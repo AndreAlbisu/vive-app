@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 
 type OptionId = 'explore' | 'search' | 'guide';
@@ -12,6 +13,7 @@ const OPTIONS: { id: OptionId; label: string; log: string }[] = [
 ];
 
 export default function OnboardingScreen2() {
+  const router = useRouter();
   const [selected, setSelected] = useState<OptionId | null>(null);
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
@@ -25,6 +27,10 @@ export default function OnboardingScreen2() {
 
   function handleContinue() {
     if (!selected) return;
+    if (selected === 'explore') {
+      router.replace('/(tabs)/');
+      return;
+    }
     const option = OPTIONS.find((o) => o.id === selected)!;
     console.log(`[VIVE Onboarding] ${option.log}`);
   }
