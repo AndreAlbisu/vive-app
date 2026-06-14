@@ -15,6 +15,8 @@ import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
+import { ScaleCard } from '@/components/ScaleCard';
 
 // ─── Paleta suave ────────────────────────────────────────────────────────────
 const TERRACOTA_SOFT = '#FDF0E8';
@@ -124,6 +126,14 @@ export default function ConexionesScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
+      <FirstTimeTooltip
+        storageKey="vive_tooltip_conexiones"
+        icon="account-group-outline"
+        iconColor={ViveColors.accent}
+        title="Encontrá a tu guía"
+        description="Explorá coaches y profesionales según lo que estás viviendo. Filtrá por tema o buscá por nombre."
+        delay={800}
+      />
       <View style={s.screen}>
 
         {/* ── Header ───────────────────────────────────────────────────── */}
@@ -167,12 +177,12 @@ export default function ConexionesScreen() {
             {TOPICS.map((t, i) => {
               const pal = PALETTE[i % PALETTE.length];
               return (
-                <TouchableOpacity key={t.id} style={s.topicCard} activeOpacity={0.75}>
+                <ScaleCard key={t.id} style={s.topicCard}>
                   <View style={[s.topicCircle, { backgroundColor: pal.bg }]}>
                     <MaterialIcons name={t.icon} size={22} color={pal.fg} />
                   </View>
                   <Text style={s.topicLabel}>{t.label}</Text>
-                </TouchableOpacity>
+                </ScaleCard>
               );
             })}
           </ScrollView>
@@ -196,7 +206,7 @@ export default function ConexionesScreen() {
             onScroll={handleCoachScroll}
             scrollEventThrottle={16}>
             {COACHES.map(coach => (
-              <TouchableOpacity key={coach.id} style={s.coachCard} activeOpacity={0.8} onPress={() => goToPerfil(coach)}>
+              <ScaleCard key={coach.id} style={s.coachCard} onPress={() => goToPerfil(coach)}>
                 {/* Foto placeholder */}
                 <View style={s.coachPhoto}>
                   <MaterialIcons name="person" size={52} color="#C0BAB4" />
@@ -222,7 +232,7 @@ export default function ConexionesScreen() {
                     <Text style={s.ratingText}>{coach.rating} ({coach.reviews} reseñas)</Text>
                   </View>
                 </View>
-              </TouchableOpacity>
+              </ScaleCard>
             ))}
           </ScrollView>
 
@@ -233,17 +243,16 @@ export default function ConexionesScreen() {
         <View style={{ flex: 1 }} />
 
         {/* ── Tarjeta Sofía ────────────────────────────────────────────── */}
-        <TouchableOpacity
+        <ScaleCard
           style={s.sofiaCard}
-          onPress={() => console.log('matching guiado')}
-          activeOpacity={0.82}>
+          onPress={() => console.log('matching guiado')}>
           <VennDiagram />
           <View style={s.sofiaText}>
             <Text style={s.sofiaQ}>¿No sabés qué necesitás?</Text>
             <Text style={s.sofiaA}>Te ayudo a encontrarlo.</Text>
           </View>
           <MaterialIcons name="chevron-right" size={20} color={ViveColors.primary} />
-        </TouchableOpacity>
+        </ScaleCard>
 
       </View>
     </SafeAreaView>

@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView } from 'react-native';
+import {
+  View, Text, TouchableOpacity, StyleSheet,
+  Animated, ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -25,6 +28,15 @@ const UNIVERSO_COLORS: Record<UniversoId, { accent: string; accentLight: string 
   alma: { accent: '#9B7FD4', accentLight: 'rgba(155, 127, 212, 0.12)' },
 };
 
+function chipConfig(text: string) {
+  const len = text.length;
+  if (len <= 7)  return { flexGrow: 1, flexBasis: 82,  borderRadius: 22, py: 18, px: 16, fontSize: 14 };
+  if (len <= 13) return { flexGrow: 1, flexBasis: 148, borderRadius: 18, py: 18, px: 20, fontSize: 15 };
+  return              { flexGrow: 2, flexBasis: 220, borderRadius: 14, py: 20, px: 22, fontSize: 14 };
+}
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
   transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
@@ -38,22 +50,40 @@ export default function OnboardingScreen5() {
   const u = (universo as UniversoId) ?? 'cuerpo';
   const key = `${u}_${categoria}`;
   const temas = TEMAS[key] ?? [];
-  const { accent, accentLight } = UNIVERSO_COLORS[u] ?? UNIVERSO_COLORS.cuerpo;
+  const { accent } = UNIVERSO_COLORS[u] ?? UNIVERSO_COLORS.cuerpo;
 
-  const headerAnim = useRef(new Animated.Value(0)).current;
+  // Per-chip animated value (0 = idle, 1 = selected)
+  const selectionAnims = useRef<Record<string, Animated.Value>>({});
+  function getAnim(tema: string): Animated.Value {
+    if (!selectionAnims.current[tema]) {
+      selectionAnims.current[tema] = new Animated.Value(0);
+    }
+    return selectionAnims.current[tema];
+  }
+
+  // Per-chip press scale (useNativeDriver:false — same driver as color animations)
+  const pressScaleAnims = useRef<Record<string, Animated.Value>>({});
+  function getPressAnim(tema: string): Animated.Value {
+    if (!pressScaleAnims.current[tema]) {
+      pressScaleAnims.current[tema] = new Animated.Value(1);
+    }
+    return pressScaleAnims.current[tema];
+  }
+
+  const headerAnim  = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
-  const titleAnim = useRef(new Animated.Value(0)).current;
+  const titleAnim   = useRef(new Animated.Value(0)).current;
   const subtitleAnim = useRef(new Animated.Value(0)).current;
-  const chipsAnim = useRef(new Animated.Value(0)).current;
-  const buttonAnim = useRef(new Animated.Value(0)).current;
+  const chipsAnim   = useRef(new Animated.Value(0)).current;
+  const buttonAnim  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.stagger(110, [
-      Animated.timing(headerAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(headerAnim,   { toValue: 1, duration: 380, useNativeDriver: true }),
       Animated.timing(progressAnim, { toValue: 1, duration: 360, useNativeDriver: true }),
-      Animated.timing(titleAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(titleAnim,    { toValue: 1, duration: 380, useNativeDriver: true }),
       Animated.timing(subtitleAnim, { toValue: 1, duration: 360, useNativeDriver: true }),
-      Animated.timing(chipsAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
+      Animated.timing(chipsAnim,    { toValue: 1, duration: 420, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -66,15 +96,21 @@ export default function OnboardingScreen5() {
   }, [selected]);
 
   function toggleTema(tema: string) {
+    const anim = getAnim(tema);
+    const isCurrentlySelected = selected.includes(tema);
+    Animated.timing(anim, {
+      toValue: isCurrentlySelected ? 0 : 1,
+      duration: 260,
+      useNativeDriver: false,
+    }).start();
     setSelected((prev) =>
-      prev.includes(tema) ? prev.filter((t) => t !== tema) : [...prev, tema]
+      isCurrentlySelected ? prev.filter((t) => t !== tema) : [...prev, tema]
     );
   }
 
   function handleContinue() {
     if (selected.length === 0) return;
     console.log('[VIVE Matching] temas seleccionados:', selected);
-    // TODO: navegar a resultados / profesionales
   }
 
   return (
@@ -113,23 +149,64 @@ export default function OnboardingScreen5() {
           </Animated.Text>
         </View>
 
-        <Animated.View style={[styles.chips, fadeUp(chipsAnim)]}>
+        <Animated.View style={[styles.mosaic, fadeUp(chipsAnim)]}>
           {temas.map((tema) => {
-            const isSelected = selected.includes(tema);
+            const anim = getAnim(tema);
+            const cfg = chipConfig(tema);
+
+            const animBorderColor = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['rgba(31,74,67,0.14)', accent],
+            });
+            const animBg = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['#FFFFFF', accent],
+            });
+            const animShadowOpacity = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.05, 0.20],
+            });
+            const animTextColor = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [ViveColors.text, '#FFFFFF'],
+            });
+
+            const pressAnim = getPressAnim(tema);
             return (
-              <TouchableOpacity
+              <AnimatedTouchable
                 key={tema}
+                onPress={() => toggleTema(tema)}
+                activeOpacity={0.95}
+                onPressIn={() =>
+                  Animated.spring(pressAnim, { toValue: 0.94, useNativeDriver: false, damping: 20, stiffness: 300 }).start()
+                }
+                onPressOut={() =>
+                  Animated.spring(pressAnim, { toValue: 1, useNativeDriver: false, damping: 14, stiffness: 180 }).start()
+                }
                 style={[
                   styles.chip,
-                  isSelected && { backgroundColor: accentLight, borderColor: accent },
+                  {
+                    flexGrow: cfg.flexGrow,
+                    flexBasis: cfg.flexBasis,
+                    borderRadius: cfg.borderRadius,
+                    paddingVertical: cfg.py,
+                    paddingHorizontal: cfg.px,
+                    backgroundColor: animBg,
+                    borderColor: animBorderColor,
+                    shadowOpacity: animShadowOpacity,
+                    transform: [{ scale: pressAnim }],
+                  },
                 ]}
-                onPress={() => toggleTema(tema)}
-                activeOpacity={0.8}
               >
-                <Text style={[styles.chipText, isSelected && { color: accent, fontFamily: ViveFonts.semibold }]}>
+                <Animated.Text
+                  style={[
+                    styles.chipText,
+                    { fontSize: cfg.fontSize, color: animTextColor },
+                  ]}
+                >
                   {tema}
-                </Text>
-              </TouchableOpacity>
+                </Animated.Text>
+              </AnimatedTouchable>
             );
           })}
         </Animated.View>
@@ -218,11 +295,14 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
+  // flexGrow:1 + justifyContent:'center' centers content vertically
+  // when it fits; scroll kicks in only when content overflows
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 24,
-    gap: 32,
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 32,
+    gap: 36,
+    justifyContent: 'center',
   },
   questionArea: {
     gap: 10,
@@ -244,29 +324,30 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
   },
-  chips: {
+  mosaic: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
     justifyContent: 'center',
   },
   chip: {
-    paddingVertical: 11,
-    paddingHorizontal: 18,
-    borderRadius: 999,
     borderWidth: 1.5,
-    borderColor: 'rgba(31, 74, 67, 0.18)',
-    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    shadowColor: '#1F4A43',
+    elevation: 2,
   },
   chipText: {
     fontFamily: ViveFonts.medium,
-    fontSize: 15,
-    color: ViveColors.text,
     lineHeight: 20,
+    textAlign: 'center',
   },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
   },
   button: {
     backgroundColor: ViveColors.primary,

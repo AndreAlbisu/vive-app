@@ -4,24 +4,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ScaleCard } from '@/components/ScaleCard';
 
 type UniversoId = 'cuerpo' | 'mente' | 'alma';
 
-const SUBCATEGORIAS: Record<UniversoId, { id: string; title: string; desc: string }[]> = {
+const SUBCATEGORIAS: Record<UniversoId, { id: string; title: string; desc: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[]> = {
   cuerpo: [
-    { id: 'energia', title: 'Energía y hábitos', desc: 'Cómo te movés y recargás día a día' },
-    { id: 'alimentacion', title: 'Alimentación', desc: 'Tu relación con lo que comés' },
-    { id: 'sexualidad', title: 'Sexualidad e intimidad', desc: 'Tu cuerpo, tu deseo y tus vínculos íntimos' },
+    { id: 'energia', title: 'Energía y hábitos', desc: 'Cómo te movés y recargás día a día', icon: 'lightning-bolt-outline' },
+    { id: 'alimentacion', title: 'Alimentación', desc: 'Tu relación con lo que comés', icon: 'food-apple-outline' },
+    { id: 'sexualidad', title: 'Sexualidad e intimidad', desc: 'Tu cuerpo, tu deseo y tus vínculos íntimos', icon: 'flower-outline' },
   ],
   mente: [
-    { id: 'sentirme', title: 'Sentirme mejor con lo que estoy viviendo', desc: 'Lo que está pasando ahora' },
-    { id: 'entender', title: 'Entender por qué me pasa lo que me pasa', desc: 'Ir más a fondo' },
-    { id: 'vinculos', title: 'Lo que me pasa con mis vínculos', desc: 'Tus relaciones y lo que generan' },
+    { id: 'sentirme', title: 'Sentirme mejor', desc: 'Con lo que estoy viviendo ahora', icon: 'emoticon-outline' },
+    { id: 'entender', title: 'Entender qué me pasa', desc: 'Ir más a fondo en mis patrones', icon: 'magnify' },
+    { id: 'vinculos', title: 'Mis vínculos', desc: 'Tus relaciones y lo que generan', icon: 'account-group-outline' },
   ],
   alma: [
-    { id: 'rumbo', title: 'Mi rumbo y mi propósito', desc: 'A dónde vas y por qué' },
-    { id: 'crecer', title: 'Crecer y motivarme', desc: 'Avanzar y encontrar impulso' },
-    { id: 'trabajo', title: 'Trabajo y carrera', desc: 'Tu vida profesional y lo que querés de ella' },
+    { id: 'rumbo', title: 'Mi rumbo y propósito', desc: 'A dónde vas y por qué', icon: 'map-marker-outline' },
+    { id: 'crecer', title: 'Crecer y motivarme', desc: 'Avanzar y encontrar impulso', icon: 'leaf' },
+    { id: 'trabajo', title: 'Trabajo y carrera', desc: 'Tu vida profesional y lo que querés', icon: 'briefcase-outline' },
   ],
 };
 
@@ -111,7 +112,7 @@ export default function OnboardingScreen4() {
           {subcats.map((sub) => {
             const isSelected = selected === sub.id;
             return (
-              <TouchableOpacity
+              <ScaleCard
                 key={sub.id}
                 style={[
                   styles.card,
@@ -120,21 +121,20 @@ export default function OnboardingScreen4() {
                     backgroundColor: accentLight,
                     shadowColor: accent,
                     shadowOpacity: 0.22,
-                    shadowRadius: 16,
+                    shadowRadius: 14,
                     elevation: 6,
                   },
                 ]}
                 onPress={() => setSelected(sub.id)}
-                activeOpacity={0.82}
               >
+                <View style={[styles.iconBubble, { backgroundColor: isSelected ? 'rgba(255,255,255,0.6)' : accentLight }]}>
+                  <MaterialCommunityIcons name={sub.icon} size={26} color={accent} />
+                </View>
                 <View style={styles.cardText}>
                   <Text style={styles.cardTitle}>{sub.title}</Text>
                   <Text style={styles.cardDesc}>{sub.desc}</Text>
                 </View>
-                {isSelected && (
-                  <Text style={[styles.cardArrow, { color: accent }]}>→</Text>
-                )}
-              </TouchableOpacity>
+              </ScaleCard>
             );
           })}
         </Animated.View>
@@ -223,11 +223,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 32,
-    gap: 32,
+    paddingTop: 28,
+    paddingBottom: 12,
+    gap: 28,
   },
   questionArea: {
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
   },
   title: {
@@ -247,32 +248,44 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cards: {
-    gap: 14,
+    flex: 1,
+    gap: 12,
   },
   card: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 2,
+    borderColor: 'transparent',
     shadowColor: '#1F4A43',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
-    shadowRadius: 10,
+    shadowRadius: 8,
     elevation: 2,
+  },
+  iconBubble: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   cardText: {
     flex: 1,
     gap: 4,
+    alignItems: 'center',
   },
   cardTitle: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,
     color: ViveColors.text,
     lineHeight: 22,
+    textAlign: 'center',
   },
   cardDesc: {
     fontFamily: ViveFonts.regular,
@@ -280,14 +293,12 @@ const styles = StyleSheet.create({
     color: ViveColors.text,
     opacity: 0.55,
     lineHeight: 18,
-  },
-  cardArrow: {
-    fontSize: 20,
-    flexShrink: 0,
+    textAlign: 'center',
   },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
   button: {
     backgroundColor: ViveColors.primary,

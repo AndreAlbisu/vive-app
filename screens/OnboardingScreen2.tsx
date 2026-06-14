@@ -1,22 +1,45 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ScaleCard } from '@/components/ScaleCard';
 
 type OptionId = 'explore' | 'search' | 'guide';
 
 const OPTIONS: {
   id: OptionId;
-  label: string;
+  title: string;
+  desc: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  bg: string;
-  color: string;
+  accent: string;
+  accentLight: string;
 }[] = [
-  { id: 'explore', label: 'Quiero explorar la app', icon: 'map-outline', bg: '#FFF3EE', color: '#E8743B' },
-  { id: 'search', label: 'Sé qué necesito, busco con quién', icon: 'compass-outline', bg: '#EEF4FF', color: '#5B8DB8' },
-  { id: 'guide', label: 'No sé por dónde empezar', icon: 'shimmer', bg: '#F0FBF4', color: '#6BBF8A' },
+  {
+    id: 'explore',
+    title: 'Quiero explorar la app',
+    desc: 'Ver todo lo que ofrece VIVE',
+    icon: 'map-outline',
+    accent: '#E8743B',
+    accentLight: 'rgba(232, 116, 59, 0.10)',
+  },
+  {
+    id: 'search',
+    title: 'Sé qué necesito',
+    desc: 'Busco el profesional indicado',
+    icon: 'compass-outline',
+    accent: '#5B8DB8',
+    accentLight: 'rgba(91, 141, 184, 0.10)',
+  },
+  {
+    id: 'guide',
+    title: 'No sé por dónde empezar',
+    desc: 'Necesito que me orienten',
+    icon: 'shimmer',
+    accent: '#9B7FD4',
+    accentLight: 'rgba(155, 127, 212, 0.10)',
+  },
 ];
 
 const fadeUp = (anim: Animated.Value) => ({
@@ -55,7 +78,7 @@ export default function OnboardingScreen2() {
 
   function handleContinue() {
     if (!selected) return;
-    if (selected === 'explore') { router.replace('/(tabs)/'); return; }
+    if (selected === 'explore') { router.replace('/(tabs)'); return; }
     if (selected === 'guide') { router.push('/onboarding3'); return; }
     console.log('[VIVE Onboarding] ir a Conexiones con buscador');
   }
@@ -71,19 +94,29 @@ export default function OnboardingScreen2() {
           {OPTIONS.map((option, i) => {
             const isSelected = selected === option.id;
             return (
-              <Animated.View key={option.id} style={[styles.cardWrap, fadeUp(cardAnims[i])]}>
-                <TouchableOpacity
+              <Animated.View key={option.id} style={[{ flex: 1 }, fadeUp(cardAnims[i])]}>
+                <ScaleCard
                   onPress={() => setSelected(option.id)}
-                  activeOpacity={0.82}
                   style={[
                     styles.card,
-                    { backgroundColor: option.bg },
-                    isSelected && styles.cardSelected,
+                    { borderColor: isSelected ? option.accent : 'transparent' },
+                    isSelected && {
+                      backgroundColor: option.accentLight,
+                      shadowColor: option.accent,
+                      shadowOpacity: 0.22,
+                      shadowRadius: 14,
+                      elevation: 6,
+                    },
                   ]}
                 >
-                  <MaterialCommunityIcons name={option.icon} size={40} color={option.color} />
-                  <Text style={[styles.cardLabel, { color: ViveColors.text }]}>{option.label}</Text>
-                </TouchableOpacity>
+                  <View style={[styles.iconBubble, { backgroundColor: isSelected ? 'rgba(255,255,255,0.6)' : option.accentLight }]}>
+                    <MaterialCommunityIcons name={option.icon} size={26} color={option.accent} />
+                  </View>
+                  <View style={styles.cardText}>
+                    <Text style={styles.cardTitle}>{option.title}</Text>
+                    <Text style={styles.cardDesc}>{option.desc}</Text>
+                  </View>
+                </ScaleCard>
               </Animated.View>
             );
           })}
@@ -113,6 +146,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 48,
+    paddingBottom: 12,
     gap: 32,
   },
   title: {
@@ -121,47 +155,60 @@ const styles = StyleSheet.create({
     color: ViveColors.text,
     letterSpacing: -0.5,
     lineHeight: 42,
+    textAlign: 'center',
   },
   cards: {
     flex: 1,
-    gap: 14,
-  },
-  cardWrap: {
-    flex: 1,
+    gap: 12,
   },
   card: {
     flex: 1,
-    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    shadowColor: '#1F4A43',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  iconBubble: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
-    borderWidth: 2.5,
-    borderColor: 'transparent',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.08,
-        shadowRadius: 10,
-      },
-      android: { elevation: 3 },
-    }),
+    flexShrink: 0,
   },
-  cardSelected: {
-    borderColor: 'rgba(31,74,67,0.25)',
+  cardText: {
+    flex: 1,
+    gap: 4,
+    alignItems: 'center',
   },
-  cardLabel: {
+  cardTitle: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,
+    color: ViveColors.text,
+    lineHeight: 22,
     textAlign: 'center',
-    lineHeight: 23,
-    letterSpacing: -0.2,
+  },
+  cardDesc: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: ViveColors.text,
+    opacity: 0.55,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
   button: {
     backgroundColor: ViveColors.primary,

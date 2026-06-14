@@ -10,8 +10,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
+import { ScaleCard } from '@/components/ScaleCard';
 
 const mockUser = { name: 'Andre' };
 const dailyPhrase = 'Cada día es una nueva oportunidad de crecer.';
@@ -45,6 +48,7 @@ const fadeUp = (anim: Animated.Value) => ({
 });
 
 export default function InicioScreen() {
+  const router = useRouter();
   const logoAnim = useRef(new Animated.Value(0)).current;
   const greetingAnim = useRef(new Animated.Value(0)).current;
   const dashboardAnim = useRef(new Animated.Value(0)).current;
@@ -63,6 +67,13 @@ export default function InicioScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <FirstTimeTooltip
+        storageKey="vive_tooltip_inicio"
+        icon="home-outline"
+        title="Tu espacio de inicio"
+        description="Acá encontrás tu próxima sesión, recursos guardados y la recomendación del día."
+        delay={800}
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}
@@ -96,7 +107,7 @@ export default function InicioScreen() {
               {[pinnedResources.slice(0, 2), pinnedResources.slice(2, 4)].map((row, ri) => (
                 <View key={ri} style={styles.pinnedRow}>
                   {row.map((r) => (
-                    <TouchableOpacity key={r.id} style={styles.pinnedSquare} activeOpacity={0.7}>
+                    <ScaleCard key={r.id} style={styles.pinnedSquare}>
                       {r.pinned && r.icon ? (
                         <>
                           <MaterialCommunityIcons name={r.icon as any} size={20} color={ViveColors.primary} />
@@ -105,7 +116,7 @@ export default function InicioScreen() {
                       ) : (
                         <Text style={styles.pinnedPlus}>+</Text>
                       )}
-                    </TouchableOpacity>
+                    </ScaleCard>
                   ))}
                 </View>
               ))}
@@ -125,7 +136,7 @@ export default function InicioScreen() {
                 {mockSession.date} · {mockSession.time}
               </Text>
             </View>
-            <TouchableOpacity style={styles.verSalaButton}>
+            <TouchableOpacity style={styles.verSalaButton} onPress={() => router.push('/sala')}>
               <Text style={styles.verSalaButtonText}>Ver sala</Text>
             </TouchableOpacity>
           </View>
@@ -134,14 +145,14 @@ export default function InicioScreen() {
         {/* Para vos hoy */}
         <Animated.View style={fadeUp(recommendationAnim)}>
           <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>Para vos hoy</Text>
-          <TouchableOpacity style={styles.recommendationCard} activeOpacity={0.8}>
+          <ScaleCard style={styles.recommendationCard}>
             <Text style={styles.recommendationEmoji}>{mockRecommendation.emoji}</Text>
             <View style={styles.recommendationInfo}>
               <Text style={styles.recommendationTitle}>{mockRecommendation.title}</Text>
               <Text style={styles.recommendationDesc}>{mockRecommendation.description}</Text>
               <Text style={styles.recommendationType}>{mockRecommendation.type}</Text>
             </View>
-          </TouchableOpacity>
+          </ScaleCard>
         </Animated.View>
 
         <View style={{ height: 32 }} />

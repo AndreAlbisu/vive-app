@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ScaleCard } from '@/components/ScaleCard';
 
 type UniversoId = 'cuerpo' | 'mente' | 'alma';
 
@@ -14,7 +15,6 @@ const UNIVERSOS: {
   desc: string;
   accent: string;
   accentLight: string;
-  accentShadow: string;
 }[] = [
   {
     id: 'cuerpo',
@@ -23,7 +23,6 @@ const UNIVERSOS: {
     desc: 'Cómo te sentís físicamente',
     accent: '#E8743B',
     accentLight: 'rgba(232, 116, 59, 0.10)',
-    accentShadow: 'rgba(232, 116, 59, 0.20)',
   },
   {
     id: 'mente',
@@ -32,7 +31,6 @@ const UNIVERSOS: {
     desc: 'Tus emociones, tu cabeza y tus vínculos',
     accent: '#5B8DB8',
     accentLight: 'rgba(91, 141, 184, 0.10)',
-    accentShadow: 'rgba(91, 141, 184, 0.20)',
   },
   {
     id: 'alma',
@@ -41,7 +39,6 @@ const UNIVERSOS: {
     desc: 'Tu rumbo, tu propósito y tu crecimiento',
     accent: '#9B7FD4',
     accentLight: 'rgba(155, 127, 212, 0.10)',
-    accentShadow: 'rgba(155, 127, 212, 0.20)',
   },
 ];
 
@@ -120,7 +117,7 @@ export default function OnboardingScreen3() {
           {UNIVERSOS.map((u) => {
             const isSelected = selected === u.id;
             return (
-              <TouchableOpacity
+              <ScaleCard
                 key={u.id}
                 style={[
                   styles.card,
@@ -129,24 +126,20 @@ export default function OnboardingScreen3() {
                     backgroundColor: u.accentLight,
                     shadowColor: u.accent,
                     shadowOpacity: 0.22,
-                    shadowRadius: 16,
+                    shadowRadius: 14,
                     elevation: 6,
                   },
                 ]}
                 onPress={() => setSelected(u.id)}
-                activeOpacity={0.82}
               >
-                <View style={[styles.iconBubble, { backgroundColor: isSelected ? 'rgba(255,255,255,0.55)' : u.accentLight }]}>
-                  <MaterialCommunityIcons name={u.icon} size={28} color={u.accent} />
+                <View style={[styles.iconBubble, { backgroundColor: isSelected ? 'rgba(255,255,255,0.6)' : u.accentLight }]}>
+                  <MaterialCommunityIcons name={u.icon} size={26} color={u.accent} />
                 </View>
                 <View style={styles.cardText}>
                   <Text style={styles.cardTitle}>{u.title}</Text>
                   <Text style={styles.cardDesc}>{u.desc}</Text>
                 </View>
-                {isSelected && (
-                  <Text style={[styles.cardArrow, { color: u.accent }]}>→</Text>
-                )}
-              </TouchableOpacity>
+              </ScaleCard>
             );
           })}
         </Animated.View>
@@ -235,11 +228,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 32,
-    gap: 32,
+    paddingTop: 28,
+    paddingBottom: 12,
+    gap: 28,
   },
   questionArea: {
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
   },
   title: {
@@ -259,40 +253,44 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cards: {
-    gap: 14,
+    flex: 1,
+    gap: 12,
   },
   card: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 2,
+    borderColor: 'transparent',
     shadowColor: '#1F4A43',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
-    shadowRadius: 10,
+    shadowRadius: 8,
     elevation: 2,
   },
   iconBubble: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   cardText: {
     flex: 1,
-    gap: 3,
+    gap: 4,
+    alignItems: 'center',
   },
   cardTitle: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 18,
+    fontFamily: ViveFonts.semibold,
+    fontSize: 16,
     color: ViveColors.text,
-    lineHeight: 24,
+    lineHeight: 22,
+    textAlign: 'center',
   },
   cardDesc: {
     fontFamily: ViveFonts.regular,
@@ -300,14 +298,12 @@ const styles = StyleSheet.create({
     color: ViveColors.text,
     opacity: 0.55,
     lineHeight: 18,
-  },
-  cardArrow: {
-    fontSize: 20,
-    flexShrink: 0,
+    textAlign: 'center',
   },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
   button: {
     backgroundColor: ViveColors.primary,

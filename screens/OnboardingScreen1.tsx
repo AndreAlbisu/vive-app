@@ -2,43 +2,106 @@ import { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+
+// ── Venn geometry ─────────────────────────────────────────────────────────────
+// R = circle radius, D = center-to-center distance (equilateral triangle side)
+// H ≈ D × √3/2 = height of the triangle
+const R  = 84;
+const D  = 82;
+const H  = 71;   // Math.round(D * Math.sqrt(3) / 2)
+const CW = 250;  // container width
+const CH = R * 2 + H;  // container height = 239
+
+// Absolute top-left positions of each circle inside the container
+const CIRCLES = [
+  { left: CW / 2 - R,           top: 0 },  // top  – Cuerpo
+  { left: CW / 2 - D / 2 - R,  top: H },  // bottom-left  – Mente
+  { left: CW / 2 + D / 2 - R,  top: H },  // bottom-right – Alma
+] as const;
+
+// ── Animation helpers ─────────────────────────────────────────────────────────
+function circleIn(anim: Animated.Value) {
+  return {
+    opacity: anim,
+    transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] }) }],
+  };
+}
+
+function fadeUp(anim: Animated.Value, dy = 18) {
+  return {
+    opacity: anim,
+    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [dy, 0] }) }],
+  };
+}
 
 export default function OnboardingScreen1() {
   const router = useRouter();
-  const logoAnim = useRef(new Animated.Value(0)).current;
+
+  const c0 = useRef(new Animated.Value(0)).current;
+  const c1 = useRef(new Animated.Value(0)).current;
+  const c2 = useRef(new Animated.Value(0)).current;
+  const viveAnim     = useRef(new Animated.Value(0)).current;
   const subtitleAnim = useRef(new Animated.Value(0)).current;
-  const buttonAnim = useRef(new Animated.Value(0)).current;
+  const buttonAnim   = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.stagger(220, [
-      Animated.timing(logoAnim, { toValue: 1, duration: 560, useNativeDriver: true }),
-      Animated.timing(subtitleAnim, { toValue: 1, duration: 460, useNativeDriver: true }),
-      Animated.timing(buttonAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
+    Animated.sequence([
+      // Phase 1 – circles appear one by one
+      Animated.stagger(300, [
+        Animated.timing(c0, { toValue: 1, duration: 520, useNativeDriver: true }),
+        Animated.timing(c1, { toValue: 1, duration: 520, useNativeDriver: true }),
+        Animated.timing(c2, { toValue: 1, duration: 520, useNativeDriver: true }),
+      ]),
+      // Phase 2 – wordmark emerges
+      Animated.delay(160),
+      Animated.timing(viveAnim, { toValue: 1, duration: 540, useNativeDriver: true }),
+      // Phase 3 – subtitle
+      Animated.delay(80),
+      Animated.timing(subtitleAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      // Phase 4 – button
+      Animated.delay(80),
+      Animated.timing(buttonAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
     ]).start();
   }, []);
-
-  const fadeUp = (anim: Animated.Value) => ({
-    opacity: anim,
-    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) }],
-  });
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Animated.View style={[styles.logoRow, fadeUp(logoAnim)]}>
-          <Text style={styles.logo}>v</Text>
-          <MaterialCommunityIcons name="sprout" size={68} color={ViveColors.primary} style={styles.logoIcon} />
-          <Text style={styles.logo}>ve</Text>
-        </Animated.View>
+
+        {/* ── Venn diagram ─────────────────────────────── */}
+        <View style={styles.venn}>
+          {([c0, c1, c2] as Animated.Value[]).map((anim, i) => (
+            <Animated.View
+              key={i}
+              style={[
+                styles.circle,
+                { left: CIRCLES[i].left, top: CIRCLES[i].top },
+                circleIn(anim),
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* ── Wordmark ─────────────────────────────────── */}
+        <Animated.Text style={[styles.vive, fadeUp(viveAnim)]}>
+          vive
+        </Animated.Text>
+
+        {/* ── Subtitle ─────────────────────────────────── */}
         <Animated.Text style={[styles.subtitle, fadeUp(subtitleAnim)]}>
           Tu camino empieza acá
         </Animated.Text>
+
       </View>
 
+      {/* ── CTA ──────────────────────────────────────── */}
       <Animated.View style={[styles.footer, fadeUp(buttonAnim)]}>
-        <TouchableOpacity style={styles.button} activeOpacity={0.85} onPress={() => router.push('/onboarding2')}>
+        <TouchableOpacity
+          style={styles.button}
+          activeOpacity={0.85}
+          onPress={() => router.push('/onboarding2')}
+        >
           <Text style={styles.buttonText}>¿Empezamos?</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -56,30 +119,44 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 20,
+    gap: 28,
   },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+
+  // Venn
+  venn: {
+    width: CW,
+    height: CH,
+    position: 'relative',
   },
-  logo: {
+  circle: {
+    position: 'absolute',
+    width: R * 2,
+    height: R * 2,
+    borderRadius: R,
+    borderWidth: 1.5,
+    borderColor: ViveColors.text,
+    backgroundColor: 'transparent',
+  },
+
+  // Wordmark — Fraunces, no sprout icon
+  vive: {
     fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 80,
-    color: ViveColors.primary,
-    letterSpacing: -3,
-    lineHeight: 90,
+    fontSize: 76,
+    color: ViveColors.text,
+    letterSpacing: -2,
+    lineHeight: 82,
   },
-  logoIcon: {
-    marginTop: 3,
-  },
+
+  // Subtitle — color carries opacity so animated opacity can go 0→1 cleanly
   subtitle: {
     fontFamily: ViveFonts.regular,
-    fontSize: 18,
-    color: ViveColors.text,
+    fontSize: 17,
+    color: `${ViveColors.text}A6`,
     textAlign: 'center',
     letterSpacing: 0.2,
-    opacity: 0.85,
   },
+
+  // Footer
   footer: {
     paddingBottom: 16,
   },
