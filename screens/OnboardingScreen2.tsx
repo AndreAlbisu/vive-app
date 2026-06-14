@@ -1,28 +1,65 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 
 type OptionId = 'explore' | 'search' | 'guide';
 
-const OPTIONS: { id: OptionId; label: string; log: string }[] = [
-  { id: 'explore', label: 'Quiero explorar la app', log: 'ir a Inicio' },
-  { id: 'search', label: 'Sé qué necesito, busco con quién', log: 'ir a Conexiones con buscador' },
-  { id: 'guide', label: 'No sé por dónde empezar', log: 'iniciar matching guiado' },
+const OPTIONS: {
+  id: OptionId;
+  label: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  bg: string;
+  color: string;
+}[] = [
+  {
+    id: 'explore',
+    label: 'Quiero explorar la app',
+    icon: 'map-outline',
+    bg: '#FFF3EE',
+    color: '#E8743B',
+  },
+  {
+    id: 'search',
+    label: 'Sé qué necesito, busco con quién',
+    icon: 'compass-outline',
+    bg: '#EEF4FF',
+    color: '#5B8DB8',
+  },
+  {
+    id: 'guide',
+    label: 'No sé por dónde empezar',
+    icon: 'shimmer',
+    bg: '#F0FBF4',
+    color: '#6BBF8A',
+  },
 ];
+
+const fadeUp = (anim: Animated.Value) => ({
+  opacity: anim,
+  transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
+});
 
 export default function OnboardingScreen2() {
   const router = useRouter();
   const [selected, setSelected] = useState<OptionId | null>(null);
+
   const titleAnim = useRef(new Animated.Value(0)).current;
-  const cardsAnim = useRef(new Animated.Value(0)).current;
+  const card0Anim = useRef(new Animated.Value(0)).current;
+  const card1Anim = useRef(new Animated.Value(0)).current;
+  const card2Anim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
+  const cardAnims = [card0Anim, card1Anim, card2Anim];
+
   useEffect(() => {
-    Animated.stagger(180, [
-      Animated.timing(titleAnim, { toValue: 1, duration: 480, useNativeDriver: true }),
-      Animated.timing(cardsAnim, { toValue: 1, duration: 460, useNativeDriver: true }),
+    Animated.stagger(110, [
+      Animated.timing(titleAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
+      Animated.timing(card0Anim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(card1Anim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(card2Anim, { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -34,11 +71,6 @@ export default function OnboardingScreen2() {
     }).start();
   }, [selected]);
 
-  const fadeUp = (anim: Animated.Value) => ({
-    opacity: anim,
-    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-  });
-
   function handleContinue() {
     if (!selected) return;
     if (selected === 'explore') {
@@ -49,32 +81,44 @@ export default function OnboardingScreen2() {
       router.push('/onboarding3');
       return;
     }
-    const option = OPTIONS.find((o) => o.id === selected)!;
-    console.log(`[VIVE Onboarding] ${option.log}`);
+    console.log('[VIVE Onboarding] ir a Conexiones con buscador');
   }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Animated.View style={[styles.header, fadeUp(titleAnim)]}>
+        <Animated.View style={fadeUp(titleAnim)}>
           <Text style={styles.title}>¿Cómo te gustaría empezar?</Text>
         </Animated.View>
 
-        <Animated.View style={[styles.cards, fadeUp(cardsAnim)]}>
-          {OPTIONS.map((option) => {
+        <View style={styles.cards}>
+          {OPTIONS.map((option, i) => {
             const isSelected = selected === option.id;
             return (
-              <TouchableOpacity
-                key={option.id}
-                style={[styles.card, isSelected && styles.cardSelected]}
-                onPress={() => setSelected(option.id)}
-                activeOpacity={0.82}
-              >
-                <Text style={styles.cardText}>{option.label}</Text>
-              </TouchableOpacity>
+              <Animated.View key={option.id} style={[styles.cardWrap, fadeUp(cardAnims[i])]}>
+                <TouchableOpacity
+                  style={[
+                    styles.card,
+                    { backgroundColor: option.bg },
+                    isSelected && {
+                      borderColor: option.color,
+                      borderWidth: 2.5,
+                      shadowColor: option.color,
+                      shadowOpacity: 0.22,
+                      shadowRadius: 14,
+                      elevation: 6,
+                    },
+                  ]}
+                  onPress={() => setSelected(option.id)}
+                  activeOpacity={0.82}
+                >
+                  <MaterialCommunityIcons name={option.icon} size={40} color={option.color} />
+                  <Text style={styles.cardLabel}>{option.label}</Text>
+                </TouchableOpacity>
+              </Animated.View>
             );
           })}
-        </Animated.View>
+        </View>
       </View>
 
       <Animated.View style={[styles.footer, { opacity: buttonAnim }]}>
@@ -98,48 +142,54 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 32,
-    paddingTop: 56,
-    gap: 36,
-  },
-  header: {
-    gap: 10,
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    gap: 32,
   },
   title: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 30,
+    fontSize: 34,
     color: ViveColors.text,
     letterSpacing: -0.5,
-    lineHeight: 38,
+    lineHeight: 42,
   },
   cards: {
+    flex: 1,
     gap: 14,
   },
+  cardWrap: {
+    flex: 1,
+  },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 22,
+    flex: 1,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
     borderWidth: 2,
     borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#1F4A43',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+      },
+      android: { elevation: 2 },
+    }),
   },
-  cardSelected: {
-    borderColor: ViveColors.primary,
-    backgroundColor: '#FDF0E8',
-  },
-  cardText: {
-    fontFamily: ViveFonts.medium,
+  cardLabel: {
+    fontFamily: ViveFonts.semibold,
     fontSize: 16,
     color: ViveColors.text,
-    lineHeight: 22,
+    textAlign: 'center',
+    lineHeight: 23,
+    letterSpacing: -0.2,
   },
   footer: {
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
     paddingBottom: 16,
   },
   button: {

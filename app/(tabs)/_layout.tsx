@@ -1,11 +1,10 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import { Feather } from '@expo/vector-icons';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ViveColors } from '@/constants/theme';
 
-const TAB_INACTIVE = 'rgba(31, 74, 67, 0.4)';
+const TAB_INACTIVE = '#ABABAB';
 
 export default function TabLayout() {
   return (
@@ -36,27 +35,21 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Inicio',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={26} name="house.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="recursos"
         options={{
           title: 'Recursos',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={26} name="book.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="conexiones"
         options={{
           title: 'Conexiones',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={26} name="person.2.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} />,
         }}
       />
       <Tabs.Screen

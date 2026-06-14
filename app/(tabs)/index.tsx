@@ -14,14 +14,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 
 const mockUser = { name: 'Andre' };
-
 const dailyPhrase = 'Cada día es una nueva oportunidad de crecer.';
 
-const pinnedResources = [
-  { id: '1', title: 'Respiración 4-7-8', pinned: true },
-  { id: '2', title: 'Diario de gratitud', pinned: true },
-  { id: '3', title: null, pinned: false },
-  { id: '4', title: null, pinned: false },
+type Resource = { id: string; title: string | null; icon: string | null; pinned: boolean };
+
+const pinnedResources: Resource[] = [
+  { id: '1', title: 'Respiración\n4-7-8', icon: 'weather-windy', pinned: true },
+  { id: '2', title: 'Diario de\ngratitud', icon: 'notebook-outline', pinned: true },
+  { id: '3', title: null, icon: null, pinned: false },
+  { id: '4', title: null, icon: null, pinned: false },
 ];
 
 const mockSession = {
@@ -33,8 +34,7 @@ const mockSession = {
 
 const mockRecommendation = {
   title: 'Cómo manejar la ansiedad social',
-  description:
-    'Una guía práctica para sentirte más cómodo en situaciones sociales del día a día.',
+  description: 'Una guía práctica para sentirte más cómodo en situaciones sociales del día a día.',
   type: 'Video · 7 min',
   emoji: '💙',
 };
@@ -45,14 +45,16 @@ const fadeUp = (anim: Animated.Value) => ({
 });
 
 export default function InicioScreen() {
-  const headerAnim = useRef(new Animated.Value(0)).current;
+  const logoAnim = useRef(new Animated.Value(0)).current;
+  const greetingAnim = useRef(new Animated.Value(0)).current;
   const dashboardAnim = useRef(new Animated.Value(0)).current;
   const sessionAnim = useRef(new Animated.Value(0)).current;
   const recommendationAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.stagger(130, [
-      Animated.timing(headerAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
+    Animated.stagger(120, [
+      Animated.timing(logoAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
+      Animated.timing(greetingAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
       Animated.timing(dashboardAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
       Animated.timing(sessionAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
       Animated.timing(recommendationAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
@@ -66,57 +68,47 @@ export default function InicioScreen() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
-        <Animated.View style={[styles.header, fadeUp(headerAnim)]}>
-          <Text style={styles.greeting}>Hola, {mockUser.name} 👋</Text>
-          <Text style={styles.dailyPhrase}>{dailyPhrase}</Text>
+        {/* Logo centrado */}
+        <Animated.View style={[styles.logoRow, fadeUp(logoAnim)]}>
+          <Text style={styles.logo}>v</Text>
+          <MaterialCommunityIcons name="sprout" size={26} color={ViveColors.primary} style={styles.logoIcon} />
+          <Text style={styles.logo}>ve</Text>
         </Animated.View>
 
-        {/* Dashboard central */}
+        {/* Saludo */}
+        <Animated.View style={[styles.greetingArea, fadeUp(greetingAnim)]}>
+          <Text style={styles.greeting}>Hola, {mockUser.name} 👋</Text>
+        </Animated.View>
+
+        {/* Dashboard: frase + recursos */}
         <Animated.View style={[styles.dashboardCard, fadeUp(dashboardAnim)]}>
-          {/* Mitad izquierda — logo vive / Sofía */}
-          <TouchableOpacity
-            style={styles.dashboardLeft}
-            onPress={() => console.log('abrir Sofía')}
-            activeOpacity={0.75}>
-            <View style={styles.viveLogoRow}>
-              <Text style={styles.viveLogo}>v</Text>
-              <MaterialCommunityIcons name="sprout" size={32} color={ViveColors.primary} style={styles.viveLogoIcon} />
-              <Text style={styles.viveLogo}>ve</Text>
-            </View>
-          </TouchableOpacity>
+          {/* Izquierda — frase motivacional */}
+          <View style={styles.phraseHalf}>
+            <MaterialCommunityIcons name="format-quote-open" size={22} color="rgba(255,255,255,0.5)" style={styles.quoteIcon} />
+            <Text style={styles.phraseText}>{dailyPhrase}</Text>
+          </View>
 
           <View style={styles.dashboardDivider} />
 
-          {/* Mitad derecha — recursos pineados 2x2 */}
-          <View style={styles.dashboardRight}>
+          {/* Derecha — recursos 2x2 */}
+          <View style={styles.resourcesHalf}>
             <View style={styles.pinnedGrid}>
-              <View style={styles.pinnedRow}>
-                {pinnedResources.slice(0, 2).map((r) => (
-                  <TouchableOpacity key={r.id} style={styles.pinnedSquare} activeOpacity={0.7}>
-                    {r.pinned ? (
-                      <Text style={styles.pinnedTitle} numberOfLines={2}>
-                        {r.title}
-                      </Text>
-                    ) : (
-                      <Text style={styles.pinnedPlus}>+</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.pinnedRow}>
-                {pinnedResources.slice(2, 4).map((r) => (
-                  <TouchableOpacity key={r.id} style={styles.pinnedSquare} activeOpacity={0.7}>
-                    {r.pinned ? (
-                      <Text style={styles.pinnedTitle} numberOfLines={2}>
-                        {r.title}
-                      </Text>
-                    ) : (
-                      <Text style={styles.pinnedPlus}>+</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
+              {[pinnedResources.slice(0, 2), pinnedResources.slice(2, 4)].map((row, ri) => (
+                <View key={ri} style={styles.pinnedRow}>
+                  {row.map((r) => (
+                    <TouchableOpacity key={r.id} style={styles.pinnedSquare} activeOpacity={0.7}>
+                      {r.pinned && r.icon ? (
+                        <>
+                          <MaterialCommunityIcons name={r.icon as any} size={20} color={ViveColors.primary} />
+                          <Text style={styles.pinnedTitle} numberOfLines={2}>{r.title}</Text>
+                        </>
+                      ) : (
+                        <Text style={styles.pinnedPlus}>+</Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
             </View>
           </View>
         </Animated.View>
@@ -179,65 +171,74 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 20,
   },
 
-  // Header
-  header: {
-    marginBottom: 28,
+  // Logo top-centered
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  logo: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 30,
+    color: ViveColors.primary,
+    letterSpacing: -0.5,
+    lineHeight: 36,
+  },
+  logoIcon: {
+    marginTop: 2,
+  },
+
+  // Greeting
+  greetingArea: {
+    marginBottom: 24,
   },
   greeting: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 28,
+    fontSize: 32,
     color: ViveColors.text,
-    lineHeight: 36,
-  },
-  dailyPhrase: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 14,
-    color: ViveColors.text,
-    opacity: 0.6,
-    marginTop: 6,
-    lineHeight: 21,
+    lineHeight: 40,
   },
 
   // Dashboard card
   dashboardCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     flexDirection: 'row',
     marginBottom: 28,
-    minHeight: 176,
+    minHeight: 180,
     overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
     ...cardShadow,
   },
-  dashboardLeft: {
+  phraseHalf: {
     flex: 1,
+    backgroundColor: ViveColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 18,
+    gap: 8,
   },
-  viveLogoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  quoteIcon: {
+    alignSelf: 'flex-start',
   },
-  viveLogo: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 38,
-    color: ViveColors.primary,
-    letterSpacing: -0.5,
-    lineHeight: 44,
-  },
-  viveLogoIcon: {
-    marginTop: 2,
+  phraseText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#FFFFFF',
+    lineHeight: 20,
+    opacity: 0.95,
   },
   dashboardDivider: {
     width: 1,
-    backgroundColor: `${ViveColors.text}10`,
-    marginVertical: 18,
+    backgroundColor: 'rgba(31, 74, 67, 0.08)',
+    marginVertical: 0,
   },
-  dashboardRight: {
+  resourcesHalf: {
     flex: 1,
-    padding: 14,
+    padding: 12,
     justifyContent: 'center',
   },
   pinnedGrid: {
@@ -251,25 +252,35 @@ const styles = StyleSheet.create({
     flex: 1,
     aspectRatio: 1,
     backgroundColor: ViveColors.background,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: `${ViveColors.text}12`,
+    borderColor: `${ViveColors.text}10`,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 6,
+    gap: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#1F4A43',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+      },
+      android: { elevation: 1 },
+    }),
   },
   pinnedTitle: {
     fontFamily: ViveFonts.medium,
-    fontSize: 10,
+    fontSize: 9,
     color: ViveColors.text,
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 13,
   },
   pinnedPlus: {
     fontFamily: ViveFonts.regular,
     fontSize: 22,
     color: ViveColors.text,
-    opacity: 0.25,
+    opacity: 0.2,
   },
 
   // Section title
