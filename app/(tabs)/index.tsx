@@ -1,4 +1,4 @@
-import React from 'react';
+import { useRef, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 
@@ -37,7 +39,26 @@ const mockRecommendation = {
   emoji: '💙',
 };
 
+const fadeUp = (anim: Animated.Value) => ({
+  opacity: anim,
+  transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+});
+
 export default function InicioScreen() {
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const dashboardAnim = useRef(new Animated.Value(0)).current;
+  const sessionAnim = useRef(new Animated.Value(0)).current;
+  const recommendationAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.stagger(130, [
+      Animated.timing(headerAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
+      Animated.timing(dashboardAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(sessionAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(recommendationAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
@@ -46,19 +67,23 @@ export default function InicioScreen() {
         showsVerticalScrollIndicator={false}>
 
         {/* Header */}
-        <View style={styles.header}>
+        <Animated.View style={[styles.header, fadeUp(headerAnim)]}>
           <Text style={styles.greeting}>Hola, {mockUser.name} 👋</Text>
           <Text style={styles.dailyPhrase}>{dailyPhrase}</Text>
-        </View>
+        </Animated.View>
 
         {/* Dashboard central */}
-        <View style={styles.dashboardCard}>
+        <Animated.View style={[styles.dashboardCard, fadeUp(dashboardAnim)]}>
           {/* Mitad izquierda — logo vive / Sofía */}
           <TouchableOpacity
             style={styles.dashboardLeft}
             onPress={() => console.log('abrir Sofía')}
             activeOpacity={0.75}>
-            <Text style={styles.viveLogo}>vive</Text>
+            <View style={styles.viveLogoRow}>
+              <Text style={styles.viveLogo}>v</Text>
+              <MaterialCommunityIcons name="sprout" size={32} color={ViveColors.primary} style={styles.viveLogoIcon} />
+              <Text style={styles.viveLogo}>ve</Text>
+            </View>
           </TouchableOpacity>
 
           <View style={styles.dashboardDivider} />
@@ -94,34 +119,38 @@ export default function InicioScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Tu próxima sesión */}
-        <Text style={styles.sectionTitle}>Tu próxima sesión</Text>
-        <View style={styles.sessionCard}>
-          <View style={styles.sessionInfo}>
-            <Text style={styles.sessionName}>
-              Sesión con {mockSession.name} — {mockSession.specialty}
-            </Text>
-            <Text style={styles.sessionDateTime}>
-              {mockSession.date} · {mockSession.time}
-            </Text>
+        <Animated.View style={fadeUp(sessionAnim)}>
+          <Text style={styles.sectionTitle}>Tu próxima sesión</Text>
+          <View style={styles.sessionCard}>
+            <View style={styles.sessionInfo}>
+              <Text style={styles.sessionName}>
+                Sesión con {mockSession.name} — {mockSession.specialty}
+              </Text>
+              <Text style={styles.sessionDateTime}>
+                {mockSession.date} · {mockSession.time}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.verSalaButton}>
+              <Text style={styles.verSalaButtonText}>Ver sala</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.verSalaButton}>
-            <Text style={styles.verSalaButtonText}>Ver sala</Text>
-          </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* Para vos hoy */}
-        <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>Para vos hoy</Text>
-        <TouchableOpacity style={styles.recommendationCard} activeOpacity={0.8}>
-          <Text style={styles.recommendationEmoji}>{mockRecommendation.emoji}</Text>
-          <View style={styles.recommendationInfo}>
-            <Text style={styles.recommendationTitle}>{mockRecommendation.title}</Text>
-            <Text style={styles.recommendationDesc}>{mockRecommendation.description}</Text>
-            <Text style={styles.recommendationType}>{mockRecommendation.type}</Text>
-          </View>
-        </TouchableOpacity>
+        <Animated.View style={fadeUp(recommendationAnim)}>
+          <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>Para vos hoy</Text>
+          <TouchableOpacity style={styles.recommendationCard} activeOpacity={0.8}>
+            <Text style={styles.recommendationEmoji}>{mockRecommendation.emoji}</Text>
+            <View style={styles.recommendationInfo}>
+              <Text style={styles.recommendationTitle}>{mockRecommendation.title}</Text>
+              <Text style={styles.recommendationDesc}>{mockRecommendation.description}</Text>
+              <Text style={styles.recommendationType}>{mockRecommendation.type}</Text>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
 
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -187,11 +216,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  viveLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   viveLogo: {
-    fontFamily: ViveFonts.bold,
+    fontFamily: ViveFonts.frauncesSerif,
     fontSize: 38,
     color: ViveColors.primary,
     letterSpacing: -0.5,
+    lineHeight: 44,
+  },
+  viveLogoIcon: {
+    marginTop: 2,
   },
   dashboardDivider: {
     width: 1,
