@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+import { AnimatedGradientCard } from '@/components/AnimatedGradientCard';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 
 const mockUser = { name: 'Andre' };
@@ -43,6 +44,12 @@ const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
   transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
 });
+
+const textShadow = {
+  textShadowColor: 'rgba(0,0,0,0.25)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 4,
+};
 
 export default function InicioScreen() {
   const logoAnim = useRef(new Animated.Value(0)).current;
@@ -81,67 +88,75 @@ export default function InicioScreen() {
         </Animated.View>
 
         {/* Dashboard: frase + recursos */}
-        <Animated.View style={[styles.dashboardCard, fadeUp(dashboardAnim)]}>
-          {/* Izquierda — frase motivacional */}
-          <View style={styles.phraseHalf}>
-            <MaterialCommunityIcons name="format-quote-open" size={22} color="rgba(255,255,255,0.5)" style={styles.quoteIcon} />
-            <Text style={styles.phraseText}>{dailyPhrase}</Text>
-          </View>
-
-          <View style={styles.dashboardDivider} />
-
-          {/* Derecha — recursos 2x2 */}
-          <View style={styles.resourcesHalf}>
-            <View style={styles.pinnedGrid}>
-              {[pinnedResources.slice(0, 2), pinnedResources.slice(2, 4)].map((row, ri) => (
-                <View key={ri} style={styles.pinnedRow}>
-                  {row.map((r) => (
-                    <TouchableOpacity key={r.id} style={styles.pinnedSquare} activeOpacity={0.7}>
-                      {r.pinned && r.icon ? (
-                        <>
-                          <MaterialCommunityIcons name={r.icon as any} size={20} color={ViveColors.primary} />
-                          <Text style={styles.pinnedTitle} numberOfLines={2}>{r.title}</Text>
-                        </>
-                      ) : (
-                        <Text style={styles.pinnedPlus}>+</Text>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ))}
+        <Animated.View style={[styles.dashboardWrapper, fadeUp(dashboardAnim)]}>
+          <AnimatedGradientCard style={styles.dashboardCard}>
+            {/* Izquierda — frase motivacional */}
+            <View style={styles.phraseHalf}>
+              <MaterialCommunityIcons name="format-quote-open" size={22} color="rgba(255,255,255,0.5)" style={styles.quoteIcon} />
+              <Text style={[styles.phraseText, textShadow]}>{dailyPhrase}</Text>
             </View>
-          </View>
+
+            <View style={styles.dashboardDivider} />
+
+            {/* Derecha — recursos 2x2 */}
+            <View style={styles.resourcesHalf}>
+              <View style={styles.pinnedGrid}>
+                {[pinnedResources.slice(0, 2), pinnedResources.slice(2, 4)].map((row, ri) => (
+                  <View key={ri} style={styles.pinnedRow}>
+                    {row.map((r) => (
+                      <TouchableOpacity key={r.id} style={styles.pinnedSquare} activeOpacity={0.7}>
+                        {r.pinned && r.icon ? (
+                          <>
+                            <MaterialCommunityIcons name={r.icon as any} size={20} color={ViveColors.primary} />
+                            <Text style={styles.pinnedTitle} numberOfLines={2}>{r.title}</Text>
+                          </>
+                        ) : (
+                          <Text style={styles.pinnedPlus}>+</Text>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            </View>
+          </AnimatedGradientCard>
         </Animated.View>
 
         {/* Tu próxima sesión */}
         <Animated.View style={fadeUp(sessionAnim)}>
           <Text style={styles.sectionTitle}>Tu próxima sesión</Text>
-          <View style={styles.sessionCard}>
-            <View style={styles.sessionInfo}>
-              <Text style={styles.sessionName}>
-                Sesión con {mockSession.name} — {mockSession.specialty}
-              </Text>
-              <Text style={styles.sessionDateTime}>
-                {mockSession.date} · {mockSession.time}
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.verSalaButton}>
-              <Text style={styles.verSalaButtonText}>Ver sala</Text>
-            </TouchableOpacity>
+          <View style={styles.sessionWrapper}>
+            <AnimatedGradientCard style={styles.sessionCard}>
+              <View style={styles.sessionInfo}>
+                <Text style={[styles.sessionName, textShadow]}>
+                  Sesión con {mockSession.name} — {mockSession.specialty}
+                </Text>
+                <Text style={[styles.sessionDateTime, textShadow]}>
+                  {mockSession.date} · {mockSession.time}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.verSalaButton}>
+                <Text style={styles.verSalaButtonText}>Ver sala</Text>
+              </TouchableOpacity>
+            </AnimatedGradientCard>
           </View>
         </Animated.View>
 
         {/* Para vos hoy */}
         <Animated.View style={fadeUp(recommendationAnim)}>
           <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>Para vos hoy</Text>
-          <TouchableOpacity style={styles.recommendationCard} activeOpacity={0.8}>
-            <Text style={styles.recommendationEmoji}>{mockRecommendation.emoji}</Text>
-            <View style={styles.recommendationInfo}>
-              <Text style={styles.recommendationTitle}>{mockRecommendation.title}</Text>
-              <Text style={styles.recommendationDesc}>{mockRecommendation.description}</Text>
-              <Text style={styles.recommendationType}>{mockRecommendation.type}</Text>
-            </View>
-          </TouchableOpacity>
+          <View style={styles.recommendationWrapper}>
+            <TouchableOpacity activeOpacity={0.8} style={styles.recommendationTouchable}>
+              <AnimatedGradientCard style={styles.recommendationCard}>
+                <Text style={styles.recommendationEmoji}>{mockRecommendation.emoji}</Text>
+                <View style={styles.recommendationInfo}>
+                  <Text style={[styles.recommendationTitle, textShadow]}>{mockRecommendation.title}</Text>
+                  <Text style={[styles.recommendationDesc, textShadow]}>{mockRecommendation.description}</Text>
+                  <Text style={[styles.recommendationType, textShadow]}>{mockRecommendation.type}</Text>
+                </View>
+              </AnimatedGradientCard>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
 
         <View style={{ height: 32 }} />
@@ -150,14 +165,14 @@ export default function InicioScreen() {
   );
 }
 
-const cardShadow = Platform.select({
+const wrapperShadow = Platform.select({
   ios: {
     shadowColor: '#1F4A43',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.09,
-    shadowRadius: 10,
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
   },
-  android: { elevation: 3 },
+  android: { elevation: 5 },
 });
 
 const styles = StyleSheet.create({
@@ -204,18 +219,18 @@ const styles = StyleSheet.create({
   },
 
   // Dashboard card
+  dashboardWrapper: {
+    borderRadius: 20,
+    marginBottom: 28,
+    ...wrapperShadow,
+  },
   dashboardCard: {
     borderRadius: 20,
     flexDirection: 'row',
-    marginBottom: 28,
     minHeight: 180,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    ...cardShadow,
   },
   phraseHalf: {
     flex: 1,
-    backgroundColor: ViveColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 18,
@@ -233,7 +248,7 @@ const styles = StyleSheet.create({
   },
   dashboardDivider: {
     width: 1,
-    backgroundColor: 'rgba(31, 74, 67, 0.08)',
+    backgroundColor: 'rgba(255,255,255,0.20)',
     marginVertical: 0,
   },
   resourcesHalf: {
@@ -251,23 +266,12 @@ const styles = StyleSheet.create({
   pinnedSquare: {
     flex: 1,
     aspectRatio: 1,
-    backgroundColor: ViveColors.background,
+    backgroundColor: 'rgba(255,255,255,0.88)',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: `${ViveColors.text}10`,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 6,
     gap: 4,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#1F4A43',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-      },
-      android: { elevation: 1 },
-    }),
   },
   pinnedTitle: {
     fontFamily: ViveFonts.medium,
@@ -280,7 +284,7 @@ const styles = StyleSheet.create({
     fontFamily: ViveFonts.regular,
     fontSize: 22,
     color: ViveColors.text,
-    opacity: 0.2,
+    opacity: 0.3,
   },
 
   // Section title
@@ -295,13 +299,15 @@ const styles = StyleSheet.create({
   },
 
   // Session card
+  sessionWrapper: {
+    borderRadius: 16,
+    ...wrapperShadow,
+  },
   sessionCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    ...cardShadow,
   },
   sessionInfo: {
     flex: 1,
@@ -310,24 +316,24 @@ const styles = StyleSheet.create({
   sessionName: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     lineHeight: 20,
     marginBottom: 4,
   },
   sessionDateTime: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
-    color: ViveColors.text,
-    opacity: 0.55,
+    color: 'rgba(255,255,255,0.80)',
   },
   verSalaButton: {
-    backgroundColor: ViveColors.primary,
     borderRadius: 10,
     paddingVertical: 9,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 38,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.80)',
   },
   verSalaButtonText: {
     fontFamily: ViveFonts.semibold,
@@ -336,13 +342,18 @@ const styles = StyleSheet.create({
   },
 
   // Recommendation card
+  recommendationWrapper: {
+    borderRadius: 16,
+    ...wrapperShadow,
+  },
+  recommendationTouchable: {
+    borderRadius: 16,
+  },
   recommendationCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    ...cardShadow,
   },
   recommendationEmoji: {
     fontSize: 30,
@@ -355,21 +366,20 @@ const styles = StyleSheet.create({
   recommendationTitle: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     lineHeight: 20,
     marginBottom: 4,
   },
   recommendationDesc: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
-    color: ViveColors.text,
-    opacity: 0.6,
+    color: 'rgba(255,255,255,0.82)',
     lineHeight: 18,
     marginBottom: 6,
   },
   recommendationType: {
     fontFamily: ViveFonts.regular,
     fontSize: 11,
-    color: ViveColors.primary,
+    color: 'rgba(255,255,255,0.75)',
   },
 });
