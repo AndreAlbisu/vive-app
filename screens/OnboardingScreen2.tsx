@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AnimatedGradientCard } from '@/components/AnimatedGradientCard';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 
 type OptionId = 'explore' | 'search' | 'guide';
@@ -12,22 +11,18 @@ const OPTIONS: {
   id: OptionId;
   label: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  bg: string;
+  color: string;
 }[] = [
-  { id: 'explore', label: 'Quiero explorar la app', icon: 'map-outline' },
-  { id: 'search', label: 'Sé qué necesito, busco con quién', icon: 'compass-outline' },
-  { id: 'guide', label: 'No sé por dónde empezar', icon: 'shimmer' },
+  { id: 'explore', label: 'Quiero explorar la app', icon: 'map-outline', bg: '#FFF3EE', color: '#E8743B' },
+  { id: 'search', label: 'Sé qué necesito, busco con quién', icon: 'compass-outline', bg: '#EEF4FF', color: '#5B8DB8' },
+  { id: 'guide', label: 'No sé por dónde empezar', icon: 'shimmer', bg: '#F0FBF4', color: '#6BBF8A' },
 ];
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
   transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
 });
-
-const textShadow = {
-  textShadowColor: 'rgba(0,0,0,0.28)',
-  textShadowOffset: { width: 0, height: 1 },
-  textShadowRadius: 4,
-};
 
 export default function OnboardingScreen2() {
   const router = useRouter();
@@ -80,17 +75,14 @@ export default function OnboardingScreen2() {
                 <TouchableOpacity
                   onPress={() => setSelected(option.id)}
                   activeOpacity={0.82}
-                  style={styles.cardTouchable}
+                  style={[
+                    styles.card,
+                    { backgroundColor: option.bg },
+                    isSelected && styles.cardSelected,
+                  ]}
                 >
-                  <AnimatedGradientCard
-                    style={[
-                      styles.card,
-                      isSelected && styles.cardSelected,
-                    ]}
-                  >
-                    <MaterialCommunityIcons name={option.icon} size={40} color="rgba(255,255,255,0.95)" />
-                    <Text style={[styles.cardLabel, textShadow]}>{option.label}</Text>
-                  </AnimatedGradientCard>
+                  <MaterialCommunityIcons name={option.icon} size={40} color={option.color} />
+                  <Text style={[styles.cardLabel, { color: ViveColors.text }]}>{option.label}</Text>
                 </TouchableOpacity>
               </Animated.View>
             );
@@ -137,19 +129,6 @@ const styles = StyleSheet.create({
   cardWrap: {
     flex: 1,
   },
-  cardTouchable: {
-    flex: 1,
-    borderRadius: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.18,
-        shadowRadius: 12,
-      },
-      android: { elevation: 5 },
-    }),
-  },
   card: {
     flex: 1,
     borderRadius: 20,
@@ -160,14 +139,22 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     paddingHorizontal: 24,
     paddingVertical: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+      },
+      android: { elevation: 3 },
+    }),
   },
   cardSelected: {
-    borderColor: 'rgba(255,255,255,0.85)',
+    borderColor: 'rgba(31,74,67,0.25)',
   },
   cardLabel: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,
-    color: '#FFFFFF',
     textAlign: 'center',
     lineHeight: 23,
     letterSpacing: -0.2,

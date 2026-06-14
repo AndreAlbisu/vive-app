@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AnimatedGradientCard } from '@/components/AnimatedGradientCard';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 
 type UniversoId = 'cuerpo' | 'mente' | 'alma';
@@ -26,25 +25,15 @@ const SUBCATEGORIAS: Record<UniversoId, { id: string; title: string; desc: strin
   ],
 };
 
+const UNIVERSO_COLORS: Record<UniversoId, { accent: string; accentLight: string }> = {
+  cuerpo: { accent: '#E8743B', accentLight: 'rgba(232, 116, 59, 0.10)' },
+  mente: { accent: '#5B8DB8', accentLight: 'rgba(91, 141, 184, 0.10)' },
+  alma: { accent: '#9B7FD4', accentLight: 'rgba(155, 127, 212, 0.10)' },
+};
+
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
   transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-});
-
-const textShadow = {
-  textShadowColor: 'rgba(0,0,0,0.25)',
-  textShadowOffset: { width: 0, height: 1 },
-  textShadowRadius: 4,
-};
-
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-  },
-  android: { elevation: 4 },
 });
 
 export default function OnboardingScreen4() {
@@ -54,6 +43,7 @@ export default function OnboardingScreen4() {
 
   const u = (universo as UniversoId) ?? 'cuerpo';
   const subcats = SUBCATEGORIAS[u] ?? SUBCATEGORIAS.cuerpo;
+  const { accent, accentLight } = UNIVERSO_COLORS[u] ?? UNIVERSO_COLORS.cuerpo;
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -121,25 +111,30 @@ export default function OnboardingScreen4() {
           {subcats.map((sub) => {
             const isSelected = selected === sub.id;
             return (
-              <View key={sub.id} style={[styles.cardShadowWrap, cardShadow]}>
-                <TouchableOpacity
-                  onPress={() => setSelected(sub.id)}
-                  activeOpacity={0.82}
-                  style={styles.cardTouchable}
-                >
-                  <AnimatedGradientCard
-                    style={[styles.card, isSelected && styles.cardSelected]}
-                  >
-                    <View style={styles.cardText}>
-                      <Text style={[styles.cardTitle, textShadow]}>{sub.title}</Text>
-                      <Text style={[styles.cardDesc, textShadow]}>{sub.desc}</Text>
-                    </View>
-                    {isSelected && (
-                      <Text style={[styles.cardArrow, textShadow]}>→</Text>
-                    )}
-                  </AnimatedGradientCard>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                key={sub.id}
+                style={[
+                  styles.card,
+                  { borderColor: isSelected ? accent : 'transparent' },
+                  isSelected && {
+                    backgroundColor: accentLight,
+                    shadowColor: accent,
+                    shadowOpacity: 0.22,
+                    shadowRadius: 16,
+                    elevation: 6,
+                  },
+                ]}
+                onPress={() => setSelected(sub.id)}
+                activeOpacity={0.82}
+              >
+                <View style={styles.cardText}>
+                  <Text style={styles.cardTitle}>{sub.title}</Text>
+                  <Text style={styles.cardDesc}>{sub.desc}</Text>
+                </View>
+                {isSelected && (
+                  <Text style={[styles.cardArrow, { color: accent }]}>→</Text>
+                )}
+              </TouchableOpacity>
             );
           })}
         </Animated.View>
@@ -254,24 +249,20 @@ const styles = StyleSheet.create({
   cards: {
     gap: 14,
   },
-  cardShadowWrap: {
-    borderRadius: 20,
-  },
-  cardTouchable: {
-    borderRadius: 20,
-  },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingVertical: 20,
     paddingHorizontal: 20,
     borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  cardSelected: {
-    borderColor: 'rgba(255,255,255,0.85)',
+    shadowColor: '#1F4A43',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 2,
   },
   cardText: {
     flex: 1,
@@ -280,18 +271,18 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: ViveColors.text,
     lineHeight: 22,
   },
   cardDesc: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.82)',
+    color: ViveColors.text,
+    opacity: 0.55,
     lineHeight: 18,
   },
   cardArrow: {
     fontSize: 20,
-    color: '#FFFFFF',
     flexShrink: 0,
   },
   footer: {

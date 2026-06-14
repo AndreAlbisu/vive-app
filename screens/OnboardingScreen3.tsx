@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AnimatedGradientCard } from '@/components/AnimatedGradientCard';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 
 type UniversoId = 'cuerpo' | 'mente' | 'alma';
@@ -13,31 +12,42 @@ const UNIVERSOS: {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   title: string;
   desc: string;
+  accent: string;
+  accentLight: string;
+  accentShadow: string;
 }[] = [
-  { id: 'cuerpo', icon: 'heart-outline', title: 'Cuerpo', desc: 'Cómo te sentís físicamente' },
-  { id: 'mente', icon: 'brain', title: 'Mente', desc: 'Tus emociones, tu cabeza y tus vínculos' },
-  { id: 'alma', icon: 'shimmer', title: 'Alma', desc: 'Tu rumbo, tu propósito y tu crecimiento' },
+  {
+    id: 'cuerpo',
+    icon: 'heart-outline',
+    title: 'Cuerpo',
+    desc: 'Cómo te sentís físicamente',
+    accent: '#E8743B',
+    accentLight: 'rgba(232, 116, 59, 0.10)',
+    accentShadow: 'rgba(232, 116, 59, 0.20)',
+  },
+  {
+    id: 'mente',
+    icon: 'brain',
+    title: 'Mente',
+    desc: 'Tus emociones, tu cabeza y tus vínculos',
+    accent: '#5B8DB8',
+    accentLight: 'rgba(91, 141, 184, 0.10)',
+    accentShadow: 'rgba(91, 141, 184, 0.20)',
+  },
+  {
+    id: 'alma',
+    icon: 'shimmer',
+    title: 'Alma',
+    desc: 'Tu rumbo, tu propósito y tu crecimiento',
+    accent: '#9B7FD4',
+    accentLight: 'rgba(155, 127, 212, 0.10)',
+    accentShadow: 'rgba(155, 127, 212, 0.20)',
+  },
 ];
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
   transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-});
-
-const textShadow = {
-  textShadowColor: 'rgba(0,0,0,0.25)',
-  textShadowOffset: { width: 0, height: 1 },
-  textShadowRadius: 4,
-};
-
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-  },
-  android: { elevation: 4 },
 });
 
 export default function OnboardingScreen3() {
@@ -110,28 +120,33 @@ export default function OnboardingScreen3() {
           {UNIVERSOS.map((u) => {
             const isSelected = selected === u.id;
             return (
-              <View key={u.id} style={[styles.cardShadowWrap, cardShadow]}>
-                <TouchableOpacity
-                  onPress={() => setSelected(u.id)}
-                  activeOpacity={0.82}
-                  style={styles.cardTouchable}
-                >
-                  <AnimatedGradientCard
-                    style={[styles.card, isSelected && styles.cardSelected]}
-                  >
-                    <View style={styles.iconBubble}>
-                      <MaterialCommunityIcons name={u.icon} size={28} color="rgba(255,255,255,0.95)" />
-                    </View>
-                    <View style={styles.cardText}>
-                      <Text style={[styles.cardTitle, textShadow]}>{u.title}</Text>
-                      <Text style={[styles.cardDesc, textShadow]}>{u.desc}</Text>
-                    </View>
-                    {isSelected && (
-                      <Text style={[styles.cardArrow, textShadow]}>→</Text>
-                    )}
-                  </AnimatedGradientCard>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                key={u.id}
+                style={[
+                  styles.card,
+                  { borderColor: isSelected ? u.accent : 'transparent' },
+                  isSelected && {
+                    backgroundColor: u.accentLight,
+                    shadowColor: u.accent,
+                    shadowOpacity: 0.22,
+                    shadowRadius: 16,
+                    elevation: 6,
+                  },
+                ]}
+                onPress={() => setSelected(u.id)}
+                activeOpacity={0.82}
+              >
+                <View style={[styles.iconBubble, { backgroundColor: isSelected ? 'rgba(255,255,255,0.55)' : u.accentLight }]}>
+                  <MaterialCommunityIcons name={u.icon} size={28} color={u.accent} />
+                </View>
+                <View style={styles.cardText}>
+                  <Text style={styles.cardTitle}>{u.title}</Text>
+                  <Text style={styles.cardDesc}>{u.desc}</Text>
+                </View>
+                {isSelected && (
+                  <Text style={[styles.cardArrow, { color: u.accent }]}>→</Text>
+                )}
+              </TouchableOpacity>
             );
           })}
         </Animated.View>
@@ -246,24 +261,20 @@ const styles = StyleSheet.create({
   cards: {
     gap: 14,
   },
-  cardShadowWrap: {
-    borderRadius: 20,
-  },
-  cardTouchable: {
-    borderRadius: 20,
-  },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingVertical: 18,
     paddingHorizontal: 20,
     borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  cardSelected: {
-    borderColor: 'rgba(255,255,255,0.85)',
+    shadowColor: '#1F4A43',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 2,
   },
   iconBubble: {
     width: 56,
@@ -271,7 +282,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
     flexShrink: 0,
   },
   cardText: {
@@ -281,18 +291,18 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontFamily: ViveFonts.bold,
     fontSize: 18,
-    color: '#FFFFFF',
+    color: ViveColors.text,
     lineHeight: 24,
   },
   cardDesc: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.82)',
+    color: ViveColors.text,
+    opacity: 0.55,
     lineHeight: 18,
   },
   cardArrow: {
     fontSize: 20,
-    color: '#FFFFFF',
     flexShrink: 0,
   },
   footer: {
