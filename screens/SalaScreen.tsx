@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,12 +24,21 @@ type Message = {
   time: string;
 };
 
+// 'locked' = >5 min before | 'soon' = ≤5 min before | 'live' = session time
+type SessionState = 'locked' | 'soon' | 'live';
+
 const COACH = {
   name: 'María González',
   specialty: 'Psicóloga',
   isOnline: true,
   initials: 'MG',
+  rating: 4.9,
+  reviewCount: 134,
+  priceFrom: 5500,
 };
+
+const SESSION_LABEL = 'Lunes 16 de junio · 11:00 hs';
+const MEET_LINK = 'https://meet.google.com/xxx-xxxx-xxx';
 
 const INITIAL_MESSAGES: Message[] = [
   { id: '1', text: '¡Hola Andre! ¿Cómo te sentís hoy?', sender: 'coach', time: '10:45' },
@@ -44,9 +54,9 @@ export default function SalaScreen() {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState('');
+  const [mockState, setMockState] = useState<SessionState>('locked');
   const scrollRef = useRef<ScrollView>(null);
 
-  // Per-message fade+slide animation
   const messageAnims = useRef<Record<string, Animated.Value>>({});
   function getAnim(id: string, initialValue = 0): Animated.Value {
     if (!messageAnims.current[id]) {
@@ -55,25 +65,34 @@ export default function SalaScreen() {
     return messageAnims.current[id];
   }
 
-  // Pre-create anims for initial messages before first render
   INITIAL_MESSAGES.forEach((m) => getAnim(m.id, 0));
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const inputAnim  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Header and input bar slide in
     Animated.stagger(80, [
       Animated.timing(headerAnim, { toValue: 1, duration: 320, useNativeDriver: true }),
       Animated.timing(inputAnim,  { toValue: 1, duration: 280, useNativeDriver: true }),
     ]).start();
 
-    // Stagger initial messages
     const msgAnimations = INITIAL_MESSAGES.map((m) =>
       Animated.timing(getAnim(m.id), { toValue: 1, duration: 350, useNativeDriver: true })
     );
     Animated.stagger(110, msgAnimations).start();
   }, []);
+
+  function handleVideoPress() {
+    if (mockState === 'locked') {
+      Alert.alert(
+        'Videollamada no disponible',
+        'La videollamada se habilita 5 minutos antes de tu sesión.',
+        [{ text: 'Entendido' }]
+      );
+    } else {
+      console.log('Abrir Google Meet:', MEET_LINK);
+    }
+  }
 
   function sendMessage() {
     const text = inputText.trim();
@@ -86,16 +105,12 @@ export default function SalaScreen() {
     setMessages((prev) => [...prev, msg]);
     setInputText('');
 
-    Animated.timing(getAnim(id), {
-      toValue: 1,
-      duration: 280,
-      useNativeDriver: true,
-    }).start();
-
+    Animated.timing(getAnim(id), { toValue: 1, duration: 280, useNativeDriver: true }).start();
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
   }
 
   const canSend = inputText.trim().length > 0;
+  const videoEnabled = mockState !== 'locked';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -107,6 +122,7 @@ export default function SalaScreen() {
         description="Tu espacio de comunicación con el coach. Escribí mensajes, compartí cómo te sentís e iniciá videollamadas."
         delay={1000}
       />
+
       {/* Header */}
       <Animated.View
         style={[
@@ -121,7 +137,20 @@ export default function SalaScreen() {
           <MaterialCommunityIcons name="arrow-left" size={22} color={ViveColors.text} />
         </TouchableOpacity>
 
-        <View style={styles.coachInfo}>
+        <TouchableOpacity
+          style={styles.coachInfo}
+          activeOpacity={0.7}
+          onPress={() => router.push({
+            pathname: '/profesional',
+            params: {
+              name: COACH.name,
+              specialty: COACH.specialty,
+              rating: String(COACH.rating),
+              reviewCount: String(COACH.reviewCount),
+              priceFrom: String(COACH.priceFrom),
+            },
+          })}
+        >
           <View style={styles.avatarWrap}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{COACH.initials}</Text>
@@ -132,19 +161,64 @@ export default function SalaScreen() {
             <Text style={styles.coachName}>{COACH.name}</Text>
             <View style={styles.statusRow}>
               <Text style={styles.coachSpecialty}>{COACH.specialty}</Text>
-              {COACH.isOnline && (
-                <Text style={styles.statusOnline}> · En línea</Text>
-              )}
+              {COACH.isOnline && <Text style={styles.statusOnline}> · En línea</Text>}
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.videoBtn} activeOpacity={0.7} hitSlop={8}>
-          <MaterialCommunityIcons name="video-outline" size={24} color={ViveColors.primary} />
+        <TouchableOpacity
+          style={[styles.videoBtn, videoEnabled && styles.videoBtnEnabled]}
+          activeOpacity={videoEnabled ? 0.7 : 1}
+          onPress={handleVideoPress}
+          hitSlop={8}
+        >
+          <MaterialCommunityIcons
+            name="video-outline"
+            size={24}
+            color={videoEnabled ? ViveColors.primary : `${ViveColors.text}44`}
+          />
         </TouchableOpacity>
       </Animated.View>
 
       <View style={styles.headerDivider} />
+
+      {/* Session Banner */}
+      <View style={[styles.banner, mockState !== 'locked' ? styles.bannerActive : styles.bannerDefault]}>
+        {mockState === 'locked' ? (
+          <Text style={styles.bannerText}>
+            Tu próxima sesión:{' '}
+            <Text style={styles.bannerBold}>{SESSION_LABEL}</Text>
+          </Text>
+        ) : (
+          <View style={styles.bannerRow}>
+            <Text style={styles.bannerTextActive}>
+              {mockState === 'soon'
+                ? '¡Tu sesión empieza en 5 minutos! ¿Entramos?'
+                : '¡Tu sesión está en curso ahora!'}
+            </Text>
+            <TouchableOpacity style={styles.joinBtn} onPress={handleVideoPress} activeOpacity={0.8}>
+              <Text style={styles.joinBtnText}>Unirse</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* Mock state selector */}
+      <View style={styles.mockSelector}>
+        <Text style={styles.mockLabel}>Test:</Text>
+        {(['locked', 'soon', 'live'] as SessionState[]).map((s) => (
+          <TouchableOpacity
+            key={s}
+            style={[styles.mockChip, mockState === s && styles.mockChipActive]}
+            onPress={() => setMockState(s)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.mockChipText, mockState === s && styles.mockChipTextActive]}>
+              {s === 'locked' ? '> 5 min' : s === 'soon' ? '5 min' : 'Ahora'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -170,9 +244,7 @@ export default function SalaScreen() {
                   isUser ? styles.messageRowUser : styles.messageRowCoach,
                   {
                     opacity: anim,
-                    transform: [{
-                      translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }),
-                    }],
+                    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
                   },
                 ]}
               >
@@ -308,13 +380,105 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: `${ViveColors.primary}15`,
+    backgroundColor: `${ViveColors.text}12`,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  videoBtnEnabled: {
+    backgroundColor: `${ViveColors.primary}18`,
   },
   headerDivider: {
     height: 1,
     backgroundColor: `${ViveColors.text}0D`,
+  },
+
+  // ── Session Banner ───────────────────────────────────────
+  banner: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  bannerDefault: {
+    backgroundColor: `${ViveColors.accent}28`,
+  },
+  bannerActive: {
+    backgroundColor: `${ViveColors.primary}15`,
+  },
+  bannerText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.text,
+    lineHeight: 18,
+  },
+  bannerBold: {
+    fontFamily: ViveFonts.semibold,
+  },
+  bannerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  bannerTextActive: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.text,
+    flex: 1,
+    lineHeight: 18,
+  },
+  joinBtn: {
+    backgroundColor: ViveColors.primary,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    flexShrink: 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: ViveColors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  joinBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13,
+    color: '#FFFFFF',
+  },
+
+  // ── Mock State Selector ──────────────────────────────────
+  mockSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    backgroundColor: ViveColors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: `${ViveColors.text}0D`,
+  },
+  mockLabel: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 10,
+    color: `${ViveColors.text}55`,
+    marginRight: 2,
+  },
+  mockChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: `${ViveColors.text}10`,
+  },
+  mockChipActive: {
+    backgroundColor: ViveColors.text,
+  },
+  mockChipText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 10,
+    color: ViveColors.text,
+  },
+  mockChipTextActive: {
+    color: '#FFFFFF',
   },
 
   // ── Messages ─────────────────────────────────────────────

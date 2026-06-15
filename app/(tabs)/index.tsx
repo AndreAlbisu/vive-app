@@ -79,11 +79,31 @@ export default function InicioScreen() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}>
 
-        {/* Logo centrado */}
+        {/* Logo centrado + avatar (izq) + sesiones (der) */}
         <Animated.View style={[styles.logoRow, fadeUp(logoAnim)]}>
-          <Text style={styles.logo}>v</Text>
-          <MaterialCommunityIcons name="sprout" size={26} color={ViveColors.primary} style={styles.logoIcon} />
-          <Text style={styles.logo}>ve</Text>
+          <TouchableOpacity
+            style={styles.profileBtn}
+            onPress={() => router.push('/profile-own')}
+            hitSlop={8}
+            activeOpacity={0.75}
+          >
+            <View style={styles.profileAvatar}>
+              <Text style={styles.profileAvatarText}>{mockUser.name.charAt(0)}</Text>
+            </View>
+          </TouchableOpacity>
+          <View style={styles.logoCenter}>
+            <Text style={styles.logo}>v</Text>
+            <MaterialCommunityIcons name="sprout" size={26} color={ViveColors.primary} style={styles.logoIcon} />
+            <Text style={styles.logo}>ve</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.sessionsBtn}
+            onPress={() => router.push('/sessions')}
+            hitSlop={8}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="message-outline" size={24} color={ViveColors.text} />
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Saludo */}
@@ -191,6 +211,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
+    position: 'relative',
+  },
+  logoCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   logo: {
     fontFamily: ViveFonts.frauncesSerif,
@@ -201,6 +226,31 @@ const styles = StyleSheet.create({
   },
   logoIcon: {
     marginTop: 2,
+  },
+  profileBtn: {
+    position: 'absolute',
+    left: 0,
+    padding: 4,
+  },
+  profileAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: `${ViveColors.primary}22`,
+    borderWidth: 1.5,
+    borderColor: ViveColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileAvatarText: {
+    fontFamily: ViveFonts.bold,
+    fontSize: 14,
+    color: ViveColors.primary,
+  },
+  sessionsBtn: {
+    position: 'absolute',
+    right: 0,
+    padding: 4,
   },
 
   // Greeting

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import {
   View,
   Text,
@@ -75,6 +76,7 @@ function ReviewAvatar({ name }: { name: string }) {
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 export default function ProfesionalScreen() {
   const router = useRouter();
+  const { isLoggedIn, requestAuth } = useAuth();
   const params = useLocalSearchParams<{
     name?: string;
     specialty?: string;
@@ -205,7 +207,8 @@ export default function ProfesionalScreen() {
             <TouchableOpacity
               style={s.btnPrimary}
               activeOpacity={0.85}
-              onPress={() =>
+              onPress={() => {
+                if (!isLoggedIn) { requestAuth(); return; }
                 router.push({
                   pathname: '/booking-calendar',
                   params: {
@@ -213,8 +216,8 @@ export default function ProfesionalScreen() {
                     specialty: prof.specialty,
                     priceFrom: String(prof.priceFrom),
                   },
-                })
-              }>
+                });
+              }}>
               <Text style={s.btnPrimaryText}>Reservar sesión</Text>
             </TouchableOpacity>
             <TouchableOpacity

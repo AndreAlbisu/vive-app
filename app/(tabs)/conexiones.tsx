@@ -57,7 +57,7 @@ const TOPIC_GAP = 10;
 const TOPIC_PAGE = (TOPIC_W + TOPIC_GAP) * 3;
 const TOPIC_DOTS = Math.ceil(TOPICS.length / 3);
 
-const COACH_W   = 158;
+const COACH_W   = 126;
 const COACH_GAP = 12;
 const COACH_PAGE = (COACH_W + COACH_GAP) * 2;
 const COACH_DOTS = Math.ceil(COACHES.length / 2);
@@ -191,7 +191,7 @@ export default function ConexionesScreen() {
         </View>
 
         {/* ── Destacados ───────────────────────────────────────────────── */}
-        <View style={s.section}>
+        <View style={[s.section, { marginBottom: 8 }]}>
           <View style={s.sectionRow}>
             <Text style={s.sectionTitle}>Destacados de la semana</Text>
             <TouchableOpacity activeOpacity={0.7}>
@@ -209,7 +209,7 @@ export default function ConexionesScreen() {
               <ScaleCard key={coach.id} style={s.coachCard} onPress={() => goToPerfil(coach)}>
                 {/* Foto placeholder */}
                 <View style={s.coachPhoto}>
-                  <MaterialIcons name="person" size={52} color="#C0BAB4" />
+                  <MaterialIcons name="person" size={42} color="#C0BAB4" />
                   <TouchableOpacity
                     style={s.favBtn}
                     onPress={() => toggleFav(coach.id)}
@@ -238,9 +238,6 @@ export default function ConexionesScreen() {
 
           <Dots count={COACH_DOTS} active={coachDot} />
         </View>
-
-        {/* ── Espaciador ───────────────────────────────────────────────── */}
-        <View style={{ flex: 1 }} />
 
         {/* ── Tarjeta Sofía ────────────────────────────────────────────── */}
         <ScaleCard
@@ -280,7 +277,7 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: ViveColors.background,
     paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: 100,
   },
 
   // Header
@@ -288,7 +285,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingHorizontal: 20,
-    marginBottom: 14,
+    marginBottom: 22,
   },
   title: {
     fontFamily: ViveFonts.semibold,
@@ -315,7 +312,7 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 28,
     paddingHorizontal: 12,
     paddingVertical: Platform.OS === 'ios' ? 11 : 6,
     gap: 8,
@@ -331,7 +328,7 @@ const s = StyleSheet.create({
 
   // Secciones
   section: {
-    marginBottom: 14,
+    marginBottom: 20,
   },
   sectionRow: {
     flexDirection: 'row',
@@ -398,7 +395,7 @@ const s = StyleSheet.create({
   },
   coachPhoto: {
     width: COACH_W,
-    height: 102,
+    height: 82,
     backgroundColor: '#EDE7E0',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
@@ -414,7 +411,7 @@ const s = StyleSheet.create({
     padding: 4,
   },
   coachInfo: {
-    padding: 12,
+    padding: 10,
   },
   coachName: {
     fontFamily: ViveFonts.semibold,
@@ -447,11 +444,14 @@ const s = StyleSheet.create({
 
   // Sofía
   sofiaCard: {
+    position: 'absolute',
+    bottom: 16,
+    left: 20,
+    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    marginHorizontal: 20,
     paddingVertical: 16,
     paddingHorizontal: 18,
     ...shadow,
