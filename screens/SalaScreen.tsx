@@ -10,12 +10,16 @@ import {
   Platform,
   Animated,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
+import { encryptMessage, decryptMessage } from '@/lib/encryption';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 type Message = {
   id: string;
@@ -40,21 +44,32 @@ const COACH = {
 const SESSION_LABEL = 'Lunes 16 de junio · 11:00 hs';
 const MEET_LINK = 'https://meet.google.com/xxx-xxxx-xxx';
 
-const INITIAL_MESSAGES: Message[] = [
-  { id: '1', text: '¡Hola Andre! ¿Cómo te sentís hoy?', sender: 'coach', time: '10:45' },
-  { id: '2', text: 'Bien, un poco cansado pero bien. Quería contarte lo que pasó esta semana.', sender: 'user', time: '10:47' },
-  { id: '3', text: 'Contame, estoy acá para escucharte 🙂', sender: 'coach', time: '10:48' },
-];
-
 function nowTime() {
   return new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function rowToMessage(row: Record<string, unknown>, userId: string): Message {
+  return {
+    id: row.id as string,
+    text: row.content as string,
+    sender: (row.sender_id as string) === userId ? 'user' : 'coach',
+    time: new Date(row.created_at as string).toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  };
+}
+
 export default function SalaScreen() {
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const { coach_id } = useLocalSearchParams<{ coach_id: string }>();
+  const { user } = useAuth();
+
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [mockState, setMockState] = useState<SessionState>('locked');
+  const [salaId, setSalaId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
 
   const messageAnims = useRef<Record<string, Animated.Value>>({});
@@ -65,8 +80,6 @@ export default function SalaScreen() {
     return messageAnims.current[id];
   }
 
-  INITIAL_MESSAGES.forEach((m) => getAnim(m.id, 0));
-
   const headerAnim = useRef(new Animated.Value(0)).current;
   const inputAnim  = useRef(new Animated.Value(0)).current;
 
@@ -75,12 +88,100 @@ export default function SalaScreen() {
       Animated.timing(headerAnim, { toValue: 1, duration: 320, useNativeDriver: true }),
       Animated.timing(inputAnim,  { toValue: 1, duration: 280, useNativeDriver: true }),
     ]).start();
-
-    const msgAnimations = INITIAL_MESSAGES.map((m) =>
-      Animated.timing(getAnim(m.id), { toValue: 1, duration: 350, useNativeDriver: true })
-    );
-    Animated.stagger(110, msgAnimations).start();
   }, []);
+
+  // Find or create sala, then load messages
+  useEffect(() => {
+    if (!user || !coach_id) {
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
+    async function init() {
+      let id: string | null = null;
+
+      const { data: existing } = await supabase
+        .from('salas')
+        .select('id')
+        .eq('user_id', user!.id)
+        .eq('coach_id', coach_id)
+        .maybeSingle();
+
+      if (existing) {
+        id = existing.id as string;
+      } else {
+        const { data: created, error } = await supabase
+          .from('salas')
+          .insert({ user_id: user!.id, coach_id })
+          .select('id')
+          .single();
+        if (error) console.error('[Sala] Error creando sala:', error.message);
+        if (created) id = (created as { id: string }).id;
+      }
+
+      if (!mounted || !id) {
+        if (mounted) setLoading(false);
+        return;
+      }
+
+      setSalaId(id);
+
+      const { data: msgs, error: msgsError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('sala_id', id)
+        .order('created_at', { ascending: true });
+
+      if (!mounted) return;
+      if (msgsError) console.error('[Sala] Error cargando mensajes:', msgsError.message);
+
+      if (msgs && msgs.length > 0) {
+        const mapped = (msgs as Record<string, unknown>[]).map(row => rowToMessage(row, user!.id));
+        mapped.forEach(m => getAnim(m.id, 0));
+        setMessages(mapped);
+        requestAnimationFrame(() => {
+          const anims = mapped.map(m =>
+            Animated.timing(getAnim(m.id), { toValue: 1, duration: 350, useNativeDriver: true })
+          );
+          Animated.stagger(60, anims).start();
+          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 80);
+        });
+      }
+
+      setLoading(false);
+    }
+
+    init();
+    return () => { mounted = false; };
+  }, [user?.id, coach_id]);
+
+  // Realtime subscription for incoming messages
+  useEffect(() => {
+    if (!salaId || !user) return;
+
+    const channel = supabase
+      .channel(`sala:${salaId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `sala_id=eq.${salaId}` },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          // Skip own messages — already shown optimistically
+          if ((row.sender_id as string) === user.id) return;
+
+          const msg = rowToMessage(row, user.id);
+          getAnim(msg.id, 0);
+          setMessages(prev => [...prev, msg]);
+          Animated.timing(getAnim(msg.id), { toValue: 1, duration: 280, useNativeDriver: true }).start();
+          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [salaId, user?.id]);
 
   function handleVideoPress() {
     if (mockState === 'locked') {
@@ -94,22 +195,31 @@ export default function SalaScreen() {
     }
   }
 
-  function sendMessage() {
+  async function sendMessage() {
     const text = inputText.trim();
-    if (!text) return;
+    if (!text || !salaId || !user) return;
 
-    const id = Date.now().toString();
-    const msg: Message = { id, text, sender: 'user', time: nowTime() };
+    const encrypted = encryptMessage(text);
+    const optimisticId = `opt_${Date.now()}`;
+    const optimistic: Message = { id: optimisticId, text: encrypted, sender: 'user', time: nowTime() };
 
-    getAnim(id, 0);
-    setMessages((prev) => [...prev, msg]);
+    getAnim(optimisticId, 0);
+    setMessages(prev => [...prev, optimistic]);
     setInputText('');
-
-    Animated.timing(getAnim(id), { toValue: 1, duration: 280, useNativeDriver: true }).start();
+    Animated.timing(getAnim(optimisticId), { toValue: 1, duration: 280, useNativeDriver: true }).start();
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+
+    const { error } = await supabase
+      .from('messages')
+      .insert({ sala_id: salaId, sender_id: user.id, content: encrypted });
+
+    if (error) {
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
+      Alert.alert('Error', 'No se pudo enviar el mensaje.');
+    }
   }
 
-  const canSend = inputText.trim().length > 0;
+  const canSend = inputText.trim().length > 0 && !!salaId && !!user;
   const videoEnabled = mockState !== 'locked';
 
   return (
@@ -233,6 +343,14 @@ export default function SalaScreen() {
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
         >
+          {loading && (
+            <ActivityIndicator color={ViveColors.primary} style={{ marginTop: 40 }} />
+          )}
+          {!loading && messages.length === 0 && (
+            <Text style={styles.emptyText}>
+              Todavía no hay mensajes.{'\n'}¡Empezá la conversación!
+            </Text>
+          )}
           {messages.map((msg) => {
             const isUser = msg.sender === 'user';
             const anim = getAnim(msg.id, 1);
@@ -255,7 +373,7 @@ export default function SalaScreen() {
                 )}
                 <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleCoach]}>
                   <Text style={[styles.bubbleText, isUser ? styles.bubbleTextUser : styles.bubbleTextCoach]}>
-                    {msg.text}
+                    {decryptMessage(msg.text)}
                   </Text>
                   <Text style={[styles.bubbleTime, isUser ? styles.bubbleTimeUser : styles.bubbleTimeCoach]}>
                     {msg.time}
@@ -490,6 +608,14 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 12,
     gap: 12,
+  },
+  emptyText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: `${ViveColors.text}55`,
+    textAlign: 'center',
+    marginTop: 60,
+    lineHeight: 22,
   },
   messageRow: {
     flexDirection: 'row',

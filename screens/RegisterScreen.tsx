@@ -11,11 +11,15 @@ import {
   Animated,
   LayoutAnimation,
   UIManager,
+  ActivityIndicator,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -28,6 +32,7 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { signUpWithEmail } = useAuth();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -37,6 +42,11 @@ export default function RegisterScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   const logoAnim    = useRef(new Animated.Value(0)).current;
   const headingAnim = useRef(new Animated.Value(0)).current;
@@ -68,7 +78,7 @@ export default function RegisterScreen() {
     setErrors(prev => ({ ...prev, [field]: false }));
   }
 
-  function handleRegister() {
+  async function handleRegister() {
     const newErrors: Record<string, boolean> = {
       name: !name.trim(),
       email: !email.trim(),
@@ -76,19 +86,26 @@ export default function RegisterScreen() {
       confirm: !confirmPassword.trim() || confirmPassword !== password,
     };
     setErrors(newErrors);
+    setServerError(null);
     if (Object.values(newErrors).some(Boolean)) return;
-    console.log('[Auth] register:', name, email);
+
+    setLoading(true);
+    const error = await signUpWithEmail(email.trim(), password, name.trim(), acceptedTerms);
+    setLoading(false);
+
+    if (error) {
+      setServerError(error);
+      return;
+    }
     router.replace('/(tabs)');
   }
 
   function handleGoogle() {
-    console.log('[Auth] Google register');
-    router.replace('/(tabs)');
+    console.log('[Auth] Google register — próximamente');
   }
 
   function handleApple() {
-    console.log('[Auth] Apple register');
-    router.replace('/(tabs)');
+    console.log('[Auth] Apple register — próximamente');
   }
 
   return (
@@ -230,8 +247,50 @@ export default function RegisterScreen() {
                   <Text style={s.errorHint}>Las contraseñas no coinciden.</Text>
                 )}
 
-                <TouchableOpacity style={s.enterBtn} onPress={handleRegister} activeOpacity={0.85}>
-                  <Text style={s.enterBtnText}>Crear cuenta</Text>
+                {serverError && (
+                  <Text style={s.serverError}>{serverError}</Text>
+                )}
+
+                {/* Checkbox de términos */}
+                <TouchableOpacity
+                  style={s.termsRow}
+                  onPress={() => setAcceptedTerms(v => !v)}
+                  activeOpacity={0.8}
+                >
+                  <MaterialCommunityIcons
+                    name={acceptedTerms ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                    size={22}
+                    color={acceptedTerms ? ViveColors.primary : `${ViveColors.text}55`}
+                  />
+                  <Text style={s.termsText}>
+                    {'Leí y acepto los '}
+                    <Text
+                      style={s.termsLink}
+                      onPress={() => setShowTermsModal(true)}
+                    >
+                      Términos y condiciones
+                    </Text>
+                    {' y la '}
+                    <Text
+                      style={s.termsLink}
+                      onPress={() => setShowPrivacyModal(true)}
+                    >
+                      Política de privacidad
+                    </Text>
+                    {' de VIVE'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[s.enterBtn, (!acceptedTerms || loading) && s.enterBtnDisabled]}
+                  onPress={handleRegister}
+                  activeOpacity={0.85}
+                  disabled={!acceptedTerms || loading}
+                >
+                  {loading
+                    ? <ActivityIndicator size="small" color="#FFFFFF" />
+                    : <Text style={s.enterBtnText}>Crear cuenta</Text>
+                  }
                 </TouchableOpacity>
               </View>
             )}
@@ -245,15 +304,99 @@ export default function RegisterScreen() {
                 <Text style={s.footerLink}>Iniciá sesión</Text>
               </TouchableOpacity>
             </View>
-            <Text style={s.legalText}>
-              Al registrarte aceptás nuestros{' '}
-              <Text style={s.legalLink}>Términos y condiciones</Text>
-              {' '}y{' '}
-              <Text style={s.legalLink}>Política de privacidad</Text>
-            </Text>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Modal Términos y condiciones ─────────────────────── */}
+      <Modal visible={showTermsModal} animationType="slide" transparent onRequestClose={() => setShowTermsModal(false)}>
+        <Pressable style={s.modalOverlay} onPress={() => setShowTermsModal(false)}>
+          <Pressable style={s.modalSheet} onPress={() => {}}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Términos y condiciones</Text>
+              <TouchableOpacity onPress={() => setShowTermsModal(false)} hitSlop={10}>
+                <MaterialCommunityIcons name="close" size={22} color={`${ViveColors.text}88`} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} style={s.modalBody}>
+              <Text style={s.modalSection}>Bienvenida/o a VIVE</Text>
+              <Text style={s.modalText}>
+                VIVE es una plataforma que conecta personas con profesionales independientes del bienestar (coaches, terapeutas, nutricionistas y otros). Al crear tu cuenta aceptás estos términos.
+              </Text>
+
+              <Text style={s.modalSection}>Qué hacemos y qué no hacemos</Text>
+              <Text style={s.modalText}>
+                VIVE actúa como canal de conexión entre vos y los profesionales. No diagnosticamos ni tratamos ninguna condición de salud. Las recomendaciones que recibís de los profesionales son orientativas y no reemplazan la consulta médica.
+              </Text>
+
+              <Text style={s.modalSection}>Profesionales independientes</Text>
+              <Text style={s.modalText}>
+                Los profesionales que usan VIVE son independientes y son responsables de su propia práctica, habilitaciones y del contenido que comparten. VIVE no avala ni garantiza los resultados de ninguna sesión o consulta.
+              </Text>
+
+              <Text style={s.modalSection}>Tus conversaciones</Text>
+              <Text style={s.modalText}>
+                Los chats que tenés con los profesionales se guardan de forma segura en nuestros servidores para permitir la continuidad de las conversaciones. No compartimos tus conversaciones ni tus datos personales con terceros.
+              </Text>
+
+              <Text style={s.modalSection}>Uso responsable</Text>
+              <Text style={s.modalText}>
+                Al usar VIVE te comprometés a brindar información verdadera y a usar la plataforma de forma respetuosa. VIVE puede suspender cuentas que violen estos términos.
+              </Text>
+
+              <Text style={s.modalFooterNote}>Última actualización: junio 2026</Text>
+            </ScrollView>
+            <TouchableOpacity style={s.modalBtn} onPress={() => { setAcceptedTerms(true); setShowTermsModal(false); }} activeOpacity={0.85}>
+              <Text style={s.modalBtnText}>Entendido</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ── Modal Política de privacidad ─────────────────────── */}
+      <Modal visible={showPrivacyModal} animationType="slide" transparent onRequestClose={() => setShowPrivacyModal(false)}>
+        <Pressable style={s.modalOverlay} onPress={() => setShowPrivacyModal(false)}>
+          <Pressable style={s.modalSheet} onPress={() => {}}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Política de privacidad</Text>
+              <TouchableOpacity onPress={() => setShowPrivacyModal(false)} hitSlop={10}>
+                <MaterialCommunityIcons name="close" size={22} color={`${ViveColors.text}88`} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} style={s.modalBody}>
+              <Text style={s.modalSection}>Qué información recopilamos</Text>
+              <Text style={s.modalText}>
+                Al registrarte guardamos tu nombre, tu dirección de email y las conversaciones que tenés con los profesionales dentro de la app.
+              </Text>
+
+              <Text style={s.modalSection}>Cómo protegemos tus datos</Text>
+              <Text style={s.modalText}>
+                Tus conversaciones se almacenan encriptadas en nuestros servidores. Solo vos y el profesional con quien chateás pueden ver el contenido de esas conversaciones. El equipo de VIVE no accede al contenido de tus chats salvo ante requerimiento legal.
+              </Text>
+
+              <Text style={s.modalSection}>Lo que nunca hacemos</Text>
+              <Text style={s.modalText}>
+                Nunca usamos tus datos para mostrarte publicidad personalizada ni los vendemos o cedemos a terceros con fines comerciales.
+              </Text>
+
+              <Text style={s.modalSection}>Tus derechos</Text>
+              <Text style={s.modalText}>
+                Podés solicitar la eliminación de tu cuenta y de todos tus datos en cualquier momento escribiéndonos a privacidad@vivewellness.app. Procesamos las solicitudes en un plazo máximo de 30 días.
+              </Text>
+
+              <Text style={s.modalSection}>Marco legal</Text>
+              <Text style={s.modalText}>
+                Cumplimos con la Ley 25.326 de Protección de Datos Personales de la República Argentina (Habeas Data).
+              </Text>
+
+              <Text style={s.modalFooterNote}>Última actualización: junio 2026</Text>
+            </ScrollView>
+            <TouchableOpacity style={s.modalBtn} onPress={() => { setAcceptedTerms(true); setShowPrivacyModal(false); }} activeOpacity={0.85}>
+              <Text style={s.modalBtnText}>Entendido</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -434,12 +577,21 @@ const s = StyleSheet.create({
     color: '#E05C5C',
     marginTop: -4,
   },
+  serverError: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#E05C5C',
+    textAlign: 'center',
+    marginTop: -2,
+  },
   enterBtn: {
     backgroundColor: ViveColors.primary,
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 4,
+    minHeight: 52,
+    justifyContent: 'center',
     ...Platform.select({
       ios: {
         shadowColor: ViveColors.primary,
@@ -450,11 +602,36 @@ const s = StyleSheet.create({
       android: { elevation: 4 },
     }),
   },
+  enterBtnLoading: {
+    opacity: 0.75,
+  },
+  enterBtnDisabled: {
+    opacity: 0.45,
+  },
   enterBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,
     color: '#FFFFFF',
     letterSpacing: 0.2,
+  },
+
+  // Terms checkbox
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 2,
+  },
+  termsText: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: `${ViveColors.text}BB`,
+    lineHeight: 19,
+  },
+  termsLink: {
+    fontFamily: ViveFonts.medium,
+    color: ViveColors.primary,
   },
 
   // Footer
@@ -477,17 +654,67 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: ViveColors.primary,
   },
-  legalText: {
+
+  // Modals
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: ViveColors.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 36,
+    maxHeight: '82%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 18,
+    color: ViveColors.text,
+    letterSpacing: -0.3,
+  },
+  modalBody: {
+    marginBottom: 20,
+  },
+  modalSection: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 14,
+    color: ViveColors.text,
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  modalText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: `${ViveColors.text}CC`,
+    lineHeight: 22,
+  },
+  modalFooterNote: {
     fontFamily: ViveFonts.regular,
     fontSize: 11,
-    color: ViveColors.text,
-    opacity: 0.4,
+    color: `${ViveColors.text}55`,
+    marginTop: 20,
+    marginBottom: 8,
     textAlign: 'center',
-    lineHeight: 17,
-    paddingHorizontal: 12,
   },
-  legalLink: {
-    fontFamily: ViveFonts.medium,
-    textDecorationLine: 'underline',
+  modalBtn: {
+    backgroundColor: ViveColors.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modalBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#FFFFFF',
   },
 });

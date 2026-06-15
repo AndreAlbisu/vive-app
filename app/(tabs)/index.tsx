@@ -33,6 +33,7 @@ const mockSession = {
   specialty: 'Psicóloga',
   date: 'Lunes 16 de junio',
   time: '11:00 hs',
+  coachId: '1',
 };
 
 const mockRecommendation = {
@@ -156,7 +157,7 @@ export default function InicioScreen() {
                 {mockSession.date} · {mockSession.time}
               </Text>
             </View>
-            <TouchableOpacity style={styles.verSalaButton} onPress={() => router.push('/sala')}>
+            <TouchableOpacity style={styles.verSalaButton} onPress={() => router.push({ pathname: '/sala', params: { coach_id: mockSession.coachId } })}>
               <Text style={styles.verSalaButtonText}>Ver sala</Text>
             </TouchableOpacity>
           </View>

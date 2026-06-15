@@ -11,6 +11,7 @@ import {
   Platform,
   UIManager,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -24,9 +25,10 @@ interface AuthModalProps {
   visible: boolean;
   onDismiss: () => void;
   onLogin: () => void;
+  signInWithEmail: (email: string, password: string) => Promise<string | null>;
 }
 
-export function AuthModal({ visible, onDismiss, onLogin }: AuthModalProps) {
+export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail }: AuthModalProps) {
   const router = useRouter();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
@@ -34,6 +36,8 @@ export function AuthModal({ visible, onDismiss, onLogin }: AuthModalProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
 
   function toggleEmailForm() {
@@ -44,30 +48,37 @@ export function AuthModal({ visible, onDismiss, onLogin }: AuthModalProps) {
       setPassword('');
       setEmailError(false);
       setPasswordError(false);
+      setServerError(null);
     }
   }
 
-  function handleEmailLogin() {
+  async function handleEmailLogin() {
     const eErr = !email.trim();
     const pErr = !password.trim();
     setEmailError(eErr);
     setPasswordError(pErr);
     if (eErr || pErr) return;
-    console.log('[Auth] modal email login:', email);
+
+    setLoading(true);
+    setServerError(null);
+    const error = await signInWithEmail(email, password);
+    setLoading(false);
+
+    if (error) {
+      setServerError(error);
+      return;
+    }
     reset();
     onLogin();
+    router.replace('/(tabs)');
   }
 
   function handleGoogle() {
-    console.log('[Auth] modal Google login');
-    reset();
-    onLogin();
+    console.log('[Auth] modal Google login — próximamente');
   }
 
   function handleApple() {
-    console.log('[Auth] modal Apple login');
-    reset();
-    onLogin();
+    console.log('[Auth] modal Apple login — próximamente');
   }
 
   function reset() {
@@ -76,6 +87,8 @@ export function AuthModal({ visible, onDismiss, onLogin }: AuthModalProps) {
     setPassword('');
     setEmailError(false);
     setPasswordError(false);
+    setServerError(null);
+    setLoading(false);
     setFocused(null);
   }
 
@@ -92,49 +105,39 @@ export function AuthModal({ visible, onDismiss, onLogin }: AuthModalProps) {
       statusBarTranslucent
       onRequestClose={handleDismiss}
     >
-      {/* Outer Pressable = dark backdrop → dismiss on tap */}
       <Pressable style={s.backdrop} onPress={handleDismiss}>
         <KeyboardAvoidingView
           style={s.center}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           pointerEvents="box-none"
         >
-          {/* Inner Pressable = card → stops propagation so tapping card doesn't dismiss */}
           <Pressable style={s.card} onPress={() => {}}>
 
-            {/* Logo */}
             <Text style={s.logo}>vive</Text>
-
-            {/* Title + subtitle */}
             <Text style={s.title}>Para continuar, ingresá a tu cuenta</Text>
             <Text style={s.subtitle}>Es gratis y solo tarda un segundo.</Text>
 
-            {/* Google */}
             <TouchableOpacity style={s.googleBtn} onPress={handleGoogle} activeOpacity={0.85}>
               <MaterialCommunityIcons name="google" size={18} color="#4285F4" />
               <Text style={s.googleBtnText}>Continuar con Google</Text>
             </TouchableOpacity>
 
-            {/* Apple */}
             <TouchableOpacity style={s.appleBtn} onPress={handleApple} activeOpacity={0.85}>
               <MaterialCommunityIcons name="apple" size={18} color="#FFFFFF" />
               <Text style={s.appleBtnText}>Continuar con Apple</Text>
             </TouchableOpacity>
 
-            {/* Separator */}
             <View style={s.dividerRow}>
               <View style={s.dividerLine} />
               <Text style={s.dividerText}>o</Text>
               <View style={s.dividerLine} />
             </View>
 
-            {/* Email button */}
             <TouchableOpacity style={s.emailBtn} onPress={toggleEmailForm} activeOpacity={0.85}>
               <MaterialCommunityIcons name="email-outline" size={18} color={ViveColors.primary} />
               <Text style={s.emailBtnText}>Usar email</Text>
             </TouchableOpacity>
 
-            {/* Expandable email form */}
             {showEmailForm && (
               <View style={s.emailForm}>
                 <TextInput
@@ -144,13 +147,14 @@ export function AuthModal({ visible, onDismiss, onLogin }: AuthModalProps) {
                     focused === 'email' && s.inputFocused,
                   ]}
                   value={email}
-                  onChangeText={v => { setEmail(v); setEmailError(false); }}
+                  onChangeText={v => { setEmail(v); setEmailError(false); setServerError(null); }}
                   placeholder="tu@email.com"
                   placeholderTextColor={`${ViveColors.text}55`}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   onFocus={() => setFocused('email')}
                   onBlur={() => setFocused(null)}
+                  editable={!loading}
                 />
                 <View style={[
                   s.inputRow,
@@ -160,12 +164,13 @@ export function AuthModal({ visible, onDismiss, onLogin }: AuthModalProps) {
                   <TextInput
                     style={s.inputInner}
                     value={password}
-                    onChangeText={v => { setPassword(v); setPasswordError(false); }}
+                    onChangeText={v => { setPassword(v); setPasswordError(false); setServerError(null); }}
                     placeholder="Contraseña"
                     placeholderTextColor={`${ViveColors.text}55`}
                     secureTextEntry={!showPassword}
                     onFocus={() => setFocused('pass')}
                     onBlur={() => setFocused(null)}
+                    editable={!loading}
                   />
                   <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={8}>
                     <MaterialCommunityIcons
@@ -175,13 +180,36 @@ export function AuthModal({ visible, onDismiss, onLogin }: AuthModalProps) {
                     />
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={s.enterBtn} onPress={handleEmailLogin} activeOpacity={0.85}>
-                  <Text style={s.enterBtnText}>Entrar</Text>
+
+                {serverError && (
+                  <Text style={s.serverError}>{serverError}</Text>
+                )}
+
+                <TouchableOpacity
+                  style={[s.enterBtn, loading && s.enterBtnLoading]}
+                  onPress={handleEmailLogin}
+                  activeOpacity={0.85}
+                  disabled={loading}
+                >
+                  {loading
+                    ? <ActivityIndicator size="small" color="#FFFFFF" />
+                    : <Text style={s.enterBtnText}>Entrar</Text>
+                  }
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* Ahora no */}
+            <View style={s.registerRow}>
+              <Text style={s.registerPrompt}>¿No tenés cuenta?</Text>
+              <TouchableOpacity
+                onPress={() => { handleDismiss(); router.push('/register'); }}
+                hitSlop={8}
+                activeOpacity={0.7}
+              >
+                <Text style={s.registerLink}>Registrate</Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity onPress={handleDismiss} style={s.dismissBtn} activeOpacity={0.7}>
               <Text style={s.dismissText}>Ahora no</Text>
             </TouchableOpacity>
@@ -225,7 +253,6 @@ const s = StyleSheet.create({
     }),
   },
 
-  // Logo
   logo: {
     fontFamily: ViveFonts.bold,
     fontSize: 28,
@@ -234,8 +261,6 @@ const s = StyleSheet.create({
     letterSpacing: -0.5,
     marginBottom: 2,
   },
-
-  // Title + subtitle
   title: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,
@@ -252,7 +277,6 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
 
-  // Social buttons
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -284,7 +308,6 @@ const s = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  // Divider
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -302,7 +325,6 @@ const s = StyleSheet.create({
     color: `${ViveColors.text}55`,
   },
 
-  // Email button
   emailBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -320,7 +342,6 @@ const s = StyleSheet.create({
     color: ViveColors.primary,
   },
 
-  // Email form
   emailForm: {
     gap: 10,
   },
@@ -359,11 +380,23 @@ const s = StyleSheet.create({
     color: ViveColors.text,
     padding: 0,
   },
+  serverError: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#E05C5C',
+    textAlign: 'center',
+    marginTop: -2,
+  },
   enterBtn: {
     backgroundColor: ViveColors.primary,
     borderRadius: 12,
     paddingVertical: 13,
     alignItems: 'center',
+    minHeight: 46,
+    justifyContent: 'center',
+  },
+  enterBtnLoading: {
+    opacity: 0.75,
   },
   enterBtnText: {
     fontFamily: ViveFonts.semibold,
@@ -371,7 +404,25 @@ const s = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  // Dismiss
+  registerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  registerPrompt: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: ViveColors.text,
+    opacity: 0.6,
+  },
+  registerLink: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13,
+    color: ViveColors.primary,
+  },
+
   dismissBtn: {
     alignItems: 'center',
     paddingVertical: 4,

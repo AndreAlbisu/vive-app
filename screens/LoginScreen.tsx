@@ -11,11 +11,13 @@ import {
   Animated,
   LayoutAnimation,
   UIManager,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -28,6 +30,7 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signInWithEmail } = useAuth();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,6 +38,8 @@ export default function LoginScreen() {
   const [focused, setFocused] = useState<string | null>(null);
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const logoAnim    = useRef(new Animated.Value(0)).current;
   const headingAnim = useRef(new Animated.Value(0)).current;
@@ -61,24 +66,31 @@ export default function LoginScreen() {
     }
   }
 
-  function handleEmailLogin() {
+  async function handleEmailLogin() {
     const eErr = !email.trim();
     const pErr = !password.trim();
     setEmailError(eErr);
     setPasswordError(pErr);
+    setServerError(null);
     if (eErr || pErr) return;
-    console.log('[Auth] email login:', email);
+
+    setLoading(true);
+    const error = await signInWithEmail(email.trim(), password);
+    setLoading(false);
+
+    if (error) {
+      setServerError(error);
+      return;
+    }
     router.replace('/(tabs)');
   }
 
   function handleGoogle() {
-    console.log('[Auth] Google login');
-    router.replace('/(tabs)');
+    console.log('[Auth] Google login — próximamente');
   }
 
   function handleApple() {
-    console.log('[Auth] Apple login');
-    router.replace('/(tabs)');
+    console.log('[Auth] Apple login — próximamente');
   }
 
   return (
@@ -174,8 +186,20 @@ export default function LoginScreen() {
                   </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity style={s.enterBtn} onPress={handleEmailLogin} activeOpacity={0.85}>
-                  <Text style={s.enterBtnText}>Entrar</Text>
+                {serverError && (
+                  <Text style={s.serverError}>{serverError}</Text>
+                )}
+
+                <TouchableOpacity
+                  style={[s.enterBtn, loading && s.enterBtnLoading]}
+                  onPress={handleEmailLogin}
+                  activeOpacity={0.85}
+                  disabled={loading}
+                >
+                  {loading
+                    ? <ActivityIndicator size="small" color="#FFFFFF" />
+                    : <Text style={s.enterBtnText}>Entrar</Text>
+                  }
                 </TouchableOpacity>
 
                 <TouchableOpacity style={s.forgotWrap} activeOpacity={0.7}>
@@ -368,11 +392,20 @@ const s = StyleSheet.create({
     color: ViveColors.text,
     padding: 0,
   },
+  serverError: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#E05C5C',
+    textAlign: 'center',
+    marginTop: -4,
+  },
   enterBtn: {
     backgroundColor: ViveColors.primary,
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
+    minHeight: 52,
+    justifyContent: 'center',
     ...Platform.select({
       ios: {
         shadowColor: ViveColors.primary,
@@ -382,6 +415,9 @@ const s = StyleSheet.create({
       },
       android: { elevation: 4 },
     }),
+  },
+  enterBtnLoading: {
+    opacity: 0.75,
   },
   enterBtnText: {
     fontFamily: ViveFonts.semibold,

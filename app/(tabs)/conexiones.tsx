@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Platform,
@@ -148,16 +147,14 @@ export default function ConexionesScreen() {
         </View>
 
         {/* ── Buscador ─────────────────────────────────────────────────── */}
-        <View style={s.searchBar}>
+        <TouchableOpacity
+          style={s.searchBar}
+          onPress={() => router.push('/search1')}
+          activeOpacity={0.85}>
           <MaterialIcons name="search" size={18} color={ViveColors.text} />
-          <TextInput
-            style={s.searchInput}
-            placeholder="Buscá por nombre, especialidad o tema..."
-            placeholderTextColor={`${ViveColors.text}66`}
-            returnKeyType="search"
-          />
+          <Text style={s.searchPlaceholder}>Buscá por nombre, especialidad o tema...</Text>
           <MaterialIcons name="tune" size={18} color={ViveColors.text} />
-        </View>
+        </TouchableOpacity>
 
         {/* ── Temas ────────────────────────────────────────────────────── */}
         <View style={s.section}>
@@ -318,12 +315,11 @@ const s = StyleSheet.create({
     gap: 8,
     ...shadow,
   },
-  searchInput: {
+  searchPlaceholder: {
     flex: 1,
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: ViveColors.text,
-    padding: 0,
+    color: `${ViveColors.text}66`,
   },
 
   // Secciones
