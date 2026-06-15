@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import {
   View,
@@ -8,57 +8,43 @@ import {
   ScrollView as RNScrollView,
   Platform,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
 
-type Session = {
+type SalaItem = {
   id: string;
-  coachName: string;
-  specialty: string;
+  coach_id: string;
+  otherName: string;
+  otherInitials: string;
   lastMessage: string;
   lastMessageDate: string;
-  status: 'Confirmada' | 'Pendiente';
-  initials: string;
 };
 
-const MOCK_SESSIONS: Session[] = [
-  {
-    id: '1',
-    coachName: 'María González',
-    specialty: 'Psicóloga',
-    lastMessage: '¡Hola Andre! ¿Cómo te sentís hoy?',
-    lastMessageDate: 'Hoy',
-    status: 'Confirmada',
-    initials: 'MG',
-  },
-  {
-    id: '2',
-    coachName: 'Carlos Méndez',
-    specialty: 'Coach de vida',
-    lastMessage: 'Nos vemos el lunes, cualquier cosa me escribís.',
-    lastMessageDate: 'Ayer',
-    status: 'Pendiente',
-    initials: 'CM',
-  },
-  {
-    id: '3',
-    coachName: 'Laura Sánchez',
-    specialty: 'Nutricionista',
-    lastMessage: 'Recordá el plan de alimentación que acordamos.',
-    lastMessageDate: 'Lun',
-    status: 'Confirmada',
-    initials: 'LS',
-  },
-];
+function getInitials(name: string): string {
+  return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || '??';
+}
 
-const HAS_SESSIONS = MOCK_SESSIONS.length > 0;
+function formatMessageDate(isoString: string): string {
+  const d = new Date(isoString);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Hoy';
+  if (diffDays === 1) return 'Ayer';
+  if (diffDays < 7) return ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][d.getDay()];
+  return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+}
 
 export default function SessionsScreen() {
   const router = useRouter();
-  const { isLoggedIn, requestAuth } = useAuth();
+  const { user, isLoggedIn, requestAuth } = useAuth();
+  const [salas, setSalas] = useState<SalaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const headerAnim = useRef(new Animated.Value(0)).current;
   const listAnim = useRef(new Animated.Value(0)).current;
 
@@ -73,17 +59,74 @@ export default function SessionsScreen() {
     ]).start();
   }, []);
 
+  const loadSalas = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+
+    const { data: salasData, error: salasError } = await supabase
+      .from('salas')
+      .select('id, user_id, coach_id')
+      .or(`user_id.eq.${user.id},coach_id.eq.${user.id}`);
+
+    if (salasError) console.error('[Sessions] Error cargando salas:', salasError.message);
+
+    if (!salasData || salasData.length === 0) {
+      setSalas([]);
+      setLoading(false);
+      return;
+    }
+
+    const otherIds = salasData.map(s => s.user_id === user.id ? s.coach_id : s.user_id);
+    const uniqueOtherIds = [...new Set(otherIds)];
+
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .in('id', uniqueOtherIds);
+
+    const profileMap: Record<string, string> = {};
+    profiles?.forEach(p => { profileMap[p.id] = p.name ?? 'Usuario'; });
+
+    const results: SalaItem[] = await Promise.all(
+      salasData.map(async (sala) => {
+        const otherId = sala.user_id === user.id ? sala.coach_id : sala.user_id;
+        const otherName = profileMap[otherId] ?? 'Usuario';
+
+        const { data: lastMsg } = await supabase
+          .from('messages')
+          .select('content, created_at')
+          .eq('sala_id', sala.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        return {
+          id: sala.id,
+          coach_id: sala.coach_id,
+          otherName,
+          otherInitials: getInitials(otherName),
+          lastMessage: lastMsg?.content ?? 'Sin mensajes aún',
+          lastMessageDate: lastMsg ? formatMessageDate(lastMsg.created_at) : '',
+        };
+      })
+    );
+
+    setSalas(results);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    loadSalas();
+  }, [loadSalas]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
       <Animated.View
         style={[
           styles.header,
           {
             opacity: headerAnim,
-            transform: [
-              { translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) },
-            ],
+            transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) }],
           },
         ]}
       >
@@ -96,18 +139,22 @@ export default function SessionsScreen() {
 
       <View style={styles.headerDivider} />
 
-      {HAS_SESSIONS ? (
+      {loading ? (
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={ViveColors.primary} />
+        </View>
+      ) : salas.length > 0 ? (
         <RNScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <Animated.View style={{ opacity: listAnim }}>
-            {MOCK_SESSIONS.map((session, index) => (
-              <SessionRow
-                key={session.id}
-                session={session}
-                onPress={() => router.push('/sala')}
+            {salas.map((sala, index) => (
+              <SalaRow
+                key={sala.id}
+                sala={sala}
+                onPress={() => router.push({ pathname: '/sala', params: { coach_id: sala.coach_id } })}
                 delay={index * 60}
               />
             ))}
@@ -116,7 +163,7 @@ export default function SessionsScreen() {
       ) : (
         <Animated.View style={[styles.emptyState, { opacity: listAnim }]}>
           <MaterialCommunityIcons name="message-outline" size={52} color={`${ViveColors.text}30`} />
-          <Text style={styles.emptyTitle}>Todavía no tenés sesiones activas.</Text>
+          <Text style={styles.emptyTitle}>Todavía no tenés conversaciones activas.</Text>
           <Text style={styles.emptySubtitle}>¿Empezamos?</Text>
           <TouchableOpacity
             style={styles.emptyBtn}
@@ -131,27 +178,20 @@ export default function SessionsScreen() {
   );
 }
 
-function SessionRow({
-  session,
+function SalaRow({
+  sala,
   onPress,
   delay,
 }: {
-  session: Session;
+  sala: SalaItem;
   onPress: () => void;
   delay: number;
 }) {
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 340,
-      delay,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(anim, { toValue: 1, duration: 340, delay, useNativeDriver: true }).start();
   }, []);
-
-  const isConfirmed = session.status === 'Confirmada';
 
   return (
     <Animated.View
@@ -161,32 +201,16 @@ function SessionRow({
       }}
     >
       <TouchableOpacity style={styles.sessionRow} onPress={onPress} activeOpacity={0.75}>
-        {/* Avatar circular */}
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{session.initials}</Text>
+          <Text style={styles.avatarText}>{sala.otherInitials}</Text>
         </View>
 
-        {/* Info */}
         <View style={styles.sessionInfo}>
           <View style={styles.sessionTopRow}>
-            <Text style={styles.coachName} numberOfLines={1}>
-              {session.coachName}
-            </Text>
-            <Text style={styles.dateText}>{session.lastMessageDate}</Text>
+            <Text style={styles.coachName} numberOfLines={1}>{sala.otherName}</Text>
+            <Text style={styles.dateText}>{sala.lastMessageDate}</Text>
           </View>
-          <Text style={styles.specialty} numberOfLines={1}>
-            {session.specialty}
-          </Text>
-          <Text style={styles.lastMessage} numberOfLines={1}>
-            {session.lastMessage}
-          </Text>
-        </View>
-
-        {/* Status badge */}
-        <View style={[styles.statusBadge, isConfirmed ? styles.statusConfirmada : styles.statusPendiente]}>
-          <Text style={[styles.statusText, isConfirmed ? styles.statusTextConfirmada : styles.statusTextPendiente]}>
-            {session.status}
-          </Text>
+          <Text style={styles.lastMessage} numberOfLines={1}>{sala.lastMessage}</Text>
         </View>
       </TouchableOpacity>
 
@@ -201,7 +225,6 @@ const styles = StyleSheet.create({
     backgroundColor: ViveColors.background,
   },
 
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -210,9 +233,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     gap: 12,
   },
-  backBtn: {
-    padding: 4,
-  },
+  backBtn: { padding: 4 },
   headerTitle: {
     flex: 1,
     fontFamily: ViveFonts.semibold,
@@ -221,24 +242,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginRight: 30,
   },
-  headerSpacer: {
-    width: 30,
-  },
-  headerDivider: {
-    height: 1,
-    backgroundColor: `${ViveColors.text}0D`,
-  },
+  headerSpacer: { width: 30 },
+  headerDivider: { height: 1, backgroundColor: `${ViveColors.text}0D` },
 
-  // List
-  scroll: {
+  loadingState: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingTop: 8,
-    paddingBottom: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  // Session row
+  scroll: { flex: 1 },
+  scrollContent: { paddingTop: 8, paddingBottom: 32 },
+
   sessionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -256,12 +271,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
     ...Platform.select({
-      ios: {
-        shadowColor: ViveColors.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
+      ios: { shadowColor: ViveColors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
       android: { elevation: 2 },
     }),
   },
@@ -271,15 +281,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
-  sessionInfo: {
-    flex: 1,
-    gap: 2,
-  },
+  sessionInfo: { flex: 1, gap: 2 },
   sessionTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 1,
+    marginBottom: 4,
   },
   coachName: {
     fontFamily: ViveFonts.semibold,
@@ -294,40 +301,11 @@ const styles = StyleSheet.create({
     color: `${ViveColors.text}55`,
     flexShrink: 0,
   },
-  specialty: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: ViveColors.primary,
-    marginBottom: 3,
-  },
   lastMessage: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
     color: `${ViveColors.text}99`,
     lineHeight: 18,
-  },
-  statusBadge: {
-    borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 9,
-    flexShrink: 0,
-    alignSelf: 'center',
-  },
-  statusConfirmada: {
-    backgroundColor: `${ViveColors.accent}22`,
-  },
-  statusPendiente: {
-    backgroundColor: `${ViveColors.primary}18`,
-  },
-  statusText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 11,
-  },
-  statusTextConfirmada: {
-    color: ViveColors.accent,
-  },
-  statusTextPendiente: {
-    color: ViveColors.primary,
   },
   rowDivider: {
     height: 1,
@@ -336,7 +314,6 @@ const styles = StyleSheet.create({
     marginRight: 20,
   },
 
-  // Empty state
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -365,12 +342,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 28,
     ...Platform.select({
-      ios: {
-        shadowColor: ViveColors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-      },
+      ios: { shadowColor: ViveColors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8 },
       android: { elevation: 4 },
     }),
   },

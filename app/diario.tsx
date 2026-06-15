@@ -14,21 +14,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-
-const STORAGE_KEY = 'diario_entradas';
+import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type MoodLevel = 1 | 2 | 3 | 4 | 5;
 
 interface JournalEntry {
   id: string;
-  date: string;
-  mood: MoodLevel;
-  text: string;
-  prompt: string;
+  mood: number;
+  content: string;
+  created_at: string;
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -41,6 +38,10 @@ const MOODS: { level: MoodLevel; emoji: string; label: string }[] = [
 ];
 
 const DAILY_PROMPT = '¿Qué fue lo más importante que sentiste hoy?';
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+}
 
 function formatToday() {
   return new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
@@ -71,40 +72,46 @@ export default function DiarioScreen() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
 
-  const { isLoggedIn, requestAuth } = useAuth();
+  const { user, isLoggedIn, requestAuth } = useAuth();
   const saveScale = useRef(new Animated.Value(1)).current;
 
   const canSave = journalText.trim().length > 0;
   const words = countWords(journalText);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then(raw => {
-        if (raw) setEntries(JSON.parse(raw));
-      })
-      .catch(() => {});
-  }, []);
+    if (!user) return;
+    supabase
+      .from('journal_entries')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setEntries(data);
+      });
+  }, [user]);
 
   async function handleSave() {
     if (!canSave || saved) return;
-    if (!isLoggedIn) { requestAuth(); return; }
+    if (!isLoggedIn || !user) { requestAuth(); return; }
 
     Animated.sequence([
       Animated.spring(saveScale, { toValue: 0.95, useNativeDriver: true, damping: 20, stiffness: 300 }),
       Animated.spring(saveScale, { toValue: 1, useNativeDriver: true, damping: 14, stiffness: 180 }),
     ]).start();
 
-    const newEntry: JournalEntry = {
-      id: Date.now().toString(),
-      date: formatToday(),
-      mood: selectedMood ?? 3,
-      text: journalText.trim(),
-      prompt: DAILY_PROMPT,
-    };
+    const { data, error } = await supabase
+      .from('journal_entries')
+      .insert({
+        user_id: user.id,
+        mood: selectedMood ?? 3,
+        content: journalText.trim(),
+      })
+      .select()
+      .single();
 
-    const updated = [newEntry, ...entries];
-    setEntries(updated);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    if (!error && data) {
+      setEntries(prev => [data, ...prev]);
+    }
 
     setJournalText('');
     setSelectedMood(null);
@@ -215,9 +222,9 @@ export default function DiarioScreen() {
               {entries.map(entry => {
                 const mood = MOODS.find(m => m.level === entry.mood);
                 const preview =
-                  entry.text.length > 64
-                    ? entry.text.slice(0, 64).trimEnd() + '...'
-                    : entry.text;
+                  entry.content.length > 64
+                    ? entry.content.slice(0, 64).trimEnd() + '...'
+                    : entry.content;
                 return (
                   <TouchableOpacity
                     key={entry.id}
@@ -227,7 +234,7 @@ export default function DiarioScreen() {
                   >
                     <Text style={s.entryEmoji}>{mood?.emoji}</Text>
                     <View style={s.entryInfo}>
-                      <Text style={s.entryDate}>{entry.date}</Text>
+                      <Text style={s.entryDate}>{formatDate(entry.created_at)}</Text>
                       <Text style={s.entryPreview}>{preview}</Text>
                     </View>
                     <MaterialCommunityIcons
@@ -262,7 +269,7 @@ export default function DiarioScreen() {
               <MaterialCommunityIcons name="close" size={22} color={ViveColors.text} />
             </TouchableOpacity>
             <Text style={s.modalTitle}>
-              {entryMood?.emoji}{'  '}{selectedEntry?.date}
+              {entryMood?.emoji}{'  '}{selectedEntry ? formatDate(selectedEntry.created_at) : ''}
             </Text>
           </View>
           <ScrollView
@@ -270,9 +277,9 @@ export default function DiarioScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={s.modalPromptBadge}>
-              <Text style={s.modalPromptText}>{selectedEntry?.prompt}</Text>
+              <Text style={s.modalPromptText}>{DAILY_PROMPT}</Text>
             </View>
-            <Text style={s.modalBodyText}>{selectedEntry?.text}</Text>
+            <Text style={s.modalBodyText}>{selectedEntry?.content}</Text>
           </ScrollView>
         </SafeAreaView>
       </Modal>

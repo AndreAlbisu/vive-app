@@ -2,6 +2,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { AuthModal } from '@/components/AuthModal';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export type UserRole = 'user' | 'coach';
 
@@ -13,6 +17,7 @@ interface AuthContextType {
   requestAuth: () => void;
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
   signUpWithEmail: (email: string, password: string, name: string, acceptedTerms?: boolean) => Promise<string | null>;
+  signInWithGoogle: () => Promise<string | null>;
   signOut: () => Promise<void>;
   switchRole: () => void;
 }
@@ -25,6 +30,7 @@ const AuthContext = createContext<AuthContextType>({
   requestAuth: () => {},
   signInWithEmail: async () => null,
   signUpWithEmail: async () => null,
+  signInWithGoogle: async () => null,
   signOut: async () => {},
   switchRole: () => {},
 });
@@ -68,6 +74,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   }
 
+  async function signInWithGoogle(): Promise<string | null> {
+    try {
+      const redirectUrl = AuthSession.makeRedirectUri();
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) return translateError(error.message);
+      if (!data?.url) return 'No se pudo iniciar el flujo de Google.';
+
+      const res = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+
+      if (res.type === 'success') {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(res.url);
+        if (exchangeError) return translateError(exchangeError.message);
+      } else if (res.type === 'cancel' || res.type === 'dismiss') {
+        return null;
+      }
+
+      return null;
+    } catch (e: any) {
+      return translateError(e?.message ?? 'error');
+    }
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
     setUser(null);
@@ -83,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, loading, isLoggedIn, role,
-      requestAuth, signInWithEmail, signUpWithEmail, signOut, switchRole,
+      requestAuth, signInWithEmail, signUpWithEmail, signInWithGoogle, signOut, switchRole,
     }}>
       {children}
       <AuthModal
@@ -91,6 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         onDismiss={() => setModalVisible(false)}
         onLogin={() => setModalVisible(false)}
         signInWithEmail={signInWithEmail}
+        signInWithGoogle={signInWithGoogle}
       />
     </AuthContext.Provider>
   );

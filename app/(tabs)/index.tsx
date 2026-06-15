@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -15,8 +15,9 @@ import { useRouter } from 'expo-router';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 
-const mockUser = { name: 'Andre' };
 const dailyPhrase = 'Cada día es una nueva oportunidad de crecer.';
 
 type Resource = { id: string; title: string | null; icon: string | null; pinned: boolean };
@@ -28,20 +29,29 @@ const pinnedResources: Resource[] = [
   { id: '4', title: null, icon: null, pinned: false },
 ];
 
-const mockSession = {
-  name: 'María González',
-  specialty: 'Psicóloga',
-  date: 'Lunes 16 de junio',
-  time: '11:00 hs',
-  coachId: '1',
-};
-
 const mockRecommendation = {
   title: 'Cómo manejar la ansiedad social',
   description: 'Una guía práctica para sentirte más cómodo en situaciones sociales del día a día.',
   type: 'Video · 7 min',
   emoji: '💙',
 };
+
+interface NextSession {
+  id: string;
+  coach_id: string;
+  date: string;
+  time: string;
+  coachName: string;
+}
+
+function formatSessionDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  const dayName = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][d.getDay()];
+  const monthName = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][month - 1];
+  return `${dayName} ${day} de ${monthName}`;
+}
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
@@ -50,6 +60,9 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function InicioScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const [nextSession, setNextSession] = useState<NextSession | null>(null);
+
   const logoAnim = useRef(new Animated.Value(0)).current;
   const greetingAnim = useRef(new Animated.Value(0)).current;
   const dashboardAnim = useRef(new Animated.Value(0)).current;
@@ -65,6 +78,44 @@ export default function InicioScreen() {
       Animated.timing(recommendationAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const today = new Date().toISOString().split('T')[0];
+    console.log('[Home] Buscando próxima sesión. user_id:', user.id, 'hoy:', today);
+
+    supabase
+      .from('bookings')
+      .select('id, coach_id, date, time')
+      .eq('user_id', user.id)
+      .eq('status', 'confirmed')
+      .gte('date', today)
+      .order('date', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+      .then(async ({ data: booking, error: bookingError }) => {
+        console.log('[Home] Resultado booking:', booking, 'error:', bookingError?.message);
+        if (!booking) { setNextSession(null); return; }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', booking.coach_id)
+          .maybeSingle();
+
+        console.log('[Home] Perfil coach:', profile, 'error:', profileError?.message);
+
+        setNextSession({
+          id: booking.id,
+          coach_id: booking.coach_id,
+          date: booking.date,
+          time: booking.time,
+          coachName: profile?.name ?? 'Tu coach',
+        });
+      });
+  }, [user]);
+
+  const displayName = user?.user_metadata?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'Hola';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -89,7 +140,7 @@ export default function InicioScreen() {
             activeOpacity={0.75}
           >
             <View style={styles.profileAvatar}>
-              <Text style={styles.profileAvatarText}>{mockUser.name.charAt(0)}</Text>
+              <Text style={styles.profileAvatarText}>{displayName.charAt(0).toUpperCase()}</Text>
             </View>
           </TouchableOpacity>
           <View style={styles.logoCenter}>
@@ -109,12 +160,11 @@ export default function InicioScreen() {
 
         {/* Saludo */}
         <Animated.View style={[styles.greetingArea, fadeUp(greetingAnim)]}>
-          <Text style={styles.greeting}>Hola, {mockUser.name} 👋</Text>
+          <Text style={styles.greeting}>Hola, {displayName} 👋</Text>
         </Animated.View>
 
         {/* Dashboard: frase + recursos */}
         <Animated.View style={[styles.dashboardCard, fadeUp(dashboardAnim)]}>
-          {/* Izquierda — frase motivacional */}
           <View style={styles.phraseHalf}>
             <MaterialCommunityIcons name="format-quote-open" size={22} color="rgba(255,255,255,0.5)" style={styles.quoteIcon} />
             <Text style={styles.phraseText}>{dailyPhrase}</Text>
@@ -122,7 +172,6 @@ export default function InicioScreen() {
 
           <View style={styles.dashboardDivider} />
 
-          {/* Derecha — recursos 2x2 */}
           <View style={styles.resourcesHalf}>
             <View style={styles.pinnedGrid}>
               {[pinnedResources.slice(0, 2), pinnedResources.slice(2, 4)].map((row, ri) => (
@@ -148,19 +197,37 @@ export default function InicioScreen() {
         {/* Tu próxima sesión */}
         <Animated.View style={fadeUp(sessionAnim)}>
           <Text style={styles.sectionTitle}>Tu próxima sesión</Text>
-          <View style={styles.sessionCard}>
-            <View style={styles.sessionInfo}>
-              <Text style={styles.sessionName}>
-                Sesión con {mockSession.name} — {mockSession.specialty}
-              </Text>
-              <Text style={styles.sessionDateTime}>
-                {mockSession.date} · {mockSession.time}
-              </Text>
+          {nextSession ? (
+            <View style={styles.sessionCard}>
+              <View style={styles.sessionInfo}>
+                <Text style={styles.sessionName}>
+                  Sesión con {nextSession.coachName}
+                </Text>
+                <Text style={styles.sessionDateTime}>
+                  {formatSessionDate(nextSession.date)} · {nextSession.time} hs
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.verSalaButton}
+                onPress={() => router.push({ pathname: '/sala', params: { coach_id: nextSession.coach_id } })}
+              >
+                <Text style={styles.verSalaButtonText}>Ver sala</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.verSalaButton} onPress={() => router.push({ pathname: '/sala', params: { coach_id: mockSession.coachId } })}>
-              <Text style={styles.verSalaButtonText}>Ver sala</Text>
+          ) : (
+            <TouchableOpacity
+              style={styles.noSessionCard}
+              onPress={() => router.push('/(tabs)/coaches')}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="calendar-plus" size={22} color={ViveColors.primary} />
+              <View style={styles.noSessionInfo}>
+                <Text style={styles.noSessionTitle}>Sin sesiones agendadas</Text>
+                <Text style={styles.noSessionSubtitle}>Reservá una sesión con tu coach</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={18} color={`${ViveColors.text}44`} />
             </TouchableOpacity>
-          </View>
+          )}
         </Animated.View>
 
         {/* Para vos hoy */}
@@ -395,6 +462,31 @@ const styles = StyleSheet.create({
     fontFamily: ViveFonts.semibold,
     fontSize: 13,
     color: '#FFFFFF',
+  },
+
+  // No session card
+  noSessionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    ...cardShadow,
+  },
+  noSessionInfo: {
+    flex: 1,
+  },
+  noSessionTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 14,
+    color: ViveColors.text,
+    marginBottom: 2,
+  },
+  noSessionSubtitle: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: `${ViveColors.text}66`,
   },
 
   // Recommendation card

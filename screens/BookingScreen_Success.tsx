@@ -30,6 +30,7 @@ type Params = {
   specialty?: string;
   date?: string;
   time?: string;
+  coachId?: string;
 };
 
 export default function BookingScreen_Success() {
@@ -40,6 +41,7 @@ export default function BookingScreen_Success() {
   const specialty = params.specialty ?? 'Coach de vida';
   const dateStr = params.date ?? '';
   const time = params.time ?? '';
+  const coachId = params.coachId ?? '';
 
   const firstName = coachName.split(' ')[0];
   const formattedDate = formatDate(dateStr);
@@ -80,7 +82,9 @@ export default function BookingScreen_Success() {
             <Text style={s.subtitle}>
               Le avisamos a {firstName}. Tiene 48hs para confirmar tu sesión.
             </Text>
-            <Text style={s.notice}>Te notificamos cuando responda.</Text>
+            <View style={s.statusBadge}>
+              <Text style={s.statusBadgeText}>Pendiente de confirmación</Text>
+            </View>
           </Animated.View>
 
           {/* Tarjeta resumen */}
@@ -114,7 +118,7 @@ export default function BookingScreen_Success() {
         <Animated.View style={[s.footer, { opacity: contentOpacity }]}>
           <TouchableOpacity
             style={s.btnPrimary}
-            onPress={() => console.log('ir a la sala')}
+            onPress={() => router.push({ pathname: '/sala', params: { coach_id: coachId } })}
             activeOpacity={0.85}>
             <Text style={s.btnPrimaryText}>Ver mi sala</Text>
           </TouchableOpacity>
@@ -199,10 +203,17 @@ const s = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 8,
   },
-  notice: {
+  statusBadge: {
+    backgroundColor: `${ViveColors.primary}18`,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  statusBadgeText: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
-    color: `${ViveColors.text}77`,
+    color: ViveColors.primary,
     textAlign: 'center',
   },
 

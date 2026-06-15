@@ -12,17 +12,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-
-const STORAGE_KEY = 'gratitud_entradas';
+import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface GratitudeEntry {
   id: string;
-  date: string;
-  items: [string, string, string];
+  item_1: string;
+  item_2: string;
+  item_3: string;
+  created_at: string;
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -31,6 +31,10 @@ const PLACEHOLDERS: [string, string, string] = [
   'Alguien que te importa...',
   'Algo simple que disfrutaste...',
 ];
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+}
 
 function formatToday() {
   return new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
@@ -54,18 +58,22 @@ export default function GratitudScreen() {
   const [saved, setSaved] = useState(false);
   const [entries, setEntries] = useState<GratitudeEntry[]>([]);
 
-  const { isLoggedIn, requestAuth } = useAuth();
+  const { user, isLoggedIn, requestAuth } = useAuth();
   const saveScale = useRef(new Animated.Value(1)).current;
 
   const canSave = items.some(i => i.trim().length > 0);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then(raw => {
-        if (raw) setEntries(JSON.parse(raw));
-      })
-      .catch(() => {});
-  }, []);
+    if (!user) return;
+    supabase
+      .from('gratitude_entries')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setEntries(data);
+      });
+  }, [user]);
 
   function updateItem(index: 0 | 1 | 2, value: string) {
     setItems(prev => {
@@ -77,26 +85,27 @@ export default function GratitudScreen() {
 
   async function handleSave() {
     if (!canSave || saved) return;
-    if (!isLoggedIn) { requestAuth(); return; }
+    if (!isLoggedIn || !user) { requestAuth(); return; }
 
     Animated.sequence([
       Animated.spring(saveScale, { toValue: 0.95, useNativeDriver: true, damping: 20, stiffness: 300 }),
       Animated.spring(saveScale, { toValue: 1, useNativeDriver: true, damping: 14, stiffness: 180 }),
     ]).start();
 
-    const newEntry: GratitudeEntry = {
-      id: Date.now().toString(),
-      date: formatToday(),
-      items: [
-        items[0].trim() || '',
-        items[1].trim() || '',
-        items[2].trim() || '',
-      ] as [string, string, string],
-    };
+    const { data, error } = await supabase
+      .from('gratitude_entries')
+      .insert({
+        user_id: user.id,
+        item_1: items[0].trim(),
+        item_2: items[1].trim(),
+        item_3: items[2].trim(),
+      })
+      .select()
+      .single();
 
-    const updated = [newEntry, ...entries];
-    setEntries(updated);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    if (!error && data) {
+      setEntries(prev => [data, ...prev]);
+    }
 
     setItems(['', '', '']);
     setSaved(true);
@@ -173,19 +182,22 @@ export default function GratitudScreen() {
           {entries.length > 0 && (
             <>
               <Text style={s.sectionTitle}>Entradas anteriores</Text>
-              {entries.map(entry => (
-                <View key={entry.id} style={s.entryCard}>
-                  <Text style={s.entryDate}>{entry.date}</Text>
-                  {entry.items.map((item, idx) =>
-                    item ? (
-                      <View key={idx} style={s.entryRow}>
-                        <Text style={s.entryBullet}>{idx + 1}</Text>
-                        <Text style={s.entryText}>{item}</Text>
-                      </View>
-                    ) : null
-                  )}
-                </View>
-              ))}
+              {entries.map(entry => {
+                const displayItems = [entry.item_1, entry.item_2, entry.item_3];
+                return (
+                  <View key={entry.id} style={s.entryCard}>
+                    <Text style={s.entryDate}>{formatDate(entry.created_at)}</Text>
+                    {displayItems.map((item, idx) =>
+                      item ? (
+                        <View key={idx} style={s.entryRow}>
+                          <Text style={s.entryBullet}>{idx + 1}</Text>
+                          <Text style={s.entryText}>{item}</Text>
+                        </View>
+                      ) : null
+                    )}
+                  </View>
+                );
+              })}
             </>
           )}
 

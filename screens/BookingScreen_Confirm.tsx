@@ -1,16 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MONTH_NAMES = [
@@ -31,23 +35,79 @@ type Params = {
   priceFrom?: string;
   date?: string;
   time?: string;
+  coachId?: string;
 };
 
 export default function BookingScreen_Confirm() {
   const router = useRouter();
+  const { user, isLoggedIn, requestAuth } = useAuth();
   const params = useLocalSearchParams<Params>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [userMessage, setUserMessage] = useState('');
 
   const coachName = params.name ?? 'Laura Méndez';
   const specialty = params.specialty ?? 'Coach de vida';
   const priceFrom = params.priceFrom ? parseInt(params.priceFrom, 10) : 4500;
   const dateStr = params.date ?? '';
   const time = params.time ?? '';
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const rawCoachId = params.coachId ?? '';
+  const coachId = UUID_RE.test(rawCoachId) ? rawCoachId : '8b16e5b7-e0e3-4988-9ccc-f8ba447fcb8c';
 
-  function onConfirm() {
-    router.replace({
-      pathname: '/booking-success',
-      params: { name: coachName, specialty, date: dateStr, time },
-    });
+  async function onConfirm() {
+    if (!isLoggedIn || !user) { requestAuth(); return; }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Buscar o crear sala para este par user + coach
+      let salaId: string;
+
+      const { data: existingSala } = await supabase
+        .from('salas')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('coach_id', coachId)
+        .maybeSingle();
+
+      if (existingSala) {
+        salaId = existingSala.id;
+      } else {
+        const { data: newSala, error: salaError } = await supabase
+          .from('salas')
+          .insert({ user_id: user.id, coach_id: coachId })
+          .select('id')
+          .single();
+        if (salaError || !newSala) throw new Error('No se pudo crear la sala de comunicación.');
+        salaId = newSala.id;
+      }
+
+      // Insertar la reserva
+      const { error: bookingError } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: user.id,
+          coach_id: coachId,
+          sala_id: salaId,
+          date: dateStr,
+          time,
+          status: 'pending',
+          ...(userMessage.trim() ? { user_message: userMessage.trim() } : {}),
+        });
+
+      if (bookingError) throw new Error('No se pudo guardar la reserva. Intentalo de nuevo.');
+
+      router.replace({
+        pathname: '/booking-success',
+        params: { name: coachName, specialty, date: dateStr, time, coachId },
+      });
+    } catch (e: any) {
+      setError(e.message ?? 'Algo salió mal. Intentalo de nuevo.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -142,6 +202,32 @@ export default function BookingScreen_Confirm() {
           <Text style={s.noticeText}>No se te cobra hasta que el coach acepte</Text>
         </View>
 
+        {/* Mensaje opcional */}
+        <View style={s.messageSection}>
+          <Text style={s.messageTitle}>¿Querés contarle algo antes de que acepte?</Text>
+          <Text style={s.messageSubtitle}>Es opcional. Le ayuda al coach a entender mejor tu situación.</Text>
+          <View style={s.messageInputWrap}>
+            <TextInput
+              style={s.messageInput}
+              value={userMessage}
+              onChangeText={t => t.length <= 300 && setUserMessage(t)}
+              placeholder="Contame brevemente qué te trajo acá..."
+              placeholderTextColor={`${ViveColors.text}44`}
+              multiline
+              textAlignVertical="top"
+            />
+            <Text style={s.messageCounter}>{userMessage.length}/300</Text>
+          </View>
+        </View>
+
+        {/* Error */}
+        {error && (
+          <View style={s.errorRow}>
+            <MaterialIcons name="error-outline" size={15} color="#E05252" />
+            <Text style={s.errorText}>{error}</Text>
+          </View>
+        )}
+
         {/* Método de pago */}
         <View style={s.paymentSection}>
           <Text style={s.paymentLabel}>Método de pago</Text>
@@ -164,10 +250,15 @@ export default function BookingScreen_Confirm() {
       <SafeAreaView style={s.footerSafe} edges={['bottom']}>
         <View style={s.footer}>
           <TouchableOpacity
-            style={s.btn}
+            style={[s.btn, loading && s.btnLoading]}
             onPress={onConfirm}
+            disabled={loading}
             activeOpacity={0.85}>
-            <Text style={s.btnText}>Confirmar reserva</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={s.btnText}>Confirmar reserva</Text>
+            )}
           </TouchableOpacity>
 
           <View style={s.guaranteeRow}>
@@ -336,12 +427,70 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 4,
-    marginBottom: 24,
+    marginBottom: 14,
   },
   noticeText: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
     color: ViveColors.accent,
+  },
+
+  messageSection: {
+    marginBottom: 20,
+  },
+  messageTitle: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 14,
+    color: ViveColors.text,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  messageSubtitle: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: `${ViveColors.text}80`,
+    marginBottom: 10,
+    lineHeight: 17,
+  },
+  messageInputWrap: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    ...Platform.select({
+      ios: { shadowColor: ViveColors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8 },
+      android: { elevation: 2 },
+    }),
+  },
+  messageInput: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: ViveColors.text,
+    minHeight: 90,
+    lineHeight: 20,
+  },
+  messageCounter: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: `${ViveColors.text}44`,
+    textAlign: 'right',
+    marginTop: 6,
+  },
+
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#FFF0F0',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorText: {
+    flex: 1,
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: '#E05252',
+    lineHeight: 19,
   },
 
   paymentSection: {
@@ -386,6 +535,10 @@ const s = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 52,
+  },
+  btnLoading: {
+    opacity: 0.7,
   },
   btnText: {
     fontFamily: ViveFonts.semibold,

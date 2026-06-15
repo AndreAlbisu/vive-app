@@ -30,7 +30,7 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signInWithEmail } = useAuth();
+  const { signInWithEmail, signInWithGoogle } = useAuth();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,6 +39,7 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const logoAnim    = useRef(new Animated.Value(0)).current;
@@ -85,8 +86,12 @@ export default function LoginScreen() {
     router.replace('/(tabs)');
   }
 
-  function handleGoogle() {
-    console.log('[Auth] Google login — próximamente');
+  async function handleGoogle() {
+    setGoogleLoading(true);
+    setServerError(null);
+    const error = await signInWithGoogle();
+    setGoogleLoading(false);
+    if (error) setServerError(error);
   }
 
   function handleApple() {
@@ -119,8 +124,16 @@ export default function LoginScreen() {
           <Animated.View style={[s.btnsArea, fadeUp(btnsAnim)]}>
 
             {/* Google */}
-            <TouchableOpacity style={s.googleBtn} onPress={handleGoogle} activeOpacity={0.85}>
-              <MaterialCommunityIcons name="google" size={20} color="#4285F4" />
+            <TouchableOpacity
+              style={[s.googleBtn, googleLoading && { opacity: 0.6 }]}
+              onPress={handleGoogle}
+              activeOpacity={0.85}
+              disabled={googleLoading || loading}
+            >
+              {googleLoading
+                ? <ActivityIndicator size="small" color="#4285F4" />
+                : <MaterialCommunityIcons name="google" size={20} color="#4285F4" />
+              }
               <Text style={s.googleBtnText}>Continuar con Google</Text>
             </TouchableOpacity>
 
@@ -129,6 +142,10 @@ export default function LoginScreen() {
               <MaterialCommunityIcons name="apple" size={20} color="#FFFFFF" />
               <Text style={s.appleBtnText}>Continuar con Apple</Text>
             </TouchableOpacity>
+
+            {serverError && !showEmailForm && (
+              <Text style={s.serverError}>{serverError}</Text>
+            )}
 
             {/* Separator */}
             <View style={s.dividerRow}>

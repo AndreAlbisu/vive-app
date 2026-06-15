@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,77 +6,113 @@ import {
   StyleSheet,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
+import { decryptMessage } from '@/lib/encryption';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 type ChatRoom = {
-  id: string;
+  salaId: string;
+  userId: string;
   userName: string;
   initials: string;
   lastMessage: string;
-  date: string;
-  unread: number;
-  sessionToday?: string;
+  lastMessageAt: string | null;
 };
 
-const MOCK_CHATS: ChatRoom[] = [
-  {
-    id: '1',
-    userName: 'Ana López',
-    initials: 'AL',
-    lastMessage: 'Gracias María, nos vemos el lunes 🙏',
-    date: '10:43',
-    unread: 0,
-    sessionToday: '11:00',
-  },
-  {
-    id: '2',
-    userName: 'Carlos Méndez',
-    initials: 'CM',
-    lastMessage: 'Practiqué la respiración y me ayudó mucho.',
-    date: 'Ayer',
-    unread: 2,
-  },
-  {
-    id: '3',
-    userName: 'Lucía Fernández',
-    initials: 'LF',
-    lastMessage: '¿Podemos mover la sesión al viernes?',
-    date: 'Lun',
-    unread: 1,
-  },
-  {
-    id: '4',
-    userName: 'Tomás García',
-    initials: 'TG',
-    lastMessage: 'Recordame enviar el diario de la semana.',
-    date: 'Vie',
-    unread: 0,
-  },
-  {
-    id: '5',
-    userName: 'Valeria Torres',
-    initials: 'VT',
-    lastMessage: 'Perfecto. Hasta el próximo encuentro.',
-    date: '10 jun',
-    unread: 0,
-  },
-];
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getInitials(name: string): string {
+  return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || '??';
+}
 
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: ViveColors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-  },
-  android: { elevation: 2 },
-});
+function formatMessageDate(isoString: string | null): string {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
+  if (diffDays === 0) {
+    return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  }
+  if (diffDays === 1) return 'Ayer';
+  if (diffDays < 7) {
+    return ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][d.getDay()];
+  }
+  return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export default function CoachChatsScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadRooms = useCallback(async () => {
+    if (!user) return;
+
+    const { data: salas, error } = await supabase
+      .from('salas')
+      .select('id, user_id')
+      .eq('coach_id', user.id);
+
+    if (error || !salas || salas.length === 0) {
+      setRooms([]);
+      setLoading(false);
+      return;
+    }
+
+    const userIds = [...new Set(salas.map(s => s.user_id as string))];
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .in('id', userIds);
+
+    const profileMap: Record<string, string> = {};
+    profiles?.forEach(p => { profileMap[p.id] = p.name ?? 'Usuario'; });
+
+    const results = await Promise.all(
+      salas.map(async (sala) => {
+        const { data: lastMsg } = await supabase
+          .from('messages')
+          .select('content, created_at')
+          .eq('sala_id', sala.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const name = profileMap[sala.user_id as string] ?? 'Usuario';
+        return {
+          salaId: sala.id as string,
+          userId: sala.user_id as string,
+          userName: name,
+          initials: getInitials(name),
+          lastMessage: lastMsg ? decryptMessage(lastMsg.content as string) : '',
+          lastMessageAt: lastMsg ? (lastMsg.created_at as string) : null,
+        } satisfies ChatRoom;
+      })
+    );
+
+    // Ordenar por último mensaje más reciente
+    results.sort((a, b) => {
+      if (!a.lastMessageAt) return 1;
+      if (!b.lastMessageAt) return -1;
+      return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+    });
+
+    setRooms(results);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    loadRooms();
+  }, [loadRooms]);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -84,53 +120,48 @@ export default function CoachChatsScreen() {
         <Text style={s.title}>Chats</Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={s.container}
-        showsVerticalScrollIndicator={false}>
+      {loading ? (
+        <View style={s.loadingState}>
+          <ActivityIndicator size="large" color={ViveColors.primary} />
+        </View>
+      ) : rooms.length === 0 ? (
+        <View style={s.emptyState}>
+          <Text style={s.emptyText}>Todavía no tenés conversaciones activas.</Text>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={s.container}
+          showsVerticalScrollIndicator={false}>
 
-        {MOCK_CHATS.map((chat, idx) => (
-          <TouchableOpacity
-            key={chat.id}
-            style={[s.chatRow, idx < MOCK_CHATS.length - 1 && s.chatRowBorder]}
-            onPress={() => router.push('/sala')}
-            activeOpacity={0.75}>
+          {rooms.map((room, idx) => (
+            <TouchableOpacity
+              key={room.salaId}
+              style={[s.chatRow, idx < rooms.length - 1 && s.chatRowBorder]}
+              onPress={() => router.push({
+                pathname: '/sala',
+                params: { coach_id: room.userId },
+              })}
+              activeOpacity={0.75}>
 
-            {/* Avatar */}
-            <View style={[s.avatar, chat.unread > 0 && s.avatarUnread]}>
-              <Text style={s.avatarText}>{chat.initials}</Text>
-            </View>
-
-            {/* Info */}
-            <View style={s.chatInfo}>
-              <View style={s.chatTopRow}>
-                <Text style={[s.chatName, chat.unread > 0 && s.chatNameUnread]}>
-                  {chat.userName}
-                </Text>
-                <Text style={s.chatDate}>{chat.date}</Text>
+              <View style={s.avatar}>
+                <Text style={s.avatarText}>{room.initials}</Text>
               </View>
 
-              {chat.sessionToday && (
-                <Text style={s.sessionLabel}>Sesión hoy a las {chat.sessionToday}</Text>
-              )}
-
-              <View style={s.chatBottomRow}>
-                <Text
-                  style={[s.lastMessage, chat.unread > 0 && s.lastMessageUnread]}
-                  numberOfLines={1}>
-                  {chat.lastMessage}
+              <View style={s.chatInfo}>
+                <View style={s.chatTopRow}>
+                  <Text style={s.chatName}>{room.userName}</Text>
+                  <Text style={s.chatDate}>{formatMessageDate(room.lastMessageAt)}</Text>
+                </View>
+                <Text style={s.lastMessage} numberOfLines={1}>
+                  {room.lastMessage || 'Sin mensajes aún'}
                 </Text>
-                {chat.unread > 0 && (
-                  <View style={s.badge}>
-                    <Text style={s.badgeText}>{chat.unread}</Text>
-                  </View>
-                )}
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          ))}
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -153,6 +184,25 @@ const s = StyleSheet.create({
   },
   container: {
     paddingHorizontal: 0,
+  },
+
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 15,
+    color: `${ViveColors.text}60`,
+    textAlign: 'center',
+    lineHeight: 24,
   },
 
   // Chat list
@@ -179,11 +229,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  avatarUnread: {
-    backgroundColor: `${ViveColors.primary}20`,
-    borderWidth: 2,
-    borderColor: `${ViveColors.primary}40`,
-  },
   avatarText: {
     fontFamily: ViveFonts.bold,
     fontSize: 15,
@@ -196,59 +241,21 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    marginBottom: 3,
   },
   chatName: {
     fontFamily: ViveFonts.medium,
     fontSize: 15,
     color: ViveColors.text,
   },
-  chatNameUnread: {
-    fontFamily: ViveFonts.semibold,
-  },
   chatDate: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
     color: `${ViveColors.text}55`,
   },
-
-  sessionLabel: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 11,
-    color: ViveColors.accent,
-    marginBottom: 3,
-  },
-
-  chatBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   lastMessage: {
-    flex: 1,
     fontFamily: ViveFonts.regular,
     fontSize: 13,
     color: `${ViveColors.text}70`,
-  },
-  lastMessageUnread: {
-    fontFamily: ViveFonts.medium,
-    color: ViveColors.text,
-  },
-
-  // Unread badge
-  badge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: ViveColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 5,
-    flexShrink: 0,
-  },
-  badgeText: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 11,
-    color: '#FFFFFF',
   },
 });

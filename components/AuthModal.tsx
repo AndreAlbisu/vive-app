@@ -26,9 +26,10 @@ interface AuthModalProps {
   onDismiss: () => void;
   onLogin: () => void;
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
+  signInWithGoogle: () => Promise<string | null>;
 }
 
-export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail }: AuthModalProps) {
+export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signInWithGoogle }: AuthModalProps) {
   const router = useRouter();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
@@ -38,6 +39,7 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail }: Auth
   const [passwordError, setPasswordError] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
 
   function toggleEmailForm() {
@@ -73,8 +75,17 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail }: Auth
     router.replace('/(tabs)');
   }
 
-  function handleGoogle() {
-    console.log('[Auth] modal Google login — próximamente');
+  async function handleGoogle() {
+    setGoogleLoading(true);
+    setServerError(null);
+    const error = await signInWithGoogle();
+    setGoogleLoading(false);
+    if (error) {
+      setServerError(error);
+      return;
+    }
+    reset();
+    onLogin();
   }
 
   function handleApple() {
@@ -117,8 +128,16 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail }: Auth
             <Text style={s.title}>Para continuar, ingresá a tu cuenta</Text>
             <Text style={s.subtitle}>Es gratis y solo tarda un segundo.</Text>
 
-            <TouchableOpacity style={s.googleBtn} onPress={handleGoogle} activeOpacity={0.85}>
-              <MaterialCommunityIcons name="google" size={18} color="#4285F4" />
+            <TouchableOpacity
+              style={[s.googleBtn, googleLoading && s.btnDisabled]}
+              onPress={handleGoogle}
+              activeOpacity={0.85}
+              disabled={googleLoading || loading}
+            >
+              {googleLoading
+                ? <ActivityIndicator size="small" color="#4285F4" />
+                : <MaterialCommunityIcons name="google" size={18} color="#4285F4" />
+              }
               <Text style={s.googleBtnText}>Continuar con Google</Text>
             </TouchableOpacity>
 
@@ -287,6 +306,9 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: `${ViveColors.text}1A`,
     paddingVertical: 13,
+  },
+  btnDisabled: {
+    opacity: 0.6,
   },
   googleBtnText: {
     fontFamily: ViveFonts.semibold,

@@ -83,6 +83,7 @@ export default function ProfesionalScreen() {
     rating?: string;
     reviewCount?: string;
     priceFrom?: string;
+    coachId?: string;
   }>();
   const [saved, setSaved] = useState(false);
 
@@ -215,6 +216,7 @@ export default function ProfesionalScreen() {
                     name: prof.name,
                     specialty: prof.specialty,
                     priceFrom: String(prof.priceFrom),
+                    coachId: params.coachId ?? '',
                   },
                 });
               }}>

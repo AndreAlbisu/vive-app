@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,37 +8,59 @@ import {
   Platform,
   ScrollView,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 type ReservationStatus = 'pending' | 'confirmed' | 'rejected';
 
-type Reservation = {
+interface Booking {
   id: string;
-  userName: string;
-  initials: string;
+  user_id: string;
+  coach_id: string;
+  sala_id: string | null;
   date: string;
   time: string;
-  requestedAt: string;
-  hoursLeft: number;
   status: ReservationStatus;
-};
+  created_at: string;
+  user_message: string | null;
+  userName: string;
+  initials: string;
+}
 
-const INITIAL_RESERVATIONS: Reservation[] = [
-  { id: '1', userName: 'Pedro Ríos',       initials: 'PR', date: 'Mié 18 jun', time: '10:00 hs', requestedAt: 'hace 2 horas',   hoursLeft: 46, status: 'pending' },
-  { id: '2', userName: 'Lucía Fernández',  initials: 'LF', date: 'Jue 19 jun', time: '14:00 hs', requestedAt: 'hace 6 horas',   hoursLeft: 42, status: 'pending' },
-  { id: '3', userName: 'Ana López',        initials: 'AL', date: 'Lun 16 jun', time: '11:00 hs', requestedAt: 'hace 3 días',    hoursLeft: 0,  status: 'confirmed' },
-  { id: '4', userName: 'Carlos Méndez',   initials: 'CM', date: 'Jue 19 jun', time: '15:30 hs', requestedAt: 'hace 1 día',     hoursLeft: 0,  status: 'confirmed' },
-  { id: '5', userName: 'Tomás García',    initials: 'TG', date: 'Vie 20 jun', time: '09:00 hs', requestedAt: 'hace 5 días',    hoursLeft: 0,  status: 'confirmed' },
-];
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getInitials(name: string): string {
+  return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || '??';
+}
 
-const cardShadow = Platform.select({
-  ios: { shadowColor: ViveColors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
-  android: { elevation: 2 },
-});
+function formatBookingDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  const dayName = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][d.getDay()];
+  const monthName = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][month - 1];
+  return `${dayName} ${day} ${monthName}`;
+}
+
+function formatTimeAgo(isoString: string): string {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffH = Math.floor(diffMs / (1000 * 60 * 60));
+  if (diffH < 1) return 'hace unos minutos';
+  if (diffH < 24) return `hace ${diffH} ${diffH === 1 ? 'hora' : 'horas'}`;
+  const diffD = Math.floor(diffH / 24);
+  return `hace ${diffD} ${diffD === 1 ? 'día' : 'días'}`;
+}
+
+function hoursLeftToRespond(createdAt: string): number {
+  const deadline = new Date(createdAt).getTime() + 48 * 60 * 60 * 1000;
+  return Math.max(0, Math.floor((deadline - Date.now()) / (1000 * 60 * 60)));
+}
 
 function urgencyColor(hoursLeft: number): string {
   if (hoursLeft <= 6) return '#E05252';
@@ -46,18 +68,98 @@ function urgencyColor(hoursLeft: number): string {
   return `${ViveColors.text}70`;
 }
 
+const cardShadow = Platform.select({
+  ios: { shadowColor: ViveColors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
+  android: { elevation: 2 },
+});
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export default function CoachReservasScreen() {
   const router = useRouter();
-  const [reservations, setReservations] = useState<Reservation[]>(INITIAL_RESERVATIONS);
+  const { user } = useAuth();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
   const [rejectModal, setRejectModal] = useState<{ visible: boolean; id: string | null }>({ visible: false, id: null });
   const [rejectReason, setRejectReason] = useState('');
 
-  const pending   = reservations.filter(r => r.status === 'pending');
-  const confirmed = reservations.filter(r => r.status === 'confirmed');
+  const pending   = bookings.filter(b => b.status === 'pending');
+  const confirmed = bookings.filter(b => b.status === 'confirmed');
 
-  function accept(id: string) {
-    console.log('[Coach] aceptar reserva', id);
-    setReservations(prev => prev.map(r => r.id === id ? { ...r, status: 'confirmed' } : r));
+  const loadBookings = useCallback(async () => {
+    if (!user) return;
+
+    console.log('[CoachReservas] auth.uid():', user.id);
+
+    const { data: rows, error } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('coach_id', user.id)
+      .in('status', ['pending', 'confirmed'])
+      .order('created_at', { ascending: false });
+
+    console.log('[CoachReservas] query coach_id=' + user.id + ' → data:', rows, '| error:', error);
+
+    // Sin filtro de coach_id — para ver todos los bookings de la tabla
+    const { data: allRows, error: allError } = await supabase
+      .from('bookings')
+      .select('id, coach_id, user_id, status')
+      .limit(20);
+    console.log('[CoachReservas] todos los bookings (sin filtro):', allRows, '| error:', allError);
+
+    if (error || !rows) { setLoading(false); return; }
+
+    // Cargar nombres de usuarios desde profiles
+    const userIds = [...new Set(rows.map(r => r.user_id))];
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .in('id', userIds);
+
+    const profileMap: Record<string, string> = {};
+    profiles?.forEach(p => { profileMap[p.id] = p.name ?? 'Usuario'; });
+
+    const merged: Booking[] = rows.map(r => {
+      const name = profileMap[r.user_id] ?? 'Usuario';
+      return {
+        id: r.id,
+        user_id: r.user_id,
+        coach_id: r.coach_id,
+        sala_id: r.sala_id,
+        date: r.date,
+        time: r.time,
+        status: r.status,
+        created_at: r.created_at,
+        user_message: r.user_message ?? null,
+        userName: name,
+        initials: getInitials(name),
+      };
+    });
+
+    setBookings(merged);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
+
+  // Realtime: recargar cuando cambia cualquier booking de este coach
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel('coach-reservas')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings', filter: `coach_id=eq.${user.id}` },
+        () => loadBookings(),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, loadBookings]);
+
+  async function accept(id: string) {
+    await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', id);
+    // La actualización llega por Realtime, pero actualizamos el estado local también para feedback inmediato
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'confirmed' } : b));
   }
 
   function openReject(id: string) {
@@ -65,12 +167,14 @@ export default function CoachReservasScreen() {
     setRejectReason('');
   }
 
-  function confirmReject() {
+  async function confirmReject() {
     if (!rejectModal.id) return;
-    console.log('[Coach] rechazar reserva', rejectModal.id, 'motivo:', rejectReason);
-    setReservations(prev => prev.map(r => r.id === rejectModal.id ? { ...r, status: 'rejected' } : r));
+    await supabase.from('bookings').update({ status: 'rejected' }).eq('id', rejectModal.id);
+    setBookings(prev => prev.filter(b => b.id !== rejectModal.id));
     setRejectModal({ visible: false, id: null });
   }
+
+  console.log('[CoachReservas] render bookings:', bookings);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -84,84 +188,103 @@ export default function CoachReservasScreen() {
       </View>
       <View style={s.divider} />
 
-      <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
+      {loading ? (
+        <View style={s.loadingState}>
+          <ActivityIndicator size="large" color={ViveColors.primary} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
 
-        {/* Pending */}
-        <Text style={s.sectionTitle}>
-          Solicitudes pendientes
-          {pending.length > 0 && (
-            <Text style={s.pendingCount}> ({pending.length})</Text>
+          {/* Pending */}
+          <Text style={s.sectionTitle}>
+            Pendientes de respuesta
+            {pending.length > 0 && (
+              <Text style={s.pendingCount}> ({pending.length})</Text>
+            )}
+          </Text>
+
+          {pending.length === 0 ? (
+            <View style={s.emptyState}>
+              <MaterialCommunityIcons name="check-circle-outline" size={36} color={ViveColors.accent} />
+              <Text style={s.emptyText}>Sin solicitudes pendientes. Estás al día 🙌</Text>
+            </View>
+          ) : (
+            pending.map(b => {
+              const hoursLeft = hoursLeftToRespond(b.created_at);
+              return (
+                <View key={b.id} style={s.pendingCard}>
+                  <View style={s.cardHeader}>
+                    <View style={s.avatar}>
+                      <Text style={s.avatarText}>{b.initials}</Text>
+                    </View>
+                    <View style={s.cardInfo}>
+                      <Text style={s.cardName}>{b.userName}</Text>
+                      <Text style={s.cardDate}>{formatBookingDate(b.date)} · {b.time} hs</Text>
+                      <Text style={s.cardRequested}>Solicitado {formatTimeAgo(b.created_at)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={s.countdownRow}>
+                    <MaterialCommunityIcons name="clock-outline" size={14} color={urgencyColor(hoursLeft)} />
+                    <Text style={[s.countdownText, { color: urgencyColor(hoursLeft) }]}>
+                      {hoursLeft}hs para responder
+                    </Text>
+                  </View>
+
+                  {!!b.user_message && (
+                    <View style={s.userMessageBox}>
+                      <MaterialCommunityIcons name="format-quote-open" size={16} color={`${ViveColors.text}55`} />
+                      <Text style={s.userMessageText}>{b.user_message}</Text>
+                    </View>
+                  )}
+
+                  <View style={s.actionRow}>
+                    <TouchableOpacity
+                      style={s.rejectBtn}
+                      onPress={() => openReject(b.id)}
+                      activeOpacity={0.8}>
+                      <Text style={s.rejectBtnText}>Rechazar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={s.acceptBtn}
+                      onPress={() => accept(b.id)}
+                      activeOpacity={0.8}>
+                      <Text style={s.acceptBtnText}>Aceptar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })
           )}
-        </Text>
 
-        {pending.length === 0 ? (
-          <View style={s.emptyState}>
-            <MaterialCommunityIcons name="check-circle-outline" size={36} color={ViveColors.accent} />
-            <Text style={s.emptyText}>Sin solicitudes pendientes. Estás al día 🙌</Text>
-          </View>
-        ) : (
-          pending.map(r => (
-            <View key={r.id} style={s.pendingCard}>
-              {/* User info */}
-              <View style={s.cardHeader}>
-                <View style={s.avatar}>
-                  <Text style={s.avatarText}>{r.initials}</Text>
+          {/* Confirmed */}
+          <Text style={[s.sectionTitle, s.sectionSpaced]}>Confirmadas</Text>
+
+          {confirmed.length === 0 ? (
+            <View style={[s.emptyState, { marginBottom: 0 }]}>
+              <Text style={s.emptyText}>No hay reservas confirmadas todavía.</Text>
+            </View>
+          ) : (
+            confirmed.map(b => (
+              <View key={b.id} style={s.confirmedCard}>
+                <View style={[s.avatar, s.avatarConfirmed]}>
+                  <Text style={s.avatarText}>{b.initials}</Text>
                 </View>
                 <View style={s.cardInfo}>
-                  <Text style={s.cardName}>{r.userName}</Text>
-                  <Text style={s.cardDate}>{r.date} · {r.time}</Text>
-                  <Text style={s.cardRequested}>Solicitado {r.requestedAt}</Text>
+                  <Text style={s.cardName}>{b.userName}</Text>
+                  <Text style={s.cardDate}>{formatBookingDate(b.date)} · {b.time} hs</Text>
+                </View>
+                <View style={s.confirmedBadge}>
+                  <MaterialCommunityIcons name="check" size={13} color={ViveColors.accent} />
+                  <Text style={s.confirmedBadgeText}>Confirmada</Text>
                 </View>
               </View>
+            ))
+          )}
 
-              {/* Countdown */}
-              <View style={s.countdownRow}>
-                <MaterialCommunityIcons name="clock-outline" size={14} color={urgencyColor(r.hoursLeft)} />
-                <Text style={[s.countdownText, { color: urgencyColor(r.hoursLeft) }]}>
-                  {r.hoursLeft}hs para responder
-                </Text>
-              </View>
-
-              {/* Actions */}
-              <View style={s.actionRow}>
-                <TouchableOpacity
-                  style={s.rejectBtn}
-                  onPress={() => openReject(r.id)}
-                  activeOpacity={0.8}>
-                  <Text style={s.rejectBtnText}>Rechazar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={s.acceptBtn}
-                  onPress={() => accept(r.id)}
-                  activeOpacity={0.8}>
-                  <Text style={s.acceptBtnText}>Aceptar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
-        )}
-
-        {/* Confirmed */}
-        <Text style={[s.sectionTitle, s.sectionSpaced]}>Reservas confirmadas</Text>
-
-        {confirmed.map(r => (
-          <View key={r.id} style={s.confirmedCard}>
-            <View style={[s.avatar, s.avatarConfirmed]}>
-              <Text style={s.avatarText}>{r.initials}</Text>
-            </View>
-            <View style={s.cardInfo}>
-              <Text style={s.cardName}>{r.userName}</Text>
-              <Text style={s.cardDate}>{r.date} · {r.time}</Text>
-            </View>
-            <View style={s.confirmedBadge}>
-              <MaterialCommunityIcons name="check" size={13} color={ViveColors.accent} />
-              <Text style={s.confirmedBadgeText}>Confirmada</Text>
-            </View>
-          </View>
-        ))}
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      )}
 
       {/* Reject Modal */}
       <Modal
@@ -232,6 +355,12 @@ const s = StyleSheet.create({
   headerSpacer: { width: 30 },
   divider: { height: 1, backgroundColor: `${ViveColors.text}0D` },
 
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   container: { paddingHorizontal: 20, paddingTop: 24 },
 
   sectionTitle: {
@@ -298,6 +427,23 @@ const s = StyleSheet.create({
   countdownText: {
     fontFamily: ViveFonts.medium,
     fontSize: 12,
+  },
+
+  userMessageBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: ViveColors.background,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 14,
+  },
+  userMessageText: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: ViveColors.text,
+    lineHeight: 19,
   },
 
   actionRow: { flexDirection: 'row', gap: 10 },
