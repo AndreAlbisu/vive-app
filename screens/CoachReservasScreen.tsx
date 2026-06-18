@@ -158,8 +158,16 @@ export default function CoachReservasScreen() {
   }, [user, loadBookings]);
 
   async function accept(id: string) {
-    await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', id);
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'confirmed' } : b));
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ status: 'confirmed' })
+      .eq('id', id)
+      .select();
+    console.log('[CoachReservas] accept update → data:', data, '| error:', error);
+
+    if (error) return;
+
+    await loadBookings();
 
     const booking = bookings.find(b => b.id === id);
     if (booking && user) {
@@ -188,9 +196,17 @@ export default function CoachReservasScreen() {
 
     const booking = bookings.find(b => b.id === rejectModal.id);
 
-    await supabase.from('bookings').update({ status: 'rejected' }).eq('id', rejectModal.id);
-    setBookings(prev => prev.filter(b => b.id !== rejectModal.id));
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ status: 'rejected' })
+      .eq('id', rejectModal.id)
+      .select();
+    console.log('[CoachReservas] reject update → data:', data, '| error:', error);
+
+    if (error) { setRejectModal({ visible: false, id: null }); return; }
+
     setRejectModal({ visible: false, id: null });
+    await loadBookings();
 
     if (booking && user) {
       const [{ data: userProfile }, { data: coachProfile }] = await Promise.all([

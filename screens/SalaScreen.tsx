@@ -63,7 +63,9 @@ function rowToMessage(row: Record<string, unknown>, userId: string): Message {
 
 export default function SalaScreen() {
   const router = useRouter();
-  const { coach_id } = useLocalSearchParams<{ coach_id: string }>();
+  // sala_id: preferred — skip find-or-create entirely.
+  // coach_id: fallback for first contact from a coach profile (user side only).
+  const { sala_id: salaIdParam, coach_id } = useLocalSearchParams<{ sala_id?: string; coach_id?: string }>();
   const { user } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -92,51 +94,66 @@ export default function SalaScreen() {
     ]).start();
   }, []);
 
-  // Find or create sala, then load messages
+  // Resolve sala: use sala_id param directly, or find-or-create via coach_id (user→coach first contact)
   useEffect(() => {
-    if (!user || !coach_id) {
-      setLoading(false);
-      return;
-    }
+    if (!user) { setLoading(false); return; }
+    if (!salaIdParam && !coach_id) { setLoading(false); return; }
 
     let mounted = true;
 
     async function init() {
       let id: string | null = null;
+      let salaUserId: string | null = null;
+      let salaCoachId: string | null = null;
 
-      const { data: existing } = await supabase
-        .from('salas')
-        .select('id, user_id')
-        .eq('user_id', user!.id)
-        .eq('coach_id', coach_id)
-        .maybeSingle();
-
-      let salaUserId: string = user!.id;
-
-      if (existing) {
-        id = existing.id as string;
-        salaUserId = (existing as { id: string; user_id: string }).user_id;
-      } else {
-        const { data: created, error } = await supabase
+      if (salaIdParam) {
+        // Fast path: sala already known — just load its user_id/coach_id for recipient resolution
+        const { data: sala } = await supabase
           .from('salas')
-          .insert({ user_id: user!.id, coach_id })
-          .select('id, user_id')
+          .select('id, user_id, coach_id')
+          .eq('id', salaIdParam)
           .single();
-        if (error) console.error('[Sala] Error creando sala:', error.message);
-        if (created) {
-          id = (created as { id: string; user_id: string }).id;
-          salaUserId = (created as { id: string; user_id: string }).user_id;
+        if (sala) {
+          id = sala.id as string;
+          salaUserId = sala.user_id as string;
+          salaCoachId = sala.coach_id as string;
+        }
+      } else {
+        // Fallback: first contact from coach profile page — current user is always the patient
+        const { data: existing } = await supabase
+          .from('salas')
+          .select('id, user_id, coach_id')
+          .eq('user_id', user!.id)
+          .eq('coach_id', coach_id!)
+          .maybeSingle();
+
+        if (existing) {
+          id = existing.id as string;
+          salaUserId = existing.user_id as string;
+          salaCoachId = existing.coach_id as string;
+        } else {
+          const { data: created, error } = await supabase
+            .from('salas')
+            .insert({ user_id: user!.id, coach_id: coach_id! })
+            .select('id, user_id, coach_id')
+            .single();
+          if (error) console.error('[Sala] Error creando sala:', error.message);
+          if (created) {
+            id = (created as any).id;
+            salaUserId = (created as any).user_id;
+            salaCoachId = (created as any).coach_id;
+          }
         }
       }
 
-      if (!mounted || !id) {
+      if (!mounted || !id || !salaUserId || !salaCoachId) {
         if (mounted) setLoading(false);
         return;
       }
 
       setSalaId(id);
-      // Recipient is whoever is NOT the current user in this sala
-      setRecipientId(user!.id === salaUserId ? coach_id as string : salaUserId);
+      // Recipient is the other person in the sala, regardless of who is calling
+      setRecipientId(user!.id === salaUserId ? salaCoachId : salaUserId);
 
       const { data: msgs, error: msgsError } = await supabase
         .from('messages')
@@ -165,7 +182,7 @@ export default function SalaScreen() {
 
     init();
     return () => { mounted = false; };
-  }, [user?.id, coach_id]);
+  }, [user?.id, salaIdParam, coach_id]);
 
   // Realtime subscription for incoming messages
   useEffect(() => {

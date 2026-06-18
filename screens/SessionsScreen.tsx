@@ -154,7 +154,7 @@ export default function SessionsScreen() {
               <SalaRow
                 key={sala.id}
                 sala={sala}
-                onPress={() => router.push({ pathname: '/sala', params: { coach_id: sala.coach_id } })}
+                onPress={() => router.push({ pathname: '/sala', params: { sala_id: sala.id } })}
                 delay={index * 60}
               />
             ))}

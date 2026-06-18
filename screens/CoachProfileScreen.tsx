@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,22 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { ViveColors, ViveFonts } from '@/constants/theme';
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const COACH = {
-  name: 'María González',
-  initials: 'MG',
-  specialty: 'Psicóloga',
-  age: 34,
-  nationality: 'Argentina',
-  topics: ['Ansiedad', 'Tristeza', 'Pareja', 'Familia', 'Culpa', 'Crecimiento'],
-  priceSession: 5500,
-  packages: [
-    { label: '4 sesiones', price: 20000, note: 'Ahorrás $2.000' },
-    { label: '8 sesiones', price: 38000, note: 'Ahorrás $6.000' },
-  ],
-};
 
 const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const SLOTS = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
@@ -46,11 +32,50 @@ const cardShadow = Platform.select({
   android: { elevation: 2 },
 });
 
+type CoachProfile = {
+  name: string;
+  specialty: string | null;
+  bio: string | null;
+  price_per_session: number | null;
+  nationality: string | null;
+};
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return (parts[0][0] ?? '').toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export default function CoachProfileScreen() {
   const router = useRouter();
-  const { switchRole } = useAuth();
+  const { user, switchRole, signOut } = useAuth();
   const [instantMode, setInstantMode] = useState(false);
   const [availability, setAvailability] = useState<Set<AvailKey>>(new Set(INITIAL_AVAIL));
+  const [profile, setProfile] = useState<CoachProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [noCoachProfile, setNoCoachProfile] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setLoadingProfile(false); return; }
+
+    (async () => {
+      const [{ data: profileRow }, { data: coachRow }] = await Promise.all([
+        supabase.from('profiles').select('name').eq('id', user.id).single(),
+        supabase.from('coaches').select('specialty, bio, price_per_session, nationality').eq('profile_id', user.id).maybeSingle(),
+      ]);
+
+      setProfile({
+        name: profileRow?.name ?? '',
+        specialty: coachRow?.specialty ?? null,
+        bio: coachRow?.bio ?? null,
+        price_per_session: coachRow?.price_per_session ?? null,
+        nationality: coachRow?.nationality ?? null,
+      });
+      setNoCoachProfile(!coachRow);
+      setLoadingProfile(false);
+    })();
+  }, [user]);
 
   function toggleSlot(day: string, slot: string) {
     const key: AvailKey = `${day}-${slot}`;
@@ -66,6 +91,13 @@ export default function CoachProfileScreen() {
     router.replace('/(tabs)');
   }
 
+  async function handleSignOut() {
+    await signOut();
+    router.replace('/(tabs)');
+  }
+
+  const initials = profile?.name ? getInitials(profile.name) : loadingProfile ? '…' : '?';
+
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
@@ -74,16 +106,32 @@ export default function CoachProfileScreen() {
         <View style={s.identitySection}>
           <View style={s.photoWrap}>
             <View style={s.photoPlaceholder}>
-              <Text style={s.photoInitials}>{COACH.initials}</Text>
+              <Text style={s.photoInitials}>{initials}</Text>
             </View>
             <TouchableOpacity style={s.editPhotoBtn} activeOpacity={0.8}>
               <MaterialCommunityIcons name="camera-outline" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
 
-          <Text style={s.coachName}>{COACH.name}</Text>
-          <Text style={s.coachSpecialty}>{COACH.specialty}</Text>
-          <Text style={s.coachMeta}>{COACH.age} años · {COACH.nationality}</Text>
+          <Text style={s.coachName}>
+            {loadingProfile ? '…' : (profile?.name || '—')}
+          </Text>
+
+          {noCoachProfile ? (
+            <Text style={s.emptyCoachText}>Todavía no completaste tu perfil de coach</Text>
+          ) : (
+            <>
+              {profile?.specialty ? (
+                <Text style={s.coachSpecialty}>{profile.specialty}</Text>
+              ) : null}
+              {profile?.bio ? (
+                <Text style={s.coachBio}>{profile.bio}</Text>
+              ) : null}
+              {profile?.nationality ? (
+                <Text style={s.coachMeta}>{profile.nationality}</Text>
+              ) : null}
+            </>
+          )}
 
           <TouchableOpacity style={s.editProfileBtn} activeOpacity={0.75}>
             <Text style={s.editProfileBtnText}>Editar perfil</Text>
@@ -93,11 +141,6 @@ export default function CoachProfileScreen() {
         {/* ── Temas ─────────────────────────────────────────── */}
         <Text style={s.sectionTitle}>Temas que trabajo</Text>
         <View style={s.chipsWrap}>
-          {COACH.topics.map(topic => (
-            <View key={topic} style={s.topicChip}>
-              <Text style={s.topicChipText}>{topic}</Text>
-            </View>
-          ))}
           <TouchableOpacity style={s.addChip} activeOpacity={0.7}>
             <MaterialCommunityIcons name="plus" size={14} color={ViveColors.primary} />
             <Text style={s.addChipText}>Agregar</Text>
@@ -109,18 +152,12 @@ export default function CoachProfileScreen() {
         <View style={s.priceCard}>
           <View style={s.priceRow}>
             <Text style={s.priceLabel}>Sesión individual</Text>
-            <Text style={s.priceValue}>${COACH.priceSession.toLocaleString('es-AR')}</Text>
+            <Text style={s.priceValue}>
+              {profile?.price_per_session != null
+                ? `$${profile.price_per_session.toLocaleString('es-AR')}`
+                : '—'}
+            </Text>
           </View>
-          <View style={s.priceDivider} />
-          {COACH.packages.map((pkg, i) => (
-            <View key={i} style={[s.priceRow, i > 0 && { borderTopWidth: 1, borderTopColor: `${ViveColors.text}08`, paddingTop: 12, marginTop: 12 }]}>
-              <View>
-                <Text style={s.priceLabel}>{pkg.label}</Text>
-                <Text style={s.priceSaving}>{pkg.note}</Text>
-              </View>
-              <Text style={s.priceValue}>${pkg.price.toLocaleString('es-AR')}</Text>
-            </View>
-          ))}
         </View>
 
         {/* ── Modo de reserva ───────────────────────────────── */}
@@ -203,6 +240,12 @@ export default function CoachProfileScreen() {
           <Text style={s.devSwitchText}>Cambiar a vista usuario</Text>
         </TouchableOpacity>
 
+        {/* ── Cerrar sesión ─────────────────────────────────── */}
+        <TouchableOpacity style={s.signOutBtn} onPress={handleSignOut} activeOpacity={0.75}>
+          <MaterialCommunityIcons name="logout" size={16} color="#E05252" />
+          <Text style={s.signOutText}>Cerrar sesión</Text>
+        </TouchableOpacity>
+
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
@@ -267,11 +310,29 @@ const s = StyleSheet.create({
     color: ViveColors.primary,
     marginBottom: 4,
   },
+  coachBio: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: `${ViveColors.text}80`,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 4,
+    paddingHorizontal: 8,
+  },
   coachMeta: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
     color: `${ViveColors.text}70`,
     marginBottom: 18,
+  },
+  emptyCoachText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: `${ViveColors.text}60`,
+    textAlign: 'center',
+    marginBottom: 18,
+    marginTop: 4,
+    paddingHorizontal: 8,
   },
   editProfileBtn: {
     borderWidth: 1.5,
@@ -279,6 +340,7 @@ const s = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 22,
+    marginTop: 4,
   },
   editProfileBtnText: {
     fontFamily: ViveFonts.medium,
@@ -529,5 +591,20 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.medium,
     fontSize: 13,
     color: `${ViveColors.text}70`,
+  },
+
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingVertical: 14,
+  },
+  signOutText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 14,
+    color: '#E05252',
   },
 });

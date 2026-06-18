@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,38 +6,27 @@ import {
   StyleSheet,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
-
-const COACH_NAME = 'María';
-const PENDING_COUNT = 2;
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 type Session = {
   id: string;
   userName: string;
   time: string;
   type: string;
+  sala_id: string | null;
+  date: string;
 };
-
-const TODAY_SESSIONS: Session[] = [
-  { id: '1', userName: 'Ana López',      time: '11:00 hs', type: 'Sesión individual'    },
-  { id: '2', userName: 'Carlos Méndez',  time: '15:30 hs', type: 'Sesión de seguimiento' },
-];
 
 type DayEntry = { abbr: string; sessions: Session[] };
 
-const WEEK: DayEntry[] = [
-  { abbr: 'Lun', sessions: [{ id: 'l1', userName: 'Ana López',     time: '11:00', type: 'Individual'  }] },
-  { abbr: 'Mar', sessions: []                                                                              },
-  { abbr: 'Mié', sessions: [{ id: 'mi1', userName: 'Pedro Ríos',   time: '10:00', type: 'Seguimiento' }] },
-  { abbr: 'Jue', sessions: [{ id: 'j1', userName: 'Carlos Méndez', time: '15:30', type: 'Individual'  }] },
-  { abbr: 'Vie', sessions: []                                                                              },
-  { abbr: 'Sáb', sessions: []                                                                              },
-  { abbr: 'Dom', sessions: []                                                                              },
-];
+const WEEK_ABBRS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 const cardShadow = Platform.select({
   ios: {
@@ -49,8 +38,114 @@ const cardShadow = Platform.select({
   android: { elevation: 2 },
 });
 
+function toDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getTodayStr(): string {
+  return toDateStr(new Date());
+}
+
+function getWeekRange(): { mondayDate: Date } {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - daysFromMonday);
+  monday.setHours(0, 0, 0, 0);
+  return { mondayDate: monday };
+}
+
+function formatTime(timeStr: string): string {
+  const parts = timeStr.split(':');
+  return `${parts[0]}:${parts[1]} hs`;
+}
+
 export default function CoachHomeScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  const [coachName, setCoachName] = useState('');
+  const [todaySessions, setTodaySessions] = useState<Session[]>([]);
+  const [weekData, setWeekData] = useState<DayEntry[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    if (!user) { setLoading(false); return; }
+
+    const todayStr = getTodayStr();
+    const { mondayDate } = getWeekRange();
+
+    const [profileRes, bookingsRes, pendingRes] = await Promise.all([
+      supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
+      supabase
+        .from('bookings')
+        .select('id, user_id, date, time, sala_id')
+        .eq('coach_id', user.id)
+        .eq('status', 'confirmed')
+        .order('date', { ascending: true })
+        .order('time', { ascending: true }),
+      supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('coach_id', user.id)
+        .eq('status', 'pending'),
+    ]);
+
+    if (profileRes.data?.name) {
+      setCoachName(profileRes.data.name.split(' ')[0]);
+    }
+
+    const bookings = bookingsRes.data ?? [];
+
+    // Fetch user names in a single query
+    const userIds = [...new Set(bookings.map(b => b.user_id))];
+    let profileMap: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', userIds);
+      profileMap = Object.fromEntries((profiles ?? []).map(p => [p.id, p.name ?? 'Usuario']));
+    }
+
+    const sessions: Session[] = bookings.map(b => ({
+      id: b.id,
+      userName: profileMap[b.user_id] ?? 'Usuario',
+      time: formatTime(b.time),
+      type: 'Sesión individual',
+      sala_id: b.sala_id,
+      date: b.date,
+    }));
+
+    setTodaySessions(sessions.filter(s => s.date === todayStr));
+
+    const week: DayEntry[] = WEEK_ABBRS.map((abbr, i) => {
+      const d = new Date(mondayDate);
+      d.setDate(mondayDate.getDate() + i);
+      const dateStr = toDateStr(d);
+      return { abbr, sessions: sessions.filter(s => s.date === dateStr) };
+    });
+    setWeekData(week);
+
+    setPendingCount(pendingRes.count ?? 0);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <View style={s.loadingContainer}>
+          <ActivityIndicator size="small" color={ViveColors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -59,10 +154,10 @@ export default function CoachHomeScreen() {
         showsVerticalScrollIndicator={false}>
 
         {/* Greeting */}
-        <Text style={s.greeting}>Hola, {COACH_NAME} 👋</Text>
+        <Text style={s.greeting}>Hola, {coachName} 👋</Text>
 
         {/* Alert Banner */}
-        {PENDING_COUNT > 0 && (
+        {pendingCount > 0 && (
           <TouchableOpacity
             style={s.alertBanner}
             onPress={() => router.push('/coach-reservas')}
@@ -70,7 +165,7 @@ export default function CoachHomeScreen() {
             <Feather name="bell" size={15} color={ViveColors.primary} style={s.alertIcon} />
             <Text style={s.alertText}>
               Tenés{' '}
-              <Text style={s.alertBold}>{PENDING_COUNT} solicitudes pendientes</Text>
+              <Text style={s.alertBold}>{pendingCount} solicitudes pendientes</Text>
               {' '}— tenés 48hs para responder
             </Text>
             <Feather name="chevron-right" size={15} color={ViveColors.primary} />
@@ -80,8 +175,8 @@ export default function CoachHomeScreen() {
         {/* Hoy */}
         <Text style={s.sectionTitle}>Hoy</Text>
 
-        {TODAY_SESSIONS.length > 0 ? (
-          TODAY_SESSIONS.map(session => (
+        {todaySessions.length > 0 ? (
+          todaySessions.map(session => (
             <View key={session.id} style={s.sessionCard}>
               <View style={s.timeTag}>
                 <Text style={s.timeTagText}>{session.time}</Text>
@@ -92,7 +187,13 @@ export default function CoachHomeScreen() {
               </View>
               <TouchableOpacity
                 style={s.chatBtn}
-                onPress={() => router.push('/sala')}
+                onPress={() =>
+                  router.push(
+                    session.sala_id
+                      ? { pathname: '/sala', params: { sala_id: session.sala_id } }
+                      : '/sala'
+                  )
+                }
                 activeOpacity={0.75}
                 hitSlop={6}>
                 <Feather name="message-circle" size={20} color={ViveColors.primary} />
@@ -108,7 +209,7 @@ export default function CoachHomeScreen() {
         {/* Esta semana */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Esta semana</Text>
         <View style={s.weekCard}>
-          {WEEK.map((day, idx) => {
+          {weekData.map((day, idx) => {
             const active = day.sessions.length > 0;
             return (
               <View key={idx} style={s.dayCol}>
@@ -117,7 +218,7 @@ export default function CoachHomeScreen() {
                   {active && <Text style={s.dayCount}>{day.sessions.length}</Text>}
                 </View>
                 {active && (
-                  <Text style={s.dayTime}>{day.sessions[0].time}</Text>
+                  <Text style={s.dayTime}>{day.sessions[0].time.replace(' hs', '')}</Text>
                 )}
               </View>
             );
@@ -138,6 +239,11 @@ const s = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
     paddingTop: 22,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   greeting: {

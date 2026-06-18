@@ -105,13 +105,20 @@ export default function ConexionesScreen() {
       .limit(5)
       .then(({ data, error }) => {
         if (error) { console.error('[Conexiones] coaches fetch:', error.message); }
-        const rows = (data ?? []).map((c: any) => ({
-          profileId: c.profiles.id as string,
-          name: c.profiles.name as string,
-          specialty: c.specialty as string,
-          priceFrom: c.price_per_session as number,
-        }));
+        console.log('[Conexiones] coaches raw data:', JSON.stringify(data, null, 2));
+        console.log('[Conexiones] coaches count:', data?.length ?? 0);
+        const rows = (data ?? []).map((c: any) => {
+          const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
+          return {
+            profileId: profile?.id as string,
+            name: profile?.name as string,
+            specialty: c.specialty as string,
+            priceFrom: c.price_per_session as number,
+          };
+        });
         setCoaches(rows);
+        console.log('[Conexiones] rows mapeados:', JSON.stringify(rows, null, 2));
+        console.log('[Conexiones] rows.length:', rows.length);
         setLoadingCoaches(false);
       });
   }, []);

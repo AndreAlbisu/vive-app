@@ -139,7 +139,7 @@ export default function CoachChatsScreen() {
               style={[s.chatRow, idx < rooms.length - 1 && s.chatRowBorder]}
               onPress={() => router.push({
                 pathname: '/sala',
-                params: { coach_id: room.userId },
+                params: { sala_id: room.salaId },
               })}
               activeOpacity={0.75}>
 

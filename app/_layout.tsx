@@ -49,7 +49,7 @@ function AuthRedirect() {
     const inOnboardingOrAuth = ONBOARDING_SCREENS.has(segments[0] as string);
 
     if (!user && inProtectedGroup) {
-      router.replace('/');
+      router.replace('/(tabs)');
     } else if (user && inOnboardingOrAuth) {
       router.replace('/(tabs)');
     }

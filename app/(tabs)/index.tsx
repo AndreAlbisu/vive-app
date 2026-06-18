@@ -39,6 +39,7 @@ const mockRecommendation = {
 interface NextSession {
   id: string;
   coach_id: string;
+  sala_id: string | null;
   date: string;
   time: string;
   coachName: string;
@@ -86,7 +87,7 @@ export default function InicioScreen() {
 
     supabase
       .from('bookings')
-      .select('id, coach_id, date, time')
+      .select('id, coach_id, sala_id, date, time')
       .eq('user_id', user.id)
       .eq('status', 'confirmed')
       .gte('date', today)
@@ -108,6 +109,7 @@ export default function InicioScreen() {
         setNextSession({
           id: booking.id,
           coach_id: booking.coach_id,
+          sala_id: booking.sala_id ?? null,
           date: booking.date,
           time: booking.time,
           coachName: profile?.name ?? 'Tu coach',
@@ -209,7 +211,12 @@ export default function InicioScreen() {
               </View>
               <TouchableOpacity
                 style={styles.verSalaButton}
-                onPress={() => router.push({ pathname: '/sala', params: { coach_id: nextSession.coach_id } })}
+                onPress={() => router.push({
+                  pathname: '/sala',
+                  params: nextSession.sala_id
+                    ? { sala_id: nextSession.sala_id }
+                    : { coach_id: nextSession.coach_id },
+                })}
               >
                 <Text style={styles.verSalaButtonText}>Ver sala</Text>
               </TouchableOpacity>

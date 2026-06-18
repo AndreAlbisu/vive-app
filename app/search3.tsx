@@ -50,6 +50,18 @@ const DEFAULT_FILTERS: Filters = {
   type:        'Todos',
 };
 
+// ─── Normalización para búsqueda sin tildes/mayúsculas ───────────────────────
+function normalize(text: string): string {
+  return (text ?? '')
+    .toLowerCase()
+    .replace(/[áàäâã]/g, 'a')
+    .replace(/[éèëê]/g, 'e')
+    .replace(/[íìïî]/g, 'i')
+    .replace(/[óòöôõ]/g, 'o')
+    .replace(/[úùüû]/g, 'u')
+    .replace(/ñ/g, 'n');
+}
+
 // ─── Sombra ──────────────────────────────────────────────────────────────────
 const shadow = Platform.select({
   ios:     { shadowColor: ViveColors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
@@ -132,20 +144,23 @@ export default function SearchScreen3() {
         if (error) console.error('[Search3] coaches fetch:', error.message);
         const topicStr = Array.isArray(topic) ? topic[0] : topic;
         const queryStr = Array.isArray(query) ? query[0] : query;
-        const all: CoachResult[] = (data ?? []).map((c: any) => ({
-          id: c.profiles.id as string,
-          name: c.profiles.name as string,
-          specialty: c.specialty as string,
-          priceFrom: c.price_per_session as number,
-          nationality: (c.nationality ?? '') as string,
-        }));
+        const all: CoachResult[] = (data ?? []).map((c: any) => {
+          const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
+          return {
+            id: profile?.id as string,
+            name: profile?.name as string,
+            specialty: c.specialty as string,
+            priceFrom: c.price_per_session as number,
+            nationality: (c.nationality ?? '') as string,
+          };
+        });
         const filtered = all.filter(c => {
           if (topicStr) {
-            return c.specialty.toLowerCase().includes(topicStr.toLowerCase());
+            return normalize(c.specialty).includes(normalize(topicStr));
           }
           if (queryStr) {
-            const q = queryStr.toLowerCase();
-            return c.name.toLowerCase().includes(q) || c.specialty.toLowerCase().includes(q);
+            const q = normalize(queryStr);
+            return normalize(c.name).includes(q) || normalize(c.specialty).includes(q);
           }
           return true;
         });
