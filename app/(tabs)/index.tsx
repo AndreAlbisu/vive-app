@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
@@ -35,6 +36,16 @@ const mockRecommendation = {
   type: 'Video · 7 min',
   emoji: '💙',
 };
+
+const DAYS_ES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function getFormattedDate(): string {
+  const d = new Date();
+  return `${DAYS_ES[d.getDay()]}, ${d.getDate()} de ${MONTHS_ES[d.getMonth()]}`;
+}
+
+const RESOURCE_ICON_COLOR = [ViveColors.primary, ViveColors.accent];
+const RESOURCE_BUBBLE_BG  = ['rgba(232,116,59,0.13)', 'rgba(107,191,138,0.13)'];
 
 interface NextSession {
   id: string;
@@ -64,19 +75,21 @@ export default function InicioScreen() {
   const { user } = useAuth();
   const [nextSession, setNextSession] = useState<NextSession | null>(null);
 
-  const logoAnim = useRef(new Animated.Value(0)).current;
-  const greetingAnim = useRef(new Animated.Value(0)).current;
-  const dashboardAnim = useRef(new Animated.Value(0)).current;
-  const sessionAnim = useRef(new Animated.Value(0)).current;
-  const recommendationAnim = useRef(new Animated.Value(0)).current;
+  const headerAnim    = useRef(new Animated.Value(0)).current;
+  const logoAnim      = useRef(new Animated.Value(0)).current;
+  const quoteAnim     = useRef(new Animated.Value(0)).current;
+  const resourcesAnim = useRef(new Animated.Value(0)).current;
+  const sessionAnim   = useRef(new Animated.Value(0)).current;
+  const recAnim       = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.stagger(120, [
-      Animated.timing(logoAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
-      Animated.timing(greetingAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(dashboardAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(sessionAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(recommendationAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+    Animated.stagger(100, [
+      Animated.timing(headerAnim,    { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(logoAnim,      { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(quoteAnim,     { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(resourcesAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(sessionAnim,   { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(recAnim,       { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -131,81 +144,94 @@ export default function InicioScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+      >
 
-        {/* Logo centrado + avatar (izq) + sesiones (der) */}
-        <Animated.View style={[styles.logoRow, fadeUp(logoAnim)]}>
-          <TouchableOpacity
-            style={styles.profileBtn}
-            onPress={() => router.push('/profile-own')}
-            hitSlop={8}
-            activeOpacity={0.75}
-          >
-            <View style={styles.profileAvatar}>
-              <Text style={styles.profileAvatarText}>{displayName.charAt(0).toUpperCase()}</Text>
+        {/* ── Logo ── */}
+        <Animated.View style={[styles.logoBar, fadeUp(logoAnim)]}>
+          <Text style={styles.logo}>vita</Text>
+        </Animated.View>
+
+        {/* ── 1. HEADER ── */}
+        <Animated.View style={[styles.header, fadeUp(headerAnim)]}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              onPress={() => router.push('/profile-own')}
+              hitSlop={8}
+              activeOpacity={0.75}
+            >
+              <LinearGradient
+                colors={['#FF9A52', ViveColors.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.avatarCircle}
+              >
+                <Text style={styles.avatarInitial}>{displayName.charAt(0).toUpperCase()}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.greeting}>Hola, {displayName} 👋</Text>
+              <Text style={styles.date}>{getFormattedDate()}</Text>
             </View>
-          </TouchableOpacity>
-          <View style={styles.logoCenter}>
-            <Text style={styles.logo}>v</Text>
-            <MaterialCommunityIcons name="sprout" size={26} color={ViveColors.primary} style={styles.logoIcon} />
-            <Text style={styles.logo}>ve</Text>
           </View>
           <TouchableOpacity
-            style={styles.sessionsBtn}
-            onPress={() => router.push('/sessions')}
-            hitSlop={8}
+            style={styles.searchBtn}
             activeOpacity={0.7}
+            onPress={() => router.push('/sessions')}
           >
-            <MaterialCommunityIcons name="message-outline" size={24} color={ViveColors.text} />
+            <MaterialCommunityIcons name="message-outline" size={20} color={ViveColors.text} />
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Saludo */}
-        <Animated.View style={[styles.greetingArea, fadeUp(greetingAnim)]}>
-          <Text style={styles.greeting}>Hola, {displayName} 👋</Text>
+        {/* ── 2. QUOTE CARD ── */}
+        <Animated.View style={fadeUp(quoteAnim)}>
+          <LinearGradient
+            colors={['#FF9A52', ViveColors.primary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.quoteCard}
+          >
+            <Text style={styles.quoteDecor}>{'"'}</Text>
+            <Text style={styles.quoteText}>{dailyPhrase}</Text>
+            <Text style={styles.quoteLabel}>Frase del día</Text>
+          </LinearGradient>
         </Animated.View>
 
-        {/* Dashboard: frase + recursos */}
-        <Animated.View style={[styles.dashboardCard, fadeUp(dashboardAnim)]}>
-          <View style={styles.phraseHalf}>
-            <MaterialCommunityIcons name="format-quote-open" size={22} color="rgba(255,255,255,0.5)" style={styles.quoteIcon} />
-            <Text style={styles.phraseText}>{dailyPhrase}</Text>
-          </View>
-
-          <View style={styles.dashboardDivider} />
-
-          <View style={styles.resourcesHalf}>
-            <View style={styles.pinnedGrid}>
-              {[pinnedResources.slice(0, 2), pinnedResources.slice(2, 4)].map((row, ri) => (
-                <View key={ri} style={styles.pinnedRow}>
-                  {row.map((r) => (
-                    <ScaleCard key={r.id} style={styles.pinnedSquare}>
-                      {r.pinned && r.icon ? (
-                        <>
-                          <MaterialCommunityIcons name={r.icon as any} size={20} color={ViveColors.primary} />
-                          <Text style={styles.pinnedTitle} numberOfLines={2}>{r.title}</Text>
-                        </>
-                      ) : (
-                        <Text style={styles.pinnedPlus}>+</Text>
-                      )}
-                    </ScaleCard>
-                  ))}
+        {/* ── 3. RECURSOS GUARDADOS ── */}
+        <Animated.View style={fadeUp(resourcesAnim)}>
+          <Text style={styles.sectionTitle}>Recursos guardados</Text>
+          <View style={styles.resourcesGrid}>
+            {pinnedResources.map((r, i) => {
+              if (r.pinned && r.icon) {
+                return (
+                  <ScaleCard key={r.id} style={styles.resourceCard}>
+                    <View style={[styles.resourceIconBubble, { backgroundColor: RESOURCE_BUBBLE_BG[i] }]}>
+                      <MaterialCommunityIcons name={r.icon as any} size={22} color={RESOURCE_ICON_COLOR[i]} />
+                    </View>
+                    <Text style={styles.resourceLabel} numberOfLines={2}>{r.title}</Text>
+                  </ScaleCard>
+                );
+              }
+              return (
+                <View key={r.id} style={[styles.resourceCard, styles.resourceCardEmpty]}>
+                  <Text style={styles.resourcePlus}>+</Text>
                 </View>
-              ))}
-            </View>
+              );
+            })}
           </View>
         </Animated.View>
 
-        {/* Tu próxima sesión */}
+        {/* ── 4. PRÓXIMA SESIÓN ── */}
         <Animated.View style={fadeUp(sessionAnim)}>
           <Text style={styles.sectionTitle}>Tu próxima sesión</Text>
           {nextSession ? (
             <View style={styles.sessionCard}>
+              <View style={styles.sessionAvatar}>
+                <Text style={styles.sessionAvatarText}>{nextSession.coachName[0]}</Text>
+              </View>
               <View style={styles.sessionInfo}>
-                <Text style={styles.sessionName}>
-                  Sesión con {nextSession.coachName}
-                </Text>
-                <Text style={styles.sessionDateTime}>
+                <Text style={styles.sessionName}>Sesión con {nextSession.coachName}</Text>
+                <Text style={styles.sessionSub}>
                   {formatSessionDate(nextSession.date)} · {nextSession.time} hs
                 </Text>
               </View>
@@ -217,6 +243,7 @@ export default function InicioScreen() {
                     ? { sala_id: nextSession.sala_id }
                     : { coach_id: nextSession.coach_id },
                 })}
+                activeOpacity={0.82}
               >
                 <Text style={styles.verSalaButtonText}>Ver sala</Text>
               </TouchableOpacity>
@@ -237,15 +264,19 @@ export default function InicioScreen() {
           )}
         </Animated.View>
 
-        {/* Para vos hoy */}
-        <Animated.View style={fadeUp(recommendationAnim)}>
+        {/* ── 5. PARA VOS HOY ── */}
+        <Animated.View style={fadeUp(recAnim)}>
           <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>Para vos hoy</Text>
-          <ScaleCard style={styles.recommendationCard}>
-            <Text style={styles.recommendationEmoji}>{mockRecommendation.emoji}</Text>
-            <View style={styles.recommendationInfo}>
-              <Text style={styles.recommendationTitle}>{mockRecommendation.title}</Text>
-              <Text style={styles.recommendationDesc}>{mockRecommendation.description}</Text>
-              <Text style={styles.recommendationType}>{mockRecommendation.type}</Text>
+          <ScaleCard style={styles.recCard}>
+            <Text style={styles.recEmoji}>{mockRecommendation.emoji}</Text>
+            <View style={styles.recInfo}>
+              <Text style={styles.recSuperLabel}>Recomendación</Text>
+              <Text style={styles.recTitle}>{mockRecommendation.title}</Text>
+              <Text style={styles.recDesc}>{mockRecommendation.description}</Text>
+              <View style={styles.recPill}>
+                <MaterialCommunityIcons name="play-circle-outline" size={12} color={ViveColors.primary} />
+                <Text style={styles.recPillText}>{mockRecommendation.type}</Text>
+              </View>
             </View>
           </ScaleCard>
         </Animated.View>
@@ -256,11 +287,13 @@ export default function InicioScreen() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 const cardShadow = Platform.select({
   ios: {
     shadowColor: '#1F4A43',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.09,
+    shadowOpacity: 0.08,
     shadowRadius: 10,
   },
   android: { elevation: 3 },
@@ -276,203 +309,239 @@ const styles = StyleSheet.create({
     backgroundColor: ViveColors.background,
   },
   container: {
+    paddingTop: 0,
+    paddingBottom: 32,
+  },
+
+  // 1. Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
-
-  // Logo top-centered
-  logoRow: {
+  headerLeft: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
-    position: 'relative',
+    ...Platform.select({
+      ios: { shadowColor: ViveColors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6 },
+      android: { elevation: 3 },
+    }),
   },
-  logoCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logo: {
+  avatarInitial: {
     fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 30,
-    color: ViveColors.primary,
-    letterSpacing: -0.5,
-    lineHeight: 36,
-  },
-  logoIcon: {
-    marginTop: 2,
-  },
-  profileBtn: {
-    position: 'absolute',
-    left: 0,
-    padding: 4,
-  },
-  profileAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: `${ViveColors.primary}22`,
-    borderWidth: 1.5,
-    borderColor: ViveColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileAvatarText: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 14,
-    color: ViveColors.primary,
-  },
-  sessionsBtn: {
-    position: 'absolute',
-    right: 0,
-    padding: 4,
-  },
-
-  // Greeting
-  greetingArea: {
-    marginBottom: 24,
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   greeting: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 32,
+    fontSize: 15,
     color: ViveColors.text,
-    lineHeight: 40,
+    lineHeight: 20,
+  },
+  date: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: ViveColors.text,
+    opacity: 0.5,
+    marginTop: 1,
+  },
+  searchBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(31,74,67,0.07)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  // Dashboard card
-  dashboardCard: {
-    borderRadius: 20,
-    flexDirection: 'row',
-    marginBottom: 28,
-    minHeight: 180,
+  // Logo bar
+  logoBar: {
+    alignItems: 'center',
+    paddingTop: 18,
+    paddingBottom: 10,
+  },
+  logo: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 26,
+    color: ViveColors.primary,
+    letterSpacing: -0.5,
+    lineHeight: 30,
+  },
+
+  // 2. Quote card
+  quoteCard: {
+    marginHorizontal: 18,
+    marginBottom: 22,
+    borderRadius: 22,
+    padding: 22,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    ...cardShadow,
-  },
-  phraseHalf: {
-    flex: 1,
-    backgroundColor: ViveColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 18,
-    gap: 8,
-  },
-  quoteIcon: {
-    alignSelf: 'flex-start',
-  },
-  phraseText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#FFFFFF',
-    lineHeight: 20,
-    opacity: 0.95,
-  },
-  dashboardDivider: {
-    width: 1,
-    backgroundColor: 'rgba(31, 74, 67, 0.08)',
-    marginVertical: 0,
-  },
-  resourcesHalf: {
-    flex: 1,
-    padding: 12,
-    justifyContent: 'center',
-  },
-  pinnedGrid: {
-    gap: 8,
-  },
-  pinnedRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  pinnedSquare: {
-    flex: 1,
-    aspectRatio: 1,
-    backgroundColor: ViveColors.background,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: `${ViveColors.text}10`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 6,
-    gap: 4,
     ...Platform.select({
-      ios: {
-        shadowColor: '#1F4A43',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-      },
-      android: { elevation: 1 },
+      ios: { shadowColor: ViveColors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 18 },
+      android: { elevation: 6 },
     }),
   },
-  pinnedTitle: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 9,
-    color: ViveColors.text,
-    textAlign: 'center',
-    lineHeight: 13,
+  quoteDecor: {
+    position: 'absolute',
+    top: -12,
+    right: 16,
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 100,
+    color: 'rgba(255,255,255,0.18)',
+    lineHeight: 110,
   },
-  pinnedPlus: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 22,
-    color: ViveColors.text,
-    opacity: 0.2,
+  quoteText: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    lineHeight: 28,
+    maxWidth: '82%',
+  },
+  quoteLabel: {
+    marginTop: 14,
+    fontFamily: ViveFonts.medium,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.72)',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 
-  // Section title
+  // 3. Resources grid
   sectionTitle: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 17,
+    fontSize: 15,
     color: ViveColors.text,
+    paddingHorizontal: 20,
     marginBottom: 12,
   },
   sectionTitleSpaced: {
-    marginTop: 24,
+    marginTop: 20,
+  },
+  resourcesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingHorizontal: 18,
+    marginBottom: 22,
+  },
+  resourceCard: {
+    width: '47%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 100,
+    gap: 10,
+    ...cardShadow,
+  },
+  resourceCardEmpty: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(31,74,67,0.18)',
+    ...Platform.select({ ios: { shadowOpacity: 0 }, android: { elevation: 0 } }),
+  },
+  resourceIconBubble: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resourceLabel: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 12,
+    color: ViveColors.text,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  resourcePlus: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 28,
+    color: ViveColors.text,
+    opacity: 0.22,
+    lineHeight: 32,
   },
 
-  // Session card
+  // 4. Session card
   sessionCard: {
+    marginHorizontal: 18,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 14,
+    marginBottom: 0,
     ...cardShadow,
+  },
+  sessionAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: ViveColors.calm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  sessionAvatarText: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   sessionInfo: {
     flex: 1,
-    marginRight: 12,
   },
   sessionName: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
     color: ViveColors.text,
     lineHeight: 20,
-    marginBottom: 4,
   },
-  sessionDateTime: {
+  sessionSub: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
     color: ViveColors.text,
-    opacity: 0.55,
+    opacity: 0.52,
+    lineHeight: 18,
+    marginTop: 2,
   },
   verSalaButton: {
     backgroundColor: ViveColors.primary,
-    borderRadius: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 16,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 38,
+    flexShrink: 0,
+    ...Platform.select({
+      ios: { shadowColor: ViveColors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.28, shadowRadius: 8 },
+      android: { elevation: 4 },
+    }),
   },
   verSalaButtonText: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 13,
+    fontSize: 12,
     color: '#FFFFFF',
   },
 
   // No session card
   noSessionCard: {
+    marginHorizontal: 18,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
@@ -496,40 +565,62 @@ const styles = StyleSheet.create({
     color: `${ViveColors.text}66`,
   },
 
-  // Recommendation card
-  recommendationCard: {
+  // 5. Recommendation card
+  recCard: {
+    marginHorizontal: 18,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
     flexDirection: 'row',
     alignItems: 'flex-start',
+    gap: 14,
     ...cardShadow,
   },
-  recommendationEmoji: {
-    fontSize: 30,
-    marginRight: 14,
+  recEmoji: {
+    fontSize: 34,
+    lineHeight: 40,
     marginTop: 2,
+    flexShrink: 0,
   },
-  recommendationInfo: {
+  recInfo: {
     flex: 1,
   },
-  recommendationTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: ViveColors.text,
-    lineHeight: 20,
-    marginBottom: 4,
+  recSuperLabel: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 11,
+    color: ViveColors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 5,
   },
-  recommendationDesc: {
+  recTitle: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 15,
+    fontWeight: '700',
+    color: ViveColors.text,
+    lineHeight: 22,
+    marginBottom: 5,
+  },
+  recDesc: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
     color: ViveColors.text,
-    opacity: 0.6,
-    lineHeight: 18,
-    marginBottom: 6,
+    opacity: 0.55,
+    lineHeight: 19,
+    marginBottom: 10,
   },
-  recommendationType: {
-    fontFamily: ViveFonts.regular,
+  recPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(232,116,59,0.11)',
+    borderRadius: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  recPillText: {
+    fontFamily: ViveFonts.medium,
     fontSize: 11,
     color: ViveColors.primary,
   },

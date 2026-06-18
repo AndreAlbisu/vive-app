@@ -124,9 +124,9 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Logo ─────────────────────────────────────────────── */}
-          <Animated.View style={[s.logoWrap, fadeUp(logoAnim)]}>
-            <Text style={s.logo}>vive</Text>
+          {/* Logo */}
+          <Animated.View style={[styles.logoRow, fadeUp(logoAnim)]}>
+            <Text style={styles.logo}>vita</Text>
           </Animated.View>
 
           {/* ── Heading ──────────────────────────────────────────── */}

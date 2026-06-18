@@ -7,7 +7,11 @@ import {
   Poppins_700Bold,
 } from '@expo-google-fonts/poppins';
 import { Fraunces_700Bold } from '@expo-google-fonts/fraunces';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import {
+  SpaceGrotesk_400Regular,
+  SpaceGrotesk_600SemiBold,
+} from '@expo-google-fonts/space-grotesk';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -69,6 +73,8 @@ export default function RootLayout() {
     Poppins_600SemiBold,
     Poppins_700Bold,
     Fraunces_700Bold,
+    SpaceGrotesk_400Regular,
+    SpaceGrotesk_600SemiBold,
   });
 
   useEffect(() => {

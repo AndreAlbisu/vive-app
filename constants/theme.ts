@@ -13,6 +13,8 @@ export const ViveFonts = {
   semibold: 'Poppins_600SemiBold',
   bold: 'Poppins_700Bold',
   frauncesSerif: 'Fraunces_700Bold',
+  spaceGroteskSemibold: 'SpaceGrotesk_600SemiBold',
+  spaceGroteskRegular: 'SpaceGrotesk_400Regular',
 };
 
 // Expo Router tab navigation colors
