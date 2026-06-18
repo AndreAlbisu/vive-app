@@ -238,8 +238,8 @@ export default function OnboardingScreen1() {
   const brandProps = useAnimatedProps(() => {
     const me = eioq(mergeP.value);
     return {
-      y:        lerp(CY - 92, CY, me),
-      fontSize: lerp(28, 34, me),
+      y:        lerp(CY - 90, CY, me),
+      fontSize: lerp(52, 62, me),
     } as any;
   });
 
@@ -334,11 +334,11 @@ export default function OnboardingScreen1() {
               animatedProps={brandProps}
               x={CX}
               textAnchor="middle"
-              fontFamily="SpaceGrotesk_600SemiBold"
-              fontWeight="600"
+              fontFamily="Fraunces_700Bold"
+              fontWeight="700"
               fill={PAL.textColor}
             >
-              {'[NOMBRE]'}
+              {'vita'}
             </AnimatedSvgText>
 
             {/* ── Tagline: appears near completion ── */}

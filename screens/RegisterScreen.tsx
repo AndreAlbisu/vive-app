@@ -64,9 +64,7 @@ export default function RegisterScreen() {
         >
           {/* Logo */}
           <Animated.View style={[styles.logoRow, fadeUp(logoAnim)]}>
-            <Text style={styles.logo}>v</Text>
-            <MaterialCommunityIcons name="sprout" size={32} color={ViveColors.primary} style={styles.logoIcon} />
-            <Text style={styles.logo}>ve</Text>
+            <Text style={styles.logo}>vita</Text>
           </Animated.View>
 
           {/* Heading */}

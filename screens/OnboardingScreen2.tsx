@@ -86,7 +86,7 @@ export default function OnboardingScreen2() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+        <TouchableOpacity onPress={() => { console.log('[vita back] onboarding2 → back'); router.back(); }} style={styles.backBtn} hitSlop={8}>
           <MaterialCommunityIcons name="arrow-left" size={20} color={ViveColors.text} />
           <Text style={styles.backText}>Atrás</Text>
         </TouchableOpacity>

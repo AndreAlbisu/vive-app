@@ -84,14 +84,12 @@ export default function OnboardingScreen3() {
   return (
     <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.header, fadeUp(headerAnim)]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+        <TouchableOpacity onPress={() => { console.log('[vita back] onboarding3 → back'); router.back(); }} style={styles.backBtn} hitSlop={8}>
           <MaterialCommunityIcons name="arrow-left" size={20} color={ViveColors.text} />
           <Text style={styles.backText}>Atrás</Text>
         </TouchableOpacity>
         <View style={styles.logoRow}>
-          <Text style={styles.logo}>v</Text>
-          <MaterialCommunityIcons name="sprout" size={22} color={ViveColors.primary} style={styles.logoIcon} />
-          <Text style={styles.logo}>ve</Text>
+          <Text style={styles.logo}>vita</Text>
         </View>
         <View style={styles.headerSide} />
       </Animated.View>
