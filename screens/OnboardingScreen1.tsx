@@ -165,7 +165,7 @@ export default function OnboardingScreen1() {
   // ── JS-thread callbacks (called via runOnJS) ──────────────────────────────
 
   const navigateNext = useCallback(() => {
-    router.replace('/onboarding2');
+    router.push('/onboarding2');
   }, []);
 
   const triggerReveal = useCallback(() => {

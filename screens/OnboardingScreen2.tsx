@@ -85,6 +85,13 @@ export default function OnboardingScreen2() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+          <MaterialCommunityIcons name="arrow-left" size={20} color={ViveColors.text} />
+          <Text style={styles.backText}>Atrás</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.content}>
         <Animated.View style={fadeUp(titleAnim)}>
           <Text style={styles.title}>¿Cómo te gustaría empezar?</Text>
@@ -142,10 +149,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: ViveColors.background,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  backText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.text,
+    opacity: 0.45,
+  },
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 48,
+    paddingTop: 24,
     paddingBottom: 12,
     gap: 32,
   },
