@@ -23,23 +23,18 @@ export async function ensureAnonSession(): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.user?.id) return session.user.id;
 
-  const { data, error } = await supabase.auth.signInAnonymously();
-  if (error) {
-    // En desarrollo, si hay rate limit, usar cuenta de diagnóstico como fallback
-    if (error.status === 429 && __DEV__) {
-      const { data: dev, error: devErr } = await supabase.auth.signInWithPassword({
-        email: 'test_vita_diag@example.com',
-        password: 'TestPass123!',
-      });
-      if (!devErr && dev.user?.id) return dev.user.id;
-    }
-    if (error.status === 429) {
-      throw new Error('Demasiados intentos. Esperá un momento y reintentá.');
-    }
-    throw new Error(`Error al iniciar sesión: ${error.message}`);
-  }
-  if (!data.user?.id) throw new Error('No se pudo crear la sesión anónima');
-  return data.user.id;
+  // Intentar sesión anónima
+  const { data: anonData, error: anonErr } = await supabase.auth.signInAnonymously();
+  if (!anonErr && anonData.user?.id) return anonData.user.id;
+
+  // Fallback para desarrollo (rate limit o anon deshabilitado temporalmente)
+  const { data: devData, error: devErr } = await supabase.auth.signInWithPassword({
+    email: 'test_vita_diag@example.com',
+    password: 'TestPass123!',
+  });
+  if (!devErr && devData.user?.id) return devData.user.id;
+
+  throw new Error('No se pudo iniciar sesión. Revisá tu conexión e intentá de nuevo.');
 }
 
 export async function registrarEvento(
