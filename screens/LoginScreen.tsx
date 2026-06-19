@@ -110,8 +110,8 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Logo */}
-          <Animated.View style={[styles.logoRow, fadeUp(logoAnim)]}>
-            <Text style={styles.logo}>vita</Text>
+          <Animated.View style={[s.logoWrap, fadeUp(logoAnim)]}>
+            <Text style={s.logo}>vita</Text>
           </Animated.View>
 
           {/* ── Heading ──────────────────────────────────────────── */}

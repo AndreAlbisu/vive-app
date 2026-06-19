@@ -54,6 +54,7 @@ export default function BookingScreen_Confirm() {
   const time = params.time ?? '';
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const rawCoachId = params.coachId ?? '';
+  console.log('[BookingConfirm] params.coachId:', params.coachId, '| rawCoachId:', rawCoachId);
   const coachId = UUID_RE.test(rawCoachId) ? rawCoachId : '8b16e5b7-e0e3-4988-9ccc-f8ba447fcb8c';
 
   async function onConfirm() {
