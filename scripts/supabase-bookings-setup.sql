@@ -28,7 +28,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-  NEW.room_url := 'https://meet.vita.app/' || encode(gen_random_bytes(12), 'hex');
+  NEW.room_url := 'https://meet.jit.si/vita-' || encode(gen_random_bytes(8), 'hex');
   RETURN NEW;
 END;
 $$;
