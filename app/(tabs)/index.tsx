@@ -102,7 +102,7 @@ export default function InicioScreen() {
       .from('bookings')
       .select('id, coach_id, sala_id, date, time')
       .eq('user_id', user.id)
-      .eq('status', 'confirmed')
+      .eq('status', 'confirmada')
       .gte('date', today)
       .order('date', { ascending: true })
       .limit(1)

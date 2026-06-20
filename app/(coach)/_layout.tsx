@@ -40,7 +40,7 @@ export default function CoachTabLayout() {
       .from('bookings')
       .select('*', { count: 'exact', head: true })
       .eq('coach_id', coachId)
-      .eq('status', 'pending')
+      .eq('status', 'pendiente')
       .then(({ count }) => setPendingCount(count ?? 0));
   }, [coachId]);
 
@@ -56,7 +56,7 @@ export default function CoachTabLayout() {
             .from('bookings')
             .select('*', { count: 'exact', head: true })
             .eq('coach_id', coachId)
-            .eq('status', 'pending')
+            .eq('status', 'pendiente')
             .then(({ count }) => setPendingCount(count ?? 0));
         },
       )

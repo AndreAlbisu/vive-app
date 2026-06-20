@@ -5,6 +5,228 @@
 
 ---
 
+## 2026-06-20 (continuación 5) — Andre
+
+**Tocado:** RLS en `messages`, `screens/CoachReservasScreen.tsx`
+
+**Resumen:**
+- Bug crítico encontrado y corregido: la política RLS de SELECT en
+  `messages` ("Users can view messages in their salas") tenía la condición
+  `auth.uid() = sender_id` — esto permitía a cada usuario ver SOLO los
+  mensajes que él mismo envió, nunca los que recibió. Por eso los chats
+  nunca sincronizaban entre usuario y coach (cada lado veía una
+  conversación distinta, solo con sus propios mensajes salientes).
+  Corregido: la política ahora compara contra `sala_id IN (SELECT id FROM
+  salas WHERE user_id = auth.uid() OR coach_id = auth.uid())`. Confirmado
+  funcionando en el dispositivo en ambos sentidos (usuario↔coach).
+- Se corrigió el orden de loadBookings() en CoachReservasScreen.tsx,
+  función accept() — antes se llamaba antes de que terminara la lógica de
+  cancelación de conflictos, mostrando datos parciales hasta un refresh
+  manual. Ahora corre al final, una sola vez, con el resultado completo.
+- Se descartó la hipótesis de "salas duplicadas" como causa del problema
+  de sincronización (confirmado con SQL: no hay duplicados para ningún
+  par user_id+coach_id — son 3 salas legítimas con distintos usuarios).
+
+**Pendiente para la próxima sesión:**
+- Bug menor identificado, no corregido: app/(tabs)/index.tsx usa columnas
+  date/time en vez de scheduled_date/scheduled_time (mismo patrón
+  recurrente del día) — el botón "Ver sala" en Home nunca funciona.
+- Bug menor identificado, no corregido: SessionsScreen.tsx muestra el
+  lastMessage sin desencriptar (debería pasar por decryptMessage()).
+- Feature grande de disponibilidad por coach sigue pendiente (ver entrada
+  anterior del mismo día — tabla coach_availability, pantalla de
+  configuración para el coach, lógica de slots en Calendar/Time).
+
+---
+
+## 2026-06-20 (continuación 4) — Andre
+
+**Tocado:** `screens/SalaScreen.tsx`, `screens/CoachReservasScreen.tsx`,
+tabla `messages` (sender_type), pull-to-refresh en Reservas
+
+**Resumen:**
+- Bug encontrado (mismo patrón recurrente del día): SalaScreen.tsx usaba
+  columnas `date`/`time` en vez de `scheduled_date`/`scheduled_time` para
+  buscar la reserva confirmada de una sala — causaba que el banner de
+  sesión y el motivo del usuario (user_message) nunca aparecieran, aunque
+  la reserva existiera y estuviera confirmada. Corregido en 4 lugares:
+  tipo ConfirmedBooking, calcVideoWindow, la query en init(), y el JSX
+  del banner.
+- Confirmado (mediante SQL, no era bug): la confusión de "no aparece nada"
+  en varias pruebas de hoy fue reiteradamente por mezclar cuentas de coach
+  de prueba (`viveappp@gmail.com` = "Coach Prueba", `dardoalbisu@gmail.com`,
+  `steamsteam335@gmail.com` eran todas cuentas distintas usadas sin
+  registrar cuál se usaba en cada prueba). Se limpiaron todas las tablas
+  de prueba (messages, notifications, bookings, salas) para arrancar fresco.
+- Nueva feature: mensajes de sistema en el chat. Se agregó columna
+  `sender_type` ('user'|'coach'|'system') a `messages`. Cuando el coach
+  acepta una reserva, se inserta automáticamente un mensaje de sistema en
+  la sala con el motivo que el usuario escribió al reservar (o "Sesión
+  confirmada" si no escribió nada) — visible para ambos, estilo visual
+  distinto (centrado, sin burbuja, sin avatar). El banner fijo de la Sala
+  ya NO muestra el motivo (se sacó esa línea), solo fecha/hora — el motivo
+  vive únicamente como mensaje en el chat.
+- Nueva feature: cancelación automática de horarios conflictivos. Cuando
+  el coach acepta una reserva, todas las OTRAS reservas pendientes para el
+  mismo coach+fecha+hora se cancelan automáticamente (status='cancelada'),
+  con notificación + push + mensaje de sistema en la sala de cada usuario
+  afectado, avisando que el horario ya no está disponible.
+- Se agregó pull-to-refresh (RefreshControl) en CoachReservasScreen.tsx
+  como red de seguridad ante posibles fallos de Realtime.
+
+**Pendiente para la próxima sesión — FEATURE GRANDE, requiere diseño:**
+
+Sistema de disponibilidad real por coach. Hoy BookingScreen_Calendar.tsx y
+BookingScreen_Time.tsx son 100% mock/hardcodeado (MOCK_UNAVAILABLE_DAYS y
+ALL_TIMES son constantes fijas, no consultan Supabase, no usan coachId para
+nada real). Decisiones YA TOMADAS sobre cómo debe funcionar:
+
+1. Cada coach define sus PROPIOS días y horarios de atención (no son los
+   mismos 7 slots fijos para todos los coaches como hoy) — requiere tabla
+   nueva, por ejemplo `coach_availability` (día de semana, hora inicio,
+   hora fin, por coach).
+2. Un horario queda NO seleccionable para nuevos usuarios SOLO cuando ya
+   tiene una reserva con status='confirmada' para ese coach+fecha+hora.
+   Mientras haya solo reservas 'pendiente' compitiendo por el mismo
+   horario, sigue apareciendo disponible para todos (la resolución de
+   conflictos ya está resuelta vía cancelación automática al aceptar,
+   ver arriba).
+3. Si todos los horarios de un día específico ya están confirmados/no
+   disponibles, ese día completo debe aparecer bloqueado en el calendario
+   (no solo el horario puntual).
+
+Falta diseñar/construir:
+- Tabla `coach_availability` (esquema a definir)
+- Pantalla para que el coach configure su disponibilidad (probablemente
+  dentro de CoachProfileScreen, donde ya existe "Editar perfil")
+- Lógica en BookingScreen_Calendar.tsx: cruzar coach_availability con
+  bookings
+
+---
+
+## 2026-06-20 (continuación 4) — Claude
+
+**Tocado:** `screens/CoachReservasScreen.tsx`, `screens/SalaScreen.tsx`, tabla `messages` (nueva columna)
+
+**Resumen:**
+- Se agregó columna `sender_type text NOT NULL DEFAULT 'user' CHECK (...)` a la tabla `messages` (valores: 'user', 'coach', 'system'). SQL corrido por Andre.
+- Al aceptar una reserva en CoachReservasScreen (`accept()`), se inserta automáticamente un mensaje de sistema en la sala: contenido = `user_message` del booking (o "Sesión confirmada" si está vacío), con `sender_type='system'`.
+- En SalaScreen: tipo `Message` actualizado con `sender_type`; `rowToMessage()` lo propaga desde la fila (con fallback `'user'` para mensajes viejos); el render de mensajes tiene rama especial para system — centrado, sin burbuja, texto gris cursiva, sin avatar; se eliminó el `user_message` del banner (solo queda fecha/hora).
+- Fix de sesión anterior aplicado también: query de `confirmedBooking` corregida de `date`/`time` a `scheduled_date`/`scheduled_time` (bug que causaba "Sin sesión programada" aunque hubiera reserva confirmada).
+
+**Pendiente para la próxima sesión:**
+- Testear el flujo completo en Expo Go: coach acepta reserva → mensaje de sistema aparece en la sala del usuario.
+- Evaluar si el realtime de `messages` en SalaScreen también necesita actualizar `confirmedBooking` cuando el status cambia (hoy lo hace solo en init).
+
+---
+
+## 2026-06-20 (continuación 3) — Andre
+
+**Tocado:** `screens/CoachReservasScreen.tsx`, `screens/CoachHomeScreen.tsx`,
+`screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, tabla `bookings`
+(RLS + constraint), tabla `profiles` (RLS)
+
+**Resumen:**
+- Implementadas las 4 piezas de mejora de la interfaz de coach: (1) pestaña
+  fija de Reservas en el tab bar con badge numérico (antes solo accesible
+  vía banner condicional cuando había pendientes); (2) al aceptar/rechazar
+  una reserva se inserta una notificación en la tabla `notifications` y se
+  manda push; el banner de sesión en SalaScreen ahora lee la reserva
+  confirmada real en vez de un SESSION_LABEL hardcodeado; (3) el botón de
+  videollamada ahora respeta una ventana de 5 minutos antes de la sesión
+  (calcVideoWindow), no solo si existe room_url; (4) campana de
+  notificaciones en CoachHomeScreen con pantalla propia (coach-notifications.tsx).
+- Se creó la tabla `notifications` (recipient_id, type, booking_id, title,
+  body, read, created_at) con RLS (notifications_select_own,
+  notifications_update_own, notifications_insert_authenticated).
+- Bug grave encontrado: bookings.status se insertaba como 'pendiente'
+  (español) pero 8 lugares distintos del código filtraban buscando 'pending'/
+  'confirmed' (inglés) — las reservas nunca aparecían en ninguna pantalla
+  del coach. Se corrigieron los 9 archivos para usar consistentemente
+  español. Se descubrió que el constraint bookings_status_check en la base
+  SOLO permite 'pendiente'/'confirmada'/'completada'/'cancelada' — no existe
+  'rechazada', se usa 'cancelada' para ambos casos (rechazo de pendiente y
+  cancelación de confirmada).
+- Bug encontrado: CoachReservasScreen y CoachHomeScreen leían columnas
+  `date`/`time` que no existen en bookings (las reales son `scheduled_date`/
+  `scheduled_time`) — causaba fechas vacías en las tarjetas y un error
+  silencioso de PostgREST en CoachHomeScreen. Corregido.
+- Bug de seguridad/RLS encontrado y corregido: la tabla `bookings` no tenía
+  ninguna política de SELECT ni UPDATE — los coaches no podían leer NINGUNA
+  reserva (ni siquiera las suyas) desde la app, aunque sí existieran en la
+  base (visible solo vía SQL Editor, que corre como postgres sin RLS). Se
+  agregaron 3 políticas: coaches_can_select_own_bookings,
+  coaches_can_update_own_bookings, users_can_select_own_bookings.
+- Segundo bug de RLS encontrado: profiles solo tenía políticas de SELECT
+  para "ver tu propio perfil" o "coaches visibles para todos" — un coach
+  no podía leer el nombre de los usuarios que le reservaban, mostrando
+  siempre el fallback "Usuario". Se agregó coaches_can_view_their_users_profiles
+  (coach puede ver profiles de usuarios con los que tiene booking o sala).
+- SalaScreen.tsx: eliminada la constante COACH hardcodeada (María González/
+  Psicóloga) que se mostraba siempre sin importar quién entrara a la sala.
+  Ahora resuelve el perfil real del destinatario (recipientId), distinguiendo
+  si es coach (muestra specialty, navega a /profesional al tocar el header)
+  o usuario (sin specialty, header no clickeable). Se eliminó también el
+  indicador "En línea" (isOnline hardcodeado, sin sistema de presencia real).
+
+**Pendiente para la próxima sesión:**
+- Verificar si la pantalla /profesional tolera bien rating/reviewCount/
+  priceFrom vacíos cuando un coach navega ahí desde la Sala (hoy se le pasan
+  strings vacíos porque esos datos no existen para un perfil de usuario/coach
+  visto desde este contexto).
+- Probar el flujo completo de Pieza 4 (notificaciones) de punta a punta —
+  se implementó pero no se confirmó visualmente en el dispositivo todavía.
+- Considerar si bookings_status_check debería tener un valor separado para
+  "rechazada" vs "cancelada" en el futuro (limitación de schema, no bloqueante).
+
+---
+
+## 2026-06-20 (continuación 7) — Claude
+
+**Tocado:** `screens/SalaScreen.tsx`
+
+**Resumen:**
+- Eliminado el objeto `COACH` hardcodeado ("María González") que se mostraba igual para todos los usuarios
+- Agregados estados `recipientProfile` y `recipientIsCoach`: al resolver la sala se determina si el destinatario es coach o usuario, y se hace query a `profiles` (y a `coaches` por `profile_id` si es coach) para traer nombre real y especialidad
+- Header ahora muestra nombre/especialidad reales con skeleton mientras carga; dot "En línea" eliminado (no hay presencia real)
+- `onPress` del header es condicional: solo navega a `/profesional` si el destinatario es coach; si es usuario, no es clickeable
+- Iniciales en avatar grande y pequeño usan `buildInitials()` sobre el nombre real
+- Tooltip cambiado a texto neutral que no asume rol ("Tu espacio de comunicación. Escribí mensajes y coordiná tus sesiones.")
+- Renombrado `recipientProfile` → `recipientPushData` dentro de `sendMessage()` para evitar shadowing del estado
+
+**Pendiente para la próxima sesión:**
+- `handleHeaderPress` pasa `rating: ''`, `reviewCount: ''`, `priceFrom: ''` a `/profesional` — confirmar si esa pantalla maneja strings vacíos o necesita ajuste
+
+---
+
+## 2026-06-20 (continuación 6) — Claude
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`, `screens/CoachReservasScreen.tsx`, `screens/CoachHomeScreen.tsx`, `screens/SalaScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `app/(tabs)/index.tsx`, `app/(coach)/_layout.tsx`
+
+**Resumen:**
+- Bug raíz: el constraint `bookings_status_check` en Supabase solo permite `'pendiente'`, `'confirmada'`, `'completada'`, `'cancelada'` (español). Todo el código JS/TS usaba inglés (`'pending'`, `'confirmed'`, `'rejected'`), causando silently failing updates y queries vacías
+- Unificación a español: 13 cambios en 7 archivos — inserts, queries Supabase, filtros JS en memoria, y TypeScript types
+- `'rejected'` mapeado a `'cancelada'` porque `'rechazada'` no existe en el constraint; la lógica de notificaciones (`type: 'reserva_rechazada'`, texto push) es independiente del status y no se tocó
+
+**Pendiente para la próxima sesión:**
+- Si hay filas en producción con status en inglés (`'pending'`, `'confirmed'`, `'rejected'`) que entraron antes de este fix, migrarlas con SQL: `UPDATE bookings SET status = 'pendiente' WHERE status = 'pending'`, etc.
+
+---
+
+## 2026-06-20 (continuación 5) — Claude
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`
+
+**Resumen:**
+- Bug encontrado: `bookings.status` se insertaba como `'pendiente'` (español) en BookingScreen_Confirm, mientras que el resto del proyecto (8 queries + 2 filtros JS) filtraba por `'pending'`/`'confirmed'` (inglés) — las reservas nuevas nunca aparecían en la pantalla del coach
+- Unificación a inglés: cambiado `status: 'pendiente'` → `status: 'pending'` en línea 127
+- No hay otros valores en español en el codebase (`confirmada`, `rechazada`, `cancelada` no aparecen en ningún lado)
+
+**Pendiente para la próxima sesión:**
+- Correr en Supabase: `UPDATE bookings SET status = 'pending' WHERE status = 'pendiente';` para migrar filas existentes (Andre lo tiene que correr manualmente)
+
+---
+
 ## 2026-06-20 (continuación 4) — Claude
 
 **Tocado:** `app/(coach)/_layout.tsx`, `app/(coach)/reservas.tsx` (nuevo), `app/coach-notifications.tsx` (nuevo), `screens/CoachReservasScreen.tsx`, `screens/CoachHomeScreen.tsx`, `screens/SalaScreen.tsx`, `screens/CoachNotificationsScreen.tsx` (nuevo)

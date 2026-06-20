@@ -9,6 +9,7 @@ import {
   ScrollView,
   Modal,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useSegments } from 'expo-router';
@@ -17,17 +18,18 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
+import { encryptMessage } from '@/lib/encryption';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type ReservationStatus = 'pending' | 'confirmed' | 'rejected';
+type ReservationStatus = 'pendiente' | 'confirmada' | 'cancelada';
 
 interface Booking {
   id: string;
   user_id: string;
   coach_id: string;
   sala_id: string | null;
-  date: string;
-  time: string;
+  scheduled_date: string;
+  scheduled_time: string;
   status: ReservationStatus;
   created_at: string;
   user_message: string | null;
@@ -85,30 +87,40 @@ export default function CoachReservasScreen() {
   const [rejectModal, setRejectModal] = useState<{ visible: boolean; id: string | null }>({ visible: false, id: null });
   const [rejectReason, setRejectReason] = useState('');
   const [coachId, setCoachId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const pending   = bookings.filter(b => b.status === 'pending');
-  const confirmed = bookings.filter(b => b.status === 'confirmed');
+  const pending   = bookings.filter(b => b.status === 'pendiente');
+  const confirmed = bookings.filter(b => b.status === 'confirmada');
 
   const loadBookings = useCallback(async () => {
     if (!user || !coachId) return;
 
-    console.log('[CoachReservas] auth.uid():', user.id);
+    console.log('[CoachReservas] ── DIAGNÓSTICO ──────────────────────────');
+    console.log('[CoachReservas] profile_id (auth.uid):', user.id);
+    console.log('[CoachReservas] coachId    (coaches.id):', coachId);
 
     const { data: rows, error } = await supabase
       .from('bookings')
       .select('*')
       .eq('coach_id', coachId)
-      .in('status', ['pending', 'confirmed'])
+      .in('status', ['pendiente', 'confirmada'])
       .order('created_at', { ascending: false });
 
-    console.log('[CoachReservas] query coach_id=' + user.id + ' → data:', rows, '| error:', error);
+    console.log('[CoachReservas] query filtrada  → rows:', rows?.length ?? 'null', '| error:', error?.message ?? null);
+    // Log completo del array crudo — si llega vacío acá el problema es RLS o coach_id; si llega pero no se ve en pantalla es un filtro de JS
+    console.log('[CoachReservas] raw rows (array completo):', JSON.stringify(rows));
 
-    // Sin filtro de coach_id — para ver todos los bookings de la tabla
+    // Sin filtro de coach_id, ordenado por fecha desc — si la reserva nueva tampoco aparece acá → RLS bloqueando
     const { data: allRows, error: allError } = await supabase
       .from('bookings')
-      .select('id, coach_id, user_id, status')
+      .select('id, coach_id, user_id, status, created_at')
+      .order('created_at', { ascending: false })
       .limit(20);
-    console.log('[CoachReservas] todos los bookings (sin filtro):', allRows, '| error:', allError);
+    console.log('[CoachReservas] todos los bookings (sin filtro, recientes primero) → count:', allRows?.length ?? 'null', '| error:', allError?.message ?? null);
+    if (allRows && allRows.length > 0) {
+      console.log('[CoachReservas] primeros 3 de allRows:', JSON.stringify(allRows.slice(0, 3)));
+    }
+    console.log('[CoachReservas] ─────────────────────────────────────────');
 
     if (error || !rows) { setLoading(false); return; }
 
@@ -129,8 +141,8 @@ export default function CoachReservasScreen() {
         user_id: r.user_id,
         coach_id: r.coach_id,
         sala_id: r.sala_id,
-        date: r.date,
-        time: r.time,
+        scheduled_date: r.scheduled_date,
+        scheduled_time: r.scheduled_time,
         status: r.status,
         created_at: r.created_at,
         user_message: r.user_message ?? null,
@@ -173,24 +185,30 @@ export default function CoachReservasScreen() {
   async function accept(id: string) {
     const { data, error } = await supabase
       .from('bookings')
-      .update({ status: 'confirmed' })
+      .update({ status: 'confirmada' })
       .eq('id', id)
       .select();
     console.log('[CoachReservas] accept update → data:', data, '| error:', error);
 
     if (error) return;
 
-    await loadBookings();
-
     const booking = bookings.find(b => b.id === id);
     if (booking && user) {
-      const [{ data: userProfile }, { data: coachProfile }] = await Promise.all([
+      const [{ data: userProfile }, { data: coachProfile }, { data: conflicting }] = await Promise.all([
         supabase.from('profiles').select('push_token').eq('id', booking.user_id).maybeSingle(),
         supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
+        supabase
+          .from('bookings')
+          .select('id, user_id, sala_id')
+          .eq('coach_id', booking.coach_id)
+          .eq('scheduled_date', booking.scheduled_date)
+          .eq('scheduled_time', booking.scheduled_time)
+          .eq('status', 'pendiente')
+          .neq('id', id),
       ]);
 
       const notifTitle = '¡Tu sesión fue confirmada! ✅';
-      const notifBody = `Tu sesión con ${coachProfile?.name ?? 'tu coach'} el ${formatBookingDate(booking.date)} está confirmada`;
+      const notifBody = `Tu sesión con ${coachProfile?.name ?? 'tu coach'} el ${formatBookingDate(booking.scheduled_date)} está confirmada`;
 
       await Promise.all([
         supabase.from('notifications').insert({
@@ -204,7 +222,61 @@ export default function CoachReservasScreen() {
           ? sendPushNotification(userProfile.push_token, notifTitle, notifBody)
           : Promise.resolve(),
       ]);
+
+      if (booking.sala_id) {
+        await supabase.from('messages').insert({
+          sala_id: booking.sala_id,
+          sender_id: user.id,
+          sender_type: 'system',
+          content: encryptMessage(booking.user_message ?? 'Sesión confirmada'),
+        });
+      }
+
+      if (conflicting && conflicting.length > 0) {
+        const conflictUserIds = conflicting.map(b => b.user_id);
+        const { data: conflictProfiles } = await supabase
+          .from('profiles')
+          .select('id, push_token')
+          .in('id', conflictUserIds);
+
+        const tokenMap: Record<string, string | null> = {};
+        conflictProfiles?.forEach(p => { tokenMap[p.id] = p.push_token ?? null; });
+
+        const cancelTitle = 'Horario no disponible';
+        const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu coach.';
+        const cancelSystemMsg = 'Esta solicitud fue cancelada — el horario ya no está disponible.';
+
+        await Promise.all(
+          conflicting.map((cb) => {
+            const ops: Promise<unknown>[] = [
+              supabase.from('bookings').update({ status: 'cancelada' }).eq('id', cb.id),
+              supabase.from('notifications').insert({
+                recipient_id: cb.user_id,
+                type: 'reserva_cancelada',
+                booking_id: cb.id,
+                title: cancelTitle,
+                body: cancelBody,
+              }),
+            ];
+            if (cb.sala_id) {
+              ops.push(
+                supabase.from('messages').insert({
+                  sala_id: cb.sala_id,
+                  sender_id: user.id,
+                  sender_type: 'system',
+                  content: encryptMessage(cancelSystemMsg),
+                })
+              );
+            }
+            const token = tokenMap[cb.user_id];
+            if (token) ops.push(sendPushNotification(token, cancelTitle, cancelBody));
+            return Promise.all(ops);
+          })
+        );
+      }
     }
+
+    await loadBookings();
   }
 
   function openReject(id: string) {
@@ -219,7 +291,7 @@ export default function CoachReservasScreen() {
 
     const { data, error } = await supabase
       .from('bookings')
-      .update({ status: 'rejected' })
+      .update({ status: 'cancelada' })
       .eq('id', rejectModal.id)
       .select();
     console.log('[CoachReservas] reject update → data:', data, '| error:', error);
@@ -253,6 +325,12 @@ export default function CoachReservasScreen() {
     }
   }
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadBookings();
+    setRefreshing(false);
+  }, [loadBookings]);
+
   console.log('[CoachReservas] render bookings:', bookings);
 
   return (
@@ -274,7 +352,18 @@ export default function CoachReservasScreen() {
           <ActivityIndicator size="large" color={ViveColors.primary} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={s.container}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={ViveColors.primary}
+              colors={[ViveColors.primary]}
+            />
+          }
+        >
 
           {/* Pending */}
           <Text style={s.sectionTitle}>
@@ -300,7 +389,7 @@ export default function CoachReservasScreen() {
                     </View>
                     <View style={s.cardInfo}>
                       <Text style={s.cardName}>{b.userName}</Text>
-                      <Text style={s.cardDate}>{formatBookingDate(b.date)} · {b.time} hs</Text>
+                      <Text style={s.cardDate}>{formatBookingDate(b.scheduled_date)} · {b.scheduled_time} hs</Text>
                       <Text style={s.cardRequested}>Solicitado {formatTimeAgo(b.created_at)}</Text>
                     </View>
                   </View>
@@ -353,7 +442,7 @@ export default function CoachReservasScreen() {
                 </View>
                 <View style={s.cardInfo}>
                   <Text style={s.cardName}>{b.userName}</Text>
-                  <Text style={s.cardDate}>{formatBookingDate(b.date)} · {b.time} hs</Text>
+                  <Text style={s.cardDate}>{formatBookingDate(b.scheduled_date)} · {b.scheduled_time} hs</Text>
                 </View>
                 <View style={s.confirmedBadge}>
                   <MaterialCommunityIcons name="check" size={13} color={ViveColors.accent} />

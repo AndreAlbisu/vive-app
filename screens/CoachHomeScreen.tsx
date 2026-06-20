@@ -85,14 +85,14 @@ export default function CoachHomeScreen() {
         .from('bookings')
         .select('id, user_id, date, time, sala_id')
         .eq('coach_id', coachId)
-        .eq('status', 'confirmed')
+        .eq('status', 'confirmada')
         .order('date', { ascending: true })
         .order('time', { ascending: true }),
       supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
         .eq('coach_id', coachId)
-        .eq('status', 'pending'),
+        .eq('status', 'pendiente'),
     ]);
 
     if (profileRes.data?.name) {

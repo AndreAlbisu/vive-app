@@ -30,6 +30,7 @@
 - `sala_id` (uuid, FK → `salas.id`)
 - `sender_id` (uuid, FK → `profiles.id`)
 - `content` (text) — encriptado con XOR+base64 antes de guardar (ver `lib/encryption.ts`)
+- `sender_type` (text, default 'user') — valores: 'user' | 'coach' | 'system'. Los mensajes system se insertan automáticamente al aceptar una reserva (contiene el motivo del usuario) o al cancelar por conflicto de horario. `sender_id` sigue siendo NOT NULL incluso en mensajes de sistema — queda el id de quien disparó la acción. Lo que determina el render es `sender_type`, no `sender_id`.
 - `created_at`
 
 ### `bookings`
@@ -70,3 +71,4 @@
 5. **Scripts SQL en `/scripts` pueden no estar corridos** — este archivo es la verdad sobre qué existe HOY. Confirmado contra `information_schema` el 20/06/2026.
 6. **Cualquier cambio estructural se revisa y corre entre Andre y Joaquín** — hay datos reales de testing en `salas`, `messages` y `bookings`.
 7. **RLS en `coaches`**: existe la política `coaches_insert_own` (FOR INSERT, WITH CHECK `profile_id = auth.uid()`) — permite que un usuario autenticado cree su propia fila de coach al postularse. Sin políticas de INSERT, la tabla bloqueaba todo insert por RLS activado sin excepciones.
+8. **Cancelación automática de horarios conflictivos**: cuando un coach acepta una reserva, todas las demás reservas 'pendiente' para el mismo `coach_id` + `scheduled_date` + `scheduled_time` se cancelan automáticamente (`status='cancelada'`), con notificación al usuario afectado. Esta lógica vive en `CoachReservasScreen.tsx`, función `accept()`.

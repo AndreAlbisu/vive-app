@@ -27,30 +27,27 @@ type Message = {
   id: string;
   text: string;
   sender: 'user' | 'coach';
+  sender_type: 'user' | 'coach' | 'system';
   time: string;
 };
 
 type ConfirmedBooking = {
   id: string;
-  date: string;
-  time: string;
+  scheduled_date: string;
+  scheduled_time: string;
   user_message: string | null;
 } | null;
 
-const COACH = {
-  name: 'María González',
-  specialty: 'Psicóloga',
-  isOnline: true,
-  initials: 'MG',
-  rating: 4.9,
-  reviewCount: 134,
-  priceFrom: 5500,
+type RecipientProfile = {
+  name: string;
+  specialty?: string;
+  initials: string;
 };
 
 function calcVideoWindow(booking: ConfirmedBooking): boolean {
   if (!booking) return false;
-  const [year, month, day] = booking.date.split('-').map(Number);
-  const [h, m] = booking.time.split(':').map(Number);
+  const [year, month, day] = booking.scheduled_date.split('-').map(Number);
+  const [h, m] = booking.scheduled_time.split(':').map(Number);
   const sessionMs = new Date(year, month - 1, day, h, m, 0).getTime();
   return Date.now() >= sessionMs - 5 * 60 * 1000;
 }
@@ -73,6 +70,7 @@ function rowToMessage(row: Record<string, unknown>, userId: string): Message {
     id: row.id as string,
     text: row.content as string,
     sender: (row.sender_id as string) === userId ? 'user' : 'coach',
+    sender_type: ((row.sender_type as string) ?? 'user') as 'user' | 'coach' | 'system',
     time: new Date(row.created_at as string).toLocaleTimeString('es-AR', {
       hour: '2-digit',
       minute: '2-digit',
@@ -80,10 +78,17 @@ function rowToMessage(row: Record<string, unknown>, userId: string): Message {
   };
 }
 
+function buildInitials(name: string): string {
+  return name
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+}
+
 export default function SalaScreen() {
   const router = useRouter();
-  // sala_id: preferred — skip find-or-create entirely.
-  // coach_id: fallback for first contact from a coach profile (user side only).
   const { sala_id: salaIdParam, coach_id } = useLocalSearchParams<{ sala_id?: string; coach_id?: string }>();
   const { user } = useAuth();
 
@@ -91,6 +96,8 @@ export default function SalaScreen() {
   const [inputText, setInputText] = useState('');
   const [salaId, setSalaId] = useState<string | null>(null);
   const [recipientId, setRecipientId] = useState<string | null>(null);
+  const [recipientIsCoach, setRecipientIsCoach] = useState(false);
+  const [recipientProfile, setRecipientProfile] = useState<RecipientProfile | null>(null);
   const [roomUrl, setRoomUrl] = useState<string | null>(null);
   const [confirmedBooking, setConfirmedBooking] = useState<ConfirmedBooking>(null);
   const [isInVideoWindow, setIsInVideoWindow] = useState(false);
@@ -115,7 +122,6 @@ export default function SalaScreen() {
     ]).start();
   }, []);
 
-  // Resolve sala: use sala_id param directly, or find-or-create via coach_id (user→coach first contact)
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     if (!salaIdParam && !coach_id) { setLoading(false); return; }
@@ -123,13 +129,13 @@ export default function SalaScreen() {
     let mounted = true;
 
     async function init() {
+      console.log('[Sala] DIAG ── params recibidos:', { salaIdParam, coach_id, userId: user!.id });
       let id: string | null = null;
       let salaUserId: string | null = null;
       let salaCoachId: string | null = null;
       let salaRoomUrl: string | null = null;
 
       if (salaIdParam) {
-        // Fast path: sala already known — just load its user_id/coach_id for recipient resolution
         const { data: sala } = await supabase
           .from('salas')
           .select('id, user_id, coach_id, room_url')
@@ -142,7 +148,6 @@ export default function SalaScreen() {
           salaRoomUrl = sala.room_url as string | null;
         }
       } else {
-        // Fallback: first contact from coach profile page — current user is always the patient
         const { data: existing } = await supabase
           .from('salas')
           .select('id, user_id, coach_id, room_url')
@@ -171,38 +176,76 @@ export default function SalaScreen() {
         }
       }
 
+      console.log('[Sala] DIAG ── sala resuelta:', { id, salaUserId, salaCoachId });
+
       if (!mounted || !id || !salaUserId || !salaCoachId) {
+        console.log('[Sala] DIAG ── ABORTANDO: id o participantes nulos');
         if (mounted) setLoading(false);
         return;
       }
 
+      const resolvedRecipientId = user!.id === salaUserId ? salaCoachId : salaUserId;
+      const isRecipientCoach = user!.id === salaUserId;
+
       setSalaId(id);
       setRoomUrl(salaRoomUrl);
-      setRecipientId(user!.id === salaUserId ? salaCoachId : salaUserId);
+      setRecipientId(resolvedRecipientId);
+      setRecipientIsCoach(isRecipientCoach);
 
-      // Fetch closest upcoming confirmed booking for this sala
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      const { data: bkRows } = await supabase
-        .from('bookings')
-        .select('id, date, time, user_message')
-        .eq('sala_id', id)
-        .eq('status', 'confirmed')
-        .gte('date', todayStr)
-        .order('date', { ascending: true })
-        .order('time', { ascending: true })
-        .limit(1);
-      if (mounted) setConfirmedBooking(bkRows?.[0] ?? null);
 
-      const { data: msgs, error: msgsError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('sala_id', id)
-        .order('created_at', { ascending: true });
+      const [profileResult, bookingResult, msgsResult] = await Promise.all([
+        supabase.from('profiles').select('name').eq('id', resolvedRecipientId).single(),
+        supabase
+          .from('bookings')
+          .select('id, scheduled_date, scheduled_time, user_message')
+          .eq('sala_id', id)
+          .eq('status', 'confirmada')
+          .gte('scheduled_date', todayStr)
+          .order('scheduled_date', { ascending: true })
+          .order('scheduled_time', { ascending: true })
+          .limit(1),
+        supabase
+          .from('messages')
+          .select('*')
+          .eq('sala_id', id)
+          .order('created_at', { ascending: true }),
+      ]);
+
+      console.log('[Sala] DIAG ── mensajes SELECT:', {
+        salaId: id,
+        count: msgsResult.data?.length ?? 0,
+        error: msgsResult.error?.message ?? null,
+        firstMsg: msgsResult.data?.[0] ? { id: msgsResult.data[0].id, sender_id: msgsResult.data[0].sender_id } : null,
+      });
 
       if (!mounted) return;
-      if (msgsError) console.error('[Sala] Error cargando mensajes:', msgsError.message);
 
+      const recipientName = (profileResult.data as any)?.name ?? '';
+      let specialty: string | undefined;
+      if (isRecipientCoach) {
+        const { data: coachRow } = await supabase
+          .from('coaches')
+          .select('specialty')
+          .eq('profile_id', resolvedRecipientId)
+          .single();
+        specialty = (coachRow as any)?.specialty;
+      }
+
+      if (mounted) {
+        setRecipientProfile({
+          name: recipientName,
+          specialty,
+          initials: recipientName ? buildInitials(recipientName) : '?',
+        });
+        setConfirmedBooking(bookingResult.data?.[0] ?? null);
+      }
+
+      if (msgsResult.error) console.error('[Sala] Error cargando mensajes:', msgsResult.error.message);
+
+      if (!mounted) return;
+      const msgs = msgsResult.data;
       if (msgs && msgs.length > 0) {
         const mapped = (msgs as Record<string, unknown>[]).map(row => rowToMessage(row, user!.id));
         mapped.forEach(m => getAnim(m.id, 0));
@@ -223,7 +266,6 @@ export default function SalaScreen() {
     return () => { mounted = false; };
   }, [user?.id, salaIdParam, coach_id]);
 
-  // Realtime subscription for incoming messages
   useEffect(() => {
     if (!salaId || !user) return;
 
@@ -234,7 +276,6 @@ export default function SalaScreen() {
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `sala_id=eq.${salaId}` },
         (payload) => {
           const row = payload.new as Record<string, unknown>;
-          // Skip own messages — already shown optimistically
           if ((row.sender_id as string) === user.id) return;
 
           const msg = rowToMessage(row, user.id);
@@ -262,6 +303,20 @@ export default function SalaScreen() {
     if (roomUrl) Linking.openURL(roomUrl);
   }
 
+  function handleHeaderPress() {
+    if (!recipientProfile) return;
+    router.push({
+      pathname: '/profesional',
+      params: {
+        name: recipientProfile.name,
+        specialty: recipientProfile.specialty ?? '',
+        rating: '',
+        reviewCount: '',
+        priceFrom: '',
+      },
+    });
+  }
+
   async function sendMessage() {
     const text = inputText.trim();
     if (!text || !salaId || !user) return;
@@ -287,15 +342,15 @@ export default function SalaScreen() {
     }
 
     if (recipientId) {
-      const { data: recipientProfile } = await supabase
+      const { data: recipientPushData } = await supabase
         .from('profiles')
         .select('push_token')
         .eq('id', recipientId)
         .maybeSingle();
 
-      if (recipientProfile?.push_token) {
+      if (recipientPushData?.push_token) {
         await sendPushNotification(
-          recipientProfile.push_token,
+          recipientPushData.push_token,
           'Nuevo mensaje',
           text.slice(0, 50),
         );
@@ -304,6 +359,7 @@ export default function SalaScreen() {
   }
 
   const canSend = inputText.trim().length > 0 && !!salaId && !!user;
+  const displayInitials = recipientProfile?.initials ?? '···';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -312,7 +368,7 @@ export default function SalaScreen() {
         icon="message-outline"
         iconColor={ViveColors.calm}
         title="La Sala"
-        description="Tu espacio de comunicación con el coach. Escribí mensajes, compartí cómo te sentís e iniciá videollamadas."
+        description="Tu espacio de comunicación. Escribí mensajes y coordiná tus sesiones."
         delay={1000}
       />
 
@@ -332,30 +388,28 @@ export default function SalaScreen() {
 
         <TouchableOpacity
           style={styles.coachInfo}
-          activeOpacity={0.7}
-          onPress={() => router.push({
-            pathname: '/profesional',
-            params: {
-              name: COACH.name,
-              specialty: COACH.specialty,
-              rating: String(COACH.rating),
-              reviewCount: String(COACH.reviewCount),
-              priceFrom: String(COACH.priceFrom),
-            },
-          })}
+          activeOpacity={recipientIsCoach ? 0.7 : 1}
+          onPress={recipientIsCoach ? handleHeaderPress : undefined}
         >
           <View style={styles.avatarWrap}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{COACH.initials}</Text>
+              <Text style={styles.avatarText}>{displayInitials}</Text>
             </View>
-            {COACH.isOnline && <View style={styles.onlineDot} />}
           </View>
           <View>
-            <Text style={styles.coachName}>{COACH.name}</Text>
-            <View style={styles.statusRow}>
-              <Text style={styles.coachSpecialty}>{COACH.specialty}</Text>
-              {COACH.isOnline && <Text style={styles.statusOnline}> · En línea</Text>}
-            </View>
+            {recipientProfile ? (
+              <>
+                <Text style={styles.coachName}>{recipientProfile.name}</Text>
+                {!!recipientProfile.specialty && (
+                  <Text style={styles.coachSpecialty}>{recipientProfile.specialty}</Text>
+                )}
+              </>
+            ) : (
+              <>
+                <View style={styles.skeletonName} />
+                <View style={styles.skeletonSpecialty} />
+              </>
+            )}
           </View>
         </TouchableOpacity>
 
@@ -383,12 +437,9 @@ export default function SalaScreen() {
             <Text style={styles.bannerText}>
               Próxima sesión:{' '}
               <Text style={styles.bannerBold}>
-                {formatSalaDate(confirmedBooking.date)} · {confirmedBooking.time.slice(0, 5)} hs
+                {formatSalaDate(confirmedBooking.scheduled_date)} · {confirmedBooking.scheduled_time.slice(0, 5)} hs
               </Text>
             </Text>
-            {!!confirmedBooking.user_message && (
-              <Text style={styles.bannerNote}>"{confirmedBooking.user_message}"</Text>
-            )}
           </>
         ) : (
           <Text style={styles.bannerText}>Sin sesión programada</Text>
@@ -419,6 +470,24 @@ export default function SalaScreen() {
           {messages.map((msg) => {
             const isUser = msg.sender === 'user';
             const anim = getAnim(msg.id, 1);
+
+            if (msg.sender_type === 'system') {
+              return (
+                <Animated.View
+                  key={msg.id}
+                  style={[
+                    styles.systemRow,
+                    {
+                      opacity: anim,
+                      transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
+                    },
+                  ]}
+                >
+                  <Text style={styles.systemText}>{decryptMessage(msg.text)}</Text>
+                </Animated.View>
+              );
+            }
+
             return (
               <Animated.View
                 key={msg.id}
@@ -433,7 +502,7 @@ export default function SalaScreen() {
               >
                 {!isUser && (
                   <View style={styles.avatarSmall}>
-                    <Text style={styles.avatarSmallText}>{COACH.initials}</Text>
+                    <Text style={styles.avatarSmallText}>{displayInitials}</Text>
                   </View>
                 )}
                 <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleCoach]}>
@@ -524,21 +593,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 1,
-    right: 1,
-    width: 11,
-    height: 11,
+  skeletonName: {
+    width: 110,
+    height: 13,
     borderRadius: 6,
-    backgroundColor: '#4CAF7D',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    backgroundColor: `${ViveColors.text}18`,
+    marginBottom: 5,
   },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 1,
+  skeletonSpecialty: {
+    width: 70,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: `${ViveColors.text}10`,
   },
   coachName: {
     fontFamily: ViveFonts.semibold,
@@ -551,11 +617,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: ViveColors.text,
     opacity: 0.55,
-  },
-  statusOnline: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: '#4CAF7D',
+    marginTop: 1,
   },
   videoBtn: {
     width: 40,
@@ -692,6 +754,17 @@ const styles = StyleSheet.create({
   },
   bubbleTimeCoach: {
     color: `${ViveColors.text}55`,
+  },
+  systemRow: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  systemText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: `${ViveColors.text}55`,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   inputArea: {
     flexDirection: 'row',
