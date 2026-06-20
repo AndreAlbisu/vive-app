@@ -61,18 +61,20 @@ export default function BookingScreen_Confirm() {
       }
       const userId = session.user.id;
 
-      // 1. Buscar coach por specialty → profile_id (profiles.id del coach)
-      //    Tanto salas.coach_id como bookings.coach_id usan profiles.id, NO coaches.id
+      // 1. Buscar coach por specialty
+      //    salas.coach_id   → coaches.profile_id (FK a profiles.id)
+      //    bookings.coach_id → coaches.id        (FK a coaches.id)
       const { data: coachRow } = await supabase
         .from('coaches')
-        .select('profile_id')
+        .select('id, profile_id')
         .eq('specialty', specialty)
         .limit(1)
         .maybeSingle();
+      const coachId: string | null = coachRow?.id ?? null;
       const coachProfileId: string | null = coachRow?.profile_id ?? null;
 
       await registrarEvento('reserva_iniciada', {
-        professional_id: coachProfileId ?? coachName,
+        professional_id: coachId ?? coachName,
         user_id: userId,
       });
 
@@ -106,15 +108,17 @@ export default function BookingScreen_Confirm() {
         throw new Error('No encontramos el profesional. Volvé y elegí de nuevo.');
       }
 
-      // 3. Insertar booking — columnas reales según Andre (date/time, no scheduled_date/amount)
+      // 3. Insertar booking — columnas reales verificadas en la base
       const { data: booking, error: insertErr } = await supabase
         .from('bookings')
         .insert({
           user_id: userId,
-          coach_id: coachProfileId,  // profiles.id del coach, NO coaches.id
+          coach_id: coachId,          // coaches.id (FK a coaches table)
           sala_id: salaId,
-          date: dateStr,
-          time,
+          coach_name: coachName,
+          scheduled_date: dateStr,
+          scheduled_time: time,
+          amount: priceFrom,
           status: 'pendiente',
         })
         .select('id')
@@ -123,7 +127,7 @@ export default function BookingScreen_Confirm() {
       if (insertErr) throw new Error(insertErr.message);
 
       await registrarEvento('reserva_confirmada', {
-        professional_id: coachProfileId ?? coachName,
+        professional_id: coachId ?? coachName,
         booking_id: booking.id,
         sala_id: salaId,
         user_id: userId,

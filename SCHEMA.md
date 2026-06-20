@@ -33,14 +33,16 @@
 
 ### `bookings`
 - `id` (uuid, PK)
-- `user_id` (uuid, FK → `profiles.id`)
-- `coach_id` (uuid) — debe ser `coaches.profile_id` (= `profiles.id` del coach)
+- `user_id` (uuid, FK → `auth.users.id`)
+- `coach_id` (uuid, FK → `coaches.id`) — a diferencia de salas, acá es el PK de coaches
 - `sala_id` (uuid, FK → `salas.id`)
-- `date` (date)
-- `time` (text)
+- `coach_name` (text)
+- `scheduled_date` (date)
+- `scheduled_time` (text)
+- `amount` (integer)
 - `status` (text)
-- `user_message` (text, nullable)
-- ⚠️ NO tiene: `room_url`, `coach_name`, `coach_specialty`, `scheduled_date`, `scheduled_time`, `amount`
+- `room_url` (text, nullable) — redundante, el room_url canónico está en `salas`
+- ⚠️ NO tiene: `date`, `time`, `user_message` (eran el schema que Andre describió pero no está corrido)
 
 ### `analytics_events`
 - `id` (uuid, PK)
@@ -59,7 +61,7 @@
 ## Reglas críticas
 
 1. **`coaches.id` ≠ `profiles.id`** — son valores distintos. El dato que conecta es `coaches.profile_id`.
-2. **`salas.coach_id` y `bookings.coach_id` usan `profiles.id`**, no `coaches.id`. Siempre usar `coaches.profile_id`.
+2. **`salas.coach_id` → `profiles.id`** (= `coaches.profile_id`). **`bookings.coach_id` → `coaches.id`**. Son FKs distintas.
 3. **`messages.content` está encriptado** — nunca guardar texto plano en esa columna.
 4. **`room_url` vive en `salas`**, generado por trigger al hacer INSERT. Leerlo siempre desde la sala, no desde bookings.
 5. **Scripts SQL en `/scripts` pueden no estar corridos** — este archivo es la verdad sobre qué existe HOY.
