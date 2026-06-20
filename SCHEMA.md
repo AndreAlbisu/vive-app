@@ -2,7 +2,7 @@
 
 > ⚠️ Este archivo describe lo que está REALMENTE en Supabase hoy.
 > No es un diseño aspiracional — si algo cambia en la base, este archivo se actualiza el mismo día.
-> Última actualización: 20 de junio 2026 (sesión 2)
+> Última actualización: 20 de junio 2026 (sesión 3)
 
 ## Tablas y relaciones
 
@@ -34,13 +34,13 @@
 ### `bookings`
 - `id` (uuid, PK)
 - `user_id` (uuid, FK → `auth.users.id`)
-- `coach_id` (uuid, FK → `coaches.id`, nullable — best-effort lookup por specialty)
+- `coach_id` (uuid, FK → `coaches.id`, nullable)
+- `sala_id` (uuid, FK → `salas.id`, nullable) — vincula el booking a su sala
 - `coach_name` (text), `coach_specialty` (text)
 - `scheduled_date` (date), `scheduled_time` (text)
 - `amount` (integer), `status` (pendiente | confirmada | completada | cancelada)
-- `room_url` (text) — generado automáticamente por trigger al insertar: `https://meet.jit.si/vita-<16hex>`
 - `created_at`
-- ⚠️ NO tiene: `sala_id`, `date`, `time`, `user_message` (columnas de un diseño anterior de Andre, no aplicado)
+- ⚠️ `room_url` vive en `salas`, no en `bookings` — leerlo siempre desde la sala
 
 ### `analytics_events`
 - `id` (uuid, PK)

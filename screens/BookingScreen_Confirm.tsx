@@ -56,14 +56,15 @@ export default function BookingScreen_Confirm() {
     try {
       const userId = await ensureAnonSession();
 
-      // Best-effort: look up coach_id by specialty
+      // 1. Buscar coach: necesitamos coaches.id (para bookings) y profile_id (para salas)
       const { data: coachRow } = await supabase
         .from('coaches')
-        .select('id')
+        .select('id, profile_id')
         .eq('specialty', specialty)
         .limit(1)
         .maybeSingle();
       const coachId: string | null = coachRow?.id ?? null;
+      const coachProfileId: string | null = coachRow?.profile_id ?? null;
 
       await registrarEvento('reserva_iniciada', {
         professional_id: coachId ?? coachName,
@@ -71,11 +72,50 @@ export default function BookingScreen_Confirm() {
         user_id: userId,
       });
 
+      // 2. Buscar sala existente o crear una nueva (user_id + coach_id = profiles.id)
+      let salaId: string;
+      let roomUrl = '';
+
+      if (coachProfileId) {
+        const { data: existingSala } = await supabase
+          .from('salas')
+          .select('id, room_url')
+          .eq('user_id', userId)
+          .eq('coach_id', coachProfileId)
+          .maybeSingle();
+
+        if (existingSala) {
+          salaId = existingSala.id;
+          roomUrl = existingSala.room_url ?? '';
+        } else {
+          const { data: newSala, error: salaErr } = await supabase
+            .from('salas')
+            .insert({ user_id: userId, coach_id: coachProfileId })
+            .select('id, room_url')
+            .single();
+          if (salaErr) throw new Error(salaErr.message);
+          salaId = newSala.id;
+          roomUrl = newSala.room_url ?? '';
+        }
+      } else {
+        // Coach no encontrado en DB — sala sin coach_id
+        const { data: newSala, error: salaErr } = await supabase
+          .from('salas')
+          .insert({ user_id: userId, coach_id: null })
+          .select('id, room_url')
+          .single();
+        if (salaErr) throw new Error(salaErr.message);
+        salaId = newSala.id;
+        roomUrl = newSala.room_url ?? '';
+      }
+
+      // 3. Insertar booking con sala_id
       const { data: booking, error: insertErr } = await supabase
         .from('bookings')
         .insert({
           user_id: userId,
           coach_id: coachId,
+          sala_id: salaId,
           coach_name: coachName,
           coach_specialty: specialty,
           scheduled_date: dateStr,
@@ -83,7 +123,7 @@ export default function BookingScreen_Confirm() {
           amount: priceFrom,
           status: 'pendiente',
         })
-        .select('id, room_url')
+        .select('id')
         .single();
 
       if (insertErr) throw new Error(insertErr.message);
@@ -92,6 +132,7 @@ export default function BookingScreen_Confirm() {
         professional_id: coachId ?? coachName,
         monto: priceFrom,
         booking_id: booking.id,
+        sala_id: salaId,
         user_id: userId,
       });
 
@@ -103,7 +144,7 @@ export default function BookingScreen_Confirm() {
           date: dateStr,
           time,
           bookingId: booking.id,
-          roomUrl: booking.room_url ?? '',
+          roomUrl,
         },
       });
     } catch (err: unknown) {
