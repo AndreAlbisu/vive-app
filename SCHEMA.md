@@ -2,7 +2,7 @@
 
 > ⚠️ Este archivo describe lo que está REALMENTE en Supabase hoy.
 > No es un diseño aspiracional — si algo cambia en la base, este archivo se actualiza el mismo día.
-> Última actualización: 20 de junio 2026 (sesión 3)
+> Última actualización: 20 de junio 2026 — confirmado por Andre con information_schema
 
 ## Tablas y relaciones
 
@@ -13,16 +13,16 @@
 - Usuarios y coaches viven en la misma tabla, diferenciados por `role`
 
 ### `coaches`
-- `id` (uuid, PK)
-- `profile_id` (uuid, FK → `profiles.id`) ⚠️ — NO es lo mismo que `coaches.id`
+- `id` (uuid, PK) ⚠️ — **NO es lo mismo que `profiles.id`**
+- `profile_id` (uuid, FK → `profiles.id`) — el dato que conecta con el resto del sistema
 - `specialty`, `bio`, `price_per_session`, `nationality`, `verified`, `created_at`
 
 ### `salas`
 - `id` (uuid, PK)
-- `user_id` (uuid, FK → `profiles.id`) ⚠️ apunta a `profiles.id`, NO a `coaches.id`
-- `coach_id` (uuid, FK → `profiles.id`) ⚠️ idem — es el `profile_id` del coach, no su `coaches.id`
-- `room_url` (text) — generado automáticamente por trigger al insertar: `https://meet.jit.si/vita-<16hex>`
+- `user_id` (uuid, FK → `profiles.id`)
+- `coach_id` (uuid, FK → `profiles.id`) — es `coaches.profile_id`, NO `coaches.id`
 - `created_at`
+- ⏳ `room_url` — pendiente: se agrega con `scripts/add-salas-room-url.sql` (revisar con Andre antes de correr)
 
 ### `messages`
 - `id` (uuid, PK)
@@ -33,14 +33,14 @@
 
 ### `bookings`
 - `id` (uuid, PK)
-- `user_id` (uuid, FK → `auth.users.id`)
-- `coach_id` (uuid, FK → `coaches.id`, nullable)
-- `sala_id` (uuid, FK → `salas.id`, nullable) — vincula el booking a su sala
-- `coach_name` (text), `coach_specialty` (text)
-- `scheduled_date` (date), `scheduled_time` (text)
-- `amount` (integer), `status` (pendiente | confirmada | completada | cancelada)
-- `created_at`
-- ⚠️ `room_url` vive en `salas`, no en `bookings` — leerlo siempre desde la sala
+- `user_id` (uuid, FK → `profiles.id`)
+- `coach_id` (uuid) — debe ser `coaches.profile_id` (= `profiles.id` del coach)
+- `sala_id` (uuid, FK → `salas.id`)
+- `date` (date)
+- `time` (text)
+- `status` (text)
+- `user_message` (text, nullable)
+- ⚠️ NO tiene: `room_url`, `coach_name`, `coach_specialty`, `scheduled_date`, `scheduled_time`, `amount`
 
 ### `analytics_events`
 - `id` (uuid, PK)
@@ -54,12 +54,13 @@
 - `id` (uuid, PK), `user_id`, `content` (text), `created_at`
 
 ### `saved_resources`
-- Existe en la base, columnas exactas no verificadas aún
+- Existe en la base, columnas exactas pendientes de verificar
 
 ## Reglas críticas
 
-1. **`coaches.id` ≠ `profiles.id`** — en `salas`, tanto `user_id` como `coach_id` apuntan a `profiles.id`. En `bookings`, `coach_id` apunta a `coaches.id`.
-2. **El trigger `trg_booking_room_url`** genera `room_url` automáticamente — no pasarlo en el INSERT.
+1. **`coaches.id` ≠ `profiles.id`** — son valores distintos. El dato que conecta es `coaches.profile_id`.
+2. **`salas.coach_id` y `bookings.coach_id` usan `profiles.id`**, no `coaches.id`. Siempre usar `coaches.profile_id`.
 3. **`messages.content` está encriptado** — nunca guardar texto plano en esa columna.
-4. **Scripts SQL en `/scripts` pueden no estar corridos** — este archivo es la verdad sobre qué existe HOY.
-5. **Antes de scripts destructivos** (DROP, ALTER), confirmar con el otro developer — la base es compartida.
+4. **`room_url` no existe en ninguna tabla todavía** — está pendiente de `scripts/add-salas-room-url.sql` con Andre.
+5. **Scripts SQL en `/scripts` pueden no estar corridos** — este archivo es la verdad sobre qué existe HOY.
+6. **Cualquier cambio estructural se revisa y corre con Andre** — hay datos reales de testing en salas, messages y bookings.

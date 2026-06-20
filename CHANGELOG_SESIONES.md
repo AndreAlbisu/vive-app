@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-06-20 — Joaquín (sesión 4)
+
+**Tocado:** `SCHEMA.md`, `screens/BookingScreen_Confirm.tsx`
+
+**Resumen:**
+- SCHEMA.md reescrito con el esquema real confirmado por Andre (information_schema).
+  Correcciones clave vs. versión anterior: bookings tiene date/time (no scheduled_date/time),
+  no tiene coach_name/amount/room_url; salas no tiene room_url todavía; coach_id en salas
+  y bookings es profiles.id (no coaches.id).
+- BookingScreen_Confirm corregido:
+  - Lookup coach: ahora solo pide profile_id (no coaches.id — era incorrecto)
+  - INSERT salas: sin cambios (ya usaba coachProfileId correctamente)
+  - INSERT bookings: usa date/time, coach_id = coachProfileId (profiles.id), sin coach_name/amount
+  - Si coach no encontrado: error explícito en vez de crear sala sin coach
+  - room_url: se pide pero queda vacío hasta que corra add-salas-room-url.sql
+
+**Pendiente (requiere Andre):**
+- Correr `scripts/add-salas-room-url.sql` para activar room_url en salas
+- Confirmar si bookings.coach_id tiene FK explícita a profiles o es solo una convención
+- SalaScreen botón de video (esperando decisión sobre cómo compartir el link)
+
+---
+
 ## 2026-06-20 — Joaquín (sesión 3)
 
 **Tocado:** `scripts/add-salas-room-url.sql` (nuevo), `screens/BookingScreen_Confirm.tsx`, `CHANGELOG_SESIONES.md`
