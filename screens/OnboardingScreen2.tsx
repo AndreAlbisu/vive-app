@@ -78,7 +78,7 @@ export default function OnboardingScreen2() {
 
   function handleContinue() {
     if (!selected) return;
-    if (selected === 'explore') { router.replace('/register'); return; }
+    if (selected === 'explore') { router.replace('/(tabs)' as any); return; }
     if (selected === 'search') { router.replace('/register'); return; }
     if (selected === 'guide') { router.push('/onboarding3'); return; }
   }

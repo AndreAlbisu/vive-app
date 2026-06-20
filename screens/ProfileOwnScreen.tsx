@@ -39,7 +39,7 @@ type ConfigItem = {
 
 export default function ProfileOwnScreen() {
   const router = useRouter();
-  const { user, switchRole, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const [activity, setActivity] = useState<ActivityData>({ sesiones: 0, recursos: 0, racha: 0 });
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
@@ -139,10 +139,6 @@ export default function ProfileOwnScreen() {
     router.replace('/');
   }
 
-  function handleSwitchToCoach() {
-    switchRole();
-    router.replace('/(coach)');
-  }
   const headerAnim = useRef(new Animated.Value(0)).current;
   const identityAnim = useRef(new Animated.Value(0)).current;
   const activityAnim = useRef(new Animated.Value(0)).current;
@@ -374,15 +370,6 @@ export default function ProfileOwnScreen() {
               ))}
             </View>
           </Animated.View>
-
-          {/* Dev: switch to coach view */}
-          <TouchableOpacity
-            style={styles.devCoachBtn}
-            onPress={handleSwitchToCoach}
-            activeOpacity={0.75}>
-            <MaterialCommunityIcons name="swap-horizontal" size={16} color={`${ViveColors.text}70`} />
-            <Text style={styles.devCoachBtnText}>Cambiar a vista coach</Text>
-          </TouchableOpacity>
 
           <View style={{ height: 40 }} />
         </ScrollView>
@@ -721,23 +708,4 @@ const styles = StyleSheet.create({
   },
   configLabelDanger: { color: '#E05252' },
 
-  // Dev switch
-  devCoachBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginHorizontal: 20,
-    marginTop: 28,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: `${ViveColors.text}20`,
-    borderStyle: 'dashed',
-  },
-  devCoachBtnText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: `${ViveColors.text}70`,
-  },
 });

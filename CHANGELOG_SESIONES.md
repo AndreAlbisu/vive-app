@@ -5,6 +5,113 @@
 
 ---
 
+## 2026-06-20 (continuación 4) — Claude
+
+**Tocado:** `app/(coach)/_layout.tsx`, `app/(coach)/reservas.tsx` (nuevo), `app/coach-notifications.tsx` (nuevo), `screens/CoachReservasScreen.tsx`, `screens/CoachHomeScreen.tsx`, `screens/SalaScreen.tsx`, `screens/CoachNotificationsScreen.tsx` (nuevo)
+
+**Resumen:**
+- **Reservas como pestaña fija:** agregada pestaña "Reservas" en el tab navigator de `(coach)` (5 pestañas: Inicio / Reservas / Chats / Recursos / Perfil). El layout resuelve su propio `coachId` y mantiene suscripción Realtime para el badge numérico de pendientes. `CoachReservasScreen` detecta con `useSegments()` si está en tab o en stack, y oculta el back button cuando es pestaña. El banner de CoachHomeScreen que navegaba a `/coach-reservas` (stack) ahora usa `router.navigate('/reservas')` para hacer switch de pestaña.
+- **Notificaciones al aceptar/rechazar:** `accept()` y `confirmReject()` en `CoachReservasScreen` insertan en la tabla `notifications` (`type: reserva_confirmada` / `reserva_rechazada`) en el mismo `Promise.all` que manda el push. Mismo texto en DB y en push.
+- **Banner dinámico en Sala:** eliminada la constante `SESSION_LABEL` hardcodeada. El `init()` de `SalaScreen` fetchea la reserva confirmada más próxima (de hoy en adelante, `status='confirmed'`) para esa `sala_id` y la muestra en el banner fijo. Si hay `user_message`, lo muestra en cursiva debajo.
+- **Ventana de video de 5 minutos:** botón de video en Sala requiere `roomUrl && isInVideoWindow`. La ventana abre 5 minutos antes de la sesión y no tiene límite superior. Un `setInterval` de 30s recalcula el estado mientras la pantalla esté abierta.
+- **Campana de notificaciones:** `CoachHomeScreen` muestra ícono de campana con punto rojo si hay `notifications.read=false` para el coach (suscripción Realtime). Navega a nueva pantalla `CoachNotificationsScreen` que lista notificaciones ordenadas por `created_at DESC`, marca todas como leídas al montar (en background para preservar el estado visual inicial), y navega a la pestaña Reservas si el ítem tiene `booking_id`.
+
+**Pendiente para la próxima sesión:**
+- La inserción en `notifications` con `type='reserva_nueva'` (cuando un usuario hace una reserva) no está implementada — el coach no recibirá notificaciones en la campana hasta que se agregue ese insert en el flujo de booking del usuario
+- `app/coach-reservas.tsx` queda como ruta de stack pero ya no es el acceso principal — decidir si se mantiene como deeplink fallback o se elimina
+- El banner de Sala muestra "Sin sesión programada" cuando no hay reserva confirmada futura — evaluar si conviene mostrar la última sesión pasada o directamente ocultar el banner
+
+---
+
+## 2026-06-20 (continuación 3) — Claude
+
+**Tocado:** `screens/ProfileOwnScreen.tsx`, `screens/CoachProfileScreen.tsx`, `context/AuthContext.tsx`
+
+**Resumen:**
+- Eliminado el botón "Cambiar a vista coach" de `ProfileOwnScreen` y su mirror "Cambiar a vista usuario" de `CoachProfileScreen` — eran un agujero de seguridad real: cualquier usuario podía auto-elevarse a `/(coach)` sin que `profiles.role` lo avalara
+- Eliminada `switchRole()` completamente de `AuthContext`: del tipo `AuthContextType`, del contexto default, de la implementación y del valor que expone el provider
+- El estado `role` en AuthContext ahora es inmutable desde el cliente — solo puede cambiar vía `fetchRole()` (consulta `profiles.role` en Supabase) o `signOut()`
+- Confirmado que `app/index.tsx` y `app/_layout.tsx` (AuthRedirect) ya usaban exclusivamente el `role` de `fetchRole()` y no necesitaron cambios
+- Decisión de arquitectura: coach y usuario son cuentas completamente separadas — si un coach quiere usar VIVE como usuario necesita otra cuenta
+
+**Pendiente para la próxima sesión:**
+- Nada abierto de esta tarea; el flujo de roles quedó cerrado y limpio
+
+---
+
+## 2026-06-20 (continuación 2) — Claude
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `screens/CoachReservasScreen.tsx`
+
+**Resumen:**
+- Corregido bug crítico: las 3 queries de `bookings` en pantallas de coach comparaban `user.id` (`profiles.id` / `auth.uid()`) directamente contra `bookings.coach_id`, pero esa columna espera `coaches.id` (el PK de la tabla `coaches`, distinto del `profile_id`). Resultado: el coach veía siempre 0 reservas aunque existieran registros reales.
+- Patrón de fix: cada pantalla ahora resuelve `coaches.id` una sola vez al montar (via `useEffect` + `useState coachId`, lookup `coaches.select('id').eq('profile_id', user.id)`), y usa ese valor en todos los `.eq('coach_id', ...)` de bookings y en el filtro de la suscripción Realtime.
+- `CoachChatsScreen` no tenía el bug: `salas.coach_id` apunta a `profiles.id`, que sí coincide con `user.id`.
+- SCHEMA.md no cambió — el esquema ya documentaba esta distinción correctamente.
+
+**Pendiente para la próxima sesión:**
+- Verificar en dispositivo que el coach ve sus reservas y que el Realtime funciona al crear una nueva booking.
+
+---
+
+## 2026-06-20 (continuación) — Andre
+
+**Tocado:** `screens/SalaScreen.tsx`, `app/_layout.tsx`, `screens/CoachLoginScreen.tsx`,
+`screens/RegisterScreen.tsx`, `screens/OnboardingScreen2.tsx`, `screens/OnboardingScreen5.tsx`,
+nuevas pantallas de coach, tabla `coaches` (esquema + RLS)
+
+**Resumen:**
+- Resuelto merge en SalaScreen.tsx: se combinó la versión completa de Andre
+  (chat real con Realtime, encriptación, búsqueda/creación de sala, push
+  notifications) con la idea de Joaquín de conectar el botón de video al
+  `room_url` real de la sala vía Linking.openURL. Se sacó el selector "Test:"
+  (locked/soon/live) y el MEET_LINK hardcodeado — ya no hacían falta.
+- Mismo bug de styles/s que en LoginScreen apareció también en RegisterScreen.tsx
+  (líneas 128-129, copy-paste heredado) — corregido: styles.logoRow → s.logoWrap,
+  styles.logo → s.logo.
+- Se construyó el flujo completo de aplicación de coaches, ya decidido en
+  sesiones anteriores de producto:
+  - Nueva pantalla de bifurcación (onboarding-bifurcacion.tsx) entre la
+    bienvenida y el onboarding de usuario: "Quiero crecer" / "Quiero acompañar"
+  - CoachLoginScreen.tsx: login/registro simple para coach, navega a
+    coach-application.tsx
+  - coach-application.tsx: formulario (especialidad, bio, precio, nacionalidad,
+    link de video) que inserta en `coaches` con verified: false
+  - Se agregó columna `application_video_url` (text) a `coaches` vía ALTER TABLE
+  - Se agregó política RLS de INSERT en `coaches` (coaches_insert_own) — sin
+    ella, el insert fallaba con "new row violates row-level security policy"
+- Se implementó ruteo por rol: AuthContext ahora tiene fetchRole(), y
+  AuthRedirect en _layout.tsx redirige a /(coach) o /(tabs) según
+  profiles.role al loguearse.
+- Se implementaron validaciones cruzadas: una cuenta no puede ser coach y
+  usuario al mismo tiempo bajo el mismo mail, en ningún estado (pendiente,
+  aprobado, o usuario normal). CoachLoginScreen y RegisterScreen ahora
+  verifican esto antes de dejar avanzar.
+- Bug encontrado y corregido (segunda vez en el día, mismo patrón que
+  index.tsx): AuthRedirect redirigía a CUALQUIER usuario sin sesión que
+  estuviera en /(tabs) de vuelta a onboarding-bifurcacion — esto rompía la
+  regla de "explorás libremente, te registrás cuando querés actuar". Se
+  corrigió para que /(tabs) sea accesible sin cuenta; solo /(coach) requiere
+  sesión. Un primer intento de fix (mandar todo a /register) fue revertido
+  por contradecir esa regla de producto.
+- OnboardingScreen2: las opciones "explorar" y "sé qué necesito" ahora van a
+  /(tabs) sin pedir cuenta (la segunda era un dead end conocido, ahora resuelto).
+  "No sé por dónde empezar" sigue el flujo guiado de 3 pasos, que termina en
+  /register al llegar a una acción concreta (correcto, según la regla).
+
+**Pendiente para la próxima sesión:**
+- Probar el flujo completo de coach (postulación → aprobación manual →
+  acceso a /(coach)) de punta a punta una vez más con el SalaScreen actualizado.
+- AuthRedirect: confirmar si segments[0] === '(coach)' funciona como se
+  espera en expo-router (sospecha de sesiones anteriores, sin confirmar).
+- Pensar la interfaz de /(coach) en sí — qué ve un coach aprobado al entrar
+  (panel, reservas entrantes, etc.) — todavía no se construyó nada de eso.
+- Avisar a Joaquín sobre el cambio de política RLS en coaches y el ALTER
+  TABLE de application_video_url (se corrieron sin esperar confirmación
+  explícita dado el contexto del día — revisar si está de acuerdo).
+
+---
+
 ## 2026-06-20 — Joaquín (sesión 2)
 
 **Tocado:**

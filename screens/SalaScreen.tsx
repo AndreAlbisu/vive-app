@@ -30,6 +30,13 @@ type Message = {
   time: string;
 };
 
+type ConfirmedBooking = {
+  id: string;
+  date: string;
+  time: string;
+  user_message: string | null;
+} | null;
+
 const COACH = {
   name: 'María González',
   specialty: 'Psicóloga',
@@ -40,7 +47,22 @@ const COACH = {
   priceFrom: 5500,
 };
 
-const SESSION_LABEL = 'Lunes 16 de junio · 11:00 hs';
+function calcVideoWindow(booking: ConfirmedBooking): boolean {
+  if (!booking) return false;
+  const [year, month, day] = booking.date.split('-').map(Number);
+  const [h, m] = booking.time.split(':').map(Number);
+  const sessionMs = new Date(year, month - 1, day, h, m, 0).getTime();
+  return Date.now() >= sessionMs - 5 * 60 * 1000;
+}
+
+function formatSalaDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  const dayName = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][d.getDay()];
+  const monthName = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][month - 1];
+  return `${dayName} ${day} ${monthName}`;
+}
 
 function nowTime() {
   return new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
@@ -70,6 +92,8 @@ export default function SalaScreen() {
   const [salaId, setSalaId] = useState<string | null>(null);
   const [recipientId, setRecipientId] = useState<string | null>(null);
   const [roomUrl, setRoomUrl] = useState<string | null>(null);
+  const [confirmedBooking, setConfirmedBooking] = useState<ConfirmedBooking>(null);
+  const [isInVideoWindow, setIsInVideoWindow] = useState(false);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -154,8 +178,21 @@ export default function SalaScreen() {
 
       setSalaId(id);
       setRoomUrl(salaRoomUrl);
-      // Recipient is the other person in the sala, regardless of who is calling
       setRecipientId(user!.id === salaUserId ? salaCoachId : salaUserId);
+
+      // Fetch closest upcoming confirmed booking for this sala
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const { data: bkRows } = await supabase
+        .from('bookings')
+        .select('id, date, time, user_message')
+        .eq('sala_id', id)
+        .eq('status', 'confirmed')
+        .gte('date', todayStr)
+        .order('date', { ascending: true })
+        .order('time', { ascending: true })
+        .limit(1);
+      if (mounted) setConfirmedBooking(bkRows?.[0] ?? null);
 
       const { data: msgs, error: msgsError } = await supabase
         .from('messages')
@@ -211,6 +248,15 @@ export default function SalaScreen() {
 
     return () => { supabase.removeChannel(channel); };
   }, [salaId, user?.id]);
+
+  useEffect(() => {
+    setIsInVideoWindow(calcVideoWindow(confirmedBooking));
+    if (!confirmedBooking) return;
+    const interval = setInterval(() => {
+      setIsInVideoWindow(calcVideoWindow(confirmedBooking));
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [confirmedBooking]);
 
   function handleVideoPress() {
     if (roomUrl) Linking.openURL(roomUrl);
@@ -314,16 +360,16 @@ export default function SalaScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.videoBtn, !roomUrl && styles.videoBtnDisabled]}
-          activeOpacity={roomUrl ? 0.7 : 1}
+          style={[styles.videoBtn, !(roomUrl && isInVideoWindow) && styles.videoBtnDisabled]}
+          activeOpacity={roomUrl && isInVideoWindow ? 0.7 : 1}
           onPress={handleVideoPress}
           hitSlop={8}
-          disabled={!roomUrl}
+          disabled={!(roomUrl && isInVideoWindow)}
         >
           <MaterialCommunityIcons
             name="video-outline"
             size={24}
-            color={roomUrl ? ViveColors.primary : `${ViveColors.text}44`}
+            color={roomUrl && isInVideoWindow ? ViveColors.primary : `${ViveColors.text}44`}
           />
         </TouchableOpacity>
       </Animated.View>
@@ -332,10 +378,21 @@ export default function SalaScreen() {
 
       {/* Session Banner */}
       <View style={styles.bannerDefault}>
-        <Text style={styles.bannerText}>
-          Tu próxima sesión:{' '}
-          <Text style={styles.bannerBold}>{SESSION_LABEL}</Text>
-        </Text>
+        {confirmedBooking ? (
+          <>
+            <Text style={styles.bannerText}>
+              Próxima sesión:{' '}
+              <Text style={styles.bannerBold}>
+                {formatSalaDate(confirmedBooking.date)} · {confirmedBooking.time.slice(0, 5)} hs
+              </Text>
+            </Text>
+            {!!confirmedBooking.user_message && (
+              <Text style={styles.bannerNote}>"{confirmedBooking.user_message}"</Text>
+            )}
+          </>
+        ) : (
+          <Text style={styles.bannerText}>Sin sesión programada</Text>
+        )}
       </View>
 
       <KeyboardAvoidingView
@@ -528,6 +585,13 @@ const styles = StyleSheet.create({
   },
   bannerBold: {
     fontFamily: ViveFonts.semibold,
+  },
+  bannerNote: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: `${ViveColors.text}70`,
+    marginTop: 3,
+    fontStyle: 'italic',
   },
   scroll: {
     flex: 1,

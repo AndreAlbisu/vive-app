@@ -54,7 +54,7 @@ function AuthRedirect() {
     const inOnboardingOrAuth = ONBOARDING_SCREENS.has(segments[0] as string);
 
     if (!user) {
-      if (inCoachGroup || inTabsGroup) router.replace('/onboarding-bifurcacion');
+      if (inCoachGroup) router.replace('/onboarding-bifurcacion');
       return;
     }
 

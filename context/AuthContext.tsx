@@ -19,7 +19,6 @@ interface AuthContextType {
   signUpWithEmail: (email: string, password: string, name: string, acceptedTerms?: boolean) => Promise<string | null>;
   signInWithGoogle: () => Promise<string | null>;
   signOut: () => Promise<void>;
-  switchRole: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -32,7 +31,6 @@ const AuthContext = createContext<AuthContextType>({
   signUpWithEmail: async () => null,
   signInWithGoogle: async () => null,
   signOut: async () => {},
-  switchRole: () => {},  // kept for backwards compat, no-op when role comes from DB
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -124,17 +122,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRole('user');
   }
 
-  function switchRole() {
-    const next = role === 'user' ? 'coach' : 'user';
-    setRole(next);
-  }
-
   const isLoggedIn = !!user;
 
   return (
     <AuthContext.Provider value={{
       user, loading, isLoggedIn, role,
-      requestAuth, signInWithEmail, signUpWithEmail, signInWithGoogle, signOut, switchRole,
+      requestAuth, signInWithEmail, signUpWithEmail, signInWithGoogle, signOut,
     }}>
       {children}
       <AuthModal

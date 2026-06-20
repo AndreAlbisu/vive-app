@@ -49,7 +49,7 @@ function getInitials(name: string): string {
 
 export default function CoachProfileScreen() {
   const router = useRouter();
-  const { user, switchRole, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const [instantMode, setInstantMode] = useState(false);
   const [availability, setAvailability] = useState<Set<AvailKey>>(new Set(INITIAL_AVAIL));
   const [profile, setProfile] = useState<CoachProfile | null>(null);
@@ -84,11 +84,6 @@ export default function CoachProfileScreen() {
       next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
-  }
-
-  function handleSwitchToUser() {
-    switchRole();
-    router.replace('/(tabs)');
   }
 
   async function handleSignOut() {
@@ -233,12 +228,6 @@ export default function CoachProfileScreen() {
             Aquí vas a ver sesiones completadas, rating promedio, retención de usuarios y más.
           </Text>
         </View>
-
-        {/* ── Dev: switch to user ───────────────────────────── */}
-        <TouchableOpacity style={s.devSwitchBtn} onPress={handleSwitchToUser} activeOpacity={0.75}>
-          <MaterialCommunityIcons name="swap-horizontal" size={16} color={`${ViveColors.text}70`} />
-          <Text style={s.devSwitchText}>Cambiar a vista usuario</Text>
-        </TouchableOpacity>
 
         {/* ── Cerrar sesión ─────────────────────────────────── */}
         <TouchableOpacity style={s.signOutBtn} onPress={handleSignOut} activeOpacity={0.75}>
@@ -571,26 +560,6 @@ const s = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginTop: 2,
-  },
-
-  // Dev switch
-  devSwitchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginHorizontal: 20,
-    marginTop: 28,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: `${ViveColors.text}20`,
-    borderStyle: 'dashed',
-  },
-  devSwitchText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: `${ViveColors.text}70`,
   },
 
   signOutBtn: {

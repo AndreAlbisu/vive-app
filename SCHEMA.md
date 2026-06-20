@@ -16,7 +16,7 @@
 - `id` (uuid, PK) ⚠️ — **NO es lo mismo que `profiles.id`**
 - `profile_id` (uuid, FK → `profiles.id`) — el dato que conecta con el resto del sistema
 - `specialty`, `bio`, `price_per_session`, `nationality`, `verified`, `created_at`
-- `application_video_url` (text, nullable) — link al video de presentación; columna agregada para el flujo de aplicación de coaches (correr: `ALTER TABLE coaches ADD COLUMN application_video_url text;`)
+- `application_video_url` (text, nullable) — link al video de presentación que el coach pega al postularse (YouTube, Drive, etc.)
 
 ### `salas`
 - `id` (uuid, PK)
@@ -69,3 +69,4 @@
 4. **`room_url` vive en `salas`**, generado por trigger al hacer INSERT. Leerlo siempre desde la sala, no desde `bookings` (la columna en `bookings` es redundante).
 5. **Scripts SQL en `/scripts` pueden no estar corridos** — este archivo es la verdad sobre qué existe HOY. Confirmado contra `information_schema` el 20/06/2026.
 6. **Cualquier cambio estructural se revisa y corre entre Andre y Joaquín** — hay datos reales de testing en `salas`, `messages` y `bookings`.
+7. **RLS en `coaches`**: existe la política `coaches_insert_own` (FOR INSERT, WITH CHECK `profile_id = auth.uid()`) — permite que un usuario autenticado cree su propia fila de coach al postularse. Sin políticas de INSERT, la tabla bloqueaba todo insert por RLS activado sin excepciones.

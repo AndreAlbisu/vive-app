@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -77,24 +77,27 @@ const cardShadow = Platform.select({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function CoachReservasScreen() {
   const router = useRouter();
+  const segments = useSegments();
+  const isInTab = segments[0] === '(coach)';
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [rejectModal, setRejectModal] = useState<{ visible: boolean; id: string | null }>({ visible: false, id: null });
   const [rejectReason, setRejectReason] = useState('');
+  const [coachId, setCoachId] = useState<string | null>(null);
 
   const pending   = bookings.filter(b => b.status === 'pending');
   const confirmed = bookings.filter(b => b.status === 'confirmed');
 
   const loadBookings = useCallback(async () => {
-    if (!user) return;
+    if (!user || !coachId) return;
 
     console.log('[CoachReservas] auth.uid():', user.id);
 
     const { data: rows, error } = await supabase
       .from('bookings')
       .select('*')
-      .eq('coach_id', user.id)
+      .eq('coach_id', coachId)
       .in('status', ['pending', 'confirmed'])
       .order('created_at', { ascending: false });
 
@@ -138,6 +141,16 @@ export default function CoachReservasScreen() {
 
     setBookings(merged);
     setLoading(false);
+  }, [user, coachId]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('coaches')
+      .select('id')
+      .eq('profile_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setCoachId(data.id); });
   }, [user]);
 
   useEffect(() => {
@@ -146,16 +159,16 @@ export default function CoachReservasScreen() {
 
   // Realtime: recargar cuando cambia cualquier booking de este coach
   useEffect(() => {
-    if (!user) return;
+    if (!user || !coachId) return;
     const channel = supabase.channel('coach-reservas')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'bookings', filter: `coach_id=eq.${user.id}` },
+        { event: '*', schema: 'public', table: 'bookings', filter: `coach_id=eq.${coachId}` },
         () => loadBookings(),
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user, loadBookings]);
+  }, [user, coachId, loadBookings]);
 
   async function accept(id: string) {
     const { data, error } = await supabase
@@ -176,13 +189,21 @@ export default function CoachReservasScreen() {
         supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
       ]);
 
-      if (userProfile?.push_token) {
-        await sendPushNotification(
-          userProfile.push_token,
-          '¡Tu sesión fue confirmada! ✅',
-          `Tu sesión con ${coachProfile?.name ?? 'tu coach'} el ${formatBookingDate(booking.date)} está confirmada`,
-        );
-      }
+      const notifTitle = '¡Tu sesión fue confirmada! ✅';
+      const notifBody = `Tu sesión con ${coachProfile?.name ?? 'tu coach'} el ${formatBookingDate(booking.date)} está confirmada`;
+
+      await Promise.all([
+        supabase.from('notifications').insert({
+          recipient_id: booking.user_id,
+          type: 'reserva_confirmada',
+          booking_id: id,
+          title: notifTitle,
+          body: notifBody,
+        }),
+        userProfile?.push_token
+          ? sendPushNotification(userProfile.push_token, notifTitle, notifBody)
+          : Promise.resolve(),
+      ]);
     }
   }
 
@@ -214,13 +235,21 @@ export default function CoachReservasScreen() {
         supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
       ]);
 
-      if (userProfile?.push_token) {
-        await sendPushNotification(
-          userProfile.push_token,
-          'Sesión no disponible',
-          `${coachProfile?.name ?? 'Tu coach'} no pudo aceptar tu sesión. Buscá otro profesional.`,
-        );
-      }
+      const notifTitle = 'Sesión no disponible';
+      const notifBody = `${coachProfile?.name ?? 'Tu coach'} no pudo aceptar tu sesión. Buscá otro profesional.`;
+
+      await Promise.all([
+        supabase.from('notifications').insert({
+          recipient_id: booking.user_id,
+          type: 'reserva_rechazada',
+          booking_id: rejectModal.id,
+          title: notifTitle,
+          body: notifBody,
+        }),
+        userProfile?.push_token
+          ? sendPushNotification(userProfile.push_token, notifTitle, notifBody)
+          : Promise.resolve(),
+      ]);
     }
   }
 
@@ -230,11 +259,13 @@ export default function CoachReservasScreen() {
     <SafeAreaView style={s.safe} edges={['top']}>
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={8} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="arrow-left" size={22} color={ViveColors.text} />
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>Reservas</Text>
-        <View style={s.headerSpacer} />
+        {!isInTab && (
+          <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={8} activeOpacity={0.7}>
+            <MaterialCommunityIcons name="arrow-left" size={22} color={ViveColors.text} />
+          </TouchableOpacity>
+        )}
+        <Text style={[s.headerTitle, isInTab && s.headerTitleTab]}>Reservas</Text>
+        {!isInTab && <View style={s.headerSpacer} />}
       </View>
       <View style={s.divider} />
 
@@ -401,6 +432,9 @@ const s = StyleSheet.create({
     color: ViveColors.text,
     textAlign: 'center',
     marginRight: 30,
+  },
+  headerTitleTab: {
+    marginRight: 0,
   },
   headerSpacer: { width: 30 },
   divider: { height: 1, backgroundColor: `${ViveColors.text}0D` },

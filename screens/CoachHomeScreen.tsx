@@ -69,10 +69,12 @@ export default function CoachHomeScreen() {
   const [todaySessions, setTodaySessions] = useState<Session[]>([]);
   const [weekData, setWeekData] = useState<DayEntry[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [coachId, setCoachId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    if (!user) { setLoading(false); return; }
+    if (!user || !coachId) { setLoading(false); return; }
 
     const todayStr = getTodayStr();
     const { mondayDate } = getWeekRange();
@@ -82,14 +84,14 @@ export default function CoachHomeScreen() {
       supabase
         .from('bookings')
         .select('id, user_id, date, time, sala_id')
-        .eq('coach_id', user.id)
+        .eq('coach_id', coachId)
         .eq('status', 'confirmed')
         .order('date', { ascending: true })
         .order('time', { ascending: true }),
       supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .eq('coach_id', user.id)
+        .eq('coach_id', coachId)
         .eq('status', 'pending'),
     ]);
 
@@ -131,11 +133,51 @@ export default function CoachHomeScreen() {
 
     setPendingCount(pendingRes.count ?? 0);
     setLoading(false);
+  }, [user, coachId]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('coaches')
+      .select('id')
+      .eq('profile_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setCoachId(data.id); });
   }, [user]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', user.id)
+      .eq('read', false)
+      .then(({ count }) => setUnreadCount(count ?? 0));
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('coach-notif-badge')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${user.id}` },
+        () => {
+          supabase
+            .from('notifications')
+            .select('*', { count: 'exact', head: true })
+            .eq('recipient_id', user.id)
+            .eq('read', false)
+            .then(({ count }) => setUnreadCount(count ?? 0));
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   if (loading) {
     return (
@@ -154,13 +196,23 @@ export default function CoachHomeScreen() {
         showsVerticalScrollIndicator={false}>
 
         {/* Greeting */}
-        <Text style={s.greeting}>Hola, {coachName} 👋</Text>
+        <View style={s.greetingRow}>
+          <Text style={s.greeting}>Hola, {coachName} 👋</Text>
+          <TouchableOpacity
+            style={s.bellBtn}
+            onPress={() => router.push('/coach-notifications')}
+            hitSlop={8}
+            activeOpacity={0.7}>
+            <Feather name="bell" size={22} color={ViveColors.text} />
+            {unreadCount > 0 && <View style={s.bellDot} />}
+          </TouchableOpacity>
+        </View>
 
         {/* Alert Banner */}
         {pendingCount > 0 && (
           <TouchableOpacity
             style={s.alertBanner}
-            onPress={() => router.push('/coach-reservas')}
+            onPress={() => router.navigate('/reservas')}
             activeOpacity={0.85}>
             <Feather name="bell" size={15} color={ViveColors.primary} style={s.alertIcon} />
             <Text style={s.alertText}>
@@ -246,11 +298,30 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  greetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
   greeting: {
+    flex: 1,
     fontFamily: ViveFonts.semibold,
     fontSize: 26,
     color: ViveColors.text,
-    marginBottom: 18,
+  },
+  bellBtn: {
+    padding: 4,
+  },
+  bellDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: ViveColors.primary,
+    borderWidth: 1.5,
+    borderColor: ViveColors.background,
   },
 
   // Alert Banner
