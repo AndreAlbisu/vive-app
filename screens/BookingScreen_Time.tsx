@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,21 +6,13 @@ import {
   StyleSheet,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
-
-const ALL_TIMES = [
-  { label: '9:00',  available: true  },
-  { label: '10:00', available: true  },
-  { label: '11:00', available: false },
-  { label: '14:00', available: true  },
-  { label: '15:00', available: true  },
-  { label: '16:00', available: false },
-  { label: '17:00', available: true  },
-];
+import { supabase } from '@/lib/supabase';
 
 const MONTHS_SHORT = [
   'ene','feb','mar','abr','may','jun',
@@ -45,10 +37,52 @@ export default function BookingScreen_Time() {
   const router = useRouter();
   const params = useLocalSearchParams<Params>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [times, setTimes] = useState<{ label: string; available: boolean }[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const coachName = params.name ?? 'Laura Méndez';
   const specialty = params.specialty ?? 'Coach de vida';
   const dateStr = params.date ?? '';
+
+  useEffect(() => {
+    const coachIdParam = params.coachId;
+    if (!coachIdParam || !dateStr) { setLoading(false); return; }
+    (async () => {
+      const { data: coachRow } = await supabase
+        .from('coaches')
+        .select('id')
+        .eq('profile_id', coachIdParam)
+        .maybeSingle();
+
+      if (!coachRow?.id) { setLoading(false); return; }
+      const coachesId = coachRow.id;
+
+      const [{ data: slots }, { data: booked }] = await Promise.all([
+        supabase
+          .from('coach_availability')
+          .select('time')
+          .eq('coach_id', coachesId)
+          .eq('date', dateStr),
+        supabase
+          .from('bookings')
+          .select('scheduled_time')
+          .eq('coach_id', coachesId)
+          .eq('scheduled_date', dateStr)
+          .eq('status', 'confirmada'),
+      ]);
+
+      const bookedSet = new Set(booked?.map(b => b.scheduled_time) ?? []);
+
+      const sorted = [...(slots ?? [])].sort((a, b) => {
+        const [ah, am = 0] = a.time.split(':').map(Number);
+        const [bh, bm = 0] = b.time.split(':').map(Number);
+        return ah * 60 + am - (bh * 60 + bm);
+      });
+
+      setTimes(sorted.map(s => ({ label: s.time, available: !bookedSet.has(s.time) })));
+      setLoading(false);
+    })();
+  }, [params.coachId, dateStr]);
 
   function onSeguimos() {
     if (!selectedTime) return;
@@ -90,7 +124,6 @@ export default function BookingScreen_Time() {
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}>
 
-        {/* Recordatorio del coach */}
         <View style={s.coachReminder}>
           <View style={s.coachAvatar}>
             <MaterialIcons name="person" size={30} color="#C0BAB4" />
@@ -104,36 +137,41 @@ export default function BookingScreen_Time() {
           </View>
         </View>
 
-        {/* Chips de horario */}
         <Text style={s.sectionLabel}>Horarios disponibles</Text>
 
-        <View style={s.chipsGrid}>
-          {ALL_TIMES.map(({ label, available }) => {
-            const isSelected = selectedTime === label;
-            return (
-              <TouchableOpacity
-                key={label}
-                style={[
-                  s.chip,
-                  available && !isSelected && s.chipAvailable,
-                  isSelected && s.chipSelected,
-                  !available && s.chipUnavailable,
-                ]}
-                onPress={() => available && setSelectedTime(label)}
-                activeOpacity={available ? 0.75 : 1}
-                disabled={!available}>
-                <Text style={[
-                  s.chipText,
-                  available && !isSelected && s.chipTextAvailable,
-                  isSelected && s.chipTextSelected,
-                  !available && s.chipTextUnavailable,
-                ]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        {loading ? (
+          <ActivityIndicator color={ViveColors.primary} style={{ marginVertical: 24 }} />
+        ) : times.length === 0 ? (
+          <Text style={s.emptyTimes}>Sin horarios disponibles para esta fecha.</Text>
+        ) : (
+          <View style={s.chipsGrid}>
+            {times.map(({ label, available }) => {
+              const isSelected = selectedTime === label;
+              return (
+                <TouchableOpacity
+                  key={label}
+                  style={[
+                    s.chip,
+                    available && !isSelected && s.chipAvailable,
+                    isSelected && s.chipSelected,
+                    !available && s.chipUnavailable,
+                  ]}
+                  onPress={() => available && setSelectedTime(label)}
+                  activeOpacity={available ? 0.75 : 1}
+                  disabled={!available}>
+                  <Text style={[
+                    s.chipText,
+                    available && !isSelected && s.chipTextAvailable,
+                    isSelected && s.chipTextSelected,
+                    !available && s.chipTextUnavailable,
+                  ]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         <View style={s.timezoneNote}>
           <MaterialIcons name="access-time" size={13} color={`${ViveColors.text}55`} />
@@ -159,130 +197,54 @@ export default function BookingScreen_Time() {
 }
 
 const cardShadow = Platform.select({
-  ios: {
-    shadowColor: ViveColors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-  },
+  ios: { shadowColor: ViveColors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
   android: { elevation: 3 },
 });
 
 const s = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: ViveColors.background,
-  },
-  safeTop: {
-    backgroundColor: ViveColors.background,
-  },
+  root: { flex: 1, backgroundColor: ViveColors.background },
+  safeTop: { backgroundColor: ViveColors.background },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 14,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
     ...Platform.select({
       ios: { shadowColor: ViveColors.text, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4 },
       android: { elevation: 2 },
     }),
   },
   headerTitle: {
-    flex: 1,
-    fontFamily: ViveFonts.semibold,
-    fontSize: 18,
-    color: ViveColors.text,
-    textAlign: 'center',
-    letterSpacing: -0.2,
+    flex: 1, fontFamily: ViveFonts.semibold, fontSize: 18,
+    color: ViveColors.text, textAlign: 'center', letterSpacing: -0.2,
   },
   headerSpacer: { width: 36 },
-
   progressTrack: {
-    height: 4,
-    backgroundColor: `${ViveColors.primary}22`,
-    marginHorizontal: 20,
-    borderRadius: 2,
-    marginBottom: 6,
-    overflow: 'hidden',
+    height: 4, backgroundColor: `${ViveColors.primary}22`,
+    marginHorizontal: 20, borderRadius: 2, marginBottom: 6, overflow: 'hidden',
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: ViveColors.primary,
-    borderRadius: 2,
-  },
-
+  progressFill: { height: '100%', backgroundColor: ViveColors.primary, borderRadius: 2 },
   scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 24,
-  },
-
+  scrollContent: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 24 },
   coachReminder: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 28,
-    ...cardShadow,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14,
+    marginBottom: 28, ...cardShadow,
   },
   coachAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#EDE7E0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: '#EDE7E0', alignItems: 'center',
+    justifyContent: 'center', marginRight: 14,
   },
   coachInfo: { flex: 1 },
-  coachName: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: ViveColors.text,
-    marginBottom: 2,
-  },
-  coachSpecialty: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: ViveColors.primary,
-    marginBottom: 4,
-  },
-  coachDate: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: `${ViveColors.text}88`,
-  },
-
-  sectionLabel: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 16,
-    color: ViveColors.text,
-    marginBottom: 16,
-  },
-
-  chipsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 24,
-  },
-  chip: {
-    paddingVertical: 13,
-    paddingHorizontal: 22,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
+  coachName: { fontFamily: ViveFonts.semibold, fontSize: 15, color: ViveColors.text, marginBottom: 2 },
+  coachSpecialty: { fontFamily: ViveFonts.medium, fontSize: 12, color: ViveColors.primary, marginBottom: 4 },
+  coachDate: { fontFamily: ViveFonts.regular, fontSize: 13, color: `${ViveColors.text}88` },
+  sectionLabel: { fontFamily: ViveFonts.semibold, fontSize: 16, color: ViveColors.text, marginBottom: 16 },
+  chipsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
+  chip: { paddingVertical: 13, paddingHorizontal: 22, borderRadius: 12, borderWidth: 1.5, borderColor: 'transparent' },
   chipAvailable: {
     backgroundColor: '#FFFFFF',
     borderColor: `${ViveColors.text}35`,
@@ -291,64 +253,27 @@ const s = StyleSheet.create({
       android: { elevation: 1 },
     }),
   },
-  chipSelected: {
-    backgroundColor: ViveColors.primary,
-    borderColor: ViveColors.primary,
+  chipSelected: { backgroundColor: ViveColors.primary, borderColor: ViveColors.primary },
+  chipUnavailable: { backgroundColor: `${ViveColors.text}08`, borderColor: 'transparent' },
+  chipText: { fontFamily: ViveFonts.medium, fontSize: 15, color: ViveColors.text },
+  chipTextAvailable: { color: ViveColors.text },
+  chipTextSelected: { color: '#FFFFFF', fontFamily: ViveFonts.semibold },
+  chipTextUnavailable: { color: '#CBCBCB' },
+  emptyTimes: {
+    fontFamily: ViveFonts.regular, fontSize: 14,
+    color: `${ViveColors.text}60`, textAlign: 'center', marginVertical: 24,
   },
-  chipUnavailable: {
-    backgroundColor: `${ViveColors.text}08`,
-    borderColor: 'transparent',
-  },
-  chipText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 15,
-    color: ViveColors.text,
-  },
-  chipTextAvailable: {
-    color: ViveColors.text,
-  },
-  chipTextSelected: {
-    color: '#FFFFFF',
-    fontFamily: ViveFonts.semibold,
-  },
-  chipTextUnavailable: {
-    color: '#CBCBCB',
-  },
-
-  timezoneNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  timezoneText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: `${ViveColors.text}55`,
-  },
-
+  timezoneNote: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  timezoneText: { fontFamily: ViveFonts.regular, fontSize: 12, color: `${ViveColors.text}55` },
   footerSafe: {
     backgroundColor: ViveColors.background,
-    borderTopWidth: 1,
-    borderTopColor: `${ViveColors.text}10`,
+    borderTopWidth: 1, borderTopColor: `${ViveColors.text}10`,
   },
-  footer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
+  footer: { paddingHorizontal: 20, paddingVertical: 16 },
   btn: {
-    backgroundColor: ViveColors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: ViveColors.primary, borderRadius: 14,
+    paddingVertical: 16, alignItems: 'center', justifyContent: 'center',
   },
-  btnDisabled: {
-    opacity: 0.45,
-  },
-  btnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 16,
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
-  },
+  btnDisabled: { opacity: 0.45 },
+  btnText: { fontFamily: ViveFonts.semibold, fontSize: 16, color: '#FFFFFF', letterSpacing: 0.2 },
 });

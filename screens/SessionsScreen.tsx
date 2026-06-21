@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { decryptMessage } from '@/lib/encryption';
 
 type SalaItem = {
   id: string;
@@ -105,7 +106,7 @@ export default function SessionsScreen() {
           coach_id: sala.coach_id,
           otherName,
           otherInitials: getInitials(otherName),
-          lastMessage: lastMsg?.content ?? 'Sin mensajes aún',
+          lastMessage: lastMsg?.content ? decryptMessage(lastMsg.content) : 'Sin mensajes aún',
           lastMessageDate: lastMsg ? formatMessageDate(lastMsg.created_at) : '',
         };
       })

@@ -100,11 +100,11 @@ export default function InicioScreen() {
 
     supabase
       .from('bookings')
-      .select('id, coach_id, sala_id, date, time')
+      .select('id, coach_id, sala_id, scheduled_date, scheduled_time')
       .eq('user_id', user.id)
       .eq('status', 'confirmada')
-      .gte('date', today)
-      .order('date', { ascending: true })
+      .gte('scheduled_date', today)
+      .order('scheduled_date', { ascending: true })
       .limit(1)
       .maybeSingle()
       .then(async ({ data: booking, error: bookingError }) => {
@@ -123,8 +123,8 @@ export default function InicioScreen() {
           id: booking.id,
           coach_id: booking.coach_id,
           sala_id: booking.sala_id ?? null,
-          date: booking.date,
-          time: booking.time,
+          date: booking.scheduled_date,
+          time: booking.scheduled_time,
           coachName: profile?.name ?? 'Tu coach',
         });
       });

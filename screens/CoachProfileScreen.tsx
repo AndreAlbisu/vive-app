@@ -15,17 +15,6 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 
-const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const SLOTS = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
-
-type AvailKey = `${string}-${string}`;
-
-const INITIAL_AVAIL: Set<AvailKey> = new Set([
-  'Lun-09:00', 'Lun-10:00', 'Lun-11:00',
-  'Mié-10:00', 'Mié-11:00', 'Mié-14:00',
-  'Jue-15:00', 'Jue-16:00',
-  'Vie-09:00', 'Vie-10:00',
-]);
 
 const cardShadow = Platform.select({
   ios: { shadowColor: ViveColors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8 },
@@ -51,7 +40,6 @@ export default function CoachProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const [instantMode, setInstantMode] = useState(false);
-  const [availability, setAvailability] = useState<Set<AvailKey>>(new Set(INITIAL_AVAIL));
   const [profile, setProfile] = useState<CoachProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [noCoachProfile, setNoCoachProfile] = useState(false);
@@ -76,15 +64,6 @@ export default function CoachProfileScreen() {
       setLoadingProfile(false);
     })();
   }, [user]);
-
-  function toggleSlot(day: string, slot: string) {
-    const key: AvailKey = `${day}-${slot}`;
-    setAvailability(prev => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
-  }
 
   async function handleSignOut() {
     await signOut();
@@ -177,34 +156,15 @@ export default function CoachProfileScreen() {
 
         {/* ── Disponibilidad ────────────────────────────────── */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Disponibilidad</Text>
-        <View style={s.availCard}>
-          {/* Column headers */}
-          <View style={s.availHeaderRow}>
-            <View style={s.slotLabelCol} />
-            {DAYS.map(d => (
-              <Text key={d} style={s.availDayHeader}>{d}</Text>
-            ))}
-          </View>
-          {/* Grid */}
-          {SLOTS.map(slot => (
-            <View key={slot} style={s.availRow}>
-              <Text style={s.slotLabel}>{slot}</Text>
-              {DAYS.map(day => {
-                const key: AvailKey = `${day}-${slot}`;
-                const active = availability.has(key);
-                return (
-                  <TouchableOpacity
-                    key={day}
-                    style={[s.availCell, active && s.availCellActive]}
-                    onPress={() => toggleSlot(day, slot)}
-                    activeOpacity={0.7}
-                  />
-                );
-              })}
-            </View>
-          ))}
-          <Text style={s.availHint}>Tocá para activar / desactivar horarios</Text>
-        </View>
+        <TouchableOpacity
+          style={s.availBtn}
+          onPress={() => router.push('/coach-availability')}
+          activeOpacity={0.75}
+        >
+          <MaterialCommunityIcons name="calendar-clock" size={18} color={ViveColors.primary} />
+          <Text style={s.availBtnText}>Gestionar disponibilidad</Text>
+          <MaterialCommunityIcons name="chevron-right" size={18} color={`${ViveColors.text}44`} />
+        </TouchableOpacity>
 
         {/* ── Video perfil ──────────────────────────────────── */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Video de perfil</Text>
@@ -441,58 +401,21 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Availability grid
-  availCard: {
+  availBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     marginHorizontal: 20,
+    gap: 12,
     ...cardShadow,
   },
-  availHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  slotLabelCol: { width: 44 },
-  availDayHeader: {
+  availBtnText: {
     flex: 1,
     fontFamily: ViveFonts.semibold,
-    fontSize: 10,
-    color: `${ViveColors.text}80`,
-    textAlign: 'center',
-  },
-  availRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  slotLabel: {
-    width: 44,
-    fontFamily: ViveFonts.regular,
-    fontSize: 10,
-    color: `${ViveColors.text}70`,
-  },
-  availCell: {
-    flex: 1,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: `${ViveColors.text}0A`,
-    marginHorizontal: 2,
-  },
-  availCellActive: {
-    backgroundColor: ViveColors.primary,
-    ...Platform.select({
-      ios: { shadowColor: ViveColors.primary, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 3 },
-      android: { elevation: 1 },
-    }),
-  },
-  availHint: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: `${ViveColors.text}50`,
-    textAlign: 'center',
-    marginTop: 10,
+    fontSize: 14,
+    color: ViveColors.text,
   },
 
   // Video

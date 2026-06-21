@@ -48,6 +48,15 @@
 - `user_message` (text, nullable) — mensaje opcional que el usuario le escribe al coach antes de reservar
 - `created_at`
 
+### `coach_availability`
+- `id` (uuid, PK)
+- `coach_id` (uuid, FK → `coaches.id`) ⚠️ — usa el PK de `coaches`, no `profile_id`
+- `date` (date) — fecha puntual para la que el coach habilita horarios
+- `time` (text) — horario en formato "9:00", "10:00", etc.
+- `created_at` (timestamptz)
+- UNIQUE(coach_id, date, time) — un coach no puede tener el mismo slot dos veces
+- RLS: SELECT abierto (anyone_can_view_availability) · ALL solo para el coach dueño (coaches_manage_own_availability, WITH CHECK `coach_id IN (SELECT id FROM coaches WHERE profile_id = auth.uid())`)
+
 ### `analytics_events`
 - `id` (uuid, PK)
 - `user_id` (uuid, FK → `auth.users.id`, nullable)
@@ -72,3 +81,4 @@
 6. **Cualquier cambio estructural se revisa y corre entre Andre y Joaquín** — hay datos reales de testing en `salas`, `messages` y `bookings`.
 7. **RLS en `coaches`**: existe la política `coaches_insert_own` (FOR INSERT, WITH CHECK `profile_id = auth.uid()`) — permite que un usuario autenticado cree su propia fila de coach al postularse. Sin políticas de INSERT, la tabla bloqueaba todo insert por RLS activado sin excepciones.
 8. **Cancelación automática de horarios conflictivos**: cuando un coach acepta una reserva, todas las demás reservas 'pendiente' para el mismo `coach_id` + `scheduled_date` + `scheduled_time` se cancelan automáticamente (`status='cancelada'`), con notificación al usuario afectado. Esta lógica vive en `CoachReservasScreen.tsx`, función `accept()`.
+9. **Sistema de disponibilidad real**: `coach_availability` almacena slots puntuales por coach+fecha. Un día aparece disponible en el calendario si tiene al menos un slot sin reserva confirmada en `bookings` para ese coach+fecha+horario. La gestión (agregar/eliminar slots) vive en `CoachAvailabilityScreen`, la lectura en `BookingScreen_Calendar` y `BookingScreen_Time`.

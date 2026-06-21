@@ -62,9 +62,6 @@ export default function CoachChatsScreen() {
       .select('id, user_id')
       .eq('coach_id', user.id);
 
-    console.log('[CoachChats] DIAG ── coach user.id:', user.id);
-    console.log('[CoachChats] DIAG ── salas encontradas:', salas?.map(s => ({ id: s.id, user_id: s.user_id })));
-
     if (error || !salas || salas.length === 0) {
       setRooms([]);
       setLoading(false);

@@ -129,7 +129,6 @@ export default function SalaScreen() {
     let mounted = true;
 
     async function init() {
-      console.log('[Sala] DIAG ── params recibidos:', { salaIdParam, coach_id, userId: user!.id });
       let id: string | null = null;
       let salaUserId: string | null = null;
       let salaCoachId: string | null = null;
@@ -176,10 +175,7 @@ export default function SalaScreen() {
         }
       }
 
-      console.log('[Sala] DIAG ── sala resuelta:', { id, salaUserId, salaCoachId });
-
       if (!mounted || !id || !salaUserId || !salaCoachId) {
-        console.log('[Sala] DIAG ── ABORTANDO: id o participantes nulos');
         if (mounted) setLoading(false);
         return;
       }
@@ -212,13 +208,6 @@ export default function SalaScreen() {
           .eq('sala_id', id)
           .order('created_at', { ascending: true }),
       ]);
-
-      console.log('[Sala] DIAG ── mensajes SELECT:', {
-        salaId: id,
-        count: msgsResult.data?.length ?? 0,
-        error: msgsResult.error?.message ?? null,
-        firstMsg: msgsResult.data?.[0] ? { id: msgsResult.data[0].id, sender_id: msgsResult.data[0].sender_id } : null,
-      });
 
       if (!mounted) return;
 
@@ -323,7 +312,7 @@ export default function SalaScreen() {
 
     const encrypted = encryptMessage(text);
     const optimisticId = `opt_${Date.now()}`;
-    const optimistic: Message = { id: optimisticId, text: encrypted, sender: 'user', time: nowTime() };
+    const optimistic: Message = { id: optimisticId, text: encrypted, sender: 'user', sender_type: 'user', time: nowTime() };
 
     getAnim(optimisticId, 0);
     setMessages(prev => [...prev, optimistic]);
