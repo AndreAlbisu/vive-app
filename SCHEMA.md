@@ -57,6 +57,17 @@
 - UNIQUE(coach_id, date, time) — un coach no puede tener el mismo slot dos veces
 - RLS: SELECT abierto (anyone_can_view_availability) · ALL solo para el coach dueño (coaches_manage_own_availability, WITH CHECK `coach_id IN (SELECT id FROM coaches WHERE profile_id = auth.uid())`)
 
+### `coach_weekly_pattern`
+- `id` (uuid, PK)
+- `coach_id` (uuid, FK → `coaches.id`) ⚠️ — mismo FK que `coach_availability`, no `profile_id`
+- `day_of_week` (int) — 1=Lunes … 7=Domingo (CHECK BETWEEN 1 AND 7)
+- `start_time` (text) — formato "H:MM" (ej: "9:00", "13:30"), igual que `coach_availability.time`
+- `end_time` (text) — ídem; el end NO se incluye como slot de inicio en la generación
+- `slot_duration_minutes` (int, default 60) — duración de cada turno generado
+- `created_at` (timestamptz)
+- RLS: SELECT abierto (anyone_can_view_pattern) · ALL solo para el coach dueño (coaches_manage_own_pattern, WITH CHECK `coach_id IN (SELECT id FROM coaches WHERE profile_id = auth.uid())`)
+- Generación: `lib/availabilityGenerator.ts → generateWeeklySlots()` pobla `coach_availability` para los próximos 56 días con upsert ignorando duplicados
+
 ### `analytics_events`
 - `id` (uuid, PK)
 - `user_id` (uuid, FK → `auth.users.id`, nullable)

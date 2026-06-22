@@ -11,6 +11,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -22,7 +25,6 @@ const MONTH_NAMES = [
 ];
 const MONTHS_SHORT = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const DAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-const PRESET_TIMES = ['9:00','10:00','11:00','12:00','14:00','15:00','16:00','17:00','18:00'];
 
 function buildCalendar(year: number, month: number): (number | null)[][] {
   const firstDow = new Date(year, month, 1).getDay();
@@ -42,7 +44,17 @@ function formatDate(ds: string): string {
   return `${d} de ${MONTHS_SHORT[m - 1]}`;
 }
 
-type Slot = { id: string; time: string; isBooked: boolean };
+function dateToTimeStr(d: Date): string {
+  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function makeDefaultPickerTime(): Date {
+  const d = new Date();
+  d.setHours(9, 0, 0, 0);
+  return d;
+}
+
+type Slot = { id: string; time: string; isBooked: boolean; blocked: boolean };
 
 export default function CoachAvailabilityScreen() {
   const router = useRouter();
@@ -58,6 +70,8 @@ export default function CoachAvailabilityScreen() {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerValue, setPickerValue] = useState<Date>(makeDefaultPickerTime());
 
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
 
@@ -77,7 +91,7 @@ export default function CoachAvailabilityScreen() {
     const [{ data: availRows }, { data: bookedRows }] = await Promise.all([
       supabase
         .from('coach_availability')
-        .select('id, time')
+        .select('id, time, blocked')
         .eq('coach_id', coachId)
         .eq('date', date),
       supabase
@@ -92,6 +106,7 @@ export default function CoachAvailabilityScreen() {
       id: r.id,
       time: r.time,
       isBooked: bookedTimes.has(r.time),
+      blocked: r.blocked ?? false,
     }));
     loaded.sort((a, b) => {
       const [ah, am = 0] = a.time.split(':').map(Number);
@@ -108,6 +123,7 @@ export default function CoachAvailabilityScreen() {
     if (date < today) return;
     const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     setSelectedDate(ds);
+    setShowPicker(false);
     loadSlots(ds);
   }
 
@@ -128,10 +144,37 @@ export default function CoachAvailabilityScreen() {
   async function removeSlot(slotId: string) {
     if (!selectedDate || saving) return;
     setSaving(true);
-    const { error } = await supabase.from('coach_availability').delete().eq('id', slotId);
-    if (error) Alert.alert('Error', 'No se pudo eliminar el horario.');
+    const { error } = await supabase
+      .from('coach_availability')
+      .update({ blocked: true })
+      .eq('id', slotId);
+    if (error) Alert.alert('Error', 'No se pudo bloquear el horario.');
     else await loadSlots(selectedDate);
     setSaving(false);
+  }
+
+  async function reactivateSlot(slotId: string) {
+    if (!selectedDate || saving) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from('coach_availability')
+      .update({ blocked: false })
+      .eq('id', slotId);
+    if (error) Alert.alert('Error', 'No se pudo reactivar el horario.');
+    else await loadSlots(selectedDate);
+    setSaving(false);
+  }
+
+  function onPickerChange(event: DateTimePickerEvent, selected?: Date) {
+    if (Platform.OS === 'android') setShowPicker(false);
+    if (event.type === 'dismissed' || !selected) return;
+    setPickerValue(selected);
+    const time = dateToTimeStr(selected);
+    if (slots.some(sl => sl.time === time)) {
+      Alert.alert('Horario duplicado', 'Ese horario ya está agregado.');
+      return;
+    }
+    addSlot(time);
   }
 
   function prevMonth() {
@@ -160,7 +203,16 @@ export default function CoachAvailabilityScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
-        {/* Calendario */}
+        <TouchableOpacity
+          style={s.weeklyLink}
+          onPress={() => router.push('/coach-weekly-pattern')}
+          activeOpacity={0.75}
+        >
+          <MaterialCommunityIcons name="calendar-clock" size={16} color={ViveColors.primary} />
+          <Text style={s.weeklyLinkText}>Configurar horario semanal habitual</Text>
+          <MaterialCommunityIcons name="chevron-right" size={16} color={ViveColors.primary} />
+        </TouchableOpacity>
+
         <View style={s.calSection}>
           <View style={s.monthNav}>
             <TouchableOpacity onPress={prevMonth} hitSlop={8} activeOpacity={isCurrentMonth ? 1 : 0.7}>
@@ -218,7 +270,6 @@ export default function CoachAvailabilityScreen() {
           ))}
         </View>
 
-        {/* Slots */}
         {selectedDate ? (
           <View style={s.slotsCard}>
             <Text style={s.slotsTitle}>
@@ -230,49 +281,70 @@ export default function CoachAvailabilityScreen() {
               <ActivityIndicator color={ViveColors.primary} style={{ marginVertical: 20 }} />
             ) : (
               <>
-                <View style={s.chipsGrid}>
-                  {PRESET_TIMES.map((time) => {
-                    const existing = slots.find(sl => sl.time === time);
-
-                    if (existing?.isBooked) {
-                      return (
-                        <View key={time} style={[s.chip, s.chipBooked]}>
-                          <MaterialCommunityIcons name="lock-outline" size={12} color={`${ViveColors.text}44`} />
-                          <Text style={[s.chipText, s.chipTextBooked]}>{time}</Text>
-                        </View>
-                      );
-                    }
-                    if (existing) {
+                {slots.length === 0 ? (
+                  <Text style={s.noSlotsText}>Sin horarios para este día.</Text>
+                ) : (
+                  <View style={s.slotList}>
+                    {slots.map((slot) => {
+                      if (slot.isBooked) {
+                        return (
+                          <View key={slot.id} style={[s.slotRow, s.slotRowBooked]}>
+                            <MaterialCommunityIcons name="lock-outline" size={14} color={`${ViveColors.text}44`} />
+                            <Text style={[s.slotTime, s.slotTimeBooked]}>{slot.time}</Text>
+                          </View>
+                        );
+                      }
+                      if (slot.blocked) {
+                        return (
+                          <TouchableOpacity
+                            key={slot.id}
+                            style={[s.slotRow, s.slotRowBlocked]}
+                            onPress={() => reactivateSlot(slot.id)}
+                            activeOpacity={0.75}
+                            disabled={saving}
+                          >
+                            <MaterialCommunityIcons name="lock" size={14} color={ViveColors.primary} />
+                            <Text style={[s.slotTime, s.slotTimeBlocked]}>{slot.time}</Text>
+                            <MaterialCommunityIcons name="lock-open-variant-outline" size={14} color={`${ViveColors.primary}88`} />
+                          </TouchableOpacity>
+                        );
+                      }
                       return (
                         <TouchableOpacity
-                          key={time}
-                          style={[s.chip, s.chipActive]}
-                          onPress={() => removeSlot(existing.id)}
+                          key={slot.id}
+                          style={[s.slotRow, s.slotRowFree]}
+                          onPress={() => removeSlot(slot.id)}
                           activeOpacity={0.75}
                           disabled={saving}
                         >
-                          <Text style={[s.chipText, s.chipTextActive]}>{time}</Text>
-                          <MaterialCommunityIcons name="close" size={12} color="#FFFFFF" />
+                          <MaterialCommunityIcons name="lock-open-variant-outline" size={14} color={ViveColors.accent} />
+                          <Text style={[s.slotTime, s.slotTimeFree]}>{slot.time}</Text>
+                          <MaterialCommunityIcons name="close" size={14} color={`${ViveColors.text}55`} />
                         </TouchableOpacity>
                       );
-                    }
-                    return (
-                      <TouchableOpacity
-                        key={time}
-                        style={[s.chip, s.chipInactive]}
-                        onPress={() => addSlot(time)}
-                        activeOpacity={0.75}
-                        disabled={saving}
-                      >
-                        <MaterialCommunityIcons name="plus" size={12} color={`${ViveColors.text}44`} />
-                        <Text style={[s.chipText, s.chipTextInactive]}>{time}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                <Text style={s.hint}>
-                  Verde = disponible · Gris = reservado · Borde = sin agregar
-                </Text>
+                    })}
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={s.addSlotBtn}
+                  onPress={() => setShowPicker(p => !p)}
+                  activeOpacity={0.75}
+                  disabled={saving}
+                >
+                  <MaterialCommunityIcons name="plus" size={15} color={ViveColors.primary} />
+                  <Text style={s.addSlotBtnText}>Agregar horario</Text>
+                </TouchableOpacity>
+
+                {showPicker && Platform.OS === 'ios' && (
+                  <DateTimePicker
+                    mode="time"
+                    display="compact"
+                    value={pickerValue}
+                    onChange={onPickerChange}
+                    locale="es"
+                  />
+                )}
               </>
             )}
           </View>
@@ -285,6 +357,14 @@ export default function CoachAvailabilityScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {Platform.OS === 'android' && showPicker && (
+        <DateTimePicker
+          mode="time"
+          value={pickerValue}
+          onChange={onPickerChange}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -300,7 +380,6 @@ const cardShadow = Platform.select({
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: ViveColors.background },
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -320,7 +399,6 @@ const s = StyleSheet.create({
   },
   divider: { height: 1, backgroundColor: `${ViveColors.text}0D` },
   scroll: { paddingTop: 20 },
-
   calSection: { paddingHorizontal: 16, marginBottom: 8 },
   monthNav: {
     flexDirection: 'row',
@@ -350,19 +428,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayCircleSelectable: {
-    backgroundColor: '#FFFFFF',
-    ...dayShadow,
-  },
+  dayCircleSelectable: { backgroundColor: '#FFFFFF', ...dayShadow },
   dayCircleSelected: { backgroundColor: ViveColors.primary },
-  dayText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 14,
-    color: ViveColors.text,
-  },
+  dayText: { fontFamily: ViveFonts.medium, fontSize: 14, color: ViveColors.text },
   dayTextSelected: { fontFamily: ViveFonts.semibold, color: '#FFFFFF' },
   dayTextPast: { color: '#CBCBCB', fontFamily: ViveFonts.regular },
-
   slotsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
@@ -378,48 +448,56 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   slotsTitleDate: { color: ViveColors.primary },
-  chipsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+  noSlotsText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: `${ViveColors.text}55`,
     marginBottom: 14,
   },
-  chip: {
+  slotList: { gap: 8, marginBottom: 14 },
+  slotRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1.5,
   },
-  chipActive: {
-    backgroundColor: ViveColors.accent,
-    borderColor: ViveColors.accent,
-    ...Platform.select({
-      ios: { shadowColor: ViveColors.accent, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
-      android: { elevation: 2 },
-    }),
+  slotRowFree: {
+    backgroundColor: `${ViveColors.accent}18`,
+    borderColor: `${ViveColors.accent}44`,
   },
-  chipInactive: {
-    backgroundColor: 'transparent',
-    borderColor: `${ViveColors.text}28`,
-  },
-  chipBooked: {
+  slotRowBooked: {
     backgroundColor: `${ViveColors.text}0A`,
     borderColor: 'transparent',
   },
-  chipText: { fontFamily: ViveFonts.medium, fontSize: 14 },
-  chipTextActive: { color: '#FFFFFF' },
-  chipTextInactive: { color: `${ViveColors.text}70` },
-  chipTextBooked: { color: `${ViveColors.text}44` },
-  hint: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: `${ViveColors.text}55`,
-    lineHeight: 16,
+  slotRowBlocked: {
+    backgroundColor: `${ViveColors.primary}10`,
+    borderColor: `${ViveColors.primary}44`,
   },
-
+  slotTimeBlocked: { color: ViveColors.primary },
+  slotTime: { fontFamily: ViveFonts.medium, fontSize: 14, flex: 1 },
+  slotTimeFree: { color: ViveColors.text },
+  slotTimeBooked: { color: `${ViveColors.text}44` },
+  addSlotBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: `${ViveColors.primary}44`,
+    backgroundColor: `${ViveColors.primary}08`,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+  addSlotBtnText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 14,
+    color: ViveColors.primary,
+  },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -433,5 +511,24 @@ const s = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 40,
     lineHeight: 22,
+  },
+  weeklyLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    backgroundColor: `${ViveColors.primary}0D`,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: `${ViveColors.primary}22`,
+  },
+  weeklyLinkText: {
+    flex: 1,
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.primary,
   },
 });

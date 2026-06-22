@@ -218,7 +218,7 @@ export default function CoachHomeScreen() {
             <Text style={s.alertText}>
               Tenés{' '}
               <Text style={s.alertBold}>{pendingCount} solicitudes pendientes</Text>
-              {' '}— tenés 48hs para responder
+              {' '}— tenés 24hs para responder
             </Text>
             <Feather name="chevron-right" size={15} color={ViveColors.primary} />
           </TouchableOpacity>

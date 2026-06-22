@@ -80,7 +80,7 @@ export default function BookingScreen_Success() {
           <Animated.View style={[s.textBlock, { opacity: contentOpacity }]}>
             <Text style={s.title}>¡Reserva enviada!</Text>
             <Text style={s.subtitle}>
-              Le avisamos a {firstName}. Tiene 48hs para confirmar tu sesión.
+              Le avisamos a {firstName}. Tiene 24hs para confirmar tu sesión.
             </Text>
             <View style={s.statusBadge}>
               <Text style={s.statusBadgeText}>Pendiente de confirmación</Text>

@@ -61,13 +61,13 @@ function formatTimeAgo(isoString: string): string {
 }
 
 function hoursLeftToRespond(createdAt: string): number {
-  const deadline = new Date(createdAt).getTime() + 48 * 60 * 60 * 1000;
+  const deadline = new Date(createdAt).getTime() + 24 * 60 * 60 * 1000;
   return Math.max(0, Math.floor((deadline - Date.now()) / (1000 * 60 * 60)));
 }
 
 function urgencyColor(hoursLeft: number): string {
   if (hoursLeft <= 6) return '#E05252';
-  if (hoursLeft <= 24) return ViveColors.primary;
+  if (hoursLeft <= 12) return ViveColors.primary;
   return `${ViveColors.text}70`;
 }
 

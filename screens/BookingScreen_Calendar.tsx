@@ -67,6 +67,7 @@ export default function BookingScreen_Calendar() {
           .from('coach_availability')
           .select('date, time')
           .eq('coach_id', coachesId)
+          .eq('blocked', false)
           .gte('date', todayStr),
         supabase
           .from('bookings')

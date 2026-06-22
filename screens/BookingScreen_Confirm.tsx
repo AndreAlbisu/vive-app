@@ -258,7 +258,7 @@ export default function BookingScreen_Confirm() {
           <View style={s.modalityBox}>
             <MaterialIcons name="info-outline" size={15} color={`${ViveColors.text}77`} />
             <Text style={s.modalityText}>
-              Reserva con confirmación — el coach tiene 48hs para aceptar
+              Reserva con confirmación — el coach tiene 24hs para aceptar
             </Text>
           </View>
         </View>

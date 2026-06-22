@@ -62,6 +62,7 @@ export default function BookingScreen_Time() {
           .from('coach_availability')
           .select('time')
           .eq('coach_id', coachesId)
+          .eq('blocked', false)
           .eq('date', dateStr),
         supabase
           .from('bookings')
