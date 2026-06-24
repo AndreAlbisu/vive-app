@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase, ensureAnonSession } from '@/lib/supabase';
+import { logError } from '@/lib/logging';
 
 type JournalEntry = {
   id: string;
@@ -54,7 +55,8 @@ export default function DiarioScreen() {
       const uid = await ensureAnonSession();
       setUserId(uid);
       await fetchEntries(uid);
-    } catch {
+    } catch (err) {
+      await logError('DiarioScreen: init failed', err);
       setError('No se pudo conectar. Revisá tu conexión.');
       setLoading(false);
     }
@@ -69,6 +71,7 @@ export default function DiarioScreen() {
       .order('created_at', { ascending: false });
 
     if (err) {
+      await logError('DiarioScreen: fetchEntries failed', err);
       setError('No se pudieron cargar las entradas.');
     } else {
       setEntries(data ?? []);
@@ -89,6 +92,7 @@ export default function DiarioScreen() {
     });
 
     if (err) {
+      await logError('DiarioScreen: save entry failed', err);
       Alert.alert('Error', 'No se pudo guardar la entrada.');
     } else {
       setText('');
