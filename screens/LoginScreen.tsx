@@ -9,11 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ViveFonts } from '@/constants/theme';
+import { AppBg } from '@/components/ui/AppBg';
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
@@ -49,119 +51,117 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <AppBg>
+      <StatusBar barStyle="light-content" />
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {/* Logo */}
-          <Animated.View style={[styles.logoRow, fadeUp(logoAnim)]}>
-            <Text style={styles.logo}>vita</Text>
-          </Animated.View>
+          <ScrollView
+            contentContainerStyle={styles.container}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Logo */}
+            <Animated.View style={[styles.logoRow, fadeUp(logoAnim)]}>
+              <Text style={styles.logo}>VITA</Text>
+            </Animated.View>
 
-          {/* Heading */}
-          <Animated.View style={[styles.headingArea, fadeUp(headingAnim)]}>
-            <Text style={styles.heading}>Bienvenido de vuelta</Text>
-            <Text style={styles.subheading}>Iniciá sesión para continuar tu camino.</Text>
-          </Animated.View>
+            {/* Heading */}
+            <Animated.View style={[styles.headingArea, fadeUp(headingAnim)]}>
+              <Text style={styles.heading}>Bienvenido de vuelta</Text>
+              <Text style={styles.subheading}>Iniciá sesión para continuar tu camino.</Text>
+            </Animated.View>
 
-          {/* Form */}
-          <Animated.View style={[styles.form, fadeUp(formAnim)]}>
-            {/* Email */}
-            <View style={styles.fieldWrap}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={[styles.input, focused === 'email' && styles.inputFocused]}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="tu@email.com"
-                placeholderTextColor={`${ViveColors.text}55`}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                onFocus={() => setFocused('email')}
-                onBlur={() => setFocused(null)}
-              />
-            </View>
-
-            {/* Contraseña */}
-            <View style={styles.fieldWrap}>
-              <Text style={styles.label}>Contraseña</Text>
-              <View style={[styles.inputRow, focused === 'pass' && styles.inputFocused]}>
+            {/* Form */}
+            <Animated.View style={[styles.form, fadeUp(formAnim)]}>
+              {/* Email */}
+              <View style={styles.fieldWrap}>
+                <Text style={styles.label}>Email</Text>
                 <TextInput
-                  style={styles.inputInner}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="••••••••"
-                  placeholderTextColor={`${ViveColors.text}55`}
-                  secureTextEntry={!showPassword}
-                  onFocus={() => setFocused('pass')}
+                  style={[styles.input, focused === 'email' && styles.inputFocused]}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="tu@email.com"
+                  placeholderTextColor="rgba(255,255,255,0.38)"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  onFocus={() => setFocused('email')}
                   onBlur={() => setFocused(null)}
                 />
-                <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                  <MaterialCommunityIcons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={20}
-                    color={`${ViveColors.text}66`}
-                  />
-                </TouchableOpacity>
               </View>
-            </View>
 
-            {/* Olvidé */}
-            <TouchableOpacity style={styles.forgotWrap} activeOpacity={0.7}>
-              <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-            </TouchableOpacity>
-          </Animated.View>
+              {/* Contraseña */}
+              <View style={styles.fieldWrap}>
+                <Text style={styles.label}>Contraseña</Text>
+                <View style={[styles.inputRow, focused === 'pass' && styles.inputFocused]}>
+                  <TextInput
+                    style={styles.inputInner}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="••••••••"
+                    placeholderTextColor="rgba(255,255,255,0.38)"
+                    secureTextEntry={!showPassword}
+                    onFocus={() => setFocused('pass')}
+                    onBlur={() => setFocused(null)}
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+                    <MaterialCommunityIcons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color="rgba(255,255,255,0.55)"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-          {/* CTA */}
-          <Animated.View style={[styles.ctaArea, fadeUp(ctaAnim)]}>
-            <TouchableOpacity
-              style={[styles.primaryBtn, (!email || !password) && styles.primaryBtnDisabled]}
-              onPress={handleLogin}
-              activeOpacity={0.82}
-              disabled={!email || !password}
-            >
-              <Text style={styles.primaryBtnText}>Iniciar sesión</Text>
-            </TouchableOpacity>
+              {/* Olvidé */}
+              <TouchableOpacity style={styles.forgotWrap} activeOpacity={0.7}>
+                <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+              </TouchableOpacity>
+            </Animated.View>
 
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>o</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            {/* CTA */}
+            <Animated.View style={[styles.ctaArea, fadeUp(ctaAnim)]}>
+              <TouchableOpacity
+                style={[styles.primaryBtn, (!email || !password) && styles.primaryBtnDisabled]}
+                onPress={handleLogin}
+                activeOpacity={0.82}
+                disabled={!email || !password}
+              >
+                <Text style={styles.primaryBtnText}>Iniciar sesión</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.googleBtn} activeOpacity={0.82}>
-              <MaterialCommunityIcons name="google" size={20} color="#4285F4" />
-              <Text style={styles.googleBtnText}>Continuar con Google</Text>
-            </TouchableOpacity>
-          </Animated.View>
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>o</Text>
+                <View style={styles.dividerLine} />
+              </View>
 
-          {/* Footer */}
-          <Animated.View style={[styles.footer, fadeUp(footerAnim)]}>
-            <Text style={styles.footerText}>¿No tenés cuenta? </Text>
-            <TouchableOpacity onPress={() => router.replace('/register')} activeOpacity={0.7}>
-              <Text style={styles.footerLink}>Registrate</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              <TouchableOpacity style={styles.googleBtn} activeOpacity={0.82}>
+                <MaterialCommunityIcons name="google" size={20} color="#4285F4" />
+                <Text style={styles.googleBtnText}>Continuar con Google</Text>
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* Footer */}
+            <Animated.View style={[styles.footer, fadeUp(footerAnim)]}>
+              <Text style={styles.footerText}>¿No tenés cuenta? </Text>
+              <TouchableOpacity onPress={() => router.replace('/register')} activeOpacity={0.7}>
+                <Text style={styles.footerLink}>Registrate</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </AppBg>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: ViveColors.background,
-  },
-  flex: {
-    flex: 1,
-  },
+  safeArea: { flex: 1 },
+  flex: { flex: 1 },
   container: {
     flexGrow: 1,
     paddingHorizontal: 28,
@@ -178,14 +178,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 44,
-    color: ViveColors.primary,
-    letterSpacing: -1,
-    lineHeight: 50,
-  },
-  logoIcon: {
-    marginTop: 2,
+    fontFamily: ViveFonts.bold,
+    fontSize: 36,
+    color: '#FFFFFF',
+    letterSpacing: 6,
   },
 
   // Heading
@@ -196,53 +192,47 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: ViveFonts.bold,
     fontSize: 26,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     letterSpacing: -0.5,
     textAlign: 'center',
   },
   subheading: {
     fontFamily: ViveFonts.regular,
     fontSize: 15,
-    color: ViveColors.text,
-    opacity: 0.55,
+    color: 'rgba(255,255,255,0.62)',
     textAlign: 'center',
     lineHeight: 22,
   },
 
   // Form
-  form: {
-    gap: 18,
-  },
-  fieldWrap: {
-    gap: 7,
-  },
+  form: { gap: 18 },
+  fieldWrap: { gap: 7 },
   label: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
-    color: ViveColors.text,
-    opacity: 0.7,
+    color: 'rgba(255,255,255,0.75)',
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: `${ViveColors.text}1A`,
+    borderColor: 'rgba(255,255,255,0.28)',
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontFamily: ViveFonts.regular,
     fontSize: 15,
-    color: ViveColors.text,
+    color: '#FFFFFF',
   },
   inputFocused: {
-    borderColor: ViveColors.primary,
+    borderColor: 'rgba(255,255,255,0.7)',
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: `${ViveColors.text}1A`,
+    borderColor: 'rgba(255,255,255,0.28)',
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 10,
@@ -251,35 +241,29 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: ViveFonts.regular,
     fontSize: 15,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     padding: 0,
   },
-  forgotWrap: {
-    alignSelf: 'flex-end',
-  },
+  forgotWrap: { alignSelf: 'flex-end' },
   forgotText: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
-    color: ViveColors.primary,
+    color: 'rgba(255,255,255,0.75)',
   },
 
   // CTA
-  ctaArea: {
-    gap: 16,
-  },
+  ctaArea: { gap: 16 },
   primaryBtn: {
-    backgroundColor: ViveColors.primary,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingVertical: 17,
     alignItems: 'center',
   },
-  primaryBtnDisabled: {
-    opacity: 0.45,
-  },
+  primaryBtnDisabled: { opacity: 0.4 },
   primaryBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#1A1A2E',
     letterSpacing: 0.2,
   },
   dividerRow: {
@@ -290,28 +274,28 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: `${ViveColors.text}1A`,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   dividerText: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: `${ViveColors.text}55`,
+    color: 'rgba(255,255,255,0.45)',
   },
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: `${ViveColors.text}1A`,
+    borderColor: 'rgba(255,255,255,0.28)',
     paddingVertical: 15,
   },
   googleBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
-    color: ViveColors.text,
+    color: '#FFFFFF',
   },
 
   // Footer
@@ -323,11 +307,11 @@ const styles = StyleSheet.create({
   footerText: {
     fontFamily: ViveFonts.regular,
     fontSize: 14,
-    color: `${ViveColors.text}88`,
+    color: 'rgba(255,255,255,0.55)',
   },
   footerLink: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
-    color: ViveColors.primary,
+    color: '#FFFFFF',
   },
 });
