@@ -47,8 +47,8 @@ const TOPICS: { id: string; icon: MIcon; label: string }[] = [
 
 const COACHES = [
   { id: '1', name: 'Laura Méndez',   specialty: 'Coach de vida',   priceFrom: 4500, rating: 4.9, reviews: 127 },
-  { id: '2', name: 'Martín Fuentes', specialty: 'Psicólogo',       priceFrom: 6000, rating: 4.8, reviews:  89 },
-  { id: '3', name: 'Valentina Ríos', specialty: 'Coach ejecutiva', priceFrom: 5200, rating: 4.9, reviews: 204 },
+  { id: '2', name: 'Martín Fuentes', specialty: 'Psicóloga clínica', priceFrom: 6000, rating: 4.8, reviews:  89 },
+  { id: '3', name: 'Valentina Ríos', specialty: 'Coach de hábitos',  priceFrom: 5200, rating: 4.9, reviews: 204 },
   { id: '4', name: 'Diego Sánchez',  specialty: 'Nutricionista',   priceFrom: 3800, rating: 4.7, reviews:  63 },
 ];
 
