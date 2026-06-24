@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-06-24 — Joaquín (sesión 7)
+
+**Tocado:** `lib/logging.ts` (nuevo), `package.json`, `screens/BookingScreen_Confirm.tsx`, `screens/DiarioScreen.tsx`, `screens/GratitudScreen.tsx`, `screens/SalaScreen.tsx`, `app/(tabs)/conexiones.tsx`, `screens/ProfesionalScreen.tsx`, `screens/BookingScreen_Calendar.tsx`, `screens/BookingScreen_Time.tsx`, `screens/BookingScreen_Success.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- Creado `lib/logging.ts` con `logError/logWarn/logInfo/readLog/clearLog` usando `expo-file-system` v19 (API nueva: `File` + `Paths`, no las funciones deprecadas). Wired en `BookingScreen_Confirm`, `DiarioScreen`, `GratitudScreen` y `SalaScreen`.
+- Bug `coachId/profileId` resuelto: `conexiones.tsx` ahora fetchea coaches reales de Supabase al montar y pasa `coachId` (coaches.id) y `coachProfileId` (coaches.profile_id) por params a través de todo el chain hasta `BookingScreen_Confirm`. El lookup por specialty queda solo como fallback.
+- Post-booking conectado a `/sala`: `BookingScreen_Success` navega a `/sala?sala_id=<uuid>` en vez de abrir `roomUrl` en browser externo. `BookingScreen_Confirm` ahora pasa `salaId` a `booking-success`.
+- `saved_resources` verificado con `information_schema` y `SCHEMA.md` actualizado: `id`, `user_id`, `resource_id` (text), `pinned` (bool), `created_at`.
+- Selector "Test:" en `SalaScreen` ya no existía en el historial de git — pendiente cerrado.
+
+**Pendiente para la próxima sesión:**
+- Verificar que los strings de `specialty` en la tabla `coaches` de Supabase coincidan exactamente con los hardcodeados en `conexiones.tsx` (`'Coach de vida'`, `'Psicólogo'`, `'Coach ejecutiva'`, `'Nutricionista'`). Si no coinciden, el fix de coachId no va a funcionar.
+- `saved_resources` no tiene ninguna pantalla que la use todavía — decidir si se implementa o se descarta.
+
+---
+
 ## 2026-06-20 — Joaquín (sesión 6)
 
 **Tocado:** `screens/SalaScreen.tsx`, `CLAUDE.md`, `CHANGELOG_SESIONES.md`
