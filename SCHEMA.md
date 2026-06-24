@@ -2,7 +2,7 @@
 
 > ⚠️ Este archivo describe lo que está REALMENTE en Supabase hoy.
 > No es un diseño aspiracional — si algo cambia en la base, este archivo se actualiza el mismo día.
-> Última actualización: 20 de junio 2026 — confirmado por Andre con information_schema
+> Última actualización: 24 de junio 2026 — saved_resources confirmado por Andre con information_schema
 
 ## Tablas y relaciones
 
@@ -56,7 +56,11 @@
 - `id` (uuid, PK), `user_id`, `content` (text), `created_at`
 
 ### `saved_resources`
-- Existe en la base, columnas exactas pendientes de verificar
+- `id` (uuid, PK)
+- `user_id` (uuid, nullable) — FK implícita a `auth.users.id`
+- `resource_id` (text, NOT NULL) — ID del recurso guardado
+- `pinned` (bool, nullable) — si el usuario lo fijó
+- `created_at` (timestamptz, nullable)
 
 ## Reglas críticas
 
