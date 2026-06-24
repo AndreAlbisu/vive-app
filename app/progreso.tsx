@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   ScrollView, View, Text, TouchableOpacity,
-  StyleSheet, Dimensions,
+  StyleSheet, Dimensions, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -54,9 +54,8 @@ export default function ProgresoScreen() {
   }
 
   return (
-    <View style={s.root}>
-      <AppBg />
-
+    <AppBg>
+      <StatusBar barStyle="light-content" />
       <SafeAreaView style={s.safe} edges={['top']}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
@@ -126,14 +125,13 @@ export default function ProgresoScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </SafeAreaView>
-    </View>
+    </AppBg>
   );
 }
 
 // ─── Estilos ──────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root: { flex: 1 },
   safe: { flex: 1 },
   scroll: { paddingBottom: 16 },
 

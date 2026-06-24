@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import {
   ScrollView, View, Text, TouchableOpacity,
-  StyleSheet, Animated, Dimensions,
+  StyleSheet, Animated, Dimensions, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -81,9 +81,8 @@ export default function InicioScreen() {
   const [a0, a1, a2, a3, a4, a5, a6] = anims;
 
   return (
-    <View style={s.root}>
-      <AppBg />
-
+    <AppBg>
+      <StatusBar barStyle="light-content" />
       <FirstTimeTooltip
         storageKey="vive_tooltip_inicio"
         icon="home-outline"
@@ -220,14 +219,13 @@ export default function InicioScreen() {
           <View style={{ height: 90 }} />
         </ScrollView>
       </SafeAreaView>
-    </View>
+    </AppBg>
   );
 }
 
 // ─── Estilos ──────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root: { flex: 1 },
   safe: { flex: 1 },
   scroll: { paddingBottom: 8 },
 
