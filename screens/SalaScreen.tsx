@@ -17,6 +17,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { supabase } from '@/lib/supabase';
+import { logError } from '@/lib/logging';
 
 type Message = {
   id: string;
@@ -57,7 +58,8 @@ export default function SalaScreen() {
       .select('room_url')
       .eq('id', sala_id)
       .single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { logError('SalaScreen: failed to fetch room_url', error); return; }
         if (data?.room_url) setRoomUrl(data.room_url);
       });
   }, [sala_id]);
