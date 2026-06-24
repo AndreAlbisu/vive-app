@@ -1,29 +1,25 @@
 import { useRef, useEffect, useState } from 'react';
 import {
-  ScrollView,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  Animated,
-  Dimensions,
+  ScrollView, View, Text, TouchableOpacity,
+  StyleSheet, Animated, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 
 import { ViveFonts } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
+import { AppBg } from '@/components/ui/AppBg';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { VitaHeader } from '@/components/ui/VitaHeader';
+import { ProgressToggle } from '@/components/ui/ProgressToggle';
 
 // ─── Datos / placeholders ─────────────────────────────────────────────────────
 
 const mockUser = { name: 'Andre' };
 
-// TODO: fetchear de Supabase — analytics_events o tabla de progreso futura
+// TODO: calcular de analytics_events o tabla de progreso futura
 const activeWeeks = 12;
 const aboutYouText =
   'Vas por buen camino y tomando acciones que te hacen cada vez más efectivo. Los retos y la constancia construyen más balance en tu vida.';
@@ -32,10 +28,9 @@ const aboutYouText =
 const dailyPhrase = 'Todas las respuestas están en vos.';
 
 // TODO: leer de saved_resources + Supabase
-type Resource = { id: string; title: string; icon: string; route?: string };
-const pinnedResources: Resource[] = [
-  { id: '1', title: 'Respiración\n4-7-8', icon: 'weather-windy' },
-  { id: '2', title: 'Diario de\ngratitud', icon: 'notebook-outline', route: '/gratitud' },
+const pinnedResources = [
+  { id: '1', title: 'Respiración\n4-7-8', icon: 'weather-windy' as const },
+  { id: '2', title: 'Diario de\ngratitud', icon: 'notebook-outline' as const, route: '/gratitud' },
 ];
 
 // TODO: fetchear próxima reserva de bookings + salas de Supabase
@@ -44,8 +39,7 @@ const mockSession = {
   specialty: 'Psicóloga',
   date: 'Lunes 16 de junio',
   time: '11:00 hs',
-  // TODO: pasar sala_id real desde bookings → salas
-  salaId: null as string | null,
+  salaId: null as string | null, // TODO: pasar sala_id real desde bookings → salas
 };
 
 // TODO: fetchear de tabla de contenidos o CMS futuro
@@ -56,64 +50,39 @@ const mockRecommendation = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const { width: SCREEN_W } = Dimensions.get('window');
+const { width: W } = Dimensions.get('window');
+const CARD_MX = 18;
 
-function getGreeting(): string {
+function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return '¡Buen día';
   if (h < 19) return '¡Buenas tardes';
   return '¡Buenas noches';
 }
 
-const fadeUp = (anim: Animated.Value) => ({
-  opacity: anim,
-  transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
+const fadeUp = (a: Animated.Value) => ({
+  opacity: a,
+  transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
 });
 
-// ─── GlassCard ────────────────────────────────────────────────────────────────
-
-function GlassCard({ children, style }: { children: React.ReactNode; style?: object }) {
-  if (Platform.OS === 'ios') {
-    return (
-      <BlurView intensity={38} tint="light" style={[s.glass, style]}>
-        {children}
-      </BlurView>
-    );
-  }
-  // Android: blur no soportado — simular con rgba
-  return (
-    <View style={[s.glass, s.glassAndroid, style]}>
-      {children}
-    </View>
-  );
-}
-
-// ─── Pantalla ──────────────────────────────────────────────────────────────────
+// ─── Pantalla ─────────────────────────────────────────────────────────────────
 
 export default function InicioScreen() {
   const router = useRouter();
-  const [progressTab, setProgressTab] = useState<'hoy' | 'mes'>('hoy');
-
-  const a0 = useRef(new Animated.Value(0)).current;
-  const a1 = useRef(new Animated.Value(0)).current;
-  const a2 = useRef(new Animated.Value(0)).current;
-  const a3 = useRef(new Animated.Value(0)).current;
-  const a4 = useRef(new Animated.Value(0)).current;
-  const a5 = useRef(new Animated.Value(0)).current;
+  const [tab, setTab] = useState<'hoy' | 'mes'>('hoy');
+  const anims = Array.from({ length: 7 }, () => useRef(new Animated.Value(0)).current);
 
   useEffect(() => {
-    Animated.stagger(80, [a0, a1, a2, a3, a4, a5].map(a =>
-      Animated.timing(a, { toValue: 1, duration: 380, useNativeDriver: true })
+    Animated.stagger(70, anims.map(a =>
+      Animated.timing(a, { toValue: 1, duration: 360, useNativeDriver: true }),
     )).start();
   }, []);
 
+  const [a0, a1, a2, a3, a4, a5, a6] = anims;
+
   return (
     <View style={s.root}>
-      <LinearGradient
-        colors={['#FBC79A', '#F2A8B6', '#CBC9EA']}
-        locations={[0, 0.52, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+      <AppBg />
 
       <FirstTimeTooltip
         storageKey="vive_tooltip_inicio"
@@ -128,74 +97,57 @@ export default function InicioScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={s.scroll}
         >
-
-          {/* ── 1. Top bar ── */}
-          <Animated.View style={[s.topBar, fadeUp(a0)]}>
-            <Text style={s.logo}>VITA</Text>
-            <View style={s.avatar}>
-              <Text style={s.avatarText}>{mockUser.name[0]}</Text>
-            </View>
+          {/* 1. Header */}
+          <Animated.View style={fadeUp(a0)}>
+            <VitaHeader userName={mockUser.name} />
           </Animated.View>
 
-          {/* ── 2. Saludo ── */}
+          {/* 2. Saludo */}
           <Animated.View style={[s.greetingBlock, fadeUp(a0)]}>
             <Text style={s.greetingMain}>{getGreeting()}, {mockUser.name}!</Text>
             <Text style={s.greetingSub}>¿cómo estás hoy?</Text>
           </Animated.View>
 
-          {/* ── 3. Tu progreso + toggle ── */}
+          {/* 3. Tu progreso + toggle */}
           <Animated.View style={[s.progressRow, fadeUp(a1)]}>
             <View style={s.progressLabelRow}>
               <Text style={s.progressLabel}>Tu progreso</Text>
-              <MaterialCommunityIcons name="information-outline" size={14} color="rgba(255,255,255,0.7)" />
+              <MaterialCommunityIcons name="information-outline" size={13} color="rgba(255,255,255,0.65)" />
             </View>
-            <View style={s.toggle}>
-              <TouchableOpacity
-                style={[s.toggleBtn, progressTab === 'hoy' && s.toggleBtnActive]}
-                onPress={() => setProgressTab('hoy')}
-                activeOpacity={0.8}
-              >
-                <Text style={[s.toggleText, progressTab === 'hoy' && s.toggleTextActive]}>Hoy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.toggleBtn, progressTab === 'mes' && s.toggleBtnActive]}
-                onPress={() => setProgressTab('mes')}
-                activeOpacity={0.8}
-              >
-                <Text style={[s.toggleText, progressTab === 'mes' && s.toggleTextActive]}>Mes</Text>
-              </TouchableOpacity>
-            </View>
+            <ProgressToggle value={tab} onChange={setTab} />
           </Animated.View>
 
-          {/* ── 4. Tarjeta progreso ── */}
-          <Animated.View style={fadeUp(a1)}>
-            <GlassCard style={s.cardProgress}>
-              <View style={s.progressLeft}>
-                <Text style={s.weeksNumber}>{activeWeeks}</Text>
-                <Text style={s.weeksLabel}>Semanas</Text>
-              </View>
-              <View style={s.progressRight}>
-                <View style={s.progressRightHeader}>
-                  <Text style={s.progressRightTitle}>Sobre ti</Text>
-                  <MaterialCommunityIcons name="information-outline" size={15} color="rgba(255,255,255,0.6)" />
+          {/* 4. Tarjeta progreso → navega a Progreso */}
+          <Animated.View style={[{ marginHorizontal: CARD_MX, marginBottom: 14 }, fadeUp(a1)]}>
+            <ScaleCard onPress={() => router.push('/progreso')} style={s.cardPressable}>
+              <GlassCard style={s.cardProgressInner}>
+                <View style={s.progressLeft}>
+                  <Text style={s.weeksNumber}>{activeWeeks}</Text>
+                  <Text style={s.weeksLabel}>Semanas</Text>
                 </View>
-                <Text style={s.progressRightText} numberOfLines={5}>{aboutYouText}</Text>
-              </View>
-            </GlassCard>
+                <View style={s.progressRight}>
+                  <View style={s.progressRightHeader}>
+                    <Text style={s.progressRightTitle}>Sobre ti</Text>
+                    <MaterialCommunityIcons name="information-outline" size={14} color="rgba(255,255,255,0.55)" />
+                  </View>
+                  <Text style={s.progressRightText} numberOfLines={5}>{aboutYouText}</Text>
+                </View>
+              </GlassCard>
+            </ScaleCard>
           </Animated.View>
 
-          {/* ── 5. Frase del día ── */}
+          {/* 5. Frase del día */}
           <Animated.View style={fadeUp(a2)}>
             <GlassCard style={s.cardPhrase}>
               <View style={s.phraseInner}>
                 <Text style={s.phraseLabel}>Frase del día</Text>
                 <Text style={s.phraseText}>{dailyPhrase}</Text>
               </View>
-              <MaterialCommunityIcons name="shimmer" size={26} color="rgba(255,255,255,0.75)" style={s.sparkle} />
+              <MaterialCommunityIcons name="shimmer" size={26} color="rgba(255,255,255,0.7)" style={s.sparkle} />
             </GlassCard>
           </Animated.View>
 
-          {/* ── 6. Recursos útiles ── */}
+          {/* 6. Recursos útiles */}
           <Animated.View style={fadeUp(a3)}>
             <Text style={s.sectionTitle}>Recursos útiles</Text>
             <ScrollView
@@ -210,22 +162,21 @@ export default function InicioScreen() {
                   onPress={r.route ? () => router.push(r.route as any) : undefined}
                 >
                   <View style={s.resourceIconCircle}>
-                    <MaterialCommunityIcons name={r.icon as any} size={24} color="rgba(255,255,255,0.9)" />
+                    <MaterialCommunityIcons name={r.icon} size={22} color="rgba(255,255,255,0.9)" />
                   </View>
                   <Text style={s.resourceLabel} numberOfLines={2}>{r.title}</Text>
                   <View style={s.resourcePlusCircle}>
-                    <MaterialCommunityIcons name="plus" size={14} color="rgba(255,255,255,0.8)" />
+                    <MaterialCommunityIcons name="plus" size={13} color="rgba(255,255,255,0.75)" />
                   </View>
                 </ScaleCard>
               ))}
-              {/* Tarjeta vacía para añadir */}
               <View style={[s.resourceCard, s.resourceCardEmpty]}>
-                <MaterialCommunityIcons name="plus" size={22} color="rgba(255,255,255,0.45)" />
+                <MaterialCommunityIcons name="plus" size={22} color="rgba(255,255,255,0.4)" />
               </View>
             </ScrollView>
           </Animated.View>
 
-          {/* ── 7. Tu próxima sesión ── */}
+          {/* 7. Tu próxima sesión */}
           <Animated.View style={fadeUp(a4)}>
             <Text style={s.sectionTitle}>Tu próxima sesión</Text>
             <GlassCard style={s.cardSession}>
@@ -234,9 +185,7 @@ export default function InicioScreen() {
               </View>
               <View style={s.sessionInfo}>
                 <Text style={s.sessionName}>{mockSession.name}</Text>
-                <Text style={s.sessionSub}>
-                  {mockSession.specialty} · {mockSession.date}
-                </Text>
+                <Text style={s.sessionSub}>{mockSession.specialty} · {mockSession.date}</Text>
                 <Text style={s.sessionSub}>{mockSession.time}</Text>
               </View>
               <TouchableOpacity
@@ -244,7 +193,7 @@ export default function InicioScreen() {
                 onPress={() => router.push(
                   mockSession.salaId
                     ? { pathname: '/sala', params: { sala_id: mockSession.salaId } }
-                    : '/sala'
+                    : '/sala',
                 )}
                 activeOpacity={0.82}
               >
@@ -253,7 +202,7 @@ export default function InicioScreen() {
             </GlassCard>
           </Animated.View>
 
-          {/* ── 8. Para vos hoy ── */}
+          {/* 8. Para vos hoy */}
           <Animated.View style={fadeUp(a5)}>
             <Text style={s.sectionTitle}>Para vos hoy</Text>
             <GlassCard style={s.cardRec}>
@@ -268,7 +217,7 @@ export default function InicioScreen() {
             </GlassCard>
           </Animated.View>
 
-          <View style={{ height: 32 }} />
+          <View style={{ height: 90 }} />
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -277,78 +226,25 @@ export default function InicioScreen() {
 
 // ─── Estilos ──────────────────────────────────────────────────────────────────
 
-const CARD_MX = 18;
-const GLASS_BG = 'rgba(255,255,255,0.18)';
-const GLASS_BORDER = 'rgba(255,255,255,0.35)';
-
 const s = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1 },
-  scroll: { paddingBottom: 32 },
-
-  // Glass base
-  glass: {
-    marginHorizontal: CARD_MX,
-    marginBottom: 14,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    overflow: 'hidden',
-  },
-  glassAndroid: {
-    backgroundColor: GLASS_BG,
-  },
-
-  // 1. Top bar
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 22,
-    paddingTop: 10,
-    paddingBottom: 4,
-  },
-  logo: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 17,
-    color: '#FFFFFF',
-    letterSpacing: 3,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.35)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#FFFFFF',
-  },
+  scroll: { paddingBottom: 8 },
 
   // 2. Saludo
-  greetingBlock: {
-    paddingHorizontal: 22,
-    paddingTop: 14,
-    paddingBottom: 18,
-  },
+  greetingBlock: { paddingHorizontal: 22, paddingTop: 12, paddingBottom: 16 },
   greetingMain: {
     fontFamily: ViveFonts.bold,
-    fontSize: 32,
+    fontSize: 30,
     color: '#FFFFFF',
-    lineHeight: 38,
+    lineHeight: 36,
     letterSpacing: -0.3,
   },
   greetingSub: {
     fontFamily: ViveFonts.regular,
-    fontSize: 26,
-    color: 'rgba(255,255,255,0.82)',
-    lineHeight: 34,
-    letterSpacing: -0.2,
+    fontSize: 24,
+    color: 'rgba(255,255,255,0.78)',
+    lineHeight: 32,
   },
 
   // 3. Progreso row
@@ -359,68 +255,35 @@ const s = StyleSheet.create({
     paddingHorizontal: 22,
     marginBottom: 12,
   },
-  progressLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
+  progressLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   progressLabel: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.82)',
-  },
-  toggle: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    padding: 3,
-  },
-  toggleBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 16,
-  },
-  toggleBtnActive: {
-    backgroundColor: '#FFFFFF',
-  },
-  toggleText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.75)',
-  },
-  toggleTextActive: {
-    color: '#C0748A',
+    color: 'rgba(255,255,255,0.78)',
   },
 
   // 4. Tarjeta progreso
-  cardProgress: {
+  cardPressable: { borderRadius: 22 },
+  cardProgressInner: {
     flexDirection: 'row',
     padding: 20,
-    gap: 16,
+    gap: 14,
   },
-  progressLeft: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 72,
-  },
+  progressLeft: { alignItems: 'center', justifyContent: 'center', minWidth: 68 },
   weeksNumber: {
     fontFamily: ViveFonts.bold,
-    fontSize: 58,
+    fontSize: 54,
     color: '#FFFFFF',
-    lineHeight: 64,
+    lineHeight: 60,
     letterSpacing: -2,
   },
   weeksLabel: {
     fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.72)',
     marginTop: 2,
   },
-  progressRight: {
-    flex: 1,
-  },
+  progressRight: { flex: 1 },
   progressRightHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -435,12 +298,14 @@ const s = StyleSheet.create({
   progressRightText: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.78)',
+    color: 'rgba(255,255,255,0.75)',
     lineHeight: 18,
   },
 
-  // 5. Frase del día
+  // 5. Frase
   cardPhrase: {
+    marginHorizontal: CARD_MX,
+    marginBottom: 14,
     flexDirection: 'row',
     alignItems: 'flex-end',
     padding: 18,
@@ -449,131 +314,109 @@ const s = StyleSheet.create({
   phraseLabel: {
     fontFamily: ViveFonts.regular,
     fontSize: 11,
-    color: 'rgba(255,255,255,0.65)',
-    marginBottom: 6,
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: 5,
     letterSpacing: 0.3,
   },
   phraseText: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 19,
+    fontSize: 18,
     color: '#FFFFFF',
-    lineHeight: 26,
-    letterSpacing: -0.2,
+    lineHeight: 25,
   },
-  sparkle: {
-    marginLeft: 10,
-    marginBottom: 2,
-  },
+  sparkle: { marginLeft: 10, marginBottom: 2 },
 
   // 6. Recursos
   sectionTitle: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.82)',
+    color: 'rgba(255,255,255,0.78)',
     paddingHorizontal: 22,
     marginBottom: 10,
-    marginTop: 4,
+    marginTop: 2,
   },
   resourcesScroll: {
     paddingHorizontal: CARD_MX,
     gap: 12,
-    paddingBottom: 4,
-    marginBottom: 14,
+    paddingBottom: 14,
   },
   resourceCard: {
-    width: SCREEN_W * 0.38,
-    backgroundColor: GLASS_BG,
+    width: W * 0.36,
+    backgroundColor: 'rgba(255,255,255,0.16)',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    padding: 16,
+    borderColor: 'rgba(255,255,255,0.35)',
+    padding: 14,
     alignItems: 'center',
-    gap: 10,
-    minHeight: 130,
+    gap: 8,
+    minHeight: 120,
     justifyContent: 'space-between',
   },
-  resourceCardEmpty: {
-    justifyContent: 'center',
-    opacity: 0.6,
-  },
+  resourceCardEmpty: { justifyContent: 'center', opacity: 0.55 },
   resourceIconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'rgba(255,255,255,0.28)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   resourceLabel: {
     fontFamily: ViveFonts.medium,
-    fontSize: 12,
+    fontSize: 11,
     color: '#FFFFFF',
     textAlign: 'center',
-    lineHeight: 17,
+    lineHeight: 16,
   },
   resourcePlusCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.45)',
+    borderColor: 'rgba(255,255,255,0.42)',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  // 7. Próxima sesión
+  // 7. Sesión
   cardSession: {
+    marginHorizontal: CARD_MX,
+    marginBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 15,
     gap: 12,
   },
   sessionAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.28)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.26)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.45)',
+    borderColor: 'rgba(255,255,255,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  sessionAvatarText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 17,
-    color: '#FFFFFF',
-  },
+  sessionAvatarText: { fontFamily: ViveFonts.semibold, fontSize: 16, color: '#FFFFFF' },
   sessionInfo: { flex: 1 },
-  sessionName: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 13,
-    color: '#FFFFFF',
-    lineHeight: 19,
-  },
-  sessionSub: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.68)',
-    lineHeight: 17,
-  },
+  sessionName: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#FFFFFF', lineHeight: 19 },
+  sessionSub: { fontFamily: ViveFonts.regular, fontSize: 11, color: 'rgba(255,255,255,0.65)', lineHeight: 16 },
   verSalaBtn: {
-    backgroundColor: 'rgba(255,255,255,0.88)',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 18,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
     flexShrink: 0,
   },
-  verSalaBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 12,
-    color: '#C0748A',
-  },
+  verSalaBtnText: { fontFamily: ViveFonts.semibold, fontSize: 12, color: '#C07080' },
 
-  // 8. Para vos hoy
+  // 8. Recomendación
   cardRec: {
+    marginHorizontal: CARD_MX,
+    marginBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
@@ -583,28 +426,18 @@ const s = StyleSheet.create({
   recLabel: {
     fontFamily: ViveFonts.semibold,
     fontSize: 10,
-    color: '#E8A070',
+    color: '#E8A060',
     letterSpacing: 0.8,
     marginBottom: 5,
   },
-  recTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: '#FFFFFF',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  recType: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.62)',
-  },
+  recTitle: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#FFFFFF', lineHeight: 20, marginBottom: 3 },
+  recType: { fontFamily: ViveFonts.regular, fontSize: 11, color: 'rgba(255,255,255,0.6)' },
   recArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
+    borderColor: 'rgba(255,255,255,0.38)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,

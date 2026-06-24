@@ -63,6 +63,7 @@ export default function RootLayout() {
         <Stack.Screen name="booking-success" options={{ headerShown: false }} />
         <Stack.Screen name="diario" options={{ headerShown: false }} />
         <Stack.Screen name="gratitud" options={{ headerShown: false }} />
+        <Stack.Screen name="progreso" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />

@@ -3,7 +3,7 @@ import { Feather } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { ViveColors } from '@/constants/theme';
+import { ViveFonts } from '@/constants/theme';
 
 const TAB_ACTIVE   = '#FFFFFF';
 const TAB_INACTIVE = 'rgba(255,255,255,0.45)';
@@ -22,9 +22,7 @@ export default function TabLayout() {
           borderTopWidth: 1,
           borderTopColor: 'rgba(255,255,255,0.35)',
           ...Platform.select({
-            ios: {
-              shadowColor: 'transparent',
-            },
+            ios: { shadowColor: 'transparent' },
             android: { elevation: 0 },
           }),
           height: 64,
@@ -32,7 +30,7 @@ export default function TabLayout() {
           paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontFamily: 'Poppins_500Medium',
+          fontFamily: ViveFonts.medium,
           fontSize: 11,
         },
       }}>
@@ -46,22 +44,22 @@ export default function TabLayout() {
       <Tabs.Screen
         name="recursos"
         options={{
-          title: 'Progreso',
-          tabBarIcon: ({ color }) => <Feather name="clock" size={22} color={color} />,
+          title: 'Recursos',
+          tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="conexiones"
         options={{
-          title: 'Guardados',
-          tabBarIcon: ({ color }) => <Feather name="bookmark" size={22} color={color} />,
+          title: 'Conexiones',
+          tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
           title: 'Comunidad',
-          tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <Feather name="globe" size={22} color={color} />,
           href: null,
         }}
       />
