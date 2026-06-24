@@ -300,7 +300,7 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: ViveColors.background,
     paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: 90,
   },
 
   // Header

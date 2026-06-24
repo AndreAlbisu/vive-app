@@ -3,10 +3,25 @@ import { Feather } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { ViveFonts } from '@/constants/theme';
+import { ViveColors, ViveFonts } from '@/constants/theme';
 
 const TAB_ACTIVE   = '#FFFFFF';
 const TAB_INACTIVE = 'rgba(255,255,255,0.45)';
+
+// Estilo de tab bar para pantallas con fondo claro (no aurora)
+const LIGHT_TAB_STYLE = {
+  position: 'absolute' as const,
+  backgroundColor: '#FFFFFF',
+  borderTopWidth: 1,
+  borderTopColor: 'rgba(0,0,0,0.08)',
+  ...Platform.select({
+    ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+    android: { elevation: 8 },
+  }),
+  height: 64,
+  paddingBottom: 10,
+  paddingTop: 6,
+};
 
 export default function TabLayout() {
   return (
@@ -53,6 +68,9 @@ export default function TabLayout() {
         options={{
           title: 'Conexiones',
           tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} />,
+          tabBarStyle: LIGHT_TAB_STYLE,
+          tabBarActiveTintColor: ViveColors.primary,
+          tabBarInactiveTintColor: `${ViveColors.text}66`,
         }}
       />
       <Tabs.Screen
