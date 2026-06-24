@@ -35,6 +35,8 @@ type Params = {
   priceFrom?: string;
   date?: string;
   time?: string;
+  coachId?: string;
+  coachProfileId?: string;
 };
 
 export default function BookingScreen_Confirm() {
@@ -62,17 +64,24 @@ export default function BookingScreen_Confirm() {
       }
       const userId = session.user.id;
 
-      // 1. Buscar coach por specialty
-      //    salas.coach_id   → coaches.profile_id (FK a profiles.id)
-      //    bookings.coach_id → coaches.id        (FK a coaches.id)
-      const { data: coachRow } = await supabase
-        .from('coaches')
-        .select('id, profile_id')
-        .eq('specialty', specialty)
-        .limit(1)
-        .maybeSingle();
-      const coachId: string | null = coachRow?.id ?? null;
-      const coachProfileId: string | null = coachRow?.profile_id ?? null;
+      // 1. Resolver IDs del coach
+      //    coachId        → coaches.id        (FK que usa bookings.coach_id)
+      //    coachProfileId → coaches.profile_id (FK que usa salas.coach_id)
+      //    Preferimos los IDs que vienen por params (pasados desde conexiones.tsx).
+      //    Solo hacemos lookup por specialty si no llegaron (flujo sin IDs reales).
+      let coachId: string | null = params.coachId ?? null;
+      let coachProfileId: string | null = params.coachProfileId ?? null;
+
+      if (!coachId || !coachProfileId) {
+        const { data: coachRow } = await supabase
+          .from('coaches')
+          .select('id, profile_id')
+          .eq('specialty', specialty)
+          .limit(1)
+          .maybeSingle();
+        coachId = coachRow?.id ?? null;
+        coachProfileId = coachRow?.profile_id ?? null;
+      }
 
       await registrarEvento('reserva_iniciada', {
         professional_id: coachId ?? coachName,

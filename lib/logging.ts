@@ -1,6 +1,8 @@
-import * as FileSystem from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 
-const LOG_FILE = FileSystem.documentDirectory + "error.log";
+function logFile() {
+  return new File(Paths.document, "error.log");
+}
 
 function formatEntry(level: string, message: string, error?: unknown): string {
   const timestamp = new Date().toISOString();
@@ -11,13 +13,9 @@ function formatEntry(level: string, message: string, error?: unknown): string {
 
 async function append(entry: string) {
   try {
-    const info = await FileSystem.getInfoAsync(LOG_FILE);
-    const existing = info.exists
-      ? await FileSystem.readAsStringAsync(LOG_FILE)
-      : "";
-    await FileSystem.writeAsStringAsync(LOG_FILE, existing + entry, {
-      encoding: FileSystem.EncodingType.UTF8,
-    });
+    const file = logFile();
+    const existing = file.exists ? await file.text() : "";
+    file.write(existing + entry);
   } catch {
     // Silently fail — logging must not crash the app
   }
@@ -37,9 +35,9 @@ export async function logInfo(message: string) {
 
 export async function readLog(): Promise<string> {
   try {
-    const info = await FileSystem.getInfoAsync(LOG_FILE);
-    if (!info.exists) return "";
-    return await FileSystem.readAsStringAsync(LOG_FILE);
+    const file = logFile();
+    if (!file.exists) return "";
+    return await file.text();
   } catch {
     return "";
   }
@@ -47,7 +45,8 @@ export async function readLog(): Promise<string> {
 
 export async function clearLog() {
   try {
-    await FileSystem.deleteAsync(LOG_FILE, { idempotent: true });
+    const file = logFile();
+    if (file.exists) file.delete();
   } catch {
     // ignore
   }

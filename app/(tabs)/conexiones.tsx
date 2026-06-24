@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
+import { supabase } from '@/lib/supabase';
 
 // ─── Paleta suave ────────────────────────────────────────────────────────────
 const TERRACOTA_SOFT = '#FDF0E8';
@@ -87,13 +88,31 @@ function VennDiagram() {
 }
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
+type CoachIds = { coachId: string; coachProfileId: string };
+
 export default function ConexionesScreen() {
   const router = useRouter();
   const [favs, setFavs] = useState<Set<string>>(new Set());
   const [topicDot, setTopicDot] = useState(0);
   const [coachDot, setCoachDot] = useState(0);
+  const [coachIdMap, setCoachIdMap] = useState<Record<string, CoachIds>>({});
+
+  useEffect(() => {
+    supabase
+      .from('coaches')
+      .select('id, profile_id, specialty')
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, CoachIds> = {};
+        for (const c of data) {
+          if (c.specialty) map[c.specialty] = { coachId: c.id, coachProfileId: c.profile_id };
+        }
+        setCoachIdMap(map);
+      });
+  }, []);
 
   function goToPerfil(coach: typeof COACHES[0]) {
+    const ids = coachIdMap[coach.specialty];
     router.push({
       pathname: '/profesional',
       params: {
@@ -102,6 +121,7 @@ export default function ConexionesScreen() {
         rating: String(coach.rating),
         reviewCount: String(coach.reviews),
         priceFrom: String(coach.priceFrom),
+        ...(ids && { coachId: ids.coachId, coachProfileId: ids.coachProfileId }),
       },
     });
   }
