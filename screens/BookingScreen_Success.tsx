@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Platform,
   Animated,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -33,6 +32,7 @@ type Params = {
   time?: string;
   roomUrl?: string;
   bookingId?: string;
+  salaId?: string;
 };
 
 export default function BookingScreen_Success() {
@@ -44,14 +44,14 @@ export default function BookingScreen_Success() {
   const dateStr = params.date ?? '';
   const time = params.time ?? '';
   const roomUrl = params.roomUrl ?? '';
+  const salaId = params.salaId ?? '';
 
   const firstName = coachName.split(' ')[0];
   const formattedDate = formatDate(dateStr);
 
-  async function openRoom() {
-    if (!roomUrl) return;
-    const canOpen = await Linking.canOpenURL(roomUrl);
-    if (canOpen) await Linking.openURL(roomUrl);
+  function openRoom() {
+    if (!salaId) return;
+    router.push({ pathname: '/sala', params: { sala_id: salaId } });
   }
 
   // Animations
@@ -123,15 +123,12 @@ export default function BookingScreen_Success() {
         {/* Botones */}
         <Animated.View style={[s.footer, { opacity: contentOpacity }]}>
           <TouchableOpacity
-            style={[s.btnPrimary, !roomUrl && s.btnDisabled]}
+            style={[s.btnPrimary, !salaId && s.btnDisabled]}
             onPress={openRoom}
-            disabled={!roomUrl}
+            disabled={!salaId}
             activeOpacity={0.85}>
             <Text style={s.btnPrimaryText}>Ver mi sala</Text>
           </TouchableOpacity>
-          {roomUrl ? (
-            <Text style={s.roomNote} numberOfLines={1}>{roomUrl}</Text>
-          ) : null}
 
           <TouchableOpacity
             style={s.btnSecondary}

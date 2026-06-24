@@ -151,6 +151,7 @@ export default function BookingScreen_Confirm() {
           date: dateStr,
           time,
           bookingId: booking.id,
+          salaId,
           roomUrl,
         },
       });
