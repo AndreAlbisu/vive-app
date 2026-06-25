@@ -33,7 +33,6 @@
 **Pendiente para la próxima sesión:**
 - Verificar que `BookingScreen_Time.tsx` recibe los params correctos desde Calendar (sigue abierto desde sesión 8).
 - Testear visualmente en dispositivo la nueva pantalla Home.
-- Push a `andre/main` sigue pendiente.
 
 ---
 
@@ -49,7 +48,6 @@
 
 **Pendiente para la próxima sesión:**
 - Verificar que `BookingScreen_Time.tsx` recibe los params correctos desde Calendar (sigue abierto desde sesión 8).
-- Push a `andre/main` sigue pendiente.
 - Testear visualmente en dispositivo el panel coach completo con el fondo aurora.
 
 ---
@@ -66,7 +64,29 @@
 **Pendiente para la próxima sesión:**
 - Verificar que `BookingScreen_Time.tsx` recibe los params correctos desde Calendar (quedó abierto desde sesión 8).
 - Revisar pantallas del panel coach (`(coach)/`) que puedan necesitar glass o estén con estilo plano.
-- Push a `andre/main` sigue pendiente (esta sesión pusheó a `Joaquín/main`).
+
+---
+
+## 2026-06-25 — Andre (auditoría post-merge sesión 8)
+
+**Tocado:** ningún archivo modificado (sesión de auditoría solamente)
+
+**Resumen:**
+- Auditoría completa de los 6 puntos críticos de la sesión 7 (Joaquín) post-merge
+  glass de la sesión 8. Los 6 sobrevivieron intactos sin pérdidas:
+  1. **Cancelación usuario/coach** — flujo y lógica preservados.
+  2. **Columnas `cancelled_by` / `cancelled_late`** — presentes en schema y en código.
+  3. **Mensajes de sistema** (incluyendo los 2 bugs resueltos en sesión 7) — código
+     intacto, correcciones no revertidas por el merge.
+  4. **Push notifications** — lógica y wiring sin cambios.
+  5. **Archivos de coordinación** (`SCHEMA.md`, `CHANGELOG_SESIONES.md`) — consistentes
+     con el estado real del código.
+  6. **`lib/logging.ts`** y el chain `coachId`/`coachProfileId` — presentes y sin
+     regresiones.
+
+**Pendiente para la próxima sesión:**
+- Ninguno abierto por esta auditoría; los pendientes vigentes son los de la sesión 8
+  (panel coach con glass, params de BookingScreen_Time).
 
 ---
 
