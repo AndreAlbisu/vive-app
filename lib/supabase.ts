@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SUPABASE_URL      = 'https://ggygiihhnkjrerpinhha.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdneWdpaWhobmtqcmVycGluaGhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mjc5NjEsImV4cCI6MjA5NzEwMzk2MX0.lHPjyKjJIYD_lUTCF7uMBCKj9tCK_67OyrIFkCLQ-BI';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
 
 // Web usa localStorage (con guard SSR); mobile usa AsyncStorage.
 const webStorage = {
@@ -18,38 +18,23 @@ const webStorage = {
 };
 const authStorage = Platform.OS === 'web' ? webStorage : AsyncStorage;
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: authStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: Platform.OS === 'web',
   },
-});
+})
 
-/**
- * Garantiza que haya una sesión activa. Si no hay ninguna, inicia sesión
- * anónima. Devuelve el user_id de la sesión actual.
- * Requiere que "Anonymous sign-ins" esté habilitado en:
- * Supabase dashboard → Authentication → Providers → Anonymous.
- */
-export async function ensureAnonSession(): Promise<string> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user?.id) return session.user.id;
-
-  // Intentar sesión anónima
-  const { data: anonData, error: anonErr } = await supabase.auth.signInAnonymously();
-  if (!anonErr && anonData.user?.id) return anonData.user.id;
-
-  // Fallback para desarrollo (rate limit o anon deshabilitado temporalmente)
-  const { data: devData, error: devErr } = await supabase.auth.signInWithPassword({
-    email: 'test_vita_diag@example.com',
-    password: 'TestPass123!',
-  });
-  if (!devErr && devData.user?.id) return devData.user.id;
-
-  throw new Error('No se pudo iniciar sesión. Revisá tu conexión e intentá de nuevo.');
-}
+// Verificación de conexión — remover en producción
+supabase.from('profiles').select('count').limit(1).then(({ error }) => {
+  if (error) {
+    console.log('[Supabase] Error de conexión:', error.message)
+  } else {
+    console.log('[Supabase] Conexión exitosa ✓')
+  }
+})
 
 export async function registrarEvento(
   eventName: string,
@@ -61,4 +46,12 @@ export async function registrarEvento(
     event_name: eventName,
     properties,
   });
+}
+
+export async function ensureAnonSession(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user?.id) return session.user.id;
+  const { data, error } = await supabase.auth.signInAnonymously();
+  if (error) throw error;
+  return data.user!.id;
 }

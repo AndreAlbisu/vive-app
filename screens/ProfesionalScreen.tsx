@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 import {
   View,
   Text,
@@ -6,7 +8,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
-  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -14,7 +15,6 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { GlassCard } from '@/components/ui/GlassCard';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 const DEFAULT_PROFESIONAL = {
@@ -78,6 +78,7 @@ function ReviewAvatar({ name }: { name: string }) {
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 export default function ProfesionalScreen() {
   const router = useRouter();
+  const { isLoggedIn, requestAuth } = useAuth();
   const params = useLocalSearchParams<{
     name?: string;
     specialty?: string;
@@ -85,9 +86,29 @@ export default function ProfesionalScreen() {
     reviewCount?: string;
     priceFrom?: string;
     coachId?: string;
-    coachProfileId?: string;
+    profileId?: string;
   }>();
   const [saved, setSaved] = useState(false);
+  const [fetchedData, setFetchedData] = useState<Partial<typeof DEFAULT_PROFESIONAL> | null>(null);
+
+  useEffect(() => {
+    const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
+    if (!pid) return;
+    supabase
+      .from('coaches')
+      .select('specialty, price_per_session, nationality, profiles!inner(name)')
+      .eq('profile_id', pid)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) return;
+        setFetchedData({
+          name: (data as any).profiles.name,
+          specialty: (data as any).specialty,
+          nationality: (data as any).nationality ?? DEFAULT_PROFESIONAL.nationality,
+          priceFrom: (data as any).price_per_session,
+        });
+      });
+  }, [params.profileId]);
 
   const prof = {
     ...DEFAULT_PROFESIONAL,
@@ -96,14 +117,15 @@ export default function ProfesionalScreen() {
     ...(params.rating && { rating: parseFloat(params.rating) }),
     ...(params.reviewCount && { reviewCount: parseInt(params.reviewCount, 10) }),
     ...(params.priceFrom && { priceFrom: parseInt(params.priceFrom, 10) }),
+    ...fetchedData,
   };
 
   return (
     <AppBg>
       <StatusBar barStyle="light-content" />
-
-      {/* Botón atrás flotante (absolute) */}
       <SafeAreaView style={s.safe} edges={['top']}>
+
+        {/* ── Botón atrás flotante ─────────────────────────────────────── */}
         <TouchableOpacity
           style={s.backBtn}
           onPress={() => router.back()}
@@ -111,6 +133,7 @@ export default function ProfesionalScreen() {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <MaterialIcons name="arrow-back-ios" size={18} color="#FFFFFF" />
         </TouchableOpacity>
+
       </SafeAreaView>
 
       {/* ── Scroll ───────────────────────────────────────────────────────── */}
@@ -122,7 +145,7 @@ export default function ProfesionalScreen() {
         {/* ── Foto grande ──────────────────────────────────────────────── */}
         <View style={s.photoContainer}>
           <View style={s.photoPlaceholder}>
-            <MaterialIcons name="person" size={90} color="rgba(255,255,255,0.35)" />
+            <MaterialIcons name="person" size={90} color="rgba(255,255,255,0.45)" />
           </View>
 
           {/* Badge verificado */}
@@ -136,7 +159,10 @@ export default function ProfesionalScreen() {
         <View style={s.infoSection}>
           <Text style={s.name}>{prof.name}</Text>
           <Text style={s.specialty}>{prof.specialty}</Text>
-          <Text style={s.metaLine}>{prof.age} · {prof.nationality} · {prof.gender}</Text>
+
+          <Text style={s.metaLine}>
+            {prof.age} · {prof.nationality} · {prof.gender}
+          </Text>
 
           {/* Chips de temas */}
           <View style={s.chipsRow}>
@@ -151,14 +177,14 @@ export default function ProfesionalScreen() {
         {/* ── Video de introducción ─────────────────────────────────────── */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>Video de introducción</Text>
-          <GlassCard style={s.videoPlaceholder}>
+          <TouchableOpacity style={s.videoPlaceholder} activeOpacity={0.8}>
             <View style={s.playBtn}>
-              <MaterialIcons name="play-arrow" size={32} color="#FFFFFF" />
+              <MaterialIcons name="play-arrow" size={32} color={ViveColors.primary} />
             </View>
             <Text style={s.videoCaption}>
               Conocé a {prof.name.split(' ')[0]} en 1 minuto
             </Text>
-          </GlassCard>
+          </TouchableOpacity>
         </View>
 
         {/* ── Reviews ──────────────────────────────────────────────────── */}
@@ -166,18 +192,18 @@ export default function ProfesionalScreen() {
           <Text style={s.sectionTitle}>Reseñas</Text>
 
           {/* Rating general */}
-          <GlassCard style={s.ratingOverall}>
+          <View style={s.ratingOverall}>
             <Text style={s.ratingNumber}>{prof.rating}</Text>
             <View style={s.ratingRight}>
               <Stars rating={prof.rating} size={18} />
               <Text style={s.ratingCount}>{prof.reviewCount} reseñas</Text>
             </View>
-          </GlassCard>
+          </View>
 
           {/* Lista de reviews */}
           <View style={s.reviewsList}>
             {REVIEWS.map(review => (
-              <GlassCard key={review.id} style={s.reviewCard}>
+              <View key={review.id} style={s.reviewCard}>
                 <View style={s.reviewHeader}>
                   <ReviewAvatar name={review.name} />
                   <View style={s.reviewMeta}>
@@ -186,7 +212,7 @@ export default function ProfesionalScreen() {
                   </View>
                 </View>
                 <Text style={s.reviewText}>{review.text}</Text>
-              </GlassCard>
+              </View>
             ))}
           </View>
         </View>
@@ -207,18 +233,20 @@ export default function ProfesionalScreen() {
             <TouchableOpacity
               style={s.btnPrimary}
               activeOpacity={0.85}
-              onPress={() =>
+              onPress={() => {
+                if (!isLoggedIn) { requestAuth(); return; }
+                console.log('[ProfesionalScreen] coachId:', params.coachId, '| typeof:', typeof params.coachId);
+                console.log('[ProfesionalScreen] profileId:', params.profileId, '| typeof:', typeof params.profileId);
                 router.push({
                   pathname: '/booking-calendar',
                   params: {
                     name: prof.name,
                     specialty: prof.specialty,
                     priceFrom: String(prof.priceFrom),
-                    ...(params.coachId && { coachId: params.coachId }),
-                    ...(params.coachProfileId && { coachProfileId: params.coachProfileId }),
+                    coachId: params.coachId ?? params.profileId ?? '',
                   },
-                })
-              }>
+                });
+              }}>
               <Text style={s.btnPrimaryText}>Reservar sesión</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -228,7 +256,7 @@ export default function ProfesionalScreen() {
               <MaterialIcons
                 name={saved ? 'favorite' : 'favorite-border'}
                 size={18}
-                color="#FFFFFF"
+                color={ViveColors.primary}
               />
               <Text style={s.btnSecondaryText}>
                 {saved ? 'Guardado' : 'Guardar en favoritos'}
@@ -241,8 +269,23 @@ export default function ProfesionalScreen() {
   );
 }
 
+// ─── Sombra ──────────────────────────────────────────────────────────────────
+const shadow = Platform.select({
+  ios: {
+    shadowColor: 'rgba(0,0,0,0.5)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+  },
+  android: { elevation: 3 },
+});
+
 // ─── Estilos ─────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
   safe: {
     position: 'absolute',
     top: 0,
@@ -250,25 +293,31 @@ const s = StyleSheet.create({
     right: 0,
     zIndex: 10,
   },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 24 },
-
-  // ── Foto ──────────────────────────────────────────────────────────────
-  photoContainer: { width: '100%', height: 300 },
-  photoPlaceholder: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   backBtn: {
     margin: 16,
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.20)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+
+  // ── Foto ──────────────────────────────────────────────────────────────
+  photoContainer: {
+    width: '100%',
+    height: 300,
+  },
+  photoPlaceholder: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -308,19 +357,23 @@ const s = StyleSheet.create({
   specialty: {
     fontFamily: ViveFonts.medium,
     fontSize: 16,
-    color: 'rgba(255,255,255,0.75)',
+    color: ViveColors.primary,
     marginBottom: 8,
   },
   metaLine: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(255,255,255,0.60)',
     marginBottom: 14,
   },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   chip: {
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.45)',
+    borderColor: ViveColors.primary,
     borderRadius: 20,
     paddingVertical: 4,
     paddingHorizontal: 12,
@@ -328,7 +381,7 @@ const s = StyleSheet.create({
   chipText: {
     fontFamily: ViveFonts.medium,
     fontSize: 12,
-    color: '#FFFFFF',
+    color: ViveColors.primary,
   },
 
   // ── Sección genérica ──────────────────────────────────────────────────
@@ -345,18 +398,23 @@ const s = StyleSheet.create({
 
   // ── Video ─────────────────────────────────────────────────────────────
   videoPlaceholder: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
     height: 160,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
+    ...shadow,
   },
   playBtn: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.20)',
+    backgroundColor: 'rgba(232,197,71,0.18)',
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.50)',
+    borderColor: ViveColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -370,9 +428,14 @@ const s = StyleSheet.create({
   ratingOverall: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
     padding: 16,
     marginBottom: 14,
     gap: 14,
+    ...shadow,
   },
   ratingNumber: {
     fontFamily: ViveFonts.bold,
@@ -380,7 +443,9 @@ const s = StyleSheet.create({
     color: '#FFFFFF',
     lineHeight: 48,
   },
-  ratingRight: { gap: 4 },
+  ratingRight: {
+    gap: 4,
+  },
   ratingCount: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
@@ -388,8 +453,17 @@ const s = StyleSheet.create({
   },
 
   // ── Reviews ───────────────────────────────────────────────────────────
-  reviewsList: { gap: 12 },
-  reviewCard: { padding: 14 },
+  reviewsList: {
+    gap: 12,
+  },
+  reviewCard: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    padding: 14,
+    ...shadow,
+  },
   reviewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -400,9 +474,9 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.20)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.38)',
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -411,7 +485,9 @@ const s = StyleSheet.create({
     fontSize: 15,
     color: '#FFFFFF',
   },
-  reviewMeta: { gap: 3 },
+  reviewMeta: {
+    gap: 3,
+  },
   reviewName: {
     fontFamily: ViveFonts.semibold,
     fontSize: 13,
@@ -420,17 +496,22 @@ const s = StyleSheet.create({
   reviewText: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.72)',
+    color: 'rgba(255,255,255,0.70)',
     lineHeight: 20,
   },
 
   // ── Footer sticky ─────────────────────────────────────────────────────
   footerSafe: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(15,10,40,0.90)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.20)',
+    borderTopColor: 'rgba(255,255,255,0.12)',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 10 },
+      ios: {
+        shadowColor: 'rgba(0,0,0,0.5)',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.07,
+        shadowRadius: 10,
+      },
       android: { elevation: 8 },
     }),
   },
@@ -446,7 +527,9 @@ const s = StyleSheet.create({
     fontSize: 15,
     color: '#FFFFFF',
   },
-  footerButtons: { gap: 10 },
+  footerButtons: {
+    gap: 10,
+  },
   btnPrimary: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
@@ -466,16 +549,16 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.45)',
+    borderColor: ViveColors.primary,
     paddingVertical: 12,
     gap: 8,
   },
   btnSecondaryActive: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(232,197,71,0.15)',
   },
   btnSecondaryText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
-    color: '#FFFFFF',
+    color: ViveColors.primary,
   },
 });

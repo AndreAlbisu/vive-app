@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
-import { logError } from '@/lib/logging';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
+  Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
-import { supabase, registrarEvento } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
-import { GlassCard } from '@/components/ui/GlassCard';
+import { supabase, registrarEvento } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
+import { sendPushNotification } from '@/lib/notifications';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MONTH_NAMES = [
@@ -38,112 +39,126 @@ type Params = {
   date?: string;
   time?: string;
   coachId?: string;
-  coachProfileId?: string;
 };
 
 export default function BookingScreen_Confirm() {
   const router = useRouter();
+  const { user, isLoggedIn, requestAuth } = useAuth();
   const params = useLocalSearchParams<Params>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [userMessage, setUserMessage] = useState('');
 
   const coachName = params.name ?? 'Laura Méndez';
   const specialty = params.specialty ?? 'Coach de vida';
   const priceFrom = params.priceFrom ? parseInt(params.priceFrom, 10) : 4500;
   const dateStr = params.date ?? '';
   const time = params.time ?? '';
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // coachId que llega por params es profiles.id (= coaches.profile_id), NO coaches.id
+  const coachProfileIdParam = Array.isArray(params.coachId) ? params.coachId[0] : params.coachId;
 
   async function onConfirm() {
-    if (loading) return;
+    if (!isLoggedIn || !user) { requestAuth(); return; }
+    if (!coachProfileIdParam) {
+      setError('No encontramos el profesional. Volvé y elegí de nuevo.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
-        router.replace('/login');
-        return;
-      }
-      const userId = session.user.id;
+      // 1. Buscar el coach por su profile_id real (no por specialty — evita reservar con el coach equivocado)
+      //    salas.coach_id    → coaches.profile_id (FK a profiles.id)
+      //    bookings.coach_id → coaches.id          (FK a coaches.id)
+      const { data: coachRow, error: coachErr } = await supabase
+        .from('coaches')
+        .select('id, profile_id')
+        .eq('profile_id', coachProfileIdParam)
+        .maybeSingle();
 
-      // 1. Resolver IDs del coach
-      //    coachId        → coaches.id        (FK que usa bookings.coach_id)
-      //    coachProfileId → coaches.profile_id (FK que usa salas.coach_id)
-      //    Preferimos los IDs que vienen por params (pasados desde conexiones.tsx).
-      //    Solo hacemos lookup por specialty si no llegaron (flujo sin IDs reales).
-      let coachId: string | null = params.coachId ?? null;
-      let coachProfileId: string | null = params.coachProfileId ?? null;
-
-      if (!coachId || !coachProfileId) {
-        const { data: coachRow } = await supabase
-          .from('coaches')
-          .select('id, profile_id')
-          .eq('specialty', specialty)
-          .limit(1)
-          .maybeSingle();
-        coachId = coachRow?.id ?? null;
-        coachProfileId = coachRow?.profile_id ?? null;
-      }
-
-      await registrarEvento('reserva_iniciada', {
-        professional_id: coachId ?? coachName,
-        user_id: userId,
-      });
-
-      // 2. Buscar sala existente o crear una nueva
-      //    salas.coach_id = coaches.profile_id (= profiles.id del coach)
-      let salaId: string;
-      let roomUrl = '';
-
-      if (coachProfileId) {
-        const { data: existingSala } = await supabase
-          .from('salas')
-          .select('id, room_url')
-          .eq('user_id', userId)
-          .eq('coach_id', coachProfileId)
-          .maybeSingle();
-
-        if (existingSala) {
-          salaId = existingSala.id;
-          roomUrl = existingSala.room_url ?? '';
-        } else {
-          const { data: newSala, error: salaErr } = await supabase
-            .from('salas')
-            .insert({ user_id: userId, coach_id: coachProfileId })
-            .select('id, room_url')
-            .single();
-          if (salaErr) throw new Error(salaErr.message);
-          salaId = newSala.id;
-          roomUrl = newSala.room_url ?? ''; // null hasta que se corra add-salas-room-url.sql
-        }
-      } else {
+      if (coachErr || !coachRow) {
         throw new Error('No encontramos el profesional. Volvé y elegí de nuevo.');
       }
 
-      // 3. Insertar booking — columnas reales verificadas en la base
-      const { data: booking, error: insertErr } = await supabase
+      const coachId = coachRow.id;              // coaches.id — para bookings.coach_id
+      const coachProfileId = coachRow.profile_id; // profiles.id — para salas.coach_id
+
+      await registrarEvento('reserva_iniciada', {
+        professional_id: coachId,
+        user_id: user.id,
+      });
+
+      // 2. Buscar sala existente o crear una nueva
+      let salaId: string;
+      let roomUrl = '';
+
+      const { data: existingSala } = await supabase
+        .from('salas')
+        .select('id, room_url')
+        .eq('user_id', user.id)
+        .eq('coach_id', coachProfileId)
+        .maybeSingle();
+
+      if (existingSala) {
+        salaId = existingSala.id;
+        roomUrl = existingSala.room_url ?? '';
+      } else {
+        const { data: newSala, error: salaErr } = await supabase
+          .from('salas')
+          .insert({ user_id: user.id, coach_id: coachProfileId })
+          .select('id, room_url')
+          .single();
+        if (salaErr || !newSala) throw new Error('No se pudo crear la sala de comunicación.');
+        salaId = newSala.id;
+        roomUrl = newSala.room_url ?? ''; // null hasta que corra el trigger / si la columna recién se agregó
+      }
+
+      // 3. Insertar booking — columnas reales verificadas en la base (SCHEMA.md)
+      const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .insert({
-          user_id: userId,
-          coach_id: coachId,          // coaches.id (FK a coaches table)
+          user_id: user.id,
+          coach_id: coachId,
           sala_id: salaId,
           coach_name: coachName,
+          coach_specialty: specialty,
           scheduled_date: dateStr,
           scheduled_time: time,
           amount: priceFrom,
           status: 'pendiente',
+          ...(userMessage.trim() ? { user_message: userMessage.trim() } : {}),
         })
         .select('id')
         .single();
 
-      if (insertErr) throw new Error(insertErr.message);
+      if (bookingError || !booking) {
+        console.log('[BookingConfirm] bookingError:', bookingError);
+        throw new Error('No se pudo guardar la reserva. Intentalo de nuevo.');
+      }
 
       await registrarEvento('reserva_confirmada', {
-        professional_id: coachId ?? coachName,
+        professional_id: coachId,
         booking_id: booking.id,
         sala_id: salaId,
-        user_id: userId,
+        user_id: user.id,
       });
+
+      // Notificar al coach (push token vive en profiles, vía coachProfileId)
+      const { data: coachProfile } = await supabase
+        .from('profiles')
+        .select('push_token, name')
+        .eq('id', coachProfileId)
+        .maybeSingle();
+
+      if (coachProfile?.push_token) {
+        const userName = user.user_metadata?.name ?? 'Un usuario';
+        await sendPushNotification(
+          coachProfile.push_token,
+          'Nueva solicitud de sesión 📅',
+          `${userName} quiere reservar una sesión el ${formatDate(dateStr)} a las ${time} hs`,
+        );
+      }
 
       router.replace({
         pathname: '/booking-success',
@@ -153,15 +168,12 @@ export default function BookingScreen_Confirm() {
           date: dateStr,
           time,
           bookingId: booking.id,
-          salaId,
           roomUrl,
         },
       });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al confirmar la reserva';
-      await logError('BookingScreen_Confirm: failed to confirm booking', err);
-      setError(msg);
-      Alert.alert('No pudimos guardar tu reserva', msg + '\n\nReintentá en un momento.');
+    } catch (e: any) {
+      console.log('[BookingConfirm] Error real:', e);
+      setError(e.message ?? 'Algo salió mal. Intentalo de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -170,7 +182,6 @@ export default function BookingScreen_Confirm() {
   return (
     <AppBg>
       <StatusBar barStyle="light-content" />
-
       <SafeAreaView style={s.safeTop} edges={['top']}>
         <View style={s.header}>
           <TouchableOpacity
@@ -194,12 +205,12 @@ export default function BookingScreen_Confirm() {
         showsVerticalScrollIndicator={false}>
 
         {/* Tarjeta resumen */}
-        <GlassCard style={s.card}>
+        <View style={s.card}>
 
           {/* Coach */}
           <View style={s.coachRow}>
             <View style={s.coachAvatar}>
-              <MaterialIcons name="person" size={34} color="rgba(255,255,255,0.45)" />
+              <MaterialIcons name="person" size={34} color="rgba(255,255,255,0.55)" />
             </View>
             <View style={s.coachInfo}>
               <Text style={s.coachName}>{coachName}</Text>
@@ -247,12 +258,12 @@ export default function BookingScreen_Confirm() {
 
           {/* Modalidad */}
           <View style={s.modalityBox}>
-            <MaterialIcons name="info-outline" size={15} color="rgba(255,255,255,0.45)" />
+            <MaterialIcons name="info-outline" size={15} color="rgba(255,255,255,0.55)" />
             <Text style={s.modalityText}>
-              Reserva con confirmación — el coach tiene 48hs para aceptar
+              Reserva con confirmación — el coach tiene 24hs para aceptar
             </Text>
           </View>
-        </GlassCard>
+        </View>
 
         {/* Aviso no cobro */}
         <View style={s.noticeRow}>
@@ -260,24 +271,46 @@ export default function BookingScreen_Confirm() {
           <Text style={s.noticeText}>No se te cobra hasta que el coach acepte</Text>
         </View>
 
+        {/* Mensaje opcional */}
+        <View style={s.messageSection}>
+          <Text style={s.messageTitle}>¿Querés contarle algo antes de que acepte?</Text>
+          <Text style={s.messageSubtitle}>Es opcional. Le ayuda al coach a entender mejor tu situación.</Text>
+          <View style={s.messageInputWrap}>
+            <TextInput
+              style={s.messageInput}
+              value={userMessage}
+              onChangeText={t => t.length <= 300 && setUserMessage(t)}
+              placeholder="Contame brevemente qué te trajo acá..."
+              placeholderTextColor="rgba(255,255,255,0.35)"
+              multiline
+              textAlignVertical="top"
+            />
+            <Text style={s.messageCounter}>{userMessage.length}/300</Text>
+          </View>
+        </View>
+
+        {/* Error */}
+        {error && (
+          <View style={s.errorRow}>
+            <MaterialIcons name="error-outline" size={15} color="#E05252" />
+            <Text style={s.errorText}>{error}</Text>
+          </View>
+        )}
+
         {/* Método de pago */}
         <View style={s.paymentSection}>
           <Text style={s.paymentLabel}>Método de pago</Text>
 
-          <TouchableOpacity activeOpacity={0.75}>
-            <GlassCard style={s.paymentCard}>
-              <MaterialIcons name="credit-card" size={22} color="rgba(255,255,255,0.75)" />
-              <Text style={s.paymentCardText}>Tarjeta de crédito / débito</Text>
-              <MaterialIcons name="chevron-right" size={20} color="rgba(255,255,255,0.40)" />
-            </GlassCard>
+          <TouchableOpacity style={s.paymentCard} activeOpacity={0.75}>
+            <MaterialIcons name="credit-card" size={22} color="rgba(255,255,255,0.80)" />
+            <Text style={s.paymentCardText}>Tarjeta de crédito / débito</Text>
+            <MaterialIcons name="chevron-right" size={20} color="rgba(255,255,255,0.45)" />
           </TouchableOpacity>
 
-          <TouchableOpacity activeOpacity={0.75}>
-            <GlassCard style={s.paymentCard}>
-              <MaterialIcons name="account-balance-wallet" size={22} color="#009EE3" />
-              <Text style={s.paymentCardText}>Mercado Pago</Text>
-              <MaterialIcons name="chevron-right" size={20} color="rgba(255,255,255,0.40)" />
-            </GlassCard>
+          <TouchableOpacity style={s.paymentCard} activeOpacity={0.75}>
+            <MaterialIcons name="account-balance-wallet" size={22} color="#009EE3" />
+            <Text style={s.paymentCardText}>Mercado Pago</Text>
+            <MaterialIcons name="chevron-right" size={20} color="rgba(255,255,255,0.45)" />
           </TouchableOpacity>
         </View>
 
@@ -287,7 +320,7 @@ export default function BookingScreen_Confirm() {
         <View style={s.footer}>
           {error ? (
             <View style={s.errorBox}>
-              <MaterialIcons name="error-outline" size={15} color="#FFB4B4" />
+              <MaterialIcons name="error-outline" size={15} color="#D94F4F" />
               <Text style={s.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -298,7 +331,7 @@ export default function BookingScreen_Confirm() {
             disabled={loading}
             activeOpacity={0.85}>
             {loading ? (
-              <ActivityIndicator color="#1A1A2E" size="small" />
+              <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <Text style={s.btnText}>Confirmar reserva</Text>
             )}
@@ -312,12 +345,29 @@ export default function BookingScreen_Confirm() {
           </View>
         </View>
       </SafeAreaView>
+
     </AppBg>
   );
 }
 
+const cardShadow = Platform.select({
+  ios: {
+    shadowColor: 'rgba(0,0,0,0.5)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+  android: { elevation: 4 },
+});
+
 const s = StyleSheet.create({
-  safeTop: {},
+  root: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  safeTop: {
+    backgroundColor: 'transparent',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -330,10 +380,12 @@ const s = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.30)',
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({
+      ios: { shadowColor: 'rgba(0,0,0,0.5)', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 4 },
+      android: { elevation: 2 },
+    }),
   },
   headerTitle: {
     flex: 1,
@@ -347,7 +399,7 @@ const s = StyleSheet.create({
 
   progressTrack: {
     height: 4,
-    backgroundColor: 'rgba(255,255,255,0.20)',
+    backgroundColor: `${ViveColors.primary}22`,
     marginHorizontal: 20,
     borderRadius: 2,
     marginBottom: 6,
@@ -367,8 +419,13 @@ const s = StyleSheet.create({
   },
 
   card: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
     padding: 20,
     marginBottom: 14,
+    ...cardShadow,
   },
   coachRow: {
     flexDirection: 'row',
@@ -379,9 +436,7 @@ const s = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -396,12 +451,12 @@ const s = StyleSheet.create({
   coachSpecialty: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.65)',
+    color: ViveColors.primary,
   },
 
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     marginVertical: 16,
   },
 
@@ -418,7 +473,7 @@ const s = StyleSheet.create({
   detailLabel: {
     fontFamily: ViveFonts.medium,
     fontSize: 10,
-    color: 'rgba(255,255,255,0.48)',
+    color: 'rgba(255,255,255,0.55)',
     letterSpacing: 0.6,
     marginBottom: 4,
   },
@@ -441,7 +496,7 @@ const s = StyleSheet.create({
     flex: 1,
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(255,255,255,0.65)',
     lineHeight: 19,
   },
 
@@ -450,7 +505,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 4,
-    marginBottom: 24,
+    marginBottom: 14,
   },
   noticeText: {
     fontFamily: ViveFonts.medium,
@@ -458,7 +513,69 @@ const s = StyleSheet.create({
     color: ViveColors.accent,
   },
 
-  paymentSection: { gap: 10 },
+  messageSection: {
+    marginBottom: 20,
+  },
+  messageTitle: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 14,
+    color: '#FFFFFF',
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  messageSubtitle: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.60)',
+    marginBottom: 10,
+    lineHeight: 17,
+  },
+  messageInputWrap: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    padding: 14,
+    ...Platform.select({
+      ios: { shadowColor: 'rgba(0,0,0,0.5)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 8 },
+      android: { elevation: 2 },
+    }),
+  },
+  messageInput: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: '#FFFFFF',
+    minHeight: 90,
+    lineHeight: 20,
+  },
+  messageCounter: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.38)',
+    textAlign: 'right',
+    marginTop: 6,
+  },
+
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: 'rgba(255,80,80,0.18)',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorText: {
+    flex: 1,
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: '#E05252',
+    lineHeight: 19,
+  },
+
+  paymentSection: {
+    gap: 10,
+  },
   paymentLabel: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
@@ -468,8 +585,13 @@ const s = StyleSheet.create({
   paymentCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
     padding: 14,
     gap: 12,
+    ...cardShadow,
   },
   paymentCardText: {
     flex: 1,
@@ -479,9 +601,9 @@ const s = StyleSheet.create({
   },
 
   footerSafe: {
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(15,10,40,0.80)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.18)',
+    borderTopColor: 'rgba(255,255,255,0.12)',
   },
   footer: {
     paddingHorizontal: 20,
@@ -495,8 +617,11 @@ const s = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 52,
   },
-  btnLoading: { opacity: 0.6 },
+  btnLoading: {
+    opacity: 0.7,
+  },
   btnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,
@@ -507,21 +632,11 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: 'rgba(255,100,100,0.18)',
+    backgroundColor: 'rgba(255,80,80,0.18)',
     borderRadius: 10,
     padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,100,100,0.35)',
     marginBottom: 4,
   },
-  errorText: {
-    flex: 1,
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#FFB4B4',
-    lineHeight: 19,
-  },
-
   guaranteeRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -532,7 +647,7 @@ const s = StyleSheet.create({
     flex: 1,
     fontFamily: ViveFonts.regular,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(255,255,255,0.60)',
     lineHeight: 18,
   },
 });

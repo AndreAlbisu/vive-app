@@ -111,7 +111,7 @@ export default function OnboardingScreen5() {
 
   function handleContinue() {
     if (selected.length === 0) return;
-    console.log('[VIVE Matching] temas seleccionados:', selected);
+    router.replace('/register');
   }
 
   return (

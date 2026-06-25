@@ -9,147 +9,227 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+  LayoutAnimation,
+  UIManager,
+  ActivityIndicator,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ViveFonts } from '@/constants/theme';
+import { ViveColors, ViveFonts } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { AppBg } from '@/components/ui/AppBg';
+
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
-  transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }) }],
+  transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
 });
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signInWithEmail, signInWithGoogle } = useAuth();
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const logoAnim    = useRef(new Animated.Value(0)).current;
   const headingAnim = useRef(new Animated.Value(0)).current;
-  const formAnim    = useRef(new Animated.Value(0)).current;
-  const ctaAnim     = useRef(new Animated.Value(0)).current;
+  const btnsAnim    = useRef(new Animated.Value(0)).current;
   const footerAnim  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.stagger(90, [
+    Animated.stagger(80, [
       Animated.timing(logoAnim,    { toValue: 1, duration: 380, useNativeDriver: true }),
       Animated.timing(headingAnim, { toValue: 1, duration: 360, useNativeDriver: true }),
-      Animated.timing(formAnim,    { toValue: 1, duration: 360, useNativeDriver: true }),
-      Animated.timing(ctaAnim,     { toValue: 1, duration: 340, useNativeDriver: true }),
+      Animated.timing(btnsAnim,    { toValue: 1, duration: 360, useNativeDriver: true }),
       Animated.timing(footerAnim,  { toValue: 1, duration: 320, useNativeDriver: true }),
     ]).start();
   }, []);
 
-  function handleLogin() {
-    // TODO: conectar con Supabase
+  function toggleEmailForm() {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowEmailForm(prev => !prev);
+    if (showEmailForm) {
+      setEmail('');
+      setPassword('');
+      setEmailError(false);
+      setPasswordError(false);
+    }
+  }
+
+  async function handleEmailLogin() {
+    const eErr = !email.trim();
+    const pErr = !password.trim();
+    setEmailError(eErr);
+    setPasswordError(pErr);
+    setServerError(null);
+    if (eErr || pErr) return;
+
+    setLoading(true);
+    const error = await signInWithEmail(email.trim(), password);
+    setLoading(false);
+
+    if (error) {
+      setServerError(error);
+      return;
+    }
     router.replace('/(tabs)');
+  }
+
+  async function handleGoogle() {
+    setGoogleLoading(true);
+    setServerError(null);
+    const error = await signInWithGoogle();
+    setGoogleLoading(false);
+    if (error) setServerError(error);
+  }
+
+  function handleApple() {
+    console.log('[Auth] Apple login — próximamente');
   }
 
   return (
     <AppBg>
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={s.safe}>
         <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+          style={s.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
-            contentContainerStyle={styles.container}
+            contentContainerStyle={s.container}
             keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
+            showsVerticalScrollIndicator={false}>
+
             {/* Logo */}
-            <Animated.View style={[styles.logoRow, fadeUp(logoAnim)]}>
-              <Text style={styles.logo}>VITA</Text>
+            <Animated.View style={[s.logoWrap, fadeUp(logoAnim)]}>
+              <Text style={s.logo}>VITA</Text>
             </Animated.View>
 
             {/* Heading */}
-            <Animated.View style={[styles.headingArea, fadeUp(headingAnim)]}>
-              <Text style={styles.heading}>Bienvenido de vuelta</Text>
-              <Text style={styles.subheading}>Iniciá sesión para continuar tu camino.</Text>
+            <Animated.View style={[s.headingArea, fadeUp(headingAnim)]}>
+              <Text style={s.heading}>Bienvenido de vuelta</Text>
+              <Text style={s.subheading}>Entrá a tu espacio</Text>
             </Animated.View>
 
-            {/* Form */}
-            <Animated.View style={[styles.form, fadeUp(formAnim)]}>
-              {/* Email */}
-              <View style={styles.fieldWrap}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={[styles.input, focused === 'email' && styles.inputFocused]}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="tu@email.com"
-                  placeholderTextColor="rgba(255,255,255,0.38)"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  onFocus={() => setFocused('email')}
-                  onBlur={() => setFocused(null)}
-                />
+            {/* Botones */}
+            <Animated.View style={[s.btnsArea, fadeUp(btnsAnim)]}>
+
+              {/* Google */}
+              <TouchableOpacity
+                style={[s.googleBtn, googleLoading && { opacity: 0.6 }]}
+                onPress={handleGoogle}
+                activeOpacity={0.85}
+                disabled={googleLoading || loading}>
+                {googleLoading
+                  ? <ActivityIndicator size="small" color="#4285F4" />
+                  : <MaterialCommunityIcons name="google" size={20} color="#4285F4" />}
+                <Text style={s.googleBtnText}>Continuar con Google</Text>
+              </TouchableOpacity>
+
+              {/* Apple */}
+              <TouchableOpacity style={s.appleBtn} onPress={handleApple} activeOpacity={0.85}>
+                <MaterialCommunityIcons name="apple" size={20} color="#FFFFFF" />
+                <Text style={s.appleBtnText}>Continuar con Apple</Text>
+              </TouchableOpacity>
+
+              {serverError && !showEmailForm && (
+                <Text style={s.serverError}>{serverError}</Text>
+              )}
+
+              {/* Separator */}
+              <View style={s.dividerRow}>
+                <View style={s.dividerLine} />
+                <Text style={s.dividerText}>o</Text>
+                <View style={s.dividerLine} />
               </View>
 
-              {/* Contraseña */}
-              <View style={styles.fieldWrap}>
-                <Text style={styles.label}>Contraseña</Text>
-                <View style={[styles.inputRow, focused === 'pass' && styles.inputFocused]}>
+              {/* Usar email */}
+              <TouchableOpacity style={s.emailBtn} onPress={toggleEmailForm} activeOpacity={0.85}>
+                <MaterialCommunityIcons name="email-outline" size={20} color="#FFFFFF" />
+                <Text style={s.emailBtnText}>Usar email</Text>
+              </TouchableOpacity>
+
+              {/* Email form expandible */}
+              {showEmailForm && (
+                <View style={s.emailForm}>
                   <TextInput
-                    style={styles.inputInner}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="••••••••"
+                    style={[
+                      s.input,
+                      emailError && s.inputError,
+                      focused === 'email' && s.inputFocused,
+                    ]}
+                    value={email}
+                    onChangeText={v => { setEmail(v); setEmailError(false); }}
+                    placeholder="tu@email.com"
                     placeholderTextColor="rgba(255,255,255,0.38)"
-                    secureTextEntry={!showPassword}
-                    onFocus={() => setFocused('pass')}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    onFocus={() => setFocused('email')}
                     onBlur={() => setFocused(null)}
                   />
-                  <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                    <MaterialCommunityIcons
-                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                      size={20}
-                      color="rgba(255,255,255,0.55)"
+
+                  <View style={[
+                    s.inputRow,
+                    passwordError && s.inputError,
+                    focused === 'pass' && s.inputFocused,
+                  ]}>
+                    <TextInput
+                      style={s.inputInner}
+                      value={password}
+                      onChangeText={v => { setPassword(v); setPasswordError(false); }}
+                      placeholder="Contraseña"
+                      placeholderTextColor="rgba(255,255,255,0.38)"
+                      secureTextEntry={!showPassword}
+                      onFocus={() => setFocused('pass')}
+                      onBlur={() => setFocused(null)}
                     />
+                    <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={8}>
+                      <MaterialCommunityIcons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={20}
+                        color="rgba(255,255,255,0.55)"
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {serverError && (
+                    <Text style={s.serverError}>{serverError}</Text>
+                  )}
+
+                  <TouchableOpacity
+                    style={[s.enterBtn, loading && s.enterBtnLoading]}
+                    onPress={handleEmailLogin}
+                    activeOpacity={0.85}
+                    disabled={loading}>
+                    {loading
+                      ? <ActivityIndicator size="small" color="#1A1A2E" />
+                      : <Text style={s.enterBtnText}>Entrar</Text>}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={s.forgotWrap} activeOpacity={0.7}>
+                    <Text style={s.forgotText}>¿Olvidaste tu contraseña?</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-
-              {/* Olvidé */}
-              <TouchableOpacity style={styles.forgotWrap} activeOpacity={0.7}>
-                <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* CTA */}
-            <Animated.View style={[styles.ctaArea, fadeUp(ctaAnim)]}>
-              <TouchableOpacity
-                style={[styles.primaryBtn, (!email || !password) && styles.primaryBtnDisabled]}
-                onPress={handleLogin}
-                activeOpacity={0.82}
-                disabled={!email || !password}
-              >
-                <Text style={styles.primaryBtnText}>Iniciar sesión</Text>
-              </TouchableOpacity>
-
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>o</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              <TouchableOpacity style={styles.googleBtn} activeOpacity={0.82}>
-                <MaterialCommunityIcons name="google" size={20} color="#4285F4" />
-                <Text style={styles.googleBtnText}>Continuar con Google</Text>
-              </TouchableOpacity>
+              )}
             </Animated.View>
 
             {/* Footer */}
-            <Animated.View style={[styles.footer, fadeUp(footerAnim)]}>
-              <Text style={styles.footerText}>¿No tenés cuenta? </Text>
+            <Animated.View style={[s.footer, fadeUp(footerAnim)]}>
+              <Text style={s.footerText}>¿No tenés cuenta? </Text>
               <TouchableOpacity onPress={() => router.replace('/register')} activeOpacity={0.7}>
-                <Text style={styles.footerLink}>Registrate</Text>
+                <Text style={s.footerLink}>Registrate</Text>
               </TouchableOpacity>
             </Animated.View>
           </ScrollView>
@@ -159,24 +239,19 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
+const s = StyleSheet.create({
+  safe: { flex: 1 },
   flex: { flex: 1 },
   container: {
     flexGrow: 1,
     paddingHorizontal: 28,
-    paddingTop: 48,
-    paddingBottom: 32,
+    paddingTop: 52,
+    paddingBottom: 36,
     justifyContent: 'center',
     gap: 32,
   },
 
-  // Logo
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  logoWrap: { alignItems: 'center' },
   logo: {
     fontFamily: ViveFonts.bold,
     fontSize: 36,
@@ -184,34 +259,92 @@ const styles = StyleSheet.create({
     letterSpacing: 6,
   },
 
-  // Heading
-  headingArea: {
-    alignItems: 'center',
-    gap: 8,
-  },
+  headingArea: { alignItems: 'center', gap: 8 },
   heading: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 26,
+    fontFamily: ViveFonts.semibold,
+    fontSize: 24,
     color: '#FFFFFF',
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
     textAlign: 'center',
   },
   subheading: {
     fontFamily: ViveFonts.regular,
     fontSize: 15,
-    color: 'rgba(255,255,255,0.62)',
+    color: 'rgba(255,255,255,0.60)',
     textAlign: 'center',
-    lineHeight: 22,
   },
 
-  // Form
-  form: { gap: 18 },
-  fieldWrap: { gap: 7 },
-  label: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
+  btnsArea: { gap: 12 },
+
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.35)',
+    paddingVertical: 15,
   },
+  googleBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+
+  appleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.20)',
+    paddingVertical: 15,
+  },
+  appleBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 2,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.20)',
+  },
+  dividerText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.50)',
+  },
+
+  emailBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.38)',
+    paddingVertical: 15,
+  },
+  emailBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+
+  emailForm: { gap: 12, marginTop: 4 },
   input: {
     backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 14,
@@ -223,9 +356,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#FFFFFF',
   },
-  inputFocused: {
-    borderColor: 'rgba(255,255,255,0.7)',
-  },
+  inputError: { borderColor: '#FFB4B4' },
+  inputFocused: { borderColor: ViveColors.primary },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -244,61 +376,35 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     padding: 0,
   },
-  forgotWrap: { alignSelf: 'flex-end' },
+  serverError: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#FFB4B4',
+    textAlign: 'center',
+    marginTop: -4,
+  },
+  enterBtn: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    minHeight: 52,
+    justifyContent: 'center',
+  },
+  enterBtnLoading: { opacity: 0.75 },
+  enterBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 16,
+    color: '#1A1A2E',
+    letterSpacing: 0.2,
+  },
+  forgotWrap: { alignSelf: 'center' },
   forgotText: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
     color: 'rgba(255,255,255,0.75)',
   },
 
-  // CTA
-  ctaArea: { gap: 16 },
-  primaryBtn: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 17,
-    alignItems: 'center',
-  },
-  primaryBtnDisabled: { opacity: 0.4 },
-  primaryBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 16,
-    color: '#1A1A2E',
-    letterSpacing: 0.2,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  dividerText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.45)',
-  },
-  googleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.28)',
-    paddingVertical: 15,
-  },
-  googleBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#FFFFFF',
-  },
-
-  // Footer
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -307,7 +413,7 @@ const styles = StyleSheet.create({
   footerText: {
     fontFamily: ViveFonts.regular,
     fontSize: 14,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(255,255,255,0.65)',
   },
   footerLink: {
     fontFamily: ViveFonts.semibold,

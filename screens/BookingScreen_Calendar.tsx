@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Platform,
+  ActivityIndicator,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +13,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
+import { supabase } from '@/lib/supabase';
 
 const MONTH_NAMES = [
   'Enero','Febrero','Marzo','Abril','Mayo','Junio',
@@ -19,38 +21,20 @@ const MONTH_NAMES = [
 ];
 const DAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
-// Mock: fines de semana + algunos días puntuales no disponibles
-const MOCK_UNAVAILABLE_DAYS = new Set([3, 7, 14, 21, 28]);
-
-function isAvailable(year: number, month: number, day: number): boolean {
-  const date = new Date(year, month, day);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (date < today) return false;
-  const dow = date.getDay(); // 0=Dom, 6=Sab
-  if (dow === 0 || dow === 6) return false;
-  if (MOCK_UNAVAILABLE_DAYS.has(day)) return false;
-  return true;
-}
-
 function buildCalendar(year: number, month: number): (number | null)[][] {
   const firstDow = new Date(year, month, 1).getDay();
-  const offset = (firstDow + 6) % 7; // Lunes primero
+  const offset = (firstDow + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-
   const cells: (number | null)[] = [];
   for (let i = 0; i < offset; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
-
   const weeks: (number | null)[][] = [];
-  for (let i = 0; i < cells.length; i += 7) {
-    weeks.push(cells.slice(i, i + 7));
-  }
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
   return weeks;
 }
 
-type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string; coachProfileId?: string };
+type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string };
 
 export default function BookingScreen_Calendar() {
   const router = useRouter();
@@ -60,10 +44,59 @@ export default function BookingScreen_Calendar() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
+  const [loadingDates, setLoadingDates] = useState(true);
 
   const weeks = buildCalendar(year, month);
-  const isCurrentMonth =
-    year === today.getFullYear() && month === today.getMonth();
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
+
+  useEffect(() => {
+    if (!params.coachId) { setLoadingDates(false); return; }
+    (async () => {
+      const { data: coachRow } = await supabase
+        .from('coaches')
+        .select('id')
+        .eq('profile_id', params.coachId)
+        .maybeSingle();
+
+      if (!coachRow?.id) { setLoadingDates(false); return; }
+      const coachesId = coachRow.id;
+
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      const [{ data: avail }, { data: booked }] = await Promise.all([
+        supabase
+          .from('coach_availability')
+          .select('date, time')
+          .eq('coach_id', coachesId)
+          .eq('blocked', false)
+          .gte('date', todayStr),
+        supabase
+          .from('bookings')
+          .select('scheduled_date, scheduled_time')
+          .eq('coach_id', coachesId)
+          .eq('status', 'confirmada')
+          .gte('scheduled_date', todayStr),
+      ]);
+
+      const bookedSet = new Set(
+        booked?.map(b => `${b.scheduled_date}|${b.scheduled_time}`) ?? []
+      );
+
+      const slotsByDate = new Map<string, string[]>();
+      avail?.forEach(({ date, time }) => {
+        slotsByDate.set(date, [...(slotsByDate.get(date) ?? []), time]);
+      });
+
+      const available = new Set<string>();
+      slotsByDate.forEach((times, date) => {
+        if (times.some(t => !bookedSet.has(`${date}|${t}`))) available.add(date);
+      });
+
+      setAvailableDates(available);
+      setLoadingDates(false);
+    })();
+  }, [params.coachId]);
 
   function prevMonth() {
     if (isCurrentMonth) return;
@@ -77,8 +110,8 @@ export default function BookingScreen_Calendar() {
   }
 
   function selectDay(day: number) {
-    if (!isAvailable(year, month, day)) return;
     const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (!availableDates.has(ds)) return;
     setSelectedDate(ds);
   }
 
@@ -91,7 +124,6 @@ export default function BookingScreen_Calendar() {
         ...(params.specialty && { specialty: params.specialty }),
         ...(params.priceFrom && { priceFrom: params.priceFrom }),
         ...(params.coachId && { coachId: params.coachId }),
-        ...(params.coachProfileId && { coachProfileId: params.coachProfileId }),
         date: selectedDate,
       },
     });
@@ -100,7 +132,6 @@ export default function BookingScreen_Calendar() {
   return (
     <AppBg>
       <StatusBar barStyle="light-content" />
-
       <SafeAreaView style={s.safeTop} edges={['top']}>
         <View style={s.header}>
           <TouchableOpacity
@@ -119,7 +150,6 @@ export default function BookingScreen_Calendar() {
       </SafeAreaView>
 
       <View style={s.content}>
-        {/* Navegación de mes */}
         <View style={s.monthNav}>
           <TouchableOpacity
             onPress={prevMonth}
@@ -129,7 +159,7 @@ export default function BookingScreen_Calendar() {
             <MaterialIcons
               name="chevron-left"
               size={28}
-              color={isCurrentMonth ? 'rgba(255,255,255,0.25)' : '#FFFFFF'}
+              color={isCurrentMonth ? "rgba(255,255,255,0.20)" : "#FFFFFF"}
             />
           </TouchableOpacity>
           <Text style={s.monthLabel}>{MONTH_NAMES[month]} {year}</Text>
@@ -142,7 +172,14 @@ export default function BookingScreen_Calendar() {
           </TouchableOpacity>
         </View>
 
-        {/* Encabezados de día */}
+        {loadingDates && (
+          <ActivityIndicator
+            size="small"
+            color="rgba(255,255,255,0.80)"
+            style={{ marginBottom: 12 }}
+          />
+        )}
+
         <View style={s.weekRow}>
           {DAY_LABELS.map((label, i) => (
             <View key={i} style={s.dayCell}>
@@ -151,14 +188,13 @@ export default function BookingScreen_Calendar() {
           ))}
         </View>
 
-        {/* Semanas */}
         {weeks.map((week, wi) => (
           <View key={wi} style={s.weekRow}>
             {week.map((day, di) => {
               if (!day) return <View key={di} style={s.dayCell} />;
 
-              const available = isAvailable(year, month, day);
               const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const available = !loadingDates && availableDates.has(ds);
               const isSelected = selectedDate === ds;
 
               return (
@@ -199,12 +235,19 @@ export default function BookingScreen_Calendar() {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+
     </AppBg>
   );
 }
 
+const dayShadow = Platform.select({
+  ios: { shadowColor: 'rgba(0,0,0,0.5)', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4 },
+  android: { elevation: 1 },
+});
+
 const s = StyleSheet.create({
-  safeTop: {},
+  root: { flex: 1, backgroundColor: 'transparent' },
+  safeTop: { backgroundColor: 'transparent' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -213,123 +256,56 @@ const s = StyleSheet.create({
     paddingBottom: 14,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.30)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
+    ...Platform.select({
+      ios: { shadowColor: 'rgba(0,0,0,0.5)', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 4 },
+      android: { elevation: 2 },
+    }),
   },
   headerTitle: {
-    flex: 1,
-    fontFamily: ViveFonts.semibold,
-    fontSize: 18,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    letterSpacing: -0.2,
+    flex: 1, fontFamily: ViveFonts.semibold, fontSize: 18,
+    color: '#FFFFFF', textAlign: 'center', letterSpacing: -0.2,
   },
   headerSpacer: { width: 36 },
-
   progressTrack: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.20)',
-    marginHorizontal: 20,
-    borderRadius: 2,
-    marginBottom: 6,
-    overflow: 'hidden',
+    height: 4, backgroundColor: `${ViveColors.primary}22`,
+    marginHorizontal: 20, borderRadius: 2, marginBottom: 6, overflow: 'hidden',
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: ViveColors.primary,
-    borderRadius: 2,
-  },
-
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 24,
-  },
-
+  progressFill: { height: '100%', backgroundColor: ViveColors.primary, borderRadius: 2 },
+  content: { flex: 1, paddingHorizontal: 16, paddingTop: 24 },
   monthNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    paddingHorizontal: 4,
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: 20, paddingHorizontal: 4,
   },
-  navBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  navBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   monthLabel: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 17,
-    color: '#FFFFFF',
-    letterSpacing: -0.2,
+    fontFamily: ViveFonts.semibold, fontSize: 17,
+    color: '#FFFFFF', letterSpacing: -0.2,
   },
-
   weekRow: { flexDirection: 'row', marginBottom: 4 },
   dayCell: { flex: 1, alignItems: 'center', paddingVertical: 3 },
   dayHeader: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.50)',
-    paddingBottom: 8,
+    fontFamily: ViveFonts.medium, fontSize: 12,
+    color: 'rgba(255,255,255,0.55)', paddingBottom: 8,
   },
-  dayCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayCircleAvailable: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
-  },
-  dayCircleSelected: {
-    backgroundColor: ViveColors.primary,
-  },
-  dayText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.22)',
-  },
-  dayTextAvailable: {
-    fontFamily: ViveFonts.medium,
-    color: '#FFFFFF',
-  },
-  dayTextSelected: {
-    fontFamily: ViveFonts.semibold,
-    color: '#FFFFFF',
-  },
-  dayTextUnavailable: {
-    color: 'rgba(255,255,255,0.22)',
-  },
-
+  dayCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  dayCircleAvailable: { backgroundColor: 'rgba(255,255,255,0.22)', ...dayShadow },
+  dayCircleSelected: { backgroundColor: ViveColors.primary },
+  dayText: { fontFamily: ViveFonts.regular, fontSize: 14, color: '#CBCBCB' },
+  dayTextAvailable: { fontFamily: ViveFonts.medium, color: '#FFFFFF' },
+  dayTextSelected: { fontFamily: ViveFonts.semibold, color: '#FFFFFF' },
+  dayTextUnavailable: { color: '#CBCBCB' },
   footerSafe: {
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(15,10,40,0.80)',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.12)',
   },
   footer: { paddingHorizontal: 20, paddingVertical: 16 },
   btn: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#FFFFFF', borderRadius: 14,
+    paddingVertical: 16, alignItems: 'center', justifyContent: 'center',
   },
-  btnDisabled: { opacity: 0.4 },
-  btnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 16,
-    color: '#1A1A2E',
-    letterSpacing: 0.2,
-  },
+  btnDisabled: { opacity: 0.45 },
+  btnText: { fontFamily: ViveFonts.semibold, fontSize: 16, color: '#1A1A2E', letterSpacing: 0.2 },
 });
