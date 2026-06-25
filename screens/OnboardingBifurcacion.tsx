@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { ScaleCard } from '@/components/ScaleCard';
+import { AppBg } from '@/components/ui/AppBg';
 
 type OptionId = 'crecer' | 'acompañar';
 
@@ -75,10 +76,11 @@ export default function OnboardingBifurcacion() {
   }
 
   return (
+    <AppBg>
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <MaterialCommunityIcons name="arrow-left" size={20} color={ViveColors.text} />
+          <MaterialCommunityIcons name="arrow-left" size={20} color="rgba(255,255,255,0.8)" />
           <Text style={styles.backText}>Atrás</Text>
         </TouchableOpacity>
       </View>
@@ -102,11 +104,7 @@ export default function OnboardingBifurcacion() {
                     styles.card,
                     { borderColor: isSelected ? option.accent : 'transparent' },
                     isSelected && {
-                      backgroundColor: option.accentLight,
-                      shadowColor: option.accent,
-                      shadowOpacity: 0.22,
-                      shadowRadius: 14,
-                      elevation: 6,
+                      backgroundColor: 'rgba(255,255,255,0.22)',
                     },
                   ]}
                 >
@@ -135,13 +133,13 @@ export default function OnboardingBifurcacion() {
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>
+    </AppBg>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ViveColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -158,8 +156,7 @@ const styles = StyleSheet.create({
   backText: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
-    color: ViveColors.text,
-    opacity: 0.45,
+    color: 'rgba(255,255,255,0.6)',
   },
   content: {
     flex: 1,
@@ -174,7 +171,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: ViveFonts.semibold,
     fontSize: 34,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     letterSpacing: -0.5,
     lineHeight: 42,
     textAlign: 'center',
@@ -182,8 +179,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: ViveFonts.regular,
     fontSize: 15,
-    color: ViveColors.text,
-    opacity: 0.55,
+    color: 'rgba(255,255,255,0.7)',
     lineHeight: 22,
     textAlign: 'center',
   },
@@ -196,16 +192,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: 16,
     padding: 20,
     borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#1F4A43',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: 'rgba(255,255,255,0.28)',
   },
   iconBubble: {
     width: 52,
@@ -223,15 +214,14 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     lineHeight: 22,
     textAlign: 'center',
   },
   cardDesc: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: ViveColors.text,
-    opacity: 0.55,
+    color: 'rgba(255,255,255,0.7)',
     lineHeight: 18,
     textAlign: 'center',
   },

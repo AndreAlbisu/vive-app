@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+import { AppBg } from '@/components/ui/AppBg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -267,13 +267,10 @@ export default function OnboardingScreen1() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <View style={styles.root}>
-      {/* Warm cream gradient background */}
-      <LinearGradient colors={[PAL.bg, PAL.bgTo]} style={StyleSheet.absoluteFill} />
-
-      {/* Solid cream overlay that fades in during reveal */}
+    <AppBg>
+      {/* Dark overlay fades in during reveal before navigating */}
       <Animated.View
-        style={[StyleSheet.absoluteFill, { backgroundColor: PAL.bg }, overlayStyle]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,8,38,0.88)' }, overlayStyle]}
         pointerEvents="none"
       />
 
@@ -364,7 +361,7 @@ export default function OnboardingScreen1() {
           </Animated.Text>
         </SafeAreaView>
       </Pressable>
-    </View>
+    </AppBg>
   );
 }
 
@@ -373,9 +370,6 @@ export default function OnboardingScreen1() {
 // =============================================================================
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
   pressable: {
     flex: 1,
   },
@@ -391,6 +385,6 @@ const styles = StyleSheet.create({
     fontFamily: 'SpaceGrotesk_400Regular',
     fontSize: 11,
     letterSpacing: 1,
-    color: '#B97A3E',
+    color: 'rgba(255,255,255,0.75)',
   },
 });

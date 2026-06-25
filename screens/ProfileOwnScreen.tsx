@@ -15,6 +15,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { AppBg } from '@/components/ui/AppBg';
 
 type Profesional = {
   id: string;
@@ -174,11 +175,12 @@ export default function ProfileOwnScreen() {
   ];
 
   return (
+    <AppBg>
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
       <Animated.View style={[styles.header, fadeUp(headerAnim)]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <MaterialCommunityIcons name="arrow-left" size={22} color={ViveColors.text} />
+          <MaterialCommunityIcons name="arrow-left" size={22} color="rgba(255,255,255,0.8)" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mi perfil</Text>
         <View style={styles.headerSpacer} />
@@ -194,7 +196,7 @@ export default function ProfileOwnScreen() {
         >
           <Animated.View style={[styles.guestSection, fadeUp(identityAnim)]}>
             <View style={styles.guestAvatar}>
-              <MaterialCommunityIcons name="account" size={44} color={`${ViveColors.text}35`} />
+              <MaterialCommunityIcons name="account" size={44} color="rgba(255,255,255,0.35)" />
             </View>
             <Text style={styles.guestTitle}>¿Sos nuevo por acá?</Text>
             <Text style={styles.guestSubtitle}>
@@ -229,11 +231,11 @@ export default function ProfileOwnScreen() {
                   <MaterialCommunityIcons
                     name={item.icon as any}
                     size={20}
-                    color={ViveColors.text}
+                    color="rgba(255,255,255,0.75)"
                     style={styles.configIcon}
                   />
                   <Text style={styles.configLabel}>{item.label}</Text>
-                  <MaterialCommunityIcons name="chevron-right" size={20} color={`${ViveColors.text}40`} />
+                  <MaterialCommunityIcons name="chevron-right" size={20} color="rgba(255,255,255,0.35)" />
                 </TouchableOpacity>
               ))}
             </View>
@@ -336,7 +338,7 @@ export default function ProfileOwnScreen() {
                       <Text style={styles.profName}>{p.name}</Text>
                       <Text style={styles.profSpecialty}>{p.specialty}</Text>
                     </View>
-                    <MaterialCommunityIcons name="chevron-right" size={20} color={`${ViveColors.text}40`} />
+                    <MaterialCommunityIcons name="chevron-right" size={20} color="rgba(255,255,255,0.35)" />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -357,14 +359,14 @@ export default function ProfileOwnScreen() {
                   <MaterialCommunityIcons
                     name={item.icon as any}
                     size={20}
-                    color={item.danger ? '#E05252' : ViveColors.text}
+                    color={item.danger ? '#FF7070' : 'rgba(255,255,255,0.75)'}
                     style={styles.configIcon}
                   />
                   <Text style={[styles.configLabel, item.danger && styles.configLabelDanger]}>
                     {item.label}
                   </Text>
                   {!item.danger && (
-                    <MaterialCommunityIcons name="chevron-right" size={20} color={`${ViveColors.text}40`} />
+                    <MaterialCommunityIcons name="chevron-right" size={20} color="rgba(255,255,255,0.35)" />
                   )}
                 </TouchableOpacity>
               ))}
@@ -375,6 +377,7 @@ export default function ProfileOwnScreen() {
         </ScrollView>
       )}
     </SafeAreaView>
+    </AppBg>
   );
 }
 
@@ -388,27 +391,21 @@ function MetricCard({ emoji, value, label }: { emoji: string; value: string; lab
   );
 }
 
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: '#1F4A43',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-  },
-  android: { elevation: 2 },
-});
+const GLASS = 'rgba(255,255,255,0.14)';
+const GLASS_BORDER = 'rgba(255,255,255,0.28)';
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: ViveColors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.15)',
     gap: 12,
   },
   backBtn: { padding: 4 },
@@ -416,14 +413,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: ViveFonts.semibold,
     fontSize: 17,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     textAlign: 'center',
     marginRight: 30,
   },
   headerSpacer: { width: 30 },
   headerDivider: {
     height: 1,
-    backgroundColor: `${ViveColors.text}0D`,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
 
   scroll: { flex: 1 },
@@ -435,14 +432,16 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingBottom: 40,
     paddingHorizontal: 32,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: GLASS,
+    borderBottomWidth: 1,
+    borderBottomColor: GLASS_BORDER,
     marginBottom: 20,
   },
   guestAvatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: `${ViveColors.text}0C`,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -450,15 +449,14 @@ const styles = StyleSheet.create({
   guestTitle: {
     fontFamily: ViveFonts.semibold,
     fontSize: 22,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 10,
   },
   guestSubtitle: {
     fontFamily: ViveFonts.regular,
     fontSize: 14,
-    color: ViveColors.text,
-    opacity: 0.6,
+    color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
     lineHeight: 21,
     marginBottom: 28,
@@ -479,7 +477,7 @@ const styles = StyleSheet.create({
   guestBtnSecondary: {
     width: '100%',
     borderWidth: 1.5,
-    borderColor: ViveColors.primary,
+    borderColor: 'rgba(255,255,255,0.5)',
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
@@ -487,7 +485,7 @@ const styles = StyleSheet.create({
   guestBtnSecondaryText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
-    color: ViveColors.primary,
+    color: '#FFFFFF',
   },
 
   // Identidad
@@ -496,50 +494,42 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingBottom: 28,
     paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: GLASS,
+    borderBottomWidth: 1,
+    borderBottomColor: GLASS_BORDER,
     marginBottom: 20,
   },
   avatarLarge: {
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: `${ViveColors.primary}20`,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderWidth: 2,
-    borderColor: ViveColors.primary,
+    borderColor: 'rgba(255,255,255,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: ViveColors.primary,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.18,
-        shadowRadius: 8,
-      },
-      android: { elevation: 3 },
-    }),
   },
   avatarLargeText: {
     fontFamily: ViveFonts.bold,
     fontSize: 28,
-    color: ViveColors.primary,
+    color: '#FFFFFF',
   },
   userName: {
     fontFamily: ViveFonts.semibold,
     fontSize: 20,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   userEmail: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: ViveColors.text,
-    opacity: 0.6,
+    color: 'rgba(255,255,255,0.65)',
     marginBottom: 16,
   },
   editBtn: {
     borderWidth: 1.5,
-    borderColor: ViveColors.primary,
+    borderColor: 'rgba(255,255,255,0.5)',
     borderRadius: 20,
     paddingVertical: 7,
     paddingHorizontal: 20,
@@ -547,14 +537,14 @@ const styles = StyleSheet.create({
   editBtnText: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
-    color: ViveColors.primary,
+    color: '#FFFFFF',
   },
 
   // Sections
   sectionTitle: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     marginBottom: 10,
     paddingHorizontal: 20,
   },
@@ -569,13 +559,14 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: GLASS,
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
     paddingVertical: 14,
     paddingHorizontal: 8,
     alignItems: 'center',
     gap: 4,
-    ...cardShadow,
   },
   metricCardLoading: {
     paddingVertical: 22,
@@ -586,24 +577,25 @@ const styles = StyleSheet.create({
   metricValue: {
     fontFamily: ViveFonts.semibold,
     fontSize: 12,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     textAlign: 'center',
   },
   metricLabel: {
     fontFamily: ViveFonts.regular,
     fontSize: 10,
-    color: `${ViveColors.text}70`,
+    color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
   },
 
   // Profesionales
   profList: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: GLASS,
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
     marginHorizontal: 20,
     marginBottom: 20,
     overflow: 'hidden',
-    ...cardShadow,
   },
   profListLoading: {
     paddingVertical: 24,
@@ -611,21 +603,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   profEmptyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: GLASS,
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
     marginHorizontal: 20,
     marginBottom: 20,
     paddingVertical: 24,
     paddingHorizontal: 20,
     alignItems: 'center',
     gap: 14,
-    ...cardShadow,
   },
   profEmptyText: {
     fontFamily: ViveFonts.regular,
     fontSize: 14,
-    color: ViveColors.text,
-    opacity: 0.65,
+    color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
     lineHeight: 21,
   },
@@ -649,15 +641,15 @@ const styles = StyleSheet.create({
   },
   profRowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: `${ViveColors.text}08`,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   profAvatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: `${ViveColors.primary}20`,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderWidth: 1.5,
-    borderColor: ViveColors.primary,
+    borderColor: 'rgba(255,255,255,0.45)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -665,28 +657,29 @@ const styles = StyleSheet.create({
   profAvatarText: {
     fontFamily: ViveFonts.bold,
     fontSize: 13,
-    color: ViveColors.primary,
+    color: '#FFFFFF',
   },
   profInfo: { flex: 1 },
   profName: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     marginBottom: 2,
   },
   profSpecialty: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
-    color: ViveColors.primary,
+    color: 'rgba(255,255,255,0.65)',
   },
 
   // Configuración
   configList: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: GLASS,
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
     marginHorizontal: 20,
     overflow: 'hidden',
-    ...cardShadow,
   },
   configRow: {
     flexDirection: 'row',
@@ -697,15 +690,15 @@ const styles = StyleSheet.create({
   },
   configRowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: `${ViveColors.text}08`,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   configIcon: { flexShrink: 0 },
   configLabel: {
     flex: 1,
     fontFamily: ViveFonts.regular,
     fontSize: 14,
-    color: ViveColors.text,
+    color: '#FFFFFF',
   },
-  configLabelDanger: { color: '#E05252' },
+  configLabelDanger: { color: '#FF7070' },
 
 });

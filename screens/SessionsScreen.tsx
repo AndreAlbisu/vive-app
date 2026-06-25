@@ -16,6 +16,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { decryptMessage } from '@/lib/encryption';
+import { AppBg } from '@/components/ui/AppBg';
 
 type SalaItem = {
   id: string;
@@ -121,6 +122,7 @@ export default function SessionsScreen() {
   }, [loadSalas]);
 
   return (
+    <AppBg>
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Animated.View
         style={[
@@ -132,7 +134,7 @@ export default function SessionsScreen() {
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <MaterialCommunityIcons name="arrow-left" size={22} color={ViveColors.text} />
+          <MaterialCommunityIcons name="arrow-left" size={22} color="rgba(255,255,255,0.8)" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mis sesiones</Text>
         <View style={styles.headerSpacer} />
@@ -163,7 +165,7 @@ export default function SessionsScreen() {
         </RNScrollView>
       ) : (
         <Animated.View style={[styles.emptyState, { opacity: listAnim }]}>
-          <MaterialCommunityIcons name="message-outline" size={52} color={`${ViveColors.text}30`} />
+          <MaterialCommunityIcons name="message-outline" size={52} color="rgba(255,255,255,0.3)" />
           <Text style={styles.emptyTitle}>Todavía no tenés conversaciones activas.</Text>
           <Text style={styles.emptySubtitle}>¿Empezamos?</Text>
           <TouchableOpacity
@@ -176,6 +178,7 @@ export default function SessionsScreen() {
         </Animated.View>
       )}
     </SafeAreaView>
+    </AppBg>
   );
 }
 
@@ -223,7 +226,6 @@ function SalaRow({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: ViveColors.background,
   },
 
   header: {
@@ -231,7 +233,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.15)',
     gap: 12,
   },
   backBtn: { padding: 4 },
@@ -239,12 +243,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: ViveFonts.semibold,
     fontSize: 17,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     textAlign: 'center',
     marginRight: 30,
   },
   headerSpacer: { width: 30 },
-  headerDivider: { height: 1, backgroundColor: `${ViveColors.text}0D` },
+  headerDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
 
   loadingState: {
     flex: 1,
@@ -260,7 +264,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: ViveColors.background,
     gap: 14,
   },
   avatar: {
@@ -271,10 +274,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    ...Platform.select({
-      ios: { shadowColor: ViveColors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
-      android: { elevation: 2 },
-    }),
   },
   avatarText: {
     fontFamily: ViveFonts.bold,
@@ -292,25 +291,25 @@ const styles = StyleSheet.create({
   coachName: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     flex: 1,
     marginRight: 8,
   },
   dateText: {
     fontFamily: ViveFonts.regular,
     fontSize: 11,
-    color: `${ViveColors.text}55`,
+    color: 'rgba(255,255,255,0.5)',
     flexShrink: 0,
   },
   lastMessage: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: `${ViveColors.text}99`,
+    color: 'rgba(255,255,255,0.65)',
     lineHeight: 18,
   },
   rowDivider: {
     height: 1,
-    backgroundColor: `${ViveColors.text}08`,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     marginLeft: 84,
     marginRight: 20,
   },
@@ -325,14 +324,14 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,
-    color: ViveColors.text,
+    color: '#FFFFFF',
     textAlign: 'center',
     marginTop: 16,
   },
   emptySubtitle: {
     fontFamily: ViveFonts.regular,
     fontSize: 15,
-    color: `${ViveColors.text}80`,
+    color: 'rgba(255,255,255,0.65)',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -342,10 +341,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 28,
-    ...Platform.select({
-      ios: { shadowColor: ViveColors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8 },
-      android: { elevation: 4 },
-    }),
   },
   emptyBtnText: {
     fontFamily: ViveFonts.semibold,
