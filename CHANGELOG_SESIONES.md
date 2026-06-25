@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-06-25 — Claude (sesión 15)
+
+**Tocado:** `app/(tabs)/_layout.tsx`, `screens/SalaScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- Dot de "novedad" rojo (`#E05252`) sobre el ícono del tab "Mis salas". Se muestra cuando (a) hay mensajes de la otra persona más nuevos que `user_last_read_at` en cualquier sala del usuario, o (b) hay una sesión confirmada para hoy. Sin número, solo punto — decisión de tono de VITA (calma, sin ansiedad de notificaciones).
+- Schema: `user_last_read_at` y `coach_last_read_at` (timestamptz, nullable) agregadas a `salas`. Backfill con `now()` al momento del ALTER TABLE para evitar dots falsos en salas existentes. Nuevo comportamiento: entrar a `SalaScreen` actualiza el campo correspondiente al rol del usuario, lo que dispara el listener realtime del layout y apaga el dot.
+- Query del dot: 2 queries siempre (salas + mensajes acotados por min(last_read_at)), 3 si no hay unread y hay que chequear bookings de hoy. Nunca N+1 — escala a múltiples salas por usuario.
+- Realtime: suscripción en `_layout.tsx` a INSERT en `messages`, UPDATE en `salas`, y `*` en `bookings`. Mismo patrón que el badge del layout de coaches.
+
+**Pendiente para la próxima sesión:**
+- Testear en dispositivo: dot aparece con mensaje nuevo, desaparece al entrar a la sala, reaparece con sesión de hoy.
+- Agregar `specialty` del profesional en cada row de "Mis salas" (diferido desde sesión 14).
+
+---
+
+## 2026-06-25 — Claude (sesión 14)
+
+**Tocado:** `app/(tabs)/mis-salas.tsx` (nuevo), `app/(tabs)/_layout.tsx`, `screens/SessionsScreen.tsx`
+
+**Resumen:**
+- Navegación cambiada de 3 tabs a 4 tabs: se revierte la decisión anterior de embeber "Mis salas" dentro de Inicio. Ahora hay tab fijo en posición 2 (Inicio → **Mis salas** → Recursos → Conexiones).
+- `SessionsScreen.tsx` adaptado de pantalla de push a pantalla de tab: se quitó el botón de volver del header, se cambió el título a "Mis salas", se actualizó el copy del estado vacío al nuevo texto acordado, se limpiaron estilos y el import `Platform` que quedaron huérfanos.
+- `app/(tabs)/mis-salas.tsx` creado como thin wrapper de `SessionsScreen` (mismo patrón que `app/sessions.tsx`).
+- `app/sessions.tsx` queda como ruta huérfana en `/sessions` — no se borró, pendiente decisión del usuario (ver Pendiente).
+- Sin cambios de schema ni base de datos — solo navegación/UI.
+
+**Pendiente para la próxima sesión:**
+- Decidir qué hacer con `app/sessions.tsx`: dejarlo como alias, redirigir a `/(tabs)/mis-salas`, o borrarlo.
+- Agregar `specialty` del profesional en cada row de "Mis salas" (quedó diferido intencionalmente en esta sesión).
+- Testear en dispositivo: tab bar de 4 items, navegación Mis salas → sala específica, estado vacío.
+
+---
+
 ## 2026-06-25 — Joaquín (sesión 13)
 
 **Tocado:** `app/(tabs)/index.tsx`, `app/progreso.tsx` (navegación), todos los archivos del fix de errores

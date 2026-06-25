@@ -203,6 +203,10 @@ export default function SalaScreen() {
       setRecipientId(resolvedRecipientId);
       setRecipientIsCoach(isRecipientCoach);
 
+      // Marcar sala como leída para este rol — dispara el listener del tab dot
+      const readField = isRecipientCoach ? 'user_last_read_at' : 'coach_last_read_at';
+      supabase.from('salas').update({ [readField]: new Date().toISOString() }).eq('id', id);
+
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 

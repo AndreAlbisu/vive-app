@@ -23,7 +23,10 @@
 - `user_id` (uuid, FK → `profiles.id`)
 - `coach_id` (uuid, FK → `profiles.id`) — es `coaches.profile_id`, NO `coaches.id`
 - `room_url` (text) — generado automáticamente por trigger al insertar: `https://meet.jit.si/vita-<16hex>`
+- `user_last_read_at` (timestamptz, nullable) — timestamp de la última vez que el usuario abrió la sala. NULL = nunca abrió. Se actualiza en `SalaScreen.init()` al entrar. Usado para el dot de "novedad" en el tab "Mis salas".
+- `coach_last_read_at` (timestamptz, nullable) — ídem para el coach. Mismo mecanismo, actualizado cuando el coach entra a la sala desde su interfaz.
 - `created_at`
+- Filas existentes al 25/06/2026: backfill aplicado con `UPDATE salas SET user_last_read_at = now(), coach_last_read_at = now()` — arranque limpio sin dots falsos. Filas nuevas nacen con NULL (correcto: si llega un mensaje antes de la primera apertura, el dot muestra).
 
 ### `messages`
 - `id` (uuid, PK)
