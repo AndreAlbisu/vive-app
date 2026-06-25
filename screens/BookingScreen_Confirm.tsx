@@ -18,6 +18,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
+import { logError } from '@/lib/logging';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MONTH_NAMES = [
@@ -133,7 +134,7 @@ export default function BookingScreen_Confirm() {
         .single();
 
       if (bookingError || !booking) {
-        console.log('[BookingConfirm] bookingError:', bookingError);
+        await logError('BookingConfirm: insert booking failed', bookingError);
         throw new Error('No se pudo guardar la reserva. Intentalo de nuevo.');
       }
 
@@ -173,7 +174,7 @@ export default function BookingScreen_Confirm() {
         },
       });
     } catch (e: any) {
-      console.log('[BookingConfirm] Error real:', e);
+      await logError('BookingConfirm: onConfirm failed', e);
       setError(e.message ?? 'Algo salió mal. Intentalo de nuevo.');
     } finally {
       setLoading(false);

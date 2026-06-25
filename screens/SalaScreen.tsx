@@ -25,6 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AppBg } from '@/components/ui/AppBg';
 import { sendPushNotification } from '@/lib/notifications';
 import { isCancelLate } from '@/lib/bookingHelpers';
+import { logError } from '@/lib/logging';
 
 type Message = {
   id: string;
@@ -179,7 +180,7 @@ export default function SalaScreen() {
             .insert({ user_id: user!.id, coach_id: coach_id! })
             .select('id, user_id, coach_id, room_url')
             .single();
-          if (error) console.error('[Sala] Error creando sala:', error.message);
+          if (error) await logError('SalaScreen: crear sala failed', error);
           if (created) {
             id = (created as any).id;
             salaUserId = (created as any).user_id;
@@ -245,7 +246,7 @@ export default function SalaScreen() {
         setConfirmedBooking(bookingResult.data?.[0] ?? null);
       }
 
-      if (msgsResult.error) console.error('[Sala] Error cargando mensajes:', msgsResult.error.message);
+      if (msgsResult.error) await logError('SalaScreen: cargar mensajes failed', msgsResult.error);
 
       if (!mounted) return;
       const msgs = msgsResult.data;
