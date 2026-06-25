@@ -200,7 +200,7 @@ export default function InicioScreen() {
           <Animated.View style={fadeUp(a2)}>
             <TouchableOpacity
               style={s.sobreTiCard}
-              onPress={() => router.push('/sessions')}
+              onPress={() => router.push('/progreso')}
               activeOpacity={0.82}
             >
               <View style={s.sobreTiLeft}>

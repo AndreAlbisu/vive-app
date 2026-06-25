@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ScrollView, View, Text, TouchableOpacity,
-  StyleSheet, Dimensions, StatusBar,
+  StyleSheet, StatusBar, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,46 +12,119 @@ import { AppBg } from '@/components/ui/AppBg';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { VitaHeader } from '@/components/ui/VitaHeader';
 import { ProgressToggle } from '@/components/ui/ProgressToggle';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
-// ─── Datos / placeholders ─────────────────────────────────────────────────────
+// ─── Tipos ───────────────────────────────────────────────────────────────────
 
-// TODO: calcular de analytics_events o tabla de progreso futura
-const stats = [
-  { value: 12, label: 'Semanas\nactivas' },
-  { value: 3,  label: 'Áreas\ntrabajadas' },
-  { value: 28, label: 'Sesiones\ncompletadas' }, // TODO: COUNT de bookings con status='completada'
+interface PastSession {
+  id: string;
+  coachName: string;
+  specialty: string | null;
+  date: string;
+  time: string;
+}
+
+// ─── Hábitos (estado local, sin DB aún) ──────────────────────────────────────
+// TODO: conectar con tabla de hábitos cuando exista
+
+const HABITOS_INIT = [
+  { id: '1', label: 'Respiración 4-7-8',      done: true  },
+  { id: '2', label: 'Diario de gratitud',      done: true  },
+  { id: '3', label: 'Meditación guiada',       done: false },
+  { id: '4', label: 'Seguimiento de hábitos',  done: true  },
 ];
 
-// TODO: conectar con tabla de hábitos / saved_resources cuando exista
-const habitos = [
-  { id: '1', label: 'Respiración 4-7-8',    done: true  },
-  { id: '2', label: 'Diario de gratitud',    done: true  },
-  { id: '3', label: 'Meditación guiada',     done: false },
-  { id: '4', label: 'Seguimiento de hábitos', done: true },
-];
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// TODO: fetchear de bookings con status='completada' + join con coaches/profiles
-const historialSesiones = [
-  { id: '1', name: 'María González', specialty: 'Psicóloga', date: 'Lunes 9 de junio',  time: '11:00 hs' },
-  { id: '2', name: 'María González', specialty: 'Psicóloga', date: 'Lunes 2 de junio',  time: '11:00 hs' },
-  { id: '3', name: 'María González', specialty: 'Psicóloga', date: 'Lunes 26 de mayo',  time: '11:00 hs' },
-];
+const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
-const { width: W } = Dimensions.get('window');
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  const dayName = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][d.getDay()];
+  return `${dayName} ${day} de ${MONTHS_ES[month - 1]}`;
+}
+
 const CARD_MX = 18;
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 
 export default function ProgresoScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [tab, setTab] = useState<'hoy' | 'mes'>('hoy');
   const [habitosDone, setHabitosDone] = useState<Record<string, boolean>>(
-    Object.fromEntries(habitos.map(h => [h.id, h.done]))
+    Object.fromEntries(HABITOS_INIT.map(h => [h.id, h.done]))
   );
+  const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+  const [sessionCount, setSessionCount] = useState<number | null>(null);
 
   function toggleHabito(id: string) {
     setHabitosDone(prev => ({ ...prev, [id]: !prev[id] }));
   }
+
+  useEffect(() => {
+    if (!user) return;
+    const today = new Date().toISOString().split('T')[0];
+
+    async function fetchData() {
+      // Sesiones pasadas (confirmadas con fecha ya pasada, o completadas)
+      const { data: bookings } = await supabase
+        .from('bookings')
+        .select('id, coach_id, scheduled_date, scheduled_time')
+        .eq('user_id', user!.id)
+        .or(`status.eq.completada,and(status.eq.confirmada,scheduled_date.lt.${today})`)
+        .order('scheduled_date', { ascending: false })
+        .limit(10);
+
+      if (!bookings || bookings.length === 0) {
+        setPastSessions([]);
+        setSessionCount(0);
+        setLoadingSessions(false);
+        return;
+      }
+
+      setSessionCount(bookings.length);
+
+      const coachIds = [...new Set(bookings.map(b => b.coach_id as string))];
+
+      const [{ data: profiles }, { data: coaches }] = await Promise.all([
+        supabase.from('profiles').select('id, name').in('id', coachIds),
+        supabase.from('coaches').select('profile_id, specialty').in('profile_id', coachIds),
+      ]);
+
+      const profileMap: Record<string, string> = {};
+      profiles?.forEach(p => { profileMap[p.id] = p.name ?? 'Coach'; });
+
+      const specialtyMap: Record<string, string> = {};
+      coaches?.forEach(c => { specialtyMap[c.profile_id as string] = c.specialty as string; });
+
+      const sessions: PastSession[] = bookings.map(b => ({
+        id: b.id as string,
+        coachName: profileMap[b.coach_id as string] ?? 'Coach',
+        specialty: specialtyMap[b.coach_id as string] ?? null,
+        date: formatDate(b.scheduled_date as string),
+        time: (b.scheduled_time as string).slice(0, 5) + ' hs',
+      }));
+
+      setPastSessions(sessions);
+      setLoadingSessions(false);
+    }
+
+    fetchData();
+  }, [user]);
+
+  // Stats: semanas y áreas son placeholders; sesiones viene de Supabase
+  // TODO: calcular semanas activas desde fecha de primer booking (analytics_events)
+  // TODO: calcular áreas trabajadas desde topics de bookings cuando exista el campo
+  const stats = [
+    { value: 12,                              label: 'Semanas\nactivas'      },
+    { value: 3,                               label: 'Áreas\ntrabajadas'     },
+    { value: sessionCount ?? '—',             label: 'Sesiones\ncompletadas' },
+  ];
 
   return (
     <AppBg>
@@ -59,18 +132,18 @@ export default function ProgresoScreen() {
       <SafeAreaView style={s.safe} edges={['top']}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
-          {/* Header: VITA + toggle */}
+          {/* ── Header: VITA + toggle ── */}
           <VitaHeader right={<ProgressToggle value={tab} onChange={setTab} />} />
 
-          {/* Atrás */}
+          {/* ── Atrás ── */}
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
             <MaterialCommunityIcons name="arrow-left" size={20} color="rgba(255,255,255,0.85)" />
           </TouchableOpacity>
 
-          {/* Título */}
+          {/* ── Título ── */}
           <Text style={s.pageTitle}>Tu progreso</Text>
 
-          {/* Stats: 3 tarjetas */}
+          {/* ── Stats: 3 tarjetas ── */}
           <View style={s.statsRow}>
             {stats.map((st, i) => (
               <GlassCard key={i} style={s.statCard}>
@@ -80,10 +153,10 @@ export default function ProgresoScreen() {
             ))}
           </View>
 
-          {/* Hábitos de hoy */}
+          {/* ── Hábitos de hoy ── */}
           <Text style={s.sectionTitle}>Hábitos de hoy</Text>
           <GlassCard style={s.habitosCard}>
-            {habitos.map((h, i) => (
+            {HABITOS_INIT.map((h, i) => (
               <View key={h.id}>
                 <TouchableOpacity
                   style={s.habitoRow}
@@ -99,30 +172,45 @@ export default function ProgresoScreen() {
                     {h.label}
                   </Text>
                 </TouchableOpacity>
-                {i < habitos.length - 1 && <View style={s.divider} />}
+                {i < HABITOS_INIT.length - 1 && <View style={s.divider} />}
               </View>
             ))}
           </GlassCard>
 
-          {/* Historial de sesiones */}
+          {/* ── Historial de sesiones ── */}
           <Text style={s.sectionTitle}>Historial de sesiones</Text>
-          <View style={s.historialList}>
-            {historialSesiones.map(ses => (
-              <GlassCard key={ses.id} style={s.sesionCard}>
-                <View style={s.sesionAvatar}>
-                  <Text style={s.sesionAvatarText}>{ses.name[0]}</Text>
-                </View>
-                <View style={s.sesionInfo}>
-                  <Text style={s.sesionName}>{ses.name}</Text>
-                  <Text style={s.sesionSub}>{ses.specialty} · {ses.date}</Text>
-                  <Text style={s.sesionSub}>{ses.time}</Text>
-                </View>
-                <MaterialCommunityIcons name="check-circle-outline" size={22} color="rgba(255,255,255,0.55)" />
-              </GlassCard>
-            ))}
-          </View>
 
-          <View style={{ height: 40 }} />
+          {loadingSessions ? (
+            <ActivityIndicator size="small" color="rgba(255,255,255,0.6)" style={{ marginTop: 12 }} />
+          ) : pastSessions.length === 0 ? (
+            <GlassCard style={[s.emptyCard]}>
+              <Text style={s.emptyText}>Todavía no hay sesiones completadas.</Text>
+            </GlassCard>
+          ) : (
+            <View style={s.historialList}>
+              {pastSessions.map(ses => (
+                <GlassCard key={ses.id} style={s.sesionCard}>
+                  <View style={s.sesionAvatar}>
+                    <Text style={s.sesionAvatarText}>{ses.coachName[0]}</Text>
+                  </View>
+                  <View style={s.sesionInfo}>
+                    <Text style={s.sesionName}>{ses.coachName}</Text>
+                    <Text style={s.sesionSub}>
+                      {ses.specialty ? `${ses.specialty} · ` : ''}{ses.date}
+                    </Text>
+                    <Text style={s.sesionSub}>{ses.time}</Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="check-circle-outline"
+                    size={22}
+                    color="rgba(255,255,255,0.55)"
+                  />
+                </GlassCard>
+              ))}
+            </View>
+          )}
+
+          <View style={{ height: 48 }} />
         </ScrollView>
       </SafeAreaView>
     </AppBg>
@@ -155,7 +243,7 @@ const s = StyleSheet.create({
     letterSpacing: -0.3,
   },
 
-  // Stats
+  // ── Stats ─────────────────────────────────────────────────────────────────
   statsRow: {
     flexDirection: 'row',
     gap: 10,
@@ -185,7 +273,7 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Sección
+  // ── Sección ───────────────────────────────────────────────────────────────
   sectionTitle: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
@@ -194,7 +282,7 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // Hábitos
+  // ── Hábitos ───────────────────────────────────────────────────────────────
   habitosCard: {
     marginHorizontal: CARD_MX,
     marginBottom: 24,
@@ -234,7 +322,7 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
   },
 
-  // Historial
+  // ── Historial ─────────────────────────────────────────────────────────────
   historialList: { gap: 10, paddingHorizontal: CARD_MX },
   sesionCard: {
     flexDirection: 'row',
@@ -257,4 +345,17 @@ const s = StyleSheet.create({
   sesionInfo: { flex: 1 },
   sesionName: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#FFFFFF', lineHeight: 18 },
   sesionSub: { fontFamily: ViveFonts.regular, fontSize: 11, color: 'rgba(255,255,255,0.62)', lineHeight: 16 },
+
+  // ── Empty / loading ───────────────────────────────────────────────────────
+  emptyCard: {
+    marginHorizontal: CARD_MX,
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.55)',
+    textAlign: 'center',
+  },
 });
