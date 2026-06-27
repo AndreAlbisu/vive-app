@@ -2,13 +2,24 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { ViveColors } from '@/constants/theme';
+import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
-const TAB_INACTIVE = '#ABABAB';
+const TAB_ACTIVE   = '#FFFFFF';
+const TAB_INACTIVE = 'rgba(255,255,255,0.45)';
+
+function TabIcon({ focused, children }: { focused: boolean; children: React.ReactNode }) {
+  return (
+    <View style={styles.iconWrap}>
+      {focused && <View style={styles.activeBubble} />}
+      {children}
+    </View>
+  );
+}
 
 function PendingBadge({ count }: { count: number }) {
   if (count === 0) return null;
@@ -69,22 +80,14 @@ export default function CoachTabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarActiveTintColor: ViveColors.primary,
+        tabBarActiveTintColor: TAB_ACTIVE,
         tabBarInactiveTintColor: TAB_INACTIVE,
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 0,
-          shadowColor: '#1F4A43',
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.08,
-          shadowRadius: 8,
-          elevation: 8,
-          height: 64,
-          paddingBottom: 10,
-          paddingTop: 6,
-        },
+        tabBarStyle: styles.tabBar,
+        tabBarBackground: () => (
+          <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
+        ),
         tabBarLabelStyle: {
-          fontFamily: 'Poppins_500Medium',
+          fontFamily: ViveFonts.medium,
           fontSize: 11,
         },
       }}>
@@ -92,18 +95,24 @@ export default function CoachTabLayout() {
         name="index"
         options={{
           title: 'Inicio',
-          tabBarIcon: ({ color }) => <Feather name="calendar" size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon focused={focused}>
+              <Feather name="calendar" size={22} color={color} />
+            </TabIcon>
+          ),
         }}
       />
       <Tabs.Screen
         name="reservas"
         options={{
           title: 'Reservas',
-          tabBarIcon: ({ color }) => (
-            <View>
-              <Feather name="clipboard" size={22} color={color} />
-              <PendingBadge count={pendingCount} />
-            </View>
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon focused={focused}>
+              <View>
+                <Feather name="clipboard" size={22} color={color} />
+                <PendingBadge count={pendingCount} />
+              </View>
+            </TabIcon>
           ),
         }}
       />
@@ -111,26 +120,65 @@ export default function CoachTabLayout() {
         name="chats"
         options={{
           title: 'Chats',
-          tabBarIcon: ({ color }) => <Feather name="message-circle" size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon focused={focused}>
+              <Feather name="message-circle" size={22} color={color} />
+            </TabIcon>
+          ),
         }}
       />
       <Tabs.Screen
         name="recursos"
         options={{
           title: 'Recursos',
-          tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon focused={focused}>
+              <Feather name="book-open" size={22} color={color} />
+            </TabIcon>
+          ),
         }}
       />
       <Tabs.Screen
         name="perfil"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon focused={focused}>
+              <Feather name="user" size={22} color={color} />
+            </TabIcon>
+          ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    right: 16,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'transparent',
+    borderTopWidth: 0,
+    overflow: 'hidden',
+  },
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 52,
+    height: 36,
+  },
+  activeBubble: {
+    position: 'absolute',
+    width: 52,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+});
 
 const badge = StyleSheet.create({
   dot: {

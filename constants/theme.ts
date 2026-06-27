@@ -17,6 +17,9 @@ export const ViveFonts = {
   spaceGroteskRegular: 'SpaceGrotesk_400Regular',
 };
 
+// Floating pill tab bar: bottom=24 + height=64 = 88px, plus ~22px breathing room
+export const TAB_BAR_CLEARANCE = 110;
+
 // Expo Router tab navigation colors
 export const Colors = {
   light: {

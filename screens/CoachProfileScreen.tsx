@@ -12,7 +12,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 
 const GLASS = 'rgba(255,255,255,0.14)';
@@ -193,7 +193,7 @@ export default function CoachProfileScreen() {
           <Text style={s.signOutText}>Cerrar sesión</Text>
         </TouchableOpacity>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: TAB_BAR_CLEARANCE }} />
       </ScrollView>
     </SafeAreaView>
     </AppBg>

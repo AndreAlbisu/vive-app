@@ -6,14 +6,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView as RNScrollView,
-  Platform,
   Animated,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { decryptMessage } from '@/lib/encryption';
 import { AppBg } from '@/components/ui/AppBg';
@@ -133,11 +132,7 @@ export default function SessionsScreen() {
           },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <MaterialCommunityIcons name="arrow-left" size={22} color="rgba(255,255,255,0.8)" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mis sesiones</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={styles.headerTitle}>Mis salas</Text>
       </Animated.View>
 
       <View style={styles.headerDivider} />
@@ -166,14 +161,17 @@ export default function SessionsScreen() {
       ) : (
         <Animated.View style={[styles.emptyState, { opacity: listAnim }]}>
           <MaterialCommunityIcons name="message-outline" size={52} color="rgba(255,255,255,0.3)" />
-          <Text style={styles.emptyTitle}>Todavía no tenés conversaciones activas.</Text>
-          <Text style={styles.emptySubtitle}>¿Empezamos?</Text>
+          <Text style={styles.emptyTitle}>Todavía no armaste tu sala</Text>
+          <Text style={styles.emptySubtitle}>
+            Dale, animate a buscar la persona que te acompañe y arrancamos.{'\n'}
+            Acá vas a tener todo: chat, sesiones, seguimiento.
+          </Text>
           <TouchableOpacity
             style={styles.emptyBtn}
             onPress={() => router.push('/(tabs)/conexiones')}
             activeOpacity={0.8}
           >
-            <Text style={styles.emptyBtnText}>Ver profesionales</Text>
+            <Text style={styles.emptyBtnText}>Empezar a buscar</Text>
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -229,25 +227,18 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.15)',
-    gap: 12,
   },
-  backBtn: { padding: 4 },
   headerTitle: {
-    flex: 1,
     fontFamily: ViveFonts.semibold,
     fontSize: 17,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginRight: 30,
   },
-  headerSpacer: { width: 30 },
   headerDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
 
   loadingState: {
@@ -257,7 +248,7 @@ const styles = StyleSheet.create({
   },
 
   scroll: { flex: 1 },
-  scrollContent: { paddingTop: 8, paddingBottom: 32 },
+  scrollContent: { paddingTop: 8, paddingBottom: TAB_BAR_CLEARANCE },
 
   sessionRow: {
     flexDirection: 'row',

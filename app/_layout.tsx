@@ -115,6 +115,7 @@ export default function RootLayout() {
           <Stack.Screen name="coach-login" options={{ headerShown: false }} />
           <Stack.Screen name="coach-application" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(coach)" options={{ headerShown: false }} />
           <Stack.Screen name="profesional" options={{ headerShown: false }} />
           <Stack.Screen name="booking-calendar" options={{ headerShown: false }} />
           <Stack.Screen name="booking-time" options={{ headerShown: false }} />

@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useSegments } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
@@ -535,7 +535,7 @@ export default function CoachReservasScreen() {
             ))
           )}
 
-          <View style={{ height: 40 }} />
+          <View style={{ height: TAB_BAR_CLEARANCE }} />
         </ScrollView>
       )}
 

@@ -13,7 +13,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
-import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { useAuth } from '@/context/AuthContext';
@@ -311,7 +311,7 @@ export default function InicioScreen() {
             </View>
           </Animated.View>
 
-          <View style={{ height: 32 }} />
+          <View style={{ height: TAB_BAR_CLEARANCE }} />
         </ScrollView>
       </SafeAreaView>
     </AppBg>
@@ -321,7 +321,7 @@ export default function InicioScreen() {
 const s = StyleSheet.create({
   safeArea: { flex: 1 },
   scroll: { flex: 1 },
-  container: { paddingBottom: 32 },
+  container: {},
 
   // ── 1. Top bar ─────────────────────────────────────────────────────────────
   topBar: {
