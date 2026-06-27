@@ -1,5 +1,21 @@
 {
   "enabledPlugins": {
     "expo@claude-plugins-official": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit*)",
+            "command": "git fetch andre 2>&1; git fetch origin 2>&1; AHEAD=$(git rev-list HEAD..andre/main --count 2>/dev/null || echo 0); if [ \"$AHEAD\" -gt 0 ]; then git merge --no-edit andre/main || exit 2; fi; git push origin main || exit 2; git push andre main || exit 2",
+            "asyncRewake": true,
+            "statusMessage": "Sincronizando origin y andre..."
+          }
+        ]
+      }
+    ]
   }
 }
