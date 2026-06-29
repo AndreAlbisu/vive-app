@@ -5,6 +5,21 @@
 
 ---
 
+## 2026-06-29 — Joaquín (sesión 18)
+
+**Tocado:** `app/(tabs)/index.tsx`, `screens/CoachProfileScreen.tsx`
+
+**Resumen:**
+- Realtime en campana de Home: reemplazado el fetch único por una suscripción Supabase Realtime filtrada por `recipient_id = user.id`. Cualquier INSERT/UPDATE/DELETE re-fetchea el count (head: true). El dot aparece/desaparece sin que el usuario salga de la pantalla.
+- `CoachProfileScreen`: reemplazado el placeholder "Estadísticas / Próximamente" por un panel real de reseñas recibidas. Summary card (promedio + total), lista completa con avatar inicial, nombre, estrellas, fecha y comentario. Reviews privadas muestran ícono de candado. Estado vacío si no hay reseñas todavía.
+
+**Pendiente para la próxima sesión:**
+- Confirmar que `complete_confirmed_sessions()` incluye `type` y `booking_id` en el payload del push para que el tap handler del OS funcione end-to-end.
+- Validar visualmente en dispositivo: pill tab bar, dot "Mis salas", botón cerrar sesión coach sobre el pill.
+- `saved_resources`: decidir si se implementa una pantalla o se descarta la tabla.
+
+---
+
 ## 2026-06-29 — Joaquín (sesión 17)
 
 **Tocado:** `screens/UserNotificationsScreen.tsx` (nuevo), `app/notifications.tsx` (nuevo), `app/_layout.tsx`, `app/(tabs)/index.tsx`
