@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-06-29 — Joaquín (sesión 17)
+
+**Tocado:** `screens/UserNotificationsScreen.tsx` (nuevo), `app/notifications.tsx` (nuevo), `app/_layout.tsx`, `app/(tabs)/index.tsx`
+
+**Resumen:**
+- `UserNotificationsScreen`: lista todas las notificaciones del usuario. Íconos y colores por tipo. Tap en `invitacion_review` → `/review`; tap en otras con `booking_id` → resuelve `sala_id` desde `bookings` y navega a `/sala`. Marca como leídas al abrir.
+- Home screen: campana en el top bar entre logo y avatar. Muestra `bell-outline` sin sin leer, `bell` filled + dot rojo `#E05252` cuando hay sin leer. Count vía query `head: true` (sin bajar data).
+- Ruta `/notifications` registrada en `_layout.tsx`.
+
+**Pendiente para la próxima sesión:**
+- Confirmar que `complete_confirmed_sessions()` incluye `type` y `booking_id` en el payload del push para que el tap handler funcione end-to-end.
+- El unread count de la campana no se refresca en tiempo real (solo al montar); si llega un push mientras la Home está abierta, el dot no aparece hasta que el usuario salga y vuelva. Agregar Realtime subscription si se quiere live.
+- Confirmar visualmente en dispositivo: pill tab bar, dot "Mis salas", botón cerrar sesión coach.
+
+---
+
 ## 2026-06-29 — Joaquín (sesión 16)
 
 **Tocado:** `screens/ReviewScreen.tsx` (nuevo), `app/review.tsx` (nuevo), `app/_layout.tsx`, `screens/ProfesionalScreen.tsx`
