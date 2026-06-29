@@ -101,12 +101,28 @@ export default function InicioScreen() {
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('recipient_id', user.id)
-      .eq('read', false)
-      .then(({ count }) => setUnreadNotifCount(count ?? 0));
+
+    const fetchCount = () => {
+      supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_id', user.id)
+        .eq('read', false)
+        .then(({ count }) => setUnreadNotifCount(count ?? 0));
+    };
+
+    fetchCount();
+
+    const channel = supabase
+      .channel(`notif-bell-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${user.id}` },
+        fetchCount,
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   useEffect(() => {
