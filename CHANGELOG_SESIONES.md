@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-06-29 — Joaquín (sesión 16)
+
+**Tocado:** `screens/ReviewScreen.tsx` (nuevo), `app/review.tsx` (nuevo), `app/_layout.tsx`, `screens/ProfesionalScreen.tsx`
+
+**Resumen:**
+- Pantalla `ReviewScreen`: permite al usuario crear o editar su review post-sesión. Recibe `booking_id`, resuelve el `coach_profile_id` vía `bookings.coach_id → coaches.id → coaches.profile_id`. Crea si no existe (INSERT); si ya existe la review para ese par reviewer/reviewed, edita solo `rating` y `comment` (respeta el trigger que bloquea cambiar `booking_id`).
+- `ProfesionalScreen`: eliminado el array `REVIEWS` hardcodeado y el rating `4.9` del `DEFAULT_PROFESIONAL`. Ahora fetchea reviews reales (`is_private=false`) con nombres de reviewers en batch. Muestra promedio real; si no hay reseñas muestra un estado vacío elegante.
+- `_layout.tsx`: agregado `addNotificationResponseReceivedListener` — si la push contiene `data.type === 'invitacion_review'` con `booking_id`, navega directo a `/review`. (Si el cron no envía data, el tap hace el comportamiento default del OS.)
+
+**Pendiente para la próxima sesión:**
+- Pantalla de notificaciones para el usuario (equivalente a `CoachNotificationsScreen` para el lado coach): listar todas las notificaciones, tap en `invitacion_review` → `/review?booking_id=xxx`. Actualmente el deep-link desde push funciona si el cron manda el data; si no, el usuario no tiene forma de llegar a ReviewScreen salvo desde push.
+- Confirmar que `complete_confirmed_sessions()` incluye `booking_id` y `type` en el payload de push para que el tap handler funcione.
+- Confirmar visualmente en dispositivo: pill tab bar, dot "Mis salas", botón cerrar sesión coach.
+
+---
+
 ## 2026-06-27 — Joaquín (sesión 15)
 
 **Tocado:** `app/(tabs)/index.tsx`, `.claude/settings.json`
