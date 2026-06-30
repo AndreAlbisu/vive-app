@@ -90,22 +90,10 @@ async function checkDot(userId: string, setHasDot: (v: boolean) => void) {
 
 function TabIcon({ focused, color, label, children }: { focused: boolean; color: string; label: string; children: React.ReactNode }) {
   return (
-    <View
-      style={styles.tabItem}
-      onLayout={(e) => {
-        const { width, height } = e.nativeEvent.layout;
-        console.log(`[TABDEBUG] tabItem "${label}" w=${width} h=${height}`);
-      }}>
+    <View style={styles.tabItem}>
       {focused && <View style={styles.activeBubble} />}
       {children}
-      <Text
-        style={[styles.tabLabel, { color }]}
-        onLayout={(e) => {
-          const { width, height } = e.nativeEvent.layout;
-          console.log(`[TABDEBUG] label "${label}" w=${width} h=${height}`);
-        }}>
-        {label}
-      </Text>
+      <Text style={[styles.tabLabel, { color }]}>{label}</Text>
     </View>
   );
 }
@@ -141,12 +129,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: TAB_INACTIVE,
         tabBarStyle: styles.tabBar,
         tabBarBackground: () => (
-          <View
-            style={styles.blurWrap}
-            onLayout={(e) => {
-              const { width, height } = e.nativeEvent.layout;
-              console.log(`[TABDEBUG] tabBar container w=${width} h=${height}`);
-            }}>
+          <View style={styles.blurWrap}>
             <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
           </View>
         ),
