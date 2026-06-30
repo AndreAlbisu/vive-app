@@ -5,6 +5,44 @@
 
 ---
 
+## 2026-06-30 — Andre (sesión 26)
+
+**Tocado:** `app/(coach)/_layout.tsx`
+
+**Resumen:**
+- Ajuste fino del margen lateral del pill en `(coach)` (4 tabs tras sacar "Perfil" en la sesión 25): subir `left/right` de `44` a `56`/`70` no tenía ningún efecto visible en los íconos, aunque el fondo (`blurWrap`) sí se achicaba. Se diagnosticó con logs `[TABDEBUG-COACH]` temporales midiendo por separado el ancho del `blurWrap` y el de cada `tabItem` real.
+- Causa raíz: la librería `@react-navigation/bottom-tabs` arma el contenedor real del tab bar con `start: 0, end: 0` (propiedades lógicas, conscientes de dirección de escritura) como base, y nuestro `tabBarStyle` solo sobreescribía `left`/`right` (propiedades físicas). Al ser ejes distintos para Yoga/RN, el override no cancelaba el valor lógico de forma confiable — el contenedor real de los botones quedaba con un ancho intermedio, inconsistente con el margen que pedíamos. Fix: agregar también `start`/`end` con los mismos valores en `styles.tabBar`.
+- Ese fix expuso un segundo bug: `blurWrap` en `(coach)` tenía su propio `left/right` duplicado (en vez de llenar a su contenedor padre como hace `(tabs)` con `...StyleSheet.absoluteFillObject`). Una vez que el contenedor real empezó a achicarse correctamente, ese `left/right` duplicado lo volvía a achicar una segunda vez, dejando el pill demasiado angosto. Fix: `blurWrap` de `(coach)` ahora usa `...StyleSheet.absoluteFillObject` igual que `(tabs)`, sin redeclarar márgenes.
+- Margen final: `56` (se había probado `70`, pero una vez arreglado el bug de fondo se sintió demasiado angosto).
+- Tercer hallazgo: bajar `tabLabel.fontSize` de `11` a `10` (para que "Reservas"/"Recursos" no se truncaran con `numberOfLines={1}`) no se reflejó con Fast Refresh — quedó dos corridas seguidas con captura idéntica a pesar del valor correcto en disco. Hizo falta un hard reload completo (cerrar Expo Go y reabrir) para que tomara el cambio. Mismo patrón de "Fast Refresh no alcanza" que ya habíamos visto con cambios de layout en este mismo árbol de componentes (el tab bar de `@react-navigation/bottom-tabs`, con `Animated.View` internamente, parece no re-renderizar layout/texto de forma confiable solo con Fast Refresh).
+- Confirmado por captura del usuario tras el hard reload: los 4 labels (`Inicio`, `Reservas`, `Chats`, `Recursos`) entran completos sin truncar, y los íconos quedaron visiblemente más agrupados.
+- Logs `[TABDEBUG-COACH]` sacados del código una vez confirmado el fix.
+
+**Pendiente para la próxima sesión:**
+- Si en el futuro un cambio de estilo en este tab bar (`(tabs)` o `(coach)`) "no se ve" pese a estar guardado en disco y con un solo proceso de Metro corriendo, probar hard reload completo antes de seguir diagnosticando como si fuera un bug de código — ya pasó dos veces en esta sesión con este componente puntual.
+- Nada commiteado todavía de esta sesión 26 — el commit `9d5141f6` (sesión 24) sigue sin pushear por el problema de credenciales de git mencionado en la sesión 25.
+
+---
+
+## 2026-06-30 — Andre (sesión 25)
+
+**Tocado:** `app/(coach)/_layout.tsx`, `screens/CoachHomeScreen.tsx`
+
+**Resumen:**
+- Cierre de los ajustes visuales de la tab bar que quedaron pendientes de la sesión 24: `bottom` volvió de `60` (valor de prueba) a `24` en `(tabs)/_layout.tsx`, y se restauró `overflow: 'hidden'` en `tabBar` (estaba comentado por una prueba de diagnóstico de recorte de texto que ya no aplicaba, porque ese recorte era el bug de `tabBarIconStyle` de la sesión 24, no el `overflow`).
+- En el camino se probó achicar fuente/padding/márgenes en `(coach)/_layout.tsx` para que "Reservas" y "Recursos" no partieran en dos líneas con 5 tabs — pero quedó obsoleto por el cambio de fondo de abajo.
+- **Cambio de fondo:** se sacó el tab "Perfil" de la tab bar fija del coach (`app/(coach)/_layout.tsx`), mismo criterio que "Tu progreso" del lado usuario — es configuración de cuenta/negocio, no algo de uso diario. La tab bar de coach queda con 4 tabs: Inicio, Reservas, Chats, Recursos.
+- Importante: no se borró el `Tabs.Screen name="perfil"` — se dejó declarado con `href: null`, seguiendo el patrón ya usado en `(tabs)/_layout.tsx` para el tab "Comunidad" (`explore`). Quitarlo del todo arriesgaba que Expo Router lo siguiera auto-generando como tab al existir el archivo de ruta `app/(coach)/perfil.tsx` en el mismo grupo.
+- El acceso a Perfil pasó a un avatar circular en el header de `screens/CoachHomeScreen.tsx` (junto a la campana de notificaciones), replicando el patrón ya usado en `app/(tabs)/index.tsx`: `LinearGradient` con los mismos colores (`#FF9A52` → `ViveColors.primary`), `avatarCircle` 40×40, inicial de `coachName` en `ViveFonts.frauncesSerif`. No se creó componente compartido — se copiaron los estilos tal cual, siguiendo el criterio del proyecto de no abstraer hasta la tercera repetición.
+- Con la tab bar de coach en 4 tabs (mismo número que el lado usuario), se revirtieron los ajustes de la iteración anterior: margen lateral del pill de vuelta a `44` (era `30`), `fontSize` del label de vuelta a `11` (era `10`), `paddingHorizontal` del `tabItem` de vuelta a `10` (era `4`) — para igualar el patrón ya probado del lado usuario. Quedó `numberOfLines={1}` en el label como red de seguridad adicional.
+
+**Pendiente para la próxima sesión:**
+- Confirmar visualmente en el celular: posición del pill (`bottom: 24`), esquinas redondeadas del blur, labels de coach en una sola línea sin truncar, y que el avatar nuevo en el header de Inicio coach navegue bien a `/perfil`.
+- Verificar que no haya quedado ningún otro lugar de la app que linkeara directo al tab "Perfil" por su posición en la barra (en vez de por ruta) — no se encontró ninguno al revisar el código, pero vale confirmarlo al testear.
+- Sin commitear todavía — el commit de la sesión 24 (`9d5141f6`) no se pusheó porque el hook de auto-push de `.claude/settings.json` falló por falta de credenciales de git para GitHub en este entorno (`could not read Username for 'https://github.com'`). Sigue pendiente resolver eso o pushear manualmente.
+
+---
+
 ## 2026-06-30 — Andre (sesión 24)
 
 **Tocado:** `app/(tabs)/_layout.tsx`, `app/(coach)/_layout.tsx`

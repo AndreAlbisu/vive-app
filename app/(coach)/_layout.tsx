@@ -17,7 +17,7 @@ function TabIcon({ focused, color, label, children }: { focused: boolean; color:
     <View style={styles.tabItem}>
       {focused && <View style={styles.activeBubble} />}
       {children}
-      <Text style={[styles.tabLabel, { color }]}>{label}</Text>
+      <Text style={[styles.tabLabel, { color }]} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
@@ -143,11 +143,7 @@ export default function CoachTabLayout() {
         name="perfil"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} label="Perfil">
-              <Feather name="user" size={22} color={color} />
-            </TabIcon>
-          ),
+          href: null,
         }}
       />
     </Tabs>
@@ -158,8 +154,10 @@ const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
     bottom: 24,
-    left: 44,
-    right: 44,
+    left: 56,
+    right: 56,
+    start: 56,
+    end: 56,
     height: 64,
     borderRadius: 32,
     backgroundColor: 'transparent',
@@ -167,11 +165,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   blurWrap: {
-    position: 'absolute',
-    bottom: 24,
-    left: 44,
-    right: 44,
-    height: 64,
+    ...StyleSheet.absoluteFillObject,
     borderRadius: 32,
     overflow: 'hidden',
   },
@@ -180,7 +174,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
   },
   activeBubble: {
     position: 'absolute',
@@ -193,7 +187,7 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontFamily: ViveFonts.medium,
-    fontSize: 11,
+    fontSize: 10,
     marginTop: 3,
   },
 });

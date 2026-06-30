@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -195,14 +196,28 @@ export default function CoachHomeScreen() {
         {/* Greeting */}
         <View style={s.greetingRow}>
           <Text style={s.greeting}>Hola, {coachName} 👋</Text>
-          <TouchableOpacity
-            style={s.bellBtn}
-            onPress={() => router.push('/coach-notifications')}
-            hitSlop={8}
-            activeOpacity={0.7}>
-            <Feather name="bell" size={22} color="rgba(255,255,255,0.8)" />
-            {unreadCount > 0 && <View style={s.bellDot} />}
-          </TouchableOpacity>
+          <View style={s.topRight}>
+            <TouchableOpacity
+              style={s.bellBtn}
+              onPress={() => router.push('/coach-notifications')}
+              hitSlop={8}
+              activeOpacity={0.7}>
+              <Feather name="bell" size={22} color="rgba(255,255,255,0.8)" />
+              {unreadCount > 0 && <View style={s.bellDot} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/perfil')}
+              hitSlop={8}
+              activeOpacity={0.8}>
+              <LinearGradient
+                colors={['#FF9A52', ViveColors.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.avatarCircle}>
+                <Text style={s.avatarInitial}>{(coachName.charAt(0) || '?').toUpperCase()}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Alert Banner */}
@@ -293,6 +308,11 @@ const s = StyleSheet.create({
     fontSize: 26,
     color: '#FFFFFF',
   },
+  topRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
   bellBtn: { padding: 4 },
   bellDot: {
     position: 'absolute',
@@ -304,6 +324,19 @@ const s = StyleSheet.create({
     backgroundColor: ViveColors.primary,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.3)',
+  },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 17,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 
   alertBanner: {
