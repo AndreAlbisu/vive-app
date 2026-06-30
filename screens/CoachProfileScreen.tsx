@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
   Switch,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -63,6 +65,9 @@ export default function CoachProfileScreen() {
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [editingPrice, setEditingPrice] = useState(false);
+  const [priceInput, setPriceInput] = useState('');
+  const [savingPrice, setSavingPrice] = useState(false);
 
   useEffect(() => {
     if (!user) { setLoadingProfile(false); return; }
@@ -128,6 +133,39 @@ export default function CoachProfileScreen() {
     router.replace('/(tabs)');
   }
 
+  function openPriceEditor() {
+    setPriceInput(profile?.price_per_session != null ? String(profile.price_per_session) : '');
+    setEditingPrice(true);
+  }
+
+  async function savePrice() {
+    if (!user) return;
+    const parsed = parseInt(priceInput.replace(/[^0-9]/g, ''), 10);
+    if (!parsed || parsed <= 0) {
+      Alert.alert('Precio inválido', 'Ingresá un monto mayor a 0.');
+      return;
+    }
+
+    setSavingPrice(true);
+    const { data, error } = await supabase
+      .from('coaches')
+      .update({ price_per_session: parsed })
+      .eq('profile_id', user.id)
+      .select('price_per_session');
+    setSavingPrice(false);
+
+    // Si RLS bloquea el UPDATE, Postgrest no devuelve error — solo
+    // 0 filas afectadas. Sin chequear `data`, esto se mostraría como
+    // "guardado" en el cliente aunque la base no haya cambiado.
+    if (error || !data || data.length === 0) {
+      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
+      return;
+    }
+
+    setProfile(prev => prev ? { ...prev, price_per_session: parsed } : prev);
+    setEditingPrice(false);
+  }
+
   async function uploadVideo(uri: string, mimeType: string | null | undefined) {
     if (!user) return;
     setUploadingVideo(true);
@@ -150,12 +188,13 @@ export default function CoachProfileScreen() {
       // el celular podría seguir mostrando el video viejo desde caché.
       const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
 
-      const { error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('coaches')
         .update({ video_url: publicUrl })
-        .eq('profile_id', user.id);
+        .eq('profile_id', user.id)
+        .select('video_url');
 
-      if (updateError) {
+      if (updateError || !updateData || updateData.length === 0) {
         Alert.alert('Video subido', 'Pero no se pudo guardar en tu perfil. Probá de nuevo.');
         return;
       }
@@ -251,14 +290,65 @@ export default function CoachProfileScreen() {
         {/* ── Precios ───────────────────────────────────────── */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Precio y paquetes</Text>
         <View style={s.priceCard}>
-          <View style={s.priceRow}>
-            <Text style={s.priceLabel}>Sesión individual</Text>
-            <Text style={s.priceValue}>
-              {profile?.price_per_session != null
-                ? `$${profile.price_per_session.toLocaleString('es-AR')}`
-                : '—'}
-            </Text>
-          </View>
+          {editingPrice ? (
+            <View>
+              <Text style={s.priceLabel}>Sesión individual</Text>
+              <View style={s.priceEditRow}>
+                <Text style={s.priceCurrency}>$</Text>
+                <TextInput
+                  style={s.priceInput}
+                  value={priceInput}
+                  onChangeText={t => setPriceInput(t.replace(/[^0-9]/g, ''))}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  autoFocus
+                  maxLength={7}
+                />
+              </View>
+              <View style={s.priceEditActions}>
+                <TouchableOpacity
+                  style={s.priceCancelBtn}
+                  onPress={() => setEditingPrice(false)}
+                  disabled={savingPrice}
+                  activeOpacity={0.75}
+                >
+                  <Text style={s.priceCancelBtnText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.priceSaveBtn}
+                  onPress={savePrice}
+                  disabled={savingPrice}
+                  activeOpacity={0.85}
+                >
+                  {savingPrice ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={s.priceSaveBtnText}>Guardar</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={s.priceRow}
+              onPress={openPriceEditor}
+              activeOpacity={0.75}
+              disabled={noCoachProfile}
+            >
+              <Text style={s.priceLabel}>Sesión individual</Text>
+              <View style={s.priceValueRow}>
+                <Text style={s.priceValue}>
+                  {profile?.price_per_session != null
+                    ? `$${profile.price_per_session.toLocaleString('es-AR')}`
+                    : '—'}
+                </Text>
+                {!noCoachProfile && (
+                  <MaterialCommunityIcons name="pencil-outline" size={15} color={ViveColors.primary} />
+                )}
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Modo de reserva ───────────────────────────────── */}
@@ -572,6 +662,61 @@ const s = StyleSheet.create({
   priceValue: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
+    color: '#FFFFFF',
+  },
+  priceValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  priceEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    borderBottomWidth: 1.5,
+    borderBottomColor: ViveColors.primary,
+    paddingBottom: 6,
+  },
+  priceCurrency: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 20,
+    color: '#FFFFFF',
+    marginRight: 4,
+  },
+  priceInput: {
+    flex: 1,
+    fontFamily: ViveFonts.semibold,
+    fontSize: 20,
+    color: '#FFFFFF',
+    padding: 0,
+  },
+  priceEditActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 14,
+  },
+  priceCancelBtn: {
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+  },
+  priceCancelBtnText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  priceSaveBtn: {
+    backgroundColor: ViveColors.primary,
+    paddingVertical: 9,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  priceSaveBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13,
     color: '#FFFFFF',
   },
 
