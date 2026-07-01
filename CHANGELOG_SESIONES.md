@@ -7,12 +7,16 @@
 
 ## 2026-07-01 — Joaquín (sesión 33)
 
-**Tocado:** `scripts/add-saved-resources-rls.sql` (corrido en Supabase), SQL en `coach_availability` (INSERT directo desde SQL Editor)
+**Tocado:** `scripts/add-saved-resources-rls.sql` (corrido en Supabase), SQL en `coach_availability` (INSERT directo desde SQL Editor), `app/diario.tsx`, `app/gratitud.tsx`, `app/search3.tsx`, `screens/BookingScreen_Calendar.tsx`, `app/(tabs)/_layout.tsx`, `app/(tabs)/recursos.tsx`
 
 **Resumen:**
 - Corrido el script RLS de `saved_resources` en Supabase — las 4 políticas quedaron activas.
 - Investigado por qué el calendario de booking no mostraba fechas: toda la disponibilidad existente era solo de "Coach Prueba" y con fechas pasadas (junio). Confirmado con el dump completo de `coach_availability`.
 - Cargada disponibilidad para todos los coaches: lunes a viernes, 6 slots diarios (09:00–17:00), del 7 al 31 de julio. Booking funciona correctamente después del INSERT.
+- Batch fix de texto invisible (oliva sobre oliva): `diario.tsx`, `gratitud.tsx`, `search3.tsx` tenían `backgroundColor: '#565E32'` en tarjetas y encabezados — reemplazado por crema `rgba(255,248,240,0.80)` y `#F7EFE4`. Patrón recurrente del redesign previo que no se había limpiado.
+- `BookingScreen_Calendar.tsx`: `dayTextSelected.color` era `'#565E32'` (oliva sobre terracota seleccionado) → corregido a `'#F7EFE4'`.
+- `app/(tabs)/_layout.tsx`: canal realtime renombrado a `user-tab-dot-${user.id}` para evitar crash `cannot add postgres_changes callbacks after subscribe()`.
+- `recursos.tsx`: color del ícono bookmark sin guardar corregido a `#87835C` (era casi invisible).
 
 **Pendiente para la próxima sesión:**
 - Verificar que el botón bookmark dentro de ScaleCard no dispara el onPress de la tarjeta en dispositivo físico.
