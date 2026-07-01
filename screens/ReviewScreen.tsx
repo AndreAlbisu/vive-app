@@ -26,7 +26,7 @@ const RATING_LABELS = ['', 'Muy mala', 'Mala', 'Regular', 'Buena', 'Excelente'];
 
 export default function ReviewScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const params = useLocalSearchParams<{ booking_id?: string }>();
   const bookingId = Array.isArray(params.booking_id) ? params.booking_id[0] : params.booking_id;
 
@@ -40,6 +40,16 @@ export default function ReviewScreen() {
   const [comment, setComment] = useState('');
 
   useEffect(() => {
+    if (authLoading) return;
+
+    // Reviews son unidireccionales (usuario → coach, decisión de producto
+    // 01/07/2026) — un coach nunca debería llegar a esta pantalla, ni
+    // siquiera por una notificación 'invitacion_review' vieja o mal generada.
+    if (role === 'coach') {
+      router.replace('/(coach)/reservas');
+      return;
+    }
+
     if (!user || !bookingId) { setPageLoading(false); return; }
 
     async function load() {
@@ -80,7 +90,7 @@ export default function ReviewScreen() {
     }
 
     load();
-  }, [user, bookingId]);
+  }, [user, bookingId, role, authLoading, router]);
 
   const handleSubmit = useCallback(async () => {
     if (rating === 0) {

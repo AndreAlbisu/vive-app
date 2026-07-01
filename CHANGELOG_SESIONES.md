@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-07-01 — Andre (sesión 44)
+
+**Tocado:** `screens/ReviewScreen.tsx`, `scripts/complete-confirmed-sessions.sql` (nuevo, corrido en Supabase por Andre el 01/07/2026), `SCHEMA.md`
+
+**Resumen:**
+- Punto de partida: Andre preguntó si el sistema de reviews funciona. Se encontró que la mitad coach→usuario nunca se construyó en UI, y que ya había una decisión de producto documentada en Notion (1 de julio 2026, "Decisiones estratégicas" → "Reviews: unidireccionales") confirmando que reviews es usuario→coach exclusivamente, por diseño — no por limitación técnica.
+- **Hallazgo mayor durante la investigación:** `complete_confirmed_sessions()` — la función que marca bookings como `'completada'` y dispara la invitación a review — **nunca existió realmente en la base**, pese a estar documentada desde el 23/06 como "✅ completada y verificada en Supabase". Confirmado con tres queries de diagnóstico corridas por Andre en el SQL Editor: `pg_get_functiondef` no la encontró, ninguna función con nombre parecido existe en `pg_proc`, y ninguna función en toda la base contiene el string `'invitacion_review'` en su cuerpo. El cron job (`complete-sessions`) sí estaba agendado y activo desde esa fecha, así que **cada corrida (cada 5 minutos, durante más de una semana) fallaba en silencio** — ningún booking se completó nunca automáticamente, y no se generó ninguna notificación de review para nadie, ni usuario ni coach. Mismo patrón que el incidente ya documentado del 19/06 (código documentado como corrido que en realidad nunca se ejecutó). El CHECK constraint de `notifications.type` sí incluía `'invitacion_review'` — esa parte del 23/06 sí había corrido, solo faltaba la función.
+- **Fix de la función:** `scripts/complete-confirmed-sessions.sql` — creación (no modificación, no había nada previo), ya con la regla unidireccional incorporada desde el día uno: solo inserta la notificación `invitacion_review` para `bookings.user_id`, nunca para el coach. No hizo falta tocar `cron.job` — ya estaba bien agendado, solo faltaba que la función existiera.
+- **Fix de defensa en profundidad:** `ReviewScreen.tsx` ahora chequea `role` de `useAuth()` al montar y redirige cualquier coach a `/(coach)/reservas` en vez de mostrar el formulario. Antes de este fix, un coach que llegara a `/review?booking_id=X` (ej. por una notificación vieja, mal generada, o un tap de push futuro) habría insertado una review con `reviewer_id = reviewed_id` (revieweándose a sí mismo) — ni la constraint UNIQUE ni las RLS de `reviews` lo hubieran impedido, porque son genéricas por diseño. En la práctica nunca se disparó porque la función que generaba la notificación tampoco existía.
+- `SCHEMA.md` actualizado: regla 10 (hallazgo completo + fix), regla nueva 15 (reviews unidireccionales + guard de rol), descripción de `notifications.type` y de la tabla `reviews` actualizadas para reflejar la decisión de producto.
+
+**Pendiente para la próxima sesión:**
+- Probar en dispositivo: crear un booking de prueba con `scheduled_date`/`scheduled_time` ya pasado + 20 min, confirmar que el cron lo marca `'completada'` y que la notificación de review le llega solo al usuario.
+- Sigue pendiente correr `scripts/add-coach-instant-booking.sql` (sesión 37) y `scripts/add-avatar-upload.sql` en cualquier ambiente que no lo haya corrido todavía.
+
+---
+
 ## 2026-07-01 — Andre (sesión 43)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`
