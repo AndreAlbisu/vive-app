@@ -452,8 +452,10 @@ const s = StyleSheet.create({
     gap: 4,
     paddingVertical: 6,
     paddingHorizontal: 10,
-    backgroundColor: '#565E32',
+    backgroundColor: 'rgba(255,248,240,0.80)',
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.65)',
     ...shadow,
   },
   filterBtnText: {
@@ -491,8 +493,10 @@ const s = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#565E32',
+    backgroundColor: 'rgba(255,248,240,0.80)',
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.65)',
     padding: 14,
     gap: 12,
     ...shadow,
@@ -548,7 +552,7 @@ const s = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#565E32',
+    backgroundColor: '#F7EFE4',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '88%',
@@ -607,11 +611,11 @@ const s = StyleSheet.create({
   },
   pill: {
     borderWidth: 1.5,
-    borderColor: `${ViveColors.text}33`,
+    borderColor: 'rgba(86,94,50,0.25)',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    backgroundColor: '#565E32',
+    backgroundColor: 'rgba(255,248,240,0.70)',
   },
   pillActive: {
     backgroundColor: ViveColors.primary,
@@ -623,7 +627,7 @@ const s = StyleSheet.create({
     color: ViveColors.text,
   },
   pillTextActive: {
-    color: '#565E32',
+    color: '#F7EFE4',
   },
 
   // Sheet footer
@@ -658,6 +662,6 @@ const s = StyleSheet.create({
   applyText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
-    color: '#565E32',
+    color: '#F7EFE4',
   },
 });
