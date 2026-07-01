@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Platform,
   StatusBar,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -28,6 +29,7 @@ const DEFAULT_PROFESIONAL = {
   topics: ['Ansiedad', 'Autoestima', 'Relaciones', 'Propósito', 'Estrés'],
   priceFrom: 4500,
   video_url: null as string | null,
+  avatar_url: null as string | null,
 };
 
 type LiveReview = { rating: number; comment: string | null; reviewerName: string };
@@ -82,7 +84,7 @@ export default function ProfesionalScreen() {
     if (!pid) return;
     supabase
       .from('coaches')
-      .select('specialty, price_per_session, nationality, video_url, profiles!inner(name)')
+      .select('specialty, price_per_session, nationality, video_url, profiles!inner(name, avatar_url)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
@@ -93,6 +95,7 @@ export default function ProfesionalScreen() {
           nationality: (data as any).nationality ?? DEFAULT_PROFESIONAL.nationality,
           priceFrom: (data as any).price_per_session,
           video_url: (data as any).video_url ?? null,
+          avatar_url: (data as any).profiles.avatar_url ?? null,
         });
       });
   }, [params.profileId]);
@@ -173,9 +176,13 @@ export default function ProfesionalScreen() {
 
         {/* ── Foto grande ──────────────────────────────────────────────── */}
         <View style={s.photoContainer}>
-          <View style={s.photoPlaceholder}>
-            <MaterialIcons name="person" size={90} color="rgba(135,131,92,0.65)" />
-          </View>
+          {prof.avatar_url ? (
+            <Image source={{ uri: prof.avatar_url }} style={s.photoImage} />
+          ) : (
+            <View style={s.photoPlaceholder}>
+              <MaterialIcons name="person" size={90} color="rgba(135,131,92,0.65)" />
+            </View>
+          )}
 
           {/* Badge verificado */}
           <View style={s.verifiedBadge}>
@@ -374,6 +381,10 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(86,94,50,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
   },
   verifiedBadge: {
     position: 'absolute',

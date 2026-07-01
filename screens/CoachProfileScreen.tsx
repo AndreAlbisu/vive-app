@@ -9,6 +9,7 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -33,6 +34,7 @@ type CoachProfile = {
   nationality: string | null;
   video_url: string | null;
   instant_booking: boolean;
+  avatar_url: string | null;
 };
 
 type ReceivedReview = {
@@ -65,6 +67,7 @@ export default function CoachProfileScreen() {
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [editingPrice, setEditingPrice] = useState(false);
   const [priceInput, setPriceInput] = useState('');
   const [savingPrice, setSavingPrice] = useState(false);
@@ -75,7 +78,7 @@ export default function CoachProfileScreen() {
 
     (async () => {
       const [{ data: profileRow }, { data: coachRow }] = await Promise.all([
-        supabase.from('profiles').select('name').eq('id', user.id).single(),
+        supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single(),
         supabase.from('coaches').select('specialty, bio, price_per_session, nationality, video_url, instant_booking').eq('profile_id', user.id).maybeSingle(),
       ]);
 
@@ -87,6 +90,7 @@ export default function CoachProfileScreen() {
         nationality: coachRow?.nationality ?? null,
         video_url: coachRow?.video_url ?? null,
         instant_booking: coachRow?.instant_booking ?? false,
+        avatar_url: profileRow?.avatar_url ?? null,
       });
       setNoCoachProfile(!coachRow);
       setLoadingProfile(false);
@@ -253,6 +257,79 @@ export default function CoachProfileScreen() {
     ]);
   }
 
+  async function uploadAvatar(uri: string, mimeType: string | null | undefined) {
+    if (!user) return;
+    setUploadingAvatar(true);
+    try {
+      const file = new File(uri);
+      const bytes = await file.bytes();
+      const path = `${user.id}/avatar.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, bytes, { contentType: mimeType ?? 'image/jpeg', upsert: true });
+
+      if (uploadError) {
+        Alert.alert('No se pudo subir la foto', 'Probá de nuevo en unos minutos.');
+        return;
+      }
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      // cache-bust: el path es siempre el mismo (upsert), así que sin esto
+      // el celular podría seguir mostrando la foto vieja desde caché.
+      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+
+      const { data: updateData, error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id)
+        .select('avatar_url');
+
+      if (updateError || !updateData || updateData.length === 0) {
+        Alert.alert('Foto subida', 'Pero no se pudo guardar en tu perfil. Probá de nuevo.');
+        return;
+      }
+
+      setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : prev);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
+  async function launchAvatarPicker(source: 'camera' | 'library') {
+    const permission = source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert('Permiso necesario', 'Activá el permiso desde los ajustes del celular para continuar.');
+      return;
+    }
+
+    const options: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    };
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    await uploadAvatar(asset.uri, asset.mimeType);
+  }
+
+  function pickAvatar() {
+    Alert.alert('Foto de perfil', 'Elegí una opción', [
+      { text: 'Tomar foto', onPress: () => launchAvatarPicker('camera') },
+      { text: 'Elegir de la galería', onPress: () => launchAvatarPicker('library') },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  }
+
   const videoPlayer = useVideoPlayer(profile?.video_url ?? null, p => { p.loop = false; });
 
   const initials = profile?.name ? getInitials(profile.name) : loadingProfile ? '…' : '?';
@@ -265,11 +342,23 @@ export default function CoachProfileScreen() {
         {/* ── Photo + Info ───────────────────────────────────── */}
         <View style={s.identitySection}>
           <View style={s.photoWrap}>
-            <View style={s.photoPlaceholder}>
-              <Text style={s.photoInitials}>{initials}</Text>
-            </View>
-            <TouchableOpacity style={s.editPhotoBtn} activeOpacity={0.8}>
-              <MaterialCommunityIcons name="camera-outline" size={16} color="#565E32" />
+            {profile?.avatar_url ? (
+              <Image source={{ uri: profile.avatar_url }} style={s.photoImage} />
+            ) : (
+              <View style={s.photoPlaceholder}>
+                <Text style={s.photoInitials}>{initials}</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={s.editPhotoBtn}
+              onPress={pickAvatar}
+              disabled={uploadingAvatar}
+              activeOpacity={0.8}>
+              {uploadingAvatar ? (
+                <ActivityIndicator size="small" color="#F7EFE4" />
+              ) : (
+                <MaterialCommunityIcons name="camera-outline" size={16} color="#565E32" />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -537,6 +626,13 @@ const s = StyleSheet.create({
     borderColor: ViveColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  photoImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 2.5,
+    borderColor: ViveColors.primary,
   },
   photoInitials: {
     fontFamily: ViveFonts.bold,

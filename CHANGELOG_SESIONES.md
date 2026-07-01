@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-01 — Andre (sesión 39)
+
+**Tocado:** `screens/CoachProfileScreen.tsx`, `screens/ProfesionalScreen.tsx`, `scripts/add-avatar-upload.sql` (nuevo, **no corrido todavía en Supabase**), `SCHEMA.md`
+
+**Resumen:**
+- Feature pedida por Andre: que el coach pueda subir su foto de perfil y que los usuarios la vean en el perfil público del coach.
+- `profiles.avatar_url` ya existía en la tabla (sin uso hasta ahora) — no hizo falta columna nueva, solo bucket de Storage.
+- `CoachProfileScreen.tsx`: el botón de cámara sobre la foto (antes sin `onPress`, según pendiente de sesiones previas) ahora abre selector cámara/galería, sube a Storage (bucket `avatars`, path `{user.id}/avatar.jpg`, mismo patrón que `video_url` de la sesión 30/06), y guarda la URL en `profiles.avatar_url` con el mismo chequeo de `data` post-update para detectar bloqueo silencioso de RLS.
+- `ProfesionalScreen.tsx`: si el coach tiene `avatar_url`, se muestra esa foto en vez del ícono de persona genérico. El query a `coaches` ahora hace join a `profiles!inner(name, avatar_url)`.
+- `scripts/add-avatar-upload.sql`: bucket `avatars` (público, 5MB, solo imágenes) + RLS de storage, y una política de UPDATE en `profiles` creada solo si no existía ninguna ya (no había ninguna documentada en scripts previos — primera vez que se confirma explícitamente que existe).
+- Alcance deliberadamente acotado a lo pedido: otras pantallas que muestran coaches (`search3.tsx`, booking, `SessionsScreen.tsx`) siguen con el ícono genérico, sin tocar.
+- `SCHEMA.md` actualizado (columna `profiles.avatar_url` documentada, regla nueva 14).
+
+**Pendiente para la próxima sesión:**
+- **Correr `scripts/add-avatar-upload.sql` en Supabase** — hasta entonces la subida de foto falla (bucket no existe) y posiblemente el guardado en `profiles` también, si resulta que no había política de UPDATE previa.
+- Probar en dispositivo físico: subir foto como coach, verificar que se ve recortada en cuadrado, y que otro usuario la ve reflejada en `ProfesionalScreen.tsx`.
+- Decidir si vale la pena mostrar la foto también en `search3.tsx` y otras listas de coaches, para consistencia visual.
+- Sigue pendiente correr `scripts/add-coach-instant-booking.sql` (sesión 37).
+
+---
+
 ## 2026-07-01 — Andre (sesión 38)
 
 **Tocado:** `screens/BookingScreen_Time.tsx`, `screens/BookingScreen_Calendar.tsx`, `SCHEMA.md`
