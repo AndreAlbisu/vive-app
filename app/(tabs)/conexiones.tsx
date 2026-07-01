@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { supabase } from '@/lib/supabase';
@@ -163,7 +163,10 @@ export default function ConexionesScreen() {
         description="Explorá coaches y profesionales según lo que estás viviendo. Filtrá por tema o buscá por nombre."
         delay={800}
       />
-      <View style={s.screen}>
+      <ScrollView
+        style={s.screen}
+        contentContainerStyle={s.screenContent}
+        showsVerticalScrollIndicator={false}>
 
         {/* ── Header ───────────────────────────────────────────────────── */}
         <View style={s.header}>
@@ -286,7 +289,9 @@ export default function ConexionesScreen() {
           <MaterialIcons name="chevron-right" size={20} color={ViveColors.primary} />
         </ScaleCard>
 
-      </View>
+        <View style={{ height: TAB_BAR_CLEARANCE }} />
+
+      </ScrollView>
     </SafeAreaView>
     </AppBg>
   );
@@ -312,8 +317,9 @@ const s = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  screenContent: {
     paddingTop: 16,
-    paddingBottom: 100,
   },
 
   // Header

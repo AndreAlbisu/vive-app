@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-07-01 — Andre (sesión 42)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`
+
+**Resumen:**
+- Bug reportado por Andre: la última card de Conexiones ("¿No sabés qué necesitás? Te ayudo a encontrarlo") aparecía muy abajo, pegada al tab bar.
+- Causa: a diferencia de todas las otras pantallas con tab bar (`index.tsx`, `recursos.tsx`, `SessionsScreen.tsx`, `CoachReservasScreen.tsx`, etc.), que envuelven su contenido en un `ScrollView` con un espaciador `<View style={{ height: TAB_BAR_CLEARANCE }} />` al final, `conexiones.tsx` usaba un `View` fijo no scrollable sin ese espaciador — la card quedaba pegada al borde inferior real de la pantalla, debajo del tab bar flotante, en vez de tener el margen que sí tienen las demás pantallas.
+- Fix: convertido el `View` contenedor en `ScrollView` (mismo patrón que el resto de la app) y agregado el espaciador `TAB_BAR_CLEARANCE` al final. Los ScrollViews horizontales anidados (temas, destacados) siguen funcionando igual.
+
+**Pendiente para la próxima sesión:**
+- Sigue pendiente correr `scripts/add-coach-instant-booking.sql` (sesión 37).
+
+---
+
 ## 2026-07-01 — Andre (sesión 41)
 
 **Tocado:** `screens/EditProfileScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `app/(tabs)/index.tsx`, `screens/CoachReservasScreen.tsx`, `screens/SalaScreen.tsx`, `screens/CoachChatsScreen.tsx`, `screens/SessionsScreen.tsx`, `SCHEMA.md`
