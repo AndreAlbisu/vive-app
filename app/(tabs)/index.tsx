@@ -264,17 +264,19 @@ export default function InicioScreen() {
 
           {/* ── 4. SOBRE TI ── */}
           <Animated.View style={fadeUp(a2)}>
-            <View style={s.sobreTiCard}>
+            <TouchableOpacity
+              style={s.sobreTiCard}
+              onPress={() => router.push('/progreso')}
+              activeOpacity={0.82}
+            >
               <View style={s.sobreTiLeft}>
-                <TouchableOpacity onPress={() => router.push('/ia')} activeOpacity={0.8} hitSlop={6}>
-                  <VennSvg />
-                </TouchableOpacity>
+                <VennSvg />
               </View>
               <View style={s.sobreTiRight}>
                 <Text style={s.sobreTiTitle}>Sobre ti</Text>
                 <Text style={s.sobreTiText}>{sobreTiText}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           </Animated.View>
 
           {/* ── 5. TU PRÓXIMA SESIÓN ── */}
