@@ -5,6 +5,18 @@
 
 ---
 
+## 2026-07-01 — Andre (sesión 47)
+
+**Tocado:** `app/(tabs)/index.tsx`
+
+**Resumen:**
+- A pedido de Andre, se sacó la frase del día hardcodeada ("Todas las respuestas están en vos.") que aparecía debajo del saludo en la home. Quedó eliminada la constante `dailyPhrase`, la línea de JSX y el estilo `dailyPhrase` sin uso. El bloque de saludo ahora solo tiene las dos líneas ("¡Buen día!" / "¿cómo estás hoy?").
+
+**Pendiente para la próxima sesión:**
+- Sigue pendiente correr `scripts/add-coach-instant-booking.sql` (sesión 37) y `scripts/add-avatar-upload.sql` en cualquier ambiente que no lo haya corrido todavía.
+
+---
+
 ## 2026-07-01 — Andre (sesión 46)
 
 **Tocado:** `screens/SalaScreen.tsx`, `SCHEMA.md`

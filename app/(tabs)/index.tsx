@@ -25,8 +25,6 @@ import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { getSobreTiInsight } from '@/lib/moodInsights';
 import Svg, { Circle } from 'react-native-svg';
 
-const dailyPhrase = 'Todas las respuestas están en vos.';
-
 type PinnedResource = { id: string; title: string; icon: string; route: string | undefined };
 
 const RESOURCE_MAP: Record<string, PinnedResource> = {
@@ -262,11 +260,10 @@ export default function InicioScreen() {
             </View>
           </Animated.View>
 
-          {/* ── 2. SALUDO + FRASE ── */}
+          {/* ── 2. SALUDO ── */}
           <Animated.View style={[s.greetingBlock, fadeUp(a1)]}>
             <Text style={s.greetingLine1}>{getGreeting()}</Text>
             <Text style={s.greetingLine2}>¿cómo estás hoy?</Text>
-            <Text style={s.dailyPhrase}>{dailyPhrase}</Text>
           </Animated.View>
 
           {/* ── 3. MOOD CHECK-IN ── */}
@@ -460,14 +457,6 @@ const s = StyleSheet.create({
     color: '#565E32',
     lineHeight: 36,
   },
-  dailyPhrase: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 15,
-    color: 'rgba(135,131,92,0.80)',
-    marginTop: 8,
-    lineHeight: 22,
-  },
-
   // ── 3. Sobre ti ────────────────────────────────────────────────────────────
   sobreTiCard: {
     marginHorizontal: 18,
