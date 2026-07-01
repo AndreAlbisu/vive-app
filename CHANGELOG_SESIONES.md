@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-07-01 — Joaquín (sesión 33)
+
+**Tocado:** `scripts/add-saved-resources-rls.sql` (corrido en Supabase), SQL en `coach_availability` (INSERT directo desde SQL Editor)
+
+**Resumen:**
+- Corrido el script RLS de `saved_resources` en Supabase — las 4 políticas quedaron activas.
+- Investigado por qué el calendario de booking no mostraba fechas: toda la disponibilidad existente era solo de "Coach Prueba" y con fechas pasadas (junio). Confirmado con el dump completo de `coach_availability`.
+- Cargada disponibilidad para todos los coaches: lunes a viernes, 6 slots diarios (09:00–17:00), del 7 al 31 de julio. Booking funciona correctamente después del INSERT.
+
+**Pendiente para la próxima sesión:**
+- Verificar que el botón bookmark dentro de ScaleCard no dispara el onPress de la tarjeta en dispositivo físico.
+- Home con exactamente 1 recurso guardado: decidir si se completa con un default o se muestra 1 card full-width.
+- Google OAuth sigue sin funcionar en Expo Go (requiere dev build o configurar redirect URI en Supabase).
+- Botón "Editar perfil" en CoachProfileScreen sin `onPress` — pendiente implementar.
+
+---
+
 ## 2026-07-01 — Joaquín (sesión 32)
 
 **Tocado:** `app/(tabs)/recursos.tsx`, `app/(tabs)/index.tsx`, `scripts/add-saved-resources-rls.sql` (nuevo)
