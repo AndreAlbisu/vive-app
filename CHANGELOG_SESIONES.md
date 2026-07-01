@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-07-01 — Joaquín (sesión 31)
+
+**Tocado:** `theme/tokens.ts` (nuevo), `constants/theme.ts`, `components/ui/AppBg.tsx`, `components/ui/GlassCard.tsx`, `components/ui/ProgressToggle.tsx`, `components/ui/VitaHeader.tsx`, `components/ui/SegmentedPill.tsx` (nuevo), `components/ui/IconChip.tsx` (nuevo), `components/ui/SectionTitle.tsx` (nuevo), `app/(tabs)/_layout.tsx`, `app/(coach)/_layout.tsx`, `app/(tabs)/index.tsx`, `app/(tabs)/recursos.tsx`, `app/(tabs)/conexiones.tsx`, todos los screens en `screens/` (31 archivos), `app/progreso.tsx`, `app/search1.tsx`, `app/search2.tsx`, `app/search3.tsx`, `app/diario.tsx`, `app/gratitud.tsx`, `app/ia.tsx`, `scripts/apply_vita_theme.py` y v2/v3/v4.
+
+**Resumen:**
+- Rediseño visual completo de toda la app al sistema VITA: fondo crema cálido (LinearGradient `#F7EFE4→#EDE0CF`), texto oliva (`#565E32`/`#87835C`), acento terracota (`#C1694F`), glass cards con `rgba(255,248,240,0.55)` + border `rgba(255,255,255,0.65)`.
+- Creado `theme/tokens.ts` con todos los tokens de diseño (colores, radii, blur, fonts). `ViveColors` actualizado para reflejar la nueva paleta.
+- Todos los `rgba(255,255,255,X)` oscuros/semitransparentes reemplazados por equivalentes oliva; todos los `barStyle="light-content"` → `"dark-content"`. Overlays oscuros (`rgba(15,10,40,0.80)`) en footers de booking → crema opaca.
+- Texto en avatares/botones coloreados (terracota, apple dark button) revertido correctamente a blanco. Texto en botones CTA oliva → crema `#F7EFE4`. Sin cambios en lógica, navegación ni datos.
+- Commit: `ffd928e4` — pusheado a `origin` y `andre`.
+
+**Pendiente para la próxima sesión:**
+- Testing visual en dispositivo físico: verificar contraste en todos los estados (hover, selected, disabled) especialmente en chips de horario, dots de paginación y tab bar.
+- Si Andre tiene pantallas propias (`ia.tsx`, video en ProfesionalScreen) verificar que el diseño nuevo se vea bien con su contenido.
+- Decidir si usar `Fraunces_500Medium`/`_600SemiBold` además del `_700Bold` ya cargado, para afinar el wordmark.
+
+---
+
 ## 2026-06-30 — Andre (sesión 30)
 
 **Tocado:** `context/AuthContext.tsx`, `screens/LoginScreen.tsx`, `components/AuthModal.tsx`
