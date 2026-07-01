@@ -15,6 +15,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 const MONTHS_SHORT = [
   'ene','feb','mar','abr','may','jun',
@@ -37,6 +38,7 @@ type Params = {
 
 export default function BookingScreen_Time() {
   const router = useRouter();
+  const { user } = useAuth();
   const params = useLocalSearchParams<Params>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [times, setTimes] = useState<{ label: string; available: boolean }[]>([]);
@@ -68,13 +70,22 @@ export default function BookingScreen_Time() {
           .eq('date', dateStr),
         supabase
           .from('bookings')
-          .select('scheduled_time')
+          .select('scheduled_time, user_id, status')
           .eq('coach_id', coachesId)
           .eq('scheduled_date', dateStr)
-          .eq('status', 'confirmada'),
+          .in('status', ['pendiente', 'confirmada']),
       ]);
 
-      const bookedSet = new Set(booked?.map(b => b.scheduled_time) ?? []);
+      // Un horario queda ocupado para todos si ya está 'confirmada' (cualquier
+      // usuario), y ocupado solo para VOS si vos ya tenés una 'pendiente' ahí
+      // — así el mismo usuario no puede mandar dos solicitudes al mismo slot,
+      // pero distintos usuarios sí pueden competir por él (el coach elige a
+      // cuál acepta y las demás se cancelan automáticamente, ver SCHEMA.md).
+      const bookedSet = new Set(
+        (booked ?? [])
+          .filter(b => b.status === 'confirmada' || b.user_id === user?.id)
+          .map(b => b.scheduled_time)
+      );
 
       const sorted = [...(slots ?? [])].sort((a, b) => {
         const [ah, am = 0] = a.time.split(':').map(Number);
@@ -94,7 +105,7 @@ export default function BookingScreen_Time() {
       }));
       setLoading(false);
     })();
-  }, [params.coachId, dateStr]);
+  }, [params.coachId, dateStr, user?.id]);
 
   function onSeguimos() {
     if (!selectedTime) return;

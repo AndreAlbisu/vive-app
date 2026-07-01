@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-07-01 — Andre (sesión 38)
+
+**Tocado:** `screens/BookingScreen_Time.tsx`, `screens/BookingScreen_Calendar.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- Bug reportado por Andre al probar la reserva con "Coach Prueba": mandaba una solicitud, y el mismo horario seguía apareciendo disponible para volver a reservarlo — un usuario podía enviar 2 solicitudes al mismo slot. Causa: ambas pantallas solo marcaban un horario ocupado si había una reserva `'confirmada'`, ignorando las `'pendiente'` por completo.
+- Fix: un horario ahora se marca ocupado también si el usuario logueado ya tiene una reserva `'pendiente'` propia ahí — pero **solo para él**. Las solicitudes `'pendiente'` de otros usuarios NO bloquean el slot a propósito, porque el diseño existente permite que varios usuarios compitan por el mismo horario y el coach elige a cuál acepta (la cancelación automática de las demás ya vivía en `CoachReservasScreen.tsx → accept()`, sin tocar).
+- `SCHEMA.md` regla 9 actualizada con el criterio nuevo de disponibilidad.
+- (Nota de contexto para la próxima sesión: el error "No encontramos el profesional" que reportó Andre en la sesión anterior era por no haber corrido todavía `scripts/add-coach-instant-booking.sql` en Supabase — sigue pendiente, ver sesión 37.)
+
+**Pendiente para la próxima sesión:**
+- Seguir sin correr `scripts/add-coach-instant-booking.sql` en Supabase — bloqueante para probar la modalidad instantánea y para que el booking normal no tire error al hacer `select('instant_booking')`.
+- Probar en dispositivo: mandar una solicitud pendiente y confirmar que ese mismo horario aparece ocupado solo para ese usuario, no para otro usuario distinto logueado con otra cuenta.
+
+---
+
 ## 2026-07-01 — Andre (sesión 37)
 
 **Tocado:** `screens/BookingScreen_Calendar.tsx`, `screens/BookingScreen_Time.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/BookingScreen_Success.tsx`, `screens/CoachProfileScreen.tsx`, `scripts/add-coach-instant-booking.sql` (nuevo, **no corrido todavía en Supabase**), `SCHEMA.md`

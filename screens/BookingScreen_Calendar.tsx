@@ -14,6 +14,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 const MONTH_NAMES = [
   'Enero','Febrero','Marzo','Abril','Mayo','Junio',
@@ -38,6 +39,7 @@ type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?:
 
 export default function BookingScreen_Calendar() {
   const router = useRouter();
+  const { user } = useAuth();
   const params = useLocalSearchParams<Params>();
 
   const today = new Date();
@@ -73,14 +75,20 @@ export default function BookingScreen_Calendar() {
           .gte('date', todayStr),
         supabase
           .from('bookings')
-          .select('scheduled_date, scheduled_time')
+          .select('scheduled_date, scheduled_time, user_id, status')
           .eq('coach_id', coachesId)
-          .eq('status', 'confirmada')
+          .in('status', ['pendiente', 'confirmada'])
           .gte('scheduled_date', todayStr),
       ]);
 
+      // Mismo criterio que BookingScreen_Time: 'confirmada' ocupa el slot
+      // para todos, 'pendiente' propia ocupa el slot solo para vos — evita
+      // que mandes 2 solicitudes al mismo horario sin bloquear que otros
+      // usuarios compitan por él.
       const bookedSet = new Set(
-        booked?.map(b => `${b.scheduled_date}|${b.scheduled_time}`) ?? []
+        (booked ?? [])
+          .filter(b => b.status === 'confirmada' || b.user_id === user?.id)
+          .map(b => `${b.scheduled_date}|${b.scheduled_time}`)
       );
 
       const slotsByDate = new Map<string, string[]>();
@@ -107,7 +115,7 @@ export default function BookingScreen_Calendar() {
       setAvailableDates(available);
       setLoadingDates(false);
     })();
-  }, [params.coachId]);
+  }, [params.coachId, user?.id]);
 
   function prevMonth() {
     if (isCurrentMonth) return;
