@@ -10,6 +10,7 @@ import {
   NativeScrollEvent,
   ActivityIndicator,
   StatusBar,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -48,6 +49,7 @@ type CoachItem = {
   name: string;
   specialty: string;
   priceFrom: number;
+  avatarUrl: string | null;
 };
 
 // ─── Constantes de diseño ─────────────────────────────────────────────────
@@ -98,7 +100,7 @@ export default function ConexionesScreen() {
   useEffect(() => {
     supabase
       .from('coaches')
-      .select('specialty, price_per_session, profiles!inner(id, name)')
+      .select('specialty, price_per_session, profiles!inner(id, name, avatar_url)')
       .eq('verified', true)
       .limit(5)
       .then(({ data, error }) => {
@@ -112,6 +114,7 @@ export default function ConexionesScreen() {
             name: profile?.name as string,
             specialty: c.specialty as string,
             priceFrom: c.price_per_session as number,
+            avatarUrl: (profile?.avatar_url ?? null) as string | null,
           };
         });
         setCoaches(rows);
@@ -249,9 +252,13 @@ export default function ConexionesScreen() {
               />
             ) : coaches.map(coach => (
               <ScaleCard key={coach.profileId} style={s.coachCard} onPress={() => goToPerfil(coach)}>
-                {/* Foto placeholder */}
+                {/* Foto */}
                 <View style={s.coachPhoto}>
-                  <MaterialIcons name="person" size={42} color="rgba(135,131,92,0.72)" />
+                  {coach.avatarUrl ? (
+                    <Image source={{ uri: coach.avatarUrl }} style={s.coachPhotoImage} />
+                  ) : (
+                    <MaterialIcons name="person" size={42} color="rgba(135,131,92,0.72)" />
+                  )}
                   <TouchableOpacity
                     style={s.favBtn}
                     onPress={() => toggleFav(coach.profileId)}
@@ -448,6 +455,11 @@ const s = StyleSheet.create({
     borderTopRightRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  coachPhotoImage: {
+    width: COACH_W,
+    height: 82,
   },
   favBtn: {
     position: 'absolute',

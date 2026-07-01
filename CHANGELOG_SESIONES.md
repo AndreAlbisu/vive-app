@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-07-01 — Andre (sesión 43)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`
+
+**Resumen:**
+- Andre notó que la sección "Destacados de la semana" tampoco mostraba la foto real del coach — mismo bug que `search3.tsx` (sesión 40): el query a `coaches` no traía `avatar_url`.
+- Fix: join cambiado a `profiles!inner(id, name, avatar_url)`, y la card de coach ahora muestra la foto real (con `overflow: hidden` en el contenedor para respetar el borde redondeado superior) o el ícono genérico si no subió foto.
+
+**Pendiente para la próxima sesión:**
+- Sigue pendiente correr `scripts/add-coach-instant-booking.sql` (sesión 37).
+
+---
+
 ## 2026-07-01 — Andre (sesión 42)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`
