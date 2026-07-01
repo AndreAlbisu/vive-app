@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-07-01 — Andre (sesión 46)
+
+**Tocado:** `screens/SalaScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- Bug reportado por Andre: se podía chatear libremente en la Sala aunque la reserva siguiera `'pendiente'` (el coach todavía no aceptó ni rechazó). Esto contradice una decisión de producto ya documentada en Notion ("Mensaje previo a la aceptación del coach"): el chat es unidireccional antes de aceptar (solo existe el mensaje opcional que el usuario deja al reservar) — nunca se había implementado esa restricción en `SalaScreen.tsx`.
+- Fix: `isChatFrozen = confirmedBooking?.status === 'pendiente'`. Mientras es `true`, el input y botón de enviar se reemplazan por un aviso explicando por qué está congelado (texto distinto para usuario y coach), y `sendMessage()` corta temprano como defensa en profundidad. El estado vacío de la lista de mensajes también cambia de copy si está congelado, para no invitar a "empezar la conversación" cuando en realidad está bloqueada.
+- Se destranca solo — apenas el booking pasa a `'confirmada'` (el coach acepta) o deja de haber un `'pendiente'` activo (se cancela/rechaza y eventualmente se pide otro horario), el chat vuelve a funcionar normal, sin código nuevo necesario (ya lee `confirmedBooking` en tiempo real vía la suscripción existente).
+- `SCHEMA.md` regla nueva 16, citando la decisión de Notion.
+
+**Pendiente para la próxima sesión:**
+- Probar en dispositivo: crear una reserva pendiente, confirmar que el chat queda congelado para ambos lados (usuario y coach), y que se destranca solo al aceptar/rechazar.
+- Sigue pendiente correr `scripts/add-coach-instant-booking.sql` (sesión 37) y `scripts/add-avatar-upload.sql` en cualquier ambiente que no lo haya corrido todavía.
+
+---
+
 ## 2026-07-01 — Andre (sesión 45)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`, `screens/ProfesionalScreen.tsx`, `hooks/useFavoriteCoaches.ts` (nuevo), `screens/FavoritosScreen.tsx` (nuevo), `app/favoritos.tsx` (nuevo), `app/_layout.tsx`, `scripts/add-favorite-coaches.sql` (nuevo, **no corrido todavía en Supabase**), `SCHEMA.md`

@@ -454,6 +454,9 @@ export default function SalaScreen() {
   async function sendMessage() {
     const text = inputText.trim();
     if (!text || !salaId || !user) return;
+    // Chat congelado hasta que el coach acepte/rechace la solicitud — evita
+    // que coach y usuario se pongan en contacto antes de un compromiso formal.
+    if (confirmedBooking?.status === 'pendiente') return;
 
     const encrypted = encryptMessage(text);
     const optimisticId = `opt_${Date.now()}`;
@@ -493,7 +496,8 @@ export default function SalaScreen() {
   }
 
   const isCurrentUserCoach = !recipientIsCoach;
-  const canSend = inputText.trim().length > 0 && !!salaId && !!user;
+  const isChatFrozen = confirmedBooking?.status === 'pendiente';
+  const canSend = inputText.trim().length > 0 && !!salaId && !!user && !isChatFrozen;
   const displayInitials = recipientProfile?.initials ?? '···';
 
   return (
@@ -624,7 +628,9 @@ export default function SalaScreen() {
           )}
           {!loading && messages.length === 0 && (
             <Text style={styles.emptyText}>
-              Todavía no hay mensajes.{'\n'}¡Empezá la conversación!
+              {isChatFrozen
+                ? `Todavía no hay mensajes.\nEl chat se habilita cuando ${isCurrentUserCoach ? 'respondas' : 'el coach responda'} la solicitud.`
+                : 'Todavía no hay mensajes.\n¡Empezá la conversación!'}
             </Text>
           )}
           {messages.map((msg) => {
@@ -713,23 +719,36 @@ export default function SalaScreen() {
             },
           ]}
         >
-          <TextInput
-            style={styles.input}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Escribí un mensaje..."
-            placeholderTextColor="rgba(135,131,92,0.55)"
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
-            onPress={sendMessage}
-            disabled={!canSend}
-            activeOpacity={0.75}
-          >
-            <MaterialCommunityIcons name="send" size={19} color="#565E32" style={{ marginLeft: 2 }} />
-          </TouchableOpacity>
+          {isChatFrozen ? (
+            <View style={styles.frozenNotice}>
+              <MaterialCommunityIcons name="lock-outline" size={16} color="rgba(135,131,92,0.70)" />
+              <Text style={styles.frozenNoticeText}>
+                {isCurrentUserCoach
+                  ? 'Aceptá o rechazá la solicitud desde Reservas para habilitar el chat.'
+                  : 'El chat se habilita cuando el coach acepte tu solicitud.'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <TextInput
+                style={styles.input}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Escribí un mensaje..."
+                placeholderTextColor="rgba(135,131,92,0.55)"
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity
+                style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
+                onPress={sendMessage}
+                disabled={!canSend}
+                activeOpacity={0.75}
+              >
+                <MaterialCommunityIcons name="send" size={19} color="#565E32" style={{ marginLeft: 2 }} />
+              </TouchableOpacity>
+            </>
+          )}
         </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -1033,6 +1052,23 @@ const styles = StyleSheet.create({
     paddingBottom: 11,
     maxHeight: 120,
     lineHeight: 21,
+  },
+  frozenNotice: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,248,240,0.48)',
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  frozenNoticeText: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: 'rgba(135,131,92,0.80)',
+    lineHeight: 18,
   },
   sendBtn: {
     width: 42,
