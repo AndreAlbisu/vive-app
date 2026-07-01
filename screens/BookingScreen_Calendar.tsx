@@ -88,9 +88,20 @@ export default function BookingScreen_Calendar() {
         slotsByDate.set(date, [...(slotsByDate.get(date) ?? []), time]);
       });
 
+      const nowMinutes = today.getHours() * 60 + today.getMinutes();
+
       const available = new Set<string>();
       slotsByDate.forEach((times, date) => {
-        if (times.some(t => !bookedSet.has(`${date}|${t}`))) available.add(date);
+        const isToday = date === todayStr;
+        const hasFreeSlot = times.some(t => {
+          if (bookedSet.has(`${date}|${t}`)) return false;
+          if (isToday) {
+            const [th, tm = 0] = t.split(':').map(Number);
+            if (th * 60 + tm <= nowMinutes) return false;
+          }
+          return true;
+        });
+        if (hasFreeSlot) available.add(date);
       });
 
       setAvailableDates(available);

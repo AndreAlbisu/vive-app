@@ -32,6 +32,7 @@ type CoachProfile = {
   price_per_session: number | null;
   nationality: string | null;
   video_url: string | null;
+  instant_booking: boolean;
 };
 
 type ReceivedReview = {
@@ -57,7 +58,6 @@ function getInitials(name: string): string {
 export default function CoachProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const [instantMode, setInstantMode] = useState(false);
   const [profile, setProfile] = useState<CoachProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [noCoachProfile, setNoCoachProfile] = useState(false);
@@ -68,6 +68,7 @@ export default function CoachProfileScreen() {
   const [editingPrice, setEditingPrice] = useState(false);
   const [priceInput, setPriceInput] = useState('');
   const [savingPrice, setSavingPrice] = useState(false);
+  const [savingInstantMode, setSavingInstantMode] = useState(false);
 
   useEffect(() => {
     if (!user) { setLoadingProfile(false); return; }
@@ -75,7 +76,7 @@ export default function CoachProfileScreen() {
     (async () => {
       const [{ data: profileRow }, { data: coachRow }] = await Promise.all([
         supabase.from('profiles').select('name').eq('id', user.id).single(),
-        supabase.from('coaches').select('specialty, bio, price_per_session, nationality, video_url').eq('profile_id', user.id).maybeSingle(),
+        supabase.from('coaches').select('specialty, bio, price_per_session, nationality, video_url, instant_booking').eq('profile_id', user.id).maybeSingle(),
       ]);
 
       setProfile({
@@ -85,6 +86,7 @@ export default function CoachProfileScreen() {
         price_per_session: coachRow?.price_per_session ?? null,
         nationality: coachRow?.nationality ?? null,
         video_url: coachRow?.video_url ?? null,
+        instant_booking: coachRow?.instant_booking ?? false,
       });
       setNoCoachProfile(!coachRow);
       setLoadingProfile(false);
@@ -164,6 +166,24 @@ export default function CoachProfileScreen() {
 
     setProfile(prev => prev ? { ...prev, price_per_session: parsed } : prev);
     setEditingPrice(false);
+  }
+
+  async function toggleInstantMode(value: boolean) {
+    if (!user || savingInstantMode) return;
+    setProfile(prev => prev ? { ...prev, instant_booking: value } : prev);
+    setSavingInstantMode(true);
+
+    const { data, error } = await supabase
+      .from('coaches')
+      .update({ instant_booking: value })
+      .eq('profile_id', user.id)
+      .select('instant_booking');
+    setSavingInstantMode(false);
+
+    if (error || !data || data.length === 0) {
+      setProfile(prev => prev ? { ...prev, instant_booking: !value } : prev);
+      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
+    }
   }
 
   async function uploadVideo(uri: string, mimeType: string | null | undefined) {
@@ -355,16 +375,17 @@ export default function CoachProfileScreen() {
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Modalidad de reserva</Text>
         <View style={s.toggleCard}>
           <View style={s.toggleInfo}>
-            <Text style={s.toggleTitle}>{instantMode ? 'Instantánea' : 'Con confirmación'}</Text>
+            <Text style={s.toggleTitle}>{profile?.instant_booking ? 'Instantánea' : 'Con confirmación'}</Text>
             <Text style={s.toggleDesc}>
-              {instantMode
+              {profile?.instant_booking
                 ? 'Los usuarios reservan directamente sin esperar tu aprobación.'
                 : 'Cada reserva requiere tu confirmación antes de quedar fijada.'}
             </Text>
           </View>
           <Switch
-            value={instantMode}
-            onValueChange={setInstantMode}
+            value={!!profile?.instant_booking}
+            onValueChange={toggleInstantMode}
+            disabled={noCoachProfile || savingInstantMode}
             trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
             thumbColor="#FFFFFF"
             ios_backgroundColor={`${ViveColors.text}25`}

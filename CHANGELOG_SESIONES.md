@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-07-01 — Andre (sesión 37)
+
+**Tocado:** `screens/BookingScreen_Calendar.tsx`, `screens/BookingScreen_Time.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/BookingScreen_Success.tsx`, `screens/CoachProfileScreen.tsx`, `scripts/add-coach-instant-booking.sql` (nuevo, **no corrido todavía en Supabase**), `SCHEMA.md`
+
+**Resumen:**
+- Bug encontrado por Andre: el booking permitía reservar horarios de hoy que ya pasaron (ej. 7am reservable a las 5pm del mismo día). `BookingScreen_Time.tsx` marcaba un slot como disponible únicamente chequeando si estaba reservado, sin comparar la hora contra el momento actual. Fix: si la fecha elegida es hoy, cualquier horario `<= ahora` se marca no disponible. Mismo criterio aplicado en `BookingScreen_Calendar.tsx` para que el día de hoy no quede seleccionable si a todos sus slots restantes ya les pasó la hora.
+- Feature: la "modalidad de reserva" (Instantánea / Con confirmación) existía como switch puramente visual en `CoachProfileScreen.tsx` desde el rediseño VITA (sesión 31) — sin persistencia ni columna en la base. Se implementó de punta a punta:
+  - **DB:** nueva columna `coaches.instant_booking` (boolean, default false) — script en `scripts/add-coach-instant-booking.sql`, **pendiente de correr en Supabase**.
+  - El switch en `CoachProfileScreen.tsx` ahora lee y persiste el valor real (mismo patrón que `savePrice()`: chequea `data` post-update para detectar bloqueo silencioso de RLS).
+  - `BookingScreen_Confirm.tsx`: si el coach tiene `instant_booking=true`, el booking se crea directo con `status='confirmada'` (no `'pendiente'`), y se replican ahí mismo los efectos que hoy dispara `CoachReservasScreen.tsx → accept()` — notificación `reserva_confirmada` al usuario, mensaje `system_confirmed` en la sala, y cancelación automática de otras reservas `'pendiente'` que compitan por el mismo horario. Lógica duplicada a propósito, no extraída a un helper compartido, para no tocar `accept()` (tiene datos reales de testing).
+  - Copy condicional según el modo en `BookingScreen_Confirm.tsx` (texto de modalidad, aviso de cobro, pregunta del mensaje opcional) y en `BookingScreen_Success.tsx` (título, subtítulo y badge de estado).
+- `SCHEMA.md` actualizado: columna `coaches.instant_booking` documentada, y regla nueva (13) explicando la duplicación de lógica y que la columna todavía no está corrida en producción.
+
+**Pendiente para la próxima sesión:**
+- **Correr `scripts/add-coach-instant-booking.sql` en el SQL Editor de Supabase** — hasta entonces el switch de modalidad falla en silencio (0 filas afectadas) y todo coach sigue funcionando en modo "con confirmación" de hecho, aunque el `select` de `instant_booking` puede además tirar error de columna inexistente.
+- Probar en dispositivo físico el flujo instantáneo completo: activar el switch como coach, reservar como usuario, confirmar que la sala recibe el mensaje `system_confirmed` y que un segundo usuario compitiendo por el mismo horario recibe la cancelación automática.
+- Con más días de check-in acumulados, verificar que el gráfico de mood en progreso se lea bien.
+- Considerar leyenda de colores de mood al costado del gráfico.
+- Google OAuth pendiente (dev build).
+- Botón "Editar perfil" en CoachProfileScreen sin `onPress`.
+
+---
+
 ## 2026-07-01 — Joaquín (sesión 36)
 
 **Tocado:** `app/(tabs)/index.tsx`, `app/(tabs)/_layout.tsx`

@@ -82,7 +82,16 @@ export default function BookingScreen_Time() {
         return ah * 60 + am - (bh * 60 + bm);
       });
 
-      setTimes(sorted.map(s => ({ label: s.time, available: !bookedSet.has(s.time) })));
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const isToday = dateStr === todayStr;
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+      setTimes(sorted.map(s => {
+        const [sh, sm = 0] = s.time.split(':').map(Number);
+        const isPast = isToday && sh * 60 + sm <= nowMinutes;
+        return { label: s.time, available: !bookedSet.has(s.time) && !isPast };
+      }));
       setLoading(false);
     })();
   }, [params.coachId, dateStr]);

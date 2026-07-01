@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
 import { logError } from '@/lib/logging';
+import { encryptMessage } from '@/lib/encryption';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MONTH_NAMES = [
@@ -49,6 +50,7 @@ export default function BookingScreen_Confirm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userMessage, setUserMessage] = useState('');
+  const [instantBooking, setInstantBooking] = useState(false);
 
   const coachName = params.name ?? 'Laura Méndez';
   const specialty = params.specialty ?? 'Coach de vida';
@@ -57,6 +59,20 @@ export default function BookingScreen_Confirm() {
   const time = params.time ?? '';
   // coachId que llega por params es profiles.id (= coaches.profile_id), NO coaches.id
   const coachProfileIdParam = Array.isArray(params.coachId) ? params.coachId[0] : params.coachId;
+
+  // Solo para mostrar el copy correcto antes de confirmar — onConfirm vuelve
+  // a leer el flag al momento de reservar, por si cambió mientras tanto.
+  useEffect(() => {
+    if (!coachProfileIdParam) return;
+    (async () => {
+      const { data } = await supabase
+        .from('coaches')
+        .select('instant_booking')
+        .eq('profile_id', coachProfileIdParam)
+        .maybeSingle();
+      setInstantBooking(!!data?.instant_booking);
+    })();
+  }, [coachProfileIdParam]);
 
   async function onConfirm() {
     if (!isLoggedIn || !user) { requestAuth(); return; }
@@ -74,7 +90,7 @@ export default function BookingScreen_Confirm() {
       //    bookings.coach_id → coaches.id          (FK a coaches.id)
       const { data: coachRow, error: coachErr } = await supabase
         .from('coaches')
-        .select('id, profile_id')
+        .select('id, profile_id, instant_booking')
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
 
@@ -84,6 +100,7 @@ export default function BookingScreen_Confirm() {
 
       const coachId = coachRow.id;              // coaches.id — para bookings.coach_id
       const coachProfileId = coachRow.profile_id; // profiles.id — para salas.coach_id
+      const isInstant = !!coachRow.instant_booking;
 
       await registrarEvento('reserva_iniciada', {
         professional_id: coachId,
@@ -127,7 +144,7 @@ export default function BookingScreen_Confirm() {
           scheduled_date: dateStr,
           scheduled_time: time,
           amount: priceFrom,
-          status: 'pendiente',
+          status: isInstant ? 'confirmada' : 'pendiente',
           ...(userMessage.trim() ? { user_message: userMessage.trim() } : {}),
         })
         .select('id')
@@ -152,13 +169,96 @@ export default function BookingScreen_Confirm() {
         .eq('id', coachProfileId)
         .maybeSingle();
 
+      const userName = user.user_metadata?.name ?? 'Un usuario';
+
       if (coachProfile?.push_token) {
-        const userName = user.user_metadata?.name ?? 'Un usuario';
         await sendPushNotification(
           coachProfile.push_token,
-          'Nueva solicitud de sesión 📅',
-          `${userName} quiere reservar una sesión el ${formatDate(dateStr)} a las ${time} hs`,
+          isInstant ? 'Nueva reserva confirmada 📅' : 'Nueva solicitud de sesión 📅',
+          isInstant
+            ? `${userName} reservó una sesión el ${formatDate(dateStr)} a las ${time} hs. Ya está confirmada.`
+            : `${userName} quiere reservar una sesión el ${formatDate(dateStr)} a las ${time} hs`,
         );
+      }
+
+      if (isInstant) {
+        // Reserva instantánea: mismos efectos que cuando el coach acepta
+        // manualmente en CoachReservasScreen — notificación al usuario,
+        // mensaje de sistema en la sala, y cancelación de otras solicitudes
+        // 'pendiente' que hayan quedado compitiendo por el mismo horario.
+        const notifTitle = '¡Tu sesión fue confirmada! ✅';
+        const notifBody = `Tu sesión con ${coachName} el ${formatDate(dateStr)} está confirmada`;
+
+        await supabase.from('notifications').insert({
+          recipient_id: user.id,
+          type: 'reserva_confirmada',
+          booking_id: booking.id,
+          title: notifTitle,
+          body: notifBody,
+        });
+
+        const confirmLine1 = `Sesión reservada · ${formatDate(dateStr)} · ${time} hs`;
+        const confirmMsg = userMessage.trim()
+          ? `${confirmLine1}\n${userMessage.trim()}`
+          : confirmLine1;
+        await supabase.from('messages').insert({
+          sala_id: salaId,
+          sender_id: user.id,
+          sender_type: 'system_confirmed',
+          content: encryptMessage(confirmMsg),
+        });
+
+        const { data: conflicting } = await supabase
+          .from('bookings')
+          .select('id, user_id, sala_id')
+          .eq('coach_id', coachId)
+          .eq('scheduled_date', dateStr)
+          .eq('scheduled_time', time)
+          .eq('status', 'pendiente')
+          .neq('id', booking.id);
+
+        if (conflicting && conflicting.length > 0) {
+          const conflictUserIds = conflicting.map(b => b.user_id);
+          const { data: conflictProfiles } = await supabase
+            .from('profiles')
+            .select('id, push_token')
+            .in('id', conflictUserIds);
+
+          const tokenMap: Record<string, string | null> = {};
+          conflictProfiles?.forEach(p => { tokenMap[p.id] = p.push_token ?? null; });
+
+          const cancelTitle = 'Horario no disponible';
+          const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu coach.';
+          const cancelSystemMsg = `Solicitud cancelada automáticamente\n${formatDate(dateStr)} · ${time} hs`;
+
+          await Promise.all(
+            conflicting.map((cb) => {
+              const ops: PromiseLike<unknown>[] = [
+                supabase.from('bookings').update({ status: 'cancelada' }).eq('id', cb.id),
+                supabase.from('notifications').insert({
+                  recipient_id: cb.user_id,
+                  type: 'reserva_cancelada',
+                  booking_id: cb.id,
+                  title: cancelTitle,
+                  body: cancelBody,
+                }),
+              ];
+              if (cb.sala_id) {
+                ops.push(
+                  supabase.from('messages').insert({
+                    sala_id: cb.sala_id,
+                    sender_id: user.id,
+                    sender_type: 'system_cancelled',
+                    content: encryptMessage(cancelSystemMsg),
+                  })
+                );
+              }
+              const token = tokenMap[cb.user_id];
+              if (token) ops.push(sendPushNotification(token, cancelTitle, cancelBody));
+              return Promise.all(ops);
+            })
+          );
+        }
       }
 
       router.replace({
@@ -171,6 +271,7 @@ export default function BookingScreen_Confirm() {
           bookingId: booking.id,
           roomUrl,
           salaId,
+          instant: isInstant ? '1' : '0',
         },
       });
     } catch (e: any) {
@@ -262,7 +363,9 @@ export default function BookingScreen_Confirm() {
           <View style={s.modalityBox}>
             <MaterialIcons name="info-outline" size={15} color="rgba(135,131,92,0.80)" />
             <Text style={s.modalityText}>
-              Reserva con confirmación — el coach tiene 24hs para aceptar
+              {instantBooking
+                ? 'Reserva instantánea — tu sesión queda confirmada al instante'
+                : 'Reserva con confirmación — el coach tiene 24hs para aceptar'}
             </Text>
           </View>
         </View>
@@ -270,12 +373,18 @@ export default function BookingScreen_Confirm() {
         {/* Aviso no cobro */}
         <View style={s.noticeRow}>
           <MaterialIcons name="shield" size={15} color={ViveColors.accent} />
-          <Text style={s.noticeText}>No se te cobra hasta que el coach acepte</Text>
+          <Text style={s.noticeText}>
+            {instantBooking
+              ? 'Tu sesión ya queda confirmada al reservar'
+              : 'No se te cobra hasta que el coach acepte'}
+          </Text>
         </View>
 
         {/* Mensaje opcional */}
         <View style={s.messageSection}>
-          <Text style={s.messageTitle}>¿Querés contarle algo antes de que acepte?</Text>
+          <Text style={s.messageTitle}>
+            {instantBooking ? '¿Querés contarle algo al coach?' : '¿Querés contarle algo antes de que acepte?'}
+          </Text>
           <Text style={s.messageSubtitle}>Es opcional. Le ayuda al coach a entender mejor tu situación.</Text>
           <View style={s.messageInputWrap}>
             <TextInput

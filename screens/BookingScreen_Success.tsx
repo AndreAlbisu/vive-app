@@ -33,6 +33,7 @@ type Params = {
   date?: string;
   time?: string;
   salaId?: string;
+  instant?: string;
 };
 
 export default function BookingScreen_Success() {
@@ -44,6 +45,7 @@ export default function BookingScreen_Success() {
   const dateStr = params.date ?? '';
   const time = params.time ?? '';
   const salaId = params.salaId ?? '';
+  const isInstant = params.instant === '1';
 
   const firstName = coachName.split(' ')[0];
   const formattedDate = formatDate(dateStr);
@@ -81,12 +83,16 @@ export default function BookingScreen_Success() {
           </Animated.View>
 
           <Animated.View style={[s.textBlock, { opacity: contentOpacity }]}>
-            <Text style={s.title}>¡Reserva enviada!</Text>
+            <Text style={s.title}>{isInstant ? '¡Sesión confirmada!' : '¡Reserva enviada!'}</Text>
             <Text style={s.subtitle}>
-              Le avisamos a {firstName}. Tiene 24hs para confirmar tu sesión.
+              {isInstant
+                ? `Tu sesión con ${firstName} ya quedó confirmada.`
+                : `Le avisamos a ${firstName}. Tiene 24hs para confirmar tu sesión.`}
             </Text>
-            <View style={s.statusBadge}>
-              <Text style={s.statusBadgeText}>Pendiente de confirmación</Text>
+            <View style={[s.statusBadge, isInstant && s.statusBadgeConfirmed]}>
+              <Text style={[s.statusBadgeText, isInstant && s.statusBadgeTextConfirmed]}>
+                {isInstant ? 'Confirmada' : 'Pendiente de confirmación'}
+              </Text>
             </View>
           </Animated.View>
 
@@ -218,6 +224,12 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: ViveColors.primary,
     textAlign: 'center',
+  },
+  statusBadgeConfirmed: {
+    backgroundColor: `${ViveColors.accent}22`,
+  },
+  statusBadgeTextConfirmed: {
+    color: ViveColors.accent,
   },
 
   card: {
