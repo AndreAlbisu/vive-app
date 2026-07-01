@@ -11,6 +11,7 @@ import {
   PanResponder,
   Pressable,
   FlatList,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -27,6 +28,7 @@ type CoachResult = {
   specialty: string;
   priceFrom: number;
   nationality: string;
+  avatarUrl: string | null;
 };
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -136,7 +138,7 @@ export default function SearchScreen3() {
     setLoadingCoaches(true);
     supabase
       .from('coaches')
-      .select('specialty, price_per_session, nationality, profiles!inner(id, name)')
+      .select('specialty, price_per_session, nationality, profiles!inner(id, name, avatar_url)')
       .eq('verified', true)
       .limit(50)
       .then(({ data, error }) => {
@@ -152,6 +154,7 @@ export default function SearchScreen3() {
             specialty: c.specialty as string,
             priceFrom: c.price_per_session as number,
             nationality: (c.nationality ?? '') as string,
+            avatarUrl: (profile?.avatar_url ?? null) as string | null,
           };
         });
         const filtered = all.filter(c => {
@@ -252,9 +255,13 @@ export default function SearchScreen3() {
               },
             })}>
             {/* Foto */}
-            <View style={s.avatar}>
-              <MaterialIcons name="person" size={36} color="#C0BAB4" />
-            </View>
+            {p.avatarUrl ? (
+              <Image source={{ uri: p.avatarUrl }} style={s.avatarImage} />
+            ) : (
+              <View style={s.avatar}>
+                <MaterialIcons name="person" size={36} color="#C0BAB4" />
+              </View>
+            )}
             {/* Info */}
             <View style={s.cardInfo}>
               <View style={s.cardTop}>
@@ -508,6 +515,12 @@ const s = StyleSheet.create({
     backgroundColor: '#EDE7E0',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+  },
+  avatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     flexShrink: 0,
   },
   cardInfo: { flex: 1 },

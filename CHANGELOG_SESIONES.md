@@ -5,6 +5,21 @@
 
 ---
 
+## 2026-07-01 — Andre (sesión 40)
+
+**Tocado:** `app/search3.tsx`
+
+**Resumen:**
+- Andre probó la foto de perfil de la sesión anterior: se ve bien en `ProfesionalScreen.tsx`, pero faltaba en la lista de resultados del buscador — seguía mostrando el ícono genérico de persona.
+- `search3.tsx` ahora trae `avatar_url` en el join a `profiles!inner(id, name, avatar_url)` y muestra la foto real en la card de cada coach si existe, con el mismo fallback al ícono genérico si no la subió.
+- Alcance acotado a `search3.tsx` (la única pantalla que lista coaches con avatar) — no se tocaron `BookingScreen_*`, `SessionsScreen.tsx` ni otras pantallas que también muestran coaches, quedan con el placeholder genérico salvo que se pida extenderlo.
+
+**Pendiente para la próxima sesión:**
+- Seguir sin correr `scripts/add-avatar-upload.sql` en algún ambiente que no lo tenga corrido todavía (en este ya se corrió, confirmado por Andre).
+- Sigue pendiente correr `scripts/add-coach-instant-booking.sql` (sesión 37).
+
+---
+
 ## 2026-07-01 — Andre (sesión 39)
 
 **Tocado:** `screens/CoachProfileScreen.tsx`, `screens/ProfesionalScreen.tsx`, `scripts/add-avatar-upload.sql` (nuevo, **no corrido todavía en Supabase**), `SCHEMA.md`
