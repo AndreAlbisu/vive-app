@@ -8,6 +8,7 @@ import {
   ScrollView as RNScrollView,
   Animated,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -22,6 +23,7 @@ type SalaItem = {
   coach_id: string;
   otherName: string;
   otherInitials: string;
+  otherAvatarUrl: string | null;
   otherSpecialty?: string;
   lastMessage: string;
   lastMessageDate: string;
@@ -83,11 +85,11 @@ export default function SessionsScreen() {
 
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, name')
+      .select('id, name, avatar_url')
       .in('id', uniqueOtherIds);
 
-    const profileMap: Record<string, string> = {};
-    profiles?.forEach(p => { profileMap[p.id] = p.name ?? 'Usuario'; });
+    const profileMap: Record<string, { name: string; avatarUrl: string | null }> = {};
+    profiles?.forEach(p => { profileMap[p.id] = { name: p.name ?? 'Usuario', avatarUrl: p.avatar_url ?? null }; });
 
     const uniqueCoachIds = [...new Set(salasData.map(s => s.coach_id))];
     const { data: coachRows } = await supabase
@@ -100,7 +102,7 @@ export default function SessionsScreen() {
     const results: SalaItem[] = await Promise.all(
       salasData.map(async (sala) => {
         const otherId = sala.user_id === user.id ? sala.coach_id : sala.user_id;
-        const otherName = profileMap[otherId] ?? 'Usuario';
+        const otherName = profileMap[otherId]?.name ?? 'Usuario';
 
         const { data: lastMsg } = await supabase
           .from('messages')
@@ -115,6 +117,7 @@ export default function SessionsScreen() {
           coach_id: sala.coach_id,
           otherName,
           otherInitials: getInitials(otherName),
+          otherAvatarUrl: profileMap[otherId]?.avatarUrl ?? null,
           otherSpecialty: specialtyMap[sala.coach_id],
           lastMessage: lastMsg?.content ? decryptMessage(lastMsg.content) : 'Sin mensajes aún',
           lastMessageDate: lastMsg ? formatMessageDate(lastMsg.created_at) : '',
@@ -213,9 +216,13 @@ function SalaRow({
       }}
     >
       <TouchableOpacity style={styles.sessionRow} onPress={onPress} activeOpacity={0.75}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{sala.otherInitials}</Text>
-        </View>
+        {sala.otherAvatarUrl ? (
+          <Image source={{ uri: sala.otherAvatarUrl }} style={styles.avatarImage} />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{sala.otherInitials}</Text>
+          </View>
+        )}
 
         <View style={styles.sessionInfo}>
           <View style={styles.sessionTopRow}>
@@ -284,6 +291,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#FFFFFF',
     letterSpacing: 0.5,
+  },
+  avatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    flexShrink: 0,
   },
   sessionInfo: { flex: 1, gap: 2 },
   sessionTopRow: {

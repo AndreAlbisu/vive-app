@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   StatusBar,
   Linking,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -47,6 +48,7 @@ type RecipientProfile = {
   name: string;
   specialty?: string;
   initials: string;
+  avatarUrl: string | null;
 };
 
 function calcVideoWindow(booking: ConfirmedBooking): boolean {
@@ -211,7 +213,7 @@ export default function SalaScreen() {
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
       const [profileResult, bookingResult, msgsResult] = await Promise.all([
-        supabase.from('profiles').select('name').eq('id', resolvedRecipientId).single(),
+        supabase.from('profiles').select('name, avatar_url').eq('id', resolvedRecipientId).single(),
         supabase
           .from('bookings')
           .select('id, scheduled_date, scheduled_time, status, user_message')
@@ -231,6 +233,7 @@ export default function SalaScreen() {
       if (!mounted) return;
 
       const recipientName = (profileResult.data as any)?.name ?? '';
+      const recipientAvatarUrl = (profileResult.data as any)?.avatar_url ?? null;
       let specialty: string | undefined;
       if (isRecipientCoach) {
         const { data: coachRow } = await supabase
@@ -246,6 +249,7 @@ export default function SalaScreen() {
           name: recipientName,
           specialty,
           initials: recipientName ? buildInitials(recipientName) : '?',
+          avatarUrl: recipientAvatarUrl,
         });
         setConfirmedBooking(bookingResult.data?.[0] ?? null);
       }
@@ -525,9 +529,13 @@ export default function SalaScreen() {
           onPress={recipientIsCoach ? handleHeaderPress : undefined}
         >
           <View style={styles.avatarWrap}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{displayInitials}</Text>
-            </View>
+            {recipientProfile?.avatarUrl ? (
+              <Image source={{ uri: recipientProfile.avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{displayInitials}</Text>
+              </View>
+            )}
           </View>
           <View>
             {recipientProfile ? (
@@ -674,9 +682,13 @@ export default function SalaScreen() {
                 ]}
               >
                 {!isUser && (
-                  <View style={styles.avatarSmall}>
-                    <Text style={styles.avatarSmallText}>{displayInitials}</Text>
-                  </View>
+                  recipientProfile?.avatarUrl ? (
+                    <Image source={{ uri: recipientProfile.avatarUrl }} style={styles.avatarSmallImage} />
+                  ) : (
+                    <View style={styles.avatarSmall}>
+                      <Text style={styles.avatarSmallText}>{displayInitials}</Text>
+                    </View>
+                  )
                 )}
                 <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleCoach]}>
                   <Text style={[styles.bubbleText, isUser ? styles.bubbleTextUser : styles.bubbleTextCoach]}>
@@ -766,6 +778,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#FFFFFF',
     letterSpacing: 0.5,
+  },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   skeletonName: {
     width: 110,
@@ -885,6 +902,13 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#565E32',
     letterSpacing: 0.3,
+  },
+  avatarSmallImage: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    flexShrink: 0,
+    marginBottom: 2,
   },
   bubble: {
     maxWidth: '74%',

@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useSegments } from 'expo-router';
@@ -37,6 +38,7 @@ interface Booking {
   user_message: string | null;
   userName: string;
   initials: string;
+  avatarUrl: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -129,14 +131,14 @@ export default function CoachReservasScreen() {
     const userIds = [...new Set(rows.map(r => r.user_id))];
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, name')
+      .select('id, name, avatar_url')
       .in('id', userIds);
 
-    const profileMap: Record<string, string> = {};
-    profiles?.forEach(p => { profileMap[p.id] = p.name ?? 'Usuario'; });
+    const profileMap: Record<string, { name: string; avatarUrl: string | null }> = {};
+    profiles?.forEach(p => { profileMap[p.id] = { name: p.name ?? 'Usuario', avatarUrl: p.avatar_url ?? null }; });
 
     const merged: Booking[] = rows.map(r => {
-      const name = profileMap[r.user_id] ?? 'Usuario';
+      const name = profileMap[r.user_id]?.name ?? 'Usuario';
       return {
         id: r.id,
         user_id: r.user_id,
@@ -149,6 +151,7 @@ export default function CoachReservasScreen() {
         user_message: r.user_message ?? null,
         userName: name,
         initials: getInitials(name),
+        avatarUrl: profileMap[r.user_id]?.avatarUrl ?? null,
       };
     });
 
@@ -457,9 +460,13 @@ export default function CoachReservasScreen() {
               return (
                 <View key={b.id} style={s.pendingCard}>
                   <View style={s.cardHeader}>
-                    <View style={s.avatar}>
-                      <Text style={s.avatarText}>{b.initials}</Text>
-                    </View>
+                    {b.avatarUrl ? (
+                      <Image source={{ uri: b.avatarUrl }} style={s.avatarImage} />
+                    ) : (
+                      <View style={s.avatar}>
+                        <Text style={s.avatarText}>{b.initials}</Text>
+                      </View>
+                    )}
                     <View style={s.cardInfo}>
                       <Text style={s.cardName}>{b.userName}</Text>
                       <Text style={s.cardDate}>{formatBookingDate(b.scheduled_date)} · {b.scheduled_time} hs</Text>
@@ -510,9 +517,13 @@ export default function CoachReservasScreen() {
           ) : (
             confirmed.map(b => (
               <View key={b.id} style={s.confirmedCard}>
-                <View style={[s.avatar, s.avatarConfirmed]}>
-                  <Text style={s.avatarText}>{b.initials}</Text>
-                </View>
+                {b.avatarUrl ? (
+                  <Image source={{ uri: b.avatarUrl }} style={s.avatarImage} />
+                ) : (
+                  <View style={[s.avatar, s.avatarConfirmed]}>
+                    <Text style={s.avatarText}>{b.initials}</Text>
+                  </View>
+                )}
                 <View style={s.cardInfo}>
                   <Text style={s.cardName}>{b.userName}</Text>
                   <Text style={s.cardDate}>{formatBookingDate(b.scheduled_date)} · {b.scheduled_time} hs</Text>
@@ -652,6 +663,12 @@ const s = StyleSheet.create({
   },
   avatarConfirmed: {
     backgroundColor: `${ViveColors.accent}20`,
+  },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    flexShrink: 0,
   },
   avatarText: {
     fontFamily: ViveFonts.bold,

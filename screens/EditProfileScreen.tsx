@@ -8,10 +8,14 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { File } from 'expo-file-system';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -28,8 +32,10 @@ export default function EditProfileScreen() {
   const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState<Gender>('Prefiero no decir');
   const [nationality, setNationality] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -42,7 +48,7 @@ export default function EditProfileScreen() {
     setLoading(true);
     const { data } = await supabase
       .from('profiles')
-      .select('name, birth_date, gender, nationality')
+      .select('name, birth_date, gender, nationality, avatar_url')
       .eq('id', user!.id)
       .single();
 
@@ -51,10 +57,84 @@ export default function EditProfileScreen() {
       setBirthDate(data.birth_date ? isoToDisplay(data.birth_date) : '');
       setGender((GENDER_OPTIONS as readonly string[]).includes(data.gender ?? '') ? data.gender : 'Prefiero no decir');
       setNationality(data.nationality ?? '');
+      setAvatarUrl(data.avatar_url ?? null);
     } else {
       setName(user?.user_metadata?.name ?? '');
     }
     setLoading(false);
+  }
+
+  async function uploadAvatar(uri: string, mimeType: string | null | undefined) {
+    if (!user) return;
+    setUploadingAvatar(true);
+    try {
+      const file = new File(uri);
+      const bytes = await file.bytes();
+      const path = `${user.id}/avatar.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, bytes, { contentType: mimeType ?? 'image/jpeg', upsert: true });
+
+      if (uploadError) {
+        Alert.alert('No se pudo subir la foto', 'Probá de nuevo en unos minutos.');
+        return;
+      }
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      // cache-bust: el path es siempre el mismo (upsert), así que sin esto
+      // el celular podría seguir mostrando la foto vieja desde caché.
+      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+
+      const { data: updateData, error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id)
+        .select('avatar_url');
+
+      if (updateError || !updateData || updateData.length === 0) {
+        Alert.alert('Foto subida', 'Pero no se pudo guardar en tu perfil. Probá de nuevo.');
+        return;
+      }
+
+      setAvatarUrl(publicUrl);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
+  async function launchAvatarPicker(source: 'camera' | 'library') {
+    const permission = source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert('Permiso necesario', 'Activá el permiso desde los ajustes del celular para continuar.');
+      return;
+    }
+
+    const options: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    };
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    await uploadAvatar(asset.uri, asset.mimeType);
+  }
+
+  function pickAvatar() {
+    Alert.alert('Foto de perfil', 'Elegí una opción', [
+      { text: 'Tomar foto', onPress: () => launchAvatarPicker('camera') },
+      { text: 'Elegir de la galería', onPress: () => launchAvatarPicker('library') },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
   }
 
   function isoToDisplay(iso: string) {
@@ -153,11 +233,24 @@ export default function EditProfileScreen() {
         >
           {/* Avatar */}
           <View style={styles.avatarSection}>
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
-            <TouchableOpacity style={styles.changePhotoBtn} activeOpacity={0.72}>
-              <Text style={styles.changePhotoText}>Cambiar foto</Text>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.changePhotoBtn}
+              onPress={pickAvatar}
+              disabled={uploadingAvatar}
+              activeOpacity={0.72}
+            >
+              {uploadingAvatar ? (
+                <ActivityIndicator size="small" color="#565E32" />
+              ) : (
+                <Text style={styles.changePhotoText}>Cambiar foto</Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -338,6 +431,14 @@ const styles = StyleSheet.create({
     fontFamily: ViveFonts.bold,
     fontSize: 30,
     color: '#FFFFFF',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.72)',
+    marginBottom: 14,
   },
   changePhotoBtn: {
     borderWidth: 1.5,

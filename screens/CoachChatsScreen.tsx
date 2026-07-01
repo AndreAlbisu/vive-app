@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -21,6 +22,7 @@ type ChatRoom = {
   userId: string;
   userName: string;
   initials: string;
+  avatarUrl: string | null;
   lastMessage: string;
   lastMessageAt: string | null;
 };
@@ -71,11 +73,11 @@ export default function CoachChatsScreen() {
     const userIds = [...new Set(salas.map(s => s.user_id as string))];
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, name')
+      .select('id, name, avatar_url')
       .in('id', userIds);
 
-    const profileMap: Record<string, string> = {};
-    profiles?.forEach(p => { profileMap[p.id] = p.name ?? 'Usuario'; });
+    const profileMap: Record<string, { name: string; avatarUrl: string | null }> = {};
+    profiles?.forEach(p => { profileMap[p.id] = { name: p.name ?? 'Usuario', avatarUrl: p.avatar_url ?? null }; });
 
     const results = await Promise.all(
       salas.map(async (sala) => {
@@ -87,12 +89,13 @@ export default function CoachChatsScreen() {
           .limit(1)
           .maybeSingle();
 
-        const name = profileMap[sala.user_id as string] ?? 'Usuario';
+        const name = profileMap[sala.user_id as string]?.name ?? 'Usuario';
         return {
           salaId: sala.id as string,
           userId: sala.user_id as string,
           userName: name,
           initials: getInitials(name),
+          avatarUrl: profileMap[sala.user_id as string]?.avatarUrl ?? null,
           lastMessage: lastMsg ? decryptMessage(lastMsg.content as string) : '',
           lastMessageAt: lastMsg ? (lastMsg.created_at as string) : null,
         } satisfies ChatRoom;
@@ -144,9 +147,13 @@ export default function CoachChatsScreen() {
               })}
               activeOpacity={0.75}>
 
-              <View style={s.avatar}>
-                <Text style={s.avatarText}>{room.initials}</Text>
-              </View>
+              {room.avatarUrl ? (
+                <Image source={{ uri: room.avatarUrl }} style={s.avatarImage} />
+              ) : (
+                <View style={s.avatar}>
+                  <Text style={s.avatarText}>{room.initials}</Text>
+                </View>
+              )}
 
               <View style={s.chatInfo}>
                 <View style={s.chatTopRow}>
@@ -231,6 +238,12 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.bold,
     fontSize: 15,
     color: '#FFFFFF',
+  },
+  avatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    flexShrink: 0,
   },
 
   // Info

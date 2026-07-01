@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Animated,
   StatusBar,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -93,6 +94,7 @@ export default function InicioScreen() {
   const [nextSession, setNextSession] = useState<NextSession | null>(null);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [displayResources, setDisplayResources] = useState<PinnedResource[]>(DEFAULT_RESOURCES);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const { entries: moodEntries } = useMoodHistory(user?.id, 7);
   const today = new Date().toISOString().split('T')[0];
@@ -141,6 +143,16 @@ export default function InicioScreen() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', user.id)
+      .maybeSingle()
+      .then(({ data }) => setAvatarUrl(data?.avatar_url ?? null));
   }, [user]);
 
   useEffect(() => {
@@ -234,14 +246,18 @@ export default function InicioScreen() {
                 hitSlop={8}
                 activeOpacity={0.8}
               >
-                <LinearGradient
-                  colors={['#FF9A52', ViveColors.primary]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={s.avatarCircle}
-                >
-                  <Text style={s.avatarInitial}>{(displayName.charAt(0) || '?').toUpperCase()}</Text>
-                </LinearGradient>
+                {avatarUrl ? (
+                  <Image source={{ uri: avatarUrl }} style={s.avatarCircle} />
+                ) : (
+                  <LinearGradient
+                    colors={['#FF9A52', ViveColors.primary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={s.avatarCircle}
+                  >
+                    <Text style={s.avatarInitial}>{(displayName.charAt(0) || '?').toUpperCase()}</Text>
+                  </LinearGradient>
+                )}
               </TouchableOpacity>
             </View>
           </Animated.View>

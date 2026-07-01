@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-07-01 — Andre (sesión 41)
+
+**Tocado:** `screens/EditProfileScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `app/(tabs)/index.tsx`, `screens/CoachReservasScreen.tsx`, `screens/SalaScreen.tsx`, `screens/CoachChatsScreen.tsx`, `screens/SessionsScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- Extensión de la foto de perfil (sesión 39) a usuarios normales, no solo coaches. Andre eligió el alcance "en todos lados" ante la pregunta de dónde debía reflejarse.
+- `EditProfileScreen.tsx`: el botón "Cambiar foto" (existía sin `onPress`) ahora sube a Storage (mismo bucket `avatars`, path `{user.id}/avatar.jpg`) y guarda en `profiles.avatar_url` — mismo patrón que `CoachProfileScreen.tsx` de la sesión 39, sin extraer a un helper compartido (dos pantallas, poca lógica, no vale la pena la abstracción todavía).
+- Foto real reemplaza iniciales/ícono genérico en: `ProfileOwnScreen.tsx` (perfil propio) y el avatar del top bar en `app/(tabs)/index.tsx`; y donde una parte ve a la otra — `SalaScreen.tsx` (chat, avatar grande del header y chico de mensajes), `CoachReservasScreen.tsx` (usuario que reservó, en pendientes y confirmadas), `CoachChatsScreen.tsx` y `SessionsScreen.tsx` (listas de chat). Todos con fallback a iniciales/ícono si no subió foto.
+- No hizo falta ningún cambio de schema — reutiliza el mismo bucket `avatars` y la misma columna `profiles.avatar_url` de la sesión 39, así que `scripts/add-avatar-upload.sql` no cambió.
+- `SCHEMA.md` actualizado: la entrada de `avatar_url` y la regla 14 ya no dicen "solo coach", listan todas las pantallas que la usan ahora.
+
+**Pendiente para la próxima sesión:**
+- Probar en dispositivo: subir foto como usuario normal desde `EditProfileScreen.tsx`, y confirmar que se ve en las 7 pantallas listadas arriba, especialmente del lado del coach (`CoachReservasScreen.tsx`, `SalaScreen.tsx`, `CoachChatsScreen.tsx`).
+- Sigue pendiente correr `scripts/add-coach-instant-booking.sql` (sesión 37).
+
+---
+
 ## 2026-07-01 — Andre (sesión 40)
 
 **Tocado:** `app/search3.tsx`

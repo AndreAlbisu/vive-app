@@ -8,6 +8,7 @@ import {
   Platform,
   Animated,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -51,6 +52,7 @@ export default function ProfileOwnScreen() {
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [semanasActivas, setSemanasActivas] = useState(0);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const displayName = user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'Usuario';
   const displayEmail = user?.email ?? '';
@@ -72,6 +74,7 @@ export default function ProfileOwnScreen() {
         getSemanasActivas(user!.id),
         loadActivity(),
         loadProfesionales(),
+        loadAvatar(),
       ]);
       setSemanasActivas(semanas);
     } finally {
@@ -144,6 +147,15 @@ export default function ProfileOwnScreen() {
     }));
 
     setProfesionales(profs);
+  }
+
+  async function loadAvatar() {
+    const { data } = await supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', user!.id)
+      .maybeSingle();
+    setAvatarUrl(data?.avatar_url ?? null);
   }
 
   async function handleSignOut() {
@@ -265,9 +277,13 @@ export default function ProfileOwnScreen() {
         >
           {/* Identidad */}
           <Animated.View style={[styles.identitySection, fadeUp(identityAnim)]}>
-            <View style={styles.avatarLarge}>
-              <Text style={styles.avatarLargeText}>{displayInitials || 'U'}</Text>
-            </View>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarLargeImage} />
+            ) : (
+              <View style={styles.avatarLarge}>
+                <Text style={styles.avatarLargeText}>{displayInitials || 'U'}</Text>
+              </View>
+            )}
             <Text style={styles.userName}>{displayName}</Text>
             <Text style={styles.userEmail}>{displayEmail}</Text>
             <TouchableOpacity
@@ -567,6 +583,14 @@ const styles = StyleSheet.create({
     fontFamily: ViveFonts.bold,
     fontSize: 28,
     color: '#565E32',
+  },
+  avatarLargeImage: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.72)',
+    marginBottom: 16,
   },
   userName: {
     fontFamily: ViveFonts.semibold,
