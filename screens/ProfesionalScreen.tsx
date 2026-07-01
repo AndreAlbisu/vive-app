@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import {
   View,
@@ -62,7 +63,7 @@ function ReviewAvatar({ name }: { name: string }) {
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 export default function ProfesionalScreen() {
   const router = useRouter();
-  const { isLoggedIn, requestAuth } = useAuth();
+  const { user, isLoggedIn, requestAuth } = useAuth();
   const params = useLocalSearchParams<{
     name?: string;
     specialty?: string;
@@ -72,7 +73,9 @@ export default function ProfesionalScreen() {
     coachId?: string;
     profileId?: string;
   }>();
-  const [saved, setSaved] = useState(false);
+  const profileId = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
+  const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
+  const saved = !!profileId && favoriteIds.has(profileId);
   const [fetchedData, setFetchedData] = useState<Partial<typeof DEFAULT_PROFESIONAL> | null>(null);
   const [liveReviews, setLiveReviews] = useState<LiveReview[]>([]);
   const [liveAvgRating, setLiveAvgRating] = useState<number | null>(null);
@@ -312,7 +315,10 @@ export default function ProfesionalScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.btnSecondary, saved && s.btnSecondaryActive]}
-              onPress={() => setSaved(v => !v)}
+              onPress={() => {
+                if (!isLoggedIn) { requestAuth(); return; }
+                if (profileId) toggleFavorite(profileId);
+              }}
               activeOpacity={0.8}>
               <MaterialIcons
                 name={saved ? 'favorite' : 'favorite-border'}

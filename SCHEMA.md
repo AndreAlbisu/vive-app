@@ -121,6 +121,15 @@
 - `pinned` (bool, nullable) — si el usuario lo fijó
 - `created_at` (timestamptz, nullable)
 
+### `favorite_coaches`
+- `id` (uuid, PK)
+- `user_id` (uuid, NOT NULL, FK → `auth.users.id` ON DELETE CASCADE)
+- `coach_profile_id` (uuid, NOT NULL, FK → `profiles.id` ON DELETE CASCADE) ⚠️ — mismo criterio que `salas.coach_id`: es `profiles.id` (= `coaches.profile_id`), **NO** `coaches.id`
+- `created_at` (timestamptz, NOT NULL DEFAULT now())
+- UNIQUE(`user_id`, `coach_profile_id`) — no se puede favoritear el mismo coach dos veces
+- RLS: SELECT/INSERT/DELETE solo si `user_id = auth.uid()`. Sin política de UPDATE (no hay nada que actualizar, solo agregar/quitar filas)
+- Agregada 01/07/2026 (`scripts/add-favorite-coaches.sql`) — reemplaza dos `useState` locales y desconectados entre sí (`conexiones.tsx` y `ProfesionalScreen.tsx`) que no persistían nada. Estado unificado vía `hooks/useFavoriteCoaches.ts`, usado en ambas pantallas y en la nueva `screens/FavoritosScreen.tsx` (`/favoritos`, accesible desde el ícono de estrella en el header de Conexiones).
+
 ## Reglas críticas
 
 1. **`coaches.id` ≠ `profiles.id`** — son valores distintos. El dato que conecta es `coaches.profile_id`.

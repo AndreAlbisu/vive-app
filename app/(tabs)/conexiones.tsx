@@ -21,6 +21,8 @@ import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
+import { useAuth } from '@/context/AuthContext';
+import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 
 // ─── Paleta suave ────────────────────────────────────────────────────────────
 const PALETTE = [
@@ -89,7 +91,8 @@ function VennDiagram() {
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 export default function ConexionesScreen() {
   const router = useRouter();
-  const [favs, setFavs] = useState<Set<string>>(new Set());
+  const { user, requestAuth } = useAuth();
+  const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
   const [topicDot, setTopicDot] = useState(0);
   const [coachDot, setCoachDot] = useState(0);
   const [coaches, setCoaches] = useState<CoachItem[]>([]);
@@ -137,11 +140,8 @@ export default function ConexionesScreen() {
   }
 
   function toggleFav(profileId: string) {
-    setFavs(prev => {
-      const next = new Set(prev);
-      if (next.has(profileId)) { next.delete(profileId); } else { next.add(profileId); }
-      return next;
-    });
+    if (!user) { requestAuth(); return; }
+    toggleFavorite(profileId);
   }
 
   function handleTopicScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -177,7 +177,13 @@ export default function ConexionesScreen() {
             <Text style={s.title}>Conexiones</Text>
             <Text style={s.subtitle}>Las personas indicadas para lo que estás viviendo.</Text>
           </View>
-          <TouchableOpacity style={s.bellBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={s.bellBtn}
+            onPress={() => (user ? router.push('/favoritos') : requestAuth())}
+            activeOpacity={0.7}>
+            <MaterialIcons name="star-border" size={24} color="#565E32" />
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.bellBtn, s.bellBtnSpaced]} activeOpacity={0.7}>
             <MaterialIcons name="notifications-none" size={24} color="#565E32" />
           </TouchableOpacity>
         </View>
@@ -265,9 +271,9 @@ export default function ConexionesScreen() {
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     activeOpacity={0.7}>
                     <MaterialIcons
-                      name={favs.has(coach.profileId) ? 'star' : 'star-border'}
+                      name={favoriteIds.has(coach.profileId) ? 'star' : 'star-border'}
                       size={20}
-                      color={favs.has(coach.profileId) ? ViveColors.primary : '#FFFFFF'}
+                      color={favoriteIds.has(coach.profileId) ? ViveColors.primary : '#FFFFFF'}
                     />
                   </TouchableOpacity>
                 </View>
@@ -352,6 +358,9 @@ const s = StyleSheet.create({
   bellBtn: {
     marginTop: 4,
     padding: 2,
+  },
+  bellBtnSpaced: {
+    marginLeft: 8,
   },
 
   // Buscador

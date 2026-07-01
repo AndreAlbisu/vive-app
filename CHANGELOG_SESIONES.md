@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-07-01 — Andre (sesión 45)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`, `screens/ProfesionalScreen.tsx`, `hooks/useFavoriteCoaches.ts` (nuevo), `screens/FavoritosScreen.tsx` (nuevo), `app/favoritos.tsx` (nuevo), `app/_layout.tsx`, `scripts/add-favorite-coaches.sql` (nuevo, **no corrido todavía en Supabase**), `SCHEMA.md`
+
+**Resumen:**
+- Andre preguntó si favoritos funciona en Conexiones — no: eran dos `useState` locales, puramente visuales y **desconectados entre sí** (la estrella en "Destacados de la semana" y el botón "Guardar en favoritos" de `ProfesionalScreen.tsx`). Ninguno persistía nada; se perdía todo al recargar, y marcar un coach de favorito en un lugar no lo reflejaba en el otro.
+- Implementado de punta a punta: tabla nueva `favorite_coaches` (mismo patrón RLS que `saved_resources`), y un hook compartido `hooks/useFavoriteCoaches.ts` (mismo criterio que `hooks/useMoodHistory.ts`) que es ahora la única fuente de verdad — usado en `conexiones.tsx` y `ProfesionalScreen.tsx`, así que favoritear un coach en cualquiera de los dos lugares se refleja en el otro.
+- Nueva pantalla `screens/FavoritosScreen.tsx` (`/favoritos`) con la lista real de coaches guardados — accesible desde un ícono de estrella nuevo en el header de Conexiones, junto a la campana. Empty state si no hay ninguno guardado todavía.
+- Alcance deliberadamente acotado: el doc conceptual de Notion ("CONEXIONES" → "Favoritos") menciona también "notificación cuando un coach guardado tiene nueva disponibilidad" — no se implementó, es una feature separada y más grande (requeriría comparar altas en `coach_availability` contra las listas de favoritos de cada usuario). Queda anotado como pendiente, no construido.
+
+**Pendiente para la próxima sesión:**
+- **Correr `scripts/add-favorite-coaches.sql` en Supabase** — hasta entonces, favoritear un coach falla en silencio (tabla no existe).
+- Probar en dispositivo: favoritear un coach desde su perfil, confirmar que aparece marcado también en Destacados y en `/favoritos`; sacarlo de favoritos desde `/favoritos` y confirmar que desaparece de los tres lugares.
+- Considerar si vale la pena la notificación de "nueva disponibilidad de un coach guardado" del doc conceptual, o se descarta para esta etapa.
+- Sigue pendiente correr `scripts/add-coach-instant-booking.sql` (sesión 37) y `scripts/add-avatar-upload.sql` en cualquier ambiente que no lo haya corrido todavía.
+
+---
+
 ## 2026-07-01 — Andre (sesión 44)
 
 **Tocado:** `screens/ReviewScreen.tsx`, `scripts/complete-confirmed-sessions.sql` (nuevo, corrido en Supabase por Andre el 01/07/2026), `SCHEMA.md`
