@@ -16,15 +16,15 @@ import { useRouter } from 'expo-router';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
+import { MoodCheckIn } from '@/components/MoodCheckIn';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
+import { useMoodHistory } from '@/hooks/useMoodHistory';
+import { getSobreTiInsight } from '@/lib/moodInsights';
 import Svg, { Circle } from 'react-native-svg';
 
 const dailyPhrase = 'Todas las respuestas están en vos.';
-
-const SOBRE_TI_MSG =
-  'Vas por buen camino tomando acciones que te hacen cada vez más efectivo. Los retos y la constancia construyen más balance en tu vida.';
 
 type PinnedResource = { id: string; title: string; icon: string; route: string | undefined };
 
@@ -89,26 +89,33 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function InicioScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, requestAuth } = useAuth();
   const [nextSession, setNextSession] = useState<NextSession | null>(null);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [displayResources, setDisplayResources] = useState<PinnedResource[]>(DEFAULT_RESOURCES);
 
-  const a1 = useRef(new Animated.Value(0)).current;
-  const a2 = useRef(new Animated.Value(0)).current;
-  const a3 = useRef(new Animated.Value(0)).current;
-  const a4 = useRef(new Animated.Value(0)).current;
-  const a5 = useRef(new Animated.Value(0)).current;
+  const { entries: moodEntries } = useMoodHistory(user?.id, 7);
+  const today = new Date().toISOString().split('T')[0];
+  const todayMoodEntry = moodEntries.find(e => e.entry_date === today);
+  const sobreTiText = getSobreTiInsight(moodEntries);
+
+  const a1   = useRef(new Animated.Value(0)).current;
+  const aMood = useRef(new Animated.Value(0)).current;
+  const a2   = useRef(new Animated.Value(0)).current;
+  const a3   = useRef(new Animated.Value(0)).current;
+  const a4   = useRef(new Animated.Value(0)).current;
+  const a5   = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.stagger(90, [
-      Animated.timing(a1, { toValue: 1, duration: 380, useNativeDriver: true }),
-      Animated.timing(a2, { toValue: 1, duration: 380, useNativeDriver: true }),
-      Animated.timing(a3, { toValue: 1, duration: 380, useNativeDriver: true }),
-      Animated.timing(a4, { toValue: 1, duration: 380, useNativeDriver: true }),
-      Animated.timing(a5, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(a1,    { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(aMood, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(a2,    { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(a3,    { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(a4,    { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(a5,    { toValue: 1, duration: 380, useNativeDriver: true }),
     ]).start();
-  }, [a1, a2, a3, a4, a5]);
+  }, [a1, aMood, a2, a3, a4, a5]);
 
   useEffect(() => {
     if (!user) return;
@@ -246,7 +253,16 @@ export default function InicioScreen() {
             <Text style={s.dailyPhrase}>{dailyPhrase}</Text>
           </Animated.View>
 
-          {/* ── 3. SOBRE TI ── */}
+          {/* ── 3. MOOD CHECK-IN ── */}
+          <Animated.View style={fadeUp(aMood)}>
+            <MoodCheckIn
+              userId={user?.id}
+              todayEntry={todayMoodEntry}
+              onRequestAuth={requestAuth}
+            />
+          </Animated.View>
+
+          {/* ── 4. SOBRE TI ── */}
           <Animated.View style={fadeUp(a2)}>
             <View style={s.sobreTiCard}>
               <View style={s.sobreTiLeft}>
@@ -256,12 +272,12 @@ export default function InicioScreen() {
               </View>
               <View style={s.sobreTiRight}>
                 <Text style={s.sobreTiTitle}>Sobre ti</Text>
-                <Text style={s.sobreTiText}>{SOBRE_TI_MSG}</Text>
+                <Text style={s.sobreTiText}>{sobreTiText}</Text>
               </View>
             </View>
           </Animated.View>
 
-          {/* ── 4. TU PRÓXIMA SESIÓN ── */}
+          {/* ── 5. TU PRÓXIMA SESIÓN ── */}
           <Animated.View style={fadeUp(a3)}>
             <Text style={s.sectionTitle}>Tu próxima sesión</Text>
             {nextSession ? (
@@ -307,7 +323,7 @@ export default function InicioScreen() {
             )}
           </Animated.View>
 
-          {/* ── 5. RECURSOS ÚTILES ── */}
+          {/* ── 6. RECURSOS ÚTILES ── */}
           <Animated.View style={fadeUp(a4)}>
             <Text style={[s.sectionTitle, { marginTop: 20 }]}>Recursos útiles</Text>
             <View style={s.resourcesRow}>
@@ -332,7 +348,7 @@ export default function InicioScreen() {
             </View>
           </Animated.View>
 
-          {/* ── 6. PARA VOS HOY ── */}
+          {/* ── 7. PARA VOS HOY ── */}
           <Animated.View style={fadeUp(a5)}>
             <Text style={[s.sectionTitle, { marginTop: 22 }]}>Para vos hoy</Text>
             <View style={s.recCard}>
