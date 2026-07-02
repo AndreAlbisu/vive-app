@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-07-02 — Joaquín (sesión 40)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`, `app/search3.tsx`
+
+**Resumen:**
+- Fix cards de temas en Conexiones: siempre devolvían 0 resultados porque los labels de UI ("Ansiedad y estrés") no coincidían con los subtemas reales de `coach_topics` ("Ansiedad", "Estrés físico").
+- Solución: cada card ahora tiene `searchTopics: string[]` con los subtemas exactos de `constants/searchData.ts` (AXES). El `onPress` pasa `topic=subtema1,subtema2,...` (coma-separado) + `label=` como parámetros separados a `/search3`.
+- En `search3.tsx`: parseo de `topic` por coma, OR logic (si el coach tiene cualquiera de los subtemas → aparece). El título del header ahora usa `label` en vez del string de búsqueda interno.
+
+**Pendiente para la próxima sesión:**
+- Probar en dispositivo: los coaches en Supabase necesitan tener `coach_topics` cargados para que la búsqueda devuelva resultados reales.
+- Verificar subida de foto de perfil en dispositivo físico.
+- Google OAuth pendiente (dev build).
+
+---
+
 ## 2026-07-02 — Joaquín (sesión 39)
 
 **Tocado:** `screens/CoachProfileScreen.tsx`, Supabase (SQL Editor — sin cambios de código)
