@@ -24,6 +24,24 @@
 
 ---
 
+## 2026-07-02 — Andre (sesión 48)
+
+**Tocado:** `screens/CoachTopicsScreen.tsx` (nuevo), `app/coach-topics.tsx` (nuevo), `app/_layout.tsx`, `screens/CoachProfileScreen.tsx`, `screens/ProfesionalScreen.tsx`, `app/search3.tsx`, `scripts/add-coach-topics.sql` (nuevo, **no corrido todavía en Supabase**), `SCHEMA.md`
+
+**Resumen:**
+- Andre pidió hacer funcional la selección de subtemas de un coach (reflejado en perfil + filtro real en el buscador). La taxonomía ya existía completa en `constants/searchData.ts` (`AXES` — 3 ejes: Bienestar físico, Bienestar emocional y mental, Crecimiento y propósito; 28 subtemas en total) y ya se usaba en el flujo `search1.tsx → search2.tsx` para elegir un subtema — pero `search3.tsx` comparaba ese subtema contra `coaches.specialty` (texto libre, ej. "Coach de vida"), así que el filtro nunca matcheaba de verdad.
+- Nueva tabla `coach_topics` (many-to-many coach↔subtema, `coach_id → coaches.id` mismo criterio que `coach_availability`).
+- Nueva pantalla `screens/CoachTopicsScreen.tsx` (`/coach-topics`): los 28 subtemas agrupados por eje, multi-select con chips, guardado con criterio "reemplazar todo" (borra y reinserta). Enganchada desde "Temas que trabajo" en `CoachProfileScreen.tsx` (antes un chip "+ Agregar" sin `onPress`) — ahora muestra los subtemas reales elegidos como chips de solo lectura + el link para editar, refrescando con `useFocusEffect` al volver de la pantalla de edición (primer uso de ese hook en el proyecto).
+- `ProfesionalScreen.tsx`: reemplazado el array de 5 temas hardcodeado por los subtemas reales del coach.
+- `search3.tsx`: el filtro por `topic` ahora compara contra `coach_topics` reales de cada coach. La búsqueda libre también matchea subtemas del coach.
+- **Hallazgo sin resolver (SCHEMA.md regla 17):** los 9 "temas" de Conexiones son una taxonomía distinta y desconectada de los 28 subtemas de `AXES` — requiere decisión de producto antes de tocarlo.
+
+**Pendiente para la próxima sesión:**
+- **Correr `scripts/add-coach-topics.sql` en Supabase** — hasta entonces, elegir subtemas falla en silencio.
+- Decidir qué hacer con las 9 cards de temas de Conexiones (regla 17 de SCHEMA.md).
+
+---
+
 ## 2026-07-02 — Joaquín (sesión 37)
 
 **Tocado:** merge de `andre/main` → `main` (fast-forward, sin conflictos)

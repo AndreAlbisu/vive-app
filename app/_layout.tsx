@@ -138,6 +138,7 @@ export default function RootLayout() {
           <Stack.Screen name="progreso" options={{ headerShown: false }} />
           <Stack.Screen name="review" options={{ headerShown: false }} />
           <Stack.Screen name="favoritos" options={{ headerShown: false }} />
+          <Stack.Screen name="coach-topics" options={{ headerShown: false }} />
           <Stack.Screen name="notifications" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>

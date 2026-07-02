@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { File } from 'expo-file-system';
@@ -72,6 +73,8 @@ export default function CoachProfileScreen() {
   const [priceInput, setPriceInput] = useState('');
   const [savingPrice, setSavingPrice] = useState(false);
   const [savingInstantMode, setSavingInstantMode] = useState(false);
+  const [coachId, setCoachId] = useState<string | null>(null);
+  const [topics, setTopics] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user) { setLoadingProfile(false); return; }
@@ -79,7 +82,7 @@ export default function CoachProfileScreen() {
     (async () => {
       const [{ data: profileRow }, { data: coachRow }] = await Promise.all([
         supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single(),
-        supabase.from('coaches').select('specialty, bio, price_per_session, nationality, video_url, instant_booking').eq('profile_id', user.id).maybeSingle(),
+        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking').eq('profile_id', user.id).maybeSingle(),
       ]);
 
       setProfile({
@@ -92,10 +95,23 @@ export default function CoachProfileScreen() {
         instant_booking: coachRow?.instant_booking ?? false,
         avatar_url: profileRow?.avatar_url ?? null,
       });
+      setCoachId(coachRow?.id ?? null);
       setNoCoachProfile(!coachRow);
       setLoadingProfile(false);
     })();
   }, [user]);
+
+  // Refresca al volver de /coach-topics (después de guardar cambios ahí)
+  useFocusEffect(
+    useCallback(() => {
+      if (!coachId) return;
+      supabase
+        .from('coach_topics')
+        .select('topic')
+        .eq('coach_id', coachId)
+        .then(({ data }) => setTopics((data ?? []).map(t => t.topic as string)));
+    }, [coachId])
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -390,9 +406,18 @@ export default function CoachProfileScreen() {
         {/* ── Temas ─────────────────────────────────────────── */}
         <Text style={s.sectionTitle}>Temas que trabajo</Text>
         <View style={s.chipsWrap}>
-          <TouchableOpacity style={s.addChip} activeOpacity={0.7}>
+          {topics.map(topic => (
+            <View key={topic} style={s.topicChip}>
+              <Text style={s.topicChipText}>{topic}</Text>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={s.addChip}
+            onPress={() => router.push('/coach-topics')}
+            disabled={noCoachProfile}
+            activeOpacity={0.7}>
             <MaterialCommunityIcons name="plus" size={14} color={ViveColors.primary} />
-            <Text style={s.addChipText}>Agregar</Text>
+            <Text style={s.addChipText}>{topics.length > 0 ? 'Editar' : 'Agregar'}</Text>
           </TouchableOpacity>
         </View>
 
