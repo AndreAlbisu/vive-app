@@ -44,10 +44,6 @@ const DEFAULT_RESOURCES: PinnedResource[] = [
   RESOURCE_MAP.gratitud,
 ];
 
-const mockRecommendation = {
-  title: 'Cómo manejar la ansiedad social',
-  type: 'Artículo · 5 min',
-};
 
 const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
@@ -104,7 +100,6 @@ export default function InicioScreen() {
   const a2   = useRef(new Animated.Value(0)).current;
   const a3   = useRef(new Animated.Value(0)).current;
   const a4   = useRef(new Animated.Value(0)).current;
-  const a5   = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.stagger(90, [
@@ -113,9 +108,8 @@ export default function InicioScreen() {
       Animated.timing(a2,    { toValue: 1, duration: 380, useNativeDriver: true }),
       Animated.timing(a3,    { toValue: 1, duration: 380, useNativeDriver: true }),
       Animated.timing(a4,    { toValue: 1, duration: 380, useNativeDriver: true }),
-      Animated.timing(a5,    { toValue: 1, duration: 380, useNativeDriver: true }),
     ]).start();
-  }, [a1, aMood, a2, a3, a4, a5]);
+  }, [a1, aMood, a2, a3, a4]);
 
   useEffect(() => {
     if (!user) return;
@@ -360,21 +354,6 @@ export default function InicioScreen() {
                   </TouchableOpacity>
                 </ScaleCard>
               ))}
-            </View>
-          </Animated.View>
-
-          {/* ── 7. PARA VOS HOY ── */}
-          <Animated.View style={fadeUp(a5)}>
-            <Text style={[s.sectionTitle, { marginTop: 22 }]}>Para vos hoy</Text>
-            <View style={s.recCard}>
-              <View style={s.recInfo}>
-                <Text style={s.recLabel}>RECOMENDACIÓN</Text>
-                <Text style={s.recTitle}>{mockRecommendation.title}</Text>
-                <Text style={s.recType}>{mockRecommendation.type}</Text>
-              </View>
-              <View style={s.recArrowBtn}>
-                <MaterialCommunityIcons name="arrow-right" size={18} color="#87835C" />
-              </View>
             </View>
           </Animated.View>
 
@@ -640,49 +619,6 @@ const s = StyleSheet.create({
     color: 'rgba(135,131,92,0.80)',
   },
 
-  // ── 8. Para vos hoy ────────────────────────────────────────────────────────
-  recCard: {
-    marginHorizontal: 18,
-    backgroundColor: GLASS,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  recInfo: { flex: 1 },
-  recLabel: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 10,
-    color: ViveColors.primary,
-    letterSpacing: 0.8,
-    marginBottom: 6,
-  },
-  recTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: '#565E32',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  recType: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: 'rgba(135,131,92,0.80)',
-  },
-  recArrowBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,248,240,0.48)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.60)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
 });
 
 function VennSvg() {
