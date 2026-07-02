@@ -2,7 +2,7 @@
 
 > ⚠️ Este archivo describe lo que está REALMENTE en Supabase hoy.
 > No es un diseño aspiracional — si algo cambia en la base, este archivo se actualiza el mismo día.
-> Última actualización: 02 de julio 2026 — resource_completions, instant_booking, avatars bucket aplicados
+> Última actualización: 02 de julio 2026 — resource_completions, instant_booking, avatars bucket aplicados. bookings.duration_minutes + meeting_url propuestos (pendientes de correr)
 
 ## Tablas y relaciones
 
@@ -50,7 +50,9 @@
 - `scheduled_time` (text)
 - `amount` (integer)
 - `status` (text)
-- `room_url` (text, nullable) — redundante, el room_url canónico está en `salas`
+- `room_url` (text, nullable) — redundante, el room_url canónico está en `salas` (Jitsi, legacy)
+- `duration_minutes` (integer, nullable) — duración de la sesión en minutos, copiado de `coach_weekly_pattern.slot_duration_minutes` al crear el booking. Agregada 02/07/2026 (`scripts/add-duration-minutes-meeting-url.sql`, **pendiente de correr en Supabase**).
+- `meeting_url` (text, nullable) — URL de la videollamada en Daily.co, generada por la Edge Function `create-meeting-room` al confirmar la sesión. Null hasta que la Edge Function corre. Agregada 02/07/2026 (mismo script). La app usa este campo como fuente de verdad para "Unirse"; `salas.room_url` es fallback legacy.
 - `user_message` (text, nullable) — mensaje opcional que el usuario le escribe al coach antes de reservar
 - `cancelled_by` (text, nullable) — quién canceló: `'usuario'` | `'coach'`. Null si no se canceló.
 - `cancelled_late` (boolean, nullable) — `true` si el coach canceló con <24hs de anticipación; `false` si ≥24hs; `null` si canceló el usuario (no aplica) o si no se canceló.

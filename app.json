@@ -57,7 +57,13 @@
           "microphonePermission": "Vita necesita acceso al micrófono para grabar tu video de presentación."
         }
       ],
-      "expo-video"
+      "expo-video",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Vive necesita acceso al calendario para agregar tus sesiones."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

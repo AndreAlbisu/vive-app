@@ -20,6 +20,7 @@ import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
 import { logError } from '@/lib/logging';
 import { encryptMessage } from '@/lib/encryption';
+import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MONTH_NAMES = [
@@ -94,6 +95,18 @@ export default function BookingScreen_Confirm() {
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
 
+      // Leer duración del patrón semanal para guardarla en el booking
+      let durationMinutes: number | null = null;
+      if (coachRow?.id) {
+        const { data: patternRow } = await supabase
+          .from('coach_weekly_pattern')
+          .select('slot_duration_minutes')
+          .eq('coach_id', coachRow.id)
+          .limit(1)
+          .maybeSingle();
+        durationMinutes = (patternRow as any)?.slot_duration_minutes ?? null;
+      }
+
       if (coachErr || !coachRow) {
         throw new Error('No encontramos el profesional. Volvé y elegí de nuevo.');
       }
@@ -145,6 +158,7 @@ export default function BookingScreen_Confirm() {
           scheduled_time: time,
           amount: priceFrom,
           status: isInstant ? 'confirmada' : 'pendiente',
+          ...(durationMinutes ? { duration_minutes: durationMinutes } : {}),
           ...(userMessage.trim() ? { user_message: userMessage.trim() } : {}),
         })
         .select('id')
@@ -182,6 +196,9 @@ export default function BookingScreen_Confirm() {
       }
 
       if (isInstant) {
+        // Crear sala de videollamada en Daily.co en segundo plano (no bloquea al usuario)
+        createOrGetMeetingUrl(booking.id).catch(() => {});
+
         // Reserva instantánea: mismos efectos que cuando el coach acepta
         // manualmente en CoachReservasScreen — notificación al usuario,
         // mensaje de sistema en la sala, y cancelación de otras solicitudes

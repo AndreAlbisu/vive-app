@@ -20,6 +20,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
 import { encryptMessage } from '@/lib/encryption';
+import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
 import { isCancelLate } from '@/lib/bookingHelpers';
 import { AppBg } from '@/components/ui/AppBg';
 
@@ -289,6 +290,9 @@ export default function CoachReservasScreen() {
         );
       }
     }
+
+    // Crear sala de videollamada en Daily.co en segundo plano
+    createOrGetMeetingUrl(id).catch(() => {});
 
     await loadBookings();
   }

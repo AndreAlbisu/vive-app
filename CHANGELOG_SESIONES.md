@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-07-02 — Joaquín (sesión 43)
+
+**Tocado:** `screens/SessionsScreen.tsx`, `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/CoachReservasScreen.tsx`, `supabase/functions/create-meeting-room/index.ts` (nuevo), `lib/meetingRoom.ts` (nuevo), `scripts/add-duration-minutes-meeting-url.sql` (nuevo), `app.json`, `tsconfig.json`, `SCHEMA.md`
+
+**Resumen:**
+- Rediseño completo de Mis salas: hero "Tu próxima sesión" con gradiente bosque, badge de estado, botones Unirse/Agendar; filas de sala con badge de no leídos y preview de mensaje; CTA punteado "Buscar profesionales" al final de la lista
+- Rediseño de SalaScreen: se elimina el botón de video del header, el banner simple de sesión se reemplaza por una session card con 4 estados (pendiente/confirmada/en vivo/finalizada). La card "en vivo" tiene fondo bosque con botón terracota y animación de pulso (respeta reduced motion). El countdown se actualiza cada 30s. "Reprogramar" abre el flujo de reserva existente. "Agendar" integra expo-calendar
+- Videollamada con Daily.co: Edge Function `create-meeting-room` crea sala privada con nbf/exp (15 min antes del inicio, 1h después del fin). Se guarda en `bookings.meeting_url`. La función es idempotente. Se llama en background al confirmar reserva (instant booking o aceptación del coach). Si meeting_url está vacío al abrir la sala, se reintenta automáticamente
+- "Unirse" usa `expo-web-browser` en vez de `Linking.openURL` (in-app browser). Se activa 10 min antes (antes era 5 min en el botón del header)
+- Schema: 2 columnas nuevas en bookings (`duration_minutes`, `meeting_url`) — **pendiente de correr** `scripts/add-duration-minutes-meeting-url.sql` en Supabase
+
+**Pendiente para la próxima sesión:**
+- Correr `scripts/add-duration-minutes-meeting-url.sql` en Supabase SQL Editor
+- Deployar Edge Function: `supabase functions deploy create-meeting-room`
+- Verificar presencia "en línea" (no implementada — no hay infraestructura de Supabase Presence)
+- Cablear escritura en `resource_completions` desde las herramientas
+- SDK nativo de Daily.co (no corre en Expo Go — mejora futura)
+
+---
+
 ## 2026-07-02 — Joaquín (sesión 42)
 
 **Tocado:** `screens/ProfileOwnScreen.tsx`, `app/(tabs)/index.tsx`
