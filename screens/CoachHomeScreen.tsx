@@ -7,10 +7,12 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -19,6 +21,7 @@ import { AppBg } from '@/components/ui/AppBg';
 
 type Session = {
   id: string;
+  userId: string;
   userName: string;
   time: string;
   type: string;
@@ -56,6 +59,17 @@ function formatTime(timeStr: string): string {
   return `${parts[0]}:${parts[1]} hs`;
 }
 
+function formatTimeAgo(isoString: string): string {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffM = Math.floor(diffMs / (1000 * 60));
+  if (diffM < 1) return 'hace unos segundos';
+  if (diffM < 60) return `hace ${diffM} min`;
+  const diffH = Math.floor(diffM / 60);
+  if (diffH < 24) return `hace ${diffH} ${diffH === 1 ? 'hora' : 'horas'}`;
+  const diffD = Math.floor(diffH / 24);
+  return `hace ${diffD} ${diffD === 1 ? 'día' : 'días'}`;
+}
+
 export default function CoachHomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -66,7 +80,10 @@ export default function CoachHomeScreen() {
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [coachId, setCoachId] = useState<string | null>(null);
+  const [lastMsgAtBySala, setLastMsgAtBySala] = useState<Record<string, string>>({});
+  const [weeklyClientCount, setWeeklyClientCount] = useState(0);
 
   const loadData = useCallback(async () => {
     if (!user || !coachId) { setLoading(false); return; }
@@ -78,11 +95,11 @@ export default function CoachHomeScreen() {
       supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
       supabase
         .from('bookings')
-        .select('id, user_id, date, time, sala_id')
+        .select('id, user_id, scheduled_date, scheduled_time, sala_id')
         .eq('coach_id', coachId)
         .eq('status', 'confirmada')
-        .order('date', { ascending: true })
-        .order('time', { ascending: true }),
+        .order('scheduled_date', { ascending: true })
+        .order('scheduled_time', { ascending: true }),
       supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
@@ -109,11 +126,12 @@ export default function CoachHomeScreen() {
 
     const sessions: Session[] = bookings.map(b => ({
       id: b.id,
+      userId: b.user_id,
       userName: profileMap[b.user_id] ?? 'Usuario',
-      time: formatTime(b.time),
+      time: formatTime(b.scheduled_time),
       type: 'Sesión individual',
       sala_id: b.sala_id,
-      date: b.date,
+      date: b.scheduled_date,
     }));
 
     setTodaySessions(sessions.filter(s => s.date === todayStr));
@@ -126,7 +144,47 @@ export default function CoachHomeScreen() {
     });
     setWeekData(week);
 
+    // Clientes distintos con al menos una sesión confirmada esta semana (Lun-Dom)
+    const weekClientIds = new Set(week.flatMap(day => day.sessions).map(s => s.userId));
+    setWeeklyClientCount(weekClientIds.size);
+
     setPendingCount(pendingRes.count ?? 0);
+
+    // Último mensaje humano por sala de las sesiones de hoy — alimenta la
+    // línea de contexto "Último mensaje hace X" bajo cada card (una sola
+    // query batch, sin N+1).
+    const todaySalaIds = [...new Set(
+      sessions.filter(s => s.date === todayStr && s.sala_id).map(s => s.sala_id as string)
+    )];
+
+    if (todaySalaIds.length > 0) {
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('messages')
+        .select('sala_id, sender_type, created_at')
+        .in('sala_id', todaySalaIds)
+        .order('created_at', { ascending: false });
+
+      if (messagesError) {
+        console.error('[CoachHomeScreen] Error cargando mensajes para el contexto de "Hoy":', messagesError);
+      }
+
+      // Los mensajes system_confirmed/system_cancelled/system son texto
+      // automático ("Sesión reservada · fecha · hora hs") — no cuentan como
+      // mensaje humano para esta línea de contexto.
+      const isHuman = (senderType: string) => senderType === 'user' || senderType === 'coach';
+      const lastHumanAtBySala: Record<string, string> = {};
+      (messagesData ?? []).forEach(m => {
+        if (!isHuman(m.sender_type as string)) return;
+        const sid = m.sala_id as string;
+        if (!lastHumanAtBySala[sid]) {
+          lastHumanAtBySala[sid] = m.created_at as string;
+        }
+      });
+      setLastMsgAtBySala(lastHumanAtBySala);
+    } else {
+      setLastMsgAtBySala({});
+    }
+
     setLoading(false);
   }, [user, coachId]);
 
@@ -140,8 +198,19 @@ export default function CoachHomeScreen() {
       .then(({ data }) => { if (data) setCoachId(data.id); });
   }, [user]);
 
-  useEffect(() => {
-    loadData();
+  // Refresca cada vez que se vuelve a esta pestaña (ej: aceptar una reserva
+  // en "Reservas" y volver a "Inicio" ya trae los datos al día, sin esto se
+  // quedaba con el pendingCount viejo hasta el próximo remount).
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
   }, [loadData]);
 
   useEffect(() => {
@@ -191,7 +260,15 @@ export default function CoachHomeScreen() {
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView
         contentContainerStyle={s.container}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={ViveColors.primary}
+            colors={[ViveColors.primary]}
+          />
+        }>
 
         {/* Greeting */}
         <View style={s.greetingRow}>
@@ -228,50 +305,18 @@ export default function CoachHomeScreen() {
             activeOpacity={0.85}>
             <Feather name="bell" size={15} color={ViveColors.primary} style={s.alertIcon} />
             <Text style={s.alertText}>
-              Tenés{' '}
-              <Text style={s.alertBold}>{pendingCount} solicitudes pendientes</Text>
-              {' '}— tenés 24hs para responder
+              {pendingCount === 1 ? (
+                <>Tenés <Text style={s.alertBold}>1 solicitud</Text> esperando tu respuesta</>
+              ) : (
+                <>Tenés <Text style={s.alertBold}>{pendingCount} solicitudes</Text> esperando tu respuesta</>
+              )}
             </Text>
             <Feather name="chevron-right" size={15} color="#87835C" />
           </TouchableOpacity>
         )}
 
-        {/* Hoy */}
-        <Text style={s.sectionTitle}>Hoy</Text>
-
-        {todaySessions.length > 0 ? (
-          todaySessions.map(session => (
-            <View key={session.id} style={s.sessionCard}>
-              <View style={s.timeTag}>
-                <Text style={s.timeTagText}>{session.time}</Text>
-              </View>
-              <View style={s.sessionInfo}>
-                <Text style={s.sessionUser}>{session.userName}</Text>
-                <Text style={s.sessionType}>{session.type}</Text>
-              </View>
-              <TouchableOpacity
-                style={s.chatBtn}
-                onPress={() =>
-                  router.push(
-                    session.sala_id
-                      ? { pathname: '/sala', params: { sala_id: session.sala_id } }
-                      : '/sala'
-                  )
-                }
-                activeOpacity={0.75}
-                hitSlop={6}>
-                <Feather name="message-circle" size={20} color="#87835C" />
-              </TouchableOpacity>
-            </View>
-          ))
-        ) : (
-          <View style={s.emptyToday}>
-            <Text style={s.emptyTodayText}>No tenés sesiones hoy. Disfrutá el día 🌿</Text>
-          </View>
-        )}
-
         {/* Esta semana */}
-        <Text style={[s.sectionTitle, s.sectionSpaced]}>Esta semana</Text>
+        <Text style={s.sectionTitle}>Esta semana</Text>
         <View style={s.weekCard}>
           {weekData.map((day, idx) => {
             const active = day.sessions.length > 0;
@@ -288,6 +333,57 @@ export default function CoachHomeScreen() {
             );
           })}
         </View>
+        {weeklyClientCount > 0 && (
+          <Text style={s.weekSummary}>
+            Esta semana acompañás a {weeklyClientCount} {weeklyClientCount === 1 ? 'persona' : 'personas'}
+          </Text>
+        )}
+
+        {/* Hoy */}
+        <Text style={[s.sectionTitle, s.sectionSpaced]}>Hoy</Text>
+
+        {todaySessions.length > 0 ? (
+          todaySessions.map(session => {
+            const lastMsgAt = session.sala_id ? lastMsgAtBySala[session.sala_id] : undefined;
+            return (
+              <View key={session.id} style={s.sessionBlock}>
+                <View style={s.sessionCard}>
+                  <View style={s.timeTag}>
+                    <Text style={s.timeTagText}>{session.time}</Text>
+                  </View>
+                  <View style={s.sessionInfo}>
+                    <Text style={s.sessionUser}>{session.userName}</Text>
+                    <Text style={s.sessionType}>{session.type}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={s.chatBtn}
+                    onPress={() =>
+                      router.push(
+                        session.sala_id
+                          ? { pathname: '/sala', params: { sala_id: session.sala_id } }
+                          : '/sala'
+                      )
+                    }
+                    activeOpacity={0.75}
+                    hitSlop={6}>
+                    <Feather name="message-circle" size={20} color="#87835C" />
+                  </TouchableOpacity>
+                </View>
+                {lastMsgAt && (
+                  <View style={s.sessionContext}>
+                    <Feather name="clock" size={11} color="rgba(135,131,92,0.65)" />
+                    <Text style={s.sessionContextText}>Último mensaje {formatTimeAgo(lastMsgAt)}</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })
+        ) : (
+          <View style={s.emptyToday}>
+            <MaterialCommunityIcons name="leaf" size={56} color="rgba(86,94,50,0.35)" />
+            <Text style={s.emptyTodayText}>No tenés sesiones hoy.{'\n'}Disfrutá el día</Text>
+          </View>
+        )}
 
         <View style={{ height: TAB_BAR_CLEARANCE }} />
       </ScrollView>
@@ -298,7 +394,7 @@ export default function CoachHomeScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1 },
-  container: { paddingHorizontal: 20, paddingTop: 22 },
+  container: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 22 },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   greetingRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
@@ -372,6 +468,7 @@ const s = StyleSheet.create({
   },
   sectionSpaced: { marginTop: 28 },
 
+  sessionBlock: { marginBottom: 10 },
   sessionCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -380,8 +477,19 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: GLASS_BORDER,
     padding: 14,
-    marginBottom: 10,
     gap: 12,
+  },
+  sessionContext: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingTop: 6,
+  },
+  sessionContextText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: 'rgba(135,131,92,0.65)',
   },
   timeTag: {
     backgroundColor: 'rgba(232,116,59,0.22)',
@@ -410,21 +518,18 @@ const s = StyleSheet.create({
   chatBtn: { padding: 4, flexShrink: 0 },
 
   emptyToday: {
-    backgroundColor: GLASS,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    paddingVertical: 28,
-    paddingHorizontal: 20,
+    flex: 1,
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
   },
   emptyTodayText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 14,
-    color: '#87835C',
+    fontFamily: ViveFonts.medium,
+    fontSize: 17,
+    color: '#565E32',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
   },
 
   weekCard: {
@@ -458,5 +563,12 @@ const s = StyleSheet.create({
     fontSize: 9,
     color: ViveColors.primary,
     textAlign: 'center',
+  },
+  weekSummary: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: '#87835C',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });
