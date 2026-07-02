@@ -7,11 +7,12 @@
 
 ## 2026-07-02 — Joaquín (sesión 41)
 
-**Tocado:** `app/(tabs)/recursos.tsx` (rediseño completo), `hooks/useResourceProgress.ts` (nuevo), `scripts/add-resource-completions.sql` (nuevo, corrido hoy), `SCHEMA.md`
+**Tocado:** `app/(tabs)/recursos.tsx` (rediseño completo + bug fixes), `hooks/useResourceProgress.ts` (nuevo), `scripts/add-resource-completions.sql` (nuevo, corrido hoy), `SCHEMA.md`
 
 **Resumen:**
-- Rediseño completo de la pantalla Recursos: header con racha semanal (StreakChip), bloque de contexto según mood del día (MoodContextBlock con gradiente verde bosque), "Continuar donde dejaste" (ContinueCard, oculta si no hay datos), sección "De tu coach" rediseñada con avatar/badge/nota/checks, filter chips Todos/Guardados, 3 grupos de herramientas con título Fraunces + subtítulo. Toda la lógica existente (saved_resources, toggleSave, ToolCard) se mantuvo intacta.
+- Rediseño completo de la pantalla Recursos: header con racha semanal (StreakChip), bloque de contexto según mood del día (MoodContextBlock con gradiente verde bosque), "Continuar donde dejaste" (ContinueCard, oculta si no hay datos), sección "De tu coach" rediseñada con avatar/badge/nota/checks, filter chips Todos/Guardados, 3 grupos de herramientas con título Fraunces + subtítulo. Toda la lógica existente (saved_resources, toggleSave, ToolCard) se mantuvo intacta. Probado en dispositivo — funciona.
 - Nuevo hook `useResourceProgress`: calcula racha, actividad últimos 7 días, recurso a medias y completados recientes desde `resource_completions`.
+- Bugs corregidos: mini-card de sugerencia en MoodContextBlock era tappable visualmente (tenía chevron) pero sin onPress — ahora navega a la herramienta. Filtro "Guardados" sin items dejaba el área vacía sin contexto — ahora muestra empty state con mensaje.
 - Corridos en Supabase: `add-resource-completions.sql` (tabla nueva), `add-coach-instant-booking.sql` (columna `instant_booking`), `add-avatar-upload.sql` (bucket `avatars` — políticas de storage ya existían, solo faltaba `profiles_update_own`). SCHEMA.md actualizado.
 
 **Pendiente para la próxima sesión:**
