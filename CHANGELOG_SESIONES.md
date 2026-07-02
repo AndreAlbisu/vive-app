@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-07-02 — Joaquín (sesión 41)
+
+**Tocado:** `app/(tabs)/recursos.tsx` (rediseño completo), `hooks/useResourceProgress.ts` (nuevo), `scripts/add-resource-completions.sql` (nuevo, corrido hoy), `SCHEMA.md`
+
+**Resumen:**
+- Rediseño completo de la pantalla Recursos: header con racha semanal (StreakChip), bloque de contexto según mood del día (MoodContextBlock con gradiente verde bosque), "Continuar donde dejaste" (ContinueCard, oculta si no hay datos), sección "De tu coach" rediseñada con avatar/badge/nota/checks, filter chips Todos/Guardados, 3 grupos de herramientas con título Fraunces + subtítulo. Toda la lógica existente (saved_resources, toggleSave, ToolCard) se mantuvo intacta.
+- Nuevo hook `useResourceProgress`: calcula racha, actividad últimos 7 días, recurso a medias y completados recientes desde `resource_completions`.
+- Corridos en Supabase: `add-resource-completions.sql` (tabla nueva), `add-coach-instant-booking.sql` (columna `instant_booking`), `add-avatar-upload.sql` (bucket `avatars` — políticas de storage ya existían, solo faltaba `profiles_update_own`). SCHEMA.md actualizado.
+
+**Pendiente para la próxima sesión:**
+- Cablear escritura de progreso en `resource_completions` desde cada herramienta (Respiración, Meditación, etc.) para que la racha y el "continuar" se pueblen con datos reales.
+- Verificar subida de foto de perfil en dispositivo físico (bucket `avatars` ya está listo).
+- Google OAuth pendiente (dev build).
+
+---
+
 ## 2026-07-02 — Joaquín (sesión 40)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`, `app/search3.tsx`, `lib/coachesCache.ts` (nuevo)

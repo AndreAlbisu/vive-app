@@ -2,7 +2,7 @@
 
 > ⚠️ Este archivo describe lo que está REALMENTE en Supabase hoy.
 > No es un diseño aspiracional — si algo cambia en la base, este archivo se actualiza el mismo día.
-> Última actualización: 24 de junio 2026 — saved_resources confirmado por Andre con information_schema
+> Última actualización: 02 de julio 2026 — resource_completions, instant_booking, avatars bucket aplicados
 
 ## Tablas y relaciones
 
@@ -11,7 +11,7 @@
 - `email`, `name`, `role` (coach | user), `avatar_url`, `birth_date`, `gender`, `nationality`
 - `accepted_terms` (bool), `push_token`, `created_at`
 - Usuarios y coaches viven en la misma tabla, diferenciados por `role`
-- `avatar_url` (text, nullable) — columna vieja, sin uso hasta el 01/07/2026. Ahora es la foto de perfil real de cualquier `profiles` (coach o usuario), subida como archivo a Supabase Storage (bucket `avatars`, path `{auth.uid()}/avatar.jpg`, upsert siempre true). Coaches suben desde `CoachProfileScreen.tsx`, usuarios desde `EditProfileScreen.tsx` (mismo patrón). Se muestra en: `ProfesionalScreen.tsx` y `app/search3.tsx` (coach visto por un usuario), `ProfileOwnScreen.tsx` y el avatar del top bar en `app/(tabs)/index.tsx` (perfil propio), y donde cualquiera de los dos roles ve a la otra parte — `SalaScreen.tsx` (chat, ambos avatares), `CoachReservasScreen.tsx` (usuario que reservó), `CoachChatsScreen.tsx` y `SessionsScreen.tsx` (listas de chat). Todos con fallback a iniciales/ícono genérico si `avatar_url` es null. Requiere `scripts/add-avatar-upload.sql` (bucket + RLS de storage + política de UPDATE en `profiles`), **pendiente de correr en Supabase** en cualquier ambiente que no lo haya corrido todavía.
+- `avatar_url` (text, nullable) — columna vieja, sin uso hasta el 01/07/2026. Ahora es la foto de perfil real de cualquier `profiles` (coach o usuario), subida como archivo a Supabase Storage (bucket `avatars`, path `{auth.uid()}/avatar.jpg`, upsert siempre true). Coaches suben desde `CoachProfileScreen.tsx`, usuarios desde `EditProfileScreen.tsx` (mismo patrón). Se muestra en: `ProfesionalScreen.tsx` y `app/search3.tsx` (coach visto por un usuario), `ProfileOwnScreen.tsx` y el avatar del top bar en `app/(tabs)/index.tsx` (perfil propio), y donde cualquiera de los dos roles ve a la otra parte — `SalaScreen.tsx` (chat, ambos avatares), `CoachReservasScreen.tsx` (usuario que reservó), `CoachChatsScreen.tsx` y `SessionsScreen.tsx` (listas de chat). Todos con fallback a iniciales/ícono genérico si `avatar_url` es null. Requiere `scripts/add-avatar-upload.sql` (bucket + RLS de storage + política de UPDATE en `profiles`), corrido en Supabase el 02/07/2026.
 
 ### `coaches`
 - `id` (uuid, PK) ⚠️ — **NO es lo mismo que `profiles.id`**
@@ -19,7 +19,7 @@
 - `specialty`, `bio`, `price_per_session`, `nationality`, `verified`, `created_at`
 - `application_video_url` (text, nullable) — link al video de presentación que el coach pega al postularse (YouTube, Drive, etc.). Artefacto de revisión de la postulación, no se muestra a usuarios.
 - `video_url` (text, nullable) — URL pública del video de perfil real, subido como archivo desde `CoachProfileScreen.tsx` a Supabase Storage (bucket `coach-videos`). Visible para cualquier usuario en `ProfesionalScreen.tsx`. Distinta de `application_video_url` a propósito: un reproductor nativo (`expo-video`) necesita una URL de archivo directa, no un link de YouTube/Drive. Agregada el 30/06/2026 (`scripts/add-coach-video-upload.sql`).
-- `instant_booking` (boolean, NOT NULL DEFAULT false) — modalidad de reserva del coach, editable desde el switch "Modalidad de reserva" en `CoachProfileScreen.tsx`. Si es `true`, las reservas nuevas de ese coach nacen con `bookings.status = 'confirmada'` directo (sin pasar por `'pendiente'` ni por aceptación manual). Agregada el 01/07/2026 (`scripts/add-coach-instant-booking.sql`, pendiente de correr en Supabase).
+- `instant_booking` (boolean, NOT NULL DEFAULT false) — modalidad de reserva del coach, editable desde el switch "Modalidad de reserva" en `CoachProfileScreen.tsx`. Si es `true`, las reservas nuevas de ese coach nacen con `bookings.status = 'confirmada'` directo (sin pasar por `'pendiente'` ni por aceptación manual). Agregada el 01/07/2026 (`scripts/add-coach-instant-booking.sql`, corrido en Supabase el 02/07/2026).
 
 ### `salas`
 - `id` (uuid, PK)
@@ -129,6 +129,17 @@
 - `resource_id` (text, NOT NULL) — ID del recurso guardado
 - `pinned` (bool, nullable) — si el usuario lo fijó
 - `created_at` (timestamptz, nullable)
+
+### `resource_completions`
+- `id` (uuid, PK)
+- `user_id` (uuid, NOT NULL, FK → `auth.users.id` ON DELETE CASCADE)
+- `resource_id` (text, NOT NULL) — ID del recurso (ej. `"respiracion"`, `"gratitud"`), mismo criterio que `saved_resources.resource_id`
+- `completed_at` (timestamptz, NOT NULL DEFAULT now())
+- `duration_seconds` (int, nullable) — duración total del recurso; NULL para recursos libres (Diario, Ruido blanco)
+- `progress_seconds` (int, nullable) — segundos completados; NULL = no empezado, igual a `duration_seconds` = terminado, entre medio = a medias
+- Índices en `(user_id, completed_at DESC)` y `(user_id, resource_id)`
+- RLS: SELECT/INSERT/UPDATE/DELETE solo si `user_id = auth.uid()`
+- Agregada 02/07/2026 (`scripts/add-resource-completions.sql`). Alimenta: racha semanal (`StreakChip`) y "Continuar donde dejaste" (`ContinueCard`) en `app/(tabs)/recursos.tsx` vía `hooks/useResourceProgress.ts`. Por ahora ninguna herramienta escribe en esta tabla todavía — los bloques se ocultan automáticamente cuando no hay datos.
 
 ### `favorite_coaches`
 - `id` (uuid, PK)
