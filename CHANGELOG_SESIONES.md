@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-07-02 — Andre (sesión 48)
+
+**Tocado:** `screens/CoachTopicsScreen.tsx` (nuevo), `app/coach-topics.tsx` (nuevo), `app/_layout.tsx`, `screens/CoachProfileScreen.tsx`, `screens/ProfesionalScreen.tsx`, `app/search3.tsx`, `scripts/add-coach-topics.sql` (nuevo, **no corrido todavía en Supabase**), `SCHEMA.md`
+
+**Resumen:**
+- Andre pidió hacer funcional la selección de subtemas de un coach (reflejado en perfil + filtro real en el buscador). La taxonomía ya existía completa en `constants/searchData.ts` (`AXES` — 3 ejes: Bienestar físico, Bienestar emocional y mental, Crecimiento y propósito; 28 subtemas en total) y ya se usaba en el flujo `search1.tsx → search2.tsx` para elegir un subtema — pero `search3.tsx` comparaba ese subtema contra `coaches.specialty` (texto libre, ej. "Coach de vida"), así que el filtro nunca matcheaba de verdad.
+- Nueva tabla `coach_topics` (many-to-many coach↔subtema, `coach_id → coaches.id` mismo criterio que `coach_availability`).
+- Nueva pantalla `screens/CoachTopicsScreen.tsx` (`/coach-topics`): los 28 subtemas agrupados por eje, multi-select con chips, guardado con criterio "reemplazar todo" (borra y reinserta). Enganchada desde "Temas que trabajo" en `CoachProfileScreen.tsx` (antes un chip "+ Agregar" sin `onPress`) — ahora muestra los subtemas reales elegidos como chips de solo lectura + el link para editar, refrescando con `useFocusEffect` al volver de la pantalla de edición (primer uso de ese hook en el proyecto).
+- `ProfesionalScreen.tsx`: reemplazado el array de 5 temas hardcodeado (`DEFAULT_PROFESIONAL.topics`, igual para cualquier coach) por los subtemas reales del coach.
+- `search3.tsx`: el filtro por `topic` (viene de `search2.tsx`) ahora compara por igualdad exacta contra los `coach_topics` reales de cada coach, en vez de la comparación rota contra `specialty`. De paso, la búsqueda libre por texto (`query`, desde `search1.tsx`) también matchea contra los subtemas del coach, no solo nombre/especialidad.
+- **Hallazgo sin resolver, documentado en SCHEMA.md (regla 17):** los 9 "temas" que aparecen como cards en Conexiones (`TOPICS` en `conexiones.tsx`) son una taxonomía *distinta* y desconectada de los 28 subtemas de `AXES` — ningún label coincide textualmente. Tocar esas cards en Conexiones ya devolvía 0 resultados antes de esta sesión (comparaba contra `specialty`, tampoco coincidía nunca) y lo sigue haciendo ahora (compara contra `coach_topics`, tampoco coincide). No es una regresión de hoy — es un bug preexistente que quedó más visible. Requiere una decisión de producto (remapear, unificar, o descartar esa navegación) antes de tocarlo.
+
+**Pendiente para la próxima sesión:**
+- **Correr `scripts/add-coach-topics.sql` en Supabase** — hasta entonces, elegir subtemas falla en silencio (tabla no existe) y el perfil/búsqueda no muestran nada.
+- Probar en dispositivo: elegir subtemas como coach, confirmar que aparecen en `ProfesionalScreen.tsx`, y que buscar por ese subtema en `search1 → search2 → search3` trae al coach correcto.
+- Decidir qué hacer con las 9 cards de temas de Conexiones (regla 17 de SCHEMA.md).
+- Sigue pendiente correr `scripts/add-coach-instant-booking.sql` (sesión 37) y `scripts/add-avatar-upload.sql` (sesión 39) en cualquier ambiente que no lo haya corrido todavía.
+
+---
+
 ## 2026-07-01 — Andre (sesión 47)
 
 **Tocado:** `app/(tabs)/index.tsx`

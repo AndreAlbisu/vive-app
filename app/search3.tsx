@@ -29,6 +29,7 @@ type CoachResult = {
   priceFrom: number;
   nationality: string;
   avatarUrl: string | null;
+  topics: string[];
 };
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -138,12 +139,28 @@ export default function SearchScreen3() {
     setLoadingCoaches(true);
     supabase
       .from('coaches')
-      .select('specialty, price_per_session, nationality, profiles!inner(id, name, avatar_url)')
+      .select('id, specialty, price_per_session, nationality, profiles!inner(id, name, avatar_url)')
       .eq('verified', true)
       .limit(50)
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (cancelled) return;
         if (error) console.error('[Search3] coaches fetch:', error.message);
+
+        const coachIds = (data ?? []).map((c: any) => c.id as string);
+        const topicsByCoachId: Record<string, string[]> = {};
+        if (coachIds.length > 0) {
+          const { data: topicRows } = await supabase
+            .from('coach_topics')
+            .select('coach_id, topic')
+            .in('coach_id', coachIds);
+          topicRows?.forEach(t => {
+            const list = topicsByCoachId[t.coach_id as string] ?? [];
+            list.push(t.topic as string);
+            topicsByCoachId[t.coach_id as string] = list;
+          });
+        }
+        if (cancelled) return;
+
         const topicStr = Array.isArray(topic) ? topic[0] : topic;
         const queryStr = Array.isArray(query) ? query[0] : query;
         const all: CoachResult[] = (data ?? []).map((c: any) => {
@@ -155,15 +172,19 @@ export default function SearchScreen3() {
             priceFrom: c.price_per_session as number,
             nationality: (c.nationality ?? '') as string,
             avatarUrl: (profile?.avatar_url ?? null) as string | null,
+            topics: topicsByCoachId[c.id as string] ?? [],
           };
         });
         const filtered = all.filter(c => {
           if (topicStr) {
-            return normalize(c.specialty).includes(normalize(topicStr));
+            const t = normalize(topicStr);
+            return c.topics.some(ct => normalize(ct) === t);
           }
           if (queryStr) {
             const q = normalize(queryStr);
-            return normalize(c.name).includes(q) || normalize(c.specialty).includes(q);
+            return normalize(c.name).includes(q)
+              || normalize(c.specialty).includes(q)
+              || c.topics.some(ct => normalize(ct).includes(q));
           }
           return true;
         });

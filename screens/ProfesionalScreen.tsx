@@ -27,7 +27,7 @@ const DEFAULT_PROFESIONAL = {
   age: '34 años',
   nationality: 'Argentina',
   gender: 'Mujer',
-  topics: ['Ansiedad', 'Autoestima', 'Relaciones', 'Propósito', 'Estrés'],
+  topics: [] as string[],
   priceFrom: 4500,
   video_url: null as string | null,
   avatar_url: null as string | null,
@@ -87,7 +87,7 @@ export default function ProfesionalScreen() {
     if (!pid) return;
     supabase
       .from('coaches')
-      .select('specialty, price_per_session, nationality, video_url, profiles!inner(name, avatar_url)')
+      .select('id, specialty, price_per_session, nationality, video_url, profiles!inner(name, avatar_url)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
@@ -100,6 +100,14 @@ export default function ProfesionalScreen() {
           video_url: (data as any).video_url ?? null,
           avatar_url: (data as any).profiles.avatar_url ?? null,
         });
+
+        supabase
+          .from('coach_topics')
+          .select('topic')
+          .eq('coach_id', (data as any).id)
+          .then(({ data: topicRows }) => {
+            setFetchedData(prev => ({ ...prev, topics: (topicRows ?? []).map(t => t.topic as string) }));
+          });
       });
   }, [params.profileId]);
 
@@ -204,13 +212,15 @@ export default function ProfesionalScreen() {
           </Text>
 
           {/* Chips de temas */}
-          <View style={s.chipsRow}>
-            {prof.topics.map(topic => (
-              <View key={topic} style={s.chip}>
-                <Text style={s.chipText}>{topic}</Text>
-              </View>
-            ))}
-          </View>
+          {prof.topics.length > 0 && (
+            <View style={s.chipsRow}>
+              {prof.topics.map(topic => (
+                <View key={topic} style={s.chip}>
+                  <Text style={s.chipText}>{topic}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* ── Video de introducción ─────────────────────────────────────── */}
