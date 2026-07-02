@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-07-02 — Joaquín (sesión 37)
+
+**Tocado:** merge de `andre/main` → `main` (fast-forward, sin conflictos)
+
+**Resumen:**
+- Integrados 11 commits de Andre: fotos de perfil para coaches y usuarios (visibles en chat, reservas, búsquedas y Destacados), favoritos de coaches funcionales, reserva instantánea implementada, bloqueo de doble reserva al mismo horario, chat de Sala congelado mientras reserva está pendiente, fix de reviews unidireccionales, fix visual card de Sofía en Conexiones, frase del día sacada del hardcode en home.
+- Scripts SQL nuevos en `scripts/`: `add-avatar-upload.sql`, `add-coach-instant-booking.sql`, `add-favorite-coaches.sql`, `complete-confirmed-sessions.sql` — verificar cuáles ya fueron corridos en Supabase.
+
+**Pendiente para la próxima sesión:**
+- Revisar qué scripts SQL de Andre ya están aplicados en Supabase y cuáles faltan.
+- Con más días de check-in, verificar gráfico de mood en progreso.
+- Google OAuth pendiente (dev build).
+- Botón "Editar perfil" en CoachProfileScreen sin `onPress`.
+
+---
+
 ## 2026-07-01 — Andre (sesión 47)
 
 **Tocado:** `app/(tabs)/index.tsx`
