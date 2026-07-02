@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-07-02 — Joaquín (sesión 44 — verificación y cierre)
+
+**Tocado:** `package.json`, `package-lock.json`
+
+**Resumen:**
+- Se verificó el flujo completo de "Unirse a la llamada": el botón abre Daily.co correctamente con `expo-web-browser` (in-app browser)
+- La SQL de prueba (`scheduled_date = '2026-07-02'`, `scheduled_time = '0:00'`, `duration_minutes = 1440`) confirma que el cálculo de estado `'live'` funciona bien en la app
+- Daily.co en plan gratuito **no permite crear salas privadas vía API** — pide plan de pago. El flujo técnico está completo; solo falta activar el plan pago en Daily.co
+- `expo-calendar` instalado — commit pendiente de esta sesión
+
+**Pendiente para la próxima sesión:**
+- **Activar plan de pago en Daily.co** para habilitar la creación de salas privadas por API (el resto del flujo ya funciona)
+- Limpiar los datos de prueba en bookings (scheduled_date/time a valores reales)
+- Verificar presencia "en línea" (no implementada — no hay infraestructura de Supabase Presence)
+- Cablear escritura en `resource_completions` desde las herramientas
+- SDK nativo de Daily.co (no corre en Expo Go — mejora futura)
+
+---
+
 ## 2026-07-02 — Joaquín (sesión 43)
 
 **Tocado:** `screens/SessionsScreen.tsx`, `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/CoachReservasScreen.tsx`, `supabase/functions/create-meeting-room/index.ts` (nuevo), `lib/meetingRoom.ts` (nuevo), `scripts/add-duration-minutes-meeting-url.sql` (nuevo), `app.json`, `tsconfig.json`, `SCHEMA.md`
