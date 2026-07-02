@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Tabs } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { View, Text, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
@@ -119,6 +120,16 @@ export default function TabLayout() {
 
     return () => { supabase.removeChannel(channel); };
   }, [user?.id]);
+
+  // Recalcula al volver a la sección de tabs (ej: salir de una sala recién
+  // leída) — no depender solo de que el evento realtime de "salas" llegue,
+  // que puede no dispararse si la tabla no tiene replicación habilitada.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      checkDot(user.id, setHasDot);
+    }, [user?.id])
+  );
 
   return (
     <Tabs

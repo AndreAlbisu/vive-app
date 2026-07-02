@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Calendar from 'expo-calendar';
@@ -117,7 +118,6 @@ export default function SessionsScreen() {
 
   const loadSalas = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
 
     const todayStr = new Date().toISOString().split('T')[0];
 
@@ -174,17 +174,30 @@ export default function SessionsScreen() {
         const otherName = profileMap[otherId]?.name ?? 'Usuario';
         const userReadAt: string | null = isUserSide ? sala.user_last_read_at : sala.coach_last_read_at;
 
-        const { data: lastMsg } = await supabase
-          .from('messages')
-          .select('content, created_at')
-          .eq('sala_id', sala.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const [{ data: lastMsg }, { data: lastForeign }] = await Promise.all([
+          supabase
+            .from('messages')
+            .select('content, created_at')
+            .eq('sala_id', sala.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          // último mensaje humano (no de sistema) que NO mandé yo mismo — un
+          // mensaje propio no debe marcar la sala como no leída. Mismo criterio
+          // validado en checkDot (app/(tabs)/_layout.tsx) y CoachChatsScreen.tsx.
+          supabase
+            .from('messages')
+            .select('created_at')
+            .eq('sala_id', sala.id)
+            .in('sender_type', ['user', 'coach'])
+            .neq('sender_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
 
-        const hasUnread = !!lastMsg && (
-          !userReadAt || new Date(lastMsg.created_at) > new Date(userReadAt)
-        );
+        const lastForeignAt = lastForeign?.created_at as string | undefined;
+        const hasUnread = !!lastForeignAt && (!userReadAt || lastForeignAt > userReadAt);
 
         return {
           id: sala.id,
@@ -230,9 +243,14 @@ export default function SessionsScreen() {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => {
-    loadSalas();
-  }, [loadSalas]);
+  // Refresca cada vez que se vuelve a esta pestaña — mismo bug que
+  // encontramos en CoachHomeScreen/CoachChatsScreen: sin esto, volver de un
+  // chat recién leído dejaba el estado de "no leído" viejo hasta un remount completo.
+  useFocusEffect(
+    useCallback(() => {
+      loadSalas();
+    }, [loadSalas])
+  );
 
   async function handleJoinFromHero() {
     if (!nextSession?.meeting_url) return;
