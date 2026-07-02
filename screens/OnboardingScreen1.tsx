@@ -17,8 +17,6 @@ import Svg, {
   RadialGradient,
   Stop,
   Circle as SvgCircle,
-  Filter,
-  FeGaussianBlur,
   Text as SvgText,
 } from 'react-native-svg';
 
@@ -300,26 +298,17 @@ export default function OnboardingScreen1() {
                   <Stop offset="100%" stopColor={color} stopOpacity="0" />
                 </RadialGradient>
               ))}
-
-              {/* Medium blur for inner glow layer */}
-              <Filter id="blurMed" x="-100%" y="-100%" width="300%" height="300%">
-                <FeGaussianBlur stdDeviation="15" />
-              </Filter>
-              {/* Deep blur for outer glow layer */}
-              <Filter id="blurDeep" x="-150%" y="-150%" width="400%" height="400%">
-                <FeGaussianBlur stdDeviation="26" />
-              </Filter>
             </Defs>
 
             {/* ── Layer 1: deep outer glow ── */}
-            <AnimatedCircle animatedProps={og0} fill={`url(#${GRAD_IDS[0]})`} filter="url(#blurDeep)" />
-            <AnimatedCircle animatedProps={og1} fill={`url(#${GRAD_IDS[1]})`} filter="url(#blurDeep)" />
-            <AnimatedCircle animatedProps={og2} fill={`url(#${GRAD_IDS[2]})`} filter="url(#blurDeep)" />
+            <AnimatedCircle animatedProps={og0} fill={`url(#${GRAD_IDS[0]})`} />
+            <AnimatedCircle animatedProps={og1} fill={`url(#${GRAD_IDS[1]})`} />
+            <AnimatedCircle animatedProps={og2} fill={`url(#${GRAD_IDS[2]})`} />
 
             {/* ── Layer 2: inner glow ── */}
-            <AnimatedCircle animatedProps={ig0} fill={`url(#${GRAD_IDS[0]})`} filter="url(#blurMed)" />
-            <AnimatedCircle animatedProps={ig1} fill={`url(#${GRAD_IDS[1]})`} filter="url(#blurMed)" />
-            <AnimatedCircle animatedProps={ig2} fill={`url(#${GRAD_IDS[2]})`} filter="url(#blurMed)" />
+            <AnimatedCircle animatedProps={ig0} fill={`url(#${GRAD_IDS[0]})`} />
+            <AnimatedCircle animatedProps={ig1} fill={`url(#${GRAD_IDS[1]})`} />
+            <AnimatedCircle animatedProps={ig2} fill={`url(#${GRAD_IDS[2]})`} />
 
             {/* ── Layer 3: thin rings (fade during merge) ── */}
             <AnimatedCircle animatedProps={rg0} fill="none" stroke={PAL.ring} />

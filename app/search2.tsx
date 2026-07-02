@@ -19,6 +19,12 @@ const shadow = Platform.select({
   android: { elevation: 2 },
 });
 
+// mismo bug que en search1.tsx: el restyle "oliva + crema + glass" (ffd928e4)
+// puso #565E32 (= ViveColors.text) como fondo del chip, dejando el texto
+// invisible sobre su propio fondo en el estado no seleccionado
+const GLASS = 'rgba(255,248,240,0.55)';
+const GLASS_BORDER = 'rgba(255,255,255,0.65)';
+
 export default function SearchScreen2() {
   const router = useRouter();
   const { axisId } = useLocalSearchParams<{ axisId: string }>();
@@ -169,10 +175,11 @@ const s = StyleSheet.create({
   },
   chip: {
     borderWidth: 1.5,
+    borderColor: GLASS_BORDER,
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#565E32',
+    backgroundColor: GLASS,
     ...shadow,
   },
   chipActive: {

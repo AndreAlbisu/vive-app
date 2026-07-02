@@ -22,6 +22,12 @@ const shadow = Platform.select({
   android: { elevation: 3 },
 });
 
+// fondo glass claro para tarjetas — el restyle "oliva + crema + glass" (ffd928e4)
+// hizo un find/replace de #FFFFFF a #565E32 acá, que es EL MISMO color que el
+// texto (ViveColors.text), dejando el texto invisible sobre su propio fondo
+const GLASS = 'rgba(255,248,240,0.55)';
+const GLASS_BORDER = 'rgba(255,255,255,0.65)';
+
 export default function SearchScreen1() {
   const router  = useRouter();
   const [query, setQuery] = useState('');
@@ -123,7 +129,9 @@ const s = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#565E32',
+    backgroundColor: GLASS,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: Platform.OS === 'ios' ? 11 : 6,
@@ -174,7 +182,9 @@ const s = StyleSheet.create({
   axisCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#565E32',
+    backgroundColor: GLASS,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
     borderRadius: 16,
     paddingVertical: 22,
     paddingHorizontal: 16,
