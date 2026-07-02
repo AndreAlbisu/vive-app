@@ -22,6 +22,38 @@
 - Probar en dispositivo: elegir subtemas como coach, confirmar que aparecen en `ProfesionalScreen.tsx`, y que buscar por ese subtema en `search1 → search2 → search3` trae al coach correcto.
 - Decidir qué hacer con las 9 cards de temas de Conexiones (regla 17 de SCHEMA.md).
 - Sigue pendiente correr `scripts/add-coach-instant-booking.sql` (sesión 37) y `scripts/add-avatar-upload.sql` (sesión 39) en cualquier ambiente que no lo haya corrido todavía.
+## 2026-07-02 — Joaquín (sesión 38)
+
+**Tocado:** Supabase (SQL Editor — sin cambios de código)
+
+**Resumen:**
+- Corridos los scripts pendientes de Andre en Supabase:
+  - `favorite_coaches` — ya existía (Andre la había corrido antes)
+  - `add-coach-instant-booking.sql` — columna `instant_booking boolean DEFAULT false` agregada a `coaches`
+  - `add-avatar-upload.sql` — bucket `avatars` creado en Storage + 4 políticas RLS + política `profiles_update_own`
+- Todos los features de Andre (fotos de perfil, reserva instantánea, favoritos) quedan operativos en producción.
+
+**Pendiente para la próxima sesión:**
+- Verificar subida de foto de perfil en dispositivo físico (coach y usuario).
+- Con más días de check-in, verificar gráfico de mood en progreso.
+- Google OAuth pendiente (dev build).
+- Botón "Editar perfil" en CoachProfileScreen sin `onPress`.
+
+---
+
+## 2026-07-02 — Joaquín (sesión 37)
+
+**Tocado:** merge de `andre/main` → `main` (fast-forward, sin conflictos)
+
+**Resumen:**
+- Integrados 11 commits de Andre: fotos de perfil para coaches y usuarios (visibles en chat, reservas, búsquedas y Destacados), favoritos de coaches funcionales, reserva instantánea implementada, bloqueo de doble reserva al mismo horario, chat de Sala congelado mientras reserva está pendiente, fix de reviews unidireccionales, fix visual card de Sofía en Conexiones, frase del día sacada del hardcode en home.
+- Scripts SQL nuevos en `scripts/`: `add-avatar-upload.sql`, `add-coach-instant-booking.sql`, `add-favorite-coaches.sql`, `complete-confirmed-sessions.sql` — verificar cuáles ya fueron corridos en Supabase.
+
+**Pendiente para la próxima sesión:**
+- Revisar qué scripts SQL de Andre ya están aplicados en Supabase y cuáles faltan.
+- Con más días de check-in, verificar gráfico de mood en progreso.
+- Google OAuth pendiente (dev build).
+- Botón "Editar perfil" en CoachProfileScreen sin `onPress`.
 
 ---
 
