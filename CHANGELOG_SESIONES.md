@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-07-02 — Joaquín (sesión 42)
+
+**Tocado:** `screens/ProfileOwnScreen.tsx`, `app/(tabs)/index.tsx`
+
+**Resumen:**
+- Se eliminó la sección "Para vos hoy" de Home (card de recomendación, animación a5, constante mockRecommendation, estilos)
+- Se eliminaron "Tu progreso" (toggle Sobre ti/Coach, sobreTiCard) y "Mi actividad" (3 MetricCards con métricas de sesiones) del perfil propio
+- Se removió el componente `MetricCard`, la función `loadActivity`, states `progressTab`/`activity`/`semanasActivas`, y todos los estilos asociados
+- `ActivityIndicator` se conservó porque sigue siendo usado en la sección "Mis profesionales"
+
+**Pendiente para la próxima sesión:**
+- Cablear escritura en `resource_completions` desde las herramientas (Respiración, Meditación, etc.)
+- Verificar subida de foto de perfil en dispositivo físico
+- Google OAuth pendiente (dev build)
+
+---
+
 ## 2026-07-02 — Joaquín (sesión 41)
 
 **Tocado:** `app/(tabs)/recursos.tsx` (rediseño completo + bug fixes), `hooks/useResourceProgress.ts` (nuevo), `scripts/add-resource-completions.sql` (nuevo, corrido hoy), `SCHEMA.md`
