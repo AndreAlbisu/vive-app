@@ -7,15 +7,14 @@
 
 ## 2026-07-02 — Joaquín (sesión 40)
 
-**Tocado:** `app/(tabs)/conexiones.tsx`, `app/search3.tsx`
+**Tocado:** `app/(tabs)/conexiones.tsx`, `app/search3.tsx`, `lib/coachesCache.ts` (nuevo)
 
 **Resumen:**
-- Fix cards de temas en Conexiones: siempre devolvían 0 resultados porque los labels de UI ("Ansiedad y estrés") no coincidían con los subtemas reales de `coach_topics` ("Ansiedad", "Estrés físico").
-- Solución: cada card ahora tiene `searchTopics: string[]` con los subtemas exactos de `constants/searchData.ts` (AXES). El `onPress` pasa `topic=subtema1,subtema2,...` (coma-separado) + `label=` como parámetros separados a `/search3`.
-- En `search3.tsx`: parseo de `topic` por coma, OR logic (si el coach tiene cualquiera de los subtemas → aparece). El título del header ahora usa `label` en vez del string de búsqueda interno.
+- Fix cards de temas en Conexiones: siempre devolvían 0 resultados porque los labels de UI ("Ansiedad y estrés") no coincidían con los subtemas reales de `coach_topics` ("Ansiedad", "Estrés físico"). Solución: cada card tiene `searchTopics: string[]` con strings exactos de AXES; se pasan como lista coma-separada a search3 que usa OR logic.
+- Carga de subtemas en Supabase: script SQL para los 8 coaches reales (andre, María González, Martín Fuentes, Sofía Herrera, Lucas Méndez, Usuario 2, dardoalbisu, Coach Prueba).
+- Performance: dos queries secuenciales colapsadas en una sola con join `coach_topics(topic)` en search3. Luego agregado prefetch en module cache (`lib/coachesCache.ts`): al abrir Conexiones se precarga en background; al tocar una card el resultado aparece instantáneo desde memoria.
 
 **Pendiente para la próxima sesión:**
-- Probar en dispositivo: los coaches en Supabase necesitan tener `coach_topics` cargados para que la búsqueda devuelva resultados reales.
 - Verificar subida de foto de perfil en dispositivo físico.
 - Google OAuth pendiente (dev build).
 
