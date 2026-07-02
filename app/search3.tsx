@@ -139,27 +139,12 @@ export default function SearchScreen3() {
     setLoadingCoaches(true);
     supabase
       .from('coaches')
-      .select('id, specialty, price_per_session, nationality, profiles!inner(id, name, avatar_url)')
+      .select('id, specialty, price_per_session, nationality, profiles!inner(id, name, avatar_url), coach_topics(topic)')
       .eq('verified', true)
       .limit(50)
-      .then(async ({ data, error }) => {
+      .then(({ data, error }) => {
         if (cancelled) return;
         if (error) console.error('[Search3] coaches fetch:', error.message);
-
-        const coachIds = (data ?? []).map((c: any) => c.id as string);
-        const topicsByCoachId: Record<string, string[]> = {};
-        if (coachIds.length > 0) {
-          const { data: topicRows } = await supabase
-            .from('coach_topics')
-            .select('coach_id, topic')
-            .in('coach_id', coachIds);
-          topicRows?.forEach(t => {
-            const list = topicsByCoachId[t.coach_id as string] ?? [];
-            list.push(t.topic as string);
-            topicsByCoachId[t.coach_id as string] = list;
-          });
-        }
-        if (cancelled) return;
 
         const topicStr = Array.isArray(topic) ? topic[0] : topic;
         const queryStr = Array.isArray(query) ? query[0] : query;
@@ -172,7 +157,7 @@ export default function SearchScreen3() {
             priceFrom: c.price_per_session as number,
             nationality: (c.nationality ?? '') as string,
             avatarUrl: (profile?.avatar_url ?? null) as string | null,
-            topics: topicsByCoachId[c.id as string] ?? [],
+            topics: (c.coach_topics ?? []).map((t: any) => t.topic as string),
           };
         });
         const filtered = all.filter(c => {
