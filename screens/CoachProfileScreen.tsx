@@ -398,7 +398,7 @@ export default function CoachProfileScreen() {
             </>
           )}
 
-          <TouchableOpacity style={s.editProfileBtn} activeOpacity={0.75}>
+          <TouchableOpacity style={s.editProfileBtn} activeOpacity={0.75} onPress={() => router.push('/edit-profile')}>
             <Text style={s.editProfileBtnText}>Editar perfil</Text>
           </TouchableOpacity>
         </View>
