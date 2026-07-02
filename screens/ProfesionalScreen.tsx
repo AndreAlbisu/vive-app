@@ -11,6 +11,7 @@ import {
   Platform,
   StatusBar,
   Image,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -227,29 +228,40 @@ export default function ProfesionalScreen() {
         {prof.video_url && (
           <View style={s.section}>
             <Text style={s.sectionTitle}>Video de introducción</Text>
-            {isPlayingVideo ? (
-              <VideoView
-                player={videoPlayer}
-                style={s.videoPlaceholder}
-                contentFit="cover"
-                nativeControls
-                allowsFullscreen
-              />
-            ) : (
-              <TouchableOpacity
-                style={s.videoPlaceholder}
-                activeOpacity={0.8}
-                onPress={() => { setIsPlayingVideo(true); videoPlayer.play(); }}>
-                <View style={s.playBtn}>
-                  <MaterialIcons name="play-arrow" size={32} color={ViveColors.primary} />
-                </View>
-                <Text style={s.videoCaption}>
-                  Conocé a {prof.name.split(' ')[0]} en 1 minuto
-                </Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={s.videoPlaceholder}
+              activeOpacity={0.8}
+              onPress={() => { setIsPlayingVideo(true); videoPlayer.play(); }}>
+              <View style={s.playBtn}>
+                <MaterialIcons name="play-arrow" size={32} color={ViveColors.primary} />
+              </View>
+              <Text style={s.videoCaption}>
+                Conocé a {prof.name.split(' ')[0]} en 1 minuto
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
+
+        <Modal
+          visible={isPlayingVideo}
+          animationType="fade"
+          presentationStyle="fullScreen"
+          onRequestClose={() => { videoPlayer.pause(); setIsPlayingVideo(false); }}>
+          <View style={s.videoModalBg}>
+            <VideoView
+              player={videoPlayer}
+              style={s.videoModalPlayer}
+              contentFit="contain"
+              nativeControls
+            />
+            <TouchableOpacity
+              style={s.videoModalCloseBtn}
+              onPress={() => { videoPlayer.pause(); setIsPlayingVideo(false); }}
+              hitSlop={12}>
+              <MaterialIcons name="close" size={26} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </Modal>
 
         {/* ── Reviews ──────────────────────────────────────────────────── */}
         <View style={s.section}>
@@ -503,6 +515,27 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.regular,
     fontSize: 13,
     color: '#87835C',
+  },
+  videoModalBg: {
+    flex: 1,
+    backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoModalPlayer: {
+    width: '100%',
+    height: '100%',
+  },
+  videoModalCloseBtn: {
+    position: 'absolute',
+    top: 56,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // ── Rating general ────────────────────────────────────────────────────

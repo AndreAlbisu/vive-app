@@ -119,9 +119,15 @@ export default function EditProfileScreen() {
       aspect: [1, 1],
       quality: 0.8,
     };
-    const result = source === 'camera'
-      ? await ImagePicker.launchCameraAsync(options)
-      : await ImagePicker.launchImageLibraryAsync(options);
+    let result;
+    try {
+      result = source === 'camera'
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
+    } catch {
+      Alert.alert('No se pudo abrir la cámara', 'Volvé a intentar. Si el problema persiste, revisá que tengas espacio de almacenamiento disponible en el celular.');
+      return;
+    }
 
     if (result.canceled || !result.assets?.[0]) return;
 
