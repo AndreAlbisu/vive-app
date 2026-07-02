@@ -124,7 +124,7 @@ function CustomSlider({
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 export default function SearchScreen3() {
   const router = useRouter();
-  const { topic, query } = useLocalSearchParams<{ topic?: string; query?: string }>();
+  const { topic, label, query } = useLocalSearchParams<{ topic?: string; label?: string; query?: string }>();
 
   const [filters, setFilters]     = useState<Filters>(DEFAULT_FILTERS);
   const [draftFilters, setDraft]  = useState<Filters>(DEFAULT_FILTERS);
@@ -177,8 +177,8 @@ export default function SearchScreen3() {
         });
         const filtered = all.filter(c => {
           if (topicStr) {
-            const t = normalize(topicStr);
-            return c.topics.some(ct => normalize(ct) === t);
+            const filterTopics = topicStr.split(',').map(normalize);
+            return c.topics.some(ct => filterTopics.includes(normalize(ct)));
           }
           if (queryStr) {
             const q = normalize(queryStr);
@@ -224,7 +224,7 @@ export default function SearchScreen3() {
     filters.type !== 'Todos',
   ].filter(Boolean).length;
 
-  const title = topic ?? query ?? 'Resultados';
+  const title = label ?? query ?? 'Resultados';
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>

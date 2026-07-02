@@ -34,16 +34,16 @@ const PALETTE = [
 // ─── Datos ───────────────────────────────────────────────────────────────────
 type MIcon = React.ComponentProps<typeof MaterialIcons>['name'];
 
-const TOPICS: { id: string; icon: MIcon; label: string }[] = [
-  { id: '1', icon: 'mood',           label: 'Estado de\nánimo'       },
-  { id: '2', icon: 'favorite',       label: 'Relaciones'              },
-  { id: '3', icon: 'trending-up',    label: 'Desarrollo\npersonal'   },
-  { id: '4', icon: 'explore',        label: 'Propósito y\ndirección' },
-  { id: '5', icon: 'spa',            label: 'Ansiedad y\nestrés'     },
-  { id: '6', icon: 'work',           label: 'Trabajo y\ncarrera'     },
-  { id: '7', icon: 'repeat',         label: 'Hábitos'                 },
-  { id: '8', icon: 'restaurant',     label: 'Nutrición'               },
-  { id: '9', icon: 'fitness-center', label: 'Salud y\nbienestar'     },
+const TOPICS: { id: string; icon: MIcon; label: string; searchTopics: string[] }[] = [
+  { id: '1', icon: 'mood',           label: 'Estado de\nánimo',       searchTopics: ['Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría'] },
+  { id: '2', icon: 'favorite',       label: 'Relaciones',              searchTopics: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'] },
+  { id: '3', icon: 'trending-up',    label: 'Desarrollo\npersonal',   searchTopics: ['Identidad', 'Motivación', 'Crecimiento', 'Propósito'] },
+  { id: '4', icon: 'explore',        label: 'Propósito y\ndirección', searchTopics: ['Propósito', 'Identidad', 'Motivación', 'Momentos de cambio'] },
+  { id: '5', icon: 'spa',            label: 'Ansiedad y\nestrés',     searchTopics: ['Ansiedad', 'Estrés físico'] },
+  { id: '6', icon: 'work',           label: 'Trabajo y\ncarrera',     searchTopics: ['Productividad', 'Concentración', 'Procrastinación', 'Vínculos laborales'] },
+  { id: '7', icon: 'repeat',         label: 'Hábitos',                 searchTopics: ['Hábitos', 'Hábitos mentales'] },
+  { id: '8', icon: 'restaurant',     label: 'Nutrición',               searchTopics: ['Nutrición'] },
+  { id: '9', icon: 'fitness-center', label: 'Salud y\nbienestar',     searchTopics: ['Sueño', 'Energía', 'Actividad física', 'Estrés físico'] },
 ];
 
 type CoachItem = {
@@ -221,7 +221,7 @@ export default function ConexionesScreen() {
                   style={s.topicCard}
                   onPress={() => router.push({
                     pathname: '/search3',
-                    params: { topic: t.label.replace('\n', ' ') },
+                    params: { topic: t.searchTopics.join(','), label: t.label.replace('\n', ' ') },
                   })}>
                   <View style={[s.topicCircle, { backgroundColor: pal.bg }]}>
                     <MaterialIcons name={t.icon} size={22} color={pal.fg} />
