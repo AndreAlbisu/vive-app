@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
-import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { ScaleCard } from '@/components/ScaleCard';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { AppBg } from '@/components/ui/AppBg';
@@ -115,7 +115,7 @@ const COACH_RESOURCES: CoachResource[] = [
 const FOREST       = '#3A4F2A';
 const FOREST_SOFT  = '#6B7A56';
 const CREAM_LIGHT  = '#F3EEDF';
-const TERRACOTTA   = ViveColors.primary; // #C1694F
+const TERRACOTTA   = '#C1694F';
 const TERRA_SOFT   = '#EAD3C6';
 const GLASS_BG     = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
@@ -142,6 +142,7 @@ function MoodContextBlock({
   moodEntry?: { mood_id: number; mood_label: string };
   onGoToCheckIn: () => void;
 }) {
+  const router = useRouter();
   const suggestion = moodEntry ? MOOD_TO_RESOURCE[moodEntry.mood_id] : null;
   const suggestedTool = suggestion ? TOOL_MAP[suggestion.toolId] : null;
 
@@ -160,7 +161,10 @@ function MoodContextBlock({
             <Text style={s.moodEmphasis}>{moodEntry.mood_label.toLowerCase()}</Text>
             {' esta mañana. Esto te puede ayudar ahora:'}
           </Text>
-          <View style={s.moodSuggestion}>
+          <TouchableOpacity
+            style={s.moodSuggestion}
+            onPress={() => { if (suggestedTool.route) router.push(suggestedTool.route as any); }}
+            activeOpacity={0.8}>
             <View style={s.moodSuggestionIcon}>
               <Ionicons name={suggestedTool.icon} size={20} color={TERRA_SOFT} />
             </View>
@@ -169,7 +173,7 @@ function MoodContextBlock({
               <Text style={s.moodSuggestionWhy}>{suggestedTool.duration} · {suggestion!.whyText}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={TERRA_SOFT} />
-          </View>
+          </TouchableOpacity>
         </>
       ) : (
         <>
@@ -486,15 +490,24 @@ export default function RecursosScreen() {
             onSelect={setFilter}
           />
 
-          {TOOL_GROUPS.map(group => (
-            <ToolGroupSection
-              key={group.id}
-              group={group}
-              savedIds={savedIds}
-              onSave={toggleSave}
-              filter={filter}
-            />
-          ))}
+          {filter === 'saved' && savedIds.size === 0 ? (
+            <View style={s.emptyState}>
+              <Ionicons name="bookmark-outline" size={32} color={FOREST_SOFT} />
+              <Text style={s.emptyStateText}>
+                Tocá el marcador en cualquier herramienta para guardarla acá.
+              </Text>
+            </View>
+          ) : (
+            TOOL_GROUPS.map(group => (
+              <ToolGroupSection
+                key={group.id}
+                group={group}
+                savedIds={savedIds}
+                onSave={toggleSave}
+                filter={filter}
+              />
+            ))
+          )}
 
           <View style={{ height: TAB_BAR_CLEARANCE }} />
         </ScrollView>
@@ -867,5 +880,20 @@ const s = StyleSheet.create({
     height: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // ── Empty state (Guardados vacío) ─────────────────────────────────────────
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  emptyStateText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: FOREST_SOFT,
+    textAlign: 'center',
+    maxWidth: 240,
+    lineHeight: 19,
   },
 });
