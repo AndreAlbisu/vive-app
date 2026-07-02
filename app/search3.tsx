@@ -21,16 +21,9 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { NATIONALITIES, MAX_PRICE } from '@/constants/searchData';
 import { ScaleCard } from '@/components/ScaleCard';
 import { supabase } from '@/lib/supabase';
+import { getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 
-type CoachResult = {
-  id: string;       // profiles.id
-  name: string;
-  specialty: string;
-  priceFrom: number;
-  nationality: string;
-  avatarUrl: string | null;
-  topics: string[];
-};
+type CoachResult = CachedCoach;
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 type SexFilter     = 'Todos' | 'Mujer' | 'Hombre';
@@ -136,6 +129,33 @@ export default function SearchScreen3() {
 
   useEffect(() => {
     let cancelled = false;
+
+    function applyAndSet(all: CachedCoach[]) {
+      const topicStr = Array.isArray(topic) ? topic[0] : topic;
+      const queryStr = Array.isArray(query) ? query[0] : query;
+      const filtered = all.filter(c => {
+        if (topicStr) {
+          const filterTopics = topicStr.split(',').map(normalize);
+          return c.topics.some(ct => filterTopics.includes(normalize(ct)));
+        }
+        if (queryStr) {
+          const q = normalize(queryStr);
+          return normalize(c.name).includes(q)
+            || normalize(c.specialty).includes(q)
+            || c.topics.some(ct => normalize(ct).includes(q));
+        }
+        return true;
+      });
+      setRawCoaches(filtered);
+      setLoadingCoaches(false);
+    }
+
+    const cached = getCoachesCache();
+    if (cached) {
+      applyAndSet(cached);
+      return;
+    }
+
     setLoadingCoaches(true);
     supabase
       .from('coaches')
@@ -145,10 +165,7 @@ export default function SearchScreen3() {
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) console.error('[Search3] coaches fetch:', error.message);
-
-        const topicStr = Array.isArray(topic) ? topic[0] : topic;
-        const queryStr = Array.isArray(query) ? query[0] : query;
-        const all: CoachResult[] = (data ?? []).map((c: any) => {
+        const all: CachedCoach[] = (data ?? []).map((c: any) => {
           const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
           return {
             id: profile?.id as string,
@@ -160,21 +177,7 @@ export default function SearchScreen3() {
             topics: (c.coach_topics ?? []).map((t: any) => t.topic as string),
           };
         });
-        const filtered = all.filter(c => {
-          if (topicStr) {
-            const filterTopics = topicStr.split(',').map(normalize);
-            return c.topics.some(ct => filterTopics.includes(normalize(ct)));
-          }
-          if (queryStr) {
-            const q = normalize(queryStr);
-            return normalize(c.name).includes(q)
-              || normalize(c.specialty).includes(q)
-              || c.topics.some(ct => normalize(ct).includes(q));
-          }
-          return true;
-        });
-        setRawCoaches(filtered);
-        setLoadingCoaches(false);
+        applyAndSet(all);
       });
     return () => { cancelled = true; };
   }, [topic, query]);

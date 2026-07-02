@@ -23,6 +23,7 @@ import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
+import { prefetchCoaches } from '@/lib/coachesCache';
 
 // ─── Paleta suave ────────────────────────────────────────────────────────────
 const PALETTE = [
@@ -99,6 +100,8 @@ export default function ConexionesScreen() {
   const [loadingCoaches, setLoadingCoaches] = useState(true);
 
   const coachDots = Math.max(1, Math.ceil(coaches.length / 2));
+
+  useEffect(() => { prefetchCoaches(); }, []);
 
   useEffect(() => {
     supabase
