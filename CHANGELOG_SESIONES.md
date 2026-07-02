@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-07-02 — Joaquín (sesión 38)
+
+**Tocado:** Supabase (SQL Editor — sin cambios de código)
+
+**Resumen:**
+- Corridos los scripts pendientes de Andre en Supabase:
+  - `favorite_coaches` — ya existía (Andre la había corrido antes)
+  - `add-coach-instant-booking.sql` — columna `instant_booking boolean DEFAULT false` agregada a `coaches`
+  - `add-avatar-upload.sql` — bucket `avatars` creado en Storage + 4 políticas RLS + política `profiles_update_own`
+- Todos los features de Andre (fotos de perfil, reserva instantánea, favoritos) quedan operativos en producción.
+
+**Pendiente para la próxima sesión:**
+- Verificar subida de foto de perfil en dispositivo físico (coach y usuario).
+- Con más días de check-in, verificar gráfico de mood en progreso.
+- Google OAuth pendiente (dev build).
+- Botón "Editar perfil" en CoachProfileScreen sin `onPress`.
+
+---
+
 ## 2026-07-02 — Joaquín (sesión 37)
 
 **Tocado:** merge de `andre/main` → `main` (fast-forward, sin conflictos)
