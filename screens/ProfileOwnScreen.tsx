@@ -17,19 +17,11 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
-import { getSemanasActivas } from '@/lib/stats';
-
 type Profesional = {
   id: string;
   name: string;
   specialty: string;
   initials: string;
-};
-
-type ActivityData = {
-  sesiones: number;
-  recursos: number;
-  racha: number;
 };
 
 type ConfigItem = {
@@ -40,18 +32,12 @@ type ConfigItem = {
   onPress: () => void;
 };
 
-const SOBRE_TI_TEXT =
-  'Vas por buen camino tomando acciones que te hacen cada vez más efectivo. Los retos y la constancia construyen más balance en tu vida.';
-
 export default function ProfileOwnScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
 
-  const [progressTab, setProgressTab] = useState<'hoy' | 'mes'>('hoy');
-  const [activity, setActivity] = useState<ActivityData>({ sesiones: 0, recursos: 0, racha: 0 });
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [semanasActivas, setSemanasActivas] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const displayName = user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'Usuario';
@@ -70,47 +56,10 @@ export default function ProfileOwnScreen() {
   async function loadProfileData() {
     setLoadingData(true);
     try {
-      const [semanas] = await Promise.all([
-        getSemanasActivas(user!.id),
-        loadActivity(),
-        loadProfesionales(),
-        loadAvatar(),
-      ]);
-      setSemanasActivas(semanas);
+      await Promise.all([loadProfesionales(), loadAvatar()]);
     } finally {
       setLoadingData(false);
     }
-  }
-
-  async function loadActivity() {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-
-    const [bookingsResult, resourcesResult, journalResult] = await Promise.all([
-      supabase
-        .from('bookings')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user!.id)
-        .eq('status', 'confirmada'),
-      supabase
-        .from('saved_resources')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user!.id),
-      supabase
-        .from('journal_entries')
-        .select('created_at')
-        .eq('user_id', user!.id)
-        .gte('created_at', sevenDaysAgo),
-    ]);
-
-    const dias = new Set(
-      (journalResult.data ?? []).map((e) => new Date(e.created_at).toDateString())
-    );
-
-    setActivity({
-      sesiones: bookingsResult.count ?? 0,
-      recursos: resourcesResult.count ?? 0,
-      racha: dias.size,
-    });
   }
 
   async function loadProfesionales() {
@@ -165,8 +114,6 @@ export default function ProfileOwnScreen() {
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const identityAnim = useRef(new Animated.Value(0)).current;
-  const progresoAnim = useRef(new Animated.Value(0)).current;
-  const activityAnim = useRef(new Animated.Value(0)).current;
   const profAnim = useRef(new Animated.Value(0)).current;
   const configAnim = useRef(new Animated.Value(0)).current;
 
@@ -174,8 +121,6 @@ export default function ProfileOwnScreen() {
     Animated.stagger(80, [
       Animated.timing(headerAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
       Animated.timing(identityAnim, { toValue: 1, duration: 360, useNativeDriver: true }),
-      Animated.timing(progresoAnim, { toValue: 1, duration: 360, useNativeDriver: true }),
-      Animated.timing(activityAnim, { toValue: 1, duration: 360, useNativeDriver: true }),
       Animated.timing(profAnim, { toValue: 1, duration: 360, useNativeDriver: true }),
       Animated.timing(configAnim, { toValue: 1, duration: 360, useNativeDriver: true }),
     ]).start();
@@ -295,82 +240,6 @@ export default function ProfileOwnScreen() {
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Tu progreso */}
-          <Animated.View style={fadeUp(progresoAnim)}>
-            <View style={styles.progresoHeader}>
-              <Text style={styles.progresoLabel}>Tu progreso</Text>
-              <View style={styles.toggle}>
-                <TouchableOpacity
-                  style={[styles.toggleBtn, progressTab === 'hoy' && styles.toggleBtnActive]}
-                  onPress={() => setProgressTab('hoy')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.toggleBtnText, progressTab === 'hoy' && styles.toggleBtnTextActive]}>Hoy</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toggleBtn, progressTab === 'mes' && styles.toggleBtnActive]}
-                  onPress={() => setProgressTab('mes')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.toggleBtnText, progressTab === 'mes' && styles.toggleBtnTextActive]}>Mes</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.sobreTiCard}
-              onPress={() => router.push('/progreso')}
-              activeOpacity={0.82}
-            >
-              <View style={styles.sobreTiLeft}>
-                <Text style={styles.sobreTiNumber}>{semanasActivas}</Text>
-                <Text style={styles.sobreTiUnit}>Semanas</Text>
-              </View>
-              <View style={styles.sobreTiRight}>
-                <View style={styles.sobreTiTitleRow}>
-                  <Text style={styles.sobreTiTitle}>Sobre ti</Text>
-                  <MaterialCommunityIcons name="information-outline" size={16} color="rgba(135,131,92,0.65)" />
-                </View>
-                <Text style={styles.sobreTiText}>{SOBRE_TI_TEXT}</Text>
-              </View>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* Mi actividad */}
-          <Animated.View style={fadeUp(activityAnim)}>
-            <Text style={styles.sectionTitle}>Mi actividad</Text>
-            {loadingData ? (
-              <View style={styles.metricsRow}>
-                <View style={[styles.metricCard, styles.metricCardLoading]}>
-                  <ActivityIndicator size="small" color={`${ViveColors.primary}60`} />
-                </View>
-                <View style={[styles.metricCard, styles.metricCardLoading]}>
-                  <ActivityIndicator size="small" color={`${ViveColors.primary}60`} />
-                </View>
-                <View style={[styles.metricCard, styles.metricCardLoading]}>
-                  <ActivityIndicator size="small" color={`${ViveColors.primary}60`} />
-                </View>
-              </View>
-            ) : (
-              <View style={styles.metricsRow}>
-                <MetricCard
-                  emoji="🗓️"
-                  value={activity.sesiones === 1 ? '1 sesión' : `${activity.sesiones} sesiones`}
-                  label="Completadas"
-                />
-                <MetricCard
-                  emoji="📚"
-                  value={activity.recursos === 1 ? '1 recurso' : `${activity.recursos} recursos`}
-                  label="Guardados"
-                />
-                <MetricCard
-                  emoji="🔥"
-                  value={activity.racha === 1 ? '1 día' : `${activity.racha} días`}
-                  label="Racha activa"
-                />
-              </View>
-            )}
-          </Animated.View>
-
           {/* Mis profesionales */}
           <Animated.View style={fadeUp(profAnim)}>
             <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>Mis profesionales</Text>
@@ -450,15 +319,6 @@ export default function ProfileOwnScreen() {
   );
 }
 
-function MetricCard({ emoji, value, label }: { emoji: string; value: string; label: string }) {
-  return (
-    <View style={styles.metricCard}>
-      <Text style={styles.metricEmoji}>{emoji}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
-    </View>
-  );
-}
 
 const GLASS = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
@@ -617,95 +477,6 @@ const styles = StyleSheet.create({
     color: '#565E32',
   },
 
-  // Tu progreso
-  progresoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  progresoLabel: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 14,
-    color: '#87835C',
-  },
-  toggle: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(86,94,50,0.08)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(86,94,50,0.14)',
-    padding: 3,
-    gap: 2,
-  },
-  toggleBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 17,
-  },
-  toggleBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-  },
-  toggleBtnText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: '#87835C',
-  },
-  toggleBtnTextActive: {
-    color: '#1A0A26',
-  },
-  sobreTiCard: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    backgroundColor: GLASS,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    flexDirection: 'row',
-    padding: 20,
-    gap: 16,
-    minHeight: 130,
-  },
-  sobreTiLeft: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 70,
-    flexShrink: 0,
-  },
-  sobreTiNumber: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 56,
-    color: '#565E32',
-    lineHeight: 60,
-  },
-  sobreTiUnit: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#87835C',
-    marginTop: 2,
-  },
-  sobreTiRight: {
-    flex: 1,
-  },
-  sobreTiTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  sobreTiTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
-  },
-  sobreTiText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: '#87835C',
-    lineHeight: 18,
-  },
-
   // Sections
   sectionTitle: {
     fontFamily: ViveFonts.semibold,
@@ -715,43 +486,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   sectionTitleSpaced: { marginTop: 4 },
-
-  // Actividad
-  metricsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 10,
-    marginBottom: 20,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: GLASS,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    gap: 4,
-  },
-  metricCardLoading: {
-    paddingVertical: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  metricEmoji: { fontSize: 20 },
-  metricValue: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 12,
-    color: '#565E32',
-    textAlign: 'center',
-  },
-  metricLabel: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 10,
-    color: '#87835C',
-    textAlign: 'center',
-  },
 
   // Profesionales
   profList: {
