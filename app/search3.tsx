@@ -159,7 +159,7 @@ export default function SearchScreen3() {
     setLoadingCoaches(true);
     supabase
       .from('coaches')
-      .select('id, specialty, price_per_session, nationality, profiles!inner(id, name, avatar_url), coach_topics(topic)')
+      .select('id, specialty, price_per_session, nationality, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
       .eq('verified', true)
       .limit(50)
       .then(({ data, error }) => {
@@ -173,6 +173,7 @@ export default function SearchScreen3() {
             specialty: c.specialty as string,
             priceFrom: c.price_per_session as number,
             nationality: (c.nationality ?? '') as string,
+            gender: (profile?.gender ?? '') as string,
             avatarUrl: (profile?.avatar_url ?? null) as string | null,
             topics: (c.coach_topics ?? []).map((t: any) => t.topic as string),
           };
@@ -181,6 +182,54 @@ export default function SearchScreen3() {
       });
     return () => { cancelled = true; };
   }, [topic, query]);
+
+  // Rating promedio real por coach — mismo criterio que ProfesionalScreen.tsx
+  // (reviews públicas, is_private=false). Se recalcula cuando cambia la lista
+  // de coaches visibles (después de aplicar topic/query, antes de los filtros
+  // del bottom sheet).
+  const [avgRatingById, setAvgRatingById] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (rawCoaches.length === 0) { setAvgRatingById({}); return; }
+    let cancelled = false;
+    supabase
+      .from('reviews')
+      .select('reviewed_id, rating')
+      .eq('is_private', false)
+      .in('reviewed_id', rawCoaches.map(c => c.id))
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) { console.error('[Search3] reviews fetch:', error.message); return; }
+        const sums: Record<string, { total: number; count: number }> = {};
+        (data ?? []).forEach(r => {
+          const id = r.reviewed_id as string;
+          if (!sums[id]) sums[id] = { total: 0, count: 0 };
+          sums[id].total += r.rating as number;
+          sums[id].count += 1;
+        });
+        const avgs: Record<string, number> = {};
+        Object.entries(sums).forEach(([id, { total, count }]) => {
+          avgs[id] = Math.round((total / count) * 10) / 10;
+        });
+        setAvgRatingById(avgs);
+      });
+    return () => { cancelled = true; };
+  }, [rawCoaches]);
+
+  // Heurística de "tipo" a partir del texto libre de specialty — no hay
+  // columna estructurada para esto en coaches todavía (decisión: usar esto
+  // por ahora, en vez de agregar una columna nueva).
+  function inferType(specialty: string): 'Coach' | 'Psicólogo' | 'Nutricionista' {
+    const s = normalize(specialty);
+    if (s.includes('psicolog')) return 'Psicólogo';
+    if (s.includes('nutricion')) return 'Nutricionista';
+    return 'Coach';
+  }
+
+  const SEX_TO_GENDER: Record<'Mujer' | 'Hombre', string> = {
+    Mujer: 'Femenino',
+    Hombre: 'Masculino',
+  };
 
   function openSheet() {
     setDraft(filters);
@@ -197,10 +246,12 @@ export default function SearchScreen3() {
     closeSheet();
   }
 
-  // Apply client-side filters (only maxPrice and nationality have real data)
   const results = rawCoaches.filter(p => {
     if (filters.maxPrice < MAX_PRICE && p.priceFrom > filters.maxPrice) return false;
     if (filters.nationality !== 'Todas' && p.nationality !== filters.nationality) return false;
+    if (filters.sex !== 'Todos' && p.gender !== SEX_TO_GENDER[filters.sex]) return false;
+    if (filters.type !== 'Todos' && inferType(p.specialty) !== filters.type) return false;
+    if (filters.minRating > 0 && (avgRatingById[p.id] ?? 0) < filters.minRating) return false;
     return true;
   });
 
