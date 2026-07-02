@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-07-02 — Joaquín (sesión 39)
+
+**Tocado:** `screens/CoachProfileScreen.tsx`, Supabase (SQL Editor — sin cambios de código)
+
+**Resumen:**
+- Fix botón "Editar perfil" en `CoachProfileScreen.tsx`: agregado `onPress={() => router.push('/edit-profile')}` — la pantalla ya existía, solo faltaba conectarla.
+- Verificado `scripts/add-coach-topics.sql`: todas las políticas ya estaban aplicadas en Supabase (Andre las había corrido antes).
+- Integrado commit de Andre (sesión 48 — subtemas de coaches) durante la sesión via merge.
+
+**Pendiente para la próxima sesión:**
+- Probar en dispositivo: elegir subtemas como coach y verificar que aparecen en perfil y búsqueda.
+- Decidir qué hacer con las 9 cards de temas de Conexiones (taxonomía distinta, ver SCHEMA.md regla 17).
+- Verificar subida de foto de perfil en dispositivo físico.
+- Google OAuth pendiente (dev build).
+
+---
+
 ## 2026-07-02 — Andre (sesión 48)
 
 **Tocado:** `screens/CoachTopicsScreen.tsx` (nuevo), `app/coach-topics.tsx` (nuevo), `app/_layout.tsx`, `screens/CoachProfileScreen.tsx`, `screens/ProfesionalScreen.tsx`, `app/search3.tsx`, `scripts/add-coach-topics.sql` (nuevo, **no corrido todavía en Supabase**), `SCHEMA.md`
