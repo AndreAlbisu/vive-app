@@ -141,6 +141,7 @@ export default function SalaScreen() {
   const [recipientIsCoach, setRecipientIsCoach] = useState(false);
   const [recipientProfile, setRecipientProfile] = useState<RecipientProfile | null>(null);
   const [activeBooking, setActiveBooking] = useState<ActiveBooking>(null);
+  const [hasSessionHistory, setHasSessionHistory] = useState(false);
   const [sessionState, setSessionState] = useState<SessionState>('none');
   const [isCancelling, setIsCancelling] = useState(false);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
@@ -247,7 +248,15 @@ export default function SalaScreen() {
       setRecipientIsCoach(isRecipientCoach);
 
       const readField = isRecipientCoach ? 'user_last_read_at' : 'coach_last_read_at';
-      supabase.from('salas').update({ [readField]: new Date().toISOString() }).eq('id', id);
+      supabase
+        .from('salas')
+        .update({ [readField]: new Date().toISOString() })
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('[SalaScreen] Error actualizando', readField, ':', error);
+          }
+        });
 
       const todayStr = new Date().toISOString().split('T')[0];
       const yesterdayStr = (() => {
@@ -256,7 +265,7 @@ export default function SalaScreen() {
         return d.toISOString().split('T')[0];
       })();
 
-      const [profileResult, activeBookingRes, recentCompletedRes, msgsResult] = await Promise.all([
+      const [profileResult, activeBookingRes, recentCompletedRes, sessionHistoryRes, msgsResult] = await Promise.all([
         supabase.from('profiles').select('name, avatar_url').eq('id', resolvedRecipientId).single(),
         supabase
           .from('bookings')
@@ -276,6 +285,13 @@ export default function SalaScreen() {
           .order('scheduled_date', { ascending: false })
           .order('scheduled_time', { ascending: false })
           .limit(1),
+        // ¿ya hubo alguna sesión completada en esta sala? El chat solo se congela
+        // antes de la primera sesión, no en cada solicitud nueva de un cliente recurrente.
+        supabase
+          .from('bookings')
+          .select('id', { count: 'exact', head: true })
+          .eq('sala_id', id)
+          .eq('status', 'completada'),
         supabase
           .from('messages')
           .select('*')
@@ -284,6 +300,8 @@ export default function SalaScreen() {
       ]);
 
       if (!mounted) return;
+
+      setHasSessionHistory((sessionHistoryRes.count ?? 0) > 0);
 
       const recipientName = (profileResult.data as any)?.name ?? '';
       const recipientAvatarUrl = (profileResult.data as any)?.avatar_url ?? null;
@@ -348,6 +366,14 @@ export default function SalaScreen() {
   // Realtime: mensajes nuevos
   useEffect(() => {
     if (!salaId || !user) return;
+
+    // supabase.channel() devuelve el canal existente si ya hay uno con el mismo
+    // topic (p.ej. si el cleanup de un montaje previo todavía no terminó de
+    // sacarlo). Si ya está subscripto, .on() más abajo tira "cannot add
+    // postgres_changes callbacks... after subscribe()". Lo sacamos antes de crear el nuevo.
+    const topic = `realtime:sala:${salaId}`;
+    const stale = supabase.getChannels().find(c => c.topic === topic);
+    if (stale) supabase.removeChannel(stale);
 
     const channel = supabase
       .channel(`sala:${salaId}`)
@@ -577,7 +603,12 @@ export default function SalaScreen() {
 
     const { error } = await supabase
       .from('messages')
-      .insert({ sala_id: salaId, sender_id: user.id, content: encrypted });
+      .insert({
+        sala_id: salaId,
+        sender_id: user.id,
+        content: encrypted,
+        sender_type: isCurrentUserCoach ? 'coach' : 'user',
+      });
 
     if (error) {
       setMessages(prev => prev.filter(m => m.id !== optimisticId));
@@ -595,7 +626,7 @@ export default function SalaScreen() {
   }
 
   const isCurrentUserCoach = !recipientIsCoach;
-  const isChatFrozen = activeBooking?.status === 'pendiente';
+  const isChatFrozen = activeBooking?.status === 'pendiente' && !hasSessionHistory;
   const canSend = inputText.trim().length > 0 && !!salaId && !!user && !isChatFrozen;
   const displayInitials = recipientProfile?.initials ?? '···';
 
