@@ -16,7 +16,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
@@ -24,27 +24,19 @@ import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 
-// ─── Paleta earth-tone ───────────────────────────────────────────────────────
-const F   = '#3A4F2A';
-const FS  = '#6B7A56';
-const CR  = '#F3EEDF';
-const TC  = '#C1694F';
-const BG  = 'rgba(255,248,240,0.55)';
-const BD  = 'rgba(255,255,255,0.65)';
-const SG  = '#C99A3F';
-const LN  = 'rgba(63,81,47,0.14)';
+// ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
+const FOREST      = '#3F512F';
+const FOREST_SOFT = '#6B7A56';
+const INK         = '#2E3624';
+const CARD        = '#F7F2E7';
+const CREAM_DEEP  = '#EAE2D0';
+const TERRACOTTA  = '#C06B4A';
+const TC_SOFT     = '#EAD3C6';
+const STAR        = '#C99A3F';
+const LIVE        = '#5F7A44';
+const LINE        = 'rgba(63,81,47,0.14)';
 
-const shadow = Platform.select({
-  ios: {
-    shadowColor: 'rgba(0,0,0,0.5)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 8,
-  },
-  android: { elevation: 3 },
-});
-
-// ─── Chips de categoría ──────────────────────────────────────────────────────
+// ─── Chips ───────────────────────────────────────────────────────────────────
 type FeatherName = React.ComponentProps<typeof Feather>['name'];
 
 type ChipItem = {
@@ -56,15 +48,15 @@ type ChipItem = {
 };
 
 const CHIPS: ChipItem[] = [
-  { id: '5', icon: 'wind',        label: 'Ansiedad',    displayLabel: 'ansiedad y estrés',    searchTopics: ['Ansiedad', 'Estrés físico'] },
-  { id: '1', icon: 'smile',       label: 'Ánimo',       displayLabel: 'estado de ánimo',      searchTopics: ['Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría'] },
-  { id: '2', icon: 'heart',       label: 'Relaciones',  displayLabel: 'relaciones',            searchTopics: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'] },
-  { id: '3', icon: 'trending-up', label: 'Crecimiento', displayLabel: 'crecimiento personal',  searchTopics: ['Identidad', 'Motivación', 'Crecimiento', 'Propósito'] },
-  { id: '4', icon: 'compass',     label: 'Propósito',   displayLabel: 'propósito y dirección', searchTopics: ['Propósito', 'Identidad', 'Motivación', 'Momentos de cambio'] },
-  { id: '6', icon: 'briefcase',   label: 'Trabajo',     displayLabel: 'trabajo y carrera',     searchTopics: ['Productividad', 'Concentración', 'Procrastinación', 'Vínculos laborales'] },
-  { id: '7', icon: 'repeat',      label: 'Hábitos',     displayLabel: 'hábitos',               searchTopics: ['Hábitos', 'Hábitos mentales'] },
-  { id: '8', icon: 'coffee',      label: 'Nutrición',   displayLabel: 'nutrición',             searchTopics: ['Nutrición'] },
-  { id: '9', icon: 'activity',    label: 'Bienestar',   displayLabel: 'salud y bienestar',     searchTopics: ['Sueño', 'Energía', 'Actividad física', 'Estrés físico'] },
+  { id: '5', icon: 'wind',        label: 'Ansiedad y estrés',  displayLabel: 'ansiedad y estrés',    searchTopics: ['Ansiedad', 'Estrés físico'] },
+  { id: '1', icon: 'smile',       label: 'Estado de ánimo',    displayLabel: 'estado de ánimo',      searchTopics: ['Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría'] },
+  { id: '2', icon: 'heart',       label: 'Relaciones',         displayLabel: 'relaciones',            searchTopics: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'] },
+  { id: '3', icon: 'trending-up', label: 'Desarrollo',         displayLabel: 'crecimiento personal',  searchTopics: ['Identidad', 'Motivación', 'Crecimiento', 'Propósito'] },
+  { id: '4', icon: 'compass',     label: 'Propósito',          displayLabel: 'propósito y dirección', searchTopics: ['Propósito', 'Identidad', 'Motivación', 'Momentos de cambio'] },
+  { id: '6', icon: 'briefcase',   label: 'Trabajo',            displayLabel: 'trabajo y carrera',     searchTopics: ['Productividad', 'Concentración', 'Procrastinación', 'Vínculos laborales'] },
+  { id: '7', icon: 'repeat',      label: 'Hábitos',            displayLabel: 'hábitos',               searchTopics: ['Hábitos', 'Hábitos mentales'] },
+  { id: '8', icon: 'coffee',      label: 'Nutrición',          displayLabel: 'nutrición',             searchTopics: ['Nutrición'] },
+  { id: '9', icon: 'activity',    label: 'Bienestar',          displayLabel: 'salud y bienestar',     searchTopics: ['Sueño', 'Energía', 'Actividad física', 'Estrés físico'] },
 ];
 
 // ─── Re-book ─────────────────────────────────────────────────────────────────
@@ -74,12 +66,20 @@ type RebookData = {
   specialty: string;
   pricePerSession: number;
   avatarUrl: string | null;
+  lastDate: string | null;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function getInitials(name: string) {
   const p = (name ?? '').trim().split(' ');
   return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : (p[0]?.[0] ?? '?').toUpperCase();
+}
+
+function formatShortDate(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
@@ -147,6 +147,7 @@ export default function ConexionesScreen() {
       specialty:      coachRow.specialty as string,
       pricePerSession: coachRow.price_per_session as number,
       avatarUrl:      (profile?.avatar_url ?? null) as string | null,
+      lastDate:       (last.scheduled_date as string) ?? null,
     });
   }, [user?.id]);
 
@@ -200,7 +201,7 @@ export default function ConexionesScreen() {
         <FirstTimeTooltip
           storageKey="vive_tooltip_conexiones"
           icon="account-group-outline"
-          iconColor="#87835C"
+          iconColor={FOREST_SOFT}
           title="Encontrá a tu guía"
           description="Explorá coaches y profesionales según lo que estás viviendo. Filtrá por tema o buscá por nombre."
           delay={800}
@@ -217,12 +218,17 @@ export default function ConexionesScreen() {
               <Text style={s.title}>Conexiones</Text>
               <Text style={s.subtitle}>Las personas indicadas para lo que estás viviendo.</Text>
             </View>
-            <TouchableOpacity
-              style={s.iconBtn}
-              onPress={() => (user ? router.push('/favoritos') : requestAuth())}
-              activeOpacity={0.7}>
-              <Feather name="star" size={22} color={FS} />
-            </TouchableOpacity>
+            <View style={s.hicons}>
+              <TouchableOpacity
+                onPress={() => (user ? router.push('/favoritos') : requestAuth())}
+                activeOpacity={0.7}
+                hitSlop={8}>
+                <Feather name="star" size={21} color={FOREST} />
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7} hitSlop={8}>
+                <Feather name="bell" size={21} color={FOREST} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* ── Buscador ───────────────────────────────────────────────── */}
@@ -230,163 +236,177 @@ export default function ConexionesScreen() {
             style={s.searchBar}
             onPress={() => router.push('/search1')}
             activeOpacity={0.85}>
-            <Feather name="search" size={16} color={FS} />
-            <Text style={s.searchPlaceholder}>Buscá por nombre, especialidad o tema...</Text>
-            <Feather name="sliders" size={16} color={FS} />
+            <Feather name="search" size={16} color={FOREST_SOFT} />
+            <Text style={s.searchPlaceholder}>Buscá por nombre, especialidad o tema…</Text>
+            <Feather name="sliders" size={16} color={FOREST} />
           </TouchableOpacity>
+
+          {/* ── PUNTO DE INSERCIÓN: carrusel "Para vos" por temas ──────── */}
+          {/* Diferido hasta tener 10+ profesionales — ver nota en diseño */}
 
           {/* ── Re-book card (condicional) ──────────────────────────────── */}
           {rebookData && (
-            <TouchableOpacity style={s.rebookCard} onPress={goRebook} activeOpacity={0.88}>
-              <View style={s.rebookLeft}>
-                {rebookData.avatarUrl ? (
-                  <Image source={{ uri: rebookData.avatarUrl }} style={s.rebookAvatar} />
-                ) : (
-                  <View style={[s.rebookAvatar, s.rebookAvatarFallback]}>
-                    <Text style={s.rebookInitials}>{getInitials(rebookData.name)}</Text>
-                  </View>
+            <View style={s.rebook}>
+              {/* Avatar */}
+              {rebookData.avatarUrl ? (
+                <Image source={{ uri: rebookData.avatarUrl }} style={s.rebookAvatar} />
+              ) : (
+                <View style={[s.rebookAvatar, s.rebookAvatarFallback]}>
+                  <Text style={s.rebookInitials}>{getInitials(rebookData.name)}</Text>
+                </View>
+              )}
+              {/* Texto */}
+              <View style={s.rebookText}>
+                <Text style={s.rebookTitle} numberOfLines={1}>
+                  ¿Otra sesión con {rebookData.name.split(' ')[0]}?
+                </Text>
+                {rebookData.lastDate && (
+                  <Text style={s.rebookSub}>
+                    Tu última fue el {formatShortDate(rebookData.lastDate)}
+                  </Text>
                 )}
               </View>
-              <View style={s.rebookCenter}>
-                <Text style={s.rebookLabel}>Reservar de nuevo con</Text>
-                <Text style={s.rebookName} numberOfLines={1}>{rebookData.name}</Text>
-                <Text style={s.rebookSpec} numberOfLines={1}>{rebookData.specialty}</Text>
-              </View>
-              <Feather name="arrow-right" size={18} color={F} />
-            </TouchableOpacity>
+              {/* CTA */}
+              <TouchableOpacity style={s.rebookCta} onPress={goRebook} activeOpacity={0.85}>
+                <Text style={s.rebookCtaText}>Reservar</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
-          {/* ── Chips de categoría ─────────────────────────────────────── */}
+          {/* ── Sección chips ──────────────────────────────────────────── */}
+          <View style={s.sectionHead}>
+            <Text style={s.sectionTitle}>¿Qué te gustaría trabajar hoy?</Text>
+            <TouchableOpacity activeOpacity={0.7}>
+              <Text style={s.sectionLink}>Ver todos</Text>
+            </TouchableOpacity>
+          </View>
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={s.chipsRow}>
-            {CHIPS.map(chip => {
-              const active = selectedChip === chip.id;
+            {CHIPS.map(c => {
+              const active = selectedChip === c.id;
               return (
                 <TouchableOpacity
-                  key={chip.id}
+                  key={c.id}
                   style={[s.chip, active && s.chipActive]}
-                  onPress={() => setSelectedChip(active ? null : chip.id)}
+                  onPress={() => setSelectedChip(active ? null : c.id)}
                   activeOpacity={0.8}>
-                  <Feather name={chip.icon} size={14} color={active ? CR : FS} />
-                  <Text style={[s.chipLabel, active && s.chipLabelActive]}>{chip.label}</Text>
+                  <Feather name={c.icon} size={14} color={active ? '#F3EEDF' : FOREST} />
+                  <Text style={[s.chipLabel, active && s.chipLabelActive]}>{c.label}</Text>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
 
-          {/* ── Lista de profesionales ─────────────────────────────────── */}
-          <View style={s.listSection}>
-            <Text style={s.listTitle}>{sectionTitle}</Text>
-
-            {/* ── PUNTO DE INSERCIÓN: carrusel "Para vos" por temas ── */}
-            {/* Pendiente: agregar aquí carrusel personalizado basado en quiz/historial */}
-
-            {loadingCoaches ? (
-              <ActivityIndicator size="small" color={F} style={{ marginTop: 24 }} />
-            ) : displayed.length === 0 ? (
-              <Text style={s.emptyText}>
-                {chip
-                  ? `No hay profesionales de ${chip.displayLabel} en este momento.`
-                  : 'No hay profesionales disponibles.'}
-              </Text>
-            ) : displayed.map((coach, idx) => (
-              <View key={coach.id}>
-                <TouchableOpacity
-                  style={s.proCard}
-                  onPress={() => goToPerfil(coach)}
-                  activeOpacity={0.88}>
-                  {/* Avatar */}
-                  <View style={s.proAvatarWrap}>
-                    {coach.avatarUrl ? (
-                      <Image source={{ uri: coach.avatarUrl }} style={s.proAvatar} />
-                    ) : (
-                      <View style={[s.proAvatar, s.proAvatarFallback]}>
-                        <Text style={s.proAvatarInitials}>{getInitials(coach.name)}</Text>
-                      </View>
-                    )}
-                    {coach.verified && (
-                      <View style={s.verifiedBadge}>
-                        <Feather name="check" size={9} color="#fff" />
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Info */}
-                  <View style={s.proInfo}>
-                    <View style={s.proTopRow}>
-                      <Text style={s.proName} numberOfLines={1}>{coach.name}</Text>
-                      <TouchableOpacity
-                        onPress={() => toggleFav(coach.id)}
-                        hitSlop={8}
-                        activeOpacity={0.7}>
-                        <Feather
-                          name={favoriteIds.has(coach.id) ? 'star' : 'star'}
-                          size={18}
-                          color={favoriteIds.has(coach.id) ? SG : 'rgba(63,81,47,0.25)'}
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    <Text style={s.proSpecialty} numberOfLines={1}>{coach.specialty}</Text>
-
-                    {/* Topic chips (máx 2) */}
-                    {coach.topics.length > 0 && (
-                      <View style={s.proTopics}>
-                        {coach.topics.slice(0, 2).map(t => (
-                          <View key={t} style={s.proTopicPill}>
-                            <Text style={s.proTopicText}>{t}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-
-                    {/* Rating + precio */}
-                    <View style={s.proBottomRow}>
-                      {(coach.reviewCount ?? 0) >= 1 ? (
-                        <View style={s.ratingRow}>
-                          <Feather name="star" size={11} color={SG} />
-                          <Text style={s.ratingText}>
-                            {(coach.avgRating ?? 0).toFixed(1)}
-                            <Text style={s.ratingCount}> ({coach.reviewCount})</Text>
-                          </Text>
-                        </View>
-                      ) : (
-                        <View />
-                      )}
-                      <Text style={s.proPrice}>
-                        Desde ${(coach.priceFrom ?? 0).toLocaleString('es-AR')}
-                      </Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-
-                {idx < displayed.length - 1 && <View style={s.divider} />}
-              </View>
-            ))}
+          {/* ── Resultados ─────────────────────────────────────────────── */}
+          <View style={s.resultsHead}>
+            <Text style={s.resultsTitle}>{sectionTitle}</Text>
           </View>
+
+          {loadingCoaches ? (
+            <ActivityIndicator size="small" color={FOREST} style={{ marginTop: 24 }} />
+          ) : displayed.length === 0 ? (
+            <Text style={s.emptyText}>
+              {chip
+                ? `No hay profesionales de ${chip.displayLabel} cargados aún.`
+                : 'No hay profesionales disponibles.'}
+            </Text>
+          ) : displayed.map(coach => (
+            <View key={coach.id} style={s.proCard}>
+              {/* Top row */}
+              <View style={s.proTop}>
+                {/* Avatar */}
+                <View style={s.proAvatarWrap}>
+                  {coach.avatarUrl ? (
+                    <Image source={{ uri: coach.avatarUrl }} style={s.proAvatar} />
+                  ) : (
+                    <View style={[s.proAvatar, s.proAvatarFallback]}>
+                      <Text style={s.proInitials}>{getInitials(coach.name)}</Text>
+                    </View>
+                  )}
+                  {coach.verified && (
+                    <View style={s.vBadge}>
+                      <Text style={s.vBadgeText}>✓</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Info */}
+                <View style={s.proInfo}>
+                  <Text style={s.proName} numberOfLines={1}>{coach.name}</Text>
+                  <Text style={s.proRole} numberOfLines={1}>{coach.specialty}</Text>
+                  {(coach.reviewCount ?? 0) >= 1 && (
+                    <View style={s.statsRow}>
+                      <Text style={s.statsStar}>★ {(coach.avgRating ?? 0).toFixed(1)}</Text>
+                      <Text style={s.statsCount}>{coach.reviewCount} reseñas</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Fav */}
+                <TouchableOpacity
+                  onPress={() => toggleFav(coach.id)}
+                  hitSlop={8}
+                  activeOpacity={0.7}
+                  style={s.favBtn}>
+                  <Feather
+                    name="star"
+                    size={18}
+                    color={favoriteIds.has(coach.id) ? TERRACOTTA : FOREST_SOFT}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Tags */}
+              {coach.topics.length > 0 && (
+                <View style={s.tagsRow}>
+                  {coach.topics.slice(0, 2).map(t => (
+                    <View key={t} style={s.tag}>
+                      <Text style={s.tagText}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Bottom row */}
+              <View style={s.proBottom}>
+                <Text style={s.proPrice} numberOfLines={1}>
+                  Desde ${(coach.priceFrom ?? 0).toLocaleString('es-AR')}
+                </Text>
+                <TouchableOpacity
+                  style={s.proBookBtn}
+                  onPress={() => goToPerfil(coach)}
+                  activeOpacity={0.85}>
+                  <Text style={s.proBookBtnText}>Ver perfil</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
 
           {/* ── Quiz card ─────────────────────────────────────────────── */}
           <TouchableOpacity
-            style={s.quizCardWrap}
+            style={s.quizWrap}
             onPress={() => router.push('/quiz')}
             activeOpacity={0.88}>
             <LinearGradient
-              colors={['#C1694F', '#A0513C']}
+              colors={[TC_SOFT, '#F0DDD2']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={s.quizCard}>
-              <View style={s.quizLeft}>
-                <View style={s.quizIconCircle}>
-                  <Feather name="help-circle" size={22} color="#fff" />
-                </View>
+              {/* Overlapping circles */}
+              <View style={s.quizCircles}>
+                <View style={[s.qc, { backgroundColor: TERRACOTTA }]} />
+                <View style={[s.qc, { backgroundColor: FOREST_SOFT, marginLeft: -9 }]} />
+                <View style={[s.qc, { backgroundColor: '#7E8CA8', marginLeft: -9 }]} />
               </View>
+              {/* Text */}
               <View style={s.quizText}>
                 <Text style={s.quizTitle}>¿No sabés qué necesitás?</Text>
-                <Text style={s.quizSub}>3 preguntas · te ayudamos a encontrarlo</Text>
+                <Text style={s.quizSub}>3 preguntas y te sugiero el perfil indicado</Text>
               </View>
-              <Feather name="arrow-right" size={18} color="rgba(255,255,255,0.80)" />
+              <Text style={s.quizArrow}>›</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -398,298 +418,375 @@ export default function ConexionesScreen() {
 }
 
 // ─── Estilos ─────────────────────────────────────────────────────────────────
+const shadow = Platform.select({
+  ios: {
+    shadowColor: 'rgba(46,54,36,0.22)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+  },
+  android: { elevation: 3 },
+});
+
 const s = StyleSheet.create({
   safe:          { flex: 1, backgroundColor: 'transparent' },
   screen:        { flex: 1, backgroundColor: 'transparent' },
-  screenContent: { paddingTop: 16 },
+  screenContent: { paddingTop: 10 },
 
   // Header
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
+    marginTop: 10,
     marginBottom: 16,
   },
   title: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 26,
-    color: F,
-    lineHeight: 32,
-    marginBottom: 2,
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 34,
+    color: FOREST,
+    lineHeight: 40,
   },
   subtitle: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: FS,
+    color: FOREST_SOFT,
+    marginTop: 2,
     lineHeight: 19,
   },
-  iconBtn: {
-    marginTop: 4,
-    padding: 4,
+  hicons: {
+    flexDirection: 'row',
+    gap: 14,
+    paddingTop: 10,
   },
 
   // Search
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: BG,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BD,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 11 : 8,
     gap: 10,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    marginHorizontal: 20,
+    marginBottom: 0,
     ...shadow,
   },
   searchPlaceholder: {
     flex: 1,
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: 'rgba(107,122,86,0.70)',
+    color: FOREST_SOFT,
   },
 
-  // Re-book card
-  rebookCard: {
+  // Re-book
+  rebook: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: BG,
-    borderRadius: 18,
+    gap: 11,
+    backgroundColor: CARD,
     borderWidth: 1,
-    borderColor: BD,
+    borderColor: LINE,
+    borderRadius: 20,
     marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 14,
-    gap: 12,
+    marginTop: 12,
+    padding: 12,
     ...shadow,
   },
-  rebookLeft: {},
   rebookAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    flexShrink: 0,
   },
   rebookAvatarFallback: {
-    backgroundColor: 'rgba(63,81,47,0.12)',
+    backgroundColor: 'rgba(192,107,74,0.20)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   rebookInitials: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: F,
+    fontSize: 13,
+    color: TERRACOTTA,
   },
-  rebookCenter: { flex: 1 },
-  rebookLabel: {
+  rebookText: { flex: 1 },
+  rebookTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13,
+    color: FOREST,
+  },
+  rebookSub: {
     fontFamily: ViveFonts.regular,
     fontSize: 11,
-    color: FS,
-    marginBottom: 2,
+    color: FOREST_SOFT,
+    marginTop: 1,
   },
-  rebookName: {
+  rebookCta: {
+    backgroundColor: TERRACOTTA,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+  },
+  rebookCtaText: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: F,
-    marginBottom: 1,
+    fontSize: 11.5,
+    color: '#FFF6EC',
   },
-  rebookSpec: {
+
+  // Section head (chips)
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    marginBottom: 12,
+    paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 19,
+    color: FOREST,
+  },
+  sectionLink: {
     fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: TC,
+    fontSize: 12.5,
+    color: TERRACOTTA,
   },
 
   // Chips
   chipsRow: {
     paddingLeft: 20,
     paddingRight: 10,
-    marginBottom: 24,
     gap: 8,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: BG,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: BD,
+    backgroundColor: CARD,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: LINE,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 9,
+    flexShrink: 0,
   },
   chipActive: {
-    backgroundColor: F,
-    borderColor: F,
+    backgroundColor: FOREST,
+    borderColor: FOREST,
   },
   chipLabel: {
     fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: FS,
+    fontSize: 12,
+    color: FOREST,
   },
   chipLabelActive: {
-    color: CR,
+    color: '#F3EEDF',
   },
 
-  // Pro list
-  listSection: {
+  // Results head
+  resultsHead: {
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginTop: 18,
+    marginBottom: 0,
   },
-  listTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: F,
-    marginBottom: 14,
+  resultsTitle: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 19,
+    color: FOREST,
   },
   emptyText: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: FS,
+    color: FOREST_SOFT,
     textAlign: 'center',
     marginTop: 24,
+    paddingHorizontal: 20,
     lineHeight: 20,
   },
 
   // Pro card
   proCard: {
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    borderRadius: 24,
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 15,
+    ...shadow,
+  },
+  proTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 14,
     gap: 12,
+    alignItems: 'flex-start',
   },
   proAvatarWrap: {
     position: 'relative',
     flexShrink: 0,
   },
   proAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
   },
   proAvatarFallback: {
-    backgroundColor: 'rgba(63,81,47,0.12)',
+    backgroundColor: 'rgba(107,122,86,0.20)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  proAvatarInitials: {
+  proInitials: {
     fontFamily: ViveFonts.semibold,
     fontSize: 18,
-    color: F,
+    color: FOREST,
   },
-  verifiedBadge: {
+  vBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
+    right: -2,
+    bottom: -2,
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: F,
+    backgroundColor: LIVE,
+    borderWidth: 2,
+    borderColor: CARD,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: CR,
+  },
+  vBadgeText: {
+    fontSize: 10,
+    color: '#F3EEDF',
+    fontFamily: ViveFonts.semibold,
   },
   proInfo: {
     flex: 1,
-    gap: 4,
-  },
-  proTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    minWidth: 0,
   },
   proName: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: F,
-    flex: 1,
-    marginRight: 8,
+    fontSize: 15,
+    color: FOREST,
   },
-  proSpecialty: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: TC,
-  },
-  proTopics: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 2,
-  },
-  proTopicPill: {
-    backgroundColor: 'rgba(63,81,47,0.08)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  proTopicText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 10.5,
-    color: FS,
-  },
-  proBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 2,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  ratingText: {
+  proRole: {
     fontFamily: ViveFonts.medium,
     fontSize: 11.5,
-    color: F,
+    color: TERRACOTTA,
+    marginTop: 1,
   },
-  ratingCount: {
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 5,
+  },
+  statsStar: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 11,
+    color: STAR,
+  },
+  statsCount: {
     fontFamily: ViveFonts.regular,
-    color: FS,
+    fontSize: 11,
+    color: FOREST_SOFT,
   },
-  proPrice: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: FS,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: LN,
+  favBtn: {
+    paddingTop: 2,
   },
 
-  // Quiz card
-  quizCardWrap: {
+  // Tags
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 11,
+  },
+  tag: {
+    backgroundColor: CREAM_DEEP,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  tagText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 10.5,
+    color: FOREST,
+  },
+
+  // Pro bottom row
+  proBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: LINE,
+  },
+  proPrice: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 11.5,
+    color: FOREST_SOFT,
+  },
+  proBookBtn: {
+    borderWidth: 1.5,
+    borderColor: FOREST,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+  },
+  proBookBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 11.5,
+    color: FOREST,
+  },
+
+  // Quiz
+  quizWrap: {
     marginHorizontal: 20,
-    marginBottom: 12,
-    borderRadius: 20,
+    marginTop: 18,
+    borderRadius: 22,
     overflow: 'hidden',
     ...shadow,
   },
   quizCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    gap: 14,
+    gap: 13,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(192,107,74,0.25)',
+    borderRadius: 22,
   },
-  quizLeft: {},
-  quizIconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  quizCircles: {
+    flexDirection: 'row',
+    flexShrink: 0,
+  },
+  qc: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    opacity: 0.75,
   },
   quizText: { flex: 1 },
   quizTitle: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
-    color: '#fff',
-    marginBottom: 3,
+    color: FOREST,
   },
   quizSub: {
     fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.80)',
+    fontSize: 11.5,
+    color: '#8F6A55',
+    marginTop: 2,
+  },
+  quizArrow: {
+    fontSize: 22,
+    color: TERRACOTTA,
+    lineHeight: 26,
   },
 });
