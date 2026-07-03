@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-07-03 — Joaquín (sesión 47)
+
+**Tocado:** `lib/resourceCompletions.ts` (nuevo), `screens/DiarioScreen.tsx`, `screens/GratitudScreen.tsx`, `screens/RespiracionScreen.tsx` (nuevo), `screens/MeditacionScreen.tsx` (nuevo), `screens/EscanerScreen.tsx` (nuevo), `screens/SuenoScreen.tsx` (nuevo), `screens/RelajacionScreen.tsx` (nuevo), `screens/RuidoScreen.tsx` (nuevo), `screens/LecturasScreen.tsx` (nuevo), `app/respiracion.tsx` (nuevo), `app/meditacion.tsx` (nuevo), `app/escaner.tsx` (nuevo), `app/sueno.tsx` (nuevo), `app/relajacion.tsx` (nuevo), `app/ruido.tsx` (nuevo), `app/lecturas.tsx` (nuevo), `app/_layout.tsx`, `app/(tabs)/recursos.tsx`
+
+**Resumen:**
+- `lib/resourceCompletions.ts`: helper `recordCompletion(userId, resourceId, durationSeconds?)` que escribe en `resource_completions`. Diario y Gratitud ya lo llaman al guardar una entrada
+- 7 pantallas nuevas de herramientas, todas con `recordCompletion` al completar:
+  - **Respiración**: animación de círculo con respiración cuadrada 4-4-4-4 (opción 3 u 8 min)
+  - **Meditación**: timer con fondo oscuro + prompts de texto que cambian por fase (10 o 15 min)
+  - **Escáner corporal**: 8 zonas × 60s, auto-avance con barra de progreso (8 min fijo)
+  - **Sueño**: timer wind-down con prompts nocturnos y fondo oscuro (10 o 20 min)
+  - **Relajación**: relajación muscular progresiva, 6 grupos tensa/soltá automático (~10 min)
+  - **Ruido blanco**: selector visual de sonido + timer (audio pendiente para dev build con expo-av)
+  - **Lecturas breves**: 5 fragmentos de libros reales (Tolle, Frankl, Kabat-Zinn, Brené Brown, Chödrön) con autor y título visible, navegación Siguiente/Terminé
+- Todas las rutas cableadas en `_layout.tsx` y `TOOLS` en `recursos.tsx` — todos los botones de la grilla son tapeables
+
+**Pendiente para la próxima sesión:**
+- **Daily.co**: activar plan de pago para habilitar creación de salas privadas por API
+- Limpiar datos de prueba en bookings
+- Ruido blanco: agregar audio real con `expo-av` (instalar + implementar)
+- "Reprogramar" roto del lado coach (definir flujo primero)
+- Google OAuth y push notifications (requieren dev build con EAS)
+
+---
+
 ## 2026-07-03 — Joaquín (sesión 46)
 
 **Tocado:** `screens/OnboardingScreen1.tsx`, `lib/notifications.ts`
