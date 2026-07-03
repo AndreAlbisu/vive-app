@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -7,8 +7,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   useAnimatedProps,
-  useFrameCallback,
   withTiming,
+  cancelAnimation,
   runOnJS,
   type SharedValue,
 } from 'react-native-reanimated';
@@ -151,73 +151,59 @@ function useRingAnimProps(
 export default function OnboardingScreen1() {
   const router  = useRouter();
   const [hintText, setHintText] = useState('mantené presionado');
+  const [entryDone, setEntryDone] = useState(false);
 
   // ── Shared values ─────────────────────────────────────────────────────────
-  const entryP   = useSharedValue(0);
-  const mergeP   = useSharedValue(0);
-  const phaseV   = useSharedValue(0);    // 0 entering | 1 resting | 2 merging | 3 revealed
-  const holdingV = useSharedValue(false);
-  const hintOp   = useSharedValue(0);
-  const diagOp   = useSharedValue(1);
-  const diagSc   = useSharedValue(1);
-  const rvlOp    = useSharedValue(0);
+  const entryP = useSharedValue(0);
+  const mergeP = useSharedValue(0);
+  const hintOp = useSharedValue(0);
+  const diagOp = useSharedValue(1);
+  const diagSc = useSharedValue(1);
+  const rvlOp  = useSharedValue(0);
 
-  // ── JS-thread callbacks (called via runOnJS) ──────────────────────────────
+  // ── JS-thread callbacks ───────────────────────────────────────────────────
 
   const navigateNext = useCallback(() => {
     router.replace('/onboarding-bifurcacion');
-  }, []);
+  }, [router]);
 
   const triggerReveal = useCallback(() => {
-    // Diagram scales out + fades (mirrors web reference CSS transitions)
     diagOp.value = withTiming(0,   { duration: 750 });
     diagSc.value = withTiming(1.4, { duration: 950 });
     hintOp.value = withTiming(0,   { duration: 280 });
-    // Cream overlay fades in over BRAND_GROW_MS
     rvlOp.value  = withTiming(1,   { duration: BRAND_GROW_MS });
     setTimeout(navigateNext, BRAND_GROW_MS + 250);
+  }, [navigateNext]);
+
+  // ── Entry animation on mount ──────────────────────────────────────────────
+  useEffect(() => {
+    entryP.value = withTiming(1, { duration: ENTRY_MS }, (finished) => {
+      if (finished) {
+        hintOp.value = withTiming(1, { duration: 600 });
+        runOnJS(setEntryDone)(true);
+      }
+    });
   }, []);
 
-  // ── Frame callback — all phase logic runs on UI thread ────────────────────
-  // Mirrors useSequence() from the reference, replacing RAF with useFrameCallback.
-
-  useFrameCallback((frame) => {
-    if (phaseV.value === 3) return;
-    const dt = frame.timeSincePreviousFrame ?? 16;
-    const p  = phaseV.value;
-
-    if (p === 0) {
-      // entering → resting
-      const next = Math.min(1, entryP.value + dt / ENTRY_MS);
-      entryP.value = next;
-      if (next >= 1) {
-        phaseV.value = 1;
-        hintOp.value = withTiming(1, { duration: 600 });
+  // ── Press handlers ────────────────────────────────────────────────────────
+  const handlePressIn = useCallback(() => {
+    if (!entryDone) return;
+    setHintText('manteniendo…');
+    mergeP.value = withTiming(1, { duration: HOLD_MS }, (finished) => {
+      if (finished) {
+        runOnJS(triggerReveal)();
       }
-    } else {
-      // resting (1) or merging (2)
-      if (holdingV.value) {
-        const next = Math.min(1, mergeP.value + dt / HOLD_MS);
-        mergeP.value = next;
-        if (p === 1) {
-          phaseV.value = 2;
-          runOnJS(setHintText)('manteniendo…');
-        }
-        if (next >= 1) {
-          phaseV.value = 3;
-          runOnJS(triggerReveal)();
-        }
-      } else {
-        // Release: reverse at 2.5× speed (reference: 600ms reverse)
-        const next = Math.max(0, mergeP.value - dt / 600);
-        mergeP.value = next;
-        if (next === 0 && p === 2) {
-          phaseV.value = 1;
-          runOnJS(setHintText)('mantené presionado');
-        }
+    });
+  }, [entryDone, triggerReveal]);
+
+  const handlePressOut = useCallback(() => {
+    cancelAnimation(mergeP);
+    mergeP.value = withTiming(0, { duration: 600 }, (finished) => {
+      if (finished) {
+        runOnJS(setHintText)('mantené presionado');
       }
-    }
-  });
+    });
+  }, []);
 
   // ── Animated props (9 circle hooks — fixed call order) ───────────────────
 
@@ -277,8 +263,8 @@ export default function OnboardingScreen1() {
       {/* Full-screen hold target */}
       <Pressable
         style={styles.pressable}
-        onPressIn={() => { holdingV.value = true; }}
-        onPressOut={() => { holdingV.value = false; }}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
       >
         {/* Diagram group — scales out + fades on reveal */}
         <Animated.View style={[StyleSheet.absoluteFill, diagramStyle]}>
