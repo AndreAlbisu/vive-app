@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-07-03 — Joaquín (sesión 46)
+
+**Tocado:** `screens/OnboardingScreen1.tsx`, `lib/notifications.ts`
+
+**Resumen:**
+- OnboardingScreen1 crasheaba en Expo Go: `useFrameCallback` no disponible en Reanimated 4.x — reemplazado con `withTiming` + `cancelAnimation` desde hilo JS
+- El linter removió SVG `<Filter>`/`<FeGaussianBlur>` que también podían crashear en Android; glow queda vía `RadialGradient`
+- Error rojo de notificaciones en Expo Go corregido: sin `projectId` EAS configurado, ahora sale silenciosamente con log de debug
+- Onboarding confirmado funcionando en Expo Go
+
+**Pendiente para la próxima sesión:**
+- **Daily.co**: activar plan de pago para habilitar creación de salas privadas por API
+- Limpiar datos de prueba en bookings (scheduled_date/time con valores de test)
+- Cablear escritura en `resource_completions` desde las herramientas
+- Verificar subida de foto de perfil en dispositivo físico
+- Google OAuth y push notifications (requieren dev build con EAS)
+
+---
+
 ## 2026-07-02 — Andre (sesión 45)
 
 **Tocado:** `screens/EditProfileScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/CoachLoginScreen.tsx`, `screens/SalaScreen.tsx`, `screens/CoachHomeScreen.tsx`, `screens/CoachChatsScreen.tsx`, `screens/SessionsScreen.tsx`, `app/(tabs)/_layout.tsx`, `app/(coach)/_layout.tsx`
