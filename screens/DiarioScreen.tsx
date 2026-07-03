@@ -11,6 +11,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase, ensureAnonSession } from '@/lib/supabase';
 import { logError } from '@/lib/logging';
 import { AppBg } from '@/components/ui/AppBg';
+import { recordCompletion } from '@/lib/resourceCompletions';
 
 type JournalEntry = {
   id: string;
@@ -99,6 +100,7 @@ export default function DiarioScreen() {
       setText('');
       setMood(null);
       await fetchEntries(userId);
+      recordCompletion(userId, 'diario').catch(() => {});
     }
     setSaving(false);
   }

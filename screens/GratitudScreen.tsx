@@ -11,6 +11,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase, ensureAnonSession } from '@/lib/supabase';
 import { logError } from '@/lib/logging';
 import { AppBg } from '@/components/ui/AppBg';
+import { recordCompletion } from '@/lib/resourceCompletions';
 
 type GratitudeEntry = {
   id: string;
@@ -87,6 +88,7 @@ export default function GratitudScreen() {
     } else {
       setText('');
       await fetchEntries(userId);
+      recordCompletion(userId, 'gratitud', 300).catch(() => {});
     }
     setSaving(false);
   }
