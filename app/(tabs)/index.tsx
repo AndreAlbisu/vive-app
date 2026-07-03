@@ -154,7 +154,6 @@ export default function InicioScreen() {
       .select('resource_id')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(2)
       .then(({ data }) => {
         if (!data || data.length === 0) return;
         const mapped = data
@@ -335,7 +334,11 @@ export default function InicioScreen() {
           {/* ── 6. RECURSOS ÚTILES ── */}
           <Animated.View style={fadeUp(a4)}>
             <Text style={[s.sectionTitle, { marginTop: 20 }]}>Recursos útiles</Text>
-            <View style={s.resourcesRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.resourcesRow}
+            >
               {displayResources.map((r, i) => (
                 <ScaleCard
                   key={r.id}
@@ -354,7 +357,7 @@ export default function InicioScreen() {
                   </TouchableOpacity>
                 </ScaleCard>
               ))}
-            </View>
+            </ScrollView>
           </Animated.View>
 
           <View style={{ height: TAB_BAR_CLEARANCE }} />
@@ -493,7 +496,7 @@ const s = StyleSheet.create({
     marginBottom: 22,
   },
   resourceCard: {
-    flex: 1,
+    width: 130,
     backgroundColor: GLASS,
     borderRadius: 18,
     borderWidth: 1,

@@ -10,17 +10,12 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
+import { AXES } from '@/constants/searchData';
 
-const SPECIALTIES = [
-  'Coach de vida',
-  'Psicóloga clínica',
-  'Nutricionista',
-  'Coach de hábitos',
-  'Terapeuta',
-  'Psiquiatra',
-  'Coach corporal',
-  'Meditación y mindfulness',
-];
+const SPECIALTIES = ['Psicólogo/a', 'Coach', 'Nutricionista'];
+
+const GENDER_OPTIONS = ['Prefiero no decir', 'Masculino', 'Femenino', 'No binario'] as const;
+type Gender = (typeof GENDER_OPTIONS)[number];
 
 const BIO_MAX = 500;
 
@@ -33,14 +28,28 @@ function isValidUrl(url: string) {
   return url.startsWith('http://') || url.startsWith('https://');
 }
 
+function displayToIso(display: string): string | null {
+  const cleaned = display.replace(/[^0-9]/g, '');
+  if (cleaned.length !== 8) return null;
+  const d = cleaned.slice(0, 2);
+  const m = cleaned.slice(2, 4);
+  const y = cleaned.slice(4, 8);
+  const date = new Date(`${y}-${m}-${d}`);
+  if (isNaN(date.getTime())) return null;
+  return `${y}-${m}-${d}`;
+}
+
 export default function CoachApplicationScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   const [specialty, setSpecialty] = useState<string | null>(null);
   const [bio, setBio] = useState('');
-  const [price, setPrice] = useState('');
+  const [topics, setTopics] = useState<Set<string>>(new Set());
+  const [birthDate, setBirthDate] = useState('');
+  const [gender, setGender] = useState<Gender>('Prefiero no decir');
   const [nationality, setNationality] = useState('');
+  const [price, setPrice] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
@@ -64,14 +73,36 @@ export default function CoachApplicationScreen() {
     }
   }, [submitted]);
 
+  function toggleTopic(topic: string) {
+    setTopics(prev => {
+      const next = new Set(prev);
+      if (next.has(topic)) next.delete(topic); else next.add(topic);
+      return next;
+    });
+  }
+
+  function handleBirthDateChange(text: string) {
+    const cleaned = text.replace(/[^0-9]/g, '').slice(0, 8);
+    let formatted = cleaned;
+    if (cleaned.length > 4) {
+      formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4)}`;
+    } else if (cleaned.length > 2) {
+      formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+    }
+    setBirthDate(formatted);
+  }
+
   async function handleSubmit() {
     if (!specialty) { setSubmitError('Elegí una especialidad.'); return; }
-    if (bio.trim().length < 10) { setSubmitError('Contanos un poco más sobre vos en la bio.'); return; }
+    if (bio.trim().length < 10) { setSubmitError('Contanos un poco más sobre vos en la presentación.'); return; }
+    if (topics.size === 0) { setSubmitError('Elegí al menos un subtema que trabajás.'); return; }
+    const birthDateIso = displayToIso(birthDate);
+    if (!birthDateIso) { setSubmitError('Ingresá tu fecha de nacimiento (DD/MM/AAAA).'); return; }
+    if (!nationality.trim()) { setSubmitError('Ingresá tu nacionalidad.'); return; }
     if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) {
       setSubmitError('Ingresá un precio válido por sesión.');
       return;
     }
-    if (!nationality.trim()) { setSubmitError('Ingresá tu nacionalidad.'); return; }
     if (!videoUrl.trim()) { setSubmitError('Ingresá el link de tu video de presentación.'); return; }
     if (!isValidUrl(videoUrl.trim())) {
       setSubmitError('El link del video debe comenzar con http:// o https://');
@@ -82,7 +113,7 @@ export default function CoachApplicationScreen() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const { error } = await supabase.from('coaches').insert({
+    const { data: coachRow, error } = await supabase.from('coaches').insert({
       profile_id: user.id,
       specialty,
       bio: bio.trim(),
@@ -90,11 +121,10 @@ export default function CoachApplicationScreen() {
       nationality: nationality.trim(),
       application_video_url: videoUrl.trim(),
       verified: false,
-    });
-
-    setSubmitting(false);
+    }).select('id').single();
 
     if (error) {
+      setSubmitting(false);
       if (error.code === '23505') {
         setSubmitError('Ya tenemos una solicitud de este perfil. Nos ponemos en contacto pronto.');
       } else {
@@ -103,6 +133,16 @@ export default function CoachApplicationScreen() {
       return;
     }
 
+    await Promise.all([
+      supabase.from('profiles').update({ birth_date: birthDateIso, gender }).eq('id', user.id),
+      supabase.from('coach_topics').insert([...topics].map(topic => ({ coach_id: coachRow.id, topic }))),
+    ]);
+
+    // La solicitud queda pendiente de revisión — no debe quedar una sesión
+    // activa que te deje usar la app como si ya estuvieras aceptado.
+    await signOut();
+
+    setSubmitting(false);
     setSubmitted(true);
   }
 
@@ -120,7 +160,7 @@ export default function CoachApplicationScreen() {
           </Text>
           <TouchableOpacity
             style={styles.successButton}
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => router.replace('/')}
             activeOpacity={0.85}
           >
             <Text style={styles.buttonText}>Volver a Inicio</Text>
@@ -183,10 +223,10 @@ export default function CoachApplicationScreen() {
               </View>
             </View>
 
-            {/* Bio */}
+            {/* Presentación breve */}
             <View style={styles.section}>
               <View style={styles.labelRow}>
-                <Text style={styles.sectionLabel}>Bio</Text>
+                <Text style={styles.sectionLabel}>Presentación breve</Text>
                 <Text style={styles.charCount}>{bio.length}/{BIO_MAX}</Text>
               </View>
               <TextInput
@@ -202,17 +242,72 @@ export default function CoachApplicationScreen() {
               />
             </View>
 
-            {/* Precio */}
+            {/* Subtemas */}
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Precio propuesto por sesión (ARS)</Text>
+              <Text style={styles.sectionLabel}>Subtemas que trabajás</Text>
+              <Text style={styles.fieldHint}>
+                Elegí los temas en los que acompañás — se usan para que los usuarios te encuentren.
+              </Text>
+              {AXES.map(axis => (
+                <View key={axis.id} style={styles.axisBlock}>
+                  <Text style={styles.axisLabel}>{axis.emoji} {axis.label}</Text>
+                  {axis.groups.map((group, gi) => (
+                    <View key={gi} style={styles.specialtyGrid}>
+                      {group.items.map(topic => {
+                        const isSelected = topics.has(topic);
+                        return (
+                          <TouchableOpacity
+                            key={topic}
+                            onPress={() => toggleTopic(topic)}
+                            activeOpacity={0.75}
+                            style={[styles.chip, isSelected && styles.chipSelected]}
+                          >
+                            <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                              {topic}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+
+            {/* Fecha de nacimiento */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Fecha de nacimiento</Text>
               <TextInput
                 style={styles.input}
-                value={price}
-                onChangeText={setPrice}
-                placeholder="Ej: 8000"
+                value={birthDate}
+                onChangeText={handleBirthDateChange}
+                placeholder="DD/MM/AAAA"
                 placeholderTextColor="rgba(135,131,92,0.45)"
                 keyboardType="numeric"
+                maxLength={10}
               />
+            </View>
+
+            {/* Sexo */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Sexo</Text>
+              <View style={styles.specialtyGrid}>
+                {GENDER_OPTIONS.map((option) => {
+                  const isSelected = gender === option;
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      onPress={() => setGender(option)}
+                      activeOpacity={0.75}
+                      style={[styles.chip, isSelected && styles.chipSelected]}
+                    >
+                      <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
             {/* Nacionalidad */}
@@ -225,6 +320,19 @@ export default function CoachApplicationScreen() {
                 placeholder="Ej: Argentina"
                 placeholderTextColor="rgba(135,131,92,0.45)"
                 autoCapitalize="words"
+              />
+            </View>
+
+            {/* Precio */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Precio propuesto por sesión (ARS)</Text>
+              <TextInput
+                style={styles.input}
+                value={price}
+                onChangeText={setPrice}
+                placeholder="Ej: 8000"
+                placeholderTextColor="rgba(135,131,92,0.45)"
+                keyboardType="numeric"
               />
             </View>
 
@@ -318,7 +426,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(135,131,92,0.58)',
   },
-  specialtyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  specialtyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  axisBlock: { gap: 8, marginTop: 4 },
+  axisLabel: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: '#565E32',
+  },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 8,

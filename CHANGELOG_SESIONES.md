@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-07-03 — Andre (sesión 51)
+
+**Tocado:** `screens/CoachLoginScreen.tsx`
+
+**Resumen:**
+- Bug: al postularse como coach con un mail nuevo (nunca usado), `handleSubmit` intenta `signInWithEmail` (falla), después `signUpWithEmail` (crea la cuenta con `profiles.role='user'` por default vía trigger), y **acto seguido** `validateAndNavigate()` chequeaba `profile.role === 'user'` — condición que siempre era true para una cuenta recién creada, así que el 100% de los mails nuevos mostraban "Esta cuenta ya está registrada como usuario" en vez de avanzar a `coach-application`
+- La cuenta (auth + `profiles`) quedaba creada en la DB sin que nunca se pidieran los datos de la postulación de coach
+- Fix: `validateAndNavigate` ahora recibe `isNewSignup: boolean`; el chequeo de rol que bloquea solo corre cuando la cuenta ya existía antes de este submit (rama `signInWithEmail` exitoso), no cuando la creamos nosotros mismos en el mismo flujo (rama `signUpWithEmail` exitoso)
+- No se tocó DB/schema
+
+**Pendiente para la próxima sesión:**
+- Bug del re-book en Conexiones sigue sin diagnosticar (ver sesión 50) — logs `[Rebook]` todavía en `loadRebook`
+- Revisar si quedaron cuentas de prueba "huérfanas" en Supabase (auth + `profiles` con `role='user'`) creadas mientras este bug estuvo activo, para limpiarlas si hace falta
+- Schema migrations pendientes: `coaches.availability_status`, tabla `user_quiz_answers`
+
+---
+
 ## 2026-07-03 — Joaquín (sesión 50)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`, `app/search1.tsx`
