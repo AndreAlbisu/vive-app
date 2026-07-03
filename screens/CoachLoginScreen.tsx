@@ -55,8 +55,8 @@ export default function CoachLoginScreen() {
 
     if (coachRow?.verified) {
       Alert.alert(
-        'Ya sos coach',
-        'Tu cuenta ya está aprobada. Ingresá desde la app normal.',
+        '¡Bienvenido de nuevo!',
+        'Tu cuenta de coach ya está aprobada. Te llevamos a tu panel.',
         [{ text: 'OK', onPress: () => router.replace('/(coach)' as any) }],
       );
       return;

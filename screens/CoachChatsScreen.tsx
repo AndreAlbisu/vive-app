@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -25,6 +26,7 @@ type ChatRoom = {
   avatarUrl: string | null;
   lastMessage: string;
   lastMessageAt: string | null;
+  hasUnread: boolean;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -61,7 +63,7 @@ export default function CoachChatsScreen() {
 
     const { data: salas, error } = await supabase
       .from('salas')
-      .select('id, user_id')
+      .select('id, user_id, coach_last_read_at')
       .eq('coach_id', user.id);
 
     if (error || !salas || salas.length === 0) {
@@ -81,13 +83,30 @@ export default function CoachChatsScreen() {
 
     const results = await Promise.all(
       salas.map(async (sala) => {
-        const { data: lastMsg } = await supabase
-          .from('messages')
-          .select('content, created_at')
-          .eq('sala_id', sala.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const [{ data: lastMsg }, { data: lastForeign }] = await Promise.all([
+          supabase
+            .from('messages')
+            .select('content, created_at')
+            .eq('sala_id', sala.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          // último mensaje humano (no de sistema) que NO mandó el propio coach —
+          // mismo criterio validado en CoachHomeScreen / checkDot de app/(tabs)/_layout.tsx
+          supabase
+            .from('messages')
+            .select('created_at')
+            .eq('sala_id', sala.id)
+            .in('sender_type', ['user', 'coach'])
+            .neq('sender_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+
+        const readAt = sala.coach_last_read_at as string | null;
+        const lastForeignAt = lastForeign?.created_at as string | undefined;
+        const hasUnread = !!lastForeignAt && (!readAt || lastForeignAt > readAt);
 
         const name = profileMap[sala.user_id as string]?.name ?? 'Usuario';
         return {
@@ -98,6 +117,7 @@ export default function CoachChatsScreen() {
           avatarUrl: profileMap[sala.user_id as string]?.avatarUrl ?? null,
           lastMessage: lastMsg ? decryptMessage(lastMsg.content as string) : '',
           lastMessageAt: lastMsg ? (lastMsg.created_at as string) : null,
+          hasUnread,
         } satisfies ChatRoom;
       })
     );
@@ -113,9 +133,14 @@ export default function CoachChatsScreen() {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => {
-    loadRooms();
-  }, [loadRooms]);
+  // Refresca cada vez que se vuelve a esta pestaña — sin esto, volver de un
+  // chat recién leído dejaba el estado de "no leído" viejo hasta un remount
+  // completo (mismo bug que ya arreglamos en CoachHomeScreen con pendingCount).
+  useFocusEffect(
+    useCallback(() => {
+      loadRooms();
+    }, [loadRooms])
+  );
 
   return (
     <AppBg>
@@ -157,10 +182,15 @@ export default function CoachChatsScreen() {
 
               <View style={s.chatInfo}>
                 <View style={s.chatTopRow}>
-                  <Text style={s.chatName}>{room.userName}</Text>
-                  <Text style={s.chatDate}>{formatMessageDate(room.lastMessageAt)}</Text>
+                  <Text style={[s.chatName, room.hasUnread && s.chatNameUnread]} numberOfLines={1}>
+                    {room.userName}
+                  </Text>
+                  <View style={s.chatMetaRight}>
+                    <Text style={s.chatDate}>{formatMessageDate(room.lastMessageAt)}</Text>
+                    {room.hasUnread && <View style={s.unreadDot} />}
+                  </View>
                 </View>
-                <Text style={s.lastMessage} numberOfLines={1}>
+                <Text style={[s.lastMessage, room.hasUnread && s.lastMessageUnread]} numberOfLines={1}>
                   {room.lastMessage || 'Sin mensajes aún'}
                 </Text>
               </View>
@@ -258,15 +288,33 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.medium,
     fontSize: 15,
     color: '#565E32',
+    flexShrink: 1,
+  },
+  chatNameUnread: { fontFamily: ViveFonts.bold },
+  chatMetaRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
   },
   chatDate: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
     color: 'rgba(135,131,92,0.72)',
   },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E05252',
+  },
   lastMessage: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
     color: '#87835C',
+  },
+  lastMessageUnread: {
+    fontFamily: ViveFonts.medium,
+    color: '#565E32',
   },
 });

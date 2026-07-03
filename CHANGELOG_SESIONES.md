@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-07-02 — Andre (sesión 45)
+
+**Tocado:** `screens/EditProfileScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/CoachLoginScreen.tsx`, `screens/SalaScreen.tsx`, `screens/CoachHomeScreen.tsx`, `screens/CoachChatsScreen.tsx`, `screens/SessionsScreen.tsx`, `app/(tabs)/_layout.tsx`, `app/(coach)/_layout.tsx`
+
+**Resumen:**
+- **Video/foto de perfil:** los pickers de cámara/galería ahora atrapan errores (antes crasheaban con "Uncaught in promise" si la cámara fallaba). Fix del bug conocido de expo-image-picker con videos guardados solo en iCloud (`preferredAssetRepresentationMode: 'compatible'` + `allowsEditing`). El "ver en pantalla completa" del video de perfil pasó de un hack con `enterFullscreen()`/`fullscreenOptions` (poco confiable en Expo Go) a un `Modal` propio.
+- **`CoachLoginScreen.tsx`:** el mensaje "Ya sos coach" decía "ingresá desde la app normal" — no existe tal cosa, y el botón ya te lleva a `/(coach)`. Corregido el texto para que coincida con lo que hace.
+- **`SalaScreen.tsx`:** el chat se congelaba en *cada* solicitud pendiente, incluso con clientes que ya tuvieron sesiones juntos — ahora solo se congela antes de la primera sesión completada. Fix de un error real de canal duplicado en el realtime de la sala (`cannot add postgres_changes callbacks after subscribe()`). `sendMessage()` ahora guarda `sender_type` real (antes TODO mensaje humano quedaba con el DEFAULT `'user'` de la columna, sin importar quién lo mandara — dato inútil para distinguir coach de cliente).
+- **`CoachHomeScreen.tsx`:** bug real encontrado — la query de "Hoy"/"Esta semana" pedía columnas `date`/`time` de `bookings` que no existen (son `scheduled_date`/`scheduled_time`), por eso nunca mostraba sesiones reales. Se agregó línea de contexto de último mensaje por sesión y resumen semanal de clientes distintos acompañados. Se evaluó un preview de "Conexiones" (salas con mensajes sin leer) en Inicio y se descartó por decisión de producto — se reemplazó por un badge en la tab de Chats. Rediseño del estado "sin sesiones hoy" (antes quedaba una tarjeta compacta con el resto de la pantalla en blanco). Se agregó refresco al volver de foco (`useFocusEffect`) y pull-to-refresh — antes `pendingCount` y el resto de los datos quedaban viejos hasta un remount completo.
+- **Indicadores de "no leído" (bug de varias sesiones atrás, resuelto hoy):** mandar tu propio mensaje o recibir una confirmación automática de reserva marcaba la sala como no leída — el cálculo no excluía mensajes propios ni de sistema (`system_confirmed`/`system_cancelled`), y un mensaje de sistema puede tener `sender_id` del coach o del cliente según qué flujo lo disparó (aceptación manual vs. reserva instantánea), así que filtrar solo por `sender_id` no alcanzaba. Corregido en `CoachChatsScreen.tsx` (que además no tenía ningún indicador por fila hasta hoy) y `SessionsScreen.tsx`. Además, los 4 indicadores (esas dos pantallas + las dos tab bars) dependían solo de eventos realtime o de un mount único — se quedaban pegados hasta recargar la app entera. Se agregó `useFocusEffect` a los 4 para que se refresquen al volver de foco.
+- Bug adicional encontrado y corregido: `SessionsScreen.tsx` tenía un `setLoading(true)` en cada recarga que, sumado al nuevo `useFocusEffect`, hacía que toda la pantalla se reemplazara por el esqueleto de carga cada vez que volvías de un chat — se sacó, ahora refresca en segundo plano.
+
+**Pendiente para la próxima sesión:**
+- Activar plan de pago en Daily.co para videollamadas privadas (sigue pendiente de sesiones anteriores).
+- "Reprogramar" en `SalaScreen.tsx` sigue roto del lado coach (usa el id del cliente como si fuera un coach) — quedó pendiente de definir el flujo (mensaje + notificación vs. solicitud formal con fecha propuesta), no se tocó en esta sesión.
+- Documentar en Notion (Decisiones estratégicas) el hallazgo de las 3 implementaciones distintas de "no leído" y la decisión de extraerlas a un hook compartido (`useUnreadSalas` o similar) — quedó pendiente de una interrupción, no se llegó a escribir.
+- Evaluar si vale la pena extraer la lógica de "no leído" (ahora duplicada en 4 lugares) a ese hook compartido.
+
 ## 2026-07-02 — Joaquín (sesión 44 — verificación y cierre)
 
 **Tocado:** `package.json`, `package-lock.json`

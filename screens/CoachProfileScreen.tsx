@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -255,9 +256,30 @@ export default function CoachProfileScreen() {
       return;
     }
 
-    const result = source === 'camera'
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['videos'], videoMaxDuration: 60 })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], videoMaxDuration: 60 });
+    let result;
+    try {
+      result = source === 'camera'
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['videos'], videoMaxDuration: 60 })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['videos'],
+            videoMaxDuration: 60,
+            // por default iOS usa la representación "current" del asset, que para videos
+            // guardados solo en iCloud (Optimizar almacenamiento) rompe con
+            // PHPhotosErrorDomain al no forzar la descarga. "compatible" sí la fuerza.
+            preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+            // bug conocido de expo-image-picker (expo/expo#39937): sin esto, videos
+            // solo-en-iCloud fallan al seleccionarlos. allowsEditing fuerza la descarga
+            // completa antes de devolver el asset porque abre la pantalla de recorte nativa.
+            allowsEditing: true,
+          });
+    } catch (err) {
+      console.error('launchVideoPicker error', err);
+      Alert.alert(
+        source === 'camera' ? 'No se pudo abrir la cámara' : 'No se pudo abrir la galería',
+        'Volvé a intentar. Si elegiste un video guardado solo en iCloud, abrilo primero en la app Fotos para descargarlo al celular y probá de nuevo.'
+      );
+      return;
+    }
 
     if (result.canceled || !result.assets?.[0]) return;
 
@@ -328,9 +350,15 @@ export default function CoachProfileScreen() {
       aspect: [1, 1],
       quality: 0.8,
     };
-    const result = source === 'camera'
-      ? await ImagePicker.launchCameraAsync(options)
-      : await ImagePicker.launchImageLibraryAsync(options);
+    let result;
+    try {
+      result = source === 'camera'
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
+    } catch {
+      Alert.alert('No se pudo abrir la cámara', 'Volvé a intentar. Si el problema persiste, revisá que tengas espacio de almacenamiento disponible en el celular.');
+      return;
+    }
 
     if (result.canceled || !result.assets?.[0]) return;
 
@@ -347,6 +375,17 @@ export default function CoachProfileScreen() {
   }
 
   const videoPlayer = useVideoPlayer(profile?.video_url ?? null, p => { p.loop = false; });
+  const [videoModalVisible, setVideoModalVisible] = useState(false);
+
+  function openVideoModal() {
+    setVideoModalVisible(true);
+    videoPlayer.play();
+  }
+
+  function closeVideoModal() {
+    videoPlayer.pause();
+    setVideoModalVisible(false);
+  }
 
   const initials = profile?.name ? getInitials(profile.name) : loadingProfile ? '…' : '?';
 
@@ -522,13 +561,17 @@ export default function CoachProfileScreen() {
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Video de perfil</Text>
         <View style={s.videoCard}>
           {profile?.video_url ? (
-            <VideoView
-              player={videoPlayer}
-              style={s.videoPlayerWrap}
-              contentFit="cover"
-              nativeControls
-              allowsFullscreen
-            />
+            <TouchableOpacity activeOpacity={0.9} onPress={openVideoModal} style={s.videoPlayerWrap}>
+              <VideoView
+                player={videoPlayer}
+                style={s.videoPlayerWrap}
+                contentFit="cover"
+                nativeControls={false}
+              />
+              <View style={s.videoExpandBadge} pointerEvents="none">
+                <MaterialCommunityIcons name="fullscreen" size={18} color="#fff" />
+              </View>
+            </TouchableOpacity>
           ) : (
             <View style={s.videoPlaceholder}>
               <MaterialCommunityIcons name="video-outline" size={36} color="rgba(135,131,92,0.52)" />
@@ -622,6 +665,24 @@ export default function CoachProfileScreen() {
         <View style={{ height: TAB_BAR_CLEARANCE }} />
       </ScrollView>
     </SafeAreaView>
+
+      <Modal
+        visible={videoModalVisible}
+        animationType="fade"
+        presentationStyle="fullScreen"
+        onRequestClose={closeVideoModal}>
+        <View style={s.videoModalBg}>
+          <VideoView
+            player={videoPlayer}
+            style={s.videoModalPlayer}
+            contentFit="contain"
+            nativeControls
+          />
+          <TouchableOpacity style={s.videoModalCloseBtn} onPress={closeVideoModal} hitSlop={12}>
+            <MaterialCommunityIcons name="close" size={26} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </AppBg>
   );
 }
@@ -940,6 +1001,38 @@ const s = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#000',
+  },
+  videoExpandBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoModalBg: {
+    flex: 1,
+    backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoModalPlayer: {
+    width: '100%',
+    height: '100%',
+  },
+  videoModalCloseBtn: {
+    position: 'absolute',
+    top: 56,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   recordBtn: {
     flexDirection: 'row',
