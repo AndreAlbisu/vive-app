@@ -90,8 +90,9 @@ export default function SearchScreen1() {
         {AXES.map((axis) => (
           <ScaleCard
             key={axis.id}
-            style={[s.axisCard, { borderLeftColor: axis.color, borderLeftWidth: 3 }]}
+            style={s.axisCard}
             onPress={() => handleAxisPress(axis.id)}>
+            <View style={[s.axisAccent, { backgroundColor: axis.color }]} />
             <View style={[s.axisIconWrap, { backgroundColor: axis.bg }]}>
               <Text style={s.axisEmoji}>{axis.emoji}</Text>
             </View>
@@ -158,12 +159,10 @@ const s = StyleSheet.create({
   // Content
   scroll: { flex: 1 },
   content: {
-    flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 40,
     gap: 14,
-    justifyContent: 'center',
   },
   heading: {
     fontFamily: ViveFonts.semibold,
@@ -186,10 +185,20 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: GLASS_BORDER,
     borderRadius: 16,
-    paddingVertical: 22,
-    paddingHorizontal: 16,
+    paddingVertical: 18,
+    paddingRight: 16,
+    paddingLeft: 20,
     gap: 14,
     ...shadow,
+  },
+  axisAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
   },
   axisIconWrap: {
     width: 56,
