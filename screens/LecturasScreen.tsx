@@ -18,55 +18,68 @@ const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 const READINGS = [
   {
     title: 'El momento presente',
+    book: 'El poder del ahora',
+    author: 'Eckhart Tolle',
     duration: '3 min',
-    body: `Ahora mismo, mientras lees esto, hay cosas pasando: tu respiración, los sonidos a tu alrededor, las sensaciones en tu cuerpo. Sin embargo, parte de tu mente probablemente ya está en otro lado.
+    body: `"Siempre solo hay este momento. La vida es ahora. Nunca hubo un momento en que tu vida no fuera ahora, ni lo habrá jamás."
 
-Este es el modo por defecto: planificar, recordar, evaluar. No está mal. Es lo que la mente hace.
+El pasado que recordás y el futuro que anticipás existen solo como pensamientos en tu mente —ahora mismo. La única puerta de entrada a tu vida real es el presente.
 
-Pero hay algo diferente disponible. No todo el tiempo, no como escape, sino como punto de retorno. Una pausa deliberada en el torrente del pensamiento.
+Tolle nos invita a notar algo simple: la mayoría del sufrimiento mental no viene de lo que está pasando, sino de nuestra resistencia a lo que está pasando. Cuando la mente lucha contra el presente —queriendo que sea distinto, juzgándolo, escapando de él— genera tensión sin resolver nada.
 
-El momento presente no te va a resolver los problemas. No te va a dar las respuestas que buscás. Solo te va a dar esto: que estés donde estás, cuando estás.
-
-Eso, de vez en cuando, es suficiente.`,
+La práctica no es forzarte a "estar presente". Es solo notar cuándo no lo estás. Ese reconocimiento ya es presencia.`,
   },
   {
-    title: 'La mente del principiante',
+    title: 'Elegir la respuesta',
+    book: 'El hombre en busca de sentido',
+    author: 'Viktor Frankl',
     duration: '4 min',
-    body: `Hay una idea del zen: la mente del principiante. En la mente del experto hay pocas posibilidades. En la del principiante, hay muchas.
+    body: `"Entre el estímulo y la respuesta hay un espacio. En ese espacio está nuestro poder de elegir nuestra respuesta. En nuestra respuesta radica nuestro crecimiento y nuestra libertad."
 
-Cuando sabemos demasiado sobre algo —una persona, una situación, nosotros mismos— dejamos de verlo. Proyectamos lo que ya vimos. Esperamos lo que ya conocemos.
+Frankl escribió esto después de sobrevivir los campos de concentración nazis. Perdió a su familia, su trabajo, su manuscrito. Lo que no le pudieron quitar, observó, era la actitud que tomaba frente a lo que le sucedía.
 
-La mente del principiante no es ingenuidad. Es una postura deliberada: ¿qué pasaría si no supiera tanto como creo que sé?
+No se trata de positivismo forzado. Frankl no sugería fingir que el sufrimiento no existe. Sugería que incluso en las circunstancias más extremas, existe un margen —pequeño pero real— entre lo que nos ocurre y lo que decidimos hacer con eso.
 
-Esto se aplica en cualquier lado. En una conversación: ¿estás escuchando o estás esperando terminar tu propio pensamiento? Con vos mismo: ¿la historia que te contás de quién sos es una descripción o una jaula?
-
-No se trata de fingir que no sabés. Se trata de dejar espacio para lo que todavía no llegó.`,
+Ese margen es suficiente para construir una vida con sentido.`,
   },
   {
-    title: 'Dejar ir',
+    title: 'Adonde vayas, ahí estás',
+    book: 'Wherever You Go, There You Are',
+    author: 'Jon Kabat-Zinn',
     duration: '3 min',
-    body: `Hay una diferencia entre soltar y abandonar.
+    body: `"No tenés que hacer nada especial para practicar la atención plena. Solo tenés que prestar atención a lo que ya está sucediendo."
 
-Abandonar implica rendirse antes de tiempo, tirar algo por falta de energía o esperanza. Soltar es diferente. Es reconocer que aferrarse a algo —un resultado, una emoción, una versión de cómo debería haber sido— le hace más daño que bien.
+Kabat-Zinn, pionero del mindfulness clínico, parte de una premisa incómoda: solemos vivir en piloto automático. Comemos sin saborear, caminamos sin sentir el piso, escuchamos sin oír realmente.
 
-Los pensamientos que más pesan no siempre son los más importantes. A veces son solo los más ruidosos. Volver a un pensamiento que ya no cambia nada no es procesarlo. Es rumiación.
+La atención plena no es un estado de calma perfecta. Es la capacidad de notar lo que está pasando —incluyendo la agitación, el aburrimiento, la incomodidad— sin que esa experiencia nos arrastre.
 
-Soltar no es un acto de voluntad. Nadie suelta algo por querer hacerlo. Sucede cuando hay algo donde poner la atención en cambio.
-
-¿Qué hay acá, ahora, que no sea el pasado ni el futuro?`,
+Podés empezar ahora mismo. ¿Qué sentís en las manos? ¿Cómo es tu respiración en este momento? No hay respuesta correcta. Solo hay lo que hay.`,
   },
   {
-    title: 'Lo pequeño',
+    title: 'La vulnerabilidad como fortaleza',
+    book: 'El poder de ser vulnerable',
+    author: 'Brené Brown',
     duration: '4 min',
-    body: `El cerebro tiene un sesgo hacia lo extraordinario. Los picos de alegría, los mínimos de angustia. Los eventos que se desvían de la norma. Y la norma, por definición, no registra.
+    body: `"La vulnerabilidad no es ganar o perder. Es tener el coraje de mostrarte y ser visto cuando no tenés control del resultado."
 
-Pero la mayor parte de la vida es norma. El café de la mañana. La luz que entra por la ventana a cierta hora. El sonido de algo familiar. El cuerpo funcionando sin que nadie lo pida.
+Durante años de investigación, Brown descubrió algo paradójico: las personas que describían tener vidas más plenas y conectadas no eran las que evitaban el riesgo emocional. Eran las que se permitían ser vulnerables.
 
-La gratitud forzada no funciona. No podés convencerte de sentir algo que no sentís. Pero sí podés entrenar la atención. Y prestar atención a lo pequeño —sin necesidad de que sea grande, importante o Instagram-able— cambia qué registra el cerebro como parte de tu vida.
+Nuestra cultura equipara vulnerabilidad con debilidad. Sin embargo, toda conexión genuina —amar, pedir ayuda, ser honesto— requiere exponerse sin garantías.
 
-No cada momento tiene que ser significativo. Pero cada momento es algo.
+La pregunta que Brown nos deja no es si vamos a sentir vulnerabilidad. Es si vamos a dejar que eso nos detenga, o si vamos a avanzar de todas formas.`,
+  },
+  {
+    title: 'La impermanencia',
+    book: 'Cuando todo se derrumba',
+    author: 'Pema Chödrön',
+    duration: '3 min',
+    body: `"Las cosas se desmoronan y nos rendimos. Los regalos de las crisis de vida son preciosos, pero raras veces se perciben como tales."
 
-Eso ya es bastante.`,
+Chödrön, monja budista tibetana, escribe sobre algo que todos evitamos: la incomodidad no va a desaparecer. El malestar, la incertidumbre, la pérdida —son parte del tejido de la vida, no errores del sistema.
+
+La propuesta no es resignarse, sino relacionarse diferente con lo que no podemos controlar. En vez de luchar contra la experiencia difícil, podemos aprender a quedarnos con ella sin escapar ni colapsar.
+
+Ese pequeño giro —de huir a permanecer— es, paradójicamente, lo que nos da más libertad.`,
   },
 ];
 
@@ -91,7 +104,7 @@ export default function LecturasScreen() {
     }
   }
 
-  const reading = READINGS[idx];
+  const reading = READINGS[idx] as typeof READINGS[0] & { book: string; author: string };
   const isLast  = idx === READINGS.length - 1;
 
   return (
@@ -139,6 +152,10 @@ export default function LecturasScreen() {
               </View>
 
               <Text style={s.readingTitle}>{reading.title}</Text>
+              <View style={s.sourceRow}>
+                <MaterialCommunityIcons name="book-open-variant" size={13} color={TERRACOTTA} />
+                <Text style={s.sourceText}>{reading.book} · {reading.author}</Text>
+              </View>
 
               <View style={s.bodyCard}>
                 <Text style={s.bodyText}>{reading.body}</Text>
@@ -175,6 +192,8 @@ const s = StyleSheet.create({
   readingNum:     { fontFamily: ViveFonts.medium, fontSize: 12, color: FOREST_SOFT },
   readingDuration:{ fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(135,131,92,0.60)' },
   readingTitle:   { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST, lineHeight: 36, letterSpacing: -0.3 },
+  sourceRow:      { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: -6 },
+  sourceText:     { fontFamily: ViveFonts.medium, fontSize: 11.5, color: TERRACOTTA, flex: 1 },
 
   bodyCard: { backgroundColor: GLASS_BG, borderRadius: 20, borderWidth: 1, borderColor: GLASS_BORDER, padding: 20 },
   bodyText: { fontFamily: ViveFonts.regular, fontSize: 15, color: '#3A3A2A', lineHeight: 26 },
