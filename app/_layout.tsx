@@ -133,8 +133,15 @@ export default function RootLayout() {
           <Stack.Screen name="booking-time" options={{ headerShown: false }} />
           <Stack.Screen name="booking-confirm" options={{ headerShown: false }} />
           <Stack.Screen name="booking-success" options={{ headerShown: false }} />
-          <Stack.Screen name="diario" options={{ headerShown: false }} />
-          <Stack.Screen name="gratitud" options={{ headerShown: false }} />
+          <Stack.Screen name="diario"      options={{ headerShown: false }} />
+          <Stack.Screen name="gratitud"   options={{ headerShown: false }} />
+          <Stack.Screen name="respiracion" options={{ headerShown: false }} />
+          <Stack.Screen name="meditacion" options={{ headerShown: false }} />
+          <Stack.Screen name="escaner"    options={{ headerShown: false }} />
+          <Stack.Screen name="sueno"      options={{ headerShown: false }} />
+          <Stack.Screen name="relajacion" options={{ headerShown: false }} />
+          <Stack.Screen name="ruido"      options={{ headerShown: false }} />
+          <Stack.Screen name="lecturas"   options={{ headerShown: false }} />
           <Stack.Screen name="progreso" options={{ headerShown: false }} />
           <Stack.Screen name="review" options={{ headerShown: false }} />
           <Stack.Screen name="favoritos" options={{ headerShown: false }} />

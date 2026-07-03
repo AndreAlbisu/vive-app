@@ -49,15 +49,15 @@ interface CoachResource {
 
 // ─── Datos ───────────────────────────────────────────────────────────────────
 const TOOLS: Tool[] = [
-  { id: 'diario',      label: 'Diario',          icon: 'book-outline',          duration: 'Libre',      route: '/diario'   },
-  { id: 'gratitud',    label: 'Gratitud',         icon: 'heart-outline',         duration: '5 min',      route: '/gratitud' },
-  { id: 'sueno',       label: 'Sueño',            icon: 'moon-outline',          duration: '10–20 min'                      },
-  { id: 'respiracion', label: 'Respiración',      icon: 'cloud-outline',         duration: '3–8 min'                        },
-  { id: 'meditacion',  label: 'Meditación',       icon: 'leaf-outline',          duration: '10–15 min'                      },
-  { id: 'escaner',     label: 'Escáner corporal', icon: 'body-outline',          duration: '8 min'                          },
-  { id: 'relajacion',  label: 'Relajación',       icon: 'musical-notes-outline', duration: '10 min'                         },
-  { id: 'ruido',       label: 'Ruido blanco',     icon: 'volume-medium-outline', duration: 'Libre'                          },
-  { id: 'lecturas',    label: 'Lecturas breves',  icon: 'library-outline',       duration: '5–10 min'                       },
+  { id: 'diario',      label: 'Diario',          icon: 'book-outline',          duration: 'Libre',      route: '/diario'      },
+  { id: 'gratitud',    label: 'Gratitud',         icon: 'heart-outline',         duration: '5 min',      route: '/gratitud'    },
+  { id: 'sueno',       label: 'Sueño',            icon: 'moon-outline',          duration: '10–20 min',  route: '/sueno'       },
+  { id: 'respiracion', label: 'Respiración',      icon: 'cloud-outline',         duration: '3–8 min',    route: '/respiracion' },
+  { id: 'meditacion',  label: 'Meditación',       icon: 'leaf-outline',          duration: '10–15 min',  route: '/meditacion'  },
+  { id: 'escaner',     label: 'Escáner corporal', icon: 'body-outline',          duration: '8 min',      route: '/escaner'     },
+  { id: 'relajacion',  label: 'Relajación',       icon: 'musical-notes-outline', duration: '10 min',     route: '/relajacion'  },
+  { id: 'ruido',       label: 'Ruido blanco',     icon: 'volume-medium-outline', duration: 'Libre',      route: '/ruido'       },
+  { id: 'lecturas',    label: 'Lecturas breves',  icon: 'library-outline',       duration: '5–10 min',   route: '/lecturas'    },
 ];
 
 const TOOL_MAP = Object.fromEntries(TOOLS.map(t => [t.id, t]));
