@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-07-03 — Joaquín (sesión 49)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`, `screens/QuizScreen.tsx` (nuevo), `app/quiz.tsx` (nuevo), `lib/coachesCache.ts`, `app/_layout.tsx`
+
+**Resumen:**
+- Rediseño completo de la pantalla Conexiones: reemplaza carrusel de temas y cards horizontales por chips filtrables (9 categorías con íconos Feather) + lista vertical de profesionales full-width
+- Tarjeta "Re-book" condicional: aparece solo si el usuario tuvo una sesión completada y no tiene reserva activa con ese coach; navega directo a booking-calendar
+- Tarjeta Quiz (antes `console.log`) ahora navega a `/quiz`; card visual terracota con LinearGradient
+- Nueva pantalla QuizScreen: 3 preguntas (tema → tipo de acompañamiento → presupuesto) → matching contra cache de coaches con fallback progresivo → muestra 1-2 resultados con razón textual; guarda respuesta Q1 en AsyncStorage (`vive_quiz_topic`) para futura sección "Para vos"
+- `coachesCache.ts` extendido: `CachedCoach` suma `verified`, `avgRating`, `reviewCount`; segunda query batch a `reviews` para calcular promedio; campos opcionales para mantener compatibilidad con `search3`
+- SCHEMA.md no cambió en esta sesión
+
+**Pendiente para la próxima sesión:**
+- Schema migrations pendientes: `coaches.availability_status`, tabla `user_quiz_answers`
+- Punto de inserción "Para vos" marcado en conexiones (carrusel personalizado por quiz/historial)
+- Daily.co: activar plan de pago para habilitar creación de salas privadas por API
+- Ruido blanco: audio real con `expo-av`
+- "Reprogramar" roto del lado coach (definir flujo primero)
+- Google OAuth y push notifications (requieren dev build con EAS)
+
+---
+
 ## 2026-07-03 — Joaquín (sesión 48)
 
 **Tocado:** `hooks/useUnreadSalas.ts` (nuevo), `app/(tabs)/_layout.tsx`, `app/(coach)/_layout.tsx`, `screens/SessionsScreen.tsx`, `screens/CoachChatsScreen.tsx`
