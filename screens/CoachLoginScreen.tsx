@@ -36,7 +36,7 @@ export default function CoachLoginScreen() {
     ]).start();
   }, []);
 
-  async function validateAndNavigate() {
+  async function validateAndNavigate(isNewSignup: boolean) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
@@ -44,12 +44,6 @@ export default function CoachLoginScreen() {
       supabase.from('profiles').select('role').eq('id', user.id).single(),
       supabase.from('coaches').select('id, verified').eq('profile_id', user.id).maybeSingle(),
     ]);
-
-    if (profile?.role === 'user') {
-      setLoading(false);
-      setError('Esta cuenta ya está registrada como usuario. Para postularte como coach necesitás usar un mail distinto.');
-      return;
-    }
 
     setLoading(false);
 
@@ -69,6 +63,16 @@ export default function CoachLoginScreen() {
         'Ya enviaste tu solicitud para ser coach. Te avisaremos cuando VIVE la apruebe.',
         [{ text: 'OK', onPress: () => router.back() }],
       );
+      return;
+    }
+
+    // A esta altura no hay fila en `coaches`. Si la cuenta ya existía antes de
+    // este submit (login, no signup) y es de un usuario final, bloqueamos — para
+    // postularte necesitás un mail distinto. Si la cuenta la acabamos de crear
+    // nosotros mismos (isNewSignup), el role='user' es solo el default del
+    // trigger y todavía no hay postulación — dejamos que siga a coach-application.
+    if (!isNewSignup && profile?.role === 'user') {
+      setError('Esta cuenta ya está registrada como usuario. Para postularte como coach necesitás usar un mail distinto.');
       return;
     }
 
@@ -94,7 +98,7 @@ export default function CoachLoginScreen() {
     const signInError = await signInWithEmail(trimmedEmail, trimmedPassword);
 
     if (!signInError) {
-      await validateAndNavigate();
+      await validateAndNavigate(false);
       return;
     }
 
@@ -103,7 +107,7 @@ export default function CoachLoginScreen() {
     const signUpError = await signUpWithEmail(trimmedEmail, trimmedPassword, nameFromEmail);
 
     if (!signUpError) {
-      await validateAndNavigate();
+      await validateAndNavigate(true);
       return;
     }
 
