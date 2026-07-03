@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-07-03 — Joaquín (sesión 48)
+
+**Tocado:** `hooks/useUnreadSalas.ts` (nuevo), `app/(tabs)/_layout.tsx`, `app/(coach)/_layout.tsx`, `screens/SessionsScreen.tsx`, `screens/CoachChatsScreen.tsx`
+
+**Resumen:**
+- Extraído hook compartido `useUnreadSalas({ userId, role })` que centraliza la lógica de "mensajes no leídos" que estaba duplicada en 4 lugares
+- El hook hace 2 queries (salas + mensajes) en lugar de N+1, se refresca solo con `useFocusEffect`, y expone `refresh()` para que los layouts puedan llamarlo desde sus canales realtime
+- Tab bar usuario y coach: reemplazaron sus funciones `checkDot`/`checkChatsUnread`; el booking check quedó como lógica separada en el layout de usuario
+- Sesiones y CoachChats: eliminado el query `lastForeign` por sala (N queries ahorrados); `hasUnread` ahora viene de `unreadSalaIds.has(sala.id)` en render
+- Corrección silenciosa: el tab bar usuario antes no filtraba por `sender_type`, podía marcar el punto por mensajes de sistema — ahora usa el mismo criterio que el resto
+
+**Pendiente para la próxima sesión:**
+- Daily.co: activar plan de pago para habilitar creación de salas privadas por API
+- Limpiar datos de prueba en bookings
+- Ruido blanco: agregar audio real con `expo-av`
+- "Reprogramar" roto del lado coach (definir flujo primero)
+- Google OAuth y push notifications (requieren dev build con EAS)
+
+---
+
 ## 2026-07-03 — Joaquín (sesión 47)
 
 **Tocado:** `lib/resourceCompletions.ts` (nuevo), `screens/DiarioScreen.tsx`, `screens/GratitudScreen.tsx`, `screens/RespiracionScreen.tsx` (nuevo), `screens/MeditacionScreen.tsx` (nuevo), `screens/EscanerScreen.tsx` (nuevo), `screens/SuenoScreen.tsx` (nuevo), `screens/RelajacionScreen.tsx` (nuevo), `screens/RuidoScreen.tsx` (nuevo), `screens/LecturasScreen.tsx` (nuevo), `app/respiracion.tsx` (nuevo), `app/meditacion.tsx` (nuevo), `app/escaner.tsx` (nuevo), `app/sueno.tsx` (nuevo), `app/relajacion.tsx` (nuevo), `app/ruido.tsx` (nuevo), `app/lecturas.tsx` (nuevo), `app/_layout.tsx`, `app/(tabs)/recursos.tsx`
