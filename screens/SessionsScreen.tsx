@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useUnreadSalas } from '@/hooks/useUnreadSalas';
 import {
   View,
   Text,
@@ -92,6 +93,7 @@ export default function SessionsScreen() {
   const [nextSession, setNextSession] = useState<NextSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [joinable, setJoinable] = useState(false);
+  const { unreadSalaIds } = useUnreadSalas({ userId: user?.id ?? null, role: 'user' });
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const listAnim = useRef(new Animated.Value(0)).current;
@@ -172,32 +174,16 @@ export default function SessionsScreen() {
         const isUserSide = sala.user_id === user.id;
         const otherId = isUserSide ? sala.coach_id : sala.user_id;
         const otherName = profileMap[otherId]?.name ?? 'Usuario';
-        const userReadAt: string | null = isUserSide ? sala.user_last_read_at : sala.coach_last_read_at;
 
-        const [{ data: lastMsg }, { data: lastForeign }] = await Promise.all([
-          supabase
-            .from('messages')
-            .select('content, created_at')
-            .eq('sala_id', sala.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          // último mensaje humano (no de sistema) que NO mandé yo mismo — un
-          // mensaje propio no debe marcar la sala como no leída. Mismo criterio
-          // validado en checkDot (app/(tabs)/_layout.tsx) y CoachChatsScreen.tsx.
-          supabase
-            .from('messages')
-            .select('created_at')
-            .eq('sala_id', sala.id)
-            .in('sender_type', ['user', 'coach'])
-            .neq('sender_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-        ]);
+        const { data: lastMsg } = await supabase
+          .from('messages')
+          .select('content, created_at')
+          .eq('sala_id', sala.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        const lastForeignAt = lastForeign?.created_at as string | undefined;
-        const hasUnread = !!lastForeignAt && (!userReadAt || lastForeignAt > userReadAt);
+        const hasUnread = unreadSalaIds.has(sala.id as string);
 
         return {
           id: sala.id,
@@ -241,7 +227,7 @@ export default function SessionsScreen() {
     }
 
     setLoading(false);
-  }, [user]);
+  }, [user, unreadSalaIds]);
 
   // Refresca cada vez que se vuelve a esta pestaña — mismo bug que
   // encontramos en CoachHomeScreen/CoachChatsScreen: sin esto, volver de un

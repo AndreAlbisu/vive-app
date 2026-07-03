@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { decryptMessage } from '@/lib/encryption';
 import { AppBg } from '@/components/ui/AppBg';
+import { useUnreadSalas } from '@/hooks/useUnreadSalas';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ChatRoom = {
@@ -57,6 +58,7 @@ export default function CoachChatsScreen() {
   const { user } = useAuth();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
+  const { unreadSalaIds } = useUnreadSalas({ userId: user?.id ?? null, role: 'coach' });
 
   const loadRooms = useCallback(async () => {
     if (!user) return;
@@ -83,30 +85,15 @@ export default function CoachChatsScreen() {
 
     const results = await Promise.all(
       salas.map(async (sala) => {
-        const [{ data: lastMsg }, { data: lastForeign }] = await Promise.all([
-          supabase
-            .from('messages')
-            .select('content, created_at')
-            .eq('sala_id', sala.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          // último mensaje humano (no de sistema) que NO mandó el propio coach —
-          // mismo criterio validado en CoachHomeScreen / checkDot de app/(tabs)/_layout.tsx
-          supabase
-            .from('messages')
-            .select('created_at')
-            .eq('sala_id', sala.id)
-            .in('sender_type', ['user', 'coach'])
-            .neq('sender_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-        ]);
+        const { data: lastMsg } = await supabase
+          .from('messages')
+          .select('content, created_at')
+          .eq('sala_id', sala.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        const readAt = sala.coach_last_read_at as string | null;
-        const lastForeignAt = lastForeign?.created_at as string | undefined;
-        const hasUnread = !!lastForeignAt && (!readAt || lastForeignAt > readAt);
+        const hasUnread = unreadSalaIds.has(sala.id as string);
 
         const name = profileMap[sala.user_id as string]?.name ?? 'Usuario';
         return {
@@ -131,7 +118,7 @@ export default function CoachChatsScreen() {
 
     setRooms(results);
     setLoading(false);
-  }, [user]);
+  }, [user, unreadSalaIds]);
 
   // Refresca cada vez que se vuelve a esta pestaña — sin esto, volver de un
   // chat recién leído dejaba el estado de "no leído" viejo hasta un remount

@@ -9,6 +9,7 @@ import { HapticTab } from '@/components/haptic-tab';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { useUnreadSalas } from '@/hooks/useUnreadSalas';
 
 const TAB_ACTIVE   = '#565E32';
 const TAB_INACTIVE = '#87835C';
@@ -32,52 +33,7 @@ const DOT_RED      = '#E05252';
 //   paddingTop: 6,
 // };
 
-// Queries: (1) salas con user_last_read_at, (2) mensajes de otros acotados por fecha,
-// (3) sesión confirmada hoy — 2-3 total, nunca N+1
-async function checkDot(userId: string, setHasDot: (v: boolean) => void) {
-  const { data: salas } = await supabase
-    .from('salas')
-    .select('id, user_last_read_at')
-    .eq('user_id', userId);
-
-  if (!salas?.length) { setHasDot(false); return; }
-
-  const salaIds = salas.map(s => s.id as string);
-
-  let minLastRead: string | null = null;
-  let anyNull = false;
-  for (const s of salas) {
-    if (!s.user_last_read_at) { anyNull = true; break; }
-    const t = s.user_last_read_at as string;
-    if (!minLastRead || t < minLastRead) minLastRead = t;
-  }
-
-  const msgsBase = supabase
-    .from('messages')
-    .select('sala_id, created_at')
-    .in('sala_id', salaIds)
-    .neq('sender_id', userId)
-    .order('created_at', { ascending: false });
-
-  const { data: foreignMsgs } = await (
-    !anyNull && minLastRead ? msgsBase.gt('created_at', minLastRead) : msgsBase
-  );
-
-  const latestBySala: Record<string, string> = {};
-  foreignMsgs?.forEach(msg => {
-    const sid = msg.sala_id as string;
-    if (!latestBySala[sid]) latestBySala[sid] = msg.created_at as string;
-  });
-
-  const hasUnread = salas.some(sala => {
-    const latest = latestBySala[sala.id as string];
-    if (!latest) return false;
-    if (!sala.user_last_read_at) return true;
-    return latest > (sala.user_last_read_at as string);
-  });
-
-  if (hasUnread) { setHasDot(true); return; }
-
+async function checkBookingToday(userId: string, setHas: (v: boolean) => void) {
   const today = new Date().toISOString().split('T')[0];
   const { count } = await supabase
     .from('bookings')
@@ -85,8 +41,7 @@ async function checkDot(userId: string, setHasDot: (v: boolean) => void) {
     .eq('user_id', userId)
     .eq('status', 'confirmada')
     .eq('scheduled_date', today);
-
-  setHasDot((count ?? 0) > 0);
+  setHas((count ?? 0) > 0);
 }
 
 function TabIcon({ focused, color, label, children }: { focused: boolean; color: string; label: string; children: React.ReactNode }) {
@@ -101,33 +56,32 @@ function TabIcon({ focused, color, label, children }: { focused: boolean; color:
 
 export default function TabLayout() {
   const { user } = useAuth();
-  const [hasDot, setHasDot] = useState(false);
+  const [hasBookingToday, setHasBookingToday] = useState(false);
+  const { hasAnyUnread, refresh: refreshUnread } = useUnreadSalas({ userId: user?.id ?? null, role: 'user' });
+  const hasDot = hasAnyUnread || hasBookingToday;
 
   useEffect(() => {
-    if (!user) { setHasDot(false); return; }
+    if (!user) { setHasBookingToday(false); return; }
 
-    checkDot(user.id, setHasDot);
+    checkBookingToday(user.id, setHasBookingToday);
 
     const channel = supabase
       .channel(`user-tab-dot-${user.id}-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
-        () => checkDot(user.id, setHasDot))
+        () => refreshUnread())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'salas' },
-        () => checkDot(user.id, setHasDot))
+        () => refreshUnread())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' },
-        () => checkDot(user.id, setHasDot))
+        () => checkBookingToday(user.id, setHasBookingToday))
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id]);
+  }, [user?.id, refreshUnread]);
 
-  // Recalcula al volver a la sección de tabs (ej: salir de una sala recién
-  // leída) — no depender solo de que el evento realtime de "salas" llegue,
-  // que puede no dispararse si la tabla no tiene replicación habilitada.
   useFocusEffect(
     useCallback(() => {
       if (!user) return;
-      checkDot(user.id, setHasDot);
+      checkBookingToday(user.id, setHasBookingToday);
     }, [user?.id])
   );
 

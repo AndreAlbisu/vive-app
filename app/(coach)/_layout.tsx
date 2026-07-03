@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 
@@ -9,6 +8,7 @@ import { HapticTab } from '@/components/haptic-tab';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { useUnreadSalas } from '@/hooks/useUnreadSalas';
 
 const TAB_ACTIVE   = '#565E32';
 const TAB_INACTIVE = '#87835C';
@@ -38,51 +38,12 @@ function UnreadDot() {
   return <View style={badge.unreadDot} />;
 }
 
-// Mismo criterio validado en CoachHomeScreen: un mensaje cuenta como no leído
-// solo si es humano (user/coach, no system/system_confirmed/system_cancelled)
-// y no lo mandó el propio coach. sender_type no siempre distingue bien coach
-// de user (ver SalaScreen.tsx sendMessage) así que sender_id !== userId es lo
-// que de verdad filtra "no es mío".
-async function checkChatsUnread(userId: string, setHasUnread: (v: boolean) => void) {
-  const { data: salas } = await supabase
-    .from('salas')
-    .select('id, coach_last_read_at')
-    .eq('coach_id', userId);
-
-  if (!salas?.length) { setHasUnread(false); return; }
-
-  const salaIds = salas.map(s => s.id as string);
-
-  const { data: messages } = await supabase
-    .from('messages')
-    .select('sala_id, sender_id, sender_type, created_at')
-    .in('sala_id', salaIds)
-    .order('created_at', { ascending: false });
-
-  const isHuman = (t: string) => t === 'user' || t === 'coach';
-  const latestForeignAtBySala: Record<string, string> = {};
-  (messages ?? []).forEach(m => {
-    if (!isHuman(m.sender_type as string)) return;
-    if (m.sender_id === userId) return;
-    const sid = m.sala_id as string;
-    if (!latestForeignAtBySala[sid]) latestForeignAtBySala[sid] = m.created_at as string;
-  });
-
-  const hasUnread = salas.some(sala => {
-    const latest = latestForeignAtBySala[sala.id as string];
-    if (!latest) return false;
-    if (!sala.coach_last_read_at) return true;
-    return latest > (sala.coach_last_read_at as string);
-  });
-
-  setHasUnread(hasUnread);
-}
 
 export default function CoachTabLayout() {
   const { user } = useAuth();
   const [coachId, setCoachId] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
-  const [hasUnreadChats, setHasUnreadChats] = useState(false);
+  const { hasAnyUnread: hasUnreadChats, refresh: refreshUnread } = useUnreadSalas({ userId: user?.id ?? null, role: 'coach' });
 
   useEffect(() => {
     if (!user) return;
@@ -125,30 +86,18 @@ export default function CoachTabLayout() {
   }, [coachId]);
 
   useEffect(() => {
-    if (!user) { setHasUnreadChats(false); return; }
-
-    checkChatsUnread(user.id, setHasUnreadChats);
+    if (!user) return;
 
     const channel = supabase
       .channel(`coach-chats-badge-${user.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
-        () => checkChatsUnread(user.id, setHasUnreadChats))
+        () => refreshUnread())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'salas' },
-        () => checkChatsUnread(user.id, setHasUnreadChats))
+        () => refreshUnread())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id]);
-
-  // Recalcula al volver a la sección de tabs (ej: salir de un chat recién
-  // leído) — no depender solo de que el evento realtime de "salas" llegue,
-  // mismo fix que en app/(tabs)/_layout.tsx del lado usuario.
-  useFocusEffect(
-    useCallback(() => {
-      if (!user) return;
-      checkChatsUnread(user.id, setHasUnreadChats);
-    }, [user?.id])
-  );
+  }, [user?.id, refreshUnread]);
 
   return (
     <Tabs
