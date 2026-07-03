@@ -46,9 +46,12 @@ export async function registerForPushNotifications(userId: string): Promise<stri
       Constants.expoConfig?.extra?.eas?.projectId ??
       (Constants as any).easConfig?.projectId;
 
-    const { data: token } = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined,
-    );
+    if (!projectId) {
+      console.log('[Notifs] Sin projectId — push tokens requieren dev build con EAS');
+      return null;
+    }
+
+    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
 
     await supabase
       .from('profiles')
