@@ -5,7 +5,26 @@
 
 ---
 
-## 2026-07-03 — Andre (sesión 51)
+## 2026-07-03 — Andre (sesión 52)
+
+**Tocado:** `scripts/add-resource-proposals.sql`, `scripts/add-resources.sql`, `scripts/add-resource-axes.sql`, `scripts/add-resource-tags.sql`, `scripts/add-resource-tag-links.sql`, `scripts/add-resource-feedback.sql`, `scripts/fix-resource-feedback-summary-grant.sql`, `scripts/add-notifications-recurso-feedback-umbral.sql`, `SCHEMA.md`
+
+**Resumen:**
+- Schema completo del sistema "Recursos propuestos por coaches": 6 tablas nuevas (`resource_proposals`, `resources`, `resource_axes`, `resource_tags`, `resource_tag_links`, `resource_feedback`) + ampliación del CHECK de `notifications.type`. Las 8 migraciones se corrieron y verificaron una por una en Supabase (corridas por Andre en el SQL Editor).
+- El catálogo hardcodeado actual (Diario, Gratitud, y las 9 tools de `recursos.tsx`) **no se tocó ni se migró** — `resources` nace vacía, solo para lo nuevo de coaches. Journaling y Gratitud siguen exclusivos de VITA, no proponibles.
+- Dos decisiones de RLS no triviales, ambas verificadas contra la base real (no solo revisadas por lectura):
+  - `resource_proposals`: un coach autenticado no puede auto-aprobarse ni tocar `reviewer_notes` — RLS no filtra por columna, así que se agregó un trigger `BEFORE UPDATE` que bloquea esos dos campos cuando hay sesión de usuario, y los deja pasar cuando se corre desde el Dashboard (sin sesión) para no trabar la aprobación manual.
+  - `resource_feedback`: el coach no tiene ninguna policy de acceso directo a la tabla (para que no pueda pedir `user_id` y ver el detalle de quién votó qué) — ve solo el agregado vía función `get_my_resource_feedback_summary()` (`SECURITY DEFINER`).
+- **Hallazgo real durante la verificación**: esa función se pudo ejecutar con la anon key pese a tener `REVOKE ALL ... FROM PUBLIC` — Supabase le da EXECUTE a `anon` en todo el schema `public` por default privileges de base, no vía el pseudo-rol `PUBLIC`. No hubo fuga de datos (el filtro interno por `auth.uid()` igual devolvía vacío), pero el permiso estaba mal. Se corrigió con `REVOKE EXECUTE ... FROM anon` explícito y se re-verificó (ahora da `permission denied`). Quedó documentado como punto 18 en SCHEMA.md para no repetir el error en futuras funciones `SECURITY DEFINER`.
+- FKs a coach: `resource_proposals.coach_id → coaches.id` (patrón operativo, como `coach_topics`) vs. `resources.attributed_to_coach_id → profiles.id` (patrón de atribución, como `favorite_coaches`) — decisión explícita para no repetir la confusión `coaches.id`/`profiles.id` ya documentada en el proyecto.
+- SCHEMA.md actualizado en el mismo momento (tablas nuevas + puntos 18 y 19 de reglas críticas).
+
+**Pendiente para la próxima sesión:**
+- Nada de frontend todavía: falta el formulario del coach para proponer un recurso, la pantalla de revisión de VITA, y la lógica que detecta el umbral de `resource_feedback` y dispara la notificación `recurso_feedback_umbral` (el tipo ya existe en el CHECK, pero nada lo dispara todavía)
+- Bug del re-book en Conexiones sigue sin diagnosticar (ver sesión 50)
+- Schema migrations pendientes: `coaches.availability_status`, tabla `user_quiz_answers`
+
+---
 
 **Tocado:** `screens/CoachLoginScreen.tsx`
 

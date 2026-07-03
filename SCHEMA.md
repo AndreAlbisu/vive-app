@@ -2,7 +2,7 @@
 
 > ⚠️ Este archivo describe lo que está REALMENTE en Supabase hoy.
 > No es un diseño aspiracional — si algo cambia en la base, este archivo se actualiza el mismo día.
-> Última actualización: 02 de julio 2026 — resource_completions, instant_booking, avatars bucket aplicados. bookings.duration_minutes + meeting_url propuestos (pendientes de correr)
+> Última actualización: 03 de julio 2026 — sistema de "Recursos propuestos por coaches" aplicado (resource_proposals, resources, resource_axes, resource_tags, resource_tag_links, resource_feedback + función agregada, notifications.type ampliado)
 
 ## Tablas y relaciones
 
@@ -113,7 +113,7 @@
 ### `notifications`
 - `id` (uuid, PK)
 - `recipient_id` (uuid, FK → `profiles.id`)
-- `type` (text) — CHECK constraint activo. Valores válidos: `'reserva_nueva'` | `'reserva_confirmada'` | `'reserva_rechazada'` | `'reserva_cancelada'` | `'recordatorio_sesion'` | `'invitacion_review'`. `'invitacion_review'` se inserta automáticamente por `complete_confirmed_sessions()` cuando un booking pasa a `'completada'` — **solo para `bookings.user_id`, nunca para el coach** (reviews son unidireccionales, ver punto 15). Ver punto 10 para el hallazgo de que esta función no existió realmente hasta el 01/07/2026 pese a estar documentada como corrida desde el 23/06.
+- `type` (text) — CHECK constraint activo. Valores válidos: `'reserva_nueva'` | `'reserva_confirmada'` | `'reserva_rechazada'` | `'reserva_cancelada'` | `'recordatorio_sesion'` | `'invitacion_review'` | `'recurso_feedback_umbral'` (agregado 03/07/2026, `scripts/add-notifications-recurso-feedback-umbral.sql` — el script busca el nombre real de la constraint en `pg_constraint` en vez de asumirlo, por eso no rompe si no coincide con el nombre por convención. **Todavía no hay ningún código que dispare este tipo** — el schema está listo pero la detección de umbral en `resource_feedback` y el envío real quedan para un paso posterior). `'invitacion_review'` se inserta automáticamente por `complete_confirmed_sessions()` cuando un booking pasa a `'completada'` — **solo para `bookings.user_id`, nunca para el coach** (reviews son unidireccionales, ver punto 15). Ver punto 10 para el hallazgo de que esta función no existió realmente hasta el 01/07/2026 pese a estar documentada como corrida desde el 23/06.
 - `booking_id` (uuid, nullable)
 - `title` (text), `body` (text)
 - `read` (boolean, DEFAULT false)
@@ -152,6 +152,56 @@
 - RLS: SELECT/INSERT/DELETE solo si `user_id = auth.uid()`. Sin política de UPDATE (no hay nada que actualizar, solo agregar/quitar filas)
 - Agregada 01/07/2026 (`scripts/add-favorite-coaches.sql`) — reemplaza dos `useState` locales y desconectados entre sí (`conexiones.tsx` y `ProfesionalScreen.tsx`) que no persistían nada. Estado unificado vía `hooks/useFavoriteCoaches.ts`, usado en ambas pantallas y en la nueva `screens/FavoritosScreen.tsx` (`/favoritos`, accesible desde el ícono de estrella en el header de Conexiones).
 
+### `resource_proposals`
+- `id` (uuid, PK)
+- `coach_id` (uuid, NOT NULL, FK → `coaches.id`) ⚠️ — mismo criterio que `coach_topics`/`coach_availability`/`coach_weekly_pattern` (tabla operativa del coach), NO `profiles.id`
+- `type` (text, NOT NULL) — CHECK IN (`'audio'`, `'guia_pasos'`, `'lectura_breve'`). A propósito **no** incluye `'journaling'` ni `'gratitud'` — esos son recursos exclusivos de VITA, no proponibles por coaches.
+- `title`, `description` (nullable), `duration_min` (int, nullable, CHECK > 0 si no es null — sin rango distinto por `type`, quedó pendiente definir si hace falta), `content` (jsonb, NOT NULL, estructura libre según `type`)
+- `status` (text, NOT NULL, DEFAULT `'enviada'`) — CHECK IN (`'enviada'`, `'necesita_ajustes'`, `'aprobada'`, `'descartada'`)
+- `reviewer_notes` (text, nullable)
+- `created_at`, `updated_at` (timestamptz, NOT NULL DEFAULT now())
+- RLS: el coach dueño (`coach_id IN (SELECT id FROM coaches WHERE profile_id = auth.uid())`) puede SELECT/INSERT/UPDATE solo sus propias propuestas. Sin política de DELETE. Nadie más tiene acceso — tabla nunca leída por un usuario final.
+- Trigger `trg_resource_proposals_protect` (BEFORE UPDATE, función `fn_resource_proposals_protect_review_fields`): si la sesión viene de un usuario autenticado (`auth.uid() IS NOT NULL`), rechaza cambios a `status` y `reviewer_notes` — RLS no puede restringir por columna, así que un coach con permiso de UPDATE sobre su propia fila no podría auto-aprobarse ni borrar notas de revisión editando directo. Mismo patrón que `reviews_before_update`. También mantiene `updated_at` al día. Cuando se corre una `UPDATE` desde el SQL Editor/Dashboard (sin JWT de usuario, `auth.uid()` es NULL), el trigger no bloquea nada — así el equipo VITA aprueba manualmente sin fricción.
+- El pase de propuesta aprobada a `resources` publicado es **manual, vía Supabase Dashboard** — no hay trigger ni automatismo. Decisión de producto, no limitación técnica.
+- Agregada 03/07/2026 (`scripts/add-resource-proposals.sql`, corrido y verificado en Supabase el mismo día).
+
+### `resources`
+- `id` (uuid, PK)
+- `proposal_id` (uuid, nullable, UNIQUE, FK → `resource_proposals.id`) — de qué propuesta salió; nullable porque VITA también puede cargar recursos propios sin propuesta de coach de por medio. UNIQUE para que una propuesta aprobada no termine duplicada en dos filas por error de carga manual.
+- `attributed_to_coach_id` (uuid, nullable, FK → `profiles.id`) ⚠️ — a diferencia de `coach_id` de arriba, este va a `profiles.id`, mismo criterio que `favorite_coaches.coach_profile_id`/`salas.coach_id` (atribución/navegación a perfil), NO el criterio operativo de `coach_topics`. Es atribución, no implica ownership de edición — el coach nunca escribe acá directo.
+- `type` (text, NOT NULL) — CHECK IN (`'audio'`, `'guia_pasos'`, `'lectura_breve'`, `'journaling'`, `'gratitud'`). Los últimos dos valores existen para que VITA pueda cargar sus propios recursos exclusivos en esta misma tabla si algún día lo decide — **el catálogo hardcodeado actual de Diario/Gratitud en `app/(tabs)/recursos.tsx` NO se migró acá, sigue viviendo aparte, sin tocar.**
+- `title`, `description` (nullable), `duration_min` (int, nullable, CHECK > 0), `content` (jsonb, NOT NULL)
+- `created_at` (timestamptz, NOT NULL DEFAULT now())
+- RLS: SELECT público (`USING (true)`), cualquiera lee, con o sin sesión. **Sin ninguna política de INSERT/UPDATE/DELETE** — con RLS activado y sin esas políticas, toda escritura desde la app queda bloqueada por defecto. La única forma de escribir es a mano vía SQL Editor/Dashboard (bypasea RLS). Verificado: INSERT como anon → rechazado por RLS.
+- Nace vacía — no hay ninguna fila todavía, ni de coach ni de VITA.
+- Agregada 03/07/2026 (`scripts/add-resources.sql`, corrido y verificado en Supabase el mismo día).
+
+### `resource_axes`
+- `resource_id` (uuid, FK → `resources.id` ON DELETE CASCADE), `axis` (text, CHECK IN `'cuerpo'`/`'mente'`/`'alma'`)
+- PK compuesta (`resource_id`, `axis`) — un recurso puede tener más de un eje
+- ⚠️ Esta taxonomía (Cuerpo/Mente/Alma) es **nueva y separada** de `AXES` en `constants/searchData.ts` (Bienestar físico/emocional-mental/Crecimiento, la que alimenta `coach_topics`) — no son la misma cosa, no se unificaron en este trabajo. Ver punto 17 de Reglas críticas para la otra confusión de taxonomías ya documentada.
+- RLS: SELECT público. Sin INSERT/UPDATE/DELETE para authenticated — se escribe a mano junto con el `resource`, vía Dashboard.
+- Agregada 03/07/2026 (`scripts/add-resource-axes.sql`, corrido y verificado en Supabase el mismo día).
+
+### `resource_tags`
+- `id` (uuid, PK), `label` (text, NOT NULL, UNIQUE), `status` (text, NOT NULL, DEFAULT `'propuesto'`, CHECK IN `'oficial'`/`'propuesto'`), `created_at`
+- RLS: SELECT público. INSERT solo para coaches autenticados (`EXISTS (SELECT 1 FROM coaches WHERE profile_id = auth.uid())`), con `WITH CHECK (status = 'propuesto')` — un coach nunca puede crear un tag ya `'oficial'` directo. Promover a `'oficial'` o fusionar con uno existente es manual, como parte de la revisión de la propuesta que lo trajo — decisión separada de aprobar el recurso en sí.
+- Agregada 03/07/2026 (`scripts/add-resource-tags.sql`, corrido y verificado en Supabase el mismo día).
+
+### `resource_tag_links`
+- `resource_id` (FK → `resources.id` ON DELETE CASCADE), `tag_id` (FK → `resource_tags.id` ON DELETE CASCADE), PK compuesta
+- RLS: SELECT público. Sin INSERT/UPDATE/DELETE para authenticated — se escribe a mano junto con la aprobación de la propuesta.
+- Agregada 03/07/2026 (`scripts/add-resource-tag-links.sql`, corrido y verificado en Supabase el mismo día).
+
+### `resource_feedback`
+- `id` (uuid, PK), `resource_id` (FK → `resources.id` ON DELETE CASCADE, NOT NULL), `user_id` (FK → `profiles.id` ON DELETE CASCADE, NOT NULL), `sirvio` (boolean, NOT NULL), `created_at`
+- UNIQUE(`resource_id`, `user_id`) — un usuario puede cambiar de opinión (UPDATE) pero no votar dos veces
+- Señal binaria post-uso, **nunca expuesta como número público en la UI**. Alimenta privadamente el perfil del coach.
+- RLS: el usuario ve/crea/edita solo su propia fila (`user_id = auth.uid()`). **A propósito no existe ninguna política que le dé al coach acceso de fila a esta tabla** — una policy de SELECT solo filtra filas, no columnas: si el coach tuviera acceso de fila a sus recursos atribuidos, podría pedir `select user_id` y ver el detalle de quién votó qué, violando la regla de negocio. El coach tiene **cero acceso directo** a esta tabla vía API.
+- Función `get_my_resource_feedback_summary()` (`SECURITY DEFINER`, `SET search_path = public, pg_temp`) — único camino que tiene un coach para ver esta señal: filtra internamente por `resources.attributed_to_coach_id = auth.uid()` y devuelve solo `sirvio_count`/`no_sirvio_count` agregados por recurso, nunca `user_id`. Permisos: `REVOKE EXECUTE FROM anon` explícito (⚠️ hallazgo: `REVOKE ALL ... FROM PUBLIC` no alcanza para bloquear `anon` — Supabase otorga EXECUTE a `anon` en todo `public` vía default privileges a nivel de base, no vía el pseudo-rol `PUBLIC`; hubo que revocarlo de `anon` explícitamente, ver `scripts/fix-resource-feedback-summary-grant.sql`), `GRANT EXECUTE TO authenticated`.
+- Detección de umbral (cada 10/25/50 "sirvió") y disparo de notificación al coach: **no implementado todavía** — queda para un paso posterior, es lógica de aplicación sobre esta función/tabla, fuera de este trabajo.
+- Agregada 03/07/2026 (`scripts/add-resource-feedback.sql`, corrido y verificado en Supabase el mismo día. Fix de permisos en `scripts/fix-resource-feedback-summary-grant.sql`, mismo día).
+
 ## Reglas críticas
 
 1. **`coaches.id` ≠ `profiles.id`** — son valores distintos. El dato que conecta es `coaches.profile_id`.
@@ -172,3 +222,5 @@
 15. **Reviews son unidireccionales (usuario → coach) por decisión de producto, no por limitación técnica** (01/07/2026 — ver Notion "Decisiones estratégicas", sección "Reviews: unidireccionales", y punto 10 más arriba para el hallazgo de `complete_confirmed_sessions()`). El schema/trigger/RLS de `reviews` son genéricos y soportarían la dirección coach→usuario sin cambios, pero nunca se construyó esa UI, y ahora está bloqueada explícitamente: `ReviewScreen.tsx` chequea `role` de `useAuth()` al montar y redirige cualquier coach a `/(coach)/reservas` en vez de mostrar el formulario — protección contra cualquier notificación `invitacion_review` vieja, mal generada, o alcanzada por una vía no prevista (ej. tap de push, deep link futuro), no solo contra el flujo normal. Antes de este fix, `app/_layout.tsx` (listener global de tap-en-push) y `ReviewScreen.tsx` no chequeaban rol — un coach que llegara a esa pantalla habría insertado una review con `reviewer_id = reviewed_id` (se reviewea a sí mismo), sin que la constraint UNIQUE ni las RLS lo impidieran. En la práctica nunca se disparó porque el mecanismo que generaba la notificación (`complete_confirmed_sessions()`) tampoco existía — ver punto 10.
 16. **El chat de la Sala está congelado mientras la reserva esté `'pendiente'`** — decisión de producto ya documentada en Notion ("Mensaje previo a la aceptación del coach": *"Es unidireccional — no hay chat antes de aceptar, lo que evita que coach y usuario intercambien contactos y se salgan de VIVE"*), implementada recién el 01/07/2026 (antes, `SalaScreen.tsx` permitía escribir y mandar mensajes libremente sin importar el estado de la reserva). `SalaScreen.tsx` deriva `isChatFrozen = confirmedBooking?.status === 'pendiente'`: mientras es `true`, el input y botón de enviar se reemplazan por un aviso (`"El chat se habilita cuando el coach acepte tu solicitud"` del lado usuario, `"Aceptá o rechazá la solicitud desde Reservas..."` del lado coach), y `sendMessage()` también corta temprano como defensa en profundidad (RLS de `messages` no valida esto — es un chequeo de UI/cliente, no de base). El único canal antes de la aceptación sigue siendo el mensaje unidireccional opcional de `bookings.user_message`, mostrado en `CoachReservasScreen.tsx`. La comunicación se destranca sola apenas el booking pasa a `'confirmada'` o `'cancelada'` (deja de haber un booking `'pendiente'` activo).
 17. **Hay dos taxonomías de "temas" distintas y desconectadas entre sí** (hallazgo del 02/07/2026, sin resolver): `AXES` en `constants/searchData.ts` (3 ejes, 28 subtemas granulares — "Ansiedad", "Pareja", "Sueño", etc., la que ahora es real vía `coach_topics`, ver más arriba) y `TOPICS` en `app/(tabs)/conexiones.tsx` (9 categorías amplias — "Ansiedad y estrés", "Relaciones", "Hábitos", etc., usadas solo para las cards de "¿Qué te gustaría trabajar hoy?"). Ningún label de `TOPICS` coincide textualmente con ninguno de los 28 de `AXES`. Tocar una card de tema en Conexiones navega a `search3.tsx` con ese label de `TOPICS` como `topic` param, que ahora se compara por igualdad exacta contra `coach_topics` (punto de arriba) — como nunca va a coincidir, esas cards devuelven 0 resultados siempre. **No es una regresión de la sesión del 02/07**: antes de esa sesión el filtro comparaba contra `coaches.specialty` (texto libre), que tampoco coincidía nunca con esos labels — ya estaba roto, solo que de una forma menos obvia. Pendiente decidir: ¿se remapean los 9 labels de `TOPICS` a uno o más subtemas de `AXES` cada uno (ej. "Ansiedad y estrés" → `['Ansiedad', 'Estrés físico']`), se unifican ambas listas en una sola, o se descarta la navegación por card de Conexiones a favor del flujo `search1 → search2` que sí es real? Es una decisión de producto, no técnica.
+18. **`REVOKE ALL ... FROM PUBLIC` no basta para bloquear `anon` en una función `SECURITY DEFINER`** (hallazgo 03/07/2026, `get_my_resource_feedback_summary()`): Supabase le otorga `EXECUTE` a `anon`/`authenticated` sobre todo objeto nuevo del schema `public` vía *default privileges* a nivel de base, no a través del pseudo-rol `PUBLIC` — así que revocar de `PUBLIC` no revoca ese grant directo. Hubo que hacer `REVOKE EXECUTE ... FROM anon` explícito (`scripts/fix-resource-feedback-summary-grant.sql`). Ante cualquier función nueva pensada para "solo `authenticated`", verificar el permiso real llamándola con la anon key sin sesión, no asumir que `REVOKE FROM PUBLIC` alcanza — mismo espíritu que el punto 10 (no asumir que algo "documentado como restringido" lo está de verdad).
+19. **Dos convenciones de FK a coach conviven a propósito, y el criterio para elegir cuál usar es "operativo vs. atribución"**: tablas donde el coach opera datos de negocio propios (`coach_availability`, `coach_weekly_pattern`, `coach_topics`, `bookings`, y ahora `resource_proposals`) usan `coach_id → coaches.id`, con RLS tipo `coach_id IN (SELECT id FROM coaches WHERE profile_id = auth.uid())`. Tablas que solo atribuyen/enlazan a un perfil para mostrarlo (`salas.coach_id`, `favorite_coaches.coach_profile_id`, `reviews.reviewed_id`, y ahora `resources.attributed_to_coach_id`) usan `→ profiles.id` directo. Ver punto 1-2 para el error clásico de confundir ambas.
