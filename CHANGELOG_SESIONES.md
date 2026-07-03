@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-07-03 — Joaquín (sesión 50)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`, `app/search1.tsx`
+
+**Resumen:**
+- Ajuste visual de Conexiones para que coincida con el mockup HTML: título Fraunces 34px, cards con fondo sólido `#F7F2E7`, bottom row con botón "Ver perfil" bordeado, re-book card con CTA pill "Reservar", quiz card con gradiente suave terracota-soft
+- Fix search1: eliminado `justifyContent:'center'` que causaba gap enorme con el teclado abierto; reemplazado `borderLeftWidth:3` por View absoluta de 4px con esquinas redondeadas para el acento de color en las cards
+- Tarjeta re-book: el código está correcto, el booking de prueba fue insertado en la DB (id: `5de341ec-fc25-4340-84e5-f2b6fbd6c0fa`, status=completada, sala_id=null), pero la tarjeta no aparece en el app — causa aún sin determinar
+- Quedaron logs de debug temporales en `loadRebook` para diagnosticar el problema
+
+**Pendiente para la próxima sesión:**
+- ⚠️ Abrir la app, ir a Conexiones, y revisar los logs `[Rebook]` en la consola de Expo para ver en qué paso falla el query (user.id, last booking, future count, coachRow)
+- Una vez diagnosticado, eliminar los logs de debug
+- Schema migrations pendientes: `coaches.availability_status`, tabla `user_quiz_answers`
+- Ruido blanco: audio real con `expo-av`
+- Daily.co: activar plan de pago
+- Google OAuth y push notifications (requieren dev build con EAS)
+
+---
+
 ## 2026-07-03 — Joaquín (sesión 49)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`, `screens/QuizScreen.tsx` (nuevo), `app/quiz.tsx` (nuevo), `lib/coachesCache.ts`, `app/_layout.tsx`
