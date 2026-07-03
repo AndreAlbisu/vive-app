@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,87 +6,80 @@ import {
   StyleSheet,
   Platform,
   ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
   ActivityIndicator,
   StatusBar,
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useFocusEffect } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
-import { ScaleCard } from '@/components/ScaleCard';
-import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
-import { prefetchCoaches } from '@/lib/coachesCache';
+import { supabase } from '@/lib/supabase';
+import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 
-// ─── Paleta suave ────────────────────────────────────────────────────────────
-const PALETTE = [
-  { bg: 'rgba(232,116,59,0.22)',  fg: ViveColors.primary },
-  { bg: 'rgba(107,191,138,0.22)', fg: ViveColors.accent  },
-  { bg: 'rgba(80,140,200,0.22)',  fg: ViveColors.calm    },
+// ─── Paleta earth-tone ───────────────────────────────────────────────────────
+const F   = '#3A4F2A';
+const FS  = '#6B7A56';
+const CR  = '#F3EEDF';
+const TC  = '#C1694F';
+const BG  = 'rgba(255,248,240,0.55)';
+const BD  = 'rgba(255,255,255,0.65)';
+const SG  = '#C99A3F';
+const LN  = 'rgba(63,81,47,0.14)';
+
+const shadow = Platform.select({
+  ios: {
+    shadowColor: 'rgba(0,0,0,0.5)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+  },
+  android: { elevation: 3 },
+});
+
+// ─── Chips de categoría ──────────────────────────────────────────────────────
+type FeatherName = React.ComponentProps<typeof Feather>['name'];
+
+type ChipItem = {
+  id: string;
+  icon: FeatherName;
+  label: string;
+  displayLabel: string;
+  searchTopics: string[];
+};
+
+const CHIPS: ChipItem[] = [
+  { id: '5', icon: 'wind',        label: 'Ansiedad',    displayLabel: 'ansiedad y estrés',    searchTopics: ['Ansiedad', 'Estrés físico'] },
+  { id: '1', icon: 'smile',       label: 'Ánimo',       displayLabel: 'estado de ánimo',      searchTopics: ['Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría'] },
+  { id: '2', icon: 'heart',       label: 'Relaciones',  displayLabel: 'relaciones',            searchTopics: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'] },
+  { id: '3', icon: 'trending-up', label: 'Crecimiento', displayLabel: 'crecimiento personal',  searchTopics: ['Identidad', 'Motivación', 'Crecimiento', 'Propósito'] },
+  { id: '4', icon: 'compass',     label: 'Propósito',   displayLabel: 'propósito y dirección', searchTopics: ['Propósito', 'Identidad', 'Motivación', 'Momentos de cambio'] },
+  { id: '6', icon: 'briefcase',   label: 'Trabajo',     displayLabel: 'trabajo y carrera',     searchTopics: ['Productividad', 'Concentración', 'Procrastinación', 'Vínculos laborales'] },
+  { id: '7', icon: 'repeat',      label: 'Hábitos',     displayLabel: 'hábitos',               searchTopics: ['Hábitos', 'Hábitos mentales'] },
+  { id: '8', icon: 'coffee',      label: 'Nutrición',   displayLabel: 'nutrición',             searchTopics: ['Nutrición'] },
+  { id: '9', icon: 'activity',    label: 'Bienestar',   displayLabel: 'salud y bienestar',     searchTopics: ['Sueño', 'Energía', 'Actividad física', 'Estrés físico'] },
 ];
 
-// ─── Datos ───────────────────────────────────────────────────────────────────
-type MIcon = React.ComponentProps<typeof MaterialIcons>['name'];
-
-const TOPICS: { id: string; icon: MIcon; label: string; searchTopics: string[] }[] = [
-  { id: '1', icon: 'mood',           label: 'Estado de\nánimo',       searchTopics: ['Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría'] },
-  { id: '2', icon: 'favorite',       label: 'Relaciones',              searchTopics: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'] },
-  { id: '3', icon: 'trending-up',    label: 'Desarrollo\npersonal',   searchTopics: ['Identidad', 'Motivación', 'Crecimiento', 'Propósito'] },
-  { id: '4', icon: 'explore',        label: 'Propósito y\ndirección', searchTopics: ['Propósito', 'Identidad', 'Motivación', 'Momentos de cambio'] },
-  { id: '5', icon: 'spa',            label: 'Ansiedad y\nestrés',     searchTopics: ['Ansiedad', 'Estrés físico'] },
-  { id: '6', icon: 'work',           label: 'Trabajo y\ncarrera',     searchTopics: ['Productividad', 'Concentración', 'Procrastinación', 'Vínculos laborales'] },
-  { id: '7', icon: 'repeat',         label: 'Hábitos',                 searchTopics: ['Hábitos', 'Hábitos mentales'] },
-  { id: '8', icon: 'restaurant',     label: 'Nutrición',               searchTopics: ['Nutrición'] },
-  { id: '9', icon: 'fitness-center', label: 'Salud y\nbienestar',     searchTopics: ['Sueño', 'Energía', 'Actividad física', 'Estrés físico'] },
-];
-
-type CoachItem = {
-  profileId: string;
+// ─── Re-book ─────────────────────────────────────────────────────────────────
+type RebookData = {
+  coachProfileId: string;
   name: string;
   specialty: string;
-  priceFrom: number;
+  pricePerSession: number;
   avatarUrl: string | null;
 };
 
-// ─── Constantes de diseño ─────────────────────────────────────────────────
-const TOPIC_W   = 88;
-const TOPIC_GAP = 10;
-const TOPIC_PAGE = (TOPIC_W + TOPIC_GAP) * 3;
-const TOPIC_DOTS = Math.ceil(TOPICS.length / 3);
-
-const COACH_W   = 126;
-const COACH_GAP = 12;
-const COACH_PAGE = (COACH_W + COACH_GAP) * 2;
-
-const VENN_C = 26;
-const VENN_O = 8;
-
-// ─── Subcomponentes ──────────────────────────────────────────────────────────
-function Dots({ count, active }: { count: number; active: number }) {
-  return (
-    <View style={dot.row}>
-      {Array.from({ length: count }, (_, i) => (
-        <View key={i} style={[dot.base, i === active && dot.active]} />
-      ))}
-    </View>
-  );
-}
-
-function VennDiagram() {
-  return (
-    <View style={venn.wrap}>
-      <View style={[venn.c, { backgroundColor: ViveColors.primary, top: 0,          left: VENN_O }]} />
-      <View style={[venn.c, { backgroundColor: ViveColors.accent,  top: VENN_O + 2, left: 0       }]} />
-      <View style={[venn.c, { backgroundColor: ViveColors.calm,    top: VENN_O + 2, left: VENN_O * 2 }]} />
-    </View>
-  );
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getInitials(name: string) {
+  const p = (name ?? '').trim().split(' ');
+  return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : (p[0]?.[0] ?? '?').toUpperCase();
 }
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
@@ -94,47 +87,83 @@ export default function ConexionesScreen() {
   const router = useRouter();
   const { user, requestAuth } = useAuth();
   const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
-  const [topicDot, setTopicDot] = useState(0);
-  const [coachDot, setCoachDot] = useState(0);
-  const [coaches, setCoaches] = useState<CoachItem[]>([]);
+
+  const [selectedChip, setSelectedChip] = useState<string | null>(null);
+  const [coaches, setCoaches]           = useState<CachedCoach[]>([]);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
+  const [rebookData, setRebookData]     = useState<RebookData | null>(null);
 
-  const coachDots = Math.max(1, Math.ceil(coaches.length / 2));
-
-  useEffect(() => { prefetchCoaches(); }, []);
-
+  // ── Cache poll ────────────────────────────────────────────────────────────
   useEffect(() => {
-    supabase
-      .from('coaches')
-      .select('specialty, price_per_session, profiles!inner(id, name, avatar_url)')
-      .eq('verified', true)
-      .limit(5)
-      .then(({ data, error }) => {
-        if (error) { console.error('[Conexiones] coaches fetch:', error.message); }
-        console.log('[Conexiones] coaches raw data:', JSON.stringify(data, null, 2));
-        console.log('[Conexiones] coaches count:', data?.length ?? 0);
-        const rows = (data ?? []).map((c: any) => {
-          const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
-          return {
-            profileId: profile?.id as string,
-            name: profile?.name as string,
-            specialty: c.specialty as string,
-            priceFrom: c.price_per_session as number,
-            avatarUrl: (profile?.avatar_url ?? null) as string | null,
-          };
-        });
-        setCoaches(rows);
-        console.log('[Conexiones] rows mapeados:', JSON.stringify(rows, null, 2));
-        console.log('[Conexiones] rows.length:', rows.length);
-        setLoadingCoaches(false);
-      });
+    prefetchCoaches();
+    let t: ReturnType<typeof setInterval>;
+    const check = () => {
+      const c = getCoachesCache();
+      if (c) { setCoaches(c); setLoadingCoaches(false); clearInterval(t); }
+    };
+    check();
+    t = setInterval(check, 80);
+    return () => clearInterval(t);
   }, []);
 
-  function goToPerfil(coach: CoachItem) {
+  // ── Re-book query ─────────────────────────────────────────────────────────
+  const loadRebook = useCallback(async () => {
+    if (!user?.id) { setRebookData(null); return; }
+    const today = new Date().toISOString().split('T')[0];
+
+    const { data: last } = await supabase
+      .from('bookings')
+      .select('coach_id, scheduled_date')
+      .eq('user_id', user.id)
+      .eq('status', 'completada')
+      .order('scheduled_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!last?.coach_id) { setRebookData(null); return; }
+
+    const { count } = await supabase
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('coach_id', last.coach_id)
+      .in('status', ['pendiente', 'confirmada'])
+      .gte('scheduled_date', today);
+
+    if ((count ?? 0) > 0) { setRebookData(null); return; }
+
+    const { data: coachRow } = await supabase
+      .from('coaches')
+      .select('specialty, price_per_session, profile_id, profiles!inner(name, avatar_url)')
+      .eq('id', last.coach_id)
+      .single();
+
+    if (!coachRow) { setRebookData(null); return; }
+
+    const profile = Array.isArray(coachRow.profiles) ? coachRow.profiles[0] : coachRow.profiles;
+    setRebookData({
+      coachProfileId: coachRow.profile_id as string,
+      name:           (profile?.name ?? '') as string,
+      specialty:      coachRow.specialty as string,
+      pricePerSession: coachRow.price_per_session as number,
+      avatarUrl:      (profile?.avatar_url ?? null) as string | null,
+    });
+  }, [user?.id]);
+
+  useFocusEffect(useCallback(() => { loadRebook(); }, [loadRebook]));
+
+  // ── Filtrado ──────────────────────────────────────────────────────────────
+  const chip = CHIPS.find(c => c.id === selectedChip) ?? null;
+  const displayed = chip
+    ? coaches.filter(c => chip.searchTopics.some(t => c.topics.includes(t)))
+    : coaches;
+
+  // ── Navegación ────────────────────────────────────────────────────────────
+  function goToPerfil(coach: CachedCoach) {
     router.push({
       pathname: '/profesional',
       params: {
-        profileId: coach.profileId,
+        profileId: coach.id,
         name: coach.name,
         specialty: coach.specialty,
         priceFrom: String(coach.priceFrom),
@@ -147,360 +176,461 @@ export default function ConexionesScreen() {
     toggleFavorite(profileId);
   }
 
-  function handleTopicScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    const x = e.nativeEvent.contentOffset.x;
-    setTopicDot(Math.min(Math.round(x / TOPIC_PAGE), TOPIC_DOTS - 1));
+  function goRebook() {
+    if (!rebookData) return;
+    router.push({
+      pathname: '/booking-calendar',
+      params: {
+        coachId:   rebookData.coachProfileId,
+        name:      rebookData.name,
+        specialty: rebookData.specialty,
+        priceFrom: String(rebookData.pricePerSession),
+      },
+    });
   }
 
-  function handleCoachScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    const x = e.nativeEvent.contentOffset.x;
-    setCoachDot(Math.min(Math.round(x / COACH_PAGE), coachDots - 1));
-  }
+  const sectionTitle = chip
+    ? `Trabajan ${chip.displayLabel}`
+    : 'Todos los profesionales';
 
   return (
     <AppBg>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={s.safe} edges={['top']}>
-      <FirstTimeTooltip
-        storageKey="vive_tooltip_conexiones"
-        icon="account-group-outline"
-        iconColor="#87835C"
-        title="Encontrá a tu guía"
-        description="Explorá coaches y profesionales según lo que estás viviendo. Filtrá por tema o buscá por nombre."
-        delay={800}
-      />
-      <ScrollView
-        style={s.screen}
-        contentContainerStyle={s.screenContent}
-        showsVerticalScrollIndicator={false}>
+        <FirstTimeTooltip
+          storageKey="vive_tooltip_conexiones"
+          icon="account-group-outline"
+          iconColor="#87835C"
+          title="Encontrá a tu guía"
+          description="Explorá coaches y profesionales según lo que estás viviendo. Filtrá por tema o buscá por nombre."
+          delay={800}
+        />
 
-        {/* ── Header ───────────────────────────────────────────────────── */}
-        <View style={s.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.title}>Conexiones</Text>
-            <Text style={s.subtitle}>Las personas indicadas para lo que estás viviendo.</Text>
-          </View>
-          <TouchableOpacity
-            style={s.bellBtn}
-            onPress={() => (user ? router.push('/favoritos') : requestAuth())}
-            activeOpacity={0.7}>
-            <MaterialIcons name="star-border" size={24} color="#565E32" />
-          </TouchableOpacity>
-          <TouchableOpacity style={[s.bellBtn, s.bellBtnSpaced]} activeOpacity={0.7}>
-            <MaterialIcons name="notifications-none" size={24} color="#565E32" />
-          </TouchableOpacity>
-        </View>
+        <ScrollView
+          style={s.screen}
+          contentContainerStyle={s.screenContent}
+          showsVerticalScrollIndicator={false}>
 
-        {/* ── Buscador ─────────────────────────────────────────────────── */}
-        <TouchableOpacity
-          style={s.searchBar}
-          onPress={() => router.push('/search1')}
-          activeOpacity={0.85}>
-          <MaterialIcons name="search" size={18} color="#87835C" />
-          <Text style={s.searchPlaceholder}>Buscá por nombre, especialidad o tema...</Text>
-          <MaterialIcons name="tune" size={18} color="#87835C" />
-        </TouchableOpacity>
-
-        {/* ── Temas ────────────────────────────────────────────────────── */}
-        <View style={s.section}>
-          <View style={s.sectionRow}>
-            <Text style={s.sectionTitle}>¿Qué te gustaría trabajar hoy?</Text>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={s.seeAll}>Ver todos</Text>
+          {/* ── Header ─────────────────────────────────────────────────── */}
+          <View style={s.header}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.title}>Conexiones</Text>
+              <Text style={s.subtitle}>Las personas indicadas para lo que estás viviendo.</Text>
+            </View>
+            <TouchableOpacity
+              style={s.iconBtn}
+              onPress={() => (user ? router.push('/favoritos') : requestAuth())}
+              activeOpacity={0.7}>
+              <Feather name="star" size={22} color={FS} />
             </TouchableOpacity>
           </View>
 
+          {/* ── Buscador ───────────────────────────────────────────────── */}
+          <TouchableOpacity
+            style={s.searchBar}
+            onPress={() => router.push('/search1')}
+            activeOpacity={0.85}>
+            <Feather name="search" size={16} color={FS} />
+            <Text style={s.searchPlaceholder}>Buscá por nombre, especialidad o tema...</Text>
+            <Feather name="sliders" size={16} color={FS} />
+          </TouchableOpacity>
+
+          {/* ── Re-book card (condicional) ──────────────────────────────── */}
+          {rebookData && (
+            <TouchableOpacity style={s.rebookCard} onPress={goRebook} activeOpacity={0.88}>
+              <View style={s.rebookLeft}>
+                {rebookData.avatarUrl ? (
+                  <Image source={{ uri: rebookData.avatarUrl }} style={s.rebookAvatar} />
+                ) : (
+                  <View style={[s.rebookAvatar, s.rebookAvatarFallback]}>
+                    <Text style={s.rebookInitials}>{getInitials(rebookData.name)}</Text>
+                  </View>
+                )}
+              </View>
+              <View style={s.rebookCenter}>
+                <Text style={s.rebookLabel}>Reservar de nuevo con</Text>
+                <Text style={s.rebookName} numberOfLines={1}>{rebookData.name}</Text>
+                <Text style={s.rebookSpec} numberOfLines={1}>{rebookData.specialty}</Text>
+              </View>
+              <Feather name="arrow-right" size={18} color={F} />
+            </TouchableOpacity>
+          )}
+
+          {/* ── Chips de categoría ─────────────────────────────────────── */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.topicsRow}
-            onScroll={handleTopicScroll}
-            scrollEventThrottle={16}>
-            {TOPICS.map((t, i) => {
-              const pal = PALETTE[i % PALETTE.length];
+            contentContainerStyle={s.chipsRow}>
+            {CHIPS.map(chip => {
+              const active = selectedChip === chip.id;
               return (
-                <ScaleCard
-                  key={t.id}
-                  style={s.topicCard}
-                  onPress={() => router.push({
-                    pathname: '/search3',
-                    params: { topic: t.searchTopics.join(','), label: t.label.replace('\n', ' ') },
-                  })}>
-                  <View style={[s.topicCircle, { backgroundColor: pal.bg }]}>
-                    <MaterialIcons name={t.icon} size={22} color={pal.fg} />
-                  </View>
-                  <Text style={s.topicLabel}>{t.label}</Text>
-                </ScaleCard>
+                <TouchableOpacity
+                  key={chip.id}
+                  style={[s.chip, active && s.chipActive]}
+                  onPress={() => setSelectedChip(active ? null : chip.id)}
+                  activeOpacity={0.8}>
+                  <Feather name={chip.icon} size={14} color={active ? CR : FS} />
+                  <Text style={[s.chipLabel, active && s.chipLabelActive]}>{chip.label}</Text>
+                </TouchableOpacity>
               );
             })}
           </ScrollView>
 
-          <Dots count={TOPIC_DOTS} active={topicDot} />
-        </View>
+          {/* ── Lista de profesionales ─────────────────────────────────── */}
+          <View style={s.listSection}>
+            <Text style={s.listTitle}>{sectionTitle}</Text>
 
-        {/* ── Destacados ───────────────────────────────────────────────── */}
-        <View style={[s.section, { marginBottom: 8 }]}>
-          <View style={s.sectionRow}>
-            <Text style={s.sectionTitle}>Destacados de la semana</Text>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={s.seeAll}>Ver todos</Text>
-            </TouchableOpacity>
-          </View>
+            {/* ── PUNTO DE INSERCIÓN: carrusel "Para vos" por temas ── */}
+            {/* Pendiente: agregar aquí carrusel personalizado basado en quiz/historial */}
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.coachesRow}
-            onScroll={handleCoachScroll}
-            scrollEventThrottle={16}>
             {loadingCoaches ? (
-              <ActivityIndicator
-                size="small"
-                color={ViveColors.primary}
-                style={{ marginLeft: 20, marginTop: 20 }}
-              />
-            ) : coaches.map(coach => (
-              <ScaleCard key={coach.profileId} style={s.coachCard} onPress={() => goToPerfil(coach)}>
-                {/* Foto */}
-                <View style={s.coachPhoto}>
-                  {coach.avatarUrl ? (
-                    <Image source={{ uri: coach.avatarUrl }} style={s.coachPhotoImage} />
-                  ) : (
-                    <MaterialIcons name="person" size={42} color="rgba(135,131,92,0.72)" />
-                  )}
-                  <TouchableOpacity
-                    style={s.favBtn}
-                    onPress={() => toggleFav(coach.profileId)}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    activeOpacity={0.7}>
-                    <MaterialIcons
-                      name={favoriteIds.has(coach.profileId) ? 'star' : 'star-border'}
-                      size={20}
-                      color={favoriteIds.has(coach.profileId) ? ViveColors.primary : '#FFFFFF'}
-                    />
-                  </TouchableOpacity>
-                </View>
-                {/* Info */}
-                <View style={s.coachInfo}>
-                  <Text style={s.coachName} numberOfLines={1}>{coach.name}</Text>
-                  <Text style={s.coachSpecialty} numberOfLines={1}>{coach.specialty}</Text>
-                  <Text style={s.coachPrice}>Desde ${coach.priceFrom.toLocaleString('es-AR')}</Text>
-                </View>
-              </ScaleCard>
+              <ActivityIndicator size="small" color={F} style={{ marginTop: 24 }} />
+            ) : displayed.length === 0 ? (
+              <Text style={s.emptyText}>
+                {chip
+                  ? `No hay profesionales de ${chip.displayLabel} en este momento.`
+                  : 'No hay profesionales disponibles.'}
+              </Text>
+            ) : displayed.map((coach, idx) => (
+              <View key={coach.id}>
+                <TouchableOpacity
+                  style={s.proCard}
+                  onPress={() => goToPerfil(coach)}
+                  activeOpacity={0.88}>
+                  {/* Avatar */}
+                  <View style={s.proAvatarWrap}>
+                    {coach.avatarUrl ? (
+                      <Image source={{ uri: coach.avatarUrl }} style={s.proAvatar} />
+                    ) : (
+                      <View style={[s.proAvatar, s.proAvatarFallback]}>
+                        <Text style={s.proAvatarInitials}>{getInitials(coach.name)}</Text>
+                      </View>
+                    )}
+                    {coach.verified && (
+                      <View style={s.verifiedBadge}>
+                        <Feather name="check" size={9} color="#fff" />
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Info */}
+                  <View style={s.proInfo}>
+                    <View style={s.proTopRow}>
+                      <Text style={s.proName} numberOfLines={1}>{coach.name}</Text>
+                      <TouchableOpacity
+                        onPress={() => toggleFav(coach.id)}
+                        hitSlop={8}
+                        activeOpacity={0.7}>
+                        <Feather
+                          name={favoriteIds.has(coach.id) ? 'star' : 'star'}
+                          size={18}
+                          color={favoriteIds.has(coach.id) ? SG : 'rgba(63,81,47,0.25)'}
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    <Text style={s.proSpecialty} numberOfLines={1}>{coach.specialty}</Text>
+
+                    {/* Topic chips (máx 2) */}
+                    {coach.topics.length > 0 && (
+                      <View style={s.proTopics}>
+                        {coach.topics.slice(0, 2).map(t => (
+                          <View key={t} style={s.proTopicPill}>
+                            <Text style={s.proTopicText}>{t}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* Rating + precio */}
+                    <View style={s.proBottomRow}>
+                      {(coach.reviewCount ?? 0) >= 1 ? (
+                        <View style={s.ratingRow}>
+                          <Feather name="star" size={11} color={SG} />
+                          <Text style={s.ratingText}>
+                            {(coach.avgRating ?? 0).toFixed(1)}
+                            <Text style={s.ratingCount}> ({coach.reviewCount})</Text>
+                          </Text>
+                        </View>
+                      ) : (
+                        <View />
+                      )}
+                      <Text style={s.proPrice}>
+                        Desde ${(coach.priceFrom ?? 0).toLocaleString('es-AR')}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+
+                {idx < displayed.length - 1 && <View style={s.divider} />}
+              </View>
             ))}
-          </ScrollView>
-
-          <Dots count={coachDots} active={coachDot} />
-        </View>
-
-        {/* ── Tarjeta Sofía ────────────────────────────────────────────── */}
-        <ScaleCard
-          style={s.sofiaCard}
-          onPress={() => console.log('matching guiado')}>
-          <VennDiagram />
-          <View style={s.sofiaText}>
-            <Text style={s.sofiaQ}>¿No sabés qué necesitás?</Text>
-            <Text style={s.sofiaA}>Te ayudo a encontrarlo.</Text>
           </View>
-          <MaterialIcons name="chevron-right" size={20} color={ViveColors.primary} />
-        </ScaleCard>
 
-        <View style={{ height: TAB_BAR_CLEARANCE }} />
+          {/* ── Quiz card ─────────────────────────────────────────────── */}
+          <TouchableOpacity
+            style={s.quizCardWrap}
+            onPress={() => router.push('/quiz')}
+            activeOpacity={0.88}>
+            <LinearGradient
+              colors={['#C1694F', '#A0513C']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={s.quizCard}>
+              <View style={s.quizLeft}>
+                <View style={s.quizIconCircle}>
+                  <Feather name="help-circle" size={22} color="#fff" />
+                </View>
+              </View>
+              <View style={s.quizText}>
+                <Text style={s.quizTitle}>¿No sabés qué necesitás?</Text>
+                <Text style={s.quizSub}>3 preguntas · te ayudamos a encontrarlo</Text>
+              </View>
+              <Feather name="arrow-right" size={18} color="rgba(255,255,255,0.80)" />
+            </LinearGradient>
+          </TouchableOpacity>
 
-      </ScrollView>
-    </SafeAreaView>
+          <View style={{ height: TAB_BAR_CLEARANCE + 16 }} />
+        </ScrollView>
+      </SafeAreaView>
     </AppBg>
   );
 }
 
-// ─── Sombra ──────────────────────────────────────────────────────────────────
-const shadow = Platform.select({
-  ios: {
-    shadowColor: 'rgba(0,0,0,0.5)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-  },
-  android: { elevation: 3 },
-});
-
 // ─── Estilos ─────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  screen: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  screenContent: {
-    paddingTop: 16,
-  },
+  safe:          { flex: 1, backgroundColor: 'transparent' },
+  screen:        { flex: 1, backgroundColor: 'transparent' },
+  screenContent: { paddingTop: 16 },
 
   // Header
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingHorizontal: 20,
-    marginBottom: 22,
+    marginBottom: 16,
   },
   title: {
     fontFamily: ViveFonts.semibold,
     fontSize: 26,
-    color: '#565E32',
+    color: F,
     lineHeight: 32,
     marginBottom: 2,
   },
   subtitle: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: '#87835C',
+    color: FS,
     lineHeight: 19,
   },
-  bellBtn: {
+  iconBtn: {
     marginTop: 4,
-    padding: 2,
-  },
-  bellBtnSpaced: {
-    marginLeft: 8,
+    padding: 4,
   },
 
-  // Buscador
+  // Search
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderRadius: 12,
+    backgroundColor: BG,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
+    borderColor: BD,
     marginHorizontal: 20,
-    marginBottom: 28,
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 11 : 6,
-    gap: 8,
+    marginBottom: 20,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'ios' ? 11 : 8,
+    gap: 10,
     ...shadow,
   },
   searchPlaceholder: {
     flex: 1,
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: 'rgba(135,131,92,0.80)',
+    color: 'rgba(107,122,86,0.70)',
   },
 
-  // Secciones
-  section: {
+  // Re-book card
+  rebookCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: BG,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: BD,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 14,
+    gap: 12,
+    ...shadow,
+  },
+  rebookLeft: {},
+  rebookAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+  },
+  rebookAvatarFallback: {
+    backgroundColor: 'rgba(63,81,47,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rebookInitials: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: F,
+  },
+  rebookCenter: { flex: 1 },
+  rebookLabel: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: FS,
+    marginBottom: 2,
+  },
+  rebookName: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 14,
+    color: F,
+    marginBottom: 1,
+  },
+  rebookSpec: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 12,
+    color: TC,
+  },
+
+  // Chips
+  chipsRow: {
+    paddingLeft: 20,
+    paddingRight: 10,
+    marginBottom: 24,
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: BG,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: BD,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  chipActive: {
+    backgroundColor: F,
+    borderColor: F,
+  },
+  chipLabel: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: FS,
+  },
+  chipLabelActive: {
+    color: CR,
+  },
+
+  // Pro list
+  listSection: {
+    paddingHorizontal: 20,
     marginBottom: 20,
   },
-  sectionRow: {
+  listTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 14,
+    color: F,
+    marginBottom: 14,
+  },
+  emptyText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: FS,
+    textAlign: 'center',
+    marginTop: 24,
+    lineHeight: 20,
+  },
+
+  // Pro card
+  proCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 14,
+    gap: 12,
+  },
+  proAvatarWrap: {
+    position: 'relative',
+    flexShrink: 0,
+  },
+  proAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  proAvatarFallback: {
+    backgroundColor: 'rgba(63,81,47,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proAvatarInitials: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 18,
+    color: F,
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: F,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: CR,
+  },
+  proInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  proTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 10,
   },
-  sectionTitle: {
+  proName: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 13,
-    color: '#565E32',
+    fontSize: 14,
+    color: F,
     flex: 1,
+    marginRight: 8,
   },
-  seeAll: {
+  proSpecialty: {
     fontFamily: ViveFonts.medium,
     fontSize: 12,
-    color: ViveColors.primary,
+    color: TC,
   },
-
-  // Temas
-  topicsRow: {
-    paddingLeft: 20,
-    paddingRight: 10,
+  proTopics: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 2,
   },
-  topicCard: {
-    width: TOPIC_W,
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.60)',
-    paddingTop: 14,
-    paddingBottom: 12,
-    paddingHorizontal: 6,
-    marginRight: TOPIC_GAP,
-    ...shadow,
+  proTopicPill: {
+    backgroundColor: 'rgba(63,81,47,0.08)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
-  topicCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  topicLabel: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 10,
-    color: '#565E32',
-    textAlign: 'center',
-    lineHeight: 14,
-  },
-
-  // Coaches
-  coachesRow: {
-    paddingLeft: 20,
-    paddingRight: 10,
-  },
-  coachCard: {
-    width: COACH_W,
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.60)',
-    marginRight: COACH_GAP,
-    ...shadow,
-  },
-  coachPhoto: {
-    width: COACH_W,
-    height: 82,
-    backgroundColor: 'rgba(255,248,240,0.62)',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  coachPhotoImage: {
-    width: COACH_W,
-    height: 82,
-  },
-  favBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(86,94,50,0.18)',
-    borderRadius: 14,
-    padding: 4,
-  },
-  coachInfo: {
-    padding: 10,
-  },
-  coachName: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 13,
-    color: '#565E32',
-    marginBottom: 2,
-  },
-  coachSpecialty: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 11,
-    color: ViveColors.primary,
-    marginBottom: 5,
-  },
-  coachPrice: {
+  proTopicText: {
     fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: '#87835C',
-    marginBottom: 5,
+    fontSize: 10.5,
+    color: FS,
+  },
+  proBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
   },
   ratingRow: {
     flexDirection: 'row',
@@ -508,78 +638,58 @@ const s = StyleSheet.create({
     gap: 3,
   },
   ratingText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 11.5,
+    color: F,
+  },
+  ratingCount: {
     fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: '#87835C',
+    color: FS,
+  },
+  proPrice: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 12,
+    color: FS,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: LN,
   },
 
-  // Sofía
-  sofiaCard: {
-    position: 'absolute',
-    bottom: 16,
-    left: 20,
-    right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
-    paddingVertical: 16,
-    paddingHorizontal: 18,
+  // Quiz card
+  quizCardWrap: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    borderRadius: 20,
+    overflow: 'hidden',
     ...shadow,
   },
-  sofiaText: {
-    flex: 1,
-    marginLeft: 16,
-    marginRight: 8,
+  quizCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    gap: 14,
   },
-  sofiaQ: {
+  quizLeft: {},
+  quizIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quizText: { flex: 1 },
+  quizTitle: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 13,
-    color: '#565E32',
-    marginBottom: 2,
+    fontSize: 14,
+    color: '#fff',
+    marginBottom: 3,
   },
-  sofiaA: {
+  quizSub: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
-    color: '#87835C',
-  },
-});
-
-// ─── Dots ─────────────────────────────────────────────────────────────────────
-const dot = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 10,
-    gap: 6,
-  },
-  base: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(86,94,50,0.10)',
-  },
-  active: {
-    width: 16,
-    backgroundColor: '#565E32',
-  },
-});
-
-// ─── Venn ─────────────────────────────────────────────────────────────────────
-const venn = StyleSheet.create({
-  wrap: {
-    width: VENN_C + VENN_O * 2,
-    height: VENN_C + VENN_O + 2,
-    position: 'relative',
-    flexShrink: 0,
-  },
-  c: {
-    width: VENN_C,
-    height: VENN_C,
-    borderRadius: VENN_C / 2,
-    opacity: 0.7,
-    position: 'absolute',
+    color: 'rgba(255,255,255,0.80)',
   },
 });
