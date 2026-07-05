@@ -63,7 +63,8 @@
         {
           "calendarPermission": "Vive necesita acceso al calendario para agregar tus sesiones."
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

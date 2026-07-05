@@ -6,6 +6,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import { File } from 'expo-file-system';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -36,9 +38,7 @@ const fadeUp = (anim: Animated.Value) => ({
   transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
 });
 
-function isValidUrl(url: string) {
-  return url.startsWith('http://') || url.startsWith('https://');
-}
+const AUDIO_MAX_BYTES = 20 * 1024 * 1024; // límite del bucket resource-audio
 
 export default function ProposeResourceScreen() {
   const router = useRouter();
@@ -61,9 +61,10 @@ export default function ProposeResourceScreen() {
   const [newTag, setNewTag] = useState('');
 
   // Contenido específico por tipo
-  const [audioUrl, setAudioUrl] = useState('');
+  const [audioFile, setAudioFile] = useState<{ uri: string; name: string; mimeType?: string } | null>(null);
+  const [existingAudioUrl, setExistingAudioUrl] = useState<string | null>(null); // modo edición: audio ya subido
   const [steps, setSteps] = useState<Step[]>([{ title: '', body: '' }]);
-  const [readingBody, setReadingBody] = useState('');
+  const [readingPages, setReadingPages] = useState<string[]>(['']);
   const [readingSource, setReadingSource] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
@@ -125,13 +126,18 @@ export default function ProposeResourceScreen() {
 
       const content = data.content ?? {};
       if (data.type === 'audio') {
-        setAudioUrl(content.url ?? '');
+        setExistingAudioUrl(content.url ?? null);
       } else if (data.type === 'guia_pasos') {
         setSteps(Array.isArray(content.steps) && content.steps.length > 0
           ? content.steps.map((s: any) => ({ title: s.title ?? '', body: s.body ?? '' }))
           : [{ title: '', body: '' }]);
       } else if (data.type === 'lectura_breve') {
-        setReadingBody(content.body ?? '');
+        // pages es la convención nueva; body es el formato anterior (una sola página)
+        setReadingPages(
+          Array.isArray(content.pages) && content.pages.length > 0
+            ? content.pages
+            : [content.body ?? '']
+        );
         setReadingSource(content.source ?? '');
       }
 
@@ -185,11 +191,32 @@ export default function ProposeResourceScreen() {
     setSteps(prev => prev.filter((_, si) => si !== i));
   }
 
-  function buildContent(): Record<string, any> | null {
-    if (type === 'audio') {
-      if (!audioUrl.trim() || !isValidUrl(audioUrl.trim())) return null;
-      return { url: audioUrl.trim() };
+  function updatePage(i: number, value: string) {
+    setReadingPages(prev => prev.map((p, pi) => (pi === i ? value : p)));
+  }
+
+  function addPage() {
+    setReadingPages(prev => [...prev, '']);
+  }
+
+  function removePage(i: number) {
+    setReadingPages(prev => prev.filter((_, pi) => pi !== i));
+  }
+
+  async function pickAudio() {
+    const res = await DocumentPicker.getDocumentAsync({ type: 'audio/*', copyToCacheDirectory: true });
+    if (res.canceled || !res.assets?.[0]) return;
+    const a = res.assets[0];
+    if (a.size && a.size > AUDIO_MAX_BYTES) {
+      setSubmitError('El audio no puede superar los 20MB. Probá con un archivo más comprimido.');
+      return;
     }
+    setSubmitError(null);
+    setAudioFile({ uri: a.uri, name: a.name ?? 'audio', mimeType: a.mimeType ?? undefined });
+  }
+
+  function buildContent(): Record<string, any> | null {
+    // audio se resuelve en handleSubmit (la subida a Storage es async)
     if (type === 'guia_pasos') {
       const validSteps = steps
         .map(s => ({ title: s.title.trim(), body: s.body.trim() }))
@@ -198,8 +225,9 @@ export default function ProposeResourceScreen() {
       return { steps: validSteps };
     }
     if (type === 'lectura_breve') {
-      if (readingBody.trim().length < 10) return null;
-      return { body: readingBody.trim(), source: readingSource.trim() || undefined };
+      const pages = readingPages.map(p => p.trim()).filter(p => p.length > 0);
+      if (pages.length === 0 || pages.join('').length < 10) return null;
+      return { pages, source: readingSource.trim() || undefined };
     }
     return null;
   }
@@ -214,11 +242,15 @@ export default function ProposeResourceScreen() {
       return;
     }
 
-    const content = buildContent();
-    if (!content) {
-      if (type === 'audio') setSubmitError('Pegá el link del audio (tiene que empezar con http:// o https://).');
-      else if (type === 'guia_pasos') setSubmitError('Agregá al menos un paso con título o contenido.');
-      else setSubmitError('Escribí el texto de la lectura (mínimo 10 caracteres).');
+    if (type === 'audio' && !audioFile && !existingAudioUrl) {
+      setSubmitError('Elegí el archivo de audio.');
+      return;
+    }
+
+    let content = type === 'audio' ? null : buildContent();
+    if (type !== 'audio' && !content) {
+      if (type === 'guia_pasos') setSubmitError('Agregá al menos un paso con título o contenido.');
+      else setSubmitError('Escribí al menos una página de la lectura (mínimo 10 caracteres).');
       return;
     }
 
@@ -226,6 +258,32 @@ export default function ProposeResourceScreen() {
 
     setSubmitting(true);
     setSubmitError(null);
+
+    // Audio: subir el archivo a Storage primero; content.url es la URL pública del bucket
+    if (type === 'audio') {
+      if (audioFile) {
+        try {
+          const ext = (audioFile.name.split('.').pop() || 'm4a').toLowerCase();
+          const path = `${user.id}/${Date.now()}.${ext}`;
+          const bytes = await new File(audioFile.uri).bytes();
+          const { error: uploadError } = await supabase.storage
+            .from('resource-audio')
+            .upload(path, bytes, { contentType: audioFile.mimeType ?? 'audio/mp4' });
+          if (uploadError) {
+            setSubmitting(false);
+            setSubmitError('No pudimos subir el audio. Probá de nuevo en unos minutos.');
+            return;
+          }
+          content = { url: supabase.storage.from('resource-audio').getPublicUrl(path).data.publicUrl };
+        } catch {
+          setSubmitting(false);
+          setSubmitError('No pudimos leer el archivo. Probá elegirlo de nuevo.');
+          return;
+        }
+      } else {
+        content = { url: existingAudioUrl };
+      }
+    }
 
     if (isEditing) {
       await proposeNewTags();
@@ -555,20 +613,29 @@ export default function ProposeResourceScreen() {
             {/* Contenido específico por tipo */}
             {type === 'audio' && (
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Link del audio</Text>
+                <Text style={styles.sectionLabel}>Archivo de audio</Text>
                 <Text style={styles.fieldHint}>
-                  Un link directo o de Drive/YouTube/Spotify — no se sube el archivo acá.
+                  Subí tu audio grabado (máx. 20MB) — se reproduce directo dentro de VITA.
                 </Text>
-                <TextInput
-                  style={styles.input}
-                  value={audioUrl}
-                  onChangeText={setAudioUrl}
-                  placeholder="https://..."
-                  placeholderTextColor="rgba(135,131,92,0.45)"
-                  keyboardType="url"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+                {(audioFile || existingAudioUrl) ? (
+                  <View style={styles.audioFileRow}>
+                    <MaterialCommunityIcons name="music-note" size={18} color={ViveColors.primary} />
+                    <Text style={styles.audioFileName} numberOfLines={1}>
+                      {audioFile ? audioFile.name : 'Audio ya cargado'}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => { setAudioFile(null); setExistingAudioUrl(null); }}
+                      hitSlop={8}
+                    >
+                      <MaterialCommunityIcons name="close" size={18} color="rgba(135,131,92,0.72)" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.audioPickBtn} onPress={pickAudio} activeOpacity={0.75}>
+                    <MaterialCommunityIcons name="tray-arrow-up" size={20} color={ViveColors.primary} />
+                    <Text style={styles.audioPickText}>Elegir archivo de audio</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
 
@@ -614,17 +681,36 @@ export default function ProposeResourceScreen() {
             {type === 'lectura_breve' && (
               <>
                 <View style={styles.section}>
-                  <Text style={styles.sectionLabel}>Texto</Text>
-                  <TextInput
-                    style={[styles.input, styles.multilineInput, styles.readingInput]}
-                    value={readingBody}
-                    onChangeText={setReadingBody}
-                    placeholder="El texto completo de la lectura"
-                    placeholderTextColor="rgba(135,131,92,0.45)"
-                    multiline
-                    numberOfLines={8}
-                    textAlignVertical="top"
-                  />
+                  <Text style={styles.sectionLabel}>Páginas</Text>
+                  <Text style={styles.fieldHint}>
+                    La lectura se muestra de a una página por vez — vos marcás el ritmo. Cada página puede tener uno o más párrafos.
+                  </Text>
+                  {readingPages.map((page, i) => (
+                    <View key={i} style={styles.stepCard}>
+                      <View style={styles.stepHeader}>
+                        <Text style={styles.stepNumber}>Página {i + 1}</Text>
+                        {readingPages.length > 1 && (
+                          <TouchableOpacity onPress={() => removePage(i)} hitSlop={8}>
+                            <MaterialCommunityIcons name="close" size={16} color="rgba(135,131,92,0.72)" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <TextInput
+                        style={[styles.input, styles.multilineInput, styles.readingInput, styles.stepInput]}
+                        value={page}
+                        onChangeText={(t) => updatePage(i, t)}
+                        placeholder="El texto de esta página"
+                        placeholderTextColor="rgba(135,131,92,0.45)"
+                        multiline
+                        numberOfLines={6}
+                        textAlignVertical="top"
+                      />
+                    </View>
+                  ))}
+                  <TouchableOpacity style={styles.addStepBtn} onPress={addPage} activeOpacity={0.75}>
+                    <MaterialCommunityIcons name="plus" size={16} color={ViveColors.primary} />
+                    <Text style={styles.addStepText}>Agregar página</Text>
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel}>Fuente (opcional)</Text>
@@ -826,6 +912,38 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   loadingWrap: { alignItems: 'center', justifyContent: 'center' },
+
+  audioPickBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(86,94,50,0.30)',
+    borderStyle: 'dashed',
+    borderRadius: 14,
+    paddingVertical: 18,
+  },
+  audioPickText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 14,
+    color: ViveColors.primary,
+  },
+  audioFileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(86,94,50,0.08)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  audioFileName: {
+    flex: 1,
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: '#565E32',
+  },
 
   newTagRow: {
     flexDirection: 'row',
