@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   ScrollView,
   View,
@@ -12,9 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { VITA_TOOL_MAP } from '@/constants/vitaTools';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { MoodCheckIn } from '@/components/MoodCheckIn';
@@ -27,22 +28,11 @@ import Svg, { Circle } from 'react-native-svg';
 
 type PinnedResource = { id: string; title: string; icon: string; route: string | undefined };
 
-const RESOURCE_MAP: Record<string, PinnedResource> = {
-  diario:      { id: 'diario',      title: 'Diario',             icon: 'notebook-outline',    route: '/diario'   },
-  gratitud:    { id: 'gratitud',    title: 'Diario de\ngratitud', icon: 'heart-outline',       route: '/gratitud' },
-  sueno:       { id: 'sueno',       title: 'Sueño',              icon: 'weather-night',        route: undefined   },
-  respiracion: { id: 'respiracion', title: 'Respiración\n4-7-8', icon: 'weather-windy',        route: undefined   },
-  meditacion:  { id: 'meditacion',  title: 'Meditación',         icon: 'leaf',                route: undefined   },
-  escaner:     { id: 'escaner',     title: 'Escáner\ncorporal',  icon: 'human',               route: undefined   },
-  relajacion:  { id: 'relajacion',  title: 'Relajación',         icon: 'music-note',          route: undefined   },
-  ruido:       { id: 'ruido',       title: 'Ruido\nblanco',      icon: 'volume-high',         route: undefined   },
-  lecturas:    { id: 'lecturas',    title: 'Lecturas\nbreves',   icon: 'book-open-variant',   route: undefined   },
+const PINNED_TYPE_ICON: Record<string, string> = {
+  audio: 'volume-high',
+  guia_pasos: 'format-list-numbered',
+  lectura_breve: 'book-open-variant',
 };
-
-const DEFAULT_RESOURCES: PinnedResource[] = [
-  RESOURCE_MAP.respiracion,
-  RESOURCE_MAP.gratitud,
-];
 
 
 const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -87,7 +77,7 @@ export default function InicioScreen() {
   const { user, requestAuth } = useAuth();
   const [nextSession, setNextSession] = useState<NextSession | null>(null);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-  const [displayResources, setDisplayResources] = useState<PinnedResource[]>(DEFAULT_RESOURCES);
+  const [displayResources, setDisplayResources] = useState<PinnedResource[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const { entries: moodEntries } = useMoodHistory(user?.id, 7);
@@ -147,21 +137,56 @@ export default function InicioScreen() {
       .then(({ data }) => setAvatarUrl(data?.avatar_url ?? null));
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from('saved_resources')
-      .select('resource_id')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (!data || data.length === 0) return;
-        const mapped = data
-          .map(r => RESOURCE_MAP[r.resource_id as string])
-          .filter(Boolean) as PinnedResource[];
-        if (mapped.length > 0) setDisplayResources(mapped);
-      });
-  }, [user]);
+  // Recarga en cada foco de la tab — así un pin hecho en otra pantalla se ve al volver
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) { setDisplayResources([]); return; }
+      let active = true;
+      (async () => {
+        const { data: pins } = await supabase
+          .from('pinned_resources')
+          .select('resource_id, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (!active) return;
+        if (!pins || pins.length === 0) { setDisplayResources([]); return; }
+
+        const ids = pins.map(p => p.resource_id as string);
+        // Los ids de tools de VITA son slugs; los de recursos de coaches, uuids
+        const coachIds = ids.filter(id => !VITA_TOOL_MAP[id]);
+
+        let coachById = new Map<string, any>();
+        if (coachIds.length > 0) {
+          const { data: rows } = await supabase
+            .from('resources')
+            .select('id, type, title')
+            .in('id', coachIds)
+            .is('retired_at', null);
+          coachById = new Map((rows ?? []).map(r => [r.id as string, r]));
+        }
+
+        if (!active) return;
+
+        // preservar el orden de pineado (más reciente primero); saltear los retirados/borrados
+        const mapped = ids.map(id => {
+          const tool = VITA_TOOL_MAP[id];
+          if (tool) return { id, title: tool.label, icon: tool.mdicon, route: tool.route };
+          const r = coachById.get(id);
+          if (r) return {
+            id: r.id as string,
+            title: r.title as string,
+            icon: PINNED_TYPE_ICON[r.type as string] ?? 'book-open-variant',
+            route: `/recurso?id=${r.id}`,
+          };
+          return null;
+        }).filter(Boolean) as PinnedResource[];
+
+        setDisplayResources(mapped);
+      })();
+      return () => { active = false; };
+    }, [user])
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -331,33 +356,42 @@ export default function InicioScreen() {
             )}
           </Animated.View>
 
-          {/* ── 6. RECURSOS ÚTILES ── */}
+          {/* ── 6. TUS RECURSOS PINNEADOS ── */}
           <Animated.View style={fadeUp(a4)}>
-            <Text style={[s.sectionTitle, { marginTop: 20 }]}>Recursos útiles</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.resourcesRow}
-            >
-              {displayResources.map((r, i) => (
-                <ScaleCard
-                  key={r.id}
-                  style={s.resourceCard}
-                  onPress={r.route ? () => router.push(r.route as any) : undefined}
-                >
-                  <View style={[s.resourceIconCircle, { backgroundColor: RESOURCE_BUBBLE_BG[i % 2] }]}>
-                    <MaterialCommunityIcons name={r.icon as any} size={22} color={RESOURCE_ICON_COLOR[i % 2]} />
-                  </View>
-                  <Text style={s.resourceLabel} numberOfLines={2}>{r.title}</Text>
-                  <TouchableOpacity
-                    style={s.resourcePlusBtn}
-                    onPress={() => router.push('/(tabs)/recursos')}
-                    hitSlop={6}>
-                    <MaterialCommunityIcons name="plus" size={14} color="#87835C" />
-                  </TouchableOpacity>
-                </ScaleCard>
-              ))}
-            </ScrollView>
+            <Text style={[s.sectionTitle, { marginTop: 20 }]}>Tus recursos pinneados</Text>
+            {displayResources.length === 0 ? (
+              <TouchableOpacity
+                style={s.pinnedEmpty}
+                onPress={() => router.push('/(tabs)/recursos')}
+                activeOpacity={0.85}
+              >
+                <MaterialCommunityIcons name="pin-outline" size={22} color={ViveColors.primary} />
+                <View style={s.pinnedEmptyText}>
+                  <Text style={s.pinnedEmptyTitle}>Fijá tus recursos favoritos acá</Text>
+                  <Text style={s.pinnedEmptySub}>Entrá a un recurso y tocá el pin para tenerlo a mano (hasta 4).</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.45)" />
+              </TouchableOpacity>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.resourcesRow}
+              >
+                {displayResources.map((r, i) => (
+                  <ScaleCard
+                    key={r.id}
+                    style={s.resourceCard}
+                    onPress={r.route ? () => router.push(r.route as any) : undefined}
+                  >
+                    <View style={[s.resourceIconCircle, { backgroundColor: RESOURCE_BUBBLE_BG[i % 2] }]}>
+                      <MaterialCommunityIcons name={r.icon as any} size={22} color={RESOURCE_ICON_COLOR[i % 2]} />
+                    </View>
+                    <Text style={s.resourceLabel} numberOfLines={2}>{r.title}</Text>
+                  </ScaleCard>
+                ))}
+              </ScrollView>
+            )}
           </Animated.View>
 
           <View style={{ height: TAB_BAR_CLEARANCE }} />
@@ -521,15 +555,30 @@ const s = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 17,
   },
-  resourcePlusBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
+  pinnedEmpty: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 12,
+    marginHorizontal: 18,
+    marginBottom: 22,
+    backgroundColor: GLASS,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  pinnedEmptyText: { flex: 1, gap: 3 },
+  pinnedEmptyTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 14,
+    color: '#565E32',
+  },
+  pinnedEmptySub: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: '#87835C',
+    lineHeight: 17,
   },
 
   // ── 7. Próxima sesión ──────────────────────────────────────────────────────

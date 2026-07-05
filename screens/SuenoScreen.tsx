@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
+import { PinButton } from '@/components/PinButton';
 import { ensureAnonSession } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 
@@ -92,7 +93,7 @@ export default function SuenoScreen() {
             <Text style={[s.backText, phase === 'running' && s.backTextLight]}>Atrás</Text>
           </TouchableOpacity>
           <Text style={[s.title, phase === 'running' && s.titleLight]}>Sueño</Text>
-          <View style={{ width: 60 }} />
+          <PinButton resourceId="sueno" />
         </View>
 
         {phase === 'idle' && (

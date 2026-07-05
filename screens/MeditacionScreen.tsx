@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
+import { PinButton } from '@/components/PinButton';
 import { ensureAnonSession } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 
@@ -96,7 +97,7 @@ export default function MeditacionScreen() {
             <Text style={[s.backText, phase === 'running' && s.backTextLight]}>Atrás</Text>
           </TouchableOpacity>
           <Text style={[s.title, phase === 'running' && s.titleLight]}>Meditación</Text>
-          <View style={{ width: 60 }} />
+          <PinButton resourceId="meditacion" />
         </View>
 
         {phase === 'idle' && (

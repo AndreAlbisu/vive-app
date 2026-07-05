@@ -315,9 +315,22 @@ export default function CoachHomeScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Esta semana */}
-        <Text style={s.sectionTitle}>Esta semana</Text>
-        <View style={s.weekCard}>
+        {/* Esta semana → agenda mensual */}
+        <View style={s.weekHeader}>
+          <Text style={s.sectionTitle}>Esta semana</Text>
+          <TouchableOpacity
+            style={s.weekHeaderLink}
+            onPress={() => router.push('/coach-agenda')}
+            hitSlop={8}
+            activeOpacity={0.7}>
+            <Text style={s.weekHeaderLinkText}>Ver mes</Text>
+            <Feather name="chevron-right" size={14} color={ViveColors.primary} />
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          style={s.weekCard}
+          onPress={() => router.push('/coach-agenda')}
+          activeOpacity={0.85}>
           {weekData.map((day, idx) => {
             const active = day.sessions.length > 0;
             return (
@@ -332,7 +345,7 @@ export default function CoachHomeScreen() {
               </View>
             );
           })}
-        </View>
+        </TouchableOpacity>
         {weeklyClientCount > 0 && (
           <Text style={s.weekSummary}>
             Esta semana acompañás a {weeklyClientCount} {weeklyClientCount === 1 ? 'persona' : 'personas'}
@@ -467,6 +480,23 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
   sectionSpaced: { marginTop: 28 },
+
+  weekHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  weekHeaderLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginBottom: 12,
+  },
+  weekHeaderLinkText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.primary,
+  },
 
   sessionBlock: { marginBottom: 10 },
   sessionCard: {

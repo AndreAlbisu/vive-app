@@ -132,7 +132,7 @@ export default function RootLayout() {
           <Stack.Screen name="booking-calendar" options={{ headerShown: false }} />
           <Stack.Screen name="booking-time" options={{ headerShown: false }} />
           <Stack.Screen name="booking-confirm" options={{ headerShown: false }} />
-          <Stack.Screen name="booking-success" options={{ headerShown: false }} />
+          <Stack.Screen name="booking-success" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="diario"      options={{ headerShown: false }} />
           <Stack.Screen name="gratitud"   options={{ headerShown: false }} />
           <Stack.Screen name="respiracion" options={{ headerShown: false }} />
@@ -147,9 +147,11 @@ export default function RootLayout() {
           <Stack.Screen name="favoritos" options={{ headerShown: false }} />
           <Stack.Screen name="quiz" options={{ headerShown: false }} />
           <Stack.Screen name="coach-topics" options={{ headerShown: false }} />
+          <Stack.Screen name="coach-agenda" options={{ headerShown: false }} />
           <Stack.Screen name="resource-proposals" options={{ headerShown: false }} />
           <Stack.Screen name="resource-proposal-new" options={{ headerShown: false }} />
           <Stack.Screen name="recurso" options={{ headerShown: false }} />
+          <Stack.Screen name="recursos-guardados" options={{ headerShown: false }} />
           <Stack.Screen name="notifications" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
