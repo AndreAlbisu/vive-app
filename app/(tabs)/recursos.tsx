@@ -249,7 +249,15 @@ const LIBRARY_TYPE_LABEL: Record<string, string> = {
   lectura_breve: 'Lectura breve',
 };
 
-function CoachLibrarySection({ resources }: { resources: LibraryResource[] }) {
+function CoachLibrarySection({
+  resources,
+  savedIds,
+  onSave,
+}: {
+  resources: LibraryResource[];
+  savedIds: Set<string>;
+  onSave: (id: string) => void;
+}) {
   const router = useRouter();
   if (resources.length === 0) return null;
 
@@ -257,20 +265,32 @@ function CoachLibrarySection({ resources }: { resources: LibraryResource[] }) {
     <View style={{ marginTop: 8 }}>
       <Text style={s.sectionTitle}>Recursos de nuestros coaches</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.libraryRow}>
-        {resources.map(r => (
-          <ScaleCard
-            key={r.id}
-            style={s.libraryCard}
-            onPress={() => router.push({ pathname: '/profesional', params: { profileId: r.attributed_to_coach_id } })}
-          >
-            <Ionicons name={LIBRARY_TYPE_ICON[r.type] ?? 'book-outline'} size={20} color={FOREST} />
-            <Text style={s.libraryCardTitle} numberOfLines={2}>{r.title}</Text>
-            <Text style={s.libraryCardMeta}>
-              {LIBRARY_TYPE_LABEL[r.type] ?? r.type}{r.duration_min ? ` · ${r.duration_min} min` : ''}
-            </Text>
-            <Text style={s.libraryCardCoach} numberOfLines={1}>Por {r.coachName}</Text>
-          </ScaleCard>
-        ))}
+        {resources.map(r => {
+          const isSaved = savedIds.has(r.id);
+          return (
+            <ScaleCard
+              key={r.id}
+              style={s.libraryCard}
+              onPress={() => router.push({ pathname: '/recurso', params: { id: r.id } })}
+            >
+              <View style={s.libraryCardHeader}>
+                <Ionicons name={LIBRARY_TYPE_ICON[r.type] ?? 'book-outline'} size={20} color={FOREST} />
+                <TouchableOpacity onPress={() => onSave(r.id)} hitSlop={8}>
+                  <Ionicons
+                    name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                    size={16}
+                    color={isSaved ? FOREST : 'rgba(135,131,92,0.60)'}
+                  />
+                </TouchableOpacity>
+              </View>
+              <Text style={s.libraryCardTitle} numberOfLines={2}>{r.title}</Text>
+              <Text style={s.libraryCardMeta}>
+                {LIBRARY_TYPE_LABEL[r.type] ?? r.type}{r.duration_min ? ` · ${r.duration_min} min` : ''}
+              </Text>
+              <Text style={s.libraryCardCoach} numberOfLines={1}>Por {r.coachName}</Text>
+            </ScaleCard>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -581,8 +601,12 @@ export default function RecursosScreen() {
             ))
           )}
 
-          {/* 7. Biblioteca de recursos de coaches (no aplica al filtro "Guardados") */}
-          {filter === 'all' && <CoachLibrarySection resources={libraryResources} />}
+          {/* 7. Biblioteca de recursos de coaches — bajo "Guardados" muestra solo los guardados */}
+          <CoachLibrarySection
+            resources={filter === 'saved' ? libraryResources.filter(r => savedIds.has(r.id)) : libraryResources}
+            savedIds={savedIds}
+            onSave={toggleSave}
+          />
 
           <View style={{ height: TAB_BAR_CLEARANCE }} />
         </ScrollView>
@@ -847,6 +871,12 @@ const s = StyleSheet.create({
     paddingBottom: 12,
   },
   coachResources: { gap: 8 },
+  libraryCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+  },
   coachResRow: {
     flexDirection: 'row',
     alignItems: 'center',

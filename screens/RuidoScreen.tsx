@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
+import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
 import { ensureAnonSession } from '@/lib/supabase';
@@ -22,6 +23,14 @@ const SOUNDS = [
   { id: 'olas',     icon: 'waves' as const,            label: 'Olas del mar' },
   { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido blanco' },
 ];
+
+// Loops sintetizados por VITA (assets propios, sin licencias de terceros)
+const SOUND_FILES: Record<string, any> = {
+  lluvia: require('../assets/sounds/lluvia.m4a'),
+  bosque: require('../assets/sounds/bosque.m4a'),
+  olas:   require('../assets/sounds/olas.m4a'),
+  blanco: require('../assets/sounds/blanco.m4a'),
+};
 
 const DURATIONS = [
   { label: '5 min',  seconds: 300 },
@@ -45,23 +54,37 @@ export default function RuidoScreen() {
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const userIdRef = useRef<string | null>(null);
 
+  const player = useAudioPlayer(SOUND_FILES[SOUNDS[0].id]);
+
   useEffect(() => {
     ensureAnonSession().then(uid => { userIdRef.current = uid; }).catch(() => {});
+    // Que suene aunque el iPhone esté con el switch de silencio activado
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
   }, []);
 
   function stopTimer() {
     if (timerRef.current) clearInterval(timerRef.current);
   }
 
+  function stopSound() {
+    try { player.pause(); } catch {}
+  }
+
   function handleStart() {
     setElapsed(0);
     setPhase('running');
+
+    player.replace(SOUND_FILES[selectedSound]);
+    player.loop = true;
+    player.play();
+
     let el = 0;
     timerRef.current = setInterval(() => {
       el++;
       setElapsed(el);
       if (el >= duration) {
         stopTimer();
+        stopSound();
         setPhase('done');
         if (userIdRef.current) {
           recordCompletion(userIdRef.current, 'ruido').catch(() => {});
@@ -80,7 +103,7 @@ export default function RuidoScreen() {
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={s.safe} edges={['top']}>
         <View style={s.header}>
-          <TouchableOpacity onPress={() => { stopTimer(); router.back(); }} style={s.backBtn} hitSlop={8}>
+          <TouchableOpacity onPress={() => { stopTimer(); stopSound(); router.back(); }} style={s.backBtn} hitSlop={8}>
             <MaterialCommunityIcons name="arrow-left" size={20} color={FOREST} />
             <Text style={s.backText}>Atrás</Text>
           </TouchableOpacity>
@@ -94,8 +117,8 @@ export default function RuidoScreen() {
               <Ionicons name="volume-medium-outline" size={56} color={FOREST_SOFT} />
               <Text style={s.subtitle}>Sonidos ambientales</Text>
               <Text style={s.description}>
-                El audio llegará en una próxima versión.{'\n'}
-                Por ahora, usá este timer como referencia de tiempo de concentración o descanso.
+                Elegí un sonido y por cuánto tiempo.{'\n'}
+                Se detiene solo cuando termina — no necesitás hacer nada más.
               </Text>
 
               {/* Sound selector */}
@@ -134,7 +157,7 @@ export default function RuidoScreen() {
               </View>
 
               <TouchableOpacity style={s.primaryBtn} onPress={handleStart} activeOpacity={0.85}>
-                <Text style={s.primaryBtnText}>Iniciar timer</Text>
+                <Text style={s.primaryBtnText}>Iniciar</Text>
               </TouchableOpacity>
             </>
           )}
@@ -146,8 +169,8 @@ export default function RuidoScreen() {
               </View>
               <Text style={s.soundName}>{currentSound.label}</Text>
               <Text style={s.timerLarge}>{formatTime(remaining)}</Text>
-              <Text style={s.runningHint}>Timer en progreso</Text>
-              <TouchableOpacity style={s.ghostBtn} onPress={() => { stopTimer(); router.back(); }} activeOpacity={0.8}>
+              <Text style={s.runningHint}>Sonando</Text>
+              <TouchableOpacity style={s.ghostBtn} onPress={() => { stopTimer(); stopSound(); router.back(); }} activeOpacity={0.8}>
                 <Text style={s.ghostBtnText}>Detener</Text>
               </TouchableOpacity>
             </>

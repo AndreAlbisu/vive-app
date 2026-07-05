@@ -12,7 +12,6 @@ import {
   StatusBar,
   Image,
   Modal,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -41,9 +40,7 @@ type CoachResource = {
   id: string;
   type: 'audio' | 'guia_pasos' | 'lectura_breve' | 'journaling' | 'gratitud';
   title: string;
-  description: string | null;
   duration_min: number | null;
-  content: any;
 };
 
 const RESOURCE_TYPE_LABELS: Record<string, string> = {
@@ -109,7 +106,6 @@ export default function ProfesionalScreen() {
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [coachResources, setCoachResources] = useState<CoachResource[]>([]);
-  const [expandedResourceId, setExpandedResourceId] = useState<string | null>(null);
 
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
@@ -185,7 +181,7 @@ export default function ProfesionalScreen() {
 
     supabase
       .from('resources')
-      .select('id, type, title, description, duration_min, content')
+      .select('id, type, title, duration_min')
       .eq('attributed_to_coach_id', pid)
       .is('retired_at', null)
       .order('created_at', { ascending: false })
@@ -311,78 +307,36 @@ export default function ProfesionalScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>Recursos de {prof.name.split(' ')[0]}</Text>
             <View style={s.resourcesList}>
-              {coachResources.map(resource => {
-                const isExpanded = expandedResourceId === resource.id;
-                return (
-                  <TouchableOpacity
-                    key={resource.id}
-                    style={s.resourceCard}
-                    activeOpacity={0.85}
-                    onPress={() => setExpandedResourceId(isExpanded ? null : resource.id)}
-                  >
-                    <View style={s.resourceHeader}>
-                      <View style={s.resourceIconWrap}>
-                        <MaterialIcons
-                          name={RESOURCE_TYPE_ICONS[resource.type] ?? 'menu-book'}
-                          size={18}
-                          color={ViveColors.primary}
-                        />
-                      </View>
-                      <View style={s.resourceHeaderText}>
-                        <Text style={s.resourceTitle}>{resource.title}</Text>
-                        <Text style={s.resourceMeta}>
-                          {RESOURCE_TYPE_LABELS[resource.type] ?? resource.type}
-                          {resource.duration_min ? ` · ${resource.duration_min} min` : ''}
-                        </Text>
-                      </View>
+              {coachResources.map(resource => (
+                <TouchableOpacity
+                  key={resource.id}
+                  style={s.resourceCard}
+                  activeOpacity={0.85}
+                  onPress={() => router.push({ pathname: '/recurso', params: { id: resource.id } })}
+                >
+                  <View style={s.resourceHeader}>
+                    <View style={s.resourceIconWrap}>
                       <MaterialIcons
-                        name={isExpanded ? 'expand-less' : 'expand-more'}
-                        size={22}
-                        color="rgba(135,131,92,0.58)"
+                        name={RESOURCE_TYPE_ICONS[resource.type] ?? 'menu-book'}
+                        size={18}
+                        color={ViveColors.primary}
                       />
                     </View>
-
-                    {isExpanded && (
-                      <View style={s.resourceBody}>
-                        {!!resource.description && (
-                          <Text style={s.resourceDescription}>{resource.description}</Text>
-                        )}
-
-                        {resource.type === 'audio' && resource.content?.url && (
-                          <TouchableOpacity
-                            style={s.resourceAudioBtn}
-                            onPress={() => Linking.openURL(resource.content.url)}
-                            activeOpacity={0.8}
-                          >
-                            <MaterialIcons name="play-circle-outline" size={18} color={ViveColors.primary} />
-                            <Text style={s.resourceAudioBtnText}>Escuchar</Text>
-                          </TouchableOpacity>
-                        )}
-
-                        {resource.type === 'guia_pasos' && Array.isArray(resource.content?.steps) && (
-                          <View style={{ gap: 10 }}>
-                            {resource.content.steps.map((step: { title: string; body: string }, i: number) => (
-                              <View key={i} style={s.resourceStep}>
-                                <Text style={s.resourceStepTitle}>{i + 1}. {step.title}</Text>
-                                {!!step.body && <Text style={s.resourceStepBody}>{step.body}</Text>}
-                              </View>
-                            ))}
-                          </View>
-                        )}
-
-                        {resource.type === 'lectura_breve' && resource.content?.body && (
-                          <View>
-                            <Text style={s.resourceReadingBody}>{resource.content.body}</Text>
-                            {!!resource.content?.source && (
-                              <Text style={s.resourceReadingSource}>— {resource.content.source}</Text>
-                            )}
-                          </View>
-                        )}
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+                    <View style={s.resourceHeaderText}>
+                      <Text style={s.resourceTitle}>{resource.title}</Text>
+                      <Text style={s.resourceMeta}>
+                        {RESOURCE_TYPE_LABELS[resource.type] ?? resource.type}
+                        {resource.duration_min ? ` · ${resource.duration_min} min` : ''}
+                      </Text>
+                    </View>
+                    <MaterialIcons
+                      name="chevron-right"
+                      size={22}
+                      color="rgba(135,131,92,0.58)"
+                    />
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         )}
@@ -646,55 +600,6 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: '#87835C',
     marginTop: 2,
-  },
-  resourceBody: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(86,94,50,0.1)',
-    gap: 10,
-  },
-  resourceDescription: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#565E32',
-    lineHeight: 19,
-  },
-  resourceAudioBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-  },
-  resourceAudioBtnText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: ViveColors.primary,
-  },
-  resourceStep: { gap: 2 },
-  resourceStepTitle: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: '#565E32',
-  },
-  resourceStepBody: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#87835C',
-    lineHeight: 18,
-  },
-  resourceReadingBody: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#565E32',
-    lineHeight: 20,
-  },
-  resourceReadingSource: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: '#87835C',
-    marginTop: 6,
-    fontStyle: 'italic',
   },
 
   // ── Video ─────────────────────────────────────────────────────────────

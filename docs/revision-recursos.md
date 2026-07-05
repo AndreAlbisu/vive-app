@@ -12,6 +12,26 @@
 siempre con notas concretas y accionables. La revisión es no punitiva: el coach tiene que
 salir de cada estado sabiendo qué está bien, qué falta y que puede volver a intentar.
 
+## Modo rápido (recomendado)
+
+Requiere `scripts/add-review-functions.sql` corrido. Cada acción es una línea,
+transaccional (o pasa todo o no pasa nada), con el copy y las notificaciones ya adentro:
+
+```sql
+SELECT * FROM cola_revision;                                  -- la cola completa
+
+SELECT revisar_aprobar('PROPOSAL_ID');                        -- publica usando los ejes propuestos
+SELECT revisar_aprobar('PROPOSAL_ID', ARRAY['mente','alma']); -- o pisando los ejes
+SELECT revisar_ajustes('PROPOSAL_ID', 'qué está bien + qué falta + invitación a reenviar');
+SELECT revisar_descartar('PROPOSAL_ID', 'motivo — solo fuera de scope, nunca por calidad');
+```
+
+`revisar_aprobar` devuelve el `RESOURCE_ID` (útil para linkear tags a mano después).
+Las funciones resuelven solas el `attributed_to_coach_id` vía `coaches.profile_id` y
+rechazan propuestas que no estén en `enviada`. Los tags propuestos siguen siendo
+decisión manual aparte (paso 3 de abajo). Los bloques siguientes son la versión
+desplegada de lo mismo — referencia y fallback.
+
 ## 1. Ver la cola
 
 ```sql
@@ -32,7 +52,7 @@ conserva lo que se le pidió antes — revisarlo para ver si lo resolvió.
 - [ ] Título y descripción claros, sin promesas ("vas a lograr...") ni urgencia
 - [ ] **Autonavegable**: ¿alguien lo puede usar sin que nadie se lo explique?
 - [ ] Tono no ansiogénico: sin culpa, sin presión, sin métricas de exigencia
-- [ ] Si es audio: la URL abre sin login y el contenido coincide con la descripción
+- [ ] Si es audio: la URL del bucket reproduce bien (abrila en el navegador) y el contenido coincide con la descripción
 - [ ] Si es guía: los pasos se entienden solos y en orden
 - [ ] Si es lectura: la fuente (si la cita) es real
 - [ ] No duplica journaling/gratitud (exclusivos de VITA) ni un recurso ya publicado
