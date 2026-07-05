@@ -227,6 +227,55 @@ function ContinueCard({
   );
 }
 
+// ─── CoachLibrarySection (recursos publicados por cualquier coach) ───────────
+type LibraryResource = {
+  id: string;
+  type: string;
+  title: string;
+  duration_min: number | null;
+  attributed_to_coach_id: string;
+  coachName: string;
+};
+
+const LIBRARY_TYPE_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  audio: 'volume-medium-outline',
+  guia_pasos: 'list-outline',
+  lectura_breve: 'book-outline',
+};
+
+const LIBRARY_TYPE_LABEL: Record<string, string> = {
+  audio: 'Audio',
+  guia_pasos: 'Guía de pasos',
+  lectura_breve: 'Lectura breve',
+};
+
+function CoachLibrarySection({ resources }: { resources: LibraryResource[] }) {
+  const router = useRouter();
+  if (resources.length === 0) return null;
+
+  return (
+    <View style={{ marginTop: 8 }}>
+      <Text style={s.sectionTitle}>Recursos de nuestros coaches</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.libraryRow}>
+        {resources.map(r => (
+          <ScaleCard
+            key={r.id}
+            style={s.libraryCard}
+            onPress={() => router.push({ pathname: '/profesional', params: { profileId: r.attributed_to_coach_id } })}
+          >
+            <Ionicons name={LIBRARY_TYPE_ICON[r.type] ?? 'book-outline'} size={20} color={FOREST} />
+            <Text style={s.libraryCardTitle} numberOfLines={2}>{r.title}</Text>
+            <Text style={s.libraryCardMeta}>
+              {LIBRARY_TYPE_LABEL[r.type] ?? r.type}{r.duration_min ? ` · ${r.duration_min} min` : ''}
+            </Text>
+            <Text style={s.libraryCardCoach} numberOfLines={1}>Por {r.coachName}</Text>
+          </ScaleCard>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 // ─── CoachSection ─────────────────────────────────────────────────────────────
 function CoachSection({ completedInLast7Days }: { completedInLast7Days: Set<string> }) {
   const newCount = COACH_RESOURCES.filter(r => !completedInLast7Days.has(r.toolId)).length;
@@ -404,6 +453,29 @@ export default function RecursosScreen() {
   const { user, requestAuth } = useAuth();
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'all' | 'saved'>('all');
+  const [libraryResources, setLibraryResources] = useState<LibraryResource[]>([]);
+
+  // ── Cargar biblioteca de recursos publicados por coaches ────────────────────
+  useEffect(() => {
+    supabase
+      .from('resources')
+      .select('id, type, title, duration_min, attributed_to_coach_id, profiles!inner(name)')
+      .not('attributed_to_coach_id', 'is', null)
+      .is('retired_at', null)
+      .order('created_at', { ascending: false })
+      .limit(12)
+      .then(({ data }) => {
+        if (!data) return;
+        setLibraryResources(data.map((r: any) => ({
+          id: r.id,
+          type: r.type,
+          title: r.title,
+          duration_min: r.duration_min,
+          attributed_to_coach_id: r.attributed_to_coach_id,
+          coachName: r.profiles?.name ?? 'un coach',
+        })));
+      });
+  }, []);
 
   const { entries: moodEntries } = useMoodHistory(user?.id, 1);
   const todayMoodEntry = moodEntries[0];
@@ -508,6 +580,9 @@ export default function RecursosScreen() {
               />
             ))
           )}
+
+          {/* 7. Biblioteca de recursos de coaches (no aplica al filtro "Guardados") */}
+          {filter === 'all' && <CoachLibrarySection resources={libraryResources} />}
 
           <View style={{ height: TAB_BAR_CLEARANCE }} />
         </ScrollView>
@@ -693,6 +768,33 @@ const s = StyleSheet.create({
     borderColor: GLASS_BORDER,
     padding: 16,
     marginBottom: 24,
+  },
+  libraryRow: { gap: 10, paddingBottom: 4 },
+  libraryCard: {
+    width: 140,
+    backgroundColor: GLASS_BG,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    padding: 14,
+    gap: 6,
+  },
+  libraryCardTitle: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: FOREST,
+    lineHeight: 17,
+  },
+  libraryCardMeta: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: FOREST_SOFT,
+  },
+  libraryCardCoach: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: 'rgba(58,79,42,0.55)',
+    fontStyle: 'italic',
   },
   coachHeader: {
     flexDirection: 'row',
