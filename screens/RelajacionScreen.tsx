@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
+import { PinButton } from '@/components/PinButton';
 import { ensureAnonSession } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 
@@ -127,7 +128,7 @@ export default function RelajacionScreen() {
             <Text style={s.backText}>Atrás</Text>
           </TouchableOpacity>
           <Text style={s.title}>Relajación</Text>
-          <View style={{ width: 60 }} />
+          <PinButton resourceId="relajacion" />
         </View>
 
         <View style={s.content}>

@@ -353,38 +353,6 @@ function CoachSection({ completedInLast7Days }: { completedInLast7Days: Set<stri
   );
 }
 
-// ─── FilterChips ──────────────────────────────────────────────────────────────
-function FilterChips({
-  active,
-  savedCount,
-  onSelect,
-}: {
-  active: 'all' | 'saved';
-  savedCount: number;
-  onSelect: (v: 'all' | 'saved') => void;
-}) {
-  return (
-    <View style={s.filterRow}>
-      <TouchableOpacity
-        style={[s.filterChip, active === 'all' && s.filterChipActive]}
-        onPress={() => onSelect('all')}
-        activeOpacity={0.8}>
-        <Text style={[s.filterChipLabel, active === 'all' && s.filterChipLabelActive]}>
-          Todos
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[s.filterChip, active === 'saved' && s.filterChipActive]}
-        onPress={() => onSelect('saved')}
-        activeOpacity={0.8}>
-        <Text style={[s.filterChipLabel, active === 'saved' && s.filterChipLabelActive]}>
-          Guardados{savedCount > 0 ? ` · ${savedCount}` : ''}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 // ─── ToolCard ─────────────────────────────────────────────────────────────────
 function ToolCard({
   tool,
@@ -422,16 +390,14 @@ function ToolGroupSection({
   group,
   savedIds,
   onSave,
-  filter,
 }: {
   group: ToolGroup;
   savedIds: Set<string>;
   onSave: (id: string) => void;
-  filter: 'all' | 'saved';
 }) {
   const tools = group.toolIds
     .map(id => TOOL_MAP[id])
-    .filter(t => t && (filter === 'all' || savedIds.has(t.id)));
+    .filter(Boolean);
 
   if (tools.length === 0) return null;
 
@@ -472,7 +438,6 @@ export default function RecursosScreen() {
   const router = useRouter();
   const { user, requestAuth } = useAuth();
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<'all' | 'saved'>('all');
   const [libraryResources, setLibraryResources] = useState<LibraryResource[]>([]);
 
   // ── Cargar biblioteca de recursos publicados por coaches ────────────────────
@@ -530,6 +495,8 @@ export default function RecursosScreen() {
         .eq('user_id', user.id)
         .eq('resource_id', resourceId);
     } else {
+      // el UNIQUE(user_id,resource_id) (add-saved-resources-unique.sql) rechaza
+      // el dup si ya estaba guardado; el error se ignora a propósito
       await supabase
         .from('saved_resources')
         .insert({ user_id: user.id, resource_id: resourceId });
@@ -552,12 +519,20 @@ export default function RecursosScreen() {
           contentContainerStyle={s.container}
           showsVerticalScrollIndicator={false}>
 
-          {/* 1. Header + racha */}
+          {/* 1. Header + racha + guardados */}
           <View style={s.header}>
             <Text style={s.pageTitle}>Recursos</Text>
-            {streak > 0 && (
-              <StreakChip streak={streak} weekActivity={weekActivity} />
-            )}
+            <View style={s.headerActions}>
+              {streak > 0 && (
+                <StreakChip streak={streak} weekActivity={weekActivity} />
+              )}
+              <TouchableOpacity
+                onPress={() => (user ? router.push('/recursos-guardados') : requestAuth())}
+                hitSlop={8}
+                activeOpacity={0.7}>
+                <Ionicons name="bookmark-outline" size={22} color={FOREST} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* 2. Bloque de contexto según mood */}
@@ -575,35 +550,19 @@ export default function RecursosScreen() {
           <Text style={s.sectionTitle}>De tu coach</Text>
           <CoachSection completedInLast7Days={completedInLast7Days} />
 
-          {/* 5 + 6. Filtro + herramientas agrupadas */}
-          <FilterChips
-            active={filter}
-            savedCount={savedIds.size}
-            onSelect={setFilter}
-          />
+          {/* 5. Herramientas agrupadas */}
+          {TOOL_GROUPS.map(group => (
+            <ToolGroupSection
+              key={group.id}
+              group={group}
+              savedIds={savedIds}
+              onSave={toggleSave}
+            />
+          ))}
 
-          {filter === 'saved' && savedIds.size === 0 ? (
-            <View style={s.emptyState}>
-              <Ionicons name="bookmark-outline" size={32} color={FOREST_SOFT} />
-              <Text style={s.emptyStateText}>
-                Tocá el marcador en cualquier herramienta para guardarla acá.
-              </Text>
-            </View>
-          ) : (
-            TOOL_GROUPS.map(group => (
-              <ToolGroupSection
-                key={group.id}
-                group={group}
-                savedIds={savedIds}
-                onSave={toggleSave}
-                filter={filter}
-              />
-            ))
-          )}
-
-          {/* 7. Biblioteca de recursos de coaches — bajo "Guardados" muestra solo los guardados */}
+          {/* 6. Biblioteca de recursos de coaches */}
           <CoachLibrarySection
-            resources={filter === 'saved' ? libraryResources.filter(r => savedIds.has(r.id)) : libraryResources}
+            resources={libraryResources}
             savedIds={savedIds}
             onSave={toggleSave}
           />
@@ -633,6 +592,11 @@ const s = StyleSheet.create({
     fontSize: 34,
     color: FOREST,
     lineHeight: 40,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
   },
 
   // ── StreakChip ─────────────────────────────────────────────────────────────
@@ -924,33 +888,6 @@ const s = StyleSheet.create({
     borderColor: FOREST_SOFT,
   },
 
-  // ── FilterChips ───────────────────────────────────────────────────────────
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(63,81,47,0.20)',
-    backgroundColor: 'transparent',
-  },
-  filterChipActive: {
-    backgroundColor: FOREST,
-    borderColor: FOREST,
-  },
-  filterChipLabel: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12.5,
-    color: FOREST_SOFT,
-  },
-  filterChipLabelActive: {
-    color: CREAM_LIGHT,
-  },
-
   // ── Grupos de herramientas ────────────────────────────────────────────────
   groupSection: { marginBottom: 24 },
   groupTitle: {
@@ -1014,18 +951,4 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // ── Empty state (Guardados vacío) ─────────────────────────────────────────
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    gap: 12,
-  },
-  emptyStateText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: FOREST_SOFT,
-    textAlign: 'center',
-    maxWidth: 240,
-    lineHeight: 19,
-  },
 });

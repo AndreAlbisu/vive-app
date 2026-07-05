@@ -66,6 +66,9 @@ export default function ResourceDetailScreen() {
   const [resource, setResource] = useState<Resource | null>(null);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [pinCount, setPinCount] = useState(0);
+  const [pinNotice, setPinNotice] = useState<string | null>(null);
   const [readerOpen, setReaderOpen] = useState(false);
   const [pageIdx, setPageIdx] = useState(0);
   const [readingDone, setReadingDone] = useState(false);
@@ -104,6 +107,15 @@ export default function ResourceDetailScreen() {
       .eq('resource_id', resourceId)
       .maybeSingle()
       .then(({ data }) => setSaved(!!data));
+
+    supabase
+      .from('pinned_resources')
+      .select('resource_id')
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        setPinCount(data?.length ?? 0);
+        setPinned((data ?? []).some(p => p.resource_id === resourceId));
+      });
   }, [user, resourceId]);
 
   async function toggleSave() {
@@ -118,9 +130,46 @@ export default function ResourceDetailScreen() {
         .eq('user_id', user.id)
         .eq('resource_id', resourceId);
     } else {
+      // el UNIQUE(user_id,resource_id) (add-saved-resources-unique.sql) rechaza
+      // el dup si ya estaba guardado; el error se ignora a propósito
       await supabase
         .from('saved_resources')
         .insert({ user_id: user.id, resource_id: resourceId });
+    }
+  }
+
+  async function togglePin() {
+    if (!user) { requestAuth(); return; }
+    if (!resourceId) return;
+
+    if (pinned) {
+      setPinned(false);
+      setPinCount(c => Math.max(0, c - 1));
+      setPinNotice(null);
+      await supabase
+        .from('pinned_resources')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('resource_id', resourceId);
+      return;
+    }
+
+    if (pinCount >= 4) {
+      setPinNotice('Ya tenés 4 recursos en tu inicio. Quitá uno para fijar este.');
+      return;
+    }
+
+    setPinned(true);
+    setPinCount(c => c + 1);
+    setPinNotice(null);
+    const { error } = await supabase
+      .from('pinned_resources')
+      .insert({ user_id: user.id, resource_id: resourceId });
+    if (error) {
+      // el trigger rechaza el 5to pin aunque el conteo local diga otra cosa
+      setPinned(false);
+      setPinCount(c => Math.max(0, c - 1));
+      setPinNotice('Ya tenés 4 recursos en tu inicio. Quitá uno para fijar este.');
     }
   }
 
@@ -271,14 +320,30 @@ export default function ResourceDetailScreen() {
             <MaterialCommunityIcons name="arrow-left" size={20} color="#565E32" />
             <Text style={s.backText}>Atrás</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={toggleSave} hitSlop={8}>
-            <MaterialCommunityIcons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={24}
-              color={saved ? ViveColors.primary : 'rgba(135,131,92,0.72)'}
-            />
-          </TouchableOpacity>
+          <View style={s.topActions}>
+            <TouchableOpacity onPress={togglePin} hitSlop={8}>
+              <MaterialCommunityIcons
+                name={pinned ? 'pin' : 'pin-outline'}
+                size={23}
+                color={pinned ? ViveColors.primary : 'rgba(135,131,92,0.72)'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleSave} hitSlop={8}>
+              <MaterialCommunityIcons
+                name={saved ? 'bookmark' : 'bookmark-outline'}
+                size={24}
+                color={saved ? ViveColors.primary : 'rgba(135,131,92,0.72)'}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {!!pinNotice && (
+          <View style={s.pinNotice}>
+            <MaterialCommunityIcons name="information-outline" size={15} color="#87835C" />
+            <Text style={s.pinNoticeText}>{pinNotice}</Text>
+          </View>
+        )}
 
         {/* Ficha */}
         <View style={s.metaRow}>
@@ -399,7 +464,19 @@ const s = StyleSheet.create({
   scroll: { paddingHorizontal: 24, paddingTop: 8 },
 
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  topActions: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 8 },
+  pinNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(86,94,50,0.08)',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 4,
+  },
+  pinNoticeText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 12, color: '#87835C' },
   backText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#87835C' },
 
   notFoundText: { fontFamily: ViveFonts.regular, fontSize: 14, color: 'rgba(135,131,92,0.80)' },

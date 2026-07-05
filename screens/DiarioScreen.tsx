@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { PinButton } from '@/components/PinButton';
 import { supabase, ensureAnonSession } from '@/lib/supabase';
 import { logError } from '@/lib/logging';
 import { AppBg } from '@/components/ui/AppBg';
@@ -149,7 +150,7 @@ export default function DiarioScreen() {
               <Text style={styles.backText}>Atrás</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Diario</Text>
-            <View style={{ width: 60 }} />
+            <PinButton resourceId="diario" />
           </View>
 
           {/* Compose */}
