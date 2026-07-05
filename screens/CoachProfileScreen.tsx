@@ -73,6 +73,9 @@ export default function CoachProfileScreen() {
   const [editingPrice, setEditingPrice] = useState(false);
   const [priceInput, setPriceInput] = useState('');
   const [savingPrice, setSavingPrice] = useState(false);
+  const [editingBio, setEditingBio] = useState(false);
+  const [bioInput, setBioInput] = useState('');
+  const [savingBio, setSavingBio] = useState(false);
   const [savingInstantMode, setSavingInstantMode] = useState(false);
   const [coachId, setCoachId] = useState<string | null>(null);
   const [topics, setTopics] = useState<string[]>([]);
@@ -187,6 +190,33 @@ export default function CoachProfileScreen() {
 
     setProfile(prev => prev ? { ...prev, price_per_session: parsed } : prev);
     setEditingPrice(false);
+  }
+
+  function openBioEditor() {
+    setBioInput(profile?.bio ?? '');
+    setEditingBio(true);
+  }
+
+  async function saveBio() {
+    if (!user) return;
+    const trimmed = bioInput.trim();
+
+    setSavingBio(true);
+    const { data, error } = await supabase
+      .from('coaches')
+      .update({ bio: trimmed || null })
+      .eq('profile_id', user.id)
+      .select('bio');
+    setSavingBio(false);
+
+    // Si RLS bloquea el UPDATE, Postgrest devuelve 0 filas sin error
+    if (error || !data || data.length === 0) {
+      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
+      return;
+    }
+
+    setProfile(prev => prev ? { ...prev, bio: trimmed || null } : prev);
+    setEditingBio(false);
   }
 
   async function toggleInstantMode(value: boolean) {
@@ -428,9 +458,6 @@ export default function CoachProfileScreen() {
               {profile?.specialty ? (
                 <Text style={s.coachSpecialty}>{profile.specialty}</Text>
               ) : null}
-              {profile?.bio ? (
-                <Text style={s.coachBio}>{profile.bio}</Text>
-              ) : null}
               {profile?.nationality ? (
                 <Text style={s.coachMeta}>{profile.nationality}</Text>
               ) : null}
@@ -442,8 +469,65 @@ export default function CoachProfileScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ── Presentación ──────────────────────────────────── */}
+        <Text style={s.sectionTitle}>Presentación</Text>
+        <View style={s.bioCard}>
+          {editingBio ? (
+            <View>
+              <TextInput
+                style={s.bioInput}
+                value={bioInput}
+                onChangeText={t => setBioInput(t.slice(0, 400))}
+                placeholder="Contale a quien te visita quién sos y cómo acompañás. Un par de líneas alcanzan."
+                placeholderTextColor="rgba(135,131,92,0.45)"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                autoFocus
+              />
+              <Text style={s.bioCount}>{bioInput.length}/400</Text>
+              <View style={s.priceEditActions}>
+                <TouchableOpacity
+                  style={s.priceCancelBtn}
+                  onPress={() => setEditingBio(false)}
+                  disabled={savingBio}
+                  activeOpacity={0.75}
+                >
+                  <Text style={s.priceCancelBtnText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.priceSaveBtn}
+                  onPress={saveBio}
+                  disabled={savingBio}
+                  activeOpacity={0.85}
+                >
+                  {savingBio ? (
+                    <ActivityIndicator size="small" color="#565E32" />
+                  ) : (
+                    <Text style={s.priceSaveBtnText}>Guardar</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={s.bioRow}
+              onPress={openBioEditor}
+              activeOpacity={0.75}
+              disabled={noCoachProfile}
+            >
+              {profile?.bio ? (
+                <Text style={s.bioText}>{profile.bio}</Text>
+              ) : (
+                <Text style={s.bioPlaceholder}>Agregá una presentación breve sobre vos</Text>
+              )}
+              <MaterialCommunityIcons name="pencil-outline" size={16} color={ViveColors.primary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* ── Temas ─────────────────────────────────────────── */}
-        <Text style={s.sectionTitle}>Temas que trabajo</Text>
+        <Text style={[s.sectionTitle, s.sectionSpaced]}>Temas que trabajo</Text>
         <View style={s.chipsWrap}>
           {topics.map(topic => (
             <View key={topic} style={s.topicChip}>
@@ -750,14 +834,46 @@ const s = StyleSheet.create({
     color: ViveColors.primary,
     marginBottom: 4,
   },
-  coachBio: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#87835C',
-    textAlign: 'center',
-    lineHeight: 19,
+  bioCard: {
+    backgroundColor: 'rgba(255,248,240,0.55)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.65)',
+    padding: 16,
     marginBottom: 4,
-    paddingHorizontal: 8,
+  },
+  bioRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  bioText: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: '#565E32',
+    lineHeight: 21,
+  },
+  bioPlaceholder: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: 'rgba(135,131,92,0.65)',
+    lineHeight: 21,
+  },
+  bioInput: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: '#565E32',
+    lineHeight: 21,
+    minHeight: 88,
+  },
+  bioCount: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: 'rgba(135,131,92,0.6)',
+    textAlign: 'right',
+    marginTop: 4,
   },
   coachMeta: {
     fontFamily: ViveFonts.regular,

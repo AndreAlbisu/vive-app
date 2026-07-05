@@ -32,6 +32,7 @@ const DEFAULT_PROFESIONAL = {
   priceFrom: 4500,
   video_url: null as string | null,
   avatar_url: null as string | null,
+  bio: null as string | null,
 };
 
 type LiveReview = { rating: number; comment: string | null; reviewerName: string };
@@ -112,7 +113,7 @@ export default function ProfesionalScreen() {
     if (!pid) return;
     supabase
       .from('coaches')
-      .select('id, specialty, price_per_session, nationality, video_url, profiles!inner(name, avatar_url)')
+      .select('id, specialty, bio, price_per_session, nationality, video_url, profiles!inner(name, avatar_url)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
@@ -124,6 +125,7 @@ export default function ProfesionalScreen() {
           priceFrom: (data as any).price_per_session,
           video_url: (data as any).video_url ?? null,
           avatar_url: (data as any).profiles.avatar_url ?? null,
+          bio: (data as any).bio ?? null,
         });
 
         supabase
@@ -250,6 +252,11 @@ export default function ProfesionalScreen() {
           <Text style={s.metaLine}>
             {prof.age} · {prof.nationality} · {prof.gender}
           </Text>
+
+          {/* Presentación */}
+          {!!prof.bio && (
+            <Text style={s.bio}>{prof.bio}</Text>
+          )}
 
           {/* Chips de temas */}
           {prof.topics.length > 0 && (
@@ -535,6 +542,13 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.regular,
     fontSize: 13,
     color: '#87835C',
+    marginBottom: 14,
+  },
+  bio: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: '#565E32',
+    lineHeight: 21,
     marginBottom: 14,
   },
   chipsRow: {
