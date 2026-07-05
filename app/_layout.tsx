@@ -147,6 +147,8 @@ export default function RootLayout() {
           <Stack.Screen name="favoritos" options={{ headerShown: false }} />
           <Stack.Screen name="quiz" options={{ headerShown: false }} />
           <Stack.Screen name="coach-topics" options={{ headerShown: false }} />
+          <Stack.Screen name="resource-proposals" options={{ headerShown: false }} />
+          <Stack.Screen name="resource-proposal-new" options={{ headerShown: false }} />
           <Stack.Screen name="notifications" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>

@@ -94,24 +94,31 @@ export default function CoachNotificationsScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={s.list} showsVerticalScrollIndicator={false}>
-          {notifs.map(n => (
-            <TouchableOpacity
-              key={n.id}
-              style={[s.item, !n.read && s.itemUnread]}
-              activeOpacity={n.booking_id ? 0.7 : 1}
-              onPress={() => { if (n.booking_id) router.navigate('/reservas'); }}
-            >
-              {!n.read && <View style={s.unreadBar} />}
-              <View style={s.itemContent}>
-                <Text style={s.itemTitle}>{n.title}</Text>
-                <Text style={s.itemBody}>{n.body}</Text>
-                <Text style={s.itemTime}>{formatTimeAgo(n.created_at)}</Text>
-              </View>
-              {n.booking_id && (
-                <Feather name="chevron-right" size={16} color="rgba(135,131,92,0.52)" style={s.chevron} />
-              )}
-            </TouchableOpacity>
-          ))}
+          {notifs.map(n => {
+            const isProposal = n.type === 'propuesta_publicada' || n.type === 'propuesta_ajustes';
+            const tappable = !!n.booking_id || isProposal;
+            return (
+              <TouchableOpacity
+                key={n.id}
+                style={[s.item, !n.read && s.itemUnread]}
+                activeOpacity={tappable ? 0.7 : 1}
+                onPress={() => {
+                  if (isProposal) router.navigate('/resource-proposals');
+                  else if (n.booking_id) router.navigate('/reservas');
+                }}
+              >
+                {!n.read && <View style={s.unreadBar} />}
+                <View style={s.itemContent}>
+                  <Text style={s.itemTitle}>{n.title}</Text>
+                  <Text style={s.itemBody}>{n.body}</Text>
+                  <Text style={s.itemTime}>{formatTimeAgo(n.created_at)}</Text>
+                </View>
+                {tappable && (
+                  <Feather name="chevron-right" size={16} color="rgba(135,131,92,0.52)" style={s.chevron} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
           <View style={{ height: 32 }} />
         </ScrollView>
       )}

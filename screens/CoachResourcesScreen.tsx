@@ -1,46 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
-  Platform,
   ScrollView,
-  Modal,
-  KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 
-// ─── Topics (28 temas del sistema VIVE) ──────────────────────────────────────
-const ALL_TOPICS = [
-  'Sueño', 'Energía', 'Nutrición', 'Actividad física', 'Hábitos',
-  'Estrés físico', 'Sexualidad',
-  'Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría',
-  'Pareja', 'Familia', 'Amistades', 'Vínculos laborales',
-  'Concentración', 'Procrastinación', 'Productividad', 'Hábitos mentales',
-  'Propósito', 'Identidad', 'Momentos de cambio', 'Motivación',
-  'Crecimiento', 'Espiritualidad', 'Soledad',
-];
-
-type ResourceType = 'Audio' | 'Texto' | 'Herramienta';
-const RESOURCE_TYPES: ResourceType[] = ['Audio', 'Texto', 'Herramienta'];
-
-// ─── Recursos mock ────────────────────────────────────────────────────────────
+// ─── Recursos publicados ──────────────────────────────────────────────────────
 type MCIcon = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-type Resource = { id: string; title: string; type: string; icon: MCIcon; iconBg: string; iconColor: string; duration: string };
+type PublishedResource = { id: string; type: string; title: string; duration_min: number | null };
 
-const MY_RESOURCES: Resource[] = [
-  { id: '1', title: 'Respiración 4-7-8',    type: 'Audio',       icon: 'weather-windy',     iconBg: '#E8EFF6', iconColor: ViveColors.calm,    duration: '5 min'  },
-  { id: '2', title: 'Diario de gratitud',    type: 'Texto',       icon: 'notebook-outline',  iconBg: '#FDF0E8', iconColor: ViveColors.primary, duration: '10 min' },
-  { id: '3', title: 'Body scan guiado',      type: 'Audio',       icon: 'meditation',        iconBg: '#E8F5EE', iconColor: ViveColors.accent,  duration: '12 min' },
-  { id: '4', title: 'Rueda de la vida',      type: 'Herramienta', icon: 'chart-donut',       iconBg: '#FDF0E8', iconColor: ViveColors.primary, duration: '20 min' },
-];
+const TYPE_META: Record<string, { label: string; icon: MCIcon; iconBg: string; iconColor: string }> = {
+  audio:         { label: 'Audio',          icon: 'volume-high',           iconBg: '#E8EFF6', iconColor: ViveColors.calm },
+  guia_pasos:    { label: 'Guía de pasos',  icon: 'format-list-numbered',  iconBg: '#FDF0E8', iconColor: ViveColors.primary },
+  lectura_breve: { label: 'Lectura breve',  icon: 'book-open-variant',     iconBg: '#E8F5EE', iconColor: ViveColors.accent },
+};
 
 const EXPLORE_CATS = [
   { id: 'diario', label: 'Diario', emoji: '📔' }, { id: 'respiracion', label: 'Respiración', emoji: '🌬️' },
@@ -51,121 +36,38 @@ const EXPLORE_CATS = [
 const GLASS = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 
-// ─── Proposal Modal ───────────────────────────────────────────────────────────
-interface ProposalModalProps {
-  visible: boolean;
-  onClose: () => void;
-}
-
-function ProposalModal({ visible, onClose }: ProposalModalProps) {
-  const [title, setTitle] = useState('');
-  const [selectedType, setSelectedType] = useState<ResourceType | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-  const [duration, setDuration] = useState('');
-  const [description, setDescription] = useState('');
-
-  function handleSend() {
-    console.log('[Coach] propuesta de recurso:', { title, type: selectedType, topic: selectedTopic, duration, description });
-    setTitle(''); setSelectedType(null); setSelectedTopic(null); setDuration(''); setDescription('');
-    onClose();
-  }
-
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={ms.safe} edges={['top']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          {/* Modal header */}
-          <View style={ms.header}>
-            <Text style={ms.headerTitle}>Proponer recurso</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={8} activeOpacity={0.7}>
-              <MaterialCommunityIcons name="close" size={22} color="#565E32" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView contentContainerStyle={ms.body} showsVerticalScrollIndicator={false}>
-
-            {/* Título */}
-            <Text style={ms.label}>Título del recurso</Text>
-            <TextInput
-              style={ms.input}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="Ej: Meditación para el estrés"
-              placeholderTextColor="rgba(135,131,92,0.45)"
-            />
-
-            {/* Tipo */}
-            <Text style={[ms.label, ms.labelSpaced]}>Tipo</Text>
-            <View style={ms.chipRow}>
-              {RESOURCE_TYPES.map(t => (
-                <TouchableOpacity
-                  key={t}
-                  style={[ms.chip, selectedType === t && ms.chipActive]}
-                  onPress={() => setSelectedType(t)}
-                  activeOpacity={0.75}>
-                  <Text style={[ms.chipText, selectedType === t && ms.chipTextActive]}>{t}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Tema */}
-            <Text style={[ms.label, ms.labelSpaced]}>Tema</Text>
-            <View style={ms.topicsWrap}>
-              {ALL_TOPICS.map(topic => (
-                <TouchableOpacity
-                  key={topic}
-                  style={[ms.topicChip, selectedTopic === topic && ms.topicChipActive]}
-                  onPress={() => setSelectedTopic(selectedTopic === topic ? null : topic)}
-                  activeOpacity={0.75}>
-                  <Text style={[ms.topicChipText, selectedTopic === topic && ms.topicChipTextActive]}>
-                    {topic}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Duración */}
-            <Text style={[ms.label, ms.labelSpaced]}>Duración</Text>
-            <TextInput
-              style={ms.input}
-              value={duration}
-              onChangeText={setDuration}
-              placeholder="Ej: 10 min"
-              placeholderTextColor="rgba(135,131,92,0.45)"
-            />
-
-            {/* Descripción */}
-            <Text style={[ms.label, ms.labelSpaced]}>Descripción breve</Text>
-            <TextInput
-              style={[ms.input, ms.inputMultiline]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="¿De qué trata este recurso? ¿Para quién es útil?"
-              placeholderTextColor="rgba(135,131,92,0.45)"
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-
-            <TouchableOpacity
-              style={[ms.sendBtn, !title.trim() && ms.sendBtnDisabled]}
-              onPress={handleSend}
-              disabled={!title.trim()}
-              activeOpacity={0.85}>
-              <Text style={ms.sendBtnText}>Enviar propuesta</Text>
-            </TouchableOpacity>
-
-            <View style={{ height: 40 }} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Modal>
-  );
-}
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CoachResourcesScreen() {
-  const [modalVisible, setModalVisible] = useState(false);
+  const router = useRouter();
+  const { user } = useAuth();
+
+  const [myResources, setMyResources] = useState<PublishedResource[]>([]);
+  const [sirvioCounts, setSirvioCounts] = useState<Record<string, number>>({});
+  const [loadingResources, setLoadingResources] = useState(true);
+
+  const loadPublished = useCallback(async () => {
+    if (!user) { setLoadingResources(false); return; }
+
+    // attributed_to_coach_id es profiles.id — coincide con user.id, sin pasar por coaches
+    const { data } = await supabase
+      .from('resources')
+      .select('id, type, title, duration_min')
+      .eq('attributed_to_coach_id', user.id)
+      .is('retired_at', null)
+      .order('created_at', { ascending: false });
+
+    setMyResources((data ?? []) as PublishedResource[]);
+
+    const { data: feedback } = await supabase.rpc('get_my_resource_feedback_summary');
+    const counts: Record<string, number> = {};
+    for (const row of feedback ?? []) {
+      counts[row.resource_id] = Number(row.sirvio_count) || 0;
+    }
+    setSirvioCounts(counts);
+    setLoadingResources(false);
+  }, [user]);
+
+  useFocusEffect(useCallback(() => { loadPublished(); }, [loadPublished]));
 
   return (
     <AppBg>
@@ -177,28 +79,57 @@ export default function CoachResourcesScreen() {
         {/* Propose button */}
         <TouchableOpacity
           style={s.proposeBtn}
-          onPress={() => setModalVisible(true)}
+          onPress={() => router.push('/resource-proposal-new')}
           activeOpacity={0.85}>
           <MaterialCommunityIcons name="plus-circle-outline" size={18} color="#565E32" />
           <Text style={s.proposeBtnText}>Proponer recurso a VIVE</Text>
         </TouchableOpacity>
 
-        {/* Mis recursos */}
+        <TouchableOpacity
+          style={s.myProposalsLink}
+          onPress={() => router.push('/resource-proposals')}
+          activeOpacity={0.75}>
+          <Text style={s.myProposalsLinkText}>Ver mis propuestas enviadas</Text>
+          <MaterialCommunityIcons name="chevron-right" size={16} color={ViveColors.primary} />
+        </TouchableOpacity>
+
+        {/* Mis recursos publicados */}
         <Text style={s.sectionTitle}>Mis recursos</Text>
-        {MY_RESOURCES.map(r => (
-          <View key={r.id} style={s.resourceCard}>
-            <View style={[s.resourceIcon, { backgroundColor: r.iconBg }]}>
-              <MaterialCommunityIcons name={r.icon} size={22} color={r.iconColor} />
-            </View>
-            <View style={s.resourceInfo}>
-              <Text style={s.resourceTitle}>{r.title}</Text>
-              <Text style={s.resourceMeta}>{r.type} · {r.duration}</Text>
-            </View>
-            <TouchableOpacity style={s.shareBtn} activeOpacity={0.75}>
-              <Text style={s.shareBtnText}>Recomendar</Text>
-            </TouchableOpacity>
+        {loadingResources ? (
+          <View style={s.resourcesLoading}>
+            <ActivityIndicator size="small" color={ViveColors.primary} />
           </View>
-        ))}
+        ) : myResources.length === 0 ? (
+          <View style={s.resourcesEmpty}>
+            <MaterialCommunityIcons name="sprout-outline" size={28} color="rgba(135,131,92,0.45)" />
+            <Text style={s.resourcesEmptyText}>
+              Cuando VITA publique tu primera propuesta, la vas a ver acá.
+            </Text>
+          </View>
+        ) : (
+          myResources.map(r => {
+            const meta = TYPE_META[r.type] ?? TYPE_META.lectura_breve;
+            const sirvio = sirvioCounts[r.id] ?? 0;
+            return (
+              <View key={r.id} style={s.resourceCard}>
+                <View style={[s.resourceIcon, { backgroundColor: meta.iconBg }]}>
+                  <MaterialCommunityIcons name={meta.icon} size={22} color={meta.iconColor} />
+                </View>
+                <View style={s.resourceInfo}>
+                  <Text style={s.resourceTitle}>{r.title}</Text>
+                  <Text style={s.resourceMeta}>
+                    {meta.label}{r.duration_min ? ` · ${r.duration_min} min` : ''}
+                  </Text>
+                  {sirvio > 0 && (
+                    <Text style={s.resourceFeedback}>
+                      {sirvio === 1 ? 'A 1 persona le sirvió' : `A ${sirvio} personas les sirvió`} 💛
+                    </Text>
+                  )}
+                </View>
+              </View>
+            );
+          })
+        )}
 
         {/* Explorar biblioteca */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Biblioteca VIVE</Text>
@@ -217,8 +148,6 @@ export default function CoachResourcesScreen() {
 
         <View style={{ height: TAB_BAR_CLEARANCE }} />
       </ScrollView>
-
-      <ProposalModal visible={modalVisible} onClose={() => setModalVisible(false)} />
     </SafeAreaView>
     </AppBg>
   );
@@ -250,6 +179,21 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
     color: '#565E32',
+  },
+
+  myProposalsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: -16,
+    marginBottom: 28,
+    paddingVertical: 8,
+  },
+  myProposalsLinkText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.primary,
   },
 
   sectionTitle: {
@@ -291,18 +235,33 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: '#87835C',
   },
-  shareBtn: {
-    borderWidth: 1.5,
-    borderColor: ViveColors.accent,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    flexShrink: 0,
-  },
-  shareBtnText: {
-    fontFamily: ViveFonts.semibold,
+  resourceFeedback: {
+    fontFamily: ViveFonts.medium,
     fontSize: 12,
     color: ViveColors.accent,
+    marginTop: 3,
+  },
+
+  resourcesLoading: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  resourcesEmpty: {
+    backgroundColor: GLASS,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 10,
+  },
+  resourcesEmptyText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#87835C',
+    textAlign: 'center',
+    lineHeight: 19,
   },
 
   exploreGrid: { gap: 10 },
@@ -326,122 +285,5 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: '#565E32',
     textAlign: 'center',
-  },
-});
-
-// ─── Modal Styles ─────────────────────────────────────────────────────────────
-const ms = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#1A0A26' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,248,240,0.48)',
-    backgroundColor: 'rgba(255,248,240,0.32)',
-  },
-  headerTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 17,
-    color: '#565E32',
-  },
-  body: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-  },
-
-  label: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 13,
-    color: '#565E32',
-    marginBottom: 8,
-  },
-  labelSpaced: { marginTop: 20 },
-
-  input: {
-    backgroundColor: 'rgba(255,248,240,0.48)',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 13 : 10,
-    fontFamily: ViveFonts.regular,
-    fontSize: 14,
-    color: '#565E32',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
-  },
-  inputMultiline: {
-    height: 100,
-    paddingTop: 13,
-  },
-
-  chipRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  chip: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignItems: 'center',
-    backgroundColor: 'rgba(86,94,50,0.08)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.60)',
-  },
-  chipActive: {
-    backgroundColor: 'rgba(232,116,59,0.18)',
-    borderColor: ViveColors.primary,
-  },
-  chipText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: '#87835C',
-  },
-  chipTextActive: {
-    color: ViveColors.primary,
-  },
-
-  topicsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  topicChip: {
-    paddingVertical: 7,
-    paddingHorizontal: 13,
-    borderRadius: 20,
-    backgroundColor: 'rgba(86,94,50,0.08)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.55)',
-  },
-  topicChipActive: {
-    backgroundColor: 'rgba(255,248,240,0.68)',
-    borderColor: 'rgba(255,255,255,0.6)',
-  },
-  topicChipText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#87835C',
-  },
-  topicChipTextActive: {
-    fontFamily: ViveFonts.semibold,
-    color: '#565E32',
-  },
-
-  sendBtn: {
-    backgroundColor: ViveColors.primary,
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  sendBtnDisabled: {
-    backgroundColor: 'rgba(255,248,240,0.65)',
-  },
-  sendBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
   },
 });

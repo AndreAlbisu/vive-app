@@ -12,6 +12,7 @@ import {
   StatusBar,
   Image,
   Modal,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -35,6 +36,31 @@ const DEFAULT_PROFESIONAL = {
 };
 
 type LiveReview = { rating: number; comment: string | null; reviewerName: string };
+
+type CoachResource = {
+  id: string;
+  type: 'audio' | 'guia_pasos' | 'lectura_breve' | 'journaling' | 'gratitud';
+  title: string;
+  description: string | null;
+  duration_min: number | null;
+  content: any;
+};
+
+const RESOURCE_TYPE_LABELS: Record<string, string> = {
+  audio: 'Audio',
+  guia_pasos: 'Guía de pasos',
+  lectura_breve: 'Lectura breve',
+  journaling: 'Diario',
+  gratitud: 'Gratitud',
+};
+
+const RESOURCE_TYPE_ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> = {
+  audio: 'volume-up',
+  guia_pasos: 'format-list-numbered',
+  lectura_breve: 'menu-book',
+  journaling: 'menu-book',
+  gratitud: 'favorite-border',
+};
 
 // ─── Subcomponentes ───────────────────────────────────────────────────────────
 function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
@@ -82,6 +108,8 @@ export default function ProfesionalScreen() {
   const [liveAvgRating, setLiveAvgRating] = useState<number | null>(null);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const [coachResources, setCoachResources] = useState<CoachResource[]>([]);
+  const [expandedResourceId, setExpandedResourceId] = useState<string | null>(null);
 
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
@@ -149,6 +177,21 @@ export default function ProfesionalScreen() {
     }
 
     loadReviews();
+  }, [params.profileId]);
+
+  useEffect(() => {
+    const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
+    if (!pid) return;
+
+    supabase
+      .from('resources')
+      .select('id, type, title, description, duration_min, content')
+      .eq('attributed_to_coach_id', pid)
+      .is('retired_at', null)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setCoachResources((data ?? []) as CoachResource[]);
+      });
   }, [params.profileId]);
 
   const prof = {
@@ -262,6 +305,87 @@ export default function ProfesionalScreen() {
             </TouchableOpacity>
           </View>
         </Modal>
+
+        {/* ── Recursos de este coach ────────────────────────────────────── */}
+        {coachResources.length > 0 && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Recursos de {prof.name.split(' ')[0]}</Text>
+            <View style={s.resourcesList}>
+              {coachResources.map(resource => {
+                const isExpanded = expandedResourceId === resource.id;
+                return (
+                  <TouchableOpacity
+                    key={resource.id}
+                    style={s.resourceCard}
+                    activeOpacity={0.85}
+                    onPress={() => setExpandedResourceId(isExpanded ? null : resource.id)}
+                  >
+                    <View style={s.resourceHeader}>
+                      <View style={s.resourceIconWrap}>
+                        <MaterialIcons
+                          name={RESOURCE_TYPE_ICONS[resource.type] ?? 'menu-book'}
+                          size={18}
+                          color={ViveColors.primary}
+                        />
+                      </View>
+                      <View style={s.resourceHeaderText}>
+                        <Text style={s.resourceTitle}>{resource.title}</Text>
+                        <Text style={s.resourceMeta}>
+                          {RESOURCE_TYPE_LABELS[resource.type] ?? resource.type}
+                          {resource.duration_min ? ` · ${resource.duration_min} min` : ''}
+                        </Text>
+                      </View>
+                      <MaterialIcons
+                        name={isExpanded ? 'expand-less' : 'expand-more'}
+                        size={22}
+                        color="rgba(135,131,92,0.58)"
+                      />
+                    </View>
+
+                    {isExpanded && (
+                      <View style={s.resourceBody}>
+                        {!!resource.description && (
+                          <Text style={s.resourceDescription}>{resource.description}</Text>
+                        )}
+
+                        {resource.type === 'audio' && resource.content?.url && (
+                          <TouchableOpacity
+                            style={s.resourceAudioBtn}
+                            onPress={() => Linking.openURL(resource.content.url)}
+                            activeOpacity={0.8}
+                          >
+                            <MaterialIcons name="play-circle-outline" size={18} color={ViveColors.primary} />
+                            <Text style={s.resourceAudioBtnText}>Escuchar</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {resource.type === 'guia_pasos' && Array.isArray(resource.content?.steps) && (
+                          <View style={{ gap: 10 }}>
+                            {resource.content.steps.map((step: { title: string; body: string }, i: number) => (
+                              <View key={i} style={s.resourceStep}>
+                                <Text style={s.resourceStepTitle}>{i + 1}. {step.title}</Text>
+                                {!!step.body && <Text style={s.resourceStepBody}>{step.body}</Text>}
+                              </View>
+                            ))}
+                          </View>
+                        )}
+
+                        {resource.type === 'lectura_breve' && resource.content?.body && (
+                          <View>
+                            <Text style={s.resourceReadingBody}>{resource.content.body}</Text>
+                            {!!resource.content?.source && (
+                              <Text style={s.resourceReadingSource}>— {resource.content.source}</Text>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* ── Reviews ──────────────────────────────────────────────────── */}
         <View style={s.section}>
@@ -487,6 +611,90 @@ const s = StyleSheet.create({
     fontSize: 17,
     color: '#565E32',
     marginBottom: 14,
+  },
+
+  // ── Recursos del coach ──────────────────────────────────────────────
+  resourcesList: { gap: 10 },
+  resourceCard: {
+    backgroundColor: 'rgba(255,248,240,0.55)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.65)',
+    padding: 14,
+  },
+  resourceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  resourceIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(232,116,59,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resourceHeaderText: { flex: 1 },
+  resourceTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 14,
+    color: '#565E32',
+  },
+  resourceMeta: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: '#87835C',
+    marginTop: 2,
+  },
+  resourceBody: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(86,94,50,0.1)',
+    gap: 10,
+  },
+  resourceDescription: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#565E32',
+    lineHeight: 19,
+  },
+  resourceAudioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+  },
+  resourceAudioBtnText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.primary,
+  },
+  resourceStep: { gap: 2 },
+  resourceStepTitle: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: '#565E32',
+  },
+  resourceStepBody: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#87835C',
+    lineHeight: 18,
+  },
+  resourceReadingBody: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#565E32',
+    lineHeight: 20,
+  },
+  resourceReadingSource: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: '#87835C',
+    marginTop: 6,
+    fontStyle: 'italic',
   },
 
   // ── Video ─────────────────────────────────────────────────────────────

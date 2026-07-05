@@ -5,6 +5,53 @@
 
 ---
 
+## 2026-07-05 — Andre (sesión 54)
+
+**Tocado:** `scripts/add-resource-proposals-axes-tags.sql` (nuevo), `scripts/fix-resource-proposals-resubmit.sql` (nuevo), `scripts/add-notifications-propuesta-types.sql` (nuevo), `scripts/add-resources-retired-at.sql` (nuevo), `docs/revision-recursos.md` (nuevo), `screens/ProposeResourceScreen.tsx`, `screens/ResourceProposalsScreen.tsx`, `screens/CoachResourcesScreen.tsx`, `screens/CoachNotificationsScreen.tsx`, `screens/ProfesionalScreen.tsx`, `app/(tabs)/recursos.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- Sesión arrancó con investigación amplia de tipos de recursos (Quenza, Headspace, Fabulous, Noom, software de nutricionistas) → spec de punta a punta del sistema de Recursos (guardado en Notion, "Decisiones estratégicas"). Decisiones clave: los 3 tipos actuales se ratifican para lanzar; `video`/`reflexion`/`autoevaluacion`/`camino` quedan modelados a futuro sin ensanchar CHECKs preventivamente; descartados trackers con racha, ejercicios con IA, formularios que reportan al coach y PDF como tipo propio.
+- Se corrió la migración pendiente de la sesión 53 (`topic`) + batch de 4 migraciones nuevas, todas corridas y verificadas en Supabase: `resource_proposals.axes`/`.tags` (propuesta no vinculante del coach), trigger relajado para permitir re-envío `necesita_ajustes → enviada` (única transición del coach; verificado por `pg_get_functiondef`, el bloqueo con sesión real se valida en Expo Go), `notifications.type` += `propuesta_publicada`/`propuesta_ajustes` (sin tipo para descartada, a propósito — sería punitivo), `resources.retired_at` (retirar = UPDATE, nunca DELETE: el CASCADE borraría los votos de `resource_feedback`).
+- **`docs/revision-recursos.md` nuevo**: protocolo completo de revisión vía Dashboard (cola, checklist, SQL de aprobar/ajustes/descartar con notificaciones, plantillas de copy). El INSERT de aprobación resuelve `attributed_to_coach_id` vía `c.profile_id` con advertencia explícita — es el punto de falla silencioso clásico `coaches.id`/`profiles.id`.
+- Frontend: (1) "Mis recursos" del coach en `CoachResourcesScreen` pasó de mock a datos reales, con "A {n} personas les sirvió" solo si n>0 (primer consumidor real de `get_my_resource_feedback_summary()`); botón muerto "Recomendar" eliminado. (2) Re-envío: botón "Ajustar y reenviar" en el historial + modo edición de `ProposeResourceScreen` vía param `proposalId` (UPDATE misma fila, notas de VITA visibles mientras ajusta, guarda que expulsa si el estado no es `necesita_ajustes`). (3) Pasos Eje (obligatorio 1-3) y Tags (opcional máx. 3, con alta de tag `'propuesto'` vía upsert `ignoreDuplicates`) en el formulario — **en ambos submits, INSERT y UPDATE** (la asimetría creación/edición fue chequeada a propósito). (4) Notificaciones nuevas tapeables en `CoachNotificationsScreen` → `/resource-proposals`. (5) Filtro `retired_at IS NULL` en las 3 queries de consumo.
+- Mapeo de FKs verificado con definición real tras cuestionamiento de review externo: `user.id` del AuthContext = `session.user.id` = `profiles.id` (el context nunca toca `coaches`); `resource_proposals.coach_id` → `coaches.id` (operativa) y `resources.attributed_to_coach_id` → `profiles.id` (atribución) conviven correctamente en el mismo circuito.
+- Typecheck limpio en código de proyecto. Ojo: existe una carpeta local `node_modules 2/` (duplicado accidental, fuera del repo) que ensucia `tsc` — filtrar o borrarla.
+
+**Pendiente para la próxima sesión:**
+- **Test completo en Expo Go** (Andre): circuito propuesta → ajustes → re-envío (valida el trigger B con sesión real) → aprobación vía protocolo → ver el recurso en las 3 pantallas + notificación tapeable. Si un coach con recursos ve "Mis recursos" vacío, sospechar del fallo silencioso de la query, no de la falta de datos.
+- Fase posterior del spec (consumo): modo paso-a-paso de guías, "¿Te sirvió?" + completions, trigger de umbral (migración D) — deliberadamente después de validar lo anterior.
+- Bug del re-book en Conexiones sigue sin diagnosticar (ver sesión 50)
+- Schema migrations pendientes: `coaches.availability_status`, tabla `user_quiz_answers`
+- Confirmar con Joaquín el hook de auto-push en `.claude/settings.json` (ver sesión 53)
+
+---
+
+## 2026-07-04 — Andre (sesión 53)
+
+**Tocado:** `screens/ProposeResourceScreen.tsx` (nuevo), `screens/ResourceProposalsScreen.tsx` (nuevo), `app/resource-proposal-new.tsx` (nuevo), `app/resource-proposals.tsx` (nuevo), `app/_layout.tsx`, `screens/CoachProfileScreen.tsx`, `screens/CoachResourcesScreen.tsx`, `screens/ProfesionalScreen.tsx`, `app/(tabs)/recursos.tsx`, `scripts/add-resource-proposals-topic.sql` (nuevo), `SCHEMA.md`
+
+**Resumen:**
+- Frontend del sistema de propuestas de recursos (schema de la sesión 52): formulario para que un coach proponga audio/guía de pasos/lectura breve, y una lista de sus propias propuestas con status (`enviada`/`necesita_ajustes`/`aprobada`/`descartada`) + `reviewer_notes`.
+- Lado usuario, dos lugares distintos donde ahora se ve lo publicado en `resources`:
+  1. `screens/ProfesionalScreen.tsx` (perfil público de un coach) — sección "Recursos de {nombre}" con tarjetas expandibles, render específico por `type` (audio con botón "Escuchar", guía con pasos numerados, lectura con texto+fuente).
+  2. `app/(tabs)/recursos.tsx` (biblioteca general) — sección nueva "Recursos de nuestros coaches", scroll horizontal de todo lo publicado por cualquier coach; tap navega al perfil de ese coach en vez de duplicar el render de contenido. Ojo: esta pantalla ya tenía un mock separado (`CoachSection`/`COACH_RESOURCES`, "María González") que es un concepto distinto (recomendaciones de tu coach personal sobre las tools de VITA) — no se tocó, conviven ambas secciones.
+- Sin contadores de feedback/guardados en ningún lado, respetando la regla de "confianza por curación editorial y atribución, no por cifras".
+- Definí la forma de `content` jsonb por `type` (no estaba especificada): `audio` → `{ url }`, `guia_pasos` → `{ steps: [{title, body}] }`, `lectura_breve` → `{ body, source? }`. Documentado en SCHEMA.md.
+- **Hallazgo a mitad de sesión**: ya existía una pantalla completa `screens/CoachResourcesScreen.tsx` (pestaña Recursos del coach) con un botón real "Proponer recurso a VIVE" que abría un modal mock — `handleSend` solo hacía `console.log`, nunca escribió a la base. Mis pantallas nuevas habían quedado colgadas de un entry point inventado en `CoachProfileScreen.tsx`, totalmente desconectado. Se corrigió: el botón real ahora navega a `/resource-proposal-new`, el modal mock y sus estilos se borraron, y saqué el entry point duplicado de `CoachProfileScreen.tsx`.
+- El modal mock tenía un selector de "Tema" (28 subtemas de `AXES`) que la migración de la sesión 52 no contemplaba — se agregó `resource_proposals.topic` (text, nullable, sin CHECK, mismo criterio que `coach_topics.topic`) para no perder esa UX ya diseñada. Es solo referencia textual para el revisor, no crea vínculo real a `resource_axes`/`resource_tags` (esa parte de la decisión anterior se mantiene).
+- No hay pantalla de edición de una propuesta ya enviada, ni vista de revisión para VITA (la aprobación sigue siendo manual vía Dashboard, decisión ya tomada en la sesión 52) — solo alta + lectura de status del lado coach.
+- No probado en dispositivo real todavía (sin acceso a Expo Go en esta sesión) — pendiente de test manual antes de darlo por cerrado.
+
+**Pendiente para la próxima sesión:**
+- **Correr `scripts/add-resource-proposals-topic.sql` en Supabase** (agrega la columna `topic`) — sin esto, el insert del formulario va a fallar
+- Probar el flujo completo en Expo Go con una cuenta de coach real: crear propuesta de cada tipo, confirmar que se guarda bien en `resource_proposals` (incluido `topic`), y que la lista de status se ve bien
+- Detección de umbral en `resource_feedback` y disparo de notificación `recurso_feedback_umbral`: sigue sin implementar
+- Confirmar con Joaquín el hook de auto-push en `.claude/settings.json` antes de tocarlo — Andre lo revirtió sin commitear tras encontrar que Joaquín lo agregó a propósito el 27/06
+- Bug del re-book en Conexiones sigue sin diagnosticar (ver sesión 50)
+- Schema migrations pendientes: `coaches.availability_status`, tabla `user_quiz_answers`
+
+---
+
 ## 2026-07-03 — Andre (sesión 52)
 
 **Tocado:** `scripts/add-resource-proposals.sql`, `scripts/add-resources.sql`, `scripts/add-resource-axes.sql`, `scripts/add-resource-tags.sql`, `scripts/add-resource-tag-links.sql`, `scripts/add-resource-feedback.sql`, `scripts/fix-resource-feedback-summary-grant.sql`, `scripts/add-notifications-recurso-feedback-umbral.sql`, `SCHEMA.md`
