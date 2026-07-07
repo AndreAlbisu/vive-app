@@ -22,7 +22,7 @@ const SOUNDS = [
   { id: 'lluvia',   icon: 'weather-rainy' as const,   label: 'Lluvia suave' },
   { id: 'bosque',   icon: 'tree-outline' as const,    label: 'Bosque' },
   { id: 'olas',     icon: 'waves' as const,            label: 'Olas del mar' },
-  { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido blanco' },
+  { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido marrón' },
 ];
 
 // Loops sintetizados por VITA (assets propios, sin licencias de terceros)
