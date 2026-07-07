@@ -65,8 +65,8 @@
 - `amount` (integer)
 - `status` (text)
 - `room_url` (text, nullable) — redundante, el room_url canónico está en `salas` (Jitsi, legacy)
-- `duration_minutes` (integer, nullable) — duración de la sesión en minutos, copiado de `coach_weekly_pattern.slot_duration_minutes` al crear el booking. Agregada 02/07/2026 (`scripts/add-duration-minutes-meeting-url.sql`, **pendiente de correr en Supabase**).
-- `meeting_url` (text, nullable) — URL de la videollamada en Daily.co, generada por la Edge Function `create-meeting-room` al confirmar la sesión. Null hasta que la Edge Function corre. Agregada 02/07/2026 (mismo script). La app usa este campo como fuente de verdad para "Unirse"; `salas.room_url` es fallback legacy.
+- `duration_minutes` (integer, nullable) — duración de la sesión en minutos, copiado de `coach_weekly_pattern.slot_duration_minutes` al crear el booking. Agregada 02/07/2026 (`scripts/add-duration-minutes-meeting-url.sql`, corrida en Supabase el 07/07/2026).
+- `meeting_url` (text, nullable) — URL de la videollamada en Daily.co, generada por la Edge Function `create-meeting-room` al confirmar la sesión. Null hasta que Daily.co esté activo. Agregada 02/07/2026 (mismo script, corrida el 07/07/2026).
 - `user_message` (text, nullable) — mensaje opcional que el usuario le escribe al coach antes de reservar
 - `cancelled_by` (text, nullable) — quién canceló: `'usuario'` | `'coach'`. Null si no se canceló.
 - `cancelled_late` (boolean, nullable) — `true` si el coach canceló con <24hs de anticipación; `false` si ≥24hs; `null` si canceló el usuario (no aplica) o si no se canceló.
@@ -234,7 +234,7 @@
 - Señal binaria post-uso, **nunca expuesta como número público en la UI**. Alimenta privadamente el perfil del coach.
 - RLS: el usuario ve/crea/edita solo su propia fila (`user_id = auth.uid()`). **A propósito no existe ninguna política que le dé al coach acceso de fila a esta tabla** — una policy de SELECT solo filtra filas, no columnas: si el coach tuviera acceso de fila a sus recursos atribuidos, podría pedir `select user_id` y ver el detalle de quién votó qué, violando la regla de negocio. El coach tiene **cero acceso directo** a esta tabla vía API.
 - Función `get_my_resource_feedback_summary()` (`SECURITY DEFINER`, `SET search_path = public, pg_temp`) — único camino que tiene un coach para ver esta señal: filtra internamente por `resources.attributed_to_coach_id = auth.uid()` y devuelve solo `sirvio_count`/`no_sirvio_count` agregados por recurso, nunca `user_id`. Permisos: `REVOKE EXECUTE FROM anon` explícito (⚠️ hallazgo: `REVOKE ALL ... FROM PUBLIC` no alcanza para bloquear `anon` — Supabase otorga EXECUTE a `anon` en todo `public` vía default privileges a nivel de base, no vía el pseudo-rol `PUBLIC`; hubo que revocarlo de `anon` explícitamente, ver `scripts/fix-resource-feedback-summary-grant.sql`), `GRANT EXECUTE TO authenticated`.
-- Detección de umbral (cada 10/25/50 "sirvió") y disparo de notificación al coach: **no implementado todavía** — queda para un paso posterior, es lógica de aplicación sobre esta función/tabla, fuera de este trabajo.
+- Detección de umbral (cada 10/25/50 "sirvió"): trigger `trg_resource_feedback_milestone` → función `fn_resource_feedback_milestone()` (SECURITY DEFINER). Dispara AFTER INSERT OR UPDATE OF sirvio; cuenta votos positivos para el resource_id; en hitos exactos 10/25/50 inserta una notificación `recurso_feedback_umbral` al `attributed_to_coach_id` del recurso. Agregado 07/07/2026 (`scripts/add-resource-feedback-milestone.sql`).
 - Agregada 03/07/2026 (`scripts/add-resource-feedback.sql`, corrido y verificado en Supabase el mismo día. Fix de permisos en `scripts/fix-resource-feedback-summary-grant.sql`, mismo día).
 
 ## Reglas críticas
