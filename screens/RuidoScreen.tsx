@@ -52,8 +52,9 @@ export default function RuidoScreen() {
   const [phase, setPhase]                 = useState<'idle' | 'running' | 'done'>('idle');
   const [elapsed, setElapsed]             = useState(0);
 
-  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const userIdRef = useRef<string | null>(null);
+  const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fadeRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const userIdRef  = useRef<string | null>(null);
 
   const player = useAudioPlayer(SOUND_FILES[SOUNDS[0].id]);
 
@@ -67,8 +68,26 @@ export default function RuidoScreen() {
     if (timerRef.current) clearInterval(timerRef.current);
   }
 
+  function stopFade() {
+    if (fadeRef.current) clearInterval(fadeRef.current);
+  }
+
   function stopSound() {
-    try { player.pause(); } catch {}
+    stopFade();
+    try { player.volume = 1; player.pause(); } catch {}
+  }
+
+  function startFadeIn(durationMs = 2000) {
+    stopFade();
+    const steps = 40;
+    const interval = durationMs / steps;
+    let step = 0;
+    try { player.volume = 0; } catch {}
+    fadeRef.current = setInterval(() => {
+      step++;
+      try { player.volume = Math.min(1, step / steps); } catch {}
+      if (step >= steps) stopFade();
+    }, interval);
   }
 
   function handleStart() {
@@ -78,6 +97,7 @@ export default function RuidoScreen() {
     player.replace(SOUND_FILES[selectedSound]);
     player.loop = true;
     player.play();
+    startFadeIn();
 
     let el = 0;
     timerRef.current = setInterval(() => {
@@ -94,7 +114,7 @@ export default function RuidoScreen() {
     }, 1000);
   }
 
-  useEffect(() => () => stopTimer(), []);
+  useEffect(() => () => { stopTimer(); stopFade(); }, []);
 
   const remaining = Math.max(0, duration - elapsed);
   const currentSound = SOUNDS.find(s => s.id === selectedSound)!;
