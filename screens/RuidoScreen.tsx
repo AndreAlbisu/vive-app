@@ -105,30 +105,28 @@ export default function RuidoScreen() {
 
   function startFadeIn(p: typeof playerLluvia) {
     stopFade();
-    const TO = 0.35;
-    const durationMs = 1600;
-    const steps = 32;
-    const interval = durationMs / steps;
+    const FROM = 0.22;   // audible inmediato — sin silencio previo
+    const TO   = 0.38;
+    const steps = 20;
+    const intervalMs = 60;   // 20 × 60ms = 1.2s total
     let step = 0;
-    try { p.volume = 0; } catch {}
+    // Volumen inicial inmediatamente (antes del primer tick del interval)
+    try { p.volume = FROM; } catch {}
     fadeRef.current = setInterval(() => {
       step++;
-      // ease-out: sube rápido al principio, llega suave al final
-      const t = step / steps;
-      const eased = 1 - Math.pow(1 - t, 2);
-      try { p.volume = TO * eased; } catch {}
+      const v = FROM + (TO - FROM) * (step / steps);
+      try { p.volume = Math.min(TO, v); } catch {}
       if (step >= steps) stopFade();
-    }, interval);
+    }, intervalMs);
   }
 
   function handleStart() {
     setElapsed(0);
     setPhase('running');
 
-    // Silenciar las otras sin pausarlas — ya están corriendo
     const active = getPlayer();
     allPlayers.forEach(p => { if (p !== active) try { p.volume = 0; } catch {} });
-    startFadeIn(active);  // no hay play(): ya estaba corriendo
+    startFadeIn(active);  // no hay play(): ya estaba corriendo desde el mount
 
     let el = 0;
     timerRef.current = setInterval(() => {
