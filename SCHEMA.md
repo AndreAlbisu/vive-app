@@ -21,6 +21,19 @@
 - `application_video_url` (text, nullable) — link al video de presentación que el coach pega al postularse (YouTube, Drive, etc.). Artefacto de revisión de la postulación, no se muestra a usuarios.
 - `video_url` (text, nullable) — URL pública del video de perfil real, subido como archivo desde `CoachProfileScreen.tsx` a Supabase Storage (bucket `coach-videos`). Visible para cualquier usuario en `ProfesionalScreen.tsx`. Distinta de `application_video_url` a propósito: un reproductor nativo (`expo-video`) necesita una URL de archivo directa, no un link de YouTube/Drive. Agregada el 30/06/2026 (`scripts/add-coach-video-upload.sql`).
 - `instant_booking` (boolean, NOT NULL DEFAULT false) — modalidad de reserva del coach, editable desde el switch "Modalidad de reserva" en `CoachProfileScreen.tsx`. Si es `true`, las reservas nuevas de ese coach nacen con `bookings.status = 'confirmada'` directo (sin pasar por `'pendiente'` ni por aceptación manual). Agregada el 01/07/2026 (`scripts/add-coach-instant-booking.sql`, corrido en Supabase el 02/07/2026).
+- `availability_status` (text, NOT NULL DEFAULT 'activo') — CHECK IN ('activo', 'en_pausa'). Controla si el coach aparece en búsquedas. 'en_pausa' lo oculta del catálogo sin afectar sesiones existentes. Editable desde el toggle "Disponible / En pausa" en `CoachProfileScreen.tsx`. `coachesCache.ts` filtra por `availability_status = 'activo'`. Agregada el 07/07/2026 (`scripts/add-coaches-availability-status.sql`).
+
+### `user_quiz_answers`
+- `id` (uuid, PK)
+- `user_id` (uuid, UNIQUE, FK → `profiles.id` ON DELETE CASCADE)
+- `topic` (text, nullable) — respuesta Q1 del quiz: emocion | relaciones | trabajo | salud | proposito
+- `professional_type` (text, nullable) — respuesta Q2: coach | psicologo | nutricionista | any
+- `budget` (text, nullable) — respuesta Q3: low | mid | high | flex
+- `created_at`, `updated_at`
+- Una fila por usuario (UNIQUE user_id); se hace upsert al re-hacer el quiz.
+- RLS: solo el dueño puede leer/escribir su propia fila (authenticated).
+- Escrita por `QuizScreen.tsx` al completar el quiz (además de AsyncStorage). Usada para personalización futura de sugerencias de coaches y home.
+- Agregada el 07/07/2026 (`scripts/add-user-quiz-answers.sql`).
 
 ### `salas`
 - `id` (uuid, PK)

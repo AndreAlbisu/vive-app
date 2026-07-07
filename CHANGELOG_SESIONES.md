@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-07-07 — Joaquín (sesión 55)
+
+**Tocado:** `screens/RuidoScreen.tsx`, `assets/sounds/lluvia.m4a`, `assets/sounds/bosque.m4a`, `assets/sounds/olas.m4a`, `assets/sounds/blanco.m4a`, `scripts/gen_sounds.py`, `scripts/add-coaches-availability-status.sql` (nuevo), `scripts/add-user-quiz-answers.sql` (nuevo), `lib/coachesCache.ts`, `screens/CoachProfileScreen.tsx`, `screens/QuizScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- **RuidoScreen — audios reales:** reemplazó los 4 loops sintetizados por grabaciones CC0 de freesound.org (lluvia suave, bosque con río y pájaros, olas del mar, ruido marrón/trueno distante). Título de pantalla actualizado a "Ruido marrón". Todos recortados a 90s con afconvert + Python.
+- **RuidoScreen — delay y volumen:** todos los players arrancan en silencio al montar la pantalla (`volume=0, loop=true, play()`). Al presionar Iniciar solo se sube el volumen — sin latencia de `play()`. Fade arranca en 0.22 (audible inmediato) y sube a 0.38 en 1.2s con interpolación lineal.
+- **`coaches.availability_status`:** columna nueva `'activo'|'en_pausa'` (DEFAULT 'activo'). Toggle en `CoachProfileScreen` sección Disponibilidad. `coachesCache` filtra por `activo`. **Migración corrida en Supabase el 07/07.**
+- **`user_quiz_answers`:** tabla nueva con RLS para persistir las 3 respuestas del quiz por usuario. `QuizScreen` hace upsert al completar (además de AsyncStorage). **Migración corrida en Supabase el 07/07.** SCHEMA.md actualizado.
+
+**Pendiente para la próxima sesión:**
+- Rediseño de pantalla Recursos (análisis de UX de Andre pendiente de decidir e implementar)
+- "¿Te sirvió?" en detalle de recursos — completions + trigger de umbral de feedback
+- Audio en background (requiere dev build EAS + UIBackgroundModes)
+- Google OAuth y push notifications (requieren dev build EAS)
+- Daily.co — activar plan de pago
+- Flujo "Reprogramar" del coach — roto, sin definición
+
+---
+
 ## 2026-07-05 — Andre (sesión 54)
 
 **Tocado:** `scripts/add-resource-proposals-axes-tags.sql` (nuevo), `scripts/fix-resource-proposals-resubmit.sql` (nuevo), `scripts/add-notifications-propuesta-types.sql` (nuevo), `scripts/add-resources-retired-at.sql` (nuevo), `scripts/add-review-functions.sql` (nuevo), `scripts/add-resource-audio-storage.sql` (nuevo), `screens/ResourceDetailScreen.tsx` (nuevo), `app/recurso.tsx` (nuevo), `assets/sounds/` (nuevo, 4 loops), `docs/revision-recursos.md` (nuevo), `screens/ProposeResourceScreen.tsx`, `screens/ResourceProposalsScreen.tsx`, `screens/CoachResourcesScreen.tsx`, `screens/CoachNotificationsScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/RuidoScreen.tsx`, `app/(tabs)/recursos.tsx`, `app/_layout.tsx`, `app.json`, `package.json`, `SCHEMA.md`
