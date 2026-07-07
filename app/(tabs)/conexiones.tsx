@@ -108,11 +108,10 @@ export default function ConexionesScreen() {
 
   // ── Re-book query ─────────────────────────────────────────────────────────
   const loadRebook = useCallback(async () => {
-    console.log('[Rebook] user.id:', user?.id);
     if (!user?.id) { setRebookData(null); return; }
     const today = new Date().toISOString().split('T')[0];
 
-    const { data: last, error: e1 } = await supabase
+    const { data: last } = await supabase
       .from('bookings')
       .select('coach_id, scheduled_date')
       .eq('user_id', user.id)
@@ -121,10 +120,9 @@ export default function ConexionesScreen() {
       .limit(1)
       .maybeSingle();
 
-    console.log('[Rebook] last booking:', last, 'error:', e1?.message);
     if (!last?.coach_id) { setRebookData(null); return; }
 
-    const { count, error: e2 } = await supabase
+    const { count } = await supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
@@ -132,25 +130,28 @@ export default function ConexionesScreen() {
       .in('status', ['pendiente', 'confirmada'])
       .gte('scheduled_date', today);
 
-    console.log('[Rebook] future count:', count, 'error:', e2?.message);
     if ((count ?? 0) > 0) { setRebookData(null); return; }
 
     const { data: coachRow, error: e3 } = await supabase
       .from('coaches')
-      .select('specialty, price_per_session, profile_id, profiles!inner(name, avatar_url)')
+      .select('specialty, price_per_session, profile_id')
       .eq('id', last.coach_id)
       .single();
 
-    console.log('[Rebook] coachRow:', coachRow, 'error:', e3?.message);
     if (!coachRow) { setRebookData(null); return; }
 
-    const profile = Array.isArray(coachRow.profiles) ? coachRow.profiles[0] : coachRow.profiles;
+    const { data: profileRow } = await supabase
+      .from('profiles')
+      .select('name, avatar_url')
+      .eq('id', coachRow.profile_id)
+      .single();
+
     setRebookData({
       coachProfileId: coachRow.profile_id as string,
-      name:           (profile?.name ?? '') as string,
+      name:           (profileRow?.name ?? '') as string,
       specialty:      coachRow.specialty as string,
       pricePerSession: coachRow.price_per_session as number,
-      avatarUrl:      (profile?.avatar_url ?? null) as string | null,
+      avatarUrl:      (profileRow?.avatar_url ?? null) as string | null,
       lastDate:       (last.scheduled_date as string) ?? null,
     });
   }, [user?.id]);
