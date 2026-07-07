@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
   ActivityIndicator, Linking, Image,
@@ -11,6 +11,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
+import { recordCompletion } from '@/lib/resourceCompletions';
 
 type Resource = {
   id: string;
@@ -77,6 +78,11 @@ export default function ResourceDetailScreen() {
   const playerStatus = useAudioPlayerStatus(player);
   const [audioLoaded, setAudioLoaded] = useState(false);
 
+  // 'none' → 'pending' (listo para votar) → 'submitted' (ya votó)
+  const [feedbackState, setFeedbackState] = useState<'none' | 'pending' | 'submitted'>('none');
+  const [guiaDone, setGuiaDone] = useState(false);
+  const prevPlayingRef = useRef(false);
+
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
   }, []);
@@ -98,6 +104,17 @@ export default function ResourceDetailScreen() {
     setReadingDone(false);
   }
 
+  async function saveFeedback(sirvio: boolean) {
+    if (!user || !resourceId) return;
+    setFeedbackState('submitted');
+    await supabase
+      .from('resource_feedback')
+      .upsert(
+        { resource_id: resourceId, user_id: user.id, sirvio },
+        { onConflict: 'resource_id,user_id' }
+      );
+  }
+
   useEffect(() => {
     if (!user || !resourceId) return;
     supabase
@@ -116,7 +133,31 @@ export default function ResourceDetailScreen() {
         setPinCount(data?.length ?? 0);
         setPinned((data ?? []).some(p => p.resource_id === resourceId));
       });
+
+    // Si ya votó antes, no volver a preguntar
+    supabase
+      .from('resource_feedback')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('resource_id', resourceId)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setFeedbackState('submitted'); });
   }, [user, resourceId]);
+
+  // Detectar fin de audio nativo (currentTime llega al final)
+  useEffect(() => {
+    const wasPlaying = prevPlayingRef.current;
+    prevPlayingRef.current = playerStatus.playing;
+    if (
+      wasPlaying && !playerStatus.playing &&
+      audioLoaded && playerStatus.duration > 1 &&
+      playerStatus.currentTime >= playerStatus.duration - 1.5 &&
+      feedbackState === 'none'
+    ) {
+      setFeedbackState('pending');
+      if (user && resourceId) recordCompletion(user.id, resourceId).catch(() => {});
+    }
+  }, [playerStatus.playing]);
 
   async function toggleSave() {
     if (!user) { requestAuth(); return; }
@@ -258,6 +299,24 @@ export default function ResourceDetailScreen() {
             <MaterialCommunityIcons name="check-circle-outline" size={72} color={TERRACOTTA} />
             <Text style={s.doneTitle}>Lectura completada</Text>
             <Text style={s.doneSub}>Tomarte este espacio importa.</Text>
+            {feedbackState === 'pending' && (
+              <View style={s.feedbackBox}>
+                <Text style={s.feedbackQ}>¿Te sirvió?</Text>
+                <View style={s.feedbackRow}>
+                  <TouchableOpacity style={s.feedbackBtn} onPress={() => saveFeedback(true)} activeOpacity={0.8}>
+                    <MaterialCommunityIcons name="thumb-up-outline" size={20} color={FOREST} />
+                    <Text style={s.feedbackBtnText}>Sí</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.feedbackBtn} onPress={() => saveFeedback(false)} activeOpacity={0.8}>
+                    <MaterialCommunityIcons name="thumb-down-outline" size={20} color={FOREST} />
+                    <Text style={s.feedbackBtnText}>No</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            {feedbackState === 'submitted' && (
+              <Text style={s.feedbackThanks}>Gracias por tu respuesta.</Text>
+            )}
             <TouchableOpacity style={s.primaryBtn} onPress={closeReader} activeOpacity={0.85}>
               <Text style={s.primaryBtnText}>Volver</Text>
             </TouchableOpacity>
@@ -296,7 +355,15 @@ export default function ResourceDetailScreen() {
 
               <TouchableOpacity
                 style={s.primaryBtn}
-                onPress={() => (isLast ? setReadingDone(true) : setPageIdx(pageIdx + 1))}
+                onPress={() => {
+                  if (isLast) {
+                    setReadingDone(true);
+                    if (feedbackState === 'none') setFeedbackState('pending');
+                    if (user && resourceId) recordCompletion(user.id, resourceId).catch(() => {});
+                  } else {
+                    setPageIdx(pageIdx + 1);
+                  }
+                }}
                 activeOpacity={0.85}
               >
                 <Text style={s.primaryBtnText}>{isLast ? 'Terminé' : 'Siguiente'}</Text>
@@ -436,6 +503,20 @@ export default function ResourceDetailScreen() {
                   </View>
                 </View>
               ))}
+              {!guiaDone && (
+                <TouchableOpacity
+                  style={s.audioBtn}
+                  onPress={() => {
+                    setGuiaDone(true);
+                    if (feedbackState === 'none') setFeedbackState('pending');
+                    if (user && resourceId) recordCompletion(user.id, resourceId).catch(() => {});
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <MaterialCommunityIcons name="check-circle-outline" size={20} color="#565E32" />
+                  <Text style={s.audioBtnText}>Completé esta guía</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
@@ -450,6 +531,29 @@ export default function ResourceDetailScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Feedback post-uso — aparece para audio y guía una vez completados */}
+        {feedbackState !== 'none' && resource.type !== 'lectura_breve' && (
+          <View style={s.feedbackCard}>
+            {feedbackState === 'pending' ? (
+              <>
+                <Text style={s.feedbackQ}>¿Te sirvió?</Text>
+                <View style={s.feedbackRow}>
+                  <TouchableOpacity style={s.feedbackBtn} onPress={() => saveFeedback(true)} activeOpacity={0.8}>
+                    <MaterialCommunityIcons name="thumb-up-outline" size={20} color={FOREST} />
+                    <Text style={s.feedbackBtnText}>Sí</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.feedbackBtn} onPress={() => saveFeedback(false)} activeOpacity={0.8}>
+                    <MaterialCommunityIcons name="thumb-down-outline" size={20} color={FOREST} />
+                    <Text style={s.feedbackBtnText}>No</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <Text style={s.feedbackThanks}>Gracias por tu respuesta.</Text>
+            )}
+          </View>
+        )}
 
         <View style={{ height: 48 }} />
       </ScrollView>
@@ -609,4 +713,12 @@ const s = StyleSheet.create({
   doneContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 18 },
   doneTitle: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST, textAlign: 'center' },
   doneSub: { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
+
+  feedbackBox:   { alignItems: 'center', gap: 12, width: '100%' },
+  feedbackCard:  { marginTop: 20, marginHorizontal: 0, borderRadius: 18, borderWidth: 1, borderColor: GLASS_BORDER, backgroundColor: GLASS, padding: 18, alignItems: 'center', gap: 12 },
+  feedbackQ:     { fontFamily: ViveFonts.semibold, fontSize: 15, color: FOREST },
+  feedbackRow:   { flexDirection: 'row', gap: 12 },
+  feedbackBtn:   { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: 'rgba(58,79,42,0.25)', borderRadius: 14, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: GLASS },
+  feedbackBtnText: { fontFamily: ViveFonts.medium, fontSize: 14, color: FOREST },
+  feedbackThanks: { fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST_SOFT, fontStyle: 'italic' },
 });
