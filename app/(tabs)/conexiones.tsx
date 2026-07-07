@@ -113,7 +113,7 @@ export default function ConexionesScreen() {
 
     const { data: last } = await supabase
       .from('bookings')
-      .select('coach_id, scheduled_date')
+      .select('coach_id, scheduled_date, coach_name, coach_specialty')
       .eq('user_id', user.id)
       .eq('status', 'completada')
       .order('scheduled_date', { ascending: false })
@@ -148,8 +148,8 @@ export default function ConexionesScreen() {
 
     setRebookData({
       coachProfileId: coachRow.profile_id as string,
-      name:           (profileRow?.name ?? '') as string,
-      specialty:      coachRow.specialty as string,
+      name:           (profileRow?.name || (last.coach_name as string) || '') as string,
+      specialty:      (coachRow.specialty || (last.coach_specialty as string) || '') as string,
       pricePerSession: coachRow.price_per_session as number,
       avatarUrl:      (profileRow?.avatar_url ?? null) as string | null,
       lastDate:       (last.scheduled_date as string) ?? null,
