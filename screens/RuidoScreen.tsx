@@ -25,7 +25,7 @@ const SOUNDS = [
   { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido marrón' },
 ];
 
-// Loops sintetizados por VITA (assets propios, sin licencias de terceros)
+// Grabaciones reales con licencia CC0 (freesound.org), recortadas a 90s
 const SOUND_FILES: Record<string, any> = {
   lluvia: require('../assets/sounds/lluvia.m4a'),
   bosque: require('../assets/sounds/bosque.m4a'),
@@ -157,7 +157,7 @@ export default function RuidoScreen() {
             <MaterialCommunityIcons name="arrow-left" size={20} color={FOREST} />
             <Text style={s.backText}>Atrás</Text>
           </TouchableOpacity>
-          <Text style={s.title}>Ruido blanco</Text>
+          <Text style={s.title}>Ruido marrón</Text>
           <PinButton resourceId="ruido" />
         </View>
 
