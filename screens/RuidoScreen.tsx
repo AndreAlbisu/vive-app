@@ -56,7 +56,20 @@ export default function RuidoScreen() {
   const fadeRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const userIdRef  = useRef<string | null>(null);
 
-  const player = useAudioPlayer(SOUND_FILES[SOUNDS[0].id]);
+  // Pre-cargar los 4 audios al montar para evitar delay al iniciar
+  const playerLluvia = useAudioPlayer(SOUND_FILES.lluvia);
+  const playerBosque = useAudioPlayer(SOUND_FILES.bosque);
+  const playerOlas   = useAudioPlayer(SOUND_FILES.olas);
+  const playerBlanco = useAudioPlayer(SOUND_FILES.blanco);
+
+  const players: Record<string, typeof playerLluvia> = {
+    lluvia: playerLluvia,
+    bosque: playerBosque,
+    olas:   playerOlas,
+    blanco: playerBlanco,
+  };
+
+  function getPlayer() { return players[selectedSound] ?? playerLluvia; }
 
   useEffect(() => {
     ensureAnonSession().then(uid => { userIdRef.current = uid; }).catch(() => {});
@@ -72,20 +85,26 @@ export default function RuidoScreen() {
     if (fadeRef.current) clearInterval(fadeRef.current);
   }
 
-  function stopSound() {
+  function stopAllPlayers() {
     stopFade();
-    try { player.volume = 1; player.pause(); } catch {}
+    [playerLluvia, playerBosque, playerOlas, playerBlanco].forEach(p => {
+      try { p.pause(); p.volume = 0.4; } catch {}
+    });
   }
 
-  function startFadeIn(durationMs = 2000) {
+  function startFadeIn(p: typeof playerLluvia) {
     stopFade();
-    const steps = 40;
+    const FROM = 0.12;
+    const TO   = 0.38;
+    const durationMs = 1800;
+    const steps = 36;
     const interval = durationMs / steps;
     let step = 0;
-    try { player.volume = 0; } catch {}
+    try { p.volume = FROM; } catch {}
     fadeRef.current = setInterval(() => {
       step++;
-      try { player.volume = Math.min(1, step / steps); } catch {}
+      const v = FROM + (TO - FROM) * (step / steps);
+      try { p.volume = Math.min(TO, v); } catch {}
       if (step >= steps) stopFade();
     }, interval);
   }
@@ -94,10 +113,12 @@ export default function RuidoScreen() {
     setElapsed(0);
     setPhase('running');
 
-    player.replace(SOUND_FILES[selectedSound]);
-    player.loop = true;
-    player.play();
-    startFadeIn();
+    stopAllPlayers();
+    const p = getPlayer();
+    p.loop = true;
+    p.volume = 0.12;
+    p.play();
+    startFadeIn(p);
 
     let el = 0;
     timerRef.current = setInterval(() => {
@@ -105,7 +126,7 @@ export default function RuidoScreen() {
       setElapsed(el);
       if (el >= duration) {
         stopTimer();
-        stopSound();
+        stopAllPlayers();
         setPhase('done');
         if (userIdRef.current) {
           recordCompletion(userIdRef.current, 'ruido').catch(() => {});
@@ -114,7 +135,7 @@ export default function RuidoScreen() {
     }, 1000);
   }
 
-  useEffect(() => () => { stopTimer(); stopFade(); }, []);
+  useEffect(() => () => { stopTimer(); stopAllPlayers(); }, []);
 
   const remaining = Math.max(0, duration - elapsed);
   const currentSound = SOUNDS.find(s => s.id === selectedSound)!;
@@ -124,7 +145,7 @@ export default function RuidoScreen() {
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={s.safe} edges={['top']}>
         <View style={s.header}>
-          <TouchableOpacity onPress={() => { stopTimer(); stopSound(); router.back(); }} style={s.backBtn} hitSlop={8}>
+          <TouchableOpacity onPress={() => { stopTimer(); stopAllPlayers(); router.back(); }} style={s.backBtn} hitSlop={8}>
             <MaterialCommunityIcons name="arrow-left" size={20} color={FOREST} />
             <Text style={s.backText}>Atrás</Text>
           </TouchableOpacity>
@@ -191,7 +212,7 @@ export default function RuidoScreen() {
               <Text style={s.soundName}>{currentSound.label}</Text>
               <Text style={s.timerLarge}>{formatTime(remaining)}</Text>
               <Text style={s.runningHint}>Sonando</Text>
-              <TouchableOpacity style={s.ghostBtn} onPress={() => { stopTimer(); stopSound(); router.back(); }} activeOpacity={0.8}>
+              <TouchableOpacity style={s.ghostBtn} onPress={() => { stopTimer(); stopAllPlayers(); router.back(); }} activeOpacity={0.8}>
                 <Text style={s.ghostBtnText}>Detener</Text>
               </TouchableOpacity>
             </>
