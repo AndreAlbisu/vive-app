@@ -15,10 +15,10 @@
 - **`coaches.availability_status`:** columna nueva `'activo'|'en_pausa'` (DEFAULT 'activo'). Toggle en `CoachProfileScreen` sección Disponibilidad. `coachesCache` filtra por `activo`. **Migración corrida en Supabase el 07/07.**
 - **`user_quiz_answers`:** tabla nueva con RLS para persistir las 3 respuestas del quiz por usuario. `QuizScreen` hace upsert al completar (además de AsyncStorage). **Migración corrida en Supabase el 07/07.**
 - **Flujo "¿Te sirvió?" en ResourceDetailScreen:** detección de completion por tipo (audio: posición >= duración − 1.5s; lectura: botón "Terminé"; guía: botón "Completé esta guía"). Thumbs up/down con upsert en `resource_feedback` (`onConflict: 'resource_id,user_id'`). Carga voto existente al montar para no volver a preguntar. Llama `recordCompletion` al completar.
-- **Trigger `fn_resource_feedback_milestone`:** notifica al coach al acumular 10/25/50 votos positivos en un recurso. `SECURITY DEFINER` + `REVOKE` de anon. Script generado; **pendiente de correr en Supabase.**
+- **Trigger `fn_resource_feedback_milestone`:** notifica al coach al acumular 10/25/50 votos positivos en un recurso. `SECURITY DEFINER` + `REVOKE` de anon. **Migración corrida en Supabase el 07/07.**
+- **`bookings.duration_minutes` / `meeting_url`:** columnas nuevas agregadas a la tabla `bookings`. **Migración corrida en Supabase el 07/07.**
 
 **Pendiente para la próxima sesión:**
-- **Correr en Supabase:** `scripts/add-resource-feedback-milestone.sql` (trigger hito feedback) y `scripts/add-duration-minutes-meeting-url.sql` (columnas `duration_minutes`/`meeting_url` en bookings)
 - Rediseño de pantalla Recursos (análisis de UX de Andre pendiente de decidir e implementar)
 - Audio en background (requiere dev build EAS + UIBackgroundModes)
 - Google OAuth y push notifications (requieren dev build EAS)
