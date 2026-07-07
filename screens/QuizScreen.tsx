@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
+import { supabase } from '@/lib/supabase';
 
 const F  = '#3A4F2A';
 const FS = '#6B7A56';
@@ -119,11 +120,18 @@ export default function QuizScreen() {
     if (step < 2) {
       setStep(s => s + 1);
     } else {
-      // compute results
       const ms = computeMatches(coaches, q1 ?? '', q2 ?? '', q3 ?? '');
       setMatches(ms);
-      // save q1 topic preference for future "Para vos"
       if (q1) AsyncStorage.setItem('vive_quiz_topic', q1).catch(() => {});
+      // Persistir en Supabase para personalización futura
+      supabase.auth.getSession().then(({ data }) => {
+        const uid = data.session?.user?.id;
+        if (!uid) return;
+        supabase.from('user_quiz_answers').upsert(
+          { user_id: uid, topic: q1, professional_type: q2, budget: q3, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        ).then(({ error }) => { if (error) console.warn('[quiz] upsert:', error.message); });
+      });
       setStep(3);
     }
   }

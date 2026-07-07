@@ -36,6 +36,7 @@ type CoachProfile = {
   nationality: string | null;
   video_url: string | null;
   instant_booking: boolean;
+  availability_status: 'activo' | 'en_pausa';
   avatar_url: string | null;
 };
 
@@ -77,6 +78,7 @@ export default function CoachProfileScreen() {
   const [bioInput, setBioInput] = useState('');
   const [savingBio, setSavingBio] = useState(false);
   const [savingInstantMode, setSavingInstantMode] = useState(false);
+  const [savingAvailability, setSavingAvailability] = useState(false);
   const [coachId, setCoachId] = useState<string | null>(null);
   const [topics, setTopics] = useState<string[]>([]);
 
@@ -86,7 +88,7 @@ export default function CoachProfileScreen() {
     (async () => {
       const [{ data: profileRow }, { data: coachRow }] = await Promise.all([
         supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single(),
-        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking').eq('profile_id', user.id).maybeSingle(),
+        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status').eq('profile_id', user.id).maybeSingle(),
       ]);
 
       setProfile({
@@ -97,6 +99,7 @@ export default function CoachProfileScreen() {
         nationality: coachRow?.nationality ?? null,
         video_url: coachRow?.video_url ?? null,
         instant_booking: coachRow?.instant_booking ?? false,
+        availability_status: (coachRow?.availability_status ?? 'activo') as 'activo' | 'en_pausa',
         avatar_url: profileRow?.avatar_url ?? null,
       });
       setCoachId(coachRow?.id ?? null);
@@ -233,6 +236,22 @@ export default function CoachProfileScreen() {
 
     if (error || !data || data.length === 0) {
       setProfile(prev => prev ? { ...prev, instant_booking: !value } : prev);
+      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
+    }
+  }
+
+  async function toggleAvailability(value: boolean) {
+    if (!user || savingAvailability) return;
+    const newStatus: 'activo' | 'en_pausa' = value ? 'activo' : 'en_pausa';
+    setProfile(prev => prev ? { ...prev, availability_status: newStatus } : prev);
+    setSavingAvailability(true);
+    const { error } = await supabase
+      .from('coaches')
+      .update({ availability_status: newStatus })
+      .eq('profile_id', user.id);
+    setSavingAvailability(false);
+    if (error) {
+      setProfile(prev => prev ? { ...prev, availability_status: newStatus === 'activo' ? 'en_pausa' : 'activo' } : prev);
       Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
     }
   }
@@ -631,8 +650,28 @@ export default function CoachProfileScreen() {
 
         {/* ── Disponibilidad ────────────────────────────────── */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Disponibilidad</Text>
+        <View style={s.toggleCard}>
+          <View style={s.toggleInfo}>
+            <Text style={s.toggleTitle}>
+              {profile?.availability_status === 'activo' ? 'Disponible' : 'En pausa'}
+            </Text>
+            <Text style={s.toggleDesc}>
+              {profile?.availability_status === 'activo'
+                ? 'Aparecés en búsquedas y podés recibir nuevas reservas.'
+                : 'No aparecés en búsquedas. Tus sesiones actuales no se ven afectadas.'}
+            </Text>
+          </View>
+          <Switch
+            value={profile?.availability_status === 'activo'}
+            onValueChange={toggleAvailability}
+            disabled={noCoachProfile || savingAvailability}
+            trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
+            thumbColor="#FFFFFF"
+            ios_backgroundColor={`${ViveColors.text}25`}
+          />
+        </View>
         <TouchableOpacity
-          style={s.availBtn}
+          style={[s.availBtn, { marginTop: 8 }]}
           onPress={() => router.push('/coach-availability')}
           activeOpacity={0.75}
         >

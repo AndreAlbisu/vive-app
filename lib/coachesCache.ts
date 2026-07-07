@@ -24,6 +24,7 @@ async function _doFetch(): Promise<void> {
     .from('coaches')
     .select('id, specialty, price_per_session, nationality, verified, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
     .eq('verified', true)
+    .eq('availability_status', 'activo')
     .limit(50);
 
   if (error) { console.error('[coachesCache] fetch:', error.message); cache = []; return; }
