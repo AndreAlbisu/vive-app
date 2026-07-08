@@ -396,7 +396,7 @@ export default function ConexionesScreen() {
           {/* ── Sección chips ──────────────────────────────────────────── */}
           <View style={s.sectionHead}>
             <Text style={s.sectionTitle}>¿Qué te gustaría trabajar hoy?</Text>
-            <TouchableOpacity activeOpacity={0.7}>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => setSelectedChip(null)}>
               <Text style={s.sectionLink}>Ver todos</Text>
             </TouchableOpacity>
           </View>

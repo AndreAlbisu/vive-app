@@ -145,22 +145,31 @@ export default function ProgresoScreen() {
 
       setSessionCount(bookings.length);
 
-      const coachIds = [...new Set(bookings.map(b => b.coach_id as string))];
+      // bookings.coach_id → coaches.id (PK interno, no profiles.id)
+      const coachInternalIds = [...new Set(bookings.map(b => b.coach_id as string))];
 
-      const [{ data: profiles }, { data: coaches }] = await Promise.all([
-        supabase.from('profiles').select('id, name').in('id', coachIds),
-        supabase.from('coaches').select('profile_id, specialty').in('profile_id', coachIds),
-      ]);
+      const { data: coachRows } = await supabase
+        .from('coaches')
+        .select('id, profile_id, specialty')
+        .in('id', coachInternalIds);
+
+      const profileIds = [...new Set((coachRows ?? []).map(c => c.profile_id as string))];
+      const { data: profiles } = await supabase
+        .from('profiles').select('id, name').in('id', profileIds);
+
+      const coachToProfileId: Record<string, string> = {};
+      const specialtyMap: Record<string, string> = {};
+      coachRows?.forEach(c => {
+        coachToProfileId[c.id as string] = c.profile_id as string;
+        specialtyMap[c.id as string] = c.specialty as string;
+      });
 
       const profileMap: Record<string, string> = {};
       profiles?.forEach(p => { profileMap[p.id] = p.name ?? 'Coach'; });
 
-      const specialtyMap: Record<string, string> = {};
-      coaches?.forEach(c => { specialtyMap[c.profile_id as string] = c.specialty as string; });
-
       const sessions: PastSession[] = bookings.map(b => ({
         id: b.id as string,
-        coachName: profileMap[b.coach_id as string] ?? 'Coach',
+        coachName: profileMap[coachToProfileId[b.coach_id as string] ?? ''] ?? 'Coach',
         specialty: specialtyMap[b.coach_id as string] ?? null,
         date: formatDate(b.scheduled_date as string),
         time: (b.scheduled_time as string).slice(0, 5) + ' hs',
