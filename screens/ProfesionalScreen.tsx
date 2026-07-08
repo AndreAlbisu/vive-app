@@ -406,8 +406,6 @@ export default function ProfesionalScreen() {
               activeOpacity={0.85}
               onPress={() => {
                 if (!isLoggedIn) { requestAuth(); return; }
-                console.log('[ProfesionalScreen] coachId:', params.coachId, '| typeof:', typeof params.coachId);
-                console.log('[ProfesionalScreen] profileId:', params.profileId, '| typeof:', typeof params.profileId);
                 router.push({
                   pathname: '/booking-calendar',
                   params: {
