@@ -61,11 +61,11 @@ const CHIPS: ChipItem[] = [
 
 // ─── Mapeo quiz → temas de coaches ───────────────────────────────────────────
 const QUIZ_TOPIC_MAP: Record<string, string[]> = {
-  emocion:    ['Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría', 'Autoestima'],
+  emocion:    ['Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría', 'Autoestima', 'Soledad'],
   relaciones: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'],
-  trabajo:    ['Productividad', 'Concentración', 'Procrastinación', 'Vínculos laborales'],
-  salud:      ['Sueño', 'Energía', 'Actividad física', 'Estrés físico', 'Hábitos', 'Nutrición'],
-  proposito:  ['Propósito', 'Identidad', 'Motivación', 'Crecimiento', 'Momentos de cambio'],
+  trabajo:    ['Productividad', 'Concentración', 'Procrastinación', 'Vínculos laborales', 'Hábitos mentales'],
+  salud:      ['Sueño', 'Energía', 'Actividad física', 'Estrés físico', 'Hábitos', 'Nutrición', 'Sexualidad'],
+  proposito:  ['Propósito', 'Identidad', 'Motivación', 'Crecimiento', 'Momentos de cambio', 'Espiritualidad'],
 };
 
 const QUIZ_TOPIC_LABEL: Record<string, string> = {
