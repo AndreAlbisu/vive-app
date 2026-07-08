@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-08 — Joaquín (sesión 56)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`, `app/(tabs)/index.tsx`, `app/progreso.tsx`, `screens/CoachReservasScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/CoachResourcesScreen.tsx`
+
+**Resumen:**
+- **Bug re-book card (abierto desde sesión 50):** `loadRebook` filtraba solo `status = 'completada'` pero los bookings reales se quedan en `'confirmada'`. Fix: mismo patrón OR que ya usaba `progreso.tsx` — `.or('status.eq.completada,and(status.eq.confirmada,scheduled_date.lt.${today})')`. También se agrega filtro `availability_status = 'activo'` para no proponer coaches en pausa.
+- **Bell de notificaciones en Conexiones:** contador `unreadCount` con realtime subscription + `useFocusEffect` para que el punto rojo desaparezca al volver de la pantalla de notificaciones. Mismo patrón aplicado a `index.tsx` (Home).
+- **"Para vos" en Conexiones:** sección con coaches sugeridos según respuestas de `user_quiz_answers` (topic + professional_type). Horizontal ScrollView con avatares, link "Cambiar" al quiz.
+- **Bugs rápidos:** "Ver todos" en Conexiones ya activa `setSelectedChip(null)`. Coach names en Progreso: fix del join de dos pasos `bookings.coach_id → coaches.id → coaches.profile_id → profiles.name`. Fix botones "Biblioteca VIVE" en `CoachResourcesScreen` usando `VITA_TOOL_MAP`. Limpieza de `console.log` de debug en `CoachReservasScreen` y `ProfesionalScreen`.
+- **"Áreas trabajadas" en Progreso:** reemplaza el `3` hardcodeado por conteo real de áreas únicas (5 categorías) mapeadas desde los topics de `coach_topics` de los coaches con los que el usuario tuvo sesiones.
+
+**Pendiente para la próxima sesión:**
+- Rediseño pantalla Recursos — BLOQUEADO esperando decisión de Andre
+- Audio en background — requiere EAS dev build
+- Google OAuth + push notifications — requieren EAS dev build
+- Daily.co — requiere pago para activar
+- Flujo "Reprogramar" del coach — roto, sin definición de producto
+- Bug taxonomías: cards de tema en Conexiones devuelven 0 resultados (TOPICS 9 labels vs AXES 28 subtemas — no coinciden textualmente, decisión de producto pendiente)
+
+---
+
 ## 2026-07-07 — Joaquín (sesión 55)
 
 **Tocado:** `screens/RuidoScreen.tsx`, `assets/sounds/lluvia.m4a`, `assets/sounds/bosque.m4a`, `assets/sounds/olas.m4a`, `assets/sounds/blanco.m4a`, `scripts/gen_sounds.py`, `scripts/add-coaches-availability-status.sql` (nuevo), `scripts/add-user-quiz-answers.sql` (nuevo), `lib/coachesCache.ts`, `screens/CoachProfileScreen.tsx`, `screens/QuizScreen.tsx`, `screens/ResourceDetailScreen.tsx`, `scripts/add-resource-feedback-milestone.sql` (nuevo), `SCHEMA.md`
