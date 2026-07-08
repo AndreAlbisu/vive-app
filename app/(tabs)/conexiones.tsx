@@ -115,7 +115,7 @@ export default function ConexionesScreen() {
       .from('bookings')
       .select('coach_id, scheduled_date, coach_name, coach_specialty')
       .eq('user_id', user.id)
-      .eq('status', 'completada')
+      .or(`status.eq.completada,and(status.eq.confirmada,scheduled_date.lt.${today})`)
       .order('scheduled_date', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -136,6 +136,7 @@ export default function ConexionesScreen() {
       .from('coaches')
       .select('specialty, price_per_session, profile_id')
       .eq('id', last.coach_id)
+      .eq('availability_status', 'activo')
       .single();
 
     if (!coachRow) { setRebookData(null); return; }
