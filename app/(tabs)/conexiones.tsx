@@ -59,6 +59,32 @@ const CHIPS: ChipItem[] = [
   { id: '9', icon: 'activity',    label: 'Bienestar',          displayLabel: 'salud y bienestar',     searchTopics: ['Sueño', 'Energía', 'Actividad física', 'Estrés físico'] },
 ];
 
+// ─── Mapeo quiz → temas de coaches ───────────────────────────────────────────
+const QUIZ_TOPIC_MAP: Record<string, string[]> = {
+  emocion:    ['Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría', 'Autoestima'],
+  relaciones: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'],
+  trabajo:    ['Productividad', 'Concentración', 'Procrastinación', 'Vínculos laborales'],
+  salud:      ['Sueño', 'Energía', 'Actividad física', 'Estrés físico', 'Hábitos', 'Nutrición'],
+  proposito:  ['Propósito', 'Identidad', 'Motivación', 'Crecimiento', 'Momentos de cambio'],
+};
+
+const QUIZ_TOPIC_LABEL: Record<string, string> = {
+  emocion:    'emociones',
+  relaciones: 'relaciones',
+  trabajo:    'trabajo',
+  salud:      'salud y hábitos',
+  proposito:  'propósito',
+};
+
+function matchesProfType(specialty: string, profType: string): boolean {
+  if (!profType || profType === 'any') return true;
+  const s = specialty.toLowerCase();
+  if (profType === 'coach')         return s.includes('coach');
+  if (profType === 'psicologo')     return s.includes('psicól') || s.includes('psicol');
+  if (profType === 'nutricionista') return s.includes('nutrici');
+  return true;
+}
+
 // ─── Re-book ─────────────────────────────────────────────────────────────────
 type RebookData = {
   coachProfileId: string;
@@ -93,6 +119,8 @@ export default function ConexionesScreen() {
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [rebookData, setRebookData]     = useState<RebookData | null>(null);
   const [unreadCount, setUnreadCount]   = useState(0);
+  const [quizTopic, setQuizTopic]       = useState<string | null>(null);
+  const [quizProfType, setQuizProfType] = useState<string | null>(null);
 
   // ── Cache poll ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -106,6 +134,20 @@ export default function ConexionesScreen() {
     t = setInterval(check, 80);
     return () => clearInterval(t);
   }, []);
+
+  // ── Quiz answers ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('user_quiz_answers')
+      .select('topic, professional_type')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setQuizTopic(data?.topic ?? null);
+        setQuizProfType(data?.professional_type ?? null);
+      });
+  }, [user]);
 
   // ── Notificaciones no leídas ──────────────────────────────────────────────
   const fetchNotifCount = useCallback(() => {
@@ -188,6 +230,15 @@ export default function ConexionesScreen() {
   const displayed = chip
     ? coaches.filter(c => chip.searchTopics.some(t => c.topics.includes(t)))
     : coaches;
+
+  const suggestedCoaches: CachedCoach[] = quizTopic
+    ? coaches
+        .filter(c =>
+          (QUIZ_TOPIC_MAP[quizTopic] ?? []).some(t => c.topics.includes(t)) &&
+          matchesProfType(c.specialty, quizProfType ?? 'any'),
+        )
+        .slice(0, 4)
+    : [];
 
   // ── Navegación ────────────────────────────────────────────────────────────
   function goToPerfil(coach: CachedCoach) {
@@ -276,8 +327,42 @@ export default function ConexionesScreen() {
             <Feather name="sliders" size={16} color={FOREST} />
           </TouchableOpacity>
 
-          {/* ── PUNTO DE INSERCIÓN: carrusel "Para vos" por temas ──────── */}
-          {/* Diferido hasta tener 10+ profesionales — ver nota en diseño */}
+          {/* ── Para vos (quiz) ────────────────────────────────────────── */}
+          {suggestedCoaches.length > 0 && (
+            <View style={s.paraVosWrap}>
+              <View style={s.paraVosHead}>
+                <Text style={s.paraVosTitle}>Para vos</Text>
+                <Text style={s.paraVosSub}>
+                  Trabajan {QUIZ_TOPIC_LABEL[quizTopic!] ?? quizTopic}
+                </Text>
+                <TouchableOpacity onPress={() => router.push('/quiz')} hitSlop={8}>
+                  <Text style={s.paraVosLink}>Cambiar</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.paraVosRow}>
+                {suggestedCoaches.map(c => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={s.paraVosCard}
+                    onPress={() => goToPerfil(c)}
+                    activeOpacity={0.85}>
+                    {c.avatarUrl ? (
+                      <Image source={{ uri: c.avatarUrl }} style={s.paraVosAvatar} />
+                    ) : (
+                      <View style={[s.paraVosAvatar, s.paraVosAvatarFallback]}>
+                        <Text style={s.paraVosInitials}>{getInitials(c.name)}</Text>
+                      </View>
+                    )}
+                    <Text style={s.paraVosName} numberOfLines={1}>{c.name.split(' ')[0]}</Text>
+                    <Text style={s.paraVosRole} numberOfLines={1}>{c.specialty}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* ── Re-book card (condicional) ──────────────────────────────── */}
           {rebookData && (
@@ -823,6 +908,79 @@ const s = StyleSheet.create({
     fontSize: 22,
     color: TERRACOTTA,
     lineHeight: 26,
+  },
+
+  // Para vos
+  paraVosWrap: {
+    marginTop: 14,
+    marginHorizontal: 20,
+  },
+  paraVosHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    marginBottom: 10,
+  },
+  paraVosTitle: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 19,
+    color: FOREST,
+  },
+  paraVosSub: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: FOREST_SOFT,
+  },
+  paraVosLink: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 12,
+    color: TERRACOTTA,
+  },
+  paraVosRow: {
+    gap: 10,
+    paddingRight: 4,
+  },
+  paraVosCard: {
+    width: 100,
+    backgroundColor: CARD,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: LINE,
+    padding: 12,
+    alignItems: 'center',
+    gap: 6,
+    ...Platform.select({
+      ios:     { shadowColor: 'rgba(46,54,36,0.18)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6 },
+      android: { elevation: 2 },
+    }),
+  },
+  paraVosAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+  },
+  paraVosAvatarFallback: {
+    backgroundColor: 'rgba(107,122,86,0.20)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paraVosInitials: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 16,
+    color: FOREST,
+  },
+  paraVosName: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 12,
+    color: FOREST,
+    textAlign: 'center',
+  },
+  paraVosRole: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 10.5,
+    color: TERRACOTTA,
+    textAlign: 'center',
   },
 
   bellBtn: {
