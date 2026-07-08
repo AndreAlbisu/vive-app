@@ -31,6 +31,18 @@ interface PastSession {
   time: string;
 }
 
+// ─── Mapeo de topics de coach → áreas de la app ──────────────────────────────
+const TOPIC_TO_AREA: Record<string, string> = {
+  'Tristeza': 'emocion', 'Ansiedad': 'emocion', 'Enojo': 'emocion',
+  'Culpa': 'emocion', 'Vergüenza': 'emocion', 'Alegría': 'emocion', 'Autoestima': 'emocion',
+  'Pareja': 'relaciones', 'Familia': 'relaciones', 'Amistades': 'relaciones', 'Vínculos laborales': 'relaciones',
+  'Productividad': 'trabajo', 'Concentración': 'trabajo', 'Procrastinación': 'trabajo',
+  'Sueño': 'salud', 'Energía': 'salud', 'Actividad física': 'salud',
+  'Estrés físico': 'salud', 'Hábitos': 'salud', 'Nutrición': 'salud',
+  'Propósito': 'proposito', 'Identidad': 'proposito', 'Motivación': 'proposito',
+  'Crecimiento': 'proposito', 'Momentos de cambio': 'proposito',
+};
+
 // ─── Hábitos (estado local, sin DB aún) ──────────────────────────────────────
 // TODO: conectar con tabla de hábitos cuando exista
 
@@ -74,6 +86,7 @@ export default function ProgresoScreen() {
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [sessionCount, setSessionCount] = useState<number | null>(null);
   const [semanasActivas, setSemanasActivas] = useState<number>(0);
+  const [areasCount, setAreasCount] = useState<number | null>(null);
 
   const { entries: moodEntries, loading: moodLoading } = useMoodHistory(user?.id, 14);
 
@@ -153,6 +166,18 @@ export default function ProgresoScreen() {
         .select('id, profile_id, specialty')
         .in('id', coachInternalIds);
 
+      const { data: topicRows } = await supabase
+        .from('coach_topics')
+        .select('topic')
+        .in('coach_id', coachInternalIds);
+
+      const uniqueAreas = new Set<string>();
+      topicRows?.forEach(t => {
+        const area = TOPIC_TO_AREA[t.topic as string];
+        if (area) uniqueAreas.add(area);
+      });
+      setAreasCount(uniqueAreas.size || null);
+
       const profileIds = [...new Set((coachRows ?? []).map(c => c.profile_id as string))];
       const { data: profiles } = await supabase
         .from('profiles').select('id, name').in('id', profileIds);
@@ -182,11 +207,10 @@ export default function ProgresoScreen() {
     fetchData();
   }, [user]);
 
-  // TODO: calcular áreas trabajadas desde topics de bookings cuando exista el campo
   const stats = [
-    { value: semanasActivas,                  label: 'Semanas\nactivas'      },
-    { value: 3,                               label: 'Áreas\ntrabajadas'     },
-    { value: sessionCount ?? '—',             label: 'Sesiones\ncompletadas' },
+    { value: semanasActivas,        label: 'Semanas\nactivas'      },
+    { value: areasCount ?? '—',     label: 'Áreas\ntrabajadas'     },
+    { value: sessionCount ?? '—',   label: 'Sesiones\ncompletadas' },
   ];
 
   return (
