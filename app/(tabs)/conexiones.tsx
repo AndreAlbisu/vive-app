@@ -92,6 +92,7 @@ export default function ConexionesScreen() {
   const [coaches, setCoaches]           = useState<CachedCoach[]>([]);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [rebookData, setRebookData]     = useState<RebookData | null>(null);
+  const [unreadCount, setUnreadCount]   = useState(0);
 
   // ── Cache poll ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -105,6 +106,25 @@ export default function ConexionesScreen() {
     t = setInterval(check, 80);
     return () => clearInterval(t);
   }, []);
+
+  // ── Notificaciones no leídas ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    const fetchCount = () => {
+      supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_id', user.id)
+        .eq('read', false)
+        .then(({ count }) => setUnreadCount(count ?? 0));
+    };
+    fetchCount();
+    const channel = supabase
+      .channel(`notif-conexiones-${user.id}-${Math.random().toString(36).slice(2)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${user.id}` }, fetchCount)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   // ── Re-book query ─────────────────────────────────────────────────────────
   const loadRebook = useCallback(async () => {
@@ -231,8 +251,13 @@ export default function ConexionesScreen() {
                 hitSlop={8}>
                 <Feather name="star" size={21} color={FOREST} />
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => (user ? router.push('/notifications') : requestAuth())}
+                activeOpacity={0.7}
+                hitSlop={8}
+                style={s.bellBtn}>
                 <Feather name="bell" size={21} color={FOREST} />
+                {unreadCount > 0 && <View style={s.bellDot} />}
               </TouchableOpacity>
             </View>
           </View>
@@ -794,5 +819,21 @@ const s = StyleSheet.create({
     fontSize: 22,
     color: TERRACOTTA,
     lineHeight: 26,
+  },
+
+  bellBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E05252',
   },
 });
