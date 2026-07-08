@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { VITA_TOOL_MAP } from '@/constants/vitaTools';
 import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
@@ -137,7 +138,7 @@ export default function CoachResourcesScreen() {
           {[0, 1].map(row => (
             <View key={row} style={s.exploreRow}>
               {EXPLORE_CATS.slice(row * 3, row * 3 + 3).map(cat => (
-                <ScaleCard key={cat.id} style={s.exploreCat} onPress={() => console.log('cat', cat.id)}>
+                <ScaleCard key={cat.id} style={s.exploreCat} onPress={() => { const r = VITA_TOOL_MAP[cat.id]?.route; if (r) router.push(r as any); }}>
                   <Text style={s.exploreCatEmoji}>{cat.emoji}</Text>
                   <Text style={s.exploreCatLabel}>{cat.label}</Text>
                 </ScaleCard>

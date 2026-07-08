@@ -99,32 +99,12 @@ export default function CoachReservasScreen() {
   const loadBookings = useCallback(async () => {
     if (!user || !coachId) return;
 
-    console.log('[CoachReservas] ── DIAGNÓSTICO ──────────────────────────');
-    console.log('[CoachReservas] profile_id (auth.uid):', user.id);
-    console.log('[CoachReservas] coachId    (coaches.id):', coachId);
-
     const { data: rows, error } = await supabase
       .from('bookings')
       .select('*')
       .eq('coach_id', coachId)
       .in('status', ['pendiente', 'confirmada'])
       .order('created_at', { ascending: false });
-
-    console.log('[CoachReservas] query filtrada  → rows:', rows?.length ?? 'null', '| error:', error?.message ?? null);
-    // Log completo del array crudo — si llega vacío acá el problema es RLS o coach_id; si llega pero no se ve en pantalla es un filtro de JS
-    console.log('[CoachReservas] raw rows (array completo):', JSON.stringify(rows));
-
-    // Sin filtro de coach_id, ordenado por fecha desc — si la reserva nueva tampoco aparece acá → RLS bloqueando
-    const { data: allRows, error: allError } = await supabase
-      .from('bookings')
-      .select('id, coach_id, user_id, status, created_at')
-      .order('created_at', { ascending: false })
-      .limit(20);
-    console.log('[CoachReservas] todos los bookings (sin filtro, recientes primero) → count:', allRows?.length ?? 'null', '| error:', allError?.message ?? null);
-    if (allRows && allRows.length > 0) {
-      console.log('[CoachReservas] primeros 3 de allRows:', JSON.stringify(allRows.slice(0, 3)));
-    }
-    console.log('[CoachReservas] ─────────────────────────────────────────');
 
     if (error || !rows) { setLoading(false); return; }
 
@@ -193,8 +173,6 @@ export default function CoachReservasScreen() {
       .update({ status: 'confirmada' })
       .eq('id', id)
       .select('id, user_id, coach_id, sala_id, scheduled_date, scheduled_time, user_message');
-    console.log('[CoachReservas] accept update → data:', data, '| error:', error);
-
     if (error || !data?.[0]) return;
 
     const booking = data[0];
@@ -228,7 +206,6 @@ export default function CoachReservasScreen() {
           : Promise.resolve(),
       ]);
 
-      console.log('[accept] booking.sala_id:', booking.sala_id);
       if (booking.sala_id) {
         const confirmDateStr = formatBookingDate(booking.scheduled_date);
         const confirmTimeStr = booking.scheduled_time.slice(0, 5);
@@ -242,7 +219,6 @@ export default function CoachReservasScreen() {
           sender_type: 'system_confirmed',
           content: encryptMessage(confirmMsg),
         });
-        console.log('[accept] message insert error:', msgError ?? 'none');
       }
 
       if (conflicting && conflicting.length > 0) {
@@ -312,8 +288,6 @@ export default function CoachReservasScreen() {
       .update({ status: 'cancelada' })
       .eq('id', rejectModal.id)
       .select();
-    console.log('[CoachReservas] reject update → data:', data, '| error:', error);
-
     if (error) { setRejectModal({ visible: false, id: null }); return; }
 
     setRejectModal({ visible: false, id: null });
@@ -409,8 +383,6 @@ export default function CoachReservasScreen() {
     await loadBookings();
     setRefreshing(false);
   }, [loadBookings]);
-
-  console.log('[CoachReservas] render bookings:', bookings);
 
   return (
     <AppBg>
