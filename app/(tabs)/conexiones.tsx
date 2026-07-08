@@ -132,7 +132,7 @@ export default function ConexionesScreen() {
 
     if ((count ?? 0) > 0) { setRebookData(null); return; }
 
-    const { data: coachRow, error: e3 } = await supabase
+    const { data: coachRow } = await supabase
       .from('coaches')
       .select('specialty, price_per_session, profile_id')
       .eq('id', last.coach_id)
