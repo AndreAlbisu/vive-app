@@ -108,23 +108,27 @@ export default function ConexionesScreen() {
   }, []);
 
   // ── Notificaciones no leídas ──────────────────────────────────────────────
+  const fetchNotifCount = useCallback(() => {
+    if (!user) return;
+    supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', user.id)
+      .eq('read', false)
+      .then(({ count }) => setUnreadCount(count ?? 0));
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
-    const fetchCount = () => {
-      supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('recipient_id', user.id)
-        .eq('read', false)
-        .then(({ count }) => setUnreadCount(count ?? 0));
-    };
-    fetchCount();
+    fetchNotifCount();
     const channel = supabase
       .channel(`notif-conexiones-${user.id}-${Math.random().toString(36).slice(2)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${user.id}` }, fetchCount)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${user.id}` }, fetchNotifCount)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, fetchNotifCount]);
+
+  useFocusEffect(useCallback(() => { fetchNotifCount(); }, [fetchNotifCount]));
 
   // ── Re-book query ─────────────────────────────────────────────────────────
   const loadRebook = useCallback(async () => {
