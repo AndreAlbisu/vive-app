@@ -35,12 +35,14 @@ interface PastSession {
 const TOPIC_TO_AREA: Record<string, string> = {
   'Tristeza': 'emocion', 'Ansiedad': 'emocion', 'Enojo': 'emocion',
   'Culpa': 'emocion', 'Vergüenza': 'emocion', 'Alegría': 'emocion', 'Autoestima': 'emocion',
+  'Soledad': 'emocion',
   'Pareja': 'relaciones', 'Familia': 'relaciones', 'Amistades': 'relaciones', 'Vínculos laborales': 'relaciones',
   'Productividad': 'trabajo', 'Concentración': 'trabajo', 'Procrastinación': 'trabajo',
+  'Hábitos mentales': 'trabajo',
   'Sueño': 'salud', 'Energía': 'salud', 'Actividad física': 'salud',
-  'Estrés físico': 'salud', 'Hábitos': 'salud', 'Nutrición': 'salud',
+  'Estrés físico': 'salud', 'Hábitos': 'salud', 'Nutrición': 'salud', 'Sexualidad': 'salud',
   'Propósito': 'proposito', 'Identidad': 'proposito', 'Motivación': 'proposito',
-  'Crecimiento': 'proposito', 'Momentos de cambio': 'proposito',
+  'Crecimiento': 'proposito', 'Momentos de cambio': 'proposito', 'Espiritualidad': 'proposito',
 };
 
 // ─── Hábitos (estado local, sin DB aún) ──────────────────────────────────────
