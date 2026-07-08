@@ -7,7 +7,7 @@
 
 ## 2026-07-08 — Joaquín (sesión 56)
 
-**Tocado:** `app/(tabs)/conexiones.tsx`, `app/(tabs)/index.tsx`, `app/progreso.tsx`, `screens/CoachReservasScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/CoachResourcesScreen.tsx`
+**Tocado:** `app/(tabs)/conexiones.tsx`, `app/(tabs)/index.tsx`, `app/progreso.tsx`, `screens/CoachReservasScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/CoachResourcesScreen.tsx`, `SCHEMA.md`
 
 **Resumen:**
 - **Bug re-book card (abierto desde sesión 50):** `loadRebook` filtraba solo `status = 'completada'` pero los bookings reales se quedan en `'confirmada'`. Fix: mismo patrón OR que ya usaba `progreso.tsx` — `.or('status.eq.completada,and(status.eq.confirmada,scheduled_date.lt.${today})')`. También se agrega filtro `availability_status = 'activo'` para no proponer coaches en pausa.
@@ -15,6 +15,7 @@
 - **"Para vos" en Conexiones:** sección con coaches sugeridos según respuestas de `user_quiz_answers` (topic + professional_type). Horizontal ScrollView con avatares, link "Cambiar" al quiz.
 - **Bugs rápidos:** "Ver todos" en Conexiones ya activa `setSelectedChip(null)`. Coach names en Progreso: fix del join de dos pasos `bookings.coach_id → coaches.id → coaches.profile_id → profiles.name`. Fix botones "Biblioteca VIVE" en `CoachResourcesScreen` usando `VITA_TOOL_MAP`. Limpieza de `console.log` de debug en `CoachReservasScreen` y `ProfesionalScreen`.
 - **"Áreas trabajadas" en Progreso:** reemplaza el `3` hardcodeado por conteo real de áreas únicas (5 categorías) mapeadas desde los topics de `coach_topics` de los coaches con los que el usuario tuvo sesiones.
+- **Bug taxonomías cerrado:** faltaban 4 subtemas de AXES en `TOPIC_TO_AREA` (progreso) y `QUIZ_TOPIC_MAP` (conexiones): `Hábitos mentales → trabajo`, `Sexualidad → salud`, `Espiritualidad → proposito`, `Soledad → emocion`. Ahora los 28 subtemas de AXES están cubiertos en ambos mapas. Punto 17 de SCHEMA.md actualizado a cerrado.
 
 **Pendiente para la próxima sesión:**
 - Rediseño pantalla Recursos — BLOQUEADO esperando decisión de Andre
@@ -22,7 +23,6 @@
 - Google OAuth + push notifications — requieren EAS dev build
 - Daily.co — requiere pago para activar
 - Flujo "Reprogramar" del coach — roto, sin definición de producto
-- Bug taxonomías: cards de tema en Conexiones devuelven 0 resultados (TOPICS 9 labels vs AXES 28 subtemas — no coinciden textualmente, decisión de producto pendiente)
 
 ---
 
