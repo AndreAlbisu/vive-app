@@ -82,12 +82,18 @@ function firstToolInAxis(axis: Axis, exclude: Set<string>): string | null {
  * prefiriendo un recurso de coach real cuando existe para ese eje.
  * Devuelve null cuando no hay ninguna señal → la UI muestra el CTA de check-in.
  */
+export type RecommendationResult = {
+  reco: Reco | null;
+  interestAxes: Set<Axis>;   // ejes que le interesan al usuario (para rankear la biblioteca)
+  excludeId: string | null;  // id del recurso ya mostrado en la card (no repetir en el carrusel)
+};
+
 export function useRecommendedResource(params: {
   userId: string | undefined;
   todayMood: MoodLite | undefined;
   library: CoachResourceLite[];
   recentlyDone: Set<string>;
-}): Reco | null {
+}): RecommendationResult {
   const { userId, todayMood, library, recentlyDone } = params;
   const [quizTopic, setQuizTopic] = useState<string | null>(null);
 
@@ -101,7 +107,7 @@ export function useRecommendedResource(params: {
       .then(({ data }) => setQuizTopic((data?.topic as string) ?? null));
   }, [userId]);
 
-  return useMemo<Reco | null>(() => {
+  const reco = useMemo<Reco | null>(() => {
     // 1. ÁNIMO DE HOY (lidera) — recurso de VITA según el estado.
     if (todayMood) {
       const cfg = MOOD_CFG[todayMood.mood_id];
@@ -146,4 +152,22 @@ export function useRecommendedResource(params: {
     // 3. Sin señal → null (la UI cae al CTA de check-in de ánimo).
     return null;
   }, [todayMood, quizTopic, library, recentlyDone]);
+
+  // Ejes de interés del usuario (quiz + comportamiento). Se exponen para rankear
+  // la biblioteca de coaches por tema (no solo por recencia).
+  const interestAxes = useMemo<Set<Axis>>(() => {
+    const s = new Set<Axis>();
+    const quiz = quizTopic ? QUIZ_AXIS[quizTopic] : null;
+    if (quiz) s.add(quiz.axis);
+    const dom = dominantAxis([...recentlyDone]);
+    if (dom) s.add(dom);
+    return s;
+  }, [quizTopic, recentlyDone]);
+
+  return {
+    reco,
+    interestAxes,
+    // el recurso de coach que ya muestra la card no se repite en el carrusel
+    excludeId: reco?.kind === 'coach' ? reco.resource.id : null,
+  };
 }
