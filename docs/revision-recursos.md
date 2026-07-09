@@ -20,17 +20,21 @@ transaccional (o pasa todo o no pasa nada), con el copy y las notificaciones ya 
 ```sql
 SELECT * FROM cola_revision;                                  -- la cola completa
 
-SELECT revisar_aprobar('PROPOSAL_ID');                        -- publica usando los ejes propuestos
-SELECT revisar_aprobar('PROPOSAL_ID', ARRAY['mente','alma']); -- o pisando los ejes
+SELECT revisar_aprobar('PROPOSAL_ID');                              -- ejes + subtema propuestos
+SELECT revisar_aprobar('PROPOSAL_ID', ARRAY['mente','alma']);       -- pisando los ejes
+SELECT revisar_aprobar('PROPOSAL_ID', ARRAY['mente'], ARRAY['Ansiedad','Estrés físico']); -- + subtemas
 SELECT revisar_ajustes('PROPOSAL_ID', 'qué está bien + qué falta + invitación a reenviar');
 SELECT revisar_descartar('PROPOSAL_ID', 'motivo — solo fuera de scope, nunca por calidad');
 ```
 
 `revisar_aprobar` devuelve el `RESOURCE_ID` (útil para linkear tags a mano después).
 Las funciones resuelven solas el `attributed_to_coach_id` vía `coaches.profile_id` y
-rechazan propuestas que no estén en `enviada`. Los tags propuestos siguen siendo
-decisión manual aparte (paso 3 de abajo). Los bloques siguientes son la versión
-desplegada de lo mismo — referencia y fallback.
+rechazan propuestas que no estén en `enviada`. **Desde el 09/07/2026 `revisar_aprobar`
+también materializa el `topic` propuesto en `resource_topics`** (nivel fino de taxonomía,
+los 28 subtemas de AXES) — antes `topic` era solo una pista textual y no quedaba linkeado.
+El 3er param `p_topics` permite pisar/extender los subtemas (ej. si el recurso cubre más
+de uno). Los tags propuestos siguen siendo decisión manual aparte (paso 3 de abajo).
+Los bloques siguientes son la versión desplegada de lo mismo — referencia y fallback.
 
 ## 1. Ver la cola
 

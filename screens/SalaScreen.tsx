@@ -74,8 +74,11 @@ function getSessionState(booking: ActiveBooking): SessionState {
     const startMs = new Date(y, mo - 1, d, h, mi).getTime();
     const endMs = startMs + ((booking.duration_minutes ?? 60) * 60_000);
     const now = Date.now();
-    if (now >= startMs - 10 * 60_000 && now <= endMs + 15 * 60_000) return 'live';
-    return 'confirmada';
+    if (now < startMs - 10 * 60_000) return 'confirmada';   // sesión futura
+    if (now <= endMs) return 'live';                        // por comenzar / en curso
+    // La llamada ya terminó pero el cron (complete_confirmed_sessions) todavía no
+    // marcó 'completada' — mostramos la tarjeta de reprogramar de una, sin esperar.
+    return now < endMs + 24 * 60 * 60_000 ? 'finalizada' : 'none';
   }
   return 'none';
 }
@@ -145,6 +148,7 @@ export default function SalaScreen() {
   const [sessionState, setSessionState] = useState<SessionState>('none');
   const [isCancelling, setIsCancelling] = useState(false);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [isAddingCalendar, setIsAddingCalendar] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reduceMotion, setReduceMotion] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -275,7 +279,7 @@ export default function SalaScreen() {
           .gte('scheduled_date', todayStr)
           .order('scheduled_date', { ascending: true })
           .order('scheduled_time', { ascending: true })
-          .limit(1),
+          .limit(10),
         supabase
           .from('bookings')
           .select('id, scheduled_date, scheduled_time, status, user_message, duration_minutes, meeting_url')
@@ -323,12 +327,21 @@ export default function SalaScreen() {
           avatarUrl: recipientAvatarUrl,
         });
 
-        const booking: ActiveBooking = (activeBookingRes.data?.[0] ?? recentCompletedRes.data?.[0] ?? null) as ActiveBooking;
+        // Entre las reservas pendiente/confirmada priorizamos la próxima sesión real
+        // (pendiente / por comenzar / en curso). Solo si no hay ninguna vigente
+        // mostramos la última que ya terminó hoy como tarjeta de reprogramar —
+        // así una sesión pasada no tapa una futura ya reservada.
+        const activeList = (activeBookingRes.data ?? []) as NonNullable<ActiveBooking>[];
+        const upcoming = activeList.find(b => getSessionState(b) !== 'finalizada');
+        const endedActive = [...activeList].reverse().find(b => getSessionState(b) === 'finalizada');
+        const booking: ActiveBooking = upcoming ?? endedActive ?? (recentCompletedRes.data?.[0] as ActiveBooking) ?? null;
+        const state = getSessionState(booking);
         setActiveBooking(booking);
-        setSessionState(getSessionState(booking));
+        setSessionState(state);
 
-        // Si la sesión está confirmada pero no tiene meeting_url, crear la sala en segundo plano
-        if (booking?.status === 'confirmada' && !booking.meeting_url) {
+        // Si la sesión está confirmada pero no tiene meeting_url, crear la sala en segundo plano.
+        // No la creamos para una sesión que ya terminó (finalizada) — no tiene sentido.
+        if (booking?.status === 'confirmada' && !booking.meeting_url && state !== 'finalizada') {
           setIsCreatingRoom(true);
           createOrGetMeetingUrl(booking.id).then(url => {
             if (url && mounted) {
@@ -442,28 +455,46 @@ export default function SalaScreen() {
   }
 
   async function handleAddToCalendar() {
-    if (!activeBooking) return;
-    const { status } = await Calendar.requestCalendarPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Sin permiso', 'Necesitamos acceso al calendario para agregar la sesión.');
-      return;
+    if (!activeBooking || isAddingCalendar) return;  // corta el doble-tap
+    setIsAddingCalendar(true);
+    try {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Sin permiso', 'Necesitamos acceso al calendario para agregar la sesión.');
+        return;
+      }
+      const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+      const writable = cals.find(c => c.allowsModifications);
+      if (!writable) return;
+      const [y, mo, d] = activeBooking.scheduled_date.split('-').map(Number);
+      const [h, mi] = activeBooking.scheduled_time.split(':').map(Number);
+      const startDate = new Date(y, mo - 1, d, h, mi, 0);
+      const dur = activeBooking.duration_minutes ?? 60;
+      const endDate = new Date(startDate.getTime() + dur * 60_000);
+      const title = `Sesión con ${recipientProfile?.name ?? 'coach'} — Vive`;
+
+      // Evitar duplicados: si ya existe un evento igual (mismo título y arranque)
+      // en ese rango, no lo agregamos de nuevo (bug de tap repetido).
+      const existing = await Calendar.getEventsAsync([writable.id], startDate, endDate);
+      const alreadyThere = existing.some(
+        e => e.title === title && new Date(e.startDate).getTime() === startDate.getTime(),
+      );
+      if (alreadyThere) {
+        Alert.alert('Ya agendada', 'Esta sesión ya está en tu calendario.');
+        return;
+      }
+
+      await Calendar.createEventAsync(writable.id, {
+        title,
+        startDate,
+        endDate,
+        notes: activeBooking.meeting_url ? `Videollamada: ${activeBooking.meeting_url}` : undefined,
+        location: activeBooking.meeting_url ?? undefined,
+      });
+      Alert.alert('Listo ✓', 'La sesión fue agregada a tu calendario.');
+    } finally {
+      setIsAddingCalendar(false);
     }
-    const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-    const writable = cals.find(c => c.allowsModifications);
-    if (!writable) return;
-    const [y, mo, d] = activeBooking.scheduled_date.split('-').map(Number);
-    const [h, mi] = activeBooking.scheduled_time.split(':').map(Number);
-    const startDate = new Date(y, mo - 1, d, h, mi, 0);
-    const dur = activeBooking.duration_minutes ?? 60;
-    const endDate = new Date(startDate.getTime() + dur * 60_000);
-    await Calendar.createEventAsync(writable.id, {
-      title: `Sesión con ${recipientProfile?.name ?? 'coach'} — Vive`,
-      startDate,
-      endDate,
-      notes: activeBooking.meeting_url ? `Videollamada: ${activeBooking.meeting_url}` : undefined,
-      location: activeBooking.meeting_url ?? undefined,
-    });
-    Alert.alert('Listo ✓', 'La sesión fue agregada a tu calendario.');
   }
 
   async function handleCancelBooking() {
@@ -774,11 +805,13 @@ export default function SalaScreen() {
                 {isCreatingRoom ? 'Preparando sala…' : 'Unirse a la llamada'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.subBtn} onPress={handleAddToCalendar} activeOpacity={0.75}>
-              <Text style={styles.subBtnText}>Agendar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.subBtn} onPress={handleReschedule} activeOpacity={0.75}>
-              <Text style={styles.subBtnText}>Reprogramar</Text>
+            <TouchableOpacity
+              style={styles.subBtn}
+              onPress={handleAddToCalendar}
+              disabled={isAddingCalendar}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.subBtnText}>{isAddingCalendar ? 'Agendando…' : 'Agendar'}</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.sessionCardHint}>Disponible 10 min antes de la sesión</Text>

@@ -20,6 +20,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { useResourceProgress } from '@/hooks/useResourceProgress';
+import { useRecommendedResource, type Reco } from '@/hooks/useRecommendedResource';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -39,13 +40,6 @@ interface ToolGroup {
   toolIds: string[];
 }
 
-interface CoachResource {
-  id: string;
-  toolId: string;
-  icon: IoniconName;
-  duration: string;
-  note?: string;
-}
 
 // ─── Datos ───────────────────────────────────────────────────────────────────
 const TOOLS: Tool[] = [
@@ -83,34 +77,6 @@ const TOOL_GROUPS: ToolGroup[] = [
   },
 ];
 
-// Mapeo mood_id → recurso sugerido
-const MOOD_TO_RESOURCE: Record<number, { toolId: string; whyText: string }> = {
-  1: { toolId: 'gratitud',    whyText: 'Registrar lo que agradecés ayuda a salir del bajón' },
-  2: { toolId: 'escaner',     whyText: 'Reconectar con el cuerpo cuando la energía está baja' },
-  3: { toolId: 'respiracion', whyText: 'Centrar la mente y llegar con más claridad al día' },
-  4: { toolId: 'meditacion',  whyText: 'Cuando estás bien es el mejor momento para el hábito' },
-  5: { toolId: 'meditacion',  whyText: 'Consolidar el bienestar que ya tenés' },
-};
-
-const COACH_NAME = 'María González';
-const COACH_INITIALS = 'MG';
-
-const COACH_RESOURCES: CoachResource[] = [
-  {
-    id: 'cr1',
-    toolId: 'respiracion',
-    icon: 'cloud-outline',
-    duration: '5 min',
-    note: '"Cuando la cabeza va rápido, este ejercicio baja la activación en menos de 5 minutos."',
-  },
-  {
-    id: 'cr2',
-    toolId: 'gratitud',
-    icon: 'heart-outline',
-    duration: '10 min',
-  },
-];
-
 // ─── Colores locales ─────────────────────────────────────────────────────────
 const FOREST       = '#3A4F2A';
 const FOREST_SOFT  = '#6B7A56';
@@ -134,58 +100,69 @@ function StreakChip({ streak, weekActivity }: { streak: number; weekActivity: bo
   );
 }
 
-// ─── MoodContextBlock ─────────────────────────────────────────────────────────
-function MoodContextBlock({
-  moodEntry,
+// ─── RecommendedCard ──────────────────────────────────────────────────────────
+// Tarjeta única que reemplaza al viejo bloque de mood + la CoachSection falsa.
+// La lógica de qué recomendar vive en useRecommendedResource; acá solo se pinta.
+function RecommendedCard({
+  reco,
   onGoToCheckIn,
 }: {
-  moodEntry?: { mood_id: number; mood_label: string };
+  reco: Reco | null;
   onGoToCheckIn: () => void;
 }) {
   const router = useRouter();
-  const suggestion = moodEntry ? MOOD_TO_RESOURCE[moodEntry.mood_id] : null;
-  const suggestedTool = suggestion ? TOOL_MAP[suggestion.toolId] : null;
+
+  // Sin señal (ni ánimo ni tema ni historial) → invitamos al check-in, que es
+  // justo lo que destraba la recomendación personalizada.
+  if (!reco) {
+    return (
+      <LinearGradient
+        colors={['#42542F', '#354526']}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={s.moodCard}>
+        <Text style={s.moodEyebrow}>CHECK-IN DE ÁNIMO</Text>
+        <Text style={s.moodTitle}>{'¿Cómo te sentís hoy?'}</Text>
+        <TouchableOpacity style={s.moodCta} onPress={onGoToCheckIn} activeOpacity={0.8}>
+          <Ionicons name="happy-outline" size={20} color={TERRA_SOFT} />
+          <Text style={s.moodCtaText}>Registrar mi estado de ánimo</Text>
+          <Ionicons name="chevron-forward" size={16} color={TERRA_SOFT} />
+        </TouchableOpacity>
+      </LinearGradient>
+    );
+  }
+
+  // Datos de presentación según el tipo de recurso recomendado.
+  let icon: IoniconName;
+  let title: string;
+  let onPress: () => void;
+  if (reco.kind === 'tool') {
+    const tool = TOOL_MAP[reco.toolId];
+    icon = tool?.icon ?? 'sparkles-outline';
+    title = tool?.label ?? reco.toolId;
+    onPress = () => { if (tool?.route) router.push(tool.route as any); };
+  } else {
+    icon = LIBRARY_TYPE_ICON[reco.resource.type] ?? 'book-outline';
+    title = reco.resource.title;
+    onPress = () => router.push({ pathname: '/recurso', params: { id: reco.resource.id } });
+  }
 
   return (
     <LinearGradient
       colors={['#42542F', '#354526']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       style={s.moodCard}>
-
-      {moodEntry && suggestedTool ? (
-        <>
-          <Text style={s.moodEyebrow}>SEGÚN TU CHECK-IN DE HOY</Text>
-          <Text style={s.moodTitle}>
-            {'Te sentiste '}
-            <Text style={s.moodEmphasis}>{moodEntry.mood_label.toLowerCase()}</Text>
-            {' esta mañana. Esto te puede ayudar ahora:'}
-          </Text>
-          <TouchableOpacity
-            style={s.moodSuggestion}
-            onPress={() => { if (suggestedTool.route) router.push(suggestedTool.route as any); }}
-            activeOpacity={0.8}>
-            <View style={s.moodSuggestionIcon}>
-              <Ionicons name={suggestedTool.icon} size={20} color={TERRA_SOFT} />
-            </View>
-            <View style={s.moodSuggestionText}>
-              <Text style={s.moodSuggestionTitle}>{suggestedTool.label}</Text>
-              <Text style={s.moodSuggestionWhy}>{suggestedTool.duration} · {suggestion!.whyText}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={TERRA_SOFT} />
-          </TouchableOpacity>
-        </>
-      ) : (
-        <>
-          <Text style={s.moodEyebrow}>CHECK-IN DE ÁNIMO</Text>
-          <Text style={s.moodTitle}>{'¿Cómo te sentís hoy?'}</Text>
-          <TouchableOpacity style={s.moodCta} onPress={onGoToCheckIn} activeOpacity={0.8}>
-            <Ionicons name="happy-outline" size={20} color={TERRA_SOFT} />
-            <Text style={s.moodCtaText}>Registrar mi estado de ánimo</Text>
-            <Ionicons name="chevron-forward" size={16} color={TERRA_SOFT} />
-          </TouchableOpacity>
-        </>
-      )}
+      <Text style={s.moodEyebrow}>{reco.eyebrow}</Text>
+      <Text style={s.moodTitle}>Esto te puede servir ahora:</Text>
+      <TouchableOpacity style={s.moodSuggestion} onPress={onPress} activeOpacity={0.8}>
+        <View style={s.moodSuggestionIcon}>
+          <Ionicons name={icon} size={20} color={TERRA_SOFT} />
+        </View>
+        <View style={s.moodSuggestionText}>
+          <Text style={s.moodSuggestionTitle}>{title}</Text>
+          <Text style={s.moodSuggestionWhy}>{reco.why}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={TERRA_SOFT} />
+      </TouchableOpacity>
     </LinearGradient>
   );
 }
@@ -235,16 +212,21 @@ type LibraryResource = {
   duration_min: number | null;
   attributed_to_coach_id: string;
   coachName: string;
+  axes: string[];   // resource_axes — alimenta la recomendación por eje
 };
 
 const LIBRARY_TYPE_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   audio: 'volume-medium-outline',
+  podcast: 'mic-outline',
+  video: 'videocam-outline',
   guia_pasos: 'list-outline',
   lectura_breve: 'book-outline',
 };
 
 const LIBRARY_TYPE_LABEL: Record<string, string> = {
-  audio: 'Audio',
+  audio: 'Audio guía',
+  podcast: 'Podcast/Charla',
+  video: 'Video',
   guia_pasos: 'Guía de pasos',
   lectura_breve: 'Lectura breve',
 };
@@ -263,7 +245,12 @@ function CoachLibrarySection({
 
   return (
     <View style={{ marginTop: 8 }}>
-      <Text style={s.sectionTitle}>Recursos de nuestros coaches</Text>
+      <View style={s.libraryHeaderRow}>
+        <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Recursos de nuestros coaches</Text>
+        <TouchableOpacity onPress={() => router.push('/explorar-recursos')} hitSlop={8} activeOpacity={0.7}>
+          <Text style={s.exploreLink}>Explorar todo →</Text>
+        </TouchableOpacity>
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.libraryRow}>
         {resources.map(r => {
           const isSaved = savedIds.has(r.id);
@@ -296,62 +283,6 @@ function CoachLibrarySection({
   );
 }
 
-// ─── CoachSection ─────────────────────────────────────────────────────────────
-function CoachSection({ completedInLast7Days }: { completedInLast7Days: Set<string> }) {
-  const newCount = COACH_RESOURCES.filter(r => !completedInLast7Days.has(r.toolId)).length;
-  const hasNote = !!COACH_RESOURCES[0]?.note;
-
-  return (
-    <View style={s.coachCard}>
-      {/* Header */}
-      <View style={s.coachHeader}>
-        <LinearGradient
-          colors={['#C06B4A', '#A5583B']}
-          style={s.coachAvatar}>
-          <Text style={s.coachInitials}>{COACH_INITIALS}</Text>
-        </LinearGradient>
-        <View style={s.coachHeaderText}>
-          <Text style={s.coachName}>{COACH_NAME}</Text>
-          <Text style={s.coachUpdated}>Actualizado hace 3 días</Text>
-        </View>
-        {newCount > 0 && (
-          <View style={s.coachBadge}>
-            <Text style={s.coachBadgeText}>{newCount} nuevo{newCount !== 1 ? 's' : ''}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Nota del coach */}
-      {hasNote && (
-        <Text style={s.coachNote}>{COACH_RESOURCES[0].note}</Text>
-      )}
-
-      {/* Recursos */}
-      <View style={s.coachResources}>
-        {COACH_RESOURCES.map(r => {
-          const tool = TOOL_MAP[r.toolId];
-          const done = completedInLast7Days.has(r.toolId);
-          return (
-            <View key={r.id} style={s.coachResRow}>
-              <View style={s.coachResIcon}>
-                <Ionicons name={r.icon} size={18} color={FOREST} />
-              </View>
-              <View style={s.coachResText}>
-                <Text style={s.coachResTitle}>{tool?.label ?? r.toolId}</Text>
-                <Text style={s.coachResSub}>
-                  {r.duration} · {done ? 'completado' : 'sin completar'}
-                </Text>
-              </View>
-              <View style={[s.checkCircle, done && s.checkCircleDone]}>
-                {done && <Ionicons name="checkmark" size={11} color="#fff" />}
-              </View>
-            </View>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
 
 // ─── ToolCard ─────────────────────────────────────────────────────────────────
 function ToolCard({
@@ -385,51 +316,42 @@ function ToolCard({
   );
 }
 
-// ─── ToolGroupSection ─────────────────────────────────────────────────────────
-function ToolGroupSection({
-  group,
+// ─── ToolsCarousel ────────────────────────────────────────────────────────────
+// Todas las tools de VITA en un solo carrusel horizontal (antes: 3 grillas
+// verticales). Comprime a una fila y le deja espacio a los recursos de coach.
+// El orden preserva la intención de TOOL_GROUPS (calma → reflexión → descanso).
+function ToolsCarousel({
   savedIds,
   onSave,
 }: {
-  group: ToolGroup;
   savedIds: Set<string>;
   onSave: (id: string) => void;
 }) {
-  const tools = group.toolIds
-    .map(id => TOOL_MAP[id])
-    .filter(Boolean);
-
-  if (tools.length === 0) return null;
-
-  // Siempre renderizar en filas de 3
-  const rows: Tool[][] = [];
-  for (let i = 0; i < tools.length; i += 3) {
-    rows.push(tools.slice(i, i + 3));
+  const seen = new Set<string>();
+  const tools: Tool[] = [];
+  for (const g of TOOL_GROUPS) {
+    for (const id of g.toolIds) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const t = TOOL_MAP[id];
+      if (t) tools.push(t);
+    }
   }
 
   return (
-    <View style={s.groupSection}>
-      <Text style={s.groupTitle}>{group.title}</Text>
-      <Text style={s.groupSubtitle}>{group.subtitle}</Text>
-      <View style={s.grid}>
-        {rows.map((row, ri) => (
-          <View key={ri} style={s.gridRow}>
-            {row.map(tool => (
-              <ToolCard
-                key={tool.id}
-                tool={tool}
-                saved={savedIds.has(tool.id)}
-                onSave={() => onSave(tool.id)}
-              />
-            ))}
-            {/* Celdas vacías para mantener el grid de 3 columnas */}
-            {row.length < 3 && Array.from({ length: 3 - row.length }).map((_, i) => (
-              <View key={`empty-${i}`} style={s.toolCardPlaceholder} />
-            ))}
-          </View>
-        ))}
-      </View>
-    </View>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={s.toolsRow}>
+      {tools.map(tool => (
+        <ToolCard
+          key={tool.id}
+          tool={tool}
+          saved={savedIds.has(tool.id)}
+          onSave={() => onSave(tool.id)}
+        />
+      ))}
+    </ScrollView>
   );
 }
 
@@ -444,7 +366,7 @@ export default function RecursosScreen() {
   useEffect(() => {
     supabase
       .from('resources')
-      .select('id, type, title, duration_min, attributed_to_coach_id, profiles!inner(name)')
+      .select('id, type, title, duration_min, attributed_to_coach_id, profiles!inner(name), resource_axes(axis)')
       .not('attributed_to_coach_id', 'is', null)
       .is('retired_at', null)
       .order('created_at', { ascending: false })
@@ -458,6 +380,7 @@ export default function RecursosScreen() {
           duration_min: r.duration_min,
           attributed_to_coach_id: r.attributed_to_coach_id,
           coachName: r.profiles?.name ?? 'un coach',
+          axes: (r.resource_axes ?? []).map((a: any) => a.axis),
         })));
       });
   }, []);
@@ -467,6 +390,13 @@ export default function RecursosScreen() {
 
   const { streak, weekActivity, lastInProgress, completedInLast7Days } =
     useResourceProgress(user?.id);
+
+  const reco = useRecommendedResource({
+    userId: user?.id,
+    todayMood: todayMoodEntry,
+    library: libraryResources,
+    recentlyDone: completedInLast7Days,
+  });
 
   // ── Cargar guardados ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -535,9 +465,9 @@ export default function RecursosScreen() {
             </View>
           </View>
 
-          {/* 2. Bloque de contexto según mood */}
-          <MoodContextBlock
-            moodEntry={todayMoodEntry}
+          {/* 2. Recomendación personalizada (ánimo + tema) */}
+          <RecommendedCard
+            reco={reco}
             onGoToCheckIn={() => router.push('/')}
           />
 
@@ -546,19 +476,9 @@ export default function RecursosScreen() {
             <ContinueCard {...lastInProgress} />
           )}
 
-          {/* 4. De tu coach */}
-          <Text style={s.sectionTitle}>De tu coach</Text>
-          <CoachSection completedInLast7Days={completedInLast7Days} />
-
-          {/* 5. Herramientas agrupadas */}
-          {TOOL_GROUPS.map(group => (
-            <ToolGroupSection
-              key={group.id}
-              group={group}
-              savedIds={savedIds}
-              onSave={toggleSave}
-            />
-          ))}
+          {/* 4. Tus herramientas (carrusel horizontal) */}
+          <Text style={s.sectionTitle}>Tus herramientas</Text>
+          <ToolsCarousel savedIds={savedIds} onSave={toggleSave} />
 
           {/* 6. Biblioteca de recursos de coaches */}
           <CoachLibrarySection
@@ -749,6 +669,20 @@ const s = StyleSheet.create({
     marginTop: 8,
     marginBottom: 10,
   },
+  libraryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  sectionTitleFlush: { marginTop: 0, marginBottom: 0, flexShrink: 1 },
+  exploreLink: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: TERRACOTTA,
+    marginLeft: 10,
+  },
   coachCard: {
     backgroundColor: GLASS_BG,
     borderRadius: 22,
@@ -906,20 +840,20 @@ const s = StyleSheet.create({
   gridRow: { flexDirection: 'row', gap: 10 },
 
   // ── ToolCard ──────────────────────────────────────────────────────────────
+  toolsRow: { gap: 10, paddingBottom: 4, paddingRight: 8 },
   toolCard: {
-    flex: 1,
+    width: 108,
     backgroundColor: GLASS_BG,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
     paddingVertical: 18,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    minHeight: 100,
+    minHeight: 108,
   },
-  toolCardPlaceholder: { flex: 1 },
   toolIconWrap: {
     width: 44,
     height: 44,

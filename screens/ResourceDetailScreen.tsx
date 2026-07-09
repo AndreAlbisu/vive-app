@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
@@ -26,13 +27,17 @@ type Resource = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  audio: 'Audio',
+  audio: 'Audio guía',
+  podcast: 'Podcast/Charla',
+  video: 'Video',
   guia_pasos: 'Guía de pasos',
   lectura_breve: 'Lectura breve',
 };
 
 const TYPE_ICONS: Record<string, string> = {
   audio: 'volume-high',
+  podcast: 'podcast',
+  video: 'video-outline',
   guia_pasos: 'format-list-numbered',
   lectura_breve: 'book-open-variant',
 };
@@ -77,6 +82,15 @@ export default function ResourceDetailScreen() {
   const player = useAudioPlayer(null);
   const playerStatus = useAudioPlayerStatus(player);
   const [audioLoaded, setAudioLoaded] = useState(false);
+
+  // Video: mismo criterio que el audio — el source se setea cuando carga el
+  // recurso (replace), no en el render inicial (resource arranca en null).
+  const videoPlayer = useVideoPlayer(null, p => { p.loop = false; });
+  useEffect(() => {
+    if (resource?.type === 'video' && resource.content?.url) {
+      videoPlayer.replace({ uri: resource.content.url });
+    }
+  }, [resource, videoPlayer]);
 
   // 'none' → 'pending' (listo para votar) → 'submitted' (ya votó)
   const [feedbackState, setFeedbackState] = useState<'none' | 'pending' | 'submitted'>('none');
@@ -457,7 +471,7 @@ export default function ResourceDetailScreen() {
 
         {/* Contenido — la experiencia de uso */}
         <View style={s.contentCard}>
-          {resource.type === 'audio' && !!resource.content?.url && (
+          {(resource.type === 'audio' || resource.type === 'podcast') && !!resource.content?.url && (
             isExternalAudio(resource.content.url) ? (
               <TouchableOpacity
                 style={s.audioBtn}
@@ -488,6 +502,16 @@ export default function ResourceDetailScreen() {
                 )}
               </View>
             )
+          )}
+
+          {resource.type === 'video' && !!resource.content?.url && (
+            <VideoView
+              player={videoPlayer}
+              style={s.video}
+              contentFit="contain"
+              allowsFullscreen
+              nativeControls
+            />
           )}
 
           {resource.type === 'guia_pasos' && Array.isArray(resource.content?.steps) && (
@@ -664,6 +688,8 @@ const s = StyleSheet.create({
   },
   audioBtnText: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#565E32' },
   audioTime: { fontFamily: ViveFonts.medium, fontSize: 12, color: '#87835C', textAlign: 'center' },
+
+  video: { width: '100%', aspectRatio: 16 / 9, borderRadius: 12, backgroundColor: '#000', overflow: 'hidden' },
 
   step: { flexDirection: 'row', gap: 12 },
   stepNumber: {

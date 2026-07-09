@@ -93,6 +93,7 @@ export default function SessionsScreen() {
   const [nextSession, setNextSession] = useState<NextSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [joinable, setJoinable] = useState(false);
+  const [isAddingCalendar, setIsAddingCalendar] = useState(false);
   const { unreadSalaIds } = useUnreadSalas({ userId: user?.id ?? null, role: 'user' });
 
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -244,27 +245,44 @@ export default function SessionsScreen() {
   }
 
   async function handleAddToCalendar() {
-    if (!nextSession) return;
-    const { status } = await Calendar.requestCalendarPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Sin permiso', 'Necesitamos acceso al calendario para agregar la sesión.');
-      return;
+    if (!nextSession || isAddingCalendar) return;  // corta el doble-tap
+    setIsAddingCalendar(true);
+    try {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Sin permiso', 'Necesitamos acceso al calendario para agregar la sesión.');
+        return;
+      }
+      const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+      const writable = cals.find(c => c.allowsModifications);
+      if (!writable) return;
+      const [y, mo, d] = nextSession.scheduled_date.split('-').map(Number);
+      const [h, mi] = nextSession.scheduled_time.split(':').map(Number);
+      const startDate = new Date(y, mo - 1, d, h, mi, 0);
+      const dur = nextSession.duration_minutes ?? 60;
+      const endDate = new Date(startDate.getTime() + dur * 60_000);
+      const title = `Sesión con ${nextSession.coachName} — Vive`;
+
+      // Evitar duplicados: si ya existe un evento igual en ese rango, no re-agregar.
+      const existing = await Calendar.getEventsAsync([writable.id], startDate, endDate);
+      const alreadyThere = existing.some(
+        e => e.title === title && new Date(e.startDate).getTime() === startDate.getTime(),
+      );
+      if (alreadyThere) {
+        Alert.alert('Ya agendada', 'Esta sesión ya está en tu calendario.');
+        return;
+      }
+
+      await Calendar.createEventAsync(writable.id, {
+        title,
+        startDate,
+        endDate,
+        notes: nextSession.meeting_url ? `Videollamada: ${nextSession.meeting_url}` : undefined,
+      });
+      Alert.alert('Listo', 'La sesión fue agregada a tu calendario.');
+    } finally {
+      setIsAddingCalendar(false);
     }
-    const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-    const writable = cals.find(c => c.allowsModifications);
-    if (!writable) return;
-    const [y, mo, d] = nextSession.scheduled_date.split('-').map(Number);
-    const [h, mi] = nextSession.scheduled_time.split(':').map(Number);
-    const startDate = new Date(y, mo - 1, d, h, mi, 0);
-    const dur = nextSession.duration_minutes ?? 60;
-    const endDate = new Date(startDate.getTime() + dur * 60_000);
-    await Calendar.createEventAsync(writable.id, {
-      title: `Sesión con ${nextSession.coachName} — Vive`,
-      startDate,
-      endDate,
-      notes: nextSession.meeting_url ? `Videollamada: ${nextSession.meeting_url}` : undefined,
-    });
-    Alert.alert('Listo', 'La sesión fue agregada a tu calendario.');
   }
 
   return (
@@ -357,9 +375,14 @@ export default function SessionsScreen() {
                         <MaterialCommunityIcons name="video" size={14} color="#F3EEDF" />
                         <Text style={styles.heroBtnPrimaryText}>Unirse a la llamada</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.heroBtnGhost} onPress={handleAddToCalendar} activeOpacity={0.75}>
+                      <TouchableOpacity
+                        style={styles.heroBtnGhost}
+                        onPress={handleAddToCalendar}
+                        disabled={isAddingCalendar}
+                        activeOpacity={0.75}
+                      >
                         <MaterialCommunityIcons name="calendar-plus" size={14} color="#F3EEDF" />
-                        <Text style={styles.heroBtnGhostText}>Agendar</Text>
+                        <Text style={styles.heroBtnGhostText}>{isAddingCalendar ? 'Agendando…' : 'Agendar'}</Text>
                       </TouchableOpacity>
                     </>
                   ) : (

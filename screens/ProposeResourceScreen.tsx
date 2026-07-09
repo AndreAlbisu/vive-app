@@ -14,10 +14,12 @@ import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { AXES } from '@/constants/searchData';
 
-type ResourceType = 'audio' | 'guia_pasos' | 'lectura_breve';
+type ResourceType = 'audio' | 'podcast' | 'video' | 'guia_pasos' | 'lectura_breve';
 
 const TYPES: { value: ResourceType; label: string; icon: string }[] = [
-  { value: 'audio', label: 'Audio', icon: 'volume-high' },
+  { value: 'audio', label: 'Audio guía', icon: 'volume-high' },
+  { value: 'podcast', label: 'Podcast/Charla', icon: 'podcast' },
+  { value: 'video', label: 'Video', icon: 'video-outline' },
   { value: 'guia_pasos', label: 'Guía de pasos', icon: 'format-list-numbered' },
   { value: 'lectura_breve', label: 'Lectura breve', icon: 'book-open-variant' },
 ];
@@ -38,7 +40,11 @@ const fadeUp = (anim: Animated.Value) => ({
   transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
 });
 
-const AUDIO_MAX_BYTES = 20 * 1024 * 1024; // límite del bucket resource-audio
+const AUDIO_MAX_BYTES = 20 * 1024 * 1024;  // límite del bucket resource-audio
+const VIDEO_MAX_BYTES = 100 * 1024 * 1024; // límite del bucket resource-video
+
+// audio y podcast comparten mecanismo (archivo de audio → bucket resource-audio)
+const isAudioType = (t: ResourceType | null) => t === 'audio' || t === 'podcast';
 
 export default function ProposeResourceScreen() {
   const router = useRouter();
@@ -63,6 +69,8 @@ export default function ProposeResourceScreen() {
   // Contenido específico por tipo
   const [audioFile, setAudioFile] = useState<{ uri: string; name: string; mimeType?: string } | null>(null);
   const [existingAudioUrl, setExistingAudioUrl] = useState<string | null>(null); // modo edición: audio ya subido
+  const [videoFile, setVideoFile] = useState<{ uri: string; name: string; mimeType?: string } | null>(null);
+  const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null); // modo edición: video ya subido
   const [steps, setSteps] = useState<Step[]>([{ title: '', body: '' }]);
   const [readingPages, setReadingPages] = useState<string[]>(['']);
   const [readingSource, setReadingSource] = useState('');
@@ -125,8 +133,10 @@ export default function ProposeResourceScreen() {
       setReviewerNotes(data.reviewer_notes ?? null);
 
       const content = data.content ?? {};
-      if (data.type === 'audio') {
+      if (data.type === 'audio' || data.type === 'podcast') {
         setExistingAudioUrl(content.url ?? null);
+      } else if (data.type === 'video') {
+        setExistingVideoUrl(content.url ?? null);
       } else if (data.type === 'guia_pasos') {
         setSteps(Array.isArray(content.steps) && content.steps.length > 0
           ? content.steps.map((s: any) => ({ title: s.title ?? '', body: s.body ?? '' }))
@@ -215,6 +225,18 @@ export default function ProposeResourceScreen() {
     setAudioFile({ uri: a.uri, name: a.name ?? 'audio', mimeType: a.mimeType ?? undefined });
   }
 
+  async function pickVideo() {
+    const res = await DocumentPicker.getDocumentAsync({ type: 'video/*', copyToCacheDirectory: true });
+    if (res.canceled || !res.assets?.[0]) return;
+    const a = res.assets[0];
+    if (a.size && a.size > VIDEO_MAX_BYTES) {
+      setSubmitError('El video no puede superar los 100MB. Grabá algo más corto o comprimilo.');
+      return;
+    }
+    setSubmitError(null);
+    setVideoFile({ uri: a.uri, name: a.name ?? 'video', mimeType: a.mimeType ?? undefined });
+  }
+
   function buildContent(): Record<string, any> | null {
     // audio se resuelve en handleSubmit (la subida a Storage es async)
     if (type === 'guia_pasos') {
@@ -242,13 +264,19 @@ export default function ProposeResourceScreen() {
       return;
     }
 
-    if (type === 'audio' && !audioFile && !existingAudioUrl) {
+    if (isAudioType(type) && !audioFile && !existingAudioUrl) {
       setSubmitError('Elegí el archivo de audio.');
       return;
     }
+    if (type === 'video' && !videoFile && !existingVideoUrl) {
+      setSubmitError('Elegí el archivo de video.');
+      return;
+    }
 
-    let content = type === 'audio' ? null : buildContent();
-    if (type !== 'audio' && !content) {
+    // audio/podcast/video suben archivo → content.url se resuelve async abajo
+    const isMediaUpload = isAudioType(type) || type === 'video';
+    let content = isMediaUpload ? null : buildContent();
+    if (!isMediaUpload && !content) {
       if (type === 'guia_pasos') setSubmitError('Agregá al menos un paso con título o contenido.');
       else setSubmitError('Escribí al menos una página de la lectura (mínimo 10 caracteres).');
       return;
@@ -259,8 +287,8 @@ export default function ProposeResourceScreen() {
     setSubmitting(true);
     setSubmitError(null);
 
-    // Audio: subir el archivo a Storage primero; content.url es la URL pública del bucket
-    if (type === 'audio') {
+    // Audio/Podcast: subir el archivo a Storage primero; content.url es la URL pública del bucket
+    if (isAudioType(type)) {
       if (audioFile) {
         try {
           const ext = (audioFile.name.split('.').pop() || 'm4a').toLowerCase();
@@ -282,6 +310,32 @@ export default function ProposeResourceScreen() {
         }
       } else {
         content = { url: existingAudioUrl };
+      }
+    }
+
+    // Video: mismo patrón, bucket resource-video
+    if (type === 'video') {
+      if (videoFile) {
+        try {
+          const ext = (videoFile.name.split('.').pop() || 'mp4').toLowerCase();
+          const path = `${user.id}/${Date.now()}.${ext}`;
+          const bytes = await new File(videoFile.uri).bytes();
+          const { error: uploadError } = await supabase.storage
+            .from('resource-video')
+            .upload(path, bytes, { contentType: videoFile.mimeType ?? 'video/mp4' });
+          if (uploadError) {
+            setSubmitting(false);
+            setSubmitError('No pudimos subir el video. Probá de nuevo en unos minutos.');
+            return;
+          }
+          content = { url: supabase.storage.from('resource-video').getPublicUrl(path).data.publicUrl };
+        } catch {
+          setSubmitting(false);
+          setSubmitError('No pudimos leer el archivo. Probá elegirlo de nuevo.');
+          return;
+        }
+      } else {
+        content = { url: existingVideoUrl };
       }
     }
 
@@ -611,11 +665,13 @@ export default function ProposeResourceScreen() {
             </View>
 
             {/* Contenido específico por tipo */}
-            {type === 'audio' && (
+            {isAudioType(type) && (
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>Archivo de audio</Text>
                 <Text style={styles.fieldHint}>
-                  Subí tu audio grabado (máx. 20MB) — se reproduce directo dentro de VITA.
+                  {type === 'podcast'
+                    ? 'Subí tu charla grabada (máx. 20MB) — se escucha dentro de VITA.'
+                    : 'Subí tu audio grabado (máx. 20MB) — se reproduce directo dentro de VITA.'}
                 </Text>
                 {(audioFile || existingAudioUrl) ? (
                   <View style={styles.audioFileRow}>
@@ -634,6 +690,34 @@ export default function ProposeResourceScreen() {
                   <TouchableOpacity style={styles.audioPickBtn} onPress={pickAudio} activeOpacity={0.75}>
                     <MaterialCommunityIcons name="tray-arrow-up" size={20} color={ViveColors.primary} />
                     <Text style={styles.audioPickText}>Elegir archivo de audio</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {type === 'video' && (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>Archivo de video</Text>
+                <Text style={styles.fieldHint}>
+                  Subí tu video (máx. 100MB) — se reproduce dentro de VITA. Grabá algo corto y liviano.
+                </Text>
+                {(videoFile || existingVideoUrl) ? (
+                  <View style={styles.audioFileRow}>
+                    <MaterialCommunityIcons name="video" size={18} color={ViveColors.primary} />
+                    <Text style={styles.audioFileName} numberOfLines={1}>
+                      {videoFile ? videoFile.name : 'Video ya cargado'}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => { setVideoFile(null); setExistingVideoUrl(null); }}
+                      hitSlop={8}
+                    >
+                      <MaterialCommunityIcons name="close" size={18} color="rgba(135,131,92,0.72)" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.audioPickBtn} onPress={pickVideo} activeOpacity={0.75}>
+                    <MaterialCommunityIcons name="tray-arrow-up" size={20} color={ViveColors.primary} />
+                    <Text style={styles.audioPickText}>Elegir archivo de video</Text>
                   </TouchableOpacity>
                 )}
               </View>

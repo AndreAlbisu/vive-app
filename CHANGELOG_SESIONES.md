@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-07-09 — Andre (sesión 57)
+
+**Tocado:** `screens/SalaScreen.tsx`, `app/(tabs)/index.tsx`, `screens/UserAgendaScreen.tsx` (nuevo), `app/agenda.tsx` (nuevo), `app/(tabs)/recursos.tsx`, `hooks/useRecommendedResource.ts` (nuevo), `screens/ExploreResourcesScreen.tsx` (nuevo), `app/explorar-recursos.tsx` (nuevo), `screens/ProposeResourceScreen.tsx`, `screens/ResourceDetailScreen.tsx`, `scripts/add-resource-topics.sql` (nuevo), `scripts/update-revisar-aprobar-resource-topics.sql` (nuevo), `scripts/add-resource-types-podcast-video.sql` (nuevo), `scripts/add-resource-video-storage.sql` (nuevo), `SCHEMA.md`, `docs/revision-recursos.md`
+
+**Resumen:**
+- **Sala — tarjeta de reprogramar post-llamada:** `getSessionState` ahora devuelve `finalizada` apenas pasa la hora de fin de un booking `confirmada` (antes esperaba ~20 min al cron `complete_confirmed_sessions`); el timer de 30s la refresca sola. Selección de booking en `init` prioriza la próxima sesión real sobre una ya terminada hoy (cierra bug latente donde una pasada tapaba una futura). Sacado el botón "Reprogramar" fijo de la tarjeta confirmada (creaba booking nuevo sin cancelar el confirmado = doble reserva).
+- **Home — "Tu próxima sesión":** el nombre del coach no leía porque se buscaba `bookings.coach_id` (= `coaches.id`) directo en `profiles`; fix con join de 2 pasos `coaches.id → profile_id → profiles.name` (mismo patrón que Progreso, sesión 56). El `coach_id` guardado para "Ver sala" ahora es `profiles.id` (navegación fallback correcta). Nuevo "Ver todas" → `/agenda` (`UserAgendaScreen` "Mis reservas", calendario del usuario espejo de `CoachAgendaScreen`, incluye completadas).
+- **Recursos — recomendación unificada:** `useRecommendedResource` (nuevo) reemplaza el viejo `MoodContextBlock` + la `CoachSection` hardcodeada ("María González"). Cascada explicable con vocabulario de ejes cuerpo/mente/alma: ánimo de hoy lidera (define eje + tono, tool de VITA), sin check-in manda el tema (`user_quiz_answers` / comportamiento) prefiriendo un recurso de coach real. Sin señal → CTA de check-in.
+- **Recursos — layout:** las tools de VITA pasaron de 3 grillas verticales a **un carrusel horizontal único** ("Tus herramientas"), dándole aire a los recursos de coach.
+- **Explorar recursos:** `ExploreResourcesScreen` (`/explorar-recursos`) — filtro por los **28 subtemas de AXES** agrupados por eje (mismo patrón que `search2`) + **filtro secundario por formato** (audio/podcast/video/lectura/guía, AND con el tema), lista filtrada de recursos de coach. Entry point "Explorar todo →" en la home. La home queda curada; el crecimiento del catálogo lo absorbe esta pantalla.
+- **`resource_topics` (tabla nueva):** espejo de `coach_topics` (28 subtemas AXES, sin CHECK), nivel fino de taxonomía para filtrar la biblioteca con la misma lista con la que se etiquetan los coaches (evita una 4ta taxonomía, regla 17). `revisar_aprobar` extendida para materializar `resource_proposals.topic` en `resource_topics` al aprobar (+ param opcional `p_topics`).
+- **Tipos de recurso de coach → 5:** se separó **audio guía** (se HACE) de **podcast/charla** (se ESCUCHA) y se sumó **video** (in-app, no YouTube). Podcast reusa el bucket/player de audio; video tiene bucket propio `resource-video` (100MB) y se reproduce con expo-video (`VideoView`). Formulario, detalle y mapas de ícono/label actualizados.
+- **Bug calendario "Agendar" (doble-tap acumulaba eventos):** `handleAddToCalendar` en `SalaScreen` y `SessionsScreen` creaba un evento nuevo en cada tap. Fix en ambos: guard `isAddingCalendar` (anti doble-tap + botón "Agendando…" deshabilitado), y chequeo de duplicado real con `getEventsAsync` (mismo título + hora de inicio) antes de crear → si ya existe avisa "Ya agendada". Eran los únicos dos `createEventAsync` de la app.
+- **DB — 4 migraciones corridas y verificadas en Supabase el 09/07:** `add-resource-topics`, `update-revisar-aprobar-resource-topics`, `add-resource-types-podcast-video`, `add-resource-video-storage`. SCHEMA.md actualizado en el momento.
+
+**Pendiente para la próxima sesión:**
+- Probar en Expo Go el circuito real de recursos (proponer → aprobar con `revisar_aprobar` → ver en carrusel/Explorar/recomendación). Requiere al menos un recurso publicado y tageado.
+- Card de recomendación y "Mis reservas" sin testear end-to-end en dispositivo.
+- Definir si "Podcast/Charla" cambia de nombre (label temporal).
+- Flujo "Reprogramar" del coach — sigue roto, sin definición de producto.
+- Daily.co / Google OAuth / push / audio en background — siguen requiriendo dev build EAS o pago.
+
+---
+
 ## 2026-07-08 — Joaquín (sesión 56)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`, `app/(tabs)/index.tsx`, `app/progreso.tsx`, `screens/CoachReservasScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/CoachResourcesScreen.tsx`, `SCHEMA.md`

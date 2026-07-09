@@ -200,14 +200,22 @@ export default function InicioScreen() {
       .then(async ({ data: booking }) => {
         if (!booking) { setNextSession(null); return; }
 
-        const [{ data: profile }, { data: coachRow }] = await Promise.all([
-          supabase.from('profiles').select('name').eq('id', booking.coach_id).maybeSingle(),
-          supabase.from('coaches').select('specialty').eq('profile_id', booking.coach_id).maybeSingle(),
-        ]);
+        // bookings.coach_id → coaches.id (NO profiles.id — ver SCHEMA regla 2).
+        // Join de dos pasos: coaches.id → coaches.profile_id → profiles.name.
+        const { data: coachRow } = await supabase
+          .from('coaches')
+          .select('profile_id, specialty')
+          .eq('id', booking.coach_id)
+          .maybeSingle();
+
+        const { data: profile } = coachRow?.profile_id
+          ? await supabase.from('profiles').select('name').eq('id', coachRow.profile_id).maybeSingle()
+          : { data: null };
 
         setNextSession({
           id: booking.id,
-          coach_id: booking.coach_id,
+          // profiles.id (= salas.coach_id) para navegar a la sala, no coaches.id
+          coach_id: coachRow?.profile_id ?? booking.coach_id,
           sala_id: booking.sala_id ?? null,
           date: booking.scheduled_date,
           time: booking.scheduled_time,
@@ -308,7 +316,12 @@ export default function InicioScreen() {
 
           {/* ── 5. TU PRÓXIMA SESIÓN ── */}
           <Animated.View style={fadeUp(a3)}>
-            <Text style={s.sectionTitle}>Tu próxima sesión</Text>
+            <View style={s.sessionHeaderRow}>
+              <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Tu próxima sesión</Text>
+              <TouchableOpacity onPress={() => router.push('/agenda')} hitSlop={8} activeOpacity={0.7}>
+                <Text style={s.verTodasLink}>Ver todas</Text>
+              </TouchableOpacity>
+            </View>
             {nextSession ? (
               <View style={s.sessionCard}>
                 <View style={s.sessionAvatar}>
@@ -518,6 +531,22 @@ const s = StyleSheet.create({
     color: '#565E32',
     paddingHorizontal: 20,
     marginBottom: 12,
+  },
+  sessionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  sectionTitleFlush: {
+    paddingHorizontal: 0,
+    marginBottom: 0,
+  },
+  verTodasLink: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.primary,
   },
   resourcesRow: {
     flexDirection: 'row',
