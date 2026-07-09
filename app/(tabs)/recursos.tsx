@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { useResourceProgress } from '@/hooks/useResourceProgress';
-import { useRecommendedResource, type Reco } from '@/hooks/useRecommendedResource';
+import { useRecommendedResource, type Reco, type Axis } from '@/hooks/useRecommendedResource';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -215,6 +215,37 @@ type LibraryResource = {
   axes: string[];   // resource_axes — alimenta la recomendación por eje
 };
 
+// Criterio del carrusel "Recursos de nuestros coaches": el TEMA lidera (para
+// descubrir cosas fuera de tu propio coach), la recencia desempata. Tope 2 por
+// coach para diversidad, y se excluye el que ya muestra la card de arriba.
+// `list` entra ya ordenada por created_at desc (la query), así que la partición
+// estable preserva la recencia dentro de cada grupo.
+function rankCoachLibrary(
+  list: LibraryResource[],
+  interestAxes: Set<Axis>,
+  excludeId: string | null,
+): LibraryResource[] {
+  const matches: LibraryResource[] = [];
+  const rest: LibraryResource[] = [];
+  for (const r of list) {
+    if (r.id === excludeId) continue;
+    const isMatch = interestAxes.size > 0 && r.axes.some(a => interestAxes.has(a as Axis));
+    (isMatch ? matches : rest).push(r);
+  }
+  const ordered = [...matches, ...rest];
+
+  const perCoach: Record<string, number> = {};
+  const out: LibraryResource[] = [];
+  for (const r of ordered) {
+    const c = r.attributed_to_coach_id;
+    if ((perCoach[c] ?? 0) >= 2) continue;   // tope 2 por coach
+    perCoach[c] = (perCoach[c] ?? 0) + 1;
+    out.push(r);
+    if (out.length >= 12) break;
+  }
+  return out;
+}
+
 const LIBRARY_TYPE_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   audio: 'volume-medium-outline',
   podcast: 'mic-outline',
@@ -391,12 +422,18 @@ export default function RecursosScreen() {
   const { streak, weekActivity, lastInProgress, completedInLast7Days } =
     useResourceProgress(user?.id);
 
-  const reco = useRecommendedResource({
+  const { reco, interestAxes, excludeId } = useRecommendedResource({
     userId: user?.id,
     todayMood: todayMoodEntry,
     library: libraryResources,
     recentlyDone: completedInLast7Days,
   });
+
+  // Carrusel rankeado por tema (ver rankCoachLibrary)
+  const rankedLibrary = useMemo(
+    () => rankCoachLibrary(libraryResources, interestAxes, excludeId),
+    [libraryResources, interestAxes, excludeId],
+  );
 
   // ── Cargar guardados ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -482,7 +519,7 @@ export default function RecursosScreen() {
 
           {/* 6. Biblioteca de recursos de coaches */}
           <CoachLibrarySection
-            resources={libraryResources}
+            resources={rankedLibrary}
             savedIds={savedIds}
             onSave={toggleSave}
           />
