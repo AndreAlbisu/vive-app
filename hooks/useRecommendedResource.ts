@@ -30,6 +30,7 @@ const MOOD_CFG: Record<number, { primary: string; secondary: string; tone: strin
 // tool de VITA → ejes. Etiqueta el hueco que hoy no existe en las tools.
 const TOOL_AXES: Record<string, Axis[]> = {
   respiracion: ['cuerpo', 'mente'],
+  anclaje:     ['cuerpo', 'mente'],
   escaner:     ['cuerpo'],
   ruido:       ['cuerpo'],
   sueno:       ['cuerpo'],

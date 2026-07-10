@@ -52,28 +52,23 @@ const TOOLS: Tool[] = [
   { id: 'relajacion',  label: 'Relajación',       icon: 'musical-notes-outline', duration: '10 min',     route: '/relajacion'  },
   { id: 'ruido',       label: 'Ruido blanco',     icon: 'volume-medium-outline', duration: 'Libre',      route: '/ruido'       },
   { id: 'lecturas',    label: 'Lecturas breves',  icon: 'library-outline',       duration: '5–10 min',   route: '/lecturas'    },
+  { id: 'anclaje',     label: 'Anclaje',          icon: 'locate-outline',        duration: '2–3 min',    route: '/anclaje'     },
 ];
 
 const TOOL_MAP = Object.fromEntries(TOOLS.map(t => [t.id, t]));
 
 const TOOL_GROUPS: ToolGroup[] = [
   {
-    id: 'calma',
-    title: 'Para calmarte ahora',
-    subtitle: 'Cuando la mente va rápido',
-    toolIds: ['respiracion', 'ruido', 'escaner'],
-  },
-  {
     id: 'reflexion',
     title: 'Para reflexionar',
     subtitle: 'Poner en palabras lo que pasa',
-    toolIds: ['diario', 'gratitud', 'lecturas'],
+    toolIds: ['diario', 'gratitud'],
   },
   {
-    id: 'descanso',
-    title: 'Para descansar',
-    subtitle: 'Cerrar el día y dormir mejor',
-    toolIds: ['sueno', 'relajacion', 'meditacion'],
+    id: 'calma',
+    title: 'Para calmarte ahora',
+    subtitle: 'Cuando la mente va rápido',
+    toolIds: ['ruido', 'respiracion', 'anclaje'],
   },
 ];
 

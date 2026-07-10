@@ -29,6 +29,7 @@ export const VITA_TOOLS: VitaTool[] = [
   { id: 'relajacion',  label: 'Relajación',       ionicon: 'musical-notes-outline', mdicon: 'music-note',        duration: '10 min',     route: '/relajacion'  },
   { id: 'ruido',       label: 'Ruido blanco',     ionicon: 'volume-medium-outline', mdicon: 'volume-high',       duration: 'Libre',      route: '/ruido'       },
   { id: 'lecturas',    label: 'Lecturas breves',  ionicon: 'library-outline',       mdicon: 'book-open-variant', duration: '5–10 min',   route: '/lecturas'    },
+  { id: 'anclaje',     label: 'Anclaje',          ionicon: 'locate-outline',        mdicon: 'anchor',            duration: '2–3 min',    route: '/anclaje'     },
 ];
 
 export const VITA_TOOL_MAP: Record<string, VitaTool> =

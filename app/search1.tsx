@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   Keyboard,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,18 +16,19 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AXES } from '@/constants/searchData';
+import { AppBg } from '@/components/ui/AppBg';
 import { ScaleCard } from '@/components/ScaleCard';
 
-const shadow = Platform.select({
-  ios:     { shadowColor: ViveColors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
-  android: { elevation: 3 },
-});
-
-// fondo glass claro para tarjetas — el restyle "oliva + crema + glass" (ffd928e4)
-// hizo un find/replace de #FFFFFF a #565E32 acá, que es EL MISMO color que el
-// texto (ViveColors.text), dejando el texto invisible sobre su propio fondo
-const GLASS = 'rgba(255,248,240,0.55)';
+const FOREST      = '#3A4F2A';
+const FOREST_SOFT = '#6B7A56';
+const TEXT        = '#565E32';
+const GLASS       = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
+
+const shadow = Platform.select({
+  ios:     { shadowColor: TEXT, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8 },
+  android: { elevation: 2 },
+});
 
 export default function SearchScreen1() {
   const router  = useRouter();
@@ -51,79 +53,83 @@ export default function SearchScreen1() {
   }
 
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
-      {/* ── Barra de búsqueda ──────────────────────────────────────── */}
-      <View style={s.topBar}>
-        <View style={s.searchBar}>
-          <MaterialIcons name="search" size={18} color={ViveColors.text} />
-          <TextInput
-            ref={inputRef}
-            style={s.searchInput}
-            placeholder="Buscá por nombre, especialidad o tema..."
-            placeholderTextColor={`${ViveColors.text}66`}
-            value={query}
-            onChangeText={setQuery}
-            returnKeyType="search"
-            onSubmitEditing={handleSearchSubmit}
-            autoFocus
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <MaterialIcons name="close" size={16} color={`${ViveColors.text}88`} />
-            </TouchableOpacity>
-          )}
+    <AppBg>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={s.safe} edges={['top']}>
+        {/* ── Barra de búsqueda ──────────────────────────────────────── */}
+        <View style={s.topBar}>
+          <View style={s.searchBar}>
+            <MaterialIcons name="search" size={19} color={FOREST_SOFT} />
+            <TextInput
+              ref={inputRef}
+              style={s.searchInput}
+              placeholder="Buscá por nombre, especialidad o tema…"
+              placeholderTextColor={`${TEXT}66`}
+              value={query}
+              onChangeText={setQuery}
+              returnKeyType="search"
+              onSubmitEditing={handleSearchSubmit}
+              autoFocus
+            />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={() => setQuery('')} hitSlop={8}>
+                <MaterialIcons name="cancel" size={17} color={`${TEXT}66`} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity onPress={handleCancel} style={s.cancelBtn} activeOpacity={0.7}>
+            <Text style={s.cancelText}>Cancelar</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleCancel} style={s.cancelBtn} activeOpacity={0.7}>
-          <Text style={s.cancelText}>Cancelar</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* ── Explorar por eje ───────────────────────────────────────── */}
-      <ScrollView
-        style={s.scroll}
-        contentContainerStyle={s.content}
-        keyboardShouldPersistTaps="handled">
+        {/* ── Explorar por eje ───────────────────────────────────────── */}
+        <ScrollView
+          style={s.scroll}
+          contentContainerStyle={s.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
 
-        <Text style={s.heading}>Explorá por área</Text>
-        <Text style={s.subheading}>¿Qué querés trabajar?</Text>
+          <Text style={s.heading}>Explorá por área</Text>
+          <Text style={s.subheading}>¿Qué querés trabajar hoy?</Text>
 
-        {AXES.map((axis) => (
-          <ScaleCard
-            key={axis.id}
-            style={s.axisCard}
-            onPress={() => handleAxisPress(axis.id)}>
-            <View style={[s.axisAccent, { backgroundColor: axis.color }]} />
-            <View style={[s.axisIconWrap, { backgroundColor: axis.bg }]}>
-              <Text style={s.axisEmoji}>{axis.emoji}</Text>
-            </View>
-            <View style={s.axisTextWrap}>
-              <Text style={s.axisLabel}>{axis.label}</Text>
-              <Text style={s.axisTopics} numberOfLines={1}>
-                {axis.groups.flatMap(g => g.items).slice(0, 4).join(' · ')}
-                {axis.groups.flatMap(g => g.items).length > 4 ? ' · ...' : ''}
-              </Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={22} color={axis.color} />
-          </ScaleCard>
-        ))}
-      </ScrollView>
-    </SafeAreaView>
+          {AXES.map((axis) => {
+            const topics = axis.groups.flatMap(g => g.items);
+            return (
+              <ScaleCard
+                key={axis.id}
+                style={[s.axisCard, { backgroundColor: axis.bg, borderColor: `${axis.color}33` }]}
+                onPress={() => handleAxisPress(axis.id)}>
+                <View style={s.axisIconWrap}>
+                  <Text style={s.axisEmoji}>{axis.emoji}</Text>
+                </View>
+                <View style={s.axisTextWrap}>
+                  <Text style={s.axisLabel}>{axis.label}</Text>
+                  <Text style={s.axisTopics} numberOfLines={1}>
+                    {topics.slice(0, 4).join(' · ')}{topics.length > 4 ? ' · …' : ''}
+                  </Text>
+                </View>
+                <View style={[s.axisArrow, { backgroundColor: axis.color }]}>
+                  <MaterialIcons name="arrow-forward" size={16} color="#FFF" />
+                </View>
+              </ScaleCard>
+            );
+          })}
+        </ScrollView>
+      </SafeAreaView>
+    </AppBg>
   );
 }
 
 const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: ViveColors.background,
-  },
+  safe: { flex: 1, backgroundColor: 'transparent' },
 
   // Top bar
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
+    paddingTop: 8,
+    paddingBottom: 14,
     gap: 10,
   },
   searchBar: {
@@ -133,96 +139,83 @@ const s = StyleSheet.create({
     backgroundColor: GLASS,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 11 : 6,
-    gap: 8,
+    borderRadius: 24,
+    paddingHorizontal: 15,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 7,
+    gap: 9,
     ...shadow,
   },
   searchInput: {
     flex: 1,
     fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: ViveColors.text,
+    fontSize: 14,
+    color: TEXT,
     padding: 0,
   },
-  cancelBtn: {
-    paddingVertical: 6,
-    paddingLeft: 2,
-  },
-  cancelText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 14,
-    color: ViveColors.primary,
-  },
+  cancelBtn: { paddingVertical: 6, paddingLeft: 2 },
+  cancelText: { fontFamily: ViveFonts.medium, fontSize: 14, color: ViveColors.primary },
 
   // Content
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 4,
     paddingBottom: 40,
-    gap: 14,
+    gap: 12,
   },
   heading: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 18,
-    color: ViveColors.text,
-    marginBottom: 2,
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 25,
+    color: FOREST,
+    lineHeight: 31,
   },
   subheading: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: `${ViveColors.text}99`,
+    color: FOREST_SOFT,
     marginBottom: 8,
+    marginTop: 1,
   },
 
   // Axis card
   axisCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GLASS,
     borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingRight: 16,
-    paddingLeft: 20,
+    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     gap: 14,
     ...shadow,
   },
-  axisAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
-  },
   axisIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  axisEmoji: {
-    fontSize: 26,
-  },
-  axisTextWrap: {
-    flex: 1,
-  },
+  axisEmoji: { fontSize: 26 },
+  axisTextWrap: { flex: 1, minWidth: 0 },
   axisLabel: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: ViveColors.text,
-    marginBottom: 4,
+    fontSize: 15.5,
+    color: FOREST,
+    marginBottom: 3,
   },
   axisTopics: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
-    color: `${ViveColors.text}88`,
+    color: FOREST_SOFT,
+  },
+  axisArrow: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
 });

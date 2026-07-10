@@ -138,6 +138,7 @@ export default function RootLayout() {
           <Stack.Screen name="respiracion" options={{ headerShown: false }} />
           <Stack.Screen name="meditacion" options={{ headerShown: false }} />
           <Stack.Screen name="escaner"    options={{ headerShown: false }} />
+          <Stack.Screen name="anclaje"    options={{ headerShown: false }} />
           <Stack.Screen name="sueno"      options={{ headerShown: false }} />
           <Stack.Screen name="relajacion" options={{ headerShown: false }} />
           <Stack.Screen name="ruido"      options={{ headerShown: false }} />
