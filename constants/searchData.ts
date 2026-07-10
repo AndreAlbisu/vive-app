@@ -42,9 +42,9 @@ export const AXES: Axis[] = [
     color: ViveColors.calm,
     bg: '#E8EFF6',
     groups: [
-      { group: 'Emociones y ánimo', items: ['Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría'] },
+      { group: 'Emociones y ánimo', items: ['Tristeza', 'Ansiedad', 'Ansiedad social', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría', 'Autoestima', 'Duelo'] },
       { group: 'Relaciones', items: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'] },
-      { group: 'Foco, hábitos y trabajo', items: ['Concentración', 'Procrastinación', 'Productividad', 'Hábitos mentales'] },
+      { group: 'Foco, hábitos y trabajo', items: ['Concentración', 'Procrastinación', 'Productividad', 'Hábitos mentales', 'Burnout (estrés laboral)'] },
     ],
   },
   {

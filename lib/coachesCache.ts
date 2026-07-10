@@ -14,6 +14,11 @@ export type CachedCoach = {
   verified?: boolean;
   avgRating?: number | null;
   reviewCount?: number;
+  // Ranking del deck de Conexiones (criterio v1)
+  coachId?: string;             // coaches.id — clave para joins (coach_rebooking_stats)
+  createdAt?: string | null;    // coaches.created_at — para "nuevo" por antigüedad
+  rebookingRate?: number | null; // coach_rebooking_stats.rebooking_rate (null si <5 completadas)
+  completadasCount?: number;     // coach_rebooking_stats.completadas_count
 };
 
 let cache: CachedCoach[] | null = null;
@@ -22,7 +27,7 @@ let inflight: Promise<void> | null = null;
 async function _doFetch(): Promise<void> {
   const { data, error } = await supabase
     .from('coaches')
-    .select('id, specialty, price_per_session, nationality, verified, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
+    .select('id, created_at, specialty, price_per_session, nationality, verified, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
     .eq('verified', true)
     .eq('availability_status', 'activo')
     .limit(50);
@@ -33,6 +38,8 @@ async function _doFetch(): Promise<void> {
     const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
     return {
       id:          profile?.id as string,
+      coachId:     c.id as string,               // coaches.id (clave del rate de reagendamiento)
+      createdAt:   (c.created_at ?? null) as string | null,
       name:        profile?.name as string,
       specialty:   c.specialty as string,
       priceFrom:   c.price_per_session as number,
@@ -43,36 +50,54 @@ async function _doFetch(): Promise<void> {
       verified:    !!(c.verified),
       avgRating:   null,
       reviewCount: 0,
+      rebookingRate:    null,
+      completadasCount: 0,
     };
   });
 
-  // Batch fetch review aggregates (1 extra query for all coaches)
   const profileIds = initial.map(c => c.id).filter(Boolean);
-  if (profileIds.length > 0) {
-    const { data: reviewRows } = await supabase
-      .from('reviews')
-      .select('reviewed_id, rating')
-      .in('reviewed_id', profileIds)
-      .eq('is_private', false);
+  const coachIds   = initial.map(c => c.coachId).filter(Boolean) as string[];
 
-    const ratingsByCoach: Record<string, number[]> = {};
-    (reviewRows ?? []).forEach(r => {
-      const key = r.reviewed_id as string;
-      if (!ratingsByCoach[key]) ratingsByCoach[key] = [];
-      ratingsByCoach[key].push(r.rating as number);
-    });
+  // Agregados en paralelo: rating (reviews públicas) + reagendamiento (vista server-side).
+  const [reviewsRes, rebookRes] = await Promise.all([
+    profileIds.length
+      ? supabase.from('reviews').select('reviewed_id, rating').in('reviewed_id', profileIds).eq('is_private', false)
+      : Promise.resolve({ data: [] as any[] }),
+    coachIds.length
+      ? supabase.from('coach_rebooking_stats').select('coach_id, rebooking_rate, completadas_count').in('coach_id', coachIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
 
-    cache = initial.map(c => {
-      const ratings = ratingsByCoach[c.id] ?? [];
-      const reviewCount = ratings.length;
-      const avgRating = reviewCount > 0
-        ? ratings.reduce((a, b) => a + b, 0) / reviewCount
-        : null;
-      return { ...c, avgRating, reviewCount };
-    });
-  } else {
-    cache = initial;
-  }
+  const ratingsByCoach: Record<string, number[]> = {};
+  (reviewsRes.data ?? []).forEach((r: any) => {
+    const key = r.reviewed_id as string;
+    if (!ratingsByCoach[key]) ratingsByCoach[key] = [];
+    ratingsByCoach[key].push(r.rating as number);
+  });
+
+  const rebookByCoach: Record<string, { rate: number | null; completed: number }> = {};
+  (rebookRes.data ?? []).forEach((r: any) => {
+    rebookByCoach[r.coach_id as string] = {
+      rate:      (r.rebooking_rate ?? null) as number | null,
+      completed: (r.completadas_count ?? 0) as number,
+    };
+  });
+
+  cache = initial.map(c => {
+    const ratings = ratingsByCoach[c.id] ?? [];
+    const reviewCount = ratings.length;
+    const avgRating = reviewCount > 0
+      ? ratings.reduce((a, b) => a + b, 0) / reviewCount
+      : null;
+    const rb = c.coachId ? rebookByCoach[c.coachId] : undefined;
+    return {
+      ...c,
+      avgRating,
+      reviewCount,
+      rebookingRate:    rb?.rate ?? null,
+      completadasCount: rb?.completed ?? 0,
+    };
+  });
 }
 
 export function prefetchCoaches(): void {

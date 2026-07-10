@@ -97,11 +97,18 @@
 ### `coach_topics`
 - `id` (uuid, PK)
 - `coach_id` (uuid, FK → `coaches.id`) ⚠️ — mismo criterio que `coach_availability`/`coach_weekly_pattern`, no `profile_id`
-- `topic` (text, NOT NULL) — uno de los 28 subtemas definidos en `constants/searchData.ts` (`AXES`), ej. `"Ansiedad"`, `"Pareja"`, `"Sueño"`. Sin CHECK constraint contra esa lista a propósito (mismo criterio que `saved_resources.resource_id`) — la lista vive en el frontend, no vale la pena la rigidez de un enum en la base.
+- `topic` (text, NOT NULL) — uno de los 32 subtemas definidos en `constants/searchData.ts` (`AXES`), ej. `"Ansiedad"`, `"Pareja"`, `"Sueño"`. Sin CHECK constraint contra esa lista a propósito (mismo criterio que `saved_resources.resource_id`) — la lista vive en el frontend, no vale la pena la rigidez de un enum en la base. Pasó de 28 a 32 el 10/07/2026: se sumaron 4 subtemas al eje emocional (`Ansiedad social`, `Autoestima`, `Duelo` en "Emociones y ánimo"; `Burnout (estrés laboral)` en "Foco, hábitos y trabajo") como parte del sistema de puertas de Conexiones — solo cambió `AXES`, sin migración de base (justo el beneficio de no tener CHECK). ⚠️ Como la base no valida, el string tiene que coincidir EXACTO entre `AXES` y `constants/conexionesDoors.ts` (`DOORS`), o el coach queda huérfano de puerta en silencio; hay un chequeo de partición para eso.
 - `created_at` (timestamptz, NOT NULL DEFAULT now())
 - UNIQUE(`coach_id`, `topic`)
 - RLS: SELECT abierto (`coach_topics_public_read`) — necesario para mostrarlo en el perfil público y para filtrar en la búsqueda sin sesión. ALL solo para el coach dueño (`coach_topics_manage_own`, WITH CHECK `coach_id IN (SELECT id FROM coaches WHERE profile_id = auth.uid())`)
 - Agregada 02/07/2026 (`scripts/add-coach-topics.sql`, **pendiente de correr en Supabase**). El coach edita su selección en `screens/CoachTopicsScreen.tsx` (`/coach-topics`, desde "Temas que trabajo" en `CoachProfileScreen.tsx`) — guardado con criterio "reemplazar todo": borra todas sus filas y reinserta la selección actual, no hace diff. Se muestra en `ProfesionalScreen.tsx` (reemplazó un array de 5 temas hardcodeado que era igual para cualquier coach) y filtra de verdad en `app/search3.tsx` (antes comparaba el subtema elegido contra `coaches.specialty`, texto libre tipo "Coach de vida" — casi nunca coincidía).
+
+### `coach_rebooking_stats` (VISTA)
+- Vista de agregación (no tabla) para el ranking del deck de Conexiones (criterio v1). Una fila por coach: `coach_id` (= `coaches.id`), `completadas_count`, `rebookers_count`, `rebooking_rate`.
+- **`rebooking_rate`** = de los usuarios distintos que completaron ≥1 sesión con el coach, qué fracción hizo una reserva posterior (cualquier status; el acto de re-agendar es la señal). `NULL` si `completadas_count < 5` (piso mínimo de muestra → el cliente cae a rating). Todo en usuarios distintos, no filas de booking. Rate global del coach, no por tema.
+- **Privacidad:** corre con permisos del owner (`security_invoker = false`) y solo se hace `GRANT SELECT` de la vista a `anon`/`authenticated`, **no** de `bookings`. Así el cliente lee el agregado sin poder ver bookings de terceros (que RLS le bloquea). Expone solo números, nunca filas crudas.
+- Se lee en `lib/coachesCache.ts` (join en paralelo con reviews, por `coach_id`) y alimenta `lib/coachDeckRanking.ts`. Usa `bookings.created_at` para "posterior". Vista en vivo; si el volumen la hace lenta, convertir a MATERIALIZED VIEW + cron (patrón `complete_confirmed_sessions()`).
+- Creada 10/07/2026 (`scripts/add-coach-rebooking-stats.sql`, corrida en Supabase el 10/07).
 
 ### `reviews`
 - `id` (uuid, PK)
