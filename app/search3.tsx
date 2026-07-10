@@ -12,6 +12,7 @@ import {
   Pressable,
   FlatList,
   Image,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -20,6 +21,17 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { NATIONALITIES, MAX_PRICE } from '@/constants/searchData';
 import { ScaleCard } from '@/components/ScaleCard';
+import { AppBg } from '@/components/ui/AppBg';
+
+// ─── Paleta local (consistente con Recursos / Explorar) ──────────────────────
+const FOREST      = '#3A4F2A';
+const FOREST_SOFT = '#6B7A56';
+const CREAM_LIGHT = '#F7EFE4';
+const GLASS_BG    = 'rgba(255,248,240,0.55)';
+const GLASS_BORDER = 'rgba(255,255,255,0.65)';
+
+// Filtros rápidos por tipo (un tap, sin abrir el sheet)
+const QUICK_TYPES: TypeFilter[] = ['Todos', 'Coach', 'Psicólogo', 'Nutricionista'];
 import { supabase } from '@/lib/supabase';
 import { getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 
@@ -266,17 +278,17 @@ export default function SearchScreen3() {
   const title = label ?? query ?? 'Resultados';
 
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
+    <AppBg>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={s.safe} edges={['top']}>
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <MaterialIcons name="arrow-back" size={22} color={ViveColors.text} />
+        <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} hitSlop={8} activeOpacity={0.7}>
+          <MaterialIcons name="arrow-back-ios-new" size={18} color={FOREST} />
         </TouchableOpacity>
-        <Text style={s.headerTitle} numberOfLines={1}>{title}</Text>
-        <TouchableOpacity onPress={openSheet} style={s.filterBtn} activeOpacity={0.8}>
-          <MaterialIcons name="tune" size={18} color={activeFilterCount > 0 ? ViveColors.primary : ViveColors.text} />
-          <Text style={[s.filterBtnText, activeFilterCount > 0 && s.filterBtnActive]}>Filtrar</Text>
+        <TouchableOpacity onPress={openSheet} style={s.iconBtn} activeOpacity={0.8}>
+          <MaterialIcons name="tune" size={19} color={activeFilterCount > 0 ? ViveColors.primary : FOREST} />
           {activeFilterCount > 0 && (
             <View style={s.badge}>
               <Text style={s.badgeText}>{activeFilterCount}</Text>
@@ -285,9 +297,33 @@ export default function SearchScreen3() {
         </TouchableOpacity>
       </View>
 
-      <Text style={s.resultCount}>
-        {loadingCoaches ? 'Buscando...' : `${results.length} profesional${results.length !== 1 ? 'es' : ''} encontrado${results.length !== 1 ? 's' : ''}`}
-      </Text>
+      {/* ── Título editorial ─────────────────────────────────────────── */}
+      <View style={s.titleBlock}>
+        <Text style={s.title} numberOfLines={2}>{title}</Text>
+        <Text style={s.subtitle}>
+          {loadingCoaches
+            ? 'Buscando…'
+            : `${results.length} ${results.length === 1 ? 'profesional disponible' : 'profesionales disponibles'}`}
+        </Text>
+      </View>
+
+      {/* ── Filtros rápidos por tipo ─────────────────────────────────── */}
+      <View style={s.quickWrap}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.quickRow}>
+          {QUICK_TYPES.map(t => {
+            const active = filters.type === t;
+            return (
+              <TouchableOpacity
+                key={t}
+                style={[s.quickChip, active && s.quickChipActive]}
+                onPress={() => setFilters(f => ({ ...f, type: t }))}
+                activeOpacity={0.8}>
+                <Text style={[s.quickChipText, active && s.quickChipTextActive]}>{t}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* ── Lista ────────────────────────────────────────────────────── */}
       <FlatList
@@ -302,42 +338,62 @@ export default function SearchScreen3() {
             <Text style={s.emptyText}>Probá ajustando los filtros o eligiendo otro tema.</Text>
           </View>
         }
-        renderItem={({ item: p }) => (
-          <ScaleCard
-            style={s.card}
-            onPress={() => router.push({
-              pathname: '/profesional',
-              params: {
-                profileId: p.id,
-                name: p.name,
-                specialty: p.specialty,
-                priceFrom: String(p.priceFrom),
-              },
-            })}>
-            {/* Foto */}
-            {p.avatarUrl ? (
-              <Image source={{ uri: p.avatarUrl }} style={s.avatarImage} />
-            ) : (
-              <View style={s.avatar}>
-                <MaterialIcons name="person" size={36} color="#C0BAB4" />
-              </View>
-            )}
-            {/* Info */}
-            <View style={s.cardInfo}>
-              <View style={s.cardTop}>
-                <Text style={s.cardName}>{p.name}</Text>
-              </View>
-              <Text style={s.cardSpecialty}>{p.specialty}</Text>
-              <Text style={s.cardPrice}>Desde ${p.priceFrom.toLocaleString('es-AR')}</Text>
-              <View style={s.tagsRow}>
-                <View style={[s.tag, s.tagActive]}>
-                  <Text style={[s.tagText, s.tagTextActive]}>{p.specialty}</Text>
+        renderItem={({ item: p }) => {
+          const rating = avgRatingById[p.id];
+          const topics = p.topics.slice(0, 2);
+          return (
+            <ScaleCard
+              style={s.card}
+              onPress={() => router.push({
+                pathname: '/profesional',
+                params: {
+                  profileId: p.id,
+                  name: p.name,
+                  specialty: p.specialty,
+                  priceFrom: String(p.priceFrom),
+                },
+              })}>
+              {/* Foto */}
+              {p.avatarUrl ? (
+                <Image source={{ uri: p.avatarUrl }} style={s.avatarImage} />
+              ) : (
+                <View style={s.avatar}>
+                  <MaterialIcons name="person" size={34} color="#C0BAB4" />
                 </View>
+              )}
+              {/* Info */}
+              <View style={s.cardInfo}>
+                <View style={s.cardTop}>
+                  <Text style={s.cardName} numberOfLines={1}>{p.name}</Text>
+                  {rating ? (
+                    <View style={s.ratingPill}>
+                      <MaterialIcons name="star" size={12} color="#E0A93B" />
+                      <Text style={s.ratingText}>{rating.toFixed(1)}</Text>
+                    </View>
+                  ) : (
+                    <View style={s.newPill}>
+                      <Text style={s.newPillText}>Nuevo</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={s.cardSpecialty} numberOfLines={1}>{p.specialty}</Text>
+                {topics.length > 0 && (
+                  <View style={s.tagsRow}>
+                    {topics.map(t => (
+                      <View key={t} style={s.tag}>
+                        <Text style={s.tagText} numberOfLines={1}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                <Text style={s.cardPrice}>
+                  Desde ${p.priceFrom.toLocaleString('es-AR')}
+                  <Text style={s.cardPriceUnit}> · por sesión</Text>
+                </Text>
               </View>
-            </View>
-            <MaterialIcons name="chevron-right" size={20} color={`${ViveColors.text}55`} />
-          </ScaleCard>
-        )}
+            </ScaleCard>
+          );
+        }}
       />
 
       {/* ── Bottom sheet (filtros) ────────────────────────────────────── */}
@@ -452,7 +508,8 @@ export default function SearchScreen3() {
         </Animated.View>
       </Modal>
 
-    </SafeAreaView>
+      </SafeAreaView>
+    </AppBg>
   );
 }
 
@@ -495,63 +552,67 @@ const sl = StyleSheet.create({
 
 // ─── Estilos: pantalla ────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: ViveColors.background },
+  safe: { flex: 1, backgroundColor: 'transparent' },
 
   // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 8,
-    gap: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
-  backBtn: { width: 36, alignItems: 'flex-start' },
-  headerTitle: {
-    flex: 1,
-    fontFamily: ViveFonts.semibold,
-    fontSize: 17,
-    color: ViveColors.text,
+  iconBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: GLASS_BG, borderWidth: 1, borderColor: GLASS_BORDER,
+    alignItems: 'center', justifyContent: 'center',
   },
-  filterBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: 'rgba(255,248,240,0.80)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
-    ...shadow,
-  },
-  filterBtnText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: ViveColors.text,
-  },
-  filterBtnActive: { color: ViveColors.primary },
   badge: {
+    position: 'absolute',
+    top: -3, right: -3,
     backgroundColor: ViveColors.primary,
     borderRadius: 9,
-    width: 18,
+    minWidth: 18,
     height: 18,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeText: { fontFamily: ViveFonts.bold, fontSize: 10, color: '#FFFFFF' },
 
-  resultCount: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: `${ViveColors.text}88`,
-    paddingHorizontal: 20,
-    marginBottom: 12,
+  // Título editorial
+  titleBlock: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 14 },
+  title: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 30,
+    color: FOREST,
+    lineHeight: 36,
   },
+  subtitle: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12.5,
+    color: FOREST_SOFT,
+    marginTop: 2,
+  },
+
+  // Filtros rápidos
+  quickWrap: { marginBottom: 6 },
+  quickRow: { gap: 8, paddingHorizontal: 20, paddingRight: 28 },
+  quickChip: {
+    borderRadius: 20, borderWidth: 1,
+    borderColor: 'rgba(58,79,42,0.22)',
+    backgroundColor: GLASS_BG,
+    paddingHorizontal: 15, paddingVertical: 8,
+  },
+  quickChipActive: { backgroundColor: FOREST, borderColor: FOREST },
+  quickChipText: { fontFamily: ViveFonts.medium, fontSize: 13, color: FOREST },
+  quickChipTextActive: { color: CREAM_LIGHT },
 
   // List
   list: {
     paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 40,
     gap: 12,
   },
@@ -560,57 +621,68 @@ const s = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,248,240,0.80)',
-    borderRadius: 16,
+    backgroundColor: GLASS_BG,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
+    borderColor: GLASS_BORDER,
     padding: 14,
-    gap: 12,
+    gap: 13,
     ...shadow,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#EDE7E0',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   avatarImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     flexShrink: 0,
   },
-  cardInfo: { flex: 1 },
+  cardInfo: { flex: 1, minWidth: 0, gap: 3 },
   cardTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    gap: 8,
   },
-  cardName: { fontFamily: ViveFonts.semibold, fontSize: 14, color: ViveColors.text },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  ratingText: { fontFamily: ViveFonts.medium, fontSize: 12, color: ViveColors.text },
-  cardSpecialty: { fontFamily: ViveFonts.medium, fontSize: 12, color: ViveColors.primary, marginBottom: 2 },
-  cardPrice: { fontFamily: ViveFonts.regular, fontSize: 11, color: `${ViveColors.text}88`, marginBottom: 6 },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  cardName: { flex: 1, fontFamily: ViveFonts.semibold, fontSize: 15.5, color: FOREST },
+  ratingPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(224,169,59,0.15)',
+    borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3,
+    flexShrink: 0,
+  },
+  ratingText: { fontFamily: ViveFonts.semibold, fontSize: 11.5, color: '#9A6E1E' },
+  newPill: {
+    backgroundColor: `${ViveColors.primary}1E`,
+    borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3,
+    flexShrink: 0,
+  },
+  newPillText: { fontFamily: ViveFonts.semibold, fontSize: 10.5, color: ViveColors.primary },
+  cardSpecialty: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: ViveColors.primary },
+  cardPrice: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST, marginTop: 2 },
+  cardPriceUnit: { fontFamily: ViveFonts.regular, fontSize: 11, color: FOREST_SOFT },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 1 },
   tag: {
-    backgroundColor: `${ViveColors.text}12`,
+    backgroundColor: 'rgba(107,122,86,0.14)',
     borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    maxWidth: 130,
   },
-  tagActive: { backgroundColor: `${ViveColors.primary}22` },
-  tagText: { fontFamily: ViveFonts.regular, fontSize: 10, color: `${ViveColors.text}BB` },
-  tagTextActive: { color: ViveColors.primary, fontFamily: ViveFonts.medium },
+  tagText: { fontFamily: ViveFonts.medium, fontSize: 10.5, color: FOREST_SOFT },
 
   // Empty
   empty: { alignItems: 'center', paddingTop: 60, gap: 10 },
   emptyEmoji: { fontSize: 40 },
-  emptyTitle: { fontFamily: ViveFonts.semibold, fontSize: 16, color: ViveColors.text },
-  emptyText: { fontFamily: ViveFonts.regular, fontSize: 13, color: `${ViveColors.text}88`, textAlign: 'center', paddingHorizontal: 20 },
+  emptyTitle: { fontFamily: ViveFonts.semibold, fontSize: 16, color: FOREST },
+  emptyText: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT, textAlign: 'center', paddingHorizontal: 20 },
 
   // Backdrop
   backdrop: {

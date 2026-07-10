@@ -816,18 +816,6 @@ export default function SalaScreen() {
           </View>
           <Text style={styles.sessionCardHint}>Disponible 10 min antes de la sesión</Text>
         </View>
-      ) : sessionState === 'finalizada' ? (
-        <View style={styles.sessionCard}>
-          <View style={styles.sessionCardTop}>
-            <MaterialCommunityIcons name="check-circle-outline" size={14} color="#87835C" />
-            <Text style={styles.sessionCardLabel}>
-              Sesión del {formatSalaDate(activeBooking!.scheduled_date)} completada
-            </Text>
-          </View>
-          <TouchableOpacity style={styles.reserveBtn} onPress={handleReschedule} activeOpacity={0.8}>
-            <Text style={styles.reserveBtnText}>Reservar próxima sesión</Text>
-          </TouchableOpacity>
-        </View>
       ) : null}
 
       <KeyboardAvoidingView
@@ -923,6 +911,26 @@ export default function SalaScreen() {
               </Animated.View>
             );
           })}
+
+          {/* Cierre de sesión + re-reserva: último mensaje del chat, cerca del input
+              (antes era un banner fijo arriba; se movió acá para quedar al alcance del dedo) */}
+          {!loading && sessionState === 'finalizada' && activeBooking && (
+            <View style={styles.endedCard}>
+              <View style={styles.endedHeader}>
+                <MaterialCommunityIcons name="check-circle-outline" size={16} color="#87835C" />
+                <Text style={styles.endedLabel}>
+                  Sesión del {formatSalaDate(activeBooking.scheduled_date)} finalizada
+                </Text>
+              </View>
+              <Text style={styles.endedText}>
+                ¿Querés reservar tu próxima sesión con {recipientProfile?.name ?? 'tu coach'}?
+              </Text>
+              <TouchableOpacity style={styles.endedBtn} onPress={handleReschedule} activeOpacity={0.85}>
+                <MaterialCommunityIcons name="calendar-plus" size={16} color="#FFF6EC" />
+                <Text style={styles.endedBtnText}>Reservar próxima sesión</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
 
         {/* Input bar */}
@@ -1110,16 +1118,6 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#E05252' },
   cancelBtnTextDisabled: { color: 'rgba(135,131,92,0.45)' },
 
-  reserveBtn: {
-    marginTop: 8,
-    backgroundColor: ViveColors.primary,
-    borderRadius: 13,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignSelf: 'flex-start',
-  },
-  reserveBtnText: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#FFF6EC' },
-
   // Live card
   sessionCardLive: {
     paddingHorizontal: 16,
@@ -1177,6 +1175,46 @@ const styles = StyleSheet.create({
   bubbleTime: { fontFamily: ViveFonts.regular, fontSize: 10, alignSelf: 'flex-end' },
   bubbleTimeUser: { color: '#87835C' },
   bubbleTimeCoach: { color: 'rgba(135,131,92,0.80)' },
+
+  // Tarjeta de cierre + re-reserva, inline al final del chat
+  endedCard: {
+    backgroundColor: 'rgba(255,248,240,0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.14)',
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 4,
+    gap: 10,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      android: { elevation: 2 },
+    }),
+  },
+  endedHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  endedLabel: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: '#87835C',
+    textTransform: 'uppercase',
+    flexShrink: 1,
+  },
+  endedText: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 16,
+    color: '#565E32',
+    lineHeight: 23,
+  },
+  endedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: ViveColors.primary,
+    borderRadius: 13,
+    paddingVertical: 12,
+  },
+  endedBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#FFF6EC' },
 
   systemRow: { alignItems: 'center', paddingVertical: 4 },
   systemText: { fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(135,131,92,0.80)', fontStyle: 'italic', textAlign: 'center' },

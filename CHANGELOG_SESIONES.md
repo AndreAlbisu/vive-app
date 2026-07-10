@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-07-10 — Andre (sesión 58)
+
+**Tocado:** `app/(tabs)/recursos.tsx`, `constants/vitaTools.ts`, `hooks/useRecommendedResource.ts`, `app/_layout.tsx`, `screens/AnclajeScreen.tsx` (nuevo), `app/anclaje.tsx` (nuevo), `screens/SalaScreen.tsx`, `screens/ExploreResourcesScreen.tsx`, `app/search1.tsx`, `app/search2.tsx`, `app/search3.tsx`
+
+**Resumen:**
+- **Herramientas de VITA — recorte:** se sacaron del carrusel "Tus herramientas" las tools que pisaban el terreno de los coaches (contenido guiado) o eran redundantes: **Lecturas breves, Meditación, Sueño, Escáner corporal, Relajación**. Criterio acordado: VITA = herramientas rápidas y autónomas; el contenido guiado va a la biblioteca de coaches. Las entries siguen en `TOOLS`/`VITA_TOOLS`/`TOOL_MAP` (para saved/continuar/ruta directa/recomendación), solo se sacaron de `TOOL_GROUPS`. Quedan: Diario, Gratitud, Ruido blanco, Respiración (+ Anclaje).
+- **Nueva tool: Anclaje (5-4-3-2-1):** `AnclajeScreen` (`/anclaje`), técnica de grounding sensorial para ansiedad aguda — el hueco que faltaba (no había nada para el momento de crisis). Diseño clave: **sin timer, a tu ritmo, tap-to-count** (llenás N círculos por sentido); la presión de un reloj sería contraproducente. Sumada a `VITA_TOOLS`, al grupo "Para calmarte ahora" del carrusel, y a `TOOL_AXES` (cuerpo+mente) del hook de recomendación. Registra completion con tiempo real transcurrido.
+- **Sala — re-reserva movida al chat:** la tarjeta de "sesión finalizada + reservar próxima" pasó de banner fijo arriba a **último ítem dentro del chat** (cerca del input, al alcance del dedo). Sigue siendo card-cliente (no mensaje persistido), se dibuja desde `sessionState === 'finalizada'`. Decisión: los avisos "está por empezar" / "finalizó" quedan como carteles vivos, no mensajes reales (eso requeriría cron/backend — se dejó fuera).
+- **Explorar recursos — rediseño estético:** de un muro de ~20 chips de subtemas a **divulgación progresiva** (elegís eje Cuerpo/Mente/Propósito → aparecen sus subtemas). El eje ahora filtra de verdad (`.in(topic, axisTopics)`, antes era decorativo). Header editorial Fraunces, tarjetas con tag de formato, contador de resultados, empty state cálido, dedupe por id (el join por subtema duplicaba filas).
+- **Buscador search1/2/3 — rediseño estético (fresco/moderno):** `AppBg` + títulos Fraunces + paleta glass verde/terracota en las tres. search1: barra pill + tarjetas de área a color (fondo pastel por eje + flecha circular). search2: chip de área + título editorial + chips que se rellenan con el color del eje al activarse. search3: header con filtro redondo + **filtros rápidos por tipo** (un tap, sin abrir el sheet) + tarjetas que ahora **muestran el rating** (se calculaba pero nunca se pintaba — bug de producto) o pill "Nuevo", con tags de temas reales.
+- **Bug de contraste (search2):** el texto del botón CTA era olivo oscuro (`#565E32`) sobre fondo terracota → casi ilegible. Corregido a crema.
+
+**Pendiente para la próxima sesión:**
+- **Decisión Conexiones (abierta, a debatir con Joaquín):** reemplazar la lista "Todos los profesionales" (infinita al escalar + redundante con el buscador search3). Recomendación: **rieles curados finitos** (Para vos + Mejor puntuados + Nuevos en VIVE), que degradan solos si hay poca oferta; alternativa liviana: lista rankeada + paginada. Nada implementado todavía.
+- Sin probar en Expo Go: Anclaje end-to-end, re-reserva inline en Sala, y los rediseños de Explorar/buscador en dispositivo.
+- Bottom sheet de filtros de search3 quedó sin refresh estético (funcional).
+
+---
+
 ## 2026-07-09 — Andre (sesión 57)
 
 **Tocado:** `screens/SalaScreen.tsx`, `app/(tabs)/index.tsx`, `screens/UserAgendaScreen.tsx` (nuevo), `app/agenda.tsx` (nuevo), `app/(tabs)/recursos.tsx`, `hooks/useRecommendedResource.ts` (nuevo), `screens/ExploreResourcesScreen.tsx` (nuevo), `app/explorar-recursos.tsx` (nuevo), `screens/ProposeResourceScreen.tsx`, `screens/ResourceDetailScreen.tsx`, `scripts/add-resource-topics.sql` (nuevo), `scripts/update-revisar-aprobar-resource-topics.sql` (nuevo), `scripts/add-resource-types-podcast-video.sql` (nuevo), `scripts/add-resource-video-storage.sql` (nuevo), `SCHEMA.md`, `docs/revision-recursos.md`
