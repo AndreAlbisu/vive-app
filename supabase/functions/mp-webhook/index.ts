@@ -16,7 +16,12 @@ const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')! // token de la app plat
 
 serve(async (req) => {
   try {
-    // TODO(MP): validar la firma del webhook (header x-signature) antes de confiar.
+    // TODO(MP) firma x-signature (VERIFICADO 07/2026 — implementar en paso 4):
+    //   header = "ts=<ts>,v1=<hmac>". HMAC-SHA256 en hex, key = secret de Webhooks
+    //   (Your integrations → Webhooks → Configure notification). Manifest:
+    //     `id:<data.id>;request-id:<x-request-id header>;ts:<ts>;`
+    //   (data.id en minúsculas si es alfanumérico). Comparar el hmac con v1.
+    //   Confirmar el template exacto contra el SDK oficial al implementar.
     const body = await req.json().catch(() => ({}))
     const url = new URL(req.url)
 
@@ -27,7 +32,11 @@ serve(async (req) => {
       return new Response('ignored', { status: 200 }) // 200 para que MP no reintente
     }
 
-    // TODO(MP): verificar contra docs — GET https://api.mercadopago.com/v1/payments/{id}
+    // GET /v1/payments/{id}. ⚠️ Verificar qué token lo lee: en marketplace el pago
+    // es del vendedor (coach). Si el token de plataforma (MP_ACCESS_TOKEN) no puede
+    // leerlo, hay que usar el token del coach — pero el coach recién se conoce por
+    // external_reference (booking→coach). Confirmar contra MP si la plataforma
+    // puede leer pagos de sus vendedores de marketplace con su propio token.
     const payRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` },
     })

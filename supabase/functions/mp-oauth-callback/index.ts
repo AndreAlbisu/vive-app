@@ -36,7 +36,10 @@ serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
   try {
-    // TODO(MP): verificar contra docs — POST https://api.mercadopago.com/oauth/token
+    // VERIFICADO (docs MP, 07/2026): POST /oauth/token, grant_type=authorization_code,
+    // body con client_id/client_secret/code/redirect_uri. El `code` vive 10 min; el
+    // access_token dura ~180 días (refrescar con refresh_token antes de expires_at).
+    // PKCE: si la app MP tiene PKCE activado, agregar `code_verifier` al body.
     const tokenRes = await fetch('https://api.mercadopago.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
