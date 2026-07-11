@@ -84,10 +84,13 @@ serve(async (req) => {
     // schema ni en este cálculo. TODO(fiscal): si VITA queda RI, sumar el IVA acá.
     const marketplaceFee = Math.round(Number(booking.amount) * commissionPct) / 100
 
-    // TODO(MP) CRÍTICO: configurar el MONEY RELEASE del split para RETENER el
-    // dinero del coach hasta DESPUÉS de la sesión. Sin esto, un reembolso (o el
-    // 100% durante la promo 0%) puede no tener fondos en la cuenta del coach.
-    // Verificar en la doc de "liberación de dinero" del marketplace de MP.
+    // ⚠️ MONEY RELEASE (VERIFICADO en docs MP, 07/2026): NO es un parámetro de la
+    // preferencia. La fecha de liberación del dinero del split (retener el dinero
+    // del coach hasta post-sesión) se configura a nivel CUENTA con el account
+    // manager comercial de MP, NO por transacción vía API. => El "hold hasta
+    // post-sesión" es una gestión comercial con MP, no código. Sin eso, un
+    // reembolso sale del balance del coach (crítico en promo 0%: el 100% sale de
+    // su cuenta). Decisión pendiente: negociar release con MP vs asumir el riesgo.
 
     // TODO(MP): verificar contra docs — POST https://api.mercadopago.com/checkout/preferences
     const prefRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
