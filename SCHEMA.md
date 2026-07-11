@@ -117,6 +117,14 @@
 - Se lee en `lib/coachesCache.ts` (join en paralelo con reviews/reagendamiento, por `coach_id`) y alimenta el slot `tendencia` de `lib/coachDeckRanking.ts`. Vista en vivo; si el volumen la hace lenta, convertir a MATERIALIZED VIEW + cron.
 - Creada 11/07/2026 (`scripts/add-coach-trending-stats.sql`, **aplicada — corrida y verificada 11/07/2026 vía `scripts/audit-schema.sql`**).
 
+### Pagos v1 — MercadoPago Marketplace (`scripts/add-payments-v1.sql`, **PENDIENTE de correr**)
+Modelo: split payments, **Checkout Pro**, cobro al reservar + reembolso automático si el coach rechaza o si la pendiente vence (24hs). Money release del coach demorado hasta post-sesión. Pre-autorización descartada. Ver memoria `project_vive_payments` y `supabase/functions/mp-*` (edge functions, hoy scaffolds). Credenciales MP en Supabase secrets, nunca en el repo.
+- **Comisión (server-side, snapshoteada, el cliente nunca la calcula):** 0% promo fundador (fin TBD) · **20%+IVA las primeras 3 sesiones COMPLETADAS del par coach-usuario** · **15%+IVA de la 4ta en adelante**. Contador **por par (`user_id`+`coach_id`)**, solo `completada`, **nunca resetea**. Se calcula en `mp-create-payment` (COUNT completadas del par → 0/20/15) y se guarda en `platform_fee_pct`. IVA (AR 21%) se factura al coach — tratamiento exacto a confirmar con contador.
+- **`bookings`** (columnas nuevas): `currency` (text, default 'ARS'), `payment_status` (text, NOT NULL default 'no_iniciado', CHECK IN `no_iniciado`/`pendiente`/`aprobado`/`rechazado`/`reembolso_pendiente`/`reembolsado`), `payment_id` (text, MP payment.id), `preference_id` (text, MP Checkout Pro), `platform_fee_pct` (numeric, default 20 — **snapshot de la comisión calculada por reserva**, no un valor fijo), `paid_at`, `refunded_at` (timestamptz). `amount` ya existía.
+- **`coach_mp_accounts`** (tabla nueva): tokens OAuth del coach — `coach_id` (PK, FK → `coaches.id`), `mp_user_id`, `access_token`, `refresh_token`, `public_key`, `expires_at`, `connected_at`, `updated_at`. **RLS habilitado SIN políticas a propósito** → ni anon ni authenticated leen/escriben; solo el service role (edge functions) accede. Los tokens NUNCA tocan el cliente.
+- **`coaches.mp_connected`** (boolean, NOT NULL default false): flag NO secreto para la UI (¿el coach conectó MP?). Sin conectar, no puede recibir reservas pagas.
+- **`expire_pending_bookings()`** (extendida): además de cancelar pendientes >24hs y notificar, ahora marca `payment_status = 'reembolso_pendiente'` si la reserva vencida estaba `aprobado`. El refund real lo hace el edge function `mp-process-refunds` (SQL no puede llamar a la API de MP) — agendar por pg_net cuando estén las creds. El cron `expire-pending-bookings` (cada 5 min) ya existe, solo se reemplaza el cuerpo.
+
 ### `reviews`
 - `id` (uuid, PK)
 - `booking_id` (uuid, FK → `bookings.id`) — booking que originó la review; queda fijo en la creación aunque la review se edite en sesiones futuras (auditoría)
