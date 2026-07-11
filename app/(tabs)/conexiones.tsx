@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
+import { DOORS, coachesForDoor } from '@/constants/conexionesDoors';
+import { rankDeck } from '@/lib/coachDeckRanking';
 
 // ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
 const FOREST      = '#3F512F';
@@ -35,29 +37,6 @@ const TC_SOFT     = '#EAD3C6';
 const STAR        = '#C99A3F';
 const LIVE        = '#5F7A44';
 const LINE        = 'rgba(63,81,47,0.14)';
-
-// ─── Chips ───────────────────────────────────────────────────────────────────
-type FeatherName = React.ComponentProps<typeof Feather>['name'];
-
-type ChipItem = {
-  id: string;
-  icon: FeatherName;
-  label: string;
-  displayLabel: string;
-  searchTopics: string[];
-};
-
-const CHIPS: ChipItem[] = [
-  { id: '5', icon: 'wind',        label: 'Ansiedad y estrés',  displayLabel: 'ansiedad y estrés',    searchTopics: ['Ansiedad', 'Estrés físico'] },
-  { id: '1', icon: 'smile',       label: 'Estado de ánimo',    displayLabel: 'estado de ánimo',      searchTopics: ['Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría'] },
-  { id: '2', icon: 'heart',       label: 'Relaciones',         displayLabel: 'relaciones',            searchTopics: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'] },
-  { id: '3', icon: 'trending-up', label: 'Desarrollo',         displayLabel: 'crecimiento personal',  searchTopics: ['Identidad', 'Motivación', 'Crecimiento', 'Propósito'] },
-  { id: '4', icon: 'compass',     label: 'Propósito',          displayLabel: 'propósito y dirección', searchTopics: ['Propósito', 'Identidad', 'Motivación', 'Momentos de cambio'] },
-  { id: '6', icon: 'briefcase',   label: 'Trabajo',            displayLabel: 'trabajo y carrera',     searchTopics: ['Productividad', 'Concentración', 'Procrastinación', 'Vínculos laborales'] },
-  { id: '7', icon: 'repeat',      label: 'Hábitos',            displayLabel: 'hábitos',               searchTopics: ['Hábitos', 'Hábitos mentales'] },
-  { id: '8', icon: 'coffee',      label: 'Nutrición',          displayLabel: 'nutrición',             searchTopics: ['Nutrición'] },
-  { id: '9', icon: 'activity',    label: 'Bienestar',          displayLabel: 'salud y bienestar',     searchTopics: ['Sueño', 'Energía', 'Actividad física', 'Estrés físico'] },
-];
 
 // ─── Mapeo quiz → temas de coaches ───────────────────────────────────────────
 const QUIZ_TOPIC_MAP: Record<string, string[]> = {
@@ -114,7 +93,8 @@ export default function ConexionesScreen() {
   const { user, requestAuth } = useAuth();
   const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
 
-  const [selectedChip, setSelectedChip] = useState<string | null>(null);
+  const [selectedDoorId, setSelectedDoorId] = useState<string | null>(null);
+  const [deckIndex, setDeckIndex]           = useState(0);
   const [coaches, setCoaches]           = useState<CachedCoach[]>([]);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [rebookData, setRebookData]     = useState<RebookData | null>(null);
@@ -225,11 +205,16 @@ export default function ConexionesScreen() {
 
   useFocusEffect(useCallback(() => { loadRebook(); }, [loadRebook]));
 
-  // ── Filtrado ──────────────────────────────────────────────────────────────
-  const chip = CHIPS.find(c => c.id === selectedChip) ?? null;
-  const displayed = chip
-    ? coaches.filter(c => chip.searchTopics.some(t => c.topics.includes(t)))
-    : coaches;
+  // ── Deck por puerta ─────────────────────────────────────────────────────────
+  const selectedDoor = selectedDoorId ? DOORS.find(d => d.id === selectedDoorId) ?? null : null;
+  const deck = useMemo(
+    () => (selectedDoor ? rankDeck(coachesForDoor(selectedDoor, coaches), user?.id) : []),
+    [selectedDoor, coaches, user?.id],
+  );
+  const currentCoach = selectedDoor && deckIndex < deck.length ? deck[deckIndex] : null;
+  const whyTopic = currentCoach && selectedDoor
+    ? selectedDoor.subtemas.find(t => currentCoach.topics.includes(t))
+    : null;
 
   const suggestedCoaches: CachedCoach[] = quizTopic
     ? coaches
@@ -271,9 +256,17 @@ export default function ConexionesScreen() {
     });
   }
 
-  const sectionTitle = chip
-    ? `Trabajan ${chip.displayLabel}`
-    : 'Todos los profesionales';
+  function selectDoor(id: string) {
+    setSelectedDoorId(prev => (prev === id ? null : id));
+    setDeckIndex(0);
+  }
+  function verTodosEnPuerta() {
+    if (!selectedDoor) return;
+    router.push({
+      pathname: '/search3',
+      params: { topic: selectedDoor.subtemas.join(','), label: selectedDoor.label },
+    });
+  }
 
   return (
     <AppBg>
@@ -393,117 +386,127 @@ export default function ConexionesScreen() {
             </View>
           )}
 
-          {/* ── Sección chips ──────────────────────────────────────────── */}
+          {/* ── Puertas ────────────────────────────────────────────────── */}
           <View style={s.sectionHead}>
-            <Text style={s.sectionTitle}>¿Qué te gustaría trabajar hoy?</Text>
-            <TouchableOpacity activeOpacity={0.7} onPress={() => setSelectedChip(null)}>
-              <Text style={s.sectionLink}>Ver todos</Text>
-            </TouchableOpacity>
+            <Text style={s.sectionTitle}>¿Qué te gustaría trabajar?</Text>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.chipsRow}>
-            {CHIPS.map(c => {
-              const active = selectedChip === c.id;
+          <View style={s.doorsWrap}>
+            {DOORS.map(d => {
+              const active = selectedDoorId === d.id;
               return (
                 <TouchableOpacity
-                  key={c.id}
-                  style={[s.chip, active && s.chipActive]}
-                  onPress={() => setSelectedChip(active ? null : c.id)}
-                  activeOpacity={0.8}>
-                  <Feather name={c.icon} size={14} color={active ? '#F3EEDF' : FOREST} />
-                  <Text style={[s.chipLabel, active && s.chipLabelActive]}>{c.label}</Text>
+                  key={d.id}
+                  style={[
+                    s.doorChip,
+                    active ? { backgroundColor: d.color, borderColor: d.color } : { borderColor: `${d.color}44` },
+                  ]}
+                  onPress={() => selectDoor(d.id)}
+                  activeOpacity={0.85}>
+                  <Text style={[s.doorChipText, active && s.doorChipTextActive]} numberOfLines={1}>
+                    {d.label}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
-
-          {/* ── Resultados ─────────────────────────────────────────────── */}
-          <View style={s.resultsHead}>
-            <Text style={s.resultsTitle}>{sectionTitle}</Text>
           </View>
 
-          {loadingCoaches ? (
-            <ActivityIndicator size="small" color={FOREST} style={{ marginTop: 24 }} />
-          ) : displayed.length === 0 ? (
-            <Text style={s.emptyText}>
-              {chip
-                ? `No hay profesionales de ${chip.displayLabel} cargados aún.`
-                : 'No hay profesionales disponibles.'}
-            </Text>
-          ) : displayed.map(coach => (
-            <View key={coach.id} style={s.proCard}>
-              {/* Top row */}
-              <View style={s.proTop}>
-                {/* Avatar */}
-                <View style={s.proAvatarWrap}>
-                  {coach.avatarUrl ? (
-                    <Image source={{ uri: coach.avatarUrl }} style={s.proAvatar} />
-                  ) : (
-                    <View style={[s.proAvatar, s.proAvatarFallback]}>
-                      <Text style={s.proInitials}>{getInitials(coach.name)}</Text>
-                    </View>
-                  )}
-                  {coach.verified && (
-                    <View style={s.vBadge}>
-                      <Text style={s.vBadgeText}>✓</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Info */}
-                <View style={s.proInfo}>
-                  <Text style={s.proName} numberOfLines={1}>{coach.name}</Text>
-                  <Text style={s.proRole} numberOfLines={1}>{coach.specialty}</Text>
-                  {(coach.reviewCount ?? 0) >= 1 && (
-                    <View style={s.statsRow}>
-                      <Text style={s.statsStar}>★ {(coach.avgRating ?? 0).toFixed(1)}</Text>
-                      <Text style={s.statsCount}>{coach.reviewCount} reseñas</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Fav */}
-                <TouchableOpacity
-                  onPress={() => toggleFav(coach.id)}
-                  hitSlop={8}
-                  activeOpacity={0.7}
-                  style={s.favBtn}>
-                  <Feather
-                    name="star"
-                    size={18}
-                    color={favoriteIds.has(coach.id) ? TERRACOTTA : FOREST_SOFT}
-                  />
-                </TouchableOpacity>
+          {/* ── Deck de la puerta elegida ──────────────────────────────── */}
+          {selectedDoor && (
+            loadingCoaches ? (
+              <ActivityIndicator size="small" color={FOREST} style={{ marginTop: 20 }} />
+            ) : deck.length === 0 ? (
+              <View style={s.deckClose}>
+                <Feather name="search" size={22} color={FOREST_SOFT} />
+                <Text style={s.deckCloseTitle}>Todavía no hay coaches en {selectedDoor.label.toLowerCase()}</Text>
+                <Text style={s.deckCloseSub}>Probá con otro tema, o hacé el quiz para una sugerencia.</Text>
               </View>
-
-              {/* Tags */}
-              {coach.topics.length > 0 && (
-                <View style={s.tagsRow}>
-                  {coach.topics.slice(0, 2).map(t => (
-                    <View key={t} style={s.tag}>
-                      <Text style={s.tagText}>{t}</Text>
+            ) : currentCoach ? (
+              <View style={s.deckCard}>
+                <View style={s.deckCounterRow}>
+                  <Text style={s.deckCounter}>{deckIndex + 1} de {deck.length}</Text>
+                  {whyTopic && (
+                    <View style={[s.whyChip, { backgroundColor: `${selectedDoor.color}1E` }]}>
+                      <Text style={[s.whyChipText, { color: selectedDoor.color }]}>Trabaja {whyTopic.toLowerCase()}</Text>
                     </View>
-                  ))}
+                  )}
                 </View>
-              )}
 
-              {/* Bottom row */}
-              <View style={s.proBottom}>
-                <Text style={s.proPrice} numberOfLines={1}>
-                  Desde ${(coach.priceFrom ?? 0).toLocaleString('es-AR')}
-                </Text>
-                <TouchableOpacity
-                  style={s.proBookBtn}
-                  onPress={() => goToPerfil(coach)}
-                  activeOpacity={0.85}>
-                  <Text style={s.proBookBtnText}>Ver perfil</Text>
-                </TouchableOpacity>
+                <View style={s.deckTop}>
+                  <View style={s.proAvatarWrap}>
+                    {currentCoach.avatarUrl ? (
+                      <Image source={{ uri: currentCoach.avatarUrl }} style={s.deckAvatar} />
+                    ) : (
+                      <View style={[s.deckAvatar, s.proAvatarFallback]}>
+                        <Text style={s.deckInitials}>{getInitials(currentCoach.name)}</Text>
+                      </View>
+                    )}
+                    {currentCoach.verified && (
+                      <View style={s.vBadge}><Text style={s.vBadgeText}>✓</Text></View>
+                    )}
+                  </View>
+
+                  <View style={s.proInfo}>
+                    <Text style={s.deckName} numberOfLines={1}>{currentCoach.name}</Text>
+                    <Text style={s.proRole} numberOfLines={1}>{currentCoach.specialty}</Text>
+                    <View style={s.deckMetaRow}>
+                      {(currentCoach.reviewCount ?? 0) >= 1 ? (
+                        <Text style={s.statsStar}>★ {(currentCoach.avgRating ?? 0).toFixed(1)}</Text>
+                      ) : (
+                        <Text style={s.deckNew}>Nuevo</Text>
+                      )}
+                      <Text style={s.deckPrice}>Desde ${(currentCoach.priceFrom ?? 0).toLocaleString('es-AR')}</Text>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => toggleFav(currentCoach.id)}
+                    hitSlop={8}
+                    activeOpacity={0.7}
+                    style={s.favBtn}>
+                    <Feather name="star" size={18} color={favoriteIds.has(currentCoach.id) ? TERRACOTTA : FOREST_SOFT} />
+                  </TouchableOpacity>
+                </View>
+
+                {currentCoach.topics.length > 0 && (
+                  <View style={s.tagsRow}>
+                    {currentCoach.topics.slice(0, 3).map(t => (
+                      <View key={t} style={s.tag}><Text style={s.tagText}>{t}</Text></View>
+                    ))}
+                  </View>
+                )}
+
+                <View style={s.deckActions}>
+                  <TouchableOpacity
+                    style={s.deckNextBtn}
+                    onPress={() => setDeckIndex(i => i + 1)}
+                    activeOpacity={0.8}>
+                    <Text style={s.deckNextText}>Siguiente</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={s.deckKnowBtn}
+                    onPress={() => goToPerfil(currentCoach)}
+                    activeOpacity={0.85}>
+                    <Text style={s.deckKnowText}>Conocer a {currentCoach.name.split(' ')[0]}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          ))}
+            ) : (
+              <View style={s.deckClose}>
+                <Feather name="check-circle" size={22} color={TERRACOTTA} />
+                <Text style={s.deckCloseTitle}>Viste los {deck.length} de {selectedDoor.label.toLowerCase()}</Text>
+                <Text style={s.deckCloseSub}>¿Ninguno te cerró? Miralos a todos o cambiá de tema.</Text>
+                <View style={s.deckCloseBtns}>
+                  <TouchableOpacity style={s.deckCloseGhost} onPress={() => setDeckIndex(0)} activeOpacity={0.8}>
+                    <Text style={s.deckCloseGhostText}>Ver de nuevo</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.deckClosePrimary} onPress={verTodosEnPuerta} activeOpacity={0.85}>
+                    <Text style={s.deckClosePrimaryText}>Ver todos</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )
+          )}
 
           {/* ── Quiz card ─────────────────────────────────────────────── */}
           <TouchableOpacity
@@ -676,6 +679,99 @@ const s = StyleSheet.create({
     fontSize: 12.5,
     color: TERRACOTTA,
   },
+
+  // ── Puertas ────────────────────────────────────────────────────────────────
+  doorsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 20,
+    marginBottom: 2,
+  },
+  doorChip: {
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: CARD,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  doorChipText: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: FOREST },
+  doorChipTextActive: { color: '#F7EFE4' },
+
+  // ── Deck ───────────────────────────────────────────────────────────────────
+  deckCard: {
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    borderRadius: 24,
+    marginHorizontal: 20,
+    marginTop: 14,
+    padding: 16,
+    ...shadow,
+  },
+  deckCounterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  deckCounter: { fontFamily: ViveFonts.semibold, fontSize: 12, color: FOREST_SOFT },
+  whyChip: { borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4 },
+  whyChipText: { fontFamily: ViveFonts.semibold, fontSize: 11 },
+  deckTop: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  deckAvatar: { width: 60, height: 60, borderRadius: 30 },
+  deckInitials: { fontFamily: ViveFonts.semibold, fontSize: 20, color: FOREST },
+  deckName: { fontFamily: ViveFonts.semibold, fontSize: 16, color: FOREST },
+  deckMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 },
+  deckNew: { fontFamily: ViveFonts.semibold, fontSize: 11, color: TERRACOTTA },
+  deckPrice: { fontFamily: ViveFonts.regular, fontSize: 11.5, color: FOREST_SOFT },
+  deckActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  deckNextBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(63,81,47,0.25)',
+  },
+  deckNextText: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST },
+  deckKnowBtn: {
+    flex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: FOREST,
+  },
+  deckKnowText: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#F3EEDF' },
+
+  deckClose: {
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginTop: 14,
+    paddingVertical: 22,
+    paddingHorizontal: 20,
+    ...shadow,
+  },
+  deckCloseTitle: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: FOREST, textAlign: 'center' },
+  deckCloseSub: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, textAlign: 'center', lineHeight: 18 },
+  deckCloseBtns: { flexDirection: 'row', gap: 10, marginTop: 6 },
+  deckCloseGhost: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    borderColor: 'rgba(63,81,47,0.25)',
+  },
+  deckCloseGhostText: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: FOREST },
+  deckClosePrimary: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 13, backgroundColor: TERRACOTTA },
+  deckClosePrimaryText: { fontFamily: ViveFonts.semibold, fontSize: 12.5, color: '#FFF6EC' },
 
   // Chips
   chipsRow: {
