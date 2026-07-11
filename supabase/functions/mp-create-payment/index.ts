@@ -78,12 +78,11 @@ serve(async (req) => {
       commissionPct = (count ?? 0) < 3 ? 20 : 15
     }
 
-    // La comisión que retiene VITA se factura al coach CON IVA (AR 21%).
-    // TODO: confirmar con contador si el marketplace_fee debe incluir el IVA o
-    // si el IVA se liquida por fuera. Por ahora se retiene comisión + IVA.
-    const IVA_PCT = 21
-    const marketplaceFee =
-      Math.round(Number(booking.amount) * commissionPct * (1 + IVA_PCT / 100)) / 100
+    // marketplace_fee = comisión pura (20/15%). El IVA NO se hornea acá: depende
+    // de la figura fiscal de VITA (monotributo → factura C sin IVA discriminado
+    // vs. RI → con IVA), todavía sin decidir. El IVA vive en la factura, no en el
+    // schema ni en este cálculo. TODO(fiscal): si VITA queda RI, sumar el IVA acá.
+    const marketplaceFee = Math.round(Number(booking.amount) * commissionPct) / 100
 
     // TODO(MP) CRÍTICO: configurar el MONEY RELEASE del split para RETENER el
     // dinero del coach hasta DESPUÉS de la sesión. Sin esto, un reembolso (o el
