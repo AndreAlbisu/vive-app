@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-07-11 — Andre (sesión 59)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`, `constants/conexionesDoors.ts`, `lib/coachDeckRanking.ts`, `lib/coachesCache.ts`, `lib/coachAvailability.ts` (nuevo), `app/search3.tsx`, `scripts/add-coach-trending-stats.sql` (nuevo), `scripts/audit-schema.sql` (nuevo), `SCHEMA.md`
+
+**Resumen:**
+- **Conexiones — rediseño de navegación en 3 fases:** el menú pasó de 10 chips a jerarquía **Ejes → Temas → Deck** (10 puertas de una abruma). Fase 1 = 3 cards de eje (`EJES` nuevo en `conexionesDoors.ts`: Bienestar físico/emocional/espiritual, agrupan puertas por color = eje dominante). Fase 2 = temas del eje como cards (ícono + tagline + chevron; agregué `icon`/`tagline` a cada `Door`). Fase 3 = deck. Back en cada nivel; los chips deslizables del deck se acotan al eje actual. Todo inline dentro del tab (no rutas nuevas) para conservar la tab bar.
+- **Deck v2 — slots etiquetados y transparentes** (`lib/coachDeckRanking.ts` reescrito): `rankDeck` devuelve `DeckEntry[]` = `{coach, slot}`. 4 slots en orden con categoría VISIBLE y criterio explícito: **Recomendado por VITA** (rating, luego reagendamiento), **En tendencia** (reservas 30d), **Nuevo en VITA** (rotado por día), **Opción económica** (menor precio del resto). Cada coach en un solo slot (gana prioridad mayor); slot sin candidato se omite (nunca coach mal-etiquetado). Reemplaza el modelo viejo de "dos carriles" opaco. Decisión de producto: criterios transparentes para que el usuario entienda el porqué y el coach sepa cómo aparecer.
+- **Deck — card rica + carrusel swipe:** card con banda de color por eje, avatar grande, chip de categoría + sublabel, rating·reseñas, **bio en itálica** (de `coaches.bio`, ya existía) y **"Con lugar esta semana"** (disponibilidad 7d vía `lib/coachAvailability.ts` nuevo, solo para los ≤5 del deck). El deck es un **carrusel horizontal paginado** (swipe izq/der + dots), reemplazó los botones Siguiente/close-card. `key={selectedDoorId}` resetea el scroll al cambiar de tema.
+- **DB — vista `coach_trending_stats`** (`scripts/add-coach-trending-stats.sql`, **corrida y verificada 11/07**): `recent_bookers` = usuarios distintos con reserva no-cancelada en 30d. Server-side por RLS (mismo patrón que `coach_rebooking_stats`). `coachesCache` la lee en paralelo → `CachedCoach.recentBookers`. También agregué `bio` al select del cache y de `search3`.
+- **Card "no sabés qué necesitás" → teaser de VITA IA:** perdió sentido (con Ejes→Temas→Deck + deck ya transparente era un 3er camino redundante, y su quiz ya no alimenta Conexiones — solo Recursos). Reconvertida a teaser que rutea a `/ia` (hoy stub "Próximamente"). Card de reagendar del menú **oculta** por ahora (flag `SHOW_REBOOK=false`). Saqué también el buscador suelto y la tira "Para vos" del menú (búsqueda sigue en el ícono 🔍) — pendiente de confirmar si se reintegran.
+- **Auditoría de schema (drift de scripts):** deep-research encontró que varios scripts figuraban "pendiente de correr" en SCHEMA/CHANGELOG pero ya estaban aplicados (drift documental, no real). Creé `scripts/audit-schema.sql` (chequeo de existencia de tablas/vistas/columnas/funciones/triggers/buckets). Sonda en vivo + audit completo → **base 100% aplicada, cero faltantes** (incluido `profiles.push_token`, que no tenía script). Corregí los flags obsoletos en SCHEMA.md (`coach_topics`, `instant_booking`, `coach_trending_stats`, bucket `avatars`).
+
+**Pendiente para la próxima sesión:**
+- **Sin probar en Expo Go:** todo el rediseño de Conexiones (flujo Ejes→Temas→Deck, carrusel swipe, slots etiquetados, teaser VITA). Ojo posible: alto despar de cards del carrusel entre una con bio larga y una sin bio.
+- **Decisión abierta:** ¿reintegrar buscador suelto / "Para vos" al menú, o queda como está?
+- **Huecos grandes de la app (del deep-research, priorizados):** (1) **pagos no conectados** — el método de pago en `BookingScreen_Confirm` es UI decorativa, sin SDK ni cobro real (bloqueante de monetización); (2) **Apple Sign-In es stub** (`próximamente`) — bloqueante de App Store (guideline 4.8) si se ofrece Google; (3) sin Sentry/analytics ni tests; (4) **VITA IA** sigue stub (ya tiene el teaser apuntándole); (5) recordatorio de sesión (`recordatorio_sesion`) no parece tener cron que lo dispare.
+- **Deck v3:** activar reagendamiento en el score de "Recomendado por VITA" cuando haya volumen (≥5 completadas).
+
+---
+
 ## 2026-07-10 — Andre (sesión 58)
 
 **Tocado:** `app/(tabs)/recursos.tsx`, `constants/vitaTools.ts`, `hooks/useRecommendedResource.ts`, `app/_layout.tsx`, `screens/AnclajeScreen.tsx` (nuevo), `app/anclaje.tsx` (nuevo), `screens/SalaScreen.tsx`, `screens/ExploreResourcesScreen.tsx`, `app/search1.tsx`, `app/search2.tsx`, `app/search3.tsx`, `constants/conexionesDoors.ts` (nuevo), `lib/coachDeckRanking.ts` (nuevo), `lib/coachesCache.ts`, `constants/searchData.ts`, `scripts/add-coach-rebooking-stats.sql` (nuevo), `SCHEMA.md`

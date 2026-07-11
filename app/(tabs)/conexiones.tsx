@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   StatusBar,
   Image,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,7 +24,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
-import { DOORS, coachesForDoor } from '@/constants/conexionesDoors';
+import { coachesWithSlotThisWeek } from '@/lib/coachAvailability';
+import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
 import { rankDeck } from '@/lib/coachDeckRanking';
 
 // ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
@@ -38,30 +40,19 @@ const STAR        = '#C99A3F';
 const LIVE        = '#5F7A44';
 const LINE        = 'rgba(63,81,47,0.14)';
 
-// ─── Mapeo quiz → temas de coaches ───────────────────────────────────────────
-const QUIZ_TOPIC_MAP: Record<string, string[]> = {
-  emocion:    ['Tristeza', 'Ansiedad', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría', 'Autoestima', 'Soledad'],
-  relaciones: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'],
-  trabajo:    ['Productividad', 'Concentración', 'Procrastinación', 'Vínculos laborales', 'Hábitos mentales'],
-  salud:      ['Sueño', 'Energía', 'Actividad física', 'Estrés físico', 'Hábitos', 'Nutrición', 'Sexualidad'],
-  proposito:  ['Propósito', 'Identidad', 'Motivación', 'Crecimiento', 'Momentos de cambio', 'Espiritualidad'],
-};
+const SCREEN_W = Dimensions.get('window').width;
 
-const QUIZ_TOPIC_LABEL: Record<string, string> = {
-  emocion:    'emociones',
-  relaciones: 'relaciones',
-  trabajo:    'trabajo',
-  salud:      'salud y hábitos',
-  proposito:  'propósito',
-};
+// Feature flag temporal: ocultar la card de reagendar en el menú (pedido Andre).
+// Poner en true para volver a mostrarla.
+const SHOW_REBOOK: boolean = false;
 
-function matchesProfType(specialty: string, profType: string): boolean {
-  if (!profType || profType === 'any') return true;
-  const s = specialty.toLowerCase();
-  if (profType === 'coach')         return s.includes('coach');
-  if (profType === 'psicologo')     return s.includes('psicól') || s.includes('psicol');
-  if (profType === 'nutricionista') return s.includes('nutrici');
-  return true;
+// Tinte suave desde un hex de eje (para círculos del menú + banda del deck).
+function tint(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 // ─── Re-book ─────────────────────────────────────────────────────────────────
@@ -93,14 +84,14 @@ export default function ConexionesScreen() {
   const { user, requestAuth } = useAuth();
   const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
 
+  const [selectedAxisId, setSelectedAxisId] = useState<string | null>(null);
   const [selectedDoorId, setSelectedDoorId] = useState<string | null>(null);
   const [deckIndex, setDeckIndex]           = useState(0);
   const [coaches, setCoaches]           = useState<CachedCoach[]>([]);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
+  const [availableSet, setAvailableSet] = useState<Set<string>>(new Set());
   const [rebookData, setRebookData]     = useState<RebookData | null>(null);
   const [unreadCount, setUnreadCount]   = useState(0);
-  const [quizTopic, setQuizTopic]       = useState<string | null>(null);
-  const [quizProfType, setQuizProfType] = useState<string | null>(null);
 
   // ── Cache poll ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -114,20 +105,6 @@ export default function ConexionesScreen() {
     t = setInterval(check, 80);
     return () => clearInterval(t);
   }, []);
-
-  // ── Quiz answers ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from('user_quiz_answers')
-      .select('topic, professional_type')
-      .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        setQuizTopic(data?.topic ?? null);
-        setQuizProfType(data?.professional_type ?? null);
-      });
-  }, [user]);
 
   // ── Notificaciones no leídas ──────────────────────────────────────────────
   const fetchNotifCount = useCallback(() => {
@@ -205,25 +182,21 @@ export default function ConexionesScreen() {
 
   useFocusEffect(useCallback(() => { loadRebook(); }, [loadRebook]));
 
-  // ── Deck por puerta ─────────────────────────────────────────────────────────
+  // ── Selección eje / puerta ──────────────────────────────────────────────────
+  const selectedAxis = selectedAxisId ? EJE_MAP[selectedAxisId] ?? null : null;
   const selectedDoor = selectedDoorId ? DOORS.find(d => d.id === selectedDoorId) ?? null : null;
   const deck = useMemo(
     () => (selectedDoor ? rankDeck(coachesForDoor(selectedDoor, coaches), user?.id) : []),
     [selectedDoor, coaches, user?.id],
   );
-  const currentCoach = selectedDoor && deckIndex < deck.length ? deck[deckIndex] : null;
-  const whyTopic = currentCoach && selectedDoor
-    ? selectedDoor.subtemas.find(t => currentCoach.topics.includes(t))
-    : null;
-
-  const suggestedCoaches: CachedCoach[] = quizTopic
-    ? coaches
-        .filter(c =>
-          (QUIZ_TOPIC_MAP[quizTopic] ?? []).some(t => c.topics.includes(t)) &&
-          matchesProfType(c.specialty, quizProfType ?? 'any'),
-        )
-        .slice(0, 4)
-    : [];
+  // ── Disponibilidad "esta semana" — solo para los coaches del deck visible ──
+  useEffect(() => {
+    if (deck.length === 0) { setAvailableSet(new Set()); return; }
+    let cancelled = false;
+    const ids = deck.map(e => e.coach.coachId).filter(Boolean) as string[];
+    coachesWithSlotThisWeek(ids).then(set => { if (!cancelled) setAvailableSet(set); });
+    return () => { cancelled = true; };
+  }, [deck]);
 
   // ── Navegación ────────────────────────────────────────────────────────────
   function goToPerfil(coach: CachedCoach) {
@@ -256,8 +229,23 @@ export default function ConexionesScreen() {
     });
   }
 
-  function selectDoor(id: string) {
-    setSelectedDoorId(prev => (prev === id ? null : id));
+  function selectAxis(id: string) {
+    setSelectedAxisId(id);
+  }
+  function backToAxes() {
+    setSelectedAxisId(null);
+  }
+  function openDoor(id: string) {
+    // Aseguro que el eje quede fijado (por si se abre desde los chips del deck).
+    const door = DOORS.find(d => d.id === id);
+    const eje = EJES.find(e => door && e.color === door.color);
+    if (eje) setSelectedAxisId(eje.id);
+    setSelectedDoorId(id);
+    setDeckIndex(0);
+  }
+  function backToMenu() {
+    // Vuelve a los temas del eje (fase 2), no a los ejes.
+    setSelectedDoorId(null);
     setDeckIndex(0);
   }
   function verTodosEnPuerta() {
@@ -268,6 +256,186 @@ export default function ConexionesScreen() {
     });
   }
 
+  // ═══ Vista DECK (una puerta elegida) ═══════════════════════════════════════
+  if (selectedDoor) {
+    return (
+      <AppBg>
+        <StatusBar barStyle="dark-content" />
+        <SafeAreaView style={s.safe} edges={['top']}>
+          <ScrollView
+            style={s.screen}
+            contentContainerStyle={s.screenContent}
+            showsVerticalScrollIndicator={false}>
+
+            {/* Header con volver */}
+            <View style={s.deckHeader}>
+              <TouchableOpacity onPress={backToMenu} hitSlop={10} activeOpacity={0.7} style={s.backBtn}>
+                <Feather name="chevron-left" size={26} color={FOREST} />
+              </TouchableOpacity>
+              <Text style={s.deckHeaderTitle}>Conexiones</Text>
+              <View style={s.hicons}>
+                <TouchableOpacity onPress={() => router.push('/search1')} activeOpacity={0.7} hitSlop={8}>
+                  <Feather name="search" size={20} color={FOREST} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => (user ? router.push('/favoritos') : requestAuth())} activeOpacity={0.7} hitSlop={8}>
+                  <Feather name="star" size={20} color={FOREST} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Chips deslizables de temas — solo los del eje actual */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.themeChipsRow}>
+              {DOORS.filter(d => d.color === selectedDoor.color).map(d => {
+                const active = d.id === selectedDoorId;
+                return (
+                  <TouchableOpacity
+                    key={d.id}
+                    style={[
+                      s.themeChip,
+                      active ? { backgroundColor: d.color, borderColor: d.color } : { borderColor: tint(d.color, 0.28) },
+                    ]}
+                    onPress={() => openDoor(d.id)}
+                    activeOpacity={0.85}>
+                    <Feather name={d.icon as any} size={13} color={active ? '#F7EFE4' : d.color} />
+                    <Text style={[s.themeChipText, active && s.themeChipTextActive]} numberOfLines={1}>
+                      {d.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Deck — carrusel paginado (swipe izq/der) */}
+            {loadingCoaches ? (
+              <ActivityIndicator size="small" color={FOREST} style={{ marginTop: 40 }} />
+            ) : deck.length === 0 ? (
+              <View style={s.deckClose}>
+                <Feather name="search" size={22} color={FOREST_SOFT} />
+                <Text style={s.deckCloseTitle}>Todavía no hay profesionales en {selectedDoor.label.toLowerCase()}</Text>
+                <Text style={s.deckCloseSub}>Probá con otro tema, o hacé el quiz para una sugerencia.</Text>
+              </View>
+            ) : (
+              <>
+                <ScrollView
+                  key={selectedDoorId}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onMomentumScrollEnd={e =>
+                    setDeckIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_W))
+                  }
+                  scrollEventThrottle={16}>
+                  {deck.map((entry, i) => {
+                    const { coach, slot } = entry;
+                    const available = coach.coachId && availableSet.has(coach.coachId);
+                    return (
+                      <View key={coach.id} style={s.cardPage}>
+                        <View style={s.cardWrap}>
+                          {/* Banda de color por eje */}
+                          <View style={[s.cardBand, { backgroundColor: tint(selectedDoor.color, 0.20) }]}>
+                            <TouchableOpacity
+                              onPress={() => toggleFav(coach.id)}
+                              hitSlop={8}
+                              activeOpacity={0.7}
+                              style={s.cardFav}>
+                              <Feather name="star" size={17} color={favoriteIds.has(coach.id) ? TERRACOTTA : FOREST_SOFT} />
+                            </TouchableOpacity>
+                            <View style={s.cardCounter}>
+                              <Text style={s.cardCounterText}>{i + 1} de {deck.length}</Text>
+                            </View>
+                          </View>
+
+                          {/* Avatar solapado */}
+                          <View style={s.cardAvatarWrap}>
+                            {coach.avatarUrl ? (
+                              <Image source={{ uri: coach.avatarUrl }} style={s.cardAvatar} />
+                            ) : (
+                              <View style={[s.cardAvatar, s.cardAvatarFallback]}>
+                                <Text style={s.cardInitials}>{getInitials(coach.name)}</Text>
+                              </View>
+                            )}
+                            {coach.verified && (
+                              <View style={s.vBadge}><Feather name="check" size={11} color="#F3EEDF" /></View>
+                            )}
+                          </View>
+
+                          {/* Cuerpo */}
+                          <View style={s.cardBody}>
+                            <View style={[s.whyChip, { backgroundColor: tint(selectedDoor.color, 0.16) }]}>
+                              <Feather name={slot.icon as any} size={12} color={selectedDoor.color} />
+                              <Text style={[s.whyChipText, { color: selectedDoor.color }]}>{slot.label}</Text>
+                            </View>
+                            <Text style={s.slotSublabel}>{slot.sublabel}</Text>
+
+                            <Text style={s.cardName} numberOfLines={1}>{coach.name}</Text>
+                            <Text style={s.cardRole} numberOfLines={1}>{coach.specialty}</Text>
+
+                            <View style={s.cardRatingRow}>
+                              {(coach.reviewCount ?? 0) >= 1 ? (
+                                <Text style={s.cardRating}>
+                                  <Text style={{ color: STAR }}>★ </Text>
+                                  {(coach.avgRating ?? 0).toFixed(1)}
+                                  <Text style={s.cardRatingMuted}>  ·  {coach.reviewCount} reseñas</Text>
+                                </Text>
+                              ) : (
+                                <Text style={s.cardNew}>Sin reseñas todavía</Text>
+                              )}
+                            </View>
+
+                            {!!coach.bio && (
+                              <Text style={s.cardBio} numberOfLines={3}>“{coach.bio.trim()}”</Text>
+                            )}
+
+                            <View style={s.cardMetaRow}>
+                              {available && (
+                                <>
+                                  <View style={s.liveDot} />
+                                  <Text style={s.cardAvail}>Con lugar esta semana</Text>
+                                  <Text style={s.cardMetaDivider}>·</Text>
+                                </>
+                              )}
+                              <Text style={s.cardPrice}>Desde ${(coach.priceFrom ?? 0).toLocaleString('es-AR')}</Text>
+                            </View>
+
+                            <TouchableOpacity
+                              style={s.knowBtn}
+                              onPress={() => goToPerfil(coach)}
+                              activeOpacity={0.85}>
+                              <Text style={s.knowText}>Conocer a {coach.name.split(' ')[0]}</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Dots */}
+                {deck.length > 1 && (
+                  <View style={s.dotsRow}>
+                    {deck.map((e, i) => (
+                      <View key={e.coach.id} style={[s.dot, i === deckIndex && s.dotActive]} />
+                    ))}
+                  </View>
+                )}
+
+                <TouchableOpacity onPress={verTodosEnPuerta} activeOpacity={0.7} style={s.verListaBtn}>
+                  <Text style={s.verListaText}>Ver lista completa</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            <View style={{ height: TAB_BAR_CLEARANCE + 16 }} />
+          </ScrollView>
+        </SafeAreaView>
+      </AppBg>
+    );
+  }
+
+  // ═══ Vista MENÚ (ninguna puerta elegida) ═══════════════════════════════════
   return (
     <AppBg>
       <StatusBar barStyle="dark-content" />
@@ -277,7 +445,7 @@ export default function ConexionesScreen() {
           icon="account-group-outline"
           iconColor={FOREST_SOFT}
           title="Encontrá a tu guía"
-          description="Explorá coaches y profesionales según lo que estás viviendo. Filtrá por tema o buscá por nombre."
+          description="Elegí un tema y te presento a los profesionales indicados. Lo cambiás cuando quieras."
           delay={800}
         />
 
@@ -288,11 +456,11 @@ export default function ConexionesScreen() {
 
           {/* ── Header ─────────────────────────────────────────────────── */}
           <View style={s.header}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.title}>Conexiones</Text>
-              <Text style={s.subtitle}>Las personas indicadas para lo que estás viviendo.</Text>
-            </View>
+            <Text style={s.title}>Conexiones</Text>
             <View style={s.hicons}>
+              <TouchableOpacity onPress={() => router.push('/search1')} activeOpacity={0.7} hitSlop={8}>
+                <Feather name="search" size={21} color={FOREST} />
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => (user ? router.push('/favoritos') : requestAuth())}
                 activeOpacity={0.7}
@@ -310,57 +478,9 @@ export default function ConexionesScreen() {
             </View>
           </View>
 
-          {/* ── Buscador ───────────────────────────────────────────────── */}
-          <TouchableOpacity
-            style={s.searchBar}
-            onPress={() => router.push('/search1')}
-            activeOpacity={0.85}>
-            <Feather name="search" size={16} color={FOREST_SOFT} />
-            <Text style={s.searchPlaceholder}>Buscá por nombre, especialidad o tema…</Text>
-            <Feather name="sliders" size={16} color={FOREST} />
-          </TouchableOpacity>
-
-          {/* ── Para vos (quiz) ────────────────────────────────────────── */}
-          {suggestedCoaches.length > 0 && (
-            <View style={s.paraVosWrap}>
-              <View style={s.paraVosHead}>
-                <Text style={s.paraVosTitle}>Para vos</Text>
-                <Text style={s.paraVosSub}>
-                  Trabajan {QUIZ_TOPIC_LABEL[quizTopic!] ?? quizTopic}
-                </Text>
-                <TouchableOpacity onPress={() => router.push('/quiz')} hitSlop={8}>
-                  <Text style={s.paraVosLink}>Cambiar</Text>
-                </TouchableOpacity>
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.paraVosRow}>
-                {suggestedCoaches.map(c => (
-                  <TouchableOpacity
-                    key={c.id}
-                    style={s.paraVosCard}
-                    onPress={() => goToPerfil(c)}
-                    activeOpacity={0.85}>
-                    {c.avatarUrl ? (
-                      <Image source={{ uri: c.avatarUrl }} style={s.paraVosAvatar} />
-                    ) : (
-                      <View style={[s.paraVosAvatar, s.paraVosAvatarFallback]}>
-                        <Text style={s.paraVosInitials}>{getInitials(c.name)}</Text>
-                      </View>
-                    )}
-                    <Text style={s.paraVosName} numberOfLines={1}>{c.name.split(' ')[0]}</Text>
-                    <Text style={s.paraVosRole} numberOfLines={1}>{c.specialty}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* ── Re-book card (condicional) ──────────────────────────────── */}
-          {rebookData && (
+          {/* ── Re-book card (condicional) — OCULTA por ahora (pedido Andre) ─ */}
+          {SHOW_REBOOK && rebookData && (
             <View style={s.rebook}>
-              {/* Avatar */}
               {rebookData.avatarUrl ? (
                 <Image source={{ uri: rebookData.avatarUrl }} style={s.rebookAvatar} />
               ) : (
@@ -368,166 +488,97 @@ export default function ConexionesScreen() {
                   <Text style={s.rebookInitials}>{getInitials(rebookData.name)}</Text>
                 </View>
               )}
-              {/* Texto */}
               <View style={s.rebookText}>
                 <Text style={s.rebookTitle} numberOfLines={1}>
                   ¿Otra sesión con {rebookData.name.split(' ')[0]}?
                 </Text>
                 {rebookData.lastDate && (
-                  <Text style={s.rebookSub}>
-                    Tu última fue el {formatShortDate(rebookData.lastDate)}
-                  </Text>
+                  <Text style={s.rebookSub}>Tu última fue el {formatShortDate(rebookData.lastDate)}</Text>
                 )}
               </View>
-              {/* CTA */}
               <TouchableOpacity style={s.rebookCta} onPress={goRebook} activeOpacity={0.85}>
                 <Text style={s.rebookCtaText}>Reservar</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* ── Puertas ────────────────────────────────────────────────── */}
-          <View style={s.sectionHead}>
-            <Text style={s.sectionTitle}>¿Qué te gustaría trabajar?</Text>
-          </View>
+          {selectedAxis ? (
+            /* ── Fase 2: temas del eje ──────────────────────────────────── */
+            <>
+              <TouchableOpacity onPress={backToAxes} activeOpacity={0.7} hitSlop={8} style={s.menuBackRow}>
+                <Feather name="chevron-left" size={18} color={FOREST_SOFT} />
+                <Text style={s.menuBackText}>Áreas de bienestar</Text>
+              </TouchableOpacity>
 
-          <View style={s.doorsWrap}>
-            {DOORS.map(d => {
-              const active = selectedDoorId === d.id;
-              return (
-                <TouchableOpacity
-                  key={d.id}
-                  style={[
-                    s.doorChip,
-                    active ? { backgroundColor: d.color, borderColor: d.color } : { borderColor: `${d.color}44` },
-                  ]}
-                  onPress={() => selectDoor(d.id)}
-                  activeOpacity={0.85}>
-                  <Text style={[s.doorChipText, active && s.doorChipTextActive]} numberOfLines={1}>
-                    {d.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* ── Deck de la puerta elegida ──────────────────────────────── */}
-          {selectedDoor && (
-            loadingCoaches ? (
-              <ActivityIndicator size="small" color={FOREST} style={{ marginTop: 20 }} />
-            ) : deck.length === 0 ? (
-              <View style={s.deckClose}>
-                <Feather name="search" size={22} color={FOREST_SOFT} />
-                <Text style={s.deckCloseTitle}>Todavía no hay coaches en {selectedDoor.label.toLowerCase()}</Text>
-                <Text style={s.deckCloseSub}>Probá con otro tema, o hacé el quiz para una sugerencia.</Text>
+              <View style={s.askWrap}>
+                <Text style={s.askTitle}>{selectedAxis.label}</Text>
+                <Text style={s.askSub}>Elegí un tema y te presento a los profesionales indicados.</Text>
               </View>
-            ) : currentCoach ? (
-              <View style={s.deckCard}>
-                <View style={s.deckCounterRow}>
-                  <Text style={s.deckCounter}>{deckIndex + 1} de {deck.length}</Text>
-                  {whyTopic && (
-                    <View style={[s.whyChip, { backgroundColor: `${selectedDoor.color}1E` }]}>
-                      <Text style={[s.whyChipText, { color: selectedDoor.color }]}>Trabaja {whyTopic.toLowerCase()}</Text>
-                    </View>
-                  )}
-                </View>
 
-                <View style={s.deckTop}>
-                  <View style={s.proAvatarWrap}>
-                    {currentCoach.avatarUrl ? (
-                      <Image source={{ uri: currentCoach.avatarUrl }} style={s.deckAvatar} />
-                    ) : (
-                      <View style={[s.deckAvatar, s.proAvatarFallback]}>
-                        <Text style={s.deckInitials}>{getInitials(currentCoach.name)}</Text>
-                      </View>
-                    )}
-                    {currentCoach.verified && (
-                      <View style={s.vBadge}><Text style={s.vBadgeText}>✓</Text></View>
-                    )}
-                  </View>
-
-                  <View style={s.proInfo}>
-                    <Text style={s.deckName} numberOfLines={1}>{currentCoach.name}</Text>
-                    <Text style={s.proRole} numberOfLines={1}>{currentCoach.specialty}</Text>
-                    <View style={s.deckMetaRow}>
-                      {(currentCoach.reviewCount ?? 0) >= 1 ? (
-                        <Text style={s.statsStar}>★ {(currentCoach.avgRating ?? 0).toFixed(1)}</Text>
-                      ) : (
-                        <Text style={s.deckNew}>Nuevo</Text>
-                      )}
-                      <Text style={s.deckPrice}>Desde ${(currentCoach.priceFrom ?? 0).toLocaleString('es-AR')}</Text>
-                    </View>
-                  </View>
-
+              <View style={s.menuWrap}>
+                {doorsForEje(selectedAxis).map(d => (
                   <TouchableOpacity
-                    onPress={() => toggleFav(currentCoach.id)}
-                    hitSlop={8}
-                    activeOpacity={0.7}
-                    style={s.favBtn}>
-                    <Feather name="star" size={18} color={favoriteIds.has(currentCoach.id) ? TERRACOTTA : FOREST_SOFT} />
-                  </TouchableOpacity>
-                </View>
-
-                {currentCoach.topics.length > 0 && (
-                  <View style={s.tagsRow}>
-                    {currentCoach.topics.slice(0, 3).map(t => (
-                      <View key={t} style={s.tag}><Text style={s.tagText}>{t}</Text></View>
-                    ))}
-                  </View>
-                )}
-
-                <View style={s.deckActions}>
-                  <TouchableOpacity
-                    style={s.deckNextBtn}
-                    onPress={() => setDeckIndex(i => i + 1)}
-                    activeOpacity={0.8}>
-                    <Text style={s.deckNextText}>Siguiente</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={s.deckKnowBtn}
-                    onPress={() => goToPerfil(currentCoach)}
+                    key={d.id}
+                    style={s.menuCard}
+                    onPress={() => openDoor(d.id)}
                     activeOpacity={0.85}>
-                    <Text style={s.deckKnowText}>Conocer a {currentCoach.name.split(' ')[0]}</Text>
+                    <View style={[s.menuIcon, { backgroundColor: tint(d.color, 0.16) }]}>
+                      <Feather name={d.icon as any} size={20} color={d.color} />
+                    </View>
+                    <View style={s.menuTextWrap}>
+                      <Text style={s.menuTitle} numberOfLines={1}>{d.label}</Text>
+                      <Text style={s.menuTagline} numberOfLines={1}>{d.tagline}</Text>
+                    </View>
+                    <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
                   </TouchableOpacity>
-                </View>
+                ))}
               </View>
-            ) : (
-              <View style={s.deckClose}>
-                <Feather name="check-circle" size={22} color={TERRACOTTA} />
-                <Text style={s.deckCloseTitle}>Viste los {deck.length} de {selectedDoor.label.toLowerCase()}</Text>
-                <Text style={s.deckCloseSub}>¿Ninguno te cerró? Miralos a todos o cambiá de tema.</Text>
-                <View style={s.deckCloseBtns}>
-                  <TouchableOpacity style={s.deckCloseGhost} onPress={() => setDeckIndex(0)} activeOpacity={0.8}>
-                    <Text style={s.deckCloseGhostText}>Ver de nuevo</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.deckClosePrimary} onPress={verTodosEnPuerta} activeOpacity={0.85}>
-                    <Text style={s.deckClosePrimaryText}>Ver todos</Text>
-                  </TouchableOpacity>
-                </View>
+            </>
+          ) : (
+            /* ── Fase 1: ejes de bienestar ──────────────────────────────── */
+            <>
+              <View style={s.askWrap}>
+                <Text style={s.askTitle}>¿Qué te gustaría{'\n'}trabajar hoy?</Text>
+                <Text style={s.askSub}>Elegí un área de bienestar para empezar.</Text>
               </View>
-            )
+
+              <View style={s.menuWrap}>
+                {EJES.map(e => (
+                  <TouchableOpacity
+                    key={e.id}
+                    style={s.menuCard}
+                    onPress={() => selectAxis(e.id)}
+                    activeOpacity={0.85}>
+                    <View style={[s.menuIcon, { backgroundColor: tint(e.color, 0.16) }]}>
+                      <Feather name={e.icon as any} size={20} color={e.color} />
+                    </View>
+                    <View style={s.menuTextWrap}>
+                      <Text style={s.menuTitle} numberOfLines={1}>{e.label}</Text>
+                      <Text style={s.menuTagline} numberOfLines={1}>{e.tagline}</Text>
+                    </View>
+                    <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
           )}
 
-          {/* ── Quiz card ─────────────────────────────────────────────── */}
+          {/* ── VITA IA — teaser de intake conversacional ─────────────── */}
           <TouchableOpacity
             style={s.quizWrap}
-            onPress={() => router.push('/quiz')}
+            onPress={() => router.push('/ia')}
             activeOpacity={0.88}>
             <LinearGradient
               colors={[TC_SOFT, '#F0DDD2']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={s.quizCard}>
-              {/* Overlapping circles */}
-              <View style={s.quizCircles}>
-                <View style={[s.qc, { backgroundColor: TERRACOTTA }]} />
-                <View style={[s.qc, { backgroundColor: FOREST_SOFT, marginLeft: -9 }]} />
-                <View style={[s.qc, { backgroundColor: '#7E8CA8', marginLeft: -9 }]} />
+              <View style={s.quizIcon}>
+                <Feather name="message-circle" size={20} color="#FFF6EC" />
               </View>
-              {/* Text */}
               <View style={s.quizText}>
-                <Text style={s.quizTitle}>¿No sabés qué necesitás?</Text>
-                <Text style={s.quizSub}>3 preguntas y te sugiero el perfil indicado</Text>
+                <Text style={s.quizTitle}>¿No sabés por dónde empezar?</Text>
+                <Text style={s.quizSub}>Contale a VITA qué te pasa y te oriento</Text>
               </View>
               <Text style={s.quizArrow}>›</Text>
             </LinearGradient>
@@ -556,55 +607,321 @@ const s = StyleSheet.create({
   screen:        { flex: 1, backgroundColor: 'transparent' },
   screenContent: { paddingTop: 10 },
 
-  // Header
+  // Header menú
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     marginTop: 10,
-    marginBottom: 16,
+    marginBottom: 6,
   },
   title: {
     fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 34,
+    fontSize: 32,
     color: FOREST,
-    lineHeight: 40,
-  },
-  subtitle: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: FOREST_SOFT,
-    marginTop: 2,
-    lineHeight: 19,
+    lineHeight: 38,
   },
   hicons: {
     flexDirection: 'row',
-    gap: 14,
-    paddingTop: 10,
+    alignItems: 'center',
+    gap: 16,
   },
 
-  // Search
-  searchBar: {
+  // Pregunta editorial
+  askWrap: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 18,
+  },
+  askTitle: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 26,
+    color: FOREST,
+    lineHeight: 32,
+  },
+  askSub: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13.5,
+    color: FOREST_SOFT,
+    marginTop: 8,
+    lineHeight: 20,
+  },
+
+  // Menú (cards de ejes / puertas)
+  menuBackRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: LINE,
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    marginHorizontal: 20,
-    marginBottom: 0,
-    ...shadow,
+    gap: 3,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    marginTop: 4,
+    alignSelf: 'flex-start',
   },
-  searchPlaceholder: {
-    flex: 1,
-    fontFamily: ViveFonts.regular,
+  menuBackText: {
+    fontFamily: ViveFonts.medium,
     fontSize: 13,
     color: FOREST_SOFT,
   },
+  menuWrap: {
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  menuCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    ...shadow,
+  },
+  menuIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  menuTextWrap: { flex: 1, minWidth: 0 },
+  menuTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15.5,
+    color: INK,
+  },
+  menuTagline: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12.5,
+    color: FOREST_SOFT,
+    marginTop: 2,
+  },
+
+  // ── Deck header ──────────────────────────────────────────────────────────
+  deckHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  backBtn: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -6,
+  },
+  deckHeaderTitle: {
+    flex: 1,
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 26,
+    color: FOREST,
+    marginLeft: 2,
+  },
+
+  // Chips de temas (deslizables)
+  themeChipsRow: {
+    paddingHorizontal: 20,
+    gap: 8,
+    paddingBottom: 4,
+  },
+  themeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: CARD,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    flexShrink: 0,
+  },
+  themeChipText: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: FOREST },
+  themeChipTextActive: { color: '#F7EFE4' },
+
+  // ── Card rica del deck ───────────────────────────────────────────────────
+  cardPage: {
+    width: SCREEN_W,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    justifyContent: 'center',   // centra la card verticalmente dentro de la página
+  },
+  cardWrap: {
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    borderRadius: 26,
+    overflow: 'hidden',
+    ...shadow,
+  },
+  cardBand: {
+    height: 92,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  cardFav: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardCounter: {
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: 13,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+  },
+  cardCounterText: { fontFamily: ViveFonts.semibold, fontSize: 11.5, color: FOREST },
+
+  cardAvatarWrap: {
+    alignSelf: 'center',
+    marginTop: -46,
+  },
+  cardAvatar: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    borderWidth: 4,
+    borderColor: CARD,
+  },
+  cardAvatarFallback: {
+    backgroundColor: 'rgba(107,122,86,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardInitials: { fontFamily: ViveFonts.semibold, fontSize: 30, color: FOREST },
+  vBadge: {
+    position: 'absolute',
+    right: 2,
+    bottom: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: LIVE,
+    borderWidth: 3,
+    borderColor: CARD,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  cardBody: {
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 18,
+  },
+  whyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 10,
+  },
+  whyChipText: { fontFamily: ViveFonts.semibold, fontSize: 11.5 },
+  slotSublabel: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11.5,
+    color: FOREST_SOFT,
+    textAlign: 'center',
+    marginTop: 5,
+  },
+  cardName: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 24,
+    color: FOREST,
+    textAlign: 'center',
+  },
+  cardRole: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: TERRACOTTA,
+    marginTop: 3,
+    textAlign: 'center',
+  },
+  cardRatingRow: { marginTop: 7 },
+  cardRating: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST },
+  cardRatingMuted: { fontFamily: ViveFonts.regular, color: FOREST_SOFT },
+  cardNew: { fontFamily: ViveFonts.semibold, fontSize: 12, color: TERRACOTTA },
+  cardBio: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 15,
+    fontStyle: 'italic',
+    color: INK,
+    textAlign: 'center',
+    lineHeight: 23,
+    marginTop: 14,
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 14,
+  },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: LIVE },
+  cardAvail: { fontFamily: ViveFonts.semibold, fontSize: 12.5, color: FOREST },
+  cardMetaDivider: { color: FOREST_SOFT, fontSize: 12.5 },
+  cardPrice: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: FOREST_SOFT },
+
+  knowBtn: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: FOREST,
+    marginTop: 16,
+  },
+  knowText: { fontFamily: ViveFonts.semibold, fontSize: 13.5, color: '#F3EEDF' },
+
+  // Dots del carrusel
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 4,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: tint(FOREST, 0.22),
+  },
+  dotActive: {
+    width: 20,
+    backgroundColor: FOREST,
+  },
+
+  verListaBtn: { alignItems: 'center', paddingVertical: 16, marginTop: 2 },
+  verListaText: { fontFamily: ViveFonts.semibold, fontSize: 13.5, color: TERRACOTTA },
+
+  // Deck close / empty
+  deckClose: {
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginTop: 14,
+    paddingVertical: 26,
+    paddingHorizontal: 20,
+    ...shadow,
+  },
+  deckCloseTitle: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: FOREST, textAlign: 'center' },
+  deckCloseSub: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, textAlign: 'center', lineHeight: 18 },
 
   // Re-book
   rebook: {
@@ -616,350 +933,18 @@ const s = StyleSheet.create({
     borderColor: LINE,
     borderRadius: 20,
     marginHorizontal: 20,
-    marginTop: 12,
+    marginBottom: 16,
     padding: 12,
     ...shadow,
   },
-  rebookAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    flexShrink: 0,
-  },
-  rebookAvatarFallback: {
-    backgroundColor: 'rgba(192,107,74,0.20)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rebookInitials: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 13,
-    color: TERRACOTTA,
-  },
+  rebookAvatar: { width: 38, height: 38, borderRadius: 19, flexShrink: 0 },
+  rebookAvatarFallback: { backgroundColor: 'rgba(192,107,74,0.20)', alignItems: 'center', justifyContent: 'center' },
+  rebookInitials: { fontFamily: ViveFonts.semibold, fontSize: 13, color: TERRACOTTA },
   rebookText: { flex: 1 },
-  rebookTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 13,
-    color: FOREST,
-  },
-  rebookSub: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: FOREST_SOFT,
-    marginTop: 1,
-  },
-  rebookCta: {
-    backgroundColor: TERRACOTTA,
-    borderRadius: 14,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-  },
-  rebookCtaText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 11.5,
-    color: '#FFF6EC',
-  },
-
-  // Section head (chips)
-  sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    marginTop: 24,
-    marginBottom: 12,
-    paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 19,
-    color: FOREST,
-  },
-  sectionLink: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12.5,
-    color: TERRACOTTA,
-  },
-
-  // ── Puertas ────────────────────────────────────────────────────────────────
-  doorsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 20,
-    marginBottom: 2,
-  },
-  doorChip: {
-    borderRadius: 18,
-    borderWidth: 1,
-    backgroundColor: CARD,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-  doorChipText: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: FOREST },
-  doorChipTextActive: { color: '#F7EFE4' },
-
-  // ── Deck ───────────────────────────────────────────────────────────────────
-  deckCard: {
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: LINE,
-    borderRadius: 24,
-    marginHorizontal: 20,
-    marginTop: 14,
-    padding: 16,
-    ...shadow,
-  },
-  deckCounterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  deckCounter: { fontFamily: ViveFonts.semibold, fontSize: 12, color: FOREST_SOFT },
-  whyChip: { borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4 },
-  whyChipText: { fontFamily: ViveFonts.semibold, fontSize: 11 },
-  deckTop: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  deckAvatar: { width: 60, height: 60, borderRadius: 30 },
-  deckInitials: { fontFamily: ViveFonts.semibold, fontSize: 20, color: FOREST },
-  deckName: { fontFamily: ViveFonts.semibold, fontSize: 16, color: FOREST },
-  deckMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 },
-  deckNew: { fontFamily: ViveFonts.semibold, fontSize: 11, color: TERRACOTTA },
-  deckPrice: { fontFamily: ViveFonts.regular, fontSize: 11.5, color: FOREST_SOFT },
-  deckActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  deckNextBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: 'rgba(63,81,47,0.25)',
-  },
-  deckNextText: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST },
-  deckKnowBtn: {
-    flex: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: FOREST,
-  },
-  deckKnowText: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#F3EEDF' },
-
-  deckClose: {
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: LINE,
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginTop: 14,
-    paddingVertical: 22,
-    paddingHorizontal: 20,
-    ...shadow,
-  },
-  deckCloseTitle: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: FOREST, textAlign: 'center' },
-  deckCloseSub: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, textAlign: 'center', lineHeight: 18 },
-  deckCloseBtns: { flexDirection: 'row', gap: 10, marginTop: 6 },
-  deckCloseGhost: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 13,
-    borderWidth: 1.5,
-    borderColor: 'rgba(63,81,47,0.25)',
-  },
-  deckCloseGhostText: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: FOREST },
-  deckClosePrimary: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 13, backgroundColor: TERRACOTTA },
-  deckClosePrimaryText: { fontFamily: ViveFonts.semibold, fontSize: 12.5, color: '#FFF6EC' },
-
-  // Chips
-  chipsRow: {
-    paddingLeft: 20,
-    paddingRight: 10,
-    gap: 8,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: CARD,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: LINE,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    flexShrink: 0,
-  },
-  chipActive: {
-    backgroundColor: FOREST,
-    borderColor: FOREST,
-  },
-  chipLabel: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: FOREST,
-  },
-  chipLabelActive: {
-    color: '#F3EEDF',
-  },
-
-  // Results head
-  resultsHead: {
-    paddingHorizontal: 20,
-    marginTop: 18,
-    marginBottom: 0,
-  },
-  resultsTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 19,
-    color: FOREST,
-  },
-  emptyText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: FOREST_SOFT,
-    textAlign: 'center',
-    marginTop: 24,
-    paddingHorizontal: 20,
-    lineHeight: 20,
-  },
-
-  // Pro card
-  proCard: {
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: LINE,
-    borderRadius: 24,
-    marginHorizontal: 20,
-    marginTop: 12,
-    padding: 15,
-    ...shadow,
-  },
-  proTop: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
-  },
-  proAvatarWrap: {
-    position: 'relative',
-    flexShrink: 0,
-  },
-  proAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-  },
-  proAvatarFallback: {
-    backgroundColor: 'rgba(107,122,86,0.20)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  proInitials: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 18,
-    color: FOREST,
-  },
-  vBadge: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: LIVE,
-    borderWidth: 2,
-    borderColor: CARD,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  vBadgeText: {
-    fontSize: 10,
-    color: '#F3EEDF',
-    fontFamily: ViveFonts.semibold,
-  },
-  proInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-  proName: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: FOREST,
-  },
-  proRole: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 11.5,
-    color: TERRACOTTA,
-    marginTop: 1,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 5,
-  },
-  statsStar: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 11,
-    color: STAR,
-  },
-  statsCount: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: FOREST_SOFT,
-  },
-  favBtn: {
-    paddingTop: 2,
-  },
-
-  // Tags
-  tagsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 11,
-  },
-  tag: {
-    backgroundColor: CREAM_DEEP,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  tagText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 10.5,
-    color: FOREST,
-  },
-
-  // Pro bottom row
-  proBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: LINE,
-  },
-  proPrice: {
-    flex: 1,
-    fontFamily: ViveFonts.regular,
-    fontSize: 11.5,
-    color: FOREST_SOFT,
-  },
-  proBookBtn: {
-    borderWidth: 1.5,
-    borderColor: FOREST,
-    borderRadius: 14,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-  },
-  proBookBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 11.5,
-    color: FOREST,
-  },
+  rebookTitle: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST },
+  rebookSub: { fontFamily: ViveFonts.regular, fontSize: 11, color: FOREST_SOFT, marginTop: 1 },
+  rebookCta: { backgroundColor: TERRACOTTA, borderRadius: 14, paddingHorizontal: 13, paddingVertical: 8 },
+  rebookCtaText: { fontFamily: ViveFonts.semibold, fontSize: 11.5, color: '#FFF6EC' },
 
   // Quiz
   quizWrap: {
@@ -978,113 +963,21 @@ const s = StyleSheet.create({
     borderColor: 'rgba(192,107,74,0.25)',
     borderRadius: 22,
   },
-  quizCircles: {
-    flexDirection: 'row',
+  quizIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: TERRACOTTA,
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
   },
-  qc: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    opacity: 0.75,
-  },
   quizText: { flex: 1 },
-  quizTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: FOREST,
-  },
-  quizSub: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11.5,
-    color: '#8F6A55',
-    marginTop: 2,
-  },
-  quizArrow: {
-    fontSize: 22,
-    color: TERRACOTTA,
-    lineHeight: 26,
-  },
+  quizTitle: { fontFamily: ViveFonts.semibold, fontSize: 14, color: FOREST },
+  quizSub: { fontFamily: ViveFonts.regular, fontSize: 11.5, color: '#8F6A55', marginTop: 2 },
+  quizArrow: { fontSize: 22, color: TERRACOTTA, lineHeight: 26 },
 
-  // Para vos
-  paraVosWrap: {
-    marginTop: 14,
-    marginHorizontal: 20,
-  },
-  paraVosHead: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
-    marginBottom: 10,
-  },
-  paraVosTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 19,
-    color: FOREST,
-  },
-  paraVosSub: {
-    flex: 1,
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: FOREST_SOFT,
-  },
-  paraVosLink: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: TERRACOTTA,
-  },
-  paraVosRow: {
-    gap: 10,
-    paddingRight: 4,
-  },
-  paraVosCard: {
-    width: 100,
-    backgroundColor: CARD,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: LINE,
-    padding: 12,
-    alignItems: 'center',
-    gap: 6,
-    ...Platform.select({
-      ios:     { shadowColor: 'rgba(46,54,36,0.18)', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6 },
-      android: { elevation: 2 },
-    }),
-  },
-  paraVosAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-  },
-  paraVosAvatarFallback: {
-    backgroundColor: 'rgba(107,122,86,0.20)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  paraVosInitials: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 16,
-    color: FOREST,
-  },
-  paraVosName: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 12,
-    color: FOREST,
-    textAlign: 'center',
-  },
-  paraVosRole: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 10.5,
-    color: TERRACOTTA,
-    textAlign: 'center',
-  },
-
-  bellBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  bellBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   bellDot: {
     position: 'absolute',
     top: 2,

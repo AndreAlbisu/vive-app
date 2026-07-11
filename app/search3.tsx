@@ -171,7 +171,7 @@ export default function SearchScreen3() {
     setLoadingCoaches(true);
     supabase
       .from('coaches')
-      .select('id, specialty, price_per_session, nationality, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
+      .select('id, specialty, bio, price_per_session, nationality, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
       .eq('verified', true)
       .limit(50)
       .then(({ data, error }) => {
@@ -187,6 +187,7 @@ export default function SearchScreen3() {
             nationality: (c.nationality ?? '') as string,
             gender: (profile?.gender ?? '') as string,
             avatarUrl: (profile?.avatar_url ?? null) as string | null,
+            bio: (c.bio ?? null) as string | null,
             topics: (c.coach_topics ?? []).map((t: any) => t.topic as string),
           };
         });
