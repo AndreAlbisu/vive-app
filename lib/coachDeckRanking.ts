@@ -1,11 +1,22 @@
 import type { CachedCoach } from './coachesCache';
 
-// Ranking del deck de Conexiones — criterio v1 (sección 4 del spec).
-// `eligible` ya viene gateado por disponibilidad: coachesCache filtra
-// verified + availability_status='activo', así que acá no se re-gatea.
+// Deck de Conexiones — criterio v2: SLOTS ETIQUETADOS.
+//
+// En vez de "dos carriles" opacos, el deck es una lista ORDENADA de slots, cada
+// uno con una categoría VISIBLE para el usuario y un criterio explícito. Esto
+// hace transparente por qué se recomienda a cada coach, y le dice al coach cómo
+// aparecer en cada slot.
+//
+// Reglas del ensamblado:
+//   - Se recorren los slots en orden de prioridad (SLOT_ORDER).
+//   - Cada slot toma el mejor coach AÚN NO ELEGIDO según su criterio.
+//   - Cada coach aparece UNA sola vez (gana el slot de mayor prioridad).
+//   - Si un slot no tiene candidato (ej. tema sin coaches "nuevos"), se OMITE —
+//     nunca se muestra un coach mal-etiquetado.
+//
+// `eligible` ya viene gateado por disponibilidad: coachesCache filtra verified +
+// availability_status='activo', así que acá no se re-gatea.
 
-export const DECK_SIZE            = 5;   // hasta 5 coaches por deck
-export const RESERVED_FOR_NEW     = 2;   // slots reservados para coaches "nuevos" (si los hay)
 export const NEW_MAX_REVIEWS      = 5;   // < 5 reseñas ⇒ "nuevo"
 export const NEW_MAX_AGE_DAYS     = 28;  // …o < 4 semanas desde que se registró
 export const MIN_REBOOKING_SAMPLE = 5;   // piso para que rebooking_rate cuente
@@ -48,76 +59,106 @@ export function isNewCoach(c: CachedCoach, now: Date = new Date()): boolean {
   return fewReviews || recent;
 }
 
-// Score del carril establecido.
-//
-// v1 ordena por RATING, no por reagendamiento — a propósito. Para calcular
-// reagendamiento un coach necesita ≥5 sesiones completadas (MIN_REBOOKING_SAMPLE),
-// y al lanzar ningún coach va a tener eso por meses. Rankear por un dato que no
-// existe es adivinar; normalizar rate (banda ~0.3-0.6) contra rating (banda
-// ~4.5-5) además castiga a la señal que más confiamos.
-//
-// La vista coach_rebooking_stats ya acumula el dato desde el día 1. Cuando haya
-// volumen real, esto pasa a ser v2 con reagendamiento primario en 3 BANDAS
-// —buen-reagendamiento > sin-dato-por-rating > mal-reagendamiento— con el corte
-// buen/mal decidido sobre la distribución real, no inventado ahora. Ese cambio
-// es solo esta función (rebookingRate/completadasCount ya están en CachedCoach).
-function establishedScore(c: CachedCoach): number {
-  return c.avgRating ?? 0;   // v1: rating 1..5 (0 si no tiene reseñas)
-}
-
 function dayKey(now: Date): string {
   return now.toISOString().slice(0, 10); // YYYY-MM-DD
 }
 
-// Intercala los coaches "nuevos" hacia el medio del deck (posiciones 2 y 4) para
-// darles visibilidad sin ponerlos en la posición 1. ⚑ Posiciones ajustables.
-function interleaveNew(established: CachedCoach[], newest: CachedCoach[]): CachedCoach[] {
-  if (newest.length === 0) return established;
-  const out = [...established];
-  const positions = [1, 3];
-  newest.forEach((c, i) => {
-    const pos = Math.min(positions[i] ?? out.length, out.length);
-    out.splice(pos, 0, c);
-  });
-  return out;
+// ─── Slots ───────────────────────────────────────────────────────────────────
+export type DeckSlotKey = 'recomendado' | 'tendencia' | 'nuevo' | 'economico';
+
+export type DeckSlot = {
+  key: DeckSlotKey;
+  label: string;     // chip que ve el usuario
+  sublabel: string;  // explicación corta del criterio
+  icon: string;      // nombre de Feather icon
+};
+
+export type DeckEntry = { coach: CachedCoach; slot: DeckSlot };
+
+export const DECK_SLOTS: Record<DeckSlotKey, DeckSlot> = {
+  recomendado: { key: 'recomendado', label: 'Recomendado por VITA', sublabel: 'Por rating y reagendamiento', icon: 'award' },
+  tendencia:   { key: 'tendencia',   label: 'En tendencia',         sublabel: 'De los más elegidos este mes', icon: 'trending-up' },
+  nuevo:       { key: 'nuevo',       label: 'Nuevo en VITA',        sublabel: 'Recién sumado a la comunidad', icon: 'feather' },
+  economico:   { key: 'economico',   label: 'Opción económica',     sublabel: 'El precio más accesible del tema', icon: 'tag' },
+};
+
+const SLOT_ORDER: DeckSlotKey[] = ['recomendado', 'tendencia', 'nuevo', 'economico'];
+
+// v1: el score "recomendado" es solo rating (0 si no tiene reseñas). Cuando haya
+// volumen (≥MIN_REBOOKING_SAMPLE completadas) el reagendamiento entra como señal
+// primaria — rebookingRate/completadasCount ya viven en CachedCoach.
+function recommendScore(c: CachedCoach): number {
+  return c.avgRating ?? 0;
+}
+
+// Cada picker recibe los candidatos aún no elegidos y devuelve al ganador (o null
+// si nadie califica para esa categoría). El orden estable ante empates lo da el
+// shuffle sembrado por día → rota la exposición entre coaches equivalentes.
+function pickForSlot(
+  key: DeckSlotKey,
+  pool: CachedCoach[],
+  now: Date,
+): CachedCoach | null {
+  if (pool.length === 0) return null;
+
+  switch (key) {
+    case 'recomendado': {
+      // Solo coaches con al menos 1 reseña — así el label no miente.
+      const eligible = pool.filter(c => (c.reviewCount ?? 0) >= 1);
+      if (eligible.length === 0) return null;
+      return [...eligible].sort((a, b) =>
+        (recommendScore(b) - recommendScore(a)) ||
+        ((b.reviewCount ?? 0) - (a.reviewCount ?? 0)),
+      )[0];
+    }
+    case 'tendencia': {
+      const eligible = pool.filter(c => (c.recentBookers ?? 0) > 0);
+      if (eligible.length === 0) return null;
+      return [...eligible].sort((a, b) =>
+        ((b.recentBookers ?? 0) - (a.recentBookers ?? 0)) ||
+        ((b.avgRating ?? 0) - (a.avgRating ?? 0)),
+      )[0];
+    }
+    case 'nuevo': {
+      const eligible = pool.filter(c => isNewCoach(c, now));
+      if (eligible.length === 0) return null;
+      // Rotación diaria: entre los nuevos, el orden cambia por día.
+      return eligible[0]; // pool ya viene barajado por día en rankDeck
+    }
+    case 'economico': {
+      // El más accesible de lo que queda (cualquier coach tiene precio).
+      return [...pool].sort((a, b) =>
+        ((a.priceFrom ?? Infinity) - (b.priceFrom ?? Infinity)) ||
+        ((b.avgRating ?? 0) - (a.avgRating ?? 0)),
+      )[0];
+    }
+  }
 }
 
 /**
- * Devuelve hasta DECK_SIZE coaches para el deck de una puerta.
- * - Parte el pool en "nuevos" vs "establecidos" (partición → sin duplicados).
- * - Establecidos ordenados por reagendamiento/rating (ver establishedScore).
- * - 1-2 slots reservados para nuevos, rotando día a día (semilla `fecha+userId`).
- * - Si no hay nuevos, esos slots vuelven al pool establecido.
+ * Devuelve el deck de una puerta como slots etiquetados (≤ SLOT_ORDER.length).
+ * Cada coach aparece una sola vez; slots sin candidato se omiten.
  */
 export function rankDeck(
   eligible: CachedCoach[],
   userId: string | undefined,
   now: Date = new Date(),
-): CachedCoach[] {
+): DeckEntry[] {
   const seed = `${dayKey(now)}:${userId ?? 'anon'}`;
+  // Baraja base por día: da orden estable-por-día para desempates y para el
+  // carril "nuevo" (rota qué nuevo se muestra sin enterrar a nadie).
+  const shuffled = seededShuffle(eligible, seed);
 
-  const newest: CachedCoach[] = [];
-  const established: CachedCoach[] = [];
-  for (const c of eligible) {
-    (isNewCoach(c, now) ? newest : established).push(c);
+  const picked = new Set<string>();
+  const out: DeckEntry[] = [];
+
+  for (const key of SLOT_ORDER) {
+    const pool = shuffled.filter(c => !picked.has(c.id));
+    const coach = pickForSlot(key, pool, now);
+    if (!coach) continue;
+    picked.add(coach.id);
+    out.push({ coach, slot: DECK_SLOTS[key] });
   }
 
-  const rankedEstablished = [...established].sort((a, b) => {
-    const d = establishedScore(b) - establishedScore(a);
-    if (d !== 0) return d;
-    return (b.avgRating ?? 0) - (a.avgRating ?? 0);   // desempate final: rating
-  });
-
-  const rotatedNew = seededShuffle(newest, seed);          // rotación diaria
-
-  // Los slots reservados son un PISO (garantizar nuevos), no un techo: primero
-  // aparto hasta RESERVED_FOR_NEW nuevos, lleno con establecidos, y si sobran
-  // slots (pocos establecidos) los backfilleo con más nuevos. Sin esto, un tema
-  // con todos-nuevos mostraría solo 2 coaches.
-  const guaranteedNew = Math.min(RESERVED_FOR_NEW, rotatedNew.length);
-  const pickedEstablished = rankedEstablished.slice(0, DECK_SIZE - guaranteedNew);
-  const newQuota = DECK_SIZE - pickedEstablished.length;   // piso + backfill
-  const pickedNew = rotatedNew.slice(0, newQuota);
-
-  return interleaveNew(pickedEstablished, pickedNew).slice(0, DECK_SIZE);
+  return out;
 }

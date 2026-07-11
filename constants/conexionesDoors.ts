@@ -17,28 +17,58 @@ import { ViveColors } from './theme';
 // usa el color de emocional (decisión de Joaquín, 10/07). Ejes → color:
 //   físico = accent · emocional = calm · crecimiento = primary.
 
+// `icon`  : nombre de Feather icon (línea) que se pinta dentro del círculo del menú.
+// `tagline`: subtítulo corto de la card (qué se trabaja, en lenguaje del usuario).
 export type Door = {
   id: string;
   label: string;
+  tagline: string;
+  icon: string;
   subtemas: string[];
   color: string;
 };
 
 export const DOORS: Door[] = [
-  { id: 'ansiedad',       label: 'Ansiedad y estrés',        color: ViveColors.calm,    subtemas: ['Ansiedad', 'Ansiedad social', 'Estrés físico'] },
-  { id: 'animo',          label: 'Estado de ánimo',          color: ViveColors.calm,    subtemas: ['Tristeza', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría', 'Autoestima', 'Duelo'] },
-  { id: 'relaciones',     label: 'Relaciones',               color: ViveColors.calm,    subtemas: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'] },
-  { id: 'foco',           label: 'Foco, hábitos y trabajo',  color: ViveColors.calm,    subtemas: ['Concentración', 'Procrastinación', 'Productividad', 'Hábitos mentales', 'Burnout (estrés laboral)', 'Hábitos'] },
-  { id: 'descanso',       label: 'Descanso y energía',       color: ViveColors.accent,  subtemas: ['Sueño', 'Energía'] },
-  { id: 'nutricion',      label: 'Nutrición y movimiento',   color: ViveColors.accent,  subtemas: ['Nutrición', 'Actividad física'] },
-  { id: 'sexualidad',     label: 'Sexualidad e intimidad',   color: ViveColors.accent,  subtemas: ['Sexualidad'] },
-  { id: 'proposito',      label: 'Propósito y dirección',    color: ViveColors.primary, subtemas: ['Propósito', 'Momentos de cambio'] },
-  { id: 'identidad',      label: 'Identidad y motivación',   color: ViveColors.primary, subtemas: ['Identidad', 'Motivación', 'Crecimiento'] },
-  { id: 'espiritualidad', label: 'Espiritualidad y soledad', color: ViveColors.primary, subtemas: ['Espiritualidad', 'Soledad'] },
+  { id: 'ansiedad',       label: 'Ansiedad y estrés',        tagline: 'Calmar la mente',        icon: 'wind',        color: ViveColors.calm,    subtemas: ['Ansiedad', 'Ansiedad social', 'Estrés físico'] },
+  { id: 'animo',          label: 'Estado de ánimo',          tagline: 'Sentirte mejor',         icon: 'smile',       color: ViveColors.calm,    subtemas: ['Tristeza', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría', 'Autoestima', 'Duelo'] },
+  { id: 'relaciones',     label: 'Relaciones',               tagline: 'Vínculos y pareja',      icon: 'users',       color: ViveColors.calm,    subtemas: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'] },
+  { id: 'foco',           label: 'Foco, hábitos y trabajo',  tagline: 'Enfoque y rutinas',      icon: 'target',      color: ViveColors.calm,    subtemas: ['Concentración', 'Procrastinación', 'Productividad', 'Hábitos mentales', 'Burnout (estrés laboral)', 'Hábitos'] },
+  { id: 'descanso',       label: 'Descanso y energía',       tagline: 'Dormir y recargar',      icon: 'moon',        color: ViveColors.accent,  subtemas: ['Sueño', 'Energía'] },
+  { id: 'nutricion',      label: 'Nutrición y movimiento',   tagline: 'Cuerpo y alimentación',  icon: 'activity',    color: ViveColors.accent,  subtemas: ['Nutrición', 'Actividad física'] },
+  { id: 'sexualidad',     label: 'Sexualidad e intimidad',   tagline: 'Intimidad y deseo',      icon: 'heart',       color: ViveColors.accent,  subtemas: ['Sexualidad'] },
+  { id: 'proposito',      label: 'Propósito y dirección',    tagline: 'Rumbo y sentido',        icon: 'compass',     color: ViveColors.primary, subtemas: ['Propósito', 'Momentos de cambio'] },
+  { id: 'identidad',      label: 'Identidad y motivación',   tagline: 'Crecer y avanzar',       icon: 'trending-up', color: ViveColors.primary, subtemas: ['Identidad', 'Motivación', 'Crecimiento'] },
+  { id: 'espiritualidad', label: 'Espiritualidad y soledad', tagline: 'Conexión interior',      icon: 'sunrise',     color: ViveColors.primary, subtemas: ['Espiritualidad', 'Soledad'] },
 ];
 
 export const DOOR_MAP: Record<string, Door> =
   Object.fromEntries(DOORS.map(d => [d.id, d]));
+
+// ─── Ejes ────────────────────────────────────────────────────────────────────
+// Primera fase del menú de Conexiones: 3 áreas de bienestar. Cada eje agrupa sus
+// puertas por color (el color de la puerta YA es el de su eje dominante):
+//   físico = accent · emocional = calm · espiritual/crecimiento = primary.
+export type Eje = {
+  id: string;
+  label: string;
+  tagline: string;
+  icon: string;
+  color: string;
+};
+
+export const EJES: Eje[] = [
+  { id: 'fisico',     label: 'Bienestar físico',     tagline: 'Cuerpo, descanso y energía',      icon: 'activity', color: ViveColors.accent },
+  { id: 'emocional',  label: 'Bienestar emocional',  tagline: 'Emociones, vínculos y foco',      icon: 'heart',    color: ViveColors.calm },
+  { id: 'espiritual', label: 'Bienestar espiritual', tagline: 'Propósito, identidad y sentido',  icon: 'sun',      color: ViveColors.primary },
+];
+
+export const EJE_MAP: Record<string, Eje> =
+  Object.fromEntries(EJES.map(e => [e.id, e]));
+
+/** Puertas de un eje (match por color = eje dominante de la puerta). */
+export function doorsForEje(eje: Eje): Door[] {
+  return DOORS.filter(d => d.color === eje.color);
+}
 
 /** Coaches cuyo `topics` incluye algún subtema de la puerta. */
 export function coachesForDoor<T extends { topics: string[] }>(door: Door, coaches: T[]): T[] {
