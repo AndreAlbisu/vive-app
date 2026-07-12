@@ -34,6 +34,7 @@ type Params = {
   time?: string;
   salaId?: string;
   instant?: string;
+  paymentPending?: string;
 };
 
 export default function BookingScreen_Success() {
@@ -46,6 +47,7 @@ export default function BookingScreen_Success() {
   const time = params.time ?? '';
   const salaId = params.salaId ?? '';
   const isInstant = params.instant === '1';
+  const paymentPending = params.paymentPending === '1';
 
   const firstName = coachName.split(' ')[0];
   const formattedDate = formatDate(dateStr);
@@ -83,15 +85,27 @@ export default function BookingScreen_Success() {
           </Animated.View>
 
           <Animated.View style={[s.textBlock, { opacity: contentOpacity }]}>
-            <Text style={s.title}>{isInstant ? '¡Sesión confirmada!' : '¡Reserva enviada!'}</Text>
-            <Text style={s.subtitle}>
-              {isInstant
-                ? `Tu sesión con ${firstName} ya quedó confirmada.`
-                : `Le avisamos a ${firstName}. Tiene 24hs para confirmar tu sesión.`}
+            <Text style={s.title}>
+              {paymentPending
+                ? '¡Reserva creada!'
+                : isInstant ? '¡Sesión confirmada!' : '¡Reserva enviada!'}
             </Text>
-            <View style={[s.statusBadge, isInstant && s.statusBadgeConfirmed]}>
-              <Text style={[s.statusBadgeText, isInstant && s.statusBadgeTextConfirmed]}>
-                {isInstant ? 'Confirmada' : 'Pendiente de confirmación'}
+            <Text style={s.subtitle}>
+              {paymentPending
+                ? 'Tu pago está siendo procesado. Te avisamos cuando se confirme la sesión.'
+                : isInstant
+                  ? `Tu sesión con ${firstName} ya quedó confirmada.`
+                  : `Le avisamos a ${firstName}. Tiene 24hs para confirmar tu sesión.`}
+            </Text>
+            <View style={[
+              s.statusBadge,
+              paymentPending ? s.statusBadgePayment : isInstant && s.statusBadgeConfirmed,
+            ]}>
+              <Text style={[
+                s.statusBadgeText,
+                paymentPending ? s.statusBadgeTextPayment : isInstant && s.statusBadgeTextConfirmed,
+              ]}>
+                {paymentPending ? 'Pago en proceso' : isInstant ? 'Confirmada' : 'Pendiente de confirmación'}
               </Text>
             </View>
           </Animated.View>
@@ -230,6 +244,12 @@ const s = StyleSheet.create({
   },
   statusBadgeTextConfirmed: {
     color: ViveColors.accent,
+  },
+  statusBadgePayment: {
+    backgroundColor: 'rgba(0,158,227,0.12)',
+  },
+  statusBadgeTextPayment: {
+    color: '#0082B8',
   },
 
   card: {
