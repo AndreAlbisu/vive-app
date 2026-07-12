@@ -3,7 +3,7 @@
 
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000 // 10 min (igual que la validez del code de MP)
 
-export async function hmacHex(secret: string, msg: string): Promise<string> {
+async function hmacBytes(secret: string, msg: string): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),
@@ -11,8 +11,17 @@ export async function hmacHex(secret: string, msg: string): Promise<string> {
     false,
     ['sign'],
   )
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg))
-  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('')
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg)))
+}
+
+export async function hmacHex(secret: string, msg: string): Promise<string> {
+  return [...await hmacBytes(secret, msg)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+function base64url(bytes: Uint8Array): string {
+  let s = ''
+  for (const b of bytes) s += String.fromCharCode(b)
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
 // Comparación en tiempo constante (evita timing attacks al comparar firmas).
@@ -45,6 +54,22 @@ export async function verifyOauthState(state: string, secret: string): Promise<s
   const exp = Number(expStr)
   if (!Number.isFinite(exp) || Date.now() > exp) return null
   return coachId
+}
+
+// ── PKCE (sin storage) ───────────────────────────────────────────────────────
+// El code_verifier se DERIVA determinísticamente del state firmado + un secret
+// de servidor, así mp-oauth-start (firma+challenge) y mp-oauth-callback (verifier)
+// lo recomputan idéntico sin persistir nada entre las dos funciones stateless.
+// El verifier NUNCA viaja en la URL (solo el challenge, que es público); un
+// atacante no puede computarlo sin el secret. El `exp` dentro del state lo hace
+// único por flujo. Verifier base64url de 32 bytes = 43 chars (rango válido PKCE).
+export async function deriveCodeVerifier(state: string, secret: string): Promise<string> {
+  return base64url(await hmacBytes(secret, `pkce:${state}`))
+}
+
+export async function codeChallengeS256(verifier: string): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
+  return base64url(new Uint8Array(hash))
 }
 
 // ── Firma del webhook (x-signature) ──────────────────────────────────────────

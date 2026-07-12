@@ -84,13 +84,15 @@ serve(async (req) => {
     // schema ni en este cálculo. TODO(fiscal): si VITA queda RI, sumar el IVA acá.
     const marketplaceFee = Math.round(Number(booking.amount) * commissionPct) / 100
 
-    // ⚠️ MONEY RELEASE (VERIFICADO en docs MP, 07/2026): NO es un parámetro de la
-    // preferencia. La fecha de liberación del dinero del split (retener el dinero
-    // del coach hasta post-sesión) se configura a nivel CUENTA con el account
-    // manager comercial de MP, NO por transacción vía API. => El "hold hasta
-    // post-sesión" es una gestión comercial con MP, no código. Sin eso, un
-    // reembolso sale del balance del coach (crítico en promo 0%: el 100% sale de
-    // su cuenta). Decisión pendiente: negociar release con MP vs asumir el riesgo.
+    // ⚠️ MONEY RELEASE (RE-VERIFICADO en docs MP, 07/2026): con Checkout Pro NO hay
+    // parámetro para setear/demorar el release por transacción. `money_release_date`
+    // existe pero es un campo de RESPUESTA del pago (lo calcula MP, ~14 días post-
+    // aprobación por default), no seteable desde acá. Cambiar el timing del release
+    // = config a nivel CUENTA con el account manager de MP (ahí sí hay parte
+    // comercial). Nuance útil: el default ~14d ya actúa de buffer — si la sesión y un
+    // posible refund caen dentro de esos ~14d, los fondos del coach siguen retenidos.
+    // El riesgo real es sesión a >14d del pago (o coach que ya retiró): ahí el refund
+    // sale de su balance, crítico en promo 0%. => nada que codear acá; leverage = MP.
 
     // TODO(MP): verificar contra docs — POST https://api.mercadopago.com/checkout/preferences
     const prefRes = await fetch('https://api.mercadopago.com/checkout/preferences', {

@@ -18,6 +18,12 @@ const MP_WEBHOOK_SECRET = Deno.env.get('MP_WEBHOOK_SECRET')! // secret de firma 
 
 serve(async (req) => {
   try {
+    // Fail-closed: sin el secret de firma NO se procesa nada (no correr sin validar).
+    if (!MP_WEBHOOK_SECRET) {
+      console.error('[mp-webhook] falta MP_WEBHOOK_SECRET — no se valida firma, se rechaza')
+      return new Response('webhook secret not configured', { status: 500 })
+    }
+
     const url = new URL(req.url)
     // El id del recurso llega por query: ?data.id=... (v2) o ?id=... (IPN v1).
     const dataId = url.searchParams.get('data.id') ?? url.searchParams.get('id')

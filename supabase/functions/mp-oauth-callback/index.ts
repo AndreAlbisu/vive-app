@@ -17,7 +17,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { verifyOauthState } from '../_shared/mp.ts'
+import { verifyOauthState, deriveCodeVerifier } from '../_shared/mp.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -48,7 +48,8 @@ serve(async (req) => {
     // VERIFICADO (docs MP, 07/2026): POST /oauth/token, grant_type=authorization_code,
     // body con client_id/client_secret/code/redirect_uri. El `code` vive 10 min; el
     // access_token dura ~180 días (refrescar con refresh_token antes de expires_at).
-    // PKCE: si la app MP tiene PKCE activado, agregar `code_verifier` al body.
+    // PKCE: code_verifier derivado del mismo state firmado (ver deriveCodeVerifier).
+    const codeVerifier = await deriveCodeVerifier(state, OAUTH_STATE_SECRET)
     const tokenRes = await fetch('https://api.mercadopago.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -58,6 +59,7 @@ serve(async (req) => {
         grant_type: 'authorization_code',
         code,
         redirect_uri: MP_REDIRECT_URI,
+        code_verifier: codeVerifier,
       }),
     })
     const token = await tokenRes.json()

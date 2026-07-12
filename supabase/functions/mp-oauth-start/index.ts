@@ -6,7 +6,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { signOauthState } from '../_shared/mp.ts'
+import { signOauthState, deriveCodeVerifier, codeChallengeS256 } from '../_shared/mp.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -40,13 +40,17 @@ serve(async (req) => {
   if (!coachRow) return json({ error: 'No sos coach' }, 404)
 
   const state = await signOauthState(coachRow.id, OAUTH_STATE_SECRET)
+  // PKCE: challenge derivado del state (el callback recomputa el verifier).
+  const challenge = await codeChallengeS256(await deriveCodeVerifier(state, OAUTH_STATE_SECRET))
   const url =
     `https://auth.mercadopago.com.ar/authorization` +
     `?client_id=${MP_CLIENT_ID}` +
     `&response_type=code` +
     `&platform_id=mp` +
     `&redirect_uri=${encodeURIComponent(MP_REDIRECT_URI)}` +
-    `&state=${encodeURIComponent(state)}`
+    `&state=${encodeURIComponent(state)}` +
+    `&code_challenge=${challenge}` +
+    `&code_challenge_method=S256`
 
   return json({ url }, 200)
 })
