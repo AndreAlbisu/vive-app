@@ -26,6 +26,9 @@ const MP_CLIENT_SECRET = Deno.env.get('MP_CLIENT_SECRET')!
 const MP_REDIRECT_URI = Deno.env.get('MP_REDIRECT_URI')!
 const OAUTH_STATE_SECRET = Deno.env.get('OAUTH_STATE_SECRET')!
 const APP_DEEP_LINK = Deno.env.get('APP_DEEP_LINK') ?? 'viveapp://coach/mp-connected'
+// Sandbox: si MP_TEST_MODE=true, el exchange pide un token de PRUEBA (test_token).
+// Default off → en producción NO se manda, comportamiento real intacto.
+const MP_TEST_MODE = Deno.env.get('MP_TEST_MODE') === 'true'
 
 serve(async (req) => {
   const url = new URL(req.url)
@@ -50,17 +53,20 @@ serve(async (req) => {
     // access_token dura ~180 días (refrescar con refresh_token antes de expires_at).
     // PKCE: code_verifier derivado del mismo state firmado (ver deriveCodeVerifier).
     const codeVerifier = await deriveCodeVerifier(state, OAUTH_STATE_SECRET)
+    const tokenBody: Record<string, unknown> = {
+      client_id: MP_CLIENT_ID,
+      client_secret: MP_CLIENT_SECRET,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: MP_REDIRECT_URI,
+      code_verifier: codeVerifier,
+    }
+    // Sandbox: fuerza credenciales de prueba aunque el client_id/secret sean de prod.
+    if (MP_TEST_MODE) tokenBody.test_token = true
     const tokenRes = await fetch('https://api.mercadopago.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: MP_CLIENT_ID,
-        client_secret: MP_CLIENT_SECRET,
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: MP_REDIRECT_URI,
-        code_verifier: codeVerifier,
-      }),
+      body: JSON.stringify(tokenBody),
     })
     const token = await tokenRes.json()
     if (!tokenRes.ok) {
