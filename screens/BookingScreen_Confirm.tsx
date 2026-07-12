@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -278,6 +279,21 @@ export default function BookingScreen_Confirm() {
         }
       }
 
+      // Intentar iniciar el flujo de pago MP (si el coach tiene MP conectado)
+      let initPoint: string | null = null;
+      try {
+        const { data: mpData } = await supabase.functions.invoke('mp-create-payment', {
+          body: { booking_id: booking.id },
+        });
+        initPoint = mpData?.init_point ?? null;
+      } catch {
+        // Coach sin MP conectado (409) o función no desplegada → sin pago online
+      }
+
+      if (initPoint) {
+        await WebBrowser.openBrowserAsync(initPoint);
+      }
+
       router.replace({
         pathname: '/booking-success',
         params: {
@@ -289,6 +305,7 @@ export default function BookingScreen_Confirm() {
           roomUrl,
           salaId,
           instant: isInstant ? '1' : '0',
+          ...(initPoint ? { paymentPending: '1' } : {}),
         },
       });
     } catch (e: any) {
@@ -425,21 +442,12 @@ export default function BookingScreen_Confirm() {
           </View>
         )}
 
-        {/* Método de pago */}
+        {/* Pago */}
         <View style={s.paymentSection}>
-          <Text style={s.paymentLabel}>Método de pago</Text>
-
-          <TouchableOpacity style={s.paymentCard} activeOpacity={0.75}>
-            <MaterialIcons name="credit-card" size={22} color="#565E32" />
-            <Text style={s.paymentCardText}>Tarjeta de crédito / débito</Text>
-            <MaterialIcons name="chevron-right" size={20} color="rgba(135,131,92,0.65)" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.paymentCard} activeOpacity={0.75}>
-            <MaterialIcons name="account-balance-wallet" size={22} color="#009EE3" />
-            <Text style={s.paymentCardText}>Mercado Pago</Text>
-            <MaterialIcons name="chevron-right" size={20} color="rgba(135,131,92,0.65)" />
-          </TouchableOpacity>
+          <View style={s.paymentInfoRow}>
+            <MaterialIcons name="account-balance-wallet" size={18} color="#009EE3" />
+            <Text style={s.paymentInfoText}>El pago se procesa a través de Mercado Pago al confirmar</Text>
+          </View>
         </View>
 
       </ScrollView>
@@ -702,30 +710,24 @@ const s = StyleSheet.create({
   },
 
   paymentSection: {
-    gap: 10,
-  },
-  paymentLabel: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
     marginBottom: 4,
   },
-  paymentCard: {
+  paymentInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderRadius: 14,
+    gap: 8,
+    backgroundColor: 'rgba(0,158,227,0.07)',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.60)',
-    padding: 14,
-    gap: 12,
-    ...cardShadow,
+    borderColor: 'rgba(0,158,227,0.18)',
+    padding: 12,
   },
-  paymentCardText: {
+  paymentInfoText: {
     flex: 1,
-    fontFamily: ViveFonts.medium,
-    fontSize: 14,
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
     color: '#565E32',
+    lineHeight: 19,
   },
 
   footerSafe: {

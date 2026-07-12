@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-07-12 — Joaquín (sesión 61)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`, `screens/CoachProfileScreen.tsx`, `supabase/functions/mp-oauth-start/index.ts` (nuevo)
+
+**Resumen:**
+- Implementó flujo de pago MP en BookingScreen_Confirm: después del insert del booking, llama a `mp-create-payment` edge function; si hay `init_point`, abre Checkout Pro con `WebBrowser.openBrowserAsync`; si el coach no tiene MP conectado (409) sigue sin pago. El `router.replace` lleva `paymentPending: '1'` cuando se abrió el browser.
+- Reemplazó la sección de pago decorativa (dos cards no funcionales) por un info-box "El pago se procesa a través de Mercado Pago al confirmar".
+- Agregó sección "Mercado Pago" en CoachProfileScreen: muestra estado conectado/no-conectado, botón "Conectar" que llama a `mp-oauth-start` → abre OAuth con `WebBrowser.openAuthSessionAsync` → al volver con `type === 'success'` marca `mpConnected = true`.
+- Creó nueva edge function `mp-oauth-start`: autentica al coach, construye la URL de autorización MP (client_id en env vars, nunca en el bundle) y la devuelve. `state = coaches.id` (TODO: firmar con HMAC).
+
+**Pendiente para la próxima sesión:**
+- Desplegar las 5 edge functions a Supabase con `supabase functions deploy` (requiere MP_CLIENT_ID, MP_CLIENT_SECRET, MP_REDIRECT_URI, MP_WEBHOOK_URL en secrets)
+- `booking-success` no lee todavía el param `paymentPending: '1'` — agregar copy de "pago en proceso" en esa pantalla
+- `viveapp://coach/mp-connected` deep link no tiene handler — agregar en app/(deep-links)/ o en las rutas de Expo Router si se necesita feedback visual al volver del OAuth
+- Verificar que `coaches.mp_connected` existe en la DB (lo usa mp-oauth-callback; si no existe, hacer `ALTER TABLE coaches ADD COLUMN mp_connected boolean DEFAULT false`)
+- Apple Sign-In sigue siendo bloqueante para App Store
+
+---
+
 ## 2026-07-12 — Joaquín (sesión 60)
 
 **Tocado:** `app/progreso.tsx`, `app/(tabs)/conexiones.tsx`, `scripts/add-session-reminders-cron.sql` (nuevo)
