@@ -22,7 +22,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const MP_CLIENT_ID = Deno.env.get('MP_CLIENT_ID')!
 const MP_CLIENT_SECRET = Deno.env.get('MP_CLIENT_SECRET')!
 const MP_REDIRECT_URI = Deno.env.get('MP_REDIRECT_URI')!
-const APP_DEEP_LINK = Deno.env.get('APP_DEEP_LINK') ?? 'vive://coach/mp-connected'
+const APP_DEEP_LINK = Deno.env.get('APP_DEEP_LINK') ?? 'viveapp://coach/mp-connected'
 
 serve(async (req) => {
   const url = new URL(req.url)
