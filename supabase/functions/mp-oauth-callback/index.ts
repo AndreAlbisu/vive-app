@@ -11,26 +11,35 @@
 //      coach_mp_accounts (tabla bloqueada, solo service role). Marcamos
 //      coaches.mp_connected = true.
 //
-// ⚠️ `state` debe ser un valor firmado/nonce mapeado al coach, NO el coach_id
-//    plano (evitar que un tercero conecte su MP a otro coach). TODO.
+// `state` viene FIRMADO desde mp-oauth-start (HMAC) — se verifica antes de
+// intercambiar el code, para que este endpoint público no pueda ser forjado
+// (ver signOauthState/verifyOauthState en _shared/mp.ts).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { verifyOauthState } from '../_shared/mp.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const MP_CLIENT_ID = Deno.env.get('MP_CLIENT_ID')!
 const MP_CLIENT_SECRET = Deno.env.get('MP_CLIENT_SECRET')!
 const MP_REDIRECT_URI = Deno.env.get('MP_REDIRECT_URI')!
+const OAUTH_STATE_SECRET = Deno.env.get('OAUTH_STATE_SECRET')!
 const APP_DEEP_LINK = Deno.env.get('APP_DEEP_LINK') ?? 'viveapp://coach/mp-connected'
 
 serve(async (req) => {
   const url = new URL(req.url)
   const code = url.searchParams.get('code')
-  const state = url.searchParams.get('state') // TODO: verificar firma/nonce → coach_id
+  const state = url.searchParams.get('state')
 
   if (!code || !state) {
     return new Response('Faltan parámetros de OAuth', { status: 400 })
+  }
+
+  // Verificar la firma del state ANTES de tocar MP → resuelve el coach_id real.
+  const coachId = await verifyOauthState(state, OAUTH_STATE_SECRET)
+  if (!coachId) {
+    return new Response('State inválido o vencido', { status: 400 })
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
@@ -57,9 +66,7 @@ serve(async (req) => {
       return new Response('No se pudo conectar Mercado Pago', { status: 502 })
     }
 
-    // TODO: resolver coach_id real desde `state` (nonce firmado). Placeholder:
-    const coachId = state
-
+    // coachId ya viene verificado del state firmado (arriba).
     await supabase.from('coach_mp_accounts').upsert({
       coach_id: coachId,
       mp_user_id: String(token.user_id),

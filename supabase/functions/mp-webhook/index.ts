@@ -9,25 +9,31 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { verifyWebhookSignature } from '../_shared/mp.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')! // token de la app plataforma
+const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!    // token de la app plataforma
+const MP_WEBHOOK_SECRET = Deno.env.get('MP_WEBHOOK_SECRET')! // secret de firma de Webhooks
 
 serve(async (req) => {
   try {
-    // TODO(MP) firma x-signature (VERIFICADO 07/2026 — implementar en paso 4):
-    //   header = "ts=<ts>,v1=<hmac>". HMAC-SHA256 en hex, key = secret de Webhooks
-    //   (Your integrations → Webhooks → Configure notification). Manifest:
-    //     `id:<data.id>;request-id:<x-request-id header>;ts:<ts>;`
-    //   (data.id en minúsculas si es alfanumérico). Comparar el hmac con v1.
-    //   Confirmar el template exacto contra el SDK oficial al implementar.
-    const body = await req.json().catch(() => ({}))
     const url = new URL(req.url)
+    // El id del recurso llega por query: ?data.id=... (v2) o ?id=... (IPN v1).
+    const dataId = url.searchParams.get('data.id') ?? url.searchParams.get('id')
 
-    // MP manda el id del pago por query (?id=&topic=payment) o en el body (data.id).
-    const paymentId = url.searchParams.get('id') ?? body?.data?.id
-    const topic = url.searchParams.get('topic') ?? body?.type
+    // Validar la firma x-signature ANTES de procesar (rechaza notificaciones forjadas).
+    const sigOk = await verifyWebhookSignature({
+      xSignature: req.headers.get('x-signature'),
+      xRequestId: req.headers.get('x-request-id'),
+      dataId,
+      secret: MP_WEBHOOK_SECRET,
+    })
+    if (!sigOk) return new Response('invalid signature', { status: 401 })
+
+    const body = await req.json().catch(() => ({}))
+    const paymentId = dataId ?? body?.data?.id
+    const topic = url.searchParams.get('topic') ?? url.searchParams.get('type') ?? body?.type
     if (!paymentId || (topic && topic !== 'payment')) {
       return new Response('ignored', { status: 200 }) // 200 para que MP no reintente
     }

@@ -2,15 +2,17 @@
 // para que el coach la abra en un WebBrowser y autorice el marketplace.
 //
 // El client_id vive en secrets del servidor; el cliente nunca lo ve.
-// `state` = coaches.id (TODO: firmar con HMAC para prevenir CSRF).
+// `state` = state firmado (HMAC) del coach — lo verifica mp-oauth-callback.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { signOauthState } from '../_shared/mp.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const MP_CLIENT_ID = Deno.env.get('MP_CLIENT_ID')!
 const MP_REDIRECT_URI = Deno.env.get('MP_REDIRECT_URI')!
+const OAUTH_STATE_SECRET = Deno.env.get('OAUTH_STATE_SECRET')!
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -37,14 +39,14 @@ serve(async (req) => {
 
   if (!coachRow) return json({ error: 'No sos coach' }, 404)
 
-  const state = coachRow.id
+  const state = await signOauthState(coachRow.id, OAUTH_STATE_SECRET)
   const url =
     `https://auth.mercadopago.com.ar/authorization` +
     `?client_id=${MP_CLIENT_ID}` +
     `&response_type=code` +
     `&platform_id=mp` +
     `&redirect_uri=${encodeURIComponent(MP_REDIRECT_URI)}` +
-    `&state=${state}`
+    `&state=${encodeURIComponent(state)}`
 
   return json({ url }, 200)
 })
