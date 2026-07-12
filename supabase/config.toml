@@ -1,0 +1,20 @@
+# Config del CLI de Supabase.
+# ⚠️ Reemplazá TU_PROJECT_REF por tu project ref real (el mismo de
+#    `supabase link --project-ref <ref>`). Si ya tenías un config.toml local,
+#    NO uses este: copiá solo los bloques [functions.*] de abajo al tuyo.
+project_id = "TU_PROJECT_REF"
+
+# ── Edge functions ───────────────────────────────────────────────────────────
+# Las llamadas por MercadoPago (redirect del OAuth y webhook) NO traen JWT de
+# Supabase → hay que desactivar la verificación de JWT del gateway, si no las
+# rechaza con 401 y el flujo falla en silencio. Su seguridad la da el state
+# firmado (OAuth) y la firma x-signature (webhook), no el JWT.
+#
+# Las otras 3 functions (mp-oauth-start, mp-create-payment, mp-process-refunds)
+# usan el default verify_jwt = true (las llama la app/cron con credencial válida).
+
+[functions.mp-oauth-callback]
+verify_jwt = false
+
+[functions.mp-webhook]
+verify_jwt = false
