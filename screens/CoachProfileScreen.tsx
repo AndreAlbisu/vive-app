@@ -18,6 +18,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import * as WebBrowser from 'expo-web-browser';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { File } from 'expo-file-system';
 import { useAuth } from '@/context/AuthContext';
@@ -81,6 +82,8 @@ export default function CoachProfileScreen() {
   const [savingAvailability, setSavingAvailability] = useState(false);
   const [coachId, setCoachId] = useState<string | null>(null);
   const [topics, setTopics] = useState<string[]>([]);
+  const [mpConnected, setMpConnected] = useState(false);
+  const [connectingMp, setConnectingMp] = useState(false);
 
   useEffect(() => {
     if (!user) { setLoadingProfile(false); return; }
@@ -88,7 +91,7 @@ export default function CoachProfileScreen() {
     (async () => {
       const [{ data: profileRow }, { data: coachRow }] = await Promise.all([
         supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single(),
-        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status').eq('profile_id', user.id).maybeSingle(),
+        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status, mp_connected').eq('profile_id', user.id).maybeSingle(),
       ]);
 
       setProfile({
@@ -103,6 +106,7 @@ export default function CoachProfileScreen() {
         avatar_url: profileRow?.avatar_url ?? null,
       });
       setCoachId(coachRow?.id ?? null);
+      setMpConnected(coachRow?.mp_connected ?? false);
       setNoCoachProfile(!coachRow);
       setLoadingProfile(false);
     })();
@@ -253,6 +257,29 @@ export default function CoachProfileScreen() {
     if (error) {
       setProfile(prev => prev ? { ...prev, availability_status: newStatus === 'activo' ? 'en_pausa' : 'activo' } : prev);
       Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
+    }
+  }
+
+  async function connectMercadoPago() {
+    if (connectingMp || noCoachProfile) return;
+    setConnectingMp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('mp-oauth-start');
+      if (error || !data?.url) {
+        Alert.alert(
+          'No disponible aún',
+          'La integración con Mercado Pago estará disponible próximamente. Te avisamos cuando esté lista.',
+        );
+        return;
+      }
+      const result = await WebBrowser.openAuthSessionAsync(data.url, 'viveapp://coach/mp-connected');
+      if (result.type === 'success') {
+        setMpConnected(true);
+      }
+    } catch {
+      Alert.alert('Error', 'No se pudo conectar con Mercado Pago. Intentá de nuevo.');
+    } finally {
+      setConnectingMp(false);
     }
   }
 
@@ -711,6 +738,37 @@ export default function CoachProfileScreen() {
               {uploadingVideo ? 'Subiendo…' : profile?.video_url ? 'Cambiar video' : 'Grabar nuevo video'}
             </Text>
           </TouchableOpacity>
+        </View>
+
+        {/* ── Mercado Pago ──────────────────────────────────── */}
+        <Text style={[s.sectionTitle, s.sectionSpaced]}>Mercado Pago</Text>
+        <View style={s.toggleCard}>
+          <View style={s.toggleInfo}>
+            <Text style={s.toggleTitle}>
+              {mpConnected ? 'Cuenta conectada' : 'Sin cuenta conectada'}
+            </Text>
+            <Text style={s.toggleDesc}>
+              {mpConnected
+                ? 'Los usuarios pueden pagarte directamente desde la app.'
+                : 'Conectá tu cuenta para recibir pagos a través de la app.'}
+            </Text>
+          </View>
+          {mpConnected ? (
+            <MaterialCommunityIcons name="check-circle-outline" size={24} color={ViveColors.accent} />
+          ) : (
+            <TouchableOpacity
+              style={s.mpConnectBtn}
+              onPress={connectMercadoPago}
+              disabled={connectingMp || noCoachProfile}
+              activeOpacity={0.85}
+            >
+              {connectingMp ? (
+                <ActivityIndicator size="small" color="#009EE3" />
+              ) : (
+                <Text style={s.mpConnectBtnText}>Conectar</Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Reseñas recibidas ─────────────────────────────── */}
@@ -1203,6 +1261,23 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.semibold,
     fontSize: 13,
     color: ViveColors.primary,
+  },
+
+  // Mercado Pago
+  mpConnectBtn: {
+    backgroundColor: 'rgba(0,158,227,0.10)',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,158,227,0.28)',
+    minWidth: 44,
+    alignItems: 'center',
+  },
+  mpConnectBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13,
+    color: '#009EE3',
   },
 
   // Reviews recibidas
