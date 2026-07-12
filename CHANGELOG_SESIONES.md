@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-07-12 — Joaquín (sesión 60)
+
+**Tocado:** `app/progreso.tsx`, `app/(tabs)/conexiones.tsx`, `scripts/add-session-reminders-cron.sql` (nuevo)
+
+**Resumen:**
+- **TOPIC_TO_AREA completo para AXES 32:** Andre agregó 4 subtemas en sesión 58 (`Ansiedad social`, `Autoestima`, `Duelo`, `Burnout (estrés laboral)`). Autoestima ya estaba; se agregaron los otros 3: `Ansiedad social → emocion`, `Duelo → emocion`, `Burnout (estrés laboral) → trabajo`. El mapa ahora cubre los 32 subtemas de AXES.
+- **Limpieza conexiones.tsx:** eliminada constante `CREAM_DEEP` huérfana (los estilos `proCard` ya los limpió Andre en sesión 59).
+- **Cron de recordatorio de sesión:** `scripts/add-session-reminders-cron.sql` — función `send_session_reminders()` + cron diario 21:00 UTC (18:00 ART). Inserta una notificación `'recordatorio_sesion'` para cada usuario con booking `confirmada` al día siguiente. `NOT EXISTS` evita duplicados. **Pendiente correr en Supabase.**
+
+**Pendiente para la próxima sesión:**
+- **Correr en Supabase:** `scripts/add-session-reminders-cron.sql`
+- Nuevo Conexiones (Ejes→Temas→Deck) sin probar en Expo Go — verificar en dispositivo
+- Decisión abierta: ¿reintegrar buscador / "Para vos" al menú de Conexiones?
+- Pagos no conectados — `BookingScreen_Confirm` tiene UI decorativa, sin SDK ni cobro real
+- Apple Sign-In es stub (bloqueante de App Store guideline 4.8 si se ofrece Google)
+- VITA IA sigue stub (tiene teaser apuntándole)
+- Deck v3: activar reagendamiento en score cuando haya volumen (≥5 completadas)
+
+---
+
 ## 2026-07-11 — Andre (sesión 59)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`, `constants/conexionesDoors.ts`, `lib/coachDeckRanking.ts`, `lib/coachesCache.ts`, `lib/coachAvailability.ts` (nuevo), `app/search3.tsx`, `scripts/add-coach-trending-stats.sql` (nuevo), `scripts/audit-schema.sql` (nuevo), `scripts/add-payments-v1.sql` (nuevo), `supabase/functions/mp-oauth-callback/`, `mp-create-payment/`, `mp-webhook/`, `mp-process-refunds/` (nuevos scaffolds), `SCHEMA.md`
