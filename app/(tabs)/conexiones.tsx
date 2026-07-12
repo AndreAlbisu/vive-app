@@ -33,7 +33,6 @@ const FOREST      = '#3F512F';
 const FOREST_SOFT = '#6B7A56';
 const INK         = '#2E3624';
 const CARD        = '#F7F2E7';
-const CREAM_DEEP  = '#EAE2D0';
 const TERRACOTTA  = '#C06B4A';
 const TC_SOFT     = '#EAD3C6';
 const STAR        = '#C99A3F';
