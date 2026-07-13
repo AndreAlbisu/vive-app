@@ -5,19 +5,20 @@
 
 ---
 
-## 2026-07-13 — Joaquín
+## 2026-07-13 — Joaquín (sesión 62)
 
-**Tocado:** `app/(tabs)/recursos.tsx`, `app/coach-recurso.tsx` (nuevo), `screens/SalaScreen.tsx`, `scripts/seed-recursos.sql` (nuevo), `package.json`, `package-lock.json`
+**Tocado:** `app/(tabs)/recursos.tsx`, `app/coach-recurso.tsx` (nuevo), `app/coach-recurso-nuevo.tsx` (nuevo), `screens/SalaScreen.tsx`, `screens/CoachProfileScreen.tsx`, `scripts/seed-recursos.sql` (nuevo), `package.json`, `package-lock.json`
 
 **Resumen:**
 - F1 (DB): tablas `coach_resources`, `resource_recommendations`, `resource_saves`, `resource_events` creadas en Supabase; columna `metadata jsonb` en `messages`; bucket `resource-audio` subido a 30MB; seed de 8 recursos corrido
 - F2 (RecursosScreen): nuevas secciones "De tus coaches" (recomendaciones por chat), "Herramientas de Vive" (reducido a 4 tools: Respiración, Ruidos, Diario, Gratitud), "Explorar por tema" (chips de 10 puertas + filtro de formato + grilla 2 columnas de `coach_resources`)
-- F3 (reproductores): pantalla `/coach-recurso` con audio player nativo (expo-audio: play/pause/seek/±15s), video YouTube embebido (react-native-youtube-iframe), podcast abre en fuente (Linking), lectura renderiza markdown (react-native-markdown-display). Bookmark guarda en `resource_saves`.
-- F4 (chat): SalaScreen — botón "+" visible solo para el coach, bottom sheet con lista de recursos publicados + nota opcional, envía card en el chat (metadata en el mensaje), usuario toca "Abrir" → navega a `/coach-recurso` y marca `opened_at`
+- F3 (reproductores): pantalla `/coach-recurso` con audio player nativo (expo-audio: play/pause/seek/±15s), video YouTube embebido (react-native-youtube-iframe), podcast abre en fuente (Linking), lectura renderiza markdown (react-native-markdown-display)
+- F4 (chat): SalaScreen — botón "+" para el coach, bottom sheet de recursos + nota, card en el chat con metadata, "Abrir" marca `opened_at`
+- F5 (coach sube recursos): sección "Mis recursos" en CoachProfileScreen (lista con estado/rechazo, límite 10) + pantalla `/coach-recurso-nuevo` (form completo: formato chips, tema puertas, contenido por formato, upload audio a Storage, declaración de autoría, submit → pending)
+- Fix (4 bugs): `CoachLibrarySection` usaba tabla equivocada para guardar; badge NUEVO no desaparecía; race condition en bookmark; botón "Nuevo" con `coachId=null`
 
 **Pendiente para la próxima sesión:**
-- F5: pantalla de subida y gestión de recursos para el coach (nueva sección en CoachProfileScreen o pantalla dedicada, form de 4 pasos, upload a Storage para audio nativo)
-- Testear F3/F4 en dispositivo real (audio + video + recomendación completa)
+- Testear F3/F4/F5 en dispositivo real (audio player, YouTube embed, upload, recomendación completa)
 - Deep link handler `viveapp://coach/mp-connected` para el flujo de OAuth de Mercado Pago
 - Deploy edge functions MP (`mp-oauth-start`, `mp-create-payment`) — requiere credenciales de mercadopago.com.ar/developers
 
