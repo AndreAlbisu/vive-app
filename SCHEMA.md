@@ -162,7 +162,6 @@ Modelo: split payments, **Checkout Pro**, cobro al reservar + reembolso automát
 - `id` (uuid, PK), `user_id`, `item_1` (text, nullable), `item_2` (text, nullable), `item_3` (text, nullable), `content` (text, nullable — vestigial), `created_at`
 - Diario de gratitud = **3 ítems por entrada** (decisión de producto 2026-07-12). La pantalla `/gratitud` (`app/gratitud.tsx`) escribe `item_1/2/3`; llenar solo 1 o 2 es válido (los vacíos van como string vacío). `content` quedó vestigial: la tabla nació con una sola columna de texto libre y el frontend nuevo no la lee. Registra racha vía `recordCompletion(user.id, 'gratitud', 300)`.
 - Migración: `scripts/add-gratitude-items.sql` (agrega item_1/2/3, afloja NOT NULL de `content`). ⚠️ **Correr en Supabase antes de que la pantalla funcione** — sin las columnas, el insert falla.
-- ⚠️ `screens/GratitudScreen.tsx` es una implementación vieja de texto libre (`content`) que **no está ruteada** (nadie la importa); la ruta real es `app/gratitud.tsx`.
 
 ### `saved_resources`
 - `id` (uuid, PK)
