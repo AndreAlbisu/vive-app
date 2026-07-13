@@ -324,6 +324,7 @@ export default function CoachRecursoScreen() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [savingBookmark, setSavingBookmark] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -359,14 +360,17 @@ export default function CoachRecursoScreen() {
   }, [user, id]);
 
   async function toggleSave() {
-    if (!user || !resource) return;
+    if (!user || !resource || savingBookmark) return;
+    setSavingBookmark(true);
     if (saved) {
       await supabase.from('resource_saves').delete().eq('user_id', user.id).eq('resource_id', resource.id);
       setSaved(false);
     } else {
-      await supabase.from('resource_saves').insert({ user_id: user.id, resource_id: resource.id });
+      await supabase.from('resource_saves')
+        .upsert({ user_id: user.id, resource_id: resource.id }, { onConflict: 'user_id,resource_id', ignoreDuplicates: true });
       setSaved(true);
     }
+    setSavingBookmark(false);
   }
 
   if (loading) {

@@ -788,7 +788,7 @@ export default function CoachProfileScreen() {
         {/* ── Mis recursos ──────────────────────────────────── */}
         <View style={s.resourcesHeader}>
           <Text style={[s.sectionTitle, s.sectionSpaced]}>Mis recursos</Text>
-          {!noCoachProfile && (
+          {!noCoachProfile && coachId !== null && (
             <TouchableOpacity
               style={s.newResourceBtn}
               onPress={() => router.push({ pathname: '/coach-recurso-nuevo', params: { coach_id: coachId } } as any)}
