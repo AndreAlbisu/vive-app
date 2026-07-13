@@ -743,18 +743,30 @@ export default function RecursosScreen() {
           {/* 4. De tus coaches — recomendaciones personalizadas por chat */}
           <CoachRecoSection
             recos={coachRecos}
-            onPress={item => router.push({ pathname: '/coach-recurso', params: { id: item.resource_id } } as any)}
+            onPress={async item => {
+              if (!item.opened_at) {
+                await supabase
+                  .from('resource_recommendations')
+                  .update({ opened_at: new Date().toISOString() })
+                  .eq('id', item.id)
+                  .is('opened_at', null);
+                setCoachRecos(prev => prev.map(r =>
+                  r.id === item.id ? { ...r, opened_at: new Date().toISOString() } : r
+                ));
+              }
+              router.push({ pathname: '/coach-recurso', params: { id: item.resource_id } } as any);
+            }}
           />
 
           {/* 5. Herramientas de Vive */}
           <Text style={s.sectionTitle}>Herramientas de Vive</Text>
           <ToolsCarousel savedIds={savedIds} onSave={toggleSave} />
 
-          {/* Biblioteca de recursos de coaches (tabla resources vieja) */}
+          {/* Biblioteca de recursos de coaches (tabla resources vieja — resource_saves para UUIDs) */}
           <CoachLibrarySection
             resources={rankedLibrary}
             savedIds={savedIds}
-            onSave={toggleSave}
+            onSave={id => toggleSave(id, true)}
           />
 
           {/* 6. Explorar por tema — coach_resources publicados */}
