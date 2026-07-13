@@ -21,9 +21,39 @@ import { supabase } from '@/lib/supabase';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { useResourceProgress } from '@/hooks/useResourceProgress';
 import { useRecommendedResource, type Reco, type Axis } from '@/hooks/useRecommendedResource';
+import { DOORS } from '@/constants/conexionesDoors';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+type CoachRecoItem = {
+  id: string;
+  resource_id: string;
+  note: string | null;
+  opened_at: string | null;
+  created_at: string;
+  coach_resources: {
+    id: string;
+    title: string;
+    format: string;
+    duration_seconds: number | null;
+    topic_id: string;
+  };
+  coaches: {
+    profiles: { name: string };
+  };
+};
+
+type CoachResourceItem = {
+  id: string;
+  title: string;
+  format: string;
+  duration_seconds: number | null;
+  topic_id: string;
+  coaches: {
+    profiles: { name: string };
+  };
+};
 
 interface Tool {
   id: string;
@@ -68,7 +98,7 @@ const TOOL_GROUPS: ToolGroup[] = [
     id: 'calma',
     title: 'Para calmarte ahora',
     subtitle: 'Cuando la mente va rápido',
-    toolIds: ['ruido', 'respiracion', 'anclaje'],
+    toolIds: ['ruido', 'respiracion'],
   },
 ];
 
@@ -257,6 +287,28 @@ const LIBRARY_TYPE_LABEL: Record<string, string> = {
   lectura_breve: 'Lectura breve',
 };
 
+const FORMAT_COLOR: Record<string, string> = {
+  audio:   '#C1694F',
+  podcast: '#3B7FC4',
+  video:   '#7B5EA7',
+  lectura: '#4A7C59',
+};
+const FORMAT_LABEL: Record<string, string> = {
+  audio: 'Audio', podcast: 'Podcast', video: 'Video', lectura: 'Lectura',
+};
+const FORMAT_ICON: Record<string, IoniconName> = {
+  audio:   'volume-medium-outline',
+  podcast: 'mic-outline',
+  video:   'videocam-outline',
+  lectura: 'book-outline',
+};
+
+function fmtDuration(secs: number | null): string {
+  if (!secs) return '';
+  const m = Math.ceil(secs / 60);
+  return m < 60 ? `${m} min` : `${Math.round(m / 60)}h`;
+}
+
 function CoachLibrarySection({
   resources,
   savedIds,
@@ -309,6 +361,162 @@ function CoachLibrarySection({
   );
 }
 
+
+// ─── CoachRecoSection ─────────────────────────────────────────────────────────
+function CoachRecoSection({
+  recos,
+  onPress,
+}: {
+  recos: CoachRecoItem[];
+  onPress: (item: CoachRecoItem) => void;
+}) {
+  if (recos.length === 0) return null;
+
+  return (
+    <View style={{ marginBottom: 4 }}>
+      <Text style={s.sectionTitle}>De tus coaches</Text>
+      {recos.map(item => {
+        const res = item.coach_resources;
+        const color = FORMAT_COLOR[res.format] ?? TERRACOTTA;
+        const isNew = !item.opened_at;
+        const coachName = item.coaches?.profiles?.name ?? 'Tu coach';
+        return (
+          <ScaleCard
+            key={item.id}
+            style={s.recoCard}
+            onPress={() => onPress(item)}
+            activeOpacity={0.88}>
+            {/* Cover strip */}
+            <View style={[s.recoStrip, { backgroundColor: color }]}>
+              <Ionicons name={FORMAT_ICON[res.format] ?? 'book-outline'} size={18} color="#fff" />
+            </View>
+            <View style={s.recoBody}>
+              <View style={s.recoTopRow}>
+                <Text style={s.recoTitle} numberOfLines={2}>{res.title}</Text>
+                {isNew && <View style={s.recoBadge}><Text style={s.recoBadgeText}>NUEVO</Text></View>}
+              </View>
+              <Text style={s.recoCoach}>Por {coachName}</Text>
+              {item.note ? <Text style={s.recoNote} numberOfLines={2}>"{item.note}"</Text> : null}
+              <Text style={s.recoMeta}>
+                {FORMAT_LABEL[res.format] ?? res.format}{res.duration_seconds ? ` · ${fmtDuration(res.duration_seconds)}` : ''}
+              </Text>
+            </View>
+          </ScaleCard>
+        );
+      })}
+    </View>
+  );
+}
+
+// ─── ExploreSection ───────────────────────────────────────────────────────────
+const FORMATS = ['audio', 'podcast', 'video', 'lectura'] as const;
+
+function ExploreSection({
+  resources,
+  savedIds,
+  onSave,
+  selectedDoor,
+  onSelectDoor,
+  selectedFormat,
+  onSelectFormat,
+}: {
+  resources: CoachResourceItem[];
+  savedIds: Set<string>;
+  onSave: (id: string) => void;
+  selectedDoor: string | null;
+  onSelectDoor: (id: string | null) => void;
+  selectedFormat: string | null;
+  onSelectFormat: (f: string | null) => void;
+}) {
+  const router = useRouter();
+
+  return (
+    <View style={{ marginTop: 8 }}>
+      <Text style={s.sectionTitle}>Explorar por tema</Text>
+
+      {/* Chips de puertas */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.chipsRow}>
+        <TouchableOpacity
+          style={[s.chip, !selectedDoor && s.chipActive]}
+          onPress={() => onSelectDoor(null)}
+          activeOpacity={0.75}>
+          <Text style={[s.chipText, !selectedDoor && s.chipTextActive]}>Todos</Text>
+        </TouchableOpacity>
+        {DOORS.map(door => {
+          const active = selectedDoor === door.id;
+          return (
+            <TouchableOpacity
+              key={door.id}
+              style={[s.chip, active && s.chipActive]}
+              onPress={() => onSelectDoor(active ? null : door.id)}
+              activeOpacity={0.75}>
+              <Text style={[s.chipText, active && s.chipTextActive]}>{door.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Filtro de formato */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[s.chipsRow, { marginTop: 6 }]}>
+        {FORMATS.map(f => {
+          const active = selectedFormat === f;
+          return (
+            <TouchableOpacity
+              key={f}
+              style={[s.chip, s.chipSmall, active && { backgroundColor: FORMAT_COLOR[f] + '22', borderColor: FORMAT_COLOR[f] }]}
+              onPress={() => onSelectFormat(active ? null : f)}
+              activeOpacity={0.75}>
+              <Ionicons name={FORMAT_ICON[f]} size={11} color={active ? FORMAT_COLOR[f] : FOREST_SOFT} />
+              <Text style={[s.chipText, s.chipTextSmall, active && { color: FORMAT_COLOR[f] }]}>{FORMAT_LABEL[f]}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Grilla 2 columnas */}
+      {resources.length === 0 ? (
+        <Text style={s.emptyText}>No hay recursos para este tema todavía.</Text>
+      ) : (
+        <View style={s.exploreGrid}>
+          {resources.map((r, i) => {
+            const color = FORMAT_COLOR[r.format] ?? TERRACOTTA;
+            const isSaved = savedIds.has(r.id);
+            const coachName = r.coaches?.profiles?.name ?? '';
+            return (
+              <ScaleCard
+                key={r.id}
+                style={[s.exploreCard, i % 2 === 0 ? { marginRight: 5 } : { marginLeft: 5 }]}
+                onPress={() => router.push({ pathname: '/coach-recurso', params: { id: r.id } } as any)}
+                activeOpacity={0.88}>
+                <View style={[s.exploreCover, { backgroundColor: color + '22' }]}>
+                  <Ionicons name={FORMAT_ICON[r.format] ?? 'book-outline'} size={22} color={color} />
+                </View>
+                <TouchableOpacity style={s.exploreBookmark} onPress={() => onSave(r.id)} hitSlop={8}>
+                  <Ionicons
+                    name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                    size={14}
+                    color={isSaved ? TERRACOTTA : 'rgba(135,131,92,0.55)'}
+                  />
+                </TouchableOpacity>
+                <Text style={s.exploreTitle} numberOfLines={3}>{r.title}</Text>
+                <Text style={s.exploreMeta}>
+                  {FORMAT_LABEL[r.format]}{r.duration_seconds ? ` · ${fmtDuration(r.duration_seconds)}` : ''}
+                </Text>
+                {coachName ? <Text style={s.exploreCoach} numberOfLines={1}>Por {coachName}</Text> : null}
+              </ScaleCard>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
 
 // ─── ToolCard ─────────────────────────────────────────────────────────────────
 function ToolCard({
@@ -387,8 +595,12 @@ export default function RecursosScreen() {
   const { user, requestAuth } = useAuth();
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [libraryResources, setLibraryResources] = useState<LibraryResource[]>([]);
+  const [coachRecos, setCoachRecos] = useState<CoachRecoItem[]>([]);
+  const [exploreResources, setExploreResources] = useState<CoachResourceItem[]>([]);
+  const [selectedDoor, setSelectedDoor] = useState<string | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
 
-  // ── Cargar biblioteca de recursos publicados por coaches ────────────────────
+  // ── Cargar biblioteca de recursos publicados por coaches (tabla resources vieja) ──
   useEffect(() => {
     supabase
       .from('resources')
@@ -410,6 +622,31 @@ export default function RecursosScreen() {
         })));
       });
   }, []);
+
+  // ── Recomendaciones de coaches al usuario ───────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('resource_recommendations')
+      .select('id, resource_id, note, opened_at, created_at, coach_resources!inner(id, title, format, duration_seconds, topic_id), coaches!inner(profiles!inner(name))')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(5)
+      .then(({ data }) => { if (data) setCoachRecos(data as any); });
+  }, [user]);
+
+  // ── Explorar coach_resources con filtros ────────────────────────────────────
+  useEffect(() => {
+    let query = supabase
+      .from('coach_resources')
+      .select('id, title, format, duration_seconds, topic_id, coaches!inner(profiles!inner(name))')
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (selectedDoor) query = query.eq('topic_id', selectedDoor);
+    if (selectedFormat) query = query.eq('format', selectedFormat);
+    query.then(({ data }) => { if (data) setExploreResources(data as any); });
+  }, [selectedDoor, selectedFormat]);
 
   const { entries: moodEntries } = useMoodHistory(user?.id, 1);
   const todayMoodEntry = moodEntries[0];
@@ -433,16 +670,18 @@ export default function RecursosScreen() {
   // ── Cargar guardados ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from('saved_resources')
-      .select('resource_id')
-      .eq('user_id', user.id)
-      .then(({ data }) => {
-        if (data) setSavedIds(new Set(data.map(r => r.resource_id as string)));
-      });
+    Promise.all([
+      supabase.from('saved_resources').select('resource_id').eq('user_id', user.id),
+      supabase.from('resource_saves').select('resource_id').eq('user_id', user.id),
+    ]).then(([old, newer]) => {
+      const ids = new Set<string>();
+      (old.data ?? []).forEach(r => ids.add(r.resource_id as string));
+      (newer.data ?? []).forEach(r => ids.add(r.resource_id as string));
+      setSavedIds(ids);
+    });
   }, [user]);
 
-  async function toggleSave(resourceId: string) {
+  async function toggleSave(resourceId: string, isCoachResource = false) {
     if (!user) { requestAuth(); return; }
     const isSaved = savedIds.has(resourceId);
     setSavedIds(prev => {
@@ -450,18 +689,11 @@ export default function RecursosScreen() {
       if (isSaved) next.delete(resourceId); else next.add(resourceId);
       return next;
     });
+    const table = isCoachResource ? 'resource_saves' : 'saved_resources';
     if (isSaved) {
-      await supabase
-        .from('saved_resources')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('resource_id', resourceId);
+      await supabase.from(table).delete().eq('user_id', user.id).eq('resource_id', resourceId);
     } else {
-      // el UNIQUE(user_id,resource_id) (add-saved-resources-unique.sql) rechaza
-      // el dup si ya estaba guardado; el error se ignora a propósito
-      await supabase
-        .from('saved_resources')
-        .insert({ user_id: user.id, resource_id: resourceId });
+      await supabase.from(table).insert({ user_id: user.id, resource_id: resourceId });
     }
   }
 
@@ -508,15 +740,32 @@ export default function RecursosScreen() {
             <ContinueCard {...lastInProgress} />
           )}
 
-          {/* 4. Tus herramientas (carrusel horizontal) */}
-          <Text style={s.sectionTitle}>Tus herramientas</Text>
+          {/* 4. De tus coaches — recomendaciones personalizadas por chat */}
+          <CoachRecoSection
+            recos={coachRecos}
+            onPress={item => router.push({ pathname: '/coach-recurso', params: { id: item.resource_id } } as any)}
+          />
+
+          {/* 5. Herramientas de Vive */}
+          <Text style={s.sectionTitle}>Herramientas de Vive</Text>
           <ToolsCarousel savedIds={savedIds} onSave={toggleSave} />
 
-          {/* 6. Biblioteca de recursos de coaches */}
+          {/* Biblioteca de recursos de coaches (tabla resources vieja) */}
           <CoachLibrarySection
             resources={rankedLibrary}
             savedIds={savedIds}
             onSave={toggleSave}
+          />
+
+          {/* 6. Explorar por tema — coach_resources publicados */}
+          <ExploreSection
+            resources={exploreResources}
+            savedIds={savedIds}
+            onSave={id => toggleSave(id, true)}
+            selectedDoor={selectedDoor}
+            onSelectDoor={setSelectedDoor}
+            selectedFormat={selectedFormat}
+            onSelectFormat={setSelectedFormat}
           />
 
           <View style={{ height: TAB_BAR_CLEARANCE }} />
@@ -915,6 +1164,158 @@ const s = StyleSheet.create({
     height: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // ── CoachRecoSection ──────────────────────────────────────────────────────
+  recoCard: {
+    flexDirection: 'row',
+    backgroundColor: GLASS_BG,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  recoStrip: {
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  recoBody: {
+    flex: 1,
+    padding: 13,
+    gap: 3,
+  },
+  recoTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  recoTitle: {
+    flex: 1,
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13.5,
+    color: FOREST,
+    lineHeight: 18,
+  },
+  recoBadge: {
+    backgroundColor: TERRACOTTA,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    flexShrink: 0,
+  },
+  recoBadgeText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 9,
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
+  recoCoach: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: FOREST_SOFT,
+    fontStyle: 'italic',
+  },
+  recoNote: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: FOREST,
+    lineHeight: 17,
+    opacity: 0.8,
+  },
+  recoMeta: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 10.5,
+    color: FOREST_SOFT,
+  },
+
+  // ── ExploreSection ────────────────────────────────────────────────────────
+  chipsRow: {
+    gap: 7,
+    paddingBottom: 2,
+  },
+  chip: {
+    backgroundColor: GLASS_BG,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    borderRadius: 20,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+  },
+  chipActive: {
+    backgroundColor: FOREST,
+    borderColor: FOREST,
+  },
+  chipText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 12.5,
+    color: FOREST,
+  },
+  chipTextActive: {
+    color: '#F3EEDF',
+  },
+  chipSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  chipTextSmall: {
+    fontSize: 11,
+  },
+  emptyText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: FOREST_SOFT,
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  exploreGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 12,
+  },
+  exploreCard: {
+    width: '50%',
+    backgroundColor: GLASS_BG,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    padding: 12,
+    marginBottom: 10,
+    gap: 6,
+  },
+  exploreCover: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exploreBookmark: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+  },
+  exploreTitle: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 12.5,
+    color: FOREST,
+    lineHeight: 17,
+  },
+  exploreMeta: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 10.5,
+    color: FOREST_SOFT,
+  },
+  exploreCoach: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 10,
+    color: 'rgba(58,79,42,0.55)',
+    fontStyle: 'italic',
   },
 
 });

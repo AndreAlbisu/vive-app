@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   StatusBar,
   Image,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -32,12 +33,30 @@ import { isCancelLate } from '@/lib/bookingHelpers';
 import { logError } from '@/lib/logging';
 import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
 
+type ResourceMeta = {
+  type: 'resource';
+  resource_id: string;
+  resource_title: string;
+  resource_format: string;
+  recommendation_id?: string;
+  note?: string;
+};
+
 type Message = {
   id: string;
   text: string;
   sender: 'user' | 'coach';
   sender_type: 'user' | 'coach' | 'system' | 'system_confirmed' | 'system_cancelled';
   time: string;
+  metadata?: ResourceMeta | null;
+};
+
+type CoachResource = {
+  id: string;
+  title: string;
+  format: string;
+  duration_seconds: number | null;
+  topic_id: string;
 };
 
 type ActiveBooking = {
@@ -125,6 +144,7 @@ function rowToMessage(row: Record<string, unknown>, userId: string): Message {
       hour: '2-digit',
       minute: '2-digit',
     }),
+    metadata: (row.metadata as ResourceMeta | null) ?? null,
   };
 }
 
@@ -152,6 +172,14 @@ export default function SalaScreen() {
   const [loading, setLoading] = useState(true);
   const [reduceMotion, setReduceMotion] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  // ── Recomendación de recursos (solo coach) ──────────────────────────────────
+  const [coachInternalId, setCoachInternalId] = useState<string | null>(null);
+  const [recoSheetOpen, setRecoSheetOpen] = useState(false);
+  const [coachResources, setCoachResources] = useState<CoachResource[]>([]);
+  const [selectedReco, setSelectedReco] = useState<CoachResource | null>(null);
+  const [recoNote, setRecoNote] = useState('');
+  const [sendingReco, setSendingReco] = useState(false);
 
   const messageAnims = useRef<Record<string, Animated.Value>>({});
   function getAnim(id: string, initialValue = 0): Animated.Value {
@@ -375,6 +403,12 @@ export default function SalaScreen() {
     init();
     return () => { mounted = false; };
   }, [user?.id, salaIdParam, coach_id]);
+
+  useEffect(() => {
+    if (!user || recipientIsCoach) return;
+    supabase.from('coaches').select('id').eq('profile_id', user.id).single()
+      .then(({ data }) => { if (data) setCoachInternalId((data as any).id); });
+  }, [user, recipientIsCoach]);
 
   // Realtime: mensajes nuevos
   useEffect(() => {
@@ -615,6 +649,90 @@ export default function SalaScreen() {
         priceFrom: '',
       },
     });
+  }
+
+  async function openRecoSheet() {
+    if (!coachInternalId) return;
+    const { data } = await supabase
+      .from('coach_resources')
+      .select('id, title, format, duration_seconds, topic_id')
+      .eq('coach_id', coachInternalId)
+      .eq('status', 'published')
+      .order('created_at', { ascending: false });
+    setCoachResources((data as CoachResource[]) ?? []);
+    setSelectedReco(null);
+    setRecoNote('');
+    setRecoSheetOpen(true);
+  }
+
+  async function sendRecommendation() {
+    if (!selectedReco || !salaId || !user || !coachInternalId || !recipientId) return;
+    setSendingReco(true);
+    try {
+      const { data: recoData, error: recoErr } = await supabase
+        .from('resource_recommendations')
+        .insert({
+          resource_id: selectedReco.id,
+          coach_id: coachInternalId,
+          user_id: recipientId,
+          room_id: salaId,
+          note: recoNote.trim() || null,
+        })
+        .select('id')
+        .single();
+
+      if (recoErr || !recoData) throw recoErr;
+
+      const meta: ResourceMeta = {
+        type: 'resource',
+        resource_id: selectedReco.id,
+        resource_title: selectedReco.title,
+        resource_format: selectedReco.format,
+        recommendation_id: (recoData as any).id,
+        note: recoNote.trim() || undefined,
+      };
+
+      const { data: msgData, error: msgErr } = await supabase
+        .from('messages')
+        .insert({
+          sala_id: salaId,
+          sender_id: user.id,
+          content: encryptMessage('[Recurso recomendado]'),
+          sender_type: 'coach',
+          metadata: meta,
+        })
+        .select('id, content, sender_id, sender_type, created_at, metadata')
+        .single();
+
+      if (msgErr || !msgData) throw msgErr;
+
+      const optimisticId = (msgData as any).id;
+      getAnim(optimisticId, 0);
+      setMessages(prev => [...prev, rowToMessage(msgData as any, user.id)]);
+      Animated.timing(getAnim(optimisticId), { toValue: 1, duration: 280, useNativeDriver: true }).start();
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+
+      setRecoSheetOpen(false);
+
+      if (recipientId) {
+        const { data: pushData } = await supabase.from('profiles').select('push_token').eq('id', recipientId).maybeSingle();
+        if (pushData?.push_token) {
+          await sendPushNotification(pushData.push_token, 'Recurso recomendado', selectedReco.title.slice(0, 60));
+        }
+      }
+    } catch {
+      Alert.alert('Error', 'No se pudo enviar la recomendación.');
+    } finally {
+      setSendingReco(false);
+    }
+  }
+
+  async function markRecoOpened(recommendationId: string) {
+    await supabase
+      .from('resource_recommendations')
+      .update({ opened_at: new Date().toISOString() })
+      .eq('id', recommendationId)
+      .is('opened_at', null);
   }
 
   async function sendMessage() {
@@ -879,6 +997,47 @@ export default function SalaScreen() {
               );
             }
 
+            // Tarjeta de recurso recomendado
+            if (msg.metadata?.type === 'resource') {
+              const meta = msg.metadata;
+              const fmtColor: Record<string,string> = { audio:'#C1694F', podcast:'#3B7FC4', video:'#7B5EA7', lectura:'#4A7C59' };
+              const fmtLabel: Record<string,string> = { audio:'Audio', podcast:'Podcast', video:'Video', lectura:'Lectura' };
+              const cardColor = fmtColor[meta.resource_format] ?? '#C1694F';
+              return (
+                <Animated.View
+                  key={msg.id}
+                  style={[
+                    styles.messageRow,
+                    styles.messageRowCoach,
+                    { opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange:[0,1], outputRange:[10,0] }) }] },
+                  ]}>
+                  {recipientProfile?.avatarUrl ? (
+                    <Image source={{ uri: recipientProfile.avatarUrl }} style={styles.avatarSmallImage} />
+                  ) : (
+                    <View style={styles.avatarSmall}><Text style={styles.avatarSmallText}>{displayInitials}</Text></View>
+                  )}
+                  <View style={styles.recoCard}>
+                    <View style={[styles.recoCardStrip, { backgroundColor: cardColor }]}>
+                      <Text style={styles.recoCardFormatLabel}>{fmtLabel[meta.resource_format] ?? meta.resource_format}</Text>
+                    </View>
+                    <View style={styles.recoCardBody}>
+                      <Text style={styles.recoCardTitle} numberOfLines={2}>{meta.resource_title}</Text>
+                      {meta.note ? <Text style={styles.recoCardNote} numberOfLines={2}>"{meta.note}"</Text> : null}
+                      <TouchableOpacity
+                        style={[styles.recoCardBtn, { backgroundColor: cardColor }]}
+                        onPress={() => {
+                          if (meta.recommendation_id) markRecoOpened(meta.recommendation_id);
+                          router.push({ pathname: '/coach-recurso', params: { id: meta.resource_id } } as any);
+                        }}
+                        activeOpacity={0.85}>
+                        <Text style={styles.recoCardBtnText}>Abrir</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Animated.View>
+              );
+            }
+
             return (
               <Animated.View
                 key={msg.id}
@@ -954,6 +1113,15 @@ export default function SalaScreen() {
             </View>
           ) : (
             <>
+              {isCurrentUserCoach && coachInternalId && (
+                <TouchableOpacity
+                  style={styles.recoBtn}
+                  onPress={openRecoSheet}
+                  activeOpacity={0.75}
+                  hitSlop={8}>
+                  <MaterialCommunityIcons name="plus" size={20} color="#87835C" />
+                </TouchableOpacity>
+              )}
               <TextInput
                 style={styles.input}
                 value={inputText}
@@ -975,6 +1143,73 @@ export default function SalaScreen() {
           )}
         </Animated.View>
       </KeyboardAvoidingView>
+
+      {/* Bottom sheet: recomendar recurso */}
+      <Modal
+        visible={recoSheetOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setRecoSheetOpen(false)}>
+        <TouchableOpacity style={styles.recoOverlay} activeOpacity={1} onPress={() => setRecoSheetOpen(false)} />
+        <View style={styles.recoSheet}>
+          <View style={styles.recoSheetHandle} />
+          <Text style={styles.recoSheetTitle}>Recomendar recurso</Text>
+
+          {coachResources.length === 0 ? (
+            <Text style={styles.recoSheetEmpty}>No tenés recursos publicados aún.</Text>
+          ) : (
+            <ScrollView style={styles.recoSheetList} showsVerticalScrollIndicator={false}>
+              {coachResources.map(r => {
+                const fmtColor: Record<string,string> = { audio:'#C1694F', podcast:'#3B7FC4', video:'#7B5EA7', lectura:'#4A7C59' };
+                const fmtLabel: Record<string,string> = { audio:'Audio', podcast:'Podcast', video:'Video', lectura:'Lectura' };
+                const isSelected = selectedReco?.id === r.id;
+                return (
+                  <TouchableOpacity
+                    key={r.id}
+                    style={[styles.recoSheetItem, isSelected && styles.recoSheetItemSelected]}
+                    onPress={() => setSelectedReco(isSelected ? null : r)}
+                    activeOpacity={0.75}>
+                    <View style={[styles.recoSheetFmtDot, { backgroundColor: fmtColor[r.format] ?? '#C1694F' }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.recoSheetItemTitle} numberOfLines={2}>{r.title}</Text>
+                      <Text style={styles.recoSheetItemMeta}>
+                        {fmtLabel[r.format] ?? r.format}{r.duration_seconds ? ` · ${Math.ceil(r.duration_seconds/60)} min` : ''}
+                      </Text>
+                    </View>
+                    {isSelected && <MaterialCommunityIcons name="check-circle" size={20} color="#2D4A3E" />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          {selectedReco && (
+            <>
+              <TextInput
+                style={styles.recoNoteInput}
+                value={recoNote}
+                onChangeText={t => setRecoNote(t.slice(0, 200))}
+                placeholder="Nota opcional para el usuario (máx. 200 chars)"
+                placeholderTextColor="rgba(135,131,92,0.55)"
+                multiline
+                maxLength={200}
+              />
+              <Text style={styles.recoNoteCount}>{recoNote.length}/200</Text>
+            </>
+          )}
+
+          <TouchableOpacity
+            style={[styles.recoSendBtn, (!selectedReco || sendingReco) && styles.recoSendBtnDisabled]}
+            onPress={sendRecommendation}
+            disabled={!selectedReco || sendingReco}
+            activeOpacity={0.85}>
+            {sendingReco
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.recoSendBtnText}>Enviar recomendación</Text>}
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
     </SafeAreaView>
     </AppBg>
   );
@@ -1255,4 +1490,168 @@ const styles = StyleSheet.create({
     }),
   },
   sendBtnDisabled: { backgroundColor: 'rgba(255,248,240,0.62)', shadowOpacity: 0, elevation: 0 },
+
+  // ── Botón "+" del coach ───────────────────────────────────────────────────
+  recoBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,248,240,0.62)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+
+  // ── Resource card en el chat ──────────────────────────────────────────────
+  recoCard: {
+    maxWidth: 260,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,248,240,0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.65)',
+  },
+  recoCardStrip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  recoCardFormatLabel: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 10,
+    color: '#fff',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  recoCardBody: {
+    padding: 12,
+    gap: 6,
+  },
+  recoCardTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13.5,
+    color: '#3A4F2A',
+    lineHeight: 18,
+  },
+  recoCardNote: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: '#6B7A56',
+    lineHeight: 17,
+    fontStyle: 'italic',
+  },
+  recoCardBtn: {
+    borderRadius: 10,
+    paddingVertical: 8,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  recoCardBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13,
+    color: '#fff',
+  },
+
+  // ── Bottom sheet ──────────────────────────────────────────────────────────
+  recoOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  recoSheet: {
+    backgroundColor: '#F7EFE4',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 36,
+    maxHeight: '75%',
+  },
+  recoSheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(86,94,50,0.20)',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  recoSheetTitle: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 20,
+    color: '#3A4F2A',
+    marginBottom: 14,
+  },
+  recoSheetEmpty: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13.5,
+    color: '#87835C',
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  recoSheetList: { maxHeight: 260 },
+  recoSheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    marginBottom: 6,
+    backgroundColor: 'rgba(255,248,240,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.60)',
+  },
+  recoSheetItemSelected: {
+    backgroundColor: 'rgba(45,74,62,0.08)',
+    borderColor: '#2D4A3E',
+  },
+  recoSheetFmtDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    flexShrink: 0,
+  },
+  recoSheetItemTitle: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13.5,
+    color: '#3A4F2A',
+  },
+  recoSheetItemMeta: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: '#87835C',
+    marginTop: 2,
+  },
+  recoNoteInput: {
+    backgroundColor: 'rgba(255,248,240,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.60)',
+    borderRadius: 14,
+    padding: 12,
+    fontFamily: ViveFonts.regular,
+    fontSize: 13.5,
+    color: '#3A4F2A',
+    minHeight: 72,
+    textAlignVertical: 'top',
+    marginTop: 12,
+  },
+  recoNoteCount: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 10.5,
+    color: '#87835C',
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  recoSendBtn: {
+    backgroundColor: '#3A4F2A',
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  recoSendBtnDisabled: {
+    backgroundColor: 'rgba(58,79,42,0.35)',
+  },
+  recoSendBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#F3EEDF',
+  },
 });
