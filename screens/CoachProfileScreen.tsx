@@ -84,6 +84,7 @@ export default function CoachProfileScreen() {
   const [topics, setTopics] = useState<string[]>([]);
   const [mpConnected, setMpConnected] = useState(false);
   const [connectingMp, setConnectingMp] = useState(false);
+  const [myResources, setMyResources] = useState<{ id: string; title: string; format: string; status: string; rejection_rule: string | null }[]>([]);
 
   useEffect(() => {
     if (!user) { setLoadingProfile(false); return; }
@@ -112,7 +113,7 @@ export default function CoachProfileScreen() {
     })();
   }, [user]);
 
-  // Refresca al volver de /coach-topics (después de guardar cambios ahí)
+  // Refresca al volver de /coach-topics o /coach-recurso-nuevo
   useFocusEffect(
     useCallback(() => {
       if (!coachId) return;
@@ -121,6 +122,13 @@ export default function CoachProfileScreen() {
         .select('topic')
         .eq('coach_id', coachId)
         .then(({ data }) => setTopics((data ?? []).map(t => t.topic as string)));
+      supabase
+        .from('coach_resources')
+        .select('id, title, format, status, rejection_rule')
+        .eq('coach_id', coachId)
+        .neq('status', 'archived')
+        .order('created_at', { ascending: false })
+        .then(({ data }) => setMyResources((data as any[]) ?? []));
     }, [coachId])
   );
 
@@ -777,6 +785,56 @@ export default function CoachProfileScreen() {
           )}
         </View>
 
+        {/* ── Mis recursos ──────────────────────────────────── */}
+        <View style={s.resourcesHeader}>
+          <Text style={[s.sectionTitle, s.sectionSpaced]}>Mis recursos</Text>
+          {!noCoachProfile && (
+            <TouchableOpacity
+              style={s.newResourceBtn}
+              onPress={() => router.push({ pathname: '/coach-recurso-nuevo', params: { coach_id: coachId } } as any)}
+              activeOpacity={0.8}>
+              <MaterialCommunityIcons name="plus" size={16} color="#fff" />
+              <Text style={s.newResourceBtnText}>Nuevo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {myResources.length === 0 ? (
+          <View style={s.resourcesEmpty}>
+            <MaterialCommunityIcons name="book-open-outline" size={24} color="rgba(135,131,92,0.38)" />
+            <Text style={s.resourcesEmptyText}>
+              Todavía no subiste recursos.{'\n'}Tus audios, videos, podcasts y lecturas aparecerán acá.
+            </Text>
+          </View>
+        ) : (
+          <View style={s.resourcesList}>
+            {myResources.map(r => {
+              const fmtColor: Record<string,string> = { audio:'#C1694F', podcast:'#3B7FC4', video:'#7B5EA7', lectura:'#4A7C59' };
+              const statusLabel: Record<string,string> = { pending:'Pendiente', published:'Publicado', rejected:'Rechazado', archived:'Archivado' };
+              const statusColor: Record<string,string> = { pending:'#CBB98C', published:'#2D4A3E', rejected:'#E05252', archived:'#87835C' };
+              return (
+                <View key={r.id} style={s.resourceRow}>
+                  <View style={[s.resourceFmtDot, { backgroundColor: fmtColor[r.format] ?? '#C1694F' }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.resourceTitle} numberOfLines={1}>{r.title}</Text>
+                    {r.status === 'rejected' && r.rejection_rule ? (
+                      <Text style={s.resourceRejectionRule}>Regla {r.rejection_rule}</Text>
+                    ) : null}
+                  </View>
+                  <View style={[s.resourceStatusBadge, { backgroundColor: (statusColor[r.status] ?? '#87835C') + '22' }]}>
+                    <Text style={[s.resourceStatusText, { color: statusColor[r.status] ?? '#87835C' }]}>
+                      {statusLabel[r.status] ?? r.status}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+            {myResources.filter(r => r.status === 'published').length >= 10 && (
+              <Text style={s.resourceLimitNote}>Llegaste al límite de 10 recursos publicados. Archivá uno para publicar otro.</Text>
+            )}
+          </View>
+        )}
+
         {/* ── Reseñas recibidas ─────────────────────────────── */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Reseñas recibidas</Text>
         {!reviewsLoaded ? null : reviews.length === 0 ? (
@@ -1392,5 +1450,85 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.medium,
     fontSize: 14,
     color: '#E05252',
+  },
+
+  // ── Mis recursos ──────────────────────────────────────────────────────────
+  resourcesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 28,
+  },
+  newResourceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#3A4F2A',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  newResourceBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 12.5,
+    color: '#fff',
+  },
+  resourcesEmpty: {
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 20,
+  },
+  resourcesEmptyText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: 'rgba(135,131,92,0.70)',
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  resourcesList: { gap: 8, marginTop: 10 },
+  resourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: GLASS,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  resourceFmtDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    flexShrink: 0,
+  },
+  resourceTitle: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13.5,
+    color: '#565E32',
+  },
+  resourceRejectionRule: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: '#E05252',
+    marginTop: 2,
+  },
+  resourceStatusBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
+  resourceStatusText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 10.5,
+  },
+  resourceLimitNote: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11.5,
+    color: '#87835C',
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
