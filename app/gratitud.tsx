@@ -9,12 +9,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { logError } from '@/lib/logging';
+import { recordCompletion } from '@/lib/resourceCompletions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface GratitudeEntry {
@@ -103,9 +106,14 @@ export default function GratitudScreen() {
       .select()
       .single();
 
-    if (!error && data) {
-      setEntries(prev => [data, ...prev]);
+    if (error || !data) {
+      await logError('GratitudScreen: save entry failed', error);
+      Alert.alert('Error', 'No se pudo guardar tu gratitud. Intentá de nuevo.');
+      return;
     }
+
+    setEntries(prev => [data, ...prev]);
+    recordCompletion(user.id, 'gratitud', 300).catch(() => {});
 
     setItems(['', '', '']);
     setSaved(true);
