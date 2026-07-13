@@ -15,6 +15,11 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const MP_WEBHOOK_URL = Deno.env.get('MP_WEBHOOK_URL')!         // URL pública de mp-webhook
 const CHECKOUT_RETURN_URL = Deno.env.get('CHECKOUT_RETURN_URL') ?? 'viveapp://booking/result'
+// Split on/off. Default true (prod). Poner MP_SPLIT_ENABLED=false para diagnosticar
+// si el marketplace_fee es lo que rompe el checkout (app sin marketplace activado).
+const MP_SPLIT_ENABLED = Deno.env.get('MP_SPLIT_ENABLED') !== 'false'
+// Sandbox: en test hay que devolver el sandbox_init_point (checkout de prueba).
+const MP_TEST_MODE = Deno.env.get('MP_TEST_MODE') === 'true'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -94,26 +99,34 @@ serve(async (req) => {
     // El riesgo real es sesión a >14d del pago (o coach que ya retiró): ahí el refund
     // sale de su balance, crítico en promo 0%. => nada que codear acá; leverage = MP.
 
-    // TODO(MP): verificar contra docs — POST https://api.mercadopago.com/checkout/preferences
+    const prefBody: Record<string, unknown> = {
+      items: [{
+        title: `Sesión con ${booking.coach_name ?? 'tu coach'}`,
+        quantity: 1,
+        unit_price: Number(booking.amount),
+        currency_id: booking.currency ?? 'ARS',
+      }],
+      external_reference: booking.id,           // clave para mp-webhook
+      notification_url: MP_WEBHOOK_URL,
+    }
+    // Split: comisión VITA (tier server-side). Se puede apagar para diagnóstico.
+    if (MP_SPLIT_ENABLED) prefBody.marketplace_fee = marketplaceFee
+    // MP EXIGE back_urls https (un deep link `viveapp://` da error `invalid_back_urls`
+    // → "algo salió mal" al aprobar). El retorno a la app ya lo maneja el WebBrowser
+    // (se cierra) + el webhook, así que solo mandamos back_urls/auto_return si hay una
+    // URL https real. Con el deep link default → se omiten y el pago funciona igual.
+    if (CHECKOUT_RETURN_URL.startsWith('https://')) {
+      prefBody.back_urls = { success: CHECKOUT_RETURN_URL, failure: CHECKOUT_RETURN_URL, pending: CHECKOUT_RETURN_URL }
+      prefBody.auto_return = 'approved'
+    }
+
     const prefRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${mp.access_token}`, // token del COACH
       },
-      body: JSON.stringify({
-        items: [{
-          title: `Sesión con ${booking.coach_name ?? 'tu coach'}`,
-          quantity: 1,
-          unit_price: Number(booking.amount),
-          currency_id: booking.currency ?? 'ARS',
-        }],
-        marketplace_fee: marketplaceFee,          // comisión VITA (10%)
-        external_reference: booking.id,           // clave para mp-webhook
-        notification_url: MP_WEBHOOK_URL,
-        back_urls: { success: CHECKOUT_RETURN_URL, failure: CHECKOUT_RETURN_URL, pending: CHECKOUT_RETURN_URL },
-        auto_return: 'approved',
-      }),
+      body: JSON.stringify(prefBody),
     })
     const pref = await prefRes.json()
     if (!prefRes.ok) {
@@ -126,7 +139,10 @@ serve(async (req) => {
       .update({ preference_id: pref.id, payment_status: 'pendiente', platform_fee_pct: commissionPct })
       .eq('id', booking.id)
 
-    return json({ preference_id: pref.id, init_point: pref.init_point }, 200)
+    // En modo test hay que abrir el checkout de SANDBOX (sandbox_init_point);
+    // el init_point de producción con una preferencia de prueba tira "algo anduvo mal".
+    const checkoutUrl = MP_TEST_MODE ? (pref.sandbox_init_point ?? pref.init_point) : pref.init_point
+    return json({ preference_id: pref.id, init_point: checkoutUrl }, 200)
   } catch (e) {
     console.error('[mp-create-payment] error:', e)
     return json({ error: 'Error interno' }, 500)
