@@ -272,7 +272,13 @@ export default function CoachProfileScreen() {
         );
         return;
       }
-      const result = await WebBrowser.openAuthSessionAsync(data.url, 'viveapp://coach/mp-connected');
+      // preferEphemeralSession: sesión sin cookies compartidas → MP siempre pide
+      // login, no reusa la sesión anterior (clave para conectar cuentas distintas).
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        'viveapp://coach/mp-connected',
+        { preferEphemeralSession: true },
+      );
       if (result.type === 'success') {
         setMpConnected(true);
       }
