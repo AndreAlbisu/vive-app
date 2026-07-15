@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-07-15 — Andre (sesión 63)
+
+**Tocado:** `scripts/add-refund-on-cancel-trigger.sql` (nuevo), `screens/SalaScreen.tsx`, `supabase/functions/mp-webhook/index.ts`, `SCHEMA.md`
+
+**Resumen:**
+- **Bug de reembolsos (crítico) — el flujo de "reembolso automático si el coach rechaza" no estaba conectado.** Los 5 caminos de cancelación (coach rechaza pendiente, coach cancela confirmada, competidores por slot ×2, expiry) pasaban el booking a `'cancelada'` pero **ninguno del lado cliente tocaba `payment_status`** → `mp-process-refunds` nunca los agarraba y un usuario que ya pagó se quedaba sin devolución. Fix: **trigger `trg_mark_refund_on_cancel`** (BEFORE UPDATE OF status en `bookings`) que centraliza la regla server-side — al cancelar un pago `aprobado`, lo marca `reembolso_pendiente`. Robusto ante cualquier path futuro. **PENDIENTE de correr en Supabase.**
+- **Política de reembolso del usuario (decisión Andre):** reembolso total si el usuario cancela con antelación (>24h), **sin reembolso si es tardía** (penalidad). El trigger excluye `cancelled_by='usuario' AND cancelled_late=true`. Para que funcione, el path de cancelación del usuario (`SalaScreen`) ahora setea `cancelled_late` (antes solo lo hacía el coach).
+- **Webhook MP — el TODO de "disparar la confirmación" estaba mal planteado.** La confirmación (`reserva_confirmada` + `system_confirmed`) ya se emite al reservar (instant) o al aceptar el coach; hacerla también en el webhook duplicaría en instant o saltearía la aceptación. Se reemplazó el TODO por un comentario que documenta esto + el gap conocido (pago rechazado sobre un instant ya confirmado — product call pendiente, baja frecuencia).
+- **Nota sobre estado de pagos:** las 5 edge functions MP están deployadas y con las llamadas reales a la API escritas (los headers "SCAFFOLD" quedaron viejos). Lo que falta para prod: correr el trigger, credenciales MP de producción + secrets (`MP_WEBHOOK_SECRET`, `CHECKOUT_RETURN_URL` https, `FOUNDER_PROMO_UNTIL`), verificación end-to-end real (el checkout fallaba en sandbox por error del lado de MP), y handler de deep link opcional.
+
+**Pendiente para la próxima sesión:**
+- **Correr en Supabase:** `scripts/add-refund-on-cancel-trigger.sql`
+- Pagos: credenciales prod MP + secrets, y un pago real end-to-end (preferencia → pago → webhook → refund) que nunca se completó
+- Product call: qué hacer si un pago se rechaza sobre un instant_booking ya confirmado (slot tomado, competidores cancelados, sin cobro)
+- `node_modules 2/` duplicado ensucia el typecheck; falta instalar tipos de `react-native-youtube-iframe`/`react-native-markdown-display` (de sesión 62)
+
+---
+
 ## 2026-07-13 — Joaquín (sesión 62)
 
 **Tocado:** `app/(tabs)/recursos.tsx`, `app/coach-recurso.tsx` (nuevo), `app/coach-recurso-nuevo.tsx` (nuevo), `screens/SalaScreen.tsx`, `screens/CoachProfileScreen.tsx`, `scripts/seed-recursos.sql` (nuevo), `package.json`, `package-lock.json`

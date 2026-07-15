@@ -79,9 +79,18 @@ serve(async (req) => {
 
     await supabase.from('bookings').update(patch).eq('id', bookingId)
 
-    // TODO: si newStatus === 'aprobado', disparar la confirmación existente
-    //   (notificación reserva_confirmada / mensaje system_confirmed en la sala).
-    //   Reusar la lógica de CoachReservasScreen.accept() / instant_booking.
+    // NO disparar acá la confirmación de sesión (reserva_confirmada /
+    // system_confirmed). En este flujo el pago ocurre DESPUÉS de crear el
+    // booking, y la confirmación ya la emite quien corresponde:
+    //   · instant_booking → BookingScreen_Confirm al reservar (status nace 'confirmada')
+    //   · no-instant      → CoachReservasScreen.accept() cuando el coach acepta
+    // Emitirla también acá duplicaría la notificación en instant o saltearía la
+    // aceptación del coach. El webhook solo trackea payment_status.
+    //
+    // GAP conocido (product call, no codear a ciegas): si el pago se RECHAZA
+    // sobre un instant ya 'confirmada' (slot tomado, competidores cancelados),
+    // queda una sesión confirmada sin cobro. Decidir si auto-cancelar + avisar
+    // reintento. Baja frecuencia; ver project_vive_payments.
 
     return new Response('ok', { status: 200 })
   } catch (e) {

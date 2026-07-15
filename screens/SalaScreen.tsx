@@ -595,7 +595,11 @@ export default function SalaScreen() {
               } else {
                 await supabase
                   .from('bookings')
-                  .update({ status: 'cancelada', cancelled_by: 'usuario' })
+                  .update({
+                    status: 'cancelada',
+                    cancelled_by: 'usuario',
+                    cancelled_late: isCancelLate(activeBooking.scheduled_date, activeBooking.scheduled_time),
+                  })
                   .eq('id', bookingId);
 
                 await supabase.from('messages').insert({
