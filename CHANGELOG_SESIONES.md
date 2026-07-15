@@ -19,7 +19,7 @@
 **Pendiente para la próxima sesión:**
 - **Correr en Supabase:** `scripts/add-refund-on-cancel-trigger.sql`
 - Pagos: credenciales prod MP + secrets, y un pago real end-to-end (preferencia → pago → webhook → refund) que nunca se completó
-- Product call: qué hacer si un pago se rechaza sobre un instant_booking ya confirmado (slot tomado, competidores cancelados, sin cobro)
+- Sweep para instant_booking sin pago aprobado: **diferido hasta que el pago sea obligatorio** (todos los coaches con MP). Verificado en docs MP que `rejected` no es final (Checkout Pro recupera rechazos con reintento) → el webhook NO auto-cancela; hoy "confirmada sin pago" es válido porque el pago es opcional. Ver memoria `project_vive_payments`.
 - **E2E real de mensajes (post-MVP):** hoy es obfuscación XOR, no cifrado. Requiere dev client + native crypto + manejo de claves. Mientras tanto, no volver a prometer E2E en copy.
 - `node_modules 2/` duplicado ensucia el typecheck; falta instalar tipos de `react-native-youtube-iframe`/`react-native-markdown-display` (de sesión 62)
 

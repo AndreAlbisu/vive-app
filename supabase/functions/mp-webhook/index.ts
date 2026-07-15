@@ -87,10 +87,18 @@ serve(async (req) => {
     // Emitirla también acá duplicaría la notificación en instant o saltearía la
     // aceptación del coach. El webhook solo trackea payment_status.
     //
-    // GAP conocido (product call, no codear a ciegas): si el pago se RECHAZA
-    // sobre un instant ya 'confirmada' (slot tomado, competidores cancelados),
-    // queda una sesión confirmada sin cobro. Decidir si auto-cancelar + avisar
-    // reintento. Baja frecuencia; ver project_vive_payments.
+    // NO auto-cancelar la reserva en 'rechazado'. VERIFICADO en docs MP (07/2026):
+    // Checkout Pro RECUPERA pagos rechazados — tras un rechazo el usuario reintenta
+    // con otro medio en el mismo flujo, generando un nuevo payment_id que puede
+    // llegar 'approved'. Un webhook 'rejected' NO es final. Cancelar acá mataría una
+    // reserva que el usuario está por pagar.
+    //
+    // El caso incómodo (instant_booking ya 'confirmada' + competidores cancelados al
+    // reservar, y el pago nunca se aprueba) NO se resuelve acá: hoy los pagos son
+    // OPCIONALES (coach sin MP → reserva sin cobro), así que "confirmada sin pago" es
+    // un estado VÁLIDO, indistinguible del abandono. Recién cuando el pago sea
+    // OBLIGATORIO (todos los coaches con MP) tiene sentido un sweep que cancele
+    // instants sin 'aprobado' tras una ventana de gracia. Diferido a ese momento.
 
     return new Response('ok', { status: 200 })
   } catch (e) {
