@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import YoutubeIframe from 'react-native-youtube-iframe';
 import Markdown from 'react-native-markdown-display';
 import { ViveFonts, ViveColors } from '@/constants/theme';
@@ -87,6 +87,10 @@ type Resource = {
 function AudioPlayer({ audioUrl, color }: { audioUrl: string; color: string }) {
   const player = useAudioPlayer(audioUrl);
   const status = useAudioPlayerStatus(player);
+
+  useEffect(() => {
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+  }, []);
 
   const isPlaying = status.playing;
   const currentTime = status.currentTime ?? 0;
