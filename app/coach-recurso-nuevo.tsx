@@ -19,6 +19,7 @@ import { ViveFonts, ViveColors } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
 import { DOORS } from '@/constants/conexionesDoors';
+import { useAuth } from '@/context/AuthContext';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const FORMATS = [
@@ -43,6 +44,7 @@ function isYouTubeUrl(s: string) {
 export default function CoachRecursoNuevoScreen() {
   const router = useRouter();
   const { coach_id } = useLocalSearchParams<{ coach_id: string }>();
+  const { user } = useAuth();
 
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -101,7 +103,9 @@ export default function CoachRecursoNuevoScreen() {
         const file = new File(audioAsset.uri);
         const bytes = await file.bytes();
         const ext = audioAsset.name.split('.').pop() ?? 'mp3';
-        const path = `${coach_id}/${Date.now()}.${ext}`;
+        // La RLS del bucket exige que la carpeta sea auth.uid() (profiles.id),
+        // NO coaches.id — son ids distintos (ver SCHEMA.md).
+        const path = `${user!.id}/${Date.now()}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from('resource-audio')
           .upload(path, bytes, { contentType: audioAsset.mimeType ?? 'audio/mpeg', upsert: false });
