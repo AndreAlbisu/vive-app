@@ -79,9 +79,26 @@ serve(async (req) => {
 
     await supabase.from('bookings').update(patch).eq('id', bookingId)
 
-    // TODO: si newStatus === 'aprobado', disparar la confirmación existente
-    //   (notificación reserva_confirmada / mensaje system_confirmed en la sala).
-    //   Reusar la lógica de CoachReservasScreen.accept() / instant_booking.
+    // NO disparar acá la confirmación de sesión (reserva_confirmada /
+    // system_confirmed). En este flujo el pago ocurre DESPUÉS de crear el
+    // booking, y la confirmación ya la emite quien corresponde:
+    //   · instant_booking → BookingScreen_Confirm al reservar (status nace 'confirmada')
+    //   · no-instant      → CoachReservasScreen.accept() cuando el coach acepta
+    // Emitirla también acá duplicaría la notificación en instant o saltearía la
+    // aceptación del coach. El webhook solo trackea payment_status.
+    //
+    // NO auto-cancelar la reserva en 'rechazado'. VERIFICADO en docs MP (07/2026):
+    // Checkout Pro RECUPERA pagos rechazados — tras un rechazo el usuario reintenta
+    // con otro medio en el mismo flujo, generando un nuevo payment_id que puede
+    // llegar 'approved'. Un webhook 'rejected' NO es final. Cancelar acá mataría una
+    // reserva que el usuario está por pagar.
+    //
+    // El caso incómodo (instant_booking ya 'confirmada' + competidores cancelados al
+    // reservar, y el pago nunca se aprueba) NO se resuelve acá: hoy los pagos son
+    // OPCIONALES (coach sin MP → reserva sin cobro), así que "confirmada sin pago" es
+    // un estado VÁLIDO, indistinguible del abandono. Recién cuando el pago sea
+    // OBLIGATORIO (todos los coaches con MP) tiene sentido un sweep que cancele
+    // instants sin 'aprobado' tras una ventana de gracia. Diferido a ese momento.
 
     return new Response('ok', { status: 200 })
   } catch (e) {

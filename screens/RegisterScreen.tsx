@@ -406,7 +406,7 @@ export default function RegisterScreen() {
 
               <Text style={s.modalSection}>Cómo protegemos tus datos</Text>
               <Text style={s.modalText}>
-                Tus conversaciones se almacenan encriptadas en nuestros servidores. Solo vos y el profesional con quien chateás pueden ver el contenido de esas conversaciones. El equipo de VIVE no accede al contenido de tus chats salvo ante requerimiento legal.
+                Protegemos tus conversaciones con controles de acceso: ningún otro usuario de VIVE puede ver tus chats con los profesionales. No usamos el contenido de esas conversaciones con fines comerciales ni lo compartimos con terceros, y solo lo revisamos ante un requerimiento legal.
               </Text>
 
               <Text style={s.modalSection}>Lo que nunca hacemos</Text>

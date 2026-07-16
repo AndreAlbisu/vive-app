@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-07-15 — Andre (sesión 63)
+
+**Tocado:** `scripts/add-refund-on-cancel-trigger.sql` (nuevo), `screens/SalaScreen.tsx`, `supabase/functions/mp-webhook/index.ts`, `screens/RegisterScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- **Bug de reembolsos (crítico) — el flujo de "reembolso automático si el coach rechaza" no estaba conectado.** Los 5 caminos de cancelación (coach rechaza pendiente, coach cancela confirmada, competidores por slot ×2, expiry) pasaban el booking a `'cancelada'` pero **ninguno del lado cliente tocaba `payment_status`** → `mp-process-refunds` nunca los agarraba y un usuario que ya pagó se quedaba sin devolución. Fix: **trigger `trg_mark_refund_on_cancel`** (BEFORE UPDATE OF status en `bookings`) que centraliza la regla server-side — al cancelar un pago `aprobado`, lo marca `reembolso_pendiente`. Robusto ante cualquier path futuro. **PENDIENTE de correr en Supabase.**
+- **Política de reembolso del usuario (decisión Andre):** reembolso total si el usuario cancela con antelación (>24h), **sin reembolso si es tardía** (penalidad). El trigger excluye `cancelled_by='usuario' AND cancelled_late=true`. Para que funcione, el path de cancelación del usuario (`SalaScreen`) ahora setea `cancelled_late` (antes solo lo hacía el coach).
+- **Webhook MP — el TODO de "disparar la confirmación" estaba mal planteado.** La confirmación (`reserva_confirmada` + `system_confirmed`) ya se emite al reservar (instant) o al aceptar el coach; hacerla también en el webhook duplicaría en instant o saltearía la aceptación. Se reemplazó el TODO por un comentario que documenta esto + el gap conocido (pago rechazado sobre un instant ya confirmado — product call pendiente, baja frecuencia).
+- **Nota sobre estado de pagos:** las 5 edge functions MP están deployadas y con las llamadas reales a la API escritas (los headers "SCAFFOLD" quedaron viejos). Lo que falta para prod: correr el trigger, credenciales MP de producción + secrets (`MP_WEBHOOK_SECRET`, `CHECKOUT_RETURN_URL` https, `FOUNDER_PROMO_UNTIL`), verificación end-to-end real (el checkout fallaba en sandbox por error del lado de MP), y handler de deep link opcional.
+- **Cifrado de mensajes — copy de privacidad corregido (era falso).** `lib/encryption.ts` no es cifrado real: XOR+base64 con clave fija en el bundle (`vive_mvp_key_2026`; `EXPO_PUBLIC_` la embebe igual). Lo que protege los chats entre usuarios es el RLS de `messages`, no el XOR. El modal de privacidad de `RegisterScreen` prometía "se almacenan encriptadas · solo vos y el profesional pueden ver · VIVE no accede" — falso (VIVE tiene la clave + DB). Se ablandó a lo verdadero: controles de acceso + no-uso-comercial + revisión solo ante requerimiento legal, sin afirmar E2E. **E2E real queda pendiente post-MVP** (par de claves por usuario, secure-store, native crypto → necesita dev client; ver memoria `project_vive_encryption`).
+
+**Pendiente para la próxima sesión:**
+- **Correr en Supabase:** `scripts/add-refund-on-cancel-trigger.sql`
+- Pagos: credenciales prod MP + secrets, y un pago real end-to-end (preferencia → pago → webhook → refund) que nunca se completó
+- Sweep para instant_booking sin pago aprobado: **diferido hasta que el pago sea obligatorio** (todos los coaches con MP). Verificado en docs MP que `rejected` no es final (Checkout Pro recupera rechazos con reintento) → el webhook NO auto-cancela; hoy "confirmada sin pago" es válido porque el pago es opcional. Ver memoria `project_vive_payments`.
+- **E2E real de mensajes (post-MVP):** hoy es obfuscación XOR, no cifrado. Requiere dev client + native crypto + manejo de claves. Mientras tanto, no volver a prometer E2E en copy.
+- `node_modules 2/` duplicado ensucia el typecheck; falta instalar tipos de `react-native-youtube-iframe`/`react-native-markdown-display` (de sesión 62)
+
+---
+
 ## 2026-07-13 — Joaquín (sesión 62)
 
 **Tocado:** `app/(tabs)/recursos.tsx`, `app/coach-recurso.tsx` (nuevo), `app/coach-recurso-nuevo.tsx` (nuevo), `screens/SalaScreen.tsx`, `screens/CoachProfileScreen.tsx`, `scripts/seed-recursos.sql` (nuevo), `package.json`, `package-lock.json`
