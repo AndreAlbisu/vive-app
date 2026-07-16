@@ -482,6 +482,15 @@ export default function CoachProfileScreen() {
   return (
     <AppBg>
     <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.topBar}>
+        <TouchableOpacity
+          onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/(coach)'); }}
+          hitSlop={10}
+          activeOpacity={0.7}
+          style={s.backBtn}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#565E32" />
+        </TouchableOpacity>
+      </View>
       <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
 
         {/* ── Photo + Info ───────────────────────────────────── */}
@@ -934,6 +943,8 @@ export default function CoachProfileScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1 },
+  topBar: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 2 },
+  backBtn: { width: 40, height: 40, alignItems: 'flex-start', justifyContent: 'center' },
   container: { paddingTop: 0, paddingHorizontal: 0 },
 
   // Identity section
