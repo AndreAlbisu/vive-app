@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-07-16 — Joaquín (sesión 64)
+
+**Tocado:** `app/(tabs)/recursos.tsx`, `scripts/seed-recursos.sql`, `scripts/recursos-v2-migration.sql`, `scripts/fix-seed-coach-orphan-role.sql` (nuevo), `SCHEMA.md`, `package.json`, `package-lock.json`
+
+**Resumen:**
+- **Bug crítico de recursos-v2 (F2/F3 no probable) — resuelto.** `coach_resources` estaba vacía en producción pese a que el CHANGELOG de sesión 62 decía "seed corrido"; el bloque `DO $$` del seed hace `RETURN` silencioso si no encuentra coach/sala, así que puede "correr" sin insertar nada y nadie lo nota. Corrí el seed (8 recursos). Con eso tampoco aparecía nada en "Explorar por tema": el coach elegido por `LIMIT 1` tenía `profiles.role='user'` (cuenta de test con fila huérfana en `coaches`), y la RLS de `profiles` solo expone perfiles con `role='coach'` — el join `coaches!inner(profiles!inner(name))` de la query fallaba en silencio y la fila entera desaparecía. Reasigné los 8 recursos a un coach válido (`scripts/fix-seed-coach-orphan-role.sql`, ya corrido) y corregí ambos scripts de seed para que filtren `profiles.role='coach'` en vez de `LIMIT 1` a ciegas. Documentado en `SCHEMA.md` (secciones `coaches` y la nueva de recursos v2).
+- **`SCHEMA.md` tenía un hueco**: las 4 tablas de recursos-v2 (`coach_resources`, `resource_recommendations`, `resource_saves`, `resource_events`) de la sesión 62 nunca se documentaron ahí. Se agregó la sección completa + el hallazgo de coaches con rol roto. Sigue habiendo un hueco sin completar entre el 05/07 y el 13/07 (pagos v1, puertas de Conexiones) — no se tocó en esta sesión, queda anotado en el header del archivo.
+- **Rediseño de la pantalla Recursos** siguiendo un mockup (`recursos-v2-interactivo`) que pasó Joaquín: "Explorar por tema" pasó de grilla de 2 columnas a lista vertical (ícono cuadrado por formato, avatar del coach con iniciales, pill de tema, tabs de formato en texto en vez de chips); "De tus coaches" ahora tiene ícono, badge NUEVO, nota citada y botón "Abrir"; "Herramientas de Vive" simplificada a íconos redondos en fila fija (se sacó el bookmark y la duración de cada tile, y el borde de card); la tarjeta de check-in de ánimo/tema ahora usa el texto `reco.why` del hook como título y un botón pill (antes era una card con ícono+subtítulo). Sin cambios en la lógica de datos, solo presentación.
+- `package.json`/`package-lock.json`: se sumó `react-native-webview` como dependencia directa (peer dep de `react-native-youtube-iframe`, quedó instalada sin commitear de una sesión anterior).
+- Se resolvió también un problema de autenticación de git (token PAT embebido en las URLs de `origin`/`andre` había expirado) — se migró a `gh auth login` + credential helper, sin token en texto plano en los remotes.
+
+**Pendiente para la próxima sesión:**
+- Testing de F3/F4/F5 sigue incompleto: falta probar formato podcast y lectura en "Explorar por tema", el flujo F4 (recomendar recurso desde el chat, botón "+"), y F5 (coach sube un recurso nuevo desde "Mis recursos").
+- Confirmar con Joaquín que "Explorar por tema" y "De tus coaches" (las dos secciones que más cambiaron) quedaron bien contra el mockup — solo confirmó "Herramientas de Vive" y la tarjeta de check-in.
+- Arrastrado de sesiones 61-62: deep link `viveapp://coach/mp-connected` sin handler; deploy pendiente de las edge functions de Mercado Pago.
+- `node_modules 2/` duplicado sigue ensuciando el typecheck (ya anotado en sesión 62).
+- `SCHEMA.md` todavía tiene el hueco 05/07→13/07 sin documentar (pagos v1, puertas de Conexiones) — no es urgente pero conviene cerrarlo en algún momento.
+
+---
+
 ## 2026-07-15 — Andre (sesión 63)
 
 **Tocado:** `scripts/add-refund-on-cancel-trigger.sql` (nuevo), `screens/SalaScreen.tsx`, `supabase/functions/mp-webhook/index.ts`, `screens/RegisterScreen.tsx`, `SCHEMA.md`

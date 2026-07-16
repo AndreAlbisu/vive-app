@@ -21,7 +21,7 @@ import { supabase } from '@/lib/supabase';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { useResourceProgress } from '@/hooks/useResourceProgress';
 import { useRecommendedResource, type Reco, type Axis } from '@/hooks/useRecommendedResource';
-import { DOORS } from '@/constants/conexionesDoors';
+import { DOORS, DOOR_MAP } from '@/constants/conexionesDoors';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -50,6 +50,8 @@ type CoachResourceItem = {
   format: string;
   duration_seconds: number | null;
   topic_id: string;
+  url: string | null;
+  source: string;
   coaches: {
     profiles: { name: string };
   };
@@ -89,16 +91,16 @@ const TOOL_MAP = Object.fromEntries(TOOLS.map(t => [t.id, t]));
 
 const TOOL_GROUPS: ToolGroup[] = [
   {
+    id: 'calma',
+    title: 'Para calmarte ahora',
+    subtitle: 'Cuando la mente va rápido',
+    toolIds: ['respiracion', 'ruido'],
+  },
+  {
     id: 'reflexion',
     title: 'Para reflexionar',
     subtitle: 'Poner en palabras lo que pasa',
     toolIds: ['diario', 'gratitud'],
-  },
-  {
-    id: 'calma',
-    title: 'Para calmarte ahora',
-    subtitle: 'Cuando la mente va rápido',
-    toolIds: ['ruido', 'respiracion'],
   },
 ];
 
@@ -147,10 +149,10 @@ function RecommendedCard({
         style={s.moodCard}>
         <Text style={s.moodEyebrow}>CHECK-IN DE ÁNIMO</Text>
         <Text style={s.moodTitle}>{'¿Cómo te sentís hoy?'}</Text>
-        <TouchableOpacity style={s.moodCta} onPress={onGoToCheckIn} activeOpacity={0.8}>
-          <Ionicons name="happy-outline" size={20} color={TERRA_SOFT} />
-          <Text style={s.moodCtaText}>Registrar mi estado de ánimo</Text>
-          <Ionicons name="chevron-forward" size={16} color={TERRA_SOFT} />
+        <TouchableOpacity style={s.moodPillBtn} onPress={onGoToCheckIn} activeOpacity={0.85}>
+          <Ionicons name="happy-outline" size={18} color={FOREST} />
+          <Text style={s.moodPillText}>Registrar mi estado de ánimo</Text>
+          <Ionicons name="arrow-forward" size={16} color={FOREST} />
         </TouchableOpacity>
       </LinearGradient>
     );
@@ -159,15 +161,18 @@ function RecommendedCard({
   // Datos de presentación según el tipo de recurso recomendado.
   let icon: IoniconName;
   let title: string;
+  let duration: string | null;
   let onPress: () => void;
   if (reco.kind === 'tool') {
     const tool = TOOL_MAP[reco.toolId];
     icon = tool?.icon ?? 'sparkles-outline';
     title = tool?.label ?? reco.toolId;
+    duration = tool?.duration ?? null;
     onPress = () => { if (tool?.route) router.push(tool.route as any); };
   } else {
     icon = LIBRARY_TYPE_ICON[reco.resource.type] ?? 'book-outline';
     title = reco.resource.title;
+    duration = null;
     onPress = () => router.push({ pathname: '/recurso', params: { id: reco.resource.id } });
   }
 
@@ -177,16 +182,11 @@ function RecommendedCard({
       start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       style={s.moodCard}>
       <Text style={s.moodEyebrow}>{reco.eyebrow}</Text>
-      <Text style={s.moodTitle}>Esto te puede servir ahora:</Text>
-      <TouchableOpacity style={s.moodSuggestion} onPress={onPress} activeOpacity={0.8}>
-        <View style={s.moodSuggestionIcon}>
-          <Ionicons name={icon} size={20} color={TERRA_SOFT} />
-        </View>
-        <View style={s.moodSuggestionText}>
-          <Text style={s.moodSuggestionTitle}>{title}</Text>
-          <Text style={s.moodSuggestionWhy}>{reco.why}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={TERRA_SOFT} />
+      <Text style={s.moodTitle}>{reco.why}</Text>
+      <TouchableOpacity style={s.moodPillBtn} onPress={onPress} activeOpacity={0.85}>
+        <Ionicons name={icon} size={18} color={FOREST} />
+        <Text style={s.moodPillText}>{title}{duration ? ` · ${duration}` : ''}</Text>
+        <Ionicons name="arrow-forward" size={16} color={FOREST} />
       </TouchableOpacity>
     </LinearGradient>
   );
@@ -309,6 +309,27 @@ function fmtDuration(secs: number | null): string {
   return m < 60 ? `${m} min` : `${Math.round(m / 60)}h`;
 }
 
+// Dónde se consume el recurso — mismo criterio que coach-recurso.tsx.
+function podcastSource(url: string): string {
+  if (url.includes('spotify')) return 'Spotify';
+  if (url.includes('apple')) return 'Apple Podcasts';
+  if (url.includes('youtube')) return 'YouTube';
+  return 'la fuente';
+}
+
+function whereLine(r: { format: string; url: string | null }): string {
+  if (r.format === 'video') return 'abre en YouTube';
+  if (r.format === 'podcast' && r.url) return `abre en ${podcastSource(r.url)}`;
+  return 'en la app';
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
 function CoachLibrarySection({
   resources,
   savedIds,
@@ -371,10 +392,16 @@ function CoachRecoSection({
   onPress: (item: CoachRecoItem) => void;
 }) {
   if (recos.length === 0) return null;
+  const unopenedCount = recos.filter(r => !r.opened_at).length;
 
   return (
     <View style={{ marginBottom: 4 }}>
-      <Text style={s.sectionTitle}>De tus coaches</Text>
+      <View style={s.libraryHeaderRow}>
+        <Text style={[s.sectionTitle, s.sectionTitleFlush]}>De tus coaches</Text>
+        {unopenedCount > 0 && (
+          <Text style={s.recoUnopenedCount}>{unopenedCount} sin abrir</Text>
+        )}
+      </View>
       {recos.map(item => {
         const res = item.coach_resources;
         const color = FORMAT_COLOR[res.format] ?? TERRACOTTA;
@@ -385,21 +412,32 @@ function CoachRecoSection({
             key={item.id}
             style={s.recoCard}
             onPress={() => onPress(item)}
-            activeOpacity={0.88}>
-            {/* Cover strip */}
-            <View style={[s.recoStrip, { backgroundColor: color }]}>
-              <Ionicons name={FORMAT_ICON[res.format] ?? 'book-outline'} size={18} color="#fff" />
-            </View>
-            <View style={s.recoBody}>
-              <View style={s.recoTopRow}>
-                <Text style={s.recoTitle} numberOfLines={2}>{res.title}</Text>
-                {isNew && <View style={s.recoBadge}><Text style={s.recoBadgeText}>NUEVO</Text></View>}
+            activeOpacity={0.9}>
+            <View style={s.recoRow}>
+              <View style={[s.recoIconSq, { backgroundColor: color }]}>
+                <Ionicons name={FORMAT_ICON[res.format] ?? 'book-outline'} size={20} color="#fff" />
               </View>
-              <Text style={s.recoCoach}>Por {coachName}</Text>
-              {item.note ? <Text style={s.recoNote} numberOfLines={2}>"{item.note}"</Text> : null}
-              <Text style={s.recoMeta}>
-                {FORMAT_LABEL[res.format] ?? res.format}{res.duration_seconds ? ` · ${fmtDuration(res.duration_seconds)}` : ''}
-              </Text>
+              <View style={s.recoBody}>
+                <View style={s.recoTopRow}>
+                  <Text style={s.recoTitle} numberOfLines={2}>{res.title}</Text>
+                  {isNew && <View style={s.recoBadge}><Text style={s.recoBadgeText}>NUEVO</Text></View>}
+                </View>
+                <Text style={s.recoMeta} numberOfLines={2}>
+                  {FORMAT_LABEL[res.format] ?? res.format}
+                  {res.duration_seconds ? ` · ${fmtDuration(res.duration_seconds)}` : ''}
+                  {' · te lo mandó '}
+                  <Text style={s.recoCoachBold}>{coachName}</Text>
+                  {' por chat'}
+                </Text>
+              </View>
+            </View>
+            {item.note ? (
+              <View style={s.recoNoteBox}>
+                <Text style={s.recoNote} numberOfLines={3}>"{item.note}"</Text>
+              </View>
+            ) : null}
+            <View style={s.recoOpenBtn}>
+              <Text style={s.recoOpenBtnText}>Abrir</Text>
             </View>
           </ScaleCard>
         );
@@ -409,7 +447,7 @@ function CoachRecoSection({
 }
 
 // ─── ExploreSection ───────────────────────────────────────────────────────────
-const FORMATS = ['audio', 'podcast', 'video', 'lectura'] as const;
+const FORMATS = ['audio', 'video', 'podcast', 'lectura'] as const;
 
 function ExploreSection({
   resources,
@@ -432,7 +470,10 @@ function ExploreSection({
 
   return (
     <View style={{ marginTop: 8 }}>
-      <Text style={s.sectionTitle}>Explorar por tema</Text>
+      <View style={s.libraryHeaderRow}>
+        <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Explorar por tema</Text>
+        <Text style={s.sectionSubtitle}>Contenido de coaches</Text>
+      </View>
 
       {/* Chips de puertas */}
       <ScrollView
@@ -459,56 +500,79 @@ function ExploreSection({
         })}
       </ScrollView>
 
-      {/* Filtro de formato */}
+      {/* Filtro de formato — tabs de texto */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[s.chipsRow, { marginTop: 6 }]}>
+        contentContainerStyle={s.formatTabsRow}>
+        <TouchableOpacity
+          style={[s.formatTab, !selectedFormat && s.formatTabActive]}
+          onPress={() => onSelectFormat(null)}
+          activeOpacity={0.75}>
+          <Text style={[s.formatTabText, !selectedFormat && s.formatTabTextActive]}>Todo</Text>
+        </TouchableOpacity>
         {FORMATS.map(f => {
           const active = selectedFormat === f;
           return (
             <TouchableOpacity
               key={f}
-              style={[s.chip, s.chipSmall, active && { backgroundColor: FORMAT_COLOR[f] + '22', borderColor: FORMAT_COLOR[f] }]}
+              style={[s.formatTab, active && s.formatTabActive]}
               onPress={() => onSelectFormat(active ? null : f)}
               activeOpacity={0.75}>
-              <Ionicons name={FORMAT_ICON[f]} size={11} color={active ? FORMAT_COLOR[f] : FOREST_SOFT} />
-              <Text style={[s.chipText, s.chipTextSmall, active && { color: FORMAT_COLOR[f] }]}>{FORMAT_LABEL[f]}</Text>
+              <Text style={[s.formatTabText, active && s.formatTabTextActive]}>{FORMAT_LABEL[f]}</Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
 
-      {/* Grilla 2 columnas */}
+      {/* Lista de recursos */}
       {resources.length === 0 ? (
         <Text style={s.emptyText}>No hay recursos para este tema todavía.</Text>
       ) : (
-        <View style={s.exploreGrid}>
-          {resources.map((r, i) => {
+        <View style={{ marginTop: 12, gap: 10 }}>
+          {resources.map(r => {
             const color = FORMAT_COLOR[r.format] ?? TERRACOTTA;
             const isSaved = savedIds.has(r.id);
-            const coachName = r.coaches?.profiles?.name ?? '';
+            const coachName = r.coaches?.profiles?.name ?? 'un coach';
+            const doorLabel = DOOR_MAP[r.topic_id]?.label;
             return (
               <ScaleCard
                 key={r.id}
-                style={[s.exploreCard, i % 2 === 0 ? { marginRight: 5 } : { marginLeft: 5 }]}
+                style={s.exploreRow}
                 onPress={() => router.push({ pathname: '/coach-recurso', params: { id: r.id } } as any)}
-                activeOpacity={0.88}>
-                <View style={[s.exploreCover, { backgroundColor: color + '22' }]}>
-                  <Ionicons name={FORMAT_ICON[r.format] ?? 'book-outline'} size={22} color={color} />
+                activeOpacity={0.9}>
+                <View style={s.exploreRowTop}>
+                  <View style={[s.exploreIconSq, { backgroundColor: color }]}>
+                    <Ionicons name={FORMAT_ICON[r.format] ?? 'book-outline'} size={18} color="#fff" />
+                    <Text style={s.exploreIconLabel}>{(FORMAT_LABEL[r.format] ?? r.format).toUpperCase()}</Text>
+                  </View>
+                  <View style={s.exploreRowText}>
+                    <Text style={s.exploreRowTitle} numberOfLines={2}>{r.title}</Text>
+                    <Text style={s.exploreRowMeta}>
+                      {r.duration_seconds ? `${fmtDuration(r.duration_seconds)} · ` : ''}{whereLine(r)}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => onSave(r.id)} hitSlop={8}>
+                    <Ionicons
+                      name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                      size={18}
+                      color={isSaved ? TERRACOTTA : 'rgba(135,131,92,0.55)'}
+                    />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={s.exploreBookmark} onPress={() => onSave(r.id)} hitSlop={8}>
-                  <Ionicons
-                    name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                    size={14}
-                    color={isSaved ? TERRACOTTA : 'rgba(135,131,92,0.55)'}
-                  />
-                </TouchableOpacity>
-                <Text style={s.exploreTitle} numberOfLines={3}>{r.title}</Text>
-                <Text style={s.exploreMeta}>
-                  {FORMAT_LABEL[r.format]}{r.duration_seconds ? ` · ${fmtDuration(r.duration_seconds)}` : ''}
-                </Text>
-                {coachName ? <Text style={s.exploreCoach} numberOfLines={1}>Por {coachName}</Text> : null}
+                <View style={s.exploreRowDivider} />
+                <View style={s.exploreRowBottom}>
+                  <View style={s.exploreAvatar}>
+                    <Text style={s.exploreAvatarText}>{initials(coachName)}</Text>
+                  </View>
+                  <Text style={s.exploreRowCoach} numberOfLines={1}>por {coachName}</Text>
+                  <View style={{ flex: 1 }} />
+                  {doorLabel ? (
+                    <View style={s.explorePill}>
+                      <Text style={s.explorePillText} numberOfLines={1}>{doorLabel}</Text>
+                    </View>
+                  ) : null}
+                </View>
               </ScaleCard>
             );
           })}
@@ -519,48 +583,25 @@ function ExploreSection({
 }
 
 // ─── ToolCard ─────────────────────────────────────────────────────────────────
-function ToolCard({
-  tool,
-  saved,
-  onSave,
-}: {
-  tool: Tool;
-  saved: boolean;
-  onSave: () => void;
-}) {
+function ToolCard({ tool }: { tool: Tool }) {
   const router = useRouter();
   return (
     <ScaleCard
-      style={s.toolCard}
+      style={s.toolTile}
       onPress={() => { if (tool.route) router.push(tool.route as any); }}
-      activeOpacity={0.88}>
-      <TouchableOpacity style={s.bookmarkBtn} onPress={onSave} hitSlop={8}>
-        <Ionicons
-          name={saved ? 'bookmark' : 'bookmark-outline'}
-          size={15}
-          color={saved ? TERRACOTTA : '#87835C'}
-        />
-      </TouchableOpacity>
+      activeOpacity={0.75}>
       <View style={s.toolIconWrap}>
         <Ionicons name={tool.icon} size={24} color={FOREST} />
       </View>
       <Text style={s.toolLabel}>{tool.label}</Text>
-      <Text style={s.toolDuration}>{tool.duration}</Text>
     </ScaleCard>
   );
 }
 
 // ─── ToolsCarousel ────────────────────────────────────────────────────────────
-// Todas las tools de VITA en un solo carrusel horizontal (antes: 3 grillas
-// verticales). Comprime a una fila y le deja espacio a los recursos de coach.
-// El orden preserva la intención de TOOL_GROUPS (calma → reflexión → descanso).
-function ToolsCarousel({
-  savedIds,
-  onSave,
-}: {
-  savedIds: Set<string>;
-  onSave: (id: string) => void;
-}) {
+// Todas las tools de VITA en una fila fija (no scrollea — son 4, entran enteras).
+// El orden preserva la intención de TOOL_GROUPS (calma → reflexión).
+function ToolsCarousel() {
   const seen = new Set<string>();
   const tools: Tool[] = [];
   for (const g of TOOL_GROUPS) {
@@ -573,19 +614,11 @@ function ToolsCarousel({
   }
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={s.toolsRow}>
+    <View style={s.toolsRow}>
       {tools.map(tool => (
-        <ToolCard
-          key={tool.id}
-          tool={tool}
-          saved={savedIds.has(tool.id)}
-          onSave={() => onSave(tool.id)}
-        />
+        <ToolCard key={tool.id} tool={tool} />
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -639,7 +672,7 @@ export default function RecursosScreen() {
   useEffect(() => {
     let query = supabase
       .from('coach_resources')
-      .select('id, title, format, duration_seconds, topic_id, coaches!inner(profiles!inner(name))')
+      .select('id, title, format, duration_seconds, topic_id, url, source, coaches!inner(profiles!inner(name))')
       .eq('status', 'published')
       .order('created_at', { ascending: false })
       .limit(20);
@@ -759,8 +792,11 @@ export default function RecursosScreen() {
           />
 
           {/* 5. Herramientas de Vive */}
-          <Text style={s.sectionTitle}>Herramientas de Vive</Text>
-          <ToolsCarousel savedIds={savedIds} onSave={toggleSave} />
+          <View style={s.libraryHeaderRow}>
+            <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Herramientas de Vive</Text>
+            <Text style={s.sectionSubtitle}>Prácticas, de uso diario</Text>
+          </View>
+          <ToolsCarousel />
 
           {/* Biblioteca de recursos de coaches (tabla resources vieja — resource_saves para UUIDs) */}
           <CoachLibrarySection
@@ -859,53 +895,20 @@ const s = StyleSheet.create({
     fontStyle: 'italic',
     color: TERRA_SOFT,
   },
-  moodSuggestion: {
+  moodPillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 16,
-    padding: 13,
+    alignSelf: 'flex-start',
+    gap: 10,
+    backgroundColor: TERRA_SOFT,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
   },
-  moodSuggestionIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(234,211,198,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  moodSuggestionText: { flex: 1 },
-  moodSuggestionTitle: {
+  moodPillText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
-    color: CREAM_LIGHT,
-    marginBottom: 2,
-  },
-  moodSuggestionWhy: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: 'rgba(201,207,175,0.85)',
-    lineHeight: 15,
-  },
-  moodCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 16,
-    padding: 13,
-  },
-  moodCtaText: {
-    flex: 1,
-    fontFamily: ViveFonts.medium,
-    fontSize: 14,
-    color: CREAM_LIGHT,
+    color: FOREST,
   },
 
   // ── ContinueCard ──────────────────────────────────────────────────────────
@@ -1133,71 +1136,70 @@ const s = StyleSheet.create({
   gridRow: { flexDirection: 'row', gap: 10 },
 
   // ── ToolCard ──────────────────────────────────────────────────────────────
-  toolsRow: { gap: 10, paddingBottom: 4, paddingRight: 8 },
-  toolCard: {
-    width: 108,
-    backgroundColor: GLASS_BG,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    paddingVertical: 18,
-    paddingHorizontal: 8,
+  toolsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  toolTile: {
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    minHeight: 108,
+    gap: 8,
+    width: 74,
   },
   toolIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: 'rgba(235,229,215,0.70)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   toolLabel: {
     fontFamily: ViveFonts.medium,
-    fontSize: 11,
+    fontSize: 12.5,
     color: FOREST,
     textAlign: 'center',
-    lineHeight: 15,
+    lineHeight: 16,
   },
-  toolDuration: {
+
+  sectionSubtitle: {
     fontFamily: ViveFonts.regular,
-    fontSize: 9.5,
+    fontSize: 12,
     color: FOREST_SOFT,
-    textAlign: 'center',
-  },
-  bookmarkBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
   // ── CoachRecoSection ──────────────────────────────────────────────────────
+  recoUnopenedCount: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: FOREST_SOFT,
+  },
   recoCard: {
-    flexDirection: 'row',
     backgroundColor: GLASS_BG,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
+    padding: 14,
     marginBottom: 10,
-    overflow: 'hidden',
+    gap: 12,
   },
-  recoStrip: {
+  recoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  recoIconSq: {
     width: 44,
+    height: 44,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   recoBody: {
     flex: 1,
-    padding: 13,
-    gap: 3,
+    gap: 4,
   },
   recoTopRow: {
     flexDirection: 'row',
@@ -1207,9 +1209,9 @@ const s = StyleSheet.create({
   recoTitle: {
     flex: 1,
     fontFamily: ViveFonts.semibold,
-    fontSize: 13.5,
+    fontSize: 15,
     color: FOREST,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   recoBadge: {
     backgroundColor: TERRACOTTA,
@@ -1224,23 +1226,39 @@ const s = StyleSheet.create({
     color: '#fff',
     letterSpacing: 0.5,
   },
-  recoCoach: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: FOREST_SOFT,
-    fontStyle: 'italic',
-  },
-  recoNote: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: FOREST,
-    lineHeight: 17,
-    opacity: 0.8,
-  },
   recoMeta: {
     fontFamily: ViveFonts.regular,
-    fontSize: 10.5,
+    fontSize: 12,
     color: FOREST_SOFT,
+    lineHeight: 17,
+  },
+  recoCoachBold: {
+    fontFamily: ViveFonts.semibold,
+    color: FOREST,
+  },
+  recoNoteBox: {
+    backgroundColor: CREAM_LIGHT,
+    borderRadius: 12,
+    padding: 12,
+  },
+  recoNote: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontStyle: 'italic',
+    fontSize: 13.5,
+    color: FOREST,
+    lineHeight: 19,
+  },
+  recoOpenBtn: {
+    alignSelf: 'flex-end',
+    backgroundColor: FOREST,
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+  },
+  recoOpenBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13,
+    color: '#F3EEDF',
   },
 
   // ── ExploreSection ────────────────────────────────────────────────────────
@@ -1268,15 +1286,32 @@ const s = StyleSheet.create({
   chipTextActive: {
     color: '#F3EEDF',
   },
-  chipSmall: {
+  formatTabsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 18,
+    paddingVertical: 12,
+    paddingRight: 8,
   },
-  chipTextSmall: {
-    fontSize: 11,
+  formatTab: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  formatTabActive: {
+    borderWidth: 1,
+    borderStyle: 'dotted',
+    borderColor: FOREST,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+  },
+  formatTabText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: FOREST_SOFT,
+  },
+  formatTabTextActive: {
+    fontFamily: ViveFonts.semibold,
+    color: FOREST,
   },
   emptyText: {
     fontFamily: ViveFonts.regular,
@@ -1285,49 +1320,87 @@ const s = StyleSheet.create({
     textAlign: 'center',
     marginVertical: 20,
   },
-  exploreGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 12,
-  },
-  exploreCard: {
-    width: '50%',
+  exploreRow: {
     backgroundColor: GLASS_BG,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
-    padding: 12,
-    marginBottom: 10,
-    gap: 6,
+    padding: 13,
   },
-  exploreCover: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
+  exploreRowTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  exploreIconSq: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    flexShrink: 0,
+  },
+  exploreIconLabel: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 8,
+    letterSpacing: 0.4,
+    color: '#fff',
+  },
+  exploreRowText: {
+    flex: 1,
+    gap: 3,
+  },
+  exploreRowTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: FOREST,
+    lineHeight: 20,
+  },
+  exploreRowMeta: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: FOREST_SOFT,
+  },
+  exploreRowDivider: {
+    height: 1,
+    backgroundColor: 'rgba(63,81,47,0.10)',
+    marginVertical: 11,
+  },
+  exploreRowBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exploreAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: TERRACOTTA,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  exploreBookmark: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
+  exploreAvatarText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 9,
+    color: '#fff',
   },
-  exploreTitle: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12.5,
-    color: FOREST,
-    lineHeight: 17,
-  },
-  exploreMeta: {
+  exploreRowCoach: {
     fontFamily: ViveFonts.regular,
-    fontSize: 10.5,
+    fontSize: 12.5,
     color: FOREST_SOFT,
   },
-  exploreCoach: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 10,
-    color: 'rgba(58,79,42,0.55)',
-    fontStyle: 'italic',
+  explorePill: {
+    backgroundColor: 'rgba(107,122,86,0.16)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    maxWidth: 140,
+  },
+  explorePillText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 10.5,
+    color: FOREST,
   },
 
 });

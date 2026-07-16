@@ -14,11 +14,20 @@ DECLARE
   r_lectura1 uuid;
   r_lectura2 uuid;
 BEGIN
+  -- JOIN contra profiles.role='coach': hay filas en `coaches` cuyo profile
+  -- vinculado tiene role='user' (cuentas de test que nunca cambiaron de rol).
+  -- Esas quedan invisibles para otros usuarios bajo la RLS de `profiles`
+  -- ("Perfiles de coaches visibles para todos" exige role='coach'), así que
+  -- un coach_id apuntando a una de esas hace que el join coaches→profiles de
+  -- la query de exploración no resuelva nada bajo RLS (fila entera invisible).
   SELECT c.id, c.profile_id INTO v_coach_id, v_coach_profile_id
-  FROM public.coaches c LIMIT 1;
+  FROM public.coaches c
+  JOIN public.profiles p ON p.id = c.profile_id
+  WHERE p.role = 'coach'
+  LIMIT 1;
 
   IF v_coach_id IS NULL THEN
-    RAISE NOTICE '[SEED] No hay coaches — seed omitido.';
+    RAISE NOTICE '[SEED] No hay coaches con profile.role=coach — seed omitido.';
     RETURN;
   END IF;
 

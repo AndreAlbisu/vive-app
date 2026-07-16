@@ -284,14 +284,21 @@ DECLARE
   r_lectura2 uuid;
 BEGIN
 
-  -- ── Buscar primer coach disponible ───────────────────────────────────────
+  -- ── Buscar primer coach disponible (con profile.role='coach' real) ──────────
+  -- JOIN contra profiles.role: hay filas en `coaches` cuyo profile vinculado
+  -- tiene role='user' (cuentas de test). La RLS de `profiles` ("Perfiles de
+  -- coaches visibles para todos") solo expone perfiles con role='coach', así
+  -- que un coach_id apuntando a una de esas deja el join coaches→profiles de
+  -- la query de exploración sin resolver bajo RLS (fila entera invisible).
   SELECT c.id, c.profile_id
     INTO v_coach_id, v_coach_profile_id
   FROM public.coaches c
+  JOIN public.profiles p ON p.id = c.profile_id
+  WHERE p.role = 'coach'
   LIMIT 1;
 
   IF v_coach_id IS NULL THEN
-    RAISE NOTICE '[SEED] No hay coaches en la base — seed omitido.';
+    RAISE NOTICE '[SEED] No hay coaches con profile.role=coach — seed omitido.';
     RETURN;
   END IF;
 
