@@ -285,6 +285,7 @@ Sistema **paralelo e independiente** al de `resource_proposals`→`resources` de
   - RLS: `FOR ALL USING/WITH CHECK (user_id = auth.uid())`.
 - **`resource_events`**: `id`, `user_id`, `resource_id` (→ `coach_resources.id`), `event` (CHECK IN `view`/`play`/`complete`/`coach_profile_visit`/`booking_started`), `created_at`. Métrica flywheel (todavía no hay código que la escriba). RLS: INSERT solo el propio usuario; **sin política de SELECT** — solo legible por service role/SQL Editor (mismo patrón que `coach_mp_accounts`).
 - Bucket `resource-audio`: límite subido de 20MB a 30MB el 13/07/2026 (mismo bucket que usa el sistema viejo de `resources`, compartido entre ambos pipelines).
+  - ⚠️ **Otra trampa `coach_id` vs `auth.uid()` encontrada 16/07/2026**: la policy `resource_audio_coach_insert` exige `(storage.foldername(name))[1] = auth.uid()::text` — la carpeta tiene que ser el `profiles.id` del coach, NO `coaches.id`. `app/coach-recurso-nuevo.tsx` armaba la ruta con el `coach_id` (`coaches.id`) que le llega por param, y el upload fallaba siempre con "new row violates row-level security policy". Fix: usar `user.id` (de `useAuth`) para la carpeta, `coach_id` solo para el INSERT en `coach_resources`. Mismo tipo de mezcla que la trampa de arriba — dos ids distintos con nombres parecidos es una fuente de bugs recurrente en este módulo.
 
 ## Reglas críticas
 
