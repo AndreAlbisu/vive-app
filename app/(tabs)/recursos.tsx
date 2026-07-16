@@ -20,7 +20,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { useResourceProgress } from '@/hooks/useResourceProgress';
-import { useRecommendedResource, type Reco, type Axis } from '@/hooks/useRecommendedResource';
+import { useRecommendedResource, type Reco } from '@/hooks/useRecommendedResource';
 import { DOORS, DOOR_MAP } from '@/constants/conexionesDoors';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -229,7 +229,9 @@ function ContinueCard({
   );
 }
 
-// ─── CoachLibrarySection (recursos publicados por cualquier coach) ───────────
+// LibraryResource alimenta la recomendación por eje (useRecommendedResource);
+// el carrusel "Recursos de nuestros coaches" se removió por pisarse con "Explorar
+// por tema", pero el tipo sigue en uso para el feed de la recomendación.
 type LibraryResource = {
   id: string;
   type: string;
@@ -240,51 +242,12 @@ type LibraryResource = {
   axes: string[];   // resource_axes — alimenta la recomendación por eje
 };
 
-// Criterio del carrusel "Recursos de nuestros coaches": el TEMA lidera (para
-// descubrir cosas fuera de tu propio coach), la recencia desempata. Tope 2 por
-// coach para diversidad, y se excluye el que ya muestra la card de arriba.
-// `list` entra ya ordenada por created_at desc (la query), así que la partición
-// estable preserva la recencia dentro de cada grupo.
-function rankCoachLibrary(
-  list: LibraryResource[],
-  interestAxes: Set<Axis>,
-  excludeId: string | null,
-): LibraryResource[] {
-  const matches: LibraryResource[] = [];
-  const rest: LibraryResource[] = [];
-  for (const r of list) {
-    if (r.id === excludeId) continue;
-    const isMatch = interestAxes.size > 0 && r.axes.some(a => interestAxes.has(a as Axis));
-    (isMatch ? matches : rest).push(r);
-  }
-  const ordered = [...matches, ...rest];
-
-  const perCoach: Record<string, number> = {};
-  const out: LibraryResource[] = [];
-  for (const r of ordered) {
-    const c = r.attributed_to_coach_id;
-    if ((perCoach[c] ?? 0) >= 2) continue;   // tope 2 por coach
-    perCoach[c] = (perCoach[c] ?? 0) + 1;
-    out.push(r);
-    if (out.length >= 12) break;
-  }
-  return out;
-}
-
 const LIBRARY_TYPE_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   audio: 'volume-medium-outline',
   podcast: 'mic-outline',
   video: 'videocam-outline',
   guia_pasos: 'list-outline',
   lectura_breve: 'book-outline',
-};
-
-const LIBRARY_TYPE_LABEL: Record<string, string> = {
-  audio: 'Audio guía',
-  podcast: 'Podcast/Charla',
-  video: 'Video',
-  guia_pasos: 'Guía de pasos',
-  lectura_breve: 'Lectura breve',
 };
 
 const FORMAT_COLOR: Record<string, string> = {
@@ -329,59 +292,6 @@ function initials(name: string): string {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
-
-function CoachLibrarySection({
-  resources,
-  savedIds,
-  onSave,
-}: {
-  resources: LibraryResource[];
-  savedIds: Set<string>;
-  onSave: (id: string) => void;
-}) {
-  const router = useRouter();
-  if (resources.length === 0) return null;
-
-  return (
-    <View style={{ marginTop: 8 }}>
-      <View style={s.libraryHeaderRow}>
-        <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Recursos de nuestros coaches</Text>
-        <TouchableOpacity onPress={() => router.push('/explorar-recursos')} hitSlop={8} activeOpacity={0.7}>
-          <Text style={s.exploreLink}>Explorar todo →</Text>
-        </TouchableOpacity>
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.libraryRow}>
-        {resources.map(r => {
-          const isSaved = savedIds.has(r.id);
-          return (
-            <ScaleCard
-              key={r.id}
-              style={s.libraryCard}
-              onPress={() => router.push({ pathname: '/recurso', params: { id: r.id } })}
-            >
-              <View style={s.libraryCardHeader}>
-                <Ionicons name={LIBRARY_TYPE_ICON[r.type] ?? 'book-outline'} size={20} color={FOREST} />
-                <TouchableOpacity onPress={() => onSave(r.id)} hitSlop={8}>
-                  <Ionicons
-                    name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                    size={16}
-                    color={isSaved ? FOREST : 'rgba(135,131,92,0.60)'}
-                  />
-                </TouchableOpacity>
-              </View>
-              <Text style={s.libraryCardTitle} numberOfLines={2}>{r.title}</Text>
-              <Text style={s.libraryCardMeta}>
-                {LIBRARY_TYPE_LABEL[r.type] ?? r.type}{r.duration_min ? ` · ${r.duration_min} min` : ''}
-              </Text>
-              <Text style={s.libraryCardCoach} numberOfLines={1}>Por {r.coachName}</Text>
-            </ScaleCard>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
-}
-
 
 // ─── CoachRecoSection ─────────────────────────────────────────────────────────
 function CoachRecoSection({
@@ -687,18 +597,12 @@ export default function RecursosScreen() {
   const { streak, weekActivity, lastInProgress, completedInLast7Days } =
     useResourceProgress(user?.id);
 
-  const { reco, interestAxes, excludeId } = useRecommendedResource({
+  const { reco } = useRecommendedResource({
     userId: user?.id,
     todayMood: todayMoodEntry,
     library: libraryResources,
     recentlyDone: completedInLast7Days,
   });
-
-  // Carrusel rankeado por tema (ver rankCoachLibrary)
-  const rankedLibrary = useMemo(
-    () => rankCoachLibrary(libraryResources, interestAxes, excludeId),
-    [libraryResources, interestAxes, excludeId],
-  );
 
   // ── Cargar guardados ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -797,13 +701,6 @@ export default function RecursosScreen() {
             <Text style={s.sectionSubtitle}>Prácticas, de uso diario</Text>
           </View>
           <ToolsCarousel />
-
-          {/* Biblioteca de recursos de coaches (tabla resources vieja — resource_saves para UUIDs) */}
-          <CoachLibrarySection
-            resources={rankedLibrary}
-            savedIds={savedIds}
-            onSave={id => toggleSave(id, true)}
-          />
 
           {/* 6. Explorar por tema — coach_resources publicados */}
           <ExploreSection
