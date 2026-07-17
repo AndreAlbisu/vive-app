@@ -149,8 +149,8 @@ export async function rejectBooking(bookingId: string, coachAuthUserId: string):
     supabase.from('profiles').select('name').eq('id', coachAuthUserId).maybeSingle(),
   ]);
 
-  const notifTitle = 'Sesión no disponible';
-  const notifBody = `${coachProfile?.name ?? 'Tu coach'} no pudo aceptar tu sesión. Buscá otro profesional.`;
+  const notifTitle = 'Ese horario no está disponible';
+  const notifBody = `${coachProfile?.name ?? 'Tu coach'} no puede en ese horario. Podés elegir otro horario disponible u otro profesional.`;
 
   await Promise.all([
     supabase.from('notifications').insert({
