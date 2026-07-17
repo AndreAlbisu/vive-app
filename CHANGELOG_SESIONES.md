@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-07-17 — Joaquín (sesión 65)
+
+**Tocado:** `app/_layout.tsx`, `lib/resourceReminders.ts` (nuevo), `SCHEMA.md`
+
+**Resumen:**
+- **Pull del trabajo overnight de Andre** (12 commits, `andre/main`): rediseño completo de las 4 tabs del coach (F1 Inicio, F2 Reservas, F3 Chats, F4 Recursos) contra `docs/coach-app-interactivo.html`, búsqueda de coaches por nombre en Conexiones, remoción del carrusel viejo "Recursos de nuestros coaches" en `app/(tabs)/recursos.tsx` (se pisaba con "Explorar por tema"), y fix de navegación (swipe-back en perfil de coach cayendo en onboarding). Mergeó limpio (fast-forward, sin conflictos con el trabajo de ayer) y se pusheó a `origin` (Andre lo había dejado solo en su remote).
+- **RF1 — motor de recordatorios, hecho y probado end-to-end en device.** `lib/resourceReminders.ts`: `reconcileResourceReminders(userId)` cancela todas las notis locales propias (prefijo `resource-reminder:`) y las reprograma desde `resource_reminders` (solo `enabled=true`) con triggers `WEEKLY` de `expo-notifications` 0.32.17 (un trigger por día, `weekday` 1-7/1=domingo — mapea contra nuestro `days` 0=Dom..6=Sáb con `+1`). Identifier determinístico por recordatorio+día, así reconciliar es "cancelar todo lo mío + reprogramar desde la base", sin trackear ids que genera el SO. Se llama al abrir la app en el mismo efecto que `registerForPushNotifications` (`app/_layout.tsx`). Tap en la notificación rutea a `/coach-recurso` o a la tool. Validado insertando una fila de prueba a mano por SQL con hora cercana — llegó la notificación real al celular.
+- **`SCHEMA.md`**: documentadas `coach_availability_status` (vista, de la sesión de Andre) y `resource_reminders` (tabla) — Andre las había dejado como deuda de documentación. De paso se confirmó contra la base que ambas migraciones ya estaban corridas (a pesar de que el mensaje de Andre marcaba `resource_reminders` como "pendiente de correr" — ya existía).
+
+**Pendiente para la próxima sesión:**
+- **RF2** (UI de configuración: campanita + chips de días/hora, componente reutilizable para las 10 tools + `/coach-recurso`) y **RF3** (pantalla "Mis recordatorios") — sin esto, RF1 no es usable desde la app todavía (no hay forma de crear un recordatorio sin SQL directo).
+- El rediseño coach F1-F4 de Andre sigue **sin probar en device** (lo dejamos pendiente a propósito hoy para priorizar RF1).
+- Decisiones abiertas que dejó Andre: grabador de audio real (hoy "Grabar audio" preselecciona el formato nomás), instrumentar `resource_events` para stats reales (hoy en 0), sacar el "Mis recursos" duplicado del perfil de coach (ya vive en el tab F4).
+- Arrastrado de sesiones 61-64: deep link `viveapp://coach/mp-connected`; deploy de edge functions de Mercado Pago; `node_modules 2/` duplicado; hueco de `SCHEMA.md` entre 05/07 y 13/07 (pagos v1, puertas de Conexiones).
+
+---
+
 ## 2026-07-16 — Joaquín (sesión 64)
 
 **Tocado:** `app/(tabs)/recursos.tsx`, `app/coach-recurso.tsx`, `app/coach-recurso-nuevo.tsx`, `scripts/seed-recursos.sql`, `scripts/recursos-v2-migration.sql`, `scripts/fix-seed-coach-orphan-role.sql` (nuevo), `SCHEMA.md`, `package.json`, `package-lock.json`
