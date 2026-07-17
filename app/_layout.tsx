@@ -21,6 +21,7 @@ import * as Notifications from 'expo-notifications';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { registerForPushNotifications } from '@/lib/notifications';
+import { reconcileResourceReminders } from '@/lib/resourceReminders';
 
 const ONBOARDING_SCREENS = new Set(['index', 'onboarding-bifurcacion', 'onboarding2', 'onboarding3', 'onboarding4', 'onboarding5', 'login', 'register']);
 
@@ -31,6 +32,7 @@ function NotificationSetup() {
   useEffect(() => {
     if (!user) return;
     registerForPushNotifications(user.id);
+    reconcileResourceReminders(user.id);
   }, [user]);
 
   useEffect(() => {
@@ -42,6 +44,13 @@ function NotificationSetup() {
       const data = response.notification.request.content.data as Record<string, string> | undefined;
       if (data?.type === 'invitacion_review' && data?.booking_id) {
         router.push({ pathname: '/review', params: { booking_id: data.booking_id } });
+      }
+      if (data?.type === 'resource_reminder' && data?.ref) {
+        if (data.kind === 'coach_resource') {
+          router.push({ pathname: '/coach-recurso', params: { id: data.ref } });
+        } else {
+          router.push(`/${data.ref}` as any);
+        }
       }
     });
 
