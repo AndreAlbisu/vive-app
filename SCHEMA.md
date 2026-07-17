@@ -2,7 +2,7 @@
 
 > ⚠️ Este archivo describe lo que está REALMENTE en Supabase hoy.
 > No es un diseño aspiracional — si algo cambia en la base, este archivo se actualiza el mismo día.
-> Última actualización: 16 de julio 2026 — documentadas las tablas de Recursos v2 (`coach_resources`, `resource_recommendations`, `resource_saves`, `resource_events`, sesión 62 del 13/07) que habían quedado sin registrar acá, + `messages.metadata`, + hallazgo de coaches con `profiles.role='user'` que rompen RLS en silencio. Nota: este archivo tiene un hueco entre el 05/07 y el 13/07 (pagos v1, puertas de Conexiones) que no se completó en esta pasada — solo se documentó lo tocado en la sesión de hoy.
+> Última actualización: 17 de julio 2026 — documentadas `coach_availability_status` (vista) y `resource_reminders` (tabla, schema-only por ahora — feature en progreso, ver RF1-RF3 en CHANGELOG), ambas de la sesión de Andre del 16/07. Nota: este archivo tiene un hueco entre el 05/07 y el 13/07 (pagos v1, puertas de Conexiones) que sigue sin completarse.
 
 ## Tablas y relaciones
 
@@ -84,6 +84,11 @@
 - `created_at` (timestamptz)
 - UNIQUE(coach_id, date, time) — un coach no puede tener el mismo slot dos veces
 - RLS: SELECT abierto (anyone_can_view_availability) · ALL solo para el coach dueño (coaches_manage_own_availability, WITH CHECK `coach_id IN (SELECT id FROM coaches WHERE profile_id = auth.uid())`)
+
+### `coach_availability_status` (VISTA)
+- `coach_id` (= `coaches.id`), `status` (text: `'this_week'` | `'responds_24h'` | `NULL`). Reemplaza el cálculo cliente de disponibilidad que hacía `lib/coachAvailability.ts` (ahora lee esta vista en vez de calcular). `'this_week'` = tiene al menos un slot en `coach_availability` de los próximos 7 días, `blocked=false`, sin booking `confirmada`/`pendiente` que lo ocupe (compara `scheduled_date`/`scheduled_time` normalizando el padding de hora). Si no hay slot libre esta semana pero `coaches.availability_status = 'activo'`, cae a `'responds_24h'`. Si ninguna, `NULL`.
+- `security_invoker = false` (corre como owner + GRANT SELECT a `anon`/`authenticated`) — mismo patrón que `coach_trending_stats`/`coach_rebooking_stats`. Necesario porque la subquery contra `bookings` con `security_invoker=true` corría con el RLS del usuario que consulta y solo veía sus propias reservas, marcando como libre un slot que en realidad ya estaba tomado por otro usuario (bug encontrado y corregido antes de correr en prod).
+- Agregada 16/07/2026 (`scripts/add-coach-availability-view.sql`, **corrida y verificada el 16/07/2026** por Andre). El estado `responds_24h` todavía no se muestra en el deck de Conexiones (badge pendiente).
 
 ### `coach_weekly_pattern`
 - `id` (uuid, PK)
@@ -180,6 +185,12 @@ Modelo: split payments, **Checkout Pro**, cobro al reservar + reembolso automát
 - El inicio distingue ambos tipos por la forma del id: si está en el lookup `VITA_TOOLS` (índice de tools con íconos MaterialCommunityIcons y rutas propias, en `index.tsx`) es tool y navega a su ruta; si no, es uuid de coach → se carga de `resources` (filtrando `retired_at IS NULL`) y navega a `/recurso`. ⚠️ Los íconos de las tools se duplican por familia: las pantallas de tool y la grilla de Recursos usan Ionicons (`TOOLS` en `recursos.tsx`), el inicio usa MaterialCommunityIcons (`VITA_TOOLS` en `index.tsx`) — si se agrega/renombra una tool, tocar ambos.
 - RLS: solo el dueño (SELECT/INSERT/DELETE, sin UPDATE — pin/despin es insert/delete). Tope de 4 por trigger `trg_pinned_resources_max_four` (RLS no cuenta filas) — el 5to INSERT lanza excepción; el frontend además avisa antes con conteo local, pero se defiende del error del trigger por si el conteo se desincroniza.
 - Agregada 05/07/2026 (`scripts/add-pinned-resources.sql`).
+
+### `resource_reminders`
+- `id` (uuid, PK), `user_id` (FK → `profiles.id` ON DELETE CASCADE), `kind` (CHECK IN `tool`/`coach_resource`), `ref` (text — slug de tool o uuid de `coach_resources`, mismo patrón dual que `saved_resources.resource_id`), `title` (text, cacheado para la notificación y la lista sin resolver el recurso), `days` (smallint[], 0=Dom..6=Sáb), `hour` (smallint 0-23), `minute` (smallint 0-59), `enabled` (bool, default true), `created_at`, `updated_at`.
+- **Recordatorios que el propio usuario configura** (feature en progreso, 16/07/2026) — reemplaza el botón del coach "recordarle que abra el recurso" (decisión Andre: era presión, no autonomía). Las notificaciones son **locales** (`expo-notifications`, no push) — esta tabla es la fuente de verdad que cada dispositivo re-agenda al abrir la app (las notis locales se pierden al reinstalar; la tabla las reconstruye).
+- RLS: `FOR ALL USING/WITH CHECK (user_id = auth.uid())` — cada usuario ve/gestiona solo los suyos.
+- Agregada 16/07/2026 (`scripts/add-resource-reminders.sql`, **corrida en Supabase**). **Solo el schema existe todavía** — falta codear el motor local (`lib/resourceReminders.ts`, RF1), la UI de configuración (campanita + chips de días/hora en tools y en `/coach-recurso`, RF2), y la pantalla "Mis recordatorios" (RF3). Nada en el frontend escribe o lee esta tabla todavía.
 
 ### `resource_completions`
 - `id` (uuid, PK)
