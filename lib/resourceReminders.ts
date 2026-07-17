@@ -97,3 +97,67 @@ export async function reconcileResourceReminders(userId: string): Promise<void> 
 export async function cancelAllResourceReminders(): Promise<void> {
   await cancelAllMine();
 }
+
+// ── CRUD (RF2/RF3) — cada mutación reprograma las notis desde la tabla ────────
+
+export type ReminderInput = {
+  id?: string;
+  kind: 'tool' | 'coach_resource';
+  ref: string;
+  title: string;
+  days: number[];
+  hour: number;
+  minute: number;
+  enabled?: boolean;
+};
+
+export type ReminderFull = ResourceReminderRow & { enabled: boolean; created_at: string };
+
+/** Recordatorios del usuario (para "Mis recordatorios" y para saber si un
+ *  recurso ya tiene uno). */
+export async function listReminders(userId: string): Promise<ReminderFull[]> {
+  const { data } = await supabase
+    .from('resource_reminders')
+    .select('id, kind, ref, title, days, hour, minute, enabled, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  return (data as ReminderFull[] | null) ?? [];
+}
+
+/** Crea o actualiza un recordatorio y reprograma. Devuelve el id (o null si falló). */
+export async function saveReminder(userId: string, input: ReminderInput): Promise<string | null> {
+  const payload = {
+    user_id: userId,
+    kind: input.kind,
+    ref: input.ref,
+    title: input.title,
+    days: input.days,
+    hour: input.hour,
+    minute: input.minute,
+    enabled: input.enabled ?? true,
+    updated_at: new Date().toISOString(),
+  };
+  let id = input.id ?? null;
+  if (id) {
+    const { error } = await supabase.from('resource_reminders').update(payload).eq('id', id).eq('user_id', userId);
+    if (error) return null;
+  } else {
+    const { data, error } = await supabase.from('resource_reminders').insert(payload).select('id').single();
+    if (error || !data) return null;
+    id = data.id as string;
+  }
+  await reconcileResourceReminders(userId);
+  return id;
+}
+
+/** Prende/apaga un recordatorio (sin borrarlo) y reprograma. */
+export async function setReminderEnabled(userId: string, id: string, enabled: boolean): Promise<void> {
+  await supabase.from('resource_reminders').update({ enabled, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', userId);
+  await reconcileResourceReminders(userId);
+}
+
+/** Borra un recordatorio y reprograma. */
+export async function deleteReminder(userId: string, id: string): Promise<void> {
+  await supabase.from('resource_reminders').delete().eq('id', id).eq('user_id', userId);
+  await reconcileResourceReminders(userId);
+}
