@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vive Coach — app completa interactiva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F2ECDF; --cream-deep:#EAE2D0; --card:#F7F2E7;
+    --forest:#3F512F; --forest-soft:#6B7A56;
+    --terracotta:#C06B4A; --terracotta-soft:#EAD3C6;
+    --ink:#2E3624; --line:rgba(63,81,47,.14);
+    --live:#5F7A44; --amber:#C99A3F; --amber-soft:#F0E4C4;
+    --f-audio:#C06B4A; --f-lectura:#6B7A56;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+  body{
+    background:linear-gradient(160deg,#DAD2BE 0%,var(--cream) 45%,#E8DFCB 100%);
+    font-family:'Poppins',sans-serif;color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;
+    padding:28px 16px 60px;
+  }
+  .intro{max-width:420px;width:100%;margin-bottom:22px;}
+  .intro h1{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--forest);line-height:1.15;}
+  .intro p{font-size:13px;color:var(--forest-soft);margin-top:8px;line-height:1.5;}
+  .intro .tip{
+    margin-top:10px;display:inline-block;
+    font-size:11.5px;font-weight:600;color:#8F4A2E;
+    background:var(--terracotta-soft);border-radius:12px;padding:6px 12px;
+  }
+  .phone{
+    width:100%;max-width:400px;height:820px;
+    background:var(--cream);border-radius:44px;
+    box-shadow:0 24px 60px rgba(46,54,36,.22), 0 0 0 10px #24291B;
+    overflow:hidden;position:relative;
+  }
+  .statusbar{display:flex;justify-content:space-between;padding:16px 26px 4px;font-size:13px;font-weight:600;color:var(--forest);}
+  .view{
+    position:absolute;inset:44px 0 0;overflow-y:auto;
+    padding:4px 20px 120px;scrollbar-width:none;display:none;
+  }
+  .view.on{display:block;}
+  .view::-webkit-scrollbar{display:none;}
+  svg{display:block;}
+  h2.big{font-family:'Fraunces',serif;font-weight:600;font-size:28px;color:var(--forest);}
+  .stitle{display:flex;align-items:baseline;justify-content:space-between;margin:22px 0 10px;}
+  .stitle b{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--forest);}
+  .stitle span{font-size:11px;color:var(--forest-soft);}
+  .av{
+    border-radius:50%;flex-shrink:0;color:#FFF3E8;
+    font-family:'Fraunces',serif;font-weight:600;
+    background:linear-gradient(135deg,#C06B4A,#A5583B);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .av.g{background:linear-gradient(135deg,#6B7A56,#55663F);}
+  .av.b{background:linear-gradient(135deg,#7E8CA8,#5F6E8C);}
+  .btn-s{
+    font-size:11px;font-weight:600;border-radius:13px;padding:7px 12px;
+    cursor:pointer;user-select:none;transition:transform .12s ease;text-align:center;
+  }
+  .btn-s:active{transform:scale(.94);}
+  .btn-s.solid{background:var(--forest);color:#F3EEDF;}
+  .btn-s.terra{background:var(--terracotta);color:#FFF6EC;}
+  .btn-s.ghost{border:1.5px solid var(--line);color:var(--forest-soft);background:var(--cream);}
+
+  /* ===== INICIO ===== */
+  .hoy-head{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+  .pquote{
+    font-family:'Fraunces',serif;font-style:italic;font-size:11.5px;color:var(--ink);
+    background:var(--cream);border-radius:11px;padding:6px 10px;margin-top:7px;line-height:1.45;
+  }
+  .tag-ok{
+    font-size:9px;font-weight:700;letter-spacing:.04em;
+    background:#DCE5CB;color:#42542F;border-radius:9px;padding:2px 7px;
+  }
+  .next{
+    margin-top:14px;background:linear-gradient(135deg,#42542F,#354526);
+    border-radius:24px;padding:16px 17px;color:#F3EEDF;position:relative;overflow:hidden;
+  }
+  .next::after{content:"";position:absolute;right:-40px;top:-46px;width:140px;height:140px;border-radius:50%;
+    background:radial-gradient(circle,rgba(234,211,198,.18),transparent 70%);}
+  .next .eyebrow{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#C9CFAF;font-weight:500;}
+  .next .who{display:flex;align-items:center;gap:11px;margin-top:10px;position:relative;z-index:1;}
+  .next .who .av{width:40px;height:40px;font-size:14px;}
+  .next .who b{font-family:'Fraunces',serif;font-weight:500;font-size:17px;display:block;}
+  .next .who span{font-size:11px;color:#C9CFAF;}
+  .next .acts{display:flex;gap:8px;margin-top:13px;position:relative;z-index:1;}
+  .next .acts .b{
+    flex:1;text-align:center;font-size:12px;font-weight:600;border-radius:15px;padding:11px 6px;
+    cursor:pointer;user-select:none;transition:transform .12s ease;
+  }
+  .next .acts .b:active{transform:scale(.96);}
+  .next .acts .b.j{background:var(--terracotta);color:#FFF6EC;}
+  .next .acts .b.p{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#F3EEDF;}
+  .prep{
+    margin-top:11px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+    border-radius:16px;padding:12px 13px;font-size:11.5px;line-height:1.6;color:#E9E4D2;
+    display:none;position:relative;z-index:1;
+  }
+  .prep.show{display:block;animation:fadeUp .3s ease;}
+  .prep b{color:#F3EEDF;}
+  .prep .ok{color:#C9DFA9;} .prep .warn{color:#EAD3C6;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .pend{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:12px 13px;margin-bottom:9px;
+    display:flex;gap:11px;align-items:center;
+    animation:fadeUp .3s ease both;
+  }
+  .pend .ic{
+    width:38px;height:38px;border-radius:13px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .pend .ic.t{background:var(--terracotta-soft);color:#8F4A2E;}
+  .pend .ic.a{background:var(--amber-soft);color:#8A6A20;}
+  .pend .ic.g{background:#DCE5CB;color:#42542F;}
+  .pend .t{flex:1;min-width:0;}
+  .pend .t b{font-size:12.5px;font-weight:600;color:var(--forest);display:block;line-height:1.35;}
+  .pend .t span{font-size:10.5px;color:var(--forest-soft);}
+  .aldia{
+    text-align:center;padding:20px;border:1.5px dashed var(--line);border-radius:20px;
+    font-size:12.5px;color:var(--forest-soft);line-height:1.5;
+  }
+  .week{
+    margin-top:14px;background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:13px 14px;display:flex;justify-content:space-between;
+  }
+  .wd{text-align:center;font-size:10px;color:var(--forest-soft);}
+  .wd .c{
+    width:26px;height:26px;border-radius:50%;margin:5px auto 0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10.5px;font-weight:600;background:var(--cream-deep);color:var(--forest-soft);
+  }
+  .wd .c.has{background:var(--terracotta);color:#FFF6EC;}
+  .wd.today{color:var(--forest);font-weight:600;}
+
+  /* ===== RESERVAS ===== */
+  .req{
+    background:var(--card);border:1px solid rgba(192,107,74,.3);
+    border-radius:20px;padding:13px 14px;margin-bottom:9px;
+    animation:fadeUp .3s ease both;
+  }
+  .req .top{display:flex;gap:11px;align-items:center;}
+  .req .av{width:38px;height:38px;font-size:13px;}
+  .req .t{flex:1;}
+  .req .t b{font-size:13px;font-weight:600;color:var(--forest);display:block;}
+  .req .t span{font-size:11px;color:var(--forest-soft);}
+  .req .acts{display:flex;gap:8px;margin-top:11px;}
+  .req .acts .btn-s{flex:1;}
+  .dayg{margin-bottom:4px;}
+  .dayg h5{
+    font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--forest-soft);font-weight:600;margin:14px 0 8px;
+  }
+  .bk{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:18px;padding:11px 13px;margin-bottom:8px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .bk .hora{
+    font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--forest);
+    width:52px;flex-shrink:0;
+  }
+  .bk .av{width:32px;height:32px;font-size:11px;}
+  .bk .t{flex:1;min-width:0;}
+  .bk .t b{font-size:12.5px;font-weight:600;color:var(--forest);display:block;}
+  .bk .t span{font-size:10px;color:var(--forest-soft);}
+  .bk .more{color:var(--forest-soft);font-size:16px;padding:4px 6px;cursor:pointer;}
+
+  /* ===== CHATS ===== */
+  .chat{
+    display:flex;gap:12px;align-items:center;
+    background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:12px 14px;margin-bottom:8px;cursor:pointer;
+  }
+  .chat .av{width:44px;height:44px;font-size:15px;position:relative;}
+  .chat .t{flex:1;min-width:0;}
+  .chat .t b{font-size:13.5px;font-weight:600;color:var(--forest);display:block;}
+  .chat .t .prev{
+    font-size:11.5px;color:var(--forest-soft);margin-top:2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    display:flex;align-items:center;gap:5px;
+  }
+  .chat .meta{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;}
+  .chat .meta time{font-size:10px;color:var(--forest-soft);}
+  .unread{
+    min-width:19px;height:19px;border-radius:10px;padding:0 6px;
+    background:var(--terracotta);color:#FFF6EC;font-size:10.5px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .tag-pre{
+    font-size:9px;font-weight:700;letter-spacing:.04em;
+    background:var(--amber-soft);color:#8A6A20;border-radius:9px;padding:2px 7px;
+  }
+  .tag-res{
+    font-size:9px;font-weight:700;letter-spacing:.04em;
+    background:var(--terracotta-soft);color:#8F4A2E;border-radius:9px;padding:2px 7px;
+  }
+
+  /* ===== RECURSOS ===== */
+  .stats{
+    margin-top:12px;background:linear-gradient(135deg,#42542F,#354526);
+    border-radius:22px;padding:15px 16px;color:#F3EEDF;position:relative;overflow:hidden;
+  }
+  .stats .row{display:flex;gap:8px;margin-top:9px;}
+  .stat{flex:1;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:8px 5px;text-align:center;}
+  .stat b{font-family:'Fraunces',serif;font-weight:600;font-size:18px;display:block;}
+  .stat span{font-size:9px;color:#C9CFAF;display:block;margin-top:1px;line-height:1.25;}
+  .stats .eyebrow{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#C9CFAF;font-weight:500;}
+  .stats .foot{font-size:10.5px;color:#EAD3C6;margin-top:9px;}
+  .ctarow{display:flex;gap:8px;margin-top:12px;}
+  .ctarow .c{
+    flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
+    font-size:12.5px;font-weight:600;border-radius:18px;padding:13px 6px;
+    cursor:pointer;user-select:none;transition:transform .12s ease;
+  }
+  .ctarow .c:active{transform:scale(.96);}
+  .ctarow .up{background:var(--terracotta);color:#FFF6EC;}
+  .ctarow .rec{background:var(--card);border:1.5px solid var(--terracotta);color:#8F4A2E;}
+  .res{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:12px 13px;margin-bottom:8px;
+  }
+  .res .top{display:flex;gap:10px;align-items:flex-start;}
+  .res .cover{
+    width:40px;height:40px;border-radius:13px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;color:#FFF6EC;
+  }
+  .res .t{flex:1;min-width:0;}
+  .res .t b{font-size:12.5px;font-weight:600;color:var(--forest);display:block;line-height:1.3;}
+  .res .meta{font-size:10px;color:var(--forest-soft);margin-top:1px;}
+  .badge{flex-shrink:0;font-size:9px;font-weight:700;letter-spacing:.04em;border-radius:10px;padding:4px 8px;}
+  .badge.pub{background:#DCE5CB;color:#42542F;}
+  .badge.pend{background:var(--amber-soft);color:#8A6A20;}
+  .res .line2{
+    display:flex;gap:11px;margin-top:9px;padding-top:9px;border-top:1px solid var(--line);
+    font-size:10px;color:var(--forest-soft);align-items:center;
+  }
+  .res .line2 b{color:var(--forest);}
+  .res .line2 .act{
+    margin-left:auto;font-size:10.5px;font-weight:600;color:var(--forest);
+    border:1.5px solid var(--forest);border-radius:12px;padding:5px 10px;cursor:pointer;
+  }
+
+  .toast{
+    position:absolute;left:50%;bottom:104px;transform:translateX(-50%) translateY(16px);
+    background:var(--forest);color:#F3EEDF;
+    font-size:12px;font-weight:500;border-radius:16px;padding:10px 18px;
+    opacity:0;transition:all .3s ease;pointer-events:none;
+    white-space:nowrap;z-index:30;max-width:88%;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .nav{
+    position:absolute;bottom:0;left:0;right:0;
+    display:flex;justify-content:space-around;align-items:center;
+    padding:14px 10px 26px;
+    background:rgba(242,236,223,.9);backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);z-index:10;
+  }
+  .nav .item{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-size:10.5px;color:var(--forest-soft);cursor:pointer;user-select:none;position:relative;
+  }
+  .nav .item.on{color:var(--forest);font-weight:600;}
+  .nav .item .pill{border-radius:16px;padding:4px 16px;}
+  .nav .item.on .pill{background:var(--cream-deep);}
+  .nav .dotn{
+    position:absolute;top:-2px;right:6px;
+    width:8px;height:8px;border-radius:50%;background:var(--terracotta);
+  }
+
+  .legend{max-width:420px;width:100%;margin-top:36px;}
+  .legend h2{font-family:'Fraunces',serif;font-weight:600;font-size:21px;color:var(--forest);margin-bottom:16px;}
+  .leg-item{
+    display:flex;gap:13px;background:rgba(255,255,255,.5);border:1px solid var(--line);
+    border-radius:18px;padding:15px 16px;margin-bottom:10px;
+  }
+  .leg-item .n{
+    width:24px;height:24px;border-radius:50%;flex-shrink:0;
+    background:var(--terracotta);color:#FFF6EC;font-size:12.5px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;margin-top:1px;
+  }
+  .leg-item b{font-size:13.5px;font-weight:600;color:var(--forest);display:block;margin-bottom:3px;}
+  .leg-item p{font-size:12.5px;color:#55603F;line-height:1.55;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Vive Coach — los 4 tabs, prácticos a morir</h1>
+  <p>Principio: el coach abre la app y en 30 segundos resolvió lo del día. La app le trae lo pendiente; él no va a pescar nada.</p>
+  <span class="tip">▶ La navegación de abajo funciona: recorré los 4 tabs y tocá todo</span>
+</div>
+
+<div class="phone">
+  <div class="statusbar"><span>4:10</span><span>●●● ᯤ ▮</span></div>
+
+  <!-- ============ INICIO ============ -->
+  <div class="view on" id="v-inicio">
+    <div class="hoy-head">
+      <h2 class="big">Hola, María</h2>
+      <div class="av" style="width:38px;height:38px;font-size:13px;">MG</div>
+    </div>
+
+    <div class="week" style="margin-top:14px;">
+      <div class="wd">Lun<div class="c"> </div></div>
+      <div class="wd">Mar<div class="c has">1</div></div>
+      <div class="wd today">Mié<div class="c" style="border:1.5px solid var(--forest);"> </div></div>
+      <div class="wd">Jue<div class="c has">1</div></div>
+      <div class="wd">Vie<div class="c has">2</div></div>
+      <div class="wd">Sáb<div class="c"> </div></div>
+      <div class="wd">Dom<div class="c"> </div></div>
+    </div>
+    <div style="text-align:center;font-size:10.5px;color:var(--forest-soft);margin-top:7px;">4 sesiones · 3 personas esta semana · <b style="color:var(--forest)">disponibilidad calculada automáticamente</b></div>
+
+    <!-- PRÓXIMA SESIÓN -->
+    <div class="next">
+      <div class="eyebrow">Tu próxima sesión</div>
+      <div class="who">
+        <div class="av g">JA</div>
+        <div>
+          <b>Joaquín Albisu</b>
+          <span>Mañana · 16:00 hs · videollamada · 3.ª sesión</span>
+        </div>
+      </div>
+      <div class="acts">
+        <div class="b j" onclick="toast('Se habilita 10 min antes de la sesión')">Unirse</div>
+        <div class="b p" onclick="togglePrep()">Preparar sesión</div>
+      </div>
+      <div class="prep" id="prep">
+        <b>Última sesión:</b> hace 8 días · hablaron de rutina de sueño<br>
+        <b>Recursos que le mandaste:</b><br>
+        <span class="ok">✓ "Meditación para soltar el día" — abierto 3 veces</span><br>
+        <span class="warn">✗ "Guía de journaling" — sin abrir</span> · <u style="cursor:pointer" onclick="event.stopPropagation();toast('Recordatorio suave enviado por chat ✓')">recordarle</u><br>
+        <b>Tu nota:</b> "Retomar lo del horario de pantallas"
+      </div>
+    </div>
+
+    <!-- PENDIENTES -->
+    <div class="stitle"><b>Pendientes</b><span id="pendCount"></span></div>
+    <div id="pendList"></div>
+  </div>
+
+  <!-- ============ RESERVAS ============ -->
+  <div class="view" id="v-reservas">
+    <h2 class="big" style="margin-top:8px;">Reservas</h2>
+    <div class="stitle"><b>Por confirmar</b><span id="reqCount"></span></div>
+    <div id="reqList"></div>
+    <div class="stitle"><b>Confirmadas</b><span>ordenadas por día</span></div>
+    <div class="dayg">
+      <h5>Mañana · Jue 23 jul</h5>
+      <div class="bk">
+        <span class="hora">16:00</span>
+        <div class="av g">JA</div>
+        <div class="t"><b>Joaquín Albisu</b><span>3.ª sesión · videollamada</span></div>
+        <span class="btn-s ghost" onclick="go('inicio');toast('El contexto de la sesión está en Inicio → Preparar')">Preparar</span>
+      </div>
+    </div>
+    <div class="dayg">
+      <h5>Vie 24 jul</h5>
+      <div class="bk">
+        <span class="hora">13:00</span>
+        <div class="av b">AN</div>
+        <div class="t"><b>André</b><span>1.ª sesión · videollamada</span></div>
+        <span class="more" onclick="toast('Reprogramar · Cancelar · Ver chat')">⋯</span>
+      </div>
+      <div class="bk">
+        <span class="hora">15:00</span>
+        <div class="av">U2</div>
+        <div class="t"><b>Usuario 2</b><span>2.ª sesión · videollamada</span></div>
+        <span class="more" onclick="toast('Reprogramar · Cancelar · Ver chat')">⋯</span>
+      </div>
+    </div>
+    <div class="dayg">
+      <h5>Lun 27 jul</h5>
+      <div class="bk">
+        <span class="hora">10:00</span>
+        <div class="av b">AN</div>
+        <div class="t"><b>André</b><span>2.ª sesión · videollamada</span></div>
+        <span class="more" onclick="toast('Reprogramar · Cancelar · Ver chat')">⋯</span>
+      </div>
+    </div>
+    <div class="aldia" style="margin-top:14px;" onclick="toast('Abriría el historial de sesiones pasadas')">Ver historial de sesiones →</div>
+  </div>
+
+  <!-- ============ CHATS ============ -->
+  <div class="view" id="v-chats">
+    <h2 class="big" style="margin-top:8px;">Chats</h2>
+    <div style="height:12px"></div>
+    <div class="chat" id="chat-andre" style="display:none;" onclick="toast('Abriría el chat · el motivo de André es el primer mensaje')">
+      <div class="av b">AN</div>
+      <div class="t">
+        <b>André</b>
+        <div class="prev"><span class="tag-ok">✓ SESIÓN ACEPTADA</span> «Quiero trabajar la procrastinación…»</div>
+      </div>
+      <div class="meta"><time>ahora</time><span class="unread">1</span></div>
+    </div>
+    <div class="chat" onclick="toast('Abriría el chat con Joaquín')">
+      <div class="av g">JA</div>
+      <div class="t">
+        <b>Joaquín Albisu</b>
+        <div class="prev"><span class="tag-res">RECURSO</span> Vos: Meditación para soltar el día · abierto ✓</div>
+      </div>
+      <div class="meta"><time>ayer</time></div>
+    </div>
+    <div class="chat" onclick="toast('Abriría el chat')">
+      <div class="av">U2</div>
+      <div class="t">
+        <b>Usuario 2</b>
+        <div class="prev">Gracias! Nos vemos el viernes 🙌</div>
+      </div>
+      <div class="meta"><time>2 jul</time></div>
+    </div>
+    <div class="aldia" style="margin-top:16px;">Los chats se habilitan cuando aceptás una solicitud —<br>el motivo del usuario queda como primer mensaje, en verde.<br><br>Chats viejos de solo eventos de sistema → "Archivados"</div>
+  </div>
+
+  <!-- ============ RECURSOS ============ -->
+  <div class="view" id="v-recursos">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:8px;">
+      <h2 class="big">Tus recursos</h2>
+      <span style="font-size:11.5px;font-weight:600;color:var(--forest);background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:18px;padding:6px 12px;margin-bottom:3px;">2/10 publicados</span>
+    </div>
+
+    <div class="stats">
+      <div class="eyebrow">Este mes</div>
+      <div class="row">
+        <div class="stat"><b>48</b><span>reproducciones</span></div>
+        <div class="stat"><b>12</b><span>guardados</span></div>
+        <div class="stat"><b>5</b><span>visitas a tu perfil</span></div>
+      </div>
+      <div class="foot">2 personas reservaron después de conocerte por un recurso ✨</div>
+    </div>
+
+    <div class="ctarow">
+      <div class="c up" onclick="toast('Flujo de subida en 3 pasos (ver mockup recursos-coach)')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFF6EC" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Subir
+      </div>
+      <div class="c rec" onclick="toast('Grabaría un audio acá mismo, como nota de voz 🎙')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8F4A2E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zM19 11a7 7 0 0 1-14 0M12 18v4"/></svg>
+        Grabar audio
+      </div>
+    </div>
+
+    <div class="stitle"><b>Mis recursos</b><span>3 en total</span></div>
+    <div class="res">
+      <div class="top">
+        <div class="cover" style="background:var(--f-audio)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zM19 11a7 7 0 0 1-14 0M12 18v4"/></svg>
+        </div>
+        <div class="t"><b>Meditación para soltar el día</b><div class="meta">Audio · 8 min · Descanso</div></div>
+        <span class="badge pub">PUBLICADO</span>
+      </div>
+      <div class="line2">
+        <span>▶ <b>31</b></span><span>◈ <b>9</b></span>
+        <span class="act" onclick="toast('Selector de chats: ¿a quién se lo mandás?')">Recomendar</span>
+      </div>
+    </div>
+    <div class="res">
+      <div class="top">
+        <div class="cover" style="background:var(--f-lectura)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-2-1.5-4.5-2-8-2v14c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2V4c-3.5 0-6 .5-8 2zm0 0v14"/></svg>
+        </div>
+        <div class="t"><b>Guía: tu primera semana de journaling</b><div class="meta">Lectura · 4 min · Foco</div></div>
+        <span class="badge pub">PUBLICADO</span>
+      </div>
+      <div class="line2">
+        <span>▶ <b>17</b></span><span>◈ <b>3</b></span>
+        <span class="act" onclick="toast('Selector de chats: ¿a quién se lo mandás?')">Recomendar</span>
+      </div>
+    </div>
+    <div class="res">
+      <div class="top">
+        <div class="cover" style="background:var(--f-audio)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zM19 11a7 7 0 0 1-14 0M12 18v4"/></svg>
+        </div>
+        <div class="t"><b>Respiración para la mañana</b><div class="meta">Audio · 5 min · Ansiedad y estrés</div></div>
+        <span class="badge pend">EN REVISIÓN</span>
+      </div>
+    </div>
+    <div class="viewas" style="text-align:center;margin-top:14px;font-size:12px;font-weight:500;color:var(--terracotta);cursor:pointer;" onclick="toast('Abriría Recursos como lo ven tus pacientes')">Ver cómo lo ven tus pacientes →</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- NAV -->
+  <div class="nav">
+    <div class="item on" id="n-inicio" onclick="go('inicio')">
+      <span class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></span>
+      Inicio
+      <span class="dotn" id="dot-inicio"></span>
+    </div>
+    <div class="item" id="n-reservas" onclick="go('reservas')">
+      <span class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4a3 3 0 0 1 6 0M9 10h6M9 14h6"/></svg></span>
+      Reservas
+      <span class="dotn" id="dot-reservas"></span>
+    </div>
+    <div class="item" id="n-chats" onclick="go('chats')">
+      <span class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg></span>
+      Chats
+      <span class="dotn" id="dot-chats"></span>
+    </div>
+    <div class="item" id="n-recursos" onclick="go('recursos')">
+      <span class="pill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-2-1.5-4.5-2-8-2v14c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2V4c-3.5 0-6 .5-8 2zm0 0v14"/></svg></span>
+      Recursos
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <h2>Qué cambió en cada tab</h2>
+
+  <div class="leg-item"><span class="n">1</span><div>
+    <b>Inicio = "Hoy": la app te trae lo pendiente</b>
+    <p>Arriba, <b>tu semana</b> de un vistazo — y la disponibilidad que ve el usuario en Conexiones ya no se toca a mano: <b>se calcula sola</b> desde tu agenda configurada y tus reservas. Después, tu próxima sesión con <b>"Preparar sesión"</b> (tocalo: última sesión, recursos enviados con estado abierto/sin abrir + recordatorio de un tap), y los <b>Pendientes accionables</b>: la solicitud llega <b>con el motivo del usuario</b> ("Quiero trabajar la procrastinación…") en itálica — sabés qué busca antes de aceptar — y se confirma ahí mismo. Al vaciar los pendientes: "Estás al día".</p>
+  </div></div>
+
+  <div class="leg-item"><span class="n">2</span><div>
+    <b>Reservas: agrupadas por día, hora primero</b>
+    <p>Solicitudes por confirmar arriba <b>con el motivo citado</b> y botones Confirmar / Otro horario inline (probalo: al confirmar salta a su día y se abre el chat). Las confirmadas agrupadas por día (Mañana, Vie, Lun…) con la <b>hora en grande primero</b>. Cancelar deja de ser un botón rojo permanente: vive en el menú "⋯" (Reprogramar · Cancelar · Ver chat) con confirmación.</p>
+  </div></div>
+
+  <div class="leg-item"><span class="n">3</span><div>
+    <b>Chats: nacen al aceptar, con el motivo como primer mensaje</b>
+    <p>No hay chats sueltos pre-reserva: el chat <b>se habilita cuando aceptás la solicitud</b> (probalo: confirmá la de André desde Inicio o Reservas y mirá aparecer su chat acá). Al aceptar, el chat arranca con un <b>mensaje de sistema en verde: "✓ Sesión aceptada · Vie 24 jul · 13:00"</b> seguido del motivo del usuario citado — el contexto queda en la conversación desde el minuto cero. El tag RECURSO con su "abierto ✓" se mantiene, y los chats muertos de eventos viejos van a Archivados.</p>
+  </div></div>
+
+  <div class="leg-item"><span class="n">4</span><div>
+    <b>Recursos: el flywheel + grabar en el momento</b>
+    <p>La versión condensada de lo que ya diseñamos (stats del mes, cupo 2/10, estados por recurso, Recomendar) más el agregado nuevo: <b>"Grabar audio"</b> como acción hermana de Subir — grabar la meditación desde el teléfono como una nota de voz baja la barrera de crear contenido de "algún día" a "ahora". La "Biblioteca VIVE" duplicada y los emojis desaparecen.</p>
+  </div></div>
+
+  <div class="leg-item"><span class="n">✦</span><div>
+    <b>Los puntitos terracota de la nav</b>
+    <p>Inicio y Reservas muestran punto cuando hay algo para resolver, y Chats cuando hay no-leídos — probalo: confirmá la solicitud de André y mirá cómo se apagan Inicio/Reservas y se prende Chats (su chat nuevo con mensaje sin leer). Es el contrato de practicidad de toda la app: si no hay punto, no hay nada que hacer.</p>
+  </div></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+/* nav */
+function go(v){
+  ['inicio','reservas','chats','recursos'].forEach(x=>{
+    $('v-'+x).classList.toggle('on', x===v);
+    $('n-'+x).classList.toggle('on', x===v);
+  });
+}
+
+/* pendientes */
+let chatUnread=false;
+let PEND = [
+  {id:'req', ic:'t', icon:'M12 8v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z',
+   title:'André pidió sesión · Vie 24 jul · 13:00', sub:'Hace 2 horas',
+   quote:'"Quiero trabajar la procrastinación, me cuesta arrancar el día."',
+   acts:[
+     {lbl:'Confirmar', cls:'solid', fn:'confirmReq()'},
+     {lbl:'Otro horario', cls:'ghost', fn:"toast('Abriría propuesta de horario alternativo')"}
+   ]},
+  {id:'rem', ic:'a', icon:'M12 6c-2-1.5-4.5-2-8-2v14c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2V4c-3.5 0-6 .5-8 2zm0 0v14',
+   title:'Joaquín no abrió "Guía de journaling"', sub:'Tienen sesión mañana', acts:[
+     {lbl:'Recordarle', cls:'ghost', fn:'remindRes()'}
+   ]}
+];
+function renderPend(){
+  $('pendCount').textContent = PEND.length ? PEND.length+' para resolver' : '';
+  $('dot-inicio').style.display = PEND.length ? 'block' : 'none';
+  $('dot-chats').style.display = chatUnread ? 'block' : 'none';
+  $('dot-reservas').style.display = PEND.some(p=>p.id==='req') ? 'block' : 'none';
+  if(!PEND.length){
+    $('pendList').innerHTML = '<div class="aldia">✓ Estás al día.<br>Nada pendiente por ahora.</div>';
+    return;
+  }
+  $('pendList').innerHTML = PEND.map(p=>`
+    <div class="pend">
+      <div class="ic ${p.ic}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${p.icon}"/></svg></div>
+      <div class="t">
+        <b>${p.title}</b><span>${p.sub}</span>
+        ${p.quote?`<div class="pquote">${p.quote}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${p.acts.map(a=>`<span class="btn-s ${a.cls}" onclick="${a.fn}">${a.lbl}</span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+function confirmReq(){
+  PEND = PEND.filter(p=>p.id!=='req');
+  REQS = [];
+  chatUnread = true;
+  const c=$('chat-andre'); if(c) c.style.display='flex';
+  renderPend(); renderReqs();
+  toast('Confirmada ✓ · se abrió el chat con André y su motivo quedó como primer mensaje');
+}
+function remindRes(){
+  PEND = PEND.filter(p=>p.id!=='rem');
+  renderPend();
+  toast('Recordatorio suave enviado a Joaquín por chat ✓');
+}
+
+/* reservas: por confirmar */
+let REQS = [{name:'André', ini:'AN', when:'Vie 24 jul · 13:00 hs', ago:'hace 2 horas', quote:'"Quiero trabajar la procrastinación, me cuesta arrancar el día."'}];
+function renderReqs(){
+  $('reqCount').textContent = REQS.length ? REQS.length+' esperando' : '';
+  if(!REQS.length){
+    $('reqList').innerHTML = '<div class="aldia">✓ Sin solicitudes pendientes. Estás al día.</div>';
+    return;
+  }
+  $('reqList').innerHTML = REQS.map(r=>`
+    <div class="req">
+      <div class="top">
+        <div class="av b">${r.ini}</div>
+        <div class="t"><b>${r.name}</b><span>${r.when} · ${r.ago}</span></div>
+      </div>
+      ${r.quote?`<div class="pquote">${r.quote}</div>`:''}
+      <div class="acts">
+        <span class="btn-s solid" onclick="confirmReq()">Confirmar</span>
+        <span class="btn-s ghost" onclick="toast('Abriría propuesta de horario alternativo')">Otro horario</span>
+      </div>
+    </div>`).join('');
+}
+
+let toastTimer;
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+renderPend(); renderReqs();
+</script>
+
+</body>
+</html>
