@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { cancelAllResourceReminders } from '@/lib/resourceReminders';
 import { AuthModal } from '@/components/AuthModal';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
@@ -118,6 +119,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
+    // Apagar las notis locales de recordatorios del usuario que se va (si no,
+    // siguen firmando aunque nadie esté logueado en el dispositivo).
+    await cancelAllResourceReminders().catch(() => {});
     await supabase.auth.signOut();
     setUser(null);
     setRole('user');
