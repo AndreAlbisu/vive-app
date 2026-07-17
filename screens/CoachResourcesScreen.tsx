@@ -6,285 +6,247 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
-import { VITA_TOOL_MAP } from '@/constants/vitaTools';
-import { ScaleCard } from '@/components/ScaleCard';
+import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { DOORS } from '@/constants/conexionesDoors';
 
-// ─── Recursos publicados ──────────────────────────────────────────────────────
-type MCIcon = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+// ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
+const CARD = '#F7F2E7';
+const FOREST = '#3F512F';
+const FOREST_SOFT = '#6B7A56';
+const TERRA = '#C06B4A';
+const LINE = 'rgba(63,81,47,0.14)';
+const GREEN_TXT = '#F3EEDF';
+const GREEN_EYEBROW = '#C9CFAF';
 
-type PublishedResource = { id: string; type: string; title: string; duration_min: number | null };
-
-const TYPE_META: Record<string, { label: string; icon: MCIcon; iconBg: string; iconColor: string }> = {
-  audio:         { label: 'Audio',          icon: 'volume-high',           iconBg: '#E8EFF6', iconColor: ViveColors.calm },
-  guia_pasos:    { label: 'Guía de pasos',  icon: 'format-list-numbered',  iconBg: '#FDF0E8', iconColor: ViveColors.primary },
-  lectura_breve: { label: 'Lectura breve',  icon: 'book-open-variant',     iconBg: '#E8F5EE', iconColor: ViveColors.accent },
+const FMT: Record<string, { label: string; color: string; icon: React.ComponentProps<typeof Feather>['name'] }> = {
+  audio:   { label: 'Audio',   color: '#C06B4A', icon: 'mic' },
+  podcast: { label: 'Podcast', color: '#3B7FC4', icon: 'headphones' },
+  video:   { label: 'Video',   color: '#7B5EA7', icon: 'video' },
+  lectura: { label: 'Lectura', color: '#6B7A56', icon: 'book-open' },
 };
 
-const EXPLORE_CATS = [
-  { id: 'diario', label: 'Diario', emoji: '📔' }, { id: 'respiracion', label: 'Respiración', emoji: '🌬️' },
-  { id: 'meditacion', label: 'Meditación', emoji: '🧘' }, { id: 'audio', label: 'Audios', emoji: '🎧' },
-  { id: 'lecturas', label: 'Lecturas', emoji: '📖' }, { id: 'herramienta', label: 'Herramientas', emoji: '🧰' },
-];
+const STATUS: Record<string, { label: string; bg: string; ink: string }> = {
+  published: { label: 'PUBLICADO', bg: '#DCE5CB', ink: '#42542F' },
+  pending:   { label: 'EN REVISIÓN', bg: '#F0E4C4', ink: '#8A6A20' },
+  rejected:  { label: 'RECHAZADO', bg: 'rgba(224,82,82,0.16)', ink: '#B53B3B' },
+  archived:  { label: 'ARCHIVADO', bg: 'rgba(135,131,92,0.16)', ink: '#6B6A4E' },
+};
 
-const GLASS = 'rgba(255,248,240,0.55)';
-const GLASS_BORDER = 'rgba(255,255,255,0.65)';
+const TOPIC_LABEL: Record<string, string> = Object.fromEntries(DOORS.map(d => [d.id, d.label]));
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+type CoachResource = {
+  id: string; title: string; format: string; status: string;
+  rejection_rule: number | null; duration_seconds: number | null; topic_id: string | null;
+};
+
+function fmtDuration(secs: number | null): string {
+  if (!secs) return '';
+  const m = Math.ceil(secs / 60);
+  return `${m} min`;
+}
+
 export default function CoachResourcesScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const [myResources, setMyResources] = useState<PublishedResource[]>([]);
-  const [sirvioCounts, setSirvioCounts] = useState<Record<string, number>>({});
-  const [loadingResources, setLoadingResources] = useState(true);
+  const [coachId, setCoachId] = useState<string | null>(null);
+  const [resources, setResources] = useState<CoachResource[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const loadPublished = useCallback(async () => {
-    if (!user) { setLoadingResources(false); return; }
+  const load = useCallback(async () => {
+    if (!user) { setLoading(false); return; }
+    const { data: coach } = await supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle();
+    const cid = (coach?.id as string) ?? null;
+    setCoachId(cid);
+    if (!cid) { setResources([]); setLoading(false); return; }
 
-    // attributed_to_coach_id es profiles.id — coincide con user.id, sin pasar por coaches
     const { data } = await supabase
-      .from('resources')
-      .select('id, type, title, duration_min')
-      .eq('attributed_to_coach_id', user.id)
-      .is('retired_at', null)
+      .from('coach_resources')
+      .select('id, title, format, status, rejection_rule, duration_seconds, topic_id')
+      .eq('coach_id', cid)
+      .neq('status', 'archived')
       .order('created_at', { ascending: false });
-
-    setMyResources((data ?? []) as PublishedResource[]);
-
-    const { data: feedback } = await supabase.rpc('get_my_resource_feedback_summary');
-    const counts: Record<string, number> = {};
-    for (const row of feedback ?? []) {
-      counts[row.resource_id] = Number(row.sirvio_count) || 0;
-    }
-    setSirvioCounts(counts);
-    setLoadingResources(false);
+    setResources((data as CoachResource[]) ?? []);
+    setLoading(false);
   }, [user]);
 
-  useFocusEffect(useCallback(() => { loadPublished(); }, [loadPublished]));
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const publishedCount = resources.filter(r => r.status === 'published').length;
+
+  function openUpload(format?: string) {
+    if (!coachId) { Alert.alert('Perfil de coach', 'Completá tu perfil de coach antes de subir recursos.'); return; }
+    router.push({ pathname: '/coach-recurso-nuevo', params: { coach_id: coachId, ...(format ? { format } : {}) } } as any);
+  }
+
+  function recommend(r: CoachResource) {
+    Alert.alert(
+      'Recomendar',
+      `Abrí el chat con la persona y tocá + para enviarle "${r.title}".`,
+      [
+        { text: 'Ir a Chats', onPress: () => router.navigate('/chats') },
+        { text: 'Cerrar', style: 'cancel' },
+      ],
+    );
+  }
 
   return (
     <AppBg>
-    <SafeAreaView style={s.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
 
-        <Text style={s.pageTitle}>Recursos</Text>
-
-        {/* Propose button */}
-        <TouchableOpacity
-          style={s.proposeBtn}
-          onPress={() => router.push('/resource-proposal-new')}
-          activeOpacity={0.85}>
-          <MaterialCommunityIcons name="plus-circle-outline" size={18} color="#565E32" />
-          <Text style={s.proposeBtnText}>Proponer recurso a VIVE</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={s.myProposalsLink}
-          onPress={() => router.push('/resource-proposals')}
-          activeOpacity={0.75}>
-          <Text style={s.myProposalsLinkText}>Ver mis propuestas enviadas</Text>
-          <MaterialCommunityIcons name="chevron-right" size={16} color={ViveColors.primary} />
-        </TouchableOpacity>
-
-        {/* Mis recursos publicados */}
-        <Text style={s.sectionTitle}>Mis recursos</Text>
-        {loadingResources ? (
-          <View style={s.resourcesLoading}>
-            <ActivityIndicator size="small" color={ViveColors.primary} />
+          {/* Header */}
+          <View style={s.header}>
+            <Text style={s.title}>Tus recursos</Text>
+            <View style={s.chip}><Text style={s.chipTxt}>{publishedCount}/10 publicados</Text></View>
           </View>
-        ) : myResources.length === 0 ? (
-          <View style={s.resourcesEmpty}>
-            <MaterialCommunityIcons name="sprout-outline" size={28} color="rgba(135,131,92,0.45)" />
-            <Text style={s.resourcesEmptyText}>
-              Cuando VITA publique tu primera propuesta, la vas a ver acá.
-            </Text>
-          </View>
-        ) : (
-          myResources.map(r => {
-            const meta = TYPE_META[r.type] ?? TYPE_META.lectura_breve;
-            const sirvio = sirvioCounts[r.id] ?? 0;
-            return (
-              <View key={r.id} style={s.resourceCard}>
-                <View style={[s.resourceIcon, { backgroundColor: meta.iconBg }]}>
-                  <MaterialCommunityIcons name={meta.icon} size={22} color={meta.iconColor} />
-                </View>
-                <View style={s.resourceInfo}>
-                  <Text style={s.resourceTitle}>{r.title}</Text>
-                  <Text style={s.resourceMeta}>
-                    {meta.label}{r.duration_min ? ` · ${r.duration_min} min` : ''}
-                  </Text>
-                  {sirvio > 0 && (
-                    <Text style={s.resourceFeedback}>
-                      {sirvio === 1 ? 'A 1 persona le sirvió' : `A ${sirvio} personas les sirvió`} 💛
-                    </Text>
-                  )}
-                </View>
-              </View>
-            );
-          })
-        )}
 
-        {/* Explorar biblioteca */}
-        <Text style={[s.sectionTitle, s.sectionSpaced]}>Biblioteca VIVE</Text>
-        <View style={s.exploreGrid}>
-          {[0, 1].map(row => (
-            <View key={row} style={s.exploreRow}>
-              {EXPLORE_CATS.slice(row * 3, row * 3 + 3).map(cat => (
-                <ScaleCard key={cat.id} style={s.exploreCat} onPress={() => { const r = VITA_TOOL_MAP[cat.id]?.route; if (r) router.push(r as any); }}>
-                  <Text style={s.exploreCatEmoji}>{cat.emoji}</Text>
-                  <Text style={s.exploreCatLabel}>{cat.label}</Text>
-                </ScaleCard>
+          {/* Stats del mes (Recursos v2 aún no instrumenta eventos → 0 con promesa) */}
+          <LinearGradient colors={['#42542F', '#354526']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.stats}>
+            <View style={s.statsGlow} pointerEvents="none" />
+            <Text style={s.eyebrow}>Este mes</Text>
+            <View style={s.statsRow}>
+              {[['0', 'reproducciones'], ['0', 'guardados'], ['0', 'visitas a tu perfil']].map(([n, l]) => (
+                <View key={l} style={s.stat}><Text style={s.statN}>{n}</Text><Text style={s.statL}>{l}</Text></View>
               ))}
             </View>
-          ))}
-        </View>
+            <Text style={s.statsFoot}>Tus recursos empiezan a contar su historia cuando se publican.</Text>
+          </LinearGradient>
 
-        <View style={{ height: TAB_BAR_CLEARANCE }} />
-      </ScrollView>
-    </SafeAreaView>
+          {/* CTAs */}
+          <View style={s.ctaRow}>
+            <TouchableOpacity style={[s.cta, s.ctaUp]} activeOpacity={0.88} onPress={() => openUpload()}>
+              <Feather name="plus" size={15} color="#FFF6EC" />
+              <Text style={s.ctaUpTxt}>Subir</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.cta, s.ctaRec]} activeOpacity={0.88} onPress={() => openUpload('audio')}>
+              <Feather name="mic" size={15} color={TERRA} />
+              <Text style={s.ctaRecTxt}>Grabar audio</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Mis recursos */}
+          <View style={s.stitle}>
+            <Text style={s.stitleB}>Mis recursos</Text>
+            {resources.length > 0 && <Text style={s.stitleSpan}>{resources.length} en total</Text>}
+          </View>
+
+          {loading ? (
+            <View style={s.loadingBox}><ActivityIndicator size="small" color={FOREST} /></View>
+          ) : resources.length === 0 ? (
+            <View style={s.empty}>
+              <Text style={s.emptyTxt}>Todavía no subiste recursos.{'\n'}Tus audios, videos, podcasts y lecturas aparecerán acá.</Text>
+            </View>
+          ) : (
+            resources.map(r => {
+              const fmt = FMT[r.format] ?? FMT.audio;
+              const st = STATUS[r.status] ?? STATUS.pending;
+              const metaLine = [fmt.label, fmtDuration(r.duration_seconds), r.topic_id ? TOPIC_LABEL[r.topic_id] : '']
+                .filter(Boolean).join(' · ');
+              return (
+                <View key={r.id} style={s.res}>
+                  <View style={s.resTop}>
+                    <View style={[s.cover, { backgroundColor: fmt.color }]}>
+                      <Feather name={fmt.icon} size={16} color="#FFF6EC" />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={s.resTitle} numberOfLines={2}>{r.title}</Text>
+                      <Text style={s.resMeta}>{metaLine}</Text>
+                    </View>
+                    <View style={[s.badge, { backgroundColor: st.bg }]}>
+                      <Text style={[s.badgeTxt, { color: st.ink }]}>{st.label}</Text>
+                    </View>
+                  </View>
+                  {r.status === 'published' && (
+                    <View style={s.line2}>
+                      <Text style={s.line2Stat}>▶ <Text style={s.line2StatN}>0</Text></Text>
+                      <Text style={s.line2Stat}>◈ <Text style={s.line2StatN}>0</Text></Text>
+                      <TouchableOpacity style={s.recBtn} activeOpacity={0.8} onPress={() => recommend(r)}>
+                        <Text style={s.recBtnTxt}>Recomendar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {r.status === 'rejected' && r.rejection_rule ? (
+                    <Text style={s.rejectNote}>Rechazado — regla {r.rejection_rule}. Editá y volvé a enviar.</Text>
+                  ) : null}
+                </View>
+              );
+            })
+          )}
+
+          {publishedCount >= 10 && (
+            <Text style={s.limitNote}>Llegaste al límite de 10 publicados. Archivá uno para publicar otro.</Text>
+          )}
+
+          <TouchableOpacity style={s.viewas} activeOpacity={0.7} onPress={() => router.push('/explorar-recursos')}>
+            <Text style={s.viewasTxt}>Ver cómo lo ven tus pacientes →</Text>
+          </TouchableOpacity>
+
+          <View style={{ height: TAB_BAR_CLEARANCE }} />
+        </ScrollView>
+      </SafeAreaView>
     </AppBg>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   safe: { flex: 1 },
-  container: { paddingHorizontal: 20, paddingTop: 22 },
+  container: { paddingHorizontal: 20, paddingTop: 12 },
 
-  pageTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 26,
-    color: '#565E32',
-    marginBottom: 16,
-  },
+  header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 8 },
+  title: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST },
+  chip: { backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: LINE, borderRadius: 18, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 3 },
+  chipTxt: { fontSize: 11.5, fontFamily: ViveFonts.semibold, color: FOREST },
 
-  proposeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: ViveColors.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    marginBottom: 28,
-    gap: 8,
-  },
-  proposeBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
-  },
+  // Stats verde
+  stats: { marginTop: 12, borderRadius: 22, padding: 16, overflow: 'hidden' },
+  statsGlow: { position: 'absolute', right: -40, top: -46, width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(234,211,198,0.10)' },
+  eyebrow: { fontSize: 10.5, letterSpacing: 0.8, textTransform: 'uppercase', color: GREEN_EYEBROW, fontFamily: ViveFonts.medium },
+  statsRow: { flexDirection: 'row', gap: 8, marginTop: 9 },
+  stat: { flex: 1, backgroundColor: 'rgba(255,255,255,0.09)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 14, paddingVertical: 8, alignItems: 'center' },
+  statN: { fontFamily: ViveFonts.frauncesSerif, fontSize: 18, color: GREEN_TXT },
+  statL: { fontSize: 9, color: GREEN_EYEBROW, marginTop: 1, textAlign: 'center', fontFamily: ViveFonts.regular },
+  statsFoot: { fontSize: 10.5, color: '#EAD3C6', marginTop: 9, fontFamily: ViveFonts.regular },
 
-  myProposalsLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    marginTop: -16,
-    marginBottom: 28,
-    paddingVertical: 8,
-  },
-  myProposalsLinkText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: ViveColors.primary,
-  },
+  // CTAs
+  ctaRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  cta: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 18, paddingVertical: 13 },
+  ctaUp: { backgroundColor: TERRA },
+  ctaUpTxt: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },
+  ctaRec: { backgroundColor: CARD, borderWidth: 1.5, borderColor: TERRA },
+  ctaRecTxt: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: '#8F4A2E' },
 
-  sectionTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
-    marginBottom: 12,
-  },
-  sectionSpaced: { marginTop: 28 },
+  stitle: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 22, marginBottom: 10 },
+  stitleB: { fontFamily: ViveFonts.frauncesSerif, fontSize: 17, color: FOREST },
+  stitleSpan: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
+  loadingBox: { paddingVertical: 24, alignItems: 'center' },
+  empty: { padding: 18, borderWidth: 1.5, borderColor: LINE, borderRadius: 20, borderStyle: 'dashed', alignItems: 'center' },
+  emptyTxt: { textAlign: 'center', fontSize: 12.5, color: FOREST_SOFT, lineHeight: 18, fontFamily: ViveFonts.regular },
 
-  resourceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: GLASS,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    padding: 14,
-    marginBottom: 10,
-    gap: 12,
-  },
-  resourceIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  resourceInfo: { flex: 1 },
-  resourceTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: '#565E32',
-    marginBottom: 2,
-  },
-  resourceMeta: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: '#87835C',
-  },
-  resourceFeedback: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: ViveColors.accent,
-    marginTop: 3,
-  },
+  res: { backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20, padding: 13, marginBottom: 8 },
+  resTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  cover: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  resTitle: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: FOREST, lineHeight: 17 },
+  resMeta: { fontSize: 10, color: FOREST_SOFT, marginTop: 1, fontFamily: ViveFonts.regular },
+  badge: { borderRadius: 10, paddingVertical: 4, paddingHorizontal: 8 },
+  badgeTxt: { fontSize: 9, fontFamily: ViveFonts.bold, letterSpacing: 0.4 },
+  line2: { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 9, paddingTop: 9, borderTopWidth: 1, borderTopColor: LINE },
+  line2Stat: { fontSize: 10, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
+  line2StatN: { color: FOREST, fontFamily: ViveFonts.semibold },
+  recBtn: { marginLeft: 'auto', borderWidth: 1.5, borderColor: FOREST, borderRadius: 12, paddingVertical: 5, paddingHorizontal: 10 },
+  recBtnTxt: { fontSize: 10.5, fontFamily: ViveFonts.semibold, color: FOREST },
+  rejectNote: { fontSize: 10.5, color: '#B53B3B', marginTop: 8, fontFamily: ViveFonts.regular },
+  limitNote: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 4, textAlign: 'center' },
 
-  resourcesLoading: {
-    paddingVertical: 24,
-    alignItems: 'center',
-  },
-  resourcesEmpty: {
-    backgroundColor: GLASS,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    gap: 10,
-  },
-  resourcesEmptyText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#87835C',
-    textAlign: 'center',
-    lineHeight: 19,
-  },
-
-  exploreGrid: { gap: 10 },
-  exploreRow: { flexDirection: 'row', gap: 10 },
-  exploreCat: {
-    flex: 1,
-    backgroundColor: GLASS,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    paddingVertical: 18,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    minHeight: 84,
-  },
-  exploreCatEmoji: { fontSize: 26 },
-  exploreCatLabel: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 11,
-    color: '#565E32',
-    textAlign: 'center',
-  },
+  viewas: { alignItems: 'center', paddingVertical: 16, marginTop: 6 },
+  viewasTxt: { fontSize: 12.5, fontFamily: ViveFonts.medium, color: TERRA },
 });

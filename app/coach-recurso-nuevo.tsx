@@ -43,12 +43,13 @@ function isYouTubeUrl(s: string) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function CoachRecursoNuevoScreen() {
   const router = useRouter();
-  const { coach_id } = useLocalSearchParams<{ coach_id: string }>();
+  const { coach_id, format } = useLocalSearchParams<{ coach_id: string; format?: string }>();
   const { user } = useAuth();
 
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [formato, setFormato] = useState<string | null>(null);
+  // `format` llega preseleccionado cuando se entra por "Grabar audio" (audio).
+  const [formato, setFormato] = useState<string | null>(format ?? null);
   const [topicId, setTopicId] = useState<string | null>(null);
   const [url, setUrl] = useState('');
   const [bodyMd, setBodyMd] = useState('');
