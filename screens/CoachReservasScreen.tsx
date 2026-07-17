@@ -20,8 +20,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
 import { encryptMessage } from '@/lib/encryption';
-import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
 import { isCancelLate } from '@/lib/bookingHelpers';
+import { confirmBooking, rejectBooking } from '@/lib/coachBookingActions';
 import { AppBg } from '@/components/ui/AppBg';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -168,108 +168,9 @@ export default function CoachReservasScreen() {
   }, [user, coachId, loadBookings]);
 
   async function accept(id: string) {
-    const { data, error } = await supabase
-      .from('bookings')
-      .update({ status: 'confirmada' })
-      .eq('id', id)
-      .select('id, user_id, coach_id, sala_id, scheduled_date, scheduled_time, user_message');
-    if (error || !data?.[0]) return;
-
-    const booking = data[0];
-    if (booking && user) {
-      const [{ data: userProfile }, { data: coachProfile }, { data: conflicting }] = await Promise.all([
-        supabase.from('profiles').select('push_token').eq('id', booking.user_id).maybeSingle(),
-        supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
-        supabase
-          .from('bookings')
-          .select('id, user_id, sala_id')
-          .eq('coach_id', booking.coach_id)
-          .eq('scheduled_date', booking.scheduled_date)
-          .eq('scheduled_time', booking.scheduled_time)
-          .eq('status', 'pendiente')
-          .neq('id', id),
-      ]);
-
-      const notifTitle = '¡Tu sesión fue confirmada! ✅';
-      const notifBody = `Tu sesión con ${coachProfile?.name ?? 'tu coach'} el ${formatBookingDate(booking.scheduled_date)} está confirmada`;
-
-      await Promise.all([
-        supabase.from('notifications').insert({
-          recipient_id: booking.user_id,
-          type: 'reserva_confirmada',
-          booking_id: id,
-          title: notifTitle,
-          body: notifBody,
-        }),
-        userProfile?.push_token
-          ? sendPushNotification(userProfile.push_token, notifTitle, notifBody)
-          : Promise.resolve(),
-      ]);
-
-      if (booking.sala_id) {
-        const confirmDateStr = formatBookingDate(booking.scheduled_date);
-        const confirmTimeStr = booking.scheduled_time.slice(0, 5);
-        const confirmLine1 = `Sesión reservada · ${confirmDateStr} · ${confirmTimeStr} hs`;
-        const confirmMsg = booking.user_message
-          ? `${confirmLine1}\n${booking.user_message}`
-          : confirmLine1;
-        const { error: msgError } = await supabase.from('messages').insert({
-          sala_id: booking.sala_id,
-          sender_id: user.id,
-          sender_type: 'system_confirmed',
-          content: encryptMessage(confirmMsg),
-        });
-      }
-
-      if (conflicting && conflicting.length > 0) {
-        const conflictUserIds = conflicting.map(b => b.user_id);
-        const { data: conflictProfiles } = await supabase
-          .from('profiles')
-          .select('id, push_token')
-          .in('id', conflictUserIds);
-
-        const tokenMap: Record<string, string | null> = {};
-        conflictProfiles?.forEach(p => { tokenMap[p.id] = p.push_token ?? null; });
-
-        const cancelTitle = 'Horario no disponible';
-        const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu coach.';
-        const cancelDateStr = formatBookingDate(booking.scheduled_date);
-        const cancelTimeStr = booking.scheduled_time.slice(0, 5);
-        const cancelSystemMsg = `Solicitud cancelada automáticamente\n${cancelDateStr} · ${cancelTimeStr} hs`;
-
-        await Promise.all(
-          conflicting.map((cb) => {
-            const ops: PromiseLike<unknown>[] = [
-              supabase.from('bookings').update({ status: 'cancelada' }).eq('id', cb.id),
-              supabase.from('notifications').insert({
-                recipient_id: cb.user_id,
-                type: 'reserva_cancelada',
-                booking_id: cb.id,
-                title: cancelTitle,
-                body: cancelBody,
-              }),
-            ];
-            if (cb.sala_id) {
-              ops.push(
-                supabase.from('messages').insert({
-                  sala_id: cb.sala_id,
-                  sender_id: user.id,
-                  sender_type: 'system_cancelled',
-                  content: encryptMessage(cancelSystemMsg),
-                })
-              );
-            }
-            const token = tokenMap[cb.user_id];
-            if (token) ops.push(sendPushNotification(token, cancelTitle, cancelBody));
-            return Promise.all(ops);
-          })
-        );
-      }
-    }
-
-    // Crear sala de videollamada en Daily.co en segundo plano
-    createOrGetMeetingUrl(id).catch(() => {});
-
+    if (!user) return;
+    // Lógica extraída a lib/coachBookingActions (compartida con Inicio) — sin cambios.
+    await confirmBooking(id, user.id);
     await loadBookings();
   }
 
@@ -279,42 +180,12 @@ export default function CoachReservasScreen() {
   }
 
   async function confirmReject() {
-    if (!rejectModal.id) return;
-
-    const booking = bookings.find(b => b.id === rejectModal.id);
-
-    const { data, error } = await supabase
-      .from('bookings')
-      .update({ status: 'cancelada' })
-      .eq('id', rejectModal.id)
-      .select();
-    if (error) { setRejectModal({ visible: false, id: null }); return; }
-
+    if (!rejectModal.id || !user) { setRejectModal({ visible: false, id: null }); return; }
+    const id = rejectModal.id;
     setRejectModal({ visible: false, id: null });
+    // Lógica extraída a lib/coachBookingActions (compartida con Inicio) — sin cambios.
+    await rejectBooking(id, user.id);
     await loadBookings();
-
-    if (booking && user) {
-      const [{ data: userProfile }, { data: coachProfile }] = await Promise.all([
-        supabase.from('profiles').select('push_token').eq('id', booking.user_id).maybeSingle(),
-        supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
-      ]);
-
-      const notifTitle = 'Sesión no disponible';
-      const notifBody = `${coachProfile?.name ?? 'Tu coach'} no pudo aceptar tu sesión. Buscá otro profesional.`;
-
-      await Promise.all([
-        supabase.from('notifications').insert({
-          recipient_id: booking.user_id,
-          type: 'reserva_rechazada',
-          booking_id: rejectModal.id,
-          title: notifTitle,
-          body: notifBody,
-        }),
-        userProfile?.push_token
-          ? sendPushNotification(userProfile.push_token, notifTitle, notifBody)
-          : Promise.resolve(),
-      ]);
-    }
   }
 
   function cancelConfirmed(booking: Booking) {

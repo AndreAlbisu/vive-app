@@ -4,601 +4,511 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Platform,
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { encryptMessage } from '@/lib/encryption';
 import { AppBg } from '@/components/ui/AppBg';
+import { useCoachPending } from '@/hooks/useCoachPending';
+import { confirmBooking } from '@/lib/coachBookingActions';
 
-type Session = {
-  id: string;
-  userId: string;
-  userName: string;
-  time: string;
-  type: string;
-  sala_id: string | null;
-  date: string;
-};
-
-type DayEntry = { abbr: string; sessions: Session[] };
+// ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
+const CARD = '#F7F2E7';
+const CREAM_DEEP = '#EAE2D0';
+const FOREST = '#3F512F';
+const FOREST_SOFT = '#6B7A56';
+const TERRA = '#C06B4A';
+const TERRA_SOFT = '#EAD3C6';
+const TERRA_INK = '#8F4A2E';
+const AMBER_SOFT = '#F0E4C4';
+const AMBER_INK = '#8A6A20';
+const OK_BG = '#DCE5CB';
+const OK_INK = '#42542F';
+const LINE = 'rgba(63,81,47,0.14)';
+const GREEN_TXT = '#F3EEDF';
+const GREEN_EYEBROW = '#C9CFAF';
 
 const WEEK_ABBRS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
-const GLASS = 'rgba(255,248,240,0.55)';
-const GLASS_BORDER = 'rgba(255,255,255,0.65)';
+type Session = { userId: string; time: string; date: string };
+type DayEntry = { abbr: string; count: number; isToday: boolean };
+
+type NextSession = {
+  bookingId: string;
+  userId: string;
+  userName: string;
+  initials: string;
+  avatarUrl: string | null;
+  dateLabel: string;
+  timeStr: string;
+  ordinal: string;
+  salaId: string | null;
+  startMs: number;
+};
+
+type PrepResource = { id: string; title: string; opened: boolean; roomId: string | null };
+type Prep = { lastDaysAgo: number | null; resources: PrepResource[] };
 
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-
-function getTodayStr(): string {
-  return toDateStr(new Date());
+function getInitials(name: string): string {
+  return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || '??';
 }
-
-function getWeekRange(): { mondayDate: Date } {
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - daysFromMonday);
-  monday.setHours(0, 0, 0, 0);
-  return { mondayDate: monday };
+function ordinalLabel(n: number): string {
+  return `${n}.ª sesión`;
 }
-
-function formatTime(timeStr: string): string {
-  const parts = timeStr.split(':');
-  return `${parts[0]}:${parts[1]} hs`;
+function bookingStartMs(date: string, time: string): number {
+  const [y, m, d] = date.split('-').map(Number);
+  const [h, min] = time.split(':').map(Number);
+  return new Date(y, m - 1, d, h, min, 0).getTime();
 }
-
-function formatTimeAgo(isoString: string): string {
-  const diffMs = Date.now() - new Date(isoString).getTime();
-  const diffM = Math.floor(diffMs / (1000 * 60));
-  if (diffM < 1) return 'hace unos segundos';
-  if (diffM < 60) return `hace ${diffM} min`;
-  const diffH = Math.floor(diffM / 60);
-  if (diffH < 24) return `hace ${diffH} ${diffH === 1 ? 'hora' : 'horas'}`;
-  const diffD = Math.floor(diffH / 24);
-  return `hace ${diffD} ${diffD === 1 ? 'día' : 'días'}`;
+function nextDateLabel(date: string): string {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const [y, m, d] = date.split('-').map(Number);
+  const target = new Date(y, m - 1, d);
+  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
+  if (diffDays === 0) return 'Hoy';
+  if (diffDays === 1) return 'Mañana';
+  const dayName = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][target.getDay()];
+  return `${dayName} ${d} ${MONTHS[m - 1]}`;
 }
 
 export default function CoachHomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
+  const [coachId, setCoachId] = useState<string | null>(null);
   const [coachName, setCoachName] = useState('');
-  const [todaySessions, setTodaySessions] = useState<Session[]>([]);
   const [weekData, setWeekData] = useState<DayEntry[]>([]);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [weekTotal, setWeekTotal] = useState(0);
+  const [weekClients, setWeekClients] = useState(0);
+  const [next, setNext] = useState<NextSession | null>(null);
+  const [prep, setPrep] = useState<Prep | null>(null);
+  const [prepOpen, setPrepOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [coachId, setCoachId] = useState<string | null>(null);
-  const [lastMsgAtBySala, setLastMsgAtBySala] = useState<Record<string, string>>({});
-  const [weeklyClientCount, setWeeklyClientCount] = useState(0);
+
+  const pending = useCoachPending(coachId);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle()
+      .then(({ data }) => { if (data) setCoachId(data.id); });
+  }, [user]);
 
   const loadData = useCallback(async () => {
     if (!user || !coachId) { setLoading(false); return; }
 
-    const todayStr = getTodayStr();
-    const { mondayDate } = getWeekRange();
+    const now = new Date();
+    const todayStr = toDateStr(now);
 
-    const [profileRes, bookingsRes, pendingRes] = await Promise.all([
+    // Semana Lun-Dom
+    const dow = now.getDay();
+    const daysFromMonday = dow === 0 ? 6 : dow - 1;
+    const monday = new Date(now); monday.setDate(now.getDate() - daysFromMonday); monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+
+    const [{ data: profile }, { data: confirmed }] = await Promise.all([
       supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
       supabase
         .from('bookings')
-        .select('id, user_id, scheduled_date, scheduled_time, sala_id')
+        .select('id, user_id, scheduled_date, scheduled_time, sala_id, duration_minutes')
         .eq('coach_id', coachId)
         .eq('status', 'confirmada')
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true }),
-      supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('coach_id', coachId)
-        .eq('status', 'pendiente'),
     ]);
 
-    if (profileRes.data?.name) {
-      setCoachName(profileRes.data.name.split(' ')[0]);
-    }
+    if (profile?.name) setCoachName(profile.name.split(' ')[0]);
 
-    const bookings = bookingsRes.data ?? [];
-
-    // Fetch user names in a single query
-    const userIds = [...new Set(bookings.map(b => b.user_id))];
-    let profileMap: Record<string, string> = {};
-    if (userIds.length > 0) {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .in('id', userIds);
-      profileMap = Object.fromEntries((profiles ?? []).map(p => [p.id, p.name ?? 'Usuario']));
-    }
-
-    const sessions: Session[] = bookings.map(b => ({
-      id: b.id,
-      userId: b.user_id,
-      userName: profileMap[b.user_id] ?? 'Usuario',
-      time: formatTime(b.scheduled_time),
-      type: 'Sesión individual',
-      sala_id: b.sala_id,
-      date: b.scheduled_date,
+    const rows = confirmed ?? [];
+    const sessions: Session[] = rows.map(b => ({
+      userId: b.user_id as string,
+      time: (b.scheduled_time as string).slice(0, 5),
+      date: b.scheduled_date as string,
     }));
 
-    setTodaySessions(sessions.filter(s => s.date === todayStr));
-
+    // Franja semanal (conteo por día + hoy)
     const week: DayEntry[] = WEEK_ABBRS.map((abbr, i) => {
-      const d = new Date(mondayDate);
-      d.setDate(mondayDate.getDate() + i);
+      const d = new Date(monday); d.setDate(monday.getDate() + i);
       const dateStr = toDateStr(d);
-      return { abbr, sessions: sessions.filter(s => s.date === dateStr) };
+      return { abbr, count: sessions.filter(s => s.date === dateStr).length, isToday: dateStr === todayStr };
     });
     setWeekData(week);
+    const inWeek = sessions.filter(s => s.date >= toDateStr(monday) && s.date <= toDateStr(sunday));
+    setWeekTotal(inWeek.length);
+    setWeekClients(new Set(inWeek.map(s => s.userId)).size);
 
-    // Clientes distintos con al menos una sesión confirmada esta semana (Lun-Dom)
-    const weekClientIds = new Set(week.flatMap(day => day.sessions).map(s => s.userId));
-    setWeeklyClientCount(weekClientIds.size);
+    // Próxima sesión = primera confirmada con inicio >= ahora
+    const nowMs = now.getTime();
+    const upcoming = rows
+      .map(b => ({ b, startMs: bookingStartMs(b.scheduled_date as string, b.scheduled_time as string) }))
+      .filter(x => x.startMs >= nowMs - 90 * 60 * 1000) // incluye una en curso (hasta 90')
+      .sort((a, b) => a.startMs - b.startMs)[0];
 
-    setPendingCount(pendingRes.count ?? 0);
-
-    // Último mensaje humano por sala de las sesiones de hoy — alimenta la
-    // línea de contexto "Último mensaje hace X" bajo cada card (una sola
-    // query batch, sin N+1).
-    const todaySalaIds = [...new Set(
-      sessions.filter(s => s.date === todayStr && s.sala_id).map(s => s.sala_id as string)
-    )];
-
-    if (todaySalaIds.length > 0) {
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('messages')
-        .select('sala_id, sender_type, created_at')
-        .in('sala_id', todaySalaIds)
-        .order('created_at', { ascending: false });
-
-      if (messagesError) {
-        console.error('[CoachHomeScreen] Error cargando mensajes para el contexto de "Hoy":', messagesError);
-      }
-
-      // Los mensajes system_confirmed/system_cancelled/system son texto
-      // automático ("Sesión reservada · fecha · hora hs") — no cuentan como
-      // mensaje humano para esta línea de contexto.
-      const isHuman = (senderType: string) => senderType === 'user' || senderType === 'coach';
-      const lastHumanAtBySala: Record<string, string> = {};
-      (messagesData ?? []).forEach(m => {
-        if (!isHuman(m.sender_type as string)) return;
-        const sid = m.sala_id as string;
-        if (!lastHumanAtBySala[sid]) {
-          lastHumanAtBySala[sid] = m.created_at as string;
-        }
+    if (upcoming) {
+      const b = upcoming.b;
+      const [{ data: prof }, { count: completedCount }] = await Promise.all([
+        supabase.from('profiles').select('name, avatar_url').eq('id', b.user_id).maybeSingle(),
+        supabase.from('bookings').select('id', { count: 'exact', head: true })
+          .eq('coach_id', coachId).eq('user_id', b.user_id).eq('status', 'completada'),
+      ]);
+      const name = (prof?.name as string) ?? 'Usuario';
+      setNext({
+        bookingId: b.id as string,
+        userId: b.user_id as string,
+        userName: name,
+        initials: getInitials(name),
+        avatarUrl: (prof?.avatar_url as string) ?? null,
+        dateLabel: nextDateLabel(b.scheduled_date as string),
+        timeStr: (b.scheduled_time as string).slice(0, 5),
+        ordinal: ordinalLabel((completedCount ?? 0) + 1),
+        salaId: (b.sala_id as string) ?? null,
+        startMs: upcoming.startMs,
       });
-      setLastMsgAtBySala(lastHumanAtBySala);
+
+      // Preparar sesión: última completada + recursos recomendados (Recursos v2)
+      const [{ data: lastDone }, { data: recs }] = await Promise.all([
+        supabase.from('bookings').select('scheduled_date')
+          .eq('coach_id', coachId).eq('user_id', b.user_id).eq('status', 'completada')
+          .order('scheduled_date', { ascending: false }).limit(1),
+        supabase.from('resource_recommendations')
+          .select('id, opened_at, room_id, coach_resources!inner(title)')
+          .eq('coach_id', coachId).eq('user_id', b.user_id)
+          .order('created_at', { ascending: false }).limit(6),
+      ]);
+      let lastDaysAgo: number | null = null;
+      if (lastDone?.[0]?.scheduled_date) {
+        const [ly, lm, ld] = (lastDone[0].scheduled_date as string).split('-').map(Number);
+        const lastMs = new Date(ly, lm - 1, ld).getTime();
+        lastDaysAgo = Math.max(0, Math.round((Date.now() - lastMs) / 86400000));
+      }
+      const resources: PrepResource[] = (recs ?? []).map(r => {
+        const cr = r.coach_resources as { title?: string } | { title?: string }[] | null;
+        const title = Array.isArray(cr) ? (cr[0]?.title ?? 'Recurso') : (cr?.title ?? 'Recurso');
+        return { id: r.id as string, title, opened: !!r.opened_at, roomId: (r.room_id as string) ?? null };
+      });
+      setPrep({ lastDaysAgo, resources });
     } else {
-      setLastMsgAtBySala({});
+      setNext(null);
+      setPrep(null);
     }
 
     setLoading(false);
   }, [user, coachId]);
 
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from('coaches')
-      .select('id')
-      .eq('profile_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => { if (data) setCoachId(data.id); });
-  }, [user]);
-
-  // Refresca cada vez que se vuelve a esta pestaña (ej: aceptar una reserva
-  // en "Reservas" y volver a "Inicio" ya trae los datos al día, sin esto se
-  // quedaba con el pendingCount viejo hasta el próximo remount).
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData])
-  );
+  useFocusEffect(useCallback(() => {
+    loadData();
+    pending.refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadData]));
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadData();
+    await Promise.all([loadData(), pending.refresh()]);
     setRefreshing(false);
-  }, [loadData]);
+  }, [loadData, pending]);
 
-  useEffect(() => {
+  async function onConfirmRequest(bookingId: string) {
     if (!user) return;
-    supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('recipient_id', user.id)
-      .eq('read', false)
-      .then(({ count }) => setUnreadCount(count ?? 0));
-  }, [user]);
+    const ok = await confirmBooking(bookingId, user.id);
+    if (!ok) { Alert.alert('No se pudo confirmar', 'Probá de nuevo en unos segundos.'); return; }
+    await Promise.all([loadData(), pending.refresh()]);
+  }
 
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel('coach-notif-badge')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${user.id}` },
-        () => {
-          supabase
-            .from('notifications')
-            .select('*', { count: 'exact', head: true })
-            .eq('recipient_id', user.id)
-            .eq('read', false)
-            .then(({ count }) => setUnreadCount(count ?? 0));
-        },
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  function onOtherTime() {
+    Alert.alert(
+      'Otro horario',
+      'La propuesta de horario alternativo llega pronto. Por ahora, coordinás el nuevo horario con el usuario una vez confirmada la sesión.',
+    );
+  }
+
+  async function onRemind(roomId: string | null, title: string) {
+    if (!roomId || !user) { Alert.alert('Sin chat', 'Todavía no hay chat con este usuario.'); return; }
+    const content = `Te dejé de nuevo el recurso: "${title}" 🙂`;
+    await supabase.from('messages').insert({
+      sala_id: roomId,
+      sender_id: user.id,
+      sender_type: 'coach',
+      content: encryptMessage(content),
+    });
+    Alert.alert('Listo', 'Le enviamos un recordatorio suave por chat ✓');
+  }
+
+  const canJoin = next ? Date.now() >= next.startMs - 10 * 60 * 1000 : false;
 
   if (loading) {
     return (
       <AppBg>
-      <SafeAreaView style={s.safe} edges={['top']}>
-        <View style={s.loadingContainer}>
-          <ActivityIndicator size="small" color={ViveColors.primary} />
-        </View>
-      </SafeAreaView>
+        <SafeAreaView style={s.safe} edges={['top']}>
+          <View style={s.loadingBox}><ActivityIndicator size="small" color={FOREST} /></View>
+        </SafeAreaView>
       </AppBg>
     );
   }
 
+  const pendTotal = pending.counts.total;
+
   return (
     <AppBg>
-    <SafeAreaView style={s.safe} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={s.container}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={ViveColors.primary}
-            colors={[ViveColors.primary]}
-          />
-        }>
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <ScrollView
+          contentContainerStyle={s.container}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={FOREST} colors={[FOREST]} />}>
 
-        {/* Greeting */}
-        <View style={s.greetingRow}>
-          <Text style={s.greeting}>Hola, {coachName} 👋</Text>
-          <View style={s.topRight}>
-            <TouchableOpacity
-              style={s.bellBtn}
-              onPress={() => router.push('/coach-notifications')}
-              hitSlop={8}
-              activeOpacity={0.7}>
-              <Feather name="bell" size={22} color="#565E32" />
-              {unreadCount > 0 && <View style={s.bellDot} />}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => router.push('/perfil')}
-              hitSlop={8}
-              activeOpacity={0.8}>
-              <LinearGradient
-                colors={['#FF9A52', ViveColors.primary]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={s.avatarCircle}>
-                <Text style={s.avatarInitial}>{(coachName.charAt(0) || '?').toUpperCase()}</Text>
+          {/* Header */}
+          <View style={s.header}>
+            <Text style={s.hello}>Hola, {coachName || '—'}</Text>
+            <TouchableOpacity onPress={() => router.push('/perfil')} activeOpacity={0.85} hitSlop={8}>
+              <LinearGradient colors={[TERRA, '#A5583B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.avatar}>
+                <Text style={s.avatarTxt}>{getInitials(coachName || '?')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Alert Banner */}
-        {pendingCount > 0 && (
-          <TouchableOpacity
-            style={s.alertBanner}
-            onPress={() => router.navigate('/reservas')}
-            activeOpacity={0.85}>
-            <Feather name="bell" size={15} color={ViveColors.primary} style={s.alertIcon} />
-            <Text style={s.alertText}>
-              {pendingCount === 1 ? (
-                <>Tenés <Text style={s.alertBold}>1 solicitud</Text> esperando tu respuesta</>
-              ) : (
-                <>Tenés <Text style={s.alertBold}>{pendingCount} solicitudes</Text> esperando tu respuesta</>
-              )}
-            </Text>
-            <Feather name="chevron-right" size={15} color="#87835C" />
-          </TouchableOpacity>
-        )}
-
-        {/* Esta semana → agenda mensual */}
-        <View style={s.weekHeader}>
-          <Text style={s.sectionTitle}>Esta semana</Text>
-          <TouchableOpacity
-            style={s.weekHeaderLink}
-            onPress={() => router.push('/coach-agenda')}
-            hitSlop={8}
-            activeOpacity={0.7}>
-            <Text style={s.weekHeaderLinkText}>Ver mes</Text>
-            <Feather name="chevron-right" size={14} color={ViveColors.primary} />
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity
-          style={s.weekCard}
-          onPress={() => router.push('/coach-agenda')}
-          activeOpacity={0.85}>
-          {weekData.map((day, idx) => {
-            const active = day.sessions.length > 0;
-            return (
-              <View key={idx} style={s.dayCol}>
-                <Text style={s.dayAbbr}>{day.abbr}</Text>
-                <View style={[s.dayDot, active && s.dayDotActive]}>
-                  {active && <Text style={s.dayCount}>{day.sessions.length}</Text>}
+          {/* Tu semana */}
+          <TouchableOpacity style={s.week} activeOpacity={0.9} onPress={() => router.navigate('/reservas')}>
+            {weekData.map((d, i) => (
+              <View key={i} style={[s.wd, d.isToday && s.wdToday]}>
+                <Text style={[s.wdAbbr, d.isToday && s.wdAbbrToday]}>{d.abbr}</Text>
+                <View style={[s.wdCircle, d.count > 0 && s.wdCircleHas, d.isToday && s.wdCircleToday]}>
+                  {d.count > 0 && <Text style={s.wdCount}>{d.count}</Text>}
                 </View>
-                {active && (
-                  <Text style={s.dayTime}>{day.sessions[0].time.replace(' hs', '')}</Text>
-                )}
               </View>
-            );
-          })}
-        </TouchableOpacity>
-        {weeklyClientCount > 0 && (
-          <Text style={s.weekSummary}>
-            Esta semana acompañás a {weeklyClientCount} {weeklyClientCount === 1 ? 'persona' : 'personas'}
+            ))}
+          </TouchableOpacity>
+          <Text style={s.weekCaption}>
+            {weekTotal} {weekTotal === 1 ? 'sesión' : 'sesiones'} · {weekClients} {weekClients === 1 ? 'persona' : 'personas'} esta semana · <Text style={s.weekCaptionB}>disponibilidad calculada automáticamente</Text>
           </Text>
-        )}
 
-        {/* Hoy */}
-        <Text style={[s.sectionTitle, s.sectionSpaced]}>Hoy</Text>
-
-        {todaySessions.length > 0 ? (
-          todaySessions.map(session => {
-            const lastMsgAt = session.sala_id ? lastMsgAtBySala[session.sala_id] : undefined;
-            return (
-              <View key={session.id} style={s.sessionBlock}>
-                <View style={s.sessionCard}>
-                  <View style={s.timeTag}>
-                    <Text style={s.timeTagText}>{session.time}</Text>
-                  </View>
-                  <View style={s.sessionInfo}>
-                    <Text style={s.sessionUser}>{session.userName}</Text>
-                    <Text style={s.sessionType}>{session.type}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={s.chatBtn}
-                    onPress={() =>
-                      router.push(
-                        session.sala_id
-                          ? { pathname: '/sala', params: { sala_id: session.sala_id } }
-                          : '/sala'
-                      )
-                    }
-                    activeOpacity={0.75}
-                    hitSlop={6}>
-                    <Feather name="message-circle" size={20} color="#87835C" />
-                  </TouchableOpacity>
-                </View>
-                {lastMsgAt && (
-                  <View style={s.sessionContext}>
-                    <Feather name="clock" size={11} color="rgba(135,131,92,0.65)" />
-                    <Text style={s.sessionContextText}>Último mensaje {formatTimeAgo(lastMsgAt)}</Text>
-                  </View>
+          {/* Tu próxima sesión */}
+          {next ? (
+            <View style={s.next}>
+              <View style={s.nextGlow} pointerEvents="none" />
+              <Text style={s.eyebrow}>Tu próxima sesión</Text>
+              <View style={s.who}>
+                {next.avatarUrl ? (
+                  <Image source={{ uri: next.avatarUrl }} style={s.whoAv} />
+                ) : (
+                  <View style={[s.whoAv, s.whoAvFallback]}><Text style={s.whoAvTxt}>{next.initials}</Text></View>
                 )}
+                <View style={{ flex: 1 }}>
+                  <Text style={s.whoName}>{next.userName}</Text>
+                  <Text style={s.whoSub}>{next.dateLabel} · {next.timeStr} hs · videollamada · {next.ordinal}</Text>
+                </View>
               </View>
-            );
-          })
-        ) : (
-          <View style={s.emptyToday}>
-            <MaterialCommunityIcons name="leaf" size={56} color="rgba(86,94,50,0.35)" />
-            <Text style={s.emptyTodayText}>No tenés sesiones hoy.{'\n'}Disfrutá el día</Text>
-          </View>
-        )}
+              <View style={s.acts}>
+                <TouchableOpacity
+                  style={[s.actBtn, s.actJoin, !canJoin && s.actDisabled]}
+                  activeOpacity={0.85}
+                  disabled={!canJoin}
+                  onPress={() => next.salaId
+                    ? router.push({ pathname: '/sala', params: { sala_id: next.salaId } })
+                    : router.push('/sala')}>
+                  <Text style={s.actJoinTxt}>{canJoin ? 'Unirse' : 'Se habilita 10 min antes'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.actBtn, s.actPrep]} activeOpacity={0.85} onPress={() => setPrepOpen(o => !o)}>
+                  <Text style={s.actPrepTxt}>Preparar sesión</Text>
+                </TouchableOpacity>
+              </View>
 
-        <View style={{ height: TAB_BAR_CLEARANCE }} />
-      </ScrollView>
-    </SafeAreaView>
+              {prepOpen && (
+                <View style={s.prep}>
+                  <Text style={s.prepLine}>
+                    <Text style={s.prepB}>Última sesión: </Text>
+                    {prep?.lastDaysAgo == null ? 'primera sesión juntos' : `hace ${prep.lastDaysAgo} ${prep.lastDaysAgo === 1 ? 'día' : 'días'}`}
+                  </Text>
+                  {prep && prep.resources.length > 0 && (
+                    <>
+                      <Text style={[s.prepB, { marginTop: 8 }]}>Recursos que le mandaste:</Text>
+                      {prep.resources.map(r => (
+                        <View key={r.id} style={s.prepRes}>
+                          <Text style={r.opened ? s.prepOk : s.prepWarn} numberOfLines={1}>
+                            {r.opened ? '✓' : '✗'} {r.title}{r.opened ? ' — abierto' : ' — sin abrir'}
+                          </Text>
+                          {!r.opened && (
+                            <TouchableOpacity onPress={() => onRemind(r.roomId, r.title)} hitSlop={6}>
+                              <Text style={s.prepRemind}>recordarle</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      ))}
+                    </>
+                  )}
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={s.nextEmpty}>
+              <Text style={s.nextEmptyTxt}>Sin sesiones programadas</Text>
+              <TouchableOpacity style={s.nextEmptyBtn} activeOpacity={0.85} onPress={() => router.navigate('/reservas')}>
+                <Text style={s.nextEmptyBtnTxt}>Ver reservas</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Pendientes */}
+          <View style={s.stitle}>
+            <Text style={s.stitleB}>Pendientes</Text>
+            {pendTotal > 0 && <Text style={s.stitleSpan}>{pendTotal} para resolver</Text>}
+          </View>
+
+          {pendTotal === 0 ? (
+            <View style={s.aldia}>
+              <Text style={s.aldiaTxt}>✓ Estás al día.{'\n'}Nada pendiente por ahora.</Text>
+            </View>
+          ) : (
+            <>
+              {pending.requests.map(r => (
+                <View key={r.id} style={s.pend}>
+                  <View style={[s.pendIc, s.pendIcT]}>
+                    <Feather name="clock" size={17} color={TERRA_INK} />
+                  </View>
+                  <View style={s.pendText}>
+                    <Text style={s.pendTitle}>{r.userName} pidió sesión · {nextDateLabel(r.scheduledDate)} · {r.scheduledTime.slice(0, 5)}</Text>
+                    {r.userMessage ? <Text style={s.pquote}>{`"${r.userMessage}"`}</Text> : null}
+                  </View>
+                  <View style={s.pendActs}>
+                    <TouchableOpacity style={[s.btnS, s.btnSolid]} activeOpacity={0.85} onPress={() => onConfirmRequest(r.id)}>
+                      <Text style={s.btnSolidTxt}>Confirmar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={onOtherTime}>
+                      <Text style={s.btnGhostTxt}>Otro horario</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+
+              {pending.unopened.map(u => (
+                <View key={u.id} style={s.pend}>
+                  <View style={[s.pendIc, s.pendIcA]}>
+                    <Feather name="book-open" size={17} color={AMBER_INK} />
+                  </View>
+                  <View style={s.pendText}>
+                    <Text style={s.pendTitle} numberOfLines={2}>{u.userName} no abrió "{u.title}"</Text>
+                    <Text style={s.pendSub}>Tienen sesión pronto</Text>
+                  </View>
+                  <View style={s.pendActs}>
+                    <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={() => onRemind(u.roomId, u.title)}>
+                      <Text style={s.btnGhostTxt}>Recordarle</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
+
+          <View style={{ height: TAB_BAR_CLEARANCE + 16 }} />
+        </ScrollView>
+      </SafeAreaView>
     </AppBg>
   );
 }
 
 const s = StyleSheet.create({
   safe: { flex: 1 },
-  container: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 22 },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  container: { paddingHorizontal: 20, paddingTop: 12 },
+  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-  greetingRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
-  greeting: {
-    flex: 1,
-    fontFamily: ViveFonts.semibold,
-    fontSize: 26,
-    color: '#565E32',
-  },
-  topRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  bellBtn: { padding: 4 },
-  bellDot: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: ViveColors.primary,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.60)',
-  },
-  avatarCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 17,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
+  hello: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST },
+  avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  avatarTxt: { fontFamily: ViveFonts.frauncesSerif, fontSize: 13, color: '#FFF3E8' },
 
-  alertBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(232,116,59,0.18)',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(232,116,59,0.4)',
-    gap: 8,
+  // Semana
+  week: {
+    marginTop: 14, backgroundColor: CARD, borderWidth: 1, borderColor: LINE,
+    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 13,
+    flexDirection: 'row', justifyContent: 'space-between',
   },
-  alertIcon: { flexShrink: 0 },
-  alertText: {
-    flex: 1,
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#565E32',
-    lineHeight: 19,
+  wd: { alignItems: 'center' },
+  wdToday: {},
+  wdAbbr: { fontSize: 10, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
+  wdAbbrToday: { color: FOREST, fontFamily: ViveFonts.semibold },
+  wdCircle: {
+    width: 26, height: 26, borderRadius: 13, marginTop: 5,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: CREAM_DEEP,
   },
-  alertBold: {
-    fontFamily: ViveFonts.semibold,
-    color: ViveColors.primary,
-  },
+  wdCircleHas: { backgroundColor: TERRA },
+  wdCircleToday: { borderWidth: 1.5, borderColor: FOREST },
+  wdCount: { fontSize: 10.5, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },
+  weekCaption: { textAlign: 'center', fontSize: 10.5, color: FOREST_SOFT, marginTop: 7, fontFamily: ViveFonts.regular },
+  weekCaptionB: { color: FOREST, fontFamily: ViveFonts.semibold },
 
-  sectionTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
-    marginBottom: 12,
+  // Próxima sesión (verde)
+  next: { marginTop: 14, backgroundColor: '#3E4E2C', borderRadius: 24, padding: 17, overflow: 'hidden' },
+  nextGlow: {
+    position: 'absolute', right: -40, top: -46, width: 140, height: 140, borderRadius: 70,
+    backgroundColor: 'rgba(234,211,198,0.10)',
   },
-  sectionSpaced: { marginTop: 28 },
+  eyebrow: { fontSize: 10.5, letterSpacing: 0.8, textTransform: 'uppercase', color: GREEN_EYEBROW, fontFamily: ViveFonts.medium },
+  who: { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 10 },
+  whoAv: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#55663F' },
+  whoAvFallback: { alignItems: 'center', justifyContent: 'center' },
+  whoAvTxt: { fontFamily: ViveFonts.frauncesSerif, fontSize: 14, color: '#FFF3E8' },
+  whoName: { fontFamily: ViveFonts.frauncesSerif, fontSize: 17, color: GREEN_TXT },
+  whoSub: { fontSize: 11, color: GREEN_EYEBROW, fontFamily: ViveFonts.regular, marginTop: 2 },
+  acts: { flexDirection: 'row', gap: 8, marginTop: 13 },
+  actBtn: { flex: 1, borderRadius: 15, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
+  actJoin: { backgroundColor: TERRA },
+  actJoinTxt: { fontSize: 12, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },
+  actDisabled: { backgroundColor: 'rgba(192,107,74,0.45)' },
+  actPrep: { backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+  actPrepTxt: { fontSize: 12, fontFamily: ViveFonts.semibold, color: GREEN_TXT },
+  prep: { marginTop: 11, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 16, padding: 13 },
+  prepLine: { fontSize: 11.5, color: '#E9E4D2', lineHeight: 18, fontFamily: ViveFonts.regular },
+  prepB: { color: GREEN_TXT, fontFamily: ViveFonts.semibold, fontSize: 11.5 },
+  prepRes: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
+  prepOk: { color: '#C9DFA9', fontSize: 11.5, fontFamily: ViveFonts.regular, flexShrink: 1 },
+  prepWarn: { color: TERRA_SOFT, fontSize: 11.5, fontFamily: ViveFonts.regular, flexShrink: 1 },
+  prepRemind: { color: '#FFF6EC', fontSize: 11.5, fontFamily: ViveFonts.semibold, textDecorationLine: 'underline' },
 
-  weekHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  nextEmpty: {
+    marginTop: 14, backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20,
+    padding: 18, alignItems: 'center', gap: 12,
   },
-  weekHeaderLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    marginBottom: 12,
-  },
-  weekHeaderLinkText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: ViveColors.primary,
-  },
+  nextEmptyTxt: { fontSize: 13.5, color: FOREST_SOFT, fontFamily: ViveFonts.medium },
+  nextEmptyBtn: { backgroundColor: FOREST, borderRadius: 15, paddingVertical: 10, paddingHorizontal: 22 },
+  nextEmptyBtnTxt: { color: GREEN_TXT, fontSize: 12.5, fontFamily: ViveFonts.semibold },
 
-  sessionBlock: { marginBottom: 10 },
-  sessionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: GLASS,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    padding: 14,
-    gap: 12,
+  // Pendientes
+  stitle: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 22, marginBottom: 10 },
+  stitleB: { fontFamily: ViveFonts.frauncesSerif, fontSize: 17, color: FOREST },
+  stitleSpan: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
+  aldia: { padding: 20, borderWidth: 1.5, borderColor: LINE, borderRadius: 20, borderStyle: 'dashed', alignItems: 'center' },
+  aldiaTxt: { textAlign: 'center', fontSize: 12.5, color: FOREST_SOFT, lineHeight: 19, fontFamily: ViveFonts.regular },
+  pend: {
+    backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20,
+    padding: 13, marginBottom: 9, flexDirection: 'row', alignItems: 'center', gap: 11,
   },
-  sessionContext: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingTop: 6,
+  pendIc: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  pendIcT: { backgroundColor: TERRA_SOFT },
+  pendIcA: { backgroundColor: AMBER_SOFT },
+  pendText: { flex: 1, minWidth: 0 },
+  pendTitle: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: FOREST, lineHeight: 17 },
+  pendSub: { fontSize: 10.5, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 2 },
+  pquote: {
+    fontFamily: ViveFonts.frauncesSerif, fontStyle: 'italic', fontSize: 11.5, color: '#2E3624',
+    backgroundColor: '#F2ECDF', borderRadius: 11, paddingVertical: 6, paddingHorizontal: 10, marginTop: 7, lineHeight: 16,
   },
-  sessionContextText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: 'rgba(135,131,92,0.65)',
-  },
-  timeTag: {
-    backgroundColor: 'rgba(232,116,59,0.22)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    flexShrink: 0,
-  },
-  timeTagText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 13,
-    color: ViveColors.primary,
-  },
-  sessionInfo: { flex: 1 },
-  sessionUser: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: '#565E32',
-    marginBottom: 2,
-  },
-  sessionType: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: '#87835C',
-  },
-  chatBtn: { padding: 4, flexShrink: 0 },
-
-  emptyToday: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-    paddingHorizontal: 20,
-  },
-  emptyTodayText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 17,
-    color: '#565E32',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-
-  weekCard: {
-    backgroundColor: GLASS,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
-    paddingVertical: 18,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  dayCol: { flex: 1, alignItems: 'center', gap: 6 },
-  dayAbbr: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 11,
-    color: '#87835C',
-  },
-  dayDot: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,248,240,0.48)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayDotActive: { backgroundColor: ViveColors.primary },
-  dayCount: { fontFamily: ViveFonts.bold, fontSize: 11, color: '#565E32' },
-  dayTime: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 9,
-    color: ViveColors.primary,
-    textAlign: 'center',
-  },
-  weekSummary: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: '#87835C',
-    textAlign: 'center',
-    marginTop: 12,
-  },
+  pendActs: { gap: 6, flexShrink: 0 },
+  btnS: { borderRadius: 13, paddingVertical: 7, paddingHorizontal: 12, alignItems: 'center' },
+  btnSolid: { backgroundColor: FOREST },
+  btnSolidTxt: { fontSize: 11, fontFamily: ViveFonts.semibold, color: '#F3EEDF' },
+  btnGhost: { borderWidth: 1.5, borderColor: LINE, backgroundColor: '#F2ECDF' },
+  btnGhostTxt: { fontSize: 11, fontFamily: ViveFonts.semibold, color: FOREST_SOFT },
 });
