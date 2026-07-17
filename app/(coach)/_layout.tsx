@@ -38,6 +38,12 @@ function UnreadDot() {
   return <View style={badge.unreadDot} />;
 }
 
+// Puntito terracota del hub (Inicio): hay algo para resolver. Mismo criterio que
+// el badge de Reservas (solicitudes pendientes), como en el mockup.
+function PendingDot() {
+  return <View style={badge.pendingDot} />;
+}
+
 
 export default function CoachTabLayout() {
   const { user } = useAuth();
@@ -121,7 +127,10 @@ export default function CoachTabLayout() {
           title: 'Inicio',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon focused={focused} color={color} label="Inicio">
-              <Feather name="calendar" size={22} color={color} />
+              <View>
+                <Feather name="calendar" size={22} color={color} />
+                {pendingCount > 0 && <PendingDot />}
+              </View>
             </TabIcon>
           ),
         }}
@@ -245,6 +254,17 @@ const badge = StyleSheet.create({
     height: 9,
     borderRadius: 5,
     backgroundColor: UNREAD_RED,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.75)',
+  },
+  pendingDot: {
+    position: 'absolute',
+    top: -3,
+    right: -5,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: '#C06B4A',
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.75)',
   },
