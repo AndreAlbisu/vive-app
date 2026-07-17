@@ -29,7 +29,6 @@ const FOREST = '#3F512F';
 const FOREST_SOFT = '#6B7A56';
 const TERRA = '#C06B4A';
 const TERRA_SOFT = '#EAD3C6';
-const TERRA_INK = '#8F4A2E';
 const AMBER_SOFT = '#F0E4C4';
 const AMBER_INK = '#8A6A20';
 const OK_BG = '#DCE5CB';
@@ -263,7 +262,9 @@ export default function CoachHomeScreen() {
     );
   }
 
-  const pendTotal = pending.counts.total;
+  // Pendientes del hub = solo los nudges únicos (recursos sin abrir con sesión
+  // próxima). Las solicitudes viven en Reservas — no se clonan acá (decisión Andre).
+  const pendTotal = pending.counts.unopened;
 
   return (
     <AppBg>
@@ -382,23 +383,6 @@ export default function CoachHomeScreen() {
             </View>
           ) : (
             <>
-              {/* Solicitudes: se muestran acá para que el coach las vea, pero
-                  confirmar/rechazar vive en Reservas (no se clona) — la fila
-                  linkea a esa pantalla. */}
-              {pending.requests.map(r => (
-                <TouchableOpacity key={r.id} style={s.pend} activeOpacity={0.85} onPress={() => router.navigate('/reservas')}>
-                  <View style={[s.pendIc, s.pendIcT]}>
-                    <Feather name="clock" size={17} color={TERRA_INK} />
-                  </View>
-                  <View style={s.pendText}>
-                    <Text style={s.pendTitle}>{r.userName} pidió sesión · {nextDateLabel(r.scheduledDate)} · {r.scheduledTime.slice(0, 5)}</Text>
-                    {r.userMessage ? <Text style={s.pquote}>{`"${r.userMessage}"`}</Text> : null}
-                    <Text style={s.pendLink}>Respondé en Reservas</Text>
-                  </View>
-                  <Feather name="chevron-right" size={20} color={FOREST_SOFT} />
-                </TouchableOpacity>
-              ))}
-
               {pending.unopened.map(u => (
                 <View key={u.id} style={s.pend}>
                   <View style={[s.pendIc, s.pendIcA]}>
@@ -513,15 +497,8 @@ const s = StyleSheet.create({
   pendText: { flex: 1, minWidth: 0 },
   pendTitle: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: FOREST, lineHeight: 17 },
   pendSub: { fontSize: 10.5, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 2 },
-  pendLink: { fontSize: 11, color: TERRA_INK, fontFamily: ViveFonts.semibold, marginTop: 6 },
-  pquote: {
-    fontFamily: ViveFonts.frauncesSerif, fontStyle: 'italic', fontSize: 11.5, color: '#2E3624',
-    backgroundColor: '#F2ECDF', borderRadius: 11, paddingVertical: 6, paddingHorizontal: 10, marginTop: 7, lineHeight: 16,
-  },
   pendActs: { gap: 6, flexShrink: 0 },
   btnS: { borderRadius: 13, paddingVertical: 7, paddingHorizontal: 12, alignItems: 'center' },
-  btnSolid: { backgroundColor: FOREST },
-  btnSolidTxt: { fontSize: 11, fontFamily: ViveFonts.semibold, color: '#F3EEDF' },
   btnGhost: { borderWidth: 1.5, borderColor: LINE, backgroundColor: '#F2ECDF' },
   btnGhostTxt: { fontSize: 11, fontFamily: ViveFonts.semibold, color: FOREST_SOFT },
 });
