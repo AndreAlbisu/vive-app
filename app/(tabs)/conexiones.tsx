@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
+  TextInput,
   Image,
   Dimensions,
 } from 'react-native';
@@ -65,6 +66,12 @@ type RebookData = {
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+// Normaliza para búsqueda tolerante: sin acentos, minúsculas, sin espacios al borde.
+// Así "gonzalez" encuentra "González" (el "o cerca" del pedido).
+function normalizeName(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
 function getInitials(name: string) {
   const p = (name ?? '').trim().split(' ');
   return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : (p[0]?.[0] ?? '?').toUpperCase();
@@ -87,6 +94,7 @@ export default function ConexionesScreen() {
   const [selectedDoorId, setSelectedDoorId] = useState<string | null>(null);
   const [deckIndex, setDeckIndex]           = useState(0);
   const [coaches, setCoaches]           = useState<CachedCoach[]>([]);
+  const [coachQuery, setCoachQuery]     = useState('');
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [availableSet, setAvailableSet] = useState<Set<string>>(new Set());
   const [rebookData, setRebookData]     = useState<RebookData | null>(null);
@@ -183,6 +191,13 @@ export default function ConexionesScreen() {
 
   // ── Selección eje / puerta ──────────────────────────────────────────────────
   const selectedAxis = selectedAxisId ? EJE_MAP[selectedAxisId] ?? null : null;
+
+  // Búsqueda en vivo por nombre (sobre el cache ya cargado; sin tocar la base).
+  const coachResults = useMemo(() => {
+    const q = normalizeName(coachQuery);
+    if (!q) return [];
+    return coaches.filter(c => normalizeName(c.name).includes(q)).slice(0, 20);
+  }, [coachQuery, coaches]);
   const selectedDoor = selectedDoorId ? DOORS.find(d => d.id === selectedDoorId) ?? null : null;
   const deck = useMemo(
     () => (selectedDoor ? rankDeck(coachesForDoor(selectedDoor, coaches), user?.id) : []),
@@ -273,9 +288,6 @@ export default function ConexionesScreen() {
               </TouchableOpacity>
               <Text style={s.deckHeaderTitle}>Conexiones</Text>
               <View style={s.hicons}>
-                <TouchableOpacity onPress={() => router.push('/search1')} activeOpacity={0.7} hitSlop={8}>
-                  <Feather name="search" size={20} color={FOREST} />
-                </TouchableOpacity>
                 <TouchableOpacity onPress={() => (user ? router.push('/favoritos') : requestAuth())} activeOpacity={0.7} hitSlop={8}>
                   <Feather name="star" size={20} color={FOREST} />
                 </TouchableOpacity>
@@ -457,9 +469,6 @@ export default function ConexionesScreen() {
           <View style={s.header}>
             <Text style={s.title}>Conexiones</Text>
             <View style={s.hicons}>
-              <TouchableOpacity onPress={() => router.push('/search1')} activeOpacity={0.7} hitSlop={8}>
-                <Feather name="search" size={21} color={FOREST} />
-              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => (user ? router.push('/favoritos') : requestAuth())}
                 activeOpacity={0.7}
@@ -536,29 +545,83 @@ export default function ConexionesScreen() {
           ) : (
             /* ── Fase 1: ejes de bienestar ──────────────────────────────── */
             <>
-              <View style={s.askWrap}>
-                <Text style={s.askTitle}>¿Qué te gustaría{'\n'}trabajar hoy?</Text>
-                <Text style={s.askSub}>Elegí un área de bienestar para empezar.</Text>
+              {/* Búsqueda por nombre — en vivo sobre el cache de coaches */}
+              <View style={s.searchBar}>
+                <Feather name="search" size={18} color={FOREST_SOFT} />
+                <TextInput
+                  style={s.searchInput}
+                  placeholder="Buscá un coach por nombre"
+                  placeholderTextColor={tint(FOREST, 0.45)}
+                  value={coachQuery}
+                  onChangeText={setCoachQuery}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  returnKeyType="search"
+                />
+                {coachQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setCoachQuery('')} hitSlop={8} activeOpacity={0.7}>
+                    <Feather name="x" size={18} color={FOREST_SOFT} />
+                  </TouchableOpacity>
+                )}
               </View>
 
-              <View style={s.menuWrap}>
-                {EJES.map(e => (
-                  <TouchableOpacity
-                    key={e.id}
-                    style={s.menuCard}
-                    onPress={() => selectAxis(e.id)}
-                    activeOpacity={0.85}>
-                    <View style={[s.menuIcon, { backgroundColor: tint(e.color, 0.16) }]}>
-                      <Feather name={e.icon as any} size={20} color={e.color} />
-                    </View>
-                    <View style={s.menuTextWrap}>
-                      <Text style={s.menuTitle} numberOfLines={1}>{e.label}</Text>
-                      <Text style={s.menuTagline} numberOfLines={1}>{e.tagline}</Text>
-                    </View>
-                    <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
-                  </TouchableOpacity>
-                ))}
-              </View>
+              {coachQuery.trim().length > 0 ? (
+                /* Resultados de búsqueda por nombre */
+                coachResults.length > 0 ? (
+                  <View style={s.resultsWrap}>
+                    {coachResults.map(coach => (
+                      <TouchableOpacity
+                        key={coach.id}
+                        style={s.resultRow}
+                        onPress={() => goToPerfil(coach)}
+                        activeOpacity={0.8}>
+                        {coach.avatarUrl ? (
+                          <Image source={{ uri: coach.avatarUrl }} style={s.resultAvatar} />
+                        ) : (
+                          <View style={[s.resultAvatar, s.resultAvatarFallback]}>
+                            <Text style={s.resultInitials}>{getInitials(coach.name)}</Text>
+                          </View>
+                        )}
+                        <View style={s.resultText}>
+                          <Text style={s.resultName} numberOfLines={1}>{coach.name}</Text>
+                          {coach.specialty ? (
+                            <Text style={s.resultSpecialty} numberOfLines={1}>{coach.specialty}</Text>
+                          ) : null}
+                        </View>
+                        <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={s.noResults}>No encontramos coaches con ese nombre.</Text>
+                )
+              ) : (
+                <>
+                  <View style={s.askWrap}>
+                    <Text style={s.askTitle}>¿Qué te gustaría{'\n'}trabajar hoy?</Text>
+                    <Text style={s.askSub}>Elegí un área de bienestar para empezar.</Text>
+                  </View>
+
+                  <View style={s.menuWrap}>
+                    {EJES.map(e => (
+                      <TouchableOpacity
+                        key={e.id}
+                        style={s.menuCard}
+                        onPress={() => selectAxis(e.id)}
+                        activeOpacity={0.85}>
+                        <View style={[s.menuIcon, { backgroundColor: tint(e.color, 0.16) }]}>
+                          <Feather name={e.icon as any} size={20} color={e.color} />
+                        </View>
+                        <View style={s.menuTextWrap}>
+                          <Text style={s.menuTitle} numberOfLines={1}>{e.label}</Text>
+                          <Text style={s.menuTagline} numberOfLines={1}>{e.tagline}</Text>
+                        </View>
+                        <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
             </>
           )}
 
@@ -628,6 +691,81 @@ const s = StyleSheet.create({
   },
 
   // Pregunta editorial
+  // Búsqueda por nombre
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 20,
+    marginTop: 6,
+    marginBottom: 4,
+    paddingHorizontal: 14,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 15,
+    color: FOREST,
+    padding: 0,
+  },
+  resultsWrap: {
+    paddingHorizontal: 20,
+    marginTop: 12,
+    gap: 8,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  resultAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: tint(FOREST, 0.1),
+  },
+  resultAvatarFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resultInitials: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 15,
+    color: FOREST,
+  },
+  resultText: {
+    flex: 1,
+  },
+  resultName: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 15,
+    color: FOREST,
+  },
+  resultSpecialty: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12.5,
+    color: FOREST_SOFT,
+    marginTop: 2,
+  },
+  noResults: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: FOREST_SOFT,
+    paddingHorizontal: 20,
+    marginTop: 24,
+    textAlign: 'center',
+  },
   askWrap: {
     paddingHorizontal: 20,
     marginTop: 10,
