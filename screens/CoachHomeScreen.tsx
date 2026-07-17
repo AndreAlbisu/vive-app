@@ -281,7 +281,7 @@ export default function CoachHomeScreen() {
           </View>
 
           {/* Tu semana */}
-          <TouchableOpacity style={s.week} activeOpacity={0.9} onPress={() => router.navigate('/reservas')}>
+          <TouchableOpacity style={s.week} activeOpacity={0.9} onPress={() => router.push('/coach-agenda')}>
             {weekData.map((d, i) => (
               <View key={i} style={[s.wd, d.isToday && s.wdToday]}>
                 <Text style={[s.wdAbbr, d.isToday && s.wdAbbrToday]}>{d.abbr}</Text>
