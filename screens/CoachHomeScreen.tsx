@@ -7,7 +7,6 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,9 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
-import { encryptMessage } from '@/lib/encryption';
 import { AppBg } from '@/components/ui/AppBg';
-import { useCoachPending } from '@/hooks/useCoachPending';
 
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
 const CARD = '#F7F2E7';
@@ -29,8 +26,6 @@ const FOREST = '#3F512F';
 const FOREST_SOFT = '#6B7A56';
 const TERRA = '#C06B4A';
 const TERRA_SOFT = '#EAD3C6';
-const AMBER_SOFT = '#F0E4C4';
-const AMBER_INK = '#8A6A20';
 const OK_BG = '#DCE5CB';
 const OK_INK = '#42542F';
 const LINE = 'rgba(63,81,47,0.14)';
@@ -99,8 +94,6 @@ export default function CoachHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-
-  const pending = useCoachPending(coachId);
 
   useEffect(() => {
     if (!user) return;
@@ -226,29 +219,13 @@ export default function CoachHomeScreen() {
     setLoading(false);
   }, [user, coachId]);
 
-  useFocusEffect(useCallback(() => {
-    loadData();
-    pending.refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadData]));
+  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([loadData(), pending.refresh()]);
+    await loadData();
     setRefreshing(false);
-  }, [loadData, pending]);
-
-  async function onRemind(roomId: string | null, title: string) {
-    if (!roomId || !user) { Alert.alert('Sin chat', 'Todavía no hay chat con este usuario.'); return; }
-    const content = `Te dejé de nuevo el recurso: "${title}" 🙂`;
-    await supabase.from('messages').insert({
-      sala_id: roomId,
-      sender_id: user.id,
-      sender_type: 'coach',
-      content: encryptMessage(content),
-    });
-    Alert.alert('Listo', 'Le enviamos un recordatorio suave por chat ✓');
-  }
+  }, [loadData]);
 
   const canJoin = next ? Date.now() >= next.startMs - 10 * 60 * 1000 : false;
 
@@ -261,10 +238,6 @@ export default function CoachHomeScreen() {
       </AppBg>
     );
   }
-
-  // Pendientes del hub = solo los nudges únicos (recursos sin abrir con sesión
-  // próxima). Las solicitudes viven en Reservas — no se clonan acá (decisión Andre).
-  const pendTotal = pending.counts.unopened;
 
   return (
     <AppBg>
@@ -350,11 +323,6 @@ export default function CoachHomeScreen() {
                           <Text style={r.opened ? s.prepOk : s.prepWarn} numberOfLines={1}>
                             {r.opened ? '✓' : '✗'} {r.title}{r.opened ? ' — abierto' : ' — sin abrir'}
                           </Text>
-                          {!r.opened && (
-                            <TouchableOpacity onPress={() => onRemind(r.roomId, r.title)} hitSlop={6}>
-                              <Text style={s.prepRemind}>recordarle</Text>
-                            </TouchableOpacity>
-                          )}
                         </View>
                       ))}
                     </>
@@ -369,37 +337,6 @@ export default function CoachHomeScreen() {
                 <Text style={s.nextEmptyBtnTxt}>Ver reservas</Text>
               </TouchableOpacity>
             </View>
-          )}
-
-          {/* Pendientes */}
-          <View style={s.stitle}>
-            <Text style={s.stitleB}>Pendientes</Text>
-            {pendTotal > 0 && <Text style={s.stitleSpan}>{pendTotal} para resolver</Text>}
-          </View>
-
-          {pendTotal === 0 ? (
-            <View style={s.aldia}>
-              <Text style={s.aldiaTxt}>✓ Estás al día.{'\n'}Nada pendiente por ahora.</Text>
-            </View>
-          ) : (
-            <>
-              {pending.unopened.map(u => (
-                <View key={u.id} style={s.pend}>
-                  <View style={[s.pendIc, s.pendIcA]}>
-                    <Feather name="book-open" size={17} color={AMBER_INK} />
-                  </View>
-                  <View style={s.pendText}>
-                    <Text style={s.pendTitle} numberOfLines={2}>{u.userName} no abrió "{u.title}"</Text>
-                    <Text style={s.pendSub}>Tienen sesión pronto</Text>
-                  </View>
-                  <View style={s.pendActs}>
-                    <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={() => onRemind(u.roomId, u.title)}>
-                      <Text style={s.btnGhostTxt}>Recordarle</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </>
           )}
 
           <View style={{ height: TAB_BAR_CLEARANCE + 16 }} />
@@ -471,7 +408,6 @@ const s = StyleSheet.create({
   prepRes: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
   prepOk: { color: '#C9DFA9', fontSize: 11.5, fontFamily: ViveFonts.regular, flexShrink: 1 },
   prepWarn: { color: TERRA_SOFT, fontSize: 11.5, fontFamily: ViveFonts.regular, flexShrink: 1 },
-  prepRemind: { color: '#FFF6EC', fontSize: 11.5, fontFamily: ViveFonts.semibold, textDecorationLine: 'underline' },
 
   nextEmpty: {
     marginTop: 14, backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20,
@@ -480,25 +416,4 @@ const s = StyleSheet.create({
   nextEmptyTxt: { fontSize: 13.5, color: FOREST_SOFT, fontFamily: ViveFonts.medium },
   nextEmptyBtn: { backgroundColor: FOREST, borderRadius: 15, paddingVertical: 10, paddingHorizontal: 22 },
   nextEmptyBtnTxt: { color: GREEN_TXT, fontSize: 12.5, fontFamily: ViveFonts.semibold },
-
-  // Pendientes
-  stitle: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 22, marginBottom: 10 },
-  stitleB: { fontFamily: ViveFonts.frauncesSerif, fontSize: 17, color: FOREST },
-  stitleSpan: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
-  aldia: { padding: 20, borderWidth: 1.5, borderColor: LINE, borderRadius: 20, borderStyle: 'dashed', alignItems: 'center' },
-  aldiaTxt: { textAlign: 'center', fontSize: 12.5, color: FOREST_SOFT, lineHeight: 19, fontFamily: ViveFonts.regular },
-  pend: {
-    backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20,
-    padding: 13, marginBottom: 9, flexDirection: 'row', alignItems: 'center', gap: 11,
-  },
-  pendIc: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  pendIcT: { backgroundColor: TERRA_SOFT },
-  pendIcA: { backgroundColor: AMBER_SOFT },
-  pendText: { flex: 1, minWidth: 0 },
-  pendTitle: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: FOREST, lineHeight: 17 },
-  pendSub: { fontSize: 10.5, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 2 },
-  pendActs: { gap: 6, flexShrink: 0 },
-  btnS: { borderRadius: 13, paddingVertical: 7, paddingHorizontal: 12, alignItems: 'center' },
-  btnGhost: { borderWidth: 1.5, borderColor: LINE, backgroundColor: '#F2ECDF' },
-  btnGhostTxt: { fontSize: 11, fontFamily: ViveFonts.semibold, color: FOREST_SOFT },
 });
