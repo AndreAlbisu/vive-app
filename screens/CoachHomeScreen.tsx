@@ -21,7 +21,6 @@ import { useAuth } from '@/context/AuthContext';
 import { encryptMessage } from '@/lib/encryption';
 import { AppBg } from '@/components/ui/AppBg';
 import { useCoachPending } from '@/hooks/useCoachPending';
-import { confirmBooking } from '@/lib/coachBookingActions';
 
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
 const CARD = '#F7F2E7';
@@ -100,6 +99,7 @@ export default function CoachHomeScreen() {
   const [prepOpen, setPrepOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const pending = useCoachPending(coachId);
 
@@ -107,6 +107,23 @@ export default function CoachHomeScreen() {
     if (!user) return;
     supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle()
       .then(({ data }) => { if (data) setCoachId(data.id); });
+  }, [user]);
+
+  // Badge de notificaciones (campana del header).
+  useEffect(() => {
+    if (!user) return;
+    const loadUnread = () => supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', user.id)
+      .eq('read', false)
+      .then(({ count }) => setUnreadCount(count ?? 0));
+    loadUnread();
+    const channel = supabase
+      .channel('coach-home-notif')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${user.id}` }, loadUnread)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const loadData = useCallback(async () => {
@@ -222,20 +239,6 @@ export default function CoachHomeScreen() {
     setRefreshing(false);
   }, [loadData, pending]);
 
-  async function onConfirmRequest(bookingId: string) {
-    if (!user) return;
-    const ok = await confirmBooking(bookingId, user.id);
-    if (!ok) { Alert.alert('No se pudo confirmar', 'Probá de nuevo en unos segundos.'); return; }
-    await Promise.all([loadData(), pending.refresh()]);
-  }
-
-  function onOtherTime() {
-    Alert.alert(
-      'Otro horario',
-      'La propuesta de horario alternativo llega pronto. Por ahora, coordinás el nuevo horario con el usuario una vez confirmada la sesión.',
-    );
-  }
-
   async function onRemind(roomId: string | null, title: string) {
     if (!roomId || !user) { Alert.alert('Sin chat', 'Todavía no hay chat con este usuario.'); return; }
     const content = `Te dejé de nuevo el recurso: "${title}" 🙂`;
@@ -273,11 +276,17 @@ export default function CoachHomeScreen() {
           {/* Header */}
           <View style={s.header}>
             <Text style={s.hello}>Hola, {coachName || '—'}</Text>
-            <TouchableOpacity onPress={() => router.push('/perfil')} activeOpacity={0.85} hitSlop={8}>
-              <LinearGradient colors={[TERRA, '#A5583B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.avatar}>
-                <Text style={s.avatarTxt}>{getInitials(coachName || '?')}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+            <View style={s.headerRight}>
+              <TouchableOpacity onPress={() => router.push('/coach-notifications')} activeOpacity={0.7} hitSlop={8} style={s.bellBtn}>
+                <Feather name="bell" size={22} color={FOREST} />
+                {unreadCount > 0 && <View style={s.bellDot} />}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/perfil')} activeOpacity={0.85} hitSlop={8}>
+                <LinearGradient colors={[TERRA, '#A5583B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.avatar}>
+                  <Text style={s.avatarTxt}>{getInitials(coachName || '?')}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Tu semana */}
@@ -373,24 +382,21 @@ export default function CoachHomeScreen() {
             </View>
           ) : (
             <>
+              {/* Solicitudes: se muestran acá para que el coach las vea, pero
+                  confirmar/rechazar vive en Reservas (no se clona) — la fila
+                  linkea a esa pantalla. */}
               {pending.requests.map(r => (
-                <View key={r.id} style={s.pend}>
+                <TouchableOpacity key={r.id} style={s.pend} activeOpacity={0.85} onPress={() => router.navigate('/reservas')}>
                   <View style={[s.pendIc, s.pendIcT]}>
                     <Feather name="clock" size={17} color={TERRA_INK} />
                   </View>
                   <View style={s.pendText}>
                     <Text style={s.pendTitle}>{r.userName} pidió sesión · {nextDateLabel(r.scheduledDate)} · {r.scheduledTime.slice(0, 5)}</Text>
                     {r.userMessage ? <Text style={s.pquote}>{`"${r.userMessage}"`}</Text> : null}
+                    <Text style={s.pendLink}>Respondé en Reservas</Text>
                   </View>
-                  <View style={s.pendActs}>
-                    <TouchableOpacity style={[s.btnS, s.btnSolid]} activeOpacity={0.85} onPress={() => onConfirmRequest(r.id)}>
-                      <Text style={s.btnSolidTxt}>Confirmar</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={onOtherTime}>
-                      <Text style={s.btnGhostTxt}>Otro horario</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                  <Feather name="chevron-right" size={20} color={FOREST_SOFT} />
+                </TouchableOpacity>
               ))}
 
               {pending.unopened.map(u => (
@@ -425,7 +431,13 @@ const s = StyleSheet.create({
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
-  hello: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST },
+  hello: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST, flex: 1 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  bellBtn: { padding: 2 },
+  bellDot: {
+    position: 'absolute', top: 0, right: 0, width: 9, height: 9, borderRadius: 5,
+    backgroundColor: TERRA, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)',
+  },
   avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   avatarTxt: { fontFamily: ViveFonts.frauncesSerif, fontSize: 13, color: '#FFF3E8' },
 
@@ -501,6 +513,7 @@ const s = StyleSheet.create({
   pendText: { flex: 1, minWidth: 0 },
   pendTitle: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: FOREST, lineHeight: 17 },
   pendSub: { fontSize: 10.5, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 2 },
+  pendLink: { fontSize: 11, color: TERRA_INK, fontFamily: ViveFonts.semibold, marginTop: 6 },
   pquote: {
     fontFamily: ViveFonts.frauncesSerif, fontStyle: 'italic', fontSize: 11.5, color: '#2E3624',
     backgroundColor: '#F2ECDF', borderRadius: 11, paddingVertical: 6, paddingHorizontal: 10, marginTop: 7, lineHeight: 16,

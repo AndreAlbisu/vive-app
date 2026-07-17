@@ -1,31 +1,31 @@
--- add-coach-availability-view.sql  ·  BORRADOR — revisar antes de correr.
+-- coach_availability_status
+-- Disponibilidad AUTOMÁTICA del coach para el badge que ve el usuario en
+-- Conexiones (reemplaza cualquier cálculo manual). Expone SOLO un enum por coach.
 --
--- Disponibilidad AUTOMÁTICA del coach (reemplaza cualquier cálculo manual del
--- badge que ve el usuario en Conexiones). Server-side, mismo patrón que
--- coach_trending_stats / coach_rebooking_stats (security_invoker).
+-- PRIVACIDAD (mismo motivo que coach_trending_stats / coach_rebooking_stats):
+--   El cálculo cruza contra TODOS los bookings de la plataforma para saber qué
+--   slots están tomados, pero un usuario NO puede leer bookings de terceros (RLS).
+--   Por eso la vista corre con permisos del OWNER (security_invoker = false) y se
+--   hace GRANT de la vista, no de public.bookings.
 --
--- Estado por coach:
---   'this_week'    → tiene al menos un slot LIBRE (no bloqueado y sin reserva)
---                    en los próximos 7 días.
+-- ESTADO por coach:
+--   'this_week'    → tiene ≥1 slot LIBRE (no bloqueado y sin reserva confirmada/
+--                    pendiente) en los próximos 7 días.
 --   'responds_24h' → activo (availability_status='activo') pero sin slot libre
 --                    en la ventana (agenda llena o sin slots cargados).
 --   null           → en pausa (availability_status='en_pausa').
 --
--- Refina la v1 de lib/coachAvailability.ts, que marcaba "con lugar" con solo
--- existir un slot no bloqueado SIN cruzar contra bookings (documentado como
--- aceptable). Acá sí se cruza para distinguir libre vs. ocupado.
+-- Refina la v1 de lib/coachAvailability.ts (que marcaba "con lugar" con solo
+-- existir un slot no bloqueado, sin cruzar bookings). Acá sí distingue libre vs.
+-- ocupado.
 --
--- ⚠️ VERIFICAR ANTES DE CORRER — formato de hora:
---   coach_availability.time es texto "H:MM" (ej. "9:00", "13:30") y
---   bookings.scheduled_time puede estar como "HH:MM:SS" o "H:MM". El JOIN de
---   abajo compara con LEFT(...,5) tras normalizar el cero inicial, pero conviene
---   confirmar los valores reales con:
---     select distinct time from coach_availability limit 20;
---     select distinct scheduled_time from bookings limit 20;
---   y ajustar la normalización si hace falta. NO correr a ciegas.
+-- Formato de hora: coach_availability.time y bookings.scheduled_time salen del
+-- mismo slot ("H:MM", ej. "9:00", vía lib/availabilityGenerator.formatTime). El
+-- lpad/split_part normaliza el cero inicial y cubre el caso de que scheduled_time
+-- sea columna `time` ("09:00:00") — verificado 16/07.
 
 create or replace view public.coach_availability_status
-with (security_invoker = true) as
+with (security_invoker = false) as
 select
   c.id as coach_id,
   case
@@ -41,7 +41,6 @@ select
           from public.bookings b
           where b.coach_id = c.id
             and b.scheduled_date = a.date
-            -- normalización defensiva de formato de hora (ver nota de arriba)
             and lpad(split_part(b.scheduled_time::text, ':', 1), 2, '0') || ':' || split_part(b.scheduled_time::text, ':', 2)
               = lpad(split_part(a.time, ':', 1), 2, '0') || ':' || split_part(a.time, ':', 2)
             and b.status in ('confirmada', 'pendiente')
@@ -51,6 +50,8 @@ select
     else null
   end as status
 from public.coaches c;
+
+grant select on public.coach_availability_status to anon, authenticated;
 
 -- Consumo previsto: lib/coachAvailability.ts pasa a leer esta vista (una query
 -- por los coaches del deck) en vez de calcular en cliente. El toggle manual
