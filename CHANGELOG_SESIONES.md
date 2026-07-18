@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-18 — Joaquín (sesión 66)
+
+**Tocado:** `app/coach-recurso.tsx`, `app/coach-recurso-nuevo.tsx`, `app/mis-recordatorios.tsx` (nuevo), `app.json`, `components/ReminderBell.tsx` (nuevo), `components/AudioRecorderModal.tsx` (nuevo), `screens/CoachProfileScreen.tsx`, `screens/CoachResourcesScreen.tsx`, `lib/resourceEvents.ts` (nuevo), `scripts/add-resource-events-stats-functions.sql` (nuevo), `SCHEMA.md`, `.gitignore`, `node_modules 2/` (eliminado del tracking)
+
+**Resumen:**
+- **RF2/RF3 de recordatorios — completos.** `components/ReminderBell.tsx`: campanita reutilizable (mismo patrón que `PinButton`) con sheet propio (chips de días Dom-Sáb + `DateTimePicker` nativo para la hora), cableada en las 10 tools de VITA (9 vía sus `screens/*.tsx` + Gratitud directo en `app/gratitud.tsx`, que no usa `PinButton`) y en `/coach-recurso`. Ojo: `screens/DiarioScreen.tsx` es código **muerto** — `/diario` en realidad lo resuelve `app/diario.tsx`, un archivo aparte; ahí quedó cableada la campanita. `app/mis-recordatorios.tsx` (RF3): lista con día/hora, toggle enabled/disabled y borrar; entry point nuevo en el header de Recursos. Fix de paso: el `DateTimePicker` en modo `spinner` (iOS) no tenía `textColor`, texto blanco invisible sobre el fondo crema del sheet. Todo probado end-to-end en device (crear, editar, activar/desactivar, borrar, notificación real recibida).
+- **Testing del rediseño coach F1-F4 de Andre (sin probar en device hasta hoy) — 1 bug real.** Swipe-back en perfil: OK. Aceptar/rechazar reserva (F2): OK (el error de Daily.co que apareció fue por una reserva de prueba mía sin `sala_id`, no un bug real). Tags de Chats (F3, "SESIÓN ACEPTADA"/"RECURSO"/Archivados): lógica correcta, simplemente no había data que calificara todavía. **Bug encontrado y arreglado en F4:** la fila de "Mis recursos" no tenía `onPress` — solo el botón "Recomendar" reaccionaba al toque, tocar el resto de la card no hacía nada.
+- **Housekeeping:** `node_modules 2/` (223MB, 26.418 archivos) estaba trackeado en git por un `.gitignore` que solo excluía `node_modules/` a secas — sacado del tracking y del disco, `.gitignore` corregido, typecheck quedó 100% limpio. `SCHEMA.md`: corregidas dos marcas "PENDIENTE de correr" obsoletas (pagos v1 y el trigger de reembolso ya estaban corridos en prod) y cerrada la nota del hueco 05/07→13/07 ("puertas de Conexiones" resultó ser frontend puro, sin migración propia).
+- **Las 3 decisiones abiertas que había dejado Andre — resueltas:**
+  1. Sacado el "Mis recursos" duplicado de `CoachProfileScreen` (queda solo en el tab F4, que ya tiene stats/CTAs/Recomendar). Limpiado el state/query huérfano.
+  2. **`resource_events` instrumentado.** `lib/resourceEvents.ts` (`logResourceEvent`, fire-and-forget) dispara `view` (al cargar el recurso), `play` (primer play de audio, primer `playing` de video, o abrir podcast en la fuente externa), `complete` (fin de audio/video), y `coach_profile_visit` (nombre del coach ahora tappable → `/profesional`). `booking_started` queda sin instrumentar (requeriría hilar `resource_id` a través de `ProfesionalScreen`→`BookingScreen`). Como ni `resource_events` ni `resource_saves` tienen SELECT para `authenticated`, se agregaron `get_my_resource_counts()` y `get_my_resource_stats_month()` (`SECURITY DEFINER`, mismo patrón que `get_my_resource_feedback_summary`) para que el coach lea sus agregados. El tab F4 ("Este mes" + ▶/◈ por recurso) ya no muestra `0` hardcodeado.
+  3. **Grabador de audio real.** `components/AudioRecorderModal.tsx` (expo-audio, `RecordingPresets.HIGH_QUALITY` → `.m4a`): grabar → parar → escuchar la previa → usar o regrabar, con el mismo límite de 30MB. Botón "Grabar ahora" en `coach-recurso-nuevo.tsx`, arriba del selector de archivo existente. Fix de paso: `useAudioRecorderState` pollea cada 200ms sin importar la fase — dejarlo así durante la reproducción de la previa (que también pollea) causaba lentitud notable; ahora solo pollea rápido mientras graba de verdad.
+- Se corrió en Supabase: `scripts/add-resource-events-stats-functions.sql`.
+
+**Pendiente para la próxima sesión:**
+- Mercado Pago sigue arrastrado: deep link `viveapp://coach/mp-connected` sin handler, y confirmar si las 5 edge functions siguen desplegadas (sesión 63 decía que sí, pero conviene verificar en vivo como pasó con los otros "ya corridos" de esta semana).
+- `booking_started` sin instrumentar en `resource_events` — el funnel completo (view→play→complete→coach_profile_visit→booking_started) queda con el último eslabón suelto.
+- El texto de permiso de micrófono custom en `app.json` (para `expo-audio`) no se prueba hasta que exista una build nativa propia — en Expo Go se ve el texto genérico.
+
+---
+
 ## 2026-07-17 — Joaquín (sesión 65)
 
 **Tocado:** `app/_layout.tsx`, `lib/resourceReminders.ts` (nuevo), `SCHEMA.md`
