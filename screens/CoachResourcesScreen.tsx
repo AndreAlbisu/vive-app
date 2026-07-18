@@ -153,7 +153,11 @@ export default function CoachResourcesScreen() {
               const metaLine = [fmt.label, fmtDuration(r.duration_seconds), r.topic_id ? TOPIC_LABEL[r.topic_id] : '']
                 .filter(Boolean).join(' · ');
               return (
-                <View key={r.id} style={s.res}>
+                <TouchableOpacity
+                  key={r.id}
+                  style={s.res}
+                  activeOpacity={0.85}
+                  onPress={() => router.push({ pathname: '/coach-recurso', params: { id: r.id } } as any)}>
                   <View style={s.resTop}>
                     <View style={[s.cover, { backgroundColor: fmt.color }]}>
                       <Feather name={fmt.icon} size={16} color="#FFF6EC" />
@@ -178,7 +182,7 @@ export default function CoachResourcesScreen() {
                   {r.status === 'rejected' && r.rejection_rule ? (
                     <Text style={s.rejectNote}>Rechazado — regla {r.rejection_rule}. Editá y volvé a enviar.</Text>
                   ) : null}
-                </View>
+                </TouchableOpacity>
               );
             })
           )}
