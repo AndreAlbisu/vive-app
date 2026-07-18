@@ -61,6 +61,8 @@ export default function CoachResourcesScreen() {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [resources, setResources] = useState<CoachResource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [monthStats, setMonthStats] = useState({ plays: 0, saves: 0, profile_visits: 0 });
+  const [counts, setCounts] = useState<Record<string, { plays: number; saves: number }>>({});
 
   const load = useCallback(async () => {
     if (!user) { setLoading(false); return; }
@@ -69,13 +71,29 @@ export default function CoachResourcesScreen() {
     setCoachId(cid);
     if (!cid) { setResources([]); setLoading(false); return; }
 
-    const { data } = await supabase
-      .from('coach_resources')
-      .select('id, title, format, status, rejection_rule, duration_seconds, topic_id')
-      .eq('coach_id', cid)
-      .neq('status', 'archived')
-      .order('created_at', { ascending: false });
+    const [{ data }, { data: monthData }, { data: countsData }] = await Promise.all([
+      supabase
+        .from('coach_resources')
+        .select('id, title, format, status, rejection_rule, duration_seconds, topic_id')
+        .eq('coach_id', cid)
+        .neq('status', 'archived')
+        .order('created_at', { ascending: false }),
+      supabase.rpc('get_my_resource_stats_month').maybeSingle(),
+      supabase.rpc('get_my_resource_counts'),
+    ]);
     setResources((data as CoachResource[]) ?? []);
+    if (monthData) {
+      setMonthStats({
+        plays: Number((monthData as any).plays ?? 0),
+        saves: Number((monthData as any).saves ?? 0),
+        profile_visits: Number((monthData as any).profile_visits ?? 0),
+      });
+    }
+    const countsMap: Record<string, { plays: number; saves: number }> = {};
+    ((countsData as any[]) ?? []).forEach(c => {
+      countsMap[c.resource_id] = { plays: Number(c.plays ?? 0), saves: Number(c.saves ?? 0) };
+    });
+    setCounts(countsMap);
     setLoading(false);
   }, [user]);
 
@@ -110,16 +128,22 @@ export default function CoachResourcesScreen() {
             <View style={s.chip}><Text style={s.chipTxt}>{publishedCount}/10 publicados</Text></View>
           </View>
 
-          {/* Stats del mes (Recursos v2 aún no instrumenta eventos → 0 con promesa) */}
+          {/* Stats del mes (resource_events instrumentado — ver get_my_resource_stats_month) */}
           <LinearGradient colors={['#42542F', '#354526']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.stats}>
             <View style={s.statsGlow} pointerEvents="none" />
             <Text style={s.eyebrow}>Este mes</Text>
             <View style={s.statsRow}>
-              {[['0', 'reproducciones'], ['0', 'guardados'], ['0', 'visitas a tu perfil']].map(([n, l]) => (
+              {[
+                [String(monthStats.plays), 'reproducciones'],
+                [String(monthStats.saves), 'guardados'],
+                [String(monthStats.profile_visits), 'visitas a tu perfil'],
+              ].map(([n, l]) => (
                 <View key={l} style={s.stat}><Text style={s.statN}>{n}</Text><Text style={s.statL}>{l}</Text></View>
               ))}
             </View>
-            <Text style={s.statsFoot}>Tus recursos empiezan a contar su historia cuando se publican.</Text>
+            {publishedCount === 0 && (
+              <Text style={s.statsFoot}>Tus recursos empiezan a contar su historia cuando se publican.</Text>
+            )}
           </LinearGradient>
 
           {/* CTAs */}
@@ -172,8 +196,8 @@ export default function CoachResourcesScreen() {
                   </View>
                   {r.status === 'published' && (
                     <View style={s.line2}>
-                      <Text style={s.line2Stat}>▶ <Text style={s.line2StatN}>0</Text></Text>
-                      <Text style={s.line2Stat}>◈ <Text style={s.line2StatN}>0</Text></Text>
+                      <Text style={s.line2Stat}>▶ <Text style={s.line2StatN}>{counts[r.id]?.plays ?? 0}</Text></Text>
+                      <Text style={s.line2Stat}>◈ <Text style={s.line2StatN}>{counts[r.id]?.saves ?? 0}</Text></Text>
                       <TouchableOpacity style={s.recBtn} activeOpacity={0.8} onPress={() => recommend(r)}>
                         <Text style={s.recBtnTxt}>Recomendar</Text>
                       </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { ReminderBell } from '@/components/ReminderBell';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { logResourceEvent } from '@/lib/resourceEvents';
 
 // ─── Constantes de formato ────────────────────────────────────────────────────
 const FORMAT_COLOR: Record<string, string> = {
@@ -85,9 +86,21 @@ type Resource = {
 };
 
 // ─── AudioPlayer ──────────────────────────────────────────────────────────────
-function AudioPlayer({ audioUrl, color }: { audioUrl: string; color: string }) {
+function AudioPlayer({
+  audioUrl,
+  color,
+  userId,
+  resourceId,
+}: {
+  audioUrl: string;
+  color: string;
+  userId: string | undefined;
+  resourceId: string;
+}) {
   const player = useAudioPlayer(audioUrl);
   const status = useAudioPlayerStatus(player);
+  const loggedPlay = useRef(false);
+  const loggedComplete = useRef(false);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
@@ -97,6 +110,18 @@ function AudioPlayer({ audioUrl, color }: { audioUrl: string; color: string }) {
   const currentTime = status.currentTime ?? 0;
   const duration = status.duration ?? 0;
   const progress = duration > 0 ? currentTime / duration : 0;
+
+  useEffect(() => {
+    if (!userId) return;
+    if (isPlaying && !loggedPlay.current) {
+      loggedPlay.current = true;
+      logResourceEvent(userId, resourceId, 'play');
+    }
+    if (duration > 0 && currentTime >= duration - 0.5 && !loggedComplete.current) {
+      loggedComplete.current = true;
+      logResourceEvent(userId, resourceId, 'complete');
+    }
+  }, [isPlaying, currentTime, duration, userId, resourceId]);
 
   function handleSeek(pct: number) {
     if (duration > 0) player.seekTo(pct * duration);
@@ -202,16 +227,28 @@ const ap = StyleSheet.create({
 });
 
 // ─── VideoPlayer ──────────────────────────────────────────────────────────────
-function VideoPlayer({ url }: { url: string }) {
+function VideoPlayer({
+  url,
+  userId,
+  resourceId,
+}: {
+  url: string;
+  userId: string | undefined;
+  resourceId: string;
+}) {
   const { width } = useWindowDimensions();
   const [playing, setPlaying] = useState(false);
   const videoId = extractYouTubeId(url);
+  const loggedPlay = useRef(false);
 
   if (!videoId) {
     return (
       <TouchableOpacity
         style={vp.fallback}
-        onPress={() => Linking.openURL(url)}
+        onPress={() => {
+          if (userId) logResourceEvent(userId, resourceId, 'play');
+          Linking.openURL(url);
+        }}
         activeOpacity={0.85}>
         <Ionicons name="videocam-outline" size={24} color="#7B5EA7" />
         <Text style={vp.fallbackText}>Ver en YouTube</Text>
@@ -231,7 +268,14 @@ function VideoPlayer({ url }: { url: string }) {
         videoId={videoId}
         play={playing}
         onChangeState={(state: string) => {
-          if (state === 'ended') setPlaying(false);
+          if (state === 'playing' && !loggedPlay.current && userId) {
+            loggedPlay.current = true;
+            logResourceEvent(userId, resourceId, 'play');
+          }
+          if (state === 'ended') {
+            setPlaying(false);
+            if (userId) logResourceEvent(userId, resourceId, 'complete');
+          }
         }}
       />
     </View>
@@ -264,12 +308,23 @@ const vp = StyleSheet.create({
 });
 
 // ─── PodcastCTA ───────────────────────────────────────────────────────────────
-function PodcastCTA({ url }: { url: string }) {
+function PodcastCTA({
+  url,
+  userId,
+  resourceId,
+}: {
+  url: string;
+  userId: string | undefined;
+  resourceId: string;
+}) {
   const source = podcastSource(url);
   return (
     <TouchableOpacity
       style={pc.btn}
-      onPress={() => Linking.openURL(url)}
+      onPress={() => {
+        if (userId) logResourceEvent(userId, resourceId, 'play');
+        Linking.openURL(url);
+      }}
       activeOpacity={0.85}>
       <Ionicons name="mic-outline" size={20} color="#fff" />
       <Text style={pc.text}>Abrir en {source}</Text>
@@ -341,6 +396,7 @@ export default function CoachRecursoScreen() {
       .then(async ({ data }) => {
         if (!data) { setLoading(false); return; }
         setResource(data as any);
+        if (user) logResourceEvent(user.id, data.id, 'view');
 
         if (data.format === 'audio' && data.storage_path) {
           const { data: signed } = await supabase.storage
@@ -403,6 +459,14 @@ export default function CoachRecursoScreen() {
 
   const color = FORMAT_COLOR[resource.format] ?? ViveColors.primary;
   const coachName = (resource.coaches as any)?.profiles?.name ?? '';
+  const coachProfileId = resource.coaches?.profile_id ?? null;
+  const resourceId = resource.id;
+
+  function goToCoachProfile() {
+    if (!coachProfileId) return;
+    if (user) logResourceEvent(user.id, resourceId, 'coach_profile_visit');
+    router.push({ pathname: '/profesional', params: { profileId: coachProfileId } } as any);
+  }
 
   return (
     <AppBg>
@@ -445,12 +509,16 @@ export default function CoachRecursoScreen() {
 
           {/* Video player — arriba de todo */}
           {resource.format === 'video' && resource.url && (
-            <VideoPlayer url={resource.url} />
+            <VideoPlayer url={resource.url} userId={user?.id} resourceId={resource.id} />
           )}
 
           {/* Info */}
           <Text style={s.title}>{resource.title}</Text>
-          {coachName ? <Text style={s.coach}>Por {coachName}</Text> : null}
+          {coachName ? (
+            <TouchableOpacity onPress={goToCoachProfile} disabled={!coachProfileId} hitSlop={4}>
+              <Text style={[s.coach, coachProfileId && s.coachLink]}>Por {coachName}</Text>
+            </TouchableOpacity>
+          ) : null}
           {resource.duration_seconds ? (
             <Text style={s.duration}>{fmtDuration(resource.duration_seconds)}</Text>
           ) : null}
@@ -460,7 +528,7 @@ export default function CoachRecursoScreen() {
 
           {/* Reproductor según formato */}
           {resource.format === 'audio' && audioUrl && (
-            <AudioPlayer audioUrl={audioUrl} color={color} />
+            <AudioPlayer audioUrl={audioUrl} color={color} userId={user?.id} resourceId={resource.id} />
           )}
           {resource.format === 'audio' && !audioUrl && !loading && (
             <View style={s.audioUnavailable}>
@@ -470,7 +538,7 @@ export default function CoachRecursoScreen() {
           )}
 
           {resource.format === 'podcast' && resource.url && (
-            <PodcastCTA url={resource.url} />
+            <PodcastCTA url={resource.url} userId={user?.id} resourceId={resource.id} />
           )}
 
           {resource.format === 'lectura' && resource.body_md && (
@@ -543,6 +611,9 @@ const s = StyleSheet.create({
     color: '#6B7A56',
     fontStyle: 'italic',
     marginBottom: 4,
+  },
+  coachLink: {
+    textDecorationLine: 'underline',
   },
   duration: {
     fontFamily: ViveFonts.medium,
