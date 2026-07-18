@@ -6,6 +6,7 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
+import { ReminderBell } from '@/components/ReminderBell';
 import { ensureAnonSession } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 
@@ -85,7 +86,10 @@ export default function AnclajeScreen() {
             <Text style={s.backText}>Atrás</Text>
           </TouchableOpacity>
           <Text style={s.title}>Anclaje</Text>
-          <PinButton resourceId="anclaje" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <ReminderBell kind="tool" ref="anclaje" title="Anclaje" />
+            <PinButton resourceId="anclaje" />
+          </View>
         </View>
 
         <View style={s.content}>

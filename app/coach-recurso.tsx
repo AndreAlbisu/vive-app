@@ -18,6 +18,7 @@ import YoutubeIframe from 'react-native-youtube-iframe';
 import Markdown from 'react-native-markdown-display';
 import { ViveFonts, ViveColors } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
+import { ReminderBell } from '@/components/ReminderBell';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
@@ -413,13 +414,16 @@ export default function CoachRecursoScreen() {
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={8}>
             <Ionicons name="arrow-back" size={22} color={ViveColors.accent} />
           </TouchableOpacity>
-          <TouchableOpacity style={s.saveBtn} onPress={toggleSave} hitSlop={8}>
-            <Ionicons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={22}
-              color={saved ? ViveColors.primary : ViveColors.accent}
-            />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            <ReminderBell kind="coach_resource" ref={resource.id} title={resource.title} />
+            <TouchableOpacity style={s.saveBtn} onPress={toggleSave} hitSlop={8}>
+              <Ionicons
+                name={saved ? 'bookmark' : 'bookmark-outline'}
+                size={22}
+                color={saved ? ViveColors.primary : ViveColors.accent}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView

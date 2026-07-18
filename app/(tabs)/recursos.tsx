@@ -658,6 +658,12 @@ export default function RecursosScreen() {
                 <StreakChip streak={streak} weekActivity={weekActivity} />
               )}
               <TouchableOpacity
+                onPress={() => (user ? router.push('/mis-recordatorios' as any) : requestAuth())}
+                hitSlop={8}
+                activeOpacity={0.7}>
+                <Ionicons name="notifications-outline" size={22} color={FOREST} />
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={() => (user ? router.push('/recursos-guardados') : requestAuth())}
                 hitSlop={8}
                 activeOpacity={0.7}>

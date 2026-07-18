@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
+import { ReminderBell } from '@/components/ReminderBell';
 import { ensureAnonSession } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 
@@ -103,7 +104,10 @@ export default function RespiracionScreen() {
             <Text style={s.backText}>Atrás</Text>
           </TouchableOpacity>
           <Text style={s.title}>Respiración</Text>
-          <PinButton resourceId="respiracion" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <ReminderBell kind="tool" ref="respiracion" title="Respiración" />
+            <PinButton resourceId="respiracion" />
+          </View>
         </View>
 
         <View style={s.content}>

@@ -17,6 +17,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { ReminderBell } from '@/components/ReminderBell';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type MoodLevel = 1 | 2 | 3 | 4 | 5;
@@ -129,7 +130,10 @@ export default function DiarioScreen() {
           <MaterialCommunityIcons name="arrow-left" size={22} color={ViveColors.text} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Diario</Text>
-        <Text style={s.headerDate}>{formatToday()}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <ReminderBell kind="tool" ref="diario" title="Diario" />
+          <Text style={s.headerDate}>{formatToday()}</Text>
+        </View>
       </View>
       <View style={s.headerDivider} />
 

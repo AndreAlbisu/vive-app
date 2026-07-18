@@ -18,6 +18,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { logError } from '@/lib/logging';
 import { recordCompletion } from '@/lib/resourceCompletions';
+import { ReminderBell } from '@/components/ReminderBell';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface GratitudeEntry {
@@ -128,7 +129,10 @@ export default function GratitudScreen() {
           <Text style={s.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={s.headerTitle}>Gratitud</Text>
-        <Text style={s.headerDate}>{formatToday()}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <ReminderBell kind="tool" ref="gratitud" title="Gratitud" />
+          <Text style={s.headerDate}>{formatToday()}</Text>
+        </View>
       </View>
       <View style={s.headerDivider} />
 
