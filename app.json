@@ -64,7 +64,12 @@
           "calendarPermission": "Vive necesita acceso al calendario para agregar tus sesiones."
         }
       ],
-      "expo-audio"
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Vive necesita acceso al micrófono para grabar tus recursos de audio."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

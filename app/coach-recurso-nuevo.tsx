@@ -20,6 +20,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
 import { DOORS } from '@/constants/conexionesDoors';
 import { useAuth } from '@/context/AuthContext';
+import { AudioRecorderModal, type RecordedAsset } from '@/components/AudioRecorderModal';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const FORMATS = [
@@ -58,6 +59,12 @@ export default function CoachRecursoNuevoScreen() {
   const [audioAsset, setAudioAsset] = useState<{ name: string; uri: string; mimeType: string | undefined; size: number | undefined } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [recorderOpen, setRecorderOpen] = useState(false);
+
+  function onRecorded(asset: RecordedAsset) {
+    setAudioAsset(asset);
+    setRecorderOpen(false);
+  }
 
   async function pickAudio() {
     const result = await DocumentPicker.getDocumentAsync({
@@ -237,10 +244,14 @@ export default function CoachRecursoNuevoScreen() {
           {formato === 'audio' && (
             <>
               <Text style={s.label}>Archivo de audio <Text style={s.required}>*</Text></Text>
+              <TouchableOpacity style={s.recordBtn} onPress={() => setRecorderOpen(true)} activeOpacity={0.85}>
+                <Ionicons name="mic" size={18} color="#fff" />
+                <Text style={s.recordBtnText}>Grabar ahora</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={s.filePickerBtn} onPress={pickAudio} activeOpacity={0.8}>
                 <Ionicons name="cloud-upload-outline" size={20} color="#C1694F" />
                 <Text style={s.filePickerText}>
-                  {audioAsset ? audioAsset.name : 'Seleccionar mp3 / m4a (máx. 30 MB)'}
+                  {audioAsset ? audioAsset.name : 'o elegí un archivo mp3 / m4a (máx. 30 MB)'}
                 </Text>
               </TouchableOpacity>
               {audioAsset?.size && (
@@ -333,6 +344,12 @@ export default function CoachRecursoNuevoScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </SafeAreaView>
+
+      <AudioRecorderModal
+        visible={recorderOpen}
+        onClose={() => setRecorderOpen(false)}
+        onDone={onRecorded}
+      />
     </AppBg>
   );
 }
@@ -459,6 +476,21 @@ const s = StyleSheet.create({
     color: '#F3EEDF',
   },
 
+  recordBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#C1694F',
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginBottom: 10,
+  },
+  recordBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 14,
+    color: '#fff',
+  },
   filePickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
