@@ -20,6 +20,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
+import { logResourceEvent } from '@/lib/resourceEvents';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 const DEFAULT_PROFESIONAL = {
@@ -97,6 +98,7 @@ export default function ProfesionalScreen() {
     priceFrom?: string;
     coachId?: string;
     profileId?: string;
+    resourceId?: string;
   }>();
   const profileId = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
   const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
@@ -406,6 +408,8 @@ export default function ProfesionalScreen() {
               activeOpacity={0.85}
               onPress={() => {
                 if (!isLoggedIn) { requestAuth(); return; }
+                const resourceId = Array.isArray(params.resourceId) ? params.resourceId[0] : params.resourceId;
+                if (resourceId && user) logResourceEvent(user.id, resourceId, 'booking_started');
                 router.push({
                   pathname: '/booking-calendar',
                   params: {

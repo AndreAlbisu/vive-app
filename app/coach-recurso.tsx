@@ -465,7 +465,7 @@ export default function CoachRecursoScreen() {
   function goToCoachProfile() {
     if (!coachProfileId) return;
     if (user) logResourceEvent(user.id, resourceId, 'coach_profile_visit');
-    router.push({ pathname: '/profesional', params: { profileId: coachProfileId } } as any);
+    router.push({ pathname: '/profesional', params: { profileId: coachProfileId, resourceId } } as any);
   }
 
   return (
