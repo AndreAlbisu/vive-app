@@ -21,7 +21,7 @@
 
 **Pendiente para la próxima sesión:**
 - Mercado Pago sigue arrastrado: deep link `viveapp://coach/mp-connected` sin handler, y confirmar si las 5 edge functions siguen desplegadas (sesión 63 decía que sí, pero conviene verificar en vivo como pasó con los otros "ya corridos" de esta semana).
-- `booking_started` se agregó sin probar en device (a diferencia del resto de la sesión) — falta confirmar que el evento llega a `resource_events` al tocar "Reservar sesión" desde un perfil de coach al que se entró por un recurso.
+- ~~`booking_started` sin probar en device~~ — probado, llega bien a `resource_events`. Funnel completo confirmado.
 - El texto de permiso de micrófono custom en `app.json` (para `expo-audio`) no se prueba hasta que exista una build nativa propia — en Expo Go se ve el texto genérico.
 
 ---
