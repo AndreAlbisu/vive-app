@@ -19,11 +19,11 @@ import { VITA_TOOL_MAP } from '@/constants/vitaTools';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { MoodCheckIn } from '@/components/MoodCheckIn';
+import { VitaWordmark } from '@/components/VitaWordmark';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
-import { getSobreTiInsight } from '@/lib/moodInsights';
 import Svg, { Circle } from 'react-native-svg';
 
 type PinnedResource = { id: string; title: string; icon: string; route: string | undefined };
@@ -45,11 +45,8 @@ function formatSessionDate(dateStr: string): string {
   return `${dayName} ${day} de ${MONTHS_ES[month - 1]}`;
 }
 
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return '¡Buen día!';
-  if (h < 20) return '¡Buenas tardes!';
-  return '¡Buenas noches!';
+function getGreeting(firstName: string | undefined): string {
+  return firstName ? `¡Hola, ${firstName}!` : '¡Hola!';
 }
 
 const GLASS = 'rgba(255,248,240,0.55)';
@@ -83,7 +80,6 @@ export default function InicioScreen() {
   const { entries: moodEntries } = useMoodHistory(user?.id, 7);
   const today = new Date().toISOString().split('T')[0];
   const todayMoodEntry = moodEntries.find(e => e.entry_date === today);
-  const sobreTiText = getSobreTiInsight(moodEntries);
 
   const a1   = useRef(new Animated.Value(0)).current;
   const aMood = useRef(new Animated.Value(0)).current;
@@ -246,7 +242,7 @@ export default function InicioScreen() {
 
           {/* ── 1. TOP BAR: logo + campana + avatar ── */}
           <Animated.View style={[s.topBar, fadeUp(a1)]}>
-            <Text style={s.logo}>vita</Text>
+            <VitaWordmark />
             <View style={s.topRight}>
               <TouchableOpacity
                 onPress={() => router.push('/notifications')}
@@ -284,8 +280,8 @@ export default function InicioScreen() {
 
           {/* ── 2. SALUDO ── */}
           <Animated.View style={[s.greetingBlock, fadeUp(a1)]}>
-            <Text style={s.greetingLine1}>{getGreeting()}</Text>
-            <Text style={s.greetingLine2}>¿cómo estás hoy?</Text>
+            <Text style={s.greetingLine1}>{getGreeting(user?.user_metadata?.name?.split(' ')[0])}</Text>
+            <Text style={s.greetingLine2}>¿Cómo venís hoy?</Text>
           </Animated.View>
 
           {/* ── 3. MOOD CHECK-IN ── */}
@@ -308,8 +304,9 @@ export default function InicioScreen() {
                 <VennSvg />
               </View>
               <View style={s.sobreTiRight}>
-                <Text style={s.sobreTiTitle}>Sobre ti</Text>
-                <Text style={s.sobreTiText}>{sobreTiText}</Text>
+                <Text style={s.sobreTiTitle}>Sobre vos</Text>
+                <Text style={s.sobreTiText}>Anotar cómo te sentís nos ayuda a conocerte y a hacer un seguimiento real de cómo venís.</Text>
+                <Text style={s.sobreTiCta}>Ir a tu progreso →</Text>
               </View>
             </TouchableOpacity>
           </Animated.View>
@@ -367,7 +364,7 @@ export default function InicioScreen() {
 
           {/* ── 6. TUS RECURSOS PINNEADOS ── */}
           <Animated.View style={fadeUp(a4)}>
-            <Text style={[s.sectionTitle, { marginTop: 20 }]}>Tus recursos pinneados</Text>
+            <Text style={[s.sectionTitle, { marginTop: 20 }]}>Tus recursos a mano</Text>
             {displayResources.length === 0 ? (
               <TouchableOpacity
                 style={s.pinnedEmpty}
@@ -377,7 +374,7 @@ export default function InicioScreen() {
                 <MaterialCommunityIcons name="pin-outline" size={22} color={ViveColors.primary} />
                 <View style={s.pinnedEmptyText}>
                   <Text style={s.pinnedEmptyTitle}>Fijá tus recursos favoritos acá</Text>
-                  <Text style={s.pinnedEmptySub}>Entrá a un recurso y tocá el pin para tenerlo a mano (hasta 4).</Text>
+                  <Text style={s.pinnedEmptySub}>Entrá a un recurso y tocá el marcador para tenerlo a mano (hasta 4).</Text>
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.45)" />
               </TouchableOpacity>
@@ -422,13 +419,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 6,
-  },
-  logo: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 22,
-    color: '#565E32',
-    letterSpacing: 4,
+    paddingBottom: 2,
   },
   topRight: {
     flexDirection: 'row',
@@ -467,7 +458,7 @@ const s = StyleSheet.create({
   // ── 2. Saludo ──────────────────────────────────────────────────────────────
   greetingBlock: {
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 6,
     paddingBottom: 18,
   },
   greetingLine1: {
@@ -482,7 +473,7 @@ const s = StyleSheet.create({
     color: '#565E32',
     lineHeight: 36,
   },
-  // ── 3. Sobre ti ────────────────────────────────────────────────────────────
+  // ── 3. Sobre vos ───────────────────────────────────────────────────────────
   sobreTiCard: {
     marginHorizontal: 18,
     marginBottom: 22,
@@ -522,6 +513,12 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: '#87835C',
     lineHeight: 18,
+  },
+  sobreTiCta: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 12,
+    color: '#565E32',
+    marginTop: 6,
   },
 
   // ── 4. Recursos útiles ─────────────────────────────────────────────────────

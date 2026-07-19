@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
+import { VitaWordmark } from '@/components/VitaWordmark';
 
 type UniversoId = 'cuerpo' | 'mente' | 'alma';
 
@@ -87,7 +88,7 @@ export default function OnboardingScreen4() {
             <Text style={styles.backText}>Atrás</Text>
           </TouchableOpacity>
           <View style={styles.logoRow}>
-            <Text style={styles.logo}>VITA</Text>
+            <VitaWordmark />
           </View>
           <View style={styles.headerSide} />
         </Animated.View>
@@ -105,7 +106,7 @@ export default function OnboardingScreen4() {
               ¿Qué aspecto querés explorar?
             </Animated.Text>
             <Animated.Text style={[styles.subtitle, fadeUp(subtitleAnim)]}>
-              Elegí por donde querés arrancar
+              Elegí por dónde querés arrancar
             </Animated.Text>
           </View>
 
@@ -178,12 +179,6 @@ const styles = StyleSheet.create({
     color: 'rgba(135,131,92,0.80)',
   },
   logoRow: { flexDirection: 'row', alignItems: 'center' },
-  logo: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 20,
-    color: '#565E32',
-    letterSpacing: 4,
-  },
   headerSide: { minWidth: 60 },
   progressArea: {
     paddingHorizontal: 24,

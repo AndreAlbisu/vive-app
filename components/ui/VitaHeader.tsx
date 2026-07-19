@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { ViveFonts } from '@/constants/theme';
 import { colors } from '@/theme/tokens';
+import { VitaWordmark } from '@/components/VitaWordmark';
 
 type Props = {
   userName?: string;
@@ -10,7 +11,7 @@ type Props = {
 export function VitaHeader({ userName, right }: Props) {
   return (
     <View style={s.bar}>
-      <Text style={s.logo}>vita</Text>
+      <VitaWordmark />
       {right ?? (
         userName ? (
           <View style={s.avatar}>
@@ -30,12 +31,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 12,
     paddingBottom: 6,
-  },
-  logo: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 17,
-    color: colors.textPrimary,
-    letterSpacing: 4,
   },
   avatar: {
     width: 36,

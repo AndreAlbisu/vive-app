@@ -1,4 +1,4 @@
-// VIVE Design System
+// VITA Design System
 export const ViveColors = {
   primary: '#C1694F',    // Terracota
   background: '#F7EFE4', // Crema cálido
@@ -13,6 +13,7 @@ export const ViveFonts = {
   semibold: 'Poppins_600SemiBold',
   bold: 'Poppins_700Bold',
   frauncesSerif: 'Fraunces_700Bold',
+  frauncesSemiBold: 'Fraunces_600SemiBold',
   spaceGroteskSemibold: 'SpaceGrotesk_600SemiBold',
   spaceGroteskRegular: 'SpaceGrotesk_400Regular',
 };

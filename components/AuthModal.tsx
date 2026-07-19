@@ -16,6 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { VitaWordmark } from '@/components/VitaWordmark';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -126,7 +127,7 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
         >
           <Pressable style={s.card} onPress={() => {}}>
 
-            <Text style={s.logo}>vive</Text>
+            <VitaWordmark style={{ alignSelf: 'center', marginBottom: 2 }} />
             <Text style={s.title}>Para continuar, ingresá a tu cuenta</Text>
             <Text style={s.subtitle}>Es gratis y solo tarda un segundo.</Text>
 
@@ -274,14 +275,6 @@ const s = StyleSheet.create({
     }),
   },
 
-  logo: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 28,
-    color: ViveColors.primary,
-    textAlign: 'center',
-    letterSpacing: -0.5,
-    marginBottom: 2,
-  },
   title: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,

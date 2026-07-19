@@ -20,6 +20,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { AppBg } from '@/components/ui/AppBg';
+import { VitaWordmark } from '@/components/VitaWordmark';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -117,7 +118,7 @@ export default function LoginScreen() {
 
             {/* Logo */}
             <Animated.View style={[s.logoWrap, fadeUp(logoAnim)]}>
-              <Text style={s.logo}>VITA</Text>
+              <VitaWordmark />
             </Animated.View>
 
             {/* Heading */}
@@ -255,12 +256,6 @@ const s = StyleSheet.create({
   },
 
   logoWrap: { alignItems: 'center' },
-  logo: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 36,
-    color: '#565E32',
-    letterSpacing: 6,
-  },
 
   headingArea: { alignItems: 'center', gap: 8 },
   heading: {

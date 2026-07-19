@@ -6,7 +6,7 @@ import {
   Poppins_600SemiBold,
   Poppins_700Bold,
 } from '@expo-google-fonts/poppins';
-import { Fraunces_700Bold } from '@expo-google-fonts/fraunces';
+import { Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraunces';
 import {
   SpaceGrotesk_400Regular,
   SpaceGrotesk_600SemiBold,
@@ -103,6 +103,7 @@ export default function RootLayout() {
     Poppins_500Medium,
     Poppins_600SemiBold,
     Poppins_700Bold,
+    Fraunces_600SemiBold,
     Fraunces_700Bold,
     SpaceGrotesk_400Regular,
     SpaceGrotesk_600SemiBold,

@@ -22,6 +22,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { AppBg } from '@/components/ui/AppBg';
+import { VitaWordmark } from '@/components/VitaWordmark';
 import { supabase } from '@/lib/supabase';
 
 if (Platform.OS === 'android') {
@@ -144,7 +145,7 @@ export default function RegisterScreen() {
         >
           {/* Logo */}
           <Animated.View style={[s.logoWrap, fadeUp(logoAnim)]}>
-            <Text style={s.logo}>VITA</Text>
+            <VitaWordmark />
           </Animated.View>
 
           {/* ── Heading ──────────────────────────────────────────── */}
@@ -312,7 +313,7 @@ export default function RegisterScreen() {
                     >
                       Política de privacidad
                     </Text>
-                    {' de VIVE'}
+                    {' de VITA'}
                   </Text>
                 </TouchableOpacity>
 
@@ -354,19 +355,19 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false} style={s.modalBody}>
-              <Text style={s.modalSection}>Bienvenida/o a VIVE</Text>
+              <Text style={s.modalSection}>Bienvenida/o a VITA</Text>
               <Text style={s.modalText}>
-                VIVE es una plataforma que conecta personas con profesionales independientes del bienestar (coaches, terapeutas, nutricionistas y otros). Al crear tu cuenta aceptás estos términos.
+                VITA es una plataforma que conecta personas con profesionales independientes del bienestar (coaches, terapeutas, nutricionistas y otros). Al crear tu cuenta aceptás estos términos.
               </Text>
 
               <Text style={s.modalSection}>Qué hacemos y qué no hacemos</Text>
               <Text style={s.modalText}>
-                VIVE actúa como canal de conexión entre vos y los profesionales. No diagnosticamos ni tratamos ninguna condición de salud. Las recomendaciones que recibís de los profesionales son orientativas y no reemplazan la consulta médica.
+                VITA actúa como canal de conexión entre vos y los profesionales. No diagnosticamos ni tratamos ninguna condición de salud. Las recomendaciones que recibís de los profesionales son orientativas y no reemplazan la consulta médica.
               </Text>
 
               <Text style={s.modalSection}>Profesionales independientes</Text>
               <Text style={s.modalText}>
-                Los profesionales que usan VIVE son independientes y son responsables de su propia práctica, habilitaciones y del contenido que comparten. VIVE no avala ni garantiza los resultados de ninguna sesión o consulta.
+                Los profesionales que usan VITA son independientes y son responsables de su propia práctica, habilitaciones y del contenido que comparten. VITA no avala ni garantiza los resultados de ninguna sesión o consulta.
               </Text>
 
               <Text style={s.modalSection}>Tus conversaciones</Text>
@@ -376,7 +377,7 @@ export default function RegisterScreen() {
 
               <Text style={s.modalSection}>Uso responsable</Text>
               <Text style={s.modalText}>
-                Al usar VIVE te comprometés a brindar información verdadera y a usar la plataforma de forma respetuosa. VIVE puede suspender cuentas que violen estos términos.
+                Al usar VITA te comprometés a brindar información verdadera y a usar la plataforma de forma respetuosa. VITA puede suspender cuentas que violen estos términos.
               </Text>
 
               <Text style={s.modalFooterNote}>Última actualización: junio 2026</Text>
@@ -406,7 +407,7 @@ export default function RegisterScreen() {
 
               <Text style={s.modalSection}>Cómo protegemos tus datos</Text>
               <Text style={s.modalText}>
-                Protegemos tus conversaciones con controles de acceso: ningún otro usuario de VIVE puede ver tus chats con los profesionales. No usamos el contenido de esas conversaciones con fines comerciales ni lo compartimos con terceros, y solo lo revisamos ante un requerimiento legal.
+                Protegemos tus conversaciones con controles de acceso: ningún otro usuario de VITA puede ver tus chats con los profesionales. No usamos el contenido de esas conversaciones con fines comerciales ni lo compartimos con terceros, y solo lo revisamos ante un requerimiento legal.
               </Text>
 
               <Text style={s.modalSection}>Lo que nunca hacemos</Text>
@@ -452,12 +453,6 @@ const s = StyleSheet.create({
   // Logo
   logoWrap: {
     alignItems: 'center',
-  },
-  logo: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 42,
-    color: '#565E32',
-    letterSpacing: 6,
   },
 
   // Heading
