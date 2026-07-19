@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-07-19 — Joaquín (sesión 67)
+
+**Tocado:** `app/(tabs)/_layout.tsx`, `app/(tabs)/index.tsx`, `app/(tabs)/recursos.tsx`, `app/_layout.tsx`, `app/coach-recurso-nuevo.tsx`, `app/index.tsx`, `app/progreso.tsx`, `components/AnimatedGradientCard.tsx`, `components/AuthModal.tsx`, `components/MoodCheckIn.tsx`, `components/ui/VitaHeader.tsx`, `components/VitaWordmark.tsx` (nuevo), `constants/theme.ts`, `lib/resourceReminders.ts`, `screens/CoachLoginScreen.tsx`, `screens/LoginScreen.tsx`, `screens/OnboardingBifurcacion.tsx`, `screens/OnboardingScreen2.tsx`, `screens/OnboardingScreen3.tsx`, `screens/OnboardingScreen4.tsx`, `screens/OnboardingScreen5.tsx`, `screens/ProfesionalScreen.tsx`, `screens/RegisterScreen.tsx`, `screens/SalaScreen.tsx`, `screens/SessionsScreen.tsx`
+
+**Resumen — sesión de copy/estilo puro, sin cambios de lógica ni de datos:**
+- **Rebrand VIVE→VITA + voseo.** Relevadas y reemplazadas todas las menciones de "VIVE"/"Vive"/"vive" (marca) por "VITA"/"Vita"/"vita" en toda la app — 20 ocurrencias entre textos y comentarios de código. Se dejaron intactos los identificadores internos que coinciden con el string ("vive_tooltip_*", "vive_quiz_topic", el deep link `viveapp://`, la key de encripción `vive_mvp_key_2026`) porque tocarlos rompería estado guardado/deep links/cifrado. Barrido de tuteo: de toda la app, el único resto real era "Sobre ti" → pasado a voseo ("Sobre vos"); el resto de la app ya estaba en voseo consistente.
+- **Cambios puntuales de copy**: selección de rol, login coach, "¿Cómo te gustaría empezar?", onboarding pasos 1-2 (subtítulos), tab bar ("Mis salas" → "Mensajes"), y varios en Inicio: saludo (ya no depende de la hora, usa el nombre si existe: "¡Hola!" / "¡Hola, {nombre}!"), subsaludo en voseo, check-in (se sacó el título fijo "CHECK-IN DE HOY", ahora muestra la fecha de hoy dinámica tipo "Domingo 19 de julio"), etiquetas de ánimo (Normal/Brillando reemplazan Neutral/Genial, actualizado también en `progreso.tsx` para que coincida), "Tus recursos a mano" (antes "pinneados").
+- **Wordmark "vita" unificado.** Antes vivía duplicado en ~9 lugares con estilos distintos (mayúsculas vs. minúsculas, bold vs. semibold, tracking alto, colores distintos: splash con un ícono de brote reemplazando una letra, Home, AuthModal, VitaHeader de Progreso, onboarding 3-5, login, registro). Se creó `components/VitaWordmark.tsx` como componente único: Fraunces SemiBold, minúscula, sin tracking, ~28px, oliva `#565E32`. Hubo que agregar `Fraunces_600SemiBold` a la carga de fuentes (`app/_layout.tsx`) — antes solo estaba `Fraunces_700Bold`. En el splash se simplificó el tratamiento (se sacó el ícono de brote) para que sea igual en todos lados — es la única pantalla donde el copy pedía explícitamente "splash" en la unificación, así que se priorizó consistencia sobre el detalle decorativo; queda anotado por si prefieren mantenerlo distinto ahí.
+- **Tarjeta "Sobre vos"**: cuerpo pasado de un insight dinámico (`lib/moodInsights.ts`, que queda sin uso pero no se borró) a texto fijo, más una línea de acción "Ir a tu progreso →" (oliva, semibold) — la navegación de la card ya existía y no se tocó.
+
+**Pendiente para la próxima sesión:**
+- Confirmar si el splash sin el ícono de brote (decisión tomada hoy para unificar el wordmark) es lo que quieren, o si prefieren un tratamiento especial solo ahí.
+- `lib/moodInsights.ts` quedó sin ningún consumidor — decidir si se borra o se deja por si se reusa en otro lado.
+- Arrastrado de sesiones anteriores: Mercado Pago (deep link `viveapp://coach/mp-connected` + confirmar deploy de edge functions).
+
+---
+
 ## 2026-07-18 — Joaquín (sesión 66)
 
 **Tocado:** `app/coach-recurso.tsx`, `app/coach-recurso-nuevo.tsx`, `app/mis-recordatorios.tsx` (nuevo), `app.json`, `components/ReminderBell.tsx` (nuevo), `components/AudioRecorderModal.tsx` (nuevo), `screens/CoachProfileScreen.tsx`, `screens/CoachResourcesScreen.tsx`, `screens/ProfesionalScreen.tsx`, `lib/resourceEvents.ts` (nuevo), `scripts/add-resource-events-stats-functions.sql` (nuevo), `SCHEMA.md`, `.gitignore`, `node_modules 2/` (eliminado del tracking)
