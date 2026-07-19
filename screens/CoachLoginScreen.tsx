@@ -60,7 +60,7 @@ export default function CoachLoginScreen() {
       await signOut();
       Alert.alert(
         'Solicitud en revisión',
-        'Ya enviaste tu solicitud para ser coach. Te avisaremos cuando VIVE la apruebe.',
+        'Ya enviaste tu solicitud para ser coach. Te avisaremos cuando VITA la apruebe.',
         [{ text: 'OK', onPress: () => router.back() }],
       );
       return;
@@ -212,7 +212,7 @@ export default function CoachLoginScreen() {
             </TouchableOpacity>
 
             <Text style={styles.note}>
-              Podés usar una cuenta existente de VIVE o crear una nueva. El rol de coach se activa cuando VIVE aprueba tu solicitud.
+              Podés usar una cuenta existente de VITA o crear una nueva. El rol de coach se activa cuando VITA aprueba tu solicitud.
             </Text>
           </Animated.View>
         </ScrollView>

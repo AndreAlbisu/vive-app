@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 import { View, Animated, Easing, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// VIVE brand colors used for aurora effect
+// VITA brand colors used for aurora effect
 const C = {
   terracota: '#E8743B',
   verde: '#6BBF8A',

@@ -242,7 +242,7 @@ export default function ProfesionalScreen() {
           {/* Badge verificado */}
           <View style={s.verifiedBadge}>
             <MaterialIcons name="verified" size={14} color="#565E32" />
-            <Text style={s.verifiedText}>Verificado por VIVE</Text>
+            <Text style={s.verifiedText}>Verificado por VITA</Text>
           </View>
         </View>
 

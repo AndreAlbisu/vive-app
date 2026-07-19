@@ -115,9 +115,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="mis-salas"
         options={{
-          title: 'Mis salas',
+          title: 'Mensajes',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} label="Mis salas">
+            <TabIcon focused={focused} color={color} label="Mensajes">
               <View>
                 <Feather name="message-square" size={22} color={color} />
                 {hasDot && <View style={styles.notifDot} />}

@@ -12,12 +12,20 @@ import { supabase } from '@/lib/supabase';
 import type { MoodEntry } from '@/hooks/useMoodHistory';
 
 const MOODS = [
-  { id: 1, label: 'Bajón'   },
-  { id: 2, label: 'Cansado' },
-  { id: 3, label: 'Neutral' },
-  { id: 4, label: 'Bien'    },
-  { id: 5, label: 'Genial'  },
+  { id: 1, label: 'Bajón'     },
+  { id: 2, label: 'Cansado'   },
+  { id: 3, label: 'Normal'    },
+  { id: 4, label: 'Bien'      },
+  { id: 5, label: 'Brillando' },
 ] as const;
+
+const DAYS_ES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+function formatTodayLabel(): string {
+  const d = new Date();
+  return `${DAYS_ES[d.getDay()]} ${d.getDate()} de ${MONTHS_ES[d.getMonth()]}`;
+}
 
 type MoodId = (typeof MOODS)[number]['id'];
 
@@ -95,7 +103,7 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth }: Props) {
 
   return (
     <View style={s.card}>
-      <Text style={s.eyebrow}>CHECK-IN DE HOY</Text>
+      <Text style={s.eyebrow}>{formatTodayLabel()}</Text>
 
       <View style={s.row}>
         {/* Hairline de fondo conectando los círculos */}
@@ -177,9 +185,8 @@ const s = StyleSheet.create({
   eyebrow: {
     fontFamily: ViveFonts.semibold,
     fontSize: 10,
-    letterSpacing: 1.2,
+    letterSpacing: 0.3,
     color: '#C1694F',
-    textTransform: 'uppercase',
     marginBottom: 9,
   },
   row: {

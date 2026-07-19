@@ -87,7 +87,7 @@ export default function OnboardingBifurcacion() {
 
       <View style={styles.content}>
         <Animated.View style={[styles.titleArea, fadeUp(titleAnim)]}>
-          <Text style={styles.title}>¿Cómo llegás a VIVE?</Text>
+          <Text style={styles.title}>¿Cómo llegás a VITA?</Text>
           <Animated.Text style={[styles.subtitle, fadeUp(subtitleAnim)]}>
             Esto nos ayuda a mostrarte lo que necesitás
           </Animated.Text>

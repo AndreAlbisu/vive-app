@@ -261,7 +261,7 @@ export default function SessionsScreen() {
       const startDate = new Date(y, mo - 1, d, h, mi, 0);
       const dur = nextSession.duration_minutes ?? 60;
       const endDate = new Date(startDate.getTime() + dur * 60_000);
-      const title = `Sesión con ${nextSession.coachName} — Vive`;
+      const title = `Sesión con ${nextSession.coachName} — Vita`;
 
       // Evitar duplicados: si ya existe un evento igual en ese rango, no re-agregar.
       const existing = await Calendar.getEventsAsync([writable.id], startDate, endDate);

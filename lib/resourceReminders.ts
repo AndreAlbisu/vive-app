@@ -77,7 +77,7 @@ export async function reconcileResourceReminders(userId: string): Promise<void> 
       await Notifications.scheduleNotificationAsync({
         identifier: identifierFor(reminder.id, day),
         content: {
-          title: 'Vive',
+          title: 'Vita',
           body: `Es hora de ${reminder.title}`,
           data: { type: 'resource_reminder', kind: reminder.kind, ref: reminder.ref, reminder_id: reminder.id },
         },

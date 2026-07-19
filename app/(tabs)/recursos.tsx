@@ -701,9 +701,9 @@ export default function RecursosScreen() {
             }}
           />
 
-          {/* 5. Herramientas de Vive */}
+          {/* 5. Herramientas de Vita */}
           <View style={s.libraryHeaderRow}>
-            <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Herramientas de Vive</Text>
+            <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Herramientas de Vita</Text>
             <Text style={s.sectionSubtitle}>Prácticas, de uso diario</Text>
           </View>
           <ToolsCarousel />

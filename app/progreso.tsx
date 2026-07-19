@@ -72,7 +72,7 @@ const CARD_MX = 18;
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 
 const MOOD_LABELS: Record<number, string> = {
-  1: 'Bajón', 2: 'Cansado', 3: 'Neutral', 4: 'Bien', 5: 'Genial',
+  1: 'Bajón', 2: 'Cansado', 3: 'Normal', 4: 'Bien', 5: 'Brillando',
 };
 const DAY_NAMES_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const DAY_LETTERS     = ['D',   'L',   'M',   'M',   'J',   'V',   'S'];
