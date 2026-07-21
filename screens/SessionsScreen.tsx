@@ -170,36 +170,36 @@ export default function SessionsScreen() {
     const specialtyMap: Record<string, string> = {};
     coachRows?.forEach(c => { if (c.specialty) specialtyMap[c.profile_id] = c.specialty; });
 
-    const results: SalaItem[] = await Promise.all(
-      salasData.map(async (sala) => {
-        const isUserSide = sala.user_id === user.id;
-        const otherId = isUserSide ? sala.coach_id : sala.user_id;
-        const otherName = profileMap[otherId]?.name ?? 'Usuario';
+    // Último mensaje de todas las salas en un solo round-trip (antes era un
+    // Promise.all con una query por sala — el N+1 se sentía fuerte apenas
+    // esta pantalla hace lazy-mount al entrar/swipear al tab).
+    const { data: lastMsgs } = await supabase.rpc('get_last_messages_per_sala', {
+      sala_ids: salasData.map(s => s.id),
+    });
+    const lastMsgMap: Record<string, { content: string | null; created_at: string }> = {};
+    (lastMsgs ?? []).forEach((m: any) => { lastMsgMap[m.sala_id] = m; });
 
-        const { data: lastMsg } = await supabase
-          .from('messages')
-          .select('content, created_at')
-          .eq('sala_id', sala.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    const results: SalaItem[] = salasData.map((sala) => {
+      const isUserSide = sala.user_id === user.id;
+      const otherId = isUserSide ? sala.coach_id : sala.user_id;
+      const otherName = profileMap[otherId]?.name ?? 'Usuario';
+      const lastMsg = lastMsgMap[sala.id as string];
 
-        const hasUnread = unreadSalaIds.has(sala.id as string);
+      const hasUnread = unreadSalaIds.has(sala.id as string);
 
-        return {
-          id: sala.id,
-          coach_id: sala.coach_id,
-          otherName,
-          otherInitials: getInitials(otherName),
-          otherAvatarUrl: profileMap[otherId]?.avatarUrl ?? null,
-          otherSpecialty: specialtyMap[sala.coach_id],
-          lastMessage: lastMsg?.content ? decryptMessage(lastMsg.content) : '',
-          lastMessageDate: lastMsg ? formatMessageDate(lastMsg.created_at) : '',
-          lastMessageRaw: lastMsg?.created_at ?? null,
-          hasUnread,
-        };
-      })
-    );
+      return {
+        id: sala.id,
+        coach_id: sala.coach_id,
+        otherName,
+        otherInitials: getInitials(otherName),
+        otherAvatarUrl: profileMap[otherId]?.avatarUrl ?? null,
+        otherSpecialty: specialtyMap[sala.coach_id],
+        lastMessage: lastMsg?.content ? decryptMessage(lastMsg.content) : '',
+        lastMessageDate: lastMsg ? formatMessageDate(lastMsg.created_at) : '',
+        lastMessageRaw: lastMsg?.created_at ?? null,
+        hasUnread,
+      };
+    });
 
     setSalas(results);
 

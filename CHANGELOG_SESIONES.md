@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-07-21 — Joaquín (sesión 70)
+
+**Tocado:** `scripts/get-last-messages-per-sala.sql` (nuevo), `screens/SessionsScreen.tsx`, `screens/CoachChatsScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- **Bug real encontrado probando el swipe de la sesión 69**: entrar y deslizar al tab Mensajes (usuario) tardaba bastante en cargar. La causa no era el swipe en sí — `SessionsScreen` (y su espejo `CoachChatsScreen` del lado coach) traían el último mensaje de cada sala con un `Promise.all` de **una query por sala** (N+1). Con `lazy` activado en material-top-tabs, esa carga se dispara recién al hacer mount la primera vez que se visita el tab, así que el N+1 se sentía como un frenón justo al llegar — antes pasaba lo mismo con bottom-tabs, pero al tap (no arrastrando) era menos perceptible.
+- **Fix**: función nueva `get_last_messages_per_sala(sala_ids uuid[])` (`DISTINCT ON`, un solo round-trip) que reemplaza el loop en los dos screens. Sin `SECURITY DEFINER` — `messages` ya tiene RLS que cubre esto, corre como invoker. `SCHEMA.md` actualizado.
+- No se tocó nada del pager/isla de la sesión 69.
+
+**Pendiente para la próxima sesión:**
+- Confirmar con Joaquín que el tiempo de carga de Mensajes/Chats ahora se siente bien en device.
+
+---
+
 ## 2026-07-21 — Joaquín (sesión 69)
 
 **Tocado:** `components/ui/IslandTabBar.tsx` (nuevo), `hooks/useReducedMotion.ts` (nuevo), `app/(tabs)/_layout.tsx`, `app/(coach)/_layout.tsx`, `app/(tabs)/conexiones.tsx`, `app/_layout.tsx`, `app/perfil.tsx` (movido desde `app/(coach)/perfil.tsx`), `components/haptic-tab.tsx` (eliminado), `package.json`/`package-lock.json`

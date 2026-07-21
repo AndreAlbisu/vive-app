@@ -83,19 +83,19 @@ export default function CoachChatsScreen() {
     const profileMap: Record<string, { name: string; avatarUrl: string | null }> = {};
     profiles?.forEach(p => { profileMap[p.id] = { name: p.name ?? 'Usuario', avatarUrl: p.avatar_url ?? null }; });
 
-    // Último mensaje de cada sala (content + tipo + metadata para los tags).
-    const lasts = await Promise.all(
-      salas.map(async (sala) => {
-        const { data: lastMsg } = await supabase
-          .from('messages')
-          .select('content, created_at, sender_type, metadata')
-          .eq('sala_id', sala.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        return { salaId: sala.id as string, userId: sala.user_id as string, lastMsg };
-      })
-    );
+    // Último mensaje de todas las salas en un solo round-trip (antes era un
+    // Promise.all con una query por sala — el N+1 se sentía fuerte apenas
+    // esta pantalla hace lazy-mount al entrar/swipear al tab).
+    const { data: lastMsgsData } = await supabase.rpc('get_last_messages_per_sala', {
+      sala_ids: salas.map(s => s.id),
+    });
+    const lastMsgMap: Record<string, any> = {};
+    (lastMsgsData ?? []).forEach((m: any) => { lastMsgMap[m.sala_id] = m; });
+    const lasts = salas.map((sala) => ({
+      salaId: sala.id as string,
+      userId: sala.user_id as string,
+      lastMsg: lastMsgMap[sala.id as string] ?? null,
+    }));
 
     // Estado abierto/sin abrir de los recursos recomendados (batch por recommendation_id).
     const recIds = lasts
