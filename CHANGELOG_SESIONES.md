@@ -11,11 +11,13 @@
 
 **Resumen:**
 - **Bug real encontrado probando el swipe de la sesión 69**: entrar y deslizar al tab Mensajes (usuario) tardaba bastante en cargar. La causa no era el swipe en sí — `SessionsScreen` (y su espejo `CoachChatsScreen` del lado coach) traían el último mensaje de cada sala con un `Promise.all` de **una query por sala** (N+1). Con `lazy` activado en material-top-tabs, esa carga se dispara recién al hacer mount la primera vez que se visita el tab, así que el N+1 se sentía como un frenón justo al llegar — antes pasaba lo mismo con bottom-tabs, pero al tap (no arrastrando) era menos perceptible.
-- **Fix**: función nueva `get_last_messages_per_sala(sala_ids uuid[])` (`DISTINCT ON`, un solo round-trip) que reemplaza el loop en los dos screens. Sin `SECURITY DEFINER` — `messages` ya tiene RLS que cubre esto, corre como invoker. `SCHEMA.md` actualizado.
+- **Fix 1**: función nueva `get_last_messages_per_sala(sala_ids uuid[])` (`DISTINCT ON`, un solo round-trip) que reemplaza el loop en los dos screens. Sin `SECURITY DEFINER` — `messages` ya tiene RLS que cubre esto, corre como invoker. `SCHEMA.md` actualizado.
+- **Fix 2**: en ambos screens quedaban `profiles`/`coaches`/último-mensaje corriendo en serie sin depender entre sí — se juntaron en un solo `Promise.all` (ya venían de un primer `Promise.all` para salas+booking). Bajó de 4 round-trips en serie a 2.
+- **Seguía "lento" después de los dos fixes — diagnóstico, no bug de código**: `messages` tiene 75 filas (sin índice por `sala_id`, pero irrelevante a ese tamaño — se revisó y confirmó que no era la causa). El proyecto de Supabase vive en `sa-east-1` (São Paulo) y Joaquín está probando desde Australia — medido con curl desde la Mac de desarrollo, cada round-trip a Supabase da entre 130ms y 837ms por pura distancia física. Con 2 round-trips en serie eso ya explica el segundo+ que se siente. No hay más margen de optimización de queries de este lado; para los usuarios reales (Argentina/Latam, a juzgar por el resto de la app) `sa-east-1` debería quedarles cerca y no notarse así.
 - No se tocó nada del pager/isla de la sesión 69.
 
 **Pendiente para la próxima sesión:**
-- Confirmar con Joaquín que el tiempo de carga de Mensajes/Chats ahora se siente bien en device.
+- Si en algún momento hace falta probar la app "como la sentiría un usuario real" desde lejos del servidor, considerar un VPN con salida en Sudamérica en vez de seguir de-optimizando queries que ya están en su mínimo de round-trips.
 
 ---
 
