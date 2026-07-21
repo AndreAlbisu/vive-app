@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-21 — Joaquín (sesión 68)
+
+**Tocado:** `app/(tabs)/recursos.tsx`, `app/coach-recurso.tsx`, `app/mis-recomendaciones.tsx` (nuevo), `design/recursos-liviano-v2.html` (nuevo)
+
+**Resumen:**
+- **Rediseño "recursos-liviano-v2" (6 ajustes) contra `design/recursos-liviano-v2.html`** — la pantalla Recursos tenía 4 secciones compitiendo por atención; quedó en 3: "Herramientas de Vita" (sugerencia del día + 4 tiles, antes secciones separadas), "Recomendado por tu coach" (antes "De tus coaches", rediseñada como tarjeta-mensaje de 3 capas: header del coach, nota citada opcional, recurso como adjunto tocable) y "Biblioteca" (antes "Explorar por tema", grilla colapsada a una fila por recurso, filtro de formato colapsable detrás de un botón nuevo, "Guardados" movido al header con badge). El hero verde de mood ahora es condicional: solo aparece con check-in intenso de hoy (`mood_id<=2`); si no, línea compacta con la recomendación real o prompt de check-in. Pantalla nueva `/mis-recomendaciones` ("Ver todas") para cuando hay más de 3 recomendaciones. Sin cambios en lógica de datos ni migraciones — solo presentación y esa condición de render.
+- **4 bugs encontrados probando en device — arreglados:**
+  1. Prefijo `[SEED]` de los títulos de prueba se colaba en la tarjeta de "Recomendado por tu coach" y en el detalle del recurso (el `displayTitle()` que lo saca solo estaba aplicado en la grilla de Biblioteca). Aplicado también en `CoachRecoSection`, `mis-recomendaciones.tsx` y `coach-recurso.tsx`.
+  2. La línea compacta del mood truncaba todo el texto a una línea y, si la razón (`reco.why`) era larga, se comía la parte accionable ("→ herramienta · duración") sin que se viera nunca. Separado en dos `Text` (razón truncable + herramienta fija) para que la flecha siempre sea visible.
+  3. Íconos de formato Audio/Podcast invertidos respecto al mockup (Audio mostraba parlante, Podcast mostraba micrófono) — corregido en los 3 archivos que duplican `FORMAT_ICON`.
+  4. Faltaba el `logResourceEvent(..., 'coach_profile_visit')` en el nombre tocable del coach en la grilla de Biblioteca (Ajuste 5 lo pedía explícitamente) — agregado, requirió pasar `userId` como prop nueva a `ExploreSection`.
+- **Bug de fondo, encontrado después de comparar capturas contra el mockup pixel a pixel:** los componentes nuevos usaban los tokens "glass" translúcidos (`GLASS_BG`/`GLASS_BORDER`) del resto de la app, que se lavan contra el gradiente de fondo. El mockup usa superficies planas con contraste definido (`--card` claro con borde para tiles/chips/línea de mood, `--cream-deep` oscuro sin borde para la tarjeta de coach). Se agregaron los tokens `CARD`/`LINE`/`CREAM_DEEP` (valores exactos del CSS del mockup) y se migraron `moodLine`, `toolTile`, `recbox`, `recAttach`, `recAttachPlay`, `chip`, `filterBtn`, `formatTabActive` y `exploreRow`. También se ajustaron `FOREST`/`TERRACOTTA`/`FORMAT_COLOR` a los valores exactos del mockup (antes eran aproximados). `ContinueCard` y `StreakChip` quedaron con el glass original a propósito — no están cubiertos por los 6 ajustes. Verificado con muestreo de píxeles sobre una captura real que el resultado coincide exacto (`#EAE2D0`, `#F7F2E7`) con el mockup.
+
+**Pendiente para la próxima sesión:**
+- Quedan sin usar (dead code, de antes del rediseño de sesión 62): `coachCard`, `libraryCard`, `libraryRow`, `coachHeader`, `coachAvatar`, `coachInitials`, `coachHeaderText`, `coachName`, `coachUpdated`, `coachBadge`, `coachNote`, `coachResources`, `libraryCardHeader`, `coachResRow`, `coachResIcon`, `coachResText`, `coachResTitle`, `coachResSub`, `checkCircle*` en `app/(tabs)/recursos.tsx` — se detectaron pero no se borraron para no meter ruido en esta sesión.
+- Falta probar en device el hero verde de mood (Ajuste 1) con un check-in real de "Bajón"/"Cansado" — se verificó por código y por diseño, no con captura.
+- Falta probar `/mis-recomendaciones` con más de 3 recomendaciones reales (hoy solo hay una sembrada).
+- Nota del coach en `SalaScreen.tsx` (recomendación in-chat) sigue sin pasar `note`/`fromCoachName` a `/coach-recurso` — quedó fuera de alcance de los 6 ajustes, mencionado como pendiente para más adelante.
+
+---
+
 ## 2026-07-19 — Joaquín (sesión 67)
 
 **Tocado:** `app/(tabs)/_layout.tsx`, `app/(tabs)/index.tsx`, `app/(tabs)/recursos.tsx`, `app/_layout.tsx`, `app/coach-recurso-nuevo.tsx`, `app/index.tsx`, `app/progreso.tsx`, `components/AnimatedGradientCard.tsx`, `components/AuthModal.tsx`, `components/MoodCheckIn.tsx`, `components/ui/VitaHeader.tsx`, `components/VitaWordmark.tsx` (nuevo), `constants/theme.ts`, `lib/resourceReminders.ts`, `screens/CoachLoginScreen.tsx`, `screens/LoginScreen.tsx`, `screens/OnboardingBifurcacion.tsx`, `screens/OnboardingScreen2.tsx`, `screens/OnboardingScreen3.tsx`, `screens/OnboardingScreen4.tsx`, `screens/OnboardingScreen5.tsx`, `screens/ProfesionalScreen.tsx`, `screens/RegisterScreen.tsx`, `screens/SalaScreen.tsx`, `screens/SessionsScreen.tsx`

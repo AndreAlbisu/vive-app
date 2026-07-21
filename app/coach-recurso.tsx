@@ -25,17 +25,21 @@ import { logResourceEvent } from '@/lib/resourceEvents';
 
 // ─── Constantes de formato ────────────────────────────────────────────────────
 const FORMAT_COLOR: Record<string, string> = {
-  audio:   '#C1694F',
-  podcast: '#3B7FC4',
-  video:   '#7B5EA7',
-  lectura: '#4A7C59',
+  audio:   '#C06B4A',
+  podcast: '#7E8CA8',
+  video:   '#8A6FA8',
+  lectura: '#6B7A56',
 };
 const FORMAT_LABEL: Record<string, string> = {
   audio: 'Audio', podcast: 'Podcast', video: 'Video', lectura: 'Lectura',
 };
+function displayTitle(title: string): string {
+  return title.replace(/^\[SEED\]\s*/, '');
+}
+
 const FORMAT_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
-  audio:   'volume-medium-outline',
-  podcast: 'mic-outline',
+  audio:   'mic-outline',
+  podcast: 'musical-notes-outline',
   video:   'videocam-outline',
   lectura: 'book-outline',
 };
@@ -378,7 +382,9 @@ const mdStyles = StyleSheet.create({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function CoachRecursoScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, note, fromCoachName } = useLocalSearchParams<{ id: string; note?: string; fromCoachName?: string }>();
+  const noteText = Array.isArray(note) ? note[0] : note;
+  const fromCoachNameText = Array.isArray(fromCoachName) ? fromCoachName[0] : fromCoachName;
   const { user } = useAuth();
   const [resource, setResource] = useState<Resource | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -495,6 +501,15 @@ export default function CoachRecursoScreen() {
           contentContainerStyle={s.container}
           showsVerticalScrollIndicator={false}>
 
+          {/* Nota del coach — solo si se llegó por una recomendación (Ajuste 6) */}
+          {noteText && fromCoachNameText ? (
+            <View style={s.recoNoteBanner}>
+              <Text style={s.recoNoteBannerText}>
+                <Text style={s.recoNoteBannerBold}>{fromCoachNameText}</Text> te dijo: "{noteText}"
+              </Text>
+            </View>
+          ) : null}
+
           {/* Cover — solo para audio y lectura; video muestra el player directo */}
           {resource.format !== 'video' && (
             <View style={[s.cover, { backgroundColor: color + '15' }]}>
@@ -513,7 +528,7 @@ export default function CoachRecursoScreen() {
           )}
 
           {/* Info */}
-          <Text style={s.title}>{resource.title}</Text>
+          <Text style={s.title}>{displayTitle(resource.title)}</Text>
           {coachName ? (
             <TouchableOpacity onPress={goToCoachProfile} disabled={!coachProfileId} hitSlop={4}>
               <Text style={[s.coach, coachProfileId && s.coachLink]}>Por {coachName}</Text>
@@ -569,6 +584,24 @@ const s = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   saveBtn: { padding: 4 },
+
+  recoNoteBanner: {
+    backgroundColor: '#F3EEDF',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 18,
+  },
+  recoNoteBannerText: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontStyle: 'italic',
+    fontSize: 13.5,
+    color: '#2E3624',
+    lineHeight: 19,
+  },
+  recoNoteBannerBold: {
+    fontStyle: 'normal',
+    fontFamily: ViveFonts.semibold,
+  },
 
   cover: {
     height: 150,
