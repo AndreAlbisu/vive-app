@@ -7,8 +7,8 @@ import { ViveColors } from './theme';
 // están particionados: cada uno aparece en exactamente una puerta (sin
 // duplicados, sin huérfanos → 3+7+4+6+2+2+1+2+3+2 = 32).
 //
-// La taxonomía canónica (AXES en searchData.ts) NO se toca: la siguen usando
-// search1/search2/CoachTopicsScreen. Las puertas admiten cruces de eje cuando
+// La taxonomía canónica (AXES en searchData.ts) NO se toca: la sigue usando
+// CoachTopicsScreen. Las puertas admiten cruces de eje cuando
 // responden a un estado real del usuario (ej. "Ansiedad y estrés" cruza
 // emocional + físico; "Hábitos" —físico en AXES— vive en "Foco, hábitos y
 // trabajo" porque es donde el usuario lo busca).

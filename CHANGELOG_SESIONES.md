@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-07-21 — Andre (sesión 71)
+
+**Tocado:** `app/(tabs)/explore.tsx` (eliminado), `app/search1.tsx` (eliminado), `app/search2.tsx` (eliminado), `lib/moodInsights.ts` (eliminado), `screens/DiarioScreen.tsx` (eliminado), `app/(tabs)/recursos.tsx`, `constants/conexionesDoors.ts`
+
+**Resumen:**
+- **Limpieza de dead code** (arrastrado de sesiones 67/68 + análisis nuevo del árbol). Antes de borrar, cada candidato se verificó con grep exhaustivo (referencias de navegación, imports por nombre, registro en layouts).
+- Borrados 5 archivos huérfanos: `app/(tabs)/explore.tsx` (stub "Próximamente", excluido del pager por `useOnlyUserDefinedScreens`, nada navega a `/explore`), `app/search1.tsx` + `app/search2.tsx` (iteraciones viejas del buscador; la usada es `search3` — search1→search2 era cadena huérfana), `lib/moodInsights.ts` (sin consumidor desde sesión 67), `screens/DiarioScreen.tsx` (muerto — `/diario` lo resuelve `app/diario.tsx`).
+- `recursos.tsx`: removidas 138 líneas de estilos muertos (22 claves del diseño viejo de sesión 62: `coachCard`, `libraryCard*`, `coachHeader/Avatar/Name/Badge/Note`, `coachRes*`, `checkCircle*`), todas confirmadas en 0 referencias.
+- `conexionesDoors.ts`: comentario que citaba `search1/search2` (ya inexistentes) corregido a `CoachTopicsScreen`.
+- **Ojo — `app/(tabs)/mis-salas.tsx` NO se tocó**: está vivo, es el tab "Mensajes" (renderiza `SessionsScreen`, registrado en el layout). Estaba en la lista inicial de candidatos como "probable huérfana" y resultó falso — por eso se verifica antes de borrar.
+- Typecheck 100% limpio tras la limpieza. Sin cambios de lógica, datos ni migraciones.
+
+**Pendiente para la próxima sesión:**
+- Del análisis del árbol quedan sin atacar (features a medias, no dead code): `app/ia.tsx` es stub "Próximamente" pero ya tiene entry point en `conexiones.tsx` (o se construye o se esconde el botón); Sign in with Apple es botón muerto (`console.log`) y es bloqueante de App Store; hábitos de `progreso.tsx` son estado local sin tabla en DB. Cerrar Mercado Pago en producción sigue siendo el gran pendiente arrastrado.
+
+---
+
 ## 2026-07-21 — Joaquín (sesión 70)
 
 **Tocado:** `scripts/get-last-messages-per-sala.sql` (nuevo), `screens/SessionsScreen.tsx`, `screens/CoachChatsScreen.tsx`, `SCHEMA.md`
