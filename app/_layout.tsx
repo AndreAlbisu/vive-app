@@ -164,6 +164,7 @@ export default function RootLayout() {
           <Stack.Screen name="recurso" options={{ headerShown: false }} />
           <Stack.Screen name="recursos-guardados" options={{ headerShown: false }} />
           <Stack.Screen name="notifications" options={{ headerShown: false }} />
+          <Stack.Screen name="perfil" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style="auto" />

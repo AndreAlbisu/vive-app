@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -87,6 +87,7 @@ function formatShortDate(iso: string | null): string {
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 export default function ConexionesScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { user, requestAuth } = useAuth();
   const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
 
@@ -335,9 +336,12 @@ export default function ConexionesScreen() {
                   horizontal
                   pagingEnabled
                   showsHorizontalScrollIndicator={false}
-                  onMomentumScrollEnd={e =>
-                    setDeckIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_W))
-                  }
+                  onScrollBeginDrag={() => navigation.setOptions({ swipeEnabled: false })}
+                  onScrollEndDrag={() => navigation.setOptions({ swipeEnabled: true })}
+                  onMomentumScrollEnd={e => {
+                    navigation.setOptions({ swipeEnabled: true });
+                    setDeckIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_W));
+                  }}
                   scrollEventThrottle={16}>
                   {deck.map((entry, i) => {
                     const { coach, slot } = entry;

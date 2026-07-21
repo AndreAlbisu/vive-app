@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-07-21 — Joaquín (sesión 69)
+
+**Tocado:** `components/ui/IslandTabBar.tsx` (nuevo), `hooks/useReducedMotion.ts` (nuevo), `app/(tabs)/_layout.tsx`, `app/(coach)/_layout.tsx`, `app/(tabs)/conexiones.tsx`, `app/_layout.tsx`, `app/perfil.tsx` (movido desde `app/(coach)/perfil.tsx`), `components/haptic-tab.tsx` (eliminado), `package.json`/`package-lock.json`
+
+**Resumen:**
+- **Isla de navegación compacta (nav-isla-compacta v.C)**, para usuario y coach: antes cada app tenía su propia tab bar (ícono+label siempre visible apilados, burbuja translúcida detrás del activo). Ahora es un solo componente compartido (`IslandTabBar`) — pill de ancho ajustado al contenido, inactivos solo ícono, el activo se expande a pastilla verde bosque con label. Punto de notificación unificado a un punto de 7px terracota en los tres casos donde antes había indicadores distintos (rojo en Mensajes/Chats, badge numérico "9+" en Reservas del coach) — la lógica de *cuándo* mostrarlo no cambió, solo el visual. `components/haptic-tab.tsx` quedó sin uso tras el cambio, se borró.
+- **Orden de tabs del usuario**: Inicio → Conexiones → Recursos → Mensajes (antes Inicio, Mensajes, Recursos, Conexiones). Coach sin cambios de orden.
+- **Swipe entre tabs**, mismo alcance (usuario y coach): se migró de `@react-navigation/bottom-tabs` a `@react-navigation/material-top-tabs` + `react-native-pager-view` (nuevas dependencias, resueltas con `npx expo install`, confirmadas compatibles con Expo Go en device) vía `withLayoutContext` de expo-router, con `tabBarPosition="bottom"` y la isla como `tabBar` custom. `lazy` y `animationEnabled` (atado a `useReducedMotion`, hook nuevo) se pasan explícitos en `screenOptions` porque el default de material-top-tabs difiere del de bottom-tabs.
+  - **Hallazgo de arquitectura**: un pager vuelve swipeable *todas* las rutas registradas — no existe el "tab oculto con botón invisible pero mismo navigator" que sí tenía bottom-tabs. `explore` (usuario) estaba muerta (nunca se navegaba ahí) y se dejó afuera del navigator sin más. `perfil` (coach) sí se usa desde `CoachHomeScreen` — se movió a `app/perfil.tsx` (ruta raíz, **misma URL `/perfil`**, mismo call site, mismo botón de volver) para que no quedara swipeable entre Reservas/Chats/Recursos. Efecto secundario aceptado con Joaquín: mientras estás en Perfil ya no se ve la isla flotante debajo (pasa a taparla como cualquier otra pantalla pusheada), antes sí se veía.
+  - **Conflicto de gestos**: se auditaron los 4 tabs de cada app buscando scroll horizontal anidado (todo lo que vive en pantallas pusheadas —`/coach-recurso`, `/ruido`, etc.— queda fuera porque tapan el pager entero). Coach: ninguno (la franja de semana que se esperaba encontrar en Reservas no existe hoy, `DAYS` solo formatea texto). Usuario: 3 casos — carrusel de `index.tsx`, chips de `recursos.tsx`/`conexiones.tsx` (ScrollView simple, se dejaron con la resolución nativa de gesto anidado) y **el deck de `conexiones.tsx`** (ScrollView horizontal `pagingEnabled`, dos paginadores en el mismo eje = mayor riesgo de pelea) — a este se le agregó `onScrollBeginDrag`/`onScrollEndDrag`/`onMomentumScrollEnd` llamando `navigation.setOptions({ swipeEnabled })` para cederle el gesto mientras el dedo está adentro.
+  - **Sync de la isla con el swipe**: se probaron dos versiones. La primera (actualizar recién al asentarse la página, con `LayoutAnimation`) se sentía atrasada. Se intentó sincronizar en vivo con el valor `position` del pager (nativo) interpolando `paddingHorizontal`/`maxWidth`/`marginLeft` — tiró error en runtime ("Style property … is not supported by native animated module": esas son propiedades de layout, el driver nativo del pager solo anima opacity/transform). Quedó un híbrido: el fondo verde y el crossfade del ícono siguen el dedo en vivo (nativo, sin jank), y el ancho de la pastilla + el label aparecen con un snap corto (`LayoutAnimation`) al asentarse — resuelve el atraso percibido sin pelear contra esa limitación del driver.
+- No hubo cambios de base de datos.
+
+**Pendiente para la próxima sesión:**
+- Falta confirmar en device Android (todo lo de arriba se probó en iOS/Expo Go).
+- Verificar que el swipe-back nativo de los stacks internos (`/coach-recurso`, etc.) y el botón de back de Android sigan sin colisionar con el pager — no se encontró nada que lo indique por código, pero no se probó explícitamente en esta sesión.
+- Si el snap de ancho/label de la isla se siente insuficiente comparado con un morph 100% continuo, la alternativa sería portar `position` a Reanimated (que sí puede animar layout en el hilo de UI sin el bridge) — bridging desde un `Animated.Value` clásico a un `SharedValue` fue evaluado y descartado por complejidad/riesgo para esta sesión.
+
+---
+
 ## 2026-07-21 — Joaquín (sesión 68)
 
 **Tocado:** `app/(tabs)/recursos.tsx`, `app/coach-recurso.tsx`, `app/mis-recomendaciones.tsx` (nuevo), `design/recursos-liviano-v2.html` (nuevo)

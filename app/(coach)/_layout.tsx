@@ -1,49 +1,26 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Tabs } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+import { withLayoutContext } from 'expo-router';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { ViveColors, ViveFonts } from '@/constants/theme';
+import { IslandTabBar, type IslandTab } from '@/components/ui/IslandTabBar';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useUnreadSalas } from '@/hooks/useUnreadSalas';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
-const TAB_ACTIVE   = '#565E32';
-const TAB_INACTIVE = '#87835C';
-// mismo rojo que DOT_RED en app/(tabs)/_layout.tsx — color reservado en la app para "no leído"
-const UNREAD_RED   = '#E05252';
-
-function TabIcon({ focused, color, label, children }: { focused: boolean; color: string; label: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.tabItem}>
-      {focused && <View style={styles.activeBubble} />}
-      {children}
-      <Text style={[styles.tabLabel, { color }]} numberOfLines={1}>{label}</Text>
-    </View>
-  );
-}
-
-function PendingBadge({ count }: { count: number }) {
-  if (count === 0) return null;
-  return (
-    <View style={badge.dot}>
-      <Text style={badge.text}>{count > 9 ? '9+' : String(count)}</Text>
-    </View>
-  );
-}
-
-function UnreadDot() {
-  return <View style={badge.unreadDot} />;
-}
-
+// Ver comentario en app/(tabs)/_layout.tsx — mismo cambio bottom-tabs→material-top-tabs
+// para swipe. `perfil` se movió a app/perfil.tsx (ruta raíz, misma URL) porque un
+// pager no puede tener una página "oculta pero navegable" sin que quede swipeable
+// entre las demás; acá solo quedan las 4 pestañas reales.
+const MaterialTopTabs = createMaterialTopTabNavigator();
+const Tabs = withLayoutContext(MaterialTopTabs.Navigator, undefined, true);
 
 export default function CoachTabLayout() {
   const { user } = useAuth();
   const [coachId, setCoachId] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const { hasAnyUnread: hasUnreadChats, refresh: refreshUnread } = useUnreadSalas({ userId: user?.id ?? null, role: 'coach' });
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (!user) return;
@@ -99,153 +76,23 @@ export default function CoachTabLayout() {
     return () => { supabase.removeChannel(channel); };
   }, [user?.id, refreshUnread]);
 
+  // Orden sin cambios: Inicio → Reservas → Chats → Recursos.
+  const tabs: IslandTab[] = [
+    { name: 'index',    icon: 'calendar',        label: 'Inicio' },
+    { name: 'reservas', icon: 'clipboard',       label: 'Reservas', dot: pendingCount > 0 },
+    { name: 'chats',    icon: 'message-circle',  label: 'Chats', dot: hasUnreadChats },
+    { name: 'recursos', icon: 'book-open',       label: 'Recursos' },
+  ];
+
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarActiveTintColor: TAB_ACTIVE,
-        tabBarInactiveTintColor: TAB_INACTIVE,
-        tabBarStyle: styles.tabBar,
-        tabBarBackground: () => (
-          <View style={styles.blurWrap}>
-            <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
-          </View>
-        ),
-        tabBarShowLabel: false,
-        tabBarIconStyle: { width: '100%', height: 52, justifyContent: 'center', alignItems: 'center' },
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Inicio',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} label="Inicio">
-              <Feather name="calendar" size={22} color={color} />
-            </TabIcon>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="reservas"
-        options={{
-          title: 'Reservas',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} label="Reservas">
-              <View>
-                <Feather name="clipboard" size={22} color={color} />
-                <PendingBadge count={pendingCount} />
-              </View>
-            </TabIcon>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="chats"
-        options={{
-          title: 'Chats',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} label="Chats">
-              <View>
-                <Feather name="message-circle" size={22} color={color} />
-                {hasUnreadChats && <UnreadDot />}
-              </View>
-            </TabIcon>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="recursos"
-        options={{
-          title: 'Recursos',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} label="Recursos">
-              <Feather name="book-open" size={22} color={color} />
-            </TabIcon>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="perfil"
-        options={{
-          title: 'Perfil',
-          href: null,
-        }}
-      />
+      tabBarPosition="bottom"
+      screenOptions={{ lazy: true, animationEnabled: !reducedMotion }}
+      tabBar={(props) => <IslandTabBar {...props} tabs={tabs} />}>
+      <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
+      <Tabs.Screen name="reservas" options={{ title: 'Reservas' }} />
+      <Tabs.Screen name="chats" options={{ title: 'Chats' }} />
+      <Tabs.Screen name="recursos" options={{ title: 'Recursos' }} />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    position: 'absolute',
-    bottom: 24,
-    left: 56,
-    right: 56,
-    start: 56,
-    end: 56,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'transparent',
-    borderTopWidth: 0,
-    overflow: 'hidden',
-  },
-  blurWrap: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 32,
-    overflow: 'hidden',
-  },
-  tabItem: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-  },
-  activeBubble: {
-    position: 'absolute',
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: 26,
-    backgroundColor: 'rgba(86,94,50,0.12)',
-  },
-  tabLabel: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 10,
-    marginTop: 3,
-  },
-});
-
-const badge = StyleSheet.create({
-  dot: {
-    position: 'absolute',
-    top: -4,
-    right: -7,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: ViveColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
-  text: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 9,
-    color: '#FFFFFF',
-    lineHeight: 12,
-  },
-  unreadDot: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: UNREAD_RED,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.75)',
-  },
-});
