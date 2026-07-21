@@ -153,29 +153,23 @@ export default function SessionsScreen() {
 
     const otherIds = salasData.map(s => s.user_id === user.id ? s.coach_id : s.user_id);
     const uniqueOtherIds = [...new Set(otherIds)];
+    const uniqueCoachIds = [...new Set(salasData.map(s => s.coach_id))];
 
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, name, avatar_url')
-      .in('id', uniqueOtherIds);
+    // Ninguna de estas tres depende del resultado de las otras — antes iban
+    // en serie (profiles → coaches → último mensaje), cada round-trip suma
+    // de lleno en una red móvil real. En paralelo.
+    const [{ data: profiles }, { data: coachRows }, { data: lastMsgs }] = await Promise.all([
+      supabase.from('profiles').select('id, name, avatar_url').in('id', uniqueOtherIds),
+      supabase.from('coaches').select('profile_id, specialty').in('profile_id', uniqueCoachIds),
+      supabase.rpc('get_last_messages_per_sala', { sala_ids: salasData.map(s => s.id) }),
+    ]);
 
     const profileMap: Record<string, { name: string; avatarUrl: string | null }> = {};
     profiles?.forEach(p => { profileMap[p.id] = { name: p.name ?? 'Usuario', avatarUrl: p.avatar_url ?? null }; });
 
-    const uniqueCoachIds = [...new Set(salasData.map(s => s.coach_id))];
-    const { data: coachRows } = await supabase
-      .from('coaches')
-      .select('profile_id, specialty')
-      .in('profile_id', uniqueCoachIds);
     const specialtyMap: Record<string, string> = {};
     coachRows?.forEach(c => { if (c.specialty) specialtyMap[c.profile_id] = c.specialty; });
 
-    // Último mensaje de todas las salas en un solo round-trip (antes era un
-    // Promise.all con una query por sala — el N+1 se sentía fuerte apenas
-    // esta pantalla hace lazy-mount al entrar/swipear al tab).
-    const { data: lastMsgs } = await supabase.rpc('get_last_messages_per_sala', {
-      sala_ids: salasData.map(s => s.id),
-    });
     const lastMsgMap: Record<string, { content: string | null; created_at: string }> = {};
     (lastMsgs ?? []).forEach((m: any) => { lastMsgMap[m.sala_id] = m; });
 

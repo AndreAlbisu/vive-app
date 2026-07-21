@@ -79,16 +79,17 @@ export default function CoachChatsScreen() {
     if (error || !salas || salas.length === 0) { setRooms([]); setLoading(false); return; }
 
     const userIds = [...new Set(salas.map(s => s.user_id as string))];
-    const { data: profiles } = await supabase.from('profiles').select('id, name, avatar_url').in('id', userIds);
+
+    // Ninguna de las dos depende de la otra — en paralelo (antes iban en
+    // serie, y el último mensaje ya venía de un Promise.all con una query
+    // por sala, N+1 que se sentía fuerte apenas la pantalla hacía lazy-mount).
+    const [{ data: profiles }, { data: lastMsgsData }] = await Promise.all([
+      supabase.from('profiles').select('id, name, avatar_url').in('id', userIds),
+      supabase.rpc('get_last_messages_per_sala', { sala_ids: salas.map(s => s.id) }),
+    ]);
     const profileMap: Record<string, { name: string; avatarUrl: string | null }> = {};
     profiles?.forEach(p => { profileMap[p.id] = { name: p.name ?? 'Usuario', avatarUrl: p.avatar_url ?? null }; });
 
-    // Último mensaje de todas las salas en un solo round-trip (antes era un
-    // Promise.all con una query por sala — el N+1 se sentía fuerte apenas
-    // esta pantalla hace lazy-mount al entrar/swipear al tab).
-    const { data: lastMsgsData } = await supabase.rpc('get_last_messages_per_sala', {
-      sala_ids: salas.map(s => s.id),
-    });
     const lastMsgMap: Record<string, any> = {};
     (lastMsgsData ?? []).forEach((m: any) => { lastMsgMap[m.sala_id] = m; });
     const lasts = salas.map((sala) => ({
