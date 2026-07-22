@@ -5,7 +5,7 @@
 
 ---
 
-## 2026-07-22 — Joaquín (sesión 71)
+## 2026-07-22 — Joaquín (sesión 72)
 
 **Tocado:** `context/AuthContext.tsx`, `components/AuthModal.tsx`, `screens/LoginScreen.tsx`, `screens/RegisterScreen.tsx`, `app.json`, `package.json`/`package-lock.json`
 
@@ -19,6 +19,24 @@
 - **Bloqueante real**: confirmar con Andre si existe/hay que crear una cuenta de Apple Developer Program, y armar un proyecto EAS (`eas.json` + `projectId`) para poder generar un dev client y probar esto de una vez.
 - Una vez con esas dos cosas: configurar el proveedor Apple en el dashboard de Supabase con las credenciales (Services ID, Team ID, Key), y recién ahí probar el flujo end-to-end en device.
 - Seguir con la prioridad (2) del audit (Mercado Pago) mientras se resuelve el acceso a Apple Developer, ya que es independiente.
+
+---
+
+## 2026-07-21 — Andre (sesión 71)
+
+**Tocado:** `app/(tabs)/explore.tsx` (eliminado), `app/search1.tsx` (eliminado), `app/search2.tsx` (eliminado), `lib/moodInsights.ts` (eliminado), `screens/DiarioScreen.tsx` (eliminado), `app/(tabs)/recursos.tsx`, `constants/conexionesDoors.ts`
+
+**Resumen:**
+- **Limpieza de dead code** (arrastrado de sesiones 67/68 + análisis nuevo del árbol). Antes de borrar, cada candidato se verificó con grep exhaustivo (referencias de navegación, imports por nombre, registro en layouts).
+- Borrados 5 archivos huérfanos: `app/(tabs)/explore.tsx` (stub "Próximamente", excluido del pager por `useOnlyUserDefinedScreens`, nada navega a `/explore`), `app/search1.tsx` + `app/search2.tsx` (iteraciones viejas del buscador; la usada es `search3` — search1→search2 era cadena huérfana), `lib/moodInsights.ts` (sin consumidor desde sesión 67), `screens/DiarioScreen.tsx` (muerto — `/diario` lo resuelve `app/diario.tsx`).
+- `recursos.tsx`: removidas 138 líneas de estilos muertos (22 claves del diseño viejo de sesión 62: `coachCard`, `libraryCard*`, `coachHeader/Avatar/Name/Badge/Note`, `coachRes*`, `checkCircle*`), todas confirmadas en 0 referencias.
+- `conexionesDoors.ts`: comentario que citaba `search1/search2` (ya inexistentes) corregido a `CoachTopicsScreen`.
+- **Ojo — `app/(tabs)/mis-salas.tsx` NO se tocó**: está vivo, es el tab "Mensajes" (renderiza `SessionsScreen`, registrado en el layout). Estaba en la lista inicial de candidatos como "probable huérfana" y resultó falso — por eso se verifica antes de borrar.
+- Typecheck 100% limpio tras la limpieza. Sin cambios de lógica, datos ni migraciones.
+
+**Pendiente para la próxima sesión:**
+- Del análisis del árbol quedan sin atacar (features a medias, no dead code): `app/ia.tsx` es stub "Próximamente" pero ya tiene entry point en `conexiones.tsx` (o se construye o se esconde el botón); hábitos de `progreso.tsx` son estado local sin tabla en DB. Cerrar Mercado Pago en producción sigue siendo el gran pendiente arrastrado.
+- *(Editado al mergear con sesión 72: Sign in with Apple ya no es botón muerto — el código quedó implementado esa misma sesión, solo falta la cuenta de Apple Developer + build para probarlo.)*
 
 ---
 
