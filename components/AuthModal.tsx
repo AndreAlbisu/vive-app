@@ -28,9 +28,10 @@ interface AuthModalProps {
   onLogin: () => void;
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
   signInWithGoogle: () => Promise<string | null>;
+  signInWithApple: () => Promise<string | null>;
 }
 
-export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signInWithGoogle }: AuthModalProps) {
+export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signInWithGoogle, signInWithApple }: AuthModalProps) {
   const router = useRouter();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
@@ -41,6 +42,7 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
 
   function toggleEmailForm() {
@@ -91,8 +93,17 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
     onLogin();
   }
 
-  function handleApple() {
-    console.log('[Auth] modal Apple login — próximamente');
+  async function handleApple() {
+    setAppleLoading(true);
+    setServerError(null);
+    const error = await signInWithApple();
+    setAppleLoading(false);
+    if (error) {
+      setServerError(error);
+      return;
+    }
+    reset();
+    onLogin();
   }
 
   function reset() {
@@ -144,10 +155,20 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
               <Text style={s.googleBtnText}>Continuar con Google</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={s.appleBtn} onPress={handleApple} activeOpacity={0.85}>
-              <MaterialCommunityIcons name="apple" size={18} color="#FFFFFF" />
-              <Text style={s.appleBtnText}>Continuar con Apple</Text>
-            </TouchableOpacity>
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                style={[s.appleBtn, appleLoading && s.btnDisabled]}
+                onPress={handleApple}
+                activeOpacity={0.85}
+                disabled={appleLoading || loading}
+              >
+                {appleLoading
+                  ? <ActivityIndicator size="small" color="#FFFFFF" />
+                  : <MaterialCommunityIcons name="apple" size={18} color="#FFFFFF" />
+                }
+                <Text style={s.appleBtnText}>Continuar con Apple</Text>
+              </TouchableOpacity>
+            )}
 
             <View style={s.dividerRow}>
               <View style={s.dividerLine} />

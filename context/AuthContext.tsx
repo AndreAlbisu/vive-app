@@ -5,6 +5,8 @@ import { cancelAllResourceReminders } from '@/lib/resourceReminders';
 import { AuthModal } from '@/components/AuthModal';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -19,6 +21,7 @@ interface AuthContextType {
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
   signUpWithEmail: (email: string, password: string, name: string, acceptedTerms?: boolean) => Promise<string | null>;
   signInWithGoogle: () => Promise<string | null>;
+  signInWithApple: () => Promise<string | null>;
   signOut: () => Promise<void>;
 }
 
@@ -31,6 +34,7 @@ const AuthContext = createContext<AuthContextType>({
   signInWithEmail: async () => null,
   signUpWithEmail: async () => null,
   signInWithGoogle: async () => null,
+  signInWithApple: async () => null,
   signOut: async () => {},
 });
 
@@ -118,6 +122,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Nativo (AuthenticationServices vía expo-apple-authentication), no OAuth
+  // web como Google — es lo que Apple espera para cumplir la guideline 4.8.
+  // El nonce viaja crudo a Apple/Supabase para que Supabase pueda verificar
+  // el identityToken contra el hash que ve en el JWT.
+  async function signInWithApple(): Promise<string | null> {
+    try {
+      const rawNonce = Crypto.randomUUID();
+      const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: hashedNonce,
+      });
+
+      if (!credential.identityToken) return 'No se pudo completar el inicio de sesión con Apple.';
+
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken,
+        nonce: rawNonce,
+      });
+
+      if (error) return translateError(error.message);
+      return null;
+    } catch (e: any) {
+      if (e?.code === 'ERR_REQUEST_CANCELED') return null;
+      return translateError(e?.message ?? 'error');
+    }
+  }
+
   async function signOut() {
     // Apagar las notis locales de recordatorios del usuario que se va (si no,
     // siguen firmando aunque nadie esté logueado en el dispositivo).
@@ -132,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, loading, isLoggedIn, role,
-      requestAuth, signInWithEmail, signUpWithEmail, signInWithGoogle, signOut,
+      requestAuth, signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, signOut,
     }}>
       {children}
       <AuthModal
@@ -141,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         onLogin={() => setModalVisible(false)}
         signInWithEmail={signInWithEmail}
         signInWithGoogle={signInWithGoogle}
+        signInWithApple={signInWithApple}
       />
     </AuthContext.Provider>
   );

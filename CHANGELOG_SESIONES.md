@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-07-22 — Joaquín (sesión 71)
+
+**Tocado:** `context/AuthContext.tsx`, `components/AuthModal.tsx`, `screens/LoginScreen.tsx`, `screens/RegisterScreen.tsx`, `app.json`, `package.json`/`package-lock.json`
+
+**Resumen:**
+- **Punto de partida**: audit de features a medias con entry point visible (vita IA, botón Apple, hábitos hardcodeados), pagos MP, deuda de testing y dead code. Prioridad acordada: (1) Sign in with Apple — único bloqueante duro de App Store si ya ofrecés Google (guideline 4.8), (2) Mercado Pago en producción, (3) decidir vita IA/hábitos. Arrancamos por (1).
+- **Sign in with Apple — código completo, sin poder probarse de punta a punta todavía.** Hasta hoy el botón "Continuar con Apple" existía en **tres** lugares (`LoginScreen`, `RegisterScreen`, y también `AuthModal` — el modal rápido de login que el audit no había pescado) y los tres solo hacían `console.log('próximamente')`. Se implementó `signInWithApple()` en `AuthContext.tsx` con el flujo nativo real (`expo-apple-authentication`, no OAuth web como Google) — nonce crudo generado con `expo-crypto`, hasheado con SHA256 para Apple, verificado por `supabase.auth.signInWithIdToken({ provider: 'apple', nonce })`. Wireado en los tres puntos de entrada, con loading state y el botón oculto en Android (Sign in with Apple no existe ahí). `app.json`: agregado el plugin `expo-apple-authentication`.
+- **Por qué queda pendiente de probar**: no hay `eas.json` ni `projectId` en este repo — nunca se hizo un build nativo custom, todo se probó siempre por Expo Go. A diferencia de `react-native-pager-view` (sesión 69), `expo-apple-authentication` **no** viene precompilado en Expo Go — no hay forma de probarlo sin un dev client propio. Además, más allá del código, hace falta: habilitar "Sign In with Apple" en Apple Developer Program para `com.andrealbisu.viveapp`, generar un Services ID + Key, y cargar esas credenciales en el proveedor Apple del dashboard de Supabase — nada de eso lo puede hacer Claude, necesita acceso a la cuenta de Apple Developer (del bundle id, parece ser de Andre). Confirmado con Joaquín que esa cuenta **no existe todavía / no se sabe** — queda bloqueado ahí, no es una tarea de código pendiente.
+- Se instalaron `expo-apple-authentication` y `expo-crypto`. No hubo cambios de base de datos.
+
+**Pendiente para la próxima sesión:**
+- **Bloqueante real**: confirmar con Andre si existe/hay que crear una cuenta de Apple Developer Program, y armar un proyecto EAS (`eas.json` + `projectId`) para poder generar un dev client y probar esto de una vez.
+- Una vez con esas dos cosas: configurar el proveedor Apple en el dashboard de Supabase con las credenciales (Services ID, Team ID, Key), y recién ahí probar el flujo end-to-end en device.
+- Seguir con la prioridad (2) del audit (Mercado Pago) mientras se resuelve el acceso a Apple Developer, ya que es independiente.
+
+---
+
 ## 2026-07-21 — Joaquín (sesión 70)
 
 **Tocado:** `scripts/get-last-messages-per-sala.sql` (nuevo), `screens/SessionsScreen.tsx`, `screens/CoachChatsScreen.tsx`, `SCHEMA.md`

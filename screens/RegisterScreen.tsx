@@ -36,7 +36,7 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { signUpWithEmail, signInWithGoogle } = useAuth();
+  const { signUpWithEmail, signInWithGoogle, signInWithApple } = useAuth();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -48,6 +48,7 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -126,8 +127,12 @@ export default function RegisterScreen() {
     if (error) setServerError(error);
   }
 
-  function handleApple() {
-    console.log('[Auth] Apple register — próximamente');
+  async function handleApple() {
+    setAppleLoading(true);
+    setServerError(null);
+    const error = await signInWithApple();
+    setAppleLoading(false);
+    if (error) setServerError(error);
   }
 
   return (
@@ -171,11 +176,21 @@ export default function RegisterScreen() {
               <Text style={s.googleBtnText}>Continuar con Google</Text>
             </TouchableOpacity>
 
-            {/* Apple */}
-            <TouchableOpacity style={s.appleBtn} onPress={handleApple} activeOpacity={0.85}>
-              <MaterialCommunityIcons name="apple" size={20} color="#565E32" />
-              <Text style={s.appleBtnText}>Continuar con Apple</Text>
-            </TouchableOpacity>
+            {/* Apple — Sign in with Apple no existe en Android, ocultar */}
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                style={[s.appleBtn, appleLoading && { opacity: 0.6 }]}
+                onPress={handleApple}
+                activeOpacity={0.85}
+                disabled={appleLoading || loading}
+              >
+                {appleLoading
+                  ? <ActivityIndicator size="small" color="#565E32" />
+                  : <MaterialCommunityIcons name="apple" size={20} color="#565E32" />
+                }
+                <Text style={s.appleBtnText}>Continuar con Apple</Text>
+              </TouchableOpacity>
+            )}
 
             {serverError && !showEmailForm && (
               <Text style={s.serverError}>{serverError}</Text>
