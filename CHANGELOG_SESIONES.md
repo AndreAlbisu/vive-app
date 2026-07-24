@@ -7,7 +7,7 @@
 
 ## 2026-07-23 — Andre (sesión 73)
 
-**Tocado:** `scripts/add-refund-cron.sql` (nuevo), `scripts/add-payments-v1.sql` (nota §5 actualizada). Cambios de infra en Supabase (cron nuevo) y en el panel de MercadoPago (webhook), no en el repo.
+**Tocado:** `scripts/add-refund-cron.sql` (nuevo), `scripts/add-payments-v1.sql` (nota §5), `app/(tabs)/conexiones.tsx` (teaser redirigido), `app/ia.tsx` (eliminado), `constants/tools.ts` (nuevo), `scripts/add-user-habits.sql` (nuevo), `lib/habits.ts` (nuevo), `hooks/useResourceProgress.ts`, `app/progreso.tsx`, `app/diario.tsx`, `app/(tabs)/recursos.tsx`, `SCHEMA.md`. Cambios de infra en Supabase (cron nuevo) y en el panel de MercadoPago (webhook), no en el repo.
 
 **Resumen — cerrar Mercado Pago en producción (prioridad 2 del audit de sesión 72):**
 - **Relevamiento: MP estaba MUCHO más avanzado de lo que decía el changelog.** Verificado en vivo contra Supabase (`ggygiihhnkjrerpinhha`): las 5 edge functions (`mp-oauth-start/callback`, `mp-create-payment`, `mp-webhook`, `mp-process-refunds`) **ya estaban desplegadas y ACTIVE** (los comentarios "SCAFFOLD v1" en el código quedaron desactualizados — el código está completo), con `verify_jwt` correcto (callback y webhook en `false`, resto `true`). **Todos los secrets ya cargados** (MP creds, `MP_WEBHOOK_SECRET`, `OAUTH_STATE_SECRET`, URLs, `MP_TEST_MODE`, `MP_SPLIT_ENABLED`). Frontend wireado (coach conecta OAuth, usuario paga al reservar, trigger de reembolso). **Un coach ya tiene `mp_connected=true`** → el OAuth se completó real al menos una vez ⇒ redirect URI OK en el panel de MP.
@@ -15,11 +15,22 @@
 - **Webhook configurado en el panel de MP** apuntando a `.../functions/v1/mp-webhook`, evento `payment`. El simulador de MP dio **502** — que es el comportamiento **esperado y correcto**: el 502 solo se alcanza *después* de pasar la validación de firma (que devolvería 401 si fallara), y ocurre porque el simulador manda un `payment_id` falso (`123456`) que la API de MP no puede resolver. O sea: **el 502 confirma que `MP_WEBHOOK_SECRET` coincide con el secret del panel** (la parte crítica y frágil). Con un pago real el fetch resuelve → 200.
 - **Sin cambios de schema.** El schema de pagos v1 ya estaba en prod desde sesiones anteriores. `SCHEMA.md` no necesitó cambios (el cron es infra, no estructura de datos).
 
+**vita IA — decisión de producto resuelta (feature a medias de sesión 71/72):**
+- El teaser de Conexiones ("¿No sabés por dónde empezar?") prometía orientación conversacional pero llevaba a `app/ia.tsx`, un stub "Próximamente". Se decidió **redirigirlo al quiz de orientación que ya existe** (`app/quiz.tsx` / `screens/QuizScreen.tsx`, autónomo, recomienda coaches) en vez de construir IA conversacional real (proyecto grande, diferido). Copy ajustado de "Contale a VITA qué te pasa y te oriento" → "Respondé unas preguntas y te orientamos" (el quiz es de opción múltiple, no chat libre). `app/ia.tsx` quedó huérfano → **borrado** (misma disciplina de dead code de sesión 71). Typecheck limpio.
+
+**Hábitos — construidos de verdad (decisión de producto de Andre: "prácticas VITA curadas" + "atado al uso real"):**
+- Los 4 hábitos hardcodeados de `progreso.tsx` (iguales para todos, checks que no persistían) pasaron a ser una **rutina real de prácticas VITA** que el usuario arma eligiendo del catálogo de 10 herramientas (respiración, gratitud, meditación...). **No hay check manual**: un hábito se tilda solo cuando el usuario **completa la herramienta real** — es "atado al uso real".
+- **Hallazgo que redujo el scope 10×**: la infra de rachas (`resource_completions` + `recordCompletion` + `useResourceProgress`) ya estaba construida pero se creía dormida. Al revisar, **9 de las 10 herramientas YA llamaban `recordCompletion`** al completarse (la nota del SCHEMA "ninguna escribe todavía" estaba desactualizada). Solo faltaba `app/diario.tsx` → se le agregó la llamada. O sea el "trabajo grande" de cablear 10 pantallas era en realidad 1.
+- **Nuevo**: tabla `user_habits` (solo la rutina; el "hecho" se deriva de `resource_completions`), `scripts/add-user-habits.sql` (RLS estándar del dueño), `constants/tools.ts` (extraído el catálogo `TOOLS`/`TOOL_MAP` que estaba dentro de `recursos.tsx`, ahora fuente única compartida), `lib/habits.ts` (queries + sembrado inicial `respiracion`+`gratitud` con guard en AsyncStorage para no re-sembrar si el usuario borra todo). `useResourceProgress` extendido con `completedToday` + un `refreshToken` opcional (Progreso lo bumpea con `useFocusEffect` para re-tildar al volver de completar una práctica). `progreso.tsx`: sección "Hábitos de hoy" reescrita (rutina real, racha con 🔥, modo Editar para agregar/quitar del catálogo, tap → abre la herramienta). Typecheck limpio.
+- **Coordinación**: la sección la había agregado Joaquín como maqueta; Andre (fundador) decidió construirla. Sigue conviniendo avisarle del cambio.
+
 **Pendiente para la próxima sesión:**
 - **Prueba end-to-end con un pago real**: reservar con el coach que tiene MP conectado, pagar con tarjeta (de prueba si sandbox / real si prod), y confirmar que la reserva pasa a `payment_status='aprobado'` (webhook 200 en los logs del dashboard) y que un cancel dispara el reembolso vía el cron nuevo.
 - **Confirmar sandbox vs producción**: no se pudo leer el valor de `MP_TEST_MODE` desde acá. Definir en qué modo está operando y que el `MP_ACCESS_TOKEN`/webhook secret sean los del modo correcto (el panel de MP tiene secrets distintos para Prueba y Producción).
+- **Correr `scripts/add-user-habits.sql` en Supabase** (SQL Editor) — sin eso, la sección Hábitos muestra el empty state (no crashea: `loadHabits` falla silencioso si la tabla no existe). Después, probar en device: armar rutina, completar una práctica (ej. Respiración) y ver que el hábito se tilda al volver + que sube la racha.
+- **Avisar a Joaquín** que los hábitos (que él había dejado como maqueta) ahora están construidos de verdad (`user_habits` + atado al uso real), por si tenía otro plan.
 - Menor: `supabase/config.toml` tiene `project_id = "TU_PROJECT_REF"` (cosmético — los deploys andan por el proyecto linkeado).
-- Retoma de prioridades: con MP prácticamente cerrado, quedan de sesión 72 → Sign in with Apple (bloqueado por cuenta Apple Developer + build EAS) y las decisiones de producto de vita IA / hábitos.
+- Retoma de prioridades: queda de sesión 72 → Sign in with Apple (bloqueado por cuenta Apple Developer + build EAS).
 
 ---
 

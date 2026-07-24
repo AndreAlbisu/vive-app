@@ -2,7 +2,9 @@
 
 > ⚠️ Este archivo describe lo que está REALMENTE en Supabase hoy.
 > No es un diseño aspiracional — si algo cambia en la base, este archivo se actualiza el mismo día.
-> Última actualización: 18 de julio 2026 — `resource_events` instrumentado (view/play/complete/coach_profile_visit) + 2 funciones `SECURITY DEFINER` nuevas para que el coach lea sus stats agregadas (`get_my_resource_counts`, `get_my_resource_stats_month`), alimentando el tab F4 "Tus recursos". `resource_reminders` ya tiene RF1-RF3 completos (motor, UI, pantalla), documentado en CHANGELOG. Cerrado el hueco 05/07→13/07: pagos v1 y el trigger de reembolso estaban marcados "pendiente de correr" pero ya estaban corridos en prod (corregido); "puertas de Conexiones" resultó ser lógica de frontend pura contra `coach_topics` (ya documentado), sin migración propia — no había nada que documentar ahí.
+> Última actualización: 23 de julio 2026 — `user_habits` (nueva tabla): rutina de hábitos = prácticas VITA elegidas por el usuario para la sección "Hábitos de hoy" de Progreso; el "hecho hoy" se deriva de `resource_completions` (atado al uso real). `app/diario.tsx` ahora también escribe en `resource_completions` (era la única de las 10 herramientas que no lo hacía). **Falta correr `scripts/add-user-habits.sql` en Supabase.**
+>
+> 18 de julio 2026 — `resource_events` instrumentado (view/play/complete/coach_profile_visit) + 2 funciones `SECURITY DEFINER` nuevas para que el coach lea sus stats agregadas (`get_my_resource_counts`, `get_my_resource_stats_month`), alimentando el tab F4 "Tus recursos". `resource_reminders` ya tiene RF1-RF3 completos (motor, UI, pantalla), documentado en CHANGELOG. Cerrado el hueco 05/07→13/07: pagos v1 y el trigger de reembolso estaban marcados "pendiente de correr" pero ya estaban corridos en prod (corregido); "puertas de Conexiones" resultó ser lógica de frontend pura contra `coach_topics` (ya documentado), sin migración propia — no había nada que documentar ahí.
 
 ## Tablas y relaciones
 
@@ -202,7 +204,17 @@ Modelo: split payments, **Checkout Pro**, cobro al reservar + reembolso automát
 - `progress_seconds` (int, nullable) — segundos completados; NULL = no empezado, igual a `duration_seconds` = terminado, entre medio = a medias
 - Índices en `(user_id, completed_at DESC)` y `(user_id, resource_id)`
 - RLS: SELECT/INSERT/UPDATE/DELETE solo si `user_id = auth.uid()`
-- Agregada 02/07/2026 (`scripts/add-resource-completions.sql`). Alimenta: racha semanal (`StreakChip`) y "Continuar donde dejaste" (`ContinueCard`) en `app/(tabs)/recursos.tsx` vía `hooks/useResourceProgress.ts`. Por ahora ninguna herramienta escribe en esta tabla todavía — los bloques se ocultan automáticamente cuando no hay datos.
+- Agregada 02/07/2026 (`scripts/add-resource-completions.sql`). Alimenta: racha semanal (`StreakChip`) y "Continuar donde dejaste" (`ContinueCard`) en `app/(tabs)/recursos.tsx` vía `hooks/useResourceProgress.ts`, y **el check "hecho hoy" de los hábitos** en Progreso (`completedToday`, agregado 23/07/2026). **Las 10 herramientas de `constants/tools.ts` escriben acá al completarse** (las 9 de audio/ejercicio ya lo hacían vía `recordCompletion`; `app/diario.tsx` se sumó el 23/07/2026 — antes era la única que no registraba). La nota vieja de "ninguna herramienta escribe todavía" quedó desactualizada.
+
+### `user_habits`
+- `id` (uuid, PK, DEFAULT `gen_random_uuid()`)
+- `user_id` (uuid, NOT NULL, FK → `auth.users.id` ON DELETE CASCADE)
+- `tool_id` (text, NOT NULL) — clave del catálogo de `constants/tools.ts` (ej. `"respiracion"`), la misma que `resource_completions.resource_id`. Sin CHECK (la lista vive en el frontend, mismo criterio que `resource_completions.resource_id`)
+- `sort_order` (int, NOT NULL DEFAULT 0), `created_at` (timestamptz, NOT NULL DEFAULT now())
+- UNIQUE(`user_id`, `tool_id`) — una práctica aparece una sola vez en la rutina
+- Índice en `(user_id, sort_order)`
+- RLS: SELECT/INSERT/UPDATE/DELETE solo si `user_id = auth.uid()`
+- Agregada 23/07/2026 (`scripts/add-user-habits.sql`). Guarda **solo la rutina** (qué prácticas VITA eligió el usuario) para la sección "Hábitos de hoy" de Progreso. El "hecho hoy" NO se guarda acá — se deriva de `resource_completions` (atado al uso real: completar la herramienta tilda el hábito). Rutina inicial (`respiracion`+`gratitud`) sembrada client-side la 1ª vez vía `lib/habits.ts` con guard en AsyncStorage (`vita_habits_seeded_<userId>`) para no re-sembrar si el usuario borra todo. Queries en `lib/habits.ts`, UI en `app/progreso.tsx`.
 
 ### `favorite_coaches`
 - `id` (uuid, PK)

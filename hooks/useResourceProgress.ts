@@ -12,15 +12,19 @@ export interface ResourceProgress {
   weekActivity: boolean[]; // 7 elements: index 0 = 6 days ago, index 6 = today
   lastInProgress: InProgressResource | null;
   completedInLast7Days: Set<string>; // resource_ids completados en los últimos 7 días
+  completedToday: Set<string>;       // resource_ids completados hoy (para el check de hábitos)
   loading: boolean;
 }
 
-export function useResourceProgress(userId: string | undefined): ResourceProgress {
+// `refreshToken`: cambiar su valor fuerza un refetch (ej. al re-enfocar Progreso
+// tras completar una práctica, para re-tildar el hábito). Opcional, default 0.
+export function useResourceProgress(userId: string | undefined, refreshToken: number = 0): ResourceProgress {
   const [progress, setProgress] = useState<ResourceProgress>({
     streak: 0,
     weekActivity: Array(7).fill(false),
     lastInProgress: null,
     completedInLast7Days: new Set(),
+    completedToday: new Set(),
     loading: true,
   });
 
@@ -31,6 +35,7 @@ export function useResourceProgress(userId: string | undefined): ResourceProgres
         weekActivity: Array(7).fill(false),
         lastInProgress: null,
         completedInLast7Days: new Set(),
+        completedToday: new Set(),
         loading: false,
       });
       return;
@@ -101,15 +106,24 @@ export function useResourceProgress(userId: string | undefined): ResourceProgres
             .map(r => r.resource_id as string)
         );
 
+        // ── Completados HOY (para tildar los hábitos) ─────────────────────
+        const todayStr = today.toISOString().split('T')[0];
+        const completedToday = new Set(
+          rows
+            .filter(r => (r.completed_at as string).split('T')[0] === todayStr)
+            .map(r => r.resource_id as string)
+        );
+
         setProgress({
           streak,
           weekActivity,
           lastInProgress,
           completedInLast7Days,
+          completedToday,
           loading: false,
         });
       });
-  }, [userId]);
+  }, [userId, refreshToken]);
 
   return progress;
 }

@@ -27,13 +27,15 @@ import { useResourceProgress } from '@/hooks/useResourceProgress';
 import { useRecommendedResource, type Reco, type MoodLite } from '@/hooks/useRecommendedResource';
 import { DOORS } from '@/constants/conexionesDoors';
 import { logResourceEvent } from '@/lib/resourceEvents';
+import { TOOLS, TOOL_MAP, type Tool, type IoniconName } from '@/constants/tools';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+// `Tool`, `IoniconName`, `TOOLS`, `TOOL_MAP` viven en @/constants/tools
+// (fuente única, compartida con Progreso/Hábitos).
 
 type CoachRecoItem = {
   id: string;
@@ -65,37 +67,12 @@ type CoachResourceItem = {
   };
 };
 
-interface Tool {
-  id: string;
-  label: string;
-  icon: IoniconName;
-  duration: string;
-  route?: string;
-}
-
 interface ToolGroup {
   id: string;
   title: string;
   subtitle: string;
   toolIds: string[];
 }
-
-
-// ─── Datos ───────────────────────────────────────────────────────────────────
-const TOOLS: Tool[] = [
-  { id: 'diario',      label: 'Diario',          icon: 'book-outline',          duration: 'Libre',      route: '/diario'      },
-  { id: 'gratitud',    label: 'Gratitud',         icon: 'heart-outline',         duration: '5 min',      route: '/gratitud'    },
-  { id: 'sueno',       label: 'Sueño',            icon: 'moon-outline',          duration: '10–20 min',  route: '/sueno'       },
-  { id: 'respiracion', label: 'Respiración',      icon: 'cloud-outline',         duration: '3–8 min',    route: '/respiracion' },
-  { id: 'meditacion',  label: 'Meditación',       icon: 'leaf-outline',          duration: '10–15 min',  route: '/meditacion'  },
-  { id: 'escaner',     label: 'Escáner corporal', icon: 'body-outline',          duration: '8 min',      route: '/escaner'     },
-  { id: 'relajacion',  label: 'Relajación',       icon: 'musical-notes-outline', duration: '10 min',     route: '/relajacion'  },
-  { id: 'ruido',       label: 'Ruido blanco',     icon: 'volume-medium-outline', duration: 'Libre',      route: '/ruido'       },
-  { id: 'lecturas',    label: 'Lecturas breves',  icon: 'library-outline',       duration: '5–10 min',   route: '/lecturas'    },
-  { id: 'anclaje',     label: 'Anclaje',          icon: 'locate-outline',        duration: '2–3 min',    route: '/anclaje'     },
-];
-
-const TOOL_MAP = Object.fromEntries(TOOLS.map(t => [t.id, t]));
 
 const TOOL_GROUPS: ToolGroup[] = [
   {

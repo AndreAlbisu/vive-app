@@ -17,6 +17,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { recordCompletion } from '@/lib/resourceCompletions';
 import { ReminderBell } from '@/components/ReminderBell';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -112,6 +113,8 @@ export default function DiarioScreen() {
 
     if (!error && data) {
       setEntries(prev => [data, ...prev]);
+      // Diario es "libre" (sin duración) → completación sin duration_seconds.
+      recordCompletion(user.id, 'diario').catch(() => {});
     }
 
     setJournalText('');

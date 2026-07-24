@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   ScrollView, View, Text, TouchableOpacity,
   StyleSheet, StatusBar, ActivityIndicator, useWindowDimensions,
@@ -7,12 +7,13 @@ import Svg, {
   Circle as SvgCircle, Line as SvgLine, Polyline, Text as SvgText,
 } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import { ViveFonts, ViveMoodColors } from '@/constants/theme';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import type { MoodEntry } from '@/hooks/useMoodHistory';
+import { useResourceProgress } from '@/hooks/useResourceProgress';
 import { AppBg } from '@/components/ui/AppBg';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { VitaHeader } from '@/components/ui/VitaHeader';
@@ -20,6 +21,8 @@ import { ProgressToggle } from '@/components/ui/ProgressToggle';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { getSemanasActivas } from '@/lib/stats';
+import { TOOLS, TOOL_MAP } from '@/constants/tools';
+import { loadHabits, addHabit, removeHabit } from '@/lib/habits';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -44,16 +47,6 @@ const TOPIC_TO_AREA: Record<string, string> = {
   'Propósito': 'proposito', 'Identidad': 'proposito', 'Motivación': 'proposito',
   'Crecimiento': 'proposito', 'Momentos de cambio': 'proposito', 'Espiritualidad': 'proposito',
 };
-
-// ─── Hábitos (estado local, sin DB aún) ──────────────────────────────────────
-// TODO: conectar con tabla de hábitos cuando exista
-
-const HABITOS_INIT = [
-  { id: '1', label: 'Respiración 4-7-8',      done: true  },
-  { id: '2', label: 'Diario de gratitud',      done: true  },
-  { id: '3', label: 'Meditación guiada',       done: false },
-  { id: '4', label: 'Seguimiento de hábitos',  done: true  },
-];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -81,9 +74,15 @@ export default function ProgresoScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [tab, setTab] = useState<'hoy' | 'mes'>('hoy');
-  const [habitosDone, setHabitosDone] = useState<Record<string, boolean>>(
-    Object.fromEntries(HABITOS_INIT.map(h => [h.id, h.done]))
-  );
+
+  // ── Hábitos (rutina de prácticas VITA) ──────────────────────────────────────
+  const [habits, setHabits] = useState<string[]>([]);       // tool_ids en orden
+  const [habitsLoading, setHabitsLoading] = useState(true);
+  const [habitsEdit, setHabitsEdit] = useState(false);
+  const [showCatalog, setShowCatalog] = useState(false);
+  const [progressToken, setProgressToken] = useState(0);    // bump al enfocar → refresca "hecho hoy"
+  const { completedToday, streak } = useResourceProgress(user?.id, progressToken);
+
   const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [sessionCount, setSessionCount] = useState<number | null>(null);
@@ -131,9 +130,37 @@ export default function ProgresoScreen() {
     return best ? DAY_NAMES_SHORT[best.dow] : '—';
   })();
 
-  function toggleHabito(id: string) {
-    setHabitosDone(prev => ({ ...prev, [id]: !prev[id] }));
+  // Cargar la rutina de hábitos del usuario (siembra la default la 1ª vez).
+  useEffect(() => {
+    if (!user) { setHabits([]); setHabitsLoading(false); return; }
+    let alive = true;
+    setHabitsLoading(true);
+    loadHabits(user.id)
+      .then(ids => { if (alive) setHabits(ids); })
+      .finally(() => { if (alive) setHabitsLoading(false); });
+    return () => { alive = false; };
+  }, [user]);
+
+  // Al re-enfocar la pantalla (ej. al volver de completar una práctica),
+  // refrescar "hecho hoy" bumpeando el token del hook de progreso.
+  useFocusEffect(
+    useCallback(() => { setProgressToken(t => t + 1); }, [])
+  );
+
+  async function handleAddHabit(toolId: string) {
+    if (!user || habits.includes(toolId)) return;
+    setHabits(prev => [...prev, toolId]);       // optimista
+    setShowCatalog(false);
+    await addHabit(user.id, toolId, habits.length);
   }
+
+  async function handleRemoveHabit(toolId: string) {
+    if (!user) return;
+    setHabits(prev => prev.filter(t => t !== toolId));  // optimista
+    await removeHabit(user.id, toolId);
+  }
+
+  const availableTools = TOOLS.filter(t => !habits.includes(t.id));
 
   useEffect(() => {
     if (!user) return;
@@ -271,27 +298,107 @@ export default function ProgresoScreen() {
           </GlassCard>
 
           {/* ── Hábitos de hoy ── */}
-          <Text style={s.sectionTitle}>Hábitos de hoy</Text>
-          <GlassCard style={s.habitosCard}>
-            {HABITOS_INIT.map((h, i) => (
-              <View key={h.id}>
+          <View style={s.habitosHeader}>
+            <Text style={[s.sectionTitle, { paddingHorizontal: 0, marginBottom: 0 }]}>Hábitos de hoy</Text>
+            <View style={s.habitosHeaderRight}>
+              {streak > 0 && (
+                <View style={s.streakPill}>
+                  <MaterialCommunityIcons name="fire" size={13} color="#C06B4A" />
+                  <Text style={s.streakPillText}>{streak} {streak === 1 ? 'día' : 'días'}</Text>
+                </View>
+              )}
+              {(habits.length > 0 || habitsEdit) && (
                 <TouchableOpacity
-                  style={s.habitoRow}
-                  onPress={() => toggleHabito(h.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[s.checkCircle, habitosDone[h.id] && s.checkCircleDone]}>
-                    {habitosDone[h.id] && (
-                      <MaterialCommunityIcons name="check" size={14} color="#565E32" />
-                    )}
-                  </View>
-                  <Text style={[s.habitoLabel, !habitosDone[h.id] && s.habitoLabelPending]}>
-                    {h.label}
-                  </Text>
+                  onPress={() => { setHabitsEdit(e => !e); setShowCatalog(false); }}
+                  hitSlop={8}
+                  activeOpacity={0.7}>
+                  <Text style={s.editBtn}>{habitsEdit ? 'Listo' : 'Editar'}</Text>
                 </TouchableOpacity>
-                {i < HABITOS_INIT.length - 1 && <View style={s.divider} />}
-              </View>
-            ))}
+              )}
+            </View>
+          </View>
+
+          <GlassCard style={s.habitosCard}>
+            {habitsLoading ? (
+              <ActivityIndicator size="small" color="#87835C" style={{ paddingVertical: 18 }} />
+            ) : habits.length === 0 && !habitsEdit ? (
+              <TouchableOpacity
+                style={s.habitosEmpty}
+                onPress={() => { setHabitsEdit(true); setShowCatalog(true); }}
+                activeOpacity={0.7}>
+                <Text style={s.habitosEmptyText}>
+                  Armá tu rutina: elegí las prácticas que querés sostener cada día.
+                </Text>
+                <Text style={s.habitosEmptyCta}>＋ Agregar hábito</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                {habits.map((toolId, i) => {
+                  const tool = TOOL_MAP[toolId];
+                  if (!tool) return null;
+                  const done = completedToday.has(toolId);
+                  return (
+                    <View key={toolId}>
+                      <TouchableOpacity
+                        style={s.habitoRow}
+                        onPress={() => {
+                          if (habitsEdit) return;
+                          if (tool.route) router.push(tool.route as any);
+                        }}
+                        activeOpacity={habitsEdit ? 1 : 0.7}>
+                        <View style={[s.checkCircle, done && s.checkCircleDone]}>
+                          {done && <MaterialCommunityIcons name="check" size={14} color="#565E32" />}
+                        </View>
+                        <Text style={[s.habitoLabel, !done && s.habitoLabelPending]}>
+                          {tool.label}
+                        </Text>
+                        {habitsEdit ? (
+                          <TouchableOpacity onPress={() => handleRemoveHabit(toolId)} hitSlop={10} activeOpacity={0.6}>
+                            <MaterialCommunityIcons name="close" size={18} color="rgba(135,131,92,0.85)" />
+                          </TouchableOpacity>
+                        ) : (
+                          <MaterialCommunityIcons name="chevron-right" size={20} color="rgba(135,131,92,0.55)" />
+                        )}
+                      </TouchableOpacity>
+                      {i < habits.length - 1 && <View style={s.divider} />}
+                    </View>
+                  );
+                })}
+
+                {habitsEdit && (
+                  <>
+                    {habits.length > 0 && <View style={s.divider} />}
+                    {showCatalog ? (
+                      availableTools.length === 0 ? (
+                        <Text style={s.catalogEmpty}>Ya agregaste todas las prácticas.</Text>
+                      ) : (
+                        availableTools.map((tool, i) => (
+                          <View key={tool.id}>
+                            <TouchableOpacity
+                              style={s.catalogRow}
+                              onPress={() => handleAddHabit(tool.id)}
+                              activeOpacity={0.7}>
+                              <Ionicons name={tool.icon} size={18} color="#565E32" />
+                              <Text style={s.catalogLabel}>{tool.label}</Text>
+                              <Text style={s.catalogDuration}>{tool.duration}</Text>
+                              <MaterialCommunityIcons name="plus-circle-outline" size={20} color="#565E32" />
+                            </TouchableOpacity>
+                            {i < availableTools.length - 1 && <View style={s.divider} />}
+                          </View>
+                        ))
+                      )
+                    ) : (
+                      availableTools.length > 0 && (
+                        <TouchableOpacity style={s.addRow} onPress={() => setShowCatalog(true)} activeOpacity={0.7}>
+                          <MaterialCommunityIcons name="plus" size={18} color="#565E32" />
+                          <Text style={s.addRowText}>Agregar hábito</Text>
+                        </TouchableOpacity>
+                      )
+                    )}
+                  </>
+                )}
+              </>
+            )}
           </GlassCard>
 
           {/* ── Historial de sesiones ── */}
@@ -439,10 +546,64 @@ const s = StyleSheet.create({
   },
 
   // ── Hábitos ───────────────────────────────────────────────────────────────
+  habitosHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 22,
+    marginBottom: 10,
+  },
+  habitosHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  streakPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255,248,240,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.65)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  streakPillText: { fontFamily: ViveFonts.semibold, fontSize: 11, color: '#565E32' },
+  editBtn: { fontFamily: ViveFonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.85)' },
   habitosCard: {
     marginHorizontal: CARD_MX,
     marginBottom: 24,
     paddingVertical: 4,
+  },
+  habitosEmpty: { paddingHorizontal: 16, paddingVertical: 18, gap: 8 },
+  habitosEmptyText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: 'rgba(135,131,92,0.85)',
+    lineHeight: 19,
+  },
+  habitosEmptyCta: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  addRowText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
+  catalogRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  catalogLabel: { fontFamily: ViveFonts.medium, fontSize: 14, color: '#565E32', flex: 1 },
+  catalogDuration: { fontFamily: ViveFonts.regular, fontSize: 11, color: 'rgba(135,131,92,0.75)' },
+  catalogEmpty: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: 'rgba(135,131,92,0.75)',
+    textAlign: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   habitoRow: {
     flexDirection: 'row',
