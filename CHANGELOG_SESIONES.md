@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-07-23 — Andre (sesión 73)
+
+**Tocado:** `scripts/add-refund-cron.sql` (nuevo), `scripts/add-payments-v1.sql` (nota §5 actualizada). Cambios de infra en Supabase (cron nuevo) y en el panel de MercadoPago (webhook), no en el repo.
+
+**Resumen — cerrar Mercado Pago en producción (prioridad 2 del audit de sesión 72):**
+- **Relevamiento: MP estaba MUCHO más avanzado de lo que decía el changelog.** Verificado en vivo contra Supabase (`ggygiihhnkjrerpinhha`): las 5 edge functions (`mp-oauth-start/callback`, `mp-create-payment`, `mp-webhook`, `mp-process-refunds`) **ya estaban desplegadas y ACTIVE** (los comentarios "SCAFFOLD v1" en el código quedaron desactualizados — el código está completo), con `verify_jwt` correcto (callback y webhook en `false`, resto `true`). **Todos los secrets ya cargados** (MP creds, `MP_WEBHOOK_SECRET`, `OAUTH_STATE_SECRET`, URLs, `MP_TEST_MODE`, `MP_SPLIT_ENABLED`). Frontend wireado (coach conecta OAuth, usuario paga al reservar, trigger de reembolso). **Un coach ya tiene `mp_connected=true`** → el OAuth se completó real al menos una vez ⇒ redirect URI OK en el panel de MP.
+- **Gap real encontrado y cerrado: el cron de reembolsos no existía.** `mp-process-refunds` estaba desplegado pero nada lo llamaba (el bloque `cron.schedule` en `add-payments-v1.sql §5` seguía comentado, "PENDIENTE, requiere creds"). Consecuencia: las reservas canceladas quedaban en `payment_status='reembolso_pendiente'` y **el dinero nunca se devolvía**. Se creó `scripts/add-refund-cron.sql` (habilita `pg_net` —primer cron del proyecto con HTTP saliente—, guarda la service key en **Vault** para no dejarla en texto plano en `cron.job`, agenda `mp-process-refunds` cada 5 min). **Corrido en prod por Andre** (jobid 5), verificaciones OK (job activo, schedule `*/5 * * * *`, secret en Vault). Nota §5 de `add-payments-v1.sql` actualizada para apuntar al script nuevo.
+- **Webhook configurado en el panel de MP** apuntando a `.../functions/v1/mp-webhook`, evento `payment`. El simulador de MP dio **502** — que es el comportamiento **esperado y correcto**: el 502 solo se alcanza *después* de pasar la validación de firma (que devolvería 401 si fallara), y ocurre porque el simulador manda un `payment_id` falso (`123456`) que la API de MP no puede resolver. O sea: **el 502 confirma que `MP_WEBHOOK_SECRET` coincide con el secret del panel** (la parte crítica y frágil). Con un pago real el fetch resuelve → 200.
+- **Sin cambios de schema.** El schema de pagos v1 ya estaba en prod desde sesiones anteriores. `SCHEMA.md` no necesitó cambios (el cron es infra, no estructura de datos).
+
+**Pendiente para la próxima sesión:**
+- **Prueba end-to-end con un pago real**: reservar con el coach que tiene MP conectado, pagar con tarjeta (de prueba si sandbox / real si prod), y confirmar que la reserva pasa a `payment_status='aprobado'` (webhook 200 en los logs del dashboard) y que un cancel dispara el reembolso vía el cron nuevo.
+- **Confirmar sandbox vs producción**: no se pudo leer el valor de `MP_TEST_MODE` desde acá. Definir en qué modo está operando y que el `MP_ACCESS_TOKEN`/webhook secret sean los del modo correcto (el panel de MP tiene secrets distintos para Prueba y Producción).
+- Menor: `supabase/config.toml` tiene `project_id = "TU_PROJECT_REF"` (cosmético — los deploys andan por el proyecto linkeado).
+- Retoma de prioridades: con MP prácticamente cerrado, quedan de sesión 72 → Sign in with Apple (bloqueado por cuenta Apple Developer + build EAS) y las decisiones de producto de vita IA / hábitos.
+
+---
+
 ## 2026-07-22 — Joaquín (sesión 72)
 
 **Tocado:** `context/AuthContext.tsx`, `components/AuthModal.tsx`, `screens/LoginScreen.tsx`, `screens/RegisterScreen.tsx`, `app.json`, `package.json`/`package-lock.json`

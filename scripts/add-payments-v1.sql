@@ -108,16 +108,10 @@ $$;
 -- El cron 'expire-pending-bookings' (cada 5 min) YA está agendado — este script
 -- solo reemplaza el cuerpo de la función, no re-agenda nada.
 
--- ── 5) (PENDIENTE, requiere creds) procesar reembolsos vía pg_net ────────────
--- Cuando estén las edge functions + secrets, agendar el procesador de reembolsos:
---
--- select cron.schedule(
---   'mp-process-refunds',
---   '*/5 * * * *',
---   $$ select net.http_post(
---        url     := 'https://<PROJECT_REF>.supabase.co/functions/v1/mp-process-refunds',
---        headers := jsonb_build_object('Authorization', 'Bearer <SERVICE_ROLE_KEY>')
---      ); $$
--- );
--- (Requiere extensión pg_net. El edge function toma los bookings en
---  'reembolso_pendiente', llama al refund de MP y los pasa a 'reembolsado'.)
+-- ── 5) procesar reembolsos vía pg_net ────────────────────────────────────────
+-- El procesador de reembolsos (cron 'mp-process-refunds', cada 5 min) se agenda
+-- en un script propio: scripts/add-refund-cron.sql. Habilita pg_net, guarda la
+-- service key en Vault y agenda el cron que llama al edge function mp-process-refunds
+-- (toma los bookings en 'reembolso_pendiente', hace el refund en MP y los pasa a
+-- 'reembolsado'). Ese script es el paso final para dejar el reembolso automático
+-- andando; ver también el trigger trg_mark_refund_on_cancel.
