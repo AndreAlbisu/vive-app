@@ -629,10 +629,10 @@ export default function ConexionesScreen() {
             </>
           )}
 
-          {/* ── VITA IA — teaser de intake conversacional ─────────────── */}
+          {/* ── Teaser del quiz de orientación ─────────────────────────── */}
           <TouchableOpacity
             style={s.quizWrap}
-            onPress={() => router.push('/ia')}
+            onPress={() => router.push('/quiz')}
             activeOpacity={0.88}>
             <LinearGradient
               colors={[TC_SOFT, '#F0DDD2']}
@@ -644,7 +644,7 @@ export default function ConexionesScreen() {
               </View>
               <View style={s.quizText}>
                 <Text style={s.quizTitle}>¿No sabés por dónde empezar?</Text>
-                <Text style={s.quizSub}>Contale a VITA qué te pasa y te oriento</Text>
+                <Text style={s.quizSub}>Respondé unas preguntas y te orientamos</Text>
               </View>
               <Text style={s.quizArrow}>›</Text>
             </LinearGradient>
