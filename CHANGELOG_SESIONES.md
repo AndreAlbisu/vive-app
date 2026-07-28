@@ -15,11 +15,11 @@
 - **Deuda de testing de sesión 69, resultado:**
   - Swipe-back vs pager: **falló, encontrado y arreglado** (bug 1 arriba).
   - Isla + swipe en Android: **sigue sin probar** — no hay dispositivo Android disponible.
-- **Mercado Pago sigue pausado**: "Coach Prueba" todavía no se reconectó (se había reseteado `mp_connected`/`coach_mp_accounts` en sesión 72 porque el token viejo había quedado en modo test). `MP_TEST_MODE=false` y precio en $1 siguen seteados desde entonces, listos para retomar la prueba end-to-end apenas se reconecte.
+- **Mercado Pago — causa real del error de sandbox encontrada, sigue pausado.** Se reconectó "Coach Prueba" con `MP_TEST_MODE=false` (ya no debería pedir `test_token`), pero el checkout siguió mandando al mismo error de sandbox ("una de las partes es de prueba"). Investigando: el `mp_user_id` guardado en `coach_mp_accounts` es **el mismo de siempre** (`3535802677`) en cada reconexión — no es un tema de mi flag `MP_TEST_MODE`, es que **la cuenta de Mercado Pago que se está autorizando es, de origen, una cuenta de prueba de MP** (probablemente creada con el generador de test-users de MP en algún momento del desarrollo), y eso no cambia por reconectar. Además, para probar el pago hace falta una cuenta real **distinta** para comprador y vendedor (MP rechaza pagarte a vos mismo) — Joaquín no tiene una segunda cuenta real de MP a mano para el lado del coach.
 - Typecheck limpio.
 
 **Pendiente para la próxima sesión:**
-- Retomar Mercado Pago: reconectar "Coach Prueba" desde Perfil → botón "Conectar" (ahora sí debería guardar el token, con `MP_TEST_MODE=false`), reservar, pagar $1 real, confirmar `payment_status='aprobado'` y probar el reembolso al cancelar.
+- **Mercado Pago — bloqueado hasta que Andre esté disponible.** Decisión: Andre conecta su propia cuenta real de MP como "Coach Prueba" (él la va a manejar de todos modos). Recién con eso hecho, reservar con Joaquín pagando desde su cuenta real, confirmar `payment_status='aprobado'` y probar el reembolso al cancelar. No perder tiempo reconectando con la misma cuenta de siempre — confirmado que no es un tema de código.
 - Sesión 68: hero verde de mood con check-in real, y `/mis-recomendaciones` con >3 recos — siguen sin probar en pantalla.
 - Isla/swipe en Android — sin dispositivo, sigue bloqueado.
 - **Sign in with Apple — pausado a propósito, decisión de Joaquín (28/07):** no tiene sentido pagar Apple Developer Program para algo que falta mucho para usarse. El código ya está listo (sesión 72); retomar recién cuando el lanzamiento esté cerca — no marcar como bloqueante urgente hasta entonces.
