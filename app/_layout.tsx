@@ -17,6 +17,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 import * as Notifications from 'expo-notifications';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
@@ -120,6 +121,7 @@ export default function RootLayout() {
   }
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <AuthProvider>
       <AuthRedirect />
       <NotificationSetup />
@@ -162,13 +164,26 @@ export default function RootLayout() {
           <Stack.Screen name="resource-proposals" options={{ headerShown: false }} />
           <Stack.Screen name="resource-proposal-new" options={{ headerShown: false }} />
           <Stack.Screen name="recurso" options={{ headerShown: false }} />
+          <Stack.Screen name="coach-recurso" options={{ headerShown: false }} />
           <Stack.Screen name="recursos-guardados" options={{ headerShown: false }} />
           <Stack.Screen name="notifications" options={{ headerShown: false }} />
           <Stack.Screen name="perfil" options={{ headerShown: false }} />
+          <Stack.Screen name="agenda" options={{ headerShown: false }} />
+          <Stack.Screen name="coach-availability" options={{ headerShown: false }} />
+          <Stack.Screen name="coach-notifications" options={{ headerShown: false }} />
+          <Stack.Screen name="coach-recurso-nuevo" options={{ headerShown: false }} />
+          <Stack.Screen name="coach-weekly-pattern" options={{ headerShown: false }} />
+          <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+          <Stack.Screen name="explorar-recursos" options={{ headerShown: false }} />
+          <Stack.Screen name="mis-recomendaciones" options={{ headerShown: false }} />
+          <Stack.Screen name="mis-recordatorios" options={{ headerShown: false }} />
+          <Stack.Screen name="profile-own" options={{ headerShown: false }} />
+          <Stack.Screen name="search3" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
     </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

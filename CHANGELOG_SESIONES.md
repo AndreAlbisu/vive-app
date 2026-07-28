@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-28 — Joaquín (sesión 74)
+
+**Tocado:** `app/_layout.tsx`. Cambios de infra en Supabase (secrets, un coach de prueba), no en el repo.
+
+**Resumen — testeo de deuda pendiente (sesión 72) + 2 bugs reales encontrados:**
+- **Bug 1 — swipe-back nativo roto en ambas apps.** Al probar el swipe-back de iOS en pantallas pusheadas (`/coach-recurso`, etc.), no volvía atrás en ninguna interfaz. Causa: la app nunca tuvo `GestureHandlerRootView` en la raíz — no hacía falta mientras nada usara gestos de `react-native-gesture-handler` de forma activa, pero desde que la sesión 69 sumó `react-native-pager-view`/`material-top-tabs` (que sí interactúan con ese sistema de gestos), su ausencia rompía la coordinación de gestos nativos en toda la app, incluido el swipe-back del stack. Se agregó el wrapper en `app/_layout.tsx` (setup oficial recomendado para cualquier app con estas librerías). Confirmado en device: swipe-back funciona en ambas interfaces.
+- **Bug 2 — header nativo negro "fantasma" en 11 pantallas.** Al entrar a un recurso apareció una barra negra arriba con "‹ (tabs)" y el nombre del archivo como título — el header nativo por default de React Navigation, duplicado sobre el header propio que cada pantalla ya dibuja. Causa: `coach-recurso.tsx` nunca se había registrado como `<Stack.Screen>` en `app/_layout.tsx`, así que expo-router lo auto-descubre con las opciones default (`headerShown` sin especificar). Al auditar el resto del árbol se encontraron **10 pantallas más con el mismo problema**: `agenda`, `coach-availability`, `coach-notifications`, `coach-recurso-nuevo`, `coach-weekly-pattern`, `edit-profile`, `explorar-recursos`, `mis-recomendaciones`, `mis-recordatorios`, `profile-own`, `search3` — todas navegables, ninguna registrada. Se agregaron las 11 con `headerShown: false`, mismo patrón que el resto del Stack. `app/coach-reservas.tsx` quedó **sin registrar a propósito** — es el único de la lista sin ninguna referencia en el código, huérfano (mismo componente que ya vive en `app/(coach)/reservas.tsx`).
+- **Deuda de testing de sesión 69, resultado:**
+  - Swipe-back vs pager: **falló, encontrado y arreglado** (bug 1 arriba).
+  - Isla + swipe en Android: **sigue sin probar** — no hay dispositivo Android disponible.
+- **Mercado Pago sigue pausado**: "Coach Prueba" todavía no se reconectó (se había reseteado `mp_connected`/`coach_mp_accounts` en sesión 72 porque el token viejo había quedado en modo test). `MP_TEST_MODE=false` y precio en $1 siguen seteados desde entonces, listos para retomar la prueba end-to-end apenas se reconecte.
+- Typecheck limpio.
+
+**Pendiente para la próxima sesión:**
+- Retomar Mercado Pago: reconectar "Coach Prueba" desde Perfil → botón "Conectar" (ahora sí debería guardar el token, con `MP_TEST_MODE=false`), reservar, pagar $1 real, confirmar `payment_status='aprobado'` y probar el reembolso al cancelar.
+- Sesión 68: hero verde de mood con check-in real, y `/mis-recomendaciones` con >3 recos — siguen sin probar en pantalla.
+- Isla/swipe en Android — sin dispositivo, sigue bloqueado.
+- Sign in with Apple — sigue bloqueado por cuenta de Apple Developer + build EAS (sesión 72/73).
+
+---
+
 ## 2026-07-23 — Andre (sesión 73)
 
 **Tocado:** `scripts/add-refund-cron.sql` (nuevo), `scripts/add-payments-v1.sql` (nota §5), `app/(tabs)/conexiones.tsx` (teaser redirigido), `app/ia.tsx` (eliminado), `constants/tools.ts` (nuevo), `scripts/add-user-habits.sql` (nuevo), `lib/habits.ts` (nuevo), `hooks/useResourceProgress.ts`, `app/progreso.tsx`, `app/diario.tsx`, `app/(tabs)/recursos.tsx`, `SCHEMA.md`. Cambios de infra en Supabase (cron nuevo) y en el panel de MercadoPago (webhook), no en el repo.
