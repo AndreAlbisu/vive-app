@@ -93,22 +93,22 @@ export default function CoachApplicationScreen() {
   }
 
   async function handleSubmit() {
-    if (!specialty) { setSubmitError('Elegí una especialidad.'); return; }
-    if (bio.trim().length < 10) { setSubmitError('Contanos un poco más sobre vos en la presentación.'); return; }
-    if (topics.size === 0) { setSubmitError('Elegí al menos un subtema que trabajás.'); return; }
+    if (!specialty) { setSubmitError('Elegí una especialidad'); return; }
+    if (bio.trim().length < 10) { setSubmitError('Contanos un poco más sobre vos en la presentación'); return; }
+    if (topics.size === 0) { setSubmitError('Elegí al menos un subtema que trabajás'); return; }
     const birthDateIso = displayToIso(birthDate);
-    if (!birthDateIso) { setSubmitError('Ingresá tu fecha de nacimiento (DD/MM/AAAA).'); return; }
-    if (!nationality.trim()) { setSubmitError('Ingresá tu nacionalidad.'); return; }
+    if (!birthDateIso) { setSubmitError('Ingresá tu fecha de nacimiento (DD/MM/AAAA)'); return; }
+    if (!nationality.trim()) { setSubmitError('Ingresá tu nacionalidad'); return; }
     if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) {
-      setSubmitError('Ingresá un precio válido por sesión.');
+      setSubmitError('Ingresá un precio válido por sesión');
       return;
     }
-    if (!videoUrl.trim()) { setSubmitError('Ingresá el link de tu video de presentación.'); return; }
+    if (!videoUrl.trim()) { setSubmitError('Ingresá el link de tu video de presentación'); return; }
     if (!isValidUrl(videoUrl.trim())) {
       setSubmitError('El link del video debe comenzar con http:// o https://');
       return;
     }
-    if (!user) { setSubmitError('No encontramos tu sesión. Volvé a ingresar.'); return; }
+    if (!user) { setSubmitError('No encontramos tu sesión. Volvé a ingresar'); return; }
 
     setSubmitting(true);
     setSubmitError(null);
@@ -126,7 +126,7 @@ export default function CoachApplicationScreen() {
     if (error) {
       setSubmitting(false);
       if (error.code === '23505') {
-        setSubmitError('Ya tenemos una solicitud de este perfil. Nos ponemos en contacto pronto.');
+        setSubmitError('Ya tenemos una solicitud de este perfil. Nos ponemos en contacto pronto');
       } else {
         setSubmitError(`No pudimos enviar tu solicitud. (${error.message})`);
       }
@@ -154,7 +154,7 @@ export default function CoachApplicationScreen() {
           <View style={styles.successIcon}>
             <MaterialCommunityIcons name="check-circle-outline" size={64} color={ViveColors.accent} />
           </View>
-          <Text style={styles.successTitle}>¡Listo! Tu solicitud está en revisión.</Text>
+          <Text style={styles.successTitle}>¡Listo! Tu solicitud está en revisión</Text>
           <Text style={styles.successSubtitle}>
             Te vamos a contactar pronto para contarte los próximos pasos.
           </Text>

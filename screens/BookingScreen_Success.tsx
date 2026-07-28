@@ -92,10 +92,10 @@ export default function BookingScreen_Success() {
             </Text>
             <Text style={s.subtitle}>
               {paymentPending
-                ? 'Tu pago está siendo procesado. Te avisamos cuando se confirme la sesión.'
+                ? 'Tu pago está siendo procesado. Te avisamos cuando se confirme la sesión'
                 : isInstant
-                  ? `Tu sesión con ${firstName} ya quedó confirmada.`
-                  : `Le avisamos a ${firstName}. Tiene 24hs para confirmar tu sesión.`}
+                  ? `Tu sesión con ${firstName} ya quedó confirmada`
+                  : `Le avisamos a ${firstName}. Tiene 24hs para confirmar tu sesión`}
             </Text>
             <View style={[
               s.statusBadge,

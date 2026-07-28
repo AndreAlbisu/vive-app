@@ -210,7 +210,7 @@ export default function ResourceDetailScreen() {
     }
 
     if (pinCount >= 4) {
-      setPinNotice('Ya tenés 4 recursos en tu inicio. Quitá uno para fijar este.');
+      setPinNotice('Ya tenés 4 recursos en tu inicio. Quitá uno para fijar este');
       return;
     }
 
@@ -224,7 +224,7 @@ export default function ResourceDetailScreen() {
       // el trigger rechaza el 5to pin aunque el conteo local diga otra cosa
       setPinned(false);
       setPinCount(c => Math.max(0, c - 1));
-      setPinNotice('Ya tenés 4 recursos en tu inicio. Quitá uno para fijar este.');
+      setPinNotice('Ya tenés 4 recursos en tu inicio. Quitá uno para fijar este');
     }
   }
 
@@ -270,7 +270,7 @@ export default function ResourceDetailScreen() {
       <AppBg>
       <SafeAreaView style={[s.safe, s.center]}>
         <MaterialCommunityIcons name="leaf-off" size={36} color="rgba(135,131,92,0.38)" />
-        <Text style={s.notFoundText}>Este recurso ya no está disponible.</Text>
+        <Text style={s.notFoundText}>Este recurso ya no está disponible</Text>
         <TouchableOpacity onPress={() => router.back()} style={s.notFoundBtn} activeOpacity={0.8}>
           <Text style={s.notFoundBtnText}>Volver</Text>
         </TouchableOpacity>
@@ -312,7 +312,7 @@ export default function ResourceDetailScreen() {
           <View style={s.doneContent}>
             <MaterialCommunityIcons name="check-circle-outline" size={72} color={TERRACOTTA} />
             <Text style={s.doneTitle}>Lectura completada</Text>
-            <Text style={s.doneSub}>Tomarte este espacio importa.</Text>
+            <Text style={s.doneSub}>Tomarte este espacio importa</Text>
             {feedbackState === 'pending' && (
               <View style={s.feedbackBox}>
                 <Text style={s.feedbackQ}>¿Te sirvió?</Text>
@@ -329,7 +329,7 @@ export default function ResourceDetailScreen() {
               </View>
             )}
             {feedbackState === 'submitted' && (
-              <Text style={s.feedbackThanks}>Gracias por tu respuesta.</Text>
+              <Text style={s.feedbackThanks}>Gracias por tu respuesta</Text>
             )}
             <TouchableOpacity style={s.primaryBtn} onPress={closeReader} activeOpacity={0.85}>
               <Text style={s.primaryBtnText}>Volver</Text>
@@ -574,7 +574,7 @@ export default function ResourceDetailScreen() {
                 </View>
               </>
             ) : (
-              <Text style={s.feedbackThanks}>Gracias por tu respuesta.</Text>
+              <Text style={s.feedbackThanks}>Gracias por tu respuesta</Text>
             )}
           </View>
         )}

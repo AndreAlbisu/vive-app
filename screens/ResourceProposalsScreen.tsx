@@ -130,7 +130,7 @@ export default function ResourceProposalsScreen() {
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <MaterialCommunityIcons name="lightbulb-outline" size={40} color="rgba(135,131,92,0.4)" />
-              <Text style={styles.emptyText}>Todavía no propusiste ningún recurso.</Text>
+              <Text style={styles.emptyText}>Todavía no propusiste ningún recurso</Text>
             </View>
           }
         />

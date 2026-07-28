@@ -17,12 +17,11 @@
 
 3. **Fix: título de "Mensajes" (antes "Mis salas") sin la misma tipografía que el resto.** `SessionsScreen.tsx`: texto cambiado, tipografía y posición del header ahora calcan exacto a Recursos (`Fraunces 34px`, `#3F512F`, alineado a la izquierda, mismo padding) — se sacó el fondo/borde/divider que tenía antes.
 
-4. **Barrido de puntos finales en microcopy corto de toda la app — en progreso, no terminado.** Catalogado con otro agente (151 candidatos en ~35 archivos: títulos, labels, errores, toasts, notificaciones push — un solo punto final, no párrafos largos). Se excluyó a propósito: términos y condiciones, citas de `LecturasScreen`, y los guiones de prácticas guiadas (Relajación/Meditación/Sueño/Escáner/Anclaje — narración de varias oraciones donde el punto marca ritmo real). Multi-oración corta (ej. "No pudimos guardar. Probá de nuevo.") pierde solo el punto de la última oración, no los intermedios. **Quedó a mitad de camino** — recomendaciones más abajo con exactamente dónde retomar.
+4. **Barrido de puntos finales en microcopy corto de toda la app — completo.** Catalogado con otro agente (151 candidatos en ~35 archivos: títulos, labels, errores, toasts, notificaciones push — un solo punto final, no párrafos largos) y aplicado entero. Se excluyó a propósito: términos y condiciones, citas de `LecturasScreen`, y los guiones de prácticas guiadas (Relajación/Meditación/Sueño/Escáner/Anclaje — narración de varias oraciones donde el punto marca ritmo real). Multi-oración corta (ej. "No pudimos guardar. Probá de nuevo.") perdió solo el punto de la última oración, no los intermedios.
 
-Typecheck limpio en cada checkpoint.
+Typecheck limpio en cada checkpoint (se hicieron ~15 a lo largo de la sesión dado el volumen).
 
 **Pendiente para la próxima sesión:**
-- **Terminar el barrido de puntos finales.** Falta desde `screens/ProposeResourceScreen.tsx` (a partir de `'Elegí el archivo de video.'`) hasta el final de la lista del agente: `ProposeResourceScreen.tsx` (resto), `CoachApplicationScreen.tsx`, `components/AudioRecorderModal.tsx`, `components/AuthModal.tsx`, `components/PinButton.tsx`, `BookingScreen_Confirm.tsx` (ya tocado por el rename, faltan los puntos), `BookingScreen_Success.tsx`, `BookingScreen_Time.tsx`, `ResourceDetailScreen.tsx`, `QuizScreen.tsx`, `RecursosGuardadosScreen.tsx`, `CoachNotificationsScreen.tsx`/`UserNotificationsScreen.tsx`, `CoachAgendaScreen.tsx`, `ResourceProposalsScreen.tsx`, `SalaScreen.tsx` (~13 strings), `lib/coachBookingActions.ts` (2 restantes). El catálogo completo con archivo+línea+texto exacto está en el mensaje del agente en esta conversación — si no está a mano, re-correr el mismo agente de catalogación.
 - Retomar Mercado Pago cuando Andre conecte su cuenta real (sesión 74).
 - `/mis-recomendaciones` con >3 recos y swipe en Android siguen sin probar (arrastrado de sesiones previas).
 - Sign in with Apple sigue pausado a propósito (sesión 72/74).

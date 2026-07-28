@@ -164,7 +164,7 @@ export default function BookingScreen_Time() {
         {loading ? (
           <ActivityIndicator color="#565E32" style={{ marginVertical: 24 }} />
         ) : times.length === 0 ? (
-          <Text style={s.emptyTimes}>Sin horarios disponibles para esta fecha.</Text>
+          <Text style={s.emptyTimes}>Sin horarios disponibles para esta fecha</Text>
         ) : (
           <View style={s.chipsGrid}>
             {times.map(({ label, available }) => {

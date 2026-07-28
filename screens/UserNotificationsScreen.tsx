@@ -131,7 +131,7 @@ export default function UserNotificationsScreen() {
         ) : notifs.length === 0 ? (
           <View style={s.emptyState}>
             <Feather name="bell-off" size={36} color="rgba(135,131,92,0.38)" />
-            <Text style={s.emptyText}>No tenés notificaciones todavía.</Text>
+            <Text style={s.emptyText}>No tenés notificaciones todavía</Text>
           </View>
         ) : (
           <ScrollView contentContainerStyle={s.list} showsVerticalScrollIndicator={false}>

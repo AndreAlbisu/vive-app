@@ -85,8 +85,8 @@ function computeMatches(
 function buildReason(coach: CachedCoach, q1Id: string): string {
   const q1 = Q1_OPTIONS.find(o => o.id === q1Id);
   const hit = q1?.subtemas.find(s => coach.topics.includes(s));
-  if (hit) return `Trabaja ${hit.toLowerCase()} — alineado con lo que estás buscando.`;
-  return 'Su perfil encaja con tus respuestas.';
+  if (hit) return `Trabaja ${hit.toLowerCase()} — alineado con lo que estás buscando`;
+  return 'Su perfil encaja con tus respuestas';
 }
 
 function getInitials(name: string) {

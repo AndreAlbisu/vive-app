@@ -471,7 +471,7 @@ export default function SalaScreen() {
     if (url) {
       await WebBrowser.openBrowserAsync(url);
     } else {
-      Alert.alert('Error', 'No se pudo preparar la sala. Intentalo de nuevo en unos segundos.');
+      Alert.alert('Error', 'No se pudo preparar la sala. Intentalo de nuevo en unos segundos');
     }
   }
 
@@ -494,7 +494,7 @@ export default function SalaScreen() {
     try {
       const { status } = await Calendar.requestCalendarPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Sin permiso', 'Necesitamos acceso al calendario para agregar la sesión.');
+        Alert.alert('Sin permiso', 'Necesitamos acceso al calendario para agregar la sesión');
         return;
       }
       const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
@@ -514,7 +514,7 @@ export default function SalaScreen() {
         e => e.title === title && new Date(e.startDate).getTime() === startDate.getTime(),
       );
       if (alreadyThere) {
-        Alert.alert('Ya agendada', 'Esta sesión ya está en tu calendario.');
+        Alert.alert('Ya agendada', 'Esta sesión ya está en tu calendario');
         return;
       }
 
@@ -525,7 +525,7 @@ export default function SalaScreen() {
         notes: activeBooking.meeting_url ? `Videollamada: ${activeBooking.meeting_url}` : undefined,
         location: activeBooking.meeting_url ?? undefined,
       });
-      Alert.alert('Listo ✓', 'La sesión fue agregada a tu calendario.');
+      Alert.alert('Listo ✓', 'La sesión fue agregada a tu calendario');
     } finally {
       setIsAddingCalendar(false);
     }
@@ -537,7 +537,7 @@ export default function SalaScreen() {
     const isCurrentUserCoach = !recipientIsCoach;
 
     if (!isCurrentUserCoach && activeBooking.status === 'confirmada' && !canCancelConfirmed(activeBooking)) {
-      Alert.alert('No se puede cancelar', 'Las sesiones confirmadas solo se pueden cancelar con al menos 24hs de anticipación.');
+      Alert.alert('No se puede cancelar', 'Las sesiones confirmadas solo se pueden cancelar con al menos 24hs de anticipación');
       return;
     }
 
@@ -578,7 +578,7 @@ export default function SalaScreen() {
                   const { data: userProfile } = await supabase
                     .from('profiles').select('push_token').eq('id', recipientId).maybeSingle();
                   const notifTitle = 'Sesión cancelada';
-                  const notifBody = 'Tu profesional canceló la sesión agendada.';
+                  const notifBody = 'Tu profesional canceló la sesión agendada';
                   await Promise.all([
                     supabase.from('notifications').insert({
                       recipient_id: recipientId,
@@ -613,7 +613,7 @@ export default function SalaScreen() {
                   const { data: coachProfile } = await supabase
                     .from('profiles').select('push_token').eq('id', recipientId).maybeSingle();
                   const notifTitle = 'Sesión cancelada';
-                  const notifBody = 'El usuario canceló la sesión agendada.';
+                  const notifBody = 'El usuario canceló la sesión agendada';
                   await Promise.all([
                     supabase.from('notifications').insert({
                       recipient_id: recipientId,
@@ -725,7 +725,7 @@ export default function SalaScreen() {
         }
       }
     } catch {
-      Alert.alert('Error', 'No se pudo enviar la recomendación.');
+      Alert.alert('Error', 'No se pudo enviar la recomendación');
     } finally {
       setSendingReco(false);
     }
@@ -765,7 +765,7 @@ export default function SalaScreen() {
 
     if (error) {
       setMessages(prev => prev.filter(m => m.id !== optimisticId));
-      Alert.alert('Error', 'No se pudo enviar el mensaje.');
+      Alert.alert('Error', 'No se pudo enviar el mensaje');
       return;
     }
 
@@ -792,7 +792,7 @@ export default function SalaScreen() {
         icon="message-outline"
         iconColor="#87835C"
         title="La Sala"
-        description="Tu espacio de comunicación. Escribí mensajes y coordiná tus sesiones."
+        description="Tu espacio de comunicación. Escribí mensajes y coordiná tus sesiones"
         delay={1000}
       />
 
@@ -1111,8 +1111,8 @@ export default function SalaScreen() {
               <MaterialCommunityIcons name="lock-outline" size={16} color="rgba(135,131,92,0.70)" />
               <Text style={styles.frozenNoticeText}>
                 {isCurrentUserCoach
-                  ? 'Aceptá o rechazá la solicitud desde Reservas para habilitar el chat.'
-                  : `El chat se habilita cuando ${recipientProfile?.name ?? 'el profesional'} acepte tu solicitud.`}
+                  ? 'Aceptá o rechazá la solicitud desde Reservas para habilitar el chat'
+                  : `El chat se habilita cuando ${recipientProfile?.name ?? 'el profesional'} acepte tu solicitud`}
               </Text>
             </View>
           ) : (
@@ -1160,7 +1160,7 @@ export default function SalaScreen() {
           <Text style={styles.recoSheetTitle}>Recomendar recurso</Text>
 
           {coachResources.length === 0 ? (
-            <Text style={styles.recoSheetEmpty}>No tenés recursos publicados aún.</Text>
+            <Text style={styles.recoSheetEmpty}>No tenés recursos publicados aún</Text>
           ) : (
             <ScrollView style={styles.recoSheetList} showsVerticalScrollIndicator={false}>
               {coachResources.map(r => {

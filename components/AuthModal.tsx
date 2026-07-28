@@ -140,7 +140,7 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
 
             <VitaWordmark style={{ alignSelf: 'center', marginBottom: 2 }} />
             <Text style={s.title}>Para continuar, ingresá a tu cuenta</Text>
-            <Text style={s.subtitle}>Es gratis y solo tarda un segundo.</Text>
+            <Text style={s.subtitle}>Es gratis y solo tarda un segundo</Text>
 
             <TouchableOpacity
               style={[s.googleBtn, googleLoading && s.btnDisabled]}

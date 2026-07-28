@@ -124,7 +124,7 @@ export default function RecursosGuardadosScreen() {
               <View style={s.empty}>
                 <Ionicons name="bookmark-outline" size={38} color="rgba(135,131,92,0.45)" />
                 <Text style={s.emptyTitle}>Todavía no guardaste ningún recurso</Text>
-                <Text style={s.emptyText}>Tocá el marcador en cualquier recurso para tenerlo acá.</Text>
+                <Text style={s.emptyText}>Tocá el marcador en cualquier recurso para tenerlo acá</Text>
               </View>
             }
             renderItem={({ item }) => (

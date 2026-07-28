@@ -196,7 +196,7 @@ export default function CoachAgendaScreen() {
               </Text>
 
               {selectedBookings.length === 0 ? (
-                <Text style={s.emptyDay}>No tenés reservas este día.</Text>
+                <Text style={s.emptyDay}>No tenés reservas este día</Text>
               ) : (
                 selectedBookings.map(b => {
                   const meta = STATUS_META[b.status] ?? { label: b.status, color: '#87835C', bg: 'rgba(135,131,92,0.14)' };

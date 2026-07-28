@@ -67,7 +67,7 @@ export function AudioRecorderModal({
     setError(null);
     const { status } = await requestRecordingPermissionsAsync();
     if (status !== 'granted') {
-      setError('Necesitamos permiso de micrófono para grabar.');
+      setError('Necesitamos permiso de micrófono para grabar');
       return;
     }
     await recorder.prepareToRecordAsync();
@@ -79,13 +79,13 @@ export function AudioRecorderModal({
     await recorder.stop();
     const uri = recorder.uri;
     if (!uri) {
-      setError('No se pudo guardar la grabación. Probá de nuevo.');
+      setError('No se pudo guardar la grabación. Probá de nuevo');
       setPhase('idle');
       return;
     }
     const file = new File(uri);
     if (file.size > MAX_BYTES) {
-      setError('La grabación superó los 30 MB — grabá algo más corto.');
+      setError('La grabación superó los 30 MB — grabá algo más corto');
       setPhase('idle');
       return;
     }

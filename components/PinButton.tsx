@@ -43,7 +43,7 @@ export function PinButton({ resourceId }: { resourceId: string }) {
     }
 
     if (pinCount >= 4) {
-      Alert.alert('Ya tenés 4 en tu inicio', 'Quitá uno para fijar este.');
+      Alert.alert('Ya tenés 4 en tu inicio', 'Quitá uno para fijar este');
       return;
     }
 
@@ -56,7 +56,7 @@ export function PinButton({ resourceId }: { resourceId: string }) {
       // el trigger rechaza el 5to pin aunque el conteo local diga otra cosa
       setPinned(false);
       setPinCount(c => Math.max(0, c - 1));
-      Alert.alert('Ya tenés 4 en tu inicio', 'Quitá uno para fijar este.');
+      Alert.alert('Ya tenés 4 en tu inicio', 'Quitá uno para fijar este');
     }
   }
 

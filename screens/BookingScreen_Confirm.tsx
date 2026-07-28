@@ -79,7 +79,7 @@ export default function BookingScreen_Confirm() {
   async function onConfirm() {
     if (!isLoggedIn || !user) { requestAuth(); return; }
     if (!coachProfileIdParam) {
-      setError('No encontramos el profesional. Volvé y elegí de nuevo.');
+      setError('No encontramos el profesional. Volvé y elegí de nuevo');
       return;
     }
 
@@ -109,7 +109,7 @@ export default function BookingScreen_Confirm() {
       }
 
       if (coachErr || !coachRow) {
-        throw new Error('No encontramos el profesional. Volvé y elegí de nuevo.');
+        throw new Error('No encontramos el profesional. Volvé y elegí de nuevo');
       }
 
       const coachId = coachRow.id;              // coaches.id — para bookings.coach_id
@@ -141,7 +141,7 @@ export default function BookingScreen_Confirm() {
           .insert({ user_id: user.id, coach_id: coachProfileId })
           .select('id, room_url')
           .single();
-        if (salaErr || !newSala) throw new Error('No se pudo crear la sala de comunicación.');
+        if (salaErr || !newSala) throw new Error('No se pudo crear la sala de comunicación');
         salaId = newSala.id;
         roomUrl = newSala.room_url ?? ''; // null hasta que corra el trigger / si la columna recién se agregó
       }
@@ -167,7 +167,7 @@ export default function BookingScreen_Confirm() {
 
       if (bookingError || !booking) {
         await logError('BookingConfirm: insert booking failed', bookingError);
-        throw new Error('No se pudo guardar la reserva. Intentalo de nuevo.');
+        throw new Error('No se pudo guardar la reserva. Intentalo de nuevo');
       }
 
       await registrarEvento('reserva_confirmada', {
@@ -246,7 +246,7 @@ export default function BookingScreen_Confirm() {
           conflictProfiles?.forEach(p => { tokenMap[p.id] = p.push_token ?? null; });
 
           const cancelTitle = 'Horario no disponible';
-          const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu profesional.';
+          const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu profesional';
           const cancelSystemMsg = `Solicitud cancelada automáticamente\n${formatDate(dateStr)} · ${time} hs`;
 
           await Promise.all(
@@ -310,7 +310,7 @@ export default function BookingScreen_Confirm() {
       });
     } catch (e: any) {
       await logError('BookingConfirm: onConfirm failed', e);
-      setError(e.message ?? 'Algo salió mal. Intentalo de nuevo.');
+      setError(e.message ?? 'Algo salió mal. Intentalo de nuevo');
     } finally {
       setLoading(false);
     }
@@ -419,7 +419,7 @@ export default function BookingScreen_Confirm() {
           <Text style={s.messageTitle}>
             {instantBooking ? '¿Querés contarle algo al profesional?' : '¿Querés contarle algo antes de que acepte?'}
           </Text>
-          <Text style={s.messageSubtitle}>Es opcional. Le ayuda al profesional a entender mejor tu situación.</Text>
+          <Text style={s.messageSubtitle}>Es opcional. Le ayuda al profesional a entender mejor tu situación</Text>
           <View style={s.messageInputWrap}>
             <TextInput
               style={s.messageInput}

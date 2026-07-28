@@ -269,7 +269,7 @@ export default function ProposeResourceScreen() {
       return;
     }
     if (type === 'video' && !videoFile && !existingVideoUrl) {
-      setSubmitError('Elegí el archivo de video.');
+      setSubmitError('Elegí el archivo de video');
       return;
     }
 
@@ -277,12 +277,12 @@ export default function ProposeResourceScreen() {
     const isMediaUpload = isAudioType(type) || type === 'video';
     let content = isMediaUpload ? null : buildContent();
     if (!isMediaUpload && !content) {
-      if (type === 'guia_pasos') setSubmitError('Agregá al menos un paso con título o contenido.');
-      else setSubmitError('Escribí al menos una página de la lectura (mínimo 10 caracteres).');
+      if (type === 'guia_pasos') setSubmitError('Agregá al menos un paso con título o contenido');
+      else setSubmitError('Escribí al menos una página de la lectura (mínimo 10 caracteres)');
       return;
     }
 
-    if (!user) { setSubmitError('No encontramos tu sesión. Volvé a ingresar.'); return; }
+    if (!user) { setSubmitError('No encontramos tu sesión. Volvé a ingresar'); return; }
 
     setSubmitting(true);
     setSubmitError(null);
@@ -299,13 +299,13 @@ export default function ProposeResourceScreen() {
             .upload(path, bytes, { contentType: audioFile.mimeType ?? 'audio/mp4' });
           if (uploadError) {
             setSubmitting(false);
-            setSubmitError('No pudimos subir el audio. Probá de nuevo en unos minutos.');
+            setSubmitError('No pudimos subir el audio. Probá de nuevo en unos minutos');
             return;
           }
           content = { url: supabase.storage.from('resource-audio').getPublicUrl(path).data.publicUrl };
         } catch {
           setSubmitting(false);
-          setSubmitError('No pudimos leer el archivo. Probá elegirlo de nuevo.');
+          setSubmitError('No pudimos leer el archivo. Probá elegirlo de nuevo');
           return;
         }
       } else {
@@ -325,13 +325,13 @@ export default function ProposeResourceScreen() {
             .upload(path, bytes, { contentType: videoFile.mimeType ?? 'video/mp4' });
           if (uploadError) {
             setSubmitting(false);
-            setSubmitError('No pudimos subir el video. Probá de nuevo en unos minutos.');
+            setSubmitError('No pudimos subir el video. Probá de nuevo en unos minutos');
             return;
           }
           content = { url: supabase.storage.from('resource-video').getPublicUrl(path).data.publicUrl };
         } catch {
           setSubmitting(false);
-          setSubmitError('No pudimos leer el archivo. Probá elegirlo de nuevo.');
+          setSubmitError('No pudimos leer el archivo. Probá elegirlo de nuevo');
           return;
         }
       } else {
@@ -379,7 +379,7 @@ export default function ProposeResourceScreen() {
 
     if (coachError || !coachRow) {
       setSubmitting(false);
-      setSubmitError('No pudimos encontrar tu perfil de profesional.');
+      setSubmitError('No pudimos encontrar tu perfil de profesional');
       return;
     }
 
@@ -416,12 +416,12 @@ export default function ProposeResourceScreen() {
             <MaterialCommunityIcons name="check-circle-outline" size={64} color={ViveColors.accent} />
           </View>
           <Text style={styles.successTitle}>
-            {isEditing ? '¡Reenviada!' : '¡Listo! Tu propuesta está en revisión.'}
+            {isEditing ? '¡Reenviada!' : '¡Listo! Tu propuesta está en revisión'}
           </Text>
           <Text style={styles.successSubtitle}>
             {isEditing
-              ? 'Gracias por los ajustes — la miramos de nuevo y te avisamos.'
-              : 'El equipo de VITA la va a revisar y te va a avisar el resultado.'}
+              ? 'Gracias por los ajustes — la miramos de nuevo y te avisamos'
+              : 'El equipo de VITA la va a revisar y te va a avisar el resultado'}
           </Text>
           <TouchableOpacity
             style={styles.successButton}
@@ -670,8 +670,8 @@ export default function ProposeResourceScreen() {
                 <Text style={styles.sectionLabel}>Archivo de audio</Text>
                 <Text style={styles.fieldHint}>
                   {type === 'podcast'
-                    ? 'Subí tu charla grabada (máx. 20MB) — se escucha dentro de VITA.'
-                    : 'Subí tu audio grabado (máx. 20MB) — se reproduce directo dentro de VITA.'}
+                    ? 'Subí tu charla grabada (máx. 20MB) — se escucha dentro de VITA'
+                    : 'Subí tu audio grabado (máx. 20MB) — se reproduce directo dentro de VITA'}
                 </Text>
                 {(audioFile || existingAudioUrl) ? (
                   <View style={styles.audioFileRow}>
