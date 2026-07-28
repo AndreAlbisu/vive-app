@@ -21,13 +21,15 @@ export const ViveFonts = {
 // Floating pill tab bar: bottom=24 + height=64 = 88px, plus ~22px breathing room
 export const TAB_BAR_CLEARANCE = 110;
 
-// Escala de mood check-in (5 niveles, de más bajo a más alto)
+// Escala de mood check-in (5 niveles, de más bajo a más alto) — un solo lugar,
+// usada en todo lo que represente nivel de ánimo (check-in, gráficos, etc.)
+// para que nunca diverjan hex sueltos entre pantallas.
 export const ViveMoodColors: Record<number, string> = {
-  1: '#B25D3B', // Bajón   — terracota oscuro/arcilla
-  2: '#C98A73', // Cansado — rosa polvo
-  3: '#CBB98C', // Neutral — arena/dorado apagado
-  4: '#8FA382', // Bien    — salvia
-  5: '#4C5B45', // Genial  — verde bosque
+  1: '#C06B4A', // Bajón
+  2: '#DDAE93', // Cansado
+  3: '#D9D0B8', // Normal
+  4: '#BFCBA6', // Bien
+  5: '#8FA07C', // Brillando
 };
 
 // Expo Router tab navigation colors

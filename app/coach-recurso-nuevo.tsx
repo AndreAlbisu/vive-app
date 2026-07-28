@@ -74,27 +74,27 @@ export default function CoachRecursoNuevoScreen() {
     if (result.canceled || !result.assets?.length) return;
     const asset = result.assets[0];
     if (asset.size && asset.size > AUDIO_MAX_BYTES) {
-      Alert.alert('Archivo muy grande', 'El audio no puede superar los 30 MB.');
+      Alert.alert('Archivo muy grande', 'El audio no puede superar los 30 MB');
       return;
     }
     setAudioAsset({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size });
   }
 
   function validate(): string | null {
-    if (!titulo.trim()) return 'El título es obligatorio.';
-    if (!formato) return 'Elegí un formato.';
-    if (!topicId) return 'Elegí un tema.';
-    if (!declared) return 'Tenés que declarar que el contenido es tuyo.';
-    if (formato === 'audio' && !audioAsset) return 'Seleccioná un archivo de audio.';
+    if (!titulo.trim()) return 'El título es obligatorio';
+    if (!formato) return 'Elegí un formato';
+    if (!topicId) return 'Elegí un tema';
+    if (!declared) return 'Tenés que declarar que el contenido es tuyo';
+    if (formato === 'audio' && !audioAsset) return 'Seleccioná un archivo de audio';
     if (formato === 'video') {
-      if (!url.trim()) return 'Pegá el link de YouTube.';
-      if (!isYouTubeUrl(url)) return 'El link debe ser de YouTube.';
+      if (!url.trim()) return 'Pegá el link de YouTube';
+      if (!isYouTubeUrl(url)) return 'El link debe ser de YouTube';
     }
     if (formato === 'podcast') {
-      if (!url.trim()) return 'Pegá el link del podcast.';
-      if (!isValidUrl(url)) return 'El link no es válido.';
+      if (!url.trim()) return 'Pegá el link del podcast';
+      if (!isValidUrl(url)) return 'El link no es válido';
     }
-    if (formato === 'lectura' && !bodyMd.trim()) return 'Escribí el contenido de la lectura.';
+    if (formato === 'lectura' && !bodyMd.trim()) return 'Escribí el contenido de la lectura';
     return null;
   }
 
@@ -149,7 +149,7 @@ export default function CoachRecursoNuevoScreen() {
 
       Alert.alert(
         '¡Recurso enviado!',
-        'Lo revisamos en los próximos días y te avisamos cuando esté publicado.',
+        'Lo revisamos en los próximos días y te avisamos cuando esté publicado',
         [{ text: 'OK', onPress: () => router.back() }],
       );
     } finally {

@@ -61,7 +61,7 @@ export default function ReviewScreen() {
 
       if (!booking) { setPageLoading(false); return; }
 
-      setCoachName(booking.coach_name ?? 'Tu coach');
+      setCoachName(booking.coach_name ?? 'Tu profesional');
       setCoachSpecialty(booking.coach_specialty ?? '');
 
       const { data: coachRow } = await supabase
@@ -94,7 +94,7 @@ export default function ReviewScreen() {
 
   const handleSubmit = useCallback(async () => {
     if (rating === 0) {
-      Alert.alert('Falta la calificación', 'Tocá las estrellas para calificar la sesión.');
+      Alert.alert('Falta la calificación', 'Tocá las estrellas para calificar la sesión');
       return;
     }
     if (!coachProfileId || !user || !bookingId) return;
@@ -123,15 +123,15 @@ export default function ReviewScreen() {
     setSubmitting(false);
 
     if (error) {
-      Alert.alert('Error', 'No pudimos guardar tu reseña. Intentá de nuevo.');
+      Alert.alert('Error', 'No pudimos guardar tu reseña. Intentá de nuevo');
       return;
     }
 
     Alert.alert(
       existingReviewId ? 'Reseña actualizada' : '¡Gracias por tu reseña!',
       existingReviewId
-        ? 'Tu reseña fue actualizada correctamente.'
-        : 'Tu experiencia ayuda a otros a elegir mejor.',
+        ? 'Tu reseña fue actualizada correctamente'
+        : 'Tu experiencia ayuda a otros a elegir mejor',
       [{ text: 'Listo', onPress: () => router.back() }],
     );
   }, [rating, comment, coachProfileId, user, bookingId, existingReviewId, router]);
@@ -153,7 +153,7 @@ export default function ReviewScreen() {
       <AppBg>
         <SafeAreaView style={s.safe}>
           <View style={s.center}>
-            <Text style={s.errorText}>Invitación no encontrada.</Text>
+            <Text style={s.errorText}>Invitación no encontrada</Text>
           </View>
         </SafeAreaView>
       </AppBg>

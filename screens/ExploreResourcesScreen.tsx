@@ -123,7 +123,7 @@ export default function ExploreResourcesScreen() {
         type: r.type,
         title: r.title,
         duration_min: r.duration_min,
-        coachName: r.profiles?.name ?? 'un coach',
+        coachName: r.profiles?.name ?? 'un profesional',
       });
     }
     setRows(mapped);
@@ -167,7 +167,7 @@ export default function ExploreResourcesScreen() {
           </TouchableOpacity>
           <View style={s.headerText}>
             <Text style={s.title}>Explorar</Text>
-            <Text style={s.subtitle}>Todo lo que comparten nuestros coaches</Text>
+            <Text style={s.subtitle}>Todo lo que comparten nuestros profesionales</Text>
           </View>
         </View>
 

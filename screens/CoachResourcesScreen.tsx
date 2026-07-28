@@ -102,14 +102,14 @@ export default function CoachResourcesScreen() {
   const publishedCount = resources.filter(r => r.status === 'published').length;
 
   function openUpload(format?: string) {
-    if (!coachId) { Alert.alert('Perfil de coach', 'Completá tu perfil de coach antes de subir recursos.'); return; }
+    if (!coachId) { Alert.alert('Perfil de profesional', 'Completá tu perfil de profesional antes de subir recursos'); return; }
     router.push({ pathname: '/coach-recurso-nuevo', params: { coach_id: coachId, ...(format ? { format } : {}) } } as any);
   }
 
   function recommend(r: CoachResource) {
     Alert.alert(
       'Recomendar',
-      `Abrí el chat con la persona y tocá + para enviarle "${r.title}".`,
+      `Abrí el chat con la persona y tocá + para enviarle "${r.title}"`,
       [
         { text: 'Ir a Chats', onPress: () => router.navigate('/chats') },
         { text: 'Cerrar', style: 'cancel' },
@@ -142,7 +142,7 @@ export default function CoachResourcesScreen() {
               ))}
             </View>
             {publishedCount === 0 && (
-              <Text style={s.statsFoot}>Tus recursos empiezan a contar su historia cuando se publican.</Text>
+              <Text style={s.statsFoot}>Tus recursos empiezan a contar su historia cuando se publican</Text>
             )}
           </LinearGradient>
 
@@ -212,7 +212,7 @@ export default function CoachResourcesScreen() {
           )}
 
           {publishedCount >= 10 && (
-            <Text style={s.limitNote}>Llegaste al límite de 10 publicados. Archivá uno para publicar otro.</Text>
+            <Text style={s.limitNote}>Llegaste al límite de 10 publicados. Archivá uno para publicar otro</Text>
           )}
 
           <TouchableOpacity style={s.viewas} activeOpacity={0.7} onPress={() => router.push('/explorar-recursos')}>

@@ -118,7 +118,7 @@ export function useRecommendedResource(params: {
           kind: 'tool',
           toolId,
           eyebrow: 'SEGÚN CÓMO TE SENTÍS HOY',
-          why: `Te sentiste ${todayMood.mood_label.toLowerCase()} — ${cfg.tone}.`,
+          why: `Te sentiste ${todayMood.mood_label.toLowerCase()} — ${cfg.tone}`,
         };
       }
     }
@@ -136,7 +136,7 @@ export function useRecommendedResource(params: {
           kind: 'coach',
           resource: coachRes,
           eyebrow: `PORQUE TE INTERESA ${label.toUpperCase()}`,
-          why: `Un recurso de ${coachRes.coachName} para trabajar ${label}.`,
+          why: `Un recurso de ${coachRes.coachName} para trabajar ${label}`,
         };
       }
       const toolId = firstToolInAxis(axis, recentlyDone);
@@ -145,7 +145,7 @@ export function useRecommendedResource(params: {
           kind: 'tool',
           toolId,
           eyebrow: `PORQUE TE INTERESA ${label.toUpperCase()}`,
-          why: `Para dedicarle un momento a ${label}.`,
+          why: `Para dedicarle un momento a ${label}`,
         };
       }
     }

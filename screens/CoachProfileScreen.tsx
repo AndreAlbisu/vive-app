@@ -175,7 +175,7 @@ export default function CoachProfileScreen() {
     if (!user) return;
     const parsed = parseInt(priceInput.replace(/[^0-9]/g, ''), 10);
     if (!parsed || parsed <= 0) {
-      Alert.alert('Precio inválido', 'Ingresá un monto mayor a 0.');
+      Alert.alert('Precio inválido', 'Ingresá un monto mayor a 0');
       return;
     }
 
@@ -191,7 +191,7 @@ export default function CoachProfileScreen() {
     // 0 filas afectadas. Sin chequear `data`, esto se mostraría como
     // "guardado" en el cliente aunque la base no haya cambiado.
     if (error || !data || data.length === 0) {
-      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
+      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
       return;
     }
 
@@ -218,7 +218,7 @@ export default function CoachProfileScreen() {
 
     // Si RLS bloquea el UPDATE, Postgrest devuelve 0 filas sin error
     if (error || !data || data.length === 0) {
-      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
+      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
       return;
     }
 
@@ -240,7 +240,7 @@ export default function CoachProfileScreen() {
 
     if (error || !data || data.length === 0) {
       setProfile(prev => prev ? { ...prev, instant_booking: !value } : prev);
-      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
+      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
     }
   }
 
@@ -256,7 +256,7 @@ export default function CoachProfileScreen() {
     setSavingAvailability(false);
     if (error) {
       setProfile(prev => prev ? { ...prev, availability_status: newStatus === 'activo' ? 'en_pausa' : 'activo' } : prev);
-      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
+      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
     }
   }
 
@@ -268,7 +268,7 @@ export default function CoachProfileScreen() {
       if (error || !data?.url) {
         Alert.alert(
           'No disponible aún',
-          'La integración con Mercado Pago estará disponible próximamente. Te avisamos cuando esté lista.',
+          'La integración con Mercado Pago estará disponible próximamente. Te avisamos cuando esté lista',
         );
         return;
       }
@@ -283,7 +283,7 @@ export default function CoachProfileScreen() {
         setMpConnected(true);
       }
     } catch {
-      Alert.alert('Error', 'No se pudo conectar con Mercado Pago. Intentá de nuevo.');
+      Alert.alert('Error', 'No se pudo conectar con Mercado Pago. Intentá de nuevo');
     } finally {
       setConnectingMp(false);
     }
@@ -302,7 +302,7 @@ export default function CoachProfileScreen() {
         .upload(path, bytes, { contentType: mimeType ?? 'video/mp4', upsert: true });
 
       if (uploadError) {
-        Alert.alert('No se pudo subir el video', 'Probá de nuevo en unos minutos.');
+        Alert.alert('No se pudo subir el video', 'Probá de nuevo en unos minutos');
         return;
       }
 
@@ -318,7 +318,7 @@ export default function CoachProfileScreen() {
         .select('video_url');
 
       if (updateError || !updateData || updateData.length === 0) {
-        Alert.alert('Video subido', 'Pero no se pudo guardar en tu perfil. Probá de nuevo.');
+        Alert.alert('Video subido', 'Pero no se pudo guardar en tu perfil. Probá de nuevo');
         return;
       }
 
@@ -334,7 +334,7 @@ export default function CoachProfileScreen() {
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert('Permiso necesario', 'Activá el permiso desde los ajustes del celular para continuar.');
+      Alert.alert('Permiso necesario', 'Activá el permiso desde los ajustes del celular para continuar');
       return;
     }
 
@@ -390,7 +390,7 @@ export default function CoachProfileScreen() {
         .upload(path, bytes, { contentType: mimeType ?? 'image/jpeg', upsert: true });
 
       if (uploadError) {
-        Alert.alert('No se pudo subir la foto', 'Probá de nuevo en unos minutos.');
+        Alert.alert('No se pudo subir la foto', 'Probá de nuevo en unos minutos');
         return;
       }
 
@@ -406,7 +406,7 @@ export default function CoachProfileScreen() {
         .select('avatar_url');
 
       if (updateError || !updateData || updateData.length === 0) {
-        Alert.alert('Foto subida', 'Pero no se pudo guardar en tu perfil. Probá de nuevo.');
+        Alert.alert('Foto subida', 'Pero no se pudo guardar en tu perfil. Probá de nuevo');
         return;
       }
 
@@ -422,7 +422,7 @@ export default function CoachProfileScreen() {
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert('Permiso necesario', 'Activá el permiso desde los ajustes del celular para continuar.');
+      Alert.alert('Permiso necesario', 'Activá el permiso desde los ajustes del celular para continuar');
       return;
     }
 
@@ -513,7 +513,7 @@ export default function CoachProfileScreen() {
           </Text>
 
           {noCoachProfile ? (
-            <Text style={s.emptyCoachText}>Todavía no completaste tu perfil de coach</Text>
+            <Text style={s.emptyCoachText}>Todavía no completaste tu perfil de profesional</Text>
           ) : (
             <>
               {profile?.specialty ? (
@@ -539,7 +539,7 @@ export default function CoachProfileScreen() {
                 style={s.bioInput}
                 value={bioInput}
                 onChangeText={t => setBioInput(t.slice(0, 400))}
-                placeholder="Contale a quien te visita quién sos y cómo acompañás. Un par de líneas alcanzan."
+                placeholder="Contale a quien te visita quién sos y cómo acompañás. Un par de líneas alcanzan"
                 placeholderTextColor="rgba(135,131,92,0.45)"
                 multiline
                 numberOfLines={4}
@@ -676,8 +676,8 @@ export default function CoachProfileScreen() {
             <Text style={s.toggleTitle}>{profile?.instant_booking ? 'Instantánea' : 'Con confirmación'}</Text>
             <Text style={s.toggleDesc}>
               {profile?.instant_booking
-                ? 'Los usuarios reservan directamente sin esperar tu aprobación.'
-                : 'Cada reserva requiere tu confirmación antes de quedar fijada.'}
+                ? 'Los usuarios reservan directamente sin esperar tu aprobación'
+                : 'Cada reserva requiere tu confirmación antes de quedar fijada'}
             </Text>
           </View>
           <Switch
@@ -699,8 +699,8 @@ export default function CoachProfileScreen() {
             </Text>
             <Text style={s.toggleDesc}>
               {profile?.availability_status === 'activo'
-                ? 'Aparecés en búsquedas y podés recibir nuevas reservas.'
-                : 'No aparecés en búsquedas. Tus sesiones actuales no se ven afectadas.'}
+                ? 'Aparecés en búsquedas y podés recibir nuevas reservas'
+                : 'No aparecés en búsquedas. Tus sesiones actuales no se ven afectadas'}
             </Text>
           </View>
           <Switch
@@ -764,8 +764,8 @@ export default function CoachProfileScreen() {
             </Text>
             <Text style={s.toggleDesc}>
               {mpConnected
-                ? 'Los usuarios pueden pagarte directamente desde la app.'
-                : 'Conectá tu cuenta para recibir pagos a través de la app.'}
+                ? 'Los usuarios pueden pagarte directamente desde la app'
+                : 'Conectá tu cuenta para recibir pagos a través de la app'}
             </Text>
           </View>
           {mpConnected ? (

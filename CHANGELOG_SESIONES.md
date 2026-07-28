@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-07-28 — Joaquín (sesión 75)
+
+**Tocado:** ver lista larga al final — toca ~35 archivos. Nuevos: `hooks/useProgressStats.ts`, `lib/moodStats.ts`.
+
+**Resumen — 4 bloques de trabajo en una sesión larga:**
+
+1. **Rebrand "coach" → "profesional" en todo el texto visible.** VITA ya no es solo coaches (psicólogos, nutricionistas también). Catalogado con un agente de exploración para separar texto de UI (sí cambia) de identificadores internos — tablas `coaches`, columnas `coach_id`, rutas `/(coach)/`, archivos `coach-*.tsx`, el rol `role: 'coach'` — que NO se tocaron. Se dejó "Coach" intacto donde es una categoría de especialidad específica (junto a Psicólogo/Nutricionista en `search3.tsx`, `QuizScreen.tsx`, `CoachApplicationScreen.tsx`, los fallbacks "Coach de vida" del flujo de booking).
+
+2. **Rediseño visual de "Sobre vos" (Inicio) y "Tu progreso"** — mismo dato, presentación nueva, siguiendo `vita-progreso-rediseno.html` (mockup, no se guardó en el repo, solo capturas). Paleta de mood centralizada: `ViveMoodColors` (`constants/theme.ts`) ya existía pero con hex viejos — actualizada a los 5 valores nuevos pedidos, se usa en `MoodCheckIn`, el gráfico de Progreso y el sparkline nuevo de Sobre Vos, sin divergencias. Trío pastel (salvia/durazno/azul) y colores por herramienta nuevos en `constants/tools.ts` (no existían antes — asignados, no reusados, ver nota en el chat). `hooks/useProgressStats.ts` (nuevo) extrae la query de semanas activas/áreas/sesiones que antes vivía solo en `progreso.tsx`, ahora la comparte con la card de Inicio. `lib/moodStats.ts` (nuevo): `computeMoodStreak` (racha de check-ins consecutivos, antes vivía inline en progreso.tsx) y `buildWeeklyHeadline` (titular dinámico reciente-vs-histórico de la card Sobre Vos — única lógica nueva no visual de la sesión, simple a propósito). Los 3 casos del titular (mood bajo/alto/sin histórico) se probaron sembrando datos de prueba en `mood_entries` del usuario de test y confirmando en pantalla — los tres funcionan.
+
+3. **Fix: título de "Mensajes" (antes "Mis salas") sin la misma tipografía que el resto.** `SessionsScreen.tsx`: texto cambiado, tipografía y posición del header ahora calcan exacto a Recursos (`Fraunces 34px`, `#3F512F`, alineado a la izquierda, mismo padding) — se sacó el fondo/borde/divider que tenía antes.
+
+4. **Barrido de puntos finales en microcopy corto de toda la app — en progreso, no terminado.** Catalogado con otro agente (151 candidatos en ~35 archivos: títulos, labels, errores, toasts, notificaciones push — un solo punto final, no párrafos largos). Se excluyó a propósito: términos y condiciones, citas de `LecturasScreen`, y los guiones de prácticas guiadas (Relajación/Meditación/Sueño/Escáner/Anclaje — narración de varias oraciones donde el punto marca ritmo real). Multi-oración corta (ej. "No pudimos guardar. Probá de nuevo.") pierde solo el punto de la última oración, no los intermedios. **Quedó a mitad de camino** — recomendaciones más abajo con exactamente dónde retomar.
+
+Typecheck limpio en cada checkpoint.
+
+**Pendiente para la próxima sesión:**
+- **Terminar el barrido de puntos finales.** Falta desde `screens/ProposeResourceScreen.tsx` (a partir de `'Elegí el archivo de video.'`) hasta el final de la lista del agente: `ProposeResourceScreen.tsx` (resto), `CoachApplicationScreen.tsx`, `components/AudioRecorderModal.tsx`, `components/AuthModal.tsx`, `components/PinButton.tsx`, `BookingScreen_Confirm.tsx` (ya tocado por el rename, faltan los puntos), `BookingScreen_Success.tsx`, `BookingScreen_Time.tsx`, `ResourceDetailScreen.tsx`, `QuizScreen.tsx`, `RecursosGuardadosScreen.tsx`, `CoachNotificationsScreen.tsx`/`UserNotificationsScreen.tsx`, `CoachAgendaScreen.tsx`, `ResourceProposalsScreen.tsx`, `SalaScreen.tsx` (~13 strings), `lib/coachBookingActions.ts` (2 restantes). El catálogo completo con archivo+línea+texto exacto está en el mensaje del agente en esta conversación — si no está a mano, re-correr el mismo agente de catalogación.
+- Retomar Mercado Pago cuando Andre conecte su cuenta real (sesión 74).
+- `/mis-recomendaciones` con >3 recos y swipe en Android siguen sin probar (arrastrado de sesiones previas).
+- Sign in with Apple sigue pausado a propósito (sesión 72/74).
+
+---
+
 ## 2026-07-28 — Joaquín (sesión 74)
 
 **Tocado:** `app/_layout.tsx`. Cambios de infra en Supabase (secrets, un coach de prueba), no en el repo.

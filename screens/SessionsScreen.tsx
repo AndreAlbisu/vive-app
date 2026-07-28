@@ -212,7 +212,7 @@ export default function SessionsScreen() {
           scheduled_time: nb.scheduled_time,
           duration_minutes: nb.duration_minutes ?? null,
           meeting_url: nb.meeting_url ?? null,
-          coachName: coachProfile?.name ?? 'Tu coach',
+          coachName: coachProfile?.name ?? 'Tu profesional',
           coachInitials: getInitials(coachProfile?.name ?? '?'),
           coachAvatarUrl: coachProfile?.avatarUrl ?? null,
         });
@@ -244,7 +244,7 @@ export default function SessionsScreen() {
     try {
       const { status } = await Calendar.requestCalendarPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Sin permiso', 'Necesitamos acceso al calendario para agregar la sesión.');
+        Alert.alert('Sin permiso', 'Necesitamos acceso al calendario para agregar la sesión');
         return;
       }
       const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
@@ -263,7 +263,7 @@ export default function SessionsScreen() {
         e => e.title === title && new Date(e.startDate).getTime() === startDate.getTime(),
       );
       if (alreadyThere) {
-        Alert.alert('Ya agendada', 'Esta sesión ya está en tu calendario.');
+        Alert.alert('Ya agendada', 'Esta sesión ya está en tu calendario');
         return;
       }
 
@@ -273,7 +273,7 @@ export default function SessionsScreen() {
         endDate,
         notes: nextSession.meeting_url ? `Videollamada: ${nextSession.meeting_url}` : undefined,
       });
-      Alert.alert('Listo', 'La sesión fue agregada a tu calendario.');
+      Alert.alert('Listo', 'La sesión fue agregada a tu calendario');
     } finally {
       setIsAddingCalendar(false);
     }
@@ -291,10 +291,8 @@ export default function SessionsScreen() {
           },
         ]}
       >
-        <Text style={styles.headerTitle}>Mis salas</Text>
+        <Text style={styles.headerTitle}>Mensajes</Text>
       </Animated.View>
-
-      <View style={styles.headerDivider} />
 
       {loading ? (
         <View style={styles.loadingState}>
@@ -506,19 +504,19 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
 
   header: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: 'rgba(255,248,240,0.48)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(86,94,50,0.14)',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    marginBottom: 16,
   },
   headerTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 17,
-    color: '#565E32',
-    textAlign: 'center',
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 34,
+    color: '#3F512F',
+    lineHeight: 40,
   },
-  headerDivider: { height: 1, backgroundColor: 'rgba(86,94,50,0.08)' },
 
   loadingState: { flex: 1, padding: 20, gap: 12 },
   skeletonHero: {
@@ -533,7 +531,7 @@ const styles = StyleSheet.create({
   },
 
   scroll: { flex: 1 },
-  scrollContent: { paddingTop: 16, paddingBottom: TAB_BAR_CLEARANCE, paddingHorizontal: 16, gap: 0 },
+  scrollContent: { paddingTop: 0, paddingBottom: TAB_BAR_CLEARANCE, paddingHorizontal: 16, gap: 0 },
 
   // Hero
   heroCard: {

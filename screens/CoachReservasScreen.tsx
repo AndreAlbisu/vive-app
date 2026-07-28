@@ -255,7 +255,7 @@ export default function CoachReservasScreen() {
                 supabase.from('profiles').select('name').eq('id', user!.id).maybeSingle(),
               ]);
               const notifTitle = 'Sesión cancelada';
-              const notifBody = `${coachProfile?.name ?? 'Tu coach'} canceló la sesión del ${fullDate(booking.scheduled_date)}.`;
+              const notifBody = `${coachProfile?.name ?? 'Tu profesional'} canceló la sesión del ${fullDate(booking.scheduled_date)}`;
               await Promise.all([
                 supabase.from('notifications').insert({
                   recipient_id: booking.user_id, type: 'reserva_cancelada', booking_id: booking.id,
@@ -283,7 +283,7 @@ export default function CoachReservasScreen() {
           ? { pathname: '/sala', params: { sala_id: booking.sala_id } }
           : '/sala'),
       },
-      { text: 'Reprogramar', onPress: () => Alert.alert('Reprogramar', 'La reprogramación llega pronto. Por ahora podés cancelar y coordinar un nuevo horario por chat.') },
+      { text: 'Reprogramar', onPress: () => Alert.alert('Reprogramar', 'La reprogramación llega pronto. Por ahora podés cancelar y coordinar un nuevo horario por chat') },
       { text: 'Cancelar sesión', style: 'destructive', onPress: () => cancelConfirmed(booking) },
       { text: 'Cerrar', style: 'cancel' },
     ]);
@@ -323,7 +323,7 @@ export default function CoachReservasScreen() {
             </View>
 
             {pending.length === 0 ? (
-              <View style={s.aldia}><Text style={s.aldiaTxt}>✓ Sin solicitudes pendientes. Estás al día.</Text></View>
+              <View style={s.aldia}><Text style={s.aldiaTxt}>✓ Sin solicitudes pendientes. Estás al día</Text></View>
             ) : (
               pending.map(b => (
                 <View key={b.id} style={s.req}>
@@ -358,7 +358,7 @@ export default function CoachReservasScreen() {
             </View>
 
             {grouped.length === 0 ? (
-              <View style={s.aldia}><Text style={s.aldiaTxt}>No tenés sesiones confirmadas próximas.</Text></View>
+              <View style={s.aldia}><Text style={s.aldiaTxt}>No tenés sesiones confirmadas próximas</Text></View>
             ) : (
               grouped.map(g => (
                 <View key={g.key} style={s.dayg}>
@@ -412,13 +412,13 @@ export default function CoachReservasScreen() {
               </TouchableOpacity>
             </View>
             <View style={rm.body}>
-              <Text style={rm.helper}>El usuario recibe un aviso para elegir otro horario disponible u otro profesional.</Text>
+              <Text style={rm.helper}>El usuario recibe un aviso para elegir otro horario disponible u otro profesional</Text>
               <Text style={rm.label}>Motivo (opcional)</Text>
               <TextInput
                 style={rm.input}
                 value={rejectReason}
                 onChangeText={setRejectReason}
-                placeholder="Ej: No tengo disponibilidad ese horario."
+                placeholder="Ej: No tengo disponibilidad ese horario"
                 placeholderTextColor="rgba(107,122,86,0.5)"
                 multiline
                 numberOfLines={4}

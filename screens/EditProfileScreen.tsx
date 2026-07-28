@@ -77,7 +77,7 @@ export default function EditProfileScreen() {
         .upload(path, bytes, { contentType: mimeType ?? 'image/jpeg', upsert: true });
 
       if (uploadError) {
-        Alert.alert('No se pudo subir la foto', 'Probá de nuevo en unos minutos.');
+        Alert.alert('No se pudo subir la foto', 'Probá de nuevo en unos minutos');
         return;
       }
 
@@ -93,7 +93,7 @@ export default function EditProfileScreen() {
         .select('avatar_url');
 
       if (updateError || !updateData || updateData.length === 0) {
-        Alert.alert('Foto subida', 'Pero no se pudo guardar en tu perfil. Probá de nuevo.');
+        Alert.alert('Foto subida', 'Pero no se pudo guardar en tu perfil. Probá de nuevo');
         return;
       }
 
@@ -109,7 +109,7 @@ export default function EditProfileScreen() {
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert('Permiso necesario', 'Activá el permiso desde los ajustes del celular para continuar.');
+      Alert.alert('Permiso necesario', 'Activá el permiso desde los ajustes del celular para continuar');
       return;
     }
 
@@ -185,7 +185,7 @@ export default function EditProfileScreen() {
     if (birthDate.replace(/[^0-9]/g, '').length > 0) {
       const iso = displayToIso(birthDate);
       if (!iso) {
-        setErrorMsg('Fecha inválida. Usá el formato DD/MM/AAAA.');
+        setErrorMsg('Fecha inválida. Usá el formato DD/MM/AAAA');
         setSaving(false);
         return;
       }
@@ -200,7 +200,7 @@ export default function EditProfileScreen() {
     setSaving(false);
 
     if (error) {
-      setErrorMsg('Error al guardar. Intentalo de nuevo.');
+      setErrorMsg('Error al guardar. Intentalo de nuevo');
     } else {
       setSuccessMsg('✓ Perfil actualizado');
       setTimeout(() => setSuccessMsg(''), 3000);

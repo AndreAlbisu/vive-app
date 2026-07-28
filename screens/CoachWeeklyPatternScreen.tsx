@@ -144,7 +144,7 @@ export default function CoachWeeklyPatternScreen() {
       slot_duration_minutes: duration,
     });
     if (error) {
-      Alert.alert('Error', 'No se pudo guardar el bloque.');
+      Alert.alert('Error', 'No se pudo guardar el bloque');
       setSaving(false);
       return;
     }
@@ -160,7 +160,7 @@ export default function CoachWeeklyPatternScreen() {
   function confirmDeleteBlock(id: string) {
     Alert.alert(
       'Eliminar bloque',
-      'Los slots ya generados en disponibilidad no se borran. Solo se deja de generar a futuro.',
+      'Los slots ya generados en disponibilidad no se borran. Solo se deja de generar a futuro',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -315,7 +315,7 @@ export default function CoachWeeklyPatternScreen() {
                   )}
 
                   {startTime !== null && endTime !== null && !canSave && (
-                    <Text style={s.validationHint}>El fin debe ser posterior al inicio.</Text>
+                    <Text style={s.validationHint}>El fin debe ser posterior al inicio</Text>
                   )}
 
                   {/* Duration chips */}

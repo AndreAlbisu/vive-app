@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ScrollView, View, Text, TouchableOpacity,
   StyleSheet, StatusBar, ActivityIndicator, useWindowDimensions,
 } from 'react-native';
 import Svg, {
-  Circle as SvgCircle, Line as SvgLine, Polyline, Text as SvgText,
+  Circle as SvgCircle, Line as SvgLine, Polyline, Path, Text as SvgText,
+  Defs, LinearGradient as SvgLinearGradient, Stop,
 } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -14,14 +16,14 @@ import { ViveFonts, ViveMoodColors } from '@/constants/theme';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import type { MoodEntry } from '@/hooks/useMoodHistory';
 import { useResourceProgress } from '@/hooks/useResourceProgress';
+import { useProgressStats } from '@/hooks/useProgressStats';
 import { AppBg } from '@/components/ui/AppBg';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { VitaHeader } from '@/components/ui/VitaHeader';
 import { ProgressToggle } from '@/components/ui/ProgressToggle';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
-import { getSemanasActivas } from '@/lib/stats';
-import { TOOLS, TOOL_MAP } from '@/constants/tools';
+import { TOOLS, TOOL_MAP, PASTEL_SALVIA, PASTEL_DURAZNO, PASTEL_AZUL } from '@/constants/tools';
 import { loadHabits, addHabit, removeHabit } from '@/lib/habits';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -33,20 +35,6 @@ interface PastSession {
   date: string;
   time: string;
 }
-
-// ─── Mapeo de topics de coach → áreas de la app ──────────────────────────────
-const TOPIC_TO_AREA: Record<string, string> = {
-  'Tristeza': 'emocion', 'Ansiedad': 'emocion', 'Enojo': 'emocion',
-  'Culpa': 'emocion', 'Vergüenza': 'emocion', 'Alegría': 'emocion', 'Autoestima': 'emocion',
-  'Soledad': 'emocion', 'Ansiedad social': 'emocion', 'Duelo': 'emocion',
-  'Pareja': 'relaciones', 'Familia': 'relaciones', 'Amistades': 'relaciones', 'Vínculos laborales': 'relaciones',
-  'Productividad': 'trabajo', 'Concentración': 'trabajo', 'Procrastinación': 'trabajo',
-  'Hábitos mentales': 'trabajo', 'Burnout (estrés laboral)': 'trabajo',
-  'Sueño': 'salud', 'Energía': 'salud', 'Actividad física': 'salud',
-  'Estrés físico': 'salud', 'Hábitos': 'salud', 'Nutrición': 'salud', 'Sexualidad': 'salud',
-  'Propósito': 'proposito', 'Identidad': 'proposito', 'Motivación': 'proposito',
-  'Crecimiento': 'proposito', 'Momentos de cambio': 'proposito', 'Espiritualidad': 'proposito',
-};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -60,15 +48,27 @@ function formatDate(dateStr: string): string {
   return `${dayName} ${day} de ${MONTHS_ES[month - 1]}`;
 }
 
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
 const CARD_MX = 18;
+const FOREST = '#3F512F';
+const FOREST_SOFT = '#6B7A56';
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 
 const MOOD_LABELS: Record<number, string> = {
   1: 'Bajón', 2: 'Cansado', 3: 'Normal', 4: 'Bien', 5: 'Brillando',
 };
+const MOOD_LEGEND = [1, 2, 3, 4, 5] as const;
 const DAY_NAMES_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const DAY_LETTERS     = ['D',   'L',   'M',   'M',   'J',   'V',   'S'];
+
+const STAT_ICON_BG: Record<string, string> = { semanas: PASTEL_AZUL, areas: PASTEL_DURAZNO, sesiones: PASTEL_SALVIA };
 
 export default function ProgresoScreen() {
   const router = useRouter();
@@ -85,9 +85,7 @@ export default function ProgresoScreen() {
 
   const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
-  const [sessionCount, setSessionCount] = useState<number | null>(null);
-  const [semanasActivas, setSemanasActivas] = useState<number>(0);
-  const [areasCount, setAreasCount] = useState<number | null>(null);
+  const { semanasActivas, areasCount, sessionCount } = useProgressStats(user?.id);
 
   const { entries: moodEntries, loading: moodLoading } = useMoodHistory(user?.id, 14);
 
@@ -162,14 +160,13 @@ export default function ProgresoScreen() {
 
   const availableTools = TOOLS.filter(t => !habits.includes(t.id));
 
+  // Historial de sesiones — mismos datos que antes, solo el detalle (nombre/
+  // especialidad de coach) para el timeline; el conteo vive en useProgressStats.
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setPastSessions([]); setLoadingSessions(false); return; }
     const today = new Date().toISOString().split('T')[0];
 
-    getSemanasActivas(user!.id).then(setSemanasActivas);
-
-    async function fetchData() {
-      // Sesiones pasadas (confirmadas con fecha ya pasada, o completadas)
+    async function fetchSessions() {
       const { data: bookings } = await supabase
         .from('bookings')
         .select('id, coach_id, scheduled_date, scheduled_time')
@@ -180,32 +177,15 @@ export default function ProgresoScreen() {
 
       if (!bookings || bookings.length === 0) {
         setPastSessions([]);
-        setSessionCount(0);
         setLoadingSessions(false);
         return;
       }
 
-      setSessionCount(bookings.length);
-
-      // bookings.coach_id → coaches.id (PK interno, no profiles.id)
       const coachInternalIds = [...new Set(bookings.map(b => b.coach_id as string))];
-
       const { data: coachRows } = await supabase
         .from('coaches')
         .select('id, profile_id, specialty')
         .in('id', coachInternalIds);
-
-      const { data: topicRows } = await supabase
-        .from('coach_topics')
-        .select('topic')
-        .in('coach_id', coachInternalIds);
-
-      const uniqueAreas = new Set<string>();
-      topicRows?.forEach(t => {
-        const area = TOPIC_TO_AREA[t.topic as string];
-        if (area) uniqueAreas.add(area);
-      });
-      setAreasCount(uniqueAreas.size || null);
 
       const profileIds = [...new Set((coachRows ?? []).map(c => c.profile_id as string))];
       const { data: profiles } = await supabase
@@ -219,11 +199,11 @@ export default function ProgresoScreen() {
       });
 
       const profileMap: Record<string, string> = {};
-      profiles?.forEach(p => { profileMap[p.id] = p.name ?? 'Coach'; });
+      profiles?.forEach(p => { profileMap[p.id] = p.name ?? 'Profesional'; });
 
       const sessions: PastSession[] = bookings.map(b => ({
         id: b.id as string,
-        coachName: profileMap[coachToProfileId[b.coach_id as string] ?? ''] ?? 'Coach',
+        coachName: profileMap[coachToProfileId[b.coach_id as string] ?? ''] ?? 'Profesional',
         specialty: specialtyMap[b.coach_id as string] ?? null,
         date: formatDate(b.scheduled_date as string),
         time: (b.scheduled_time as string).slice(0, 5) + ' hs',
@@ -233,13 +213,13 @@ export default function ProgresoScreen() {
       setLoadingSessions(false);
     }
 
-    fetchData();
+    fetchSessions();
   }, [user]);
 
   const stats = [
-    { value: semanasActivas,        label: 'Semanas\nactivas'      },
-    { value: areasCount ?? '—',     label: 'Áreas\ntrabajadas'     },
-    { value: sessionCount ?? '—',   label: 'Sesiones\ncompletadas' },
+    { key: 'semanas',  icon: 'leaf-outline' as const,       value: semanasActivas,        label: 'Semanas\nactivas'      },
+    { key: 'areas',    icon: 'compass-outline' as const,    value: areasCount ?? '—',     label: 'Áreas\ntrabajadas'     },
+    { key: 'sesiones', icon: 'checkmark-outline' as const,  value: sessionCount ?? '—',   label: 'Sesiones\ncompletadas' },
   ];
 
   return (
@@ -259,13 +239,16 @@ export default function ProgresoScreen() {
           {/* ── Título ── */}
           <Text style={s.pageTitle}>Tu progreso</Text>
 
-          {/* ── Stats: 3 tarjetas ── */}
+          {/* ── Stats: 3 tarjetas de color ── */}
           <View style={s.statsRow}>
-            {stats.map((st, i) => (
-              <GlassCard key={i} style={s.statCard}>
+            {stats.map((st) => (
+              <View key={st.key} style={[s.statCard, { backgroundColor: STAT_ICON_BG[st.key] }]}>
+                <View style={s.statIconWrap}>
+                  <Ionicons name={st.icon} size={16} color={FOREST} />
+                </View>
                 <Text style={s.statValue}>{st.value}</Text>
                 <Text style={s.statLabel}>{st.label}</Text>
-              </GlassCard>
+              </View>
             ))}
           </View>
 
@@ -296,6 +279,16 @@ export default function ProgresoScreen() {
               <MoodLineChart entries={moodEntries} />
             )}
           </GlassCard>
+          {!moodLoading && moodEntries.length > 0 && (
+            <View style={s.moodLegendRow}>
+              {MOOD_LEGEND.map(id => (
+                <View key={id} style={s.moodLegendItem}>
+                  <View style={[s.moodLegendDot, { backgroundColor: ViveMoodColors[id] }]} />
+                  <Text style={s.moodLegendText}>{MOOD_LABELS[id]}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* ── Hábitos de hoy ── */}
           <View style={s.habitosHeader}>
@@ -346,8 +339,8 @@ export default function ProgresoScreen() {
                           if (tool.route) router.push(tool.route as any);
                         }}
                         activeOpacity={habitsEdit ? 1 : 0.7}>
-                        <View style={[s.checkCircle, done && s.checkCircleDone]}>
-                          {done && <MaterialCommunityIcons name="check" size={14} color="#565E32" />}
+                        <View style={[s.habitoIconWrap, { backgroundColor: tool.color }]}>
+                          <Ionicons name={tool.icon} size={17} color={FOREST} />
                         </View>
                         <Text style={[s.habitoLabel, !done && s.habitoLabelPending]}>
                           {tool.label}
@@ -357,7 +350,9 @@ export default function ProgresoScreen() {
                             <MaterialCommunityIcons name="close" size={18} color="rgba(135,131,92,0.85)" />
                           </TouchableOpacity>
                         ) : (
-                          <MaterialCommunityIcons name="chevron-right" size={20} color="rgba(135,131,92,0.55)" />
+                          <View style={[s.checkCircle, done && s.checkCircleDone]}>
+                            {done && <MaterialCommunityIcons name="check" size={14} color="#F3EEDF" />}
+                          </View>
                         )}
                       </TouchableOpacity>
                       {i < habits.length - 1 && <View style={s.divider} />}
@@ -370,7 +365,7 @@ export default function ProgresoScreen() {
                     {habits.length > 0 && <View style={s.divider} />}
                     {showCatalog ? (
                       availableTools.length === 0 ? (
-                        <Text style={s.catalogEmpty}>Ya agregaste todas las prácticas.</Text>
+                        <Text style={s.catalogEmpty}>Ya agregaste todas las prácticas</Text>
                       ) : (
                         availableTools.map((tool, i) => (
                           <View key={tool.id}>
@@ -401,35 +396,41 @@ export default function ProgresoScreen() {
             )}
           </GlassCard>
 
-          {/* ── Historial de sesiones ── */}
+          {/* ── Historial de sesiones (timeline) ── */}
           <Text style={s.sectionTitle}>Historial de sesiones</Text>
 
           {loadingSessions ? (
             <ActivityIndicator size="small" color="#87835C" style={{ marginTop: 12 }} />
           ) : pastSessions.length === 0 ? (
             <GlassCard style={[s.emptyCard]}>
-              <Text style={s.emptyText}>Todavía no hay sesiones completadas.</Text>
+              <Text style={s.emptyText}>Todavía no hay sesiones completadas</Text>
             </GlassCard>
           ) : (
             <View style={s.historialList}>
-              {pastSessions.map(ses => (
-                <GlassCard key={ses.id} style={s.sesionCard}>
-                  <View style={s.sesionAvatar}>
-                    <Text style={s.sesionAvatarText}>{ses.coachName[0]}</Text>
+              {pastSessions.map((ses, i) => (
+                <View key={ses.id} style={s.timelineRow}>
+                  <View style={s.timelineRail}>
+                    <LinearGradient
+                      colors={['#4A5D38', '#3F512F']}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      style={s.sesionAvatar}>
+                      <Text style={s.sesionAvatarText}>{initials(ses.coachName)}</Text>
+                    </LinearGradient>
+                    {i < pastSessions.length - 1 && <View style={s.timelineLine} />}
                   </View>
-                  <View style={s.sesionInfo}>
-                    <Text style={s.sesionName}>{ses.coachName}</Text>
-                    <Text style={s.sesionSub}>
-                      {ses.specialty ? `${ses.specialty} · ` : ''}{ses.date}
-                    </Text>
-                    <Text style={s.sesionSub}>{ses.time}</Text>
+                  <View style={s.sesionCard}>
+                    <View style={s.sesionInfo}>
+                      <Text style={s.sesionName}>{ses.coachName}</Text>
+                      <Text style={s.sesionSub}>
+                        {ses.specialty ? `${ses.specialty} · ` : ''}{ses.date}
+                      </Text>
+                      <Text style={s.sesionSub}>{ses.time}</Text>
+                    </View>
+                    <View style={s.sesionDoneBadge}>
+                      <MaterialCommunityIcons name="check" size={13} color="#F3EEDF" />
+                    </View>
                   </View>
-                  <MaterialCommunityIcons
-                    name="check-circle-outline"
-                    size={22}
-                    color="rgba(135,131,92,0.80)"
-                  />
-                </GlassCard>
+                </View>
               ))}
             </View>
           )}
@@ -458,8 +459,8 @@ const s = StyleSheet.create({
   },
 
   pageTitle: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 32,
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 27,
     color: '#565E32',
     paddingHorizontal: 22,
     paddingTop: 10,
@@ -478,22 +479,31 @@ const s = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 8,
+    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 6,
+  },
+  statIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   statValue: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 36,
-    color: '#565E32',
-    lineHeight: 42,
-    letterSpacing: -1,
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 24,
+    color: FOREST,
+    lineHeight: 28,
   },
   statLabel: {
     fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: '#87835C',
+    fontSize: 10,
+    color: FOREST_SOFT,
     textAlign: 'center',
-    lineHeight: 15,
+    lineHeight: 13,
     marginTop: 4,
   },
 
@@ -537,13 +547,24 @@ const s = StyleSheet.create({
   },
   moodChartCard: {
     marginHorizontal: CARD_MX,
-    marginBottom: 24,
+    marginBottom: 10,
     paddingVertical: 14,
     paddingHorizontal: 4,
     alignItems: 'center',
     minHeight: 80,
     justifyContent: 'center',
   },
+  moodLegendRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+    marginHorizontal: CARD_MX,
+    marginBottom: 24,
+  },
+  moodLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  moodLegendDot: { width: 7, height: 7, borderRadius: 3.5 },
+  moodLegendText: { fontFamily: ViveFonts.regular, fontSize: 10, color: 'rgba(255,255,255,0.78)' },
 
   // ── Hábitos ───────────────────────────────────────────────────────────────
   habitosHeader: {
@@ -608,14 +629,22 @@ const s = StyleSheet.create({
   habitoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
+  },
+  habitoIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   checkCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.70)',
     alignItems: 'center',
@@ -623,8 +652,8 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   checkCircleDone: {
-    backgroundColor: 'rgba(86,94,50,0.14)',
-    borderColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: FOREST,
+    borderColor: FOREST,
   },
   habitoLabel: {
     fontFamily: ViveFonts.medium,
@@ -639,29 +668,45 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
   },
 
-  // ── Historial ─────────────────────────────────────────────────────────────
-  historialList: { gap: 10, paddingHorizontal: CARD_MX },
+  // ── Historial (timeline) ──────────────────────────────────────────────────
+  historialList: { paddingHorizontal: CARD_MX },
+  timelineRow: { flexDirection: 'row', gap: 12 },
+  timelineRail: { alignItems: 'center', width: 38 },
+  timelineLine: {
+    width: 1.5,
+    flex: 1,
+    minHeight: 14,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+    marginTop: 4,
+  },
   sesionCard: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    paddingBottom: 14,
     gap: 12,
   },
   sesionAvatar: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(255,248,240,0.68)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.70)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  sesionAvatarText: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#565E32' },
+  sesionAvatarText: { fontFamily: ViveFonts.frauncesSerif, fontSize: 14, color: '#F3EEDF' },
   sesionInfo: { flex: 1 },
   sesionName: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#565E32', lineHeight: 18 },
   sesionSub: { fontFamily: ViveFonts.regular, fontSize: 11, color: '#87835C', lineHeight: 16 },
+  sesionDoneBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: FOREST,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
 
   // ── Empty / loading ───────────────────────────────────────────────────────
   emptyCard: {
@@ -675,19 +720,36 @@ const s = StyleSheet.create({
     color: 'rgba(135,131,92,0.80)',
     textAlign: 'center',
   },
+
+  // ── Tooltip del gráfico ───────────────────────────────────────────────────
+  tooltip: {
+    position: 'absolute',
+    backgroundColor: FOREST,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  tooltipText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 11,
+    color: '#F3EEDF',
+  },
 });
 
 // ─── Gráfico de línea de mood ─────────────────────────────────────────────────
 
 function MoodLineChart({ entries }: { entries: MoodEntry[] }) {
   const { width: screenW } = useWindowDimensions();
-  const chartW = screenW - 36;
+  const chartW = screenW - 44;
+
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const NUM_DAYS  = 14;
-  const PAD_TOP   = 10;
+  const PAD_TOP   = 14;
   const PAD_BOT   = 28;
   const PAD_H     = 14;
-  const CHART_H   = 110;
+  const CHART_H   = 150;
   const plotH     = CHART_H - PAD_TOP - PAD_BOT;
   const plotW     = chartW - PAD_H * 2;
 
@@ -712,75 +774,119 @@ function MoodLineChart({ entries }: { entries: MoodEntry[] }) {
   });
 
   // Segmentos continuos (se cortan donde no hay dato)
-  const segments: string[][] = [];
-  let seg: string[] = [];
+  const segments: { x: number; y: number }[][] = [];
+  let seg: { x: number; y: number }[] = [];
   pts.forEach(p => {
     if (p.y !== null) {
-      seg.push(`${p.x},${p.y}`);
+      seg.push({ x: p.x, y: p.y });
     } else {
       if (seg.length) { segments.push(seg); seg = []; }
     }
   });
   if (seg.length) segments.push(seg);
 
+  function areaPath(segment: { x: number; y: number }[]): string {
+    if (segment.length < 2) return '';
+    const base = PAD_TOP + plotH;
+    const top = segment.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+    return `${top} L${segment[segment.length - 1].x},${base} L${segment[0].x},${base} Z`;
+  }
+
+  function handlePointPress(p: { x: number; y: number | null; moodId?: number; date: string }) {
+    if (p.y === null || !p.moodId) return;
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    const [y, m, d] = p.date.split('-').map(Number);
+    const dow = new Date(y, m - 1, d).getDay();
+    setTooltip({ x: p.x, y: p.y, label: `${DAY_NAMES_SHORT[dow]}: ${MOOD_LABELS[p.moodId]}` });
+    hideTimer.current = setTimeout(() => setTooltip(null), 2200);
+  }
+
   return (
-    <Svg width={chartW} height={CHART_H}>
-      {/* Guías horizontales por nivel de mood */}
-      {[1, 2, 3, 4, 5].map(mood => {
-        const gy = PAD_TOP + (1 - (mood - 1) / 4) * plotH;
-        return (
-          <SvgLine
-            key={mood}
-            x1={PAD_H} y1={gy} x2={chartW - PAD_H} y2={gy}
-            stroke="rgba(86,94,50,0.07)"
-            strokeWidth={1}
+    <View style={{ width: chartW, height: CHART_H }}>
+      <Svg width={chartW} height={CHART_H}>
+        <Defs>
+          <SvgLinearGradient id="moodArea" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#C06B4A" stopOpacity={0.22} />
+            <Stop offset="1" stopColor="#C06B4A" stopOpacity={0} />
+          </SvgLinearGradient>
+        </Defs>
+
+        {/* Grid horizontal sutil — 4 líneas */}
+        {[1, 2, 3, 4].map(i => {
+          const gy = PAD_TOP + (i / 4) * plotH;
+          return (
+            <SvgLine
+              key={i}
+              x1={PAD_H} y1={gy} x2={chartW - PAD_H} y2={gy}
+              stroke="rgba(86,94,50,0.08)"
+              strokeWidth={1}
+            />
+          );
+        })}
+
+        {/* Área bajo la curva */}
+        {segments.filter(seg => seg.length > 1).map((seg, i) => (
+          <Path key={`area-${i}`} d={areaPath(seg)} fill="url(#moodArea)" />
+        ))}
+
+        {/* Línea conectando los puntos (salta días sin dato) */}
+        {segments.filter(seg => seg.length > 1).map((seg, i) => (
+          <Polyline
+            key={`line-${i}`}
+            points={seg.map(p => `${p.x},${p.y}`).join(' ')}
+            fill="none"
+            stroke="#C06B4A"
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+            strokeLinecap="round"
           />
-        );
-      })}
+        ))}
 
-      {/* Línea conectando los puntos (salta días sin dato) */}
-      {segments.filter(s => s.length > 1).map((s, i) => (
-        <Polyline
-          key={i}
-          points={s.join(' ')}
-          fill="none"
-          stroke="rgba(86,94,50,0.28)"
-          strokeWidth={1.5}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-      ))}
-
-      {/* Puntos coloreados por mood */}
-      {pts.filter(p => p.y !== null).map((p, i) => (
-        <SvgCircle
-          key={i}
-          cx={p.x}
-          cy={p.y!}
-          r={4.5}
-          fill={ViveMoodColors[p.moodId!]}
-        />
-      ))}
-
-      {/* Etiquetas de día — cada 2 para 14 días */}
-      {dates.map((date, i) => {
-        if (i % 2 !== 0) return null;
-        const x = PAD_H + (i / (NUM_DAYS - 1)) * plotW;
-        const [y, m, d] = date.split('-').map(Number);
-        const dow = new Date(y, m - 1, d).getDay();
-        return (
-          <SvgText
+        {/* Puntos coloreados por mood — tocables */}
+        {pts.filter(p => p.y !== null).map((p, i) => (
+          <SvgCircle
             key={i}
-            x={x}
-            y={CHART_H - 6}
-            textAnchor="middle"
-            fontSize={9}
-            fill="rgba(86,94,50,0.38)"
-          >
-            {DAY_LETTERS[dow]}
-          </SvgText>
-        );
-      })}
-    </Svg>
+            cx={p.x}
+            cy={p.y!}
+            r={4.5}
+            fill={ViveMoodColors[p.moodId!]}
+            stroke="#F3EEDF"
+            strokeWidth={1}
+            onPress={() => handlePointPress(p)}
+          />
+        ))}
+
+        {/* Etiquetas de día — cada 2 para 14 días */}
+        {dates.map((date, i) => {
+          if (i % 2 !== 0) return null;
+          const x = PAD_H + (i / (NUM_DAYS - 1)) * plotW;
+          const [y, m, d] = date.split('-').map(Number);
+          const dow = new Date(y, m - 1, d).getDay();
+          return (
+            <SvgText
+              key={i}
+              x={x}
+              y={CHART_H - 6}
+              textAnchor="middle"
+              fontSize={9}
+              fill="rgba(86,94,50,0.38)"
+            >
+              {DAY_LETTERS[dow]}
+            </SvgText>
+          );
+        })}
+      </Svg>
+
+      {tooltip && (
+        <View
+          pointerEvents="none"
+          style={[
+            s.tooltip,
+            { left: Math.min(Math.max(tooltip.x - 34, 0), chartW - 68), top: Math.max(tooltip.y - 34, 0) },
+          ]}>
+          <Text style={s.tooltipText}>{tooltip.label}</Text>
+        </View>
+      )}
+    </View>
   );
 }

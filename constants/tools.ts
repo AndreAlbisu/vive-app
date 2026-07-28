@@ -14,19 +14,27 @@ export interface Tool {
   icon: IoniconName;
   duration: string;
   route?: string;
+  color: string;
 }
 
+// Trío pastel — no existía como constante compartida antes (rediseño de
+// Progreso, sesión 75); reusado tanto en los tiles de hábitos como en las
+// cards de stats de Progreso para no traer más de 3 tonos a la pantalla.
+export const PASTEL_SALVIA   = '#DCE5CB';
+export const PASTEL_DURAZNO  = '#F2DCCF';
+export const PASTEL_AZUL     = '#DAE0EC';
+
 export const TOOLS: Tool[] = [
-  { id: 'diario',      label: 'Diario',          icon: 'book-outline',          duration: 'Libre',      route: '/diario'      },
-  { id: 'gratitud',    label: 'Gratitud',         icon: 'heart-outline',         duration: '5 min',      route: '/gratitud'    },
-  { id: 'sueno',       label: 'Sueño',            icon: 'moon-outline',          duration: '10–20 min',  route: '/sueno'       },
-  { id: 'respiracion', label: 'Respiración',      icon: 'cloud-outline',         duration: '3–8 min',    route: '/respiracion' },
-  { id: 'meditacion',  label: 'Meditación',       icon: 'leaf-outline',          duration: '10–15 min',  route: '/meditacion'  },
-  { id: 'escaner',     label: 'Escáner corporal', icon: 'body-outline',          duration: '8 min',      route: '/escaner'     },
-  { id: 'relajacion',  label: 'Relajación',       icon: 'musical-notes-outline', duration: '10 min',     route: '/relajacion'  },
-  { id: 'ruido',       label: 'Ruido blanco',     icon: 'volume-medium-outline', duration: 'Libre',      route: '/ruido'       },
-  { id: 'lecturas',    label: 'Lecturas breves',  icon: 'library-outline',       duration: '5–10 min',   route: '/lecturas'    },
-  { id: 'anclaje',     label: 'Anclaje',          icon: 'locate-outline',        duration: '2–3 min',    route: '/anclaje'     },
+  { id: 'diario',      label: 'Diario',          icon: 'book-outline',          duration: 'Libre',      route: '/diario',      color: PASTEL_AZUL    },
+  { id: 'gratitud',    label: 'Gratitud',         icon: 'heart-outline',         duration: '5 min',      route: '/gratitud',    color: PASTEL_SALVIA  },
+  { id: 'sueno',       label: 'Sueño',            icon: 'moon-outline',          duration: '10–20 min',  route: '/sueno',       color: PASTEL_DURAZNO },
+  { id: 'respiracion', label: 'Respiración',      icon: 'cloud-outline',         duration: '3–8 min',    route: '/respiracion', color: PASTEL_DURAZNO },
+  { id: 'meditacion',  label: 'Meditación',       icon: 'leaf-outline',          duration: '10–15 min',  route: '/meditacion',  color: PASTEL_SALVIA  },
+  { id: 'escaner',     label: 'Escáner corporal', icon: 'body-outline',          duration: '8 min',      route: '/escaner',     color: PASTEL_AZUL    },
+  { id: 'relajacion',  label: 'Relajación',       icon: 'musical-notes-outline', duration: '10 min',     route: '/relajacion',  color: PASTEL_DURAZNO },
+  { id: 'ruido',       label: 'Ruido blanco',     icon: 'volume-medium-outline', duration: 'Libre',      route: '/ruido',       color: PASTEL_SALVIA  },
+  { id: 'lecturas',    label: 'Lecturas breves',  icon: 'library-outline',       duration: '5–10 min',   route: '/lecturas',    color: PASTEL_AZUL    },
+  { id: 'anclaje',     label: 'Anclaje',          icon: 'locate-outline',        duration: '2–3 min',    route: '/anclaje',     color: PASTEL_DURAZNO },
 ];
 
 export const TOOL_MAP: Record<string, Tool> = Object.fromEntries(TOOLS.map(t => [t.id, t]));

@@ -109,7 +109,7 @@ export default function GratitudScreen() {
 
     if (error || !data) {
       await logError('GratitudScreen: save entry failed', error);
-      Alert.alert('Error', 'No se pudo guardar tu gratitud. Intentá de nuevo.');
+      Alert.alert('Error', 'No se pudo guardar tu gratitud. Intentá de nuevo');
       return;
     }
 

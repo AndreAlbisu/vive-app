@@ -109,8 +109,8 @@ export default function FavoritosScreen() {
             ) : (
               <View style={s.empty}>
                 <MaterialIcons name="star-border" size={40} color="rgba(135,131,92,0.45)" />
-                <Text style={s.emptyTitle}>Todavía no guardaste ningún coach</Text>
-                <Text style={s.emptyText}>Tocá la estrella en el perfil de un coach o en Destacados para guardarlo acá.</Text>
+                <Text style={s.emptyTitle}>Todavía no guardaste ningún profesional</Text>
+                <Text style={s.emptyText}>Tocá la estrella en el perfil de un profesional o en Destacados para guardarlo acá.</Text>
               </View>
             )
           }

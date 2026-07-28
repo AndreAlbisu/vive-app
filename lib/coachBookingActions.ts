@@ -47,7 +47,7 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
   ]);
 
   const notifTitle = '¡Tu sesión fue confirmada! ✅';
-  const notifBody = `Tu sesión con ${coachProfile?.name ?? 'tu coach'} el ${formatBookingDate(booking.scheduled_date)} está confirmada`;
+  const notifBody = `Tu sesión con ${coachProfile?.name ?? 'tu profesional'} el ${formatBookingDate(booking.scheduled_date)} está confirmada`;
 
   await Promise.all([
     supabase.from('notifications').insert({
@@ -88,7 +88,7 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
     conflictProfiles?.forEach(p => { tokenMap[p.id] = p.push_token ?? null; });
 
     const cancelTitle = 'Horario no disponible';
-    const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu coach.';
+    const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu profesional.';
     const cancelDateStr = formatBookingDate(booking.scheduled_date);
     const cancelTimeStr = booking.scheduled_time.slice(0, 5);
     const cancelSystemMsg = `Solicitud cancelada automáticamente\n${cancelDateStr} · ${cancelTimeStr} hs`;
@@ -150,7 +150,7 @@ export async function rejectBooking(bookingId: string, coachAuthUserId: string):
   ]);
 
   const notifTitle = 'Ese horario no está disponible';
-  const notifBody = `${coachProfile?.name ?? 'Tu coach'} no puede en ese horario. Podés elegir otro horario disponible u otro profesional.`;
+  const notifBody = `${coachProfile?.name ?? 'Tu profesional'} no puede en ese horario. Podés elegir otro horario disponible u otro profesional.`;
 
   await Promise.all([
     supabase.from('notifications').insert({

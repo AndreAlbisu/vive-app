@@ -74,7 +74,7 @@ export default function CoachTopicsScreen() {
 
     if (deleteError) {
       setSaving(false);
-      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
+      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
       return;
     }
 
@@ -86,7 +86,7 @@ export default function CoachTopicsScreen() {
 
       if (insertError) {
         setSaving(false);
-        Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos.');
+        Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
         return;
       }
     }
@@ -117,11 +117,11 @@ export default function CoachTopicsScreen() {
           </View>
         ) : !coachId ? (
           <View style={s.loadingWrap}>
-            <Text style={s.emptyText}>Todavía no completaste tu perfil de coach.</Text>
+            <Text style={s.emptyText}>Todavía no completaste tu perfil de profesional</Text>
           </View>
         ) : (
           <>
-            <Text style={s.subtitle}>Elegí los subtemas que trabajás — se muestran en tu perfil y los usuarios pueden filtrar por ellos.</Text>
+            <Text style={s.subtitle}>Elegí los subtemas que trabajás — se muestran en tu perfil y los usuarios pueden filtrar por ellos</Text>
 
             <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
               {AXES.map(axis => (

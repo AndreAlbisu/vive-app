@@ -336,7 +336,7 @@ export default function SearchScreen3() {
           <View style={s.empty}>
             <Text style={s.emptyEmoji}>🔍</Text>
             <Text style={s.emptyTitle}>Sin resultados</Text>
-            <Text style={s.emptyText}>Probá ajustando los filtros o eligiendo otro tema.</Text>
+            <Text style={s.emptyText}>Probá ajustando los filtros o eligiendo otro tema</Text>
           </View>
         }
         renderItem={({ item: p }) => {

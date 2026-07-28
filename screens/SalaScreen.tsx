@@ -505,7 +505,7 @@ export default function SalaScreen() {
       const startDate = new Date(y, mo - 1, d, h, mi, 0);
       const dur = activeBooking.duration_minutes ?? 60;
       const endDate = new Date(startDate.getTime() + dur * 60_000);
-      const title = `Sesión con ${recipientProfile?.name ?? 'coach'} — Vita`;
+      const title = `Sesión con ${recipientProfile?.name ?? 'profesional'} — Vita`;
 
       // Evitar duplicados: si ya existe un evento igual (mismo título y arranque)
       // en ese rango, no lo agregamos de nuevo (bug de tap repetido).
@@ -571,14 +571,14 @@ export default function SalaScreen() {
                   sala_id: salaId,
                   sender_id: user.id,
                   sender_type: 'system_cancelled',
-                  content: encryptMessage(`El coach canceló la sesión\n${cancelDateStr} · ${cancelTimeStr} hs`),
+                  content: encryptMessage(`El profesional canceló la sesión\n${cancelDateStr} · ${cancelTimeStr} hs`),
                 });
 
                 if (recipientId) {
                   const { data: userProfile } = await supabase
                     .from('profiles').select('push_token').eq('id', recipientId).maybeSingle();
                   const notifTitle = 'Sesión cancelada';
-                  const notifBody = 'Tu coach canceló la sesión agendada.';
+                  const notifBody = 'Tu profesional canceló la sesión agendada.';
                   await Promise.all([
                     supabase.from('notifications').insert({
                       recipient_id: recipientId,
@@ -885,7 +885,7 @@ export default function SalaScreen() {
             {formatSalaDate(activeBooking!.scheduled_date)} · {activeBooking!.scheduled_time.slice(0, 5)} hs
           </Text>
           <Text style={styles.sessionCardSub}>
-            Esperando confirmación de {recipientProfile?.name ?? 'tu coach'}
+            Esperando confirmación de {recipientProfile?.name ?? 'tu profesional'}
           </Text>
           <TouchableOpacity
             style={styles.cancelBtn}
@@ -1086,7 +1086,7 @@ export default function SalaScreen() {
                 </Text>
               </View>
               <Text style={styles.endedText}>
-                ¿Querés reservar tu próxima sesión con {recipientProfile?.name ?? 'tu coach'}?
+                ¿Querés reservar tu próxima sesión con {recipientProfile?.name ?? 'tu profesional'}?
               </Text>
               <TouchableOpacity style={styles.endedBtn} onPress={handleReschedule} activeOpacity={0.85}>
                 <MaterialCommunityIcons name="calendar-plus" size={16} color="#FFF6EC" />
@@ -1112,7 +1112,7 @@ export default function SalaScreen() {
               <Text style={styles.frozenNoticeText}>
                 {isCurrentUserCoach
                   ? 'Aceptá o rechazá la solicitud desde Reservas para habilitar el chat.'
-                  : `El chat se habilita cuando ${recipientProfile?.name ?? 'el coach'} acepte tu solicitud.`}
+                  : `El chat se habilita cuando ${recipientProfile?.name ?? 'el profesional'} acepte tu solicitud.`}
               </Text>
             </View>
           ) : (

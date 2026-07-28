@@ -83,7 +83,7 @@ export default function MisRecordatoriosScreen() {
               <View style={s.empty}>
                 <Ionicons name="notifications-outline" size={38} color="rgba(135,131,92,0.45)" />
                 <Text style={s.emptyTitle}>Todavía no tenés recordatorios</Text>
-                <Text style={s.emptyText}>Tocá la campanita en cualquier herramienta o recurso para armar uno.</Text>
+                <Text style={s.emptyText}>Tocá la campanita en cualquier herramienta o recurso para armar uno</Text>
               </View>
             }
             renderItem={({ item }) => (

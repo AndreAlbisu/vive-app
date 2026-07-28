@@ -385,7 +385,7 @@ export default function ProfesionalScreen() {
             </>
           ) : reviewsLoaded ? (
             <View style={s.noReviews}>
-              <Text style={s.noReviewsText}>Todavía no hay reseñas para este coach.</Text>
+              <Text style={s.noReviewsText}>Todavía no hay reseñas para este profesional.</Text>
             </View>
           ) : null}
         </View>

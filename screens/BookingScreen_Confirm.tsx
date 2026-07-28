@@ -246,7 +246,7 @@ export default function BookingScreen_Confirm() {
           conflictProfiles?.forEach(p => { tokenMap[p.id] = p.push_token ?? null; });
 
           const cancelTitle = 'Horario no disponible';
-          const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu coach.';
+          const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu profesional.';
           const cancelSystemMsg = `Solicitud cancelada automáticamente\n${formatDate(dateStr)} · ${time} hs`;
 
           await Promise.all(
@@ -399,7 +399,7 @@ export default function BookingScreen_Confirm() {
             <Text style={s.modalityText}>
               {instantBooking
                 ? 'Reserva instantánea — tu sesión queda confirmada al instante'
-                : 'Reserva con confirmación — el coach tiene 24hs para aceptar'}
+                : 'Reserva con confirmación — el profesional tiene 24hs para aceptar'}
             </Text>
           </View>
         </View>
@@ -410,16 +410,16 @@ export default function BookingScreen_Confirm() {
           <Text style={s.noticeText}>
             {instantBooking
               ? 'Tu sesión ya queda confirmada al reservar'
-              : 'No se te cobra hasta que el coach acepte'}
+              : 'No se te cobra hasta que el profesional acepte'}
           </Text>
         </View>
 
         {/* Mensaje opcional */}
         <View style={s.messageSection}>
           <Text style={s.messageTitle}>
-            {instantBooking ? '¿Querés contarle algo al coach?' : '¿Querés contarle algo antes de que acepte?'}
+            {instantBooking ? '¿Querés contarle algo al profesional?' : '¿Querés contarle algo antes de que acepte?'}
           </Text>
-          <Text style={s.messageSubtitle}>Es opcional. Le ayuda al coach a entender mejor tu situación.</Text>
+          <Text style={s.messageSubtitle}>Es opcional. Le ayuda al profesional a entender mejor tu situación.</Text>
           <View style={s.messageInputWrap}>
             <TextInput
               style={s.messageInput}

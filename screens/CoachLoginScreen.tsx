@@ -50,7 +50,7 @@ export default function CoachLoginScreen() {
     if (coachRow?.verified) {
       Alert.alert(
         '¡Bienvenido de nuevo!',
-        'Tu cuenta de coach ya está aprobada. Te llevamos a tu panel.',
+        'Tu cuenta de profesional ya está aprobada. Te llevamos a tu panel',
         [{ text: 'OK', onPress: () => router.replace('/(coach)' as any) }],
       );
       return;
@@ -60,7 +60,7 @@ export default function CoachLoginScreen() {
       await signOut();
       Alert.alert(
         'Solicitud en revisión',
-        'Ya enviaste tu solicitud para ser coach. Te avisaremos cuando VITA la apruebe.',
+        'Ya enviaste tu solicitud para ser profesional. Te avisaremos cuando VITA la apruebe',
         [{ text: 'OK', onPress: () => router.back() }],
       );
       return;
@@ -72,7 +72,7 @@ export default function CoachLoginScreen() {
     // nosotros mismos (isNewSignup), el role='user' es solo el default del
     // trigger y todavía no hay postulación — dejamos que siga a coach-application.
     if (!isNewSignup && profile?.role === 'user') {
-      setError('Esta cuenta ya está registrada como usuario. Para postularte como coach necesitás usar un mail distinto.');
+      setError('Esta cuenta ya está registrada como usuario. Para postularte como profesional necesitás usar un mail distinto');
       return;
     }
 
@@ -84,11 +84,11 @@ export default function CoachLoginScreen() {
     const trimmedPassword = password.trim();
 
     if (!trimmedEmail || !trimmedPassword) {
-      setError('Completá el email y la contraseña.');
+      setError('Completá el email y la contraseña');
       return;
     }
     if (trimmedPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
+      setError('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
@@ -115,9 +115,9 @@ export default function CoachLoginScreen() {
 
     // Si signUp también falla, la cuenta existe pero la contraseña es incorrecta
     if (signUpError.includes('already registered') || signUpError.includes('already been registered')) {
-      setError('Contraseña incorrecta. Revisá tus datos.');
+      setError('Contraseña incorrecta. Revisá tus datos');
     } else {
-      setError('No pudimos acceder. Revisá el email y la contraseña.');
+      setError('No pudimos acceder. Revisá el email y la contraseña');
     }
   }
 
@@ -212,7 +212,7 @@ export default function CoachLoginScreen() {
             </TouchableOpacity>
 
             <Text style={styles.note}>
-              Podés usar una cuenta existente de VITA o crear una nueva. El rol de coach se activa cuando VITA aprueba tu solicitud.
+              Podés usar una cuenta existente de VITA o crear una nueva. El rol de profesional se activa cuando VITA aprueba tu solicitud.
             </Text>
           </Animated.View>
         </ScrollView>

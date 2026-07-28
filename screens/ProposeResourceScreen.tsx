@@ -218,7 +218,7 @@ export default function ProposeResourceScreen() {
     if (res.canceled || !res.assets?.[0]) return;
     const a = res.assets[0];
     if (a.size && a.size > AUDIO_MAX_BYTES) {
-      setSubmitError('El audio no puede superar los 20MB. Probá con un archivo más comprimido.');
+      setSubmitError('El audio no puede superar los 20MB. Probá con un archivo más comprimido');
       return;
     }
     setSubmitError(null);
@@ -230,7 +230,7 @@ export default function ProposeResourceScreen() {
     if (res.canceled || !res.assets?.[0]) return;
     const a = res.assets[0];
     if (a.size && a.size > VIDEO_MAX_BYTES) {
-      setSubmitError('El video no puede superar los 100MB. Grabá algo más corto o comprimilo.');
+      setSubmitError('El video no puede superar los 100MB. Grabá algo más corto o comprimilo');
       return;
     }
     setSubmitError(null);
@@ -255,17 +255,17 @@ export default function ProposeResourceScreen() {
   }
 
   async function handleSubmit() {
-    if (!type) { setSubmitError('Elegí un tipo de recurso.'); return; }
-    if (!title.trim()) { setSubmitError('Ponele un título.'); return; }
-    if (axes.length === 0) { setSubmitError('Elegí al menos un eje: Cuerpo, Mente o Alma.'); return; }
-    if (!description.trim()) { setSubmitError('Contanos brevemente de qué se trata.'); return; }
+    if (!type) { setSubmitError('Elegí un tipo de recurso'); return; }
+    if (!title.trim()) { setSubmitError('Ponele un título'); return; }
+    if (axes.length === 0) { setSubmitError('Elegí al menos un eje: Cuerpo, Mente o Alma'); return; }
+    if (!description.trim()) { setSubmitError('Contanos brevemente de qué se trata'); return; }
     if (durationMin.trim() && (isNaN(Number(durationMin)) || Number(durationMin) <= 0)) {
-      setSubmitError('La duración tiene que ser un número mayor a 0.');
+      setSubmitError('La duración tiene que ser un número mayor a 0');
       return;
     }
 
     if (isAudioType(type) && !audioFile && !existingAudioUrl) {
-      setSubmitError('Elegí el archivo de audio.');
+      setSubmitError('Elegí el archivo de audio');
       return;
     }
     if (type === 'video' && !videoFile && !existingVideoUrl) {
@@ -379,7 +379,7 @@ export default function ProposeResourceScreen() {
 
     if (coachError || !coachRow) {
       setSubmitting(false);
-      setSubmitError('No pudimos encontrar tu perfil de coach.');
+      setSubmitError('No pudimos encontrar tu perfil de profesional.');
       return;
     }
 

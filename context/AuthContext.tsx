@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) return translateError(error.message);
-      if (!data?.url) return 'No se pudo iniciar el flujo de Google.';
+      if (!data?.url) return 'No se pudo iniciar el flujo de Google';
 
       const res = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
 
@@ -139,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         nonce: hashedNonce,
       });
 
-      if (!credential.identityToken) return 'No se pudo completar el inicio de sesión con Apple.';
+      if (!credential.identityToken) return 'No se pudo completar el inicio de sesión con Apple';
 
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
@@ -189,12 +189,12 @@ export function useAuth() {
 }
 
 function translateError(msg: string): string {
-  if (msg.includes('Invalid login credentials')) return 'El email o la contraseña son incorrectos.';
-  if (msg.includes('Email not confirmed')) return 'Confirmá tu email antes de iniciar sesión.';
-  if (msg.includes('User already registered')) return 'Ya existe una cuenta con ese email.';
-  if (msg.includes('Password should be at least')) return 'La contraseña debe tener al menos 6 caracteres.';
-  if (msg.includes('Unable to validate email') || msg.includes('valid email')) return 'El email no es válido.';
-  if (msg.includes('rate limit') || msg.includes('too many')) return 'Demasiados intentos. Esperá un momento.';
-  if (msg.includes('network') || msg.includes('fetch')) return 'Sin conexión. Revisá tu internet.';
-  return 'Algo salió mal. Intentalo de nuevo.';
+  if (msg.includes('Invalid login credentials')) return 'El email o la contraseña son incorrectos';
+  if (msg.includes('Email not confirmed')) return 'Confirmá tu email antes de iniciar sesión';
+  if (msg.includes('User already registered')) return 'Ya existe una cuenta con ese email';
+  if (msg.includes('Password should be at least')) return 'La contraseña debe tener al menos 6 caracteres';
+  if (msg.includes('Unable to validate email') || msg.includes('valid email')) return 'El email no es válido';
+  if (msg.includes('rate limit') || msg.includes('too many')) return 'Demasiados intentos. Esperá un momento';
+  if (msg.includes('network') || msg.includes('fetch')) return 'Sin conexión. Revisá tu internet';
+  return 'Algo salió mal. Intentalo de nuevo';
 }

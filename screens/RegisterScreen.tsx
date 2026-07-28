@@ -104,7 +104,7 @@ export default function RegisterScreen() {
         .from('coaches').select('id').eq('profile_id', existingProfile.id).maybeSingle();
       if (coachRow) {
         setLoading(false);
-        setServerError('Esta cuenta ya está registrada como coach. No podés crear una cuenta de usuario con el mismo mail.');
+        setServerError('Esta cuenta ya está registrada como profesional. No podés crear una cuenta de usuario con el mismo mail.');
         return;
       }
     }

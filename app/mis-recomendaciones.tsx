@@ -97,7 +97,7 @@ export default function MisRecomendacionesScreen() {
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={8} activeOpacity={0.7}>
             <Ionicons name="arrow-back" size={20} color="#565E32" />
           </TouchableOpacity>
-          <Text style={s.headerTitle}>Recomendado por tu coach</Text>
+          <Text style={s.headerTitle}>Recomendado por tu profesional</Text>
           <View style={s.headerSpacer} />
         </View>
 
@@ -108,14 +108,14 @@ export default function MisRecomendacionesScreen() {
             {recos.length === 0 ? (
               <View style={s.empty}>
                 <Ionicons name="chatbubble-outline" size={38} color="rgba(135,131,92,0.45)" />
-                <Text style={s.emptyText}>Todavía no tenés recomendaciones.</Text>
+                <Text style={s.emptyText}>Todavía no tenés recomendaciones</Text>
               </View>
             ) : (
               recos.map(item => {
                 const res = item.coach_resources;
                 const color = FORMAT_COLOR[res.format] ?? TERRACOTTA;
                 const isNew = !item.opened_at;
-                const coachName = item.coaches?.profiles?.name ?? 'Tu coach';
+                const coachName = item.coaches?.profiles?.name ?? 'Tu profesional';
                 return (
                   <View key={item.id} style={s.recbox}>
                     <View style={s.recHead}>

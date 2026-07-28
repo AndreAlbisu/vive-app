@@ -8,13 +8,14 @@ import {
   Animated,
   StatusBar,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 
-import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { ViveColors, ViveFonts, ViveMoodColors, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { VITA_TOOL_MAP } from '@/constants/vitaTools';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
@@ -24,7 +25,11 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
-import Svg, { Circle } from 'react-native-svg';
+import type { MoodEntry } from '@/hooks/useMoodHistory';
+import { useProgressStats } from '@/hooks/useProgressStats';
+import { computeMoodStreak, buildWeeklyHeadline } from '@/lib/moodStats';
+import type { WeeklyHeadline } from '@/lib/moodStats';
+import Svg, { Circle, Path, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 
 type PinnedResource = { id: string; title: string; icon: string; route: string | undefined };
 
@@ -77,9 +82,22 @@ export default function InicioScreen() {
   const [displayResources, setDisplayResources] = useState<PinnedResource[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  const { entries: moodEntries } = useMoodHistory(user?.id, 7);
+  // 37 días: los últimos 7 alimentan el sparkline + el titular ("reciente"),
+  // los 30 anteriores son la base "histórica" contra la que se compara.
+  const { entries: moodEntries } = useMoodHistory(user?.id, 37);
   const today = new Date().toISOString().split('T')[0];
   const todayMoodEntry = moodEntries.find(e => e.entry_date === today);
+  const { semanasActivas, areasCount, sessionCount } = useProgressStats(user?.id);
+
+  const recentCutoff = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().split('T')[0];
+  })();
+  const recentMoodEntries = moodEntries.filter(e => e.entry_date >= recentCutoff);
+  const historicMoodEntries = moodEntries.filter(e => e.entry_date < recentCutoff);
+  const moodStreak = computeMoodStreak(moodEntries);
+  const weeklyHeadline = buildWeeklyHeadline(recentMoodEntries, historicMoodEntries);
 
   const a1   = useRef(new Animated.Value(0)).current;
   const aMood = useRef(new Animated.Value(0)).current;
@@ -215,7 +233,7 @@ export default function InicioScreen() {
           sala_id: booking.sala_id ?? null,
           date: booking.scheduled_date,
           time: booking.scheduled_time,
-          coachName: profile?.name ?? 'Tu coach',
+          coachName: profile?.name ?? 'Tu profesional',
           coachSpecialty: coachRow?.specialty ?? null,
         });
       });
@@ -231,7 +249,7 @@ export default function InicioScreen() {
           storageKey="vive_tooltip_inicio"
           icon="home-outline"
           title="Tu espacio de inicio"
-          description="Acá encontrás tu próxima sesión, recursos guardados y la recomendación del día."
+          description="Acá encontrás tu próxima sesión, recursos guardados y la recomendación del día"
           delay={800}
         />
         <ScrollView
@@ -293,22 +311,17 @@ export default function InicioScreen() {
             />
           </Animated.View>
 
-          {/* ── 4. SOBRE TI ── */}
+          {/* ── 4. SOBRE VOS ── */}
           <Animated.View style={fadeUp(a2)}>
-            <TouchableOpacity
-              style={s.sobreTiCard}
+            <SobreVosCard
+              moodStreak={moodStreak}
+              headline={weeklyHeadline}
+              sparklineEntries={recentMoodEntries}
+              semanasActivas={semanasActivas}
+              areasCount={areasCount}
+              sessionCount={sessionCount}
               onPress={() => router.push('/progreso')}
-              activeOpacity={0.82}
-            >
-              <View style={s.sobreTiLeft}>
-                <VennSvg />
-              </View>
-              <View style={s.sobreTiRight}>
-                <Text style={s.sobreTiTitle}>Sobre vos</Text>
-                <Text style={s.sobreTiText}>Anotar cómo te sentís nos ayuda a conocerte y a hacer un seguimiento real de cómo venís.</Text>
-                <Text style={s.sobreTiCta}>Ir a tu progreso →</Text>
-              </View>
-            </TouchableOpacity>
+            />
           </Animated.View>
 
           {/* ── 5. TU PRÓXIMA SESIÓN ── */}
@@ -355,7 +368,7 @@ export default function InicioScreen() {
                 <MaterialCommunityIcons name="calendar-plus" size={22} color={ViveColors.primary} />
                 <View style={s.noSessionInfo}>
                   <Text style={s.noSessionTitle}>Sin sesiones agendadas</Text>
-                  <Text style={s.noSessionSub}>Reservá una sesión con tu coach</Text>
+                  <Text style={s.noSessionSub}>Reservá una sesión con tu profesional</Text>
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.45)" />
               </TouchableOpacity>
@@ -374,7 +387,7 @@ export default function InicioScreen() {
                 <MaterialCommunityIcons name="pin-outline" size={22} color={ViveColors.primary} />
                 <View style={s.pinnedEmptyText}>
                   <Text style={s.pinnedEmptyTitle}>Fijá tus recursos favoritos acá</Text>
-                  <Text style={s.pinnedEmptySub}>Entrá a un recurso y tocá el marcador para tenerlo a mano (hasta 4).</Text>
+                  <Text style={s.pinnedEmptySub}>Entrá a un recurso y tocá el marcador para tenerlo a mano (hasta 4)</Text>
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.45)" />
               </TouchableOpacity>
@@ -474,51 +487,102 @@ const s = StyleSheet.create({
     lineHeight: 36,
   },
   // ── 3. Sobre vos ───────────────────────────────────────────────────────────
-  sobreTiCard: {
+  sobreVosCard: {
     marginHorizontal: 18,
     marginBottom: 22,
-    backgroundColor: GLASS,
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: GLASS_BORDER,
+    borderColor: 'rgba(255,255,255,0.65)',
     padding: 18,
+  },
+  sobreVosTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  sobreTiLeft: {
-    width: 80,
-    flexShrink: 0,
-    alignItems: 'center',
-    gap: 6,
-  },
-  vitaIaLabel: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 11,
-    color: '#87835C',
-  },
-  sobreTiRight: {
-    flex: 1,
-  },
-  sobreTiTitle: {
+  sobreVosEyebrow: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 11,
+    fontSize: 10.5,
     color: 'rgba(135,131,92,0.72)',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    marginBottom: 6,
   },
-  sobreTiText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: '#87835C',
-    lineHeight: 18,
+  sobreVosStreakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EAD3C6',
+    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
-  sobreTiCta: {
+  sobreVosStreakText: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 12,
-    color: '#565E32',
-    marginTop: 6,
+    fontSize: 10.5,
+    color: '#8F4A2E',
+  },
+  sobreVosHeadline: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 17,
+    lineHeight: 23,
+    color: '#3F512F',
+  },
+  sobreVosHeadlineBold: {
+    fontFamily: ViveFonts.frauncesSerif,
+  },
+  sobreVosStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  sobreVosStatCard: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  sobreVosStatValue: {
+    fontFamily: ViveFonts.frauncesSerif,
+    fontSize: 17,
+    color: '#3F512F',
+  },
+  sobreVosStatLabel: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 8.5,
+    color: '#6B7A56',
+    textAlign: 'center',
+    lineHeight: 11,
+    marginTop: 3,
+  },
+  sobreVosCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#3F512F',
+    borderRadius: 24,
+    paddingVertical: 13,
+  },
+  sobreVosCtaText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13.5,
+    color: '#F3EEDF',
+  },
+  sparkTooltip: {
+    position: 'absolute',
+    backgroundColor: '#3F512F',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  sparkTooltipText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 10,
+    color: '#F3EEDF',
   },
 
   // ── 4. Recursos útiles ─────────────────────────────────────────────────────
@@ -695,12 +759,154 @@ const s = StyleSheet.create({
 
 });
 
-function VennSvg() {
+// ─── Sobre vos ──────────────────────────────────────────────────────────────
+
+const SOBRE_VOS_MOOD_LABEL: Record<number, string> = {
+  1: 'Bajón', 2: 'Cansado', 3: 'Normal', 4: 'Bien', 5: 'Brillando',
+};
+const SOBRE_VOS_DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+function SobreVosCard({
+  moodStreak,
+  headline,
+  sparklineEntries,
+  semanasActivas,
+  areasCount,
+  sessionCount,
+  onPress,
+}: {
+  moodStreak: number;
+  headline: WeeklyHeadline;
+  sparklineEntries: MoodEntry[];
+  semanasActivas: number;
+  areasCount: number | null;
+  sessionCount: number | null;
+  onPress: () => void;
+}) {
+  const stats = [
+    { value: semanasActivas,      label: 'Semanas\nactivas'      },
+    { value: areasCount ?? '—',   label: 'Áreas\ntrabajadas'     },
+    { value: sessionCount ?? '—', label: 'Sesiones\ncompletadas' },
+  ];
+
   return (
-    <Svg width={72} height={64} viewBox="-2 -2 72 66">
-      <Circle cx={21} cy={21} r={20} fill="none" stroke="rgba(86,94,50,0.55)" strokeWidth={1.5} />
-      <Circle cx={47} cy={21} r={20} fill="none" stroke="rgba(86,94,50,0.55)" strokeWidth={1.5} />
-      <Circle cx={34} cy={40} r={20} fill="none" stroke="rgba(86,94,50,0.55)" strokeWidth={1.5} />
-    </Svg>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
+      <LinearGradient
+        colors={['#F7F2E7', '#EAE2D0']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.47, y: 1 }}
+        style={s.sobreVosCard}>
+        <View style={s.sobreVosTopRow}>
+          <Text style={s.sobreVosEyebrow}>Tu semana</Text>
+          {moodStreak > 0 && (
+            <View style={s.sobreVosStreakBadge}>
+              <MaterialCommunityIcons name="leaf" size={12} color="#8F4A2E" />
+              <Text style={s.sobreVosStreakText}>{moodStreak} {moodStreak === 1 ? 'día' : 'días'} de racha</Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={s.sobreVosHeadline}>
+          {headline.before}
+          {headline.bold ? <Text style={s.sobreVosHeadlineBold}>{headline.bold}</Text> : null}
+          {headline.after}
+        </Text>
+
+        <MoodSparkline entries={sparklineEntries} />
+
+        <View style={s.sobreVosStatsRow}>
+          {stats.map((st, i) => (
+            <View key={i} style={s.sobreVosStatCard}>
+              <Text style={s.sobreVosStatValue}>{st.value}</Text>
+              <Text style={s.sobreVosStatLabel}>{st.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={s.sobreVosCta}>
+          <Text style={s.sobreVosCtaText}>Ver tu progreso completo</Text>
+          <MaterialCommunityIcons name="arrow-right" size={16} color="#F3EEDF" />
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+
+function MoodSparkline({ entries }: { entries: MoodEntry[] }) {
+  const { width: screenW } = useWindowDimensions();
+  const chartW = screenW - 18 * 2 - 18 * 2; // margen de la card + padding interno, en los dos lados
+  const CHART_H = 66;
+  const PAD = 10;
+  const plotW = chartW - PAD * 2;
+  const plotH = CHART_H - PAD * 2;
+
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  const sorted = [...entries].sort((a, b) => a.entry_date.localeCompare(b.entry_date));
+  const n = sorted.length;
+  const pts = sorted.map((e, i) => ({
+    x: n === 1 ? chartW / 2 : PAD + (i / (n - 1)) * plotW,
+    y: PAD + (1 - (e.mood_id - 1) / 4) * plotH,
+    moodId: e.mood_id,
+    date: e.entry_date,
+  }));
+
+  const areaPath = n > 1
+    ? `M${pts[0].x},${pts[0].y} ` +
+      pts.slice(1).map(p => `L${p.x},${p.y}`).join(' ') +
+      ` L${pts[n - 1].x},${CHART_H - PAD} L${pts[0].x},${CHART_H - PAD} Z`
+    : '';
+  const linePath = `M${pts.map(p => `${p.x},${p.y}`).join(' L')}`;
+
+  function handlePress(p: (typeof pts)[number]) {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    const [y, m, d] = p.date.split('-').map(Number);
+    const dow = new Date(y, m - 1, d).getDay();
+    setTooltip({ x: p.x, y: p.y, label: `${SOBRE_VOS_DAY_NAMES[dow]}: ${SOBRE_VOS_MOOD_LABEL[p.moodId]}` });
+    hideTimer.current = setTimeout(() => setTooltip(null), 2200);
+  }
+
+  return (
+    <View style={{ width: chartW, height: CHART_H, alignSelf: 'center', marginVertical: 12 }}>
+      <Svg width={chartW} height={CHART_H}>
+        <Defs>
+          <SvgLinearGradient id="sparkArea" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#C06B4A" stopOpacity={0.22} />
+            <Stop offset="1" stopColor="#C06B4A" stopOpacity={0} />
+          </SvgLinearGradient>
+        </Defs>
+        {!!areaPath && <Path d={areaPath} fill="url(#sparkArea)" />}
+        {n > 1 && (
+          <Path d={linePath} fill="none" stroke="#C06B4A" strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
+        )}
+        {pts.map((p, i) => (
+          <Circle
+            key={i}
+            cx={p.x}
+            cy={p.y}
+            r={4.5}
+            fill={ViveMoodColors[p.moodId]}
+            stroke="#F7F2E7"
+            strokeWidth={1.5}
+            onPress={() => handlePress(p)}
+          />
+        ))}
+      </Svg>
+      {tooltip && (
+        <View
+          pointerEvents="none"
+          style={[
+            s.sparkTooltip,
+            { left: Math.min(Math.max(tooltip.x - 34, 0), chartW - 68), top: Math.max(tooltip.y - 32, 0) },
+          ]}>
+          <Text style={s.sparkTooltipText}>{tooltip.label}</Text>
+        </View>
+      )}
+    </View>
   );
 }

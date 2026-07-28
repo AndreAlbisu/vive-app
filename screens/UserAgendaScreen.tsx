@@ -99,14 +99,14 @@ export default function UserAgendaScreen() {
         .from('profiles')
         .select('id, name')
         .in('id', profileIds);
-      nameByProfile = Object.fromEntries((profiles ?? []).map(p => [p.id, p.name ?? 'Coach']));
+      nameByProfile = Object.fromEntries((profiles ?? []).map(p => [p.id, p.name ?? 'Profesional']));
     }
 
     const grouped: Record<string, Booking[]> = {};
     for (const b of rows) {
       const item: Booking = {
         id: b.id,
-        coachName: nameByProfile[profileIdByCoach[b.coach_id]] ?? b.coach_name ?? 'Coach',
+        coachName: nameByProfile[profileIdByCoach[b.coach_id]] ?? b.coach_name ?? 'Profesional',
         time: (b.scheduled_time as string).slice(0, 5),
         status: b.status,
         sala_id: b.sala_id,

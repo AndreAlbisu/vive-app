@@ -137,7 +137,7 @@ export default function CoachAvailabilityScreen() {
       date: selectedDate,
       time,
     });
-    if (error) Alert.alert('Error', 'No se pudo agregar el horario.');
+    if (error) Alert.alert('Error', 'No se pudo agregar el horario');
     else await loadSlots(selectedDate);
     setSaving(false);
   }
@@ -149,7 +149,7 @@ export default function CoachAvailabilityScreen() {
       .from('coach_availability')
       .update({ blocked: true })
       .eq('id', slotId);
-    if (error) Alert.alert('Error', 'No se pudo bloquear el horario.');
+    if (error) Alert.alert('Error', 'No se pudo bloquear el horario');
     else await loadSlots(selectedDate);
     setSaving(false);
   }
@@ -161,7 +161,7 @@ export default function CoachAvailabilityScreen() {
       .from('coach_availability')
       .update({ blocked: false })
       .eq('id', slotId);
-    if (error) Alert.alert('Error', 'No se pudo reactivar el horario.');
+    if (error) Alert.alert('Error', 'No se pudo reactivar el horario');
     else await loadSlots(selectedDate);
     setSaving(false);
   }
@@ -172,7 +172,7 @@ export default function CoachAvailabilityScreen() {
     setPickerValue(selected);
     const time = dateToTimeStr(selected);
     if (slots.some(sl => sl.time === time)) {
-      Alert.alert('Horario duplicado', 'Ese horario ya está agregado.');
+      Alert.alert('Horario duplicado', 'Ese horario ya está agregado');
       return;
     }
     addSlot(time);
@@ -284,7 +284,7 @@ export default function CoachAvailabilityScreen() {
             ) : (
               <>
                 {slots.length === 0 ? (
-                  <Text style={s.noSlotsText}>Sin horarios para este día.</Text>
+                  <Text style={s.noSlotsText}>Sin horarios para este día</Text>
                 ) : (
                   <View style={s.slotList}>
                     {slots.map((slot) => {

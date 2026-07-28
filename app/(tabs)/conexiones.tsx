@@ -327,7 +327,7 @@ export default function ConexionesScreen() {
               <View style={s.deckClose}>
                 <Feather name="search" size={22} color={FOREST_SOFT} />
                 <Text style={s.deckCloseTitle}>Todavía no hay profesionales en {selectedDoor.label.toLowerCase()}</Text>
-                <Text style={s.deckCloseSub}>Probá con otro tema, o hacé el quiz para una sugerencia.</Text>
+                <Text style={s.deckCloseSub}>Probá con otro tema, o hacé el quiz para una sugerencia</Text>
               </View>
             ) : (
               <>
@@ -460,7 +460,7 @@ export default function ConexionesScreen() {
           icon="account-group-outline"
           iconColor={FOREST_SOFT}
           title="Encontrá a tu guía"
-          description="Elegí un tema y te presento a los profesionales indicados. Lo cambiás cuando quieras."
+          description="Elegí un tema y te presento a los profesionales indicados. Lo cambiás cuando quieras"
           delay={800}
         />
 
@@ -524,7 +524,7 @@ export default function ConexionesScreen() {
 
               <View style={s.askWrap}>
                 <Text style={s.askTitle}>{selectedAxis.label}</Text>
-                <Text style={s.askSub}>Elegí un tema y te presento a los profesionales indicados.</Text>
+                <Text style={s.askSub}>Elegí un tema y te presento a los profesionales indicados</Text>
               </View>
 
               <View style={s.menuWrap}>
@@ -554,7 +554,7 @@ export default function ConexionesScreen() {
                 <Feather name="search" size={18} color={FOREST_SOFT} />
                 <TextInput
                   style={s.searchInput}
-                  placeholder="Buscá un coach por nombre"
+                  placeholder="Buscá un profesional por nombre"
                   placeholderTextColor={tint(FOREST, 0.45)}
                   value={coachQuery}
                   onChangeText={setCoachQuery}
@@ -597,13 +597,13 @@ export default function ConexionesScreen() {
                     ))}
                   </View>
                 ) : (
-                  <Text style={s.noResults}>No encontramos coaches con ese nombre.</Text>
+                  <Text style={s.noResults}>No encontramos profesionales con ese nombre</Text>
                 )
               ) : (
                 <>
                   <View style={s.askWrap}>
                     <Text style={s.askTitle}>¿Qué te gustaría{'\n'}trabajar hoy?</Text>
-                    <Text style={s.askSub}>Elegí un área de bienestar para empezar.</Text>
+                    <Text style={s.askSub}>Elegí un área de bienestar para empezar</Text>
                   </View>
 
                   <View style={s.menuWrap}>

@@ -302,7 +302,7 @@ function relativeDay(iso: string): string {
   return `${d.getDate()} ${monthName}`;
 }
 
-const MAX_RECOS_VISIBLE = 3;
+const MAX_RECOS_VISIBLE = 1;
 
 // ─── CoachRecoSection ─────────────────────────────────────────────────────────
 // Rediseño Ajuste 3: cada recomendación es un "mensaje" en 3 capas (cabecera del
@@ -323,7 +323,7 @@ function CoachRecoSection({
   return (
     <View style={{ marginBottom: 4 }}>
       <View style={s.libraryHeaderRow}>
-        <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Recomendado por tu coach</Text>
+        <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Recomendado por tu profesional</Text>
         <Text style={s.recoUnopenedCount}>{unopenedCount > 0 ? `${unopenedCount} sin abrir` : 'Al día ✓'}</Text>
       </View>
       <View style={{ gap: 10 }}>
@@ -331,7 +331,7 @@ function CoachRecoSection({
           const res = item.coach_resources;
           const color = FORMAT_COLOR[res.format] ?? TERRACOTTA;
           const isNew = !item.opened_at;
-          const coachName = item.coaches?.profiles?.name ?? 'Tu coach';
+          const coachName = item.coaches?.profiles?.name ?? 'Tu profesional';
           return (
             <View key={item.id} style={s.recbox}>
               <View style={s.recHead}>
@@ -370,7 +370,7 @@ function CoachRecoSection({
       </View>
       {recos.length > MAX_RECOS_VISIBLE && (
         <TouchableOpacity onPress={() => router.push('/mis-recomendaciones' as any)} hitSlop={8} activeOpacity={0.7}>
-          <Text style={s.exploreLink}>Ver todas →</Text>
+          <Text style={s.exploreLink}>+{recos.length - MAX_RECOS_VISIBLE} más →</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -424,7 +424,7 @@ function ExploreSection({
     <View style={{ marginTop: 8 }}>
       <View style={s.libraryHeaderRow}>
         <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Biblioteca</Text>
-        <Text style={s.sectionSubtitle}>Contenido de los coaches de Vita</Text>
+        <Text style={s.sectionSubtitle}>Contenido de los profesionales de Vita</Text>
       </View>
 
       {/* Chips de puertas + botón de filtro */}
@@ -487,13 +487,13 @@ function ExploreSection({
 
       {/* Lista de recursos */}
       {resources.length === 0 ? (
-        <Text style={s.emptyText}>No hay recursos para este tema todavía.</Text>
+        <Text style={s.emptyText}>No hay recursos para este tema todavía</Text>
       ) : (
         <View style={{ marginTop: 12, gap: 9 }}>
           {resources.map(r => {
             const color = FORMAT_COLOR[r.format] ?? TERRACOTTA;
             const isSaved = savedIds.has(r.id);
-            const coachName = r.coaches?.profiles?.name ?? 'un coach';
+            const coachName = r.coaches?.profiles?.name ?? 'un profesional';
             const coachProfileId = r.coaches?.profile_id;
             return (
               <ScaleCard
@@ -612,7 +612,7 @@ export default function RecursosScreen() {
           title: r.title,
           duration_min: r.duration_min,
           attributed_to_coach_id: r.attributed_to_coach_id,
-          coachName: r.profiles?.name ?? 'un coach',
+          coachName: r.profiles?.name ?? 'un profesional',
           axes: (r.resource_axes ?? []).map((a: any) => a.axis),
         })));
       });
@@ -694,7 +694,7 @@ export default function RecursosScreen() {
           storageKey="vive_tooltip_recursos"
           icon="book-open-outline"
           title="Recursos para vos"
-          description="Herramientas de bienestar para usar cuando quieras, a tu ritmo."
+          description="Herramientas de bienestar para usar cuando quieras, a tu ritmo"
           delay={800}
         />
         <ScrollView
