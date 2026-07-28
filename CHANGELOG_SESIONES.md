@@ -22,7 +22,7 @@
 - Retomar Mercado Pago: reconectar "Coach Prueba" desde Perfil → botón "Conectar" (ahora sí debería guardar el token, con `MP_TEST_MODE=false`), reservar, pagar $1 real, confirmar `payment_status='aprobado'` y probar el reembolso al cancelar.
 - Sesión 68: hero verde de mood con check-in real, y `/mis-recomendaciones` con >3 recos — siguen sin probar en pantalla.
 - Isla/swipe en Android — sin dispositivo, sigue bloqueado.
-- Sign in with Apple — sigue bloqueado por cuenta de Apple Developer + build EAS (sesión 72/73).
+- **Sign in with Apple — pausado a propósito, decisión de Joaquín (28/07):** no tiene sentido pagar Apple Developer Program para algo que falta mucho para usarse. El código ya está listo (sesión 72); retomar recién cuando el lanzamiento esté cerca — no marcar como bloqueante urgente hasta entonces.
 
 ---
 
