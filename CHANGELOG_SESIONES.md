@@ -5,6 +5,34 @@
 
 ---
 
+## 2026-07-29 — Joaquín (sesión 78)
+
+**Tocado:** `components/ReminderBell.tsx`, `app/coach-recurso.tsx`, `screens/AnclajeScreen.tsx`, `screens/EscanerScreen.tsx`, `screens/LecturasScreen.tsx`, `screens/MeditacionScreen.tsx`, `screens/RelajacionScreen.tsx`, `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`, `screens/SuenoScreen.tsx`, `package.json`, `components/ui/SurfaceCard.tsx`.
+
+**Resumen — revisión de bugs pedida por Joaquín, los 6 hallazgos arreglados:**
+- **Bug real, roto en producción hasta hoy:** `ReminderBell.tsx` recibía una prop llamada `ref` (`{ kind, ref: resourceRef, title }`) — `ref` es una prop reservada de React (junto con `key`), nunca llega al componente vía props normales. `resourceRef` era `undefined` siempre, en runtime, en las 9 pantallas que usan la campanita de recordatorios (las 8 tools de VITA + `coach-recurso.tsx`). Efecto: la campanita siempre se mostraba inactiva sin importar si había un recordatorio configurado (la query de lectura filtraba por `ref: undefined`), y al guardar, el insert escribía `ref: undefined` para cualquier herramienta (sin poder distinguir a cuál pertenecía, o directamente fallando si la columna es NOT NULL). Bug preexistente del commit `6984cc7b` (feature de recordatorios), no introducido en sesiones recientes, pero confirmado roto hoy.
+- **Fix del bug:** se renombró la prop de `ref` a `resourceRef` en la firma de `ReminderBell` (el resto del componente ya usaba internamente ese nombre) y se actualizaron los 9 call sites (`ref="..."` → `resourceRef="..."`).
+- **Punto ciego del lint — también arreglado:** `npx expo lint` (el script `npm run lint`) no detectaba el bug de arriba porque por default solo escanea `/app`, `/src` y `/components` — todas las pantallas de tools viven en `screens/`, fuera de ese alcance. Confirmado con `npx expo lint --help` ("Lint all files in /src, /app, /components directories") y comparando contra `npx eslint .` directo (97 problemas vs. 18, con 30 solo en `screens/`). Se cambió el script `lint` en `package.json` de `"expo lint"` a `"expo lint app screens components hooks lib context constants theme"` — cubre todo el código de la app (se excluyó a propósito `supabase/functions/` porque son Deno edge functions con imports por URL que ESLint/Node no puede resolver, son falsos positivos esperados, no bugs reales; y `assets/`, `design/`, `docs/`, `scripts/` porque no tienen código lintable). Verificado: `npm run lint` ahora reporta 76 problemas (10 errores, 66 warnings) — todos preexistentes, ninguno es el bug de `ref` (los 9 `react/no-string-refs` ya no aparecen).
+- **Los 4 hallazgos chicos de la revisión, también arreglados:**
+  - `SurfaceCard.tsx`: el contenido interno usaba el `borderRadius` completo en vez de `borderRadius - 1` cuando está anidado dentro del borde con gradiente (`elevated`+`light`) — se parametrizó `renderContent(radius)` para que cada wrapper le pase el radio correcto.
+  - `SurfaceCard.tsx`: el `useMemo` de las capas de sombra dependía solo de `isPressable` — se agregaron `idleRecipe`/`pressedRecipe`/`press` a las deps (ya no hace falta el `eslint-disable`).
+  - `RuidoScreen.tsx`: se sacó `currentSound`, variable muerta desde el rediseño de esta sesión.
+  - `RuidoScreen.tsx`: se restauró un timer grande y prominente (`runningTimer`, Fraunces 40px) durante la reproducción — el rediseño anterior lo había metido como texto chico dentro de "Sonando…", perdiendo el vistazo rápido de cuánto tiempo queda; ahora conviven el timer grande arriba y "Sonando…" + ecualizador debajo, sin volver a ocultar el grid/duración (esa decisión de UX se mantiene).
+- Sin cambios de schema — son bugs de código (props mal consumidas, script de lint mal alcanzado, estilos/memos con valores de más o de menos), no de ninguna tabla.
+
+**Pendiente para la próxima sesión:**
+- **Revisar si hay filas existentes en `resource_reminders` rotas por el bug de `ReminderBell`.** Dos escenarios posibles, no investigado porque requiere acceso directo a la base (Joaquín lo va a chequear él en el SQL editor de Supabase):
+  - Si `ref` es `NOT NULL`: los inserts fallaban, no se guardó nada — pero además `handleSave` (`components/ReminderBell.tsx:131`) nunca chequea el resultado de `saveReminder(...)` (ni siquiera hoy, después del fix del prop) — cierra la hoja como si hubiera guardado incluso si falló. Esto es un bug aparte, todavía sin arreglar, que puede seguir enmascarando errores de guardado a futuro (de cualquier causa, no solo el de `ref`).
+  - Si `ref` acepta `null`: pueden existir filas huérfanas (`ref: null`), posiblemente duplicadas si el usuario reintentó (la campanita nunca reconocía la existente). Esas filas sí se reprograman como notificación local (`reconcileResourceReminders` no filtra por `ref`), así que puede haber usuarios recibiendo notificaciones de recordatorio "fantasma" sin que la campanita correspondiente se haya visto nunca activa.
+  - Query para chequear: `select id, user_id, kind, ref, title, days, hour, minute, enabled, created_at from resource_reminders where ref is null or kind = 'tool' order by created_at desc;`
+  - Si aparecen filas rotas, definir si se borran o se intenta recuperar el `ref` correcto a partir del `title` (los títulos son fijos por tool, ej. "Respiración" → `ref='respiracion'`).
+- **Arreglar el silencio de errores en `handleSave`** (`components/ReminderBell.tsx:131`) — hoy cualquier falla al guardar un recordatorio (no solo la de `ref`) se muestra como éxito al usuario.
+- `npm run lint` ahora reporta 76 problemas reales (10 errores, 66 warnings) que antes eran invisibles — ninguno es urgente (comillas sin escapar, imports duplicados, deps de hooks faltantes, variables sin usar) pero vale hacer una pasada de limpieza cuando haya tiempo.
+- Retomar Mercado Pago cuando Andre conecte su cuenta real (arrastrado de sesiones previas).
+- Sign in with Apple sigue pausado a propósito.
+
+---
+
 ## 2026-07-29 — Joaquín (sesión 77)
 
 **Tocado:** `theme/tokens.ts`, `app/(tabs)/index.tsx`, `app/(tabs)/recursos.tsx`, `screens/SessionsScreen.tsx`. Nuevo: `components/ui/SurfaceCard.tsx`.

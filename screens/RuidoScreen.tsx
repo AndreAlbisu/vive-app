@@ -155,7 +155,6 @@ export default function RuidoScreen() {
   useEffect(() => () => { stopTimer(); pauseAll(); }, []);
 
   const remaining = Math.max(0, duration - elapsed);
-  const currentSound = SOUNDS.find(s => s.id === selectedSound)!;
   const isRunning = phase === 'running';
 
   return (
@@ -166,7 +165,7 @@ export default function RuidoScreen() {
           onBack={() => { stopTimer(); pauseAll(); router.back(); }}
           right={
             <>
-              <ReminderBell kind="tool" ref="ruido" title="Ruido blanco" />
+              <ReminderBell kind="tool" resourceRef="ruido" title="Ruido blanco" />
               <PinButton resourceId="ruido" />
             </>
           }
@@ -240,9 +239,12 @@ export default function RuidoScreen() {
             </TouchableOpacity>
 
             {isRunning && (
-              <View style={s.runningRow}>
-                <SoundEqualizer color={FOREST} />
-                <Text style={s.runningHint}>Sonando… {formatTime(remaining)}</Text>
+              <View style={s.runningBlock}>
+                <Text style={s.runningTimer}>{formatTime(remaining)}</Text>
+                <View style={s.runningRow}>
+                  <SoundEqualizer color={FOREST} />
+                  <Text style={s.runningHint}>Sonando…</Text>
+                </View>
               </View>
             )}
           </ScrollView>
@@ -296,6 +298,8 @@ const s = StyleSheet.create({
   stopBtn:        { backgroundColor: TERRACOTTA },
   primaryBtnText: { fontFamily: ViveFonts.semibold, fontSize: 16, color: CREAM_LIGHT },
 
+  runningBlock: { alignItems: 'center', gap: 6 },
+  runningTimer: { fontFamily: ViveFonts.frauncesSerif, fontSize: 40, color: FOREST, letterSpacing: -1 },
   runningRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   runningHint: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT },
 });

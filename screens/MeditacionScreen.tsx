@@ -99,7 +99,7 @@ export default function MeditacionScreen() {
           </TouchableOpacity>
           <Text style={[s.title, phase === 'running' && s.titleLight]}>Meditación</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <ReminderBell kind="tool" ref="meditacion" title="Meditación" />
+            <ReminderBell kind="tool" resourceRef="meditacion" title="Meditación" />
             <PinButton resourceId="meditacion" />
           </View>
         </View>

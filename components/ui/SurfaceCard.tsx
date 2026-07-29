@@ -130,7 +130,10 @@ export function SurfaceCard({
   const translateY = press.interpolate({ inputRange: [0, 1], outputRange: [0, -4] });
 
   // Una capa animada por índice (idle → pressed) si es pressable; si no, se
-  // queda fija en los valores idle (sin costo de interpolación).
+  // queda fija en los valores idle (sin costo de interpolación). Depende de
+  // idleRecipe/pressedRecipe (no solo isPressable) para no quedarse con
+  // sombras stale si variant/tone cambiaran en una instancia ya montada —
+  // hoy ningún call site lo hace, pero el memo antes no lo cubría.
   const layers: AnimatedLayer[] = useMemo(() => {
     return idleRecipe.ios.map((idle: ShadowLayer, i: number) => {
       if (!isPressable) return idle;
@@ -145,8 +148,7 @@ export function SurfaceCard({
         radius: press.interpolate({ inputRange: [0, 1], outputRange: [idle.radius, pressed.radius] }),
       };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPressable]);
+  }, [isPressable, idleRecipe, pressedRecipe, press]);
 
   const backLayers = idleRecipe.ios.slice(0, -1);
   const contactLayer = layers[layers.length - 1];
@@ -161,20 +163,26 @@ export function SurfaceCard({
   const grain = grainOpacity ?? (variant === 'elevated' ? 0.05 : 0.03);
   const useGradientBorder = variant === 'elevated' && tone === 'light';
 
-  const content = (
-    <View style={{ borderRadius, overflow: 'hidden', backgroundColor }}>
-      <Grain opacity={grain} borderRadius={borderRadius} />
-      {variant === 'elevated' && (
-        <LinearGradient
-          colors={['transparent', 'rgba(255,255,255,0.9)', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={s.topLine}
-        />
-      )}
-      {children}
-    </View>
-  );
+  // El contenido clippeado necesita SU PROPIO radio, un punto menos que el
+  // wrapper que lo contiene cuando ese wrapper achica 1px por el borde
+  // gradiente (padding-box) — si no, la esquina del contenido queda con un
+  // radio mayor que la caja que lo recorta.
+  function renderContent(radius: number) {
+    return (
+      <View style={{ borderRadius: radius, overflow: 'hidden', backgroundColor }}>
+        <Grain opacity={grain} borderRadius={radius} />
+        {variant === 'elevated' && (
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,0.9)', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={s.topLine}
+          />
+        )}
+        {children}
+      </View>
+    );
+  }
 
   const cardBody = useGradientBorder ? (
     <LinearGradient
@@ -183,7 +191,7 @@ export function SurfaceCard({
       end={{ x: 0.85, y: 1 }}
       style={{ borderRadius, padding: 1 }}
     >
-      <View style={{ borderRadius: borderRadius - 1 }}>{content}</View>
+      <View style={{ borderRadius: borderRadius - 1, overflow: 'hidden' }}>{renderContent(borderRadius - 1)}</View>
     </LinearGradient>
   ) : (
     <View
@@ -193,7 +201,7 @@ export function SurfaceCard({
         borderColor: tone === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(63,81,47,0.08)',
       }}
     >
-      {content}
+      {renderContent(borderRadius)}
     </View>
   );
 

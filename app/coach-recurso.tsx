@@ -485,7 +485,7 @@ export default function CoachRecursoScreen() {
             <Ionicons name="arrow-back" size={22} color={ViveColors.accent} />
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            <ReminderBell kind="coach_resource" ref={resource.id} title={resource.title} />
+            <ReminderBell kind="coach_resource" resourceRef={resource.id} title={resource.title} />
             <TouchableOpacity style={s.saveBtn} onPress={toggleSave} hitSlop={8}>
               <Ionicons
                 name={saved ? 'bookmark' : 'bookmark-outline'}

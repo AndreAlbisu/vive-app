@@ -120,7 +120,7 @@ export default function LecturasScreen() {
           </TouchableOpacity>
           <Text style={s.title}>Lecturas breves</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <ReminderBell kind="tool" ref="lecturas" title="Lecturas breves" />
+            <ReminderBell kind="tool" resourceRef="lecturas" title="Lecturas breves" />
             <PinButton resourceId="lecturas" />
           </View>
         </View>

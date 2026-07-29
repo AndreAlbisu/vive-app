@@ -103,7 +103,7 @@ export default function EscanerScreen() {
           </TouchableOpacity>
           <Text style={s.title}>Escáner corporal</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <ReminderBell kind="tool" ref="escaner" title="Escáner corporal" />
+            <ReminderBell kind="tool" resourceRef="escaner" title="Escáner corporal" />
             <PinButton resourceId="escaner" />
           </View>
         </View>

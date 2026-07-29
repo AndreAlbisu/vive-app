@@ -130,7 +130,7 @@ export default function RelajacionScreen() {
           </TouchableOpacity>
           <Text style={s.title}>Relajación</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <ReminderBell kind="tool" ref="relajacion" title="Relajación" />
+            <ReminderBell kind="tool" resourceRef="relajacion" title="Relajación" />
             <PinButton resourceId="relajacion" />
           </View>
         </View>

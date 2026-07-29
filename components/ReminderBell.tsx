@@ -28,11 +28,16 @@ function fmtTime(hour: number, minute: number): string {
  */
 export function ReminderBell({
   kind,
-  ref: resourceRef,
+  resourceRef,
   title,
 }: {
   kind: 'tool' | 'coach_resource';
-  ref: string;
+  // `resourceRef` (no `ref`): `ref` es una prop reservada de React y nunca
+  // llega al componente — con ese nombre esto quedaba silenciosamente
+  // undefined en runtime, rompiendo lectura y guardado de recordatorios en
+  // las 8 pantallas de herramientas + coach-recurso.tsx. Bug encontrado y
+  // arreglado sesión 78 (ver CHANGELOG_SESIONES.md).
+  resourceRef: string;
   title: string;
 }) {
   const { user, requestAuth } = useAuth();

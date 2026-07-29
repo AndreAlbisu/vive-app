@@ -87,7 +87,7 @@ export default function AnclajeScreen() {
           </TouchableOpacity>
           <Text style={s.title}>Anclaje</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <ReminderBell kind="tool" ref="anclaje" title="Anclaje" />
+            <ReminderBell kind="tool" resourceRef="anclaje" title="Anclaje" />
             <PinButton resourceId="anclaje" />
           </View>
         </View>

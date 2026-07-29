@@ -136,7 +136,7 @@ export default function RespiracionScreen() {
           onBack={() => { stopTimer(); router.back(); }}
           right={
             <>
-              <ReminderBell kind="tool" ref="respiracion" title="Respiración" />
+              <ReminderBell kind="tool" resourceRef="respiracion" title="Respiración" />
               <PinButton resourceId="respiracion" />
             </>
           }

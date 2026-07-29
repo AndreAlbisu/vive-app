@@ -95,7 +95,7 @@ export default function SuenoScreen() {
           </TouchableOpacity>
           <Text style={[s.title, phase === 'running' && s.titleLight]}>Sueño</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <ReminderBell kind="tool" ref="sueno" title="Sueño" />
+            <ReminderBell kind="tool" resourceRef="sueno" title="Sueño" />
             <PinButton resourceId="sueno" />
           </View>
         </View>
