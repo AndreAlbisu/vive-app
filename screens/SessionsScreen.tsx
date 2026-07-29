@@ -22,6 +22,7 @@ import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { decryptMessage } from '@/lib/encryption';
 import { AppBg } from '@/components/ui/AppBg';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 
 type SalaItem = {
   id: string;
@@ -311,6 +312,7 @@ export default function SessionsScreen() {
 
             {/* Hero — próxima sesión */}
             {nextSession && (
+              <SurfaceCard variant="elevated" tone="dark" backgroundColor="#3A4A28" borderRadius={22} style={styles.heroCardWrap}>
               <LinearGradient
                 colors={['#42542F', '#354526']}
                 start={{ x: 0, y: 0 }}
@@ -388,6 +390,7 @@ export default function SessionsScreen() {
                   )}
                 </View>
               </LinearGradient>
+              </SurfaceCard>
             )}
 
             {/* Lista de salas */}
@@ -534,11 +537,11 @@ const styles = StyleSheet.create({
   scrollContent: { paddingTop: 0, paddingBottom: TAB_BAR_CLEARANCE, paddingHorizontal: 16, gap: 0 },
 
   // Hero
-  heroCard: {
-    borderRadius: 22,
-    padding: 18,
+  heroCardWrap: {
     marginBottom: 16,
-    overflow: 'hidden',
+  },
+  heroCard: {
+    padding: 18,
   },
   heroTop: {
     flexDirection: 'row',

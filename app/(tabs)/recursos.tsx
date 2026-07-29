@@ -20,6 +20,7 @@ import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { ScaleCard } from '@/components/ScaleCard';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { AppBg } from '@/components/ui/AppBg';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
@@ -171,7 +172,7 @@ function RecommendedCard({
 
   if (isIntense) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.92}>
+      <SurfaceCard variant="elevated" tone="dark" backgroundColor="#3A4A28" borderRadius={22} style={s.moodCardWrap} onPress={onPress}>
         <LinearGradient
           colors={['#42542F', '#354526']}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -184,7 +185,7 @@ function RecommendedCard({
             <Ionicons name="arrow-forward" size={16} color={FOREST} />
           </View>
         </LinearGradient>
-      </TouchableOpacity>
+      </SurfaceCard>
     );
   }
 
@@ -333,7 +334,8 @@ function CoachRecoSection({
           const isNew = !item.opened_at;
           const coachName = item.coaches?.profiles?.name ?? 'Tu profesional';
           return (
-            <View key={item.id} style={s.recbox}>
+            <SurfaceCard key={item.id} variant="subtle" backgroundColor={CREAM_DEEP} borderRadius={22}>
+            <View style={s.recbox}>
               <View style={s.recHead}>
                 <LinearGradient
                   colors={['#C06B4A', '#A5583B']}
@@ -365,6 +367,7 @@ function CoachRecoSection({
                 </View>
               </ScaleCard>
             </View>
+            </SurfaceCard>
           );
         })}
       </View>
@@ -498,36 +501,39 @@ function ExploreSection({
             return (
               <ScaleCard
                 key={r.id}
-                style={s.exploreRow}
                 onPress={() => router.push({ pathname: '/coach-recurso', params: { id: r.id } } as any)}
                 activeOpacity={0.9}>
-                <View style={[s.exploreCover, { backgroundColor: color }]}>
-                  <Ionicons name={FORMAT_ICON[r.format] ?? 'book-outline'} size={15} color="#fff" />
-                  <Text style={s.exploreCoverLabel}>{(FORMAT_LABEL[r.format] ?? r.format).toUpperCase()}</Text>
-                </View>
-                <View style={s.exploreRowText}>
-                  <Text style={s.exploreRowTitle} numberOfLines={2}>{displayTitle(r.title)}</Text>
-                  <Text style={s.exploreRowMeta} numberOfLines={1}>
-                    {r.duration_seconds ? `${fmtDuration(r.duration_seconds)} · ` : ''}por{' '}
-                    <Text
-                      style={s.exploreRowAuthor}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        if (!coachProfileId) return;
-                        if (userId) logResourceEvent(userId, r.id, 'coach_profile_visit');
-                        router.push({ pathname: '/profesional', params: { profileId: coachProfileId, resourceId: r.id } } as any);
-                      }}>
-                      {coachName}
-                    </Text>
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => onSave(r.id)} hitSlop={8}>
-                  <Ionicons
-                    name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                    size={18}
-                    color={isSaved ? TERRACOTTA : FOREST_SOFT}
-                  />
-                </TouchableOpacity>
+                <SurfaceCard variant="subtle" backgroundColor={CARD} borderRadius={20}>
+                  <View style={s.exploreRow}>
+                    <View style={[s.exploreCover, { backgroundColor: color }]}>
+                      <Ionicons name={FORMAT_ICON[r.format] ?? 'book-outline'} size={15} color="#fff" />
+                      <Text style={s.exploreCoverLabel}>{(FORMAT_LABEL[r.format] ?? r.format).toUpperCase()}</Text>
+                    </View>
+                    <View style={s.exploreRowText}>
+                      <Text style={s.exploreRowTitle} numberOfLines={2}>{displayTitle(r.title)}</Text>
+                      <Text style={s.exploreRowMeta} numberOfLines={1}>
+                        {r.duration_seconds ? `${fmtDuration(r.duration_seconds)} · ` : ''}por{' '}
+                        <Text
+                          style={s.exploreRowAuthor}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (!coachProfileId) return;
+                            if (userId) logResourceEvent(userId, r.id, 'coach_profile_visit');
+                            router.push({ pathname: '/profesional', params: { profileId: coachProfileId, resourceId: r.id } } as any);
+                          }}>
+                          {coachName}
+                        </Text>
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => onSave(r.id)} hitSlop={8}>
+                      <Ionicons
+                        name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                        size={18}
+                        color={isSaved ? TERRACOTTA : FOREST_SOFT}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </SurfaceCard>
               </ScaleCard>
             );
           })}
@@ -549,13 +555,17 @@ function ToolCard({ tool }: { tool: Tool }) {
   const router = useRouter();
   return (
     <ScaleCard
-      style={s.toolTile}
+      style={s.toolTileWrap}
       onPress={() => { if (tool.route) router.push(tool.route as any); }}
       activeOpacity={0.75}>
-      <View style={s.toolIconWrap}>
-        <Ionicons name={tool.icon} size={16} color={FOREST} />
-      </View>
-      <Text style={s.toolLabel}>{TILE_LABEL[tool.id] ?? tool.label}</Text>
+      <SurfaceCard variant="subtle" backgroundColor={CARD} borderRadius={18}>
+        <View style={s.toolTile}>
+          <View style={s.toolIconWrap}>
+            <Ionicons name={tool.icon} size={16} color={FOREST} />
+          </View>
+          <Text style={s.toolLabel}>{TILE_LABEL[tool.id] ?? tool.label}</Text>
+        </View>
+      </SurfaceCard>
     </ScaleCard>
   );
 }
@@ -855,11 +865,11 @@ const s = StyleSheet.create({
   streakDotActive: { backgroundColor: TERRACOTTA },
 
   // ── MoodContextBlock ───────────────────────────────────────────────────────
-  moodCard: {
-    borderRadius: 22,
-    padding: 20,
+  moodCardWrap: {
     marginBottom: 12,
-    overflow: 'hidden',
+  },
+  moodCard: {
+    padding: 20,
   },
   moodEyebrow: {
     fontFamily: ViveFonts.medium,
@@ -1016,14 +1026,12 @@ const s = StyleSheet.create({
     gap: 9,
     marginTop: 10,
   },
-  toolTile: {
+  toolTileWrap: {
     flex: 1,
+  },
+  toolTile: {
     alignItems: 'center',
     gap: 6,
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: LINE,
-    borderRadius: 18,
     paddingVertical: 12,
     paddingHorizontal: 4,
   },
@@ -1056,8 +1064,6 @@ const s = StyleSheet.create({
     color: FOREST_SOFT,
   },
   recbox: {
-    backgroundColor: CREAM_DEEP,
-    borderRadius: 22,
     padding: 15,
   },
   recHead: {
@@ -1225,10 +1231,6 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
-    backgroundColor: CARD,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: LINE,
     paddingVertical: 12,
     paddingHorizontal: 13,
   },

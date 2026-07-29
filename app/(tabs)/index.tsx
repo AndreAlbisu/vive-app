@@ -24,6 +24,7 @@ import { VitaWordmark } from '@/components/VitaWordmark';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import type { MoodEntry } from '@/hooks/useMoodHistory';
 import { useProgressStats } from '@/hooks/useProgressStats';
@@ -333,32 +334,34 @@ export default function InicioScreen() {
               </TouchableOpacity>
             </View>
             {nextSession ? (
-              <View style={s.sessionCard}>
-                <View style={s.sessionAvatar}>
-                  <Text style={s.sessionAvatarText}>{nextSession.coachName[0]}</Text>
+              <SurfaceCard variant="elevated" backgroundColor={GLASS} borderRadius={18} style={s.sessionCardWrap}>
+                <View style={s.sessionCardInner}>
+                  <View style={s.sessionAvatar}>
+                    <Text style={s.sessionAvatarText}>{nextSession.coachName[0]}</Text>
+                  </View>
+                  <View style={s.sessionInfo}>
+                    <Text style={s.sessionName}>{nextSession.coachName}</Text>
+                    {nextSession.coachSpecialty ? (
+                      <Text style={s.sessionRole}>{nextSession.coachSpecialty}</Text>
+                    ) : null}
+                    <Text style={s.sessionSub}>
+                      {formatSessionDate(nextSession.date)} · {nextSession.time.slice(0, 5)} hs
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={s.verSalaButton}
+                    onPress={() => router.push({
+                      pathname: '/sala',
+                      params: nextSession.sala_id
+                        ? { sala_id: nextSession.sala_id }
+                        : { coach_id: nextSession.coach_id },
+                    })}
+                    activeOpacity={0.82}
+                  >
+                    <Text style={s.verSalaButtonText}>Ver sala</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={s.sessionInfo}>
-                  <Text style={s.sessionName}>{nextSession.coachName}</Text>
-                  {nextSession.coachSpecialty ? (
-                    <Text style={s.sessionRole}>{nextSession.coachSpecialty}</Text>
-                  ) : null}
-                  <Text style={s.sessionSub}>
-                    {formatSessionDate(nextSession.date)} · {nextSession.time.slice(0, 5)} hs
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={s.verSalaButton}
-                  onPress={() => router.push({
-                    pathname: '/sala',
-                    params: nextSession.sala_id
-                      ? { sala_id: nextSession.sala_id }
-                      : { coach_id: nextSession.coach_id },
-                  })}
-                  activeOpacity={0.82}
-                >
-                  <Text style={s.verSalaButtonText}>Ver sala</Text>
-                </TouchableOpacity>
-              </View>
+              </SurfaceCard>
             ) : (
               <TouchableOpacity
                 style={s.noSessionCard}
@@ -537,11 +540,11 @@ const s = StyleSheet.create({
     marginTop: 4,
     marginBottom: 14,
   },
-  sobreVosStatCard: {
+  sobreVosStatCardWrap: {
     flex: 1,
+  },
+  sobreVosStatCard: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 4,
   },
@@ -668,17 +671,15 @@ const s = StyleSheet.create({
   },
 
   // ── 7. Próxima sesión ──────────────────────────────────────────────────────
-  sessionCard: {
+  sessionCardWrap: {
     marginHorizontal: 18,
-    backgroundColor: GLASS,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
+    marginBottom: 0,
+  },
+  sessionCardInner: {
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 0,
   },
   sessionAvatar: {
     width: 44,
@@ -816,10 +817,18 @@ function SobreVosCard({
 
         <View style={s.sobreVosStatsRow}>
           {stats.map((st, i) => (
-            <View key={i} style={s.sobreVosStatCard}>
-              <Text style={s.sobreVosStatValue}>{st.value}</Text>
-              <Text style={s.sobreVosStatLabel}>{st.label}</Text>
-            </View>
+            <SurfaceCard
+              key={i}
+              variant="subtle"
+              backgroundColor="rgba(255,255,255,0.55)"
+              borderRadius={14}
+              style={s.sobreVosStatCardWrap}
+            >
+              <View style={s.sobreVosStatCard}>
+                <Text style={s.sobreVosStatValue}>{st.value}</Text>
+                <Text style={s.sobreVosStatLabel}>{st.label}</Text>
+              </View>
+            </SurfaceCard>
           ))}
         </View>
 

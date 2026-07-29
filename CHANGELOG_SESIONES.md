@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-07-29 — Joaquín (sesión 77)
+
+**Tocado:** `theme/tokens.ts`, `app/(tabs)/index.tsx`, `app/(tabs)/recursos.tsx`, `screens/SessionsScreen.tsx`. Nuevo: `components/ui/SurfaceCard.tsx`.
+
+**Resumen — tratamiento visual nuevo para cards ("sombra cálida en capas"), siguiendo `card-efectos-comparador.html` (mockup, no se guardó en el repo, solo el HTML por AirDrop). Primera pasada, no aplicado a toda la app:**
+- No existía ningún `Card.tsx` genérico — `ScaleCard.tsx` solo maneja el gesto de press (scale), sin estilo visual; cada pantalla dibujaba su propia card inline. Se creó `components/ui/SurfaceCard.tsx` como el único lugar donde vive el efecto, y `theme/tokens.ts` ganó un export `shadow` (no existía ningún token de sombra centralizado antes) con las recetas `elevated`/`elevatedPressed`/`subtle`, cada una `light`/`dark`.
+- **Variantes:** `elevated` (3 sombras con halo terracota, grano 5%, borde gradiente, línea de brillo superior, sube al presionar) para la card más importante de cada pantalla; `subtle` (sombra 1+2 sin halo, grano 3%, borde plano, sin interacción propia) para cards repetidas. `tone="dark"` (agregado, no estaba en el pedido original) para superficies oscuras como el hero de sesión — mismo criterio que usa el propio mockup, cuyo `.hero` no lleva borde con brillo ni halo terracota, sino tinta oscura.
+- **Primera adopción:** Inicio (`sessionCard` → elevated/light; las 3 stat cards dentro de `SobreVosCard` → subtle/light), Recursos (`moodCard`/recurso destacado en mood bajo → elevated/dark; `toolTile`, `exploreRow`, `recbox` de recomendaciones del coach → subtle/light, conviviendo con el `ScaleCard` existente sin duplicar el gesto), Mensajes (`heroCard` → elevated/dark, sin interacción propia porque tiene varios botones internos, no es un solo tap target).
+- **3 decisiones técnicas resueltas sin librerías nuevas** (`expo-linear-gradient` y `react-native-svg` ya estaban instalados, no se sumó nada a `package.json`):
+  - Grano: no hay textura en `assets/` ni herramienta de generación de imagen en este entorno — se aproximó con un `<Pattern>` de `react-native-svg` (puntos pseudo-random generados una sola vez al cargar el módulo, no por card ni por frame).
+  - Sombra multicapa en iOS: RN no soporta más de una sombra por View — se resuelve apilando 2-3 Views detrás de la card visible, cada una con su propio `shadowColor/Offset/Opacity/Radius`, más chicas que la card (aproxima el spread negativo de CSS).
+  - Halo en Android: `elevation` no soporta tinte — se simula con una View extra semitransparente detrás (terracota o tinta oscura según `tone`), sin blur real. **La diferencia visual entre plataformas es esperable y no se pudo verificar en dispositivo real desde este entorno** — en iOS el halo debería verse difuminado suave, en Android más sólido/con borde más definido.
+- Interacción de press: mismo spring que ya usa `ScaleCard` (`damping:20/stiffness:300` in, `damping:14/stiffness:180` out), pero animando `translateY` + intensidad de las 3 capas en vez de `scale` — solo en `elevated` con `onPress`.
+- **No se pudo probar en simulador/dispositivo (ni iOS ni Android) desde este entorno** — typecheck y `expo lint` quedaron limpios, pero falta la verificación visual real que pedía el brief (capturas/grabación de las 3 pantallas por plataforma, frame drops en listas de cards `subtle`). Queda pendiente.
+- Riesgo a vigilar: algunas cards (`sessionCard`, las 3 de `SobreVosCard`) usan `backgroundColor` translúcido (`GLASS`/`rgba(255,255,255,0.55)`) — las capas de sombra apiladas en iOS reusan ese mismo color de fondo para poder proyectar sombra, así que podría verse un leve doble-tono en el borde donde las capas no se superponen del todo. No se pudo confirmar visualmente.
+
+**Pendiente para la próxima sesión:**
+- Probar las 3 pantallas en dispositivo real, iOS y Android por separado — comparar el halo de color entre plataformas y buscar frame drops al montar las listas de cards `subtle` (grilla de Recursos, recomendaciones del coach).
+- Si el resultado en Android no convence, evaluar `@shopify/react-native-skia` (no instalado) para blur real en vez de la aproximación con View tintada — solo si vale la pena el esfuerzo.
+- Segunda pasada a otras pantallas una vez validado esto (quedó explícitamente fuera de esta primera tanda).
+- Retomar Mercado Pago cuando Andre conecte su cuenta real (arrastrado de sesiones previas).
+- Sign in with Apple sigue pausado a propósito.
+
+---
+
 ## 2026-07-29 — Joaquín (sesión 76)
 
 **Tocado:** `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`, `app/gratitud.tsx`, `app/diario.tsx`, `components/PinButton.tsx`, `constants/tools.ts`. Nuevo: `components/ui/SoundEqualizer.tsx`, `components/ui/ToolHeader.tsx`.
