@@ -14,15 +14,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ViveColors, ViveFonts, ViveMoodColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
-import { ReminderBell } from '@/components/ReminderBell';
+import { useMoodHistory } from '@/hooks/useMoodHistory';
+import { ToolHeader } from '@/components/ui/ToolHeader';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type MoodLevel = 1 | 2 | 3 | 4 | 5;
-
 interface JournalEntry {
   id: string;
   mood: number;
@@ -31,22 +30,16 @@ interface JournalEntry {
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
-const MOODS: { level: MoodLevel; emoji: string; label: string }[] = [
-  { level: 1, emoji: '😔', label: 'Mal' },
-  { level: 2, emoji: '😕', label: 'Regular' },
-  { level: 3, emoji: '😐', label: 'Neutro' },
-  { level: 4, emoji: '🙂', label: 'Bien' },
-  { level: 5, emoji: '😊', label: 'Muy bien' },
-];
-
 const DAILY_PROMPT = '¿Qué fue lo más importante que sentiste hoy?';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
 }
 
-function formatToday() {
-  return new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+function formatTodayShort() {
+  return new Date()
+    .toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+    .replace('.', '');
 }
 
 function countWords(text: string): number {
@@ -68,17 +61,25 @@ const shadow = Platform.select({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function DiarioScreen() {
   const router = useRouter();
-  const [selectedMood, setSelectedMood] = useState<MoodLevel | null>(null);
   const [journalText, setJournalText] = useState('');
+  const [textFocused, setTextFocused] = useState(false);
   const [saved, setSaved] = useState(false);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
+  const historyRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   const { user, isLoggedIn, requestAuth } = useAuth();
   const saveScale = useRef(new Animated.Value(1)).current;
 
   const canSave = journalText.trim().length > 0;
   const words = countWords(journalText);
+
+  // Mood del día — lee la misma fuente que el check-in de Inicio (mood_entries),
+  // Diario ya no pregunta su propio mood (Ajuste 5, evita duplicar el check-in).
+  const { entries: moodEntries } = useMoodHistory(user?.id, 1);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayMoodEntry = moodEntries.find(e => e.entry_date === todayStr);
 
   useEffect(() => {
     if (!user) return;
@@ -105,7 +106,7 @@ export default function DiarioScreen() {
       .from('journal_entries')
       .insert({
         user_id: user.id,
-        mood: selectedMood ?? 3,
+        mood: todayMoodEntry?.mood_id ?? 3,
         content: journalText.trim(),
       })
       .select()
@@ -118,26 +119,27 @@ export default function DiarioScreen() {
     }
 
     setJournalText('');
-    setSelectedMood(null);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
 
-  const entryMood = MOODS.find(m => m.level === selectedEntry?.mood);
+  function scrollToHistory() {
+    historyRef.current?.measureLayout(
+      // @ts-ignore — measureLayout típa el arg como número de nodo nativo
+      scrollRef.current,
+      (_x: number, y: number) => scrollRef.current?.scrollTo({ y, animated: true }),
+      () => {}
+    );
+  }
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       {/* ── Header ──────────────────────────────────────────────── */}
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={8}>
-          <MaterialCommunityIcons name="arrow-left" size={22} color={ViveColors.text} />
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>Diario</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <ReminderBell kind="tool" ref="diario" title="Diario" />
-          <Text style={s.headerDate}>{formatToday()}</Text>
-        </View>
-      </View>
+      <ToolHeader
+        title="Diario"
+        onBack={() => router.back()}
+        right={<Text style={s.datePillText}>{formatTodayShort()}</Text>}
+      />
       <View style={s.headerDivider} />
 
       <KeyboardAvoidingView
@@ -150,44 +152,49 @@ export default function DiarioScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── Paso 1: Check-in de ánimo ────────────────────────── */}
+          {/* ── Mood del día — lee el check-in de Inicio, no repregunta ── */}
           <View style={s.section}>
-            <Text style={s.stepLabel}>¿Cómo estás hoy?</Text>
-            <View style={s.moodRow}>
-              {MOODS.map(m => {
-                const active = selectedMood === m.level;
-                return (
-                  <TouchableOpacity
-                    key={m.level}
-                    style={[s.moodOption, active && s.moodOptionActive]}
-                    onPress={() => setSelectedMood(m.level)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={s.moodEmoji}>{m.emoji}</Text>
-                    <Text style={[s.moodLabel, active && s.moodLabelActive]}>
-                      {m.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            {todayMoodEntry ? (
+              <View style={s.moodSummaryRow}>
+                <View style={[s.moodDot, { backgroundColor: ViveMoodColors[todayMoodEntry.mood_id] }]} />
+                <View style={s.moodSummaryInfo}>
+                  <Text style={s.moodSummaryLabel}>Hoy registraste</Text>
+                  <Text style={s.moodSummaryValue}>{todayMoodEntry.mood_label}</Text>
+                </View>
+                <TouchableOpacity onPress={() => router.push('/(tabs)')} hitSlop={8}>
+                  <Text style={s.moodChangeLink}>Cambiar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={s.moodInviteRow}>
+                <MaterialCommunityIcons name="bell-outline" size={18} color="#C1694F" />
+                <Text style={s.moodInviteText}>Todavía no contaste cómo venís hoy.</Text>
+                <TouchableOpacity style={s.moodInviteBtn} onPress={() => router.push('/(tabs)')} activeOpacity={0.85}>
+                  <Text style={s.moodInviteBtnText}>Registrar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
-          {/* ── Paso 2: Prompt del día ───────────────────────────── */}
+          {/* ── Prompt del día ───────────────────────────── */}
           <View style={[s.section, s.promptCard]}>
-            <Text style={s.quoteChar}>{'"'}</Text>
+            <View style={s.promptIconWrap}>
+              <MaterialCommunityIcons name="creation" size={16} color={ViveColors.primary} />
+            </View>
             <Text style={s.promptText}>{DAILY_PROMPT}</Text>
             <Text style={s.promptHint}>
               No hay respuesta correcta. Escribí lo que te salga.
             </Text>
           </View>
 
-          {/* ── Paso 3: Área de escritura ────────────────────────── */}
-          <View style={[s.section, s.writeCard]}>
+          {/* ── Área de escritura ────────────────────────── */}
+          <View style={[s.section, s.writeCard, textFocused && s.writeCardFocused]}>
             <TextInput
               style={s.textArea}
               value={journalText}
               onChangeText={setJournalText}
+              onFocus={() => setTextFocused(true)}
+              onBlur={() => setTextFocused(false)}
               placeholder="Empezá por donde quieras..."
               placeholderTextColor={`${ViveColors.text}66`}
               multiline
@@ -213,46 +220,55 @@ export default function DiarioScreen() {
             >
               {saved ? (
                 <View style={s.savedRow}>
-                  <MaterialCommunityIcons name="check-circle-outline" size={18} color="#565E32" />
-                  <Text style={s.saveBtnText}>Guardado 🌱</Text>
+                  <MaterialCommunityIcons name="check-circle-outline" size={18} color="#F7EFE4" />
+                  <Text style={s.saveBtnText}>Guardado</Text>
                 </View>
               ) : (
-                <Text style={s.saveBtnText}>Guardar entrada</Text>
+                <Text style={[s.saveBtnText, !canSave && s.saveBtnTextDisabled]}>Guardar entrada</Text>
               )}
             </TouchableOpacity>
           </Animated.View>
 
           {/* ── Historial ────────────────────────────────────────── */}
+          <View ref={historyRef} collapsable={false}>
+            {entries.length > 0 && (
+              <>
+                <Text style={s.sectionTitle}>Entradas anteriores</Text>
+                {entries.map(entry => {
+                  const moodColor = ViveMoodColors[entry.mood];
+                  const preview =
+                    entry.content.length > 64
+                      ? entry.content.slice(0, 64).trimEnd() + '...'
+                      : entry.content;
+                  return (
+                    <TouchableOpacity
+                      key={entry.id}
+                      style={s.entryCard}
+                      onPress={() => setSelectedEntry(entry)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[s.entryMoodDot, moodColor && { backgroundColor: moodColor }]} />
+                      <View style={s.entryInfo}>
+                        <Text style={s.entryDate}>{formatDate(entry.created_at)}</Text>
+                        <Text style={s.entryPreview}>{preview}</Text>
+                      </View>
+                      <MaterialCommunityIcons
+                        name="chevron-right"
+                        size={18}
+                        color={`${ViveColors.text}44`}
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
+              </>
+            )}
+          </View>
+
           {entries.length > 0 && (
-            <>
-              <Text style={s.sectionTitle}>Entradas anteriores</Text>
-              {entries.map(entry => {
-                const mood = MOODS.find(m => m.level === entry.mood);
-                const preview =
-                  entry.content.length > 64
-                    ? entry.content.slice(0, 64).trimEnd() + '...'
-                    : entry.content;
-                return (
-                  <TouchableOpacity
-                    key={entry.id}
-                    style={s.entryCard}
-                    onPress={() => setSelectedEntry(entry)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={s.entryEmoji}>{mood?.emoji}</Text>
-                    <View style={s.entryInfo}>
-                      <Text style={s.entryDate}>{formatDate(entry.created_at)}</Text>
-                      <Text style={s.entryPreview}>{preview}</Text>
-                    </View>
-                    <MaterialCommunityIcons
-                      name="chevron-right"
-                      size={18}
-                      color={`${ViveColors.text}44`}
-                    />
-                  </TouchableOpacity>
-                );
-              })}
-            </>
+            <TouchableOpacity onPress={scrollToHistory} hitSlop={8} style={s.historyLink}>
+              <Text style={s.historyLinkText}>Tus últimas entradas</Text>
+              <MaterialCommunityIcons name="arrow-right" size={16} color="#C1694F" />
+            </TouchableOpacity>
           )}
 
           <View style={{ height: 40 }} />
@@ -275,8 +291,11 @@ export default function DiarioScreen() {
             >
               <MaterialCommunityIcons name="close" size={22} color={ViveColors.text} />
             </TouchableOpacity>
+            {selectedEntry && ViveMoodColors[selectedEntry.mood] && (
+              <View style={[s.entryMoodDot, { backgroundColor: ViveMoodColors[selectedEntry.mood] }]} />
+            )}
             <Text style={s.modalTitle}>
-              {entryMood?.emoji}{'  '}{selectedEntry ? formatDate(selectedEntry.created_at) : ''}
+              {selectedEntry ? formatDate(selectedEntry.created_at) : ''}
             </Text>
           </View>
           <ScrollView
@@ -302,26 +321,18 @@ const s = StyleSheet.create({
   },
   flex: { flex: 1 },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#F7EFE4',
-  },
-  backBtn: { padding: 4 },
-  headerTitle: {
-    flex: 1,
-    fontFamily: ViveFonts.semibold,
-    fontSize: 17,
-    color: ViveColors.text,
-    textAlign: 'center',
-  },
-  headerDate: {
-    fontFamily: ViveFonts.regular,
+  // Header — layout compartido en ToolHeader; acá solo queda el contenido del slot `right`
+  datePillText: {
+    fontFamily: ViveFonts.medium,
     fontSize: 13,
-    color: `${ViveColors.text}66`,
+    color: ViveColors.text,
+    backgroundColor: 'rgba(255,255,255,0.70)',
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.14)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    overflow: 'hidden',
   },
   headerDivider: {
     height: 1,
@@ -339,61 +350,86 @@ const s = StyleSheet.create({
     marginBottom: 20,
   },
 
-  // Mood check-in
-  stepLabel: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 14,
-    color: ViveColors.text,
-    marginBottom: 14,
-  },
-  moodRow: {
+  // Mood del día (resumen de solo lectura o invitación a registrar)
+  moodSummaryRow: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  moodOption: {
-    flex: 1,
     alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 14,
+    gap: 12,
     backgroundColor: 'rgba(255,248,240,0.80)',
-    borderWidth: 1.5,
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.65)',
-    gap: 5,
+    padding: 14,
     ...shadow,
   },
-  moodOptionActive: {
-    backgroundColor: `${ViveColors.primary}10`,
-    borderColor: ViveColors.primary,
+  moodDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    flexShrink: 0,
   },
-  moodEmoji: {
-    fontSize: 22,
-  },
-  moodLabel: {
+  moodSummaryInfo: { flex: 1 },
+  moodSummaryLabel: {
     fontFamily: ViveFonts.regular,
-    fontSize: 10,
-    color: `${ViveColors.text}88`,
-    textAlign: 'center',
+    fontSize: 11,
+    color: `${ViveColors.text}80`,
   },
-  moodLabelActive: {
+  moodSummaryValue: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: ViveColors.text,
+  },
+  moodChangeLink: {
     fontFamily: ViveFonts.medium,
-    color: ViveColors.primary,
+    fontSize: 13,
+    color: '#C1694F',
+  },
+  moodInviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(193,105,79,0.10)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(193,105,79,0.20)',
+    padding: 14,
+  },
+  moodInviteText: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: ViveColors.text,
+    lineHeight: 18,
+  },
+  moodInviteBtn: {
+    backgroundColor: '#C1694F',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  moodInviteBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 12,
+    color: '#F7EFE4',
   },
 
   // Prompt card
   promptCard: {
     backgroundColor: 'rgba(255,248,240,0.80)',
     borderRadius: 18,
-    padding: 10,
+    padding: 14,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.65)',
     ...shadow,
   },
-  quoteChar: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 24,
-    color: ViveColors.primary,
-    lineHeight: 24,
-    marginBottom: 4,
+  promptIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: `${ViveColors.primary}18`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   promptText: {
     fontFamily: ViveFonts.medium,
@@ -418,6 +454,9 @@ const s = StyleSheet.create({
     padding: 16,
     ...shadow,
   },
+  writeCardFocused: {
+    borderColor: '#C1694F',
+  },
   textArea: {
     fontFamily: ViveFonts.regular,
     fontSize: 15,
@@ -437,14 +476,14 @@ const s = StyleSheet.create({
 
   // Save button
   saveBtn: {
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.accent,
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: ViveColors.primary,
+        shadowColor: ViveColors.accent,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.28,
         shadowRadius: 8,
@@ -453,7 +492,7 @@ const s = StyleSheet.create({
     }),
   },
   saveBtnDisabled: {
-    backgroundColor: `${ViveColors.text}22`,
+    backgroundColor: '#EAE2D0',
     ...Platform.select({
       ios: { shadowOpacity: 0 },
       android: { elevation: 0 },
@@ -472,7 +511,10 @@ const s = StyleSheet.create({
   saveBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
-    color: '#565E32',
+    color: '#F7EFE4',
+  },
+  saveBtnTextDisabled: {
+    color: 'rgba(86,94,50,0.40)',
   },
   savedRow: {
     flexDirection: 'row',
@@ -499,8 +541,10 @@ const s = StyleSheet.create({
     gap: 12,
     ...shadow,
   },
-  entryEmoji: {
-    fontSize: 26,
+  entryMoodDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     flexShrink: 0,
   },
   entryInfo: {
@@ -518,6 +562,18 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: ViveColors.text,
     lineHeight: 19,
+  },
+  historyLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  historyLinkText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: '#C1694F',
   },
 
   // Modal

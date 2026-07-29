@@ -13,12 +13,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { PASTEL_SALVIA, PASTEL_DURAZNO } from '@/constants/tools';
+import { ToolHeader } from '@/components/ui/ToolHeader';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { logError } from '@/lib/logging';
 import { recordCompletion } from '@/lib/resourceCompletions';
-import { ReminderBell } from '@/components/ReminderBell';
+
+const CREAM_DEEP = '#EAE2D0';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface GratitudeEntry {
@@ -28,6 +32,14 @@ interface GratitudeEntry {
   item_3: string;
   created_at: string;
 }
+
+// Ícono + color por campo (ver PLACEHOLDERS) — mismo lenguaje visual que los
+// cards pastel de Sonidos/Recursos, rediseño herramientas sesión 76.
+const FIELD_META: { icon: keyof typeof MaterialCommunityIcons.glyphMap; bg: string }[] = [
+  { icon: 'clock-outline',   bg: PASTEL_DURAZNO },
+  { icon: 'account-outline', bg: PASTEL_SALVIA },
+  { icon: 'leaf',            bg: CREAM_DEEP },
+];
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const PLACEHOLDERS: [string, string, string] = [
@@ -40,8 +52,10 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
 }
 
-function formatToday() {
-  return new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+function formatTodayShort() {
+  return new Date()
+    .toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+    .replace('.', '');
 }
 
 // ─── Shadow ───────────────────────────────────────────────────────────────────
@@ -59,8 +73,10 @@ const shadow = Platform.select({
 export default function GratitudScreen() {
   const router = useRouter();
   const [items, setItems] = useState<[string, string, string]>(['', '', '']);
+  const [focused, setFocused] = useState<[boolean, boolean, boolean]>([false, false, false]);
   const [saved, setSaved] = useState(false);
   const [entries, setEntries] = useState<GratitudeEntry[]>([]);
+  const [streak, setStreak] = useState(0);
 
   const { user, isLoggedIn, requestAuth } = useAuth();
   const saveScale = useRef(new Animated.Value(1)).current;
@@ -79,9 +95,44 @@ export default function GratitudScreen() {
       });
   }, [user]);
 
+  // Racha de Gratitud: no hay streak propio en la tabla — se calcula sobre
+  // resource_completions (resource_id='gratitud'), mismo algoritmo que
+  // useResourceProgress pero acotado a esta herramienta. Sin migración nueva.
+  useEffect(() => {
+    if (!user) return;
+    const from = new Date();
+    from.setDate(from.getDate() - 30);
+    supabase
+      .from('resource_completions')
+      .select('completed_at')
+      .eq('user_id', user.id)
+      .eq('resource_id', 'gratitud')
+      .gte('completed_at', from.toISOString())
+      .then(({ data }) => {
+        const dates = new Set((data ?? []).map(r => (r.completed_at as string).split('T')[0]));
+        let s = 0;
+        const today = new Date();
+        for (let i = 0; i < 30; i++) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          if (dates.has(d.toISOString().split('T')[0])) s++;
+          else break;
+        }
+        setStreak(s);
+      });
+  }, [user, saved]);
+
   function updateItem(index: 0 | 1 | 2, value: string) {
     setItems(prev => {
       const next = [...prev] as [string, string, string];
+      next[index] = value;
+      return next;
+    });
+  }
+
+  function setFieldFocused(index: 0 | 1 | 2, value: boolean) {
+    setFocused(prev => {
+      const next = [...prev] as [boolean, boolean, boolean];
       next[index] = value;
       return next;
     });
@@ -124,16 +175,11 @@ export default function GratitudScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       {/* ── Header ──────────────────────────────────────────────── */}
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={8}>
-          <Text style={s.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>Gratitud</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <ReminderBell kind="tool" ref="gratitud" title="Gratitud" />
-          <Text style={s.headerDate}>{formatToday()}</Text>
-        </View>
-      </View>
+      <ToolHeader
+        title="Gratitud"
+        onBack={() => router.back()}
+        right={<Text style={s.datePillText}>{formatTodayShort()}</Text>}
+      />
       <View style={s.headerDivider} />
 
       <KeyboardAvoidingView
@@ -148,21 +194,33 @@ export default function GratitudScreen() {
         >
           {/* ── Intro ────────────────────────────────────────────── */}
           <View style={s.intro}>
-            <Text style={s.introEmoji}>🙏</Text>
+            <View style={s.introIconWrap}>
+              <MaterialCommunityIcons name="heart-outline" size={26} color="#C1694F" />
+            </View>
             <Text style={s.introTitle}>¿Por qué estás agradecido hoy?</Text>
             <Text style={s.introSubtitle}>
               Tres cosas, grandes o pequeñas.{'\n'}Lo que importa es que sean tuyas.
             </Text>
+            {streak > 0 && (
+              <View style={s.streakPill}>
+                <MaterialCommunityIcons name="fire" size={14} color="#C1694F" />
+                <Text style={s.streakText}>{streak} {streak === 1 ? 'día seguido' : 'días seguidos'}</Text>
+              </View>
+            )}
           </View>
 
           {/* ── Campos de gratitud ───────────────────────────────── */}
           {([0, 1, 2] as const).map(i => (
-            <View key={i} style={s.fieldCard}>
-              <Text style={s.fieldNumber}>{i + 1}</Text>
+            <View key={i} style={[s.fieldCard, focused[i] && s.fieldCardFocused]}>
+              <View style={[s.fieldIconWrap, { backgroundColor: FIELD_META[i].bg }]}>
+                <MaterialCommunityIcons name={FIELD_META[i].icon} size={17} color={ViveColors.primary} />
+              </View>
               <TextInput
                 style={s.fieldInput}
                 value={items[i]}
                 onChangeText={v => updateItem(i, v)}
+                onFocus={() => setFieldFocused(i, true)}
+                onBlur={() => setFieldFocused(i, false)}
                 placeholder={PLACEHOLDERS[i]}
                 placeholderTextColor={`${ViveColors.text}55`}
                 multiline
@@ -184,9 +242,14 @@ export default function GratitudScreen() {
               disabled={!canSave || saved}
               activeOpacity={0.85}
             >
-              <Text style={s.saveBtnText}>
-                {saved ? '✓ Guardado. Gracias por tomarte este momento 🌱' : 'Guardar'}
-              </Text>
+              {saved ? (
+                <View style={s.savedRow}>
+                  <MaterialCommunityIcons name="check-circle-outline" size={18} color="#F7EFE4" />
+                  <Text style={s.saveBtnText}>Guardado. Gracias por tomarte este momento</Text>
+                </View>
+              ) : (
+                <Text style={[s.saveBtnText, !canSave && s.saveBtnTextDisabled]}>Guardar</Text>
+              )}
             </TouchableOpacity>
           </Animated.View>
 
@@ -228,31 +291,18 @@ const s = StyleSheet.create({
   },
   flex: { flex: 1 },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#F7EFE4',
-  },
-  backBtn: { padding: 4 },
-  backIcon: {
-    fontSize: 22,
-    color: ViveColors.text,
-    lineHeight: 26,
-  },
-  headerTitle: {
-    flex: 1,
-    fontFamily: ViveFonts.semibold,
-    fontSize: 17,
-    color: ViveColors.text,
-    textAlign: 'center',
-  },
-  headerDate: {
-    fontFamily: ViveFonts.regular,
+  // Header — layout compartido en ToolHeader; acá solo queda el contenido del slot `right`
+  datePillText: {
+    fontFamily: ViveFonts.medium,
     fontSize: 13,
-    color: `${ViveColors.text}66`,
+    color: ViveColors.text,
+    backgroundColor: 'rgba(255,255,255,0.70)',
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.14)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    overflow: 'hidden',
   },
   headerDivider: {
     height: 1,
@@ -272,9 +322,29 @@ const s = StyleSheet.create({
     marginBottom: 32,
     gap: 10,
   },
-  introEmoji: {
-    fontSize: 48,
+  introIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(193,105,79,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 4,
+  },
+  streakPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(193,105,79,0.12)',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 4,
+  },
+  streakText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 12,
+    color: '#C1694F',
   },
   introTitle: {
     fontFamily: ViveFonts.semibold,
@@ -304,12 +374,15 @@ const s = StyleSheet.create({
     marginBottom: 12,
     ...shadow,
   },
-  fieldNumber: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 22,
-    color: ViveColors.primary,
-    lineHeight: 28,
-    width: 22,
+  fieldCardFocused: {
+    borderColor: '#C1694F',
+  },
+  fieldIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
   },
   fieldInput: {
@@ -329,7 +402,7 @@ const s = StyleSheet.create({
     marginBottom: 36,
   },
   saveBtn: {
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.accent,
     borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 20,
@@ -337,7 +410,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: ViveColors.primary,
+        shadowColor: ViveColors.accent,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.28,
         shadowRadius: 8,
@@ -346,7 +419,7 @@ const s = StyleSheet.create({
     }),
   },
   saveBtnDisabled: {
-    backgroundColor: `${ViveColors.text}22`,
+    backgroundColor: CREAM_DEEP,
     ...Platform.select({
       ios: { shadowOpacity: 0 },
       android: { elevation: 0 },
@@ -365,9 +438,18 @@ const s = StyleSheet.create({
   saveBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
-    color: '#565E32',
+    color: '#F7EFE4',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  saveBtnTextDisabled: {
+    color: 'rgba(86,94,50,0.40)',
+  },
+  savedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
 
   // History

@@ -23,6 +23,9 @@ export interface Tool {
 export const PASTEL_SALVIA   = '#DCE5CB';
 export const PASTEL_DURAZNO  = '#F2DCCF';
 export const PASTEL_AZUL     = '#DAE0EC';
+// Teal — sumado en el rediseño de herramientas (sesión 76) para la card "Olas
+// del mar" de Sonidos ambientales; no existía en el trío original.
+export const PASTEL_TEAL     = '#D3E4E0';
 
 export const TOOLS: Tool[] = [
   { id: 'diario',      label: 'Diario',          icon: 'book-outline',          duration: 'Libre',      route: '/diario',      color: PASTEL_AZUL    },

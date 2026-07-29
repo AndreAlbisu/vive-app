@@ -10,6 +10,8 @@ import { ViveColors } from '@/constants/theme';
  * Reutilizable en cualquier pantalla de recurso: las tools de VITA pasan su
  * slug ('ruido', 'diario', ...), los recursos de coaches su uuid.
  * Pensado para ir en el header, reemplazando el spacer de ancho 60.
+ * Ícono bookmark (antes pin) — unificado con el vocabulario de "guardar" que
+ * ya usa Recursos, rediseño de herramientas sesión 76.
  */
 export function PinButton({ resourceId }: { resourceId: string }) {
   const { user, requestAuth } = useAuth();
@@ -64,7 +66,7 @@ export function PinButton({ resourceId }: { resourceId: string }) {
     <View style={s.slot}>
       <TouchableOpacity onPress={toggle} hitSlop={10}>
         <MaterialCommunityIcons
-          name={pinned ? 'pin' : 'pin-outline'}
+          name={pinned ? 'bookmark' : 'bookmark-outline'}
           size={22}
           color={pinned ? ViveColors.primary : 'rgba(135,131,92,0.72)'}
         />
