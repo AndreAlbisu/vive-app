@@ -41,11 +41,15 @@ export async function registrarEvento(
   properties: Record<string, unknown> = {},
 ): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
-  await supabase.from('analytics_events').insert({
+  const { error } = await supabase.from('analytics_events').insert({
     user_id: session?.user?.id ?? null,
     event_name: eventName,
     properties,
   });
+
+  if (error) {
+    console.warn(`[registrarEvento] no se pudo anotar "${eventName}":`, error.message);
+  }
 }
 
 export async function ensureAnonSession(): Promise<string> {

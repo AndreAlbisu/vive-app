@@ -18,7 +18,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { PASTEL_SALVIA, PASTEL_DURAZNO } from '@/constants/tools';
 import { ToolHeader } from '@/components/ui/ToolHeader';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { supabase, registrarEvento } from '@/lib/supabase';
 import { logError } from '@/lib/logging';
 import { recordCompletion } from '@/lib/resourceCompletions';
 
@@ -166,6 +166,7 @@ export default function GratitudScreen() {
 
     setEntries(prev => [data, ...prev]);
     recordCompletion(user.id, 'gratitud', 300).catch(() => {});
+    registrarEvento('recurso_completado', { resource_id: 'gratitud', duration_seconds: 300, user_id: user.id }).catch(() => {});
 
     setItems(['', '', '']);
     setSaved(true);

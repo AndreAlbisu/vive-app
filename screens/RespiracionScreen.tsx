@@ -8,7 +8,7 @@ import { ViveFonts } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
 import { ToolHeader } from '@/components/ui/ToolHeader';
-import { ensureAnonSession } from '@/lib/supabase';
+import { ensureAnonSession, registrarEvento } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
@@ -111,6 +111,7 @@ export default function RespiracionScreen() {
         setPhase('done');
         if (userIdRef.current) {
           recordCompletion(userIdRef.current, 'respiracion', duration).catch(() => {});
+          registrarEvento('recurso_completado', { resource_id: 'respiracion', duration_seconds: duration, user_id: userIdRef.current }).catch(() => {});
         }
       }
     }, 1000);

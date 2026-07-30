@@ -11,7 +11,7 @@ import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
 import { ToolHeader } from '@/components/ui/ToolHeader';
 import { SoundEqualizer } from '@/components/ui/SoundEqualizer';
-import { ensureAnonSession } from '@/lib/supabase';
+import { ensureAnonSession, registrarEvento } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 
 const FOREST      = '#3A4F2A';
@@ -140,6 +140,7 @@ export default function RuidoScreen() {
         setPhase('done');
         if (userIdRef.current) {
           recordCompletion(userIdRef.current, 'ruido').catch(() => {});
+          registrarEvento('recurso_completado', { resource_id: 'ruido', duration_seconds: duration, user_id: userIdRef.current }).catch(() => {});
         }
       }
     }, 1000);

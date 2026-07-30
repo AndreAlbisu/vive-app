@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-30 — Joaquín (sesión 79)
+
+**Tocado:** `lib/supabase.ts`, `app/gratitud.tsx`, `app/diario.tsx`, `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`.
+
+**Resumen — analytics de eventos, evitando duplicar lo que ya existía:**
+- Joaquín pidió crear `eventLogger.ts` (tabla `user_events`, función `logEvent`). Antes de crearlo se encontró que ya existía `registrarEvento()` en `lib/supabase.ts`, insertando en `analytics_events` (tabla real, documentada en SCHEMA.md) — mismas columnas que pedía el nuevo archivo. `user_events` no existe en la base. Decisión de Joaquín: no crear nada nuevo, reusar `registrarEvento`.
+- Único cambio a `registrarEvento`: le faltaba manejo de error — ahora chequea el resultado del insert y hace `console.warn` si falla (mismo patrón que tenía el `eventLogger.ts` propuesto). No cambió su firma ni la tabla que usa.
+- **`recurso_completado` (evento nuevo, no existía ningún llamado a `registrarEvento` para esto):** agregado en el mismo momento donde cada herramienta ya llama `recordCompletion()` (que es otra cosa — tabla `resource_completions`, para rachas/progreso, no analytics): `app/gratitud.tsx` y `app/diario.tsx` al guardar, `screens/RespiracionScreen.tsx` y `screens/RuidoScreen.tsx` cuando el timer de sesión llega a 0. Propiedades: `resource_id`, `duration_seconds` (cuando aplica), `user_id` — mismo patrón que ya usa `BookingScreen_Confirm.tsx` (pasar `user_id` en las properties además de la columna, por consistencia con lo existente aunque sea redundante).
+- **Gap encontrado de paso, no arreglado:** `'reserva_confirmada'` (evento existente) se dispara cuando el *usuario* termina de mandar la reserva, no cuando el *profesional* la confirma después — `confirmBooking()` en `lib/coachBookingActions.ts` no llama a `registrarEvento` en ningún lado. Si en algún momento se quiere trackear "el coach aceptó la sesión" como evento separado, ahí falta.
+- **Pre-booking (mensaje a un coach antes de reservar):** Joaquín preguntó si ya había un evento para esto. Se buscó en todo el repo y en SCHEMA.md — la feature no existe todavía (no hay flujo de mensaje a un coach antes de la reserva; las `salas` hoy se crean recién dentro de `BookingScreen_Confirm.tsx`). Confirmado con Joaquín: se deja para cuando se construya esa feature. Si se agrega, seguir el mismo patrón: `registrarEvento('prebooking_enviado', {...})` en el momento exacto del envío.
+- Sin cambios de schema — `analytics_events` ya existía con las columnas necesarias.
+
+**Pendiente para la próxima sesión:**
+- Feature de pre-booking (mensaje a coach antes de reservar) — no construida, sin fecha.
+- Evento para cuando el coach confirma una reserva `pendiente` (gap encontrado arriba) — evaluar si vale la pena agregarlo a `confirmBooking()`.
+- Sigue pendiente de sesión 78: revisar filas rotas en `resource_reminders` (query SQL ya está en la entrada de esa sesión) y el silencio de errores en `ReminderBell.handleSave`.
+- Retomar Mercado Pago cuando Andre conecte su cuenta real (arrastrado de sesiones previas).
+- Sign in with Apple sigue pausado a propósito.
+
+---
+
 ## 2026-07-29 — Joaquín (sesión 78)
 
 **Tocado:** `components/ReminderBell.tsx`, `app/coach-recurso.tsx`, `screens/AnclajeScreen.tsx`, `screens/EscanerScreen.tsx`, `screens/LecturasScreen.tsx`, `screens/MeditacionScreen.tsx`, `screens/RelajacionScreen.tsx`, `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`, `screens/SuenoScreen.tsx`, `package.json`, `components/ui/SurfaceCard.tsx`.
