@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { ViveColors } from '@/constants/theme';
@@ -21,6 +21,7 @@ export default function Index() {
     return (
       <View style={styles.splash}>
         <VitaWordmark />
+        <ActivityIndicator color={ViveColors.primary} style={styles.spinner} />
       </View>
     );
   }
@@ -36,5 +37,8 @@ const styles = StyleSheet.create({
     backgroundColor: ViveColors.background,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  spinner: {
+    marginTop: 16,
   },
 });

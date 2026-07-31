@@ -5,6 +5,37 @@
 
 ---
 
+## 2026-07-31 — Joaquín (sesión 80)
+
+**Tocado:** `app/(tabs)/index.tsx`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `app/index.tsx`, `context/AuthContext.tsx`, `lib/supabase.ts`.
+
+**Resumen — 2 bloques de trabajo, ambos de diseño/UX salvo el último:**
+
+1. **Consistencia visual del header en Inicio/Conexiones/Recursos** (varias rondas sobre capturas reales, ida y vuelta hasta calzar):
+   - Campanita: mismo ícono en las 3 (`MaterialCommunityIcons` `bell`/`bell-outline`, antes cada pantalla usaba una librería distinta — MaterialCommunityIcons, Feather, Ionicons), mismo tamaño (22px), misma caja de toque (32×32), mismo color (`#3F512F`). Conexiones ahora también alterna lleno/vacío según no-leídos, como Inicio (antes era ícono fijo). El de Recursos sigue apuntando a "Mis recordatorios" (no es una campana de notificaciones real, es otra feature) — no se tocó el comportamiento, solo look.
+   - Orden: la campana quedó primera en el grupo de íconos de la derecha en las 3 (antes en Conexiones iba después de la estrella).
+   - Alineación vertical: `alignItems: 'center'` en las 3 (Recursos tenía `flex-end`). El título "Recursos" necesitó 3 rondas de ajuste fino de `marginTop` (12 → 6 → 2 → -2) por una diferencia de proporción tamaño/interlineado con los otros títulos — quedó resuelto por prueba y error contra capturas, no hay una causa 100% aislada en el código.
+   - Se sacó el cartel "N sin abrir"/"Al día ✓" de "Recomendado por tu profesional" (no convencía visualmente) — junto con la variable `unopenedCount` y el estilo `recoUnopenedCount` que quedaban sin uso.
+   - Se agregó `marginTop: 18` a esa misma sección para separarla de los tiles de herramientas de arriba (estaba pegada).
+   - Se sacó la coma de "¡Hola, Joaquin!" → "¡Hola Joaquin!" en Inicio.
+
+2. **Diagnóstico y fix de la pantalla "vita" trabada al abrir la app logueado:**
+   - Causa real: no era una animación (`VitaWordmark` es texto plano, sin animación) — `AuthContext` esperaba **dos llamadas de red seguidas** (`getSession()` + `fetchRole()` a `profiles`) antes de bajar `loading`, sin timeout ni spinner. Se separó: `loading` baja apenas resuelve `getSession()`, el rol se resuelve aparte y actualiza `role` cuando llega (la redirect en `app/index.tsx` ya reacciona sola a cambios de `role`).
+   - Se sacó una query suelta de "verificación de conexión" en `lib/supabase.ts` que competía por red en el arranque (el propio comentario ya decía "remover en producción").
+   - Se agregó un `ActivityIndicator` a la pantalla de splash en `app/index.tsx` para que, si igual tarda, se sienta como carga y no como freeze.
+   - **Factor externo importante, sin resolver:** Joaquín confirmó que está corriendo con **Expo Go**, no un dev build. El proyecto usa Reanimated 4 + `react-native-worklets` + New Architecture (`newArchEnabled: true` en `app.json`), combinación que Expo Go no soporta bien — puede estar degradando el arranque de toda la app, no solo esta pantalla. Se necesita un dev build (`npx expo run:ios`/`run:android`, o EAS Build) para descartarlo del todo. **No se pudo armar acá**: esta Mac no tiene Xcode completo instalado (solo Command Line Tools) ni Android SDK.
+   - Sin cambios de schema.
+
+**Pendiente para la próxima sesión:**
+- **Armar el dev build** — decidir entre instalar Xcode completo en esta Mac, usar EAS Build (necesita `eas login` de Joaquín), o que Joaquín lo arme en otra máquina. Es la única forma de confirmar si Expo Go era la causa real (o gran parte) del lag reportado.
+- Confirmar con Joaquín que el look final del header en las 3 pantallas quedó bien en dispositivo real (última ronda fue "quedó todo bien" + 2 ajustes menores de título/espaciado ya aplicados, sin nueva captura de confirmación).
+- Sigue pendiente de sesión 78: revisar filas rotas en `resource_reminders` y el silencio de errores en `ReminderBell.handleSave`.
+- Sigue pendiente de sesión 79: feature de pre-booking (no construida) y evento para cuando el coach confirma una reserva pendiente.
+- Retomar Mercado Pago cuando Andre conecte su cuenta real (arrastrado de sesiones previas).
+- Sign in with Apple sigue pausado a propósito.
+
+---
+
 ## 2026-07-30 — Joaquín (sesión 79)
 
 **Tocado:** `lib/supabase.ts`, `app/gratitud.tsx`, `app/diario.tsx`, `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`.

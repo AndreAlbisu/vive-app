@@ -27,15 +27,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
-// Verificación de conexión — remover en producción
-supabase.from('profiles').select('count').limit(1).then(({ error }) => {
-  if (error) {
-    console.log('[Supabase] Error de conexión:', error.message)
-  } else {
-    console.log('[Supabase] Conexión exitosa ✓')
-  }
-})
-
 export async function registrarEvento(
   eventName: string,
   properties: Record<string, unknown> = {},

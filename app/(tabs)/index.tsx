@@ -52,7 +52,7 @@ function formatSessionDate(dateStr: string): string {
 }
 
 function getGreeting(firstName: string | undefined): string {
-  return firstName ? `¡Hola, ${firstName}!` : '¡Hola!';
+  return firstName ? `¡Hola ${firstName}!` : '¡Hola!';
 }
 
 const GLASS = 'rgba(255,248,240,0.55)';
@@ -271,8 +271,8 @@ export default function InicioScreen() {
               >
                 <MaterialCommunityIcons
                   name={unreadNotifCount > 0 ? 'bell' : 'bell-outline'}
-                  size={24}
-                  color="#565E32"
+                  size={22}
+                  color="#3F512F"
                 />
                 {unreadNotifCount > 0 && <View style={s.bellDot} />}
               </TouchableOpacity>
@@ -443,8 +443,8 @@ const s = StyleSheet.create({
     gap: 14,
   },
   bellBtn: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },

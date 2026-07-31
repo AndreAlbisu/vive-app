@@ -12,7 +12,7 @@ import {
   UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
@@ -318,14 +318,12 @@ function CoachRecoSection({
 }) {
   const router = useRouter();
   if (recos.length === 0) return null;
-  const unopenedCount = recos.filter(r => !r.opened_at).length;
   const visible = recos.slice(0, MAX_RECOS_VISIBLE);
 
   return (
-    <View style={{ marginBottom: 4 }}>
+    <View style={{ marginTop: 18, marginBottom: 4 }}>
       <View style={s.libraryHeaderRow}>
         <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Recomendado por tu profesional</Text>
-        <Text style={s.recoUnopenedCount}>{unopenedCount > 0 ? `${unopenedCount} sin abrir` : 'Al día ✓'}</Text>
       </View>
       <View style={{ gap: 10 }}>
         {visible.map(item => {
@@ -372,7 +370,7 @@ function CoachRecoSection({
         })}
       </View>
       {recos.length > MAX_RECOS_VISIBLE && (
-        <TouchableOpacity onPress={() => router.push('/mis-recomendaciones' as any)} hitSlop={8} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.push('/mis-recomendaciones' as any)} hitSlop={8} activeOpacity={0.7} style={s.recoMoreLink}>
           <Text style={s.exploreLink}>+{recos.length - MAX_RECOS_VISIBLE} más →</Text>
         </TouchableOpacity>
       )}
@@ -722,8 +720,9 @@ export default function RecursosScreen() {
               <TouchableOpacity
                 onPress={() => (user ? router.push('/mis-recordatorios' as any) : requestAuth())}
                 hitSlop={8}
-                activeOpacity={0.7}>
-                <Ionicons name="notifications-outline" size={22} color={FOREST} />
+                activeOpacity={0.7}
+                style={s.bellBtn}>
+                <MaterialCommunityIcons name="bell-outline" size={22} color={FOREST} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => (user ? router.push('/recursos-guardados') : requestAuth())}
@@ -806,8 +805,9 @@ const s = StyleSheet.create({
   // ── Header ────────────────────────────────────────────────────────────────
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: -2,
     marginBottom: 16,
   },
   pageTitle: {
@@ -820,6 +820,12 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+  },
+  bellBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bookmarkBtnWrap: {
     position: 'relative',
@@ -993,7 +999,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 8,
-    marginBottom: 10,
+    marginBottom: 14,
   },
   sectionTitleFlush: { marginTop: 0, marginBottom: 0, flexShrink: 1 },
   exploreLink: {
@@ -1001,6 +1007,9 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: TERRACOTTA,
     marginLeft: 10,
+  },
+  recoMoreLink: {
+    marginTop: 14,
   },
 
   // ── Grupos de herramientas ────────────────────────────────────────────────
@@ -1058,11 +1067,6 @@ const s = StyleSheet.create({
   },
 
   // ── CoachRecoSection — tarjeta-mensaje (Ajuste 3) ────────────────────────────
-  recoUnopenedCount: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: FOREST_SOFT,
-  },
   recbox: {
     padding: 15,
   },

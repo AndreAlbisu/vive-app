@@ -54,19 +54,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // El rol se resuelve aparte, sin bloquear el splash inicial (antes
+    // esperaba fetchRole() encadenado a getSession() — dos round-trips de
+    // red seguidos antes de poder mostrar cualquier pantalla). getSession()
+    // suele resolver de AsyncStorage sin red; fetchRole() sí pega contra
+    // Supabase, pero el usuario ya puede navegar mientras tanto — la
+    // redirect de app/index.tsx reacciona sola cuando `role` cambia.
+    supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null;
-      const r = u ? await fetchRole(u.id) : 'user';
-      setRole(r);
       setUser(u);
       setLoading(false);
+      if (u) fetchRole(u.id).then(setRole);
+      else setRole('user');
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null;
-      const r = u ? await fetchRole(u.id) : 'user';
-      setRole(r);
       setUser(u);
+      if (u) fetchRole(u.id).then(setRole);
+      else setRole('user');
     });
 
     return () => subscription.unsubscribe();

@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
@@ -474,18 +474,18 @@ export default function ConexionesScreen() {
             <Text style={s.title}>Conexiones</Text>
             <View style={s.hicons}>
               <TouchableOpacity
-                onPress={() => (user ? router.push('/favoritos') : requestAuth())}
-                activeOpacity={0.7}
-                hitSlop={8}>
-                <Feather name="star" size={21} color={FOREST} />
-              </TouchableOpacity>
-              <TouchableOpacity
                 onPress={() => (user ? router.push('/notifications') : requestAuth())}
                 activeOpacity={0.7}
                 hitSlop={8}
                 style={s.bellBtn}>
-                <Feather name="bell" size={21} color={FOREST} />
+                <MaterialCommunityIcons name={unreadCount > 0 ? 'bell' : 'bell-outline'} size={22} color={FOREST} />
                 {unreadCount > 0 && <View style={s.bellDot} />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => (user ? router.push('/favoritos') : requestAuth())}
+                activeOpacity={0.7}
+                hitSlop={8}>
+                <Feather name="star" size={22} color={FOREST} />
               </TouchableOpacity>
             </View>
           </View>
