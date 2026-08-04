@@ -7,7 +7,7 @@
 
 ## 2026-08-04 — Joaquín (sesión 81)
 
-**Tocado:** `lib/moodStats.ts`, `app/(tabs)/index.tsx`. Nuevo: `components/CoachSuggestionCard.tsx`.
+**Tocado:** `lib/moodStats.ts`, `app/(tabs)/index.tsx`, `app/diario.tsx`. Nuevo: `components/CoachSuggestionCard.tsx`.
 
 **Resumen — sugerencia de hablar con un coach cuando el mood check-in baja fuerte respecto al anterior:**
 - Investigación previa (sin código) confirmó: no existía ninguna lógica que comparara el check-in de hoy contra el anterior — `lib/moodStats.ts` solo tenía racha (`computeMoodStreak`) y promedio semanal (`buildWeeklyHeadline`), y lo único parecido en la app (`RecommendedCard` en `recursos.tsx`, `isIntense` con `mood_id≤2`) sugiere herramientas de autoayuda, nunca hablar con una persona.
@@ -17,8 +17,12 @@
 - Sin cambios de schema — `mood_entries` y `salas` ya estaban documentadas y no se tocó ninguna columna ni tabla nueva.
 - **Nota aparte, no relacionada al código:** en medio de la sesión `git` dejó de andar en esta Mac por la licencia de Xcode sin aceptar (bloqueaba cualquier comando git, no solo el mío) — Joaquín la aceptó con `sudo xcodebuild -license` y se resolvió. Dejarlo anotado por si vuelve a pasar en otra sesión.
 
+**Dos cambios más, pedidos aparte en la misma sesión:**
+- **Diario, pregunta dinámica según el mood de hoy:** `app/diario.tsx` — la pregunta que encabeza el espacio de escritura ahora sale de un mapa `MOOD_PROMPTS` (1 texto por nivel, Bajón a Brillando) según `todayMoodEntry.mood_id` (misma fuente que ya leía la pantalla, `mood_entries` vía `useMoodHistory`). Sin check-in de hoy, cae a un default genérico ("Este es tu espacio seguro..."). Solo se tocó el prompt de la pantalla de escritura — el modal que muestra una entrada pasada sigue con la pregunta fija de siempre (no se guarda qué prompt correspondía a cada entrada vieja, no había con qué hacerlo dinámico ahí sin migrar datos).
+- **Home, se sacó la sección de recursos pinneados:** el bloque "Tus recursos a mano" (card vacía "Fijá tus recursos favoritos acá" / carrusel de pineados) se eliminó de `app/(tabs)/index.tsx` — JSX, el estado/query que lo alimentaba (`pinned_resources`, `useFocusEffect` dedicado), y los estilos que quedaban sin uso. La funcionalidad de pinear/guardar en sí **no se tocó** — sigue viva en `components/PinButton.tsx` y `screens/ResourceDetailScreen.tsx`, disponible desde Recursos. Verificado que no queda ninguna referencia colgada (typecheck y lint limpios).
+
 **Pendiente para la próxima sesión:**
-- Probar en dispositivo real: que el umbral de 2 niveles se sienta bien (ni muy sensible ni muy laxo), que el ruteo a sala/Mensajes/Conexiones ande según corresponda, y que el dismiss por día funcione.
+- Probar en dispositivo real: que el umbral de 2 niveles se sienta bien (ni muy sensible ni muy laxo), que el ruteo a sala/Mensajes/Conexiones ande según corresponda, y que el dismiss por día funcione. También confirmar visualmente que Home quedó bien acomodado sin el bloque de pinneados y que los 5 prompts de Diario se leen bien en pantalla.
 - Sigue pendiente de sesión 80: confirmar si Expo Go era la causa del lag de arranque — sigue sin armarse el dev build.
 - Sigue pendiente de sesión 78: revisar filas rotas en `resource_reminders` y el silencio de errores en `ReminderBell.handleSave`.
 - Sigue pendiente de sesión 79: feature de pre-booking (no construida) y evento para cuando el coach confirma una reserva pendiente.

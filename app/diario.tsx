@@ -32,6 +32,18 @@ interface JournalEntry {
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const DAILY_PROMPT = '¿Qué fue lo más importante que sentiste hoy?';
 
+// Pregunta del espacio de escritura, dinámica según el mood_id del check-in
+// de hoy (mismos niveles que ViveMoodColors: 1=Bajón..5=Brillando). Si no
+// hay check-in de hoy, se usa MOOD_PROMPT_DEFAULT.
+const MOOD_PROMPTS: Record<number, string> = {
+  1: 'Hoy venís con un bajón. ¿Qué es lo que más te está pesando? Soltalo acá, sin filtro.',
+  2: 'Se nota que estás cansado. ¿Qué te está drenando la energía estos días?',
+  3: 'Un día tranquilo. ¿Qué anduvo dando vueltas por tu cabeza hoy?',
+  4: 'Venís bien hoy. ¿Qué fue lo que sumó para sentirte así?',
+  5: '¡Hoy estás brillando! ¿Qué hizo especial este día? Dejalo guardado acá.',
+};
+const MOOD_PROMPT_DEFAULT = 'Este es tu espacio seguro. Escribí lo que necesites descargar, sin juzgarte.';
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
 }
@@ -80,6 +92,9 @@ export default function DiarioScreen() {
   const { entries: moodEntries } = useMoodHistory(user?.id, 1);
   const todayStr = new Date().toISOString().split('T')[0];
   const todayMoodEntry = moodEntries.find(e => e.entry_date === todayStr);
+  const writingPrompt = todayMoodEntry
+    ? (MOOD_PROMPTS[todayMoodEntry.mood_id] ?? MOOD_PROMPT_DEFAULT)
+    : MOOD_PROMPT_DEFAULT;
 
   useEffect(() => {
     if (!user) return;
@@ -182,7 +197,7 @@ export default function DiarioScreen() {
             <View style={s.promptIconWrap}>
               <MaterialCommunityIcons name="creation" size={16} color={ViveColors.primary} />
             </View>
-            <Text style={s.promptText}>{DAILY_PROMPT}</Text>
+            <Text style={s.promptText}>{writingPrompt}</Text>
             <Text style={s.promptHint}>
               No hay respuesta correcta. Escribí lo que te salga.
             </Text>
