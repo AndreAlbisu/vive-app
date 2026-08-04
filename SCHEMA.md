@@ -177,6 +177,12 @@ Modelo: split payments, **Checkout Pro**, cobro al reservar + reembolso automát
 - Check-in de mood de Inicio ("¿Cómo venís hoy?", `components/MoodCheckIn.tsx`). Se lee con el hook `hooks/useMoodHistory.ts`. Colores de los 5 niveles centralizados en `ViveMoodColors` (`constants/theme.ts`), reusados en el check-in y ahora también en el resumen de mood de Diario (`app/diario.tsx`, rediseño sesión 76) — no redefinir esos hex en otro lado.
 - Esta tabla ya existía (usada por Inicio) pero no estaba documentada acá — gap cerrado el 29/07/2026 al hacer que Diario también la lea. Sin migración nueva.
 
+### `resource_recommendations`
+- `id` (uuid, PK), `user_id` (FK → `auth.users.id` ON DELETE CASCADE), `created_at` (timestamptz), `mood_id` (smallint 1-5), `mood_label` (text), `suggested_first`/`suggested_second` (text — resource_id/slug, mismo criterio que `resource_completions.resource_id`), `chosen` (text, nullable — CHECK que sea NULL o uno de los dos sugeridos).
+- Registro de la tarjeta "Para vos ahora" en Inicio (`components/ResourceSuggestionCard.tsx`): un evento por cada vez que se muestra con check-in real de hoy (no se inserta nada si no hay check-in), guardando el par de recursos sugerido y en qué orden (el orden se randomiza en cada visualización a propósito, para no sesgar el análisis por posición). Si el usuario toca uno de los dos, se hace `UPDATE` de esa misma fila con `chosen` — si no toca ninguno, queda `NULL`.
+- RLS: 4 policies own-only (select/insert/update/delete, `user_id = auth.uid()`), mismo patrón que `mood_entries`.
+- ⚠️ **Tabla nueva, agregada 04/08/2026, coordinada con Andre antes de crearse — falta correr `scripts/create-resource-recommendations.sql` en Supabase.** Sin eso, la tarjeta muestra la recomendación pero el registro falla silenciosamente (insert/update con error swallowed, no rompe la UI).
+
 ### `gratitude_entries`
 - `id` (uuid, PK), `user_id`, `item_1` (text, nullable), `item_2` (text, nullable), `item_3` (text, nullable), `content` (text, nullable — vestigial), `created_at`
 - Diario de gratitud = **3 ítems por entrada** (decisión de producto 2026-07-12). La pantalla `/gratitud` (`app/gratitud.tsx`) escribe `item_1/2/3`; llenar solo 1 o 2 es válido (los vacíos van como string vacío). `content` quedó vestigial: la tabla nació con una sola columna de texto libre y el frontend nuevo no la lee. Registra racha vía `recordCompletion(user.id, 'gratitud', 300)`.
