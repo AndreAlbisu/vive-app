@@ -4,24 +4,21 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { TOOL_MAP } from '@/constants/tools';
+import { MOOD_RESOURCES } from '@/constants/moodResources';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { supabase } from '@/lib/supabase';
 import type { MoodEntry } from '@/hooks/useMoodHistory';
 
 // Tarjeta "Para vos ahora" en Inicio — recomienda 2 recursos según el mood_id
-// del check-in de hoy. Registra en `resource_recommendations` (nueva, ver
-// scripts/create-resource-recommendations.sql, coordinada con Andre antes de
-// crearse) qué par se mostró, en qué orden, y cuál tocó el usuario — para
-// analizar después qué se elige más por estado de ánimo. El orden del par se
+// del check-in de hoy, leyendo el mismo mapeo que usa la card de Recursos
+// (MOOD_RESOURCES, constants/moodResources.ts) para que las dos pantallas
+// sugieran siempre lo mismo por el mismo estado de ánimo — antes cada una
+// tenía su propio mapeo y podían contradecirse. Registra en
+// `resource_recommendations` (ver scripts/create-resource-recommendations.sql)
+// qué par se mostró, en qué orden, y cuál tocó el usuario — para analizar
+// después qué se elige más por estado de ánimo. El orden del par se
 // randomiza en cada visualización a propósito, para no sesgar el análisis
 // por posición.
-const MOOD_RECS: Record<number, { line: string; pair: [string, string] }> = {
-  1: { line: 'Venís con un bajón. Algo para aflojar un poco:', pair: ['diario', 'respiracion'] },
-  2: { line: 'Estás cansado. Para recargar:', pair: ['respiracion', 'gratitud'] },
-  3: { line: 'Día tranquilo. Para sumar algo bueno:', pair: ['gratitud', 'diario'] },
-  4: { line: 'Venís bien. Para sostenerlo:', pair: ['gratitud', 'diario'] },
-  5: { line: 'Estás brillando. Para aprovecharlo:', pair: ['gratitud', 'respiracion'] },
-};
 const NO_CHECKIN_LINE = 'Contanos cómo venís hoy y te sugerimos algo a tu medida.';
 
 export function ResourceSuggestionCard({
@@ -44,10 +41,11 @@ export function ResourceSuggestionCard({
     setChosen(null);
 
     if (!userId || !moodId) { setOrder(null); return; }
-    const rec = MOOD_RECS[moodId];
+    const rec = MOOD_RESOURCES[moodId];
     if (!rec) { setOrder(null); return; }
 
-    const pair: [string, string] = Math.random() < 0.5 ? rec.pair : [rec.pair[1], rec.pair[0]];
+    const basePair: [string, string] = [rec.primary, rec.secondary];
+    const pair: [string, string] = Math.random() < 0.5 ? basePair : [basePair[1], basePair[0]];
     setOrder(pair);
 
     supabase
@@ -75,7 +73,7 @@ export function ResourceSuggestionCard({
 
   if (!userId) return null;
 
-  const rec = moodId ? MOOD_RECS[moodId] : undefined;
+  const rec = moodId ? MOOD_RESOURCES[moodId] : undefined;
 
   return (
     <SurfaceCard variant="subtle" backgroundColor="rgba(255,248,240,0.62)" borderRadius={18} style={s.card}>

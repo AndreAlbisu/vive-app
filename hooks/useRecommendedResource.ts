@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { MOOD_RESOURCES } from '@/constants/moodResources';
 
 // Vocabulario de ejes compartido con resource_axes (recursos de coach).
 // Es lo que permite puntuar tools de VITA y recursos de coach en el mismo espacio.
@@ -15,17 +16,6 @@ export type CoachResourceLite = {
 };
 
 export type MoodLite = { mood_id: number; mood_label: string };
-
-// El humor de hoy define el EJE objetivo y el tono. La tool primaria preserva
-// las elecciones curadas que ya existían; la secundaria es el respaldo si la
-// primaria se completó hace poco (anti-repetición).
-const MOOD_CFG: Record<number, { primary: string; secondary: string; tone: string }> = {
-  1: { primary: 'gratitud',    secondary: 'diario',      tone: 'registrar algo bueno ayuda a salir del bajón' },
-  2: { primary: 'escaner',     secondary: 'respiracion', tone: 'reconectar con el cuerpo cuando la energía está baja' },
-  3: { primary: 'respiracion', secondary: 'meditacion',  tone: 'centrar la mente y ganar claridad' },
-  4: { primary: 'meditacion',  secondary: 'gratitud',    tone: 'buen momento para sostener el hábito' },
-  5: { primary: 'meditacion',  secondary: 'gratitud',    tone: 'consolidar el bienestar que ya tenés' },
-};
 
 // tool de VITA → ejes. Etiqueta el hueco que hoy no existe en las tools.
 const TOOL_AXES: Record<string, Axis[]> = {
@@ -111,7 +101,7 @@ export function useRecommendedResource(params: {
   const reco = useMemo<Reco | null>(() => {
     // 1. ÁNIMO DE HOY (lidera) — recurso de VITA según el estado.
     if (todayMood) {
-      const cfg = MOOD_CFG[todayMood.mood_id];
+      const cfg = MOOD_RESOURCES[todayMood.mood_id];
       if (cfg) {
         const toolId = !recentlyDone.has(cfg.primary) ? cfg.primary : cfg.secondary;
         return {
