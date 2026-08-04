@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-08-04 — Joaquín (sesión 81)
+
+**Tocado:** `lib/moodStats.ts`, `app/(tabs)/index.tsx`. Nuevo: `components/CoachSuggestionCard.tsx`.
+
+**Resumen — sugerencia de hablar con un coach cuando el mood check-in baja fuerte respecto al anterior:**
+- Investigación previa (sin código) confirmó: no existía ninguna lógica que comparara el check-in de hoy contra el anterior — `lib/moodStats.ts` solo tenía racha (`computeMoodStreak`) y promedio semanal (`buildWeeklyHeadline`), y lo único parecido en la app (`RecommendedCard` en `recursos.tsx`, `isIntense` con `mood_id≤2`) sugiere herramientas de autoayuda, nunca hablar con una persona.
+- `detectMoodDrop(entries)` (nuevo, `lib/moodStats.ts`): compara `entries[0]` (hoy) contra `entries[1]` (el check-in anterior más reciente, sea de ayer o de hace una semana) — "baja fuerte" = diferencia de 2 niveles o más en la escala 1-5. Sin check-in previo, no hay con qué comparar → no dispara nada. Reusa el array que Inicio ya trae de `useMoodHistory`, sin query nueva.
+- `CoachSuggestionCard` (nuevo componente): fila compacta debajo del check-in en Inicio, mismo lenguaje visual que la card de invitación de mood en `app/diario.tsx` (terracota tenue, ícono + texto + pill) — a propósito no es un hero grande, tiene que sentirse opcional. Se puede cerrar con una "×"; una vez cerrada no vuelve a aparecer ese mismo día (`AsyncStorage`, clave con fecha incluida, mismo patrón que `FirstTimeTooltip`).
+- **Ruteo del botón, según pedido de Joaquín** — al tocar "Hablar con alguien" se consulta `salas` del usuario (única query nueva, solo se dispara al tocar el botón, no en cada carga de Inicio): sin salas → Conexiones (buscar con quién hablar); una sala → directo a esa sala (`/sala`, mínima fricción); más de una → Mensajes, para que elija.
+- Sin cambios de schema — `mood_entries` y `salas` ya estaban documentadas y no se tocó ninguna columna ni tabla nueva.
+- **Nota aparte, no relacionada al código:** en medio de la sesión `git` dejó de andar en esta Mac por la licencia de Xcode sin aceptar (bloqueaba cualquier comando git, no solo el mío) — Joaquín la aceptó con `sudo xcodebuild -license` y se resolvió. Dejarlo anotado por si vuelve a pasar en otra sesión.
+
+**Pendiente para la próxima sesión:**
+- Probar en dispositivo real: que el umbral de 2 niveles se sienta bien (ni muy sensible ni muy laxo), que el ruteo a sala/Mensajes/Conexiones ande según corresponda, y que el dismiss por día funcione.
+- Sigue pendiente de sesión 80: confirmar si Expo Go era la causa del lag de arranque — sigue sin armarse el dev build.
+- Sigue pendiente de sesión 78: revisar filas rotas en `resource_reminders` y el silencio de errores en `ReminderBell.handleSave`.
+- Sigue pendiente de sesión 79: feature de pre-booking (no construida) y evento para cuando el coach confirma una reserva pendiente.
+- Retomar Mercado Pago cuando Andre conecte su cuenta real (arrastrado de sesiones previas).
+- Sign in with Apple sigue pausado a propósito.
+
+---
+
 ## 2026-07-31 — Joaquín (sesión 80)
 
 **Tocado:** `app/(tabs)/index.tsx`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `app/index.tsx`, `context/AuthContext.tsx`, `lib/supabase.ts`.

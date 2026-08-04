@@ -20,6 +20,7 @@ import { VITA_TOOL_MAP } from '@/constants/vitaTools';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { MoodCheckIn } from '@/components/MoodCheckIn';
+import { CoachSuggestionCard } from '@/components/CoachSuggestionCard';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -310,6 +311,11 @@ export default function InicioScreen() {
               todayEntry={todayMoodEntry}
               onRequestAuth={requestAuth}
             />
+          </Animated.View>
+
+          {/* ── 3b. Sugerencia de coach si el check-in de hoy bajó fuerte ── */}
+          <Animated.View style={fadeUp(aMood)}>
+            <CoachSuggestionCard userId={user?.id} entries={moodEntries} />
           </Animated.View>
 
           {/* ── 4. SOBRE VOS ── */}

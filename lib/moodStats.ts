@@ -51,3 +51,18 @@ export function buildWeeklyHeadline(recent: MoodEntry[], historic: MoodEntry[]):
   }
   return { before: 'Veniste más ', bold: label, after: ' que de costumbre — se nota' };
 }
+
+// Umbral de "baja fuerte": 2 niveles o más respecto al check-in anterior
+// (ej. Bien→Cansado, Brillando→Bajón). No es lo mismo que `isIntense` de
+// RecommendedCard (mood_id≤2 sin importar tendencia, sugiere herramientas) —
+// esto mira la caída relativa al registro previo y sugiere hablar con una
+// persona. `entries` debe venir ordenado por entry_date descendente (mismo
+// contrato que useMoodHistory).
+export function detectMoodDrop(entries: MoodEntry[]): { today: MoodEntry; previous: MoodEntry } | null {
+  if (entries.length < 2) return null;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [today, previous] = entries;
+  if (today.entry_date !== todayStr) return null;
+  if (previous.mood_id - today.mood_id >= 2) return { today, previous };
+  return null;
+}
