@@ -103,7 +103,6 @@ const CREAM_DEEP   = '#EAE2D0';
 const CARD         = '#F7F2E7';
 const LINE         = 'rgba(63,81,47,0.14)';
 const TERRACOTTA   = '#C06B4A';
-const TERRA_SOFT   = '#EAD3C6';
 const GLASS_BG     = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 
@@ -172,17 +171,19 @@ function RecommendedCard({
 
   if (isIntense) {
     return (
-      <SurfaceCard variant="elevated" tone="dark" backgroundColor="#3A4A28" borderRadius={22} style={s.moodCardWrap} onPress={onPress}>
+      <SurfaceCard variant="elevated" tone="dark" backgroundColor="#3A4A28" borderRadius={18} style={s.moodCardWrap} onPress={onPress}>
         <LinearGradient
           colors={['#42542F', '#354526']}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={s.moodCard}>
           <Text style={s.moodEyebrow}>{reco.eyebrow}</Text>
-          <Text style={s.moodTitle}>{reco.why}</Text>
+          <Text style={s.moodTitle} numberOfLines={2}>{reco.why}</Text>
           <View style={s.moodPillBtn}>
-            <Ionicons name={icon} size={18} color={FOREST} />
+            <View style={s.moodPillIconWrap}>
+              <Ionicons name={icon} size={14} color={CREAM_LIGHT} />
+            </View>
             <Text style={s.moodPillText}>{title}{duration ? ` · ${duration}` : ''}</Text>
-            <Ionicons name="arrow-forward" size={16} color={FOREST} />
+            <Ionicons name="arrow-forward" size={14} color="#C9CFAF" />
           </View>
         </LinearGradient>
       </SurfaceCard>
@@ -870,41 +871,54 @@ const s = StyleSheet.create({
   streakDot:     { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(63,81,47,0.18)' },
   streakDotActive: { backgroundColor: TERRACOTTA },
 
-  // ── MoodContextBlock ───────────────────────────────────────────────────────
+  // ── MoodContextBlock — compacta (mood-hero-minimalista.html, opción A) ──────
   moodCardWrap: {
     marginBottom: 12,
   },
   moodCard: {
-    padding: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   moodEyebrow: {
     fontFamily: ViveFonts.medium,
-    fontSize: 10,
+    fontSize: 9.5,
     letterSpacing: 0.8,
     color: 'rgba(201,207,175,0.9)',
     marginBottom: 8,
   },
   moodTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 19,
+    // Fraunces solo tiene 600/700 cargadas en el proyecto — frauncesSemiBold
+    // (600) es lo más cerca del peso 500 pedido sin sumar una fuente nueva.
+    fontFamily: ViveFonts.frauncesSemiBold,
+    fontSize: 14.5,
     color: CREAM_LIGHT,
-    lineHeight: 26,
-    marginBottom: 14,
+    lineHeight: 20,
+    marginBottom: 10,
   },
   moodPillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: 10,
-    backgroundColor: TERRA_SOFT,
-    borderRadius: 24,
-    paddingHorizontal: 18,
-    paddingVertical: 13,
+    gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 13,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+  },
+  moodPillIconWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   moodPillText: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: FOREST,
+    fontSize: 12,
+    color: CREAM_LIGHT,
   },
   moodLine: {
     flexDirection: 'row',

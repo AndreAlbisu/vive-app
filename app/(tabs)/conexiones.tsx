@@ -549,6 +549,11 @@ export default function ConexionesScreen() {
           ) : (
             /* ── Fase 1: ejes de bienestar ──────────────────────────────── */
             <>
+              <View style={s.askWrap}>
+                <Text style={[s.askTitle, s.askTitleGreeting]}>¿Qué te gustaría{'\n'}trabajar hoy?</Text>
+                <Text style={s.askSub}>Elegí un área de bienestar para empezar</Text>
+              </View>
+
               {/* Búsqueda por nombre — en vivo sobre el cache de coaches */}
               <View style={s.searchBar}>
                 <Feather name="search" size={18} color={FOREST_SOFT} />
@@ -600,31 +605,24 @@ export default function ConexionesScreen() {
                   <Text style={s.noResults}>No encontramos profesionales con ese nombre</Text>
                 )
               ) : (
-                <>
-                  <View style={s.askWrap}>
-                    <Text style={s.askTitle}>¿Qué te gustaría{'\n'}trabajar hoy?</Text>
-                    <Text style={s.askSub}>Elegí un área de bienestar para empezar</Text>
-                  </View>
-
-                  <View style={s.menuWrap}>
-                    {EJES.map(e => (
-                      <TouchableOpacity
-                        key={e.id}
-                        style={s.menuCard}
-                        onPress={() => selectAxis(e.id)}
-                        activeOpacity={0.85}>
-                        <View style={[s.menuIcon, { backgroundColor: tint(e.color, 0.16) }]}>
-                          <Feather name={e.icon as any} size={20} color={e.color} />
-                        </View>
-                        <View style={s.menuTextWrap}>
-                          <Text style={s.menuTitle} numberOfLines={1}>{e.label}</Text>
-                          <Text style={s.menuTagline} numberOfLines={1}>{e.tagline}</Text>
-                        </View>
-                        <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </>
+                <View style={s.menuWrap}>
+                  {EJES.map(e => (
+                    <TouchableOpacity
+                      key={e.id}
+                      style={s.menuCard}
+                      onPress={() => selectAxis(e.id)}
+                      activeOpacity={0.85}>
+                      <View style={[s.menuIcon, { backgroundColor: tint(e.color, 0.16) }]}>
+                        <Feather name={e.icon as any} size={20} color={e.color} />
+                      </View>
+                      <View style={s.menuTextWrap}>
+                        <Text style={s.menuTitle} numberOfLines={1}>{e.label}</Text>
+                        <Text style={s.menuTagline} numberOfLines={1}>{e.tagline}</Text>
+                      </View>
+                      <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
               )}
             </>
           )}
@@ -780,6 +778,14 @@ const s = StyleSheet.create({
     fontSize: 26,
     color: FOREST,
     lineHeight: 32,
+  },
+  // Solo para "¿Qué te gustaría trabajar hoy?" — misma tipografía que
+  // greetingLine2 ("¿Cómo venís hoy?") en Inicio, sin tocar el askTitle
+  // compartido con el título de Fase 2 (nombre del eje elegido).
+  askTitleGreeting: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 28,
+    lineHeight: 36,
   },
   askSub: {
     fontFamily: ViveFonts.regular,

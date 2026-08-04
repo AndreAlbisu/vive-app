@@ -93,10 +93,15 @@ export function IslandTabBar({ state, navigation, position, tabs }: MaterialTopT
   const mounted = useRef(false);
 
   // Snap del ancho/label — anima el cambio de pastilla sea cual sea la causa
-  // (tap en la isla o swipe entre páginas).
+  // (tap en la isla o swipe entre páginas). 180ms en vez del preset default
+  // (300ms, se sentía lento) — misma curva easeInEaseOut, solo más corto.
   useLayoutEffect(() => {
     if (!mounted.current) { mounted.current = true; return; }
-    if (!reducedMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (!reducedMotion) {
+      LayoutAnimation.configureNext(
+        LayoutAnimation.create(180, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity)
+      );
+    }
   }, [activeRouteName, reducedMotion]);
 
   function onPress(tab: IslandTab, isFocused: boolean) {
