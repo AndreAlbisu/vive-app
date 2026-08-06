@@ -134,14 +134,14 @@ export default function ProfileOwnScreen() {
   const configItems: ConfigItem[] = [
     { id: 'notif', icon: 'bell-outline', label: 'Notificaciones', onPress: () => {} },
     { id: 'lang', icon: 'web', label: 'Idioma', onPress: () => {} },
-    { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => {} },
-    { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => {} },
+    { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => router.push('/legal?doc=terminos') },
+    { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },
     { id: 'logout', icon: 'logout', label: 'Cerrar sesión', danger: true, onPress: handleSignOut },
   ];
 
   const guestConfigItems: ConfigItem[] = [
-    { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => {} },
-    { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => {} },
+    { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => router.push('/legal?doc=terminos') },
+    { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },
   ];
 
   return (

@@ -9,6 +9,13 @@ los otros dos archivos.
 - [`politica-de-privacidad.md`](./politica-de-privacidad.md) — Política de Privacidad (14 secciones).
 - Ambos son **BORRADORES**. No se publican ni entran en vigencia sin revisión de un/a abogado/a matriculado/a en Argentina.
 
+> **Estos `.md` son la fuente de verdad y la app los muestra.** Después de editar
+> cualquiera de los dos hay que correr **`npm run sync:legal`**, que regenera
+> `constants/legal.ts` (Metro no puede importar `.md` directo). Si no se corre,
+> la app sigue mostrando la versión anterior. La pantalla legal muestra un aviso de
+> "borrador pendiente de revisión" mientras queden placeholders `[ ]` sin completar;
+> cuando se completen todos, el aviso desaparece solo (bandera `LEGAL_IS_DRAFT`).
+
 ## Los 4 pasos, en orden
 
 ### Paso 1 — Completar los placeholders `[ ]`

@@ -13,8 +13,6 @@ import {
   UIManager,
   ActivityIndicator,
   StatusBar,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,6 +21,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import LegalSheet from '@/components/LegalSheet';
 import { supabase } from '@/lib/supabase';
 
 if (Platform.OS === 'android') {
@@ -359,95 +358,25 @@ export default function RegisterScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ── Modal Términos y condiciones ─────────────────────── */}
-      <Modal visible={showTermsModal} animationType="slide" transparent onRequestClose={() => setShowTermsModal(false)}>
-        <Pressable style={s.modalOverlay} onPress={() => setShowTermsModal(false)}>
-          <Pressable style={s.modalSheet} onPress={() => {}}>
-            <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Términos y condiciones</Text>
-              <TouchableOpacity onPress={() => setShowTermsModal(false)} hitSlop={10}>
-                <MaterialCommunityIcons name="close" size={22} color="rgba(135,131,92,0.80)" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false} style={s.modalBody}>
-              <Text style={s.modalSection}>Bienvenida/o a VITA</Text>
-              <Text style={s.modalText}>
-                VITA es una plataforma que conecta personas con profesionales independientes del bienestar (coaches, terapeutas, nutricionistas y otros). Al crear tu cuenta aceptás estos términos.
-              </Text>
+      {/* Documentos legales completos — mismo texto que /legal (constants/legal.ts).
+          Antes acá había un resumen escrito a mano que no coincidía con el
+          documento real; se reemplazó por la fuente única. */}
+      <LegalSheet
+        visible={showTermsModal}
+        doc="terminos"
+        onClose={() => setShowTermsModal(false)}
+        acceptLabel="Entendido"
+        onAccept={() => setAcceptedTerms(true)}
+      />
 
-              <Text style={s.modalSection}>Qué hacemos y qué no hacemos</Text>
-              <Text style={s.modalText}>
-                VITA actúa como canal de conexión entre vos y los profesionales. No diagnosticamos ni tratamos ninguna condición de salud. Las recomendaciones que recibís de los profesionales son orientativas y no reemplazan la consulta médica.
-              </Text>
+      <LegalSheet
+        visible={showPrivacyModal}
+        doc="privacidad"
+        onClose={() => setShowPrivacyModal(false)}
+        acceptLabel="Entendido"
+        onAccept={() => setAcceptedTerms(true)}
+      />
 
-              <Text style={s.modalSection}>Profesionales independientes</Text>
-              <Text style={s.modalText}>
-                Los profesionales que usan VITA son independientes y son responsables de su propia práctica, habilitaciones y del contenido que comparten. VITA no avala ni garantiza los resultados de ninguna sesión o consulta.
-              </Text>
-
-              <Text style={s.modalSection}>Tus conversaciones</Text>
-              <Text style={s.modalText}>
-                Los chats que tenés con los profesionales se guardan de forma segura en nuestros servidores para permitir la continuidad de las conversaciones. No compartimos tus conversaciones ni tus datos personales con terceros.
-              </Text>
-
-              <Text style={s.modalSection}>Uso responsable</Text>
-              <Text style={s.modalText}>
-                Al usar VITA te comprometés a brindar información verdadera y a usar la plataforma de forma respetuosa. VITA puede suspender cuentas que violen estos términos.
-              </Text>
-
-              <Text style={s.modalFooterNote}>Última actualización: junio 2026</Text>
-            </ScrollView>
-            <TouchableOpacity style={s.modalBtn} onPress={() => { setAcceptedTerms(true); setShowTermsModal(false); }} activeOpacity={0.85}>
-              <Text style={s.modalBtnText}>Entendido</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* ── Modal Política de privacidad ─────────────────────── */}
-      <Modal visible={showPrivacyModal} animationType="slide" transparent onRequestClose={() => setShowPrivacyModal(false)}>
-        <Pressable style={s.modalOverlay} onPress={() => setShowPrivacyModal(false)}>
-          <Pressable style={s.modalSheet} onPress={() => {}}>
-            <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Política de privacidad</Text>
-              <TouchableOpacity onPress={() => setShowPrivacyModal(false)} hitSlop={10}>
-                <MaterialCommunityIcons name="close" size={22} color="rgba(135,131,92,0.80)" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false} style={s.modalBody}>
-              <Text style={s.modalSection}>Qué información recopilamos</Text>
-              <Text style={s.modalText}>
-                Al registrarte guardamos tu nombre, tu dirección de email y las conversaciones que tenés con los profesionales dentro de la app.
-              </Text>
-
-              <Text style={s.modalSection}>Cómo protegemos tus datos</Text>
-              <Text style={s.modalText}>
-                Protegemos tus conversaciones con controles de acceso: ningún otro usuario de VITA puede ver tus chats con los profesionales. No usamos el contenido de esas conversaciones con fines comerciales ni lo compartimos con terceros, y solo lo revisamos ante un requerimiento legal.
-              </Text>
-
-              <Text style={s.modalSection}>Lo que nunca hacemos</Text>
-              <Text style={s.modalText}>
-                Nunca usamos tus datos para mostrarte publicidad personalizada ni los vendemos o cedemos a terceros con fines comerciales.
-              </Text>
-
-              <Text style={s.modalSection}>Tus derechos</Text>
-              <Text style={s.modalText}>
-                Podés solicitar la eliminación de tu cuenta y de todos tus datos en cualquier momento escribiéndonos a privacidad@vivewellness.app. Procesamos las solicitudes en un plazo máximo de 30 días.
-              </Text>
-
-              <Text style={s.modalSection}>Marco legal</Text>
-              <Text style={s.modalText}>
-                Cumplimos con la Ley 25.326 de Protección de Datos Personales de la República Argentina (Habeas Data).
-              </Text>
-
-              <Text style={s.modalFooterNote}>Última actualización: junio 2026</Text>
-            </ScrollView>
-            <TouchableOpacity style={s.modalBtn} onPress={() => { setAcceptedTerms(true); setShowPrivacyModal(false); }} activeOpacity={0.85}>
-              <Text style={s.modalBtnText}>Entendido</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </SafeAreaView>
     </AppBg>
   );
@@ -696,68 +625,5 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
     color: ViveColors.primary,
-  },
-
-  // Modals
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: 'transparent',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 36,
-    maxHeight: '82%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 18,
-    color: '#565E32',
-    letterSpacing: -0.3,
-  },
-  modalBody: {
-    marginBottom: 20,
-  },
-  modalSection: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: '#565E32',
-    marginTop: 16,
-    marginBottom: 4,
-  },
-  modalText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 14,
-    color: '#565E32',
-    lineHeight: 22,
-  },
-  modalFooterNote: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: 'rgba(135,131,92,0.52)',
-    marginTop: 20,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  modalBtn: {
-    backgroundColor: '#565E32',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  modalBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#F7EFE4',
   },
 });
