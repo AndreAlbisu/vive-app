@@ -4,6 +4,7 @@
 // (borrar de auth.users necesita service role). Ver el header de esa función
 // para el modelo de borrado + anonimización.
 
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
 export type DeleteAccountResult =
@@ -20,15 +21,25 @@ export async function deleteMyAccount(): Promise<DeleteAccountResult> {
     headers: { Authorization: `Bearer ${session.access_token}` },
   });
 
-  // supabase-js mete el body de un 4xx/5xx en el error, así que hay que leerlo
-  // de ahí para poder distinguir el caso del coach de una falla real.
+  // Ante un 4xx/5xx, supabase-js NO deja el body en `data`: lo deja en
+  // `error.context`, que es la Response cruda. Leerlo de `data` (como se hacía
+  // antes) perdía el motivo real y mostraba siempre "intentá más tarde" —
+  // justo lo que hace imposible diagnosticar una baja fallida.
   if (error) {
-    const body = (data ?? null) as { error?: string; message?: string } | null;
+    let body: { error?: string; message?: string; detail?: string } | null = null;
+    if (error instanceof FunctionsHttpError) {
+      try { body = await error.context.json(); } catch { /* body no-JSON */ }
+    }
     if (body?.error === 'coach_con_sesiones') {
       return { ok: false, reason: 'coach_con_sesiones', message: body.message ?? 'Tenés sesiones agendadas.' };
     }
-    console.warn('[deleteMyAccount]', error.message);
-    return { ok: false, reason: 'error', message: 'No pudimos eliminar tu cuenta. Intentá de nuevo en unos minutos.' };
+    const detail = body?.detail ?? body?.error ?? error.message;
+    console.warn('[deleteMyAccount]', detail);
+    return {
+      ok: false,
+      reason: 'error',
+      message: `No pudimos eliminar tu cuenta.\n\n${detail}`,
+    };
   }
 
   const body = data as { ok?: boolean; error?: string; message?: string; steps?: string[] };

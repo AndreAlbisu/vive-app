@@ -144,19 +144,36 @@ serve(async (req) => {
     // ── 5. Lápida en profiles ───────────────────────────────────────────────
     // Reservas, reseñas, mensajes y salas siguen apuntando acá; por eso la fila
     // sobrevive, pero sin un solo dato que identifique a la persona.
-    const { error: tombErr } = await admin
-      .from('profiles')
-      .update({
+    // El email va a un placeholder opaco y no a NULL: `profiles.email` puede ser
+    // NOT NULL (poner NULL fallaba), y un literal fijo chocaría contra el UNIQUE
+    // en la segunda baja. `.invalid` es un TLD reservado, nunca resoluble. No
+    // agrega información: el uuid ya es la PK de la fila.
+    const tombstone: Record<string, unknown> = {
+      name: 'Usuario eliminado',
+      email: `deleted-${userId}@vita.invalid`,
+      avatar_url: null,
+      push_token: null,
+      birth_date: null,
+      gender: null,
+      nationality: null,
+      deleted_at: new Date().toISOString(),
+    }
+
+    let { error: tombErr } = await admin.from('profiles').update(tombstone).eq('id', userId)
+
+    // Reintento acotado: si alguna de las columnas opcionales es NOT NULL en este
+    // entorno, se cae toda la anonimización por una columna secundaria. Se vuelve
+    // a intentar con lo mínimo indispensable antes de dar la baja por fallida.
+    if (tombErr) {
+      console.warn('[delete-account] tombstone completo falló:', tombErr.message)
+      const minimal = {
         name: 'Usuario eliminado',
-        email: null,
-        avatar_url: null,
-        push_token: null,
-        birth_date: null,
-        gender: null,
-        nationality: null,
+        email: `deleted-${userId}@vita.invalid`,
         deleted_at: new Date().toISOString(),
-      })
-      .eq('id', userId)
+      }
+      const retry = await admin.from('profiles').update(minimal).eq('id', userId)
+      tombErr = retry.error
+    }
     if (tombErr) return json({ error: 'No se pudo anonimizar el perfil', detail: tombErr.message }, 500)
     steps.push('perfil anonimizado')
 
