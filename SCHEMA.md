@@ -13,10 +13,23 @@
 ## Tablas y relaciones
 
 ### `profiles`
-- `id` (uuid, PK) — coincide con `auth.users.id`
+- `id` (uuid, PK) — coincide con `auth.users.id`, pero **YA NO hay FK contra `auth.users`** (se dropeó el 06/08/2026, ver "Baja de cuenta" abajo). La integridad la sostiene el trigger de alta; la fila puede sobrevivir a la cuenta de auth.
 - `email`, `name`, `role` (coach | user), `avatar_url`, `birth_date`, `gender`, `nationality`
 - `accepted_terms` (bool), `push_token`, `created_at`
+- `deleted_at` (timestamptz, nullable) — no nulo = **lápida**: el usuario se dio de baja, la fila quedó vaciada de datos personales (`name = 'Usuario eliminado'`, resto en NULL) y la cuenta de `auth.users` ya no existe.
 - Usuarios y coaches viven en la misma tabla, diferenciados por `role`
+
+#### Baja de cuenta (`delete-account`, 06/08/2026)
+Apple exige (guideline **5.1.1(v)**) que toda app con registro permita borrar la cuenta desde adentro; sin esto la app se rechaza en iOS. **Modelo: borrado + anonimización, NO cascade.**
+- **Se borra** el contenido personal: `journal_entries`, `gratitude_entries`, `mood_entries`, `mood_suggestions`, `user_habits`, `user_quiz_answers`, `resource_reminders`, `resource_completions`, `saved_resources`, `pinned_resources`, `resource_saves`, `resource_feedback`, `favorite_coaches`, `notifications`, y el avatar del bucket.
+- **Se conserva anonimizado** lo que pertenece también a un tercero o hay que retener: `bookings` (respaldo fiscal + historial del coach), `reviews` (reputación del coach — si se borraran, alguien podría darse de baja para eliminar una reseña negativa), `messages` y `salas`. Todo apunta a la lápida y muestra "Usuario eliminado". `session_notes` también se conservan (⚠️ a confirmar con abogado, ver changelog).
+- **Sesiones futuras**: se cancelan y disparan el reembolso vía `trg_mark_refund_on_cancel`. No se marca `cancelled_late` a propósito — darse de baja no es cancelar tarde. Un **coach con sesiones agendadas no puede darse de baja**: se le pide cancelarlas antes, para que cada cancelación avise y reembolse.
+- **3 FKs cambiadas** (`scripts/add-account-deletion.sql`, **corrido y verificado el 06/08/2026**). Sin esto, un `deleteUser` a secas rompía cosas:
+  1. `profiles.id → auth.users` era **CASCADE** → borraba la lápida y reventaba las FKs NO ACTION de `reviews`/`messages`/`salas`. **FK dropeada.**
+  2. `bookings.user_id → auth.users` era **CASCADE** → **borraba todas las reservas**. **Repuntada a `profiles(id)` NO ACTION.**
+  3. `analytics_events.user_id` era **NO ACTION** → **bloqueaba** el borrado con error de FK. **Ahora SET NULL** (conserva la métrica, pierde la identidad).
+- Lo que sigue colgando de `auth.users` con CASCADE es todo contenido personal y está bien que se vaya solo: `favorite_coaches`, `gratitude_entries`, `mood_entries`, `mood_suggestions`, `resource_completions`, `user_events`, `user_habits`.
+- **`user_events` SÍ existe en prod** (cuelga de `auth.users`), contra lo que concluyó la sesión 79. El código no la usa: la analítica va por `analytics_events` vía `registrarEvento`.
 - `avatar_url` (text, nullable) — columna vieja, sin uso hasta el 01/07/2026. Ahora es la foto de perfil real de cualquier `profiles` (coach o usuario), subida como archivo a Supabase Storage (bucket `avatars`, path `{auth.uid()}/avatar.jpg`, upsert siempre true). Coaches suben desde `CoachProfileScreen.tsx`, usuarios desde `EditProfileScreen.tsx` (mismo patrón). Se muestra en: `ProfesionalScreen.tsx` y `app/search3.tsx` (coach visto por un usuario), `ProfileOwnScreen.tsx` y el avatar del top bar en `app/(tabs)/index.tsx` (perfil propio), y donde cualquiera de los dos roles ve a la otra parte — `SalaScreen.tsx` (chat, ambos avatares), `CoachReservasScreen.tsx` (usuario que reservó), `CoachChatsScreen.tsx` y `SessionsScreen.tsx` (listas de chat). Todos con fallback a iniciales/ícono genérico si `avatar_url` es null. Requiere `scripts/add-avatar-upload.sql` (bucket + RLS de storage + política de UPDATE en `profiles`), corrido en Supabase el 02/07/2026.
 
 ### `coaches`
