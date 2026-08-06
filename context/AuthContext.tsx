@@ -89,12 +89,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signUpWithEmail(email: string, password: string, name: string, acceptedTerms = false): Promise<string | null> {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } },
+      // accepted_terms va también en la metadata del usuario: es lo único que
+      // sobrevive si el signUp no devuelve sesión (confirmación de mail activada),
+      // y deja el dato en auth.users para poder backfillear después.
+      options: { data: { name, accepted_terms: acceptedTerms } },
     });
     if (error) return translateError(error.message);
+
+    // La fila de `profiles` la crea un trigger sobre auth.users, así que para
+    // cuando signUp devuelve ya existe — pero nadie le escribía `accepted_terms`:
+    // este parámetro llegaba hasta acá y se descartaba en silencio, con lo cual
+    // no quedaba constancia de que el usuario aceptara los T&C (necesaria para
+    // que la cláusula anti-solicitación sea oponible). Requiere sesión, porque
+    // el UPDATE pasa por RLS de dueño.
+    if (acceptedTerms && data.session && data.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ accepted_terms: true })
+        .eq('id', data.user.id);
+      if (profileError) console.warn('[auth] no se pudo registrar accepted_terms:', profileError.message);
+    }
     return null;
   }
 
