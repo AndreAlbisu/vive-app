@@ -1,7 +1,6 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Animated, LayoutAnimation, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
@@ -75,7 +74,16 @@ function IslandTabItem({
             />
           )}
         </View>
-        {isFocused && <Text style={styles.label}>{tab.label}</Text>}
+        {/* El label se funde con `focus`, que viene del pager por driver nativo:
+            aparece siguiendo el movimiento en vez de aparecer de golpe cuando la
+            ruta cambia. El ANCHO de la pastilla sigue dependiendo del montaje +
+            LayoutAnimation, que es la parte que todavía se siente escalonada
+            (ver nota de arriba sobre la limitación del driver nativo). */}
+        {isFocused && (
+          <Animated.View style={{ opacity: focus }}>
+            <Text style={styles.label}>{tab.label}</Text>
+          </Animated.View>
+        )}
       </View>
     </Pressable>
   );
@@ -117,8 +125,16 @@ export function IslandTabBar({ state, navigation, position, tabs }: MaterialTopT
   return (
     <View style={[styles.wrap, { bottom: insets.bottom + 8 }]} pointerEvents="box-none">
       <View style={styles.shadowWrap}>
+        {/* Sin BlurView a propósito (sacado 06/08/2026). Estaba DENTRO de la
+            pastilla, o sea encima de su `backgroundColor` crema al 95% de
+            opacidad — difuminaba un rectángulo casi sólido, sobre un fondo de app
+            que es un gradiente de tres cremas casi idénticos. Efecto invisible,
+            costo real: se re-rasterizaba en cada frame mientras el ancho de la
+            pastilla se animaba al cambiar de pestaña.
+            Si alguna vez se quiere vidrio esmerilado de verdad, hay que bajarle
+            la opacidad a CREAM (0.95 → ~0.55) para que el blur tenga qué mostrar,
+            y recién ahí vuelve a tener sentido pagar el costo. */}
         <View style={styles.pill}>
-          <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
           {tabs.map((tab, i) => {
             const isFocused = activeRouteName === tab.name;
             return (
