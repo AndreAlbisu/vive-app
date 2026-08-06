@@ -28,6 +28,8 @@ import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import ReportSheet from '@/components/ReportSheet';
+import SessionNotesSheet from '@/components/SessionNotesSheet';
+import { getSharedNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
 import { sendPushNotification } from '@/lib/notifications';
 import { isCancelLate } from '@/lib/bookingHelpers';
@@ -164,6 +166,8 @@ export default function SalaScreen() {
   const [recipientId, setRecipientId] = useState<string | null>(null);
   const [recipientIsCoach, setRecipientIsCoach] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [sharedNote, setSharedNote] = useState<string | null>(null);
   const [recipientProfile, setRecipientProfile] = useState<RecipientProfile | null>(null);
   const [activeBooking, setActiveBooking] = useState<ActiveBooking>(null);
   const [hasSessionHistory, setHasSessionHistory] = useState(false);
@@ -446,6 +450,15 @@ export default function SalaScreen() {
 
     return () => { supabase.removeChannel(channel); };
   }, [salaId, user?.id]);
+
+  // Usuario (recipientIsCoach = la otra parte es coach): cargar la nota compartida
+  // de su sesión, si el coach dejó una. Es la razón de volver a la app entre sesiones.
+  useEffect(() => {
+    if (!recipientIsCoach || !activeBooking) { setSharedNote(null); return; }
+    let alive = true;
+    getSharedNote(activeBooking.id).then(n => { if (alive) setSharedNote(n); });
+    return () => { alive = false; };
+  }, [recipientIsCoach, activeBooking]);
 
   // Timer: recomputar sessionState cada 30s
   useEffect(() => {
@@ -857,6 +870,19 @@ export default function SalaScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Notas de la sesión: solo el coach (recipientIsCoach false = la otra parte
+            es el usuario), y si hay una sesión sobre la cual anotar. */}
+        {!recipientIsCoach && activeBooking && recipientProfile && (
+          <TouchableOpacity
+            style={styles.rebookPill}
+            onPress={() => setNotesOpen(true)}
+            activeOpacity={0.8}
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+            <MaterialCommunityIcons name="note-edit-outline" size={15} color="#3A4F2A" />
+            <Text style={styles.rebookPillText}>Notas</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={styles.menuBtn}
           onPress={() => setReportOpen(true)}
@@ -1099,6 +1125,20 @@ export default function SalaScreen() {
             );
           })}
 
+          {/* Nota compartida de la sesión (lado usuario): la escribió el coach y la
+              relee entre sesiones. sharedNote solo se carga cuando recipientIsCoach. */}
+          {!loading && recipientIsCoach && sharedNote && (
+            <View style={styles.noteCard}>
+              <View style={styles.noteHeader}>
+                <MaterialCommunityIcons name="note-text-outline" size={16} color="#3A4F2A" />
+                <Text style={styles.noteLabel}>
+                  Nota de {recipientProfile?.name ?? 'tu profesional'}
+                </Text>
+              </View>
+              <Text style={styles.noteText}>{sharedNote}</Text>
+            </View>
+          )}
+
           {/* Cierre de sesión + re-reserva: último mensaje del chat, cerca del input
               (antes era un banner fijo arriba; se movió acá para quedar al alcance del dedo) */}
           {!loading && sessionState === 'finalizada' && activeBooking && (
@@ -1245,6 +1285,16 @@ export default function SalaScreen() {
         reportedId={recipientId ?? ''}
         salaId={salaId}
       />
+
+      {!recipientIsCoach && activeBooking && recipientId && (
+        <SessionNotesSheet
+          visible={notesOpen}
+          onClose={() => setNotesOpen(false)}
+          bookingId={activeBooking.id}
+          userId={recipientId}
+          clientName={recipientProfile?.name ?? 'tu cliente'}
+        />
+      )}
 
     </SafeAreaView>
     </AppBg>
@@ -1463,6 +1513,33 @@ const styles = StyleSheet.create({
   bubbleTime: { fontFamily: ViveFonts.regular, fontSize: 10, alignSelf: 'flex-end' },
   bubbleTimeUser: { color: '#87835C' },
   bubbleTimeCoach: { color: 'rgba(135,131,92,0.80)' },
+
+  // Nota compartida de la sesión (lado usuario)
+  noteCard: {
+    backgroundColor: 'rgba(86,94,50,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.14)',
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 4,
+    marginBottom: 8,
+    gap: 8,
+  },
+  noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  noteLabel: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: '#3A4F2A',
+    textTransform: 'uppercase',
+    flexShrink: 1,
+  },
+  noteText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: '#565E32',
+    lineHeight: 21,
+  },
 
   // Tarjeta de cierre + re-reserva, inline al final del chat
   endedCard: {

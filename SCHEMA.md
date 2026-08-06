@@ -2,7 +2,7 @@
 
 > ⚠️ Este archivo describe lo que está REALMENTE en Supabase hoy.
 > No es un diseño aspiracional — si algo cambia en la base, este archivo se actualiza el mismo día.
-> Última actualización: 6 de agosto 2026 — tabla `reports` (moderación, reportar usuarios/coaches, **`scripts/add-reports.sql` FALTA correr**). Antes, mismo día: auditoría del pipeline de pagos MP: se documenta `bookings.refund_attempts` (dead-letter de reembolsos, **`scripts/add-refund-attempts.sql` FALTA correr**), el refresh automático del token del coach (`getFreshCoachToken`), y se corrige la nota de "edge functions scaffolds" (ya tienen lógica real). Ver sección "Pagos v1".
+> Última actualización: 6 de agosto 2026 — tabla `session_notes` (notas de sesión del coach, privada+compartida, anti-fuga #4, **`scripts/add-session-notes.sql` FALTA correr**) y tabla `reports` (moderación, reportar usuarios/coaches, **`scripts/add-reports.sql` FALTA correr**). Antes, mismo día: auditoría del pipeline de pagos MP: se documenta `bookings.refund_attempts` (dead-letter de reembolsos, **`scripts/add-refund-attempts.sql` FALTA correr**), el refresh automático del token del coach (`getFreshCoachToken`), y se corrige la nota de "edge functions scaffolds" (ya tienen lógica real). Ver sección "Pagos v1".
 >
 > 29 de julio 2026 — se documenta `mood_entries` (existía en Supabase pero no estaba en este archivo — gap detectado al hacer que `app/diario.tsx` la lea). Sin migración nueva: la tabla y sus datos ya existían, solo se agregó un consumidor.
 >
@@ -163,6 +163,13 @@ Modelo: split payments, **Checkout Pro**, cobro al reservar + reembolso automát
 - Entrada desde `components/ReportSheet.tsx` (hoja compartida): en `SalaScreen` (botón "⋯" del header, `reported_id` = la otra parte, `sala_id` seteado) y en `ProfesionalScreen` (link "Reportar" al pie, `reported_id` = coach, `sala_id` null; oculto en el propio perfil, pide login). Inserta vía `submitReport` (`lib/reports.ts`) + evento `registrarEvento('reporte_enviado', …)`.
 - RLS: `reports_insert_own` (INSERT solo si `reporter_id = auth.uid()`), `reports_select_own` (SELECT solo los propios — para evitar spam desde la UI; nadie ve los reportes recibidos). **Sin UPDATE/DELETE** desde el cliente (el equipo gestiona `status` con el service role). Índice `reports_status_created_idx (status, created_at desc)`.
 - ⚠️ **Tabla nueva, agregada 06/08/2026 (`scripts/add-reports.sql`) — FALTA correr en Supabase.** Sin eso, el envío de reporte falla (insert con error, la hoja avisa y no finge éxito).
+
+### `session_notes`
+- `id` (uuid, PK), `booking_id` (uuid, FK → `bookings.id` ON DELETE CASCADE — la sesión), `coach_id` (uuid, FK → `profiles.id` ON DELETE CASCADE — autor, = `coaches.profile_id` / auth uid del coach), `user_id` (uuid, FK → `profiles.id` ON DELETE CASCADE — el cliente), `content` (text, NOT NULL), `shared` (boolean, NOT NULL default false — false: privada solo coach · true: la ve el usuario), `created_at`, `updated_at`. **UNIQUE(`booking_id`, `shared`)** → 1 privada + 1 compartida por sesión, editables (upsert con `onConflict: 'booking_id,shared'`).
+- Notas de sesión del coach (medida anti-fuga #4, sesión pegajosa — ver memoria `project_vive_anti_disintermediation`). El coach escribe desde `components/SessionNotesSheet.tsx` (pill "Notas" en el header del chat, lado coach = `!recipientIsCoach`, tied a `activeBooking`); el usuario ve la compartida como card en el chat (`getSharedNote`). `lib/sessionNotes.ts` (`getSessionNotes`/`getSharedNote`/`saveSessionNote` — vaciar el campo borra esa fila).
+- **Por qué tabla aparte y no columnas en `bookings`:** el RLS de Postgres es por FILA, no por columna — el usuario ya lee su booking, así que una columna de nota privada le quedaría visible. Acá el RLS filtra la privada por completo.
+- RLS: `session_notes_coach_all` (el coach FOR ALL sobre lo suyo, `coach_id = auth.uid()`) · `session_notes_user_read_shared` (el usuario SOLO SELECT de compartidas propias, `user_id = auth.uid() AND shared = true`). La nota privada nunca entra en el filtro del usuario. Índice `session_notes_booking_idx (booking_id)`.
+- ⚠️ **Tabla nueva, agregada 06/08/2026 (`scripts/add-session-notes.sql`) — FALTA correr en Supabase.** Sin eso, guardar/leer notas falla (la hoja avisa, no finge éxito).
 
 ### `analytics_events`
 - `id` (uuid, PK)
