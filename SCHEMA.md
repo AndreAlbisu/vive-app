@@ -2,7 +2,7 @@
 
 > ⚠️ Este archivo describe lo que está REALMENTE en Supabase hoy.
 > No es un diseño aspiracional — si algo cambia en la base, este archivo se actualiza el mismo día.
-> Última actualización: 6 de agosto 2026 — tabla `session_notes` (notas de sesión del coach, privada+compartida, anti-fuga #4, **`scripts/add-session-notes.sql` FALTA correr**) y tabla `reports` (moderación, reportar usuarios/coaches, **`scripts/add-reports.sql` FALTA correr**). Antes, mismo día: auditoría del pipeline de pagos MP: se documenta `bookings.refund_attempts` (dead-letter de reembolsos, **`scripts/add-refund-attempts.sql` FALTA correr**), el refresh automático del token del coach (`getFreshCoachToken`), y se corrige la nota de "edge functions scaffolds" (ya tienen lógica real). Ver sección "Pagos v1".
+> Última actualización: 6 de agosto 2026 — tabla `session_notes` (notas de sesión del coach, privada+compartida, anti-fuga #4, **`scripts/add-session-notes.sql` CORRIDO — incluye el `WITH CHECK` endurecido, verificado en `pg_policy`**) y tabla `reports` (moderación, reportar usuarios/coaches, `scripts/add-reports.sql` corrido). Antes, mismo día: auditoría del pipeline de pagos MP: se documenta `bookings.refund_attempts` (dead-letter de reembolsos, `scripts/add-refund-attempts.sql` corrido), el refresh automático del token del coach (`getFreshCoachToken`), y se corrige la nota de "edge functions scaffolds" (ya tienen lógica real). Ver sección "Pagos v1".
 >
 > 29 de julio 2026 — se documenta `mood_entries` (existía en Supabase pero no estaba en este archivo — gap detectado al hacer que `app/diario.tsx` la lea). Sin migración nueva: la tabla y sus datos ya existían, solo se agregó un consumidor.
 >
