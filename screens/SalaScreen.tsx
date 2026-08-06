@@ -423,14 +423,11 @@ export default function SalaScreen() {
 
     // supabase.channel() devuelve el canal existente si ya hay uno con el mismo
     // topic (p.ej. si el cleanup de un montaje previo todavía no terminó de
-    // sacarlo). Si ya está subscripto, .on() más abajo tira "cannot add
-    // postgres_changes callbacks... after subscribe()". Lo sacamos antes de crear el nuevo.
-    const topic = `realtime:sala:${salaId}`;
-    const stale = supabase.getChannels().find(c => c.topic === topic);
-    if (stale) supabase.removeChannel(stale);
-
+    // sacarlo: removeChannel es async). Si ese canal ya está subscripto, .on()
+    // tira "cannot add postgres_changes callbacks... after subscribe()".
+    // Sufijo random => topic nuevo en cada montaje, nunca colisiona.
     const channel = supabase
-      .channel(`sala:${salaId}`)
+      .channel(`sala:${salaId}-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `sala_id=eq.${salaId}` },

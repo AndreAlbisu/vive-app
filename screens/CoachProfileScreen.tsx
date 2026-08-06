@@ -819,9 +819,10 @@ export default function CoachProfileScreen() {
         <View style={s.commissionCard}>
           <MaterialCommunityIcons name="trending-down" size={18} color={ViveColors.accent} />
           <Text style={s.commissionText}>
-            <Text style={s.commissionStrong}>20%</Text> en las primeras 3 sesiones con cada persona y{' '}
-            <Text style={s.commissionStrong}>15%</Text> de la cuarta en adelante. El contador es por persona
-            y nunca se reinicia: cuanto más sostenés el vínculo con alguien, menos comisión pagás.
+            <Text style={s.commissionStrong}>20%</Text> en la primera sesión con cada persona y{' '}
+            <Text style={s.commissionStrong}>15%</Text> de la segunda en adelante. Te cobramos por
+            presentarte a alguien nuevo, no por la relación que construís después: el contador es por
+            persona y nunca se reinicia.
           </Text>
         </View>
 

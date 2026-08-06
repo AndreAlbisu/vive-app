@@ -27,7 +27,7 @@ No son legales puras, son tuyas (con tu contador/abogado):
 
 - [ ] **IVA / figura fiscal** (T&C §8.4) — depende de si VIVE es monotributo o RI. Esto también afecta el cálculo de la comisión en el código, así que definilo de una.
 - [ ] **Garantía de primera sesión** (T&C §9.3) — confirmar si se mantiene y su alcance exacto (reintegro vs. nueva sesión, plazos, condiciones).
-- [ ] **Comisión** (T&C §8.3) — confirmar los números (hoy: 20% primeras 3 / 15% desde la 4ta) y si mencionás la promo fundador.
+- [ ] **Comisión** (T&C §8.3) — confirmar los números (hoy: 20% la primera sesión con cada persona / 15% desde la 2da) y si mencionás la promo fundador.
 - [ ] **Antelación mínima de cancelación** (T&C §9.1) — el número de horas exacto.
 - [ ] **Jurisdicción** (T&C §22) — normalmente CABA, confirmar con abogado.
 - [ ] **Líneas de ayuda en crisis** (T&C §5.3) — decidir si incluís líneas locales.

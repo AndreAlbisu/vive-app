@@ -112,7 +112,7 @@ export default function CoachHomeScreen() {
       .then(({ count }) => setUnreadCount(count ?? 0));
     loadUnread();
     const channel = supabase
-      .channel('coach-home-notif')
+      .channel(`coach-home-notif-${user.id}-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${user.id}` }, loadUnread)
       .subscribe();
     return () => { supabase.removeChannel(channel); };

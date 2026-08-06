@@ -196,7 +196,7 @@ export default function CoachReservasScreen() {
 
   useEffect(() => {
     if (!user || !coachId) return;
-    const channel = supabase.channel('coach-reservas')
+    const channel = supabase.channel(`coach-reservas-${coachId}-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `coach_id=eq.${coachId}` },
         () => loadBookings())
       .subscribe();

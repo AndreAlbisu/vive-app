@@ -7,8 +7,8 @@
 -- Modelo decidido (ver memoria project_vive_payments):
 --   - Split payments: cada coach conecta su cuenta MP (OAuth). MP reparte:
 --     comisión VITA (marketplace_fee) + resto al coach.
---   - Comisión: 0% promo fundador (fin TBD) · 20% las primeras 3 sesiones
---     COMPLETADAS del par coach-usuario · 15% de la 4ta en adelante.
+--   - Comisión: 0% promo fundador (fin TBD) · 20% la PRIMERA sesión COMPLETADA
+--     del par coach-usuario · 15% de la 2da en adelante.
 --     Calculada server-side en mp-create-payment (COUNT completadas del par) y
 --     snapshoteada en bookings.platform_fee_pct. El cliente nunca la calcula.
 --     (IVA según figura fiscal de VITA — monotributo/RI, TBD — NO vive acá.)

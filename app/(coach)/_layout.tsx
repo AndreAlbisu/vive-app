@@ -45,7 +45,7 @@ export default function CoachTabLayout() {
   useEffect(() => {
     if (!coachId) return;
     const channel = supabase
-      .channel('coach-tab-badge')
+      .channel(`coach-tab-badge-${coachId}-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bookings', filter: `coach_id=eq.${coachId}` },
@@ -66,7 +66,7 @@ export default function CoachTabLayout() {
     if (!user) return;
 
     const channel = supabase
-      .channel(`coach-chats-badge-${user.id}`)
+      .channel(`coach-chats-badge-${user.id}-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
         () => refreshUnread())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'salas' },

@@ -80,9 +80,12 @@ serve(async (req) => {
     // ── Comisión (server-side; el cliente NUNCA la calcula) ──────────────────
     // Esquema definitivo (ver memoria project_vive_payments):
     //   0% promo fundador (hasta FOUNDER_PROMO_UNTIL) ·
-    //   20% las primeras 3 sesiones COMPLETADAS del par coach-usuario ·
-    //   15% de la 4ta en adelante (permanente).
+    //   20% la PRIMERA sesión COMPLETADA del par coach-usuario ·
+    //   15% de la 2da en adelante (permanente).
     // Contador POR PAR (user_id + coach_id), solo 'completada', nunca resetea.
+    // El 20% es el costo de adquisición: VIVE aporta el cliente nuevo (sesión 1),
+    // la relación de ahí en más la sostiene el coach. Bajar en la 2da pone el
+    // descuento justo en el momento de máxima fuga (fin de la sesión 1).
     const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL') // ISO date, TBD
     let commissionPct: number
     if (promoUntil && Date.now() < Date.parse(promoUntil)) {
@@ -94,7 +97,7 @@ serve(async (req) => {
         .eq('user_id', booking.user_id)
         .eq('coach_id', booking.coach_id)
         .eq('status', 'completada')
-      commissionPct = (count ?? 0) < 3 ? 20 : 15
+      commissionPct = (count ?? 0) < 1 ? 20 : 15
     }
 
     // marketplace_fee = comisión pura (20/15%). El IVA NO se hornea acá: depende

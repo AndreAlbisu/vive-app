@@ -73,7 +73,7 @@ Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, l
 
 8.2. **Procesamiento de pagos.** Los pagos se procesan a través de Mercado Pago mediante un modelo de marketplace (pago dividido). El Cliente autoriza el cobro al momento de reservar. Cada Profesional conecta su propia cuenta de Mercado Pago para recibir el pago correspondiente. VIVE no almacena datos completos de tarjetas; el procesamiento se rige también por los términos de Mercado Pago.
 
-8.3. **Comisión de la Plataforma.** VIVE percibe una comisión sobre el precio de cada Sesión, retenida automáticamente en el momento del pago. La comisión vigente es: [20]% sobre las primeras [3] Sesiones completadas de cada vínculo Cliente–Profesional y [15]% a partir de la cuarta, de manera permanente. VIVE puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. VIVE puede modificar sus comisiones a futuro, notificando con antelación razonable.
+8.3. **Comisión de la Plataforma.** VIVE percibe una comisión sobre el precio de cada Sesión, retenida automáticamente en el momento del pago. La comisión vigente es: [20]% sobre la primera Sesión completada de cada vínculo Cliente–Profesional y [15]% a partir de la segunda, de manera permanente. VIVE puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. VIVE puede modificar sus comisiones a futuro, notificando con antelación razonable.
 
 8.4. **Impuestos.** El tratamiento impositivo (incluido el IVA, de corresponder) se rige por la normativa aplicable y por la condición fiscal de VIVE y de los Profesionales. [PENDIENTE DE DEFINIR según figura fiscal de VIVE — revisar con contador/abogado antes de publicar.]
 

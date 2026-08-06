@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-08-06 — Andre (sesión 83)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `screens/CoachReservasScreen.tsx`, `screens/SalaScreen.tsx`, `app/(coach)/_layout.tsx`, `supabase/functions/mp-create-payment/index.ts`, `screens/CoachProfileScreen.tsx`, `scripts/add-payments-v1.sql`, `docs/terminos-y-condiciones.md`, `docs/legal-instrucciones.md`, `SCHEMA.md`. **`mp-create-payment` PENDIENTE de redeploy.**
+
+**Resumen:**
+- **Bug realtime del lado coach ("cannot add postgres_changes callbacks ... after subscribe()"):** `supabase.channel(topic)` de realtime-js 2.108.2 **devuelve el canal existente** si ya hay uno con ese topic, y `removeChannel()` es async (`await unsubscribe()` → teardown). Al remontar (reiniciar sesión, Fast Refresh) el canal viejo sigue en la lista y en estado `joined`, así que `.on()` explota. Los 4 canales del lado coach usaban topics fijos; ahora llevan sufijo random (`${Math.random().toString(36).slice(2)}`), el mismo patrón que ya tenían los 3 del lado usuario. **A confirmar en Expo Go** (reiniciar sesión como coach: sin errores y badges de campana/reservas/chats vivos).
+- De paso, `SalaScreen` usaba otro workaround (buscar el canal stale y removerlo antes) que era racy — `removeChannel` no lo saca de la lista de forma síncrona, solo no explotaba porque `unsubscribe()` marca `leaving` en el acto, pero después re-suscribía un canal en teardown. Unificado al mismo patrón.
+- **Cambio de comisión (decisión Andre):** de **20% las primeras 3 sesiones / 15% desde la 4ta** a **20% la PRIMERA sesión de cada par coach-usuario / 15% de la 2da en adelante**. Razón: el 20% es el costo de adquisición del cliente nuevo, no un peaje sobre la relación que el coach sostiene solo; además dejaba la tarifa más alta justo en las sesiones 2-3, las de máxima fuga. Cuesta ~2-3 pts de GMV. **Tercer tramo de 10% descartado** (no cubre costos + margen). Sin cambio de schema: solo `commissionPct = count < 1 ? 20 : 15` en `mp-create-payment`, más el copy del `CoachProfileScreen` ("te cobramos por presentarte a alguien nuevo, no por la relación que construís después"), T&C §8.3, `legal-instrucciones.md`, el header de `add-payments-v1.sql` y SCHEMA.md.
+
+**Pendiente para la próxima sesión:**
+- **Redeployar `mp-create-payment`** — hasta que no se haga, prod sigue cobrando 20% hasta la 3ra sesión mientras la app ya promete 15% desde la 2da.
+- Confirmar en el celular que el error de realtime no vuelve al reiniciar sesión como coach.
+- Sigue abierto de la 82: correr `scripts/add-reports.sql`.
+
 ## 2026-08-06 — Andre (sesión 82)
 
 **Tocado:** `supabase/functions/_shared/mp.ts`, `supabase/functions/mp-create-payment/index.ts`, `supabase/functions/mp-process-refunds/index.ts`, `supabase/functions/mp-webhook/index.ts`, `supabase/functions/mp-oauth-callback/index.ts`, `screens/BookingScreen_Confirm.tsx`, `screens/CoachProfileScreen.tsx`, `SCHEMA.md`. Nuevo: `scripts/add-refund-attempts.sql`. **SQL corrido y las 5 functions redeployadas por Andre.**
