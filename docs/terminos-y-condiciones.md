@@ -14,7 +14,7 @@
 
 ## 1. Aceptación de los Términos
 
-Estos Términos y Condiciones de Uso (los "**Términos**") regulan el acceso y uso de la aplicación móvil y demás servicios digitales de Vita (la "**Plataforma**"), operada por [NOMBRE Y APELLIDO], CUIT [CUIT], con domicilio en [domicilio] ("**Vita**", "**nosotros**").
+Estos Términos y Condiciones de Uso (los "**Términos**") regulan el acceso y uso de la aplicación móvil y demás servicios digitales de Vita (la "**Plataforma**"), operada por Andre Albisu Lambertini, CUIT [CUIT], con domicilio en De los Extremeños 5069, Córdoba, Provincia de Córdoba ("**Vita**", "**nosotros**").
 
 Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, la persona usuaria (el "**Usuario**") declara haber leído, comprendido y aceptado estos Términos y la [Política de Privacidad](./politica-de-privacidad.md), que forma parte integrante de este documento. Si el Usuario no está de acuerdo, debe abstenerse de utilizar la Plataforma.
 
@@ -181,4 +181,4 @@ El Usuario puede dar de baja su cuenta en cualquier momento. Vita puede suspende
 
 ## 24. Contacto
 
-Ante consultas sobre estos Términos: [correo de contacto legal] — [NOMBRE Y APELLIDO], [domicilio].
+Ante consultas sobre estos Términos: vitaappar@gmail.com — Andre Albisu Lambertini, De los Extremeños 5069, Córdoba, Provincia de Córdoba.

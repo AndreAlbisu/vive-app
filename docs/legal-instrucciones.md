@@ -23,12 +23,12 @@ Datos de la empresa y de contacto que solo tenés vos. Checklist consolidado (am
 
 > **Decidido el 06/08/2026 (Andre): Vita la opera una PERSONA HUMANA inscripta en Monotributo**, no una sociedad. Por eso los documentos ya no dicen "razón social" sino `[NOMBRE Y APELLIDO]`. Revisar la decisión cuando entre inversión, se formalice un socio, la facturación se acerque al tope del monotributo, o el volumen haga que el riesgo patrimonial personal deje de ser teórico.
 
-- [ ] **Nombre y apellido** de la persona que opera Vita
-- [ ] **CUIT**
-- [ ] **Domicilio**
-- [ ] **Correo de contacto legal** (T&C) — ⚠️ definir el dominio real: el copy viejo del registro usaba `@vivewellness.app`, que es del nombre anterior
-- [ ] **Correo de privacidad** (Política) — puede ser el mismo
-- [ ] **Fecha de última actualización** y **fecha de vigencia** (en ambos)
+- [x] ~~**Nombre y apellido**~~ — Andre Albisu Lambertini
+- [ ] **CUIT** — ⚠️ el dato que se pasó (`20-460340870-0`) tiene **12 dígitos**; un CUIT tiene 11. La forma sin el cero de más, `20-46034087-0`, valida bien el dígito verificador, pero **falta confirmarlo** antes de escribirlo
+- [x] ~~**Domicilio**~~ — De los Extremeños 5069, Córdoba, Provincia de Córdoba
+- [x] ~~**Correo de contacto legal**~~ — vitaappar@gmail.com
+- [x] ~~**Correo de privacidad**~~ — vitaappar@gmail.com (el mismo)
+- [ ] **Fecha de última actualización** y **fecha de vigencia** (en ambos) — poner la fecha real de publicación, no la de hoy
 - [ ] Referente/responsable de datos, si se designa (Política §1)
 
 ### Paso 2 — Resolver las decisiones de producto/fiscales pendientes

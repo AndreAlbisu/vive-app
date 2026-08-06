@@ -13,13 +13,13 @@
 **Última actualización:** [fecha]
 **Vigencia a partir de:** [fecha]
 
-Esta Política describe cómo Vita, operada por [NOMBRE Y APELLIDO], CUIT [CUIT], con domicilio en [domicilio] ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
+Esta Política describe cómo Vita, operada por Andre Albisu Lambertini, CUIT [CUIT], con domicilio en De los Extremeños 5069, Córdoba, Provincia de Córdoba ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
 
 Al utilizar la Plataforma, el Usuario declara haber leído y comprendido esta Política. Forma parte de los [Términos y Condiciones](./terminos-y-condiciones.md).
 
 ## 1. Responsable del Tratamiento
 
-Responsable: [NOMBRE Y APELLIDO]. Contacto en materia de privacidad: [correo de privacidad]. [Indicar si existe un responsable/referente de datos designado.]
+Responsable: Andre Albisu Lambertini. Contacto en materia de privacidad: vitaappar@gmail.com. [Indicar si existe un responsable/referente de datos designado.]
 
 ## 2. Qué Datos Recolectamos
 
@@ -77,7 +77,7 @@ Algunos de los proveedores mencionados pueden almacenar o procesar datos en serv
 
 ## 9. Derechos del Titular de los Datos
 
-Conforme a la Ley 25.326, el Usuario tiene derecho a **acceder** a sus datos, **rectificarlos**, **actualizarlos** y **suprimirlos**, así como a solicitar información sobre su tratamiento. Para ejercerlos, puede escribir a [correo de privacidad]. Vita responderá en los plazos legales.
+Conforme a la Ley 25.326, el Usuario tiene derecho a **acceder** a sus datos, **rectificarlos**, **actualizarlos** y **suprimirlos**, así como a solicitar información sobre su tratamiento. Para ejercerlos, puede escribir a vitaappar@gmail.com. Vita responderá en los plazos legales.
 
 La AAIP, órgano de control de la Ley 25.326, tiene la atribución de atender denuncias y reclamos de quienes vean afectados sus derechos. [Incluir la mención informativa que la normativa vigente requiera respecto de la AAIP.]
 
@@ -99,4 +99,4 @@ Vita puede actualizar esta Política. Los cambios sustanciales se notificarán p
 
 ## 14. Contacto
 
-Consultas o ejercicio de derechos: [correo de privacidad] — [NOMBRE Y APELLIDO], [domicilio].
+Consultas o ejercicio de derechos: vitaappar@gmail.com — Andre Albisu Lambertini, De los Extremeños 5069, Córdoba, Provincia de Córdoba.
