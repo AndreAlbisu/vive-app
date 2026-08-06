@@ -16,7 +16,8 @@
 - `id` (uuid, PK) — coincide con `auth.users.id`, pero **YA NO hay FK contra `auth.users`** (se dropeó el 06/08/2026, ver "Baja de cuenta" abajo). La integridad la sostiene el trigger de alta; la fila puede sobrevivir a la cuenta de auth.
 - `email`, `name`, `role` (coach | user), `avatar_url`, `birth_date`, `gender`, `nationality`
 - `accepted_terms` (bool), `push_token`, `created_at`
-- `deleted_at` (timestamptz, nullable) — no nulo = **lápida**: el usuario se dio de baja, la fila quedó vaciada de datos personales (`name = 'Usuario eliminado'`, resto en NULL) y la cuenta de `auth.users` ya no existe.
+- `deleted_at` (timestamptz, nullable) — no nulo = **lápida**: el usuario se dio de baja, la fila quedó vaciada de datos personales (`name = 'Usuario eliminado'`, el resto en NULL) y la cuenta de `auth.users` ya no existe.
+- ⚠️ **`email` es NOT NULL** (verificado en la primera baja real, 06/08/2026: `email: null` hacía fallar la anonimización). Por eso la lápida escribe un placeholder opaco `deleted-<uuid>@vita.invalid` en vez de NULL — un literal fijo chocaría contra el UNIQUE en la segunda baja, y `.invalid` es un TLD reservado que nunca resuelve. Efecto secundario deseable: **libera el email original** para que la persona pueda registrarse de nuevo.
 - Usuarios y coaches viven en la misma tabla, diferenciados por `role`
 
 #### Baja de cuenta (`delete-account`, 06/08/2026)
