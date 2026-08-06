@@ -23,6 +23,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { File } from 'expo-file-system';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 
@@ -207,6 +208,16 @@ export default function CoachProfileScreen() {
   async function saveBio() {
     if (!user) return;
     const trimmed = bioInput.trim();
+
+    // Anti-fuga: la presentación es pública, no puede ser un canal para derivar la
+    // relación fuera de la app (teléfono, redes, mail, links, CBU/transferencia).
+    if (trimmed && hasContactInfo(trimmed)) {
+      Alert.alert(
+        'Sacá los datos de contacto',
+        'Para tu seguridad y la de los usuarios, la presentación no puede incluir teléfono, redes, mail, links ni datos para pagar por fuera. Mantené la conversación y las reservas dentro de VIVE.',
+      );
+      return;
+    }
 
     setSavingBio(true);
     const { data, error } = await supabase
@@ -803,6 +814,17 @@ export default function CoachProfileScreen() {
           )}
         </View>
 
+        {/* Comisión decreciente — incentiva sostener la relación en la app (anti-fuga).
+            Sin IVA a propósito (depende de la figura fiscal, TBD). */}
+        <View style={s.commissionCard}>
+          <MaterialCommunityIcons name="trending-down" size={18} color={ViveColors.accent} />
+          <Text style={s.commissionText}>
+            <Text style={s.commissionStrong}>20%</Text> en las primeras 3 sesiones con cada persona y{' '}
+            <Text style={s.commissionStrong}>15%</Text> de la cuarta en adelante. El contador es por persona
+            y nunca se reinicia: cuanto más sostenés el vínculo con alguien, menos comisión pagás.
+          </Text>
+        </View>
+
         {/* ── Reseñas recibidas ─────────────────────────────── */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Reseñas recibidas</Text>
         {!reviewsLoaded ? null : reviews.length === 0 ? (
@@ -1194,6 +1216,29 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: '#87835C',
     lineHeight: 18,
+  },
+  commissionCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(86,94,50,0.06)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.12)',
+    padding: 14,
+    marginHorizontal: 20,
+    marginTop: 10,
+    gap: 10,
+  },
+  commissionText: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: '#87835C',
+    lineHeight: 18,
+  },
+  commissionStrong: {
+    fontFamily: ViveFonts.semibold,
+    color: '#565E32',
   },
 
   availBtn: {

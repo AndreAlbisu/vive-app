@@ -843,6 +843,20 @@ export default function SalaScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Re-reserva persistente: acceso fijo a reservar de nuevo con este coach,
+            no solo en la ventana de 24hs de la card post-sesión. Solo del lado del
+            usuario (recipientIsCoach = la otra parte es coach → puedo reservarle). */}
+        {recipientIsCoach && recipientProfile && (
+          <TouchableOpacity
+            style={styles.rebookPill}
+            onPress={handleReschedule}
+            activeOpacity={0.8}
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+            <MaterialCommunityIcons name="calendar-plus" size={15} color="#3A4F2A" />
+            <Text style={styles.rebookPillText}>Reservar</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={styles.menuBtn}
           onPress={() => setReportOpen(true)}
@@ -1251,6 +1265,22 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   menuBtn: { padding: 4 },
+  rebookPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(58,79,42,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(58,79,42,0.22)',
+  },
+  rebookPillText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 12.5,
+    color: '#3A4F2A',
+  },
   coachInfo: {
     flex: 1,
     flexDirection: 'row',
