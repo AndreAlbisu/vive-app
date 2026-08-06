@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Modal,
   Platform,
+  Alert,
 } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -131,7 +132,7 @@ function ReminderSheet({
   async function handleSave() {
     if (!user || days.length === 0 || saving) return;
     setSaving(true);
-    await saveReminder(user.id, {
+    const savedId = await saveReminder(user.id, {
       id: existing?.id,
       kind,
       ref: resourceRef,
@@ -142,14 +143,25 @@ function ReminderSheet({
       enabled: true,
     });
     setSaving(false);
+    // saveReminder devuelve null si el insert/update falló. Antes se cerraba la
+    // hoja igual → el usuario creía que quedó guardado sin estarlo. Ahora avisamos
+    // y dejamos la hoja abierta para reintentar.
+    if (!savedId) {
+      Alert.alert('No se pudo guardar', 'Revisá tu conexión y probá de nuevo');
+      return;
+    }
     onSaved();
   }
 
   async function handleDelete() {
     if (!user || !existing || saving) return;
     setSaving(true);
-    await deleteReminder(user.id, existing.id);
+    const ok = await deleteReminder(user.id, existing.id);
     setSaving(false);
+    if (!ok) {
+      Alert.alert('No se pudo borrar', 'Probá de nuevo en unos minutos');
+      return;
+    }
     onSaved();
   }
 

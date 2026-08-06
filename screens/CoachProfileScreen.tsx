@@ -769,7 +769,24 @@ export default function CoachProfileScreen() {
             </Text>
           </View>
           {mpConnected ? (
-            <MaterialCommunityIcons name="check-circle-outline" size={24} color={ViveColors.accent} />
+            <View style={s.mpConnectedRow}>
+              <MaterialCommunityIcons name="check-circle-outline" size={24} color={ViveColors.accent} />
+              {/* Reconectar = OAuth con sesión efímera (fuerza login limpio) → el
+                  callback hace upsert sobre coach_id y sobreescribe el token con la
+                  cuenta nueva. No hace falta desconectar antes. */}
+              <TouchableOpacity
+                onPress={connectMercadoPago}
+                disabled={connectingMp || noCoachProfile}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                {connectingMp ? (
+                  <ActivityIndicator size="small" color="#009EE3" />
+                ) : (
+                  <Text style={s.mpSwitchText}>Cambiar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           ) : (
             <TouchableOpacity
               style={s.mpConnectBtn}
@@ -1292,6 +1309,16 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   mpConnectBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13,
+    color: '#009EE3',
+  },
+  mpConnectedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  mpSwitchText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 13,
     color: '#009EE3',

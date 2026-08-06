@@ -27,6 +27,7 @@ import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import ReportSheet from '@/components/ReportSheet';
 import { AppBg } from '@/components/ui/AppBg';
 import { sendPushNotification } from '@/lib/notifications';
 import { isCancelLate } from '@/lib/bookingHelpers';
@@ -162,6 +163,7 @@ export default function SalaScreen() {
   const [salaId, setSalaId] = useState<string | null>(null);
   const [recipientId, setRecipientId] = useState<string | null>(null);
   const [recipientIsCoach, setRecipientIsCoach] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [recipientProfile, setRecipientProfile] = useState<RecipientProfile | null>(null);
   const [activeBooking, setActiveBooking] = useState<ActiveBooking>(null);
   const [hasSessionHistory, setHasSessionHistory] = useState(false);
@@ -840,6 +842,14 @@ export default function SalaScreen() {
             )}
           </View>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuBtn}
+          onPress={() => setReportOpen(true)}
+          disabled={!recipientId}
+          hitSlop={8}>
+          <MaterialCommunityIcons name="dots-vertical" size={22} color="#565E32" />
+        </TouchableOpacity>
       </Animated.View>
 
       <View style={styles.headerDivider} />
@@ -1214,6 +1224,14 @@ export default function SalaScreen() {
         </View>
       </Modal>
 
+      <ReportSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        reportedName={recipientProfile?.name ?? 'esta persona'}
+        reportedId={recipientId ?? ''}
+        salaId={salaId}
+      />
+
     </SafeAreaView>
     </AppBg>
   );
@@ -1232,6 +1250,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backBtn: { padding: 4 },
+  menuBtn: { padding: 4 },
   coachInfo: {
     flex: 1,
     flexDirection: 'row',

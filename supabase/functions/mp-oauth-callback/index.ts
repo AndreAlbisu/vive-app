@@ -1,8 +1,5 @@
 // mp-oauth-callback — el coach conecta su cuenta de MercadoPago (OAuth marketplace).
 //
-// SCAFFOLD v1 — estructura lista; la llamada a MP está marcada TODO y hay que
-// verificarla contra la doc vigente de MercadoPago antes de producción.
-//
 // Flujo:
 //   1. La app abre (WebBrowser) la URL de authorize de MP con:
 //        redirect_uri = URL de esta función · state = identificador del coach
