@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "vive-app",
-    "slug": "vive-app",
+    "name": "Vita",
+    "slug": "vita",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
