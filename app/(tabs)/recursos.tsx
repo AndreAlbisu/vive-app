@@ -570,7 +570,7 @@ function ToolCard({ tool }: { tool: Tool }) {
 }
 
 // ─── ToolsCarousel ────────────────────────────────────────────────────────────
-// Todas las tools de VITA en una fila fija (no scrollea — son 4, entran enteras).
+// Todas las tools de Vita en una fila fija (no scrollea — son 4, entran enteras).
 // El orden preserva la intención de TOOL_GROUPS (calma → reflexión).
 function ToolsCarousel() {
   const seen = new Set<string>();

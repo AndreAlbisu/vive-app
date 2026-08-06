@@ -58,7 +58,7 @@ export default function RecursosGuardadosScreen() {
     const ids = [...new Set((saved ?? []).map(r => r.resource_id as string))];
     if (ids.length === 0) { setItems([]); setLoading(false); return; }
 
-    // slugs = tools de VITA; uuids = recursos de coaches
+    // slugs = tools de Vita; uuids = recursos de coaches
     const coachIds = ids.filter(id => !VITA_TOOL_MAP[id]);
     let coachById = new Map<string, any>();
     if (coachIds.length > 0) {

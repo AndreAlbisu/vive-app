@@ -56,7 +56,7 @@ function formatAudioTime(seconds: number) {
   return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 }
 
-// Paleta del lector — misma que LecturasScreen (la tool hardcodeada de VITA)
+// Paleta del lector — misma que LecturasScreen (la tool hardcodeada de Vita)
 const FOREST      = '#3A4F2A';
 const FOREST_SOFT = '#6B7A56';
 const CREAM_LIGHT = '#F3EEDF';
@@ -460,7 +460,7 @@ export default function ResourceDetailScreen() {
             )}
             <View style={s.authorText}>
               <Text style={s.authorName}>Por {resource.coachName}</Text>
-              <Text style={s.authorHint}>{resource.coachName.split(' ')[0]} comparte esto con la comunidad de VITA</Text>
+              <Text style={s.authorHint}>{resource.coachName.split(' ')[0]} comparte esto con la comunidad de Vita</Text>
             </View>
             <View style={s.authorLink}>
               <Text style={s.authorLinkText}>Ver perfil</Text>

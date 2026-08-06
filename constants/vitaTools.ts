@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 
 /**
- * Catálogo de las herramientas nativas de VITA (las hardcodeadas de la
+ * Catálogo de las herramientas nativas de Vita (las hardcodeadas de la
  * pantalla Recursos). Fuente compartida para el inicio (pinneados, íconos
  * MaterialCommunityIcons) y la pantalla de guardados (íconos Ionicons).
  * La clave `id` es el slug que se guarda en saved_resources / pinned_resources.

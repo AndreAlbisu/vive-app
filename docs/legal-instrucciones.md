@@ -1,4 +1,4 @@
-# Instrucciones — Documentos legales de VIVE
+# Instrucciones — Documentos legales de Vita
 
 Guía operativa (no legal) para llevar los borradores de **Términos y Condiciones**
 y **Política de Privacidad** de "borrador" a "publicado". Leé esto antes de tocar
@@ -21,7 +21,7 @@ los otros dos archivos.
 ### Paso 1 — Completar los placeholders `[ ]`
 Datos de la empresa y de contacto que solo tenés vos. Checklist consolidado (ambos documentos):
 
-- [ ] **Razón social** (nombre legal de la empresa/persona que opera VIVE)
+- [ ] **Razón social** (nombre legal de la empresa/persona que opera Vita)
 - [ ] **CUIT**
 - [ ] **Domicilio legal**
 - [ ] **Correo de contacto legal** (T&C)
@@ -32,7 +32,7 @@ Datos de la empresa y de contacto que solo tenés vos. Checklist consolidado (am
 ### Paso 2 — Resolver las decisiones de producto/fiscales pendientes
 No son legales puras, son tuyas (con tu contador/abogado):
 
-- [ ] **IVA / figura fiscal** (T&C §8.4) — depende de si VIVE es monotributo o RI. Esto también afecta el cálculo de la comisión en el código, así que definilo de una.
+- [ ] **IVA / figura fiscal** (T&C §8.4) — depende de si Vita es monotributo o RI. Esto también afecta el cálculo de la comisión en el código, así que definilo de una.
 - [ ] **Garantía de primera sesión** (T&C §9.3) — confirmar si se mantiene y su alcance exacto (reintegro vs. nueva sesión, plazos, condiciones).
 - [ ] **Comisión** (T&C §8.3) — confirmar los números (hoy: 20% la primera sesión con cada persona / 15% desde la 2da) y si mencionás la promo fundador.
 - [ ] **Antelación mínima de cancelación** (T&C §9.1) — el número de horas exacto.

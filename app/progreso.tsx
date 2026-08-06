@@ -75,7 +75,7 @@ export default function ProgresoScreen() {
   const { user } = useAuth();
   const [tab, setTab] = useState<'hoy' | 'mes'>('hoy');
 
-  // ── Hábitos (rutina de prácticas VITA) ──────────────────────────────────────
+  // ── Hábitos (rutina de prácticas Vita) ──────────────────────────────────────
   const [habits, setHabits] = useState<string[]>([]);       // tool_ids en orden
   const [habitsLoading, setHabitsLoading] = useState(true);
   const [habitsEdit, setHabitsEdit] = useState(false);
@@ -228,7 +228,7 @@ export default function ProgresoScreen() {
       <SafeAreaView style={s.safe} edges={['top']}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
-          {/* ── Header: VITA + toggle ── */}
+          {/* ── Header: Vita + toggle ── */}
           <VitaHeader right={<ProgressToggle value={tab} onChange={setTab} />} />
 
           {/* ── Atrás ── */}

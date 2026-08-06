@@ -327,7 +327,7 @@ export default function RegisterScreen() {
                     >
                       Política de privacidad
                     </Text>
-                    {' de VITA'}
+                    {' de Vita'}
                   </Text>
                 </TouchableOpacity>
 

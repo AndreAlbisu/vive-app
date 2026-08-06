@@ -7,7 +7,7 @@ import { ViveColors } from '@/constants/theme';
 
 /**
  * Botón de "fijar al inicio" (pinned_resources, tope 4).
- * Reutilizable en cualquier pantalla de recurso: las tools de VITA pasan su
+ * Reutilizable en cualquier pantalla de recurso: las tools de Vita pasan su
  * slug ('ruido', 'diario', ...), los recursos de coaches su uuid.
  * Pensado para ir en el header, reemplazando el spacer de ancho 60.
  * Ícono bookmark (antes pin) — unificado con el vocabulario de "guardar" que

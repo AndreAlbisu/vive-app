@@ -23,7 +23,7 @@ function fmtTime(hour: number, minute: number): string {
 
 /**
  * Botón de campanita para configurar un recordatorio propio (resource_reminders).
- * Reutilizable en tools de VITA (kind='tool', ref=slug) y en recursos de
+ * Reutilizable en tools de Vita (kind='tool', ref=slug) y en recursos de
  * coaches (kind='coach_resource', ref=uuid de coach_resources). Mismo criterio
  * que PinButton: pensado para el header, autocontenido (carga/toggle/sheet).
  */

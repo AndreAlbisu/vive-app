@@ -1,5 +1,5 @@
 > ⚠️ **BORRADOR — REQUIERE REVISIÓN LEGAL PROFESIONAL. NO PUBLICAR SIN ELLA.**
-> Primer borrador estructurado para VIVE. Debe ser revisado y validado por un/a
+> Primer borrador estructurado para Vita. Debe ser revisado y validado por un/a
 > abogado/a matriculado/a en Argentina con experiencia en protección de datos antes
 > de su publicación. El tratamiento de **datos sensibles** (estado de ánimo, diario,
 > contenido de mensajes que pueda revelar información de salud) exige recaudos
@@ -8,12 +8,12 @@
 > "etiquetas de privacidad" (Apple) y el "formulario de seguridad de los datos"
 > (Google) con lo declarado aquí.
 
-# Política de Privacidad — VIVE
+# Política de Privacidad — Vita
 
 **Última actualización:** [fecha]
 **Vigencia a partir de:** [fecha]
 
-Esta Política describe cómo VIVE, operada por [RAZÓN SOCIAL], CUIT [•], con domicilio en [•] ("**VIVE**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
+Esta Política describe cómo Vita, operada por [RAZÓN SOCIAL], CUIT [•], con domicilio en [•] ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
 
 Al utilizar la Plataforma, el Usuario declara haber leído y comprendido esta Política. Forma parte de los [Términos y Condiciones](./terminos-y-condiciones.md).
 
@@ -30,7 +30,7 @@ Responsable: [RAZÓN SOCIAL]. Contacto en materia de privacidad: [correo de priv
 
 **2.2. Datos de la operación del servicio:**
 - **Reservas y Sesiones:** historial de reservas, estados, fechas y horarios.
-- **Pagos:** VIVE procesa los pagos a través de Mercado Pago. **VIVE no almacena los datos completos de las tarjetas.** Conserva información de la transacción necesaria para operar (por ejemplo, identificadores de pago, estado, montos).
+- **Pagos:** Vita procesa los pagos a través de Mercado Pago. **Vita no almacena los datos completos de las tarjetas.** Conserva información de la transacción necesaria para operar (por ejemplo, identificadores de pago, estado, montos).
 
 **2.3. Datos técnicos y de uso:**
 - Identificadores de dispositivo y **token de notificaciones push**; datos de uso y eventos de la aplicación (analítica); datos técnicos de conexión.
@@ -49,9 +49,9 @@ El tratamiento se basa en el consentimiento del Usuario, en la ejecución de la 
 
 ## 6. Con Quién Compartimos los Datos
 
-VIVE **no vende** los datos personales de los Usuarios. Los compartimos únicamente con:
+Vita **no vende** los datos personales de los Usuarios. Los compartimos únicamente con:
 
-- **Proveedores que procesan datos por cuenta de VIVE (encargados de tratamiento):**
+- **Proveedores que procesan datos por cuenta de Vita (encargados de tratamiento):**
   - **Supabase** — infraestructura de base de datos, autenticación y almacenamiento.
   - **Mercado Pago** — procesamiento de pagos (sujeto a sus propias políticas).
   - **[Proveedor de videollamadas, p. ej. Daily.co]** — realización de las videollamadas de las Sesiones.
@@ -65,19 +65,19 @@ VIVE **no vende** los datos personales de los Usuarios. Los compartimos únicame
 
 ## 7. Transferencia Internacional de Datos
 
-Algunos de los proveedores mencionados pueden almacenar o procesar datos en servidores ubicados fuera de la Argentina. En dichos casos, VIVE procurará que existan garantías adecuadas conforme a la Ley 25.326 y a las normas de la AAIP sobre transferencia internacional de datos. [Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]
+Algunos de los proveedores mencionados pueden almacenar o procesar datos en servidores ubicados fuera de la Argentina. En dichos casos, Vita procurará que existan garantías adecuadas conforme a la Ley 25.326 y a las normas de la AAIP sobre transferencia internacional de datos. [Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]
 
 ## 8. Seguridad de los Datos
 
-8.1. VIVE aplica medidas técnicas y organizativas razonables para proteger los datos, incluyendo controles de acceso a nivel de base de datos que restringen el acceso a la información de cada Usuario.
+8.1. Vita aplica medidas técnicas y organizativas razonables para proteger los datos, incluyendo controles de acceso a nivel de base de datos que restringen el acceso a la información de cada Usuario.
 
-8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que VIVE podría técnicamente acceder a su contenido. VIVE se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales. [Mantener esta redacción consistente con la realidad técnica del producto; no afirmar cifrado E2E mientras no exista.]
+8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales. [Mantener esta redacción consistente con la realidad técnica del producto; no afirmar cifrado E2E mientras no exista.]
 
-8.3. Ningún sistema es completamente seguro; VIVE no puede garantizar seguridad absoluta.
+8.3. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.
 
 ## 9. Derechos del Titular de los Datos
 
-Conforme a la Ley 25.326, el Usuario tiene derecho a **acceder** a sus datos, **rectificarlos**, **actualizarlos** y **suprimirlos**, así como a solicitar información sobre su tratamiento. Para ejercerlos, puede escribir a [correo de privacidad]. VIVE responderá en los plazos legales.
+Conforme a la Ley 25.326, el Usuario tiene derecho a **acceder** a sus datos, **rectificarlos**, **actualizarlos** y **suprimirlos**, así como a solicitar información sobre su tratamiento. Para ejercerlos, puede escribir a [correo de privacidad]. Vita responderá en los plazos legales.
 
 La AAIP, órgano de control de la Ley 25.326, tiene la atribución de atender denuncias y reclamos de quienes vean afectados sus derechos. [Incluir la mención informativa que la normativa vigente requiera respecto de la AAIP.]
 
@@ -91,11 +91,11 @@ La Plataforma está dirigida a personas mayores de 18 años. No recolectamos del
 
 ## 12. Notificaciones Push
 
-Con el consentimiento del Usuario (otorgado a nivel del sistema operativo del dispositivo), VIVE envía notificaciones relacionadas con el servicio. El Usuario puede desactivarlas desde la configuración de su dispositivo.
+Con el consentimiento del Usuario (otorgado a nivel del sistema operativo del dispositivo), Vita envía notificaciones relacionadas con el servicio. El Usuario puede desactivarlas desde la configuración de su dispositivo.
 
 ## 13. Cambios a esta Política
 
-VIVE puede actualizar esta Política. Los cambios sustanciales se notificarán por medios razonables. La versión vigente estará siempre disponible en la Plataforma.
+Vita puede actualizar esta Política. Los cambios sustanciales se notificarán por medios razonables. La versión vigente estará siempre disponible en la Plataforma.
 
 ## 14. Contacto
 

@@ -55,7 +55,7 @@ function ProposalCard({ proposal }: { proposal: Proposal }) {
       <Text style={styles.cardDate}>Enviada el {formatDate(proposal.created_at)}</Text>
       {proposal.reviewer_notes && (proposal.status === 'necesita_ajustes' || proposal.status === 'descartada') && (
         <View style={styles.notesBox}>
-          <Text style={styles.notesLabel}>Notas de VITA</Text>
+          <Text style={styles.notesLabel}>Notas de Vita</Text>
           <Text style={styles.notesText}>{proposal.reviewer_notes}</Text>
         </View>
       )}

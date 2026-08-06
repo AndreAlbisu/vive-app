@@ -60,7 +60,7 @@ export default function CoachLoginScreen() {
       await signOut();
       Alert.alert(
         'Solicitud en revisión',
-        'Ya enviaste tu solicitud para ser profesional. Te avisaremos cuando VITA la apruebe',
+        'Ya enviaste tu solicitud para ser profesional. Te avisaremos cuando Vita la apruebe',
         [{ text: 'OK', onPress: () => router.back() }],
       );
       return;
@@ -212,7 +212,7 @@ export default function CoachLoginScreen() {
             </TouchableOpacity>
 
             <Text style={styles.note}>
-              Podés usar una cuenta existente de VITA o crear una nueva. El rol de profesional se activa cuando VITA aprueba tu solicitud.
+              Podés usar una cuenta existente de Vita o crear una nueva. El rol de profesional se activa cuando Vita aprueba tu solicitud.
             </Text>
           </Animated.View>
         </ScrollView>

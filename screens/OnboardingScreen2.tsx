@@ -20,7 +20,7 @@ const OPTIONS: {
   {
     id: 'explore',
     title: 'Quiero explorar la app',
-    desc: 'Ver todo lo que ofrece VITA',
+    desc: 'Ver todo lo que ofrece Vita',
     icon: 'map-outline',
     accent: '#E8743B',
     accentLight: 'rgba(232, 116, 59, 0.30)',

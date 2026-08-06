@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { MOOD_RESOURCES } from '@/constants/moodResources';
 
 // Vocabulario de ejes compartido con resource_axes (recursos de coach).
-// Es lo que permite puntuar tools de VITA y recursos de coach en el mismo espacio.
+// Es lo que permite puntuar tools de Vita y recursos de coach en el mismo espacio.
 export type Axis = 'cuerpo' | 'mente' | 'alma';
 
 // Recurso de coach ya cargado en la pantalla, con sus ejes (resource_axes).
@@ -17,7 +17,7 @@ export type CoachResourceLite = {
 
 export type MoodLite = { mood_id: number; mood_label: string };
 
-// tool de VITA → ejes. Etiqueta el hueco que hoy no existe en las tools.
+// tool de Vita → ejes. Etiqueta el hueco que hoy no existe en las tools.
 const TOOL_AXES: Record<string, Axis[]> = {
   respiracion: ['cuerpo', 'mente'],
   anclaje:     ['cuerpo', 'mente'],
@@ -99,7 +99,7 @@ export function useRecommendedResource(params: {
   }, [userId]);
 
   const reco = useMemo<Reco | null>(() => {
-    // 1. ÁNIMO DE HOY (lidera) — recurso de VITA según el estado.
+    // 1. ÁNIMO DE HOY (lidera) — recurso de Vita según el estado.
     if (todayMood) {
       const cfg = MOOD_RESOURCES[todayMood.mood_id];
       if (cfg) {
