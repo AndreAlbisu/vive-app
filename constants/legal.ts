@@ -9,7 +9,7 @@ export const TERMS_MD = `# Términos y Condiciones de Uso — Vita
 
 ## 1. Aceptación de los Términos
 
-Estos Términos y Condiciones de Uso (los "**Términos**") regulan el acceso y uso de la aplicación móvil y demás servicios digitales de Vita (la "**Plataforma**"), operada por Andre Albisu Lambertini, CUIT [CUIT], con domicilio en De los Extremeños 5069, Córdoba, Provincia de Córdoba ("**Vita**", "**nosotros**").
+Estos Términos y Condiciones de Uso (los "**Términos**") regulan el acceso y uso de la aplicación móvil y demás servicios digitales de Vita (la "**Plataforma**"), operada por Andre Albisu Lambertini, CUIT 20-46034087-0, con domicilio en De los Extremeños 5069, Córdoba, Provincia de Córdoba ("**Vita**", "**nosotros**").
 
 Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, la persona usuaria (el "**Usuario**") declara haber leído, comprendido y aceptado estos Términos y la Política de Privacidad, que forma parte integrante de este documento. Si el Usuario no está de acuerdo, debe abstenerse de utilizar la Plataforma.
 
@@ -184,7 +184,7 @@ export const PRIVACY_MD = `# Política de Privacidad — Vita
 **Última actualización:** [fecha]
 **Vigencia a partir de:** [fecha]
 
-Esta Política describe cómo Vita, operada por Andre Albisu Lambertini, CUIT [CUIT], con domicilio en De los Extremeños 5069, Córdoba, Provincia de Córdoba ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
+Esta Política describe cómo Vita, operada por Andre Albisu Lambertini, CUIT 20-46034087-0, con domicilio en De los Extremeños 5069, Córdoba, Provincia de Córdoba ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
 
 Al utilizar la Plataforma, el Usuario declara haber leído y comprendido esta Política. Forma parte de los Términos y Condiciones.
 
@@ -274,7 +274,7 @@ Consultas o ejercicio de derechos: vitaappar@gmail.com — Andre Albisu Lamberti
 `;
 
 /** Placeholders sin completar detectados al generar este archivo. */
-export const LEGAL_PLACEHOLDERS: string[] = ["[CUIT]","[fecha]"];
+export const LEGAL_PLACEHOLDERS: string[] = ["[fecha]"];
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la
