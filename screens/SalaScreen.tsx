@@ -25,7 +25,8 @@ import * as Calendar from 'expo-calendar';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
-import { supabase } from '@/lib/supabase';
+import { supabase, registrarEvento } from '@/lib/supabase';
+import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { useAuth } from '@/context/AuthContext';
 import ReportSheet from '@/components/ReportSheet';
 import SessionNotesSheet from '@/components/SessionNotesSheet';
@@ -759,6 +760,31 @@ export default function SalaScreen() {
     if (!text || !salaId || !user) return;
     if (activeBooking?.status === 'pendiente') return;
 
+    // Anti-fuga #5: si el mensaje parece traer datos de contacto o pago externo,
+    // advertir antes de enviar (no se bloquea duro: en una charla hay más falsos
+    // positivos que en la bio, y a veces es legítimo). Se registra el evento con el
+    // desenlace para medir cuánto pasa y si la advertencia disuade.
+    if (hasContactInfo(text)) {
+      const role = isCurrentUserCoach ? 'coach' : 'user';
+      Alert.alert(
+        '¿Compartir datos de contacto?',
+        'Por tu seguridad, mantené la conversación y los pagos dentro de VIVE. Si arreglás por fuera, perdés las protecciones de la app.',
+        [
+          { text: 'Cancelar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { role, sent_anyway: false }) },
+          {
+            text: 'Enviar igual',
+            style: 'destructive',
+            onPress: () => { registrarEvento('mensaje_contacto_detectado', { role, sent_anyway: true }); doSendMessage(text); },
+          },
+        ],
+      );
+      return;
+    }
+    doSendMessage(text);
+  }
+
+  async function doSendMessage(text: string) {
+    if (!salaId || !user) return;
     const encrypted = encryptMessage(text);
     const optimisticId = `opt_${Date.now()}`;
     const optimistic: Message = { id: optimisticId, text: encrypted, sender: 'user', sender_type: 'user', time: nowTime() };

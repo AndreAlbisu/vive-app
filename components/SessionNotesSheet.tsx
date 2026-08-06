@@ -15,6 +15,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ViveFonts } from '@/constants/theme';
 import { getSessionNotes, saveSessionNote } from '@/lib/sessionNotes';
+import { sheetStyles } from '@/components/ui/sheetStyles';
 
 interface Props {
   visible: boolean;
@@ -59,11 +60,11 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={s.flex}>
-        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onClose} />
+      <View style={sheetStyles.flex}>
+        <TouchableOpacity style={sheetStyles.overlay} activeOpacity={1} onPress={onClose} />
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={s.sheet}>
-            <View style={s.handle} />
+          <View style={sheetStyles.sheet}>
+            <View style={sheetStyles.handle} />
             <Text style={s.title}>Notas de la sesión</Text>
 
             {loading ? (
@@ -115,20 +116,6 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1 },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
-  sheet: {
-    backgroundColor: '#F7EFE4',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 36,
-  },
-  handle: {
-    width: 36, height: 4, borderRadius: 2,
-    backgroundColor: 'rgba(86,94,50,0.20)',
-    alignSelf: 'center', marginBottom: 16,
-  },
   title: {
     fontFamily: ViveFonts.frauncesSerif,
     fontSize: 20, color: '#3A4F2A', marginBottom: 18,
