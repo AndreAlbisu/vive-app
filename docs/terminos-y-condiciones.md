@@ -14,7 +14,7 @@
 
 ## 1. Aceptación de los Términos
 
-Estos Términos y Condiciones de Uso (los "**Términos**") regulan el acceso y uso de la aplicación móvil y demás servicios digitales de Vita (la "**Plataforma**"), operada por [RAZÓN SOCIAL], CUIT [•], con domicilio en [•] ("**Vita**", "**nosotros**").
+Estos Términos y Condiciones de Uso (los "**Términos**") regulan el acceso y uso de la aplicación móvil y demás servicios digitales de Vita (la "**Plataforma**"), operada por [NOMBRE Y APELLIDO], CUIT [CUIT], con domicilio en [domicilio] ("**Vita**", "**nosotros**").
 
 Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, la persona usuaria (el "**Usuario**") declara haber leído, comprendido y aceptado estos Términos y la [Política de Privacidad](./politica-de-privacidad.md), que forma parte integrante de este documento. Si el Usuario no está de acuerdo, debe abstenerse de utilizar la Plataforma.
 
@@ -73,11 +73,15 @@ Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, l
 
 8.2. **Procesamiento de pagos.** Los pagos se procesan a través de Mercado Pago mediante un modelo de marketplace (pago dividido). El Cliente autoriza el cobro al momento de reservar. Cada Profesional conecta su propia cuenta de Mercado Pago para recibir el pago correspondiente. Vita no almacena datos completos de tarjetas; el procesamiento se rige también por los términos de Mercado Pago.
 
-8.3. **Comisión de la Plataforma.** Vita percibe una comisión sobre el precio de cada Sesión, retenida automáticamente en el momento del pago. La comisión vigente es: [20]% sobre la primera Sesión completada de cada vínculo Cliente–Profesional y [15]% a partir de la segunda, de manera permanente. Vita puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. Vita puede modificar sus comisiones a futuro, notificando con antelación razonable.
+8.3. **Comisión de la Plataforma.** Vita percibe una comisión sobre el precio de cada Sesión, retenida automáticamente en el momento del pago. La comisión vigente es: **20%** sobre la primera Sesión completada de cada vínculo Cliente–Profesional y **15%** a partir de la segunda, de manera permanente. Vita puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. Vita puede modificar sus comisiones a futuro, notificando con antelación razonable.
 
-8.4. **Impuestos.** El tratamiento impositivo (incluido el IVA, de corresponder) se rige por la normativa aplicable y por la condición fiscal de Vita y de los Profesionales. [PENDIENTE DE DEFINIR según figura fiscal de Vita — revisar con contador/abogado antes de publicar.]
+8.4. **Impuestos.** Vita opera bajo el **Régimen Simplificado para Pequeños Contribuyentes (Monotributo)**. En consecuencia, los comprobantes que emite son **facturas tipo C, que no discriminan IVA**, y la comisión indicada en 8.3 es el importe total que percibe Vita por su servicio de intermediación, sin adicionales impositivos.
 
-8.5. **Liberación de fondos.** La liberación de los fondos al Profesional puede estar sujeta a plazos operativos del procesador de pagos.
+8.5. **Situación fiscal del Profesional.** Cada Profesional es el único responsable de su propia situación fiscal y de emitir al Cliente los comprobantes que correspondan por la Sesión. Vita no emite comprobantes por la Sesión —que es una prestación del Profesional al Cliente— sino únicamente por su comisión, y no actúa como agente de retención o percepción. Las retenciones e impuestos que aplique el procesador de pagos sobre los fondos del Profesional se rigen por las condiciones de dicho procesador y por la normativa aplicable.
+
+8.6. **Cambio de condición fiscal.** Si Vita modifica su condición frente a los impuestos, informará con antelación razonable cualquier cambio que afecte el importe de la comisión.
+
+8.7. **Liberación de fondos.** La liberación de los fondos al Profesional puede estar sujeta a plazos operativos del procesador de pagos.
 
 ## 9. Cancelaciones, Reembolsos y Garantía
 
@@ -177,4 +181,4 @@ El Usuario puede dar de baja su cuenta en cualquier momento. Vita puede suspende
 
 ## 24. Contacto
 
-Ante consultas sobre estos Términos: [correo de contacto legal] — [RAZÓN SOCIAL], [domicilio].
+Ante consultas sobre estos Términos: [correo de contacto legal] — [NOMBRE Y APELLIDO], [domicilio].

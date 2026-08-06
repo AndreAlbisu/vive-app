@@ -9,7 +9,7 @@ export const TERMS_MD = `# Términos y Condiciones de Uso — Vita
 
 ## 1. Aceptación de los Términos
 
-Estos Términos y Condiciones de Uso (los "**Términos**") regulan el acceso y uso de la aplicación móvil y demás servicios digitales de Vita (la "**Plataforma**"), operada por [RAZÓN SOCIAL], CUIT [•], con domicilio en [•] ("**Vita**", "**nosotros**").
+Estos Términos y Condiciones de Uso (los "**Términos**") regulan el acceso y uso de la aplicación móvil y demás servicios digitales de Vita (la "**Plataforma**"), operada por [NOMBRE Y APELLIDO], CUIT [CUIT], con domicilio en [domicilio] ("**Vita**", "**nosotros**").
 
 Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, la persona usuaria (el "**Usuario**") declara haber leído, comprendido y aceptado estos Términos y la Política de Privacidad, que forma parte integrante de este documento. Si el Usuario no está de acuerdo, debe abstenerse de utilizar la Plataforma.
 
@@ -68,11 +68,15 @@ Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, l
 
 8.2. **Procesamiento de pagos.** Los pagos se procesan a través de Mercado Pago mediante un modelo de marketplace (pago dividido). El Cliente autoriza el cobro al momento de reservar. Cada Profesional conecta su propia cuenta de Mercado Pago para recibir el pago correspondiente. Vita no almacena datos completos de tarjetas; el procesamiento se rige también por los términos de Mercado Pago.
 
-8.3. **Comisión de la Plataforma.** Vita percibe una comisión sobre el precio de cada Sesión, retenida automáticamente en el momento del pago. La comisión vigente es: [20]% sobre la primera Sesión completada de cada vínculo Cliente–Profesional y [15]% a partir de la segunda, de manera permanente. Vita puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. Vita puede modificar sus comisiones a futuro, notificando con antelación razonable.
+8.3. **Comisión de la Plataforma.** Vita percibe una comisión sobre el precio de cada Sesión, retenida automáticamente en el momento del pago. La comisión vigente es: **20%** sobre la primera Sesión completada de cada vínculo Cliente–Profesional y **15%** a partir de la segunda, de manera permanente. Vita puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. Vita puede modificar sus comisiones a futuro, notificando con antelación razonable.
 
-8.4. **Impuestos.** El tratamiento impositivo (incluido el IVA, de corresponder) se rige por la normativa aplicable y por la condición fiscal de Vita y de los Profesionales. [PENDIENTE DE DEFINIR según figura fiscal de Vita — revisar con contador/abogado antes de publicar.]
+8.4. **Impuestos.** Vita opera bajo el **Régimen Simplificado para Pequeños Contribuyentes (Monotributo)**. En consecuencia, los comprobantes que emite son **facturas tipo C, que no discriminan IVA**, y la comisión indicada en 8.3 es el importe total que percibe Vita por su servicio de intermediación, sin adicionales impositivos.
 
-8.5. **Liberación de fondos.** La liberación de los fondos al Profesional puede estar sujeta a plazos operativos del procesador de pagos.
+8.5. **Situación fiscal del Profesional.** Cada Profesional es el único responsable de su propia situación fiscal y de emitir al Cliente los comprobantes que correspondan por la Sesión. Vita no emite comprobantes por la Sesión —que es una prestación del Profesional al Cliente— sino únicamente por su comisión, y no actúa como agente de retención o percepción. Las retenciones e impuestos que aplique el procesador de pagos sobre los fondos del Profesional se rigen por las condiciones de dicho procesador y por la normativa aplicable.
+
+8.6. **Cambio de condición fiscal.** Si Vita modifica su condición frente a los impuestos, informará con antelación razonable cualquier cambio que afecte el importe de la comisión.
+
+8.7. **Liberación de fondos.** La liberación de los fondos al Profesional puede estar sujeta a plazos operativos del procesador de pagos.
 
 ## 9. Cancelaciones, Reembolsos y Garantía
 
@@ -172,7 +176,7 @@ El Usuario puede dar de baja su cuenta en cualquier momento. Vita puede suspende
 
 ## 24. Contacto
 
-Ante consultas sobre estos Términos: [correo de contacto legal] — [RAZÓN SOCIAL], [domicilio].
+Ante consultas sobre estos Términos: [correo de contacto legal] — [NOMBRE Y APELLIDO], [domicilio].
 `;
 
 export const PRIVACY_MD = `# Política de Privacidad — Vita
@@ -180,13 +184,13 @@ export const PRIVACY_MD = `# Política de Privacidad — Vita
 **Última actualización:** [fecha]
 **Vigencia a partir de:** [fecha]
 
-Esta Política describe cómo Vita, operada por [RAZÓN SOCIAL], CUIT [•], con domicilio en [•] ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
+Esta Política describe cómo Vita, operada por [NOMBRE Y APELLIDO], CUIT [CUIT], con domicilio en [domicilio] ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
 
 Al utilizar la Plataforma, el Usuario declara haber leído y comprendido esta Política. Forma parte de los Términos y Condiciones.
 
 ## 1. Responsable del Tratamiento
 
-Responsable: [RAZÓN SOCIAL]. Contacto en materia de privacidad: [correo de privacidad]. [Indicar si existe un responsable/referente de datos designado.]
+Responsable: [NOMBRE Y APELLIDO]. Contacto en materia de privacidad: [correo de privacidad]. [Indicar si existe un responsable/referente de datos designado.]
 
 ## 2. Qué Datos Recolectamos
 
@@ -221,14 +225,14 @@ Vita **no vende** los datos personales de los Usuarios. Los compartimos únicame
 - **Proveedores que procesan datos por cuenta de Vita (encargados de tratamiento):**
   - **Supabase** — infraestructura de base de datos, autenticación y almacenamiento.
   - **Mercado Pago** — procesamiento de pagos (sujeto a sus propias políticas).
-  - **[Proveedor de videollamadas, p. ej. Daily.co]** — realización de las videollamadas de las Sesiones.
+  - **Daily.co** — realización de las videollamadas de las Sesiones.
   - **Expo / proveedor de notificaciones push** — envío de notificaciones.
-  - **[Proveedor de analítica]** — métricas de uso de la aplicación.
+- **Analítica:** Vita **no utiliza proveedores de analítica de terceros**. Las métricas de uso se registran en la propia base de datos de Vita (alojada en Supabase) y no se comparten con terceros con fines publicitarios ni comerciales.
 - **Otros Usuarios:** la información necesaria para la interacción (por ejemplo, el perfil del Profesional es visible para los Clientes; el nombre/foto del Cliente puede ser visible para el Profesional con quien tiene una Sesión).
 - **Autoridades competentes:** cuando exista obligación legal o requerimiento válido.
 - **En caso de reorganización societaria** (fusión, adquisición), notificando cuando corresponda.
 
-[Completar la lista de proveedores con los efectivamente utilizados y revisar los acuerdos de tratamiento con cada uno.]
+La lista anterior es la de los proveedores efectivamente utilizados, verificada contra el código el 06/08/2026. [Pendiente: revisar el acuerdo de tratamiento de datos con cada uno.]
 
 ## 7. Transferencia Internacional de Datos
 
@@ -266,11 +270,11 @@ Vita puede actualizar esta Política. Los cambios sustanciales se notificarán p
 
 ## 14. Contacto
 
-Consultas o ejercicio de derechos: [correo de privacidad] — [RAZÓN SOCIAL], [domicilio].
+Consultas o ejercicio de derechos: [correo de privacidad] — [NOMBRE Y APELLIDO], [domicilio].
 `;
 
 /** Placeholders sin completar detectados al generar este archivo. */
-export const LEGAL_PLACEHOLDERS: string[] = ["[15]","[20]","[Proveedor de analítica]","[Proveedor de videollamadas, p. ej. Daily.co]","[RAZÓN SOCIAL]","[correo de contacto legal]","[correo de privacidad]","[domicilio]","[fecha]","[•]"];
+export const LEGAL_PLACEHOLDERS: string[] = ["[CUIT]","[NOMBRE Y APELLIDO]","[correo de contacto legal]","[correo de privacidad]","[domicilio]","[fecha]"];
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

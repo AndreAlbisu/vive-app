@@ -21,10 +21,12 @@ los otros dos archivos.
 ### Paso 1 — Completar los placeholders `[ ]`
 Datos de la empresa y de contacto que solo tenés vos. Checklist consolidado (ambos documentos):
 
-- [ ] **Razón social** (nombre legal de la empresa/persona que opera Vita)
+> **Decidido el 06/08/2026 (Andre): Vita la opera una PERSONA HUMANA inscripta en Monotributo**, no una sociedad. Por eso los documentos ya no dicen "razón social" sino `[NOMBRE Y APELLIDO]`. Revisar la decisión cuando entre inversión, se formalice un socio, la facturación se acerque al tope del monotributo, o el volumen haga que el riesgo patrimonial personal deje de ser teórico.
+
+- [ ] **Nombre y apellido** de la persona que opera Vita
 - [ ] **CUIT**
-- [ ] **Domicilio legal**
-- [ ] **Correo de contacto legal** (T&C)
+- [ ] **Domicilio**
+- [ ] **Correo de contacto legal** (T&C) — ⚠️ definir el dominio real: el copy viejo del registro usaba `@vivewellness.app`, que es del nombre anterior
 - [ ] **Correo de privacidad** (Política) — puede ser el mismo
 - [ ] **Fecha de última actualización** y **fecha de vigencia** (en ambos)
 - [ ] Referente/responsable de datos, si se designa (Política §1)
@@ -32,13 +34,13 @@ Datos de la empresa y de contacto que solo tenés vos. Checklist consolidado (am
 ### Paso 2 — Resolver las decisiones de producto/fiscales pendientes
 No son legales puras, son tuyas (con tu contador/abogado):
 
-- [ ] **IVA / figura fiscal** (T&C §8.4) — depende de si Vita es monotributo o RI. Esto también afecta el cálculo de la comisión en el código, así que definilo de una.
+- [x] ~~**IVA / figura fiscal** (T&C §8.4)~~ — **RESUELTO 06/08/2026: Monotributo**, factura C sin IVA discriminado. §8.4 ya redactada, y el código no necesita cambio (la comisión retenida es la comisión final). Se agregaron §8.5 (situación fiscal del Profesional) y §8.6 (cambio de condición fiscal).
+- [x] ~~**Comisión** (T&C §8.3)~~ — **20%** la primera sesión con cada persona / **15%** desde la 2da, ya escrito sin corchetes. Falta solo decidir si mencionás la promo fundador.
+- [x] ~~**Lista de proveedores** (Política §6)~~ — verificada contra el código: Supabase, Mercado Pago, **Daily.co** (el video real; lo de Jitsi en `salas.room_url` es vestigial, nada lo abre) y Expo push. **Analítica: ninguna de terceros**, es tabla propia. Falta el acuerdo de tratamiento de datos con cada uno.
 - [ ] **Garantía de primera sesión** (T&C §9.3) — confirmar si se mantiene y su alcance exacto (reintegro vs. nueva sesión, plazos, condiciones).
-- [ ] **Comisión** (T&C §8.3) — confirmar los números (hoy: 20% la primera sesión con cada persona / 15% desde la 2da) y si mencionás la promo fundador.
 - [ ] **Antelación mínima de cancelación** (T&C §9.1) — el número de horas exacto.
 - [ ] **Jurisdicción** (T&C §22) — normalmente CABA, confirmar con abogado.
 - [ ] **Líneas de ayuda en crisis** (T&C §5.3) — decidir si incluís líneas locales.
-- [ ] **Lista final de proveedores** (Política §6) — confirmar cuáles se usan realmente (Supabase, Mercado Pago, proveedor de video [¿Daily.co?], Expo push, analítica) y tener el acuerdo de tratamiento de datos con cada uno.
 - [ ] **Plazos de conservación** de datos por categoría (Política §10).
 
 ### Paso 3 — Revisión legal (obligatoria)
@@ -56,9 +58,11 @@ Llevá los dos borradores ya completados (pasos 1 y 2) a un/a abogado/a. Puntos 
 ### Paso 4 — Publicar y conectar en la app
 Una vez revisados y aprobados:
 
-- [ ] **Aceptación en el registro.** La tabla `profiles` ya tiene la columna `accepted_terms`. Hay que asegurar que el registro (usuario y coach) muestre un check con enlaces a T&C y Privacidad, y que solo se pueda avanzar aceptando. (Hoy existe un modal de privacidad en el registro — revisar que quede alineado a estos textos.)
+- [x] ~~**Enlaces dentro de la app.**~~ Hecho el 06/08/2026: pantalla `/legal?doc=terminos|privacidad` desde el menú de perfil, y `LegalSheet` en el registro de usuario y en el de profesional. Muestran el texto real de estos `.md` (vía `npm run sync:legal`), no un resumen aparte.
+- [x] ~~**Aceptación en el registro (email).**~~ El checkbox ya persiste en `profiles.accepted_terms` (antes se descartaba). El registro del profesional usa aceptación implícita, porque su pantalla es login y alta a la vez.
+- [ ] **Aceptación en el registro con Google y Apple.** Esos botones **no exigen el checkbox** y no pasan por `signUpWithEmail`, así que hoy se crea cuenta sin aceptar ni registrar nada. Decidir entre bloquearlos hasta tildar o pasar a aceptación implícita.
+- [ ] **Guardar cuándo y qué versión** aceptó cada usuario (`accepted_terms_at`, `accepted_terms_version`) — hoy solo hay un booleano. Refuerza la ejecutabilidad de §10.
 - [ ] **URL pública de la Política de Privacidad.** App Store Connect y Google Play Console **exigen una URL pública** de la política para poder publicar la app. Hay que subir la Política (y preferentemente los T&C) como página web accesible (sitio de marketing, o una página simple hosteada). El markdown de `docs/` no sirve como URL pública por sí solo — hay que convertirlo en página.
-- [ ] **Enlaces dentro de la app.** Agregar en Ajustes/Perfil enlaces a "Términos" y "Privacidad".
 - [ ] **Etiquetas de las tiendas.** Completar las *App Privacy labels* (Apple) y el *formulario de seguridad de los datos* (Google) de forma **consistente** con lo que declara la Política (datos sensibles incluidos).
 
 ## Mantenimiento

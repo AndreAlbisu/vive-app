@@ -13,13 +13,13 @@
 **Última actualización:** [fecha]
 **Vigencia a partir de:** [fecha]
 
-Esta Política describe cómo Vita, operada por [RAZÓN SOCIAL], CUIT [•], con domicilio en [•] ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
+Esta Política describe cómo Vita, operada por [NOMBRE Y APELLIDO], CUIT [CUIT], con domicilio en [domicilio] ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
 
 Al utilizar la Plataforma, el Usuario declara haber leído y comprendido esta Política. Forma parte de los [Términos y Condiciones](./terminos-y-condiciones.md).
 
 ## 1. Responsable del Tratamiento
 
-Responsable: [RAZÓN SOCIAL]. Contacto en materia de privacidad: [correo de privacidad]. [Indicar si existe un responsable/referente de datos designado.]
+Responsable: [NOMBRE Y APELLIDO]. Contacto en materia de privacidad: [correo de privacidad]. [Indicar si existe un responsable/referente de datos designado.]
 
 ## 2. Qué Datos Recolectamos
 
@@ -54,14 +54,14 @@ Vita **no vende** los datos personales de los Usuarios. Los compartimos únicame
 - **Proveedores que procesan datos por cuenta de Vita (encargados de tratamiento):**
   - **Supabase** — infraestructura de base de datos, autenticación y almacenamiento.
   - **Mercado Pago** — procesamiento de pagos (sujeto a sus propias políticas).
-  - **[Proveedor de videollamadas, p. ej. Daily.co]** — realización de las videollamadas de las Sesiones.
+  - **Daily.co** — realización de las videollamadas de las Sesiones.
   - **Expo / proveedor de notificaciones push** — envío de notificaciones.
-  - **[Proveedor de analítica]** — métricas de uso de la aplicación.
+- **Analítica:** Vita **no utiliza proveedores de analítica de terceros**. Las métricas de uso se registran en la propia base de datos de Vita (alojada en Supabase) y no se comparten con terceros con fines publicitarios ni comerciales.
 - **Otros Usuarios:** la información necesaria para la interacción (por ejemplo, el perfil del Profesional es visible para los Clientes; el nombre/foto del Cliente puede ser visible para el Profesional con quien tiene una Sesión).
 - **Autoridades competentes:** cuando exista obligación legal o requerimiento válido.
 - **En caso de reorganización societaria** (fusión, adquisición), notificando cuando corresponda.
 
-[Completar la lista de proveedores con los efectivamente utilizados y revisar los acuerdos de tratamiento con cada uno.]
+La lista anterior es la de los proveedores efectivamente utilizados, verificada contra el código el 06/08/2026. [Pendiente: revisar el acuerdo de tratamiento de datos con cada uno.]
 
 ## 7. Transferencia Internacional de Datos
 
@@ -99,4 +99,4 @@ Vita puede actualizar esta Política. Los cambios sustanciales se notificarán p
 
 ## 14. Contacto
 
-Consultas o ejercicio de derechos: [correo de privacidad] — [RAZÓN SOCIAL], [domicilio].
+Consultas o ejercicio de derechos: [correo de privacidad] — [NOMBRE Y APELLIDO], [domicilio].

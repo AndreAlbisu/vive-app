@@ -100,10 +100,15 @@ serve(async (req) => {
       commissionPct = (count ?? 0) < 1 ? 20 : 15
     }
 
-    // marketplace_fee = comisión pura (20/15%). El IVA NO se hornea acá: depende
-    // de la figura fiscal de VITA (monotributo → factura C sin IVA discriminado
-    // vs. RI → con IVA), todavía sin decidir. El IVA vive en la factura, no en el
-    // schema ni en este cálculo. TODO(fiscal): si VITA queda RI, sumar el IVA acá.
+    // marketplace_fee = comisión pura (20/15%), SIN IVA — y así queda.
+    // Figura fiscal DECIDIDA (Andre, 06/08/2026): persona humana en Monotributo.
+    // Factura tipo C, sin IVA discriminado ⇒ la comisión que se retiene acá es
+    // exactamente lo que percibe Vita y lo que dice el copy del coach. Nada que sumar.
+    // Si algún día pasa a Responsable Inscripto, ACÁ hay que decidir: o el coach
+    // pasa a pagar 24,2% (20% + IVA 21%) y este cálculo lo suma, o el 20% se
+    // vuelve IVA incluido y el ingreso real cae a ~16,5%. Es decisión de precio,
+    // no de código: cambiar esto sin cambiar el copy de CoachProfileScreen y el
+    // §8.4 de los T&C deja las tres cosas contradiciéndose.
     const marketplaceFee = Math.round(Number(booking.amount) * commissionPct) / 100
 
     // ⚠️ MONEY RELEASE (RE-VERIFICADO en docs MP, 07/2026): con Checkout Pro NO hay
