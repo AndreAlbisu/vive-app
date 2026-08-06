@@ -20,8 +20,8 @@ interface AuthContextType {
   requestAuth: () => void;
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
   signUpWithEmail: (email: string, password: string, name: string, acceptedTerms?: boolean) => Promise<string | null>;
-  signInWithGoogle: () => Promise<string | null>;
-  signInWithApple: () => Promise<string | null>;
+  signInWithGoogle: (acceptedTerms?: boolean) => Promise<string | null>;
+  signInWithApple: (acceptedTerms?: boolean) => Promise<string | null>;
   signOut: () => Promise<void>;
 }
 
@@ -115,7 +115,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  async function signInWithGoogle(): Promise<string | null> {
+  /** Marca `profiles.accepted_terms` del usuario ya autenticado. Se usa desde los
+   *  flujos sociales, donde la fila de profiles la crea el trigger de auth.users
+   *  y no hay un signUp propio donde escribirla. */
+  async function markTermsAccepted() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ accepted_terms: true })
+      .eq('id', session.user.id);
+    if (error) console.warn('[auth] no se pudo registrar accepted_terms:', error.message);
+  }
+
+  // `acceptedTerms` lo manda solo el registro (en el login no se re-acepta nada).
+  // Los flujos sociales no pasan por signUpWithEmail, así que sin esto se creaba
+  // la cuenta sin dejar constancia de la aceptación de los T&C.
+  async function signInWithGoogle(acceptedTerms = false): Promise<string | null> {
     try {
       const redirectUrl = AuthSession.makeRedirectUri();
 
@@ -135,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.type === 'success') {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(res.url);
         if (exchangeError) return translateError(exchangeError.message);
+        if (acceptedTerms) await markTermsAccepted();
       } else if (res.type === 'cancel' || res.type === 'dismiss') {
         return null;
       }
@@ -149,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // web como Google — es lo que Apple espera para cumplir la guideline 4.8.
   // El nonce viaja crudo a Apple/Supabase para que Supabase pueda verificar
   // el identityToken contra el hash que ve en el JWT.
-  async function signInWithApple(): Promise<string | null> {
+  async function signInWithApple(acceptedTerms = false): Promise<string | null> {
     try {
       const rawNonce = Crypto.randomUUID();
       const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
@@ -171,6 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) return translateError(error.message);
+      if (acceptedTerms) await markTermsAccepted();
       return null;
     } catch (e: any) {
       if (e?.code === 'ERR_REQUEST_CANCELED') return null;

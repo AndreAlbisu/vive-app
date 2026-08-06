@@ -62,13 +62,13 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Vive necesita acceso al calendario para agregar tus sesiones."
+          "calendarPermission": "Vita necesita acceso al calendario para agregar tus sesiones."
         }
       ],
       [
         "expo-audio",
         {
-          "microphonePermission": "Vive necesita acceso al micrófono para grabar tus recursos de audio."
+          "microphonePermission": "Vita necesita acceso al micrófono para grabar tus recursos de audio."
         }
       ]
     ],

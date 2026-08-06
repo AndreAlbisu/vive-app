@@ -118,18 +118,23 @@ export default function RegisterScreen() {
     router.replace('/(tabs)');
   }
 
+  // Google y Apple exigen el mismo checkbox que el alta por email — antes estaban
+  // habilitados desde el arranque y se podía crear cuenta sin aceptar nada ni
+  // dejar constancia. El `true` que se les pasa persiste `profiles.accepted_terms`.
   async function handleGoogle() {
+    if (!acceptedTerms) { setServerError('Para continuar, aceptá los Términos y la Política de privacidad'); return; }
     setGoogleLoading(true);
     setServerError(null);
-    const error = await signInWithGoogle();
+    const error = await signInWithGoogle(true);
     setGoogleLoading(false);
     if (error) setServerError(error);
   }
 
   async function handleApple() {
+    if (!acceptedTerms) { setServerError('Para continuar, aceptá los Términos y la Política de privacidad'); return; }
     setAppleLoading(true);
     setServerError(null);
-    const error = await signInWithApple();
+    const error = await signInWithApple(true);
     setAppleLoading(false);
     if (error) setServerError(error);
   }
@@ -161,12 +166,38 @@ export default function RegisterScreen() {
           {/* ── Botones ──────────────────────────────────────────── */}
           <Animated.View style={[s.btnsArea, fadeUp(btnsAnim)]}>
 
+            {/* Checkbox de términos — VA ARRIBA DE LOS TRES MÉTODOS, no adentro del
+                formulario de email. Antes vivía adentro, así que Google y Apple
+                creaban cuenta sin que el usuario tuviera siquiera dónde aceptar. */}
+            <TouchableOpacity
+              style={s.termsRow}
+              onPress={() => setAcceptedTerms(v => !v)}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons
+                name={acceptedTerms ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                size={22}
+                color={acceptedTerms ? ViveColors.primary : "rgba(135,131,92,0.55)"}
+              />
+              <Text style={s.termsText}>
+                {'Leí y acepto los '}
+                <Text style={s.termsLink} onPress={() => setShowTermsModal(true)}>
+                  Términos y condiciones
+                </Text>
+                {' y la '}
+                <Text style={s.termsLink} onPress={() => setShowPrivacyModal(true)}>
+                  Política de privacidad
+                </Text>
+                {' de Vita'}
+              </Text>
+            </TouchableOpacity>
+
             {/* Google */}
             <TouchableOpacity
-              style={[s.googleBtn, googleLoading && { opacity: 0.6 }]}
+              style={[s.googleBtn, (googleLoading || !acceptedTerms) && { opacity: 0.5 }]}
               onPress={handleGoogle}
               activeOpacity={0.85}
-              disabled={googleLoading || loading}
+              disabled={googleLoading || loading || !acceptedTerms}
             >
               {googleLoading
                 ? <ActivityIndicator size="small" color="#4285F4" />
@@ -178,10 +209,10 @@ export default function RegisterScreen() {
             {/* Apple — Sign in with Apple no existe en Android, ocultar */}
             {Platform.OS === 'ios' && (
               <TouchableOpacity
-                style={[s.appleBtn, appleLoading && { opacity: 0.6 }]}
+                style={[s.appleBtn, (appleLoading || !acceptedTerms) && { opacity: 0.5 }]}
                 onPress={handleApple}
                 activeOpacity={0.85}
-                disabled={appleLoading || loading}
+                disabled={appleLoading || loading || !acceptedTerms}
               >
                 {appleLoading
                   ? <ActivityIndicator size="small" color="#565E32" />
@@ -300,36 +331,6 @@ export default function RegisterScreen() {
                 {serverError && (
                   <Text style={s.serverError}>{serverError}</Text>
                 )}
-
-                {/* Checkbox de términos */}
-                <TouchableOpacity
-                  style={s.termsRow}
-                  onPress={() => setAcceptedTerms(v => !v)}
-                  activeOpacity={0.8}
-                >
-                  <MaterialCommunityIcons
-                    name={acceptedTerms ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                    size={22}
-                    color={acceptedTerms ? ViveColors.primary : "rgba(135,131,92,0.55)"}
-                  />
-                  <Text style={s.termsText}>
-                    {'Leí y acepto los '}
-                    <Text
-                      style={s.termsLink}
-                      onPress={() => setShowTermsModal(true)}
-                    >
-                      Términos y condiciones
-                    </Text>
-                    {' y la '}
-                    <Text
-                      style={s.termsLink}
-                      onPress={() => setShowPrivacyModal(true)}
-                    >
-                      Política de privacidad
-                    </Text>
-                    {' de Vita'}
-                  </Text>
-                </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[s.enterBtn, (!acceptedTerms || loading) && s.enterBtnDisabled]}
