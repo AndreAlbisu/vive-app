@@ -9,6 +9,8 @@ import {
   Animated,
   ActivityIndicator,
   Image,
+  Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,6 +19,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
+import { deleteMyAccount } from '@/lib/accountDeletion';
 type Profesional = {
   id: string;
   name: string;
@@ -39,6 +42,8 @@ export default function ProfileOwnScreen() {
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const displayName = user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'Usuario';
   const displayEmail = user?.email ?? '';
@@ -112,6 +117,29 @@ export default function ProfileOwnScreen() {
     router.replace('/');
   }
 
+  // Baja de cuenta — exigida por Apple (5.1.1(v)). Doble confirmación a
+  // propósito: es irreversible y borra diario, ánimo y guardados. Lo que se
+  // conserva (reservas, reseñas, mensajes) se le dice explícitamente al usuario
+  // en vez de dejarlo en la política, porque es lo que suele sorprender.
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    const res = await deleteMyAccount();
+    setDeleting(false);
+
+    if (res.ok) {
+      setDeleteOpen(false);
+      await signOut();
+      router.replace('/');
+      return;
+    }
+    if (res.reason === 'coach_con_sesiones') {
+      setDeleteOpen(false);
+      Alert.alert('Tenés sesiones agendadas', res.message);
+      return;
+    }
+    Alert.alert('No se pudo eliminar', res.message);
+  }
+
   const headerAnim = useRef(new Animated.Value(0)).current;
   const identityAnim = useRef(new Animated.Value(0)).current;
   const profAnim = useRef(new Animated.Value(0)).current;
@@ -137,6 +165,7 @@ export default function ProfileOwnScreen() {
     { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => router.push('/legal?doc=terminos') },
     { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },
     { id: 'logout', icon: 'logout', label: 'Cerrar sesión', danger: true, onPress: handleSignOut },
+    { id: 'delete', icon: 'trash-can-outline', label: 'Eliminar mi cuenta', danger: true, onPress: () => setDeleteOpen(true) },
   ];
 
   const guestConfigItems: ConfigItem[] = [
@@ -314,6 +343,45 @@ export default function ProfileOwnScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
+
+      {/* Confirmación de baja. Se detalla qué se borra y qué se conserva: lo
+          segundo es lo que sorprende, y dejarlo solo en la política no alcanza. */}
+      <Modal visible={deleteOpen} transparent animationType="fade" onRequestClose={() => setDeleteOpen(false)}>
+        <View style={styles.delOverlay}>
+          <View style={styles.delCard}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={28} color="#C0392B" />
+            <Text style={styles.delTitle}>Eliminar tu cuenta</Text>
+            <Text style={styles.delBody}>
+              Esta acción no se puede deshacer. Se borran tu perfil, tu diario, tus check-ins
+              de ánimo, tus recordatorios y tus recursos guardados.
+            </Text>
+            <Text style={styles.delBody}>
+              Se conservan de forma anónima tus reservas —por obligaciones contables— y las
+              reseñas y conversaciones con profesionales, que figurarán como
+              &quot;Usuario eliminado&quot;. Si tenés sesiones futuras, se cancelan y se
+              reembolsan.
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.delConfirmBtn, deleting && { opacity: 0.6 }]}
+              onPress={handleDeleteAccount}
+              disabled={deleting}
+              activeOpacity={0.85}>
+              {deleting
+                ? <ActivityIndicator size="small" color="#FFF" />
+                : <Text style={styles.delConfirmText}>Sí, eliminar mi cuenta</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.delCancelBtn}
+              onPress={() => setDeleteOpen(false)}
+              disabled={deleting}
+              activeOpacity={0.8}>
+              <Text style={styles.delCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
     </AppBg>
   );
@@ -601,4 +669,49 @@ const styles = StyleSheet.create({
   },
   configLabelDanger: { color: '#FF7070' },
 
+  // ── Confirmación de baja de cuenta ──────────────────────────────
+  delOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  delCard: {
+    backgroundColor: ViveColors.background,
+    borderRadius: 22,
+    padding: 24,
+    alignItems: 'center',
+    gap: 12,
+  },
+  delTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 18,
+    color: '#565E32',
+  },
+  delBody: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: 'rgba(86,94,50,0.85)',
+    textAlign: 'center',
+  },
+  delConfirmBtn: {
+    marginTop: 6,
+    alignSelf: 'stretch',
+    backgroundColor: '#C0392B',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  delConfirmText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#FFF',
+  },
+  delCancelBtn: { paddingVertical: 6 },
+  delCancelText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 14,
+    color: 'rgba(86,94,50,0.75)',
+  },
 });
