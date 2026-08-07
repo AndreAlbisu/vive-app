@@ -19,7 +19,6 @@ import { ViveColors, ViveFonts, ViveMoodColors, TAB_BAR_CLEARANCE } from '@/cons
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { MoodCheckIn } from '@/components/MoodCheckIn';
 import { CoachSuggestionCard } from '@/components/CoachSuggestionCard';
-import { ResourceSuggestionCard } from '@/components/ResourceSuggestionCard';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -250,11 +249,6 @@ export default function InicioScreen() {
           {/* ── 3b. Sugerencia de coach si el check-in de hoy bajó fuerte ── */}
           <Animated.View style={fadeUp(aMood)}>
             <CoachSuggestionCard userId={user?.id} entries={moodEntries} />
-          </Animated.View>
-
-          {/* ── 3c. "Para vos ahora" — 2 recursos sugeridos según el mood de hoy ── */}
-          <Animated.View style={fadeUp(aMood)}>
-            <ResourceSuggestionCard userId={user?.id} todayEntry={todayMoodEntry} />
           </Animated.View>
 
           {/* ── 4. SOBRE VOS ── */}

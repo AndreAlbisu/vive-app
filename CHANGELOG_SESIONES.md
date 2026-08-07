@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-08-07 — Joaquín (sesión 82)
+
+**Tocado:** `app/(tabs)/index.tsx`.
+
+**Resumen:**
+- Se sacó la card "Para vos ahora" (`ResourceSuggestionCard`) de Inicio — a Joaquín no le convenció el resultado visual. Solo se quitó el `import` y el bloque JSX; no se tocó nada más de la pantalla (el check-in, `CoachSuggestionCard` y "Sobre vos" siguen igual).
+- **`components/ResourceSuggestionCard.tsx` queda sin usar en ningún lado** (no se borró) — junto con la tabla `resource_recommendations` y su registro de uso, que sigue viva en Supabase pero ya no recibe eventos nuevos porque nada la llama. `constants/moodResources.ts` (el mapeo mood→recurso unificado de la sesión pasada) sigue en uso — lo consume la card de Recursos, no se vio afectado.
+- Nota aparte: en medio de la sesión, un error de Expo Go (`ERR_NGROK_3200`, túnel offline) resultó ser porque el servidor de desarrollo nunca se había levantado — no era un bug de código. Diagnosticado desde una captura de pantalla.
+- Sin cambios de schema.
+
+**Pendiente para la próxima sesión:**
+- Decidir qué hacer con `ResourceSuggestionCard.tsx` y `resource_recommendations`: ¿se borra del todo, se rediseña para reintentarlo, o se deja archivado por si sirve más adelante?
+- Sigue pendiente de sesión 80: confirmar si Expo Go (aparte del error de túnel de hoy, que era otra cosa) sigue siendo un problema real de performance — falta el dev build.
+- Sigue pendiente de sesión 78: revisar filas rotas en `resource_reminders` y el silencio de errores en `ReminderBell.handleSave`.
+- Sigue pendiente de sesión 79: feature de pre-booking (no construida) y evento para cuando el coach confirma una reserva pendiente.
+- Retomar Mercado Pago cuando Andre conecte su cuenta real (arrastrado de sesiones previas).
+- Sign in with Apple sigue pausado a propósito.
+
+---
+
 ## 2026-08-04 — Joaquín (sesión 81)
 
 **Tocado:** `lib/moodStats.ts`, `app/(tabs)/index.tsx`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `app/diario.tsx`, `components/ui/IslandTabBar.tsx`, `hooks/useRecommendedResource.ts`, `SCHEMA.md`. Nuevo: `components/CoachSuggestionCard.tsx`, `components/ResourceSuggestionCard.tsx`, `constants/moodResources.ts`, `scripts/create-resource-recommendations.sql`.
