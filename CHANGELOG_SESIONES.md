@@ -54,14 +54,14 @@
 **Auditoría de estado (pedido de Andre: "qué falta por implementar"):**
 
 - Se sondeó el schema REAL con la anon key en vez de creerle a los documentos, porque SCHEMA.md advierte que "documentado como corrido" ya falló dos veces. Falló de nuevo, en las dos direcciones.
-- 🔴 **BUG EN VIVO: la pantalla de Gratitud está rota.** `app/gratitud.tsx:154-156` inserta `item_1`/`item_2`/`item_3` y esas columnas **no existen en prod** — `scripts/add-gratitude-items.sql` nunca se corrió. Todo guardado en esa pantalla falla. Único bug en vivo de la auditoría.
+- 🔴 **BUG EN VIVO (ya corregido en esta misma sesión): la pantalla de Gratitud estaba rota.** `app/gratitud.tsx:154-156` inserta `item_1`/`item_2`/`item_3` y esas columnas **no existen en prod** — `scripts/add-gratitude-items.sql` nunca se corrió. Todo guardado en esa pantalla falla. Único bug en vivo de la auditoría.
 - **Al revés:** `reports`, `session_notes` y `bookings.refund_attempts` SÍ existen, contra lo que decía SCHEMA.md ("FALTA correr"). Corregido.
 - **`profiles.accepted_terms_at` ya existe en la base y ningún código la escribe.** El changelog la listaba como "columna nueva a crear" — está creada, falta usarla.
 - **Ya resuelto pero listado como pendiente en entradas viejas:** Google y Apple sí bloquean el registro hasta aceptar T&C (`RegisterScreen:200,215`), y los términos sí están cableados a `/legal` (`ProfileOwnScreen:165-166`). Quedan muertos solo "Notificaciones" e "Idioma".
 - **Bloqueadores de lanzamiento, ordenados:** (1) MP nunca probado contra la API real — las dos incógnitas son si el token de plataforma puede leer el pago del coach en `mp-webhook` y el template del manifest de firma; (2) `mp-create-payment` sin redeployar, así que prod cobra la comisión vieja mientras la app promete la nueva; (3) figura fiscal sin definir; (4) páginas legales sin hostear (+ URL de eliminación de cuenta que pide Google); (5) dev build sin armar, que a su vez bloquea meter la videollamada adentro de la app.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **Correr `scripts/add-gratitude-items.sql`** — arregla la pantalla rota.
+- ~~Correr `scripts/add-gratitude-items.sql`~~ **HECHO por Andre el 07/08/2026**, verificado sondeando las tres columnas. La pantalla de Gratitud estuvo rota casi un mes (el script existía desde el 12/07 y nunca se había corrido). **Falta probar en el celular** que ahora sí guarda.
 - ~~Redeployar `mp-create-payment`~~ **HECHO 07/08/2026**: deployado y verificado con `functions list` (ACTIVE, **versión 17**, `updated_at` nuevo; el resto de las funciones sigue en versiones del 05/08). Prod ya cobra **20% la primera sesión de cada par coach-usuario y 15% de la 2da en adelante**, que es lo que la app venía prometiendo en el copy desde la sesión 83.
 - **`harden-reviews-insert.sql` ya lo corrió Andre** (aplicó los tres bloques). Sin confirmar contra el output del paso 3 — si querés verificarlo, corré el bloque de verificación y mirá que `reviews_insert_completed_session` sea la única política de INSERT.
 - **Volver a correr `check-deck-pools.ts` cuando haya datos reales.** Hoy el veredicto está dominado por el hecho de que hay 1 reseña y 6 coaches seed; los umbrales recién se pueden juzgar con operación real.
