@@ -27,6 +27,7 @@ import {
   isNewCoach,
   NEW_MAX_REVIEWS,
   NEW_MAX_AGE_DAYS,
+  MIN_DECK_SIZE,
   type DoorStanding,
   type ChecklistItem,
   type SlotStanding,
@@ -259,7 +260,7 @@ export default function CoachVisibilityScreen() {
                         <Text style={s.doorLabel}>{d.door.label}</Text>
                         <Text style={s.doorSub}>
                           {d.total} {d.total === 1 ? 'coach' : 'coaches'}
-                          {d.best ? ` · ${d.best.slot.label}` : ' · sin lugar hoy'}
+                          {` · ${d.best ? d.best.slot.label : d.fallback.label}`}
                         </Text>
                       </View>
                       {badge && (
@@ -272,6 +273,14 @@ export default function CoachVisibilityScreen() {
 
                     {expanded && (
                       <View style={s.slots}>
+                        <View style={s.fallbackRow}>
+                          <Feather name={d.fallback.icon as any} size={13} color={FOREST_SOFT} />
+                          <Text style={s.fallbackTxt}>
+                            {d.best
+                              ? `Si el lugar de arriba se lo lleva otro, igual entrás como "${d.fallback.label}".`
+                              : `Aunque hoy no llegues a ninguna barra, entrás como "${d.fallback.label}" — la puerta nunca muestra menos de ${MIN_DECK_SIZE}.`}
+                          </Text>
+                        </View>
                         {d.slots.map(st => {
                           const style = STATUS_STYLE[st.status];
                           const off = st.status === 'bloqueado';
@@ -407,6 +416,8 @@ const s = StyleSheet.create({
   pillTxt: { fontSize: 10, fontFamily: ViveFonts.semibold },
 
   slots: { borderTopWidth: 1, borderTopColor: LINE, paddingHorizontal: 14, paddingVertical: 4 },
+  fallbackRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingTop: 11, paddingBottom: 3 },
+  fallbackTxt: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 11.5, color: FOREST_SOFT, lineHeight: 17 },
   slotRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 11 },
   slotIcon: { marginTop: 2 },
   slotHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },

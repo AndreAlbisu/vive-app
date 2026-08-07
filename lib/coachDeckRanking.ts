@@ -124,8 +124,11 @@ export function medianPrice(coaches: CachedCoach[]): number {
 // ─── Slots ───────────────────────────────────────────────────────────────────
 export type DeckSlotKey = 'recomendado' | 'tendencia' | 'nuevo' | 'economico';
 
+/** Chips de relleno — ver FALLBACK_SLOTS. No son mérito, son disponibilidad. */
+export type FallbackKey = 'disponible_semana' | 'responde_24h';
+
 export type DeckSlot = {
-  key: DeckSlotKey;
+  key: DeckSlotKey | FallbackKey;
   label: string;     // chip que ve el usuario
   sublabel: string;  // explicación corta del criterio
   icon: string;      // nombre de Feather icon
@@ -141,6 +144,32 @@ export const DECK_SLOTS: Record<DeckSlotKey, DeckSlot> = {
 };
 
 export const SLOT_ORDER: DeckSlotKey[] = ['recomendado', 'tendencia', 'nuevo', 'economico'];
+
+// ─── Relleno ─────────────────────────────────────────────────────────────────
+//
+// Los 4 slots de mérito son pools con barra, así que en un mercado flaco quedan
+// vacíos y `rankDeck` los omite — correcto (nunca etiquetar mal a nadie) pero el
+// resultado era una puerta con 1 solo coach. Medido con datos reales: las 10
+// puertas mostraban 1. Eso es peor que v2, donde el argmax siempre producía un
+// ganador.
+//
+// El relleno completa hasta MIN_DECK_SIZE con chips que NO implican mérito, solo
+// disponibilidad — y que son verdad por construcción: `coachesCache` ya filtra
+// `availability_status = 'activo'`, y la vista `coach_availability_status`
+// garantiza que todo coach activo es 'this_week' (tiene hueco en 7 días) o
+// 'responds_24h'. O sea que el pool de relleno es el catálogo entero y la puerta
+// nunca queda desierta.
+export const MIN_DECK_SIZE = 3;
+
+export const FALLBACK_SLOTS: Record<FallbackKey, DeckSlot> = {
+  disponible_semana: { key: 'disponible_semana', label: 'Con lugar esta semana', sublabel: 'Tiene horarios libres en los próximos 7 días', icon: 'calendar' },
+  responde_24h:      { key: 'responde_24h',      label: 'Responde en 24 h',      sublabel: 'Activo y atendiendo consultas',              icon: 'clock' },
+};
+
+/** El chip de disponibilidad que le corresponde a este coach. Siempre hay uno. */
+export function fallbackSlotFor(c: CachedCoach): DeckSlot {
+  return c.hasSlotThisWeek ? FALLBACK_SLOTS.disponible_semana : FALLBACK_SLOTS.responde_24h;
+}
 
 /** Contexto que depende de la puerta entera, no del coach suelto. */
 export type SlotContext = { medianPrice: number; now: Date };
@@ -190,6 +219,15 @@ export function rankDeck(
     if (!coach) continue;
     picked.add(coach.id);
     out.push({ coach, slot: DECK_SLOTS[key] });
+  }
+
+  // Relleno: completar hasta MIN_DECK_SIZE con chips de disponibilidad. Respeta
+  // el mismo orden barajado, así que también rota por persona y por día.
+  for (const coach of shuffled) {
+    if (out.length >= MIN_DECK_SIZE) break;
+    if (picked.has(coach.id)) continue;
+    picked.add(coach.id);
+    out.push({ coach, slot: fallbackSlotFor(coach) });
   }
 
   return out;

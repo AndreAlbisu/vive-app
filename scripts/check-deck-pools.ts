@@ -24,6 +24,8 @@ import { DOORS, coachesForDoor } from '../constants/conexionesDoors';
 import {
   SLOT_ORDER,
   DECK_SLOTS,
+  MIN_DECK_SIZE,
+  rankDeck,
   buildSlotContext,
   isEligibleForSlot,
   MIN_RECOMMEND_RATING,
@@ -84,10 +86,11 @@ async function fetchCatalog(): Promise<CachedCoach[]> {
   const coachIds = initial.map(c => c.coachId).filter(Boolean) as string[];
   if (profileIds.length === 0) return initial;
 
-  const [reviews, rebook, trend] = await Promise.all([
+  const [reviews, rebook, trend, avail] = await Promise.all([
     sb.from('reviews').select('reviewed_id, rating').in('reviewed_id', profileIds).eq('is_private', false),
     sb.from('coach_rebooking_stats').select('coach_id, rebooking_rate, completadas_count').in('coach_id', coachIds),
     sb.from('coach_trending_stats').select('coach_id, recent_bookers').in('coach_id', coachIds),
+    sb.from('coach_availability_status').select('coach_id, status').in('coach_id', coachIds),
   ]);
 
   const ratings: Record<string, number[]> = {};
@@ -96,6 +99,12 @@ async function fetchCatalog(): Promise<CachedCoach[]> {
   (rebook.data ?? []).forEach((r: any) => { rb[r.coach_id] = r; });
   const tr: Record<string, number> = {};
   (trend.data ?? []).forEach((r: any) => { tr[r.coach_id] = r.recent_bookers ?? 0; });
+  const av: Record<string, string> = {};
+  (avail.data ?? []).forEach((r: any) => { av[r.coach_id] = r.status ?? '(null)'; });
+  console.log('\nEstado de disponibilidad (vista coach_availability_status):');
+  const tally: Record<string, number> = {};
+  coachIds.forEach(id => { const st = av[id] ?? '(sin fila)'; tally[st] = (tally[st] ?? 0) + 1; });
+  Object.entries(tally).forEach(([k, v]) => console.log(`  ${k}: ${v}`));
 
   return initial.map(c => {
     const rs = ratings[c.id] ?? [];
@@ -106,6 +115,7 @@ async function fetchCatalog(): Promise<CachedCoach[]> {
       rebookingRate: rb[c.coachId!]?.rebooking_rate ?? null,
       completadasCount: rb[c.coachId!]?.completadas_count ?? 0,
       recentBookers: tr[c.coachId!] ?? 0,
+      hasSlotThisWeek: av[c.coachId!] === 'this_week',
     };
   });
 }
@@ -145,16 +155,18 @@ async function main() {
     const ctx = buildSlotContext(inDoor);
     const counts = SLOT_ORDER.map(key => inDoor.filter(c => isEligibleForSlot(key as DeckSlotKey, c, ctx)).length);
 
-    // Cuántos slots se llenarían de verdad: cada slot toma un coach distinto, así
-    // que el deck no puede mostrar más coaches que los que hay en la puerta.
-    const filled = Math.min(counts.filter(n => n > 0).length, inDoor.length);
+    // El tamaño real del deck lo da rankDeck, no una estimación: incluye el
+    // relleno por disponibilidad y el hecho de que cada coach aparece una vez.
+    const filled = rankDeck(inDoor, undefined).length;
     fillCount[filled] = (fillCount[filled] ?? 0) + 1;
     counts.forEach((n, i) => { if (n === 0) emptySlots[SLOT_ORDER[i]] = (emptySlots[SLOT_ORDER[i]] ?? 0) + 1; });
 
-    const flag = inDoor.length === 0 ? '  (puerta vacía)' : filled <= 1 ? '  ⚠️' : '';
+    const flag = inDoor.length === 0
+      ? '  (puerta vacía)'
+      : filled < Math.min(MIN_DECK_SIZE, inDoor.length) ? '  ⚠️' : '';
     console.log(
       pad(door.label, W) + padL(String(inDoor.length), 9) +
-      counts.map(n => padL(String(n), 10)).join('') + padL(`${filled}/4`, 8) + flag,
+      counts.map(n => padL(String(n), 10)).join('') + padL(String(filled), 8) + flag,
     );
   }
 

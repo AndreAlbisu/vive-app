@@ -21,6 +21,7 @@ export type CachedCoach = {
   rebookingRate?: number | null; // coach_rebooking_stats.rebooking_rate (null si <5 completadas)
   completadasCount?: number;     // coach_rebooking_stats.completadas_count
   recentBookers?: number;        // coach_trending_stats.recent_bookers (usuarios distintos, 30d)
+  hasSlotThisWeek?: boolean;     // coach_availability_status.status = 'this_week' — criterio del slot de relleno
 };
 
 let cache: CachedCoach[] | null = null;
@@ -69,8 +70,9 @@ async function _doFetch(): Promise<void> {
   const profileIds = initial.map(c => c.id).filter(Boolean);
   const coachIds   = initial.map(c => c.coachId).filter(Boolean) as string[];
 
-  // Agregados en paralelo: rating (reviews públicas) + reagendamiento + tendencia (vistas server-side).
-  const [reviewsRes, rebookRes, trendRes] = await Promise.all([
+  // Agregados en paralelo: rating (reviews públicas) + reagendamiento + tendencia
+  // + disponibilidad (vistas server-side).
+  const [reviewsRes, rebookRes, trendRes, availRes] = await Promise.all([
     profileIds.length
       ? supabase.from('reviews').select('reviewed_id, rating').in('reviewed_id', profileIds).eq('is_private', false)
       : Promise.resolve({ data: [] as any[] }),
@@ -79,6 +81,9 @@ async function _doFetch(): Promise<void> {
       : Promise.resolve({ data: [] as any[] }),
     coachIds.length
       ? supabase.from('coach_trending_stats').select('coach_id, recent_bookers').in('coach_id', coachIds)
+      : Promise.resolve({ data: [] as any[] }),
+    coachIds.length
+      ? supabase.from('coach_availability_status').select('coach_id, status').in('coach_id', coachIds).eq('status', 'this_week')
       : Promise.resolve({ data: [] as any[] }),
   ]);
 
@@ -102,6 +107,9 @@ async function _doFetch(): Promise<void> {
     trendByCoach[r.coach_id as string] = (r.recent_bookers ?? 0) as number;
   });
 
+  // La query ya viene filtrada por status='this_week', así que estar en el set alcanza.
+  const availableThisWeek = new Set<string>((availRes.data ?? []).map((r: any) => r.coach_id as string));
+
   cache = initial.map(c => {
     const ratings = ratingsByCoach[c.id] ?? [];
     const reviewCount = ratings.length;
@@ -116,6 +124,7 @@ async function _doFetch(): Promise<void> {
       rebookingRate:    rb?.rate ?? null,
       completadasCount: rb?.completed ?? 0,
       recentBookers:    (c.coachId ? trendByCoach[c.coachId] : 0) ?? 0,
+      hasSlotThisWeek:  !!c.coachId && availableThisWeek.has(c.coachId),
     };
   });
 }

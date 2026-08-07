@@ -4,6 +4,8 @@ import {
   SLOT_ORDER,
   buildSlotContext,
   isEligibleForSlot,
+  fallbackSlotFor,
+  MIN_DECK_SIZE,
   isNewCoach,
   NEW_MAX_REVIEWS,
   NEW_MAX_AGE_DAYS,
@@ -51,6 +53,11 @@ export type DoorStanding = {
   slots: SlotStanding[];
   /** Primer slot en orden de prioridad que podés ocupar hoy. */
   best: SlotStanding | null;
+  /**
+   * El chip de disponibilidad con el que aparecés cuando no ocupás ningún slot
+   * de mérito. Siempre hay uno — nadie queda afuera de la puerta.
+   */
+  fallback: DeckSlot;
 };
 
 export type ChecklistItem = {
@@ -204,7 +211,7 @@ export function analyzeDoors(
       });
 
       const best = slots.find(s => s.status !== 'bloqueado') ?? null;
-      return { door, total: rivals.length + 1, slots, best };
+      return { door, total: rivals.length + 1, slots, best, fallback: fallbackSlotFor(self as CachedCoach) };
     });
 }
 
@@ -322,4 +329,4 @@ export function visibilityTeaser(args: {
 }
 
 // Re-export para que la pantalla no tenga que importar del deck directamente.
-export { isNewCoach, NEW_MAX_REVIEWS, NEW_MAX_AGE_DAYS };
+export { isNewCoach, NEW_MAX_REVIEWS, NEW_MAX_AGE_DAYS, MIN_DECK_SIZE };
