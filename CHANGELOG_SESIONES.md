@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-08-07 — Joaquín (sesión 85)
+
+**Tocado:** `app/(tabs)/index.tsx`.
+
+**Resumen:**
+- Se volvió a agregar la card "Tus recursos a mano" (recursos pinneados) en Inicio, que se había sacado en sesión 81 (commit `b50514a6`). Joaquín pidió restaurarla tal cual estaba.
+- Reconstruida desde el diff del commit que la eliminó: estado `displayResources`, el `useFocusEffect` que trae `pinned_resources` (recarga al volver a la tab), el mapeo a tools de Vita (`VITA_TOOL_MAP`) o recursos de coach (`resources`), el estado vacío ("Fijá tus recursos favoritos acá") y el carrusel horizontal con `ScaleCard`. Va como sección 6, después de "Tu próxima sesión". Sin cambios en `PinButton`/`pinned_resources` — esa parte nunca se había tocado.
+- Typecheck y lint limpios.
+- Sin cambios de schema.
+
+**Pendiente para la próxima sesión:**
+- Ninguno nuevo de esta sesión.
+
 ## 2026-08-07 — Joaquín (sesión 84)
 
 **Tocado:** `app/(tabs)/index.tsx`.
