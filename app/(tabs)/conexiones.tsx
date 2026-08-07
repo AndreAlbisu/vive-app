@@ -375,7 +375,7 @@ export default function ConexionesScreen() {
                               {coach.avatarUrl ? (
                                 <Image source={{ uri: coach.avatarUrl }} style={s.cardAvatar} />
                               ) : (
-                                <View style={[s.cardAvatar, { backgroundColor: catColor }]}>
+                                <View style={[s.cardAvatar, s.cardAvatarFallback]}>
                                   <Text style={s.cardInitials}>{getInitials(coach.name)}</Text>
                                 </View>
                               )}
@@ -414,7 +414,7 @@ export default function ConexionesScreen() {
                             </View>
 
                             <TouchableOpacity
-                              style={[s.knowBtn, { backgroundColor: catColor }]}
+                              style={s.knowBtn}
                               onPress={() => goToPerfil(coach)}
                               activeOpacity={0.85}>
                               <Text style={s.knowText}>Conocer a {coach.name.split(' ')[0]}</Text>
@@ -925,22 +925,26 @@ const s = StyleSheet.create({
   cardCounterText: { fontFamily: ViveFonts.semibold, fontSize: 11, color: '#F7F2E7' },
 
   // ── Cuerpo ───────────────────────────────────────────────────────────────
-  cardBody: { paddingHorizontal: 16, paddingTop: 15, paddingBottom: 17, gap: 13 },
+  cardBody: { paddingHorizontal: 18, paddingTop: 18, paddingBottom: 20, gap: 16 },
 
   cardWho: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   cardWhoText: { flex: 1, minWidth: 0 },
   cardAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardInitials: { fontFamily: ViveFonts.frauncesSerif, fontSize: 19, color: '#F7F2E7' },
+  // Neutro a propósito: el color de la categoría vive SOLO en la cabecera. Cuando
+  // además teñía el avatar y el botón, la card quedaba dominada por un bloque de
+  // color y el acento dejaba de acentuar.
+  cardAvatarFallback: { backgroundColor: 'rgba(107,122,86,0.18)' },
+  cardInitials: { fontFamily: ViveFonts.frauncesSerif, fontSize: 20, color: FOREST },
   vBadge: {
     position: 'absolute',
-    left: 40,
-    top: 38,
+    left: 43,
+    top: 41,
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -956,7 +960,7 @@ const s = StyleSheet.create({
     lineHeight: 24,
     color: FOREST,
   },
-  cardRole: { fontFamily: ViveFonts.medium, fontSize: 12, color: TERRACOTTA, marginTop: 2 },
+  cardRole: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: FOREST_SOFT, marginTop: 2 },
   cardRating: { fontFamily: ViveFonts.semibold, fontSize: 12.5, color: FOREST, marginTop: 4 },
   cardRatingMuted: { fontFamily: ViveFonts.regular, color: FOREST_SOFT },
   cardNew: { fontFamily: ViveFonts.medium, fontSize: 12, color: FOREST_SOFT, marginTop: 4 },
@@ -965,11 +969,11 @@ const s = StyleSheet.create({
   // visual al nombre de la persona, que es lo que tiene que leerse primero.
   cardBio: {
     fontFamily: ViveFonts.frauncesSemiBold,
-    fontSize: 13.5,
+    fontSize: 14,
     fontStyle: 'italic',
     color: INK,
-    opacity: 0.82,
-    lineHeight: 21,
+    opacity: 0.8,
+    lineHeight: 23,
   },
 
   cardMetaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
@@ -983,8 +987,10 @@ const s = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 13,
+    paddingVertical: 14,
     borderRadius: 15,
+    backgroundColor: FOREST,
+    marginTop: 2,
   },
   knowText: { fontFamily: ViveFonts.semibold, fontSize: 13.5, color: '#F3EEDF' },
 
