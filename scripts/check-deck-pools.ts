@@ -24,7 +24,6 @@ import { DOORS, coachesForDoor } from '../constants/conexionesDoors';
 import {
   SLOT_ORDER,
   DECK_SLOTS,
-  MIN_DECK_SIZE,
   rankDeck,
   buildSlotContext,
   isEligibleForSlot,
@@ -150,6 +149,7 @@ async function main() {
   const fillCount: Record<number, number> = {};
   const emptySlots: Record<string, number> = {};
   const dupes: string[] = [];
+  const coverage: { door: string; total: number; cubiertos: number }[] = [];
 
   for (const door of DOORS) {
     const inDoor = coachesForDoor(door, catalog);
@@ -158,17 +158,19 @@ async function main() {
 
     // El tamaño real del deck lo da rankDeck, no una estimación: incluye el
     // relleno por disponibilidad y el hecho de que cada coach aparece una vez.
-    const entries = rankDeck(inDoor, undefined, new Date(), door.subtemas);
+    const entries = rankDeck(inDoor, undefined);
     const filled = entries.length;
+    // Cuántos coaches de la puerta califican para AL MENOS una categoría de
+    // mérito. Los que no, son los únicos que el relleno puede llegar a mostrar.
+    const cubiertos = inDoor.filter(c => SLOT_ORDER.some(k => isEligibleForSlot(k as DeckSlotKey, c, ctx))).length;
+    coverage.push({ door: door.label, total: inDoor.length, cubiertos });
     // Un chip repetido dentro del mismo deck se lee como bug — se chequea acá.
     const labels = entries.map(e => e.slot.label);
     if (new Set(labels).size !== labels.length) dupes.push(`${door.label}: ${labels.join(' / ')}`);
     fillCount[filled] = (fillCount[filled] ?? 0) + 1;
     counts.forEach((n, i) => { if (n === 0) emptySlots[SLOT_ORDER[i]] = (emptySlots[SLOT_ORDER[i]] ?? 0) + 1; });
 
-    const flag = inDoor.length === 0
-      ? '  (puerta vacía)'
-      : filled < Math.min(MIN_DECK_SIZE, inDoor.length) ? '  ⚠️' : '';
+    const flag = inDoor.length === 0 ? '  (puerta vacía)' : filled <= 1 ? '  ⚠️ una sola card' : '';
     console.log(
       pad(door.label, W) + padL(String(inDoor.length), 9) +
       counts.map(n => padL(String(n), 10)).join('') + padL(String(filled), 8) + flag,
@@ -179,9 +181,17 @@ async function main() {
   for (const n of [4, 3, 2, 1, 0]) {
     if (fillCount[n]) console.log(`  ${fillCount[n]} puerta(s) mostrarían ${n} coach(es)`);
   }
+  console.log('\nCobertura — coaches que YA califican para alguna categoría de mérito:');
+  let tot = 0, cub = 0;
+  for (const c of coverage) {
+    tot += c.total; cub += c.cubiertos;
+    console.log(`  ${pad(c.door, 26)} ${padL(`${c.cubiertos}/${c.total}`, 7)}   sin ninguna: ${c.total - c.cubiertos}`);
+  }
+  console.log(`  ${pad('TOTAL', 26)} ${padL(`${cub}/${tot}`, 7)}   sin ninguna: ${tot - cub}`);
+
   console.log('\nChips que renderiza cada puerta (deck anónimo de hoy):');
   for (const door of DOORS) {
-    const entries = rankDeck(coachesForDoor(door, catalog), undefined, new Date(), door.subtemas);
+    const entries = rankDeck(coachesForDoor(door, catalog), undefined);
     if (entries.length === 0) continue;
     console.log(`  ${pad(door.label, 26)} ${entries.map(e => `[${e.slot.label}]`).join(' ')}`);
   }

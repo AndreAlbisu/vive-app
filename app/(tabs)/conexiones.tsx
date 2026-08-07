@@ -199,7 +199,7 @@ export default function ConexionesScreen() {
   }, [coachQuery, coaches]);
   const selectedDoor = selectedDoorId ? DOORS.find(d => d.id === selectedDoorId) ?? null : null;
   const deck = useMemo(
-    () => (selectedDoor ? rankDeck(coachesForDoor(selectedDoor, coaches), user?.id, new Date(), selectedDoor.subtemas) : []),
+    () => (selectedDoor ? rankDeck(coachesForDoor(selectedDoor, coaches), user?.id) : []),
     [selectedDoor, coaches, user?.id],
   );
   // La disponibilidad "esta semana" ahora viene en el cache (`hasSlotThisWeek`,
@@ -338,8 +338,6 @@ export default function ConexionesScreen() {
                   scrollEventThrottle={16}>
                   {deck.map((entry, i) => {
                     const { coach, slot } = entry;
-                    // La disponibilidad vive SOLO acá abajo, en la meta. No hay
-                    // chip de relleno que la repita (ver fallbackSlotFor).
                     const available = !!coach.hasSlotThisWeek;
                     return (
                       <View key={coach.id} style={s.cardPage}>

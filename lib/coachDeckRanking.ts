@@ -124,11 +124,8 @@ export function medianPrice(coaches: CachedCoach[]): number {
 // ─── Slots ───────────────────────────────────────────────────────────────────
 export type DeckSlotKey = 'recomendado' | 'tendencia' | 'nuevo' | 'economico';
 
-/** Chips de relleno — ver fallbackSlotFor. No son mérito. */
-export type FallbackKey = 'tema' | 'responde_24h';
-
 export type DeckSlot = {
-  key: DeckSlotKey | FallbackKey;
+  key: DeckSlotKey;
   label: string;     // chip que ve el usuario
   sublabel: string;  // explicación corta del criterio
   icon: string;      // nombre de Feather icon
@@ -144,61 +141,6 @@ export const DECK_SLOTS: Record<DeckSlotKey, DeckSlot> = {
 };
 
 export const SLOT_ORDER: DeckSlotKey[] = ['recomendado', 'tendencia', 'nuevo', 'economico'];
-
-// ─── Relleno ─────────────────────────────────────────────────────────────────
-//
-// Los 4 slots de mérito son pools con barra, así que en un mercado flaco quedan
-// vacíos y `rankDeck` los omite — correcto (nunca etiquetar mal a nadie) pero el
-// resultado era una puerta con 1 solo coach. Medido con datos reales: las 10
-// puertas mostraban 1. Eso es peor que v2, donde el argmax siempre producía un
-// ganador.
-//
-// El relleno completa hasta MIN_DECK_SIZE con chips que NO implican mérito, solo
-// disponibilidad — y que son verdad por construcción: `coachesCache` ya filtra
-// `availability_status = 'activo'`, y la vista `coach_availability_status`
-// garantiza que todo coach activo es 'this_week' (tiene hueco en 7 días) o
-// 'responds_24h'. O sea que el pool de relleno es el catálogo entero y la puerta
-// nunca queda desierta.
-export const MIN_DECK_SIZE = 3;
-
-export const SLOT_RESPONDE: DeckSlot = {
-  key: 'responde_24h', label: 'Responde en 24 h',
-  sublabel: 'Activo y atendiendo consultas', icon: 'clock',
-};
-const slotTema = (tema: string): DeckSlot => ({
-  key: 'tema', label: `Trabaja ${tema}`,
-  sublabel: 'Uno de los temas de esta puerta', icon: 'bookmark',
-});
-
-/**
- * Chip de relleno para un coach que no ocupa ningún slot de mérito.
- *
- * El chip contesta "por qué te muestro a esta persona", así que **repetirlo no
- * sirve**: la primera versión usaba solo disponibilidad y, como casi todo el
- * catálogo es `responds_24h`, dos cards seguidas mostraban la misma frase y
- * parecía un bug. Se vio en dispositivo, no en la calibración.
- *
- * `used` acumula las etiquetas ya puestas en este deck para no repetir. El orden
- * va de más informativo a menos:
- *   1. "Trabaja X" — el subtema de la puerta que ese coach cubre. Diferencia de
- *      verdad y le sirve al usuario para elegir.
- *   2. "Responde en 24 h" — último recurso, cierto para cualquier coach activo.
- *
- * Hubo un tercer chip, "Con lugar esta semana", sacado por pedido de Andre: la
- * card YA muestra esa misma frase abajo, en la meta junto al precio (alimentada
- * por `hasSlotThisWeek`). El chip repetía información que ya estaba en pantalla.
- */
-export function fallbackSlotFor(c: CachedCoach, subtemas: string[] = [], used: Set<string> = new Set()): DeckSlot {
-  const tema = subtemas.find(t => c.topics.includes(t) && !used.has(`tema:${t}`));
-  if (tema) return slotTema(tema);
-
-  return SLOT_RESPONDE;
-}
-
-/** Clave con la que `fallbackSlotFor` marca un chip como ya usado. */
-export function fallbackUsedKey(slot: DeckSlot): string {
-  return slot.key === 'tema' ? `tema:${slot.label.replace(/^Trabaja /, '')}` : slot.key;
-}
 
 /** Contexto que depende de la puerta entera, no del coach suelto. */
 export type SlotContext = { medianPrice: number; now: Date };
@@ -235,8 +177,6 @@ export function rankDeck(
   eligible: CachedCoach[],
   userId: string | undefined,
   now: Date = new Date(),
-  /** Subtemas de la puerta — habilitan el chip "Trabaja X" del relleno. */
-  subtemas: string[] = [],
 ): DeckEntry[] {
   const seed = `${dayKey(now)}:${userId ?? 'anon'}`;
   const shuffled = seededShuffle(eligible, seed);
@@ -250,19 +190,6 @@ export function rankDeck(
     if (!coach) continue;
     picked.add(coach.id);
     out.push({ coach, slot: DECK_SLOTS[key] });
-  }
-
-  // Relleno: completar hasta MIN_DECK_SIZE. Respeta el mismo orden barajado, así
-  // que también rota por persona y por día. `usedFallback` evita que dos cards
-  // del mismo deck muestren la misma etiqueta.
-  const usedFallback = new Set<string>();
-  for (const coach of shuffled) {
-    if (out.length >= MIN_DECK_SIZE) break;
-    if (picked.has(coach.id)) continue;
-    picked.add(coach.id);
-    const slot = fallbackSlotFor(coach, subtemas, usedFallback);
-    usedFallback.add(fallbackUsedKey(slot));
-    out.push({ coach, slot });
   }
 
   return out;
