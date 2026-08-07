@@ -5,6 +5,35 @@
 
 ---
 
+## 2026-08-07 — Joaquín (sesión 85)
+
+**Tocado:** `app/(tabs)/index.tsx`.
+
+**Resumen:**
+- Se volvió a agregar la card "Tus recursos a mano" (recursos pinneados) en Inicio, que se había sacado en sesión 81 (commit `b50514a6`). Joaquín pidió restaurarla tal cual estaba.
+- Reconstruida desde el diff del commit que la eliminó: estado `displayResources`, el `useFocusEffect` que trae `pinned_resources` (recarga al volver a la tab), el mapeo a tools de Vita (`VITA_TOOL_MAP`) o recursos de coach (`resources`), el estado vacío ("Fijá tus recursos favoritos acá") y el carrusel horizontal con `ScaleCard`. Va como sección 6, después de "Tu próxima sesión". Sin cambios en `PinButton`/`pinned_resources` — esa parte nunca se había tocado.
+- Typecheck y lint limpios.
+- Sin cambios de schema.
+
+**Pendiente para la próxima sesión:**
+- Ninguno nuevo de esta sesión.
+
+## 2026-08-07 — Joaquín (sesión 84)
+
+**Tocado:** `app/(tabs)/index.tsx`.
+
+**Resumen:**
+- Se sacó la card "Para vos ahora" (`ResourceSuggestionCard`) de Inicio — a Joaquín no le convenció el resultado visual. Solo se quitó el `import` y el bloque JSX; no se tocó nada más de la pantalla (el check-in, `CoachSuggestionCard` y "Sobre vos" siguen igual).
+- **`components/ResourceSuggestionCard.tsx` queda sin usar en ningún lado** (no se borró). Nota escrita después de mergear el trabajo paralelo de Andre (sesión 83, más abajo): la tabla que este componente usaba **no era `resource_recommendations`** como se pensó al escribir esta entrada — hubo una colisión de nombres con la tabla real de recomendaciones coach→usuario de Recursos v2, y Andre la encontró y la resolvió renombrando la de mood a **`mood_suggestions`**. El componente ya apunta ahí y loguea errores en vez de tragárselos, pero sigue sin consumidor en ningún lado porque esta sesión lo sacó de Inicio.
+- Nota aparte: en medio de la sesión, un error de Expo Go (`ERR_NGROK_3200`, túnel offline) resultó ser porque el servidor de desarrollo nunca se había levantado — no era un bug de código. Diagnosticado desde una captura de pantalla.
+- Sin cambios de schema de esta sesión (el rename de tabla fue trabajo de Andre, ver su entrada).
+
+**Pendiente para la próxima sesión:**
+- Decidir qué hacer con `ResourceSuggestionCard.tsx` y `mood_suggestions`: ¿se borra del todo, se rediseña para reintentarlo, o se deja archivado por si sirve más adelante?
+- Sigue pendiente de sesión 80: confirmar si Expo Go (aparte del error de túnel de hoy, que era otra cosa) sigue siendo un problema real de performance — falta el dev build.
+- Sign in with Apple sigue pausado a propósito.
+- Ver también los pendientes de Andre (sesión 83, abajo) — hay varios abiertos en paralelo (redeploy de `mp-create-payment`, T&C de Google/Apple, probar borrado de cuenta).
+
 ## 2026-08-06 — Andre (sesión 83)
 
 **Tocado:** `screens/CoachHomeScreen.tsx`, `screens/CoachReservasScreen.tsx`, `screens/SalaScreen.tsx`, `app/(coach)/_layout.tsx`, `supabase/functions/mp-create-payment/index.ts`, `screens/CoachProfileScreen.tsx`, `scripts/add-payments-v1.sql`, `docs/terminos-y-condiciones.md`, `docs/legal-instrucciones.md`, `SCHEMA.md`, `screens/ProfileOwnScreen.tsx`, `screens/RegisterScreen.tsx`, `app/_layout.tsx`, `package.json`. Nuevos: `app/legal.tsx`, `components/LegalSheet.tsx`, `scripts/sync-legal.mjs`, `constants/legal.ts` (generado). **`scripts/add-session-notes.sql` corrido por Andre** · **`mp-create-payment` PENDIENTE de redeploy.**

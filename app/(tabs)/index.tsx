@@ -16,10 +16,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 
 import { ViveColors, ViveFonts, ViveMoodColors, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { VITA_TOOL_MAP } from '@/constants/vitaTools';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
+import { ScaleCard } from '@/components/ScaleCard';
 import { MoodCheckIn } from '@/components/MoodCheckIn';
 import { CoachSuggestionCard } from '@/components/CoachSuggestionCard';
-import { ResourceSuggestionCard } from '@/components/ResourceSuggestionCard';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -48,6 +49,16 @@ function getGreeting(firstName: string | undefined): string {
 
 const GLASS = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
+const RESOURCE_ICON_COLOR = [ViveColors.primary, ViveColors.accent];
+const RESOURCE_BUBBLE_BG  = ['rgba(232,116,59,0.18)', 'rgba(107,191,138,0.18)'];
+
+type PinnedResource = { id: string; title: string; icon: string; route: string | undefined };
+
+const PINNED_TYPE_ICON: Record<string, string> = {
+  audio: 'volume-high',
+  guia_pasos: 'format-list-numbered',
+  lectura_breve: 'book-open-variant',
+};
 
 interface NextSession {
   id: string;
@@ -69,6 +80,7 @@ export default function InicioScreen() {
   const { user, requestAuth } = useAuth();
   const [nextSession, setNextSession] = useState<NextSession | null>(null);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [displayResources, setDisplayResources] = useState<PinnedResource[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // 37 días: los últimos 7 alimentan el sparkline + el titular ("reciente"),
@@ -92,6 +104,7 @@ export default function InicioScreen() {
   const aMood = useRef(new Animated.Value(0)).current;
   const a2   = useRef(new Animated.Value(0)).current;
   const a3   = useRef(new Animated.Value(0)).current;
+  const a4   = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.stagger(90, [
@@ -99,8 +112,9 @@ export default function InicioScreen() {
       Animated.timing(aMood, { toValue: 1, duration: 380, useNativeDriver: true }),
       Animated.timing(a2,    { toValue: 1, duration: 380, useNativeDriver: true }),
       Animated.timing(a3,    { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(a4,    { toValue: 1, duration: 380, useNativeDriver: true }),
     ]).start();
-  }, [a1, aMood, a2, a3]);
+  }, [a1, aMood, a2, a3, a4]);
 
   const fetchNotifCount = useCallback(() => {
     if (!user) return;
@@ -133,6 +147,57 @@ export default function InicioScreen() {
   }, [user]);
 
   useFocusEffect(useCallback(() => { fetchNotifCount(); }, [fetchNotifCount]));
+
+  // Recarga en cada foco de la tab — así un pin hecho en otra pantalla se ve al volver
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) { setDisplayResources([]); return; }
+      let active = true;
+      (async () => {
+        const { data: pins } = await supabase
+          .from('pinned_resources')
+          .select('resource_id, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (!active) return;
+        if (!pins || pins.length === 0) { setDisplayResources([]); return; }
+
+        const ids = pins.map(p => p.resource_id as string);
+        // Los ids de tools de VITA son slugs; los de recursos de coaches, uuids
+        const coachIds = ids.filter(id => !VITA_TOOL_MAP[id]);
+
+        let coachById = new Map<string, any>();
+        if (coachIds.length > 0) {
+          const { data: rows } = await supabase
+            .from('resources')
+            .select('id, type, title')
+            .in('id', coachIds)
+            .is('retired_at', null);
+          coachById = new Map((rows ?? []).map(r => [r.id as string, r]));
+        }
+
+        if (!active) return;
+
+        // preservar el orden de pineado (más reciente primero); saltear los retirados/borrados
+        const mapped = ids.map(id => {
+          const tool = VITA_TOOL_MAP[id];
+          if (tool) return { id, title: tool.label, icon: tool.mdicon, route: tool.route };
+          const r = coachById.get(id);
+          if (r) return {
+            id: r.id as string,
+            title: r.title as string,
+            icon: PINNED_TYPE_ICON[r.type as string] ?? 'book-open-variant',
+            route: `/recurso?id=${r.id}`,
+          };
+          return null;
+        }).filter(Boolean) as PinnedResource[];
+
+        setDisplayResources(mapped);
+      })();
+      return () => { active = false; };
+    }, [user])
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -252,11 +317,6 @@ export default function InicioScreen() {
             <CoachSuggestionCard userId={user?.id} entries={moodEntries} />
           </Animated.View>
 
-          {/* ── 3c. "Para vos ahora" — 2 recursos sugeridos según el mood de hoy ── */}
-          <Animated.View style={fadeUp(aMood)}>
-            <ResourceSuggestionCard userId={user?.id} todayEntry={todayMoodEntry} />
-          </Animated.View>
-
           {/* ── 4. SOBRE VOS ── */}
           <Animated.View style={fadeUp(a2)}>
             <SobreVosCard
@@ -320,6 +380,44 @@ export default function InicioScreen() {
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.45)" />
               </TouchableOpacity>
+            )}
+          </Animated.View>
+
+          {/* ── 6. TUS RECURSOS PINNEADOS ── */}
+          <Animated.View style={fadeUp(a4)}>
+            <Text style={[s.sectionTitle, { marginTop: 20 }]}>Tus recursos a mano</Text>
+            {displayResources.length === 0 ? (
+              <TouchableOpacity
+                style={s.pinnedEmpty}
+                onPress={() => router.push('/(tabs)/recursos')}
+                activeOpacity={0.85}
+              >
+                <MaterialCommunityIcons name="pin-outline" size={22} color={ViveColors.primary} />
+                <View style={s.pinnedEmptyText}>
+                  <Text style={s.pinnedEmptyTitle}>Fijá tus recursos favoritos acá</Text>
+                  <Text style={s.pinnedEmptySub}>Entrá a un recurso y tocá el marcador para tenerlo a mano (hasta 4)</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.45)" />
+              </TouchableOpacity>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.resourcesRow}
+              >
+                {displayResources.map((r, i) => (
+                  <ScaleCard
+                    key={r.id}
+                    style={s.resourceCard}
+                    onPress={r.route ? () => router.push(r.route as any) : undefined}
+                  >
+                    <View style={[s.resourceIconCircle, { backgroundColor: RESOURCE_BUBBLE_BG[i % 2] }]}>
+                      <MaterialCommunityIcons name={r.icon as any} size={22} color={RESOURCE_ICON_COLOR[i % 2]} />
+                    </View>
+                    <Text style={s.resourceLabel} numberOfLines={2}>{r.title}</Text>
+                  </ScaleCard>
+                ))}
+              </ScrollView>
             )}
           </Animated.View>
 
@@ -519,6 +617,64 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: ViveColors.primary,
   },
+  resourcesRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 18,
+    gap: 12,
+    marginBottom: 22,
+  },
+  resourceCard: {
+    width: 130,
+    backgroundColor: GLASS,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    padding: 16,
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 110,
+    justifyContent: 'center',
+  },
+  resourceIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resourceLabel: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 12,
+    color: '#565E32',
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  pinnedEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: 18,
+    marginBottom: 22,
+    backgroundColor: GLASS,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  pinnedEmptyText: { flex: 1, gap: 3 },
+  pinnedEmptyTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 14,
+    color: '#565E32',
+  },
+  pinnedEmptySub: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: '#87835C',
+    lineHeight: 17,
+  },
+
   // ── 7. Próxima sesión ──────────────────────────────────────────────────────
   sessionCardWrap: {
     marginHorizontal: 18,
