@@ -211,7 +211,10 @@ export function analyzeDoors(
       });
 
       const best = slots.find(s => s.status !== 'bloqueado') ?? null;
-      return { door, total: rivals.length + 1, slots, best, fallback: fallbackSlotFor(self as CachedCoach) };
+      return {
+        door, total: rivals.length + 1, slots, best,
+        fallback: fallbackSlotFor(self as CachedCoach, door.subtemas),
+      };
     });
 }
 

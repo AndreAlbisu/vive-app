@@ -199,7 +199,7 @@ export default function ConexionesScreen() {
   }, [coachQuery, coaches]);
   const selectedDoor = selectedDoorId ? DOORS.find(d => d.id === selectedDoorId) ?? null : null;
   const deck = useMemo(
-    () => (selectedDoor ? rankDeck(coachesForDoor(selectedDoor, coaches), user?.id) : []),
+    () => (selectedDoor ? rankDeck(coachesForDoor(selectedDoor, coaches), user?.id, new Date(), selectedDoor.subtemas) : []),
     [selectedDoor, coaches, user?.id],
   );
   // La disponibilidad "esta semana" ahora viene en el cache (`hasSlotThisWeek`,

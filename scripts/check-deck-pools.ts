@@ -149,6 +149,7 @@ async function main() {
 
   const fillCount: Record<number, number> = {};
   const emptySlots: Record<string, number> = {};
+  const dupes: string[] = [];
 
   for (const door of DOORS) {
     const inDoor = coachesForDoor(door, catalog);
@@ -157,7 +158,11 @@ async function main() {
 
     // El tamaño real del deck lo da rankDeck, no una estimación: incluye el
     // relleno por disponibilidad y el hecho de que cada coach aparece una vez.
-    const filled = rankDeck(inDoor, undefined).length;
+    const entries = rankDeck(inDoor, undefined, new Date(), door.subtemas);
+    const filled = entries.length;
+    // Un chip repetido dentro del mismo deck se lee como bug — se chequea acá.
+    const labels = entries.map(e => e.slot.label);
+    if (new Set(labels).size !== labels.length) dupes.push(`${door.label}: ${labels.join(' / ')}`);
     fillCount[filled] = (fillCount[filled] ?? 0) + 1;
     counts.forEach((n, i) => { if (n === 0) emptySlots[SLOT_ORDER[i]] = (emptySlots[SLOT_ORDER[i]] ?? 0) + 1; });
 
@@ -174,6 +179,20 @@ async function main() {
   for (const n of [4, 3, 2, 1, 0]) {
     if (fillCount[n]) console.log(`  ${fillCount[n]} puerta(s) mostrarían ${n} coach(es)`);
   }
+  console.log('\nChips que renderiza cada puerta (deck anónimo de hoy):');
+  for (const door of DOORS) {
+    const entries = rankDeck(coachesForDoor(door, catalog), undefined, new Date(), door.subtemas);
+    if (entries.length === 0) continue;
+    console.log(`  ${pad(door.label, 26)} ${entries.map(e => `[${e.slot.label}]`).join(' ')}`);
+  }
+
+  if (dupes.length) {
+    console.log('\n⚠️  Puertas con el MISMO chip repetido en el deck:');
+    dupes.forEach(d => console.log(`  ${d}`));
+  } else {
+    console.log('\n✓ Ninguna puerta repite chip dentro del mismo deck.');
+  }
+
   // Detalle por coach — sin esto no se distingue "umbral demasiado alto" de
   // "todavía no hay datos", que piden decisiones opuestas.
   console.log('\nDetalle por coach:');

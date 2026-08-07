@@ -124,8 +124,8 @@ export function medianPrice(coaches: CachedCoach[]): number {
 // ─── Slots ───────────────────────────────────────────────────────────────────
 export type DeckSlotKey = 'recomendado' | 'tendencia' | 'nuevo' | 'economico';
 
-/** Chips de relleno — ver FALLBACK_SLOTS. No son mérito, son disponibilidad. */
-export type FallbackKey = 'disponible_semana' | 'responde_24h';
+/** Chips de relleno — ver fallbackSlotFor. No son mérito. */
+export type FallbackKey = 'disponible_semana' | 'tema' | 'responde_24h';
 
 export type DeckSlot = {
   key: DeckSlotKey | FallbackKey;
@@ -161,14 +161,46 @@ export const SLOT_ORDER: DeckSlotKey[] = ['recomendado', 'tendencia', 'nuevo', '
 // nunca queda desierta.
 export const MIN_DECK_SIZE = 3;
 
-export const FALLBACK_SLOTS: Record<FallbackKey, DeckSlot> = {
-  disponible_semana: { key: 'disponible_semana', label: 'Con lugar esta semana', sublabel: 'Tiene horarios libres en los próximos 7 días', icon: 'calendar' },
-  responde_24h:      { key: 'responde_24h',      label: 'Responde en 24 h',      sublabel: 'Activo y atendiendo consultas',              icon: 'clock' },
+export const SLOT_DISPONIBLE: DeckSlot = {
+  key: 'disponible_semana', label: 'Con lugar esta semana',
+  sublabel: 'Tiene horarios libres en los próximos 7 días', icon: 'calendar',
 };
+export const SLOT_RESPONDE: DeckSlot = {
+  key: 'responde_24h', label: 'Responde en 24 h',
+  sublabel: 'Activo y atendiendo consultas', icon: 'clock',
+};
+const slotTema = (tema: string): DeckSlot => ({
+  key: 'tema', label: `Trabaja ${tema}`,
+  sublabel: 'Uno de los temas de esta puerta', icon: 'bookmark',
+});
 
-/** El chip de disponibilidad que le corresponde a este coach. Siempre hay uno. */
-export function fallbackSlotFor(c: CachedCoach): DeckSlot {
-  return c.hasSlotThisWeek ? FALLBACK_SLOTS.disponible_semana : FALLBACK_SLOTS.responde_24h;
+/**
+ * Chip de relleno para un coach que no ocupa ningún slot de mérito.
+ *
+ * El chip contesta "por qué te muestro a esta persona", así que **repetirlo no
+ * sirve**: la primera versión usaba solo disponibilidad y, como casi todo el
+ * catálogo es `responds_24h`, dos cards seguidas mostraban la misma frase y
+ * parecía un bug. Se vio en dispositivo, no en la calibración.
+ *
+ * `used` acumula las etiquetas ya puestas en este deck para no repetir. El orden
+ * va de más informativo a menos:
+ *   1. "Con lugar esta semana" — fuerte justamente porque es raro.
+ *   2. "Trabaja X" — el subtema de la puerta que ese coach cubre. Diferencia de
+ *      verdad y le sirve al usuario para elegir.
+ *   3. "Responde en 24 h" — último recurso, cierto para cualquier coach activo.
+ */
+export function fallbackSlotFor(c: CachedCoach, subtemas: string[] = [], used: Set<string> = new Set()): DeckSlot {
+  if (c.hasSlotThisWeek && !used.has('disponible_semana')) return SLOT_DISPONIBLE;
+
+  const tema = subtemas.find(t => c.topics.includes(t) && !used.has(`tema:${t}`));
+  if (tema) return slotTema(tema);
+
+  return SLOT_RESPONDE;
+}
+
+/** Clave con la que `fallbackSlotFor` marca un chip como ya usado. */
+export function fallbackUsedKey(slot: DeckSlot): string {
+  return slot.key === 'tema' ? `tema:${slot.label.replace(/^Trabaja /, '')}` : slot.key;
 }
 
 /** Contexto que depende de la puerta entera, no del coach suelto. */
@@ -206,6 +238,8 @@ export function rankDeck(
   eligible: CachedCoach[],
   userId: string | undefined,
   now: Date = new Date(),
+  /** Subtemas de la puerta — habilitan el chip "Trabaja X" del relleno. */
+  subtemas: string[] = [],
 ): DeckEntry[] {
   const seed = `${dayKey(now)}:${userId ?? 'anon'}`;
   const shuffled = seededShuffle(eligible, seed);
@@ -221,13 +255,17 @@ export function rankDeck(
     out.push({ coach, slot: DECK_SLOTS[key] });
   }
 
-  // Relleno: completar hasta MIN_DECK_SIZE con chips de disponibilidad. Respeta
-  // el mismo orden barajado, así que también rota por persona y por día.
+  // Relleno: completar hasta MIN_DECK_SIZE. Respeta el mismo orden barajado, así
+  // que también rota por persona y por día. `usedFallback` evita que dos cards
+  // del mismo deck muestren la misma etiqueta.
+  const usedFallback = new Set<string>();
   for (const coach of shuffled) {
     if (out.length >= MIN_DECK_SIZE) break;
     if (picked.has(coach.id)) continue;
     picked.add(coach.id);
-    out.push({ coach, slot: fallbackSlotFor(coach) });
+    const slot = fallbackSlotFor(coach, subtemas, usedFallback);
+    usedFallback.add(fallbackUsedKey(slot));
+    out.push({ coach, slot });
   }
 
   return out;
