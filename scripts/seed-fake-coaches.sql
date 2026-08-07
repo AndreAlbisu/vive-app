@@ -147,29 +147,50 @@ on conflict (coach_id, date, time) do nothing;
 --      · coaches 07-12 → sesiones de hace 40-60 días  ⇒ alimentan reseñas, NO tendencia
 --      · coaches 13-15 → sesiones de hace 5-20 días   ⇒ alimentan "En tendencia"
 -- ─────────────────────────────────────────────────────────────────────────────
-create temporary table _seed_pairs on commit drop as
-select
-  c.id            as coach_id,
-  p.id            as coach_profile_id,
-  p.name          as coach_name,
-  c.specialty     as coach_specialty,
-  c.price_per_session as amount,
-  u.id            as user_id,
-  x.i             as idx,
-  un.u            as unum,
-  case when x.i between 13 and 15 then 5 + un.u * 4 else 40 + un.u * 5 end as days_ago
-from public.profiles p
-join public.coaches c on c.profile_id = p.id
-cross join lateral (select (regexp_replace(p.email, '\D', '', 'g'))::int as i) x
-cross join generate_series(1, 4) as un(u)
-join public.profiles u on u.email = format('seed.user.%s@seed.vive.local', lpad(un.u::text, 2, '0'))
-where p.email like 'seed.coach.%@seed.vive.local'
-  and x.i between 7 and 15;
-
+-- ⚠️ Acá había una tabla temporal `_seed_pairs` compartida entre los tres inserts.
+-- No funciona: en un script multi-statement Postgres PARSEA todas las sentencias
+-- antes de ejecutar ninguna, así que las que la referencian fallan con
+-- `relation "_seed_pairs" does not exist` — la tabla todavía no existe al
+-- parsear. Por eso el mismo CTE va repetido en cada insert.
+with pairs as (
+  select
+    c.id            as coach_id,
+    p.id            as coach_profile_id,
+    x.i             as idx,
+    un.u            as unum,
+    u.id            as user_id,
+    case when x.i between 13 and 15 then 5 + un.u * 4 else 40 + un.u * 5 end as days_ago
+  from public.profiles p
+  join public.coaches c on c.profile_id = p.id
+  cross join lateral (select (regexp_replace(p.email, '\D', '', 'g'))::int as i) x
+  cross join generate_series(1, 4) as un(u)
+  join public.profiles u on u.email = format('seed.user.%s@seed.vive.local', lpad(un.u::text, 2, '0'))
+  where p.email like 'seed.coach.%@seed.vive.local'
+    and x.i between 7 and 15
+)
 insert into public.salas (id, user_id, coach_id, created_at)
 select gen_random_uuid(), s.user_id, s.coach_profile_id, now() - make_interval(days => s.days_ago)
-from _seed_pairs s;
+from pairs s;
 
+with pairs as (
+  select
+    c.id            as coach_id,
+    p.id            as coach_profile_id,
+    p.name          as coach_name,
+    c.specialty     as coach_specialty,
+    c.price_per_session as amount,
+    x.i             as idx,
+    un.u            as unum,
+    u.id            as user_id,
+    case when x.i between 13 and 15 then 5 + un.u * 4 else 40 + un.u * 5 end as days_ago
+  from public.profiles p
+  join public.coaches c on c.profile_id = p.id
+  cross join lateral (select (regexp_replace(p.email, '\D', '', 'g'))::int as i) x
+  cross join generate_series(1, 4) as un(u)
+  join public.profiles u on u.email = format('seed.user.%s@seed.vive.local', lpad(un.u::text, 2, '0'))
+  where p.email like 'seed.coach.%@seed.vive.local'
+    and x.i between 7 and 15
+)
 insert into public.bookings (
   id, user_id, coach_id, sala_id, coach_name, coach_specialty,
   scheduled_date, scheduled_time, amount, status, duration_minutes, created_at
@@ -180,7 +201,7 @@ select
   (array['10:00','15:00','18:00'])[1 + (s.unum % 3)],
   s.amount, 'completada', 60,
   now() - make_interval(days => s.days_ago)
-from _seed_pairs s
+from pairs s
 join public.salas sa
   on sa.user_id = s.user_id and sa.coach_id = s.coach_profile_id;
 
@@ -191,6 +212,21 @@ join public.salas sa
 --    Cada reseña cuelga de un booking completado real, así que también valida
 --    que la política nueva de INSERT no rompió el flujo legítimo.
 -- ─────────────────────────────────────────────────────────────────────────────
+with pairs as (
+  select
+    c.id            as coach_id,
+    p.id            as coach_profile_id,
+    x.i             as idx,
+    un.u            as unum,
+    u.id            as user_id
+  from public.profiles p
+  join public.coaches c on c.profile_id = p.id
+  cross join lateral (select (regexp_replace(p.email, '\D', '', 'g'))::int as i) x
+  cross join generate_series(1, 4) as un(u)
+  join public.profiles u on u.email = format('seed.user.%s@seed.vive.local', lpad(un.u::text, 2, '0'))
+  where p.email like 'seed.coach.%@seed.vive.local'
+    and x.i between 7 and 12
+)
 insert into public.reviews (booking_id, reviewer_id, reviewed_id, rating, comment, is_private)
 select
   b.id, s.user_id, s.coach_profile_id,
@@ -203,10 +239,9 @@ select
          'Puntual y muy claro. Volvería.',
          'Buena sesión, me sirvió.'])[s.unum],
   false
-from _seed_pairs s
+from pairs s
 join public.bookings b
   on b.user_id = s.user_id and b.coach_id = s.coach_id
-where s.idx between 7 and 12
 on conflict (reviewer_id, reviewed_id) do nothing;
 
 commit;
