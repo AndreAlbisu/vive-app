@@ -32,7 +32,14 @@ async function _doFetch(): Promise<void> {
     .select('id, created_at, specialty, bio, price_per_session, nationality, verified, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
     .eq('verified', true)
     .eq('availability_status', 'activo')
-    .limit(50);
+    // El `.limit()` estaba sin `order`: Postgres devolvía N filas ARBITRARIAS, así
+    // que pasado el tope algunos coaches simplemente no existían para Conexiones —
+    // y cuáles podía cambiar entre consultas. Con el deck v3 (pools + sorteo) eso
+    // además sesgaba los pools en silencio. El orden lo vuelve determinístico.
+    // Arreglo de fondo pendiente: traer por puerta desde el server en vez de
+    // bajarse el catálogo entero al cliente.
+    .order('created_at', { ascending: true })
+    .limit(200);
 
   if (error) { console.error('[coachesCache] fetch:', error.message); cache = []; return; }
 

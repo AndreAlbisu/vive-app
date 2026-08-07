@@ -1,25 +1,44 @@
 import type { CachedCoach } from './coachesCache';
 
-// Deck de Conexiones — criterio v2: SLOTS ETIQUETADOS.
+// Deck de Conexiones — criterio v3: SLOTS COMO CATEGORÍA, NO COMO PODIO.
 //
-// En vez de "dos carriles" opacos, el deck es una lista ORDENADA de slots, cada
-// uno con una categoría VISIBLE para el usuario y un criterio explícito. Esto
-// hace transparente por qué se recomienda a cada coach, y le dice al coach cómo
-// aparecer en cada slot.
+// v2 etiquetaba los slots como categorías pero los implementaba como rankings:
+// cada uno hacía `sort(...)[0]`, o sea el máximo. Eso tenía tres consecuencias
+// malas, todas del mismo error:
 //
-// Reglas del ensamblado:
-//   - Se recorren los slots en orden de prioridad (SLOT_ORDER).
-//   - Cada slot toma el mejor coach AÚN NO ELEGIDO según su criterio.
-//   - Cada coach aparece UNA sola vez (gana el slot de mayor prioridad).
-//   - Si un slot no tiene candidato (ej. tema sin coaches "nuevos"), se OMITE —
-//     nunca se muestra un coach mal-etiquetado.
+//   1. El mismo coach ocupaba "Recomendado por Vita" durante semanas, porque el
+//      criterio era determinístico y no rotaba nunca. El deck dejaba de repartir
+//      exposición y pasaba a ser una tabla de posiciones.
+//   2. Pagaba muchísimo hacer trampa: subir de 4.7 a 4.9 te daba el monopolio de
+//      la puerta. Con una barra, cruzarla una vez no te compra nada más.
+//   3. Duplicaba el trabajo de la búsqueda (app/search3.tsx), que ya es la lista
+//      completa, filtrable y comparable. Conexiones recomienda UNA opción; la
+//      búsqueda te deja comparar las 100.
+//
+// v3: cada slot es un FILTRO que define un pool de aptos, y el coach que se
+// muestra sale sorteado de ese pool. El sorteo ya existía — el shuffle sembrado
+// por `${día}:${userId}` — solo que antes lo pisaba el sort. Ahora es el
+// mecanismo principal: dos personas distintas ven coaches distintos el mismo día,
+// y la misma persona ve otros al día siguiente.
+//
+// Las barras son PISOS, no podios. "Recomendado" significa "cumple lo que Vita
+// recomienda", que es lo que la etiqueta siempre prometió.
 //
 // `eligible` ya viene gateado por disponibilidad: coachesCache filtra verified +
 // availability_status='activo', así que acá no se re-gatea.
 
-export const NEW_MAX_REVIEWS      = 5;   // < 5 reseñas ⇒ "nuevo"
-export const NEW_MAX_AGE_DAYS     = 28;  // …o < 4 semanas desde que se registró
-export const MIN_REBOOKING_SAMPLE = 5;   // piso para que rebooking_rate cuente
+// ─── Umbrales ────────────────────────────────────────────────────────────────
+export const NEW_MAX_REVIEWS      = 5;   // "nuevo" mientras tenga menos de 5 reseñas…
+export const NEW_MAX_AGE_DAYS     = 28;  // …Y menos de 4 semanas. Es un AND, ver isNewCoach.
+export const MIN_REBOOKING_SAMPLE = 5;   // piso de muestra para que rebooking_rate cuente
+
+// Barra de "Recomendado por Vita".
+export const MIN_RECOMMEND_RATING    = 4.5;
+export const MIN_RECOMMEND_REVIEWS   = 3;
+export const MIN_RECOMMEND_REBOOKING = 0.3;  // 30% de los clientes vuelve a reservar
+
+// Barra de "En tendencia".
+export const MIN_TRENDING_BOOKERS = 3;
 
 // ─── PRNG determinístico sembrado por string (rotación estable por día) ──────
 function hashStr(s: string): number {
@@ -48,19 +67,58 @@ function seededShuffle<T>(arr: T[], seedStr: string): T[] {
   return a;
 }
 
-/** "Nuevo": pocas reseñas O poco tiempo desde que se registró (lo que se cumpla primero). */
-export function isNewCoach(c: CachedCoach, now: Date = new Date()): boolean {
-  const fewReviews = (c.reviewCount ?? 0) < NEW_MAX_REVIEWS;
-  let recent = false;
-  if (c.createdAt) {
-    const ageDays = (now.getTime() - new Date(c.createdAt).getTime()) / 86_400_000;
-    recent = ageDays < NEW_MAX_AGE_DAYS;
-  }
-  return fewReviews || recent;
-}
-
 function dayKey(now: Date): string {
   return now.toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+// ─── Criterios de cada slot ──────────────────────────────────────────────────
+
+/**
+ * "Nuevo": pocas reseñas **Y** poco tiempo desde que se registró.
+ *
+ * Era un OR hasta v3, y ese OR no drenaba: un coach que nunca llegaba a 5
+ * reseñas quedaba "nuevo" para siempre. El carril terminaba acumulando justo a
+ * los que no convirtieron, que diluían la rotación de los que recién llegaban
+ * — con 60 acumulados, el recién llegado se lleva 1/60 de la exposición y la
+ * garantía de arranque desaparece cuando más se necesita.
+ *
+ * Sin `createdAt` falla cerrado (no es nuevo): dejarlo pasar reabriría la fuga.
+ */
+export function isNewCoach(c: CachedCoach, now: Date = new Date()): boolean {
+  if ((c.reviewCount ?? 0) >= NEW_MAX_REVIEWS) return false;
+  if (!c.createdAt) return false;
+  const ageDays = (now.getTime() - new Date(c.createdAt).getTime()) / 86_400_000;
+  return ageDays < NEW_MAX_AGE_DAYS;
+}
+
+/**
+ * Barra de calidad de "Recomendado por Vita".
+ *
+ * Con muestra suficiente de sesiones completadas, el REAGENDAMIENTO es la señal
+ * que manda: una cuenta falsa puede dejar 5★, pero no puede volver a reservar y
+ * pagar sin poner la plata. Las estrellas quedan como piso en los dos tramos,
+ * nunca como criterio único cuando hay algo mejor disponible.
+ */
+export function passesQualityBar(c: CachedCoach): boolean {
+  const rating = c.avgRating ?? 0;
+  if (rating < MIN_RECOMMEND_RATING) return false;
+
+  if ((c.completadasCount ?? 0) >= MIN_REBOOKING_SAMPLE) {
+    return (c.rebookingRate ?? 0) >= MIN_RECOMMEND_REBOOKING;
+  }
+  return (c.reviewCount ?? 0) >= MIN_RECOMMEND_REVIEWS;
+}
+
+/** Mediana de precio de la puerta — la barra de "Opción económica". */
+export function medianPrice(coaches: CachedCoach[]): number {
+  const prices = coaches
+    .map(c => c.priceFrom)
+    .filter((p): p is number => typeof p === 'number' && Number.isFinite(p))
+    .sort((a, b) => a - b);
+
+  if (prices.length === 0) return Infinity;
+  const mid = Math.floor(prices.length / 2);
+  return prices.length % 2 === 1 ? prices[mid] : (prices[mid - 1] + prices[mid]) / 2;
 }
 
 // ─── Slots ───────────────────────────────────────────────────────────────────
@@ -76,68 +134,44 @@ export type DeckSlot = {
 export type DeckEntry = { coach: CachedCoach; slot: DeckSlot };
 
 export const DECK_SLOTS: Record<DeckSlotKey, DeckSlot> = {
-  recomendado: { key: 'recomendado', label: 'Recomendado por Vita', sublabel: 'Por rating y reagendamiento', icon: 'award' },
+  recomendado: { key: 'recomendado', label: 'Recomendado por Vita', sublabel: 'Cumple la barra de calidad', icon: 'award' },
   tendencia:   { key: 'tendencia',   label: 'En tendencia',         sublabel: 'De los más elegidos este mes', icon: 'trending-up' },
   nuevo:       { key: 'nuevo',       label: 'Nuevo en Vita',        sublabel: 'Recién sumado a la comunidad', icon: 'feather' },
-  economico:   { key: 'economico',   label: 'Opción económica',     sublabel: 'El precio más accesible del tema', icon: 'tag' },
+  economico:   { key: 'economico',   label: 'Opción económica',     sublabel: 'De los más accesibles del tema', icon: 'tag' },
 };
 
 export const SLOT_ORDER: DeckSlotKey[] = ['recomendado', 'tendencia', 'nuevo', 'economico'];
 
-// v1: el score "recomendado" es solo rating (0 si no tiene reseñas). Cuando haya
-// volumen (≥MIN_REBOOKING_SAMPLE completadas) el reagendamiento entra como señal
-// primaria — rebookingRate/completadasCount ya viven en CachedCoach.
-function recommendScore(c: CachedCoach): number {
-  return c.avgRating ?? 0;
+/** Contexto que depende de la puerta entera, no del coach suelto. */
+export type SlotContext = { medianPrice: number; now: Date };
+
+export function buildSlotContext(doorCoaches: CachedCoach[], now: Date = new Date()): SlotContext {
+  return { medianPrice: medianPrice(doorCoaches), now };
 }
 
-// Cada picker recibe los candidatos aún no elegidos y devuelve al ganador (o null
-// si nadie califica para esa categoría). El orden estable ante empates lo da el
-// shuffle sembrado por día → rota la exposición entre coaches equivalentes.
-function pickForSlot(
-  key: DeckSlotKey,
-  pool: CachedCoach[],
-  now: Date,
-): CachedCoach | null {
-  if (pool.length === 0) return null;
-
+/**
+ * ¿Este coach entra al pool de este slot? Es la única definición de cada
+ * criterio en todo el código — `rankDeck` y el panel del coach
+ * (`lib/coachVisibility.ts`) la comparten para que no puedan divergir.
+ */
+export function isEligibleForSlot(key: DeckSlotKey, c: CachedCoach, ctx: SlotContext): boolean {
   switch (key) {
-    case 'recomendado': {
-      // Solo coaches con al menos 1 reseña — así el label no miente.
-      const eligible = pool.filter(c => (c.reviewCount ?? 0) >= 1);
-      if (eligible.length === 0) return null;
-      return [...eligible].sort((a, b) =>
-        (recommendScore(b) - recommendScore(a)) ||
-        ((b.reviewCount ?? 0) - (a.reviewCount ?? 0)),
-      )[0];
-    }
-    case 'tendencia': {
-      const eligible = pool.filter(c => (c.recentBookers ?? 0) > 0);
-      if (eligible.length === 0) return null;
-      return [...eligible].sort((a, b) =>
-        ((b.recentBookers ?? 0) - (a.recentBookers ?? 0)) ||
-        ((b.avgRating ?? 0) - (a.avgRating ?? 0)),
-      )[0];
-    }
-    case 'nuevo': {
-      const eligible = pool.filter(c => isNewCoach(c, now));
-      if (eligible.length === 0) return null;
-      // Rotación diaria: entre los nuevos, el orden cambia por día.
-      return eligible[0]; // pool ya viene barajado por día en rankDeck
-    }
-    case 'economico': {
-      // El más accesible de lo que queda (cualquier coach tiene precio).
-      return [...pool].sort((a, b) =>
-        ((a.priceFrom ?? Infinity) - (b.priceFrom ?? Infinity)) ||
-        ((b.avgRating ?? 0) - (a.avgRating ?? 0)),
-      )[0];
-    }
+    case 'recomendado': return passesQualityBar(c);
+    case 'tendencia':   return (c.recentBookers ?? 0) >= MIN_TRENDING_BOOKERS;
+    case 'nuevo':       return isNewCoach(c, ctx.now);
+    case 'economico':   return (c.priceFrom ?? Infinity) <= ctx.medianPrice;
   }
 }
 
 /**
  * Devuelve el deck de una puerta como slots etiquetados (≤ SLOT_ORDER.length).
- * Cada coach aparece una sola vez; slots sin candidato se omiten.
+ * Cada coach aparece una sola vez y ocupa el slot de mayor prioridad para el que
+ * califica; los slots sin ningún candidato se omiten (nunca se muestra un coach
+ * mal etiquetado).
+ *
+ * La mediana se calcula sobre la puerta COMPLETA, no sobre lo que queda después
+ * de que los slots de arriba consumieron coaches — si no, la barra de "económico"
+ * se movería sola según quién ya fue elegido.
  */
 export function rankDeck(
   eligible: CachedCoach[],
@@ -145,16 +179,14 @@ export function rankDeck(
   now: Date = new Date(),
 ): DeckEntry[] {
   const seed = `${dayKey(now)}:${userId ?? 'anon'}`;
-  // Baraja base por día: da orden estable-por-día para desempates y para el
-  // carril "nuevo" (rota qué nuevo se muestra sin enterrar a nadie).
   const shuffled = seededShuffle(eligible, seed);
+  const ctx = buildSlotContext(eligible, now);
 
   const picked = new Set<string>();
   const out: DeckEntry[] = [];
 
   for (const key of SLOT_ORDER) {
-    const pool = shuffled.filter(c => !picked.has(c.id));
-    const coach = pickForSlot(key, pool, now);
+    const coach = shuffled.find(c => !picked.has(c.id) && isEligibleForSlot(key, c, ctx));
     if (!coach) continue;
     picked.add(coach.id);
     out.push({ coach, slot: DECK_SLOTS[key] });

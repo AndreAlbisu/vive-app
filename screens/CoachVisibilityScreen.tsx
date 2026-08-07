@@ -24,6 +24,9 @@ import {
   analyzeDoors,
   buildChecklist,
   blockingReason,
+  isNewCoach,
+  NEW_MAX_REVIEWS,
+  NEW_MAX_AGE_DAYS,
   type DoorStanding,
   type ChecklistItem,
   type SlotStanding,
@@ -32,7 +35,6 @@ import {
 
 // Misma paleta que CoachHomeScreen (docs/coach-app-interactivo.html).
 const CARD = '#F7F2E7';
-const CREAM_DEEP = '#EAE2D0';
 const FOREST = '#3F512F';
 const FOREST_SOFT = '#6B7A56';
 const TERRA = '#C06B4A';
@@ -44,10 +46,9 @@ const GREEN_TXT = '#F3EEDF';
 const GREEN_EYEBROW = '#C9CFAF';
 
 const STATUS_STYLE: Record<SlotStanding['status'], { bg: string; ink: string; label: string }> = {
-  ganado:    { bg: OK_BG,      ink: OK_INK,     label: 'Lo ocupás' },
-  rotando:   { bg: TERRA_SOFT, ink: '#8C4A31',  label: 'Rotás' },
-  compite:   { bg: CREAM_DEEP, ink: FOREST_SOFT, label: 'Competís' },
-  bloqueado: { bg: 'transparent', ink: 'rgba(107,122,86,0.65)', label: 'Cerrado' },
+  ganado:    { bg: OK_BG,      ink: OK_INK,    label: 'Es tuyo' },
+  rotando:   { bg: TERRA_SOFT, ink: '#8C4A31', label: 'Entrás al sorteo' },
+  bloqueado: { bg: 'transparent', ink: 'rgba(107,122,86,0.65)', label: 'Te falta' },
 };
 
 type Loaded = {
@@ -81,12 +82,13 @@ export default function CoachVisibilityScreen() {
 
     const coachId = coachRow.id as string;
 
-    const [{ data: profile }, { data: topicRows }, { data: reviewRows }, { data: trendRows }, { data: availRows }, pool] =
+    const [{ data: profile }, { data: topicRows }, { data: reviewRows }, { data: trendRows }, { data: rebookRow }, { data: availRows }, pool] =
       await Promise.all([
         supabase.from('profiles').select('name, avatar_url, gender').eq('id', user.id).maybeSingle(),
         supabase.from('coach_topics').select('topic').eq('coach_id', coachId),
         supabase.from('reviews').select('rating').eq('reviewed_id', user.id).eq('is_private', false),
         supabase.from('coach_trending_stats').select('recent_bookers').eq('coach_id', coachId).maybeSingle(),
+        supabase.from('coach_rebooking_stats').select('rebooking_rate, completadas_count').eq('coach_id', coachId).maybeSingle(),
         supabase.from('coach_availability_status').select('status').eq('coach_id', coachId).maybeSingle(),
         loadCoaches(),
       ]);
@@ -109,8 +111,8 @@ export default function CoachVisibilityScreen() {
       verified: !!coachRow.verified,
       avgRating: reviewCount > 0 ? ratings.reduce((a, b) => a + b, 0) / reviewCount : null,
       reviewCount,
-      rebookingRate: null,
-      completadasCount: 0,
+      rebookingRate: (rebookRow?.rebooking_rate ?? null) as number | null,
+      completadasCount: (rebookRow?.completadas_count ?? 0) as number,
       recentBookers: (trendRows?.recent_bookers ?? 0) as number,
       availabilityStatus: (coachRow.availability_status ?? 'activo') as 'activo' | 'en_pausa',
       hasSlotThisWeek: availRows?.status === 'this_week',
@@ -205,12 +207,13 @@ export default function CoachVisibilityScreen() {
               <>
                 <Text style={s.heroTitle}>
                   {winnable > 0
-                    ? `Podés ocupar un lugar en ${winnable} de ${doors.length} ${doors.length === 1 ? 'puerta' : 'puertas'}`
+                    ? `Entrás al sorteo en ${winnable} de ${doors.length} ${doors.length === 1 ? 'puerta' : 'puertas'}`
                     : `Aparecés en ${doors.length} ${doors.length === 1 ? 'puerta' : 'puertas'}`}
                 </Text>
                 <Text style={s.heroSub}>
-                  Cada puerta muestra 4 lugares en orden fijo. Se recorren de arriba a abajo y cada coach ocupa
-                  uno solo: el más alto que le corresponda.
+                  Cada puerta tiene 4 lugares. No los gana el mejor de la lista: entran todos los que cruzan la
+                  barra y se sortea entre ellos, distinto para cada persona y cada día. Ocupás el lugar más alto
+                  para el que califiques.
                 </Text>
               </>
             )}
@@ -340,10 +343,11 @@ export default function CoachVisibilityScreen() {
             <Feather name="chevron-right" size={16} color={FOREST_SOFT} />
           </TouchableOpacity>
 
-          {self.reviewCount === 0 && (
+          {isNewCoach(self) && (
             <Text style={s.footNote}>
-              Contás como nuevo mientras tengas menos de 5 reseñas o menos de 4 semanas en Vita. Es la ventana
-              en la que tenés lugar reservado sin haber trabajado con nadie todavía.
+              Contás como nuevo mientras tengas menos de {NEW_MAX_REVIEWS} reseñas y menos de {NEW_MAX_AGE_DAYS} días
+              en Vita. Es una ventana que se cierra sola: aprovechala para conseguir las primeras reseñas, que son
+              las que te abren los lugares de arriba.
             </Text>
           )}
 

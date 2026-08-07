@@ -2,11 +2,19 @@ import { DOORS, coachesForDoor, type Door } from '@/constants/conexionesDoors';
 import {
   DECK_SLOTS,
   SLOT_ORDER,
+  buildSlotContext,
+  isEligibleForSlot,
   isNewCoach,
   NEW_MAX_REVIEWS,
   NEW_MAX_AGE_DAYS,
+  MIN_REBOOKING_SAMPLE,
+  MIN_RECOMMEND_RATING,
+  MIN_RECOMMEND_REVIEWS,
+  MIN_RECOMMEND_REBOOKING,
+  MIN_TRENDING_BOOKERS,
   type DeckSlot,
   type DeckSlotKey,
+  type SlotContext,
 } from './coachDeckRanking';
 import type { CachedCoach } from './coachesCache';
 
@@ -14,28 +22,25 @@ import type { CachedCoach } from './coachesCache';
 //
 // El deck decide QUÉ coach ocupa cada slot de una puerta. Acá respondemos la
 // pregunta inversa, que es la que se hace el coach recién llegado: "de los 4
-// slots de esta puerta, ¿en cuál puedo entrar hoy y qué me falta para el
-// siguiente?". Sin esto el coach nuevo ve la app vacía y concluye que lo único
-// que puede hacer es traer clientes de afuera — cuando en realidad dos de los
-// cuatro slots (`nuevo` y `economico`) son ganables el día 1 sin tráfico propio.
+// lugares de esta puerta, ¿en cuál entro hoy y qué me falta para el siguiente?".
+// Sin esto el coach nuevo ve la app vacía y concluye que lo único a su alcance
+// es traer clientes de afuera — cuando en realidad dos de los cuatro lugares
+// (`nuevo` y `economico`) son alcanzables el día 1 sin tráfico propio.
 //
-// Aproximación conocida: el ranking de cada slot se calcula sobre TODA la puerta,
-// pero `rankDeck` consume coaches en orden de prioridad (quien gana `recomendado`
-// ya no compite por `economico`). O sea que la posición real del coach en los
-// slots bajos es igual o MEJOR que la que mostramos. Preferimos subestimar antes
-// que prometer un slot que después no aparece.
+// Los criterios NO se reimplementan acá: se llama a `isEligibleForSlot` del deck,
+// así el panel no puede prometer algo que el deck después no cumple. Lo único
+// propio de este archivo son los textos que explican la brecha.
 
 export type StandingStatus =
-  | 'ganado'     // sos el pick determinístico de ese slot
-  | 'rotando'    // elegible y empatado: la rotación diaria reparte el slot
-  | 'compite'    // elegible pero hay alguien adelante
-  | 'bloqueado'; // no cumplís el requisito del slot
+  | 'ganado'     // estás en el pool y sos el único: el lugar es tuyo
+  | 'rotando'    // estás en el pool y se sortea entre varios
+  | 'bloqueado'; // no llegás a la barra
 
 export type SlotStanding = {
   slot: DeckSlot;
   status: StandingStatus;
   detail: string;
-  /** Cuántos coaches de la puerta califican para el slot (te incluye si calificás). */
+  /** Cuántos coaches de la puerta están en el pool (te incluye si estás). */
   contenders: number;
 };
 
@@ -44,7 +49,7 @@ export type DoorStanding = {
   /** Coaches visibles en la puerta, incluyéndote. */
   total: number;
   slots: SlotStanding[];
-  /** Primer slot en orden de prioridad que podés ocupar hoy (`ganado` o `rotando`). */
+  /** Primer slot en orden de prioridad que podés ocupar hoy. */
   best: SlotStanding | null;
 };
 
@@ -66,168 +71,103 @@ export type VisibilitySelf = CachedCoach & {
 };
 
 function money(n: number | null | undefined): string {
-  return n == null ? '—' : `$${n.toLocaleString('es-AR')}`;
+  return n == null || !Number.isFinite(n) ? '—' : `$${Math.round(n).toLocaleString('es-AR')}`;
 }
 
 function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-// ─── Standing por slot ───────────────────────────────────────────────────────
-
-function standRecomendado(self: VisibilitySelf, others: CachedCoach[]): SlotStanding {
-  const slot = DECK_SLOTS.recomendado;
-  const mine = self.reviewCount ?? 0;
-  const rivals = others.filter(c => (c.reviewCount ?? 0) >= 1);
-
-  if (mine < 1) {
-    return {
-      slot,
-      status: 'bloqueado',
-      contenders: rivals.length,
-      detail: rivals.length === 0
-        ? 'Nadie en esta puerta tiene reseñas todavía: el slot está vacío y lo abre tu primera reseña.'
-        : `Necesitás tu primera reseña pública. Hoy compiten ${plural(rivals.length, 'coach', 'coaches')}.`,
-    };
-  }
-
-  const ranked = [self as CachedCoach, ...rivals].sort((a, b) =>
-    ((b.avgRating ?? 0) - (a.avgRating ?? 0)) ||
-    ((b.reviewCount ?? 0) - (a.reviewCount ?? 0)),
-  );
-  const pos = ranked.findIndex(c => c.id === self.id) + 1;
-  const mineRating = (self.avgRating ?? 0).toFixed(1);
-
-  if (pos === 1) {
-    return {
-      slot,
-      status: 'ganado',
-      contenders: ranked.length,
-      detail: `Sos el mejor puntuado de la puerta: ${mineRating} ★ sobre ${plural(mine, 'reseña', 'reseñas')}.`,
-    };
-  }
-  const top = ranked[0];
-  return {
-    slot,
-    status: 'compite',
-    contenders: ranked.length,
-    detail: `Vas #${pos} de ${ranked.length} con ${mineRating} ★. El primero está en ${(top.avgRating ?? 0).toFixed(1)} ★.`,
-  };
+function pct(n: number): string {
+  return `${Math.round(n * 100)}%`;
 }
 
-function standTendencia(self: VisibilitySelf, others: CachedCoach[]): SlotStanding {
-  const slot = DECK_SLOTS.tendencia;
+function ageDays(c: CachedCoach, now: Date): number | null {
+  if (!c.createdAt) return null;
+  return Math.floor((now.getTime() - new Date(c.createdAt).getTime()) / 86_400_000);
+}
+
+// ─── Textos ──────────────────────────────────────────────────────────────────
+// Qué le falta al coach para cruzar cada barra. La regla de escritura: siempre
+// un número concreto y alcanzable, nunca una posición relativa. "Te faltan 2
+// reseñas" es accionable; "vas #3 de 7" es una carrera contra gente que él no
+// controla, que es justo lo que v3 dejó de ser.
+
+function gapRecomendado(self: VisibilitySelf): string {
+  const rating = self.avgRating ?? 0;
+  const reviews = self.reviewCount ?? 0;
+  const completadas = self.completadasCount ?? 0;
+
+  if (reviews === 0) {
+    return `La barra es ${MIN_RECOMMEND_REVIEWS} reseñas con ${MIN_RECOMMEND_RATING}★ o más. Todavía no tenés ninguna.`;
+  }
+  if (rating < MIN_RECOMMEND_RATING) {
+    return `Tenés ${rating.toFixed(1)}★ y la barra está en ${MIN_RECOMMEND_RATING}★.`;
+  }
+  if (completadas >= MIN_REBOOKING_SAMPLE) {
+    return `Con ${completadas} sesiones completadas la barra pasa a ser el reagendamiento: hace falta ${pct(MIN_RECOMMEND_REBOOKING)} y tenés ${pct(self.rebookingRate ?? 0)}.`;
+  }
+  const faltan = MIN_RECOMMEND_REVIEWS - reviews;
+  return `Vas bien de puntaje (${rating.toFixed(1)}★). Te ${faltan === 1 ? 'falta' : 'faltan'} ${plural(faltan, 'reseña', 'reseñas')} para cruzar la barra.`;
+}
+
+function gapTendencia(self: VisibilitySelf): string {
   const mine = self.recentBookers ?? 0;
-  const rivals = others.filter(c => (c.recentBookers ?? 0) > 0);
-
-  if (mine < 1) {
-    return {
-      slot,
-      status: 'bloqueado',
-      contenders: rivals.length,
-      detail: 'Cuenta la gente distinta que te reservó en los últimos 30 días. Hoy tenés 0.',
-    };
-  }
-
-  const ranked = [self as CachedCoach, ...rivals].sort((a, b) =>
-    ((b.recentBookers ?? 0) - (a.recentBookers ?? 0)) ||
-    ((b.avgRating ?? 0) - (a.avgRating ?? 0)),
-  );
-  const pos = ranked.findIndex(c => c.id === self.id) + 1;
-
-  if (pos === 1) {
-    return {
-      slot,
-      status: 'ganado',
-      contenders: ranked.length,
-      detail: `${plural(mine, 'persona distinta te reservó', 'personas distintas te reservaron')} en 30 días — el máximo de la puerta.`,
-    };
-  }
-  return {
-    slot,
-    status: 'compite',
-    contenders: ranked.length,
-    detail: `Vas #${pos} de ${ranked.length} con ${plural(mine, 'reserva', 'reservas')} de gente distinta. El primero tiene ${ranked[0].recentBookers ?? 0}.`,
-  };
+  return mine === 0
+    ? `Hace falta que ${MIN_TRENDING_BOOKERS} personas distintas te reserven en 30 días. Hoy tenés 0.`
+    : `Vas ${mine} de ${MIN_TRENDING_BOOKERS} personas distintas en los últimos 30 días.`;
 }
 
-function standNuevo(self: VisibilitySelf, others: CachedCoach[], now: Date): SlotStanding {
-  const slot = DECK_SLOTS.nuevo;
+function gapNuevo(self: VisibilitySelf, now: Date): string {
+  const reviews = self.reviewCount ?? 0;
+  const days = ageDays(self, now);
 
-  if (!isNewCoach(self, now)) {
-    return {
-      slot,
-      status: 'bloqueado',
-      contenders: others.filter(c => isNewCoach(c, now)).length,
-      detail: `Ya pasaste las ${NEW_MAX_REVIEWS} reseñas y los ${NEW_MAX_AGE_DAYS} días: ahora te toca pelear arriba.`,
-    };
+  if (reviews >= NEW_MAX_REVIEWS) {
+    return `Dejaste de contar como nuevo al llegar a ${NEW_MAX_REVIEWS} reseñas. Ya te toca pelear arriba.`;
   }
-
-  const rivals = others.filter(c => isNewCoach(c, now)).length;
-  // El pool ya viene barajado por `${día}:${userId}` en rankDeck, así que entre
-  // los nuevos la rotación es por persona-y-día, no por día global.
-  if (rivals === 0) {
-    return {
-      slot,
-      status: 'ganado',
-      contenders: 1,
-      detail: 'Sos el único coach nuevo de esta puerta: el slot es tuyo hasta que llegue otro.',
-    };
+  if (days != null && days >= NEW_MAX_AGE_DAYS) {
+    return `La ventana de recién llegado dura ${NEW_MAX_AGE_DAYS} días y ya llevás ${days}.`;
   }
-  return {
-    slot,
-    status: 'rotando',
-    contenders: rivals + 1,
-    detail: `Rotás con ${plural(rivals, 'coach nuevo', 'coaches nuevos')}: te ve ≈1 de cada ${rivals + 1} personas que abren la puerta.`,
-  };
+  return 'No podemos calcular tu antigüedad, así que este lugar queda cerrado. Avisanos si te pasa.';
 }
 
-function standEconomico(self: VisibilitySelf, others: CachedCoach[]): SlotStanding {
-  const slot = DECK_SLOTS.economico;
-  const all = [self as CachedCoach, ...others];
-
-  // Mismo criterio que pickForSlot: precio asc, y el puntaje desempata.
-  const ranked = [...all].sort((a, b) =>
-    ((a.priceFrom ?? Infinity) - (b.priceFrom ?? Infinity)) ||
-    ((b.avgRating ?? 0) - (a.avgRating ?? 0)),
-  );
-  const pos = ranked.findIndex(c => c.id === self.id) + 1;
-  const cheapest = ranked[0];
-
-  if (pos === 1) {
-    const tied = others.filter(c => c.priceFrom === self.priceFrom).length;
-    return {
-      slot,
-      status: 'ganado',
-      contenders: all.length,
-      detail: tied === 0
-        ? `Sos la opción más accesible de la puerta con ${money(self.priceFrom)}.`
-        : `Empatás en ${money(self.priceFrom)} con ${plural(tied, 'coach', 'coaches')} y ganás el desempate por puntaje.`,
-    };
-  }
-
-  const gap = (self.priceFrom ?? 0) - (cheapest.priceFrom ?? 0);
-  return {
-    slot,
-    status: 'compite',
-    contenders: all.length,
-    detail: `Vas #${pos} de ${all.length}. El más accesible está en ${money(cheapest.priceFrom)}, ${money(gap)} por debajo tuyo.`,
-  };
+function gapEconomico(self: VisibilitySelf, ctx: SlotContext): string {
+  const mine = self.priceFrom ?? 0;
+  const diff = mine - ctx.medianPrice;
+  return `La mediana de la puerta está en ${money(ctx.medianPrice)} y cobrás ${money(mine)}. Entrás bajando ${money(diff)}.`;
 }
 
-function standingForSlot(
-  key: DeckSlotKey,
-  self: VisibilitySelf,
-  others: CachedCoach[],
-  now: Date,
-): SlotStanding {
+function gapFor(key: DeckSlotKey, self: VisibilitySelf, ctx: SlotContext): string {
   switch (key) {
-    case 'recomendado': return standRecomendado(self, others);
-    case 'tendencia':   return standTendencia(self, others);
-    case 'nuevo':       return standNuevo(self, others, now);
-    case 'economico':   return standEconomico(self, others);
+    case 'recomendado': return gapRecomendado(self);
+    case 'tendencia':   return gapTendencia(self);
+    case 'nuevo':       return gapNuevo(self, ctx.now);
+    case 'economico':   return gapEconomico(self, ctx);
   }
 }
+
+function inPoolDetail(key: DeckSlotKey, self: VisibilitySelf, rivals: number, ctx: SlotContext): string {
+  const share = rivals === 0
+    ? 'Sos el único que califica: el lugar es tuyo.'
+    : `Se sortea entre ${rivals + 1}: te ve ≈1 de cada ${rivals + 1} personas que abren la puerta.`;
+
+  switch (key) {
+    case 'recomendado':
+      return `Cumplís la barra de calidad. ${share}`;
+    case 'tendencia':
+      return `${plural(self.recentBookers ?? 0, 'persona distinta te reservó', 'personas distintas te reservaron')} en 30 días. ${share}`;
+    case 'nuevo': {
+      const days = ageDays(self, ctx.now);
+      const left = days == null ? null : NEW_MAX_AGE_DAYS - days;
+      const window = left != null && left > 0 ? ` Te ${left === 1 ? 'queda' : 'quedan'} ${plural(left, 'día', 'días')} de ventana.` : '';
+      return `${share}${window}`;
+    }
+    case 'economico':
+      return `${money(self.priceFrom)} queda por debajo de la mediana de la puerta (${money(ctx.medianPrice)}). ${share}`;
+  }
+}
+
+// ─── Análisis ────────────────────────────────────────────────────────────────
 
 /**
  * Standing del coach en cada puerta donde sus temas lo meten.
@@ -244,8 +184,26 @@ export function analyzeDoors(
     .filter(door => door.subtemas.some(t => self.topics.includes(t)))
     .map(door => {
       const rivals = coachesForDoor(door, others);
-      const slots = SLOT_ORDER.map(key => standingForSlot(key, self, rivals, now));
-      const best = slots.find(s => s.status === 'ganado' || s.status === 'rotando') ?? null;
+      // El contexto se arma con la puerta completa incluyéndolo a él, igual que
+      // en rankDeck — si no, la mediana que ve el coach no es la que se aplica.
+      const ctx = buildSlotContext([self as CachedCoach, ...rivals], now);
+
+      const slots = SLOT_ORDER.map<SlotStanding>(key => {
+        const inPool = isEligibleForSlot(key, self as CachedCoach, ctx);
+        const rivalsInPool = rivals.filter(c => isEligibleForSlot(key, c, ctx)).length;
+
+        if (!inPool) {
+          return { slot: DECK_SLOTS[key], status: 'bloqueado', contenders: rivalsInPool, detail: gapFor(key, self, ctx) };
+        }
+        return {
+          slot: DECK_SLOTS[key],
+          status: rivalsInPool === 0 ? 'ganado' : 'rotando',
+          contenders: rivalsInPool + 1,
+          detail: inPoolDetail(key, self, rivalsInPool, ctx),
+        };
+      });
+
+      const best = slots.find(s => s.status !== 'bloqueado') ?? null;
       return { door, total: rivals.length + 1, slots, best };
     });
 }
@@ -281,7 +239,7 @@ export function buildChecklist(self: VisibilitySelf): ChecklistItem[] {
       label: 'Precio por sesión',
       done: (self.priceFrom ?? 0) > 0,
       blocking: true,
-      hint: 'Además de habilitar la reserva, define si entrás al slot "Opción económica".',
+      hint: 'Además de habilitar la reserva, define si entrás al lugar de "Opción económica".',
       route: '/perfil',
     },
     {
@@ -297,7 +255,7 @@ export function buildChecklist(self: VisibilitySelf): ChecklistItem[] {
       label: 'Presentación escrita',
       done: !!self.bio && self.bio.trim().length > 0,
       blocking: false,
-      hint: 'No cambia el ranking, cambia la conversión: es lo primero que se lee cuando el deck ya te mostró.',
+      hint: 'No cambia el sorteo, cambia la conversión: es lo primero que se lee cuando el deck ya te mostró.',
       route: '/perfil',
     },
     {
@@ -305,7 +263,7 @@ export function buildChecklist(self: VisibilitySelf): ChecklistItem[] {
       label: 'Foto de perfil',
       done: !!self.avatarUrl,
       blocking: false,
-      hint: 'Un perfil sin foto pierde contra uno con foto en el mismo slot.',
+      hint: 'Un perfil sin foto pierde contra uno con foto en el mismo lugar.',
       route: '/perfil',
     },
     {
@@ -313,7 +271,7 @@ export function buildChecklist(self: VisibilitySelf): ChecklistItem[] {
       label: 'Video de presentación',
       done: self.hasVideo,
       blocking: false,
-      hint: 'Es lo que más acelera la primera reserva, y la primera reserva es lo que abre los slots de arriba.',
+      hint: 'Es lo que más acelera la primera reserva, y la primera reserva es lo que abre los lugares de arriba.',
       route: '/perfil',
     },
     {
@@ -362,3 +320,6 @@ export function visibilityTeaser(args: {
     blocked: blockingReason(buildChecklist(partial)),
   };
 }
+
+// Re-export para que la pantalla no tenga que importar del deck directamente.
+export { isNewCoach, NEW_MAX_REVIEWS, NEW_MAX_AGE_DAYS };

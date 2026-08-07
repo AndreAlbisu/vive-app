@@ -7,7 +7,7 @@
 
 ## 2026-08-07 — Andre (sesión 86)
 
-**Tocado:** `screens/CoachHomeScreen.tsx`, `lib/coachDeckRanking.ts`, `lib/coachesCache.ts`, `app/_layout.tsx`. Nuevos: `lib/coachVisibility.ts`, `screens/CoachVisibilityScreen.tsx`, `app/coach-visibilidad.tsx`. **Sin cambios de schema.**
+**Tocado:** `screens/CoachHomeScreen.tsx`, `lib/coachDeckRanking.ts` (reescrito), `lib/coachesCache.ts`, `app/_layout.tsx`, `SCHEMA.md`. Nuevos: `lib/coachVisibility.ts`, `screens/CoachVisibilityScreen.tsx`, `app/coach-visibilidad.tsx`, `scripts/harden-reviews-insert.sql`. **`scripts/harden-reviews-insert.sql` FALTA CORRER.**
 
 **Resumen:**
 - **Problema de arranque del coach:** al crear la cuenta, el coach no tiene forma de saber qué puede hacer y concluye que lo único a su alcance es traer clientes de afuera. Falso: de los 4 slots del deck de una puerta, **dos son ganables el día 1** — `nuevo` (elegible con <5 reseñas **o** <28 días) y `economico` (el precio más bajo de la puerta). El comentario de `coachDeckRanking.ts` ya decía "le dice al coach cómo aparecer en cada slot", pero ese mapeo solo existía del lado del usuario.
@@ -17,11 +17,24 @@
 - Se exportó `SLOT_ORDER` desde `coachDeckRanking.ts` y se agregó `loadCoaches()` a `coachesCache.ts` (versión esperable de `prefetchCoaches`, evita el poll con `setInterval` que usa `conexiones.tsx` — esa pantalla no se tocó).
 - Typecheck y lint limpios. **Falta probar en Expo Go.**
 
+**Segunda mitad de la sesión — el deck pasa de podio a sorteo (v3) + se cierra el agujero de reseñas:**
+
+- **Diagnóstico (conversación con Andre):** los 4 slots estaban *etiquetados como categorías pero implementados como rankings* — cada uno hacía `sort(...)[0]`, el máximo. De ahí salían tres problemas del mismo error: (1) el mismo coach ocupaba "Recomendado por Vita" semanas enteras porque el criterio era determinístico y no rotaba; (2) hacer trampa pagaba muchísimo, porque subir de 4.7 a 4.9 daba el monopolio de la puerta; (3) duplicaba el trabajo de `search3`, que ya es la lista completa y comparable. **Conexiones recomienda una opción; la búsqueda deja comparar las 100** — esa es la división de trabajo que el deck no estaba respetando.
+- **v3 en `coachDeckRanking.ts`:** cada slot deja de ser "el máximo" y pasa a ser **un filtro que define un pool + un sorteo**. El sorteo ya existía (shuffle sembrado por `${día}:${userId}`), solo que lo pisaba el `sort`. Ahora es el mecanismo principal: dos personas ven coaches distintos el mismo día. Barras nuevas — `recomendado`: ≥4.5★ **y** (≥3 reseñas, o ≥30% de reagendamiento cuando hay ≥5 completadas); `tendencia`: ≥3 personas distintas en 30 días; `economico`: por debajo de la **mediana** de la puerta (no "el más barato", que era una carrera hacia abajo con un único ganador). El archivo quedó más corto que antes.
+- **`isNewCoach` pasó de OR a AND** (<5 reseñas **y** <28 días). El OR no drenaba: quien nunca llegaba a 5 reseñas quedaba "nuevo" para siempre, y el carril terminaba acumulando justo a los que no convirtieron, diluyendo a los recién llegados (con 60 acumulados, 1/60 de exposición). Sin `createdAt` falla cerrado.
+- **`isEligibleForSlot` es ahora la única definición de cada criterio** y la comparten el deck y el panel del coach — no pueden divergir ni prometer un lugar que después no aparece.
+- **`scripts/harden-reviews-insert.sql` (NUEVO, FALTA CORRER):** la política de INSERT de `reviews` era solo `reviewer_id = auth.uid()` — no validaba que el booking fuera propio, ni que la sesión estuviera `completada`, ni que el reseñado fuera el coach de esa reserva. `ReviewScreen` armaba todo bien, pero la pantalla no es la frontera de seguridad: contra la API directa se podía reseñar a **cualquier** coach del catálogo. Costo de fabricar reputación: N cuentas, no N sesiones pagadas. Sin esto, la barra de calidad de v3 sería decorativa. El `UNIQUE(reviewer_id, reviewed_id)`, la ausencia de DELETE y el trigger de inmutabilidad ya estaban bien y no se tocaron. SCHEMA.md actualizado.
+- **Bug de fondo corregido en `coachesCache`:** el `.limit(50)` estaba **sin `order by`** → Postgres devolvía 50 filas arbitrarias y, pasado el tope, algunos coaches no existían para Conexiones (y cuáles podía cambiar entre consultas). Con v3 además sesgaba los pools en silencio. Ahora `.order('created_at').limit(200)`.
+- Panel del coach reescrito en consecuencia: los estados pasaron de `ganado/rotando/compite/bloqueado` a **`ganado/rotando/bloqueado`** y los textos pasaron de posición relativa a brecha concreta — "te faltan 2 reseñas para cruzar la barra" en vez de "vas #3 de 7". La regla de escritura quedó documentada en el lib: siempre un número alcanzable, nunca una carrera contra gente que el coach no controla.
+- Typecheck y lint limpios.
+
 **Pendiente para la próxima sesión:**
-- Probar `/coach-visibilidad` en dispositivo con una cuenta de coach real: sobre todo el caso "recién postulado" (sin verificar, sin temas) y el caso "verificado con temas pero sin reservas".
-- **`isNewCoach` es un OR, no un AND**: un coach con <5 reseñas queda "nuevo" para siempre, sin importar la antigüedad. Hoy no molesta, pero con más oferta el pool del slot `nuevo` se llena de coaches que nunca convirtieron y diluye la rotación de los que recién llegan. Decidir con Joaquín si el criterio pasa a AND o si se le pone un techo de antigüedad duro.
-- **Mecánica de "cliente traído"**: no existe link de invitación ni comisión diferencial para el cliente que el coach trae de afuera. Es lo contrario de la fuga y hoy no se premia — quedó como el siguiente bloque a definir después de este panel.
-- `analyzeDoors` opera sobre el cache de coaches, que tiene `.limit(50)`. Coincide con lo que ve el usuario en el deck, así que los números no mienten, pero cuando la oferta pase de 50 hay que revisar ese límite en `coachesCache` (afecta al deck, no solo a este panel).
+- **Correr `scripts/harden-reviews-insert.sql`** — tiene un diagnóstico previo al principio: correr ESO solo primero y mirar cuántas reseñas existentes no pasarían la política nueva antes de cerrar la puerta.
+- Probar `/coach-visibilidad` en dispositivo con una cuenta de coach real: sobre todo "recién postulado" (sin verificar, sin temas) y "verificado con temas pero sin reservas".
+- **Calibrar los umbrales de v3 con datos reales.** Están puestos a ojo: 4.5★, 3 reseñas, 30% de reagendamiento, 3 reservantes en 30 días. Si quedan altos, los pools se vacían y los slots se omiten; si quedan bajos, "Recomendado por Vita" no dice nada. Revisar con Joaquín.
+- **Enchufado el reagendamiento como señal, falta verificar que tenga volumen**: hoy casi ningún coach llega a `MIN_REBOOKING_SAMPLE = 5` completadas, así que en la práctica todos caen al tramo de estrellas. Es lo esperado al principio.
+- **Mecánica de "cliente traído"**: sigue sin existir link de invitación ni comisión diferencial para el cliente que el coach trae de afuera. Es lo contrario de la fuga y no se premia — es el bloque grande que quedó abierto.
+- Arreglo de fondo del catálogo: traer coaches **por puerta desde el server** en vez de bajarse el catálogo entero al cliente. El `.limit(200)` compra tiempo, no resuelve.
 
 ## 2026-08-07 — Joaquín (sesión 85)
 
