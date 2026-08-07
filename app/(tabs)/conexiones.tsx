@@ -26,7 +26,7 @@ import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
-import { rankDeck } from '@/lib/coachDeckRanking';
+import { rankDeck, SLOT_COLORS } from '@/lib/coachDeckRanking';
 
 // ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
 const FOREST      = '#3F512F';
@@ -339,58 +339,62 @@ export default function ConexionesScreen() {
                   {deck.map((entry, i) => {
                     const { coach, slot } = entry;
                     const available = !!coach.hasSlotThisWeek;
+                    // El color lo da la CATEGORÍA, no la puerta: la puerta ya está
+                    // nombrada arriba en la pastilla, y así cada card del deck se
+                    // distingue de la anterior.
+                    const catColor = SLOT_COLORS[slot.key];
+                    const isFav = favoriteIds.has(coach.id);
                     return (
                       <View key={coach.id} style={s.cardPage}>
                         <View style={s.cardWrap}>
-                          {/* Banda de color por eje */}
-                          <View style={[s.cardBand, { backgroundColor: tint(selectedDoor.color, 0.20) }]}>
-                            <TouchableOpacity
-                              onPress={() => toggleFav(coach.id)}
-                              hitSlop={8}
-                              activeOpacity={0.7}
-                              style={s.cardFav}>
-                              <Feather name="star" size={17} color={favoriteIds.has(coach.id) ? TERRACOTTA : FOREST_SOFT} />
-                            </TouchableOpacity>
-                            <View style={s.cardCounter}>
-                              <Text style={s.cardCounterText}>{i + 1} de {deck.length}</Text>
+                          {/* Cabecera: la categoría deja de ser una pastilla suelta
+                              y pasa a ser la identidad de la card. */}
+                          <View style={[s.cardHead, { backgroundColor: catColor }]}>
+                            <View style={s.cardHeadLeft}>
+                              <Feather name={slot.icon as any} size={13} color="#F7F2E7" />
+                              <Text style={s.cardHeadLabel} numberOfLines={1}>{slot.label}</Text>
                             </View>
-                          </View>
-
-                          {/* Avatar solapado */}
-                          <View style={s.cardAvatarWrap}>
-                            {coach.avatarUrl ? (
-                              <Image source={{ uri: coach.avatarUrl }} style={s.cardAvatar} />
-                            ) : (
-                              <View style={[s.cardAvatar, s.cardAvatarFallback]}>
-                                <Text style={s.cardInitials}>{getInitials(coach.name)}</Text>
+                            <View style={s.cardHeadRight}>
+                              <TouchableOpacity
+                                onPress={() => toggleFav(coach.id)}
+                                hitSlop={10}
+                                activeOpacity={0.7}>
+                                <Feather name="star" size={16} color="#F7F2E7" style={isFav ? undefined : s.starOff} />
+                              </TouchableOpacity>
+                              <View style={s.cardCounter}>
+                                <Text style={s.cardCounterText}>{i + 1} / {deck.length}</Text>
                               </View>
-                            )}
-                            {coach.verified && (
-                              <View style={s.vBadge}><Feather name="check" size={11} color="#F3EEDF" /></View>
-                            )}
+                            </View>
                           </View>
 
-                          {/* Cuerpo */}
                           <View style={s.cardBody}>
-                            <View style={[s.whyChip, { backgroundColor: tint(selectedDoor.color, 0.16) }]}>
-                              <Feather name={slot.icon as any} size={12} color={selectedDoor.color} />
-                              <Text style={[s.whyChipText, { color: selectedDoor.color }]}>{slot.label}</Text>
-                            </View>
-                            <Text style={s.slotSublabel}>{slot.sublabel}</Text>
-
-                            <Text style={s.cardName} numberOfLines={1}>{coach.name}</Text>
-                            <Text style={s.cardRole} numberOfLines={1}>{coach.specialty}</Text>
-
-                            <View style={s.cardRatingRow}>
-                              {(coach.reviewCount ?? 0) >= 1 ? (
-                                <Text style={s.cardRating}>
-                                  <Text style={{ color: STAR }}>★ </Text>
-                                  {(coach.avgRating ?? 0).toFixed(1)}
-                                  <Text style={s.cardRatingMuted}>  ·  {coach.reviewCount} reseñas</Text>
-                                </Text>
+                            {/* Quién: avatar y nombre en la misma fila, alineados a
+                                la izquierda — antes estaba todo centrado y no había
+                                por dónde empezar a leer. */}
+                            <View style={s.cardWho}>
+                              {coach.avatarUrl ? (
+                                <Image source={{ uri: coach.avatarUrl }} style={s.cardAvatar} />
                               ) : (
-                                <Text style={s.cardNew}>Sin reseñas todavía</Text>
+                                <View style={[s.cardAvatar, { backgroundColor: catColor }]}>
+                                  <Text style={s.cardInitials}>{getInitials(coach.name)}</Text>
+                                </View>
                               )}
+                              {coach.verified && (
+                                <View style={s.vBadge}><Feather name="check" size={10} color="#F3EEDF" /></View>
+                              )}
+                              <View style={s.cardWhoText}>
+                                <Text style={s.cardName} numberOfLines={1}>{coach.name}</Text>
+                                <Text style={s.cardRole} numberOfLines={1}>{coach.specialty}</Text>
+                                {(coach.reviewCount ?? 0) >= 1 ? (
+                                  <Text style={s.cardRating}>
+                                    <Text style={{ color: STAR }}>★ </Text>
+                                    {(coach.avgRating ?? 0).toFixed(1)}
+                                    <Text style={s.cardRatingMuted}>  ·  {coach.reviewCount} reseñas</Text>
+                                  </Text>
+                                ) : (
+                                  <Text style={s.cardNew}>Sin reseñas todavía</Text>
+                                )}
+                              </View>
                             </View>
 
                             {!!coach.bio && (
@@ -398,18 +402,19 @@ export default function ConexionesScreen() {
                             )}
 
                             <View style={s.cardMetaRow}>
+                              <Text style={s.cardPrice}>
+                                Desde <Text style={s.cardPriceNum}>${(coach.priceFrom ?? 0).toLocaleString('es-AR')}</Text>
+                              </Text>
                               {available && (
-                                <>
+                                <View style={s.cardAvailWrap}>
                                   <View style={s.liveDot} />
                                   <Text style={s.cardAvail}>Con lugar esta semana</Text>
-                                  <Text style={s.cardMetaDivider}>·</Text>
-                                </>
+                                </View>
                               )}
-                              <Text style={s.cardPrice}>Desde ${(coach.priceFrom ?? 0).toLocaleString('es-AR')}</Text>
                             </View>
 
                             <TouchableOpacity
-                              style={s.knowBtn}
+                              style={[s.knowBtn, { backgroundColor: catColor }]}
                               onPress={() => goToPerfil(coach)}
                               activeOpacity={0.85}>
                               <Text style={s.knowText}>Conocer a {coach.name.split(' ')[0]}</Text>
@@ -898,129 +903,88 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     ...shadow,
   },
-  cardBand: {
-    height: 92,
-    paddingHorizontal: 14,
-    paddingTop: 12,
+  // ── Cabecera de categoría ────────────────────────────────────────────────
+  cardHead: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
   },
-  cardFav: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  cardHeadLeft: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1 },
+  cardHeadLabel: { fontFamily: ViveFonts.semibold, fontSize: 12, color: '#F7F2E7', flexShrink: 1 },
+  cardHeadRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  starOff: { opacity: 0.55 },
   cardCounter: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    borderRadius: 13,
-    paddingHorizontal: 11,
-    paddingVertical: 5,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 11,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
-  cardCounterText: { fontFamily: ViveFonts.semibold, fontSize: 11.5, color: FOREST },
+  cardCounterText: { fontFamily: ViveFonts.semibold, fontSize: 11, color: '#F7F2E7' },
 
-  cardAvatarWrap: {
-    alignSelf: 'center',
-    marginTop: -46,
-  },
+  // ── Cuerpo ───────────────────────────────────────────────────────────────
+  cardBody: { paddingHorizontal: 16, paddingTop: 15, paddingBottom: 17, gap: 13 },
+
+  cardWho: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cardWhoText: { flex: 1, minWidth: 0 },
   cardAvatar: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    borderWidth: 4,
-    borderColor: CARD,
-  },
-  cardAvatarFallback: {
-    backgroundColor: 'rgba(107,122,86,0.22)',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardInitials: { fontFamily: ViveFonts.semibold, fontSize: 30, color: FOREST },
+  cardInitials: { fontFamily: ViveFonts.frauncesSerif, fontSize: 19, color: '#F7F2E7' },
   vBadge: {
     position: 'absolute',
-    right: 2,
-    bottom: 2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    left: 40,
+    top: 38,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: LIVE,
-    borderWidth: 3,
+    borderWidth: 2.5,
     borderColor: CARD,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-
-  cardBody: {
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 18,
-  },
-  whyChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 13,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginBottom: 10,
-  },
-  whyChipText: { fontFamily: ViveFonts.semibold, fontSize: 11.5 },
-  slotSublabel: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 11.5,
-    color: FOREST_SOFT,
-    textAlign: 'center',
-    marginTop: 5,
   },
   cardName: {
     fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 24,
+    fontSize: 20,
+    lineHeight: 24,
     color: FOREST,
-    textAlign: 'center',
   },
-  cardRole: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: TERRACOTTA,
-    marginTop: 3,
-    textAlign: 'center',
-  },
-  cardRatingRow: { marginTop: 7 },
-  cardRating: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST },
+  cardRole: { fontFamily: ViveFonts.medium, fontSize: 12, color: TERRACOTTA, marginTop: 2 },
+  cardRating: { fontFamily: ViveFonts.semibold, fontSize: 12.5, color: FOREST, marginTop: 4 },
   cardRatingMuted: { fontFamily: ViveFonts.regular, color: FOREST_SOFT },
-  cardNew: { fontFamily: ViveFonts.semibold, fontSize: 12, color: TERRACOTTA },
+  cardNew: { fontFamily: ViveFonts.medium, fontSize: 12, color: FOREST_SOFT, marginTop: 4 },
+
+  // La cita baja de 15 a 13.5 y deja de ser bold: antes le ganaba en masa
+  // visual al nombre de la persona, que es lo que tiene que leerse primero.
   cardBio: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 15,
+    fontFamily: ViveFonts.frauncesSemiBold,
+    fontSize: 13.5,
     fontStyle: 'italic',
     color: INK,
-    textAlign: 'center',
-    lineHeight: 23,
-    marginTop: 14,
+    opacity: 0.82,
+    lineHeight: 21,
   },
-  cardMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    marginTop: 14,
-  },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: LIVE },
-  cardAvail: { fontFamily: ViveFonts.semibold, fontSize: 12.5, color: FOREST },
-  cardMetaDivider: { color: FOREST_SOFT, fontSize: 12.5 },
-  cardPrice: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: FOREST_SOFT },
+
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  cardPrice: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT },
+  cardPriceNum: { fontFamily: ViveFonts.semibold, fontSize: 16, color: FOREST },
+  cardAvailWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: LIVE },
+  cardAvail: { fontFamily: ViveFonts.medium, fontSize: 11.5, color: FOREST },
 
   knowBtn: {
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 16,
-    backgroundColor: FOREST,
-    marginTop: 16,
+    paddingVertical: 13,
+    borderRadius: 15,
   },
   knowText: { fontFamily: ViveFonts.semibold, fontSize: 13.5, color: '#F3EEDF' },
 

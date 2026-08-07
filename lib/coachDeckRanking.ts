@@ -142,6 +142,24 @@ export const DECK_SLOTS: Record<DeckSlotKey, DeckSlot> = {
 
 export const SLOT_ORDER: DeckSlotKey[] = ['recomendado', 'tendencia', 'nuevo', 'economico'];
 
+/**
+ * Color de cada categoría. Vive acá, pegado a `DECK_SLOTS`, para que la etiqueta
+ * y su color no puedan divergir.
+ *
+ * Antes el chip se teñía con el color de la PUERTA, así que las tres cards de un
+ * deck se veían idénticas y la categoría —el dato más importante de la card— no
+ * tenía peso visual. La puerta ya está nombrada arriba en la pastilla
+ * seleccionada, así que el color queda libre para lo que sí distingue.
+ *
+ * Los cuatro salen del mundo cálido de VIVE; ninguno es un color nuevo.
+ */
+export const SLOT_COLORS: Record<DeckSlotKey, string> = {
+  recomendado: '#C06B4A', // terracota — el primario de la marca para el reconocimiento más alto
+  tendencia:   '#B98A2E', // ocre — ya vive en el código como el dorado de las estrellas
+  nuevo:       '#5F7A44', // verde vivo — el mismo del punto de "disponible"
+  economico:   '#3F512F', // forest — accesible no es lo mismo que barato
+};
+
 /** Contexto que depende de la puerta entera, no del coach suelto. */
 export type SlotContext = { medianPrice: number; now: Date };
 

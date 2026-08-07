@@ -17,6 +17,14 @@
 - Se exportó `SLOT_ORDER` desde `coachDeckRanking.ts` y se agregó `loadCoaches()` a `coachesCache.ts` (versión esperable de `prefetchCoaches`, evita el poll con `setInterval` que usa `conexiones.tsx` — esa pantalla no se tocó).
 - Typecheck y lint limpios. **Falta probar en Expo Go.**
 
+**Rediseño de la card del deck (Dirección 1 — "Cabecera"):**
+
+- Andre pidió rediseñar la card del deck ("muy fea"). Se armó un mockup HTML con **las tipografías reales** (Fraunces y Poppins incrustadas como data URI desde `node_modules/@expo-google-fonts`) y la paleta tal cual está en el código, con tres direcciones para elegir. Se eligió la 1.
+- **Diagnóstico:** no le faltaban adornos, le faltaba jerarquía. Todo centrado con el mismo ritmo; la cita en Fraunces bold sobre 3 líneas le ganaba en masa visual al nombre de la persona; la banda gris de 92 px era una foto de portada que no existe; el chip —el dato más importante— era una pastilla gris chica; y "Cumple la barra de calidad" era lenguaje de sistema filtrándose a la pantalla.
+- **`SLOT_COLORS` nuevo en `coachDeckRanking.ts`**, pegado a `DECK_SLOTS` para que etiqueta y color no diverjan: terracota `#C06B4A` (recomendado), ocre `#B98A2E` (tendencia), verde vivo `#5F7A44` (nuevo), forest `#3F512F` (económico). Antes el chip se teñía con el color de la PUERTA, así que las tres cards de un deck se veían idénticas. La puerta ya está nombrada en la pastilla de arriba, así que el color quedó libre para lo que sí distingue.
+- **La categoría pasó de pastilla a cabecera** de la card, con la estrella de favorito y el contador dentro. El cuerpo se alineó a la izquierda, el avatar bajó a 56 px y entró en la fila del nombre, la cita bajó a 13.5 y dejó de ser bold, el precio ganó peso como número, y el botón toma el color de la categoría. Se fue `slotSublabel`.
+- Sin huérfanos en el StyleSheet (chequeado). **Falta verlo en dispositivo.**
+
 **Segunda mitad de la sesión — el deck pasa de podio a sorteo (v3) + se cierra el agujero de reseñas:**
 
 - **Diagnóstico (conversación con Andre):** los 4 slots estaban *etiquetados como categorías pero implementados como rankings* — cada uno hacía `sort(...)[0]`, el máximo. De ahí salían tres problemas del mismo error: (1) el mismo coach ocupaba "Recomendado por Vita" semanas enteras porque el criterio era determinístico y no rotaba; (2) hacer trampa pagaba muchísimo, porque subir de 4.7 a 4.9 daba el monopolio de la puerta; (3) duplicaba el trabajo de `search3`, que ya es la lista completa y comparable. **Conexiones recomienda una opción; la búsqueda deja comparar las 100** — esa es la división de trabajo que el deck no estaba respetando.
