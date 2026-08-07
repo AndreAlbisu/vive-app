@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-08-07 — Andre (sesión 86)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `lib/coachDeckRanking.ts`, `lib/coachesCache.ts`, `app/_layout.tsx`. Nuevos: `lib/coachVisibility.ts`, `screens/CoachVisibilityScreen.tsx`, `app/coach-visibilidad.tsx`. **Sin cambios de schema.**
+
+**Resumen:**
+- **Problema de arranque del coach:** al crear la cuenta, el coach no tiene forma de saber qué puede hacer y concluye que lo único a su alcance es traer clientes de afuera. Falso: de los 4 slots del deck de una puerta, **dos son ganables el día 1** — `nuevo` (elegible con <5 reseñas **o** <28 días) y `economico` (el precio más bajo de la puerta). El comentario de `coachDeckRanking.ts` ya decía "le dice al coach cómo aparecer en cada slot", pero ese mapeo solo existía del lado del usuario.
+- **Pantalla "Cómo aparecer"** (`/coach-visibilidad`): por cada puerta donde sus temas lo meten, muestra los 4 slots con estado `ganado` / `rotando` / `compite` / `bloqueado` y el detalle concreto ("rotás con 3 coaches nuevos: te ve ≈1 de cada 4 personas", "el más accesible está en $X, $Y por debajo tuyo"). Abajo, checklist de lo que depende de él, separando lo **bloqueante** (verificación, perfil activo, temas, precio) de lo que solo mueve conversión (bio, foto, video, reserva instantánea), y un atajo a publicar recursos — el carril de descubrimiento que no pasa por el deck ni por las reseñas.
+- La lógica vive en `lib/coachVisibility.ts`, pura y sin queries, espejando los criterios de `pickForSlot`. **Aproximación conocida y documentada:** el ranking de cada slot se calcula sobre toda la puerta, pero `rankDeck` consume coaches en orden de prioridad, así que la posición real en los slots bajos es igual o mejor que la mostrada — se prefiere subestimar antes que prometer un slot que después no aparece.
+- Card de entrada en el home del coach, alimentada por `visibilityTeaser()` (2 queries baratas sumadas al `Promise.all` que ya existía). Si hay bloqueo, la card lo dice de frente ("Hoy no aparecés en Conexiones") en vez de mostrar el conteo de puertas.
+- Se exportó `SLOT_ORDER` desde `coachDeckRanking.ts` y se agregó `loadCoaches()` a `coachesCache.ts` (versión esperable de `prefetchCoaches`, evita el poll con `setInterval` que usa `conexiones.tsx` — esa pantalla no se tocó).
+- Typecheck y lint limpios. **Falta probar en Expo Go.**
+
+**Pendiente para la próxima sesión:**
+- Probar `/coach-visibilidad` en dispositivo con una cuenta de coach real: sobre todo el caso "recién postulado" (sin verificar, sin temas) y el caso "verificado con temas pero sin reservas".
+- **`isNewCoach` es un OR, no un AND**: un coach con <5 reseñas queda "nuevo" para siempre, sin importar la antigüedad. Hoy no molesta, pero con más oferta el pool del slot `nuevo` se llena de coaches que nunca convirtieron y diluye la rotación de los que recién llegan. Decidir con Joaquín si el criterio pasa a AND o si se le pone un techo de antigüedad duro.
+- **Mecánica de "cliente traído"**: no existe link de invitación ni comisión diferencial para el cliente que el coach trae de afuera. Es lo contrario de la fuga y hoy no se premia — quedó como el siguiente bloque a definir después de este panel.
+- `analyzeDoors` opera sobre el cache de coaches, que tiene `.limit(50)`. Coincide con lo que ve el usuario en el deck, así que los números no mienten, pero cuando la oferta pase de 50 hay que revisar ese límite en `coachesCache` (afecta al deck, no solo a este panel).
+
 ## 2026-08-07 — Joaquín (sesión 85)
 
 **Tocado:** `app/(tabs)/index.tsx`.

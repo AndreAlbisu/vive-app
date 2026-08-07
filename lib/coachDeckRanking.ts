@@ -82,7 +82,7 @@ export const DECK_SLOTS: Record<DeckSlotKey, DeckSlot> = {
   economico:   { key: 'economico',   label: 'Opción económica',     sublabel: 'El precio más accesible del tema', icon: 'tag' },
 };
 
-const SLOT_ORDER: DeckSlotKey[] = ['recomendado', 'tendencia', 'nuevo', 'economico'];
+export const SLOT_ORDER: DeckSlotKey[] = ['recomendado', 'tendencia', 'nuevo', 'economico'];
 
 // v1: el score "recomendado" es solo rating (0 si no tiene reseñas). Cuando haya
 // volumen (≥MIN_REBOOKING_SAMPLE completadas) el reagendamiento entra como señal

@@ -18,6 +18,7 @@ import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { AppBg } from '@/components/ui/AppBg';
+import { visibilityTeaser, type VisibilityTeaser } from '@/lib/coachVisibility';
 
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
 const CARD = '#F7F2E7';
@@ -94,6 +95,7 @@ export default function CoachHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [visibility, setVisibility] = useState<VisibilityTeaser | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -130,7 +132,7 @@ export default function CoachHomeScreen() {
     const monday = new Date(now); monday.setDate(now.getDate() - daysFromMonday); monday.setHours(0, 0, 0, 0);
     const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
 
-    const [{ data: profile }, { data: confirmed }] = await Promise.all([
+    const [{ data: profile }, { data: confirmed }, { data: coachRow }, { data: topicRows }] = await Promise.all([
       supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
       supabase
         .from('bookings')
@@ -139,9 +141,18 @@ export default function CoachHomeScreen() {
         .eq('status', 'confirmada')
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true }),
+      supabase.from('coaches').select('verified, availability_status, price_per_session').eq('id', coachId).maybeSingle(),
+      supabase.from('coach_topics').select('topic').eq('coach_id', coachId),
     ]);
 
     if (profile?.name) setCoachName(profile.name.split(' ')[0]);
+
+    setVisibility(visibilityTeaser({
+      verified: !!coachRow?.verified,
+      availabilityStatus: (coachRow?.availability_status ?? 'activo') as 'activo' | 'en_pausa',
+      topics: (topicRows ?? []).map(t => t.topic as string),
+      price: (coachRow?.price_per_session ?? null) as number | null,
+    }));
 
     const rows = confirmed ?? [];
     const sessions: Session[] = rows.map(b => ({
@@ -339,6 +350,28 @@ export default function CoachHomeScreen() {
             </View>
           )}
 
+          {/* Cómo aparecer en Conexiones */}
+          {visibility && (
+            <TouchableOpacity style={s.vis} activeOpacity={0.85} onPress={() => router.push('/coach-visibilidad')}>
+              <View style={[s.visIcon, visibility.blocked && s.visIconWarn]}>
+                <Feather name={visibility.blocked ? 'alert-circle' : 'compass'} size={16} color={visibility.blocked ? TERRA : FOREST} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.visTitle}>
+                  {visibility.blocked
+                    ? 'Hoy no aparecés en Conexiones'
+                    : `Aparecés en ${visibility.doorCount} ${visibility.doorCount === 1 ? 'puerta' : 'puertas'}`}
+                </Text>
+                <Text style={s.visTxt} numberOfLines={2}>
+                  {visibility.blocked
+                    ? visibility.blocked.hint
+                    : 'Mirá qué lugar ocupás en cada una y qué te falta para el siguiente.'}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={FOREST_SOFT} />
+            </TouchableOpacity>
+          )}
+
           <View style={{ height: TAB_BAR_CLEARANCE + 16 }} />
         </ScrollView>
       </SafeAreaView>
@@ -416,4 +449,17 @@ const s = StyleSheet.create({
   nextEmptyTxt: { fontSize: 13.5, color: FOREST_SOFT, fontFamily: ViveFonts.medium },
   nextEmptyBtn: { backgroundColor: FOREST, borderRadius: 15, paddingVertical: 10, paddingHorizontal: 22 },
   nextEmptyBtnTxt: { color: GREEN_TXT, fontSize: 12.5, fontFamily: ViveFonts.semibold },
+
+  // Cómo aparecer en Conexiones
+  vis: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12, padding: 15,
+    backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20,
+  },
+  visIcon: {
+    width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM_DEEP,
+  },
+  visIconWarn: { backgroundColor: TERRA_SOFT },
+  visTitle: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST },
+  visTxt: { fontFamily: ViveFonts.regular, fontSize: 11.5, color: FOREST_SOFT, lineHeight: 17, marginTop: 3 },
 });

@@ -122,6 +122,14 @@ export function getCoachesCache(): CachedCoach[] | null {
   return cache;
 }
 
+/** Igual que prefetch pero esperable — evita el poll con setInterval del lado del consumidor. */
+export async function loadCoaches(): Promise<CachedCoach[]> {
+  if (cache) return cache;
+  const p = inflight ?? (inflight = _doFetch().finally(() => { inflight = null; }));
+  await p;
+  return cache ?? [];
+}
+
 export function invalidateCoachesCache(): void {
   cache = null;
   inflight = null;
