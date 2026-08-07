@@ -25,7 +25,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
-import { coachesWithSlotThisWeek } from '@/lib/coachAvailability';
 import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
 import { rankDeck } from '@/lib/coachDeckRanking';
 
@@ -97,7 +96,6 @@ export default function ConexionesScreen() {
   const [coaches, setCoaches]           = useState<CachedCoach[]>([]);
   const [coachQuery, setCoachQuery]     = useState('');
   const [loadingCoaches, setLoadingCoaches] = useState(true);
-  const [availableSet, setAvailableSet] = useState<Set<string>>(new Set());
   const [rebookData, setRebookData]     = useState<RebookData | null>(null);
   const [unreadCount, setUnreadCount]   = useState(0);
 
@@ -204,14 +202,9 @@ export default function ConexionesScreen() {
     () => (selectedDoor ? rankDeck(coachesForDoor(selectedDoor, coaches), user?.id) : []),
     [selectedDoor, coaches, user?.id],
   );
-  // ── Disponibilidad "esta semana" — solo para los coaches del deck visible ──
-  useEffect(() => {
-    if (deck.length === 0) { setAvailableSet(new Set()); return; }
-    let cancelled = false;
-    const ids = deck.map(e => e.coach.coachId).filter(Boolean) as string[];
-    coachesWithSlotThisWeek(ids).then(set => { if (!cancelled) setAvailableSet(set); });
-    return () => { cancelled = true; };
-  }, [deck]);
+  // La disponibilidad "esta semana" ahora viene en el cache (`hasSlotThisWeek`,
+  // poblado en coachesCache contra la misma vista), así que se fue el fetch
+  // aparte que se disparaba con cada cambio de deck.
 
   // ── Navegación ────────────────────────────────────────────────────────────
   function goToPerfil(coach: CachedCoach) {
@@ -345,7 +338,9 @@ export default function ConexionesScreen() {
                   scrollEventThrottle={16}>
                   {deck.map((entry, i) => {
                     const { coach, slot } = entry;
-                    const available = coach.coachId && availableSet.has(coach.coachId);
+                    // El chip de relleno ya dice "Con lugar esta semana" — no se
+                    // repite abajo en la meta cuando el coach entró por ahí.
+                    const available = !!coach.hasSlotThisWeek && slot.key !== 'disponible_semana';
                     return (
                       <View key={coach.id} style={s.cardPage}>
                         <View style={s.cardWrap}>
