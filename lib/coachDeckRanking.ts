@@ -76,9 +76,9 @@ export type DeckSlot = {
 export type DeckEntry = { coach: CachedCoach; slot: DeckSlot };
 
 export const DECK_SLOTS: Record<DeckSlotKey, DeckSlot> = {
-  recomendado: { key: 'recomendado', label: 'Recomendado por VITA', sublabel: 'Por rating y reagendamiento', icon: 'award' },
+  recomendado: { key: 'recomendado', label: 'Recomendado por Vita', sublabel: 'Por rating y reagendamiento', icon: 'award' },
   tendencia:   { key: 'tendencia',   label: 'En tendencia',         sublabel: 'De los más elegidos este mes', icon: 'trending-up' },
-  nuevo:       { key: 'nuevo',       label: 'Nuevo en VITA',        sublabel: 'Recién sumado a la comunidad', icon: 'feather' },
+  nuevo:       { key: 'nuevo',       label: 'Nuevo en Vita',        sublabel: 'Recién sumado a la comunidad', icon: 'feather' },
   economico:   { key: 'economico',   label: 'Opción económica',     sublabel: 'El precio más accesible del tema', icon: 'tag' },
 };
 

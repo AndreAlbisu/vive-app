@@ -1,11 +1,14 @@
 // mp-webhook — recibe notificaciones de MercadoPago sobre el estado de un pago.
 //
-// SCAFFOLD v1 — estructura lista; el fetch al pago y la validación de firma
-// están marcados TODO y hay que verificarlos contra la doc vigente de MP.
+// MP hace POST acá cuando cambia un pago. Validamos la firma x-signature, buscamos
+// el pago, lo mapeamos a la reserva por `external_reference` (= booking_id) y
+// actualizamos payment_status. Idempotente: MP puede reintentar la misma
+// notificación varias veces.
 //
-// MP hace POST acá cuando cambia un pago. Buscamos el pago, lo mapeamos a la
-// reserva por `external_reference` (= booking_id) y actualizamos payment_status.
-// Idempotente: MP puede reintentar la misma notificación varias veces.
+// ⚠️ PENDIENTE DE VERIFICAR EN SANDBOX (no bloquea el deploy, sí el "listo"):
+//   1. Que el token de plataforma (MP_ACCESS_TOKEN) pueda LEER el pago del coach
+//      (marketplace); si no, hay que leerlo con el token del coach (ver abajo).
+//   2. El template exacto del manifest de firma (ver verifyWebhookSignature).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'

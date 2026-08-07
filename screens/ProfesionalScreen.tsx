@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
+import ReportSheet from '@/components/ReportSheet';
 import {
   View,
   Text,
@@ -107,6 +108,7 @@ export default function ProfesionalScreen() {
   const [liveReviews, setLiveReviews] = useState<LiveReview[]>([]);
   const [liveAvgRating, setLiveAvgRating] = useState<number | null>(null);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [coachResources, setCoachResources] = useState<CoachResource[]>([]);
 
@@ -242,7 +244,7 @@ export default function ProfesionalScreen() {
           {/* Badge verificado */}
           <View style={s.verifiedBadge}>
             <MaterialIcons name="verified" size={14} color="#565E32" />
-            <Text style={s.verifiedText}>Verificado por VITA</Text>
+            <Text style={s.verifiedText}>Verificado por Vita</Text>
           </View>
         </View>
 
@@ -390,6 +392,21 @@ export default function ProfesionalScreen() {
           ) : null}
         </View>
 
+        {/* Reportar (oculto en el propio perfil) */}
+        {user?.id !== profileId && (
+          <TouchableOpacity
+            style={s.reportLink}
+            onPress={() => {
+              if (!isLoggedIn) { requestAuth(); return; }
+              setReportOpen(true);
+            }}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <MaterialIcons name="outlined-flag" size={15} color="rgba(135,131,92,0.75)" />
+            <Text style={s.reportLinkText}>Reportar a {prof.name.split(' ')[0]}</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Espaciador para el footer sticky */}
         <View style={{ height: 108 }} />
       </ScrollView>
@@ -441,6 +458,13 @@ export default function ProfesionalScreen() {
           </View>
         </View>
       </SafeAreaView>
+
+      <ReportSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        reportedName={prof.name}
+        reportedId={profileId ?? ''}
+      />
     </AppBg>
   );
 }
@@ -707,6 +731,19 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(135,131,92,0.65)',
     textAlign: 'center',
+  },
+  reportLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 22,
+    paddingVertical: 8,
+  },
+  reportLinkText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: 'rgba(135,131,92,0.75)',
   },
   reviewsList: {
     gap: 12,

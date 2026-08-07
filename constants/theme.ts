@@ -1,4 +1,4 @@
-// VITA Design System
+// Vita Design System
 export const ViveColors = {
   primary: '#C1694F',    // Terracota
   background: '#F7EFE4', // Crema cálido

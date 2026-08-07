@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "vive-app",
-    "slug": "vive-app",
+    "name": "Vita",
+    "slug": "vita",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -18,7 +18,13 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#FBF6EF"
       },
-      "package": "com.andrealbisu.viveapp"
+      "package": "com.andrealbisu.viveapp",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "output": "static",
@@ -62,19 +68,26 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Vive necesita acceso al calendario para agregar tus sesiones."
+          "calendarPermission": "Vita necesita acceso al calendario para agregar tus sesiones."
         }
       ],
       [
         "expo-audio",
         {
-          "microphonePermission": "Vive necesita acceso al micrófono para grabar tus recursos de audio."
+          "microphonePermission": "Vita necesita acceso al micrófono para grabar tus recursos de audio."
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d295d41b-9b35-4376-8b28-3997ad01cbf9"
+      }
+    },
+    "owner": "vita-wellness-app"
   }
 }

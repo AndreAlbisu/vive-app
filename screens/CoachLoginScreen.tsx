@@ -10,6 +10,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
+import LegalSheet from '@/components/LegalSheet';
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
@@ -25,6 +26,7 @@ export default function CoachLoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [legalDoc, setLegalDoc] = useState<'terminos' | 'privacidad' | null>(null);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
@@ -60,7 +62,7 @@ export default function CoachLoginScreen() {
       await signOut();
       Alert.alert(
         'Solicitud en revisión',
-        'Ya enviaste tu solicitud para ser profesional. Te avisaremos cuando VITA la apruebe',
+        'Ya enviaste tu solicitud para ser profesional. Te avisaremos cuando Vita la apruebe',
         [{ text: 'OK', onPress: () => router.back() }],
       );
       return;
@@ -104,7 +106,9 @@ export default function CoachLoginScreen() {
 
     // Intentar crear la cuenta si las credenciales no existen
     const nameFromEmail = trimmedEmail.split('@')[0];
-    const signUpError = await signUpWithEmail(trimmedEmail, trimmedPassword, nameFromEmail);
+    // acceptedTerms = true: al tocar "Continuar" el profesional ya aceptó, según
+    // la línea de abajo del botón. Antes se creaba la cuenta sin registrar nada.
+    const signUpError = await signUpWithEmail(trimmedEmail, trimmedPassword, nameFromEmail, true);
 
     if (!signUpError) {
       await validateAndNavigate(true);
@@ -212,11 +216,33 @@ export default function CoachLoginScreen() {
             </TouchableOpacity>
 
             <Text style={styles.note}>
-              Podés usar una cuenta existente de VITA o crear una nueva. El rol de profesional se activa cuando VITA aprueba tu solicitud.
+              Podés usar una cuenta existente de Vita o crear una nueva. El rol de profesional se activa cuando Vita aprueba tu solicitud.
+            </Text>
+
+            {/* Aceptación implícita: esta pantalla es login Y alta de cuenta a la vez,
+                así que un checkbox obligatorio le sumaría fricción a quien solo entra.
+                Importa que el profesional pase por acá: la cláusula anti-solicitación
+                de los T&C (§10) es la que sostiene la medida anti-fuga. */}
+            <Text style={styles.legalNote}>
+              {'Al continuar aceptás los '}
+              <Text style={styles.legalLink} onPress={() => setLegalDoc('terminos')}>
+                Términos y condiciones
+              </Text>
+              {' y la '}
+              <Text style={styles.legalLink} onPress={() => setLegalDoc('privacidad')}>
+                Política de privacidad
+              </Text>
+              {' de Vita.'}
             </Text>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <LegalSheet
+        visible={legalDoc !== null}
+        doc={legalDoc ?? 'terminos'}
+        onClose={() => setLegalDoc(null)}
+      />
     </SafeAreaView>
     </AppBg>
   );
@@ -315,5 +341,17 @@ const styles = StyleSheet.create({
     color: 'rgba(135,131,92,0.72)',
     lineHeight: 18,
     textAlign: 'center',
+  },
+  legalNote: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11.5,
+    color: 'rgba(135,131,92,0.62)',
+    lineHeight: 17,
+    textAlign: 'center',
+    marginTop: 14,
+  },
+  legalLink: {
+    fontFamily: ViveFonts.semibold,
+    color: ViveColors.primary,
   },
 });

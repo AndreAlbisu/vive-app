@@ -156,8 +156,9 @@ export async function setReminderEnabled(userId: string, id: string, enabled: bo
   await reconcileResourceReminders(userId);
 }
 
-/** Borra un recordatorio y reprograma. */
-export async function deleteReminder(userId: string, id: string): Promise<void> {
-  await supabase.from('resource_reminders').delete().eq('id', id).eq('user_id', userId);
+/** Borra un recordatorio y reprograma. Devuelve false si el borrado falló. */
+export async function deleteReminder(userId: string, id: string): Promise<boolean> {
+  const { error } = await supabase.from('resource_reminders').delete().eq('id', id).eq('user_id', userId);
   await reconcileResourceReminders(userId);
+  return !error;
 }

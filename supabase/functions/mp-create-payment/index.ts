@@ -1,18 +1,19 @@
 // mp-create-payment — crea la preferencia de Checkout Pro para una reserva.
 //
-// SCAFFOLD v1 — estructura lista; la llamada a MP está marcada TODO y hay que
-// verificarla contra la doc vigente de MercadoPago antes de producción.
-//
 // COBRO AL RESERVAR: la app llama a esta función al confirmar la reserva. Crea
-// una preferencia con `marketplace_fee` (comisión VITA 10%) usando el token del
-// COACH (split), y devuelve el init_point (URL de Checkout Pro) que la app abre
-// en WebBrowser. El resultado real del pago llega por mp-webhook.
+// una preferencia con `marketplace_fee` (comisión VITA server-side, 20/15% según
+// el par coach-usuario) usando el token del COACH (split), y devuelve el
+// init_point (URL de Checkout Pro) que la app abre en WebBrowser. El resultado
+// real del pago llega por mp-webhook.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getFreshCoachToken } from '../_shared/mp.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const MP_CLIENT_ID = Deno.env.get('MP_CLIENT_ID')!            // para refrescar el token del coach
+const MP_CLIENT_SECRET = Deno.env.get('MP_CLIENT_SECRET')!
 const MP_WEBHOOK_URL = Deno.env.get('MP_WEBHOOK_URL')!         // URL pública de mp-webhook
 const CHECKOUT_RETURN_URL = Deno.env.get('CHECKOUT_RETURN_URL') ?? 'viveapp://booking/result'
 // Split on/off. Default true (prod). Poner MP_SPLIT_ENABLED=false para diagnosticar
@@ -50,25 +51,41 @@ serve(async (req) => {
 
     if (!booking) return json({ error: 'Booking not found' }, 404)
     if (booking.user_id !== user.id) return json({ error: 'Forbidden' }, 403)
-    // Idempotente: si ya hay preferencia y no fue rechazada, reusarla
-    if (booking.preference_id && booking.payment_status === 'pendiente') {
-      return json({ preference_id: booking.preference_id }, 200)
-    }
 
-    // Token del coach (split). Sin cuenta MP conectada, no se puede cobrar.
-    const { data: mp } = await supabase
-      .from('coach_mp_accounts')
-      .select('access_token')
-      .eq('coach_id', booking.coach_id)
-      .single()
-    if (!mp?.access_token) return json({ error: 'Coach sin Mercado Pago conectado' }, 409)
+    // Token del coach (split), refrescado si está por vencer. Sin cuenta MP
+    // conectada, no se puede cobrar.
+    const coachToken = await getFreshCoachToken(
+      supabase, booking.coach_id, MP_CLIENT_ID, MP_CLIENT_SECRET,
+    )
+    if (!coachToken) return json({ error: 'Coach sin Mercado Pago conectado' }, 409)
+
+    // Idempotente: si ya hay preferencia pendiente, reusarla — pero devolviendo el
+    // init_point real (leído de MP), no solo el id. Devolver solo preference_id
+    // dejaba al cliente sin URL de checkout → mandaba al usuario a "reserva ok" sin
+    // pagar. Se recupera con un GET de la preferencia existente.
+    if (booking.preference_id && booking.payment_status === 'pendiente') {
+      const prefRes = await fetch(
+        `https://api.mercadopago.com/checkout/preferences/${booking.preference_id}`,
+        { headers: { Authorization: `Bearer ${coachToken}` } },
+      )
+      const pref = await prefRes.json().catch(() => ({}))
+      if (prefRes.ok) {
+        const checkoutUrl = MP_TEST_MODE ? (pref.sandbox_init_point ?? pref.init_point) : pref.init_point
+        return json({ preference_id: booking.preference_id, init_point: checkoutUrl }, 200)
+      }
+      // Si no se pudo leer (preferencia vencida/borrada), caemos a crear una nueva.
+      console.warn('[mp-create-payment] no se pudo leer preferencia existente, se crea otra:', pref)
+    }
 
     // ── Comisión (server-side; el cliente NUNCA la calcula) ──────────────────
     // Esquema definitivo (ver memoria project_vive_payments):
     //   0% promo fundador (hasta FOUNDER_PROMO_UNTIL) ·
-    //   20% las primeras 3 sesiones COMPLETADAS del par coach-usuario ·
-    //   15% de la 4ta en adelante (permanente).
+    //   20% la PRIMERA sesión COMPLETADA del par coach-usuario ·
+    //   15% de la 2da en adelante (permanente).
     // Contador POR PAR (user_id + coach_id), solo 'completada', nunca resetea.
+    // El 20% es el costo de adquisición: VIVE aporta el cliente nuevo (sesión 1),
+    // la relación de ahí en más la sostiene el coach. Bajar en la 2da pone el
+    // descuento justo en el momento de máxima fuga (fin de la sesión 1).
     const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL') // ISO date, TBD
     let commissionPct: number
     if (promoUntil && Date.now() < Date.parse(promoUntil)) {
@@ -80,13 +97,18 @@ serve(async (req) => {
         .eq('user_id', booking.user_id)
         .eq('coach_id', booking.coach_id)
         .eq('status', 'completada')
-      commissionPct = (count ?? 0) < 3 ? 20 : 15
+      commissionPct = (count ?? 0) < 1 ? 20 : 15
     }
 
-    // marketplace_fee = comisión pura (20/15%). El IVA NO se hornea acá: depende
-    // de la figura fiscal de VITA (monotributo → factura C sin IVA discriminado
-    // vs. RI → con IVA), todavía sin decidir. El IVA vive en la factura, no en el
-    // schema ni en este cálculo. TODO(fiscal): si VITA queda RI, sumar el IVA acá.
+    // marketplace_fee = comisión pura (20/15%), SIN IVA — y así queda.
+    // Figura fiscal DECIDIDA (Andre, 06/08/2026): persona humana en Monotributo.
+    // Factura tipo C, sin IVA discriminado ⇒ la comisión que se retiene acá es
+    // exactamente lo que percibe Vita y lo que dice el copy del coach. Nada que sumar.
+    // Si algún día pasa a Responsable Inscripto, ACÁ hay que decidir: o el coach
+    // pasa a pagar 24,2% (20% + IVA 21%) y este cálculo lo suma, o el 20% se
+    // vuelve IVA incluido y el ingreso real cae a ~16,5%. Es decisión de precio,
+    // no de código: cambiar esto sin cambiar el copy de CoachProfileScreen y el
+    // §8.4 de los T&C deja las tres cosas contradiciéndose.
     const marketplaceFee = Math.round(Number(booking.amount) * commissionPct) / 100
 
     // ⚠️ MONEY RELEASE (RE-VERIFICADO en docs MP, 07/2026): con Checkout Pro NO hay
@@ -124,7 +146,7 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${mp.access_token}`, // token del COACH
+        Authorization: `Bearer ${coachToken}`, // token del COACH (refrescado)
       },
       body: JSON.stringify(prefBody),
     })

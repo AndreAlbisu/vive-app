@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 
-// Catálogo de herramientas/prácticas de VITA. Fuente única de verdad, compartida
+// Catálogo de herramientas/prácticas de Vita. Fuente única de verdad, compartida
 // por Recursos (grilla de herramientas) y Progreso (hábitos = prácticas elegidas).
 // El `id` es la clave estable que también usa `resource_completions.resource_id`
 // (ver lib/resourceCompletions.ts) y `user_habits.tool_id`.

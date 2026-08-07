@@ -117,7 +117,7 @@ export default function ProposeResourceScreen() {
         .eq('id', proposalId)
         .maybeSingle();
 
-      // Solo se ajusta lo que VITA pidió ajustar — cualquier otro estado vuelve al historial
+      // Solo se ajusta lo que Vita pidió ajustar — cualquier otro estado vuelve al historial
       if (!data || data.status !== 'necesita_ajustes') {
         router.replace('/resource-proposals');
         return;
@@ -421,7 +421,7 @@ export default function ProposeResourceScreen() {
           <Text style={styles.successSubtitle}>
             {isEditing
               ? 'Gracias por los ajustes — la miramos de nuevo y te avisamos'
-              : 'El equipo de VITA la va a revisar y te va a avisar el resultado'}
+              : 'El equipo de Vita la va a revisar y te va a avisar el resultado'}
           </Text>
           <TouchableOpacity
             style={styles.successButton}
@@ -472,14 +472,14 @@ export default function ProposeResourceScreen() {
               </Text>
               <Text style={styles.subtitle}>
                 {isEditing
-                  ? 'Revisá las sugerencias de VITA, hacé los cambios y reenviala cuando esté lista.'
-                  : 'Lo revisa el equipo de VITA antes de publicarlo — Journaling y Gratitud son exclusivos de VITA y no se proponen acá.'}
+                  ? 'Revisá las sugerencias de Vita, hacé los cambios y reenviala cuando esté lista.'
+                  : 'Lo revisa el equipo de Vita antes de publicarlo — Journaling y Gratitud son exclusivos de Vita y no se proponen acá.'}
               </Text>
             </View>
 
             {isEditing && !!reviewerNotes && (
               <View style={styles.reviewerNotesBox}>
-                <Text style={styles.reviewerNotesLabel}>Notas de VITA</Text>
+                <Text style={styles.reviewerNotesLabel}>Notas de Vita</Text>
                 <Text style={styles.reviewerNotesText}>{reviewerNotes}</Text>
               </View>
             )}
@@ -670,8 +670,8 @@ export default function ProposeResourceScreen() {
                 <Text style={styles.sectionLabel}>Archivo de audio</Text>
                 <Text style={styles.fieldHint}>
                   {type === 'podcast'
-                    ? 'Subí tu charla grabada (máx. 20MB) — se escucha dentro de VITA'
-                    : 'Subí tu audio grabado (máx. 20MB) — se reproduce directo dentro de VITA'}
+                    ? 'Subí tu charla grabada (máx. 20MB) — se escucha dentro de Vita'
+                    : 'Subí tu audio grabado (máx. 20MB) — se reproduce directo dentro de Vita'}
                 </Text>
                 {(audioFile || existingAudioUrl) ? (
                   <View style={styles.audioFileRow}>
@@ -699,7 +699,7 @@ export default function ProposeResourceScreen() {
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>Archivo de video</Text>
                 <Text style={styles.fieldHint}>
-                  Subí tu video (máx. 100MB) — se reproduce dentro de VITA. Grabá algo corto y liviano.
+                  Subí tu video (máx. 100MB) — se reproduce dentro de Vita. Grabá algo corto y liviano.
                 </Text>
                 {(videoFile || existingVideoUrl) ? (
                   <View style={styles.audioFileRow}>

@@ -13,12 +13,16 @@ import type { MoodEntry } from '@/hooks/useMoodHistory';
 // del check-in de hoy, leyendo el mismo mapeo que usa la card de Recursos
 // (MOOD_RESOURCES, constants/moodResources.ts) para que las dos pantallas
 // sugieran siempre lo mismo por el mismo estado de ánimo — antes cada una
-// tenía su propio mapeo y podían contradecirse. Registra en
-// `resource_recommendations` (ver scripts/create-resource-recommendations.sql)
-// qué par se mostró, en qué orden, y cuál tocó el usuario — para analizar
-// después qué se elige más por estado de ánimo. El orden del par se
-// randomiza en cada visualización a propósito, para no sesgar el análisis
-// por posición.
+// tenía su propio mapeo y podían contradecirse. Registra en `mood_suggestions`
+// (ver scripts/create-mood-suggestions.sql) qué par se mostró, en qué orden, y
+// cuál tocó el usuario — para analizar después qué se elige más por estado de
+// ánimo. El orden del par se randomiza en cada visualización a propósito, para
+// no sesgar el análisis por posición.
+//
+// OJO: hasta el 06/08/2026 esto escribía en `resource_recommendations`, nombre
+// que ya usaba la recomendación coach → usuario de Recursos v2. La tabla nunca
+// se creó (el CREATE TABLE IF NOT EXISTS encontró la otra) y ningún insert entró.
+// Los errores se logean, justamente para que un fallo así no vuelva a ser mudo.
 const NO_CHECKIN_LINE = 'Contanos cómo venís hoy y te sugerimos algo a tu medida.';
 
 export function ResourceSuggestionCard({
@@ -49,7 +53,7 @@ export function ResourceSuggestionCard({
     setOrder(pair);
 
     supabase
-      .from('resource_recommendations')
+      .from('mood_suggestions')
       .insert({
         user_id: userId,
         mood_id: moodId,
@@ -59,13 +63,18 @@ export function ResourceSuggestionCard({
       })
       .select('id')
       .single()
-      .then(({ data }) => { if (data) rowIdRef.current = data.id as string; });
+      .then(({ data, error }) => {
+        if (error) { console.warn('[mood_suggestions] no se registró la sugerencia:', error.message); return; }
+        if (data) rowIdRef.current = data.id as string;
+      });
   }, [userId, moodId, moodLabel]);
 
   function handlePress(resourceId: string) {
     setChosen(resourceId);
     if (rowIdRef.current) {
-      supabase.from('resource_recommendations').update({ chosen: resourceId }).eq('id', rowIdRef.current).then(() => {});
+      supabase.from('mood_suggestions').update({ chosen: resourceId }).eq('id', rowIdRef.current).then(({ error }) => {
+        if (error) console.warn('[mood_suggestions] no se registró la elección:', error.message);
+      });
     }
     const tool = TOOL_MAP[resourceId];
     if (tool?.route) router.push(tool.route as any);

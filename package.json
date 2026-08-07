@@ -8,7 +8,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint app screens components hooks lib context constants theme"
+    "lint": "expo lint app screens components hooks lib context constants theme",
+    "sync:legal": "node ./scripts/sync-legal.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
@@ -30,6 +31,7 @@
     "expo-calendar": "~15.0.8",
     "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.9",
+    "expo-dev-client": "~6.0.21",
     "expo-device": "~8.0.10",
     "expo-document-picker": "~14.0.8",
     "expo-file-system": "~19.0.23",
@@ -66,6 +68,7 @@
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
+    "marked": "^18.0.9",
     "typescript": "~5.9.2"
   },
   "private": true

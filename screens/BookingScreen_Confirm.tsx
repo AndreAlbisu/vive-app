@@ -282,16 +282,33 @@ export default function BookingScreen_Confirm() {
       // Intentar iniciar el flujo de pago MP (si el coach tiene MP conectado)
       let initPoint: string | null = null;
       try {
-        const { data: mpData } = await supabase.functions.invoke('mp-create-payment', {
+        const { data: mpData, error: mpError } = await supabase.functions.invoke('mp-create-payment', {
           body: { booking_id: booking.id },
         });
+        // El caso esperado hoy es 409 "coach sin MP conectado" (pagos opcionales) →
+        // no es un error real, seguimos sin pago online. Pero ya no lo tragamos en
+        // silencio: dejamos rastro para distinguir eso de una falla real de MP.
+        // (cuando el pago sea OBLIGATORIO, esto debería frenar la reserva, no seguir.)
+        if (mpError) console.warn('[BookingConfirm] mp-create-payment sin init_point:', mpError);
         initPoint = mpData?.init_point ?? null;
-      } catch {
-        // Coach sin MP conectado (409) o función no desplegada → sin pago online
+      } catch (e) {
+        console.warn('[BookingConfirm] mp-create-payment threw:', e);
       }
 
       if (initPoint) {
-        await WebBrowser.openBrowserAsync(initPoint);
+        // En testing (Expo Go / dev build) abrimos con sesión EFÍMERA para poder
+        // cambiar de cuenta de MP entre pruebas (comprador ≠ vendedor): el browser
+        // normal comparte cookies con Safari y deja la cuenta pegada. En producción
+        // seguimos con openBrowserAsync (persistente) → el usuario real no re-loguea
+        // en cada reserva. No dependemos del redirect (MP exige back_urls https): el
+        // resultado del pago llega por mp-webhook, la sesión se cierra a mano.
+        if (__DEV__) {
+          await WebBrowser.openAuthSessionAsync(initPoint, 'viveapp://booking/result', {
+            preferEphemeralSession: true,
+          });
+        } else {
+          await WebBrowser.openBrowserAsync(initPoint);
+        }
       }
 
       router.replace({

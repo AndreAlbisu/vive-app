@@ -25,8 +25,12 @@ import * as Calendar from 'expo-calendar';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
-import { supabase } from '@/lib/supabase';
+import { supabase, registrarEvento } from '@/lib/supabase';
+import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { useAuth } from '@/context/AuthContext';
+import ReportSheet from '@/components/ReportSheet';
+import SessionNotesSheet from '@/components/SessionNotesSheet';
+import { getSharedNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
 import { sendPushNotification } from '@/lib/notifications';
 import { isCancelLate } from '@/lib/bookingHelpers';
@@ -162,6 +166,9 @@ export default function SalaScreen() {
   const [salaId, setSalaId] = useState<string | null>(null);
   const [recipientId, setRecipientId] = useState<string | null>(null);
   const [recipientIsCoach, setRecipientIsCoach] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [sharedNote, setSharedNote] = useState<string | null>(null);
   const [recipientProfile, setRecipientProfile] = useState<RecipientProfile | null>(null);
   const [activeBooking, setActiveBooking] = useState<ActiveBooking>(null);
   const [hasSessionHistory, setHasSessionHistory] = useState(false);
@@ -416,14 +423,11 @@ export default function SalaScreen() {
 
     // supabase.channel() devuelve el canal existente si ya hay uno con el mismo
     // topic (p.ej. si el cleanup de un montaje previo todavía no terminó de
-    // sacarlo). Si ya está subscripto, .on() más abajo tira "cannot add
-    // postgres_changes callbacks... after subscribe()". Lo sacamos antes de crear el nuevo.
-    const topic = `realtime:sala:${salaId}`;
-    const stale = supabase.getChannels().find(c => c.topic === topic);
-    if (stale) supabase.removeChannel(stale);
-
+    // sacarlo: removeChannel es async). Si ese canal ya está subscripto, .on()
+    // tira "cannot add postgres_changes callbacks... after subscribe()".
+    // Sufijo random => topic nuevo en cada montaje, nunca colisiona.
     const channel = supabase
-      .channel(`sala:${salaId}`)
+      .channel(`sala:${salaId}-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `sala_id=eq.${salaId}` },
@@ -444,6 +448,15 @@ export default function SalaScreen() {
 
     return () => { supabase.removeChannel(channel); };
   }, [salaId, user?.id]);
+
+  // Usuario (recipientIsCoach = la otra parte es coach): cargar la nota compartida
+  // de su sesión, si el coach dejó una. Es la razón de volver a la app entre sesiones.
+  useEffect(() => {
+    if (!recipientIsCoach || !activeBooking) { setSharedNote(null); return; }
+    let alive = true;
+    getSharedNote(activeBooking.id).then(n => { if (alive) setSharedNote(n); });
+    return () => { alive = false; };
+  }, [recipientIsCoach, activeBooking]);
 
   // Timer: recomputar sessionState cada 30s
   useEffect(() => {
@@ -744,6 +757,31 @@ export default function SalaScreen() {
     if (!text || !salaId || !user) return;
     if (activeBooking?.status === 'pendiente') return;
 
+    // Anti-fuga #5: si el mensaje parece traer datos de contacto o pago externo,
+    // advertir antes de enviar (no se bloquea duro: en una charla hay más falsos
+    // positivos que en la bio, y a veces es legítimo). Se registra el evento con el
+    // desenlace para medir cuánto pasa y si la advertencia disuade.
+    if (hasContactInfo(text)) {
+      const role = isCurrentUserCoach ? 'coach' : 'user';
+      Alert.alert(
+        '¿Compartir datos de contacto?',
+        'Por tu seguridad, mantené la conversación y los pagos dentro de VIVE. Si arreglás por fuera, perdés las protecciones de la app.',
+        [
+          { text: 'Cancelar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { role, sent_anyway: false }) },
+          {
+            text: 'Enviar igual',
+            style: 'destructive',
+            onPress: () => { registrarEvento('mensaje_contacto_detectado', { role, sent_anyway: true }); doSendMessage(text); },
+          },
+        ],
+      );
+      return;
+    }
+    doSendMessage(text);
+  }
+
+  async function doSendMessage(text: string) {
+    if (!salaId || !user) return;
     const encrypted = encryptMessage(text);
     const optimisticId = `opt_${Date.now()}`;
     const optimistic: Message = { id: optimisticId, text: encrypted, sender: 'user', sender_type: 'user', time: nowTime() };
@@ -839,6 +877,41 @@ export default function SalaScreen() {
               </>
             )}
           </View>
+        </TouchableOpacity>
+
+        {/* Re-reserva persistente: acceso fijo a reservar de nuevo con este coach,
+            no solo en la ventana de 24hs de la card post-sesión. Solo del lado del
+            usuario (recipientIsCoach = la otra parte es coach → puedo reservarle). */}
+        {recipientIsCoach && recipientProfile && (
+          <TouchableOpacity
+            style={styles.rebookPill}
+            onPress={handleReschedule}
+            activeOpacity={0.8}
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+            <MaterialCommunityIcons name="calendar-plus" size={15} color="#3A4F2A" />
+            <Text style={styles.rebookPillText}>Reservar</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Notas de la sesión: solo el coach (recipientIsCoach false = la otra parte
+            es el usuario), y si hay una sesión sobre la cual anotar. */}
+        {!recipientIsCoach && activeBooking && recipientProfile && (
+          <TouchableOpacity
+            style={styles.rebookPill}
+            onPress={() => setNotesOpen(true)}
+            activeOpacity={0.8}
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+            <MaterialCommunityIcons name="note-edit-outline" size={15} color="#3A4F2A" />
+            <Text style={styles.rebookPillText}>Notas</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={styles.menuBtn}
+          onPress={() => setReportOpen(true)}
+          disabled={!recipientId}
+          hitSlop={8}>
+          <MaterialCommunityIcons name="dots-vertical" size={22} color="#565E32" />
         </TouchableOpacity>
       </Animated.View>
 
@@ -1075,6 +1148,20 @@ export default function SalaScreen() {
             );
           })}
 
+          {/* Nota compartida de la sesión (lado usuario): la escribió el coach y la
+              relee entre sesiones. sharedNote solo se carga cuando recipientIsCoach. */}
+          {!loading && recipientIsCoach && sharedNote && (
+            <View style={styles.noteCard}>
+              <View style={styles.noteHeader}>
+                <MaterialCommunityIcons name="note-text-outline" size={16} color="#3A4F2A" />
+                <Text style={styles.noteLabel}>
+                  Nota de {recipientProfile?.name ?? 'tu profesional'}
+                </Text>
+              </View>
+              <Text style={styles.noteText}>{sharedNote}</Text>
+            </View>
+          )}
+
           {/* Cierre de sesión + re-reserva: último mensaje del chat, cerca del input
               (antes era un banner fijo arriba; se movió acá para quedar al alcance del dedo) */}
           {!loading && sessionState === 'finalizada' && activeBooking && (
@@ -1214,6 +1301,24 @@ export default function SalaScreen() {
         </View>
       </Modal>
 
+      <ReportSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        reportedName={recipientProfile?.name ?? 'esta persona'}
+        reportedId={recipientId ?? ''}
+        salaId={salaId}
+      />
+
+      {!recipientIsCoach && activeBooking && recipientId && (
+        <SessionNotesSheet
+          visible={notesOpen}
+          onClose={() => setNotesOpen(false)}
+          bookingId={activeBooking.id}
+          userId={recipientId}
+          clientName={recipientProfile?.name ?? 'tu cliente'}
+        />
+      )}
+
     </SafeAreaView>
     </AppBg>
   );
@@ -1232,6 +1337,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backBtn: { padding: 4 },
+  menuBtn: { padding: 4 },
+  rebookPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(58,79,42,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(58,79,42,0.22)',
+  },
+  rebookPillText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 12.5,
+    color: '#3A4F2A',
+  },
   coachInfo: {
     flex: 1,
     flexDirection: 'row',
@@ -1414,6 +1536,33 @@ const styles = StyleSheet.create({
   bubbleTime: { fontFamily: ViveFonts.regular, fontSize: 10, alignSelf: 'flex-end' },
   bubbleTimeUser: { color: '#87835C' },
   bubbleTimeCoach: { color: 'rgba(135,131,92,0.80)' },
+
+  // Nota compartida de la sesión (lado usuario)
+  noteCard: {
+    backgroundColor: 'rgba(86,94,50,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.14)',
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 4,
+    marginBottom: 8,
+    gap: 8,
+  },
+  noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  noteLabel: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: '#3A4F2A',
+    textTransform: 'uppercase',
+    flexShrink: 1,
+  },
+  noteText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: '#565E32',
+    lineHeight: 21,
+  },
 
   // Tarjeta de cierre + re-reserva, inline al final del chat
   endedCard: {

@@ -6,7 +6,7 @@
 // el mensaje de sistema y cancela conflictos). Ambas pantallas llaman a esto y
 // después refrescan su propia data.
 
-import { supabase } from '@/lib/supabase';
+import { supabase, registrarEvento } from '@/lib/supabase';
 import { sendPushNotification } from '@/lib/notifications';
 import { encryptMessage } from '@/lib/encryption';
 import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
@@ -60,6 +60,15 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
     userProfile?.push_token
       ? sendPushNotification(userProfile.push_token, notifTitle, notifBody)
       : Promise.resolve(),
+    // Analytics: el coach ACEPTÓ una reserva pendiente. Distinto de
+    // 'reserva_confirmada' (ese lo dispara el usuario al reservar). registrarEvento
+    // anota user_id = coach (su sesión); client_id guarda al usuario de la reserva.
+    registrarEvento('reserva_aceptada', {
+      booking_id: bookingId,
+      coach_id: booking.coach_id,
+      client_id: booking.user_id,
+      scheduled_date: booking.scheduled_date,
+    }),
   ]);
 
   if (booking.sala_id) {

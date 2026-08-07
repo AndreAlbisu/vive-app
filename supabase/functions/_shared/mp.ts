@@ -2,6 +2,10 @@
 // Deno + Web Crypto (SubtleCrypto), sin dependencias externas.
 
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000 // 10 min (igual que la validez del code de MP)
+const MP_TOKEN_URL = 'https://api.mercadopago.com/oauth/token'
+// El access_token del coach dura ~180 días. Refrescamos si vence en <24h para no
+// cortar un cobro/reembolso justo en el borde.
+const TOKEN_REFRESH_BUFFER_MS = 24 * 60 * 60 * 1000
 
 async function hmacBytes(secret: string, msg: string): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey(
@@ -101,4 +105,70 @@ export async function verifyWebhookSignature(opts: {
   manifest += `ts:${ts};`
 
   return timingSafeEqual(v1, await hmacHex(secret, manifest))
+}
+
+// ── Token del coach con refresh automático ───────────────────────────────────
+// El access_token de OAuth dura ~180 días; MP entrega un refresh_token (de un
+// solo uso: cada refresh devuelve uno nuevo, hay que reguardarlo). Sin esto, a
+// los ~6 meses de conectar MP el token del coach vence y TODO cobro/reembolso de
+// ese coach falla con 401 sin recuperación. Este helper es el único punto por el
+// que mp-create-payment y mp-process-refunds obtienen el token: si está por
+// vencer, lo refresca y persiste antes de devolverlo.
+//
+// Devuelve null solo si el coach no tiene cuenta conectada (sin fila o sin
+// access_token). Si el refresh falla, cae al token viejo y deja que la llamada
+// posterior falle con su propio 401 (mejor intentar que romper acá).
+export async function getFreshCoachToken(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  coachId: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<string | null> {
+  const { data: acct } = await supabase
+    .from('coach_mp_accounts')
+    .select('access_token, refresh_token, expires_at')
+    .eq('coach_id', coachId)
+    .single()
+  if (!acct?.access_token) return null
+
+  const expMs = acct.expires_at ? Date.parse(acct.expires_at) : NaN
+  // Vigente (o sin expiry conocido → no arriesgar un refresh innecesario): tal cual.
+  if (!Number.isFinite(expMs) || Date.now() < expMs - TOKEN_REFRESH_BUFFER_MS) {
+    return acct.access_token
+  }
+  // Vencido o por vencer, pero sin refresh_token no hay nada que hacer: devolver
+  // el viejo y que falle aguas abajo (queda logueado ahí).
+  if (!acct.refresh_token) return acct.access_token
+
+  const res = await fetch(MP_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'refresh_token',
+      refresh_token: acct.refresh_token,
+    }),
+  })
+  const tok = await res.json().catch(() => ({}))
+  if (!res.ok || !tok.access_token) {
+    console.error('[mp] refresh token error', coachId, tok)
+    return acct.access_token // fallback: intentar con el viejo
+  }
+
+  await supabase
+    .from('coach_mp_accounts')
+    .update({
+      access_token: tok.access_token,
+      // refresh_token de un solo uso: guardar el nuevo o el viejo si MP no mandó.
+      refresh_token: tok.refresh_token ?? acct.refresh_token,
+      expires_at: tok.expires_in
+        ? new Date(Date.now() + tok.expires_in * 1000).toISOString()
+        : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('coach_id', coachId)
+
+  return tok.access_token
 }
