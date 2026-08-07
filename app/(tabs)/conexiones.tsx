@@ -338,9 +338,9 @@ export default function ConexionesScreen() {
                   scrollEventThrottle={16}>
                   {deck.map((entry, i) => {
                     const { coach, slot } = entry;
-                    // El chip de relleno ya dice "Con lugar esta semana" — no se
-                    // repite abajo en la meta cuando el coach entró por ahí.
-                    const available = !!coach.hasSlotThisWeek && slot.key !== 'disponible_semana';
+                    // La disponibilidad vive SOLO acá abajo, en la meta. No hay
+                    // chip de relleno que la repita (ver fallbackSlotFor).
+                    const available = !!coach.hasSlotThisWeek;
                     return (
                       <View key={coach.id} style={s.cardPage}>
                         <View style={s.cardWrap}>

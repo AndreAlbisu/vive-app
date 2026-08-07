@@ -125,7 +125,7 @@ export function medianPrice(coaches: CachedCoach[]): number {
 export type DeckSlotKey = 'recomendado' | 'tendencia' | 'nuevo' | 'economico';
 
 /** Chips de relleno — ver fallbackSlotFor. No son mérito. */
-export type FallbackKey = 'disponible_semana' | 'tema' | 'responde_24h';
+export type FallbackKey = 'tema' | 'responde_24h';
 
 export type DeckSlot = {
   key: DeckSlotKey | FallbackKey;
@@ -161,10 +161,6 @@ export const SLOT_ORDER: DeckSlotKey[] = ['recomendado', 'tendencia', 'nuevo', '
 // nunca queda desierta.
 export const MIN_DECK_SIZE = 3;
 
-export const SLOT_DISPONIBLE: DeckSlot = {
-  key: 'disponible_semana', label: 'Con lugar esta semana',
-  sublabel: 'Tiene horarios libres en los próximos 7 días', icon: 'calendar',
-};
 export const SLOT_RESPONDE: DeckSlot = {
   key: 'responde_24h', label: 'Responde en 24 h',
   sublabel: 'Activo y atendiendo consultas', icon: 'clock',
@@ -184,14 +180,15 @@ const slotTema = (tema: string): DeckSlot => ({
  *
  * `used` acumula las etiquetas ya puestas en este deck para no repetir. El orden
  * va de más informativo a menos:
- *   1. "Con lugar esta semana" — fuerte justamente porque es raro.
- *   2. "Trabaja X" — el subtema de la puerta que ese coach cubre. Diferencia de
+ *   1. "Trabaja X" — el subtema de la puerta que ese coach cubre. Diferencia de
  *      verdad y le sirve al usuario para elegir.
- *   3. "Responde en 24 h" — último recurso, cierto para cualquier coach activo.
+ *   2. "Responde en 24 h" — último recurso, cierto para cualquier coach activo.
+ *
+ * Hubo un tercer chip, "Con lugar esta semana", sacado por pedido de Andre: la
+ * card YA muestra esa misma frase abajo, en la meta junto al precio (alimentada
+ * por `hasSlotThisWeek`). El chip repetía información que ya estaba en pantalla.
  */
 export function fallbackSlotFor(c: CachedCoach, subtemas: string[] = [], used: Set<string> = new Set()): DeckSlot {
-  if (c.hasSlotThisWeek && !used.has('disponible_semana')) return SLOT_DISPONIBLE;
-
   const tema = subtemas.find(t => c.topics.includes(t) && !used.has(`tema:${t}`));
   if (tema) return slotTema(tema);
 
