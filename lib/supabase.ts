@@ -5,6 +5,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
 
+// Las EXPO_PUBLIC_* se inlinean en tiempo de build. Si el build no las tuvo
+// (caso típico: .env está gitignoreado y EAS empaqueta respetando .gitignore),
+// llegan como undefined, el cliente se crea roto y la app se cuelga cargando
+// sin decir por qué. El `!` de arriba es una promesa a TS, no un chequeo.
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Faltan EXPO_PUBLIC_SUPABASE_URL y/o EXPO_PUBLIC_SUPABASE_ANON_KEY. ' +
+    'En local revisá .env; en un build de EAS cargalas con `eas env:set` — .env no viaja al servidor de build.'
+  );
+}
+
 // Web usa localStorage (con guard SSR); mobile usa AsyncStorage.
 const webStorage = {
   getItem: (key: string) =>
