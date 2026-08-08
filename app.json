@@ -18,7 +18,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png",
         "backgroundColor": "#FBF6EF"
       },
       "package": "com.andrealbisu.viveapp",
@@ -79,7 +80,8 @@
         {
           "microphonePermission": "Vita necesita acceso al micrófono para grabar tus recursos de audio."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
