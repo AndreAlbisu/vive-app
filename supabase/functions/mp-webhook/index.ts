@@ -41,21 +41,33 @@ serve(async (req) => {
     const paymentId = dataId ?? body?.data?.id
     const topic = url.searchParams.get('topic') ?? url.searchParams.get('type') ?? body?.type
 
-    // Descartar lo que no es un pago ANTES de mirar la firma. Por cada pago MP manda
-    // también notificaciones `topic=merchant_order`, que no tienen nada que hacer acá.
-    // Cuando el filtro estaba DESPUÉS de la validación, esas caían en el 401 de abajo
-    // y MP las reintentaba en loop (8 reintentos por un solo pago en el test real).
-    // Descartar sin firma es seguro: esta rama no lee ni escribe nada.
-    if (!paymentId || (topic && topic !== 'payment')) {
-      return new Response('ignored', { status: 200 }) // 200 para que MP no reintente
+    // Por CADA pago, MP manda hasta tres notificaciones al mismo notification_url:
+    // la v2 (`?data.id=…&type=payment`), la IPN v1 (`?id=…&topic=payment`) y una o
+    // más de merchant_order. Procesamos SOLO la v2 y descartamos el resto con 200.
+    //
+    // El descarte va ANTES de validar la firma, y esa es la parte que importa: si
+    // se responde 401, MP lo toma como fallo y reintenta la misma notificación en
+    // loop. Con el filtro puesto después de la firma, un solo pago generaba 8
+    // reintentos (medido el 09/08/2026). Descartar sin mirar la firma es seguro
+    // porque estas ramas no leen ni escriben nada: solo devuelven 200.
+
+    // IPN v1 (legacy): se reconoce por el query param `topic` (la v2 usa `type`).
+    // Ojo, contra lo que parecía a primera vista, estas SÍ vienen firmadas, pero con
+    // un manifest que no es el de la v2 — por eso seguían cayendo en el 401 después
+    // del primer arreglo. No vale la pena reproducir ese template: la v2 del mismo
+    // evento ya trae todo y es la que se procesa.
+    if (url.searchParams.has('topic')) {
+      return new Response('ignored (legacy IPN v1)', { status: 200 })
     }
 
-    // Las IPN v1 (legacy) llegan SIN x-signature. Para el mismo evento MP manda
-    // además la notificación v2 firmada, que es la que procesamos — así que la v1
-    // se ignora con 200. Responderle 401 solo consigue que MP la reintente para
-    // siempre. Ignorar acá tampoco abre nada: no se toca la base en esta rama.
+    if (!paymentId || (topic && topic !== 'payment')) {
+      return new Response('ignored', { status: 200 })
+    }
+
+    // Sin firma no hay nada que validar. Cae acá cualquier notificación v2 que
+    // llegue sin el header; se ignora en vez de rechazarse, por lo mismo de arriba.
     if (!req.headers.get('x-signature')) {
-      return new Response('ignored (unsigned legacy IPN)', { status: 200 })
+      return new Response('ignored (unsigned)', { status: 200 })
     }
 
     // Validar la firma x-signature ANTES de procesar (rechaza notificaciones forjadas).
