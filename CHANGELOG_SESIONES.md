@@ -28,10 +28,24 @@
 
 - **Ojo con el `booking-success`:** `BookingScreen_Confirm.tsx:314` hace `router.replace('/booking-success')` incondicionalmente al cerrarse el browser, sin mirar el resultado del pago. "Reserva creada" en pantalla no significa que se cobró — por eso el bug del webhook pasó desapercibido en las pruebas manuales. No se tocó (hoy los pagos son opcionales y ese estado es válido), pero cuando el pago sea obligatorio hay que revisarlo.
 
+**✅ SPLIT VALIDADO — cuarto pago real (19:26, payment `172923514332`).** `MP_SPLIT_ENABLED` estaba en `false` desde el 13/07 (se había apagado para diagnosticar el sandbox y nunca se volvió a prender), así que los tres pagos anteriores fueron con comisión **0** aunque la reserva guardara `platform_fee_pct: 20`. Para poder prenderlo hacía falta resolver el self-split: **la app de MP (client_id `7632643428001156`) es la cuenta personal de Andre**, y el coach de prueba estaba conectado con ESA misma cuenta — MP no deja que el que cobra el `marketplace_fee` sea el vendedor. Andre reconectó el coach con la cuenta de un amigo (`mp_user_id` pasó de `1405939310` a `464948031`) y recién ahí se prendió el flag.
+
+Resultado, verificado contra la API de MP y no contra la base:
+- Preferencia: `marketplace_fee: 0.2`, `marketplace: MP-MKT-7632643428001156`, `collector_id: 464948031`.
+- Pago: `fee_details` trae `{"type": "application_fee", "amount": 0.2, "fee_payer": "collector"}` — la comisión de VIVE — además del `mercadopago_fee` de $0,04.
+- `net_received_amount: 0.76` = 1 − 0,20 (VIVE) − 0,04 (MP). El reparto cierra exacto.
+- `platform_fee_pct: 20` bien snapshoteado: 0 sesiones `completada` del par → primer tramo.
+- Los 5 hits del webhook de ese pago dieron **200, sin un solo 401 ni 502**.
+
+**Con esto pagos v1 queda validado end-to-end en producción:** Checkout Pro → split 20% → webhook escribiendo `payment_status` solo → trigger de reembolso → cron de reembolsos.
+
 **Pendiente para la próxima sesión:**
 
-- **`MP_SPLIT_ENABLED` sigue en `false`** desde el 13/07, cuando se apagó para diagnosticar el sandbox. Con el split apagado no se manda `marketplace_fee`: en este pago VIVE cobró **0** aunque la reserva tenga `platform_fee_pct: 20` snapshoteado. **La comisión nueva del commit `19f7affd` no está probada contra MP todavía.** Es lo único que falta para cerrar pagos v1: prenderlo y hacer otro pago de $1.
-- Verificar el webhook arreglado con ese mismo pago — el camino del token del coach quedó probado por partes (el token lee el pago, el lookup `mp_user_id → coach_id` resuelve), pero no end-to-end, porque no se puede forjar una firma válida sin `MP_WEBHOOK_SECRET`.
+- **El tramo del 15% no está probado**, solo el del 20%. Necesita un par coach-usuario con ≥1 sesión `completada`. Riesgo bajo (es un COUNT), pero es el número que cobra de la segunda sesión en adelante.
+- **`MP_SPLIT_ENABLED` quedó en `true` y `MP_TEST_MODE` en `false`**: producción cobra comisión real. Es el estado correcto, pero conviene saberlo.
+- **`MP_ACCESS_TOKEN` sigue siendo el de la era sandbox** (cargado 12/07, casi seguro `TEST-`) — fue lo que rompió el webhook. Ya no está en el camino normal, pero sigue siendo el fallback: reemplazarlo por el `APP_USR-`.
+- **El coach de prueba está conectado con la cuenta de un tercero.** Antes de cualquier demo o de abrir a coaches reales, desconectarla.
+- Quedan **3 pagos de $1 sin reembolsar** (`2c72b126`, `51b36c93`, `5948c59d`). Cancelando las reservas se reembolsan solos ahora que el cron anda.
 - Las 5 reservas viejas de "Coach Prueba" quedaron con `payment_status='pendiente'` y pagos que nunca existieron (nunca se completó el checkout). Decidir si se limpian.
 - El hook de `.claude/settings.json` dispara en cualquier Bash, no solo en `git commit` como dice su `if`, y falla el push. Ruido, no rompe nada.
 
