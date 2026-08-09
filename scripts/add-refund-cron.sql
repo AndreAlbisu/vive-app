@@ -45,6 +45,22 @@ where not exists (
 --     '<PEGAR_SERVICE_ROLE_KEY>'
 --   );
 
+-- ⚠️ GUARDA (agregada 09/08/2026, después de que esto fallara de verdad): el
+-- 24/07/2026 este script se corrió TAL CUAL, sin reemplazar el placeholder. El
+-- Vault quedó guardando el texto '<PEGAR_SERVICE_ROLE_KEY>', el cron mandó ese
+-- texto como Bearer y el gateway devolvió 401 cada 5 minutos durante dos semanas
+-- y media, sin reembolsar a nadie. Nada falla ruidosamente en ese camino: el job
+-- queda `active = true` y la única traza está en net._http_response.
+-- Este bloque hace que el script se niegue a seguir en vez de dejarlo pasar.
+do $$
+begin
+  if (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key')
+     like '%PEGAR_SERVICE_ROLE_KEY%' then
+    raise exception
+      'El secret service_role_key tiene el placeholder sin reemplazar. Poné la key real (la nueva sb_secret_…, NO la service_role legacy con formato JWT) con vault.update_secret y volvé a correr.';
+  end if;
+end $$;
+
 -- ── 3) Agendar el cron (cada 5 min) ──────────────────────────────────────────
 -- Idempotente: cron.schedule con el mismo nombre reemplaza el job existente.
 -- Lee la key desde Vault en cada corrida (no queda en el command en texto plano).

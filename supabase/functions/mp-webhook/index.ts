@@ -5,19 +5,26 @@
 // actualizamos payment_status. Idempotente: MP puede reintentar la misma
 // notificación varias veces.
 //
-// ⚠️ PENDIENTE DE VERIFICAR EN SANDBOX (no bloquea el deploy, sí el "listo"):
-//   1. Que el token de plataforma (MP_ACCESS_TOKEN) pueda LEER el pago del coach
-//      (marketplace); si no, hay que leerlo con el token del coach (ver abajo).
-//   2. El template exacto del manifest de firma (ver verifyWebhookSignature).
+// Las dos incógnitas que este archivo marcaba como "PENDIENTE DE VERIFICAR"
+// quedaron RESUELTAS con el primer pago real (09/08/2026, payment 172908775452):
+//   1. El token de plataforma (MP_ACCESS_TOKEN) NO puede leer el pago del coach.
+//      Las 3 notificaciones v2 de ese pago pasaron la firma y murieron en el
+//      `GET /v1/payments/{id}` → 502, y la reserva quedó en 'pendiente' con el
+//      pago ya acreditado en MP. En marketplace el pago es del VENDEDOR, así que
+//      ahora se lee con el token del COACH (ver resolveCoachToken abajo).
+//   2. El manifest de firma es correcto: las notificaciones v2 validaron bien.
+//      Las que daban 401 eran las IPN v1 legacy, que MP manda SIN firmar.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { verifyWebhookSignature } from '../_shared/mp.ts'
+import { verifyWebhookSignature, getFreshCoachToken } from '../_shared/mp.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!    // token de la app plataforma
+const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!    // token de la app plataforma (fallback)
 const MP_WEBHOOK_SECRET = Deno.env.get('MP_WEBHOOK_SECRET')! // secret de firma de Webhooks
+const MP_CLIENT_ID = Deno.env.get('MP_CLIENT_ID')!           // para refrescar el token del coach
+const MP_CLIENT_SECRET = Deno.env.get('MP_CLIENT_SECRET')!
 
 serve(async (req) => {
   try {
@@ -30,6 +37,26 @@ serve(async (req) => {
     const url = new URL(req.url)
     // El id del recurso llega por query: ?data.id=... (v2) o ?id=... (IPN v1).
     const dataId = url.searchParams.get('data.id') ?? url.searchParams.get('id')
+    const body = await req.json().catch(() => ({}))
+    const paymentId = dataId ?? body?.data?.id
+    const topic = url.searchParams.get('topic') ?? url.searchParams.get('type') ?? body?.type
+
+    // Descartar lo que no es un pago ANTES de mirar la firma. Por cada pago MP manda
+    // también notificaciones `topic=merchant_order`, que no tienen nada que hacer acá.
+    // Cuando el filtro estaba DESPUÉS de la validación, esas caían en el 401 de abajo
+    // y MP las reintentaba en loop (8 reintentos por un solo pago en el test real).
+    // Descartar sin firma es seguro: esta rama no lee ni escribe nada.
+    if (!paymentId || (topic && topic !== 'payment')) {
+      return new Response('ignored', { status: 200 }) // 200 para que MP no reintente
+    }
+
+    // Las IPN v1 (legacy) llegan SIN x-signature. Para el mismo evento MP manda
+    // además la notificación v2 firmada, que es la que procesamos — así que la v1
+    // se ignora con 200. Responderle 401 solo consigue que MP la reintente para
+    // siempre. Ignorar acá tampoco abre nada: no se toca la base en esta rama.
+    if (!req.headers.get('x-signature')) {
+      return new Response('ignored (unsigned legacy IPN)', { status: 200 })
+    }
 
     // Validar la firma x-signature ANTES de procesar (rechaza notificaciones forjadas).
     const sigOk = await verifyWebhookSignature({
@@ -40,20 +67,13 @@ serve(async (req) => {
     })
     if (!sigOk) return new Response('invalid signature', { status: 401 })
 
-    const body = await req.json().catch(() => ({}))
-    const paymentId = dataId ?? body?.data?.id
-    const topic = url.searchParams.get('topic') ?? url.searchParams.get('type') ?? body?.type
-    if (!paymentId || (topic && topic !== 'payment')) {
-      return new Response('ignored', { status: 200 }) // 200 para que MP no reintente
-    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    // GET /v1/payments/{id}. ⚠️ Verificar qué token lo lee: en marketplace el pago
-    // es del vendedor (coach). Si el token de plataforma (MP_ACCESS_TOKEN) no puede
-    // leerlo, hay que usar el token del coach — pero el coach recién se conoce por
-    // external_reference (booking→coach). Confirmar contra MP si la plataforma
-    // puede leer pagos de sus vendedores de marketplace con su propio token.
+    // GET /v1/payments/{id} con el token del COACH: en marketplace el pago es del
+    // vendedor y el token de plataforma no lo puede leer (verificado, ver cabecera).
+    const token = await resolveCoachToken(supabase, body?.user_id)
     const payRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
     const payment = await payRes.json()
     if (!payRes.ok) {
@@ -75,7 +95,6 @@ serve(async (req) => {
     const newStatus = statusMap[payment.status as string]
     if (!newStatus) return new Response('unhandled status', { status: 200 })
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     const patch: Record<string, unknown> = { payment_status: newStatus, payment_id: String(paymentId) }
     if (newStatus === 'aprobado') patch.paid_at = new Date().toISOString()
     if (newStatus === 'reembolsado') patch.refunded_at = new Date().toISOString()
@@ -109,3 +128,30 @@ serve(async (req) => {
     return new Response('error', { status: 500 })
   }
 })
+
+// Token con el que leer el pago. El huevo-y-gallina aparente —el coach sale del
+// booking, y el booking sale del `external_reference` que está DENTRO del pago—
+// se resuelve sin leer el pago: la notificación v2 trae `user_id`, que es el
+// collector, o sea el `mp_user_id` del coach que cobró. De ahí sale el coach_id.
+//
+// Fallback al token de plataforma si MP no mandó `user_id` o el coach no está en
+// coach_mp_accounts (p. ej. desconectó MP después de cobrar). Sabemos que ese token
+// no puede leer pagos de marketplace, así que en la práctica va a dar 502 → MP
+// reintenta y queda el error en los logs, que es mejor que tragarlo con un 200.
+// deno-lint-ignore no-explicit-any
+async function resolveCoachToken(supabase: any, collectorUserId: unknown): Promise<string> {
+  if (collectorUserId == null) return MP_ACCESS_TOKEN
+
+  const { data: acct } = await supabase
+    .from('coach_mp_accounts')
+    .select('coach_id')
+    .eq('mp_user_id', String(collectorUserId))
+    .maybeSingle()
+  if (!acct?.coach_id) {
+    console.warn('[mp-webhook] sin coach para mp_user_id', collectorUserId, '— se usa el token de plataforma')
+    return MP_ACCESS_TOKEN
+  }
+
+  const token = await getFreshCoachToken(supabase, acct.coach_id, MP_CLIENT_ID, MP_CLIENT_SECRET)
+  return token ?? MP_ACCESS_TOKEN
+}

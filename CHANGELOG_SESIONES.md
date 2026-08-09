@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-08-09 — Andre (sesión 87)
+
+**Tocado:** `supabase/functions/mp-webhook/index.ts` (desplegado), `scripts/add-refund-cron.sql`, `SCHEMA.md`. Cambios de config en prod (no en el repo): `vault.secrets['service_role_key']`.
+
+**Resumen:**
+
+- **Primer pago REAL contra MP.** Andre conectó su cuenta de MP al coach de prueba y reservó desde el celular de su mamá. Pago `172908775452`, $1 ARS, `live_mode: true`, `approved/accredited`. Después se reembolsó entero (refund `3170241103`, MP devolvió también su fee de $0,04). El test destapó dos cosas rotas en producción que ningún test anterior podía ver, porque **las dos fallan en silencio**.
+
+- 🔴 **`mp-webhook` nunca funcionó, ni una sola vez.** Leía el pago con `MP_ACCESS_TOKEN` (token de plataforma) y en marketplace el pago es del VENDEDOR: el `GET /v1/payments/{id}` fallaba y la función cortaba en 502. Resultado: el pago se acredita en MP y la reserva queda en `payment_status='pendiente'` para siempre. Las 6 reservas de "Coach Prueba" están así. Era la incógnita (a) que el propio archivo marcaba como `⚠️ PENDIENTE DE VERIFICAR` desde julio — quedó respondida, y la respuesta era "no, no puede".
+  - Arreglado resolviendo el token del coach desde la notificación: `body.user_id` (el collector) → `coach_mp_accounts.mp_user_id` → `getFreshCoachToken`. El huevo-y-gallina que anotaba el comentario viejo (el coach sale del booking, el booking sale del `external_reference` que está dentro del pago) no existe: `user_id` viene en la notificación, antes de leer nada.
+
+- 🔴 **Los reembolsos estaban muertos desde el 24/07 por un placeholder.** `add-refund-cron.sql` se corrió sin reemplazar `<PEGAR_SERVICE_ROLE_KEY>`, así que el Vault guardaba ese texto literal (24 chars) y el cron mandaba `Authorization: Bearer <PEGAR_SERVICE_ROLE_KEY>` cada 5 minutos → `401 UNAUTHORIZED_INVALID_JWT_FORMAT` del gateway, antes de que la función corriera siquiera. **Dos semanas y media**, con `mp-process-refunds` sano. Corregido con `vault.update_secret` + guarda en el script para que no se repita.
+  - Detalle que cuesta plata si se pasa por alto: la key que va ahí es la nueva **`sb_secret_…`**, no la `service_role` legacy formato JWT. Es la que quedó en el secret de las edge functions tras la rotación del 07/08.
+
+- **Bug menor del webhook, mismo diagnóstico:** el filtro de topic estaba DESPUÉS de la validación de firma, así que las IPN v1 legacy —que MP manda **sin firmar**, incluidas las de `topic=merchant_order`, que ni siquiera son pagos— morían en 401 y MP las reintentaba en loop (8 reintentos por un solo pago). Ahora se descartan con 200 `ignored` antes de mirar la firma. No abre nada: esa rama no lee ni escribe.
+
+- **Lo que SÍ estaba bien:** el manifest de firma del webhook (incógnita (b), las v2 validaron a la primera), `trg_mark_refund_on_cancel` (existe, activo, flipeó solo a `reembolso_pendiente`), `mp-process-refunds` con el token del coach, la preferencia de Checkout Pro (`marketplace: MP-MKT-…` bien formada) y `MP_CLIENT_ID` (verificado que es la app de producción).
+
+- **Ojo con el `booking-success`:** `BookingScreen_Confirm.tsx:314` hace `router.replace('/booking-success')` incondicionalmente al cerrarse el browser, sin mirar el resultado del pago. "Reserva creada" en pantalla no significa que se cobró — por eso el bug del webhook pasó desapercibido en las pruebas manuales. No se tocó (hoy los pagos son opcionales y ese estado es válido), pero cuando el pago sea obligatorio hay que revisarlo.
+
+**Pendiente para la próxima sesión:**
+
+- **`MP_SPLIT_ENABLED` sigue en `false`** desde el 13/07, cuando se apagó para diagnosticar el sandbox. Con el split apagado no se manda `marketplace_fee`: en este pago VIVE cobró **0** aunque la reserva tenga `platform_fee_pct: 20` snapshoteado. **La comisión nueva del commit `19f7affd` no está probada contra MP todavía.** Es lo único que falta para cerrar pagos v1: prenderlo y hacer otro pago de $1.
+- Verificar el webhook arreglado con ese mismo pago — el camino del token del coach quedó probado por partes (el token lee el pago, el lookup `mp_user_id → coach_id` resuelve), pero no end-to-end, porque no se puede forjar una firma válida sin `MP_WEBHOOK_SECRET`.
+- Las 5 reservas viejas de "Coach Prueba" quedaron con `payment_status='pendiente'` y pagos que nunca existieron (nunca se completó el checkout). Decidir si se limpian.
+- El hook de `.claude/settings.json` dispara en cualquier Bash, no solo en `git commit` como dice su `if`, y falla el push. Ruido, no rompe nada.
+
 ## 2026-08-07 — Andre (sesión 86)
 
 **Tocado:** `screens/CoachHomeScreen.tsx`, `lib/coachDeckRanking.ts` (reescrito), `lib/coachesCache.ts`, `app/_layout.tsx`, `app/(tabs)/conexiones.tsx`, `SCHEMA.md`. Nuevos: `lib/coachVisibility.ts`, `screens/CoachVisibilityScreen.tsx`, `app/coach-visibilidad.tsx`, `scripts/harden-reviews-insert.sql` (CORRIDO por Andre), `scripts/check-deck-pools.ts`.
