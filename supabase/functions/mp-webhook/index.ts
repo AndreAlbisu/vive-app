@@ -111,6 +111,25 @@ serve(async (req) => {
     if (newStatus === 'aprobado') patch.paid_at = new Date().toISOString()
     if (newStatus === 'reembolsado') patch.refunded_at = new Date().toISOString()
 
+    // Pago aprobado sobre una reserva YA cancelada: es plata cobrada por una
+    // sesión que no va a existir. Pasa si el usuario paga justo cuando
+    // expire_unpaid_checkouts() liberó el horario, o si el coach canceló
+    // mientras el checkout estaba abierto. Marcarlo 'aprobado' a secas dejaría
+    // la plata adentro sin que nada la devuelva: `trg_mark_refund_on_cancel`
+    // solo mira la transición a 'cancelada', que en este orden ya ocurrió.
+    // Se encola el reembolso directamente y mp-process-refunds lo devuelve.
+    if (newStatus === 'aprobado') {
+      const { data: b } = await supabase
+        .from('bookings')
+        .select('status')
+        .eq('id', bookingId)
+        .maybeSingle()
+      if (b?.status === 'cancelada') {
+        patch.payment_status = 'reembolso_pendiente'
+        console.warn('[mp-webhook] pago aprobado sobre reserva cancelada, se encola reembolso:', bookingId)
+      }
+    }
+
     await supabase.from('bookings').update(patch).eq('id', bookingId)
 
     // NO disparar acá la confirmación de sesión (reserva_confirmada /

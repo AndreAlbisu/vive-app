@@ -87,12 +87,15 @@ export default function BookingScreen_Success() {
           <Animated.View style={[s.textBlock, { opacity: contentOpacity }]}>
             <Text style={s.title}>
               {paymentPending
-                ? '¡Reserva creada!'
+                ? 'Falta confirmar el pago'
                 : isInstant ? '¡Sesión confirmada!' : '¡Reserva enviada!'}
             </Text>
             <Text style={s.subtitle}>
               {paymentPending
-                ? 'Tu pago está siendo procesado. Te avisamos cuando se confirme la sesión'
+                // No decir "tu pago está siendo procesado": acá no sabemos si pagó
+                // o si cerró el checkout, y prometerle una sesión que se le va a
+                // cancelar sola es peor que decirle la verdad.
+                ? 'Todavía no vemos el pago acreditado. Si entra, te avisamos y el horario queda reservado; si no, lo liberamos en un rato'
                 : isInstant
                   ? `Tu sesión con ${firstName} ya quedó confirmada`
                   : `Le avisamos a ${firstName}. Tiene 24hs para confirmar tu sesión`}
@@ -105,7 +108,7 @@ export default function BookingScreen_Success() {
                 s.statusBadgeText,
                 paymentPending ? s.statusBadgeTextPayment : isInstant && s.statusBadgeTextConfirmed,
               ]}>
-                {paymentPending ? 'Pago en proceso' : isInstant ? 'Confirmada' : 'Pendiente de confirmación'}
+                {paymentPending ? 'Pago sin confirmar' : isInstant ? 'Confirmada' : 'Pendiente de confirmación'}
               </Text>
             </View>
           </Animated.View>

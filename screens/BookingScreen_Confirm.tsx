@@ -158,7 +158,15 @@ export default function BookingScreen_Confirm() {
           scheduled_date: dateStr,
           scheduled_time: time,
           amount: priceFrom,
-          status: isInstant ? 'confirmada' : 'pendiente',
+          // SIEMPRE nace 'pendiente', incluso en instantánea. Antes nacía
+          // 'confirmada' y los efectos de confirmación corrían acá mismo, ANTES
+          // del checkout: cerrar la pestaña de MP sin pagar dejaba una sesión
+          // confirmada, al coach notificado y a los competidores del horario
+          // cancelados, sin que entrara un peso (27 casos medidos el 09/08/2026,
+          // 16 de ellos auto-completados por complete_confirmed_sessions()).
+          // Ahora se confirma abajo, recién cuando el pago está aprobado — o de
+          // entrada si el coach no tiene MP y no hay nada que cobrar.
+          status: 'pendiente',
           ...(durationMinutes ? { duration_minutes: durationMinutes } : {}),
           ...(userMessage.trim() ? { user_message: userMessage.trim() } : {}),
         })
@@ -177,26 +185,37 @@ export default function BookingScreen_Confirm() {
         user_id: user.id,
       });
 
-      // Notificar al coach (push token vive en profiles, vía coachProfileId)
-      const { data: coachProfile } = await supabase
-        .from('profiles')
-        .select('push_token, name')
-        .eq('id', coachProfileId)
-        .maybeSingle();
+      // Todo lo que sigue —avisarle al coach y, si es instantánea, confirmar—
+      // corre DESPUÉS de saber que el pago entró. Va en una función para no
+      // ejecutarse por el solo hecho de haber creado la reserva.
+      // `confirmedNow` = la reserva queda confirmada ya mismo: es instantánea Y
+      // no quedó nada por cobrar (coach sin MP, o pago aprobado).
+      const applyBookingEffects = async (confirmedNow: boolean) => {
+        // Notificar al coach (push token vive en profiles, vía coachProfileId)
+        const { data: coachProfile } = await supabase
+          .from('profiles')
+          .select('push_token, name')
+          .eq('id', coachProfileId)
+          .maybeSingle();
 
-      const userName = user.user_metadata?.name ?? 'Un usuario';
+        const userName = user.user_metadata?.name ?? 'Un usuario';
 
-      if (coachProfile?.push_token) {
-        await sendPushNotification(
-          coachProfile.push_token,
-          isInstant ? 'Nueva reserva confirmada 📅' : 'Nueva solicitud de sesión 📅',
-          isInstant
-            ? `${userName} reservó una sesión el ${formatDate(dateStr)} a las ${time} hs. Ya está confirmada.`
-            : `${userName} quiere reservar una sesión el ${formatDate(dateStr)} a las ${time} hs`,
-        );
-      }
+        if (coachProfile?.push_token) {
+          await sendPushNotification(
+            coachProfile.push_token,
+            confirmedNow ? 'Nueva reserva confirmada 📅' : 'Nueva solicitud de sesión 📅',
+            confirmedNow
+              ? `${userName} reservó una sesión el ${formatDate(dateStr)} a las ${time} hs. Ya está confirmada.`
+              : `${userName} quiere reservar una sesión el ${formatDate(dateStr)} a las ${time} hs`,
+          );
+        }
 
-      if (isInstant) {
+        if (!confirmedNow) return;
+
+        // Pasa a 'confirmada' acá y no en el insert: hasta este punto la reserva
+        // era una solicitud sin pagar.
+        await supabase.from('bookings').update({ status: 'confirmada' }).eq('id', booking.id);
+
         // Crear sala de videollamada en Daily.co en segundo plano (no bloquea al usuario)
         createOrGetMeetingUrl(booking.id).catch(() => {});
 
@@ -277,7 +296,7 @@ export default function BookingScreen_Confirm() {
             })
           );
         }
-      }
+      };
 
       // Intentar iniciar el flujo de pago MP (si el coach tiene MP conectado)
       let initPoint: string | null = null;
@@ -311,6 +330,38 @@ export default function BookingScreen_Confirm() {
         }
       }
 
+      // ¿Entró el pago? Cerrar el browser no dice nada: puede haber pagado o
+      // haber cerrado la pestaña. El único que sabe es mp-webhook, que escribe
+      // payment_status. En los pagos reales del 09/08 tardó ~2 s desde que MP
+      // aprueba, así que 12 s de sondeo cubren el caso normal de sobra.
+      //
+      // Si se agota el tiempo NO se cancela la reserva desde acá: el pago podría
+      // acreditarse un segundo después y quedaríamos con una reserva cancelada y
+      // plata cobrada. Se deja 'pendiente' y decide el servidor —
+      // expire_unpaid_checkouts() la libera a los 30 min si nunca se pagó, y si
+      // sí se pagó el coach la ve como solicitud normal y puede aceptarla.
+      let paid = false;
+      if (initPoint) {
+        for (let i = 0; i < 6; i++) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const { data: paymentRow } = await supabase
+            .from('bookings')
+            .select('payment_status')
+            .eq('id', booking.id)
+            .maybeSingle();
+          if (paymentRow?.payment_status === 'aprobado') { paid = true; break; }
+        }
+      }
+
+      // Sin pago pendiente no hay nada que esperar: si el coach no tiene MP
+      // (initPoint null) la instantánea se confirma como siempre.
+      const confirmedNow = isInstant && (!initPoint || paid);
+      const awaitingPayment = !!initPoint && !paid;
+
+      // Con el pago sin confirmar no se avisa a nadie ni se cancelan horarios de
+      // otros: eso era exactamente el bug.
+      if (!awaitingPayment) await applyBookingEffects(confirmedNow);
+
       router.replace({
         pathname: '/booking-success',
         params: {
@@ -321,8 +372,12 @@ export default function BookingScreen_Confirm() {
           bookingId: booking.id,
           roomUrl,
           salaId,
-          instant: isInstant ? '1' : '0',
-          ...(initPoint ? { paymentPending: '1' } : {}),
+          // Lo que se le muestra tiene que ser lo que de verdad pasó: 'Confirmada'
+          // solo si quedó confirmada, y el estado de pago pendiente solo si el
+          // pago no llegó a acreditarse (antes se mandaba con cualquier initPoint,
+          // incluso después de un pago aprobado).
+          instant: confirmedNow ? '1' : '0',
+          ...(awaitingPayment ? { paymentPending: '1' } : {}),
         },
       });
     } catch (e: any) {
