@@ -5,6 +5,21 @@
 
 ---
 
+## 2026-08-10 — Joaquín (sesión 88)
+
+**Tocado:** nuevo `scripts/cleanup-loose-test-payments.sql`.
+
+**Resumen:**
+- Arrancando la lista de pendientes de la sesión 87 (Andre): preparé la limpieza de los 3 pagos de $1 sin reembolsar (`2c72b126`, `51b36c93`, `5948c59d`). **No lo corrí yo** — este entorno solo tiene la anon key local, sin service role ni el CLI de Supabase logueado, así que no hay forma de escribir en prod desde acá. Queda el script para que Joaquín o Andre lo corran en el SQL editor de Supabase.
+- El script solo cancela las 3 reservas (`status = 'cancelada'`); `trg_mark_refund_on_cancel` (ya en prod) hace el resto solo — detecta `payment_status='aprobado'` y lo pasa a `'reembolso_pendiente'`, y el cron de `mp-process-refunds` reembolsa contra la API real en la corrida siguiente (cada 5 min). No hace falta tocar `payment_status` a mano ni invocar nada.
+- **Sigue pendiente coordinar con Andre desconectar la cuenta de MP del coach de prueba** (la de un tercero) — no es código: el botón "Cambiar" de `CoachProfileScreen` ya permite reconectar a otra cuenta re-corriendo el OAuth, pero hay que hacerlo logueado como ese coach. La desconexión total (dejar de cobrar del todo) sigue sin construirse — requeriría una edge function nueva porque `coach_mp_accounts` está bajo RLS; no se construyó porque no está claro que haga falta si alcanza con reconectar a una cuenta real.
+- Sin cambios de schema ni de deploy.
+
+**Pendiente para la próxima sesión:**
+- **Correr `scripts/cleanup-loose-test-payments.sql` en el SQL editor de Supabase** (paso a paso, tiene verificación antes y después) y confirmar que las 3 reservas pasan a `reembolsado`.
+- Coordinar con Andre la desconexión/reconexión de la cuenta de MP del coach de prueba.
+- El resto de la lista de la sesión 87 sigue abierto: probar reserva instantánea con pago, tramo 15% de comisión, Gratitud y `/coach-visibilidad` en el celular; calibrar umbrales del deck v3; decidir qué hacer con las 16 reservas `completada` sin pago real.
+
 ## 2026-08-09 — Andre (sesión 87)
 
 **Tocado:** `supabase/functions/mp-webhook/index.ts` (desplegado), `scripts/add-refund-cron.sql`, `SCHEMA.md`. Cambios de config en prod (no en el repo): `vault.secrets['service_role_key']`.
