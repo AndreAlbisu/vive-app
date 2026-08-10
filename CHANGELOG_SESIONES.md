@@ -34,10 +34,11 @@
 - **Decisión con Joaquín: no tocar los umbrales numéricos** (4.5★, 3 reseñas, 30% reagendamiento, 3 reservantes/30d) — calibrar contra datos sintéticos sería calibrar contra ruido. Se recalibran cuando haya operación real, como ya venía anotado.
 - **Decisión con Joaquín: las 2 puertas de 1 sola card se dejan así** — es el mismo criterio que Andre ya aplicó en sesión 86 al sacar el relleno artificial (mostrar 1 card real es más honesto que inflar con relleno; "Ver lista completa" sigue teniendo a todos). Si esas puertas siguen angostas con operación real, es un tema de reclutar más coaches para esos temas, no de código.
 
+**Cuenta de MP del coach de prueba — cerrado, se queda como está.** Joaquín confirmó que sigue conectada al mail del amigo (la que Andre conectó en sesión 87 para probar el split) y decidió no tocarla — no hace falta reconectar a otra cuenta. Saca este ítem de pendientes; si en algún momento hace falta desconectarla de verdad para abrir a coaches reales, retomar desde acá.
+
 **Pendiente para la próxima sesión:**
 - **Decidir con Andre cómo resolver el agujero de "reconectar MP huérfana reembolsos viejos"** (ver arriba) — implica una decisión de diseño (historial de tokens vs. guardarraíl que bloquee reconectar), no solo código.
 - Confirmar si local (Expo Go, sin dev build) realmente requiere estar logueado/en la org de Expo, o si esa parte del bloqueo era innecesaria — ahorraría el paso de login+invitación a cualquiera que solo quiera correr la app en Expo Go.
-- Coordinar con Andre la desconexión/reconexión de la cuenta de MP del coach de prueba.
 - El resto de la lista de la sesión 87 sigue abierto: probar reserva instantánea con pago, tramo 15% de comisión (ideal probarlo YA con el fix del contador deployado), Gratitud y `/coach-visibilidad` en el celular.
 - Recalibrar `check-deck-pools.ts` de verdad cuando haya operación real (no seed data).
 
