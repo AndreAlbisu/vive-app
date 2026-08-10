@@ -86,6 +86,17 @@ serve(async (req) => {
     // El 20% es el costo de adquisición: VIVE aporta el cliente nuevo (sesión 1),
     // la relación de ahí en más la sostiene el coach. Bajar en la 2da pone el
     // descuento justo en el momento de máxima fuga (fin de la sesión 1).
+    //
+    // Excluye checkouts ABANDONADOS que igual llegaron a 'completada' (preference_id
+    // seteado, payment_status nunca salió de 'pendiente' — nadie pagó nada). Antes del
+    // 09/08 (expire_unpaid_checkouts) esto podía colarse: el checkout se abandonaba,
+    // la reserva seguía viva y complete_confirmed_sessions() la barría igual al pasar
+    // el horario. 16 reservas así en prod (auditoría sesión 87) empujaban al par al
+    // tramo del 15% sin que hubiera pasado ninguna sesión paga de verdad. Hoy ya no
+    // debería poder pasar (el checkout abandonado se cancela a los 30 min, mucho antes
+    // de la fecha agendada), pero el filtro queda por las 16 viejas y como red por si
+    // algún camino nuevo repite el patrón. Una sesión sin cobro por diseño (coach sin
+    // MP conectado) nunca tiene preference_id, así que no la toca.
     const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL') // ISO date, TBD
     let commissionPct: number
     if (promoUntil && Date.now() < Date.parse(promoUntil)) {
@@ -97,6 +108,7 @@ serve(async (req) => {
         .eq('user_id', booking.user_id)
         .eq('coach_id', booking.coach_id)
         .eq('status', 'completada')
+        .or('preference_id.is.null,payment_status.neq.pendiente')
       commissionPct = (count ?? 0) < 1 ? 20 : 15
     }
 
