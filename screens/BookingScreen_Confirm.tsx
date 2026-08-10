@@ -476,13 +476,32 @@ export default function BookingScreen_Confirm() {
           </View>
         </View>
 
-        {/* Aviso no cobro */}
+        {/* Aviso de cobro.
+            Decía "No se te cobra hasta que el profesional acepte", y era falso:
+            `mp-create-payment` se invoca más abajo para TODA reserva, sin mirar la
+            modalidad, y el checkout se abre en el acto. El cobro es al reservar y
+            lo que existe es el reembolso automático si la reserva no prospera —
+            que es lo que los T&C §8.2 ya describían bien. Si el coach no tiene MP
+            conectado no hay checkout y no se cobra nada; el texto sigue siendo
+            válido ahí (no promete un cobro, describe cuándo ocurre). */}
         <View style={s.noticeRow}>
           <MaterialIcons name="shield" size={15} color={ViveColors.accent} />
           <Text style={s.noticeText}>
             {instantBooking
-              ? 'Tu sesión ya queda confirmada al reservar'
-              : 'No se te cobra hasta que el profesional acepte'}
+              ? 'El pago se hace al reservar y tu sesión queda confirmada al instante'
+              : 'El pago se hace al reservar. Si el profesional no acepta, te devolvemos el total'}
+          </Text>
+        </View>
+
+        {/* Política de cancelación. Va acá y no escondida en los T&C porque §9.1
+            dice que se informa ANTES de confirmar la reserva — si no está en esta
+            pantalla, esa cláusula es falsa. El número tiene que seguir a
+            `isCancelLate` / `canCancelConfirmed` (24hs, lib/bookingHelpers.ts). */}
+        <View style={s.noticeRow}>
+          <MaterialIcons name="event-busy" size={15} color={ViveColors.accent} />
+          <Text style={s.noticeText}>
+            Podés cancelar hasta 24hs antes y te devolvemos todo. Después de esa hora
+            la sesión no se puede cancelar desde la app
           </Text>
         </View>
 
@@ -545,12 +564,15 @@ export default function BookingScreen_Confirm() {
             )}
           </TouchableOpacity>
 
-          <View style={s.guaranteeRow}>
-            <MaterialIcons name="verified-user" size={13} color={ViveColors.accent} />
-            <Text style={s.guaranteeText}>
-              Garantía de primera sesión — si no quedás conforme, te devolvemos el dinero
-            </Text>
-          </View>
+          {/* Acá iba "Garantía de primera sesión — si no quedás conforme, te
+              devolvemos el dinero". Se sacó el 10/08/2026: es una promesa
+              incondicional en el punto de venta (art. 8 Ley 24.240: las
+              precisiones publicitarias obligan e integran el contrato) contra la
+              que no hay NI política escrita —T&C §9.3 es un placeholder— NI
+              implementación: no existe ningún flujo de reembolso por
+              insatisfacción, solo por cancelación y por vencimiento sin
+              confirmar. Para reponerla hacen falta las dos cosas, no el texto.
+              Los estilos `guaranteeRow`/`guaranteeText` quedan a propósito. */}
         </View>
       </SafeAreaView>
 

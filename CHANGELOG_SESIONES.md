@@ -5,6 +5,45 @@
 
 ---
 
+## 2026-08-10 — Andre (sesión 89)
+
+**Tocado:** `scripts/sync-legal.mjs`, `screens/BookingScreen_Confirm.tsx`, `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `docs/legal-instrucciones.md`, `constants/legal.ts` + `web/legal/*.html` (regenerados). Sin cambios de schema.
+
+**Resumen:**
+
+- **Andre se inscribió en Monotributo.** Actividad **631200 (Portales web)** nacional — 631201, el código nuevo de intermediación por plataformas de la RG 5607/24, no aparecía en el formulario— y **631201 como actividad provincial** en el alta de IIBB de Córdoba (Monotributo Unificado). Categoría A. Cierra el bloqueador (3) de la auditoría de la sesión 86 y confirma lo que `mp-create-payment:116` ya asumía: factura C sin IVA discriminado, la comisión retenida es la final.
+- **Revisión completa de los legales antes de hostearlos.** Se cruzó cada cláusula contra el código. Lo que salió:
+
+- 🔴 **El detector de placeholders estaba roto y publicaba notas dirigidas al abogado.** `sync-legal.mjs` limitaba el match a 60 caracteres (`/\[[^\]\n]{1,60}\]/g`), así que de 15 corchetes solo veía `[fecha]`. Los otros 10 —`[Validar con abogado…]`, `[Si se mantiene esta política, describir su alcance exacto…]`— **se estaban publicando literales** en la app y en `web/legal/*.html`. Peor: al completar las fechas, `LEGAL_IS_DRAFT` habría pasado a `false` y el aviso de borrador habría desaparecido con las 10 notas adentro del texto. Arreglado sin tope de longitud, y ahora reporta archivo y línea real del `.md` (mapeando el offset del blockquote que se descarta). Quedan **9**: 4 fechas + 5 de abogado.
+- 🔴 **Dos frases falsas en el checkout, las dos en `BookingScreen_Confirm`.** (a) *"No se te cobra hasta que el profesional acepte"* — falso: `mp-create-payment` se invoca para toda reserva sin mirar la modalidad y el checkout se abre en el acto. Los T&C §8.2 decían la verdad y la pantalla lo contrario, del lado que el usuario lee al decidir. (b) *"Garantía de primera sesión — si no quedás conforme, te devolvemos el dinero"*: promesa incondicional en el punto de venta (art. 8 Ley 24.240: las precisiones publicitarias integran el contrato) contra la que no había ni política escrita —§9.3 era un placeholder— ni implementación. Corregidas las dos; la garantía se sacó de la pantalla hasta que exista mecanismo.
+- **Corrección sobre la economía de la garantía**, que cambió la decisión: el reembolso es `POST /v1/payments/{id}/refunds` sin `amount` **con el token del coach** (`mp-process-refunds:66`), o sea total y sobre un pago que es del vendedor. En un pago con split eso revierte todo: **la garantía la paga el Profesional, no Vita** — Vita solo resigna su comisión. No es un problema de margen sino de relación con los coaches.
+
+**Decisiones de contenido (Andre, esta sesión):**
+- **Garantía de primera sesión: se mantiene y la paga el Profesional.** Reintegro total, se pide por mail dentro de las **48hs** del horario agendado, sin expresar motivo, **una sola vez por Cliente en toda la Plataforma**, solo sobre la primera Sesión de cada vínculo. Escrita en §9.3 y, del lado del coach, en **§8.8 (cláusula nueva)** para que se entere al aceptar los términos y no cuando le pasa.
+- **Cancelación: 24hs, sin franja intermedia.** Es lo que el código ya hacía. §9.1 estaba mal redactada: decía que las tardías "pueden no dar lugar a reembolso" cuando en realidad **no se pueden cancelar** (`SalaScreen:553` bloquea la acción). Reescrita, y la política ahora se muestra en `BookingScreen_Confirm` — §9.1 afirma que se informa antes de reservar, así que sin eso la cláusula era falsa.
+- **Líneas de crisis en §5.3:** 911 + línea de asistencia al suicida **135** / (011) 5275-1135 / 0800-345-1435. Vigencia verificada al escribirlas.
+- **Referente de datos:** no se designa uno distinto del Responsable.
+- **Plazos de conservación (Política §10):** bienestar borrado inmediato; reservas/transacciones 10 años disociadas; reseñas indefinidas anonimizadas; mensajes anonimizados mientras viva la conversación; analítica disociada. §10 describe además el modelo real de baja (lápida + anonimización), que hasta ahora solo existía en el código.
+- Se sacaron del texto publicable dos notas internas que no eran decisiones (Política §6 y §8.2); siguen anotadas en `legal-instrucciones.md`.
+
+**Lo que estaba bien y no se tocó:** §4 (intermediación), §5 (salud), §8.3/§8.4 (comisión 20/15 y monotributo, ambas coinciden con `mp-create-payment`), §15 y Política §8.2 (mensajería: dicen explícitamente que **no hay E2E**, eso es correcto y no hay que "mejorarlo"), Política §6 (analítica propia — verificado contra `package.json`: no hay ningún SDK de terceros). Ley 25.326 sigue vigente en 2026, los proyectos de reforma no se aprobaron: el encuadre normativo no cambia.
+
+**`legal-instrucciones.md` estaba desactualizado en su ítem más alarmante:** decía con 🚨 que el borrado de cuenta dentro de la app no existía y bloqueaba iOS. Existe desde el 06/08 (`delete-account` + `lib/accountDeletion.ts` + `ProfileOwnScreen`). Tildado.
+
+Typecheck y lint limpios. `npm run sync:legal` corrido; `constants/legal.ts` y las dos páginas web regeneradas.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Botón de arrepentimiento y derecho de revocación** (Res. 424/2020 + art. 34 Ley 24.240 / art. 1110 CCyC): 10 días hábiles, enlace destacado en la portada sin exigir registro, 24hs para informar el código de revocación. No está ni en los T&C ni en la web. Es texto nuevo **más** una página cuando se hostee.
+- 🔴 **Implementar §9.3.** Está escrita pero no hay mecanismo: los únicos caminos a `reembolso_pendiente` son la cancelación y el vencimiento. Una `completada` no se puede marcar para reintegro sin reescribir su `status`, que va contra el criterio de no reescribir historia. A volumen bajo se opera a mano, pero hay que saberlo.
+- 🔴 **Checkbox de mayoría de edad en el registro** — §3.1 dice que el Usuario lo declara y no se le pregunta nada.
+- 🔴 **Bloqueo de usuarios** — guideline 1.2 de Apple lo exige junto con reportes, filtrado y contacto. Hay reportes, no hay bloqueo.
+- **Jurisdicción (§22.2)** es el último corchete de contenido; el resto de los 9 son 4 fechas y 4 puntos de abogado.
+- Faltan en Política §6: Google/Apple como proveedores de identidad, YouTube embebido, y los permisos de fotos y calendario.
+- Inscripción en el Registro Nacional de Bases de Datos de la AAIP (trámite por TAD, no es texto).
+- **Después de todo eso: hostear `web/legal/`** + la página de solicitud de eliminación de cuenta que pide Google Play.
+- Decidir si se borran los estilos `guaranteeRow`/`guaranteeText` de `BookingScreen_Confirm` (quedaron sin uso al sacar la garantía de la pantalla; se dejaron por si vuelve).
+- Sigue abierto todo lo de la sesión 88: probar en dispositivo el guardarraíl de reconexión de MP, la reserva instantánea con pago y el tramo del 15%.
+
 ## 2026-08-10 — Joaquín (sesión 88)
 
 **Tocado:** `supabase/functions/mp-create-payment/index.ts` (**deployado por Joaquín, versión 20**), `screens/CoachProfileScreen.tsx`. Nuevo `scripts/cleanup-loose-test-payments.sql`.

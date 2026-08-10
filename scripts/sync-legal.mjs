@@ -28,12 +28,15 @@ const DOCS = [
   { key: 'PRIVACY', file: 'docs/politica-de-privacidad.md' },
 ];
 
-/** Saca el bloque de citas inicial (aviso interno de borrador). */
+/** Saca el bloque de citas inicial (aviso interno de borrador).
+ *  Devuelve también cuántas líneas se comieron, para poder reportar los
+ *  placeholders con el número de línea del .md real y no el del texto ya
+ *  recortado — que es el archivo que se edita a mano. */
 function stripLeadingBlockquote(md) {
   const lines = md.split('\n');
   let i = 0;
   while (i < lines.length && (lines[i].startsWith('>') || lines[i].trim() === '')) i++;
-  return lines.slice(i).join('\n').trimStart();
+  return { md: lines.slice(i).join('\n'), offset: i };
 }
 
 /** [texto](./archivo.md) → texto (los links relativos no resuelven en la app). */
@@ -41,10 +44,29 @@ function flattenRelativeLinks(md) {
   return md.replace(/\[([^\]]+)\]\(\.\/[^)]+\)/g, '$1');
 }
 
-/** Placeholders sin completar: [algo] que no sea un link markdown. */
+/** Placeholders sin completar: [algo] que no sea un link markdown.
+ *
+ *  ⚠️ Sin tope de longitud a propósito. La versión anterior limitaba el match a
+ *  60 caracteres (`{1,60}`) y por eso solo veía `[fecha]`: las 10 notas largas
+ *  dirigidas al abogado —`[Validar con abogado…]`, `[Si se mantiene esta
+ *  política…]`— quedaban afuera del conteo y se publicaban tal cual en la app y
+ *  en las páginas web, mientras `LEGAL_IS_DRAFT` daba a entender que faltaba un
+ *  solo campo. Cualquier corchete que sobreviva al strip de links es algo sin
+ *  resolver; no hay razón para filtrarlo por tamaño. */
 function findPlaceholders(md) {
   const withoutLinks = md.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
-  return [...new Set(withoutLinks.match(/\[[^\]\n]{1,60}\]/g) ?? [])];
+  const found = [];
+  withoutLinks.split('\n').forEach((line, i) => {
+    for (const match of line.match(/\[[^\]\n]+\]/g) ?? []) {
+      found.push({ text: match, line: i + 1 });
+    }
+  });
+  return found;
+}
+
+/** Corta al medio para que la consola siga siendo legible con notas largas. */
+function ellipsis(text, max = 72) {
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…]`;
 }
 
 /** Escapa para meter el texto en un template literal de TS. */
@@ -58,13 +80,16 @@ const forWeb = [];
 
 for (const { key, file } of DOCS) {
   const raw = readFileSync(join(root, file), 'utf8');
-  const clean = flattenRelativeLinks(stripLeadingBlockquote(raw));
-  placeholders.push(...findPlaceholders(clean));
+  const { md, offset } = stripLeadingBlockquote(raw);
+  const clean = flattenRelativeLinks(md);
+  placeholders.push(
+    ...findPlaceholders(clean).map((p) => ({ ...p, file, line: p.line + offset }))
+  );
   parts.push(`export const ${key}_MD = ${toTemplateLiteral(clean)};`);
   forWeb.push({ key, md: clean });
 }
 
-const unique = [...new Set(placeholders)].sort();
+const unique = [...new Set(placeholders.map((p) => p.text))].sort();
 
 const out = `// GENERADO POR scripts/sync-legal.mjs — NO EDITAR A MANO.
 // Fuente: docs/terminos-y-condiciones.md · docs/politica-de-privacidad.md
@@ -82,8 +107,13 @@ export const LEGAL_IS_DRAFT = ${unique.length > 0};
 `;
 
 writeFileSync(join(root, 'constants/legal.ts'), out, 'utf8');
-console.log(`constants/legal.ts generado. Placeholders sin completar: ${unique.length}`);
-if (unique.length) console.log(unique.join(' · '));
+console.log(
+  `constants/legal.ts generado. Placeholders sin completar: ${placeholders.length}` +
+    ` (${unique.length} distintos)`
+);
+for (const { file, line, text } of placeholders) {
+  console.log(`  ${file}:${line}  ${ellipsis(text)}`);
+}
 
 // ── Páginas web públicas ─────────────────────────────────────────────────────
 // App Store Connect y Google Play Console EXIGEN una URL pública de la Política

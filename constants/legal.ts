@@ -44,7 +44,12 @@ Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, l
 
 5.2. Los Profesionales que ejercen prestaciones reguladas (por ejemplo, psicólogos/as o nutricionistas) lo hacen bajo su exclusiva responsabilidad profesional, debiendo contar con la matrícula y habilitaciones que la ley exija, y cumplir con las obligaciones propias de su profesión (incluido el secreto profesional). Vita no supervisa ni dirige el ejercicio profesional.
 
-5.3. **La Plataforma no es un servicio de emergencia.** Ante una situación de crisis, riesgo para la vida o emergencia de salud, el Usuario debe comunicarse de inmediato con los servicios de emergencia locales (por ejemplo, 911) o con las líneas de asistencia correspondientes. [Considerar incluir líneas de ayuda locales — p. ej., línea de prevención del suicidio.]
+5.3. **La Plataforma no es un servicio de emergencia.** Ante una situación de crisis, riesgo para la vida o emergencia de salud, el Usuario debe comunicarse de inmediato con los servicios de emergencia (**911**) o con la línea de asistencia al suicida y crisis de salud mental, disponible las 24 horas, todos los días, de forma gratuita, anónima y confidencial:
+
+- **135** — gratuita desde la Ciudad Autónoma de Buenos Aires y el Gran Buenos Aires.
+- **(011) 5275-1135** o **0800-345-1435** — desde todo el país.
+
+La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Profesionales no están disponibles para atender urgencias.
 
 ## 6. Los Profesionales y la Verificación
 
@@ -78,13 +83,25 @@ Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, l
 
 8.7. **Liberación de fondos.** La liberación de los fondos al Profesional puede estar sujeta a plazos operativos del procesador de pagos.
 
+8.8. **Garantía de primera sesión — efecto sobre el Profesional.** El Profesional conoce y acepta, como condición para operar en la Plataforma, la garantía prevista en la cláusula 9.3: cuando un Cliente la ejerce, el importe reintegrado **se debita de los fondos percibidos por esa Sesión**. La garantía alcanza únicamente a la primera Sesión de cada vínculo Cliente–Profesional y solo puede ejercerse una vez por Cliente en toda la Plataforma. Vita no percibe comisión sobre las Sesiones reintegradas por esta vía, de modo que el costo del reintegro no se traslada a la comisión de Sesiones posteriores.
+
 ## 9. Cancelaciones, Reembolsos y Garantía
 
-9.1. **Cancelación por el Cliente.** El Cliente puede cancelar una Sesión desde la Plataforma. Si cancela con la antelación mínima informada, tendrá derecho al reembolso total. Las cancelaciones tardías (por debajo de dicha antelación) pueden no dar lugar a reembolso, según la política vigente informada al reservar.
+9.1. **Cancelación por el Cliente.** El Cliente puede cancelar una Sesión desde la Plataforma **hasta 24 horas antes** del horario agendado, y en ese caso tiene derecho al **reembolso total**, que se procesa de forma automática a través del procesador de pagos.
+
+Dentro de las 24 horas previas al horario agendado, la Sesión **no puede cancelarse desde la Plataforma**. El Cliente puede solicitar al Profesional, a través del chat de la Sesión, que la cancele; si el Profesional accede, el reembolso se procesa igualmente de forma automática. Esta política se informa al Cliente antes de confirmar la reserva.
 
 9.2. **Cancelación o rechazo por el Profesional.** Si el Profesional rechaza o cancela una Sesión ya abonada, o si la reserva pendiente vence sin confirmarse, el Cliente tendrá derecho al reembolso, que se procesará de forma automática a través del procesador de pagos. Los tiempos de acreditación dependen de dicho procesador y del medio de pago.
 
-9.3. **Garantía de primera sesión.** [Si se mantiene esta política, describir su alcance exacto: p. ej., reintegro o nueva sesión ante insatisfacción en la primera Sesión con un Profesional, condiciones y plazos. Validar redacción con abogado.]
+9.3. **Garantía de primera sesión.** Si el Cliente no queda conforme con la **primera Sesión que mantiene con un Profesional determinado**, puede solicitar el reintegro total de lo abonado por esa Sesión escribiendo a vitaappar@gmail.com **dentro de las 48 horas** posteriores al horario en que la Sesión estaba agendada.
+
+Condiciones:
+
+- No es necesario expresar el motivo de la insatisfacción.
+- La garantía puede ejercerse **una sola vez por Cliente** en toda la Plataforma, cualquiera sea el Profesional de que se trate.
+- Alcanza únicamente a la primera Sesión de cada vínculo Cliente–Profesional, y solo si fue efectivamente abonada a través de la Plataforma.
+- El reintegro se procesa a través del procesador de pagos y **se debita de los fondos correspondientes al Profesional**, conforme a la cláusula 8.8. Vita no percibe comisión sobre las Sesiones reintegradas por esta vía.
+- Vita puede denegar la solicitud ante uso abusivo o fraudulento de la garantía (por ejemplo, cuentas múltiples de una misma persona, o solicitudes reiteradas destinadas a obtener Sesiones sin costo).
 
 9.4. Nada de lo previsto en esta cláusula limita los derechos que la normativa de defensa del consumidor reconozca al Cliente.
 
@@ -190,7 +207,7 @@ Al utilizar la Plataforma, el Usuario declara haber leído y comprendido esta Po
 
 ## 1. Responsable del Tratamiento
 
-Responsable: Andre Albisu Lambertini. Contacto en materia de privacidad: vitaappar@gmail.com. [Indicar si existe un responsable/referente de datos designado.]
+Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contacto en materia de privacidad: vitaappar@gmail.com. No se ha designado un referente de datos distinto del Responsable; las solicitudes vinculadas a datos personales se atienden a través de esa dirección.
 
 ## 2. Qué Datos Recolectamos
 
@@ -232,7 +249,7 @@ Vita **no vende** los datos personales de los Usuarios. Los compartimos únicame
 - **Autoridades competentes:** cuando exista obligación legal o requerimiento válido.
 - **En caso de reorganización societaria** (fusión, adquisición), notificando cuando corresponda.
 
-La lista anterior es la de los proveedores efectivamente utilizados, verificada contra el código el 06/08/2026. [Pendiente: revisar el acuerdo de tratamiento de datos con cada uno.]
+La lista anterior comprende la totalidad de los proveedores con los que Vita comparte datos personales de sus Usuarios.
 
 ## 7. Transferencia Internacional de Datos
 
@@ -242,7 +259,7 @@ Algunos de los proveedores mencionados pueden almacenar o procesar datos en serv
 
 8.1. Vita aplica medidas técnicas y organizativas razonables para proteger los datos, incluyendo controles de acceso a nivel de base de datos que restringen el acceso a la información de cada Usuario.
 
-8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales. [Mantener esta redacción consistente con la realidad técnica del producto; no afirmar cifrado E2E mientras no exista.]
+8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales.
 
 8.3. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.
 
@@ -254,7 +271,17 @@ La AAIP, órgano de control de la Ley 25.326, tiene la atribución de atender de
 
 ## 10. Conservación de los Datos
 
-Conservamos los datos mientras la cuenta esté activa y durante el plazo necesario para cumplir las finalidades descriptas y las obligaciones legales (por ejemplo, obligaciones contables o fiscales de las transacciones). Luego, los datos se suprimen o anonimizan. [Definir plazos concretos de conservación por categoría de dato con el abogado/contador.]
+Conservamos los datos mientras la cuenta esté activa. Al darse de baja, el tratamiento depende de la categoría del dato:
+
+- **Contenido personal de bienestar** — entradas de diario, registros de estado de ánimo, ejercicios de gratitud, hábitos, recordatorios, recursos guardados y respuestas del cuestionario: **se suprimen de forma inmediata y definitiva**, junto con la foto de perfil.
+- **Reservas y datos de la transacción** — montos, identificadores de pago, fechas y estados: se conservan **diez (10) años** desde la operación, por obligaciones contables y fiscales, **disociados de la identidad** del Usuario dado de baja.
+- **Reseñas**: se conservan de forma indefinida y **anonimizadas**, por integrar la reputación pública del Profesional evaluado. Suprimirlas permitiría que una baja de cuenta se use para eliminar una evaluación desfavorable.
+- **Mensajes y salas de conversación**: se conservan **anonimizados** mientras subsista la conversación, dado que pertenecen también al otro participante.
+- **Datos técnicos y de uso** (analítica): se conservan **disociados de la identidad** del Usuario.
+
+Al darse de baja, las Sesiones futuras ya agendadas se cancelan automáticamente y se reembolsan. La ficha de perfil no se elimina: queda **vaciada de todo dato personal** y muestra "Usuario eliminado" allí donde antes figuraba el Usuario, de modo que las reservas, reseñas y conversaciones de terceros no queden rotas. La cuenta de acceso se elimina y la dirección de correo queda liberada para un eventual registro futuro.
+
+Cumplidos los plazos indicados, los datos se suprimen o anonimizan de modo irreversible.
 
 ## 11. Menores de Edad
 
@@ -274,7 +301,7 @@ Consultas o ejercicio de derechos: vitaappar@gmail.com — Andre Albisu Lamberti
 `;
 
 /** Placeholders sin completar detectados al generar este archivo. */
-export const LEGAL_PLACEHOLDERS: string[] = ["[fecha]"];
+export const LEGAL_PLACEHOLDERS: string[] = ["[Incluir la mención informativa que la normativa vigente requiera respecto de la AAIP.]","[Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]","[Validar con abogado el mecanismo de obtención y registro del consentimiento explícito.]","[Validar redacción de esta cláusula con abogado: las cláusulas de jurisdicción frente a consumidores tienen límites estrictos.]","[fecha]","[ordinarios de la Ciudad Autónoma de Buenos Aires / los que correspondan]"];
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

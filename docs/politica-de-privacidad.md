@@ -19,7 +19,7 @@ Al utilizar la Plataforma, el Usuario declara haber leído y comprendido esta Po
 
 ## 1. Responsable del Tratamiento
 
-Responsable: Andre Albisu Lambertini. Contacto en materia de privacidad: vitaappar@gmail.com. [Indicar si existe un responsable/referente de datos designado.]
+Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contacto en materia de privacidad: vitaappar@gmail.com. No se ha designado un referente de datos distinto del Responsable; las solicitudes vinculadas a datos personales se atienden a través de esa dirección.
 
 ## 2. Qué Datos Recolectamos
 
@@ -61,7 +61,7 @@ Vita **no vende** los datos personales de los Usuarios. Los compartimos únicame
 - **Autoridades competentes:** cuando exista obligación legal o requerimiento válido.
 - **En caso de reorganización societaria** (fusión, adquisición), notificando cuando corresponda.
 
-La lista anterior es la de los proveedores efectivamente utilizados, verificada contra el código el 06/08/2026. [Pendiente: revisar el acuerdo de tratamiento de datos con cada uno.]
+La lista anterior comprende la totalidad de los proveedores con los que Vita comparte datos personales de sus Usuarios.
 
 ## 7. Transferencia Internacional de Datos
 
@@ -71,7 +71,7 @@ Algunos de los proveedores mencionados pueden almacenar o procesar datos en serv
 
 8.1. Vita aplica medidas técnicas y organizativas razonables para proteger los datos, incluyendo controles de acceso a nivel de base de datos que restringen el acceso a la información de cada Usuario.
 
-8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales. [Mantener esta redacción consistente con la realidad técnica del producto; no afirmar cifrado E2E mientras no exista.]
+8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales.
 
 8.3. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.
 
@@ -83,7 +83,17 @@ La AAIP, órgano de control de la Ley 25.326, tiene la atribución de atender de
 
 ## 10. Conservación de los Datos
 
-Conservamos los datos mientras la cuenta esté activa y durante el plazo necesario para cumplir las finalidades descriptas y las obligaciones legales (por ejemplo, obligaciones contables o fiscales de las transacciones). Luego, los datos se suprimen o anonimizan. [Definir plazos concretos de conservación por categoría de dato con el abogado/contador.]
+Conservamos los datos mientras la cuenta esté activa. Al darse de baja, el tratamiento depende de la categoría del dato:
+
+- **Contenido personal de bienestar** — entradas de diario, registros de estado de ánimo, ejercicios de gratitud, hábitos, recordatorios, recursos guardados y respuestas del cuestionario: **se suprimen de forma inmediata y definitiva**, junto con la foto de perfil.
+- **Reservas y datos de la transacción** — montos, identificadores de pago, fechas y estados: se conservan **diez (10) años** desde la operación, por obligaciones contables y fiscales, **disociados de la identidad** del Usuario dado de baja.
+- **Reseñas**: se conservan de forma indefinida y **anonimizadas**, por integrar la reputación pública del Profesional evaluado. Suprimirlas permitiría que una baja de cuenta se use para eliminar una evaluación desfavorable.
+- **Mensajes y salas de conversación**: se conservan **anonimizados** mientras subsista la conversación, dado que pertenecen también al otro participante.
+- **Datos técnicos y de uso** (analítica): se conservan **disociados de la identidad** del Usuario.
+
+Al darse de baja, las Sesiones futuras ya agendadas se cancelan automáticamente y se reembolsan. La ficha de perfil no se elimina: queda **vaciada de todo dato personal** y muestra "Usuario eliminado" allí donde antes figuraba el Usuario, de modo que las reservas, reseñas y conversaciones de terceros no queden rotas. La cuenta de acceso se elimina y la dirección de correo queda liberada para un eventual registro futuro.
+
+Cumplidos los plazos indicados, los datos se suprimen o anonimizan de modo irreversible.
 
 ## 11. Menores de Edad
 

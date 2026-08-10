@@ -49,7 +49,12 @@ Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, l
 
 5.2. Los Profesionales que ejercen prestaciones reguladas (por ejemplo, psicólogos/as o nutricionistas) lo hacen bajo su exclusiva responsabilidad profesional, debiendo contar con la matrícula y habilitaciones que la ley exija, y cumplir con las obligaciones propias de su profesión (incluido el secreto profesional). Vita no supervisa ni dirige el ejercicio profesional.
 
-5.3. **La Plataforma no es un servicio de emergencia.** Ante una situación de crisis, riesgo para la vida o emergencia de salud, el Usuario debe comunicarse de inmediato con los servicios de emergencia locales (por ejemplo, 911) o con las líneas de asistencia correspondientes. [Considerar incluir líneas de ayuda locales — p. ej., línea de prevención del suicidio.]
+5.3. **La Plataforma no es un servicio de emergencia.** Ante una situación de crisis, riesgo para la vida o emergencia de salud, el Usuario debe comunicarse de inmediato con los servicios de emergencia (**911**) o con la línea de asistencia al suicida y crisis de salud mental, disponible las 24 horas, todos los días, de forma gratuita, anónima y confidencial:
+
+- **135** — gratuita desde la Ciudad Autónoma de Buenos Aires y el Gran Buenos Aires.
+- **(011) 5275-1135** o **0800-345-1435** — desde todo el país.
+
+La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Profesionales no están disponibles para atender urgencias.
 
 ## 6. Los Profesionales y la Verificación
 
@@ -83,13 +88,25 @@ Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, l
 
 8.7. **Liberación de fondos.** La liberación de los fondos al Profesional puede estar sujeta a plazos operativos del procesador de pagos.
 
+8.8. **Garantía de primera sesión — efecto sobre el Profesional.** El Profesional conoce y acepta, como condición para operar en la Plataforma, la garantía prevista en la cláusula 9.3: cuando un Cliente la ejerce, el importe reintegrado **se debita de los fondos percibidos por esa Sesión**. La garantía alcanza únicamente a la primera Sesión de cada vínculo Cliente–Profesional y solo puede ejercerse una vez por Cliente en toda la Plataforma. Vita no percibe comisión sobre las Sesiones reintegradas por esta vía, de modo que el costo del reintegro no se traslada a la comisión de Sesiones posteriores.
+
 ## 9. Cancelaciones, Reembolsos y Garantía
 
-9.1. **Cancelación por el Cliente.** El Cliente puede cancelar una Sesión desde la Plataforma. Si cancela con la antelación mínima informada, tendrá derecho al reembolso total. Las cancelaciones tardías (por debajo de dicha antelación) pueden no dar lugar a reembolso, según la política vigente informada al reservar.
+9.1. **Cancelación por el Cliente.** El Cliente puede cancelar una Sesión desde la Plataforma **hasta 24 horas antes** del horario agendado, y en ese caso tiene derecho al **reembolso total**, que se procesa de forma automática a través del procesador de pagos.
+
+Dentro de las 24 horas previas al horario agendado, la Sesión **no puede cancelarse desde la Plataforma**. El Cliente puede solicitar al Profesional, a través del chat de la Sesión, que la cancele; si el Profesional accede, el reembolso se procesa igualmente de forma automática. Esta política se informa al Cliente antes de confirmar la reserva.
 
 9.2. **Cancelación o rechazo por el Profesional.** Si el Profesional rechaza o cancela una Sesión ya abonada, o si la reserva pendiente vence sin confirmarse, el Cliente tendrá derecho al reembolso, que se procesará de forma automática a través del procesador de pagos. Los tiempos de acreditación dependen de dicho procesador y del medio de pago.
 
-9.3. **Garantía de primera sesión.** [Si se mantiene esta política, describir su alcance exacto: p. ej., reintegro o nueva sesión ante insatisfacción en la primera Sesión con un Profesional, condiciones y plazos. Validar redacción con abogado.]
+9.3. **Garantía de primera sesión.** Si el Cliente no queda conforme con la **primera Sesión que mantiene con un Profesional determinado**, puede solicitar el reintegro total de lo abonado por esa Sesión escribiendo a vitaappar@gmail.com **dentro de las 48 horas** posteriores al horario en que la Sesión estaba agendada.
+
+Condiciones:
+
+- No es necesario expresar el motivo de la insatisfacción.
+- La garantía puede ejercerse **una sola vez por Cliente** en toda la Plataforma, cualquiera sea el Profesional de que se trate.
+- Alcanza únicamente a la primera Sesión de cada vínculo Cliente–Profesional, y solo si fue efectivamente abonada a través de la Plataforma.
+- El reintegro se procesa a través del procesador de pagos y **se debita de los fondos correspondientes al Profesional**, conforme a la cláusula 8.8. Vita no percibe comisión sobre las Sesiones reintegradas por esta vía.
+- Vita puede denegar la solicitud ante uso abusivo o fraudulento de la garantía (por ejemplo, cuentas múltiples de una misma persona, o solicitudes reiteradas destinadas a obtener Sesiones sin costo).
 
 9.4. Nada de lo previsto en esta cláusula limita los derechos que la normativa de defensa del consumidor reconozca al Cliente.
 
