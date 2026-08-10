@@ -275,6 +275,27 @@ export default function CoachProfileScreen() {
     if (connectingMp || noCoachProfile) return;
     setConnectingMp(true);
     try {
+      // Guardarraíl al RECONECTAR (mpConnected=true): coach_mp_accounts guarda un
+      // solo token vivo por coach, sin historial — si hay un pago cobrado con la
+      // cuenta ACTUAL que todavía puede necesitar reembolso, cambiar de cuenta lo
+      // deja huérfano (mp-process-refunds intenta con el token nuevo un pago que
+      // pertenece a la cuenta vieja, MP contesta 404 "Payment not found"; pasó de
+      // verdad en sesión 88, ver CHANGELOG_SESIONES.md). No aplica al primer
+      // connect: sin cuenta conectada todavía no hay nada que pueda orfanarse.
+      if (mpConnected && coachId) {
+        const { count } = await supabase
+          .from('bookings')
+          .select('id', { count: 'exact', head: true })
+          .eq('coach_id', coachId)
+          .in('payment_status', ['aprobado', 'reembolso_pendiente']);
+        if ((count ?? 0) > 0) {
+          Alert.alert(
+            'Todavía no podés cambiar de cuenta',
+            'Tenés pagos cobrados o reembolsos pendientes de resolver con la cuenta actual. Si cambiás ahora, esos quedan sin poder reembolsarse automáticamente. Esperá a que se resuelvan (o cancelen) antes de reconectar.',
+          );
+          return;
+        }
+      }
       const { data, error } = await supabase.functions.invoke('mp-oauth-start');
       if (error || !data?.url) {
         Alert.alert(
