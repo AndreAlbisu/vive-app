@@ -28,11 +28,18 @@
 - **Es un agujero real, no solo el $1 de hoy:** cualquier coach que reconecte su cuenta de MP (por el motivo que sea, no solo test) deja huérfano cualquier reembolso que quedara pendiente de la cuenta anterior, sin forma automática de recuperarlo — `coach_mp_accounts` guarda un solo token vivo por coach, no historial por pago.
 - **Decisión con Joaquín:** el $1 de este booking puntual se deja así (es plata de prueba de Andre, no de un usuario real; si le importa, Andre puede reembolsarlo a mano entrando con su cuenta MP vieja directo en mercadopago.com). El agujero de fondo (reconectar deja huérfanos los reembolsos previos) **se documenta y se decide después con Andre** — arreglarlo bien implica guardar historial de tokens por pago o bloquear "Cambiar cuenta" mientras haya pagos/reembolsos sin resolver, ninguna de las dos es un cambio de 5 minutos.
 
+**Umbrales del deck v3 — recalibrados corriendo `check-deck-pools.ts` con datos de hoy, sin cambios:**
+- Cobertura: 60/83 lugares-puerta califican para alguna categoría de mérito (72%). 3 puertas muestran 3 cards, 5 muestran 2, **2 muestran 1 sola** ("Identidad y motivación", "Espiritualidad y soledad" — cero coaches cruzan ninguna barra ahí, sobrevive solo "Opción económica").
+- **El dato está dominado por seed data, no por operación real**: los coaches con reseñas/rating (Nicolás Bravo, Agustina Ferrer, Damián Costa, Rocío Ibáñez, Facundo Lemos, Malena Ortiz, todos con exactamente 4 reseñas) son de `scripts/seed-fake-coaches.sql` (sesión 87, Andre), sembrados para poder testear la mecánica del deck sin esperar operación real — no reflejan comportamiento de usuarios de verdad. Los coaches reales siguen mayormente en 0 reseñas.
+- **Decisión con Joaquín: no tocar los umbrales numéricos** (4.5★, 3 reseñas, 30% reagendamiento, 3 reservantes/30d) — calibrar contra datos sintéticos sería calibrar contra ruido. Se recalibran cuando haya operación real, como ya venía anotado.
+- **Decisión con Joaquín: las 2 puertas de 1 sola card se dejan así** — es el mismo criterio que Andre ya aplicó en sesión 86 al sacar el relleno artificial (mostrar 1 card real es más honesto que inflar con relleno; "Ver lista completa" sigue teniendo a todos). Si esas puertas siguen angostas con operación real, es un tema de reclutar más coaches para esos temas, no de código.
+
 **Pendiente para la próxima sesión:**
 - **Decidir con Andre cómo resolver el agujero de "reconectar MP huérfana reembolsos viejos"** (ver arriba) — implica una decisión de diseño (historial de tokens vs. guardarraíl que bloquee reconectar), no solo código.
 - Confirmar si local (Expo Go, sin dev build) realmente requiere estar logueado/en la org de Expo, o si esa parte del bloqueo era innecesaria — ahorraría el paso de login+invitación a cualquiera que solo quiera correr la app en Expo Go.
 - Coordinar con Andre la desconexión/reconexión de la cuenta de MP del coach de prueba.
-- El resto de la lista de la sesión 87 sigue abierto: probar reserva instantánea con pago, tramo 15% de comisión (ideal probarlo YA con el fix del contador deployado), Gratitud y `/coach-visibilidad` en el celular; calibrar umbrales del deck v3.
+- El resto de la lista de la sesión 87 sigue abierto: probar reserva instantánea con pago, tramo 15% de comisión (ideal probarlo YA con el fix del contador deployado), Gratitud y `/coach-visibilidad` en el celular.
+- Recalibrar `check-deck-pools.ts` de verdad cuando haya operación real (no seed data).
 
 ## 2026-08-09 — Andre (sesión 87)
 
