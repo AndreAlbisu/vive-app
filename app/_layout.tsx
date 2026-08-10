@@ -14,7 +14,7 @@ import {
 import { Stack, useSegments, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import * as Notifications from 'expo-notifications';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -94,7 +94,14 @@ function AuthRedirect() {
   return null;
 }
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Tope para la carga de tipografías. `useFonts` puede quedarse sin resolver ni
+// fallar, y como el render está condicionado a ella, eso deja el splash nativo
+// puesto para siempre: la app se ve colgada, sin error y sin salida. Expo Go
+// nunca lo mostró porque no usa el splash de la app (docs de v54), así que el
+// cuelgue se estrenó en el primer build standalone.
+const FONT_TIMEOUT_MS = 5000;
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -110,13 +117,23 @@ export default function RootLayout() {
     SpaceGrotesk_600SemiBold,
   });
 
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
+  const [fontsTimedOut, setFontsTimedOut] = useState(false);
 
-  if (!fontsLoaded && !fontError) {
+  useEffect(() => {
+    const t = setTimeout(() => setFontsTimedOut(true), FONT_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Arrancar sin la tipografía cargada es feo pero usable; no arrancar, no.
+  const ready = fontsLoaded || !!fontError || fontsTimedOut;
+
+  useEffect(() => {
+    if (ready) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [ready]);
+
+  if (!ready) {
     return null;
   }
 
