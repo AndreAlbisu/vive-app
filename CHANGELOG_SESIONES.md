@@ -18,7 +18,12 @@
 - Typecheck del proyecto limpio (las edge functions no entran en el `tsconfig` principal, corren aparte en Deno — revisado a mano).
 - Sin cambios de schema.
 
+**Nota operativa — Joaquín no podía entrar a la app (dos problemas encadenados, ninguno de código):**
+- No tenía cuenta de Expo logueada localmente. Con `expo-dev-client` como dependencia (desde que Andre linkeó el proyecto a la org `vita-wellness-app`, sesión 83), hace falta estar logueado y ser miembro de esa organización para algunos flujos — **a confirmar si Expo Go local realmente lo necesita** o si alcanzaba con estar logueado (no se llegó a aislar la causa exacta, se resolvió por el camino de loguearse + pedirle a Andre la invitación).
+- **Con eso resuelto, apareció el problema real y va a repetirse:** `npm start` / `expo start` ahora arranca por default en modo **`development build`** (no Expo Go) porque el proyecto tiene `expo-dev-client` instalado — el QR que muestra apunta a un esquema custom (`com.andrealbisu.viveapp1://expo-development-client/...`) que Expo Go NO puede abrir, y ni siquiera se puede escanear con la Cámara del iPhone (no es un link http). **Mientras no exista un dev build real instalado en el celular** (sigue pendiente de sesiones anteriores), hay que apretar `s` en la Terminal después de arrancar el server para forzar `Press s | switch to Expo Go`, que regenera un QR `exp://` compatible. Vale la pena decirle esto a Andre también, le va a pasar lo mismo.
+
 **Pendiente para la próxima sesión:**
+- Confirmar si local (Expo Go, sin dev build) realmente requiere estar logueado/en la org de Expo, o si esa parte del bloqueo era innecesaria — ahorraría el paso de login+invitación a cualquiera que solo quiera correr la app en Expo Go.
 - **Confirmar que las 3 reservas terminaron en `payment_status='reembolsado'`** (quedaron en `reembolso_pendiente`, falta el paso final del cron contra la API de MP).
 - Coordinar con Andre la desconexión/reconexión de la cuenta de MP del coach de prueba.
 - El resto de la lista de la sesión 87 sigue abierto: probar reserva instantánea con pago, tramo 15% de comisión (ideal probarlo YA con el fix del contador deployado), Gratitud y `/coach-visibilidad` en el celular; calibrar umbrales del deck v3.
