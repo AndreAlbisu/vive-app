@@ -60,12 +60,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // suele resolver de AsyncStorage sin red; fetchRole() sí pega contra
     // Supabase, pero el usuario ya puede navegar mientras tanto — la
     // redirect de app/index.tsx reacciona sola cuando `role` cambia.
+    // El .catch() no es decorativo: `setLoading(false)` vive solo acá adentro,
+    // así que si getSession() rechaza (red caída, token que no se puede
+    // refrescar) `loading` se queda en true y app/index.tsx muestra el spinner
+    // para siempre. Sin sesión resuelta seguimos como anónimos, que es un
+    // estado válido y navegable.
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
       setLoading(false);
       if (u) fetchRole(u.id).then(setRole);
       else setRole('user');
+    }).catch((e) => {
+      console.warn('[auth] getSession fallo, sigo como anonimo:', e?.message ?? e);
+      setUser(null);
+      setRole('user');
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
