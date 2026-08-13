@@ -31,6 +31,15 @@ const DOCS = [
   // y directo desde la portada, sin registro ni trámite previo. Enterrado
   // adentro de los Términos no cumpliría.
   { key: 'REGRET',  file: 'docs/boton-de-arrepentimiento.md' },
+  // Google Play exige una URL pública de solicitud de eliminación de cuenta,
+  // accesible sin instalar la app y sin iniciar sesión. Tiene que declarar qué
+  // se borra y qué se conserva con su plazo — o sea, seguir a Política §10.
+  //
+  // `app: false` = no se exporta a constants/legal.ts. Adentro de la app la
+  // baja es un botón real (Perfil → Eliminar mi cuenta), no un instructivo, así
+  // que el texto viajaría en el bundle sin que ninguna pantalla lo lea. Los
+  // placeholders del documento se siguen contando igual.
+  { key: 'DELETE',  file: 'docs/eliminar-cuenta.md', app: false },
 ];
 
 /** Saca el bloque de citas inicial (aviso interno de borrador).
@@ -74,6 +83,12 @@ function ellipsis(text, max = 72) {
   return text.length <= max ? text : `${text.slice(0, max - 1)}…]`;
 }
 
+/** Envuelve las tablas en un div con overflow: en pantalla angosta, una tabla
+ *  sin contenedor propio desborda el body entero y rompe el scroll de la página. */
+function wrapTables(html) {
+  return html.replace(/<table>[\s\S]*?<\/table>/g, (t) => `<div class="table-wrap">${t}</div>`);
+}
+
 /** Escapa para meter el texto en un template literal de TS. */
 function toTemplateLiteral(text) {
   return '`' + text.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${') + '`';
@@ -83,14 +98,14 @@ const parts = [];
 const placeholders = [];
 const forWeb = [];
 
-for (const { key, file } of DOCS) {
+for (const { key, file, app = true } of DOCS) {
   const raw = readFileSync(join(root, file), 'utf8');
   const { md, offset } = stripLeadingBlockquote(raw);
   const clean = flattenRelativeLinks(md);
   placeholders.push(
     ...findPlaceholders(clean).map((p) => ({ ...p, file, line: p.line + offset }))
   );
-  parts.push(`export const ${key}_MD = ${toTemplateLiteral(clean)};`);
+  if (app) parts.push(`export const ${key}_MD = ${toTemplateLiteral(clean)};`);
   forWeb.push({ key, md: clean });
 }
 
@@ -131,6 +146,7 @@ const WEB_META = {
   // que el enlace diga literalmente "BOTÓN DE ARREPENTIMIENTO" y esté en lugar
   // destacado. Va en las tres páginas, no solo en la suya.
   REGRET:  { file: 'arrepentimiento.html', title: 'Botón de Arrepentimiento — Vita', nav: 'BOTÓN DE ARREPENTIMIENTO' },
+  DELETE:  { file: 'eliminar-cuenta.html', title: 'Eliminar tu cuenta — Vita', nav: 'Eliminar tu cuenta' },
 };
 
 const CSS = `
@@ -150,6 +166,12 @@ const CSS = `
   ul, ol { padding-left: 1.35rem; }
   li { margin-bottom: .4rem; }
   hr { border: 0; border-top: 1px solid rgba(58,79,42,.15); margin: 2.5rem 0; }
+  /* La página de eliminación de cuenta declara los plazos de conservación en
+     una tabla; sin overflow se rompe en pantallas angostas. */
+  .table-wrap { overflow-x: auto; margin: 1.25rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .925rem; }
+  th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid rgba(58,79,42,.15); vertical-align: top; }
+  th { font-weight: 700; }
   a { color: #C1694F; }
   code { background: rgba(58,79,42,.08); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
   .nav { max-width: 720px; margin: 0 auto 2rem; font-size: .9rem; }
@@ -170,8 +192,30 @@ const CSS = `
     h1, h2, h3 { color: #F2EDE0; }
     hr { border-top-color: rgba(228,224,210,.18); }
     code { background: rgba(228,224,210,.10); }
+    th, td { border-bottom-color: rgba(228,224,210,.18); }
     .draft { background: rgba(193,105,79,.16); color: #E8B48F; border-color: rgba(193,105,79,.35); }
+    .card { background: rgba(228,224,210,.05); border-color: rgba(228,224,210,.14); }
+    .lead { color: rgba(228,224,210,.85); }
   }
+`;
+
+// Estilos que solo usa la portada. Van aparte para no engordar cada página
+// legal con reglas que no aplican.
+const HOME_CSS = `
+  .lead { font-size: 1.05rem; color: rgba(58,79,42,.85); margin-bottom: 2.5rem; }
+  .card {
+    display: block; padding: 16px 18px; margin-bottom: 12px;
+    background: rgba(58,79,42,.04); border: 1px solid rgba(58,79,42,.14);
+    border-radius: 14px; text-decoration: none; color: inherit;
+  }
+  .card:hover { border-color: rgba(58,79,42,.30); }
+  .card strong { display: block; margin-bottom: 3px; }
+  .card span { font-size: .9rem; opacity: .8; }
+  /* "Lugar destacado" de la Res. 424/2020: el botón de arrepentimiento tiene
+     que verse como tal en la portada, no ser un link más de una lista. */
+  .card.regret { background: rgba(193,105,79,.10); border-color: rgba(193,105,79,.40); }
+  .card.regret strong { color: #C1694F; letter-spacing: .02em; }
+  .contact { margin-top: 3rem; font-size: .925rem; line-height: 1.7; }
 `;
 
 const draftNotice = unique.length
@@ -196,10 +240,10 @@ for (const { key, md } of forWeb) {
 <style>${CSS}</style>
 </head>
 <body>
-<nav class="nav">${others}</nav>
+<nav class="nav"><a href="../index.html">Inicio</a> · ${others}</nav>
 ${draftNotice}
 <main>
-${marked.parse(md)}
+${wrapTables(marked.parse(md))}
 </main>
 </body>
 </html>
@@ -207,7 +251,57 @@ ${marked.parse(md)}
   writeFileSync(join(webDir, file), html, 'utf8');
 }
 
+// ── Portada ──────────────────────────────────────────────────────────────────
+// Existe por dos exigencias distintas que se resuelven en el mismo lugar:
+//   - Res. 424/2020: el enlace "BOTÓN DE ARREPENTIMIENTO" tiene que estar en la
+//     PORTADA, en lugar destacado y sin registro previo. Sin index no hay
+//     portada, así que las páginas legales sueltas no alcanzaban.
+//   - Guideline 1.2 de Apple: junto con filtrado, reporte y bloqueo, exige un
+//     medio de contacto PUBLICADO. Es la cuarta pata, y es la de abajo.
+const HOME_LINKS = [
+  { key: 'REGRET',  hint: 'Arrepentite de una contratación dentro de los 10 días corridos. Sin registro, sin costo.' },
+  { key: 'TERMS',   hint: 'Las reglas de uso de la plataforma.' },
+  { key: 'PRIVACY', hint: 'Qué datos tratamos, para qué, y cuáles son tus derechos.' },
+  { key: 'DELETE',  hint: 'Cómo borrar tu cuenta y qué pasa con tus datos.' },
+];
+
+const homeHtml = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vita — Bienestar acompañado</title>
+<meta name="description" content="Vita conecta personas con profesionales del bienestar para sesiones online. Términos, privacidad, botón de arrepentimiento y contacto.">
+<style>${CSS}${HOME_CSS}</style>
+</head>
+<body>
+${draftNotice}
+<main>
+<h1>Vita</h1>
+<p class="lead">Vita conecta a personas con profesionales del bienestar para sesiones online. Acá están los documentos legales, el botón de arrepentimiento y cómo contactarnos.</p>
+
+${HOME_LINKS.map(({ key, hint }) => {
+  const m = WEB_META[key];
+  return `<a class="card${key === 'REGRET' ? ' regret' : ''}" href="./legal/${m.file}"><strong>${m.nav}</strong><span>${hint}</span></a>`;
+}).join('\n')}
+
+<div class="contact">
+<h2>Contacto</h2>
+<p>
+Escribinos a <a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a>. Respondemos consultas sobre el servicio, reportes de conducta, privacidad y bajas de cuenta.<br>
+Andre Albisu Lambertini — CUIT 20-46034087-0<br>
+De los Extremeños 5069, Córdoba, Provincia de Córdoba, Argentina.
+</p>
+</div>
+</main>
+</body>
+</html>
+`;
+
+writeFileSync(join(root, 'web/index.html'), homeHtml, 'utf8');
+
 console.log(
   `web/legal/: ${forWeb.length} páginas generadas ` +
     `(${forWeb.map(({ key }) => WEB_META[key].file).join(', ')}).`
 );
+console.log('web/index.html: portada generada (botón de arrepentimiento + contacto).');

@@ -21,6 +21,12 @@
   ul, ol { padding-left: 1.35rem; }
   li { margin-bottom: .4rem; }
   hr { border: 0; border-top: 1px solid rgba(58,79,42,.15); margin: 2.5rem 0; }
+  /* La página de eliminación de cuenta declara los plazos de conservación en
+     una tabla; sin overflow se rompe en pantallas angostas. */
+  .table-wrap { overflow-x: auto; margin: 1.25rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .925rem; }
+  th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid rgba(58,79,42,.15); vertical-align: top; }
+  th { font-weight: 700; }
   a { color: #C1694F; }
   code { background: rgba(58,79,42,.08); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
   .nav { max-width: 720px; margin: 0 auto 2rem; font-size: .9rem; }
@@ -41,12 +47,15 @@
     h1, h2, h3 { color: #F2EDE0; }
     hr { border-top-color: rgba(228,224,210,.18); }
     code { background: rgba(228,224,210,.10); }
+    th, td { border-bottom-color: rgba(228,224,210,.18); }
     .draft { background: rgba(193,105,79,.16); color: #E8B48F; border-color: rgba(193,105,79,.35); }
+    .card { background: rgba(228,224,210,.05); border-color: rgba(228,224,210,.14); }
+    .lead { color: rgba(228,224,210,.85); }
   }
 </style>
 </head>
 <body>
-<nav class="nav"><a href="./privacidad.html">Política de Privacidad</a> · <a href="./arrepentimiento.html" class="regret">BOTÓN DE ARREPENTIMIENTO</a></nav>
+<nav class="nav"><a href="../index.html">Inicio</a> · <a href="./privacidad.html">Política de Privacidad</a> · <a href="./arrepentimiento.html" class="regret">BOTÓN DE ARREPENTIMIENTO</a> · <a href="./eliminar-cuenta.html">Eliminar tu cuenta</a></nav>
 <div class="draft"><strong>Borrador.</strong> Este documento todavía tiene campos sin completar y no fue revisado por un/a profesional del derecho. No debe considerarse vigente.</div>
 <main>
 <h1>Términos y Condiciones de Uso — Vita</h1>
