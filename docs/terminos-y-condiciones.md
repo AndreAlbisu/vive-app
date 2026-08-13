@@ -108,7 +108,17 @@ Condiciones:
 - El reintegro se procesa a través del procesador de pagos y **se debita de los fondos correspondientes al Profesional**, conforme a la cláusula 8.8. Vita no percibe comisión sobre las Sesiones reintegradas por esta vía.
 - Vita puede denegar la solicitud ante uso abusivo o fraudulento de la garantía (por ejemplo, cuentas múltiples de una misma persona, o solicitudes reiteradas destinadas a obtener Sesiones sin costo).
 
-9.4. Nada de lo previsto en esta cláusula limita los derechos que la normativa de defensa del consumidor reconozca al Cliente.
+9.4. **Derecho de revocación — Botón de arrepentimiento.** Por tratarse de una contratación celebrada a distancia, el Cliente tiene el **derecho irrenunciable de revocar la contratación dentro de los diez (10) días corridos**, contados desde la celebración del contrato —esto es, desde la confirmación de la reserva de la Sesión— conforme al art. 34 de la Ley 24.240 y a los arts. 1110 a 1116 del Código Civil y Comercial.
+
+Condiciones:
+
+- La revocación **no requiere expresar motivo** y **no tiene costo alguno** para el Cliente.
+- Puede ejercerse desde el enlace **"BOTÓN DE ARREPENTIMIENTO"**, disponible en [URL del botón de arrepentimiento — completar al publicar el sitio], **sin necesidad de registrarse ni de realizar trámite previo alguno**, o escribiendo a vitaappar@gmail.com.
+- Recibida la solicitud, Vita remitirá al Cliente, **dentro de las 24 horas y por medio electrónico**, un **código de identificación de la revocación**, conforme a la Resolución 424/2020 de la Secretaría de Comercio Interior.
+- Ejercida la revocación, Vita reintegrará la totalidad de lo abonado, sin cargo. El reintegro se procesa a través del procesador de pagos; los tiempos de acreditación dependen de dicho procesador y del medio de pago.
+- [Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]
+
+9.5. Nada de lo previsto en esta cláusula limita los derechos que la normativa de defensa del consumidor reconozca al Cliente.
 
 ## 10. Uso Exclusivo de la Plataforma (No Elusión)
 

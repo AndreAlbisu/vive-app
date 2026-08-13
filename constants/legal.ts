@@ -103,7 +103,17 @@ Condiciones:
 - El reintegro se procesa a través del procesador de pagos y **se debita de los fondos correspondientes al Profesional**, conforme a la cláusula 8.8. Vita no percibe comisión sobre las Sesiones reintegradas por esta vía.
 - Vita puede denegar la solicitud ante uso abusivo o fraudulento de la garantía (por ejemplo, cuentas múltiples de una misma persona, o solicitudes reiteradas destinadas a obtener Sesiones sin costo).
 
-9.4. Nada de lo previsto en esta cláusula limita los derechos que la normativa de defensa del consumidor reconozca al Cliente.
+9.4. **Derecho de revocación — Botón de arrepentimiento.** Por tratarse de una contratación celebrada a distancia, el Cliente tiene el **derecho irrenunciable de revocar la contratación dentro de los diez (10) días corridos**, contados desde la celebración del contrato —esto es, desde la confirmación de la reserva de la Sesión— conforme al art. 34 de la Ley 24.240 y a los arts. 1110 a 1116 del Código Civil y Comercial.
+
+Condiciones:
+
+- La revocación **no requiere expresar motivo** y **no tiene costo alguno** para el Cliente.
+- Puede ejercerse desde el enlace **"BOTÓN DE ARREPENTIMIENTO"**, disponible en [URL del botón de arrepentimiento — completar al publicar el sitio], **sin necesidad de registrarse ni de realizar trámite previo alguno**, o escribiendo a vitaappar@gmail.com.
+- Recibida la solicitud, Vita remitirá al Cliente, **dentro de las 24 horas y por medio electrónico**, un **código de identificación de la revocación**, conforme a la Resolución 424/2020 de la Secretaría de Comercio Interior.
+- Ejercida la revocación, Vita reintegrará la totalidad de lo abonado, sin cargo. El reintegro se procesa a través del procesador de pagos; los tiempos de acreditación dependen de dicho procesador y del medio de pago.
+- [Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]
+
+9.5. Nada de lo previsto en esta cláusula limita los derechos que la normativa de defensa del consumidor reconozca al Cliente.
 
 ## 10. Uso Exclusivo de la Plataforma (No Elusión)
 
@@ -302,8 +312,52 @@ Vita puede actualizar esta Política. Los cambios sustanciales se notificarán p
 Consultas o ejercicio de derechos: vitaappar@gmail.com — Andre Albisu Lambertini, De los Extremeños 5069, Córdoba, Provincia de Córdoba.
 `;
 
+export const REGRET_MD = `# Botón de arrepentimiento
+
+**Última actualización:** [fecha]
+
+## Qué es
+
+Si contrataste una Sesión en Vita, tenés derecho a **arrepentirte y dejar sin efecto la contratación dentro de los 10 (diez) días corridos**, contados desde que confirmaste la reserva.
+
+Es un derecho **irrenunciable**: no hace falta que expliques por qué, no tiene ningún costo para vos, y nadie puede pedirte que renuncies a él. Está previsto en el **artículo 34 de la Ley 24.240** de Defensa del Consumidor y en los **artículos 1110 a 1116 del Código Civil y Comercial**.
+
+## Cómo lo ejercés
+
+No necesitás tener cuenta, ni estar logueado, ni hacer ningún trámite previo. Escribinos a **vitaappar@gmail.com** con el asunto **"ARREPENTIMIENTO"** e incluí:
+
+- Tu nombre y apellido.
+- El correo electrónico con el que reservaste (o el que usaste para pagar).
+- La fecha en que hiciste la reserva y, si lo tenés a mano, con qué profesional.
+
+Con eso alcanza. No hace falta ningún formulario ni ningún dato adicional.
+
+## Qué pasa después
+
+1. **Dentro de las 24 horas** de recibida tu solicitud te enviamos por correo electrónico un **código de identificación de la revocación**. Ese código es tu constancia: guardalo.
+2. Damos de baja la Sesión y te **reintegramos el 100% de lo que pagaste**, sin cargo alguno.
+3. El reintegro se hace a través del mismo medio de pago que usaste, por medio del procesador de pagos. **Los tiempos de acreditación dependen de tu banco o de la tarjeta**, no de nosotros: normalmente entre 5 y 20 días hábiles según el medio.
+
+## Si el plazo de 10 días ya pasó
+
+Tenés otras vías, que son independientes de este derecho:
+
+- **Cancelar una Sesión** que todavía no ocurrió: podés hacerlo desde la app hasta 24 horas antes del horario agendado, con reembolso total (Términos y Condiciones §9.1).
+- **Garantía de primera sesión**: si no quedaste conforme con la primera Sesión con un profesional, podés pedir el reintegro total escribiendo a vitaappar@gmail.com dentro de las 48 horas del horario agendado (Términos y Condiciones §9.3).
+
+## Ante cualquier problema
+
+Si tenés una dificultad para ejercer este derecho, escribinos a **vitaappar@gmail.com** y lo resolvemos.
+
+También podés acudir a la autoridad de aplicación en materia de defensa del consumidor de tu jurisdicción, o iniciar un reclamo en el **Servicio de Conciliación Previa en las Relaciones de Consumo (COPREC)**, en https://autogestion.produccion.gob.ar/consumidores.
+
+---
+
+Vita — Andre Albisu Lambertini, CUIT 20-46034087-0, De los Extremeños 5069, Córdoba, Provincia de Córdoba. vitaappar@gmail.com
+`;
+
 /** Placeholders sin completar detectados al generar este archivo. */
-export const LEGAL_PLACEHOLDERS: string[] = ["[Incluir la mención informativa que la normativa vigente requiera respecto de la AAIP.]","[Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]","[Validar con abogado el mecanismo de obtención y registro del consentimiento explícito.]","[Validar redacción de esta cláusula con abogado: las cláusulas de jurisdicción frente a consumidores tienen límites estrictos.]","[fecha]","[ordinarios de la Ciudad Autónoma de Buenos Aires / los que correspondan]"];
+export const LEGAL_PLACEHOLDERS: string[] = ["[Incluir la mención informativa que la normativa vigente requiera respecto de la AAIP.]","[URL del botón de arrepentimiento — completar al publicar el sitio]","[Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]","[Validar con abogado el mecanismo de obtención y registro del consentimiento explícito.]","[Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]","[Validar redacción de esta cláusula con abogado: las cláusulas de jurisdicción frente a consumidores tienen límites estrictos.]","[fecha]","[ordinarios de la Ciudad Autónoma de Buenos Aires / los que correspondan]"];
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

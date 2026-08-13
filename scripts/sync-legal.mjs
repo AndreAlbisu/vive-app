@@ -26,6 +26,11 @@ mkdirSync(webDir, { recursive: true });
 const DOCS = [
   { key: 'TERMS',   file: 'docs/terminos-y-condiciones.md' },
   { key: 'PRIVACY', file: 'docs/politica-de-privacidad.md' },
+  // El botón de arrepentimiento es página propia y no una sección de los T&C
+  // por exigencia de la Res. 424/2020: tiene que ser un enlace de acceso fácil
+  // y directo desde la portada, sin registro ni trámite previo. Enterrado
+  // adentro de los Términos no cumpliría.
+  { key: 'REGRET',  file: 'docs/boton-de-arrepentimiento.md' },
 ];
 
 /** Saca el bloque de citas inicial (aviso interno de borrador).
@@ -120,8 +125,12 @@ for (const { file, line, text } of placeholders) {
 // de Privacidad para poder publicar la app; el .md del repo no sirve como tal.
 // Se generan del mismo texto que muestra la app, así no pueden divergir.
 const WEB_META = {
-  TERMS:   { file: 'terminos.html',   title: 'Términos y Condiciones — Vita' },
-  PRIVACY: { file: 'privacidad.html', title: 'Política de Privacidad — Vita' },
+  TERMS:   { file: 'terminos.html',       title: 'Términos y Condiciones — Vita', nav: 'Términos y Condiciones' },
+  PRIVACY: { file: 'privacidad.html',     title: 'Política de Privacidad — Vita', nav: 'Política de Privacidad' },
+  // El nav lo escribe en mayúsculas y destacado porque la Res. 424/2020 pide
+  // que el enlace diga literalmente "BOTÓN DE ARREPENTIMIENTO" y esté en lugar
+  // destacado. Va en las tres páginas, no solo en la suya.
+  REGRET:  { file: 'arrepentimiento.html', title: 'Botón de Arrepentimiento — Vita', nav: 'BOTÓN DE ARREPENTIMIENTO' },
 };
 
 const CSS = `
@@ -144,6 +153,13 @@ const CSS = `
   a { color: #C1694F; }
   code { background: rgba(58,79,42,.08); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
   .nav { max-width: 720px; margin: 0 auto 2rem; font-size: .9rem; }
+  /* "Lugar destacado" de la Res. 424/2020: el enlace no puede ser un link más
+     perdido en el pie. Se lo pinta como botón y se lo separa del resto. */
+  .nav a.regret {
+    display: inline-block; margin-left: .35rem; padding: .35rem .7rem;
+    background: #C1694F; color: #FFF6EC; border-radius: 8px;
+    font-weight: 700; letter-spacing: .02em; text-decoration: none;
+  }
   .draft {
     max-width: 720px; margin: 0 auto 2rem; padding: 12px 16px;
     background: rgba(193,105,79,.10); border: 1px solid rgba(193,105,79,.28);
@@ -164,7 +180,13 @@ const draftNotice = unique.length
 
 for (const { key, md } of forWeb) {
   const { file, title } = WEB_META[key];
-  const other = key === 'TERMS' ? WEB_META.PRIVACY : WEB_META.TERMS;
+  // Enlaces a TODAS las otras páginas, no solo a "la otra": con tres documentos
+  // el par fijo dejaba el botón de arrepentimiento inalcanzable desde dos de las
+  // tres páginas, que es justo lo que la Res. 424/2020 no permite.
+  const others = Object.entries(WEB_META)
+    .filter(([k]) => k !== key)
+    .map(([k, m]) => `<a href="./${m.file}"${k === 'REGRET' ? ' class="regret"' : ''}>${m.nav}</a>`)
+    .join(' · ');
   const html = `<!doctype html>
 <html lang="es">
 <head>
@@ -174,7 +196,7 @@ for (const { key, md } of forWeb) {
 <style>${CSS}</style>
 </head>
 <body>
-<nav class="nav"><a href="./${other.file}">${other.title.replace(' — Vita', '')}</a></nav>
+<nav class="nav">${others}</nav>
 ${draftNotice}
 <main>
 ${marked.parse(md)}
@@ -185,4 +207,7 @@ ${marked.parse(md)}
   writeFileSync(join(webDir, file), html, 'utf8');
 }
 
-console.log(`web/legal/: ${forWeb.length} páginas generadas (terminos.html, privacidad.html).`);
+console.log(
+  `web/legal/: ${forWeb.length} páginas generadas ` +
+    `(${forWeb.map(({ key }) => WEB_META[key].file).join(', ')}).`
+);

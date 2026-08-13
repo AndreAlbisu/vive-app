@@ -165,13 +165,18 @@ export default function ProfileOwnScreen() {
     { id: 'blocked', icon: 'account-cancel-outline', label: 'Cuentas bloqueadas', onPress: () => router.push('/cuentas-bloqueadas') },
     { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => router.push('/legal?doc=terminos') },
     { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },
+    { id: 'regret', icon: 'undo-variant', label: 'Botón de arrepentimiento', onPress: () => router.push('/legal?doc=arrepentimiento') },
     { id: 'logout', icon: 'logout', label: 'Cerrar sesión', danger: true, onPress: handleSignOut },
     { id: 'delete', icon: 'trash-can-outline', label: 'Eliminar mi cuenta', danger: true, onPress: () => setDeleteOpen(true) },
   ];
 
+  // El botón de arrepentimiento va TAMBIÉN en la lista de invitado: la Res.
+  // 424/2020 pide que sea accesible sin registro previo, así que esconderlo
+  // detrás del login sería exactamente lo que la norma no admite.
   const guestConfigItems: ConfigItem[] = [
     { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => router.push('/legal?doc=terminos') },
     { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },
+    { id: 'regret', icon: 'undo-variant', label: 'Botón de arrepentimiento', onPress: () => router.push('/legal?doc=arrepentimiento') },
   ];
 
   return (

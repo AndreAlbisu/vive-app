@@ -1,10 +1,11 @@
-// Pantalla de documentos legales — T&C y Política de Privacidad.
+// Pantalla de documentos legales — T&C, Política de Privacidad y botón de
+// arrepentimiento.
 //
 // Fuente única: docs/*.md → constants/legal.ts (generado por `npm run sync:legal`).
 // Antes esto no existía: los ítems del menú de perfil no hacían nada y el
 // registro mostraba un resumen escrito a mano que no era el documento real.
 //
-// Ruta: /legal?doc=terminos | /legal?doc=privacidad
+// Ruta: /legal?doc=terminos | /legal?doc=privacidad | /legal?doc=arrepentimiento
 
 import { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
@@ -14,22 +15,27 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
 import { ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { TERMS_MD, PRIVACY_MD, LEGAL_IS_DRAFT } from '@/constants/legal';
+import { TERMS_MD, PRIVACY_MD, REGRET_MD, LEGAL_IS_DRAFT } from '@/constants/legal';
 
 const FOREST = '#3A4F2A';
 
-export type LegalDoc = 'terminos' | 'privacidad';
+export type LegalDoc = 'terminos' | 'privacidad' | 'arrepentimiento';
+
+const DOCS: Record<LegalDoc, { title: string; body: string }> = {
+  terminos:       { title: 'Términos y condiciones', body: TERMS_MD },
+  privacidad:     { title: 'Política de privacidad', body: PRIVACY_MD },
+  arrepentimiento:{ title: 'Botón de arrepentimiento', body: REGRET_MD },
+};
 
 export default function LegalScreen() {
   const router = useRouter();
   const { doc } = useLocalSearchParams<{ doc?: string }>();
 
-  const isPrivacy = doc === 'privacidad';
+  // Un `doc` desconocido cae en los Términos, igual que antes: la pantalla se
+  // alcanza también desde links viejos y es preferible mostrar algo que romper.
   const { title, body } = useMemo(
-    () => (isPrivacy
-      ? { title: 'Política de privacidad', body: PRIVACY_MD }
-      : { title: 'Términos y condiciones', body: TERMS_MD }),
-    [isPrivacy],
+    () => DOCS[(doc as LegalDoc)] ?? DOCS.terminos,
+    [doc],
   );
 
   return (

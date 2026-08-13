@@ -24,6 +24,13 @@
   a { color: #C1694F; }
   code { background: rgba(58,79,42,.08); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
   .nav { max-width: 720px; margin: 0 auto 2rem; font-size: .9rem; }
+  /* "Lugar destacado" de la Res. 424/2020: el enlace no puede ser un link más
+     perdido en el pie. Se lo pinta como botón y se lo separa del resto. */
+  .nav a.regret {
+    display: inline-block; margin-left: .35rem; padding: .35rem .7rem;
+    background: #C1694F; color: #FFF6EC; border-radius: 8px;
+    font-weight: 700; letter-spacing: .02em; text-decoration: none;
+  }
   .draft {
     max-width: 720px; margin: 0 auto 2rem; padding: 12px 16px;
     background: rgba(193,105,79,.10); border: 1px solid rgba(193,105,79,.28);
@@ -39,7 +46,7 @@
 </style>
 </head>
 <body>
-<nav class="nav"><a href="./terminos.html">Términos y Condiciones</a></nav>
+<nav class="nav"><a href="./terminos.html">Términos y Condiciones</a> · <a href="./arrepentimiento.html" class="regret">BOTÓN DE ARREPENTIMIENTO</a></nav>
 <div class="draft"><strong>Borrador.</strong> Este documento todavía tiene campos sin completar y no fue revisado por un/a profesional del derecho. No debe considerarse vigente.</div>
 <main>
 <h1>Política de Privacidad — Vita</h1>

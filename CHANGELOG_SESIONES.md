@@ -7,7 +7,9 @@
 
 ## 2026-08-13 — Andre (sesión 90)
 
-**Tocado:** nuevos `scripts/add-user-blocking.sql`, `lib/blocking.ts`, `hooks/useBlockedFilter.ts`, `components/UserActionsSheet.tsx`, `screens/BlockedAccountsScreen.tsx`, `app/cuentas-bloqueadas.tsx`. Modificados `screens/SalaScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/FavoritosScreen.tsx`, `screens/QuizScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `context/AuthContext.tsx`, `app/search3.tsx`, `app/(tabs)/conexiones.tsx`, `docs/terminos-y-condiciones.md`, `docs/legal-instrucciones.md` + `constants/legal.ts` y `web/legal/*` regenerados. **Schema nuevo — SCHEMA.md ya actualizado.**
+**Tocado:** nuevos `scripts/add-user-blocking.sql`, `scripts/add-age-confirmation.sql`, `docs/boton-de-arrepentimiento.md`, `lib/blocking.ts`, `hooks/useBlockedFilter.ts`, `components/UserActionsSheet.tsx`, `screens/BlockedAccountsScreen.tsx`, `app/cuentas-bloqueadas.tsx`. Modificados `screens/SalaScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/FavoritosScreen.tsx`, `screens/QuizScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/RegisterScreen.tsx`, `screens/CoachLoginScreen.tsx`, `screens/CoachApplicationScreen.tsx`, `context/AuthContext.tsx`, `app/search3.tsx`, `app/legal.tsx`, `app/(tabs)/conexiones.tsx`, `scripts/sync-legal.mjs`, `docs/terminos-y-condiciones.md`, `docs/legal-instrucciones.md` + `constants/legal.ts` y `web/legal/*` regenerados. **Dos scripts de schema nuevos — SCHEMA.md ya actualizado.**
+
+**Sesión de tres bloques, los tres bloqueadores de publicación:** bloqueo de usuarios (guideline 1.2 de Apple), declaración de mayoría de edad, y botón de arrepentimiento (Res. 424/2020).
 
 **Resumen:**
 
@@ -30,13 +32,23 @@ Typecheck limpio. Lint sin errores nuevos — el único error que reporta `SalaS
 - **Decisión: NO se backfillea.** Las cuentas previas quedan en `false` porque efectivamente no declararon nada. Poner `true` sería fabricar una constancia que no existió, que es peor que no tenerla.
 - **Del lado coach, chequeo duro además de la declaración.** `CoachLoginScreen` es login y alta a la vez, así que mantiene la aceptación implícita (ahora también de la edad) para no sumarle fricción a quien solo entra; pero `CoachApplicationScreen` ahora corta la postulación si `birth_date` da menos de 18. Es el único punto del alta con una fecha real, y del lado del coach la mayoría de edad no puede quedar solo en una línea de texto.
 
-Typecheck y lint limpios en los dos bloques.
+**Tercer bloque — botón de arrepentimiento y derecho de revocación (3er rojo):**
+
+- **Página propia, no una sección de los T&C.** La Res. 424/2020 pide un enlace de acceso fácil y directo **desde la portada**, en lugar destacado y **sin registro ni trámite previo**. Enterrado adentro de los Términos no cumple. Nuevo `docs/boton-de-arrepentimiento.md` → `web/legal/arrepentimiento.html`, más **T&C §9.4** (la vieja 9.4 pasó a 9.5).
+- 🔴 **Corrección a lo que decía el pendiente de la sesión 89: el plazo es de 10 días CORRIDOS, no hábiles.** El art. 34 de la Ley 24.240 lo dice con esas palabras. El texto quedó escrito con "corridos".
+- **`sync-legal.mjs` pasó a soportar N documentos.** El nav de cada página linkeaba a "la otra" con un ternario; con tres documentos eso dejaba el botón de arrepentimiento inalcanzable desde dos de las tres páginas — justo lo que la norma no permite. Ahora enlaza a todas las demás, y el de arrepentimiento va con estilo de botón destacado y en mayúsculas, como pide la resolución.
+- **En la app, el ítem va también en la lista de invitado** de `ProfileOwnScreen`: esconderlo detrás del login sería exactamente lo que la norma no admite. `app/legal.tsx` pasó de un `isPrivacy` binario a un mapa de documentos.
+- **Tres cosas quedaron abiertas y anotadas, no tapadas:** (a) falta la **portada** del sitio — `web/` solo tiene `legal/`, y la resolución pide el enlace desde el index; (b) el efecto de la revocación sobre una Sesión **ya prestada** dentro de los 10 días es un placeholder para el abogado/a (los arts. 1110–1116 CCyC no contemplan esa hipótesis para servicios); (c) el circuito es **manual** — el código de identificación dentro de las 24hs se manda por mail, igual que la garantía de §9.3.
+- Placeholders: de 9 a 12 (8 distintos). Suben a propósito: 2 son los puntos abiertos de arriba y 1 la fecha del documento nuevo. `LEGAL_IS_DRAFT` sigue en `true`, que es lo correcto.
+
+Typecheck y lint limpios en los tres bloques.
 
 **Pendiente para la próxima sesión:**
 - 🔴 **Correr `scripts/add-age-confirmation.sql`** (una columna, `add column if not exists`). Hasta entonces el alta escribe un campo que no existe y el update de `profiles` falla en silencio — solo warnea, no rompe el registro. La query de verificación está al pie del script.
 - ~~Correr `scripts/add-user-blocking.sql`~~ — **corrido por Andre y verificado en la misma sesión**: `pg_trigger` devuelve las 2 filas esperadas y `pg_get_functiondef` la definición de `are_blocked`. Prod ya tiene el bloqueo. **Anotado para la próxima vez:** el SQL editor de Supabase muestra solo el resultado de la ÚLTIMA sentencia cuando se corren varias juntas — la primera verificación se perdió en silencio y parecía que no había devuelto nada. Correrlas por separado.
 - **Probar en dispositivo:** bloquear desde el chat y desde el perfil, confirmar que el coach desaparece de Conexiones/búsqueda/favoritos, que el input del chat se congela de los dos lados, y que desbloquear desde `/cuentas-bloqueadas` revierte todo.
-- Siguen abiertos 2 rojos de legales: **arrepentimiento/revocación** (bloquea hostear `web/legal/`, y hostear cierra la cuarta pata de la guideline 1.2 — el contacto publicado) e **implementar §9.3**.
+- 🔴 **Hostear `web/legal/`** — es lo que destraba dos cosas a la vez: la cuarta pata de la guideline 1.2 (**contacto publicado**) y el requisito de portada de la Res. 424/2020. Hace falta **crear el index del sitio**, que hoy no existe, con el botón de arrepentimiento en lugar destacado. Va también la página de solicitud de eliminación de cuenta que pide Google Play.
+- 🔴 Queda un solo rojo de contenido legal: **implementar §9.3** (la garantía). El circuito de §9.4 (revocación) también es manual, pero eso está anotado y asumido.
 - Sigue abierto todo lo de la sesión 88: probar en dispositivo el guardarraíl de reconexión de MP, la reserva instantánea con pago y el tramo del 15%.
 
 ## 2026-08-10 — Andre (sesión 89)
