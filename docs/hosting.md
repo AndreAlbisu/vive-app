@@ -36,6 +36,10 @@ vence, el sitio se cae y con él la URL que los T&C §9.4 declaran como vía par
 ejercer el derecho de revocación, y la URL de privacidad que sostiene la ficha de
 las dos tiendas. Poner un recordatorio de renovación.
 
+> **Estado al 13/08/2026:** deployado y verificado en `https://vive-app.vercel.app`.
+> Falta solo el dominio propio: `vitaapp.com.ar` está **en trámite en NIC.ar**
+> (sin nameservers delegados todavía). Los registros a cargar están en el paso 3.
+
 ### 2. Vercel
 
 1. Entrar a [vercel.com](https://vercel.com) con la cuenta de GitHub.
@@ -48,10 +52,30 @@ las dos tiendas. Poner un recordatorio de renovación.
 
 ### 3. Apuntar `vitaapp.com.ar` a Vercel
 
-**Project → Settings → Domains** → agregar `vitaapp.com.ar` y `www.vitaapp.com.ar`.
-Vercel indica qué registros cargar en el panel de NIC.ar (normalmente un `A` a su
-IP para el dominio raíz y un `CNAME` a `cname.vercel-dns.com` para `www`). La
-propagación tarda hasta 24hs; el certificado TLS lo emite Vercel solo.
+Los dos dominios ya están agregados en **Project → Settings → Domains**. Cuando
+NIC.ar acredite el dominio, cargar estos dos registros en su panel:
+
+| Tipo | Nombre | Valor |
+|---|---|---|
+| `A` | `@` | `216.198.79.1` |
+| `CNAME` | `www` | `c841fb5e89b37a72.vercel-dns-017.com.` |
+
+- ⚠️ **El CNAME es único de este proyecto**, no el genérico `cname.vercel-dns.com`.
+  Escribir de memoria uno que "suena bien" deja el dominio muerto sin decir por qué.
+- Si el panel no acepta `@` para el raíz, dejar el campo vacío o poner el dominio completo.
+- El punto final del CNAME es parte del valor; si el panel lo rechaza, cargarlo sin él.
+- **No usar el `76.76.21.21` legacy** que Vercel menciona al pie: sigue funcionando,
+  pero si se carga hoy que sea la IP recomendada.
+- Si NIC.ar solo permite **delegar nameservers** y no cargar registros sueltos, el
+  camino es la pestaña **"Vercel DNS"** de esa misma pantalla.
+
+La propagación tarda hasta 24hs; el certificado TLS lo emite Vercel solo. Verificar
+con `dig +short A vitaapp.com.ar` y `dig +short NS vitaapp.com.ar`.
+
+**Decisión pendiente:** Vercel dejó `www` como Production y el raíz redirigiendo
+con 308. Los T&C §9.4 declaran la URL **sin** `www`. Conviene darlo vuelta desde
+**Edit** — funciona igual por el redirect, pero un documento legal no debería
+apuntar a una URL que rebota. Los registros DNS no cambian con el swap.
 
 ### 4. Completar lo que depende de que el dominio resuelva
 

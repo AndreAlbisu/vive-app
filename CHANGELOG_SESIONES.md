@@ -61,13 +61,33 @@ Typecheck limpio. Lint sin errores nuevos — el único error que reporta `SalaS
 - ⚠️ **Riesgo que esto NO resuelve y conviene saber antes de tener volumen:** si el coach ya retiró los fondos, el refund contra MP puede fallar y caer al dead-letter. Es política de *money release*.
 - `docs/garantia-runbook.md` nuevo: cómo encontrar la reserva desde el mail, `dry_run` para contestar sin comprometerse, aprobar, rechazar, y verificar que el reembolso salió — con los dos modos de falla ya conocidos.
 
-Typecheck y lint limpios en los cinco bloques. HTML de las 5 páginas validado (anidamiento correcto).
+**Sexto bloque — el sitio deployado y verificado en vivo:**
+
+- **Vercel conectado y andando: `https://vive-app.vercel.app`.** Verificado desde acá, no de palabra: las 5 páginas dan 200, los 4 links de la portada resuelven, `cleanUrls` redirige `.html` → URL limpia con 308, el botón de arrepentimiento está en la portada, el contacto figura, y los headers de `vercel.json` (`nosniff`, `referrer-policy`) se aplican. La pantalla de import mostró `Other` / `npm run sync:legal` / `web`, o sea que tomó el `vercel.json` y no autodetectó Expo.
+- ⚠️ **El aviso de borrador se está publicando**, y hoy es lo correcto, pero **no se puede enviar la app a revisión con eso visible**: un revisor que abra la URL de privacidad lee "no debe considerarse vigente" y es rechazo cantado. Desaparece solo al completar los 12 placeholders, o sea que depende del abogado/a.
+- **`vitaapp.com.ar` sigue en trámite en NIC.ar** — sin nameservers delegados (verificado con `dig NS`, vacío). Los dos dominios ya están cargados en Vercel como "Invalid Configuration", que es lo esperado hasta que el dominio exista.
+- **Los registros DNS a cargar cuando NIC.ar acredite** (⚠️ el CNAME es **único de este proyecto**, no el genérico `cname.vercel-dns.com` — adivinarlo deja el dominio muerto):
+
+  | Tipo | Nombre | Valor |
+  |---|---|---|
+  | `A` | `@` | `216.198.79.1` |
+  | `CNAME` | `www` | `c841fb5e89b37a72.vercel-dns-017.com.` |
+
+- **Decisión abierta:** Vercel puso `www` como Production y el raíz redirigiendo con 308. Los T&C §9.4 declaran la URL **sin** `www`, así que conviene darlo vuelta — el redirect la hace funcionar igual, pero un documento legal no debería apuntar a una URL que rebota. Los registros DNS son los mismos con o sin el swap.
+
+Typecheck y lint limpios en los cinco bloques de código. HTML de las 5 páginas validado (anidamiento correcto).
 
 **Pendiente para la próxima sesión:**
 - ~~Correr `scripts/add-age-confirmation.sql`~~ — **corrido y verificado**: `information_schema.columns` devuelve `age_confirmed` / `boolean` / `is_nullable = NO` / `default false`. Prod ya guarda la constancia.
 - ~~Correr `scripts/add-user-blocking.sql`~~ — **corrido por Andre y verificado en la misma sesión**: `pg_trigger` devuelve las 2 filas esperadas y `pg_get_functiondef` la definición de `are_blocked`. Prod ya tiene el bloqueo. **Anotado para la próxima vez:** el SQL editor de Supabase muestra solo el resultado de la ÚLTIMA sentencia cuando se corren varias juntas — la primera verificación se perdió en silencio y parecía que no había devuelto nada. Correrlas por separado.
 - **Probar en dispositivo:** bloquear desde el chat y desde el perfil, confirmar que el coach desaparece de Conexiones/búsqueda/favoritos, que el input del chat se congela de los dos lados, y que desbloquear desde `/cuentas-bloqueadas` revierte todo.
-- 🔴 **Publicar el sitio — lo único que queda, y son pasos de Andre, no de código.** **Dominio ya comprado: `vitaapp.com.ar`** (13/08/2026, NIC.ar). Falta (1) importar el repo en Vercel verificando que tome el `vercel.json` y no autodetecte Expo, (2) apuntar el DNS. Paso a paso en `docs/hosting.md`.
+- 🔴 **Cargar los dos registros DNS en NIC.ar apenas se acredite `vitaapp.com.ar`** (están en el sexto bloque de arriba). El sitio ya está publicado y verificado en `vive-app.vercel.app`; solo falta el dominio propio. Paso a paso en `docs/hosting.md`.
+
+**Quedaron abiertos, sin decidir (Andre los dejó pendientes a propósito):**
+- **Paquete para el abogado/a** — se ofreció armarlo (mail de encuadre + los 6 puntos abiertos redactados como preguntas concretas + los placeholders separados entre fechas y criterio profesional). Sigue siendo el camino más largo y el que bloquea sacar el aviso de borrador.
+- **El hook de `.claude/settings.json`** falla en cada `git commit` de este entorno (`fetch`/`push` sin credenciales de GitHub) y corta con `exit 2`. Propuesta: dejar el `exit 2` del `merge` —un conflicto tiene que frenar— y que los dos `push` reporten sin bloquear. **No se tocó**: el archivo está commiteado y le cambia el comportamiento a Joaquín, donde el hook sí funciona.
+- **Logo (borrador).** Tres círculos superpuestos en oliva sobre crema, con "VITA" en mayúscula sans-serif y tracking amplio. Tres observaciones: (1) **no coincide con `components/VitaWordmark.tsx`**, que renderiza "vita" en minúscula Fraunces SemiBold y dice ser el único wordmark de toda la app — hay que elegir uno; (2) como ícono de app el trazo fino se pierde a ~60px y el arreglo es más ancho que alto, hace falta una versión solo-círculos reencuadrada y con trazo más grueso (más la monocroma que Android ya declara en `app.json`); (3) los íconos siguen siendo los del scaffold de Expo.
+- **VIVE vs VITA.** El repo es `vive-app`, las constantes son `ViveColors`/`ViveFonts`, y los legales ya publicados dicen "Vita". Ficha de tienda, legales y UI tienen que decir lo mismo antes de enviar a revisión.
 - ⚠️ **Los T&C ya declaran `https://vitaapp.com.ar/legal/arrepentimiento` como vía para ejercer el derecho de revocación, y el sitio todavía no está arriba.** Mientras siga siendo borrador no hay problema, pero **§9.4 no puede entrar en vigencia antes de que el dominio resuelva**: sería declarar una vía de ejercicio que no existe.
 - ⚠️ **`.com.ar` se renueva cada año y NIC.ar no cobra solo.** Si vence, se cae la URL de revocación de §9.4 y la de privacidad que sostiene las fichas de las dos tiendas. Poner recordatorio.
 - Cuando el sitio esté arriba: cargar `https://vitaapp.com.ar/legal/privacidad` en App Store Connect y en Google Play Console, y `https://vitaapp.com.ar/legal/eliminar-cuenta` como URL de baja en Play. Probar en incógnito que la portada abra el botón sin sesión.
