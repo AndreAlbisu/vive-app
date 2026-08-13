@@ -160,8 +160,11 @@ export default function ProfileOwnScreen() {
   });
 
   const configItems: ConfigItem[] = [
-    { id: 'notif', icon: 'bell-outline', label: 'Notificaciones', onPress: () => {} },
-    { id: 'lang', icon: 'web', label: 'Idioma', onPress: () => {} },
+    // "Notificaciones" e "Idioma" vivían acá con `onPress: () => {}`: se veían,
+    // se tocaban y no hacían nada. Sacados el 13/08/2026 — no hay preferencias
+    // de notificación en la base ni i18n en el proyecto, así que no era cablear
+    // algo existente sino prometer dos features que no están. Guideline 2.1 de
+    // Apple cubre funcionalidad visible que no funciona. Vuelven cuando existan.
     { id: 'blocked', icon: 'account-cancel-outline', label: 'Cuentas bloqueadas', onPress: () => router.push('/cuentas-bloqueadas') },
     { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => router.push('/legal?doc=terminos') },
     { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },
