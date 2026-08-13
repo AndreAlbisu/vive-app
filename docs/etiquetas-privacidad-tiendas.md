@@ -78,14 +78,14 @@ Google clasifica como procesamiento, no como compartir con terceros.
 
 ### Prácticas de seguridad
 - **¿Se cifran los datos en tránsito?** **Sí** — todo va por HTTPS (Supabase, Mercado Pago, Daily.co, Expo).
-- **¿El usuario puede pedir la eliminación de sus datos?** **Sí** — escribiendo a `vitaappar@gmail.com` (Política §9). ⚠️ **Google exige además una URL de solicitud de eliminación de cuenta**; hoy el mecanismo es solo por correo. Ver pendientes.
+- **¿El usuario puede pedir la eliminación de sus datos?** **Sí** — desde la app (Perfil → Eliminar mi cuenta), escribiendo a `vitaappar@gmail.com` (Política §9), o desde la URL que exige Google: **`https://vitaapp.com.ar/legal/eliminar-cuenta`** (escrita el 13/08/2026, pendiente de publicar).
 - **¿Se siguió el programa Play Families?** No aplica: la app es para mayores de 18 (T&C §3.1).
 
 ---
 
 ## Pendientes antes de completar los formularios
 
-- [ ] **URL de eliminación de cuenta (Google).** Play exige una URL pública donde el usuario pueda pedir la baja de su cuenta y sus datos, incluso sin tener la app instalada. Hoy solo existe el correo. Se resuelve con una página simple junto a las de `web/legal/`.
+- [x] ~~**URL de eliminación de cuenta (Google).**~~ Página escrita y generada el 13/08/2026 (`docs/eliminar-cuenta.md` → `web/legal/eliminar-cuenta.html`): declara qué se borra y qué se conserva con su plazo, siguiendo Política §10. Queda cargar `https://vitaapp.com.ar/legal/eliminar-cuenta` en Play Console **cuando el sitio esté publicado** — ver `docs/hosting.md`.
 - [ ] **⚠️ No hay borrado de cuenta dentro de la app.** Apple lo **exige** para cualquier app que permita crear cuenta (guideline 5.1.1(v)). Verificado: no existe esa función. **Esto sí bloquea la publicación en iOS** y es más grande que completar un formulario — hay que construirlo.
 - [ ] **Revisar si el video de presentación puede considerarse dato biométrico**; en principio no, es contenido subido voluntariamente y público en el perfil.
 - [ ] Confirmar que las respuestas coinciden con la Política antes de enviar.

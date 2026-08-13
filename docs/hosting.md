@@ -27,10 +27,14 @@ la pena.
 
 ## Puesta en marcha (una sola vez)
 
-### 1. Dominio
+### 1. Dominio — ✅ hecho
 
-Comprar en [NIC.ar](https://nic.ar) (`.com.ar` requiere CUIT/CUIL argentino, que
-ya está: 20-46034087-0). Alternativa internacional: Namecheap, Cloudflare.
+**`vitaapp.com.ar`**, comprado en NIC.ar el 13/08/2026.
+
+⚠️ Los `.com.ar` **se renuevan cada año** y NIC.ar no cobra automáticamente: si
+vence, el sitio se cae y con él la URL que los T&C §9.4 declaran como vía para
+ejercer el derecho de revocación, y la URL de privacidad que sostiene la ficha de
+las dos tiendas. Poner un recordatorio de renovación.
 
 ### 2. Vercel
 
@@ -42,21 +46,20 @@ ya está: 20-46034087-0). Alternativa internacional: Namecheap, Cloudflare.
    configuración muestre eso antes de deployar.
 4. Deploy. Queda en `<algo>.vercel.app`.
 
-### 3. Dominio en Vercel
+### 3. Apuntar `vitaapp.com.ar` a Vercel
 
-**Project → Settings → Domains** → agregar el dominio. Vercel indica qué
-registros cargar en el panel de NIC.ar (normalmente un `A` a su IP y un `CNAME`
-para `www`). La propagación tarda hasta 24hs; el certificado TLS lo emite Vercel
-solo.
+**Project → Settings → Domains** → agregar `vitaapp.com.ar` y `www.vitaapp.com.ar`.
+Vercel indica qué registros cargar en el panel de NIC.ar (normalmente un `A` a su
+IP para el dominio raíz y un `CNAME` a `cname.vercel-dns.com` para `www`). La
+propagación tarda hasta 24hs; el certificado TLS lo emite Vercel solo.
 
-### 4. Completar lo que depende de la URL
+### 4. Completar lo que depende de que el dominio resuelva
 
-Recién cuando el dominio resuelva:
-
-- [ ] **T&C §9.4** — reemplazar `[URL del botón de arrepentimiento — completar al publicar el sitio]` por la URL real y correr `npm run sync:legal`. Con `cleanUrls` activo la URL canónica va **sin** `.html` (`…/legal/arrepentimiento`); los enlaces internos sí llevan `.html` a propósito, para que el sitio se pueda abrir desde el disco antes de deployar, y Vercel los redirige.
-- [ ] **App Store Connect** — URL de la política de privacidad.
-- [ ] **Google Play Console** — URL de la política de privacidad **y** URL de solicitud de eliminación de cuenta (`/legal/eliminar-cuenta`).
-- [ ] Confirmar que la portada abre el botón de arrepentimiento **sin sesión ni registro**, desde un navegador en incógnito.
+- [x] ~~**T&C §9.4**~~ — la URL ya está escrita (`https://vitaapp.com.ar` y `https://vitaapp.com.ar/legal/arrepentimiento`). ⚠️ **El documento la declara como vía para ejercer un derecho, así que no puede entrar en vigencia antes de que el sitio esté arriba.** Con `cleanUrls` activo la URL canónica va **sin** `.html`; los enlaces internos sí llevan `.html` a propósito, para poder abrir el sitio desde el disco antes de deployar, y Vercel los redirige.
+- [ ] **App Store Connect** — `https://vitaapp.com.ar/legal/privacidad`
+- [ ] **Google Play Console** — `https://vitaapp.com.ar/legal/privacidad` **y**, como URL de solicitud de eliminación de cuenta, `https://vitaapp.com.ar/legal/eliminar-cuenta`
+- [ ] Confirmar en **incógnito** que `https://vitaapp.com.ar` abre y que el botón de arrepentimiento se alcanza **sin sesión ni registro**.
+- [ ] Confirmar que las 4 páginas de `legal/` cargan y que el link "Inicio" vuelve a la portada.
 
 ## Después de cada cambio en `docs/*.md`
 
