@@ -174,6 +174,15 @@ export default function BookingScreen_Confirm() {
         .single();
 
       if (bookingError || !booking) {
+        // `trg_block_bookings_between_blocked` rebota la reserva si hay un
+        // bloqueo entre los dos. Se llega acá solo por un camino viejo (link
+        // guardado, back a esta pantalla con el bloqueo puesto en el medio) —
+        // el perfil y el catálogo ya no ofrecen reservar. Sin este caso, el
+        // usuario veía "intentalo de nuevo" para algo que no se arregla
+        // reintentando.
+        if (bookingError?.message?.includes('blocked')) {
+          throw new Error('No podés reservar con esta persona.');
+        }
         await logError('BookingConfirm: insert booking failed', bookingError);
         throw new Error('No se pudo guardar la reserva. Intentalo de nuevo');
       }

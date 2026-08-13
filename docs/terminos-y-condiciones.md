@@ -144,6 +144,8 @@ El Usuario se obliga a no: (a) usar la Plataforma con fines ilícitos o no autor
 
 14.2. Vita puede, a su razonable criterio y cuando existan motivos, advertir, limitar, suspender o cancelar cuentas, y retirar contenido, ante incumplimientos de estos Términos o de la ley, procurando —cuando sea posible y apropiado— notificar al Usuario afectado.
 
+14.3. **Bloqueo entre Usuarios.** Todo Usuario puede bloquear a otro desde su perfil o desde el menú de la conversación, sin expresar motivo y sin intervención de Vita. El bloqueo impide el intercambio de mensajes y la reserva de nuevas Sesiones entre ambos, en los dos sentidos, y se puede deshacer en cualquier momento desde "Cuentas bloqueadas". El bloqueo **no** cancela las Sesiones ya agendadas —si el Usuario quiere cancelarlas debe hacerlo por separado, y rige la política de cancelación de §9.1— ni elimina el historial de conversaciones o de Sesiones. Bloquear no equivale a reportar: el bloqueo es una medida propia del Usuario y no se le notifica a la persona bloqueada; el reporte, en cambio, se dirige al equipo de Vita conforme §14.1. Ambas acciones pueden ejercerse de forma independiente o conjunta.
+
 ## 15. Mensajería y Privacidad de las Comunicaciones
 
 15.1. La Plataforma permite el intercambio de mensajes entre Cliente y Profesional dentro de una Sesión reservada. Los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos.

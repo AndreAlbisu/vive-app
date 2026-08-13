@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
+import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { supabase } from '@/lib/supabase';
 
 const F  = '#3A4F2A';
@@ -101,7 +102,8 @@ export default function QuizScreen() {
   const [q1, setQ1] = useState<string | null>(null);
   const [q2, setQ2] = useState<string | null>(null);
   const [q3, setQ3] = useState<string | null>(null);
-  const [coaches, setCoaches] = useState<CachedCoach[]>([]);
+  const [rawCoaches, setCoaches] = useState<CachedCoach[]>([]);
+  const coaches = useBlockedFilter(rawCoaches);
   const [matches, setMatches] = useState<CachedCoach[]>([]);
 
   useEffect(() => {

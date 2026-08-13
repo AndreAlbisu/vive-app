@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-08-13 — Andre (sesión 90)
+
+**Tocado:** nuevos `scripts/add-user-blocking.sql`, `lib/blocking.ts`, `hooks/useBlockedFilter.ts`, `components/UserActionsSheet.tsx`, `screens/BlockedAccountsScreen.tsx`, `app/cuentas-bloqueadas.tsx`. Modificados `screens/SalaScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/FavoritosScreen.tsx`, `screens/QuizScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `context/AuthContext.tsx`, `app/search3.tsx`, `app/(tabs)/conexiones.tsx`, `docs/terminos-y-condiciones.md`, `docs/legal-instrucciones.md` + `constants/legal.ts` y `web/legal/*` regenerados. **Schema nuevo — SCHEMA.md ya actualizado.**
+
+**Resumen:**
+
+- **Bloqueo de usuarios, el pendiente rojo que bloqueaba publicar.** La guideline 1.2 de Apple pide cuatro cosas juntas para apps con contenido generado por usuarios: filtrado, reporte, bloqueo y contacto publicado. Había reportes desde el 06/08 y nada de bloqueo; con chat 1 a 1 entre desconocidos, el review de App Store rebotaba. Quedan cubiertas tres de las cuatro — **falta publicar el contacto**, que depende de hostear `web/legal/`.
+- **Decisión de modelo: direccional en la tabla, simétrico en el efecto.** Se guarda quién bloqueó a quién, pero un bloqueo en cualquier sentido corta mensajes y reservas para los dos. Si el efecto fuera unidireccional, la persona bloqueada podría seguir escribiéndole a quien la bloqueó — exactamente lo que la guideline impide.
+- **Decisión de enforcement: triggers `BEFORE INSERT`, no policies.** Las policies de `messages` y `bookings` se crearon a mano en el panel de Supabase y **no están versionadas en ningún script** — reescribirlas desde una migración es reescribir algo que no podemos leer. Un `BEFORE INSERT` es aditivo, no puede romper lo que ya funciona, y aplica venga de donde venga el insert (cliente, edge function con service role, SQL a mano). El de `bookings` tiene la trampa de siempre: `bookings.coach_id` es `coaches.id`, hay que pasar por `coaches.profile_id` para comparar contra `blocked_users`.
+- **`are_blocked()` es `SECURITY DEFINER` por una razón concreta.** El RLS de `blocked_users` solo expone los bloqueos propios, así que el lado bloqueado consultando la tabla no ve nada y concluiría que puede escribir. La función mira las dos direcciones. Con `REVOKE` explícito de `anon`, no solo de `PUBLIC` (regla crítica 18 — en Supabase los grants son directos por default privileges).
+- **El filtro del catálogo va en las pantallas, no en `coachesCache`.** Ese cache también lo consume `CoachVisibilityScreen`, donde el coach mira su standing contra el pool COMPLETO de su puerta: si el filtro viviera adentro del cache, un coach que bloqueó a alguien vería un pool más chico y la app le prometería un lugar que el deck de los demás no le va a dar. Filtrado aplicado en Conexiones, búsqueda, quiz y favoritos.
+- **Lo que el bloqueo deliberadamente NO hace:** no borra la conversación ni el historial, **no cancela sesiones ya agendadas** (se dice en el Alert de confirmación y en §14.3 — cancelar es aparte y tiene su reembolso), y no le avisa nada a la persona bloqueada. El aviso del chat del lado de quien NO bloqueó es neutro a propósito ("No podés escribir en esta conversación"): enterarse de que te bloquearon es justo lo que la función tiene que evitar.
+- **T&C §14.3 nueva**, escrita en el mismo momento que el código y no después. Distingue explícitamente bloquear de reportar, porque son cosas distintas y la app ahora las ofrece juntas en el mismo menú.
+- El menú "⋯" del chat antes abría el reporte directo; ahora abre `UserActionsSheet` con las dos acciones, y después de bloquear ofrece reportar también. En `ProfesionalScreen` el link al pie pasó de "Reportar a X" a "Reportar o bloquear a X", y "Reservar sesión" queda deshabilitado si el coach está bloqueado.
+
+Typecheck limpio. Lint sin errores nuevos — el único error que reporta `SalaScreen` (comillas sin escapar en `recoCardNote`, línea 1127) **es previo a esta sesión**, verificado contra `git show HEAD`; no se tocó para no mezclar scope.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/add-user-blocking.sql` en Supabase.** No se corrió: este entorno solo tiene la anon key. Hasta entonces la app tira error al bloquear y los triggers no existen. El script trae al pie las queries de verificación (`pg_trigger` + `pg_get_functiondef`) — correrlas y confirmar, no asumir (regla crítica 10).
+- **Probar en dispositivo:** bloquear desde el chat y desde el perfil, confirmar que el coach desaparece de Conexiones/búsqueda/favoritos, que el input del chat se congela de los dos lados, y que desbloquear desde `/cuentas-bloqueadas` revierte todo.
+- Siguen abiertos los otros 3 rojos de legales: **arrepentimiento/revocación** (bloquea hostear `web/legal/`), **checkbox de mayoría de edad** en el registro, e **implementar §9.3**.
+- Sigue abierto todo lo de la sesión 88: probar en dispositivo el guardarraíl de reconexión de MP, la reserva instantánea con pago y el tramo del 15%.
+
 ## 2026-08-10 — Andre (sesión 89)
 
 **Tocado:** `scripts/sync-legal.mjs`, `screens/BookingScreen_Confirm.tsx`, `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `docs/legal-instrucciones.md`, `constants/legal.ts` + `web/legal/*.html` (regenerados). Sin cambios de schema.

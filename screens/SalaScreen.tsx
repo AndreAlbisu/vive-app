@@ -29,6 +29,8 @@ import { supabase, registrarEvento } from '@/lib/supabase';
 import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { useAuth } from '@/context/AuthContext';
 import ReportSheet from '@/components/ReportSheet';
+import UserActionsSheet from '@/components/UserActionsSheet';
+import { areBlocked, loadBlockedIds } from '@/lib/blocking';
 import SessionNotesSheet from '@/components/SessionNotesSheet';
 import { getSharedNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
@@ -167,6 +169,11 @@ export default function SalaScreen() {
   const [recipientId, setRecipientId] = useState<string | null>(null);
   const [recipientIsCoach, setRecipientIsCoach] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  // Hay bloqueo entre los dos, en cualquier dirección (RPC `are_blocked`).
+  const [pairBlocked, setPairBlocked] = useState(false);
+  // De esos, el que puse yo (lo único que puedo deshacer desde acá).
+  const [iBlockedThem, setIBlockedThem] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [sharedNote, setSharedNote] = useState<string | null>(null);
   const [recipientProfile, setRecipientProfile] = useState<RecipientProfile | null>(null);
@@ -285,6 +292,20 @@ export default function SalaScreen() {
       setSalaId(id);
       setRecipientId(resolvedRecipientId);
       setRecipientIsCoach(isRecipientCoach);
+
+      // El bloqueo se consulta por RPC y no contra el cache propio porque acá
+      // importan las dos direcciones: el lado bloqueado no tiene forma de verlo
+      // en su propia lista (el RLS solo expone los bloqueos que uno hizo), y si
+      // no lo supiéramos le dejaríamos escribir un mensaje que el trigger rebota.
+      void areBlocked(user!.id, resolvedRecipientId).then(v => {
+        if (mounted) setPairBlocked(v);
+      });
+      // Y por separado, si el bloqueo lo puse yo — es lo único que me habilita a
+      // deshacerlo, y lo que decide si el aviso dice "bloqueaste a X" o el
+      // texto neutro (a la persona bloqueada no se le informa que la bloquearon).
+      void loadBlockedIds(user!.id).then(set => {
+        if (mounted) setIBlockedThem(set.has(resolvedRecipientId));
+      });
 
       const readField = isRecipientCoach ? 'user_last_read_at' : 'coach_last_read_at';
       supabase
@@ -756,6 +777,10 @@ export default function SalaScreen() {
     const text = inputText.trim();
     if (!text || !salaId || !user) return;
     if (activeBooking?.status === 'pendiente') return;
+    // Defensa en profundidad, igual que el chequeo de 'pendiente': el trigger
+    // `trg_block_messages_between_blocked` es el que manda, esto solo evita el
+    // viaje de ida y el mensaje optimista que después habría que sacar.
+    if (pairBlocked) return;
 
     // Anti-fuga #5: si el mensaje parece traer datos de contacto o pago externo,
     // advertir antes de enviar (no se bloquea duro: en una charla hay más falsos
@@ -817,7 +842,7 @@ export default function SalaScreen() {
   }
 
   const isCurrentUserCoach = !recipientIsCoach;
-  const isChatFrozen = activeBooking?.status === 'pendiente' && !hasSessionHistory;
+  const isChatFrozen = (activeBooking?.status === 'pendiente' && !hasSessionHistory) || pairBlocked;
   const canSend = inputText.trim().length > 0 && !!salaId && !!user && !isChatFrozen;
   const displayInitials = recipientProfile?.initials ?? '···';
 
@@ -882,7 +907,7 @@ export default function SalaScreen() {
         {/* Re-reserva persistente: acceso fijo a reservar de nuevo con este coach,
             no solo en la ventana de 24hs de la card post-sesión. Solo del lado del
             usuario (recipientIsCoach = la otra parte es coach → puedo reservarle). */}
-        {recipientIsCoach && recipientProfile && (
+        {recipientIsCoach && recipientProfile && !pairBlocked && (
           <TouchableOpacity
             style={styles.rebookPill}
             onPress={handleReschedule}
@@ -908,7 +933,7 @@ export default function SalaScreen() {
 
         <TouchableOpacity
           style={styles.menuBtn}
-          onPress={() => setReportOpen(true)}
+          onPress={() => setActionsOpen(true)}
           disabled={!recipientId}
           hitSlop={8}>
           <MaterialCommunityIcons name="dots-vertical" size={22} color="#565E32" />
@@ -1195,11 +1220,23 @@ export default function SalaScreen() {
         >
           {isChatFrozen ? (
             <View style={styles.frozenNotice}>
-              <MaterialCommunityIcons name="lock-outline" size={16} color="rgba(135,131,92,0.70)" />
+              <MaterialCommunityIcons
+                name={pairBlocked ? 'account-cancel-outline' : 'lock-outline'}
+                size={16}
+                color="rgba(135,131,92,0.70)"
+              />
               <Text style={styles.frozenNoticeText}>
-                {isCurrentUserCoach
-                  ? 'Aceptá o rechazá la solicitud desde Reservas para habilitar el chat'
-                  : `El chat se habilita cuando ${recipientProfile?.name ?? 'el profesional'} acepte tu solicitud`}
+                {/* El bloqueo gana sobre "pendiente": si están bloqueados, el
+                    chat no se destraba aceptando la solicitud. El texto de
+                    quien NO bloqueó es neutro a propósito — enterarse de que te
+                    bloquearon es justo lo que la función tiene que evitar. */}
+                {pairBlocked
+                  ? (iBlockedThem
+                      ? `Bloqueaste a ${recipientProfile?.name?.split(' ')[0] ?? 'esta persona'}. Desbloqueá desde el menú “⋯” para volver a escribirle.`
+                      : 'No podés escribir en esta conversación.')
+                  : isCurrentUserCoach
+                    ? 'Aceptá o rechazá la solicitud desde Reservas para habilitar el chat'
+                    : `El chat se habilita cuando ${recipientProfile?.name ?? 'el profesional'} acepte tu solicitud`}
               </Text>
             </View>
           ) : (
@@ -1300,6 +1337,22 @@ export default function SalaScreen() {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      <UserActionsSheet
+        visible={actionsOpen}
+        onClose={() => setActionsOpen(false)}
+        targetId={recipientId ?? ''}
+        targetName={recipientProfile?.name ?? 'esta persona'}
+        blocked={iBlockedThem}
+        onReport={() => setReportOpen(true)}
+        onBlockChange={next => {
+          setIBlockedThem(next);
+          // Al desbloquear no se asume que el par quedó libre: el otro puede
+          // haberme bloqueado a mí también, y eso no lo veo en mi lista.
+          if (next) setPairBlocked(true);
+          else if (user && recipientId) void areBlocked(user.id, recipientId).then(setPairBlocked);
+        }}
+      />
 
       <ReportSheet
         visible={reportOpen}

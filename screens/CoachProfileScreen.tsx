@@ -913,6 +913,17 @@ export default function CoachProfileScreen() {
           </View>
         )}
 
+        {/* ── Cuentas bloqueadas ────────────────────────────── */}
+        {/* El coach bloquea desde el "⋯" del chat, igual que el usuario, pero
+            necesita el mismo lugar fijo para revisar y deshacer. */}
+        <TouchableOpacity
+          style={s.blockedBtn}
+          onPress={() => router.push('/cuentas-bloqueadas')}
+          activeOpacity={0.75}>
+          <MaterialCommunityIcons name="account-cancel-outline" size={16} color="#87835C" />
+          <Text style={s.blockedText}>Cuentas bloqueadas</Text>
+        </TouchableOpacity>
+
         {/* ── Cerrar sesión ─────────────────────────────────── */}
         <TouchableOpacity style={s.signOutBtn} onPress={handleSignOut} activeOpacity={0.75}>
           <MaterialCommunityIcons name="logout" size={16} color="#E05252" />
@@ -1484,6 +1495,20 @@ const s = StyleSheet.create({
     lineHeight: 19,
   },
 
+  blockedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginHorizontal: 20,
+    marginTop: 20,
+    paddingVertical: 14,
+  },
+  blockedText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 14,
+    color: '#87835C',
+  },
   signOutBtn: {
     flexDirection: 'row',
     alignItems: 'center',

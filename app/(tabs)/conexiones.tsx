@@ -25,6 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
+import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
 import { rankDeck, SLOT_COLORS } from '@/lib/coachDeckRanking';
 
@@ -93,7 +94,8 @@ export default function ConexionesScreen() {
   const [selectedAxisId, setSelectedAxisId] = useState<string | null>(null);
   const [selectedDoorId, setSelectedDoorId] = useState<string | null>(null);
   const [deckIndex, setDeckIndex]           = useState(0);
-  const [coaches, setCoaches]           = useState<CachedCoach[]>([]);
+  const [rawCoaches, setCoaches]        = useState<CachedCoach[]>([]);
+  const coaches                         = useBlockedFilter(rawCoaches);
   const [coachQuery, setCoachQuery]     = useState('');
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [rebookData, setRebookData]     = useState<RebookData | null>(null);

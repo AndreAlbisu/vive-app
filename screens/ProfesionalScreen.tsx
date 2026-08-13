@@ -3,6 +3,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import ReportSheet from '@/components/ReportSheet';
+import UserActionsSheet from '@/components/UserActionsSheet';
+import { loadBlockedIds, onBlockedChange, isBlocked } from '@/lib/blocking';
 import {
   View,
   Text,
@@ -109,8 +111,23 @@ export default function ProfesionalScreen() {
   const [liveAvgRating, setLiveAvgRating] = useState<number | null>(null);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [coachResources, setCoachResources] = useState<CoachResource[]>([]);
+
+  // Acá alcanza con el cache propio (a diferencia de la Sala, donde hacen falta
+  // las dos direcciones): a este perfil se llega desde el catálogo, y el
+  // catálogo ya filtra a los que bloqueé. Lo que resta es que el perfil sepa
+  // mostrar "Desbloquear" si se llegó por un link viejo o un favorito.
+  useEffect(() => {
+    if (!user || !profileId) return;
+    let mounted = true;
+    const sync = () => { if (mounted) setBlocked(isBlocked(profileId)); };
+    void loadBlockedIds(user.id).then(sync);
+    const off = onBlockedChange(sync);
+    return () => { mounted = false; off(); };
+  }, [user, profileId]);
 
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
@@ -392,18 +409,18 @@ export default function ProfesionalScreen() {
           ) : null}
         </View>
 
-        {/* Reportar (oculto en el propio perfil) */}
+        {/* Reportar / bloquear (oculto en el propio perfil) */}
         {user?.id !== profileId && (
           <TouchableOpacity
             style={s.reportLink}
             onPress={() => {
               if (!isLoggedIn) { requestAuth(); return; }
-              setReportOpen(true);
+              setActionsOpen(true);
             }}
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <MaterialIcons name="outlined-flag" size={15} color="rgba(135,131,92,0.75)" />
-            <Text style={s.reportLinkText}>Reportar a {prof.name.split(' ')[0]}</Text>
+            <Text style={s.reportLinkText}>Reportar o bloquear a {prof.name.split(' ')[0]}</Text>
           </TouchableOpacity>
         )}
 
@@ -421,8 +438,9 @@ export default function ProfesionalScreen() {
           </View>
           <View style={s.footerButtons}>
             <TouchableOpacity
-              style={s.btnPrimary}
+              style={[s.btnPrimary, blocked && s.btnPrimaryDisabled]}
               activeOpacity={0.85}
+              disabled={blocked}
               onPress={() => {
                 if (!isLoggedIn) { requestAuth(); return; }
                 const resourceId = Array.isArray(params.resourceId) ? params.resourceId[0] : params.resourceId;
@@ -437,7 +455,9 @@ export default function ProfesionalScreen() {
                   },
                 });
               }}>
-              <Text style={s.btnPrimaryText}>Reservar sesión</Text>
+              <Text style={s.btnPrimaryText}>
+                {blocked ? 'Bloqueado' : 'Reservar sesión'}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.btnSecondary, saved && s.btnSecondaryActive]}
@@ -458,6 +478,16 @@ export default function ProfesionalScreen() {
           </View>
         </View>
       </SafeAreaView>
+
+      <UserActionsSheet
+        visible={actionsOpen}
+        onClose={() => setActionsOpen(false)}
+        targetId={profileId ?? ''}
+        targetName={prof.name}
+        blocked={blocked}
+        onReport={() => setReportOpen(true)}
+        onBlockChange={setBlocked}
+      />
 
       <ReportSheet
         visible={reportOpen}
@@ -829,6 +859,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  btnPrimaryDisabled: { backgroundColor: 'rgba(86,94,50,0.35)' },
   btnPrimaryText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,

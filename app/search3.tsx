@@ -34,6 +34,7 @@ const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 const QUICK_TYPES: TypeFilter[] = ['Todos', 'Coach', 'Psicólogo', 'Nutricionista'];
 import { supabase } from '@/lib/supabase';
 import { getCoachesCache, CachedCoach } from '@/lib/coachesCache';
+import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 
 type CoachResult = CachedCoach;
 
@@ -135,6 +136,7 @@ export default function SearchScreen3() {
   const [draftFilters, setDraft]  = useState<Filters>(DEFAULT_FILTERS);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [rawCoaches, setRawCoaches] = useState<CoachResult[]>([]);
+  const visibleCoaches = useBlockedFilter(rawCoaches);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
 
   const slideAnim = useRef(new Animated.Value(700)).current;
@@ -259,7 +261,7 @@ export default function SearchScreen3() {
     closeSheet();
   }
 
-  const results = rawCoaches.filter(p => {
+  const results = visibleCoaches.filter(p => {
     if (filters.maxPrice < MAX_PRICE && p.priceFrom > filters.maxPrice) return false;
     if (filters.nationality !== 'Todas' && p.nationality !== filters.nationality) return false;
     if (filters.sex !== 'Todos' && p.gender !== SEX_TO_GENDER[filters.sex]) return false;

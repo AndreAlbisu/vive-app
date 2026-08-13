@@ -17,6 +17,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { ScaleCard } from '@/components/ScaleCard';
 import { supabase } from '@/lib/supabase';
+import { loadBlockedIds } from '@/lib/blocking';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
@@ -54,6 +55,10 @@ export default function FavoritosScreen() {
 
     if (error) { console.error('[Favoritos] coaches fetch:', error.message); }
 
+    // Un coach guardado en favoritos y bloqueado después sigue en la tabla de
+    // favoritos: el bloqueo no borra datos del usuario, solo deja de mostrarlo.
+    const blocked = user ? await loadBlockedIds(user.id) : new Set<string>();
+
     const rows: FavoriteCoach[] = (data ?? []).map((c: any) => {
       const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
       return {
@@ -64,9 +69,9 @@ export default function FavoritosScreen() {
         avatarUrl: (profile?.avatar_url ?? null) as string | null,
       };
     });
-    setCoaches(rows);
+    setCoaches(rows.filter(r => !blocked.has(r.profileId)));
     setLoadingCoaches(false);
-  }, [loaded, favoriteIds]);
+  }, [loaded, favoriteIds, user]);
 
   useEffect(() => { loadCoaches(); }, [loadCoaches]);
 

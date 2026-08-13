@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { cancelAllResourceReminders } from '@/lib/resourceReminders';
+import { clearBlockedCache } from '@/lib/blocking';
 import { AuthModal } from '@/components/AuthModal';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
@@ -210,6 +211,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Apagar las notis locales de recordatorios del usuario que se va (si no,
     // siguen firmando aunque nadie esté logueado en el dispositivo).
     await cancelAllResourceReminders().catch(() => {});
+    // La lista de bloqueados es module-level: sin esto, el próximo que se
+    // loguee en este dispositivo hereda los bloqueos del anterior y no ve
+    // coaches que nunca bloqueó.
+    clearBlockedCache();
     await supabase.auth.signOut();
     setUser(null);
     setRole('user');
