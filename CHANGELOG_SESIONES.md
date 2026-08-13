@@ -51,7 +51,17 @@ Typecheck limpio. Lint sin errores nuevos — el único error que reporta `SalaS
 - **El `buildCommand` es `npm run sync:legal`, no un deploy del `web/` commiteado.** Cuesta un par de minutos de instalación por deploy (baja todo el árbol de Expo para usar solo `marked`), pero garantiza que si alguien edita un `.md` y se olvida de correr el script, Vercel publique igual la versión correcta. Para texto legal que no puede quedar viejo, vale.
 - `docs/hosting.md` nuevo: por qué existe cada página, los pasos de NIC.ar + Vercel, y el checklist de lo que hay que completar **recién cuando el dominio resuelva** (la URL en §9.4, las dos fichas de tienda, y probar la portada en incógnito).
 
-Typecheck y lint limpios en los cuatro bloques. HTML de las 5 páginas validado (anidamiento correcto).
+**Quinto bloque — implementada la garantía de §9.3 (el último rojo en código):**
+
+- 🔴 **La premisa del pendiente era falsa, y eso cambió todo el diseño.** Venía anotado desde la sesión 89 que una sesión `completada` no se podía marcar para reintegro "sin reescribir su `status`, que va contra el criterio de no reescribir historia". **`mp-process-refunds` selecciona solo por `payment_status = 'reembolso_pendiente'` y nunca mira `status`** (`index.ts:39`): marcar una `completada` la reembolsa el cron que ya corre, con su historia intacta. No hizo falta ni una línea de código de reembolso nuevo. Lo que faltaba era permiso para poner la marca (el RLS de usuario solo deja UPDATE hacia `status='cancelada'`) y alguien que validara la cláusula.
+- **Decisión de intake: sigue el mail.** §9.3 ya dice "escribiendo a vitaappar@gmail.com"; un botón en la app obliga a reeditar el texto y, sobre todo, **multiplica el uso de una garantía que paga el Profesional** (§8.8) sin tener un solo dato de tasa de reclamo. El backend es idéntico en los dos casos, así que el botón queda como añadido puro para cuando haya volumen real — no es una reescritura.
+- **Tabla `guarantee_claims`, no una columna en `bookings`:** la solicitud tiene ciclo propio y §9.3 se reserva denegar por abuso. Una columna no sabe expresar "pedida y rechazada", y perder ese registro haría imposible detectar a quien reincide, que es la única defensa que la cláusula se dejó.
+- **Dos bugs propios encontrados releyendo antes de commitear:** (a) "primera sesión del vínculo" comparaba solo `scheduled_date`, así que **dos sesiones el mismo día** hacían que la segunda calificara como primera — ahora compara fecha y hora, filtrando en JS porque PostgREST no compone dos `.or()` de forma predecible; (b) el UPDATE que marca el reembolso tiene un guard `.eq('payment_status','aprobado')` contra carreras, y **sin `.select()` Postgrest devuelve `error: null` aunque no matchee ninguna fila** — reportaba un reembolso marcado que nunca se marcó.
+- **Detalles que quedaron cubiertos:** "una sola vez por Cliente" cuenta claims **aprobadas** y no pedidas (si contara pedidas, un rechazo por abuso le quemaría el único intento a alguien legítimo); el rechazo se registra **aunque la solicitud tampoco calificara por otro motivo**; y la comisión no hay que calcularla —el refund sin `amount` con el token del coach revierte el `application_fee` también, que es justo lo que §9.3 promete.
+- ⚠️ **Riesgo que esto NO resuelve y conviene saber antes de tener volumen:** si el coach ya retiró los fondos, el refund contra MP puede fallar y caer al dead-letter. Es política de *money release*.
+- `docs/garantia-runbook.md` nuevo: cómo encontrar la reserva desde el mail, `dry_run` para contestar sin comprometerse, aprobar, rechazar, y verificar que el reembolso salió — con los dos modos de falla ya conocidos.
+
+Typecheck y lint limpios en los cinco bloques. HTML de las 5 páginas validado (anidamiento correcto).
 
 **Pendiente para la próxima sesión:**
 - ~~Correr `scripts/add-age-confirmation.sql`~~ — **corrido y verificado**: `information_schema.columns` devuelve `age_confirmed` / `boolean` / `is_nullable = NO` / `default false`. Prod ya guarda la constancia.
@@ -61,7 +71,8 @@ Typecheck y lint limpios en los cuatro bloques. HTML de las 5 páginas validado 
 - ⚠️ **Los T&C ya declaran `https://vitaapp.com.ar/legal/arrepentimiento` como vía para ejercer el derecho de revocación, y el sitio todavía no está arriba.** Mientras siga siendo borrador no hay problema, pero **§9.4 no puede entrar en vigencia antes de que el dominio resuelva**: sería declarar una vía de ejercicio que no existe.
 - ⚠️ **`.com.ar` se renueva cada año y NIC.ar no cobra solo.** Si vence, se cae la URL de revocación de §9.4 y la de privacidad que sostiene las fichas de las dos tiendas. Poner recordatorio.
 - Cuando el sitio esté arriba: cargar `https://vitaapp.com.ar/legal/privacidad` en App Store Connect y en Google Play Console, y `https://vitaapp.com.ar/legal/eliminar-cuenta` como URL de baja en Play. Probar en incógnito que la portada abra el botón sin sesión.
-- 🔴 Queda un solo rojo de contenido legal: **implementar §9.3** (la garantía). El circuito de §9.4 (revocación) también es manual, pero eso está anotado y asumido.
+- 🔴 **Correr `scripts/add-guarantee-claims.sql` y deployar `guarantee-claim`.** El deploy no se puede hacer desde acá (este entorno no tiene el CLI de Supabase logueado — `supabase functions deploy` se cuelga esperando un login interactivo). Queries de verificación al pie del script. Hasta entonces la garantía sigue siendo 100% manual.
+- Ya no queda ningún rojo de contenido legal. Los circuitos de §9.3 y §9.4 tienen intake por mail y eso está asumido y escrito en los T&C.
 - Sigue abierto todo lo de la sesión 88: probar en dispositivo el guardarraíl de reconexión de MP, la reserva instantánea con pago y el tramo del 15%.
 
 ## 2026-08-10 — Andre (sesión 89)
