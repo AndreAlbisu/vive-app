@@ -81,6 +81,12 @@
 <ul>
 <li>Identificadores de dispositivo y <strong>token de notificaciones push</strong>; datos de uso y eventos de la aplicación (analítica); datos técnicos de conexión.</li>
 </ul>
+<p><strong>2.4. Accesos al dispositivo que la aplicación solicita.</strong> En todos los casos el sistema operativo pide autorización previa, el Usuario puede negarla o revocarla en cualquier momento desde los ajustes del dispositivo, y la aplicación sigue funcionando sin ellos —solo deja de estar disponible la función asociada:</p>
+<ul>
+<li><strong>Fotos y cámara:</strong> para subir la foto de perfil y, en el caso de Profesionales, el video de presentación. Vita accede únicamente al archivo que el Usuario elige o captura; no lee el resto de la galería.</li>
+<li><strong>Micrófono:</strong> únicamente durante la grabación del video de presentación y durante las videollamadas de las Sesiones.</li>
+<li><strong>Calendario:</strong> solo para <em>escribir</em> el evento de una Sesión que el Usuario decide agendar. Vita <strong>no lee</strong> los eventos existentes del calendario.</li>
+</ul>
 <h2>3. Datos Sensibles y Consentimiento Explícito</h2>
 <p>Ciertos datos que el Usuario ingresa —en especial los registros de estado de ánimo, el diario y el contenido de las conversaciones o notas que puedan revelar información sobre su salud o su vida emocional— pueden constituir <strong>datos sensibles</strong> en los términos de la Ley 25.326. Su tratamiento se realiza <strong>con el consentimiento libre, expreso e informado del Usuario</strong>, otorgado al utilizar las funcionalidades correspondientes, y con el único fin de prestar el servicio. El Usuario puede abstenerse de utilizar estas funcionalidades y puede solicitar la supresión de estos datos conforme a la sección 9. [Validar con abogado el mecanismo de obtención y registro del consentimiento explícito.]</p>
 <h2>4. Finalidades del Tratamiento</h2>
@@ -97,12 +103,18 @@
 <li><strong>Expo / proveedor de notificaciones push</strong> — envío de notificaciones.</li>
 </ul>
 </li>
+<li><strong>Proveedores de identidad, solo si el Usuario elige registrarse o iniciar sesión con ellos:</strong><ul>
+<li><strong>Google</strong> y <strong>Apple</strong>. En ese caso, el proveedor conoce que el Usuario accede a Vita y le comunica a Vita los datos mínimos de la cuenta (nombre y correo electrónico). Si el Usuario se registra con correo y contraseña, ninguno de los dos interviene.</li>
+</ul>
+</li>
+<li><strong>Contenido embebido de terceros:</strong> algunas fichas de recursos incluyen un reproductor de <strong>YouTube</strong> insertado dentro de la aplicación. Al cargarse, YouTube recibe la dirección IP y datos técnicos del dispositivo, y puede utilizar cookies o tecnologías similares conforme a sus propias políticas. Ocurre solo al abrir una ficha que contenga ese reproductor.</li>
 <li><strong>Analítica:</strong> Vita <strong>no utiliza proveedores de analítica de terceros</strong>. Las métricas de uso se registran en la propia base de datos de Vita (alojada en Supabase) y no se comparten con terceros con fines publicitarios ni comerciales.</li>
 <li><strong>Otros Usuarios:</strong> la información necesaria para la interacción (por ejemplo, el perfil del Profesional es visible para los Clientes; el nombre/foto del Cliente puede ser visible para el Profesional con quien tiene una Sesión).</li>
 <li><strong>Autoridades competentes:</strong> cuando exista obligación legal o requerimiento válido.</li>
 <li><strong>En caso de reorganización societaria</strong> (fusión, adquisición), notificando cuando corresponda.</li>
 </ul>
 <p>La lista anterior comprende la totalidad de los proveedores con los que Vita comparte datos personales de sus Usuarios.</p>
+<p><strong>Enlaces que llevan fuera de la aplicación.</strong> Algunos recursos son enlaces a servicios externos (por ejemplo YouTube, Spotify o Google Drive) que <strong>se abren en el navegador o en la aplicación correspondiente del dispositivo</strong>. En esos casos el Usuario sale de Vita y pasa a regirse por las políticas de ese servicio. Vita no le transmite ningún dato personal al abrirlos: solo abre la dirección.</p>
 <h2>7. Transferencia Internacional de Datos</h2>
 <p>Algunos de los proveedores mencionados pueden almacenar o procesar datos en servidores ubicados fuera de la Argentina. En dichos casos, Vita procurará que existan garantías adecuadas conforme a la Ley 25.326 y a las normas de la AAIP sobre transferencia internacional de datos. [Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]</p>
 <h2>8. Seguridad de los Datos</h2>

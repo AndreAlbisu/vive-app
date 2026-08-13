@@ -48,10 +48,17 @@ Dos criterios que se aplicaron en todo el documento:
 - **Advertising Data** — no hay publicidad.
 
 ### Permisos que pide la app (justificación, ya en `app.json`)
-- **Cámara y Fotos** — foto de perfil y video de presentación del profesional.
-- **Micrófono** — video de presentación y grabación de recursos de audio.
-- **Calendario** — agregar las sesiones reservadas al calendario del usuario.
+Declarados también en **Política §2.4** desde el 13/08/2026; tienen que decir lo mismo.
+- **Cámara y Fotos** — foto de perfil y video de presentación del profesional (`expo-image-picker`, en `CoachProfileScreen` y `EditProfileScreen`).
+- **Micrófono** — video de presentación y videollamadas.
+- **Calendario** — **solo escritura**: agregar la sesión que el usuario decide agendar (`expo-calendar`, en `SessionsScreen` y `SalaScreen`). La app **no lee** los eventos existentes; conviene decirlo así en el formulario, porque "acceso al calendario" a secas suena a lectura.
 - **Notificaciones** — recordatorios de sesión y avisos del servicio.
+
+### Terceros que reciben datos, más allá de los encargados
+Contrastado contra el código el 13/08/2026 y declarado en **Política §6**:
+- **Google / Apple como proveedores de identidad** — solo si el usuario elige ese camino de alta (`expo-auth-session`, `expo-apple-authentication`).
+- **YouTube** — hay un **reproductor embebido** en `app/coach-recurso.tsx` (`react-native-youtube-iframe`). Al cargarse, YouTube recibe IP y datos técnicos del dispositivo. ⚠️ Esto **sí** cuenta como compartir con un tercero en los dos formularios.
+- ⚠️ **No confundir con los enlaces externos.** `ResourceDetailScreen` abre YouTube, Spotify y Google Drive con `Linking.openURL`: el usuario sale de la app y ahí no se comparte nada. Declararlos como destinatarios sería declarar de más.
 
 ---
 

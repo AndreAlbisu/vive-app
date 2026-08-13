@@ -84,6 +84,15 @@ Typecheck limpio. Lint sin errores nuevos — el único error que reporta `SalaS
 - `acceptanceFields()` centraliza los tres caminos de alta y **nunca escribe `false` ni `null`**, así una llamada parcial —por ejemplo solo la edad— no puede pisar una aceptación anterior ni borrarle la fecha. Fecha y versión van solo con los T&C: la declaración de edad no es la aceptación de un documento.
 - **No se backfillea**, mismo criterio que `age_confirmed`: las cuentas previas aceptaron de verdad, pero poner una fecha o un hash inventado sería fabricar la constancia.
 
+**Octavo bloque — destinatarios de datos que faltaban en Política §6:**
+
+- **Contrastado contra el código, y aparecieron dos errores en el propio pendiente.** (1) El embed de YouTube **no está en `ResourceDetailScreen`** como decía la nota, sino en `app/coach-recurso.tsx`. (2) No es solo YouTube: `ResourceDetailScreen:51` reconoce **Spotify y Google Drive** además.
+- **Esa diferencia cambió la redacción, no es un detalle.** El **embed** (`react-native-youtube-iframe`, WebView) sí es un destinatario: YouTube recibe IP y datos del dispositivo **sin que el Usuario lo elija**. Los **links externos** se abren con `Linking.openURL`, o sea que el Usuario sale de la app y Vita no transmite nada. Quedaron en párrafos separados: declarar los segundos como destinatarios sería declarar de más, que también es declarar mal.
+- **Los permisos de dispositivo no son destinatarios y no fueron a §6.** Fueron a **§2.4** (nueva), aclarando que el calendario es de **solo escritura** —la app no lee los eventos existentes— y que negarlos no rompe la app, solo desactiva la función.
+- Google y Apple como proveedores de identidad, en §6, con la aclaración de que si el alta es por correo y contraseña ninguno de los dos interviene.
+- `docs/etiquetas-privacidad-tiendas.md` actualizado en paralelo con la advertencia de no confundir embed con enlace externo, que es el error fácil al llenar los dos formularios.
+- **El mecanismo de versión del bloque anterior funcionó en su primer uso real:** cambió el texto aceptado y `LEGAL_VERSION` pasó de `55c4861bf51e` a `416392a6c15a` sola, sin que nadie tuviera que acordarse de nada.
+
 Typecheck y lint limpios en los seis bloques de código. HTML de las 5 páginas validado (anidamiento correcto).
 
 **Pendiente para la próxima sesión:**

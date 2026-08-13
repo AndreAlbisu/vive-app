@@ -235,6 +235,11 @@ Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contac
 **2.3. Datos técnicos y de uso:**
 - Identificadores de dispositivo y **token de notificaciones push**; datos de uso y eventos de la aplicación (analítica); datos técnicos de conexión.
 
+**2.4. Accesos al dispositivo que la aplicación solicita.** En todos los casos el sistema operativo pide autorización previa, el Usuario puede negarla o revocarla en cualquier momento desde los ajustes del dispositivo, y la aplicación sigue funcionando sin ellos —solo deja de estar disponible la función asociada:
+- **Fotos y cámara:** para subir la foto de perfil y, en el caso de Profesionales, el video de presentación. Vita accede únicamente al archivo que el Usuario elige o captura; no lee el resto de la galería.
+- **Micrófono:** únicamente durante la grabación del video de presentación y durante las videollamadas de las Sesiones.
+- **Calendario:** solo para *escribir* el evento de una Sesión que el Usuario decide agendar. Vita **no lee** los eventos existentes del calendario.
+
 ## 3. Datos Sensibles y Consentimiento Explícito
 
 Ciertos datos que el Usuario ingresa —en especial los registros de estado de ánimo, el diario y el contenido de las conversaciones o notas que puedan revelar información sobre su salud o su vida emocional— pueden constituir **datos sensibles** en los términos de la Ley 25.326. Su tratamiento se realiza **con el consentimiento libre, expreso e informado del Usuario**, otorgado al utilizar las funcionalidades correspondientes, y con el único fin de prestar el servicio. El Usuario puede abstenerse de utilizar estas funcionalidades y puede solicitar la supresión de estos datos conforme a la sección 9. [Validar con abogado el mecanismo de obtención y registro del consentimiento explícito.]
@@ -256,12 +261,17 @@ Vita **no vende** los datos personales de los Usuarios. Los compartimos únicame
   - **Mercado Pago** — procesamiento de pagos (sujeto a sus propias políticas).
   - **Daily.co** — realización de las videollamadas de las Sesiones.
   - **Expo / proveedor de notificaciones push** — envío de notificaciones.
+- **Proveedores de identidad, solo si el Usuario elige registrarse o iniciar sesión con ellos:**
+  - **Google** y **Apple**. En ese caso, el proveedor conoce que el Usuario accede a Vita y le comunica a Vita los datos mínimos de la cuenta (nombre y correo electrónico). Si el Usuario se registra con correo y contraseña, ninguno de los dos interviene.
+- **Contenido embebido de terceros:** algunas fichas de recursos incluyen un reproductor de **YouTube** insertado dentro de la aplicación. Al cargarse, YouTube recibe la dirección IP y datos técnicos del dispositivo, y puede utilizar cookies o tecnologías similares conforme a sus propias políticas. Ocurre solo al abrir una ficha que contenga ese reproductor.
 - **Analítica:** Vita **no utiliza proveedores de analítica de terceros**. Las métricas de uso se registran en la propia base de datos de Vita (alojada en Supabase) y no se comparten con terceros con fines publicitarios ni comerciales.
 - **Otros Usuarios:** la información necesaria para la interacción (por ejemplo, el perfil del Profesional es visible para los Clientes; el nombre/foto del Cliente puede ser visible para el Profesional con quien tiene una Sesión).
 - **Autoridades competentes:** cuando exista obligación legal o requerimiento válido.
 - **En caso de reorganización societaria** (fusión, adquisición), notificando cuando corresponda.
 
 La lista anterior comprende la totalidad de los proveedores con los que Vita comparte datos personales de sus Usuarios.
+
+**Enlaces que llevan fuera de la aplicación.** Algunos recursos son enlaces a servicios externos (por ejemplo YouTube, Spotify o Google Drive) que **se abren en el navegador o en la aplicación correspondiente del dispositivo**. En esos casos el Usuario sale de Vita y pasa a regirse por las políticas de ese servicio. Vita no le transmite ningún dato personal al abrirlos: solo abre la dirección.
 
 ## 7. Transferencia Internacional de Datos
 
@@ -365,7 +375,7 @@ export const LEGAL_PLACEHOLDERS: string[] = ["[Incluir la mención informativa q
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '55c4861bf51e';
+export const LEGAL_VERSION = '416392a6c15a';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la
