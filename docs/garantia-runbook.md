@@ -1,5 +1,8 @@
 # Runbook — Garantía de primera sesión (T&C §9.3)
 
+> Tabla y función **en producción desde el 13/08/2026**, verificadas.
+> `<PROJECT>` en las URLs de abajo es `ggygiihhnkjrerpinhha`.
+
 Qué hacer cuando llega un mail a `vitaappar@gmail.com` pidiendo el reintegro de
 la garantía. El intake es por correo porque así lo dice §9.3; lo que sigue
 reemplaza al editar filas a mano.
