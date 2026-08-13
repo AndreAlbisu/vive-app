@@ -74,6 +74,9 @@ create policy guarantee_claims_select_own on public.guarantee_claims
 --   order by ordinal_position;
 --   -- esperado: 9 filas
 --
---   select polname, cmd from pg_policy
---   where polrelid = 'public.guarantee_claims'::regclass;
---   -- esperado: 1 fila — guarantee_claims_select_own / SELECT
+--   select policyname, cmd, roles
+--   from pg_policies
+--   where schemaname = 'public' and tablename = 'guarantee_claims';
+--   -- esperado: 1 fila — guarantee_claims_select_own / SELECT / {authenticated}
+--   -- (la vista pg_policies, NO el catálogo pg_policy: ahí la columna se llama
+--   --  polcmd y es un char 'r'/'a'/'w'/'d', no el texto legible)
