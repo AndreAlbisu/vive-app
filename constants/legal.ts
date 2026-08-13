@@ -359,6 +359,14 @@ Vita — Andre Albisu Lambertini, CUIT 20-46034087-0, De los Extremeños 5069, C
 /** Placeholders sin completar detectados al generar este archivo. */
 export const LEGAL_PLACEHOLDERS: string[] = ["[Incluir la mención informativa que la normativa vigente requiera respecto de la AAIP.]","[Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]","[Validar con abogado el mecanismo de obtención y registro del consentimiento explícito.]","[Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]","[Validar redacción de esta cláusula con abogado: las cláusulas de jurisdicción frente a consumidores tienen límites estrictos.]","[fecha]","[ordinarios de la Ciudad Autónoma de Buenos Aires / los que correspondan]"];
 
+/** Identifica la versión EXACTA de los T&C + Política que el Usuario acepta.
+ *  Es el sha256 (12 hex) del contenido de esos dos documentos, así que cambia
+ *  solo cuando cambia el texto aceptado, y no se puede olvidar de actualizar.
+ *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
+ *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
+ *  invocar §20 (modificaciones) o §10 (no elusión). */
+export const LEGAL_VERSION = '55c4861bf51e';
+
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la
  *  abogado/a complete todos los campos entre corchetes, desaparece solo. */

@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { cancelAllResourceReminders } from '@/lib/resourceReminders';
 import { clearBlockedCache } from '@/lib/blocking';
+import { LEGAL_VERSION } from '@/constants/legal';
 import { AuthModal } from '@/components/AuthModal';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
@@ -99,6 +100,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   }
 
+  /** Campos de constancia de aceptación, compartidos por los tres caminos de alta.
+   *  Nunca escribe `false` ni `null`: así una llamada parcial (p. ej. solo la
+   *  edad) no puede pisar una aceptación anterior ni borrar su fecha/versión.
+   *  La versión y la fecha van SOLO con los T&C — no las mueve la declaración de
+   *  edad, que no es la aceptación de un documento. */
+  function acceptanceFields(acceptedTerms: boolean, ageConfirmed: boolean) {
+    return {
+      ...(acceptedTerms
+        ? {
+            accepted_terms: true,
+            accepted_terms_at: new Date().toISOString(),
+            accepted_terms_version: LEGAL_VERSION,
+          }
+        : {}),
+      ...(ageConfirmed ? { age_confirmed: true } : {}),
+    };
+  }
+
   async function signUpWithEmail(email: string, password: string, name: string, acceptedTerms = false, ageConfirmed = false): Promise<string | null> {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -120,10 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if ((acceptedTerms || ageConfirmed) && data.session && data.user) {
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({
-          ...(acceptedTerms ? { accepted_terms: true } : {}),
-          ...(ageConfirmed ? { age_confirmed: true } : {}),
-        })
+        .update(acceptanceFields(acceptedTerms, ageConfirmed))
         .eq('id', data.user.id);
       if (profileError) console.warn('[auth] no se pudo registrar la aceptación:', profileError.message);
     }
@@ -141,10 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!session?.user) return;
     const { error } = await supabase
       .from('profiles')
-      .update({
-        ...(acceptedTerms ? { accepted_terms: true } : {}),
-        ...(ageConfirmed ? { age_confirmed: true } : {}),
-      })
+      .update(acceptanceFields(acceptedTerms, ageConfirmed))
       .eq('id', session.user.id);
     if (error) console.warn('[auth] no se pudo registrar la aceptación:', error.message);
   }

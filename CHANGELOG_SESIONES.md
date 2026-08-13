@@ -75,12 +75,22 @@ Typecheck limpio. Lint sin errores nuevos — el único error que reporta `SalaS
 
 - **Decisión abierta:** Vercel puso `www` como Production y el raíz redirigiendo con 308. Los T&C §9.4 declaran la URL **sin** `www`, así que conviene darlo vuelta — el redirect la hace funcionar igual, pero un documento legal no debería apuntar a una URL que rebota. Los registros DNS son los mismos con o sin el swap.
 
-Typecheck y lint limpios en los cinco bloques de código. HTML de las 5 páginas validado (anidamiento correcto).
+**Séptimo bloque — constancia de qué y cuándo se aceptó:**
+
+- **`accepted_terms` a secas no prueba nada sobre el contenido.** Dice que la persona aceptó, no qué texto leyó. Alcanza mientras los documentos no cambien nunca — y van a cambiar: hoy son borrador con 12 placeholders y §20 prevé expresamente modificarlos. Sin fecha ni versión, invocar §20 o §10 contra alguien deja la aceptación existente pero **inoponible en su contenido**.
+- **Al implementarlo apareció que no existía ningún identificador de versión** de los legales: `constants/legal.ts` exportaba los textos y nada que dijera cuál es. Se agregó **`LEGAL_VERSION`**, **derivado del contenido** (sha256 corto de T&C + Política) y no mantenido a mano: un número manual se olvida justo cuando importa, al editar el documento, y entonces habría aceptaciones apuntando a una versión que no es la que la persona leyó — o sea el mismo modo de falla que la columna existe para evitar.
+- **Entran solo T&C y Política en el hash.** Arrepentimiento y baja de cuenta son informativos, no se aceptan; incluirlos invalidaría aceptaciones por un cambio que no toca lo aceptado.
+- **Verificadas las tres propiedades que lo hacen útil**, no asumidas: determinístico (dos corridas, mismo hash), sensible (agregar una línea al `.md` lo cambia) y reversible (al restaurar vuelve al original).
+- `acceptanceFields()` centraliza los tres caminos de alta y **nunca escribe `false` ni `null`**, así una llamada parcial —por ejemplo solo la edad— no puede pisar una aceptación anterior ni borrarle la fecha. Fecha y versión van solo con los T&C: la declaración de edad no es la aceptación de un documento.
+- **No se backfillea**, mismo criterio que `age_confirmed`: las cuentas previas aceptaron de verdad, pero poner una fecha o un hash inventado sería fabricar la constancia.
+
+Typecheck y lint limpios en los seis bloques de código. HTML de las 5 páginas validado (anidamiento correcto).
 
 **Pendiente para la próxima sesión:**
 - ~~Correr `scripts/add-age-confirmation.sql`~~ — **corrido y verificado**: `information_schema.columns` devuelve `age_confirmed` / `boolean` / `is_nullable = NO` / `default false`. Prod ya guarda la constancia.
 - ~~Correr `scripts/add-user-blocking.sql`~~ — **corrido por Andre y verificado en la misma sesión**: `pg_trigger` devuelve las 2 filas esperadas y `pg_get_functiondef` la definición de `are_blocked`. Prod ya tiene el bloqueo. **Anotado para la próxima vez:** el SQL editor de Supabase muestra solo el resultado de la ÚLTIMA sentencia cuando se corren varias juntas — la primera verificación se perdió en silencio y parecía que no había devuelto nada. Correrlas por separado.
 - **Probar en dispositivo:** bloquear desde el chat y desde el perfil, confirmar que el coach desaparece de Conexiones/búsqueda/favoritos, que el input del chat se congela de los dos lados, y que desbloquear desde `/cuentas-bloqueadas` revierte todo.
+- 🔴 **Correr `scripts/add-terms-version.sql`** (dos columnas, `add column if not exists`). Hasta entonces el alta intenta escribir campos que no existen y el update de `profiles` falla en silencio — solo warnea, no rompe el registro, pero no queda constancia de qué versión se aceptó. Query de verificación al pie del script.
 - 🔴 **Cargar los dos registros DNS en NIC.ar apenas se acredite `vitaapp.com.ar`** (están en el sexto bloque de arriba). El sitio ya está publicado y verificado en `vive-app.vercel.app`; solo falta el dominio propio. Paso a paso en `docs/hosting.md`.
 
 **Quedaron abiertos, sin decidir (Andre los dejó pendientes a propósito):**

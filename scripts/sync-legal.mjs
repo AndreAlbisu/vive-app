@@ -15,6 +15,7 @@
 //     borrador. Cuando se completen todos, el aviso desaparece solo.
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { marked } from 'marked';
@@ -111,6 +112,22 @@ for (const { key, file, app = true } of DOCS) {
 
 const unique = [...new Set(placeholders.map((p) => p.text))].sort();
 
+// ── Versión de los documentos ────────────────────────────────────────────────
+// Se DERIVA del contenido en vez de mantenerse a mano. Un número de versión
+// manual se olvida justo cuando importa —al editar el texto— y entonces habría
+// aceptaciones registradas contra una versión que ya no es la que la persona
+// leyó; que es exactamente lo que la columna existe para evitar.
+//
+// Entran solo TERMS y PRIVACY: son los dos documentos que el Usuario acepta al
+// registrarse. El botón de arrepentimiento y la baja de cuenta son
+// informativos, no se aceptan, y hacer que muevan la versión invalidaría
+// aceptaciones por un cambio que no toca lo aceptado.
+const ACCEPTED_DOCS = ['TERMS', 'PRIVACY'];
+const legalVersion = createHash('sha256')
+  .update(forWeb.filter(({ key }) => ACCEPTED_DOCS.includes(key)).map(({ md }) => md).join('\n---\n'))
+  .digest('hex')
+  .slice(0, 12);
+
 const out = `// GENERADO POR scripts/sync-legal.mjs — NO EDITAR A MANO.
 // Fuente: docs/terminos-y-condiciones.md · docs/politica-de-privacidad.md
 // Para actualizar: editá el .md y corré \`npm run sync:legal\`.
@@ -120,6 +137,14 @@ ${parts.join('\n\n')}
 /** Placeholders sin completar detectados al generar este archivo. */
 export const LEGAL_PLACEHOLDERS: string[] = ${JSON.stringify(unique)};
 
+/** Identifica la versión EXACTA de los T&C + Política que el Usuario acepta.
+ *  Es el sha256 (12 hex) del contenido de esos dos documentos, así que cambia
+ *  solo cuando cambia el texto aceptado, y no se puede olvidar de actualizar.
+ *  Se guarda en \`profiles.accepted_terms_version\` al registrarse: sin esto no
+ *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
+ *  invocar §20 (modificaciones) o §10 (no elusión). */
+export const LEGAL_VERSION = '${legalVersion}';
+
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la
  *  abogado/a complete todos los campos entre corchetes, desaparece solo. */
@@ -128,8 +153,8 @@ export const LEGAL_IS_DRAFT = ${unique.length > 0};
 
 writeFileSync(join(root, 'constants/legal.ts'), out, 'utf8');
 console.log(
-  `constants/legal.ts generado. Placeholders sin completar: ${placeholders.length}` +
-    ` (${unique.length} distintos)`
+  `constants/legal.ts generado. Versión de los legales: ${legalVersion}. ` +
+    `Placeholders sin completar: ${placeholders.length} (${unique.length} distintos)`
 );
 for (const { file, line, text } of placeholders) {
   console.log(`  ${file}:${line}  ${ellipsis(text)}`);
