@@ -44,7 +44,7 @@ Typecheck limpio. Lint sin errores nuevos — el único error que reporta `SalaS
 Typecheck y lint limpios en los tres bloques.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **Correr `scripts/add-age-confirmation.sql`** (una columna, `add column if not exists`). Hasta entonces el alta escribe un campo que no existe y el update de `profiles` falla en silencio — solo warnea, no rompe el registro. La query de verificación está al pie del script.
+- ~~Correr `scripts/add-age-confirmation.sql`~~ — **corrido y verificado**: `information_schema.columns` devuelve `age_confirmed` / `boolean` / `is_nullable = NO` / `default false`. Prod ya guarda la constancia.
 - ~~Correr `scripts/add-user-blocking.sql`~~ — **corrido por Andre y verificado en la misma sesión**: `pg_trigger` devuelve las 2 filas esperadas y `pg_get_functiondef` la definición de `are_blocked`. Prod ya tiene el bloqueo. **Anotado para la próxima vez:** el SQL editor de Supabase muestra solo el resultado de la ÚLTIMA sentencia cuando se corren varias juntas — la primera verificación se perdió en silencio y parecía que no había devuelto nada. Correrlas por separado.
 - **Probar en dispositivo:** bloquear desde el chat y desde el perfil, confirmar que el coach desaparece de Conexiones/búsqueda/favoritos, que el input del chat se congela de los dos lados, y que desbloquear desde `/cuentas-bloqueadas` revierte todo.
 - 🔴 **Hostear `web/legal/`** — es lo que destraba dos cosas a la vez: la cuarta pata de la guideline 1.2 (**contacto publicado**) y el requisito de portada de la Res. 424/2020. Hace falta **crear el index del sitio**, que hoy no existe, con el botón de arrepentimiento en lugar destacado. Va también la página de solicitud de eliminación de cuenta que pide Google Play.
