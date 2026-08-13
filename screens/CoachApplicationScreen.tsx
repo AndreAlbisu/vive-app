@@ -28,6 +28,16 @@ function isValidUrl(url: string) {
   return url.startsWith('http://') || url.startsWith('https://');
 }
 
+/** Años cumplidos a hoy. Cuenta el cumpleaños del año en curso solo si ya pasó. */
+function ageFromIso(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number);
+  const today = new Date();
+  let age = today.getFullYear() - y;
+  const monthDiff = today.getMonth() + 1 - m;
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < d)) age -= 1;
+  return age;
+}
+
 function displayToIso(display: string): string | null {
   const cleaned = display.replace(/[^0-9]/g, '');
   if (cleaned.length !== 8) return null;
@@ -98,6 +108,13 @@ export default function CoachApplicationScreen() {
     if (topics.size === 0) { setSubmitError('Elegí al menos un subtema que trabajás'); return; }
     const birthDateIso = displayToIso(birthDate);
     if (!birthDateIso) { setSubmitError('Ingresá tu fecha de nacimiento (DD/MM/AAAA)'); return; }
+    // Chequeo duro contra el dato real: es el único lugar del alta donde hay una
+    // fecha de nacimiento obligatoria, así que del lado coach la mayoría de edad
+    // no queda solo en la declaración de CoachLoginScreen. T&C §3.1.
+    if (ageFromIso(birthDateIso) < 18) {
+      setSubmitError('Tenés que ser mayor de 18 años para ofrecer sesiones en Vita');
+      return;
+    }
     if (!nationality.trim()) { setSubmitError('Ingresá tu nacionalidad'); return; }
     if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) {
       setSubmitError('Ingresá un precio válido por sesión');

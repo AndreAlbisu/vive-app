@@ -50,6 +50,10 @@ export default function RegisterScreen() {
   const [appleLoading, setAppleLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // Declaración separada de la de T&C a propósito: §3.1 la trata como una
+  // manifestación propia del Usuario, y meterla adentro del mismo tilde la
+  // volvería una condición sepultada en un texto que casi nadie lee.
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
@@ -108,7 +112,7 @@ export default function RegisterScreen() {
       }
     }
 
-    const error = await signUpWithEmail(email.trim(), password, name.trim(), acceptedTerms);
+    const error = await signUpWithEmail(email.trim(), password, name.trim(), acceptedTerms, ageConfirmed);
     setLoading(false);
 
     if (error) {
@@ -118,23 +122,29 @@ export default function RegisterScreen() {
     router.replace('/(tabs)');
   }
 
-  // Google y Apple exigen el mismo checkbox que el alta por email — antes estaban
+  // Las dos declaraciones habilitan los tres métodos por igual.
+  const canSubmit = acceptedTerms && ageConfirmed;
+  const GATE_ERROR = !acceptedTerms
+    ? 'Para continuar, aceptá los Términos y la Política de privacidad'
+    : 'Para continuar, confirmá que tenés 18 años o más';
+
+  // Google y Apple exigen los mismos checkboxes que el alta por email — antes estaban
   // habilitados desde el arranque y se podía crear cuenta sin aceptar nada ni
   // dejar constancia. El `true` que se les pasa persiste `profiles.accepted_terms`.
   async function handleGoogle() {
-    if (!acceptedTerms) { setServerError('Para continuar, aceptá los Términos y la Política de privacidad'); return; }
+    if (!canSubmit) { setServerError(GATE_ERROR); return; }
     setGoogleLoading(true);
     setServerError(null);
-    const error = await signInWithGoogle(true);
+    const error = await signInWithGoogle(true, true);
     setGoogleLoading(false);
     if (error) setServerError(error);
   }
 
   async function handleApple() {
-    if (!acceptedTerms) { setServerError('Para continuar, aceptá los Términos y la Política de privacidad'); return; }
+    if (!canSubmit) { setServerError(GATE_ERROR); return; }
     setAppleLoading(true);
     setServerError(null);
-    const error = await signInWithApple(true);
+    const error = await signInWithApple(true, true);
     setAppleLoading(false);
     if (error) setServerError(error);
   }
@@ -192,12 +202,31 @@ export default function RegisterScreen() {
               </Text>
             </TouchableOpacity>
 
+            {/* Mayoría de edad — tilde propio, no fundido con el de T&C.
+                §3.1 dice que el Usuario "declara" ser mayor de 18 y hasta ahora
+                no se le preguntaba nada: la cláusula afirmaba una declaración
+                que nunca existía. Queda como constancia en `age_confirmed`. */}
+            <TouchableOpacity
+              style={s.termsRow}
+              onPress={() => setAgeConfirmed(v => !v)}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons
+                name={ageConfirmed ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                size={22}
+                color={ageConfirmed ? ViveColors.primary : "rgba(135,131,92,0.55)"}
+              />
+              <Text style={s.termsText}>
+                Declaro que tengo 18 años o más
+              </Text>
+            </TouchableOpacity>
+
             {/* Google */}
             <TouchableOpacity
-              style={[s.googleBtn, (googleLoading || !acceptedTerms) && { opacity: 0.5 }]}
+              style={[s.googleBtn, (googleLoading || !canSubmit) && { opacity: 0.5 }]}
               onPress={handleGoogle}
               activeOpacity={0.85}
-              disabled={googleLoading || loading || !acceptedTerms}
+              disabled={googleLoading || loading || !canSubmit}
             >
               {googleLoading
                 ? <ActivityIndicator size="small" color="#4285F4" />
@@ -209,10 +238,10 @@ export default function RegisterScreen() {
             {/* Apple — Sign in with Apple no existe en Android, ocultar */}
             {Platform.OS === 'ios' && (
               <TouchableOpacity
-                style={[s.appleBtn, (appleLoading || !acceptedTerms) && { opacity: 0.5 }]}
+                style={[s.appleBtn, (appleLoading || !canSubmit) && { opacity: 0.5 }]}
                 onPress={handleApple}
                 activeOpacity={0.85}
-                disabled={appleLoading || loading || !acceptedTerms}
+                disabled={appleLoading || loading || !canSubmit}
               >
                 {appleLoading
                   ? <ActivityIndicator size="small" color="#565E32" />
@@ -333,10 +362,10 @@ export default function RegisterScreen() {
                 )}
 
                 <TouchableOpacity
-                  style={[s.enterBtn, (!acceptedTerms || loading) && s.enterBtnDisabled]}
+                  style={[s.enterBtn, (!canSubmit || loading) && s.enterBtnDisabled]}
                   onPress={handleRegister}
                   activeOpacity={0.85}
-                  disabled={!acceptedTerms || loading}
+                  disabled={!canSubmit || loading}
                 >
                   {loading
                     ? <ActivityIndicator size="small" color="#565E32" />

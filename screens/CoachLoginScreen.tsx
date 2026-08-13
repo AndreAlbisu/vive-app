@@ -106,9 +106,11 @@ export default function CoachLoginScreen() {
 
     // Intentar crear la cuenta si las credenciales no existen
     const nameFromEmail = trimmedEmail.split('@')[0];
-    // acceptedTerms = true: al tocar "Continuar" el profesional ya aceptó, según
-    // la línea de abajo del botón. Antes se creaba la cuenta sin registrar nada.
-    const signUpError = await signUpWithEmail(trimmedEmail, trimmedPassword, nameFromEmail, true);
+    // acceptedTerms / ageConfirmed = true: al tocar "Continuar" el profesional ya
+    // aceptó y declaró la edad, según la línea de abajo del botón. Antes se creaba
+    // la cuenta sin registrar nada. La edad se vuelve a chequear de forma dura
+    // contra `birth_date` en CoachApplicationScreen, que es donde hay un dato real.
+    const signUpError = await signUpWithEmail(trimmedEmail, trimmedPassword, nameFromEmail, true, true);
 
     if (!signUpError) {
       await validateAndNavigate(true);
@@ -224,7 +226,7 @@ export default function CoachLoginScreen() {
                 Importa que el profesional pase por acá: la cláusula anti-solicitación
                 de los T&C (§10) es la que sostiene la medida anti-fuga. */}
             <Text style={styles.legalNote}>
-              {'Al continuar aceptás los '}
+              {'Al continuar declarás tener 18 años o más y aceptás los '}
               <Text style={styles.legalLink} onPress={() => setLegalDoc('terminos')}>
                 Términos y condiciones
               </Text>

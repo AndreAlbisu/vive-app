@@ -20,9 +20,9 @@ interface AuthContextType {
   role: UserRole;
   requestAuth: () => void;
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
-  signUpWithEmail: (email: string, password: string, name: string, acceptedTerms?: boolean) => Promise<string | null>;
-  signInWithGoogle: (acceptedTerms?: boolean) => Promise<string | null>;
-  signInWithApple: (acceptedTerms?: boolean) => Promise<string | null>;
+  signUpWithEmail: (email: string, password: string, name: string, acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
+  signInWithGoogle: (acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
+  signInWithApple: (acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
   signOut: () => Promise<void>;
 }
 
@@ -99,14 +99,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  async function signUpWithEmail(email: string, password: string, name: string, acceptedTerms = false): Promise<string | null> {
+  async function signUpWithEmail(email: string, password: string, name: string, acceptedTerms = false, ageConfirmed = false): Promise<string | null> {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       // accepted_terms va también en la metadata del usuario: es lo único que
       // sobrevive si el signUp no devuelve sesión (confirmación de mail activada),
-      // y deja el dato en auth.users para poder backfillear después.
-      options: { data: { name, accepted_terms: acceptedTerms } },
+      // y deja el dato en auth.users para poder backfillear después. Lo mismo
+      // vale para age_confirmed, que es una declaración del mismo momento.
+      options: { data: { name, accepted_terms: acceptedTerms, age_confirmed: ageConfirmed } },
     });
     if (error) return translateError(error.message);
 
@@ -116,33 +117,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // no quedaba constancia de que el usuario aceptara los T&C (necesaria para
     // que la cláusula anti-solicitación sea oponible). Requiere sesión, porque
     // el UPDATE pasa por RLS de dueño.
-    if (acceptedTerms && data.session && data.user) {
+    if ((acceptedTerms || ageConfirmed) && data.session && data.user) {
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ accepted_terms: true })
+        .update({
+          ...(acceptedTerms ? { accepted_terms: true } : {}),
+          ...(ageConfirmed ? { age_confirmed: true } : {}),
+        })
         .eq('id', data.user.id);
-      if (profileError) console.warn('[auth] no se pudo registrar accepted_terms:', profileError.message);
+      if (profileError) console.warn('[auth] no se pudo registrar la aceptación:', profileError.message);
     }
     return null;
   }
 
-  /** Marca `profiles.accepted_terms` del usuario ya autenticado. Se usa desde los
-   *  flujos sociales, donde la fila de profiles la crea el trigger de auth.users
-   *  y no hay un signUp propio donde escribirla. */
-  async function markTermsAccepted() {
+  /** Marca `profiles.accepted_terms` / `age_confirmed` del usuario ya autenticado.
+   *  Se usa desde los flujos sociales, donde la fila de profiles la crea el
+   *  trigger de auth.users y no hay un signUp propio donde escribirla.
+   *  Nunca escribe `false`: no tiene sentido "desdeclarar" y así una llamada
+   *  parcial no puede pisar una declaración anterior. */
+  async function markAccepted(acceptedTerms: boolean, ageConfirmed: boolean) {
+    if (!acceptedTerms && !ageConfirmed) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
     const { error } = await supabase
       .from('profiles')
-      .update({ accepted_terms: true })
+      .update({
+        ...(acceptedTerms ? { accepted_terms: true } : {}),
+        ...(ageConfirmed ? { age_confirmed: true } : {}),
+      })
       .eq('id', session.user.id);
-    if (error) console.warn('[auth] no se pudo registrar accepted_terms:', error.message);
+    if (error) console.warn('[auth] no se pudo registrar la aceptación:', error.message);
   }
 
-  // `acceptedTerms` lo manda solo el registro (en el login no se re-acepta nada).
-  // Los flujos sociales no pasan por signUpWithEmail, así que sin esto se creaba
-  // la cuenta sin dejar constancia de la aceptación de los T&C.
-  async function signInWithGoogle(acceptedTerms = false): Promise<string | null> {
+  // `acceptedTerms` / `ageConfirmed` los manda solo el registro (en el login no
+  // se re-declara nada). Los flujos sociales no pasan por signUpWithEmail, así
+  // que sin esto se creaba la cuenta sin dejar constancia de ninguna de las dos.
+  async function signInWithGoogle(acceptedTerms = false, ageConfirmed = false): Promise<string | null> {
     try {
       const redirectUrl = AuthSession.makeRedirectUri();
 
@@ -162,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.type === 'success') {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(res.url);
         if (exchangeError) return translateError(exchangeError.message);
-        if (acceptedTerms) await markTermsAccepted();
+        await markAccepted(acceptedTerms, ageConfirmed);
       } else if (res.type === 'cancel' || res.type === 'dismiss') {
         return null;
       }
@@ -177,7 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // web como Google — es lo que Apple espera para cumplir la guideline 4.8.
   // El nonce viaja crudo a Apple/Supabase para que Supabase pueda verificar
   // el identityToken contra el hash que ve en el JWT.
-  async function signInWithApple(acceptedTerms = false): Promise<string | null> {
+  async function signInWithApple(acceptedTerms = false, ageConfirmed = false): Promise<string | null> {
     try {
       const rawNonce = Crypto.randomUUID();
       const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
@@ -199,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) return translateError(error.message);
-      if (acceptedTerms) await markTermsAccepted();
+      await markAccepted(acceptedTerms, ageConfirmed);
       return null;
     } catch (e: any) {
       if (e?.code === 'ERR_REQUEST_CANCELED') return null;

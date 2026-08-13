@@ -22,10 +22,21 @@
 
 Typecheck limpio. Lint sin errores nuevos — el único error que reporta `SalaScreen` (comillas sin escapar en `recoCardNote`, línea 1127) **es previo a esta sesión**, verificado contra `git show HEAD`; no se tocó para no mezclar scope.
 
+**Segundo bloque — declaración de mayoría de edad (2º rojo de legales):**
+
+- **T&C §3.1 afirmaba una declaración que nunca se pedía.** Dice que el Usuario "declara" ser mayor de 18 y la Política §11 que no se recolectan datos de menores; en el alta no se preguntaba nada. `birth_date` es opcional para el usuario, obligatoria solo para el coach, y en ningún caso se validaba que fueran 18.
+- **Checkbox propio, no fundido con el de T&C.** §3.1 la trata como una manifestación separada, y meterla adentro del mismo tilde la volvería una condición sepultada en un texto que casi nadie lee. Los dos tildes habilitan por igual los tres métodos de alta (email, Google, Apple) — antes el gate era solo `acceptedTerms`, ahora es `canSubmit`.
+- **Constancia en `profiles.age_confirmed`** (`scripts/add-age-confirmation.sql`), mismo criterio que `accepted_terms`: sin registro no es oponible. `markTermsAccepted` pasó a ser `markAccepted(acceptedTerms, ageConfirmed)` y **nunca escribe `false`**, así una llamada parcial no puede pisar una declaración anterior.
+- **Decisión: NO se backfillea.** Las cuentas previas quedan en `false` porque efectivamente no declararon nada. Poner `true` sería fabricar una constancia que no existió, que es peor que no tenerla.
+- **Del lado coach, chequeo duro además de la declaración.** `CoachLoginScreen` es login y alta a la vez, así que mantiene la aceptación implícita (ahora también de la edad) para no sumarle fricción a quien solo entra; pero `CoachApplicationScreen` ahora corta la postulación si `birth_date` da menos de 18. Es el único punto del alta con una fecha real, y del lado del coach la mayoría de edad no puede quedar solo en una línea de texto.
+
+Typecheck y lint limpios en los dos bloques.
+
 **Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/add-age-confirmation.sql`** (una columna, `add column if not exists`). Hasta entonces el alta escribe un campo que no existe y el update de `profiles` falla en silencio — solo warnea, no rompe el registro. La query de verificación está al pie del script.
 - ~~Correr `scripts/add-user-blocking.sql`~~ — **corrido por Andre y verificado en la misma sesión**: `pg_trigger` devuelve las 2 filas esperadas y `pg_get_functiondef` la definición de `are_blocked`. Prod ya tiene el bloqueo. **Anotado para la próxima vez:** el SQL editor de Supabase muestra solo el resultado de la ÚLTIMA sentencia cuando se corren varias juntas — la primera verificación se perdió en silencio y parecía que no había devuelto nada. Correrlas por separado.
 - **Probar en dispositivo:** bloquear desde el chat y desde el perfil, confirmar que el coach desaparece de Conexiones/búsqueda/favoritos, que el input del chat se congela de los dos lados, y que desbloquear desde `/cuentas-bloqueadas` revierte todo.
-- Siguen abiertos los otros 3 rojos de legales: **arrepentimiento/revocación** (bloquea hostear `web/legal/`), **checkbox de mayoría de edad** en el registro, e **implementar §9.3**.
+- Siguen abiertos 2 rojos de legales: **arrepentimiento/revocación** (bloquea hostear `web/legal/`, y hostear cierra la cuarta pata de la guideline 1.2 — el contacto publicado) e **implementar §9.3**.
 - Sigue abierto todo lo de la sesión 88: probar en dispositivo el guardarraíl de reconexión de MP, la reserva instantánea con pago y el tramo del 15%.
 
 ## 2026-08-10 — Andre (sesión 89)
