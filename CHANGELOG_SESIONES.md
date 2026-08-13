@@ -23,7 +23,7 @@
 Typecheck limpio. Lint sin errores nuevos — el único error que reporta `SalaScreen` (comillas sin escapar en `recoCardNote`, línea 1127) **es previo a esta sesión**, verificado contra `git show HEAD`; no se tocó para no mezclar scope.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **Correr `scripts/add-user-blocking.sql` en Supabase.** No se corrió: este entorno solo tiene la anon key. Hasta entonces la app tira error al bloquear y los triggers no existen. El script trae al pie las queries de verificación (`pg_trigger` + `pg_get_functiondef`) — correrlas y confirmar, no asumir (regla crítica 10).
+- ~~Correr `scripts/add-user-blocking.sql`~~ — **corrido por Andre y verificado en la misma sesión**: `pg_trigger` devuelve las 2 filas esperadas y `pg_get_functiondef` la definición de `are_blocked`. Prod ya tiene el bloqueo. **Anotado para la próxima vez:** el SQL editor de Supabase muestra solo el resultado de la ÚLTIMA sentencia cuando se corren varias juntas — la primera verificación se perdió en silencio y parecía que no había devuelto nada. Correrlas por separado.
 - **Probar en dispositivo:** bloquear desde el chat y desde el perfil, confirmar que el coach desaparece de Conexiones/búsqueda/favoritos, que el input del chat se congela de los dos lados, y que desbloquear desde `/cuentas-bloqueadas` revierte todo.
 - Siguen abiertos los otros 3 rojos de legales: **arrepentimiento/revocación** (bloquea hostear `web/legal/`), **checkbox de mayoría de edad** en el registro, e **implementar §9.3**.
 - Sigue abierto todo lo de la sesión 88: probar en dispositivo el guardarraíl de reconexión de MP, la reserva instantánea con pago y el tramo del 15%.
