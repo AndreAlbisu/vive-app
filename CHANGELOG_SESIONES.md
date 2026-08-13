@@ -7,9 +7,11 @@
 
 ## 2026-08-13 — Andre (sesión 90)
 
-**Tocado:** nuevos `scripts/add-user-blocking.sql`, `scripts/add-age-confirmation.sql`, `docs/boton-de-arrepentimiento.md`, `lib/blocking.ts`, `hooks/useBlockedFilter.ts`, `components/UserActionsSheet.tsx`, `screens/BlockedAccountsScreen.tsx`, `app/cuentas-bloqueadas.tsx`. Modificados `screens/SalaScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/FavoritosScreen.tsx`, `screens/QuizScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/RegisterScreen.tsx`, `screens/CoachLoginScreen.tsx`, `screens/CoachApplicationScreen.tsx`, `context/AuthContext.tsx`, `app/search3.tsx`, `app/legal.tsx`, `app/(tabs)/conexiones.tsx`, `scripts/sync-legal.mjs`, `docs/terminos-y-condiciones.md`, `docs/legal-instrucciones.md` + `constants/legal.ts` y `web/legal/*` regenerados. **Dos scripts de schema nuevos — SCHEMA.md ya actualizado.**
+**Tocado:** nuevos `scripts/add-user-blocking.sql`, `scripts/add-age-confirmation.sql`, `docs/boton-de-arrepentimiento.md`, `docs/eliminar-cuenta.md`, `docs/hosting.md`, `vercel.json`, `web/index.html`, `lib/blocking.ts`, `hooks/useBlockedFilter.ts`, `components/UserActionsSheet.tsx`, `screens/BlockedAccountsScreen.tsx`, `app/cuentas-bloqueadas.tsx`. Modificados `screens/SalaScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/FavoritosScreen.tsx`, `screens/QuizScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/RegisterScreen.tsx`, `screens/CoachLoginScreen.tsx`, `screens/CoachApplicationScreen.tsx`, `context/AuthContext.tsx`, `app/search3.tsx`, `app/legal.tsx`, `app/(tabs)/conexiones.tsx`, `scripts/sync-legal.mjs`, `docs/terminos-y-condiciones.md`, `docs/legal-instrucciones.md` + `constants/legal.ts` y `web/legal/*` regenerados. **Dos scripts de schema nuevos — SCHEMA.md ya actualizado.**
 
-**Sesión de tres bloques, los tres bloqueadores de publicación:** bloqueo de usuarios (guideline 1.2 de Apple), declaración de mayoría de edad, y botón de arrepentimiento (Res. 424/2020).
+**Sesión de cuatro bloques, todos bloqueadores de publicación:** bloqueo de usuarios (guideline 1.2 de Apple), declaración de mayoría de edad (T&C §3.1), botón de arrepentimiento (Res. 424/2020) y el sitio público listo para deployar (portada + baja de cuenta para Google Play + config de Vercel).
+
+**Después de esta sesión no queda ningún bloqueador de publicación sin resolver en código.** Lo único pendiente para publicar son pasos manuales de Andre: comprar el dominio, conectar Vercel, y completar las URLs. Ver `docs/hosting.md`.
 
 **Resumen:**
 
