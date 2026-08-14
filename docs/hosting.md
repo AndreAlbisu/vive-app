@@ -41,9 +41,10 @@ vence, el sitio se cae y con él la URL que los T&C §9.4 declaran como vía par
 ejercer el derecho de revocación, y la URL de privacidad que sostiene la ficha de
 las dos tiendas. Poner un recordatorio de renovación.
 
-> **Estado al 13/08/2026:** deployado y verificado en `https://vive-app.vercel.app`.
-> Falta solo el dominio propio: `vitaapp.com.ar` está **en trámite en NIC.ar**
-> (sin nameservers delegados todavía). Los registros a cargar están en el paso 3.
+> **Estado al 14/08/2026:** deployado y verificado en `https://vive-app.vercel.app`.
+> El dominio propio ya está acreditado y su delegación **ya apunta a Vercel en el
+> panel de DonWeb**; falta que DonWeb publique el cambio en el registro de
+> `.com.ar`. Hasta entonces `vitaapp.com.ar` no resuelve.
 
 ### 2. Vercel
 
@@ -55,32 +56,40 @@ las dos tiendas. Poner un recordatorio de renovación.
    configuración muestre eso antes de deployar.
 4. Deploy. Queda en `<algo>.vercel.app`.
 
-### 3. Apuntar `vitaapp.com.ar` a Vercel
+### 3. Apuntar `vitaapp.com.ar` a Vercel — ✅ hecho el 14/08/2026
 
-Los dos dominios ya están agregados en **Project → Settings → Domains**. Cuando
-NIC.ar acredite el dominio, cargar estos dos registros en su panel:
+Se hizo por **delegación de nameservers**, no cargando registros sueltos: así
+Vercel maneja la zona entera, emite el certificado solo, y funciona sea cual sea
+el editor de DNS que ofrezca el registrador.
 
-| Tipo | Nombre | Valor |
-|---|---|---|
-| `A` | `@` | `216.198.79.1` |
-| `CNAME` | `www` | `c841fb5e89b37a72.vercel-dns-017.com.` |
+En **DonWeb → Dominio → NS y Registros DNS → Editar nameservers**:
 
-- ⚠️ **El CNAME es único de este proyecto**, no el genérico `cname.vercel-dns.com`.
-  Escribir de memoria uno que "suena bien" deja el dominio muerto sin decir por qué.
-- Si el panel no acepta `@` para el raíz, dejar el campo vacío o poner el dominio completo.
-- El punto final del CNAME es parte del valor; si el panel lo rechaza, cargarlo sin él.
-- **No usar el `76.76.21.21` legacy** que Vercel menciona al pie: sigue funcionando,
-  pero si se carga hoy que sea la IP recomendada.
-- Si NIC.ar solo permite **delegar nameservers** y no cargar registros sueltos, el
-  camino es la pestaña **"Vercel DNS"** de esa misma pantalla.
+```
+ns1.vercel-dns.com
+ns2.vercel-dns.com
+```
 
-La propagación tarda hasta 24hs; el certificado TLS lo emite Vercel solo. Verificar
-con `dig +short A vitaapp.com.ar` y `dig +short NS vitaapp.com.ar`.
+(los dos dominios ya estaban agregados en Vercel → Settings → Domains)
+
+- ⚠️ **No cargar además el `A` ni el `CNAME`.** Con la delegación, la zona vive
+  en Vercel y esos registros ya están de ese lado. Los valores que Vercel muestra
+  en la pestaña "DNS Records" (`A @ 216.198.79.1` y un `CNAME` de `www` **único
+  de este proyecto**) son para el OTRO camino, el de no delegar. Quedan acá solo
+  por si alguna vez hay que volver atrás.
+- **Verificar la delegación contra el padre, no contra un resolver:** los
+  recursivos cachean también las respuestas negativas.
+
+  ```
+  dig +short @a.lactld.org NS vitaapp.com.ar
+  ```
+
+  Mientras devuelva `ns1.donweb.com` / `ns2.donweb.com`, el cambio todavía no se
+  publicó. Cuando devuelva los de Vercel, resuelve en minutos.
 
 **Decisión pendiente:** Vercel dejó `www` como Production y el raíz redirigiendo
 con 308. Los T&C §9.4 declaran la URL **sin** `www`. Conviene darlo vuelta desde
 **Edit** — funciona igual por el redirect, pero un documento legal no debería
-apuntar a una URL que rebota. Los registros DNS no cambian con el swap.
+apuntar a una URL que rebota.
 
 ### 4. Completar lo que depende de que el dominio resuelva
 
