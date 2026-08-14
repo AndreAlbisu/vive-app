@@ -29,7 +29,12 @@ la pena.
 
 ### 1. Dominio — ✅ hecho
 
-**`vitaapp.com.ar`**, comprado en NIC.ar el 13/08/2026.
+**`vitaapp.com.ar`**, comprado el 13/08/2026 **a través de DonWeb**, no en NIC.ar
+directo. ⚠️ **Eso importa y es fácil de olvidar:** la delegación (los nameservers)
+se administra desde el panel de DonWeb, no desde el de NIC.ar. DonWeb después
+empuja el cambio al registro de `.com.ar`, en lote — puede tardar de horas a un
+día, y mientras tanto `dig` contra el padre sigue mostrando los NS viejos aunque
+el panel ya muestre los nuevos. La renovación anual también sale por DonWeb.
 
 ⚠️ Los `.com.ar` **se renuevan cada año** y NIC.ar no cobra automáticamente: si
 vence, el sitio se cae y con él la URL que los T&C §9.4 declaran como vía para
