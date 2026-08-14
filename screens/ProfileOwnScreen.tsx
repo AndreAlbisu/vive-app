@@ -37,7 +37,7 @@ type ConfigItem = {
 
 export default function ProfileOwnScreen() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
 
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -166,6 +166,10 @@ export default function ProfileOwnScreen() {
     // algo existente sino prometer dos features que no están. Guideline 2.1 de
     // Apple cubre funcionalidad visible que no funciona. Vuelven cuando existan.
     { id: 'blocked', icon: 'account-cancel-outline', label: 'Cuentas bloqueadas', onPress: () => router.push('/cuentas-bloqueadas') },
+    // Solo visible para admins. Ocultarlo no es la protección — `admin-actions`
+    // revalida contra el JWT en cada escritura — pero no tiene sentido mostrarle
+    // a nadie una puerta que no puede abrir.
+    ...(isAdmin ? [{ id: 'admin', icon: 'shield-account-outline' as const, label: 'Administración', onPress: () => router.push('/admin') }] : []),
     { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => router.push('/legal?doc=terminos') },
     { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },
     { id: 'regret', icon: 'undo-variant', label: 'Botón de arrepentimiento', onPress: () => router.push('/legal?doc=arrepentimiento') },

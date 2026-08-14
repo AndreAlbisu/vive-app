@@ -51,10 +51,31 @@ function scheduledAt(date: string, time: string): number {
   return Date.parse(`${date}T${time.slice(0, 5)}:00${AR_OFFSET}`)
 }
 
+/** Deja pasar al service role (curl del runbook) o a un admin logueado (panel).
+ *  El panel corre con la anon key, así que no puede mandar la service key —
+ *  pero tampoco hay que duplicar las validaciones de §9.3 en otra función.
+ *  Se resuelve la identidad desde el token, que el cliente no puede falsificar. */
+async function isAuthorized(authHeader: string): Promise<boolean> {
+  if (authHeader.includes(SUPABASE_SERVICE_ROLE_KEY)) return true
+  if (!authHeader.startsWith('Bearer ')) return false
+
+  const asCaller = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: authHeader } },
+  })
+  const { data: { user } } = await asCaller.auth.getUser()
+  if (!user) return false
+
+  // El chequeo va con service role: con el cliente del invocador, una política
+  // mal puesta podría devolver null y hacer que esto fallara ABIERTO.
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  const { data: profile } = await admin
+    .from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
+  return !!profile?.is_admin
+}
+
 serve(async (req) => {
-  // Solo service role: no hay flujo de usuario acá (el intake es el mail).
   const authHeader = req.headers.get('Authorization') ?? ''
-  if (!authHeader.includes(SUPABASE_SERVICE_ROLE_KEY)) {
+  if (!(await isAuthorized(authHeader))) {
     return new Response('Unauthorized', { status: 401 })
   }
 

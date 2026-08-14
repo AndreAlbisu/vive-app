@@ -19,6 +19,9 @@ interface AuthContextType {
   loading: boolean;
   isLoggedIn: boolean;
   role: UserRole;
+  /** Solo decide si se MUESTRA la entrada al panel. No autoriza nada:
+   *  cada escritura la revalida la edge function `admin-actions` contra el JWT. */
+  isAdmin: boolean;
   requestAuth: () => void;
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
   signUpWithEmail: (email: string, password: string, name: string, acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
@@ -32,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isLoggedIn: false,
   role: 'user',
+  isAdmin: false,
   requestAuth: () => {},
   signInWithEmail: async () => null,
   signUpWithEmail: async () => null,
@@ -44,15 +48,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<UserRole>('user');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
-  async function fetchRole(userId: string): Promise<UserRole> {
+  /** Rol + flag de admin en una sola consulta: los dos salen de la misma fila y
+   *  se necesitan en el mismo momento, así que pedirlos por separado sería un
+   *  round-trip de más en el arranque. `is_admin` NO habilita nada por sí solo:
+   *  solo decide si se muestra la entrada al panel. Cada escritura la vuelve a
+   *  validar `admin-actions` contra el JWT, que es donde manda de verdad. */
+  async function fetchRole(userId: string): Promise<{ role: UserRole; isAdmin: boolean }> {
     const { data } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, is_admin')
       .eq('id', userId)
       .single();
-    return (data?.role as UserRole) ?? 'user';
+    return { role: (data?.role as UserRole) ?? 'user', isAdmin: !!data?.is_admin };
+  }
+
+  function applyProfile({ role: r, isAdmin: a }: { role: UserRole; isAdmin: boolean }) {
+    setRole(r);
+    setIsAdmin(a);
   }
 
   useEffect(() => {
@@ -71,20 +86,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const u = session?.user ?? null;
       setUser(u);
       setLoading(false);
-      if (u) fetchRole(u.id).then(setRole);
-      else setRole('user');
+      if (u) fetchRole(u.id).then(applyProfile);
+      else applyProfile({ role: "user", isAdmin: false });
     }).catch((e) => {
       console.warn('[auth] getSession fallo, sigo como anonimo:', e?.message ?? e);
       setUser(null);
-      setRole('user');
+      applyProfile({ role: "user", isAdmin: false });
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) fetchRole(u.id).then(setRole);
-      else setRole('user');
+      if (u) fetchRole(u.id).then(applyProfile);
+      else applyProfile({ role: "user", isAdmin: false });
     });
 
     return () => subscription.unsubscribe();
@@ -240,14 +255,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearBlockedCache();
     await supabase.auth.signOut();
     setUser(null);
-    setRole('user');
+    applyProfile({ role: "user", isAdmin: false });
   }
 
   const isLoggedIn = !!user;
 
   return (
     <AuthContext.Provider value={{
-      user, loading, isLoggedIn, role,
+      user, loading, isLoggedIn, role, isAdmin,
       requestAuth, signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, signOut,
     }}>
       {children}
