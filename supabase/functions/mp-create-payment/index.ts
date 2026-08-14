@@ -8,6 +8,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { commissionPctFor, marketplaceFeeFor } from '../_shared/commission.ts'
 import { getFreshCoachToken } from '../_shared/mp.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -97,20 +98,21 @@ serve(async (req) => {
     // de la fecha agendada), pero el filtro queda por las 16 viejas y como red por si
     // algún camino nuevo repite el patrón. Una sesión sin cobro por diseño (coach sin
     // MP conectado) nunca tiene preference_id, así que no la toca.
+    // ⚠️ El filtro de checkouts abandonados vive DOS veces: acá como predicado
+    // SQL (`.or(...)`) y en `countsAsCompletedSession` de _shared/commission.ts
+    // como predicado JS. Son la misma regla escrita en dos lenguajes y pueden
+    // divergir — si se toca una, tocar la otra. El JS es el que está testeado.
     const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL') // ISO date, TBD
-    let commissionPct: number
-    if (promoUntil && Date.now() < Date.parse(promoUntil)) {
-      commissionPct = 0
-    } else {
-      const { count } = await supabase
-        .from('bookings')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', booking.user_id)
-        .eq('coach_id', booking.coach_id)
-        .eq('status', 'completada')
-        .or('preference_id.is.null,payment_status.neq.pendiente')
-      commissionPct = (count ?? 0) < 1 ? 20 : 15
-    }
+    const { count } = await supabase
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', booking.user_id)
+      .eq('coach_id', booking.coach_id)
+      .eq('status', 'completada')
+      .or('preference_id.is.null,payment_status.neq.pendiente')
+
+    // La decisión de tramo es pura y está en _shared/commission.ts, testeada.
+    const commissionPct = commissionPctFor(count ?? 0, Date.now(), promoUntil)
 
     // marketplace_fee = comisión pura (20/15%), SIN IVA — y así queda.
     // Figura fiscal DECIDIDA (Andre, 06/08/2026): persona humana en Monotributo.
@@ -121,7 +123,7 @@ serve(async (req) => {
     // vuelve IVA incluido y el ingreso real cae a ~16,5%. Es decisión de precio,
     // no de código: cambiar esto sin cambiar el copy de CoachProfileScreen y el
     // §8.4 de los T&C deja las tres cosas contradiciéndose.
-    const marketplaceFee = Math.round(Number(booking.amount) * commissionPct) / 100
+    const marketplaceFee = marketplaceFeeFor(Number(booking.amount), commissionPct)
 
     // ⚠️ MONEY RELEASE (RE-VERIFICADO en docs MP, 07/2026): con Checkout Pro NO hay
     // parámetro para setear/demorar el release por transacción. `money_release_date`

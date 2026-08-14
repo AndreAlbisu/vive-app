@@ -26,29 +26,19 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { guaranteeFailures, scheduledAtMs } from '../_shared/guarantee.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-// §9.3: la solicitud se hace "dentro de las 48 horas posteriores al horario en
-// que la Sesión estaba agendada".
-const WINDOW_HOURS = 48
-
-// Las fechas de `bookings` son hora local de Argentina (scheduled_date es un
-// `date` y scheduled_time un `text` 'HH:MM'), sin timezone guardada. El resto
-// del proyecto asume lo mismo (ver complete_confirmed_sessions).
-const AR_OFFSET = '-03:00'
+// Las condiciones de §9.3 viven en ../_shared/guarantee.ts: son puras, así que
+// se pueden testear sin levantar Supabase. Esta función solo consulta y escribe.
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   })
-}
-
-/** Fecha+hora agendada como instante real, interpretando la hora de Argentina. */
-function scheduledAt(date: string, time: string): number {
-  return Date.parse(`${date}T${time.slice(0, 5)}:00${AR_OFFSET}`)
 }
 
 /** Deja pasar al service role (curl del runbook) o a un admin logueado (panel).
@@ -137,39 +127,12 @@ serve(async (req) => {
     }, 409)
   }
 
-  // (2) Que se haya pagado de verdad por la Plataforma. Una sesión sin cobro
-  // (coach sin MP conectado) no tiene nada que reintegrar.
-  if (booking.payment_status !== 'aprobado') {
-    failures.push(`el pago está en '${booking.payment_status}', no 'aprobado' — no hay nada que reintegrar`)
-  }
-  if (!booking.payment_id) {
-    failures.push('la reserva no tiene payment_id: nunca se cobró por MP')
-  }
-
-  // (3) Ventana de 48hs desde el horario agendado.
-  const startedAt = scheduledAt(booking.scheduled_date, booking.scheduled_time)
-  const hoursSince = (Date.now() - startedAt) / 3_600_000
-  if (Number.isNaN(startedAt)) {
-    failures.push(`no se pudo interpretar la fecha agendada (${booking.scheduled_date} ${booking.scheduled_time})`)
-  } else if (hoursSince < 0) {
-    failures.push('la sesión todavía no ocurrió: para eso está la cancelación de §9.1, no la garantía')
-  } else if (hoursSince > WINDOW_HOURS) {
-    failures.push(`pasaron ${Math.floor(hoursSince)}hs del horario agendado y la ventana de §9.3 es de ${WINDOW_HOURS}hs`)
-  }
-
-  // (4) Que sea la PRIMERA Sesión de ese vínculo Cliente-Profesional.
+  // (2) a (5) — las cuatro condiciones restantes de §9.3. La evaluación vive en
+  // `_shared/guarantee.ts`, pura y testeada; acá solo se juntan los datos.
   //
-  // Se cuenta con el mismo criterio que la comisión en `mp-create-payment`:
-  // 'completada' + excluyendo checkouts abandonados (preference_id seteado y
-  // payment_status que nunca salió de 'pendiente'). Sin ese filtro, una reserva
-  // basura vieja del par haría que la primera sesión REAL no calificara — el
-  // mismo bug que empujaba a los pares al tramo del 15% antes de la sesión 88.
-  // El "anterior a esta" se compara por fecha Y hora, y se filtra en JS en vez de
-  // encadenar un segundo .or() en la query: PostgREST no compone dos `or` sobre
-  // el mismo request de forma predecible, y comparar solo por `scheduled_date`
-  // dejaba pasar el caso de dos sesiones el MISMO día (la de las 10 y la de las
-  // 15) — la segunda habría calificado como "primera del vínculo". Por par hay
-  // un puñado de filas, así que traerlas sale gratis.
+  // Las sesiones del par se traen enteras y se filtran en JS en vez de encadenar
+  // un segundo `.or()`: PostgREST no compone dos `or` sobre el mismo request de
+  // forma predecible, y por par hay un puñado de filas.
   const { data: pairBookings } = await supabase
     .from('bookings')
     .select('id, scheduled_date, scheduled_time, preference_id, payment_status')
@@ -177,30 +140,24 @@ serve(async (req) => {
     .eq('coach_id', booking.coach_id)
     .eq('status', 'completada')
 
-  const previousOfPair = (pairBookings ?? []).filter((b) => {
-    if (b.id === booking.id) return false
-    // Checkout abandonado que igual llegó a 'completada': no cuenta como sesión.
-    if (b.preference_id && b.payment_status === 'pendiente') return false
-    return scheduledAt(b.scheduled_date, b.scheduled_time) < startedAt
-  }).length
-
-  if (previousOfPair > 0) {
-    failures.push(`ya hubo ${previousOfPair} sesión(es) previa(s) con ese profesional: §9.3 alcanza solo a la primera del vínculo`)
-  }
-
-  // (5) Una sola vez por Cliente en TODA la Plataforma.
-  //
-  // Cuenta APROBADAS, no pedidas: si contara las pedidas, una solicitud
-  // rechazada por abusiva le quemaría el único intento a alguien que después
-  // reclama de forma legítima — y el rechazo dejaría de ser gratis para Vita.
+  // Cuenta APROBADAS, no pedidas: si contara pedidas, un rechazo por abuso le
+  // quemaría el único intento a alguien que después reclama legítimamente.
   const { count: usedBefore } = await supabase
     .from('guarantee_claims')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', booking.user_id)
     .eq('status', 'aprobada')
-  if ((usedBefore ?? 0) > 0) {
-    failures.push('este Cliente ya usó la garantía: §9.3 se ejerce una sola vez en toda la Plataforma')
-  }
+
+  const now = Date.now()
+  const startedAt = scheduledAtMs(booking.scheduled_date, booking.scheduled_time)
+  const hoursSince = (now - startedAt) / 3_600_000
+
+  failures.push(...guaranteeFailures({
+    booking,
+    pairBookings: pairBookings ?? [],
+    approvedClaimsByUser: usedBefore ?? 0,
+    now,
+  }))
 
   if (failures.length > 0) {
     return json({ eligible: false, booking_id: booking.id, reasons: failures }, 422)
