@@ -5,7 +5,9 @@
 
 ---
 
-## 2026-08-13 — Andre (sesión 90)
+## 2026-08-13 / 14 — Andre (sesión 90)
+
+> Sesión larga: arrancó el 13 y siguió el 14. El panel de administración, los tests y el bug que encontraron son del 14.
 
 **Tocado:** nuevos `scripts/add-user-blocking.sql`, `scripts/add-age-confirmation.sql`, `docs/boton-de-arrepentimiento.md`, `docs/eliminar-cuenta.md`, `docs/hosting.md`, `vercel.json`, `web/index.html`, `lib/blocking.ts`, `hooks/useBlockedFilter.ts`, `components/UserActionsSheet.tsx`, `screens/BlockedAccountsScreen.tsx`, `app/cuentas-bloqueadas.tsx`. Modificados `screens/SalaScreen.tsx`, `screens/ProfesionalScreen.tsx`, `screens/FavoritosScreen.tsx`, `screens/QuizScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/RegisterScreen.tsx`, `screens/CoachLoginScreen.tsx`, `screens/CoachApplicationScreen.tsx`, `context/AuthContext.tsx`, `app/search3.tsx`, `app/legal.tsx`, `app/(tabs)/conexiones.tsx`, `scripts/sync-legal.mjs`, `docs/terminos-y-condiciones.md`, `docs/legal-instrucciones.md` + `constants/legal.ts` y `web/legal/*` regenerados. **Dos scripts de schema nuevos — SCHEMA.md ya actualizado.**
 
@@ -112,11 +114,21 @@ Typecheck limpio. Lint sin errores nuevos — el único error que reporta `SalaS
 - La pantalla tiene tres pestañas con contador. Postulaciones ordenadas **de más vieja a más nueva** —es una cola con reloj, hay alguien esperando para poder trabajar— al revés que los reportes de `reports`, que se listan por urgencia.
 - ⚠️ **Tres límites conocidos, escritos en el código y en SCHEMA.md:** (a) **no hay estado de "postulación rechazada"** —una rechazada es indistinguible de una que nadie miró—, por eso el panel solo aprueba; (b) **sin auditoría** de quién aprobó a quién más allá del log de la función (`reports` y `guarantee_claims` sí dejan rastro, `coaches.verified` no); (c) las garantías **se ven pero no se aprueban** desde la pantalla: el intake sigue siendo el mail por §9.3.
 
-Typecheck y lint limpios en los ocho bloques de código. HTML de las 5 páginas validado (anidamiento correcto).
+**Undécimo bloque — primeros tests del proyecto, y un bug real que encontraron:**
+
+- 🔴 **El bug, en código escrito el día anterior.** `Date.parse('xTy:00-03:00')` **no devuelve `NaN`**: devuelve el año 2000. El parser legacy de V8 saca una fecha de casi cualquier cosa, así que la guarda `Number.isNaN` de `scheduledAt` en `guarantee-claim` **nunca se disparaba** — una reserva con fecha corrupta se interpretaba como el 2000 y la solicitud se rechazaba con "pasaron 233337hs" en vez de decir que la fecha no se podía leer. Arreglado validando la forma con regex. Apareció a los diez minutos de escribir el primer test.
+- **Extraída a módulos puros la lógica de plata que vivía inline en las edge functions:** `_shared/commission.ts` (tramos 20/15/0, `marketplace_fee`, filtro de checkouts abandonados) y `_shared/guarantee.ts` (las condiciones de §9.3). **Las dos funciones quedaron cableadas para usarlos** — si no, los tests probarían código que no es el que corre, que es peor que no tener tests.
+- ⚠️ **Divergencia asumida y anotada en el código:** el filtro de checkouts abandonados existe DOS veces, como predicado SQL en la query de `mp-create-payment` y como predicado JS en `countsAsCompletedSession`. Misma regla en dos lenguajes, pueden separarse; el JS es el testeado.
+- **Cambio de comportamiento menor:** con la promo fundador activa, antes el COUNT de sesiones del par se salteaba; ahora corre siempre. Una query de más en un caso que hoy no ocurre.
+- 🔴 **El `npm install` de jest-expo FALLA en este entorno por la red restringida** — mismo motivo que el push a GitHub y el whois de NIC.ar. Los tests están escritos pero **no se pudieron correr con jest**. Lo que sí se hizo: compilar los dos módulos con `tsc` y ejecutar los 36 casos con Node pelado — **36 pasan, 0 fallan**. Valida la lógica, no el arnés.
+- `package.json` ya declara `jest`, `jest-expo`, `@types/jest`, el bloque `jest` y los scripts `test` / `test:watch`. ⚠️ **`npx tsc --noEmit` reporta errores en `__tests__` hasta que se corra `npm install`** (faltan los tipos): no es una regresión.
+
+Typecheck y lint limpios en los ocho bloques de código (los tests quedan afuera hasta el `npm install`). HTML de las 5 páginas validado (anidamiento correcto).
 
 **Pendiente para la próxima sesión:**
 - ~~Poner el panel en marcha~~ — **hecho y verificado el 14/08**: script corrido, **dos cuentas** marcadas `is_admin` (Andre y su hermano), `admin-actions` deployada y `guarantee-claim` re-deployada (v1 → v2). Sondeo: `admin-actions` con anon key devuelve `{"error":"token inválido"}`, que es respuesta del propio código y prueba que la anon key no sirve para hacerse pasar por un usuario. ⚠️ Con dos admins, la falta de auditoría en `coaches.verified` pesa más — quién aprobó a quién queda solo en el log de la función.
 - 🔴 **Probar el panel en el celular.** Es lo único que no se puede verificar con una query ni con un sondeo: que aparezca "Administración" en el perfil (**hay que cerrar y reabrir la app** — `is_admin` se lee al resolver la sesión), que liste las postulaciones pendientes, y sobre todo **que aprobar realmente publique al coach** (que pase a `verified` y aparezca en Conexiones). Probar también con una cuenta NO admin que la entrada no se vea.
+- 🔴 **`npm install` + `npm test` desde tu Terminal**, y **re-deployar `guarantee-claim` y `mp-create-payment`**, que cambiaron al cablearlos a los módulos compartidos. **Hasta el re-deploy, el bug de la fecha sigue vivo en producción.**
 - 🔴 **Probar en el celular que `lock-privileged-columns.sql` no rompió ningún guardado.** La lista de columnas otorgadas salió de auditar el código, pero si me faltó alguna ese guardado empieza a fallar. Probar: perfil de usuario (nombre, género, nacionalidad, fecha, foto) y del lado coach precio, bio, switch de reserva instantánea y toggle disponible/en pausa. **Es la única parte de ese fix que no se pudo verificar con una query.**
 - ~~Correr `scripts/add-age-confirmation.sql`~~ — **corrido y verificado**: `information_schema.columns` devuelve `age_confirmed` / `boolean` / `is_nullable = NO` / `default false`. Prod ya guarda la constancia.
 - ~~Correr `scripts/add-user-blocking.sql`~~ — **corrido por Andre y verificado en la misma sesión**: `pg_trigger` devuelve las 2 filas esperadas y `pg_get_functiondef` la definición de `are_blocked`. Prod ya tiene el bloqueo. **Anotado para la próxima vez:** el SQL editor de Supabase muestra solo el resultado de la ÚLTIMA sentencia cuando se corren varias juntas — la primera verificación se perdió en silencio y parecía que no había devuelto nada. Correrlas por separado.
