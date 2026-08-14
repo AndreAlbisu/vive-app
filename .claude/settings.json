@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if git remote get-url andre >/dev/null 2>&1; then HAS_ANDRE=1; else HAS_ANDRE=0; fi; if [ \"$HAS_ANDRE\" = 1 ]; then git fetch andre 2>&1; fi; git fetch origin 2>&1; if [ \"$HAS_ANDRE\" = 1 ]; then AHEAD=$(git rev-list HEAD..andre/main --count 2>/dev/null || echo 0); if [ \"$AHEAD\" -gt 0 ]; then git merge --no-edit andre/main || exit 2; fi; fi; git push origin main || exit 2; if [ \"$HAS_ANDRE\" = 1 ]; then git push andre main || exit 2; fi",
+            "command": "if git remote get-url andre >/dev/null 2>&1; then HAS_ANDRE=1; else HAS_ANDRE=0; fi; if [ \"$HAS_ANDRE\" = 1 ]; then git fetch andre 2>&1; fi; git fetch origin 2>&1; if [ \"$HAS_ANDRE\" = 1 ]; then AHEAD=$(git rev-list HEAD..andre/main --count 2>/dev/null || echo 0); if [ \"$AHEAD\" -gt 0 ]; then git merge --no-edit andre/main || exit 2; fi; fi; git push origin main || echo \"[hook] no se pudo pushear a origin (¿sin credenciales en este entorno?) — los commits quedan locales\"; if [ \"$HAS_ANDRE\" = 1 ]; then git push andre main || exit 2; fi",
             "if": "Bash(git commit*)",
             "statusMessage": "Sincronizando con GitHub...",
             "asyncRewake": true
