@@ -131,7 +131,7 @@ export default function MisRecomendacionesScreen() {
                       </View>
                       {isNew && <View style={s.recDot} />}
                     </View>
-                    {item.note ? <Text style={s.recNote} numberOfLines={4}>"{item.note}"</Text> : null}
+                    {item.note ? <Text style={s.recNote} numberOfLines={4}>“{item.note}”</Text> : null}
                     <ScaleCard style={s.recAttach} onPress={() => openReco(item)} activeOpacity={0.92}>
                       <View style={[s.recAttachIcon, { backgroundColor: color }]}>
                         <Ionicons name={FORMAT_ICON[res.format] ?? 'book-outline'} size={16} color="#fff" />

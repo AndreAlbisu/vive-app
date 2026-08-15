@@ -337,7 +337,7 @@ export default function CoachRecursoNuevoScreen() {
           </TouchableOpacity>
 
           <Text style={s.submitHint}>
-            Tu recurso quedará en estado "Pendiente" hasta que lo revisemos.{'\n'}
+            Tu recurso quedará en estado “Pendiente” hasta que lo revisemos.{'\n'}
             Te avisamos cuando esté publicado o si necesita ajustes.
           </Text>
 

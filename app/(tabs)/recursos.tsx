@@ -349,7 +349,7 @@ function CoachRecoSection({
                 {isNew && <View style={s.recDot} />}
               </View>
               {item.note ? (
-                <Text style={s.recNote} numberOfLines={4}>"{item.note}"</Text>
+                <Text style={s.recNote} numberOfLines={4}>“{item.note}”</Text>
               ) : null}
               <ScaleCard style={s.recAttach} onPress={() => onPress(item)} activeOpacity={0.92}>
                 <View style={[s.recAttachIcon, { backgroundColor: color }]}>

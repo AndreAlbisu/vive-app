@@ -1124,7 +1124,7 @@ export default function SalaScreen() {
                     </View>
                     <View style={styles.recoCardBody}>
                       <Text style={styles.recoCardTitle} numberOfLines={2}>{meta.resource_title}</Text>
-                      {meta.note ? <Text style={styles.recoCardNote} numberOfLines={2}>"{meta.note}"</Text> : null}
+                      {meta.note ? <Text style={styles.recoCardNote} numberOfLines={2}>“{meta.note}”</Text> : null}
                       <TouchableOpacity
                         style={[styles.recoCardBtn, { backgroundColor: cardColor }]}
                         onPress={() => {

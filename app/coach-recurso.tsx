@@ -505,7 +505,7 @@ export default function CoachRecursoScreen() {
           {noteText && fromCoachNameText ? (
             <View style={s.recoNoteBanner}>
               <Text style={s.recoNoteBannerText}>
-                <Text style={s.recoNoteBannerBold}>{fromCoachNameText}</Text> te dijo: "{noteText}"
+                <Text style={s.recoNoteBannerBold}>{fromCoachNameText}</Text> te dijo: “{noteText}”
               </Text>
             </View>
           ) : null}
