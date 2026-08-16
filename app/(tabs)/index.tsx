@@ -21,6 +21,7 @@ import { ScaleCard } from '@/components/ScaleCard';
 import { MoodCheckIn } from '@/components/MoodCheckIn';
 import { CoachSuggestionCard } from '@/components/CoachSuggestionCard';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import { VitaMark } from '@/components/VitaMark';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
@@ -505,52 +506,42 @@ const s = StyleSheet.create({
   },
   // ── 3. Sobre vos ───────────────────────────────────────────────────────────
   sobreVosCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
     marginHorizontal: 18,
     marginBottom: 22,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
-    // Más aire que antes: la tarjeta ya no compite con un gráfico y tres
-    // números, así que el mensaje puede respirar.
+    borderRadius: 26,
+    // Crema plano, sin gradiente ni borde: la referencia es una superficie
+    // tranquila donde lo único que pesa es el texto.
+    backgroundColor: '#F4EFE4',
     paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 16,
+    paddingVertical: 22,
+  },
+  sobreVosMark: {
+    // `alignSelf: flex-start` a propósito — con mensajes de cuatro líneas la
+    // marca centrada verticalmente queda flotando lejos del rótulo.
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  sobreVosBody: {
+    flex: 1,
   },
   sobreVosEyebrow: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 10.5,
-    color: 'rgba(135,131,92,0.72)',
-    letterSpacing: 0.8,
+    fontSize: 11,
+    color: ViveColors.primary,
+    letterSpacing: 1.4,
     textTransform: 'uppercase',
     marginBottom: 10,
   },
   sobreVosHeadline: {
-    // ⚠️ SemiBold, no Bold. Antes esta línea y `sobreVosHeadlineBold` usaban
-    // las dos `frauncesSerif` (Fraunces_700Bold), así que el fragmento que la
-    // devolución elige destacar se renderizaba idéntico al resto y el énfasis
-    // no se veía. Ahora el cuerpo es 600 y el destacado 700.
-    fontFamily: ViveFonts.frauncesSemiBold,
-    fontSize: 20,
-    lineHeight: 28,
-    color: '#3F512F',
-    marginBottom: 18,
-  },
-  sobreVosHeadlineBold: {
-    fontFamily: ViveFonts.frauncesSerif,
-  },
-  sobreVosCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#3F512F',
-    borderRadius: 24,
-    paddingVertical: 13,
-  },
-  sobreVosCtaText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 13.5,
-    color: '#F3EEDF',
+    // Sans, no serif: la referencia usa la tipografía de interfaz, no la de
+    // títulos. Interlineado generoso porque el mensaje puede ir a 3-4 líneas.
+    fontFamily: ViveFonts.regular,
+    fontSize: 16.5,
+    lineHeight: 26,
+    color: '#3F3D36',
   },
   sparkTooltip: {
     position: 'absolute',
@@ -740,38 +731,35 @@ const s = StyleSheet.create({
 // ─── Sobre vos ──────────────────────────────────────────────────────────────
 
 
-/** La tarjeta que le habla a la persona. Muestra SOLO el mensaje: los datos que
- *  antes vivían acá (sparkline, semanas activas, áreas, sesiones) están en
- *  `/progreso`, que es adonde lleva el tap. */
+/** La tarjeta que le habla a la persona.
+ *
+ *  Es SOLO el mensaje: la marca a la izquierda, el rótulo y la devolución.
+ *  El sparkline, los tres números y el badge de racha vivían acá duplicando lo
+ *  que ya muestra `/progreso` —que es justo adonde lleva el tap— y hacían que
+ *  la frase se leyera como el título de un tablero en vez de como algo dicho.
+ *
+ *  Sin botón: toda la tarjeta es el área táctil. */
 function SobreVosCard({ reflection, onPress }: { reflection: Reflection; onPress: () => void }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
-      <LinearGradient
-        colors={['#F7F2E7', '#EAE2D0']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0.47, y: 1 }}
-        style={s.sobreVosCard}>
-        {/* El badge de racha también salió: la devolución YA puede ser sobre la
-            racha ("Van 5 días seguidos que registrás cómo venís"), y tenerlo al
-            lado repetía el mismo dato en la misma tarjeta. */}
-        <Text style={s.sobreVosEyebrow}>Tu semana</Text>
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      style={s.sobreVosCard}
+      accessibilityRole="button"
+      // Sin botón visible, el tap no se anuncia solo: el hint es lo único que
+      // le dice a un lector de pantalla que esto lleva a algún lado.
+      accessibilityLabel={`${reflection.before}${reflection.bold}${reflection.after}`}
+      accessibilityHint="Abre tu progreso completo">
+      <View style={s.sobreVosMark}>
+        <VitaMark size={54} />
+      </View>
 
-        {/* La tarjeta es el mensaje. El sparkline y los tres números
-            (semanas activas / áreas / sesiones) se sacaron a propósito: vivían
-            acá duplicando lo que ya muestra `/progreso`, que es justo adonde
-            lleva el tap. Con los datos al lado, la frase competía con ellos y
-            se leía como el título de un tablero en vez de como algo dicho. */}
+      <View style={s.sobreVosBody}>
+        <Text style={s.sobreVosEyebrow}>Sobre vos</Text>
         <Text style={s.sobreVosHeadline}>
-          {reflection.before}
-          {reflection.bold ? <Text style={s.sobreVosHeadlineBold}>{reflection.bold}</Text> : null}
-          {reflection.after}
+          {reflection.before}{reflection.bold}{reflection.after}
         </Text>
-
-        <View style={s.sobreVosCta}>
-          <Text style={s.sobreVosCtaText}>Ver tu progreso completo</Text>
-          <MaterialCommunityIcons name="arrow-right" size={16} color="#F3EEDF" />
-        </View>
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 }
