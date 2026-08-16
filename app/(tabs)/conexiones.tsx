@@ -550,7 +550,7 @@ export default function ConexionesScreen() {
             /* ── Fase 1: ejes de bienestar ──────────────────────────────── */
             <>
               <View style={s.askWrap}>
-                <Text style={[s.askTitle, s.askTitleGreeting]}>¿Qué te gustaría{'\n'}trabajar hoy?</Text>
+                <Text style={[s.askTitle, s.askTitleGreeting]}>Encontrá a alguien que{'\n'}pueda acompañarte.</Text>
                 <Text style={s.askSub}>Elegí un área de bienestar para empezar</Text>
               </View>
 
@@ -779,8 +779,8 @@ const s = StyleSheet.create({
     color: FOREST,
     lineHeight: 32,
   },
-  // Solo para "¿Qué te gustaría trabajar hoy?" — misma tipografía que
-  // greetingLine2 ("¿Cómo venís hoy?") en Inicio, sin tocar el askTitle
+  // Solo para "Encontrá a alguien que pueda acompañarte." — misma tipografía
+  // que greetingLine2 ("¿Cómo venís hoy?") en Inicio, sin tocar el askTitle
   // compartido con el título de Fase 2 (nombre del eje elegido).
   askTitleGreeting: {
     fontFamily: ViveFonts.regular,
