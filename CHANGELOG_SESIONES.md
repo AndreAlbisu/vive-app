@@ -19,8 +19,16 @@
 - **El aviso de "en desarrollo"** quedó en un solo lugar, justo arriba de las opciones ("Todavía estoy aprendiendo a conversar. Mientras tanto, elegí una de estas opciones:") — se evitó duplicarlo con una frase parecida bajo el input; ahí quedó una línea distinta y específica sobre el campo de texto en sí ("Muy pronto vas a poder escribirme directamente").
 - Typecheck, lint y 140/140 tests limpios.
 
+**Fix al toque, mismo commit: Joaquín probó y seguía lagueado — mismo síntoma que `SobreVosMomento`, ni rasterizar ni diferir la animación alcanzaron.**
+- 🔴 **Diagnóstico: el problema de fondo es `<Modal>` en sí, no algo arreglable con trucos de animación.** `Modal` arma una pantalla nativa nueva (`UIViewController` en iOS) cada vez que se abre — ese costo de montaje es del sistema, no del hilo de JS, así que ni rasterizar ni `InteractionManager` lo tocan.
+- **Se sacó `Modal` de `SofiaAssistant.tsx` — ahora es un `View` absoluto normal.** Viable acá porque el componente ya está montado como sibling de `<Tabs>` en `app/(tabs)/_layout.tsx`, no dentro de una pantalla — no hace falta la garantía de "por encima de todo" que da `Modal`, un `View` con `position:absolute` alcanza igual de bien y sale gratis el costo de montaje nativo.
+- Repuesto a mano el botón físico de "atrás" en Android (`BackHandler`), que antes venía gratis con `Modal`'s `onRequestClose`.
+- ⚠️ **`SobreVosMomento.tsx` NO puede aplicar el mismo arreglo tal cual** — vive DENTRO del árbol de la pantalla de Inicio, no al lado de `<Tabs>`. Un `View` absoluto ahí quedaría por DEBAJO de la isla de tabs (que la arma `<Tabs>` por fuera, como su propio `tabBar` prop), no por encima. Para aplicar el mismo arreglo ahí hace falta mover el estado del momento al nivel del layout (como ya está Sofía) y que Inicio solo dispare un evento/callback hacia arriba — cambio de arquitectura más grande, no se hizo especulativamente.
+- Typecheck, lint y 140/140 tests limpios.
+
 **Pendiente para la próxima sesión:**
-- Probar en el dev build que la hoja no se sienta lagueada al abrir (ya se aplicaron las dos mitigaciones que funcionaron para `SobreVosMomento`, pero no se verificó en dispositivo para ESTA hoja específicamente).
+- Confirmar que Sofía ahora sí se siente fluida.
+- **Decidir si vale la pena mover `SobreVosMomento` al mismo patrón** (sin `Modal`, montado al nivel del layout) — mismo diagnóstico, arreglo más grande.
 
 ## 2026-08-16 — Joaquín (sesión 95)
 

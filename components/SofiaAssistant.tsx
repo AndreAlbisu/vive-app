@@ -9,9 +9,9 @@ import {
   PanResponder,
   Platform,
   Dimensions,
-  Modal,
   Easing,
   InteractionManager,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -29,11 +29,18 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 //
 // El orbe se arrastra con `PanResponder` + `Animated.ValueXY` (mismo mecanismo
 // que ya usa el slider de filtros de app/search3.tsx). Al tocarlo (sin
-// arrastrar) abre un panel a pantalla casi completa — `Modal` + `Animated.View`
-// propios, mismo patrón que `SobreVosMomento.tsx`: rasterizado
-// (`shouldRasterizeIOS`/`renderToHardwareTextureAndroid`) y arranque de la
-// animación diferido con `InteractionManager` para que no se sienta lagueado,
-// lección aprendida en esa misma feature.
+// arrastrar) abre un panel a pantalla casi completa.
+//
+// ⚠️ A propósito, SIN `<Modal>`: se probó con Modal + las mismas mitigaciones
+// que lleva `SobreVosMomento.tsx` (rasterizado, animación diferida con
+// InteractionManager) y igual se sentía lento — `Modal` arma una pantalla
+// nativa nueva cada vez que se abre, y ese costo no se puede evitar desde
+// nuestro lado con trucos de animación. Como este componente ya está montado
+// arriba de `<Tabs>` (no dentro de una pantalla), no hace falta Modal para
+// quedar por encima de todo — un View absoluto normal alcanza y sale gratis
+// ese costo. `SobreVosMomento.tsx` no puede aplicar el mismo arreglo todavía:
+// vive DENTRO del árbol de Inicio, no al lado de `<Tabs>`, así que un View
+// absoluto ahí quedaría por DEBAJO de la isla de tabs en vez de por encima.
 
 const FOREST = '#3F512F'; // color propio de Sofía — ViveColors.primary (terracota)
                            // se parecía demasiado al avatar del perfil.
@@ -148,6 +155,18 @@ export function SofiaAssistant() {
     setOpen(false);
   }
 
+  // Sin `Modal`, se pierde gratis el manejo del botón físico de "atrás" en
+  // Android — se repone a mano, mismo comportamiento de antes (cierra el
+  // panel en vez de salir de la pantalla de abajo).
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !open) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      close();
+      return true;
+    });
+    return () => sub.remove();
+  }, [open]);
+
   function goTo(route: Href) {
     close();
     router.push(route);
@@ -170,11 +189,13 @@ export function SofiaAssistant() {
         </Animated.View>
       )}
 
-      <Modal transparent visible={mounted} animationType="none" onRequestClose={close}>
+      {mounted && (
         <Pressable style={StyleSheet.absoluteFillObject} onPress={close} accessibilityLabel="Cerrar el asistente">
           <Animated.View style={[StyleSheet.absoluteFillObject, styles.backdrop, { opacity: backdropOpacity }]} />
         </Pressable>
+      )}
 
+      {mounted && (
         <Animated.View
           style={[
             styles.sheet,
@@ -246,7 +267,7 @@ export function SofiaAssistant() {
             <Text style={styles.caption}>El chat está en desarrollo — probá las opciones de arriba mientras tanto</Text>
           </View>
         </Animated.View>
-      </Modal>
+      )}
     </View>
   );
 }
