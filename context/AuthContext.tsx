@@ -247,10 +247,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return motivo || 'Google rechazó el inicio de sesión';
       }
 
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(res.url);
+      // 🔴 `exchangeCodeForSession` espera el CÓDIGO, no la URL de retorno.
+      // Manda su argumento tal cual como `auth_code` al servidor, sin parsear
+      // nada (ver `_exchangeCodeForSession` en @supabase/auth-js). Pasarle
+      // `res.url` entera hacía que GoTrue buscara un flow state para
+      // "viveapp://auth/callback?code=…" completo y contestara
+      // `invalid flow state, no valid flow state found` — un mensaje que suena a
+      // problema de configuración del servidor y era un argumento mal armado.
+      //
+      // Se extrae con regex y no con `new URL()`: el polyfill de URL de React
+      // Native no maneja bien los schemes propios.
+      const code = res.url.match(/[?&]code=([^&]+)/)?.[1];
+      if (!code) {
+        console.log('[auth] volvió sin código:', res.url.slice(0, 120));
+        return 'Google no devolvió el código de acceso. Probá de nuevo.';
+      }
+
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(decodeURIComponent(code));
       if (exchangeError) {
         // El mensaje traducido se lo lleva la persona; el crudo va al log,
         // porque `translateError` colapsa causas distintas en un mismo texto.
+        // ⚠️ El SDK borra el code verifier incluso cuando el canje falla, así
+        // que un reintento tiene que arrancar el flujo de cero — no alcanza con
+        // volver a canjear el mismo código.
         console.log('[auth] falló el canje:', exchangeError.message);
         return translateError(exchangeError.message);
       }
