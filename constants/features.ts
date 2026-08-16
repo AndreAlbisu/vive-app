@@ -7,8 +7,11 @@
  * 🔴 **Queda en `false` hasta que haya respuesta legal.** Aunque lo que sale
  * del dispositivo es mínimo —el nombre de la señal, el tono y dos números, sin
  * valores de ánimo ni texto libre— sigue siendo una transferencia
- * internacional que hay que encuadrar. La consulta está redactada en
- * `docs/legal-instrucciones.md`, Paso 3.
+ * internacional que hay que encuadrar.
+ *
+ * 📌 **La consulta y los cuatro pasos para encenderla están en
+ * `docs/legal-instrucciones.md`: la pregunta en el Paso 3, qué hacer con cada
+ * respuesta posible en el Paso 5.1.** No prendas esto sin pasar por ahí.
  *
  * Con esto en `false` la app usa el texto determinístico de
  * `lib/weeklyReflection.ts`, que es igual el piso cuando no hay red o el

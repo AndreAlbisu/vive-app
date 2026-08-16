@@ -16,7 +16,11 @@ los otros dos archivos.
 > "borrador pendiente de revisión" mientras queden placeholders `[ ]` sin completar;
 > cuando se completen todos, el aviso desaparece solo (bandera `LEGAL_IS_DRAFT`).
 
-## Los 4 pasos, en orden
+## Los 5 pasos, en orden
+
+> Los pasos 1 a 4 llevan los documentos hasta publicarlos. El **Paso 5** es lo
+> que queda esperando del otro lado: dos features construidas o evaluadas que
+> no se encienden hasta que haya respuesta legal.
 
 ### Paso 1 — Completar los placeholders `[ ]`
 Datos de la empresa y de contacto que solo tenés vos. Checklist consolidado (ambos documentos):
@@ -158,8 +162,67 @@ Una vez revisados y aprobados:
 - [ ] ⚠️ **Las columnas de aceptación son falsificables por su propio titular.** `accepted_terms`, `accepted_terms_at`, `accepted_terms_version` y `age_confirmed` las escribe el cliente desde `AuthContext`, y aunque `scripts/lock-privileged-columns.sql` limita el UPDATE a esas columnas, su dueño sigue pudiendo escribirlas — por ejemplo una versión vieja para sostener que aceptó otro texto. El daño es acotado (solo su propia fila) pero debilita justo el valor probatorio para el que existen. Cerrarlo exige mover esa escritura a una edge function en el alta. Detectado 13/08/2026.
 - [ ] **Etiquetas de las tiendas.** Completar las *App Privacy labels* (Apple) y el *formulario de seguridad de los datos* (Google) de forma **consistente** con lo que declara la Política (datos sensibles incluidos).
 
+---
+
+## Paso 5 — Decisiones que esperan la respuesta legal
+
+Esta sección existe porque el resto del archivo está escrito **hacia** el
+abogado/a: son las preguntas. Acá va lo de **después** — qué hacer con cada
+respuesta. Sin esto, la respuesta llega y no queda registrado en ningún lado
+qué se destraba con ella.
+
+**Nada de lo de abajo está pendiente de programar.** Está construido, apagado y
+sin deployar. Lo que falta es una decisión, no trabajo.
+
+### 5.1 — Devolución escrita por IA en Inicio 🔒 apagada
+
+Lo construido está en el duodécimo y decimotercer bloque del changelog del
+15-16/08/2026. La consulta correspondiente es la **segunda** del Paso 3
+("Segunda consulta, más chica").
+
+| Estado | Dónde |
+|---|---|
+| Flag del cliente | `constants/features.ts` → `AI_REFLECTION_ENABLED` (`false`) |
+| Flag del servidor | ausencia de `ANTHROPIC_API_KEY` → la función devuelve 503 |
+| Edge function | `supabase/functions/weekly-reflection/` — **escrita, no deployada** |
+| Guardarraíl | `rejectCopy()` en `lib/weeklyReflection.ts`, con tests |
+| Piso si algo falla | las reglas de `buildReflection()` — la app funciona igual |
+
+**Si la respuesta es que el payload NO es dato sensible** (una etiqueta de
+categoría y tres enteros, sin identificador):
+1. Declarar al proveedor de IA en **Política §6** como destinatario, y la
+   transferencia internacional en **§7**.
+2. Cargar `ANTHROPIC_API_KEY` en Supabase.
+3. `npx supabase functions deploy weekly-reflection`.
+4. `EXPO_PUBLIC_AI_REFLECTION=true` y rebuild.
+
+Los cuatro son independientes y **cualquiera que falte deja la app en el texto
+determinístico sin romperse** — se puede avanzar de a uno.
+
+**Si la respuesta es que SÍ es dato sensible:** hace falta consentimiento
+específico y separado, con su propia pantalla, antes de encenderlo. En ese caso
+conviene evaluar si vale la pena: la ganancia es de redacción, no de
+funcionalidad, y el costo pasa a ser una fricción nueva en el onboarding.
+
+**Si la respuesta no llega o queda en duda:** no hay que hacer nada. Es el
+estado actual y la tarjeta funciona.
+
+### 5.2 — Recomendación de profesional asistida por IA 🔒 sin construir
+
+Corresponde a la **primera** consulta del Paso 3. A diferencia de 5.1, acá no
+hay nada escrito todavía — evaluado en 8/10 de viabilidad, con el grueso del
+trabajo ya hecho (el contrato de salida es el mismo que produce hoy el quiz).
+
+🔴 **Requisito de producto que no depende de la respuesta legal:** la detección
+de crisis tiene que ser **determinística y correr ANTES del modelo**. Si el
+texto trae expresiones de riesgo, el flujo corta y muestra las líneas de
+T&C §5.3 (911 / 135) sin devolver recomendación ni precio. Eso se construye
+primero, o no se construye nada.
+
 ## Mantenimiento
 - Actualizar la **fecha** de cada documento cada vez que cambie.
+- **Revisar el Paso 5 apenas vuelva el abogado/a**, aunque la consulta haya sido
+  por otra cosa: son las dos features que quedaron esperando una respuesta.
 - Re-revisar con el abogado ante cambios relevantes del producto (nuevos datos que se recolecten, nuevos proveedores, cambio de modelo de pago, etc.).
 - Mantener la sección de mensajería (T&C §15 / Política §8.2) **siempre consistente con la realidad técnica**: mientras no haya cifrado de extremo a extremo real, no afirmarlo.
 
