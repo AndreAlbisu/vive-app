@@ -99,6 +99,31 @@ Preguntas concretas:
 - [ ] **Responsabilidad.** Si la sugerencia resulta inadecuada para el cuadro de la persona,
       ¿qué exposición genera, y qué redacción la acota sin volverla una cláusula abusiva?
 
+#### Segunda consulta, más chica — devolución escrita por IA en la pantalla de inicio
+
+**Construida y apagada** (`constants/features.ts`, `AI_REFLECTION_ENABLED = false`).
+Se anota aparte de la anterior porque **el dato que sale es mucho menor**, y eso
+puede cambiar la respuesta:
+
+> La app le muestra a la persona una frase sobre su semana ("Tu semana viene
+> pareja. No todo tiene que ser un antes y un después"). **Qué decir lo decide un
+> algoritmo en el propio teléfono**, con reglas fijas. Lo único que se le pide a
+> un modelo de lenguaje externo es **redactar esa frase**.
+>
+> Lo que viaja al proveedor es: el nombre de la señal que eligió el algoritmo
+> (`trend-up`, `streak`…), un tono (`gentle`/`neutral`/`warm`) y dos o tres
+> números que ya aparecen en el texto (días de racha, sesiones de la semana,
+> prácticas). **NO viajan los valores de ánimo, ni el historial, ni una sola
+> palabra escrita por la persona.** En los hechos se transmite *"la app decidió
+> decir algo alentador"*, no un estado emocional.
+
+- [ ] ¿Ese payload —una etiqueta de categoría y tres enteros, sin identificador
+      de la persona— constituye tratamiento de dato **sensible**, o queda fuera
+      por no ser información sobre la salud de un titular identificable?
+- [ ] Si queda fuera, ¿alcanza con declarar al proveedor en Política §6 como
+      destinatario, sin el consentimiento específico que sí pediría el punto
+      anterior?
+
 ⚠️ **Independiente de la respuesta legal, hay un requisito de producto que no se negocia:**
 la detección de crisis tiene que ser **determinística y correr ANTES del modelo**, no
 después ni a cargo de él. Si el texto contiene expresiones de riesgo, el flujo corta y

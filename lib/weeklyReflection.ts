@@ -37,6 +37,81 @@
 
 export type ReflectionTone = 'gentle' | 'neutral' | 'warm';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Guardarraíl para el texto que escribe un modelo
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Las reglas de abajo garantizan su propia salida con tests. Un modelo no: hay
+// que revisar lo que devuelve ANTES de mostrarlo. Esto es lo mismo que los
+// tests verifican sobre las reglas, pero corriendo en producción sobre cada
+// frase generada — y lo que decide caer al texto determinístico.
+//
+// El criterio para agregar una regla acá es que su violación sea un daño, no
+// un matiz de estilo. Una frase apenas rara se muestra; una que le asigna
+// género a quien lee, o que anima a alguien que hoy cayó fuerte, no.
+
+// ⚠️ `\b` de JavaScript NO sirve para cerrar una palabra en español. Se define
+// sobre `\w` = [A-Za-z0-9_], así que una vocal acentuada ya cuenta como
+// "no-palabra": en "reservá" no hay borde después de la `á` —los dos lados son
+// no-word— y por eso `/\breservá\b/` **nunca matchea**. Un guardarraíl escrito
+// así deja pasar justo lo que tiene que frenar, y en silencio.
+//
+// El arranque con `\b` sí es correcto (todos estos patrones empiezan con letra
+// ASCII); lo que hay que reemplazar es el cierre, con un lookahead que
+// contemple acentos y ñ. Se evita `lookbehind` a propósito: no está garantizado
+// en todos los motores de JS de React Native.
+const FIN = '(?![a-záéíóúüñ])';
+const re = (body: string) => new RegExp(body.replace(/#/g, FIN), 'i');
+
+/** Adjetivo que generiza a la persona: "venís cansada", "venís sostenido". */
+const GENDERED = /\bven[íi]s\s+(?!a |m[áa]s |un |bien|mejor|peor|para |atravesando|levantando)\w+(ada|ado|osa|oso|ida|ido)\b/i;
+
+/** Vocabulario clínico o de diagnóstico. La app acompaña, no diagnostica. */
+const CLINICAL = /\b(depresi[óo]n|depresiv|ansiedad generalizada|trastorno|s[íi]ntoma|diagn[óo]stic|patol[óo]g|terapia cognitiv|episodio)/i;
+
+/** Promesas y tono de gurú, prohibidos por el brief de marca. */
+const GURU = re('\\b(transformar[áa]#|vas a lograr#|te lo mereces#|el universo#|energ[íi]a positiva#|todo pasa por algo#|s[óo]lo depende de vos#|solo depende de vos#)');
+
+/** Con tono `gentle` no se anima ni se pide nada: alguien la está pasando mal
+ *  y arriba ya hay una tarjeta sugiriendo hablar con un profesional. */
+const CHEER = re('\\b(felicit[a-záéíóúñ]*#|buen[íi]simo#|excelente#|genial#|orgullo[a-záéíóúñ]*#|segu[íi] as[íi]#|no bajes los brazos#)');
+const ASKS  = re('\\b(reserv[áa]#|prob[áa]#|anot[áa]te#|escrib[íi]le#|agend[áa]#|clicke[áa]#|toc[áa] (ac[áa]|aqu[íi])#)');
+
+export type CopyRejection =
+  | 'vacío' | 'muy corto' | 'muy largo' | 'genera a la persona'
+  | 'lenguaje clínico' | 'tono gurú' | 'anima en tono suave' | 'pide una acción en tono suave'
+  | 'signos de exclamación' | 'markdown o comillas';
+
+/** ¿Se puede mostrar esta frase? `null` = sí. Si no, el motivo — que se loguea
+ *  para poder ver qué rechaza el guardarraíl sin tener que adivinar. */
+export function rejectCopy(text: string, tone: ReflectionTone): CopyRejection | null {
+  const t = text.trim();
+  if (!t) return 'vacío';
+
+  // Los límites salen de la forma que ya tienen las frases de las reglas: dos
+  // oraciones. Menos de 6 palabras es un rótulo; más de 45 no entra en la
+  // tarjeta sin empujar todo lo de abajo.
+  const words = t.split(/\s+/).length;
+  if (words < 6) return 'muy corto';
+  if (words > 45) return 'muy largo';
+
+  // Un modelo que devuelve markdown o se pone a citar está respondiendo a otra
+  // pregunta, no escribiendo la línea.
+  if (/[*_#`]|^["“']/.test(t)) return 'markdown o comillas';
+  if (/!/.test(t)) return 'signos de exclamación';
+
+  if (GENDERED.test(t)) return 'genera a la persona';
+  if (CLINICAL.test(t)) return 'lenguaje clínico';
+  if (GURU.test(t)) return 'tono gurú';
+
+  if (tone === 'gentle') {
+    if (CHEER.test(t)) return 'anima en tono suave';
+    if (ASKS.test(t)) return 'pide una acción en tono suave';
+  }
+
+  return null;
+}
+
 export type Reflection = {
   before: string;
   bold: string;

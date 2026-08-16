@@ -1,4 +1,4 @@
-import { buildReflection, type ReflectionInput } from '@/lib/weeklyReflection';
+import { buildReflection, rejectCopy, type ReflectionInput } from '@/lib/weeklyReflection';
 import { localDayKey, localDayKeyMinus } from '@/lib/dates';
 
 // Base neutra: sin actividad, sin racha, sin histórico. Cada test enciende
@@ -347,5 +347,112 @@ describe('localDayKey — la fecha del usuario, no la de UTC', () => {
   it('retrocede días cruzando el borde de mes', () => {
     expect(localDayKeyMinus(1, new Date(2026, 8, 1, 12, 0, 0))).toBe('2026-08-31');
     expect(localDayKeyMinus(7, new Date(2026, 7, 15, 12, 0, 0))).toBe('2026-08-08');
+  });
+});
+
+describe('rejectCopy — el guardarraíl sobre lo que escribe un modelo', () => {
+  // Las reglas garantizan su salida con los tests de arriba. Un modelo no:
+  // hay que revisar cada frase ANTES de mostrarla. Esto es lo que decide caer
+  // al texto determinístico.
+
+  it('deja pasar una devolución bien escrita', () => {
+    expect(rejectCopy('Algo se acomodó esta semana. Vale la pena registrar qué hiciste distinto.', 'warm')).toBeNull();
+    expect(rejectCopy('Tu semana viene pareja. No todo tiene que ser un antes y un después.', 'neutral')).toBeNull();
+    expect(rejectCopy('Un día flojo no borra la semana. Mañana es otro día y no le debés nada a nadie.', 'gentle')).toBeNull();
+  });
+
+  it('acepta las nueve frases que producen las reglas', () => {
+    // El guardarraíl no puede ser más estricto que el piso al que cae: si
+    // rechazara el texto determinístico, encender la IA dejaría la tarjeta
+    // oscilando entre dos cosas que el propio código considera inaceptables.
+    const casos: Partial<ReflectionInput>[] = [
+      {}, { sharpDrop: true },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3] },
+      { recentMoods: [2, 2, 1], historicMoods: [1, 1, 1] },
+      { recentMoods: [4, 4, 5], historicMoods: [3, 3, 2] },
+      { recentMoods: [2, 3, 2], historicMoods: [4, 4, 3] },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], sessionsThisWeek: 2 },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], streak: 6 },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], resourcesThisWeek: 3 },
+    ];
+    for (const dayKey of ['2026-12-01', '2026-12-02', '2026-12-03', '2026-12-04']) {
+      for (const c of casos) {
+        const r = buildReflection(on({ ...c, dayKey }));
+        expect(rejectCopy(`${r.before}${r.bold}${r.after}`, r.tone)).toBeNull();
+      }
+    }
+  });
+
+  it('rechaza lo que le asigna un género a quien lee', () => {
+    expect(rejectCopy('Venís cansada esta semana, pero seguís apareciendo igual.', 'neutral')).toBe('genera a la persona');
+    expect(rejectCopy('Venís sostenido en días difíciles y eso dice bastante de vos.', 'gentle')).toBe('genera a la persona');
+  });
+
+  it('rechaza el vocabulario clínico', () => {
+    expect(rejectCopy('Puede que estés atravesando un episodio de ansiedad generalizada esta semana.', 'gentle')).toBe('lenguaje clínico');
+    expect(rejectCopy('Estos síntomas suelen aparecer cuando la semana viene cargada de más.', 'neutral')).toBe('lenguaje clínico');
+  });
+
+  it('rechaza el tono de gurú que el brief prohíbe', () => {
+    expect(rejectCopy('Vas a lograr todo lo que te propongas si sostenés esta constancia.', 'warm')).toBe('tono gurú');
+    expect(rejectCopy('El universo te devuelve la energía que ponés en tus prácticas.', 'warm')).toBe('tono gurú');
+  });
+
+  it('en tono suave no deja animar ni pedir nada', () => {
+    // Arriba de la tarjeta hay otra sugiriendo hablar con un profesional. Esta
+    // no puede competir con eso ni celebrar el día en que alguien cayó fuerte.
+    expect(rejectCopy('Buenísimo que lo hayas registrado igual, seguí así toda la semana.', 'gentle')).toBe('anima en tono suave');
+    expect(rejectCopy('Hoy venís más abajo. Reservá una sesión y hablalo con alguien esta semana.', 'gentle')).toBe('pide una acción en tono suave');
+    // Las mismas frases en tono cálido no son un problema.
+    expect(rejectCopy('Buenísimo que lo hayas registrado igual, seguí así toda la semana.', 'warm')).toBeNull();
+  });
+
+  it('rechaza formato que delata que el modelo contestó otra cosa', () => {
+    expect(rejectCopy('**Tu semana viene pareja.** No todo tiene que ser un antes y un después.', 'neutral')).toBe('markdown o comillas');
+    expect(rejectCopy('"Tu semana viene pareja." No todo tiene que ser un antes y un después.', 'neutral')).toBe('markdown o comillas');
+    expect(rejectCopy('Tu semana viene pareja y eso está muy bien, seguí registrando así!', 'neutral')).toBe('signos de exclamación');
+  });
+
+  it('rechaza por largo, en los dos extremos', () => {
+    expect(rejectCopy('', 'neutral')).toBe('vacío');
+    expect(rejectCopy('   ', 'neutral')).toBe('vacío');
+    expect(rejectCopy('Tu semana viene pareja.', 'neutral')).toBe('muy corto');
+    expect(rejectCopy(Array(50).fill('palabra').join(' '), 'neutral')).toBe('muy largo');
+  });
+});
+
+describe('rejectCopy — el borde de palabra en español', () => {
+  // 🔴 Bug propio, encontrado por el test de arriba: `\b` de JavaScript se
+  // define sobre [A-Za-z0-9_], así que una vocal acentuada cuenta como
+  // "no-palabra". En "reservá" no hay borde después de la `á` —los dos lados
+  // son no-word— y `/\breservá\b/` no matchea NUNCA. El guardarraíl dejaba
+  // pasar exactamente lo que existe para frenar, y sin avisar.
+  // Estos casos son todos los patrones que terminan en carácter acentuado.
+
+  it('frena verbos en imperativo con tilde final', () => {
+    for (const frase of [
+      'Hoy venís más abajo. Reservá una sesión con alguien esta misma semana.',
+      'Hoy venís más abajo. Probá una respiración antes de irte a dormir hoy.',
+      'Hoy venís más abajo. Agendá algo para vos en los próximos días.',
+    ]) {
+      expect(rejectCopy(frase, 'gentle')).toBe('pide una acción en tono suave');
+    }
+  });
+
+  it('frena el aliento con tilde final', () => {
+    expect(rejectCopy('Registraste un día difícil igual. Seguí así que vas muy bien.', 'gentle'))
+      .toBe('anima en tono suave');
+  });
+
+  it('frena la promesa con tilde final', () => {
+    expect(rejectCopy('Esta constancia transformará tu manera de encarar las semanas difíciles.', 'warm'))
+      .toBe('tono gurú');
+  });
+
+  it('no frena una palabra que solo empieza igual', () => {
+    // El lookahead tiene que cerrar la palabra, no cortarla por la mitad:
+    // "reservado" no es "reservá", y "genialidad" no es "genial".
+    expect(rejectCopy('Tu semana viene pareja y tenés el horario reservado para vos.', 'gentle')).toBeNull();
+    expect(rejectCopy('Tu semana viene pareja, sin la genialidad de otras pero igual de válida.', 'gentle')).toBeNull();
   });
 });

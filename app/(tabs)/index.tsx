@@ -28,7 +28,8 @@ import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { computeMoodStreak, detectMoodDrop } from '@/lib/moodStats';
-import { buildReflection, type Reflection } from '@/lib/weeklyReflection';
+import { type Reflection } from '@/lib/weeklyReflection';
+import { useDailyReflection } from '@/hooks/useDailyReflection';
 import { localDayKey, localDayKeyMinus } from '@/lib/dates';
 import { useWeeklySignals } from '@/hooks/useWeeklySignals';
 
@@ -107,7 +108,10 @@ export default function InicioScreen() {
   // vez de decir algo liviano dos centímetros más abajo.
   const sharpDrop = detectMoodDrop(moodEntries) !== null;
 
-  const reflection = buildReflection({
+  // Las reglas eligen QUÉ decir y salen en el acto; si la redacción por IA está
+  // encendida, el hook cambia solo el texto cuando llega. Nunca hay spinner:
+  // la tarjeta arranca con el texto determinístico.
+  const reflection = useDailyReflection(user?.id, {
     recentMoods: recentMoodEntries.map(e => e.mood_id),
     historicMoods: historicMoodEntries.map(e => e.mood_id),
     streak: moodStreak,
