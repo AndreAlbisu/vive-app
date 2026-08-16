@@ -219,6 +219,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const res = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
 
+      // Diagnóstico: sin esto no hay forma de saber en cuál de los tres tramos
+      // muere el flujo — si no vuelve del navegador, si vuelve sin `code`, o si
+      // vuelve bien y falla el canje. La URL se recorta a propósito: lleva el
+      // código de autorización.
+      console.log('[auth] resultado:', res.type, 'url:', 'url' in res ? String(res.url).slice(0, 120) : '(sin url)');
+
       if (res.type === 'cancel' || res.type === 'dismiss') return null;
 
       // ⚠️ `openAuthSessionAsync` también puede devolver 'locked' (ya hay otra
@@ -242,7 +248,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(res.url);
-      if (exchangeError) return translateError(exchangeError.message);
+      if (exchangeError) {
+        // El mensaje traducido se lo lleva la persona; el crudo va al log,
+        // porque `translateError` colapsa causas distintas en un mismo texto.
+        console.log('[auth] falló el canje:', exchangeError.message);
+        return translateError(exchangeError.message);
+      }
       await markAccepted(acceptedTerms, ageConfirmed);
       return null;
     } catch (e: any) {
