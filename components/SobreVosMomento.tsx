@@ -82,6 +82,12 @@ export function SobreVosMomento({ visible, reflection, moodColor, onClose, onSee
           s.sheet,
           { paddingBottom: 30 + insets.bottom, transform: [{ translateY }] },
         ]}
+        // Sin esto, la vista se re-rasteriza (bordes redondeados + overflow
+        // hidden + el gradiente adentro) en CADA frame del translateY — es lo
+        // que se sentía como lag al aparecer. Con esto, el sistema la renderiza
+        // una vez como bitmap y solo mueve esa imagen durante la animación.
+        shouldRasterizeIOS
+        renderToHardwareTextureAndroid
       >
         {/* El "130%" del stop en el mockup (linear-gradient(160deg, mood, forest
             130%)) suaviza cuánto domina el forest dentro del área visible — acá

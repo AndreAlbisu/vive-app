@@ -25,7 +25,10 @@
 - De paso: se limpiaron `sparkTooltip`/`sparkTooltipText`, estilos sin uso desde que se borró `MoodSparkline` en la sesión 91 y habían quedado atrás.
 - Sin cambios de schema.
 
+**Fix al toque, probando en el dev build: el momento se sentía lagueado al aparecer.** Causa probable: el `Animated.View` de la hoja tiene bordes redondeados + `overflow:hidden` + un `LinearGradient` adentro, Y ADEMÁS se anima (`translateY`) — sin ayuda, el sistema tiene que recalcular esa máscara + gradiente en cada frame de la animación. Se agregó `shouldRasterizeIOS`/`renderToHardwareTextureAndroid` a esa vista (`SobreVosMomento.tsx`) — la plataforma la rasteriza una vez como bitmap y solo mueve esa imagen durante el slide, en vez de re-renderizar el contenido frame a frame. No verificado todavía si resolvió del todo — **queda para la próxima sesión confirmar que el momento se siente fluido ahora**.
+
 **Pendiente para la próxima sesión:**
+- **Confirmar que el fix de rasterización resolvió el lag del momento** (arriba). Si sigue lento, sospechar de la `VitaMark` (SVG) como marca de agua, o del trabajo síncrono en `handleMoodPicked` compitiendo con las animaciones propias de `MoodCheckIn` en el mismo instante.
 - **Probar en el dev build**: los dos estados de la card (neutro/resuelto), el momento completo (colores, tipografía, cierre por backdrop/botón), el toggle en Ajustes en las dos posiciones, y sobre todo que el gate de "vale la pena" se sienta bien en un uso real de varios días seguidos (no se pudo probar la persistencia de `{fecha, señal}` más que con tests unitarios).
 - Si el gradiente del momento o los pesos de Fraunces no se ven bien contra el mockup real, ajustar `locations` del `LinearGradient` en `SobreVosMomento.tsx`.
 - Evaluar si vale la pena, más adelante, un mecanismo de "resurfacing" cuando la misma señal persiste muchas semanas (hoy no vuelve a disparar nunca más una vez mostrada, sin ventana de tiempo — documentado como simplificación consciente en `lib/sobreVosMomento.ts`).
