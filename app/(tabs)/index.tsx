@@ -8,14 +8,13 @@ import {
   Animated,
   StatusBar,
   Image,
-  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 
-import { ViveColors, ViveFonts, ViveMoodColors, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { VITA_TOOL_MAP } from '@/constants/vitaTools';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
@@ -27,13 +26,10 @@ import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
-import type { MoodEntry } from '@/hooks/useMoodHistory';
-import { useProgressStats } from '@/hooks/useProgressStats';
 import { computeMoodStreak, detectMoodDrop } from '@/lib/moodStats';
 import { buildReflection, type Reflection } from '@/lib/weeklyReflection';
 import { localDayKey, localDayKeyMinus } from '@/lib/dates';
 import { useWeeklySignals } from '@/hooks/useWeeklySignals';
-import Svg, { Circle, Path, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 
 const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
@@ -85,15 +81,18 @@ export default function InicioScreen() {
   const [displayResources, setDisplayResources] = useState<PinnedResource[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  // 37 días: los últimos 7 alimentan el sparkline + el titular ("reciente"),
-  // los 30 anteriores son la base "histórica" contra la que se compara.
+  // 37 días: los últimos 7 son "esta semana" y los 30 anteriores la base
+  // histórica contra la que la devolución compara.
   const { entries: moodEntries } = useMoodHistory(user?.id, 37);
   // Fecha LOCAL, no UTC: con `toISOString()` el día saltaba a las 21:00, así
   // que después de esa hora `todayMoodEntry` buscaba la entrada de MAÑANA, no
   // la encontraba, y el check-in de hoy se veía como no hecho.
   const today = localDayKey();
   const todayMoodEntry = moodEntries.find(e => e.entry_date === today);
-  const { semanasActivas, areasCount, sessionCount } = useProgressStats(user?.id);
+  // `useProgressStats` salió de esta pantalla junto con los tres números: eran
+  // sus únicos consumidores acá. Son dos queries menos en la pantalla que más
+  // se abre — el hook sigue vivo y lo usa `/progreso`, que es donde esos
+  // números tienen lugar.
   const weekly = useWeeklySignals(user?.id);
 
   const recentCutoff = localDayKeyMinus(6);
@@ -335,17 +334,9 @@ export default function InicioScreen() {
             <CoachSuggestionCard userId={user?.id} entries={moodEntries} />
           </Animated.View>
 
-          {/* ── 4. SOBRE VOS ── */}
+          {/* ── 4. TU SEMANA ── */}
           <Animated.View style={fadeUp(a2)}>
-            <SobreVosCard
-              moodStreak={moodStreak}
-              reflection={reflection}
-              sparklineEntries={recentMoodEntries}
-              semanasActivas={semanasActivas}
-              areasCount={areasCount}
-              sessionCount={sessionCount}
-              onPress={() => router.push('/progreso')}
-            />
+            <SobreVosCard reflection={reflection} onPress={() => router.push('/progreso')} />
           </Animated.View>
 
           {/* ── 5. TU PRÓXIMA SESIÓN ── */}
@@ -519,13 +510,11 @@ const s = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.65)',
-    padding: 18,
-  },
-  sobreVosTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
+    // Más aire que antes: la tarjeta ya no compite con un gráfico y tres
+    // números, así que el mensaje puede respirar.
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 16,
   },
   sobreVosEyebrow: {
     fontFamily: ViveFonts.semibold,
@@ -533,56 +522,21 @@ const s = StyleSheet.create({
     color: 'rgba(135,131,92,0.72)',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-  },
-  sobreVosStreakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#EAD3C6',
-    borderRadius: 12,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  sobreVosStreakText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 10.5,
-    color: '#8F4A2E',
+    marginBottom: 10,
   },
   sobreVosHeadline: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 17,
-    lineHeight: 23,
+    // ⚠️ SemiBold, no Bold. Antes esta línea y `sobreVosHeadlineBold` usaban
+    // las dos `frauncesSerif` (Fraunces_700Bold), así que el fragmento que la
+    // devolución elige destacar se renderizaba idéntico al resto y el énfasis
+    // no se veía. Ahora el cuerpo es 600 y el destacado 700.
+    fontFamily: ViveFonts.frauncesSemiBold,
+    fontSize: 20,
+    lineHeight: 28,
     color: '#3F512F',
+    marginBottom: 18,
   },
   sobreVosHeadlineBold: {
     fontFamily: ViveFonts.frauncesSerif,
-  },
-  sobreVosStatsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-    marginBottom: 14,
-  },
-  sobreVosStatCardWrap: {
-    flex: 1,
-  },
-  sobreVosStatCard: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-  },
-  sobreVosStatValue: {
-    fontFamily: ViveFonts.frauncesSerif,
-    fontSize: 17,
-    color: '#3F512F',
-  },
-  sobreVosStatLabel: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 8.5,
-    color: '#6B7A56',
-    textAlign: 'center',
-    lineHeight: 11,
-    marginTop: 3,
   },
   sobreVosCta: {
     flexDirection: 'row',
@@ -785,34 +739,11 @@ const s = StyleSheet.create({
 
 // ─── Sobre vos ──────────────────────────────────────────────────────────────
 
-const SOBRE_VOS_MOOD_LABEL: Record<number, string> = {
-  1: 'Bajón', 2: 'Cansado', 3: 'Normal', 4: 'Bien', 5: 'Brillando',
-};
-const SOBRE_VOS_DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-function SobreVosCard({
-  moodStreak,
-  reflection,
-  sparklineEntries,
-  semanasActivas,
-  areasCount,
-  sessionCount,
-  onPress,
-}: {
-  moodStreak: number;
-  reflection: Reflection;
-  sparklineEntries: MoodEntry[];
-  semanasActivas: number;
-  areasCount: number | null;
-  sessionCount: number | null;
-  onPress: () => void;
-}) {
-  const stats = [
-    { value: semanasActivas,      label: 'Semanas\nactivas'      },
-    { value: areasCount ?? '—',   label: 'Áreas\ntrabajadas'     },
-    { value: sessionCount ?? '—', label: 'Sesiones\ncompletadas' },
-  ];
-
+/** La tarjeta que le habla a la persona. Muestra SOLO el mensaje: los datos que
+ *  antes vivían acá (sparkline, semanas activas, áreas, sesiones) están en
+ *  `/progreso`, que es adonde lleva el tap. */
+function SobreVosCard({ reflection, onPress }: { reflection: Reflection; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
       <LinearGradient
@@ -820,40 +751,21 @@ function SobreVosCard({
         start={{ x: 0, y: 0 }}
         end={{ x: 0.47, y: 1 }}
         style={s.sobreVosCard}>
-        <View style={s.sobreVosTopRow}>
-          <Text style={s.sobreVosEyebrow}>Tu semana</Text>
-          {moodStreak > 0 && (
-            <View style={s.sobreVosStreakBadge}>
-              <MaterialCommunityIcons name="leaf" size={12} color="#8F4A2E" />
-              <Text style={s.sobreVosStreakText}>{moodStreak} {moodStreak === 1 ? 'día' : 'días'} de racha</Text>
-            </View>
-          )}
-        </View>
+        {/* El badge de racha también salió: la devolución YA puede ser sobre la
+            racha ("Van 5 días seguidos que registrás cómo venís"), y tenerlo al
+            lado repetía el mismo dato en la misma tarjeta. */}
+        <Text style={s.sobreVosEyebrow}>Tu semana</Text>
 
+        {/* La tarjeta es el mensaje. El sparkline y los tres números
+            (semanas activas / áreas / sesiones) se sacaron a propósito: vivían
+            acá duplicando lo que ya muestra `/progreso`, que es justo adonde
+            lleva el tap. Con los datos al lado, la frase competía con ellos y
+            se leía como el título de un tablero en vez de como algo dicho. */}
         <Text style={s.sobreVosHeadline}>
           {reflection.before}
           {reflection.bold ? <Text style={s.sobreVosHeadlineBold}>{reflection.bold}</Text> : null}
           {reflection.after}
         </Text>
-
-        <MoodSparkline entries={sparklineEntries} />
-
-        <View style={s.sobreVosStatsRow}>
-          {stats.map((st, i) => (
-            <SurfaceCard
-              key={i}
-              variant="subtle"
-              backgroundColor="rgba(255,255,255,0.55)"
-              borderRadius={14}
-              style={s.sobreVosStatCardWrap}
-            >
-              <View style={s.sobreVosStatCard}>
-                <Text style={s.sobreVosStatValue}>{st.value}</Text>
-                <Text style={s.sobreVosStatLabel}>{st.label}</Text>
-              </View>
-            </SurfaceCard>
-          ))}
-        </View>
 
         <View style={s.sobreVosCta}>
           <Text style={s.sobreVosCtaText}>Ver tu progreso completo</Text>
@@ -861,84 +773,5 @@ function SobreVosCard({
         </View>
       </LinearGradient>
     </TouchableOpacity>
-  );
-}
-
-function MoodSparkline({ entries }: { entries: MoodEntry[] }) {
-  const { width: screenW } = useWindowDimensions();
-  const chartW = screenW - 18 * 2 - 18 * 2; // margen de la card + padding interno, en los dos lados
-  const CHART_H = 66;
-  const PAD = 10;
-  const plotW = chartW - PAD * 2;
-  const plotH = CHART_H - PAD * 2;
-
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  if (entries.length === 0) {
-    return null;
-  }
-
-  const sorted = [...entries].sort((a, b) => a.entry_date.localeCompare(b.entry_date));
-  const n = sorted.length;
-  const pts = sorted.map((e, i) => ({
-    x: n === 1 ? chartW / 2 : PAD + (i / (n - 1)) * plotW,
-    y: PAD + (1 - (e.mood_id - 1) / 4) * plotH,
-    moodId: e.mood_id,
-    date: e.entry_date,
-  }));
-
-  const areaPath = n > 1
-    ? `M${pts[0].x},${pts[0].y} ` +
-      pts.slice(1).map(p => `L${p.x},${p.y}`).join(' ') +
-      ` L${pts[n - 1].x},${CHART_H - PAD} L${pts[0].x},${CHART_H - PAD} Z`
-    : '';
-  const linePath = `M${pts.map(p => `${p.x},${p.y}`).join(' L')}`;
-
-  function handlePress(p: (typeof pts)[number]) {
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    const [y, m, d] = p.date.split('-').map(Number);
-    const dow = new Date(y, m - 1, d).getDay();
-    setTooltip({ x: p.x, y: p.y, label: `${SOBRE_VOS_DAY_NAMES[dow]}: ${SOBRE_VOS_MOOD_LABEL[p.moodId]}` });
-    hideTimer.current = setTimeout(() => setTooltip(null), 2200);
-  }
-
-  return (
-    <View style={{ width: chartW, height: CHART_H, alignSelf: 'center', marginVertical: 12 }}>
-      <Svg width={chartW} height={CHART_H}>
-        <Defs>
-          <SvgLinearGradient id="sparkArea" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#C06B4A" stopOpacity={0.22} />
-            <Stop offset="1" stopColor="#C06B4A" stopOpacity={0} />
-          </SvgLinearGradient>
-        </Defs>
-        {!!areaPath && <Path d={areaPath} fill="url(#sparkArea)" />}
-        {n > 1 && (
-          <Path d={linePath} fill="none" stroke="#C06B4A" strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
-        )}
-        {pts.map((p, i) => (
-          <Circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={4.5}
-            fill={ViveMoodColors[p.moodId]}
-            stroke="#F7F2E7"
-            strokeWidth={1.5}
-            onPress={() => handlePress(p)}
-          />
-        ))}
-      </Svg>
-      {tooltip && (
-        <View
-          pointerEvents="none"
-          style={[
-            s.sparkTooltip,
-            { left: Math.min(Math.max(tooltip.x - 34, 0), chartW - 68), top: Math.max(tooltip.y - 32, 0) },
-          ]}>
-          <Text style={s.sparkTooltipText}>{tooltip.label}</Text>
-        </View>
-      )}
-    </View>
   );
 }
