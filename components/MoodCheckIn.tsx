@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { ViveFonts, ViveMoodColors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { localDayKey } from '@/lib/dates';
 import type { MoodEntry } from '@/hooks/useMoodHistory';
 
 const MOODS = [
@@ -91,7 +92,11 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth }: Props) {
       Animated.timing(confirmY,       { toValue: 0, duration: 260, useNativeDriver: true }),
     ]).start();
 
-    const today = new Date().toISOString().split('T')[0];
+    // Fecha LOCAL, no UTC. Con `toISOString()` el día saltaba a las 21:00
+    // argentinas, así que dos check-ins del mismo lunes (20:00 y 22:00) se
+    // guardaban con fechas distintas y el UNIQUE(user_id, entry_date) no los
+    // dedupeaba — quedaban dos registros para un solo día del usuario.
+    const today = localDayKey();
     const mood  = MOODS.find(m => m.id === id)!;
     await supabase.from('mood_entries').upsert(
       { user_id: userId, mood_id: id, mood_label: mood.label, entry_date: today },

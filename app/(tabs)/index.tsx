@@ -29,8 +29,10 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import type { MoodEntry } from '@/hooks/useMoodHistory';
 import { useProgressStats } from '@/hooks/useProgressStats';
-import { computeMoodStreak, buildWeeklyHeadline } from '@/lib/moodStats';
-import type { WeeklyHeadline } from '@/lib/moodStats';
+import { computeMoodStreak, detectMoodDrop } from '@/lib/moodStats';
+import { buildReflection, type Reflection } from '@/lib/weeklyReflection';
+import { localDayKey, localDayKeyMinus } from '@/lib/dates';
+import { useWeeklySignals } from '@/hooks/useWeeklySignals';
 import Svg, { Circle, Path, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 
 const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -86,19 +88,35 @@ export default function InicioScreen() {
   // 37 días: los últimos 7 alimentan el sparkline + el titular ("reciente"),
   // los 30 anteriores son la base "histórica" contra la que se compara.
   const { entries: moodEntries } = useMoodHistory(user?.id, 37);
-  const today = new Date().toISOString().split('T')[0];
+  // Fecha LOCAL, no UTC: con `toISOString()` el día saltaba a las 21:00, así
+  // que después de esa hora `todayMoodEntry` buscaba la entrada de MAÑANA, no
+  // la encontraba, y el check-in de hoy se veía como no hecho.
+  const today = localDayKey();
   const todayMoodEntry = moodEntries.find(e => e.entry_date === today);
   const { semanasActivas, areasCount, sessionCount } = useProgressStats(user?.id);
+  const weekly = useWeeklySignals(user?.id);
 
-  const recentCutoff = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 6);
-    return d.toISOString().split('T')[0];
-  })();
+  const recentCutoff = localDayKeyMinus(6);
   const recentMoodEntries = moodEntries.filter(e => e.entry_date >= recentCutoff);
   const historicMoodEntries = moodEntries.filter(e => e.entry_date < recentCutoff);
   const moodStreak = computeMoodStreak(moodEntries);
-  const weeklyHeadline = buildWeeklyHeadline(recentMoodEntries, historicMoodEntries);
+
+  // `sharpDrop` se calcula acá y no adentro de la card porque son DOS tarjetas
+  // que tienen que coordinarse: `CoachSuggestionCard` aparece arriba cuando el
+  // ánimo cayó fuerte hoy, y la devolución de abajo tiene que bajar el tono en
+  // vez de decir algo liviano dos centímetros más abajo.
+  const sharpDrop = detectMoodDrop(moodEntries) !== null;
+
+  const reflection = buildReflection({
+    recentMoods: recentMoodEntries.map(e => e.mood_id),
+    historicMoods: historicMoodEntries.map(e => e.mood_id),
+    streak: moodStreak,
+    resourcesThisWeek: weekly.resourcesThisWeek,
+    sessionsThisWeek: weekly.sessionsThisWeek,
+    writingThisWeek: weekly.writingThisWeek,
+    sharpDrop,
+    dayKey: today,
+  });
 
   const a1   = useRef(new Animated.Value(0)).current;
   const aMood = useRef(new Animated.Value(0)).current;
@@ -321,7 +339,7 @@ export default function InicioScreen() {
           <Animated.View style={fadeUp(a2)}>
             <SobreVosCard
               moodStreak={moodStreak}
-              headline={weeklyHeadline}
+              reflection={reflection}
               sparklineEntries={recentMoodEntries}
               semanasActivas={semanasActivas}
               areasCount={areasCount}
@@ -774,7 +792,7 @@ const SOBRE_VOS_DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves
 
 function SobreVosCard({
   moodStreak,
-  headline,
+  reflection,
   sparklineEntries,
   semanasActivas,
   areasCount,
@@ -782,7 +800,7 @@ function SobreVosCard({
   onPress,
 }: {
   moodStreak: number;
-  headline: WeeklyHeadline;
+  reflection: Reflection;
   sparklineEntries: MoodEntry[];
   semanasActivas: number;
   areasCount: number | null;
@@ -813,9 +831,9 @@ function SobreVosCard({
         </View>
 
         <Text style={s.sobreVosHeadline}>
-          {headline.before}
-          {headline.bold ? <Text style={s.sobreVosHeadlineBold}>{headline.bold}</Text> : null}
-          {headline.after}
+          {reflection.before}
+          {reflection.bold ? <Text style={s.sobreVosHeadlineBold}>{reflection.bold}</Text> : null}
+          {reflection.after}
         </Text>
 
         <MoodSparkline entries={sparklineEntries} />
