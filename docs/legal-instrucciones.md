@@ -56,6 +56,13 @@ No son legales puras, son tuyas (con tu contador/abogado):
 - [x] ~~**Plazos de conservación** de datos por categoría (Política §10)~~ — **definidos 10/08/2026**: contenido de bienestar borrado inmediato; reservas/transacciones 10 años disociadas (obligación contable-fiscal); reseñas indefinidas anonimizadas; mensajes anonimizados mientras viva la conversación; analítica disociada. §10 describe además el modelo real de baja (lápida + anonimización), que antes solo vivía en el código. **Confirmar los 10 años con el contador.**
 
 ### Paso 3 — Revisión legal (obligatoria)
+
+> 📦 **El paquete listo para enviar está en `docs/paquete-abogado.md`.** Junta
+> el contexto del negocio, los cinco puntos que bloquean, los cuatro que no, y
+> las tres consultas de IA — redactado para que se entienda sin conocer la app.
+> Este archivo es el interno (estado, qué se destraba con cada respuesta); ese
+> otro es el que se manda. ⚠️ Antes de enviarlo hay que **decidir si va la
+> sección C**, que depende de una decisión de producto abierta sobre Sofía.
 Llevá los dos borradores ya completados (pasos 1 y 2) a un/a abogado/a. Puntos donde su revisión vale más (están marcados `[Validar con abogado]` en los textos):
 
 - [ ] **Cláusula de jurisdicción frente a consumidores** (T&C §22) — tiene límites estrictos en Argentina; no se puede perjudicar al consumidor.
