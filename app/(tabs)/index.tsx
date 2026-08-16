@@ -751,7 +751,11 @@ function SobreVosCard({ reflection, onPress }: { reflection: Reflection; onPress
       accessibilityLabel={`${reflection.before}${reflection.bold}${reflection.after}`}
       accessibilityHint="Abre tu progreso completo">
       <View style={s.sobreVosMark}>
-        <VitaMark size={54} />
+        {/* Atenuada: acá la marca acompaña, no encabeza. A plena intensidad
+            compite con el mensaje, que es lo único que la tarjeta tiene que
+            hacer leer. El color pleno queda para donde la marca sea la
+            protagonista (ícono, splash, portada). */}
+        <VitaMark size={54} color="rgba(75,75,44,0.42)" strokeWidth={3.4} />
       </View>
 
       <View style={s.sobreVosBody}>
