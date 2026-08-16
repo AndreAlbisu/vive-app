@@ -4,6 +4,7 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { useFocusEffect } from '@react-navigation/native';
 
 import { IslandTabBar, type IslandTab } from '@/components/ui/IslandTabBar';
+import { SofiaAssistant } from '@/components/SofiaAssistant';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useUnreadSalas } from '@/hooks/useUnreadSalas';
@@ -68,14 +69,21 @@ export default function TabLayout() {
   ];
 
   return (
-    <Tabs
-      tabBarPosition="bottom"
-      screenOptions={{ lazy: true, animationEnabled: !reducedMotion }}
-      tabBar={(props) => <IslandTabBar {...props} tabs={tabs} />}>
-      <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
-      <Tabs.Screen name="conexiones" options={{ title: 'Conexiones' }} />
-      <Tabs.Screen name="recursos" options={{ title: 'Recursos' }} />
-      <Tabs.Screen name="mis-salas" options={{ title: 'Mensajes' }} />
-    </Tabs>
+    <>
+      <Tabs
+        tabBarPosition="bottom"
+        screenOptions={{ lazy: true, animationEnabled: !reducedMotion }}
+        tabBar={(props) => <IslandTabBar {...props} tabs={tabs} />}>
+        <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
+        <Tabs.Screen name="conexiones" options={{ title: 'Conexiones' }} />
+        <Tabs.Screen name="recursos" options={{ title: 'Recursos' }} />
+        <Tabs.Screen name="mis-salas" options={{ title: 'Mensajes' }} />
+      </Tabs>
+
+      {/* Global a las 4 tabs principales, montado acá (no por pantalla) para
+          que sea un solo elemento — no aparece en coach/admin/onboarding/auth,
+          que viven en otros grupos de rutas. */}
+      <SofiaAssistant />
+    </>
   );
 }

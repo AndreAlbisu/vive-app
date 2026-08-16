@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-08-16 — Joaquín (sesión 95)
+
+**Tocado:** `app/(tabs)/_layout.tsx`. Nuevo: `components/SofiaAssistant.tsx`.
+
+**Resumen — asistente flotante "Sofía", SOLO interfaz, sin conexión a ningún LLM.**
+
+- Orbe circular (54px, terracota `ViveColors.primary`, "S" en Fraunces 700) flotando en la esquina inferior derecha, montado en `app/(tabs)/_layout.tsx` como sibling de `<Tabs>` (no dentro de cada pantalla) — visible en las 4 tabs principales (Inicio, Conexiones, Recursos, Mensajes) y en ningún otro grupo de rutas (coach, admin, onboarding, auth quedan afuera solos, porque viven en layouts distintos que no montan este).
+- Posición calculada con el mismo criterio que usa `IslandTabBar` para sí misma (`insets.bottom + 8` + su propia altura ≈56 + margen) en vez de una constante fija — así queda pegado arriba de la isla en cualquier dispositivo sin desalinearse si la isla cambia de tamaño.
+- Al tocar, se expande a un panel (glassy, mismos `GLASS`/`GLASS_BORDER` que ya usa el resto de la app) con: header (orbe chico + "Sofía" en Fraunces 600 + "tu asistente") y X para cerrar; saludo; 3 chips que navegan a pantallas YA existentes, no conversan (`router.push`, sin backend); campo de texto visiblemente deshabilitado (`editable={false}`) con el placeholder pedido — no hace nada al tocarlo.
+- **Los 3 atajos, resueltos contra rutas reales:** "¿Qué me recomendás para hoy?" → `/(tabs)/recursos` (no existe una pantalla de recomendación aparte — la card de `useRecommendedResource` ya vive arriba de Recursos, así que ir ahí cubre las dos ramas del pedido a la vez). "Ayudame a arrancar" → `/(tabs)` (Inicio, mismo patrón que ya usa `diario.tsx` para volver). "Estoy teniendo un mal día" → `/diario`.
+- Respeta `useReducedMotion` (ya existente): con la preferencia activa, la transición orbe↔panel es instantánea en vez de animada.
+- Cierre por X, por tocar afuera del panel (backdrop invisible), o reabrir tocando el orbe de nuevo.
+- Typecheck y lint limpios (los 2 warnings de `_layout.tsx` son preexistentes, en un `useEffect`/`useCallback` que no se tocó). 140/140 tests siguen pasando — nada de esto tiene lógica pura para testear, es interfaz.
+- Sin cambios de schema, sin nueva dependencia, sin tocar nada de lo que ya existía en las pantallas.
+
+**Pendiente para la próxima sesión:**
+- **Probar en el dev build**: que el orbe no tape nada de la isla ni de las pantallas en ningún tab, que el panel se vea bien en los 4 fondos distintos (Inicio/Conexiones/Recursos/Mensajes), y que los 3 atajos naveguen bien.
+- Cuando haya backend de IA para conectar: el campo de texto y el hook de conversación son el próximo paso natural — hoy es deliberadamente un preview sin funcionalidad.
+
 ## 2026-08-16 — Joaquín (sesión 94)
 
 **Tocado:** `app/(tabs)/index.tsx`, `components/MoodCheckIn.tsx`, `screens/ProfileOwnScreen.tsx`. Nuevo: `lib/sobreVosMomento.ts`, `lib/sobreVosMomentoStorage.ts`, `components/SobreVosMomento.tsx`, `__tests__/sobreVosMomento.test.ts`.
