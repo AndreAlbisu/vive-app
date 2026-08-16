@@ -98,7 +98,7 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function InicioScreen() {
   const router = useRouter();
-  const { user, requestAuth } = useAuth();
+  const { user, requestAuth, displayName: nombrePerfil } = useAuth();
   const [nextSession, setNextSession] = useState<NextSession | null>(null);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [displayResources, setDisplayResources] = useState<PinnedResource[]>([]);
@@ -344,7 +344,14 @@ export default function InicioScreen() {
       });
   }, [user]);
 
-  const displayName = user?.user_metadata?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? '';
+  // `profiles.name` primero: es la fuente que ve el resto de la app y la única
+  // que tiene el nombre de las cuentas de Apple (el id token no lo lleva). La
+  // metadata queda de respaldo mientras el perfil no resolvió.
+  const primerNombre = (nombrePerfil ?? user?.user_metadata?.name)?.split(' ')[0];
+  // El prefijo del mail SOLO acá, no en el saludo: `getGreeting` sin nombre
+  // saluda igual y bien, mientras que "Hola a1b2c3d4" (el mail de Hide My
+  // Email de Apple) sería peor que no nombrar a nadie.
+  const displayName = primerNombre ?? user?.email?.split('@')[0] ?? '';
 
   return (
     <AppBg>
@@ -403,7 +410,7 @@ export default function InicioScreen() {
 
           {/* ── 2. SALUDO ── */}
           <Animated.View style={[s.greetingBlock, fadeUp(a1)]}>
-            <Text style={s.greetingLine1}>{getGreeting(user?.user_metadata?.name?.split(' ')[0])}</Text>
+            <Text style={s.greetingLine1}>{getGreeting(primerNombre)}</Text>
             <Text style={s.greetingLine2}>¿Cómo venís hoy?</Text>
           </Animated.View>
 

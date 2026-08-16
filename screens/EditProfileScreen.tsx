@@ -26,7 +26,7 @@ type Gender = (typeof GENDER_OPTIONS)[number];
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
 
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -204,6 +204,10 @@ export default function EditProfileScreen() {
     } else {
       setSuccessMsg('✓ Perfil actualizado');
       setTimeout(() => setSuccessMsg(''), 3000);
+      // El nombre del saludo del home y del perfil sale del contexto, que solo
+      // se refresca al cambiar la sesión: sin esto, quien edita su nombre lo
+      // sigue viendo viejo ahí hasta reabrir la app.
+      refreshProfile();
     }
   }
 

@@ -22,6 +22,18 @@ interface AuthContextType {
   /** Solo decide si se MUESTRA la entrada al panel. No autoriza nada:
    *  cada escritura la revalida la edge function `admin-actions` contra el JWT. */
   isAdmin: boolean;
+  /** Nombre para mostrar, tomado de `profiles.name` — la misma fuente que ve el
+   *  resto de la app (chats, reservas, el coach). No sale de `user_metadata`:
+   *  ahí el nombre lo pone el proveedor, y Apple no lo manda nunca en el id
+   *  token, así que las cuentas de Apple caían al prefijo del mail — que con
+   *  Hide My Email es la cadena aleatoria de `privaterelay.appleid.com`.
+   *  `null` mientras no resolvió o si no hay sesión: quien lo use tiene que
+   *  tener su propio fallback. */
+  displayName: string | null;
+  /** Recarga `displayName`/`role`/`isAdmin` desde la base. Lo necesita quien
+   *  edite el perfil: el contexto solo se refresca al cambiar la sesión, así
+   *  que sin esto el nombre nuevo no llega al home hasta reabrir la app. */
+  refreshProfile: () => Promise<void>;
   requestAuth: () => void;
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
   signUpWithEmail: (email: string, password: string, name: string, acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
@@ -36,6 +48,8 @@ const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   role: 'user',
   isAdmin: false,
+  displayName: null,
+  refreshProfile: async () => {},
   requestAuth: () => {},
   signInWithEmail: async () => null,
   signUpWithEmail: async () => null,
@@ -49,32 +63,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<UserRole>('user');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  /** Rol + flag de admin en una sola consulta: los dos salen de la misma fila y
-   *  se necesitan en el mismo momento, así que pedirlos por separado sería un
-   *  round-trip de más en el arranque. `is_admin` NO habilita nada por sí solo:
-   *  solo decide si se muestra la entrada al panel. Cada escritura la vuelve a
-   *  validar `admin-actions` contra el JWT, que es donde manda de verdad. */
-  async function fetchRole(userId: string): Promise<{ role: UserRole; isAdmin: boolean }> {
+  type Perfil = { role: UserRole; isAdmin: boolean; name: string | null };
+
+  /** Rol, flag de admin y nombre en una sola consulta: los tres salen de la
+   *  misma fila y se necesitan en el mismo momento, así que pedirlos por
+   *  separado sería un round-trip de más en el arranque. `is_admin` NO habilita
+   *  nada por sí solo: solo decide si se muestra la entrada al panel. Cada
+   *  escritura la vuelve a validar `admin-actions` contra el JWT, que es donde
+   *  manda de verdad.
+   *
+   *  El `'Usuario'` se normaliza a `null` acá y no en cada pantalla: es el
+   *  placeholder que escribe el trigger de alta cuando el proveedor no manda
+   *  nombre, o sea la ausencia de dato, y tratarlo como un nombre real haría
+   *  que las pantallas saludaran "Hola Usuario" en vez de caer a su fallback. */
+  async function fetchProfile(userId: string): Promise<Perfil> {
     const { data } = await supabase
       .from('profiles')
-      .select('role, is_admin')
+      .select('role, is_admin, name')
       .eq('id', userId)
       .single();
-    return { role: (data?.role as UserRole) ?? 'user', isAdmin: !!data?.is_admin };
+    const nombre = data?.name?.trim();
+    return {
+      role: (data?.role as UserRole) ?? 'user',
+      isAdmin: !!data?.is_admin,
+      name: nombre && nombre !== 'Usuario' ? nombre : null,
+    };
   }
 
-  function applyProfile({ role: r, isAdmin: a }: { role: UserRole; isAdmin: boolean }) {
+  function applyProfile({ role: r, isAdmin: a, name: n }: Perfil) {
     setRole(r);
     setIsAdmin(a);
+    setDisplayName(n);
   }
 
   useEffect(() => {
     // El rol se resuelve aparte, sin bloquear el splash inicial (antes
-    // esperaba fetchRole() encadenado a getSession() — dos round-trips de
+    // esperaba fetchProfile() encadenado a getSession() — dos round-trips de
     // red seguidos antes de poder mostrar cualquier pantalla). getSession()
-    // suele resolver de AsyncStorage sin red; fetchRole() sí pega contra
+    // suele resolver de AsyncStorage sin red; fetchProfile() sí pega contra
     // Supabase, pero el usuario ya puede navegar mientras tanto — la
     // redirect de app/index.tsx reacciona sola cuando `role` cambia.
     // El .catch() no es decorativo: `setLoading(false)` vive solo acá adentro,
@@ -86,24 +115,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const u = session?.user ?? null;
       setUser(u);
       setLoading(false);
-      if (u) fetchRole(u.id).then(applyProfile);
-      else applyProfile({ role: "user", isAdmin: false });
+      if (u) fetchProfile(u.id).then(applyProfile);
+      else applyProfile({ role: "user", isAdmin: false, name: null });
     }).catch((e) => {
       console.warn('[auth] getSession fallo, sigo como anonimo:', e?.message ?? e);
       setUser(null);
-      applyProfile({ role: "user", isAdmin: false });
+      applyProfile({ role: "user", isAdmin: false, name: null });
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) fetchRole(u.id).then(applyProfile);
-      else applyProfile({ role: "user", isAdmin: false });
+      if (u) fetchProfile(u.id).then(applyProfile);
+      else applyProfile({ role: "user", isAdmin: false, name: null });
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  async function refreshProfile() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    applyProfile(await fetchProfile(session.user.id));
+  }
 
   function requestAuth() {
     if (!user) setModalVisible(true);
@@ -354,11 +389,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) return translateError(error.message);
       await markAccepted(acceptedTerms, ageConfirmed);
+      await saveAppleName(credential.fullName);
       return null;
     } catch (e: any) {
       if (e?.code === 'ERR_REQUEST_CANCELED') return null;
       return translateError(e?.message ?? 'error');
     }
+  }
+
+  /** Persiste el nombre que devuelve Apple en `profiles.name`.
+   *
+   *  ⚠️ Apple entrega los scopes SOLO en la primera autorización — en los
+   *  logins siguientes `fullName` viene con todo en `null`, y no vuelve a
+   *  darlo salvo que la persona revoque la app desde Ajustes. Distinto de
+   *  Google, que manda el nombre en cada login dentro del id token y por eso
+   *  lo levanta el trigger de alta desde `raw_user_meta_data`. Acá el
+   *  `identityToken` de Apple no lo lleva, así que si no se guarda en este
+   *  momento el perfil queda con el 'Usuario' por defecto del trigger para
+   *  siempre.
+   *
+   *  Solo pisa el placeholder: si la fila ya tiene un nombre real —porque la
+   *  persona lo editó, o porque la cuenta venía de otro proveedor y Apple se
+   *  vinculó al mismo mail— no se toca. */
+  async function saveAppleName(fullName: AppleAuthentication.AppleAuthenticationFullName | null) {
+    const nombre = [fullName?.givenName, fullName?.familyName].filter(Boolean).join(' ').trim();
+    if (!nombre) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+
+    const { data: actual, error: readError } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    if (readError) {
+      console.warn('[auth] no se pudo leer el nombre previo:', readError.message);
+      return;
+    }
+    if (actual?.name && actual.name !== 'Usuario') return;
+
+    const { error } = await supabase.from('profiles').update({ name: nombre }).eq('id', session.user.id);
+    if (error) {
+      console.warn('[auth] no se pudo guardar el nombre de Apple:', error.message);
+      return;
+    }
+    // El listener de sesión ya corrió `fetchProfile` antes de este UPDATE, así
+    // que tiene cacheado el 'Usuario' viejo. Sin esto el nombre recién aparece
+    // al reabrir la app, justo en el estreno de la cuenta.
+    setDisplayName(nombre);
   }
 
   async function signOut() {
@@ -371,14 +450,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearBlockedCache();
     await supabase.auth.signOut();
     setUser(null);
-    applyProfile({ role: "user", isAdmin: false });
+    applyProfile({ role: "user", isAdmin: false, name: null });
   }
 
   const isLoggedIn = !!user;
 
   return (
     <AuthContext.Provider value={{
-      user, loading, isLoggedIn, role, isAdmin,
+      user, loading, isLoggedIn, role, isAdmin, displayName, refreshProfile,
       requestAuth, signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, signOut,
     }}>
       {children}

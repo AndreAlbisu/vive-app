@@ -39,7 +39,7 @@ type ConfigItem = {
 
 export default function ProfileOwnScreen() {
   const router = useRouter();
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut, isAdmin, displayName: nombrePerfil } = useAuth();
 
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -58,7 +58,9 @@ export default function ProfileOwnScreen() {
     if (!value) registrarEvento('reflexion_momento_desactivado');
   }
 
-  const displayName = user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'Usuario';
+  // `profiles.name` primero, igual que en el home: es lo que ve el resto de la
+  // app y lo único que tiene el nombre de las cuentas de Apple.
+  const displayName = nombrePerfil ?? user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'Usuario';
   const displayEmail = user?.email ?? '';
   const displayInitials = displayName
     .split(' ')
