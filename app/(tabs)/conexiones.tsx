@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   TextInput,
   Image,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -83,6 +84,24 @@ function formatShortDate(iso: string | null): string {
   const d = new Date(iso);
   const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   return `${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+// Las "fases" de Conexiones (Ejes → Puertas/temas → Deck) son un swap de estado
+// dentro de la misma pantalla, no una navegación real — así que no reciben gratis
+// el slide nativo de iOS que sí tiene cualquier `router.push` del resto de la app.
+// Se remonta con cada `key` distinto (recibido desde afuera) y anima una sola vez
+// al montarse: fundido + deslizamiento leve desde la derecha, imitando ese push.
+function SlideInView({ children, style }: { children: React.ReactNode; style?: any }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(anim, { toValue: 1, duration: 260, useNativeDriver: true }).start();
+  }, [anim]);
+  const translateX = anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] });
+  return (
+    <Animated.View style={[style, { opacity: anim, transform: [{ translateX }] }]}>
+      {children}
+    </Animated.View>
+  );
 }
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
@@ -273,6 +292,7 @@ export default function ConexionesScreen() {
       <AppBg>
         <StatusBar barStyle="dark-content" />
         <SafeAreaView style={s.safe} edges={['top']}>
+          <SlideInView key={selectedDoorId} style={s.slideFill}>
           <ScrollView
             style={s.screen}
             contentContainerStyle={s.screenContent}
@@ -446,6 +466,7 @@ export default function ConexionesScreen() {
 
             <View style={{ height: TAB_BAR_CLEARANCE + 16 }} />
           </ScrollView>
+          </SlideInView>
         </SafeAreaView>
       </AppBg>
     );
@@ -517,7 +538,7 @@ export default function ConexionesScreen() {
 
           {selectedAxis ? (
             /* ── Fase 2: temas del eje ──────────────────────────────────── */
-            <>
+            <SlideInView key={selectedAxis.id}>
               <TouchableOpacity onPress={backToAxes} activeOpacity={0.7} hitSlop={8} style={s.menuBackRow}>
                 <Feather name="chevron-left" size={18} color={FOREST_SOFT} />
                 <Text style={s.menuBackText}>Áreas de bienestar</Text>
@@ -545,10 +566,10 @@ export default function ConexionesScreen() {
                   </ScaleCard>
                 ))}
               </View>
-            </>
+            </SlideInView>
           ) : (
             /* ── Fase 1: ejes de bienestar ──────────────────────────────── */
-            <>
+            <SlideInView key="fase1">
               <View style={s.askWrap}>
                 <Text style={[s.askTitle, s.askTitleGreeting]}>Encontrá a alguien que{'\n'}pueda acompañarte.</Text>
                 <Text style={s.askSub}>Elegí un área de bienestar para empezar</Text>
@@ -622,7 +643,7 @@ export default function ConexionesScreen() {
                   ))}
                 </View>
               )}
-            </>
+            </SlideInView>
           )}
 
           {/* ── Teaser del quiz de orientación ─────────────────────────── */}
@@ -665,6 +686,7 @@ const s = StyleSheet.create({
   safe:          { flex: 1, backgroundColor: 'transparent' },
   screen:        { flex: 1, backgroundColor: 'transparent' },
   screenContent: { paddingTop: 10 },
+  slideFill:     { flex: 1 },
 
   // Header menú
   header: {

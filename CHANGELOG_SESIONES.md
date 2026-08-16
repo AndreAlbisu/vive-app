@@ -16,8 +16,13 @@
 - Typecheck y lint limpios. **132/132 tests siguen pasando** (nada de esto lo tocaba, pero se corrió igual para confirmar).
 - Sin cambios de schema.
 
+**Segunda vuelta — el problema real no era el rebote de presión, era la falta de transición entre "pantallas" internas:**
+- Joaquín probó en el dev build y "sigue igual". Al revisar de nuevo: dentro de Conexiones, pasar de "Ejes" → "Puertas/temas" → "Deck" **no es una navegación real** — es un swap de estado local (`selectedAxisId`/`selectedDoorId`) que cambia qué JSX renderiza el mismo componente, al instante y sin ninguna animación. En cambio, cualquier `router.push` real del resto de la app (ir al quiz, al perfil de un coach, a la búsqueda) recibe gratis el slide nativo de iOS. Por eso Conexiones se sentía distinta: no le faltaba el rebote al tocar, le faltaba la transición al cambiar de vista.
+- **Nuevo `SlideInView`** (helper local, no un componente compartido — es chico y específico de este patrón): se remonta con cada `key` distinto y anima una vez al montarse (fundido + deslizamiento leve desde la derecha, 260ms), imitando el push nativo. Aplicado en 3 puntos: el swap Fase 1 ↔ Fase 2 del menú (key = `"fase1"` / `selectedAxis.id`) y el contenido completo de la vista Deck (key = `selectedDoorId`, así que también anima al cambiar de puerta con los chips de arriba, no solo al entrar). Escribir en el buscador no dispara la animación (la key no cambia con cada tecla).
+- Typecheck, lint y **132/132 tests** de nuevo verdes.
+
 **Pendiente para la próxima sesión:**
-- **Probar en el dev build** que el rebote se sienta bien en las 4 tarjetas, sobre todo la del quiz (gradiente) y las filas de búsqueda (más angostas que el resto).
+- **Probar en el dev build** — esta vez confirmar que se ve/siente la transición al tocar una tarjeta de Eje o de Puerta, no solo el rebote de las 4 tarjetas de la primera vuelta.
 
 ## 2026-08-16 — Joaquín (sesión 92)
 
