@@ -165,14 +165,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    *  Se usa desde los flujos sociales, donde la fila de profiles la crea el
    *  trigger de auth.users y no hay un signUp propio donde escribirla.
    *  Nunca escribe `false`: no tiene sentido "desdeclarar" y así una llamada
-   *  parcial no puede pisar una declaración anterior. */
+   *  parcial no puede pisar una declaración anterior.
+   *
+   *  ⚠️ IDEMPOTENTE A PROPÓSITO: solo escribe lo que todavía está en `false`.
+   *  En OAuth no existe "registrarse" vs "iniciar sesión" — es el mismo flujo —
+   *  así que esto corre también en cada login de alguien que ya aceptó. Sin el
+   *  chequeo previo, `acceptanceFields` le pisaría `accepted_terms_at` con la
+   *  fecha de hoy y `accepted_terms_version` con la versión vigente en cada
+   *  entrada: se perdería cuándo aceptó de verdad y quedaría "aceptando" solo
+   *  versiones nuevas de los T&C sin haber visto nada — que es exactamente la
+   *  constancia que estas columnas existen para guardar (§20). */
   async function markAccepted(acceptedTerms: boolean, ageConfirmed: boolean) {
     if (!acceptedTerms && !ageConfirmed) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
+
+    const { data: actual, error: readError } = await supabase
+      .from('profiles')
+      .select('accepted_terms, age_confirmed')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    // Ante la duda no se escribe: pisar una aceptación buena es peor que no
+    // registrar una nueva, que además se puede recuperar en el próximo login.
+    if (readError) {
+      console.warn('[auth] no se pudo leer la aceptación previa:', readError.message);
+      return;
+    }
+
+    const fields = acceptanceFields(
+      acceptedTerms && !actual?.accepted_terms,
+      ageConfirmed && !actual?.age_confirmed,
+    );
+    if (Object.keys(fields).length === 0) return;
+
     const { error } = await supabase
       .from('profiles')
-      .update(acceptanceFields(acceptedTerms, ageConfirmed))
+      .update(fields)
       .eq('id', session.user.id);
     if (error) console.warn('[auth] no se pudo registrar la aceptación:', error.message);
   }
@@ -211,12 +239,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           redirectTo: redirectUrl,
           skipBrowserRedirect: true,
+          // Sin esto, si el navegador ya tiene una sesión de Google activa,
+          // Google saltea el selector y entra con esa cuenta sin preguntar —
+          // imposible crear una cuenta con otro mail desde el mismo teléfono.
+          queryParams: { prompt: 'select_account' },
         },
       });
 
       if (error) return translateError(error.message);
       if (!data?.url) return 'No se pudo iniciar el flujo de Google';
 
+      // ⚠️ Sin `preferEphemeralSession` a propósito. En efímero el navegador
+      // arranca sin las cookies de Safari, y ahí Google pierde las cuentas que
+      // tiene recordadas: obliga a tipear mail y contraseña en cada inicio de
+      // sesión. Compartir la sesión del navegador es lo que hace que aparezcan
+      // las cuentas ya guardadas en el dispositivo; el selector lo fuerza
+      // `prompt=select_account`, que no necesita sesión efímera.
       const res = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
 
       // Diagnóstico: sin esto no hay forma de saber en cuál de los tres tramos
@@ -241,8 +279,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // un tipo de resultado distinto — sin esto, `exchangeCodeForSession`
       // fallaría con un mensaje del SDK que no le dice nada a nadie.
       if (res.url.includes('error=')) {
+        // `[^&#]` por lo mismo que el `code` de más abajo: la URL de retorno
+        // trae un `#` final que si no se excluye queda pegado al mensaje.
         const motivo = decodeURIComponent(
-          res.url.match(/error_description=([^&]+)/)?.[1]?.replace(/\+/g, ' ') ?? '',
+          res.url.match(/error_description=([^&#]+)/)?.[1]?.replace(/\+/g, ' ') ?? '',
         );
         return motivo || 'Google rechazó el inicio de sesión';
       }
@@ -257,7 +297,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       //
       // Se extrae con regex y no con `new URL()`: el polyfill de URL de React
       // Native no maneja bien los schemes propios.
-      const code = res.url.match(/[?&]code=([^&]+)/)?.[1];
+      //
+      // 🔴 La clase de caracteres excluye `#`, no solo `&`. El redirect vuelve
+      // como `viveapp://auth/callback?code=<uuid>#` — con un fragmento vacío al
+      // final— y `[^&]+` se llevaba también ese numeral. El código salía con un
+      // carácter de más, GoTrue no encontraba ningún flow state para él y
+      // contestaba `invalid flow state, no valid flow state found`: un mensaje
+      // que suena a sesión vencida o a config del servidor y era un `#`.
+      const code = res.url.match(/[?&]code=([^&#]+)/)?.[1];
       if (!code) {
         console.log('[auth] volvió sin código:', res.url.slice(0, 120));
         return 'Google no devolvió el código de acceso. Probá de nuevo.';

@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import LegalSheet from '@/components/LegalSheet';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -27,8 +28,9 @@ interface AuthModalProps {
   onDismiss: () => void;
   onLogin: () => void;
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
-  signInWithGoogle: () => Promise<string | null>;
-  signInWithApple: () => Promise<string | null>;
+  // Con los dos flags de constancia: acá también se dan de alta cuentas nuevas.
+  signInWithGoogle: (acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
+  signInWithApple: (acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
 }
 
 export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signInWithGoogle, signInWithApple }: AuthModalProps) {
@@ -44,6 +46,7 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
+  const [legalDoc, setLegalDoc] = useState<'terminos' | 'privacidad' | null>(null);
 
   function toggleEmailForm() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -80,10 +83,15 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
     // con esa corrección que crasheaba la app al loguearse con un mail de coach.
   }
 
+  // ⚠️ `(true, true)`: este modal dice "ingresá a tu cuenta", pero con Google o
+  // Apple da de alta cuentas nuevas igual — OAuth no separa registro de login.
+  // Sin los flags, quien entraba por acá se creaba la cuenta sin constancia de
+  // T&C ni de edad. Aceptación implícita por el texto legal debajo de los
+  // botones; `markAccepted` no pisa la aceptación de quien ya la tenía.
   async function handleGoogle() {
     setGoogleLoading(true);
     setServerError(null);
-    const error = await signInWithGoogle();
+    const error = await signInWithGoogle(true, true);
     setGoogleLoading(false);
     if (error) {
       setServerError(error);
@@ -96,7 +104,7 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
   async function handleApple() {
     setAppleLoading(true);
     setServerError(null);
-    const error = await signInWithApple();
+    const error = await signInWithApple(true, true);
     setAppleLoading(false);
     if (error) {
       setServerError(error);
@@ -169,6 +177,20 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
                 <Text style={s.appleBtnText}>Continuar con Apple</Text>
               </TouchableOpacity>
             )}
+
+            {/* Aceptación implícita, igual que en LoginScreen: con Google/Apple
+                este modal también crea cuentas nuevas. */}
+            <Text style={s.legalNote}>
+              {'Al continuar con Google o Apple declarás tener 18 años o más y aceptás los '}
+              <Text style={s.legalLink} onPress={() => setLegalDoc('terminos')}>
+                Términos y condiciones
+              </Text>
+              {' y la '}
+              <Text style={s.legalLink} onPress={() => setLegalDoc('privacidad')}>
+                Política de privacidad
+              </Text>
+              {' de Vita.'}
+            </Text>
 
             <View style={s.dividerRow}>
               <View style={s.dividerLine} />
@@ -260,11 +282,31 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
           </Pressable>
         </KeyboardAvoidingView>
       </Pressable>
+
+      {/* Dentro del Modal padre a propósito: LegalSheet es a su vez un Modal, y
+          montado como hermano quedaría por debajo de este en iOS. */}
+      <LegalSheet
+        visible={legalDoc !== null}
+        doc={legalDoc ?? 'terminos'}
+        onClose={() => setLegalDoc(null)}
+      />
     </Modal>
   );
 }
 
 const s = StyleSheet.create({
+  legalNote: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: 'rgba(135,131,92,0.62)',
+    lineHeight: 16,
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  legalLink: {
+    fontFamily: ViveFonts.semibold,
+    color: ViveColors.primary,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.52)',

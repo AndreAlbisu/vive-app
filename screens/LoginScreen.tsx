@@ -21,6 +21,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import LegalSheet from '@/components/LegalSheet';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -45,6 +46,7 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [legalDoc, setLegalDoc] = useState<'terminos' | 'privacidad' | null>(null);
 
   const logoAnim    = useRef(new Animated.Value(0)).current;
   const headingAnim = useRef(new Animated.Value(0)).current;
@@ -93,10 +95,17 @@ export default function LoginScreen() {
     // crasheaba con "Attempted to navigate before mounting the Root Layout".
   }
 
+  // ⚠️ `(true, true)` también acá, aunque esta sea la pantalla de login: en
+  // OAuth no hay "registrarse" separado de "iniciar sesión" — es el mismo flujo,
+  // y si el mail no existe crea la cuenta. Sin esto, quien entraba por acá con
+  // Google o Apple se creaba una cuenta sin constancia de T&C ni de edad, que es
+  // lo que sostiene la cláusula anti-solicitación (§10) y T&C §3.1.
+  // La aceptación es implícita por el texto legal debajo de los botones, mismo
+  // criterio que CoachLoginScreen; `markAccepted` no pisa una aceptación previa.
   async function handleGoogle() {
     setGoogleLoading(true);
     setServerError(null);
-    const error = await signInWithGoogle();
+    const error = await signInWithGoogle(true, true);
     setGoogleLoading(false);
     if (error) setServerError(error);
   }
@@ -104,7 +113,7 @@ export default function LoginScreen() {
   async function handleApple() {
     setAppleLoading(true);
     setServerError(null);
-    const error = await signInWithApple();
+    const error = await signInWithApple(true, true);
     setAppleLoading(false);
     if (error) setServerError(error);
   }
@@ -160,6 +169,24 @@ export default function LoginScreen() {
                   <Text style={s.appleBtnText}>Continuar con Apple</Text>
                 </TouchableOpacity>
               )}
+
+              {/* Aceptación implícita de los botones sociales: con Google/Apple
+                  esta pantalla también da de alta cuentas nuevas (OAuth no
+                  distingue login de registro), así que la constancia tiene que
+                  poder tomarse acá. Va pegado a los botones y no al pie para que
+                  quede claro a qué se refiere "Al continuar". El login por email
+                  no lo necesita: no puede crear una cuenta. */}
+              <Text style={s.legalNote}>
+                {'Al continuar con Google o Apple declarás tener 18 años o más y aceptás los '}
+                <Text style={s.legalLink} onPress={() => setLegalDoc('terminos')}>
+                  Términos y condiciones
+                </Text>
+                {' y la '}
+                <Text style={s.legalLink} onPress={() => setLegalDoc('privacidad')}>
+                  Política de privacidad
+                </Text>
+                {' de Vita.'}
+              </Text>
 
               {serverError && !showEmailForm && (
                 <Text style={s.serverError}>{serverError}</Text>
@@ -251,6 +278,12 @@ export default function LoginScreen() {
             </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        <LegalSheet
+          visible={legalDoc !== null}
+          doc={legalDoc ?? 'terminos'}
+          onClose={() => setLegalDoc(null)}
+        />
       </SafeAreaView>
     </AppBg>
   );
@@ -259,6 +292,20 @@ export default function LoginScreen() {
 const s = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
+
+  legalNote: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11.5,
+    color: 'rgba(135,131,92,0.62)',
+    lineHeight: 17,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  legalLink: {
+    fontFamily: ViveFonts.semibold,
+    color: ViveColors.primary,
+  },
+
   container: {
     flexGrow: 1,
     paddingHorizontal: 28,
