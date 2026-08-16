@@ -11,15 +11,17 @@ import {
   Image,
   Modal,
   Alert,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { supabase, registrarEvento } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { deleteMyAccount } from '@/lib/accountDeletion';
+import { getMomentPref, setMomentPref } from '@/lib/sobreVosMomentoStorage';
 type Profesional = {
   id: string;
   name: string;
@@ -44,6 +46,17 @@ export default function ProfileOwnScreen() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Parte E de "Sobre vos" — auto-disparo del momento completo. Vive en
+  // AsyncStorage, no en `profiles` (ver lib/sobreVosMomentoStorage.ts).
+  const [momentoEnabled, setMomentoEnabled] = useState(true);
+
+  useEffect(() => { getMomentPref().then(setMomentoEnabled); }, []);
+
+  async function toggleMomento(value: boolean) {
+    setMomentoEnabled(value);
+    await setMomentPref(value);
+    if (!value) registrarEvento('reflexion_momento_desactivado');
+  }
 
   const displayName = user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'Usuario';
   const displayEmail = user?.email ?? '';
@@ -323,6 +336,24 @@ export default function ProfileOwnScreen() {
                 ))}
               </View>
             )}
+          </Animated.View>
+
+          {/* Preferencias */}
+          <Animated.View style={fadeUp(configAnim)}>
+            <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>Preferencias</Text>
+            <View style={styles.preferenceCard}>
+              <View style={styles.preferenceInfo}>
+                <Text style={styles.preferenceTitle}>Mostrar la reflexión completa al registrar tu ánimo</Text>
+                <Text style={styles.preferenceDesc}>Si lo apagás, vas directo al resumen sin el paso completo</Text>
+              </View>
+              <Switch
+                value={momentoEnabled}
+                onValueChange={toggleMomento}
+                trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor={`${ViveColors.text}25`}
+              />
+            </View>
           </Animated.View>
 
           {/* Configuración */}
@@ -651,6 +682,33 @@ const styles = StyleSheet.create({
     fontFamily: ViveFonts.regular,
     fontSize: 12,
     color: '#87835C',
+  },
+
+  // Preferencias
+  preferenceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: GLASS,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    padding: 16,
+    marginHorizontal: 20,
+    gap: 12,
+  },
+  preferenceInfo: { flex: 1 },
+  preferenceTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 14,
+    color: '#565E32',
+    marginBottom: 3,
+    lineHeight: 19,
+  },
+  preferenceDesc: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: '#87835C',
+    lineHeight: 18,
   },
 
   // Configuración

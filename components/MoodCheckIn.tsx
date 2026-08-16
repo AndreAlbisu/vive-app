@@ -37,9 +37,15 @@ interface Props {
   userId:        string | undefined;
   todayEntry:    MoodEntry | undefined;
   onRequestAuth: () => void;
+  /** Se dispara al elegir un mood, ANTES del upsert (no depende de la red).
+   *  `firstToday` = todavía no había check-in hoy cuando se tocó — Inicio lo
+   *  usa para decidir si corresponde el momento de pantalla completa. Elegir
+   *  un mood distinto habiendo ya hecho el check-in hoy también dispara esto,
+   *  pero con `firstToday: false`. */
+  onPicked?: (mood: { id: MoodId; label: string; color: string }, opts: { firstToday: boolean }) => void;
 }
 
-export function MoodCheckIn({ userId, todayEntry, onRequestAuth }: Props) {
+export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked }: Props) {
   const [selectedId, setSelectedId] = useState<MoodId | null>(null);
 
   const scales   = useRef(MOODS.map(() => new Animated.Value(1))).current;
@@ -98,6 +104,16 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth }: Props) {
     // dedupeaba — quedaban dos registros para un solo día del usuario.
     const today = localDayKey();
     const mood  = MOODS.find(m => m.id === id)!;
+
+    // ANTES del upsert y sin esperar la red — Inicio necesita reaccionar en
+    // el acto (Parte A: "actualizá inmediatamente la card persistente").
+    // `todayEntry` es el prop de ANTES de este toque, así que "no había nada
+    // todavía" es exactamente `!todayEntry`, sin necesitar otro estado.
+    onPicked?.(
+      { id, label: mood.label, color: ViveMoodColors[id] },
+      { firstToday: !todayEntry },
+    );
+
     await supabase.from('mood_entries').upsert(
       { user_id: userId, mood_id: id, mood_label: mood.label, entry_date: today },
       { onConflict: 'user_id,entry_date' },

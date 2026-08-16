@@ -8,30 +8,52 @@ import {
   Animated,
   StatusBar,
   Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 
-import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { ViveColors, ViveFonts, ViveMoodColors, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { VITA_TOOL_MAP } from '@/constants/vitaTools';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { MoodCheckIn } from '@/components/MoodCheckIn';
 import { CoachSuggestionCard } from '@/components/CoachSuggestionCard';
+import { SobreVosMomento } from '@/components/SobreVosMomento';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { VitaMark } from '@/components/VitaMark';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { supabase, registrarEvento } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
+import type { MoodEntry } from '@/hooks/useMoodHistory';
 import { computeMoodStreak, detectMoodDrop } from '@/lib/moodStats';
-import { type Reflection } from '@/lib/weeklyReflection';
+import { buildReflection, type Reflection } from '@/lib/weeklyReflection';
 import { useDailyReflection } from '@/hooks/useDailyReflection';
 import { localDayKey, localDayKeyMinus } from '@/lib/dates';
 import { useWeeklySignals } from '@/hooks/useWeeklySignals';
+import { shouldShowMoment } from '@/lib/sobreVosMomento';
+import { getMomentPref, getLastShown, markMomentShown } from '@/lib/sobreVosMomentoStorage';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+
+// Colores del mockup `sobre-vos-momento.html` — deliberadamente NO ViveColors,
+// que son tonos parecidos pero no idénticos (terracota #C1694F vs #C06B4A del
+// mockup). Fidelidad exacta al diseño, no al token más cercano.
+const SELLO_TERRACOTTA = '#C06B4A';
+const SELLO_FOREST     = '#3F512F';
+const SELLO_INK        = '#2E3624';
+const SELLO_CREAM      = '#F2ECDF';
+
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
 const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
@@ -121,6 +143,70 @@ export default function InicioScreen() {
     sharpDrop,
     dayKey: today,
   });
+
+  // ── "Sobre vos" — Parte A/B/C ────────────────────────────────────────────
+  // `useMoodHistory` no se refresca solo tras guardar un check-in nuevo (fetch
+  // único al montar), así que sin esto la card y el momento seguirían mirando
+  // datos de ANTES del check-in que la persona recién hizo. `freshCheckIn`
+  // guarda el resultado recalculado a mano con el pick ya adentro; una vez que
+  // existe, manda sobre `reflection`/`todayMoodEntry` para el resto de la
+  // sesión (hasta el próximo montaje, que sí trae todo fresco de la base).
+  const [freshCheckIn, setFreshCheckIn] = useState<{ color: string; reflection: Reflection } | null>(null);
+  const [momentoVisible, setMomentoVisible] = useState(false);
+
+  const cardMoodColor = freshCheckIn?.color ?? (todayMoodEntry ? ViveMoodColors[todayMoodEntry.mood_id] : null);
+  const cardReflection = freshCheckIn?.reflection ?? reflection;
+
+  const handleMoodPicked = useCallback((
+    mood: { id: number; label: string; color: string },
+    opts: { firstToday: boolean },
+  ) => {
+    const optimisticToday: MoodEntry = {
+      id: 'optimistic', mood_id: mood.id, mood_label: mood.label, entry_date: today,
+    };
+    const augmented = [optimisticToday, ...moodEntries.filter(e => e.entry_date !== today)];
+    const augRecent = augmented.filter(e => e.entry_date >= recentCutoff);
+    const augHistoric = augmented.filter(e => e.entry_date < recentCutoff);
+    const freshReflection = buildReflection({
+      recentMoods: augRecent.map(e => e.mood_id),
+      historicMoods: augHistoric.map(e => e.mood_id),
+      streak: computeMoodStreak(augmented),
+      resourcesThisWeek: weekly.resourcesThisWeek,
+      sessionsThisWeek: weekly.sessionsThisWeek,
+      writingThisWeek: weekly.writingThisWeek,
+      sharpDrop: detectMoodDrop(augmented) !== null,
+      dayKey: today,
+    });
+
+    setFreshCheckIn({ color: mood.color, reflection: freshReflection });
+
+    // Cambiaste el mood habiendo ya hecho el check-in hoy: la card se
+    // actualiza (arriba), pero el momento es una sola vez por día — no
+    // relanza.
+    if (!opts.firstToday) return;
+
+    setTimeout(async () => {
+      const [prefEnabled, lastShown] = await Promise.all([getMomentPref(), getLastShown()]);
+      if (!shouldShowMoment({ signal: freshReflection.signal, prefEnabled, lastShown })) return;
+      setMomentoVisible(true);
+      markMomentShown(today, freshReflection.signal);
+      registrarEvento('reflexion_vista', { origen: 'checkin' });
+    }, 350);
+  }, [moodEntries, today, recentCutoff, weekly.resourcesThisWeek, weekly.sessionsThisWeek, weekly.writingThisWeek]);
+
+  function handleReopenMomento() {
+    if (!cardMoodColor) {
+      Alert.alert('Elegí cómo venís hoy', 'Así vas a poder ver tu reflexión completa');
+      return;
+    }
+    setMomentoVisible(true);
+    registrarEvento('reflexion_vista', { origen: 'reapertura' });
+  }
+
+  function handleSeeProgress() {
+    setMomentoVisible(false);
+    router.push('/progreso');
+  }
 
   const a1   = useRef(new Animated.Value(0)).current;
   const aMood = useRef(new Animated.Value(0)).current;
@@ -331,6 +417,7 @@ export default function InicioScreen() {
               userId={user?.id}
               todayEntry={todayMoodEntry}
               onRequestAuth={requestAuth}
+              onPicked={handleMoodPicked}
             />
           </Animated.View>
 
@@ -339,9 +426,9 @@ export default function InicioScreen() {
             <CoachSuggestionCard userId={user?.id} entries={moodEntries} />
           </Animated.View>
 
-          {/* ── 4. TU SEMANA ── */}
+          {/* ── 4. SOBRE VOS ── */}
           <Animated.View style={fadeUp(a2)}>
-            <SobreVosCard reflection={reflection} onPress={() => router.push('/progreso')} />
+            <SobreVosCard reflection={cardReflection} moodColor={cardMoodColor} onPress={handleReopenMomento} />
           </Animated.View>
 
           {/* ── 5. TU PRÓXIMA SESIÓN ── */}
@@ -438,6 +525,14 @@ export default function InicioScreen() {
           <View style={{ height: TAB_BAR_CLEARANCE }} />
         </ScrollView>
       </SafeAreaView>
+
+      <SobreVosMomento
+        visible={momentoVisible}
+        reflection={cardReflection}
+        moodColor={cardMoodColor}
+        onClose={() => setMomentoVisible(false)}
+        onSeeProgress={handleSeeProgress}
+      />
     </AppBg>
   );
 }
@@ -508,56 +603,63 @@ const s = StyleSheet.create({
     color: '#565E32',
     lineHeight: 36,
   },
-  // ── 3. Sobre vos ───────────────────────────────────────────────────────────
-  sobreVosCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
+  // ── 3. Sobre vos — card "Sello" ────────────────────────────────────────────
+  selloOuter: {
     marginHorizontal: 18,
     marginBottom: 22,
-    borderRadius: 26,
-    // Crema plano, sin gradiente ni borde: la referencia es una superficie
-    // tranquila donde lo único que pesa es el texto.
-    backgroundColor: '#F4EFE4',
-    paddingHorizontal: 20,
-    paddingVertical: 22,
+    marginTop: 10, // deja aire para que el sello sobresalga sin pisar lo de arriba
   },
-  sobreVosMark: {
-    // `alignSelf: flex-start` a propósito — con mensajes de cuatro líneas la
-    // marca centrada verticalmente queda flotando lejos del rótulo.
-    alignSelf: 'flex-start',
+  selloWrap: {},
+  selloContent: {
+    paddingTop: 22,
+    paddingHorizontal: 18,
+    paddingBottom: 16,
+  },
+  selloReflect: {
+    fontFamily: ViveFonts.frauncesSemiBold,
+    fontSize: 15.5,
+    lineHeight: 24,
+    color: SELLO_INK,
     marginTop: 2,
   },
-  sobreVosBody: {
-    flex: 1,
+  selloReflectBold: {
+    fontFamily: ViveFonts.frauncesSerif,
+    color: SELLO_FOREST,
   },
-  sobreVosEyebrow: {
+  selloCta: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 11,
-    color: ViveColors.primary,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    marginBottom: 10,
+    fontSize: 12,
+    color: SELLO_FOREST,
+    marginTop: 5,
   },
-  sobreVosHeadline: {
-    // Sans, no serif: la referencia usa la tipografía de interfaz, no la de
-    // títulos. Interlineado generoso porque el mensaje puede ir a 3-4 líneas.
-    fontFamily: ViveFonts.regular,
-    fontSize: 16.5,
-    lineHeight: 26,
-    color: '#3F3D36',
+  selloCtaUp: {
+    color: SELLO_TERRACOTTA,
   },
-  sparkTooltip: {
+  seal: {
     position: 'absolute',
-    backgroundColor: '#3F512F',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    top: -16,
+    left: 16,
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 16,
+    paddingTop: 7,
+    paddingBottom: 7,
+    paddingLeft: 9,
+    paddingRight: 12,
+    borderWidth: 2,
+    borderColor: SELLO_CREAM,
+    shadowColor: '#2E261A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.32,
+    shadowRadius: 7,
+    elevation: 4,
   },
-  sparkTooltipText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 10,
-    color: '#F3EEDF',
+  sealText: {
+    fontFamily: ViveFonts.bold,
+    fontSize: 11,
+    color: '#FFF8EF',
   },
 
   // ── 4. Recursos útiles ─────────────────────────────────────────────────────
@@ -732,42 +834,106 @@ const s = StyleSheet.create({
 
 });
 
-// ─── Sobre vos ──────────────────────────────────────────────────────────────
+// ─── Sobre vos — la card "Sello" (Parte B) ──────────────────────────────────
 
+/** La card persistente. El texto siempre sale de `buildReflection()` (el
+ *  motor de Andre en lib/weeklyReflection.ts) — acá no hay una segunda fuente
+ *  de frases. Lo que cambia según el estado es la presentación:
+ *
+ *  - Neutro (sin check-in hoy, `moodColor == null`): sello terracota con
+ *    pulso, invitación a hacer el check-in.
+ *  - Resuelto (con check-in hoy): sello y tinte de fondo con el color de ESE
+ *    mood — el texto es el mismo que mostraría igual sin el rediseño.
+ *
+ *  Toda la card es tocable → reabre el momento completo (SobreVosMomento). */
+function SobreVosCard({
+  reflection,
+  moodColor,
+  onPress,
+}: {
+  reflection: Reflection;
+  moodColor: string | null;
+  onPress: () => void;
+}) {
+  const reducedMotion = useReducedMotion();
+  const isNeutral = !moodColor;
+  const pulse = useRef(new Animated.Value(1)).current;
 
-/** La tarjeta que le habla a la persona.
- *
- *  Es SOLO el mensaje: la marca a la izquierda, el rótulo y la devolución.
- *  El sparkline, los tres números y el badge de racha vivían acá duplicando lo
- *  que ya muestra `/progreso` —que es justo adonde lleva el tap— y hacían que
- *  la frase se leyera como el título de un tablero en vez de como algo dicho.
- *
- *  Sin botón: toda la tarjeta es el área táctil. */
-function SobreVosCard({ reflection, onPress }: { reflection: Reflection; onPress: () => void }) {
+  useEffect(() => {
+    if (!isNeutral || reducedMotion) {
+      pulse.stopAnimation();
+      pulse.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.045, duration: 1300, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1,     duration: 1300, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isNeutral, reducedMotion, pulse]);
+
+  const sealColor = isNeutral ? SELLO_TERRACOTTA : moodColor!;
+  const tintColors: [string, string] = isNeutral
+    ? ['rgba(196,181,140,0.20)', '#F7F2E7']
+    : [hexToRgba(moodColor!, 0.16), '#F7F2E7'];
+
+  const a11yLabel = isNeutral
+    ? 'Contame cómo venís'
+    : `${reflection.before}${reflection.bold}${reflection.after}`;
+
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.85}
-      style={s.sobreVosCard}
-      accessibilityRole="button"
-      // Sin botón visible, el tap no se anuncia solo: el hint es lo único que
-      // le dice a un lector de pantalla que esto lleva a algún lado.
-      accessibilityLabel={`${reflection.before}${reflection.bold}${reflection.after}`}
-      accessibilityHint="Abre tu progreso completo">
-      <View style={s.sobreVosMark}>
-        {/* Atenuada: acá la marca acompaña, no encabeza. A plena intensidad
-            compite con el mensaje, que es lo único que la tarjeta tiene que
-            hacer leer. El color pleno queda para donde la marca sea la
-            protagonista (ícono, splash, portada). */}
-        <VitaMark size={54} color="rgba(75,75,44,0.42)" strokeWidth={3.4} />
-      </View>
+    <View style={s.selloOuter}>
+      <SurfaceCard
+        variant="elevated"
+        tone="light"
+        backgroundColor="#F7F2E7"
+        borderRadius={20}
+        grainOpacity={0.045}
+        onPress={onPress}
+        style={s.selloWrap}
+      >
+        <LinearGradient
+          colors={tintColors}
+          locations={[0, 0.6]}
+          start={{ x: 0.12, y: 0 }}
+          end={{ x: 0.65, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View
+          style={s.selloContent}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={a11yLabel}
+          accessibilityHint="Abre tu reflexión completa"
+        >
+          {isNeutral ? (
+            <>
+              <Text style={s.selloReflect}>Contame cómo venís</Text>
+              <Text style={[s.selloCta, s.selloCtaUp]}>↑ Tocá un mood arriba</Text>
+            </>
+          ) : (
+            <>
+              <Text style={s.selloReflect}>
+                {reflection.before}
+                <Text style={s.selloReflectBold}>{reflection.bold}</Text>
+                {reflection.after}
+              </Text>
+              <Text style={s.selloCta}>→ Ver más</Text>
+            </>
+          )}
+        </View>
+      </SurfaceCard>
 
-      <View style={s.sobreVosBody}>
-        <Text style={s.sobreVosEyebrow}>Sobre vos</Text>
-        <Text style={s.sobreVosHeadline}>
-          {reflection.before}{reflection.bold}{reflection.after}
-        </Text>
-      </View>
-    </TouchableOpacity>
+      {/* Fuera de SurfaceCard a propósito: su contenido va con overflow
+          hidden (para el grano/gradiente), y el sello está diseñado para
+          sobresalir por encima del borde superior de la card. */}
+      <Animated.View style={[s.seal, { backgroundColor: sealColor, transform: [{ scale: pulse }] }]}>
+        <VitaMark size={13} color="#FFF8EF" strokeWidth={9} />
+        <Text style={s.sealText}>Sobre vos</Text>
+      </Animated.View>
+    </View>
   );
 }

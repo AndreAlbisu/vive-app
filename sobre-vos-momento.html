@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vita · Un momento, no una card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F2ECDF; --cream-deep:#EAE2D0; --card:#F7F2E7;
+    --forest:#3F512F; --forest-soft:#6B7A56;
+    --terracotta:#C06B4A; --terracotta-soft:#EAD3C6;
+    --ink:#2E3624; --line:rgba(63,81,47,.14);
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+  body{
+    background:linear-gradient(160deg,#DAD2BE 0%,var(--cream) 45%,#E8DFCB 100%);
+    font-family:'Poppins',sans-serif;color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;
+    padding:32px 16px 70px;
+  }
+  .intro{max-width:440px;width:100%;margin-bottom:14px;}
+  .intro h1{font-family:'Fraunces',serif;font-weight:600;font-size:25px;color:var(--forest);line-height:1.18;}
+  .intro p{font-size:13px;color:var(--forest-soft);margin-top:9px;line-height:1.55;}
+  .intro .tip{
+    margin-top:11px;display:inline-block;
+    font-size:11.5px;font-weight:600;color:#8F4A2E;
+    background:var(--terracotta-soft);border-radius:12px;padding:6px 12px;
+  }
+
+  .phone{
+    width:100%;max-width:400px;height:760px;
+    background:var(--cream);border-radius:44px;
+    box-shadow:0 24px 60px rgba(46,54,36,.22), 0 0 0 10px #24291B;
+    overflow:hidden;position:relative;
+  }
+  .statusbar{display:flex;justify-content:space-between;padding:16px 26px 4px;font-size:13px;font-weight:600;color:var(--forest);position:relative;z-index:5;}
+  .screen{padding:6px 20px 28px;position:relative;}
+  svg{display:block;}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-top:6px;}
+  .header .logo{font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:20px;color:var(--forest);}
+  .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#C06B4A,#A5583B);color:#FFF3E8;font-family:'Fraunces',serif;font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:center;}
+  h2.big{font-family:'Fraunces',serif;font-weight:600;font-size:25px;color:var(--forest);margin-top:14px;line-height:1.25;}
+
+  .checkin{
+    position:relative;overflow:visible;margin-top:16px;
+    border:1px solid transparent;border-radius:20px;padding:15px 16px 16px;
+    background-image:
+      linear-gradient(var(--card),var(--card)),
+      linear-gradient(150deg, rgba(255,255,255,.9), rgba(192,107,74,.16) 45%, rgba(63,81,47,.14));
+    background-origin:border-box;background-clip:padding-box, border-box;
+    box-shadow:
+      0 1px 2px rgba(46,38,26,.05),
+      0 10px 22px -10px rgba(46,38,26,.14),
+      0 20px 36px -20px rgba(150,150,120,.20);
+  }
+  .checkin::before{
+    content:"";position:absolute;inset:0;border-radius:20px;background-image:var(--grain);
+    opacity:.04;mix-blend-mode:multiply;pointer-events:none;
+  }
+  .checkin::after{
+    content:"";position:absolute;top:0;left:15px;right:15px;height:1px;border-radius:20px 20px 0 0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);
+  }
+  .checkin .date{position:relative;font-size:12px;font-weight:600;color:var(--terracotta);}
+  .checkin .row{position:relative;display:flex;justify-content:space-between;margin-top:18px;padding-top:2px;}
+  .checkin .row::before{
+    content:"";position:absolute;left:12px;right:12px;top:12px;height:2.5px;border-radius:2px;
+    background:linear-gradient(90deg,#C06B4A,#DDAE93,#D9D0B8,#BFCBA6,#8FA07C);opacity:.45;
+  }
+  .checkin .m{text-align:center;font-size:9px;color:var(--forest-soft);cursor:pointer;user-select:none;position:relative;}
+  .checkin .m .c{
+    width:24px;height:24px;border-radius:50%;margin:0 auto 5px;border:2px solid var(--card);
+    transition:all .2s ease;position:relative;
+  }
+  .checkin .m.picked .c{
+    border-color:var(--forest);transform:scale(1.18);
+    box-shadow:0 0 0 5px var(--glow, rgba(63,81,47,.16));
+  }
+  .checkin .hint{position:relative;font-size:10.5px;color:var(--forest-soft);margin-top:12px;text-align:center;}
+
+  .persistCard{
+    position:relative;overflow:visible;margin-top:22px;
+    border:1px solid transparent;border-radius:20px;padding:22px 18px 16px;
+    cursor:pointer;user-select:none;
+    background-image:
+      linear-gradient(155deg, rgba(217,208,184,.16) 0%, var(--card) 60%),
+      linear-gradient(150deg, rgba(255,255,255,.9), rgba(192,107,74,.22) 45%, rgba(63,81,47,.16));
+    background-origin:border-box;background-clip:padding-box, border-box;
+    box-shadow:
+      0 1px 2px rgba(46,38,26,.05),
+      0 12px 26px -10px rgba(46,38,26,.16),
+      0 24px 42px -20px rgba(196,181,140,.28);
+    transition:box-shadow .35s ease, background .35s ease, transform .15s ease;
+    animation:fadeUp .35s ease;
+  }
+  .persistCard:active{transform:scale(.98);}
+  .persistCard::before{
+    content:"";position:absolute;inset:0;border-radius:20px;background-image:var(--grain);
+    opacity:.045;mix-blend-mode:multiply;pointer-events:none;
+  }
+  .persistCard.neutral{
+    background-image:
+      linear-gradient(155deg, rgba(217,208,184,.20) 0%, var(--card) 60%),
+      linear-gradient(150deg, rgba(255,255,255,.9), rgba(196,181,140,.30) 45%, rgba(63,81,47,.14));
+  }
+  .persistCard .seal{
+    position:absolute;top:-16px;left:16px;z-index:2;
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--terracotta);color:#FFF8EF;
+    font-size:11px;font-weight:700;border-radius:16px;padding:7px 12px 7px 9px;
+    box-shadow:0 6px 14px -4px rgba(46,38,26,.32), inset 0 -2px 4px rgba(0,0,0,.12);
+    border:2px solid var(--cream);
+  }
+  .persistCard.neutral .seal{animation:pulseSeal 2.6s ease-in-out infinite;}
+  @keyframes pulseSeal{0%,100%{transform:scale(1);}50%{transform:scale(1.045);}}
+  .persistCard p.reflect{
+    font-family:'Fraunces',serif;font-size:15.5px;line-height:1.55;color:var(--ink);
+    margin-top:2px;position:relative;
+  }
+  .persistCard p.reflect strong{font-weight:600;color:var(--forest);}
+  .persistCard .cta{
+    display:flex;align-items:center;gap:5px;margin-top:5px;
+    font-size:12px;font-weight:600;color:var(--forest);position:relative;
+  }
+  .persistCard .cta.point-up{color:var(--terracotta);}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  .stitle{display:flex;align-items:baseline;justify-content:space-between;margin:20px 0 10px;}
+  .stitle b{font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--forest);}
+  .nextcard{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 15px;display:flex;align-items:center;gap:13px;}
+  .nextcard .ic{width:38px;height:38px;border-radius:12px;background:var(--terracotta-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .nextcard .t b{font-size:13.5px;font-weight:600;color:var(--forest);display:block;}
+  .nextcard .t span{font-size:11px;color:var(--forest-soft);}
+
+  /* ===== overlay: el momento ===== */
+  .backdrop{
+    position:absolute;inset:0;background:rgba(30,26,18,.45);
+    opacity:0;pointer-events:none;transition:opacity .35s ease;z-index:20;
+  }
+  .backdrop.show{opacity:1;pointer-events:auto;}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:21;
+    border-radius:28px 28px 0 0;overflow:hidden;
+    transform:translateY(105%);transition:transform .4s cubic-bezier(.32,.1,.25,1);
+    padding:26px 24px 30px;
+  }
+  .sheet.show{transform:translateY(0);}
+  .sheet .grab{width:38px;height:4px;border-radius:2px;background:rgba(255,255,255,.35);margin:0 auto 20px;}
+  .sheet .mark{
+    display:flex;align-items:center;gap:8px;font-family:'Fraunces',serif;font-style:italic;
+    font-weight:600;font-size:13px;color:rgba(255,255,255,.8);position:relative;z-index:1;
+  }
+  .sheet .mark svg{opacity:.85;}
+  .venn-watermark{
+    position:absolute;top:-18px;right:-22px;width:150px;height:150px;
+    opacity:.09;pointer-events:none;z-index:0;
+  }
+  .sheet .reflect{
+    font-family:'Fraunces',serif;font-weight:400;font-size:22px;line-height:1.5;
+    color:#FFF8EF;margin-top:16px;
+  }
+  .sheet .reflect strong{font-weight:600;}
+  .sheet .acts{display:flex;flex-direction:column;gap:10px;margin-top:26px;}
+  .sheet .go{
+    text-align:center;font-size:14.5px;font-weight:600;color:var(--forest);
+    background:#FFF8EF;border-radius:16px;padding:14px;
+    cursor:pointer;user-select:none;transition:transform .12s ease;
+  }
+  .sheet .go:active{transform:scale(.97);}
+  .sheet .sub{
+    text-align:center;font-size:12px;font-weight:500;color:rgba(255,255,255,.7);
+    cursor:pointer;padding:4px;
+  }
+
+  .toast{
+    position:absolute;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);
+    background:var(--forest);color:#F3EEDF;font-size:12px;font-weight:500;
+    border-radius:16px;padding:10px 18px;opacity:0;transition:all .3s ease;
+    pointer-events:none;white-space:nowrap;z-index:30;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .legend{max-width:440px;width:100%;margin-top:38px;}
+  .legend h2{font-family:'Fraunces',serif;font-weight:600;font-size:21px;color:var(--forest);margin-bottom:16px;}
+  .leg-item{display:flex;gap:13px;background:rgba(255,255,255,.5);border:1px solid var(--line);border-radius:18px;padding:15px 16px;margin-bottom:10px;}
+  .leg-item .n{width:24px;height:24px;border-radius:50%;flex-shrink:0;background:var(--terracotta);color:#FFF6EC;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .leg-item b{font-size:13.5px;font-weight:600;color:var(--forest);display:block;margin-bottom:3px;}
+  .leg-item p{font-size:12.5px;color:#55603F;line-height:1.55;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Un momento — y algo que se queda</h1>
+  <p>El momento grande sigue apareciendo apenas elegís tu mood. Pero ahora, cuando se cierra (o si abrís la app horas después), queda en su lugar la card "con presencia" — nunca un hueco vacío en el scroll.</p>
+  <span class="tip">▶ Tocá un mood: mirá el momento grande Y la card que queda después</span>
+</div>
+
+<div class="phone">
+  <div class="statusbar"><span>4:03</span><span>●●● ▮</span></div>
+  <div class="screen">
+    <div class="header">
+      <span class="logo">vita</span>
+      <div class="av">J</div>
+    </div>
+    <h2 class="big">¡Hola, Joaquin!</h2>
+
+    <div class="checkin">
+      <div class="date">Domingo 16 de agosto</div>
+      <div class="row" id="moodRow"></div>
+    </div>
+
+    <div class="persistCard neutral" id="persistCard" onclick="reopenSheet()">
+      <div class="seal" id="persistSeal">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFF8EF" stroke-width="1.6">
+          <circle cx="9" cy="9" r="6"/><circle cx="15" cy="9" r="6"/><circle cx="12" cy="14" r="6"/>
+        </svg>
+        Sobre vos
+      </div>
+      <p class="reflect" id="persistReflect">Contame cómo venís</p>
+      <div class="cta point-up" id="persistCta">↑ Tocá un mood arriba</div>
+    </div>
+
+    <div class="stitle"><b>Tu próxima sesión</b></div>
+    <div class="nextcard">
+      <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8F4A2E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M9 15l2 2 4-4"/></svg></div>
+      <div class="t"><b>Sin sesiones agendadas</b><span>Reservá una sesión con tu profesional</span></div>
+    </div>
+  </div>
+
+  <div class="backdrop" id="backdrop" onclick="dismissSheet(true)"></div>
+  <div class="sheet" id="sheet">
+    <svg class="venn-watermark" viewBox="0 0 24 24" fill="none" stroke="#FFF8EF" stroke-width="0.7">
+      <circle cx="9" cy="9" r="6.4"/>
+      <circle cx="15" cy="9" r="6.4"/>
+      <circle cx="12" cy="14.2" r="6.4"/>
+    </svg>
+    <div class="grab"></div>
+    <div class="mark">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFF8EF" stroke-width="1.5">
+        <circle cx="9" cy="9" r="6"/>
+        <circle cx="15" cy="9" r="6"/>
+        <circle cx="12" cy="14" r="6"/>
+      </svg>
+      vita
+    </div>
+    <p class="reflect" id="reflectText"></p>
+    <div class="acts">
+      <div class="go" onclick="dismissSheet(false)">Seguir</div>
+      <div class="sub" onclick="toast('Abriría Tu progreso completo')">Ver mi progreso completo</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<div class="legend">
+  <h2>Por qué esto sí llama la atención</h2>
+
+  <div class="leg-item"><span class="n">1</span><div>
+    <b>Aparece cuando ya estás mirando, no cuando estás de paso</b>
+    <p>El disparador es el check-in de ánimo — el momento en que tocás la pantalla con intención, no cuando estás scrolleando de camino a otra cosa. Ya tenés ese evento registrado en la app (el check-in diario); mostrar la reflexión inmediatamente después es simplemente encadenarla a algo que ya sucede, no agregar un paso nuevo.</p>
+  </div></div>
+
+  <div class="leg-item"><span class="n">2</span><div>
+    <b>Ocupa la pantalla entera, por diseño</b>
+    <p>No compite con el check-in de arriba, con "Tu próxima sesión", ni con nada — cuando aparece, es lo único que hay. Fondo con tinte oscuro de todo el detrás (backdrop), tipografía grande (22px vs. los 15-16px de cualquier card), y un solo botón de acción. Es imposible no verla, porque literalmente no hay nada más que ver en ese instante.</p>
+  </div></div>
+
+  <div class="leg-item"><span class="n">3</span><div>
+    <b>Pero nunca deja un hueco vacío atrás (el ajuste de esta vuelta)</b>
+    <p>Antes, al cerrar el momento quedaba solo un link flaco — y cualquiera que abriera la app horas después del check-in (la mayoría de las veces que se entra en un día) nunca iba a ver nada ahí. Ahora, en su lugar queda la card <b>"con presencia"</b> que ya habíamos diseñado: sombra cálida, grano de papel, tinte del color de tu mood, la frase líder en negrita. Se actualiza apenas elegís cómo venís y se queda ahí — no es un resumen pobre del momento grande, es una versión con el mismo peso visual, todo el tiempo. Tocarla vuelve a abrir el momento completo por si querés releerlo.</p>
+  </div></div>
+
+  <div class="leg-item"><span class="n">4</span><div>
+    <b>Y antes de que hagas el check-in, tampoco está vacío</b>
+    <p>Si todavía no elegiste tu mood hoy, la misma card con presencia muestra una invitación neutra ("Contame cómo venís hoy") en vez de desaparecer o mostrar un placeholder gris. La pantalla nunca tiene ese momento de "no hay nada acá todavía" que mencionabas — siempre hay algo terminado, solo cambia si es una invitación o una reflexión ya hecha.</p>
+  </div></div>
+
+  <div class="leg-item"><span class="n">5</span><div>
+    <b>El diagrama de Venn, presente pero sin competir</b>
+    <p>Vuelve en tres lugares: chico junto a "vita" en el encabezado de la hoja (como firma, no como protagonista), como marca de agua grande y muy tenue en la esquina (9% de opacidad — da presencia de marca sin robarle peso al texto, que sigue siendo lo principal), y en el eyebrow de la card persistente para que la marca quede reconocible incluso en el estado de reposo. La lección de todo este proceso se mantiene: los elementos de marca refuerzan identidad cuando acompañan, y se pierden cuando cargan solos con todo el peso de comunicar algo.</p>
+  </div></div>
+
+  <div class="leg-item"><span class="n">✦</span><div>
+    <b>Complemento posible: notificación push</b>
+    <p>Si además querés que llegue incluso a quien no abre la app ese día, el mismo texto puede salir como notificación push (por ejemplo, una hora después del check-in, o al otro día si no volviste a entrar) — ahí la atención la gana el sistema operativo, no el diseño de una card. Es una capa aparte, no hace falta resolverla ahora, pero queda como camino natural si esto funciona bien.</p>
+  </div></div>
+</div>
+
+<script>
+const MOODS = [
+  {lbl:'Bajón', c:'#C06B4A', lead:'Esta semana viniste más bajón que de costumbre.', rest:' Está bien no estar siempre arriba — lo importante es que seguís apareciendo.'},
+  {lbl:'Cansado', c:'#DDAE93', lead:'Se te nota cansado esta semana.', rest:' A veces el cuerpo pide bajar el ritmo antes que la cabeza lo acepte.'},
+  {lbl:'Normal', c:'#D9D0B8', lead:'Esta semana viniste sosteniendo un buen equilibrio.', rest:' Se nota en cómo volvés a las herramientas, incluso en los días más flojos.'},
+  {lbl:'Bien', c:'#BFCBA6', lead:'Venís mejor que hace unas semanas.', rest:' Se nota en cómo te acercás a las herramientas: más constancia, menos esfuerzo.'},
+  {lbl:'Brillando', c:'#8FA07C', lead:'Esta semana viniste brillando.', rest:' Aprovechalo — es un buen momento para sostener lo que venís construyendo.'}
+];
+
+function renderMoods(){
+  document.getElementById('moodRow').innerHTML = MOODS.map((m,i)=>`
+    <div class="m" onclick="pickMood(${i})"><div class="c" style="background:${m.c}"></div>${m.lbl}</div>`).join('');
+}
+renderMoods();
+
+function hexToRgb(hex){
+  const v = hex.replace('#','');
+  return [parseInt(v.substr(0,2),16), parseInt(v.substr(2,2),16), parseInt(v.substr(4,2),16)];
+}
+
+let currentMood = null;
+
+function pickMood(i){
+  document.querySelectorAll('.checkin .m').forEach((el,idx)=>{
+    el.classList.toggle('picked', idx===i);
+    if(idx===i){
+      const [r,g,b] = hexToRgb(MOODS[i].c);
+      el.style.setProperty('--glow', `rgba(${r},${g},${b},.28)`);
+    }
+  });
+  updatePersistCard(MOODS[i]);
+  setTimeout(()=>openSheet(MOODS[i]), 350);
+}
+
+function updatePersistCard(mood){
+  currentMood = mood;
+  const [r,g,b] = hexToRgb(mood.c);
+  const card = document.getElementById('persistCard');
+  card.classList.remove('neutral');
+  card.style.background =
+    `linear-gradient(155deg, rgba(${r},${g},${b},.16) 0%, var(--card) 62%)`;
+  card.style.boxShadow =
+    `0 1px 2px rgba(46,38,26,.05), 0 12px 26px -10px rgba(46,38,26,.16), 0 24px 42px -20px rgba(${r},${g},${b},.30)`;
+  document.getElementById('persistSeal').style.background = mood.c;
+  document.getElementById('persistReflect').innerHTML = `<strong>${mood.lead}</strong>${mood.rest}`;
+  const cta = document.getElementById('persistCta');
+  cta.classList.remove('point-up');
+  cta.innerHTML = '→ Ver más';
+}
+
+function openSheet(mood){
+  document.getElementById('sheet').style.background = `linear-gradient(160deg, ${mood.c}, #3F512F 130%)`;
+  document.getElementById('reflectText').innerHTML = `<strong>${mood.lead}</strong>${mood.rest}`;
+  document.getElementById('backdrop').classList.add('show');
+  document.getElementById('sheet').classList.add('show');
+}
+function dismissSheet(fromBackdrop){
+  document.getElementById('backdrop').classList.remove('show');
+  document.getElementById('sheet').classList.remove('show');
+}
+function reopenSheet(){
+  if(!currentMood){ toast('Elegí cómo venís hoy para ver tu reflexión'); return; }
+  openSheet(currentMood);
+}
+
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2000);
+}
+</script>
+
+</body>
+</html>
