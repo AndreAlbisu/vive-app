@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-16 — Joaquín (sesión 96)
+
+**Tocado:** `components/SofiaAssistant.tsx`.
+
+**Resumen — rediseño grande del panel de Sofía, con referencia visual (captura del asistente de Banco Galicia).**
+
+- Joaquín mandó una captura de referencia: quería el panel más espacioso, con más aire, saludo grande arriba y las opciones como filas (no chips chicas), más un aviso de que el chat todavía no está listo. El panel chico anclado cerca del orbe (sesión 95) se reemplazó por una hoja casi a pantalla completa.
+- **Nuevo `Modal` + `Animated.View` propios**, mismo patrón que `SobreVosMomento.tsx` (que ya resolvió el mismo problema de performance dos veces esa sesión): `shouldRasterizeIOS`/`renderToHardwareTextureAndroid` + `InteractionManager.runAfterInteractions` antes de arrancar la animación de apertura. Al ser ahora un modal de verdad (no anclado a la posición del orbe), se pudo sacar TODA la lógica de clamping de `panelLeft`/`panelTop`/`openAbove` que tenía la versión anterior — quedó más simple, no más compleja, a pesar de ser visualmente más grande.
+- El orbe (arrastrable, forest, sesión 95) no cambió — sigue igual, solo se oculta mientras el panel está abierto.
+- **Layout con `justifyContent: 'space-between'`**: arriba, identidad (orbe chico + "Sofía" + "tu asistente" + X) y el saludo grande en Fraunces; abajo, el aviso de "en desarrollo" + las 4 filas de opciones + el input deshabilitado — con el aire del medio repartido automáticamente, igual que en la referencia.
+- **Atajo nuevo, pedido esta sesión: "Quiero ver a los profesionales" → `/(tabs)/conexiones`** — el pedido original de Joaquín. Quedan 4 atajos en total (recomendación de hoy, arrancar, mal día, profesionales).
+- **El aviso de "en desarrollo"** quedó en un solo lugar, justo arriba de las opciones ("Todavía estoy aprendiendo a conversar. Mientras tanto, elegí una de estas opciones:") — se evitó duplicarlo con una frase parecida bajo el input; ahí quedó una línea distinta y específica sobre el campo de texto en sí ("Muy pronto vas a poder escribirme directamente").
+- Typecheck, lint y 140/140 tests limpios.
+
+**Pendiente para la próxima sesión:**
+- Probar en el dev build que la hoja no se sienta lagueada al abrir (ya se aplicaron las dos mitigaciones que funcionaron para `SobreVosMomento`, pero no se verificó en dispositivo para ESTA hoja específicamente).
+
 ## 2026-08-16 — Joaquín (sesión 95)
 
 **Tocado:** `app/(tabs)/_layout.tsx`. Nuevo: `components/SofiaAssistant.tsx`.
