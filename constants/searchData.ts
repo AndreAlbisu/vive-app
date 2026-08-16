@@ -43,8 +43,8 @@ export const AXES: Axis[] = [
     bg: '#E8EFF6',
     groups: [
       { group: 'Emociones y ánimo', items: ['Tristeza', 'Ansiedad', 'Ansiedad social', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría', 'Autoestima', 'Duelo'] },
-      { group: 'Relaciones', items: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'] },
-      { group: 'Foco, hábitos y trabajo', items: ['Concentración', 'Procrastinación', 'Productividad', 'Hábitos mentales', 'Burnout (estrés laboral)'] },
+      { group: 'Relaciones', items: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales', 'Ruptura y separación', 'Comunicación', 'Asertividad'] },
+      { group: 'Foco, hábitos y trabajo', items: ['Concentración', 'Procrastinación', 'Productividad', 'Hábitos mentales', 'Burnout (estrés laboral)', 'Equilibrio vida-trabajo', 'Liderazgo'] },
     ],
   },
   {
@@ -54,7 +54,7 @@ export const AXES: Axis[] = [
     color: ViveColors.primary,
     bg: '#FDF0E8',
     groups: [
-      { group: '', items: ['Propósito', 'Identidad', 'Momentos de cambio', 'Motivación', 'Crecimiento', 'Espiritualidad', 'Soledad'] },
+      { group: '', items: ['Propósito', 'Identidad', 'Momentos de cambio', 'Orientación vocacional', 'Motivación', 'Crecimiento', 'Espiritualidad', 'Soledad'] },
     ],
   },
 ];
@@ -74,3 +74,48 @@ export const PROFESSIONALS: Professional[] = [
 
 export const NATIONALITIES = ['Argentina', 'Colombia', 'México', 'Uruguay', 'España'];
 export const MAX_PRICE = 8000;
+
+
+// ─── Quiz de orientación ─────────────────────────────────────────────────────
+// Vive acá y no en `QuizScreen` porque es taxonomía, no interfaz: es el tercer
+// mapa que hay que tocar al agregar un subtema (junto con AXES y TOPIC_TO_AREA),
+// y tenerlos en el mismo archivo es lo que permite testear que no se
+// desincronicen. `icon` es `string` —igual que en `conexionesDoors`— para no
+// arrastrar @expo/vector-icons a un archivo de constantes.
+export type QuizArea = { id: string; label: string; icon: string; subtemas: string[] };
+
+// ⚠️ El quiz es un mapa GRUESO: cinco opciones que cubren un subconjunto de los
+// subtemas canónicos, no la lista entera. Agregar un subtema a `AXES` no obliga
+// a agregarlo acá — pero si se omite, ningún camino del quiz lleva a un coach
+// que solo trabaje ese tema. `Autoestima` estaba en esa situación desde antes y
+// se sumó ahora que además tiene puerta propia.
+export const QUIZ_AREAS: QuizArea[] = [
+  { id: 'emocion',    label: 'Emociones y ánimo',      icon: 'smile',      subtemas: ['Tristeza','Ansiedad','Enojo','Culpa','Vergüenza','Alegría','Autoestima'] },
+  { id: 'relaciones', label: 'Relaciones',              icon: 'heart',      subtemas: ['Pareja','Familia','Amistades','Vínculos laborales','Ruptura y separación','Comunicación','Asertividad'] },
+  { id: 'trabajo',    label: 'Trabajo y carrera',       icon: 'briefcase',  subtemas: ['Productividad','Concentración','Procrastinación','Vínculos laborales','Equilibrio vida-trabajo','Liderazgo','Orientación vocacional'] },
+  { id: 'salud',      label: 'Salud y bienestar',       icon: 'activity',   subtemas: ['Sueño','Energía','Nutrición','Actividad física','Estrés físico'] },
+  { id: 'proposito',  label: 'Propósito y crecimiento', icon: 'compass',    subtemas: ['Propósito','Identidad','Motivación','Crecimiento','Momentos de cambio','Orientación vocacional'] },
+];
+
+
+// ─── Subtema → área de Progreso ──────────────────────────────────────────────
+// Tercer mapa de la taxonomía. Vivía en `useProgressStats`; se mudó acá para
+// que los tres estén juntos y un test pueda verificar que no se desincronicen —
+// que es exactamente el fallo que documenta la regla crítica 19 de SCHEMA.md
+// (cuatro subtemas quedaron sin mapear al agregarlos).
+export const TOPIC_TO_AREA: Record<string, string> = {
+  'Tristeza': 'emocion', 'Ansiedad': 'emocion', 'Enojo': 'emocion',
+  'Culpa': 'emocion', 'Vergüenza': 'emocion', 'Alegría': 'emocion', 'Autoestima': 'emocion',
+  'Soledad': 'emocion', 'Ansiedad social': 'emocion', 'Duelo': 'emocion',
+  'Pareja': 'relaciones', 'Familia': 'relaciones', 'Amistades': 'relaciones', 'Vínculos laborales': 'relaciones',
+  'Ruptura y separación': 'relaciones', 'Comunicación': 'relaciones', 'Asertividad': 'relaciones',
+  'Productividad': 'trabajo', 'Concentración': 'trabajo', 'Procrastinación': 'trabajo',
+  'Hábitos mentales': 'trabajo', 'Burnout (estrés laboral)': 'trabajo',
+  'Equilibrio vida-trabajo': 'trabajo', 'Liderazgo': 'trabajo',
+  'Sueño': 'salud', 'Energía': 'salud', 'Actividad física': 'salud',
+  'Estrés físico': 'salud', 'Hábitos': 'salud', 'Nutrición': 'salud', 'Sexualidad': 'salud',
+  'Propósito': 'proposito', 'Identidad': 'proposito', 'Motivación': 'proposito',
+  'Crecimiento': 'proposito', 'Momentos de cambio': 'proposito', 'Espiritualidad': 'proposito',
+  'Orientación vocacional': 'proposito',
+};
+

@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
+import { QUIZ_AREAS as Q1_OPTIONS } from '@/constants/searchData';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { supabase } from '@/lib/supabase';
 
@@ -28,17 +29,6 @@ const BD = 'rgba(255,255,255,0.65)';
 const SG = '#C99A3F';
 
 // ─── Quiz data ───────────────────────────────────────────────────────────────
-type FeatherName = React.ComponentProps<typeof Feather>['name'];
-
-type Q1Opt = { id: string; label: string; icon: FeatherName; subtemas: string[] };
-const Q1_OPTIONS: Q1Opt[] = [
-  { id: 'emocion',    label: 'Emociones y ánimo',      icon: 'smile',      subtemas: ['Tristeza','Ansiedad','Enojo','Culpa','Vergüenza','Alegría'] },
-  { id: 'relaciones', label: 'Relaciones',              icon: 'heart',      subtemas: ['Pareja','Familia','Amistades','Vínculos laborales'] },
-  { id: 'trabajo',    label: 'Trabajo y carrera',       icon: 'briefcase',  subtemas: ['Productividad','Concentración','Procrastinación','Vínculos laborales'] },
-  { id: 'salud',      label: 'Salud y bienestar',       icon: 'activity',   subtemas: ['Sueño','Energía','Nutrición','Actividad física','Estrés físico'] },
-  { id: 'proposito',  label: 'Propósito y crecimiento', icon: 'compass',    subtemas: ['Propósito','Identidad','Motivación','Crecimiento','Momentos de cambio'] },
-];
-
 type Q2Opt = { id: string; label: string; desc: string; kw: string | null };
 const Q2_OPTIONS: Q2Opt[] = [
   { id: 'coach',         label: 'Coach de vida',   desc: 'Metas, hábitos y propósito',     kw: 'coach' },
@@ -191,7 +181,7 @@ export default function QuizScreen() {
                   style={[s.option, q1 === opt.id && s.optionActive]}
                   onPress={() => setQ1(opt.id)}
                   activeOpacity={0.8}>
-                  <Feather name={opt.icon} size={18} color={q1 === opt.id ? CR : FS} />
+                  <Feather name={opt.icon as any} size={18} color={q1 === opt.id ? CR : FS} />
                   <Text style={[s.optionText, q1 === opt.id && s.optionTextActive]}>{opt.label}</Text>
                   {q1 === opt.id && <Feather name="check" size={16} color={CR} />}
                 </TouchableOpacity>

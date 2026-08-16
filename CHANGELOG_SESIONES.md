@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-08-16 — Andre (sesión 99)
+
+**Tocado:** `constants/searchData.ts`, `constants/conexionesDoors.ts`, `hooks/useProgressStats.ts`, `screens/QuizScreen.tsx`. Nuevo: `__tests__/taxonomia.test.ts`. Sin cambios de schema.
+
+**Resumen — grupo A del análisis de motivos de consulta: seis subtemas nuevos, dos puertas nuevas, y la taxonomía consolidada en un archivo con tests.**
+
+- **Punto de partida: Andre trajo un análisis de motivos reales de consulta** (psicólogo, con prevalencias de fuentes argentinas; coach, del estudio ICF/PwC n>30.000 — que él mismo marca como fuente con conflicto de interés). Se mapeó contra `conexionesDoors.ts` real, no de memoria.
+- 🔴 **El hallazgo principal: los tres motivos más grandes de coaching estaban sin cubrir, apenas cubiertos, o enterrados.** *Comunicación* (37%) no existía como subtema. *Equilibrio vida-trabajo* (35%) solo aparecía como **Burnout**, que es el momento en que ya se rompió, no el de quien quiere reordenar antes. *Autoestima* (35%) existía pero adentro de la puerta **"Estado de ánimo"**, junto a Tristeza, Culpa y Duelo — nadie que quiera trabajar su confianza entra por ahí. El patrón: **la taxonomía está construida sobre una lógica de psicología clínica y los coaches entran de prestado.**
+- **Seis subtemas nuevos (32 → 38):** `Comunicación`, `Asertividad`, `Liderazgo`, `Equilibrio vida-trabajo`, `Ruptura y separación`, `Orientación vocacional`. Los tres primeros cubren huecos del lado coach; `Asertividad` cubre el "no puedo poner límites" que *Enojo* dejaba afuera (la irritabilidad estaba, la dificultad para decir que no no); `Ruptura y separación` estaba partida entre tres puertas distintas para un solo evento.
+- **Dos puertas nuevas (10 → 12):** **Comunicación** y **Autoestima y confianza**. La segunda no agrega subtema: saca `Autoestima` de "Estado de ánimo" y le da puerta propia.
+- 🔴 **Hallazgo de paso, no relacionado con el grupo A: el onboarding pregunta por temas que el catálogo no puede servir, y encima descarta la respuesta.** `OnboardingScreen5` tiene su propia lista —una **tercera** taxonomía paralela— con `Comunicación`, `Separación/ruptura`, `Liderazgo` y `Carrera`, ninguno de los cuales existía como subtema. Y `handleContinue()` hace `router.replace('/register')` **sin guardar nada**: lo que la persona elige se descarta. Eso además significa que el "Momento AHA" de la pantalla 6 del spec —mostrar coaches en match antes del registro— hoy no ocurre.
+- **La taxonomía se consolidó en un solo archivo.** `QUIZ_AREAS` (era `Q1_OPTIONS` en `QuizScreen`) y `TOPIC_TO_AREA` (era privado de `useProgressStats`) se mudaron a `constants/searchData.ts`, junto a `AXES`. Motivo concreto: son los **tres mapas que hay que tocar al agregar un subtema**, y estando repartidos no se podían testear juntos. `icon` quedó tipado como `string` en `QUIZ_AREAS` —mismo patrón que ya usaba `conexionesDoors`— para no arrastrar `@expo/vector-icons` a un archivo de constantes.
+- **11 tests nuevos (total 151), y son la parte que más importa.** La regla crítica 19 documenta que estos mapas **ya se desincronizaron una vez** y que cuatro subtemas quedaron sin mapear en silencio. Nada de eso falla en runtime: un subtema huérfano simplemente hace que un coach que solo trabaje ese tema **no aparezca en ninguna puerta** — invisible para el usuario e invisible para quien lo agregó. Los tests verifican la partición en las dos direcciones (sin huérfanos, sin duplicados, sin subtemas inventados por las puertas), que `TOPIC_TO_AREA` cubra todo y no tenga fantasmas, y que el quiz no nombre temas inexistentes.
+- ⚠️ **Las dos puertas nuevas nacen vacías.** `coach_topics` no tiene CHECK y su lista sale de `AXES`: los 32 coaches actuales **no** tienen los subtemas nuevos hasta que editen su perfil. Hay un test que fija que una puerta sin coaches devuelva lista vacía en vez de romper, pero el deck va a rankear raro hasta que se pueblen — la mediana se calcula sobre la puerta completa.
+- **Sigue abierto y deliberadamente sin tocar: los ejes.** Se analizó y se recomendó sacarlos como fase (Emocional concentra 20 de 32 subtemas —ahora 22 de 38— contra 5 del físico, y la primera pantalla pide una categorización que la persona no está en condiciones de hacer). Andre pidió ver una comparación visual antes de decidir; se le pasó y la decisión quedó pendiente. **El grupo A se implementó sobre la estructura actual, con ejes intactos**, para no forzar esa decisión por la ventana.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Decidir el grupo B**, que no es taxonomía sino alcance de la plataforma: **trauma y violencia** (hoy alguien que escribe "mi pareja me pega" no tiene adónde ir — se cruza con el corte por crisis y con tener psicólogos matriculados), **consumo de sustancias** (donde la respuesta correcta puede ser derivar *afuera*), **crisis económica** (el 55,91% más alto del análisis; si va, nombrado por el lado de la angustia, no como asesoramiento financiero) y **migración** (2,57%, podría plegarse a Soledad + Momentos de cambio).
+- **Cerrar la decisión de los ejes.** La comparación visual quedó hecha.
+- **Avisarles a los coaches que hay temas nuevos** para elegir, o las dos puertas nuevas quedan vacías indefinidamente.
+- **Qué hacer con el onboarding**: hoy tiene una taxonomía propia que no coincide con ninguna de las otras dos y descarta lo que la persona elige.
+
 ## 2026-08-16 — Joaquín (sesión 98)
 
 **Tocado:** `app/(tabs)/index.tsx`, `lib/weeklyReflection.ts`, `__tests__/weeklyReflection.test.ts`. Borrado: `components/CoachSuggestionCard.tsx`.

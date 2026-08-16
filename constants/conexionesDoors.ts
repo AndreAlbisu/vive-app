@@ -3,9 +3,10 @@ import { ViveColors } from './theme';
 // Puertas de Conexiones — capa de PRESENTACIÓN (no es AXES ni coach_topics).
 //
 // Cada puerta mapea a ≥1 subtema canónico. Un coach entra en una puerta si su
-// `topics` incluye CUALQUIERA de los subtemas de la puerta. Los 32 subtemas
+// `topics` incluye CUALQUIERA de los subtemas de la puerta. Los 38 subtemas
 // están particionados: cada uno aparece en exactamente una puerta (sin
-// duplicados, sin huérfanos → 3+7+4+6+2+2+1+2+3+2 = 32).
+// duplicados, sin huérfanos → 3+6+1+5+2+8+2+2+1+3+3+2 = 38).
+// `__tests__/conexionesDoors.test.ts` verifica la partición contra AXES.
 //
 // La taxonomía canónica (AXES en searchData.ts) NO se toca: la sigue usando
 // CoachTopicsScreen. Las puertas admiten cruces de eje cuando
@@ -30,13 +31,22 @@ export type Door = {
 
 export const DOORS: Door[] = [
   { id: 'ansiedad',       label: 'Ansiedad y estrés',        tagline: 'Calmar la mente',        icon: 'wind',        color: ViveColors.calm,    subtemas: ['Ansiedad', 'Ansiedad social', 'Estrés físico'] },
-  { id: 'animo',          label: 'Estado de ánimo',          tagline: 'Sentirte mejor',         icon: 'smile',       color: ViveColors.calm,    subtemas: ['Tristeza', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría', 'Autoestima', 'Duelo'] },
-  { id: 'relaciones',     label: 'Relaciones',               tagline: 'Vínculos y pareja',      icon: 'users',       color: ViveColors.calm,    subtemas: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales'] },
-  { id: 'foco',           label: 'Foco, hábitos y trabajo',  tagline: 'Enfoque y rutinas',      icon: 'target',      color: ViveColors.calm,    subtemas: ['Concentración', 'Procrastinación', 'Productividad', 'Hábitos mentales', 'Burnout (estrés laboral)', 'Hábitos'] },
+  { id: 'animo',          label: 'Estado de ánimo',          tagline: 'Sentirte mejor',         icon: 'smile',       color: ViveColors.calm,    subtemas: ['Tristeza', 'Enojo', 'Culpa', 'Vergüenza', 'Alegría', 'Duelo'] },
+  // `Autoestima` salió de "Estado de ánimo" y tiene puerta propia: es el motivo
+  // #3 de coaching (35%) y el #10 de psicología, o sea de los más compartidos
+  // entre las dos listas — y estaba enterrado entre Tristeza, Culpa y Duelo,
+  // donde no entra nadie que quiera trabajar su confianza.
+  { id: 'autoestima',     label: 'Autoestima y confianza',   tagline: 'Cómo te tratás',         icon: 'award',       color: ViveColors.calm,    subtemas: ['Autoestima'] },
+  { id: 'relaciones',     label: 'Relaciones',               tagline: 'Vínculos y pareja',      icon: 'users',       color: ViveColors.calm,    subtemas: ['Pareja', 'Familia', 'Amistades', 'Vínculos laborales', 'Ruptura y separación'] },
+  // Puerta nueva. `Comunicación` es el motivo #1 de coaching (37%) y no existía
+  // como subtema; `Asertividad` cubre el "no puedo poner límites" que `Enojo`
+  // deja afuera — la irritabilidad estaba, la dificultad para decir que no, no.
+  { id: 'comunicacion',   label: 'Comunicación',             tagline: 'Decir lo que necesitás', icon: 'message-circle', color: ViveColors.calm, subtemas: ['Comunicación', 'Asertividad'] },
+  { id: 'foco',           label: 'Foco, hábitos y trabajo',  tagline: 'Enfoque y rutinas',      icon: 'target',      color: ViveColors.calm,    subtemas: ['Concentración', 'Procrastinación', 'Productividad', 'Hábitos mentales', 'Burnout (estrés laboral)', 'Hábitos', 'Equilibrio vida-trabajo', 'Liderazgo'] },
   { id: 'descanso',       label: 'Descanso y energía',       tagline: 'Dormir y recargar',      icon: 'moon',        color: ViveColors.accent,  subtemas: ['Sueño', 'Energía'] },
   { id: 'nutricion',      label: 'Nutrición y movimiento',   tagline: 'Cuerpo y alimentación',  icon: 'activity',    color: ViveColors.accent,  subtemas: ['Nutrición', 'Actividad física'] },
   { id: 'sexualidad',     label: 'Sexualidad e intimidad',   tagline: 'Intimidad y deseo',      icon: 'heart',       color: ViveColors.accent,  subtemas: ['Sexualidad'] },
-  { id: 'proposito',      label: 'Propósito y dirección',    tagline: 'Rumbo y sentido',        icon: 'compass',     color: ViveColors.primary, subtemas: ['Propósito', 'Momentos de cambio'] },
+  { id: 'proposito',      label: 'Propósito y dirección',    tagline: 'Rumbo y sentido',        icon: 'compass',     color: ViveColors.primary, subtemas: ['Propósito', 'Momentos de cambio', 'Orientación vocacional'] },
   { id: 'identidad',      label: 'Identidad y motivación',   tagline: 'Crecer y avanzar',       icon: 'trending-up', color: ViveColors.primary, subtemas: ['Identidad', 'Motivación', 'Crecimiento'] },
   { id: 'espiritualidad', label: 'Espiritualidad y soledad', tagline: 'Conexión interior',      icon: 'sunrise',     color: ViveColors.primary, subtemas: ['Espiritualidad', 'Soledad'] },
 ];

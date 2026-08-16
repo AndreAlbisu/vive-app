@@ -1,21 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getSemanasActivas } from '@/lib/stats';
+import { TOPIC_TO_AREA } from '@/constants/searchData';
 
-// Extraído de progreso.tsx (rediseño sesión 75) — la card "Sobre vos" de
-// Inicio necesita los mismos 3 números, misma query, sin duplicar la lógica.
-const TOPIC_TO_AREA: Record<string, string> = {
-  'Tristeza': 'emocion', 'Ansiedad': 'emocion', 'Enojo': 'emocion',
-  'Culpa': 'emocion', 'Vergüenza': 'emocion', 'Alegría': 'emocion', 'Autoestima': 'emocion',
-  'Soledad': 'emocion', 'Ansiedad social': 'emocion', 'Duelo': 'emocion',
-  'Pareja': 'relaciones', 'Familia': 'relaciones', 'Amistades': 'relaciones', 'Vínculos laborales': 'relaciones',
-  'Productividad': 'trabajo', 'Concentración': 'trabajo', 'Procrastinación': 'trabajo',
-  'Hábitos mentales': 'trabajo', 'Burnout (estrés laboral)': 'trabajo',
-  'Sueño': 'salud', 'Energía': 'salud', 'Actividad física': 'salud',
-  'Estrés físico': 'salud', 'Hábitos': 'salud', 'Nutrición': 'salud', 'Sexualidad': 'salud',
-  'Propósito': 'proposito', 'Identidad': 'proposito', 'Motivación': 'proposito',
-  'Crecimiento': 'proposito', 'Momentos de cambio': 'proposito', 'Espiritualidad': 'proposito',
-};
+// Extraído de progreso.tsx (rediseño sesión 75) — los mismos 3 números, misma
+// query, sin duplicar la lógica.
 
 export interface ProgressStats {
   semanasActivas: number;
