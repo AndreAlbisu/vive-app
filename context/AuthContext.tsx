@@ -197,14 +197,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const res = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
 
-      if (res.type === 'success') {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(res.url);
-        if (exchangeError) return translateError(exchangeError.message);
-        await markAccepted(acceptedTerms, ageConfirmed);
-      } else if (res.type === 'cancel' || res.type === 'dismiss') {
-        return null;
+      if (res.type === 'cancel' || res.type === 'dismiss') return null;
+
+      // ⚠️ `openAuthSessionAsync` también puede devolver 'locked' (ya hay otra
+      // sesión de autenticación abierta) u 'opened'. Antes esos casos caían al
+      // `return null` final, que quien llama interpreta como ÉXITO: el modal se
+      // cerraba, no aparecía ningún error, y la persona seguía sin sesión sin
+      // que nada se lo dijera. Cualquier resultado que no sea 'success' es un
+      // fallo y tiene que decirlo.
+      if (res.type !== 'success') {
+        return 'No se pudo completar el inicio de sesión con Google. Probá de nuevo.';
       }
 
+      // Google devuelve el rechazo como parámetro en la URL de retorno, no como
+      // un tipo de resultado distinto — sin esto, `exchangeCodeForSession`
+      // fallaría con un mensaje del SDK que no le dice nada a nadie.
+      if (res.url.includes('error=')) {
+        const motivo = decodeURIComponent(
+          res.url.match(/error_description=([^&]+)/)?.[1]?.replace(/\+/g, ' ') ?? '',
+        );
+        return motivo || 'Google rechazó el inicio de sesión';
+      }
+
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(res.url);
+      if (exchangeError) return translateError(exchangeError.message);
+      await markAccepted(acceptedTerms, ageConfirmed);
       return null;
     } catch (e: any) {
       return translateError(e?.message ?? 'error');

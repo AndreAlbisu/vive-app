@@ -35,6 +35,25 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: Platform.OS === 'web',
+    // 🔴 SIN ESTO EL LOGIN CON GOOGLE NO PUEDE FUNCIONAR, y falla en silencio.
+    //
+    // El default de supabase-js es `implicit` (GoTrueClient.js:24), que devuelve
+    // los tokens en el FRAGMENTO de la URL de retorno (`#access_token=…`).
+    // `AuthContext.signInWithGoogle` llama a `exchangeCodeForSession()`, que el
+    // propio SDK documenta como "used when flowType is set to pkce": espera un
+    // `?code=` en la query y un verificador guardado localmente. Con el flujo
+    // implícito no hay ni una cosa ni la otra, así que no hay nada que
+    // intercambiar y la sesión nunca se crea.
+    //
+    // PKCE guarda el code verifier en `storage` — el mismo AsyncStorage de
+    // arriba— entre que se abre el navegador y vuelve, así que no hace falta
+    // nada más.
+    //
+    // ⚠️ Cambiar esto afectaría también a los links por mail (confirmación,
+    // recuperación de contraseña), que bajo PKCE viajan con `code`. Verificado
+    // que no aplica: `exchangeCodeForSession` se usa en un solo lugar de todo el
+    // proyecto y no hay ningún `emailRedirectTo` ni `resetPasswordForEmail`.
+    flowType: 'pkce',
   },
 })
 
