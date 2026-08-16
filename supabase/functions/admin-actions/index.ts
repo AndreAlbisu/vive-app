@@ -1,10 +1,10 @@
 // admin-actions — las escrituras privilegiadas del panel de administración.
 //
 // El panel corre dentro de la app, con la anon key, así que NO puede escribir
-// `coaches.verified` ni `reports.status`: `lock-privileged-columns.sql` cerró
-// esas columnas justo para que nadie se auto-apruebe. Esta función es la única
-// vía. Valida el JWT de quien llama, confirma que sea admin, y recién ahí
-// escribe con service role.
+// `coaches.verified` ni `reports.status`: `lock-privileged-columns.sql` y
+// `add-application-status-and-audit.sql` cerraron esas columnas justo para que
+// nadie se auto-apruebe. Esta función es la única vía. Valida el JWT de quien
+// llama, confirma que sea admin, y recién ahí escribe con service role.
 //
 // El orden importa y es el punto entero de esta función: primero se resuelve
 // QUIÉN es a partir de su token —lo que el cliente no puede falsificar— y solo
@@ -18,10 +18,11 @@
 //
 // Acciones:
 //   { action: 'set_coach_verified', coach_id, verified: boolean, notes? }
+//   { action: 'reject_coach_application', coach_id, reason }
 //   { action: 'resolve_report', report_id, status: 'revisado'|'accionado'|'descartado' }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -34,6 +35,78 @@ function json(body: unknown, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json' },
   })
+}
+
+/** Deja constancia de una acción del panel en `admin_audit_log`.
+ *
+ *  Se llama DESPUÉS de que la acción ya ocurrió, no antes: loguear primero
+ *  dejaría registro de cosas que después fallaron. La contra es que un fallo
+ *  del log no deshace la acción — por eso devuelve el error en vez de tragarlo,
+ *  y quien llama lo expone como `warning`. Una auditoría que falla en silencio
+ *  es peor que no tenerla: promete un rastro que no existe. */
+async function audit(
+  admin: SupabaseClient,
+  entry: {
+    adminId: string
+    adminEmail: string | null
+    action: string
+    targetType: 'coach' | 'report' | 'booking'
+    targetId: string
+    details?: Record<string, unknown>
+  },
+): Promise<string | null> {
+  const { error } = await admin.from('admin_audit_log').insert({
+    admin_id: entry.adminId,
+    admin_email: entry.adminEmail,
+    action: entry.action,
+    target_type: entry.targetType,
+    target_id: entry.targetId,
+    details: entry.details ?? null,
+  })
+  if (error) {
+    console.error(`[admin-actions] NO SE PUDO AUDITAR ${entry.action} sobre ${entry.targetId}: ${error.message}`)
+    return error.message
+  }
+  return null
+}
+
+/** Avisa al coach el resultado de su postulación: fila en `notifications`
+ *  (la que lee CoachNotificationsScreen) y push si tiene token.
+ *
+ *  Es best-effort a propósito: que falle el aviso no puede desarmar una
+ *  aprobación ya escrita. Queda en el log. */
+async function notifyCoach(
+  admin: SupabaseClient,
+  profileId: string,
+  type: 'postulacion_aprobada' | 'postulacion_rechazada',
+  title: string,
+  body: string,
+): Promise<void> {
+  const { error } = await admin.from('notifications').insert({
+    recipient_id: profileId,
+    type,
+    title,
+    body,
+  })
+  if (error) {
+    console.error(`[admin-actions] no se pudo notificar a ${profileId}: ${error.message}`)
+    return
+  }
+
+  const { data: profile } = await admin
+    .from('profiles').select('push_token').eq('id', profileId).maybeSingle()
+
+  if (!profile?.push_token) return
+
+  try {
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ to: profile.push_token, sound: 'default', title, body }),
+    })
+  } catch (e) {
+    console.error(`[admin-actions] push a ${profileId} falló: ${e}`)
+  }
 }
 
 serve(async (req) => {
@@ -66,6 +139,8 @@ serve(async (req) => {
     return json({ error: 'no autorizado' }, 403)
   }
 
+  const actor = { adminId: user.id, adminEmail: user.email ?? null }
+
   let body: any
   try {
     body = await req.json()
@@ -79,24 +154,111 @@ serve(async (req) => {
     // que esto es literalmente lo que publica o despublica a un profesional.
     // Se soporta ponerlo en false además de en true: sirve para revocar una
     // aprobación por error o tras un reporte, sin borrarle la cuenta a nadie.
+    //
+    // ⚠️ Revocar NO es rechazar. Al despublicar se deja `application_status`
+    // como está: la postulación fue efectivamente aprobada en su momento y
+    // reescribirla a 'rechazada' borraría por qué el coach está afuera del
+    // catálogo. Rechazar es la acción de abajo y solo aplica a lo que nunca
+    // se aprobó.
     case 'set_coach_verified': {
       if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
       if (typeof body.verified !== 'boolean') return json({ error: 'verified tiene que ser booleano' }, 400)
 
+      const patch: Record<string, unknown> = { verified: body.verified }
+      if (body.verified) {
+        patch.application_status = 'aprobada'
+        patch.application_reviewed_at = new Date().toISOString()
+        patch.application_notes = body.notes ?? null
+      }
+
       const { data, error } = await admin
         .from('coaches')
-        .update({ verified: body.verified })
+        .update(patch)
         .eq('id', body.coach_id)
-        .select('id, verified, profile_id')
+        .select('id, verified, profile_id, application_status')
 
       if (error) return json({ error: error.message }, 500)
       if (!data || data.length === 0) return json({ error: 'no existe ese coach' }, 404)
 
-      // Sin tabla de auditoría todavía: el log de la función es el único rastro
-      // de quién aprobó a quién. Anotado como pendiente.
-      console.log(`[admin-actions] ${user.email ?? user.id} puso verified=${body.verified} en coach ${body.coach_id}${body.notes ? ` — ${body.notes}` : ''}`)
+      const coach = data[0]
 
-      return json({ result: 'ok', coach: data[0] })
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'set_coach_verified',
+        targetType: 'coach',
+        targetId: coach.id,
+        details: { verified: body.verified, notes: body.notes ?? null },
+      })
+
+      if (body.verified) {
+        await notifyCoach(
+          admin,
+          coach.profile_id,
+          'postulacion_aprobada',
+          'Tu perfil ya está publicado',
+          'Aprobamos tu postulación. Ya aparecés en Vita y podés recibir reservas.',
+        )
+      }
+
+      return json({ result: 'ok', coach, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
+    // ── Rechazar una postulación ─────────────────────────────────────────────
+    // Antes no existía: `verified = false` significaba a la vez "nadie la miró"
+    // y "la miramos y no", así que rechazar dejaba la fila igual que antes y la
+    // postulación volvía a la cola para siempre. `application_status` separa
+    // esas dos cosas.
+    //
+    // El motivo es OBLIGATORIO y le llega al coach. Un rechazo sin motivo lo
+    // deja sin saber qué corregir, y como puede volver a postularse (el trigger
+    // `trg_reset_application_on_edit` lo devuelve a la cola al editar), sin
+    // motivo la segunda vuelta sería idéntica a la primera.
+    case 'reject_coach_application': {
+      if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+      if (!reason) return json({ error: 'hace falta un motivo para rechazar' }, 400)
+
+      // El guard sobre `verified` evita el caso raro pero destructivo de
+      // rechazar a alguien que ya está publicado: eso es revocar, y tiene su
+      // propia acción. Sin el guard, un tap en la pantalla equivocada sacaría
+      // del catálogo a un coach activo.
+      const { data, error } = await admin
+        .from('coaches')
+        .update({
+          application_status: 'rechazada',
+          application_notes: reason,
+          application_reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', body.coach_id)
+        .eq('verified', false)
+        .select('id, profile_id, application_status')
+
+      if (error) return json({ error: error.message }, 500)
+      // Sin `.select()` PostgREST devuelve error null aunque no matchee ninguna
+      // fila — hay que mirar las filas afectadas, no el error.
+      if (!data || data.length === 0) {
+        return json({ error: 'no existe ese coach, o ya está publicado (revocalo en vez de rechazarlo)' }, 404)
+      }
+
+      const coach = data[0]
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'reject_coach_application',
+        targetType: 'coach',
+        targetId: coach.id,
+        details: { reason },
+      })
+
+      await notifyCoach(
+        admin,
+        coach.profile_id,
+        'postulacion_rechazada',
+        'Sobre tu postulación',
+        `${reason} Podés corregirlo y volver a enviarla desde la app.`,
+      )
+
+      return json({ result: 'ok', coach, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
     }
 
     // ── Moderar un reporte ───────────────────────────────────────────────────
@@ -115,9 +277,15 @@ serve(async (req) => {
       if (error) return json({ error: error.message }, 500)
       if (!data || data.length === 0) return json({ error: 'no existe ese reporte' }, 404)
 
-      console.log(`[admin-actions] ${user.email ?? user.id} marcó el reporte ${body.report_id} como ${body.status}`)
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'resolve_report',
+        targetType: 'report',
+        targetId: data[0].id,
+        details: { status: body.status },
+      })
 
-      return json({ result: 'ok', report: data[0] })
+      return json({ result: 'ok', report: data[0], ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
     }
 
     default:

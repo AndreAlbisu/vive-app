@@ -66,6 +66,13 @@ export default function CoachApplicationScreen() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
+  // Re-postulación. Si ya existe una fila de coach RECHAZADA, esta pantalla
+  // pasa de alta a edición: el UNIQUE de `profile_id` hace que un INSERT falle
+  // con 23505 ("ya tenemos una solicitud"), que era un callejón sin salida —
+  // la persona sabía qué corregir por la notificación y no tenía dónde hacerlo.
+  const [existingCoachId, setExistingCoachId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
+
   const headerAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
   const successAnim = useRef(new Animated.Value(0)).current;
@@ -82,6 +89,40 @@ export default function CoachApplicationScreen() {
       Animated.timing(successAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
     }
   }, [submitted]);
+
+  // Carga la postulación anterior si la hubo. Solo se prellena cuando está
+  // 'rechazada': una 'pendiente' no se toca (ya está en la cola de revisión) y
+  // una 'aprobada' se edita desde el perfil de coach, no desde acá.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    (async () => {
+      const { data: coach } = await supabase
+        .from('coaches')
+        .select('id, specialty, bio, price_per_session, nationality, application_video_url, application_status, application_notes')
+        .eq('profile_id', user.id)
+        .maybeSingle();
+
+      if (cancelled || !coach || coach.application_status !== 'rechazada') return;
+
+      const { data: savedTopics } = await supabase
+        .from('coach_topics').select('topic').eq('coach_id', coach.id);
+
+      if (cancelled) return;
+
+      setExistingCoachId(coach.id);
+      setRejectionReason(coach.application_notes ?? null);
+      setSpecialty(coach.specialty ?? null);
+      setBio(coach.bio ?? '');
+      setPrice(coach.price_per_session != null ? String(coach.price_per_session) : '');
+      setNationality(coach.nationality ?? '');
+      setVideoUrl(coach.application_video_url ?? '');
+      setTopics(new Set((savedTopics ?? []).map(t => t.topic as string)));
+    })();
+
+    return () => { cancelled = true; };
+  }, [user]);
 
   function toggleTopic(topic: string) {
     setTopics(prev => {
@@ -130,15 +171,24 @@ export default function CoachApplicationScreen() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const { data: coachRow, error } = await supabase.from('coaches').insert({
-      profile_id: user.id,
+    // Los campos que se revisan. `verified` NO va acá: la escribe solo
+    // `admin-actions` con service role, y desde `add-application-status-and-audit.sql`
+    // el cliente ya no tiene el privilegio de INSERT sobre esa columna —
+    // mandarla haría fallar el alta entera con un 42501.
+    const application = {
       specialty,
       bio: bio.trim(),
       price_per_session: Number(price),
       nationality: nationality.trim(),
       application_video_url: videoUrl.trim(),
-      verified: false,
-    }).select('id').single();
+    };
+
+    // Re-postulación vs. alta. El UPDATE devuelve la fila a 'pendiente' por el
+    // trigger `trg_reset_application_on_edit` — el coach no puede escribir
+    // `application_status` ni debería poder.
+    const { data: coachRow, error } = existingCoachId
+      ? await supabase.from('coaches').update(application).eq('id', existingCoachId).select('id').single()
+      : await supabase.from('coaches').insert({ profile_id: user.id, ...application }).select('id').single();
 
     if (error) {
       setSubmitting(false);
@@ -148,6 +198,13 @@ export default function CoachApplicationScreen() {
         setSubmitError(`No pudimos enviar tu solicitud. (${error.message})`);
       }
       return;
+    }
+
+    // En la re-postulación los temas se reemplazan, no se suman: si el motivo
+    // del rechazo fue justamente qué temas eligió, dejar los viejos haría que
+    // la corrección no corrigiera nada.
+    if (existingCoachId) {
+      await supabase.from('coach_topics').delete().eq('coach_id', coachRow.id);
     }
 
     await Promise.all([
@@ -171,7 +228,9 @@ export default function CoachApplicationScreen() {
           <View style={styles.successIcon}>
             <MaterialCommunityIcons name="check-circle-outline" size={64} color={ViveColors.accent} />
           </View>
-          <Text style={styles.successTitle}>¡Listo! Tu solicitud está en revisión</Text>
+          <Text style={styles.successTitle}>
+            {existingCoachId ? 'Reenviada. Queda en revisión otra vez' : '¡Listo! Tu solicitud está en revisión'}
+          </Text>
           <Text style={styles.successSubtitle}>
             Te vamos a contactar pronto para contarte los próximos pasos.
           </Text>
@@ -209,11 +268,23 @@ export default function CoachApplicationScreen() {
 
           <Animated.View style={[styles.content, fadeUp(formAnim)]}>
             <View style={styles.titleArea}>
-              <Text style={styles.title}>Contanos sobre vos</Text>
+              <Text style={styles.title}>
+                {existingCoachId ? 'Corregí y volvé a enviarla' : 'Contanos sobre vos'}
+              </Text>
               <Text style={styles.subtitle}>
                 Con esta info armamos tu perfil y lo revisamos antes de activar tu cuenta como profesional.
               </Text>
             </View>
+
+            {/* Motivo del rechazo anterior. Va arriba de todo y no en un aviso
+                que se pueda cerrar: es lo único que dice qué hay que cambiar,
+                y sin eso la segunda vuelta sería idéntica a la primera. */}
+            {!!rejectionReason && (
+              <View style={styles.rejectionBox}>
+                <Text style={styles.rejectionLabel}>Qué nos faltó de tu postulación</Text>
+                <Text style={styles.rejectionText}>{rejectionReason}</Text>
+              </View>
+            )}
 
             {/* Especialidad */}
             <View style={styles.section}>
@@ -385,7 +456,7 @@ export default function CoachApplicationScreen() {
               disabled={submitting}
             >
               <Text style={styles.buttonText}>
-                {submitting ? 'Enviando...' : 'Enviar solicitud'}
+                {submitting ? 'Enviando...' : existingCoachId ? 'Volver a enviar' : 'Enviar solicitud'}
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -399,6 +470,27 @@ export default function CoachApplicationScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flexGrow: 1, paddingBottom: 48 },
+  rejectionBox: {
+    marginHorizontal: 24,
+    marginBottom: 20,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(181,83,58,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(181,83,58,0.20)',
+  },
+  rejectionLabel: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 12.5,
+    color: '#B5533A',
+    marginBottom: 4,
+  },
+  rejectionText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    color: '#3A4F2A',
+    lineHeight: 20,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

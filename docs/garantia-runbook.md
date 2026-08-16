@@ -7,6 +7,19 @@ Qué hacer cuando llega un mail a `vitaappar@gmail.com` pidiendo el reintegro de
 la garantía. El intake es por correo porque así lo dice §9.3; lo que sigue
 reemplaza al editar filas a mano.
 
+> **Desde el 15/08/2026 esto se puede hacer desde la app, sin `curl`.**
+> Perfil → Administración → pestaña **Garantías**: pegás el ID de la reserva,
+> "Verificar" corre el mismo `dry_run` y muestra qué condición falla, y los
+> botones aprueban o rechazan. Es la **misma** edge function con el mismo
+> payload — no hay dos implementaciones de §9.3.
+>
+> Este runbook sigue siendo válido y es la vía cuando no tenés la app a mano o
+> necesitás el detalle crudo de la respuesta. La única diferencia: desde el
+> panel, **`resolved_by` sale del JWT** y se ignora lo que mande el body.
+>
+> El paso 1 (encontrar la reserva) sigue siendo SQL en los dos caminos: el panel
+> arranca del ID, no busca por mail.
+
 ## 1. Encontrar la reserva
 
 Del mail salen el nombre y el correo. En el SQL editor de Supabase:

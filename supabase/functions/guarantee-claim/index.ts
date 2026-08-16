@@ -17,12 +17,16 @@
 //
 // Uso:
 //   POST /guarantee-claim
-//   Authorization: Bearer <SERVICE_ROLE_KEY>
+//   Authorization: Bearer <SERVICE_ROLE_KEY>          (runbook, por curl)
+//                  Bearer <access_token de un admin>  (panel de administración)
 //   { "booking_id": "...", "resolved_by": "andre", "dry_run": true }
 //   { "booking_id": "...", "resolved_by": "andre", "reject": "motivo" }
 //
 // `dry_run` valida y no escribe: sirve para contestar el mail sabiendo si
 // califica antes de comprometerse.
+//
+// ⚠️ `resolved_by` del body se IGNORA cuando llama un admin logueado: ahí la
+// identidad sale del JWT. Solo lo usa el runbook, donde no hay ninguna.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -44,28 +48,37 @@ function json(body: unknown, status = 200) {
 /** Deja pasar al service role (curl del runbook) o a un admin logueado (panel).
  *  El panel corre con la anon key, así que no puede mandar la service key —
  *  pero tampoco hay que duplicar las validaciones de §9.3 en otra función.
- *  Se resuelve la identidad desde el token, que el cliente no puede falsificar. */
-async function isAuthorized(authHeader: string): Promise<boolean> {
-  if (authHeader.includes(SUPABASE_SERVICE_ROLE_KEY)) return true
-  if (!authHeader.startsWith('Bearer ')) return false
+ *  Se resuelve la identidad desde el token, que el cliente no puede falsificar.
+ *
+ *  Devuelve TAMBIÉN quién es, no solo si puede: `resolved_by` queda escrito en
+ *  `guarantee_claims` y es el único rastro de quién resolvió una garantía. Si
+ *  saliera del body, sería un campo de auditoría que su propio actor elige —
+ *  el mismo problema que un `is_admin` que viniera del cliente. Para el runbook
+ *  (service role) no hay identidad que derivar y ahí sí vale lo que mande. */
+async function authorize(authHeader: string): Promise<{ ok: boolean; identity: string | null }> {
+  if (authHeader.includes(SUPABASE_SERVICE_ROLE_KEY)) return { ok: true, identity: null }
+  if (!authHeader.startsWith('Bearer ')) return { ok: false, identity: null }
 
   const asCaller = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: authHeader } },
   })
   const { data: { user } } = await asCaller.auth.getUser()
-  if (!user) return false
+  if (!user) return { ok: false, identity: null }
 
   // El chequeo va con service role: con el cliente del invocador, una política
   // mal puesta podría devolver null y hacer que esto fallara ABIERTO.
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
   const { data: profile } = await admin
     .from('profiles').select('is_admin').eq('id', user.id).maybeSingle()
-  return !!profile?.is_admin
+
+  if (!profile?.is_admin) return { ok: false, identity: null }
+  return { ok: true, identity: user.email ?? user.id }
 }
 
 serve(async (req) => {
   const authHeader = req.headers.get('Authorization') ?? ''
-  if (!(await isAuthorized(authHeader))) {
+  const auth = await authorize(authHeader)
+  if (!auth.ok) {
     return new Response('Unauthorized', { status: 401 })
   }
 
@@ -78,6 +91,11 @@ serve(async (req) => {
 
   const bookingId = body.booking_id
   if (!bookingId) return json({ error: 'falta booking_id' }, 400)
+
+  // Quien resuelve. Si vino por el panel, es la identidad del JWT y el body no
+  // puede pisarla; si vino por el runbook con service role, no hay identidad
+  // que derivar y vale lo que mande el curl.
+  const resolvedBy = auth.identity ?? body.resolved_by ?? null
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -102,7 +120,7 @@ serve(async (req) => {
       coach_id: booking.coach_id,
       status: 'rechazada',
       resolved_at: new Date().toISOString(),
-      resolved_by: body.resolved_by ?? null,
+      resolved_by: resolvedBy,
       notes: body.reject,
     }, { onConflict: 'booking_id' })
     if (error) return json({ error: `no se pudo registrar el rechazo: ${error.message}` }, 500)
@@ -185,7 +203,7 @@ serve(async (req) => {
     coach_id: booking.coach_id,
     status: 'aprobada',
     resolved_at: new Date().toISOString(),
-    resolved_by: body.resolved_by ?? null,
+    resolved_by: resolvedBy,
     notes: null,
   })
   if (claimErr) return json({ error: `no se pudo registrar la solicitud: ${claimErr.message}` }, 500)
