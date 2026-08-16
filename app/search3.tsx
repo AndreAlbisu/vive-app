@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,10 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { NATIONALITIES, MAX_PRICE } from '@/constants/searchData';
 import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
+import { topicOptionsFrom } from '@/constants/conexionesDoors';
+import { supabase } from '@/lib/supabase';
+import { getCoachesCache, CachedCoach } from '@/lib/coachesCache';
+import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 
 // ─── Paleta local (consistente con Recursos / Explorar) ──────────────────────
 const FOREST      = '#3A4F2A';
@@ -32,10 +36,6 @@ const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 
 // Filtros rápidos por tipo (un tap, sin abrir el sheet)
 const QUICK_TYPES: TypeFilter[] = ['Todos', 'Coach', 'Psicólogo', 'Nutricionista'];
-import { supabase } from '@/lib/supabase';
-import { getCoachesCache, CachedCoach } from '@/lib/coachesCache';
-import { useBlockedFilter } from '@/hooks/useBlockedFilter';
-
 type CoachResult = CachedCoach;
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -49,6 +49,8 @@ type Filters = {
   maxPrice:    number;
   nationality: NatFilter;
   type:        TypeFilter;
+  /** Subtemas seleccionados. Vacío = sin filtro de tema (todos los coaches). */
+  topics:      string[];
 };
 
 const DEFAULT_FILTERS: Filters = {
@@ -57,6 +59,7 @@ const DEFAULT_FILTERS: Filters = {
   maxPrice:    MAX_PRICE,
   nationality: 'Todas',
   type:        'Todos',
+  topics:      [],
 };
 
 // ─── Normalización para búsqueda sin tildes/mayúsculas ───────────────────────
@@ -132,8 +135,17 @@ export default function SearchScreen3() {
   const router = useRouter();
   const { topic, label, query } = useLocalSearchParams<{ topic?: string; label?: string; query?: string }>();
 
-  const [filters, setFilters]     = useState<Filters>(DEFAULT_FILTERS);
-  const [draftFilters, setDraft]  = useState<Filters>(DEFAULT_FILTERS);
+  // Los subtemas con los que se entró (los de la puerta). Siembran el filtro en
+  // vez de competir con él: llegan pre-seleccionados, visibles y editables. Antes
+  // el tema era el título de la pantalla y no se podía tocar — ni siquiera
+  // "Limpiar filtros" lo alcanzaba, siendo el más restrictivo de todos.
+  const seedTopics = useMemo(() => {
+    const t = Array.isArray(topic) ? topic[0] : topic;
+    return t ? t.split(',').map((x: string) => x.trim()).filter(Boolean) : [];
+  }, [topic]);
+
+  const [filters, setFilters]     = useState<Filters>(() => ({ ...DEFAULT_FILTERS, topics: seedTopics }));
+  const [draftFilters, setDraft]  = useState<Filters>(() => ({ ...DEFAULT_FILTERS, topics: seedTopics }));
   const [sheetOpen, setSheetOpen] = useState(false);
   const [rawCoaches, setRawCoaches] = useState<CoachResult[]>([]);
   const visibleCoaches = useBlockedFilter(rawCoaches);
@@ -144,21 +156,20 @@ export default function SearchScreen3() {
   useEffect(() => {
     let cancelled = false;
 
+    // ⚠️ El filtro por TEMA ya no se aplica acá. Antes se hacía en este paso, con
+    // el parámetro de la ruta, y eso dejaba `rawCoaches` recortado a la puerta
+    // por la que se entró: el sheet no tenía forma de AMPLIAR a otros temas
+    // porque los coaches de las otras puertas nunca habían entrado a la lista.
+    // Ahora el tema es un filtro más, junto al precio y los otros, y esta lista
+    // guarda el universo completo — que además es de donde salen las opciones
+    // del filtro (ver `topicOptions`).
     function applyAndSet(all: CachedCoach[]) {
-      const topicStr = Array.isArray(topic) ? topic[0] : topic;
       const queryStr = Array.isArray(query) ? query[0] : query;
-      const filtered = all.filter(c => {
-        if (topicStr) {
-          const filterTopics = topicStr.split(',').map(normalize);
-          return c.topics.some(ct => filterTopics.includes(normalize(ct)));
-        }
-        if (queryStr) {
-          const q = normalize(queryStr);
-          return normalize(c.name).includes(q)
-            || normalize(c.specialty).includes(q)
-            || c.topics.some(ct => normalize(ct).includes(q));
-        }
-        return true;
+      const filtered = !queryStr ? all : all.filter(c => {
+        const q = normalize(queryStr);
+        return normalize(c.name).includes(q)
+          || normalize(c.specialty).includes(q)
+          || c.topics.some(ct => normalize(ct).includes(q));
       });
       setRawCoaches(filtered);
       setLoadingCoaches(false);
@@ -196,7 +207,7 @@ export default function SearchScreen3() {
         applyAndSet(all);
       });
     return () => { cancelled = true; };
-  }, [topic, query]);
+  }, [query]);
 
   // Rating promedio real por coach — mismo criterio que ProfesionalScreen.tsx
   // (reviews públicas, is_private=false). Se recalcula cuando cambia la lista
@@ -262,6 +273,10 @@ export default function SearchScreen3() {
   }
 
   const results = visibleCoaches.filter(p => {
+    if (filters.topics.length > 0) {
+      const wanted = filters.topics.map(normalize);
+      if (!p.topics.some(t => wanted.includes(normalize(t)))) return false;
+    }
     if (filters.maxPrice < MAX_PRICE && p.priceFrom > filters.maxPrice) return false;
     if (filters.nationality !== 'Todas' && p.nationality !== filters.nationality) return false;
     if (filters.sex !== 'Todos' && p.gender !== SEX_TO_GENDER[filters.sex]) return false;
@@ -270,15 +285,35 @@ export default function SearchScreen3() {
     return true;
   });
 
+  // Opciones del filtro derivadas de los coaches que existen, no de la
+  // taxonomía. El porqué —y por qué se calcula sobre el universo completo y no
+  // sobre el resultado— está en `topicOptionsFrom`.
+  const topicOptions = useMemo(() => topicOptionsFrom(visibleCoaches), [visibleCoaches]);
+
+  // ¿La selección sigue siendo la de la puerta por la que se entró? Decide el
+  // título y si el tema cuenta como filtro "tocado".
+  const topicsIgualAPuerta =
+    filters.topics.length === seedTopics.length &&
+    filters.topics.every(t => seedTopics.includes(t));
+
   const activeFilterCount = [
     filters.minRating > 0,
     filters.sex !== 'Todos',
     filters.maxPrice < MAX_PRICE,
     filters.nationality !== 'Todas',
     filters.type !== 'Todos',
+    !topicsIgualAPuerta,
   ].filter(Boolean).length;
 
-  const title = label ?? query ?? 'Resultados';
+  // El título dejaba de ser cierto apenas se tocaban los temas: decía el nombre
+  // de la puerta aunque la selección ya no fuera esa. Se mantiene mientras
+  // coincida, y si no, dice qué se está mirando.
+  const title = (() => {
+    if (topicsIgualAPuerta && label) return label;
+    if (filters.topics.length === 1) return filters.topics[0];
+    if (filters.topics.length > 1) return `${filters.topics.length} temas`;
+    return query ?? 'Profesionales';
+  })();
 
   return (
     <AppBg>
@@ -410,6 +445,48 @@ export default function SearchScreen3() {
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.sheetContent}>
 
             <Text style={s.sheetTitle}>Filtros</Text>
+
+            {/* ── Temas ──
+                Va primero porque es el filtro que más recorta: con la puerta
+                sembrada, es también lo que explica por qué la lista es la que es. */}
+            {topicOptions.length > 0 && (
+              <View style={s.filterSection}>
+                <View style={s.temasHead}>
+                  <Text style={s.filterLabel}>Temas</Text>
+                  {draftFilters.topics.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => setDraft(d => ({ ...d, topics: [] }))}
+                      hitSlop={8}
+                      activeOpacity={0.7}>
+                      <Text style={s.temasClear}>Ver todos</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {topicOptions.map(group => (
+                  <View key={group.id} style={s.temaGroup}>
+                    <Text style={s.temaGroupLabel}>{group.label}</Text>
+                    <View style={s.pillRow}>
+                      {group.subtemas.map(t => {
+                        const on = draftFilters.topics.includes(t);
+                        return (
+                          <TouchableOpacity
+                            key={t}
+                            style={[s.pill, on && s.pillActive]}
+                            onPress={() => setDraft(d => ({
+                              ...d,
+                              topics: on ? d.topics.filter(x => x !== t) : [...d.topics, t],
+                            }))}
+                            activeOpacity={0.75}>
+                            <Text style={[s.pillText, on && s.pillTextActive]}>{t}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
 
             {/* ── Puntuación mínima ── */}
             <View style={s.filterSection}>
@@ -709,6 +786,25 @@ const s = StyleSheet.create({
       ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 16 },
       android: { elevation: 20 },
     }),
+  },
+  temasHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  temasClear: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 12.5,
+    color: ViveColors.primary,
+  },
+  temaGroup: {
+    marginTop: 10,
+  },
+  temaGroupLabel: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 11.5,
+    color: FOREST_SOFT,
+    marginBottom: 5,
   },
   sheetHandle: {
     width: 36,

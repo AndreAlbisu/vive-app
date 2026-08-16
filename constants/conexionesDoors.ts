@@ -84,3 +84,29 @@ export function doorsForEje(eje: Eje): Door[] {
 export function coachesForDoor<T extends { topics: string[] }>(door: Door, coaches: T[]): T[] {
   return coaches.filter(c => door.subtemas.some(t => c.topics.includes(t)));
 }
+
+export type TopicOptionGroup = { id: string; label: string; color: string; subtemas: string[] };
+
+/**
+ * Opciones del filtro por tema, derivadas de los coaches que EXISTEN.
+ *
+ * ⚠️ Deliberadamente NO devuelve los 38 subtemas de la taxonomía. Al 16/08/2026
+ * hay siete que no trabaja nadie —los seis agregados ese día más `Duelo`— y
+ * ofrecerlos daría filtros que devuelven cero resultados, que se leen como una
+ * pantalla rota y no como "no hay nadie de eso". Derivándolo del dato, no puede
+ * existir una opción muerta; y cuando un coach marque `Comunicación`, la opción
+ * aparece sola sin tocar código.
+ *
+ * Se llama con el universo COMPLETO de coaches visibles, nunca con el resultado
+ * ya filtrado: si dependiera del resultado, las opciones desaparecerían a medida
+ * que se filtra y no habría forma de volver a ampliar.
+ *
+ * Las puertas sin ningún subtema en uso se omiten enteras — un grupo vacío es
+ * un encabezado sin nada debajo.
+ */
+export function topicOptionsFrom<T extends { topics: string[] }>(coaches: T[]): TopicOptionGroup[] {
+  const enUso = new Set(coaches.flatMap(c => c.topics));
+  return DOORS
+    .map(d => ({ id: d.id, label: d.label, color: d.color, subtemas: d.subtemas.filter(t => enUso.has(t)) }))
+    .filter(g => g.subtemas.length > 0);
+}

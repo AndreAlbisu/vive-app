@@ -1,5 +1,5 @@
 import { AXES, QUIZ_AREAS, TOPIC_TO_AREA } from '@/constants/searchData';
-import { DOORS, coachesForDoor } from '@/constants/conexionesDoors';
+import { DOORS, coachesForDoor, topicOptionsFrom } from '@/constants/conexionesDoors';
 
 // La taxonomía de temas vive repartida en tres mapas que tienen que estar
 // sincronizados, y ya se desincronizaron una vez: la regla crítica 19 de
@@ -100,5 +100,50 @@ describe('coachesForDoor', () => {
     // perfil: `coach_topics` no tiene CHECK y nadie tiene los subtemas nuevos.
     const puerta = DOORS.find(d => d.id === 'autoestima')!;
     expect(coachesForDoor(puerta, [coach(['Sueño']), coach(['Pareja'])])).toEqual([]);
+  });
+});
+
+describe('topicOptionsFrom — opciones del filtro derivadas del dato', () => {
+  const coach = (topics: string[]) => ({ topics });
+
+  it('solo ofrece subtemas que algún coach trabaja', () => {
+    // El caso que motiva la función: `Comunicación` existe en la taxonomía pero
+    // al 16/08 no lo trabaja nadie. Ofrecerlo daría un filtro que devuelve cero.
+    const grupos = topicOptionsFrom([coach(['Pareja', 'Familia']), coach(['Sueño'])]);
+    const ofrecidos = grupos.flatMap(g => g.subtemas);
+    expect(ofrecidos.sort()).toEqual(['Familia', 'Pareja', 'Sueño']);
+    expect(ofrecidos).not.toContain('Comunicación');
+  });
+
+  it('omite las puertas que quedarían sin ningún tema', () => {
+    // Un encabezado sin nada debajo es peor que no mostrar la sección.
+    const grupos = topicOptionsFrom([coach(['Sueño'])]);
+    expect(grupos).toHaveLength(1);
+    expect(grupos[0].id).toBe('descanso');
+    expect(grupos.every(g => g.subtemas.length > 0)).toBe(true);
+  });
+
+  it('agrupa por puerta y respeta su orden', () => {
+    const grupos = topicOptionsFrom([coach(['Propósito', 'Ansiedad', 'Sueño'])]);
+    expect(grupos.map(g => g.id)).toEqual(['ansiedad', 'descanso', 'proposito']);
+  });
+
+  it('sin coaches no ofrece nada, en vez de ofrecer los 38', () => {
+    // Si devolviera la taxonomía completa, una lista vacía mostraría un filtro
+    // lleno de opciones que no llevan a nadie.
+    expect(topicOptionsFrom([])).toEqual([]);
+  });
+
+  it('no repite un subtema que comparten varios coaches', () => {
+    const grupos = topicOptionsFrom([coach(['Pareja']), coach(['Pareja']), coach(['Pareja', 'Familia'])]);
+    const relaciones = grupos.find(g => g.id === 'relaciones')!;
+    expect(relaciones.subtemas).toEqual(['Pareja', 'Familia']);
+  });
+
+  it('ignora temas que un coach tenga y la taxonomía ya no', () => {
+    // `coach_topics` no tiene CHECK: puede quedar una fila con un tema viejo
+    // después de renombrarlo. No debe aparecer como opción de filtro.
+    const grupos = topicOptionsFrom([coach(['Pareja', 'Tema Que Ya No Existe'])]);
+    expect(grupos.flatMap(g => g.subtemas)).toEqual(['Pareja']);
   });
 });
