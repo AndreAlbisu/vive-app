@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Animated,
   Easing,
+  InteractionManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -48,19 +49,27 @@ export function SobreVosMomento({ visible, reflection, moodColor, onClose, onSee
   useEffect(() => {
     if (visible) {
       setMounted(true);
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 1,
-          duration: reducedMotion ? 120 : 350,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: reducedMotion ? 120 : 400,
-          easing: reducedMotion ? Easing.linear : Easing.bezier(0.32, 0.1, 0.25, 1),
-          useNativeDriver: true,
-        }),
-      ]).start();
+      // El pick del mood dispara un re-render grande de toda Inicio (la card,
+      // el propio check-in animando sus círculos) justo antes de que esto
+      // quiera arrancar. `runAfterInteractions` espera a que ese trabajo
+      // termine antes de largar la animación del momento, en vez de competir
+      // por el hilo de JS/el bridge en el peor momento posible.
+      const task = InteractionManager.runAfterInteractions(() => {
+        Animated.parallel([
+          Animated.timing(backdropOpacity, {
+            toValue: 1,
+            duration: reducedMotion ? 120 : 350,
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateY, {
+            toValue: 0,
+            duration: reducedMotion ? 120 : 400,
+            easing: reducedMotion ? Easing.linear : Easing.bezier(0.32, 0.1, 0.25, 1),
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+      return () => task.cancel();
     } else {
       Animated.parallel([
         Animated.timing(backdropOpacity, { toValue: 0, duration: reducedMotion ? 100 : 200, useNativeDriver: true }),
