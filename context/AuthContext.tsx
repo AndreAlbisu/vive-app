@@ -196,7 +196,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // `native` corta ese camino y devuelve la URL tal cual en los entornos
       // `bare` y `standalone` (el dev build es `bare`). En Expo Go la ignora y
       // usa la `exp://…`, que es justo lo que Expo Go necesita.
-      const redirectUrl = AuthSession.makeRedirectUri({ native: 'viveapp://' });
+      // ⚠️ Con PATH, no `viveapp://` pelado. En un dev client, `expo-dev-client`
+      // registra el MISMO scheme para su propio launcher, y una URL sin path es
+      // la ambigua: el sistema puede entregársela al launcher en vez de a la
+      // app, con lo cual `openAuthSessionAsync` nunca ve volver el redirect y la
+      // sesión no se crea aunque todo lo demás esté bien. Un path la desambigua.
+      const redirectUrl = AuthSession.makeRedirectUri({ native: 'viveapp://auth/callback' });
       // Se loguea a propósito: es el dato que decide si la allowlist matchea, y
       // no se puede saber desde afuera del dispositivo.
       console.log('[auth] redirect URI:', redirectUrl);
