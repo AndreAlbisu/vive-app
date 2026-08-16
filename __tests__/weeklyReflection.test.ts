@@ -180,6 +180,101 @@ describe('buildReflection — la variante del día', () => {
     expect(new Set(frases).size).toBeGreaterThan(1);
   });
 
+  it('TODAS las señales rotan, incluidas las dos que más se ven', () => {
+    // `level` (ánimo parejo) y `empty` (usuario nuevo) tenían UNA sola frase,
+    // así que la app decía literalmente lo mismo cada mañana — y son justo las
+    // dos ramas en las que cae alguien que recién empieza. Este test es el
+    // guardarraíl: si una señal vuelve a quedarse con una variante, falla.
+    const dias = Array.from({ length: 14 }, (_, i) => `2026-08-${String(i + 1).padStart(2, '0')}`);
+    const casos: [string, Partial<ReflectionInput>][] = [
+      ['empty',         {}],
+      ['level',         { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3] }],
+      ['sharp-drop',    { sharpDrop: true }],
+      ['sustained-low', { recentMoods: [2, 2, 1], historicMoods: [1, 1, 1] }],
+      ['trend-up',      { recentMoods: [4, 4, 5], historicMoods: [3, 3, 2] }],
+      ['trend-down',    { recentMoods: [2, 3, 2], historicMoods: [4, 4, 3] }],
+      ['sessions',      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], sessionsThisWeek: 1 }],
+      ['streak',        { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], streak: 6 }],
+      ['practices',     { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], resourcesThisWeek: 3 }],
+    ];
+
+    for (const [signal, caso] of casos) {
+      const frases = new Set(dias.map(dayKey => text(on({ ...caso, dayKey }))));
+      expect(buildReflection(on({ ...caso, dayKey: dias[0] })).signal).toBe(signal);
+      expect(frases.size).toBeGreaterThan(1);
+    }
+  });
+
+  it('ninguna devolución es un dato pelado', () => {
+    // El pedido que motivó el reescrito: "Esta semana hiciste 3 prácticas" es
+    // un informe, no una devolución. Toda frase tiene que tener un segundo
+    // tiempo — lo que se nota Y qué se dice de eso.
+    const dias = Array.from({ length: 14 }, (_, i) => `2026-10-${String(i + 1).padStart(2, '0')}`);
+    const casos: Partial<ReflectionInput>[] = [
+      {}, { sharpDrop: true },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3] },
+      { recentMoods: [2, 2, 1], historicMoods: [1, 1, 1] },
+      { recentMoods: [4, 4, 5], historicMoods: [3, 3, 2] },
+      { recentMoods: [2, 3, 2], historicMoods: [4, 4, 3] },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], sessionsThisWeek: 2 },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], streak: 6 },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], resourcesThisWeek: 3 },
+    ];
+    for (const dayKey of dias) {
+      for (const c of casos) {
+        const t = text(on({ ...c, dayKey }));
+        // Dos oraciones (o una con guion largo), y no menos de diez palabras:
+        // una frase de seis palabras terminada en punto es un rótulo.
+        expect(t.split(/\s+/).length).toBeGreaterThanOrEqual(10);
+        expect(t).toMatch(/[.—]\s|—/);
+      }
+    }
+  });
+
+  it('nunca le asigna un género a la persona', () => {
+    // La app no sabe el género de quien lee, así que ninguna frase puede
+    // adjetivarlo. El riesgo concreto: las etiquetas de nivel (`cansada`,
+    // `pareja`) concuerdan con "semana" y son correctas en "tu semana viene
+    // cansada", pero misgenerizan apenas el sujeto pasa a ser la persona
+    // ("venís cansada"). Este test vigila ese salto de marco.
+    const generizado = /\bven[íi]s\s+(?!a |m[áa]s |un |bien|mejor|peor|para |sosteni|atravesando|levantando)\w+(ada|ado|osa|oso|ida|ido)\b/i;
+    const dias = Array.from({ length: 14 }, (_, i) => `2026-11-${String(i + 1).padStart(2, '0')}`);
+    const casos: Partial<ReflectionInput>[] = [
+      {}, { sharpDrop: true },
+      { recentMoods: [1, 1, 1], historicMoods: [1, 1, 1] },
+      { recentMoods: [2, 2, 2], historicMoods: [2, 2, 2] },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3] },
+      { recentMoods: [4, 4, 4], historicMoods: [4, 4, 4] },
+      { recentMoods: [5, 5, 5], historicMoods: [5, 5, 5] },
+      { recentMoods: [2, 2, 1], historicMoods: [1, 1, 1] },
+      { recentMoods: [4, 4, 5], historicMoods: [3, 3, 2] },
+      { recentMoods: [2, 3, 2], historicMoods: [4, 4, 3] },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], sessionsThisWeek: 2 },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], streak: 6 },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], resourcesThisWeek: 3 },
+    ];
+    for (const dayKey of dias) {
+      for (const c of casos) {
+        expect(text(on({ ...c, dayKey }))).not.toMatch(generizado);
+      }
+    }
+  });
+
+  it('las etiquetas de nivel solo aparecen concordando con "semana"', () => {
+    // El marco tiene que ser "(Tu|La) semana viene ___" en las cinco etiquetas.
+    // ⚠️ Los niveles 1 y 2 con muestra completa caen en `sustained-low`, no
+    // acá: a la rama de nivel llegan con una o dos entradas, que es el caso de
+    // alguien que recién arranca y registró un par de días malos.
+    const casos: number[][] = [[1], [2], [3, 3, 3], [4, 4, 4], [5, 5, 5]];
+    for (const moods of casos) {
+      for (const dayKey of ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04']) {
+        const r = buildReflection(on({ recentMoods: moods, historicMoods: moods, dayKey }));
+        expect(r.signal).toBe('level');
+        expect(`${r.before}${r.bold}`).toMatch(/^(Tu|La) semana viene .+/);
+      }
+    }
+  });
+
   it('no depende de la hora ni de nada externo', () => {
     // Nada de Date.now() adentro: mismo input, mismo output, siempre.
     const input = on({ recentMoods: [2, 2, 2], historicMoods: [4, 4, 4] });

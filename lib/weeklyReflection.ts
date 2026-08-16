@@ -114,15 +114,19 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // acción ni se levanta el ánimo a la fuerza: se acusa recibo y se corre.
   if (sharpDrop) {
     return pick(dayKey, [
-      r('Hoy venís ', 'más abajo', '. No hace falta que hagas nada con eso ahora.', 'gentle', 'sharp-drop'),
-      r('', 'Un día flojo', ' no borra la semana.', 'gentle', 'sharp-drop'),
-      r('Registraste un día difícil. ', 'Eso también cuenta', '.', 'gentle', 'sharp-drop'),
+      r('Hoy venís ', 'más abajo', '. No hace falta que hagas nada con eso ahora — alcanza con haberlo registrado.', 'gentle', 'sharp-drop'),
+      r('', 'Un día flojo', ' no borra la semana. Mañana es otro día y no le debés nada a nadie.', 'gentle', 'sharp-drop'),
+      r('Registraste un día difícil, y eso ya es ', 'mirarse de frente', '. Quedate tranqui.', 'gentle', 'sharp-drop'),
     ]);
   }
 
   // ── 2. Todavía no hay con qué ─────────────────────────────────────────────
   if (recentMoods.length === 0) {
-    return r('Contame cómo venís y ', 'acá te lo devuelvo', '.', 'neutral', 'empty');
+    return pick(dayKey, [
+      r('Todavía no nos conocemos mucho. Contame cómo venís unos días y ', 'empiezo a devolverte', ' lo que voy viendo.', 'neutral', 'empty'),
+      r('Acá te voy a ir contando lo que noto en tu semana. Para eso necesito que ', 'me cuentes cómo venís', '.', 'neutral', 'empty'),
+      r('Recién arrancamos. Registrá cómo venís unos días y ', 'esto se pone interesante', '.', 'neutral', 'empty'),
+    ]);
   }
 
   const avgRecent = average(recentMoods);
@@ -133,8 +137,9 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // de un mes peor. El nivel manda sobre la tendencia cuando el nivel es bajo.
   if (recentMoods.length >= MIN_SAMPLE && avgRecent <= 2) {
     return pick(dayKey, [
-      r('Venís sostenido en ', 'días difíciles', '. Registrarlo igual ya es algo.', 'gentle', 'sustained-low'),
-      r('La semana viene ', 'cuesta arriba', '. No tiene que estar buena para que valga anotarla.', 'gentle', 'sustained-low'),
+      r('Venís atravesando ', 'días difíciles', '. Registrarlo igual, cuando cuesta, dice bastante de vos.', 'gentle', 'sustained-low'),
+      r('La semana viene ', 'cuesta arriba', '. No tiene que estar buena para que valga la pena anotarla.', 'gentle', 'sustained-low'),
+      r('Hace unos días que ', 'venís abajo', '. No siempre hay algo que arreglar — a veces solo hay que atravesarlo.', 'gentle', 'sustained-low'),
     ]);
   }
 
@@ -145,16 +150,17 @@ export function buildReflection(input: ReflectionInput): Reflection {
 
     if (delta >= CHANGE_THRESHOLD) {
       return pick(dayKey, [
-        r('Esta semana venís ', 'mejor', ' que las anteriores.', 'warm', 'trend-up'),
-        r('Algo se ', 'acomodó', ' esta semana.', 'warm', 'trend-up'),
-        r('Venís ', 'levantando', ' respecto del último mes.', 'warm', 'trend-up'),
+        r('Esta semana venís ', 'mejor', ' que las anteriores. No sé qué cambió, pero algo cambió.', 'warm', 'trend-up'),
+        r('Algo se ', 'acomodó', ' esta semana. Vale la pena registrar qué hiciste distinto.', 'warm', 'trend-up'),
+        r('Venís ', 'levantando', ' respecto del último mes. Esas cosas no pasan solas.', 'warm', 'trend-up'),
       ]);
     }
 
     if (delta <= -CHANGE_THRESHOLD) {
       return pick(dayKey, [
-        r('Esta semana viene ', 'más pesada', ' que las anteriores.', 'gentle', 'trend-down'),
-        r('Venís ', 'un poco más abajo', ' que el último mes.', 'gentle', 'trend-down'),
+        r('Esta semana viene ', 'más pesada', ' que las anteriores. Pasa, y no dice nada malo de vos.', 'gentle', 'trend-down'),
+        r('Venís ', 'un poco más abajo', ' que el último mes. Si necesitás bajar el ritmo, bajalo.', 'gentle', 'trend-down'),
+        r('La semana viene ', 'más cargada', ' que el último mes. No todas tienen que rendir.', 'gentle', 'trend-down'),
       ]);
     }
   }
@@ -162,9 +168,12 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // ── 5. Sesiones ───────────────────────────────────────────────────────────
   // Antes que la racha: una sesión es lo más importante que pasó esa semana.
   if (sessionsThisWeek > 0) {
+    const varias = sessionsThisWeek > 1;
     return pick(dayKey, [
-      r('Tuviste ', sessionsThisWeek === 1 ? 'una sesión' : `${sessionsThisWeek} sesiones`, ' esta semana.', 'warm', 'sessions'),
-      r('Esta semana te ', 'hiciste el tiempo', ' para una sesión.', 'warm', 'sessions'),
+      varias
+        ? r('Esta semana te sentaste a hablar con alguien ', `${sessionsThisWeek} veces`, '. Sostener eso cuesta más de lo que parece desde afuera.', 'warm', 'sessions')
+        : r('Esta semana te sentaste a ', 'hablar con alguien', '. Cuesta más de lo que parece desde afuera.', 'warm', 'sessions'),
+      r('Te hiciste el tiempo para ', varias ? `${sessionsThisWeek} sesiones` : 'una sesión', '. Entre todo lo demás, no es poco.', 'warm', 'sessions'),
     ]);
   }
 
@@ -172,8 +181,8 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // Desde 3 días: menos que eso no es una racha, es haber entrado dos veces.
   if (streak >= 3) {
     return pick(dayKey, [
-      r('Van ', `${streak} días seguidos`, ' que registrás cómo venís.', 'warm', 'streak'),
-      r('', `${streak} días`, ' sin saltearte el check-in.', 'warm', 'streak'),
+      r('Van ', `${streak} días seguidos`, ' parando un segundo a ver cómo venís. Es más de lo que parece.', 'warm', 'streak'),
+      r('', `${streak} días`, ' sin saltearte el check-in. Esa constancia después se nota en otras cosas.', 'warm', 'streak'),
     ]);
   }
 
@@ -181,14 +190,30 @@ export function buildReflection(input: ReflectionInput): Reflection {
   const practices = resourcesThisWeek + writingThisWeek;
   if (practices >= 2) {
     return pick(dayKey, [
-      r('Esta semana hiciste ', practices === 1 ? 'una práctica' : `${practices} prácticas`, '.', 'warm', 'practices'),
-      r('Volviste a tus ', 'herramientas', ' esta semana.', 'warm', 'practices'),
+      r('Volviste ', `${practices} veces`, ' a tus herramientas esta semana. Eso ya es una rutina, aunque todavía no la llames así.', 'warm', 'practices'),
+      r('Esta semana usaste tus prácticas ', `${practices} veces`, '. De a poco se arma.', 'warm', 'practices'),
     ]);
   }
 
   // ── 8. Nivel, sin comparar ────────────────────────────────────────────────
   // Último recurso: no hay cambio, ni sesión, ni racha, ni práctica. Se dice el
   // nivel y nada más — sin "que de costumbre", que es lo que rompía antes.
+  //
+  // ⚠️ Es la rama que más se toca, sobre todo al principio: alguien con el
+  // ánimo parejo y poca actividad cae acá todos los días. Por eso tiene tantas
+  // variantes como las demás — con una sola, la app le decía literalmente la
+  // misma frase cada mañana y se leía como un cartel.
+  //
+  // ⚠️ Las etiquetas concuerdan con **"semana"** (femenino): `cansada`,
+  // `pareja`. Solo se pueden usar en el marco "(Tu|La) semana viene ___" —
+  // metidas en una frase cuyo sujeto sea la persona misma la misgenerizan
+  // ("venís pareja" a un varón, "venís cansada" a quien no lo es). Lo que
+  // varía entre variantes es la segunda oración, nunca el marco.
   const level = LEVEL_LABEL[Math.round(avgRecent)] ?? 'pareja';
-  return r('Tu semana viene ', level, '.', 'neutral', 'level');
+  return pick(dayKey, [
+    r('Tu semana viene ', level, '. No todo tiene que ser un antes y un después.', 'neutral', 'level'),
+    r('La semana viene ', level, ', sin grandes sobresaltos. A veces sostener ya es bastante.', 'neutral', 'level'),
+    r('Tu semana viene ', level, '. Está bien que algunas sean así.', 'neutral', 'level'),
+    r('La semana viene ', level, '. No hace falta que pase algo para que cuente.', 'neutral', 'level'),
+  ]);
 }
