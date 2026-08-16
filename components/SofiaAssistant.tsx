@@ -6,7 +6,9 @@ import {
   TextInput,
   StyleSheet,
   Animated,
+  PanResponder,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -23,11 +25,27 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 // (Inicio, Conexiones, Recursos, Mensajes) y en ningún otro lado — coach,
 // admin, onboarding, auth, etc. quedan afuera porque viven en otros grupos
 // de rutas que no montan este layout.
+//
+// Arrastre: `PanResponder` + `Animated.ValueXY`, mismo mecanismo que ya usa
+// el slider de filtros de app/search3.tsx — no se trajo gesture-handler para
+// esto. La posición vive en memoria (no en AsyncStorage): se resetea a la
+// esquina de abajo a la derecha en cada arranque de la app, no entre tabs
+// (el componente no se desmonta al cambiar de tab, vive arriba del navegador).
 
-const GLASS        = 'rgba(255,248,240,0.55)';
-const GLASS_BORDER = 'rgba(255,255,255,0.65)';
+const FOREST = '#3F512F'; // color propio de Sofía — antes usaba ViveColors.primary
+                           // (terracota), muy parecido al círculo del avatar del
+                           // perfil en el top bar de Inicio. Forest ya es el
+                           // segundo color fuerte de la marca (tab activo de
+                           // IslandTabBar, CTAs) y se distingue de un vistazo.
+const CARD        = '#F7F2E7'; // fondo sólido del panel — antes era glass
+                                // translúcido y se veía todo lo de atrás.
+const LINE         = 'rgba(63,81,47,0.14)';
 const ORB_SIZE      = 54;
 const HEADER_ORB    = 34;
+const PANEL_WIDTH   = 290;
+const PANEL_HEIGHT_ESTIMATE = 300; // no se puede medir antes de montar; usado solo para decidir si el panel abre arriba o abajo del orbe.
+const EDGE_MARGIN   = 8;
+const DRAG_THRESHOLD = 6; // px — por debajo de esto, un toque cuenta como tap y no como arrastre.
 
 type Shortcut = { id: string; label: string; route: Href };
 
@@ -46,10 +64,57 @@ export function SofiaAssistant() {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
+  const [orbPos, setOrbPos] = useState(() => ({
+    x: Dimensions.get('window').width - 18 - ORB_SIZE,
+    y: Dimensions.get('window').height - (insets.bottom + 8 + 56 + 14) - ORB_SIZE,
+  }));
+
+  // Posición absoluta en pantalla (no un delta) — `getTranslateTransform()`
+  // la aplica directo, y clampear contra los bordes reales es más simple con
+  // coordenadas absolutas que con un offset relativo a la esquina de origen.
+  const pan = useRef(new Animated.ValueXY(orbPos)).current;
+  const dragStart = useRef(orbPos);
 
   // 0 = orbe, 1 = panel. Un solo valor maneja fade + scale de los dos estados,
   // así queda una sola transición coordinada en vez de dos independientes.
   const progress = useRef(new Animated.Value(0)).current;
+
+  function clampToScreen(x: number, y: number) {
+    const { width, height } = Dimensions.get('window');
+    const minX = EDGE_MARGIN;
+    const maxX = width - ORB_SIZE - EDGE_MARGIN;
+    const minY = insets.top + EDGE_MARGIN;
+    // No se deja bajar más que su posición de reposo — ahí abajo empieza la isla.
+    const maxY = height - (insets.bottom + 8 + 56 + 14) - ORB_SIZE;
+    return {
+      x: Math.min(Math.max(x, minX), maxX),
+      y: Math.min(Math.max(y, minY), maxY),
+    };
+  }
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 2 || Math.abs(g.dy) > 2,
+      onPanResponderGrant: () => {
+        dragStart.current = orbPos;
+      },
+      onPanResponderMove: (_, g) => {
+        const next = clampToScreen(dragStart.current.x + g.dx, dragStart.current.y + g.dy);
+        pan.setValue(next);
+      },
+      onPanResponderRelease: (_, g) => {
+        const next = clampToScreen(dragStart.current.x + g.dx, dragStart.current.y + g.dy);
+        pan.setValue(next);
+        setOrbPos(next);
+
+        // Sin esto, cualquier toque —arrastre incluido— abriría el panel al
+        // soltar. Un desplazamiento chico se trata como tap.
+        const moved = Math.hypot(g.dx, g.dy);
+        if (moved < DRAG_THRESHOLD) toggle(true);
+      },
+    })
+  ).current;
 
   function toggle(next: boolean) {
     setOpen(next);
@@ -65,15 +130,24 @@ export function SofiaAssistant() {
     router.push(route);
   }
 
-  // Mismo cálculo de posición que usa IslandTabBar para sí misma
-  // (insets.bottom + 8, altura de la pastilla ≈ 44 + 6*2 = 56) + un margen —
-  // así el orbe queda pegado arriba de la isla en cualquier dispositivo, sin
-  // depender de una constante fija que podría desalinearse si la isla cambia.
-  const bottom = insets.bottom + 8 + 56 + 14;
+  // El panel se ancla cerca de donde esté el orbe (no siempre en la esquina
+  // de origen, ahora que se puede arrastrar), clampeado para no salirse de
+  // pantalla. Por default abre ARRIBA del orbe; si no entra (orbe cerca del
+  // borde superior), abre abajo.
+  const { width: screenW, height: screenH } = Dimensions.get('window');
+  const openAbove = orbPos.y - PANEL_HEIGHT_ESTIMATE - 14 >= insets.top + EDGE_MARGIN;
+  const panelTop = openAbove
+    ? Math.max(insets.top + EDGE_MARGIN, orbPos.y - PANEL_HEIGHT_ESTIMATE - 14)
+    : Math.min(screenH - PANEL_HEIGHT_ESTIMATE - EDGE_MARGIN, orbPos.y + ORB_SIZE + 14);
+  const panelLeft = Math.min(
+    Math.max(orbPos.x + ORB_SIZE - PANEL_WIDTH, EDGE_MARGIN),
+    screenW - PANEL_WIDTH - EDGE_MARGIN,
+  );
 
-  const orbStyle = {
+  const orbAnimStyle = {
     opacity: progress.interpolate({ inputRange: [0, 0.4], outputRange: [1, 0], extrapolate: 'clamp' as const }),
     transform: [
+      ...pan.getTranslateTransform(),
       { scale: progress.interpolate({ inputRange: [0, 0.4], outputRange: [1, 0.6], extrapolate: 'clamp' as const }) },
     ],
   };
@@ -86,7 +160,7 @@ export function SofiaAssistant() {
   };
 
   return (
-    <View style={[styles.wrap, { bottom }]} pointerEvents="box-none">
+    <View style={styles.layer} pointerEvents="box-none">
       {/* Backdrop invisible: tocar afuera del panel cierra. Solo existe (y
           solo captura toques) mientras el panel está abierto. */}
       {open && (
@@ -98,7 +172,10 @@ export function SofiaAssistant() {
       )}
 
       {open && (
-        <Animated.View style={[styles.panel, panelStyle]} pointerEvents={open ? 'auto' : 'none'}>
+        <Animated.View
+          style={[styles.panel, panelStyle, { left: panelLeft, top: panelTop }]}
+          pointerEvents="auto"
+        >
           <View style={styles.panelHeader}>
             <View style={styles.headerOrb}>
               <Text style={styles.headerOrbS}>S</Text>
@@ -143,15 +220,14 @@ export function SofiaAssistant() {
       )}
 
       {!open && (
-        <Animated.View style={orbStyle} pointerEvents={open ? 'none' : 'auto'}>
-          <Pressable
-            onPress={() => toggle(true)}
-            style={styles.orb}
-            accessibilityRole="button"
-            accessibilityLabel="Abrir Sofía, tu asistente"
-          >
+        <Animated.View
+          {...panResponder.panHandlers}
+          style={[styles.orbAbs, orbAnimStyle]}
+          pointerEvents="auto"
+        >
+          <View style={styles.orb} accessibilityRole="button" accessibilityLabel="Abrir Sofía, tu asistente. Mantené presionado para moverla">
             <Text style={styles.orbS}>S</Text>
-          </Pressable>
+          </View>
         </Animated.View>
       )}
     </View>
@@ -159,23 +235,29 @@ export function SofiaAssistant() {
 }
 
 const styles = StyleSheet.create({
-  wrap: {
+  // Cubre toda la pantalla (necesario para poder arrastrar el orbe a
+  // cualquier lado) sin capturar toques donde no hay nada propio —
+  // `box-none` deja pasar todo lo que no sea el orbe/panel/backdrop.
+  layer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  orbAbs: {
     position: 'absolute',
-    right: 18,
-    alignItems: 'flex-end',
+    left: 0,
+    top: 0,
   },
   orb: {
     width: ORB_SIZE,
     height: ORB_SIZE,
     borderRadius: ORB_SIZE / 2,
-    backgroundColor: ViveColors.primary,
+    backgroundColor: FOREST,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: '#2E3624',
+        shadowColor: '#1E2617',
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.28,
+        shadowOpacity: 0.32,
         shadowRadius: 14,
       },
       android: { elevation: 6 },
@@ -188,17 +270,18 @@ const styles = StyleSheet.create({
   },
 
   panel: {
-    width: 290,
-    backgroundColor: GLASS,
+    position: 'absolute',
+    width: PANEL_WIDTH,
+    backgroundColor: CARD,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: GLASS_BORDER,
+    borderColor: LINE,
     padding: 18,
     ...Platform.select({
       ios: {
         shadowColor: '#2E3624',
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.18,
+        shadowOpacity: 0.22,
         shadowRadius: 24,
       },
       android: { elevation: 10 },
@@ -213,7 +296,7 @@ const styles = StyleSheet.create({
     width: HEADER_ORB,
     height: HEADER_ORB,
     borderRadius: HEADER_ORB / 2,
-    backgroundColor: ViveColors.primary,
+    backgroundColor: FOREST,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -248,9 +331,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: GLASS_BORDER,
+    borderColor: LINE,
     borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 13,
@@ -266,9 +349,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginTop: 14,
-    backgroundColor: 'rgba(255,255,255,0.45)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: GLASS_BORDER,
+    borderColor: LINE,
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 11,

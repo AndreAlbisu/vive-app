@@ -21,8 +21,15 @@
 - Sin cambios de schema, sin nueva dependencia, sin tocar nada de lo que ya existía en las pantallas.
 
 **Pendiente para la próxima sesión:**
-- **Probar en el dev build**: que el orbe no tape nada de la isla ni de las pantallas en ningún tab, que el panel se vea bien en los 4 fondos distintos (Inicio/Conexiones/Recursos/Mensajes), y que los 3 atajos naveguen bien.
 - Cuando haya backend de IA para conectar: el campo de texto y el hook de conversación son el próximo paso natural — hoy es deliberadamente un preview sin funcionalidad.
+
+**Ajustes al toque, pedidos por Joaquín después de ver el primer resultado — mismo commit de hoy, sin nueva sesión:**
+- **El orbe pasa a ser arrastrable.** Se parecía demasiado al círculo de avatar del perfil (mismo terracota) y no se podía mover del lugar fijo. `PanResponder` + `Animated.ValueXY` (mismo mecanismo que ya usa el slider de filtros de `app/search3.tsx` — no se agregó gesture-handler para esto). Posición absoluta en pantalla, clampeada a los bordes reales (no se puede arrastrar debajo de donde empieza la isla, ni tapando el status bar arriba). Distingue tap de arrastre por distancia recorrida (<6px = tap). **No persiste entre reinicios de la app** (vuelve a la esquina inferior derecha cada vez que arranca) — no se pidió que persista, y el componente igual no se desmonta al cambiar de tab, así que la posición se mantiene mientras la app sigue abierta.
+- **Color propio: forest `#3F512F`, no `ViveColors.primary` (terracota).** Es el mismo terracota que usa el gradiente del avatar en el top bar de Inicio — de un vistazo, Sofía se leía como "otro círculo de perfil". Forest ya es el segundo color fuerte de la marca (tab activo de `IslandTabBar`, botones de acción), así que sigue siendo de la paleta pero se distingue clara.
+- **Panel a fondo sólido** (`#F7F2E7`, el mismo `CARD` que usa `SurfaceCard` por default) **en vez de glass translúcido** — antes se veía todo lo de atrás (la pantalla, otros elementos) a través del panel. Borde y chips pasaron del estilo "glass" (blancos/bordes semitransparentes) al mismo patrón "card sólida + línea sutil" que ya usan `menuCard`/`resultRow` en Conexiones.
+- **El panel ahora se abre cerca de donde esté el orbe**, no siempre en la esquina de origen — tenía que ser así una vez que el orbe es arrastrable (si el orbe se mueve a upper-left y el panel siguiera abriendo en la esquina de abajo a la derecha, quedaría desconectado visualmente). Clampeado para no salirse de pantalla; abre arriba del orbe por default, abajo si no entra (cerca del borde superior).
+- ⚠️ **Trade-off de accesibilidad, anotado y no resuelto:** el orbe pasó de `Pressable` (con `onPress` real) a una `View` con `PanResponder` manejando tap-vs-drag a mano — un lector de pantalla no dispara el tap sintético de VoiceOver/TalkBack sobre gestos de `PanResponder` de la misma forma que sobre un `Pressable` real. Queda pendiente si se vuelve un problema real.
+- Typecheck, lint y 140/140 tests siguen limpios.
 
 ## 2026-08-16 — Joaquín (sesión 94)
 
