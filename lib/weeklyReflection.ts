@@ -23,10 +23,14 @@
 //    peor, y encima se felicita. Acá una frase habla del nivel O de la
 //    dirección, nunca de las dos con la gramática de la otra.
 //
-// 3. CEDE EL TONO. Cuando `CoachSuggestionCard` está visible justo arriba —
-//    porque el ánimo cayó fuerte hoy— esta tarjeta no puede decir algo liviano
-//    dos centímetros más abajo. La señal `sharpDrop` gana sobre todas y baja
-//    el registro.
+// 3. CEDE EL TONO. Cuando el ánimo cayó fuerte hoy, esta tarjeta no puede decir
+//    algo liviano como si nada — la señal `sharpDrop` gana sobre todas y baja
+//    el registro. (Hasta la sesión 97 coordinaba con `CoachSuggestionCard`,
+//    una tarjeta aparte que sugería hablar con un coach justo arriba — se
+//    sacó por sentirse demasiado orientada a vender un booking justo en el
+//    peor momento para pedir algo. Esta señal quedó igual: sigue siendo la
+//    única reacción a un bajón fuerte, y tiene más razón todavía para ser
+//    gentil, no menos.)
 //
 // ── Sobre la IA ──────────────────────────────────────────────────────────────
 // La idea es que en algún momento esto lo escriba un modelo con tono Vita. El
@@ -135,7 +139,7 @@ export type ReflectionInput = {
   sessionsThisWeek: number;
   /** Entradas de diario y gratitud en los últimos 7 días. */
   writingThisWeek: number;
-  /** ¿`CoachSuggestionCard` está visible arriba? Ver decisión 3. */
+  /** ¿El ánimo cayó fuerte hoy respecto del check-in anterior? Ver decisión 3. */
   sharpDrop: boolean;
   /** Fecha local (YYYY-MM-DD). Fija la variante del día — ver `variantFor`. */
   dayKey: string;

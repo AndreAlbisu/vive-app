@@ -20,7 +20,6 @@ import { VITA_TOOL_MAP } from '@/constants/vitaTools';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { MoodCheckIn } from '@/components/MoodCheckIn';
-import { CoachSuggestionCard } from '@/components/CoachSuggestionCard';
 import { useSobreVosMomento } from '@/context/SobreVosMomentoContext';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { VitaMark } from '@/components/VitaMark';
@@ -124,10 +123,10 @@ export default function InicioScreen() {
   const historicMoodEntries = moodEntries.filter(e => e.entry_date < recentCutoff);
   const moodStreak = computeMoodStreak(moodEntries);
 
-  // `sharpDrop` se calcula acá y no adentro de la card porque son DOS tarjetas
-  // que tienen que coordinarse: `CoachSuggestionCard` aparece arriba cuando el
-  // ánimo cayó fuerte hoy, y la devolución de abajo tiene que bajar el tono en
-  // vez de decir algo liviano dos centímetros más abajo.
+  // `sharpDrop` alimenta la señal `sharp-drop` de `buildReflection()` — cuando
+  // el ánimo cayó fuerte hoy, la devolución baja el tono en vez de decir algo
+  // liviano. Se calcula acá (no adentro del hook) porque también lo necesita
+  // el recompute optimista de `handleMoodPicked`, más abajo.
   const sharpDrop = detectMoodDrop(moodEntries) !== null;
 
   // Las reglas eligen QUÉ decir y salen en el acto; si la redacción por IA está
@@ -416,11 +415,6 @@ export default function InicioScreen() {
               onRequestAuth={requestAuth}
               onPicked={handleMoodPicked}
             />
-          </Animated.View>
-
-          {/* ── 3b. Sugerencia de coach si el check-in de hoy bajó fuerte ── */}
-          <Animated.View style={fadeUp(aMood)}>
-            <CoachSuggestionCard userId={user?.id} entries={moodEntries} />
           </Animated.View>
 
           {/* ── 4. SOBRE VOS ── */}

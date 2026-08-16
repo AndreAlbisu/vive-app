@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-08-16 — Joaquín (sesión 98)
+
+**Tocado:** `app/(tabs)/index.tsx`, `lib/weeklyReflection.ts`, `__tests__/weeklyReflection.test.ts`. Borrado: `components/CoachSuggestionCard.tsx`.
+
+**Resumen — se borró `CoachSuggestionCard` ("Notamos que veniste bajando. ¿Querés hablar con alguien?"), pedido de Joaquín.**
+
+- Joaquín mandó una captura de la card por AirDrop: le gustaba la idea pero la sentía "mal ejecutada" y demasiado orientada a vender. Diagnóstico antes de tocar nada: el botón sólido terracota "Hablar con alguien", con el mismo peso visual que cualquier CTA de reservar/conectar del resto de la app, puesto justo al lado de una frase reconociendo que la persona la está pasando mal — leía como que la empatía era el gancho para el CTA. Encima, si el usuario no tenía ningún chat todavía, el botón lo mandaba directo a Conexiones (la parte más comercial del flujo).
+- Propuse rediseñarla (CTA más liviano, más aire, mismo patrón que el "→ Ver más" de la card "Sobre vos"). **Joaquín prefirió borrarla directamente**: con "Sobre vos" ya cubriendo la misma señal (bajón fuerte) de forma deliberadamente gentil — "no hace falta que hagas nada con eso ahora" —, tener las dos, una arriba de la otra con tonos opuestos para el mismo evento, hacía más obvia la intención de venta de la vieja, no menos.
+- **Verificado antes de borrar** que no quedaba nada más colgando de ella: dos comentarios en `lib/weeklyReflection.ts` (y uno en su test) explicaban por qué la señal `sharpDrop` "cede el tono" citándola — se actualizaron para explicar la misma decisión sin la referencia a un componente que ya no existe. La señal `sharpDrop` en sí **no se tocó**: sigue siendo el input de `buildReflection()` que hace que la devolución de "Sobre vos" sea gentil un día de bajón — de hecho ahora es la ÚNICA reacción a esa señal, así que tiene más razón para seguir siendo así, no menos.
+- Typecheck, lint y 140/140 tests limpios.
+
+**Pendiente para la próxima sesión:**
+- Ninguno nuevo — decisión cerrada y aplicada en la misma conversación.
+
 ## 2026-08-16 — Joaquín (sesión 97)
 
 **Tocado:** `app/(tabs)/index.tsx`, `app/(tabs)/_layout.tsx`, `components/SobreVosMomento.tsx`. Nuevo: `context/SobreVosMomentoContext.tsx`.

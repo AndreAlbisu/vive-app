@@ -88,8 +88,8 @@ describe('buildReflection — prioridad de señales', () => {
   });
 
   it('con caída fuerte no se felicita ni se pide nada', () => {
-    // CoachSuggestionCard ya está arriba sugiriendo hablar con alguien. Esta
-    // tarjeta no puede sumar una segunda acción ni levantar el ánimo a la fuerza.
+    // Con un bajón fuerte hoy, esta tarjeta no puede pedir una acción ni
+    // levantar el ánimo a la fuerza — es la única reacción a esa señal.
     for (const dayKey of ['2026-08-15', '2026-08-16', '2026-08-17']) {
       const t = text(on({ sharpDrop: true, dayKey }));
       expect(t).not.toMatch(/reservá|probá|hacé|buenísimo|felicit/i);
