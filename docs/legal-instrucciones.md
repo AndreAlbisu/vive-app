@@ -63,6 +63,49 @@ Llevá los dos borradores ya completados (pasos 1 y 2) a un/a abogado/a. Puntos 
 
 > Tip: aprovechá la misma consulta legal/contable que vas a necesitar por lo fiscal (IVA/figura) para que te revisen estos textos. Es la misma persona/estudio.
 
+#### Consulta a futuro — recomendación de profesional asistida por IA
+
+**No está construido ni decidido.** Se anota acá, y no en un pendiente de producto, porque
+**lo que lo bloquea es legal, no técnico**: el desarrollo es de una sesión, pero depende de
+respuestas que solo puede dar un/a abogado/a. Preguntarlo en la **misma** consulta que los
+puntos de arriba no cuesta nada; preguntarlo después son semanas de espera.
+
+*Contexto para pasarle al abogado/a, redactado para que se entienda sin conocer la app:*
+
+> Vita quiere ofrecer que la persona escriba **en texto libre** qué le está pasando
+> (ej.: *"hace tres meses que no duermo y estoy peleando con mi mamá"*) y que el sistema,
+> usando un modelo de lenguaje de un proveedor externo, clasifique ese texto dentro de una
+> lista cerrada de 28 temas predefinidos y le muestre profesionales que trabajan esos temas.
+> El sistema **no** genera texto libre de vuelta, no diagnostica y no da consejo clínico:
+> solo elige temas de una lista y ordena profesionales, igual que hoy hace un cuestionario
+> de opción múltiple. Vita se declara intermediario (T&C §4) y expresamente no prestador de
+> salud (T&C §5).
+
+Preguntas concretas:
+
+- [ ] **Naturaleza del acto.** ¿Clasificar un relato de malestar y sugerir a qué profesional
+      acudir puede interpretarse como **triage** o acto sanitario, aun sin diagnóstico ni
+      indicación terapéutica? ¿Cambia la respuesta si lo hace un algoritmo en vez de un
+      cuestionario de opción múltiple, siendo que el resultado es el mismo?
+- [ ] **Consentimiento.** El texto libre sobre malestar psíquico es dato sensible (Ley 25.326
+      art. 7 y 8). ¿Alcanza el consentimiento general de Política §3 o hace falta uno
+      **específico y separado** para este uso, con su propia pantalla?
+- [ ] **Transferencia internacional.** El texto se envía a un proveedor de IA con servidores
+      fuera de Argentina. Se cruza con el punto ya abierto de Política §7 — conviene
+      resolverlos **juntos**, porque este suma la categoría más sensible de todas.
+- [ ] **Conservación.** ¿Se puede guardar el texto que la persona escribió? ¿Por cuánto
+      tiempo, y para qué usos (mejorar el sistema, auditoría, soporte)? ¿O hay que
+      descartarlo apenas se resuelve la clasificación?
+- [ ] **Responsabilidad.** Si la sugerencia resulta inadecuada para el cuadro de la persona,
+      ¿qué exposición genera, y qué redacción la acota sin volverla una cláusula abusiva?
+
+⚠️ **Independiente de la respuesta legal, hay un requisito de producto que no se negocia:**
+la detección de crisis tiene que ser **determinística y correr ANTES del modelo**, no
+después ni a cargo de él. Si el texto contiene expresiones de riesgo, el flujo corta y
+muestra las líneas de T&C §5.3 (911 y 135), sin devolver ninguna recomendación ni precio.
+Un sistema que ante *"no le encuentro sentido a nada"* responde con una tarjeta de coach y
+un botón de reservar es el peor modo de falla que este producto puede tener.
+
 ### Paso 4 — Publicar y conectar en la app
 Una vez revisados y aprobados:
 
