@@ -182,7 +182,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // que sin esto se creaba la cuenta sin dejar constancia de ninguna de las dos.
   async function signInWithGoogle(acceptedTerms = false, ageConfirmed = false): Promise<string | null> {
     try {
-      const redirectUrl = AuthSession.makeRedirectUri();
+      // 🔴 `makeRedirectUri()` SIN argumentos no devuelve `viveapp://` en un dev
+      // build: devuelve `viveapp://192.168.x.x:8081`.
+      //
+      // Por qué: termina en `Linking.createURL('')`, que arma la URL como
+      // `${scheme}://${hostUri}` — y `hostUri` es `Constants.expoConfig.hostUri`,
+      // o sea la dirección del servidor de Metro cuando hay uno. En un build
+      // standalone ese campo no existe y sí sale `viveapp://`, que es lo único
+      // que está en la allowlist de Supabase. De ahí que el login ande (o
+      // andaría) en una build de tienda y falle en el dev build — y que el
+      // redirect cambie al cambiar de red, que es lo peor de todo.
+      //
+      // `native` corta ese camino y devuelve la URL tal cual en los entornos
+      // `bare` y `standalone` (el dev build es `bare`). En Expo Go la ignora y
+      // usa la `exp://…`, que es justo lo que Expo Go necesita.
+      const redirectUrl = AuthSession.makeRedirectUri({ native: 'viveapp://' });
+      // Se loguea a propósito: es el dato que decide si la allowlist matchea, y
+      // no se puede saber desde afuera del dispositivo.
+      console.log('[auth] redirect URI:', redirectUrl);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
