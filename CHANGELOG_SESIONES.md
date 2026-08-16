@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-08-16 — Joaquín (sesión 92)
+
+**Tocado:** ningún archivo de código — sesión 100% operativa/infra, guiando a Joaquín desde su propia Terminal (este entorno no tiene acceso al hardware ni puede tocar el celular).
+
+**Resumen — se armó el primer dev build real y quedó instalado y corriendo en el iPhone de Joaquín:**
+- Arrancó como "no puedo entrar a la app" (mismo `ERR_NGROK`/túnel offline de sesiones anteriores), pero destapó una cadena mucho más larga: Joaquín nunca había podido correr el proyecto porque le faltaba estar logueado y agregado como colaborador en el proyecto de Expo (`vita-wellness-app`) — arreglado con `npx expo login` + Andre agregándolo en expo.dev (organización Y proyecto puntual, son dos permisos separados).
+- Con eso resuelto, `npm start` arranca en modo `development build` (no Expo Go) desde que el proyecto tiene `expo-dev-client` — el QR que muestra no lo puede leer Expo Go. Antes se resolvía apretando `s` para forzar Expo Go; **esta sesión fue directo a lo de fondo: armar el dev build real**, que es lo que estaba pendiente desde sesión 81.
+- **Camino completo, con cada bache documentado porque se va a repetir (para quien lo corra de nuevo):**
+  1. `npx eas-cli device:create` — registrar el UDID del iPhone en la cuenta de Apple del proyecto. Se completa desde Safari **en el celular**, no en la compu.
+  2. `npx eas-cli build --profile development --platform ios` — falló varias veces antes de arrancar de verdad: primero `Entity not authorized` (Joaquín no tenía acceso al proyecto en Expo, sección aparte de la org — resuelto por Andre); después `ENOTFOUND api.expo.dev` un par de veces (red inestable de Joaquín, nada del lado del proyecto — confirmado con `nslookup` funcionando pero `curl` tardando ~10s en responder).
+  3. Con la red y los permisos ok, pidió loguearse con la cuenta de **Apple Developer de Andre** (`ANDRE ALBISU LAMBERTINI`, no una cuenta personal de Joaquín) + código de verificación en dos pasos que solo le llega a Andre — tuvieron que coordinar el momento exacto.
+  4. Primer intento de login a Apple falló igual después del código 2FA (`Apple servers threw an expected error … Authentication with Apple Developer Portal failed`) — se probó de nuevo sin cambiar nada y la segunda vez pasó. Es un error conocido e intermitente del lado de Apple (`fastlane spaceship`), no señala nada mal configurado.
+  5. Preguntó si re-provisionar el dispositivo (el perfil existente no incluía el UDID nuevo) — se aceptó y se marcaron los dos dispositivos (el de Joaquín + el de Andre).
+  6. **La build terminó "finished" pero instalar en el iPhone daba "No se pudo instalar 'Vita' — no fue posible verificar su integridad"**, incluso reinstalando desde el link correcto de la build más reciente (`eas build:list` para confirmarlo — la primera vez se estaba probando sin querer con un link de una build vieja del 09/08). Fecha/hora del dispositivo, wifi vs. datos móviles, y VPN se descartaron uno por uno sin cambiar nada.
+  7. **La causa real: el perfil de aprovisionamiento (Ad Hoc) se había generado en algún punto de los reintentos anteriores sin la lista de dispositivos actualizada.** Se resolvió con `npx eas-cli credentials` → iOS → development → Build Credentials → **"Provisioning Profile: Delete one from your project"** (borra el perfil viejo sin tocar el certificado) y se volvió a correr el build — esta vez sí preguntó de nuevo qué dispositivos incluir (los dos, ya marcados) y el `.ipa` instaló bien.
+  8. Instalada, iOS pidió activar **Modo de desarrollador** (Ajustes → Privacidad y seguridad → Modo de desarrollador → reiniciar → confirmar) — paso normal para cualquier app firmada así, no específico de este proyecto.
+  9. Con el dev client instalado, `npm start` (sin apretar `s` esta vez — hay que quedarse en modo dev-client) + escanear el QR desde adentro de la app **Vita** (no Expo Go) conectó todo. Funciona.
+- **Dev build real, funcionando, en un dispositivo real** — esto estaba bloqueando desde sesión 81: confirmar si Expo Go era la causa de lentitud percibida, Google OAuth, push notifications, audio en background, y eventualmente sacar la videollamada del navegador (anti-fuga #4). Ahora hay un dispositivo real para probar todo eso.
+- **Se trajo en paralelo el trabajo de Andre de sesiones 89-91** (48 commits: panel de administración completo, tests — 132 pasando, 5 suites —, garantía de primera sesión, bloqueo de usuarios, declaración de mayoría de edad, botón de arrepentimiento, dominio `vitaapp.com.ar` comprado y sitio deployado en Vercel, devolución semanal con redacción por IA detrás de flag, y más — ver sus entradas abajo para el detalle real). Merge limpio, sin conflictos (fast-forward). `npm install` para traer las deps nuevas de Jest, typecheck limpio, **132/132 tests pasando**.
+
+**Pendiente para la próxima sesión:**
+- **Usar el dev build para probar lo que quedó bloqueado por Expo Go**: audio en background, performance real de arranque, y confirmar Google OAuth/push si Andre ya cargó las credenciales correspondientes.
+- Si hace falta una build nueva más adelante (nuevo dispositivo, cambios nativos), el camino ya está pavimentado — pero si vuelve a fallar la instalación con "no fue posible verificar su integridad" después de agregar un dispositivo nuevo, ir derecho a borrar el provisioning profile viejo (`eas credentials` → Provisioning Profile: Delete) antes de perder tiempo con fecha/red/VPN.
+- Seguir con el resto de pendientes de sesión 87-88 que sigan abiertos (probar reserva instantánea con pago, tramo 15%, etc. — revisar contra las entradas de Andre más abajo, es posible que algunos ya se hayan cerrado en sesiones 89-91).
+
 ## 2026-08-15 — Andre (sesión 91)
 
 **Tocado:** nuevo `scripts/add-application-status-and-audit.sql`. Modificados `supabase/functions/admin-actions/index.ts`, `supabase/functions/guarantee-claim/index.ts`, `lib/admin.ts`, `screens/AdminScreen.tsx`, `screens/CoachApplicationScreen.tsx`, `docs/garantia-runbook.md`, `SCHEMA.md`. **Un script de schema nuevo — SCHEMA.md ya actualizado. FALTA CORRERLO.**
