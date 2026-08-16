@@ -5,6 +5,8 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { IslandTabBar, type IslandTab } from '@/components/ui/IslandTabBar';
 import { SofiaAssistant } from '@/components/SofiaAssistant';
+import { SobreVosMomento } from '@/components/SobreVosMomento';
+import { SobreVosMomentoProvider } from '@/context/SobreVosMomentoContext';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useUnreadSalas } from '@/hooks/useUnreadSalas';
@@ -69,7 +71,12 @@ export default function TabLayout() {
   ];
 
   return (
-    <>
+    // El momento de "Sobre vos" (Parte C) se movió acá desde adentro de
+    // index.tsx para poder sacarle el <Modal> propio (mismo motivo que
+    // SofiaAssistant, ver context/SobreVosMomentoContext.tsx) — Inicio sigue
+    // siendo dueño de CUÁNDO corresponde mostrarlo, solo que ahora lo pide
+    // por contexto en vez de tenerlo montado en su propio árbol.
+    <SobreVosMomentoProvider>
       <Tabs
         tabBarPosition="bottom"
         screenOptions={{ lazy: true, animationEnabled: !reducedMotion }}
@@ -84,6 +91,7 @@ export default function TabLayout() {
           que sea un solo elemento — no aparece en coach/admin/onboarding/auth,
           que viven en otros grupos de rutas. */}
       <SofiaAssistant />
-    </>
+      <SobreVosMomento />
+    </SobreVosMomentoProvider>
   );
 }

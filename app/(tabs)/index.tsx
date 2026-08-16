@@ -21,7 +21,7 @@ import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { MoodCheckIn } from '@/components/MoodCheckIn';
 import { CoachSuggestionCard } from '@/components/CoachSuggestionCard';
-import { SobreVosMomento } from '@/components/SobreVosMomento';
+import { useSobreVosMomento } from '@/context/SobreVosMomentoContext';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { VitaMark } from '@/components/VitaMark';
 import { useAuth } from '@/context/AuthContext';
@@ -152,7 +152,9 @@ export default function InicioScreen() {
   // existe, manda sobre `reflection`/`todayMoodEntry` para el resto de la
   // sesión (hasta el próximo montaje, que sí trae todo fresco de la base).
   const [freshCheckIn, setFreshCheckIn] = useState<{ color: string; reflection: Reflection } | null>(null);
-  const [momentoVisible, setMomentoVisible] = useState(false);
+  // El momento vive fuera de Inicio (app/(tabs)/_layout.tsx, sibling de
+  // <Tabs>) para poder sacarle el <Modal> propio — ver SobreVosMomentoContext.
+  const { open: openMomento } = useSobreVosMomento();
 
   const cardMoodColor = freshCheckIn?.color ?? (todayMoodEntry ? ViveMoodColors[todayMoodEntry.mood_id] : null);
   const cardReflection = freshCheckIn?.reflection ?? reflection;
@@ -188,24 +190,19 @@ export default function InicioScreen() {
     setTimeout(async () => {
       const [prefEnabled, lastShown] = await Promise.all([getMomentPref(), getLastShown()]);
       if (!shouldShowMoment({ signal: freshReflection.signal, prefEnabled, lastShown })) return;
-      setMomentoVisible(true);
+      openMomento(freshReflection, mood.color);
       markMomentShown(today, freshReflection.signal);
       registrarEvento('reflexion_vista', { origen: 'checkin' });
     }, 350);
-  }, [moodEntries, today, recentCutoff, weekly.resourcesThisWeek, weekly.sessionsThisWeek, weekly.writingThisWeek]);
+  }, [moodEntries, today, recentCutoff, weekly.resourcesThisWeek, weekly.sessionsThisWeek, weekly.writingThisWeek, openMomento]);
 
   function handleReopenMomento() {
     if (!cardMoodColor) {
       Alert.alert('Elegí cómo venís hoy', 'Así vas a poder ver tu reflexión completa');
       return;
     }
-    setMomentoVisible(true);
+    openMomento(cardReflection, cardMoodColor);
     registrarEvento('reflexion_vista', { origen: 'reapertura' });
-  }
-
-  function handleSeeProgress() {
-    setMomentoVisible(false);
-    router.push('/progreso');
   }
 
   const a1   = useRef(new Animated.Value(0)).current;
@@ -525,14 +522,6 @@ export default function InicioScreen() {
           <View style={{ height: TAB_BAR_CLEARANCE }} />
         </ScrollView>
       </SafeAreaView>
-
-      <SobreVosMomento
-        visible={momentoVisible}
-        reflection={cardReflection}
-        moodColor={cardMoodColor}
-        onClose={() => setMomentoVisible(false)}
-        onSeeProgress={handleSeeProgress}
-      />
     </AppBg>
   );
 }

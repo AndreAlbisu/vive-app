@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-08-16 — Joaquín (sesión 97)
+
+**Tocado:** `app/(tabs)/index.tsx`, `app/(tabs)/_layout.tsx`, `components/SobreVosMomento.tsx`. Nuevo: `context/SobreVosMomentoContext.tsx`.
+
+**Resumen — mismo arreglo de fondo que Sofía (sesión 96), aplicado a `SobreVosMomento`: se le sacó el `<Modal>`.**
+
+- Pedido directo de Joaquín tras el fix de Sofía: "arreglalo también para SobreVosMomento". Mismo diagnóstico (`<Modal>` arma una pantalla nativa nueva cada vez que se abre, costo que rasterizar/`InteractionManager` no tocan), pero acá el arreglo era más grande — como avisé antes de tocar nada: `SobreVosMomento` vivía DENTRO del árbol de la pantalla de Inicio, no al lado de `<Tabs>` como Sofía, así que sacarle el Modal tal cual lo hubiera dejado por DEBAJO de la isla de tabs.
+- **Nuevo `context/SobreVosMomentoContext.tsx`**: puente entre Inicio (dueña de los datos — la devolución y el color del mood de hoy) y el componente, ahora movido a `app/(tabs)/_layout.tsx` como sibling de `<Tabs>` y `<SofiaAssistant>`. Mismo patrón que `AuthContext` (Provider + hook `useSobreVosMomento()`, sin necesidad de un valor por default que tire error). Inicio llama `open(reflection, moodColor)` cuando corresponde — la lógica de CUÁNDO corresponde (el gate de "vale la pena", `lib/sobreVosMomento.ts`) no se tocó, sigue viviendo en Inicio.
+- **`SobreVosMomento.tsx` perdió sus props** (`visible`/`reflection`/`moodColor`/`onClose`/`onSeeProgress`) — ahora lee todo de `useSobreVosMomento()` y navega con `useRouter()` directo (ya no necesita que Inicio le pase un callback de navegación). Se sacó `<Modal>`, quedó como `View` absoluto — mismo patrón que Sofía. Se mantienen el rasterizado y `InteractionManager` (optimizaciones válidas aparte del Modal). Repuesto el botón físico de "atrás" en Android con `BackHandler`, que antes venía gratis con `Modal`.
+- **`index.tsx`**: se sacó el estado local `momentoVisible` y el render directo de `<SobreVosMomento>`; `handleMoodPicked`/`handleReopenMomento` ahora llaman `openMomento(...)` del contexto. `handleSeeProgress` se eliminó — quedó sin uso, la navegación vive adentro del componente ahora.
+- **`app/(tabs)/_layout.tsx`**: todo el árbol (`<Tabs>` + `<SofiaAssistant>` + `<SobreVosMomento>`) queda envuelto en `<SobreVosMomentoProvider>`.
+- Typecheck, lint y 140/140 tests limpios.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build que el momento ahora sí se siente fluido, igual que Sofía.
+
 ## 2026-08-16 — Joaquín (sesión 96)
 
 **Tocado:** `components/SofiaAssistant.tsx`.

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Modal,
   Pressable,
   View,
   Text,
@@ -8,39 +7,45 @@ import {
   Animated,
   Easing,
   InteractionManager,
+  Platform,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ViveFonts } from '@/constants/theme';
 import { VitaMark } from '@/components/VitaMark';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import type { Reflection } from '@/lib/weeklyReflection';
+import { useSobreVosMomento } from '@/context/SobreVosMomentoContext';
 
-// El momento de pantalla completa (Parte C). Modal transparente + Animated.View
-// propios en vez del `animationType="slide"` nativo — igual que el bottom sheet
-// de filtros en app/search3.tsx — porque necesitamos el easing exacto del
-// mockup (cubic-bezier(.32,.1,.25,1), 400ms), que el slide nativo no permite
-// controlar.
+// El momento de pantalla completa (Parte C). Montado como sibling de `<Tabs>`
+// en app/(tabs)/_layout.tsx (no dentro del árbol de Inicio) — mismo lugar que
+// `SofiaAssistant`, y por el mismo motivo: sin `<Modal>`.
 //
-// `visible` es un prop, no estado propio: quien lo usa (Inicio) decide CUÁNDO
-// corresponde mostrarlo (ver lib/sobreVosMomento.ts). Este componente solo
-// sabe animar la entrada/salida — por eso mantiene su propio `mounted`,
-// desacoplado de `visible`, para poder animar la salida ANTES de desmontar
-// (si atara el Modal directo a `visible`, se iría de golpe sin transición).
+// ⚠️ A propósito, SIN `<Modal>`: lo tenía al principio, con las mismas
+// mitigaciones de acá abajo (rasterizado + animación diferida) y Joaquín lo
+// siguió sintiendo lento — `Modal` arma una pantalla nativa nueva cada vez
+// que se abre, costo que no toca ninguno de esos dos trucos. Se resolvió
+// primero en `SofiaAssistant` (ver esa entrada de sesión) sacándole el
+// `Modal` — viable porque estaba montado al lado de `<Tabs>`. Este componente
+// vivía DENTRO de index.tsx, así que hubo que mudarlo primero (de ahí
+// `SobreVosMomentoContext`: Inicio ya no puede pasarle props directas).
+//
+// Lee su estado de `useSobreVosMomento()` en vez de props — Inicio llama
+// `open(reflection, moodColor)` cuando corresponde (ver lib/sobreVosMomento.ts
+// para el criterio de "cuándo corresponde"), este componente solo sabe animar
+// la entrada/salida. Por eso mantiene su propio `mounted`, desacoplado de
+// `visible`: para poder animar la salida ANTES de dejar de renderizar (si
+// desmontara apenas `visible` pasa a false, se iría de golpe sin transición).
 
 const OFFSCREEN = 700; // mismo valor que usa search3.tsx para su sheet — sale de pantalla de sobra sin depender de Dimensions.
 
-type Props = {
-  visible: boolean;
-  reflection: Reflection | null;
-  moodColor: string | null;
-  onClose: () => void;
-  onSeeProgress: () => void;
-};
-
-export function SobreVosMomento({ visible, reflection, moodColor, onClose, onSeeProgress }: Props) {
+export function SobreVosMomento() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const reducedMotion = useReducedMotion();
+  const { state, close } = useSobreVosMomento();
+  const { visible, reflection, moodColor } = state;
   const [mounted, setMounted] = useState(visible);
 
   const translateY = useRef(new Animated.Value(OFFSCREEN)).current;
@@ -78,11 +83,27 @@ export function SobreVosMomento({ visible, reflection, moodColor, onClose, onSee
     }
   }, [visible, reducedMotion, backdropOpacity, translateY]);
 
-  if (!reflection || !moodColor) return null;
+  // Sin `Modal`, se pierde gratis el manejo del botón físico de "atrás" en
+  // Android — se repone a mano, mismo comportamiento de antes.
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !visible) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      close();
+      return true;
+    });
+    return () => sub.remove();
+  }, [visible, close]);
+
+  function seeProgress() {
+    close();
+    router.push('/progreso');
+  }
+
+  if (!mounted || !reflection || !moodColor) return null;
 
   return (
-    <Modal transparent visible={mounted} animationType="none" onRequestClose={onClose}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
+    <View style={s.layer} pointerEvents="box-none">
+      <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Cerrar">
         <Animated.View style={[StyleSheet.absoluteFill, s.backdrop, { opacity: backdropOpacity }]} />
       </Pressable>
 
@@ -92,9 +113,10 @@ export function SobreVosMomento({ visible, reflection, moodColor, onClose, onSee
           { paddingBottom: 30 + insets.bottom, transform: [{ translateY }] },
         ]}
         // Sin esto, la vista se re-rasteriza (bordes redondeados + overflow
-        // hidden + el gradiente adentro) en CADA frame del translateY — es lo
-        // que se sentía como lag al aparecer. Con esto, el sistema la renderiza
-        // una vez como bitmap y solo mueve esa imagen durante la animación.
+        // hidden + el gradiente adentro) en CADA frame del translateY. Con
+        // esto, el sistema la renderiza una vez como bitmap y solo mueve esa
+        // imagen durante la animación — sigue valiendo la pena aunque ya no
+        // haya Modal, es una optimización distinta y complementaria.
         shouldRasterizeIOS
         renderToHardwareTextureAndroid
       >
@@ -127,19 +149,22 @@ export function SobreVosMomento({ visible, reflection, moodColor, onClose, onSee
         </Text>
 
         <View style={s.acts}>
-          <Pressable style={s.go} onPress={onClose} accessibilityRole="button">
+          <Pressable style={s.go} onPress={close} accessibilityRole="button">
             <Text style={s.goText}>Seguir</Text>
           </Pressable>
-          <Pressable style={s.sub} onPress={onSeeProgress} accessibilityRole="button">
+          <Pressable style={s.sub} onPress={seeProgress} accessibilityRole="button">
             <Text style={s.subText}>Ver mi progreso completo</Text>
           </Pressable>
         </View>
       </Animated.View>
-    </Modal>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
+  layer: {
+    ...StyleSheet.absoluteFillObject,
+  },
   backdrop: {
     backgroundColor: 'rgba(30,26,18,0.45)',
   },
