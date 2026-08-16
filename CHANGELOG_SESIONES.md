@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-08-16 — Joaquín (sesión 93)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`.
+
+**Resumen:**
+- Pedido de Joaquín: el efecto de "apretado" (rebote de escala al presionar) que ya tienen las tarjetas en el resto de la app (`ScaleCard` — usado en Home, Recursos, Favoritos, Onboarding, `search3`) faltaba específicamente en Conexiones. Confirmado con un video que Joaquín mandó por AirDrop (extraído cuadro por cuadro con `ffmpeg`, recién instalado para esto) y comparando contra el resto del código: `conexiones.tsx` era la única pantalla con tarjetas de contenido que seguía usando `TouchableOpacity` a secas.
+- **4 tarjetas pasadas a `ScaleCard`** (mismo patrón que `search3.tsx`: `<ScaleCard style={...} onPress={...}>`, sin `activeOpacity` — el feedback ahora es el rebote de escala, no el dimming de opacidad): las dos versiones de `menuCard` (menú de ejes de bienestar, y menú de temas dentro de un eje), las filas de resultado de búsqueda por nombre (`resultRow`), y la tarjeta del quiz de orientación (`quizWrap`) — la que Joaquín señaló originalmente.
+- **A propósito, NO se tocaron:** los botones de ícono chico (campana, estrella, chevron "atrás", limpiar búsqueda) ni los chips de tema — en el resto de la app tampoco los envuelve `ScaleCard`, es un patrón reservado para tarjetas de contenido (ícono + título + subtítulo), no para controles chicos. Tampoco se tocó la card grande del deck (el carrusel swipeable de "En tendencia"/"Recomendado"/etc.): no tiene `onPress` propio —solo el botón "Conocer a [nombre]" adentro— y viste dentro de un `ScrollView` horizontal con paginado; envolverla enteramente en un touchable competiría con el gesto de swipe. El botón interno tampoco se tocó, sigue el mismo criterio que otros CTAs de la app (el botón "Ver tu progreso completo" de Home tampoco usa `ScaleCard`).
+- Typecheck y lint limpios. **132/132 tests siguen pasando** (nada de esto lo tocaba, pero se corrió igual para confirmar).
+- Sin cambios de schema.
+
+**Pendiente para la próxima sesión:**
+- **Probar en el dev build** que el rebote se sienta bien en las 4 tarjetas, sobre todo la del quiz (gradiente) y las filas de búsqueda (más angostas que el resto).
+
 ## 2026-08-16 — Joaquín (sesión 92)
 
 **Tocado:** ningún archivo de código — sesión 100% operativa/infra, guiando a Joaquín desde su propia Terminal (este entorno no tiene acceso al hardware ni puede tocar el celular).

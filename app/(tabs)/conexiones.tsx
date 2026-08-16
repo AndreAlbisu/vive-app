@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
+import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
@@ -529,11 +530,10 @@ export default function ConexionesScreen() {
 
               <View style={s.menuWrap}>
                 {doorsForEje(selectedAxis).map(d => (
-                  <TouchableOpacity
+                  <ScaleCard
                     key={d.id}
                     style={s.menuCard}
-                    onPress={() => openDoor(d.id)}
-                    activeOpacity={0.85}>
+                    onPress={() => openDoor(d.id)}>
                     <View style={[s.menuIcon, { backgroundColor: tint(d.color, 0.16) }]}>
                       <Feather name={d.icon as any} size={20} color={d.color} />
                     </View>
@@ -542,7 +542,7 @@ export default function ConexionesScreen() {
                       <Text style={s.menuTagline} numberOfLines={1}>{d.tagline}</Text>
                     </View>
                     <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
-                  </TouchableOpacity>
+                  </ScaleCard>
                 ))}
               </View>
             </>
@@ -579,11 +579,10 @@ export default function ConexionesScreen() {
                 coachResults.length > 0 ? (
                   <View style={s.resultsWrap}>
                     {coachResults.map(coach => (
-                      <TouchableOpacity
+                      <ScaleCard
                         key={coach.id}
                         style={s.resultRow}
-                        onPress={() => goToPerfil(coach)}
-                        activeOpacity={0.8}>
+                        onPress={() => goToPerfil(coach)}>
                         {coach.avatarUrl ? (
                           <Image source={{ uri: coach.avatarUrl }} style={s.resultAvatar} />
                         ) : (
@@ -598,7 +597,7 @@ export default function ConexionesScreen() {
                           ) : null}
                         </View>
                         <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
-                      </TouchableOpacity>
+                      </ScaleCard>
                     ))}
                   </View>
                 ) : (
@@ -607,11 +606,10 @@ export default function ConexionesScreen() {
               ) : (
                 <View style={s.menuWrap}>
                   {EJES.map(e => (
-                    <TouchableOpacity
+                    <ScaleCard
                       key={e.id}
                       style={s.menuCard}
-                      onPress={() => selectAxis(e.id)}
-                      activeOpacity={0.85}>
+                      onPress={() => selectAxis(e.id)}>
                       <View style={[s.menuIcon, { backgroundColor: tint(e.color, 0.16) }]}>
                         <Feather name={e.icon as any} size={20} color={e.color} />
                       </View>
@@ -620,7 +618,7 @@ export default function ConexionesScreen() {
                         <Text style={s.menuTagline} numberOfLines={1}>{e.tagline}</Text>
                       </View>
                       <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
-                    </TouchableOpacity>
+                    </ScaleCard>
                   ))}
                 </View>
               )}
@@ -628,10 +626,7 @@ export default function ConexionesScreen() {
           )}
 
           {/* ── Teaser del quiz de orientación ─────────────────────────── */}
-          <TouchableOpacity
-            style={s.quizWrap}
-            onPress={() => router.push('/quiz')}
-            activeOpacity={0.88}>
+          <ScaleCard style={s.quizWrap} onPress={() => router.push('/quiz')}>
             <LinearGradient
               colors={[TC_SOFT, '#F0DDD2']}
               start={{ x: 0, y: 0 }}
@@ -646,7 +641,7 @@ export default function ConexionesScreen() {
               </View>
               <Text style={s.quizArrow}>›</Text>
             </LinearGradient>
-          </TouchableOpacity>
+          </ScaleCard>
 
           <View style={{ height: TAB_BAR_CLEARANCE + 16 }} />
         </ScrollView>
