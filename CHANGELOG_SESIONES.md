@@ -7,7 +7,7 @@
 
 ## 2026-08-16 — Andre (sesión 100)
 
-**Tocado:** `context/AuthContext.tsx`, `screens/LoginScreen.tsx`, `components/AuthModal.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/EditProfileScreen.tsx`, `app/(tabs)/index.tsx`, `app.json`, `SCHEMA.md`. Nuevo: `scripts/add-social-profile-data.sql` (**corrido y verificado**).
+**Tocado:** `context/AuthContext.tsx`, `lib/supabase.ts`, `screens/LoginScreen.tsx`, `components/AuthModal.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/EditProfileScreen.tsx`, `app/(tabs)/index.tsx`, `app.json`, `SCHEMA.md`. Nuevos: `lib/webcrypto.ts`, `scripts/add-social-profile-data.sql` (**corrido y verificado**).
 
 **Resumen — sesión de auth con Google: un bug de un carácter que hacía imposible el alta, la foto de Google que nunca llegaba al perfil, y un agujero de constancia legal.**
 
@@ -27,8 +27,14 @@
 - **El saludo quedó separado del nombre con fallback al mail**, a propósito: `getGreeting` recibe solo un nombre real, porque sin nombre saluda bien igual y el prefijo del mail sería peor que no nombrar a nadie.
 - **`refreshProfile()` en el contexto**, llamado desde `EditProfileScreen` al guardar. Lo hizo necesario el cambio anterior: al pasar el saludo a leer del contexto —que solo se refresca al cambiar la sesión— editarse el nombre lo dejaba viejo en el home hasta reabrir la app. Verificado que `EditProfileScreen` es el único lugar de la app que escribe `profiles.name`.
 
+**Tercer bloque — PKCE estaba degradado a `plain`, o sea que no protegía nada. Corregido y verificado en dispositivo.**
+
+- 🔴 **El síntoma estaba en los logs desde siempre y se leía como un warning inocuo:** `WebCrypto API is not supported. Code challenge method will default to use plain instead of sha256`. No es cosmético. `auth-js` exige `crypto`, `crypto.subtle` y `TextEncoder`, y **Hermes no trae ninguno de los tres**, así que caía al `return verifier` y el `code_challenge` viajaba **igual** al `code_verifier`. Con eso PKCE deja de existir: su única función es que interceptar el código de autorización no alcance para canjearlo —hace falta además el verifier—, y en modo `plain` el verifier va escrito en la misma URL de autorización que el atacante ya vio. El riesgo concreto en iOS es otra app registrando el scheme `viveapp://`.
+- **Se resolvió sin sumar dependencias.** `expo-crypto` ya estaba en el proyecto y expone `digest(algorithm, data) => Promise<ArrayBuffer>`, que es exactamente la firma de `crypto.subtle.digest`. `lib/webcrypto.ts` define **solo lo que falta** (`TextEncoder`, `crypto`, `getRandomValues`, `randomUUID`, `subtle`), cada cosa por separado: en web no toca nada porque WebCrypto es nativo, y si Hermes trae alguno más adelante se respeta el que exista. Se importa arriba de `lib/supabase.ts` para no depender del orden de imports de las pantallas. `crypto` se define con `defineProperty` y no por asignación: en algunos runtimes es un getter de solo lectura y la asignación falla en silencio, que sería el peor resultado posible — el polyfill "puesto" y el PKCE igual en `plain`.
+- **El `TextEncoder` propio se verificó byte por byte contra el nativo de Node** en 8 casos, incluidos emoji y pares suplentes. Un bug ahí no daría error: daría un hash distinto y un login que falla sin explicación.
+- **Verificado en dispositivo:** el WARN desapareció de los logs y el login con Google entra. De paso quedó confirmado que **el `#` del redirect aparece en todos los logins** (`…?code=65d80136-…#`), no era circunstancial: sin el fix del regex del primer bloque, esto habría fallado igual.
+
 **Pendiente para la próxima sesión:**
-- ⚠️ **PKCE está corriendo en modo `plain`.** Los logs avisan `WebCrypto API is not supported. Code challenge method will default to use plain instead of sha256`: React Native no trae `crypto.subtle`, así que el `code_challenge` viaja igual al `code_verifier` en vez de hasheado. PKCE existe para que interceptar el código de autorización no alcance para canjearlo, y con `plain` esa protección se cae — el riesgo concreto en iOS es otra app registrando el scheme `viveapp://`. Necesita un polyfill, o sea una decisión de dependencia. Resolver antes de publicar.
 - **Las cuentas de Apple creadas antes de hoy quedaron con `name = 'Usuario'` de forma irreversible**: Apple ya entregó su única oportunidad de dar el nombre. La persona lo puede corregir desde Editar perfil, pero no hay backfill posible.
 - **`avatar_url` de las cuentas de Apple queda siempre en NULL** — Apple no manda foto. El fallback a iniciales ya lo cubre, pero significa que el `coalesce` del trigger solo sirve para Google.
 

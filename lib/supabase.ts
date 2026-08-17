@@ -1,3 +1,7 @@
+// Primero de todo y por su efecto secundario: define `crypto.subtle` y
+// `TextEncoder`, sin los cuales el PKCE de abajo degrada a método `plain`
+// (que es como no tener PKCE). Ver lib/webcrypto.ts.
+import '@/lib/webcrypto';
 import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
