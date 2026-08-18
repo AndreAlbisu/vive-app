@@ -37,6 +37,13 @@ serve(async (req) => {
     .from('bookings')
     .select('id, payment_id, coach_id, refund_attempts')
     .eq('payment_status', 'reembolso_pendiente')
+    // ⚠️ Solo las que cobró Mercado Pago. `trg_mark_refund_on_cancel` marca
+    // 'reembolso_pendiente' venga de donde venga el pago, así que sin este
+    // filtro una reserva cobrada por otro rail terminaría acá: le pediríamos a
+    // MP reembolsar un `payment_id` que no es suyo, fallaría, y a los cinco
+    // intentos quedaría en el dead-letter — el usuario sin su plata y sin
+    // ningún error visible. Cada rail nuevo necesita su propio procesador.
+    .eq('payment_provider', 'mp')
     .not('payment_id', 'is', null)
     .lt('refund_attempts', MAX_ATTEMPTS)
     .limit(50)

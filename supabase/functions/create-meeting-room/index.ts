@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { scheduledAtMs } from '../_shared/guarantee.ts'
 
 const DAILY_API_KEY = Deno.env.get('DAILY_API_KEY')!
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -63,9 +64,28 @@ serve(async (req) => {
     }
 
     // Calcular ventana de la sala
-    const [year, month, day] = (booking.scheduled_date as string).split('-').map(Number)
-    const [h, m] = (booking.scheduled_time as string).split(':').map(Number)
-    const startMs = new Date(year, month - 1, day, h, m, 0).getTime()
+    //
+    // 🔴 Antes: `new Date(year, month - 1, day, h, m, 0)`. Ese constructor
+    // interpreta los componentes en la zona horaria DEL RUNTIME, y las edge
+    // functions corren en UTC — mientras que `scheduled_date`/`scheduled_time`
+    // son hora local de Argentina, sin zona guardada. Una sesión de las 15:00
+    // ART se calculaba como 15:00 UTC (12:00 ART): la sala abría 3 horas antes
+    // y, con `exp` = fin + 1h, **expiraba antes de que la sesión empezara**.
+    // Nadie podía entrar.
+    //
+    // `scheduledAtMs` aplica el offset fijo de Argentina (no hay horario de
+    // verano) y ya valida la forma de los campos — es el mismo helper que usa
+    // `guarantee-claim`, y el criterio que ya usaban los crons en SQL con
+    // `AT TIME ZONE 'America/Argentina/Buenos_Aires'`. Esta función era la
+    // única que había quedado afuera.
+    const startMs = scheduledAtMs(booking.scheduled_date as string, booking.scheduled_time as string)
+    if (!Number.isFinite(startMs)) {
+      console.error('[create-meeting-room] fecha/hora ilegible:', booking.scheduled_date, booking.scheduled_time)
+      return new Response(
+        JSON.stringify({ error: 'Fecha de la sesión inválida' }),
+        { status: 422, headers: cors }
+      )
+    }
     const durationMs = ((booking.duration_minutes as number | null) ?? 60) * 60 * 1000
     const endMs = startMs + durationMs
 
