@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-08-18 — Andre (sesión 102)
+
+**Tocado:** `screens/CoachLoginScreen.tsx`. Sin cambios de base de datos (SCHEMA.md no se tocó).
+
+**Resumen — el alta de profesional no aceptaba Google ni Apple, y la vía por email dejaba trabadas a las cuentas sociales.**
+
+- **Estado previo:** `CoachLoginScreen` —la única puerta al alta de profesional, se llega desde `OnboardingBifurcacion`— tenía solo email + contraseña. `signInWithGoogle`/`signInWithApple` ya existían en `AuthContext` pero los consumían nada más que `LoginScreen`, `RegisterScreen` y `AuthModal`, todos flujo de usuario final. **Decisión: se habilitan los dos en el alta de coach, y se mantiene la regla de mail distinto** (una cuenta que ya es de usuario final no se convierte en profesional).
+- 🔴 **Efecto colateral del estado previo que estaba pasando en silencio:** quien ya tenía cuenta creada con Google o Apple e intentaba postularse por email quedaba trabado sin entender por qué — esa cuenta no tiene contraseña, así que `signInWithEmail` fallaba, `signUpWithEmail` devolvía `already registered`, y la pantalla mostraba **"Contraseña incorrecta"**: la persona probando combinaciones de una clave que nunca existió. El mensaje ahora apunta a la causa real ("si creaste la cuenta con Google o Apple, entrá con ese botón").
+- **Lo que costó resolver: OAuth no distingue registro de login, y `validateAndNavigate` necesita esa distinción.** `profiles.role` arranca en `'user'` por el default del trigger de alta, así que una cuenta recién creada con Google se ve idéntica a la de un usuario final de siempre y la regla de mail distinto la rebotaría — justo al revés de lo que se quiere. No hay flag exacto en la sesión: se resuelve mirando la antigüedad de `user.created_at` (ventana de 2 min) **más** el chequeo exacto de si ya había sesión abierta antes de tocar el botón, que va primero. El margen es acotado a propósito: como mucho deja postularse a alguien que se registró como usuario final hace menos de dos minutos.
+- **Segundo caso que no era obvio: cancelar el flujo social y entrar devuelven lo mismo.** `signInWithGoogle` trata el cierre del navegador como un no-evento y devuelve `null`, igual que en el éxito. Sin distinguirlos, cancelar caía en la validación y —si ya había sesión abierta— le tiraba el cartel de "usá otro mail" a alguien que solo cerró la ventana. Se compara `last_sign_in_at` antes y después; solo con el `id` no alcanza cuando ya había sesión de esa misma persona.
+- **Cambio de comportamiento en la rama de bloqueo:** al rebotar por mail distinto ahora se cierra la sesión, igual que ya hacía la rama de "solicitud en revisión". Por email era raro dejarla abierta; con Google/Apple es peor — se toca un botón, se entra de verdad, y el cartel de error deja a la persona logueada como usuario final sin haberlo pedido.
+- Apple solo se muestra en iOS (`Sign in with Apple` no existe en Android), y la constancia de T&C/edad viaja como `(true, true)` en las dos llamadas, mismo criterio que se fijó en la sesión 100.
+
+**Pendiente para la próxima sesión:**
+- **Falta probarlo en el celular** (Expo Go / dev build): typecheck y lint pasan, pero los tres caminos que importan no se ejercitaron contra Supabase — alta nueva con Google, cuenta social que ya es usuario final (tiene que rebotar), y cancelar el navegador a mitad de camino (no tiene que mostrar error).
+- **Ojo con Apple y "Hide My Email"**: un profesional que se dé de alta así queda con un mail `@privaterelay.appleid.com`. Para la entrevista de aprobación y para lo que venga de pagos al coach conviene decidir si se le pide un mail de contacto real en `coach-application`.
+- El ícono de Apple en `LoginScreen` está en `#565E32` sobre fondo `rgba(0,0,0,0.45)` — casi invisible. Acá se usó blanco; falta emprolijar el de `LoginScreen`.
+
+---
+
 ## 2026-08-18 — Andre (sesión 101)
 
 **Tocado:** `supabase/functions/create-meeting-room/index.ts`, `supabase/functions/mp-process-refunds/index.ts`, `SCHEMA.md`. Nuevo: `scripts/add-payment-provider.sql` (**corrido y verificado**). Las dos edge functions **deployadas**.

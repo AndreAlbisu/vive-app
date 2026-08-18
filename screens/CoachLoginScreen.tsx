@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  View, Text, TextInput, TouchableOpacity, ActivityIndicator,
   StyleSheet, Animated, KeyboardAvoidingView, Platform, ScrollView, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import type { User } from '@supabase/supabase-js';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -19,12 +20,14 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function CoachLoginScreen() {
   const router = useRouter();
-  const { signInWithEmail, signUpWithEmail, signOut } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, signOut } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [legalDoc, setLegalDoc] = useState<'terminos' | 'privacidad' | null>(null);
 
@@ -74,11 +77,88 @@ export default function CoachLoginScreen() {
     // nosotros mismos (isNewSignup), el role='user' es solo el default del
     // trigger y todavía no hay postulación — dejamos que siga a coach-application.
     if (!isNewSignup && profile?.role === 'user') {
+      // Cerrar la sesión, igual que en la rama de "solicitud en revisión". Sin
+      // esto quedaba abierta una sesión de usuario final sobre una pantalla que
+      // dice que no sirve para entrar: por email era raro, con Google/Apple es
+      // peor — se toca un botón, se entra de verdad, y el cartel de error deja
+      // a la persona logueada como usuario sin haberlo pedido.
+      await signOut();
       setError('Esta cuenta ya está registrada como usuario. Para postularte como profesional necesitás usar un mail distinto');
       return;
     }
 
     router.replace('/coach-application');
+  }
+
+  /** ¿La cuenta la creó este mismo login social, o ya existía?
+   *
+   *  OAuth no separa "registrarse" de "iniciar sesión": el mismo botón da de
+   *  alta la cuenta si el mail no existía. Pero `validateAndNavigate` necesita
+   *  distinguir las dos cosas, porque `profiles.role` arranca en 'user' por el
+   *  default del trigger de alta — sin esta distinción una cuenta recién creada
+   *  se vería idéntica a la de un usuario final de siempre y quedaría bloqueada
+   *  por la regla de mail distinto, que es justo lo contrario de lo que se
+   *  quiere.
+   *
+   *  No hay un flag exacto en la sesión, así que se mira la antigüedad de la
+   *  cuenta: si `created_at` es de recién, la creó este flujo. La ventana es
+   *  holgada a propósito (el ida y vuelta al navegador puede demorar) y el
+   *  costo del margen es acotado: como mucho deja postularse a alguien que se
+   *  registró como usuario final hace menos de dos minutos.
+   *
+   *  Si ya había sesión antes de tocar el botón, no hay nada nuevo: la cuenta
+   *  existía sí o sí. Ese chequeo va primero porque es el exacto. */
+  function esCuentaRecienCreada(user: User, habiaSesionPrevia: boolean) {
+    if (habiaSesionPrevia) return false;
+    return Date.now() - new Date(user.created_at).getTime() < 2 * 60_000;
+  }
+
+  // Con Google/Apple el alta y el login son el mismo botón, así que esta es
+  // también la vía de alta de un profesional nuevo. La regla de mail distinto
+  // no cambia: la sigue aplicando `validateAndNavigate`, y una cuenta que ya
+  // existe como usuario final rebota igual que por email.
+  async function handleOAuth(provider: 'google' | 'apple') {
+    const setProviderLoading = provider === 'google' ? setGoogleLoading : setAppleLoading;
+    setProviderLoading(true);
+    setError(null);
+
+    // Foto de la sesión previa para poder distinguir "canceló" de "entró": los
+    // dos casos vuelven con `null`, porque `signInWithGoogle` trata el cierre
+    // del navegador como un no-evento y no como un error. Sin esto, cancelar
+    // caía igual en la validación y —si ya había una sesión abierta— le tiraba
+    // el cartel de "usá otro mail" a alguien que solo cerró la ventana.
+    const { data: { session: sesionPrevia } } = await supabase.auth.getSession();
+
+    const oauthError = provider === 'google'
+      ? await signInWithGoogle(true, true)
+      : await signInWithApple(true, true);
+
+    if (oauthError) {
+      setProviderLoading(false);
+      setError(oauthError);
+      return;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+
+    // `last_sign_in_at` es lo que separa "volvió a entrar con la misma cuenta"
+    // de "cerró el navegador y la sesión quedó como estaba": comparar solo el
+    // id no alcanza cuando ya había sesión de esa misma persona.
+    const cancelado = !session || (
+      sesionPrevia?.user.id === session.user.id &&
+      sesionPrevia?.user.last_sign_in_at === session.user.last_sign_in_at
+    );
+
+    if (cancelado) {
+      setProviderLoading(false);
+      return;
+    }
+
+    // El spinner pasa del botón del proveedor al genérico: `validateAndNavigate`
+    // apaga `loading`, que es el que cubre las consultas a profiles/coaches.
+    setProviderLoading(false);
+    setLoading(true);
+    await validateAndNavigate(esCuentaRecienCreada(session.user, !!sesionPrevia));
   }
 
   async function handleSubmit() {
@@ -119,13 +199,21 @@ export default function CoachLoginScreen() {
 
     setLoading(false);
 
-    // Si signUp también falla, la cuenta existe pero la contraseña es incorrecta
+    // Si signUp también falla, la cuenta existe pero no entró con esa
+    // contraseña. Ojo: la causa más probable ya no es haberla tipeado mal, es
+    // que la cuenta se haya creado con Google o Apple y no tenga contraseña
+    // ninguna — ahí "contraseña incorrecta" a secas deja a la persona probando
+    // combinaciones de una clave que nunca existió.
     if (signUpError.includes('already registered') || signUpError.includes('already been registered')) {
-      setError('Contraseña incorrecta. Revisá tus datos');
+      setError('No pudimos entrar con esa contraseña. Si creaste la cuenta con Google o Apple, entrá con ese botón');
     } else {
       setError('No pudimos acceder. Revisá el email y la contraseña');
     }
   }
+
+  // Un solo flag para deshabilitar: si no, se puede tocar Google mientras
+  // corre el submit por email y quedan dos flujos de auth pisándose.
+  const anyLoading = loading || googleLoading || appleLoading;
 
   return (
     <AppBg>
@@ -152,6 +240,41 @@ export default function CoachLoginScreen() {
               <Text style={styles.subtitle}>
                 Si todavía no tenés una, la creamos al instante.
               </Text>
+            </View>
+
+            <View style={styles.social}>
+              <TouchableOpacity
+                style={[styles.googleBtn, anyLoading && styles.buttonDisabled]}
+                onPress={() => handleOAuth('google')}
+                activeOpacity={0.85}
+                disabled={anyLoading}
+              >
+                {googleLoading
+                  ? <ActivityIndicator size="small" color="#4285F4" />
+                  : <MaterialCommunityIcons name="google" size={20} color="#4285F4" />}
+                <Text style={styles.googleBtnText}>Continuar con Google</Text>
+              </TouchableOpacity>
+
+              {/* Sign in with Apple no existe en Android, ocultar */}
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  style={[styles.appleBtn, anyLoading && styles.buttonDisabled]}
+                  onPress={() => handleOAuth('apple')}
+                  activeOpacity={0.85}
+                  disabled={anyLoading}
+                >
+                  {appleLoading
+                    ? <ActivityIndicator size="small" color="#FFFFFF" />
+                    : <MaterialCommunityIcons name="apple" size={20} color="#FFFFFF" />}
+                  <Text style={styles.appleBtnText}>Continuar con Apple</Text>
+                </TouchableOpacity>
+              )}
+
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>o con tu email</Text>
+                <View style={styles.dividerLine} />
+              </View>
             </View>
 
             <View style={styles.form}>
@@ -205,10 +328,10 @@ export default function CoachLoginScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={[styles.button, anyLoading && styles.buttonDisabled]}
               onPress={handleSubmit}
               activeOpacity={0.85}
-              disabled={loading}
+              disabled={anyLoading}
             >
               {loading ? (
                 <Text style={styles.buttonText}>Ingresando...</Text>
@@ -218,7 +341,7 @@ export default function CoachLoginScreen() {
             </TouchableOpacity>
 
             <Text style={styles.note}>
-              Podés usar una cuenta existente de Vita o crear una nueva. El rol de profesional se activa cuando Vita aprueba tu solicitud.
+              Podés entrar con Google, con Apple o con tu email. El rol de profesional se activa cuando Vita aprueba tu solicitud.
             </Text>
 
             {/* Aceptación implícita: esta pantalla es login Y alta de cuenta a la vez,
@@ -281,6 +404,59 @@ const styles = StyleSheet.create({
     color: '#87835C',
     lineHeight: 22,
   },
+  social: { gap: 12 },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255,248,240,0.62)',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.60)',
+    paddingVertical: 15,
+  },
+  googleBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#565E32',
+  },
+  appleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.55)',
+    paddingVertical: 15,
+  },
+  appleBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    // Centrar el separador entre los botones sociales y el formulario: el
+    // contenedor ya mete 28 por debajo (su `gap`) y acá arriba solo hay 12.
+    marginTop: 8,
+    marginBottom: -8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,248,240,0.65)',
+  },
+  dividerText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: 'rgba(135,131,92,0.72)',
+  },
+
   form: { gap: 16 },
   field: { gap: 6 },
   label: {
