@@ -118,16 +118,20 @@ export default function CoachReservasScreen() {
   const esperandoPago = (b: any) =>
     b.payment_status === 'pendiente' && (b.preference_id != null || b.usdt_amount != null);
 
-  // 🔴 Las que esperan pago NO se le ofrecen al coach para aceptar. Aceptar
+  // 🔴 Las que esperan pago se MUESTRAN pero no se pueden CONFIRMAR. Confirmar
   // compromete el horario, le avisa al usuario y cancela a los competidores del
   // slot — todo eso sin que haya entrado un peso. Con Mercado Pago casi no se
   // notaba porque el checkout se paga en el acto y lo impago se cancela a los
   // 30 minutos; con USDT la ventana es real y puede no pagarse nunca.
   //
-  // Las reservas sin cobro iniciado (coach sin MP conectado) sí entran: ahí no
-  // hay nada que esperar, y son las que ya funcionaban así.
-  const pending = bookings.filter(b => b.status === 'pendiente' && !esperandoPago(b));
-  const pendientesDePago = bookings.filter(b => b.status === 'pendiente' && esperandoPago(b)).length;
+  // ⚠️ RECHAZAR sí se puede, y es importante: rechazar no compromete nada, libera
+  // el turno. Al sacarlas de la lista por completo, el coach que no podía atender
+  // a esa hora se quedaba sin forma de decirlo hasta que el pago entrara o
+  // expirara. Se restringe la acción peligrosa, no la pantalla entera.
+  //
+  // Las reservas sin cobro iniciado (coach sin MP conectado) no se restringen:
+  // ahí no hay nada que esperar, y son las que ya funcionaban así.
+  const pending = bookings.filter(b => b.status === 'pendiente');
 
   const todayStr = toDateStr(new Date());
   // Confirmadas próximas (de hoy en adelante), ordenadas cronológicamente.
@@ -335,24 +339,8 @@ export default function CoachReservasScreen() {
               {pending.length > 0 && <Text style={s.stitleSpan}>{pending.length} esperando</Text>}
             </View>
 
-            {/* Que no aparezcan para aceptar no significa esconderlas: si el
-                coach ve "estás al día" mientras alguien está pagando, la próxima
-                reserva le llega de la nada. Decirle que existen, sin dejarlo
-                actuar sobre ellas todavía. */}
-            {pendientesDePago > 0 && (
-              <View style={s.aldia}>
-                <Text style={s.aldiaTxt}>
-                  {pendientesDePago === 1
-                    ? '1 persona está completando el pago. Te avisamos cuando se acredite'
-                    : `${pendientesDePago} personas están completando el pago. Te avisamos cuando se acrediten`}
-                </Text>
-              </View>
-            )}
-
             {pending.length === 0 ? (
-              pendientesDePago === 0 ? (
-                <View style={s.aldia}><Text style={s.aldiaTxt}>✓ Sin solicitudes pendientes. Estás al día</Text></View>
-              ) : null
+              <View style={s.aldia}><Text style={s.aldiaTxt}>✓ Sin solicitudes pendientes. Estás al día</Text></View>
             ) : (
               pending.map(b => (
                 <View key={b.id} style={s.req}>
@@ -368,10 +356,20 @@ export default function CoachReservasScreen() {
                     </View>
                   </View>
                   {!!b.user_message && <Text style={s.pquote}>{`"${b.user_message}"`}</Text>}
+                  {esperandoPago(b) && (
+                    <Text style={s.esperandoPagoTxt}>
+                      Esperando el pago. Vas a poder confirmarla apenas se acredite.
+                    </Text>
+                  )}
                   <View style={s.reqActs}>
-                    <TouchableOpacity style={[s.btnS, s.btnSolid]} activeOpacity={0.85} onPress={() => accept(b.id)}>
+                    <TouchableOpacity
+                      style={[s.btnS, s.btnSolid, esperandoPago(b) && s.btnOff]}
+                      activeOpacity={0.85}
+                      disabled={esperandoPago(b)}
+                      onPress={() => accept(b.id)}>
                       <Text style={s.btnSolidTxt}>Confirmar</Text>
                     </TouchableOpacity>
+                    {/* Rechazar queda SIEMPRE habilitado: libera el turno, no lo compromete. */}
                     <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={() => openReject(b.id)}>
                       <Text style={s.btnGhostTxt}>Otro horario</Text>
                     </TouchableOpacity>
@@ -468,6 +466,11 @@ export default function CoachReservasScreen() {
 }
 
 const s = StyleSheet.create({
+  btnOff: { opacity: 0.4 },
+  esperandoPagoTxt: {
+    fontFamily: ViveFonts.regular, fontSize: 12, lineHeight: 17,
+    color: 'rgba(135,131,92,0.85)', marginTop: 8,
+  },
   safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4, gap: 10 },
   backBtn: { padding: 2 },
