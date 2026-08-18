@@ -5,6 +5,39 @@
 
 ---
 
+## 2026-08-18 — Andre (sesión 103)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`, `screens/CoachProfileScreen.tsx`, `screens/CoachReservasScreen.tsx`, `SCHEMA.md`. Nuevos: `supabase/functions/_shared/usdt.ts`, `usdt-create-payment`, `usdt-check-payments`, `screens/UsdtPaymentScreen.tsx`, `app/pago-usdt.tsx`, `__tests__/usdt.test.ts`, y 5 scripts SQL (**todos corridos**). 187 tests.
+
+**Resumen — el riel de cobro en USDT, construido y VERIFICADO con plata real.**
+
+- ✅ **Funciona de punta a punta.** Pago real de **6,28 USDT** (tx `ff53bdcb3a7d…`) el 18/08: la reserva se acreditó sola y pasó a `confirmada` sin intervención. Sin webhook — Tron no avisa nada, así que `usdt-check-payments` corre cada minuto y pregunta.
+- **Cómo se reconoce un pago.** En cripto no hay `external_reference`: cada reserva recibe un **monto único** (precio + identificador en los centavos) y el cron cruza las transferencias TRC20 hacia la wallet contra las reservas pendientes.
+- 🔴 **Se valida el CONTRATO del token, no el símbolo.** Cualquiera puede desplegar un token llamado "USDT" en Tron; aceptarlo por símbolo dejaría pagar una sesión con algo que no vale nada. Hay un test que fabrica ese token falso.
+- **La rama de USDT sale del flujo de reserva ANTES de MP y antes de `applyBookingEffects`.** Más abajo, `confirmedNow = isInstant && (!initPoint || paid)` confirma la instantánea cuando no hay `initPoint`, porque eso significa "coach sin MP, nada que cobrar". Con USDT tampoco hay `initPoint` pero **sí** hay algo que cobrar: caer ahí habría confirmado la sesión y cancelado a los competidores del slot sin que entrara un dólar — el mismo bug de las 27 reservas fantasma de agosto, por el otro riel.
+
+**Cuatro bugs que aparecieron probando con billeteras reales, y ninguno se habría visto en el código:**
+
+- 🔴 **El identificador era más grande que el precio.** Ocupaba los 4 primeros decimales (hasta 0,9999): con precio USD 1, cada reserva salía entre 1,00 y 1,99 y parecía que la tarifa cambiaba sola.
+- 🔴 **Y después: las billeteras no dejan tipear más de 2 decimales** (verificado en Belo). Un identificador en el decimal 5 es inescribible para el usuario, así que el pago nunca se podría reconocer. Bajó a **centavos: 100 combinaciones por precio**. Hay un test que fija que el monto siempre se pueda escribir con 2 decimales.
+- 🔴 **La dirección se mostraba en bloques de 6 con espacios** para que fuera legible — y `selectable` copia el texto tal cual se renderiza, así que se copiaba `TQ4T99 n1StNF …` y **ninguna billetera acepta eso**. (Antes lo atribuí a que Phantom no soporta Tron, que es cierto pero no era todo.) Ahora va entera, con los primeros y últimos 6 caracteres aparte para verificar a ojo.
+- 🔴 **El campo de precio no se podía vaciar.** `value={priceUsdInput || precioGuardado}`: al borrar, el valor vacío es *falsy* y el campo repoblaba solo, así que lo tipeado quedaba pegado adelante y no se podía bajar de dos dígitos.
+
+**Y un patrón que se repitió tres veces en la misma sesión — `status` y `payment_status` cuentan historias distintas:**
+
+- 🔴 **El coach podía aceptar una reserva impaga.** `CoachReservasScreen` filtraba por `status` sin mirar `payment_status`. Aceptar compromete el horario, avisa al usuario y **cancela a los competidores del slot**. Con MP casi no se notaba (el checkout se paga en el acto); con USDT la ventana es real. Ahora esas reservas no se ofrecen para aceptar, pero **se le avisa que existen** — si viera "estás al día" mientras alguien paga, la próxima reserva le aparecería de la nada. ⚠️ Es defensa de pantalla: contra la API directa el coach todavía podría confirmarla. La solución real es endurecer la policy de UPDATE de `bookings`, que no está versionada.
+- 🔴 **Las reservas de USDT no expiraban nunca.** `expire_unpaid_checkouts()` buscaba `preference_id is not null`, que es el marcador de MP. Extendida a los dos rieles (60 min USDT, 30 MP).
+- 🔴 **Y el índice de montos no liberaba las canceladas.** La expiración cancela poniendo `status='cancelada'` y deja `payment_status='pendiente'`; el índice miraba solo `payment_status`, así que la cancelada seguía adentro y **se quedaba con su monto para siempre** — la misma fuga que la expiración venía a resolver. Visible en los datos de prueba.
+
+**Pendiente para la próxima sesión:**
+- **Cambiar el precio de prueba** del coach (quedó en 6 USD) y **rotar la wallet**: `USDT_WALLET_TRC20` apunta hoy a la dirección personal de Andre (`TQ4T99n1…`). Es un secret, se cambia con un comando.
+- ⚠️ **Endurecer la policy de UPDATE de `bookings`** para que un coach no pueda confirmar una reserva impaga por API. Requiere leer/reescribir policies creadas a mano en el panel.
+- **Decidir si se soportan más redes.** Hoy solo TRC20. Phantom (Solana) es plausible en el público objetivo, pero cada red nueva es otra función de verificación —otro RPC, otro parseo—, no una fila más en el enum.
+- **Los reembolsos de USDT no tienen procesador.** `trg_mark_refund_on_cancel` los marca `reembolso_pendiente` y nadie los procesa. Hay que pedirle la dirección de reembolso al usuario — **nunca reusar la del pago**: si pagó desde un exchange, esa es una wallet caliente y el reembolso se pierde.
+- **Sigue abierto de la 101**: la query de `meeting_url` (reservas futuras con sala de ventana rota).
+
+---
+
 ## 2026-08-18 — Andre (sesión 102)
 
 **Tocado:** `screens/CoachLoginScreen.tsx`. Sin cambios de base de datos (SCHEMA.md no se tocó).

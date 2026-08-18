@@ -53,6 +53,8 @@ export default function BookingScreen_Confirm() {
   const [error, setError] = useState<string | null>(null);
   const [userMessage, setUserMessage] = useState('');
   const [instantBooking, setInstantBooking] = useState(false);
+  const [usdtDisponible, setUsdtDisponible] = useState(false);
+  const [metodoPago, setMetodoPago] = useState<'mp' | 'usdt'>('mp');
 
   const coachName = params.name ?? 'Laura Méndez';
   const specialty = params.specialty ?? 'Coach de vida';
@@ -69,10 +71,14 @@ export default function BookingScreen_Confirm() {
     (async () => {
       const { data } = await supabase
         .from('coaches')
-        .select('instant_booking')
+        .select('instant_booking, accepts_international, price_usd')
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
       setInstantBooking(!!data?.instant_booking);
+      // El botón de USDT solo existe si el coach puede cobrarlo: acepta
+      // internacional y fijó su precio en dólares. Sin eso, `usdt-create-payment`
+      // devolvería 409 y la persona vería un error después de reservar.
+      setUsdtDisponible(!!data?.accepts_international && !!data?.price_usd);
     })();
   }, [coachProfileIdParam]);
 
@@ -307,6 +313,23 @@ export default function BookingScreen_Confirm() {
         }
       };
 
+      // 🔴 Rama USDT: sale ACÁ, antes de MP y antes de `applyBookingEffects`.
+      //
+      // El motivo es concreto: más abajo, `confirmedNow = isInstant && (!initPoint
+      // || paid)` confirma la reserva instantánea cuando NO hay initPoint, porque
+      // ese caso significa "coach sin MP, no hay nada que cobrar". Con USDT
+      // tampoco hay initPoint pero SÍ hay algo que cobrar, así que caer en esa
+      // rama confirmaría la sesión, avisaría al coach y cancelaría a los
+      // competidores del horario sin que entrara un dólar — exactamente el bug
+      // que se arregló el 09/08 por el lado de Mercado Pago.
+      //
+      // La reserva queda 'pendiente' y la confirma `usdt-check-payments` cuando
+      // ve la transferencia.
+      if (metodoPago === 'usdt') {
+        router.replace({ pathname: '/pago-usdt', params: { booking_id: booking.id } });
+        return;
+      }
+
       // Intentar iniciar el flujo de pago MP (si el coach tiene MP conectado)
       let initPoint: string | null = null;
       try {
@@ -496,9 +519,16 @@ export default function BookingScreen_Confirm() {
         <View style={s.noticeRow}>
           <MaterialIcons name="shield" size={15} color={ViveColors.accent} />
           <Text style={s.noticeText}>
-            {instantBooking
-              ? 'El pago se hace al reservar y tu sesión queda confirmada al instante'
-              : 'El pago se hace al reservar. Si el profesional no acepta, te devolvemos el total'}
+            {/* Con USDT NO es "al instante": la transferencia la confirma el cron
+                cuando la ve en la red. Prometer inmediatez acá sería el mismo
+                tipo de texto falso que ya se corrigió en esta pantalla una vez. */}
+            {metodoPago === 'usdt'
+              ? (instantBooking
+                  ? 'Tu sesión queda confirmada cuando recibimos la transferencia, en un minuto o menos'
+                  : 'El pago se hace al reservar. Si el profesional no acepta, te devolvemos el total')
+              : instantBooking
+                ? 'El pago se hace al reservar y tu sesión queda confirmada al instante'
+                : 'El pago se hace al reservar. Si el profesional no acepta, te devolvemos el total'}
           </Text>
         </View>
 
@@ -561,6 +591,32 @@ export default function BookingScreen_Confirm() {
             </View>
           ) : null}
 
+          {/* Selector de medio de pago. Solo aparece si hay más de una opción:
+              para la enorme mayoría —usuarios en Argentina con un coach que no
+              atiende afuera— no hay nada que elegir y mostrar un selector de un
+              solo ítem es fricción sin beneficio.
+
+              Está armado como lista para que sumar un tercer medio (PayPal) sea
+              agregar una entrada, no reescribir la pantalla. */}
+          {usdtDisponible && (
+            <View style={s.pagoRow}>
+              {([
+                { id: 'mp' as const,   label: 'Mercado Pago', desc: 'Pesos · tarjeta o dinero en cuenta' },
+                { id: 'usdt' as const, label: 'Crypto · USDT', desc: 'Dólares · desde el exterior' },
+              ]).map(m => (
+                <TouchableOpacity
+                  key={m.id}
+                  style={[s.pagoCard, metodoPago === m.id && s.pagoCardOn]}
+                  onPress={() => setMetodoPago(m.id)}
+                  disabled={loading}
+                  activeOpacity={0.85}>
+                  <Text style={[s.pagoLabel, metodoPago === m.id && s.pagoLabelOn]}>{m.label}</Text>
+                  <Text style={s.pagoDesc}>{m.desc}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
           <TouchableOpacity
             style={[s.btn, loading && s.btnLoading]}
             onPress={onConfirm}
@@ -600,6 +656,17 @@ const cardShadow = Platform.select({
 });
 
 const s = StyleSheet.create({
+  pagoRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  pagoCard: {
+    flex: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 12,
+    backgroundColor: 'rgba(255,248,240,0.55)',
+    borderWidth: 1.5, borderColor: 'transparent', gap: 3,
+  },
+  pagoCardOn: { borderColor: ViveColors.primary, backgroundColor: 'rgba(255,248,240,0.88)' },
+  pagoLabel: { fontFamily: ViveFonts.semibold, fontSize: 13.5, color: 'rgba(135,131,92,0.85)' },
+  pagoLabelOn: { color: '#565E32' },
+  pagoDesc: { fontFamily: ViveFonts.regular, fontSize: 11, lineHeight: 15, color: 'rgba(135,131,92,0.70)' },
+
   root: {
     flex: 1,
     backgroundColor: 'transparent',

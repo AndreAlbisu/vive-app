@@ -114,7 +114,20 @@ export default function CoachReservasScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const pending = bookings.filter(b => b.status === 'pendiente');
+  /** Se inició un cobro y todavía no se acreditó. */
+  const esperandoPago = (b: any) =>
+    b.payment_status === 'pendiente' && (b.preference_id != null || b.usdt_amount != null);
+
+  // 🔴 Las que esperan pago NO se le ofrecen al coach para aceptar. Aceptar
+  // compromete el horario, le avisa al usuario y cancela a los competidores del
+  // slot — todo eso sin que haya entrado un peso. Con Mercado Pago casi no se
+  // notaba porque el checkout se paga en el acto y lo impago se cancela a los
+  // 30 minutos; con USDT la ventana es real y puede no pagarse nunca.
+  //
+  // Las reservas sin cobro iniciado (coach sin MP conectado) sí entran: ahí no
+  // hay nada que esperar, y son las que ya funcionaban así.
+  const pending = bookings.filter(b => b.status === 'pendiente' && !esperandoPago(b));
+  const pendientesDePago = bookings.filter(b => b.status === 'pendiente' && esperandoPago(b)).length;
 
   const todayStr = toDateStr(new Date());
   // Confirmadas próximas (de hoy en adelante), ordenadas cronológicamente.
@@ -322,8 +335,24 @@ export default function CoachReservasScreen() {
               {pending.length > 0 && <Text style={s.stitleSpan}>{pending.length} esperando</Text>}
             </View>
 
+            {/* Que no aparezcan para aceptar no significa esconderlas: si el
+                coach ve "estás al día" mientras alguien está pagando, la próxima
+                reserva le llega de la nada. Decirle que existen, sin dejarlo
+                actuar sobre ellas todavía. */}
+            {pendientesDePago > 0 && (
+              <View style={s.aldia}>
+                <Text style={s.aldiaTxt}>
+                  {pendientesDePago === 1
+                    ? '1 persona está completando el pago. Te avisamos cuando se acredite'
+                    : `${pendientesDePago} personas están completando el pago. Te avisamos cuando se acrediten`}
+                </Text>
+              </View>
+            )}
+
             {pending.length === 0 ? (
-              <View style={s.aldia}><Text style={s.aldiaTxt}>✓ Sin solicitudes pendientes. Estás al día</Text></View>
+              pendientesDePago === 0 ? (
+                <View style={s.aldia}><Text style={s.aldiaTxt}>✓ Sin solicitudes pendientes. Estás al día</Text></View>
+              ) : null
             ) : (
               pending.map(b => (
                 <View key={b.id} style={s.req}>

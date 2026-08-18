@@ -35,6 +35,7 @@ type CoachProfile = {
   specialty: string | null;
   bio: string | null;
   price_per_session: number | null;
+  price_usd: number | null;
   nationality: string | null;
   video_url: string | null;
   instant_booking: boolean;
@@ -75,6 +76,8 @@ export default function CoachProfileScreen() {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [editingPrice, setEditingPrice] = useState(false);
+  const [priceUsdInput, setPriceUsdInput] = useState('');
+  const [savingPriceUsd, setSavingPriceUsd] = useState(false);
   const [priceInput, setPriceInput] = useState('');
   const [savingPrice, setSavingPrice] = useState(false);
   const [editingBio, setEditingBio] = useState(false);
@@ -94,7 +97,7 @@ export default function CoachProfileScreen() {
     (async () => {
       const [{ data: profileRow }, { data: coachRow }] = await Promise.all([
         supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single(),
-        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status, mp_connected, accepts_international').eq('profile_id', user.id).maybeSingle(),
+        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status, mp_connected, accepts_international, price_usd').eq('profile_id', user.id).maybeSingle(),
       ]);
 
       setProfile({
@@ -102,6 +105,7 @@ export default function CoachProfileScreen() {
         specialty: coachRow?.specialty ?? null,
         bio: coachRow?.bio ?? null,
         price_per_session: coachRow?.price_per_session ?? null,
+        price_usd: coachRow?.price_usd ?? null,
         nationality: coachRow?.nationality ?? null,
         video_url: coachRow?.video_url ?? null,
         instant_booking: coachRow?.instant_booking ?? false,
@@ -111,6 +115,8 @@ export default function CoachProfileScreen() {
       });
       setCoachId(coachRow?.id ?? null);
       setMpConnected(coachRow?.mp_connected ?? false);
+      // El input arranca con lo guardado y desde ahí manda él solo.
+      setPriceUsdInput(coachRow?.price_usd != null ? String(coachRow.price_usd) : '');
       setNoCoachProfile(!coachRow);
       setLoadingProfile(false);
     })();
@@ -201,6 +207,43 @@ export default function CoachProfileScreen() {
 
     setProfile(prev => prev ? { ...prev, price_per_session: parsed } : prev);
     setEditingPrice(false);
+  }
+
+  // ⚠️ ENTERO obligatorio, y no es cosmético: el cobro en USDT identifica cada
+  // reserva por un monto único donde los decimales son el identificador. Un
+  // precio con decimales lo corrompe y la transferencia queda irreconocible.
+  async function savePriceUsd() {
+    if (!user || savingPriceUsd) return;
+
+    // Vaciar el campo no es un error: es el paso intermedio para escribir otro
+    // número. Se restaura lo guardado en silencio en vez de acusar al usuario
+    // de haber puesto un precio inválido.
+    if (!priceUsdInput.trim()) {
+      setPriceUsdInput(profile?.price_usd != null ? String(profile.price_usd) : '');
+      return;
+    }
+
+    const parsed = parseInt(priceUsdInput.replace(/[^0-9]/g, ''), 10);
+    if (!parsed || parsed <= 0) {
+      Alert.alert('Precio inválido', 'Ingresá un monto en dólares mayor a 0');
+      return;
+    }
+    if (parsed === profile?.price_usd) return;   // nada que guardar
+
+    setSavingPriceUsd(true);
+    const { data, error } = await supabase
+      .from('coaches')
+      .update({ price_usd: parsed })
+      .eq('profile_id', user.id)
+      .select('price_usd');
+    setSavingPriceUsd(false);
+
+    if (error || !data || data.length === 0) {
+      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
+      return;
+    }
+    setProfile(prev => prev ? { ...prev, price_usd: parsed } : prev);
+    setPriceUsdInput(String(parsed));
   }
 
   function openBioEditor() {
@@ -921,6 +964,50 @@ export default function CoachProfileScreen() {
               </Text>
             </View>
 
+            {/* Precio en dólares. Lo fija el coach, no se convierte desde el
+                precio en pesos: el de afuera es una decisión comercial distinta,
+                y una conversión dejaría a VIVE en el medio de la discusión de
+                cotización cada vez que se mueve el dólar. */}
+            <View style={s.toggleCard}>
+              <View style={s.toggleInfo}>
+                <Text style={s.toggleTitle}>Precio en dólares</Text>
+                <Text style={s.toggleDesc}>
+                  Lo que cobrás por una sesión desde el exterior. En dólares enteros.
+                </Text>
+              </View>
+              <View style={s.usdRow}>
+                <Text style={s.usdPrefix}>US$</Text>
+                <TextInput
+                  style={s.usdInput}
+                  // ⚠️ `value={priceUsdInput}` a secas, sin `|| precio guardado`.
+                  // Con el fallback, borrar el campo lo dejaba vacío por un
+                  // instante y volvía a mostrar el valor guardado, así que era
+                  // IMPOSIBLE vaciarlo: lo que se tipeaba quedaba pegado
+                  // adelante del número viejo.
+                  value={priceUsdInput}
+                  onChangeText={setPriceUsdInput}
+                  onBlur={savePriceUsd}
+                  placeholder="50"
+                  placeholderTextColor="rgba(135,131,92,0.45)"
+                  keyboardType="number-pad"
+                  maxLength={5}
+                />
+                {savingPriceUsd && <ActivityIndicator size="small" color={ViveColors.primary} />}
+              </View>
+            </View>
+
+            {/* Qué le falta para poder recibir reservas. Sin esto activa el
+                toggle, no pasa nada, y no tiene forma de saber por qué. */}
+            {(profile?.price_usd == null) && (
+              <View style={s.commissionCard}>
+                <MaterialCommunityIcons name="alert-outline" size={18} color="#8C4A31" />
+                <Text style={s.commissionText}>
+                  Te falta fijar tu precio en dólares y cargar cómo querés que te paguemos. Hasta
+                  entonces no vas a aparecer para usuarios del exterior.
+                </Text>
+              </View>
+            )}
+
             <TouchableOpacity
               style={s.toggleCard}
               onPress={() => router.push('/coach-datos-cobro')}
@@ -1044,6 +1131,14 @@ export default function CoachProfileScreen() {
 }
 
 const s = StyleSheet.create({
+  usdRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  usdPrefix: { fontFamily: ViveFonts.semibold, fontSize: 14, color: 'rgba(135,131,92,0.75)' },
+  usdInput: {
+    minWidth: 62, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10,
+    backgroundColor: 'rgba(255,248,240,0.72)',
+    fontFamily: ViveFonts.semibold, fontSize: 15, color: '#565E32', textAlign: 'right',
+  },
+
   safe: { flex: 1 },
   topBar: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 2 },
   backBtn: { width: 40, height: 40, alignItems: 'flex-start', justifyContent: 'center' },
