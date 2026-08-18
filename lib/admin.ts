@@ -257,6 +257,57 @@ export function rejectGuarantee(bookingId: string, reason: string) {
   return callFunction('guarantee-claim', { booking_id: bookingId.trim(), reject: reason });
 }
 
+// ─── Reembolsos en USDT ──────────────────────────────────────────────────────
+//
+// El envío se hace A MANO desde la billetera de VIVE: automatizarlo exigiría la
+// clave privada en el backend, y con el volumen actual el riesgo no se
+// justifica. El panel es la lista de trabajo, no el que transfiere.
+
+export type UsdtRefund = {
+  bookingId: string;
+  monto: number | null;
+  fecha: string;
+  hora: string;
+  coachName: string | null;
+  /** null = todavía no la dio. Sin esto no hay adónde mandar la plata. */
+  address: string | null;
+  network: string | null;
+};
+
+export async function listUsdtRefunds(): Promise<UsdtRefund[]> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id, usdt_amount, scheduled_date, scheduled_time, coach_name, refund_address, refund_network')
+    .eq('payment_provider', 'usdt')
+    .eq('payment_status', 'reembolso_pendiente')
+    .order('scheduled_date', { ascending: true })
+    .limit(100);
+
+  if (error) {
+    console.warn('[admin] no se pudieron leer los reembolsos:', error.message);
+    return [];
+  }
+  return (data ?? []).map(b => ({
+    bookingId: b.id,
+    monto: b.usdt_amount != null ? Number(b.usdt_amount) : null,
+    fecha: b.scheduled_date,
+    hora: String(b.scheduled_time ?? '').slice(0, 5),
+    coachName: b.coach_name ?? null,
+    address: b.refund_address ?? null,
+    network: b.refund_network ?? null,
+  }));
+}
+
+/** Registra que el reembolso se pagó. NO transfiere: el hash es la prueba de
+ *  que la plata salió, y la edge function lo exige con formato válido. */
+export function markUsdtRefunded(bookingId: string, refundTxId: string) {
+  return callFunction('admin-actions', {
+    action: 'mark_usdt_refunded',
+    booking_id: bookingId,
+    refund_tx_id: refundTxId.trim(),
+  });
+}
+
 // ─── Auditoría ───────────────────────────────────────────────────────────────
 
 export type AuditEntry = {

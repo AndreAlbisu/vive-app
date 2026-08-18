@@ -20,6 +20,7 @@
 //   { action: 'set_coach_verified', coach_id, verified: boolean, notes? }
 //   { action: 'reject_coach_application', coach_id, reason }
 //   { action: 'resolve_report', report_id, status: 'revisado'|'accionado'|'descartado' }
+//   { action: 'mark_usdt_refunded', booking_id, refund_tx_id }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -286,6 +287,51 @@ serve(async (req) => {
       })
 
       return json({ result: 'ok', report: data[0], ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
+    // Marca un reembolso de USDT como pagado. El envío se hace A MANO desde la
+    // billetera de VIVE — automatizarlo exigiría la clave privada en un secret
+    // del backend, y quien accediera a ese secret vaciaría la wallet entera, no
+    // solo el monto de un reembolso. Con el volumen actual no se justifica.
+    //
+    // Por eso esta acción **registra**, no transfiere: el hash es la prueba de
+    // que la plata salió, y sin él no se puede marcar nada.
+    case 'mark_usdt_refunded': {
+      if (!body.booking_id) return json({ error: 'falta booking_id' }, 400)
+      const tx = String(body.refund_tx_id ?? '').trim()
+      // 64 hexadecimales: el formato de un hash de transacción en Tron. Sin esta
+      // validación se podría marcar como reembolsado escribiendo cualquier cosa,
+      // y el registro dejaría de ser una prueba.
+      if (!/^[0-9a-fA-F]{64}$/.test(tx)) {
+        return json({ error: 'refund_tx_id tiene que ser el hash de la transacción (64 hexadecimales)' }, 400)
+      }
+
+      const { data, error } = await admin
+        .from('bookings')
+        .update({
+          payment_status: 'reembolsado',
+          refunded_at: new Date().toISOString(),
+          refund_tx_id: tx,
+        })
+        .eq('id', body.booking_id)
+        .eq('payment_provider', 'usdt')
+        .eq('payment_status', 'reembolso_pendiente')   // idempotente: no repisa uno ya hecho
+        .select('id, usdt_amount, refund_tx_id')
+
+      if (error) return json({ error: error.message }, 500)
+      if (!data || data.length === 0) {
+        return json({ error: 'no hay un reembolso de USDT pendiente con ese id' }, 404)
+      }
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'mark_usdt_refunded',
+        targetType: 'booking',
+        targetId: data[0].id,
+        details: { monto: data[0].usdt_amount, tx },
+      })
+
+      return json({ result: 'ok', booking: data[0], ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
     }
 
     default:

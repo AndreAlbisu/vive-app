@@ -92,6 +92,7 @@ export default function SessionsScreen() {
   const { user, isLoggedIn, requestAuth } = useAuth();
   const [salas, setSalas] = useState<SalaItem[]>([]);
   const [nextSession, setNextSession] = useState<NextSession | null>(null);
+  const [refundPendiente, setRefundPendiente] = useState<{ id: string; monto: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [joinable, setJoinable] = useState(false);
   const [isAddingCalendar, setIsAddingCalendar] = useState(false);
@@ -125,7 +126,7 @@ export default function SessionsScreen() {
 
     const todayStr = new Date().toISOString().split('T')[0];
 
-    const [salasRes, nextBookingRes] = await Promise.all([
+    const [salasRes, nextBookingRes, refundRes] = await Promise.all([
       supabase
         .from('salas')
         .select('id, user_id, coach_id, user_last_read_at, coach_last_read_at')
@@ -140,7 +141,30 @@ export default function SessionsScreen() {
         .order('scheduled_time', { ascending: true })
         .limit(1)
         .maybeSingle(),
+      // Reembolsos que esperan que la persona diga a dónde mandárselos. Sin
+      // esto no se enteraría nunca: las canceladas no aparecen en ningún lado
+      // de esta pantalla, y la plata quedaría esperando indefinidamente.
+      supabase
+        .from('bookings')
+        .select('id, usdt_amount')
+        .eq('user_id', user.id)
+        .eq('payment_provider', 'usdt')
+        .eq('payment_status', 'reembolso_pendiente')
+        .is('refund_address', null)
+        .limit(1)
+        .maybeSingle(),
     ]);
+
+    setRefundPendiente(
+
+      refundRes?.data
+
+        ? { id: refundRes.data.id, monto: refundRes.data.usdt_amount != null ? Number(refundRes.data.usdt_amount) : null }
+
+        : null,
+
+    );
+
 
     if (salasRes.error) console.error('[Sessions] Error cargando salas:', salasRes.error.message);
 
@@ -309,6 +333,30 @@ export default function SessionsScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Animated.View style={{ opacity: listAnim }}>
+
+            {/* Reembolso esperando dirección. Va ARRIBA de todo y no al final:
+                es plata de la persona que no le podemos devolver hasta que nos
+                diga adónde, y las reservas canceladas no aparecen en ninguna
+                otra parte de la app. Si no lo ve acá, no se entera nunca. */}
+            {refundPendiente && (
+              <TouchableOpacity
+                style={styles.refundBanner}
+                activeOpacity={0.85}
+                onPress={() => router.push({ pathname: '/reembolso', params: { booking_id: refundPendiente.id } })}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.refundTitle}>
+                    {refundPendiente.monto != null
+                      ? `Tenés ${refundPendiente.monto.toFixed(2)} USDT para recibir`
+                      : 'Tenés una devolución pendiente'}
+                  </Text>
+                  <Text style={styles.refundDesc}>
+                    Decinos a qué dirección mandártelos
+                  </Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={22} color="#8C4A31" />
+              </TouchableOpacity>
+            )}
 
             {/* Hero — próxima sesión */}
             {nextSession && (
@@ -504,6 +552,14 @@ function SalaRow({
 }
 
 const styles = StyleSheet.create({
+  refundBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: 'rgba(214,150,120,0.18)', borderRadius: 16,
+    paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16,
+  },
+  refundTitle: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#8C4A31' },
+  refundDesc: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#8C4A31', opacity: 0.85, marginTop: 2 },
+
   safeArea: { flex: 1 },
 
   header: {

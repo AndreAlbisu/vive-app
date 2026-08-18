@@ -31,6 +31,7 @@ import {
   listCoachApplications, setCoachVerified, rejectCoachApplication,
   listPendingReports, resolveReport,
   listClaims, checkGuarantee, approveGuarantee, rejectGuarantee,
+  listUsdtRefunds, markUsdtRefunded, type UsdtRefund,
   listAuditLog,
   type PendingCoach, type AdminReport, type AdminClaim, type ReportResolution,
   type AuditEntry, type GuaranteeCheck,
@@ -40,12 +41,13 @@ const FOREST = '#3A4F2A';
 const OLIVE = '#87835C';
 const CLAY = '#B5533A';
 
-type Tab = 'coaches' | 'reportes' | 'garantias' | 'auditoria';
+type Tab = 'coaches' | 'reportes' | 'garantias' | 'reembolsos' | 'auditoria';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'coaches',   label: 'Postulaciones' },
   { key: 'reportes',  label: 'Reportes' },
   { key: 'garantias', label: 'Garantías' },
+  { key: 'reembolsos', label: 'Reembolsos' },
   { key: 'auditoria', label: 'Registro' },
 ];
 
@@ -77,6 +79,8 @@ export default function AdminScreen() {
   const [showRejected, setShowRejected] = useState(false);
   const [reports, setReports] = useState<AdminReport[]>([]);
   const [claims, setClaims] = useState<AdminClaim[]>([]);
+  const [refunds, setRefunds] = useState<UsdtRefund[]>([]);
+  const [txInput, setTxInput] = useState<Record<string, string>>({});
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<string | null>(null);
@@ -87,14 +91,15 @@ export default function AdminScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [c, rej, r, g, a] = await Promise.all([
+    const [c, rej, r, g, rf, a] = await Promise.all([
       listCoachApplications('pendiente'),
       listCoachApplications('rechazada'),
       listPendingReports(),
       listClaims(),
+      listUsdtRefunds(),
       listAuditLog(),
     ]);
-    setCoaches(c); setRejected(rej); setReports(r); setClaims(g); setAudit(a);
+    setCoaches(c); setRejected(rej); setReports(r); setClaims(g); setRefunds(rf); setAudit(a);
     setLoading(false);
   }, []);
 
@@ -175,6 +180,7 @@ export default function AdminScreen() {
             const on = tab === t.key;
             const count = t.key === 'coaches' ? coaches.length
                         : t.key === 'reportes' ? reports.length
+                        : t.key === 'reembolsos' ? refunds.length
                         : 0;
             return (
               <TouchableOpacity
@@ -352,6 +358,62 @@ export default function AdminScreen() {
             {/* ── Garantías ───────────────────────────────────────────────── */}
             {!loading && tab === 'garantias' && (
               <GuaranteePanel claims={claims} onDone={load} />
+            )}
+
+            {/* ── Reembolsos en USDT ──────────────────────────────────────── */}
+            {/* El panel NO transfiere: lista lo que hay que devolver y registra
+                el hash como prueba. Automatizar el envío exigiría la clave
+                privada de la wallet en el backend — quien accediera a ese
+                secret vaciaría la billetera entera, no un reembolso. */}
+            {!loading && tab === 'reembolsos' && (
+              refunds.length === 0 ? (
+                <View style={s.empty}><Text style={s.emptyText}>No hay reembolsos pendientes</Text></View>
+              ) : (
+                refunds.map(r => (
+                  <View key={r.bookingId} style={s.card}>
+                    <Text style={s.cardTitle}>
+                      {r.monto != null ? `${r.monto.toFixed(2)} USDT` : 'monto desconocido'}
+                    </Text>
+                    <Text style={s.cardMeta}>
+                      {r.fecha} · {r.hora} hs{r.coachName ? ` · ${r.coachName}` : ''}
+                    </Text>
+
+                    {r.address ? (
+                      <>
+                        <Text style={s.mono} selectable>{r.network} · {r.address}</Text>
+                        <TextInput
+                          style={s.input}
+                          value={txInput[r.bookingId] ?? ''}
+                          onChangeText={v => setTxInput(prev => ({ ...prev, [r.bookingId]: v }))}
+                          placeholder="Hash de la transacción (64 hex)"
+                          placeholderTextColor="rgba(135,131,92,0.45)"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                        <TouchableOpacity
+                          style={[s.btn, s.btnPrimary, { marginTop: 10 }]}
+                          activeOpacity={0.85}
+                          onPress={async () => {
+                            const tx = (txInput[r.bookingId] ?? '').trim();
+                            const res: any = await markUsdtRefunded(r.bookingId, tx);
+                            if (res?.error) { Alert.alert('No se pudo registrar', res.error); return; }
+                            setTxInput(prev => ({ ...prev, [r.bookingId]: '' }));
+                            void load();
+                          }}>
+                          <Text style={s.btnPrimaryText}>Marcar reembolsado</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      // Sin dirección no hay adónde mandar la plata. Se dice
+                      // explícito para que no parezca que el reembolso está
+                      // trabado por otra cosa.
+                      <Text style={s.cardBody}>
+                        ⚠️ La persona todavía no dio su dirección de reembolso. Pedísela por chat.
+                      </Text>
+                    )}
+                  </View>
+                ))
+              )
             )}
 
             {/* ── Registro de auditoría ───────────────────────────────────── */}
