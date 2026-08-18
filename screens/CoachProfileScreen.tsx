@@ -38,6 +38,7 @@ type CoachProfile = {
   nationality: string | null;
   video_url: string | null;
   instant_booking: boolean;
+  accepts_international: boolean;
   availability_status: 'activo' | 'en_pausa';
   avatar_url: string | null;
 };
@@ -80,6 +81,7 @@ export default function CoachProfileScreen() {
   const [bioInput, setBioInput] = useState('');
   const [savingBio, setSavingBio] = useState(false);
   const [savingInstantMode, setSavingInstantMode] = useState(false);
+  const [savingInternational, setSavingInternational] = useState(false);
   const [savingAvailability, setSavingAvailability] = useState(false);
   const [coachId, setCoachId] = useState<string | null>(null);
   const [topics, setTopics] = useState<string[]>([]);
@@ -92,7 +94,7 @@ export default function CoachProfileScreen() {
     (async () => {
       const [{ data: profileRow }, { data: coachRow }] = await Promise.all([
         supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single(),
-        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status, mp_connected').eq('profile_id', user.id).maybeSingle(),
+        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status, mp_connected, accepts_international').eq('profile_id', user.id).maybeSingle(),
       ]);
 
       setProfile({
@@ -103,6 +105,7 @@ export default function CoachProfileScreen() {
         nationality: coachRow?.nationality ?? null,
         video_url: coachRow?.video_url ?? null,
         instant_booking: coachRow?.instant_booking ?? false,
+        accepts_international: coachRow?.accepts_international ?? false,
         availability_status: (coachRow?.availability_status ?? 'activo') as 'activo' | 'en_pausa',
         avatar_url: profileRow?.avatar_url ?? null,
       });
@@ -252,6 +255,42 @@ export default function CoachProfileScreen() {
     if (error || !data || data.length === 0) {
       setProfile(prev => prev ? { ...prev, instant_booking: !value } : prev);
       Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
+    }
+  }
+
+  // Sesiones con personas fuera de Argentina. No cambia los horarios del coach
+  // —atiende en las mismas franjas, el que se acomoda es el usuario— pero sí
+  // cambia el cobro: esas sesiones las cobra VIVE y se las transferimos, y él
+  // nos factura a nosotros en vez de al usuario.
+  async function toggleInternational(value: boolean) {
+    if (!user || savingInternational) return;
+    setProfile(prev => prev ? { ...prev, accepts_international: value } : prev);
+    setSavingInternational(true);
+
+    const { data, error } = await supabase
+      .from('coaches')
+      .update({ accepts_international: value })
+      .eq('profile_id', user.id)
+      .select('accepts_international');
+    setSavingInternational(false);
+
+    if (error || !data || data.length === 0) {
+      setProfile(prev => prev ? { ...prev, accepts_international: !value } : prev);
+      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
+      return;
+    }
+
+    // Al activar, mandarlo a cargar el dato de cobro: sin eso el opt-in no
+    // sirve de nada — no tendríamos cómo pagarle.
+    if (value) {
+      Alert.alert(
+        'Falta un dato',
+        'Para poder transferirte las sesiones del exterior necesitamos saber cómo querés cobrarlas.',
+        [
+          { text: 'Después', style: 'cancel' },
+          { text: 'Cargarlo ahora', onPress: () => router.push('/coach-datos-cobro') },
+        ],
+      );
     }
   }
 
@@ -846,6 +885,55 @@ export default function CoachProfileScreen() {
             persona y nunca se reinicia.
           </Text>
         </View>
+
+        {/* ── Sesiones desde el exterior ────────────────────── */}
+        <Text style={[s.sectionTitle, s.sectionSpaced]}>Sesiones desde el exterior</Text>
+        <View style={s.toggleCard}>
+          <View style={s.toggleInfo}>
+            <Text style={s.toggleTitle}>
+              {profile?.accepts_international ? 'Activadas' : 'Desactivadas'}
+            </Text>
+            <Text style={s.toggleDesc}>
+              Atendé a argentinos que viven afuera. Tus horarios no cambian — seguís atendiendo en
+              las franjas que ya cargaste, el que se acomoda es el usuario.
+            </Text>
+          </View>
+          <Switch
+            value={!!profile?.accepts_international}
+            onValueChange={toggleInternational}
+            disabled={savingInternational}
+            trackColor={{ false: 'rgba(135,131,92,0.28)', true: ViveColors.primary }}
+            thumbColor="#FFF8F0"
+          />
+        </View>
+
+        {profile?.accepts_international && (
+          <>
+            {/* Lo que sí le cambia. Va explícito y no en letra chica: si se
+                entera después de la primera sesión, va a pensar que le
+                retuvimos la plata. */}
+            <View style={s.commissionCard}>
+              <MaterialCommunityIcons name="information-outline" size={18} color={ViveColors.accent} />
+              <Text style={s.commissionText}>
+                Estas sesiones <Text style={s.commissionStrong}>no te entran por Mercado Pago</Text>:
+                las cobra VIVE y te las transferimos cada semana, por sesiones ya realizadas. Nos
+                facturás a nosotros en vez de a la persona.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={s.toggleCard}
+              onPress={() => router.push('/coach-datos-cobro')}
+              activeOpacity={0.85}
+            >
+              <View style={s.toggleInfo}>
+                <Text style={s.toggleTitle}>Cómo te pagamos</Text>
+                <Text style={s.toggleDesc}>Transferencia a tu cuenta o USDT</Text>
+              </View>
+              <MaterialIcons name="arrow-forward-ios" size={16} color="rgba(135,131,92,0.6)" />
+            </TouchableOpacity>
+          </>
+        )}
 
         {/* ── Reseñas recibidas ─────────────────────────────── */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Reseñas recibidas</Text>

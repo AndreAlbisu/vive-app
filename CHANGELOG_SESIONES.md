@@ -25,6 +25,34 @@
 
 ---
 
+## 2026-08-18 — Andre (sesión 102)
+
+**Tocado:** `screens/CoachProfileScreen.tsx`. Nuevos: `screens/CoachPayoutScreen.tsx`, `app/coach-datos-cobro.tsx`, `lib/payout.ts`, `__tests__/payout.test.ts`, `scripts/add-coach-international.sql` (**corrido y verificado**). 172 tests (eran 157).
+
+**Resumen — opt-in del coach a sesiones del exterior, y el cierre de las decisiones del rail internacional.**
+
+- **`coaches.accepts_international`** + toggle en el perfil del coach. Público a propósito (el usuario del exterior tiene que poder filtrar). Requirió `grant update` de la columna: `lock-privileged-columns.sql` hace `revoke update` y otorga columna por columna, así que **toda columna nueva de `coaches` es de solo lectura hasta agregarla a esa lista**, y desde el cliente falla en silencio.
+- 🔴 **Los datos de cobro NO van en `coaches`.** Verificado contra el REST API: esa tabla **se lee con la anon key sin sesión**, así que un CBU ahí sería público para cualquiera que abra la app. Van en `coach_payout_accounts`, con RLS de dueño y SELECT para admin (el panel necesita el CBU para transferir, pero nadie edita el dato de cobro de otro).
+- **Tres capas de validación en cripto, porque un error no se deshace**: coherencia por método, formato por CHECK en la base, y `lib/payout.ts` (puro, sin RN, 15 tests) para mostrar el error mientras se escribe. **La red se valida CONTRA la dirección**: una dirección EVM es válida en sí misma, y mandarle USDT por red Tron pierde los fondos definitivamente — no rebota como un CBU. La pantalla avisa que el primer pago va de prueba.
+
+**Decisiones cerradas del rail internacional** (investigación, no asesoramiento — falta validar con contador):
+
+- **Mercado Pago no sirve para el exterior.** Cerrado con evidencia. **El riel es USDT**; PayPal complemento; Stripe+LLC descartado por ahora (y **Connect ni siquiera paga a Argentina** — no es país de payout a 2026). **Cobra VIVE** (evita que cada coach sea exportador), **precio en dólares**, pago al coach **semanal por sesiones ya realizadas** (garantiza tener con qué reembolsar). Banda operativa: **25 a 100 sesiones/mes**.
+- **No existe una fintech que reemplace esto**: las alternativas a Connect son europeas o enterprise, y MP Split aparece en las comparativas como "el Stripe Connect que la mayoría no puede usar". La arquitectura elegida no es un rodeo, es la única disponible sin sociedad afuera.
+- 📊 **Modelo económico** (ticket $60.000, 4 sesiones/par → comisión efectiva 16,25%, USD 1.500): break-even local 15 ses/mes. 🔴 **El internacional como principal se vuelve peor a medida que crece**: a 150 ses/mes la cuota del monotributo ($1.614.446) **supera todo el ingreso** de esas sesiones ($1.462.500), porque te categoriza por plata que no es tuya. Las mismas 150 sesiones locales dan el mismo ingreso con cuota de $56.379 — **28× menos**.
+- 🔴 **Monotributo: la exportación computa igual.** Art. 3 Anexo Ley 24.977 define ingreso bruto "por cuenta propia **o ajena**" → estructurarlo por cuenta y orden **no salva el tope**. (Córdoba sí lo salva: art. 238 inc. b) CTP excluye la parte de terceros, e inc. g) las exportaciones.)
+- 🔴 **Y el hallazgo que cambia la figura fiscal: decide el marketing, no el volumen.** Como monotributista el IVA dentro de cada gasto se pierde; como RI con ventas de exportación (exentas) es crédito recuperable. Con $2M/mes de pauta y 100 sesiones: monotributo cuesta $895.847/mes contra $76.860 de RI. **Con pauta >$500.000/mes conviene RI aunque el volumen sea chico.**
+- ⚠️ **Una devaluación te acerca al tope sin que el negocio cambie**: el tope está fijo en pesos y se actualiza semestralmente, tu facturación internacional está en dólares. A 1300 el tope eran USD 97.393; a 1500, USD 84.407.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **El mensaje a los coaches** (ya redactado en la sesión): ¿tomarían una sesión del exterior cobrando por VIVE? ¿aceptarían USDT? **Es lo único que bloquea de verdad** — sin oferta no hay servicio, y la respuesta define si se puede borrar toda la rama de transferencia/CBU.
+- **Capa de zonas horarias**, antes del primer usuario del exterior. Convertir **con zona horaria y no con offset fijo**: Argentina no tiene horario de verano pero los destinos sí. Ojo con el día (lunes 21:00 ART es martes en Bangkok) y los crons que dicen "mañana".
+- **Probar en dispositivo** el toggle y la pantalla de datos de cobro.
+- **Sin resolver de la sesión 101**: el resultado de la query de `meeting_url` — si hay reservas futuras con sala ya generada, tienen la ventana rota y hay que resetearlas a null.
+- **Contador**: (1) ¿computa el total aunque actúe como intermediario? (2) ¿cuándo salgo del monotributo? (3) exención de IIBB en Córdoba por art. 238. (4) ¿el IVA de Meta/Google por importación de servicios genera crédito recuperable?
+
+---
+
 ## 2026-08-18 — Andre (sesión 101)
 
 **Tocado:** `supabase/functions/create-meeting-room/index.ts`, `supabase/functions/mp-process-refunds/index.ts`, `SCHEMA.md`. Nuevo: `scripts/add-payment-provider.sql` (**corrido y verificado**). Las dos edge functions **deployadas**.
