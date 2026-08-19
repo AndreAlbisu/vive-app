@@ -23,6 +23,18 @@
 
 ---
 
+## 2026-08-19 — Joaquín (sesión 108)
+
+**Tocado:** ningún archivo de código. Verificación en producción, con plata real.
+
+**Resumen — la reserva instantánea con pago quedó probada por primera vez. Venía sin cerrarse desde la sesión 87-88.**
+
+- Coach Prueba ya tenía `instant_booking=true` (no hizo falta tocar nada). Se reservó y pagó una tercera sesión del mismo par ($4.500 ARS).
+- ✅ **Resultado:** `status: 'confirmada'` (sin que nadie la acepte — se confirma sola al acreditarse el pago dentro de la ventana de sondeo de 12s), `payment_status: 'aprobado'`, `platform_fee_pct: 15`, sala de video generada. Cierra el camino que más efectos corre de una sola vez (push, sala, cancelar competidores del horario) y el único que nunca se había ejercitado con pago real.
+- Con esto quedan cerrados los dos pendientes más urgentes de la lista de QA (tramo del 15% en la 106, instantánea con pago acá). Sigue abierto: el guardarraíl de reconexión de MP en el celular.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 106)
 
 **Tocado:** ningún archivo de código. Verificación en producción, con plata real.
