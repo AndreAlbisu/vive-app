@@ -36,6 +36,7 @@ import { getSharedNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
 import { sendPushNotification } from '@/lib/notifications';
 import { canCancelConfirmed } from '@/lib/bookingHelpers';
+import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { logError } from '@/lib/logging';
 import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
@@ -89,15 +90,15 @@ function getSessionState(booking: ActiveBooking): SessionState {
   if (!booking) return 'none';
   if (booking.status === 'pendiente') return 'pendiente';
   if (booking.status === 'completada') {
-    const [y, mo, d] = booking.scheduled_date.split('-').map(Number);
-    const [h, mi] = booking.scheduled_time.split(':').map(Number);
-    const endMs = new Date(y, mo - 1, d, h, mi).getTime() + ((booking.duration_minutes ?? 60) * 60_000);
+    const endMs = scheduledAtMs(booking.scheduled_date, booking.scheduled_time)
+      + ((booking.duration_minutes ?? 60) * 60_000);
     return Date.now() < endMs + 24 * 60 * 60_000 ? 'finalizada' : 'none';
   }
   if (booking.status === 'confirmada') {
-    const [y, mo, d] = booking.scheduled_date.split('-').map(Number);
-    const [h, mi] = booking.scheduled_time.split(':').map(Number);
-    const startMs = new Date(y, mo - 1, d, h, mi).getTime();
+    // 🔴 Con `new Date(y, mo-1, d, h, mi)` esto se calculaba en la zona del
+    // dispositivo: desde afuera de Argentina la sala se "abría" corrida por la
+    // diferencia de offset, y el countdown mentía por lo mismo.
+    const startMs = scheduledAtMs(booking.scheduled_date, booking.scheduled_time);
     const endMs = startMs + ((booking.duration_minutes ?? 60) * 60_000);
     const now = Date.now();
     if (now < startMs - 10 * 60_000) return 'confirmada';   // sesión futura
@@ -118,12 +119,20 @@ function formatSalaDate(dateStr: string): string {
   return `${DAY[d.getDay()]} ${day} ${MON[month - 1]}`;
 }
 
+/** Sufijo con la hora local del usuario, o cadena vacía si está en la misma
+ *  hora que Argentina. La hora que muestran las tarjetas es SIEMPRE la
+ *  argentina, que es la que acordaron las dos partes; esto la traduce sin
+ *  reemplazarla, para que las dos personas sigan hablando del mismo número. */
+function tzSuffix(dateStr: string, timeStr: string): string {
+  const label = localEquivalentLabel(dateStr, timeStr);
+  return label ? ` · ${label}` : '';
+}
+
 function countdownText(dateStr: string, timeStr: string, durationMins: number | null): string {
-  const [y, mo, d] = dateStr.split('-').map(Number);
-  const target = new Date(y, mo - 1, d);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  // "Hoy" y "Mañana" se cuentan en días ARGENTINOS, que es como está guardada la
+  // fecha. Con el día del dispositivo, a la 01:00 en Madrid en Argentina todavía
+  // es el día anterior y la tarjeta decía "Mañana" para una sesión de hoy.
+  const days = daysFromTodayAr(dateStr);
   let dayText = days === 0 ? 'Hoy' : days === 1 ? 'Mañana' : `En ${days} días`;
   const dur = durationMins ? `${durationMins} min` : '60 min';
   return `${dayText} · ${dur} · videollamada`;
@@ -528,9 +537,10 @@ export default function SalaScreen() {
       const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
       const writable = cals.find(c => c.allowsModifications);
       if (!writable) return;
-      const [y, mo, d] = activeBooking.scheduled_date.split('-').map(Number);
-      const [h, mi] = activeBooking.scheduled_time.split(':').map(Number);
-      const startDate = new Date(y, mo - 1, d, h, mi, 0);
+      // El evento va al calendario del sistema, que trabaja en instantes: si se
+      // arma con componentes locales, alguien fuera de Argentina se agenda la
+      // sesión a la hora equivocada.
+      const startDate = new Date(scheduledAtMs(activeBooking.scheduled_date, activeBooking.scheduled_time));
       const dur = activeBooking.duration_minutes ?? 60;
       const endDate = new Date(startDate.getTime() + dur * 60_000);
       const title = `Sesión con ${recipientProfile?.name ?? 'profesional'} — Vita`;
@@ -885,14 +895,12 @@ export default function SalaScreen() {
         <LinearGradient colors={['#42542F', '#354526']} style={styles.sessionCardLive}>
           <Text style={styles.liveTitle}>
             {(() => {
-              const [y, mo, d] = activeBooking!.scheduled_date.split('-').map(Number);
-              const [h, mi] = activeBooking!.scheduled_time.split(':').map(Number);
-              const startMs = new Date(y, mo - 1, d, h, mi).getTime();
+              const startMs = scheduledAtMs(activeBooking!.scheduled_date, activeBooking!.scheduled_time);
               return Date.now() < startMs ? 'Tu sesión está por comenzar' : 'Tu sesión está en curso';
             })()}
           </Text>
           <Text style={styles.liveSub}>
-            {formatSalaDate(activeBooking!.scheduled_date)} · {activeBooking!.scheduled_time.slice(0, 5)} hs
+            {formatSalaDate(activeBooking!.scheduled_date)} · {activeBooking!.scheduled_time.slice(0, 5)} hs{tzSuffix(activeBooking!.scheduled_date, activeBooking!.scheduled_time)}
           </Text>
           <Animated.View style={{ transform: [{ scale: pulseAnim }], marginTop: 12 }}>
             <TouchableOpacity
@@ -918,7 +926,7 @@ export default function SalaScreen() {
             <Text style={styles.sessionCardLabel}>Solicitud enviada</Text>
           </View>
           <Text style={styles.sessionCardDate}>
-            {formatSalaDate(activeBooking!.scheduled_date)} · {activeBooking!.scheduled_time.slice(0, 5)} hs
+            {formatSalaDate(activeBooking!.scheduled_date)} · {activeBooking!.scheduled_time.slice(0, 5)} hs{tzSuffix(activeBooking!.scheduled_date, activeBooking!.scheduled_time)}
           </Text>
           <Text style={styles.sessionCardSub}>
             Esperando confirmación de {recipientProfile?.name ?? 'tu profesional'}
@@ -944,7 +952,7 @@ export default function SalaScreen() {
             </View>
           </View>
           <Text style={styles.sessionCardDate}>
-            {formatSalaDate(activeBooking!.scheduled_date)} · {activeBooking!.scheduled_time.slice(0, 5)} hs
+            {formatSalaDate(activeBooking!.scheduled_date)} · {activeBooking!.scheduled_time.slice(0, 5)} hs{tzSuffix(activeBooking!.scheduled_date, activeBooking!.scheduled_time)}
           </Text>
           <Text style={styles.sessionCardSub}>
             {countdownText(activeBooking!.scheduled_date, activeBooking!.scheduled_time, activeBooking!.duration_minutes)}

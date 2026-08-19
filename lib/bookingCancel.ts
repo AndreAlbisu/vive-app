@@ -54,14 +54,20 @@ export async function cancelBookingFlow(p: CancelBookingParams): Promise<CancelR
     .update({
       status: 'cancelada',
       cancelled_by: p.actorRole,
-      // Lo usa trg_mark_refund_on_cancel: una cancelación tardía DEL USUARIO
-      // pierde el reembolso; la del coach no.
+      // ⚠️ Este valor ya NO decide nada: desde `add-late-cancel-server-side.sql`
+      // el trigger recalcula la tardanza con la zona de Argentina y PISA lo que
+      // llegue de acá. Se sigue mandando porque quitarlo del UPDATE no cambia el
+      // resultado y sí obligaría a tocar el grant de columnas — y porque las
+      // builds viejas lo mandan igual. La regla vive en la base, que es donde se
+      // puede verificar contra scheduled_date/time.
       cancelled_late: isCancelLate(p.scheduledDate, p.scheduledTime),
     })
     .eq('id', p.bookingId)
     // El trigger es BEFORE UPDATE, así que la fila que vuelve ya trae el
-    // `payment_status` que él decidió. Es la forma de saber qué pasó con la
-    // plata sin duplicar acá la regla de las 24hs.
+    // `payment_status` Y el `cancelled_late` que él decidió. Es la forma de
+    // saber qué pasó con la plata sin duplicar acá la regla de las 24hs — y
+    // ahora además significa que el mensaje que ve la persona sigue la decisión
+    // del servidor, no la que había calculado su teléfono.
     .select('id, payment_status, payment_provider, cancelled_late');
 
   // Postgrest no devuelve error cuando RLS bloquea: devuelve 0 filas. Sin este

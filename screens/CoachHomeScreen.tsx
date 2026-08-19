@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { AppBg } from '@/components/ui/AppBg';
 import { visibilityTeaser, type VisibilityTeaser } from '@/lib/coachVisibility';
+import { scheduledAtMs, daysFromTodayAr } from '@/lib/time';
 
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
 const CARD = '#F7F2E7';
@@ -64,19 +65,20 @@ function getInitials(name: string): string {
 function ordinalLabel(n: number): string {
   return `${n}.ª sesión`;
 }
+// Todo lo de acá se calcula en hora/día de ARGENTINA, que es como está guardado.
+// Vale también del lado del coach: un coach de viaje veía su propia agenda
+// corrida, con el "Hoy" y el "Mañana" cambiados de lugar.
 function bookingStartMs(date: string, time: string): number {
-  const [y, m, d] = date.split('-').map(Number);
-  const [h, min] = time.split(':').map(Number);
-  return new Date(y, m - 1, d, h, min, 0).getTime();
+  return scheduledAtMs(date, time);
 }
 function nextDateLabel(date: string): string {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const [y, m, d] = date.split('-').map(Number);
-  const target = new Date(y, m - 1, d);
-  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
+  const diffDays = daysFromTodayAr(date);
   if (diffDays === 0) return 'Hoy';
   if (diffDays === 1) return 'Mañana';
-  const dayName = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][target.getDay()];
+  const [y, m, d] = date.split('-').map(Number);
+  // Solo para el día de la semana: una fecha de calendario tiene el mismo día
+  // en cualquier zona, así que acá `new Date` con componentes locales es seguro.
+  const dayName = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][new Date(y, m - 1, d).getDay()];
   return `${dayName} ${d} ${MONTHS[m - 1]}`;
 }
 
@@ -212,9 +214,7 @@ export default function CoachHomeScreen() {
       ]);
       let lastDaysAgo: number | null = null;
       if (lastDone?.[0]?.scheduled_date) {
-        const [ly, lm, ld] = (lastDone[0].scheduled_date as string).split('-').map(Number);
-        const lastMs = new Date(ly, lm - 1, ld).getTime();
-        lastDaysAgo = Math.max(0, Math.round((Date.now() - lastMs) / 86400000));
+        lastDaysAgo = Math.max(0, -daysFromTodayAr(lastDone[0].scheduled_date as string));
       }
       const resources: PrepResource[] = (recs ?? []).map(r => {
         const cr = r.coach_resources as { title?: string } | { title?: string }[] | null;

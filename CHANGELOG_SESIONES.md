@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-08-19 — Andre (sesión 112)
+
+**Tocado:** `lib/bookingHelpers.ts`, `lib/bookingCancel.ts`, `screens/SalaScreen.tsx`, `screens/SessionsScreen.tsx`, `screens/CoachHomeScreen.tsx`, `screens/BookingScreen_Time.tsx`, `supabase/functions/_shared/guarantee.ts`, `SCHEMA.md`. Nuevos: `lib/time.ts`, `__tests__/time.test.ts`, `scripts/add-late-cancel-server-side.sql`. 218 tests (eran 198).
+
+**Resumen — punto 3, zonas horarias. Resultó ser un bug de plata, no una mejora de copy.**
+
+- 🔴 **El reembolso lo decidía el teléfono del usuario, y leía su zona horaria.** `lib/bookingCancel.ts` escribe `cancelled_late` con `isCancelLate`, y `trg_mark_refund_on_cancel` lee esa columna para decidir si devuelve la plata. `isCancelLate` armaba el instante con `new Date(year, month-1, day, h, m)`, que interpreta una hora guardada **en horario argentino** según la zona **del dispositivo**. En un teléfono argentino coincide y por eso nunca se vio; desde Madrid el instante cae 5 horas antes, así que **alguien cancelando con 29 horas de anticipación quedaba marcado como tardío y perdía un reembolso que le correspondía**. Le pegaba justo a los usuarios del riel internacional. Es el mismo bug que tenía `create-meeting-room` en la 101, del lado del cliente.
+- 🔴 **Y la misma columna era falsificable.** `harden-bookings-update.sql` le da `grant update (… cancelled_late …)` a `authenticated` y ninguna política restringe su VALOR: contra la API directa se podía cancelar una hora antes mandando `cancelled_late = false` y cobrar el reembolso igual — la penalidad por cancelación tardía no era exigible. Mismo patrón que la 104: la pantalla no es la frontera.
+- **Los dos se cierran con el mismo cambio**: el trigger calcula la tardanza por su cuenta, con `AT TIME ZONE 'America/Argentina/Buenos_Aires'`, y **pisa** lo que mande el cliente. La columna pasa de entrada a dato derivado, auditable contra `scheduled_date`/`scheduled_time`.
+  - ⚠️ **Se pisa el valor en vez de revocar el grant, a propósito.** Revocar rompería a cualquiera con una build vieja: la cancelación escribe `status`, `cancelled_by` y `cancelled_late` en un solo UPDATE y si una columna queda fuera del grant **falla el UPDATE entero** (la lección de la 104) — nadie podría cancelar hasta actualizar la app. Pisando el valor, las builds viejas siguen mandando lo que mandaban, se ignora, y el resultado es correcto igual.
+  - Como el trigger es BEFORE UPDATE, la fila que vuelve ya trae el valor corregido, así que **el mensaje que ve la persona sigue la decisión del servidor** y no la que había calculado su teléfono. Eso ya funcionaba así para `payment_status`; ahora vale también para la tardanza.
+
+**El mismo patrón estaba en seis lugares más, todos decidiendo cosas visibles:**
+
+- **La sala se "abría" a la hora equivocada** y el countdown mentía (`SalaScreen`), **el botón de entrar** aparecía corrido (`SessionsScreen`), y el coach de viaje veía su propia agenda mal (`CoachHomeScreen`).
+- 🔴 **El selector de horarios era el peor.** Comparaba el día y los minutos DEL DISPOSITIVO contra horas guardadas en horario argentino: desde Madrid a las 22:00 (17:00 en Argentina) daba por pasados todos los turnos hasta las 22:00 ART. **La persona abría la pantalla y veía casi todo gris, sin ningún motivo visible.** Ahora compara instantes absolutos, que resuelve el día y la hora de una.
+- **"Hoy" y "Mañana" se contaban en días del dispositivo.** A la 01:00 en Madrid en Argentina todavía es el día anterior, así que la tarjeta decía "Mañana" para una sesión de hoy.
+- **Los eventos de calendario** se armaban con componentes locales, o sea que se agendaban a la hora equivocada.
+
+**Decisiones:**
+
+- **Zona IANA en los tres lados, no offset fijo.** Argentina no tiene horario de verano desde 2009, así que hoy `-03:00` da el mismo número. Se usa el nombre igual porque el offset fijo se rompe **en silencio** el día que vuelva a haber DST —se discute cada par de años— y lo que se rompe son reembolsos y salas de video, una hora corridas. `_shared/guarantee.ts` pasó de `-03:00` a la zona, igual que ya hacían los dos crons SQL. **Hay un test que exige que cliente y servidor devuelvan el MISMO número**: si divergen, la app promete una cosa y la base hace otra.
+- **`Intl` con `timeZone` se chequea de forma FUNCIONAL, no por feature-detect.** Soportar un locale y soportar la opción `timeZone` son cosas distintas, y en Hermes eso dependió de cómo esté compilado. Se convierte un instante cuya respuesta se conoce y se compara; si no da, se cae al offset fijo, que es exactamente el comportamiento actual. Un detect que solo mirara si la API existe devolvería `true` en un motor que después ignora la zona en silencio.
+- 📝 **La zona del usuario es un PARÁMETRO inyectable**, igual que `now` en `commissionPctFor`. No es un detalle de estilo: dentro de jest, mutar `process.env.TZ` en caliente **no** reconfigura `Date`, así que los primeros tests que escribí pasaban sin probar nada. Con la zona como parámetro se prueban Bangkok, Los Ángeles, Madrid y Montevideo de verdad.
+
+**Y lo que se muestra (bloque C):**
+
+- **El cartel del selector era una etiqueta, no una conversión.** Decía "Horarios en zona horaria Argentina (ART)" y dejaba la cuenta a cargo de quien reserva. Elegir "21:00" desde Bangkok sin ver que para vos es el **martes a las 07:00** no es una molestia, es reservar a ciegas — y lo que se corre es el **día**, que es lo que de verdad muerde. Ahora, al elegir un horario, aparece la equivalencia con el día nombrado.
+- Las tarjetas de sesión (`SalaScreen`, `SessionsScreen`) muestran la hora local al costado. **La hora argentina se sigue mostrando primero y no se reemplaza**: es la que acordaron las dos partes, y si cada uno ve un número distinto dejan de poder hablar del mismo horario.
+- **Montevideo y São Paulo (en invierno) no cuentan como otra zona**: se compara el offset, no el nombre. Mostrar una "conversión" que dice lo mismo dos veces es ruido.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/add-late-cancel-server-side.sql`** y **deployar `guarantee-claim` y `create-meeting-room`** (las dos usan `_shared/guarantee.ts`). Ninguna de las dos cosas está hecha.
+- **Nada de esto se probó en dispositivo.** Typecheck, lint (0 warnings nuevos) y 218 tests, pero el filtro del punto 2, el badge, el precio en dólares y toda la capa de zonas horarias no se vieron corriendo. Para probar zonas alcanza con cambiar la zona del teléfono a Madrid o Bangkok — no hace falta viajar.
+- ⚠️ **Falta verificar `Intl` con `timeZone` en el dev build.** Si el chequeo funcional da `false`, todo cae al offset fijo y las equivalencias locales no se muestran (degrada al comportamiento de hoy, no rompe). Se ve rápido: si el cartel de conversión no aparece con el teléfono en Madrid, es eso.
+- **Punto 4, higiene**: `USDT_WALLET_TRC20` sigue apuntando a la dirección personal de Andre y el precio de prueba sigue en 6 USD.
+- Sigue arriba de todo: **el mensaje a los coaches** (1 de 32 tiene el internacional prendido) y **la hora con el contador**.
+
+---
+
 ## 2026-08-19 — Andre (sesión 111)
 
 **Tocado:** `lib/coachesCache.ts`, `app/search3.tsx`, `screens/ProfesionalScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `SCHEMA.md`, `CHANGELOG_SESIONES.md` (corrección a la 101). Sin cambios de base de datos. 198 tests.

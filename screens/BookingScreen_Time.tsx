@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { scheduledAtMs, deviceIsOffArgentina, localEquivalent } from '@/lib/time';
 
 const MONTHS_SHORT = [
   'ene','feb','mar','abr','may','jun',
@@ -41,6 +42,9 @@ export default function BookingScreen_Time() {
   const { user } = useAuth();
   const params = useLocalSearchParams<Params>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  // Se resuelve una sola vez: la zona del dispositivo no cambia mientras la
+  // pantalla está abierta, y preguntarla en cada render es trabajo al pedo.
+  const fueraDeArgentina = useMemo(() => deviceIsOffArgentina(), []);
   const [times, setTimes] = useState<{ label: string; available: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -105,14 +109,13 @@ export default function BookingScreen_Time() {
         return ah * 60 + am - (bh * 60 + bm);
       });
 
-      const now = new Date();
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const isToday = dateStr === todayStr;
-      const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
+      // 🔴 Antes esto comparaba el día y los minutos DEL DISPOSITIVO contra una
+      // hora guardada en horario argentino. Desde Madrid a las 22:00 (17:00 en
+      // Argentina) daba por pasados todos los turnos hasta las 22:00 ART: la
+      // persona abría la pantalla y veía casi todo gris, sin ningún motivo
+      // visible. Comparar instantes absolutos resuelve el día y la hora de una.
       setTimes(sorted.map(s => {
-        const [sh, sm = 0] = s.time.split(':').map(Number);
-        const isPast = isToday && sh * 60 + sm <= nowMinutes;
+        const isPast = scheduledAtMs(dateStr, s.time) <= Date.now();
         return { label: s.time, available: !bookedSet.has(s.time) && !isPast };
       }));
       setLoading(false);
@@ -207,10 +210,36 @@ export default function BookingScreen_Time() {
           </View>
         )}
 
+        {/* El cartel era una ETIQUETA, no una conversión: decía "horarios en
+            zona horaria Argentina (ART)" y dejaba la cuenta a cargo de quien
+            reserva. Elegir "21:00" desde Bangkok sin ver que para vos es el
+            MARTES a las 07:00 no es una molestia, es reservar a ciegas — y el
+            que se corre es el día, que es lo que de verdad muerde. La
+            equivalencia aparece recién al elegir un horario: ponerla debajo de
+            cada chip llenaría la grilla de números para una sola línea útil. */}
         <View style={s.timezoneNote}>
           <MaterialIcons name="access-time" size={13} color="rgba(135,131,92,0.80)" />
-          <Text style={s.timezoneText}>Horarios en zona horaria Argentina (ART)</Text>
+          <Text style={s.timezoneText}>
+            {fueraDeArgentina
+              ? 'Los horarios están en hora de Argentina'
+              : 'Horarios en zona horaria Argentina (ART)'}
+          </Text>
         </View>
+
+        {fueraDeArgentina && selectedTime && (() => {
+          const eq = localEquivalent(dateStr, selectedTime);
+          if (!eq) return null;
+          return (
+            <View style={s.tzConversion}>
+              <MaterialIcons name="public" size={14} color={ViveColors.accent} />
+              <Text style={s.tzConversionText}>
+                {eq.dayShift === 0
+                  ? `Donde estás vos son las ${eq.time}`
+                  : `Donde estás vos es el ${eq.weekday} a las ${eq.time}`}
+              </Text>
+            </View>
+          );
+        })()}
 
       </ScrollView>
 
@@ -298,6 +327,12 @@ const s = StyleSheet.create({
     color: 'rgba(135,131,92,0.72)', textAlign: 'center', marginVertical: 24,
   },
   timezoneNote: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tzConversion: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8,
+    backgroundColor: 'rgba(58,79,42,0.07)',
+    borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10,
+  },
+  tzConversionText: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: '#565E32', flex: 1 },
   timezoneText: { fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(135,131,92,0.72)' },
   footerSafe: {
     backgroundColor: 'rgba(247,239,228,0.97)',

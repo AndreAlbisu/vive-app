@@ -23,6 +23,7 @@ import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { decryptMessage } from '@/lib/encryption';
 import { canCancelConfirmed } from '@/lib/bookingHelpers';
+import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -90,18 +91,24 @@ function formatSalaDate(dateStr: string): string {
   return `${DAY[d.getDay()]} ${day} ${MON[month - 1]}`;
 }
 
+/** Sufijo con la hora local del usuario, vacío si coincide con Argentina.
+ *  Ver la nota de `tzSuffix` en SalaScreen: la hora argentina es la que manda,
+ *  esto la traduce al costado. */
+function tzSuffix(dateStr: string, timeStr: string): string {
+  const label = localEquivalentLabel(dateStr, timeStr);
+  return label ? ` · ${label}` : '';
+}
+
+// Días ARGENTINOS: la fecha está guardada en esa zona, así que contar con el
+// día del dispositivo corre el resultado para quien no está en Argentina.
 function daysUntil(dateStr: string): number {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const target = new Date(year, month - 1, day);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return daysFromTodayAr(dateStr);
 }
 
 function isJoinable(dateStr: string, timeStr: string): boolean {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const [h, m] = timeStr.split(':').map(Number);
-  return Date.now() >= new Date(year, month - 1, day, h, m).getTime() - 10 * 60_000;
+  const startMs = scheduledAtMs(dateStr, timeStr);
+  if (!Number.isFinite(startMs)) return false;
+  return Date.now() >= startMs - 10 * 60_000;
 }
 
 export default function SessionsScreen() {
@@ -343,9 +350,9 @@ export default function SessionsScreen() {
       const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
       const writable = cals.find(c => c.allowsModifications);
       if (!writable) return;
-      const [y, mo, d] = ses.scheduled_date.split('-').map(Number);
-      const [h, mi] = ses.scheduled_time.split(':').map(Number);
-      const startDate = new Date(y, mo - 1, d, h, mi, 0);
+      // Instante absoluto: el calendario del sistema no sabe de la convención
+      // "esto está en hora argentina".
+      const startDate = new Date(scheduledAtMs(ses.scheduled_date, ses.scheduled_time));
       const dur = ses.duration_minutes ?? 60;
       const endDate = new Date(startDate.getTime() + dur * 60_000);
       const title = `Sesión con ${ses.coachName} — Vita`;
@@ -498,7 +505,7 @@ export default function SessionsScreen() {
                             )}
                             <View style={styles.heroBodyText}>
                               <Text style={styles.heroDate}>
-                                {formatSalaDate(ses.scheduled_date)} · {ses.scheduled_time.slice(0, 5)} hs
+                                {formatSalaDate(ses.scheduled_date)} · {ses.scheduled_time.slice(0, 5)} hs{tzSuffix(ses.scheduled_date, ses.scheduled_time)}
                               </Text>
                               <Text style={styles.heroSub}>Con {ses.coachName}</Text>
                             </View>
