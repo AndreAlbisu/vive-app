@@ -25,6 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { priceUsdError, MIN_PRICE_USD, paypalGrossUp } from '@/lib/pricing';
 import { AppBg } from '@/components/ui/AppBg';
 
 const GLASS = 'rgba(255,248,240,0.55)';
@@ -223,9 +224,14 @@ export default function CoachProfileScreen() {
       return;
     }
 
+    // La regla vive en `lib/pricing.ts` y está duplicada como CHECK en la base.
+    // El mínimo existe por la comisión FIJA de PayPal (USD 0,30): como no
+    // escala, en precios bajos se come todo — sobre USD 1 el recargo necesario
+    // para netear el precio es del 37%.
     const parsed = parseInt(priceUsdInput.replace(/[^0-9]/g, ''), 10);
-    if (!parsed || parsed <= 0) {
-      Alert.alert('Precio inválido', 'Ingresá un monto en dólares mayor a 0');
+    const motivo = priceUsdError(priceUsdInput);
+    if (motivo) {
+      Alert.alert('Precio inválido', motivo);
       return;
     }
     if (parsed === profile?.price_usd) return;   // nada que guardar
@@ -998,6 +1004,14 @@ export default function CoachProfileScreen() {
 
             {/* Qué le falta para poder recibir reservas. Sin esto activa el
                 toggle, no pasa nada, y no tiene forma de saber por qué. */}
+            {profile?.price_usd != null && (
+              <Text style={s.priceHint}>
+                El cliente del exterior paga USD {paypalGrossUp(profile.price_usd).toFixed(2)} —
+                la diferencia es el costo de procesar el pago internacional y no sale de tu parte.
+                Vos cobrás sobre USD {profile.price_usd}. Mínimo USD {MIN_PRICE_USD}.
+              </Text>
+            )}
+
             {(profile?.price_usd == null) && (
               <View style={s.commissionCard}>
                 <MaterialCommunityIcons name="alert-outline" size={18} color="#8C4A31" />
@@ -1451,6 +1465,13 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: '#87835C',
     lineHeight: 18,
+  },
+  priceHint: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: '#87835C',
+    lineHeight: 18,
+    marginTop: 8,
   },
   commissionStrong: {
     fontFamily: ViveFonts.semibold,

@@ -5,6 +5,41 @@
 
 ---
 
+## 2026-08-19 — Andre (sesión 113)
+
+**Tocado:** `screens/CoachProfileScreen.tsx`, `SCHEMA.md`. Nuevos: `lib/pricing.ts`, `__tests__/pricing.test.ts`, `scripts/add-paypal-rail.sql` (⚠️ **PENDIENTE DE CORRER**), `docs/cobro-internacional-coaches.md`. 229 tests (eran 218).
+
+**Resumen — se decidió el riel de cobro del exterior y arrancó el schema. Ninguna edge function todavía.**
+
+- 📝 **Corrección al registro, y me hizo recomendar mal durante media sesión: los 32 coaches son de PRUEBA y la app no salió.** La 101 dice "preguntarles a los 32 coaches actuales" y la 102 trata el mensaje a los coaches como "lo único que bloquea de verdad", así que estuve argumentando "no construyas, no hay tráfico" sobre una premisa falsa. No hay clientes porque no se lanzó.
+- **Decisión: PayPal como riel principal al lanzar, USDT como secundario.** Es un vuelco respecto de la 102 (que tenía USDT principal y PayPal complemento) y el motivo es la conversión: el muro de cripto deja afuera a la mayoría en el momento en que más importa. USDT se queda porque ya está hecho, cuesta ~0 y sirve al segmento cripto-nativo.
+- **Stripe descartado, con una razón mejor que "es burocrático":** aunque se hiciera la LLC, **Connect no paga a Argentina**. No es más papeleo para el mismo resultado, es más papeleo para medio resultado — resolvería el cobro y dejaría un ente en EEUU cuya plata igual tiene que llegar a coaches argentinos.
+- **Payoneer, evaluado por primera vez: no sirve como checkout** (links de cobro tipo factura, no un flujo embebido), sí como capa de recepción y retiro. Son dos preguntas distintas —cómo paga el comprador y cómo aterriza la plata— y mezclarlas es lo que hacía dar vueltas al registro.
+
+**Las comisiones, de la fuente y no de blogs:**
+
+- **5,40% + USD 0,30** por transacción comercial, **todos los mercados**, sin comisión extra por ser internacional. Argentina está agrupada con el resto de Latinoamérica. (El 4,4% que circula en blogs es la tarifa de otros mercados.)
+- **4,50% de spread** de conversión de divisa. 🔴 **Pero ese es evitable y el otro no**: solo se aplica si PayPal convierte. **Decisión de Andre: se mantiene saldo en dólares y se retira por una vía que no convierta en PayPal**, así que el precio cubre solo el 5,40% + 0,30. Meter el 4,5% en el precio sería cobrarle al cliente un costo que se puede evitar operativamente.
+- **Estrategia de precio: un solo precio con el costo adentro**, no un ítem separado — el contrato de PayPal prohíbe el recargo por usar PayPal, pero poner precio no es recargar. ⚠️ Leído de fuentes secundarias sobre el contrato estadounidense; el texto argentino lo tiene que mirar quien revise los T&C.
+- 🔴 **Mi primera propuesta (+7% flat) estaba mal y el test lo fija.** Como los USD 0,30 no escalan, el recargo real depende del precio: +6,0% sobre 100, +6,2% sobre 60, +7,3% sobre 20, **+37% sobre 1**. Un porcentaje plano cobra de menos justo donde el fijo pesa. Va la fórmula `(precio + 0,30) / 0,946`, redondeada al centavo de **arriba** — hacia abajo VIVE pondría la diferencia en cada transacción.
+- De ahí sale el **mínimo de USD 20** para el precio internacional (CHECK 1..10000 → 20..10000).
+
+**Lo construido:**
+
+- **`lib/pricing.ts`** (puro, 11 tests) con el mínimo, el gross-up y `netAfterPaypal`. **El test que importa es el que verifica que el gross-up alcance de verdad**: después de que PayPal cobre lo suyo tiene que quedar al menos el precio del coach en todo el rango — si quedara menos, la diferencia la pondría VIVE en cada sesión, en silencio.
+- **`scripts/add-paypal-rail.sql`** — `charged_amount`, el CHECK nuevo y `expire_unpaid_checkouts()` extendida al tercer riel. ⚠️ Trae un `UPDATE` obligatorio antes del CHECK: el coach de prueba está en `price_usd = 6` y sin corregirlo el constraint no se crea. De paso cierra el pendiente de la 103.
+- **`docs/cobro-internacional-coaches.md`** — la explicación para el coach. 🔴 **La sección "qué facturás" queda BLOQUEADA** hasta la respuesta del contador: depende de si VIVE es principal o por cuenta y orden, y en el segundo caso **el coach podría terminar siendo el exportador**, que es justo lo que el punto 1 del propio documento le promete evitar. Es la sección que más le importa, así que el documento no se manda hasta cerrar eso.
+
+**Pendiente para la próxima sesión:**
+- **Correr `scripts/add-paypal-rail.sql`** (revisando antes el `UPDATE` del precio de prueba).
+- 🔴 **Falta la cuenta PayPal Business y las credenciales** (`client_id`, `secret`, `webhook_id`). Sin eso no se puede construir ni probar. Conviene arrancar por **sandbox** — a diferencia del de Mercado Pago, que estaba roto y obligó a probar con plata real.
+- **Las edge functions**: `paypal-create-payment` (reusa `commissionPctFor` y `PAIR_SESSION_FILTER`), webhook **con verificación de firma desde el principio** —es donde el de MP estuvo muerto un mes sin que nadie se enterara—, procesador de reembolsos gemelo de `mp-process-refunds`, y la UI con el patrón de `booking-return`.
+- ⚠️ **Riesgos de PayPal que el precio no arregla, para tener presentes al lanzar:** (1) **contracargos** — "el servicio no se prestó" sobre una videollamada, sin nada que enviar, es dificilísimo de defender; conviene dejar rastro de asistencia a la sala. (2) **Congelamiento de saldo** — y ahora es peor que cuando se anotó en la 101, porque el saldo contiene los payouts de los coaches: un congelamiento hace que los coaches no cobren. Mitigación: retirar seguido y tener reserva fuera de PayPal para un ciclo de pagos. (3) **La plata que entra por PayPal no puede salir como USDT directamente** — un coach que eligió cobrar en USDT implica un paso de conversión intermedio.
+- **Definir la vía de retiro** concreta (Prex, Belo, Payoneer, banco). No bloquea construir, sí lanzar.
+- Sigue arriba de todo: **la hora con el contador**. Es lo único que decide si el negocio de exportar sesiones cierra — la plataforma ya está decidida.
+
+---
+
 ## 2026-08-19 — Andre (sesión 112)
 
 **Tocado:** `lib/bookingHelpers.ts`, `lib/bookingCancel.ts`, `screens/SalaScreen.tsx`, `screens/SessionsScreen.tsx`, `screens/CoachHomeScreen.tsx`, `screens/BookingScreen_Time.tsx`, `supabase/functions/_shared/guarantee.ts`, `SCHEMA.md`. Nuevos: `lib/time.ts`, `__tests__/time.test.ts`, `scripts/add-late-cancel-server-side.sql`. 218 tests (eran 198).
