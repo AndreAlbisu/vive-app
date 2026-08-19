@@ -21,3 +21,10 @@ verify_jwt = false
 
 [functions.booking-return]
 verify_jwt = false
+
+# PayPal tampoco manda JWT de Supabase. Su seguridad la da la verificación de
+# firma contra la API de PayPal (`/v1/notifications/verify-webhook-signature`),
+# no el JWT del gateway. La función es fail-closed: sin PAYPAL_WEBHOOK_ID
+# rechaza con 503 en vez de procesar sin verificar.
+[functions.paypal-webhook]
+verify_jwt = false
