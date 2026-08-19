@@ -49,3 +49,28 @@ export function walletError(wallet: string, network: PayoutNetwork): string | nu
 export function normalizarCbu(cbu: string): string {
   return cbu.replace(/\D/g, '');
 }
+
+// ─── Cuánto se le debe al coach ──────────────────────────────────────────────
+
+/**
+ * Lo que le corresponde al coach por una sesión del riel internacional:
+ * el precio menos la comisión que se snapshoteó en `bookings.platform_fee_pct`.
+ *
+ * Solo aplica a los rieles donde cobra VIVE. Con Mercado Pago el split ya le
+ * pagó en el momento del cobro y no hay nada que transferir.
+ *
+ * ⚠️ El monto base es `bookings.amount` (el precio), NO `usdt_amount`: ese
+ * último trae el identificador del pago en los centavos, y pagárselo al coach
+ * sería regalarle hasta 0,99 USD por sesión de una plata que existe solo para
+ * reconocer la transferencia.
+ *
+ * ⚠️ El redondeo replica el de `marketplaceFeeFor` en
+ * `supabase/functions/_shared/commission.ts` —multiplicar antes de dividir— para
+ * que las dos mitades del reparto cierren contra el mismo número. Está duplicado
+ * porque `supabase/functions` está fuera del tsconfig de la app y no se puede
+ * importar desde acá; si cambia el redondeo allá, cambia acá.
+ */
+export function coachNetFor(amount: number, feePct: number): number {
+  const fee = Math.round(amount * feePct) / 100;
+  return Math.round((amount - fee) * 100) / 100;
+}

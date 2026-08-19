@@ -21,6 +21,7 @@
 //   { action: 'reject_coach_application', coach_id, reason }
 //   { action: 'resolve_report', report_id, status: 'revisado'|'accionado'|'descartado' }
 //   { action: 'mark_usdt_refunded', booking_id, refund_tx_id }
+//   { action: 'mark_coach_paid', booking_ids: string[], payout_reference }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -332,6 +333,80 @@ serve(async (req) => {
       })
 
       return json({ result: 'ok', booking: data[0], ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
+    // Pago al coach de sus sesiones del riel internacional.
+    //
+    // Igual que el reembolso de USDT: la transferencia se hace a mano (banco o
+    // billetera) y esto solo deja constancia. Automatizarla exigiría la clave
+    // privada de la wallet en un secret del backend, y con este volumen el
+    // riesgo no se justifica.
+    //
+    // En LOTE porque una transferencia semanal cubre varias sesiones: marcarlas
+    // de a una dejaría la mitad pagada si la app se cierra en el medio, y ahí no
+    // hay forma de saber cuáles entraron en la transferencia que ya salió.
+    case 'mark_coach_paid': {
+      const ids = Array.isArray(body.booking_ids) ? body.booking_ids.map(String) : []
+      if (ids.length === 0) return json({ error: 'falta booking_ids' }, 400)
+
+      // Texto libre, a diferencia del hash de 64 hex de `mark_usdt_refunded`:
+      // acá el pago puede haber sido una transferencia bancaria, que no tiene
+      // hash. Se exige que haya ALGO — sin comprobante el registro no prueba
+      // nada— pero no un formato, porque conviven dos.
+      const ref = String(body.payout_reference ?? '').trim()
+      if (ref.length < 6) {
+        return json({ error: 'payout_reference: poné el hash de la tx o el número de operación' }, 400)
+      }
+
+      const { data, error } = await admin
+        .from('bookings')
+        .update({ paid_out_at: new Date().toISOString(), payout_reference: ref })
+        .in('id', ids)
+        .neq('payment_provider', 'mp')          // con MP el split ya le pagó
+        .eq('status', 'completada')             // solo sesiones ya realizadas
+        .eq('payment_status', 'aprobado')
+        .is('paid_out_at', null)                // idempotente: no repisa un pago ya hecho
+        .select('id, coach_id, amount, platform_fee_pct')
+
+      if (error) return json({ error: error.message }, 500)
+      if (!data || data.length === 0) {
+        return json({ error: 'ninguna de esas reservas está pendiente de pago' }, 404)
+      }
+
+      // Que se hayan marcado MENOS de las pedidas no es un error, pero tiene que
+      // verse: significa que alguna ya estaba paga o cambió de estado mientras
+      // el panel mostraba la lista vieja. Callarlo dejaría creer que la
+      // transferencia cubrió sesiones que siguen impagas.
+      const parcial = data.length !== ids.length
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'mark_coach_paid',
+        targetType: 'booking',
+        targetId: data[0].id,
+        details: {
+          coach_id: data[0].coach_id,
+          bookings: data.map(b => b.id),
+          pedidas: ids.length,
+          marcadas: data.length,
+          reference: ref,
+        },
+      })
+
+      // Los dos avisos se concatenan en vez de ir en claves separadas: como
+      // `warning` es una sola, ponerla dos veces con un spread condicional haría
+      // que la segunda pisara a la primera en silencio.
+      const avisos = [
+        parcial ? `se marcaron ${data.length} de ${ids.length}: el resto ya no estaba pendiente` : null,
+        auditErr ? `acción hecha, auditoría fallida: ${auditErr}` : null,
+      ].filter(Boolean)
+
+      return json({
+        result: 'ok',
+        marcadas: data.length,
+        pedidas: ids.length,
+        ...(avisos.length ? { warning: avisos.join(' · ') } : {}),
+      })
     }
 
     default:

@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-08-19 — Andre (sesión 110)
+
+**Tocado:** `supabase/functions/_shared/commission.ts`, `usdt-create-payment/index.ts`, `mp-create-payment/index.ts`, `admin-actions/index.ts`, `lib/admin.ts`, `lib/payout.ts`, `screens/AdminScreen.tsx`, `__tests__/commission.test.ts`, `__tests__/payout.test.ts`, `SCHEMA.md`. Nuevo: `scripts/add-coach-payouts.sql` (**corrido y verificado**). Las tres edge functions **deployadas**. 198 tests (eran 187).
+
+**Resumen — el riel internacional cobraba bien y no sabía cuánto le debía al coach. Punto 1 de los cuatro que salieron de repasar el tema del exterior.**
+
+- 🔴 **`usdt-create-payment` nunca escribía `platform_fee_pct`.** Escribía `payment_provider`, `payment_status`, `currency`, `amount` y `usdt_amount`, y nada más: toda reserva internacional se quedaba con el **default 20** de la columna, sin contar las sesiones del par. En Mercado Pago ese campo es casi decorativo —el split ya repartió la plata en el momento del cobro—, pero **en el riel internacional entra el 100% a la wallet de VIVE y ese porcentaje es lo único que después dice cuánto transferirle al coach**: un par en el tramo del 15%, o en plena promo fundador de 0%, iba a cobrar de menos el día de la transferencia y nada lo habría delatado. Ahora calcula igual que MP, con el mismo contador — que **no depende del riel**, porque es de la relación coach-usuario: una primera sesión pagada en pesos manda la segunda al 15% aunque se pague en dólares.
+- 🔴 **Y al hacerlo apareció que el filtro de checkouts abandonados estaba desactualizado.** Vivía escrito inline dentro de `mp-create-payment` como predicado SQL y miraba **solo `preference_id`**, el marcador de Mercado Pago. Un cobro de USDT abandonado que igual llegara a `completada` empujaba al par al tramo del 15% sin que hubiera entrado un dólar — **las 16 reservas fantasma de agosto otra vez, por la otra puerta**. El predicado se mudó a `_shared/commission.ts` como `PAIR_SESSION_FILTER`, al lado de la versión JS que sí tenía tests, y ahora reconoce los dos marcadores. Verificado contra PostgREST con la anon key antes de deployar: el `or` anidado resuelve, y el control con una columna inventada devuelve 42703 — o sea que un filtro mal armado se habría visto.
+- 🔴 **El panel nunca tuvo policy de SELECT sobre `bookings`.** `add-admin-flag.sql` creó cuatro (`reports`, `guarantee_claims`, `coaches`, `profiles`) y ninguna cubre `bookings`. La **pestaña de Reembolsos de la sesión 104** consulta esa tabla con la sesión del admin, así que bajo RLS solo veía las reservas propias: **cualquier reembolso de USDT de otra persona salía como lista vacía, sin error**. Pasó desapercibido porque el único reembolso probado con plata real fue por Mercado Pago, que no pasa por esa pestaña. `bookings_select_admin` va en el script nuevo.
+- **Registro de la deuda con el coach**: `bookings.paid_out_at` + `payout_reference`, pestaña **Pagos** en el panel (agrupada por coach, con el desglose sesión por sesión a la vista — el total es la cifra que se tipea en una transferencia que no se deshace) y la acción `mark_coach_paid`. **En lote a propósito**: una transferencia semanal cubre varias sesiones, y marcarlas de a una dejaría la mitad pagada si algo falla en el medio, sin forma de saber cuáles entraron en la plata que ya salió. La transferencia se sigue haciendo a mano, mismo criterio que los reembolsos de USDT: automatizarla exige la clave privada de la wallet en el backend.
+  - **La base del cálculo es `amount`, nunca `usdt_amount`** — este último trae el identificador del pago en los centavos, y pagárselo al coach sería regalarle hasta 0,99 USD por sesión de una plata que existe solo para reconocer la transferencia.
+  - `paid_out_at` y `payout_reference` **no tienen `grant update` para `authenticated`**: las escribe solo `admin-actions` con service role. Marcarse a uno mismo como cobrado no puede ser una acción del cliente.
+  - `payout_reference` es texto libre y no 64 hex como `mark_usdt_refunded`: una transferencia bancaria no tiene hash, y exigir el formato de cripto dejaría sin poder registrar el método más común.
+- **Si el script no se hubiera corrido, la pestaña habría mostrado el error y no una lista vacía.** `listCoachPayouts` devuelve `{ rows, error }` en vez de tragarse el fallo: "no le debemos nada a nadie" y "no pudimos averiguar a quién le debemos" se ven igual y significan lo opuesto. Es el modo de falla que este proyecto ya se comió tres veces (el cron con el placeholder, el webhook muerto, la pestaña de reembolsos sin policy).
+
+**Contexto — de dónde salió esto.** Se repasó el estado del cobro a gente del exterior y quedaron cuatro bloques ordenados por daño: (1) comisión y registro de pagos, hecho acá; (2) **hacer visible la oferta** — `accepts_international` no se lee en `search3`, `coachesCache` ni `ProfesionalScreen`, así que hoy el usuario del exterior recorre el catálogo entero sin saber quién lo atiende y se entera recién en el checkout, y encima `BookingScreen_Confirm` muestra el precio en pesos formateado `es-AR` aunque elija USDT; (3) **zonas horarias**, con zona y no offset fijo; (4) **higiene**: `USDT_WALLET_TRC20` sigue apuntando a la dirección personal de Andre y el precio de prueba del coach quedó en 6 USD.
+
+**Pendiente para la próxima sesión:**
+- **Punto 2: hacer visible la oferta del riel internacional** — es lo que sigue.
+- **Nada de esto se ejerció con datos reales todavía**: no hay ninguna sesión internacional `completada`, así que la pestaña Pagos está legítimamente vacía y `mark_coach_paid` nunca corrió. La primera sesión del exterior es la que lo prueba.
+- 🔴 **Sigue siendo lo único que bloquea de verdad: el mensaje a los 32 coaches** (redactado en la 102). ¿Tomarían una sesión del exterior cobrando por VIVE? ¿Aceptarían USDT? Sin oferta no hay servicio.
+- 🔴 **La hora con el contador**, también de la 102: VIVE como principal o por cuenta y orden. Y los dos hallazgos que apuntan al mismo lado — la exportación computa igual para el tope del monotributo, y con pauta >$500.000/mes conviene RI aunque el volumen sea chico.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 107)
 
 **Tocado:** `screens/BookingScreen_Confirm.tsx`, `supabase/functions/mp-create-payment/index.ts`, `supabase/config.toml`, `SCHEMA.md`. Nuevo: `supabase/functions/booking-return/index.ts` (**deployada**).

@@ -2,6 +2,7 @@ import {
   countsAsCompletedSession,
   commissionPctFor,
   marketplaceFeeFor,
+  PAIR_SESSION_FILTER,
   COMMISSION_FIRST,
   COMMISSION_RECURRING,
   COMMISSION_PROMO,
@@ -12,6 +13,7 @@ import {
 const booking = (over: Partial<BookingForCount> = {}): BookingForCount => ({
   status: 'completada',
   preference_id: null,
+  usdt_amount: null,
   payment_status: 'aprobado',
   ...over,
 });
@@ -47,6 +49,55 @@ describe('countsAsCompletedSession', () => {
     expect(countsAsCompletedSession(
       booking({ preference_id: 'pref_1', payment_status: 'reembolsado' }),
     )).toBe(true);
+  });
+
+  // El riel internacional: `usdt_amount` es el marcador de que arrancó un cobro,
+  // igual que `preference_id` para Mercado Pago. Mirar solo el de MP dejaba
+  // entrar el abandono del otro riel — el mismo bug por la otra puerta.
+  it('NO cuenta un cobro de USDT abandonado que igual llegó a completada', () => {
+    expect(countsAsCompletedSession(
+      booking({ usdt_amount: 6.28, payment_status: 'pendiente' }),
+    )).toBe(false);
+  });
+
+  it('SÍ cuenta una sesión pagada en USDT', () => {
+    expect(countsAsCompletedSession(
+      booking({ usdt_amount: 6.28, payment_status: 'aprobado' }),
+    )).toBe(true);
+  });
+
+  // `usdt_amount` es numeric en la base, y PostgREST puede devolverlo como
+  // string. Un `!!'0'` sería true y un `Number('0')` false: se compara contra
+  // null a propósito para que el tipo no cambie la respuesta.
+  it('trata el monto como marcador aunque venga como string', () => {
+    expect(countsAsCompletedSession(
+      booking({ usdt_amount: '6.28', payment_status: 'pendiente' }),
+    )).toBe(false);
+  });
+
+  it('no rompe si `usdt_amount` no viene en la fila (filas viejas)', () => {
+    const sinCampo = { status: 'completada', preference_id: null, payment_status: 'aprobado' };
+    expect(countsAsCompletedSession(sinCampo)).toBe(true);
+  });
+});
+
+// El predicado SQL y la función JS son la misma regla en dos lenguajes, y ya
+// divergieron una vez (el string seguía mirando solo `preference_id` cuando
+// apareció USDT). Este test no puede correr PostgREST, pero sí fija que los dos
+// marcadores estén nombrados: si alguien agrega un riel y se olvida del string,
+// falla acá.
+describe('PAIR_SESSION_FILTER', () => {
+  it('nombra los marcadores de los dos rieles', () => {
+    expect(PAIR_SESSION_FILTER).toContain('preference_id.is.null');
+    expect(PAIR_SESSION_FILTER).toContain('usdt_amount.is.null');
+  });
+
+  it('los agrupa con and() — si fueran dos condiciones sueltas del or, una sola alcanzaría para contar', () => {
+    expect(PAIR_SESSION_FILTER).toContain('and(preference_id.is.null,usdt_amount.is.null)');
+  });
+
+  it('deja entrar todo lo que ya salió de pendiente', () => {
+    expect(PAIR_SESSION_FILTER).toContain('payment_status.neq.pendiente');
   });
 });
 

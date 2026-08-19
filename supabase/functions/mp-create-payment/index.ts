@@ -8,7 +8,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { commissionPctFor, marketplaceFeeFor } from '../_shared/commission.ts'
+import { commissionPctFor, marketplaceFeeFor, PAIR_SESSION_FILTER } from '../_shared/commission.ts'
 import { getFreshCoachToken } from '../_shared/mp.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -103,10 +103,11 @@ serve(async (req) => {
     // de la fecha agendada), pero el filtro queda por las 16 viejas y como red por si
     // algún camino nuevo repite el patrón. Una sesión sin cobro por diseño (coach sin
     // MP conectado) nunca tiene preference_id, así que no la toca.
-    // ⚠️ El filtro de checkouts abandonados vive DOS veces: acá como predicado
-    // SQL (`.or(...)`) y en `countsAsCompletedSession` de _shared/commission.ts
-    // como predicado JS. Son la misma regla escrita en dos lenguajes y pueden
-    // divergir — si se toca una, tocar la otra. El JS es el que está testeado.
+    // ⚠️ El filtro de checkouts abandonados vive DOS veces —acá como predicado
+    // SQL y en `countsAsCompletedSession` como predicado JS— así que el string
+    // se importa de _shared/commission.ts, al lado de la versión testeada. Antes
+    // estaba escrito inline y quedó desactualizado apenas apareció el riel de
+    // USDT: seguía mirando solo `preference_id`.
     const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL') // ISO date, TBD
     const { count } = await supabase
       .from('bookings')
@@ -114,7 +115,7 @@ serve(async (req) => {
       .eq('user_id', booking.user_id)
       .eq('coach_id', booking.coach_id)
       .eq('status', 'completada')
-      .or('preference_id.is.null,payment_status.neq.pendiente')
+      .or(PAIR_SESSION_FILTER)
 
     // La decisión de tramo es pura y está en _shared/commission.ts, testeada.
     const commissionPct = commissionPctFor(count ?? 0, Date.now(), promoUntil)

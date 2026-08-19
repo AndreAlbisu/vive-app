@@ -11,6 +11,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { REPORT_REASONS, type ReportReason } from '@/lib/reports';
+import { coachNetFor, type PayoutMethod } from '@/lib/payout';
 
 const FUNCTIONS_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 
@@ -305,6 +306,123 @@ export function markUsdtRefunded(bookingId: string, refundTxId: string) {
     action: 'mark_usdt_refunded',
     booking_id: bookingId,
     refund_tx_id: refundTxId.trim(),
+  });
+}
+
+// ─── Pagos a coaches (riel internacional) ────────────────────────────────────
+//
+// Solo existe para los rieles donde cobra VIVE. Con Mercado Pago el split ya le
+// pagó al coach en el momento del cobro, así que no hay deuda que registrar; en
+// el internacional la plata entra entera a la wallet de VIVE y se transfiere
+// después, semanalmente y solo por sesiones ya realizadas — así siempre hay con
+// qué reembolsar si algo se cae antes de la sesión.
+//
+// La transferencia se hace A MANO (banco o billetera). Esto es la lista de
+// trabajo y el registro de que se pagó, no el que mueve la plata.
+
+/** Lo que se le debe a un coach: sus sesiones impagas, agrupadas. */
+export type CoachPayout = {
+  coachId: string;
+  coachName: string | null;
+  /** Bruto y neto en USD. El neto es lo que hay que transferir. */
+  bruto: number;
+  neto: number;
+  sesiones: { bookingId: string; fecha: string; amount: number; feePct: number; neto: number }[];
+  /** Datos de cobro. `null` = todavía no los cargó y no hay adónde mandar nada. */
+  destino: {
+    method: PayoutMethod;
+    cbu: string | null;
+    alias: string | null;
+    wallet: string | null;
+    network: string | null;
+  } | null;
+};
+
+/** Devuelve el error en vez de tragárselo: si el script `add-coach-payouts.sql`
+ *  no se corrió, la consulta falla por columna inexistente y una lista vacía se
+ *  leería como "no hay nada que pagar" — que es exactamente lo contrario. Este
+ *  proyecto ya se comió esa confusión tres veces (el cron de reembolsos con el
+ *  placeholder, el webhook muerto, la pestaña de reembolsos sin policy). */
+export async function listCoachPayouts(): Promise<{ rows: CoachPayout[]; error: string | null }> {
+  // Dos consultas y no un join: `coach_payout_accounts` se lee por una policy
+  // distinta (`coach_payout_select_admin`), y con un embed de PostgREST un coach
+  // sin datos de cobro cargados desaparecería de la lista en vez de aparecer
+  // marcado — que es justo el caso que hay que ver.
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id, coach_id, coach_name, scheduled_date, amount, platform_fee_pct')
+    .neq('payment_provider', 'mp')
+    .eq('status', 'completada')
+    .eq('payment_status', 'aprobado')
+    .is('paid_out_at', null)
+    .order('scheduled_date', { ascending: true })
+    .limit(500);
+
+  if (error) {
+    console.warn('[admin] no se pudieron leer los pagos pendientes:', error.message);
+    return { rows: [], error: error.message };
+  }
+  if (!data?.length) return { rows: [], error: null };
+
+  const coachIds = [...new Set(data.map(b => b.coach_id).filter(Boolean))];
+  const { data: cuentas } = await supabase
+    .from('coach_payout_accounts')
+    .select('coach_id, method, cbu, alias, wallet, network')
+    .in('coach_id', coachIds);
+
+  const porCoach = new Map<string, CoachPayout>();
+  for (const b of data) {
+    const amount = Number(b.amount ?? 0);
+    // El `?? 20` no debería activarse nunca: la columna es NOT NULL con default
+    // 20. Está para que una fila rara no propague NaN al monto a transferir.
+    const feePct = Number(b.platform_fee_pct ?? 20);
+    const neto = coachNetFor(amount, feePct);
+
+    let entry = porCoach.get(b.coach_id);
+    if (!entry) {
+      const c = cuentas?.find(x => x.coach_id === b.coach_id);
+      entry = {
+        coachId: b.coach_id,
+        coachName: b.coach_name ?? null,
+        bruto: 0,
+        neto: 0,
+        sesiones: [],
+        destino: c
+          ? {
+              method: c.method as PayoutMethod,
+              cbu: c.cbu ?? null,
+              alias: c.alias ?? null,
+              wallet: c.wallet ?? null,
+              network: c.network ?? null,
+            }
+          : null,
+      };
+      porCoach.set(b.coach_id, entry);
+    }
+    entry.bruto += amount;
+    entry.neto += neto;
+    entry.sesiones.push({ bookingId: b.id, fecha: b.scheduled_date, amount, feePct, neto });
+  }
+
+  // El acumulado se redondea al final: sumar netos ya redondeados arrastra
+  // centavos, y el total es la cifra que se tipea en la transferencia.
+  const rows = [...porCoach.values()]
+    .map(e => ({ ...e, bruto: Math.round(e.bruto * 100) / 100, neto: Math.round(e.neto * 100) / 100 }))
+    .sort((a, b) => b.neto - a.neto);
+  return { rows, error: null };
+}
+
+/** Registra que se le transfirió al coach. NO transfiere: `reference` es el
+ *  comprobante (hash de la tx o número de operación del banco), y sin él no se
+ *  puede marcar nada — igual criterio que `markUsdtRefunded`.
+ *
+ *  Va en lote a propósito: una transferencia semanal cubre varias sesiones, y
+ *  marcarlas de a una dejaría la mitad pagada si algo falla en el medio. */
+export function markCoachPaid(bookingIds: string[], reference: string) {
+  return callAdmin({
+    action: 'mark_coach_paid',
+    booking_ids: bookingIds,
+    payout_reference: reference.trim(),
   });
 }
 

@@ -22,27 +22,50 @@ export const COMMISSION_PROMO = 0;
 /** Una reserva, vista desde el contador de sesiones del par. */
 export type BookingForCount = {
   status: string;
+  /** Marcador de que arrancó un checkout de Mercado Pago. */
   preference_id: string | null;
+  /** Marcador de que arrancó un cobro en USDT. Mismo rol que `preference_id`. */
+  usdt_amount?: number | string | null;
   payment_status: string;
 };
 
 /**
  * ¿Esta reserva cuenta como una sesión cumplida del par?
  *
- * Excluye los **checkouts abandonados** que igual llegaron a `'completada'`:
- * `preference_id` seteado (el checkout arrancó, o sea que el coach tiene MP) y
- * `payment_status` que nunca salió de `'pendiente'` (nadie pagó nada). Hubo 27
- * así en producción, 16 de ellas ya completadas — empujaban al par al tramo del
- * 15% sin que hubiera pasado una sola sesión paga.
+ * Excluye los **checkouts abandonados** que igual llegaron a `'completada'`: se
+ * arrancó un cobro y `payment_status` nunca salió de `'pendiente'` (nadie pagó
+ * nada). Hubo 27 así en producción, 16 de ellas ya completadas — empujaban al
+ * par al tramo del 15% sin que hubiera pasado una sola sesión paga.
  *
- * Una sesión legítimamente sin cobro (coach sin MP conectada) **nunca** tiene
- * `preference_id`, así que este filtro no la toca: esa sí cuenta.
+ * "Arrancó un cobro" se reconoce por el marcador de CUALQUIERA de los dos
+ * rieles: `preference_id` (Mercado Pago) o `usdt_amount` (internacional). Mirar
+ * solo el de MP dejaría entrar el abandono del otro riel — el mismo bug por la
+ * otra puerta, que es exactamente lo que pasó con `expire_unpaid_checkouts()`.
+ *
+ * Una sesión legítimamente sin cobro (coach sin MP conectada) no tiene ninguno
+ * de los dos, así que este filtro no la toca: esa sí cuenta.
  */
 export function countsAsCompletedSession(b: BookingForCount): boolean {
   if (b.status !== 'completada') return false;
-  const abandonedCheckout = !!b.preference_id && b.payment_status === 'pendiente';
+  const checkoutStarted = !!b.preference_id || b.usdt_amount != null;
+  const abandonedCheckout = checkoutStarted && b.payment_status === 'pendiente';
   return !abandonedCheckout;
 }
+
+/**
+ * `countsAsCompletedSession` escrito como predicado de PostgREST, para el
+ * `.or(...)` de la consulta que cuenta las sesiones del par.
+ *
+ * ⚠️ Es la MISMA regla que la función de arriba, en otro lenguaje. Vivía
+ * copiada dentro de `mp-create-payment`, y cuando apareció el segundo riel la
+ * copia quedó desactualizada sin que nada avisara. Está acá para que las dos
+ * versiones se lean juntas: si se toca una, se toca la otra. La de JS es la que
+ * tiene tests.
+ *
+ * Se lee: NO (arrancó un cobro Y sigue en pendiente).
+ */
+export const PAIR_SESSION_FILTER =
+  'and(preference_id.is.null,usdt_amount.is.null),payment_status.neq.pendiente';
 
 /**
  * Porcentaje de comisión para una reserva nueva del par.

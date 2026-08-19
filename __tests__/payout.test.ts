@@ -1,4 +1,4 @@
-import { cbuError, walletError, normalizarCbu } from '@/lib/payout';
+import { cbuError, walletError, normalizarCbu, coachNetFor } from '@/lib/payout';
 
 // Direcciones reales de contratos conocidos: sirven como muestras de formato
 // válido sin exponer la wallet de nadie.
@@ -72,5 +72,32 @@ describe('walletError', () => {
 describe('normalizarCbu', () => {
   it('deja solo los dígitos', () => {
     expect(normalizarCbu('2850-5909 4009.0418/1352 01')).toBe('2850590940090418135201');
+  });
+});
+
+describe('coachNetFor', () => {
+  it('descuenta el 20% y el 15%', () => {
+    expect(coachNetFor(100, 20)).toBe(80);
+    expect(coachNetFor(100, 15)).toBe(85);
+  });
+
+  // Durante la promo fundador el coach se lleva todo. Es el caso que hoy queda
+  // MAL si `usdt-create-payment` no escribe el porcentaje: la columna se queda
+  // en su default de 20 y el coach cobraría 80 cuando le corresponde 100.
+  it('con promo del 0% se lleva el total', () => {
+    expect(coachNetFor(100, 0)).toBe(100);
+  });
+
+  it('cierra exacto contra la comisión: neto + fee === bruto', () => {
+    for (const [monto, pct] of [[60, 20], [60, 15], [45, 15], [6, 20], [1, 20]] as const) {
+      const fee = Math.round(monto * pct) / 100;
+      expect(coachNetFor(monto, pct) + fee).toBeCloseTo(monto, 6);
+    }
+  });
+
+  // El precio internacional es un entero por diseño (los centavos son el
+  // identificador del pago), pero el neto no tiene por qué serlo.
+  it('devuelve centavos cuando el reparto no da redondo', () => {
+    expect(coachNetFor(45, 15)).toBe(38.25);
   });
 });

@@ -32,6 +32,7 @@ import {
   listPendingReports, resolveReport,
   listClaims, checkGuarantee, approveGuarantee, rejectGuarantee,
   listUsdtRefunds, markUsdtRefunded, type UsdtRefund,
+  listCoachPayouts, markCoachPaid, type CoachPayout,
   listAuditLog,
   type PendingCoach, type AdminReport, type AdminClaim, type ReportResolution,
   type AuditEntry, type GuaranteeCheck,
@@ -41,13 +42,14 @@ const FOREST = '#3A4F2A';
 const OLIVE = '#87835C';
 const CLAY = '#B5533A';
 
-type Tab = 'coaches' | 'reportes' | 'garantias' | 'reembolsos' | 'auditoria';
+type Tab = 'coaches' | 'reportes' | 'garantias' | 'reembolsos' | 'pagos' | 'auditoria';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'coaches',   label: 'Postulaciones' },
   { key: 'reportes',  label: 'Reportes' },
   { key: 'garantias', label: 'Garantías' },
   { key: 'reembolsos', label: 'Reembolsos' },
+  { key: 'pagos',     label: 'Pagos' },
   { key: 'auditoria', label: 'Registro' },
 ];
 
@@ -67,6 +69,8 @@ const ACTION_LABELS: Record<string, string> = {
   set_coach_verified:       'cambió la publicación de un coach',
   reject_coach_application: 'rechazó una postulación',
   resolve_report:           'resolvió un reporte',
+  mark_usdt_refunded:       'registró un reembolso en USDT',
+  mark_coach_paid:          'registró un pago a un coach',
 };
 
 export default function AdminScreen() {
@@ -81,6 +85,9 @@ export default function AdminScreen() {
   const [claims, setClaims] = useState<AdminClaim[]>([]);
   const [refunds, setRefunds] = useState<UsdtRefund[]>([]);
   const [txInput, setTxInput] = useState<Record<string, string>>({});
+  const [payouts, setPayouts] = useState<CoachPayout[]>([]);
+  const [payoutsError, setPayoutsError] = useState<string | null>(null);
+  const [payoutRef, setPayoutRef] = useState<Record<string, string>>({});
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<string | null>(null);
@@ -91,15 +98,17 @@ export default function AdminScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [c, rej, r, g, rf, a] = await Promise.all([
+    const [c, rej, r, g, rf, pg, a] = await Promise.all([
       listCoachApplications('pendiente'),
       listCoachApplications('rechazada'),
       listPendingReports(),
       listClaims(),
       listUsdtRefunds(),
+      listCoachPayouts(),
       listAuditLog(),
     ]);
-    setCoaches(c); setRejected(rej); setReports(r); setClaims(g); setRefunds(rf); setAudit(a);
+    setCoaches(c); setRejected(rej); setReports(r); setClaims(g); setRefunds(rf);
+    setPayouts(pg.rows); setPayoutsError(pg.error); setAudit(a);
     setLoading(false);
   }, []);
 
@@ -413,6 +422,124 @@ export default function AdminScreen() {
                     )}
                   </View>
                 ))
+              )
+            )}
+
+            {/* ── Pagos a coaches ─────────────────────────────────────────
+                Solo el riel internacional. Con Mercado Pago el split ya le pagó
+                al coach en el momento del cobro y no hay nada que transferir;
+                acá la plata entró entera a la wallet de VIVE y esta lista es el
+                único registro de lo que se le debe.
+
+                La transferencia se hace A MANO, desde el banco o la billetera.
+                Este panel no mueve plata: agrupa la deuda y guarda el
+                comprobante. */}
+            {!loading && tab === 'pagos' && (
+              // Una lista vacía por error y una lista vacía de verdad se ven
+              // igual, y acá significan lo opuesto: "no le debemos nada a nadie"
+              // contra "no pudimos averiguar a quién le debemos". Si falta correr
+              // `add-coach-payouts.sql` es esto lo que se ve.
+              payoutsError ? (
+                <View style={s.card}>
+                  <Text style={s.cardTitle}>No se pudo leer la lista</Text>
+                  <Text style={s.cardBody}>
+                    {payoutsError}
+                    {'\n\n'}Si dice que falta una columna, todavía no se corrió
+                    scripts/add-coach-payouts.sql.
+                  </Text>
+                </View>
+              ) : payouts.length === 0 ? (
+                <Empty icon="cash-check" text="No hay pagos pendientes a coaches." />
+              ) : (
+                <>
+                  <Text style={s.note}>
+                    Sesiones internacionales ya realizadas y cobradas, todavía sin transferir.
+                    El neto es lo que hay que mandar: el precio menos la comisión de cada sesión.
+                  </Text>
+                  {payouts.map(p => (
+                    <View key={p.coachId} style={s.card}>
+                      <Text style={s.cardTitle}>{p.coachName ?? 'coach sin nombre'}</Text>
+                      <Text style={s.cardMeta}>
+                        {p.sesiones.length} {p.sesiones.length === 1 ? 'sesión' : 'sesiones'} · bruto USD {p.bruto.toFixed(2)}
+                      </Text>
+                      <Text style={[s.cardTitle, { marginTop: 6 }]}>
+                        A transferir: USD {p.neto.toFixed(2)}
+                      </Text>
+
+                      {/* El desglose va a la vista y no escondido: el número de
+                          arriba es el que se tipea en una transferencia que no
+                          se deshace, y conviene poder contrastarlo contra las
+                          sesiones que lo componen. */}
+                      {p.sesiones.map(x => (
+                        <Text key={x.bookingId} style={s.mono}>
+                          {x.fecha} · USD {x.amount.toFixed(2)} − {x.feePct}% = {x.neto.toFixed(2)}
+                        </Text>
+                      ))}
+
+                      {p.destino ? (
+                        <>
+                          <Text style={[s.mono, { marginTop: 10 }]} selectable>
+                            {p.destino.method === 'usdt'
+                              ? `${p.destino.network} · ${p.destino.wallet}`
+                              : `CBU ${p.destino.cbu}${p.destino.alias ? ` · ${p.destino.alias}` : ''}`}
+                          </Text>
+                          <TextInput
+                            style={s.input}
+                            value={payoutRef[p.coachId] ?? ''}
+                            onChangeText={v => setPayoutRef(prev => ({ ...prev, [p.coachId]: v }))}
+                            placeholder="Hash de la tx o número de operación"
+                            placeholderTextColor="rgba(135,131,92,0.45)"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                          />
+                          <TouchableOpacity
+                            style={[s.btn, s.btnPrimary, { marginTop: 10 }]}
+                            activeOpacity={0.85}
+                            disabled={working === p.coachId}
+                            onPress={() => {
+                              const ref = (payoutRef[p.coachId] ?? '').trim();
+                              // Confirmación explícita: marcar es irreversible
+                              // desde el panel y lo que declara es que la plata
+                              // ya salió. Un tap de más no puede darlo por
+                              // hecho.
+                              Alert.alert(
+                                'Confirmar pago',
+                                `¿Ya transferiste USD ${p.neto.toFixed(2)} a ${p.coachName ?? 'este coach'}? Se van a marcar ${p.sesiones.length} sesiones como pagadas.`,
+                                [
+                                  { text: 'Todavía no', style: 'cancel' },
+                                  {
+                                    text: 'Sí, ya transferí',
+                                    onPress: async () => {
+                                      setWorking(p.coachId);
+                                      const res: any = await markCoachPaid(p.sesiones.map(x => x.bookingId), ref);
+                                      setWorking(null);
+                                      if (res?.error) { Alert.alert('No se pudo registrar', res.error); return; }
+                                      if (res?.data?.warning) Alert.alert('Registrado con aviso', res.data.warning);
+                                      setPayoutRef(prev => ({ ...prev, [p.coachId]: '' }));
+                                      void load();
+                                    },
+                                  },
+                                ],
+                              );
+                            }}>
+                            <Text style={s.btnPrimaryText}>
+                              {working === p.coachId ? 'Registrando…' : 'Marcar pagado'}
+                            </Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : (
+                        // Sin datos de cobro no hay adónde mandar la plata.
+                        // `usdt-create-payment` los exige antes de cobrarle al
+                        // usuario, así que ver esto significa que el coach los
+                        // borró después — vale decirlo explícito y no dejar la
+                        // tarjeta sin acción y sin motivo.
+                        <Text style={s.cardBody}>
+                          ⚠️ Este coach no tiene datos de cobro cargados. Pedíselos antes de transferir.
+                        </Text>
+                      )}
+                    </View>
+                  ))}
+                </>
               )
             )}
 
