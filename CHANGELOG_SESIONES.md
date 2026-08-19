@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-19 — Joaquín (sesión 105)
+
+**Tocado:** ningún archivo de código. Cambio de infraestructura: secret `ANTHROPIC_API_KEY` cargado en Supabase.
+
+**Resumen — se arrancó a prender la devolución con IA de "Sobre vos" (pedido de la 104) y apareció una contradicción entre esa nota y `docs/legal-instrucciones.md`.**
+
+- Joaquín creó la API key en console.anthropic.com y cargó crédito. Se corrió `supabase secrets set ANTHROPIC_API_KEY=...` — **confirmado con `supabase secrets list`**. La función `weekly-reflection` ya estaba deployada (v2, activa) desde la 104.
+- 🔴 **Antes de prender el flag del cliente, se releyó `docs/legal-instrucciones.md` y no cierra con la nota de la 104.** Esa nota decía "la feature está entera y deployada, apagada por tres interruptores, falta solo la API key" — como si lo único pendiente fuera técnico. Pero el Paso 5.1 del propio doc de Andre dice explícitamente: *"Nada de lo de abajo está pendiente de programar. Lo que falta es una decisión [del abogado], no trabajo"*, y lista 4 pasos condicionados a que la respuesta legal sea "el payload no es dato sensible" — el primero de los cuales es **declarar al proveedor de IA en Política de Privacidad §6/§7**. Se verificó contra `docs/politica-de-privacidad.md`: no menciona Anthropic ni IA en ningún lado. No hay registro en ningún archivo de que la consulta legal (Paso 3, "segunda consulta, más chica") se haya hecho ni respondido.
+- **Se le preguntó a Joaquín cómo seguir.** Decisión: dejar la `ANTHROPIC_API_KEY` cargada en Supabase (no hace nada por sí sola, la función sigue gateada por el flag del cliente), pero **NO prender `EXPO_PUBLIC_AI_REFLECTION`** todavía — se dejó comentado en el `.env` local con una nota explicando por qué, hasta confirmar con Andre si ya habló con el abogado.
+- ⚠️ **Para Andre**: si ya hiciste la consulta legal y la respuesta fue favorable, avisá y prendemos el flag (y falta igual escribir la declaración en Política §6/§7 antes, por los 4 pasos del Paso 5.1). Si no la hiciste todavía, la nota de la sesión 104 se adelantó al proceso que vos mismo documentaste — no es un reproche, es solo que la nota no distinguía "técnicamente listo" de "legalmente destrabado" y alguien leyéndola rápido (como pasó acá) puede terminar prendiéndolo sin el paso 1.
+
+**Pendiente para la próxima sesión:**
+- 🔴 Confirmar con Andre el estado real de la consulta legal (Paso 3 / Paso 5.1 de `docs/legal-instrucciones.md`) antes de prender `EXPO_PUBLIC_AI_REFLECTION` en cualquier build.
+- Si la respuesta es favorable: escribir la declaración del proveedor de IA + transferencia internacional en Política §6/§7, correr `sync:legal`, y recién ahí prender el flag y rebuildear.
+
+---
+
 ## 2026-08-19 — Andre (sesión 104)
 
 **Tocado:** `screens/SessionsScreen.tsx`, `screens/SalaScreen.tsx`, `screens/AdminScreen.tsx`, `screens/BookingScreen_Time.tsx`, `screens/CoachReservasScreen.tsx`, `lib/admin.ts`, `lib/bookingHelpers.ts`, `supabase/functions/admin-actions/index.ts`, `supabase/functions/weekly-reflection/index.ts`. Nuevos: `lib/bookingCancel.ts`, `screens/RefundAddressScreen.tsx`, `app/reembolso.tsx`, y 4 scripts SQL (**corridos**). 187 tests.
