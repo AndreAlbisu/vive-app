@@ -21,6 +21,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { decryptMessage } from '@/lib/encryption';
+import { canCancelConfirmed } from '@/lib/bookingHelpers';
+import { cancelBookingFlow } from '@/lib/bookingCancel';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 
@@ -93,6 +95,8 @@ export default function SessionsScreen() {
   const [salas, setSalas] = useState<SalaItem[]>([]);
   const [nextSession, setNextSession] = useState<NextSession | null>(null);
   const [refundPendiente, setRefundPendiente] = useState<{ id: string; monto: number | null } | null>(null);
+  const [otrasProximas, setOtrasProximas] = useState<(NextSession & { coachProfileId: string })[]>([]);
+  const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [joinable, setJoinable] = useState(false);
   const [isAddingCalendar, setIsAddingCalendar] = useState(false);
@@ -131,16 +135,19 @@ export default function SessionsScreen() {
         .from('salas')
         .select('id, user_id, coach_id, user_last_read_at, coach_last_read_at')
         .or(`user_id.eq.${user.id},coach_id.eq.${user.id}`),
+      // 🔴 Antes: `.limit(1).maybeSingle()`. La app mostraba UNA sola sesión
+      // próxima —la más cercana— en todas sus pantallas, así que la segunda
+      // existía en la base, iba a ocurrir, y era invisible: no se podía ver, ni
+      // agendar, ni cancelar hasta que pasara la primera.
       supabase
         .from('bookings')
-        .select('id, sala_id, status, scheduled_date, scheduled_time, duration_minutes, meeting_url')
+        .select('id, sala_id, status, scheduled_date, scheduled_time, duration_minutes, meeting_url, coach_id, coach_name')
         .eq('user_id', user.id)
         .in('status', ['pendiente', 'confirmada'])
         .gte('scheduled_date', todayStr)
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true })
-        .limit(1)
-        .maybeSingle(),
+        .limit(20),
       // Reembolsos que esperan que la persona diga a dónde mandárselos. Sin
       // esto no se enteraría nunca: las canceladas no aparecen en ningún lado
       // de esta pantalla, y la plata quedaría esperando indefinidamente.
@@ -222,14 +229,14 @@ export default function SessionsScreen() {
 
     setSalas(results);
 
-    // Build next session hero
-    const nb = nextBookingRes.data;
-    if (nb) {
-      const nbSala = salasData.find(s => s.id === nb.sala_id);
-      if (nbSala) {
-        const coachProfileId = nbSala.coach_id;
-        const coachProfile = profileMap[coachProfileId];
-        setNextSession({
+    // La primera va al hero; las demás a la lista de abajo. La misma consulta
+    // alimenta las dos: antes se traía una sola y el resto no existía para nadie.
+    const proximas = (nextBookingRes.data ?? [])
+      .map(nb => {
+        const nbSala = salasData.find(s => s.id === nb.sala_id);
+        if (!nbSala) return null;
+        const coachProfile = profileMap[nbSala.coach_id];
+        return {
           bookingId: nb.id,
           salaId: nb.sala_id,
           status: nb.status as 'pendiente' | 'confirmada',
@@ -237,17 +244,59 @@ export default function SessionsScreen() {
           scheduled_time: nb.scheduled_time,
           duration_minutes: nb.duration_minutes ?? null,
           meeting_url: nb.meeting_url ?? null,
-          coachName: coachProfile?.name ?? 'Tu profesional',
-          coachInitials: getInitials(coachProfile?.name ?? '?'),
+          coachName: coachProfile?.name ?? nb.coach_name ?? 'Tu profesional',
+          coachInitials: getInitials(coachProfile?.name ?? nb.coach_name ?? '?'),
           coachAvatarUrl: coachProfile?.avatarUrl ?? null,
-        });
-      }
-    } else {
-      setNextSession(null);
-    }
+          coachProfileId: nbSala.coach_id as string,
+        };
+      })
+      .filter(Boolean) as (NextSession & { coachProfileId: string })[];
+
+    setNextSession(proximas[0] ?? null);
+    setOtrasProximas(proximas.slice(1));
 
     setLoading(false);
   }, [user, unreadSalaIds]);
+
+  async function cancelarProxima(ses: NextSession & { coachProfileId: string }) {
+    if (!user || cancelandoId) return;
+
+    // Misma regla que en la sala: confirmada solo con 24hs. No se duplica el
+    // criterio — sale de `canCancelConfirmed`, que es la única fuente.
+    if (ses.status === 'confirmada' && !canCancelConfirmed(ses.scheduled_date, ses.scheduled_time)) {
+      Alert.alert('No se puede cancelar', 'Las sesiones confirmadas solo se pueden cancelar con al menos 24hs de anticipación');
+      return;
+    }
+
+    const esSolicitud = ses.status === 'pendiente';
+    Alert.alert(
+      esSolicitud ? '¿Cancelar solicitud?' : '¿Cancelar sesión?',
+      `${formatSalaDate(ses.scheduled_date)} · ${ses.scheduled_time.slice(0, 5)} hs con ${ses.coachName}`,
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Sí, cancelar',
+          style: 'destructive',
+          onPress: async () => {
+            setCancelandoId(ses.bookingId);
+            const res = await cancelBookingFlow({
+              bookingId: ses.bookingId,
+              salaId: ses.salaId,
+              actorId: user.id,
+              actorRole: 'usuario',
+              recipientId: ses.coachProfileId,
+              scheduledDate: ses.scheduled_date,
+              scheduledTime: ses.scheduled_time,
+              fechaLegible: formatSalaDate(ses.scheduled_date),
+            });
+            setCancelandoId(null);
+            if (!res.ok) { Alert.alert('No se pudo cancelar', res.error); return; }
+            void loadSalas();
+          },
+        },
+      ],
+    );
+  }
 
   // Refresca cada vez que se vuelve a esta pestaña — mismo bug que
   // encontramos en CoachHomeScreen/CoachChatsScreen: sin esto, volver de un
@@ -441,7 +490,37 @@ export default function SessionsScreen() {
               </SurfaceCard>
             )}
 
-            {/* Lista de salas */}
+                        {/* Las OTRAS sesiones próximas. Antes la consulta traía una sola y el
+                resto no existía para nadie: estaban en la base, iban a ocurrir, y
+                no se podían ver ni cancelar hasta que pasara la primera. */}
+            {otrasProximas.length > 0 && (
+              <View style={styles.proximasWrap}>
+                <Text style={styles.proximasTitle}>Después</Text>
+                {otrasProximas.map(ses => (
+                  <View key={ses.bookingId} style={styles.proximaRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.proximaFecha}>
+                        {formatSalaDate(ses.scheduled_date)} · {ses.scheduled_time.slice(0, 5)} hs
+                      </Text>
+                      <Text style={styles.proximaSub}>
+                        {ses.coachName} · {ses.status === 'confirmada' ? 'Confirmada' : 'Esperando confirmación'}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => cancelarProxima(ses)}
+                      disabled={cancelandoId === ses.bookingId}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      activeOpacity={0.7}>
+                      <Text style={styles.proximaCancel}>
+                        {cancelandoId === ses.bookingId ? 'Cancelando…' : 'Cancelar'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+
+{/* Lista de salas */}
             {salas.length > 0 ? (
               <>
                 {salas.map((sala, index) => (
@@ -552,6 +631,19 @@ function SalaRow({
 }
 
 const styles = StyleSheet.create({
+  proximasWrap: { marginBottom: 20, gap: 8 },
+  proximasTitle: {
+    fontFamily: ViveFonts.semibold, fontSize: 13, color: 'rgba(135,131,92,0.85)', marginBottom: 2,
+  },
+  proximaRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: 'rgba(255,248,240,0.55)', borderRadius: 14,
+    paddingHorizontal: 14, paddingVertical: 12,
+  },
+  proximaFecha: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
+  proximaSub: { fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(135,131,92,0.78)', marginTop: 2 },
+  proximaCancel: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#B5533A' },
+
   refundBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: 'rgba(214,150,120,0.18)', borderRadius: 16,

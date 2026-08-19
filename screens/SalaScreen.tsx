@@ -35,7 +35,7 @@ import SessionNotesSheet from '@/components/SessionNotesSheet';
 import { getSharedNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
 import { sendPushNotification } from '@/lib/notifications';
-import { isCancelLate } from '@/lib/bookingHelpers';
+import { isCancelLate, canCancelConfirmed } from '@/lib/bookingHelpers';
 import { logError } from '@/lib/logging';
 import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
 
@@ -106,13 +106,6 @@ function getSessionState(booking: ActiveBooking): SessionState {
     return now < endMs + 24 * 60 * 60_000 ? 'finalizada' : 'none';
   }
   return 'none';
-}
-
-function canCancelConfirmed(booking: ActiveBooking): boolean {
-  if (!booking) return false;
-  const [y, mo, d] = booking.scheduled_date.split('-').map(Number);
-  const [h, mi] = booking.scheduled_time.split(':').map(Number);
-  return Date.now() < new Date(y, mo - 1, d, h, mi).getTime() - 24 * 60 * 60_000;
 }
 
 function formatSalaDate(dateStr: string): string {
@@ -570,7 +563,7 @@ export default function SalaScreen() {
 
     const isCurrentUserCoach = !recipientIsCoach;
 
-    if (!isCurrentUserCoach && activeBooking.status === 'confirmada' && !canCancelConfirmed(activeBooking)) {
+    if (!isCurrentUserCoach && activeBooking.status === 'confirmada' && !canCancelConfirmed(activeBooking.scheduled_date, activeBooking.scheduled_time)) {
       Alert.alert('No se puede cancelar', 'Las sesiones confirmadas solo se pueden cancelar con al menos 24hs de anticipación');
       return;
     }
@@ -1035,6 +1028,25 @@ export default function SalaScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.sessionCardHint}>Disponible 10 min antes de la sesión</Text>
+          {/* 🔴 Faltaba. `handleCancelBooking` ya manejaba el caso confirmado
+              —chequea las 24hs y escribe `cancelled_late`— pero ningún botón lo
+              llamaba en este estado: la función estaba escrita y era inalcanzable.
+              Y en el checkout se promete "podés cancelar hasta 24hs antes y te
+              devolvemos todo", así que sin este botón esa promesa era falsa.
+              Sin condicionar por rol, igual que la tarjeta de solicitud:
+              `handleCancelBooking` ya distingue —al coach no le aplica la regla
+              de las 24hs— y duplicar esa decisión acá sería otro lugar donde
+              se puede desincronizar. */}
+          <TouchableOpacity
+            style={styles.cancelBtn}
+            onPress={handleCancelBooking}
+            disabled={isCancelling}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.cancelBtnText, isCancelling && styles.cancelBtnTextDisabled]}>
+              {isCancelling ? 'Cancelando…' : 'Cancelar sesión'}
+            </Text>
+          </TouchableOpacity>
         </View>
       ) : null}
 

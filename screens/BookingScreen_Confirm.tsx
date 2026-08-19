@@ -152,6 +152,30 @@ export default function BookingScreen_Confirm() {
         roomUrl = newSala.room_url ?? ''; // null hasta que corra el trigger / si la columna recién se agregó
       }
 
+      // 2.5 Limpiar el intento anterior del MISMO turno, si lo hubo.
+      //
+      // La pantalla de horarios deja reintentar un turno que abandonaste sin
+      // pagar (ver BookingScreen_Time). Sin esto, cada reintento suma una
+      // solicitud más: el coach termina viendo dos o tres pedidos idénticos,
+      // del mismo usuario y a la misma hora, sin forma de saber cuál mirar.
+      //
+      // Se cancela solo lo propio, pendiente y con un cobro iniciado que nunca
+      // se acreditó — nunca algo pagado. Sin notificar a nadie: no es una
+      // cancelación real, es el reintento de la misma persona.
+      await supabase
+        .from('bookings')
+        .update({ status: 'cancelada' })
+        .eq('user_id', user.id)
+        .eq('coach_id', coachId)
+        .eq('scheduled_date', dateStr)
+        .eq('scheduled_time', time)
+        .eq('status', 'pendiente')
+        .eq('payment_status', 'pendiente')
+        // Un cobro iniciado por cualquiera de los dos rieles. Sin esta
+        // condición se cancelarían también las reservas legítimas sin cobro
+        // (coach sin Mercado Pago conectado), que no son reintentos de nada.
+        .or('preference_id.not.is.null,usdt_amount.not.is.null');
+
       // 3. Insertar booking — columnas reales verificadas en la base (SCHEMA.md)
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')

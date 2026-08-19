@@ -70,7 +70,7 @@ export default function BookingScreen_Time() {
           .eq('date', dateStr),
         supabase
           .from('bookings')
-          .select('scheduled_time, user_id, status')
+          .select('scheduled_time, user_id, status, payment_status, preference_id, usdt_amount')
           .eq('coach_id', coachesId)
           .eq('scheduled_date', dateStr)
           .in('status', ['pendiente', 'confirmada']),
@@ -81,9 +81,21 @@ export default function BookingScreen_Time() {
       // — así el mismo usuario no puede mandar dos solicitudes al mismo slot,
       // pero distintos usuarios sí pueden competir por él (el coach elige a
       // cuál acepta y las demás se cancelan automáticamente, ver SCHEMA.md).
+      //
+      // 🔴 EXCEPCIÓN: tu propia reserva con un cobro iniciado y sin pagar NO te
+      // bloquea. Abrías el checkout, lo cerrabas sin pagar, y el turno que
+      // acababas de soltar te quedaba vedado a VOS durante media hora, hasta que
+      // `expire_unpaid_checkouts()` cancelara la fila. A nadie más le bloqueaba
+      // nada — el único perjudicado era el que quería reintentar.
+      //
+      // La reserva vieja no se toca: el cron la cancela sola. Quedan dos
+      // pendientes tuyas un rato y no molesta, porque solo una puede pagarse.
+      const abandonada = (b: { payment_status?: string | null; preference_id?: string | null; usdt_amount?: number | null }) =>
+        b.payment_status === 'pendiente' && (b.preference_id != null || b.usdt_amount != null);
+
       const bookedSet = new Set(
         (booked ?? [])
-          .filter(b => b.status === 'confirmada' || b.user_id === user?.id)
+          .filter(b => b.status === 'confirmada' || (b.user_id === user?.id && !abandonada(b)))
           .map(b => b.scheduled_time)
       );
 
