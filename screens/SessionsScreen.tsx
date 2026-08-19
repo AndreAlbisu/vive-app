@@ -10,6 +10,7 @@ import {
   Animated,
   Image,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -56,6 +57,13 @@ function getInitials(name: string): string {
   return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || '??';
 }
 
+// La tarjeta ocupa el 86% del ancho: el 14% restante es lo que deja asomar la
+// siguiente. Sin ese asomo, un carrusel se lee como una tarjeta sola y nadie
+// descubre que hay más — el gesto de deslizar no se le ocurre a quien no ve
+// que haya algo del otro lado.
+const CARD_GAP = 12;
+const CARD_W = Math.round(Dimensions.get('window').width * 0.86) - 20;
+
 function formatMessageDate(isoString: string): string {
   const d = new Date(isoString);
   const now = new Date();
@@ -93,12 +101,17 @@ export default function SessionsScreen() {
   const router = useRouter();
   const { user, isLoggedIn, requestAuth } = useAuth();
   const [salas, setSalas] = useState<SalaItem[]>([]);
-  const [nextSession, setNextSession] = useState<NextSession | null>(null);
+  /** TODAS las sesiones próximas, en orden. Antes había una destacada y una
+   *  lista aparte, y eso obligaba a cancelar en dos lugares distintos según
+   *  cuál fuera. Ahora son todas iguales y se recorren de a una. */
+  const [proximas, setProximas] = useState<(NextSession & { coachProfileId: string })[]>([]);
+  const [indiceVisible, setIndiceVisible] = useState(0);
   const [refundPendiente, setRefundPendiente] = useState<{ id: string; monto: number | null } | null>(null);
-  const [otrasProximas, setOtrasProximas] = useState<(NextSession & { coachProfileId: string })[]>([]);
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [joinable, setJoinable] = useState(false);
+  /** Se re-renderiza cada 30s para que `isJoinable` se recalcule en cada
+   *  tarjeta. Antes era un booleano único, atado a la sesión del hero. */
+  const [, setTick] = useState(0);
   const [isAddingCalendar, setIsAddingCalendar] = useState(false);
   const { unreadSalaIds } = useUnreadSalas({ userId: user?.id ?? null, role: 'user' });
 
@@ -116,14 +129,12 @@ export default function SessionsScreen() {
     ]).start();
   }, []);
 
-  // Recompute joinable every 30s
+  // Un tick cada 30s: hace que cada tarjeta recalcule si su sesión ya se puede
+  // unir, sin mantener un estado por sesión.
   useEffect(() => {
-    if (!nextSession || nextSession.status !== 'confirmada') { setJoinable(false); return; }
-    const check = () => setJoinable(isJoinable(nextSession.scheduled_date, nextSession.scheduled_time));
-    check();
-    const interval = setInterval(check, 30_000);
-    return () => clearInterval(interval);
-  }, [nextSession]);
+    const i = setInterval(() => setTick(t => t + 1), 30_000);
+    return () => clearInterval(i);
+  }, []);
 
   const loadSalas = useCallback(async () => {
     if (!user) return;
@@ -178,7 +189,7 @@ export default function SessionsScreen() {
     const salasData = salasRes.data;
     if (!salasData || salasData.length === 0) {
       setSalas([]);
-      setNextSession(null);
+      setProximas([]);
       setLoading(false);
       return;
     }
@@ -252,8 +263,7 @@ export default function SessionsScreen() {
       })
       .filter(Boolean) as (NextSession & { coachProfileId: string })[];
 
-    setNextSession(proximas[0] ?? null);
-    setOtrasProximas(proximas.slice(1));
+    setProximas(proximas);
 
     setLoading(false);
   }, [user, unreadSalaIds]);
@@ -307,13 +317,13 @@ export default function SessionsScreen() {
     }, [loadSalas])
   );
 
-  async function handleJoinFromHero() {
-    if (!nextSession?.meeting_url) return;
-    await WebBrowser.openBrowserAsync(nextSession.meeting_url);
+  async function handleJoin(ses: NextSession) {
+    if (!ses.meeting_url) return;
+    await WebBrowser.openBrowserAsync(ses.meeting_url);
   }
 
-  async function handleAddToCalendar() {
-    if (!nextSession || isAddingCalendar) return;  // corta el doble-tap
+  async function handleAddToCalendar(ses: NextSession) {
+    if (isAddingCalendar) return;  // corta el doble-tap
     setIsAddingCalendar(true);
     try {
       const { status } = await Calendar.requestCalendarPermissionsAsync();
@@ -324,12 +334,12 @@ export default function SessionsScreen() {
       const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
       const writable = cals.find(c => c.allowsModifications);
       if (!writable) return;
-      const [y, mo, d] = nextSession.scheduled_date.split('-').map(Number);
-      const [h, mi] = nextSession.scheduled_time.split(':').map(Number);
+      const [y, mo, d] = ses.scheduled_date.split('-').map(Number);
+      const [h, mi] = ses.scheduled_time.split(':').map(Number);
       const startDate = new Date(y, mo - 1, d, h, mi, 0);
-      const dur = nextSession.duration_minutes ?? 60;
+      const dur = ses.duration_minutes ?? 60;
       const endDate = new Date(startDate.getTime() + dur * 60_000);
-      const title = `Sesión con ${nextSession.coachName} — Vita`;
+      const title = `Sesión con ${ses.coachName} — Vita`;
 
       // Evitar duplicados: si ya existe un evento igual en ese rango, no re-agregar.
       const existing = await Calendar.getEventsAsync([writable.id], startDate, endDate);
@@ -345,7 +355,7 @@ export default function SessionsScreen() {
         title,
         startDate,
         endDate,
-        notes: nextSession.meeting_url ? `Videollamada: ${nextSession.meeting_url}` : undefined,
+        notes: ses.meeting_url ? `Videollamada: ${ses.meeting_url}` : undefined,
       });
       Alert.alert('Listo', 'La sesión fue agregada a tu calendario');
     } finally {
@@ -407,118 +417,140 @@ export default function SessionsScreen() {
               </TouchableOpacity>
             )}
 
-            {/* Hero — próxima sesión */}
-            {nextSession && (
-              <SurfaceCard variant="elevated" tone="dark" backgroundColor="#3A4A28" borderRadius={22} style={styles.heroCardWrap}>
-              <LinearGradient
-                colors={['#42542F', '#354526']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.heroCard}
-              >
-                <View style={styles.heroTop}>
-                  <Text style={styles.heroEyebrow}>TU PRÓXIMA SESIÓN</Text>
-                  <View style={[
-                    styles.heroStatusPill,
-                    nextSession.status === 'confirmada' ? styles.heroStatusConfirmed : styles.heroStatusPending,
-                  ]}>
-                    <Text style={[
-                      styles.heroStatusText,
-                      nextSession.status === 'confirmada' ? styles.heroStatusTextConfirmed : null,
-                    ]}>
-                      {nextSession.status === 'confirmada' ? 'Confirmada' : 'Pendiente'}
-                    </Text>
-                  </View>
-                </View>
+            {/* Carrusel de sesiones próximas.
+                Antes: una destacada arriba y una lista aparte abajo, lo que
+                obligaba a cancelar en dos lugares distintos según cuál sesión
+                fuera. Ahora todas son la misma tarjeta y se recorren.
 
-                <View style={styles.heroBody}>
-                  {nextSession.coachAvatarUrl ? (
-                    <Image source={{ uri: nextSession.coachAvatarUrl }} style={styles.heroAvatar} />
-                  ) : (
-                    <View style={styles.heroAvatarPlaceholder}>
-                      <Text style={styles.heroAvatarText}>{nextSession.coachInitials}</Text>
-                    </View>
-                  )}
-                  <View style={styles.heroBodyText}>
-                    <Text style={styles.heroDate}>
-                      {formatSalaDate(nextSession.scheduled_date)} · {nextSession.scheduled_time.slice(0, 5)} hs
-                    </Text>
-                    <Text style={styles.heroSub}>
-                      {(() => {
-                        const days = daysUntil(nextSession.scheduled_date);
-                        if (days === 0) return `Hoy con ${nextSession.coachName}`;
-                        if (days === 1) return `Mañana con ${nextSession.coachName}`;
-                        return `Con ${nextSession.coachName} · en ${days} días`;
-                      })()}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.heroActions}>
-                  {nextSession.status === 'confirmada' ? (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.heroBtnPrimary, (!joinable || !nextSession.meeting_url) && styles.heroBtnPrimaryDisabled]}
-                        onPress={handleJoinFromHero}
-                        disabled={!joinable || !nextSession.meeting_url}
-                        activeOpacity={0.8}
+                ⚠️ La tarjeta NO ocupa el ancho completo a propósito: la
+                siguiente tiene que asomar. Un carrusel donde el segundo ítem
+                cae justo afuera del borde se lee como una sola tarjeta, y nadie
+                descubre que hay más. El contador de abajo refuerza lo mismo. */}
+            {proximas.length > 0 && (
+              <View style={styles.carruselWrap}>
+                <RNScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  snapToInterval={CARD_W + CARD_GAP}
+                  decelerationRate="fast"
+                  contentContainerStyle={styles.carrusel}
+                  onMomentumScrollEnd={e => {
+                    setIndiceVisible(Math.round(e.nativeEvent.contentOffset.x / (CARD_W + CARD_GAP)));
+                  }}
+                >
+                  {proximas.map(ses => {
+                    const puedeUnirse = ses.status === 'confirmada'
+                      && isJoinable(ses.scheduled_date, ses.scheduled_time)
+                      && !!ses.meeting_url;
+                    const dias = daysUntil(ses.scheduled_date);
+                    return (
+                      <SurfaceCard
+                        key={ses.bookingId}
+                        variant="elevated" tone="dark" backgroundColor="#3A4A28" borderRadius={22}
+                        style={[styles.heroCardWrap, { width: CARD_W }]}
                       >
-                        <MaterialCommunityIcons name="video" size={14} color="#F3EEDF" />
-                        <Text style={styles.heroBtnPrimaryText}>Unirse a la llamada</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.heroBtnGhost}
-                        onPress={handleAddToCalendar}
-                        disabled={isAddingCalendar}
-                        activeOpacity={0.75}
-                      >
-                        <MaterialCommunityIcons name="calendar-plus" size={14} color="#F3EEDF" />
-                        <Text style={styles.heroBtnGhostText}>{isAddingCalendar ? 'Agendando…' : 'Agendar'}</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.heroBtnGhost}
-                      onPress={() => router.push({ pathname: '/sala', params: { sala_id: nextSession.salaId } })}
-                      activeOpacity={0.75}
-                    >
-                      <Text style={styles.heroBtnGhostText}>Ver sala</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </LinearGradient>
-              </SurfaceCard>
-            )}
+                        <LinearGradient
+                          colors={['#42542F', '#354526']}
+                          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                          style={styles.heroCard}
+                        >
+                          <View style={styles.heroTop}>
+                            <Text style={styles.heroEyebrow}>
+                              {dias === 0 ? 'HOY' : dias === 1 ? 'MAÑANA' : `EN ${dias} DÍAS`}
+                            </Text>
+                            <View style={[
+                              styles.heroStatusPill,
+                              ses.status === 'confirmada' ? styles.heroStatusConfirmed : styles.heroStatusPending,
+                            ]}>
+                              <Text style={[
+                                styles.heroStatusText,
+                                ses.status === 'confirmada' ? styles.heroStatusTextConfirmed : null,
+                              ]}>
+                                {ses.status === 'confirmada' ? 'Confirmada' : 'Pendiente'}
+                              </Text>
+                            </View>
+                          </View>
 
-                        {/* Las OTRAS sesiones próximas. Antes la consulta traía una sola y el
-                resto no existía para nadie: estaban en la base, iban a ocurrir, y
-                no se podían ver ni cancelar hasta que pasara la primera. */}
-            {otrasProximas.length > 0 && (
-              <View style={styles.proximasWrap}>
-                <Text style={styles.proximasTitle}>Después</Text>
-                {otrasProximas.map(ses => (
-                  <View key={ses.bookingId} style={styles.proximaRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.proximaFecha}>
-                        {formatSalaDate(ses.scheduled_date)} · {ses.scheduled_time.slice(0, 5)} hs
-                      </Text>
-                      <Text style={styles.proximaSub}>
-                        {ses.coachName} · {ses.status === 'confirmada' ? 'Confirmada' : 'Esperando confirmación'}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => cancelarProxima(ses)}
-                      disabled={cancelandoId === ses.bookingId}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      activeOpacity={0.7}>
-                      <Text style={styles.proximaCancel}>
-                        {cancelandoId === ses.bookingId ? 'Cancelando…' : 'Cancelar'}
-                      </Text>
-                    </TouchableOpacity>
+                          <View style={styles.heroBody}>
+                            {ses.coachAvatarUrl ? (
+                              <Image source={{ uri: ses.coachAvatarUrl }} style={styles.heroAvatar} />
+                            ) : (
+                              <View style={styles.heroAvatarPlaceholder}>
+                                <Text style={styles.heroAvatarText}>{ses.coachInitials}</Text>
+                              </View>
+                            )}
+                            <View style={styles.heroBodyText}>
+                              <Text style={styles.heroDate}>
+                                {formatSalaDate(ses.scheduled_date)} · {ses.scheduled_time.slice(0, 5)} hs
+                              </Text>
+                              <Text style={styles.heroSub}>Con {ses.coachName}</Text>
+                            </View>
+                          </View>
+
+                          <View style={styles.heroActions}>
+                            {ses.status === 'confirmada' ? (
+                              <>
+                                <TouchableOpacity
+                                  style={[styles.heroBtnPrimary, !puedeUnirse && styles.heroBtnPrimaryDisabled]}
+                                  onPress={() => handleJoin(ses)}
+                                  disabled={!puedeUnirse}
+                                  activeOpacity={0.8}
+                                >
+                                  <MaterialCommunityIcons name="video" size={14} color="#F3EEDF" />
+                                  <Text style={styles.heroBtnPrimaryText}>Unirse</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={styles.heroBtnGhost}
+                                  onPress={() => handleAddToCalendar(ses)}
+                                  disabled={isAddingCalendar}
+                                  activeOpacity={0.75}
+                                >
+                                  <MaterialCommunityIcons name="calendar-plus" size={14} color="#F3EEDF" />
+                                  <Text style={styles.heroBtnGhostText}>{isAddingCalendar ? '…' : 'Agendar'}</Text>
+                                </TouchableOpacity>
+                              </>
+                            ) : (
+                              <TouchableOpacity
+                                style={styles.heroBtnGhost}
+                                onPress={() => router.push({ pathname: '/sala', params: { sala_id: ses.salaId } })}
+                                activeOpacity={0.75}
+                              >
+                                <Text style={styles.heroBtnGhostText}>Ver sala</Text>
+                              </TouchableOpacity>
+                            )}
+                            <TouchableOpacity
+                              style={styles.heroBtnGhost}
+                              onPress={() => cancelarProxima(ses)}
+                              disabled={cancelandoId === ses.bookingId}
+                              activeOpacity={0.75}
+                            >
+                              <Text style={styles.heroBtnGhostText}>
+                                {cancelandoId === ses.bookingId ? 'Cancelando…' : 'Cancelar'}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </LinearGradient>
+                      </SurfaceCard>
+                    );
+                  })}
+                </RNScrollView>
+
+                {proximas.length > 1 && (
+                  <View style={styles.puntos}>
+                    {proximas.map((ses, i) => (
+                      <View
+                        key={ses.bookingId}
+                        style={[styles.punto, i === indiceVisible && styles.puntoActivo]}
+                      />
+                    ))}
+                    <Text style={styles.contador}>
+                      {indiceVisible + 1} de {proximas.length}
+                    </Text>
                   </View>
-                ))}
+                )}
               </View>
             )}
+
 
 {/* Lista de salas */}
             {salas.length > 0 ? (
@@ -631,6 +663,13 @@ function SalaRow({
 }
 
 const styles = StyleSheet.create({
+  carruselWrap: { marginBottom: 20 },
+  carrusel: { gap: CARD_GAP, paddingRight: 20 },
+  puntos: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingHorizontal: 4 },
+  punto: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(135,131,92,0.28)' },
+  puntoActivo: { backgroundColor: ViveColors.primary, width: 16 },
+  contador: { marginLeft: 6, fontFamily: ViveFonts.regular, fontSize: 11.5, color: 'rgba(135,131,92,0.75)' },
+
   proximasWrap: { marginBottom: 20, gap: 8 },
   proximasTitle: {
     fontFamily: ViveFonts.semibold, fontSize: 13, color: 'rgba(135,131,92,0.85)', marginBottom: 2,
