@@ -33,7 +33,17 @@ export type CancelBookingParams = {
   fechaLegible: string;
 };
 
-export type CancelResult = { ok: true } | { ok: false; error: string };
+/** Qué pasa con la plata. Lo decide la base (el trigger `trg_mark_refund_on_cancel`),
+ *  no esta función: acá solo se lee el resultado para poder contárselo a la persona.
+ *   · `mp`      → vuelve sola, pero tarda en verse en el resumen de la tarjeta.
+ *   · `usdt`    → hay que pedirle la dirección; el envío es manual.
+ *   · `tardia`  → canceló con menos de 24hs y pierde el reembolso (política).
+ *   · `sin_pago`→ no había nada cobrado. */
+export type RefundOutcome = 'mp' | 'usdt' | 'tardia' | 'sin_pago';
+
+export type CancelResult =
+  | { ok: true; refund: RefundOutcome }
+  | { ok: false; error: string };
 
 export async function cancelBookingFlow(p: CancelBookingParams): Promise<CancelResult> {
   const horaLegible = p.scheduledTime.slice(0, 5);
@@ -49,13 +59,24 @@ export async function cancelBookingFlow(p: CancelBookingParams): Promise<CancelR
       cancelled_late: isCancelLate(p.scheduledDate, p.scheduledTime),
     })
     .eq('id', p.bookingId)
-    .select('id');
+    // El trigger es BEFORE UPDATE, así que la fila que vuelve ya trae el
+    // `payment_status` que él decidió. Es la forma de saber qué pasó con la
+    // plata sin duplicar acá la regla de las 24hs.
+    .select('id, payment_status, payment_provider, cancelled_late');
 
   // Postgrest no devuelve error cuando RLS bloquea: devuelve 0 filas. Sin este
   // chequeo, la pantalla diría "cancelada" con la reserva intacta.
   if (error || !data || data.length === 0) {
     return { ok: false, error: error?.message ?? 'No se pudo cancelar. Probá de nuevo' };
   }
+
+  const fila = data[0] as { payment_status: string; payment_provider: string | null; cancelled_late: boolean | null };
+  const refund: RefundOutcome =
+    fila.payment_status === 'reembolso_pendiente'
+      ? (fila.payment_provider === 'usdt' ? 'usdt' : 'mp')
+      : fila.payment_status === 'aprobado' && fila.cancelled_late
+        ? 'tardia'
+        : 'sin_pago';
 
   // Lo que sigue es best-effort: la reserva YA está cancelada. Si falla el aviso
   // no se revierte nada — sería peor dejarla viva por no haber podido notificar.
@@ -91,5 +112,38 @@ export async function cancelBookingFlow(p: CancelBookingParams): Promise<CancelR
     ]).catch(e => console.warn('[cancel] no se pudo notificar:', e));
   }
 
-  return { ok: true };
+  return { ok: true, refund };
+}
+
+/** El mensaje que ve la persona después de cancelar.
+ *
+ *  Existe acá y no en cada pantalla porque son tres pantallas las que cancelan
+ *  (el carrusel, la sala, y el coach) y el texto sobre la plata tiene que ser
+ *  el mismo en las tres. Un usuario que lee "te devolvemos el dinero" en un
+ *  lado y nada en el otro, escribe a soporte.
+ *
+ *  El "puede tardar unos días" no es un descargo: Mercado Pago procesa el
+ *  reembolso al instante, pero el banco emisor tarda en reflejarlo en el
+ *  resumen. Sin decirlo, la persona da por hecho que no le devolvieron nada.
+ */
+export function refundMessage(refund: RefundOutcome): { title: string; body: string } {
+  switch (refund) {
+    case 'mp':
+      return {
+        title: 'Sesión cancelada',
+        body: 'Te devolvemos el total a tu medio de pago. El reembolso sale ahora, pero puede tardar unos días en aparecer en tu resumen — depende de tu banco, no de nosotros.',
+      };
+    case 'usdt':
+      return {
+        title: 'Sesión cancelada',
+        body: 'Te devolvemos el total. Necesitamos que nos digas a qué dirección mandártelo: vas a ver el aviso en Sesiones.',
+      };
+    case 'tardia':
+      return {
+        title: 'Sesión cancelada',
+        body: 'Como la cancelaste con menos de 24hs de anticipación, no corresponde reembolso. El profesional ya había reservado ese tiempo.',
+      };
+    case 'sin_pago':
+      return { title: 'Sesión cancelada', body: 'Liberamos ese horario.' };
+  }
 }

@@ -23,7 +23,7 @@ import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { decryptMessage } from '@/lib/encryption';
 import { canCancelConfirmed } from '@/lib/bookingHelpers';
-import { cancelBookingFlow } from '@/lib/bookingCancel';
+import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 
@@ -301,6 +301,8 @@ export default function SessionsScreen() {
             });
             setCancelandoId(null);
             if (!res.ok) { Alert.alert('No se pudo cancelar', res.error); return; }
+            const msg = refundMessage(res.refund);
+            Alert.alert(msg.title, msg.body);
             void loadSalas();
           },
         },

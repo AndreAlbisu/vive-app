@@ -35,7 +35,8 @@ import SessionNotesSheet from '@/components/SessionNotesSheet';
 import { getSharedNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
 import { sendPushNotification } from '@/lib/notifications';
-import { isCancelLate, canCancelConfirmed } from '@/lib/bookingHelpers';
+import { canCancelConfirmed } from '@/lib/bookingHelpers';
+import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { logError } from '@/lib/logging';
 import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
 
@@ -559,19 +560,20 @@ export default function SalaScreen() {
   }
 
   async function handleCancelBooking() {
-    if (!activeBooking || !salaId || !user) return;
+    if (!activeBooking || !user) return;
 
-    const isCurrentUserCoach = !recipientIsCoach;
+    const soyCoach = !recipientIsCoach;
 
-    if (!isCurrentUserCoach && activeBooking.status === 'confirmada' && !canCancelConfirmed(activeBooking.scheduled_date, activeBooking.scheduled_time)) {
+    if (!soyCoach && activeBooking.status === 'confirmada'
+        && !canCancelConfirmed(activeBooking.scheduled_date, activeBooking.scheduled_time)) {
       Alert.alert('No se puede cancelar', 'Las sesiones confirmadas solo se pueden cancelar con al menos 24hs de anticipación');
       return;
     }
 
-    const isPending = activeBooking.status === 'pendiente';
+    const esSolicitud = activeBooking.status === 'pendiente';
     Alert.alert(
-      isPending ? '¿Cancelar solicitud?' : '¿Cancelar sesión?',
-      isPending ? '¿Querés cancelar tu solicitud de sesión?' : '¿Querés cancelar esta sesión confirmada?',
+      esSolicitud ? '¿Cancelar solicitud?' : '¿Cancelar sesión?',
+      esSolicitud ? '¿Querés cancelar tu solicitud de sesión?' : '¿Querés cancelar esta sesión confirmada?',
       [
         { text: 'No', style: 'cancel' },
         {
@@ -579,94 +581,37 @@ export default function SalaScreen() {
           style: 'destructive',
           onPress: async () => {
             setIsCancelling(true);
-            const bookingId = activeBooking.id;
-            const cancelDateStr = formatSalaDate(activeBooking.scheduled_date);
-            const cancelTimeStr = activeBooking.scheduled_time.slice(0, 5);
+            // Todo el cuerpo —cancelar, dejar el mensaje de sistema, notificar—
+            // vive en lib/bookingCancel.ts. Acá vivía duplicado en dos ramas
+            // casi iguales, y al necesitarlo también en el carrusel de sesiones
+            // se habría vuelto una tercera copia de la misma regla.
+            const res = await cancelBookingFlow({
+              bookingId: activeBooking.id,
+              salaId,
+              actorId: user.id,
+              actorRole: soyCoach ? 'coach' : 'usuario',
+              recipientId,
+              scheduledDate: activeBooking.scheduled_date,
+              scheduledTime: activeBooking.scheduled_time,
+              fechaLegible: formatSalaDate(activeBooking.scheduled_date),
+            });
+            setIsCancelling(false);
 
-            try {
-              if (isCurrentUserCoach) {
-                await supabase
-                  .from('bookings')
-                  .update({
-                    status: 'cancelada',
-                    cancelled_by: 'coach',
-                    cancelled_late: isCancelLate(activeBooking.scheduled_date, activeBooking.scheduled_time),
-                  })
-                  .eq('id', bookingId);
+            if (!res.ok) { Alert.alert('No se pudo cancelar', res.error); return; }
 
-                await supabase.from('messages').insert({
-                  sala_id: salaId,
-                  sender_id: user.id,
-                  sender_type: 'system_cancelled',
-                  content: encryptMessage(`El profesional canceló la sesión\n${cancelDateStr} · ${cancelTimeStr} hs`),
-                });
-
-                if (recipientId) {
-                  const { data: userProfile } = await supabase
-                    .from('profiles').select('push_token').eq('id', recipientId).maybeSingle();
-                  const notifTitle = 'Sesión cancelada';
-                  const notifBody = 'Tu profesional canceló la sesión agendada';
-                  await Promise.all([
-                    supabase.from('notifications').insert({
-                      recipient_id: recipientId,
-                      type: 'reserva_cancelada',
-                      booking_id: bookingId,
-                      title: notifTitle,
-                      body: notifBody,
-                    }),
-                    userProfile?.push_token
-                      ? sendPushNotification(userProfile.push_token, notifTitle, notifBody)
-                      : Promise.resolve(),
-                  ]);
-                }
-              } else {
-                await supabase
-                  .from('bookings')
-                  .update({
-                    status: 'cancelada',
-                    cancelled_by: 'usuario',
-                    cancelled_late: isCancelLate(activeBooking.scheduled_date, activeBooking.scheduled_time),
-                  })
-                  .eq('id', bookingId);
-
-                await supabase.from('messages').insert({
-                  sala_id: salaId,
-                  sender_id: user.id,
-                  sender_type: 'system_cancelled',
-                  content: encryptMessage(`El usuario canceló la sesión\n${cancelDateStr} · ${cancelTimeStr} hs`),
-                });
-
-                if (recipientId) {
-                  const { data: coachProfile } = await supabase
-                    .from('profiles').select('push_token').eq('id', recipientId).maybeSingle();
-                  const notifTitle = 'Sesión cancelada';
-                  const notifBody = 'El usuario canceló la sesión agendada';
-                  await Promise.all([
-                    supabase.from('notifications').insert({
-                      recipient_id: recipientId,
-                      type: 'reserva_cancelada',
-                      booking_id: bookingId,
-                      title: notifTitle,
-                      body: notifBody,
-                    }),
-                    coachProfile?.push_token
-                      ? sendPushNotification(coachProfile.push_token, notifTitle, notifBody)
-                      : Promise.resolve(),
-                  ]);
-                }
-              }
-
-              setActiveBooking(null);
-              setSessionState('none');
-            } finally {
-              setIsCancelling(false);
+            // Al coach no se le habla de reembolso: no es su plata, y el texto
+            // ("te devolvemos el total") sería directamente falso para él.
+            if (!soyCoach) {
+              const msg = refundMessage(res.refund);
+              Alert.alert(msg.title, msg.body);
             }
+            setActiveBooking(null);
+            setSessionState('none');
           },
         },
       ],
     );
   }
-
   function handleHeaderPress() {
     if (!recipientProfile) return;
     router.push({
