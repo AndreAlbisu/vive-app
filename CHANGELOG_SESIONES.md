@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-19 — Joaquín (sesión 106)
+
+**Tocado:** ningún archivo de código. Verificación en producción, con plata real.
+
+**Resumen — el tramo de comisión del 15% quedó probado por primera vez. Venía sin cerrarse desde la sesión 88.**
+
+- **Par usado:** Joaquín Albisu + Coach Prueba, que ya tenía 1 sesión legítima contada (de antes de que el coach conectara MP, así que sin cobro por diseño — el filtro de checkouts abandonados la sigue contando bien). Se reservó y pagó una segunda sesión real ($4.500 ARS, antes costaba $1 — el precio de prueba cambió en algún momento sin que quedara anotado dónde).
+- ✅ **Resultado:** `platform_fee_pct: 15`, `payment_status: 'aprobado'`, con `payment_id` real de MP. Los dos intentos previos del mismo día (abandonados antes de pagar) también habían quedado en 15 — el cálculo es consistente en cada intento, no fue casualidad de la vez que sí se completó.
+- 📝 **De paso, un hallazgo de datos viejos, no un bug activo.** Al revisar el historial de bookings de este par apareció una fila de fecha 24/07 (`completada`, `payment_status: 'pendiente'`, con `preference_id` seteado — checkout abandonado que igual pasó a completada) — Joaquín la recordaba como *"salí antes y se reservó igual"*. Es de **antes** de los fixes de la sesión 103 (coach podía confirmar reserva impaga) y 104 (`with_check` en la policy de UPDATE), así que no es el bug reapareciendo — es un resto de cuando el bug todavía existía. El filtro de `_shared/commission.ts` la excluyó correctamente del conteo (por eso el par seguía en "1 sesión válida" y no en "2"), confirmando que la protección funciona también con datos reales, no solo en los tests.
+
+**Pendiente para la próxima sesión:**
+- Sigue sin probarse la reserva instantánea con pago (nunca se ejerció ese camino con un coach en modo `instant_booking=true`).
+- Sigue sin probarse el guardarraíl de reconexión de MP en el celular.
+- Queda la fila vieja del 24/07 (`bf622b93…`, `completada` sin pago real, $11.000) como dato sucio — no rompe nada porque el filtro la excluye del conteo, pero convendría limpiarla en algún momento (mismo criterio que se usó con las 16 fantasma de agosto: no reescribir a mano si no hace falta para nada funcional).
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 105)
 
 **Tocado:** ningún archivo de código. Cambio de infraestructura: secret `ANTHROPIC_API_KEY` cargado en Supabase.
