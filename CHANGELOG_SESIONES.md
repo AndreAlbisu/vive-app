@@ -37,7 +37,7 @@
 - **Montevideo y São Paulo (en invierno) no cuentan como otra zona**: se compara el offset, no el nombre. Mostrar una "conversión" que dice lo mismo dos veces es ruido.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **Correr `scripts/add-late-cancel-server-side.sql`** y **deployar `guarantee-claim` y `create-meeting-room`** (las dos usan `_shared/guarantee.ts`). Ninguna de las dos cosas está hecha.
+- ✅ **Hecho el mismo día**: `scripts/add-late-cancel-server-side.sql` corrido, y `guarantee-claim` + `create-meeting-room` deployadas (las dos usan `_shared/guarantee.ts`; las dos bootean y contestan desde su propio código, así que el `Intl` que ahora corre al cargar el módulo no rompe nada en Deno).
 - **Nada de esto se probó en dispositivo.** Typecheck, lint (0 warnings nuevos) y 218 tests, pero el filtro del punto 2, el badge, el precio en dólares y toda la capa de zonas horarias no se vieron corriendo. Para probar zonas alcanza con cambiar la zona del teléfono a Madrid o Bangkok — no hace falta viajar.
 - ⚠️ **Falta verificar `Intl` con `timeZone` en el dev build.** Si el chequeo funcional da `false`, todo cae al offset fijo y las equivalencias locales no se muestran (degrada al comportamiento de hoy, no rompe). Se ve rápido: si el cartel de conversión no aparece con el teléfono en Madrid, es eso.
 - **Punto 4, higiene**: `USDT_WALLET_TRC20` sigue apuntando a la dirección personal de Andre y el precio de prueba sigue en 6 USD.
