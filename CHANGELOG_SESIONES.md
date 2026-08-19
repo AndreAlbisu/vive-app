@@ -23,6 +23,24 @@
 
 ---
 
+## 2026-08-19 — Joaquín (sesión 109)
+
+**Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.
+
+**Resumen — el fix del redirect de MP (sesión 107) quedó a medio cerrar: creaba una ruta que no existía.**
+
+- Joaquín probó en el dev build: no se cerró solo — redirigió a Safari, pidió "Abrir la app Vita", y ahí quedó trabado.
+- 🔴 **La causa: `viveapp://booking/result` nunca fue una pantalla real.** Era solo el string que se le pasa a `openAuthSessionAsync` como `redirectUrl` — en el caso normal ni hace falta que exista una ruta, porque `openAuthSessionAsync` intercepta el redirect DENTRO de su propia sesión y nunca navega de verdad (la promesa se resuelve, el browser se cierra, y `BookingScreen_Confirm` sigue solo). Pero acá MP rompió esa sesión y el redirect terminó en Safari, que lo abrió como un deep link real — y como no había ninguna ruta en `app/booking/result.tsx`, la app abría sin tener a dónde ir.
+- **Arreglo:** se creó esa pantalla. No necesita leer nada del redirect — el resultado del pago ya está en el servidor (`mp-webhook` escribe `payment_status` antes de que MP muestre "aprobado") — así que solo redirige a "Mis sesiones" (`/(tabs)/mis-salas`), donde la reserva ya aparece.
+- ⚠️ **Sigue sin saberse por qué MP rompe la sesión de `openAuthSessionAsync`** en vez de quedarse adentro (que es el comportamiento esperado y lo que haría el cierre silencioso). Puede ser el propio flujo de "Pago aprobado" de MP abriendo algo en una ventana nueva. Con este fix, el peor caso ahora es "un tap más en Safari" en vez de "sin salida" — mejora real, pero no es el cierre 100% silencioso que se buscaba. Falta otra vuelta de prueba en el dev build para confirmar si mejoró.
+- Typecheck y lint limpios (0 warnings en el archivo nuevo).
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build si con esta ruta ya alcanza (llegar a "Mis sesiones" sin trabarse) o si vale la pena investigar por qué MP rompe la sesión de `openAuthSessionAsync`.
+- El guardarraíl de reconexión de MP sigue siendo el único pendiente grande de plata sin probar en dispositivo.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 108)
 
 **Tocado:** ningún archivo de código. Verificación en producción, con plata real.
