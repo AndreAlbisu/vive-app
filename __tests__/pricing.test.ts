@@ -83,3 +83,22 @@ describe('el gross-up alcanza de verdad', () => {
     }
   });
 });
+
+// Cliente y servidor calculan el precio sobre los mismos datos. Si divergen, la
+// app le muestra un número al usuario y el servidor le cobra otro.
+describe('cliente y servidor coinciden', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const server = require('../supabase/functions/_shared/pricing');
+
+  it('paypalGrossUp da el mismo número en las dos implementaciones', () => {
+    for (const precio of [20, 35, 60, 99, 150, 1000, 10000]) {
+      expect(paypalGrossUp(precio)).toBe(server.paypalGrossUp(precio));
+    }
+  });
+
+  it('y las constantes de comisión no se desincronizaron', () => {
+    expect(server.PAYPAL_PCT).toBe(0.054);
+    expect(server.PAYPAL_FIXED_USD).toBe(0.30);
+    expect(server.MIN_PRICE_USD).toBe(MIN_PRICE_USD);
+  });
+});
