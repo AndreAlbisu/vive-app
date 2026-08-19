@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-08-19 — Joaquín (sesión 107)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`, `supabase/functions/mp-create-payment/index.ts`, `supabase/config.toml`, `SCHEMA.md`. Nuevo: `supabase/functions/booking-return/index.ts` (**deployada**).
+
+**Resumen — después de pagar con Mercado Pago, la app se quedaba pegada en la pantalla de MP. Ahora vuelve sola.**
+
+- **Pedido de Joaquín, encontrado probando el pago del tramo del 15%** (sesión 106): "quiero que me redirija" a la app en vez de quedarse en el navegador de MP.
+- 🔴 **La causa era doble, y arreglar solo un lado no alcanzaba.** (1) `CHECKOUT_RETURN_URL` nunca tuvo un valor https configurado — MP **exige** https para `back_urls` (un deep link `viveapp://` da `invalid_back_urls` al crear la preferencia), así que `mp-create-payment` nunca mandaba `back_urls`/`auto_return`: MP no tenía a dónde redirigir. (2) Del lado del cliente, producción usaba `WebBrowser.openBrowserAsync` — un browser normal, que no sabe esperar un redirect ni cerrarse solo. Solo `__DEV__` usaba `openAuthSessionAsync` (el que sí detecta el redirect y cierra), y ahí con sesión efímera, a propósito, para poder cambiar de cuenta de MP entre pruebas.
+- **Arreglados los dos juntos.** Nueva edge function `booking-return` (`verify_jwt=false`, mismo patrón que `mp-oauth-callback`/`APP_DEEP_LINK` para la conexión de MP del coach): recibe la vuelta de MP en una URL https real y hace un 302 a `viveapp://booking/result`, reenviando los query params de MP por si algún día hacen falta (hoy no se leen — la app sigue confiando en `payment_status` vía `mp-webhook` + el sondeo de 12s que ya tenía `BookingScreen_Confirm`). `CHECKOUT_RETURN_URL` (secret) apunta ahí. Del lado del cliente, las dos ramas (dev y prod) pasaron a `openAuthSessionAsync` — la única diferencia que queda es `preferEphemeralSession: __DEV__`, para no perder el login persistente de MP en producción.
+- **Verificado el bounce con curl antes de tocar la app**: `GET booking-return?payment_id=123&status=approved` → `302 Location: viveapp://booking/result?payment_id=123&status=approved`. Falta la confirmación visual en el dev build (que el browser se cierre solo después de pagar) — el próximo pago de prueba la da gratis.
+- Typecheck, lint (0 warnings nuevos) y 187/187 tests limpios. `booking-return` y `mp-create-payment` (solo cambiaron comentarios) redeployadas.
+
+**Pendiente para la próxima sesión:**
+- **Confirmar visualmente en el dev build** que después de pagar el browser se cierra solo y vuelve a la app — no se pudo ver en vivo desde acá, solo verificar el 302 con curl.
+- Sigue sin probarse la reserva instantánea con pago, y el guardarraíl de reconexión de MP en el celular (heredado de sesiones anteriores).
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 106)
 
 **Tocado:** ningún archivo de código. Verificación en producción, con plata real.

@@ -371,19 +371,24 @@ export default function BookingScreen_Confirm() {
       }
 
       if (initPoint) {
-        // En testing (Expo Go / dev build) abrimos con sesión EFÍMERA para poder
-        // cambiar de cuenta de MP entre pruebas (comprador ≠ vendedor): el browser
-        // normal comparte cookies con Safari y deja la cuenta pegada. En producción
-        // seguimos con openBrowserAsync (persistente) → el usuario real no re-loguea
-        // en cada reserva. No dependemos del redirect (MP exige back_urls https): el
-        // resultado del pago llega por mp-webhook, la sesión se cierra a mano.
-        if (__DEV__) {
-          await WebBrowser.openAuthSessionAsync(initPoint, 'viveapp://booking/result', {
-            preferEphemeralSession: true,
-          });
-        } else {
-          await WebBrowser.openBrowserAsync(initPoint);
-        }
+        // Las dos ramas usan openAuthSessionAsync — es el que sabe esperar el
+        // redirect de vuelta (`viveapp://booking/result`, que ahora sí llega:
+        // `booking-return` le da a MP una back_url https real, ver mp-create-
+        // payment) y cerrar el browser solo en cuanto lo ve, en vez de dejar a
+        // la persona mirando la pantalla de "Pago aprobado" de MP hasta que
+        // cierre la pestaña a mano.
+        //
+        // La única diferencia entre testing y producción es `preferEphemeralSession`:
+        // en testing (Expo Go / dev build) se fuerza una sesión SIN cookies para
+        // poder cambiar de cuenta de MP entre pruebas (comprador ≠ vendedor) — el
+        // browser normal comparte cookies con Safari y deja la cuenta pegada. En
+        // producción se deja compartir cookies (default `false`) para que el
+        // usuario real no tenga que volver a loguearse en MP en cada reserva —
+        // mismo criterio que ya se aplicó con Google Sign-In (sesión 100): no
+        // reintroducir sesión efímera fuera de testing.
+        await WebBrowser.openAuthSessionAsync(initPoint, 'viveapp://booking/result', {
+          preferEphemeralSession: __DEV__,
+        });
       }
 
       // ¿Entró el pago? Cerrar el browser no dice nada: puede haber pagado o

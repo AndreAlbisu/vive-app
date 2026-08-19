@@ -16,6 +16,11 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const MP_CLIENT_ID = Deno.env.get('MP_CLIENT_ID')!            // para refrescar el token del coach
 const MP_CLIENT_SECRET = Deno.env.get('MP_CLIENT_SECRET')!
 const MP_WEBHOOK_URL = Deno.env.get('MP_WEBHOOK_URL')!         // URL pública de mp-webhook
+// ⚠️ Tiene que ser https — MP exige eso para `back_urls` (un deep link directo
+// da `invalid_back_urls` al crear la preferencia). Por eso el default de acá
+// abajo NO se usa nunca en la práctica (no empieza con https, ver el `if` de
+// más abajo): apunta a `booking-return`, la función que rebota a
+// `viveapp://booking/result` — mismo patrón que `mp-oauth-callback`/`APP_DEEP_LINK`.
 const CHECKOUT_RETURN_URL = Deno.env.get('CHECKOUT_RETURN_URL') ?? 'viveapp://booking/result'
 // Split on/off. Default true (prod). Poner MP_SPLIT_ENABLED=false para diagnosticar
 // si el marketplace_fee es lo que rompe el checkout (app sin marketplace activado).
@@ -148,9 +153,14 @@ serve(async (req) => {
     // Split: comisión VITA (tier server-side). Se puede apagar para diagnóstico.
     if (MP_SPLIT_ENABLED) prefBody.marketplace_fee = marketplaceFee
     // MP EXIGE back_urls https (un deep link `viveapp://` da error `invalid_back_urls`
-    // → "algo salió mal" al aprobar). El retorno a la app ya lo maneja el WebBrowser
-    // (se cierra) + el webhook, así que solo mandamos back_urls/auto_return si hay una
-    // URL https real. Con el deep link default → se omiten y el pago funciona igual.
+    // → "algo salió mal" al aprobar). Sin una URL https configurada, MP nunca redirige
+    // y la persona se queda mirando la pantalla de "Pago aprobado" hasta cerrarla a
+    // mano — el pago funciona igual (lo confirma mp-webhook, no el redirect), pero
+    // la vuelta a la app no es automática. Con `CHECKOUT_RETURN_URL` apuntando a
+    // `booking-return` (https, rebota a `viveapp://booking/result`), sí lo es:
+    // `openAuthSessionAsync` del lado del cliente cierra el browser solo en cuanto
+    // ve ese redirect. Si el secret no está seteado, se omiten y el pago sigue
+    // funcionando igual — solo se pierde el cierre automático.
     if (CHECKOUT_RETURN_URL.startsWith('https://')) {
       prefBody.back_urls = { success: CHECKOUT_RETURN_URL, failure: CHECKOUT_RETURN_URL, pending: CHECKOUT_RETURN_URL }
       prefBody.auto_return = 'approved'
