@@ -24,7 +24,12 @@ import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.68.0'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
-const MODEL = Deno.env.get('REFLECTION_MODEL') ?? 'claude-sonnet-5'
+const MODEL = Deno.env.get('REFLECTION_MODEL') ?? 'claude-haiku-4-5'
+
+// Haiku no acepta `effort` ni la configuración de thinking de los modelos 4.6+.
+// El chequeo va por prefijo y no por lista de ids para que cambiar de versión
+// de Haiku por env no lo rompa.
+const SOPORTA_EFFORT = !MODEL.startsWith('claude-haiku')
 
 const SIGNALS = [
   'empty', 'level', 'trend-up', 'trend-down',
@@ -127,9 +132,16 @@ Deno.serve(async (req) => {
       // Sin thinking y con esfuerzo bajo: es reescribir una señal en una
       // oración, no razonar. Pensar acá solo agrega latencia en la pantalla
       // que más se abre.
-      thinking: { type: 'disabled' },
+      //
+      // 🔴 Los dos parámetros son de la familia 4.6+ y NO existen en Haiku 4.5:
+      // mandarle `effort` devuelve 400, así que con REFLECTION_MODEL apuntando
+      // a Haiku la función fallaría con error en vez de caer al fallback. En
+      // Haiku sobran igual — no piensa salvo que se lo pidan explícitamente, que
+      // es justo el comportamiento que estas dos líneas buscan en los modelos
+      // nuevos (varios de ellos SÍ piensan por defecto).
+      ...(SOPORTA_EFFORT ? { thinking: { type: 'disabled' as const } } : {}),
       output_config: {
-        effort: 'low',
+        ...(SOPORTA_EFFORT ? { effort: 'low' as const } : {}),
         // Salida estructurada para no tener que limpiar preámbulos del tipo
         // "Acá va la línea:".
         format: {

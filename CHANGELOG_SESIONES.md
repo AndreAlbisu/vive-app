@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-08-19 — Andre (sesión 104)
+
+**Tocado:** `screens/SessionsScreen.tsx`, `screens/SalaScreen.tsx`, `screens/AdminScreen.tsx`, `screens/BookingScreen_Time.tsx`, `screens/CoachReservasScreen.tsx`, `lib/admin.ts`, `lib/bookingHelpers.ts`, `supabase/functions/admin-actions/index.ts`, `supabase/functions/weekly-reflection/index.ts`. Nuevos: `lib/bookingCancel.ts`, `screens/RefundAddressScreen.tsx`, `app/reembolso.tsx`, y 4 scripts SQL (**corridos**). 187 tests.
+
+**Resumen — reembolsos de USDT, endurecimiento de RLS, y el flujo de cancelación reconstruido.**
+
+- 🔴 **El agujero más grave de la sesión: `bookings_update_own` era UPDATE con `qual = (user_id = auth.uid())` y SIN `with_check`.** Sin `with_check`, Postgres valida la fila nueva contra el mismo USING: alcanzaba con que siguiera siendo suya. Cualquier persona con sesión podía, contra la API directa, `update bookings set payment_status='aprobado', status='confirmada'` y **darse una sesión gratis**. Lo mismo del lado del coach. Que existiera `users_cancel_own_booking` —bien hecha, restringida a `'cancelada'`— muestra qué pasó: se agregó la política correcta y **la permisiva quedó activa**, anulándola.
+  - Cerrado en dos capas (`harden-bookings-update.sql`, corrido y verificado): `revoke update` + `grant` por columna (un cliente solo escribe `status`, `cancelled_by`, `cancelled_late` y las dos de reembolso — `payment_status` pasó a solo lectura), y `with_check` en las cuatro políticas. **Verificado**: `pg_policies` no devuelve ninguna UPDATE sin `with_check`, y `column_privileges` devuelve exactamente 5 columnas.
+  - **Confirmar exige que la reserva esté paga** — o que no se haya iniciado ningún cobro (el flujo del coach sin MP, que ya funcionaba así).
+- **Reembolsos de USDT, circuito asistido.** El trigger los marcaba y nadie los procesaba. 🔴 **Decisión: el envío NO se automatiza** — exigiría la clave privada de la wallet en un secret del backend, y quien accediera a ese secret vaciaría la billetera entera, no el monto de un reembolso. El panel lista y registra; `mark_usdt_refunded` exige el hash con formato válido (64 hex), porque sin eso el registro deja de ser una prueba.
+  - 🔴 **Nunca se reusa la dirección del pago**: si pagó desde un exchange, esa es una wallet caliente compartida y el depósito no se le acredita. Se le pide la suya, y **la advertencia va ANTES del campo** — leerla después de pegar la dirección del exchange no sirve de nada.
+- ✅ **El reembolso de Mercado Pago quedó verificado end-to-end**: cancelación → trigger → cron → `reembolsado` al primer intento (`refund_attempts: 0`). De paso validó que el endurecimiento de RLS no rompió nada — la cancelación escribe `status`, `cancelled_by` y `cancelled_late` **juntas**, y si alguna hubiera quedado fuera del grant el update entero habría fallado en silencio.
+
+**Tres agujeros del flujo de sesiones, todos encontrados probando:**
+
+- 🔴 **La app mostraba UNA sola sesión próxima.** `SessionsScreen` consultaba con `.limit(1)` y `SalaScreen` traía 10 y se quedaba con la primera. **La segunda existía, iba a ocurrir, y era invisible**: no se podía ver, ni agendar, ni cancelar hasta que pasara la primera. No se ve en el código — la consulta trae diez y descarta nueve en la última línea.
+- 🔴 **La tarjeta de sesión CONFIRMADA no tenía botón de cancelar.** `handleCancelBooking` ya manejaba el caso pero **ningún botón lo llamaba**: función escrita e inalcanzable. Y en el checkout se promete "podés cancelar hasta 24hs antes y te devolvemos todo", así que la promesa era falsa.
+- 🔴 **El turno abandonado sin pagar te bloqueaba a VOS.** Cerrabas el checkout de MP y el horario que acababas de soltar te quedaba vedado media hora. A nadie más le bloqueaba nada — el único perjudicado era el que quería reintentar. Al permitirlo apareció el efecto colateral (el coach veía dos solicitudes idénticas), resuelto cancelando el intento anterior al crear el nuevo.
+
+**Y lo que salió de ahí:**
+
+- **Carrusel horizontal de próximas sesiones**, reemplazando "una destacada + una lista aparte" que obligaba a cancelar en dos lugares distintos según cuál fuera. ⚠️ La tarjeta ocupa el **86% del ancho disponible** a propósito: la siguiente tiene que asomar. Un carrusel donde el segundo ítem cae justo afuera del borde se lee como una tarjeta sola y nadie descubre que hay más. Con una sola sesión pasa a ancho completo — si no, el 14% vacío se lee como un error de layout.
+- **Al cancelar ahora se dice qué pasa con la plata**, y el mensaje depende del caso: MP vuelve sola pero *"puede tardar unos días en aparecer en tu resumen — depende de tu banco"* (MP reembolsa al instante, el emisor tarda; sin decirlo la persona da por hecho que no le devolvieron nada), USDT pide la dirección, cancelación tardía explica por qué no corresponde. **Cuál aplica NO lo decide la pantalla**: el trigger es BEFORE UPDATE, así que la fila que vuelve del update ya trae el `payment_status` que él decidió — se lee de ahí en vez de duplicar la regla de las 24hs en el cliente.
+- **`cancelBookingFlow` y `canCancelConfirmed` salieron a helpers compartidos.** Vivían dentro de `SalaScreen` (109 líneas con dos ramas casi idénticas); con el carrusel habrían sido una tercera copia. Dos copias de la regla de las 24hs se desincronizan tarde o temprano, y el día que pase una pantalla va a permitir lo que la otra prohíbe.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **PARA JOAQUÍN — prender la devolución con IA de "Sobre vos".** La feature está **entera y deployada**, apagada por tres interruptores; ya prendí dos. **Falta solo cargar la API key de Anthropic**: `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...` (sacarla de console.anthropic.com → API Keys). El flag del cliente (`EXPO_PUBLIC_AI_REFLECTION=true`) ya está en el `.env` local — **ojo que `.env` está gitignoreado, así que hay que agregarlo también en la máquina de quien lo pruebe**. Costo real medido: **USD 7,50/mes con 200 usuarios activos por día**; 5 dólares de crédito alcanzan para meses.
+  - Se cambió el modelo por defecto a **`claude-haiku-4-5`** y `effort`/`thinking` ahora solo se mandan si el modelo los soporta: **Haiku rechaza `effort` con un 400**, así que apuntar a Haiku sin ese cambio habría apagado la tarjeta con un error en vez de caer al fallback — que es peor, porque no se nota.
+  - ⚠️ **No tocar la división que hace segura la feature**: la IA no decide QUÉ decir, solo CÓMO. La señal se elige en el dispositivo (incluida la garantía de que el día que alguien cae fuerte la tarjeta no lo anime) y al modelo solo le llegan el nombre de la señal, el tono y dos o tres números. No viajan valores de ánimo, ni historial, ni texto escrito por la persona — eso es lo que achica la pregunta legal de transferencia internacional de dato sensible.
+- ⚠️ **Defensa de pantalla pendiente de cerrar del todo**: `CoachReservasScreen` impide confirmar una reserva impaga, y ahora la policy también — pero conviene revisar que las dos digan lo mismo cuando cambie una.
+- **Sin resolver, de sesiones anteriores**: rotar `USDT_WALLET_TRC20` (apunta a la dirección personal de Andre), el precio de prueba del coach en 6 USD, la query de `meeting_url` de la 101, decidir si se soportan más redes que TRC20, y el mensaje a los coaches.
+
+---
+
 ## 2026-08-18 — Andre (sesión 103)
 
 **Tocado:** `screens/BookingScreen_Confirm.tsx`, `screens/CoachProfileScreen.tsx`, `screens/CoachReservasScreen.tsx`, `SCHEMA.md`. Nuevos: `supabase/functions/_shared/usdt.ts`, `usdt-create-payment`, `usdt-check-payments`, `screens/UsdtPaymentScreen.tsx`, `app/pago-usdt.tsx`, `__tests__/usdt.test.ts`, y 5 scripts SQL (**todos corridos**). 187 tests.

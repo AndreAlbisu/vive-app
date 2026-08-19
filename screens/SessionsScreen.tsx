@@ -57,12 +57,19 @@ function getInitials(name: string): string {
   return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || '??';
 }
 
-// La tarjeta ocupa el 86% del ancho: el 14% restante es lo que deja asomar la
-// siguiente. Sin ese asomo, un carrusel se lee como una tarjeta sola y nadie
-// descubre que hay más — el gesto de deslizar no se le ocurre a quien no ve
-// que haya algo del otro lado.
+// La tarjeta ocupa el 86% del ancho DISPONIBLE (el de la pantalla menos el
+// padding del scroll), no el de la pantalla. El 14% restante es lo que deja
+// asomar la siguiente: sin ese asomo, un carrusel se lee como una tarjeta sola
+// y nadie descubre que hay más — el gesto de deslizar no se le ocurre a quien
+// no ve que haya algo del otro lado.
+//
+// El porcentaje va contra el ancho disponible y no contra el de la pantalla
+// porque si no, el "86%" no significa nada: el padding se descuenta después y
+// el asomo real termina siendo otro número, distinto en cada dispositivo.
 const CARD_GAP = 12;
-const CARD_W = Math.round(Dimensions.get('window').width * 0.86) - 20;
+const H_PADDING = 16;   // tiene que seguir a `scrollContent.paddingHorizontal`
+const CARD_FULL = Dimensions.get('window').width - H_PADDING * 2;
+const CARD_W = Math.round(CARD_FULL * 0.86);
 
 function formatMessageDate(isoString: string): string {
   const d = new Date(isoString);
@@ -433,9 +440,17 @@ export default function SessionsScreen() {
                 <RNScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
+                  // Con una sola sesión no hay carrusel: la tarjeta ocupa todo
+                  // el ancho. El asomo del 14% existe para anunciar que hay otra
+                  // tarjeta — si no la hay, es un hueco a la derecha que se lee
+                  // como un error de layout.
+                  scrollEnabled={proximas.length > 1}
                   snapToInterval={CARD_W + CARD_GAP}
                   decelerationRate="fast"
-                  contentContainerStyle={styles.carrusel}
+                  contentContainerStyle={[
+                    styles.carrusel,
+                    proximas.length === 1 && { paddingRight: 0 },
+                  ]}
                   onMomentumScrollEnd={e => {
                     setIndiceVisible(Math.round(e.nativeEvent.contentOffset.x / (CARD_W + CARD_GAP)));
                   }}
@@ -449,7 +464,7 @@ export default function SessionsScreen() {
                       <SurfaceCard
                         key={ses.bookingId}
                         variant="elevated" tone="dark" backgroundColor="#3A4A28" borderRadius={22}
-                        style={[styles.heroCardWrap, { width: CARD_W }]}
+                        style={[styles.heroCardWrap, { width: proximas.length > 1 ? CARD_W : CARD_FULL }]}
                       >
                         <LinearGradient
                           colors={['#42542F', '#354526']}
@@ -666,7 +681,7 @@ function SalaRow({
 
 const styles = StyleSheet.create({
   carruselWrap: { marginBottom: 20 },
-  carrusel: { gap: CARD_GAP, paddingRight: 20 },
+  carrusel: { gap: CARD_GAP, paddingRight: H_PADDING },
   puntos: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingHorizontal: 4 },
   punto: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(135,131,92,0.28)' },
   puntoActivo: { backgroundColor: ViveColors.primary, width: 16 },
