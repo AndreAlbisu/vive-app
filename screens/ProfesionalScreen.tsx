@@ -37,6 +37,8 @@ const DEFAULT_PROFESIONAL = {
   video_url: null as string | null,
   avatar_url: null as string | null,
   bio: null as string | null,
+  acceptsInternational: false,
+  priceUsd: null as number | null,
 };
 
 type LiveReview = { rating: number; comment: string | null; reviewerName: string };
@@ -134,7 +136,7 @@ export default function ProfesionalScreen() {
     if (!pid) return;
     supabase
       .from('coaches')
-      .select('id, specialty, bio, price_per_session, nationality, video_url, profiles!inner(name, avatar_url)')
+      .select('id, specialty, bio, price_per_session, nationality, video_url, accepts_international, price_usd, profiles!inner(name, avatar_url)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
@@ -147,6 +149,12 @@ export default function ProfesionalScreen() {
           video_url: (data as any).video_url ?? null,
           avatar_url: (data as any).profiles.avatar_url ?? null,
           bio: (data as any).bio ?? null,
+          // Los dos juntos, misma condición que el filtro de búsqueda y que el
+          // botón de USDT en el checkout: sin precio en dólares el cobro del
+          // exterior no se puede armar, así que anunciarlo sería prometer algo
+          // que la pantalla de pago no va a ofrecer.
+          acceptsInternational: !!(data as any).accepts_international && (data as any).price_usd != null,
+          priceUsd: (data as any).price_usd ?? null,
         });
 
         supabase
@@ -263,6 +271,17 @@ export default function ProfesionalScreen() {
             <MaterialIcons name="verified" size={14} color="#565E32" />
             <Text style={s.verifiedText}>Verificado por Vita</Text>
           </View>
+
+          {/* Atiende desde el exterior. Hasta ahora este dato solo se leía en
+              `BookingScreen_Confirm` para decidir si dibujaba el botón de USDT,
+              o sea que alguien desde afuera recorría el catálogo entero sin
+              saber quién lo atiende. Es público a propósito. */}
+          {prof.acceptsInternational && (
+            <View style={s.intlBadge}>
+              <MaterialIcons name="public" size={14} color="#565E32" />
+              <Text style={s.verifiedText}>Atiende desde el exterior</Text>
+            </View>
+          )}
         </View>
 
         {/* ── Info básica ──────────────────────────────────────────────── */}
@@ -435,6 +454,16 @@ export default function ProfesionalScreen() {
             <Text style={s.price}>
               Desde ${prof.priceFrom.toLocaleString('es-AR')} por sesión
             </Text>
+            {/* Va acá y no arriba con el badge de verificado porque es
+                información de PRECIO: quien está afuera necesita el número en
+                dólares, no la etiqueta. Verlo recién en el checkout —que es lo
+                que pasaba hasta ahora— obliga a recorrer todo el flujo para
+                averiguar cuánto sale. */}
+            {prof.acceptsInternational && prof.priceUsd != null && (
+              <Text style={s.priceIntl}>
+                Desde el exterior: USD {prof.priceUsd}
+              </Text>
+            )}
           </View>
           <View style={s.footerButtons}>
             <TouchableOpacity
@@ -554,6 +583,18 @@ const s = StyleSheet.create({
   photoImage: {
     width: '100%',
     height: '100%',
+  },
+  intlBadge: {
+    position: 'absolute',
+    bottom: 54,
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: ViveColors.accent,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    gap: 5,
   },
   verifiedBadge: {
     position: 'absolute',
@@ -848,6 +889,12 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
     color: '#565E32',
+  },
+  priceIntl: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12.5,
+    color: 'rgba(135,131,92,0.95)',
+    marginTop: 2,
   },
   footerButtons: {
     gap: 10,

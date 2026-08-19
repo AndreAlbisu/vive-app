@@ -22,6 +22,13 @@ export type CachedCoach = {
   completadasCount?: number;     // coach_rebooking_stats.completadas_count
   recentBookers?: number;        // coach_trending_stats.recent_bookers (usuarios distintos, 30d)
   hasSlotThisWeek?: boolean;     // coach_availability_status.status = 'this_week' — criterio del slot de relleno
+  /** Atiende a gente de fuera de Argentina, cobrando en dólares por el riel de
+   *  USDT. Es opt-in del coach y **no cambia sus horarios** (atiende en las
+   *  mismas franjas; el que se acomoda es el usuario), cambia el cobro. */
+  acceptsInternational?: boolean;
+  /** Precio de la sesión internacional, en USD enteros. Lo fija el coach y NO
+   *  se deriva de una cotización. */
+  priceUsd?: number | null;
 };
 
 let cache: CachedCoach[] | null = null;
@@ -30,7 +37,7 @@ let inflight: Promise<void> | null = null;
 async function _doFetch(): Promise<void> {
   const { data, error } = await supabase
     .from('coaches')
-    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
+    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, accepts_international, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
     .eq('verified', true)
     .eq('availability_status', 'activo')
     // El `.limit()` estaba sin `order`: Postgres devolvía N filas ARBITRARIAS, así
@@ -59,6 +66,14 @@ async function _doFetch(): Promise<void> {
       bio:         (c.bio ?? null) as string | null,
       topics:      (c.coach_topics ?? []).map((t: any) => t.topic as string),
       verified:    !!(c.verified),
+      // ⚠️ Los dos van juntos y no por separado: `usdt-create-payment` rechaza
+      // el cobro si falta el precio en dólares, así que un coach con el flag
+      // prendido y sin precio NO puede recibir una reserva del exterior. Es la
+      // misma condición que usa `BookingScreen_Confirm` para dibujar el botón
+      // de USDT — si el filtro de búsqueda usara otra, prometería en el
+      // catálogo algo que la pantalla de pago después no ofrece.
+      acceptsInternational: !!(c.accepts_international) && c.price_usd != null,
+      priceUsd:    (c.price_usd ?? null) as number | null,
       avgRating:   null,
       reviewCount: 0,
       rebookingRate:    null,

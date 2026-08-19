@@ -45,6 +45,8 @@ type NatFilter     = 'Todas' | string;
 
 type Filters = {
   minRating:   number;
+  /** true = solo profesionales que atienden desde el exterior. */
+  international: boolean;
   sex:         SexFilter;
   maxPrice:    number;
   nationality: NatFilter;
@@ -55,6 +57,7 @@ type Filters = {
 
 const DEFAULT_FILTERS: Filters = {
   minRating:   0,
+  international: false,
   sex:         'Todos',
   maxPrice:    MAX_PRICE,
   nationality: 'Todas',
@@ -282,6 +285,7 @@ export default function SearchScreen3() {
     if (filters.sex !== 'Todos' && p.gender !== SEX_TO_GENDER[filters.sex]) return false;
     if (filters.type !== 'Todos' && inferType(p.specialty) !== filters.type) return false;
     if (filters.minRating > 0 && (avgRatingById[p.id] ?? 0) < filters.minRating) return false;
+    if (filters.international && !p.acceptsInternational) return false;
     return true;
   });
 
@@ -302,6 +306,7 @@ export default function SearchScreen3() {
     filters.maxPrice < MAX_PRICE,
     filters.nationality !== 'Todas',
     filters.type !== 'Todos',
+    filters.international,
     !topicsIgualAPuerta,
   ].filter(Boolean).length;
 
@@ -536,6 +541,35 @@ export default function SearchScreen3() {
                 max={MAX_PRICE}
                 formatLabel={v => v >= MAX_PRICE ? 'Sin límite' : `$${v.toLocaleString('es-AR')}`}
               />
+            </View>
+
+            {/* ── Desde el exterior ──
+                No cambia los horarios del profesional —atiende en sus mismas
+                franjas y el que se acomoda es quien reserva—, cambia el cobro:
+                Mercado Pago rechaza tarjetas emitidas fuera de Argentina, así
+                que estas sesiones se pagan en dólares por transferencia de
+                USDT. Sin este filtro no había forma de saber quién los toma:
+                el dato es público justamente para poder buscar por él, y hasta
+                ahora solo se leía en la pantalla de pago — o sea que se
+                descubría recién al final. */}
+            <View style={s.filterSection}>
+              <Text style={s.filterLabel}>¿Estás fuera de Argentina?</Text>
+              <View style={s.pillRow}>
+                {([false, true] as const).map(opt => (
+                  <TouchableOpacity
+                    key={String(opt)}
+                    style={[s.pill, draftFilters.international === opt && s.pillActive]}
+                    onPress={() => setDraft(d => ({ ...d, international: opt }))}
+                    activeOpacity={0.75}>
+                    <Text style={[s.pillText, draftFilters.international === opt && s.pillTextActive]}>
+                      {opt ? 'Atienden desde el exterior' : 'No filtrar'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {draftFilters.international && (
+                <Text style={s.starHint}>Se paga en dólares, con USDT</Text>
+              )}
             </View>
 
             {/* ── Nacionalidad ── */}

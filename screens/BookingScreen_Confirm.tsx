@@ -54,6 +54,7 @@ export default function BookingScreen_Confirm() {
   const [userMessage, setUserMessage] = useState('');
   const [instantBooking, setInstantBooking] = useState(false);
   const [usdtDisponible, setUsdtDisponible] = useState(false);
+  const [priceUsd, setPriceUsd] = useState<number | null>(null);
   const [metodoPago, setMetodoPago] = useState<'mp' | 'usdt'>('mp');
 
   const coachName = params.name ?? 'Laura Méndez';
@@ -79,6 +80,7 @@ export default function BookingScreen_Confirm() {
       // internacional y fijó su precio en dólares. Sin eso, `usdt-create-payment`
       // devolvería 409 y la persona vería un error después de reservar.
       setUsdtDisponible(!!data?.accepts_international && !!data?.price_usd);
+      setPriceUsd(data?.price_usd ?? null);
     })();
   }, [coachProfileIdParam]);
 
@@ -520,7 +522,19 @@ export default function BookingScreen_Confirm() {
             </View>
             <View style={s.detailText}>
               <Text style={s.detailLabel}>PRECIO</Text>
-              <Text style={s.detailValue}>${priceFrom.toLocaleString('es-AR')} por sesión</Text>
+              {/* El precio TIENE que seguir al método elegido. Antes mostraba
+                  siempre `priceFrom` formateado en pesos, así que quien elegía
+                  USDT leía "$4.500" acá y en la pantalla siguiente le aparecía
+                  un número en dólares sin ninguna relación con ese — y el monto
+                  real de USDT trae encima los centavos que identifican el pago,
+                  con lo cual ni siquiera coincide con el precio redondo. Son dos
+                  precios distintos que fija el coach por separado (`price_usd`
+                  NO se deriva de una cotización), no el mismo convertido. */}
+              <Text style={s.detailValue}>
+                {metodoPago === 'usdt' && priceUsd != null
+                  ? `USD ${priceUsd} por sesión`
+                  : `$${priceFrom.toLocaleString('es-AR')} por sesión`}
+              </Text>
             </View>
           </View>
 

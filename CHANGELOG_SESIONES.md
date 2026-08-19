@@ -5,6 +5,35 @@
 
 ---
 
+## 2026-08-19 — Andre (sesión 111)
+
+**Tocado:** `lib/coachesCache.ts`, `app/search3.tsx`, `screens/ProfesionalScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `SCHEMA.md`, `CHANGELOG_SESIONES.md` (corrección a la 101). Sin cambios de base de datos. 198 tests.
+
+**Resumen — la oferta del riel internacional existía y no se veía. Punto 2 de los cuatro.**
+
+- **`accepts_international` se leía en UN solo lugar**: `BookingScreen_Confirm`, para decidir si dibujaba el botón de USDT. No estaba en la búsqueda, ni en `coachesCache`, ni en el perfil público. El dato es **público a propósito** —la nota de la 102 decía "el usuario del exterior tiene que poder filtrar por esto como filtra por precio"— pero ese filtro nunca se había construido: alguien desde Madrid recorría el catálogo entero sin saber quién lo atiende y se enteraba recién en el checkout.
+- **Ahora se lee en tres lugares más**: el cache (y de ahí el filtro "¿Estás fuera de Argentina?" en `search3`), y el perfil público, con badge arriba y el precio en dólares en el footer al lado del de pesos.
+- ⚠️ **En todos va junto con `price_usd != null`, nunca solo.** `usdt-create-payment` rechaza el cobro sin precio en dólares, así que un coach con el flag prendido y sin precio **no puede** recibir una reserva del exterior. Es la misma condición que ya usaba el botón de USDT — si el filtro usara otra, el catálogo prometería algo que la pantalla de pago no ofrece.
+- 🔴 **El checkout mostraba el precio equivocado.** `BookingScreen_Confirm` renderizaba siempre `priceFrom` formateado `es-AR`, así que quien elegía "Crypto · USDT" leía **$4.500** y en la pantalla siguiente le aparecía un número en dólares sin relación con ese. No es una conversión mal hecha: son **dos precios distintos que el coach fija por separado** (`price_usd` no se deriva de ninguna cotización), y encima el monto real de USDT trae los centavos que identifican el pago, con lo cual ni siquiera coincide con el precio redondo. Ahora el precio sigue al método elegido.
+
+**Antes de esto, un test que salió negativo y corrige a la sesión 101.**
+
+- Andre marcó que **Mercado Pago también es internacional** —opera en 7 países— y que la evidencia de la 101 solo cubría tarjetas de otros continentes. Es cierto: sobre tarjetas de Brasil, México, Chile, Uruguay o Colombia no había ni un dato.
+- Se repitió el test de BINs contra `payment_methods/search` con la public key de la app, con BINs reales de la región. 🔴 **El resultado es que el endpoint no mide lo que se creía.** Tres cosas lo muestran: una Mastercard de **crédito argentina verificada** (554210) devuelve **vacío** —o sea que "sin resultado" no marca extranjera—, una Visa de **crédito de Estados Unidos** resuelve `visa`/`credit_card`/`active` idéntico a una argentina, y el `debvisa`/`debit_card` que la 101 tomó como la causa del rechazo aparece también en tarjetas de crédito **mexicanas**. Resuelve BIN → marca y tipo, y nada más.
+- **La corrección quedó anotada dentro de la entrada de la 101**, porque ese archivo afirmaba como probado algo que no lo está y se lee rápido. Lo que sigue en pie es el dato duro: una tarjeta de otro continente, tipeada de verdad en el checkout, fue rechazada. La causa no está probada.
+- 📝 **De paso, un error propio que vale anotar**: los dos BINs argentinos de control los puse de memoria, sin verificarlos contra fuente — exactamente lo que había advertido que no había que hacer, porque un BIN inexistente da un resultado indistinguible de uno rechazado. Uno de los dos no existía. El test recién sirvió cuando se rehizo con BINs verificados.
+- **Esto no bloqueaba el punto 2**: si las tarjetas de la región funcionaran, esos usuarios reservan por Mercado Pago como cualquiera y **ni tocan el flag** — que existe para quien no puede pagar con tarjeta. La capa de visibilidad es la misma en los dos escenarios; lo único que cambia es cuánta gente queda del lado del USDT.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Hay UN solo coach con `accepts_international = true` sobre 32 activos y verificados** — y es el de prueba, con `price_usd = 6` (el precio de test que quedó de la 103). O sea que el filtro recién construido, corrido hoy en producción, devuelve un resultado y es falso. **Es literalmente el escenario de la 101: "si de 32 activan 5, el usuario de Miami abre la app y la ve vacía".** La capa de visibilidad está lista y no hay nada que mostrar.
+- 🔴 **Por eso lo que bloquea sigue siendo el mensaje a los coaches** (redactado en la 102), no código. ¿Tomarían una sesión del exterior cobrando por VIVE? ¿Aceptarían USDT?
+- **Falta probar en dispositivo** el filtro nuevo, el badge del perfil y el precio en dólares del checkout.
+- **Un test real con tarjeta de la región** (alguien en Brasil/Chile/México/Uruguay reservando de verdad) es lo único que decide si "exterior" son uno o dos buckets. La otra vía es el equipo comercial de MP: `crm_regionales@mercadopago.com`.
+- **Punto 3: zonas horarias**, con zona y no con offset fijo. **Punto 4: higiene** — `USDT_WALLET_TRC20` sigue apuntando a la dirección personal de Andre y el precio de prueba sigue en 6 USD.
+- Sigue abierta **la hora con el contador** (VIVE principal o por cuenta y orden).
+
+---
+
 ## 2026-08-19 — Andre (sesión 110)
 
 **Tocado:** `supabase/functions/_shared/commission.ts`, `usdt-create-payment/index.ts`, `mp-create-payment/index.ts`, `admin-actions/index.ts`, `lib/admin.ts`, `lib/payout.ts`, `screens/AdminScreen.tsx`, `__tests__/commission.test.ts`, `__tests__/payout.test.ts`, `SCHEMA.md`. Nuevo: `scripts/add-coach-payouts.sql` (**corrido y verificado**). Las tres edge functions **deployadas**. 198 tests (eran 187).
@@ -243,6 +272,7 @@
 
 **Investigación: cobrar a usuarios del exterior. Conclusión: con Mercado Pago no se puede.**
 
+- ⚠️ **CORRECCIÓN (19/08/2026, sesión 111): la parte de este bullet que va después del guion no se sostiene.** Al repetir el test con más BINs apareció que `payment_methods/search` **no mide aceptación por país emisor** — resuelve BIN → marca y tipo contra la tabla de MP y nada más. Tres resultados lo dejan claro: una Mastercard de **crédito argentina verificada** (554210) devuelve **vacío**, o sea que "sin resultado" no marca extranjera; una Visa de **crédito de Estados Unidos** (414720) resuelve `visa`/`credit_card`/`active`, idéntico a una argentina; y el `debvisa`/`debit_card` aparece también en tarjetas de crédito **mexicanas**, que son de un país donde MP sí opera. O sea que "clasifica raro" no predice "la rechaza". **Lo que sigue siendo válido es el dato duro: una tarjeta de otro continente, tipeada de verdad en el checkout, fue rechazada.** Eso pasó y es el único instrumento confiable que se usó. Lo que no está probado es la causa — y sobre tarjetas de países donde MP opera (Brasil, México, Chile, Uruguay, Colombia) **no hay ni un dato real todavía**.
 - **Probado contra la API de MP, sin gastar un peso.** Se resolvieron BINs reales contra `payment_methods/search` con la public key del coach. **Dos tarjetas de dos continentes, una de ellas de crédito europea, las dos devuelven `debvisa` / `debit_card`** — una tarjeta de crédito clasificada como débito local es una clasificación errónea, y explica el rechazo al tipear el número. Los BINs argentinos de control resuelven bien (`visa`/`master`/`amex`). **Se descartó el split como causa**: se apagó `MP_SPLIT_ENABLED` en producción, se reintentó, mismo rechazo, se revirtió.
 - ⚠️ **Se descartaron dos hipótesis intermedias y vale anotarlo**: (1) que el perfil huérfano bloqueara el mail — el mecanismo es real y quedó documentado, pero no era esto; (2) que fuera débito contra crédito — cayó cuando la tarjeta de crédito europea dio el mismo resultado. Diagnosticar sin el mensaje de error a la vista costó varias vueltas.
 - **Opciones evaluadas**: PayPal (no requiere LLC, sirve como v0; riesgo de congelamiento de fondos lo descalifica como infraestructura), Stripe (mejor experiencia, **exige LLC en EEUU**: no opera con entidades argentinas), dLocal (arquitectura exacta —onboarding, split, retención, payout— pero es enterprise y su fuerte es cobrar *en* mercados emergentes, no en EEUU/Europa; sí es el especialista para **pagar** a Argentina cuando haya volumen), MoR tipo Paddle/Lemon Squeezy (**descartado**: son para SaaS, no para marketplaces de servicios humanos con pagos a terceros), y **stablecoins**, que para este perfil específico —argentinos emigrados pagando a argentinos— es la que mejor encaja: funciona igual desde Bangkok que desde Miami, comisiones cercanas a cero, y las dos puntas plausiblemente ya tienen USDT.
