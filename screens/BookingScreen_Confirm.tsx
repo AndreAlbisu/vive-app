@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,9 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
+  BackHandler,
 } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
+import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -55,6 +56,11 @@ export default function BookingScreen_Confirm() {
   const [instantBooking, setInstantBooking] = useState(false);
   const [usdtDisponible, setUsdtDisponible] = useState(false);
   const [metodoPago, setMetodoPago] = useState<'mp' | 'usdt'>('mp');
+  // Checkout de MP embebido (no WebBrowser/Safari) — ver el comentario largo
+  // más abajo, junto a onShouldStartLoadWithRequest, sobre por qué.
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const checkoutUrlRef = useRef<string | null>(null);
+  checkoutUrlRef.current = checkoutUrl;
 
   const coachName = params.name ?? 'Laura Méndez';
   const specialty = params.specialty ?? 'Coach de vida';
@@ -81,6 +87,20 @@ export default function BookingScreen_Confirm() {
       setUsdtDisponible(!!data?.accepts_international && !!data?.price_usd);
     })();
   }, [coachProfileIdParam]);
+
+  // Botón físico de "atrás" en Android mientras el checkout está abierto: lo
+  // cierra en vez de sacar a la persona de la pantalla de confirmación por
+  // completo (antes esto venía gratis con WebBrowser/Modal).
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (checkoutUrlRef.current) {
+        setCheckoutUrl(null);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, []);
 
   async function onConfirm() {
     if (!isLoggedIn || !user) { requestAuth(); return; }
@@ -370,40 +390,35 @@ export default function BookingScreen_Confirm() {
         console.warn('[BookingConfirm] mp-create-payment threw:', e);
       }
 
-      // 20/08/2026 (sesión 110→111): el cierre automático NO se logra esperando
-      // el redirect de MP — se probó (sesión 107) y salió peor: la pantalla de
-      // "pago aprobado" de MP rompe la sesión de `openAuthSessionAsync` (se nota
-      // porque el sistema termina mostrando el cartel "¿Abrir en Vita?", que es
-      // justo la señal de que NO se interceptó en silencio como debería), y de
-      // ahí Safari mostraba una checkout de MP nueva desde cero antes de volver.
-      // `CHECKOUT_RETURN_URL` quedó sin setear a propósito — MP no manda ningún
-      // redirect, así que ese cartel no tiene forma de aparecer.
-      //
-      // En vez de eso, quien cierra el browser es la APP, y lo hace mirando lo
-      // único confiable que hay: `payment_status`, escrito por `mp-webhook`
-      // (nunca el redirect). En producción NO se espera a que abra el browser —
-      // se dispara y se sigue de largo al sondeo de abajo, que llama a
-      // `dismissBrowser()` apenas ve `'aprobado'`. Si la persona lo cierra a
-      // mano antes de que el pago se confirme, no pasa nada raro: el sondeo
-      // sigue igual y `dismissBrowser()` sobre un browser ya cerrado no rompe
-      // nada (queda en el catch).
-      //
-      // En testing (Expo Go / dev build) sigue con `openAuthSessionAsync` +
-      // sesión EFÍMERA, sin tocar: sirve para cambiar de cuenta de MP entre
-      // pruebas (comprador ≠ vendedor), no para el cierre — ahí se sigue
-      // cerrando a mano, que para testing está bien.
-      if (initPoint) {
-        if (__DEV__) {
-          await WebBrowser.openAuthSessionAsync(initPoint, 'viveapp://booking/result', {
-            preferEphemeralSession: true,
-          });
-        } else {
-          WebBrowser.openBrowserAsync(initPoint).catch(() => {});
-        }
-      }
+      // 20/08/2026 (sesión 110→111→113): tres intentos de cerrar el browser del
+      // sistema solo, y los tres fallaron por el mismo motivo de fondo — no es
+      // nuestro browser el que decide cuándo cerrarse.
+      //   107: back_urls https + openAuthSessionAsync → la pantalla de "pago
+      //        aprobado" de MP rompe esa sesión (se ve el cartel "¿Abrir en
+      //        Vita?", que es justo la señal de que NO se interceptó en
+      //        silencio como debería) y Safari termina mostrando una checkout
+      //        nueva desde cero.
+      //   111: dismissBrowser() disparado por el sondeo → funciona solo SI el
+      //        browser sigue siendo nuestro. Con la app de Mercado Pago
+      //        instalada, MP le pasa el control a SU app nativa para mostrar
+      //        "pago aprobado" — un salto real entre apps que nuestro código
+      //        no puede ver ni cerrar. `dismissBrowser()` cierra una pestaña
+      //        que ya no es la que está en pantalla.
+      // La única forma de no perder el control es no usar el browser del
+      // sistema para nada: el checkout se abre EMBEBIDO (`<WebView>` más abajo
+      // en el JSX, no `expo-web-browser`), y `onShouldStartLoadWithRequest`
+      // bloquea cualquier intento de navegar a algo que no sea http(s) — ahí
+      // es donde MP intentaría saltar a su app nativa, y ahora no puede.
+      // `incognito={__DEV__}` reemplaza a la sesión efímera de antes: en
+      // testing arranca sin cookies para poder cambiar de cuenta de MP entre
+      // pruebas; en producción las guarda (aisladas de Safari, propias de la
+      // app) para que la persona no vuelva a loguearse en MP en cada reserva.
+      if (initPoint) setCheckoutUrl(initPoint);
 
       // ¿Entró el pago? En los pagos reales del 09/08 tardó ~2 s desde que MP
-      // aprueba, así que 12 s de sondeo cubren el caso normal de sobra.
+      // aprueba, así que 12 s de sondeo cubren el caso normal de sobra. Esto
+      // es lo único que decide cuándo se cierra el checkout embebido —
+      // `setCheckoutUrl(null)` más abajo — nunca un redirect ni el propio MP.
       //
       // Si se agota el tiempo NO se cancela la reserva desde acá: el pago podría
       // acreditarse un segundo después y quedaríamos con una reserva cancelada y
@@ -414,6 +429,9 @@ export default function BookingScreen_Confirm() {
       if (initPoint) {
         for (let i = 0; i < 6; i++) {
           await new Promise((r) => setTimeout(r, 2000));
+          // La persona pudo haber cerrado el checkout a mano (botón X) —
+          // no tiene sentido seguir sondeando si ya no está mirando nada.
+          if (!checkoutUrlRef.current) break;
           const { data: paymentRow } = await supabase
             .from('bookings')
             .select('payment_status')
@@ -421,14 +439,7 @@ export default function BookingScreen_Confirm() {
             .maybeSingle();
           if (paymentRow?.payment_status === 'aprobado') { paid = true; break; }
         }
-        // Solo en producción: en dev ya se cerró a mano arriba (await bloqueante).
-        if (paid && !__DEV__) {
-          try {
-            await WebBrowser.dismissBrowser();
-          } catch {
-            // Browser ya cerrado (la persona lo cerró a mano) — no hay nada que hacer.
-          }
-        }
+        setCheckoutUrl(null);
       }
 
       // Sin pago pendiente no hay nada que esperar: si el coach no tiene MP
@@ -687,6 +698,47 @@ export default function BookingScreen_Confirm() {
         </View>
       </SafeAreaView>
 
+      {/* Checkout de MP embebido — no expo-web-browser/Safari. Ver el
+          comentario largo en onConfirm (sesión 113) sobre por qué: es la
+          única forma de bloquear el salto a la app nativa de MP y quedarnos
+          con el control de cuándo se cierra. */}
+      {checkoutUrl && (
+        <View style={s.checkoutOverlay}>
+          <SafeAreaView style={s.checkoutSafe} edges={['top', 'bottom']}>
+            <View style={s.checkoutHeader}>
+              <TouchableOpacity
+                style={s.checkoutClose}
+                onPress={() => setCheckoutUrl(null)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <MaterialIcons name="close" size={22} color="#2E3624" />
+              </TouchableOpacity>
+              <Text style={s.checkoutTitle}>Mercado Pago</Text>
+              <View style={s.checkoutHeaderSpacer} />
+            </View>
+            <WebView
+              source={{ uri: checkoutUrl }}
+              // Reemplaza a la sesión efímera de antes: sin cookies en testing
+              // (para cambiar de cuenta de MP entre pruebas), persistentes
+              // pero aisladas de Safari en producción (no repetir login de MP
+              // en cada reserva).
+              incognito={__DEV__}
+              startInLoadingState
+              renderLoading={() => (
+                <View style={s.checkoutLoading}>
+                  <ActivityIndicator color={ViveColors.primary} size="large" />
+                </View>
+              )}
+              onShouldStartLoadWithRequest={(req) =>
+                // Bloquea cualquier salto a algo que no sea la web de MP —
+                // ahí es donde intentaría abrir su app nativa. `false` no
+                // cancela el pago, solo esa navegación puntual: el checkout
+                // sigue andando igual dentro de http(s).
+                req.url.startsWith('http://') || req.url.startsWith('https://')
+              }
+            />
+          </SafeAreaView>
+        </View>
+      )}
     </AppBg>
   );
 }
@@ -995,5 +1047,41 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: '#87835C',
     lineHeight: 18,
+  },
+  checkoutOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFFFFF',
+    zIndex: 10,
+  },
+  checkoutSafe: {
+    flex: 1,
+  },
+  checkoutHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDE7D8',
+  },
+  checkoutClose: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkoutTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#2E3624',
+  },
+  checkoutHeaderSpacer: {
+    width: 32,
+  },
+  checkoutLoading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

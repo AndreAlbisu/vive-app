@@ -72,6 +72,28 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 113)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — cuarto intento con el cierre del checkout de MP. Esta vez sí ataca la causa real: se sacó el browser del sistema por completo.**
+
+- Joaquín mandó capturas nuevas: después de pagar, la pantalla mostraba **"◄ Vita"** arriba — el cartelito que pone iOS cuando saltás de una app a OTRA app de verdad, no una pestaña web. Eso reveló la causa real de los tres intentos anteriores (107, 110, 111): **Mercado Pago tiene su propia app nativa instalada en el teléfono, y salta a ella** para mostrar "pago aprobado" en vez de quedarse en nuestra pestaña. Ese salto pasa completamente por fuera de lo que nuestro código puede ver o cerrar — ni `openAuthSessionAsync` ni `dismissBrowser()` pueden hacer nada contra una app DISTINTA que se puso encima.
+- Se evaluó evitar el salto pagando como invitado (sin "Ingresar con mi cuenta") — **descartado por Joaquín**: la mayoría de la gente real va a pagar logueada a su MP, así que optimizar para el camino de invitado no serviría para el caso común.
+- **Arreglo de fondo: sacar el browser del sistema (`expo-web-browser`) por completo, y embeber el checkout con `react-native-webview`** (ya estaba en el proyecto, sin usar). Con un `WebView` propio, `onShouldStartLoadWithRequest` puede **bloquear cualquier navegación que no sea http(s)** — exactamente donde MP intentaría saltar a su app nativa — sin tocar el pago en sí, que sigue funcionando adentro del mismo checkout web.
+- El sondeo de `payment_status` (sin cambios, ya funcionaba) sigue siendo quien decide cuándo cerrar: al confirmar el pago, `setCheckoutUrl(null)` desmonta el WebView — más simple y más confiable que `dismissBrowser()`, porque ahora es SIEMPRE nuestra propia vista, nunca algo que otra app se pueda robar.
+- `incognito={__DEV__}` reemplaza a `preferEphemeralSession`: sin cookies en testing (cambiar de cuenta de MP entre pruebas), persistentes pero aisladas de Safari en producción (no repetir login de MP en cada reserva) — mismo objetivo que antes, ahora contenido en nuestra propia vista.
+- Botón X + `BackHandler` (Android) para cerrar el checkout a mano si hace falta — el sondeo ya no depende de que el browser siga abierto para seguir corriendo, corta solo si detecta que se cerró.
+- `CHECKOUT_RETURN_URL` sigue sin usarse (ya no hace falta ningún redirect con este diseño). `booking-return`/`app/booking/result.tsx` (sesiones 107/109) siguen dormidos en el repo.
+- ⚠️ **Riesgo a confirmar en dispositivo**: `react-native-webview` es un módulo nativo. Si el dev build actual no lo tiene compilado (la dependencia ya estaba en `package.json` de antes, pero nunca se había usado en código), puede hacer falta una build nueva de EAS — no alcanza con recargar el JS.
+- Typecheck, lint y 187/187 tests limpios. **No probado en dispositivo desde acá** — el próximo pago real lo confirma.
+
+**Pendiente para la próxima sesión:**
+- **Confirmar en el dev build** que el checkout embebido carga bien y que el cierre automático funciona ahora sí, sin saltar a la app nativa de MP.
+- Si tira error de módulo nativo, hace falta un build nuevo de EAS (`eas build --profile development --platform ios`) antes de seguir probando.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.
