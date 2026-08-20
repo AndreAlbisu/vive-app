@@ -45,10 +45,38 @@ elegida fue redactar bien §5 y §18-19 de los T&C, no constituir sociedad.
 **Esta va primera aunque parezca la menos interesante, porque es la única que ya
 está corriendo con plata real.**
 
-Vita cobra comisiones desde el **09/08/2026** (primer pago real por Mercado
-Pago). **El sistema no emite ninguna factura** — no hay una sola referencia a
-facturación, ARCA o AFIP en todo el código. Si no se vinieron emitiendo a mano
-por fuera de la app, hay comisiones cobradas sin comprobante.
+Vita cobró con plata real desde el **09/08/2026**, y **el sistema no emite
+ninguna factura** — no hay una sola referencia a facturación, ARCA o AFIP en todo
+el código.
+
+⚠️ **Pero el volumen es mínimo y casi todo se revirtió.** Todos los movimientos
+fueron pruebas del pipeline de pagos, no ventas a clientes:
+
+| Fecha | Qué | Comisión de Vita | Estado |
+|---|---|---|---|
+| 09/08 | 4 pagos de $1 ARS | ~$0,20 c/u | uno reembolsado |
+| 19/08 | Sesión $4.500, tramo 15% | ~$675 | **cancelada y reembolsada** |
+| 19/08 | Sesión $4.500, instantánea | ~$675 | confirmada, sin reembolso |
+| 18/08 | 6,28 USDT | **ninguna** | fue a la billetera personal, sin split |
+
+O sea que lo que quedó con comisión retenida y no devuelta es **un solo
+movimiento de ~$675**. Los reembolsados normalmente revierten también la
+comisión, y el de USDT no tuvo split.
+
+🔴 **Que hayan sido pruebas no determina por sí solo si son facturables** — eso
+depende de cómo se documente el movimiento, no de la intención con que se hizo.
+Pero conviene llevar el dato exacto y no la pregunta general.
+
+**Para traer los números reales** (en vez de esta reconstrucción del changelog):
+
+```sql
+select b.id, b.scheduled_date, b.amount, b.platform_fee_pct,
+       round(b.amount * b.platform_fee_pct / 100, 2) as comision,
+       b.payment_status, b.payment_provider, b.status
+  from public.bookings b
+ where b.payment_status in ('aprobado','reembolsado')
+ order by b.created_at;
+```
 
 Preguntar:
 - ¿Con qué **frecuencia** y en qué **formato** se factura la comisión? ¿Una por
@@ -57,7 +85,8 @@ Preguntar:
   de su parte vía el split?
 - ¿Cómo se documenta una comisión **retenida por un tercero** (Mercado Pago) que
   nunca pasó por una cuenta de Vita?
-- **¿Qué se hace con las que ya se cobraron desde agosto?**
+- **¿Ese único movimiento de ~$675 hay que facturarlo?** ¿Y los reembolsados, que revirtieron la comisión?
+- Hacia adelante, cuando haya ventas de verdad: ¿desde qué momento hay que tener la emisión resuelta?
 
 ### 2.2 ¿La plata de terceros me computa para el tope?
 
