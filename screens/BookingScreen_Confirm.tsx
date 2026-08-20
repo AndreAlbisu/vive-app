@@ -18,6 +18,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { supabase, registrarEvento } from '@/lib/supabase';
+import { paypalGrossUp } from '@/lib/pricing';
 import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
 import { logError } from '@/lib/logging';
@@ -54,9 +55,9 @@ export default function BookingScreen_Confirm() {
   const [error, setError] = useState<string | null>(null);
   const [userMessage, setUserMessage] = useState('');
   const [instantBooking, setInstantBooking] = useState(false);
-  const [usdtDisponible, setUsdtDisponible] = useState(false);
+  const [internacionalDisponible, setInternacionalDisponible] = useState(false);
   const [priceUsd, setPriceUsd] = useState<number | null>(null);
-  const [metodoPago, setMetodoPago] = useState<'mp' | 'usdt'>('mp');
+  const [metodoPago, setMetodoPago] = useState<'mp' | 'usdt' | 'paypal'>('mp');
   // Checkout de MP embebido (no WebBrowser/Safari) — ver el comentario largo
   // más abajo, junto a onShouldStartLoadWithRequest, sobre por qué.
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
@@ -82,10 +83,13 @@ export default function BookingScreen_Confirm() {
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
       setInstantBooking(!!data?.instant_booking);
-      // El botón de USDT solo existe si el coach puede cobrarlo: acepta
-      // internacional y fijó su precio en dólares. Sin eso, `usdt-create-payment`
-      // devolvería 409 y la persona vería un error después de reservar.
-      setUsdtDisponible(!!data?.accepts_international && !!data?.price_usd);
+      // Los medios internacionales (USDT y PayPal) solo existen si el coach
+      // puede cobrarlos: acepta internacional y fijó su precio en dólares. Sin
+      // eso, las dos `*-create-payment` devuelven 409 y la persona vería un
+      // error después de reservar. Es la misma condición que usan el filtro de
+      // búsqueda y el perfil público — si acá fuera otra, el catálogo prometería
+      // algo que esta pantalla no ofrece.
+      setInternacionalDisponible(!!data?.accepts_international && !!data?.price_usd);
       setPriceUsd(data?.price_usd ?? null);
     })();
   }, [coachProfileIdParam]);
@@ -376,20 +380,45 @@ export default function BookingScreen_Confirm() {
         return;
       }
 
-      // Intentar iniciar el flujo de pago MP (si el coach tiene MP conectado)
+      // Intentar iniciar el flujo de pago (si el coach tiene MP conectado)
+      //
+      // PayPal entra por acá y NO por una rama propia: su `approve_url` es una
+      // URL https común, así que funciona dentro del mismo checkout embebido y
+      // hereda todo lo que costó llegar a él — el WebView en vez del browser
+      // del sistema, el bloqueo de saltos a apps nativas, los 3 minutos de
+      // margen y el no cancelar la reserva al vencer el sondeo. Duplicar esa
+      // lógica en una rama aparte sería tener dos versiones de las mismas
+      // decisiones, y una de las dos envejecería.
+      //
+      // (USDT sí sale antes, más arriba: no tiene checkout que abrir.)
       let initPoint: string | null = null;
       try {
-        const { data: mpData, error: mpError } = await supabase.functions.invoke('mp-create-payment', {
+        const fn = metodoPago === 'paypal' ? 'paypal-create-payment' : 'mp-create-payment';
+        const { data: mpData, error: mpError } = await supabase.functions.invoke(fn, {
           body: { booking_id: booking.id },
         });
         // El caso esperado hoy es 409 "coach sin MP conectado" (pagos opcionales) →
         // no es un error real, seguimos sin pago online. Pero ya no lo tragamos en
         // silencio: dejamos rastro para distinguir eso de una falla real de MP.
         // (cuando el pago sea OBLIGATORIO, esto debería frenar la reserva, no seguir.)
-        if (mpError) console.warn('[BookingConfirm] mp-create-payment sin init_point:', mpError);
-        initPoint = mpData?.init_point ?? null;
+        if (mpError) console.warn('[BookingConfirm] create-payment sin URL de checkout:', mpError);
+        // MP devuelve `init_point`; PayPal, `approve_url`. Lo único que le
+        // importa a lo que sigue es que haya una URL https que abrir.
+        initPoint = mpData?.init_point ?? mpData?.approve_url ?? null;
       } catch (e) {
-        console.warn('[BookingConfirm] mp-create-payment threw:', e);
+        console.warn('[BookingConfirm] create-payment threw:', e);
+      }
+
+      // 🔴 Con PayPal, quedarse sin URL NO es el caso benigno de Mercado Pago.
+      // Ahí `initPoint` null significa "coach sin MP conectado, no hay nada que
+      // cobrar" y la reserva sigue sin pago, por diseño. Acá significa que el
+      // cobro falló, y seguir dejaría una reserva internacional confirmada sin
+      // que entrara un dólar — el mismo bug de las 27 fantasma de agosto, por
+      // la tercera puerta.
+      if (metodoPago === 'paypal' && !initPoint) {
+        setError('No pudimos iniciar el pago con PayPal. Probá de nuevo en unos minutos');
+        setLoading(false);
+        return;
       }
 
       // 20/08/2026 (sesión 110→111→113): tres intentos de cerrar el browser del
@@ -574,7 +603,15 @@ export default function BookingScreen_Confirm() {
               <Text style={s.detailValue}>
                 {metodoPago === 'usdt' && priceUsd != null
                   ? `USD ${priceUsd} por sesión`
-                  : `$${priceFrom.toLocaleString('es-AR')} por sesión`}
+                  : metodoPago === 'paypal' && priceUsd != null
+                    // Con PayPal el número es más alto que con USDT y no es un
+                    // error: el costo de procesar el pago internacional va
+                    // sumado al precio, no descontado de la parte del coach.
+                    // Mostrar el precio "limpio" acá y cobrar otro en PayPal
+                    // sería el mismo tipo de texto falso que ya se corrigió dos
+                    // veces en esta pantalla.
+                    ? `USD ${paypalGrossUp(priceUsd).toFixed(2)} por sesión`
+                    : `$${priceFrom.toLocaleString('es-AR')} por sesión`}
               </Text>
             </View>
           </View>
@@ -660,7 +697,15 @@ export default function BookingScreen_Confirm() {
         <View style={s.paymentSection}>
           <View style={s.paymentInfoRow}>
             <MaterialIcons name="account-balance-wallet" size={18} color="#009EE3" />
-            <Text style={s.paymentInfoText}>El pago se procesa a través de Mercado Pago al confirmar</Text>
+            {/* Decía "a través de Mercado Pago" fijo, sin mirar el método. Con
+                tres rieles eso es directamente falso para dos de ellos. */}
+            <Text style={s.paymentInfoText}>
+              {metodoPago === 'usdt'
+                ? 'El pago se hace por transferencia de USDT al confirmar'
+                : metodoPago === 'paypal'
+                  ? 'El pago se procesa a través de PayPal al confirmar'
+                  : 'El pago se procesa a través de Mercado Pago al confirmar'}
+            </Text>
           </View>
         </View>
 
@@ -682,11 +727,12 @@ export default function BookingScreen_Confirm() {
 
               Está armado como lista para que sumar un tercer medio (PayPal) sea
               agregar una entrada, no reescribir la pantalla. */}
-          {usdtDisponible && (
+          {internacionalDisponible && (
             <View style={s.pagoRow}>
               {([
-                { id: 'mp' as const,   label: 'Mercado Pago', desc: 'Pesos · tarjeta o dinero en cuenta' },
-                { id: 'usdt' as const, label: 'Crypto · USDT', desc: 'Dólares · desde el exterior' },
+                { id: 'mp' as const,     label: 'Mercado Pago', desc: 'Pesos · tarjeta o dinero en cuenta' },
+                { id: 'paypal' as const, label: 'PayPal',        desc: 'Dólares · tarjeta desde el exterior' },
+                { id: 'usdt' as const,   label: 'Crypto · USDT', desc: 'Dólares · transferencia de cripto' },
               ]).map(m => (
                 <TouchableOpacity
                   key={m.id}

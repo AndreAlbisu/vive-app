@@ -5,6 +5,39 @@
 
 ---
 
+## 2026-08-20 — Andre (sesión 114)
+
+**Tocado:** `supabase/functions/usdt-check-payments/index.ts`, `supabase/config.toml`, `screens/BookingScreen_Confirm.tsx`, `SCHEMA.md`. Nuevos: `supabase/functions/_shared/pricing.ts`, `paypal-create-payment`, `paypal-webhook`, `paypal-process-refunds`, `scripts/add-paypal-refund-cron.sql` (**corrido y verificado**). Las cuatro edge functions **deployadas**. 231 tests.
+
+**Resumen — el riel de PayPal, entero. Y dos agujeros de plata encontrados probándolo.**
+
+- **Las cuatro piezas construidas y deployadas**: create-payment, webhook, procesador de reembolsos y su cron. Credenciales de sandbox verificadas contra la API antes de escribir nada (el handshake devuelve `scope`, que es la respuesta de éxito).
+- **La UI reusa el checkout embebido de Mercado Pago en vez de tener rama propia.** El `approve_url` de PayPal es https, así que entra en el mismo `<WebView>` y hereda todo lo que costó llegar ahí: el bloqueo de saltos a apps nativas, los 3 minutos de margen y el no cancelar la reserva al vencer el sondeo. Duplicar eso habría dejado dos versiones de las mismas decisiones.
+- 🔴 **Con PayPal, quedarse sin URL de checkout NO es benigno.** En Mercado Pago `initPoint` null significa "coach sin MP conectado, no hay nada que cobrar" y la reserva sigue sin pago por diseño. Con PayPal significa que el cobro falló, y seguir dejaría una reserva internacional confirmada sin que entrara un dólar — las 27 fantasma de agosto por la tercera puerta. Ahora frena con error.
+
+**🔴 El hallazgo de seguridad: la verificación de firma de PayPal aceptó un evento falsificado.**
+
+- Probando el webhook con un POST inventado, **pasó el control de firma** y llegó hasta la escritura. Con un `custom_id` real en vez de ceros, marcaba esa reserva como pagada: sesión gratis para cualquiera que supiera la URL.
+- Reproducido y con la condición aislada: **sin el header `paypal-cert-url` devuelve `FAILURE`; con un `cert_url` inventado devuelve `SUCCESS`.** Medido en sandbox; no está verificado si producción se comporta igual, y da lo mismo.
+- **El arreglo no fue ajustar la verificación, fue dejar de depender de ella.** El body pasó a ser solo un disparador: la función **lee la captura contra la API de PayPal con nuestras credenciales** y de ahí toma el estado, el monto y a qué reserva corresponde. Nadie puede fabricar una captura que exista bajo nuestra cuenta. Es el mismo camino al que terminó llegando `mp-webhook`. La firma queda como defensa en profundidad, nunca como la única.
+
+**🔴 Y el otro, encontrado por casualidad al verificar el cron de reembolsos: `usdt-check-payments` podía acreditar un pago a la reserva equivocada.**
+
+- La respuesta del cron decía `"pendientes":14` en una app que no lanzó. La consulta filtraba solo por `payment_status = 'pendiente'` y **no excluía las canceladas** — y `expire_unpaid_checkouts()` cancela dejando `payment_status` en `'pendiente'` a propósito, así que cada checkout abandonado quedaba ahí para siempre.
+- **El grave**: `fix-usdt-amount-index.sql` hizo que el índice de montos excluya las canceladas, o sea que **su monto queda libre para una reserva nueva**. Con las dos en la lista, un pago tardío del dueño de la cancelada podía acreditarse sobre la reserva de **otra persona**.
+- Más: una cancelada podía quedar `'aprobado'` (paga, sin sesión, y fuera del trigger de reembolso porque la transición a `'cancelada'` ya había ocurrido), y con el `.limit(200)` las canceladas acumuladas terminarían desplazando a las pendientes reales.
+- **Cuarta vez del patrón `status` vs `payment_status`** en este proyecto. Corregido en la consulta **y** en el update — entre una y otro la reserva puede expirar.
+- ✅ **Verificado que no hubo daño**: las 14 eran todas de las pruebas del 18/08 y la consulta de canceladas-con-pago-aprobado no devuelve filas. Nadie pagó sobre una cancelada.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Nada del riel de PayPal se probó de punta a punta.** Falta crear una orden real, pagarla con la cuenta sandbox de comprador y ver la reserva pasar a `aprobado`. Recién ahí se sabe si funciona. Todo lo verificado hasta acá es que las funciones arrancan, que las credenciales sirven y que el webhook rechaza lo que tiene que rechazar.
+- **Probar en dispositivo** el selector de tres medios y el precio que cambia según el método.
+- ⚠️ **`CHECKOUT_RETURN_URL` no está seteado** (se ve que quedó así desde la sesión 110). No rompe el cobro —la captura es server-side y el checkout embebido no depende del redirect— pero conviene decidir si se repone.
+- **Live**: las credenciales, el webhook y el `PAYPAL_MODE` de producción son otro juego. Y habría que ver si la verificación de firma se comporta distinto allá.
+- Sigue arriba de todo: **la hora con el contador**, que es lo único que decide si exportar sesiones cierra.
+
+---
+
 ## 2026-08-19 — Andre (sesión 113)
 
 **Tocado:** `screens/CoachProfileScreen.tsx`, `SCHEMA.md`. Nuevos: `lib/pricing.ts`, `__tests__/pricing.test.ts`, `scripts/add-paypal-rail.sql` (⚠️ **PENDIENTE DE CORRER**), `docs/cobro-internacional-coaches.md`. 229 tests (eran 218).
