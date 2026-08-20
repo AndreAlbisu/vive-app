@@ -974,7 +974,7 @@ export default function CoachProfileScreen() {
                 precio en pesos: el de afuera es una decisión comercial distinta,
                 y una conversión dejaría a VIVE en el medio de la discusión de
                 cotización cada vez que se mueve el dólar. */}
-            <View style={s.toggleCard}>
+            <View style={[s.toggleCard, s.stackedCard]}>
               <View style={s.toggleInfo}>
                 <Text style={s.toggleTitle}>Precio en dólares</Text>
                 <Text style={s.toggleDesc}>
@@ -1023,7 +1023,7 @@ export default function CoachProfileScreen() {
             )}
 
             <TouchableOpacity
-              style={s.toggleCard}
+              style={[s.toggleCard, s.stackedCard]}
               onPress={() => router.push('/coach-datos-cobro')}
               activeOpacity={0.85}
             >
@@ -1434,6 +1434,17 @@ const s = StyleSheet.create({
     marginHorizontal: 20,
     gap: 16,
   },
+  // `toggleCard` no trae margen propio arriba a propósito: la mayoría de los
+  // usos van pegados debajo de un `sectionTitle` (que ya trae `sectionSpaced`)
+  // y sumar otro margen ahí daría un salto de más. Pero cuando un `toggleCard`
+  // sigue a OTRA tarjeta (`commissionCard` u otro `toggleCard`) en vez de a un
+  // título, esa tarjeta anterior solo empuja espacio hacia ARRIBA de sí misma
+  // (`commissionCard.marginTop`), no hacia abajo — así que sin esto quedan
+  // pegadas. Ej.: "Sesiones desde el exterior" en `CoachProfileScreen`, donde
+  // "Precio en dólares" y "Cómo te pagamos" quedaban tocando la tarjeta de
+  // arriba. Mismo valor que `commissionCard.marginTop`, para que el espaciado
+  // sea igual venga de un lado o del otro.
+  stackedCard: { marginTop: 10 },
   toggleInfo: { flex: 1 },
   toggleTitle: {
     fontFamily: ViveFonts.semibold,

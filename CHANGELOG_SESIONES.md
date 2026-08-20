@@ -152,6 +152,234 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 110)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`, `supabase/functions/mp-create-payment/index.ts` (redeployada). Secret `CHECKOUT_RETURN_URL` — **unset**.
+
+**Resumen — el intento de cierre automático de la sesión 107 salió PEOR que el comportamiento original. Revertido.**
+
+- Joaquín probó en el dev build (con captura por AirDrop de cada paso) y la secuencia real fue: pagar → Safari muestra el cartel del sistema **"¿Abrir en Vita?"** → al tocar "Abrir", en vez de entrar a la app, Safari muestra **una checkout de MP nueva desde cero** ("¿Cómo querés pagar?") → recién ~10 segundos después de salir de ahí aparece la confirmación real (que sale del sondeo que la app ya hacía, no del redirect).
+- 🔴 **Diagnóstico: el cartel "¿Abrir en Vita?" es la prueba de que `openAuthSessionAsync` NO está funcionando.** Si interceptara el redirect como se supone, no debería aparecer ningún cartel del sistema — la sesión se cierra en silencio y listo. Que aparezca significa que la pantalla de "pago aprobado" de MP **rompe** esa sesión (probablemente abre algo en un contexto nuevo del lado de MP, fuera de nuestro control) antes de llegar al redirect.
+- **Revertido a `openBrowserAsync`** en producción (como estaba antes de la sesión 107) — sin depender de que el SDK detecte el redirect solo. El sondeo de `payment_status` que ya existía (12s, sin cambios) sigue siendo el mecanismo real que confirma el pago; cerrar el browser es cosa de la persona, como antes. `__DEV__` sigue con `openAuthSessionAsync` + sesión efímera (sirve para otra cosa: cambiar de cuenta de MP entre pruebas, no para el auto-cierre).
+- **`CHECKOUT_RETURN_URL` unset** — así `mp-create-payment` no manda `back_urls`/`auto_return` y MP no intenta redirigir a nada, que es lo que dispara el cartel confuso del sistema.
+- `booking-return` (edge function) y `app/booking/result.tsx` (sesión 107/109) **quedan en el repo, dormidos** — no rotos, solo sin usarse. Si se retoma esto, la nota en el código apunta a la vía más confiable: `Linking.addEventListener('url', …)` + `WebBrowser.dismissBrowser()` manejado a mano, no depender del auto-detect del SDK.
+- Typecheck, lint y 187/187 tests limpios. `mp-create-payment` redeployada (comentarios actualizados, sin cambio de lógica).
+
+**Pendiente para la próxima sesión:**
+- El cierre automático del browser después de pagar con MP **queda sin resolver, y no es prioritario** — el flujo funciona (el sondeo lo confirma), solo no es "mágico". Si se retoma, investigar por qué la pantalla de "pago aprobado" de MP rompe `ASWebAuthenticationSession` antes de intentar de nuevo.
+- El guardarraíl de reconexión de MP sigue siendo el único pendiente grande de plata sin probar en dispositivo.
+
+---
+
+## 2026-08-20 — Joaquín (sesión 111)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — cierre automático del browser de MP, tercer intento: en vez de esperar el redirect (que no funciona), la app lo cierra ella misma cuando confirma el pago.**
+
+- Joaquín no quería tener que cerrar la pestaña a mano (la sesión 110 había revertido a eso). En vez de insistir con el redirect de MP (roto, ver sesión 110), se cambió el mecanismo de raíz: la app **ya sondeaba `payment_status` cada 2s** para saber si el pago entró — ahora, en producción, ese mismo sondeo llama a `WebBrowser.dismissBrowser()` apenas ve `'aprobado'`. No depende de ningún redirect, cartel del sistema, ni sesión especial — solo de lo único que ya era la fuente de verdad real (`mp-webhook` escribiendo `payment_status`).
+- **Cambio de forma, no de fondo:** antes se hacía `await WebBrowser.openBrowserAsync(initPoint)` (bloqueaba hasta que la persona cerraba) y RECIÉN DESPUÉS arrancaba el sondeo. Ahora se abre sin `await` (sigue de largo) y el sondeo corre en paralelo — cuando confirma el pago, cierra el browser con `dismissBrowser()`. Si la persona lo cierra a mano antes de que se confirme, no rompe nada: `dismissBrowser()` sobre un browser ya cerrado queda contenido en un `try/catch`.
+- `__DEV__` no se tocó — sigue con `openAuthSessionAsync` + sesión efímera (sirve para cambiar de cuenta de MP entre pruebas) y cierre manual, que para testing está bien.
+- `CHECKOUT_RETURN_URL` sigue unset (sesión 110) — no hace falta para este mecanismo, no depende del redirect.
+- Typecheck, lint y 187/187 tests limpios. **No se pudo probar en dispositivo desde acá** — próximo pago real lo confirma.
+
+**Pendiente para la próxima sesión:**
+- **Confirmar en el dev build** que ahora sí se cierra solo, sin el cartel de "Abrir en Vita" ni la checkout fantasma de las sesiones 107/110.
+- El guardarraíl de reconexión de MP sigue siendo el único pendiente grande de plata sin probar en dispositivo.
+
+---
+
+## 2026-08-20 — Joaquín (sesión 112)
+
+**Tocado:** ninguno. Verificación en producción.
+
+**Resumen — el guardarraíl de reconexión de MP (sesión 88) quedó probado. Era el último pendiente grande de plata de la lista de QA.**
+
+- Coach Prueba ya tenía un booking `aprobado` activo (la instantánea de la sesión 108, sin completar todavía) — no hizo falta armar nada nuevo. Joaquín entró como Coach Prueba, tocó "Cambiar" en Mercado Pago.
+- ✅ **Resultado:** apareció el Alert exacto ("Todavía no podés cambiar de cuenta… tenés pagos cobrados o reembolsos pendientes…") y el OAuth de reconexión **no se abrió**. Funciona como se diseñó en la sesión 88.
+- Con esto se cierran los tres pendientes grandes de plata de la lista de QA original (15% en la 106, instantánea con pago en la 108, guardarraíl acá). Quedan pendientes menores: alta de coach con Google/Apple, toggle de sesiones del exterior + datos de cobro, y bloqueo de usuarios — ninguno mueve plata.
+
+---
+
+## 2026-08-20 — Joaquín (sesión 113)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — cuarto intento con el cierre del checkout de MP. Esta vez sí ataca la causa real: se sacó el browser del sistema por completo.**
+
+- Joaquín mandó capturas nuevas: después de pagar, la pantalla mostraba **"◄ Vita"** arriba — el cartelito que pone iOS cuando saltás de una app a OTRA app de verdad, no una pestaña web. Eso reveló la causa real de los tres intentos anteriores (107, 110, 111): **Mercado Pago tiene su propia app nativa instalada en el teléfono, y salta a ella** para mostrar "pago aprobado" en vez de quedarse en nuestra pestaña. Ese salto pasa completamente por fuera de lo que nuestro código puede ver o cerrar — ni `openAuthSessionAsync` ni `dismissBrowser()` pueden hacer nada contra una app DISTINTA que se puso encima.
+- Se evaluó evitar el salto pagando como invitado (sin "Ingresar con mi cuenta") — **descartado por Joaquín**: la mayoría de la gente real va a pagar logueada a su MP, así que optimizar para el camino de invitado no serviría para el caso común.
+- **Arreglo de fondo: sacar el browser del sistema (`expo-web-browser`) por completo, y embeber el checkout con `react-native-webview`** (ya estaba en el proyecto, sin usar). Con un `WebView` propio, `onShouldStartLoadWithRequest` puede **bloquear cualquier navegación que no sea http(s)** — exactamente donde MP intentaría saltar a su app nativa — sin tocar el pago en sí, que sigue funcionando adentro del mismo checkout web.
+- El sondeo de `payment_status` (sin cambios, ya funcionaba) sigue siendo quien decide cuándo cerrar: al confirmar el pago, `setCheckoutUrl(null)` desmonta el WebView — más simple y más confiable que `dismissBrowser()`, porque ahora es SIEMPRE nuestra propia vista, nunca algo que otra app se pueda robar.
+- `incognito={__DEV__}` reemplaza a `preferEphemeralSession`: sin cookies en testing (cambiar de cuenta de MP entre pruebas), persistentes pero aisladas de Safari en producción (no repetir login de MP en cada reserva) — mismo objetivo que antes, ahora contenido en nuestra propia vista.
+- Botón X + `BackHandler` (Android) para cerrar el checkout a mano si hace falta — el sondeo ya no depende de que el browser siga abierto para seguir corriendo, corta solo si detecta que se cerró.
+- `CHECKOUT_RETURN_URL` sigue sin usarse (ya no hace falta ningún redirect con este diseño). `booking-return`/`app/booking/result.tsx` (sesiones 107/109) siguen dormidos en el repo.
+- ⚠️ **Riesgo a confirmar en dispositivo**: `react-native-webview` es un módulo nativo. Si el dev build actual no lo tiene compilado (la dependencia ya estaba en `package.json` de antes, pero nunca se había usado en código), puede hacer falta una build nueva de EAS — no alcanza con recargar el JS.
+- Typecheck, lint y 187/187 tests limpios. **No probado en dispositivo desde acá** — el próximo pago real lo confirma.
+
+**Pendiente para la próxima sesión:**
+- **Confirmar en el dev build** que el checkout embebido carga bien y que el cierre automático funciona ahora sí, sin saltar a la app nativa de MP.
+- Si tira error de módulo nativo, hace falta un build nuevo de EAS (`eas build --profile development --platform ios`) antes de seguir probando.
+
+---
+
+## 2026-08-20 — Joaquín (sesión 114)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — el checkout embebido (sesión 113) funcionó, pero `incognito` escondía la opción de pagar con cuenta de MP.**
+
+- Joaquín probó en dispositivo: el WebView cargó bien (el módulo nativo ya estaba compilado, no hizo falta build nueva) y mostró el header propio ("X" + "Mercado Pago"). Pero faltaba la sección **"Con tu cuenta de Mercado Pago → Ingresar con mi cuenta"** — solo aparecían Tarjeta y Efectivo.
+- 🔴 **Causa: `incognito={__DEV__}`.** Sin cookies, MP no reconoce ninguna sesión logueada y no ofrece la opción de cuenta — justo el caso que Joaquín había marcado como el que importa de verdad: alguien sin tarjeta que necesita pagar con el dinero de su cuenta de MP.
+- **Sacado `incognito` en los dos ambientes.** Las cookies quedan persistentes pero aisladas de Safari (el `WebView` tiene su propio storage, separado del navegador del sistema) — mismo objetivo que se buscaba con la sesión efímera antigua (no repetir login de MP en cada reserva), sin el efecto secundario de esconder la opción de cuenta.
+- Typecheck, lint y 187/187 tests limpios. **Falta la confirmación final en dispositivo**: que con esto puesto vuelva a aparecer "Ingresar con mi cuenta" Y que el cierre automático siga funcionando.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build: aparece "Ingresar con mi cuenta", el pago con cuenta se completa normal, y el checkout se cierra solo al confirmarse — las tres cosas juntas, no probadas todavía con este último cambio.
+
+---
+
+## 2026-08-20 — Joaquín (sesión 115)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — bug real encontrado probando: el checkout embebido se cerraba solo a los 12s pasara lo que pasara, aunque la persona siguiera pagando.**
+
+- Joaquín reportó: "si estás mucho tiempo en la pantalla sin hacer nada se reserva la sesión igual aunque no se haya concretado el pago". Causa: el sondeo (12s fijos, heredado de cuando el browser era del sistema) llamaba `setCheckoutUrl(null)` **sin importar si `paid` era `true`** — con el browser del sistema esto no se notaba (la pestaña seguía tapando todo mientras la app navegaba atrás en silencio), pero con el checkout embebido cerrarlo a los 12s es cerrarlo en la cara de alguien que todavía está tipeando la tarjeta o esperando un 2FA, y mandarlo a la pantalla siguiente como si ya hubiera pagado.
+- **Arreglado:** el límite pasó de 12s (6 intentos) a 3 minutos (90 intentos) — lo único que corta antes ahora es pagar de verdad o cerrar el checkout a mano (botón X / back de Android, ya contemplado por `checkoutUrlRef`). El límite de 3 min sigue siendo un margen razonable de abandono real, no un tiempo de espera del pago (el webhook tarda ~2s una vez que la persona termina).
+- También reportado: la carga del checkout embebido se siente más lenta que el browser del sistema — anotado, no investigado todavía (puede ser propio de WebView vs. SFSafariViewController para una página pesada como la de MP).
+- Typecheck, lint y 187/187 tests limpios. **Falta confirmar en dispositivo** — junto con si "Ingresar con mi cuenta" ya aparece (sesión 114, sin confirmar todavía si mejoró).
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build las tres cosas juntas: aparece "Ingresar con mi cuenta", el checkout ya no se cierra antes de tiempo, y sigue cerrándose solo al pagar de verdad.
+- Investigar el tiempo de carga del checkout embebido si sigue sintiéndose lento.
+
+---
+
+## 2026-08-20 — Joaquín (sesión 116)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — sacar `incognito` (sesión 114) no alcanzó: "Ingresar con mi cuenta" seguía sin aparecer. La causa real era otra.**
+
+- El `WebView` tiene su **propio almacén de cookies**, completamente separado del de Safari — sacar `incognito` lo vuelve persistente, pero seguía sin haber visto NUNCA la sesión de MP de Joaquín, porque esa sesión vive en las cookies de Safari, no en las del WebView. Antes de la sesión 113 (browser del sistema) esto no era un problema: el browser del sistema comparte contexto con Safari por diseño.
+- **Arreglado con `sharedCookiesEnabled` (solo iOS)** — hace que el `WebView` use el mismo `NSHTTPCookieStorage` que Safari, así que ve la sesión de MP que ya existe. No interfiere con `onShouldStartLoadWithRequest` (el bloqueo del salto a la app nativa, sesión 113): son mecanismos independientes, cookies vs. navegación.
+- ⚠️ **Solo iOS.** Android no tiene este pendiente probado — su manejo de cookies de WebView es distinto (`CookieManager`, generalmente ya compartido con el sistema por default), pero no se verificó nada ahí porque no hay dispositivo Android de prueba.
+- Typecheck, lint y 187/187 tests limpios. **Falta confirmar en dispositivo** — cuarta vuelta sobre el mismo problema, la esperanza es que esta sea la que cierra las tres cosas juntas: cuenta visible, sin cierre prematuro (sesión 115), y cierre automático al pagar.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build las tres cosas juntas.
+- Si "Ingresar con mi cuenta" sigue sin aparecer después de esto, quedaría descartado el lado de cookies — habría que investigar si MP usa alguna otra señal (User-Agent, fingerprint del dispositivo) para decidir si ofrece la opción de cuenta.
+
+## 2026-08-20 — Joaquín (sesión 117) — cierre de la saga del checkout de MP
+
+**Tocado:** ninguno. Diagnóstico final, sin más cambios de código.
+
+**Resumen — probado en dispositivo: el cierre a tiempo y el bloqueo del salto a la app nativa quedaron resueltos. "Ingresar con mi cuenta" queda como limitación conocida, no como bug.**
+
+- Joaquín confirmó: sin cierre prematuro (sesión 115) ✅, sin secuestro a la app nativa de MP (sesión 113) ✅. Solo sigue faltando "Ingresar con mi cuenta" pese a `sharedCookiesEnabled` (sesión 116).
+- 🔴 **Causa real, y no tiene arreglo de código: en iOS ninguna app puede leer las cookies de navegación reales de Safari — restricción de seguridad de Apple.** Solo los componentes del propio sistema (`SFSafariViewController`/`ASWebAuthenticationSession`, lo que usábamos hasta la sesión 112) tienen ese acceso, porque son parte de Safari por dentro. Un `WebView` normal —lo que se necesita para bloquear el salto a la app nativa y controlar el cierre— nunca va a poder ver esa sesión, comparta cookies "propias" o no. `sharedCookiesEnabled` sincroniza cookies DENTRO del sandbox de la app, no las de Safari.
+- **Es una tensión real entre dos propiedades que no se pueden tener juntas con las herramientas disponibles**: navegador del sistema (ve la sesión de MP, pero MP puede secuestrar el control hacia su app nativa) vs. WebView propio (control total, pero arranca sin sesión). Se priorizó el control — cerrar en el momento correcto y no perder al usuario en la app de otro es más grave que no ofrecer el atajo de cuenta.
+- **No es permanente para siempre — es un costo de la primera vez.** El `WebView` SÍ guarda sus propias cookies entre usos (no es incógnito): si la persona llega a loguearse a MP alguna vez dentro de este checkout, esa sesión queda y "Ingresar con mi cuenta" debería aparecer en pagos siguientes. Sin confirmar si existe ese camino de login dentro del flujo actual (Tarjeta/Efectivo son las únicas opciones visibles hoy sin sesión).
+- **Decisión: se deja pendiente, no se sigue iterando con plata real.** Fueron ~7 pagos reales de $4.500 solo en esta saga (sesiones 107 a 117). Lo que importaba de verdad —que el pago se confirme bien y la app no se quede pegada en otra app— está resuelto.
+
+**Pendiente para la próxima sesión:**
+- Si en algún momento importa recuperar "Ingresar con mi cuenta" desde el primer pago: investigar (sin gastar plata real, contra la documentación de MP) si el checkout ofrece algún link de login alternativo dentro del flujo de Tarjeta, o si hay que resignarse a que sea un costo de la primera vez.
+
+---
+
+## 2026-08-20 — Joaquín (sesión 118)
+
+**Tocado:** ninguno. Verificación en producción.
+
+**Resumen — alta de coach con Google (sesión 102), probada en dispositivo. 2 de 3 caminos confirmados con cuentas reales, el tercero queda cubierto por lógica pero no ejercitado con una cuenta 100% virgen.**
+
+- **Cancelar el login de Google a mitad de camino** ✅ — no muestra error, la pantalla queda como si nada.
+- **Cuenta que ya es usuario final** ✅ — probado dos veces sin querer (una con la cuenta de Coach Prueba, que llevó al panel de coach correctamente; otra con una cuenta de usuario final real) y una vez a propósito: rebota con "Esta cuenta ya está registrada como usuario. Para postularte como profesional necesitás usar un mail distinto", como se diseñó.
+  - 📝 **Casi se reporta como bug y no lo era.** Joaquín probó con lo que creía una cuenta 100% nueva (`joaquinalbisu494@gmail.com`) y rebotó igual — se verificó contra `profiles` antes de tocar código: esa cuenta existe desde el **01/07/2026** como usuario final (es la misma cuenta "Joaquin" que ya había pagado la primera sesión de $1 con Coach Prueba en sesiones anteriores). El rebote era correcto — de paso confirma que la regla funciona con cuentas viejas, no solo con las recién creadas en el momento.
+- **Alta 100% nueva** — sin ejercitar con una cuenta que nunca haya tocado Vita. Decisión: no vale la pena conseguir una cuarta cuenta de Google solo para esto — es el camino de menor riesgo de los tres (si falla, se nota altiro: nadie se puede registrar, error visible, no es un fallo silencioso como los otros dos que sí se confirmaron).
+
+**Pendiente para la próxima sesión:**
+- Si alguna vez se consigue una cuenta de Google genuinamente nueva, confirmar el alta feliz. No es urgente.
+
+---
+
+## 2026-08-20 — Joaquín (sesión 119)
+
+**Tocado:** ninguno. Verificación en producción.
+
+**Resumen — bloqueo de usuarios probado en dispositivo, funciona de punta a punta.**
+
+- Joaquín bloqueó a Coach Prueba desde su perfil (la opción de bloquear/reportar apareció bien). Confirmado: **desaparece de Conexiones** y **el chat se congela** (no se puede escribir).
+- Desbloqueado desde "Cuentas bloqueadas" en el perfil: **reaparece en Conexiones** y **se puede volver a escribir**. Los cuatro efectos esperados (sesión 93, cuando se construyó) quedan confirmados con uso real.
+
+**Pendiente para la próxima sesión:**
+- Ninguno nuevo de este ítem — queda cerrado.
+- De la lista de QA sigue abierto: el toggle "acepta sesiones del exterior" + pantalla de datos de cobro del coach, sin probar en dispositivo.
+
+---
+
+## 2026-08-20 — Joaquín (sesión 120)
+
+**Tocado:** ninguno. Verificación en producción.
+
+**Resumen — toggle de sesiones del exterior + pantalla de datos de cobro, probados en dispositivo. Cierra el último pendiente de la lista de QA de la sesión 102.**
+
+- Toggle "Sesiones desde el exterior" y campo "Precio en dólares" en `CoachProfileScreen` — funcionan, guardan solo.
+- `CoachPayoutScreen` ("Cómo te pagamos"): las dos opciones (Transferencia/USDT), el selector de red (TRC20/ERC20/Polygon) y el campo de dirección se ven y funcionan como se diseñaron.
+- ✅ **Validación cruzada red↔dirección confirmada**: puesta una dirección de Tron (`TQ4T99n1...`) y cambiada la red a ERC20, avisó que no correspondían. Vuelta a TRC20 y "Guardar" funcionó normal.
+
+**Con esto se cierra toda la lista de pendientes de QA acumulada en las sesiones 88-102** (tramo 15%, reserva instantánea con pago, guardarraíl de reconexión de MP, checkout de MP completo, alta de coach con Google, bloqueo de usuarios, y esto). Lo único que queda abierto es el gate legal de la devolución con IA (pendiente de confirmar con Andre) y los ítems menores ya anotados (rotar `USDT_WALLET_TRC20`, precio de prueba del coach, mensaje a los 32 coaches, etc.).
+
+---
+
+## 2026-08-20 — Joaquín (sesión 121)
+
+**Tocado:** `screens/CoachProfileScreen.tsx`.
+
+**Resumen — las tarjetas de "Sesiones desde el exterior" quedaban pegadas entre sí, sin el espaciado que sí tienen las de "Mercado Pago".**
+
+- Joaquín mandó captura: en "Mercado Pago" las dos tarjetas ("Cuenta conectada" y la de comisión 20/15%) tienen aire entre sí; en "Sesiones desde el exterior", las cuatro tarjetas seguidas ("Activadas", el aviso de que no cobra por MP, "Precio en dólares" y "Cómo te pagamos") se veían todas pegadas, como un solo bloque.
+- 🔴 **Causa: `toggleCard` no trae margen propio arriba, a propósito** — la mayoría de sus usos van pegados debajo de un título de sección (que ya trae su propio espaciado) y sumarle margen ahí daría un salto de más. El problema es cuando un `toggleCard` sigue a OTRA tarjeta en vez de a un título: esa tarjeta anterior (`commissionCard`) solo empuja espacio hacia **arriba** de sí misma, nunca hacia abajo, así que la siguiente queda pegada.
+- **Arreglado con un estilo nuevo (`stackedCard`, `marginTop: 10`)** aplicado solo a los dos `toggleCard` que efectivamente siguen a otra tarjeta ("Precio en dólares" y "Cómo te pagamos") — mismo valor que ya usa `commissionCard.marginTop`, para que el espaciado sea igual venga de un lado o del otro. No se tocó el estilo base de `toggleCard`, así que el resto de sus usos (Modalidad de reserva, Disponibilidad, Cuenta conectada) siguen exactamente igual.
+- Typecheck, lint y 187/187 tests limpios. **No confirmado visualmente en dispositivo desde acá** — próxima apertura de esa pantalla lo confirma.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build que el espaciado quedó parejo.
+
+---
+
+## 2026-08-20 — Joaquín (sesión 122)
+
+**Tocado:** `app/_layout.tsx`.
+
+**Resumen — `coach-datos-cobro` mostraba el header nativo por default de Expo Router, duplicado arriba del header propio de la pantalla.**
+
+- A `coach-datos-cobro` le faltaba la entrada `<Stack.Screen options={{ headerShown: false }} />` que tienen todas las demás pantallas con diseño propio (`coach-availability`, `coach-visibilidad`, etc.) — sin ella, Expo Router agrega su barra negra por default (con el nombre del archivo como título) arriba del header cream que ya construye `CoachPayoutScreen`. Agregada, mismo patrón que el resto.
+- Typecheck, lint y 187/187 tests limpios. No confirmado visualmente en dispositivo desde acá.
+
+**Pendiente para la próxima sesión:**
+- Confirmar que desapareció la barra negra duplicada.
+
+---
+
+## 2026-08-20 — Joaquín (sesión 123)
+
+**Tocado:** `components/ui/IslandTabBar.tsx`.
+
+**Resumen — se sacaron las palabras de la isla flotante de abajo. El lag al cambiar de tab era estructural, no de timing.**
+
+- Joaquín: al tocar otro ícono, tardaba en deslizarse porque la pastilla tenía que agrandarse para hacerle lugar al nombre de la pantalla. Preguntó si convenía optimizar o directamente sacar las palabras (el nombre ya aparece arriba del todo en cada pantalla).
+- 🔴 **No era un problema de timing, sino del driver de animación.** `paddingHorizontal`/`maxWidth` no se pueden animar por el driver nativo de React Native (tiran "not supported by native animated module"), así que el cambio de ancho de la pastilla dependía de `LayoutAnimation` (JS thread) — el propio archivo ya documentaba **dos rondas previas** de ajuste de timing (180ms en vez de 300ms, crossfade del ícono movido al driver nativo) que mejoraron pero nunca eliminaron el lag, porque la causa de fondo seguía ahí.
+- **Se sacó el label visible.** Con todos los tabs del mismo ancho fijo (`paddingVertical: 12, paddingHorizontal: 15`, sin diferencia entre activo/inactivo) no hay ningún layout que animar — se eliminó `LayoutAnimation`, `useLayoutEffect` y la dependencia de `useReducedMotion` del componente entero, no solo se ajustó. El nombre de cada tab queda solo como `accessibilityLabel` (para lectores de pantalla), y el estado activo se sigue viendo con el fondo verde + crossfade del ícono, que ya vivía 100% en el driver nativo y seguía el dedo sin jank.
+- **La altura de la pastilla no cambió** — el `minHeight: 44` del área táctil (`tabHit`) ya dominaba por sobre el padding del contenido, con o sin label (19px de ícono + 24px de padding nuevo = 43px, sigue por debajo de 44). No hizo falta tocar el `56` hardcodeado que usa `SofiaAssistant.tsx` para calcular su propio clearance sobre la isla.
+- Typecheck, lint y 187/187 tests limpios. No confirmado visualmente en dispositivo desde acá.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build que el cambio de tab se siente instantáneo ahora, y que el ícono solo (sin nombre) se entiende bien sin confundir.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.
