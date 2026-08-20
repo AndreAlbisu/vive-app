@@ -190,6 +190,20 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 120)
+
+**Tocado:** ninguno. Verificación en producción.
+
+**Resumen — toggle de sesiones del exterior + pantalla de datos de cobro, probados en dispositivo. Cierra el último pendiente de la lista de QA de la sesión 102.**
+
+- Toggle "Sesiones desde el exterior" y campo "Precio en dólares" en `CoachProfileScreen` — funcionan, guardan solo.
+- `CoachPayoutScreen` ("Cómo te pagamos"): las dos opciones (Transferencia/USDT), el selector de red (TRC20/ERC20/Polygon) y el campo de dirección se ven y funcionan como se diseñaron.
+- ✅ **Validación cruzada red↔dirección confirmada**: puesta una dirección de Tron (`TQ4T99n1...`) y cambiada la red a ERC20, avisó que no correspondían. Vuelta a TRC20 y "Guardar" funcionó normal.
+
+**Con esto se cierra toda la lista de pendientes de QA acumulada en las sesiones 88-102** (tramo 15%, reserva instantánea con pago, guardarraíl de reconexión de MP, checkout de MP completo, alta de coach con Google, bloqueo de usuarios, y esto). Lo único que queda abierto es el gate legal de la devolución con IA (pendiente de confirmar con Andre) y los ítems menores ya anotados (rotar `USDT_WALLET_TRC20`, precio de prueba del coach, mensaje a los 32 coaches, etc.).
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.
