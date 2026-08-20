@@ -234,6 +234,23 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 123)
+
+**Tocado:** `components/ui/IslandTabBar.tsx`.
+
+**Resumen — se sacaron las palabras de la isla flotante de abajo. El lag al cambiar de tab era estructural, no de timing.**
+
+- Joaquín: al tocar otro ícono, tardaba en deslizarse porque la pastilla tenía que agrandarse para hacerle lugar al nombre de la pantalla. Preguntó si convenía optimizar o directamente sacar las palabras (el nombre ya aparece arriba del todo en cada pantalla).
+- 🔴 **No era un problema de timing, sino del driver de animación.** `paddingHorizontal`/`maxWidth` no se pueden animar por el driver nativo de React Native (tiran "not supported by native animated module"), así que el cambio de ancho de la pastilla dependía de `LayoutAnimation` (JS thread) — el propio archivo ya documentaba **dos rondas previas** de ajuste de timing (180ms en vez de 300ms, crossfade del ícono movido al driver nativo) que mejoraron pero nunca eliminaron el lag, porque la causa de fondo seguía ahí.
+- **Se sacó el label visible.** Con todos los tabs del mismo ancho fijo (`paddingVertical: 12, paddingHorizontal: 15`, sin diferencia entre activo/inactivo) no hay ningún layout que animar — se eliminó `LayoutAnimation`, `useLayoutEffect` y la dependencia de `useReducedMotion` del componente entero, no solo se ajustó. El nombre de cada tab queda solo como `accessibilityLabel` (para lectores de pantalla), y el estado activo se sigue viendo con el fondo verde + crossfade del ícono, que ya vivía 100% en el driver nativo y seguía el dedo sin jank.
+- **La altura de la pastilla no cambió** — el `minHeight: 44` del área táctil (`tabHit`) ya dominaba por sobre el padding del contenido, con o sin label (19px de ícono + 24px de padding nuevo = 43px, sigue por debajo de 44). No hizo falta tocar el `56` hardcodeado que usa `SofiaAssistant.tsx` para calcular su propio clearance sobre la isla.
+- Typecheck, lint y 187/187 tests limpios. No confirmado visualmente en dispositivo desde acá.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build que el cambio de tab se siente instantáneo ahora, y que el ícono solo (sin nombre) se entiende bien sin confundir.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.

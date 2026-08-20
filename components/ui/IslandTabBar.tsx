@@ -1,12 +1,11 @@
-import React, { useLayoutEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, LayoutAnimation, Platform } from 'react-native';
+import React from 'react';
+import { View, Pressable, StyleSheet, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 
-import { ViveFonts, ViveColors } from '@/constants/theme';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { ViveColors } from '@/constants/theme';
 
 const CREAM       = 'rgba(242,236,223,0.95)';
 const CREAM_LIGHT = '#F3EEDF';
@@ -23,13 +22,17 @@ export type IslandTab = {
   dot?: boolean;
 };
 
-// `position` viene de react-native-tab-view enganchado al driver nativo del
-// pager — solo se le puede animar opacity/transform desde ahí (paddingHorizontal
-// / maxWidth / marginLeft tiran "not supported by native animated module").
-// Por eso el fondo verde + crossfade del ícono siguen el dedo en vivo (nativo,
-// sin jank), y el ancho de la pastilla + el label aparecen con un snap corto
-// al asentarse — igual resuelve el lag que se sentía antes, sin pelear contra
-// esa limitación.
+// 20/08/2026: se sacó el label visible (quedó solo como accessibilityLabel).
+// Antes cada tab cambiaba de ancho al enfocarse para hacerle lugar al texto —
+// `paddingHorizontal`/`maxWidth` no se pueden animar por el driver nativo
+// (tiran "not supported by native animated module"), así que ese cambio de
+// ancho dependía de `LayoutAnimation` (JS thread) y siempre se sentía un paso
+// atrás del dedo, por más que se ajustara el timing — dos rondas de intentos
+// documentadas en el historial de este archivo, ninguna lo resolvió del todo.
+// Con todos los tabs del mismo ancho fijo no hay ningún layout que animar: el
+// nombre de la pantalla ya se ve arriba del todo en cada una, así que no hacía
+// falta repetirlo acá abajo. Todo lo que queda animado (el fondo verde +
+// crossfade del ícono) sigue el dedo en vivo por el driver nativo, sin jank.
 function IslandTabItem({
   tab,
   index,
@@ -57,7 +60,7 @@ function IslandTabItem({
       accessibilityLabel={tab.label}
       accessibilityState={isFocused ? { selected: true } : {}}
       style={styles.tabHit}>
-      <View style={[styles.tab, isFocused && styles.tabActive]}>
+      <View style={styles.tab}>
         <Animated.View pointerEvents="none" style={[styles.bubble, { opacity: focus }]} />
         <View style={styles.iconSlot}>
           <Feather name={tab.icon} size={19} color={FOREST_SOFT} />
@@ -74,43 +77,19 @@ function IslandTabItem({
             />
           )}
         </View>
-        {/* El label se funde con `focus`, que viene del pager por driver nativo:
-            aparece siguiendo el movimiento en vez de aparecer de golpe cuando la
-            ruta cambia. El ANCHO de la pastilla sigue dependiendo del montaje +
-            LayoutAnimation, que es la parte que todavía se siente escalonada
-            (ver nota de arriba sobre la limitación del driver nativo). */}
-        {isFocused && (
-          <Animated.View style={{ opacity: focus }}>
-            <Text style={styles.label}>{tab.label}</Text>
-          </Animated.View>
-        )}
       </View>
     </Pressable>
   );
 }
 
 // Tab bar compartida entre la app de usuario y la de coach (nav-isla-compacta,
-// versión C): pill de ancho ajustado al contenido, solo el tab activo se
-// expande con label. Vive sobre material-top-tabs (reemplazó a bottom-tabs
-// para poder swipear) — cada layout pasa su propio orden/íconos/lógica de
-// punto vía `tabs`.
+// versión C): pill de ancho fijo, solo íconos (sin label visible desde el
+// 20/08/2026). Vive sobre material-top-tabs (reemplazó a bottom-tabs para
+// poder swipear) — cada layout pasa su propio orden/íconos/lógica de punto
+// vía `tabs`.
 export function IslandTabBar({ state, navigation, position, tabs }: MaterialTopTabBarProps & { tabs: IslandTab[] }) {
   const insets = useSafeAreaInsets();
-  const reducedMotion = useReducedMotion();
   const activeRouteName = state.routes[state.index].name;
-  const mounted = useRef(false);
-
-  // Snap del ancho/label — anima el cambio de pastilla sea cual sea la causa
-  // (tap en la isla o swipe entre páginas). 180ms en vez del preset default
-  // (300ms, se sentía lento) — misma curva easeInEaseOut, solo más corto.
-  useLayoutEffect(() => {
-    if (!mounted.current) { mounted.current = true; return; }
-    if (!reducedMotion) {
-      LayoutAnimation.configureNext(
-        LayoutAnimation.create(180, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity)
-      );
-    }
-  }, [activeRouteName, reducedMotion]);
 
   function onPress(tab: IslandTab, isFocused: boolean) {
     const route = state.routes.find(r => r.name === tab.name);
@@ -187,16 +166,13 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   tab: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
-    paddingVertical: 9,
-    paddingHorizontal: 13,
+    // Mismo padding siempre, foco o no — es justo lo que evita tener que
+    // animar ningún ancho al cambiar de tab (ver nota arriba del componente).
+    paddingVertical: 12,
+    paddingHorizontal: 15,
     borderRadius: 22,
-  },
-  tabActive: {
-    paddingHorizontal: 16,
   },
   bubble: {
     ...StyleSheet.absoluteFillObject,
@@ -206,11 +182,6 @@ const styles = StyleSheet.create({
   iconSlot: {
     width: 19,
     height: 19,
-  },
-  label: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 11.5,
-    color: CREAM_LIGHT,
   },
   dot: {
     position: 'absolute',
