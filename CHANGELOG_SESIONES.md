@@ -60,6 +60,18 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 112)
+
+**Tocado:** ninguno. Verificación en producción.
+
+**Resumen — el guardarraíl de reconexión de MP (sesión 88) quedó probado. Era el último pendiente grande de plata de la lista de QA.**
+
+- Coach Prueba ya tenía un booking `aprobado` activo (la instantánea de la sesión 108, sin completar todavía) — no hizo falta armar nada nuevo. Joaquín entró como Coach Prueba, tocó "Cambiar" en Mercado Pago.
+- ✅ **Resultado:** apareció el Alert exacto ("Todavía no podés cambiar de cuenta… tenés pagos cobrados o reembolsos pendientes…") y el OAuth de reconexión **no se abrió**. Funciona como se diseñó en la sesión 88.
+- Con esto se cierran los tres pendientes grandes de plata de la lista de QA original (15% en la 106, instantánea con pago en la 108, guardarraíl acá). Quedan pendientes menores: alta de coach con Google/Apple, toggle de sesiones del exterior + datos de cobro, y bloqueo de usuarios — ninguno mueve plata.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.
