@@ -20,6 +20,31 @@
 // mismo: si el cliente y la base calculan distinto, la app promete una cosa y la
 // base hace otra.
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ⚠️ SUPUESTO CON FECHA DE VENCIMIENTO: el profesional está en Argentina.
+//
+// Toda la conversión de este archivo asume que la hora guardada es hora de
+// Argentina **porque el profesional atiende desde Argentina**. Hoy es cierto y
+// por eso alcanza con una zona fija.
+//
+// El día que haya un profesional que no esté acá, esto es lo PRIMERO que hay
+// que cambiar, y es lo único del sistema que toca el significado de datos ya
+// guardados — el resto de lo que asume "coach argentino" (CBU de 22 dígitos,
+// precio en pesos, OAuth de Mercado Pago) es aditivo y no obliga a rehacer nada.
+//
+// Lo que haría falta: una zona por profesional (`coaches.timezone`), pasarla por
+// cada lugar que hoy convierte, y decidir qué significan las filas viejas — que
+// quedan ambiguas si nadie lo define antes.
+//
+// 📝 NO se agregó un parámetro de zona "por las dudas": lo caro no es la firma
+// de la función sino tener la zona disponible en cada punto de uso, así que un
+// default sería código muerto sin tests. Cuando haga falta, se hace entero.
+//
+// ⚠️ Ojo con el vocabulario, porque hoy "internacional" nombra DOS cosas
+// independientes: que el CLIENTE esté afuera (los rieles de pago, el flag
+// `accepts_international` — todo lo que existe hoy) y que el PROFESIONAL esté
+// afuera (esto). La primera no implica la segunda.
+
 /** La zona, por nombre IANA y no por offset fijo.
  *
  *  Argentina no tiene horario de verano desde 2009, así que hoy `-03:00` da el

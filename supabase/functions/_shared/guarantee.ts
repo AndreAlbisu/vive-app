@@ -10,6 +10,31 @@
 /** §9.3: "dentro de las 48 horas posteriores al horario en que la Sesión estaba agendada". */
 export const WINDOW_HOURS = 48;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ⚠️ SUPUESTO CON FECHA DE VENCIMIENTO: el profesional está en Argentina.
+//
+// Toda la conversión de este archivo asume que la hora guardada es hora de
+// Argentina **porque el profesional atiende desde Argentina**. Hoy es cierto y
+// por eso alcanza con una zona fija.
+//
+// El día que haya un profesional que no esté acá, esto es lo PRIMERO que hay
+// que cambiar, y es lo único del sistema que toca el significado de datos ya
+// guardados — el resto de lo que asume "coach argentino" (CBU de 22 dígitos,
+// precio en pesos, OAuth de Mercado Pago) es aditivo y no obliga a rehacer nada.
+//
+// Lo que haría falta: una zona por profesional (`coaches.timezone`), pasarla por
+// cada lugar que hoy convierte, y decidir qué significan las filas viejas — que
+// quedan ambiguas si nadie lo define antes.
+//
+// 📝 NO se agregó un parámetro de zona "por las dudas": lo caro no es la firma
+// de la función sino tener la zona disponible en cada punto de uso, así que un
+// default sería código muerto sin tests. Cuando haga falta, se hace entero.
+//
+// ⚠️ Ojo con el vocabulario, porque hoy "internacional" nombra DOS cosas
+// independientes: que el CLIENTE esté afuera (los rieles de pago, el flag
+// `accepts_international` — todo lo que existe hoy) y que el PROFESIONAL esté
+// afuera (esto). La primera no implica la segunda.
+
 /** Las fechas de `bookings` son hora local de Argentina, sin timezone guardada. */
 export const AR_TZ = 'America/Argentina/Buenos_Aires';
 

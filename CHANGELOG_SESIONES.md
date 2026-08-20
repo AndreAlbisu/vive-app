@@ -5,6 +5,39 @@
 
 ---
 
+## 2026-08-20 — Andre (sesión 115)
+
+**Tocado:** `lib/time.ts`, `supabase/functions/_shared/guarantee.ts`, `SCHEMA.md`. Sin cambios de base de datos ni de comportamiento — documentación de decisiones. 231 tests.
+
+**Resumen — sesión de decisiones sobre el riel internacional. Se cerró la plataforma, se abrió el modelo de costos, y quedó un supuesto escrito antes de que venza.**
+
+- 🔴 **Se agotaron las salidas técnicas al problema del tope del Monotributo.** El chat de soporte de PayPal confirmó que **no hay pagos repartidos** ("el pago solo llega a una cuenta"), USDT tampoco los tiene, y Stripe Connect no paga a Argentina. La plata del exterior **pasa sí o sí por la cuenta de VIVE**, con lo cual la consulta al contador dejó de ser una tarea más y pasó a ser la única que decide si exportar sesiones cierra.
+  - ⚠️ La respuesta es de soporte de primera línea y **Multiparty existe** como producto de PayPal, así que "no está habilitado" como afirmación general no es exacto — puede ser específico de Argentina. Coincide con el resto de la evidencia igual: la página de plataformas y marketplaces **da 404 para `/ar/`** y la de negocios argentina no ofrece nada de reparto.
+- 📝 **Corrección de peso propio: los T&C son un BORRADOR sin revisión legal**, y yo los venía tratando como una restricción. La contradicción entre el §8.5 (el profesional le factura al cliente → sería exportador) y la arquitectura (cobra VIVE para tener un solo circuito) no es "dos cosas de igual peso": es una arquitectura construida contra un texto escrito para el caso argentino antes de que el riel existiera. Cambiarlo cuesta editar un `.md` y correr `sync:legal`. **La pregunta para el contador es "¿qué tendría que decir acá?", no "¿esto está bien?"**.
+
+**El modelo de costos, que estaba incompleto en todo lo anterior:**
+
+- 🔴 **Faltaba un costo entero: el cambio de moneda.** Sacar dólares de PayPal hacia Argentina cuesta, y **vender USDT por pesos también** — y son **el mismo costo**, no dos. Ningún número de las sesiones anteriores lo contaba. Sobre una sesión de USD 60 con comisión del 20%, quedaban 8,46 netos; si el cambio cuesta entre 2% y 4%, quedan entre **6,00 y 7,25**.
+- **Quedan tres costos distintos**: cobro (procesador), cambio de moneda (solo si lo que entra no es lo que sale) y entrega (comisión de red en USDT, ~0 en transferencia con archivo de lote).
+- **Criterio para repartirlos, uno solo: paga el que controla la decisión que lo genera.** Es el mismo que ya rige en Mercado Pago. De ahí: el **cobro** lo paga el cliente vía precio; la **entrega en USDT** la paga el profesional que la eligió (y eso elimina el único costo que escalaba linealmente con la cantidad de profesionales); el **cambio de moneda** lo paga VIVE, porque **no lo causa ninguna decisión sino que dos decisiones independientes no coincidan** — el profesional que cargó su CBU no eligió que el cliente pagara en USDT ni se enteró.
+- **Decisión pendiente: 20% fijo para el riel internacional**, sin contador por par y con precio limpio para el cliente. Justificación: en Argentina VIVE baja al 15% porque después de la presentación deja de aportar; en el exterior **cobra y transfiere en cada sesión, para siempre**. Frenada hasta medir el cambio de moneda.
+- 📝 **De paso quedó documentado por qué cada riel trata la comisión del procesador distinto** (MP la paga el coach porque ahí el comerciante es él; en USDT no hay procesador y VIVE se queda los centavos del identificador; en PayPal la paga el cliente porque el comerciante es VIVE). Está en SCHEMA.md para que nadie los unifique sin entender la diferencia.
+
+**Y un supuesto que se escribió antes de vencer:**
+
+- ⚠️ **"El profesional está en Argentina" no es un campo, es el sistema de coordenadas.** Lo asumen la hora (texto sin zona = hora argentina), el CBU de 22 dígitos, el precio en pesos, el OAuth de Mercado Pago y todo el tratamiento fiscal.
+- 🔴 **De todo eso, lo único que toca el significado de datos ya guardados es la hora.** El resto es aditivo. Documentado en `lib/time.ts`, `_shared/guarantee.ts` y SCHEMA.md, con qué haría falta el día que cambie y por qué **no** se agregó un parámetro de zona "por las dudas" (sería código muerto sin tests; lo caro es tener la zona disponible en cada punto de uso, no la firma de la función).
+- ⚠️ **Vocabulario: "internacional" nombra dos cosas independientes** — que el **cliente** esté afuera (los rieles de pago, todo lo que existe) y que el **profesional** esté afuera. La primera no implica la segunda, y usar una palabra para las dos ya confundió una vez en esta misma sesión.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Dos mediciones de USD 50**, y son las que destraban todo lo demás: dólares de PayPal → pesos, y USDT → pesos. **Primero la de PayPal** (supuesto: el pago en USDT va a ser el menos usado, aunque en alza). Las tarifas publicadas no incluyen el spread, así que la única forma de saberlo es hacerlo.
+- 🔴 **La hora con el contador.** Tres preguntas, en orden: ¿la plata de terceros me computa para el tope? ¿cuál es el techo real de sesiones/mes? ¿quién factura la exportación?
+- **Dos llamadas de diez minutos**: al banco, si la cuenta admite transferencias masivas por archivo (si no, el techo operativo aparece antes de lo previsto); y el formulario de plataformas de PayPal, que es otro canal que el de soporte.
+- **Sigue sin probarse un pago real de PayPal de punta a punta**, ni nada en dispositivo (selector de tres medios, filtro del exterior, badge, zonas horarias).
+- **La billetera propia de VIVE es lo único con urgencia real**: rotar tiene una ventana de 60 min donde un pago puede perderse, y **hoy es el único momento en que sale gratis** porque no hay ni una reserva internacional.
+
+---
+
 ## 2026-08-20 — Andre (sesión 114)
 
 **Tocado:** `supabase/functions/usdt-check-payments/index.ts`, `supabase/config.toml`, `screens/BookingScreen_Confirm.tsx`, `SCHEMA.md`. Nuevos: `supabase/functions/_shared/pricing.ts`, `paypal-create-payment`, `paypal-webhook`, `paypal-process-refunds`, `scripts/add-paypal-refund-cron.sql` (**corrido y verificado**). Las cuatro edge functions **deployadas**. 231 tests.
