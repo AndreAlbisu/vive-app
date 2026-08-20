@@ -34,11 +34,29 @@ serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
+  // 🔴 `status <> 'cancelada'` NO es un detalle. `expire_unpaid_checkouts()`
+  // cancela poniendo `status = 'cancelada'` y **deja** `payment_status =
+  // 'pendiente'` (correcto: no se pagó nada). Sin este filtro, cada checkout
+  // abandonado se quedaba en esta lista para siempre, con tres efectos:
+  //
+  //   1. Una reserva cancelada podía quedar 'aprobado' si la plata llegaba
+  //      tarde: paga, sin sesión, y fuera del alcance del trigger de reembolso
+  //      —que dispara en la transición a 'cancelada', que ya había ocurrido.
+  //   2. 🔴 El peor: `fix-usdt-amount-index.sql` hizo que el índice único de
+  //      montos excluya las canceladas, así que su monto queda LIBRE para una
+  //      reserva nueva. Con las dos en esta lista, un pago tardío del dueño de
+  //      la cancelada podía acreditarse sobre la reserva de OTRA persona.
+  //   3. Con el `.limit(200)`, las canceladas acumuladas terminan desplazando a
+  //      las pendientes de verdad, que dejan de acreditarse sin ningún error.
+  //
+  // Cuarta vez del mismo patrón en este proyecto: `status` y `payment_status`
+  // cuentan historias distintas y mezclarlas genera fugas.
   const { data: pendientes, error: errPend } = await supabase
     .from('bookings')
     .select('id, usdt_amount, user_id, status')
     .eq('payment_provider', 'usdt')
     .eq('payment_status', 'pendiente')
+    .neq('status', 'cancelada')
     .not('usdt_amount', 'is', null)
     .limit(200)
 
@@ -106,6 +124,10 @@ serve(async (req) => {
       })
       .eq('id', b.id)
       .eq('payment_status', 'pendiente')   // no pisar si otra corrida ganó
+      // La misma guarda, en la escritura: entre la consulta y este update la
+      // reserva pudo expirar. La consulta filtra para no traerla; esto impide
+      // acreditarla si se canceló en el medio.
+      .neq('status', 'cancelada')
 
     if (errUpd) {
       console.error('[usdt-check] no se pudo acreditar', b.id, errUpd.message)
