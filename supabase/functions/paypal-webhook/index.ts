@@ -76,7 +76,52 @@ async function verificarFirma(token: string, headers: Headers, rawBody: string):
     return false
   }
   const data = await res.json()
+  // Se loguea el veredicto siempre. Sin esto, cuando la verificación se comporta
+  // distinto de lo esperado no hay forma de saberlo desde afuera — y es
+  // exactamente lo que pasó al probarla con una firma inventada.
+  console.log('[paypal-webhook] verification_status:', data.verification_status)
   return data.verification_status === 'SUCCESS'
+}
+
+/**
+ * Lee la captura desde la API de PayPal, con nuestras propias credenciales.
+ *
+ * 🔴 Esta es la defensa que de verdad sostiene el webhook, y existe por un
+ * hallazgo concreto del 20/08/2026: **la verificación de firma de PayPal aceptó
+ * un evento enteramente falsificado.** Medido y reproducido en sandbox:
+ *
+ *   - sin el header `paypal-cert-url`  → verification_status FAILURE (rechaza)
+ *   - con un `cert_url` INVENTADO      → verification_status SUCCESS (acepta)
+ *
+ * O sea que un POST público con headers fabricados pasaba el control y llegaba
+ * a escribir. No está verificado si en producción se comporta igual, y da lo
+ * mismo: un endpoint abierto que marca reservas como pagadas no puede depender
+ * de que un tercero valide bien. La firma queda como defensa en profundidad,
+ * nunca como la única.
+ *
+ * Nadie puede fabricar una captura que exista dentro de NUESTRA cuenta de
+ * PayPal. Por eso el cuerpo de la notificación pasa a ser solo un disparador, y
+ * el monto, el estado y el `custom_id` se toman de esta lectura y no de él.
+ *
+ * Es el mismo camino al que terminó llegando `mp-webhook`: leer el pago del
+ * procesador en vez de creerle a la notificación.
+ */
+async function leerCaptura(token: string, captureId: string): Promise<
+  { status: string; value: number; customId: string } | null
+> {
+  const res = await fetch(`${PAYPAL_API}/v2/payments/captures/${captureId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    console.error('[paypal-webhook] no se pudo leer la captura:', captureId, res.status, await res.text())
+    return null
+  }
+  const c = await res.json()
+  return {
+    status: c.status ?? '',
+    value: Number(c?.amount?.value ?? NaN),
+    customId: c.custom_id ?? '',
+  }
 }
 
 serve(async (req) => {
@@ -162,8 +207,28 @@ serve(async (req) => {
   // `custom_id` viaja desde la creación de la orden (`paypal-create-payment`) y
   // es el booking id. Es el equivalente al `external_reference` de MP — y la
   // razón por la que este riel no tiene que adivinar por monto como USDT.
-  const bookingId: string = recurso.custom_id ?? ''
   const captureId: string = recurso.id ?? ''
+  if (!captureId) {
+    console.error('[paypal-webhook] evento de captura sin id')
+    return new Response('no capture id', { status: 200 })
+  }
+
+  // 🔴 Del body solo se usa el ID. Todo lo demás —estado, monto, a qué reserva
+  // corresponde— sale de leer la captura contra la API con nuestras credenciales.
+  const captura = await leerCaptura(token, captureId)
+  if (!captura) {
+    // No existe bajo nuestra cuenta, o PayPal no responde. En cualquiera de los
+    // dos casos NO se escribe nada. 200 porque si la captura no existe,
+    // reintentar no la va a hacer aparecer.
+    return new Response('capture not found', { status: 200 })
+  }
+
+  if (captura.status !== 'COMPLETED') {
+    console.error('[paypal-webhook] captura no COMPLETED:', captureId, captura.status)
+    return new Response('capture not completed', { status: 200 })
+  }
+
+  const bookingId = captura.customId
   if (!bookingId) {
     console.error('[paypal-webhook] captura sin custom_id, no se puede asociar:', captureId)
     // 200 a propósito: reintentar no va a hacer aparecer el custom_id, y dejar a
@@ -183,11 +248,11 @@ serve(async (req) => {
     return new Response('unknown booking', { status: 200 })
   }
 
-  // 🔴 Se compara lo capturado contra lo que se pidió cobrar. La orden se crea
-  // del lado del servidor, así que un desvío acá significa que algo no cierra —
-  // y marcar como pagada una reserva por la que entró menos plata es
-  // exactamente el error que nadie encuentra después.
-  const capturado = Number(recurso?.amount?.value ?? NaN)
+  // 🔴 Se compara lo capturado (leído de la API, no del body) contra lo que se
+  // pidió cobrar. La orden se crea del lado del servidor, así que un desvío acá
+  // significa que algo no cierra — y marcar como pagada una reserva por la que
+  // entró menos plata es exactamente el error que nadie encuentra después.
+  const capturado = captura.value
   const esperado = Number(booking.charged_amount ?? NaN)
   if (Number.isFinite(capturado) && Number.isFinite(esperado) && Math.abs(capturado - esperado) > 0.01) {
     console.error(
