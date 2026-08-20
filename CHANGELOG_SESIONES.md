@@ -42,6 +42,24 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 111)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — cierre automático del browser de MP, tercer intento: en vez de esperar el redirect (que no funciona), la app lo cierra ella misma cuando confirma el pago.**
+
+- Joaquín no quería tener que cerrar la pestaña a mano (la sesión 110 había revertido a eso). En vez de insistir con el redirect de MP (roto, ver sesión 110), se cambió el mecanismo de raíz: la app **ya sondeaba `payment_status` cada 2s** para saber si el pago entró — ahora, en producción, ese mismo sondeo llama a `WebBrowser.dismissBrowser()` apenas ve `'aprobado'`. No depende de ningún redirect, cartel del sistema, ni sesión especial — solo de lo único que ya era la fuente de verdad real (`mp-webhook` escribiendo `payment_status`).
+- **Cambio de forma, no de fondo:** antes se hacía `await WebBrowser.openBrowserAsync(initPoint)` (bloqueaba hasta que la persona cerraba) y RECIÉN DESPUÉS arrancaba el sondeo. Ahora se abre sin `await` (sigue de largo) y el sondeo corre en paralelo — cuando confirma el pago, cierra el browser con `dismissBrowser()`. Si la persona lo cierra a mano antes de que se confirme, no rompe nada: `dismissBrowser()` sobre un browser ya cerrado queda contenido en un `try/catch`.
+- `__DEV__` no se tocó — sigue con `openAuthSessionAsync` + sesión efímera (sirve para cambiar de cuenta de MP entre pruebas) y cierre manual, que para testing está bien.
+- `CHECKOUT_RETURN_URL` sigue unset (sesión 110) — no hace falta para este mecanismo, no depende del redirect.
+- Typecheck, lint y 187/187 tests limpios. **No se pudo probar en dispositivo desde acá** — próximo pago real lo confirma.
+
+**Pendiente para la próxima sesión:**
+- **Confirmar en el dev build** que ahora sí se cierra solo, sin el cartel de "Abrir en Vita" ni la checkout fantasma de las sesiones 107/110.
+- El guardarraíl de reconexión de MP sigue siendo el único pendiente grande de plata sin probar en dispositivo.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.

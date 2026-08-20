@@ -370,40 +370,39 @@ export default function BookingScreen_Confirm() {
         console.warn('[BookingConfirm] mp-create-payment threw:', e);
       }
 
+      // 20/08/2026 (sesión 110→111): el cierre automático NO se logra esperando
+      // el redirect de MP — se probó (sesión 107) y salió peor: la pantalla de
+      // "pago aprobado" de MP rompe la sesión de `openAuthSessionAsync` (se nota
+      // porque el sistema termina mostrando el cartel "¿Abrir en Vita?", que es
+      // justo la señal de que NO se interceptó en silencio como debería), y de
+      // ahí Safari mostraba una checkout de MP nueva desde cero antes de volver.
+      // `CHECKOUT_RETURN_URL` quedó sin setear a propósito — MP no manda ningún
+      // redirect, así que ese cartel no tiene forma de aparecer.
+      //
+      // En vez de eso, quien cierra el browser es la APP, y lo hace mirando lo
+      // único confiable que hay: `payment_status`, escrito por `mp-webhook`
+      // (nunca el redirect). En producción NO se espera a que abra el browser —
+      // se dispara y se sigue de largo al sondeo de abajo, que llama a
+      // `dismissBrowser()` apenas ve `'aprobado'`. Si la persona lo cierra a
+      // mano antes de que el pago se confirme, no pasa nada raro: el sondeo
+      // sigue igual y `dismissBrowser()` sobre un browser ya cerrado no rompe
+      // nada (queda en el catch).
+      //
+      // En testing (Expo Go / dev build) sigue con `openAuthSessionAsync` +
+      // sesión EFÍMERA, sin tocar: sirve para cambiar de cuenta de MP entre
+      // pruebas (comprador ≠ vendedor), no para el cierre — ahí se sigue
+      // cerrando a mano, que para testing está bien.
       if (initPoint) {
-        // REVERTIDO 20/08/2026 (sesión 110) — probado en dispositivo y el intento
-        // de cierre automático (openAuthSessionAsync + back_urls https, sesión 107)
-        // salió PEOR que esto: la pantalla de "pago aprobado" de MP rompe la sesión
-        // de openAuthSessionAsync (se ve porque el sistema termina mostrando el
-        // cartel "¿Abrir en Vita?", que es justo la señal de que NO se interceptó
-        // en silencio como debería), y de ahí Safari mostraba una checkout de MP
-        // nueva desde cero antes de volver a la app. Confuso y sin ganancia real:
-        // el sondeo de acá abajo ya detecta el pago igual, cierre automático o no.
-        // CHECKOUT_RETURN_URL quedó sin setear (unset) para que mp-create-payment
-        // no mande back_urls/auto_return — así MP no intenta redirigir a nada y no
-        // dispara ese cartel del sistema. Si se retoma esto alguna vez, la vía más
-        // confiable es Linking.addEventListener('url', …) + WebBrowser.dismissBrowser()
-        // manejado a mano, no depender de que ASWebAuthenticationSession intercepte
-        // el redirect de MP solo.
-        //
-        // En testing (Expo Go / dev build) sigue con sesión EFÍMERA para poder
-        // cambiar de cuenta de MP entre pruebas (comprador ≠ vendedor): el browser
-        // normal comparte cookies con Safari y deja la cuenta pegada. En producción
-        // sigue con openBrowserAsync (persistente) → el usuario real no re-loguea
-        // en cada reserva. El resultado del pago llega por mp-webhook + el sondeo
-        // de abajo, no del redirect — cerrar el browser es cosa de la persona.
         if (__DEV__) {
           await WebBrowser.openAuthSessionAsync(initPoint, 'viveapp://booking/result', {
             preferEphemeralSession: true,
           });
         } else {
-          await WebBrowser.openBrowserAsync(initPoint);
+          WebBrowser.openBrowserAsync(initPoint).catch(() => {});
         }
       }
 
-      // ¿Entró el pago? Cerrar el browser no dice nada: puede haber pagado o
-      // haber cerrado la pestaña. El único que sabe es mp-webhook, que escribe
-      // payment_status. En los pagos reales del 09/08 tardó ~2 s desde que MP
+      // ¿Entró el pago? En los pagos reales del 09/08 tardó ~2 s desde que MP
       // aprueba, así que 12 s de sondeo cubren el caso normal de sobra.
       //
       // Si se agota el tiempo NO se cancela la reserva desde acá: el pago podría
@@ -421,6 +420,14 @@ export default function BookingScreen_Confirm() {
             .eq('id', booking.id)
             .maybeSingle();
           if (paymentRow?.payment_status === 'aprobado') { paid = true; break; }
+        }
+        // Solo en producción: en dev ya se cerró a mano arriba (await bloqueante).
+        if (paid && !__DEV__) {
+          try {
+            await WebBrowser.dismissBrowser();
+          } catch {
+            // Browser ya cerrado (la persona lo cerró a mano) — no hay nada que hacer.
+          }
         }
       }
 
