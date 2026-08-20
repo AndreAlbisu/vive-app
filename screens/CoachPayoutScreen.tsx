@@ -37,6 +37,7 @@ import {
   cbuError,
   normalizarCbu,
   walletError,
+  USDT_NETWORK_FEE_USD,
   type PayoutMethod as Method,
   type PayoutNetwork as Network,
 } from '@/lib/payout';
@@ -193,11 +194,26 @@ export default function CoachPayoutScreen() {
                       {m === 'transferencia' ? 'Transferencia' : 'USDT'}
                     </Text>
                     <Text style={s.methodDesc}>
-                      {m === 'transferencia' ? 'A tu cuenta en pesos' : 'Stablecoin en dólares'}
+                      {m === 'transferencia'
+                        ? 'A tu cuenta en pesos · sin costo'
+                        : `Stablecoin en dólares · USD ${USDT_NETWORK_FEE_USD.toFixed(2)} por envío`}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {/* El costo se dice ANTES de elegir y no cuando llega menos plata.
+                  Es una vez por transferencia y no por sesión, así que pesa
+                  según cuántas sesiones hiciste en la semana — eso es lo que
+                  hay que entender, no el número suelto. */}
+              {method === 'usdt' && (
+                <Text style={s.methodNote}>
+                  Enviar USDT tiene un costo de red de USD {USDT_NETWORK_FEE_USD.toFixed(2)} que se
+                  descuenta de tu pago. Es por transferencia y no por sesión: si esa semana
+                  hiciste cuatro sesiones, se descuenta una sola vez. Con transferencia
+                  bancaria no hay costo.
+                </Text>
+              )}
 
               {method === 'transferencia' ? (
                 <>
@@ -352,6 +368,10 @@ const s = StyleSheet.create({
   methodTitle: { fontFamily: ViveFonts.semibold, fontSize: 14, color: 'rgba(135,131,92,0.85)' },
   methodTitleOn: { color: '#565E32' },
   methodDesc: { fontFamily: ViveFonts.regular, fontSize: 11.5, color: 'rgba(135,131,92,0.70)' },
+  methodNote: {
+    fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#87835C',
+    lineHeight: 18, marginTop: 12,
+  },
 
   input: {
     backgroundColor: 'rgba(255,248,240,0.62)', borderRadius: 14,

@@ -462,9 +462,24 @@ export default function AdminScreen() {
                       <Text style={s.cardMeta}>
                         {p.sesiones.length} {p.sesiones.length === 1 ? 'sesión' : 'sesiones'} · bruto USD {p.bruto.toFixed(2)}
                       </Text>
+                      {/* El costo de red se descuenta UNA vez por pago, no por
+                          sesión — es lo que cuesta el envío, no lo que cuesta
+                          cada sesión. Se muestra separado para que el coach
+                          pueda auditarlo si pregunta. */}
+                      {p.costoEntrega > 0 && (
+                        <Text style={s.cardMeta}>
+                          le corresponden USD {p.neto.toFixed(2)} − {p.costoEntrega.toFixed(2)} de red
+                        </Text>
+                      )}
                       <Text style={[s.cardTitle, { marginTop: 6 }]}>
-                        A transferir: USD {p.neto.toFixed(2)}
+                        A transferir: USD {p.aTransferir.toFixed(2)}
                       </Text>
+                      {p.noAlcanza && (
+                        <Text style={s.cardBody}>
+                          ⚠️ El costo de red se come todo lo que se le debe. No transfieras —
+                          se acumula solo con las sesiones de la semana que viene.
+                        </Text>
+                      )}
 
                       {/* El desglose va a la vista y no escondido: el número de
                           arriba es el que se tipea en una transferencia que no
@@ -495,7 +510,7 @@ export default function AdminScreen() {
                           <TouchableOpacity
                             style={[s.btn, s.btnPrimary, { marginTop: 10 }]}
                             activeOpacity={0.85}
-                            disabled={working === p.coachId}
+                            disabled={working === p.coachId || p.noAlcanza}
                             onPress={() => {
                               const ref = (payoutRef[p.coachId] ?? '').trim();
                               // Confirmación explícita: marcar es irreversible
@@ -504,7 +519,7 @@ export default function AdminScreen() {
                               // hecho.
                               Alert.alert(
                                 'Confirmar pago',
-                                `¿Ya transferiste USD ${p.neto.toFixed(2)} a ${p.coachName ?? 'este coach'}? Se van a marcar ${p.sesiones.length} sesiones como pagadas.`,
+                                `¿Ya transferiste USD ${p.aTransferir.toFixed(2)} a ${p.coachName ?? 'este coach'}? Se van a marcar ${p.sesiones.length} sesiones como pagadas.`,
                                 [
                                   { text: 'Todavía no', style: 'cancel' },
                                   {

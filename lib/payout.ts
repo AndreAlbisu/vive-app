@@ -74,3 +74,33 @@ export function coachNetFor(amount: number, feePct: number): number {
   const fee = Math.round(amount * feePct) / 100;
   return Math.round((amount - fee) * 100) / 100;
 }
+
+/**
+ * Lo que cuesta mandar un pago en USDT por la red Tron. **Por ENVÍO, no por
+ * sesión**: un pago semanal cubre todas las sesiones de esa semana.
+ *
+ * 🔴 Esa propiedad es la que importa. Como no escala con el monto, sobre una
+ * sesión de USD 50 el costo es del 3% si el profesional hizo una sola esa semana
+ * y del 0,3% si hizo diez. No lo determina el precio, lo determina su volumen.
+ *
+ * Por eso se lo descuenta **a quien lo elige**: pidió que le manden dólares por
+ * blockchain, controla la causa y paga el costo — mismo criterio que en Mercado
+ * Pago, donde la comisión del procesador sale de la parte del profesional. Y cae
+ * solo donde corresponde: al de una sesión semanal le baja el cobro de 75% a
+ * 72%, y al de cuatro le descuenta un 1% que no nota.
+ *
+ * Sin este descuento, el mínimo de USD 20 no llegaría al 10% de margen en el
+ * peor caso (6,2%); con él da 13,7% en todos.
+ *
+ * ⚠️ Valor de Andre, 20/08/2026. Si cambia el precio de TRX o se stakea TRX para
+ * energía, este número cambia — y no hay nada que lo detecte solo.
+ */
+export const USDT_NETWORK_FEE_USD = 1.5;
+
+/** Lo que hay que transferirle realmente a un profesional, descontado el costo
+ *  de entrega del método que eligió. `transferencia` no tiene costo: el archivo
+ *  de lote del banco cuesta lo mismo con una fila que con doscientas. */
+export function payoutAfterDeliveryCost(neto: number, method: PayoutMethod): number {
+  const costo = method === 'usdt' ? USDT_NETWORK_FEE_USD : 0;
+  return Math.round((neto - costo) * 100) / 100;
+}

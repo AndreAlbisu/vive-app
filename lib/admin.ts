@@ -11,7 +11,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { REPORT_REASONS, type ReportReason } from '@/lib/reports';
-import { coachNetFor, type PayoutMethod } from '@/lib/payout';
+import { coachNetFor, payoutAfterDeliveryCost, USDT_NETWORK_FEE_USD, type PayoutMethod } from '@/lib/payout';
 
 const FUNCTIONS_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 
@@ -324,9 +324,19 @@ export function markUsdtRefunded(bookingId: string, refundTxId: string) {
 export type CoachPayout = {
   coachId: string;
   coachName: string | null;
-  /** Bruto y neto en USD. El neto es lo que hay que transferir. */
+  /** Bruto y neto en USD. `neto` es lo que le corresponde al profesional por sus
+   *  sesiones; `aTransferir` es eso menos el costo de entrega del método que
+   *  eligió — y es el número que se tipea en la transferencia. */
   bruto: number;
   neto: number;
+  /** Costo de entrega descontado (0 en transferencia bancaria). Se cobra una vez
+   *  por PAGO, no por sesión. */
+  costoEntrega: number;
+  aTransferir: number;
+  /** true si el costo de entrega se come todo lo que se le debe. Sin mínimo de
+   *  acumulación (decisión de Andre), así que puede pasar con montos chicos —
+   *  y hay que verlo, no transferir un número negativo. */
+  noAlcanza: boolean;
   sesiones: { bookingId: string; fecha: string; amount: number; feePct: number; neto: number }[];
   /** Datos de cobro. `null` = todavía no los cargó y no hay adónde mandar nada. */
   destino: {
@@ -386,6 +396,9 @@ export async function listCoachPayouts(): Promise<{ rows: CoachPayout[]; error: 
         coachName: b.coach_name ?? null,
         bruto: 0,
         neto: 0,
+        costoEntrega: 0,
+        aTransferir: 0,
+        noAlcanza: false,
         sesiones: [],
         destino: c
           ? {
@@ -406,9 +419,26 @@ export async function listCoachPayouts(): Promise<{ rows: CoachPayout[]; error: 
 
   // El acumulado se redondea al final: sumar netos ya redondeados arrastra
   // centavos, y el total es la cifra que se tipea en la transferencia.
+  //
+  // El costo de entrega se descuenta ACÁ y no por sesión, porque se paga una vez
+  // por transferencia — descontarlo en cada sesión multiplicaría el cobro por la
+  // cantidad de sesiones de la semana, que es justo lo contrario de cómo funciona.
   const rows = [...porCoach.values()]
-    .map(e => ({ ...e, bruto: Math.round(e.bruto * 100) / 100, neto: Math.round(e.neto * 100) / 100 }))
-    .sort((a, b) => b.neto - a.neto);
+    .map(e => {
+      const neto = Math.round(e.neto * 100) / 100;
+      const method = e.destino?.method;
+      const costoEntrega = method === 'usdt' ? USDT_NETWORK_FEE_USD : 0;
+      const aTransferir = payoutAfterDeliveryCost(neto, method ?? 'transferencia');
+      return {
+        ...e,
+        bruto: Math.round(e.bruto * 100) / 100,
+        neto,
+        costoEntrega,
+        aTransferir,
+        noAlcanza: aTransferir <= 0,
+      };
+    })
+    .sort((a, b) => b.aTransferir - a.aTransferir);
   return { rows, error: null };
 }
 

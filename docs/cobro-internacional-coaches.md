@@ -43,12 +43,20 @@ perfil no aparece en las búsquedas del exterior aunque tengas la opción activa
 
 ## 4. La comisión es la misma
 
-**20%** en la primera sesión con esa persona, **15%** de la segunda en adelante,
-igual que en Argentina. No hay recargo por ser del exterior.
+**25%**, siempre, sin tramos. Sobre un precio de USD 60 cobrás **USD 45**.
 
-El costo de procesar un pago internacional lo absorbe VIVE dentro del precio que
-paga el cliente — **no sale de tu parte**. Sobre un precio de USD 60 cobrás
-USD 48 la primera sesión y USD 51 de ahí en más.
+Es más que el 20%/15% de las sesiones de Argentina, y la razón es concreta: acá
+VIVE **cobra, retiene y te transfiere en cada sesión**. En Argentina te presenta
+a alguien y después la plata te llega sola a tu Mercado Pago; del exterior, sin
+la plataforma no habría forma de que ese cliente te pague. Dentro de ese 25%
+entran la comisión del procesador, el costo de traer los dólares y la operación
+de pagarte.
+
+**El cliente paga tu precio, pague como pague** — no hay recargo encima ni te
+cambia lo que cobrás según el medio que él elija.
+
+📝 Antes de comparar el porcentaje con el de Argentina, compará los pesos: el 75%
+de un precio en dólares suele ser bastante más que el 85% de un precio en pesos.
 
 ## 5. Cuándo y cómo cobrás
 
@@ -62,8 +70,14 @@ hay con qué devolver. Si pagáramos antes, un reembolso saldría de tu bolsillo
 
 Cargás tus datos de cobro en **Perfil → Datos de cobro**, y elegís:
 
-- **Transferencia bancaria** — tu CBU. Cobrás en pesos.
-- **USDT** — tu dirección y la red (TRC20, ERC20 o POLYGON). Cobrás en dólares.
+- **Transferencia bancaria** — tu CBU. Cobrás en pesos. **Sin costo.**
+- **USDT** — tu dirección y la red (TRC20, ERC20 o POLYGON). Cobrás en dólares, con un
+  **costo de red de USD 1,50 por transferencia** que se descuenta de tu pago.
+
+⚠️ Ese costo es **por transferencia y no por sesión**. Si en la semana hiciste cuatro
+sesiones, se descuenta una sola vez — así que pesa mucho más si hacés una sesión cada
+tanto que si hacés varias. Lo pagás vos y no VIVE porque es el costo de la forma de
+entrega que elegiste: mandar dólares por blockchain cuesta, transferir a un banco no.
 
 ⚠️ **Si elegís USDT, revisá la red dos veces.** Una dirección de Ethereum es
 válida como dirección, y si le mandás USDT por la red Tron **los fondos se

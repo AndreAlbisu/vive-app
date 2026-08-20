@@ -1,4 +1,4 @@
-import { cbuError, walletError, normalizarCbu, coachNetFor } from '@/lib/payout';
+import { cbuError, walletError, normalizarCbu, coachNetFor, payoutAfterDeliveryCost, USDT_NETWORK_FEE_USD } from '@/lib/payout';
 
 // Direcciones reales de contratos conocidos: sirven como muestras de formato
 // válido sin exponer la wallet de nadie.
@@ -99,5 +99,34 @@ describe('coachNetFor', () => {
   // identificador del pago), pero el neto no tiene por qué serlo.
   it('devuelve centavos cuando el reparto no da redondo', () => {
     expect(coachNetFor(45, 15)).toBe(38.25);
+  });
+});
+
+describe('payoutAfterDeliveryCost', () => {
+  it('la transferencia bancaria no tiene costo de entrega', () => {
+    expect(payoutAfterDeliveryCost(150, 'transferencia')).toBe(150);
+  });
+
+  it('USDT descuenta la comisión de red una sola vez', () => {
+    expect(payoutAfterDeliveryCost(150, 'usdt')).toBe(150 - USDT_NETWORK_FEE_USD);
+  });
+
+  // 🔴 La propiedad que justifica el descuento: el costo NO depende del monto,
+  // así que pesa muchísimo más sobre un pago chico que sobre uno grande. Al
+  // profesional de una sesión semanal le baja el cobro ~3 puntos; al de cuatro,
+  // menos de uno.
+  it('pesa según el volumen del profesional, no según el precio', () => {
+    const unaSesion = payoutAfterDeliveryCost(37.5, 'usdt') / 37.5;
+    const cuatroSesiones = payoutAfterDeliveryCost(150, 'usdt') / 150;
+    expect(1 - unaSesion).toBeCloseTo(0.04, 2);
+    expect(1 - cuatroSesiones).toBeCloseTo(0.01, 2);
+    expect(cuatroSesiones).toBeGreaterThan(unaSesion);
+  });
+
+  // Sin mínimo de acumulación (decisión de Andre), así que esto puede pasar.
+  // Lo importante es que dé negativo y se vea, en vez de que el panel muestre
+  // cero y alguien crea que ya está saldado.
+  it('devuelve negativo si el costo se come el pago, en vez de esconderlo', () => {
+    expect(payoutAfterDeliveryCost(1, 'usdt')).toBeLessThan(0);
   });
 });
