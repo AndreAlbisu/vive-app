@@ -415,10 +415,14 @@ export default function BookingScreen_Confirm() {
       // app) para que la persona no vuelva a loguearse en MP en cada reserva.
       if (initPoint) setCheckoutUrl(initPoint);
 
-      // ¿Entró el pago? En los pagos reales del 09/08 tardó ~2 s desde que MP
-      // aprueba, así que 12 s de sondeo cubren el caso normal de sobra. Esto
-      // es lo único que decide cuándo se cierra el checkout embebido —
-      // `setCheckoutUrl(null)` más abajo — nunca un redirect ni el propio MP.
+      // ¿Entró el pago? En los pagos reales del 09/08 el webhook tardó ~2 s
+      // desde que MP aprueba — el sondeo lo agarra casi al toque apenas la
+      // persona termina de pagar. El límite de 3 min de acá abajo NO es "el
+      // tiempo que tarda el pago": es el margen para que la PERSONA termine de
+      // tipear la tarjeta o el 2FA sin que la echemos a mitad de camino (ver
+      // sesión 115). Esto es lo único que decide cuándo se cierra el checkout
+      // embebido — `setCheckoutUrl(null)` más abajo — nunca un redirect ni el
+      // propio MP.
       //
       // Si se agota el tiempo NO se cancela la reserva desde acá: el pago podría
       // acreditarse un segundo después y quedaríamos con una reserva cancelada y
@@ -427,10 +431,19 @@ export default function BookingScreen_Confirm() {
       // sí se pagó el coach la ve como solicitud normal y puede aceptarla.
       let paid = false;
       if (initPoint) {
-        for (let i = 0; i < 6; i++) {
+        // 20/08/2026 (sesión 115): ESTO cerraba el checkout a los 12s fijos
+        // pasara lo que pasara — con el browser del sistema no se notaba (la
+        // pestaña seguía abierta tapando todo mientras la app navegaba atrás),
+        // pero con el checkout embebido cerrarlo a los 12s significa cerrarlo
+        // en la cara de alguien que todavía está tipeando la tarjeta o
+        // esperando el 2FA del banco, y mandarla derecho a la pantalla
+        // siguiente como si ya hubiera terminado. Ahora el límite es de tiempo
+        // real de pago (3 min, 90 intentos) y lo único que corta antes es
+        // pagar (`paid`) o cerrar el checkout a mano (botón X / back).
+        for (let i = 0; i < 90; i++) {
           await new Promise((r) => setTimeout(r, 2000));
-          // La persona pudo haber cerrado el checkout a mano (botón X) —
-          // no tiene sentido seguir sondeando si ya no está mirando nada.
+          // La persona cerró el checkout a mano — no tiene sentido seguir
+          // sondeando ni forzar el cierre de algo que ya no está.
           if (!checkoutUrlRef.current) break;
           const { data: paymentRow } = await supabase
             .from('bookings')

@@ -110,6 +110,23 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 115)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — bug real encontrado probando: el checkout embebido se cerraba solo a los 12s pasara lo que pasara, aunque la persona siguiera pagando.**
+
+- Joaquín reportó: "si estás mucho tiempo en la pantalla sin hacer nada se reserva la sesión igual aunque no se haya concretado el pago". Causa: el sondeo (12s fijos, heredado de cuando el browser era del sistema) llamaba `setCheckoutUrl(null)` **sin importar si `paid` era `true`** — con el browser del sistema esto no se notaba (la pestaña seguía tapando todo mientras la app navegaba atrás en silencio), pero con el checkout embebido cerrarlo a los 12s es cerrarlo en la cara de alguien que todavía está tipeando la tarjeta o esperando un 2FA, y mandarlo a la pantalla siguiente como si ya hubiera pagado.
+- **Arreglado:** el límite pasó de 12s (6 intentos) a 3 minutos (90 intentos) — lo único que corta antes ahora es pagar de verdad o cerrar el checkout a mano (botón X / back de Android, ya contemplado por `checkoutUrlRef`). El límite de 3 min sigue siendo un margen razonable de abandono real, no un tiempo de espera del pago (el webhook tarda ~2s una vez que la persona termina).
+- También reportado: la carga del checkout embebido se siente más lenta que el browser del sistema — anotado, no investigado todavía (puede ser propio de WebView vs. SFSafariViewController para una página pesada como la de MP).
+- Typecheck, lint y 187/187 tests limpios. **Falta confirmar en dispositivo** — junto con si "Ingresar con mi cuenta" ya aparece (sesión 114, sin confirmar todavía si mejoró).
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build las tres cosas juntas: aparece "Ingresar con mi cuenta", el checkout ya no se cierra antes de tiempo, y sigue cerrándose solo al pagar de verdad.
+- Investigar el tiempo de carga del checkout embebido si sigue sintiéndose lento.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.
