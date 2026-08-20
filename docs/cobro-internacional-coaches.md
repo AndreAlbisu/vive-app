@@ -8,6 +8,8 @@ Es distinto de cómo cobrás las sesiones de Argentina, y la diferencia importa.
 > cuenta y orden de terceros — pendiente desde la sesión 101). Es la sección que
 > más le importa al coach, así que **este documento no se manda hasta cerrar eso**.
 > Todo lo demás ya está decidido y no depende de esa respuesta.
+>
+> Las preguntas para esa consulta están en [`fiscal-instrucciones.md`](./fiscal-instrucciones.md).
 
 ---
 
