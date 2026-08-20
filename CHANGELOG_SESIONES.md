@@ -220,6 +220,20 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 122)
+
+**Tocado:** `app/_layout.tsx`.
+
+**Resumen — `coach-datos-cobro` mostraba el header nativo por default de Expo Router, duplicado arriba del header propio de la pantalla.**
+
+- A `coach-datos-cobro` le faltaba la entrada `<Stack.Screen options={{ headerShown: false }} />` que tienen todas las demás pantallas con diseño propio (`coach-availability`, `coach-visibilidad`, etc.) — sin ella, Expo Router agrega su barra negra por default (con el nombre del archivo como título) arriba del header cream que ya construye `CoachPayoutScreen`. Agregada, mismo patrón que el resto.
+- Typecheck, lint y 187/187 tests limpios. No confirmado visualmente en dispositivo desde acá.
+
+**Pendiente para la próxima sesión:**
+- Confirmar que desapareció la barra negra duplicada.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.
