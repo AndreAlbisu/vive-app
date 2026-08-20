@@ -204,6 +204,22 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 121)
+
+**Tocado:** `screens/CoachProfileScreen.tsx`.
+
+**Resumen — las tarjetas de "Sesiones desde el exterior" quedaban pegadas entre sí, sin el espaciado que sí tienen las de "Mercado Pago".**
+
+- Joaquín mandó captura: en "Mercado Pago" las dos tarjetas ("Cuenta conectada" y la de comisión 20/15%) tienen aire entre sí; en "Sesiones desde el exterior", las cuatro tarjetas seguidas ("Activadas", el aviso de que no cobra por MP, "Precio en dólares" y "Cómo te pagamos") se veían todas pegadas, como un solo bloque.
+- 🔴 **Causa: `toggleCard` no trae margen propio arriba, a propósito** — la mayoría de sus usos van pegados debajo de un título de sección (que ya trae su propio espaciado) y sumarle margen ahí daría un salto de más. El problema es cuando un `toggleCard` sigue a OTRA tarjeta en vez de a un título: esa tarjeta anterior (`commissionCard`) solo empuja espacio hacia **arriba** de sí misma, nunca hacia abajo, así que la siguiente queda pegada.
+- **Arreglado con un estilo nuevo (`stackedCard`, `marginTop: 10`)** aplicado solo a los dos `toggleCard` que efectivamente siguen a otra tarjeta ("Precio en dólares" y "Cómo te pagamos") — mismo valor que ya usa `commissionCard.marginTop`, para que el espaciado sea igual venga de un lado o del otro. No se tocó el estilo base de `toggleCard`, así que el resto de sus usos (Modalidad de reserva, Disponibilidad, Cuenta conectada) siguen exactamente igual.
+- Typecheck, lint y 187/187 tests limpios. **No confirmado visualmente en dispositivo desde acá** — próxima apertura de esa pantalla lo confirma.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build que el espaciado quedó parejo.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.
