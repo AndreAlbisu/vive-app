@@ -1,10 +1,15 @@
-// pricing — cuánto cobrarle al cliente en el riel de PayPal. Puro, sin imports.
+// pricing — las constantes de costo del riel de PayPal. Puro, sin imports.
 //
-// ⚠️ Es la MISMA regla que `lib/pricing.ts` en el cliente, duplicada porque
-// `supabase/functions` está fuera del tsconfig de la app y no se puede importar
-// desde ahí (mismo caso que `lib/payout.ts` con los CHECK de la base). Hay un
-// test que exige que las dos devuelvan el mismo número: si divergen, la app le
-// muestra un precio al usuario y el servidor le cobra otro.
+// 📝 Acá vivía `paypalGrossUp`, que calculaba cuánto sumarle al precio para que
+// al coach le llegara entero. Se eliminó el 20/08/2026 al pasar el riel
+// internacional a una comisión plana del 25%: **el cliente paga el precio del
+// coach y el costo sale de la comisión**, así que ya no hay nada que sumar.
+// Quedan las constantes porque describen lo que cobra PayPal y sirven para
+// estimar el margen real de una sesión.
+//
+// ⚠️ Espejo de `lib/pricing.ts`, duplicado porque `supabase/functions` está
+// fuera del tsconfig de la app. Hay un test que exige que las constantes no se
+// desincronicen.
 
 /** Comisión de PayPal para una cuenta argentina recibiendo de cualquier mercado.
  *  Confirmado en la tarifa oficial de PayPal (19/08/2026): 5,40% + USD 0,30 al
@@ -17,26 +22,7 @@
 export const PAYPAL_PCT = 0.054;
 export const PAYPAL_FIXED_USD = 0.30;
 
-/** Piso del precio internacional. Existe porque la comisión FIJA no escala. */
+/** Piso del precio internacional. Ya no por aritmética —la comisión plana del
+ *  25% aguanta precios bajos— sino porque una sesión de USD 5 no es un producto
+ *  serio. Espejo del CHECK en `scripts/add-paypal-rail.sql`. */
 export const MIN_PRICE_USD = 20;
-
-/**
- * Cuánto cobrarle al cliente para que al profesional le llegue su precio entero.
- *
- * 🔴 El costo se SUMA al precio, no sale de la parte del coach. Si saliera de
- * adentro, la comisión real de VIVE sería 21-22% y el copy le promete 15%.
- * Por eso `bookings.amount` guarda el precio del profesional (la base del
- * payout) y `bookings.charged_amount` el total cobrado: son números distintos.
- *
- * ⚠️ No es un porcentaje fijo. Como los USD 0,30 no escalan, el recargo real va
- * de +6,0% sobre USD 100 a +37% sobre USD 1 — un porcentaje plano cobraría de
- * menos justo donde el fijo pesa.
- *
- * Redondea al centavo de ARRIBA: hacia abajo VIVE pondría la diferencia en cada
- * transacción.
- */
-export function paypalGrossUp(priceUsd: number): number {
-  if (!Number.isFinite(priceUsd) || priceUsd <= 0) return NaN;
-  const bruto = (priceUsd + PAYPAL_FIXED_USD) / (1 - PAYPAL_PCT);
-  return Math.ceil(bruto * 100) / 100;
-}

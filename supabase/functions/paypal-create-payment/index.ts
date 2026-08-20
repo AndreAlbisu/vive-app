@@ -13,8 +13,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { commissionPctFor, PAIR_SESSION_FILTER } from '../_shared/commission.ts'
-import { paypalGrossUp } from '../_shared/pricing.ts'
+import { COMMISSION_INTERNATIONAL } from '../_shared/commission.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -127,35 +126,15 @@ serve(async (req) => {
   const token = await getAccessToken()
   if (!token) return json({ error: 'No se pudo conectar con PayPal' }, 502)
 
-  // ── Comisión (server-side; el cliente NUNCA la calcula) ────────────────────
-  // Mismo esquema y mismo contador por par que los otros dos rieles: el tramo es
-  // de la RELACIÓN coach-usuario, no del método de pago, así que una primera
-  // sesión pagada en pesos manda la segunda al 15% aunque se pague con PayPal.
+  // ── Comisión y precio ──────────────────────────────────────────────────────
+  // Tarifa PLANA del riel internacional: no hay contador por par ni tramos. El
+  // porqué (y por qué 25 y no 20) está en `_shared/commission.ts`.
   //
-  // 🔴 Acá pesa igual que en USDT y por el mismo motivo: PayPal no hace split,
-  // entra el total a la cuenta de VIVE, y este porcentaje es lo único que
-  // después dice cuánto transferirle al coach.
-  const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL') // ISO date, TBD
-  const { count } = await admin
-    .from('bookings')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', booking.user_id)
-    .eq('coach_id', booking.coach_id)
-    .eq('status', 'completada')
-    .or(PAIR_SESSION_FILTER)
-
-  const commissionPct = commissionPctFor(count ?? 0, Date.now(), promoUntil)
-
-  // ── Precio ────────────────────────────────────────────────────────────────
-  // `amount` = el precio del profesional, que es la base de su payout.
-  // `charged_amount` = lo que paga el cliente, con el costo de PayPal encima.
-  // Confundirlos hace que todos los coaches del riel cobren de más, en silencio.
+  // 🔴 El cliente paga el precio del coach, sin recargo encima. El costo de
+  // procesamiento sale de la comisión, no del precio ni de la parte del coach —
+  // por eso `charged_amount` es igual a `amount` en este riel y existe solo para
+  // el día que algún rail vuelva a cobrar algo distinto del precio.
   const precio = coach.price_usd
-  const aCobrar = paypalGrossUp(precio)
-  if (!Number.isFinite(aCobrar)) {
-    console.error('[paypal-create] precio ilegible:', precio)
-    return json({ error: 'No se pudo calcular el precio' }, 500)
-  }
 
   const orderRes = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
     method: 'POST',
@@ -175,7 +154,7 @@ serve(async (req) => {
         // adivinar por monto, que es el problema que USDT tiene por diseño y
         // acá no hace falta tener.
         custom_id: booking.id,
-        amount: { currency_code: 'USD', value: aCobrar.toFixed(2) },
+        amount: { currency_code: 'USD', value: precio.toFixed(2) },
         description: 'Sesión en VIVE',
       }],
       payment_source: {
@@ -219,9 +198,9 @@ serve(async (req) => {
       payment_status: 'pendiente',
       currency: 'USD',
       amount: precio,
-      charged_amount: aCobrar,
+      charged_amount: precio,
       preference_id: order.id,
-      platform_fee_pct: commissionPct,
+      platform_fee_pct: COMMISSION_INTERNATIONAL,
     })
     .eq('id', booking.id)
 
@@ -233,5 +212,5 @@ serve(async (req) => {
     return json({ error: 'No se pudo iniciar el pago' }, 502)
   }
 
-  return json({ order_id: order.id, approve_url: approveUrl, amount: aCobrar, currency: 'USD' })
+  return json({ order_id: order.id, approve_url: approveUrl, amount: precio, currency: 'USD' })
 })

@@ -18,7 +18,6 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { supabase, registrarEvento } from '@/lib/supabase';
-import { paypalGrossUp } from '@/lib/pricing';
 import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
 import { logError } from '@/lib/logging';
@@ -600,18 +599,15 @@ export default function BookingScreen_Confirm() {
                   con lo cual ni siquiera coincide con el precio redondo. Son dos
                   precios distintos que fija el coach por separado (`price_usd`
                   NO se deriva de una cotización), no el mismo convertido. */}
+              {/* Con cualquiera de los dos medios internacionales el cliente
+                  paga el MISMO número: el precio que fijó el profesional. El
+                  costo de procesamiento sale de la comisión del 25%, no del
+                  precio — antes PayPal mostraba un monto más alto por el
+                  recargo, y eso desapareció con la tarifa plana. */}
               <Text style={s.detailValue}>
-                {metodoPago === 'usdt' && priceUsd != null
+                {metodoPago !== 'mp' && priceUsd != null
                   ? `USD ${priceUsd} por sesión`
-                  : metodoPago === 'paypal' && priceUsd != null
-                    // Con PayPal el número es más alto que con USDT y no es un
-                    // error: el costo de procesar el pago internacional va
-                    // sumado al precio, no descontado de la parte del coach.
-                    // Mostrar el precio "limpio" acá y cobrar otro en PayPal
-                    // sería el mismo tipo de texto falso que ya se corrigió dos
-                    // veces en esta pantalla.
-                    ? `USD ${paypalGrossUp(priceUsd).toFixed(2)} por sesión`
-                    : `$${priceFrom.toLocaleString('es-AR')} por sesión`}
+                  : `$${priceFrom.toLocaleString('es-AR')} por sesión`}
               </Text>
             </View>
           </View>

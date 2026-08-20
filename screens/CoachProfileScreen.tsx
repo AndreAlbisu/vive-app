@@ -25,7 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
-import { priceUsdError, MIN_PRICE_USD, paypalGrossUp } from '@/lib/pricing';
+import { priceUsdError, MIN_PRICE_USD } from '@/lib/pricing';
 import { AppBg } from '@/components/ui/AppBg';
 
 const GLASS = 'rgba(255,248,240,0.55)';
@@ -1006,9 +1006,11 @@ export default function CoachProfileScreen() {
                 toggle, no pasa nada, y no tiene forma de saber por qué. */}
             {profile?.price_usd != null && (
               <Text style={s.priceHint}>
-                El cliente del exterior paga USD {paypalGrossUp(profile.price_usd).toFixed(2)} —
-                la diferencia es el costo de procesar el pago internacional y no sale de tu parte.
-                Vos cobrás sobre USD {profile.price_usd}. Mínimo USD {MIN_PRICE_USD}.
+                El cliente del exterior paga USD {profile.price_usd}, pague como pague.
+                La comisión de las sesiones internacionales es del 25% e incluye todos los
+                costos de cobrarte del exterior y transferirte — cobrás USD{' '}
+                {Math.round(profile.price_usd * 0.75 * 100) / 100} por sesión.
+                Mínimo USD {MIN_PRICE_USD}.
               </Text>
             )}
 

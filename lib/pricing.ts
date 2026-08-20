@@ -8,7 +8,13 @@
 // que `lib/payout.ts`: acá para que el error se vea mientras se escribe, allá
 // porque la pantalla nunca es la frontera. Si cambia una, cambia la otra.
 
-/** Piso del precio internacional, en USD. Ver `paypalGrossUp` para el porqué. */
+/** Piso del precio internacional, en USD.
+ *
+ *  📝 Cambió de motivo el 20/08/2026. Existía porque la comisión FIJA de PayPal
+ *  (USD 0,30) se comía el recargo que se le sumaba al precio en los montos
+ *  chicos. Con la comisión plana del 25% eso dejó de ser un problema aritmético
+ *  —el margen aguanta hasta precios muy bajos—, así que el piso se queda por una
+ *  razón distinta y más simple: **una sesión de USD 5 no es un producto serio**. */
 export const MIN_PRICE_USD = 20;
 export const MAX_PRICE_USD = 10000;
 
@@ -37,31 +43,12 @@ export function priceUsdError(input: string | number): string | null {
 }
 
 /**
- * Cuánto hay que cobrarle al cliente para que al profesional le llegue su precio
- * entero después de la comisión de PayPal.
+ * Lo que efectivamente queda después de que PayPal cobre lo suyo.
  *
- * 🔴 El costo NO sale de la parte del coach: se suma al precio. Si saliera de
- * adentro, la comisión real de VIVE sería 21-22% y el copy le promete 15% —
- * `bookings.amount` sigue siendo el precio del profesional y esta función
- * calcula aparte lo que se cobra (`bookings.charged_amount`).
- *
- * ⚠️ NO es un porcentaje fijo, y ese fue el error de la primera propuesta. Como
- * los USD 0,30 no escalan, el recargo real depende del precio: +6,0% sobre 100,
- * +6,2% sobre 60, +7,3% sobre 20 y +37% sobre 1. Un porcentaje plano cobraría de
- * menos en los precios bajos, que es justo donde el fijo pesa. Por eso además
- * existe `MIN_PRICE_USD`.
- *
- * Se redondea hacia ARRIBA al centavo: redondear hacia abajo dejaría a VIVE
- * poniendo la diferencia en cada transacción.
+ * Ya no se usa para fijar precios —el cliente paga el precio del coach y el
+ * costo sale de la comisión del 25%— pero sirve para estimar el margen real de
+ * una sesión y para el modelo de costos.
  */
-export function paypalGrossUp(priceUsd: number): number {
-  if (!Number.isFinite(priceUsd) || priceUsd <= 0) return NaN;
-  const bruto = (priceUsd + PAYPAL_FIXED_USD) / (1 - PAYPAL_PCT);
-  return Math.ceil(bruto * 100) / 100;
-}
-
-/** Lo que efectivamente queda después de que PayPal cobre lo suyo. Sirve para
- *  verificar que el gross-up alcanza — tiene que dar >= el precio del coach. */
 export function netAfterPaypal(chargedUsd: number): number {
   return Math.round((chargedUsd * (1 - PAYPAL_PCT) - PAYPAL_FIXED_USD) * 100) / 100;
 }

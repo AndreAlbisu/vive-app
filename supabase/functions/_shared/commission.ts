@@ -19,6 +19,32 @@ export const COMMISSION_FIRST = 20;
 export const COMMISSION_RECURRING = 15;
 export const COMMISSION_PROMO = 0;
 
+/**
+ * Comisión del riel INTERNACIONAL (PayPal y USDT). Plana, sin contador por par.
+ *
+ * Por qué no sigue el esquema 20/15: en Argentina VIVE baja al 15% en la segunda
+ * sesión porque después de la presentación **deja de aportar** — el coach cobra
+ * por su propio Mercado Pago y la relación es suya. En el exterior eso no es
+ * cierto: VIVE **cobra, retiene y transfiere en cada sesión, para siempre**. El
+ * coach no puede cobrarle a alguien en Madrid sin la plataforma. No es un peaje
+ * sobre una relación ajena, es un servicio que se sigue prestando cada vez.
+ *
+ * Por qué 25 y no 20: el 25% es lo que permite dejar de preguntar **cómo** pagó
+ * el cliente y **cómo** cobra el coach. Sobre una sesión de USD 60 el neto va de
+ * ~8,56 (PayPal + salida en USDT, la peor) a ~13,20 (USDT + salida a CBU, la
+ * mejor). Con 20% la peor combinación caía a ~5,60 y había que mirar caso por
+ * caso; con 25% las cuatro cierran, y por eso la tarifa puede ser una sola.
+ *
+ * Los costos que absorbe: comisión del procesador, cambio de moneda cuando lo
+ * que entra no es lo que sale, y la comisión de red de los pagos en USDT.
+ *
+ * ⚠️ El único de esos que **no escala con la facturación sino con la cantidad de
+ * coaches** es la comisión de red: es por pago, no por sesión, así que un coach
+ * de una sesión por semana cuesta lo mismo que uno de diez. Si algún día la
+ * mayoría cobra en USDT, hay que revisarlo.
+ */
+export const COMMISSION_INTERNATIONAL = 25;
+
 /** Una reserva, vista desde el contador de sesiones del par. */
 export type BookingForCount = {
   status: string;

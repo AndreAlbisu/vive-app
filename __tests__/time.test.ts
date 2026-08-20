@@ -157,7 +157,7 @@ describe('localEquivalent', () => {
 // Si divergen, la app habilita un botón que la base después rechaza — o peor,
 // promete un reembolso que el trigger no da.
 describe('cliente y servidor coinciden', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const server = require('../supabase/functions/_shared/guarantee');
 
   it('scheduledAtMs da el mismo número en las dos implementaciones', () => {

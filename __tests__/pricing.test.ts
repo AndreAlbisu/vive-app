@@ -1,6 +1,5 @@
 import {
   priceUsdError,
-  paypalGrossUp,
   netAfterPaypal,
   MIN_PRICE_USD,
   MAX_PRICE_USD,
@@ -36,67 +35,40 @@ describe('priceUsdError', () => {
   });
 });
 
-describe('paypalGrossUp', () => {
-  // La cuenta que decide el precio: 5,40% + USD 0,30 sobre lo cobrado.
-  it('calcula el total a cobrar para netear el precio del coach', () => {
-    expect(paypalGrossUp(60)).toBeCloseTo(63.75, 2);   // 63,7420… redondeado al centavo de arriba
-    expect(paypalGrossUp(100)).toBeCloseTo(106.03, 2);
-    expect(paypalGrossUp(20)).toBeCloseTo(21.46, 2);
+// 📝 Los tests de `paypalGrossUp` se eliminaron el 20/08/2026 junto con la
+// función: al pasar el riel internacional a una comisión plana del 25%, el
+// cliente paga el precio del coach y no hay recargo que calcular.
+
+describe('netAfterPaypal', () => {
+  it('descuenta 5,40% + USD 0,30', () => {
+    expect(netAfterPaypal(60)).toBeCloseTo(56.46, 2);
+    expect(netAfterPaypal(100)).toBeCloseTo(94.30, 2);
   });
 
-  // 🔴 Lo que invalidó la propuesta de "+7% flat": el recargo real depende del
-  // precio porque la comisión fija no escala.
-  it('el recargo NO es un porcentaje constante', () => {
-    const pct = (p: number) => (paypalGrossUp(p) / p - 1) * 100;
-    expect(pct(100)).toBeLessThan(pct(20));
-    expect(pct(100)).toBeCloseTo(6.0, 1);
-    expect(pct(20)).toBeCloseTo(7.3, 1);
+  // 🔴 Lo que hace viable la tarifa plana: sobre el precio mínimo, la comisión
+  // del 25% tiene que cubrir lo que se lleva PayPal y dejar margen. Si este test
+  // falla, el mínimo quedó bajo para la comisión vigente.
+  it('sobre el precio mínimo, la comisión del 25% cubre PayPal y sobra', () => {
+    const precio = MIN_PRICE_USD;
+    const comision = precio * 0.25;
+    const costoPaypal = precio - netAfterPaypal(precio);
+    expect(costoPaypal).toBeLessThan(comision);
+    // Y con holgura suficiente para absorber el cambio de moneda, que todavía
+    // no está medido pero se estima en 2-4%.
+    expect(comision - costoPaypal).toBeGreaterThan(precio * 0.04);
   });
 
-  // La razón de ser de MIN_PRICE_USD: abajo del piso el fijo se vuelve absurdo.
-  it('en precios chicos el fijo domina, que es por lo que existe el mínimo', () => {
-    const pct = (p: number) => (paypalGrossUp(p) / p - 1) * 100;
-    expect(pct(1)).toBeGreaterThan(35);
-    expect(pct(6)).toBeGreaterThan(10);
-  });
-
-  it('devuelve NaN con entradas inválidas en vez de un precio inventado', () => {
-    expect(paypalGrossUp(0)).toBeNaN();
-    expect(paypalGrossUp(-5)).toBeNaN();
-    expect(paypalGrossUp(NaN)).toBeNaN();
+  it('la holgura crece con el precio, porque el fijo no escala', () => {
+    const margen = (p: number) => p * 0.25 - (p - netAfterPaypal(p));
+    expect(margen(100) / 100).toBeGreaterThan(margen(20) / 20);
   });
 });
 
-describe('el gross-up alcanza de verdad', () => {
-  // 🔴 El test que importa: después de que PayPal cobre lo suyo sobre el monto
-  // cobrado, tiene que quedar AL MENOS el precio del coach. Si quedara menos,
-  // la diferencia la estaría poniendo VIVE en cada sesión, en silencio.
-  it('lo que queda cubre el precio del profesional, en todo el rango', () => {
-    for (const precio of [20, 35, 50, 60, 99, 150, 500, 1000, 10000]) {
-      expect(netAfterPaypal(paypalGrossUp(precio))).toBeGreaterThanOrEqual(precio);
-    }
-  });
-
-  it('y no se pasa de más de un centavo — no es una excusa para recargar', () => {
-    for (const precio of [20, 60, 100, 1000]) {
-      expect(netAfterPaypal(paypalGrossUp(precio)) - precio).toBeLessThanOrEqual(0.01);
-    }
-  });
-});
-
-// Cliente y servidor calculan el precio sobre los mismos datos. Si divergen, la
-// app le muestra un número al usuario y el servidor le cobra otro.
 describe('cliente y servidor coinciden', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const server = require('../supabase/functions/_shared/pricing');
 
-  it('paypalGrossUp da el mismo número en las dos implementaciones', () => {
-    for (const precio of [20, 35, 60, 99, 150, 1000, 10000]) {
-      expect(paypalGrossUp(precio)).toBe(server.paypalGrossUp(precio));
-    }
-  });
-
-  it('y las constantes de comisión no se desincronizaron', () => {
+  it('las constantes de comisión no se desincronizaron', () => {
     expect(server.PAYPAL_PCT).toBe(0.054);
     expect(server.PAYPAL_FIXED_USD).toBe(0.30);
     expect(server.MIN_PRICE_USD).toBe(MIN_PRICE_USD);
