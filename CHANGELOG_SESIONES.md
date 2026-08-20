@@ -142,6 +142,21 @@
 - Confirmar en el dev build las tres cosas juntas.
 - Si "Ingresar con mi cuenta" sigue sin aparecer después de esto, quedaría descartado el lado de cookies — habría que investigar si MP usa alguna otra señal (User-Agent, fingerprint del dispositivo) para decidir si ofrece la opción de cuenta.
 
+## 2026-08-20 — Joaquín (sesión 117) — cierre de la saga del checkout de MP
+
+**Tocado:** ninguno. Diagnóstico final, sin más cambios de código.
+
+**Resumen — probado en dispositivo: el cierre a tiempo y el bloqueo del salto a la app nativa quedaron resueltos. "Ingresar con mi cuenta" queda como limitación conocida, no como bug.**
+
+- Joaquín confirmó: sin cierre prematuro (sesión 115) ✅, sin secuestro a la app nativa de MP (sesión 113) ✅. Solo sigue faltando "Ingresar con mi cuenta" pese a `sharedCookiesEnabled` (sesión 116).
+- 🔴 **Causa real, y no tiene arreglo de código: en iOS ninguna app puede leer las cookies de navegación reales de Safari — restricción de seguridad de Apple.** Solo los componentes del propio sistema (`SFSafariViewController`/`ASWebAuthenticationSession`, lo que usábamos hasta la sesión 112) tienen ese acceso, porque son parte de Safari por dentro. Un `WebView` normal —lo que se necesita para bloquear el salto a la app nativa y controlar el cierre— nunca va a poder ver esa sesión, comparta cookies "propias" o no. `sharedCookiesEnabled` sincroniza cookies DENTRO del sandbox de la app, no las de Safari.
+- **Es una tensión real entre dos propiedades que no se pueden tener juntas con las herramientas disponibles**: navegador del sistema (ve la sesión de MP, pero MP puede secuestrar el control hacia su app nativa) vs. WebView propio (control total, pero arranca sin sesión). Se priorizó el control — cerrar en el momento correcto y no perder al usuario en la app de otro es más grave que no ofrecer el atajo de cuenta.
+- **No es permanente para siempre — es un costo de la primera vez.** El `WebView` SÍ guarda sus propias cookies entre usos (no es incógnito): si la persona llega a loguearse a MP alguna vez dentro de este checkout, esa sesión queda y "Ingresar con mi cuenta" debería aparecer en pagos siguientes. Sin confirmar si existe ese camino de login dentro del flujo actual (Tarjeta/Efectivo son las únicas opciones visibles hoy sin sesión).
+- **Decisión: se deja pendiente, no se sigue iterando con plata real.** Fueron ~7 pagos reales de $4.500 solo en esta saga (sesiones 107 a 117). Lo que importaba de verdad —que el pago se confirme bien y la app no se quede pegada en otra app— está resuelto.
+
+**Pendiente para la próxima sesión:**
+- Si en algún momento importa recuperar "Ingresar con mi cuenta" desde el primer pago: investigar (sin gastar plata real, contra la documentación de MP) si el checkout ofrece algún link de login alternativo dentro del flujo de Tarjeta, o si hay que resignarse a que sea un costo de la primera vez.
+
 ---
 
 ## 2026-08-19 — Joaquín (sesión 109)
