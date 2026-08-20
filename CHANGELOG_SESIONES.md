@@ -94,6 +94,22 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 114)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — el checkout embebido (sesión 113) funcionó, pero `incognito` escondía la opción de pagar con cuenta de MP.**
+
+- Joaquín probó en dispositivo: el WebView cargó bien (el módulo nativo ya estaba compilado, no hizo falta build nueva) y mostró el header propio ("X" + "Mercado Pago"). Pero faltaba la sección **"Con tu cuenta de Mercado Pago → Ingresar con mi cuenta"** — solo aparecían Tarjeta y Efectivo.
+- 🔴 **Causa: `incognito={__DEV__}`.** Sin cookies, MP no reconoce ninguna sesión logueada y no ofrece la opción de cuenta — justo el caso que Joaquín había marcado como el que importa de verdad: alguien sin tarjeta que necesita pagar con el dinero de su cuenta de MP.
+- **Sacado `incognito` en los dos ambientes.** Las cookies quedan persistentes pero aisladas de Safari (el `WebView` tiene su propio storage, separado del navegador del sistema) — mismo objetivo que se buscaba con la sesión efímera antigua (no repetir login de MP en cada reserva), sin el efecto secundario de esconder la opción de cuenta.
+- Typecheck, lint y 187/187 tests limpios. **Falta la confirmación final en dispositivo**: que con esto puesto vuelva a aparecer "Ingresar con mi cuenta" Y que el cierre automático siga funcionando.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build: aparece "Ingresar con mi cuenta", el pago con cuenta se completa normal, y el checkout se cierra solo al confirmarse — las tres cosas juntas, no probadas todavía con este último cambio.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.

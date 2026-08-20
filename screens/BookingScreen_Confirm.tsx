@@ -717,11 +717,14 @@ export default function BookingScreen_Confirm() {
             </View>
             <WebView
               source={{ uri: checkoutUrl }}
-              // Reemplaza a la sesión efímera de antes: sin cookies en testing
-              // (para cambiar de cuenta de MP entre pruebas), persistentes
-              // pero aisladas de Safari en producción (no repetir login de MP
-              // en cada reserva).
-              incognito={__DEV__}
+              // NO incognito, en ningún ambiente — probado en dispositivo el
+              // 20/08/2026: con `incognito` MP no reconoce ninguna sesión
+              // logueada y no ofrece "Ingresar con mi cuenta" (solo Tarjeta/
+              // Efectivo), justo el caso de alguien sin tarjeta que necesita
+              // pagar con el dinero de su cuenta de MP. Cookies persistentes,
+              // aisladas de Safari (WebView tiene su propio storage) — mismo
+              // motivo que antes (no repetir login de MP en cada reserva), sin
+              // el efecto secundario de esconder la opción de cuenta.
               startInLoadingState
               renderLoading={() => (
                 <View style={s.checkoutLoading}>
