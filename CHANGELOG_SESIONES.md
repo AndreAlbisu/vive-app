@@ -23,6 +23,25 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 110)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`, `supabase/functions/mp-create-payment/index.ts` (redeployada). Secret `CHECKOUT_RETURN_URL` — **unset**.
+
+**Resumen — el intento de cierre automático de la sesión 107 salió PEOR que el comportamiento original. Revertido.**
+
+- Joaquín probó en el dev build (con captura por AirDrop de cada paso) y la secuencia real fue: pagar → Safari muestra el cartel del sistema **"¿Abrir en Vita?"** → al tocar "Abrir", en vez de entrar a la app, Safari muestra **una checkout de MP nueva desde cero** ("¿Cómo querés pagar?") → recién ~10 segundos después de salir de ahí aparece la confirmación real (que sale del sondeo que la app ya hacía, no del redirect).
+- 🔴 **Diagnóstico: el cartel "¿Abrir en Vita?" es la prueba de que `openAuthSessionAsync` NO está funcionando.** Si interceptara el redirect como se supone, no debería aparecer ningún cartel del sistema — la sesión se cierra en silencio y listo. Que aparezca significa que la pantalla de "pago aprobado" de MP **rompe** esa sesión (probablemente abre algo en un contexto nuevo del lado de MP, fuera de nuestro control) antes de llegar al redirect.
+- **Revertido a `openBrowserAsync`** en producción (como estaba antes de la sesión 107) — sin depender de que el SDK detecte el redirect solo. El sondeo de `payment_status` que ya existía (12s, sin cambios) sigue siendo el mecanismo real que confirma el pago; cerrar el browser es cosa de la persona, como antes. `__DEV__` sigue con `openAuthSessionAsync` + sesión efímera (sirve para otra cosa: cambiar de cuenta de MP entre pruebas, no para el auto-cierre).
+- **`CHECKOUT_RETURN_URL` unset** — así `mp-create-payment` no manda `back_urls`/`auto_return` y MP no intenta redirigir a nada, que es lo que dispara el cartel confuso del sistema.
+- `booking-return` (edge function) y `app/booking/result.tsx` (sesión 107/109) **quedan en el repo, dormidos** — no rotos, solo sin usarse. Si se retoma esto, la nota en el código apunta a la vía más confiable: `Linking.addEventListener('url', …)` + `WebBrowser.dismissBrowser()` manejado a mano, no depender del auto-detect del SDK.
+- Typecheck, lint y 187/187 tests limpios. `mp-create-payment` redeployada (comentarios actualizados, sin cambio de lógica).
+
+**Pendiente para la próxima sesión:**
+- El cierre automático del browser después de pagar con MP **queda sin resolver, y no es prioritario** — el flujo funciona (el sondeo lo confirma), solo no es "mágico". Si se retoma, investigar por qué la pantalla de "pago aprobado" de MP rompe `ASWebAuthenticationSession` antes de intentar de nuevo.
+- El guardarraíl de reconexión de MP sigue siendo el único pendiente grande de plata sin probar en dispositivo.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.

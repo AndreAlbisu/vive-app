@@ -371,24 +371,34 @@ export default function BookingScreen_Confirm() {
       }
 
       if (initPoint) {
-        // Las dos ramas usan openAuthSessionAsync — es el que sabe esperar el
-        // redirect de vuelta (`viveapp://booking/result`, que ahora sí llega:
-        // `booking-return` le da a MP una back_url https real, ver mp-create-
-        // payment) y cerrar el browser solo en cuanto lo ve, en vez de dejar a
-        // la persona mirando la pantalla de "Pago aprobado" de MP hasta que
-        // cierre la pestaña a mano.
+        // REVERTIDO 20/08/2026 (sesión 110) — probado en dispositivo y el intento
+        // de cierre automático (openAuthSessionAsync + back_urls https, sesión 107)
+        // salió PEOR que esto: la pantalla de "pago aprobado" de MP rompe la sesión
+        // de openAuthSessionAsync (se ve porque el sistema termina mostrando el
+        // cartel "¿Abrir en Vita?", que es justo la señal de que NO se interceptó
+        // en silencio como debería), y de ahí Safari mostraba una checkout de MP
+        // nueva desde cero antes de volver a la app. Confuso y sin ganancia real:
+        // el sondeo de acá abajo ya detecta el pago igual, cierre automático o no.
+        // CHECKOUT_RETURN_URL quedó sin setear (unset) para que mp-create-payment
+        // no mande back_urls/auto_return — así MP no intenta redirigir a nada y no
+        // dispara ese cartel del sistema. Si se retoma esto alguna vez, la vía más
+        // confiable es Linking.addEventListener('url', …) + WebBrowser.dismissBrowser()
+        // manejado a mano, no depender de que ASWebAuthenticationSession intercepte
+        // el redirect de MP solo.
         //
-        // La única diferencia entre testing y producción es `preferEphemeralSession`:
-        // en testing (Expo Go / dev build) se fuerza una sesión SIN cookies para
-        // poder cambiar de cuenta de MP entre pruebas (comprador ≠ vendedor) — el
-        // browser normal comparte cookies con Safari y deja la cuenta pegada. En
-        // producción se deja compartir cookies (default `false`) para que el
-        // usuario real no tenga que volver a loguearse en MP en cada reserva —
-        // mismo criterio que ya se aplicó con Google Sign-In (sesión 100): no
-        // reintroducir sesión efímera fuera de testing.
-        await WebBrowser.openAuthSessionAsync(initPoint, 'viveapp://booking/result', {
-          preferEphemeralSession: __DEV__,
-        });
+        // En testing (Expo Go / dev build) sigue con sesión EFÍMERA para poder
+        // cambiar de cuenta de MP entre pruebas (comprador ≠ vendedor): el browser
+        // normal comparte cookies con Safari y deja la cuenta pegada. En producción
+        // sigue con openBrowserAsync (persistente) → el usuario real no re-loguea
+        // en cada reserva. El resultado del pago llega por mp-webhook + el sondeo
+        // de abajo, no del redirect — cerrar el browser es cosa de la persona.
+        if (__DEV__) {
+          await WebBrowser.openAuthSessionAsync(initPoint, 'viveapp://booking/result', {
+            preferEphemeralSession: true,
+          });
+        } else {
+          await WebBrowser.openBrowserAsync(initPoint);
+        }
       }
 
       // ¿Entró el pago? Cerrar el browser no dice nada: puede haber pagado o
