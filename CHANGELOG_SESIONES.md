@@ -159,6 +159,22 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 118)
+
+**Tocado:** ninguno. Verificación en producción.
+
+**Resumen — alta de coach con Google (sesión 102), probada en dispositivo. 2 de 3 caminos confirmados con cuentas reales, el tercero queda cubierto por lógica pero no ejercitado con una cuenta 100% virgen.**
+
+- **Cancelar el login de Google a mitad de camino** ✅ — no muestra error, la pantalla queda como si nada.
+- **Cuenta que ya es usuario final** ✅ — probado dos veces sin querer (una con la cuenta de Coach Prueba, que llevó al panel de coach correctamente; otra con una cuenta de usuario final real) y una vez a propósito: rebota con "Esta cuenta ya está registrada como usuario. Para postularte como profesional necesitás usar un mail distinto", como se diseñó.
+  - 📝 **Casi se reporta como bug y no lo era.** Joaquín probó con lo que creía una cuenta 100% nueva (`joaquinalbisu494@gmail.com`) y rebotó igual — se verificó contra `profiles` antes de tocar código: esa cuenta existe desde el **01/07/2026** como usuario final (es la misma cuenta "Joaquin" que ya había pagado la primera sesión de $1 con Coach Prueba en sesiones anteriores). El rebote era correcto — de paso confirma que la regla funciona con cuentas viejas, no solo con las recién creadas en el momento.
+- **Alta 100% nueva** — sin ejercitar con una cuenta que nunca haya tocado Vita. Decisión: no vale la pena conseguir una cuarta cuenta de Google solo para esto — es el camino de menor riesgo de los tres (si falla, se nota altiro: nadie se puede registrar, error visible, no es un fallo silencioso como los otros dos que sí se confirmaron).
+
+**Pendiente para la próxima sesión:**
+- Si alguna vez se consigue una cuenta de Google genuinamente nueva, confirmar el alta feliz. No es urgente.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.
