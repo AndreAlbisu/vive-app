@@ -175,6 +175,21 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 119)
+
+**Tocado:** ninguno. Verificación en producción.
+
+**Resumen — bloqueo de usuarios probado en dispositivo, funciona de punta a punta.**
+
+- Joaquín bloqueó a Coach Prueba desde su perfil (la opción de bloquear/reportar apareció bien). Confirmado: **desaparece de Conexiones** y **el chat se congela** (no se puede escribir).
+- Desbloqueado desde "Cuentas bloqueadas" en el perfil: **reaparece en Conexiones** y **se puede volver a escribir**. Los cuatro efectos esperados (sesión 93, cuando se construyó) quedan confirmados con uso real.
+
+**Pendiente para la próxima sesión:**
+- Ninguno nuevo de este ítem — queda cerrado.
+- De la lista de QA sigue abierto: el toggle "acepta sesiones del exterior" + pantalla de datos de cobro del coach, sin probar en dispositivo.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.
