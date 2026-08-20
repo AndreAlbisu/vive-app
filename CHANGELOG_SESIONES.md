@@ -127,6 +127,23 @@
 
 ---
 
+## 2026-08-20 — Joaquín (sesión 116)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — sacar `incognito` (sesión 114) no alcanzó: "Ingresar con mi cuenta" seguía sin aparecer. La causa real era otra.**
+
+- El `WebView` tiene su **propio almacén de cookies**, completamente separado del de Safari — sacar `incognito` lo vuelve persistente, pero seguía sin haber visto NUNCA la sesión de MP de Joaquín, porque esa sesión vive en las cookies de Safari, no en las del WebView. Antes de la sesión 113 (browser del sistema) esto no era un problema: el browser del sistema comparte contexto con Safari por diseño.
+- **Arreglado con `sharedCookiesEnabled` (solo iOS)** — hace que el `WebView` use el mismo `NSHTTPCookieStorage` que Safari, así que ve la sesión de MP que ya existe. No interfiere con `onShouldStartLoadWithRequest` (el bloqueo del salto a la app nativa, sesión 113): son mecanismos independientes, cookies vs. navegación.
+- ⚠️ **Solo iOS.** Android no tiene este pendiente probado — su manejo de cookies de WebView es distinto (`CookieManager`, generalmente ya compartido con el sistema por default), pero no se verificó nada ahí porque no hay dispositivo Android de prueba.
+- Typecheck, lint y 187/187 tests limpios. **Falta confirmar en dispositivo** — cuarta vuelta sobre el mismo problema, la esperanza es que esta sea la que cierra las tres cosas juntas: cuenta visible, sin cierre prematuro (sesión 115), y cierre automático al pagar.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build las tres cosas juntas.
+- Si "Ingresar con mi cuenta" sigue sin aparecer después de esto, quedaría descartado el lado de cookies — habría que investigar si MP usa alguna otra señal (User-Agent, fingerprint del dispositivo) para decidir si ofrece la opción de cuenta.
+
+---
+
 ## 2026-08-19 — Joaquín (sesión 109)
 
 **Tocado:** ninguno. Nuevo: `app/booking/result.tsx`.

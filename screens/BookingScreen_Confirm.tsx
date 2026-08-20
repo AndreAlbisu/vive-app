@@ -730,14 +730,24 @@ export default function BookingScreen_Confirm() {
             </View>
             <WebView
               source={{ uri: checkoutUrl }}
-              // NO incognito, en ningún ambiente — probado en dispositivo el
-              // 20/08/2026: con `incognito` MP no reconoce ninguna sesión
+              // NO incognito — con `incognito` MP no reconoce ninguna sesión
               // logueada y no ofrece "Ingresar con mi cuenta" (solo Tarjeta/
-              // Efectivo), justo el caso de alguien sin tarjeta que necesita
-              // pagar con el dinero de su cuenta de MP. Cookies persistentes,
-              // aisladas de Safari (WebView tiene su propio storage) — mismo
-              // motivo que antes (no repetir login de MP en cada reserva), sin
-              // el efecto secundario de esconder la opción de cuenta.
+              // Efectivo), justo el caso de alguien sin tarjeta.
+              //
+              // 20/08/2026 (sesión 116): sacar `incognito` NO ALCANZÓ —
+              // probado en dispositivo, "Ingresar con mi cuenta" seguía sin
+              // aparecer. El motivo real: el `WebView` tiene su PROPIO storage
+              // de cookies, separado del de Safari — nunca vio la sesión de MP
+              // aunque ya no sea incógnito, porque nunca estuvo ahí para
+              // empezar. `sharedCookiesEnabled` (solo iOS) hace que use el
+              // mismo `NSHTTPCookieStorage` que Safari — ahí SÍ está la sesión
+              // de MP de la persona, que es justo lo que hacía que el browser
+              // del sistema (antes de la sesión 113) mostrara la opción de
+              // cuenta sin problema. No afecta el bloqueo de
+              // `onShouldStartLoadWithRequest` de más abajo — son mecanismos
+              // distintos (cookies vs. navegación), así que el salto a la app
+              // nativa de MP sigue bloqueado igual.
+              sharedCookiesEnabled
               startInLoadingState
               renderLoading={() => (
                 <View style={s.checkoutLoading}>
