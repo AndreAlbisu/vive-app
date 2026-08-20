@@ -33,6 +33,7 @@ import {
   listClaims, checkGuarantee, approveGuarantee, rejectGuarantee,
   listUsdtRefunds, markUsdtRefunded, type UsdtRefund,
   listCoachPayouts, markCoachPaid, type CoachPayout,
+  listCommissionReport, type CommissionReport,
   listAuditLog,
   type PendingCoach, type AdminReport, type AdminClaim, type ReportResolution,
   type AuditEntry, type GuaranteeCheck,
@@ -42,7 +43,7 @@ const FOREST = '#3A4F2A';
 const OLIVE = '#87835C';
 const CLAY = '#B5533A';
 
-type Tab = 'coaches' | 'reportes' | 'garantias' | 'reembolsos' | 'pagos' | 'auditoria';
+type Tab = 'coaches' | 'reportes' | 'garantias' | 'reembolsos' | 'pagos' | 'facturacion' | 'auditoria';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'coaches',   label: 'Postulaciones' },
@@ -50,6 +51,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'garantias', label: 'Garantías' },
   { key: 'reembolsos', label: 'Reembolsos' },
   { key: 'pagos',     label: 'Pagos' },
+  { key: 'facturacion', label: 'Facturación' },
   { key: 'auditoria', label: 'Registro' },
 ];
 
@@ -88,6 +90,7 @@ export default function AdminScreen() {
   const [payouts, setPayouts] = useState<CoachPayout[]>([]);
   const [payoutsError, setPayoutsError] = useState<string | null>(null);
   const [payoutRef, setPayoutRef] = useState<Record<string, string>>({});
+  const [factu, setFactu] = useState<CommissionReport>({ cobradas: [], reembolsadas: [], totales: {}, error: null });
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<string | null>(null);
@@ -98,17 +101,18 @@ export default function AdminScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [c, rej, r, g, rf, pg, a] = await Promise.all([
+    const [c, rej, r, g, rf, pg, fc, a] = await Promise.all([
       listCoachApplications('pendiente'),
       listCoachApplications('rechazada'),
       listPendingReports(),
       listClaims(),
       listUsdtRefunds(),
       listCoachPayouts(),
+      listCommissionReport(),
       listAuditLog(),
     ]);
     setCoaches(c); setRejected(rej); setReports(r); setClaims(g); setRefunds(rf);
-    setPayouts(pg.rows); setPayoutsError(pg.error); setAudit(a);
+    setPayouts(pg.rows); setPayoutsError(pg.error); setFactu(fc); setAudit(a);
     setLoading(false);
   }, []);
 
@@ -554,6 +558,87 @@ export default function AdminScreen() {
                       )}
                     </View>
                   ))}
+                </>
+              )
+            )}
+
+            {/* ── Facturación ─────────────────────────────────────────────
+                🔴 Esto NO decide qué es facturable — muestra la comisión que
+                quedó, agrupada, para llevársela al contador. Las cobradas y las
+                reembolsadas van SEPARADAS y no netadas: la comisión de una
+                reembolsada normalmente se revierte, pero "normalmente" no es una
+                regla que esta pantalla pueda aplicar sola.
+                Ver docs/fiscal-instrucciones.md §2.1. */}
+            {!loading && tab === 'facturacion' && (
+              factu.error ? (
+                <View style={s.card}>
+                  <Text style={s.cardTitle}>No se pudo leer</Text>
+                  <Text style={s.cardBody}>{factu.error}</Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={s.note}>
+                    Comisión de VIVE por mes y profesional. Es material para el contador, no una
+                    factura: qué corresponde facturar, a quién y cada cuánto todavía está sin
+                    definir.
+                  </Text>
+
+                  {Object.keys(factu.totales).length > 0 && (
+                    <View style={s.card}>
+                      <Text style={s.cardMeta}>Total de comisión cobrada</Text>
+                      {Object.entries(factu.totales).map(([moneda, total]) => (
+                        <Text key={moneda} style={s.cardTitle}>
+                          {moneda} {total.toFixed(2)}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+
+                  {factu.cobradas.length === 0 ? (
+                    <Empty icon="receipt-text-outline" text="Todavía no hay comisiones cobradas." />
+                  ) : (
+                    factu.cobradas.map(g => (
+                      <View key={`${g.mes}-${g.coachId}-${g.moneda}-${g.riel}`} style={s.card}>
+                        <Text style={s.cardTitle}>
+                          {g.mes} · {g.moneda} {g.comision.toFixed(2)}
+                        </Text>
+                        <Text style={s.cardMeta}>
+                          {g.coachName ?? 'coach sin nombre'} · {g.sesiones}{' '}
+                          {g.sesiones === 1 ? 'sesión' : 'sesiones'} · bruto {g.moneda} {g.bruto.toFixed(2)}
+                        </Text>
+                        {/* El riel cambia CÓMO se cobró la comisión, y eso es
+                            justo lo que el contador necesita saber: con Mercado
+                            Pago la retuvo el procesador y nunca pasó por una
+                            cuenta de VIVE; en el internacional entró todo y la
+                            comisión se descontó al pagarle al profesional. */}
+                        <Text style={s.cardMeta}>
+                          {g.riel === 'mp'
+                            ? 'Mercado Pago — la retuvo el procesador, no pasó por una cuenta de VIVE'
+                            : 'Internacional — entró todo a VIVE y se descontó al pagarle'}
+                        </Text>
+                      </View>
+                    ))
+                  )}
+
+                  {factu.reembolsadas.length > 0 && (
+                    <>
+                      <Text style={[s.note, { marginTop: 12 }]}>
+                        Reembolsadas — la comisión normalmente se revierte, pero conviene que lo
+                        confirme el contador. Van aparte y NO están restadas de lo de arriba.
+                      </Text>
+                      {factu.reembolsadas.map(g => (
+                        <View key={`r-${g.mes}-${g.coachId}-${g.moneda}-${g.riel}`} style={[s.card, s.cardMuted]}>
+                          <Text style={s.cardTitle}>
+                            {g.mes} · {g.moneda} {g.comision.toFixed(2)}
+                          </Text>
+                          <Text style={s.cardMeta}>
+                            {g.coachName ?? 'coach sin nombre'} · {g.sesiones}{' '}
+                            {g.sesiones === 1 ? 'sesión' : 'sesiones'}
+                          </Text>
+                        </View>
+                      ))}
+                    </>
+                  )}
                 </>
               )
             )}

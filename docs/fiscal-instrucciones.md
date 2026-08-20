@@ -67,7 +67,13 @@ comisión, y el de USDT no tuvo split.
 depende de cómo se documente el movimiento, no de la intención con que se hizo.
 Pero conviene llevar el dato exacto y no la pregunta general.
 
-**Para traer los números reales** (en vez de esta reconstrucción del changelog):
+**Para traer los números reales:** el panel de admin tiene una pestaña
+**Facturación** que muestra la comisión de Vita agrupada por mes, profesional,
+moneda y riel — con las reembolsadas aparte y sin netar. ⚠️ **No decide qué es
+facturable**: es material en bruto para esta conversación, justamente porque el
+criterio es lo que falta definir.
+
+También se puede sacar directo de la base:
 
 ```sql
 select b.id, b.scheduled_date, b.amount, b.platform_fee_pct,

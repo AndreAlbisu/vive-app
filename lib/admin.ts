@@ -12,6 +12,7 @@
 import { supabase } from '@/lib/supabase';
 import { REPORT_REASONS, type ReportReason } from '@/lib/reports';
 import { coachNetFor, payoutAfterDeliveryCost, USDT_NETWORK_FEE_USD, type PayoutMethod } from '@/lib/payout';
+import { agruparComisiones, totalPorMoneda, type BookingForBilling, type CommissionGroup } from '@/lib/billing';
 
 const FUNCTIONS_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 
@@ -454,6 +455,50 @@ export function markCoachPaid(bookingIds: string[], reference: string) {
     booking_ids: bookingIds,
     payout_reference: reference.trim(),
   });
+}
+
+// ─── Facturación ─────────────────────────────────────────────────────────────
+//
+// 🔴 NO emite facturas ni decide qué es facturable — es material en bruto para
+// llevarle al contador. Las tres preguntas abiertas (qué facturar, a quién, cada
+// cuánto) están en `docs/fiscal-instrucciones.md` §2.1, y ninguna se responde
+// desde el código.
+//
+// Por eso trae las **cobradas y las reembolsadas por separado** en vez de
+// aplicar un criterio: elegir uno acá sería hornear una respuesta que todavía no
+// existe. La comisión de una reserva reembolsada normalmente se revierte, pero
+// "normalmente" no es una regla que pueda fijar este archivo.
+
+export type CommissionReport = {
+  cobradas: CommissionGroup[];
+  reembolsadas: CommissionGroup[];
+  /** Total cobrado POR MONEDA. Es un mapa y no un número para que sumar pesos
+   *  con dólares sea imposible por accidente. */
+  totales: Record<string, number>;
+  error: string | null;
+};
+
+export async function listCommissionReport(): Promise<CommissionReport> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('scheduled_date, coach_id, coach_name, amount, platform_fee_pct, currency, payment_provider, payment_status')
+    .in('payment_status', ['aprobado', 'reembolsado'])
+    .order('scheduled_date', { ascending: false })
+    .limit(2000);
+
+  if (error) {
+    console.warn('[admin] no se pudo leer la facturación:', error.message);
+    return { cobradas: [], reembolsadas: [], totales: {}, error: error.message };
+  }
+
+  const filas = (data ?? []) as BookingForBilling[];
+  const cobradas = agruparComisiones(filas.filter(b => b.payment_status === 'aprobado'));
+  return {
+    cobradas,
+    reembolsadas: agruparComisiones(filas.filter(b => b.payment_status === 'reembolsado')),
+    totales: totalPorMoneda(cobradas),
+    error: null,
+  };
 }
 
 // ─── Auditoría ───────────────────────────────────────────────────────────────
