@@ -7,7 +7,7 @@
 
 ## 2026-08-20 — Andre (sesión 115)
 
-**Tocado:** `lib/time.ts`, `supabase/functions/_shared/guarantee.ts`, `SCHEMA.md`. Sin cambios de base de datos ni de comportamiento — documentación de decisiones. 231 tests.
+**Tocado:** `lib/time.ts`, `lib/pricing.ts`, `lib/payout.ts`, `lib/admin.ts`, `supabase/functions/_shared/guarantee.ts`, `_shared/commission.ts`, `_shared/pricing.ts`, `paypal-create-payment`, `usdt-create-payment`, `screens/BookingScreen_Confirm.tsx`, `CoachProfileScreen.tsx`, `CoachPayoutScreen.tsx`, `AdminScreen.tsx`, `docs/cobro-internacional-coaches.md`, `SCHEMA.md`. Las dos edge functions **deployadas**. Sin cambios de base de datos. 231 tests.
 
 **Resumen — sesión de decisiones sobre el riel internacional. Se cerró la plataforma, se abrió el modelo de costos, y quedó un supuesto escrito antes de que venza.**
 
@@ -29,12 +29,36 @@
 - 🔴 **De todo eso, lo único que toca el significado de datos ya guardados es la hora.** El resto es aditivo. Documentado en `lib/time.ts`, `_shared/guarantee.ts` y SCHEMA.md, con qué haría falta el día que cambie y por qué **no** se agregó un parámetro de zona "por las dudas" (sería código muerto sin tests; lo caro es tener la zona disponible en cada punto de uso, no la firma de la función).
 - ⚠️ **Vocabulario: "internacional" nombra dos cosas independientes** — que el **cliente** esté afuera (los rieles de pago, todo lo que existe) y que el **profesional** esté afuera. La primera no implica la segunda, y usar una palabra para las dos ya confundió una vez en esta misma sesión.
 
+**Y el esquema de comisiones quedó cerrado — 25% plano para el internacional.**
+
+- **La propuesta salió de Andre y es mejor que lo que yo venía recomendando.** Yo defendía sumarle el costo al precio (el cliente pagaba 63,75 por una sesión de 60); él propuso **cambiar la promesa en vez de esconder el costo**. Toda mi objeción a que lo absorbiera el coach era que rompía el copy del 15% — si la tarifa dice otra cosa, la objeción desaparece.
+- **Por qué 25 y no 20:** es lo que permite **dejar de preguntar por la combinación**. Sobre USD 60 el neto va de ~8,56 (PayPal + salida en USDT) a ~13,20 (USDT + salida a CBU). Con 20% la peor caía a ~5,60 y había que mirar caso por caso; con 25% las cuatro cierran. No es simplicidad, es que el margen absorbe la varianza.
+- **Descartado el "10% de descuento con Mercado Pago"** que también proponía Andre: **no hay un precio del cual descontar**. El local está en pesos y el internacional en dólares, y son números independientes que el coach fija por separado. Además el selector de medios aparece según lo que configuró el COACH y no según dónde está el cliente, así que alguien en Argentina vería las dos monedas sin poder compararlas — y eso acerca el asunto a la cláusula de recargo de PayPal, que hoy no aplica.
+- **Qué eliminó:** `paypalGrossUp` en las dos copias, `charged_amount` como recargo (ahora igual a `amount`), el contador por par en los dos rieles internacionales, y la pregunta contractual de PayPal.
+- 📝 **El mínimo de USD 20 sobrevive con otro motivo**: existía porque la comisión fija de PayPal se comía el recargo en montos chicos; con la tarifa plana eso deja de ser aritmética y se queda porque una sesión de USD 5 no es un producto serio.
+- ⚠️ **Sigue abierto para el riel LOCAL**: pasar Mercado Pago a 15% plano borraría todo el andamiaje del contador por par, pero **VIVE dejaría de capturar el valor de la presentación**, que es lo único que aporta ahí. Decisión con argumento propio, no debe viajar de arrastre.
+
+**El modelo de costos, armado con números medidos:**
+
+- **Fijos ~USD 41/mes**: Supabase 25, Anthropic 7,50, Apple 8,25. **Daily.co da 10.000 minutos de participante gratis por mes** = **83 sesiones**, y después USD 0,004 por minuto (USD 0,48 por sesión de 60 min con dos personas).
+- **Punto de equilibrio: ~5 sesiones internacionales por mes.** Los costos fijos **no son el problema** — el negocio se define por volumen y margen variable.
+- 🔴 **Lo único sin medir sigue siendo el cambio de moneda** (estimado 2-4%). Si resulta el doble, el neto de una sesión de 60 baja de ~9,20 a ~7,40: el negocio no cambia de forma, el margen sí.
+
+**El costo de red, descontado a quien lo elige (USD 1,50 por envío, valor real de Andre):**
+
+- 🔴 **Se paga una vez por TRANSFERENCIA, no por sesión** — y me equivoqué dos veces antes de tenerlo claro, primero estimándolo en USD 2 y después computándolo por sesión. Con pagos semanales, un coach de cuatro sesiones recibe **un solo envío**.
+- **Eso hace que el costo lo determine el volumen del profesional y no el precio**: sobre una sesión de USD 50 pesa 3% si hizo una esa semana y 0,3% si hizo diez.
+- **Sin el descuento, el mínimo de USD 20 no llegaba al 10% de margen** en el peor caso (6,2%); con él da 13,7% en todos. Y cae solo sobre quien genera el costo desproporcionado: al de una sesión semanal le baja el cobro de 75% a 72%, al de cuatro le descuenta un 1% que no nota.
+- **Sin mínimo de acumulación** (decisión de Andre). Si el costo supera lo que se le debe, el panel lo marca y **deshabilita el botón de marcar pagado** en vez de mostrar cero — que se leería como saldado, dejando al coach sin cobrar y sin registro.
+- **El profesional lo ve al ELEGIR el método**, no cuando le llega menos plata.
+
 **Pendiente para la próxima sesión:**
 - 🔴 **Dos mediciones de USD 50**, y son las que destraban todo lo demás: dólares de PayPal → pesos, y USDT → pesos. **Primero la de PayPal** (supuesto: el pago en USDT va a ser el menos usado, aunque en alza). Las tarifas publicadas no incluyen el spread, así que la única forma de saberlo es hacerlo.
 - 🔴 **La hora con el contador.** Tres preguntas, en orden: ¿la plata de terceros me computa para el tope? ¿cuál es el techo real de sesiones/mes? ¿quién factura la exportación?
 - **Dos llamadas de diez minutos**: al banco, si la cuenta admite transferencias masivas por archivo (si no, el techo operativo aparece antes de lo previsto); y el formulario de plataformas de PayPal, que es otro canal que el de soporte.
 - **Sigue sin probarse un pago real de PayPal de punta a punta**, ni nada en dispositivo (selector de tres medios, filtro del exterior, badge, zonas horarias).
-- **La billetera propia de VIVE es lo único con urgencia real**: rotar tiene una ventana de 60 min donde un pago puede perderse, y **hoy es el único momento en que sale gratis** porque no hay ni una reserva internacional.
+- **La billetera propia de VIVE es lo único con urgencia real**: rotar tiene una ventana de 60 min donde un pago puede perderse, y **hoy es el único momento en que sale gratis** porque no hay ni una reserva internacional. **Al hacerlo, anotá cuánto costó el envío** — confirma el USD 1,50 que quedó horneado en `USDT_NETWORK_FEE_USD`, que hoy nada detecta si cambia.
+- **Decidir el 15% plano en Mercado Pago**, que quedó explícitamente fuera de la decisión del internacional.
 
 ---
 
