@@ -12,6 +12,7 @@ import {
   BackHandler,
   Linking,
   AppState,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -164,6 +165,41 @@ export default function BookingScreen_Confirm() {
     } catch (e) {
       await logError('BookingConfirm: no se pudo abrir el checkout por ninguna vía', e);
       return false;
+    }
+  };
+
+  // 🔬 DIAGNÓSTICO TEMPORAL (21/08/2026) — BORRAR cuando se resuelva.
+  //
+  // Existe para responder UNA pregunta sobre el "Unable to open URL" que tiró
+  // `Linking.openURL` con el `init_point` de MP: ¿falla esa URL en particular, o
+  // falla `Linking` con cualquier https?
+  //
+  //   · Abre Safari  → `Linking` anda. El problema es esa URL puntual, casi
+  //     seguro porque la app de Mercado Pago la reclama como universal link y el
+  //     traspaso se rompe. El fallback al navegador in-app es la respuesta final
+  //     y no hay nada más que hacer.
+  //   · Tira el Alert → `Linking.openURL` está roto para TODO https en este
+  //     build. Grave: el salto a la app nativa nunca va a funcionar en iOS, y
+  //     todo el cambio de la sesión 117 termina siempre en el navegador in-app.
+  //
+  // Probar los DOS botones: `google.com` no lo reclama nadie; `mercadopago.com.ar`
+  // sí. Que uno ande y el otro no es en sí mismo la respuesta.
+  const probarApertura = async (url: string) => {
+    let puede: boolean | string;
+    try {
+      puede = await Linking.canOpenURL(url);
+    } catch (e) {
+      puede = `canOpenURL tiró: ${e}`;
+    }
+    try {
+      await Linking.openURL(url);
+      // No hay Alert de éxito a propósito: si funcionó, la app ya no está en
+      // pantalla. Estar mirando Safari ES el resultado.
+    } catch (e) {
+      Alert.alert(
+        'No abrió',
+        `URL:\n${url}\n\ncanOpenURL: ${puede}\n\nopenURL falló con:\n${e}`,
+      );
     }
   };
 
@@ -894,6 +930,25 @@ export default function BookingScreen_Confirm() {
             </View>
           )}
 
+          {/* 🔬 DIAGNÓSTICO TEMPORAL — BORRAR junto con `probarApertura`.
+              Solo en desarrollo: nunca se compila en un build de producción. */}
+          {__DEV__ && (
+            <View style={s.diagRow}>
+              <TouchableOpacity
+                style={s.diagBtn}
+                onPress={() => probarApertura('https://google.com')}
+                activeOpacity={0.85}>
+                <Text style={s.diagText}>🔬 https común</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.diagBtn}
+                onPress={() => probarApertura('https://www.mercadopago.com.ar')}
+                activeOpacity={0.85}>
+                <Text style={s.diagText}>🔬 mercadopago.com.ar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           <TouchableOpacity
             style={[s.btn, loading && s.btnLoading]}
             onPress={onConfirm}
@@ -1258,6 +1313,27 @@ const s = StyleSheet.create({
     color: '#87835C',
     lineHeight: 18,
   },
+  // 🔬 DIAGNÓSTICO TEMPORAL — BORRAR junto con `probarApertura`.
+  diagRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  diagBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: 'rgba(217,79,79,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(217,79,79,0.35)',
+  },
+  diagText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 12,
+    color: '#A33B3B',
+  },
+
   esperaOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#FFFDF8',
