@@ -725,6 +725,29 @@ export default function BookingScreen_Confirm() {
         <View style={s.progressTrack}>
           <View style={[s.progressFill, { width: '100%' }]} />
         </View>
+
+        {/* 🔬 DIAGNÓSTICO TEMPORAL — BORRAR junto con `probarApertura`.
+            Va acá arriba, en el flujo normal, y no en el footer: ahí abajo
+            quedaban tapados y no se podían tocar. Solo en desarrollo, nunca se
+            compila en un build de producción. */}
+        {__DEV__ && (
+          <View style={s.diagRow}>
+            <TouchableOpacity
+              style={s.diagBtn}
+              onPress={() => probarApertura('https://google.com')}
+              activeOpacity={0.85}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}>
+              <Text style={s.diagText}>🔬 https común</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.diagBtn}
+              onPress={() => probarApertura('https://www.mercadopago.com.ar')}
+              activeOpacity={0.85}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}>
+              <Text style={s.diagText}>🔬 mercadopago</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </SafeAreaView>
 
       <ScrollView
@@ -927,25 +950,6 @@ export default function BookingScreen_Confirm() {
                   <Text style={s.pagoDesc}>{m.desc}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
-          )}
-
-          {/* 🔬 DIAGNÓSTICO TEMPORAL — BORRAR junto con `probarApertura`.
-              Solo en desarrollo: nunca se compila en un build de producción. */}
-          {__DEV__ && (
-            <View style={s.diagRow}>
-              <TouchableOpacity
-                style={s.diagBtn}
-                onPress={() => probarApertura('https://google.com')}
-                activeOpacity={0.85}>
-                <Text style={s.diagText}>🔬 https común</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={s.diagBtn}
-                onPress={() => probarApertura('https://www.mercadopago.com.ar')}
-                activeOpacity={0.85}>
-                <Text style={s.diagText}>🔬 mercadopago.com.ar</Text>
-              </TouchableOpacity>
             </View>
           )}
 
@@ -1317,16 +1321,19 @@ const s = StyleSheet.create({
   diagRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    zIndex: 5,
   },
   diagBtn: {
     flex: 1,
-    paddingVertical: 9,
+    paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: 'rgba(217,79,79,0.10)',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(217,79,79,0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(217,79,79,0.35)',
+    borderColor: 'rgba(217,79,79,0.45)',
   },
   diagText: {
     fontFamily: ViveFonts.semibold,
