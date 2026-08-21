@@ -30,12 +30,13 @@ import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 // ─── Paleta local (consistente con Recursos / Explorar) ──────────────────────
 const FOREST      = '#3A4F2A';
 const FOREST_SOFT = '#6B7A56';
-const CREAM_LIGHT = '#F7EFE4';
 const GLASS_BG    = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 
-// Filtros rápidos por tipo (un tap, sin abrir el sheet)
-const QUICK_TYPES: TypeFilter[] = ['Todos', 'Coach', 'Psicólogo', 'Nutricionista'];
+// Los tipos de profesional. Vivían duplicados —una copia en las píldoras
+// rápidas de la cabecera y otra dentro del sheet— y las píldoras se sacaron el
+// 21/08/2026 para dejar el filtro en un solo lugar. Queda una sola lista.
+const TYPE_OPTIONS: TypeFilter[] = ['Todos', 'Coach', 'Psicólogo', 'Nutricionista'];
 type CoachResult = CachedCoach;
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -350,24 +351,6 @@ export default function SearchScreen3() {
         </Text>
       </View>
 
-      {/* ── Filtros rápidos por tipo ─────────────────────────────────── */}
-      <View style={s.quickWrap}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.quickRow}>
-          {QUICK_TYPES.map(t => {
-            const active = filters.type === t;
-            return (
-              <TouchableOpacity
-                key={t}
-                style={[s.quickChip, active && s.quickChipActive]}
-                onPress={() => setFilters(f => ({ ...f, type: t }))}
-                activeOpacity={0.8}>
-                <Text style={[s.quickChipText, active && s.quickChipTextActive]}>{t}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
       {/* ── Lista ────────────────────────────────────────────────────── */}
       <FlatList
         data={results}
@@ -592,7 +575,7 @@ export default function SearchScreen3() {
             <View style={s.filterSection}>
               <Text style={s.filterLabel}>Tipo</Text>
               <View style={s.pillRow}>
-                {(['Todos', 'Coach', 'Psicólogo', 'Nutricionista'] as TypeFilter[]).map(t => (
+                {TYPE_OPTIONS.map(t => (
                   <TouchableOpacity
                     key={t}
                     style={[s.pill, draftFilters.type === t && s.pillActive]}
@@ -711,17 +694,6 @@ const s = StyleSheet.create({
   },
 
   // Filtros rápidos
-  quickWrap: { marginBottom: 6 },
-  quickRow: { gap: 8, paddingHorizontal: 20, paddingRight: 28 },
-  quickChip: {
-    borderRadius: 20, borderWidth: 1,
-    borderColor: 'rgba(58,79,42,0.22)',
-    backgroundColor: GLASS_BG,
-    paddingHorizontal: 15, paddingVertical: 8,
-  },
-  quickChipActive: { backgroundColor: FOREST, borderColor: FOREST },
-  quickChipText: { fontFamily: ViveFonts.medium, fontSize: 13, color: FOREST },
-  quickChipTextActive: { color: CREAM_LIGHT },
 
   // List
   list: {
