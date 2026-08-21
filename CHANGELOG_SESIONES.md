@@ -7,7 +7,7 @@
 
 ## 2026-08-21 — Andre (sesión 117)
 
-**Tocado:** `screens/BookingScreen_Confirm.tsx`, `app/booking/result.tsx`, `supabase/functions/_shared/booking-effects.ts` (**nuevo**), `mp-webhook`, `paypal-webhook`, `usdt-check-payments`, `mp-create-payment`, `paypal-create-payment`, `SCHEMA.md`. Sin cambios de base de datos. 241 tests, `tsc` limpio. ⚠️ **Nada deployado ni probado en dispositivo todavía.**
+**Tocado:** `screens/BookingScreen_Confirm.tsx`, `app/booking/result.tsx`, `supabase/functions/_shared/booking-effects.ts` (**nuevo**), `mp-webhook`, `paypal-webhook`, `usdt-check-payments`, `mp-create-payment`, `paypal-create-payment`, `SCHEMA.md`. Sin cambios de base de datos. 241 tests, `tsc` limpio. **Las 5 edge functions deployadas el 21/08 19:25** (`mp-webhook` v20, `paypal-webhook` v7, `usdt-check-payments` v12, `mp-create-payment` v34, `paypal-create-payment` v6; `verify_jwt` verificado, los dos webhooks siguen en `false`). ⚠️ **Sin probar en dispositivo.**
 
 **Resumen — el checkout ahora salta a la app nativa de Mercado Pago, y para que eso fuera seguro hubo que mover la confirmación al servidor.**
 
@@ -29,13 +29,18 @@
 - **Las guardas del update hacen imposible matar una reserva paga** (`status = 'pendiente'` y `payment_status <> 'aprobado'`). Si el pago entra en el mismo instante, o gana él y no se cancela nada, o gana la cancelación y el pago aterriza sobre una reserva cancelada — que `mp-webhook` ya manda al circuito de reembolso.
 - **`expire_unpaid_checkouts()` no se toca**: cubre a quien nunca vuelve a la app. La cancelación del cliente es el camino rápido, no el único.
 
-**Pendiente para la próxima sesión — nada de esto está deployado:**
-- 🔴 **Deployar las 5 edge functions** (`mp-webhook`, `paypal-webhook`, `usdt-check-payments`, `mp-create-payment`, `paypal-create-payment`) **y `booking-return`, que puede no estar deployada nunca** — ahora es el back_url por default, así que sin ella MP redirige a un 404 después de pagar (el pago se acredita igual, solo se pierde la vuelta automática).
-- ⚠️ **Secret `MESSAGE_ENCRYPTION_KEY`**: solo hace falta si `EXPO_PUBLIC_ENCRYPTION_KEY` del `.env` **no** es el default `vive_mvp_key_2026`. Tiene que valer exactamente lo mismo, o el mensaje de sistema de la sala se guarda ilegible.
+**Verificado al deployar (21/08), para no volver a preguntarlo:**
+- ✅ **`booking-return` ya estaba deployada** (v6, `verify_jwt = false`) desde el 19/08. Smoke test: devuelve `302 → viveapp://booking/result?...` con los query params reenviados.
+- ✅ **`CHECKOUT_RETURN_URL` NO está seteado como secret**, así que aplica el default nuevo (`${SUPABASE_URL}/functions/v1/booking-return`) y los dos rieles mandan `back_urls`.
+- ✅ **No hace falta el secret `MESSAGE_ENCRYPTION_KEY`**: `EXPO_PUBLIC_ENCRYPTION_KEY` en `.env` es exactamente el default `vive_mvp_key_2026`, al que ya cae el helper del servidor. ⚠️ El día que se cambie una, hay que cambiar la otra en el mismo momento.
+- ✅ **`MP_TEST_MODE = false`** (y `MP_SPLIT_ENABLED = true`): se está en producción, no en sandbox, así que la duda sobre el `sandbox_init_point` en la app nativa no aplica. Se prueba con pagos reales de $1 como el 09/08.
+
+**⚠️ ORDEN AL SUBIR LA APP:** las funciones van SIEMPRE antes que el build. Con el build nuevo y el webhook viejo, **ninguna reserva paga se confirma** — el cliente ya no aplica los efectos (`if (!initPoint)`) y el webhook viejo tampoco. Al revés es seguro, con una arruga chica: entre el deploy y el OTA, un build viejo aplica los efectos del lado del cliente y el webhook nuevo del suyo → doble push al coach y dos mensajes de sistema en la sala.
+
+**Pendiente para la próxima sesión:**
 - 🔴 **Probar en dispositivo, con la app de MP instalada**, el camino completo: reservar → salta a MP → pagar → volver → ver "reserva confirmada". Y el caso feo a propósito: **matar la app desde el multitasking mientras se paga**, y verificar que la reserva quede confirmada y el coach notificado igual. Ese es el caso que justifica todo el cambio.
 - 🔴 **Decidir qué hacer con los medios OFFLINE de Mercado Pago** (efectivo, Rapipago, cajero): acreditan horas o días después, así que con la regla nueva quien elija uno se queda sin reserva, y si después paga el pago cae sobre una reserva cancelada y sale por reembolso. Se corta de raíz excluyéndolos en la preferencia (`payment_methods.excluded_payment_types: ['ticket','atm']` en `mp-create-payment`). No lo hice porque es decisión de producto, no de código.
 - ⚠️ **`registrarEvento('reserva_confirmada')` se dispara al INSERTAR la reserva**, antes del pago — o sea que ahora cuenta como confirmadas reservas que se cancelan segundos después. Ya era impreciso antes (las 27 fantasma también lo dispararon); ahora es más visible. Moverlo cambia la semántica de un embudo de analytics, así que queda para decidir.
-- ⚠️ **Verificar qué pasa con `MP_TEST_MODE`**: el `sandbox_init_point` abierto en la app nativa de MP puede no funcionar. Si falla, testear con pagos reales de $1 como el 09/08.
 - ⚠️ **No está verificado que iOS abra la app de MP con el `init_point`** en vez de Safari (depende de que MP tenga ese path registrado como universal link). Si cae en Safari, el checkout web de MP hace su propio salto a la app nativa — que es lo que se observó en la sesión 111 — así que el destino final es el mismo, pero conviene mirarlo.
 - Todo lo de la sesión 116 sigue: seed de la billetera USDT en papel, la hora con el contador, las dos mediciones de USD 50 y el pago real de PayPal de punta a punta.
 
