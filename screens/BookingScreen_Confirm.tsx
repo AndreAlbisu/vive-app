@@ -529,10 +529,62 @@ export default function BookingScreen_Confirm() {
         setPagoEnCurso(null);
       }
 
-      // Sin pago pendiente no hay nada que esperar: si el coach no tiene MP
-      // (initPoint null) la instantánea se confirma como siempre.
-      const confirmedNow = isInstant && (!initPoint || paid);
-      const awaitingPayment = !!initPoint && !paid;
+      // 🔴 SIN PAGO ACREDITADO NO QUEDA RESERVA (sesión 117).
+      //
+      // Antes se seguía de largo: la reserva sobrevivía en 'pendiente' hasta que
+      // `expire_unpaid_checkouts()` la barría a los 30 min, y en el medio pasaban
+      // dos cosas malas. La primera es que el horario quedaba TOMADO para todo el
+      // mundo — la vista de disponibilidad cuenta `status in ('confirmada',
+      // 'pendiente')`, así que media hora de nadie pudiendo reservar ese turno por
+      // un checkout que se cerró sin pagar. La segunda es lo que veía la persona:
+      // la pantalla de éxito, con tilde verde y botón "Ver mi sala", diciéndole
+      // "falta confirmar el pago" — el diseño gritaba que había salido bien y la
+      // letra chica decía que no.
+      //
+      // Las dos guardas del update hacen imposible matar una reserva paga:
+      // `status = 'pendiente'` (no toca una ya confirmada por el servidor) y
+      // `payment_status <> 'aprobado'`. Si el pago entra justo en el medio, o gana
+      // él —y no cancelamos nada— o ganamos nosotros y el pago aterriza sobre una
+      // reserva cancelada, caso que `mp-webhook` ya resuelve marcándola
+      // 'reembolso_pendiente' para que el cron devuelva la plata.
+      //
+      // No se inserta ninguna notificación de "reserva cancelada" (sí lo hace
+      // `expire_unpaid_checkouts()`, que avisa de algo que pasó mientras la
+      // persona no miraba). Acá está parada frente a la pantalla que se lo dice.
+      if (initPoint && !paid) {
+        const { data: fila } = await supabase
+          .from('bookings')
+          .select('payment_status')
+          .eq('id', booking.id)
+          .maybeSingle();
+
+        if (fila?.payment_status === 'aprobado') {
+          // Entró entre la última vuelta del sondeo y esta consulta. Sigue
+          // como un pago normal.
+          paid = true;
+        } else {
+          await supabase
+            .from('bookings')
+            .update({ status: 'cancelada' })
+            .eq('id', booking.id)
+            .eq('status', 'pendiente')
+            .neq('payment_status', 'aprobado');
+
+          setError(
+            fila?.payment_status === 'rechazado'
+              ? 'El pago fue rechazado, así que no te reservamos el horario. Probá de nuevo o con otro medio de pago'
+              : 'No vimos el pago acreditado, así que no te reservamos el horario. Si te lo cobraron igual, se devuelve solo',
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Llegar hasta acá con `initPoint` significa que el pago está aprobado: el
+      // caso contrario ya salió por el `return` de arriba. Por eso alcanza con
+      // `isInstant` — el `(!initPoint || paid)` que había antes se volvió
+      // siempre verdadero, y dejarlo escrito sugería un estado que ya no existe.
+      const confirmedNow = isInstant;
 
       // 🔴 Los efectos SOLO se aplican acá cuando no hubo nada que cobrar (coach
       // sin Mercado Pago conectado). Con cobro de por medio los aplica el
@@ -540,10 +592,10 @@ export default function BookingScreen_Confirm() {
       // `mp-webhook`/`paypal-webhook`/`usdt-check-payments`—, porque desde la
       // sesión 117 esta pantalla puede estar muerta cuando el pago entra.
       //
-      // Ojo con la condición: es `!initPoint`, NO `!awaitingPayment`. Con
-      // `!awaitingPayment` un pago aprobado los correría de los dos lados, y el
-      // coach recibiría dos push, la sala dos mensajes de sistema y los
-      // competidores dos cancelaciones.
+      // Ojo con la condición: es `!initPoint`, y NO "no quedó pago pendiente"
+      // —que es lo que decía antes—. Con esa segunda, un pago aprobado los
+      // correría de los dos lados: dos push al coach, dos mensajes de sistema en
+      // la sala y dos cancelaciones a cada competidor del horario.
       if (!initPoint) await applyBookingEffects(confirmedNow);
 
       router.replace({
@@ -557,11 +609,9 @@ export default function BookingScreen_Confirm() {
           roomUrl,
           salaId,
           // Lo que se le muestra tiene que ser lo que de verdad pasó: 'Confirmada'
-          // solo si quedó confirmada, y el estado de pago pendiente solo si el
-          // pago no llegó a acreditarse (antes se mandaba con cualquier initPoint,
-          // incluso después de un pago aprobado).
+          // solo si el coach tiene reserva instantánea. Ya no existe un
+          // `paymentPending`: a esta pantalla no se llega sin el pago hecho.
           instant: confirmedNow ? '1' : '0',
-          ...(awaitingPayment ? { paymentPending: '1' } : {}),
         },
       });
     } catch (e: any) {

@@ -34,7 +34,6 @@ type Params = {
   time?: string;
   salaId?: string;
   instant?: string;
-  paymentPending?: string;
 };
 
 export default function BookingScreen_Success() {
@@ -47,7 +46,6 @@ export default function BookingScreen_Success() {
   const time = params.time ?? '';
   const salaId = params.salaId ?? '';
   const isInstant = params.instant === '1';
-  const paymentPending = params.paymentPending === '1';
 
   const firstName = coachName.split(' ')[0];
   const formattedDate = formatDate(dateStr);
@@ -85,30 +83,23 @@ export default function BookingScreen_Success() {
           </Animated.View>
 
           <Animated.View style={[s.textBlock, { opacity: contentOpacity }]}>
+            {/* Ya no existe el estado "falta confirmar el pago" (sesión 117).
+                Esta pantalla mostraba un tilde verde y un botón "Ver mi sala"
+                para una reserva sin pagar que se iba a cancelar sola en 30 min:
+                el diseño decía que había salido bien y la letra chica decía que
+                no. Ahora un pago que no se acredita cancela la reserva en
+                `BookingScreen_Confirm` y ni siquiera navega hasta acá. */}
             <Text style={s.title}>
-              {paymentPending
-                ? 'Falta confirmar el pago'
-                : isInstant ? '¡Sesión confirmada!' : '¡Reserva enviada!'}
+              {isInstant ? '¡Sesión confirmada!' : '¡Reserva enviada!'}
             </Text>
             <Text style={s.subtitle}>
-              {paymentPending
-                // No decir "tu pago está siendo procesado": acá no sabemos si pagó
-                // o si cerró el checkout, y prometerle una sesión que se le va a
-                // cancelar sola es peor que decirle la verdad.
-                ? 'Todavía no vemos el pago acreditado. Si entra, te avisamos y el horario queda reservado; si no, lo liberamos en un rato'
-                : isInstant
-                  ? `Tu sesión con ${firstName} ya quedó confirmada`
-                  : `Le avisamos a ${firstName}. Tiene 24hs para confirmar tu sesión`}
+              {isInstant
+                ? `Tu sesión con ${firstName} ya quedó confirmada`
+                : `Le avisamos a ${firstName}. Tiene 24hs para confirmar tu sesión`}
             </Text>
-            <View style={[
-              s.statusBadge,
-              paymentPending ? s.statusBadgePayment : isInstant && s.statusBadgeConfirmed,
-            ]}>
-              <Text style={[
-                s.statusBadgeText,
-                paymentPending ? s.statusBadgeTextPayment : isInstant && s.statusBadgeTextConfirmed,
-              ]}>
-                {paymentPending ? 'Pago sin confirmar' : isInstant ? 'Confirmada' : 'Pendiente de confirmación'}
+            <View style={[s.statusBadge, isInstant && s.statusBadgeConfirmed]}>
+              <Text style={[s.statusBadgeText, isInstant && s.statusBadgeTextConfirmed]}>
+                {isInstant ? 'Confirmada' : 'Pendiente de confirmación'}
               </Text>
             </View>
           </Animated.View>
@@ -247,12 +238,6 @@ const s = StyleSheet.create({
   },
   statusBadgeTextConfirmed: {
     color: ViveColors.accent,
-  },
-  statusBadgePayment: {
-    backgroundColor: 'rgba(0,158,227,0.12)',
-  },
-  statusBadgeTextPayment: {
-    color: '#0082B8',
   },
 
   card: {
