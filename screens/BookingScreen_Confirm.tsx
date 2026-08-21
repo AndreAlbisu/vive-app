@@ -21,7 +21,8 @@ import { AppBg } from '@/components/ui/AppBg';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
-import { logError } from '@/lib/logging';
+import * as WebBrowser from 'expo-web-browser';
+import { logError, logWarn } from '@/lib/logging';
 import { encryptMessage } from '@/lib/encryption';
 import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
 
@@ -126,6 +127,46 @@ export default function BookingScreen_Confirm() {
   // Si se agota igual NO se cancela nada: la reserva queda 'pendiente' y decide
   // el servidor (`expire_unpaid_checkouts()` la libera a los 30 min si nunca se
   // pagó; si se pagó, `mp-webhook` la confirma sin ayuda del cliente).
+  // Abre el checkout FUERA de la pantalla. Dos vías, en este orden:
+  //
+  //   1. `Linking.openURL` — la única que puede entregarle el control a la APP
+  //      NATIVA de Mercado Pago, que es todo el punto del cambio de la sesión
+  //      117: ahí la persona ya está logueada, con tarjetas guardadas y
+  //      biometría.
+  //   2. `WebBrowser.openBrowserAsync` — navegador in-app
+  //      (SFSafariViewController en iOS, Custom Tab en Android).
+  //
+  // La 2 existe porque la 1 falla en iOS de formas que no dependen de nosotros:
+  // rechaza con "Unable to open URL" incluso sobre una URL https común. Visto en
+  // dispositivo el 21/08/2026 con un `init_point` real de MP, a los 3 minutos de
+  // deployar — o sea que la primera prueba del camino nuevo se murió acá.
+  //
+  // Caer en la 2 NO pierde el salto a la app nativa: el checkout WEB de Mercado
+  // Pago hace su propio handoff a la app si está instalada. Es exactamente lo
+  // que se observó en la sesión 111, cuando ese handoff era el problema que
+  // había que bloquear; ahora es la red de contención.
+  const abrirCheckout = async (url: string): Promise<boolean> => {
+    try {
+      await Linking.openURL(url);
+      return true;
+    } catch (e) {
+      await logWarn(`BookingConfirm: Linking.openURL rechazó (${e}) — se cae al navegador in-app`);
+    }
+    try {
+      // Sin `await` del resultado a propósito: esa promesa se resuelve recién
+      // cuando se CIERRA el navegador, y el sondeo tiene que arrancar mientras
+      // sigue abierto. Si rechazara, la persona igual tiene el botón "Volver a
+      // abrir" del overlay de espera.
+      WebBrowser.openBrowserAsync(url).catch((e) => {
+        logError('BookingConfirm: el navegador in-app también falló', e);
+      });
+      return true;
+    } catch (e) {
+      await logError('BookingConfirm: no se pudo abrir el checkout por ninguna vía', e);
+      return false;
+    }
+  };
+
   const esperarAcreditacion = async (bookingId: string): Promise<boolean> => {
     const LIMITE_MS = 10 * 60 * 1000;
     // El ciclo late cada 500 ms pero solo consulta cada 2 s. Los dos números son
@@ -508,19 +549,35 @@ export default function BookingScreen_Confirm() {
       // si el sistema operativo mata la app mientras la persona paga, el pago se
       // acredita y la reserva se confirma igual. El sondeo de acá abajo quedó
       // para una sola cosa — mostrarle el resultado a quien SÍ vuelve.
+      // Suelta la reserva que YA se creó, para los caminos que no terminan en
+      // pago. La reserva se inserta antes del checkout por obligación —
+      // `mp-create-payment` necesita un `booking_id` para el `external_reference`
+      // de la preferencia—, así que cada salida sin pagar tiene que limpiarla o
+      // deja el horario tomado hasta que lo barra `expire_unpaid_checkouts()`.
+      //
+      // Las dos guardas hacen imposible matar una reserva paga: `status =
+      // 'pendiente'` (no toca una ya confirmada por el servidor) y
+      // `payment_status <> 'aprobado'`.
+      const soltarReserva = async () => {
+        await supabase
+          .from('bookings')
+          .update({ status: 'cancelada' })
+          .eq('id', booking.id)
+          .eq('status', 'pendiente')
+          .neq('payment_status', 'aprobado');
+      };
+
       let paid = false;
       if (initPoint) {
         setPagoEnCurso(initPoint);
-        try {
-          // `openURL` y no `canOpenURL` + fallback: `init_point` es una URL
-          // https, así que el sistema decide solo — app de MP si está instalada
-          // (universal link / app link), browser si no. Preguntar antes no
-          // agregaría información, y en Android `canOpenURL` de un https
-          // siempre da true.
-          await Linking.openURL(initPoint);
-        } catch (e) {
+        if (!(await abrirCheckout(initPoint))) {
+          // 🔴 Cancelar acá también. La primera versión de esto solo mostraba el
+          // error y volvía, dejando la reserva viva en 'pendiente' con el
+          // horario tomado por un checkout que nunca llegó a abrirse — el mismo
+          // bug que se acababa de arreglar para el pago no acreditado, por la
+          // puerta de al lado.
+          await soltarReserva();
           setPagoEnCurso(null);
-          await logError('BookingConfirm: no se pudo abrir el checkout', e);
           setError(`No pudimos abrir ${nombrePasarela}. Probá de nuevo en unos minutos`);
           setLoading(false);
           return;
@@ -541,11 +598,9 @@ export default function BookingScreen_Confirm() {
       // "falta confirmar el pago" — el diseño gritaba que había salido bien y la
       // letra chica decía que no.
       //
-      // Las dos guardas del update hacen imposible matar una reserva paga:
-      // `status = 'pendiente'` (no toca una ya confirmada por el servidor) y
-      // `payment_status <> 'aprobado'`. Si el pago entra justo en el medio, o gana
-      // él —y no cancelamos nada— o ganamos nosotros y el pago aterriza sobre una
-      // reserva cancelada, caso que `mp-webhook` ya resuelve marcándola
+      // Si el pago entra justo en el medio, o gana él —y `soltarReserva` no
+      // encuentra nada que cancelar— o ganamos nosotros y el pago aterriza sobre
+      // una reserva cancelada, caso que `mp-webhook` ya resuelve marcándola
       // 'reembolso_pendiente' para que el cron devuelva la plata.
       //
       // No se inserta ninguna notificación de "reserva cancelada" (sí lo hace
@@ -563,13 +618,7 @@ export default function BookingScreen_Confirm() {
           // como un pago normal.
           paid = true;
         } else {
-          await supabase
-            .from('bookings')
-            .update({ status: 'cancelada' })
-            .eq('id', booking.id)
-            .eq('status', 'pendiente')
-            .neq('payment_status', 'aprobado');
-
+          await soltarReserva();
           setError(
             fila?.payment_status === 'rechazado'
               ? 'El pago fue rechazado, así que no te reservamos el horario. Probá de nuevo o con otro medio de pago'
