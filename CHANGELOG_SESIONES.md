@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-08-21 — Andre (sesión 116)
+
+**Tocado:** `SCHEMA.md`. Secret `USDT_WALLET_TRC20` **rotado**; `usdt-create-payment` y `usdt-check-payments` **redeployadas**. Sin cambios de código.
+
+**Resumen — se rotó la billetera de cobro, que era el único pendiente que se encarecía con el tiempo.**
+
+- ✅ **`USDT_WALLET_TRC20` apunta ahora a una billetera dedicada a VIVE** (`TYtm2r…7JQFLs`). Antes era la dirección personal de Andre, que iba a terminar conteniendo plata de los profesionales — con el problema de mezcla de fondos que eso trae para la pregunta fiscal, y sin poder auditar nada.
+- **Se verificó por CHECKSUM y no solo por formato.** El regex de `lib/payout.ts` detecta la forma de una dirección de Tron, pero un error de tipeo puede producir una cadena con forma válida. Se decodificó el base58check, se comprobó que los últimos 4 bytes son el doble SHA-256 del resto y que el prefijo de red es `0x41` (mainnet). **Conviene repetirlo ante cualquier dirección nueva**: un carácter cambiado pierde los fondos y no rebota.
+- ⚠️ **Se hizo ahora porque era el único momento gratis.** La dirección **no se guarda en la reserva** —`usdt-create-payment` la devuelve desde el env en cada llamada—, así que rotar con tráfico tiene una ventana de 60 min donde alguien manda a la vieja y el cron mira la nueva. Sin ninguna reserva internacional, esa ventana no existe.
+- ⚠️ **Se redeployaron las dos funciones que leen el secret.** Lo leen al arrancar, así que una instancia caliente podría seguir con el valor viejo. Rotar sin redeployar deja un estado indistinguible del correcto hasta que alguien pierde un pago.
+
+**Sobre la elección de billetera, para que no se repita la discusión:**
+- 📝 **TronLink en el App Store argentino tiene 18 opiniones y es la real** — las reseñas del App Store son por país. Se sospechó que era una impostora y no lo era. El criterio que sí vale: entrar al dominio oficial (`tronlink.org`) y seguir su link, en vez de instalar desde un resultado de búsqueda.
+- **Se descartó usar una dirección de Belo como punto de cobro.** El mecanismo de identificación cruza por monto exacto y **asume que a esa dirección solo llega plata de VIVE**: un movimiento personal que coincidiera en monto acreditaría la sesión de otra persona. Además la dirección es de ellos (pueden rotarla) y seguiría habiendo mezcla de fondos. Belo sirve para el otro rol — **convertir a pesos**, que es justo el costo que falta medir.
+- **Pendiente al primer envío: anotar cuánto costó.** El USD 1,50 de `USDT_NETWORK_FEE_USD` es un valor informado, no medido, y nada lo detecta si cambia.
+
+**Pendiente para la próxima sesión:**
+- **Seed de la billetera nueva en papel y fuera de la computadora**, antes de que entre el primer pago real.
+- Todo lo de la sesión 115 sigue igual: la hora con el contador (`docs/fiscal-instrucciones.md`), las dos mediciones de USD 50, el pago real de PayPal de punta a punta, y nada probado en dispositivo.
+
+---
+
 ## 2026-08-20 — Andre (sesión 115)
 
 **Tocado:** `lib/time.ts`, `lib/pricing.ts`, `lib/payout.ts`, `lib/admin.ts`, `supabase/functions/_shared/guarantee.ts`, `_shared/commission.ts`, `_shared/pricing.ts`, `paypal-create-payment`, `usdt-create-payment`, `screens/BookingScreen_Confirm.tsx`, `CoachProfileScreen.tsx`, `CoachPayoutScreen.tsx`, `AdminScreen.tsx`, `docs/cobro-internacional-coaches.md`, `SCHEMA.md`. Las dos edge functions **deployadas**. Sin cambios de base de datos. 231 tests.
