@@ -13,12 +13,23 @@ select
   b.payment_status,
   b.paid_at,
   b.status,
-  -- El mensaje de sistema que deja el helper en la sala. Solo se cuentan los
-  -- posteriores a la reserva para no arrastrar los de sesiones anteriores.
+  -- El mensaje de sistema que deja el helper en la sala.
+  --
+  -- 🔴 La ventana de arriba (`>= b.created_at`) y la de abajo (< la reserva
+  -- SIGUIENTE de la misma sala) son las dos necesarias. La sala es una sola por
+  -- par usuario-coach y la comparten TODAS sus reservas, así que sin el techo
+  -- cada fila se cuenta también los mensajes de las reservas posteriores. Con
+  -- dos pruebas seguidas eso da 2 y se lee como "los efectos corrieron dos
+  -- veces", que es justo la conclusión que este script existe para evitar.
+  -- (Pasó en la primera corrida, el 21/08/2026.)
   (select count(*) from messages m
     where m.sala_id = b.sala_id
       and m.sender_type = 'system_confirmed'
-      and m.created_at >= b.created_at)                       as msg_confirmacion,
+      and m.created_at >= b.created_at
+      and m.created_at < coalesce(
+            (select min(b2.created_at) from bookings b2
+              where b2.sala_id = b.sala_id and b2.created_at > b.created_at),
+            'infinity'::timestamptz))                         as msg_confirmacion,
   -- La notificación al usuario.
   (select count(*) from notifications n
     where n.booking_id = b.id
@@ -46,4 +57,6 @@ limit 5;
 --     decisión suya desde CoachReservasScreen. No es un fallo.
 --
 --   msg_confirmacion = 2 → los efectos corrieron DOS veces (cliente + servidor).
---     Pasa si la app que usaste es un build viejo, de antes de la sesión 117.
+--     Pasaría con un build viejo, de antes de la sesión 117. Ojo: antes de que
+--     la subconsulta tuviera techo, un 2 acá era un artefacto de la query y no
+--     un problema real — ver el comentario largo arriba.

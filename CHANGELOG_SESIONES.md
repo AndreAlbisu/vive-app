@@ -37,7 +37,11 @@
 
 **⚠️ ORDEN AL SUBIR LA APP:** las funciones van SIEMPRE antes que el build. Con el build nuevo y el webhook viejo, **ninguna reserva paga se confirma** — el cliente ya no aplica los efectos (`if (!initPoint)`) y el webhook viejo tampoco. Al revés es seguro, con una arruga chica: entre el deploy y el OTA, un build viejo aplica los efectos del lado del cliente y el webhook nuevo del suyo → doble push al coach y dos mensajes de sistema en la sala.
 
-**Prueba en dispositivo (21/08): el camino feliz ANDA.** Reserva real de punta a punta con Mercado Pago, después de agregar el fallback. El primer intento había fallado; el detalle de por qué y de lo que se descartó, abajo.
+**✅ PROBADO EN DISPOSITIVO Y ANDA, incluido el caso difícil (21/08).** La reserva de las 22:46: se pagó desde la app nativa de MP y se cerró Vita **antes** de volver — y el servidor la confirmó igual (`payment_status = 'aprobado'`, `status = 'confirmada'`, mensaje de sistema en la sala, notificación al usuario), sin ninguna ayuda del cliente. Es exactamente lo que justificaba mover los efectos a `mp-webhook`. Verificado con `scripts/verificar-confirmacion-server-side.sql`.
+
+⚠️ **Y una lección sobre el propio script de verificación:** en su primera versión contaba los mensajes de sistema con `m.created_at >= b.created_at` sin techo. La sala es UNA por par usuario-coach y la comparten todas sus reservas, así que cada fila se contaba también los mensajes de las reservas posteriores — con dos pruebas seguidas daba 2 y se leía como "los efectos corrieron dos veces", que es la conclusión que el script existía para descartar. Corregido con un techo en la reserva siguiente de la misma sala.
+
+**El camino feliz también anda.** Reserva real de punta a punta con Mercado Pago, después de agregar el fallback. El primer intento había fallado; el detalle de por qué y de lo que se descartó, abajo.
 
 **El fallo del primer intento (21/08 19:27), y la red que quedó puesta:**
 
@@ -47,7 +51,8 @@
 - 🔴 **Y el `catch` de esa apertura tenía el mismo bug que se acababa de arreglar**, por la puerta de al lado: mostraba el error y volvía **sin cancelar la reserva**, dejándola viva en 'pendiente' con el horario tomado por un checkout que nunca se abrió. Ahora las dos salidas sin pago usan el mismo `soltarReserva()`.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **El test de "matar la app mientras se paga" SE HIZO pero falta leer el resultado.** Se pagó desde la app de MP y se cerró Vita antes de volver. Queda correr `scripts/verificar-confirmacion-server-side.sql` (solo lee) para ver si `applyPaidBookingEffects` corrió de verdad desde el webhook. Si falla no hay ningún error visible: la reserva se queda en 'pendiente' y el coach nunca se entera.
+- ⚠️ **Quedó una reserva fantasma del intento fallido de las 22:27** (`pendiente`/`pendiente`, sin cancelar): es de antes de que el `catch` de la apertura llamara a `soltarReserva()`. La barre `expire_unpaid_checkouts()` a los 30 min sola, no hay que hacer nada — queda anotada para que no se lea como un caso nuevo.
+- ⚠️ **Nada de esto está probado en Android**, que es justo donde el WebView era peor (no existe `sharedCookiesEnabled`) y donde más se esperaba ganar con el salto a la app nativa.
 - ✅ **CONFIRMADO EN DISPOSITIVO: abre la APP NATIVA de Mercado Pago**, no el navegador in-app. O sea que `Linking.openURL` funcionó y el fallback ni se usó — el objetivo del cambio se cumple. El error del primer intento queda como transitorio: no se reprodujo ni con la URL exacta ni con el contexto.
 - 🔴 **Decidir qué hacer con los medios OFFLINE de Mercado Pago** (efectivo, Rapipago, cajero): acreditan horas o días después, así que con la regla nueva quien elija uno se queda sin reserva, y si después paga el pago cae sobre una reserva cancelada y sale por reembolso. Se corta de raíz excluyéndolos en la preferencia (`payment_methods.excluded_payment_types: ['ticket','atm']` en `mp-create-payment`). No lo hice porque es decisión de producto, no de código.
 - ⚠️ **`registrarEvento('reserva_confirmada')` se dispara al INSERTAR la reserva**, antes del pago — o sea que ahora cuenta como confirmadas reservas que se cancelan segundos después. Ya era impreciso antes (las 27 fantasma también lo dispararon); ahora es más visible. Moverlo cambia la semántica de un embudo de analytics, así que queda para decidir.
