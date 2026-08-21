@@ -182,8 +182,19 @@ export default function BookingScreen_Confirm() {
   //     build. Grave: el salto a la app nativa nunca va a funcionar en iOS, y
   //     todo el cambio de la sesión 117 termina siempre en el navegador in-app.
   //
-  // Probar los DOS botones: `google.com` no lo reclama nadie; `mercadopago.com.ar`
-  // sí. Que uno ande y el otro no es en sí mismo la respuesta.
+  // RESULTADO DE LA PRIMERA VUELTA (21/08): `google.com` y `mercadopago.com.ar`
+  // abrieron Safari los dos. O sea que `Linking` funciona y el problema no es
+  // "https en este build". Queda separar dos cosas más:
+  //
+  //   · la URL del checkout en sí (path `/checkout/v1/redirect` + `pref_id`), o
+  //   · el CONTEXTO en el que se la llama en el flujo real — después de varias
+  //     vueltas de red y justo después de `setPagoEnCurso`, que monta el overlay
+  //     de espera a pantalla completa en el mismo tick.
+  //
+  // De ahí los dos botones de ahora: el mismo `openURL`, con y sin overlay.
+  const URL_CHECKOUT_QUE_FALLO =
+    'https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=464948031-a3de1951-161f-4efb-8f77-e9d4a7957848';
+
   const probarApertura = async (url: string) => {
     let puede: boolean | string;
     try {
@@ -734,17 +745,24 @@ export default function BookingScreen_Confirm() {
           <View style={s.diagRow}>
             <TouchableOpacity
               style={s.diagBtn}
-              onPress={() => probarApertura('https://google.com')}
+              onPress={() => probarApertura(URL_CHECKOUT_QUE_FALLO)}
               activeOpacity={0.85}
               hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}>
-              <Text style={s.diagText}>🔬 https común</Text>
+              <Text style={s.diagText}>🔬 checkout solo</Text>
             </TouchableOpacity>
+            {/* Reproduce el contexto del flujo real: monta el overlay de espera
+                y recién ahí llama a `openURL`, igual que `onConfirm`. Si esta
+                falla y la de al lado anda, el culpable es el contexto y no la
+                URL — y se arregla llamando a `openURL` ANTES de tocar el estado. */}
             <TouchableOpacity
               style={s.diagBtn}
-              onPress={() => probarApertura('https://www.mercadopago.com.ar')}
+              onPress={() => {
+                setPagoEnCurso(URL_CHECKOUT_QUE_FALLO);
+                probarApertura(URL_CHECKOUT_QUE_FALLO).finally(() => setPagoEnCurso(null));
+              }}
               activeOpacity={0.85}
               hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}>
-              <Text style={s.diagText}>🔬 mercadopago</Text>
+              <Text style={s.diagText}>🔬 checkout + overlay</Text>
             </TouchableOpacity>
           </View>
         )}
