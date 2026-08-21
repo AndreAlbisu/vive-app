@@ -12,7 +12,6 @@ import {
   BackHandler,
   Linking,
   AppState,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -165,52 +164,6 @@ export default function BookingScreen_Confirm() {
     } catch (e) {
       await logError('BookingConfirm: no se pudo abrir el checkout por ninguna vía', e);
       return false;
-    }
-  };
-
-  // 🔬 DIAGNÓSTICO TEMPORAL (21/08/2026) — BORRAR cuando se resuelva.
-  //
-  // Existe para responder UNA pregunta sobre el "Unable to open URL" que tiró
-  // `Linking.openURL` con el `init_point` de MP: ¿falla esa URL en particular, o
-  // falla `Linking` con cualquier https?
-  //
-  //   · Abre Safari  → `Linking` anda. El problema es esa URL puntual, casi
-  //     seguro porque la app de Mercado Pago la reclama como universal link y el
-  //     traspaso se rompe. El fallback al navegador in-app es la respuesta final
-  //     y no hay nada más que hacer.
-  //   · Tira el Alert → `Linking.openURL` está roto para TODO https en este
-  //     build. Grave: el salto a la app nativa nunca va a funcionar en iOS, y
-  //     todo el cambio de la sesión 117 termina siempre en el navegador in-app.
-  //
-  // RESULTADO DE LA PRIMERA VUELTA (21/08): `google.com` y `mercadopago.com.ar`
-  // abrieron Safari los dos. O sea que `Linking` funciona y el problema no es
-  // "https en este build". Queda separar dos cosas más:
-  //
-  //   · la URL del checkout en sí (path `/checkout/v1/redirect` + `pref_id`), o
-  //   · el CONTEXTO en el que se la llama en el flujo real — después de varias
-  //     vueltas de red y justo después de `setPagoEnCurso`, que monta el overlay
-  //     de espera a pantalla completa en el mismo tick.
-  //
-  // De ahí los dos botones de ahora: el mismo `openURL`, con y sin overlay.
-  const URL_CHECKOUT_QUE_FALLO =
-    'https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=464948031-a3de1951-161f-4efb-8f77-e9d4a7957848';
-
-  const probarApertura = async (url: string) => {
-    let puede: boolean | string;
-    try {
-      puede = await Linking.canOpenURL(url);
-    } catch (e) {
-      puede = `canOpenURL tiró: ${e}`;
-    }
-    try {
-      await Linking.openURL(url);
-      // No hay Alert de éxito a propósito: si funcionó, la app ya no está en
-      // pantalla. Estar mirando Safari ES el resultado.
-    } catch (e) {
-      Alert.alert(
-        'No abrió',
-        `URL:\n${url}\n\ncanOpenURL: ${puede}\n\nopenURL falló con:\n${e}`,
-      );
     }
   };
 
@@ -737,35 +690,6 @@ export default function BookingScreen_Confirm() {
           <View style={[s.progressFill, { width: '100%' }]} />
         </View>
 
-        {/* 🔬 DIAGNÓSTICO TEMPORAL — BORRAR junto con `probarApertura`.
-            Va acá arriba, en el flujo normal, y no en el footer: ahí abajo
-            quedaban tapados y no se podían tocar. Solo en desarrollo, nunca se
-            compila en un build de producción. */}
-        {__DEV__ && (
-          <View style={s.diagRow}>
-            <TouchableOpacity
-              style={s.diagBtn}
-              onPress={() => probarApertura(URL_CHECKOUT_QUE_FALLO)}
-              activeOpacity={0.85}
-              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}>
-              <Text style={s.diagText}>🔬 checkout solo</Text>
-            </TouchableOpacity>
-            {/* Reproduce el contexto del flujo real: monta el overlay de espera
-                y recién ahí llama a `openURL`, igual que `onConfirm`. Si esta
-                falla y la de al lado anda, el culpable es el contexto y no la
-                URL — y se arregla llamando a `openURL` ANTES de tocar el estado. */}
-            <TouchableOpacity
-              style={s.diagBtn}
-              onPress={() => {
-                setPagoEnCurso(URL_CHECKOUT_QUE_FALLO);
-                probarApertura(URL_CHECKOUT_QUE_FALLO).finally(() => setPagoEnCurso(null));
-              }}
-              activeOpacity={0.85}
-              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}>
-              <Text style={s.diagText}>🔬 checkout + overlay</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </SafeAreaView>
 
       <ScrollView
@@ -1335,30 +1259,6 @@ const s = StyleSheet.create({
     color: '#87835C',
     lineHeight: 18,
   },
-  // 🔬 DIAGNÓSTICO TEMPORAL — BORRAR junto con `probarApertura`.
-  diagRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    zIndex: 5,
-  },
-  diagBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(217,79,79,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(217,79,79,0.45)',
-  },
-  diagText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 12,
-    color: '#A33B3B',
-  },
-
   esperaOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#FFFDF8',
