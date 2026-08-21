@@ -10,8 +10,9 @@ import {
   ActivityIndicator,
   StatusBar,
   BackHandler,
+  Linking,
+  AppState,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -57,11 +58,15 @@ export default function BookingScreen_Confirm() {
   const [internacionalDisponible, setInternacionalDisponible] = useState(false);
   const [priceUsd, setPriceUsd] = useState<number | null>(null);
   const [metodoPago, setMetodoPago] = useState<'mp' | 'usdt' | 'paypal'>('mp');
-  // Checkout de MP embebido (no WebBrowser/Safari) — ver el comentario largo
-  // más abajo, junto a onShouldStartLoadWithRequest, sobre por qué.
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
-  const checkoutUrlRef = useRef<string | null>(null);
-  checkoutUrlRef.current = checkoutUrl;
+  // Pago abierto FUERA de la app (app nativa de Mercado Pago, o el browser con
+  // PayPal). Guarda la URL del checkout, no solo un booleano, para poder
+  // reabrirla si la persona volvió a Vita sin querer — ver el overlay de espera
+  // más abajo. `null` = no hay ningún pago en curso.
+  const [pagoEnCurso, setPagoEnCurso] = useState<string | null>(null);
+  const pagoEnCursoRef = useRef<string | null>(null);
+  pagoEnCursoRef.current = pagoEnCurso;
+
+  const nombrePasarela = metodoPago === 'paypal' ? 'PayPal' : 'Mercado Pago';
 
   const coachName = params.name ?? 'Laura Méndez';
   const specialty = params.specialty ?? 'Coach de vida';
@@ -93,19 +98,72 @@ export default function BookingScreen_Confirm() {
     })();
   }, [coachProfileIdParam]);
 
-  // Botón físico de "atrás" en Android mientras el checkout está abierto: lo
-  // cierra en vez de sacar a la persona de la pantalla de confirmación por
-  // completo (antes esto venía gratis con WebBrowser/Modal).
+  // Botón físico de "atrás" en Android mientras se espera el pago: da por
+  // terminada la espera en vez de sacar a la persona de la pantalla de
+  // confirmación por completo. No cancela la reserva ni el pago — si la plata
+  // entra igual, la acredita el webhook y la confirma el servidor.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (checkoutUrlRef.current) {
-        setCheckoutUrl(null);
+      if (pagoEnCursoRef.current) {
+        setPagoEnCurso(null);
         return true;
       }
       return false;
     });
     return () => sub.remove();
   }, []);
+
+  // Sondeo de `payment_status` mientras la persona paga afuera.
+  //
+  // El límite se mide en tiempo de app EN PANTALLA, no en tiempo de reloj: los
+  // 2,5 s solo cuentan cuando `AppState` está en 'active'. Mientras está en la
+  // app de Mercado Pago no se gasta presupuesto, que es justo lo que rompía la
+  // versión anterior (12 s fijos, sesión 115) y lo que rompería cualquier
+  // deadline de reloj acá — 10 minutos tipeando una tarjeta y un 2FA son
+  // normales, y echarla a mitad de camino la manda a "reserva sin pagar"
+  // habiendo pagado.
+  //
+  // Si se agota igual NO se cancela nada: la reserva queda 'pendiente' y decide
+  // el servidor (`expire_unpaid_checkouts()` la libera a los 30 min si nunca se
+  // pagó; si se pagó, `mp-webhook` la confirma sin ayuda del cliente).
+  const esperarAcreditacion = async (bookingId: string): Promise<boolean> => {
+    const LIMITE_MS = 10 * 60 * 1000;
+    // El ciclo late cada 500 ms pero solo consulta cada 2 s. Los dos números son
+    // distintos a propósito: el chico es lo que tarda en NOTARSE que la persona
+    // volvió de la app de Mercado Pago, y el grande es cada cuánto se le
+    // pregunta a la base. Con un solo número había que elegir entre sondear de
+    // más o dejarla mirando "terminá el pago" un rato largo después de pagar.
+    const LATIDO_MS = 500;
+    const INTERVALO_MS = 2000;
+
+    let msEnPantalla = 0;
+    let desdeElUltimo = INTERVALO_MS;
+    let estabaAfuera = false;
+
+    while (msEnPantalla < LIMITE_MS) {
+      await new Promise((r) => setTimeout(r, LATIDO_MS));
+      // La persona tocó "No voy a pagar ahora" o el botón físico de atrás.
+      if (!pagoEnCursoRef.current) return false;
+
+      if (AppState.currentState !== 'active') { estabaAfuera = true; continue; }
+
+      msEnPantalla += LATIDO_MS;
+      desdeElUltimo += LATIDO_MS;
+      // Acaba de volver de pagar: se consulta YA, sin esperar el intervalo. Es
+      // el momento en el que el estado tiene más chances de haber cambiado.
+      if (estabaAfuera) { estabaAfuera = false; desdeElUltimo = INTERVALO_MS; }
+      if (desdeElUltimo < INTERVALO_MS) continue;
+      desdeElUltimo = 0;
+
+      const { data } = await supabase
+        .from('bookings')
+        .select('payment_status')
+        .eq('id', bookingId)
+        .maybeSingle();
+      if (data?.payment_status === 'aprobado') return true;
+    }
+    return false;
+  };
 
   async function onConfirm() {
     if (!isLoggedIn || !user) { requestAuth(); return; }
@@ -382,12 +440,12 @@ export default function BookingScreen_Confirm() {
       // Intentar iniciar el flujo de pago (si el coach tiene MP conectado)
       //
       // PayPal entra por acá y NO por una rama propia: su `approve_url` es una
-      // URL https común, así que funciona dentro del mismo checkout embebido y
-      // hereda todo lo que costó llegar a él — el WebView en vez del browser
-      // del sistema, el bloqueo de saltos a apps nativas, los 3 minutos de
-      // margen y el no cancelar la reserva al vencer el sondeo. Duplicar esa
-      // lógica en una rama aparte sería tener dos versiones de las mismas
-      // decisiones, y una de las dos envejecería.
+      // URL https común, así que se abre igual que el `init_point` de MP y
+      // hereda todo lo que costó llegar a esto — el sondeo medido en tiempo de
+      // app en pantalla, el no cancelar la reserva al vencerlo, y la
+      // confirmación server-side. Duplicar esa lógica en una rama aparte sería
+      // tener dos versiones de las mismas decisiones, y una de las dos
+      // envejecería.
       //
       // (USDT sí sale antes, más arriba: no tiene checkout que abrir.)
       let initPoint: string | null = null;
@@ -420,69 +478,55 @@ export default function BookingScreen_Confirm() {
         return;
       }
 
-      // 20/08/2026 (sesión 110→111→113): tres intentos de cerrar el browser del
-      // sistema solo, y los tres fallaron por el mismo motivo de fondo — no es
-      // nuestro browser el que decide cuándo cerrarse.
-      //   107: back_urls https + openAuthSessionAsync → la pantalla de "pago
-      //        aprobado" de MP rompe esa sesión (se ve el cartel "¿Abrir en
-      //        Vita?", que es justo la señal de que NO se interceptó en
-      //        silencio como debería) y Safari termina mostrando una checkout
-      //        nueva desde cero.
-      //   111: dismissBrowser() disparado por el sondeo → funciona solo SI el
-      //        browser sigue siendo nuestro. Con la app de Mercado Pago
-      //        instalada, MP le pasa el control a SU app nativa para mostrar
-      //        "pago aprobado" — un salto real entre apps que nuestro código
-      //        no puede ver ni cerrar. `dismissBrowser()` cierra una pestaña
-      //        que ya no es la que está en pantalla.
-      // La única forma de no perder el control es no usar el browser del
-      // sistema para nada: el checkout se abre EMBEBIDO (`<WebView>` más abajo
-      // en el JSX, no `expo-web-browser`), y `onShouldStartLoadWithRequest`
-      // bloquea cualquier intento de navegar a algo que no sea http(s) — ahí
-      // es donde MP intentaría saltar a su app nativa, y ahora no puede.
-      // `incognito={__DEV__}` reemplaza a la sesión efímera de antes: en
-      // testing arranca sin cookies para poder cambiar de cuenta de MP entre
-      // pruebas; en producción las guarda (aisladas de Safari, propias de la
-      // app) para que la persona no vuelva a loguearse en MP en cada reserva.
-      if (initPoint) setCheckoutUrl(initPoint);
-
-      // ¿Entró el pago? En los pagos reales del 09/08 el webhook tardó ~2 s
-      // desde que MP aprueba — el sondeo lo agarra casi al toque apenas la
-      // persona termina de pagar. El límite de 3 min de acá abajo NO es "el
-      // tiempo que tarda el pago": es el margen para que la PERSONA termine de
-      // tipear la tarjeta o el 2FA sin que la echemos a mitad de camino (ver
-      // sesión 115). Esto es lo único que decide cuándo se cierra el checkout
-      // embebido — `setCheckoutUrl(null)` más abajo — nunca un redirect ni el
-      // propio MP.
+      // ── El checkout SALTA A LA APP NATIVA (sesión 117) ────────────────────
       //
-      // Si se agota el tiempo NO se cancela la reserva desde acá: el pago podría
-      // acreditarse un segundo después y quedaríamos con una reserva cancelada y
-      // plata cobrada. Se deja 'pendiente' y decide el servidor —
-      // expire_unpaid_checkouts() la libera a los 30 min si nunca se pagó, y si
-      // sí se pagó el coach la ve como solicitud normal y puede aceptarla.
+      // Historia corta de cómo se abrió este checkout, porque cada vuelta costó
+      // una sesión entera:
+      //   107: browser del sistema + `back_urls` https + `openAuthSessionAsync`
+      //        → la pantalla de "pago aprobado" de MP rompe esa sesión en vez
+      //        de dejarse interceptar, y Safari terminaba mostrando un checkout
+      //        nuevo desde cero.
+      //   111: `dismissBrowser()` disparado por el sondeo → funciona solo si el
+      //        browser sigue siendo el nuestro. Con la app de MP instalada, MP
+      //        le pasa el control a SU app nativa y cerrábamos una pestaña que
+      //        ya no estaba en pantalla.
+      //   113: WebView embebido + `onShouldStartLoadWithRequest` bloqueando todo
+      //        lo que no fuera http(s), justamente para IMPEDIR el salto a la
+      //        app nativa y no perder el control del cierre.
+      //   117 (esto): el salto a la app nativa se vuelve el objetivo, no el
+      //        problema. En la app de MP la persona ya está logueada, con sus
+      //        tarjetas guardadas y biometría; en el WebView tenía que loguearse
+      //        a mano cada vez (en iOS lo tapaba a medias `sharedCookiesEnabled`,
+      //        que no existe en Android). Ese login era el paso donde se caían
+      //        los pagos.
+      //
+      // Lo que hace que esto no repita el error de 107/111: ya NO nos importa
+      // controlar el cierre del checkout. Los efectos de confirmar la reserva
+      // —avisarle al coach, confirmar la sesión, cancelar a los competidores del
+      // horario— se mudaron al servidor (`_shared/booking-effects.ts`, llamado
+      // desde `mp-webhook`). Esta pantalla ya no es responsable de que ocurran:
+      // si el sistema operativo mata la app mientras la persona paga, el pago se
+      // acredita y la reserva se confirma igual. El sondeo de acá abajo quedó
+      // para una sola cosa — mostrarle el resultado a quien SÍ vuelve.
       let paid = false;
       if (initPoint) {
-        // 20/08/2026 (sesión 115): ESTO cerraba el checkout a los 12s fijos
-        // pasara lo que pasara — con el browser del sistema no se notaba (la
-        // pestaña seguía abierta tapando todo mientras la app navegaba atrás),
-        // pero con el checkout embebido cerrarlo a los 12s significa cerrarlo
-        // en la cara de alguien que todavía está tipeando la tarjeta o
-        // esperando el 2FA del banco, y mandarla derecho a la pantalla
-        // siguiente como si ya hubiera terminado. Ahora el límite es de tiempo
-        // real de pago (3 min, 90 intentos) y lo único que corta antes es
-        // pagar (`paid`) o cerrar el checkout a mano (botón X / back).
-        for (let i = 0; i < 90; i++) {
-          await new Promise((r) => setTimeout(r, 2000));
-          // La persona cerró el checkout a mano — no tiene sentido seguir
-          // sondeando ni forzar el cierre de algo que ya no está.
-          if (!checkoutUrlRef.current) break;
-          const { data: paymentRow } = await supabase
-            .from('bookings')
-            .select('payment_status')
-            .eq('id', booking.id)
-            .maybeSingle();
-          if (paymentRow?.payment_status === 'aprobado') { paid = true; break; }
+        setPagoEnCurso(initPoint);
+        try {
+          // `openURL` y no `canOpenURL` + fallback: `init_point` es una URL
+          // https, así que el sistema decide solo — app de MP si está instalada
+          // (universal link / app link), browser si no. Preguntar antes no
+          // agregaría información, y en Android `canOpenURL` de un https
+          // siempre da true.
+          await Linking.openURL(initPoint);
+        } catch (e) {
+          setPagoEnCurso(null);
+          await logError('BookingConfirm: no se pudo abrir el checkout', e);
+          setError(`No pudimos abrir ${nombrePasarela}. Probá de nuevo en unos minutos`);
+          setLoading(false);
+          return;
         }
-        setCheckoutUrl(null);
+        paid = await esperarAcreditacion(booking.id);
+        setPagoEnCurso(null);
       }
 
       // Sin pago pendiente no hay nada que esperar: si el coach no tiene MP
@@ -490,9 +534,17 @@ export default function BookingScreen_Confirm() {
       const confirmedNow = isInstant && (!initPoint || paid);
       const awaitingPayment = !!initPoint && !paid;
 
-      // Con el pago sin confirmar no se avisa a nadie ni se cancelan horarios de
-      // otros: eso era exactamente el bug.
-      if (!awaitingPayment) await applyBookingEffects(confirmedNow);
+      // 🔴 Los efectos SOLO se aplican acá cuando no hubo nada que cobrar (coach
+      // sin Mercado Pago conectado). Con cobro de por medio los aplica el
+      // servidor al acreditar el pago —`_shared/booking-effects.ts` desde
+      // `mp-webhook`/`paypal-webhook`/`usdt-check-payments`—, porque desde la
+      // sesión 117 esta pantalla puede estar muerta cuando el pago entra.
+      //
+      // Ojo con la condición: es `!initPoint`, NO `!awaitingPayment`. Con
+      // `!awaitingPayment` un pago aprobado los correría de los dos lados, y el
+      // coach recibiría dos push, la sala dos mensajes de sistema y los
+      // competidores dos cancelaciones.
+      if (!initPoint) await applyBookingEffects(confirmedNow);
 
       router.replace({
         pathname: '/booking-success',
@@ -767,57 +819,34 @@ export default function BookingScreen_Confirm() {
         </View>
       </SafeAreaView>
 
-      {/* Checkout de MP embebido — no expo-web-browser/Safari. Ver el
-          comentario largo en onConfirm (sesión 113) sobre por qué: es la
-          única forma de bloquear el salto a la app nativa de MP y quedarnos
-          con el control de cuándo se cierra. */}
-      {checkoutUrl && (
-        <View style={s.checkoutOverlay}>
-          <SafeAreaView style={s.checkoutSafe} edges={['top', 'bottom']}>
-            <View style={s.checkoutHeader}>
+      {/* Espera del pago. Reemplaza al checkout embebido de la sesión 113: el
+          checkout ahora vive en la app de Mercado Pago, así que lo único que
+          queda de este lado es esto — decir qué está pasando y dar una salida.
+          Nada de acá decide si el pago vale: eso lo resuelve el webhook. */}
+      {pagoEnCurso && (
+        <View style={s.esperaOverlay}>
+          <SafeAreaView style={s.esperaSafe} edges={['top', 'bottom']}>
+            <View style={s.esperaBody}>
+              <ActivityIndicator size="large" color={ViveColors.primary} />
+              <Text style={s.esperaTitle}>Terminá el pago en {nombrePasarela}</Text>
+              <Text style={s.esperaDesc}>
+                Cuando lo completes, volvé a Vita y tu reserva ya va a estar confirmada.
+              </Text>
+              {/* La app de MP a veces vuelve a Vita sin pagar (un back de más, una
+                  notificación en el medio). Sin esto, la única salida era
+                  abandonar la reserva y empezarla de nuevo. */}
               <TouchableOpacity
-                style={s.checkoutClose}
-                onPress={() => setCheckoutUrl(null)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <MaterialIcons name="close" size={22} color="#2E3624" />
+                style={s.esperaBtn}
+                activeOpacity={0.85}
+                onPress={() => { Linking.openURL(pagoEnCurso).catch(() => {}); }}>
+                <Text style={s.esperaBtnText}>Volver a abrir {nombrePasarela}</Text>
               </TouchableOpacity>
-              <Text style={s.checkoutTitle}>Mercado Pago</Text>
-              <View style={s.checkoutHeaderSpacer} />
+              <TouchableOpacity
+                onPress={() => setPagoEnCurso(null)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={s.esperaCancel}>No voy a pagar ahora</Text>
+              </TouchableOpacity>
             </View>
-            <WebView
-              source={{ uri: checkoutUrl }}
-              // NO incognito — con `incognito` MP no reconoce ninguna sesión
-              // logueada y no ofrece "Ingresar con mi cuenta" (solo Tarjeta/
-              // Efectivo), justo el caso de alguien sin tarjeta.
-              //
-              // 20/08/2026 (sesión 116): sacar `incognito` NO ALCANZÓ —
-              // probado en dispositivo, "Ingresar con mi cuenta" seguía sin
-              // aparecer. El motivo real: el `WebView` tiene su PROPIO storage
-              // de cookies, separado del de Safari — nunca vio la sesión de MP
-              // aunque ya no sea incógnito, porque nunca estuvo ahí para
-              // empezar. `sharedCookiesEnabled` (solo iOS) hace que use el
-              // mismo `NSHTTPCookieStorage` que Safari — ahí SÍ está la sesión
-              // de MP de la persona, que es justo lo que hacía que el browser
-              // del sistema (antes de la sesión 113) mostrara la opción de
-              // cuenta sin problema. No afecta el bloqueo de
-              // `onShouldStartLoadWithRequest` de más abajo — son mecanismos
-              // distintos (cookies vs. navegación), así que el salto a la app
-              // nativa de MP sigue bloqueado igual.
-              sharedCookiesEnabled
-              startInLoadingState
-              renderLoading={() => (
-                <View style={s.checkoutLoading}>
-                  <ActivityIndicator color={ViveColors.primary} size="large" />
-                </View>
-              )}
-              onShouldStartLoadWithRequest={(req) =>
-                // Bloquea cualquier salto a algo que no sea la web de MP —
-                // ahí es donde intentaría abrir su app nativa. `false` no
-                // cancela el pago, solo esa navegación puntual: el checkout
-                // sigue andando igual dentro de http(s).
-                req.url.startsWith('http://') || req.url.startsWith('https://')
-              }
-            />
           </SafeAreaView>
         </View>
       )}
@@ -1130,40 +1159,52 @@ const s = StyleSheet.create({
     color: '#87835C',
     lineHeight: 18,
   },
-  checkoutOverlay: {
+  esperaOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFDF8',
     zIndex: 10,
   },
-  checkoutSafe: {
+  esperaSafe: {
     flex: 1,
   },
-  checkoutHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EDE7D8',
-  },
-  checkoutClose: {
-    width: 32,
-    height: 32,
+  esperaBody: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 14,
   },
-  checkoutTitle: {
+  esperaTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 19,
+    color: '#2E3624',
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  esperaDesc: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: 'rgba(135,131,92,0.85)',
+    textAlign: 'center',
+  },
+  esperaBtn: {
+    marginTop: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 26,
+    borderRadius: 14,
+    backgroundColor: ViveColors.primary,
+  },
+  esperaBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
-    color: '#2E3624',
+    color: '#FFFDF8',
   },
-  checkoutHeaderSpacer: {
-    width: 32,
-  },
-  checkoutLoading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  esperaCancel: {
+    marginTop: 4,
+    fontFamily: ViveFonts.regular,
+    fontSize: 13.5,
+    color: 'rgba(135,131,92,0.75)',
+    textDecorationLine: 'underline',
   },
 });

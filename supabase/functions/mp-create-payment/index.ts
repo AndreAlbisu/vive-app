@@ -16,11 +16,23 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const MP_CLIENT_ID = Deno.env.get('MP_CLIENT_ID')!            // para refrescar el token del coach
 const MP_CLIENT_SECRET = Deno.env.get('MP_CLIENT_SECRET')!
 const MP_WEBHOOK_URL = Deno.env.get('MP_WEBHOOK_URL')!         // URL pública de mp-webhook
-// Secret sin setear a propósito (sesión 110) — ver el comentario largo en
-// BookingScreen_Confirm.tsx sobre por qué se revirtió el intento de cierre
-// automático. Existe `booking-return` (edge function) para cuando esto se
-// retome con una vía más confiable que el redirect crudo de MP.
-const CHECKOUT_RETURN_URL = Deno.env.get('CHECKOUT_RETURN_URL') ?? 'viveapp://booking/result'
+// Vuelta a la app después de pagar. Estuvo APAGADA a propósito entre las
+// sesiones 110 y 116 (default `viveapp://…`, que no es https, así que el `if`
+// de más abajo no mandaba `back_urls`): con el checkout embebido en un WebView
+// la vuelta la manejaba la app sola, y el redirect de MP solo rompía cosas.
+//
+// Desde la sesión 117 el checkout se abre en la APP NATIVA de Mercado Pago, y
+// ahí la vuelta SÍ hace falta: sin `back_urls`, quien termina de pagar queda
+// parado en la app de MP y tiene que volver a Vita a mano. El default apunta a
+// `booking-return`, que es https (requisito de MP) y hace 302 al deep link.
+//
+// Por qué ahora sí y en la sesión 107 no: aquel intento fallaba porque el
+// redirect tenía que ser interceptado por la sesión efímera de
+// `openAuthSessionAsync`, y la pantalla de "pago aprobado" de MP la rompía.
+// Hoy no hay ninguna sesión de browser que romper — el deep link abre la app
+// por el camino normal del sistema.
+const CHECKOUT_RETURN_URL = Deno.env.get('CHECKOUT_RETURN_URL')
+  ?? `${SUPABASE_URL}/functions/v1/booking-return`
 // Split on/off. Default true (prod). Poner MP_SPLIT_ENABLED=false para diagnosticar
 // si el marketplace_fee es lo que rompe el checkout (app sin marketplace activado).
 const MP_SPLIT_ENABLED = Deno.env.get('MP_SPLIT_ENABLED') !== 'false'
@@ -153,15 +165,14 @@ serve(async (req) => {
     // Split: comisión VITA (tier server-side). Se puede apagar para diagnóstico.
     if (MP_SPLIT_ENABLED) prefBody.marketplace_fee = marketplaceFee
     // MP EXIGE back_urls https (un deep link `viveapp://` da error `invalid_back_urls`
-    // → "algo salió mal" al aprobar). Sin una URL https configurada, MP nunca redirige
-    // y la persona se queda mirando la pantalla de "Pago aprobado" hasta cerrarla a
-    // mano — el pago funciona igual (lo confirma mp-webhook, no el redirect), solo
-    // que la vuelta a la app no es automática.
-    // ⚠️ Probado con `CHECKOUT_RETURN_URL` apuntando a `booking-return` (sesión 107)
-    // y salió PEOR: la pantalla de "pago aprobado" de MP rompe la sesión de
-    // `openAuthSessionAsync` en vez de dejarse interceptar, y de ahí Safari mostraba
-    // una checkout de MP nueva antes de volver a la app. Revertido (sesión 110):
-    // el secret queda sin setear a propósito, así que este `if` no manda back_urls.
+    // → "algo salió mal" al aprobar). Por eso la vuelta pasa por `booking-return`,
+    // que es https y hace el 302 al deep link.
+    //
+    // El `if` se conserva como interruptor: poniendo `CHECKOUT_RETURN_URL` en
+    // cualquier cosa que no empiece con https (p. ej. `off`) se vuelve al
+    // comportamiento sin redirect, sin tener que tocar código. El pago no
+    // depende de esto en ningún caso — lo acredita `mp-webhook`, no el redirect;
+    // lo único que se pierde es la vuelta automática a la app.
     if (CHECKOUT_RETURN_URL.startsWith('https://')) {
       prefBody.back_urls = { success: CHECKOUT_RETURN_URL, failure: CHECKOUT_RETURN_URL, pending: CHECKOUT_RETURN_URL }
       prefBody.auto_return = 'approved'

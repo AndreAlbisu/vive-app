@@ -21,6 +21,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { applyPaidBookingEffects } from '../_shared/booking-effects.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -286,6 +287,13 @@ serve(async (req) => {
     // Ya estaba marcada (reintento normal) o cambió de estado mientras tanto.
     return new Response('no change', { status: 200 })
   }
+
+  // Efectos de confirmación, server-side (sesión 117): confirmar la reserva,
+  // avisarle al coach y liberar a los competidores del horario. Va acá y no en
+  // el cliente porque PayPal también abre su checkout FUERA de la app, así que
+  // no hay ninguna pantalla nuestra garantizada viva cuando el pago entra.
+  // El `.select('id')` de arriba es lo que hace que corra una sola vez.
+  await applyPaidBookingEffects(admin, bookingId)
 
   return new Response('ok', { status: 200 })
 })

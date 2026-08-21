@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-08-21 — Andre (sesión 117)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`, `app/booking/result.tsx`, `supabase/functions/_shared/booking-effects.ts` (**nuevo**), `mp-webhook`, `paypal-webhook`, `usdt-check-payments`, `mp-create-payment`, `paypal-create-payment`, `SCHEMA.md`. Sin cambios de base de datos. 241 tests, `tsc` limpio. ⚠️ **Nada deployado ni probado en dispositivo todavía.**
+
+**Resumen — el checkout ahora salta a la app nativa de Mercado Pago, y para que eso fuera seguro hubo que mover la confirmación al servidor.**
+
+- **El pedido era simple: que abra la app de MP.** En la app nativa la persona ya está logueada, con tarjetas guardadas y biometría; en el WebView de la sesión 113 tenía que loguearse a mano cada vez (en iOS lo tapaba a medias `sharedCookiesEnabled`, que **no existe en Android**), y ese login era el paso donde se caían los pagos. Ahora es `Linking.openURL(init_point)` y el sistema decide: app de MP si está instalada, browser si no. Se fue la dependencia de `react-native-webview`.
+- 🔴 **Pero el salto solo era seguro después de mover los efectos de confirmación al servidor.** Hasta ahora los aplicaba `BookingScreen_Confirm` en el cliente, y podía porque el WebView mantenía la app en primer plano todo el pago. Con la app en segundo plano, el SO puede matarla: un pago aprobado con la app muerta dejaba **plata cobrada, la reserva en 'pendiente' y el coach sin enterarse** — el espejo exacto de las 27 fantasma del 09/08, cobrado-sin-confirmar en vez de confirmado-sin-cobrar. Nuevo `_shared/booking-effects.ts`, llamado por los tres rieles desde el punto donde ganan la carrera por marcar `payment_status = 'aprobado'`.
+- 🔴 **Eso destapó un bug que ya existía: el riel de USDT nunca confirmó nada.** `BookingScreen_Confirm` sale por `router.replace('/pago-usdt')` **antes** de `applyBookingEffects`, y el cron solo escribía `payment_status`. La persona pagaba, la pantalla le decía "Tu sesión quedó confirmada" y la reserva se quedaba en 'pendiente'. No se notó porque todavía no hubo ningún pago real en USDT. Arreglado con la misma llamada.
+- **Por qué esto no repite los fracasos de las sesiones 107 y 111:** aquellos dependían de controlar el cierre del browser (interceptar el redirect, o cerrar la pestaña desde el sondeo), y MP siempre podía quitarnos el control. Ahora el cierre **no importa**: si la app muere, el pago se acredita y la reserva se confirma igual. El sondeo del cliente quedó solo para mostrarle el resultado a quien vuelve.
+- **La vuelta a la app se encendió** (`booking-return` ya existía sin usarse): `CHECKOUT_RETURN_URL` ahora cae por default a esa función en los dos rieles, así que MP y PayPal mandan `back_urls`. Sin esto la persona terminaba de pagar y quedaba parada en la app de MP.
+- **Detalles que costaron pensar más de lo que se ven:**
+  - El sondeo se mide en **tiempo de app en pantalla** (`AppState === 'active'`), no de reloj: 10 minutos tipeando una tarjeta y un 2FA son normales, y un deadline de reloj echaría a alguien que ya pagó. Late cada 500 ms para notar el regreso, pero consulta cada 2 s.
+  - La idempotencia la ponen los **llamadores** con un update condicional + `.select('id')`, no el helper. En `mp-webhook` la guarda es `.neq('payment_status','aprobado')` y no `= 'pendiente'`, porque Checkout Pro recupera pagos rechazados y la aprobación puede llegar sobre un `'rechazado'`.
+  - El cliente sigue aplicando los efectos cuando **no hay nada que cobrar** (coach sin MP). La condición es `if (!initPoint)` y no `if (!awaitingPayment)` — con la segunda, un pago aprobado los correría de los dos lados: dos push al coach, dos mensajes de sistema, dos cancelaciones a los competidores.
+  - `app/booking/result.tsx` hacía `router.replace('/(tabs)/mis-salas')` siempre, y eso **pisaba** el flujo de la pantalla que seguía sondeando. Ahora hace `back()` si hay algo debajo, y solo va a mis-salas si el deep link abrió la app de cero.
+
+**Pendiente para la próxima sesión — nada de esto está deployado:**
+- 🔴 **Deployar las 5 edge functions** (`mp-webhook`, `paypal-webhook`, `usdt-check-payments`, `mp-create-payment`, `paypal-create-payment`) **y `booking-return`, que puede no estar deployada nunca** — ahora es el back_url por default, así que sin ella MP redirige a un 404 después de pagar (el pago se acredita igual, solo se pierde la vuelta automática).
+- ⚠️ **Secret `MESSAGE_ENCRYPTION_KEY`**: solo hace falta si `EXPO_PUBLIC_ENCRYPTION_KEY` del `.env` **no** es el default `vive_mvp_key_2026`. Tiene que valer exactamente lo mismo, o el mensaje de sistema de la sala se guarda ilegible.
+- 🔴 **Probar en dispositivo, con la app de MP instalada**, el camino completo: reservar → salta a MP → pagar → volver → ver "reserva confirmada". Y el caso feo a propósito: **matar la app desde el multitasking mientras se paga**, y verificar que la reserva quede confirmada y el coach notificado igual. Ese es el caso que justifica todo el cambio.
+- ⚠️ **Verificar qué pasa con `MP_TEST_MODE`**: el `sandbox_init_point` abierto en la app nativa de MP puede no funcionar. Si falla, testear con pagos reales de $1 como el 09/08.
+- ⚠️ **No está verificado que iOS abra la app de MP con el `init_point`** en vez de Safari (depende de que MP tenga ese path registrado como universal link). Si cae en Safari, el checkout web de MP hace su propio salto a la app nativa — que es lo que se observó en la sesión 111 — así que el destino final es el mismo, pero conviene mirarlo.
+- Todo lo de la sesión 116 sigue: seed de la billetera USDT en papel, la hora con el contador, las dos mediciones de USD 50 y el pago real de PayPal de punta a punta.
+
+---
+
 ## 2026-08-21 — Andre (sesión 116)
 
 **Tocado:** `SCHEMA.md`. Secret `USDT_WALLET_TRC20` **rotado**; `usdt-create-payment` y `usdt-check-payments` **redeployadas**. Sin cambios de código.

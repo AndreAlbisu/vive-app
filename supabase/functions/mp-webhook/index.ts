@@ -18,6 +18,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { verifyWebhookSignature, getFreshCoachToken } from '../_shared/mp.ts'
+import { applyPaidBookingEffects } from '../_shared/booking-effects.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -130,15 +131,46 @@ serve(async (req) => {
       }
     }
 
-    await supabase.from('bookings').update(patch).eq('id', bookingId)
+    // 🔴 RECLAMO DE LA TRANSICIÓN. Hasta la sesión 116 esto era un update a
+    // secas, y alcanzaba: MP manda hasta 3 notificaciones por pago, pero el
+    // webhook solo escribía una columna, así que repetirlo no se notaba. Desde
+    // que de acá cuelgan los efectos de confirmación —push al coach, mensaje de
+    // sistema en la sala, cancelación de los competidores del horario— correr
+    // dos veces SÍ se ve. `.neq('payment_status','aprobado')` hace que solo la
+    // primera notificación que lo deja aprobado devuelva fila.
+    //
+    // No se filtra por `= 'pendiente'` a propósito: Checkout Pro RECUPERA pagos
+    // rechazados (ver más abajo), así que la aprobación puede llegar sobre un
+    // `payment_status = 'rechazado'` y esa transición también tiene que valer.
+    const upd = supabase.from('bookings').update(patch).eq('id', bookingId)
+    if (newStatus === 'aprobado') upd.neq('payment_status', 'aprobado')
+    const { data: cambiada, error: errUpd } = await upd.select('id')
 
-    // NO disparar acá la confirmación de sesión (reserva_confirmada /
-    // system_confirmed). En este flujo el pago ocurre DESPUÉS de crear el
-    // booking, y la confirmación ya la emite quien corresponde:
-    //   · instant_booking → BookingScreen_Confirm al reservar (status nace 'confirmada')
-    //   · no-instant      → CoachReservasScreen.accept() cuando el coach acepta
-    // Emitirla también acá duplicaría la notificación en instant o saltearía la
-    // aceptación del coach. El webhook solo trackea payment_status.
+    if (errUpd) {
+      // 502 para que MP reintente: la plata está cobrada y la reserva no lo
+      // sabe, que es justo el estado en el que quedó durante un mes.
+      console.error('[mp-webhook] no se pudo escribir el estado del pago:', errUpd.message)
+      return new Response('update failed', { status: 502 })
+    }
+
+    // EFECTOS DE CONFIRMACIÓN, SERVER-SIDE (sesión 117). Antes los aplicaba
+    // `BookingScreen_Confirm` en el cliente, y podía porque el checkout se
+    // abría embebido y la app quedaba en primer plano todo el pago. Ahora el
+    // checkout salta a la app nativa de MP: la app se va a segundo plano y el
+    // SO puede matarla, así que el único lugar seguro para esto es acá. Ver el
+    // comentario largo de `_shared/booking-effects.ts`.
+    //
+    // `patch.payment_status` y no `newStatus`: si la reserva ya estaba
+    // cancelada, la rama de arriba lo cambió a 'reembolso_pendiente' y no hay
+    // ninguna sesión que confirmar.
+    if (patch.payment_status === 'aprobado' && cambiada?.length) {
+      await applyPaidBookingEffects(supabase, bookingId)
+    }
+
+    // Sigue SIN dispararse la confirmación desde acá cuando el coach NO tiene
+    // `instant_booking`: en ese caso `applyPaidBookingEffects` solo le avisa de
+    // la solicitud nueva, y quien confirma es CoachReservasScreen.accept().
+    // Pagar no saltea la decisión del coach.
     //
     // NO auto-cancelar la reserva en 'rechazado'. VERIFICADO en docs MP (07/2026):
     // Checkout Pro RECUPERA pagos rechazados — tras un rechazo el usuario reintenta

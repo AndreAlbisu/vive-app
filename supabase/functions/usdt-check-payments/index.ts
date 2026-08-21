@@ -12,6 +12,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { USDT_TRC20_CONTRACT, findPayment, type TronTransfer } from '../_shared/usdt.ts'
+import { applyPaidBookingEffects } from '../_shared/booking-effects.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -115,7 +116,7 @@ serve(async (req) => {
     }
     if (r.kind !== 'match') continue
 
-    const { error: errUpd } = await supabase
+    const { data: acreditada, error: errUpd } = await supabase
       .from('bookings')
       .update({
         payment_status: 'aprobado',
@@ -128,11 +129,27 @@ serve(async (req) => {
       // reserva pudo expirar. La consulta filtra para no traerla; esto impide
       // acreditarla si se canceló en el medio.
       .neq('status', 'cancelada')
+      // El `.select()` es lo que convierte las dos guardas de arriba en un
+      // RECLAMO: solo la corrida que de verdad hizo la transición recibe fila,
+      // y por lo tanto solo ella aplica los efectos de abajo.
+      .select('id')
 
     if (errUpd) {
       console.error('[usdt-check] no se pudo acreditar', b.id, errUpd.message)
       continue
     }
+    if (!acreditada?.length) continue   // ganó otra corrida, o se canceló en el medio
+
+    // 🔴 Esto FALTABA (agregado en la sesión 117, junto con el salto a la app
+    // nativa de MP). El riel de USDT nunca confirmó nada: `BookingScreen_Confirm`
+    // sale por `router.replace('/pago-usdt')` ANTES de `applyBookingEffects`, y
+    // acá solo se escribía `payment_status`. Resultado: la persona pagaba, la
+    // pantalla le decía "Tu sesión quedó confirmada" y la reserva se quedaba en
+    // 'pendiente' — sin avisarle al coach, sin liberar el horario de los
+    // competidores y sin nadie del otro lado. Ahora lo aplica el mismo helper
+    // que usan los webhooks de MP y PayPal.
+    await applyPaidBookingEffects(supabase, b.id)
+
     hashesUsados.add(r.transfer.transaction_id)
     acreditadas++
     console.log('[usdt-check] acreditada', b.id, r.transfer.transaction_id)

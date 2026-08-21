@@ -3,26 +3,34 @@ import { View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ViveColors } from '@/constants/theme';
 
-// booking/result — el deep link al que apunta `booking-return` (y el que se le
-// pasa a `WebBrowser.openAuthSessionAsync` como redirectUrl) después de pagar
-// con MP. En el caso normal, `openAuthSessionAsync` intercepta este redirect
-// DENTRO de su propia sesión y nunca llega a navegar de verdad: la promesa se
-// resuelve, el browser se cierra solo, y `BookingScreen_Confirm` sigue su
-// propio flujo (sondea `payment_status`, después navega a /booking-success).
+// booking/result — adónde aterriza la vuelta de Mercado Pago y de PayPal
+// después de pagar. El camino completo es: `back_urls`/`return_url` (https,
+// requisito del procesador) → la edge function `booking-return` → 302 a
+// `viveapp://booking/result` → acá.
 //
-// Esta pantalla es el fallback para cuando eso NO pasa — MP rompe la sesión y
-// entrega el redirect a Safari, que lo abre como un deep link real (visto en
-// dispositivo el 19/08/2026: "redirigió a Safari, pidió abrir Vita, y ahí
-// quedó"). Antes esta ruta no existía, así que abrir la app por acá no tenía
-// a dónde ir. El resultado del pago YA está en el servidor (mp-webhook
-// escribió payment_status antes de que MP mostrara "aprobado"), así que no
-// hace falta leer nada de acá: alcanza con mandar a la persona a ver sus
-// sesiones.
+// Hay DOS formas de llegar, y hacen falta las dos:
+//
+//  1. La app siguió viva mientras la persona pagaba (el caso normal). Abajo,
+//     en la pila, `BookingScreen_Confirm` está sondeando `payment_status` y va
+//     a mandar a `/booking-success` en cuanto lo vea aprobado. Acá NO hay que
+//     navegar a ningún lado: alcanza con salirse del medio con un `back()`, y
+//     que siga el flujo que ya estaba en curso. Antes esta pantalla mandaba
+//     siempre a mis-salas, y eso pisaba justamente ese flujo — la persona
+//     terminaba de pagar y aterrizaba en una lista en vez de en la pantalla de
+//     "reserva confirmada".
+//
+//  2. La app venía muerta y este deep link la abrió de cero (el SO la mató
+//     mientras estaba en la app de Mercado Pago). No hay ninguna pantalla
+//     debajo ni ningún sondeo esperando, así que sí hay que llevarla a algún
+//     lado. Va a mis-salas: el resultado del pago ya está en el servidor
+//     —`mp-webhook` escribió `payment_status` y confirmó la reserva antes de
+//     que MP mostrara "aprobado"— así que la sesión ya figura ahí, confirmada.
 export default function BookingResult() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/(tabs)/mis-salas');
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/mis-salas');
   }, [router]);
 
   return (

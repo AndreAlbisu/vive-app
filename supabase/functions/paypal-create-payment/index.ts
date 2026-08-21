@@ -35,7 +35,12 @@ const PAYPAL_API = PAYPAL_MODE === 'live'
 // Adónde vuelve PayPal después de pagar. Es el mismo rebote https que usa
 // Mercado Pago (`booking-return`), que hace un 302 al deep link de la app: un
 // `viveapp://` directo no lo acepta ningún procesador como return URL.
-const CHECKOUT_RETURN_URL = Deno.env.get('CHECKOUT_RETURN_URL') ?? ''
+// Mismo default que `mp-create-payment` (sesión 117): sin esto la vuelta a la
+// app quedaba apagada salvo que alguien se acordara de setear el secret, y
+// desde que el checkout se abre FUERA de la app eso significa dejar a la
+// persona parada en PayPal después de pagar.
+const CHECKOUT_RETURN_URL = Deno.env.get('CHECKOUT_RETURN_URL')
+  ?? `${SUPABASE_URL}/functions/v1/booking-return`
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
