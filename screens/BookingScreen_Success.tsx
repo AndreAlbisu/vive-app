@@ -47,6 +47,27 @@ export default function BookingScreen_Success() {
   const salaId = params.salaId ?? '';
   const isInstant = params.instant === '1';
 
+  // Salir de acá tiene que DESARMAR la pila de la reserva, no apilarse encima.
+  //
+  // Antes "Ver mi sala" hacía `push` y "Volver a Inicio" `navigate`, y en los
+  // dos casos esta pantalla —y todo el embudo que la precede: el perfil del
+  // profesional, el calendario, la elección de horario— quedaba viva abajo. El
+  // gesto de volver atrás desde la sala te devolvía a "sesión confirmada", una
+  // pantalla terminal de algo que ya pasó. Y un paso más atrás te dejaba en el
+  // selector de horarios de una reserva que ya está hecha.
+  //
+  // `booking-success` ya tiene `gestureEnabled: false` en `app/_layout.tsx`, así
+  // que no se puede volver DESDE ella; lo que faltaba era no poder volver A ella.
+  //
+  // `dismissAll()` vuelve a la primera ruta de la pila, que para alguien logueado
+  // es `(tabs)` — `app/index.tsx` hace `replace('/(tabs)')` al abrir sesión, así
+  // que Inicio es la raíz y no algo apilado. El `canDismiss()` es para el caso
+  // sin nada que desapilar, donde `dismissAll()` avisaría por consola.
+  const salirDelEmbudo = () => {
+    if (router.canDismiss()) router.dismissAll();
+    else router.replace('/(tabs)');
+  };
+
   const firstName = coachName.split(' ')[0];
   const formattedDate = formatDate(dateStr);
 
@@ -135,14 +156,19 @@ export default function BookingScreen_Success() {
         <Animated.View style={[s.footer, { opacity: contentOpacity }]}>
           <TouchableOpacity
             style={s.btnPrimary}
-            onPress={() => router.push({ pathname: '/sala', params: { sala_id: salaId } })}
+            onPress={() => {
+              // Desarmar primero y apilar la sala después: queda Inicio → sala,
+              // que es donde se llega desde cualquier otro lado de la app.
+              salirDelEmbudo();
+              router.push({ pathname: '/sala', params: { sala_id: salaId } });
+            }}
             activeOpacity={0.85}>
             <Text style={s.btnPrimaryText}>Ver mi sala</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={s.btnSecondary}
-            onPress={() => router.navigate('/(tabs)')}
+            onPress={salirDelEmbudo}
             activeOpacity={0.75}>
             <Text style={s.btnSecondaryText}>Volver a Inicio</Text>
           </TouchableOpacity>

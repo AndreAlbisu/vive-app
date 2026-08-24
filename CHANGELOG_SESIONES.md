@@ -27,6 +27,22 @@
 
 ---
 
+## 2026-08-23 — Andre (sesión 118)
+
+**Tocado:** `screens/BookingScreen_Success.tsx`. Sin cambios de base de datos ni de edge functions. 241 tests, `tsc` limpio.
+
+**Resumen:**
+
+- **Salir de "sesión confirmada" no desarmaba la pila de la reserva.** "Ver mi sala" hacía `push` y "Volver a Inicio" `navigate`, así que la pantalla terminal —y todo el embudo que la precede: perfil del profesional, calendario, elección de horario— quedaba viva abajo. El gesto de volver atrás desde la sala te devolvía a "sesión confirmada", y un paso más atrás al selector de horarios de una reserva ya hecha. Los dos botones ahora hacen `dismissAll()` primero.
+- **La mitad ya estaba resuelta y por eso costaba ver la otra:** `booking-success` tiene `gestureEnabled: false` en `app/_layout.tsx`, así que no se puede volver DESDE ella. Lo que faltaba era no poder volver A ella.
+- 📝 `dismissAll()` es correcto acá porque para alguien logueado la raíz de la pila es `(tabs)`: `app/index.tsx` hace `replace('/(tabs)')` al abrir sesión, así que Inicio no está apilado sino que es el piso.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **`UsdtPaymentScreen` tiene el mismo patrón sin arreglar** (`router.replace('/(tabs)')` al acreditarse, que deja el embudo abajo). Hoy no se nota porque `(tabs)` también tiene `gestureEnabled: false`, así que no hay gesto que lo destape — pero es la misma forma y conviene unificarla cuando se toque esa pantalla.
+- Sigue todo lo de la sesión 117: **nada probado en Android**, que es donde más se esperaba ganar con el salto a la app nativa de Mercado Pago.
+
+---
+
 ## 2026-08-24 — Joaquín (sesión 124)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`, `__tests__/pureLogic.test.ts`.
