@@ -23,13 +23,14 @@ import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
-import { rankDeck, SLOT_COLORS } from '@/lib/coachDeckRanking';
+import { rankDeck, SLOT_COLORS, type DeckSlotKey } from '@/lib/coachDeckRanking';
 
 // ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
 const FOREST      = '#3F512F';
@@ -39,8 +40,22 @@ const CARD        = '#F7F2E7';
 const TERRACOTTA  = '#C06B4A';
 const TC_SOFT     = '#EAD3C6';
 const STAR        = '#C99A3F';
-const LIVE        = '#5F7A44';
 const LINE        = 'rgba(63,81,47,0.14)';
+const SAGE        = '#DCE5CB'; // pill "Opción económica" — card-otras-estructuras.html §B2
+
+// Pill de "motivo" (por qué esta persona está en el carrusel) — reusa
+// DECK_SLOTS/SLOT_COLORS de lib/coachDeckRanking.ts, no un campo nuevo: ese
+// dato YA elige de qué slot viene cada card del deck. Solo `recomendado` y
+// `economico` están definidos por el HTML de referencia (fondo+texto exactos,
+// medidos); `tendencia`/`nuevo` son un tinte de su propio SLOT_COLOR para
+// sostener el mismo lenguaje visual — no vienen del mockup, son mi propuesta,
+// ver la conversación de la sesión antes de ajustarlos.
+const REASON_STYLES: Record<DeckSlotKey, { bg: string; text: string }> = {
+  recomendado: { bg: TC_SOFT, text: '#8F4A2E' },
+  economico:   { bg: SAGE,    text: '#42542F' },
+  tendencia:   { bg: tint(SLOT_COLORS.tendencia, 0.18), text: SLOT_COLORS.tendencia },
+  nuevo:       { bg: tint(SLOT_COLORS.nuevo, 0.16),      text: SLOT_COLORS.nuevo },
+};
 
 const SCREEN_W = Dimensions.get('window').width;
 
@@ -359,42 +374,40 @@ export default function ConexionesScreen() {
                     setDeckIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_W));
                   }}
                   scrollEventThrottle={16}>
-                  {deck.map((entry, i) => {
+                  {deck.map((entry) => {
                     const { coach, slot } = entry;
-                    const available = !!coach.hasSlotThisWeek;
-                    // El color lo da la CATEGORÍA, no la puerta: la puerta ya está
-                    // nombrada arriba en la pastilla, y así cada card del deck se
-                    // distingue de la anterior.
-                    const catColor = SLOT_COLORS[slot.key];
                     const isFav = favoriteIds.has(coach.id);
+                    const reason = REASON_STYLES[slot.key];
                     return (
                       <View key={coach.id} style={s.cardPage}>
-                        <View style={s.cardWrap}>
-                          {/* Cabecera: la categoría deja de ser una pastilla suelta
-                              y pasa a ser la identidad de la card. */}
-                          <View style={[s.cardHead, { backgroundColor: catColor }]}>
-                            <View style={s.cardHeadLeft}>
-                              <Feather name={slot.icon as any} size={13} color="#F7F2E7" />
-                              <Text style={s.cardHeadLabel} numberOfLines={1}>{slot.label}</Text>
-                            </View>
-                            <View style={s.cardHeadRight}>
+                        <SurfaceCard
+                          variant="elevated"
+                          tone="light"
+                          backgroundColor={CARD}
+                          borderRadius={20}
+                          grainOpacity={0.045}
+                          style={s.cardSurface}>
+                          <View style={s.cardBody}>
+                            {/* Fila superior: solo el favorito. Nada más arriba —
+                                sin eyebrow suelto, sin contador "i/N" (los puntitos
+                                de paginación siguen a nivel pantalla, debajo). */}
+                            <View style={s.cardTop}>
                               <TouchableOpacity
                                 onPress={() => toggleFav(coach.id)}
                                 hitSlop={10}
                                 activeOpacity={0.7}>
-                                <Feather name="star" size={16} color="#F7F2E7" style={isFav ? undefined : s.starOff} />
+                                <Feather name="star" size={16} color={FOREST_SOFT} style={isFav ? undefined : s.starOff} />
                               </TouchableOpacity>
-                              <View style={s.cardCounter}>
-                                <Text style={s.cardCounterText}>{i + 1} / {deck.length}</Text>
-                              </View>
                             </View>
-                          </View>
 
-                          <View style={s.cardBody}>
-                            {/* Quién: avatar y nombre en la misma fila, alineados a
-                                la izquierda — antes estaba todo centrado y no había
-                                por dónde empezar a leer. */}
-                            <View style={s.cardWho}>
+                            {/* Avatar con halo cálido + anillo durazno + badge de
+                                verificación — card-otras-estructuras.html §B2. RN no
+                                tiene radial-gradient nativo: el halo se aproxima con
+                                un círculo semitransparente en vez de un degradé real
+                                con caída hacia afuera. */}
+                            <View style={s.avatarWrap}>
+                              <View style={s.avatarGlow} />
+                              <View style={s.avatarRing} />
                               {coach.avatarUrl ? (
                                 <Image source={{ uri: coach.avatarUrl }} style={s.cardAvatar} />
                               ) : (
@@ -405,45 +418,49 @@ export default function ConexionesScreen() {
                               {coach.verified && (
                                 <View style={s.vBadge}><Feather name="check" size={10} color="#F3EEDF" /></View>
                               )}
-                              <View style={s.cardWhoText}>
-                                <Text style={s.cardName} numberOfLines={1}>{coach.name}</Text>
-                                <Text style={s.cardRole} numberOfLines={1}>{coach.specialty}</Text>
-                                {(coach.reviewCount ?? 0) >= 1 ? (
-                                  <Text style={s.cardRating}>
-                                    <Text style={{ color: STAR }}>★ </Text>
-                                    {(coach.avgRating ?? 0).toFixed(1)}
-                                    <Text style={s.cardRatingMuted}>  ·  {coach.reviewCount} reseñas</Text>
-                                  </Text>
-                                ) : (
-                                  <Text style={s.cardNew}>Sin reseñas todavía</Text>
-                                )}
-                              </View>
+                            </View>
+
+                            <Text style={s.cardName} numberOfLines={1}>{coach.name}</Text>
+                            <Text style={s.cardMeta} numberOfLines={1}>
+                              {coach.specialty}
+                              {(coach.reviewCount ?? 0) >= 1 ? (
+                                <Text>
+                                  {'  ·  '}
+                                  <Text style={{ color: STAR }}>★ </Text>
+                                  {(coach.avgRating ?? 0).toFixed(1)}
+                                </Text>
+                              ) : (
+                                '  ·  Sin reseñas todavía'
+                              )}
+                            </Text>
+
+                            {/* Pill de motivo — por qué esta persona está en el
+                                carrusel. Mismo dato que antes pintaba la banda
+                                sólida de arriba (lib/coachDeckRanking.ts), ahora
+                                como pill chica integrada al cuerpo de la card. */}
+                            <View style={[s.reasonPill, { backgroundColor: reason.bg }]}>
+                              <Feather name={slot.icon as any} size={11} color={reason.text} />
+                              <Text style={[s.reasonText, { color: reason.text }]}>{slot.label}</Text>
+                            </View>
+
+                            <View style={s.dots3}>
+                              <View style={s.dot3} />
+                              <View style={s.dot3} />
+                              <View style={s.dot3} />
                             </View>
 
                             {!!coach.bio && (
-                              <Text style={s.cardBio} numberOfLines={3}>“{coach.bio.trim()}”</Text>
+                              <Text style={s.cardBio} numberOfLines={2}>“{coach.bio.trim()}”</Text>
                             )}
-
-                            <View style={s.cardMetaRow}>
-                              <Text style={s.cardPrice}>
-                                Desde <Text style={s.cardPriceNum}>${(coach.priceFrom ?? 0).toLocaleString('es-AR')}</Text>
-                              </Text>
-                              {available && (
-                                <View style={s.cardAvailWrap}>
-                                  <View style={s.liveDot} />
-                                  <Text style={s.cardAvail}>Con lugar esta semana</Text>
-                                </View>
-                              )}
-                            </View>
 
                             <TouchableOpacity
                               style={s.knowBtn}
                               onPress={() => goToPerfil(coach)}
-                              activeOpacity={0.85}>
+                              activeOpacity={0.75}>
                               <Text style={s.knowText}>Conocer a {coach.name.split(' ')[0]}</Text>
                             </TouchableOpacity>
                           </View>
-                        </View>
+                        </SurfaceCard>
                       </View>
                     );
                   })}
@@ -922,104 +939,109 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     justifyContent: 'center',   // centra la card verticalmente dentro de la página
   },
-  cardWrap: {
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: LINE,
-    borderRadius: 26,
-    overflow: 'hidden',
-    ...shadow,
-  },
-  // ── Cabecera de categoría ────────────────────────────────────────────────
-  cardHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-  },
-  cardHeadLeft: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1 },
-  cardHeadLabel: { fontFamily: ViveFonts.semibold, fontSize: 12, color: '#F7F2E7', flexShrink: 1 },
-  cardHeadRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  // Rediseño 24/08/2026 (card-otras-estructuras.html §B2) — el contenedor con
+  // sombra/grano/borde-gradiente ahora lo da SurfaceCard (mismo tratamiento
+  // que "Sobre vos"), no el `cardWrap`/`shadow` local que tenía antes (`shadow`
+  // sigue en uso en otras cards de este archivo, no se tocó).
+  cardSurface: {},
+  // ── Cuerpo (todo centrado, de arriba a abajo) ─────────────────────────────
+  cardBody: { paddingTop: 26, paddingHorizontal: 20, paddingBottom: 20, alignItems: 'center' },
+
+  cardTop: { alignSelf: 'stretch', flexDirection: 'row', justifyContent: 'flex-end' },
   starOff: { opacity: 0.55 },
-  cardCounter: {
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderRadius: 11,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+
+  // Avatar 76px con halo cálido + anillo durazno — HTML: .avwrap 76×76,
+  // .glow inset:-16 (108×108), .ring inset:-5 (86×86).
+  avatarWrap: { width: 76, height: 76, marginTop: 6, position: 'relative' },
+  avatarGlow: {
+    position: 'absolute',
+    top: -16, left: -16, right: -16, bottom: -16,
+    borderRadius: 54,
+    // RN no tiene radial-gradient: se aproxima con un círculo semitransparente
+    // (el HTML usa radial-gradient(rgba(192,107,74,.28), transparent 70%)).
+    backgroundColor: 'rgba(192,107,74,0.16)',
   },
-  cardCounterText: { fontFamily: ViveFonts.semibold, fontSize: 11, color: '#F7F2E7' },
-
-  // ── Cuerpo ───────────────────────────────────────────────────────────────
-  cardBody: { paddingHorizontal: 18, paddingTop: 18, paddingBottom: 20, gap: 16 },
-
-  cardWho: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  cardWhoText: { flex: 1, minWidth: 0 },
+  avatarRing: {
+    position: 'absolute',
+    top: -5, left: -5, right: -5, bottom: -5,
+    borderRadius: 43,
+    borderWidth: 1.5,
+    borderColor: TC_SOFT,
+  },
   cardAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Neutro a propósito: el color de la categoría vive SOLO en la cabecera. Cuando
-  // además teñía el avatar y el botón, la card quedaba dominada por un bloque de
-  // color y el acento dejaba de acentuar.
   cardAvatarFallback: { backgroundColor: 'rgba(107,122,86,0.18)' },
-  cardInitials: { fontFamily: ViveFonts.frauncesSerif, fontSize: 20, color: FOREST },
+  cardInitials: { fontFamily: ViveFonts.frauncesSerif, fontSize: 22, color: FOREST },
   vBadge: {
     position: 'absolute',
-    left: 43,
-    top: 41,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: LIVE,
-    borderWidth: 2.5,
+    right: 1,
+    bottom: 1,
+    width: 19,
+    height: 19,
+    borderRadius: 9.5,
+    backgroundColor: FOREST,
+    borderWidth: 2,
     borderColor: CARD,
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   cardName: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.frauncesSemiBold, // Fraunces 600, no 700 — HTML §B2
     fontSize: 20,
     lineHeight: 24,
     color: FOREST,
+    marginTop: 12,
   },
-  cardRole: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: FOREST_SOFT, marginTop: 2 },
-  cardRating: { fontFamily: ViveFonts.semibold, fontSize: 12.5, color: FOREST, marginTop: 4 },
-  cardRatingMuted: { fontFamily: ViveFonts.regular, color: FOREST_SOFT },
-  cardNew: { fontFamily: ViveFonts.medium, fontSize: 12, color: FOREST_SOFT, marginTop: 4 },
+  // Rol + rating en una sola línea, sin conteo de reseñas (eso queda para el
+  // perfil detallado) — reemplaza a cardRole+cardRating, que eran dos líneas.
+  cardMeta: { fontFamily: ViveFonts.medium, fontSize: 11, color: FOREST_SOFT, marginTop: 3 },
 
-  // La cita baja de 15 a 13.5 y deja de ser bold: antes le ganaba en masa
-  // visual al nombre de la persona, que es lo que tiene que leerse primero.
+  // Pill de motivo — ícono + texto, no banda. Colores en REASON_STYLES.
+  reasonPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 11,
+    marginTop: 10,
+  },
+  reasonText: { fontFamily: ViveFonts.bold, fontSize: 10 },
+
+  // Separador de tres puntos en vez de línea recta.
+  dots3: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 13, marginBottom: 13 },
+  dot3: { width: 3.5, height: 3.5, borderRadius: 1.75, backgroundColor: TERRACOTTA, opacity: 0.6 },
+
   cardBio: {
     fontFamily: ViveFonts.frauncesSemiBold,
-    fontSize: 14,
+    fontSize: 13,
     fontStyle: 'italic',
     color: INK,
-    opacity: 0.8,
-    lineHeight: 23,
+    opacity: 0.85,
+    lineHeight: 20,
+    textAlign: 'center',
+    paddingHorizontal: 10,
   },
 
-  cardMetaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  cardPrice: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT },
-  cardPriceNum: { fontFamily: ViveFonts.semibold, fontSize: 16, color: FOREST },
-  cardAvailWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: LIVE },
-  cardAvail: { fontFamily: ViveFonts.medium, fontSize: 11.5, color: FOREST },
-
+  // Pill con borde, no relleno sólido — reemplaza al botón ancho de antes.
   knowBtn: {
-    alignSelf: 'stretch',
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 15,
-    backgroundColor: FOREST,
-    marginTop: 2,
+    borderWidth: 1.5,
+    borderColor: FOREST,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    marginTop: 16,
   },
-  knowText: { fontFamily: ViveFonts.semibold, fontSize: 13.5, color: '#F3EEDF' },
+  knowText: { fontFamily: ViveFonts.semibold, fontSize: 11.5, color: FOREST },
 
   // Dots del carrusel
   dotsRow: {

@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-08-24 — Joaquín (sesión 125)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`.
+
+**Resumen — rediseño de la card del deck de Conexiones (la del carrusel "Recomendado por Vita"), fiel a `card-otras-estructuras.html` §B2. Pedido con plan de exploración primero, según instrucción explícita.**
+
+- **Exploración antes de codear** (pedido explícito): la card vive inline en `conexiones.tsx` (no es un componente aparte), todos sus datos salen de `CachedCoach`/`useFavoriteCoaches` (sin tocar), y el concepto de "motivo" que se pedía **ya existía completo** — `DECK_SLOTS`/`SLOT_COLORS` en `lib/coachDeckRanking.ts` (4 slots: recomendado/tendencia/nuevo/economico, cada uno con label+sublabel+ícono de Feather+color), antes usado para pintar la banda sólida que se sacó. No hizo falta ningún campo ni migración nueva.
+- **El contenedor "elevado" es literalmente `SurfaceCard`** (`variant="elevated" tone="light"`) — su borde-gradiente hardcodeado (blanco→terracota(.28)→forest(.20)) coincide EXACTO con el `.cardbase` del HTML, sin tocar el componente compartido. Y la mayoría de los colores del archivo (`FOREST`, `FOREST_SOFT`, `INK`, `CARD`, `TERRACOTTA`, `TC_SOFT #EAD3C6`, `STAR #C99A3F`) ya coincidían letra por letra con los tokens del mockup — solo hicieron falta 2 nuevos (`SAGE #DCE5CB` y los 2 textos oscuros de la pill).
+- **Se sacó**: la banda de color sólida de arriba, el contador "i/N" (los puntitos de paginación de la pantalla, aparte, siguen intactos), el conteo de reseñas, y la línea de precio. El botón pasó de relleno sólido forest a pill con borde 1.5px. La cita bajó de `numberOfLines={3}` a `{2}`.
+- **Corrección de fidelidad encontrada explorando**: el HTML pide Fraunces **600** para el nombre, y el código usaba `frauncesSerif` (700 bold) — cambiado a `frauncesSemiBold`, que ya existía como token y no se usaba en esta card.
+- ⚠️ **RN no tiene `radial-gradient` nativo** — el halo cálido detrás del avatar (`radial-gradient(rgba(192,107,74,.28), transparent 70%)` en el HTML) se aproximó con un círculo semitransparente plano, sin la caída hacia los bordes. Anotado en el código para quien lo retome.
+- **Dos decisiones confirmadas con Joaquín antes de codear**: (1) los 2 slots sin color definido en el HTML (tendencia/nuevo) llevan un tinte de su propio `SLOT_COLOR` — propuesta mía, no viene del mockup, ajustable; (2) "Con lugar esta semana" (disponibilidad) se sacó de la card por completo — el HTML no le daba lugar y no está en la lista de elementos de la nueva estructura.
+- **La lista completa (`app/search3.tsx`) no se tocó** — tiene una card de fila horizontal totalmente distinta (`ScaleCard`, sin el tratamiento de sombra/grano). Queda para una sesión aparte si se decide unificar el lenguaje visual.
+- Typecheck, lint (0 warnings nuevos) y 241/241 tests limpios (incluido `deckRanking.test.ts`, sin tocar la lógica de ranking). **No confirmado visualmente en dispositivo desde acá.**
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el dev build: la card con "Recomendado" y, si aparece algún coach en el slot "económico", que la pill cambie a salvia — las dos son las que Joaquín pidió ver para validar el sistema de colores.
+- Si algún día importa el halo con caída real (no plano), evaluar una librería de radial-gradient para RN o aproximar con capas de círculos concéntricos.
+- Decidir si vale la pena unificar `search3.tsx` con este mismo lenguaje visual (sombra/grano/borde-gradiente + botón con borde) en una sesión propia.
+
+---
+
 ## 2026-08-24 — Joaquín (sesión 124)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`, `__tests__/pureLogic.test.ts`.
