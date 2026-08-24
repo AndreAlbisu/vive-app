@@ -1,4 +1,4 @@
-import { cbuError, walletError, normalizarCbu, coachNetFor, payoutAfterDeliveryCost, USDT_NETWORK_FEE_USD } from '@/lib/payout';
+import { cbuError, walletError, normalizarCbu, coachNetFor, payoutAfterDeliveryCost, paypalEmailError, paypalPayoutCost, deliveryCostFor, USDT_NETWORK_FEE_USD, PAYPAL_PAYOUT_FEE_PCT } from '@/lib/payout';
 
 // Direcciones reales de contratos conocidos: sirven como muestras de formato
 // válido sin exponer la wallet de nadie.
@@ -128,5 +128,68 @@ describe('payoutAfterDeliveryCost', () => {
   // cero y alguien crea que ya está saldado.
   it('devuelve negativo si el costo se come el pago, en vez de esconderlo', () => {
     expect(payoutAfterDeliveryCost(1, 'usdt')).toBeLessThan(0);
+  });
+});
+
+
+describe('paypalEmailError', () => {
+  it('acepta un mail normal', () => {
+    expect(paypalEmailError('coach@ejemplo.com')).toBeNull();
+  });
+
+  it('ignora espacios alrededor', () => {
+    expect(paypalEmailError('  coach@ejemplo.com  ')).toBeNull();
+  });
+
+  it('pide el dato cuando está vacío', () => {
+    expect(paypalEmailError('')).toContain('Ingresá');
+  });
+
+  it('rechaza lo que claramente no es un mail', () => {
+    for (const malo of ['coach', 'coach@', '@ejemplo.com', 'coach ejemplo.com', 'coach@ejemplo']) {
+      expect(paypalEmailError(malo)).not.toBeNull();
+    }
+  });
+
+  // 🔴 La diferencia con `walletError`, y es deliberada: un mail equivocado NO
+  // pierde la plata (PayPal rebota el payout y vuelve al saldo), así que el
+  // chequeo es de tipeo. Un regex estricto rechazaría mails válidos y raros,
+  // que acá es el error más caro de los dos.
+  it('no rechaza mails válidos poco comunes', () => {
+    for (const raro of ['a+b@ejemplo.com.ar', "o'brien@ejemplo.io", 'x@sub.dominio.co']) {
+      expect(paypalEmailError(raro)).toBeNull();
+    }
+  });
+});
+
+describe('costo de entrega por método', () => {
+  // 🔴 La regla decidida el 24/08/2026: costo FIJO se le descuenta al coach,
+  // costo PROPORCIONAL lo absorbe VIVE. Por eso PayPal no aparece acá aunque
+  // tenga un costo real: el 2% no castiga al de poco volumen, que es lo único
+  // que justificaba descontar el de USDT.
+  it('PayPal no le descuenta nada al coach', () => {
+    expect(deliveryCostFor(150, 'paypal')).toBe(0);
+    expect(payoutAfterDeliveryCost(150, 'paypal')).toBe(150);
+  });
+
+  it('solo USDT descuenta', () => {
+    expect(deliveryCostFor(150, 'transferencia')).toBe(0);
+    expect(deliveryCostFor(150, 'usdt')).toBe(USDT_NETWORK_FEE_USD);
+  });
+
+  it('el costo de PayPal es el 2% y lo paga VIVE', () => {
+    expect(paypalPayoutCost(45)).toBe(0.9);
+    expect(paypalPayoutCost(22.5)).toBe(0.45);
+    expect(PAYPAL_PAYOUT_FEE_PCT).toBe(2);
+  });
+
+  // El número que decide cuál conviene, y que conviene tener fijado: como el de
+  // USDT es fijo y el de PayPal proporcional, se cruzan en USD 75 por ENVÍO
+  // (2% × 75 = 1,50). Abajo de eso PayPal nos sale más barato que lo que USDT
+  // le cuesta al coach; arriba, al revés.
+  it('el cruce con el costo de USDT cae en USD 75 por envío', () => {
+    expect(paypalPayoutCost(75)).toBe(USDT_NETWORK_FEE_USD);
+    expect(paypalPayoutCost(74)).toBeLessThan(USDT_NETWORK_FEE_USD);
+    expect(paypalPayoutCost(76)).toBeGreaterThan(USDT_NETWORK_FEE_USD);
   });
 });

@@ -73,10 +73,24 @@ hay con qué devolver. Si pagáramos antes, un reembolso saldría de tu bolsillo
 Cargás tus datos de cobro en **Perfil → Datos de cobro**, y elegís:
 
 - **Transferencia bancaria** — tu CBU. Cobrás en pesos. **Sin costo.**
+- **PayPal** — el mail de tu cuenta. Recibís **dólares**, y **sin costo para vos**: la
+  comisión del envío la pagamos nosotros.
 - **USDT** — tu dirección y la red (TRC20, ERC20 o POLYGON). Cobrás en dólares, con un
   **costo de red de USD 1,50 por transferencia** que se descuenta de tu pago.
 
-⚠️ Ese costo es **por transferencia y no por sesión**. Si en la semana hiciste cuatro
+⚠️ **Si elegís PayPal, entendé qué pasa después.** Los dólares te quedan como saldo en
+tu cuenta de PayPal. Si los dejás ahí, son dólares y siguen siendo dólares. Pero si los
+pasás a un banco argentino, **PayPal los convierte a pesos a su tipo de cambio** y la
+cuenta destino tiene que estar en pesos — los retiros a cuentas locales en dólares se
+revierten. Retirar dólares como dólares requiere una cuenta bancaria en Estados Unidos.
+O sea: PayPal te sirve si querés **quedarte** con los dólares o gastarlos desde ahí. Si
+tu plan es pasarlos a pesos igual, la transferencia bancaria te ahorra ese paso y esa
+conversión.
+
+⚠️ Y si el mail que cargás no tiene una cuenta de PayPal que pueda recibir pagos, el
+envío **rebota** y lo reintentamos. No se pierde nada — a diferencia de USDT.
+
+⚠️ El costo de USDT es **por transferencia y no por sesión**. Si en la semana hiciste cuatro
 sesiones, se descuenta una sola vez — así que pesa mucho más si hacés una sesión cada
 tanto que si hacés varias. Lo pagás vos y no VIVE porque es el costo de la forma de
 entrega que elegiste: mandar dólares por blockchain cuesta, transferir a un banco no.
@@ -111,7 +125,12 @@ No. Hay un solo precio en dólares para todas las sesiones del exterior.
 
 **¿Puedo atender del exterior sin aceptar USDT como forma de pago mía?**
 Sí. Que el cliente pague de una forma no te obliga a cobrar de esa forma: podés
-recibir por transferencia en pesos aunque el cliente haya pagado en dólares.
+recibir por transferencia en pesos aunque el cliente haya pagado en dólares. Son
+dos cosas independientes — cómo paga él y cómo cobrás vos.
+
+**Quiero dólares pero no quiero saber nada con cripto. ¿Se puede?**
+Sí, elegí PayPal. Es la opción para eso: recibís dólares sin tocar una billetera
+ni una red. Leé arriba qué pasa cuando los quieras bajar a un banco argentino.
 
 **¿Qué pasa si no tengo cargados los datos de cobro?**
 La reserva no se puede armar. El sistema lo verifica antes de cobrarle al

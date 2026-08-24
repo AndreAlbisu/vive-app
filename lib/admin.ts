@@ -11,7 +11,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { REPORT_REASONS, type ReportReason } from '@/lib/reports';
-import { coachNetFor, payoutAfterDeliveryCost, USDT_NETWORK_FEE_USD, type PayoutMethod } from '@/lib/payout';
+import { coachNetFor, payoutAfterDeliveryCost, deliveryCostFor, paypalPayoutCost, type PayoutMethod } from '@/lib/payout';
 import { agruparComisiones, totalPorMoneda, type BookingForBilling, type CommissionGroup } from '@/lib/billing';
 
 const FUNCTIONS_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
@@ -338,6 +338,10 @@ export type CoachPayout = {
    *  acumulación (decisión de Andre), así que puede pasar con montos chicos —
    *  y hay que verlo, no transferir un número negativo. */
   noAlcanza: boolean;
+  /** Lo que a VIVE le cuesta hacer el envío, que NO sale del pago del coach.
+   *  Hoy solo PayPal (2%); el costo de sacar los dólares para el camino de la
+   *  transferencia todavía no está medido, así que ahí es 0 y no cero de verdad. */
+  costoPlataforma: number;
   sesiones: { bookingId: string; fecha: string; amount: number; feePct: number; neto: number }[];
   /** Datos de cobro. `null` = todavía no los cargó y no hay adónde mandar nada. */
   destino: {
@@ -346,6 +350,7 @@ export type CoachPayout = {
     alias: string | null;
     wallet: string | null;
     network: string | null;
+    paypalEmail: string | null;
   } | null;
 };
 
@@ -378,7 +383,7 @@ export async function listCoachPayouts(): Promise<{ rows: CoachPayout[]; error: 
   const coachIds = [...new Set(data.map(b => b.coach_id).filter(Boolean))];
   const { data: cuentas } = await supabase
     .from('coach_payout_accounts')
-    .select('coach_id, method, cbu, alias, wallet, network')
+    .select('coach_id, method, cbu, alias, wallet, network, paypal_email')
     .in('coach_id', coachIds);
 
   const porCoach = new Map<string, CoachPayout>();
@@ -398,6 +403,7 @@ export async function listCoachPayouts(): Promise<{ rows: CoachPayout[]; error: 
         bruto: 0,
         neto: 0,
         costoEntrega: 0,
+        costoPlataforma: 0,
         aTransferir: 0,
         noAlcanza: false,
         sesiones: [],
@@ -408,6 +414,7 @@ export async function listCoachPayouts(): Promise<{ rows: CoachPayout[]; error: 
               alias: c.alias ?? null,
               wallet: c.wallet ?? null,
               network: c.network ?? null,
+              paypalEmail: c.paypal_email ?? null,
             }
           : null,
       };
@@ -427,14 +434,17 @@ export async function listCoachPayouts(): Promise<{ rows: CoachPayout[]; error: 
   const rows = [...porCoach.values()]
     .map(e => {
       const neto = Math.round(e.neto * 100) / 100;
-      const method = e.destino?.method;
-      const costoEntrega = method === 'usdt' ? USDT_NETWORK_FEE_USD : 0;
-      const aTransferir = payoutAfterDeliveryCost(neto, method ?? 'transferencia');
+      const method = e.destino?.method ?? 'transferencia';
+      const costoEntrega = deliveryCostFor(neto, method);
+      const aTransferir = payoutAfterDeliveryCost(neto, method);
       return {
         ...e,
         bruto: Math.round(e.bruto * 100) / 100,
         neto,
         costoEntrega,
+        // Lo que el envío le cuesta a VIVE. No se le descuenta al coach, pero
+        // dejarlo invisible haría imposible comparar los métodos con números.
+        costoPlataforma: method === 'paypal' ? paypalPayoutCost(aTransferir) : 0,
         aTransferir,
         noAlcanza: aTransferir <= 0,
       };

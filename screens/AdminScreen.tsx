@@ -478,9 +478,18 @@ export default function AdminScreen() {
                       <Text style={[s.cardTitle, { marginTop: 6 }]}>
                         A transferir: USD {p.aTransferir.toFixed(2)}
                       </Text>
+                      {/* Lo que el envío nos cuesta a NOSOTROS. No sale del pago
+                          del coach —el 2% de PayPal lo absorbe VIVE— pero sin
+                          verlo no hay forma de comparar los métodos con números
+                          reales cuando haya que decidir cuál conviene. */}
+                      {p.costoPlataforma > 0 && (
+                        <Text style={s.cardMeta}>
+                          nos cuesta USD {p.costoPlataforma.toFixed(2)} de comisión de PayPal
+                        </Text>
+                      )}
                       {p.noAlcanza && (
                         <Text style={s.cardBody}>
-                          ⚠️ El costo de red se come todo lo que se le debe. No transfieras —
+                          ⚠️ El costo de envío se come todo lo que se le debe. No transfieras —
                           se acumula solo con las sesiones de la semana que viene.
                         </Text>
                       )}
@@ -500,6 +509,8 @@ export default function AdminScreen() {
                           <Text style={[s.mono, { marginTop: 10 }]} selectable>
                             {p.destino.method === 'usdt'
                               ? `${p.destino.network} · ${p.destino.wallet}`
+                              : p.destino.method === 'paypal'
+                              ? `PayPal · ${p.destino.paypalEmail}`
                               : `CBU ${p.destino.cbu}${p.destino.alias ? ` · ${p.destino.alias}` : ''}`}
                           </Text>
                           <TextInput

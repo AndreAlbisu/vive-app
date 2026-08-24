@@ -37,10 +37,40 @@ import {
   cbuError,
   normalizarCbu,
   walletError,
+  paypalEmailError,
   USDT_NETWORK_FEE_USD,
   type PayoutMethod as Method,
   type PayoutNetwork as Network,
 } from '@/lib/payout';
+
+// El selector se apila en vez de ir en fila: con tres opciones, `flex: 1` deja
+// ~86px de ancho útil por card y la descripción de cada método —que es la que
+// hace entender la diferencia— quedaba en seis renglones.
+const METHODS: {
+  id: Method;
+  label: string;
+  desc: string;
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+}[] = [
+  {
+    id: 'transferencia',
+    label: 'Transferencia',
+    desc: 'A tu cuenta en pesos · sin costo',
+    icon: 'bank-outline',
+  },
+  {
+    id: 'paypal',
+    label: 'PayPal',
+    desc: 'Dólares a tu cuenta de PayPal · sin costo',
+    icon: 'wallet-outline',
+  },
+  {
+    id: 'usdt',
+    label: 'USDT',
+    desc: `Stablecoin en dólares · USD ${USDT_NETWORK_FEE_USD.toFixed(2)} por envío`,
+    icon: 'currency-usd',
+  },
+];
 
 const NETWORKS: { id: Network; label: string; hint: string }[] = [
   { id: 'TRC20',   label: 'TRC20',   hint: 'Tron · la más usada para USDT' },
@@ -61,6 +91,7 @@ export default function CoachPayoutScreen() {
   const [alias, setAlias] = useState('');
   const [wallet, setWallet] = useState('');
   const [network, setNetwork] = useState<Network>('TRC20');
+  const [paypalEmail, setPaypalEmail] = useState('');
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -76,7 +107,7 @@ export default function CoachPayoutScreen() {
 
       const { data: payout } = await supabase
         .from('coach_payout_accounts')
-        .select('method, cbu, alias, wallet, network')
+        .select('method, cbu, alias, wallet, network, paypal_email')
         .eq('coach_id', coachRow.id)
         .maybeSingle();
 
@@ -86,6 +117,7 @@ export default function CoachPayoutScreen() {
         setAlias(payout.alias ?? '');
         setWallet(payout.wallet ?? '');
         setNetwork((payout.network as Network) ?? 'TRC20');
+        setPaypalEmail(payout.paypal_email ?? '');
       }
       setLoading(false);
     })();
@@ -97,11 +129,15 @@ export default function CoachPayoutScreen() {
     ? walletError(wallet, network)
     : null;
 
+  const errorPaypal = method === 'paypal' && paypalEmail.trim().length > 0
+    ? paypalEmailError(paypalEmail)
+    : null;
+
   const puedeGuardar =
     !!coachId && !saving &&
-    (method === 'transferencia'
-      ? !cbuError(cbu)
-      : !walletError(wallet, network));
+    (method === 'transferencia' ? !cbuError(cbu)
+      : method === 'usdt' ? !walletError(wallet, network)
+      : !paypalEmailError(paypalEmail));
 
   async function guardar() {
     if (!coachId || !puedeGuardar) return;
@@ -119,9 +155,12 @@ export default function CoachPayoutScreen() {
       alias: string | null;
       wallet: string | null;
       network: Network | null;
+      paypal_email: string | null;
     } = method === 'transferencia'
-      ? { coach_id: coachId, method, cbu: cbuLimpio, alias: alias.trim() || null, wallet: null, network: null }
-      : { coach_id: coachId, method, cbu: null, alias: null, wallet: wallet.trim(), network };
+      ? { coach_id: coachId, method, cbu: cbuLimpio, alias: alias.trim() || null, wallet: null, network: null, paypal_email: null }
+      : method === 'usdt'
+      ? { coach_id: coachId, method, cbu: null, alias: null, wallet: wallet.trim(), network, paypal_email: null }
+      : { coach_id: coachId, method, cbu: null, alias: null, wallet: null, network: null, paypal_email: paypalEmail.trim() };
 
     const { data, error } = await supabase
       .from('coach_payout_accounts')
@@ -179,25 +218,19 @@ export default function CoachPayoutScreen() {
 
               <Text style={s.label}>Cómo preferís cobrar</Text>
               <View style={s.methodRow}>
-                {(['transferencia', 'usdt'] as Method[]).map(m => (
+                {METHODS.map(m => (
                   <TouchableOpacity
-                    key={m}
-                    style={[s.methodCard, method === m && s.methodCardOn]}
-                    onPress={() => setMethod(m)}
+                    key={m.id}
+                    style={[s.methodCard, method === m.id && s.methodCardOn]}
+                    onPress={() => setMethod(m.id)}
                     activeOpacity={0.85}>
                     <MaterialCommunityIcons
-                      name={m === 'transferencia' ? 'bank-outline' : 'currency-usd'}
+                      name={m.icon}
                       size={22}
-                      color={method === m ? ViveColors.primary : 'rgba(135,131,92,0.72)'}
+                      color={method === m.id ? ViveColors.primary : 'rgba(135,131,92,0.72)'}
                     />
-                    <Text style={[s.methodTitle, method === m && s.methodTitleOn]}>
-                      {m === 'transferencia' ? 'Transferencia' : 'USDT'}
-                    </Text>
-                    <Text style={s.methodDesc}>
-                      {m === 'transferencia'
-                        ? 'A tu cuenta en pesos · sin costo'
-                        : `Stablecoin en dólares · USD ${USDT_NETWORK_FEE_USD.toFixed(2)} por envío`}
-                    </Text>
+                    <Text style={[s.methodTitle, method === m.id && s.methodTitleOn]}>{m.label}</Text>
+                    <Text style={s.methodDesc}>{m.desc}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -206,6 +239,22 @@ export default function CoachPayoutScreen() {
                   Es una vez por transferencia y no por sesión, así que pesa
                   según cuántas sesiones hiciste en la semana — eso es lo que
                   hay que entender, no el número suelto. */}
+              {/* 🔴 Lo que NO hay que dejar implícito: los dólares le llegan a
+                  su PayPal, pero bajarlos a un banco argentino los convierte a
+                  pesos al cambio de PayPal. Prometer "cobrás en dólares" a secas
+                  sería el mismo problema que este documento evita en el resto de
+                  la pantalla: para la mayoría termina en pesos igual. */}
+              {method === 'paypal' && (
+                <Text style={s.methodNote}>
+                  Te mandamos los dólares a tu cuenta de PayPal y no te descontamos nada: el costo del
+                  envío lo pagamos nosotros.
+                  {'\n\n'}
+                  Tené en cuenta que si después los pasás a un banco argentino, PayPal los convierte a
+                  pesos a su tipo de cambio, y la cuenta destino tiene que estar en pesos. Quedarte con
+                  los dólares es posible dejándolos en PayPal.
+                </Text>
+              )}
+
               {method === 'usdt' && (
                 <Text style={s.methodNote}>
                   Enviar USDT tiene un costo de red de USD {USDT_NETWORK_FEE_USD.toFixed(2)} que se
@@ -215,7 +264,26 @@ export default function CoachPayoutScreen() {
                 </Text>
               )}
 
-              {method === 'transferencia' ? (
+              {method === 'paypal' ? (
+                <>
+                  <Text style={s.label}>Mail de tu cuenta de PayPal</Text>
+                  <TextInput
+                    style={[s.input, errorPaypal && s.inputError]}
+                    value={paypalEmail}
+                    onChangeText={setPaypalEmail}
+                    placeholder="tumail@ejemplo.com"
+                    placeholderTextColor="rgba(135,131,92,0.45)"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                  />
+                  {errorPaypal && <Text style={s.errorText}>{errorPaypal}</Text>}
+                  <Text style={s.hint}>
+                    Tiene que ser el mail de una cuenta de PayPal tuya que pueda recibir pagos. Si el
+                    mail no tiene cuenta, el envío rebota y lo reintentamos: no se pierde nada.
+                  </Text>
+                </>
+              ) : method === 'transferencia' ? (
                 <>
                   <Text style={s.label}>CBU</Text>
                   <TextInput
@@ -358,7 +426,7 @@ const s = StyleSheet.create({
     color: '#565E32', marginBottom: 8, marginTop: 18,
   },
 
-  methodRow: { flexDirection: 'row', gap: 10 },
+  methodRow: { flexDirection: 'column', gap: 10 },
   methodCard: {
     flex: 1, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 12,
     backgroundColor: 'rgba(255,248,240,0.55)',
