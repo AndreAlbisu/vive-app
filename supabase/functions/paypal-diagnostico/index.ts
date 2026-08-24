@@ -8,6 +8,8 @@
 //   2. ¿Hay un webhook registrado, y su URL es la de nuestra función?
 //   3. ¿PAYPAL_WEBHOOK_ID es el id de ESE webhook, y están suscritos los dos
 //      eventos que el riel necesita?
+//   4. ¿La cuenta tiene aprobado el acceso a PAYOUTS? (para pagarle a los
+//      coaches que eligen cobrar en su PayPal)
 //
 // Se hace así y no mirando los dos dashboards porque la comparación a ojo entre
 // un id de PayPal y un secret de Supabase es justo el tipo de chequeo que
@@ -71,7 +73,20 @@ serve(async (req) => {
       detalle: await tokenRes.text(),
     }, 502)
   }
-  const token = (await tokenRes.json()).access_token
+  const tokenBody = await tokenRes.json()
+  const token = tokenBody.access_token
+
+  // ── Payouts ────────────────────────────────────────────────────────────────
+  // 🔴 Se lee del `scope` que devuelve el propio handshake, y NO probando un
+  // payout: un intento real movería plata si resultara que sí está habilitado,
+  // y un intento inválido devolvería un error de validación que taparía la
+  // respuesta que buscamos. El scope es lectura pura y no mueve un dólar.
+  //
+  // ⚠️ En SANDBOX suele estar concedido siempre. Que acá diga que sí NO prueba
+  // que producción esté aprobado — PayPal aprueba Payouts por separado, y para
+  // la cuenta live. Este chequeo recién es concluyente con credenciales live.
+  const scopes: string[] = String(tokenBody.scope ?? '').split(' ').filter(Boolean)
+  const scopesPayouts = scopes.filter((sc) => sc.includes('payouts'))
 
   const whRes = await fetch(`${PAYPAL_API}/v1/notifications/webhooks`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -102,6 +117,16 @@ serve(async (req) => {
   return json({
     modo: PAYPAL_MODE,
     api: PAYPAL_API,
+    payouts: {
+      scopes_concedidos: scopesPayouts,
+      veredicto: scopesPayouts.length
+        ? (PAYPAL_MODE === 'live'
+            ? '✅ Payouts aprobado en la cuenta live'
+            : '🟡 concedido en SANDBOX — no dice nada sobre la cuenta live, que es la que hay que mirar en el dashboard')
+        : (PAYPAL_MODE === 'live'
+            ? '🔴 la cuenta live NO tiene Payouts aprobado — no se le puede pagar a un coach por PayPal, y "enviar dinero" común le cobraría A ÉL al recibir'
+            : '🔴 ni siquiera en sandbox aparece el scope de Payouts'),
+    },
     url_esperada: URL_ESPERADA,
     webhook_id_configurado: PAYPAL_WEBHOOK_ID || '(vacío)',
     registrados,
