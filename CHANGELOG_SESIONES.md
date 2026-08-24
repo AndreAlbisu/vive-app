@@ -7,7 +7,7 @@
 
 ## 2026-08-24 — Andre (sesión 126)
 
-**Tocado:** `supabase/functions/paypal-webhook/index.ts`, `lib/payout.ts`, `lib/admin.ts`, `screens/CoachPayoutScreen.tsx`, `screens/AdminScreen.tsx`, `__tests__/payout.test.ts`, `docs/cobro-internacional-coaches.md`, `SCHEMA.md`. Nuevos: `scripts/verificar-riel-paypal.sql`, `scripts/verificar-paypal-e2e.sql`, `scripts/add-coach-paypal-payout.sql` (⚠️ **PENDIENTE DE CORRER**), `supabase/functions/paypal-diagnostico/` (temporal). **Tres scripts SQL corridos** (`add-paypal-rail.sql`, `add-paypal-refund-cron.sql`, y las verificaciones). **`paypal-webhook` deployada (v8, `verify_jwt = false`)** y **`PAYPAL_WEBHOOK_ID` corregido**. 250 tests (eran 241), `tsc` y lint limpios.
+**Tocado:** `supabase/functions/paypal-webhook/index.ts`, `lib/payout.ts`, `lib/admin.ts`, `screens/CoachPayoutScreen.tsx`, `screens/AdminScreen.tsx`, `__tests__/payout.test.ts`, `docs/cobro-internacional-coaches.md`, `SCHEMA.md`. Nuevos: `scripts/verificar-riel-paypal.sql`, `scripts/verificar-paypal-e2e.sql`, `scripts/add-coach-paypal-payout.sql` (**CORRIDO y VERIFICADO**), `supabase/functions/paypal-diagnostico/` (temporal). **Tres scripts SQL corridos** (`add-paypal-rail.sql`, `add-paypal-refund-cron.sql`, y las verificaciones). **`paypal-webhook` deployada (v8, `verify_jwt = false`)** y **`PAYPAL_WEBHOOK_ID` corregido**. 250 tests (eran 241), `tsc` y lint limpios.
 
 **✅ EL RIEL DE PAYPAL FUNCIONA DE PUNTA A PUNTA, verificado con un pago real en sandbox (24/08 22:40).** Primera vez que ejecuta desde que se construyó el 19-20/08.
 
@@ -46,7 +46,6 @@
 - ⚠️ **No se automatizó el envío.** Los pagos a coaches siguen siendo manuales y registrados con `payout_reference`, igual que los otros dos métodos — se agregó la OPCIÓN de cobro, no un riel de payouts automático. Integrar la API de Payouts es una decisión aparte.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **CORRER `scripts/add-coach-paypal-payout.sql`.** Sin eso, un coach que elija PayPal recibe un error de la base al guardar (el CHECK viejo solo admite `transferencia`/`usdt`), y el panel consulta una columna inexistente — que es como se cae la lista entera de pagos pendientes.
 - **Probar en dispositivo** la pantalla de datos de cobro con las tres opciones.
 - 🔴 **Probar el REEMBOLSO de PayPal**, que es la única mitad del riel que sigue sin ejecutar nunca. Requiere una reserva a más de 24hs (si falta menos, el usuario que cancela pierde el reembolso por política y el test no probaría nada) pagada con PayPal y después cancelada: el trigger la marca `'reembolso_pendiente'`, el cron la agarra en ≤5 min y tiene que quedar en `'reembolsado'`. Query lista en el scratchpad de la sesión.
 - Sigue todo lo demás de la 117: **la hora con el contador** (`docs/fiscal-instrucciones.md`), las **dos mediciones de USD 50** (PayPal → pesos y USDT → pesos), el **seed de la billetera USDT en papel**, **nada probado en Android**, y decidir qué hacer con los **medios offline de Mercado Pago** (verificado: `excluded_payment_types` no está en `mp-create-payment`).
