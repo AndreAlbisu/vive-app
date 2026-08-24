@@ -9,7 +9,7 @@
 
 **Tocado:** `supabase/functions/paypal-webhook/index.ts`, `lib/payout.ts`, `lib/admin.ts`, `screens/CoachPayoutScreen.tsx`, `screens/AdminScreen.tsx`, `__tests__/payout.test.ts`, `docs/cobro-internacional-coaches.md`, `SCHEMA.md`. Nuevos: `scripts/verificar-riel-paypal.sql`, `scripts/verificar-paypal-e2e.sql`, `scripts/add-coach-paypal-payout.sql` (**CORRIDO y VERIFICADO**), `supabase/functions/paypal-diagnostico/` (temporal). **Tres scripts SQL corridos** (`add-paypal-rail.sql`, `add-paypal-refund-cron.sql`, y las verificaciones). **`paypal-webhook` deployada (v8, `verify_jwt = false`)** y **`PAYPAL_WEBHOOK_ID` corregido**. 250 tests (eran 241), `tsc` y lint limpios.
 
-**✅ EL RIEL DE PAYPAL FUNCIONA DE PUNTA A PUNTA, verificado con un pago real en sandbox (24/08 22:40).** Primera vez que ejecuta desde que se construyó el 19-20/08.
+**✅ EL RIEL DE PAYPAL FUNCIONA DE PUNTA A PUNTA, verificado con pagos reales en sandbox (24/08).** Primera vez que ejecuta desde que se construyó el 19-20/08. **Cobro** (22:40): `aprobado` + `confirmada` + mensaje de sistema + notificación, todo aplicado por el webhook sin ayuda del cliente. **Reembolso** (23:50): cancelada a más de 24hs → el trigger la marcó `'reembolso_pendiente'` y el cron la devolvió **al primer intento** (`refunded_at 23:50:03`, `refund_attempts = 0`). **Y la penalidad por cancelación tardía también quedó probada de paso**: una reserva a menos de 24hs se cancela sin reembolso, con `cancelled_late` calculado por la base.
 
 **Resumen — se cerró el pendiente más viejo de la lista: los dos scripts del riel de PayPal que figuraban sin correr desde el 19 y el 20 de agosto.**
 
@@ -47,7 +47,8 @@
 
 **Pendiente para la próxima sesión:**
 - **Probar en dispositivo** la pantalla de datos de cobro con las tres opciones.
-- 🔴 **Probar el REEMBOLSO de PayPal**, que es la única mitad del riel que sigue sin ejecutar nunca. Requiere una reserva a más de 24hs (si falta menos, el usuario que cancela pierde el reembolso por política y el test no probaría nada) pagada con PayPal y después cancelada: el trigger la marca `'reembolso_pendiente'`, el cron la agarra en ≤5 min y tiene que quedar en `'reembolsado'`. Query lista en el scratchpad de la sesión.
+- ⚠️ **Una reserva quedó `confirmada` después de que la pantalla dijera "sesión cancelada"** (la del 25/08 10:00, `9HA78089YM288842E`). Cancelada desde la tarjeta de la sala; `cancelled_by` quedó en NULL, o sea que el UPDATE no escribió. `cancelBookingFlow` **sí** chequea el caso de RLS devolviendo 0 filas y en ese caso muestra "No se pudo cancelar", así que si el cartel de éxito apareció de verdad, hay un camino que reporta éxito sin escribir. **Sin confirmar si el cartel llegó a aparecer o si se salió por el "No"** — es lo primero que hay que despejar. Si es real, es grave: la reserva sigue viva ocupando el horario mientras la persona cree que la canceló.
+- 📝 **La tarjeta de arriba de la sala no deja elegir qué sesión cancelar**: muestra siempre la próxima (`activeList.find(b => getSessionState(b) !== 'finalizada')`, ordenada por fecha y hora ascendente). Con varias sesiones con el mismo coach, quien quiera cancelar una específica tiene que ir a la lista de próximas sesiones. Se descubrió cancelando la del 25 sin querer.
 - Sigue todo lo demás de la 117: **la hora con el contador** (`docs/fiscal-instrucciones.md`), las **dos mediciones de USD 50** (PayPal → pesos y USDT → pesos), el **seed de la billetera USDT en papel**, **nada probado en Android**, y decidir qué hacer con los **medios offline de Mercado Pago** (verificado: `excluded_payment_types` no está en `mp-create-payment`).
 
 ---
