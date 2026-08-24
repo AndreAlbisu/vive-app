@@ -8,7 +8,15 @@ import { encryptMessage, decryptMessage } from '../lib/encryption';
 // alguien, o le devuelve plata al que no correspondía.
 describe('isCancelLate', () => {
   // isCancelLate lee Date.now() adentro, así que se fija el reloj.
-  const fixNow = (iso: string) => jest.spyOn(Date, 'now').mockReturnValue(new Date(iso).getTime());
+  //
+  // ⚠️ El ISO va con `-03:00` explícito, no como hora local sin zona. Sin
+  // esto, `new Date(iso)` lo interpreta en la zona de la MÁQUINA que corre el
+  // test — coincide por casualidad en Argentina, pero en cualquier otra (este
+  // sandbox corre en Sídney, UTC+10) el reloj fijado queda corrido y los
+  // casos de borde fallan sin que el código de producción tenga nada que ver
+  // (`scheduledAtMs`, que sí usa la zona de Argentina explícita, ya estaba
+  // bien). Encontrado el 24/08/2026 corriendo la suite en este sandbox.
+  const fixNow = (iso: string) => jest.spyOn(Date, 'now').mockReturnValue(new Date(`${iso}-03:00`).getTime());
   afterEach(() => jest.restoreAllMocks());
 
   it('no es tardía con más de 24hs de anticipación', () => {
