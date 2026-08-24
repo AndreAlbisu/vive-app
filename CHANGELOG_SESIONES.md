@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-08-24 — Andre (sesión 126)
+
+**Tocado:** `SCHEMA.md`. Nuevo: `scripts/verificar-riel-paypal.sql`. Sin cambios de código ni de edge functions. **Dos scripts SQL corridos en el SQL Editor** (`add-paypal-rail.sql`, `add-paypal-refund-cron.sql`).
+
+**Resumen — se cerró el pendiente más viejo de la lista: los dos scripts del riel de PayPal que figuraban sin correr desde el 19 y el 20 de agosto.**
+
+- 🔴 **Sin el cron de reembolsos, toda reserva de PayPal cancelada se quedaba en `'reembolso_pendiente'` para siempre.** El trigger marca el estado venga de donde venga el pago, pero cada riel tiene su procesador: si el de PayPal no corre, nadie recibe su plata y **no hay ningún error visible**. Quedó agendado (jobid 8, cada 5 min).
+- 🔴 **Verificado por la RESPUESTA y no por `active = true`.** `net.http_post` a mano → `200 {"processed":0,"failed":0}` (request 19405). Es exactamente la distinción que en julio costó dos semanas y media de reembolsos sin procesar: el job con el placeholder del Vault también figuraba activo todo ese tiempo mientras devolvía 401.
+- ⚠️ **`bookings.charged_amount` YA estaba en la base**, y tanto el changelog como SCHEMA.md la daban por pendiente desde el 19/08. O sea que el riel de PayPal no estaba tan roto como parecía. **Un `add column if not exists` no distingue "la creé" de "ya estaba"**, así que correr el script no aclaraba nada — el estado real solo se sabe preguntándole a la base. Lo que sí faltaba: el CHECK de `price_usd >= 20` y la rama de PayPal en `expire_unpaid_checkouts()`.
+- **Nuevo `scripts/verificar-riel-paypal.sql`** (solo lectura, 8 chequeos: columna, CHECK, ningún coach bajo el piso, la función cubriendo los tres rieles, los dos crons, el secret del Vault sin placeholder, dead-letter). Existe para que esto no se repita: el estado del schema no puede depender de lo que diga un documento.
+- **El `UPDATE` del precio de prueba quedó no-op**: el script lo subía a 60 si estaba abajo de 20, y el único coach con `price_usd` ya estaba en **30**. Alguien lo cambió a mano en algún momento; el script lo daba en 6.
+- 📝 **La única fila roja es conocida y ya estaba decidida**: `2c72b126…` (riel `mp`, ARS 1, del 09/08) sigue en dead-letter con `refund_attempts = 6`. Su pago se cobró con la cuenta de Mercado Pago anterior del coach de prueba y `mp-process-refunds` usa siempre el token actual → 404 "Payment not found". **Reencolarla no sirve, vuelve a fallar igual.** La sesión 88 decidió dejarla; el chequeo 8 ahora lista los ids justamente para poder distinguirla de un caso nuevo de un vistazo.
+- **Verificado de paso**: las 16 edge functions están ACTIVE (incluida `paypal-process-refunds` v2, o sea que el cron tiene a quién llamar), y los valores de `payment_provider` son consistentes entre el CHECK del schema y el filtro de cada procesador (`mp` / `paypal` / `usdt`).
+- 📝 **El `create or replace` de `expire_unpaid_checkouts()` era seguro**: se comparó contra las otras 4 versiones que viven en `scripts/` y la de `add-paypal-rail.sql` es superset exacto de la última viva (`expire-unpaid-usdt.sql`) — agrega la rama de PayPal y no toca nada más.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Ahora sí se puede probar PayPal de punta a punta**, que era lo que este pendiente bloqueaba: crear una orden real, pagarla con la cuenta sandbox de comprador y ver la reserva pasar a `aprobado`. Nada del riel se probó nunca.
+- Sigue todo lo demás de la 117: **la hora con el contador** (`docs/fiscal-instrucciones.md`), las **dos mediciones de USD 50** (PayPal → pesos y USDT → pesos), el **seed de la billetera USDT en papel**, **nada probado en Android**, y decidir qué hacer con los **medios offline de Mercado Pago** (verificado: `excluded_payment_types` no está en `mp-create-payment`).
+
+---
+
 ## 2026-08-24 — Joaquín (sesión 125)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`.
