@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-24 — Joaquín (sesión 124)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`, `__tests__/pureLogic.test.ts`.
+
+**Resumen — dos arreglos chicos: el buscador de Conexiones se veía separado del texto que lo introduce, y una fragilidad de timezone en un test que Andre no podía haber visto desde su máquina.**
+
+- **Joaquín mandó captura de Conexiones**: el buscador ("Buscá un profesional por nombre") se leía como una sección aparte de "Elegí un área de bienestar para empezar", en vez de la acción natural de esa instrucción. Causa: `askWrap.marginBottom` (18) + `searchBar.marginTop` (6) = 24px, el triple que el espacio entre el título grande y ese mismo subtítulo (8px). Arreglado con un modificador nuevo (`askWrapTight`, `marginBottom: 8`) aplicado **solo** en Fase 1 (donde sigue el buscador) — Fase 2 usa el mismo `askWrap` pero seguido de una lista de puertas, y ahí el espacio de 18 está bien, no se tocó.
+- 🔴 **De paso, corriendo los tests después de traer los 39 commits de Andre (sesión 110-117), aparecieron 2 fallando: `isCancelLate` en el borde de las 24hs.** No era un bug de Andre — este sandbox corre en **Sídney (UTC+10)**, y `fixNow()` fijaba el reloj con un ISO **sin zona** (`new Date('2026-08-11T15:00:00')`), que Node interpreta en la zona de la MÁQUINA que corre el test. En Argentina coincide por casualidad; acá el reloj quedaba corrido 13hs y los casos de borde fallaban. El código de producción (`scheduledAtMs`, que sí ancla a `America/Argentina/Buenos_Aires` explícito) estaba bien — es exactamente la clase de bug que la sesión 112 de Andre había cerrado, pero en el arnés de tests en vez del código. Arreglado anclando el ISO a `-03:00` explícito en `fixNow`.
+- Se trajeron los 39 commits de Andre (sesiones 110-117: checkout que salta a la app nativa de MP + confirmación server-side, riel de PayPal completo, comisión internacional del 25%, wallet de USDT rotada) — merge sin conflictos, fast-forward.
+- Typecheck, lint y 241/241 tests limpios.
+
+**Pendiente para la próxima sesión:**
+- De la lista de Andre (sesión 117): nada de PayPal se probó de punta a punta, nada se probó en Android, falta decidir qué hacer con los medios offline de MP (efectivo/Rapipago/cajero).
+- Confirmar visualmente que el espaciado del buscador en Conexiones quedó bien.
+
+---
+
 ## 2026-08-21 — Andre (sesión 117)
 
 **Tocado:** `screens/BookingScreen_Confirm.tsx`, `app/booking/result.tsx`, `supabase/functions/_shared/booking-effects.ts` (**nuevo**), `mp-webhook`, `paypal-webhook`, `usdt-check-payments`, `mp-create-payment`, `paypal-create-payment`, `SCHEMA.md`. Sin cambios de base de datos. 241 tests, `tsc` limpio. **Las 5 edge functions deployadas el 21/08 19:25** (`mp-webhook` v20, `paypal-webhook` v7, `usdt-check-payments` v12, `mp-create-payment` v34, `paypal-create-payment` v6; `verify_jwt` verificado, los dos webhooks siguen en `false`). ⚠️ **Sin probar en dispositivo.**

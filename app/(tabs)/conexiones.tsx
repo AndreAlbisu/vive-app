@@ -570,7 +570,7 @@ export default function ConexionesScreen() {
           ) : (
             /* ── Fase 1: ejes de bienestar ──────────────────────────────── */
             <SlideInView key="fase1">
-              <View style={s.askWrap}>
+              <View style={[s.askWrap, s.askWrapTight]}>
                 <Text style={[s.askTitle, s.askTitleGreeting]}>Encontrá a alguien que{'\n'}pueda acompañarte.</Text>
                 <Text style={s.askSub}>Elegí un área de bienestar para empezar</Text>
               </View>
@@ -789,6 +789,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 10,
     marginBottom: 18,
+  },
+  // Solo para Fase 1, donde lo que sigue es el buscador: sin esto, sumado al
+  // marginTop del buscador (6), quedaban 24px de aire — el triple que entre
+  // el título y "Elegí un área…" (8px) — y el buscador se leía como una
+  // sección aparte en vez de la acción natural de esa instrucción. En Fase 2
+  // (mismo askWrap, pero seguido de la lista de puertas) no se toca.
+  askWrapTight: {
+    marginBottom: 8,
   },
   askTitle: {
     fontFamily: ViveFonts.frauncesSerif,
