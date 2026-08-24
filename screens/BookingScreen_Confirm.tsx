@@ -64,6 +64,10 @@ export default function BookingScreen_Confirm() {
   // reabrirla si la persona volvió a Vita sin querer — ver el overlay de espera
   // más abajo. `null` = no hay ningún pago en curso.
   const [pagoEnCurso, setPagoEnCurso] = useState<string | null>(null);
+  // La persona ya volvió del checkout. Cambia lo que dice el cartel de espera:
+  // hasta que vuelve, la instrucción es "terminá el pago"; después, esa frase es
+  // falsa y encima promete una reserva confirmada que todavía no lo está.
+  const [volvioDelCheckout, setVolvioDelCheckout] = useState(false);
   const pagoEnCursoRef = useRef<string | null>(null);
   pagoEnCursoRef.current = pagoEnCurso;
 
@@ -192,7 +196,7 @@ export default function BookingScreen_Confirm() {
       desdeElUltimo += LATIDO_MS;
       // Acaba de volver de pagar: se consulta YA, sin esperar el intervalo. Es
       // el momento en el que el estado tiene más chances de haber cambiado.
-      if (estabaAfuera) { estabaAfuera = false; desdeElUltimo = INTERVALO_MS; }
+      if (estabaAfuera) { estabaAfuera = false; setVolvioDelCheckout(true); desdeElUltimo = INTERVALO_MS; }
       if (desdeElUltimo < INTERVALO_MS) continue;
       desdeElUltimo = 0;
 
@@ -570,6 +574,7 @@ export default function BookingScreen_Confirm() {
       let paid = false;
       if (initPoint) {
         setPagoEnCurso(initPoint);
+        setVolvioDelCheckout(false);
         if (!(await abrirCheckout(initPoint))) {
           // 🔴 Cancelar acá también. La primera versión de esto solo mostraba el
           // error y volvía, dejando la reserva viva en 'pendiente' con el
@@ -928,10 +933,33 @@ export default function BookingScreen_Confirm() {
           <SafeAreaView style={s.esperaSafe} edges={['top', 'bottom']}>
             <View style={s.esperaBody}>
               <ActivityIndicator size="large" color={ViveColors.primary} />
-              <Text style={s.esperaTitle}>Terminá el pago en {nombrePasarela}</Text>
-              <Text style={s.esperaDesc}>
-                Cuando lo completes, volvé a Vita y tu reserva ya va a estar confirmada.
-              </Text>
+              {/* 🔴 Dos textos y no uno. Al volver de pagar, "Terminá el pago"
+                  es falso y "ya va a estar confirmada" promete un estado que
+                  todavía no llegó — y esa espera no es corta: en PayPal son DOS
+                  viajes (aprobar dispara nuestra captura, y la captura dispara
+                  el aviso que confirma), más lo que PayPal tarde en avisar. Con
+                  el texto de antes, esos segundos se leen como que se colgó.
+
+                  No se puede distinguir "volvió habiendo pagado" de "volvió sin
+                  pagar" —el back de más, una notificación en el medio—, así que
+                  el texto tiene que ser honesto en los dos casos y por eso los
+                  dos botones siguen abajo. */}
+              {volvioDelCheckout ? (
+                <>
+                  <Text style={s.esperaTitle}>Estamos confirmando tu pago</Text>
+                  <Text style={s.esperaDesc}>
+                    Si ya pagaste, puede tardar unos segundos: {nombrePasarela} tiene que avisarnos y
+                    recién ahí confirmamos la reserva. No cierres esta pantalla.
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={s.esperaTitle}>Terminá el pago en {nombrePasarela}</Text>
+                  <Text style={s.esperaDesc}>
+                    Cuando lo completes, volvé a Vita y tu reserva ya va a estar confirmada.
+                  </Text>
+                </>
+              )}
               {/* La app de MP a veces vuelve a Vita sin pagar (un back de más, una
                   notificación en el medio). Sin esto, la única salida era
                   abandonar la reserva y empezarla de nuevo. */}
