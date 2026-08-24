@@ -7,7 +7,7 @@
 
 ## 2026-08-24 — Andre (sesión 126)
 
-**Tocado:** `SCHEMA.md`. Nuevo: `scripts/verificar-riel-paypal.sql`. Sin cambios de código ni de edge functions. **Dos scripts SQL corridos en el SQL Editor** (`add-paypal-rail.sql`, `add-paypal-refund-cron.sql`).
+**Tocado:** `supabase/functions/paypal-webhook/index.ts`, `SCHEMA.md`. Nuevo: `scripts/verificar-riel-paypal.sql`. **Dos scripts SQL corridos en el SQL Editor** (`add-paypal-rail.sql`, `add-paypal-refund-cron.sql`). 241 tests, `tsc` limpio. ⚠️ **`paypal-webhook` SIN DEPLOYAR.**
 
 **Resumen — se cerró el pendiente más viejo de la lista: los dos scripts del riel de PayPal que figuraban sin correr desde el 19 y el 20 de agosto.**
 
@@ -20,7 +20,16 @@
 - **Verificado de paso**: las 16 edge functions están ACTIVE (incluida `paypal-process-refunds` v2, o sea que el cron tiene a quién llamar), y los valores de `payment_provider` son consistentes entre el CHECK del schema y el filtro de cada procesador (`mp` / `paypal` / `usdt`).
 - 📝 **El `create or replace` de `expire_unpaid_checkouts()` era seguro**: se comparó contra las otras 4 versiones que viven en `scripts/` y la de `add-paypal-rail.sql` es superset exacto de la última viva (`expire-unpaid-usdt.sql`) — agrega la rama de PayPal y no toca nada más.
 
+**Y auditando el riel antes de probarlo, apareció un agujero que nunca ejecutó porque el riel nunca ejecutó:**
+
+- 🔴 **`paypal-webhook` no tenía la rama de "captura acreditada sobre reserva ya cancelada".** `mp-webhook` la tiene desde la sesión 116 y ahí la reserva se marca `'reembolso_pendiente'`; PayPal marcaba `'aprobado'` a secas sobre una reserva cancelada. Resultado: **plata cobrada, sesión que no existe, y nada que la devuelva** — `trg_mark_refund_on_cancel` solo mira la transición a `'cancelada'`, que en ese orden ya ocurrió. Sin error visible, que es la firma de esta clase de bug.
+- **Y en PayPal es más probable que en Mercado Pago, no menos.** En MP abandonar el checkout no cobra nada. En PayPal, aprobar dispara `CHECKOUT.ORDER.APPROVED` y **es nuestro propio webhook el que captura la plata** — así que *cualquier* aprobación posterior a la cancelación termina en un cobro. Las dos vías de cancelación son rutinarias: `soltarReserva()` cancela apenas el cobro no se acredita (sesión 117) y `expire_unpaid_checkouts()` barre a los 30 min; las dos dejan `payment_status = 'pendiente'`, que es exactamente lo que el webhook necesitaba para escribir.
+- **Arreglado calcando `mp-webhook`**: se lee `status`, y si está cancelada el patch escribe `'reembolso_pendiente'` en vez de `'aprobado'` y no se aplican los efectos de confirmación. `paypal-process-refunds` ya tiene todo lo que necesita para devolverla (`payment_id` = id de la captura, `charged_amount`, `payment_provider`), así que el reembolso sale solo por el cron que se agendó hoy. `paid_at` se conserva a propósito: la plata entró en ese momento y es el dato con el que se concilia contra PayPal.
+- 📝 **El helper compartido ya documentaba el contrato que faltaba cumplir**: `_shared/booking-effects.ts` dice *"El reembolso lo encola quien llamó acá (mp-webhook) o el trigger"* — nombrando solo a `mp-webhook`. La guarda de `booking-effects` evitaba que la reserva cancelada se resucitara como confirmada, y por eso el agujero era solo de plata y no también de estado.
+- ✅ **El tercer riel está bien, verificado de paso**: `usdt-check-payments` lo resuelve al revés (`.neq('status','cancelada')` en la consulta y en el update), o sea que directamente no acredita sobre una cancelada. Es deliberado y está documentado ahí como "cuarta vez del mismo patrón en este proyecto".
+
 **Pendiente para la próxima sesión:**
+- 🔴 **DEPLOYAR `paypal-webhook` antes de cualquier prueba** (`supabase functions deploy paypal-webhook`). El arreglo de arriba está solo en el repo. Ojo: la función va con `--no-verify-jwt` o equivalente — hoy está deployada con `verify_jwt = false` y tiene que seguir así, porque PayPal no manda JWT.
 - 🔴 **Ahora sí se puede probar PayPal de punta a punta**, que era lo que este pendiente bloqueaba: crear una orden real, pagarla con la cuenta sandbox de comprador y ver la reserva pasar a `aprobado`. Nada del riel se probó nunca.
 - Sigue todo lo demás de la 117: **la hora con el contador** (`docs/fiscal-instrucciones.md`), las **dos mediciones de USD 50** (PayPal → pesos y USDT → pesos), el **seed de la billetera USDT en papel**, **nada probado en Android**, y decidir qué hacer con los **medios offline de Mercado Pago** (verificado: `excluded_payment_types` no está en `mp-create-payment`).
 

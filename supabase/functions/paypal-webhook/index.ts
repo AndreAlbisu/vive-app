@@ -240,7 +240,7 @@ serve(async (req) => {
 
   const { data: booking } = await admin
     .from('bookings')
-    .select('id, payment_status, charged_amount')
+    .select('id, status, payment_status, charged_amount')
     .eq('id', bookingId)
     .maybeSingle()
 
@@ -262,15 +262,45 @@ serve(async (req) => {
     return new Response('amount mismatch', { status: 200 })
   }
 
+  const patch: Record<string, unknown> = {
+    payment_status: 'aprobado',
+    payment_id: captureId,
+    // Se conserva aunque abajo el estado pase a 'reembolso_pendiente': la plata
+    // entró en este momento, y es el dato con el que se concilia contra PayPal.
+    paid_at: new Date().toISOString(),
+  }
+
+  // 🔴 Captura acreditada sobre una reserva YA cancelada. Misma rama que
+  // `mp-webhook`, y acá es MÁS probable que allá: en Mercado Pago abandonar el
+  // checkout no cobra nada, mientras que en PayPal aprobar dispara
+  // CHECKOUT.ORDER.APPROVED y **este mismo webhook captura la plata**. O sea
+  // que cualquier aprobación posterior a la cancelación termina en un cobro.
+  //
+  // Cómo se llega: `soltarReserva()` cancela la reserva en cuanto el cobro no
+  // se acredita (sesión 117), y `expire_unpaid_checkouts()` la barre a los 30
+  // min — las dos dejan `payment_status = 'pendiente'`, así que la persona que
+  // vuelve a la pestaña de PayPal y aprueba tarde cae justo acá.
+  //
+  // Marcarlo 'aprobado' a secas dejaría la plata adentro sin que nada la
+  // devuelva: `trg_mark_refund_on_cancel` solo mira la transición a
+  // 'cancelada', que en este orden ya ocurrió. Se encola el reembolso y
+  // `paypal-process-refunds` lo devuelve — ya tiene todo lo que necesita
+  // (`payment_id` = id de la captura, `charged_amount`, `payment_provider`).
+  //
+  // ⚠️ Queda la misma ventana que en `mp-webhook`: entre esta lectura y el
+  // update, alguien podría cancelar. Es angosta y del lado seguro — las dos
+  // vías de cancelación exigen `payment_status <> 'aprobado'`, así que si el
+  // webhook llega primero la cancelación no ocurre.
+  if (booking.status === 'cancelada') {
+    patch.payment_status = 'reembolso_pendiente'
+    console.warn('[paypal-webhook] captura sobre reserva cancelada, se encola reembolso:', bookingId)
+  }
+
   // Idempotente: el `.eq('payment_status', 'pendiente')` hace que un reintento
   // no reescriba una reserva ya resuelta (ni pise un reembolso en curso).
   const { data: actualizada, error } = await admin
     .from('bookings')
-    .update({
-      payment_status: 'aprobado',
-      payment_id: captureId,
-      paid_at: new Date().toISOString(),
-    })
+    .update(patch)
     .eq('id', bookingId)
     .eq('payment_provider', 'paypal')
     .eq('payment_status', 'pendiente')
@@ -293,7 +323,14 @@ serve(async (req) => {
   // el cliente porque PayPal también abre su checkout FUERA de la app, así que
   // no hay ninguna pantalla nuestra garantizada viva cuando el pago entra.
   // El `.select('id')` de arriba es lo que hace que corra una sola vez.
-  await applyPaidBookingEffects(admin, bookingId)
+  //
+  // `patch.payment_status` y no la constante: si la reserva ya estaba
+  // cancelada, la rama de arriba lo dejó en 'reembolso_pendiente' y no hay
+  // ninguna sesión que confirmar. (`applyPaidBookingEffects` igual se defiende
+  // sola de ese caso; esto le ahorra la lectura y deja la intención escrita.)
+  if (patch.payment_status === 'aprobado') {
+    await applyPaidBookingEffects(admin, bookingId)
+  }
 
   return new Response('ok', { status: 200 })
 })
