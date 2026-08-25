@@ -185,12 +185,27 @@ cliente y es reversible.
   bancaria gratis. Sobre un pago de USD 45 son entre 0 y 0,90 dólares.
 - **Spread de conversión**: lo que se pierde al pasar de una moneda a otra.
 
-En Argentina el segundo domina. PayPal convierte a pesos **a su propio tipo de
-cambio** al retirar a un banco local; vender USDT llega a un tipo de cambio
-distinto. 🔴 **La brecha entre esos dos números es el costo más grande de todo el
-sistema de pagos, y es el único que nadie midió.**
+🔴 **CORRECCIÓN (25/08, después de un análisis externo): la premisa original de
+esta sección estaba mal.** Decía que la brecha entre convertir por PayPal y
+convertir por cripto era el costo más grande del sistema, asumiendo una brecha
+cambiaria grande entre el dólar oficial y el MEP. **Hoy esa brecha es de ~0,3%**
+(verificado el 25/08/2026: MEP ≈ $1.524, oficial minorista ≈ $1.515). Elegir MEP
+u oficial como referencia mueve centavos.
 
-Las tarifas de riel están todas verificadas y son ruido al lado de eso.
+**Lo que sí es caro es el RIEL, no el dólar.** PayPal incorpora un recargo de
+~3-4,5% dentro de su propio tipo de cambio al convertir, que no aparece como
+comisión. Encadenado con el 5,40% + USD 0,30 de recepción y el costo del retiro,
+**el riel de PayPal puede llevarse entre 9% y 14% del monto** — sobre una
+comisión bruta del 25%, es la mitad del margen.
+
+**Qué sobrevive de la conclusión original y qué no:**
+- ✅ Sobrevive la regla de ruteo: fondear pesos desde PayPal sigue siendo peor que
+  desde USDT, porque el markup de PayPal es real aunque la brecha de mercado no
+  lo sea.
+- ❌ No sobrevive la magnitud. No es "el costo más grande y desconocido del
+  sistema": es ~3-4,5% de markup, medible y acotado.
+- ✅ Sobrevive la necesidad de medirlo — pero lo que hay que medir cambió: es el
+  **markup de PayPal**, no una brecha de mercado.
 
 ### 2. Eso reordena la matriz
 
@@ -291,6 +306,33 @@ Los tres criterios, para dejarlos escritos:
 **Y en los tres casos, guardar el número usado.** Hoy `payout_reference` es texto
 libre; alcanzaría con dos columnas (`payout_fx_rate`, `payout_amount_ars`) para
 que la conversión deje rastro.
+
+### 3bis. Lo que un análisis externo afirmó y NO es cierto
+
+Verificado contra el código el 25/08, porque se recomendaba tratarlo como
+prioridad uno:
+
+- ❌ **"El coach fija precio en dólares, el usuario argentino paga en pesos por
+  MP, y alguien convierte sin registrar el tipo de cambio."** **No existe esa
+  conversión.** El precio local (pesos) y el `price_usd` son **dos números
+  independientes** que el coach fija por separado; `price_usd` no se deriva de
+  ninguna cotización, y está documentado así a propósito. **No hay ningún tipo de
+  cambio del lado del cobro, en ningún riel.**
+- ⚠️ **"Conciliar por identificador en los centavos funciona hasta que dos
+  reservas coinciden en monto."** El choque **no puede acreditar mal un pago**:
+  hay un índice único parcial sobre `usdt_amount` y `usdt-create-payment`
+  reintenta ante el `23505`. El modo de falla es "probá de nuevo", no un cobro mal
+  asignado. **Lo que sí es cierto es el techo**: 2 decimales son 100
+  combinaciones, o sea 100 reservas esperando pago al mismo tiempo — y está
+  documentado en `_shared/usdt.ts`, junto con la salida (una dirección por
+  reserva, no más decimales). Los 2 decimales tampoco son elección: las
+  billeteras no dejan tipear más.
+- ⚠️ **"El botón de arrepentimiento hay que sumarlo a la lista del abogado."** Ya
+  existe como borrador (`docs/boton-de-arrepentimiento.md`), citando la misma
+  Res. 424/2020, y ya está marcado como pendiente de revisión legal. **Lo que sí
+  es aporte nuevo** es la pregunta de si la cláusula de "menos de 24hs, sin
+  reembolso" es oponible frente al régimen de contratación a distancia — eso no
+  estaba y va a la lista.
 
 ### 4bis. Contracargos — el agujero que no se cierra con una columna
 
