@@ -130,10 +130,18 @@ serve(async (req) => {
     .select('booking_id')
   const traidas = new Set((yaTraidas ?? []).map((r: { booking_id: string }) => r.booking_id))
 
+  // 🔴 NO se filtra por `meeting_url is not null`, y es deliberado: esa columna
+  // se llena recién cuando alguien abre la sala. Filtrando por ella, el caso
+  // **"no vino nadie"** —donde la sala nunca llegó a crearse— no quedaría nunca
+  // registrado, y es justo la evidencia que hace falta para el reclamo inverso:
+  // alguien que cobra una sesión que no dio.
+  //
+  // El nombre de la sala se deriva del `booking_id`, así que no hace falta que
+  // exista para preguntar. Si nunca existió, Daily devuelve vacío y a las 24hs
+  // eso se guarda como la conclusión que es.
   const { data: candidatas, error } = await supabase
     .from('bookings')
     .select('id, scheduled_date, scheduled_time, duration_minutes, meeting_url')
-    .not('meeting_url', 'is', null)
     .gte('scheduled_date', desde)
     .in('status', ['confirmada', 'completada'])
     .limit(200)
