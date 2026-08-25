@@ -9,13 +9,41 @@
 > conviene que quede escrito como decisión y no como fix — quien vea después el
 > contador sin filtro va a pensar que es un descuido y "arreglarlo" al revés.
 
+## El modelo, después de tres correcciones
+
+> Escrito al final de la ronda de decisiones (25/08/2026). **Es lo que hace
+> consistente todo lo de abajo**, y llegó corrigiendo dos veces el razonamiento.
+
+**Hay TRES datos con tres usos que no se pisan.** Mezclarlos fue el origen de casi
+todo lo que se discutió:
+
+| Dato | Decide | No decide |
+|---|---|---|
+| **Dirección fiscal del coach** | Cómo VIVE le factura **su comisión** (E si está afuera, C si está en Argentina) y qué rieles de cobro le sirven | Nada del precio |
+| **Riel usado** | Cuánto costó cobrar → **la comisión** | Nada del encuadre fiscal |
+| **Ubicación del cliente** | Si **el coach** exporta (problema de él) y qué rieles mostrarle | Nada de las obligaciones de VIVE |
+
+🔴 **Que la comisión dependa del riel NO es el acoplamiento que había que romper.**
+Es correcto: el 25% existe para cubrir lo que cuesta ese riel —el propio comentario
+de `_shared/commission.ts` lo dice: "los costos que absorbe: comisión del
+procesador, cambio de moneda, comisión de red"— y PayPal cuesta unos 8 puntos más
+que el split de Mercado Pago, que no cuesta nada. **Cobrar según lo que costó
+cobrar no es cobrar de más.**
+
+🔴 **El acoplamiento que sí había que romper es el otro: usar el riel para decidir
+la ETIQUETA FISCAL.** Eso sigue mal y lo arregla D2.
+
+🔴 **Y bajo D1 (agente), el cliente de VIVE es el COACH** — a él se le factura la
+comisión. Por lo tanto **si VIVE exporta o no lo decide la dirección fiscal del
+coach, no la del cliente.** Esto corrige lo que este documento afirmaba antes.
+
 ## Mapa rápido
 
 | # | Decisión | Espera a | Urgencia |
 |---|---|---|---|
 | ~~D1~~ | ~~Principal o agente~~ | — | ✅ **DECIDIDA 25/08: AGENTE** |
-| ~~D2~~ | ~~Cómo se clasifica una operación como internacional~~ | — | ✅ **DECIDIDA 25/08: país observado en la reserva** |
-| ~~D3~~ | ~~Si las internacionales avanzan el contador~~ | — | ✅ **DECIDIDA 25/08: escalera también en internacional, contador único** |
+| ~~D2~~ | ~~Cómo se clasifica una operación como internacional~~ | — | ✅ **DECIDIDA 25/08** · razón corregida, menos urgente |
+| ~~D3~~ | ~~La escalera~~ | — | ✅ **DECIDIDA 25/08** · revisada: escalera **por riel**, contador único |
 | ~~D4~~ | ~~Alcance de la regla espejo~~ | — | ✅ **DECIDIDA 25/08: espejo estricto, por reserva** |
 | ~~D5~~ | ~~Mínimo por riel~~ | — | ✅ **DECIDIDA 25/08: el costo de red lo absorbe VIVE; sin mínimo** |
 | ~~D6~~ | ~~Coach sin Mercado Pago conectado~~ | — | ✅ **DECIDIDA 25/08: publicar exige al menos un riel completo** |
@@ -23,7 +51,8 @@
 | ~~D8~~ | ~~Criterio y registro del tipo de cambio~~ | — | ✅ **DECIDIDA 25/08: tabla append-only de operaciones** |
 | ~~D9~~ | ~~Multiparty: pedirlo o no~~ | — | ✅ **DECIDIDA 25/08: se pide, sin desarmar nada** |
 | ~~D10~~ | ~~Contracargos~~ | — | ✅ **DECIDIDA 25/08: niveles 1 y 2 ahora** |
-| D11 | Filtro por ubicación en el checkout | D2 y D3 | Baja a decisión de producto una vez desacoplado |
+| D11 | Filtro por ubicación en el checkout | D2 | Decisión de producto: arbitraje y plata ajena |
+| **D12** | **Dirección fiscal del coach** | **Nadie** | 🔴 **El dato que VIVE necesita para SU facturación** |
 
 ---
 
@@ -124,9 +153,16 @@ es exactamente lo que hay que preguntar.**
 > guardando la procedencia del dato, y con **nulo** —nunca `AR`— cuando no hay
 > observación.
 >
-> **Por qué ahora y no después:** con D1 (agente) lo que VIVE declara es su
-> comisión, y **la comisión depende de si la operación es internacional**. Una
-> clasificación mal hecha no es solo una etiqueta: es facturación mal hecha.
+> ⚠️ **RAZÓN CORREGIDA el 25/08, unas horas después.** Este documento decía que la
+> clasificación era urgente porque "la comisión depende de si la operación es
+> internacional". **Eso era falso**: la comisión depende del **riel** (ver "El
+> modelo"), y la facturación de VIVE depende de la **dirección fiscal del coach**
+> (D12). El país del cliente **no decide ninguna obligación de VIVE**.
+>
+> **La decisión se mantiene** —no derivar la clasificación del riel, guardar
+> observaciones— pero **baja de urgencia** y sirve para otras dos cosas: poder
+> decirle la verdad al coach sobre su propia situación fiscal, y filtrar qué
+> rieles mostrarle a cada cliente (D11).
 >
 > **Se aceptó que es un proxy.** El servicio se aprovecha en la sesión, no en la
 > reserva, y quien reserva puede viajar en el medio. Se elige igual porque la
@@ -217,10 +253,30 @@ alternativa limpia es **borrarlas**.
 > siendo otra y mejor: **el internacional también tiene escalera, y el contador
 > del par es uno solo.**
 
+> 🔴 **REVISADA el 25/08, unas horas después.** La escalera **no es por régimen
+> fiscal sino POR RIEL**. Ver "El modelo" arriba: el 25% cubre el costo del riel,
+> no la internacionalidad. Atarlo al encuadre fiscal volvía a mezclar precio con
+> clasificación, que es justo lo que se estaba desarmando.
+
+| Riel | Primera del par | Recurrentes |
+|---|---|---|
+| **Mercado Pago** | 20% | 15% |
+| **PayPal / USDT** | 25% | **20%** |
+
+📝 **La versión revisada es además más simple de implementar**: cada función de
+cobro **ya sabe por qué riel corre**, así que no necesita la clasificación de D2
+para nada. Solo consulta el contador del par. La comisión y el encuadre fiscal
+quedan completamente desacoplados.
+
+<details>
+<summary>La tabla original, antes de la revisión</summary>
+
 | | Primera del par | Recurrentes |
 |---|---|---|
-| **Local** | 20% | 15% |
-| **Internacional** | 25% | **20%** |
+| Local | 20% | 15% |
+| Internacional | 25% | 20% |
+
+</details>
 
 **El contador cuenta TODAS las sesiones cumplidas del par, sin mirar el régimen.**
 Cada régimen lee su propia tarifa en la posición que le toca.
@@ -947,3 +1003,37 @@ documento de comisión local para el coach — no es que firme otra cosa, es que
 hay nada que firmar**. Y la razón es lo que hace defendible la regla: sin ella,
 "te cobro menos en la segunda" se lee como un descuento arbitrario que se puede
 quitar.
+
+---
+
+## D12 · La dirección fiscal del coach — 🔴 ABIERTA
+
+Apareció al final de la ronda, y es **el dato que VIVE necesita para sus propias
+obligaciones** — a diferencia del país del cliente, que no decide ninguna.
+
+**Hoy no existe.** Está implícito que todos los coaches son argentinos, y
+estructuralmente **ya no tiene por qué ser así**: PayPal y USDT le sirven a
+cualquiera, en cualquier país.
+
+**Para qué se necesita:**
+
+1. **Cómo VIVE le factura su comisión.** Coach en el exterior → exportación de
+   servicios, factura E, sin IVA y sin sumar al tope del monotributo. Coach en
+   Argentina → factura C, mercado interno. Es la misma comisión y dos comprobantes
+   distintos.
+2. **Qué rieles de cobro le sirven.** Argentina figura como "Send, receive and
+   withdraw" en la tabla de países de PayPal Payouts, pero **no todos los países
+   tienen el mismo nivel**. Hay que mirarlo país por país antes de ofrecerle a
+   alguien un riel que su país no soporta.
+
+**Lo que hay que decidir:**
+
+- ¿Se soportan coaches fuera de Argentina, o por ahora es hipotético? Cambia si
+  hace falta pedir el dato o basta asumirlo.
+- Si se soportan: cómo se pide y cómo se verifica. Y si aplica la misma regla de
+  D2 — **guardar la observación, derivar la clasificación** — que acá probablemente
+  no, porque una dirección fiscal es **declarada**, no observada.
+
+⚠️ **Y el documento de cobro internacional está escrito para un coach argentino de
+punta a punta** — habla de CBU, de monotributo, de bajar dólares a un banco
+argentino. Con coaches afuera hace falta otra versión, o una que no asuma el país.
