@@ -375,6 +375,45 @@ la contesta nuestro código.
 4. Recién después discutir reserva retenida o retraso del pago, que es la
    mitigación cara y la que peor le cae al coach.
 
+### 4ter. El pivot a cobro directo está GATED, no bloqueado por una decisión
+
+Un análisis externo (25/08) propuso reemplazar todo el riel internacional por
+**PayPal Multi-party con cobro directo a la cuenta del coach y comisión retenida
+como platform fee** — espejo del split de Mercado Pago—, matando de paso USDT y
+los payouts manuales. El argumento a favor es bueno: elimina el pozo, el ruteo,
+el tipo de cambio de payout, el riesgo de congelamiento y el trabajo manual. Y el
+costo (fragmentar el catálogo: quien esté en España solo ve coaches con PayPal)
+**hoy es cero, porque el catálogo no tiene tráfico**.
+
+🔴 **Verificado el 25/08 contra la documentación de PayPal, y el obstáculo no es
+el que se suponía:**
+
+- **Multi-party NO es self-serve.** Se solicita por formulario, un representante
+  evalúa el negocio, aprueba la plataforma, se prueba en sandbox y hace falta otra
+  aprobación para producción.
+- **No hay lista pública de países** para el lado de la PLATAFORMA. Argentina no
+  figura ni en la documentación de multiparty ni en la de plataformas. (Para
+  **Payouts** sí figura, como "Send, receive, and withdraw" — son productos
+  distintos, no confundirlos.)
+- 🔴 **El filtro más probable es de VOLUMEN, no geográfico.** Hay plataformas
+  rechazadas porque su volumen era demasiado bajo para calificar como cliente, y
+  los mínimos no se publican. **VIVE tiene cero volumen real.**
+- ⚠️ Quien recibe el platform fee **debe tener una cuenta bancaria vinculada** a
+  su PayPal, y en Argentina esa cuenta tiene que ser en pesos. Cómo se liquida el
+  fee en ese caso es una pregunta concreta para PayPal.
+
+**Consecuencia para la secuencia, que es lo que importa:** no se puede desarmar el
+riel actual antes de tener la aprobación, y la aprobación probablemente exija un
+volumen que solo el riel actual puede generar. **El pivot no es una decisión que
+se pueda tomar hoy: es una solicitud que conviene iniciar hoy** —es gratis y
+lenta— mientras lo que existe sigue funcionando. Pedirlo no rompe nada: la
+integración actual (VIVE como comerciante) es un producto distinto y sigue igual.
+
+**Si Multi-party no se otorga**, la alternativa propuesta fue **dLocal for
+Platforms** (payins, payouts y split en una integración, liquidando en USD a
+cuenta internacional, 4-6%). Sin evaluar. Es proveedor nuevo e integración nueva,
+así que solo entra en la conversación si PayPal dice que no.
+
 ### 5. Qué medir, y en qué orden
 
 Las mediciones que ya estaban pendientes son **exactamente los insumos de este
