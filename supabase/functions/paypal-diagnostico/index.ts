@@ -1,4 +1,19 @@
-// paypal-diagnostico — TEMPORAL. Borrar después de usar.
+// paypal-diagnostico — NO DEPLOYADA. Se conserva a propósito.
+//
+// Se deployó el 24/08/2026, hizo su trabajo y se borró el mismo día. El archivo
+// queda porque el chequeo vuelve a hacer falta ENTERO en el pase a producción:
+// el webhook id es por app y por modo, así que el de live va a ser otro, y el
+// scope de Payouts recién es concluyente con credenciales live.
+//
+// Ese día: `supabase functions deploy paypal-diagnostico`, invocarla desde el
+// SQL Editor con `net.http_post` y la service_role key del Vault (así ningún
+// secret pasa por otro lado), leer el veredicto, y borrar el deploy.
+//
+// 🔴 Lo que encontró la primera vez, para que no se subestime: `PAYPAL_WEBHOOK_ID`
+// apuntaba a un webhook que no existía en ese modo. Con eso,
+// verify-webhook-signature devuelve FAILURE, el webhook contesta 401 y NUNCA
+// captura — el pago queda aprobado sin cobrar y la reserva en 'pendiente', sin
+// ningún error visible del lado de la app.
 //
 // Contesta, desde adentro (que es el único lugar donde conviven las credenciales
 // y el PAYPAL_WEBHOOK_ID), las tres preguntas que deciden si la prueba de punta
