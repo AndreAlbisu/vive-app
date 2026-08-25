@@ -247,8 +247,39 @@ diferencia en el tipo de cambio son USD 4,50 por semana — más que todas las
 comisiones de riel de esa semana juntas. Elegir mal el criterio, o no elegirlo,
 pesa más que la diferencia entre cobrar 20% o 25% de comisión.
 
-**Hay que decidir explícitamente cuál de estas es**, y escribirla en el documento
-del coach:
+**Son dos problemas y conviene no mezclarlos** (precisión que aportó un análisis
+externo del brief, 25/08): **qué criterio se promete** —ex ante, va en el
+documento del coach— y **qué se registra** —ex post, va en la tabla—. El registro
+**no es opcional en ningún escenario**: tipo de cambio, monto en pesos, fuente y
+timestamp, se elija el criterio que se elija. Y es lo primero, porque es una
+migración de tres columnas y es lo único que permite reconstruir qué se pagó si un
+coach reclama tres meses después.
+
+**Sobre el criterio, la recomendación es (B), una referencia pública** (MEP del día
+del pago, con fuente y horario fijados por escrito). (A) suena más justo y es
+indefendible en la práctica: depende de cuándo VIVE decidió vender, el coach no
+puede verificarlo ni anticiparlo, y si se convierte en lote para varios coaches la
+atribución por coach es arbitraria — convierte una decisión operativa nuestra en el
+ingreso de otro. Con (B) el coach sabe el lunes cuánto va a cobrar el viernes.
+
+🔴 **Y esto convierte la regla de ruteo en una restricción, no en una
+optimización.** Si se promete MEP, los pesos **solo** se pueden fondear con USDT:
+vender desde PayPal a un cambio sensiblemente peor que MEP es regalar la diferencia
+en cada pago. `PayPal → CBU` deja de ser una celda cara y pasa a ser una celda
+prohibida mientras la promesa sea MEP.
+
+📝 **Y el riesgo de (B) es más chico de lo que parece, si el ruteo se respeta.**
+VIVE tiene dólares, cuyo valor en pesos se mueve *con* el MEP: no hay exposición al
+nivel del tipo de cambio, solo a la **brecha** entre el cambio realizado y el MEP.
+Fondeando con USDT esa brecha es chica; fondeando con PayPal es justamente la que
+no se controla. El criterio y el ruteo son el mismo problema.
+
+**Corolario incómodo:** si el pozo de PayPal crece más rápido que los pagos por
+PayPal, se acumula saldo que no se puede bajar a pesos sin perder. Eso da vuelta el
+argumento de §2.3: **varios métodos aceptados no sirven solo para elegir el más
+barato, sirven para poder DRENAR el pozo de PayPal** ofreciéndolo cuando sobra.
+
+Los tres criterios, para dejarlos escritos:
 
 - **(a) El cambio al que VIVE efectivamente convirtió**, mostrando el
   comprobante. Honesto y auditable; el coach asume la variación.
@@ -260,6 +291,47 @@ del coach:
 **Y en los tres casos, guardar el número usado.** Hoy `payout_reference` es texto
 libre; alcanzaría con dos columnas (`payout_fx_rate`, `payout_amount_ars`) para
 que la conversión deje rastro.
+
+### 4bis. Contracargos — el agujero que no se cierra con una columna
+
+Verificado en el código el 25/08, después de que un análisis externo lo señalara
+como el riesgo ausente. Los tres hallazgos son peores que "no está en la lista":
+
+- 🔴 **Un contracargo de Mercado Pago se registra como si fuera un reembolso
+  normal.** `mp-webhook` mapea `charged_back → 'reembolsado'`, el mismo valor que
+  usa para `refunded`. **En los datos son indistinguibles**: no se puede contar
+  cuántos hubo, ni detectar un patrón, ni saber si un coach los acumula.
+- 🔴 **Las disputas de PayPal son invisibles.** El webhook solo procesa
+  `CHECKOUT.ORDER.APPROVED` y `PAYMENT.CAPTURE.COMPLETED`; cualquier otro evento
+  se descarta con 200. Y el webhook registrado en producción **tiene suscritos
+  exactamente esos dos eventos**, así que PayPal ni siquiera nos avisa. Una
+  disputa debita el saldo de VIVE y **nada en el sistema se entera**.
+- 🔴 **Nada mira `paid_out_at` cuando la plata se va para atrás.** La columna solo
+  se usa para escribirla y para filtrar los pagos pendientes. Si un contracargo
+  cae sobre una sesión ya transferida al coach, **la pierde VIVE, en silencio y
+  sin ningún registro de que eso fue lo que pasó.**
+
+**La exposición es estructural, no un caso de borde.** PayPal le da al comprador
+hasta 180 días para disputar; el coach cobra a la semana de la sesión, sin mínimo
+de acumulación y sin reserva retenida. Cada sesión pagada es exposición neta de
+VIVE por medio año. Y sobre una videollamada, "el servicio no se prestó" es
+dificilísimo de defender: no hay nada que enviar como prueba de entrega.
+
+⚠️ **Sin verificar, y hay que hacerlo contra la documentación de Mercado Pago:**
+en el split, un contracargo ¿debita al coach, a VIVE, o a los dos en proporción?
+Si la plata fue directo a la cuenta del coach, la pregunta de contra quién va no
+la contesta nuestro código.
+
+**Lo mínimo que habría que hacer, en orden de costo:**
+1. **Distinguir el contracargo del reembolso** en `payment_status`. Es un valor
+   nuevo, y sin eso no se puede medir nada del resto.
+2. **Suscribir los eventos de disputa de PayPal** y al menos dejar registro y
+   aviso. Hoy no llegan.
+3. **Cruzar contra `paid_out_at`**: si la reversión cae sobre una sesión ya
+   pagada, marcarla — es plata que hay que recuperar o dar por perdida, y hoy
+   nadie se entera.
+4. Recién después discutir reserva retenida o retraso del pago, que es la
+   mitigación cara y la que peor le cae al coach.
 
 ### 5. Qué medir, y en qué orden
 
