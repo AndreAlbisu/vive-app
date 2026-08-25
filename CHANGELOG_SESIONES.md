@@ -95,6 +95,14 @@
 - ❌ **Del otro análisis:** propuso matar USDT por frágil. La conciliación por centavos tiene índice único y reintenta — el modo de falla es "probá de nuevo", no un cobro mal asignado. Lo retiró; la objeción que queda en pie es otra: **es un riel sin reversa**, y los legales prometen un reembolso que no puede ejecutar solo.
 - 📝 **Verificado sobre multiparty:** no es self-serve, no hay lista pública de países, y el filtro más probable es de **volumen** — hay plataformas rechazadas por volumen bajo y VIVE tiene cero. El sandbox no requiere aprobación, así que el binario se despeja en paralelo. **No desarmar nada hasta tenerlo.**
 
+**Y en la misma sesión se implementaron los pasos 1, 2 y parte del 3 del plan:**
+
+- ✅ **Paso 1 — las tres consultas externas, redactadas** dentro de los documentos que ya existían: contador (`fiscal-instrucciones.md` §2.3bis), abogado (`paquete-abogado.md` A.6 a A.9) y el mensaje a PayPal (en `decisiones-pagos.md`, bajo D9). Falta mandarlas.
+- ✅ **Paso 2 — regla espejo** (`scripts/add-payout-rails.sql`, **CORRIDO y VERIFICADO**). El coach declara qué rieles acepta, el checkout ofrece solo esos, el CBU sale del exterior, el costo de entrega lo absorbe VIVE, el panel agrupa por `(coach, riel)` y **`accepts_international` pasó a columna derivada por trigger** con su `update` revocado — los seis lectores no se tocaron.
+- ✅ **Paso 3 (D3) — escalera por riel.** PayPal y USDT pasan de 25% plano a **25% la primera del par y 20% las recurrentes**, con el mismo contador que ya usaba Mercado Pago. **Las tres `*-create-payment` deployadas.**
+- 🔴 **D11 se disolvió**: el país de quien reserva **no gatilla nada**. Puede haber argentinos que quieran pagar en USDT y coaches argentinos que solo quieran cobrar en USDT — filtrar por ubicación les cerraría la puerta a los dos. El país se guarda solo para la etiqueta fiscal. Queda una pregunta legal en su lugar (A.9): si se le puede cobrar en dólares a un consumidor en Argentina.
+- 📝 **Once de doce decisiones cerradas.** Queda **D12** (la dirección fiscal del coach), que ya está redactada como pregunta para el contador.
+
 **Pendiente para la próxima sesión — PLAN ORDENADO:**
 
 ### 1 · Arrancar los relojes que no dependen de código (primero, porque tardan)
@@ -103,19 +111,10 @@
 - 🔴 **La consulta al contador, reformulada.** Ya no es "cómo trato el riel internacional" sino: *VIVE es agente (D1), su cliente es el coach y le factura su comisión. ¿Cómo se factura esa comisión según el domicilio fiscal del coach —factura E si está afuera, C si está en Argentina—? ¿Y qué implica que el coach pueda no ser argentino?* Más: si el coach es exportador aunque cobre VIVE, y el movimiento de ~$675 de `docs/fiscal-instrucciones.md`.
 - **Tres puntos para el abogado:** (1) si la cláusula de "menos de 24hs, sin reembolso" es oponible frente al régimen de contratación a distancia; (2) **§9.3 (garantía) al lado de §4.1 (intermediación)** — VIVE ofrece reintegro por una prestación que dice no prestar; (3) **§9 promete un reembolso "automático a través del procesador"** que en el riel de USDT no existe: es una transferencia a mano.
 
-### 2 · Primera sesión de código: D4 + D5 + D6 juntas
-
-Son la misma zona y comparten la reescritura del documento del coach. Separarlas es tocar los mismos archivos tres veces.
-
-- `coach_payout_accounts`: de `method` único a **conjunto de rieles aceptados** (las columnas ya existen todas).
-- `deliveryCostFor` → **0 para todos** (D5: el costo lo absorbe VIVE), y sacar el descuento del documento y de la pantalla.
-- **Publicar exige al menos un riel completo** (D6), y `accepts_international` pasa a **derivarse** en vez de ser flag.
-- **Filtro del checkout** por rieles del coach, y el panel **agrupa por `(coach, riel)`**.
-- **Reescribir `docs/cobro-internacional-coaches.md`**: hoy ofrece CBU para el exterior, dice que USDT descuenta USD 1,50, y está escrito para un coach argentino de punta a punta.
+### 2 · ✅ HECHO (25/08) — D4 + D5 + D6, y D3 del paso 3
 
 ### 3 · Después, en este orden
 
-- **D3 — escalera por riel** (MP 20/15, PayPal y USDT 25/20): partir `COMMISSION_INTERNATIONAL`, que `paypal-create-payment` y `usdt-create-payment` consulten el contador del par, y **actualizar el comentario de `_shared/commission.ts`**, que argumenta a favor de la tarifa plana.
 - **D10 — contracargos**: distinguir contracargo de reembolso, suscribir los eventos de disputa de PayPal, cruzar contra `paid_out_at`, y 🔴 **guardar la asistencia que Daily ya produce** — hoy no hay ninguna prueba de que la sesión ocurrió.
 - **D2** (columnas de país observado + procedencia) y **D8** (tabla append-only de operaciones). Ninguna bloquea a nadie.
 
