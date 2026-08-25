@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
@@ -235,6 +235,24 @@ export default function SalaScreen() {
   }, [sessionState, reduceMotion]);
 
   // Load sala data
+  // 🔴 Releer al VOLVER a la pantalla, no solo al montarla.
+  //
+  // Sin esto, la tarjeta de sesión se queda con lo que había cuando se abrió la
+  // sala. Si mientras tanto se creó o se canceló una reserva, la tarjeta muestra
+  // otra — y como cancelar se hace DESDE la tarjeta, se cancela la que ella diga.
+  //
+  // Pasó dos veces el 25/08/2026, la segunda con plata: canceló y reembolsó una
+  // reserva paga que nadie quería tocar, y no se notó hasta horas después.
+  const primerFoco = useRef(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      // El primer foco coincide con el montaje: dejarlo pasar duplicaría la carga.
+      if (primerFoco.current) { primerFoco.current = false; return; }
+      setRefreshKey(k => k + 1);
+    }, []),
+  );
+
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     if (!salaIdParam && !coach_id) { setLoading(false); return; }
@@ -433,7 +451,7 @@ export default function SalaScreen() {
 
     init();
     return () => { mounted = false; };
-  }, [user?.id, salaIdParam, coach_id]);
+  }, [user?.id, salaIdParam, coach_id, refreshKey]);
 
   useEffect(() => {
     if (!user || recipientIsCoach) return;
@@ -581,9 +599,15 @@ export default function SalaScreen() {
     }
 
     const esSolicitud = activeBooking.status === 'pendiente';
+    // 🔴 El cartel NOMBRA la sesión, con fecha y hora. Es la última barrera antes
+    // de una acción irreversible que además dispara un reembolso: si la tarjeta
+    // quedó vieja, acá se ve que no es la que se quería cancelar.
+    const cual = `${formatSalaDate(activeBooking.scheduled_date)} · ${activeBooking.scheduled_time.slice(0, 5)} hs`;
     Alert.alert(
       esSolicitud ? '¿Cancelar solicitud?' : '¿Cancelar sesión?',
-      esSolicitud ? '¿Querés cancelar tu solicitud de sesión?' : '¿Querés cancelar esta sesión confirmada?',
+      esSolicitud
+        ? `Vas a cancelar tu solicitud del ${cual}.`
+        : `Vas a cancelar la sesión del ${cual}. No se puede deshacer.`,
       [
         { text: 'No', style: 'cancel' },
         {
