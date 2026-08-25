@@ -95,15 +95,49 @@
 - ❌ **Del otro análisis:** propuso matar USDT por frágil. La conciliación por centavos tiene índice único y reintenta — el modo de falla es "probá de nuevo", no un cobro mal asignado. Lo retiró; la objeción que queda en pie es otra: **es un riel sin reversa**, y los legales prometen un reembolso que no puede ejecutar solo.
 - 📝 **Verificado sobre multiparty:** no es self-serve, no hay lista pública de países, y el filtro más probable es de **volumen** — hay plataformas rechazadas por volumen bajo y VIVE tiene cero. El sandbox no requiere aprobación, así que el binario se despeja en paralelo. **No desarmar nada hasta tenerlo.**
 
-**Pendiente para la próxima sesión:**
-- **Probar en dispositivo** la pantalla de datos de cobro con las tres opciones.
-- 🔴 **La tarjeta de sesión de la sala puede estar VIEJA, y cancelar desde ahí cancela lo que ella diga.** Apareció probando el reembolso: Andre quiso cancelar una sesión y canceló otra, sin ningún error de por medio.
-  - **La pantalla carga las reservas UNA sola vez al montarse** (el `useEffect` de `SalaScreen`) y no las vuelve a leer al volver a ella. Con la sala abierta desde antes de crear reservas nuevas, la tarjeta sigue mostrando la que era "la próxima" en el momento en que se cargó.
-  - **Y la tarjeta no deja elegir**: muestra siempre la primera no finalizada (`activeList.find(b => getSessionState(b) !== 'finalizada')`, ordenada por fecha y hora). Con varias sesiones con el mismo coach, la única forma de cancelar una específica es la lista de próximas sesiones.
-  - 🔴 **Cancelar es irreversible y puede disparar un reembolso**, así que mostrar una sesión distinta de la que la persona cree estar cancelando no es un detalle cosmético. Sin arreglar.
-  - 📝 **Cómo se diagnosticó, porque no había otra forma:** `bookings` no guarda `cancelled_at` ni `updated_at`, así que no hay manera de saber CUÁNDO se canceló algo. El único rastro fechado es el mensaje de sistema que deja `cancelBookingFlow` en la sala — y su texto lleva adentro la fecha y hora de la sesión cancelada. Descifrándolo (XOR + base64, `lib/encryption.ts`) apareció "Mié 26 ago · 16:00", que era una reserva de Mercado Pago y por eso ninguna consulta filtrada por `payment_provider = 'paypal'` la veía. **Vale la pena considerar un `cancelled_at`**: sin él, cualquier investigación de este tipo depende de descifrar mensajes.
-  - ✅ De paso quedó probado que **el reembolso de Mercado Pago también funciona hoy**: esa reserva de $1 pasó a `reembolsado` sola.
-- Sigue todo lo demás de la 117: **la hora con el contador** (`docs/fiscal-instrucciones.md`), las **dos mediciones de USD 50** (PayPal → pesos y USDT → pesos), el **seed de la billetera USDT en papel**, **nada probado en Android**, y decidir qué hacer con los **medios offline de Mercado Pago** (verificado: `excluded_payment_types` no está en `mp-create-payment`).
+**Pendiente para la próxima sesión — PLAN ORDENADO:**
+
+### 1 · Arrancar los relojes que no dependen de código (primero, porque tardan)
+
+- **Formulario de PayPal Multiparty** (D9 decidida). Y **probar el flujo en sandbox en paralelo**, que no requiere aprobación. 🔴 En el mismo contacto, la pregunta que la respuesta genérica no contesta: *para una plataforma con entidad argentina, ¿la partner fee se liquida sí o sí a la cuenta bancaria vinculada en pesos, o puede retenerse en saldo USD?*
+- 🔴 **La consulta al contador, reformulada.** Ya no es "cómo trato el riel internacional" sino: *VIVE es agente (D1), su cliente es el coach y le factura su comisión. ¿Cómo se factura esa comisión según el domicilio fiscal del coach —factura E si está afuera, C si está en Argentina—? ¿Y qué implica que el coach pueda no ser argentino?* Más: si el coach es exportador aunque cobre VIVE, y el movimiento de ~$675 de `docs/fiscal-instrucciones.md`.
+- **Tres puntos para el abogado:** (1) si la cláusula de "menos de 24hs, sin reembolso" es oponible frente al régimen de contratación a distancia; (2) **§9.3 (garantía) al lado de §4.1 (intermediación)** — VIVE ofrece reintegro por una prestación que dice no prestar; (3) **§9 promete un reembolso "automático a través del procesador"** que en el riel de USDT no existe: es una transferencia a mano.
+
+### 2 · Primera sesión de código: D4 + D5 + D6 juntas
+
+Son la misma zona y comparten la reescritura del documento del coach. Separarlas es tocar los mismos archivos tres veces.
+
+- `coach_payout_accounts`: de `method` único a **conjunto de rieles aceptados** (las columnas ya existen todas).
+- `deliveryCostFor` → **0 para todos** (D5: el costo lo absorbe VIVE), y sacar el descuento del documento y de la pantalla.
+- **Publicar exige al menos un riel completo** (D6), y `accepts_international` pasa a **derivarse** en vez de ser flag.
+- **Filtro del checkout** por rieles del coach, y el panel **agrupa por `(coach, riel)`**.
+- **Reescribir `docs/cobro-internacional-coaches.md`**: hoy ofrece CBU para el exterior, dice que USDT descuenta USD 1,50, y está escrito para un coach argentino de punta a punta.
+
+### 3 · Después, en este orden
+
+- **D3 — escalera por riel** (MP 20/15, PayPal y USDT 25/20): partir `COMMISSION_INTERNATIONAL`, que `paypal-create-payment` y `usdt-create-payment` consulten el contador del par, y **actualizar el comentario de `_shared/commission.ts`**, que argumenta a favor de la tarifa plana.
+- **D10 — contracargos**: distinguir contracargo de reembolso, suscribir los eventos de disputa de PayPal, cruzar contra `paid_out_at`, y 🔴 **guardar la asistencia que Daily ya produce** — hoy no hay ninguna prueba de que la sesión ocurrió.
+- **D2** (columnas de país observado + procedencia) y **D8** (tabla append-only de operaciones). Ninguna bloquea a nadie.
+
+### 4 · Siguen abiertas
+
+- **D11** — filtro por ubicación en el checkout. Decisión de producto; ya no cobra mal.
+- **D12** — **la dirección fiscal del coach**, que hoy no existe como dato y decide si VIVE emite factura E o C por su propia comisión.
+
+### 5 · De antes de esta discusión, que no hay que perder
+
+- 🔴 **La tarjeta de la sala puede cancelar otra sesión** (lee las reservas una sola vez al montarse). Cancelar es irreversible y puede disparar un reembolso.
+- **Aviso cuando hay un reembolso de USDT pendiente** (D7) y verificar que la pantalla valide la dirección contra la red.
+- **`bookings.cancelled_at`** — hoy no hay forma de saber cuándo se canceló algo sin descifrar mensajes de chat.
+- **Probar en dispositivo** la pantalla de datos de cobro y el cartel de espera nuevo. **Nada probado en Android.**
+- **Las dos mediciones de USD 50** (PayPal → pesos, USDT → pesos).
+- **Actualizar la página visual** (`claude.ai/code/artifact/b50eb896…`): quedó sin las revisiones de D2 y D3 ni la D12.
+
+### 📌 Lo que NO hay que perder de vista al retomar
+
+**Nada de esto está ardiendo.** Los agujeros encontrados —el coach sin cobro, los contracargos invisibles, la falta de prueba de asistencia— **solo lastiman cuando hay usuarios reales, y no hay ninguno**. Es la ventana que este proyecto no tuvo ni con el webhook muerto un mes ni con el cron dando 401 dos semanas. No desperdiciarla apurándose.
+
+**Las decisiones están en `docs/decisiones-pagos.md`**, cada una con su razonamiento, lo que descarta, el riesgo que asume y el trabajo que se desprende. **Empezar por "El modelo, después de tres correcciones"**, que es lo que hace consistente todo lo demás.
 
 ---
 
