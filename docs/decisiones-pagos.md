@@ -22,7 +22,7 @@
 | ~~D7~~ | ~~USDT: ofrecerlo o no~~ | — | ✅ **DECIDIDA 25/08: se ofrece, con dos cosas antes** |
 | ~~D8~~ | ~~Criterio y registro del tipo de cambio~~ | — | ✅ **DECIDIDA 25/08: tabla append-only de operaciones** |
 | ~~D9~~ | ~~Multiparty: pedirlo o no~~ | — | ✅ **DECIDIDA 25/08: se pide, sin desarmar nada** |
-| D10 | Contracargos | Nadie | Invisible hoy |
+| ~~D10~~ | ~~Contracargos~~ | — | ✅ **DECIDIDA 25/08: niveles 1 y 2 ahora** |
 | D11 | Filtro por ubicación en el checkout | D2 y D3 | Baja a decisión de producto una vez desacoplado |
 
 ---
@@ -802,7 +802,76 @@ bancaria, o puede retenerse en saldo USD?
 
 ---
 
-## D10 · Contracargos
+## D10 · Contracargos — ✅ DECIDIDA: **niveles 1 y 2 ahora** (25/08/2026)
+
+> **Decisión de Andre, 25/08/2026.** Ver lo que pasa y poder defenderse. Recuperar
+> cuando haya volumen; prevenir, probablemente nunca.
+
+### 🔴 El hallazgo que cambió la prioridad: no hay ninguna prueba de que la sesión ocurrió
+
+Verificado el 25/08: existe `meeting_url` (Daily.co) y `duration_minutes`, pero
+**nada registra quién entró, cuándo ni por cuánto tiempo**.
+
+Si llega una disputa diciendo *"el servicio no se prestó"* —que sobre una
+videollamada es **la** disputa que va a llegar— **no hay nada que presentar**. No
+es un caso débil: es no tener evidencia. Daily.co sí produce esos datos; simplemente
+no se guardan.
+
+**Por eso el nivel 2 va junto con el 1, aunque parezca menos urgente:** los otros
+niveles dejan enterarse, recuperar o prevenir. **El 2 es el único que permite
+ganar la disputa**, y es el más barato de los cuatro.
+
+### Nivel 1 — Ver lo que pasa ✅
+
+1. **Distinguir contracargo de reembolso.** Hoy `mp-webhook` mapea `charged_back`
+   al mismo `'reembolsado'` que un reembolso voluntario: en los datos son
+   indistinguibles. Sin esto no se puede ni contar cuántos hubo.
+2. **Suscribir los eventos de disputa de PayPal** y dejar registro y aviso. Hoy el
+   webhook procesa dos eventos y el registrado en producción tiene suscritos
+   exactamente esos dos, así que **ni llegan**.
+3. **Cruzar contra `paid_out_at`.** Si la reversión cae sobre una sesión ya
+   transferida al coach, marcarla: es plata que hay que recuperar o dar por
+   perdida, y hoy nadie se entera.
+
+### Nivel 2 — Poder defenderse ✅
+
+**Guardar la asistencia que Daily ya produce**: quién entró, a qué hora, cuánto
+duró. Es la única prueba que existe de que la sesión pasó.
+
+⚠️ **Es metadato, no contenido** — pero en una app de salud mental hay que
+declararlo en la política de privacidad, **que sigue esperando al abogado**. Mismo
+criterio que se aplicó en D2 con la ubicación: no sumar una recolección nueva a un
+documento que todavía no existe.
+
+### Nivel 3 — Recuperar ⏸️ cuando haya volumen
+
+La idea de Andre: **que el coach quede en negativo** y se descuente de pagos
+futuros. Necesita el registro de operaciones de **D8** para tener sentido.
+
+📝 **Acá sí aplica**, a diferencia de lo que se vio en D7: un contracargo llega
+*después* de haberle pagado al coach, así que hay algo que descontar. En las
+cancelaciones no, porque la plata todavía es de VIVE.
+
+### Nivel 4 — Prevenir ❌ probablemente nunca
+
+Reserva retenida o retraso de los pagos. Es la mitigación cara y la que peor le cae
+al coach. Solo si los contracargos aparecen de verdad.
+
+### La exposición, para dimensionar
+
+PayPal le da al comprador **hasta 180 días** para disputar; el coach cobra a la
+semana de la sesión, **sin mínimo y sin reserva retenida**. Cada sesión pagada es
+exposición neta de VIVE por medio año.
+
+📝 Cobrar directo (D9) lo mitigaría mucho —el contracargo iría contra el coach—
+pero hay que confirmar el tratamiento del platform fee. Y en el split de Mercado
+Pago, contra quién va el contracargo **no lo contesta nuestro código**: hay que
+verificarlo en la documentación de MP.
+
+<details>
+<summary>El planteo original</summary>
+
+## Los tres hallazgos
 
 **Los tres hallazgos, verificados en el código:**
 - Un contracargo de Mercado Pago se registra como `'reembolsado'`, **el mismo
@@ -822,6 +891,8 @@ y la que peor le cae al coach.
 
 📝 Cobrar directo (D1/D9) lo mitiga mucho —el contracargo va contra el coach—
 pero hay que confirmar el tratamiento del platform fee.
+
+</details>
 
 ---
 
