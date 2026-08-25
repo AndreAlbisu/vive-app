@@ -1080,6 +1080,29 @@ quitar.
 
 ---
 
+## 🔴 El bug de la tarjeta de la sala volvió a morder — con plata de por medio
+
+**25/08/2026, segunda vez en la misma noche.** La reserva `d6fc1a6c` (Mercado Pago,
+27/08 9:00, ARS 1) apareció **cancelada y reembolsada** sin que nadie lo hubiera
+pedido. No fue un proceso automático: `cancelled_by = 'usuario'` **solo lo escribe
+`cancelBookingFlow`**, o sea la pantalla — ningún cron ni trigger lo pone.
+
+**Qué pasó, casi con seguridad:** la tarjeta de la sala muestra siempre **la
+próxima sesión** del par. Al ir cancelando otras, la "próxima" se fue corriendo, y
+una cancelación posterior desde esa tarjeta apuntó a la del 27 sin que quien la
+tocó lo supiera.
+
+**La primera vez del día fue un susto; esta movió plata**: canceló una reserva
+paga y disparó su reembolso, y **nadie lo notó hasta horas después**, por casualidad
+—buscando por qué otra consulta devolvía cero—.
+
+📌 **Sube a lo más urgente de la lista de arreglos.** La causa está identificada y es
+chica: `SalaScreen` lee las reservas **una sola vez al montarse** y no las relee al
+volver a la pantalla, y la tarjeta **no deja elegir** cuál cancelar. Cancelar es
+irreversible y dispara reembolsos: no es un problema de comodidad.
+
+---
+
 ## D12 · La dirección fiscal del coach — 🔴 ABIERTA
 
 Apareció al final de la ronda, y es **el dato que VIVE necesita para sus propias
