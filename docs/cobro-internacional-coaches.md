@@ -43,21 +43,28 @@ conversión del precio local: lo fijás vos, y no se mueve con la cotización.
 Es un número entero (USD 60, no USD 59,50). Si el precio no está cargado, tu
 perfil no aparece en las búsquedas del exterior aunque tengas la opción activada.
 
-## 4. La comisión es la misma
+## 4. La comisión
 
-**25%**, siempre, sin tramos. Sobre un precio de USD 60 cobrás **USD 45**.
+**25% en la primera sesión con cada persona, 20% de la segunda en adelante.**
+Sobre un precio de USD 60 cobrás **USD 45** la primera vez y **USD 48** después.
 
-Es más que el 20%/15% de las sesiones de Argentina, y la razón es concreta: acá
-VIVE **cobra, retiene y te transfiere en cada sesión**. En Argentina te presenta
-a alguien y después la plata te llega sola a tu Mercado Pago; del exterior, sin
-la plataforma no habría forma de que ese cliente te pague. Dentro de ese 25%
-entran la comisión del procesador, el costo de traer los dólares y la operación
-de pagarte.
+Es la misma lógica que en Argentina —donde es 20% y baja a 15%— y por el mismo
+motivo: **el primer tramo es lo que nos costó presentarte a alguien nuevo, y la
+baja es para que te convenga que esa persona se quede.** El contador es por
+persona y no se reinicia nunca.
+
+**Y es el mismo contador para todas tus sesiones**, sin importar por dónde te
+pagaron. Si alguien tomó una sesión con vos desde afuera y después te reserva
+estando en Argentina, esa segunda ya es recurrente.
+
+Los puntos de diferencia con Argentina son concretos: acá VIVE **cobra, retiene y
+te transfiere**, y ahí entran la comisión del procesador y la operación de
+pagarte. En Argentina la plata te llega sola a tu Mercado Pago y eso no cuesta.
 
 **El cliente paga tu precio, pague como pague** — no hay recargo encima ni te
 cambia lo que cobrás según el medio que él elija.
 
-📝 Antes de comparar el porcentaje con el de Argentina, compará los pesos: el 75%
+📝 Antes de comparar el porcentaje con el de Argentina, compará los pesos: el 80%
 de un precio en dólares suele ser bastante más que el 85% de un precio en pesos.
 
 ## 5. Cuándo y cómo cobrás

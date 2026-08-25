@@ -1,6 +1,8 @@
 import {
   countsAsCompletedSession,
   commissionPctFor,
+  COMMISSION_INTERNATIONAL_FIRST,
+  COMMISSION_INTERNATIONAL_RECURRING,
   marketplaceFeeFor,
   PAIR_SESSION_FILTER,
   COMMISSION_FIRST,
@@ -170,5 +172,54 @@ describe('marketplaceFeeFor', () => {
 
   it('maneja montos con centavos', () => {
     expect(marketplaceFeeFor(12345.67, 15)).toBeCloseTo(1851.85, 2);
+  });
+});
+
+describe('escalera por riel', () => {
+  const now = Date.parse('2026-06-01T00:00:00Z');
+
+  // 🔴 D3 (25/08/2026): los rieles internacionales dejaron de ser tarifa plana.
+  // El motivo no es de costos sino de qué ES la escalera: el primer tramo
+  // recupera la ADQUISICIÓN del cliente y la baja retiene. Eso aplica en
+  // cualquier riel — también en el exterior hubo un costo de conseguir a esa
+  // persona.
+  it('PayPal y USDT tienen escalera 25/20', () => {
+    for (const rail of ['paypal', 'usdt'] as const) {
+      expect(commissionPctFor(0, now, null, rail)).toBe(COMMISSION_INTERNATIONAL_FIRST);
+      expect(commissionPctFor(1, now, null, rail)).toBe(COMMISSION_INTERNATIONAL_RECURRING);
+      expect(commissionPctFor(20, now, null, rail)).toBe(COMMISSION_INTERNATIONAL_RECURRING);
+    }
+  });
+
+  it('Mercado Pago sigue en 20/15, y es el default', () => {
+    expect(commissionPctFor(0, now, null, 'mp')).toBe(COMMISSION_FIRST);
+    expect(commissionPctFor(1, now, null, 'mp')).toBe(COMMISSION_RECURRING);
+    expect(commissionPctFor(0, now)).toBe(COMMISSION_FIRST);
+  });
+
+  // 🔴 La propiedad que resuelve el caso que motivó la decisión: el contador del
+  // par es UNO SOLO y no mira el riel. Alguien que pagó una sesión desde Madrid
+  // por PayPal y después reserva desde Buenos Aires por Mercado Pago llega a la
+  // segunda como recurrente, y se le cobra 15% — sin ninguna regla especial para
+  // el cruce, que era lo que había que evitar.
+  it('el contador es del par: cruzar de riel no reinicia la escalera', () => {
+    expect(commissionPctFor(1, now, null, 'mp')).toBe(COMMISSION_RECURRING);
+    expect(commissionPctFor(1, now, null, 'paypal')).toBe(COMMISSION_INTERNATIONAL_RECURRING);
+  });
+
+  // La promo fundador gana sobre las dos escaleras: es 0% venga por donde venga.
+  it('la promo fundador le gana a cualquier riel', () => {
+    for (const rail of ['mp', 'paypal', 'usdt'] as const) {
+      expect(commissionPctFor(0, now, '2026-12-31T00:00:00Z', rail)).toBe(COMMISSION_PROMO);
+      expect(commissionPctFor(7, now, '2026-12-31T00:00:00Z', rail)).toBe(COMMISSION_PROMO);
+    }
+  });
+
+  // El margen que justifica que 20 alcance en las recurrentes depende de que la
+  // regla espejo haya eliminado las combinaciones cruzadas. Si alguna vez se
+  // vuelve a permitir cobrar por un riel y pagar por otro, esto hay que revisarlo.
+  it('el recurrente internacional sigue por encima del local', () => {
+    expect(COMMISSION_INTERNATIONAL_RECURRING).toBeGreaterThan(COMMISSION_RECURRING);
+    expect(COMMISSION_INTERNATIONAL_RECURRING).toBeLessThan(COMMISSION_INTERNATIONAL_FIRST);
   });
 });

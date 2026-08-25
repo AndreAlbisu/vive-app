@@ -12,7 +12,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { uniqueAmount, NONCE_DIGITS } from '../_shared/usdt.ts'
-import { COMMISSION_INTERNATIONAL } from '../_shared/commission.ts'
+import { commissionPctFor, PAIR_SESSION_FILTER } from '../_shared/commission.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -94,10 +94,26 @@ serve(async (req) => {
   }
 
   // ── Comisión ───────────────────────────────────────────────────────────────
-  // Tarifa PLANA del riel internacional, la misma que PayPal: no depende de cómo
-  // pagó el cliente ni de cómo cobra el coach. El porqué está en
-  // `_shared/commission.ts`.
+  // ── Comisión: el tramo del par, igual que en Mercado Pago ─────────────────
+  // 🔴 Desde el 25/08/2026 estos rieles también tienen escalera (D3). El contador
+  // del par es **uno solo** y cuenta todas las sesiones cumplidas sin mirar el
+  // riel; cada riel lee su tarifa en la posición que le toca. Por eso el caso
+  // "pagó una vez por PayPal y después por Mercado Pago" se resuelve solo.
   //
+  // Es la misma consulta que hace `mp-create-payment`, con el mismo filtro de
+  // checkouts abandonados importado de `_shared/commission.ts` — si se toca una,
+  // se toca la otra.
+  const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL')
+  const { count: sesionesDelPar } = await admin
+    .from('bookings')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', booking.user_id)
+    .eq('coach_id', booking.coach_id)
+    .eq('status', 'completada')
+    .or(PAIR_SESSION_FILTER)
+
+  const commissionPct = commissionPctFor(sesionesDelPar ?? 0, Date.now(), promoUntil, 'usdt')
+
   // 🔴 Acá el porcentaje es lo ÚNICO que dice cuánto se le debe al coach: no hay
   // split, entra el total a la billetera de VIVE y se transfiere después.
 
@@ -122,7 +138,7 @@ serve(async (req) => {
         // identificador del pago, no parte del precio de la sesión.
         amount: coach.price_usd,
         usdt_amount: monto,
-        platform_fee_pct: COMMISSION_INTERNATIONAL,
+        platform_fee_pct: commissionPct,
       })
       .eq('id', booking.id)
       .select('usdt_amount')
