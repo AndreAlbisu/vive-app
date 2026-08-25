@@ -18,7 +18,7 @@
 | ~~D3~~ | ~~Si las internacionales avanzan el contador~~ | — | ✅ **DECIDIDA 25/08: escalera también en internacional, contador único** |
 | ~~D4~~ | ~~Alcance de la regla espejo~~ | — | ✅ **DECIDIDA 25/08: espejo estricto, por reserva** |
 | ~~D5~~ | ~~Mínimo por riel~~ | — | ✅ **DECIDIDA 25/08: el costo de red lo absorbe VIVE; sin mínimo** |
-| D6 | Coach sin Mercado Pago conectado | Nadie | Agujero al lanzar |
+| ~~D6~~ | ~~Coach sin Mercado Pago conectado~~ | — | ✅ **DECIDIDA 25/08: publicar exige al menos un riel completo** |
 | D7 | USDT: ofrecerlo o no | Runbook de reembolso | Antes de que haya volumen |
 | D8 | Criterio y registro del tipo de cambio | Nadie | El registro es incondicional |
 | D9 | Multiparty: pedirlo o no | Nadie | Es lento, conviene empezar |
@@ -509,7 +509,63 @@ no medido.
 
 ---
 
-## D6 · Coach sin Mercado Pago conectado
+## D6 · Requisito para publicar — ✅ DECIDIDA (25/08/2026)
+
+> **Decisión de Andre, 25/08/2026: para publicar el perfil hay que tener al menos
+> UN riel de cobro completo.** No es "exigir Mercado Pago": es exigir **un** medio,
+> cualquiera.
+
+**Y el catálogo muestra al coach solo a los clientes que pueden pagarle:**
+
+| Riel configurado | Quién lo ve |
+|---|---|
+| Mercado Pago conectado | Clientes en Argentina |
+| PayPal o USDT | Clientes del exterior |
+| Los dos | Los dos |
+| Ninguno | **No publica** |
+
+Es la regla espejo (D4) aplicada a la publicación, y **es mejor que una guarda**:
+el estado "reserva confirmada sin cobro" no se bloquea — **deja de ser
+alcanzable**. Hoy ese estado existe porque `mp-create-payment` devuelve 409, el
+cliente lo trata como caso benigno y sigue: reserva confirmada, cero cobrado, sin
+comisión y sin protección para quien reservó. Es un default heredado de cuando el
+pago era opcional, y el comentario del código ya lo anticipaba.
+
+### 🔴 Arregla de paso otro estado roto que ya existe
+
+Hoy un coach puede tener `accepts_international = true` **sin `price_usd`
+cargado**: queda anunciado en el catálogo y la pantalla de pago no puede cobrarle.
+Con esta regla eso es imposible — **lo que habilita un riel es que el riel esté
+COMPLETO**, no un flag aparte.
+
+📝 **`accepts_international` pasa de casilla a dato derivado**: se deduce de tener
+un riel en dólares configurado y un precio en dólares. Una casilla que puede
+contradecir a los datos es una fuente de estados imposibles; derivarla los elimina.
+
+### Por qué no la alternativa
+
+La otra opción era **que VIVE cobrara también en pesos** y transfiriera por CBU,
+para que un coach sin MP pudiera trabajar. Se descarta porque **contradice D1 y
+D4 a la vez**: pondría plata de terceros en la cuenta también en el mercado local
+—hoy el split de Mercado Pago es la única parte del sistema donde eso **no
+pasa**— y extendería ahí la misma pregunta fiscal que hoy es solo del exterior.
+Sería renunciar justo a la pieza que ya resuelve bien lo que en el resto del
+sistema es un problema.
+
+### Trabajo que se desprende
+
+1. **Bloquear la publicación del perfil** sin ningún riel completo.
+2. **Filtrar el catálogo y el buscador** por los rieles del coach cruzados con el
+   contexto del usuario. ⚠️ Si un coach solo tiene USDT, alguien en Argentina no
+   debería verlo: llegaría a la pantalla de reserva sin ningún medio que ofrecerle.
+   **De dónde sale el contexto del usuario es D11.**
+3. **Derivar `accepts_international`** en vez de leerlo como flag, y sacar la
+   casilla del perfil del coach.
+
+<details>
+<summary>El análisis previo a la decisión</summary>
+
+## Planteo original
 
 **Hoy la reserva se confirma igual, sin cobro**: sin comisión para VIVE y sin
 ninguna protección para quien reservó. Es un default heredado de cuando el pago
@@ -520,6 +576,8 @@ era opcional — el comentario del código ya lo anticipaba.
 | **(a) Exigir MP conectado para publicar** (recomendado) | Con el split, VIVE **nunca toca la plata del coach**: sin float, sin plata ajena, sin obligación de transferir | Fricción de onboarding |
 | **(b) VIVE cobra en pesos y transfiere por CBU** | Un coach sin MP puede trabajar | 🔴 Pone plata ajena en la cuenta y **extiende al mercado local la pregunta fiscal** que hoy es solo del exterior |
 | **(c) Dejarlo como está** | — | 🔴 No es una decisión: es un agujero |
+
+</details>
 
 ---
 
