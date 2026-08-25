@@ -21,7 +21,7 @@
 | ~~D6~~ | ~~Coach sin Mercado Pago conectado~~ | — | ✅ **DECIDIDA 25/08: publicar exige al menos un riel completo** |
 | ~~D7~~ | ~~USDT: ofrecerlo o no~~ | — | ✅ **DECIDIDA 25/08: se ofrece, con dos cosas antes** |
 | ~~D8~~ | ~~Criterio y registro del tipo de cambio~~ | — | ✅ **DECIDIDA 25/08: tabla append-only de operaciones** |
-| D9 | Multiparty: pedirlo o no | Nadie | Es lento, conviene empezar |
+| ~~D9~~ | ~~Multiparty: pedirlo o no~~ | — | ✅ **DECIDIDA 25/08: se pide, sin desarmar nada** |
 | D10 | Contracargos | Nadie | Invisible hoy |
 | D11 | Filtro por ubicación en el checkout | D2 y D3 | Baja a decisión de producto una vez desacoplado |
 
@@ -747,7 +747,39 @@ de cambio, solo a la **brecha**.
 
 ---
 
-## D9 · Multiparty: ¿se pide?
+## D9 · Multiparty — ✅ DECIDIDA: **se pide** (25/08/2026)
+
+> **Decisión de Andre, 25/08/2026: se solicita ahora, y se prueba el flujo en
+> sandbox en paralelo.** El sandbox **no requiere aprobación**, así que la
+> integración técnica se valida con una cuenta de desarrollador mientras la
+> solicitud avanza. Es gratis y es lento: cuanto antes arranque el reloj, mejor.
+
+**No rompe nada:** la integración actual (VIVE como comerciante) es otro producto y
+sigue funcionando igual.
+
+🔴 **Condición escrita: no desarmar nada hasta tenerlo aprobado y probado.** Sacar
+el riel actual antes dejaría a VIVE sin ningún medio internacional, esperando un
+permiso que puede tardar o no llegar. Y el problema es circular: la aprobación
+probablemente exija un volumen que **solo el riel actual puede generar**.
+
+⚠️ **Expectativa calibrada:** la partner fee se liquidaría a una cuenta bancaria
+vinculada, una vez por día — con entidad argentina eso sería **pesificación diaria
+al cambio de PayPal**. Si es así, multiparty **no saca del problema PayPal→pesos**:
+lo achica del 100% del ticket al 25%.
+
+Sigue valiendo la pena, pero por otra razón: **se deja de mover plata ajena**, que
+después de D1 es el argumento fuerte. No compite con la regla espejo — se apila
+arriba.
+
+**La pregunta hay que hacerla así, porque la respuesta genérica no sirve:**
+
+> Para una plataforma con entidad argentina, ¿la partner fee se liquida sí o sí a
+> la cuenta bancaria vinculada en pesos, o puede retenerse en saldo USD?
+
+<details>
+<summary>El análisis previo a la decisión</summary>
+
+## Planteo original
 
 | Opción | Pros | Contras |
 |---|---|---|
@@ -765,6 +797,8 @@ cuenta bancaria vinculada, una vez por día — con entidad argentina, eso es
 PayPal→pesos: lo achicaría del 100% del ticket al 25%. **Preguntarlo así, porque
 la respuesta genérica no sirve:** ¿la partner fee se liquida sí o sí a la cuenta
 bancaria, o puede retenerse en saldo USD?
+
+</details>
 
 ---
 
