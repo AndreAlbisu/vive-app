@@ -414,6 +414,65 @@ Platforms** (payins, payouts y split en una integración, liquidando en USD a
 cuenta internacional, 4-6%). Sin evaluar. Es proveedor nuevo e integración nueva,
 así que solo entra en la conversación si PayPal dice que no.
 
+### 4quater. La regla espejo — lo que se puede hacer YA, sin depender de nadie
+
+Segunda vuelta del análisis externo (25/08), y esta corrige el marco anterior: lo
+recomendable no es "multiparty" sino **la regla espejo**. Multiparty es su mejor
+implementación, no la regla. Tiene tres implementaciones de calidad decreciente:
+
+- **A — Multiparty.** La plata nunca es de VIVE salvo la comisión. Gated por
+  aprobación (ver 4ter). ⚠️ Y con un caveat que le baja el techo: la partner fee
+  se liquida a una cuenta bancaria vinculada, una vez por día — con entidad
+  argentina eso es **pesificación diaria al cambio de PayPal**. No elimina el
+  problema PayPal→pesos: lo achica del 100% del ticket al 25%. **Sin verificar,
+  es pregunta para PayPal.**
+- **B — La regla espejo dentro de la arquitectura actual.** VIVE sigue cobrando,
+  pero **solo puede pagar por el mismo riel por el que cobró**. No es integración
+  nueva: es **borrar opciones y filtrar en el checkout**, un subconjunto estricto
+  de lo que ya existe.
+- **C — dLocal.** Solo si A se cae Y hay volumen que lo justifique. Hoy no hay.
+
+🔴 **B se hace ahora, pase lo que pase con A** — y aunque A se apruebe, B es lo
+que corre mientras tanto y lo que genera los datos para saber si A vale la pena.
+
+**Qué implica B, en una frase:** *para atender sesiones del exterior, el coach
+tiene que elegir cobrar en dólares* (PayPal o USDT). Y con eso desaparecen, no se
+resuelven: el pozo, la regla de ruteo, el criterio de tipo de cambio del payout
+(no habría ningún pago en pesos desde VIVE) y el problema de drenar PayPal.
+
+**El costo residual** es que un coach que solo quiere pesos no puede atender al
+exterior. Hoy eso es **un** coach, y la conversión que hoy paga VIVE pasa a
+hacerla el coach, explícitamente y sabiéndolo.
+
+📝 **Espejar por RESERVA es mejor que por coach**: agrupar los pagos por
+`(coach, riel)` en vez de por `(coach)` hace que el coach ni siquiera tenga que
+elegir — cobra por el riel que usó cada cliente. El cambio en el panel es chico.
+
+⚠️ **Corrección de una posición anterior de este documento.** Antes se argumentó
+que el coach no debía tener palanca sobre cómo paga el cliente, porque el costo
+—perder clientes que solo podían pagar así— era frecuente y el beneficio —evitar
+conversiones— era raro. **La conversión no es rara: es estructural.** Con los
+números del riel (§1 corregido) la comparación se da vuelta.
+
+### 4quinquies. 🔴 El locale NO queda fijado, y eso habilita arbitraje
+
+Verificado el 25/08: `internacionalDisponible` en `BookingScreen_Confirm` depende
+**solo** de la configuración del coach (`accepts_international && price_usd`). **La
+ubicación del usuario no se consulta en ningún lado del flujo de reserva.**
+
+Consecuencia: un usuario **en Argentina** que reserve con un coach internacional ve
+los tres medios y puede elegir entre **el precio en pesos y el precio en dólares**,
+que son números independientes sin ninguna cotización que los ate. Elige el que le
+conviene. Dos problemas en uno: **arbitraje** entre dos precios del mismo servicio,
+y **cobrarle en dólares a alguien en Argentina**.
+
+`SCHEMA.md` ya notaba que "alguien en Argentina vería las dos monedas", pero como
+argumento para descartar un encuadre de descuento — no como riesgo.
+
+**La salida probable es la misma que pide la regla espejo**: que los rieles
+internacionales se ofrezcan según **dónde está el usuario**, y no solo según lo que
+configuró el coach.
+
 ### 5. Qué medir, y en qué orden
 
 Las mediciones que ya estaban pendientes son **exactamente los insumos de este
