@@ -117,6 +117,27 @@ cliente, ¿el reintegro es total o proporcional al servicio efectivamente
 prestado? Los arts. 1110 a 1116 del CCyC no parecen contemplar expresamente esa
 hipótesis para servicios. Necesito la cláusula redactada en consecuencia.
 
+**A.6 — Cancelación dentro de las 24hs sin reembolso (T&C §9.1).**
+Hoy quien cancela con menos de 24 horas de anticipación **pierde el reembolso**, y
+la sesión **todavía no se prestó**. ¿Esa cláusula es oponible frente al régimen de
+contratación a distancia de la Ley 24.240 y la Res. 424/2020? Es distinto de A.5,
+que pregunta por una sesión ya prestada. Si no es oponible, el código está
+implementando una penalidad que no se sostiene.
+
+**A.7 — La garantía de §9.3 frente al encuadre de §4.1.**
+Léelas juntas, por favor. §4.1 dice que Vita **no presta** servicios de coaching ni
+de salud, y §9.3 ofrece **reintegrar la primera sesión** si la persona no quedó
+conforme. ¿Ofrecer esa garantía debilita el encuadre de intermediación, o convive
+sin problema como garantía comercial? Es el hecho más fuerte que un reclamo podría
+usar para argumentar solidaridad en la cadena de comercialización.
+
+**A.8 — §9 promete un reembolso que en un medio de pago no existe.**
+§9.1 y §9.2 dicen que el reembolso "se procesa de forma **automática** a través del
+procesador de pagos". Es cierto para Mercado Pago y PayPal. **Para los pagos en
+criptomoneda (USDT) no hay procesador**: lo ejecuta una persona haciendo una
+transferencia a mano. ¿Alcanza con aclararlo en la cláusula, o hay que comprometer
+un plazo máximo? ¿Y qué plazo sería defendible?
+
 ### B. No bloquean, pero quiero tu lectura
 
 **B.1 — Limitación de responsabilidad e indemnidad (T&C §18–19).**

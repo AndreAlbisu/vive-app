@@ -832,6 +832,37 @@ arriba.
 > Para una plataforma con entidad argentina, ¿la partner fee se liquida sí o sí a
 > la cuenta bancaria vinculada en pesos, o puede retenerse en saldo USD?
 
+### El mensaje, para mandar tal cual
+
+> We run a marketplace based in Argentina that connects independent wellness
+> professionals with clients, and we currently use PayPal Checkout as the merchant
+> of record. We are evaluating a multiparty setup where the payment settles
+> directly into the professional's PayPal account and we retain our fee as a
+> platform fee.
+>
+> Three questions before we commit to building it:
+>
+> 1. Is the multiparty / platform-fee solution available for a **platform with an
+>    Argentine entity**, onboarding sellers who are mostly in Argentina but may be
+>    in other countries?
+> 2. **How is the platform fee settled for an Argentine platform?** We understand
+>    the fee payee needs a linked bank account and that fees are disbursed daily —
+>    for an Argentine account that would mean a daily conversion to local currency.
+>    **Can the platform fee instead be retained as a USD balance?**
+> 3. In a transaction with a retained platform fee, **who bears a chargeback** —
+>    the seller, the platform, or both proportionally?
+>
+> We are pre-launch, so our current transaction volume is minimal. If there is a
+> minimum volume requirement to qualify, we would rather know now.
+
+📝 **La tercera pregunta no estaba en el plan original** y es la que más importa
+para D10: si el contracargo va contra el vendedor, multiparty mitiga la exposición
+de 180 días que hoy tiene VIVE. Si va contra la plataforma, no cambia nada de eso.
+
+📝 **Decir el volumen de entrada es a propósito.** Si el filtro es de volumen —que
+es el obstáculo más probable— conviene enterarse en el primer mail y no después de
+construir la integración.
+
 <details>
 <summary>El análisis previo a la decisión</summary>
 
