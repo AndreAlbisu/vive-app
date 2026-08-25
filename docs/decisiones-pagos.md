@@ -16,7 +16,7 @@
 | ~~D1~~ | ~~Principal o agente~~ | — | ✅ **DECIDIDA 25/08: AGENTE** |
 | ~~D2~~ | ~~Cómo se clasifica una operación como internacional~~ | — | ✅ **DECIDIDA 25/08: país observado en la reserva** |
 | ~~D3~~ | ~~Si las internacionales avanzan el contador~~ | — | ✅ **DECIDIDA 25/08: escalera también en internacional, contador único** |
-| D4 | Alcance de la regla espejo | Nadie | Elimina cuatro problemas de una |
+| ~~D4~~ | ~~Alcance de la regla espejo~~ | — | ✅ **DECIDIDA 25/08: espejo estricto, por reserva** |
 | D5 | Mínimo por riel (solo si D4 = por reserva) | D4 | Antes de escribir el agrupamiento |
 | D6 | Coach sin Mercado Pago conectado | Nadie | Agujero al lanzar |
 | D7 | USDT: ofrecerlo o no | Runbook de reembolso | Antes de que haya volumen |
@@ -327,7 +327,80 @@ vuelve a Buenos Aires y reserva con el mismo coach.
 
 ---
 
-## D4 · Alcance de la regla espejo
+## D4 · Regla espejo — ✅ DECIDIDA: **espejo estricto, por reserva** (25/08/2026)
+
+> **Decisión de Andre, 25/08/2026.** El coach **declara qué rieles acepta**
+> (PayPal, USDT, o los dos); sus clientes ven exactamente esos; y **cada reserva
+> se paga por el riel por el que entró**. **El CBU desaparece como opción de cobro
+> para el exterior.**
+
+**Qué elimina —no resuelve, elimina—:** el pozo de plata ajena, la regla de ruteo,
+el criterio de tipo de cambio del payout y el problema de que el saldo de PayPal
+no se pueda drenar. **No es integración nueva: es borrar opciones y filtrar.**
+
+Después de D1 (agente) esto dejó de ser una optimización de costos: la plata del
+riel internacional es **de terceros**, y la regla espejo es una de las dos formas
+de reducir cuánta se tiene y por cuánto tiempo.
+
+### Por qué esta y no las otras dos
+
+**Contra "espejo por coach"** (el coach elige UN riel y eso define qué ven sus
+clientes): **fragmenta el catálogo mucho más.** Un coach que eligiera USDT
+perdería a todos los clientes que hubieran pagado con PayPal — que son la mayoría.
+Y lo obliga a entender la mecánica para elegir bien, cuando la elección no le
+cambia nada a él. A cambio solo ahorra tener que decidir D5.
+
+**Contra "espejo con conversión pasante"** (mantener el CBU, convirtiendo cada
+pago puntual y pasando el tipo de cambio real con comprobante): es una buena idea
+y **es aditiva** — se puede agregar después sin rehacer nada. Hoy no se justifica:
+hay **un** coach con internacional habilitado, así que sería resolverle el problema
+a alguien que no existe, pagándolo con una operación manual por cada pago. ⚠️ Y
+tiene un costo que apareció al analizarla: los retiros de PayPal a un banco
+argentino **tienen comisión de transferencia**, así que convertir de a un pago
+multiplica un costo fijo — el mismo problema de amortización de D5, pero del lado
+de VIVE.
+
+📝 **Vale la pena guardar el hallazgo de esa opción**: convirtiendo **por pago**, la
+atribución del tipo de cambio es exacta y el criterio (A) de D8 —descartado por
+arbitrario cuando se convierte en lote— vuelve a ser defendible. Si algún día se
+agrega, ese es el criterio que le corresponde.
+
+### El costo residual, aceptado con los ojos abiertos
+
+Un coach que solo quiere pesos **no puede atender al exterior** sin convertir él.
+
+📝 **Y eso es menos grave de lo que suena en el riel de PayPal**: como no se puede
+sacar dólares de PayPal salvo retirando a una cuenta en pesos, la ruta del coach y
+la de VIVE son **idénticas** — los dos pasan por la misma conversión, al mismo
+~3-4,5%. La regla espejo no empeora el resultado: mueve quién aprieta el botón y
+quién come el markup. "Saber hacerlo" ahí es vincular una cuenta bancaria y tocar
+retirar.
+
+🔴 **En USDT es otra cosa**: vender cripto exige cuenta en un exchange y entender
+la red. **De ahí una regla de producto: PayPal es el riel para el coach que quiere
+pesos, y USDT para el que realmente quiere dólares.** Empujar a un coach que quiere
+pesos hacia USDT es pedirle que aprenda cripto para cobrar su sueldo.
+
+### 🔴 D5 es obligatoria y va pegada
+
+Espejar por reserva **fragmenta la acumulación**: el pozo del coach se parte en
+tantos como rieles use. Con pagos semanales y **sin mínimo** —decisión ya tomada—
+un coach con una sesión USDT por semana come USD 1,50 sobre ~USD 45: **3,3%**.
+
+### Trabajo que se desprende
+
+1. **`coach_payout_accounts` pasa de un `method` único a un conjunto de rieles
+   aceptados.** Las columnas ya existen todas (`wallet` + `network`,
+   `paypal_email`); `cbu`/`alias` quedan solo para el uso local, si aplica.
+2. **El selector del checkout filtra por los rieles que el coach acepta.**
+3. **El panel agrupa los pagos por `(coach, riel)`** en vez de por `(coach)`.
+4. **Actualizar el documento del coach**: hoy ofrece CBU como una de las tres
+   opciones de cobro del exterior.
+
+<details>
+<summary>El análisis previo a la decisión</summary>
+
+## Comparación original
 
 **La regla:** pagarle al coach solo por el riel por el que se cobró.
 
@@ -347,6 +420,8 @@ subconjunto estricto de lo que ya está construido.
 **Costo residual:** un coach que solo quiere pesos no puede atender al exterior.
 Hoy eso es **un** coach, y la conversión que hoy paga VIVE pasa a hacerla él,
 explícitamente y sabiéndolo.
+
+</details>
 
 ---
 
