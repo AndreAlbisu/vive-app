@@ -174,8 +174,122 @@ cliente y es reversible.
 
 ---
 
+## Análisis — dónde está la plata de verdad
+
+> Escrito el 25/08/2026 mirando la matriz de conversiones. **La conclusión es
+> que la matriz mide lo que menos importa.**
+
+### 1. Hay dos costos mezclados, y uno es un orden de magnitud más grande
+
+- **Costos de riel**: 2% de PayPal Payouts, USD 1,50 de red en USDT, transferencia
+  bancaria gratis. Sobre un pago de USD 45 son entre 0 y 0,90 dólares.
+- **Spread de conversión**: lo que se pierde al pasar de una moneda a otra.
+
+En Argentina el segundo domina. PayPal convierte a pesos **a su propio tipo de
+cambio** al retirar a un banco local; vender USDT llega a un tipo de cambio
+distinto. 🔴 **La brecha entre esos dos números es el costo más grande de todo el
+sistema de pagos, y es el único que nadie midió.**
+
+Las tarifas de riel están todas verificadas y son ruido al lado de eso.
+
+### 2. Eso reordena la matriz
+
+Si la brecha existe —hay que medirla—, el orden real de conveniencia es:
+
+1. **PayPal → PayPal** y **USDT → USDT**: gratis, sin conversión.
+2. **USDT → CBU**: una conversión, por la vía que mejor cotice.
+3. **PayPal → CBU**: una conversión **al tipo de cambio de PayPal**, que es el
+   que no elegimos nosotros.
+4. **PayPal → USDT**: dos conversiones, la primera al cambio de PayPal.
+5. **USDT → PayPal**: imposible.
+
+⚠️ **Corrige algo que se dijo antes en esta misma sesión** ("el CBU es el más
+cómodo de fondear porque se llega desde los dos rieles"). Se llega desde los dos,
+pero **no al mismo precio**, y la diferencia no es marginal.
+
+> **Regla operativa: nunca fondear un pago en pesos desde PayPal si hay USDT
+> disponible.** Es la decisión de ruteo que más plata mueve, y no cuesta nada
+> implementarla — es elegir bien de qué pozo sale cada transferencia.
+
+### 3. La política de ruteo, en tres pasos
+
+Con varios métodos aceptados por coach (ver 2.3), cada semana:
+
+1. **Llenar las diagonales gratis**: pagarle por PayPal a quien acepte PayPal,
+   por USDT a quien acepte USDT, hasta agotar cada pozo.
+2. **Lo que quede en USDT** financia los pagos en pesos.
+3. **Lo que quede en PayPal** solo se convierte si no hubo con qué cubrirlo
+   antes. **Nunca** PayPal → USDT.
+
+No hace falta ningún motor: son dos pozos y tres destinos, se resuelve mirando el
+panel.
+
+### 4. 🔴 El agujero: el tipo de cambio no se decide ni se registra
+
+`markCoachPaid(bookingIds, reference)` guarda **un texto libre** y nada más. El
+panel muestra la deuda **en dólares** y quien transfiere elige a cuántos pesos
+equivale, a mano. No hay columna que guarde el tipo de cambio ni el monto en
+pesos.
+
+Tres consecuencias, y las tres son de plata:
+
+- **No se puede auditar.** Si un coach pregunta por qué recibió esos pesos, no
+  hay con qué contestarle.
+- **No se puede reconciliar.** Es imposible saber si VIVE ganó o perdió en la
+  conversión, ni cuánto.
+- **El documento del coach dice "cobrás en pesos, sin costo" sin decir a qué
+  cambio.** Es la clase de ambigüedad que se descubre en la primera discusión, y
+  la descubre el coach.
+
+**Y es una decisión de negocio, no un detalle operativo.** Sobre 10 sesiones
+semanales de USD 60, al coach le corresponden USD 450. Cada punto porcentual de
+diferencia en el tipo de cambio son USD 4,50 por semana — más que todas las
+comisiones de riel de esa semana juntas. Elegir mal el criterio, o no elegirlo,
+pesa más que la diferencia entre cobrar 20% o 25% de comisión.
+
+**Hay que decidir explícitamente cuál de estas es**, y escribirla en el documento
+del coach:
+
+- **(a) El cambio al que VIVE efectivamente convirtió**, mostrando el
+  comprobante. Honesto y auditable; el coach asume la variación.
+- **(b) Una referencia pública** (por ejemplo el dólar MEP del día del pago).
+  Predecible para él; VIVE se queda con la diferencia o la pone.
+- **(c) Pagar en dólares y que convierta él** — que es exactamente lo que
+  resuelven PayPal y USDT como métodos de cobro.
+
+**Y en los tres casos, guardar el número usado.** Hoy `payout_reference` es texto
+libre; alcanzaría con dos columnas (`payout_fx_rate`, `payout_amount_ars`) para
+que la conversión deje rastro.
+
+### 5. Qué medir, y en qué orden
+
+Las mediciones que ya estaban pendientes son **exactamente los insumos de este
+análisis**. Con una precisión que antes no estaba: hay que anotar, el mismo día y
+para el mismo monto, **contra qué referencia** quedó cada una.
+
+1. **USD 50 de PayPal → pesos.** Anotar los pesos que llegaron y la cotización de
+   referencia de ese día. Da el tipo de cambio efectivo de PayPal.
+2. **USD 50 de USDT → pesos.** Lo mismo.
+3. **La brecha entre los dos es el número que decide todo lo de arriba.** Si es
+   chica, la regla de ruteo es una optimización menor. Si es grande, es la
+   decisión económica más importante del riel internacional.
+
+### 6. Lo que NO haría
+
+- **Especular con el momento de convertir.** Eso es tomar posición en el dólar,
+  no optimizar costos.
+- **Automatizar la conversión.** Con este volumen, la decisión semanal se toma
+  mirando el panel.
+- **PayPal → USDT, nunca.** Siempre hay una forma mejor: pagarle en USDT a otro
+  coach y en PayPal a este.
+
+---
+
 ## Orden sugerido
 
+0. **Decidir el criterio del tipo de cambio** y guardarlo (§4 del análisis). Es
+   barato, no depende de nadie, y es requisito para poder medir cualquier otra
+   cosa — hoy cada transferencia en pesos se hace a un cambio que nadie anota.
 1. **Bloque 0** — es lo único que no espera a nadie y lo único que es un agujero
    real al lanzar.
 2. **La hora con el contador** — no porque haya que construir algo después, sino
