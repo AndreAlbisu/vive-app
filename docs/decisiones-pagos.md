@@ -17,7 +17,7 @@
 | ~~D2~~ | ~~Cómo se clasifica una operación como internacional~~ | — | ✅ **DECIDIDA 25/08: país observado en la reserva** |
 | ~~D3~~ | ~~Si las internacionales avanzan el contador~~ | — | ✅ **DECIDIDA 25/08: escalera también en internacional, contador único** |
 | ~~D4~~ | ~~Alcance de la regla espejo~~ | — | ✅ **DECIDIDA 25/08: espejo estricto, por reserva** |
-| D5 | Mínimo por riel (solo si D4 = por reserva) | D4 | Antes de escribir el agrupamiento |
+| ~~D5~~ | ~~Mínimo por riel~~ | — | ✅ **DECIDIDA 25/08: el costo de red lo absorbe VIVE; sin mínimo** |
 | D6 | Coach sin Mercado Pago conectado | Nadie | Agujero al lanzar |
 | D7 | USDT: ofrecerlo o no | Runbook de reembolso | Antes de que haya volumen |
 | D8 | Criterio y registro del tipo de cambio | Nadie | El registro es incondicional |
@@ -425,7 +425,72 @@ explícitamente y sabiéndolo.
 
 ---
 
-## D5 · Mínimo por riel (solo si D4 = por reserva)
+## D5 · El costo de entrega — ✅ DECIDIDA (25/08/2026)
+
+> **Decisión de Andre, 25/08/2026: el costo de red de USDT lo absorbe VIVE**, como
+> ya absorbe el 2% de PayPal Payouts. **Y no hay mínimo**: se paga todo, todas las
+> semanas, como estaba decidido.
+
+**Esto disuelve el problema en vez de administrarlo.** La pregunta original era
+cómo evitar que un coach con una sesión USDT semanal comiera 3,3% de su pago
+(USD 1,50 sobre ~45). Si el costo no sale de su pago, no hay mínimo que decidir ni
+espera que administrar.
+
+### 🔴 Revierte la regla fijada esta misma mañana, y por un motivo
+
+La regla anterior era **"costo fijo se descuenta, costo proporcional se absorbe"**,
+y el argumento para descontar el de USDT estaba escrito en `lib/payout.ts`: *"se lo
+descuenta a quien lo elige: pidió que le manden dólares por blockchain, controla la
+causa y paga el costo"*.
+
+**D4 le sacó el piso a ese argumento.** Con el espejo estricto, elegir un riel dejó
+de ser una preferencia libre: **define qué clientes pueden pagarle**. Cobrarle el
+costo sería penalizarlo por una decisión que ya no es puramente suya.
+
+La regla nueva es más simple: **el costo de entrega lo paga VIVE, sea fijo o
+proporcional.** El coach cobra su neto, siempre.
+
+### El riesgo que se acepta, que ya estaba anticipado
+
+`_shared/commission.ts` lo dice desde antes de esta conversación: el costo de red
+**es el único que no escala con la facturación sino con la cantidad de coaches** —
+es por pago, no por sesión, así que un coach de una sesión por semana cuesta lo
+mismo que uno de diez. Absorberlo traslada ese riesgo a VIVE.
+
+Sobre la comisión, no sobre el ticket, así se ve la magnitud real:
+
+| Sesión | Comisión de VIVE (25%) | USD 1,50 pesa |
+|---|---|---|
+| USD 60 | 15,00 | 10% |
+| USD 20 (el mínimo) | 5,00 | **30%** |
+
+**Muerde justo donde el margen es más chico.** Hoy es irrelevante —cero coaches
+internacionales activos— pero es el número a mirar cuando haya volumen.
+
+**⏱️ Disparador para revisar:** si la mayoría de los coaches internacionales
+termina cobrando en USDT, sobre todo con poco volumen cada uno. Es el mismo
+disparador que el comentario del código ya anotaba.
+
+**Mitigación estructural, que ya está decidida y no cuesta nada:** la regla de
+producto de D4 — **PayPal para el coach que quiere pesos, USDT para el que quiere
+dólares**. El costo de PayPal es proporcional, así que no es regresivo; empujar
+hacia USDT solo a quien realmente quiere dólares mantiene ese riel en los perfiles
+de más volumen.
+
+### Trabajo que se desprende
+
+1. **`deliveryCostFor` devuelve 0 para todos los métodos** — el costo se mueve al
+   lado de VIVE (`costoPlataforma` en el panel, donde ya está el 2% de PayPal).
+2. **Sacar el descuento del documento del coach**: hoy dice *"USDT — … con un costo
+   de red de USD 1,50 por transferencia que se descuenta de tu pago"*.
+3. **Sacar la nota de la pantalla de datos de cobro**, que explica ese descuento.
+4. **Actualizar el comentario de `lib/payout.ts`** con el razonamiento nuevo — el
+   viejo argumenta explícitamente a favor de descontarlo.
+
+<details>
+<summary>El análisis previo a la decisión</summary>
+
+## Planteo original
 
 Con pagos semanales agrupados por `(coach, riel)` y **sin mínimo de acumulación**
 —que es una decisión ya tomada—, un coach con una sesión USDT por semana come
@@ -439,6 +504,8 @@ no medido.
 | **(c) Barrido al riel primario bajo X** | Cobra todo y sin costo desproporcionado | Rompe el espejo justo en los montos chicos |
 
 ⚠️ **Se decide antes de escribir el agrupamiento, no después.**
+
+</details>
 
 ---
 
