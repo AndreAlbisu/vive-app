@@ -1096,10 +1096,14 @@ tocó lo supiera.
 paga y disparó su reembolso, y **nadie lo notó hasta horas después**, por casualidad
 —buscando por qué otra consulta devolvía cero—.
 
-📌 **Sube a lo más urgente de la lista de arreglos.** La causa está identificada y es
-chica: `SalaScreen` lee las reservas **una sola vez al montarse** y no las relee al
-volver a la pantalla, y la tarjeta **no deja elegir** cuál cancelar. Cancelar es
-irreversible y dispara reembolsos: no es un problema de comodidad.
+✅ **ARREGLADO el mismo día.** `SalaScreen` ahora **relee al volver a la pantalla**
+(salteando el primer foco, que coincide con el montaje) y el cartel de confirmación
+**nombra la sesión con fecha y hora**. Lo segundo es lo que de verdad cierra el
+agujero: aunque la tarjeta quedara vieja por cualquier otro motivo, la última
+pantalla antes de una acción irreversible dice cuál se está cancelando.
+
+📝 Queda que desde la sala se cancela **la próxima** y no se puede elegir otra —
+para eso está la lista de sesiones—. Ya no es peligroso, es una limitación.
 
 ---
 

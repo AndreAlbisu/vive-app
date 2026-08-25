@@ -125,7 +125,7 @@
 
 ### 5 · De antes de esta discusión, que no hay que perder
 
-- 🔴🔴 **LA TARJETA DE LA SALA — máxima prioridad.** Volvió a morder el 25/08, **segunda vez en la misma noche y esta con plata**: canceló y reembolsó la reserva `d6fc1a6c` (MP, 27/08 9:00) sin que nadie lo pidiera, y no se notó hasta horas después. `SalaScreen` lee las reservas una sola vez al montarse y la tarjeta no deja elegir cuál cancelar. Cancelar es irreversible y dispara reembolsos.
+- ✅ **La tarjeta de la sala — ARREGLADA el 25/08.** Había mordido dos veces ese mismo día, la segunda con plata (canceló y reembolsó `d6fc1a6c`, MP 27/08 9:00, sin que nadie lo pidiera). Dos cambios: `SalaScreen` **relee al volver a la pantalla** —salteando el primer foco para no duplicar la carga del montaje— y el cartel de confirmación **nombra la sesión con fecha y hora**, que es la última barrera antes de algo irreversible que dispara un reembolso. ⚠️ **Sin probar en dispositivo.** 📝 Queda una limitación menor y deliberada: desde la sala se sigue cancelando **la próxima**; para elegir otra hay que ir a la lista de sesiones. Ya no es peligroso —el cartel dice cuál es— pero conviene saberlo.
 - **Aviso cuando hay un reembolso de USDT pendiente** (D7) y verificar que la pantalla valide la dirección contra la red.
 - **`bookings.cancelled_at`** — hoy no hay forma de saber cuándo se canceló algo sin descifrar mensajes de chat.
 - **Probar en dispositivo** la pantalla de datos de cobro y el cartel de espera nuevo. **Nada probado en Android.**
