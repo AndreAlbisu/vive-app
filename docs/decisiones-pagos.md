@@ -20,7 +20,7 @@
 | ~~D5~~ | ~~Mínimo por riel~~ | — | ✅ **DECIDIDA 25/08: el costo de red lo absorbe VIVE; sin mínimo** |
 | ~~D6~~ | ~~Coach sin Mercado Pago conectado~~ | — | ✅ **DECIDIDA 25/08: publicar exige al menos un riel completo** |
 | ~~D7~~ | ~~USDT: ofrecerlo o no~~ | — | ✅ **DECIDIDA 25/08: se ofrece, con dos cosas antes** |
-| D8 | Criterio y registro del tipo de cambio | Nadie | El registro es incondicional |
+| ~~D8~~ | ~~Criterio y registro del tipo de cambio~~ | — | ✅ **DECIDIDA 25/08: tabla append-only de operaciones** |
 | D9 | Multiparty: pedirlo o no | Nadie | Es lento, conviene empezar |
 | D10 | Contracargos | Nadie | Invisible hoy |
 | D11 | Filtro por ubicación en el checkout | D2 y D3 | Baja a decisión de producto una vez desacoplado |
@@ -660,7 +660,69 @@ diez por semana en vez de una?
 
 ---
 
-## D8 · Tipo de cambio: criterio y registro
+## D8 · Registro de operaciones — ✅ DECIDIDA (25/08/2026)
+
+> **Decisión de Andre, 25/08/2026: una tabla append-only de operaciones**, acotada
+> a lo que ejecuta una persona.
+
+### 🔴 El criterio de tipo de cambio se disolvió con D4
+
+La pregunta original tenía dos mitades: **qué criterio se promete** y **qué se
+registra**. La primera **ya no tiene caso de uso**: con el espejo estricto, el
+internacional se paga en dólares por el mismo riel que cobró, y lo local lo paga el
+split de Mercado Pago directamente. **VIVE nunca convierte moneda para pagarle a
+nadie.** Las tres opciones que se habían planteado (cambio realizado / referencia
+pública / pagar en dólares) quedaron sin objeto.
+
+📝 Si algún día se agrega la "conversión pasante" de D4, el criterio que le
+corresponde es **el cambio realizado con comprobante** — convirtiendo por pago, la
+atribución es exacta y deja de ser arbitraria, que era la única objeción.
+
+### Lo que sí queda, y cambió de naturaleza
+
+Ya no es sobre tipo de cambio: **es que no hay ningún registro de operaciones.**
+
+Hoy existen `paid_at`, `refunded_at`, `paid_out_at` y un `payout_reference` de
+texto libre. Todo eso es **estado sobre la reserva**, no un registro de lo que se
+hizo. No se puede contestar "qué se ejecutó el martes", "quién lo hizo", ni
+"cuántos reembolsos manuales van este mes".
+
+### El alcance, que es lo que hace la decisión barata
+
+**Los movimientos automáticos ya tienen registro en otro lado:** Mercado Pago y
+PayPal tienen sus propios paneles, y una transferencia TRC20 está en la blockchain
+para siempre. **Lo que no tiene registro en ningún lado es lo que hizo una persona
+de VIVE**: pagarle a un coach, ejecutar un reembolso de USDT a mano, compensar un
+error.
+
+**La tabla cubre solo eso.** No cada escritura de webhook.
+
+Campos: **tipo** de movimiento · **qué reservas** abarca (un pago semanal cubre
+varias, y una compensación puede no corresponder a ninguna) · **monto y moneda** ·
+**tipo de cambio y su fuente**, si hubo conversión · **referencia externa** (hash o
+número de operación) · **quién lo ejecutó** · **cuándo**.
+
+### Por qué ahora, con cero volumen
+
+**Es lo único de toda esta lista que no se puede reconstruir después.** Una columna
+se agrega el día que se necesita; la historia de lo que se hizo, no. Empezarla hoy
+sale gratis y hace que el registro cubra la vida entera del negocio.
+
+Y es **append-only**, coherente con lo que el proyecto ya sostiene en todos lados:
+no se reescribe historia.
+
+### Por qué no las alternativas
+
+- **Dejarlo como está**: cada operación manual queda como un texto libre pegado a
+  una reserva.
+- **Columnas en `bookings`**: sirve mientras cada operación toque **una sola**
+  reserva. Un pago semanal cubre varias y una compensación puede no corresponder a
+  ninguna.
+
+<details>
+<summary>El análisis previo a la decisión</summary>
+
+## Planteo original
 
 **Son dos problemas y no hay que mezclarlos.**
 
@@ -680,6 +742,8 @@ se pagó si un coach reclama en noviembre.
 📝 **El riesgo de (B) es más chico de lo que suena**: VIVE tiene dólares, cuyo
 valor en pesos se mueve *con* la referencia. No hay exposición al nivel del tipo
 de cambio, solo a la **brecha**.
+
+</details>
 
 ---
 
