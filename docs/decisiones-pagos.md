@@ -19,7 +19,7 @@
 | ~~D4~~ | ~~Alcance de la regla espejo~~ | — | ✅ **DECIDIDA 25/08: espejo estricto, por reserva** |
 | ~~D5~~ | ~~Mínimo por riel~~ | — | ✅ **DECIDIDA 25/08: el costo de red lo absorbe VIVE; sin mínimo** |
 | ~~D6~~ | ~~Coach sin Mercado Pago conectado~~ | — | ✅ **DECIDIDA 25/08: publicar exige al menos un riel completo** |
-| D7 | USDT: ofrecerlo o no | Runbook de reembolso | Antes de que haya volumen |
+| ~~D7~~ | ~~USDT: ofrecerlo o no~~ | — | ✅ **DECIDIDA 25/08: se ofrece, con dos cosas antes** |
 | D8 | Criterio y registro del tipo de cambio | Nadie | El registro es incondicional |
 | D9 | Multiparty: pedirlo o no | Nadie | Es lento, conviene empezar |
 | D10 | Contracargos | Nadie | Invisible hoy |
@@ -581,7 +581,61 @@ era opcional — el comentario del código ya lo anticipaba.
 
 ---
 
-## D7 · USDT: ¿se ofrece?
+## D7 · USDT — ✅ DECIDIDA: **se ofrece** (25/08/2026)
+
+> **Decisión de Andre, 25/08/2026.** El mecanismo de reembolso **ya está
+> construido casi entero**; lo que falta no es mecanismo sino dos cosas chicas.
+
+### Lo que ya existe (más de lo que se creía)
+
+- **`RefundAddressScreen`**: el usuario carga **su propia dirección** de devolución
+  y la red, con policy propia en la base para que solo toque la suya. `SessionsScreen`
+  detecta el reembolso pendiente sin dirección y se la pide solo.
+- **`listUsdtRefunds`**: el panel lista los pendientes **con esa dirección**.
+- **`mark_usdt_refunded`** exige el **hash de la transacción**, validado como 64
+  hexadecimales, con el comentario explícito de que sin eso el registro dejaría de
+  ser una prueba.
+
+📝 **Eso cubre la preocupación de estafa mejor que un banco.** No se devuelve a la
+dirección remitente —que si pagó desde un exchange **no es suya**, y devolver ahí
+pierde los fondos— sino a la que el usuario declara. Y "nunca me lo mandaron" es
+refutable con el hash: una transacción TRC20 es pública y verificable para siempre.
+
+### 🔴 Lo que falta, y son dos cosas
+
+**1. Nada avisa que hay un reembolso esperando.** `listUsdtRefunds` es una consulta
+que hay que ir a buscar: si nadie abre el panel, el reembolso se queda ahí. Hace
+falta un aviso cuando uno lleva más de X horas pendiente. Es lo que convierte "hay
+que acordarse" en "te enterás".
+
+**2. Los T&C describen un mecanismo que en este riel no existe.** §9.1 y §9.2
+prometen que el reembolso *"se procesa de forma automática a través del procesador
+de pagos"*. En Mercado Pago y PayPal es cierto —hay un cron—; **en USDT no hay
+ningún procesador: es una persona haciendo una transferencia a mano**. Es la misma
+clase de brecha entre legales y código que el proyecto viene cazando, y §9 es la
+cláusula que un usuario señalaría. **A la lista del abogado, junto con la pregunta
+de las 24 horas.**
+
+⚠️ **Verificar antes de ofrecerlo:** que la pantalla valide la dirección **contra la
+red elegida**, como ya hace `walletError` con la wallet del coach. Sin eso, alguien
+puede pegar una dirección de Ethereum y elegir Tron — y ahí los fondos se pierden y
+no rebotan.
+
+### Sobre "que VIVE pague y el coach quede en negativo"
+
+Propuesta de Andre durante la discusión. **Para las cancelaciones no hace falta: la
+plata todavía es de VIVE.** Al coach se le paga *después* de la sesión y las
+cancelaciones ocurren antes, así que cuando hay que devolver esos dólares siguen en
+la wallet. No hay nada que descontarle.
+
+📝 **Ese mecanismo sí va a hacer falta en D10**, para un contracargo posterior al
+pago al coach — que en USDT no existe, pero en PayPal y Mercado Pago tienen ventana
+de meses.
+
+<details>
+<summary>El análisis previo a la decisión</summary>
+
+## Planteo original
 
 **No es un problema de fragilidad ni de costo.** La conciliación por centavos
 tiene índice único y reintenta (el modo de falla es "probá de nuevo", no un cobro
@@ -601,6 +655,8 @@ de cancelación, con el reembolso por expiración y con el derecho de revocació
 **La pregunta que decide entre (a) y (b):** ¿puede una persona con nombre y
 apellido devolver a mano dentro del plazo que prometen los legales, cuando haya
 diez por semana en vez de una?
+
+</details>
 
 ---
 
