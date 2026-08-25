@@ -113,10 +113,12 @@
 
 ### 2 · ✅ HECHO (25/08) — D4 + D5 + D6, y D3 del paso 3
 
-### 3 · Después, en este orden
+### 3 · ✅ HECHO (25/08) — D10, D2, D8 y el bug de la sala
 
-- **D10 — contracargos**: distinguir contracargo de reembolso, suscribir los eventos de disputa de PayPal, cruzar contra `paid_out_at`, y 🔴 **guardar la asistencia que Daily ya produce** — hoy no hay ninguna prueba de que la sesión ocurrió.
-- **D2** (columnas de país observado + procedencia) y **D8** (tabla append-only de operaciones). Ninguna bloquea a nadie.
+- **D10 completa**, las dos mitades. `'contracargo'` como estado propio (antes era indistinguible de un reembolso voluntario), las disputas de PayPal llegando por primera vez —7 eventos suscritos—, la vista `reversiones_despues_de_pagar` y `session-attendance` guardando la prueba de que la sesión ocurrió. ⚠️ Esa prueba **todavía no dice quién entró**: `create-meeting-room` no emite tokens con identidad.
+- **D2** — se guarda la zona horaria observada, su procedencia y cuándo. 🔴 **Ni el país ni `es_internacional`**: los dos son conclusiones, y el criterio no está confirmado. El criterio vive **solo** en `clasificacion_de_operaciones`. 📝 Apareció una trampa: `deviceTz()` cae a Argentina cuando no puede leer la zona —correcto para mostrar horarios— así que usarla acá habría registrado un país que nadie observó. Hay una función aparte y un test que protege ese invariante.
+- **D8** — 🔴 **la decisión partía de una premisa falsa mía**: dije que no había ningún registro de operaciones y `admin_audit_log` ya existía, append-only y con actor. Lo que faltaba era que `mark_coach_paid` **no guardaba cuánto se transfirió**. Salió sin tabla nueva: una forma acordada para los montos y una vista.
+- ✅ **El bug de la tarjeta de la sala, arreglado** el mismo día en que mordió dos veces.
 
 ### 4 · Siguen abiertas
 
