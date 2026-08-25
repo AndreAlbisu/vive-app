@@ -138,6 +138,14 @@ criptomoneda (USDT) no hay procesador**: lo ejecuta una persona haciendo una
 transferencia a mano. ¿Alcanza con aclararlo en la cláusula, o hay que comprometer
 un plazo máximo? ¿Y qué plazo sería defendible?
 
+**A.9 — Precio en dólares a un consumidor en Argentina.**
+Un profesional puede fijar **dos precios**: uno en pesos y uno en dólares. Y puede
+aceptar cobrar por medios en dólares (PayPal, USDT). **Nada impide que alguien que
+está en Argentina elija pagar el precio en dólares** — puede ser lo que prefiera.
+¿Hay algún problema con ofrecerle a un consumidor local un precio expresado en
+dólares, si el precio en pesos también está disponible? ¿Cambia si el profesional
+solo aceptó medios en dólares y entonces el precio en pesos no se le ofrece?
+
 ### B. No bloquean, pero quiero tu lectura
 
 **B.1 — Limitación de responsabilidad e indemnidad (T&C §18–19).**

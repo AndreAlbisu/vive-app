@@ -51,7 +51,7 @@ coach, no la del cliente.** Esto corrige lo que este documento afirmaba antes.
 | ~~D8~~ | ~~Criterio y registro del tipo de cambio~~ | — | ✅ **DECIDIDA 25/08: tabla append-only de operaciones** |
 | ~~D9~~ | ~~Multiparty: pedirlo o no~~ | — | ✅ **DECIDIDA 25/08: se pide, sin desarmar nada** |
 | ~~D10~~ | ~~Contracargos~~ | — | ✅ **DECIDIDA 25/08: niveles 1 y 2 ahora** |
-| D11 | Filtro por ubicación en el checkout | D2 | Decisión de producto: arbitraje y plata ajena |
+| ~~D11~~ | ~~Filtro por ubicación~~ | — | ✅ **DECIDIDA 25/08: NO se filtra. El país solo etiqueta** |
 | **D12** | **Dirección fiscal del coach** | **Nadie** | 🔴 **El dato que VIVE necesita para SU facturación** |
 
 ---
@@ -983,7 +983,48 @@ pero hay que confirmar el tratamiento del platform fee.
 
 ---
 
-## D11 · Filtro por ubicación en el checkout
+## D11 · Filtro por ubicación — ✅ DECIDIDA: **no se filtra** (25/08/2026)
+
+> **Decisión de Andre, 25/08/2026: la ubicación de quien reserva NO gatilla nada.**
+> Lo que se ofrece son **los rieles que el coach acepta**, y punto. El país se
+> observa y se guarda (D2) **solo para la etiqueta fiscal**.
+
+**La pregunta se disolvió en vez de resolverse.** Se venía discutiendo si mostrar
+los rieles del exterior solo a quien está afuera. Pero el país nunca fue lo que
+importaba: **puede haber argentinos que quieran pagar en USDT, y coaches argentinos
+que solo quieran cobrar en USDT.** Filtrar por ubicación les cerraría la puerta a
+los dos por una razón que no es la suya.
+
+**Y no rompe nada de lo decidido:**
+
+- **La regla espejo se cumple igual.** Un argentino paga en USDT, VIVE recibe USDT y
+  le paga al coach en USDT. Sin pozo, sin conversión.
+- **La clasificación fiscal no se contradice.** Un argentino pagando USDT es una
+  operación de **mercado interno pagada por USDT**. Las dos cosas conviven porque
+  D2 desacopló la etiqueta del riel — que era todo el punto.
+- **La comisión tampoco.** Con D3 revisada la escalera es **por riel**, así que esa
+  sesión se cobra al 25% porque USDT cuesta más que el split de Mercado Pago. Es
+  correcto, y el coach lo aceptó al marcar el riel.
+
+### Lo que se deja de considerar un problema
+
+**El arbitraje entre los dos precios.** El precio en pesos y el precio en dólares
+son dos números que el coach fija por separado; si divergen, es **su decisión
+comercial**, no una fuga. La respuesta no es un filtro sino **mostrarle la
+equivalencia cuando los carga**, para que la divergencia le sea visible a él. Es un
+detalle de pantalla.
+
+### 🔴 Lo que queda, y es una pregunta legal, no de producto
+
+**¿Se le puede cobrar en dólares a un consumidor en Argentina?** No por lo fiscal
+—eso ya lo resuelve la clasificación por país— sino por **defensa del consumidor**:
+la normativa argentina tiene expectativas sobre mostrar precios en pesos a
+consumidores locales. **A la lista del abogado (A.9).**
+
+<details>
+<summary>El planteo original</summary>
+
+## Antes de la decisión
 
 ⚠️ **Esto va DESPUÉS de D2 y D3, y el orden importa.** El filtro **enmascara** el
 acoplamiento en vez de arreglarlo: si un argentino nunca ve PayPal, la comisión
@@ -1003,6 +1044,8 @@ ya no es urgente.
 |---|---|---|
 | **(a) Rieles internacionales solo a usuarios fuera de Argentina** | Cierra el arbitraje entre dos precios independientes del mismo coach | Hay que decidir de dónde sale la ubicación, y un viajero puede quedar del lado equivocado |
 | **(b) Como está** | — | Un argentino elige entre el precio en pesos y el precio en dólares, y se queda con el que le conviene |
+
+</details>
 
 ---
 
