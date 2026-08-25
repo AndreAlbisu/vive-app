@@ -14,7 +14,7 @@
 | # | Decisión | Espera a | Urgencia |
 |---|---|---|---|
 | ~~D1~~ | ~~Principal o agente~~ | — | ✅ **DECIDIDA 25/08: AGENTE** |
-| D2 | Cómo se clasifica una operación como internacional | Nadie | Precondición de todo lo demás |
+| ~~D2~~ | ~~Cómo se clasifica una operación como internacional~~ | — | ✅ **DECIDIDA 25/08: país observado en la reserva** |
 | D3 | Si las sesiones internacionales avanzan el contador de tramos | Nadie | Cobra mal hoy |
 | D4 | Alcance de la regla espejo | Nadie | Elimina cuatro problemas de una |
 | D5 | Mínimo por riel (solo si D4 = por reserva) | D4 | Antes de escribir el agrupamiento |
@@ -118,7 +118,66 @@ es exactamente lo que hay que preguntar.**
 
 ---
 
-## D2 · ¿Cómo se clasifica una operación como internacional?
+## D2 · ¿Cómo se clasifica una operación como internacional? — ✅ DECIDIDA (25/08/2026)
+
+> **Decisión de Andre, 25/08/2026: por el PAÍS OBSERVADO al momento de reservar**,
+> guardando la procedencia del dato, y con **nulo** —nunca `AR`— cuando no hay
+> observación.
+>
+> **Por qué ahora y no después:** con D1 (agente) lo que VIVE declara es su
+> comisión, y **la comisión depende de si la operación es internacional**. Una
+> clasificación mal hecha no es solo una etiqueta: es facturación mal hecha.
+>
+> **Se aceptó que es un proxy.** El servicio se aprovecha en la sesión, no en la
+> reserva, y quien reserva puede viajar en el medio. Se elige igual porque la
+> alternativa —observar en la sesión— exige capturar ubicación durante una sesión
+> de salud mental: dato sensible bajo la 25.326 que habría que declarar en una
+> política de privacidad **que todavía tiene placeholders esperando al abogado**.
+> Sumar una recolección nueva a un documento que no existe es garantizar que no
+> coincidan. Si el contador dice que hace falta, se agrega después, con el
+> criterio conocido y el texto legal escrito.
+
+### Las dos reglas que van pegadas a la decisión
+
+🔴 **1. Guardá observaciones, derivá la clasificación. Nunca persistas
+`es_internacional` como si fuera un hecho.**
+
+Se guarda **qué país se observó**, **de dónde salió el dato** (locale del
+dispositivo, IP, declarado) y **cuándo**. La clasificación se calcula al
+consultarla.
+
+El motivo es directamente D1: la respuesta del contador **puede definir el
+criterio distinto** de como se asume hoy. Con un booleano guardado, aplicar el
+criterio nuevo obliga a reescribir historia; con observaciones, se vuelve a
+derivar y no se toca ninguna fila. Guardar la procedencia importa tanto como el
+valor: locale, IP y declarado tienen confiabilidades distintas, y en dos años esa
+diferencia va a pesar más que el país.
+
+🔴 **2. El default es NULO, nunca `AR`.** La derivación trata el nulo como **"sin
+clasificar"**, no como "local". Un default silencioso es indistinguible de un dato
+real a los seis meses, que es exactamente lo que guardar la procedencia intenta
+evitar. **Como todas las reservas internacionales que existen son de prueba, la
+salida limpia es borrarlas** en vez de backfillear nada.
+
+📝 Precedente de la familia de errores que esto evita: el `?? 20` de
+`platform_fee_pct` en `lib/admin.ts`, documentado como "no debería activarse
+nunca". Así empiezan.
+
+### Cómo se relaciona con la comisión
+
+Son cosas con vidas distintas y la tentación va a ser unificarlas:
+
+- **La observación** se guarda (hecho, inmutable).
+- **La clasificación** se deriva de la observación (puede cambiar si cambia el
+  criterio).
+- **La comisión se SELLA en la reserva** — se decide una vez, con la clasificación
+  vigente en ese momento, y no se recalcula nunca. Derivarla al consultarla haría
+  que un cambio de criterio moviera retroactivamente lo ya cobrado.
+
+<details>
+<summary>El análisis previo a la decisión</summary>
+
+## Comparación original
 
 **Hoy la clasifica el RIEL, y el riel lo elige el usuario.** Un argentino que
 elige PayPal genera una operación que parece exportación —dólares, riel
@@ -146,6 +205,8 @@ dejarlo **nulo** y que la derivación trate el nulo como "sin clasificar", nunca
 como "local". Un default silencioso es indistinguible de un dato real a los seis
 meses. Como todas las reservas internacionales existentes son de prueba, la
 alternativa limpia es **borrarlas**.
+
+</details>
 
 ---
 
