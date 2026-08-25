@@ -13,7 +13,7 @@
 
 | # | Decisión | Espera a | Urgencia |
 |---|---|---|---|
-| D1 | Principal o agente | **Nadie** (la toma Andre; el contador la confirma) | Destraba D2, D6 y el documento del coach |
+| ~~D1~~ | ~~Principal o agente~~ | — | ✅ **DECIDIDA 25/08: AGENTE** |
 | D2 | Cómo se clasifica una operación como internacional | Nadie | Precondición de todo lo demás |
 | D3 | Si las sesiones internacionales avanzan el contador de tramos | Nadie | Cobra mal hoy |
 | D4 | Alcance de la regla espejo | Nadie | Elimina cuatro problemas de una |
@@ -27,7 +27,63 @@
 
 ---
 
-## D1 · ¿VIVE es principal o agente?
+## D1 · ¿VIVE es principal o agente? — ✅ DECIDIDA: **AGENTE** (25/08/2026)
+
+> **Decisión de Andre, 25/08/2026.** Y no fue elegir entre dos opciones abiertas:
+> **los T&C ya dicen agente en cuatro cláusulas**, así que principal habría
+> significado reescribir el encuadre central de un documento que los usuarios ya
+> aceptan.
+>
+> - **§4.1** — "Vita es una plataforma tecnológica de intermediación… **no presta
+>   por sí misma** servicios de coaching, psicología, nutrición ni ningún servicio
+>   de salud".
+> - **§4.2** — "La relación contractual por la Sesión se establece entre el
+>   Cliente y el Profesional. **Vita no es parte de esa relación**, más allá de
+>   facilitar la conexión, la agenda y —cuando corresponda— el procesamiento del
+>   pago".
+> - **§8.5** — "Vita **no emite comprobantes por la Sesión** … sino únicamente por
+>   su comisión".
+> - **§18.1** — no responde por "la conducta, idoneidad, cumplimiento o
+>   prestaciones de los Profesionales".
+>
+> **Lo que se evita:** ser el prestador de sesiones de salud mental, y que el
+> ingreso declarable pase a ser el **ticket completo** — VIVE es Monotributo
+> (§8.4), así que bajo principal el tope de categoría se consumiría cuatro o
+> cinco veces más rápido que facturando solo la comisión.
+>
+> **Lo que se asume:** en el riel internacional VIVE recibe el 100% del ticket en
+> su cuenta, y bajo agente eso **no es ingreso: es plata de terceros**.
+> Contablemente un pasivo, con su propia superficie regulatoria. 🔴 **Eso convierte
+> la regla espejo (D4) y multiparty (D9) en estructurales y no en optimizaciones:
+> son las dos formas de reducir cuánta plata ajena se tiene y por cuánto tiempo.**
+
+### Trabajo que se desprende de la decisión
+
+1. **Reescribir el razonamiento de la sesión 101** ("cobra Vita para tener un solo
+   circuito"). Bajo agente, VIVE cobra **por cuenta y orden**. El motivo real es
+   más simple y alcanza: Mercado Pago no procesa tarjetas emitidas fuera del país.
+2. **Corregir el comentario de `screens/CoachProfileScreen.tsx:313`** — *"él nos
+   factura a nosotros en vez de al usuario"* es la formulación de **principal**, y
+   contradice directamente §8.5.
+3. **Revisar la promesa del documento del coach**: "cobrando VIVE, ese circuito es
+   uno solo" (o sea, vos no exportás). Si el criterio de exportación es dónde se
+   aprovecha el servicio, bajo agente esa promesa es probablemente falsa. La
+   sección ya está bloqueada esperando al contador, así que **no se mandó a nadie**.
+4. 🔴 **Para el abogado: §9.3 (garantía de primera sesión) al lado de §4.1.** VIVE
+   ofrece un reintegro por una prestación que §4.1 dice que no presta. Es
+   defendible como garantía comercial, pero es el hecho más fuerte que un reclamo
+   podría usar para argumentar solidaridad en la cadena. Que las vea juntas.
+
+### Lo que esta decisión NO decide
+
+No obliga a cobrar directo: un agente puede cobrar por cuenta y orden, que es lo
+que se hace hoy. Lo que sí hace es **quitar la justificación que se venía dando**
+para cobrar.
+
+<details>
+<summary>El análisis previo a la decisión</summary>
+
+## Comparación original
 
 **Qué se decide:** si VIVE le vende la sesión al usuario (y el coach le vende a
 VIVE), o si el coach es el vendedor y VIVE cobra una comisión por intermediar.
@@ -57,6 +113,8 @@ puede emitir en moneda extranjera, no suma al tope del monotributo, y desde la
 Com. A 8330 del BCRA se puede cobrar del exterior sin límite y sin pesificar. El
 costo real para el coach sería habilitar un punto de venta E. **Sin verificar —
 es exactamente lo que hay que preguntar.**
+
+</details>
 
 ---
 
