@@ -15,7 +15,7 @@
 |---|---|---|---|
 | ~~D1~~ | ~~Principal o agente~~ | — | ✅ **DECIDIDA 25/08: AGENTE** |
 | ~~D2~~ | ~~Cómo se clasifica una operación como internacional~~ | — | ✅ **DECIDIDA 25/08: país observado en la reserva** |
-| D3 | Si las sesiones internacionales avanzan el contador de tramos | Nadie | Cobra mal hoy |
+| ~~D3~~ | ~~Si las internacionales avanzan el contador~~ | — | ✅ **DECIDIDA 25/08: escalera también en internacional, contador único** |
 | D4 | Alcance de la regla espejo | Nadie | Elimina cuatro problemas de una |
 | D5 | Mínimo por riel (solo si D4 = por reserva) | D4 | Antes de escribir el agrupamiento |
 | D6 | Coach sin Mercado Pago conectado | Nadie | Agujero al lanzar |
@@ -210,7 +210,91 @@ alternativa limpia es **borrarlas**.
 
 ---
 
-## D3 · ¿Una sesión internacional avanza el contador de tramos?
+## D3 · La escalera — ✅ DECIDIDA (25/08/2026)
+
+> **Decisión de Andre, 25/08/2026.** La pregunta original era si las sesiones
+> internacionales debían **dejar de avanzar** el contador. La respuesta terminó
+> siendo otra y mejor: **el internacional también tiene escalera, y el contador
+> del par es uno solo.**
+
+| | Primera del par | Recurrentes |
+|---|---|---|
+| **Local** | 20% | 15% |
+| **Internacional** | 25% | **20%** |
+
+**El contador cuenta TODAS las sesiones cumplidas del par, sin mirar el régimen.**
+Cada régimen lee su propia tarifa en la posición que le toca.
+
+### Por qué este modelo y no el filtro
+
+🔴 **Cambia el RAZONAMIENTO de la escalera, no solo los números.** El comentario de
+`_shared/commission.ts` la justificaba diciendo que VIVE "deja de aportar" después
+de la presentación —y de ahí salía que el internacional fuera plano, porque ahí
+VIVE aporta siempre—. **La justificación real es otra**: el 20% recupera el
+**costo de adquisición** del cliente y la baja al 15% es **retención**. Eso aplica
+igual en los dos regímenes: en el exterior también hubo un costo de adquirir a esa
+persona, y también hay que retenerla.
+
+⚠️ **Esto hay que dejarlo escrito o alguien lo revierte.** El comentario viejo
+argumenta explícitamente a favor de la tarifa plana; quien lo lea sin este
+contexto va a pensar que la escalera internacional es un error.
+
+**Tres cosas que resuelve de una:**
+
+1. **El cruce de rieles deja de ser un problema.** El caso "paga primero con PayPal
+   y después con Mercado Pago" —que es el público del producto: alguien que toma
+   una sesión desde Madrid y después otra desde Buenos Aires— se resuelve solo. La
+   segunda es recurrente, se cobra 15% porque ocurrió en Argentina, y no hay regla
+   especial.
+2. **Desaparece el borde de la prima doble.** Nadie paga la adquisición dos veces,
+   porque la prima es la **posición del par**, no el régimen.
+3. **`countsAsCompletedSession` no necesita filtrar por `payment_provider`.** Queda
+   como está. La decisión simplifica el código en vez de complicarlo.
+
+**Y un argumento que no es de costos:** la escalera es también **anti-fuga**, una
+de las cinco medidas de esa estrategia. Un par internacional recurrente pagando 25%
+para siempre, contra uno local pagando 15%, es exactamente donde el incentivo a
+irse de la plataforma es más fuerte.
+
+### 🔴 Dependencia: el 20% recurrente solo cierra bajo la regla espejo (D4)
+
+El 25% se fijó para que **la peor combinación cerrara**: sobre USD 60 el neto iba
+de ~8,56 (cobrado por PayPal, pagado en USDT) a ~13,20, y con 20% esa peor caía a
+~5,60 — 9,3% del ticket.
+
+**La regla espejo elimina las combinaciones cruzadas**, y con eso el 20% recurrente
+deja más margen que el que tenía la peor combinación de hoy:
+
+- **PayPal → PayPal**, USD 60 al 20%: se cobra 12, PayPal se lleva 3,54 al procesar
+  y 0,96 al pagar → quedan **~7,50** (12,5% del ticket).
+- **USDT → USDT** al 20%: quedan **12** (el costo de red lo paga el coach).
+
+⚠️ **La cuenta usa las cifras del propio comentario y la tarifa verificada de
+PayPal, no una medición.** La medición de USD 50 es lo que la confirma.
+
+⚠️ **Por lo tanto: no shippear la escalera internacional antes que D4.** Con las
+combinaciones cruzadas todavía posibles, un par recurrente cobrado por PayPal y
+pagado en USDT dejaría ~9,3%.
+
+### Trabajo que se desprende
+
+1. **Partir `COMMISSION_INTERNATIONAL`** en primera y recurrente (25 / 20).
+2. **`paypal-create-payment` y `usdt-create-payment` tienen que consultar el
+   contador del par**, como ya hace `mp-create-payment`, en vez de escribir una
+   constante plana.
+3. **Actualizar el comentario de `_shared/commission.ts`** con el razonamiento
+   nuevo (adquisición + retención + anti-fuga), reemplazando el de "deja de
+   aportar".
+4. **Corregir el documento del coach**: hoy dice *"25%, siempre, sin tramos. Sobre
+   un precio de USD 60 cobrás USD 45"*. 📝 No se le mandó a nadie todavía —está
+   bloqueado esperando al contador—, así que no hay ninguna promesa que romper.
+5. **Verificar cómo interactúa con la promo fundador** (`COMMISSION_PROMO = 0`
+   hasta `FOUNDER_PROMO_UNTIL`): tiene que seguir ganándole a las dos escaleras.
+
+<details>
+<summary>El análisis previo a la decisión</summary>
+
+## Planteo original
 
 **Hoy sí.** `countsAsCompletedSession` no filtra por `payment_provider`, así que
 una sesión pagada por PayPal o USDT hace que **la próxima sesión local de ese par
@@ -238,6 +322,8 @@ cobró 25%.
 
 ⚠️ El escenario es el público del producto: alguien toma una sesión desde Madrid,
 vuelve a Buenos Aires y reserva con el mismo coach.
+
+</details>
 
 ---
 
