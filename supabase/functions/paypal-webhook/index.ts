@@ -153,7 +153,23 @@ serve(async (req) => {
   // cualquier cosa distinta de 2xx lo hace reintentar, y eso fue lo que en MP
   // generó 8 reintentos por un solo pago. Descartar sin verificar es seguro
   // porque estas ramas no leen ni escriben nada.
-  const RELEVANTES = ['CHECKOUT.ORDER.APPROVED', 'PAYMENT.CAPTURE.COMPLETED']
+  // ⚠️ Suscribir un evento acá NO alcanza: también hay que marcarlo en el webhook
+  // registrado en el dashboard de PayPal, o simplemente no llega. Hasta el
+  // 25/08/2026 el registrado en producción tenía suscritos exactamente los dos
+  // primeros, así que **una disputa debitaba el saldo y nada en el sistema se
+  // enteraba**.
+  const RELEVANTES = [
+    'CHECKOUT.ORDER.APPROVED',
+    'PAYMENT.CAPTURE.COMPLETED',
+    // Una disputa abierta todavía NO movió plata: es el aviso de que puede
+    // moverse. Por eso no toca `payment_status`.
+    'CUSTOMER.DISPUTE.CREATED',
+    'CUSTOMER.DISPUTE.UPDATED',
+    'CUSTOMER.DISPUTE.RESOLVED',
+    // La plata efectivamente volvió por decisión del comprador y su banco.
+    'PAYMENT.CAPTURE.REVERSED',
+    'PAYMENT.CAPTURE.DENIED',
+  ]
   if (!RELEVANTES.includes(tipo)) {
     return new Response('ignored', { status: 200 })
   }
@@ -168,6 +184,89 @@ serve(async (req) => {
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
   const recurso = evento.resource ?? {}
+
+  // ── 0. Disputas y reversiones ─────────────────────────────────────────────
+  //
+  // 🔴 El mapeo a nuestra reserva es best-effort A PROPÓSITO. El evento de
+  // disputa trae las transacciones disputadas y de ahí se saca el id de la
+  // captura, que es lo que guardamos en `payment_id`. Si esa forma cambia o no
+  // viene, **NO se adivina**: se loguea fuerte y se contesta 200. Marcar la
+  // reserva equivocada como disputada es peor que no marcar ninguna, porque
+  // dispara una investigación sobre alguien que no tuvo nada que ver.
+  if (tipo.startsWith('CUSTOMER.DISPUTE.')) {
+    const capturas: string[] = (recurso.disputed_transactions ?? [])
+      .map((t: { seller_transaction_id?: string }) => t?.seller_transaction_id)
+      .filter(Boolean)
+    const motivo = recurso.reason ?? recurso.dispute_state ?? tipo
+    const estado = recurso.status ?? ''
+
+    if (!capturas.length) {
+      console.error('[paypal-webhook] 🔴 DISPUTA sin transacción identificable:', JSON.stringify(recurso).slice(0, 800))
+      return new Response('dispute without capture', { status: 200 })
+    }
+
+    for (const captureId of capturas) {
+      const { data: b } = await admin
+        .from('bookings')
+        .select('id, paid_out_at, payout_reference')
+        .eq('payment_id', captureId)
+        .eq('payment_provider', 'paypal')
+        .maybeSingle()
+
+      if (!b) {
+        console.error('[paypal-webhook] 🔴 DISPUTA sobre una captura desconocida:', captureId, motivo)
+        continue
+      }
+
+      // Se marca la disputa; `payment_status` NO se toca. La plata sigue siendo
+      // nuestra hasta que PayPal resuelva, y adelantarse a marcarla como perdida
+      // rompería la conciliación si la disputa se gana.
+      await admin
+        .from('bookings')
+        .update({ disputed_at: new Date().toISOString(), dispute_reason: `${motivo} (${estado})`.trim() })
+        .eq('id', b.id)
+
+      console.error(
+        `[paypal-webhook] 🔴 DISPUTA ${estado || 'abierta'} sobre booking ${b.id} — motivo: ${motivo}.` +
+        (b.paid_out_at
+          ? ` ⚠️ La sesión YA se le transfirió al coach el ${b.paid_out_at} (ref ${b.payout_reference ?? 's/ref'}).`
+          : ''),
+      )
+    }
+    return new Response('dispute recorded', { status: 200 })
+  }
+
+  // La plata volvió por decisión del comprador. Acá sí cambia el estado del pago.
+  if (tipo === 'PAYMENT.CAPTURE.REVERSED' || tipo === 'PAYMENT.CAPTURE.DENIED') {
+    const captureId: string = recurso.id ?? ''
+    if (!captureId) return new Response('no capture id', { status: 200 })
+
+    const { data: b } = await admin
+      .from('bookings')
+      .select('id, paid_out_at, payout_reference')
+      .eq('payment_id', captureId)
+      .eq('payment_provider', 'paypal')
+      .maybeSingle()
+
+    if (!b) {
+      console.error('[paypal-webhook] 🔴 REVERSIÓN sobre una captura desconocida:', captureId)
+      return new Response('unknown capture', { status: 200 })
+    }
+
+    await admin
+      .from('bookings')
+      .update({ payment_status: 'contracargo', refunded_at: new Date().toISOString() })
+      .eq('id', b.id)
+      .neq('payment_status', 'contracargo')
+
+    console.error(
+      `[paypal-webhook] 🔴 CONTRACARGO en booking ${b.id} (${tipo}).` +
+      (b.paid_out_at
+        ? ` ⚠️ REVERSIÓN SOBRE SESIÓN YA PAGADA AL COACH el ${b.paid_out_at} (ref ${b.payout_reference ?? 's/ref'}) — es plata que hay que recuperar o dar por perdida.`
+        : ''),
+    )
+    return new Response('chargeback recorded', { status: 200 })
+  }
 
   // ── 1. Aprobada pero sin capturar → capturar ──────────────────────────────
   if (tipo === 'CHECKOUT.ORDER.APPROVED') {

@@ -493,7 +493,10 @@ export async function listCommissionReport(): Promise<CommissionReport> {
   const { data, error } = await supabase
     .from('bookings')
     .select('scheduled_date, coach_id, coach_name, amount, platform_fee_pct, currency, payment_provider, payment_status')
-    .in('payment_status', ['aprobado', 'reembolsado'])
+    // 'contracargo' entra igual que 'reembolsado': los dos revierten la comisión,
+    // y dejarlo afuera haría que una sesión disputada desapareciera del material
+    // que se le lleva al contador.
+    .in('payment_status', ['aprobado', 'reembolsado', 'contracargo'])
     .order('scheduled_date', { ascending: false })
     .limit(2000);
 
@@ -506,7 +509,9 @@ export async function listCommissionReport(): Promise<CommissionReport> {
   const cobradas = agruparComisiones(filas.filter(b => b.payment_status === 'aprobado'));
   return {
     cobradas,
-    reembolsadas: agruparComisiones(filas.filter(b => b.payment_status === 'reembolsado')),
+    reembolsadas: agruparComisiones(
+      filas.filter(b => b.payment_status === 'reembolsado' || b.payment_status === 'contracargo'),
+    ),
     totales: totalPorMoneda(cobradas),
     error: null,
   };
