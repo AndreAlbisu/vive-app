@@ -70,15 +70,31 @@ la sesión ocurre, esa plata todavía puede tener que volver — si se cancela c
 más de 24hs, al cliente se le devuelve todo. Pagando después de la sesión, siempre
 hay con qué devolver. Si pagáramos antes, un reembolso saldría de tu bolsillo.
 
-Cargás tus datos de cobro en **Perfil → Datos de cobro**, y elegís:
+Cargás tus datos de cobro en **Perfil → Datos de cobro**, y ahí marcás **por qué
+medios aceptás cobrar**:
 
-- **Transferencia bancaria** — tu CBU. Cobrás en pesos. **Sin costo.**
-- **PayPal** — el mail de tu cuenta. Recibís **dólares**, y **sin costo para vos**: la
-  comisión del envío la pagamos nosotros.
-- **USDT** — tu dirección y la red (TRC20, ERC20 o POLYGON). Cobrás en dólares, con un
-  **costo de red de USD 1,50 por transferencia** que se descuenta de tu pago.
+- **PayPal** — el mail de tu cuenta.
+- **USDT** — tu dirección y la red (TRC20, ERC20 o POLYGON).
 
-⚠️ **Si elegís PayPal, entendé qué pasa después.** Los dólares te quedan como saldo en
+Podés marcar uno o los dos. **Los dos te pagan en dólares y ninguno te descuenta
+nada**: el costo del envío lo pagamos nosotros.
+
+⚠️ **No es "elegí cómo querés cobrar": es "decí cómo aceptás cobrar".** A quien te
+reserva desde afuera **se le ofrecen solo los medios que vos marcaste**, porque te
+pagamos por el mismo camino por el que nos pagaron. Si marcás los dos, te reserva
+más gente; si marcás uno, te llega todo por ahí.
+
+**Y si no marcás ninguno, no recibís sesiones del exterior.** No es un castigo: es
+que no tendríamos cómo pagarte, y preferimos no venderte a alguien antes que
+cobrarle y descubrirlo después.
+
+📝 **¿Y si querés pesos?** Los dos medios te pagan dólares, así que los pasás vos.
+**Con PayPal es un trámite**: vinculás tu cuenta bancaria y tocás retirar; PayPal
+los convierte a pesos a su tipo de cambio, que es el mismo que conseguiríamos
+nosotros. **Con USDT tenés que venderlos vos**, así que necesitás saber hacerlo. Si
+tu plan es pasar todo a pesos, PayPal es el más simple de los dos.
+
+⚠️ **Si aceptás PayPal, entendé qué pasa después.** Los dólares te quedan como saldo en
 tu cuenta de PayPal. Si los dejás ahí, son dólares y siguen siendo dólares. Pero si los
 pasás a un banco argentino, **PayPal los convierte a pesos a su tipo de cambio** y la
 cuenta destino tiene que estar en pesos — los retiros a cuentas locales en dólares se
@@ -90,12 +106,7 @@ conversión.
 ⚠️ Y si el mail que cargás no tiene una cuenta de PayPal que pueda recibir pagos, el
 envío **rebota** y lo reintentamos. No se pierde nada — a diferencia de USDT.
 
-⚠️ El costo de USDT es **por transferencia y no por sesión**. Si en la semana hiciste cuatro
-sesiones, se descuenta una sola vez — así que pesa mucho más si hacés una sesión cada
-tanto que si hacés varias. Lo pagás vos y no VIVE porque es el costo de la forma de
-entrega que elegiste: mandar dólares por blockchain cuesta, transferir a un banco no.
-
-⚠️ **Si elegís USDT, revisá la red dos veces.** Una dirección de Ethereum es
+⚠️ **Si aceptás USDT, revisá la red dos veces.** Una dirección de Ethereum es
 válida como dirección, y si le mandás USDT por la red Tron **los fondos se
 pierden y no hay forma de recuperarlos** — no rebota como un CBU mal cargado.
 Por eso el primer pago lo hacemos de prueba, por un monto chico, antes de mandar
@@ -123,15 +134,18 @@ anticipación devuelve todo; después de esa hora, no.
 **¿Puedo cobrar distinto según el país?**
 No. Hay un solo precio en dólares para todas las sesiones del exterior.
 
-**¿Puedo atender del exterior sin aceptar USDT como forma de pago mía?**
-Sí. Que el cliente pague de una forma no te obliga a cobrar de esa forma: podés
-recibir por transferencia en pesos aunque el cliente haya pagado en dólares. Son
-dos cosas independientes — cómo paga él y cómo cobrás vos.
-
 **Quiero dólares pero no quiero saber nada con cripto. ¿Se puede?**
-Sí, elegí PayPal. Es la opción para eso: recibís dólares sin tocar una billetera
-ni una red. Leé arriba qué pasa cuando los quieras bajar a un banco argentino.
+Sí: marcá solo PayPal. Recibís dólares sin tocar una billetera ni una red, y a vos
+te reserva quien pueda pagar por ahí, que es la mayoría.
+
+**¿Por qué no puedo cobrar directo en pesos, como en Argentina?**
+Porque en el exterior no hay ningún medio que cobre en pesos: el cliente paga en
+dólares. Nosotros te pagamos por el mismo camino por el que nos pagaron, así que
+para llegar a pesos alguien tiene que convertir. Preferimos que lo hagas vos,
+cuando quieras y viendo el cambio, antes que hacerlo nosotros por vos y decidir por
+tu cuenta a qué cotización.
 
 **¿Qué pasa si no tengo cargados los datos de cobro?**
-La reserva no se puede armar. El sistema lo verifica antes de cobrarle al
-cliente, para no cobrarle a alguien y descubrir el problema el día de pagarte.
+No aparecés para quien busca desde afuera. El sistema lo verifica antes, para no
+mostrarte a alguien que después no va a poder reservarte — y sobre todo para no
+cobrarle a nadie y descubrir el problema el día de pagarte.

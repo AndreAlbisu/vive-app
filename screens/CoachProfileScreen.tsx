@@ -85,7 +85,6 @@ export default function CoachProfileScreen() {
   const [bioInput, setBioInput] = useState('');
   const [savingBio, setSavingBio] = useState(false);
   const [savingInstantMode, setSavingInstantMode] = useState(false);
-  const [savingInternational, setSavingInternational] = useState(false);
   const [savingAvailability, setSavingAvailability] = useState(false);
   const [coachId, setCoachId] = useState<string | null>(null);
   const [topics, setTopics] = useState<string[]>([]);
@@ -307,41 +306,14 @@ export default function CoachProfileScreen() {
     }
   }
 
-  // Sesiones con personas fuera de Argentina. No cambia los horarios del coach
-  // —atiende en las mismas franjas, el que se acomoda es el usuario— pero sí
-  // cambia el cobro: esas sesiones las cobra VIVE y se las transferimos, y él
-  // nos factura a nosotros en vez de al usuario.
-  async function toggleInternational(value: boolean) {
-    if (!user || savingInternational) return;
-    setProfile(prev => prev ? { ...prev, accepts_international: value } : prev);
-    setSavingInternational(true);
-
-    const { data, error } = await supabase
-      .from('coaches')
-      .update({ accepts_international: value })
-      .eq('profile_id', user.id)
-      .select('accepts_international');
-    setSavingInternational(false);
-
-    if (error || !data || data.length === 0) {
-      setProfile(prev => prev ? { ...prev, accepts_international: !value } : prev);
-      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
-      return;
-    }
-
-    // Al activar, mandarlo a cargar el dato de cobro: sin eso el opt-in no
-    // sirve de nada — no tendríamos cómo pagarle.
-    if (value) {
-      Alert.alert(
-        'Falta un dato',
-        'Para poder transferirte las sesiones del exterior necesitamos saber cómo querés cobrarlas.',
-        [
-          { text: 'Después', style: 'cancel' },
-          { text: 'Cargarlo ahora', onPress: () => router.push('/coach-datos-cobro') },
-        ],
-      );
-    }
-  }
+  // 🔴 Ya NO hay toggle de "sesiones del exterior". `accepts_international` pasó
+  // a ser una columna DERIVADA (`scripts/add-payout-rails.sql`): la mantiene un
+  // trigger a partir de tener un riel de cobro en dólares configurado y un precio
+  // en dólares cargado. El `update` desde la app está revocado a propósito.
+  //
+  // El motivo: como casilla podía contradecir a los datos — se podía activar sin
+  // precio en dólares, y entonces el catálogo lo anunciaba y la pantalla de pago
+  // no le podía cobrar. Derivándola, ese estado deja de existir.
 
   async function toggleAvailability(value: boolean) {
     if (!user || savingAvailability) return;
@@ -937,24 +909,29 @@ export default function CoachProfileScreen() {
 
         {/* ── Sesiones desde el exterior ────────────────────── */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Sesiones desde el exterior</Text>
-        <View style={s.toggleCard}>
+        {/* No es un interruptor: se activan solas cuando hay con qué cobrarlas.
+            Un estado que se puede prender sin tener cómo cobrar es un estado
+            roto — el catálogo lo anuncia y la pantalla de pago no puede. */}
+        <TouchableOpacity
+          style={s.toggleCard}
+          onPress={() => router.push('/coach-datos-cobro')}
+          activeOpacity={0.85}>
           <View style={s.toggleInfo}>
             <Text style={s.toggleTitle}>
               {profile?.accepts_international ? 'Activadas' : 'Desactivadas'}
             </Text>
             <Text style={s.toggleDesc}>
-              Atendé a argentinos que viven afuera. Tus horarios no cambian — seguís atendiendo en
-              las franjas que ya cargaste, el que se acomoda es el usuario.
+              {profile?.accepts_international
+                ? 'Atendé a personas que viven afuera. Tus horarios no cambian — seguís atendiendo en las franjas que ya cargaste, el que se acomoda es el usuario.'
+                : 'Se activan solas cuando cargues un precio en dólares y al menos un medio para cobrarlas. Tocá acá para configurarlo.'}
             </Text>
           </View>
-          <Switch
-            value={!!profile?.accepts_international}
-            onValueChange={toggleInternational}
-            disabled={savingInternational}
-            trackColor={{ false: 'rgba(135,131,92,0.28)', true: ViveColors.primary }}
-            thumbColor="#FFF8F0"
+          <MaterialCommunityIcons
+            name="chevron-right"
+            size={22}
+            color="rgba(135,131,92,0.6)"
           />
-        </View>
+        </TouchableOpacity>
 
         {profile?.accepts_international && (
           <>
@@ -965,8 +942,7 @@ export default function CoachProfileScreen() {
               <MaterialCommunityIcons name="information-outline" size={18} color={ViveColors.accent} />
               <Text style={s.commissionText}>
                 Estas sesiones <Text style={s.commissionStrong}>no te entran por Mercado Pago</Text>:
-                las cobra VIVE y te las transferimos cada semana, por sesiones ya realizadas. Nos
-                facturás a nosotros en vez de a la persona.
+                las cobra VIVE y te las transferimos cada semana, por sesiones ya realizadas.
               </Text>
             </View>
 

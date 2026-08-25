@@ -10,6 +10,17 @@
 // nunca es la frontera de seguridad. Si cambia una, cambia la otra.
 
 export type PayoutMethod = 'transferencia' | 'usdt' | 'paypal';
+
+/**
+ * Los rieles por los que el coach puede cobrar una sesión del exterior.
+ *
+ * 🔴 Son los mismos por los que se le puede COBRAR al cliente, y no es
+ * casualidad: es la **regla espejo** (D4). Cada reserva se paga por el riel por el
+ * que entró, así que un riel de cobro que no existe del lado del pago no tendría
+ * con qué financiarse. Por eso `transferencia` no está: no hay riel de entrada en
+ * pesos para el exterior que lo espeje.
+ */
+export type PayoutRail = 'paypal' | 'usdt';
 export type PayoutNetwork = 'TRC20' | 'ERC20' | 'POLYGON';
 
 /** CBU: 22 dígitos exactos. */
@@ -149,25 +160,26 @@ export function paypalPayoutCost(neto: number): number {
 }
 
 /**
- * El costo de entrega que se le DESCUENTA AL COACH, según el método que eligió.
+ * Lo que a VIVE le cuesta entregarle el pago al coach, por riel.
  *
- * Vive en su propia función porque el panel lo necesita por separado (para
- * mostrar "te corresponden X − Y de red") y `payoutAfterDeliveryCost` para
- * restarlo. Estaba duplicado en `lib/admin.ts` y las dos copias tenían que
- * acordarse de cambiar juntas.
+ * 🔴 **Al coach no se le descuenta nada** (decisión del 25/08/2026, D5). Antes se
+ * le descontaba el costo de red de USDT, con este argumento escrito acá mismo:
+ * "se lo descuenta a quien lo elige, pidió que le manden dólares por blockchain y
+ * controla la causa". **La regla espejo (D4) le sacó el piso a ese argumento**:
+ * elegir un riel dejó de ser una preferencia libre, porque define **qué clientes
+ * pueden pagarle**. Cobrarle por eso sería penalizarlo por una decisión que ya no
+ * es solo suya.
  *
- * · `transferencia` → 0. El archivo de lote del banco cuesta lo mismo con una
- *   fila que con doscientas.
- * · `usdt`          → USD 1,50 fijos, por envío.
- * · `paypal`        → 0 para el coach; el 2% lo absorbe VIVE (ver arriba).
+ * Existe para que el panel pueda mostrar el costo real de cada riel en vez de
+ * dejarlo invisible — sin esto no hay forma de comparar los rieles con números
+ * cuando haya que decidir.
+ *
+ * ⚠️ **El de USDT es el único que no escala con la facturación sino con la
+ * CANTIDAD DE COACHES**: es por pago y no por sesión, así que un coach de una
+ * sesión por semana cuesta lo mismo que uno de diez. Sobre la comisión de una
+ * sesión de USD 60 pesa 10%; sobre una de USD 20 —el mínimo— pesa 30%. Si algún
+ * día la mayoría cobra en USDT, hay que revisarlo.
  */
-export function deliveryCostFor(neto: number, method: PayoutMethod): number {
-  void neto;
-  return method === 'usdt' ? USDT_NETWORK_FEE_USD : 0;
-}
-
-/** Lo que hay que transferirle realmente a un profesional, descontado el costo
- *  de entrega del método que eligió. */
-export function payoutAfterDeliveryCost(neto: number, method: PayoutMethod): number {
-  return Math.round((neto - deliveryCostFor(neto, method)) * 100) / 100;
+export function platformDeliveryCost(neto: number, rail: PayoutRail): number {
+  return rail === 'usdt' ? USDT_NETWORK_FEE_USD : paypalPayoutCost(neto);
 }

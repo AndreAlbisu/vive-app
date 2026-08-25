@@ -1,4 +1,4 @@
-import { cbuError, walletError, normalizarCbu, coachNetFor, payoutAfterDeliveryCost, paypalEmailError, paypalPayoutCost, deliveryCostFor, USDT_NETWORK_FEE_USD, PAYPAL_PAYOUT_FEE_PCT } from '@/lib/payout';
+import { cbuError, walletError, normalizarCbu, coachNetFor, paypalEmailError, paypalPayoutCost, platformDeliveryCost, USDT_NETWORK_FEE_USD, PAYPAL_PAYOUT_FEE_PCT } from '@/lib/payout';
 
 // Direcciones reales de contratos conocidos: sirven como muestras de formato
 // válido sin exponer la wallet de nadie.
@@ -102,36 +102,6 @@ describe('coachNetFor', () => {
   });
 });
 
-describe('payoutAfterDeliveryCost', () => {
-  it('la transferencia bancaria no tiene costo de entrega', () => {
-    expect(payoutAfterDeliveryCost(150, 'transferencia')).toBe(150);
-  });
-
-  it('USDT descuenta la comisión de red una sola vez', () => {
-    expect(payoutAfterDeliveryCost(150, 'usdt')).toBe(150 - USDT_NETWORK_FEE_USD);
-  });
-
-  // 🔴 La propiedad que justifica el descuento: el costo NO depende del monto,
-  // así que pesa muchísimo más sobre un pago chico que sobre uno grande. Al
-  // profesional de una sesión semanal le baja el cobro ~3 puntos; al de cuatro,
-  // menos de uno.
-  it('pesa según el volumen del profesional, no según el precio', () => {
-    const unaSesion = payoutAfterDeliveryCost(37.5, 'usdt') / 37.5;
-    const cuatroSesiones = payoutAfterDeliveryCost(150, 'usdt') / 150;
-    expect(1 - unaSesion).toBeCloseTo(0.04, 2);
-    expect(1 - cuatroSesiones).toBeCloseTo(0.01, 2);
-    expect(cuatroSesiones).toBeGreaterThan(unaSesion);
-  });
-
-  // Sin mínimo de acumulación (decisión de Andre), así que esto puede pasar.
-  // Lo importante es que dé negativo y se vea, en vez de que el panel muestre
-  // cero y alguien crea que ya está saldado.
-  it('devuelve negativo si el costo se come el pago, en vez de esconderlo', () => {
-    expect(payoutAfterDeliveryCost(1, 'usdt')).toBeLessThan(0);
-  });
-});
-
-
 describe('paypalEmailError', () => {
   it('acepta un mail normal', () => {
     expect(paypalEmailError('coach@ejemplo.com')).toBeNull();
@@ -162,34 +132,27 @@ describe('paypalEmailError', () => {
   });
 });
 
-describe('costo de entrega por método', () => {
-  // 🔴 La regla decidida el 24/08/2026: costo FIJO se le descuenta al coach,
-  // costo PROPORCIONAL lo absorbe VIVE. Por eso PayPal no aparece acá aunque
-  // tenga un costo real: el 2% no castiga al de poco volumen, que es lo único
-  // que justificaba descontar el de USDT.
-  it('PayPal no le descuenta nada al coach', () => {
-    expect(deliveryCostFor(150, 'paypal')).toBe(0);
-    expect(payoutAfterDeliveryCost(150, 'paypal')).toBe(150);
+describe('costo de entrega', () => {
+  // 🔴 D5 (25/08/2026): al coach NO se le descuenta nada, ni fijo ni proporcional.
+  // Antes se le descontaba el costo de red de USDT; la regla espejo le sacó el piso
+  // a ese argumento, porque elegir un riel dejó de ser una preferencia libre —
+  // define qué clientes pueden pagarle.
+  it('lo paga VIVE, y depende del riel', () => {
+    expect(platformDeliveryCost(45, 'usdt')).toBe(USDT_NETWORK_FEE_USD);
+    expect(platformDeliveryCost(45, 'paypal')).toBe(0.9);
   });
 
-  it('solo USDT descuenta', () => {
-    expect(deliveryCostFor(150, 'transferencia')).toBe(0);
-    expect(deliveryCostFor(150, 'usdt')).toBe(USDT_NETWORK_FEE_USD);
+  // La propiedad que vuelve a USDT el riesgo a vigilar: su costo NO escala con el
+  // monto, así que escala con la cantidad de coaches y no con la facturación.
+  it('el de PayPal es proporcional y el de USDT no', () => {
+    expect(platformDeliveryCost(20, 'paypal') / 20).toBeCloseTo(0.02, 6);
+    expect(platformDeliveryCost(200, 'paypal') / 200).toBeCloseTo(0.02, 6);
+    expect(platformDeliveryCost(20, 'usdt') / 20).toBeCloseTo(0.075, 6);
+    expect(platformDeliveryCost(200, 'usdt') / 200).toBeCloseTo(0.0075, 6);
   });
 
-  it('el costo de PayPal es el 2% y lo paga VIVE', () => {
-    expect(paypalPayoutCost(45)).toBe(0.9);
-    expect(paypalPayoutCost(22.5)).toBe(0.45);
-    expect(PAYPAL_PAYOUT_FEE_PCT).toBe(2);
-  });
-
-  // El número que decide cuál conviene, y que conviene tener fijado: como el de
-  // USDT es fijo y el de PayPal proporcional, se cruzan en USD 75 por ENVÍO
-  // (2% × 75 = 1,50). Abajo de eso PayPal nos sale más barato que lo que USDT
-  // le cuesta al coach; arriba, al revés.
-  it('el cruce con el costo de USDT cae en USD 75 por envío', () => {
+  it('el cruce entre los dos costos cae en USD 75 por envío', () => {
     expect(paypalPayoutCost(75)).toBe(USDT_NETWORK_FEE_USD);
-    expect(paypalPayoutCost(74)).toBeLessThan(USDT_NETWORK_FEE_USD);
-    expect(paypalPayoutCost(76)).toBeGreaterThan(USDT_NETWORK_FEE_USD);
+    expect(PAYPAL_PAYOUT_FEE_PCT).toBe(2);
   });
 });

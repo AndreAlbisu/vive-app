@@ -470,11 +470,12 @@ export default function AdminScreen() {
                           sesión — es lo que cuesta el envío, no lo que cuesta
                           cada sesión. Se muestra separado para que el coach
                           pueda auditarlo si pregunta. */}
-                      {p.costoEntrega > 0 && (
-                        <Text style={s.cardMeta}>
-                          le corresponden USD {p.neto.toFixed(2)} − {p.costoEntrega.toFixed(2)} de red
-                        </Text>
-                      )}
+                      {/* 🔴 Una fila por (coach, riel): con la regla espejo un coach
+                          con sesiones cobradas por los dos rieles recibe DOS pagos.
+                          Sin decir cuál es, se transfiere al lugar equivocado. */}
+                      <Text style={s.cardMeta}>
+                        se paga por {p.rail === 'usdt' ? 'USDT' : 'PayPal'}
+                      </Text>
                       <Text style={[s.cardTitle, { marginTop: 6 }]}>
                         A transferir: USD {p.aTransferir.toFixed(2)}
                       </Text>
@@ -484,13 +485,13 @@ export default function AdminScreen() {
                           reales cuando haya que decidir cuál conviene. */}
                       {p.costoPlataforma > 0 && (
                         <Text style={s.cardMeta}>
-                          nos cuesta USD {p.costoPlataforma.toFixed(2)} de comisión de PayPal
+                          nos cuesta USD {p.costoPlataforma.toFixed(2)}
+                          {p.rail === 'usdt' ? ' de red' : ' de comisión de PayPal'}
                         </Text>
                       )}
                       {p.noAlcanza && (
                         <Text style={s.cardBody}>
-                          ⚠️ El costo de envío se come todo lo que se le debe. No transfieras —
-                          se acumula solo con las sesiones de la semana que viene.
+                          ⚠️ No hay nada que transferir en este riel todavía.
                         </Text>
                       )}
 
@@ -507,11 +508,9 @@ export default function AdminScreen() {
                       {p.destino ? (
                         <>
                           <Text style={[s.mono, { marginTop: 10 }]} selectable>
-                            {p.destino.method === 'usdt'
+                            {p.rail === 'usdt'
                               ? `${p.destino.network} · ${p.destino.wallet}`
-                              : p.destino.method === 'paypal'
-                              ? `PayPal · ${p.destino.paypalEmail}`
-                              : `CBU ${p.destino.cbu}${p.destino.alias ? ` · ${p.destino.alias}` : ''}`}
+                              : `PayPal · ${p.destino.paypalEmail}`}
                           </Text>
                           <TextInput
                             style={s.input}

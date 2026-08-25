@@ -57,6 +57,8 @@ export default function BookingScreen_Confirm() {
   const [userMessage, setUserMessage] = useState('');
   const [instantBooking, setInstantBooking] = useState(false);
   const [internacionalDisponible, setInternacionalDisponible] = useState(false);
+  const [aceptaPaypal, setAceptaPaypal] = useState(false);
+  const [aceptaUsdt, setAceptaUsdt] = useState(false);
   const [priceUsd, setPriceUsd] = useState<number | null>(null);
   const [metodoPago, setMetodoPago] = useState<'mp' | 'usdt' | 'paypal'>('mp');
   // Pago abierto FUERA de la app (app nativa de Mercado Pago, o el browser con
@@ -88,7 +90,7 @@ export default function BookingScreen_Confirm() {
     (async () => {
       const { data } = await supabase
         .from('coaches')
-        .select('instant_booking, accepts_international, price_usd')
+        .select('instant_booking, accepts_international, accepts_paypal, accepts_usdt, price_usd')
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
       setInstantBooking(!!data?.instant_booking);
@@ -99,6 +101,12 @@ export default function BookingScreen_Confirm() {
       // búsqueda y el perfil público — si acá fuera otra, el catálogo prometería
       // algo que esta pantalla no ofrece.
       setInternacionalDisponible(!!data?.accepts_international && !!data?.price_usd);
+      // 🔴 REGLA ESPEJO (D4): se ofrece un medio de pago solo si el coach acepta
+      // COBRAR por ese mismo riel. Si no, VIVE quedaría con dólares en un pozo que
+      // no puede usar para pagarle — y en el caso de USDT→PayPal directamente no
+      // hay forma, porque en Argentina no se puede cargar saldo en PayPal.
+      setAceptaPaypal(!!data?.accepts_paypal);
+      setAceptaUsdt(!!data?.accepts_usdt);
       setPriceUsd(data?.price_usd ?? null);
     })();
   }, [coachProfileIdParam]);
@@ -884,8 +892,12 @@ export default function BookingScreen_Confirm() {
             <View style={s.pagoRow}>
               {([
                 { id: 'mp' as const,     label: 'Mercado Pago', desc: 'Pesos · tarjeta o dinero en cuenta' },
-                { id: 'paypal' as const, label: 'PayPal',        desc: 'Dólares · tarjeta desde el exterior' },
-                { id: 'usdt' as const,   label: 'Crypto · USDT', desc: 'Dólares · transferencia de cripto' },
+                ...(aceptaPaypal
+                  ? [{ id: 'paypal' as const, label: 'PayPal', desc: 'Dólares · tarjeta desde el exterior' }]
+                  : []),
+                ...(aceptaUsdt
+                  ? [{ id: 'usdt' as const, label: 'Crypto · USDT', desc: 'Dólares · transferencia de cripto' }]
+                  : []),
               ]).map(m => (
                 <TouchableOpacity
                   key={m.id}

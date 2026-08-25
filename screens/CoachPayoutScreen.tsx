@@ -34,42 +34,22 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
 import {
-  cbuError,
-  normalizarCbu,
   walletError,
   paypalEmailError,
-  USDT_NETWORK_FEE_USD,
-  type PayoutMethod as Method,
   type PayoutNetwork as Network,
 } from '@/lib/payout';
 
-// El selector se apila en vez de ir en fila: con tres opciones, `flex: 1` deja
-// ~86px de ancho útil por card y la descripción de cada método —que es la que
-// hace entender la diferencia— quedaba en seis renglones.
-const METHODS: {
-  id: Method;
+// Los rieles por los que el coach puede aceptar cobrar sus sesiones del exterior.
+// No es "elegí uno": marca los que acepta, y sus clientes ven exactamente esos.
+// Es la regla espejo (D4) — cada reserva se paga por el riel por el que entró.
+const RAILS: {
+  id: 'paypal' | 'usdt';
   label: string;
   desc: string;
   icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 }[] = [
-  {
-    id: 'transferencia',
-    label: 'Transferencia',
-    desc: 'A tu cuenta en pesos · sin costo',
-    icon: 'bank-outline',
-  },
-  {
-    id: 'paypal',
-    label: 'PayPal',
-    desc: 'Dólares a tu cuenta de PayPal · sin costo',
-    icon: 'wallet-outline',
-  },
-  {
-    id: 'usdt',
-    label: 'USDT',
-    desc: `Stablecoin en dólares · USD ${USDT_NETWORK_FEE_USD.toFixed(2)} por envío`,
-    icon: 'currency-usd',
-  },
+  { id: 'paypal', label: 'PayPal', desc: 'Dólares a tu cuenta de PayPal', icon: 'wallet-outline' },
+  { id: 'usdt', label: 'USDT', desc: 'Stablecoin en dólares, a tu billetera', icon: 'currency-usd' },
 ];
 
 const NETWORKS: { id: Network; label: string; hint: string }[] = [
@@ -86,9 +66,8 @@ export default function CoachPayoutScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [method, setMethod] = useState<Method>('transferencia');
-  const [cbu, setCbu] = useState('');
-  const [alias, setAlias] = useState('');
+  const [aceptaPaypal, setAceptaPaypal] = useState(false);
+  const [aceptaUsdt, setAceptaUsdt] = useState(false);
   const [wallet, setWallet] = useState('');
   const [network, setNetwork] = useState<Network>('TRC20');
   const [paypalEmail, setPaypalEmail] = useState('');
@@ -107,14 +86,13 @@ export default function CoachPayoutScreen() {
 
       const { data: payout } = await supabase
         .from('coach_payout_accounts')
-        .select('method, cbu, alias, wallet, network, paypal_email')
+        .select('accepts_paypal, accepts_usdt, wallet, network, paypal_email')
         .eq('coach_id', coachRow.id)
         .maybeSingle();
 
       if (payout) {
-        setMethod((payout.method as Method) ?? 'transferencia');
-        setCbu(payout.cbu ?? '');
-        setAlias(payout.alias ?? '');
+        setAceptaPaypal(!!payout.accepts_paypal);
+        setAceptaUsdt(!!payout.accepts_usdt);
         setWallet(payout.wallet ?? '');
         setNetwork((payout.network as Network) ?? 'TRC20');
         setPaypalEmail(payout.paypal_email ?? '');
@@ -123,44 +101,38 @@ export default function CoachPayoutScreen() {
     })();
   }, [user]);
 
-  const cbuLimpio = normalizarCbu(cbu);
-  const errorCbu = method === 'transferencia' && cbuLimpio.length > 0 ? cbuError(cbu) : null;
-  const errorWallet = method === 'usdt' && wallet.trim().length > 0
+  const errorWallet = aceptaUsdt && wallet.trim().length > 0
     ? walletError(wallet, network)
     : null;
 
-  const errorPaypal = method === 'paypal' && paypalEmail.trim().length > 0
+  const errorPaypal = aceptaPaypal && paypalEmail.trim().length > 0
     ? paypalEmailError(paypalEmail)
     : null;
 
+  // Ningún riel aceptado es válido: significa "no atiendo sesiones del exterior".
+  // Lo que no se puede es aceptar un riel sin decir adónde mandar la plata — la
+  // base tiene el mismo CHECK, y acá está para mostrarlo mientras se escribe.
   const puedeGuardar =
     !!coachId && !saving &&
-    (method === 'transferencia' ? !cbuError(cbu)
-      : method === 'usdt' ? !walletError(wallet, network)
-      : !paypalEmailError(paypalEmail));
+    (!aceptaPaypal || !paypalEmailError(paypalEmail)) &&
+    (!aceptaUsdt || !walletError(wallet, network));
 
   async function guardar() {
     if (!coachId || !puedeGuardar) return;
     setSaving(true);
 
-    // Se limpian los campos del otro método: si alguien cargó CBU, cambió a
-    // USDT y guardó, dejar el CBU viejo dando vueltas invita a transferir al
-    // destino equivocado cuando alguien mire la fila sin mirar `method`.
-    // Tipado explícito y no inferido: con el ternario, TS infiere una unión de
-    // dos formas distintas y `upsert` la rechaza por exceso de propiedades.
-    const fila: {
-      coach_id: string;
-      method: Method;
-      cbu: string | null;
-      alias: string | null;
-      wallet: string | null;
-      network: Network | null;
-      paypal_email: string | null;
-    } = method === 'transferencia'
-      ? { coach_id: coachId, method, cbu: cbuLimpio, alias: alias.trim() || null, wallet: null, network: null, paypal_email: null }
-      : method === 'usdt'
-      ? { coach_id: coachId, method, cbu: null, alias: null, wallet: wallet.trim(), network, paypal_email: null }
-      : { coach_id: coachId, method, cbu: null, alias: null, wallet: null, network: null, paypal_email: paypalEmail.trim() };
+    // Se guardan los dos rieles y sus destinos. El destino de un riel apagado NO
+    // se borra: la base ya impide aceptar un riel sin destino (CHECK), así que no
+    // puede haber un envío al lugar equivocado — y conservarlo evita tener que
+    // volver a tipear una wallet si se reactiva.
+    const fila = {
+      coach_id: coachId,
+      accepts_paypal: aceptaPaypal,
+      accepts_usdt: aceptaUsdt,
+      paypal_email: aceptaPaypal ? paypalEmail.trim() : (paypalEmail.trim() || null),
+      wallet: aceptaUsdt ? wallet.trim() : (wallet.trim() || null),
+      network: aceptaUsdt ? network : (wallet.trim() ? network : null),
+    };
 
     const { data, error } = await supabase
       .from('coach_payout_accounts')
@@ -177,9 +149,9 @@ export default function CoachPayoutScreen() {
 
     Alert.alert(
       'Datos guardados',
-      method === 'usdt'
-        ? 'El primer pago te lo vamos a mandar de prueba, por un monto chico, para confirmar juntos que la dirección y la red son correctas.'
-        : 'Vamos a usar estos datos para transferirte las sesiones internacionales.',
+      aceptaUsdt
+        ? 'El primer pago en USDT te lo vamos a mandar de prueba, por un monto chico, para confirmar juntos que la dirección y la red son correctas.'
+        : 'Vamos a usar estos datos para transferirte las sesiones del exterior.',
       [{ text: 'Listo', onPress: () => router.back() }],
     );
   }
@@ -216,55 +188,56 @@ export default function CoachPayoutScreen() {
                 Pago: las cobra VIVE y te las transferimos cada semana, por sesiones ya realizadas.
               </Text>
 
-              <Text style={s.label}>Cómo preferís cobrar</Text>
+              <Text style={s.label}>Cómo aceptás cobrar</Text>
               <View style={s.methodRow}>
-                {METHODS.map(m => (
-                  <TouchableOpacity
-                    key={m.id}
-                    style={[s.methodCard, method === m.id && s.methodCardOn]}
-                    onPress={() => setMethod(m.id)}
-                    activeOpacity={0.85}>
-                    <MaterialCommunityIcons
-                      name={m.icon}
-                      size={22}
-                      color={method === m.id ? ViveColors.primary : 'rgba(135,131,92,0.72)'}
-                    />
-                    <Text style={[s.methodTitle, method === m.id && s.methodTitleOn]}>{m.label}</Text>
-                    <Text style={s.methodDesc}>{m.desc}</Text>
-                  </TouchableOpacity>
-                ))}
+                {RAILS.map(r => {
+                  const on = r.id === 'paypal' ? aceptaPaypal : aceptaUsdt;
+                  const toggle = () =>
+                    r.id === 'paypal' ? setAceptaPaypal(!on) : setAceptaUsdt(!on);
+                  return (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={[s.methodCard, on && s.methodCardOn]}
+                      onPress={toggle}
+                      activeOpacity={0.85}>
+                      <View style={s.railHead}>
+                        <MaterialCommunityIcons
+                          name={r.icon}
+                          size={22}
+                          color={on ? ViveColors.primary : 'rgba(135,131,92,0.72)'}
+                        />
+                        <View style={s.flex}>
+                          <Text style={[s.methodTitle, on && s.methodTitleOn]}>{r.label}</Text>
+                          <Text style={s.methodDesc}>{r.desc}</Text>
+                        </View>
+                        <MaterialCommunityIcons
+                          name={on ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                          size={22}
+                          color={on ? ViveColors.primary : 'rgba(135,131,92,0.5)'}
+                        />
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
-              {/* El costo se dice ANTES de elegir y no cuando llega menos plata.
-                  Es una vez por transferencia y no por sesión, así que pesa
-                  según cuántas sesiones hiciste en la semana — eso es lo que
-                  hay que entender, no el número suelto. */}
-              {/* 🔴 Lo que NO hay que dejar implícito: los dólares le llegan a
-                  su PayPal, pero bajarlos a un banco argentino los convierte a
-                  pesos al cambio de PayPal. Prometer "cobrás en dólares" a secas
-                  sería el mismo problema que este documento evita en el resto de
-                  la pantalla: para la mayoría termina en pesos igual. */}
-              {method === 'paypal' && (
-                <Text style={s.methodNote}>
-                  Te mandamos los dólares a tu cuenta de PayPal y no te descontamos nada: el costo del
-                  envío lo pagamos nosotros.
-                  {'\n\n'}
-                  Tené en cuenta que si después los pasás a un banco argentino, PayPal los convierte a
-                  pesos a su tipo de cambio, y la cuenta destino tiene que estar en pesos. Quedarte con
-                  los dólares es posible dejándolos en PayPal.
-                </Text>
-              )}
+              {/* 🔴 Lo que hay que decir sin vueltas, porque decide cuál conviene:
+                  los dos pagan en DÓLARES. El que quiera pesos los convierte él.
+                  En PayPal eso es vincular una cuenta y tocar retirar, al mismo
+                  cambio que conseguiríamos nosotros; en USDT hay que saber vender
+                  cripto. Por eso PayPal es el riel del que quiere pesos. */}
+              <Text style={s.methodNote}>
+                Los dos te pagan en dólares, y sin costo para vos: la comisión del envío la
+                pagamos nosotros.
+                {'\n\n'}
+                Si querés pesos, PayPal es el más simple: los bajás a tu banco cuando quieras y
+                PayPal los convierte. Con USDT vas a necesitar venderlos vos.
+                {'\n\n'}
+                Solo se te ofrece a clientes del exterior que puedan pagarte por alguno de los
+                que marques. Si no marcás ninguno, no recibís sesiones del exterior.
+              </Text>
 
-              {method === 'usdt' && (
-                <Text style={s.methodNote}>
-                  Enviar USDT tiene un costo de red de USD {USDT_NETWORK_FEE_USD.toFixed(2)} que se
-                  descuenta de tu pago. Es por transferencia y no por sesión: si esa semana
-                  hiciste cuatro sesiones, se descuenta una sola vez. Con transferencia
-                  bancaria no hay costo.
-                </Text>
-              )}
-
-              {method === 'paypal' ? (
+              {aceptaPaypal && (
                 <>
                   <Text style={s.label}>Mail de tu cuenta de PayPal</Text>
                   <TextInput
@@ -279,38 +252,13 @@ export default function CoachPayoutScreen() {
                   />
                   {errorPaypal && <Text style={s.errorText}>{errorPaypal}</Text>}
                   <Text style={s.hint}>
-                    Tiene que ser el mail de una cuenta de PayPal tuya que pueda recibir pagos. Si el
-                    mail no tiene cuenta, el envío rebota y lo reintentamos: no se pierde nada.
+                    Tiene que ser el mail de una cuenta de PayPal tuya que pueda recibir pagos. Si
+                    el mail no tiene cuenta, el envío rebota y lo reintentamos: no se pierde nada.
                   </Text>
                 </>
-              ) : method === 'transferencia' ? (
-                <>
-                  <Text style={s.label}>CBU</Text>
-                  <TextInput
-                    style={[s.input, errorCbu && s.inputError]}
-                    value={cbu}
-                    onChangeText={setCbu}
-                    placeholder="22 dígitos"
-                    placeholderTextColor="rgba(135,131,92,0.45)"
-                    keyboardType="number-pad"
-                    maxLength={26}
-                  />
-                  {errorCbu && <Text style={s.errorText}>{errorCbu}</Text>}
+              )}
 
-                  <Text style={s.label}>Alias (opcional)</Text>
-                  <TextInput
-                    style={s.input}
-                    value={alias}
-                    onChangeText={setAlias}
-                    placeholder="mi.alias.banco"
-                    placeholderTextColor="rgba(135,131,92,0.45)"
-                    autoCapitalize="none"
-                  />
-                  <Text style={s.hint}>
-                    La cuenta tiene que estar a tu nombre. No transferimos a cuentas de terceros.
-                  </Text>
-                </>
-              ) : (
+              {aceptaUsdt && (
                 <>
                   <Text style={s.label}>Red</Text>
                   {NETWORKS.map(n => (
@@ -433,6 +381,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: 'transparent', gap: 4, ...shadow,
   },
   methodCardOn: { borderColor: ViveColors.primary, backgroundColor: 'rgba(255,248,240,0.85)' },
+  railHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   methodTitle: { fontFamily: ViveFonts.semibold, fontSize: 14, color: 'rgba(135,131,92,0.85)' },
   methodTitleOn: { color: '#565E32' },
   methodDesc: { fontFamily: ViveFonts.regular, fontSize: 11.5, color: 'rgba(135,131,92,0.70)' },
