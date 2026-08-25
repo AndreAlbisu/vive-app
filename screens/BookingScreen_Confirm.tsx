@@ -25,6 +25,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { logError, logWarn } from '@/lib/logging';
 import { encryptMessage } from '@/lib/encryption';
 import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
+import { observedTz } from '@/lib/time';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MONTH_NAMES = [
@@ -312,6 +313,10 @@ export default function BookingScreen_Confirm() {
         // (coach sin Mercado Pago conectado), que no son reintentos de nada.
         .or('preference_id.not.is.null,usdt_amount.not.is.null');
 
+      // Se lee ACÁ y no al montar la pantalla: lo que importa es dónde estaba
+      // en el momento de reservar, no cuándo abrió la app.
+      const tzObservada = observedTz();
+
       // 3. Insertar booking — columnas reales verificadas en la base (SCHEMA.md)
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
@@ -333,6 +338,27 @@ export default function BookingScreen_Confirm() {
           // Ahora se confirma abajo, recién cuando el pago está aprobado — o de
           // entrada si el coach no tiene MP y no hay nada que cobrar.
           status: 'pendiente',
+          // ── Dónde estaba quien reserva (D2) ────────────────────────────────
+          // 🔴 Se guarda la OBSERVACIÓN cruda, no una conclusión. El sistema no
+          // sabía cuáles operaciones eran internacionales: lo inferí­a del riel de
+          // pago, y el riel lo elige el usuario — un argentino pagando con PayPal
+          // generaba algo que parecía exportación y no lo era.
+          //
+          // No se guarda el país porque el país ya es una lectura de la zona.
+          // Y no se guarda `es_internacional` porque el criterio todavía no está
+          // confirmado: con un booleano habría que reescribir historia el día que
+          // el contador defina otra cosa; con la observación, se vuelve a derivar.
+          //
+          // `observedTz()` y no `deviceTz()`: aquella cae a Argentina cuando no
+          // puede leer la zona, y acá eso sería registrar un país que nadie
+          // observó.
+          ...(tzObservada
+            ? {
+                user_tz_observed: tzObservada,
+                user_observation_source: 'timezone',
+                user_observed_at: new Date().toISOString(),
+              }
+            : {}),
           ...(durationMinutes ? { duration_minutes: durationMinutes } : {}),
           ...(userMessage.trim() ? { user_message: userMessage.trim() } : {}),
         })
