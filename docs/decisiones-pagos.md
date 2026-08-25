@@ -720,6 +720,24 @@ diez por semana en vez de una?
 
 > **Decisión de Andre, 25/08/2026: una tabla append-only de operaciones**, acotada
 > a lo que ejecuta una persona.
+>
+> 🔴 **CORREGIDA AL IMPLEMENTARLA (25/08).** La premisa era falsa: **`admin_audit_log`
+> ya existe**, ya es append-only, ya guarda quién hizo qué sobre qué y cuándo, y ya
+> lo escribe `audit()` en cada acción del panel. Decir "no hay ningún registro de
+> operaciones" estaba mal.
+>
+> **Lo que de verdad faltaba es mucho más chico:** los montos vivían sueltos dentro
+> del `details` jsonb con nombres distintos según la acción, y **`mark_coach_paid`
+> no guardaba cuánto se transfirió** — se podía saber quién pagó y a quién, pero no
+> cuánto.
+>
+> **Lo implementado**: una **forma acordada** para los campos de dinero dentro de
+> `details` (`monto`, `moneda`, `riel`, `referencia`, y `tipo_cambio` +
+> `fuente_tipo_cambio` para el día que haya una conversión manual), y la vista
+> `operaciones_de_dinero` que los saca tipados. **Sin tabla nueva.**
+>
+> 📝 Las filas anteriores al cambio quedan con `monto` en null. **No se rellenan**:
+> el registro no se reescribe.
 
 ### 🔴 El criterio de tipo de cambio se disolvió con D4
 
