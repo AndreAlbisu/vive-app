@@ -1,0 +1,203 @@
+# Pagos — dónde estamos y qué sigue
+
+> Escrito el 25/08/2026, al cerrar la sesión 126. Consolida decisiones que
+> estaban dispersas en `CHANGELOG_SESIONES.md`. **No es una lista de tareas: es
+> un mapa de qué depende de qué**, porque la mitad de lo que falta no se puede
+> construir todavía y conviene saber por qué antes de empezar.
+
+## Lo que YA funciona
+
+| Sesión | Cómo paga el cliente | Adónde va la plata | Estado |
+|---|---|---|---|
+| **Argentina** | Mercado Pago, pesos | **Directo al MP del coach** (split). VIVE no la toca. | Producción, probado |
+| **Exterior** | PayPal, dólares | La cobra VIVE, le transfiere después | **Producción, probado 25/08** |
+| **Exterior** | USDT (TRC20), dólares | La cobra VIVE, le transfiere después | Producción, probado 18/08 |
+
+El coach elige **cómo recibe** lo del exterior, en Perfil → Datos de cobro:
+**CBU** (pesos, sin costo) · **PayPal** (dólares, sin costo) · **USDT** (dólares,
+USD 1,50 por envío a su cargo). Uno a la vez. Los pagos son **semanales y
+agregados**, solo por sesiones ya realizadas, y se registran a mano en el panel.
+
+---
+
+## Bloque 0 — Antes de lanzar. No depende de nadie.
+
+Lo único de esta lista que no espera a ningún tercero. Son dos, y las dos son
+defaults viejos, no decisiones.
+
+### 0.1 · Un coach sin Mercado Pago recibe reservas SIN COBRO 🔴
+
+`mp-create-payment` devuelve 409, el cliente lo trata como caso benigno y sigue:
+reserva confirmada, cero cobrado, sin comisión y sin protección para quien
+reservó. El comentario del código ya lo anticipaba —*"cuando el pago sea
+OBLIGATORIO, esto debería frenar la reserva"*— pero quedó así de cuando el pago
+era opcional.
+
+**Decidir entre dos:**
+- **(a) Exigir MP conectado para publicar.** Más simple y más seguro: con el
+  split, VIVE nunca toca la plata del coach — sin float, sin plata ajena en la
+  cuenta, sin obligación de transferir.
+- **(b) Que VIVE cobre también en pesos** y transfiera por CBU. La
+  infraestructura ya existe casi entera; habría que ajustar `listCoachPayouts`,
+  que excluye las reservas de MP porque ahí el split ya pagó. ⚠️ Pone plata
+  ajena en la cuenta y **extiende al mercado local la pregunta fiscal** que hoy
+  es solo del exterior.
+
+**Recomendación: (a)**, y (b) solo si aparecen coaches reales que no puedan.
+
+### 0.2 · La tarjeta de la sala puede cancelar otra sesión 🔴
+
+`SalaScreen` lee las reservas una sola vez al montarse y no las relee al volver;
+además la tarjeta muestra siempre la próxima, sin dejar elegir. Cancelar es
+irreversible y puede disparar un reembolso. Apareció el 24/08 cancelando una
+sesión por otra.
+
+**Arreglo:** releer al enfocar la pantalla. Chico, pero toca una pantalla
+central — probarlo en dispositivo.
+
+---
+
+## Bloque 1 — Bloqueado por el contador 🔴
+
+**Una sola respuesta destraba las tres.** Es el pendiente más viejo del proyecto
+y desde el 25/08 es también el más caro: el riel internacional está en
+producción y puede entrar plata real en cualquier momento.
+
+La pregunta, ordenada en `docs/fiscal-instrucciones.md`, es si **VIVE actúa como
+principal o por cuenta y orden**.
+
+### 1.1 · El sistema no emite ninguna factura
+Cero referencias a ARCA/AFIP en todo el código. La cuota del Monotributo no
+reemplaza la obligación de facturar.
+
+### 1.2 · La sección "Qué facturás" del documento del coach
+Bloqueada. Hasta que se cierre, **ese documento no se le manda a ningún coach**.
+
+### 1.3 · Si conviene cobrar DIRECTO a la cuenta del coach
+- **PayPal: técnicamente posible** — producto "Multi-party", con un OAuth por
+  coach calcado del de Mercado Pago.
+- **USDT: imposible.** En una transferencia on-chain directa no hay forma de
+  retener comisión ni de reembolsar, y se cae el mecanismo que identifica los
+  pagos por monto (funciona porque los centavos son un identificador **en
+  nuestra wallet**).
+
+🔴 **Lo que lo frena no es el código: cobrar directo convierte a cada coach en
+exportador de servicios**, que es justo lo que el diseño actual evita y lo que su
+documento le promete evitar. **Y la respuesta puede darlo vuelta entero:** si
+VIVE es por cuenta y orden, el coach termina siendo exportador igual y cobrar
+directo sería *más* coherente. Construir cualquiera de las dos arquitecturas
+antes de esa respuesta es 50% de chance de tirarla.
+
+⚠️ La contradicción de quién exporta vive hoy en **tres** lugares: T&C §8.5, el
+changelog de la sesión 101, y un comentario en `CoachProfileScreen.tsx:313`.
+
+---
+
+## Bloque 2 — Tesorería. Depende de volumen real, no de terceros.
+
+### 2.1 · Las dos mediciones de USD 50 🔴
+Dólares de PayPal → pesos, y USDT → pesos. Las tarifas publicadas no incluyen el
+spread, así que la única forma de saberlo es hacerlo. **Primero la de PayPal.**
+Destraban: si el 2% de PayPal Payouts conviene o no (ver 2.3), y el margen real
+del riel internacional.
+
+### 2.2 · El techo de PayPal 🔴
+**En Argentina no se puede cargar saldo en PayPal**: se retira a un banco local
+(en pesos, obligatoriamente) pero no se ingresa por transferencia local.
+
+> **Lo que se le paga a los coaches por PayPal está topeado por lo que entra por
+> PayPal.** No es un costo que se pueda decidir pagar: es un techo.
+
+Las otras direcciones sí funcionan: PayPal → pesos (con su spread), PayPal →
+USDT (retirar a pesos y comprar, caro pero posible), USDT → pesos o → USDT
+(directo). El techo casi nunca debería morder —PayPal es el riel principal—
+pero **nunca prometerle PayPal a un coach sin entrada por PayPal que lo
+respalde**.
+
+⚠️ Confirmarlo en la cuenta: si no aparece "Agregar fondos", queda cerrado.
+
+### 2.3 · Que el coach acepte VARIOS métodos de cobro
+**Es la solución al problema de los pozos, y no cuesta un solo cliente.**
+
+El coach marca **qué métodos acepta**, no cuál usa, y **VIVE elige al pagar**
+según qué pozo tenga saldo. Nadie es indiferente entre pesos y dólares — pero
+entre **PayPal y USDT sí puede serlo**, y ese es justo el par que causa el
+problema.
+
+- 🔴 **Resolver antes de construir:** hoy USDT le descuenta USD 1,50 al coach y
+  PayPal no. Si el que elige pasa a ser VIVE, **el costo lo absorbe VIVE** — si
+  no, el coach que aceptó los dos para ayudarnos cobra menos según qué pozo
+  teníamos flojo.
+- **El código no es grande: las columnas ya existen todas.** Cambia `method` de
+  valor único a conjunto de habilitados; el panel tiene que dejar elegir con
+  cuál se paga y registrar cuál se usó; la lógica que borra los datos del método
+  inactivo pasa a borrar los de los no habilitados (sigue cubriendo el riesgo
+  del destino viejo, que es real).
+
+**Mientras tanto**, la palanca barata: ofrecer solo **CBU + PayPal**. El CBU se
+alimenta desde los dos rieles y es una conversión que se hace igual; PayPal se
+autoalimenta con el riel principal. **USDT como método de COBRO es el único que
+puede obligar a comprar cripto** — sacarlo no le quita ninguna opción de PAGO al
+cliente y es reversible.
+
+### 2.4 · Decisiones de producto sueltas
+- **Medios offline de Mercado Pago** (efectivo/Rapipago/cajero): acreditan días
+  después, así que con la regla actual quien elija uno se queda sin reserva y su
+  pago cae sobre una cancelada → reembolso. Se corta excluyéndolos en la
+  preferencia (`excluded_payment_types: ['ticket','atm']`). Verificado: **no
+  está puesto**.
+- **El 15% plano en Mercado Pago**, que quedó afuera de la decisión del riel
+  internacional.
+- **La vía de retiro concreta** de los dólares (Prex, Belo, Payoneer, banco). No
+  bloquea construir, sí lanzar.
+
+---
+
+## Bloque 3 — Deuda conocida, sin bloqueo
+
+- **`bookings.cancelled_at`.** Hoy no hay ninguna columna que diga *cuándo* se
+  canceló algo: el 24/08 la única forma de investigar una cancelación fue
+  **descifrar mensajes de chat**. Se repite entero la próxima vez.
+- **`UsdtPaymentScreen`** sigue con `router.replace('/(tabs)')`, el patrón que se
+  arregló en `BookingScreen_Success` en la sesión 118. Hoy no se nota porque
+  `(tabs)` tiene `gestureEnabled: false`.
+- **`registrarEvento('reserva_confirmada')`** se dispara al insertar la reserva,
+  antes del pago: cuenta como confirmadas reservas que se cancelan segundos
+  después.
+- **El checkout de PayPal abre Safari**, no la app: PayPal no reclama la ruta
+  como universal link. No afecta la acreditación (es server-side) pero obliga a
+  loguearse a mano — el paso donde históricamente se caen los pagos. La salida
+  sería el SDK nativo, que es otra integración.
+- **Sin probar en Android**, nada del riel de pagos.
+- **Probar en dispositivo** la pantalla de datos de cobro con las tres opciones,
+  y el cartel de espera nuevo.
+
+---
+
+## Orden sugerido
+
+1. **Bloque 0** — es lo único que no espera a nadie y lo único que es un agujero
+   real al lanzar.
+2. **La hora con el contador** — no porque haya que construir algo después, sino
+   porque destraba tres cosas a la vez y cada día que pasa con el riel en
+   producción es más caro.
+3. **La medición de PayPal → pesos** — un movimiento de USD 50, y da el número
+   que falta para cerrar el margen.
+4. **Bloque 3**, en los huecos: son chicos, independientes entre sí y ninguno
+   necesita una decisión.
+5. **2.3 (varios métodos de cobro)** cuando haya volumen real que lo justifique.
+   Antes es optimizar un problema que todavía no existe.
+
+## Al pasar a producción algo nuevo, releer esto
+
+Tres cosas que ya costaron caro y son fáciles de repetir:
+
+- **El webhook id es por app y por modo.** El de sandbox no sirve en live y
+  viceversa; el síntoma es 401 en cada notificación, sin capturar nunca, **sin
+  error visible en la app**. Está `supabase/functions/paypal-diagnostico/` sin
+  deployar para exactamente esto.
+- **Los secrets se leen al arrancar.** Cambiar uno sin redeployar deja un estado
+  indistinguible del correcto hasta que alguien pierde un pago.
+- **Cerrar las reservas de prueba ANTES de cambiar de modo.** Un reembolso de
+  una captura de sandbox pedido contra la API de producción es un 404, seis
+  intentos y dead-letter — el pozo del que `2c72b126` no salió desde julio.
