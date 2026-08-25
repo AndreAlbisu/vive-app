@@ -25,6 +25,8 @@
 //      eventos que el riel necesita?
 //   4. ¿La cuenta tiene aprobado el acceso a PAYOUTS? (para pagarle a los
 //      coaches que eligen cobrar en su PayPal)
+//   5. ¿Están suscritos los eventos de disputa? (D10 — sin ellos, un contracargo
+//      debita el saldo y nada se entera)
 //
 // Se hace así y no mirando los dos dashboards porque la comparación a ojo entre
 // un id de PayPal y un secret de Supabase es justo el tipo de chequeo que
@@ -47,9 +49,24 @@ const PAYPAL_API = PAYPAL_MODE === 'live'
   ? 'https://api-m.paypal.com'
   : 'https://api-m.sandbox.paypal.com'
 
-// Los dos que el riel necesita. Con solo el primero, el webhook captura la
-// plata y la reserva nunca se entera: el peor estado de los posibles.
-const EVENTOS_NECESARIOS = ['CHECKOUT.ORDER.APPROVED', 'PAYMENT.CAPTURE.COMPLETED']
+// Los eventos que el riel necesita.
+//
+// Los dos primeros son el cobro: con solo `APPROVED`, el webhook captura la plata
+// y la reserva nunca se entera — el peor estado de los posibles.
+//
+// Los cinco siguientes son D10 (contracargos). Hasta el 25/08/2026 no estaban
+// suscritos, así que **una disputa debitaba el saldo y nada en el sistema se
+// enteraba**. Suscribirlos en el código no alcanza: si no están marcados en el
+// webhook registrado, PayPal no los manda.
+const EVENTOS_NECESARIOS = [
+  'CHECKOUT.ORDER.APPROVED',
+  'PAYMENT.CAPTURE.COMPLETED',
+  'CUSTOMER.DISPUTE.CREATED',
+  'CUSTOMER.DISPUTE.UPDATED',
+  'CUSTOMER.DISPUTE.RESOLVED',
+  'PAYMENT.CAPTURE.REVERSED',
+  'PAYMENT.CAPTURE.DENIED',
+]
 
 const URL_ESPERADA = `${SUPABASE_URL}/functions/v1/paypal-webhook`
 
@@ -153,6 +170,6 @@ serve(async (req) => {
       ? `🔴 el webhook configurado apunta a ${elNuestro.url}, no a la función`
       : elNuestro.faltantes.length
       ? `🔴 faltan eventos suscritos: ${elNuestro.faltantes.join(', ')}`
-      : '✅ todo en orden: el webhook existe, apunta a la función y tiene los dos eventos',
+      : `✅ todo en orden: el webhook existe, apunta a la función y tiene los ${EVENTOS_NECESARIOS.length} eventos que el riel necesita`,
   })
 })
