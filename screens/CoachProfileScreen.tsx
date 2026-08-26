@@ -70,7 +70,7 @@ function getInitials(name: string): string {
 
 export default function CoachProfileScreen() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<CoachProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [noCoachProfile, setNoCoachProfile] = useState(false);
@@ -199,10 +199,6 @@ export default function CoachProfileScreen() {
     })();
   }, [user]);
 
-  async function handleSignOut() {
-    await signOut();
-    router.replace('/(tabs)');
-  }
 
   function openPriceEditor() {
     setPriceInput(profile?.price_per_session != null ? String(profile.price_per_session) : '');
@@ -650,7 +646,10 @@ export default function CoachProfileScreen() {
           )}
 
           <TouchableOpacity style={s.editProfileBtn} activeOpacity={0.75} onPress={() => router.push('/edit-profile')}>
-            <Text style={s.editProfileBtnText}>Editar perfil</Text>
+            {/* Dice QUÉ edita. "Editar perfil" a secas competía con la
+                presentación, los temas y el video, que se editan acá mismo sin
+                salir — y no había forma de saber cuál de las dos cosas hacía. */}
+            <Text style={s.editProfileBtnText}>Editar nombre y foto</Text>
           </TouchableOpacity>
         </View>
 
@@ -1078,6 +1077,23 @@ export default function CoachProfileScreen() {
           />
         </View>
 
+        {/* 🔴 `/coach-visibilidad` vivía SOLO en Home, a pesar de ser la
+            respuesta a "¿por qué no aparezco?" — la misma pregunta que hace el
+            interruptor de acá arriba. Se agrega acá y se DEJA la tarjeta de
+            Home: esa es un aviso proactivo con contenido propio (en cuántas
+            puertas estás, qué te falta), y esta pantalla no es configuración
+            sino diagnóstico. Dos puertas a un ESTADO está bien; dos puertas a
+            una misma ACCIÓN era el problema, y ese ya se sacó. */}
+        <TouchableOpacity
+          style={[s.availBtn, { marginTop: 8 }]}
+          onPress={() => router.push('/coach-visibilidad')}
+          activeOpacity={0.75}
+        >
+          <MaterialCommunityIcons name="compass-outline" size={18} color={ViveColors.primary} />
+          <Text style={s.availBtnText}>Cómo aparecés en Conexiones</Text>
+          <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.58)" />
+        </TouchableOpacity>
+
         <View style={s.groupHead}>
           <Text style={s.groupTitle}>Tu reputación</Text>
           <Text style={s.groupHint}>Lo que dejaron las personas que atendiste</Text>
@@ -1148,28 +1164,6 @@ export default function CoachProfileScreen() {
             </View>
           </View>
         )}
-
-        <View style={s.groupHead}>
-          <Text style={s.groupTitle}>Tu cuenta</Text>
-          <Text style={s.groupHint}>Nada de esto lo ve nadie más</Text>
-        </View>
-
-        {/* ── Cuentas bloqueadas ────────────────────────────── */}
-        {/* El coach bloquea desde el "⋯" del chat, igual que el usuario, pero
-            necesita el mismo lugar fijo para revisar y deshacer. */}
-        <TouchableOpacity
-          style={s.blockedBtn}
-          onPress={() => router.push('/cuentas-bloqueadas')}
-          activeOpacity={0.75}>
-          <MaterialCommunityIcons name="account-cancel-outline" size={16} color="#87835C" />
-          <Text style={s.blockedText}>Cuentas bloqueadas</Text>
-        </TouchableOpacity>
-
-        {/* ── Cerrar sesión ─────────────────────────────────── */}
-        <TouchableOpacity style={s.signOutBtn} onPress={handleSignOut} activeOpacity={0.75}>
-          <MaterialCommunityIcons name="logout" size={16} color="#E05252" />
-          <Text style={s.signOutText}>Cerrar sesión</Text>
-        </TouchableOpacity>
 
         <View style={{ height: TAB_BAR_CLEARANCE }} />
       </ScrollView>

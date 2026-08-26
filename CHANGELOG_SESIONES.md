@@ -40,6 +40,17 @@
 - 📝 **Nuevo nivel `groupTitle` / `groupHint`** por encima de `sectionTitle`. Sin jerarquía las doce secciones pesaban igual: cobrar en pesos quedaba visualmente al mismo nivel que el video de perfil.
 - ⚠️ **Lo que NO se hizo todavía**, y sigue abierto del análisis: el perfil **no es una pestaña** —se entra tocando el avatar en Home (`CoachHomeScreen.tsx:269`), único acceso, sin etiqueta—; `/coach-visibilidad` y `/coach-notifications` siguen colgando de Home en vez de del perfil; el nombre y la fecha de nacimiento siguen en `/edit-profile` (compartida con el usuario) mientras la bio se edita inline, o sea dos modelos de edición para campos de la misma tarjeta; y el archivo sigue teniendo ~1750 líneas con sus diez estados de guardado juntos.
 
+**Y separando "configuración de la app" de "configuración del perfil" —idea de Andre— apareció que al coach le faltaba media pantalla, y dos de esas ausencias son de CUMPLIMIENTO.**
+
+- 🔴 **El coach no tenía forma de llegar a los Términos, a la Política de privacidad, al botón de arrepentimiento ni a dar de baja su cuenta.** Cero coincidencias en todo `screens/Coach*.tsx`. Todo eso vive en `ProfileOwnScreen`, que es la pantalla del USUARIO — y un coach **nunca la ve**: `AuthRedirect` lo manda a `(coach)` y `/perfil` le renderiza `CoachProfileScreen`. No era un problema de organización: era funcionalidad ausente.
+  - 🔴 **"Eliminar mi cuenta" es la guideline 5.1.1(v) de Apple** — toda app con registro tiene que permitir borrar la cuenta desde adentro o **la rechazan**. SCHEMA.md ya lo documentaba como bloqueador de publicación. Y lo más llamativo: **`deleteMyAccount()` YA contemplaba al coach** (devuelve `coach_con_sesiones` si tiene sesiones agendadas), o sea que el backend lo previó desde el principio y **la UI nunca lo expuso**.
+  - 🔴 **El botón de arrepentimiento es la Res. 424/2020.** Está en la lista del usuario y hasta en la de invitado —que es justo lo que la norma pide— y faltaba en la del coach, que es quien cobra.
+- ✅ **Nueva `screens/CoachSettingsScreen.tsx` + `app/coach-ajustes.tsx`**, con los siete ítems agrupados en Tu cuenta / Legales / (salida). El texto de la baja es **el del coach y no el del usuario**: lo que se le conserva a un profesional son sus reseñas y las reservas de otra gente, y se le avisa que con sesiones agendadas no puede darse de baja hasta cancelarlas.
+- ✅ **Engranaje en el header de Home**, al lado de la campana. **El avatar lleva al PERFIL** (cómo te ven, cuánto cobrás, cuándo atendés) y **el engranaje a la CUENTA**. Antes el avatar era el único acceso a las dos cosas, sin etiqueta.
+- 📝 **`/coach-notifications` NO se movió, contra lo que decía el análisis de ayer.** Es una BANDEJA de entrada, no configuración —título "Notificaciones", vacío "No tenés notificaciones todavía"—; agruparla en "Tu cuenta" fue un error de guiarse por el nombre. Una campana en el header es su lugar.
+- 📝 **`/coach-visibilidad` se agregó al perfil y se DEJÓ la tarjeta de Home.** Es la respuesta a "¿por qué no aparezco?", la misma pregunta del interruptor nuevo. Dos puertas a un **estado** está bien; dos puertas a una misma **acción** era el problema, y ese ya se sacó.
+- 📝 **`/edit-profile` quedó con UNA sola puerta**, la tarjeta de identidad del perfil, y el botón ahora dice **"Editar nombre y foto"** en vez de "Editar perfil" — que competía con la presentación, los temas y el video, que se editan ahí mismo sin salir. Se sacó de Ajustes a propósito aunque suene a "datos de la cuenta": de los cuatro campos que edita, tres son públicos.
+
 **Pendiente para la próxima sesión:**
 - 🔴 **Retomar el espaciado de "Elegí un área de bienestar para empezar" en Conexiones.** Antes de seguir ajustando a tanteos: pedirle a Joaquín una captura fresca apenas se siente a trabajar, y si hace falta más de un ajuste, pedir el número aproximado de píxeles (o "un poco" = referencia visual concreta) en vez de iterar a ciegas — así se cierra en 1-2 pasadas en vez de 6 commits chicos como hoy.
 - Si el problema persiste igual, considerar que la medición por script (detectar filas oscuras de texto) puede estar capturando mal algún elemento — vale la pena verificar visualmente con un crop de la zona exacta antes de confiar en el número.
@@ -88,7 +99,7 @@
 
 ## 2026-08-26 — Andre (sesión 128)
 
-**Tocado:** `scripts/fix-payout-rails-trigger.sql` (encabezado), `supabase/functions/paypal-webhook/index.ts`, `SCHEMA.md`. Nuevo: `scripts/add-dispute-resolution.sql` (**CORRIDO**). `screens/CoachProfileScreen.tsx`. `paypal-webhook` **v18** deployada, `paypal-diagnostico` **borrada**. 259 tests, `tsc` y lint limpios.
+**Tocado:** `scripts/fix-payout-rails-trigger.sql` (encabezado), `supabase/functions/paypal-webhook/index.ts`, `SCHEMA.md`. Nuevo: `scripts/add-dispute-resolution.sql` (**CORRIDO**). `screens/CoachProfileScreen.tsx`, `screens/CoachHomeScreen.tsx`, `app/_layout.tsx`. Nuevos: `screens/CoachSettingsScreen.tsx`, `app/coach-ajustes.tsx`. `paypal-webhook` **v18** deployada, `paypal-diagnostico` **borrada**. 259 tests, `tsc` y lint limpios.
 
 **Resumen:**
 
@@ -102,7 +113,8 @@
 
 - ⚠️ **Probar la rama del DELETE del trigger** (chequeo 3 del script), la única que quedó sin ejercitar — y confirmar antes que `coach_payout_accounts` tenga al menos una fila, si no el chequeo pasa vacío.
 - 📝 **Conviene dejar una forma de consultar la base desde la sesión de trabajo** — sin eso, todo "corrido" queda sin contrastar y el registro vuelve a depender de lo que diga un documento, que es el patrón que este proyecto ya arrastró tres veces.
-- **Terminar la reorganización del coach**: darle al perfil una entrada con nombre (pestaña o engranaje, no el avatar), traer `/coach-visibilidad` y `/coach-notifications` desde Home, y unificar la edición de nombre/bio.
+- 🔴 **Probar en el teléfono todo el bloque del coach** — es la primera vez que se toca la navegación (ruta nueva `/coach-ajustes`, engranaje en Home) y nada de esto se vio corriendo.
+- ⚠️ **Revisar si el USUARIO tiene las mismas ausencias al revés.** Se auditó el lado del coach porque era el que estábamos mirando; nadie chequeó si `ProfileOwnScreen` tiene todo lo que el coach sí tiene.
 - **Onboarding del usuario**, analizado y sin empezar: las tres pantallas de perfilado no se guardan en ningún lado, el botón dice "Ver profesionales" y lleva a "Creá tu cuenta", y solo 1 de los 3 caminos de `onboarding2` pasa por el perfilado.
 - **La promo de fundador en los rieles internacionales** (decisión de precio, no defecto).
 

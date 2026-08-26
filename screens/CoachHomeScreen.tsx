@@ -266,6 +266,16 @@ export default function CoachHomeScreen() {
                 <Feather name="bell" size={22} color={FOREST} />
                 {unreadCount > 0 && <View style={s.bellDot} />}
               </TouchableOpacity>
+              {/* Ajustes de la APP — separado del avatar a propósito. El avatar
+                  lleva al PERFIL (cómo te ven, cuánto cobrás, cuándo atendés) y
+                  el engranaje a la CUENTA (datos, legales, cerrar sesión, baja).
+                  Antes el avatar era el único acceso a las dos cosas, sin
+                  etiqueta, y la mitad de esa configuración directamente no
+                  existía: el coach no tenía forma de llegar a los Términos ni de
+                  darse de baja. */}
+              <TouchableOpacity onPress={() => router.push('/coach-ajustes')} activeOpacity={0.7} hitSlop={8} style={s.bellBtn}>
+                <Feather name="settings" size={21} color={FOREST} />
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => router.push('/perfil')} activeOpacity={0.85} hitSlop={8}>
                 <LinearGradient colors={[TERRA, '#A5583B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.avatar}>
                   <Text style={s.avatarTxt}>{getInitials(coachName || '?')}</Text>
