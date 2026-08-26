@@ -73,12 +73,14 @@
 **Resumen:**
 
 - ✅ **Se corrió `scripts/fix-payout-rails-trigger.sql`** en producción. Con eso quedan cerrados los dos bugs que impedían a cualquier coach guardar su `price_usd` y sus datos de cobro.
-- ⚠️ **CORRIDO, no "CORRIDO y VERIFICADO".** La verificación no se pudo hacer desde la sesión de trabajo: en `.env` solo está la anon key (no lee `information_schema`), no hay service role key ni password de Postgres, y `psql` no está instalado — las dos vías del CLI (`supabase db`, `inspect db`) piden esa credencial. **Es exactamente la distinción que en este proyecto ya costó cara tres veces** (el cron con el placeholder del Vault, el webhook muerto, `charged_amount` dado por pendiente), así que se registra como lo que es y no como lo que se espera que sea.
+- ✅ **VERIFICADO el mismo día, con Andre pasando la salida del SQL Editor.** `method` devuelve `is_nullable = YES`, y el `update` de `price_usd` que antes abortaba con `record "new" has no field "coach_id"` ahora pasa. 📝 **Y la salida dice más que "no explotó"**: el coach de prueba quedó con `price_usd = 50` y `accepts_international = false`, que es el valor CORRECTO porque tiene los dos rieles en `false` — o sea que el trigger no solo dejó de abortar, está calculando bien la derivada.
+- ⚠️ **Queda sin probar una rama: la del DELETE** (`old.coach_id`), el otro caso que rompía — borrar una fila de cobro y, por cascada, borrar un coach. El chequeo 3 del script la cubre, pero **solo prueba algo si hay al menos una fila** en `coach_payout_accounts`: con la tabla vacía el delete afecta 0 filas, el trigger no dispara y el chequeo pasa sin haber ejercitado nada.
+- 📝 **La verificación se hizo por captura de pantalla y no desde la sesión**: en `.env` solo está la anon key (no lee `information_schema`), no hay service role key ni password de Postgres, y `psql` no está instalado — las dos vías del CLI (`supabase db`, `inspect db`) piden esa credencial.
 - 📝 Se corrigió el encabezado del script, que todavía decía que el estado de `add-payout-rails.sql` era desconocido cuando ya se había confirmado contra la base el 25/08.
 
 **Pendiente para la próxima sesión:**
 
-- ⚠️ **Cerrar la verificación del fix**: correr los chequeos comentados al final del script — `method` en `is_nullable = YES`, y los dos `begin/rollback` que reproducen el `update` de `price_usd` (antes: `record "new" has no field "coach_id"`) y el `delete` de la fila de cobro (antes: `record "new" is not assigned yet`).
+- ⚠️ **Probar la rama del DELETE del trigger** (chequeo 3 del script), la única que quedó sin ejercitar — y confirmar antes que `coach_payout_accounts` tenga al menos una fila, si no el chequeo pasa vacío.
 - 📝 **Conviene dejar una forma de consultar la base desde la sesión de trabajo** — sin eso, todo "corrido" queda sin contrastar y el registro vuelve a depender de lo que diga un documento, que es el patrón que este proyecto ya arrastró tres veces.
 - Sigue todo lo demás abierto de la sesión 127: la promo de fundador en los rieles internacionales, el `outcome_code` de disputas de PayPal, `paypal-diagnostico` (ACTIVE pero dada por borrada), y las dos reorganizaciones analizadas y sin empezar (configuración del coach y onboarding del usuario).
 
