@@ -4,15 +4,19 @@
 -- la app hace todos los días, y ninguno de los dos avisa: el error sale del lado
 -- del cliente como "no se pudo guardar".
 --
--- ⚠️ CUÁNDO CORRER ESTO. `add-payout-rails.sql` ya quedó arreglado en su lugar,
--- así que este archivo es SOLO para la base donde aquel ya se corrió. Si todavía
--- no se corrió, corré aquel (ya corregido) y este no hace falta — correrlo igual
--- es inofensivo, es `create or replace` + un `drop not null` idempotente.
+-- 🔴 HAY QUE CORRERLO: `add-payout-rails.sql` YA ESTÁ CORRIDO en producción
+-- (confirmado contra la base el 25/08/2026 — las columnas de rieles responden
+-- por REST), así que los dos defectos de abajo están VIVOS: hoy ningún coach
+-- puede guardar su precio en dólares ni sus datos de cobro.
 --
--- 🔴 Y hay que averiguar cuál de los dos casos es: al 25/08/2026
--- CHANGELOG_SESIONES.md dice "CORRIDO y VERIFICADO" y SCHEMA.md dice "PENDIENTE
--- DE CORRER". El chequeo 0 de abajo lo contesta contra la base, que es la única
--- fuente que no se desactualiza.
+-- 📝 El estado del script lo contestó la base y no los documentos, que decían
+-- cosas distintas: CHANGELOG_SESIONES.md "CORRIDO y VERIFICADO" y SCHEMA.md
+-- "PENDIENTE DE CORRER". El changelog tenía razón. El chequeo 0 de abajo es esa
+-- misma pregunta, por si hace falta repetirla en otro entorno.
+--
+-- Es idempotente y no toca datos: un `create or replace` y un `drop not null`.
+-- `add-payout-rails.sql` ya quedó arreglado en su lugar, así que una base nueva
+-- no necesita este archivo.
 
 
 -- ── 1. El trigger no puede resolver el coach con un coalesce único ───────────
