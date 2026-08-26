@@ -13,7 +13,8 @@
 
 - Pedido explícito: mismo tamaño/letra/color que `sectionTitle` de `recursos.tsx` (Jakarta 700, 20px, forest) — antes era Poppins regular 13.5px, gris oliva.
 - **Nuevo modificador `askSubBig`**, aplicado solo al texto de Fase 1 — el subtítulo de Fase 2 ("Elegí un tema y te presento a los profesionales indicados") sigue con el estilo chico original, no se tocó.
-- Typecheck, lint y 259/259 tests limpios. No confirmado en dispositivo — con la letra más grande puede que el espaciado que se ajustó en la sesión 128 necesite otra vuelta.
+- **Fix al toque, mismo pedido**: con la letra más grande el texto quedó pegado arriba del "Conexiones" — se subió `askWrapTight.marginTop` de 0 a 10 (había bajado a 0 en la sesión 128, cuando ese bloque todavía tenía el subtítulo chico).
+- Typecheck, lint y 259/259 tests limpios. No confirmado en dispositivo.
 
 ---
 

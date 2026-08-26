@@ -816,7 +816,7 @@ const s = StyleSheet.create({
   // `askWrap`) además del `marginBottom`, para traer el CONTENIDO hacia el
   // título sin tocar el título en sí.
   askWrapTight: {
-    marginTop: 0,
+    marginTop: 10,
     marginBottom: 2,
   },
   // Título de Fase 2 (nombre del eje elegido) — Fase 1 ya no tiene título propio.
