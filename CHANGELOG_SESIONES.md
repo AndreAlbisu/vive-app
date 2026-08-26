@@ -66,6 +66,24 @@
 
 ---
 
+## 2026-08-26 — Andre (sesión 128)
+
+**Tocado:** `scripts/fix-payout-rails-trigger.sql` (encabezado), `SCHEMA.md`.
+
+**Resumen:**
+
+- ✅ **Se corrió `scripts/fix-payout-rails-trigger.sql`** en producción. Con eso quedan cerrados los dos bugs que impedían a cualquier coach guardar su `price_usd` y sus datos de cobro.
+- ⚠️ **CORRIDO, no "CORRIDO y VERIFICADO".** La verificación no se pudo hacer desde la sesión de trabajo: en `.env` solo está la anon key (no lee `information_schema`), no hay service role key ni password de Postgres, y `psql` no está instalado — las dos vías del CLI (`supabase db`, `inspect db`) piden esa credencial. **Es exactamente la distinción que en este proyecto ya costó cara tres veces** (el cron con el placeholder del Vault, el webhook muerto, `charged_amount` dado por pendiente), así que se registra como lo que es y no como lo que se espera que sea.
+- 📝 Se corrigió el encabezado del script, que todavía decía que el estado de `add-payout-rails.sql` era desconocido cuando ya se había confirmado contra la base el 25/08.
+
+**Pendiente para la próxima sesión:**
+
+- ⚠️ **Cerrar la verificación del fix**: correr los chequeos comentados al final del script — `method` en `is_nullable = YES`, y los dos `begin/rollback` que reproducen el `update` de `price_usd` (antes: `record "new" has no field "coach_id"`) y el `delete` de la fila de cobro (antes: `record "new" is not assigned yet`).
+- 📝 **Conviene dejar una forma de consultar la base desde la sesión de trabajo** — sin eso, todo "corrido" queda sin contrastar y el registro vuelve a depender de lo que diga un documento, que es el patrón que este proyecto ya arrastró tres veces.
+- Sigue todo lo demás abierto de la sesión 127: la promo de fundador en los rieles internacionales, el `outcome_code` de disputas de PayPal, `paypal-diagnostico` (ACTIVE pero dada por borrada), y las dos reorganizaciones analizadas y sin empezar (configuración del coach y onboarding del usuario).
+
+---
+
 ## 2026-08-25 — Andre (sesión 127)
 
 **Tocado:** `scripts/add-payout-rails.sql`, `screens/CoachPayoutScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/AdminScreen.tsx`, `lib/payout.ts`, `__tests__/payout.test.ts`, `supabase/functions/paypal-webhook/index.ts`, `mp-webhook/index.ts`, `paypal-create-payment/index.ts`, `usdt-create-payment/index.ts`, `session-attendance/index.ts`, `SCHEMA.md`. Nuevo: `scripts/fix-payout-rails-trigger.sql` (⚠️ **PENDIENTE DE CORRER**). 259 tests (eran 252), `tsc` y lint limpios. **Cinco edge functions deployadas y verificadas** (ver el final de la entrada).
