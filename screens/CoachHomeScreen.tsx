@@ -31,6 +31,23 @@ type PersonaCayendo = PersonaEnRiesgo & {
   salaId: string | null;
 };
 
+/**
+ * 🔴 EL INTERRUPTOR de "el coach ve la tendencia de ánimo de su cliente" (D).
+ *
+ * A la espera de la respuesta del abogado — pregunta **A.10** de
+ * `docs/paquete-abogado.md`. Decisión de Andre el 26/08/2026: construirlo ahora
+ * y apagarlo si la respuesta es que no, para no perder tiempo.
+ *
+ * Poner esto en `false` lo apaga entero del lado de la app. La otra llave es no
+ * correr `scripts/add-mood-para-coach.sql`, o borrar su función: sin ella la
+ * consulta falla y esto ya trata el error como "no hay datos".
+ *
+ * ⚠️ Lo que se muestra es SOLO la tendencia agregada. Nunca las entradas una por
+ * una, y nunca el diario ni la gratitud — eso es texto libre donde la persona
+ * escribe lo que no le dice a nadie, y queda afuera por completo.
+ */
+const MOSTRAR_ANIMO_AL_COACH = true;
+
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
 const CARD = '#F7F2E7';
 const CREAM_DEEP = '#EAE2D0';
@@ -63,8 +80,15 @@ type NextSession = {
   startMs: number;
 };
 
+type AnimoCliente = {
+  diasConRegistro: number;
+  promedio: number;
+  ultimo: number;
+  direccion: 'sube' | 'baja' | 'igual';
+};
+
 type PrepResource = { id: string; title: string; opened: boolean; roomId: string | null };
-type Prep = { lastDaysAgo: number | null; resources: PrepResource[] };
+type Prep = { lastDaysAgo: number | null; resources: PrepResource[]; animo: AnimoCliente | null };
 
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -234,7 +258,28 @@ export default function CoachHomeScreen() {
         const title = Array.isArray(cr) ? (cr[0]?.title ?? 'Recurso') : (cr?.title ?? 'Recurso');
         return { id: r.id as string, title, opened: !!r.opened_at, roomId: (r.room_id as string) ?? null };
       });
-      setPrep({ lastDaysAgo, resources });
+      // Tendencia de ánimo — solo de la persona de la PRÓXIMA sesión, y solo
+      // acá: es información para prepararse, no un panel de vigilancia. Si la
+      // función no existe (script sin correr o borrado por el abogado), el
+      // error se traga y queda en null.
+      let animo: AnimoCliente | null = null;
+      if (MOSTRAR_ANIMO_AL_COACH) {
+        const { data: tend } = await supabase.rpc('mood_trend_for_client', {
+          p_user_id: b.user_id as string,
+          p_days: 14,
+        });
+        const fila = Array.isArray(tend) ? tend[0] : null;
+        if (fila) {
+          animo = {
+            diasConRegistro: Number(fila.dias_con_registro),
+            promedio: Number(fila.promedio),
+            ultimo: Number(fila.ultimo),
+            direccion: (fila.direccion as AnimoCliente['direccion']) ?? 'igual',
+          };
+        }
+      }
+
+      setPrep({ lastDaysAgo, resources, animo });
     } else {
       setNext(null);
       setPrep(null);
@@ -453,6 +498,28 @@ export default function CoachHomeScreen() {
                     <Text style={s.prepB}>Última sesión: </Text>
                     {prep?.lastDaysAgo == null ? 'primera sesión juntos' : `hace ${prep.lastDaysAgo} ${prep.lastDaysAgo === 1 ? 'día' : 'días'}`}
                   </Text>
+                  {/* 🔴 Tendencia de ánimo. Va DENTRO de "Preparar sesión" y no
+                      suelto en la Home: es información para llegar mejor a esta
+                      sesión, no un panel para mirar a la gente.
+
+                      Se dice en palabras y no con el número crudo: "viene
+                      bajoneada" es lo que el coach necesita saber; "promedio
+                      2,4" invita a tratarlo como un score. Y se aclara sobre
+                      cuántos días, para que no se lea como un diagnóstico. */}
+                  {prep?.animo && (
+                    <Text style={[s.prepLine, { marginTop: 8 }]}>
+                      <Text style={s.prepB}>Cómo viene: </Text>
+                      {prep.animo.promedio <= 2.4 ? 'con el ánimo bajo'
+                        : prep.animo.promedio >= 3.6 ? 'con buen ánimo'
+                        : 'con el ánimo parejo'}
+                      {prep.animo.direccion === 'sube' ? ', y mejorando'
+                        : prep.animo.direccion === 'baja' ? ', y cayendo' : ''}
+                      <Text style={s.prepSoft}>
+                        {`  ·  ${prep.animo.diasConRegistro} registros en 14 días`}
+                      </Text>
+                    </Text>
+                  )}
+
                   {prep && prep.resources.length > 0 && (
                     <>
                       <Text style={[s.prepB, { marginTop: 8 }]}>Recursos que le mandaste:</Text>
@@ -676,6 +743,7 @@ const s = StyleSheet.create({
   prepB: { color: GREEN_TXT, fontFamily: ViveFonts.semibold, fontSize: 11.5 },
   prepRes: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
   prepOk: { color: '#C9DFA9', fontSize: 11.5, fontFamily: ViveFonts.regular, flexShrink: 1 },
+  prepSoft: { fontFamily: ViveFonts.regular, fontSize: 11, color: FOREST_SOFT, opacity: 0.85 },
   prepWarn: { color: TERRA_SOFT, fontSize: 11.5, fontFamily: ViveFonts.regular, flexShrink: 1 },
 
   nextEmpty: {

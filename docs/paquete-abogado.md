@@ -146,6 +146,38 @@ está en Argentina elija pagar el precio en dólares** — puede ser lo que pref
 dólares, si el precio en pesos también está disponible? ¿Cambia si el profesional
 solo aceptó medios en dólares y entonces el precio en pesos no se le ofrece?
 
+**A.10 — Mostrarle al profesional el ánimo de su cliente.** 🔴 *La más delicada de
+todas.*
+El Usuario hace un check-in diario de estado de ánimo (una escala de 1 a 5:
+"bajón", "cansado", "normal", "bien", "brillando"). Hoy **eso lo ve solo él**.
+Queremos que el profesional pueda ver, **antes de la sesión**, cómo viene esa
+persona — porque llega mejor preparado y la sesión rinde más.
+
+Lo que queremos mostrarle es **solo la tendencia agregada** (un promedio y si
+viene subiendo o bajando en los últimos días), **nunca las entradas una por una**,
+y **nunca el diario ni las anotaciones de gratitud**, que son texto libre y se
+quedan afuera por completo.
+
+Nuestra lectura, para que la confirmes o la corrijas:
+1. Entendemos que el ánimo puede ser **dato sensible** en los términos de la Ley
+   25.326, y así lo dice hoy nuestra Política de privacidad.
+2. El consentimiento que hoy damos por prestado alcanza para **prestar el
+   servicio** — o sea, para que la app se lo muestre a la propia persona.
+   Compartirlo con un tercero (el profesional) nos parece una **finalidad nueva**
+   que ese consentimiento **no cubre**.
+3. Por eso asumimos que hace falta un **consentimiento propio, expreso,
+   informado y revocable**, probablemente por profesional y no global.
+
+**Preguntas:** ¿es correcta esa lectura? ¿Alcanza con un opt-in dentro de la app
+(un interruptor con su texto explicativo) o hace falta otra forma? ¿Cambia algo
+que sea solo la tendencia y no las entradas? ¿Y que el profesional no sea
+personal de salud sino un coach? ¿Hay que registrar cuándo y qué versión del
+texto aceptó, como hacemos con los T&C?
+
+⚠️ **Estado:** se está construyendo detrás de un interruptor apagable en un solo
+lugar, **a la espera de esta respuesta**. Si la respuesta es que no se puede en
+esta forma, se apaga sin tocar nada más.
+
 ### B. No bloquean, pero quiero tu lectura
 
 **B.1 — Limitación de responsabilidad e indemnidad (T&C §18–19).**
