@@ -18,6 +18,7 @@ import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { personasQueSeCaen, haceCuanto, type PersonaEnRiesgo } from '@/lib/coachContinuity';
+import { COMMISSION_LOCAL_FIRST, COMMISSION_LOCAL_RECURRING } from '@/lib/pricing';
 import { AppBg } from '@/components/ui/AppBg';
 import { visibilityTeaser, type VisibilityTeaser } from '@/lib/coachVisibility';
 import { scheduledAtMs, daysFromTodayAr, todayInAr } from '@/lib/time';
@@ -108,6 +109,8 @@ export default function CoachHomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [visibility, setVisibility] = useState<VisibilityTeaser | null>(null);
   const [seCaen, setSeCaen] = useState<PersonaCayendo[]>([]);
+  const [repu, setRepu] = useState<{ completadas: number; vuelvenPct: number | null } | null>(null);
+  const [sinCerrar, setSinCerrar] = useState<{ name: string; salaId: string; dias: number } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -236,6 +239,67 @@ export default function CoachHomeScreen() {
       setNext(null);
       setPrep(null);
     }
+
+    // ── La sesión que pasó y no cerraste ─────────────────────────────────────
+    // 🔴 `session_notes` existe desde el 06/08 y vive detrás de una pill en el
+    // header del chat: **nadie le pide nunca al coach que la escriba**. Es a la
+    // vez buena práctica profesional y la función más pegajosa del producto —
+    // ese historial no se lo puede llevar si se va.
+    //
+    // Ventana corta a propósito: una semana. Pasado eso el aviso deja de ser un
+    // recordatorio y pasa a ser un reproche por algo que ya no se acuerda.
+    const haceUnaSemana = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+    const { data: recientes } = await supabase
+      .from('bookings')
+      .select('id, user_id, sala_id, scheduled_date')
+      .eq('coach_id', coachId)
+      .eq('status', 'completada')
+      .gte('scheduled_date', haceUnaSemana)
+      .lte('scheduled_date', todayInAr())
+      .order('scheduled_date', { ascending: false });
+
+    let pendienteNota: { name: string; salaId: string; dias: number } | null = null;
+    if (recientes && recientes.length > 0) {
+      // Una nota (privada o compartida) alcanza para darla por cerrada: la tabla
+      // permite hasta dos por reserva y exigir las dos sería inventar un deber.
+      const { data: conNota } = await supabase
+        .from('session_notes')
+        .select('booking_id')
+        .in('booking_id', recientes.map(b => b.id as string));
+      const yaTiene = new Set((conNota ?? []).map(n => n.booking_id as string));
+
+      const primera = recientes.find(b => !yaTiene.has(b.id as string) && b.sala_id);
+      if (primera) {
+        const { data: quien } = await supabase
+          .from('profiles').select('name').eq('id', primera.user_id as string).maybeSingle();
+        pendienteNota = {
+          name: (quien?.name as string) ?? 'esa persona',
+          salaId: primera.sala_id as string,
+          dias: -daysFromTodayAr(primera.scheduled_date as string),
+        };
+      }
+    }
+    setSinCerrar(pendienteNota);
+
+    // ── Lo que construiste acá ───────────────────────────────────────────────
+    // 🔴 `coach_rebooking_stats` ya calcula la tasa de recompra y hasta hoy se
+    // usaba SOLO para rankear al coach en el deck del usuario: él nunca veía su
+    // propio número. Es el dato más halagador y más difícil de conseguir que
+    // tiene un profesional independiente — y, para lo que importa acá, **es el
+    // que no se puede llevar a ningún lado** si se va de la app.
+    const { data: stats } = await supabase
+      .from('coach_rebooking_stats')
+      .select('completadas_count, rebooking_rate')
+      .eq('coach_id', coachId)
+      .maybeSingle();
+
+    // `rebooking_rate` viene NULL con menos de 5 completadas: es el piso de
+    // muestra de la vista, no un cero. Mostrar "0% vuelve" cuando todavía no
+    // hay con qué calcularlo sería desmoralizar con un dato inventado.
+    setRepu(stats ? {
+      completadas: Number(stats.completadas_count ?? 0),
+      vuelvenPct: stats.rebooking_rate == null ? null : Math.round(Number(stats.rebooking_rate) * 100),
+    } : null);
 
     // ── Quién se está cayendo ────────────────────────────────────────────────
     // Se pide aparte de las confirmadas de arriba porque son otro conjunto: las
@@ -413,6 +477,34 @@ export default function CoachHomeScreen() {
             </View>
           )}
 
+          {/* ── La sesión que pasó y no cerraste ──────────────────────────
+              Va después de la próxima sesión y antes del resto: mira para
+              atrás, pero para atrás RECIENTE, así que sigue siendo del día. */}
+          {sinCerrar && (
+            <TouchableOpacity
+              style={s.notaCard}
+              activeOpacity={0.9}
+              onPress={() => router.push({
+                pathname: '/sala',
+                params: { sala_id: sinCerrar.salaId, abrir_notas: '1' },
+              })}>
+              <View style={s.notaIcon}>
+                <Feather name="edit-3" size={15} color={FOREST} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.notaTitle}>
+                  {sinCerrar.dias === 0
+                    ? `Hoy tuviste sesión con ${sinCerrar.name}`
+                    : sinCerrar.dias === 1
+                      ? `Ayer tuviste sesión con ${sinCerrar.name}`
+                      : `Hace ${sinCerrar.dias} días tuviste sesión con ${sinCerrar.name}`}
+                </Text>
+                <Text style={s.notaTxt}>¿Le dejás algo escrito para esta semana?</Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={FOREST_SOFT} />
+            </TouchableOpacity>
+          )}
+
           {/* ── Quién se está cayendo ─────────────────────────────────────
               🔴 El bloque que contesta la pregunta que la app no contestaba:
               "¿a quién hace mucho que no veo?". Hasta acá había reservas y
@@ -477,6 +569,43 @@ export default function CoachHomeScreen() {
               </View>
               <Feather name="chevron-right" size={16} color={FOREST_SOFT} />
             </TouchableOpacity>
+          )}
+
+          {/* ── Lo que construiste acá ─────────────────────────────────────
+              🔴 Va ÚLTIMO a propósito: no es accionable, es el cierre. Y va
+              JUNTO con la comisión, no separado, porque separados los dos
+              pierden. "El 60% vuelve" solo es una palmada; "el 60% vuelve, y
+              cuando vuelve te cobramos menos" es el argumento entero — la
+              medida anti-fuga #3, pendiente desde el 06/08/2026.
+
+              El encuadre que funciona NO es "baja por volumen" sino "te
+              cobramos por presentarte, no por tu relación". Dicho al lado de su
+              propio número de recompra, es donde más se entiende. */}
+          {repu && repu.completadas > 0 && (
+            <View style={s.repuWrap}>
+              <Text style={s.repuEyebrow}>LO QUE CONSTRUISTE ACÁ</Text>
+              <View style={s.repuRow}>
+                <View style={s.repuItem}>
+                  <Text style={s.repuNum}>{repu.completadas}</Text>
+                  <Text style={s.repuLbl}>
+                    {repu.completadas === 1 ? 'sesión cumplida' : 'sesiones cumplidas'}
+                  </Text>
+                </View>
+                {repu.vuelvenPct != null && (
+                  <View style={s.repuItem}>
+                    <Text style={s.repuNum}>{repu.vuelvenPct}%</Text>
+                    <Text style={s.repuLbl}>de tus personas vuelve</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={s.repuNota}>
+                Y cuando vuelven te cobramos menos: {COMMISSION_LOCAL_FIRST}% la primera sesión
+                con cada persona, {COMMISSION_LOCAL_RECURRING}% de ahí en adelante, y no se
+                reinicia nunca.{' '}
+                <Text style={s.repuNotaB}>Te cobramos por presentarte a alguien, no por tu
+                relación con esa persona.</Text>
+              </Text>
+            </View>
           )}
 
           <View style={{ height: TAB_BAR_CLEARANCE + 16 }} />
@@ -558,6 +687,48 @@ const s = StyleSheet.create({
   nextEmptyBtnTxt: { color: GREEN_TXT, fontSize: 12.5, fontFamily: ViveFonts.semibold },
 
   // Cómo aparecer en Conexiones
+  notaCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: CARD,
+    borderRadius: 18,
+    padding: 14,
+    marginTop: 14,
+  },
+  notaIcon: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: CREAM_DEEP,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  notaTitle: { fontFamily: ViveFonts.semibold, fontSize: 14, color: FOREST },
+  notaTxt: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, marginTop: 2 },
+
+  repuWrap: {
+    backgroundColor: CARD,
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 14,
+    gap: 12,
+  },
+  repuEyebrow: {
+    fontFamily: ViveFonts.bold,
+    fontSize: 10,
+    letterSpacing: 1.1,
+    color: FOREST_SOFT,
+  },
+  repuRow: { flexDirection: 'row', gap: 24 },
+  repuItem: { flexShrink: 1 },
+  repuNum: { fontFamily: ViveFonts.title, fontSize: 26, color: FOREST },
+  repuLbl: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, marginTop: 2 },
+  repuNota: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: FOREST_SOFT,
+  },
+  repuNotaB: { fontFamily: ViveFonts.semibold, color: FOREST },
+
   caenWrap: {
     backgroundColor: CARD,
     borderRadius: 18,

@@ -1,8 +1,12 @@
 import {
   COMMISSION_INTERNATIONAL_FIRST,
   COMMISSION_INTERNATIONAL_RECURRING,
+  COMMISSION_FIRST,
+  COMMISSION_RECURRING,
 } from '../supabase/functions/_shared/commission';
 import {
+  COMMISSION_LOCAL_FIRST,
+  COMMISSION_LOCAL_RECURRING,
   COMMISSION_INTL_FIRST,
   COMMISSION_INTL_RECURRING,
   priceUsdError,
@@ -90,5 +94,10 @@ describe('la comisión internacional que se muestra es la que se aplica', () => 
   it('coincide con `_shared/commission.ts`', () => {
     expect(COMMISSION_INTL_FIRST).toBe(COMMISSION_INTERNATIONAL_FIRST);
     expect(COMMISSION_INTL_RECURRING).toBe(COMMISSION_INTERNATIONAL_RECURRING);
+  });
+
+  it('la del riel local también', () => {
+    expect(COMMISSION_LOCAL_FIRST).toBe(COMMISSION_FIRST);
+    expect(COMMISSION_LOCAL_RECURRING).toBe(COMMISSION_RECURRING);
   });
 });

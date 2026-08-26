@@ -27,6 +27,22 @@
  * test, cambiar la escalera del lado servidor dejaría a la pantalla del coach
  * prometiéndole un neto que no va a cobrar.
  */
+/**
+ * La escalera del riel LOCAL (Mercado Pago), para mostrársela al coach: 20% en
+ * la primera sesión con cada persona, 15% de la segunda en adelante, y **nunca
+ * se reinicia**.
+ *
+ * 🔴 El encuadre importa tanto como el número. No es "baja por volumen" — es
+ * **"te cobramos por presentarte al cliente, no por tu relación con él"**. Esa
+ * frase es la medida anti-fuga #3 y estaba pendiente de decirse desde el
+ * 06/08/2026.
+ *
+ * ⚠️ Mismo trato que la escalera internacional: la fuente de verdad es
+ * `supabase/functions/_shared/commission.ts` y un test compara las dos.
+ */
+export const COMMISSION_LOCAL_FIRST = 20;
+export const COMMISSION_LOCAL_RECURRING = 15;
+
 export const COMMISSION_INTL_FIRST = 25;
 export const COMMISSION_INTL_RECURRING = 20;
 

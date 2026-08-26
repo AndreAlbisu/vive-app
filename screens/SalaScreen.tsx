@@ -163,7 +163,9 @@ function buildInitials(name: string): string {
 
 export default function SalaScreen() {
   const router = useRouter();
-  const { sala_id: salaIdParam, coach_id } = useLocalSearchParams<{ sala_id?: string; coach_id?: string }>();
+  const { sala_id: salaIdParam, coach_id, abrir_notas } = useLocalSearchParams<{
+    sala_id?: string; coach_id?: string; abrir_notas?: string;
+  }>();
   const { user } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -177,7 +179,11 @@ export default function SalaScreen() {
   const [pairBlocked, setPairBlocked] = useState(false);
   // De esos, el que puse yo (lo único que puedo deshacer desde acá).
   const [iBlockedThem, setIBlockedThem] = useState(false);
-  const [notesOpen, setNotesOpen] = useState(false);
+  // 🔴 Puede nacer abierta. El aviso de la Home ("cerrá la sesión de ayer")
+  // tiene que caer EN la nota, no en el chat con la nota escondida detrás de
+  // una pill del header: si el atajo deja al coach a un tap más de distancia,
+  // el aviso pide algo que no facilita.
+  const [notesOpen, setNotesOpen] = useState(abrir_notas === '1');
   const [sharedNote, setSharedNote] = useState<string | null>(null);
   const [recipientProfile, setRecipientProfile] = useState<RecipientProfile | null>(null);
   const [activeBooking, setActiveBooking] = useState<ActiveBooking>(null);
