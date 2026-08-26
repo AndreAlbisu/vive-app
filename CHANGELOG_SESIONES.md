@@ -15,7 +15,7 @@
 - **Nuevo modificador `askSubBig`**, aplicado solo al texto de Fase 1 — el subtítulo de Fase 2 ("Elegí un tema y te presento a los profesionales indicados") sigue con el estilo chico original, no se tocó.
 - **Fix al toque, mismo pedido**: con la letra más grande el texto quedó pegado arriba del "Conexiones" — se subió `askWrapTight.marginTop` de 0 a 10 (había bajado a 0 en la sesión 128, cuando ese bloque todavía tenía el subtítulo chico).
 - **Segundo fix al toque, con captura comparativa**: pedido que quede a la misma altura de pantalla que "Herramientas de Vita" en Recursos. Medí las tres diferencias entre las dos pantallas (`header.marginTop`: 10 acá vs. -2 en recursos.tsx; `header.marginBottom`: 6 vs. 8; el título mide 32/38 vs. 34/40) y las compensé todas en un solo número: `askWrapTight.marginTop` pasó de 10 a -6.
-- **Tercer y cuarto fix al toque**: "subilo un poco más" — de -6 a -12, y después "un poquito más, no mucho" — de -12 a -16.
+- **Ajustes finos sucesivos**: "subilo un poco más" (-6 → -12), "un poquito más, no mucho" (-12 → -16), "más abajo" (-16 → -8).
 - Typecheck, lint y 259/259 tests limpios. No confirmado en dispositivo.
 
 ---

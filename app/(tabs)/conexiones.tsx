@@ -822,7 +822,7 @@ const s = StyleSheet.create({
   // contra 34/40 — así que el número compensa las tres diferencias juntas,
   // no solo esta.
   askWrapTight: {
-    marginTop: -16,
+    marginTop: -8,
     marginBottom: 2,
   },
   // Título de Fase 2 (nombre del eje elegido) — Fase 1 ya no tiene título propio.
