@@ -654,6 +654,11 @@ export default function CoachProfileScreen() {
           </TouchableOpacity>
         </View>
 
+        <View style={s.groupHead}>
+          <Text style={s.groupTitle}>Tu perfil público</Text>
+          <Text style={s.groupHint}>Lo que ve quien entra a tu perfil</Text>
+        </View>
+
         {/* ── Presentación ──────────────────────────────────── */}
         <Text style={s.sectionTitle}>Presentación</Text>
         <View style={s.bioCard}>
@@ -729,8 +734,46 @@ export default function CoachProfileScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ── Video perfil ──────────────────────────────────── */}
+        <Text style={[s.sectionTitle, s.sectionSpaced]}>Video de perfil</Text>
+        <View style={s.videoCard}>
+          {profile?.video_url ? (
+            <TouchableOpacity activeOpacity={0.9} onPress={openVideoModal} style={s.videoPlayerWrap}>
+              <VideoView
+                player={videoPlayer}
+                style={s.videoPlayerWrap}
+                contentFit="cover"
+                nativeControls={false}
+              />
+              <View style={s.videoExpandBadge} pointerEvents="none">
+                <MaterialCommunityIcons name="fullscreen" size={18} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View style={s.videoPlaceholder}>
+              <MaterialCommunityIcons name="video-outline" size={36} color="rgba(135,131,92,0.52)" />
+              <Text style={s.videoPlaceholderText}>Sin video grabado</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={s.recordBtn}
+            onPress={pickVideo}
+            activeOpacity={0.85}
+            disabled={uploadingVideo}>
+            <MaterialCommunityIcons name="record-circle-outline" size={16} color={ViveColors.primary} />
+            <Text style={s.recordBtnText}>
+              {uploadingVideo ? 'Subiendo…' : profile?.video_url ? 'Cambiar video' : 'Grabar nuevo video'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={s.groupHead}>
+          <Text style={s.groupTitle}>Cómo cobrás</Text>
+          <Text style={s.groupHint}>Tus precios y por dónde te llega la plata</Text>
+        </View>
+
         {/* ── Precios ───────────────────────────────────────── */}
-        <Text style={[s.sectionTitle, s.sectionSpaced]}>Precio y paquetes</Text>
+        <Text style={s.sectionTitle}>Precio y paquetes</Text>
         <View style={s.priceCard}>
           {editingPrice ? (
             <View>
@@ -791,92 +834,6 @@ export default function CoachProfileScreen() {
               </View>
             </TouchableOpacity>
           )}
-        </View>
-
-        {/* ── Modo de reserva ───────────────────────────────── */}
-        <Text style={[s.sectionTitle, s.sectionSpaced]}>Modalidad de reserva</Text>
-        <View style={s.toggleCard}>
-          <View style={s.toggleInfo}>
-            <Text style={s.toggleTitle}>{profile?.instant_booking ? 'Instantánea' : 'Con confirmación'}</Text>
-            <Text style={s.toggleDesc}>
-              {profile?.instant_booking
-                ? 'Los usuarios reservan directamente sin esperar tu aprobación'
-                : 'Cada reserva requiere tu confirmación antes de quedar fijada'}
-            </Text>
-          </View>
-          <Switch
-            value={!!profile?.instant_booking}
-            onValueChange={toggleInstantMode}
-            disabled={noCoachProfile || savingInstantMode}
-            trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
-            thumbColor="#FFFFFF"
-            ios_backgroundColor={`${ViveColors.text}25`}
-          />
-        </View>
-
-        {/* ── Disponibilidad ────────────────────────────────── */}
-        <Text style={[s.sectionTitle, s.sectionSpaced]}>Disponibilidad</Text>
-        <View style={s.toggleCard}>
-          <View style={s.toggleInfo}>
-            <Text style={s.toggleTitle}>
-              {profile?.availability_status === 'activo' ? 'Disponible' : 'En pausa'}
-            </Text>
-            <Text style={s.toggleDesc}>
-              {profile?.availability_status === 'activo'
-                ? 'Aparecés en búsquedas y podés recibir nuevas reservas'
-                : 'No aparecés en búsquedas. Tus sesiones actuales no se ven afectadas'}
-            </Text>
-          </View>
-          <Switch
-            value={profile?.availability_status === 'activo'}
-            onValueChange={toggleAvailability}
-            disabled={noCoachProfile || savingAvailability}
-            trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
-            thumbColor="#FFFFFF"
-            ios_backgroundColor={`${ViveColors.text}25`}
-          />
-        </View>
-        <TouchableOpacity
-          style={[s.availBtn, { marginTop: 8 }]}
-          onPress={() => router.push('/coach-availability')}
-          activeOpacity={0.75}
-        >
-          <MaterialCommunityIcons name="calendar-clock" size={18} color={ViveColors.primary} />
-          <Text style={s.availBtnText}>Gestionar disponibilidad</Text>
-          <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.58)" />
-        </TouchableOpacity>
-
-        {/* ── Video perfil ──────────────────────────────────── */}
-        <Text style={[s.sectionTitle, s.sectionSpaced]}>Video de perfil</Text>
-        <View style={s.videoCard}>
-          {profile?.video_url ? (
-            <TouchableOpacity activeOpacity={0.9} onPress={openVideoModal} style={s.videoPlayerWrap}>
-              <VideoView
-                player={videoPlayer}
-                style={s.videoPlayerWrap}
-                contentFit="cover"
-                nativeControls={false}
-              />
-              <View style={s.videoExpandBadge} pointerEvents="none">
-                <MaterialCommunityIcons name="fullscreen" size={18} color="#fff" />
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <View style={s.videoPlaceholder}>
-              <MaterialCommunityIcons name="video-outline" size={36} color="rgba(135,131,92,0.52)" />
-              <Text style={s.videoPlaceholderText}>Sin video grabado</Text>
-            </View>
-          )}
-          <TouchableOpacity
-            style={s.recordBtn}
-            onPress={pickVideo}
-            activeOpacity={0.85}
-            disabled={uploadingVideo}>
-            <MaterialCommunityIcons name="record-circle-outline" size={16} color={ViveColors.primary} />
-            <Text style={s.recordBtnText}>
-              {uploadingVideo ? 'Subiendo…' : profile?.video_url ? 'Cambiar video' : 'Grabar nuevo video'}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* ── Mercado Pago ──────────────────────────────────── */}
@@ -943,11 +900,13 @@ export default function CoachProfileScreen() {
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Sesiones desde el exterior</Text>
         {/* No es un interruptor: se activan solas cuando hay con qué cobrarlas.
             Un estado que se puede prender sin tener cómo cobrar es un estado
-            roto — el catálogo lo anuncia y la pantalla de pago no puede. */}
-        <TouchableOpacity
-          style={s.toggleCard}
-          onPress={() => router.push('/coach-datos-cobro')}
-          activeOpacity={0.85}>
+            roto — el catálogo lo anuncia y la pantalla de pago no puede.
+            🔴 Y por eso tampoco es un LINK. Antes esta tarjeta llevaba a
+            `/coach-datos-cobro`, igual que la fila "Cómo te pagamos" de abajo:
+            dos accesos al mismo lugar dentro de la misma sección, y encima
+            colgados de algo que no se configura. Es un ESTADO — lo que se
+            configura son las dos cosas que lo producen, que están acá abajo. */}
+        <View style={s.toggleCard}>
           <View style={s.toggleInfo}>
             <Text style={s.toggleTitle}>
               {profile?.accepts_international ? 'Activadas' : 'Desactivadas'}
@@ -955,15 +914,15 @@ export default function CoachProfileScreen() {
             <Text style={s.toggleDesc}>
               {profile?.accepts_international
                 ? 'Atendé a personas que viven afuera. Tus horarios no cambian — seguís atendiendo en las franjas que ya cargaste, el que se acomoda es el usuario.'
-                : 'Se activan solas cuando tengas un precio en dólares y al menos un medio para cobrarlas. Tocá acá para elegir el medio.'}
+                : 'Se activan solas cuando tengas un precio en dólares y al menos un medio para cobrarlas.'}
             </Text>
           </View>
           <MaterialCommunityIcons
-            name="chevron-right"
+            name={profile?.accepts_international ? 'check-circle-outline' : 'circle-outline'}
             size={22}
-            color="rgba(135,131,92,0.6)"
+            color={profile?.accepts_international ? ViveColors.accent : 'rgba(135,131,92,0.45)'}
           />
-        </TouchableOpacity>
+        </View>
 
         {/* 🔴 El precio en dólares y el acceso a los rieles van SIEMPRE visibles,
             NO adentro de `accepts_international`. Desde que esa columna se
@@ -1052,8 +1011,80 @@ export default function CoachProfileScreen() {
           <MaterialIcons name="arrow-forward-ios" size={16} color="rgba(135,131,92,0.6)" />
         </TouchableOpacity>
 
+        <View style={s.groupHead}>
+          <Text style={s.groupTitle}>Cómo trabajás</Text>
+          <Text style={s.groupHint}>Cómo se reservan tus sesiones y cuándo estás</Text>
+        </View>
+
+        {/* ── Modo de reserva ───────────────────────────────── */}
+        <Text style={s.sectionTitle}>Modalidad de reserva</Text>
+        <View style={s.toggleCard}>
+          <View style={s.toggleInfo}>
+            <Text style={s.toggleTitle}>{profile?.instant_booking ? 'Instantánea' : 'Con confirmación'}</Text>
+            <Text style={s.toggleDesc}>
+              {profile?.instant_booking
+                ? 'Los usuarios reservan directamente sin esperar tu aprobación'
+                : 'Cada reserva requiere tu confirmación antes de quedar fijada'}
+            </Text>
+          </View>
+          <Switch
+            value={!!profile?.instant_booking}
+            onValueChange={toggleInstantMode}
+            disabled={noCoachProfile || savingInstantMode}
+            trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
+            thumbColor="#FFFFFF"
+            ios_backgroundColor={`${ViveColors.text}25`}
+          />
+        </View>
+
+        {/* ── Horarios ──────────────────────────────────────── */}
+        {/* 🔴 Antes esta sección se llamaba "Disponibilidad", y esa palabra
+            nombraba TRES cosas distintas en la app: este interruptor (que en
+            realidad decide si APARECÉS), las franjas horarias de
+            `/coach-availability`, y el patrón semanal de adentro de esa. El
+            coach que se quería pausar una semana tenía que adivinar entre las
+            tres. Ahora cada una dice lo que hace. */}
+        <Text style={s.sectionTitle}>Tus horarios</Text>
+        <TouchableOpacity
+          style={s.availBtn}
+          onPress={() => router.push('/coach-availability')}
+          activeOpacity={0.75}
+        >
+          <MaterialCommunityIcons name="calendar-clock" size={18} color={ViveColors.primary} />
+          <Text style={s.availBtnText}>Ver y editar tus franjas</Text>
+          <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.58)" />
+        </TouchableOpacity>
+
+        {/* ── Pausar el perfil ──────────────────────────────── */}
+        <Text style={[s.sectionTitle, s.sectionSpaced]}>Aparecer en búsquedas</Text>
+        <View style={s.toggleCard}>
+          <View style={s.toggleInfo}>
+            <Text style={s.toggleTitle}>
+              {profile?.availability_status === 'activo' ? 'Aparecés' : 'En pausa'}
+            </Text>
+            <Text style={s.toggleDesc}>
+              {profile?.availability_status === 'activo'
+                ? 'Aparecés en búsquedas y podés recibir nuevas reservas'
+                : 'No aparecés en búsquedas. Tus sesiones actuales no se ven afectadas'}
+            </Text>
+          </View>
+          <Switch
+            value={profile?.availability_status === 'activo'}
+            onValueChange={toggleAvailability}
+            disabled={noCoachProfile || savingAvailability}
+            trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
+            thumbColor="#FFFFFF"
+            ios_backgroundColor={`${ViveColors.text}25`}
+          />
+        </View>
+
+        <View style={s.groupHead}>
+          <Text style={s.groupTitle}>Tu reputación</Text>
+          <Text style={s.groupHint}>Lo que dejaron las personas que atendiste</Text>
+        </View>
+
         {/* ── Reseñas recibidas ─────────────────────────────── */}
-        <Text style={[s.sectionTitle, s.sectionSpaced]}>Reseñas recibidas</Text>
+        <Text style={s.sectionTitle}>Reseñas recibidas</Text>
         {!reviewsLoaded ? null : reviews.length === 0 ? (
           <View style={s.reviewsEmpty}>
             <MaterialCommunityIcons name="star-outline" size={28} color="rgba(135,131,92,0.38)" />
@@ -1117,6 +1148,11 @@ export default function CoachProfileScreen() {
             </View>
           </View>
         )}
+
+        <View style={s.groupHead}>
+          <Text style={s.groupTitle}>Tu cuenta</Text>
+          <Text style={s.groupHint}>Nada de esto lo ve nadie más</Text>
+        </View>
 
         {/* ── Cuentas bloqueadas ────────────────────────────── */}
         {/* El coach bloquea desde el "⋯" del chat, igual que el usuario, pero
@@ -1312,6 +1348,30 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
   },
   sectionSpaced: { marginTop: 28 },
+
+  // Encabezado de GRUPO — un nivel por encima de `sectionTitle`. Existe porque
+  // esta pantalla es un scroll largo con doce secciones, y sin jerarquía todas
+  // pesan igual: cobrar en pesos quedaba visualmente al mismo nivel que el
+  // video de perfil. El grupo contesta la pregunta que se hace el coach ("¿cómo
+  // cobro?") y las secciones de adentro son las partes de esa respuesta.
+  groupHead: {
+    paddingHorizontal: 20,
+    marginTop: 34,
+    marginBottom: 10,
+    gap: 2,
+  },
+  groupTitle: {
+    fontFamily: ViveFonts.bold,
+    fontSize: 12,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    color: 'rgba(86,94,50,0.55)',
+  },
+  groupHint: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: 'rgba(135,131,92,0.85)',
+  },
 
   // Topics
   chipsWrap: {
