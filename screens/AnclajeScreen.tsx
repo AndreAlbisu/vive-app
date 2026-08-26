@@ -184,7 +184,7 @@ const s = StyleSheet.create({
   title:   { fontFamily: ViveFonts.bold, fontSize: 20, color: FOREST, letterSpacing: -0.3 },
 
   content:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 20 },
-  subtitle:    { fontFamily: ViveFonts.frauncesSerif, fontSize: 24, color: FOREST, textAlign: 'center' },
+  subtitle:    { fontFamily: ViveFonts.title, fontSize: 24, color: FOREST, textAlign: 'center' },
   description: { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
 
   stepsPreview: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 320 },
@@ -203,7 +203,7 @@ const s = StyleSheet.create({
   progressFill:   { height: '100%', backgroundColor: FOREST, borderRadius: 2 },
 
   senseIconWrap: { width: 68, height: 68, borderRadius: 34, borderWidth: 2, borderColor: 'rgba(63,81,47,0.20)', alignItems: 'center', justifyContent: 'center', backgroundColor: GLASS_BG },
-  senseName:     { fontFamily: ViveFonts.frauncesSerif, fontSize: 21, color: FOREST, textAlign: 'center' },
+  senseName:     { fontFamily: ViveFonts.title, fontSize: 21, color: FOREST, textAlign: 'center' },
   prompt:        { fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST_SOFT, textAlign: 'center', lineHeight: 22 },
 
   countRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' },

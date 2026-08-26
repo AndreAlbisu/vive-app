@@ -344,7 +344,7 @@ const s = StyleSheet.create({
   },
   headerText: { flex: 1 },
   title: {
-    fontFamily: ViveFonts.frauncesSerif, fontSize: 30, color: FOREST, lineHeight: 36,
+    fontFamily: ViveFonts.title, fontSize: 30, color: FOREST, lineHeight: 36,
   },
   subtitle: {
     fontFamily: ViveFonts.regular, fontSize: 12.5, color: FOREST_SOFT, marginTop: 1,
@@ -391,7 +391,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, marginTop: 6, marginBottom: 12,
   },
   resultsLabel: {
-    fontFamily: ViveFonts.frauncesSerif, fontSize: 18, color: FOREST, flexShrink: 1,
+    fontFamily: ViveFonts.title, fontSize: 18, color: FOREST, flexShrink: 1,
   },
   resultsCount: {
     fontFamily: ViveFonts.medium, fontSize: 12, color: FOREST_SOFT, marginLeft: 10,

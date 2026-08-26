@@ -385,7 +385,7 @@ const s = StyleSheet.create({
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
-  hello: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST, flex: 1 },
+  hello: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST, flex: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   bellBtn: { padding: 2 },
   bellDot: {
@@ -393,7 +393,7 @@ const s = StyleSheet.create({
     backgroundColor: TERRA, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)',
   },
   avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  avatarTxt: { fontFamily: ViveFonts.frauncesSerif, fontSize: 13, color: '#FFF3E8' },
+  avatarTxt: { fontFamily: ViveFonts.bold, fontSize: 13, color: '#FFF3E8' },
 
   // Semana
   week: {
@@ -425,8 +425,8 @@ const s = StyleSheet.create({
   who: { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 10 },
   whoAv: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#55663F' },
   whoAvFallback: { alignItems: 'center', justifyContent: 'center' },
-  whoAvTxt: { fontFamily: ViveFonts.frauncesSerif, fontSize: 14, color: '#FFF3E8' },
-  whoName: { fontFamily: ViveFonts.frauncesSerif, fontSize: 17, color: GREEN_TXT },
+  whoAvTxt: { fontFamily: ViveFonts.bold, fontSize: 14, color: '#FFF3E8' },
+  whoName: { fontFamily: ViveFonts.titleSemiBold, fontSize: 17, color: GREEN_TXT },
   whoSub: { fontSize: 11, color: GREEN_EYEBROW, fontFamily: ViveFonts.regular, marginTop: 2 },
   acts: { flexDirection: 'row', gap: 8, marginTop: 13 },
   actBtn: { flex: 1, borderRadius: 15, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },

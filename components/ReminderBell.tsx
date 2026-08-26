@@ -247,7 +247,7 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 20,
     color: '#3A4F2A',
     marginBottom: 18,

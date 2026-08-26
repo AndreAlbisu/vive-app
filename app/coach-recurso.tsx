@@ -592,7 +592,7 @@ const s = StyleSheet.create({
     marginBottom: 18,
   },
   recoNoteBannerText: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.feedback,
     fontStyle: 'italic',
     fontSize: 13.5,
     color: '#2E3624',
@@ -632,7 +632,7 @@ const s = StyleSheet.create({
   },
 
   title: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 24,
     color: '#3A4F2A',
     lineHeight: 32,

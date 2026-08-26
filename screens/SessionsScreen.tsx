@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 34,
     color: '#3F512F',
     lineHeight: 40,
@@ -799,7 +799,7 @@ const styles = StyleSheet.create({
   heroAvatarText: { fontFamily: ViveFonts.bold, fontSize: 15, color: '#FFF6EC' },
   heroBodyText: { flex: 1, gap: 3 },
   heroDate: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.bold,
     fontSize: 18,
     color: '#F3EEDF',
     lineHeight: 24,

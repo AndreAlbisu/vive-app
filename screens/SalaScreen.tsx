@@ -1431,7 +1431,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sessionCardDate: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.bold,
     fontSize: 18,
     color: '#565E32',
     lineHeight: 24,
@@ -1606,7 +1606,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   endedText: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.semibold,
     fontSize: 16,
     color: '#565E32',
     lineHeight: 23,
@@ -1744,7 +1744,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   recoSheetTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 20,
     color: '#3A4F2A',
     marginBottom: 14,

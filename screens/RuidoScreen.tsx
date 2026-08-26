@@ -261,7 +261,7 @@ const s = StyleSheet.create({
 
   content:      { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 18 },
   scrollContent:{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 24, gap: 18 },
-  subtitle:     { fontFamily: ViveFonts.frauncesSerif, fontSize: 26, color: FOREST, textAlign: 'center' },
+  subtitle:     { fontFamily: ViveFonts.title, fontSize: 26, color: FOREST, textAlign: 'center' },
   screenTitle:  { fontFamily: ViveFonts.semibold, fontSize: 22, color: FOREST, textAlign: 'center' },
   description:  { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
 
@@ -300,7 +300,7 @@ const s = StyleSheet.create({
   primaryBtnText: { fontFamily: ViveFonts.semibold, fontSize: 16, color: CREAM_LIGHT },
 
   runningBlock: { alignItems: 'center', gap: 6 },
-  runningTimer: { fontFamily: ViveFonts.frauncesSerif, fontSize: 40, color: FOREST, letterSpacing: -1 },
+  runningTimer: { fontFamily: ViveFonts.bold, fontSize: 40, color: FOREST, letterSpacing: -1 },
   runningRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   runningHint: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT },
 });

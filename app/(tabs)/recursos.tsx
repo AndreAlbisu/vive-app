@@ -812,7 +812,7 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   pageTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 34,
     color: FOREST,
     lineHeight: 40,
@@ -887,9 +887,8 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   moodTitle: {
-    // Fraunces solo tiene 600/700 cargadas en el proyecto — frauncesSemiBold
-    // (600) es lo más cerca del peso 500 pedido sin sumar una fuente nueva.
-    fontFamily: ViveFonts.frauncesSemiBold,
+    // Texto de recomendación generado (reco.why) — feedback, no título.
+    fontFamily: ViveFonts.feedback,
     fontSize: 14.5,
     color: CREAM_LIGHT,
     lineHeight: 20,
@@ -1002,7 +1001,7 @@ const s = StyleSheet.create({
 
   // ── Sección "De tu coach" ─────────────────────────────────────────────────
   sectionTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 20,
     color: FOREST,
     marginTop: 8,
@@ -1029,7 +1028,7 @@ const s = StyleSheet.create({
   // ── Grupos de herramientas ────────────────────────────────────────────────
   groupSection: { marginBottom: 24 },
   groupTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 19,
     color: FOREST,
     marginBottom: 2,
@@ -1099,7 +1098,7 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   recAvatarText: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.bold,
     fontSize: 12,
     color: '#FFF3E8',
   },
@@ -1121,7 +1120,7 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   recNote: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.feedback,
     fontStyle: 'italic',
     fontSize: 13.5,
     color: '#2E3624',

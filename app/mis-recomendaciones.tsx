@@ -181,12 +181,12 @@ const s = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18, backgroundColor: TERRACOTTA,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  recAvatarText: { fontFamily: ViveFonts.frauncesSerif, fontSize: 12, color: '#FFF3E8' },
+  recAvatarText: { fontFamily: ViveFonts.bold, fontSize: 12, color: '#FFF3E8' },
   recHeadName: { fontFamily: ViveFonts.semibold, fontSize: 12.5, color: FOREST },
   recHeadSub: { fontFamily: ViveFonts.regular, fontSize: 10, color: FOREST_SOFT },
   recDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: TERRACOTTA, flexShrink: 0 },
   recNote: {
-    fontFamily: ViveFonts.frauncesSerif, fontStyle: 'italic', fontSize: 13.5,
+    fontFamily: ViveFonts.feedback, fontStyle: 'italic', fontSize: 13.5,
     color: '#2E3624', lineHeight: 19, marginTop: 10, marginBottom: 11,
   },
   recAttach: {

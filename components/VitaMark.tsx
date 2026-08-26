@@ -14,9 +14,10 @@ import Svg, { Circle } from 'react-native-svg';
  * trazo al achicar y lo afina al agrandar.
  *
  * ⚠️ **El logo NO está cerrado.** Sigue en pie el conflicto con `VitaWordmark`
- * (la palabra "vita" en Fraunces minúscula, que dice ser el único wordmark de
- * la app) y es parte del encargo al estudio de diseño. Todo lo que dibuja la
- * marca vive en este archivo: si cambia, se reemplaza acá y nada más.
+ * (la palabra "vita" en Plus Jakarta Sans minúscula — Fraunces salió del
+ * proyecto el 24/08/2026 —, que dice ser el único wordmark de la app) y es
+ * parte del encargo al estudio de diseño. Todo lo que dibuja la marca vive en
+ * este archivo: si cambia, se reemplaza acá y nada más.
  */
 export function VitaMark({
   size = 54,

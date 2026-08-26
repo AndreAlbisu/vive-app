@@ -246,7 +246,7 @@ const s = StyleSheet.create({
   },
   confirm: {
     marginTop: 9,
-    fontFamily: ViveFonts.regular,
+    fontFamily: ViveFonts.feedback,
     fontSize: 11,
     color: '#4B5943',
     minHeight: 16,

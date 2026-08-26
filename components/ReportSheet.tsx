@@ -108,7 +108,7 @@ export default function ReportSheet({ visible, onClose, reportedName, reportedId
 
 const s = StyleSheet.create({
   title: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 20, color: '#3A4F2A', marginBottom: 6,
   },
   subtitle: {

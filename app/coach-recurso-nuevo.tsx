@@ -374,7 +374,7 @@ const s = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   headerTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 18,
     color: FOREST,
   },

@@ -193,7 +193,7 @@ const s = StyleSheet.create({
     gap: 8,
   },
   markText: {
-    fontFamily: ViveFonts.frauncesSemiBold,
+    fontFamily: ViveFonts.feedback,
     fontStyle: 'italic',
     fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
@@ -204,14 +204,14 @@ const s = StyleSheet.create({
     right: -22,
   },
   reflect: {
-    fontFamily: ViveFonts.frauncesSemiBold,
+    fontFamily: ViveFonts.feedback,
     fontSize: 22,
     lineHeight: 33,
     color: '#FFF8EF',
     marginTop: 16,
   },
   reflectBold: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
   },
   acts: {
     marginTop: 26,

@@ -231,7 +231,7 @@ export default function CoachChatsScreen() {
 const s = StyleSheet.create({
   safe: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
-  title: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST },
+  title: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST },
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   emptyText: { fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST_SOFT, textAlign: 'center', lineHeight: 21 },
@@ -245,7 +245,7 @@ const s = StyleSheet.create({
   chatDimmed: { opacity: 0.62 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(63,81,47,0.1)' },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
-  avatarTxt: { fontFamily: ViveFonts.frauncesSerif, fontSize: 15, color: FOREST },
+  avatarTxt: { fontFamily: ViveFonts.bold, fontSize: 15, color: FOREST },
   chatInfo: { flex: 1, minWidth: 0 },
   chatName: { fontSize: 13.5, fontFamily: ViveFonts.semibold, color: FOREST },
   chatNameUnread: { fontFamily: ViveFonts.bold },

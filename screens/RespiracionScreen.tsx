@@ -226,10 +226,10 @@ const s = StyleSheet.create({
   circleWrap:  { width: 220, height: 220, alignItems: 'center', justifyContent: 'center' },
   circleOuter: { width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(74,122,90,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(74,122,90,0.28)' },
   circleInner: { width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(74,122,90,0.30)', alignItems: 'center', justifyContent: 'center' },
-  orbLabel:    { fontFamily: ViveFonts.frauncesSemiBold, fontSize: 15, color: CREAM_LIGHT },
+  orbLabel:    { fontFamily: ViveFonts.semibold, fontSize: 15, color: CREAM_LIGHT },
 
-  timer:      { fontFamily: ViveFonts.frauncesSerif, fontSize: 52, color: FOREST, letterSpacing: -1 },
-  phaseLabel: { fontFamily: ViveFonts.frauncesSerif, fontSize: 32, letterSpacing: -0.3 },
+  timer:      { fontFamily: ViveFonts.bold, fontSize: 52, color: FOREST, letterSpacing: -1 },
+  phaseLabel: { fontFamily: ViveFonts.bold, fontSize: 32, letterSpacing: -0.3 },
   phaseSub:   { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT },
 
   primaryBtn:     { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: FOREST, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 48, marginTop: 4 },
@@ -239,6 +239,6 @@ const s = StyleSheet.create({
   footerHint:     { fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(107,122,86,0.75)', textAlign: 'center', marginTop: 4 },
 
   doneIconWrap: { marginBottom: 8 },
-  doneTitle:    { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST },
+  doneTitle:    { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST },
   doneSub:      { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 22 },
 });

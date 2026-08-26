@@ -117,7 +117,7 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
 
 const s = StyleSheet.create({
   title: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 20, color: '#3A4F2A', marginBottom: 18,
   },
   labelRow: {

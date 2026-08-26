@@ -172,7 +172,7 @@ const s = StyleSheet.create({
   titleLight: { color: CREAM_LIGHT },
 
   idleContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 18 },
-  subtitle:    { fontFamily: ViveFonts.frauncesSerif, fontSize: 26, color: FOREST, textAlign: 'center' },
+  subtitle:    { fontFamily: ViveFonts.title, fontSize: 26, color: FOREST, textAlign: 'center' },
   description: { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
 
   durationRow:       { flexDirection: 'row', gap: 12 },
@@ -185,10 +185,10 @@ const s = StyleSheet.create({
   primaryBtnText: { fontFamily: ViveFonts.semibold, fontSize: 16, color: CREAM_LIGHT },
 
   runningBg:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 28, paddingHorizontal: 32 },
-  timerLarge:   { fontFamily: ViveFonts.frauncesSerif, fontSize: 72, color: CREAM_LIGHT, letterSpacing: -2 },
+  timerLarge:   { fontFamily: ViveFonts.bold, fontSize: 72, color: CREAM_LIGHT, letterSpacing: -2 },
   progressTrack: { width: '100%', height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.15)' },
   progressFill:  { height: '100%', backgroundColor: 'rgba(255,248,240,0.55)', borderRadius: 2 },
-  promptText:    { fontFamily: ViveFonts.frauncesSerif, fontStyle: 'italic', fontSize: 19, color: 'rgba(243,238,223,0.85)', textAlign: 'center', lineHeight: 29 },
+  promptText:    { fontFamily: ViveFonts.semibold, fontStyle: 'italic', fontSize: 19, color: 'rgba(243,238,223,0.85)', textAlign: 'center', lineHeight: 29 },
   ghostBtnDark:     { borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 32 },
   ghostBtnDarkText: { fontFamily: ViveFonts.medium, fontSize: 13, color: 'rgba(255,248,240,0.60)' },
 });

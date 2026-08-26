@@ -306,8 +306,8 @@ export default function OnboardingScreen1() {
               animatedProps={brandProps}
               x={CX}
               textAnchor="middle"
-              fontFamily="Fraunces_700Bold"
-              fontWeight="700"
+              fontFamily="PlusJakartaSans_800ExtraBold"
+              fontWeight="800"
               fill={PAL.textColor}
             >
               {'vita'}

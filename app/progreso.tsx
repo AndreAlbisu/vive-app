@@ -459,7 +459,7 @@ const s = StyleSheet.create({
   },
 
   pageTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 27,
     color: '#565E32',
     paddingHorizontal: 22,
@@ -493,7 +493,7 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   statValue: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.bold,
     fontSize: 24,
     color: FOREST,
     lineHeight: 28,
@@ -694,7 +694,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  sesionAvatarText: { fontFamily: ViveFonts.frauncesSerif, fontSize: 14, color: '#F3EEDF' },
+  sesionAvatarText: { fontFamily: ViveFonts.bold, fontSize: 14, color: '#F3EEDF' },
   sesionInfo: { flex: 1 },
   sesionName: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#565E32', lineHeight: 18 },
   sesionSub: { fontFamily: ViveFonts.regular, fontSize: 11, color: '#87835C', lineHeight: 16 },

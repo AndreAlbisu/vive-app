@@ -231,7 +231,7 @@ const s = StyleSheet.create({
   container: { paddingHorizontal: 20, paddingTop: 12 },
 
   header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 8 },
-  title: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST },
+  title: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST },
   chip: { backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: LINE, borderRadius: 18, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 3 },
   chipTxt: { fontSize: 11.5, fontFamily: ViveFonts.semibold, color: FOREST },
 
@@ -241,7 +241,7 @@ const s = StyleSheet.create({
   eyebrow: { fontSize: 10.5, letterSpacing: 0.8, textTransform: 'uppercase', color: GREEN_EYEBROW, fontFamily: ViveFonts.medium },
   statsRow: { flexDirection: 'row', gap: 8, marginTop: 9 },
   stat: { flex: 1, backgroundColor: 'rgba(255,255,255,0.09)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 14, paddingVertical: 8, alignItems: 'center' },
-  statN: { fontFamily: ViveFonts.frauncesSerif, fontSize: 18, color: GREEN_TXT },
+  statN: { fontFamily: ViveFonts.bold, fontSize: 18, color: GREEN_TXT },
   statL: { fontSize: 9, color: GREEN_EYEBROW, marginTop: 1, textAlign: 'center', fontFamily: ViveFonts.regular },
   statsFoot: { fontSize: 10.5, color: '#EAD3C6', marginTop: 9, fontFamily: ViveFonts.regular },
 
@@ -254,7 +254,7 @@ const s = StyleSheet.create({
   ctaRecTxt: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: '#8F4A2E' },
 
   stitle: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 22, marginBottom: 10 },
-  stitleB: { fontFamily: ViveFonts.frauncesSerif, fontSize: 17, color: FOREST },
+  stitleB: { fontFamily: ViveFonts.title, fontSize: 17, color: FOREST },
   stitleSpan: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
   loadingBox: { paddingVertical: 24, alignItems: 'center' },
   empty: { padding: 18, borderWidth: 1.5, borderColor: LINE, borderRadius: 20, borderStyle: 'dashed', alignItems: 'center' },

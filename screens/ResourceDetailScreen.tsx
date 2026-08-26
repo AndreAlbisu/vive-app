@@ -726,7 +726,7 @@ const s = StyleSheet.create({
   readerMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   readingNum: { fontFamily: ViveFonts.medium, fontSize: 12, color: FOREST_SOFT },
   readingDuration: { fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(135,131,92,0.60)' },
-  readerTitle: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST, lineHeight: 36, letterSpacing: -0.3 },
+  readerTitle: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST, lineHeight: 36, letterSpacing: -0.3 },
   sourceRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: -6 },
   sourceText: { fontFamily: ViveFonts.medium, fontSize: 11.5, color: TERRACOTTA, flex: 1 },
 
@@ -737,7 +737,7 @@ const s = StyleSheet.create({
   primaryBtnText: { fontFamily: ViveFonts.semibold, fontSize: 16, color: CREAM_LIGHT },
 
   doneContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 18 },
-  doneTitle: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST, textAlign: 'center' },
+  doneTitle: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST, textAlign: 'center' },
   doneSub: { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
 
   feedbackBox:   { alignItems: 'center', gap: 12, width: '100%' },

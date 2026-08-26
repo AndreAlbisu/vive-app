@@ -139,7 +139,7 @@ export default function UserActionsSheet({
 
 const s = StyleSheet.create({
   title: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 20, color: '#3A4F2A', marginBottom: 16,
   },
   row: {

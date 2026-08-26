@@ -316,7 +316,7 @@ const s = StyleSheet.create({
 
   content: { paddingHorizontal: 20, paddingTop: 16, gap: 12 },
 
-  question: { fontFamily: ViveFonts.frauncesSerif, fontSize: 24, color: F, lineHeight: 32, marginBottom: 6 },
+  question: { fontFamily: ViveFonts.title, fontSize: 24, color: F, lineHeight: 32, marginBottom: 6 },
 
   option: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -340,7 +340,7 @@ const s = StyleSheet.create({
   nextBtnTextDisabled: { color: 'rgba(63,81,47,0.35)' },
 
   // Results
-  resultsTitle: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: F, marginBottom: 4 },
+  resultsTitle: { fontFamily: ViveFonts.title, fontSize: 28, color: F, marginBottom: 4 },
   resultsSub:   { fontFamily: ViveFonts.regular, fontSize: 14, color: FS, lineHeight: 22, marginBottom: 8 },
   noMatches:    { fontFamily: ViveFonts.regular, fontSize: 14, color: FS, lineHeight: 22, textAlign: 'center', marginTop: 20 },
 

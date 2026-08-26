@@ -186,7 +186,7 @@ const s = StyleSheet.create({
   title:   { fontFamily: ViveFonts.bold, fontSize: 20, color: FOREST, letterSpacing: -0.3 },
 
   content:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 20 },
-  subtitle:    { fontFamily: ViveFonts.frauncesSerif, fontSize: 24, color: FOREST, textAlign: 'center' },
+  subtitle:    { fontFamily: ViveFonts.title, fontSize: 24, color: FOREST, textAlign: 'center' },
   description: { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
 
   stepsPreview: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 320 },
@@ -209,5 +209,5 @@ const s = StyleSheet.create({
   stepText: { fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST_SOFT, lineHeight: 22 },
 
   stepTimerWrap: { width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: 'rgba(63,81,47,0.20)', alignItems: 'center', justifyContent: 'center', backgroundColor: GLASS_BG },
-  stepTimer:     { fontFamily: ViveFonts.frauncesSerif, fontSize: 26, color: FOREST },
+  stepTimer:     { fontFamily: ViveFonts.bold, fontSize: 26, color: FOREST },
 });

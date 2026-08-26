@@ -588,7 +588,6 @@ export default function ConexionesScreen() {
             /* ── Fase 1: ejes de bienestar ──────────────────────────────── */
             <SlideInView key="fase1">
               <View style={[s.askWrap, s.askWrapTight]}>
-                <Text style={[s.askTitle, s.askTitleGreeting]}>Encontrá a alguien que{'\n'}pueda acompañarte.</Text>
                 <Text style={s.askSub}>Elegí un área de bienestar para empezar</Text>
               </View>
 
@@ -715,7 +714,7 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   title: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 32,
     color: FOREST,
     lineHeight: 38,
@@ -807,27 +806,22 @@ const s = StyleSheet.create({
     marginTop: 10,
     marginBottom: 18,
   },
-  // Solo para Fase 1, donde lo que sigue es el buscador: sin esto, sumado al
-  // marginTop del buscador (6), quedaban 24px de aire — el triple que entre
-  // el título y "Elegí un área…" (8px) — y el buscador se leía como una
-  // sección aparte en vez de la acción natural de esa instrucción. En Fase 2
-  // (mismo askWrap, pero seguido de la lista de puertas) no se toca.
+  // Sesión 121: en Fase 1 el buscador quedaba pegado al subtítulo (24px de
+  // aire, contra los 8px que separan título y subtítulo en Fase 2) — este
+  // modificador achica ese margen. Sesión 126: se sacó el título propio de
+  // Fase 1 ("Encontrá a alguien que pueda acompañarte", pedido de Joaquín),
+  // así que hoy `askWrap` en Fase 1 contiene solo el subtítulo — el
+  // modificador queda igual, ya no hay título de por medio para justificarlo
+  // por comparación, pero el buscador sigue necesitando el margen corto.
   askWrapTight: {
     marginBottom: 8,
   },
+  // Título de Fase 2 (nombre del eje elegido) — Fase 1 ya no tiene título propio.
   askTitle: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 26,
     color: FOREST,
     lineHeight: 32,
-  },
-  // Solo para "Encontrá a alguien que pueda acompañarte." — misma tipografía
-  // que greetingLine2 ("¿Cómo venís hoy?") en Inicio, sin tocar el askTitle
-  // compartido con el título de Fase 2 (nombre del eje elegido).
-  askTitleGreeting: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 28,
-    lineHeight: 36,
   },
   askSub: {
     fontFamily: ViveFonts.regular,
@@ -906,7 +900,7 @@ const s = StyleSheet.create({
   },
   deckHeaderTitle: {
     flex: 1,
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 26,
     color: FOREST,
     marginLeft: 2,
@@ -976,7 +970,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   cardAvatarFallback: { backgroundColor: 'rgba(107,122,86,0.18)' },
-  cardInitials: { fontFamily: ViveFonts.frauncesSerif, fontSize: 22, color: FOREST },
+  cardInitials: { fontFamily: ViveFonts.bold, fontSize: 22, color: FOREST },
   vBadge: {
     position: 'absolute',
     right: 1,
@@ -992,7 +986,7 @@ const s = StyleSheet.create({
   },
 
   cardName: {
-    fontFamily: ViveFonts.frauncesSemiBold, // Fraunces 600, no 700 — HTML §B2
+    fontFamily: ViveFonts.titleSemiBold, // Jakarta 600 — antes Fraunces 600, HTML §B2
     fontSize: 20,
     lineHeight: 24,
     color: FOREST,
@@ -1019,7 +1013,7 @@ const s = StyleSheet.create({
   dot3: { width: 3.5, height: 3.5, borderRadius: 1.75, backgroundColor: TERRACOTTA, opacity: 0.6 },
 
   cardBio: {
-    fontFamily: ViveFonts.frauncesSemiBold,
+    fontFamily: ViveFonts.semibold,
     fontSize: 13,
     fontStyle: 'italic',
     color: INK,

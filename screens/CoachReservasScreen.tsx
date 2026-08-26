@@ -474,12 +474,12 @@ const s = StyleSheet.create({
   safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4, gap: 10 },
   backBtn: { padding: 2 },
-  title: { fontFamily: ViveFonts.frauncesSerif, fontSize: 28, color: FOREST },
+  title: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST },
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   container: { paddingHorizontal: 20, paddingTop: 4 },
 
   stitle: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 22, marginBottom: 10 },
-  stitleB: { fontFamily: ViveFonts.frauncesSerif, fontSize: 17, color: FOREST },
+  stitleB: { fontFamily: ViveFonts.title, fontSize: 17, color: FOREST },
   stitleSpan: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
 
   aldia: { padding: 18, borderWidth: 1.5, borderColor: LINE, borderRadius: 20, borderStyle: 'dashed', alignItems: 'center' },
@@ -489,8 +489,8 @@ const s = StyleSheet.create({
   avSm: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(63,81,47,0.1)' },
   avXs: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(63,81,47,0.1)' },
   avFallback: { alignItems: 'center', justifyContent: 'center' },
-  avSmTxt: { fontFamily: ViveFonts.frauncesSerif, fontSize: 13, color: FOREST },
-  avXsTxt: { fontFamily: ViveFonts.frauncesSerif, fontSize: 11, color: FOREST },
+  avSmTxt: { fontFamily: ViveFonts.bold, fontSize: 13, color: FOREST },
+  avXsTxt: { fontFamily: ViveFonts.bold, fontSize: 11, color: FOREST },
 
   // Por confirmar
   req: { backgroundColor: CARD, borderWidth: 1, borderColor: TERRA_LINE, borderRadius: 20, padding: 14, marginBottom: 9 },
@@ -498,7 +498,7 @@ const s = StyleSheet.create({
   reqName: { fontSize: 13, fontFamily: ViveFonts.semibold, color: FOREST },
   reqSub: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 1 },
   pquote: {
-    fontFamily: ViveFonts.frauncesSerif, fontStyle: 'italic', fontSize: 11.5, color: '#2E3624',
+    fontFamily: ViveFonts.semibold, fontStyle: 'italic', fontSize: 11.5, color: '#2E3624',
     backgroundColor: CREAM, borderRadius: 11, paddingVertical: 6, paddingHorizontal: 10, marginTop: 9, lineHeight: 16,
   },
   reqActs: { flexDirection: 'row', gap: 8, marginTop: 11 },
@@ -520,7 +520,7 @@ const s = StyleSheet.create({
     paddingVertical: 11, paddingHorizontal: 13, marginBottom: 8,
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  hora: { fontFamily: ViveFonts.frauncesSerif, fontSize: 16, color: FOREST, width: 52 },
+  hora: { fontFamily: ViveFonts.bold, fontSize: 16, color: FOREST, width: 52 },
   bkName: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: FOREST },
   bkSub: { fontSize: 10, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 1 },
 
@@ -534,7 +534,7 @@ const rm = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: LINE,
   },
-  title: { fontFamily: ViveFonts.frauncesSerif, fontSize: 20, color: FOREST },
+  title: { fontFamily: ViveFonts.title, fontSize: 20, color: FOREST },
   body: { padding: 20 },
   helper: { fontSize: 13, color: FOREST_SOFT, fontFamily: ViveFonts.regular, lineHeight: 19, marginBottom: 18 },
   label: { fontSize: 13, fontFamily: ViveFonts.semibold, color: FOREST, marginBottom: 8 },

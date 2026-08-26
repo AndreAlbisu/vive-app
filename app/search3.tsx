@@ -681,7 +681,7 @@ const s = StyleSheet.create({
   // Título editorial
   titleBlock: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 14 },
   title: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 30,
     color: FOREST,
     lineHeight: 36,

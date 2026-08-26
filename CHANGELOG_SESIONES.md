@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-08-26 — Joaquín (sesión 126)
+
+**Tocado:** 38 archivos. Nuevo: `@expo-google-fonts/plus-jakarta-sans` (instalado). Sacado: `@expo-google-fonts/fraunces` (desinstalado, sin uso).
+
+**Resumen — Fraunces salió del proyecto. Títulos y feedback pasan a Plus Jakarta Sans; el resto queda en Poppins, sin tocar.**
+
+- **Dos tokens nuevos en `constants/theme.ts`**: `ViveFonts.title` (Jakarta 700, donde antes iba `frauncesSerif`) y `ViveFonts.titleSemiBold` (Jakarta 600, donde antes iba `frauncesSemiBold`). Más `ViveFonts.feedback` (Jakarta 600, para devoluciones/reflexión) y `ViveFonts.wordmark` (Jakarta 800 ExtraBold, solo para "vita"). `app/_layout.tsx` carga los 5 pesos de Jakarta (400/500/600/700/800) y dejó de cargar Fraunces.
+- **El wordmark "vita"** — `components/VitaWordmark.tsx` (el componente único que se usa en toda la app) y el SVG animado del splash (`screens/OnboardingScreen1.tsx`, que tenía la fuente puesta a mano, no vía token) — los dos a Jakarta 800.
+- **Texto de feedback identificado y migrado**: la card "Sobre vos" (`index.tsx`, `selloReflect`/`selloReflectBold`), el momento de pantalla completa (`SobreVosMomento.tsx`), el "gracias por contarnos" del check-in de ánimo (`MoodCheckIn.tsx`), y las notas de recomendación del coach (`recNote`/`recoNoteBannerText` en `mis-recomendaciones.tsx`/`coach-recurso.tsx`, y la explicación dinámica `reco.why` en `recursos.tsx`, que se llamaba `moodTitle` pero no era un título).
+- **Títulos migrados en las ~35 pantallas que usaban Fraunces** (la convención de este proyecto ya era "Fraunces = título/encabezado", así que migrar todo lo que era Fraunces cubre la enorme mayoría de los títulos reales) — más el saludo del home y los títulos de sección ("Tu próxima sesión", "Tus recursos a mano") en `index.tsx`, que **ya estaban en Poppins** y se movieron a Jakarta igual, por nombrarlos explícitos en el pedido.
+- ⚠️ **Alcance de "títulos" — no rastreé toda la app.** Solo migré lo que ya era Fraunces (que ya cumplía el rol de título en este proyecto) más los dos casos que nombraste explícitos. **No** salí a buscar cada `sectionTitle` en Poppins de cada pantalla — sería un rediseño de la app entera, no lo que pediste.
+- 📝 **Criterio para lo que NO era ni título ni feedback** (nombres de personas en cards, iniciales de avatar, números de stat, timers de countdown, texto de narración guiada en meditación/sueño/respiración, citas/bios propias del coach o del usuario): cayeron a Poppins (bold/semibold según el peso que tenían en Fraunces), porque no podían quedarse en una fuente que ya no se carga. **Es la parte con más criterio propio de esta sesión — si alguno de estos debería haber sido título o feedback, decímelo y lo cambio.** Ejemplos concretos: `cardInitials`/avatarTxt en varias pantallas, `statValue`/`statN`, todos los `timerLarge`/`runningTimer`/`stepTimer`, `promptText` de Meditación/Sueño (narración), `cardBio` del deck de Conexiones y `pquote` de `CoachReservasScreen` (citas/mensajes, no feedback generado por la app).
+- **Nombres de persona destacados** (nombre del coach en la card del deck de Conexiones, nombre de un cliente en `CoachHomeScreen`, "Sofía" en el header de `SofiaAssistant`): usé `titleSemiBold` — son la identidad principal de esa tarjeta/fila, tratamiento similar a un título chico.
+- **Pedido aparte: se sacó el texto "Encontrá a alguien que pueda acompañarte"** de la pantalla de Conexiones (Fase 1) — quedó solo "Elegí un área de bienestar para empezar". El estilo `askTitleGreeting`, que solo servía para ese texto, se eliminó por quedar sin uso.
+- Typecheck, lint (65 warnings preexistentes, 0 nuevos) y 241/241 tests limpios. **No confirmado visualmente en dispositivo desde acá** — es un cambio grande y solo se puede terminar de validar viéndolo.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Confirmar en el dev build** — es el cambio visual más grande de una sola vez en muchas sesiones, hay que verlo funcionando de verdad, sobre todo los pesos de Jakarta 600 vs 700 en pantalla.
+- Revisar la lista de "cayó a Poppins" de arriba y decirme si alguno debería ser título/feedback.
+- ⚠️ **Andre subió MUCHÍSIMO trabajo nuevo mientras tanto** (más de 70 commits: riel de PayPal a producción, modelo "VIVE es agente", regla espejo, contracargos, disputas, T&C reescritos) — **todavía no mergeado con este cambio de tipografía**. Antes de tocar código de nuevo, mergear con cuidado (`SalaScreen.tsx` lo tocaron los dos).
+
+---
+
 ## 2026-08-24 — Joaquín (sesión 125)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`.

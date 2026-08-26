@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     }),
   },
   orbS: {
-    fontFamily: ViveFonts.frauncesSerif, // Fraunces 700
+    fontFamily: ViveFonts.bold,
     fontSize: 24,
     color: '#FFFFFF',
   },
@@ -369,13 +369,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerOrbS: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.bold,
     fontSize: 16,
     color: '#FFFFFF',
   },
   headerText: { flex: 1 },
   headerName: {
-    fontFamily: ViveFonts.frauncesSemiBold, // Fraunces 600
+    fontFamily: ViveFonts.titleSemiBold,
     fontSize: 17,
     color: ViveColors.text,
   },
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   },
 
   greeting: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     fontSize: 26,
     lineHeight: 33,
     color: ViveColors.text,

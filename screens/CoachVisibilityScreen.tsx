@@ -393,7 +393,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(234,211,198,0.10)',
   },
   heroEyebrow: { fontSize: 10.5, letterSpacing: 0.8, textTransform: 'uppercase', color: GREEN_EYEBROW, fontFamily: ViveFonts.medium },
-  heroTitle: { fontFamily: ViveFonts.frauncesSerif, fontSize: 21, color: GREEN_TXT, marginTop: 8, lineHeight: 28 },
+  heroTitle: { fontFamily: ViveFonts.title, fontSize: 21, color: GREEN_TXT, marginTop: 8, lineHeight: 28 },
   heroSub: { fontSize: 12, color: GREEN_EYEBROW, fontFamily: ViveFonts.regular, marginTop: 8, lineHeight: 19 },
   heroBtn: { backgroundColor: TERRA, borderRadius: 15, paddingVertical: 11, alignItems: 'center', marginTop: 14 },
   heroBtnTxt: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },

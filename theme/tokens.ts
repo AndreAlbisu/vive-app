@@ -16,7 +16,10 @@ export const colors = {
 
 export const radii = { card: 20, res: 18, pill: 20, icon: 21 };
 export const blur  = { card: 14, nav: 16 };
-export const fonts = { sans: 'Poppins', brand: 'Fraunces' };
+// Sin uso — nadie importa `fonts` de acá (ViveFonts en constants/theme.ts es
+// la fuente real). Actualizado el 24/08/2026 para no mentir: Fraunces salió
+// del proyecto, títulos y feedback pasaron a Plus Jakarta Sans.
+export const fonts = { sans: 'Poppins', brand: 'PlusJakartaSans' };
 
 // Sombra cálida en capas para SurfaceCard (components/ui/SurfaceCard.tsx) —
 // rediseño "efecto de superficie", sesión 77. Valores tomados 1:1 de

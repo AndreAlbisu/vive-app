@@ -569,10 +569,9 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitial: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.bold,
     fontSize: 17,
     color: '#FFFFFF',
-    fontWeight: '700',
   },
 
   // ── 2. Saludo ──────────────────────────────────────────────────────────────
@@ -582,13 +581,13 @@ const s = StyleSheet.create({
     paddingBottom: 18,
   },
   greetingLine1: {
-    fontFamily: ViveFonts.semibold,
+    fontFamily: ViveFonts.title,
     fontSize: 30,
     color: '#565E32',
     lineHeight: 38,
   },
   greetingLine2: {
-    fontFamily: ViveFonts.regular,
+    fontFamily: ViveFonts.titleSemiBold,
     fontSize: 28,
     color: '#565E32',
     lineHeight: 36,
@@ -606,14 +605,14 @@ const s = StyleSheet.create({
     paddingBottom: 16,
   },
   selloReflect: {
-    fontFamily: ViveFonts.frauncesSemiBold,
+    fontFamily: ViveFonts.feedback,
     fontSize: 15.5,
     lineHeight: 24,
     color: SELLO_INK,
     marginTop: 2,
   },
   selloReflectBold: {
-    fontFamily: ViveFonts.frauncesSerif,
+    fontFamily: ViveFonts.title,
     color: SELLO_FOREST,
   },
   selloCta: {
@@ -654,7 +653,7 @@ const s = StyleSheet.create({
 
   // ── 4. Recursos útiles ─────────────────────────────────────────────────────
   sectionTitle: {
-    fontFamily: ViveFonts.semibold,
+    fontFamily: ViveFonts.titleSemiBold,
     fontSize: 15,
     color: '#565E32',
     paddingHorizontal: 20,
