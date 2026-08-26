@@ -17,9 +17,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { personasQueSeCaen, haceCuanto, type PersonaEnRiesgo } from '@/lib/coachContinuity';
 import { AppBg } from '@/components/ui/AppBg';
 import { visibilityTeaser, type VisibilityTeaser } from '@/lib/coachVisibility';
-import { scheduledAtMs, daysFromTodayAr } from '@/lib/time';
+import { scheduledAtMs, daysFromTodayAr, todayInAr } from '@/lib/time';
+
+/** Una persona que se está cayendo, ya resuelta con lo que hace falta para
+ *  mostrarla y para escribirle. */
+type PersonaCayendo = PersonaEnRiesgo & {
+  name: string;
+  avatarUrl: string | null;
+  salaId: string | null;
+};
 
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
 const CARD = '#F7F2E7';
@@ -98,6 +107,7 @@ export default function CoachHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [visibility, setVisibility] = useState<VisibilityTeaser | null>(null);
+  const [seCaen, setSeCaen] = useState<PersonaCayendo[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -225,6 +235,49 @@ export default function CoachHomeScreen() {
     } else {
       setNext(null);
       setPrep(null);
+    }
+
+    // ── Quién se está cayendo ────────────────────────────────────────────────
+    // Se pide aparte de las confirmadas de arriba porque son otro conjunto: las
+    // COMPLETADAS, que es lo único que prueba que la relación existió.
+    const [{ data: cumplidas }, { data: futuras }] = await Promise.all([
+      supabase.from('bookings')
+        .select('user_id, scheduled_date')
+        .eq('coach_id', coachId).eq('status', 'completada'),
+      // Con sesión futura no se está cayendo nadie — y ofrecerle al coach que le
+      // escriba "hace mucho que no te veo" a quien tiene turno el jueves lo
+      // haría quedar mal. Entra `pendiente` además de `confirmada`: una reserva
+      // esperando su OK ya es contacto vivo.
+      supabase.from('bookings')
+        .select('user_id')
+        .eq('coach_id', coachId)
+        .in('status', ['confirmada', 'pendiente'])
+        .gte('scheduled_date', todayInAr()),
+    ]);
+
+    const enRiesgo = personasQueSeCaen(
+      (cumplidas ?? []).map(b => ({ userId: b.user_id as string, fecha: b.scheduled_date as string })),
+      new Set((futuras ?? []).map(b => b.user_id as string)),
+    ).slice(0, 3);   // tres es lo que entra sin volverse una lista de tareas
+
+    if (enRiesgo.length === 0) {
+      setSeCaen([]);
+    } else {
+      // Nombre y sala en una sola vuelta por cada cosa, no una por persona.
+      const ids = enRiesgo.map(p => p.userId);
+      const [{ data: profs }, { data: salas }] = await Promise.all([
+        supabase.from('profiles').select('id, name, avatar_url').in('id', ids),
+        // `salas.coach_id` es `profiles.id` del coach, NO `coaches.id`.
+        supabase.from('salas').select('id, user_id').eq('coach_id', user.id).in('user_id', ids),
+      ]);
+      const nombre = new Map((profs ?? []).map(p => [p.id as string, p]));
+      const sala = new Map((salas ?? []).map(sa => [sa.user_id as string, sa.id as string]));
+      setSeCaen(enRiesgo.map(p => ({
+        ...p,
+        name: (nombre.get(p.userId)?.name as string) ?? 'Alguien',
+        avatarUrl: (nombre.get(p.userId)?.avatar_url as string) ?? null,
+        salaId: sala.get(p.userId) ?? null,
+      })));
     }
 
     setLoading(false);
@@ -360,6 +413,50 @@ export default function CoachHomeScreen() {
             </View>
           )}
 
+          {/* ── Quién se está cayendo ─────────────────────────────────────
+              🔴 El bloque que contesta la pregunta que la app no contestaba:
+              "¿a quién hace mucho que no veo?". Hasta acá había reservas y
+              chats —dos vistas de eventos sueltos— y ninguna forma de ver una
+              RELACIÓN enfriándose.
+
+              Va ARRIBA de la tarjeta de visibilidad a propósito: recuperar a
+              alguien que ya te eligió es más barato y más probable que
+              conseguir a alguien nuevo. */}
+          {seCaen.length > 0 && (
+            <View style={s.caenWrap}>
+              <Text style={s.caenTitle}>Hace rato que no los ves</Text>
+              {seCaen.map(p => (
+                <View key={p.userId} style={s.caenRow}>
+                  {p.avatarUrl ? (
+                    <Image source={{ uri: p.avatarUrl }} style={s.caenAv} />
+                  ) : (
+                    <View style={[s.caenAv, s.caenAvFallback]}>
+                      <Text style={s.caenInitials}>{getInitials(p.name)}</Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.caenName} numberOfLines={1}>{p.name}</Text>
+                    <Text style={s.caenMeta} numberOfLines={1}>
+                      {haceCuanto(p.diasSinVerse)}
+                      {p.sesiones > 1 && ` · ${p.sesiones} sesiones juntos`}
+                      {p.cadenciaDias != null && p.cadenciaDias <= 10 && ' · venía seguido'}
+                    </Text>
+                  </View>
+                  {/* Sin sala no hay a dónde ir: la conversación nace de una
+                      reserva, así que si no existe no se ofrece un botón muerto. */}
+                  {p.salaId && (
+                    <TouchableOpacity
+                      style={s.caenBtn}
+                      activeOpacity={0.85}
+                      onPress={() => router.push({ pathname: '/sala', params: { sala_id: p.salaId } })}>
+                      <Text style={s.caenBtnTxt}>Escribirle</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
+
           {/* Cómo aparecer en Conexiones */}
           {visibility && (
             <TouchableOpacity style={s.vis} activeOpacity={0.85} onPress={() => router.push('/coach-visibilidad')}>
@@ -461,6 +558,32 @@ const s = StyleSheet.create({
   nextEmptyBtnTxt: { color: GREEN_TXT, fontSize: 12.5, fontFamily: ViveFonts.semibold },
 
   // Cómo aparecer en Conexiones
+  caenWrap: {
+    backgroundColor: CARD,
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 14,
+    gap: 12,
+  },
+  caenTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 14,
+    color: FOREST,
+  },
+  caenRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  caenAv: { width: 38, height: 38, borderRadius: 19 },
+  caenAvFallback: { backgroundColor: CREAM_DEEP, alignItems: 'center', justifyContent: 'center' },
+  caenInitials: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST },
+  caenName: { fontFamily: ViveFonts.semibold, fontSize: 14, color: FOREST },
+  caenMeta: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, marginTop: 1 },
+  caenBtn: {
+    backgroundColor: TERRA,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  caenBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 12, color: '#F7EFE4' },
+
   vis: {
     flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12, padding: 15,
     backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20,
