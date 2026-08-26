@@ -5,6 +5,18 @@
 
 ---
 
+## 2026-08-26 — Joaquín (sesión 129)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`.
+
+**Resumen — "Elegí un área de bienestar para empezar" (Fase 1 de Conexiones) pasó a tener el mismo estilo que "Herramientas de Vita" en Recursos.**
+
+- Pedido explícito: mismo tamaño/letra/color que `sectionTitle` de `recursos.tsx` (Jakarta 700, 20px, forest) — antes era Poppins regular 13.5px, gris oliva.
+- **Nuevo modificador `askSubBig`**, aplicado solo al texto de Fase 1 — el subtítulo de Fase 2 ("Elegí un tema y te presento a los profesionales indicados") sigue con el estilo chico original, no se tocó.
+- Typecheck, lint y 259/259 tests limpios. No confirmado en dispositivo — con la letra más grande puede que el espaciado que se ajustó en la sesión 128 necesite otra vuelta.
+
+---
+
 ## 2026-08-26 — Joaquín (sesión 128)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`.

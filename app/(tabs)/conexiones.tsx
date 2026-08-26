@@ -588,7 +588,7 @@ export default function ConexionesScreen() {
             /* ── Fase 1: ejes de bienestar ──────────────────────────────── */
             <SlideInView key="fase1">
               <View style={[s.askWrap, s.askWrapTight]}>
-                <Text style={s.askSub}>Elegí un área de bienestar para empezar</Text>
+                <Text style={[s.askSub, s.askSubBig]}>Elegí un área de bienestar para empezar</Text>
               </View>
 
               {/* Búsqueda por nombre — en vivo sobre el cache de coaches */}
@@ -825,6 +825,14 @@ const s = StyleSheet.create({
     fontSize: 26,
     color: FOREST,
     lineHeight: 32,
+  },
+  // Mismo estilo que "Herramientas de Vita" en recursos.tsx (sectionTitle),
+  // pedido explícito — solo para Fase 1 ("Elegí un área de bienestar para
+  // empezar"), no para el subtítulo de Fase 2, que sigue con el estilo chico.
+  askSubBig: {
+    fontFamily: ViveFonts.title,
+    fontSize: 20,
+    color: FOREST,
   },
   askSub: {
     fontFamily: ViveFonts.regular,
