@@ -25,7 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
-import { priceUsdError, MIN_PRICE_USD } from '@/lib/pricing';
+import { priceUsdError } from '@/lib/pricing';
 import { faltaParaInternacional, rielesTexto } from '@/lib/payout';
 import { AppBg } from '@/components/ui/AppBg';
 
@@ -92,6 +92,11 @@ export default function CoachProfileScreen() {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [topics, setTopics] = useState<string[]>([]);
   const [mpConnected, setMpConnected] = useState(false);
+  // Desplegable de las sesiones del exterior. `null` = todavía no lo tocó,
+  // así que manda el default: abierto si ya hay algo configurado, cerrado si
+  // no. Sin ese default, el coach que YA atiende del exterior abría el perfil
+  // y no veía su propio precio.
+  const [intlAbierto, setIntlAbierto] = useState<boolean | null>(null);
   const [connectingMp, setConnectingMp] = useState(false);
 
   useEffect(() => {
@@ -572,6 +577,12 @@ export default function CoachProfileScreen() {
     ]);
   }
 
+  const intlConfigurado = !!profile && (
+    profile.accepts_international || profile.price_usd != null ||
+    profile.accepts_paypal || profile.accepts_usdt
+  );
+  const intlAbiertoReal = intlAbierto ?? intlConfigurado;
+
   const faltaInternacional = profile
     ? faltaParaInternacional(profile.price_usd, profile.accepts_paypal, profile.accepts_usdt)
     : null;
@@ -767,12 +778,30 @@ export default function CoachProfileScreen() {
         </View>
 
         <View style={s.groupHead}>
-          <Text style={s.groupTitle}>Cómo cobrás</Text>
-          <Text style={s.groupHint}>Tus precios y por dónde te llega la plata</Text>
+          <Text style={s.groupTitle}>Tu trabajo</Text>
+          <Text style={s.groupHint}>Cuándo atendés, cuánto cobrás y cómo te pagan</Text>
         </View>
 
+        {/* ── Horarios ──────────────────────────────────────── */}
+        {/* 🔴 Antes esta sección se llamaba "Disponibilidad", y esa palabra
+            nombraba TRES cosas distintas en la app: este interruptor (que en
+            realidad decide si APARECÉS), las franjas horarias de
+            `/coach-availability`, y el patrón semanal de adentro de esa. El
+            coach que se quería pausar una semana tenía que adivinar entre las
+            tres. Ahora cada una dice lo que hace. */}
+        <Text style={s.sectionTitle}>Tus horarios</Text>
+        <TouchableOpacity
+          style={s.availBtn}
+          onPress={() => router.push('/coach-availability')}
+          activeOpacity={0.75}
+        >
+          <MaterialCommunityIcons name="calendar-clock" size={18} color={ViveColors.primary} />
+          <Text style={s.availBtnText}>Ver y editar tus franjas</Text>
+          <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.58)" />
+        </TouchableOpacity>
+
         {/* ── Precios ───────────────────────────────────────── */}
-        <Text style={s.sectionTitle}>Precio y paquetes</Text>
+        <Text style={[s.sectionTitle, s.sectionSpaced]}>Precio y paquetes</Text>
         <View style={s.priceCard}>
           {editingPrice ? (
             <View>
@@ -833,6 +862,27 @@ export default function CoachProfileScreen() {
               </View>
             </TouchableOpacity>
           )}
+        </View>
+
+        {/* ── Modo de reserva ───────────────────────────────── */}
+        <Text style={[s.sectionTitle, s.sectionSpaced]}>Modalidad de reserva</Text>
+        <View style={s.toggleCard}>
+          <View style={s.toggleInfo}>
+            <Text style={s.toggleTitle}>{profile?.instant_booking ? 'Instantánea' : 'Con confirmación'}</Text>
+            <Text style={s.toggleDesc}>
+              {profile?.instant_booking
+                ? 'Los usuarios reservan directamente sin esperar tu aprobación'
+                : 'Cada reserva requiere tu confirmación antes de quedar fijada'}
+            </Text>
+          </View>
+          <Switch
+            value={!!profile?.instant_booking}
+            onValueChange={toggleInstantMode}
+            disabled={noCoachProfile || savingInstantMode}
+            trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
+            thumbColor="#FFFFFF"
+            ios_backgroundColor={`${ViveColors.text}25`}
+          />
         </View>
 
         {/* ── Mercado Pago ──────────────────────────────────── */}
@@ -897,86 +947,42 @@ export default function CoachProfileScreen() {
 
         {/* ── Sesiones desde el exterior ────────────────────── */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Sesiones desde el exterior</Text>
-        {/* No es un interruptor: se activan solas cuando hay con qué cobrarlas.
-            Un estado que se puede prender sin tener cómo cobrar es un estado
-            roto — el catálogo lo anuncia y la pantalla de pago no puede.
-            🔴 Y por eso tampoco es un LINK. Antes esta tarjeta llevaba a
-            `/coach-datos-cobro`, igual que la fila "Cómo te pagamos" de abajo:
-            dos accesos al mismo lugar dentro de la misma sección, y encima
-            colgados de algo que no se configura. Es un ESTADO — lo que se
-            configura son las dos cosas que lo producen, que están acá abajo. */}
-        <View style={s.toggleCard}>
+
+        {/* 🔴 Es un DESPLEGABLE, no un interruptor de la función.
+            `accepts_international` es una columna DERIVADA (precio en dólares
+            cargado + algún riel aceptado): un switch acá prometería prender algo
+            que en realidad se prende solo, y dejaría al coach mirando
+            "Activadas" con el catálogo diciendo lo contrario. Lo que se pliega
+            es la VISTA, no el estado.
+            ⚠️ Y por eso lo de adentro NO puede colgar de `accepts_international`:
+            esconder el campo del precio detrás de la columna que se deriva DE
+            ese precio es el circuito cerrado que ya arreglamos una vez. Cuelga
+            de `intlAbiertoReal`, que es estado de pantalla y arranca abierto si
+            ya hay algo cargado. */}
+        <TouchableOpacity
+          style={s.toggleCard}
+          onPress={() => setIntlAbierto(!intlAbiertoReal)}
+          activeOpacity={0.85}>
           <View style={s.toggleInfo}>
             <Text style={s.toggleTitle}>
               {profile?.accepts_international ? 'Activadas' : 'Desactivadas'}
             </Text>
             <Text style={s.toggleDesc}>
               {profile?.accepts_international
-                ? 'Atendé a personas que viven afuera. Tus horarios no cambian — seguís atendiendo en las franjas que ya cargaste, el que se acomoda es el usuario.'
-                : 'Se activan solas cuando tengas un precio en dólares y al menos un medio para cobrarlas.'}
+                ? 'Atendé a personas que viven afuera. Tus horarios no cambian.'
+                : 'Se activan solas cuando tengas precio en dólares y un medio de cobro.'}
             </Text>
           </View>
           <MaterialCommunityIcons
-            name={profile?.accepts_international ? 'check-circle-outline' : 'circle-outline'}
+            name={intlAbiertoReal ? 'chevron-up' : 'chevron-down'}
             size={22}
-            color={profile?.accepts_international ? ViveColors.accent : 'rgba(135,131,92,0.45)'}
+            color="rgba(135,131,92,0.6)"
           />
-        </View>
+        </TouchableOpacity>
 
-        {/* 🔴 El precio en dólares y el acceso a los rieles van SIEMPRE visibles,
-            NO adentro de `accepts_international`. Desde que esa columna se
-            DERIVA (`price_usd is not null` y algún riel aceptado), tener acá
-            adentro el campo que fija `price_usd` cerraba el circuito: el coach
-            sin precio no veía nunca el input que se lo habría puesto, y la
-            tarjeta de arriba le decía "cargá un precio en dólares" mandándolo a
-            una pantalla donde ese campo no existe. Se activan solas, sí, pero
-            hay que poder darles con qué. */}
-
-        {/* Precio en dólares. Lo fija el coach, no se convierte desde el
-            precio en pesos: el de afuera es una decisión comercial distinta,
-            y una conversión dejaría a VIVE en el medio de la discusión de
-            cotización cada vez que se mueve el dólar. */}
-        <View style={[s.toggleCard, s.stackedCard]}>
-          <View style={s.toggleInfo}>
-            <Text style={s.toggleTitle}>Precio en dólares</Text>
-            <Text style={s.toggleDesc}>
-              Lo que cobrás por una sesión desde el exterior. En dólares enteros.
-            </Text>
-          </View>
-          <View style={s.usdRow}>
-            <Text style={s.usdPrefix}>US$</Text>
-            <TextInput
-              style={s.usdInput}
-              // ⚠️ `value={priceUsdInput}` a secas, sin `|| precio guardado`.
-              // Con el fallback, borrar el campo lo dejaba vacío por un
-              // instante y volvía a mostrar el valor guardado, así que era
-              // IMPOSIBLE vaciarlo: lo que se tipeaba quedaba pegado
-              // adelante del número viejo.
-              value={priceUsdInput}
-              onChangeText={setPriceUsdInput}
-              onBlur={savePriceUsd}
-              placeholder="50"
-              placeholderTextColor="rgba(135,131,92,0.45)"
-              keyboardType="number-pad"
-              maxLength={5}
-            />
-            {savingPriceUsd && <ActivityIndicator size="small" color={ViveColors.primary} />}
-          </View>
-        </View>
-
-        {profile?.price_usd != null && (
-          <Text style={s.priceHint}>
-            El cliente del exterior paga USD {profile.price_usd}, pague como pague.
-            La comisión es del 25% en la primera sesión con cada persona y del 20% en
-            las siguientes, e incluye todos los costos de cobrarte del exterior y
-            transferirte — cobrás USD {Math.round(profile.price_usd * 0.75 * 100) / 100}{' '}
-            la primera y USD {Math.round(profile.price_usd * 0.80 * 100) / 100} las que sigan.
-            Mínimo USD {MIN_PRICE_USD}.
-          </Text>
-        )}
-
-        {/* Qué le falta para que se activen. Sin esto no pasa nada y no tiene
-            forma de saber por qué. */}
+        {/* El aviso de qué falta queda AFUERA del pliegue: es el motivo para
+            abrirlo. Escondido adentro, el coach cierra la sección y no se
+            entera de que no está apareciendo. */}
         {faltaInternacional && (
           <View style={s.commissionCard}>
             <MaterialCommunityIcons name="alert-outline" size={18} color="#8C4A31" />
@@ -984,78 +990,60 @@ export default function CoachProfileScreen() {
           </View>
         )}
 
-        {profile?.accepts_international && (
-          /* Lo que sí le cambia. Va explícito y no en letra chica: si se entera
-             después de la primera sesión, va a pensar que le retuvimos la plata. */
-          <View style={s.commissionCard}>
-            <MaterialCommunityIcons name="information-outline" size={18} color={ViveColors.accent} />
-            <Text style={s.commissionText}>
-              Estas sesiones <Text style={s.commissionStrong}>no te entran por Mercado Pago</Text>:
-              las cobra VIVE y te las transferimos cada semana, por sesiones ya realizadas.
-            </Text>
-          </View>
+        {intlAbiertoReal && (
+          <>
+            {/* Precio en dólares. Lo fija el coach, no se convierte desde el
+                precio en pesos: el de afuera es una decisión comercial distinta,
+                y una conversión dejaría a VIVE en el medio de la discusión de
+                cotización cada vez que se mueve el dólar. */}
+            <View style={[s.toggleCard, s.stackedCard]}>
+              <View style={s.toggleInfo}>
+                <Text style={s.toggleTitle}>Precio en dólares</Text>
+              </View>
+              <View style={s.usdRow}>
+                <Text style={s.usdPrefix}>US$</Text>
+                <TextInput
+                  style={s.usdInput}
+                  // ⚠️ `value={priceUsdInput}` a secas, sin `|| precio guardado`.
+                  // Con el fallback, borrar el campo lo dejaba vacío por un
+                  // instante y volvía a mostrar el valor guardado, así que era
+                  // IMPOSIBLE vaciarlo: lo que se tipeaba quedaba pegado
+                  // adelante del número viejo.
+                  value={priceUsdInput}
+                  onChangeText={setPriceUsdInput}
+                  onBlur={savePriceUsd}
+                  placeholder="50"
+                  placeholderTextColor="rgba(135,131,92,0.45)"
+                  keyboardType="number-pad"
+                  maxLength={5}
+                />
+                {savingPriceUsd && <ActivityIndicator size="small" color={ViveColors.primary} />}
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[s.toggleCard, s.stackedCard]}
+              onPress={() => router.push('/coach-datos-cobro')}
+              activeOpacity={0.85}
+            >
+              <View style={s.toggleInfo}>
+                <Text style={s.toggleTitle}>Cómo te pagamos</Text>
+                <Text style={s.toggleDesc}>
+                  {rielesTexto(!!profile?.accepts_paypal, !!profile?.accepts_usdt)}
+                </Text>
+              </View>
+              <MaterialIcons name="arrow-forward-ios" size={16} color="rgba(135,131,92,0.6)" />
+            </TouchableOpacity>
+          </>
         )}
 
-        <TouchableOpacity
-          style={[s.toggleCard, s.stackedCard]}
-          onPress={() => router.push('/coach-datos-cobro')}
-          activeOpacity={0.85}
-        >
-          <View style={s.toggleInfo}>
-            <Text style={s.toggleTitle}>Cómo te pagamos</Text>
-            <Text style={s.toggleDesc}>
-              {rielesTexto(!!profile?.accepts_paypal, !!profile?.accepts_usdt)}
-            </Text>
-          </View>
-          <MaterialIcons name="arrow-forward-ios" size={16} color="rgba(135,131,92,0.6)" />
-        </TouchableOpacity>
-
         <View style={s.groupHead}>
-          <Text style={s.groupTitle}>Cómo trabajás</Text>
-          <Text style={s.groupHint}>Cómo se reservan tus sesiones y cuándo estás</Text>
+          <Text style={s.groupTitle}>Cómo te encuentran</Text>
+          <Text style={s.groupHint}>Si aparecés y en qué lugar</Text>
         </View>
-
-        {/* ── Modo de reserva ───────────────────────────────── */}
-        <Text style={s.sectionTitle}>Modalidad de reserva</Text>
-        <View style={s.toggleCard}>
-          <View style={s.toggleInfo}>
-            <Text style={s.toggleTitle}>{profile?.instant_booking ? 'Instantánea' : 'Con confirmación'}</Text>
-            <Text style={s.toggleDesc}>
-              {profile?.instant_booking
-                ? 'Los usuarios reservan directamente sin esperar tu aprobación'
-                : 'Cada reserva requiere tu confirmación antes de quedar fijada'}
-            </Text>
-          </View>
-          <Switch
-            value={!!profile?.instant_booking}
-            onValueChange={toggleInstantMode}
-            disabled={noCoachProfile || savingInstantMode}
-            trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
-            thumbColor="#FFFFFF"
-            ios_backgroundColor={`${ViveColors.text}25`}
-          />
-        </View>
-
-        {/* ── Horarios ──────────────────────────────────────── */}
-        {/* 🔴 Antes esta sección se llamaba "Disponibilidad", y esa palabra
-            nombraba TRES cosas distintas en la app: este interruptor (que en
-            realidad decide si APARECÉS), las franjas horarias de
-            `/coach-availability`, y el patrón semanal de adentro de esa. El
-            coach que se quería pausar una semana tenía que adivinar entre las
-            tres. Ahora cada una dice lo que hace. */}
-        <Text style={s.sectionTitle}>Tus horarios</Text>
-        <TouchableOpacity
-          style={s.availBtn}
-          onPress={() => router.push('/coach-availability')}
-          activeOpacity={0.75}
-        >
-          <MaterialCommunityIcons name="calendar-clock" size={18} color={ViveColors.primary} />
-          <Text style={s.availBtnText}>Ver y editar tus franjas</Text>
-          <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.58)" />
-        </TouchableOpacity>
 
         {/* ── Pausar el perfil ──────────────────────────────── */}
-        <Text style={[s.sectionTitle, s.sectionSpaced]}>Aparecer en búsquedas</Text>
+        <Text style={s.sectionTitle}>Aparecer en búsquedas</Text>
         <View style={s.toggleCard}>
           <View style={s.toggleInfo}>
             <Text style={s.toggleTitle}>
@@ -1546,13 +1534,6 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: '#87835C',
     lineHeight: 18,
-  },
-  priceHint: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: '#87835C',
-    lineHeight: 18,
-    marginTop: 8,
   },
   commissionStrong: {
     fontFamily: ViveFonts.semibold,
