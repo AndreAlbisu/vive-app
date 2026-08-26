@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   ScrollView, View, Text, TouchableOpacity,
   StyleSheet, StatusBar, ActivityIndicator, useWindowDimensions,
+  Alert,
 } from 'react-native';
 import Svg, {
   Circle as SvgCircle, Line as SvgLine, Polyline, Path, Text as SvgText,
@@ -14,6 +15,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 
 import { ViveFonts, ViveMoodColors } from '@/constants/theme';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
+import { encryptMessage } from '@/lib/encryption';
+import { leerAnimo, textoAnimo } from '@/lib/moodTrend';
 import type { MoodEntry } from '@/hooks/useMoodHistory';
 import { useResourceProgress } from '@/hooks/useResourceProgress';
 import { useProgressStats } from '@/hooks/useProgressStats';
@@ -88,6 +91,86 @@ export default function ProgresoScreen() {
   const { semanasActivas, areasCount, sessionCount } = useProgressStats(user?.id);
 
   const { entries: moodEntries, loading: moodLoading } = useMoodHistory(user?.id, 14);
+
+  // 🔴 La lectura de su propio ánimo. Hasta ahora la persona hacía el check-in
+  // todos los días y veía las caritas, pero nadie le devolvía qué dicen: el
+  // único dato suyo que no tenía interpretado. `null` cuando no hay registros
+  // suficientes, que NO es lo mismo que "venís mal".
+  const [compartiendo, setCompartiendo] = useState(false);
+
+  /**
+   * 🔴 Compartir la semana con el profesional — la versión CHICA de la idea.
+   *
+   * No es un permiso: es un MENSAJE. La persona manda su lectura al chat que ya
+   * usa, como cualquier otra cosa que manda. Eso evita toda la arquitectura de
+   * consentimiento —acceso continuo, revocación, qué pasa con lo ya visto— y
+   * las tres preguntas al abogado que esa versión abría
+   * (`docs/animo-compartido.md`). Acá no estamos compartiendo datos con un
+   * tercero: la persona está enviando algo suyo por su canal.
+   *
+   * 📝 Va la LECTURA, no los registros. "Venís con el ánimo parejo, y mejorando"
+   * es lo que quiso decir; el día por día es más íntimo y no hace falta para
+   * que el profesional sepa cómo llegar a la sesión.
+   */
+  async function compartirConProfesional() {
+    if (!user || !lectura) return;
+    setCompartiendo(true);
+
+    const { data: salas } = await supabase
+      .from('salas')
+      .select('id, coach_id')
+      .eq('user_id', user.id);
+
+    if (!salas || salas.length === 0) {
+      setCompartiendo(false);
+      Alert.alert('Todavía no tenés con quién', 'Cuando tengas una sesión reservada vas a poder compartirle esto a tu profesional.');
+      return;
+    }
+
+    const nombres = await supabase
+      .from('profiles').select('id, name').in('id', salas.map(x => x.coach_id as string));
+    const nombreDe = new Map((nombres.data ?? []).map(p => [p.id as string, (p.name as string) ?? 'tu profesional']));
+
+    const texto =
+      `${textoAnimo(lectura)}. ${lectura.registros} registros en los últimos 14 días.`;
+
+    const enviar = async (salaId: string) => {
+      const { error } = await supabase.from('messages').insert({
+        sala_id: salaId,
+        sender_id: user.id,
+        content: encryptMessage(texto),
+        sender_type: 'user',
+        // `type` desconocido cae al render de texto normal (ver SCHEMA), así que
+        // esto no rompe nada hoy y permite pintarlo distinto más adelante sin
+        // migrar los mensajes ya enviados.
+        metadata: { type: 'mood_week', promedio: lectura.promedio, direccion: lectura.direccion, registros: lectura.registros },
+      });
+      setCompartiendo(false);
+      if (error) { Alert.alert('No se pudo enviar', 'Probá de nuevo en unos minutos'); return; }
+      Alert.alert('Enviado', 'Tu profesional lo va a ver en el chat.');
+    };
+
+    // Con más de uno hay que elegir: mandarlo a todos sería compartir de más sin
+    // que nadie lo haya pedido.
+    if (salas.length === 1) { await enviar(salas[0].id as string); return; }
+    setCompartiendo(false);
+    Alert.alert(
+      '¿A quién se lo mandás?',
+      undefined,
+      [
+        ...salas.slice(0, 3).map(sa => ({
+          text: nombreDe.get(sa.coach_id as string) ?? 'Profesional',
+          onPress: () => { setCompartiendo(true); void enviar(sa.id as string); },
+        })),
+        { text: 'Cancelar', style: 'cancel' as const },
+      ],
+    );
+  }
+
+  const lectura = useMemo(
+    () => leerAnimo(moodEntries.map(e => ({ moodId: e.mood_id, fecha: e.entry_date }))),
+    [moodEntries],
+  );
 
   // ── Métricas de mood ───────────────────────────────────────────────────────
   const avgMoodLabel = (() => {
@@ -254,6 +337,26 @@ export default function ProgresoScreen() {
 
           {/* ── Estado de ánimo ── */}
           <Text style={s.sectionTitle}>Estado de ánimo</Text>
+          {lectura && (
+            <>
+              <Text style={s.lecturaTxt}>
+                {textoAnimo(lectura)}
+                <Text style={s.lecturaSoft}>{`  ·  ${lectura.registros} registros en 14 días`}</Text>
+              </Text>
+              {/* 🔴 Un MENSAJE, no un permiso. Por eso el botón dice "contarle"
+                  y no "compartir mi ánimo": lo primero es algo que hacés una
+                  vez, lo segundo suena a una llave que dejás puesta. */}
+              <TouchableOpacity
+                style={s.compartirBtn}
+                activeOpacity={0.85}
+                disabled={compartiendo}
+                onPress={compartirConProfesional}>
+                <Text style={s.compartirTxt}>
+                  {compartiendo ? 'Enviando…' : 'Contarle cómo vengo a mi profesional'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
           <View style={s.moodStatsRow}>
             <GlassCard style={s.moodStatCard}>
               <Text style={s.moodStatValue}>{avgMoodLabel}</Text>
@@ -517,6 +620,26 @@ const s = StyleSheet.create({
   },
 
   // ── Mood ──────────────────────────────────────────────────────────────────
+  lecturaTxt: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#565E32',
+    paddingHorizontal: 20,
+    marginTop: -4,
+    marginBottom: 12,
+  },
+  lecturaSoft: { fontFamily: ViveFonts.regular, fontSize: 12, color: '#87835C' },
+  compartirBtn: {
+    marginHorizontal: 20,
+    marginBottom: 14,
+    paddingVertical: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.22)',
+    alignItems: 'center',
+  },
+  compartirTxt: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#565E32' },
+
   moodStatsRow: {
     flexDirection: 'row',
     gap: 10,

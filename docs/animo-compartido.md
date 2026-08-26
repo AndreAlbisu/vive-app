@@ -163,6 +163,39 @@ agregar dos preguntas nuevas:
 persona mayor de edad está garantizada (`age_confirmed`), así que al menos no hay
 menores involucrados.
 
+## 9 bis. 🔴 LO QUE SE HIZO EN VEZ (26/08/2026)
+
+Andre puso en duda la necesidad, con el argumento más filoso posible: **si
+alguien quiere que su coach sepa cómo le fue, ya puede escribírselo — el chat
+existe.** De ahí salió una versión mucho más chica, y es la que se construyó.
+
+**En vez de un PERMISO, un MENSAJE.** En Progreso hay un botón *"Contarle cómo
+vengo a mi profesional"* que manda la **lectura** (no los registros) al chat, como
+cualquier otro mensaje.
+
+Por qué esto cambia el problema entero:
+
+- **No hay acceso continuo**, así que no hay revocación, ni "qué pasa con lo ya
+  visto", ni aviso al profesional cuando alguien deja de compartir. Las tres
+  decisiones incómodas de las secciones 5 y 9 **desaparecen**.
+- **Legalmente casi se disuelve**: no estamos compartiendo datos con un tercero,
+  la persona está enviando algo suyo por un canal que ya usa para eso.
+- **La conversación sigue siendo el canal**, que era la objeción de Andre — pero
+  el que no encuentra las palabras tiene una forma de decirlo.
+- **Costó una tarde** en vez de semanas.
+
+Y se pagó primero la deuda de la sección 7: **la persona ahora ve la lectura de
+su propio ánimo** en Progreso (`lib/moodTrend.ts`, 8 tests) — promedio, dirección
+y en palabras. Antes veía las caritas y nadie le devolvía qué decían.
+
+⚠️ **Lo que sigue valiendo de este documento**: los tres niveles de intimidad (§3),
+que el profesional no pueda pedirlo (§4), que no haya alertas push (§6), y que el
+diario y la gratitud no se compartan nunca. Si algún día se vuelve al permiso
+continuo, se vuelve con todo esto.
+
+📝 **Y queda por ver si alguien lo usa.** Es la prueba real: si el botón no se
+toca, la necesidad no era tal y se saca. Eso también es una respuesta.
+
 ## 10. Lo que NO haría, resumido
 
 - Un panel con todas las personas y su ánimo. Nunca.
