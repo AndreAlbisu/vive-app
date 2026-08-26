@@ -205,6 +205,33 @@ identificado adentro del propio contrato.
 - **Qué pasa ante un contracargo o una disputa** del medio de pago.
 - **Que ciertos medios cobran en dólares**, y cuál es el precio aplicable en ese caso.
 
+### 📌 PENDIENTE — reescribir los T&C desde cero, ANTES de la consulta legal
+
+**Decisión de Andre, 25/08/2026.** El texto actual describe un sistema que ya no
+existe, y parcharlo punto por punto deja un documento que se lee como capas.
+
+🔴 **El alcance importa, porque hay dos cosas mezcladas en los siete desajustes:**
+
+| Se reescribe AHORA | Se deja marcado como pregunta |
+|---|---|
+| **Cómo funciona el sistema**: los tres rieles, quién cobra en cada uno, en qué monedas, cuándo y cómo se le paga al Profesional, qué pasa ante un contracargo | **Qué consecuencias legales tiene**: si la cláusula de 24hs es oponible, si la garantía debilita el encuadre de intermediación, si se puede cobrar en dólares a un consumidor local |
+
+**Lo primero solo lo podés hacer vos** —nadie más sabe cómo funciona— y hoy está
+mal escrito. **Lo segundo necesita al abogado**, y adelantarse tiene dos costos:
+se escribe texto que va a cambiar cuando llegue la respuesta, y **se lo ancla a
+una redacción propia** en vez de preguntarle qué tendría que decir. Es exactamente
+lo que `fiscal-instrucciones.md` ya se dijo a sí mismo: *"la pregunta correcta es
+'¿qué tendría que decir acá?', no '¿esto está bien?'"*.
+
+⚠️ **Esto NO frena las otras dos consultas.** La del contador y la de PayPal no
+dependen de los T&C y se mandan igual. La del abogado espera la reescritura:
+hacerlo leer una descripción falsa del sistema es pagarle por revisar algo que no
+existe.
+
+📌 **Y al reescribir, arrancar por §9.1 vs §9.4**, que es el único desajuste que no
+vino de esta sesión: el contrato se contradice a sí mismo sobre un derecho que él
+mismo llama irrenunciable.
+
 📌 **Nada de esto se arregla escribiendo el texto ahora.** Cinco de los siete
 dependen de respuestas que todavía no están (A.6 a A.9 del paquete, y la consulta
 fiscal). Lo que sí conviene es **llevarle esta lista al abogado junto con las
