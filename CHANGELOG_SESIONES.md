@@ -17,7 +17,12 @@
 - **Segundo fix al toque, con captura comparativa**: pedido que quede a la misma altura de pantalla que "Herramientas de Vita" en Recursos. Medí las tres diferencias entre las dos pantallas (`header.marginTop`: 10 acá vs. -2 en recursos.tsx; `header.marginBottom`: 6 vs. 8; el título mide 32/38 vs. 34/40) y las compensé todas en un solo número: `askWrapTight.marginTop` pasó de 10 a -6.
 - **Ajustes finos sucesivos a ciegas** (sin captura, solo "más"/"menos"): -6 → -12 → -16 → -8.
 - **Se cortó la ronda de tanteos y se midió en píxeles sobre capturas reales.** El cálculo teórico original (a partir de `marginTop`/`lineHeight` declarados) estaba equivocado: no predice cómo Plus Jakarta Sans se renderiza de verdad. Medido con un script que detecta filas de texto: el gap título→subtítulo en Conexiones daba **54px** contra **83px** en Recursos — es decir, iba en la dirección contraria a lo que el cálculo había dicho. `marginTop` final: **21**.
-- Typecheck, lint y 259/259 tests limpios. No confirmado en dispositivo — esta vez el número sale de medir la captura, no de la fórmula.
+- Typecheck, lint y 259/259 tests limpios.
+- 🔴 **Con `marginTop: 21` (medido), Joaquín dijo que tampoco quedó.** Cortamos la sesión ahí — **queda pendiente, sin resolver**, para retomar mañana. `askWrapTight.marginTop = 21` es el valor que quedó commiteado, no una solución confirmada.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Retomar el espaciado de "Elegí un área de bienestar para empezar" en Conexiones.** Antes de seguir ajustando a tanteos: pedirle a Joaquín una captura fresca apenas se siente a trabajar, y si hace falta más de un ajuste, pedir el número aproximado de píxeles (o "un poco" = referencia visual concreta) en vez de iterar a ciegas — así se cierra en 1-2 pasadas en vez de 6 commits chicos como hoy.
+- Si el problema persiste igual, considerar que la medición por script (detectar filas oscuras de texto) puede estar capturando mal algún elemento — vale la pena verificar visualmente con un crop de la zona exacta antes de confiar en el número.
 
 ---
 
