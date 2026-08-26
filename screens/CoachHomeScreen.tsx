@@ -46,7 +46,15 @@ type PersonaCayendo = PersonaEnRiesgo & {
  * una, y nunca el diario ni la gratitud — eso es texto libre donde la persona
  * escribe lo que no le dice a nadie, y queda afuera por completo.
  */
-const MOSTRAR_ANIMO_AL_COACH = true;
+// ⏸️ APAGADO el 26/08/2026 mientras se piensa la propuesta completa. La función
+// de la base sigue existiendo (no molesta: sin este flag nadie la llama), así
+// que volver a prenderlo es cambiar este `false` por `true`.
+//
+// El motivo de apagarlo: está construido con la puerta en el lado equivocado
+// —la valida el VÍNCULO (existe una reserva), no la PERSONA— así que hoy un
+// coach ve el ánimo de alguien que nunca aceptó compartirlo. Ver
+// `docs/animo-compartido.md`.
+const MOSTRAR_ANIMO_AL_COACH = false;
 
 
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
