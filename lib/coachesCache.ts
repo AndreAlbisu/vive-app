@@ -22,10 +22,19 @@ export type CachedCoach = {
   completadasCount?: number;     // coach_rebooking_stats.completadas_count
   recentBookers?: number;        // coach_trending_stats.recent_bookers (usuarios distintos, 30d)
   hasSlotThisWeek?: boolean;     // coach_availability_status.status = 'this_week' — criterio del slot de relleno
-  /** Atiende a gente de fuera de Argentina, cobrando en dólares por el riel de
-   *  USDT. Es opt-in del coach y **no cambia sus horarios** (atiende en las
-   *  mismas franjas; el que se acomoda es el usuario), cambia el cobro. */
+  /** Atiende a gente de fuera de Argentina, cobrando en dólares. **No cambia
+   *  sus horarios** (atiende en las mismas franjas; el que se acomoda es el
+   *  usuario), cambia el cobro. Ya NO implica USDT: desde D4 el riel puede ser
+   *  PayPal, USDT o los dos — mirá `acceptsPaypal` / `acceptsUsdt`. */
   acceptsInternational?: boolean;
+  /** 🔴 Los rieles por los que el coach acepta COBRAR. Con la regla espejo (D4)
+   *  a quien reserva se le ofrecen solo estos, así que el catálogo tiene que
+   *  conocerlos: sin ellos alguien del exterior que solo puede pagar con PayPal
+   *  llega hasta la pantalla de confirmar para enterarse de que ese coach solo
+   *  toma USDT. `acceptsMp` es el riel en pesos (`coaches.mp_connected`). */
+  acceptsMp?: boolean;
+  acceptsPaypal?: boolean;
+  acceptsUsdt?: boolean;
   /** Precio de la sesión internacional, en USD enteros. Lo fija el coach y NO
    *  se deriva de una cotización. */
   priceUsd?: number | null;
@@ -37,7 +46,7 @@ let inflight: Promise<void> | null = null;
 async function _doFetch(): Promise<void> {
   const { data, error } = await supabase
     .from('coaches')
-    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, accepts_international, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
+    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
     .eq('verified', true)
     .eq('availability_status', 'activo')
     // El `.limit()` estaba sin `order`: Postgres devolvía N filas ARBITRARIAS, así
@@ -73,6 +82,9 @@ async function _doFetch(): Promise<void> {
       // de USDT — si el filtro de búsqueda usara otra, prometería en el
       // catálogo algo que la pantalla de pago después no ofrece.
       acceptsInternational: !!(c.accepts_international) && c.price_usd != null,
+      acceptsMp: !!(c as any).mp_connected,
+      acceptsPaypal: !!(c as any).accepts_paypal,
+      acceptsUsdt: !!(c as any).accepts_usdt,
       priceUsd:    (c.price_usd ?? null) as number | null,
       avgRating:   null,
       reviewCount: 0,

@@ -24,6 +24,7 @@ import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { PaymentBadges } from '@/components/PaymentBadges';
 import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
@@ -442,6 +443,17 @@ export default function ConexionesScreen() {
                               <Feather name={slot.icon as any} size={11} color={reason.text} />
                               <Text style={[s.reasonText, { color: reason.text }]}>{slot.label}</Text>
                             </View>
+
+                            {/* Con qué se le puede pagar. `compact` porque la
+                                card del deck es angosta y ya tiene el pill de
+                                motivo arriba: con tres cartelitos más la fila se
+                                parte y desordena el cuerpo. */}
+                            <PaymentBadges
+                              mp={coach.acceptsMp}
+                              paypal={coach.acceptsPaypal}
+                              usdt={coach.acceptsUsdt}
+                              compact
+                            />
 
                             <View style={s.dots3}>
                               <View style={s.dot3} />

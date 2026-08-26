@@ -20,6 +20,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { NATIONALITIES, MAX_PRICE } from '@/constants/searchData';
+import { PaymentBadges } from '@/components/PaymentBadges';
 import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
 import { topicOptionsFrom } from '@/constants/conexionesDoors';
@@ -51,10 +52,21 @@ type Filters = {
   sex:         SexFilter;
   maxPrice:    number;
   nationality: NatFilter;
+  /** Con qué puede pagar quien busca. Regla espejo (D4): el coach cobra solo
+   *  por los rieles que aceptó, así que filtrar por acá es filtrar por "me
+   *  puede cobrar a mí". `'Todos'` = sin filtro. */
+  payment: 'Todos' | 'mp' | 'paypal' | 'usdt';
   type:        TypeFilter;
   /** Subtemas seleccionados. Vacío = sin filtro de tema (todos los coaches). */
   topics:      string[];
 };
+
+const PAYMENT_OPTIONS = [
+  { value: 'Todos', label: 'Cualquiera' },
+  { value: 'mp', label: 'Mercado Pago' },
+  { value: 'paypal', label: 'PayPal' },
+  { value: 'usdt', label: 'USDT' },
+] as const;
 
 const DEFAULT_FILTERS: Filters = {
   minRating:   0,
@@ -62,6 +74,7 @@ const DEFAULT_FILTERS: Filters = {
   sex:         'Todos',
   maxPrice:    MAX_PRICE,
   nationality: 'Todas',
+  payment: 'Todos',
   type:        'Todos',
   topics:      [],
 };
@@ -188,7 +201,7 @@ export default function SearchScreen3() {
     setLoadingCoaches(true);
     supabase
       .from('coaches')
-      .select('id, specialty, bio, price_per_session, nationality, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
+      .select('id, specialty, bio, price_per_session, nationality, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
       .eq('verified', true)
       .limit(50)
       .then(({ data, error }) => {
@@ -206,6 +219,10 @@ export default function SearchScreen3() {
             avatarUrl: (profile?.avatar_url ?? null) as string | null,
             bio: (c.bio ?? null) as string | null,
             topics: (c.coach_topics ?? []).map((t: any) => t.topic as string),
+            acceptsInternational: !!c.accepts_international && c.price_usd != null,
+            acceptsMp: !!c.mp_connected,
+            acceptsPaypal: !!c.accepts_paypal,
+            acceptsUsdt: !!c.accepts_usdt,
           };
         });
         applyAndSet(all);
@@ -287,6 +304,9 @@ export default function SearchScreen3() {
     if (filters.type !== 'Todos' && inferType(p.specialty) !== filters.type) return false;
     if (filters.minRating > 0 && (avgRatingById[p.id] ?? 0) < filters.minRating) return false;
     if (filters.international && !p.acceptsInternational) return false;
+    if (filters.payment === 'mp' && !p.acceptsMp) return false;
+    if (filters.payment === 'paypal' && !p.acceptsPaypal) return false;
+    if (filters.payment === 'usdt' && !p.acceptsUsdt) return false;
     return true;
   });
 
@@ -306,6 +326,7 @@ export default function SearchScreen3() {
     filters.sex !== 'Todos',
     filters.maxPrice < MAX_PRICE,
     filters.nationality !== 'Todas',
+    filters.payment !== 'Todos',
     filters.type !== 'Todos',
     filters.international,
     !topicsIgualAPuerta,
@@ -416,6 +437,7 @@ export default function SearchScreen3() {
                   Desde ${p.priceFrom.toLocaleString('es-AR')}
                   <Text style={s.cardPriceUnit}> · por sesión</Text>
                 </Text>
+                <PaymentBadges mp={p.acceptsMp} paypal={p.acceptsPaypal} usdt={p.acceptsUsdt} />
               </View>
             </ScaleCard>
           );
@@ -551,8 +573,37 @@ export default function SearchScreen3() {
                 ))}
               </View>
               {draftFilters.international && (
-                <Text style={s.starHint}>Se paga en dólares, con USDT</Text>
+                /* 🔴 Antes decía "Se paga en dólares, con USDT" a secas. Era
+                   cierto cuando USDT era el único riel internacional; desde que
+                   PayPal está en producción DEPENDE DEL COACH, y esa frase
+                   espantaba a quien no quiere cripto y sorprendía al resto. */
+                <Text style={s.starHint}>
+                  Se paga en dólares. El medio depende de cada profesional — filtralo acá abajo.
+                </Text>
               )}
+            </View>
+
+            {/* ── Con qué podés pagar ── */}
+            {/* 🔴 Regla espejo (D4): el coach cobra solo por los rieles que
+                aceptó, así que esto no es una preferencia sino "quién me puede
+                cobrar a mí". Sin este filtro, quien solo puede pagar con PayPal
+                se enteraba de que el coach toma únicamente USDT recién en la
+                pantalla de confirmar, cuatro pantallas después. */}
+            <View style={s.filterSection}>
+              <Text style={s.filterLabel}>¿Con qué querés pagar?</Text>
+              <View style={s.pillRow}>
+                {PAYMENT_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[s.pill, draftFilters.payment === opt.value && s.pillActive]}
+                    onPress={() => setDraft(d => ({ ...d, payment: opt.value }))}
+                    activeOpacity={0.75}>
+                    <Text style={[s.pillText, draftFilters.payment === opt.value && s.pillTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
             {/* ── Nacionalidad ── */}
