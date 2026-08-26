@@ -30,6 +30,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
+import { COMMISSION_INTL_FIRST, COMMISSION_INTL_RECURRING } from '@/lib/pricing';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
@@ -208,6 +209,10 @@ export default function CoachPayoutScreen() {
               <Text style={s.subtitle}>
                 Solo para las sesiones con personas fuera de Argentina. Esas no te entran por Mercado
                 Pago: las cobra VIVE y te las transferimos cada semana, por sesiones ya realizadas.
+                {'\n\n'}
+                De cada una retenemos {COMMISSION_INTL_FIRST}% la primera vez con cada persona y{' '}
+                {COMMISSION_INTL_RECURRING}% de ahí en adelante, e incluye todos los costos de
+                cobrarte del exterior y transferirte.
               </Text>
 
               <Text style={s.label}>Cómo aceptás cobrar</Text>

@@ -1,4 +1,10 @@
 import {
+  COMMISSION_INTERNATIONAL_FIRST,
+  COMMISSION_INTERNATIONAL_RECURRING,
+} from '../supabase/functions/_shared/commission';
+import {
+  COMMISSION_INTL_FIRST,
+  COMMISSION_INTL_RECURRING,
   priceUsdError,
   netAfterPaypal,
   MIN_PRICE_USD,
@@ -72,5 +78,17 @@ describe('cliente y servidor coinciden', () => {
     expect(server.PAYPAL_PCT).toBe(0.054);
     expect(server.PAYPAL_FIXED_USD).toBe(0.30);
     expect(server.MIN_PRICE_USD).toBe(MIN_PRICE_USD);
+  });
+});
+
+// 🔴 La escalera que se le MUESTRA al coach tiene que ser la que se le APLICA.
+// `lib/pricing.ts` la duplica porque el módulo que la aplica corre en Deno; este
+// test es lo único que impide que se separen. Si alguien cambia la del servidor
+// y no la del cliente, la pantalla de cobro le promete al coach un neto que no
+// va a recibir — y nadie se entera hasta que reclame.
+describe('la comisión internacional que se muestra es la que se aplica', () => {
+  it('coincide con `_shared/commission.ts`', () => {
+    expect(COMMISSION_INTL_FIRST).toBe(COMMISSION_INTERNATIONAL_FIRST);
+    expect(COMMISSION_INTL_RECURRING).toBe(COMMISSION_INTERNATIONAL_RECURRING);
   });
 });

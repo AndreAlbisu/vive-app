@@ -15,6 +15,21 @@
  *  chicos. Con la comisión plana del 25% eso dejó de ser un problema aritmético
  *  —el margen aguanta hasta precios muy bajos—, así que el piso se queda por una
  *  razón distinta y más simple: **una sesión de USD 5 no es un producto serio**. */
+/**
+ * La escalera de comisión de los rieles internacionales, para MOSTRÁRSELA al
+ * coach. 25% en la primera sesión con cada persona, 20% de la segunda en
+ * adelante (D3, 25/08/2026).
+ *
+ * ⚠️ **La fuente de verdad es `supabase/functions/_shared/commission.ts`**, que
+ * es quien la aplica al cobrar. Estos valores están duplicados acá solo porque
+ * aquel corre en Deno y esto es la app — y la duplicación **está atada por un
+ * test** (`pricing.test.ts`) que compara los dos y falla si se separan. Sin ese
+ * test, cambiar la escalera del lado servidor dejaría a la pantalla del coach
+ * prometiéndole un neto que no va a cobrar.
+ */
+export const COMMISSION_INTL_FIRST = 25;
+export const COMMISSION_INTL_RECURRING = 20;
+
 export const MIN_PRICE_USD = 20;
 export const MAX_PRICE_USD = 10000;
 
