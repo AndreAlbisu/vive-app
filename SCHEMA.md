@@ -100,7 +100,7 @@ Es lo único que crea filas en `profiles` — no hay ningún INSERT a `profiles`
 - `coach_specialty` (text)
 - `scheduled_date` (date)
 - `scheduled_time` (text)
-- `amount` (integer)
+- `amount` (integer) — 🔴 **NO es de confianza tal como lo inserta el cliente.** `BookingScreen_Confirm` lo escribe desde un parámetro de ruta, así que hasta el 26/08/2026 **el monto que se cobraba era el que mandaba el cliente**: `mp-create-payment` lo usaba como `unit_price` y como base de la comisión sin compararlo contra nada. Sin parámetro se cobraban $4500 (un default del mockup); con el parámetro modificado, cualquier precio. Los rieles internacionales nunca tuvieron el agujero — `usdt-create-payment` y `paypal-create-payment` derivan el precio de `coaches.price_usd` desde el primer día. Desde el 26/08 `mp-create-payment` hace lo mismo con `coaches.price_per_session`, **corrige la fila si llegó distinta** y loguea la corrección; y el cliente relee el precio al insertar. **No hay CHECK ni trigger que lo valide en la base**: la garantía son las tres funciones de cobro.
 - `status` (text)
 - `room_url` (text, nullable) — redundante, el room_url canónico está en `salas` (Jitsi, legacy)
 - `duration_minutes` (integer, nullable) — duración de la sesión en minutos, copiado de `coach_weekly_pattern.slot_duration_minutes` al crear el booking. Agregada 02/07/2026 (`scripts/add-duration-minutes-meeting-url.sql`, corrida en Supabase el 07/07/2026).

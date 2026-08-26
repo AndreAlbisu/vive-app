@@ -69,6 +69,41 @@ serve(async (req) => {
     if (!booking) return json({ error: 'Booking not found' }, 404)
     if (booking.user_id !== user.id) return json({ error: 'Forbidden' }, 403)
 
+    // 🔴 EL PRECIO SALE DE `coaches`, NO DE LA RESERVA. `bookings.amount` lo
+    // escribe el CLIENTE al insertar (`BookingScreen_Confirm`), tomándolo de un
+    // parámetro de ruta: hasta acá esta función lo usaba tal cual como
+    // `unit_price` y como base de la comisión, así que **el monto que se cobraba
+    // era el que mandaba el cliente**. Un cliente modificado reservaba una
+    // sesión de $50.000 por $1, y encima la comisión del coach se calculaba
+    // sobre ese $1.
+    //
+    // Es exactamente la regla que `usdt-create-payment` y `paypal-create-payment`
+    // ya seguían desde el primer día ("el precio sale de `coaches.price_usd` y
+    // NO del body"): el riel de pesos era el único que faltaba.
+    //
+    // ⚠️ `booking.coach_id` es `coaches.id`, NO `profiles.id`.
+    const { data: coachPrecio } = await supabase
+      .from('coaches')
+      .select('price_per_session')
+      .eq('id', booking.coach_id)
+      .maybeSingle()
+
+    const precio = Number(coachPrecio?.price_per_session)
+    if (!Number.isFinite(precio) || precio <= 0) {
+      return json({ error: 'Este profesional todavía no fijó su precio' }, 409)
+    }
+
+    // Se corrige la reserva si venía con otro monto. No es cosmético: `amount`
+    // es lo que leen el informe del contador y el cálculo de lo que se le debe
+    // al coach, así que dejarlo mal ahí mueve plata aunque el cobro salga bien.
+    if (Number(booking.amount) !== precio) {
+      console.warn(
+        `[mp-create-payment] monto corregido en booking ${booking.id}: ` +
+        `llegó ${booking.amount}, se cobra ${precio}`,
+      )
+      await supabase.from('bookings').update({ amount: precio }).eq('id', booking.id)
+    }
+
     // Token del coach (split), refrescado si está por vencer. Sin cuenta MP
     // conectada, no se puede cobrar.
     const coachToken = await getFreshCoachToken(
@@ -140,7 +175,7 @@ serve(async (req) => {
     // vuelve IVA incluido y el ingreso real cae a ~16,5%. Es decisión de precio,
     // no de código: cambiar esto sin cambiar el copy de CoachProfileScreen y el
     // §8.4 de los T&C deja las tres cosas contradiciéndose.
-    const marketplaceFee = marketplaceFeeFor(Number(booking.amount), commissionPct)
+    const marketplaceFee = marketplaceFeeFor(precio, commissionPct)
 
     // ⚠️ MONEY RELEASE (RE-VERIFICADO en docs MP, 07/2026): con Checkout Pro NO hay
     // parámetro para setear/demorar el release por transacción. `money_release_date`
@@ -156,7 +191,7 @@ serve(async (req) => {
       items: [{
         title: `Sesión con ${booking.coach_name ?? 'tu coach'}`,
         quantity: 1,
-        unit_price: Number(booking.amount),
+        unit_price: precio,
         currency_id: booking.currency ?? 'ARS',
       }],
       external_reference: booking.id,           // clave para mp-webhook

@@ -9,6 +9,7 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
+  Alert,
   BackHandler,
   Linking,
   AppState,
@@ -76,9 +77,22 @@ export default function BookingScreen_Confirm() {
 
   const nombrePasarela = metodoPago === 'paypal' ? 'PayPal' : 'Mercado Pago';
 
-  const coachName = params.name ?? 'Laura Méndez';
-  const specialty = params.specialty ?? 'Coach de vida';
-  const priceFrom = params.priceFrom ? parseInt(params.priceFrom, 10) : 4500;
+  const coachName = params.name ?? '';
+  const specialty = params.specialty ?? '';
+
+  // 🔴 El precio de los params es SOLO un placeholder para no mostrar un hueco
+  // mientras carga. El que vale es `precioReal`, leído de `coaches`.
+  //
+  // Antes esto era `params.priceFrom ?? 4500` y ese número se insertaba tal cual
+  // en `bookings.amount`, que es lo que `mp-create-payment` usaba como
+  // `unit_price` y como base de la comisión. O sea: **el monto que se cobraba
+  // era el que venía en la ruta**. Si el parámetro faltaba, se cobraban $4500
+  // que nadie fijó; y como el parámetro lo controla el cliente, una sesión de
+  // $50.000 se podía reservar por $1. Los defaults 'Laura Méndez' / 4500 eran
+  // restos del mockup (`constants/searchData.ts`).
+  const [precioReal, setPrecioReal] = useState<number | null>(null);
+  const precioPlaceholder = params.priceFrom ? parseInt(params.priceFrom, 10) : null;
+  const priceFrom = precioReal ?? precioPlaceholder;
   const dateStr = params.date ?? '';
   const time = params.time ?? '';
   // coachId que llega por params es profiles.id (= coaches.profile_id), NO coaches.id
@@ -91,7 +105,7 @@ export default function BookingScreen_Confirm() {
     (async () => {
       const { data } = await supabase
         .from('coaches')
-        .select('instant_booking, accepts_international, accepts_paypal, accepts_usdt, price_usd')
+        .select('instant_booking, accepts_international, accepts_paypal, accepts_usdt, price_usd, price_per_session')
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
       setInstantBooking(!!data?.instant_booking);
@@ -109,6 +123,7 @@ export default function BookingScreen_Confirm() {
       setAceptaPaypal(!!data?.accepts_paypal);
       setAceptaUsdt(!!data?.accepts_usdt);
       setPriceUsd(data?.price_usd ?? null);
+      setPrecioReal(data?.price_per_session ?? null);
     })();
   }, [coachProfileIdParam]);
 
@@ -317,6 +332,26 @@ export default function BookingScreen_Confirm() {
       // en el momento de reservar, no cuándo abrió la app.
       const tzObservada = observedTz();
 
+      // 🔴 Y el precio también se relee acá, por el mismo motivo: lo que vale es
+      // el que el coach tiene fijado AHORA, no el que había cuando se abrió la
+      // pantalla ni —sobre todo— el que vino en la ruta. `mp-create-payment`
+      // vuelve a derivarlo de `coaches` antes de cobrar, así que esto no es la
+      // única barrera; está para que `bookings.amount` nazca bien, que es el
+      // número que después leen el informe del contador y lo que se le debe al
+      // coach del riel internacional.
+      const { data: precioAhora } = await supabase
+        .from('coaches')
+        .select('price_per_session')
+        .eq('id', coachId)
+        .maybeSingle();
+
+      const montoReserva = Number(precioAhora?.price_per_session ?? precioReal);
+      if (!Number.isFinite(montoReserva) || montoReserva <= 0) {
+        setLoading(false);
+        Alert.alert('No se pudo reservar', 'Este profesional todavía no fijó su precio.');
+        return;
+      }
+
       // 3. Insertar booking — columnas reales verificadas en la base (SCHEMA.md)
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
@@ -328,7 +363,7 @@ export default function BookingScreen_Confirm() {
           coach_specialty: specialty,
           scheduled_date: dateStr,
           scheduled_time: time,
-          amount: priceFrom,
+          amount: montoReserva,
           // SIEMPRE nace 'pendiente', incluso en instantánea. Antes nacía
           // 'confirmada' y los efectos de confirmación corrían acá mismo, ANTES
           // del checkout: cerrar la pestaña de MP sin pagar dejaba una sesión
@@ -798,7 +833,9 @@ export default function BookingScreen_Confirm() {
               <Text style={s.detailValue}>
                 {metodoPago !== 'mp' && priceUsd != null
                   ? `USD ${priceUsd} por sesión`
-                  : `$${priceFrom.toLocaleString('es-AR')} por sesión`}
+                  : priceFrom != null
+                    ? `$${priceFrom.toLocaleString('es-AR')} por sesión`
+                    : '—'}
               </Text>
             </View>
           </View>

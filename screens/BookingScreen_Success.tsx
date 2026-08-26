@@ -40,7 +40,7 @@ export default function BookingScreen_Success() {
   const router = useRouter();
   const params = useLocalSearchParams<Params>();
 
-  const coachName = params.name ?? 'Laura Méndez';
+  const coachName = params.name ?? '';
   const specialty = params.specialty ?? 'Coach de vida';
   const dateStr = params.date ?? '';
   const time = params.time ?? '';

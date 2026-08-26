@@ -48,7 +48,7 @@ export default function BookingScreen_Time() {
   const [times, setTimes] = useState<{ label: string; available: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const coachName = params.name ?? 'Laura Méndez';
+  const coachName = params.name ?? '';
   const specialty = params.specialty ?? 'Coach de vida';
   const dateStr = params.date ?? '';
 

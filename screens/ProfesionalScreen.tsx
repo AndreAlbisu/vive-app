@@ -26,14 +26,23 @@ import { AppBg } from '@/components/ui/AppBg';
 import { logResourceEvent } from '@/lib/resourceEvents';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
+// 🔴 Sin datos inventados. Esto arrancaba con 'Laura Méndez', 'Coach de vida' y
+// **4500** —restos del mockup (`constants/searchData.ts`)— y esos valores se
+// mostraban mientras viajaba la consulta y SE QUEDABAN si fallaba. O sea que el
+// perfil público de un coach que cobra $1 podía decir $4500. Peor: ese número se
+// pasaba después por params a la pantalla de confirmar (`priceFrom`), que hasta
+// hoy lo insertaba tal cual en `bookings.amount`.
+//
+// Un precio falso en pantalla es peor que un espacio vacío: el vacío se lee como
+// "todavía no cargó", el número se lee como el precio.
 const DEFAULT_PROFESIONAL = {
-  name: 'Laura Méndez',
-  specialty: 'Coach de vida',
-  age: '34 años',
-  nationality: 'Argentina',
-  gender: 'Mujer',
+  name: '',
+  specialty: '',
+  age: '',
+  nationality: '',
+  gender: '',
   topics: [] as string[],
-  priceFrom: 4500,
+  priceFrom: null as number | null,
   video_url: null as string | null,
   avatar_url: null as string | null,
   bio: null as string | null,
@@ -452,7 +461,9 @@ export default function ProfesionalScreen() {
         <View style={s.footer}>
           <View style={s.footerTop}>
             <Text style={s.price}>
-              Desde ${prof.priceFrom.toLocaleString('es-AR')} por sesión
+              {prof.priceFrom != null
+                ? `Desde $${prof.priceFrom.toLocaleString('es-AR')} por sesión`
+                : 'Cargando precio…'}
             </Text>
             {/* Va acá y no arriba con el badge de verificado porque es
                 información de PRECIO: quien está afuera necesita el número en
@@ -479,7 +490,7 @@ export default function ProfesionalScreen() {
                   params: {
                     name: prof.name,
                     specialty: prof.specialty,
-                    priceFrom: String(prof.priceFrom),
+                    ...(prof.priceFrom != null && { priceFrom: String(prof.priceFrom) }),
                     coachId: params.coachId ?? params.profileId ?? '',
                   },
                 });
