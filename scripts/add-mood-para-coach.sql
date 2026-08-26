@@ -27,7 +27,12 @@ create or replace function public.mood_trend_for_client(
 returns table (
   dias_con_registro int,
   promedio numeric,
-  ultimo smallint,
+  -- ⚠️ `int` y no `smallint`, aunque `mood_entries.mood_id` sea smallint: en la
+  -- subconsulta escalar de abajo Postgres lo devuelve como integer y `RETURN
+  -- QUERY` compara los tipos de forma ESTRICTA — daba
+  -- `42804 structure of query does not match function result type`. Encontrado
+  -- corriendo la verificación, 26/08/2026.
+  ultimo int,
   ultimo_dia date,
   -- 'sube' | 'baja' | 'igual', comparando la primera mitad del período con la
   -- segunda. Es una DIRECCIÓN, no un diagnóstico, y así se nombra.
@@ -70,16 +75,16 @@ begin
       from e
   )
   select
-    (select count(*)::int from e),
-    (select round(avg(mood_id), 2) from e),
-    (select mood_id from e order by entry_date desc limit 1),
-    (select entry_date from e order by entry_date desc limit 1),
-    case
+    (select count(*) from e)::int,
+    (select round(avg(mood_id), 2) from e)::numeric,
+    (select mood_id from e order by entry_date desc limit 1)::int,
+    (select entry_date from e order by entry_date desc limit 1)::date,
+    (case
       when (select primera from mitades) is null or (select segunda from mitades) is null then 'igual'
       when (select segunda from mitades) - (select primera from mitades) >  0.5 then 'sube'
       when (select segunda from mitades) - (select primera from mitades) < -0.5 then 'baja'
       else 'igual'
-    end
+    end)::text
   -- Piso de muestra: con menos de 3 registros no hay tendencia, hay ruido. Un
   -- solo día malo no puede leerse como "viene cayendo".
   where (select count(*) from e) >= 3;
