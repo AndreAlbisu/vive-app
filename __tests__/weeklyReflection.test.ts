@@ -421,6 +421,38 @@ describe('rejectCopy — el guardarraíl sobre lo que escribe un modelo', () => 
   });
 });
 
+describe('rejectCopy — etiquetas internas del modelo', () => {
+  // 🔴 Hoy no puede pasar: la función corre en Haiku, que no entra en la rama
+  // que apaga el thinking. Pero `REFLECTION_MODEL` es un override por variable
+  // de entorno y la configuración se elige por PREFIJO, así que apuntarlo a un
+  // modelo Opus le manda `thinking: disabled` — y con el thinking apagado esos
+  // modelos pueden derramar `<thinking>` en la respuesta visible.
+  //
+  // Ninguno de los otros filtros mira `<` ni `>`: markdown, comillas y
+  // exclamaciones pasaban de largo. Un cambio de env alcanzaba para publicarle
+  // una etiqueta interna a la persona en su pantalla de inicio.
+
+  it('rechaza una etiqueta derramada', () => {
+    expect(rejectCopy('<thinking>La señal es streak</thinking> Seis días seguidos. Eso ya es una rutina.', 'warm'))
+      .toBe('etiquetas internas');
+  });
+
+  it('rechaza aunque la etiqueta venga sola al final', () => {
+    expect(rejectCopy('Tu semana viene pareja. No todo tiene que ser un antes y un después. </thinking>', 'neutral'))
+      .toBe('etiquetas internas');
+  });
+
+  // El chequeo es por PAR de ángulos, no por carácter suelto: una frase que use
+  // un "<" o un ">" en prosa —comparando números, por ejemplo— sigue pasando.
+  // Rechazar el carácter suelto haría caer frases legítimas a las reglas.
+  it('no rechaza un ángulo suelto en prosa', () => {
+    expect(rejectCopy('Volviste a tus herramientas más veces que la semana pasada. Eso se nota.', 'warm'))
+      .toBeNull();
+    expect(rejectCopy('Tu semana viene mejor > que la anterior, y eso alcanza por hoy.', 'warm'))
+      .toBeNull();
+  });
+});
+
 describe('rejectCopy — el borde de palabra en español', () => {
   // 🔴 Bug propio, encontrado por el test de arriba: `\b` de JavaScript se
   // define sobre [A-Za-z0-9_], así que una vocal acentuada cuenta como

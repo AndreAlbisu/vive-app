@@ -84,7 +84,7 @@ const ASKS  = re('\\b(reserv[áa]#|prob[áa]#|anot[áa]te#|escrib[íi]le#|agend[
 export type CopyRejection =
   | 'vacío' | 'muy corto' | 'muy largo' | 'genera a la persona'
   | 'lenguaje clínico' | 'tono gurú' | 'anima en tono suave' | 'pide una acción en tono suave'
-  | 'signos de exclamación' | 'markdown o comillas';
+  | 'signos de exclamación' | 'markdown o comillas' | 'etiquetas internas';
 
 /** ¿Se puede mostrar esta frase? `null` = sí. Si no, el motivo — que se loguea
  *  para poder ver qué rechaza el guardarraíl sin tener que adivinar. */
@@ -103,6 +103,19 @@ export function rejectCopy(text: string, tone: ReflectionTone): CopyRejection | 
   // pregunta, no escribiendo la línea.
   if (/[*_#`]|^["“']/.test(t)) return 'markdown o comillas';
   if (/!/.test(t)) return 'signos de exclamación';
+
+  // 🔴 Etiquetas internas del modelo. Hoy no puede pasar —la función corre en
+  // Haiku, que no entra en la rama que apaga el thinking— pero `REFLECTION_MODEL`
+  // es un override por variable de entorno, y el código elige la configuración
+  // por PREFIJO (`!MODEL.startsWith('claude-haiku')`). Apuntarlo a un modelo
+  // Opus le manda `thinking: disabled`, y con el thinking apagado esos modelos
+  // pueden derramar `<thinking>` en la respuesta visible.
+  //
+  // Sin este chequeo la etiqueta pasaba entera: los filtros de arriba miran
+  // markdown, comillas y exclamaciones, ninguno mira `<` ni `>`. O sea que un
+  // cambio de una variable de entorno alcanzaba para publicarle una etiqueta
+  // interna a la persona en su pantalla de inicio.
+  if (/<[^>]*>/.test(t)) return 'etiquetas internas';
 
   if (GENDERED.test(t)) return 'genera a la persona';
   if (CLINICAL.test(t)) return 'lenguaje clínico';
