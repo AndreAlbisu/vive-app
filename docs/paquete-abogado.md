@@ -174,9 +174,17 @@ que sea solo la tendencia y no las entradas? ¿Y que el profesional no sea
 personal de salud sino un coach? ¿Hay que registrar cuándo y qué versión del
 texto aceptó, como hacemos con los T&C?
 
-⚠️ **Estado:** se está construyendo detrás de un interruptor apagable en un solo
-lugar, **a la espera de esta respuesta**. Si la respuesta es que no se puede en
-esta forma, se apaga sin tocar nada más.
+⚠️ **Estado (26/08/2026): esta pregunta puede haber quedado sin objeto.** Se
+construyó, se apagó, y después una psicóloga consultada corrigió el enfoque: la
+asociación entre lo que la persona sintió y lo que estaba pasando **es el trabajo
+de la sesión**, no algo que la app deba entregar resuelto. En vez de acceso
+permanente a una tendencia, la persona **arma y manda un paquete** antes de cada
+sesión (`docs/paquete-para-la-sesion.md`). Sin acceso continuo no hay permiso que
+consultar. **Contestala igual si te resulta simple** —sirve para saber si el
+camino descartado estaba bien descartado— pero **la pregunta que importa ahora es
+A.11**, y una nueva: ¿cambia algo que la persona envíe texto libre suyo por el
+chat a su profesional, frente a compartirlo por un permiso? Nuestra lectura es
+que es un mensaje como cualquier otro y no una cesión a un tercero.
 
 ### B. No bloquean, pero quiero tu lectura
 

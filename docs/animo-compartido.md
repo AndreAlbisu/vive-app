@@ -4,6 +4,33 @@
 > "podría ser delicado". **Nada de esto está implementado como propuesta.** Lo
 > que sí existe hoy está en la sección 8, y está **apagado**.
 
+## 0. ⚠️ SUPERADO EN SU PARTE CENTRAL (26/08/2026)
+
+**El enfoque de permiso continuo que propone este documento quedó reemplazado por
+`docs/paquete-para-la-sesion.md`**, después de consultarle a una psicóloga.
+
+Lo que cambió: la asociación entre lo que la persona sintió y lo que estaba
+pasando **es el trabajo de la sesión**, no algo que la app deba entregar
+resuelto. Así que en vez de darle al profesional acceso permanente a una
+tendencia, la persona **arma y manda un paquete** antes de cada sesión. Sin
+acceso continuo no hay permiso, ni revocación, ni "qué pasa con lo ya visto" —
+las tres decisiones incómodas de §4 y §5 desaparecen, y con ellas la pregunta
+A.10 al abogado.
+
+🔴 **Lo que de este documento SIGUE VIGENTE y hay que respetar igual:**
+
+- **§3 — los tres niveles de intimidad.** Y su regla más dura: el diario y la
+  gratitud no se comparten por permiso. En el paquete entran **solo** si la
+  persona elige entrada por entrada y ve qué manda; ver `paquete-para-la-sesion.md` §5.
+- **§4 — el profesional no puede pedirlo.** El desnivel de autoridad no cambia
+  porque cambie el mecanismo.
+- **§6 — nada de alertas push.** Una alerta implica una respuesta que Vita no
+  puede sostener, y los profesionales no son todos clínicos.
+- **§7 — primero la lectura para la persona.** Ya se pagó (`lib/moodTrend.ts`).
+- **§8 — la vista del coach sigue APAGADA**, y con esto probablemente no vuelva.
+- **§9 — A.11 (deber de actuar) sigue abierta, y más filosa**: acá la persona
+  eligió deliberadamente mostrar algo.
+
 ## 1. La idea, en una frase
 
 La persona registra su ánimo todos los días. Si ella quiere, su profesional
