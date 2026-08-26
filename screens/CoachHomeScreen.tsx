@@ -48,6 +48,24 @@ type PersonaCayendo = PersonaEnRiesgo & {
  */
 const MOSTRAR_ANIMO_AL_COACH = true;
 
+/**
+ * 🔧 DIAGNÓSTICO — TEMPORAL, 26/08/2026.
+ *
+ * Andre reporta que los botones de la barra inferior no responden del lado
+ * coach. Se descartaron por inspección: la lógica de la barra (navega por
+ * `tab.name`, sin cambios), los dos layouts (idénticos y con los nombres
+ * coincidiendo), el ícono (`users` existe en Feather), el label (ni siquiera se
+ * renderiza desde el 20/08) y los overlays (Sofía es solo del lado usuario).
+ *
+ * Poner esto en `false` apaga los tres bloques nuevos de esta pantalla —sus
+ * consultas y su render— sin borrar nada. Si con `false` la barra vuelve a
+ * andar, el problema está acá adentro y sé dónde mirar; si sigue igual, no es
+ * de esta pantalla y hay que buscar en otro lado.
+ *
+ * **Sacar este flag cuando esté resuelto.**
+ */
+const BLOQUES_NUEVOS_HOME = true;
+
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
 const CARD = '#F7F2E7';
 const CREAM_DEEP = '#EAE2D0';
@@ -285,6 +303,7 @@ export default function CoachHomeScreen() {
       setPrep(null);
     }
 
+    if (BLOQUES_NUEVOS_HOME) {
     // ── La sesión que pasó y no cerraste ─────────────────────────────────────
     // 🔴 `session_notes` existe desde el 06/08 y vive detrás de una pill en el
     // header del chat: **nadie le pide nunca al coach que la escriba**. Es a la
@@ -389,6 +408,7 @@ export default function CoachHomeScreen() {
       })));
     }
 
+    }
     setLoading(false);
   }, [user, coachId]);
 
@@ -547,7 +567,7 @@ export default function CoachHomeScreen() {
           {/* ── La sesión que pasó y no cerraste ──────────────────────────
               Va después de la próxima sesión y antes del resto: mira para
               atrás, pero para atrás RECIENTE, así que sigue siendo del día. */}
-          {sinCerrar && (
+          {BLOQUES_NUEVOS_HOME && sinCerrar && (
             <TouchableOpacity
               style={s.notaCard}
               activeOpacity={0.9}
@@ -581,7 +601,7 @@ export default function CoachHomeScreen() {
               Va ARRIBA de la tarjeta de visibilidad a propósito: recuperar a
               alguien que ya te eligió es más barato y más probable que
               conseguir a alguien nuevo. */}
-          {seCaen.length > 0 && (
+          {BLOQUES_NUEVOS_HOME && seCaen.length > 0 && (
             <View style={s.caenWrap}>
               <Text style={s.caenTitle}>Hace rato que no los ves</Text>
               {seCaen.map(p => (
@@ -648,7 +668,7 @@ export default function CoachHomeScreen() {
               El encuadre que funciona NO es "baja por volumen" sino "te
               cobramos por presentarte, no por tu relación". Dicho al lado de su
               propio número de recompra, es donde más se entiende. */}
-          {repu && repu.completadas > 0 && (
+          {BLOQUES_NUEVOS_HOME && repu && repu.completadas > 0 && (
             <View style={s.repuWrap}>
               <Text style={s.repuEyebrow}>LO QUE CONSTRUISTE ACÁ</Text>
               <View style={s.repuRow}>
