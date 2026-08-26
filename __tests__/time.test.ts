@@ -6,6 +6,7 @@ import {
   deviceIsOffArgentina,
   TZ_SUPPORTED,
   AR_TZ,
+  observedTz,
 } from '@/lib/time';
 
 describe('entorno de test', () => {
@@ -171,5 +172,30 @@ describe('cliente y servidor coinciden', () => {
     for (const [d, t] of casos) {
       expect(scheduledAtMs(d, t)).toBe(server.scheduledAtMs(d, t));
     }
+  });
+});
+
+describe('observedTz', () => {
+  // 🔴 La razón de existir de esta función, y lo único que hay que proteger: NO
+  // inventa. `deviceTz()` cae a Argentina cuando no puede leer la zona —correcto
+  // para mostrar horarios, hay que mostrar algo— pero esta se usa para OBSERVAR
+  // dónde estaba quien reservó, y ahí ese fallback registraría un país que nadie
+  // observó. Un default silencioso es indistinguible de un dato real a los seis
+  // meses.
+  it('devuelve null en vez de suponer Argentina cuando no puede leer la zona', () => {
+    const original = global.Intl;
+    try {
+      // @ts-expect-error se rompe Intl a propósito
+      global.Intl = undefined;
+      expect(observedTz()).toBeNull();
+    } finally {
+      global.Intl = original;
+    }
+  });
+
+  it('devuelve la zona cuando está disponible', () => {
+    const tz = observedTz();
+    expect(tz === null || typeof tz === 'string').toBe(true);
+    if (tz !== null) expect(tz.length).toBeGreaterThan(0);
   });
 });

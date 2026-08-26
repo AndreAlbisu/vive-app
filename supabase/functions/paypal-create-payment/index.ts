@@ -13,7 +13,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { COMMISSION_INTERNATIONAL } from '../_shared/commission.ts'
+import { commissionPctFor, PAIR_SESSION_FILTER } from '../_shared/commission.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -121,19 +121,48 @@ serve(async (req) => {
   // que hace `usdt-create-payment`.
   const { data: payout } = await admin
     .from('coach_payout_accounts')
-    .select('coach_id')
+    .select('coach_id, accepts_paypal')
     .eq('coach_id', coach.id)
     .maybeSingle()
   if (!payout) {
     return json({ error: 'Este profesional todavía no completó sus datos de cobro' }, 409)
   }
+  // 🔴 Y que acepte ESTE riel — la regla espejo (D4), del lado del servidor.
+  // Hasta ahora solo se validaba que existiera fila de datos de cobro, o sea
+  // "tiene ALGÚN medio", y la elección de cuál ofrecer vivía únicamente en la
+  // UI. Los flags se leen una sola vez al abrir la pantalla de confirmación, así
+  // que un cliente con la pantalla vieja abierta —o una llamada directa a la
+  // función— podía cobrarle a alguien por un riel que el coach no acepta. Con
+  // dólares cobrados y sin destino donde pagarlos: exactamente el pozo que la
+  // regla existe para evitar.
+  if (!payout.accepts_paypal) {
+    return json({ error: 'Este profesional no acepta cobrar por PayPal' }, 409)
+  }
 
   const token = await getAccessToken()
   if (!token) return json({ error: 'No se pudo conectar con PayPal' }, 502)
 
-  // ── Comisión y precio ──────────────────────────────────────────────────────
-  // Tarifa PLANA del riel internacional: no hay contador por par ni tramos. El
-  // porqué (y por qué 25 y no 20) está en `_shared/commission.ts`.
+  // ── Comisión: el tramo del par, igual que en Mercado Pago ─────────────────
+  // 🔴 Desde el 25/08/2026 estos rieles también tienen escalera (D3). El contador
+  // del par es **uno solo** y cuenta todas las sesiones cumplidas sin mirar el
+  // riel; cada riel lee su tarifa en la posición que le toca. Por eso el caso
+  // "pagó una vez por PayPal y después por Mercado Pago" se resuelve solo.
+  //
+  // Es la misma consulta que hace `mp-create-payment`, con el mismo filtro de
+  // checkouts abandonados importado de `_shared/commission.ts` — si se toca una,
+  // se toca la otra.
+  const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL')
+  const { count: sesionesDelPar } = await admin
+    .from('bookings')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', booking.user_id)
+    .eq('coach_id', booking.coach_id)
+    .eq('status', 'completada')
+    .or(PAIR_SESSION_FILTER)
+
+  const commissionPct = commissionPctFor(sesionesDelPar ?? 0, Date.now(), promoUntil, 'paypal')
+
+  // ── Precio ─────────────────────────────────────────────────────────────────
   //
   // 🔴 El cliente paga el precio del coach, sin recargo encima. El costo de
   // procesamiento sale de la comisión, no del precio ni de la parte del coach —
@@ -205,7 +234,7 @@ serve(async (req) => {
       amount: precio,
       charged_amount: precio,
       preference_id: order.id,
-      platform_fee_pct: COMMISSION_INTERNATIONAL,
+      platform_fee_pct: commissionPct,
     })
     .eq('id', booking.id)
 

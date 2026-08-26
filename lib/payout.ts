@@ -9,7 +9,18 @@
 // para que la persona vea el error mientras escribe, allá porque la pantalla
 // nunca es la frontera de seguridad. Si cambia una, cambia la otra.
 
-export type PayoutMethod = 'transferencia' | 'usdt';
+export type PayoutMethod = 'transferencia' | 'usdt' | 'paypal';
+
+/**
+ * Los rieles por los que el coach puede cobrar una sesión del exterior.
+ *
+ * 🔴 Son los mismos por los que se le puede COBRAR al cliente, y no es
+ * casualidad: es la **regla espejo** (D4). Cada reserva se paga por el riel por el
+ * que entró, así que un riel de cobro que no existe del lado del pago no tendría
+ * con qué financiarse. Por eso `transferencia` no está: no hay riel de entrada en
+ * pesos para el exterior que lo espeje.
+ */
+export type PayoutRail = 'paypal' | 'usdt';
 export type PayoutNetwork = 'TRC20' | 'ERC20' | 'POLYGON';
 
 /** CBU: 22 dígitos exactos. */
@@ -18,6 +29,11 @@ export const CBU_RE = /^[0-9]{22}$/;
 export const TRON_RE = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
 /** Ethereum y Polygon comparten formato: 0x + 40 hexadecimales. */
 export const EVM_RE = /^0x[0-9a-fA-F]{40}$/;
+/** Mail de PayPal. Deliberadamente laxo: la validación de verdad la hace PayPal
+ *  al enviar (un mail sin cuenta asociada rebota y la plata vuelve). Acá solo se
+ *  atajan los errores de tipeo evidentes — un regex estricto rechazaría mails
+ *  válidos y raros, que es peor que dejar pasar uno que PayPal va a rebotar. */
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /** `null` si está bien; si no, el motivo en criollo para mostrar debajo del campo. */
 export function cbuError(cbu: string): string | null {
@@ -42,6 +58,21 @@ export function walletError(wallet: string, network: PayoutNetwork): string | nu
   if ((network === 'ERC20' || network === 'POLYGON') && !EVM_RE.test(w)) {
     return `No parece una dirección de ${network} (empieza con 0x y tiene 42 caracteres)`;
   }
+  return null;
+}
+
+/**
+ * Valida el mail de PayPal al que se le van a mandar los dólares.
+ *
+ * ⚠️ A diferencia del CBU y de la wallet, un error acá **no pierde los fondos**:
+ * PayPal rebota el payout si el mail no tiene una cuenta que pueda recibir, y la
+ * plata vuelve al saldo de VIVE. Por eso la validación es de tipeo y no de
+ * seguridad. La wallet es el caso opuesto y por eso su chequeo es estricto.
+ */
+export function paypalEmailError(email: string): string | null {
+  const e = email.trim();
+  if (!e) return 'Ingresá el mail de tu cuenta de PayPal';
+  if (!EMAIL_RE.test(e)) return 'No parece un mail válido';
   return null;
 }
 
@@ -97,10 +128,99 @@ export function coachNetFor(amount: number, feePct: number): number {
  */
 export const USDT_NETWORK_FEE_USD = 1.5;
 
-/** Lo que hay que transferirle realmente a un profesional, descontado el costo
- *  de entrega del método que eligió. `transferencia` no tiene costo: el archivo
- *  de lote del banco cuesta lo mismo con una fila que con doscientas. */
-export function payoutAfterDeliveryCost(neto: number, method: PayoutMethod): number {
-  const costo = method === 'usdt' ? USDT_NETWORK_FEE_USD : 0;
-  return Math.round((neto - costo) * 100) / 100;
+/**
+ * Lo que cobra PayPal por mandar un payout: 2% del monto, sin parte fija.
+ * Verificado el 24/08/2026 en la página de comisiones de PayPal Argentina
+ * ("2% del importe total de la transacción", igual para nacional e
+ * internacional). Hay un tope máximo por envío, pero recién mordería arriba de
+ * ~USD 1.000 y los pagos semanales de una sesión están un orden de magnitud
+ * abajo, así que no se modela.
+ *
+ * 🔴 **Lo paga VIVE, no el coach** — por eso NO aparece en
+ * `deliveryCostFor`. La regla, decidida el 24/08/2026, es: **costo fijo se
+ * descuenta, costo proporcional se absorbe.** El de USDT se descuenta porque no
+ * escala y por lo tanto castiga al de poco volumen (ver arriba); un 2% pesa
+ * igual para el que hace una sesión que para el que hace veinte, así que ese
+ * argumento no se traslada. Y elegir PayPal nos AHORRA el tramo de sacar los
+ * dólares a Argentina, que en el camino de la transferencia ya pagamos
+ * nosotros: cobrárselo encima sería cobrar dos veces el mismo tramo.
+ *
+ * ⚠️ Lo que esto asume y todavía no está medido: que sacar los dólares a
+ * Argentina cuesta MÁS que 2%. Si costara menos, pagar por PayPal nos saldría
+ * más caro que la transferencia. Lo dice la medición de USD 50 que sigue
+ * pendiente, no este código.
+ */
+export const PAYPAL_PAYOUT_FEE_PCT = 2;
+
+/** Lo que le cuesta a VIVE mandar un payout de PayPal. No se le descuenta al
+ *  coach; existe para que el panel pueda mostrar el costo real de cada método
+ *  en vez de dejarlo invisible. */
+export function paypalPayoutCost(neto: number): number {
+  return Math.round(neto * PAYPAL_PAYOUT_FEE_PCT) / 100;
+}
+
+/**
+ * Lo que a VIVE le cuesta entregarle el pago al coach, por riel.
+ *
+ * 🔴 **Al coach no se le descuenta nada** (decisión del 25/08/2026, D5). Antes se
+ * le descontaba el costo de red de USDT, con este argumento escrito acá mismo:
+ * "se lo descuenta a quien lo elige, pidió que le manden dólares por blockchain y
+ * controla la causa". **La regla espejo (D4) le sacó el piso a ese argumento**:
+ * elegir un riel dejó de ser una preferencia libre, porque define **qué clientes
+ * pueden pagarle**. Cobrarle por eso sería penalizarlo por una decisión que ya no
+ * es solo suya.
+ *
+ * Existe para que el panel pueda mostrar el costo real de cada riel en vez de
+ * dejarlo invisible — sin esto no hay forma de comparar los rieles con números
+ * cuando haya que decidir.
+ *
+ * ⚠️ **El de USDT es el único que no escala con la facturación sino con la
+ * CANTIDAD DE COACHES**: es por pago y no por sesión, así que un coach de una
+ * sesión por semana cuesta lo mismo que uno de diez. Sobre la comisión de una
+ * sesión de USD 60 pesa 10%; sobre una de USD 20 —el mínimo— pesa 30%. Si algún
+ * día la mayoría cobra en USDT, hay que revisarlo.
+ */
+export function platformDeliveryCost(neto: number, rail: PayoutRail): number {
+  return rail === 'usdt' ? USDT_NETWORK_FEE_USD : paypalPayoutCost(neto);
+}
+
+/**
+ * Qué le falta al coach para que sus sesiones del exterior se activen solas.
+ * `null` = no le falta nada.
+ *
+ * 🔴 Los dos requisitos son EXACTAMENTE los que evalúa el trigger
+ * `sync_accepts_international` (`scripts/add-payout-rails.sql`): un precio en
+ * dólares y al menos un riel aceptado. `coaches.accepts_international` dejó de
+ * ser una casilla que el coach prende para pasar a ser el RESULTADO de esos
+ * dos, así que la pantalla no puede prenderla — solo puede decir qué falta.
+ * Si el trigger cambia, esto cambia con él.
+ *
+ * Se nombran por separado porque faltar uno o faltar los dos manda a lugares
+ * distintos: el precio se carga en el perfil y el riel en la pantalla de cobro.
+ */
+export function faltaParaInternacional(
+  priceUsd: number | null,
+  aceptaPaypal: boolean,
+  aceptaUsdt: boolean,
+): string | null {
+  const sinPrecio = priceUsd == null;
+  const sinRiel = !aceptaPaypal && !aceptaUsdt;
+  if (!sinPrecio && !sinRiel) return null;
+
+  const que = sinPrecio && sinRiel
+    ? 'fijar tu precio en dólares y elegir cómo querés que te paguemos'
+    : sinPrecio
+      ? 'fijar tu precio en dólares acá abajo'
+      : 'elegir cómo querés que te paguemos: PayPal o USDT';
+
+  return `Te falta ${que}. Hasta entonces no vas a aparecer para usuarios del exterior.`;
+}
+
+/** Los rieles aceptados, en criollo, para mostrarlos sin entrar a la pantalla
+ *  de cobro. */
+export function rielesTexto(aceptaPaypal: boolean, aceptaUsdt: boolean): string {
+  if (aceptaPaypal && aceptaUsdt) return 'A tu PayPal o en USDT';
+  if (aceptaPaypal) return 'A tu cuenta de PayPal';
+  if (aceptaUsdt) return 'En USDT';
+  return 'Todavía no elegiste ninguno';
 }

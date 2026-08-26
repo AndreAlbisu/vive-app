@@ -25,6 +25,10 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// 🔴 Se importa en vez de recalcular: el redondeo de la comisión tiene que dar el
+// MISMO número que en el cobro, o el registro de lo que se pagó no cuadra contra
+// lo que se retuvo. Duplicar la fórmula es exactamente cómo se desincronizan.
+import { marketplaceFeeFor } from '../_shared/commission.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -329,7 +333,9 @@ serve(async (req) => {
         action: 'mark_usdt_refunded',
         targetType: 'booking',
         targetId: data[0].id,
-        details: { monto: data[0].usdt_amount, tx },
+        // Misma forma que arriba (D8). `monto` ya estaba; se le suman los otros
+        // campos para que la vista no tenga que adivinar por acción.
+        details: { monto: data[0].usdt_amount, tx, moneda: 'USD', riel: 'usdt', referencia: tx },
       })
 
       return json({ result: 'ok', booking: data[0], ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
@@ -366,7 +372,7 @@ serve(async (req) => {
         .eq('status', 'completada')             // solo sesiones ya realizadas
         .eq('payment_status', 'aprobado')
         .is('paid_out_at', null)                // idempotente: no repisa un pago ya hecho
-        .select('id, coach_id, amount, platform_fee_pct')
+        .select('id, coach_id, amount, platform_fee_pct, payment_provider')
 
       if (error) return json({ error: error.message }, 500)
       if (!data || data.length === 0) {
@@ -390,6 +396,25 @@ serve(async (req) => {
           pedidas: ids.length,
           marcadas: data.length,
           reference: ref,
+          // ── Forma acordada para las operaciones de dinero (D8) ──────────────
+          // Hasta el 25/08/2026 esta acción NO guardaba cuánto se transfirió, así
+          // que se podía saber quién pagó y a quién, pero no cuánto. La vista
+          // `operaciones_de_dinero` saca estos campos tipados.
+          monto: Math.round(
+            data.reduce((acc, b) => {
+              const amount = Number(b.amount ?? 0)
+              const pct = Number(b.platform_fee_pct ?? 20)
+              return acc + (amount - marketplaceFeeFor(amount, pct))
+            }, 0) * 100,
+          ) / 100,
+          // Estos pagos son siempre del riel internacional (`neq('payment_provider','mp')`
+          // en el update de arriba), y ahí el precio del coach está en dólares.
+          moneda: 'USD',
+          // Con la regla espejo (D4) un pago cubre un solo riel: el panel agrupa
+          // por `(coach, riel)` justamente porque son dos envíos por vías que no
+          // se cruzan. Si alguna vez llegaran mezcladas, queda constancia.
+          riel: [...new Set(data.map(b => b.payment_provider))].join('+'),
+          referencia: ref,
         },
       })
 

@@ -153,6 +153,94 @@ Una vez revisados y aprobados:
 - [x] ~~**URL de solicitud de eliminación de cuenta (Google Play).**~~ Página escrita y generada: `docs/eliminar-cuenta.md` → `https://vitaapp.com.ar/legal/eliminar-cuenta`. Falta publicarla y cargar la URL en Play Console.
 - [x] ~~🚨 **BORRADO DE CUENTA DENTRO DE LA APP**~~ — **YA EXISTE** (se construyó el 06/08/2026, este ítem había quedado desactualizado). `supabase/functions/delete-account/index.ts` (edge function con service role), `lib/accountDeletion.ts`, UI en `ProfileOwnScreen.tsx`. Modelo de borrado + anonimización documentado en `SCHEMA.md`. Cumple la guideline 5.1.1(v) de Apple.
 
+### 🔴 Desajustes detectados el 25/08/2026 — los T&C describen un sistema que ya no existe
+
+Después de la sesión de decisiones de pagos, los T&C quedaron **desactualizados en
+siete puntos**. Todos son de la sección 8 y 9, y **cinco son afirmaciones falsas**,
+no omisiones.
+
+⚠️ **Uno de ellos ya era una contradicción interna antes de esta sesión.**
+
+**1. §8.1 — "Los precios se expresan en pesos argentinos (ARS)."** 🔴 **Falso.**
+Existe un precio en dólares (`coaches.price_usd`), independiente del de pesos y
+fijado por separado, y hay medios que cobran en USD. Además **nada impide que
+alguien en Argentina elija pagar el precio en dólares** — es la pregunta A.9 del
+paquete.
+
+**2. §8.2 — "Los pagos se procesan a través de Mercado Pago mediante un modelo de
+marketplace (pago dividido). Cada Profesional conecta su propia cuenta."** 🔴
+**Falso para dos de los tres rieles.** Hoy hay Mercado Pago, PayPal y USDT. Y en
+los dos últimos **no hay pago dividido**: cobra Vita y le transfiere al Profesional
+después. El Profesional no conecta ninguna cuenta propia ahí; declara adónde
+quiere recibir.
+
+**3. §8.3 — comisión 20% / 15%.** 🔴 **Incompleto.** En los rieles internacionales
+es **25% la primera Sesión del vínculo y 20% las siguientes**. Y la frase "retenida
+automáticamente en el momento del pago" **solo es cierta en Mercado Pago**: en los
+otros dos entra todo a Vita y la comisión se descuenta al transferir.
+
+**4. §8.5 — "Las retenciones que aplique el procesador sobre los fondos del
+Profesional".** Asume que el procesador tiene los fondos del Profesional. Cierto
+con el split de Mercado Pago; en los otros dos **los fondos pasan por Vita**.
+
+**5. §8.7 — "La liberación de los fondos puede estar sujeta a plazos operativos del
+procesador."** 🔴 **Incompleto, y es material para el Profesional.** En los rieles
+internacionales la demora **no es del procesador**: es la política de Vita —pago
+semanal y **solo por Sesiones ya realizadas**—. Eso hoy solo está escrito en el
+documento explicativo del coach, que **no es un contrato**.
+
+**6. §9.1 y §9.2 — "el reembolso se procesa de forma automática a través del
+procesador de pagos."** 🔴 **Falso en el riel de USDT**: no hay procesador que lo
+haga; lo ejecuta una persona. Es la pregunta **A.8**.
+
+**7. 🔴 §9.1 contradice a §9.4, y esto ya estaba antes de esta sesión.** §9.1 dice
+que dentro de las 24hs previas la Sesión **no puede cancelarse**. §9.4 reconoce un
+**derecho de revocación irrenunciable de 10 días corridos** desde la confirmación
+de la reserva. Alguien que reservó hace tres días y hoy está dentro de las 24hs
+**sigue dentro de sus 10 días**. Los dos no pueden ser verdad a la vez, y **el
+código implementa solo §9.1**. Es la pregunta **A.6**, ahora con el conflicto
+identificado adentro del propio contrato.
+
+**Además, no está previsto en ningún lado:**
+- **Qué pasa ante un contracargo o una disputa** del medio de pago.
+- **Que ciertos medios cobran en dólares**, y cuál es el precio aplicable en ese caso.
+
+### 📌 PENDIENTE — reescribir los T&C desde cero, ANTES de la consulta legal
+
+**Decisión de Andre, 25/08/2026.** El texto actual describe un sistema que ya no
+existe, y parcharlo punto por punto deja un documento que se lee como capas.
+
+🔴 **El alcance importa, porque hay dos cosas mezcladas en los siete desajustes:**
+
+| Se reescribe AHORA | Se deja marcado como pregunta |
+|---|---|
+| **Cómo funciona el sistema**: los tres rieles, quién cobra en cada uno, en qué monedas, cuándo y cómo se le paga al Profesional, qué pasa ante un contracargo | **Qué consecuencias legales tiene**: si la cláusula de 24hs es oponible, si la garantía debilita el encuadre de intermediación, si se puede cobrar en dólares a un consumidor local |
+
+**Lo primero solo lo podés hacer vos** —nadie más sabe cómo funciona— y hoy está
+mal escrito. **Lo segundo necesita al abogado**, y adelantarse tiene dos costos:
+se escribe texto que va a cambiar cuando llegue la respuesta, y **se lo ancla a
+una redacción propia** en vez de preguntarle qué tendría que decir. Es exactamente
+lo que `fiscal-instrucciones.md` ya se dijo a sí mismo: *"la pregunta correcta es
+'¿qué tendría que decir acá?', no '¿esto está bien?'"*.
+
+⚠️ **Esto NO frena las otras dos consultas.** La del contador y la de PayPal no
+dependen de los T&C y se mandan igual. La del abogado espera la reescritura:
+hacerlo leer una descripción falsa del sistema es pagarle por revisar algo que no
+existe.
+
+📌 **Y al reescribir, arrancar por §9.1 vs §9.4**, que es el único desajuste que no
+vino de esta sesión: el contrato se contradice a sí mismo sobre un derecho que él
+mismo llama irrenunciable.
+
+📌 **Nada de esto se arregla escribiendo el texto ahora.** Cinco de los siete
+dependen de respuestas que todavía no están (A.6 a A.9 del paquete, y la consulta
+fiscal). Lo que sí conviene es **llevarle esta lista al abogado junto con las
+preguntas**: es más barato que revise siete puntos de una vez que descubrirlos de a
+uno.
+
+⚠️ **Y hasta que se resuelvan, los T&C no se publican.** Ya estaban marcados como
+borrador sin revisión legal; esto lo confirma.
+
 ### Faltantes detectados en la revisión del 10/08/2026
 
 - [x] ~~🔴 **Botón de arrepentimiento + derecho de revocación.**~~ Escrito el 13/08/2026: **T&C §9.4** (la vieja 9.4 pasó a 9.5) + **página propia** `docs/boton-de-arrepentimiento.md` → `web/legal/arrepentimiento.html`, enlazada como botón destacado desde las otras dos páginas y accesible en la app desde el menú de perfil **también sin sesión iniciada**. ⚠️ **Corrección sobre lo que decía este ítem: el plazo es de 10 días CORRIDOS, no hábiles** — art. 34 Ley 24.240 lo dice con esas palabras; el texto se escribió con "corridos".

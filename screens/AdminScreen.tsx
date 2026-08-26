@@ -460,8 +460,31 @@ export default function AdminScreen() {
                     Sesiones internacionales ya realizadas y cobradas, todavía sin transferir.
                     El neto es lo que hay que mandar: el precio menos la comisión de cada sesión.
                   </Text>
-                  {payouts.map(p => (
-                    <View key={p.coachId} style={s.card}>
+                  {payouts.map(p => {
+                    // 🔴 La identidad de una fila es (coach, RIEL), no el coach:
+                    // `listCoachPayouts` agrupa así porque un coach con sesiones
+                    // cobradas por los dos rieles recibe DOS pagos. Con
+                    // `p.coachId` de clave, esas dos tarjetas compartían key de
+                    // React, el input de referencia y el flag de `working`:
+                    // tipear el hash de la tx de USDT llenaba el campo de la de
+                    // PayPal, y marcar una dejaba la otra en "Registrando…".
+                    const filaKey = `${p.coachId}|${p.rail}`;
+
+                    // Y el destino se mira POR RIEL. `p.destino` es la fila de
+                    // datos de cobro del coach, que existe entera: puede tener
+                    // la wallet cargada y el mail de PayPal vacío. Mirarla a
+                    // secas pintaba el literal "PayPal · null" y encima ofrecía
+                    // marcar como pagado un pago que no tiene adónde ir.
+                    const destinoRiel = p.rail === 'usdt'
+                      ? (p.destino?.wallet && p.destino?.network
+                          ? `${p.destino.network} · ${p.destino.wallet}`
+                          : null)
+                      : (p.destino?.paypalEmail
+                          ? `PayPal · ${p.destino.paypalEmail}`
+                          : null);
+
+                    return (
+                    <View key={filaKey} style={s.card}>
                       <Text style={s.cardTitle}>{p.coachName ?? 'coach sin nombre'}</Text>
                       <Text style={s.cardMeta}>
                         {p.sesiones.length} {p.sesiones.length === 1 ? 'sesión' : 'sesiones'} · bruto USD {p.bruto.toFixed(2)}
@@ -470,18 +493,28 @@ export default function AdminScreen() {
                           sesión — es lo que cuesta el envío, no lo que cuesta
                           cada sesión. Se muestra separado para que el coach
                           pueda auditarlo si pregunta. */}
-                      {p.costoEntrega > 0 && (
-                        <Text style={s.cardMeta}>
-                          le corresponden USD {p.neto.toFixed(2)} − {p.costoEntrega.toFixed(2)} de red
-                        </Text>
-                      )}
+                      {/* 🔴 Una fila por (coach, riel): con la regla espejo un coach
+                          con sesiones cobradas por los dos rieles recibe DOS pagos.
+                          Sin decir cuál es, se transfiere al lugar equivocado. */}
+                      <Text style={s.cardMeta}>
+                        se paga por {p.rail === 'usdt' ? 'USDT' : 'PayPal'}
+                      </Text>
                       <Text style={[s.cardTitle, { marginTop: 6 }]}>
                         A transferir: USD {p.aTransferir.toFixed(2)}
                       </Text>
+                      {/* Lo que el envío nos cuesta a NOSOTROS. No sale del pago
+                          del coach —el 2% de PayPal lo absorbe VIVE— pero sin
+                          verlo no hay forma de comparar los métodos con números
+                          reales cuando haya que decidir cuál conviene. */}
+                      {p.costoPlataforma > 0 && (
+                        <Text style={s.cardMeta}>
+                          nos cuesta USD {p.costoPlataforma.toFixed(2)}
+                          {p.rail === 'usdt' ? ' de red' : ' de comisión de PayPal'}
+                        </Text>
+                      )}
                       {p.noAlcanza && (
                         <Text style={s.cardBody}>
-                          ⚠️ El costo de red se come todo lo que se le debe. No transfieras —
-                          se acumula solo con las sesiones de la semana que viene.
+                          ⚠️ No hay nada que transferir en este riel todavía.
                         </Text>
                       )}
 
@@ -495,17 +528,15 @@ export default function AdminScreen() {
                         </Text>
                       ))}
 
-                      {p.destino ? (
+                      {destinoRiel ? (
                         <>
                           <Text style={[s.mono, { marginTop: 10 }]} selectable>
-                            {p.destino.method === 'usdt'
-                              ? `${p.destino.network} · ${p.destino.wallet}`
-                              : `CBU ${p.destino.cbu}${p.destino.alias ? ` · ${p.destino.alias}` : ''}`}
+                            {destinoRiel}
                           </Text>
                           <TextInput
                             style={s.input}
-                            value={payoutRef[p.coachId] ?? ''}
-                            onChangeText={v => setPayoutRef(prev => ({ ...prev, [p.coachId]: v }))}
+                            value={payoutRef[filaKey] ?? ''}
+                            onChangeText={v => setPayoutRef(prev => ({ ...prev, [filaKey]: v }))}
                             placeholder="Hash de la tx o número de operación"
                             placeholderTextColor="rgba(135,131,92,0.45)"
                             autoCapitalize="none"
@@ -514,9 +545,9 @@ export default function AdminScreen() {
                           <TouchableOpacity
                             style={[s.btn, s.btnPrimary, { marginTop: 10 }]}
                             activeOpacity={0.85}
-                            disabled={working === p.coachId || p.noAlcanza}
+                            disabled={working === filaKey || p.noAlcanza}
                             onPress={() => {
-                              const ref = (payoutRef[p.coachId] ?? '').trim();
+                              const ref = (payoutRef[filaKey] ?? '').trim();
                               // Confirmación explícita: marcar es irreversible
                               // desde el panel y lo que declara es que la plata
                               // ya salió. Un tap de más no puede darlo por
@@ -529,12 +560,12 @@ export default function AdminScreen() {
                                   {
                                     text: 'Sí, ya transferí',
                                     onPress: async () => {
-                                      setWorking(p.coachId);
+                                      setWorking(filaKey);
                                       const res: any = await markCoachPaid(p.sesiones.map(x => x.bookingId), ref);
                                       setWorking(null);
                                       if (res?.error) { Alert.alert('No se pudo registrar', res.error); return; }
                                       if (res?.data?.warning) Alert.alert('Registrado con aviso', res.data.warning);
-                                      setPayoutRef(prev => ({ ...prev, [p.coachId]: '' }));
+                                      setPayoutRef(prev => ({ ...prev, [filaKey]: '' }));
                                       void load();
                                     },
                                   },
@@ -542,7 +573,7 @@ export default function AdminScreen() {
                               );
                             }}>
                             <Text style={s.btnPrimaryText}>
-                              {working === p.coachId ? 'Registrando…' : 'Marcar pagado'}
+                              {working === filaKey ? 'Registrando…' : 'Marcar pagado'}
                             </Text>
                           </TouchableOpacity>
                         </>
@@ -553,11 +584,14 @@ export default function AdminScreen() {
                         // borró después — vale decirlo explícito y no dejar la
                         // tarjeta sin acción y sin motivo.
                         <Text style={s.cardBody}>
-                          ⚠️ Este coach no tiene datos de cobro cargados. Pedíselos antes de transferir.
+                          ⚠️ Este coach no tiene cargado el destino de{' '}
+                          {p.rail === 'usdt' ? 'USDT (wallet y red)' : 'PayPal (mail)'}.
+                          Pedíselo antes de transferir.
                         </Text>
                       )}
                     </View>
-                  ))}
+                    );
+                  })}
                 </>
               )
             )}

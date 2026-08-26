@@ -11,7 +11,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { REPORT_REASONS, type ReportReason } from '@/lib/reports';
-import { coachNetFor, payoutAfterDeliveryCost, USDT_NETWORK_FEE_USD, type PayoutMethod } from '@/lib/payout';
+import { coachNetFor, platformDeliveryCost, type PayoutRail } from '@/lib/payout';
 import { agruparComisiones, totalPorMoneda, type BookingForBilling, type CommissionGroup } from '@/lib/billing';
 
 const FUNCTIONS_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
@@ -337,15 +337,20 @@ export type CoachPayout = {
   /** true si el costo de entrega se come todo lo que se le debe. Sin mínimo de
    *  acumulación (decisión de Andre), así que puede pasar con montos chicos —
    *  y hay que verlo, no transferir un número negativo. */
+  /** 🔴 Una fila por `(coach, riel)` y no por coach: con la regla espejo (D4) cada
+   *  reserva se paga por el riel por el que entró, así que un coach con sesiones
+   *  cobradas por los dos rieles recibe DOS pagos, uno por cada uno. */
+  rail: PayoutRail;
   noAlcanza: boolean;
+  /** Lo que a VIVE le cuesta hacer el envío. **No sale del pago del coach** (D5);
+   *  se muestra para poder comparar el costo real de cada riel. */
+  costoPlataforma: number;
   sesiones: { bookingId: string; fecha: string; amount: number; feePct: number; neto: number }[];
   /** Datos de cobro. `null` = todavía no los cargó y no hay adónde mandar nada. */
   destino: {
-    method: PayoutMethod;
-    cbu: string | null;
-    alias: string | null;
     wallet: string | null;
     network: string | null;
+    paypalEmail: string | null;
   } | null;
 };
 
@@ -361,7 +366,7 @@ export async function listCoachPayouts(): Promise<{ rows: CoachPayout[]; error: 
   // marcado — que es justo el caso que hay que ver.
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, coach_id, coach_name, scheduled_date, amount, platform_fee_pct')
+    .select('id, coach_id, coach_name, scheduled_date, amount, platform_fee_pct, payment_provider')
     .neq('payment_provider', 'mp')
     .eq('status', 'completada')
     .eq('payment_status', 'aprobado')
@@ -378,7 +383,7 @@ export async function listCoachPayouts(): Promise<{ rows: CoachPayout[]; error: 
   const coachIds = [...new Set(data.map(b => b.coach_id).filter(Boolean))];
   const { data: cuentas } = await supabase
     .from('coach_payout_accounts')
-    .select('coach_id, method, cbu, alias, wallet, network')
+    .select('coach_id, wallet, network, paypal_email')
     .in('coach_id', coachIds);
 
   const porCoach = new Map<string, CoachPayout>();
@@ -389,29 +394,34 @@ export async function listCoachPayouts(): Promise<{ rows: CoachPayout[]; error: 
     const feePct = Number(b.platform_fee_pct ?? 20);
     const neto = coachNetFor(amount, feePct);
 
-    let entry = porCoach.get(b.coach_id);
+    // 🔴 La clave es `(coach, riel)`. Agrupar solo por coach mezclaría dólares de
+    // PayPal con dólares de la wallet, que son dos pagos distintos y por vías que
+    // no se cruzan — no se puede fondear PayPal con cripto.
+    const rail = (b.payment_provider === 'usdt' ? 'usdt' : 'paypal') as PayoutRail;
+    const key = `${b.coach_id}|${rail}`;
+    let entry = porCoach.get(key);
     if (!entry) {
       const c = cuentas?.find(x => x.coach_id === b.coach_id);
       entry = {
         coachId: b.coach_id,
         coachName: b.coach_name ?? null,
+        rail,
         bruto: 0,
         neto: 0,
         costoEntrega: 0,
+        costoPlataforma: 0,
         aTransferir: 0,
         noAlcanza: false,
         sesiones: [],
         destino: c
           ? {
-              method: c.method as PayoutMethod,
-              cbu: c.cbu ?? null,
-              alias: c.alias ?? null,
               wallet: c.wallet ?? null,
               network: c.network ?? null,
+              paypalEmail: c.paypal_email ?? null,
             }
           : null,
       };
-      porCoach.set(b.coach_id, entry);
+      porCoach.set(key, entry);
     }
     entry.bruto += amount;
     entry.neto += neto;
@@ -427,16 +437,17 @@ export async function listCoachPayouts(): Promise<{ rows: CoachPayout[]; error: 
   const rows = [...porCoach.values()]
     .map(e => {
       const neto = Math.round(e.neto * 100) / 100;
-      const method = e.destino?.method;
-      const costoEntrega = method === 'usdt' ? USDT_NETWORK_FEE_USD : 0;
-      const aTransferir = payoutAfterDeliveryCost(neto, method ?? 'transferencia');
+      // D5: al coach no se le descuenta nada, así que lo que se le transfiere ES
+      // su neto. `costoEntrega` queda en 0 y se conserva para no romper lo que lo
+      // lee; el costo real vive en `costoPlataforma`, del lado de VIVE.
       return {
         ...e,
         bruto: Math.round(e.bruto * 100) / 100,
         neto,
-        costoEntrega,
-        aTransferir,
-        noAlcanza: aTransferir <= 0,
+        costoEntrega: 0,
+        costoPlataforma: platformDeliveryCost(neto, e.rail),
+        aTransferir: neto,
+        noAlcanza: neto <= 0,
       };
     })
     .sort((a, b) => b.aTransferir - a.aTransferir);
@@ -482,7 +493,10 @@ export async function listCommissionReport(): Promise<CommissionReport> {
   const { data, error } = await supabase
     .from('bookings')
     .select('scheduled_date, coach_id, coach_name, amount, platform_fee_pct, currency, payment_provider, payment_status')
-    .in('payment_status', ['aprobado', 'reembolsado'])
+    // 'contracargo' entra igual que 'reembolsado': los dos revierten la comisión,
+    // y dejarlo afuera haría que una sesión disputada desapareciera del material
+    // que se le lleva al contador.
+    .in('payment_status', ['aprobado', 'reembolsado', 'contracargo'])
     .order('scheduled_date', { ascending: false })
     .limit(2000);
 
@@ -495,7 +509,9 @@ export async function listCommissionReport(): Promise<CommissionReport> {
   const cobradas = agruparComisiones(filas.filter(b => b.payment_status === 'aprobado'));
   return {
     cobradas,
-    reembolsadas: agruparComisiones(filas.filter(b => b.payment_status === 'reembolsado')),
+    reembolsadas: agruparComisiones(
+      filas.filter(b => b.payment_status === 'reembolsado' || b.payment_status === 'contracargo'),
+    ),
     totales: totalPorMoneda(cobradas),
     error: null,
   };

@@ -103,14 +103,21 @@ serve(async (req) => {
       rejected: 'rechazado',
       cancelled: 'rechazado',
       refunded: 'reembolsado',
-      charged_back: 'reembolsado',
+      // 🔴 NO es 'reembolsado' (lo fue hasta el 25/08/2026, y por eso en los datos
+      // eran indistinguibles). Los dos son "la plata volvió"; lo que los separa es
+      // quién lo decidió: el reembolso lo decidimos nosotros o el coach, el
+      // contracargo lo decide el comprador y su banco sin pedirnos permiso.
+      charged_back: 'contracargo',
     }
     const newStatus = statusMap[payment.status as string]
     if (!newStatus) return new Response('unhandled status', { status: 200 })
 
     const patch: Record<string, unknown> = { payment_status: newStatus, payment_id: String(paymentId) }
     if (newStatus === 'aprobado') patch.paid_at = new Date().toISOString()
-    if (newStatus === 'reembolsado') patch.refunded_at = new Date().toISOString()
+    // Los dos comparten `refunded_at`: es cuándo volvió la plata, no por qué.
+    if (newStatus === 'reembolsado' || newStatus === 'contracargo') {
+      patch.refunded_at = new Date().toISOString()
+    }
 
     // Pago aprobado sobre una reserva YA cancelada: es plata cobrada por una
     // sesión que no va a existir. Pasa si el usuario paga justo cuando
@@ -119,6 +126,26 @@ serve(async (req) => {
     // la plata adentro sin que nada la devuelva: `trg_mark_refund_on_cancel`
     // solo mira la transición a 'cancelada', que en este orden ya ocurrió.
     // Se encola el reembolso directamente y mp-process-refunds lo devuelve.
+    // 🔴 Una reversión sobre una sesión YA transferida al coach es plata que
+    // pierde VIVE. Antes no se enteraba nadie: nada miraba `paid_out_at` cuando
+    // la plata se iba para atrás. Sigue sin recuperarse sola —eso necesita el
+    // registro de operaciones (D8)— pero al menos deja rastro y se puede ver en
+    // la vista `reversiones_despues_de_pagar`.
+    if (newStatus === 'contracargo' || newStatus === 'reembolsado') {
+      const { data: b } = await supabase
+        .from('bookings')
+        .select('paid_out_at, payout_reference')
+        .eq('id', bookingId)
+        .maybeSingle()
+      if (b?.paid_out_at) {
+        console.error(
+          `[mp-webhook] 🔴 REVERSIÓN SOBRE SESIÓN YA PAGADA AL COACH — booking ${bookingId}, ` +
+          `estado ${newStatus}, transferida ${b.paid_out_at} (ref ${b.payout_reference ?? 's/ref'}). ` +
+          `Es plata que hay que recuperar o dar por perdida.`,
+        )
+      }
+    }
+
     if (newStatus === 'aprobado') {
       const { data: b } = await supabase
         .from('bookings')
@@ -144,6 +171,23 @@ serve(async (req) => {
     // `payment_status = 'rechazado'` y esa transición también tiene que valer.
     const upd = supabase.from('bookings').update(patch).eq('id', bookingId)
     if (newStatus === 'aprobado') upd.neq('payment_status', 'aprobado')
+
+    // 🔴 Y el contracargo NO se pisa. Sin esta guarda, una notificación
+    // `refunded` posterior a un `charged_back` —MP manda hasta 3 por pago y no
+    // garantiza el orden— reescribía `'contracargo'` como `'reembolsado'`,
+    // deshaciendo en silencio la única distinción que existe entre "la plata
+    // volvió porque lo decidimos nosotros" y "la plata volvió porque la sacó el
+    // banco del comprador". Que es exactamente lo que se separó el 25/08.
+    // De paso hace idempotente el contracargo repetido, que hasta ahora volvía
+    // a pisar `refunded_at` en cada reintento — el mismo `.neq` que ya tenía el
+    // camino de PayPal.
+    //
+    // La transición al revés SÍ vale: `reembolsado` → `contracargo` es una
+    // escalada real y esta guarda no la toca.
+    if (newStatus === 'reembolsado' || newStatus === 'contracargo') {
+      upd.neq('payment_status', 'contracargo')
+    }
+
     const { data: cambiada, error: errUpd } = await upd.select('id')
 
     if (errUpd) {

@@ -153,7 +153,23 @@ serve(async (req) => {
   // cualquier cosa distinta de 2xx lo hace reintentar, y eso fue lo que en MP
   // generó 8 reintentos por un solo pago. Descartar sin verificar es seguro
   // porque estas ramas no leen ni escriben nada.
-  const RELEVANTES = ['CHECKOUT.ORDER.APPROVED', 'PAYMENT.CAPTURE.COMPLETED']
+  // ⚠️ Suscribir un evento acá NO alcanza: también hay que marcarlo en el webhook
+  // registrado en el dashboard de PayPal, o simplemente no llega. Hasta el
+  // 25/08/2026 el registrado en producción tenía suscritos exactamente los dos
+  // primeros, así que **una disputa debitaba el saldo y nada en el sistema se
+  // enteraba**.
+  const RELEVANTES = [
+    'CHECKOUT.ORDER.APPROVED',
+    'PAYMENT.CAPTURE.COMPLETED',
+    // Una disputa abierta todavía NO movió plata: es el aviso de que puede
+    // moverse. Por eso no toca `payment_status`.
+    'CUSTOMER.DISPUTE.CREATED',
+    'CUSTOMER.DISPUTE.UPDATED',
+    'CUSTOMER.DISPUTE.RESOLVED',
+    // La plata efectivamente volvió por decisión del comprador y su banco.
+    'PAYMENT.CAPTURE.REVERSED',
+    'PAYMENT.CAPTURE.DENIED',
+  ]
   if (!RELEVANTES.includes(tipo)) {
     return new Response('ignored', { status: 200 })
   }
@@ -168,6 +184,121 @@ serve(async (req) => {
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
   const recurso = evento.resource ?? {}
+
+  // ── 0. Disputas y reversiones ─────────────────────────────────────────────
+  //
+  // 🔴 El mapeo a nuestra reserva es best-effort A PROPÓSITO. El evento de
+  // disputa trae las transacciones disputadas y de ahí se saca el id de la
+  // captura, que es lo que guardamos en `payment_id`. Si esa forma cambia o no
+  // viene, **NO se adivina**: se loguea fuerte y se contesta 200. Marcar la
+  // reserva equivocada como disputada es peor que no marcar ninguna, porque
+  // dispara una investigación sobre alguien que no tuvo nada que ver.
+  if (tipo.startsWith('CUSTOMER.DISPUTE.')) {
+    const capturas: string[] = (recurso.disputed_transactions ?? [])
+      .map((t: { seller_transaction_id?: string }) => t?.seller_transaction_id)
+      .filter(Boolean)
+    const motivo = recurso.reason ?? recurso.dispute_state ?? tipo
+    const estado = recurso.status ?? ''
+
+    if (!capturas.length) {
+      console.error('[paypal-webhook] 🔴 DISPUTA sin transacción identificable:', JSON.stringify(recurso).slice(0, 800))
+      return new Response('dispute without capture', { status: 200 })
+    }
+
+    for (const captureId of capturas) {
+      const { data: b } = await admin
+        .from('bookings')
+        .select('id, paid_out_at, payout_reference, disputed_at')
+        .eq('payment_id', captureId)
+        .eq('payment_provider', 'paypal')
+        .maybeSingle()
+
+      if (!b) {
+        console.error('[paypal-webhook] 🔴 DISPUTA sobre una captura desconocida:', captureId, motivo)
+        continue
+      }
+
+      // Se marca la disputa; `payment_status` NO se toca. La plata sigue siendo
+      // nuestra hasta que PayPal resuelva, y adelantarse a marcarla como perdida
+      // rompería la conciliación si la disputa se gana.
+      //
+      // 🔴 `disputed_at` es CUÁNDO SE ABRIÓ, y por eso solo se escribe si está
+      // vacío. PayPal manda `CUSTOMER.DISPUTE.UPDATED` varias veces por disputa
+      // (cambio de estado, respuesta del comprador, revisión), y pisarlo con
+      // `now()` en cada uno hacía perder el único dato que la columna guarda:
+      // después del primer update pasaba a decir "cuándo nos avisaron por
+      // última vez", que no es lo que documenta ni lo que se necesita para
+      // contar los plazos.
+      //
+      // `dispute_reason` SÍ se pisa: ahí interesa el estado más reciente.
+      const patch: Record<string, string> = {
+        dispute_reason: `${motivo} (${estado})`.trim(),
+      }
+      if (!b.disputed_at) patch.disputed_at = new Date().toISOString()
+
+      await admin
+        .from('bookings')
+        .update(patch)
+        .eq('id', b.id)
+
+      console.error(
+        `[paypal-webhook] 🔴 DISPUTA ${estado || 'abierta'} sobre booking ${b.id} — motivo: ${motivo}.` +
+        (b.paid_out_at
+          ? ` ⚠️ La sesión YA se le transfirió al coach el ${b.paid_out_at} (ref ${b.payout_reference ?? 's/ref'}).`
+          : ''),
+      )
+    }
+    return new Response('dispute recorded', { status: 200 })
+  }
+
+  // 🔴 `DENIED` NO es un contracargo: es una captura que PayPal RECHAZÓ, o sea
+  // plata que nunca se movió. Estaba metida en la misma rama que `REVERSED` y
+  // eso tenía dos consecuencias. La visible: `payment_id` se escribe recién en
+  // `PAYMENT.CAPTURE.COMPLETED`, así que la búsqueda no encontraba nada y cada
+  // tarjeta rechazada dejaba un `🔴 REVERSIÓN sobre una captura desconocida` en
+  // los logs — ruido con forma de incidente. La grave, si alguna vez llegara a
+  // matchear: una reserva que nunca se pagó quedaba en `'contracargo'` con
+  // `refunded_at`, o sea contada como plata devuelta en el informe del contador
+  // (`lib/admin.ts`) y en `reversiones_despues_de_pagar`.
+  //
+  // No hay estado que cambiar: la reserva sigue en `'pendiente'` y la barre
+  // `expire_unpaid_checkouts()` como cualquier checkout no completado.
+  if (tipo === 'PAYMENT.CAPTURE.DENIED') {
+    console.log('[paypal-webhook] captura rechazada por PayPal (no hubo cobro):', recurso.id ?? 's/id')
+    return new Response('capture denied', { status: 200 })
+  }
+
+  // La plata volvió por decisión del comprador. Acá sí cambia el estado del pago.
+  if (tipo === 'PAYMENT.CAPTURE.REVERSED') {
+    const captureId: string = recurso.id ?? ''
+    if (!captureId) return new Response('no capture id', { status: 200 })
+
+    const { data: b } = await admin
+      .from('bookings')
+      .select('id, paid_out_at, payout_reference')
+      .eq('payment_id', captureId)
+      .eq('payment_provider', 'paypal')
+      .maybeSingle()
+
+    if (!b) {
+      console.error('[paypal-webhook] 🔴 REVERSIÓN sobre una captura desconocida:', captureId)
+      return new Response('unknown capture', { status: 200 })
+    }
+
+    await admin
+      .from('bookings')
+      .update({ payment_status: 'contracargo', refunded_at: new Date().toISOString() })
+      .eq('id', b.id)
+      .neq('payment_status', 'contracargo')
+
+    console.error(
+      `[paypal-webhook] 🔴 CONTRACARGO en booking ${b.id} (${tipo}).` +
+      (b.paid_out_at
+        ? ` ⚠️ REVERSIÓN SOBRE SESIÓN YA PAGADA AL COACH el ${b.paid_out_at} (ref ${b.payout_reference ?? 's/ref'}) — es plata que hay que recuperar o dar por perdida.`
+        : ''),
+    )
+    return new Response('chargeback recorded', { status: 200 })
+  }
 
   // ── 1. Aprobada pero sin capturar → capturar ──────────────────────────────
   if (tipo === 'CHECKOUT.ORDER.APPROVED') {
@@ -240,7 +371,7 @@ serve(async (req) => {
 
   const { data: booking } = await admin
     .from('bookings')
-    .select('id, payment_status, charged_amount')
+    .select('id, status, payment_status, charged_amount')
     .eq('id', bookingId)
     .maybeSingle()
 
@@ -262,15 +393,45 @@ serve(async (req) => {
     return new Response('amount mismatch', { status: 200 })
   }
 
+  const patch: Record<string, unknown> = {
+    payment_status: 'aprobado',
+    payment_id: captureId,
+    // Se conserva aunque abajo el estado pase a 'reembolso_pendiente': la plata
+    // entró en este momento, y es el dato con el que se concilia contra PayPal.
+    paid_at: new Date().toISOString(),
+  }
+
+  // 🔴 Captura acreditada sobre una reserva YA cancelada. Misma rama que
+  // `mp-webhook`, y acá es MÁS probable que allá: en Mercado Pago abandonar el
+  // checkout no cobra nada, mientras que en PayPal aprobar dispara
+  // CHECKOUT.ORDER.APPROVED y **este mismo webhook captura la plata**. O sea
+  // que cualquier aprobación posterior a la cancelación termina en un cobro.
+  //
+  // Cómo se llega: `soltarReserva()` cancela la reserva en cuanto el cobro no
+  // se acredita (sesión 117), y `expire_unpaid_checkouts()` la barre a los 30
+  // min — las dos dejan `payment_status = 'pendiente'`, así que la persona que
+  // vuelve a la pestaña de PayPal y aprueba tarde cae justo acá.
+  //
+  // Marcarlo 'aprobado' a secas dejaría la plata adentro sin que nada la
+  // devuelva: `trg_mark_refund_on_cancel` solo mira la transición a
+  // 'cancelada', que en este orden ya ocurrió. Se encola el reembolso y
+  // `paypal-process-refunds` lo devuelve — ya tiene todo lo que necesita
+  // (`payment_id` = id de la captura, `charged_amount`, `payment_provider`).
+  //
+  // ⚠️ Queda la misma ventana que en `mp-webhook`: entre esta lectura y el
+  // update, alguien podría cancelar. Es angosta y del lado seguro — las dos
+  // vías de cancelación exigen `payment_status <> 'aprobado'`, así que si el
+  // webhook llega primero la cancelación no ocurre.
+  if (booking.status === 'cancelada') {
+    patch.payment_status = 'reembolso_pendiente'
+    console.warn('[paypal-webhook] captura sobre reserva cancelada, se encola reembolso:', bookingId)
+  }
+
   // Idempotente: el `.eq('payment_status', 'pendiente')` hace que un reintento
   // no reescriba una reserva ya resuelta (ni pise un reembolso en curso).
   const { data: actualizada, error } = await admin
     .from('bookings')
-    .update({
-      payment_status: 'aprobado',
-      payment_id: captureId,
-      paid_at: new Date().toISOString(),
-    })
+    .update(patch)
     .eq('id', bookingId)
     .eq('payment_provider', 'paypal')
     .eq('payment_status', 'pendiente')
@@ -293,7 +454,14 @@ serve(async (req) => {
   // el cliente porque PayPal también abre su checkout FUERA de la app, así que
   // no hay ninguna pantalla nuestra garantizada viva cuando el pago entra.
   // El `.select('id')` de arriba es lo que hace que corra una sola vez.
-  await applyPaidBookingEffects(admin, bookingId)
+  //
+  // `patch.payment_status` y no la constante: si la reserva ya estaba
+  // cancelada, la rama de arriba lo dejó en 'reembolso_pendiente' y no hay
+  // ninguna sesión que confirmar. (`applyPaidBookingEffects` igual se defiende
+  // sola de ese caso; esto le ahorra la lectura y deja la intención escrita.)
+  if (patch.payment_status === 'aprobado') {
+    await applyPaidBookingEffects(admin, bookingId)
+  }
 
   return new Response('ok', { status: 200 })
 })

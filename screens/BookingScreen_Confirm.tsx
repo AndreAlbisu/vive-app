@@ -25,6 +25,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { logError, logWarn } from '@/lib/logging';
 import { encryptMessage } from '@/lib/encryption';
 import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
+import { observedTz } from '@/lib/time';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MONTH_NAMES = [
@@ -57,6 +58,8 @@ export default function BookingScreen_Confirm() {
   const [userMessage, setUserMessage] = useState('');
   const [instantBooking, setInstantBooking] = useState(false);
   const [internacionalDisponible, setInternacionalDisponible] = useState(false);
+  const [aceptaPaypal, setAceptaPaypal] = useState(false);
+  const [aceptaUsdt, setAceptaUsdt] = useState(false);
   const [priceUsd, setPriceUsd] = useState<number | null>(null);
   const [metodoPago, setMetodoPago] = useState<'mp' | 'usdt' | 'paypal'>('mp');
   // Pago abierto FUERA de la app (app nativa de Mercado Pago, o el browser con
@@ -64,6 +67,10 @@ export default function BookingScreen_Confirm() {
   // reabrirla si la persona volvió a Vita sin querer — ver el overlay de espera
   // más abajo. `null` = no hay ningún pago en curso.
   const [pagoEnCurso, setPagoEnCurso] = useState<string | null>(null);
+  // La persona ya volvió del checkout. Cambia lo que dice el cartel de espera:
+  // hasta que vuelve, la instrucción es "terminá el pago"; después, esa frase es
+  // falsa y encima promete una reserva confirmada que todavía no lo está.
+  const [volvioDelCheckout, setVolvioDelCheckout] = useState(false);
   const pagoEnCursoRef = useRef<string | null>(null);
   pagoEnCursoRef.current = pagoEnCurso;
 
@@ -84,7 +91,7 @@ export default function BookingScreen_Confirm() {
     (async () => {
       const { data } = await supabase
         .from('coaches')
-        .select('instant_booking, accepts_international, price_usd')
+        .select('instant_booking, accepts_international, accepts_paypal, accepts_usdt, price_usd')
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
       setInstantBooking(!!data?.instant_booking);
@@ -95,6 +102,12 @@ export default function BookingScreen_Confirm() {
       // búsqueda y el perfil público — si acá fuera otra, el catálogo prometería
       // algo que esta pantalla no ofrece.
       setInternacionalDisponible(!!data?.accepts_international && !!data?.price_usd);
+      // 🔴 REGLA ESPEJO (D4): se ofrece un medio de pago solo si el coach acepta
+      // COBRAR por ese mismo riel. Si no, VIVE quedaría con dólares en un pozo que
+      // no puede usar para pagarle — y en el caso de USDT→PayPal directamente no
+      // hay forma, porque en Argentina no se puede cargar saldo en PayPal.
+      setAceptaPaypal(!!data?.accepts_paypal);
+      setAceptaUsdt(!!data?.accepts_usdt);
       setPriceUsd(data?.price_usd ?? null);
     })();
   }, [coachProfileIdParam]);
@@ -192,7 +205,7 @@ export default function BookingScreen_Confirm() {
       desdeElUltimo += LATIDO_MS;
       // Acaba de volver de pagar: se consulta YA, sin esperar el intervalo. Es
       // el momento en el que el estado tiene más chances de haber cambiado.
-      if (estabaAfuera) { estabaAfuera = false; desdeElUltimo = INTERVALO_MS; }
+      if (estabaAfuera) { estabaAfuera = false; setVolvioDelCheckout(true); desdeElUltimo = INTERVALO_MS; }
       if (desdeElUltimo < INTERVALO_MS) continue;
       desdeElUltimo = 0;
 
@@ -300,6 +313,10 @@ export default function BookingScreen_Confirm() {
         // (coach sin Mercado Pago conectado), que no son reintentos de nada.
         .or('preference_id.not.is.null,usdt_amount.not.is.null');
 
+      // Se lee ACÁ y no al montar la pantalla: lo que importa es dónde estaba
+      // en el momento de reservar, no cuándo abrió la app.
+      const tzObservada = observedTz();
+
       // 3. Insertar booking — columnas reales verificadas en la base (SCHEMA.md)
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
@@ -321,6 +338,27 @@ export default function BookingScreen_Confirm() {
           // Ahora se confirma abajo, recién cuando el pago está aprobado — o de
           // entrada si el coach no tiene MP y no hay nada que cobrar.
           status: 'pendiente',
+          // ── Dónde estaba quien reserva (D2) ────────────────────────────────
+          // 🔴 Se guarda la OBSERVACIÓN cruda, no una conclusión. El sistema no
+          // sabía cuáles operaciones eran internacionales: lo inferí­a del riel de
+          // pago, y el riel lo elige el usuario — un argentino pagando con PayPal
+          // generaba algo que parecía exportación y no lo era.
+          //
+          // No se guarda el país porque el país ya es una lectura de la zona.
+          // Y no se guarda `es_internacional` porque el criterio todavía no está
+          // confirmado: con un booleano habría que reescribir historia el día que
+          // el contador defina otra cosa; con la observación, se vuelve a derivar.
+          //
+          // `observedTz()` y no `deviceTz()`: aquella cae a Argentina cuando no
+          // puede leer la zona, y acá eso sería registrar un país que nadie
+          // observó.
+          ...(tzObservada
+            ? {
+                user_tz_observed: tzObservada,
+                user_observation_source: 'timezone',
+                user_observed_at: new Date().toISOString(),
+              }
+            : {}),
           ...(durationMinutes ? { duration_minutes: durationMinutes } : {}),
           ...(userMessage.trim() ? { user_message: userMessage.trim() } : {}),
         })
@@ -570,6 +608,7 @@ export default function BookingScreen_Confirm() {
       let paid = false;
       if (initPoint) {
         setPagoEnCurso(initPoint);
+        setVolvioDelCheckout(false);
         if (!(await abrirCheckout(initPoint))) {
           // 🔴 Cancelar acá también. La primera versión de esto solo mostraba el
           // error y volvía, dejando la reserva viva en 'pendiente' con el
@@ -879,8 +918,12 @@ export default function BookingScreen_Confirm() {
             <View style={s.pagoRow}>
               {([
                 { id: 'mp' as const,     label: 'Mercado Pago', desc: 'Pesos · tarjeta o dinero en cuenta' },
-                { id: 'paypal' as const, label: 'PayPal',        desc: 'Dólares · tarjeta desde el exterior' },
-                { id: 'usdt' as const,   label: 'Crypto · USDT', desc: 'Dólares · transferencia de cripto' },
+                ...(aceptaPaypal
+                  ? [{ id: 'paypal' as const, label: 'PayPal', desc: 'Dólares · tarjeta desde el exterior' }]
+                  : []),
+                ...(aceptaUsdt
+                  ? [{ id: 'usdt' as const, label: 'Crypto · USDT', desc: 'Dólares · transferencia de cripto' }]
+                  : []),
               ]).map(m => (
                 <TouchableOpacity
                   key={m.id}
@@ -928,10 +971,33 @@ export default function BookingScreen_Confirm() {
           <SafeAreaView style={s.esperaSafe} edges={['top', 'bottom']}>
             <View style={s.esperaBody}>
               <ActivityIndicator size="large" color={ViveColors.primary} />
-              <Text style={s.esperaTitle}>Terminá el pago en {nombrePasarela}</Text>
-              <Text style={s.esperaDesc}>
-                Cuando lo completes, volvé a Vita y tu reserva ya va a estar confirmada.
-              </Text>
+              {/* 🔴 Dos textos y no uno. Al volver de pagar, "Terminá el pago"
+                  es falso y "ya va a estar confirmada" promete un estado que
+                  todavía no llegó — y esa espera no es corta: en PayPal son DOS
+                  viajes (aprobar dispara nuestra captura, y la captura dispara
+                  el aviso que confirma), más lo que PayPal tarde en avisar. Con
+                  el texto de antes, esos segundos se leen como que se colgó.
+
+                  No se puede distinguir "volvió habiendo pagado" de "volvió sin
+                  pagar" —el back de más, una notificación en el medio—, así que
+                  el texto tiene que ser honesto en los dos casos y por eso los
+                  dos botones siguen abajo. */}
+              {volvioDelCheckout ? (
+                <>
+                  <Text style={s.esperaTitle}>Estamos confirmando tu pago</Text>
+                  <Text style={s.esperaDesc}>
+                    Si ya pagaste, puede tardar unos segundos: {nombrePasarela} tiene que avisarnos y
+                    recién ahí confirmamos la reserva. No cierres esta pantalla.
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={s.esperaTitle}>Terminá el pago en {nombrePasarela}</Text>
+                  <Text style={s.esperaDesc}>
+                    Cuando lo completes, volvé a Vita y tu reserva ya va a estar confirmada.
+                  </Text>
+                </>
+              )}
               {/* La app de MP a veces vuelve a Vita sin pagar (un back de más, una
                   notificación en el medio). Sin esto, la única salida era
                   abandonar la reserva y empezarla de nuevo. */}

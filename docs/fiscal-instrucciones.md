@@ -150,6 +150,58 @@ está bien?"**.
 facturar la comisión a facturar el total. Es **multiplicar por cinco la
 facturación bruta para el mismo margen**, con impacto inmediato en la categoría.
 
+### 2.3 bis 🔴 DECISIÓN TOMADA (25/08/2026) — y la pregunta cambia
+
+**Vita actúa como AGENTE, no como principal.** No es una preferencia: los T&C ya lo
+dicen en cuatro cláusulas (§4.1 intermediación, §4.2 "Vita no es parte de esa
+relación", §8.5 "no emite comprobantes por la Sesión", §18.1 no responde por las
+prestaciones). Elegir principal habría significado reescribir el encuadre central
+de un documento que los usuarios ya aceptan.
+
+**Eso resuelve la contradicción de arriba a favor de la Opción A**: el profesional
+es el exportador. Se corrigen los otros dos lugares (el changelog de la sesión 101
+y el comentario de `CoachProfileScreen.tsx:313`), no los T&C.
+
+**Y de ahí salen dos preguntas nuevas, que son las que hay que llevar:**
+
+#### 🔴 a) Si Vita es agente, ¿el profesional es exportador igual?
+
+La arquitectura actual hace que **Vita cobre** en el riel internacional y le
+transfiera al profesional después. El documento que se le entrega al profesional
+justifica eso diciendo que así **él no pasa a ser exportador**.
+
+**La duda es si eso es cierto.** Si el criterio de exportación de servicios es
+**dónde se aprovecha el servicio** —y no por dónde pasó el dinero—, entonces el
+profesional que atiende a alguien en Madrid **exporta igual**, cobre él o cobre
+Vita. En ese caso el diseño actual **no evita nada: lo esconde**, y a cambio le
+mete a Vita plata de terceros en la cuenta.
+
+⚠️ **Es la pregunta más cara de esta lista**, porque de la respuesta depende si el
+documento que se le va a entregar al profesional dice la verdad. **Ese documento no
+se mandó a nadie todavía**, justamente por esto.
+
+#### 🔴 b) ¿Cómo se factura la comisión según dónde esté el profesional?
+
+Bajo agente, **el cliente de Vita es el profesional**: a él se le factura la
+comisión, que sale de su parte. Por lo tanto **si Vita exporta o no lo decide el
+domicilio fiscal del PROFESIONAL, no el del cliente final.**
+
+- Profesional en Argentina → comisión facturada al mercado interno (factura C).
+- Profesional en el exterior → **la comisión de Vita es exportación de servicios**
+  (factura E, sin IVA, y —según lo que hay que confirmar— sin sumar al tope del
+  monotributo).
+
+**Y esto ya no es hipotético.** Los medios de cobro del profesional son
+transferencia, PayPal y USDT: **los dos últimos le sirven a alguien en cualquier
+país.** Hoy el sistema asume que todos los profesionales son argentinos y **no
+guarda su domicilio fiscal**. Antes de pedir ese dato hace falta saber para qué
+cambia.
+
+**Preguntas concretas:**
+1. ¿La comisión a un profesional del exterior es exportación de servicios para Vita?
+2. Si sí, ¿esa facturación suma al tope de la categoría del monotributo?
+3. ¿Hay algo que impida tener profesionales no argentinos, más allá de lo operativo?
+
 ### 2.4 ¿Conviene pasar a Responsable Inscripto?
 
 Y acá el hallazgo que más sorprende de todo lo investigado: **lo que define la

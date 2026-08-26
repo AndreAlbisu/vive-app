@@ -129,7 +129,7 @@ serve(async (req) => {
       .or(PAIR_SESSION_FILTER)
 
     // La decisión de tramo es pura y está en _shared/commission.ts, testeada.
-    const commissionPct = commissionPctFor(count ?? 0, Date.now(), promoUntil)
+    const commissionPct = commissionPctFor(count ?? 0, Date.now(), promoUntil, 'mp')
 
     // marketplace_fee = comisión pura (20/15%), SIN IVA — y así queda.
     // Figura fiscal DECIDIDA (Andre, 06/08/2026): persona humana en Monotributo.

@@ -163,6 +163,29 @@ export function deviceTz(): string {
   }
 }
 
+/**
+ * La zona del dispositivo **sin inventar nada**: `null` si no se pudo leer.
+ *
+ * 🔴 Es distinta de `deviceTz()` a propósito, y la diferencia es el punto. Aquella
+ * cae a Argentina cuando `Intl` no está disponible, y para MOSTRAR horarios está
+ * bien: hay que mostrar algo, y la zona del negocio es el default razonable.
+ *
+ * Pero esta se usa para **observar dónde estaba quien reservó**, y ahí ese mismo
+ * fallback sería registrar "Argentina" cuando en realidad no se sabe. Un default
+ * silencioso es indistinguible de un dato real a los seis meses — que es
+ * exactamente lo que la decisión D2 (`docs/decisiones-pagos.md`) prohíbe.
+ *
+ * Sin dato se guarda `null`, y la clasificación lo trata como **"sin clasificar"**,
+ * nunca como "mercado interno".
+ */
+export function observedTz(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Los componentes de un instante, leídos en una zona cualquiera. Todo pasa por
  *  `Intl` y NUNCA por los métodos locales de `Date` (`getHours`, `getDate`…),
  *  que siempre responden en la zona del dispositivo: usarlos acá haría que la
