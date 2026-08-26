@@ -124,8 +124,6 @@ export default function CoachHomeScreen() {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [coachName, setCoachName] = useState('');
   const [weekData, setWeekData] = useState<DayEntry[]>([]);
-  const [weekTotal, setWeekTotal] = useState(0);
-  const [weekClients, setWeekClients] = useState(0);
   const [next, setNext] = useState<NextSession | null>(null);
   const [prep, setPrep] = useState<Prep | null>(null);
   const [prepOpen, setPrepOpen] = useState(false);
@@ -208,9 +206,6 @@ export default function CoachHomeScreen() {
       return { abbr, count: sessions.filter(s => s.date === dateStr).length, isToday: dateStr === todayStr };
     });
     setWeekData(week);
-    const inWeek = sessions.filter(s => s.date >= toDateStr(monday) && s.date <= toDateStr(sunday));
-    setWeekTotal(inWeek.length);
-    setWeekClients(new Set(inWeek.map(s => s.userId)).size);
 
     // Próxima sesión = primera confirmada con inicio >= ahora
     const nowMs = now.getTime();
@@ -458,9 +453,6 @@ export default function CoachHomeScreen() {
               </View>
             ))}
           </TouchableOpacity>
-          <Text style={s.weekCaption}>
-            {weekTotal} {weekTotal === 1 ? 'sesión' : 'sesiones'} · {weekClients} {weekClients === 1 ? 'persona' : 'personas'} esta semana · <Text style={s.weekCaptionB}>disponibilidad calculada automáticamente</Text>
-          </Text>
 
           {/* Tu próxima sesión */}
           {next ? (
@@ -716,8 +708,6 @@ const s = StyleSheet.create({
   wdCircleHas: { backgroundColor: TERRA },
   wdCircleToday: { borderWidth: 1.5, borderColor: FOREST },
   wdCount: { fontSize: 10.5, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },
-  weekCaption: { textAlign: 'center', fontSize: 10.5, color: FOREST_SOFT, marginTop: 7, fontFamily: ViveFonts.regular },
-  weekCaptionB: { color: FOREST, fontFamily: ViveFonts.semibold },
 
   // Próxima sesión (verde)
   next: { marginTop: 14, backgroundColor: '#3E4E2C', borderRadius: 24, padding: 17, overflow: 'hidden' },
