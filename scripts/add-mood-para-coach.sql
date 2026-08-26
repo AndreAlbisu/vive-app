@@ -20,7 +20,15 @@
 -- texto libre donde la persona escribe lo que no le dice a nadie. El ánimo es
 -- una escala de 1 a 5; el diario es contenido. No se tocan.
 
-create or replace function public.mood_trend_for_client(
+-- ⚠️ El drop va SIEMPRE, no solo la primera vez: `create or replace` no puede
+-- cambiar los tipos de salida de una función que ya existe
+-- (`42P13 cannot change return type of existing function`), y esta ya cambió una
+-- vez. Es seguro: nada depende de ella —ninguna vista, ningún trigger— y el
+-- `create` viene inmediatamente después. El `grant` de abajo hay que rehacerlo
+-- justamente porque el drop se lleva los permisos, y por eso también está acá.
+drop function if exists public.mood_trend_for_client(uuid, int);
+
+create function public.mood_trend_for_client(
   p_user_id uuid,
   p_days int default 14
 )
