@@ -30,6 +30,21 @@ update public.coach_payout_accounts
        accepts_usdt   = (method = 'usdt')
  where accepts_paypal = false and accepts_usdt = false;
 
+-- 🔴 Y `method` deja de ser OBLIGATORIA. La columna se conserva (arriba se
+-- explica por qué), pero con la regla espejo un coach acepta CERO, UNO o DOS
+-- rieles y `method` es singular: ya no hay valor que represente el estado.
+-- Mientras siguiera siendo NOT NULL sin default, la pantalla de cobro no podía
+-- guardar nada — el upsert no la manda, y Postgres valida el NOT NULL sobre la
+-- tupla propuesta ANTES de resolver el `on conflict`, así que fallaba también
+-- para el coach que ya tenía fila.
+--
+-- Los tres CHECK viejos por método siguen vivos y siguen valiendo: los tres
+-- tienen la forma `method <> 'x' or <destino> is not null`, que con `method`
+-- en null da verdadero. O sea que un build viejo que todavía escriba `method`
+-- sigue validando igual que antes.
+alter table public.coach_payout_accounts
+  alter column method drop not null;
+
 -- ── 3. Coherencia: aceptar un riel exige tener su destino ────────────────────
 -- Mismo criterio que los CHECK que ya existían por método. Sin esto se puede
 -- aceptar PayPal sin mail y el error aparece recién el día de pagar.
@@ -88,7 +103,36 @@ declare
 begin
   -- El disparo puede venir de `coaches` (cambió el precio) o de
   -- `coach_payout_accounts` (cambiaron los rieles).
-  v_coach := coalesce(new.coach_id, old.coach_id, new.id, old.id);
+  --
+  -- 🔴 NO se puede resolver con un coalesce único sobre los cuatro campos.
+  -- Parece defensivo y no lo es: PL/pgSQL resuelve cada campo contra la forma
+  -- REAL del registro, así que `new.coach_id` sobre una fila de `coaches` no
+  -- devuelve null — tira `record "new" has no field "coach_id"` y aborta la
+  -- sentencia que disparó el trigger. Con `trg_sync_intl_on_price` colgado de
+  -- `coaches` eso dejaba a TODO coach sin poder guardar su `price_usd`. Lo
+  -- mismo `new` en un DELETE, donde no está asignado: rompía borrar una fila de
+  -- cobro y, por cascada, borrar un coach.
+  --
+  -- Va con `if` y no con un `case` por el mismo motivo: el registro se evalúa
+  -- como parámetro de la expresión entera, así que un `case` igual tocaría la
+  -- rama que no corresponde.
+  if TG_TABLE_NAME = 'coaches' then
+    if TG_OP = 'DELETE' then
+      v_coach := old.id;
+    else
+      v_coach := new.id;
+    end if;
+  else
+    if TG_OP = 'DELETE' then
+      v_coach := old.coach_id;
+    else
+      v_coach := new.coach_id;
+    end if;
+  end if;
+
+  if v_coach is null then
+    return null;
+  end if;
 
   update public.coaches c
      set accepts_paypal = coalesce((

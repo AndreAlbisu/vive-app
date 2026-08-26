@@ -183,3 +183,44 @@ export function paypalPayoutCost(neto: number): number {
 export function platformDeliveryCost(neto: number, rail: PayoutRail): number {
   return rail === 'usdt' ? USDT_NETWORK_FEE_USD : paypalPayoutCost(neto);
 }
+
+/**
+ * Qué le falta al coach para que sus sesiones del exterior se activen solas.
+ * `null` = no le falta nada.
+ *
+ * 🔴 Los dos requisitos son EXACTAMENTE los que evalúa el trigger
+ * `sync_accepts_international` (`scripts/add-payout-rails.sql`): un precio en
+ * dólares y al menos un riel aceptado. `coaches.accepts_international` dejó de
+ * ser una casilla que el coach prende para pasar a ser el RESULTADO de esos
+ * dos, así que la pantalla no puede prenderla — solo puede decir qué falta.
+ * Si el trigger cambia, esto cambia con él.
+ *
+ * Se nombran por separado porque faltar uno o faltar los dos manda a lugares
+ * distintos: el precio se carga en el perfil y el riel en la pantalla de cobro.
+ */
+export function faltaParaInternacional(
+  priceUsd: number | null,
+  aceptaPaypal: boolean,
+  aceptaUsdt: boolean,
+): string | null {
+  const sinPrecio = priceUsd == null;
+  const sinRiel = !aceptaPaypal && !aceptaUsdt;
+  if (!sinPrecio && !sinRiel) return null;
+
+  const que = sinPrecio && sinRiel
+    ? 'fijar tu precio en dólares y elegir cómo querés que te paguemos'
+    : sinPrecio
+      ? 'fijar tu precio en dólares acá abajo'
+      : 'elegir cómo querés que te paguemos: PayPal o USDT';
+
+  return `Te falta ${que}. Hasta entonces no vas a aparecer para usuarios del exterior.`;
+}
+
+/** Los rieles aceptados, en criollo, para mostrarlos sin entrar a la pantalla
+ *  de cobro. */
+export function rielesTexto(aceptaPaypal: boolean, aceptaUsdt: boolean): string {
+  if (aceptaPaypal && aceptaUsdt) return 'A tu PayPal o en USDT';
+  if (aceptaPaypal) return 'A tu cuenta de PayPal';
+  if (aceptaUsdt) return 'En USDT';
+  return 'Todavía no elegiste ninguno';
+}

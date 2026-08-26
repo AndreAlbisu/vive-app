@@ -123,13 +123,6 @@ serve(async (req) => {
     .toISOString()
     .split('T')[0]
 
-  // Las que ya tienen fila no se vuelven a mirar: la evidencia no cambia una vez
-  // que la sesión terminó, y re-pedirla sería gastar llamadas por nada.
-  const { data: yaTraidas } = await supabase
-    .from('session_attendance')
-    .select('booking_id')
-  const traidas = new Set((yaTraidas ?? []).map((r: { booking_id: string }) => r.booking_id))
-
   // 🔴 NO se filtra por `meeting_url is not null`, y es deliberado: esa columna
   // se llena recién cuando alguien abre la sala. Filtrando por ella, el caso
   // **"no vino nadie"** —donde la sala nunca llegó a crearse— no quedaría nunca
@@ -150,6 +143,34 @@ serve(async (req) => {
     console.error('[attendance] no se pudieron leer las reservas:', error.message)
     return new Response('db error', { status: 502 })
   }
+
+  // Las que ya tienen fila no se vuelven a mirar: la evidencia no cambia una vez
+  // que la sesión terminó, y re-pedirla sería gastar llamadas por nada.
+  //
+  // 🔴 Se pregunta SOLO por las candidatas de esta corrida, y no por la tabla
+  // entera. `session_attendance` crece una fila por sesión y para siempre: un
+  // `select` sin filtro ni límite lo corta en el tope de filas de PostgREST y
+  // ahí la lista deja de ser "las ya traídas" para pasar a ser "las primeras N",
+  // en silencio. El efecto es doble y sin error visible: se vuelve a consultar a
+  // Daily por sesiones ya resueltas —cada hora, para siempre— y el insert
+  // posterior falla contra la PK de `booking_id`. Acotado a las candidatas, el
+  // conjunto no puede pasar del `.limit(200)` de arriba.
+  const idsCandidatas = (candidatas ?? []).map(b => b.id)
+  const { data: yaTraidas, error: errTraidas } = idsCandidatas.length
+    ? await supabase
+        .from('session_attendance')
+        .select('booking_id')
+        .in('booking_id', idsCandidatas)
+    : { data: [], error: null }
+
+  if (errTraidas) {
+    // Sin esta lista NO se puede seguir: se re-consultaría a Daily por todo y
+    // cada insert chocaría contra la PK. Mejor frenar y que reintente el cron.
+    console.error('[attendance] no se pudo leer lo ya traído:', errTraidas.message)
+    return new Response('db error', { status: 502 })
+  }
+
+  const traidas = new Set((yaTraidas ?? []).map((r: { booking_id: string }) => r.booking_id))
 
   let revisadas = 0
   let guardadas = 0

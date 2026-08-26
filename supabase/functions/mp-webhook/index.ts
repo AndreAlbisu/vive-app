@@ -171,6 +171,23 @@ serve(async (req) => {
     // `payment_status = 'rechazado'` y esa transición también tiene que valer.
     const upd = supabase.from('bookings').update(patch).eq('id', bookingId)
     if (newStatus === 'aprobado') upd.neq('payment_status', 'aprobado')
+
+    // 🔴 Y el contracargo NO se pisa. Sin esta guarda, una notificación
+    // `refunded` posterior a un `charged_back` —MP manda hasta 3 por pago y no
+    // garantiza el orden— reescribía `'contracargo'` como `'reembolsado'`,
+    // deshaciendo en silencio la única distinción que existe entre "la plata
+    // volvió porque lo decidimos nosotros" y "la plata volvió porque la sacó el
+    // banco del comprador". Que es exactamente lo que se separó el 25/08.
+    // De paso hace idempotente el contracargo repetido, que hasta ahora volvía
+    // a pisar `refunded_at` en cada reintento — el mismo `.neq` que ya tenía el
+    // camino de PayPal.
+    //
+    // La transición al revés SÍ vale: `reembolsado` → `contracargo` es una
+    // escalada real y esta guarda no la toca.
+    if (newStatus === 'reembolsado' || newStatus === 'contracargo') {
+      upd.neq('payment_status', 'contracargo')
+    }
+
     const { data: cambiada, error: errUpd } = await upd.select('id')
 
     if (errUpd) {

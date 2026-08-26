@@ -1,4 +1,4 @@
-import { cbuError, walletError, normalizarCbu, coachNetFor, paypalEmailError, paypalPayoutCost, platformDeliveryCost, USDT_NETWORK_FEE_USD, PAYPAL_PAYOUT_FEE_PCT } from '@/lib/payout';
+import { cbuError, walletError, normalizarCbu, coachNetFor, paypalEmailError, paypalPayoutCost, platformDeliveryCost, faltaParaInternacional, rielesTexto, USDT_NETWORK_FEE_USD, PAYPAL_PAYOUT_FEE_PCT } from '@/lib/payout';
 
 // Direcciones reales de contratos conocidos: sirven como muestras de formato
 // válido sin exponer la wallet de nadie.
@@ -154,5 +154,56 @@ describe('costo de entrega', () => {
   it('el cruce entre los dos costos cae en USD 75 por envío', () => {
     expect(paypalPayoutCost(75)).toBe(USDT_NETWORK_FEE_USD);
     expect(PAYPAL_PAYOUT_FEE_PCT).toBe(2);
+  });
+});
+
+// 🔴 Espeja al trigger `sync_accepts_international` (`add-payout-rails.sql`).
+// `accepts_international` es DERIVADA: la pantalla no puede prenderla, solo
+// puede decir qué falta. Si estas condiciones se separan de las del trigger, el
+// coach lee "ya está" y el catálogo sigue sin mostrarlo — o al revés.
+describe('qué falta para las sesiones del exterior', () => {
+  it('con precio y al menos un riel no falta nada', () => {
+    expect(faltaParaInternacional(50, true, false)).toBeNull();
+    expect(faltaParaInternacional(50, false, true)).toBeNull();
+    expect(faltaParaInternacional(50, true, true)).toBeNull();
+  });
+
+  it('sin precio lo pide, aunque tenga riel', () => {
+    const msg = faltaParaInternacional(null, true, false);
+    expect(msg).toContain('precio en dólares');
+    expect(msg).not.toContain('cómo querés que te paguemos');
+  });
+
+  it('sin riel lo pide, aunque tenga precio', () => {
+    const msg = faltaParaInternacional(50, false, false);
+    expect(msg).toContain('PayPal o USDT');
+    expect(msg).not.toContain('precio en dólares');
+  });
+
+  it('sin nada los nombra a los dos', () => {
+    const msg = faltaParaInternacional(null, false, false);
+    expect(msg).toContain('precio en dólares');
+    expect(msg).toContain('cómo querés que te paguemos');
+  });
+
+  // El 0 es un precio INVÁLIDO pero no es "sin precio": lo rechazan el CHECK de
+  // `price_usd` (1..10000) y el mínimo de `lib/pricing`. Confundirlos mandaría
+  // al coach a cargar un precio que ya cargó.
+  it('distingue "sin precio" de "precio inválido"', () => {
+    expect(faltaParaInternacional(0, true, false)).toBeNull();
+  });
+});
+
+describe('rieles en criollo', () => {
+  it('nombra los que acepta', () => {
+    expect(rielesTexto(true, true)).toBe('A tu PayPal o en USDT');
+    expect(rielesTexto(true, false)).toBe('A tu cuenta de PayPal');
+    expect(rielesTexto(false, true)).toBe('En USDT');
+  });
+
+  // Sin rieles NO nombra ninguno: la tarjeta del perfil muestra esto como
+  // destino del pago, y nombrar uno que no está elegido se lee como que sí.
+  it('sin ninguno lo dice explícito', () => {
+    expect(rielesTexto(false, false)).toBe('Todavía no elegiste ninguno');
   });
 });

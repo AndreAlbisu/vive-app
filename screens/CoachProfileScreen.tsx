@@ -26,6 +26,7 @@ import { supabase } from '@/lib/supabase';
 import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { priceUsdError, MIN_PRICE_USD } from '@/lib/pricing';
+import { faltaParaInternacional, rielesTexto } from '@/lib/payout';
 import { AppBg } from '@/components/ui/AppBg';
 
 const GLASS = 'rgba(255,248,240,0.55)';
@@ -41,6 +42,8 @@ type CoachProfile = {
   video_url: string | null;
   instant_booking: boolean;
   accepts_international: boolean;
+  accepts_paypal: boolean;
+  accepts_usdt: boolean;
   availability_status: 'activo' | 'en_pausa';
   avatar_url: string | null;
 };
@@ -97,7 +100,7 @@ export default function CoachProfileScreen() {
     (async () => {
       const [{ data: profileRow }, { data: coachRow }] = await Promise.all([
         supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single(),
-        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status, mp_connected, accepts_international, price_usd').eq('profile_id', user.id).maybeSingle(),
+        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status, mp_connected, accepts_international, accepts_paypal, accepts_usdt, price_usd').eq('profile_id', user.id).maybeSingle(),
       ]);
 
       setProfile({
@@ -110,6 +113,8 @@ export default function CoachProfileScreen() {
         video_url: coachRow?.video_url ?? null,
         instant_booking: coachRow?.instant_booking ?? false,
         accepts_international: coachRow?.accepts_international ?? false,
+        accepts_paypal: coachRow?.accepts_paypal ?? false,
+        accepts_usdt: coachRow?.accepts_usdt ?? false,
         availability_status: (coachRow?.availability_status ?? 'activo') as 'activo' | 'en_pausa',
         avatar_url: profileRow?.avatar_url ?? null,
       });
@@ -122,15 +127,38 @@ export default function CoachProfileScreen() {
     })();
   }, [user]);
 
-  // Refresca al volver de /coach-topics
+  // Refresca al volver de /coach-topics y de /coach-datos-cobro.
+  //
+  // Los tres `accepts_*` son DERIVADOS por trigger desde `coach_payout_accounts`
+  // (`add-payout-rails.sql`): esta pantalla no los escribe y no puede
+  // adivinarlos. Sin volver a leerlos, quien configuraba un riel y volvía seguía
+  // viendo "Desactivadas" hasta reiniciar la app — y esa pantalla es
+  // exactamente adonde lo manda esta sección.
   useFocusEffect(
     useCallback(() => {
       if (!coachId) return;
+
       supabase
         .from('coach_topics')
         .select('topic')
         .eq('coach_id', coachId)
         .then(({ data }) => setTopics((data ?? []).map(t => t.topic as string)));
+
+      supabase
+        .from('coaches')
+        .select('accepts_international, accepts_paypal, accepts_usdt, price_usd')
+        .eq('id', coachId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!data) return;
+          setProfile(prev => prev && {
+            ...prev,
+            accepts_international: data.accepts_international ?? false,
+            accepts_paypal: data.accepts_paypal ?? false,
+            accepts_usdt: data.accepts_usdt ?? false,
+            price_usd: data.price_usd ?? null,
+          });
+        });
     }, [coachId])
   );
 
@@ -548,6 +576,10 @@ export default function CoachProfileScreen() {
     ]);
   }
 
+  const faltaInternacional = profile
+    ? faltaParaInternacional(profile.price_usd, profile.accepts_paypal, profile.accepts_usdt)
+    : null;
+
   const videoPlayer = useVideoPlayer(profile?.video_url ?? null, p => { p.loop = false; });
   const [videoModalVisible, setVideoModalVisible] = useState(false);
 
@@ -923,7 +955,7 @@ export default function CoachProfileScreen() {
             <Text style={s.toggleDesc}>
               {profile?.accepts_international
                 ? 'Atendé a personas que viven afuera. Tus horarios no cambian — seguís atendiendo en las franjas que ya cargaste, el que se acomoda es el usuario.'
-                : 'Se activan solas cuando cargues un precio en dólares y al menos un medio para cobrarlas. Tocá acá para configurarlo.'}
+                : 'Se activan solas cuando tengas un precio en dólares y al menos un medio para cobrarlas. Tocá acá para elegir el medio.'}
             </Text>
           </View>
           <MaterialCommunityIcons
@@ -933,86 +965,92 @@ export default function CoachProfileScreen() {
           />
         </TouchableOpacity>
 
-        {profile?.accepts_international && (
-          <>
-            {/* Lo que sí le cambia. Va explícito y no en letra chica: si se
-                entera después de la primera sesión, va a pensar que le
-                retuvimos la plata. */}
-            <View style={s.commissionCard}>
-              <MaterialCommunityIcons name="information-outline" size={18} color={ViveColors.accent} />
-              <Text style={s.commissionText}>
-                Estas sesiones <Text style={s.commissionStrong}>no te entran por Mercado Pago</Text>:
-                las cobra VIVE y te las transferimos cada semana, por sesiones ya realizadas.
-              </Text>
-            </View>
+        {/* 🔴 El precio en dólares y el acceso a los rieles van SIEMPRE visibles,
+            NO adentro de `accepts_international`. Desde que esa columna se
+            DERIVA (`price_usd is not null` y algún riel aceptado), tener acá
+            adentro el campo que fija `price_usd` cerraba el circuito: el coach
+            sin precio no veía nunca el input que se lo habría puesto, y la
+            tarjeta de arriba le decía "cargá un precio en dólares" mandándolo a
+            una pantalla donde ese campo no existe. Se activan solas, sí, pero
+            hay que poder darles con qué. */}
 
-            {/* Precio en dólares. Lo fija el coach, no se convierte desde el
-                precio en pesos: el de afuera es una decisión comercial distinta,
-                y una conversión dejaría a VIVE en el medio de la discusión de
-                cotización cada vez que se mueve el dólar. */}
-            <View style={[s.toggleCard, s.stackedCard]}>
-              <View style={s.toggleInfo}>
-                <Text style={s.toggleTitle}>Precio en dólares</Text>
-                <Text style={s.toggleDesc}>
-                  Lo que cobrás por una sesión desde el exterior. En dólares enteros.
-                </Text>
-              </View>
-              <View style={s.usdRow}>
-                <Text style={s.usdPrefix}>US$</Text>
-                <TextInput
-                  style={s.usdInput}
-                  // ⚠️ `value={priceUsdInput}` a secas, sin `|| precio guardado`.
-                  // Con el fallback, borrar el campo lo dejaba vacío por un
-                  // instante y volvía a mostrar el valor guardado, así que era
-                  // IMPOSIBLE vaciarlo: lo que se tipeaba quedaba pegado
-                  // adelante del número viejo.
-                  value={priceUsdInput}
-                  onChangeText={setPriceUsdInput}
-                  onBlur={savePriceUsd}
-                  placeholder="50"
-                  placeholderTextColor="rgba(135,131,92,0.45)"
-                  keyboardType="number-pad"
-                  maxLength={5}
-                />
-                {savingPriceUsd && <ActivityIndicator size="small" color={ViveColors.primary} />}
-              </View>
-            </View>
+        {/* Precio en dólares. Lo fija el coach, no se convierte desde el
+            precio en pesos: el de afuera es una decisión comercial distinta,
+            y una conversión dejaría a VIVE en el medio de la discusión de
+            cotización cada vez que se mueve el dólar. */}
+        <View style={[s.toggleCard, s.stackedCard]}>
+          <View style={s.toggleInfo}>
+            <Text style={s.toggleTitle}>Precio en dólares</Text>
+            <Text style={s.toggleDesc}>
+              Lo que cobrás por una sesión desde el exterior. En dólares enteros.
+            </Text>
+          </View>
+          <View style={s.usdRow}>
+            <Text style={s.usdPrefix}>US$</Text>
+            <TextInput
+              style={s.usdInput}
+              // ⚠️ `value={priceUsdInput}` a secas, sin `|| precio guardado`.
+              // Con el fallback, borrar el campo lo dejaba vacío por un
+              // instante y volvía a mostrar el valor guardado, así que era
+              // IMPOSIBLE vaciarlo: lo que se tipeaba quedaba pegado
+              // adelante del número viejo.
+              value={priceUsdInput}
+              onChangeText={setPriceUsdInput}
+              onBlur={savePriceUsd}
+              placeholder="50"
+              placeholderTextColor="rgba(135,131,92,0.45)"
+              keyboardType="number-pad"
+              maxLength={5}
+            />
+            {savingPriceUsd && <ActivityIndicator size="small" color={ViveColors.primary} />}
+          </View>
+        </View>
 
-            {/* Qué le falta para poder recibir reservas. Sin esto activa el
-                toggle, no pasa nada, y no tiene forma de saber por qué. */}
-            {profile?.price_usd != null && (
-              <Text style={s.priceHint}>
-                El cliente del exterior paga USD {profile.price_usd}, pague como pague.
-                La comisión de las sesiones internacionales es del 25% e incluye todos los
-                costos de cobrarte del exterior y transferirte — cobrás USD{' '}
-                {Math.round(profile.price_usd * 0.75 * 100) / 100} por sesión.
-                Mínimo USD {MIN_PRICE_USD}.
-              </Text>
-            )}
-
-            {(profile?.price_usd == null) && (
-              <View style={s.commissionCard}>
-                <MaterialCommunityIcons name="alert-outline" size={18} color="#8C4A31" />
-                <Text style={s.commissionText}>
-                  Te falta fijar tu precio en dólares y cargar cómo querés que te paguemos. Hasta
-                  entonces no vas a aparecer para usuarios del exterior.
-                </Text>
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={[s.toggleCard, s.stackedCard]}
-              onPress={() => router.push('/coach-datos-cobro')}
-              activeOpacity={0.85}
-            >
-              <View style={s.toggleInfo}>
-                <Text style={s.toggleTitle}>Cómo te pagamos</Text>
-                <Text style={s.toggleDesc}>Transferencia a tu cuenta o USDT</Text>
-              </View>
-              <MaterialIcons name="arrow-forward-ios" size={16} color="rgba(135,131,92,0.6)" />
-            </TouchableOpacity>
-          </>
+        {profile?.price_usd != null && (
+          <Text style={s.priceHint}>
+            El cliente del exterior paga USD {profile.price_usd}, pague como pague.
+            La comisión es del 25% en la primera sesión con cada persona y del 20% en
+            las siguientes, e incluye todos los costos de cobrarte del exterior y
+            transferirte — cobrás USD {Math.round(profile.price_usd * 0.75 * 100) / 100}{' '}
+            la primera y USD {Math.round(profile.price_usd * 0.80 * 100) / 100} las que sigan.
+            Mínimo USD {MIN_PRICE_USD}.
+          </Text>
         )}
+
+        {/* Qué le falta para que se activen. Sin esto no pasa nada y no tiene
+            forma de saber por qué. */}
+        {faltaInternacional && (
+          <View style={s.commissionCard}>
+            <MaterialCommunityIcons name="alert-outline" size={18} color="#8C4A31" />
+            <Text style={s.commissionText}>{faltaInternacional}</Text>
+          </View>
+        )}
+
+        {profile?.accepts_international && (
+          /* Lo que sí le cambia. Va explícito y no en letra chica: si se entera
+             después de la primera sesión, va a pensar que le retuvimos la plata. */
+          <View style={s.commissionCard}>
+            <MaterialCommunityIcons name="information-outline" size={18} color={ViveColors.accent} />
+            <Text style={s.commissionText}>
+              Estas sesiones <Text style={s.commissionStrong}>no te entran por Mercado Pago</Text>:
+              las cobra VIVE y te las transferimos cada semana, por sesiones ya realizadas.
+            </Text>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[s.toggleCard, s.stackedCard]}
+          onPress={() => router.push('/coach-datos-cobro')}
+          activeOpacity={0.85}
+        >
+          <View style={s.toggleInfo}>
+            <Text style={s.toggleTitle}>Cómo te pagamos</Text>
+            <Text style={s.toggleDesc}>
+              {rielesTexto(!!profile?.accepts_paypal, !!profile?.accepts_usdt)}
+            </Text>
+          </View>
+          <MaterialIcons name="arrow-forward-ios" size={16} color="rgba(135,131,92,0.6)" />
+        </TouchableOpacity>
 
         {/* ── Reseñas recibidas ─────────────────────────────── */}
         <Text style={[s.sectionTitle, s.sectionSpaced]}>Reseñas recibidas</Text>

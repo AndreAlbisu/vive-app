@@ -208,7 +208,7 @@ serve(async (req) => {
     for (const captureId of capturas) {
       const { data: b } = await admin
         .from('bookings')
-        .select('id, paid_out_at, payout_reference')
+        .select('id, paid_out_at, payout_reference, disputed_at')
         .eq('payment_id', captureId)
         .eq('payment_provider', 'paypal')
         .maybeSingle()
@@ -221,9 +221,24 @@ serve(async (req) => {
       // Se marca la disputa; `payment_status` NO se toca. La plata sigue siendo
       // nuestra hasta que PayPal resuelva, y adelantarse a marcarla como perdida
       // rompería la conciliación si la disputa se gana.
+      //
+      // 🔴 `disputed_at` es CUÁNDO SE ABRIÓ, y por eso solo se escribe si está
+      // vacío. PayPal manda `CUSTOMER.DISPUTE.UPDATED` varias veces por disputa
+      // (cambio de estado, respuesta del comprador, revisión), y pisarlo con
+      // `now()` en cada uno hacía perder el único dato que la columna guarda:
+      // después del primer update pasaba a decir "cuándo nos avisaron por
+      // última vez", que no es lo que documenta ni lo que se necesita para
+      // contar los plazos.
+      //
+      // `dispute_reason` SÍ se pisa: ahí interesa el estado más reciente.
+      const patch: Record<string, string> = {
+        dispute_reason: `${motivo} (${estado})`.trim(),
+      }
+      if (!b.disputed_at) patch.disputed_at = new Date().toISOString()
+
       await admin
         .from('bookings')
-        .update({ disputed_at: new Date().toISOString(), dispute_reason: `${motivo} (${estado})`.trim() })
+        .update(patch)
         .eq('id', b.id)
 
       console.error(
@@ -236,8 +251,25 @@ serve(async (req) => {
     return new Response('dispute recorded', { status: 200 })
   }
 
+  // 🔴 `DENIED` NO es un contracargo: es una captura que PayPal RECHAZÓ, o sea
+  // plata que nunca se movió. Estaba metida en la misma rama que `REVERSED` y
+  // eso tenía dos consecuencias. La visible: `payment_id` se escribe recién en
+  // `PAYMENT.CAPTURE.COMPLETED`, así que la búsqueda no encontraba nada y cada
+  // tarjeta rechazada dejaba un `🔴 REVERSIÓN sobre una captura desconocida` en
+  // los logs — ruido con forma de incidente. La grave, si alguna vez llegara a
+  // matchear: una reserva que nunca se pagó quedaba en `'contracargo'` con
+  // `refunded_at`, o sea contada como plata devuelta en el informe del contador
+  // (`lib/admin.ts`) y en `reversiones_despues_de_pagar`.
+  //
+  // No hay estado que cambiar: la reserva sigue en `'pendiente'` y la barre
+  // `expire_unpaid_checkouts()` como cualquier checkout no completado.
+  if (tipo === 'PAYMENT.CAPTURE.DENIED') {
+    console.log('[paypal-webhook] captura rechazada por PayPal (no hubo cobro):', recurso.id ?? 's/id')
+    return new Response('capture denied', { status: 200 })
+  }
+
   // La plata volvió por decisión del comprador. Acá sí cambia el estado del pago.
-  if (tipo === 'PAYMENT.CAPTURE.REVERSED' || tipo === 'PAYMENT.CAPTURE.DENIED') {
+  if (tipo === 'PAYMENT.CAPTURE.REVERSED') {
     const captureId: string = recurso.id ?? ''
     if (!captureId) return new Response('no capture id', { status: 200 })
 

@@ -121,11 +121,22 @@ serve(async (req) => {
   // que hace `usdt-create-payment`.
   const { data: payout } = await admin
     .from('coach_payout_accounts')
-    .select('coach_id')
+    .select('coach_id, accepts_paypal')
     .eq('coach_id', coach.id)
     .maybeSingle()
   if (!payout) {
     return json({ error: 'Este profesional todavía no completó sus datos de cobro' }, 409)
+  }
+  // 🔴 Y que acepte ESTE riel — la regla espejo (D4), del lado del servidor.
+  // Hasta ahora solo se validaba que existiera fila de datos de cobro, o sea
+  // "tiene ALGÚN medio", y la elección de cuál ofrecer vivía únicamente en la
+  // UI. Los flags se leen una sola vez al abrir la pantalla de confirmación, así
+  // que un cliente con la pantalla vieja abierta —o una llamada directa a la
+  // función— podía cobrarle a alguien por un riel que el coach no acepta. Con
+  // dólares cobrados y sin destino donde pagarlos: exactamente el pozo que la
+  // regla existe para evitar.
+  if (!payout.accepts_paypal) {
+    return json({ error: 'Este profesional no acepta cobrar por PayPal' }, 409)
   }
 
   const token = await getAccessToken()

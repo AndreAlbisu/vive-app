@@ -125,8 +125,30 @@ export default function CoachPayoutScreen() {
     // se borra: la base ya impide aceptar un riel sin destino (CHECK), así que no
     // puede haber un envío al lugar equivocado — y conservarlo evita tener que
     // volver a tipear una wallet si se reactiva.
+    // `method` es la columna vieja, la de un método único. Ya no es la fuente de
+    // verdad —lo son los dos `accepts_*`— pero se sigue escribiendo por dos
+    // motivos. Uno: es el valor que lee un build viejo mientras la migración ya
+    // corrió y la app nueva no está en todos los teléfonos; no escribirla lo
+    // dejaría mirando el método anterior, que es peor que un método incompleto.
+    // Dos: hasta `fix-payout-rails-trigger.sql` la columna era NOT NULL sin
+    // default, así que omitirla hacía fallar el upsert entero — y no solo en el
+    // alta: Postgres valida el NOT NULL sobre la tupla propuesta ANTES de
+    // resolver el `on conflict`, así que tampoco podía guardar quien ya tenía
+    // fila.
+    //
+    // Se deriva del primer riel aceptado QUE TENGA SU DESTINO CARGADO, nunca a
+    // secas: los tres CHECK viejos por método (`method <> 'x' or <destino> is
+    // not null`) siguen vivos, y escribir 'usdt' sin wallet volvería a hacer
+    // fallar el guardado por el otro lado. Sin rieles queda en null, que ahora
+    // es un estado válido y es además el que corresponde: "no cobro del exterior".
+    const method =
+      aceptaPaypal && paypalEmail.trim() ? 'paypal'
+      : aceptaUsdt && wallet.trim() ? 'usdt'
+      : null;
+
     const fila = {
       coach_id: coachId,
+      method,
       accepts_paypal: aceptaPaypal,
       accepts_usdt: aceptaUsdt,
       paypal_email: aceptaPaypal ? paypalEmail.trim() : (paypalEmail.trim() || null),
