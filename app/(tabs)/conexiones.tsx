@@ -815,8 +815,14 @@ const s = StyleSheet.create({
   // y las cards de abajo — se achicó `marginTop` acá (antes heredaba el 10 de
   // `askWrap`) además del `marginBottom`, para traer el CONTENIDO hacia el
   // título sin tocar el título en sí.
+  // marginTop calculado contra recursos.tsx para que quede a la misma altura
+  // de pantalla que "Herramientas de Vita" (pedido explícito, con captura
+  // comparativa): la diferencia no es solo este margen — el header de acá
+  // tiene marginTop:10 contra el -2 de recursos.tsx, y el título mide 32/38
+  // contra 34/40 — así que el número compensa las tres diferencias juntas,
+  // no solo esta.
   askWrapTight: {
-    marginTop: 10,
+    marginTop: -6,
     marginBottom: 2,
   },
   // Título de Fase 2 (nombre del eje elegido) — Fase 1 ya no tiene título propio.
