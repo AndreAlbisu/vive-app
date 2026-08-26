@@ -18,7 +18,6 @@ import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { personasQueSeCaen, haceCuanto, type PersonaEnRiesgo } from '@/lib/coachContinuity';
-import { esperaConfirmacionDelCoach } from '@/lib/bookingHelpers';
 import { AppBg } from '@/components/ui/AppBg';
 import { visibilityTeaser, type VisibilityTeaser } from '@/lib/coachVisibility';
 import { scheduledAtMs, daysFromTodayAr, todayInAr } from '@/lib/time';
@@ -109,7 +108,6 @@ export default function CoachHomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [visibility, setVisibility] = useState<VisibilityTeaser | null>(null);
   const [seCaen, setSeCaen] = useState<PersonaCayendo[]>([]);
-  const [esperan, setEsperan] = useState<{ cuantos: number; primero: string } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -239,36 +237,6 @@ export default function CoachHomeScreen() {
       setPrep(null);
     }
 
-    // ── Quién te está esperando ──────────────────────────────────────────────
-    // 🔴 Hoy esto vive SOLO en el punto rojo de la pestaña Reservas. Es lo único
-    // accionable de toda la app que no se nombra en ningún lado: hay una persona
-    // esperando una respuesta y el coach se entera por un punto de seis píxeles
-    // en otra pestaña.
-    const { data: pendientes } = await supabase
-      .from('bookings')
-      .select('id, user_id, scheduled_date, scheduled_time, status, payment_status, preference_id, usdt_amount')
-      .eq('coach_id', coachId)
-      .eq('status', 'pendiente')
-      .gte('scheduled_date', todayInAr())
-      .order('scheduled_date', { ascending: true })
-      .order('scheduled_time', { ascending: true });
-
-    // `esperaConfirmacionDelCoach` y no `status === 'pendiente'` a secas: una
-    // reserva con el cobro sin acreditar también está pendiente, pero espera a
-    // la plata y el coach NO la puede confirmar. Contarla acá lo mandaría a una
-    // pantalla donde esa fila no tiene botón.
-    const esperando = (pendientes ?? []).filter(esperaConfirmacionDelCoach);
-    if (esperando.length === 0) {
-      setEsperan(null);
-    } else {
-      const { data: quien } = await supabase
-        .from('profiles').select('name').eq('id', esperando[0].user_id as string).maybeSingle();
-      setEsperan({
-        cuantos: esperando.length,
-        primero: (quien?.name as string) ?? 'Alguien',
-      });
-    }
-
     // ── Quién se está cayendo ────────────────────────────────────────────────
     // Se pide aparte de las confirmadas de arriba porque son otro conjunto: las
     // COMPLETADAS, que es lo único que prueba que la relación existió.
@@ -368,30 +336,6 @@ export default function CoachHomeScreen() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* 🔴 Va ARRIBA de la semana y de la próxima sesión: es lo único de
-              la pantalla donde hay una PERSONA esperando una respuesta, y encima
-              con reloj — el horario se libera si no se contesta. Todo lo demás
-              es información; esto es una deuda. */}
-          {esperan && (
-            <TouchableOpacity
-              style={s.esperanCard}
-              activeOpacity={0.9}
-              onPress={() => router.navigate('/reservas')}>
-              <View style={s.esperanDot} />
-              <View style={{ flex: 1 }}>
-                <Text style={s.esperanTitle}>
-                  {esperan.cuantos === 1
-                    ? `${esperan.primero} espera tu confirmación`
-                    : `${esperan.cuantos} personas esperan tu confirmación`}
-                </Text>
-                <Text style={s.esperanTxt}>
-                  Mientras no contestes, ese horario les queda reservado a medias.
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={16} color={TERRA} />
-            </TouchableOpacity>
-          )}
 
           {/* Tu semana */}
           <TouchableOpacity style={s.week} activeOpacity={0.9} onPress={() => router.push('/coach-agenda')}>
@@ -614,19 +558,6 @@ const s = StyleSheet.create({
   nextEmptyBtnTxt: { color: GREEN_TXT, fontSize: 12.5, fontFamily: ViveFonts.semibold },
 
   // Cómo aparecer en Conexiones
-  esperanCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: TERRA_SOFT,
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 14,
-  },
-  esperanDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: TERRA },
-  esperanTitle: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#8C4A31' },
-  esperanTxt: { fontFamily: ViveFonts.regular, fontSize: 12, color: '#8C4A31', opacity: 0.8, marginTop: 2 },
-
   caenWrap: {
     backgroundColor: CARD,
     borderRadius: 18,
