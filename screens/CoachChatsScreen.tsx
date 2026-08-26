@@ -14,6 +14,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { haceCuanto } from '@/lib/coachContinuity';
+import { daysFromTodayAr, todayInAr } from '@/lib/time';
 import { useAuth } from '@/context/AuthContext';
 import { decryptMessage } from '@/lib/encryption';
 import { AppBg } from '@/components/ui/AppBg';
@@ -42,9 +44,33 @@ type ChatRoom = {
   lastMessageAt: string | null;
   hasUnread: boolean;
   archived: boolean;
+  /** 🔴 El estado de la RELACIÓN, no de la conversación. Esta pantalla listaba
+   *  a las personas correctas —las salas nacen de una reserva— pero las
+   *  mostraba solo como hilos de mensajes. El coach no piensa en conversaciones
+   *  ni en reservas: piensa en personas, y de cada una quiere saber cuándo la
+   *  vio por última vez y si tiene próxima. Eso no estaba en ningún lado de la
+   *  app. */
+  sesiones: number;
+  ultimaIso: string | null;
+  proximaIso: string | null;
 };
 
 type ResourceMeta = { type?: string; resource_title?: string; recommendation_id?: string };
+
+/** Una línea con el estado de la relación. Vacía cuando no hay nada que decir
+ *  —alguien que reservó y todavía no tuvo su primera sesión— porque inventar
+ *  texto para llenar el renglón es exactamente lo que vuelve ilegible una lista. */
+function textoRelacion(r: { sesiones: number; ultimaIso: string | null; proximaIso: string | null }): string {
+  const partes: string[] = [];
+  if (r.sesiones > 0) partes.push(r.sesiones === 1 ? '1 sesión' : `${r.sesiones} sesiones`);
+  if (r.proximaIso) {
+    const d = new Date(`${r.proximaIso}T12:00:00-03:00`);
+    partes.push(`próxima ${d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}`);
+  } else if (r.ultimaIso) {
+    partes.push(haceCuanto(-daysFromTodayAr(r.ultimaIso)).toLowerCase());
+  }
+  return partes.join(' · ');
+}
 
 function getInitials(name: string): string {
   return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || '??';
@@ -108,6 +134,37 @@ export default function CoachChatsScreen() {
       (recs ?? []).forEach(r => { openedMap[r.id as string] = !!r.opened_at; });
     }
 
+    // Estado de la relación con cada persona. Una sola consulta para todas:
+    // ⚠️ `bookings.coach_id` es `coaches.id`, mientras que `salas.coach_id` es
+    // `profiles.id` — dos ids con nombres parecidos, la trampa recurrente de
+    // este proyecto. Hay que traducir antes de preguntar.
+    const { data: coachRow } = await supabase
+      .from('coaches').select('id').eq('profile_id', user.id).maybeSingle();
+
+    const rel = new Map<string, { sesiones: number; ultimaIso: string | null; proximaIso: string | null }>();
+    if (coachRow?.id) {
+      const hoy = todayInAr();
+      const { data: bks } = await supabase
+        .from('bookings')
+        .select('user_id, scheduled_date, status')
+        .eq('coach_id', coachRow.id)
+        .in('user_id', userIds);
+
+      for (const b of bks ?? []) {
+        const uid = b.user_id as string;
+        const fecha = b.scheduled_date as string;
+        const cur = rel.get(uid) ?? { sesiones: 0, ultimaIso: null, proximaIso: null };
+        if (b.status === 'completada') {
+          cur.sesiones += 1;
+          if (!cur.ultimaIso || fecha > cur.ultimaIso) cur.ultimaIso = fecha;
+        } else if ((b.status === 'confirmada' || b.status === 'pendiente') && fecha >= hoy) {
+          // La más CERCANA de las futuras, no la última que llegó.
+          if (!cur.proximaIso || fecha < cur.proximaIso) cur.proximaIso = fecha;
+        }
+        rel.set(uid, cur);
+      }
+    }
+
     const thirtyDaysAgo = Date.now() - 30 * 86400000;
 
     const results: ChatRoom[] = lasts.map(l => {
@@ -147,6 +204,9 @@ export default function CoachChatsScreen() {
         lastMessageAt: at,
         hasUnread: unreadSalaIds.has(l.salaId),
         archived,
+        sesiones: rel.get(l.userId)?.sesiones ?? 0,
+        ultimaIso: rel.get(l.userId)?.ultimaIso ?? null,
+        proximaIso: rel.get(l.userId)?.proximaIso ?? null,
       };
     });
 
@@ -184,6 +244,10 @@ export default function CoachChatsScreen() {
             {room.tag === 'resource' && <Text style={s.tagRes}>RECURSO</Text>}
             <Text style={[s.prevTxt, room.hasUnread && s.prevTxtUnread]} numberOfLines={1}>{room.preview}</Text>
           </View>
+          {/* La relación en una línea. Se prioriza la PRÓXIMA sobre la última:
+              lo primero que quiere saber un profesional al mirar un nombre es
+              si ya lo tiene agendado. Recién si no, cuánto hace que no lo ve. */}
+          <Text style={s.relTxt} numberOfLines={1}>{textoRelacion(room)}</Text>
         </View>
         <View style={s.meta}>
           <Text style={s.metaTime}>{formatMessageDate(room.lastMessageAt)}</Text>
@@ -196,14 +260,14 @@ export default function CoachChatsScreen() {
   return (
     <AppBg>
       <SafeAreaView style={s.safe} edges={['top']}>
-        <View style={s.header}><Text style={s.title}>Chats</Text></View>
+        <View style={s.header}><Text style={s.title}>Tus personas</Text></View>
 
         {loading ? (
           <View style={s.loadingState}><ActivityIndicator size="large" color={FOREST} /></View>
         ) : rooms.length === 0 ? (
           <View style={s.emptyState}>
             <Text style={s.emptyText}>
-              Todavía no tenés conversaciones.{'\n\n'}Los chats se habilitan cuando aceptás una solicitud — el motivo del usuario queda como primer mensaje.
+              Todavía no atendiste a nadie.{'\n\n'}Cuando aceptes una solicitud, esa persona aparece acá — con sus sesiones, cuándo la viste por última vez y la conversación adentro.
             </Text>
           </View>
         ) : (
@@ -247,6 +311,12 @@ const s = StyleSheet.create({
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
   avatarTxt: { fontFamily: ViveFonts.bold, fontSize: 15, color: FOREST },
   chatInfo: { flex: 1, minWidth: 0 },
+  relTxt: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 11,
+    color: FOREST_SOFT,
+    marginTop: 3,
+  },
   chatName: { fontSize: 13.5, fontFamily: ViveFonts.semibold, color: FOREST },
   chatNameUnread: { fontFamily: ViveFonts.bold },
   prev: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },

@@ -76,11 +76,15 @@ export default function CoachTabLayout() {
     return () => { supabase.removeChannel(channel); };
   }, [user?.id, refreshUnread]);
 
-  // Orden sin cambios: Inicio → Reservas → Chats → Recursos.
+  // Orden sin cambios: Inicio → Reservas → Personas → Recursos.
+  // 🔴 "Chats" pasó a "Personas" (26/08/2026). No es solo el rótulo: la pantalla
+  // dejó de listar conversaciones y pasa a listar gente, con las sesiones que
+  // llevan juntos y cuándo fue la última. El coach no busca "una conversación",
+  // busca a alguien — y esa lista no existía en ningún lado de la app.
   const tabs: IslandTab[] = [
     { name: 'index',    icon: 'calendar',        label: 'Inicio' },
     { name: 'reservas', icon: 'clipboard',       label: 'Reservas', dot: pendingCount > 0 },
-    { name: 'chats',    icon: 'message-circle',  label: 'Chats', dot: hasUnreadChats },
+    { name: 'chats',    icon: 'users',           label: 'Personas', dot: hasUnreadChats },
     { name: 'recursos', icon: 'book-open',       label: 'Recursos' },
   ];
 
