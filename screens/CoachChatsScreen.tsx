@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -94,12 +95,49 @@ export default function CoachChatsScreen() {
   const [showArchived, setShowArchived] = useState(false);
   const { unreadSalaIds } = useUnreadSalas({ userId: user?.id ?? null, role: 'coach' });
 
+  /** Archivar / desarchivar. Se escribe el valor EXPLÍCITO (true o false), no
+   *  se vuelve a null: una vez que el coach opinó, su decisión manda sobre la
+   *  regla automática para siempre. Volver a null sería "olvidate de lo que
+   *  dije", que no es lo que pide ninguno de los dos botones. */
+  const cambiarArchivado = useCallback(async (room: ChatRoom) => {
+    const nuevo = !room.archived;
+    // Optimista: la lista es la respuesta al toque, y esperar el round trip
+    // para mover una fila se siente roto.
+    setRooms(prev => prev.map(r => (r.salaId === room.salaId ? { ...r, archived: nuevo } : r)));
+
+    const { error } = await supabase
+      .from('salas')
+      .update({ coach_archived: nuevo })
+      .eq('id', room.salaId);
+
+    if (error) {
+      setRooms(prev => prev.map(r => (r.salaId === room.salaId ? { ...r, archived: !nuevo } : r)));
+      Alert.alert('No se pudo archivar', 'Probá de nuevo en unos minutos');
+    }
+  }, []);
+
+  function preguntarArchivar(room: ChatRoom) {
+    Alert.alert(
+      room.userName,
+      room.archived
+        ? 'Vuelve a tu lista de personas.'
+        : 'Se guarda en Archivados. Si te escribe, te va a llegar igual — solo deja de aparecer arriba.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: room.archived ? 'Sacar de archivados' : 'Archivar',
+          onPress: () => cambiarArchivado(room),
+        },
+      ],
+    );
+  }
+
   const loadRooms = useCallback(async () => {
     if (!user) return;
 
     const { data: salas, error } = await supabase
       .from('salas')
-      .select('id, user_id, coach_last_read_at')
+      .select('id, user_id, coach_last_read_at, coach_archived')
       .eq('coach_id', user.id);
 
     if (error || !salas || salas.length === 0) { setRooms([]); setLoading(false); return; }
@@ -122,6 +160,8 @@ export default function CoachChatsScreen() {
       salaId: sala.id as string,
       userId: sala.user_id as string,
       lastMsg: lastMsgMap[sala.id as string] ?? null,
+      // `null` = el coach nunca opinó y manda la regla automática.
+      decidido: (sala as { coach_archived?: boolean | null }).coach_archived ?? null,
     }));
 
     // Estado abierto/sin abrir de los recursos recomendados (batch por recommendation_id).
@@ -191,8 +231,15 @@ export default function CoachChatsScreen() {
       }
 
       // Archivado: última actividad de solo sistema (cancelación/aviso) y vieja (>30d).
-      const archived = (senderType === 'system' || senderType === 'system_cancelled')
+      // Regla automática: la conversación terminó en un mensaje del sistema y
+      // ya pasó un mes. Sirve para lo que murió solo.
+      const porRegla = (senderType === 'system' || senderType === 'system_cancelled')
         && !!at && new Date(at).getTime() < thirtyDaysAgo;
+      // 🔴 Lo que el coach decidió GANA, en las dos direcciones: archivar algo
+      // vivo y rescatar algo que la regla se llevó. Por eso `decidido` es de
+      // tres estados y no un booleano — con dos, "todavía no opinó" y "quiere
+      // verlo activo" serían lo mismo y la regla no correría nunca.
+      const archived = l.decidido ?? porRegla;
 
       return {
         salaId: l.salaId,
@@ -231,6 +278,8 @@ export default function CoachChatsScreen() {
         key={room.salaId}
         style={[s.chat, dimmed && s.chatDimmed]}
         onPress={() => router.push({ pathname: '/sala', params: { sala_id: room.salaId } })}
+        onLongPress={() => preguntarArchivar(room)}
+        delayLongPress={350}
         activeOpacity={0.8}>
         {room.avatarUrl ? (
           <Image source={{ uri: room.avatarUrl }} style={s.avatar} />
@@ -274,11 +323,24 @@ export default function CoachChatsScreen() {
           <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
             {active.map(r => renderRoom(r))}
 
+            {/* El gesto no se adivina. Se dice una sola vez, al pie de la lista
+                activa, y solo cuando hay algo que archivar. */}
+            {active.length > 0 && (
+              <Text style={s.hintArch}>Mantené presionada una persona para archivarla</Text>
+            )}
+
             {archived.length > 0 && (
               <>
                 <TouchableOpacity style={s.archLink} activeOpacity={0.7} onPress={() => setShowArchived(v => !v)}>
                   <Feather name={showArchived ? 'chevron-down' : 'chevron-right'} size={16} color={FOREST_SOFT} />
                   <Text style={s.archLinkTxt}>Archivados ({archived.length})</Text>
+                  {/* 🔴 Archivar NO silencia. Si alguien archivado escribe, el
+                      punto aparece acá: la conversación deja de estar arriba,
+                      pero el coach no se pierde a un cliente que lo buscó. Se
+                      eligió esto antes que desarchivar solo —como hace el mail—
+                      porque deshacer una decisión del coach sin avisarle es
+                      peor que un punto de más. */}
+                  {archived.some(r => r.hasUnread) && <View style={s.archDot} />}
                 </TouchableOpacity>
                 {showArchived && archived.map(r => renderRoom(r, true))}
               </>
@@ -311,6 +373,16 @@ const s = StyleSheet.create({
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
   avatarTxt: { fontFamily: ViveFonts.bold, fontSize: 15, color: FOREST },
   chatInfo: { flex: 1, minWidth: 0 },
+  hintArch: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: FOREST_SOFT,
+    opacity: 0.75,
+    textAlign: 'center',
+    marginTop: 14,
+  },
+  archDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: TERRA, marginLeft: 6 },
+
   relTxt: {
     fontFamily: ViveFonts.medium,
     fontSize: 11,
