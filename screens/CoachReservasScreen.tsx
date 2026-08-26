@@ -17,6 +17,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { esperaConfirmacionDelCoach } from '@/lib/bookingHelpers';
 import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
 import { encryptMessage } from '@/lib/encryption';
@@ -114,9 +115,12 @@ export default function CoachReservasScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  /** Se inició un cobro y todavía no se acreditó. */
-  const esperandoPago = (b: any) =>
-    b.payment_status === 'pendiente' && (b.preference_id != null || b.usdt_amount != null);
+  /** Se inició un cobro y todavía no se acreditó.
+   *  La regla vive en `lib/bookingHelpers.ts` porque la Home la necesita para
+   *  contar quién espera al coach — y dos copias de esto se separan solas. Acá
+   *  es el complemento: sobre una fila `pendiente`, "no espera al coach" es
+   *  exactamente "espera a la plata". */
+  const esperandoPago = (b: any) => !esperaConfirmacionDelCoach(b);
 
   // 🔴 Las que esperan pago se MUESTRAN pero no se pueden CONFIRMAR. Confirmar
   // compromete el horario, le avisa al usuario y cancela a los competidores del

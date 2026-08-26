@@ -1,4 +1,4 @@
-import { isCancelLate } from '../lib/bookingHelpers';
+import { isCancelLate, esperaConfirmacionDelCoach } from '../lib/bookingHelpers';
 import { hasContactInfo } from '../lib/contactInfoGuard';
 import { encryptMessage, decryptMessage } from '../lib/encryption';
 
@@ -125,5 +125,36 @@ describe('encryptMessage / decryptMessage', () => {
   // mensajes. Un texto plano viejo tiene que sobrevivir a decryptMessage.
   it('descifrar algo que no está cifrado devuelve la entrada, no rompe', () => {
     expect(() => decryptMessage('esto no es base64 válido ñ')).not.toThrow();
+  });
+});
+
+// 🔴 Decide si al coach se le dice "te esperan". Contar de más lo manda a una
+// pantalla donde esas filas no tienen botón; contar de menos le esconde a
+// alguien que efectivamente lo está esperando.
+describe('esperaConfirmacionDelCoach', () => {
+  const base = { status: 'pendiente', payment_status: null, preference_id: null };
+
+  it('sin cobro iniciado, espera al coach', () => {
+    // El caso del coach sin Mercado Pago conectado: no hay nada que cobrar.
+    expect(esperaConfirmacionDelCoach(base)).toBe(true);
+  });
+
+  it('con checkout de Mercado Pago o PayPal abierto, espera a la plata', () => {
+    // PayPal guarda su `order.id` en la MISMA columna que Mercado Pago.
+    expect(esperaConfirmacionDelCoach({ ...base, payment_status: 'pendiente', preference_id: 'abc' })).toBe(false);
+  });
+
+  it('con cobro en USDT sin acreditar, espera a la plata', () => {
+    expect(esperaConfirmacionDelCoach({ ...base, payment_status: 'pendiente', usdt_amount: 30.42 })).toBe(false);
+  });
+
+  it('pagada y todavía pendiente, sí espera al coach', () => {
+    // Instantánea apagada: la plata entró y falta el OK del profesional.
+    expect(esperaConfirmacionDelCoach({ ...base, payment_status: 'aprobado', preference_id: 'abc' })).toBe(true);
+  });
+
+  it('lo que no está pendiente no espera a nadie', () => {
+    expect(esperaConfirmacionDelCoach({ ...base, status: 'confirmada' })).toBe(false);
+    expect(esperaConfirmacionDelCoach({ ...base, status: 'cancelada' })).toBe(false);
   });
 });

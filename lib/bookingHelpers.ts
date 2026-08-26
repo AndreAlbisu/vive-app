@@ -33,3 +33,34 @@ export function isCancelLate(scheduledDate: string, scheduledTime: string): bool
 export function canCancelConfirmed(scheduledDate: string, scheduledTime: string): boolean {
   return !isCancelLate(scheduledDate, scheduledTime);
 }
+
+/** Lo mínimo de una reserva para saber quién está esperando a quién. */
+export type ReservaPendiente = {
+  status: string;
+  payment_status: string | null;
+  /** Id del checkout. Lo escriben Mercado Pago **y PayPal** (`order.id`). */
+  preference_id: string | null;
+  /** Marcador del cobro en cripto, mismo rol que `preference_id`. */
+  usdt_amount?: number | string | null;
+};
+
+/**
+ * ¿Esta reserva está esperando que el COACH la confirme?
+ *
+ * 🔴 No alcanza con `status === 'pendiente'`. Una reserva con un cobro iniciado
+ * y sin acreditar también está pendiente, pero ahí **no espera al coach: espera
+ * a la plata**, y el coach no puede confirmarla — confirmar compromete el
+ * horario, le avisa al usuario y cancela a los competidores del slot, todo eso
+ * sin que haya entrado un peso.
+ *
+ * Contarlas juntas le diría al coach "3 personas esperan tu confirmación"
+ * cuando no lo espera nadie, y lo mandaría a una pantalla donde esas filas no
+ * tienen botón. La regla es la misma que `CoachReservasScreen` aplicaba puertas
+ * adentro; vive acá para que no haya dos copias que se separen.
+ */
+export function esperaConfirmacionDelCoach(b: ReservaPendiente): boolean {
+  if (b.status !== 'pendiente') return false;
+  const cobroIniciado =
+    b.payment_status === 'pendiente' && (b.preference_id != null || b.usdt_amount != null);
+  return !cobroIniciado;
+}
