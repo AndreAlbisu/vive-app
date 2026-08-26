@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-26 — Joaquín (sesión 128)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`.
+
+**Resumen — el título y el contenido de abajo quedaban muy separados en Conexiones y Recursos, después del cambio de tipografía de la sesión 126.**
+
+- Joaquín mandó capturas de las dos pantallas. Medí los márgenes en el código antes de tocar nada: eran chicos (6-10px), no explicaban un gap tan grande a simple vista. **Hipótesis: Plus Jakarta Sans trae más "aire" propio (métrica interna de la fuente) que Fraunces para el mismo `lineHeight` declarado** — no es algo que controlemos con el número que pusimos, así que el mismo margen de código se ve más grande ahora que antes.
+- **Pedido explícito: traer el contenido de abajo hacia arriba, no mover los títulos.** Se tocaron solo los márgenes de lo que sigue al título — nunca el propio texto "Conexiones"/"Recursos" ni su tamaño/lineHeight:
+  - `conexiones.tsx`: `askWrapTight` (el modificador de Fase 1, sesión 121) pasó de solo `marginBottom:8` a `marginTop:0, marginBottom:2` — antes heredaba el `marginTop:10` de `askWrap` sin necesidad, porque hoy en Fase 1 ese bloque no tiene título propio (se sacó en la sesión 126). `searchBar.marginTop` bajó de 6 a 2.
+  - `recursos.tsx`: `header.marginBottom` bajó de 16 a 8, `libraryHeaderRow.marginTop` de 8 a 2.
+- Typecheck, lint (65 warnings preexistentes, 0 nuevos) y 259/259 tests limpios. No confirmado visualmente en dispositivo desde acá.
+
+**Pendiente para la próxima sesión:**
+- Confirmar que el ajuste alcanza. Si Plus Jakarta Sans efectivamente tiene más leading interno que Fraunces, puede que otras pantallas con títulos (que no se tocaron hoy, solo estas dos) tengan el mismo problema — no se auditó toda la app por esto, solo las dos pantallas de las capturas.
+
+---
+
 ## 2026-08-26 — Joaquín (sesión 126)
 
 **Tocado:** 38 archivos. Nuevo: `@expo-google-fonts/plus-jakarta-sans` (instalado). Sacado: `@expo-google-fonts/fraunces` (desinstalado, sin uso).

@@ -809,7 +809,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: -2,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   pageTitle: {
     fontFamily: ViveFonts.title,
@@ -1007,11 +1007,14 @@ const s = StyleSheet.create({
     marginTop: 8,
     marginBottom: 10,
   },
+  // marginTop bajó de 8 a 2 (sesión 128): Plus Jakarta Sans trae más "aire"
+  // propio que Fraunces para el mismo lineHeight del título — se compensa acá,
+  // trayendo el contenido hacia el título, no achicando el título en sí.
   libraryHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 2,
     marginBottom: 14,
   },
   sectionTitleFlush: { marginTop: 0, marginBottom: 0, flexShrink: 1 },

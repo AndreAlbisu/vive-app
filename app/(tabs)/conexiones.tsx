@@ -732,7 +732,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginHorizontal: 20,
-    marginTop: 6,
+    marginTop: 2,
     marginBottom: 4,
     paddingHorizontal: 14,
     height: 46,
@@ -806,15 +806,18 @@ const s = StyleSheet.create({
     marginTop: 10,
     marginBottom: 18,
   },
-  // Sesión 121: en Fase 1 el buscador quedaba pegado al subtítulo (24px de
-  // aire, contra los 8px que separan título y subtítulo en Fase 2) — este
-  // modificador achica ese margen. Sesión 126: se sacó el título propio de
-  // Fase 1 ("Encontrá a alguien que pueda acompañarte", pedido de Joaquín),
-  // así que hoy `askWrap` en Fase 1 contiene solo el subtítulo — el
-  // modificador queda igual, ya no hay título de por medio para justificarlo
-  // por comparación, pero el buscador sigue necesitando el margen corto.
+  // Sesión 121: en Fase 1 el buscador quedaba pegado al subtítulo. Sesión 126:
+  // se sacó el título propio de Fase 1 ("Encontrá a alguien que pueda
+  // acompañarte", pedido de Joaquín), así que hoy `askWrap` en Fase 1 contiene
+  // solo el subtítulo. Sesión 128: con Plus Jakarta Sans (más "aire" propio
+  // que Fraunces para el mismo lineHeight — métrica de la fuente, no un
+  // margen nuestro) el bloque entero volvió a sentirse separado del buscador
+  // y las cards de abajo — se achicó `marginTop` acá (antes heredaba el 10 de
+  // `askWrap`) además del `marginBottom`, para traer el CONTENIDO hacia el
+  // título sin tocar el título en sí.
   askWrapTight: {
-    marginBottom: 8,
+    marginTop: 0,
+    marginBottom: 2,
   },
   // Título de Fase 2 (nombre del eje elegido) — Fase 1 ya no tiene título propio.
   askTitle: {
