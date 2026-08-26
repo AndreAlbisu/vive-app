@@ -208,7 +208,7 @@ serve(async (req) => {
     for (const captureId of capturas) {
       const { data: b } = await admin
         .from('bookings')
-        .select('id, paid_out_at, payout_reference, disputed_at')
+        .select('id, paid_out_at, payout_reference, disputed_at, dispute_resolved_at')
         .eq('payment_id', captureId)
         .eq('payment_provider', 'paypal')
         .maybeSingle()
@@ -231,18 +231,45 @@ serve(async (req) => {
       // contar los plazos.
       //
       // `dispute_reason` SÍ se pisa: ahí interesa el estado más reciente.
-      const patch: Record<string, string> = {
+      const patch: Record<string, string | null> = {
         dispute_reason: `${motivo} (${estado})`.trim(),
       }
       if (!b.disputed_at) patch.disputed_at = new Date().toISOString()
+
+      // 🔴 Cerrar la disputa cuando PayPal la da por RESUELTA. Sin esto, una
+      // disputa GANADA se quedaba para siempre en `reversiones_despues_de_pagar`
+      // —la lista de "plata que hay que recuperar o dar por perdida"— porque esa
+      // vista mira `disputed_at`, que no se limpia nunca ni debe: documenta
+      // cuándo se ABRIÓ, que es un hecho histórico.
+      //
+      // 📝 Cuelga de `status` y NO de `dispute_outcome.outcome_code`. De los
+      // enums de la API de disputas se pudo citar de la documentación el de
+      // `status` (OPEN / WAITING_FOR_SELLER_RESPONSE / WAITING_FOR_BUYER_RESPONSE
+      // / UNDER_REVIEW / RESOLVED); el de `outcome_code` no. El outcome se guarda
+      // CRUDO para que lo lea una persona, y no se ramifica por él.
+      //
+      // 🔴 Y se LIMPIA si el estado deja de ser RESOLVED: una disputa puede
+      // reabrirse al escalar (inquiry → chargeback → arbitraje), y ahí vuelve a
+      // ser plata en riesgo. Sin esta rama, la reserva escalada se quedaba fuera
+      // de la lista justo cuando más hay que mirarla.
+      if (estado === 'RESOLVED') {
+        if (!b.dispute_resolved_at) patch.dispute_resolved_at = new Date().toISOString()
+        const outcome = recurso.dispute_outcome?.outcome_code
+        if (outcome) patch.dispute_outcome = String(outcome)
+      } else if (b.dispute_resolved_at) {
+        patch.dispute_resolved_at = null
+      }
 
       await admin
         .from('bookings')
         .update(patch)
         .eq('id', b.id)
 
-      console.error(
-        `[paypal-webhook] 🔴 DISPUTA ${estado || 'abierta'} sobre booking ${b.id} — motivo: ${motivo}.` +
+      const cerrada = estado === 'RESOLVED'
+      const log = cerrada ? console.log : console.error
+      log(
+        `[paypal-webhook] ${cerrada ? '✅' : '🔴'} DISPUTA ${estado || 'abierta'} sobre booking ${b.id} — motivo: ${motivo}` +
+        (cerrada ? ` — outcome: ${recurso.dispute_outcome?.outcome_code ?? 's/outcome'}.` : '.') +
         (b.paid_out_at
           ? ` ⚠️ La sesión YA se le transfirió al coach el ${b.paid_out_at} (ref ${b.payout_reference ?? 's/ref'}).`
           : ''),
