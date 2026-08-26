@@ -20,6 +20,16 @@
 - Typecheck, lint y 259/259 tests limpios.
 - 🔴 **Con `marginTop: 21` (medido), Joaquín dijo que tampoco quedó.** Cortamos la sesión ahí — **queda pendiente, sin resolver**, para retomar mañana. `askWrapTight.marginTop = 21` es el valor que quedó commiteado, no una solución confirmada.
 
+**Y se cerró el pendiente de las disputas de PayPal.**
+
+- 🔴 **Una disputa GANADA se quedaba para siempre en `reversiones_despues_de_pagar`** — la lista de "plata que hay que recuperar o dar por perdida". La vista mira `disputed_at is not null`, y esa columna **no se limpia nunca ni debe**: documenta cuándo se ABRIÓ la disputa, que es un hecho histórico. Borrarla para sacar la fila destruiría el único registro de que la disputa existió. Nuevas `bookings.dispute_resolved_at` y `dispute_outcome` (`scripts/add-dispute-resolution.sql`, **CORRIDO el 26/08/2026**), y la vista pasa a exigir `dispute_resolved_at is null`.
+- 📝 **La lógica cuelga de `status` y NO de `dispute_outcome.outcome_code`, a propósito.** Se fue a buscar la documentación de PayPal en vez de escribirlo de memoria: el enum de `status` se pudo **citar de una página** (`OPEN` / `WAITING_FOR_SELLER_RESPONSE` / `WAITING_FOR_BUYER_RESPONSE` / `UNDER_REVIEW` / `RESOLVED`), pero el de `outcome_code` **solo apareció en un resumen de búsqueda**, no citado. Así que el outcome se guarda **crudo y sin interpretar**, para que lo lea una persona — mismo criterio que `session_attendance.raw`. Es la misma disciplina que evitó el error del 4,4% contra el 5,40% real.
+- 🔴 **Y resultó que el outcome no hace falta para nada.** Si la disputa se PIERDE, PayPal revierte la captura y `PAYMENT.CAPTURE.REVERSED` deja `payment_status = 'contracargo'`: la fila se queda en la lista por **esa** condición de la vista, que no se tocó. Si se GANA, no hay reversión y sale. ⚠️ Los dos avisos son eventos distintos y PayPal no garantiza el orden: si `RESOLVED` llega antes que `REVERSED`, la fila desaparece un rato y vuelve. Es transitorio y se corrige solo; lo que no puede pasar —y no pasa— es que se quede afuera con la plata devuelta.
+- 🔴 **Agregado algo que el review no había pedido: la disputa se puede REABRIR.** Al escalar (inquiry → chargeback → arbitraje) el `status` deja de ser `RESOLVED`, y ahí vuelve a ser plata en riesgo. El webhook **limpia `dispute_resolved_at`** en ese caso. Sin esa rama, la reserva escalada quedaba fuera de la lista justo cuando más hay que mirarla.
+- ✅ **`paypal-webhook` deployada (v18, `verify_jwt = false`), verificada contra la API y con smoke test** (200 `ignored`). 🔴 **El orden importaba**: la función hace `select` y `update` de `dispute_resolved_at`, así que contra una base sin esa columna el select falla, la reserva queda en null y se loguea "DISPUTA sobre una captura desconocida" — o sea que **dejaba de registrar disputas en silencio**. Por eso las columnas se verificaron ANTES de deployar.
+- 📝 **Cómo se verificaron sin service role key**: `GET /rest/v1/bookings?select=<columna>` con la anon key **distingue los dos casos** — una columna inexistente da 400 `42703 column does not exist`, y una existente bloqueada por RLS da 200 `[]`. Con un control positivo (`disputed_at`) y uno negativo (una columna inventada) alcanza para confirmar. Sirve para cualquier tabla, incluidas las que la anon key no puede leer.
+- 📝 **`tsc` estaba fallando por `@expo-google-fonts/plus-jakarta-sans`**, declarada en `package.json` pero no instalada — de la migración de fuentes. Un `npm install` lo resolvió; el lockfile no cambió.
+
 **Pendiente para la próxima sesión:**
 - 🔴 **Retomar el espaciado de "Elegí un área de bienestar para empezar" en Conexiones.** Antes de seguir ajustando a tanteos: pedirle a Joaquín una captura fresca apenas se siente a trabajar, y si hace falta más de un ajuste, pedir el número aproximado de píxeles (o "un poco" = referencia visual concreta) en vez de iterar a ciegas — así se cierra en 1-2 pasadas en vez de 6 commits chicos como hoy.
 - Si el problema persiste igual, considerar que la medición por script (detectar filas oscuras de texto) puede estar capturando mal algún elemento — vale la pena verificar visualmente con un crop de la zona exacta antes de confiar en el número.
@@ -68,7 +78,7 @@
 
 ## 2026-08-26 — Andre (sesión 128)
 
-**Tocado:** `scripts/fix-payout-rails-trigger.sql` (encabezado), `SCHEMA.md`.
+**Tocado:** `scripts/fix-payout-rails-trigger.sql` (encabezado), `supabase/functions/paypal-webhook/index.ts`, `SCHEMA.md`. Nuevo: `scripts/add-dispute-resolution.sql` (**CORRIDO**). `paypal-webhook` **v18** deployada. 259 tests, `tsc` y lint limpios.
 
 **Resumen:**
 
@@ -82,7 +92,7 @@
 
 - ⚠️ **Probar la rama del DELETE del trigger** (chequeo 3 del script), la única que quedó sin ejercitar — y confirmar antes que `coach_payout_accounts` tenga al menos una fila, si no el chequeo pasa vacío.
 - 📝 **Conviene dejar una forma de consultar la base desde la sesión de trabajo** — sin eso, todo "corrido" queda sin contrastar y el registro vuelve a depender de lo que diga un documento, que es el patrón que este proyecto ya arrastró tres veces.
-- Sigue todo lo demás abierto de la sesión 127: la promo de fundador en los rieles internacionales, el `outcome_code` de disputas de PayPal, `paypal-diagnostico` (ACTIVE pero dada por borrada), y las dos reorganizaciones analizadas y sin empezar (configuración del coach y onboarding del usuario).
+- Sigue abierto de la sesión 127: **la promo de fundador en los rieles internacionales** (decisión de precio, no defecto), **`paypal-diagnostico`** (ACTIVE pero dada por borrada en el registro), y las dos reorganizaciones analizadas y sin empezar: **configuración del coach** y **onboarding del usuario**.
 
 ---
 
