@@ -49,6 +49,13 @@ async function _doFetch(): Promise<void> {
     .select('id, created_at, specialty, bio, price_per_session, nationality, verified, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
     .eq('verified', true)
     .eq('availability_status', 'activo')
+    // D6 (docs/decisiones-pagos.md): para aparecer en el catálogo hace falta
+    // al menos UN riel de cobro configurado — no exige Mercado Pago puntual,
+    // exige un medio, cualquiera. Sin esto un coach recién aprobado y sin
+    // conectar nada llegaba hasta acá y solo se notaba en el checkout, cuatro
+    // pantallas después. Debe reflejar la MISMA condición que usa
+    // `BookingScreen_Confirm` para decidir qué botón de pago dibujar.
+    .or('mp_connected.eq.true,accepts_paypal.eq.true,accepts_usdt.eq.true')
     // El `.limit()` estaba sin `order`: Postgres devolvía N filas ARBITRARIAS, así
     // que pasado el tope algunos coaches simplemente no existían para Conexiones —
     // y cuáles podía cambiar entre consultas. Con el deck v3 (pools + sorteo) eso

@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 132)
+
+**Tocado:** `lib/coachesCache.ts`, `app/search3.tsx`, `SCHEMA.md`.
+
+**Resumen — implementado D6: sin ningún riel de cobro configurado, el coach ya no aparece en el catálogo.**
+
+- Venía del pendiente "las 3 puertas sin cartelito" (`PaymentBadges` devolviendo `null` para coaches sin ningún riel). Al ir a arreglarlo con copy, Joaquín frenó la solución cosmética: "¿no sería mejor que el coach tenga que sí o sí definir un método de pago?" — la respuesta correcta no era mejorar el texto de una tarjeta vacía, era no dejar llegar esa tarjeta al catálogo.
+- Encontrado que Andre ya había tomado esa decisión en `docs/decisiones-pagos.md` (**D6**, decidida 25/08/2026: "para publicar el perfil hay que tener al menos UN riel de cobro completo") pero **nunca quedó implementada en código**. Confirmado con Joaquín antes de tocar nada (impacto real: 3 de los 4 coaches de prueba actuales, todos sin riel conectado, iban a desaparecer del catálogo) — dio el visto bueno.
+- Agregado `.or('mp_connected.eq.true,accepts_paypal.eq.true,accepts_usdt.eq.true')` en **las dos** consultas de coaches que existen en el código: `lib/coachesCache.ts` (`_doFetch`, la fuente principal) y la consulta de respaldo de `app/search3.tsx` (la que corre solo con el caché frío) — mismo patrón ya documentado antes para `verified`/`availability_status`: dos queries independientes, cualquier filtro nuevo tiene que ir en las dos o se desincronizan.
+- `SCHEMA.md` actualizado con la nota de D6 junto a `coaches.mp_connected`.
+- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo.
+
+**Pendiente para la próxima sesión:**
+- Ver en el catálogo real que los 3 coaches sin riel efectivamente desaparecieron y que el que sí tiene MP sigue visible.
+- `docs/decisiones-pagos.md` ya sugiere el siguiente paso natural: una vez que D6 esté firme, `accepts_international` podría pasar de flag a dato derivado (riel en dólares + `price_usd` cargado) — no es urgente, queda anotado.
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 131)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`.

@@ -203,6 +203,10 @@ export default function SearchScreen3() {
       .from('coaches')
       .select('id, specialty, bio, price_per_session, nationality, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
       .eq('verified', true)
+      // D6 (docs/decisiones-pagos.md): mismo filtro que `coachesCache.ts` — sin
+      // esto, con el caché frío esta consulta de respaldo volvía a mostrar
+      // coaches sin ningún riel de cobro configurado.
+      .or('mp_connected.eq.true,accepts_paypal.eq.true,accepts_usdt.eq.true')
       .limit(50)
       .then(({ data, error }) => {
         if (cancelled) return;
