@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 137)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — de la investigación de la sesión 136 salió un problema real: alguien reservando desde lejos (el riel internacional existe para eso) puede tener la misma espera larga que Joaquín, y hasta ahora no había ningún aviso — solo un spinner mudo.**
+
+- Idea de Joaquín: ya que sin querer se topó con este caso (probando desde Australia), aprovecharlo para blindar la experiencia de cualquier usuario real que reserve desde lejos, para que no piense que la app se colgó.
+- `loadingLong`: se prende recién a los 3.5s de apretar "Reservar sesión" (no antes — el caso normal, en Argentina, dura menos que eso y no necesita el aviso). Cuando se prende, aparece un cartel informativo (mismo estilo celeste que ya usa `paymentInfoRow`, no uno nuevo) con "Esto está tardando más de lo normal — puede pasar si estás conectando desde lejos. Seguí esperando, no hace falta reintentar."
+- El botón, mientras `loading`, ahora muestra "Reservando…" al lado del spinner — antes era el spinner solo, sin texto.
+- 🔴 **De yapa, un bug real encontrado al tocar esto**: el `ActivityIndicator` del botón estaba pintado `color="#565E32"` — el mismo verde oscuro que el fondo del botón (`btn.backgroundColor`). Era, en los hechos, invisible; todo lo que se veía al tocar "Confirmar reserva" era el botón atenuándose un poco (`btnLoading: {opacity:0.7}`), sin ninguna señal clara de que algo estaba pasando. Corregido a `#F7EFE4` (el mismo claro que usa `btnText`).
+- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo.
+
+**Pendiente para la próxima sesión:**
+- Confirmar visualmente en el teléfono: que el spinner ahora se vea, y que el cartel de "tardando más de lo normal" aparezca pasados los 3.5s (probar con el propio Joaquín desde Australia sirve para esto, para variar).
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 136)
 
 **Tocado:** ninguno de código — investigación y cierre de la demora de las sesiones 134/135.

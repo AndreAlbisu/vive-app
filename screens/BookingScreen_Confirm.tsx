@@ -55,6 +55,13 @@ export default function BookingScreen_Confirm() {
   const { user, isLoggedIn, requestAuth } = useAuth();
   const params = useLocalSearchParams<Params>();
   const [loading, setLoading] = useState(false);
+  // 🔴 Se prende sola a los 3.5s de `loading` — no antes, para no mostrar un
+  // aviso de demora en el caso normal, que dura menos que eso. Existe porque
+  // este tramo (armar la reserva + crear el pago) hace varios viajes de red
+  // seguidos, y para alguien conectando desde lejos (el riel internacional
+  // existe justamente para eso) cada uno pesa más: un spinner mudo por varios
+  // segundos se lee como que la app se colgó, no como que está trabajando.
+  const [loadingLong, setLoadingLong] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userMessage, setUserMessage] = useState('');
   const [instantBooking, setInstantBooking] = useState(false);
@@ -126,6 +133,15 @@ export default function BookingScreen_Confirm() {
       setPrecioReal(data?.price_per_session ?? null);
     })();
   }, [coachProfileIdParam]);
+
+  // Ver la declaración de `loadingLong` más arriba. El timer se limpia si
+  // `loading` se apaga antes de los 3.5s (caso normal) y también al
+  // desmontar, para no setear estado de una pantalla que ya no está.
+  useEffect(() => {
+    if (!loading) { setLoadingLong(false); return; }
+    const t = setTimeout(() => setLoadingLong(true), 3500);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   // Botón físico de "atrás" en Android mientras se espera el pago: da por
   // terminada la espera en vez de sacar a la persona de la pantalla de
@@ -962,6 +978,19 @@ export default function BookingScreen_Confirm() {
             </View>
           ) : null}
 
+          {/* Solo aparece pasados los 3.5s de `loading` — ver `loadingLong`.
+              Reusa el estilo informativo (celeste) que ya existe para
+              `paymentInfoRow`, no uno nuevo: mismo lenguaje visual para "esto
+              es normal", distinto del rojo de `errorBox`, que es "algo falló". */}
+          {loading && loadingLong ? (
+            <View style={s.paymentInfoRow}>
+              <MaterialIcons name="wifi" size={15} color="#0B84B0" />
+              <Text style={s.paymentInfoText}>
+                Esto está tardando más de lo normal — puede pasar si estás conectando desde lejos. Seguí esperando, no hace falta reintentar.
+              </Text>
+            </View>
+          ) : null}
+
           {/* Selector de medio de pago. Solo aparece si hay más de una opción:
               para la enorme mayoría —usuarios en Argentina con un coach que no
               atiende afuera— no hay nada que elegir y mostrar un selector de un
@@ -999,7 +1028,10 @@ export default function BookingScreen_Confirm() {
             disabled={loading}
             activeOpacity={0.85}>
             {loading ? (
-              <ActivityIndicator color="#565E32" size="small" />
+              <View style={s.btnLoadingRow}>
+                <ActivityIndicator color="#F7EFE4" size="small" />
+                <Text style={s.btnText}>Reservando…</Text>
+              </View>
             ) : (
               <Text style={s.btnText}>Confirmar reserva</Text>
             )}
@@ -1351,6 +1383,11 @@ const s = StyleSheet.create({
   },
   btnLoading: {
     opacity: 0.7,
+  },
+  btnLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   btnText: {
     fontFamily: ViveFonts.semibold,
