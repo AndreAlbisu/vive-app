@@ -194,6 +194,23 @@ export default function RootLayout() {
           <Stack.Screen name="recursos-guardados" options={{ headerShown: false }} />
           <Stack.Screen name="notifications" options={{ headerShown: false }} />
           <Stack.Screen name="legal" options={{ headerShown: false }} />
+          {/* Las cinco de acá abajo no estaban en esta lista — les faltaba el
+              `headerShown: false` explícito que tiene el resto de la app, así
+              que mostraban el header nativo de Expo Router (título = nombre de
+              archivo) DUPLICADO encima del propio header que ya dibujan sus
+              pantallas (`AdminScreen`, `BlockedAccountsScreen`,
+              `CoachReservasScreen`, `UsdtPaymentScreen`, `RefundAddressScreen`
+              — las cinco tienen su propio `SafeAreaView`+`s.header`). Mismo bug
+              que ya se había arreglado antes para `coach-datos-cobro`.
+              Encontradas de a una: primero al revisar la navegación nueva del
+              coach (sesión 127/128 de Andre agregó `/coach-ajustes`, que
+              linkea a `admin`/`cuentas-bloqueadas`), y de ahí se hizo el
+              barrido completo del resto de `app/*.tsx` contra esta lista. */}
+          <Stack.Screen name="admin" options={{ headerShown: false }} />
+          <Stack.Screen name="cuentas-bloqueadas" options={{ headerShown: false }} />
+          <Stack.Screen name="coach-reservas" options={{ headerShown: false }} />
+          <Stack.Screen name="pago-usdt" options={{ headerShown: false }} />
+          <Stack.Screen name="reembolso" options={{ headerShown: false }} />
           <Stack.Screen name="perfil" options={{ headerShown: false }} />
           <Stack.Screen name="agenda" options={{ headerShown: false }} />
           <Stack.Screen name="coach-availability" options={{ headerShown: false }} />
