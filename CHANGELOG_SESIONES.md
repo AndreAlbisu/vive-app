@@ -22,10 +22,11 @@
 **Pendiente para la próxima sesión:**
 
 - 🔴 **Archivar un chat como Coach Prueba desde el teléfono.** El SQL ya está corrido, pero **que el coach pueda ESCRIBIR la columna no se probó**: se apoya en la policy que ya deja escribir `coach_last_read_at` y eso se asumió, no se confirmó. Se sacó del SQL a propósito — suplantar dentro de una transacción deja el resultado tapado por el `rollback`, y además probaría la policy y no la pantalla.
-- 🔴 **Probar una reserva real contra Mercado Pago** (viene de la 128): `mp-create-payment` v41 no se pudo smoke-testear sin JWT de usuario. Reservar con Coach Prueba ($1) y confirmar que se cobra 1.
+- ✅ ~~Probar una reserva real contra Mercado Pago~~ — **ya lo cerró Joaquín en la sesión 133**: `amount = 1` sin desvío, `payment_status = 'aprobado'`, `payment_id` real de MP. v41 confirmada de punta a punta con plata real. 📝 Lo dejé anotado como pendiente por escribir la entrada sin leer las suyas primero, que es justo lo que el encabezado de este archivo pide no hacer.
 - 🔴 **Probar el bloque del coach en el teléfono** — se tocó navegación y nada se vio corriendo.
 - ⚠️ **Mandar el paquete al abogado**: ahora lleva A.10 (posiblemente sin objeto), A.11 más filosa y A.12, más una pregunta nueva sobre texto libre por el chat.
 - 📝 **A.11 se agravó**: la persona que manda algo eligió mostrarlo, y eso sube la expectativa de respuesta. En Vita hay coaches de hábitos y nutricionistas, no psicólogos. Un profesional que no lo lee es peor que no haber ofrecido nada, y no se arregla por código.
+- 📝 **Ya se puede consultar la base desde la sesión**: `npx supabase db query --linked "..."` funciona (lo resolvió Joaquín, sesión 132). Reemplaza el truco de la anon key por REST y las capturas del SQL Editor — verificado hoy contra `coach_archived`.
 - ⚠️ **El perfil del coach está fuera del design system** (sin `SurfaceCard` ni `theme/tokens`, tres paletas, siete radios). Diagnosticado, sin tocar.
 - **Onboarding del usuario**, sigue analizado y sin empezar.
 
