@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 134)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — "tarda muchísimo en redirigirte" al tocar Reservar sesión: el tramo entre el botón y el checkout hacía ~7 viajes de red en serie sin necesidad.**
+
+- Entre apretar "Reservar sesión" y abrir el checkout, `onConfirm` hacía: buscar coach → patrón semanal → **esperar** el insert de analítica (`reserva_iniciada`) → buscar/crear sala → limpiar intento anterior → precio actual → insertar booking → **esperar** el insert de analítica (`reserva_confirmada`) → recién ahí invocar `mp-create-payment`/`paypal-create-payment`. Ocho pasos en fila, la mayoría independientes entre sí.
+- 🔴 **Los dos registros de analítica (`registrarEvento`) se esperaban (`await`) estando en el camino crítico**, cuando son de mejor esfuerzo por diseño (`lib/supabase.ts`: si falla, solo hace `console.warn`, nunca corta el flujo). Cada uno suma su propio viaje a `auth.getSession()` más el insert — dos esperas completas que no le aportan nada a quien está reservando. Cambiados a "fire and forget" (`.catch(() => {})`, sin `await`): se siguen registrando si salen bien, pero ya no hacen esperar a nadie.
+- **Las cuatro consultas del paso 2 (sala, patrón semanal, limpieza de intento anterior, precio actual) no dependían una de otra** y se hacían en serie sin motivo. Pasadas a `Promise.all` — el tiempo total pasa a ser el de la más lenta de las cuatro, no la suma de las cuatro.
+- No se tocó `mp-create-payment` ni `paypal-create-payment` (la llamada a la API de MP/PayPal en sí, más el refresh de token si corresponde, sigue siendo el paso más lento y queda del lado del servidor) — si después de este cambio la demora sigue sintiéndose fuerte, el siguiente sospechoso es ese, no el cliente.
+- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo — pendiente que Joaquín lo pruebe y diga si se sintió más rápido.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el teléfono si la demora bajó. Si sigue sintiéndose lenta, medir tiempo puntual de `mp-create-payment` (¿está refrescando el token de MP en cada reserva, o solo cuando falta <24h como debería?).
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 133)
 
 **Tocado:** ninguno de código — solo verificación contra la base.

@@ -254,18 +254,6 @@ export default function BookingScreen_Confirm() {
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
 
-      // Leer duración del patrón semanal para guardarla en el booking
-      let durationMinutes: number | null = null;
-      if (coachRow?.id) {
-        const { data: patternRow } = await supabase
-          .from('coach_weekly_pattern')
-          .select('slot_duration_minutes')
-          .eq('coach_id', coachRow.id)
-          .limit(1)
-          .maybeSingle();
-        durationMinutes = (patternRow as any)?.slot_duration_minutes ?? null;
-      }
-
       if (coachErr || !coachRow) {
         throw new Error('No encontramos el profesional. Volvé y elegí de nuevo');
       }
@@ -274,37 +262,55 @@ export default function BookingScreen_Confirm() {
       const coachProfileId = coachRow.profile_id; // profiles.id — para salas.coach_id
       const isInstant = !!coachRow.instant_booking;
 
-      await registrarEvento('reserva_iniciada', {
+      // 🔴 No se espera esta escritura: es un registro de analítica, tolerante a
+      // fallos (`registrarEvento` solo hace `console.warn` si algo sale mal, ver
+      // `lib/supabase.ts`), y antes estaba en el camino crítico entre apretar
+      // "Reservar sesión" y llegar al checkout — sumaba un viaje de red entero
+      // (más el de `auth.getSession()` de adentro) a algo que a quien reserva no
+      // le aporta nada. Con `.catch()` en vez de `await`, sigue quedando
+      // registrado si sale bien, pero ya no hace esperar a nadie.
+      registrarEvento('reserva_iniciada', {
         professional_id: coachId,
         user_id: user.id,
-      });
+      }).catch(() => {});
 
-      // 2. Buscar sala existente o crear una nueva
-      let salaId: string;
-      let roomUrl = '';
+      // 2 a 2.5. Las cuatro consultas de acá abajo son independientes entre sí
+      // —ninguna necesita el resultado de otra— y antes se hacían una atrás de
+      // la otra. Iban en serie sin motivo: es la otra mitad de la demora entre
+      // apretar "Reservar sesión" y que se abra el checkout. En paralelo, el
+      // tiempo total pasa a ser el de la MÁS LENTA de las cuatro, no la suma.
+      const resolverSala = async (): Promise<{ salaId: string; roomUrl: string }> => {
+        const { data: existingSala } = await supabase
+          .from('salas')
+          .select('id, room_url')
+          .eq('user_id', user.id)
+          .eq('coach_id', coachProfileId)
+          .maybeSingle();
 
-      const { data: existingSala } = await supabase
-        .from('salas')
-        .select('id, room_url')
-        .eq('user_id', user.id)
-        .eq('coach_id', coachProfileId)
-        .maybeSingle();
-
-      if (existingSala) {
-        salaId = existingSala.id;
-        roomUrl = existingSala.room_url ?? '';
-      } else {
+        if (existingSala) {
+          return { salaId: existingSala.id, roomUrl: existingSala.room_url ?? '' };
+        }
         const { data: newSala, error: salaErr } = await supabase
           .from('salas')
           .insert({ user_id: user.id, coach_id: coachProfileId })
           .select('id, room_url')
           .single();
         if (salaErr || !newSala) throw new Error('No se pudo crear la sala de comunicación');
-        salaId = newSala.id;
-        roomUrl = newSala.room_url ?? ''; // null hasta que corra el trigger / si la columna recién se agregó
-      }
+        return { salaId: newSala.id, roomUrl: newSala.room_url ?? '' }; // null hasta que corra el trigger / si la columna recién se agregó
+      };
 
-      // 2.5 Limpiar el intento anterior del MISMO turno, si lo hubo.
+      // Leer duración del patrón semanal para guardarla en el booking
+      const resolverDuracion = async (): Promise<number | null> => {
+        const { data: patternRow } = await supabase
+          .from('coach_weekly_pattern')
+          .select('slot_duration_minutes')
+          .eq('coach_id', coachId)
+          .limit(1)
+          .maybeSingle();
+        return (patternRow as any)?.slot_duration_minutes ?? null;
+      };
+
+      // Limpiar el intento anterior del MISMO turno, si lo hubo.
       //
       // La pantalla de horarios deja reintentar un turno que abandonaste sin
       // pagar (ver BookingScreen_Time). Sin esto, cada reintento suma una
@@ -314,38 +320,49 @@ export default function BookingScreen_Confirm() {
       // Se cancela solo lo propio, pendiente y con un cobro iniciado que nunca
       // se acreditó — nunca algo pagado. Sin notificar a nadie: no es una
       // cancelación real, es el reintento de la misma persona.
-      await supabase
-        .from('bookings')
-        .update({ status: 'cancelada' })
-        .eq('user_id', user.id)
-        .eq('coach_id', coachId)
-        .eq('scheduled_date', dateStr)
-        .eq('scheduled_time', time)
-        .eq('status', 'pendiente')
-        .eq('payment_status', 'pendiente')
-        // Un cobro iniciado por cualquiera de los dos rieles. Sin esta
-        // condición se cancelarían también las reservas legítimas sin cobro
-        // (coach sin Mercado Pago conectado), que no son reintentos de nada.
-        .or('preference_id.not.is.null,usdt_amount.not.is.null');
+      const limpiarIntentoAnterior = async (): Promise<void> => {
+        await supabase
+          .from('bookings')
+          .update({ status: 'cancelada' })
+          .eq('user_id', user.id)
+          .eq('coach_id', coachId)
+          .eq('scheduled_date', dateStr)
+          .eq('scheduled_time', time)
+          .eq('status', 'pendiente')
+          .eq('payment_status', 'pendiente')
+          // Un cobro iniciado por cualquiera de los dos rieles. Sin esta
+          // condición se cancelarían también las reservas legítimas sin cobro
+          // (coach sin Mercado Pago conectado), que no son reintentos de nada.
+          .or('preference_id.not.is.null,usdt_amount.not.is.null');
+      };
+
+      // 🔴 El precio se relee acá, no se usa el que vino en la ruta ni el que
+      // había cuando se abrió la pantalla: lo que vale es el que el coach tiene
+      // fijado AHORA. `mp-create-payment` vuelve a derivarlo de `coaches` antes
+      // de cobrar, así que esto no es la única barrera; está para que
+      // `bookings.amount` nazca bien, que es el número que después leen el
+      // informe del contador y lo que se le debe al coach del riel internacional.
+      const resolverPrecio = async (): Promise<number> => {
+        const { data: precioAhora } = await supabase
+          .from('coaches')
+          .select('price_per_session')
+          .eq('id', coachId)
+          .maybeSingle();
+        return Number(precioAhora?.price_per_session ?? precioReal);
+      };
+
+      const [sala, durationMinutes, , montoReserva] = await Promise.all([
+        resolverSala(),
+        resolverDuracion(),
+        limpiarIntentoAnterior(),
+        resolverPrecio(),
+      ]);
+      const { salaId, roomUrl } = sala;
 
       // Se lee ACÁ y no al montar la pantalla: lo que importa es dónde estaba
       // en el momento de reservar, no cuándo abrió la app.
       const tzObservada = observedTz();
 
-      // 🔴 Y el precio también se relee acá, por el mismo motivo: lo que vale es
-      // el que el coach tiene fijado AHORA, no el que había cuando se abrió la
-      // pantalla ni —sobre todo— el que vino en la ruta. `mp-create-payment`
-      // vuelve a derivarlo de `coaches` antes de cobrar, así que esto no es la
-      // única barrera; está para que `bookings.amount` nazca bien, que es el
-      // número que después leen el informe del contador y lo que se le debe al
-      // coach del riel internacional.
-      const { data: precioAhora } = await supabase
-        .from('coaches')
-        .select('price_per_session')
-        .eq('id', coachId)
-        .maybeSingle();
-
-      const montoReserva = Number(precioAhora?.price_per_session ?? precioReal);
       if (!Number.isFinite(montoReserva) || montoReserva <= 0) {
         setLoading(false);
         Alert.alert('No se pudo reservar', 'Este profesional todavía no fijó su precio.');
@@ -414,12 +431,13 @@ export default function BookingScreen_Confirm() {
         throw new Error('No se pudo guardar la reserva. Intentalo de nuevo');
       }
 
-      await registrarEvento('reserva_confirmada', {
+      // Mismo motivo que "reserva_iniciada" arriba: no bloquea camino al checkout.
+      registrarEvento('reserva_confirmada', {
         professional_id: coachId,
         booking_id: booking.id,
         sala_id: salaId,
         user_id: user.id,
-      });
+      }).catch(() => {});
 
       // Todo lo que sigue —avisarle al coach y, si es instantánea, confirmar—
       // corre DESPUÉS de saber que el pago entró. Va en una función para no
