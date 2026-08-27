@@ -356,7 +356,10 @@ export default function CoachChatsScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
+  // paddingTop: 20 — mismo ajuste y mismo motivo que CoachReservasScreen: sin
+  // el paddingTop:12 del `container` que tienen Home/CoachResourcesScreen,
+  // quedaba ~12pt más arriba que los otros títulos (hallazgo 27/08/2026).
+  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8 },
   title: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST },
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },

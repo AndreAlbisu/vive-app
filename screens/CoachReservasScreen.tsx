@@ -476,7 +476,13 @@ const s = StyleSheet.create({
     color: 'rgba(135,131,92,0.85)', marginTop: 8,
   },
   safe: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4, gap: 10 },
+  // paddingTop: 20 — medido contra "Hola, Coach" de CoachHomeScreen (mismo
+  // ViveFonts.title 28px). Este header vive directo bajo el SafeAreaView, sin
+  // el paddingTop:12 del `container` que sí tienen Home/CoachResourcesScreen
+  // (ahí el título entra por el ScrollView) — con 8 quedaba ~12pt más arriba
+  // que los otros tres títulos de las pestañas del coach (hallazgo 27/08/2026,
+  // 4 capturas comparadas).
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 4, gap: 10 },
   backBtn: { padding: 2 },
   title: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST },
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },

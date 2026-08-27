@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 142)
+
+**Tocado:** `screens/CoachReservasScreen.tsx`, `screens/CoachChatsScreen.tsx`.
+
+**Resumen — los 4 títulos de las pestañas del coach (Reservas, Tus personas, Tus recursos, Home) no estaban a la misma altura. Medido con las 4 capturas que mandó Joaquín, no a ojo.**
+
+- Mismo método que las sesiones 128-131 de Conexiones/Recursos: detección del primer píxel oscuro del título contra las capturas reales (script Python/PIL), no comparación visual. Resultado: "Reservas" y "Tus personas" arrancaban en y=243px; "Tus recursos" y "Hola, Coach" en y≈280px — **~12pt de diferencia real**, no un efecto óptico.
+- Causa: las 4 usan el mismo `ViveFonts.title` 28px (confirmado, no era tema de fuente), pero dos estructuras de header distintas. `CoachHomeScreen`/`CoachResourcesScreen` meten el título DENTRO del `ScrollView` (`container.paddingTop:12` + `header.marginTop:8` = 20pt de offset). `CoachReservasScreen`/`CoachChatsScreen` lo dejan FIJO, fuera del scroll (para que no se mueva mientras la lista scrollea — diseño intencional, no se tocó), pero con `header.paddingTop:8` a secas — le faltaban los 12pt del `container` que nunca tuvo.
+- Arreglado subiendo `header.paddingTop` de 8 a 20 en los dos, para igualar el offset total sin cambiar la estructura (el header sigue fijo, no entra al scroll).
+- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo.
+
+**Pendiente para la próxima sesión:**
+- Confirmar visualmente que las 4 pestañas del coach quedan a la misma altura.
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 141)
 
 **Tocado:** `screens/CoachLoginScreen.tsx`, `screens/CoachHomeScreen.tsx`.
