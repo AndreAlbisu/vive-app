@@ -5,7 +5,7 @@ import { ViveColors } from './theme';
 // Cada puerta mapea a ≥1 subtema canónico. Un coach entra en una puerta si su
 // `topics` incluye CUALQUIERA de los subtemas de la puerta. Los 38 subtemas
 // están particionados: cada uno aparece en exactamente una puerta (sin
-// duplicados, sin huérfanos → 3+6+1+5+2+8+2+2+1+3+3+2 = 38).
+// duplicados, sin huérfanos → 3+6+1+5+2+8 + 1+1+1+1+1 + 2+1+1+2+2 = 38).
 // `__tests__/conexionesDoors.test.ts` verifica la partición contra AXES.
 //
 // La taxonomía canónica (AXES en searchData.ts) NO se toca: la sigue usando
@@ -43,11 +43,26 @@ export const DOORS: Door[] = [
   // deja afuera — la irritabilidad estaba, la dificultad para decir que no, no.
   { id: 'comunicacion',   label: 'Comunicación',             tagline: 'Decir lo que necesitás', icon: 'message-circle', color: ViveColors.calm, subtemas: ['Comunicación', 'Asertividad'] },
   { id: 'foco',           label: 'Foco, hábitos y trabajo',  tagline: 'Enfoque y rutinas',      icon: 'target',      color: ViveColors.calm,    subtemas: ['Concentración', 'Procrastinación', 'Productividad', 'Hábitos mentales', 'Burnout (estrés laboral)', 'Hábitos', 'Equilibrio vida-trabajo', 'Liderazgo'] },
-  { id: 'descanso',       label: 'Descanso y energía',       tagline: 'Dormir y recargar',      icon: 'moon',        color: ViveColors.accent,  subtemas: ['Sueño', 'Energía'] },
-  { id: 'nutricion',      label: 'Nutrición y movimiento',   tagline: 'Cuerpo y alimentación',  icon: 'activity',    color: ViveColors.accent,  subtemas: ['Nutrición', 'Actividad física'] },
+  // 🔴 Físico y espiritual se abrieron de 3 puertas a 5 el 27/08/2026. El
+  // catálogo está cargado hacia lo mental —25 de los 38 subtemas— así que esos
+  // dos ejes mostraban una lista de tres renglones que se leía incompleta.
+  //
+  // 📝 Dividir NO le pide nada a ningún profesional: las puertas son capa de
+  // presentación y siguen matcheando por los mismos subtemas, que no se tocaron.
+  // La contra es que cada puerta queda más angosta — "Sueño" va a tener menos
+  // gente que "Descanso y energía" — a cambio de ser más precisa al buscar.
+  { id: 'sueno',          label: 'Sueño',                    tagline: 'Dormir mejor',           icon: 'moon',        color: ViveColors.accent,  subtemas: ['Sueño'] },
+  { id: 'energia',        label: 'Energía',                  tagline: 'Recargar el día',        icon: 'zap',         color: ViveColors.accent,  subtemas: ['Energía'] },
+  { id: 'nutricion',      label: 'Nutrición',                tagline: 'Comer mejor',            icon: 'coffee',      color: ViveColors.accent,  subtemas: ['Nutrición'] },
+  { id: 'movimiento',     label: 'Movimiento',               tagline: 'Mover el cuerpo',        icon: 'activity',    color: ViveColors.accent,  subtemas: ['Actividad física'] },
   { id: 'sexualidad',     label: 'Sexualidad e intimidad',   tagline: 'Intimidad y deseo',      icon: 'heart',       color: ViveColors.accent,  subtemas: ['Sexualidad'] },
-  { id: 'proposito',      label: 'Propósito y dirección',    tagline: 'Rumbo y sentido',        icon: 'compass',     color: ViveColors.primary, subtemas: ['Propósito', 'Momentos de cambio', 'Orientación vocacional'] },
-  { id: 'identidad',      label: 'Identidad y motivación',   tagline: 'Crecer y avanzar',       icon: 'trending-up', color: ViveColors.primary, subtemas: ['Identidad', 'Motivación', 'Crecimiento'] },
+  // `Orientación vocacional` viaja con `Propósito` y no sola: es de los siete
+  // subtemas que hoy no trabaja nadie, y una puerta construida solo sobre él
+  // nacería vacía.
+  { id: 'proposito',      label: 'Propósito y sentido',      tagline: 'Rumbo y sentido',        icon: 'compass',     color: ViveColors.primary, subtemas: ['Propósito', 'Orientación vocacional'] },
+  { id: 'cambio',         label: 'Momentos de cambio',       tagline: 'Transiciones y decisiones', icon: 'shuffle',  color: ViveColors.primary, subtemas: ['Momentos de cambio'] },
+  { id: 'identidad',      label: 'Identidad',                tagline: 'Quién sos hoy',          icon: 'user',        color: ViveColors.primary, subtemas: ['Identidad'] },
+  { id: 'motivacion',     label: 'Motivación y crecimiento', tagline: 'Avanzar y sostenerlo',   icon: 'trending-up', color: ViveColors.primary, subtemas: ['Motivación', 'Crecimiento'] },
   { id: 'espiritualidad', label: 'Espiritualidad y soledad', tagline: 'Conexión interior',      icon: 'sunrise',     color: ViveColors.primary, subtemas: ['Espiritualidad', 'Soledad'] },
 ];
 
