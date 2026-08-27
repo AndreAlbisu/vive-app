@@ -21,7 +21,8 @@ import { personasQueSeCaen, haceCuanto, type PersonaEnRiesgo } from '@/lib/coach
 import { COMMISSION_LOCAL_FIRST, COMMISSION_LOCAL_RECURRING } from '@/lib/pricing';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { visibilityTeaser, type VisibilityTeaser } from '@/lib/coachVisibility';
+import { visibilityTeaser, analyzeDoors, homeStanding, tituloVisibilidad, bajadaVisibilidad, type VisibilityTeaser, type HomeStanding } from '@/lib/coachVisibility';
+import { loadVisibilitySelf } from '@/lib/coachVisibilityData';
 import { DOORS } from '@/constants/conexionesDoors';
 import { scheduledAtMs, daysFromTodayAr, todayInAr } from '@/lib/time';
 
@@ -141,14 +142,14 @@ export default function CoachHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [visibility, setVisibility] = useState<VisibilityTeaser | null>(null);
+  const [standing, setStanding] = useState<HomeStanding | null>(null);
   const [seCaen, setSeCaen] = useState<PersonaCayendo[]>([]);
   const [repu, setRepu] = useState<{ completadas: number; vuelvenPct: number | null } | null>(null);
   const [sinCerrar, setSinCerrar] = useState<{ name: string; salaId: string; dias: number } | null>(null);
 
   // ── Card de preparación (estado vacío de Inicio) ────────────────────────
   // Los 3 pasos del checklist. `puertas` no tiene estado propio — se deriva
-  // de `doorLabels.length` (mismo dato que ya calcula `visibility.doorCount`,
-  // pero acá hace falta la lista completa para los chips, no solo el número).
+  // de `doorLabels.length` — acá hace falta la lista completa para los chips.
   const [prepPerfil, setPrepPerfil] = useState(false);
   const [prepRecurso, setPrepRecurso] = useState(false);
   const [doorLabels, setDoorLabels] = useState<string[]>([]);
@@ -472,6 +473,34 @@ export default function CoachHomeScreen() {
   // condición acá.
   const esCoachNuevo = !hasAnyBookingEver;
 
+  // ── El lugar que ocupa en cada puerta ───────────────────────────────────
+  // 🔴 Reemplaza al conteo "Aparecés en N puertas". Ese número se derivaba de
+  // los temas elegidos, así que solo se movía cuando el coach editaba sus temas
+  // — y encima subía tildando más temas, premiando amplitud. El lugar, en
+  // cambio, se mueve solo: entra un rival, sube una reseña, cambia la mediana
+  // de precio de la puerta.
+  //
+  // Va en un efecto aparte y DESPUÉS del primer pintado a propósito: cuesta
+  // siete consultas más el catálogo (`loadVisibilitySelf`), y la Home no puede
+  // esperar a eso para dibujarse. Mientras no llegó, la tarjeta no miente:
+  // muestra el estado bloqueante —que ya vino barato con `visibilityTeaser`— o
+  // una línea sin número.
+  //
+  // ⚠️ No corre si está bloqueado: ahí el titular es que no aparece, y calcular
+  // en qué lugar entraría sería trabajo tirado.
+  const visibilityLista = !!visibility;
+  const visibilityBloqueada = !!visibility?.blocked;
+  useEffect(() => {
+    if (!user || esCoachNuevo || !visibilityLista || visibilityBloqueada) { setStanding(null); return; }
+    let vivo = true;
+    (async () => {
+      const cargado = await loadVisibilitySelf(user.id);
+      if (!vivo || !cargado) return;
+      setStanding(homeStanding(analyzeDoors(cargado.self, cargado.pool)));
+    })();
+    return () => { vivo = false; };
+  }, [user, esCoachNuevo, visibilityLista, visibilityBloqueada]);
+
   const prepPuertas = doorLabels.length > 0;
   const prepDoneCount = [prepPerfil, prepPuertas, prepRecurso].filter(Boolean).length;
   const prepMissing = 3 - prepDoneCount;
@@ -793,12 +822,10 @@ export default function CoachHomeScreen() {
                 <Text style={s.visTitle}>
                   {visibility.blocked
                     ? 'Hoy no aparecés en Conexiones'
-                    : `Aparecés en ${visibility.doorCount} ${visibility.doorCount === 1 ? 'puerta' : 'puertas'}`}
+                    : tituloVisibilidad(standing)}
                 </Text>
                 <Text style={s.visTxt} numberOfLines={2}>
-                  {visibility.blocked
-                    ? visibility.blocked.hint
-                    : 'Mirá qué lugar ocupás en cada una y qué te falta para el siguiente.'}
+                  {visibility.blocked ? visibility.blocked.hint : bajadaVisibilidad(standing)}
                 </Text>
               </View>
               <Feather name="chevron-right" size={16} color={FOREST_SOFT} />

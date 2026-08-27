@@ -17,9 +17,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
-import { loadCoaches, type CachedCoach } from '@/lib/coachesCache';
+import { type CachedCoach } from '@/lib/coachesCache';
+import { loadVisibilitySelf } from '@/lib/coachVisibilityData';
 import {
   analyzeDoors,
   buildChecklist,
@@ -72,53 +72,13 @@ export default function CoachVisibilityScreen() {
   const load = useCallback(async () => {
     if (!user) { setLoading(false); return; }
 
-    const { data: coachRow } = await supabase
-      .from('coaches')
-      .select('id, created_at, specialty, bio, price_per_session, nationality, verified, availability_status, video_url, instant_booking')
-      .eq('profile_id', user.id)
-      .maybeSingle();
+    const cargado = await loadVisibilitySelf(user.id);
+    if (!cargado) { setNoCoach(true); setLoading(false); return; }
 
-    if (!coachRow) { setNoCoach(true); setLoading(false); return; }
-
-    const coachId = coachRow.id as string;
-
-    const [{ data: profile }, { data: topicRows }, { data: reviewRows }, { data: trendRows }, { data: rebookRow }, { data: availRows }, pool] =
-      await Promise.all([
-        supabase.from('profiles').select('name, avatar_url, gender').eq('id', user.id).maybeSingle(),
-        supabase.from('coach_topics').select('topic').eq('coach_id', coachId),
-        supabase.from('reviews').select('rating').eq('reviewed_id', user.id).eq('is_private', false),
-        supabase.from('coach_trending_stats').select('recent_bookers').eq('coach_id', coachId).maybeSingle(),
-        supabase.from('coach_rebooking_stats').select('rebooking_rate, completadas_count').eq('coach_id', coachId).maybeSingle(),
-        supabase.from('coach_availability_status').select('status').eq('coach_id', coachId).maybeSingle(),
-        loadCoaches(),
-      ]);
-
-    const ratings = (reviewRows ?? []).map((r: any) => r.rating as number);
-    const reviewCount = ratings.length;
-
-    const self: VisibilitySelf = {
-      id: user.id,
-      coachId,
-      createdAt: (coachRow.created_at ?? null) as string | null,
-      name: (profile?.name as string) ?? '',
-      specialty: (coachRow.specialty as string) ?? '',
-      priceFrom: (coachRow.price_per_session ?? 0) as number,
-      nationality: (coachRow.nationality ?? '') as string,
-      gender: (profile?.gender ?? '') as string,
-      avatarUrl: (profile?.avatar_url ?? null) as string | null,
-      bio: (coachRow.bio ?? null) as string | null,
-      topics: (topicRows ?? []).map((t: any) => t.topic as string),
-      verified: !!coachRow.verified,
-      avgRating: reviewCount > 0 ? ratings.reduce((a, b) => a + b, 0) / reviewCount : null,
-      reviewCount,
-      rebookingRate: (rebookRow?.rebooking_rate ?? null) as number | null,
-      completadasCount: (rebookRow?.completadas_count ?? 0) as number,
-      recentBookers: (trendRows?.recent_bookers ?? 0) as number,
-      availabilityStatus: (coachRow.availability_status ?? 'activo') as 'activo' | 'en_pausa',
-      hasSlotThisWeek: availRows?.status === 'this_week',
-      hasVideo: !!coachRow.video_url,
-      instantBooking: !!coachRow.instant_booking,
-    };
+    // El retrato del coach lo arma `loadVisibilitySelf` — lo comparte con la
+    // tarjeta de la Home para que las dos no puedan describir al mismo coach
+    // de dos formas distintas a un tap de distancia.
+    const { self, pool } = cargado;
 
     const checklist = buildChecklist(self);
     setData({

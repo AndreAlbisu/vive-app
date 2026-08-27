@@ -290,7 +290,11 @@ export function blockingReason(items: ChecklistItem[]): ChecklistItem | null {
   return items.find(i => i.blocking && !i.done) ?? null;
 }
 
-export type VisibilityTeaser = { doorCount: number; blocked: ChecklistItem | null };
+// Solo el estado bloqueante: es lo único que la Home puede saber barato y a la
+// vez es lo más urgente que puede decir (un coach que no aparece gana cero).
+// 📝 Tenía además un `doorCount` que alimentaba "Aparecés en N puertas" — salió
+// el 27/08/2026 junto con esa card: ver `homeStanding` más abajo.
+export type VisibilityTeaser = { blocked: ChecklistItem | null };
 
 /**
  * Resumen para la card del home del coach: solo lo que se resuelve con dos
@@ -315,11 +319,103 @@ export function visibilityTeaser(args: {
     instantBooking: true,
   } as VisibilitySelf;
 
-  return {
-    doorCount: DOORS.filter(d => d.subtemas.some(t => args.topics.includes(t))).length,
-    blocked: blockingReason(buildChecklist(partial)),
-  };
+  return { blocked: blockingReason(buildChecklist(partial)) };
 }
 
 // Re-export para que la pantalla no tenga que importar del deck directamente.
 export { isNewCoach, NEW_MAX_REVIEWS, NEW_MAX_AGE_DAYS };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// El titular de la tarjeta de visibilidad en la Home del coach.
+//
+// 🔴 Reemplaza a `visibilityTeaser().doorCount`, que mostraba "Aparecés en N
+// puertas". Ese número contaba cuántas puertas tocan los temas elegidos, así que
+// solo cambiaba cuando el coach editaba sus temas — o sea casi nunca. Un dato
+// que no se mueve se vuelve mueble a la tercera vez que lo ves, y además subía
+// tildando más temas: premiaba amplitud, que puede diluir en vez de ayudar.
+//
+// Acá se muestra el LUGAR que ocupa, que es lo que se mueve solo (entra un rival
+// nuevo, sube una reseña, cambia la mediana de precio de la puerta) y lo que
+// tiene una acción atrás. Es el mismo dato que ya calculaba `analyzeDoors` para
+// `CoachVisibilityScreen` y que la Home tiraba.
+export type HomeStanding =
+  | { kind: 'ganado' | 'rotando'; doorLabel: string; slotLabel: string; contenders: number; otherDoors: number }
+  | { kind: 'sin_lugar'; doorLabel: string; detail: string; totalDoors: number };
+
+export function homeStanding(doors: DoorStanding[]): HomeStanding | null {
+  if (doors.length === 0) return null;
+
+  const conLugar = doors.filter(d => d.best);
+  if (conLugar.length > 0) {
+    // Gana el lugar más valioso: primero los que son suyos sin disputa, y a
+    // igualdad de estado el slot más arriba en SLOT_ORDER. El `* 10` alcanza
+    // porque SLOT_ORDER tiene 4 elementos, así que ningún índice puede empatarle
+    // a un cambio de estado.
+    const rank = (d: DoorStanding) =>
+      (d.best!.status === 'ganado' ? 0 : 1) * 10 + SLOT_ORDER.indexOf(d.best!.slot.key);
+    const elegida = conLugar.reduce((a, b) => (rank(b) < rank(a) ? b : a));
+
+    return {
+      kind: elegida.best!.status === 'ganado' ? 'ganado' : 'rotando',
+      doorLabel: elegida.door.label,
+      slotLabel: elegida.best!.slot.label,
+      contenders: elegida.best!.contenders,
+      otherDoors: conLugar.length - 1,
+    };
+  }
+
+  // Ningún lugar en ninguna puerta. Se informa la brecha del slot MÁS alcanzable
+  // y no la del más prestigioso: decirle "te faltan 12 reseñas para Recomendado"
+  // a alguien que no entra en ningún lado es cierto e inútil. El orden es el
+  // inverso al de prioridad — `economico` y `nuevo` son los dos que el panel
+  // describe como alcanzables el día 1 sin tráfico propio.
+  const ALCANZABLES: DeckSlotKey[] = ['economico', 'nuevo', 'tendencia', 'recomendado'];
+  const primera = doors[0];
+  const slot = ALCANZABLES
+    .map(k => primera.slots.find(s => s.slot.key === k))
+    .find(s => s?.status === 'bloqueado');
+
+  return {
+    kind: 'sin_lugar',
+    doorLabel: primera.door.label,
+    detail: slot?.detail ?? '',
+    totalDoors: doors.length,
+  };
+}
+
+/**
+ * Copy de la tarjeta de visibilidad en la Home. Vive acá y no en la pantalla
+ * para poder testearlo: son cuatro estados y el que más importa —"todavía no
+ * entrás en ningún lugar"— es el que menos se ve en desarrollo.
+ *
+ * `null` = todavía no llegó el cálculo (cuesta 7 consultas, ver el efecto en
+ * `CoachHomeScreen`). En ese hueco NO se muestra un número: se muestra la
+ * invitación, que es cierta siempre.
+ */
+export function tituloVisibilidad(st: HomeStanding | null): string {
+  if (!st) return 'Tu lugar en Conexiones';
+  if (st.kind === 'sin_lugar') return 'Todavía no entrás en ningún lugar';
+  if (st.kind === 'ganado') return `«${st.slotLabel}» es tuyo en ${st.doorLabel}`;
+  return `Entrás al sorteo de «${st.slotLabel}» en ${st.doorLabel}`;
+}
+
+export function bajadaVisibilidad(st: HomeStanding | null): string {
+  if (!st) return 'Mirá en qué lugar entrás en cada puerta y qué te falta para el siguiente.';
+
+  if (st.kind === 'sin_lugar') {
+    // `plural()` antepone el número y acá quedaba "en 1 tu puerta". Con una sola
+    // puerta el número no aporta nada, así que no va.
+    if (st.detail) return st.detail;
+    return st.totalDoors === 1
+      ? 'Mirá qué te falta en tu puerta.'
+      : `Mirá qué te falta en tus ${st.totalDoors} puertas.`;
+  }
+
+  if (st.kind === 'rotando') {
+    return `Sos uno de ${st.contenders}. Mirá qué te falta para que el lugar sea tuyo.`;
+  }
+
+  return st.otherDoors > 0
+    ? `Y tenés lugar en ${plural(st.otherDoors, 'puerta más', 'puertas más')}. Mirá qué te falta para el siguiente.`
+    : 'Mirá qué te falta para el siguiente lugar.';
+}
