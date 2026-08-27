@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { VitaMark } from '@/components/VitaMark';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 // Asistente flotante "Sofía" — SOLO interfaz, sin conexión a ningún backend/LLM
@@ -216,7 +217,7 @@ export function SofiaAssistant() {
             accessibilityRole="button"
             accessibilityLabel="Abrir Sofía, tu asistente. Mantené presionado para moverla"
           >
-            <Text style={styles.orbS}>S</Text>
+            <VitaMark size={34} color="#FFFFFF" strokeWidth={6} />
           </View>
         </Animated.View>
       )}
@@ -245,7 +246,7 @@ export function SofiaAssistant() {
           <View style={styles.topGroup}>
             <View style={styles.sheetHeader}>
               <View style={styles.headerOrb}>
-                <Text style={styles.headerOrbS}>S</Text>
+                <VitaMark size={24} color="#FFFFFF" strokeWidth={7} />
               </View>
               <View style={styles.headerText}>
                 <Text style={styles.headerName}>Sofía</Text>
@@ -333,11 +334,18 @@ const styles = StyleSheet.create({
       android: { elevation: 6 },
     }),
   },
-  orbS: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 24,
-    color: '#FFFFFF',
-  },
+  // 📝 La letra "S" salió el 27/08/2026: el orbe lleva el isotipo de Vita en
+  // blanco sobre el verde del fondo, o sea la marca invertida. `VitaMark` ya
+  // parametriza color y grosor, así que no hubo que tocar el logo — y el día que
+  // el estudio lo cierre, cambia en `components/VitaMark.tsx` y esto lo hereda.
+  //
+  // ⚠️ `strokeWidth` va en unidades del viewBox (100 = ancho de la marca), así
+  // que escala con `size`: a 30px un trazo de 4 se vería filoso, por eso 6. Es
+  // el mismo criterio que ya usaban `SobreVosMomento` (18/7) e `index` (13/9).
+  //
+  // Los tamaños (34 en un orbe de 54, 24 en uno de 38) salieron de comparar
+  // cinco combinaciones renderizadas: a 30 la marca se ve tímida y a 38 aprieta
+  // contra el borde. En los dos casos ocupa ~63% del diámetro.
 
   backdrop: {
     backgroundColor: 'rgba(30,26,18,0.45)',
@@ -401,11 +409,6 @@ const styles = StyleSheet.create({
     backgroundColor: FOREST,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerOrbS: {
-    fontFamily: ViveFonts.bold,
-    fontSize: 16,
-    color: '#FFFFFF',
   },
   headerText: { flex: 1 },
   headerName: {
