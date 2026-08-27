@@ -197,6 +197,22 @@ serve(async (req) => {
       })
 
       if (body.verified) {
+        // 🔴 Hasta acá esto solo escribía `coaches.verified` — y `role` es lo
+        // que `AuthRedirect`/`app/index.tsx` usa para mandar a `(coach)` vs
+        // `(tabs)`. Sin esta línea, un coach aprobado por este mismo camino
+        // se logueaba y volvía a caer en la app de USUARIO para siempre, sin
+        // ningún error visible (encontrado 27/08/2026 con un alta real de
+        // punta a punta — nadie lo había pisado porque los coaches de prueba
+        // existentes se sembraron por SQL con el rol ya puesto a mano).
+        // Ningún coach real había pasado por acá todavía, así que no hay
+        // cuentas viejas para migrar — el fix alcanza desde ahora.
+        //
+        // ⚠️ No se toca al REVOCAR (`verified=false`, más abajo no hay rama
+        // simétrica): revocar es "sacar del catálogo", no "convertir de nuevo
+        // en usuario final" — mismo criterio que ya usa este archivo para no
+        // reescribir `application_status` al revocar.
+        await admin.from('profiles').update({ role: 'coach' }).eq('id', coach.profile_id)
+
         await notifyCoach(
           admin,
           coach.profile_id,

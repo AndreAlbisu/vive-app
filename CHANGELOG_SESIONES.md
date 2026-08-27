@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 140)
+
+**Tocado:** `supabase/functions/admin-actions/index.ts`, `SCHEMA.md`. Deployada: `admin-actions` **v20**.
+
+**Resumen — 🔴 bug real y serio, encontrado mientras se probaba la tarjeta de "coach nuevo" (sesión 139): un coach aprobado por el camino real de la app nunca llegaba al panel de coach.**
+
+- Para probar la tarjeta nueva de la Home hacía falta un coach genuinamente nuevo, así que Joaquín hizo el primer alta de punta a punta de este proyecto: se registró como coach (con `+coachtest` en el mail, mismo mail de siempre), completó la postulación, la aprobó como admin, y al volver a entrar **cayó en la app de USUARIO, no en la de coach**.
+- Causa: `admin-actions` (`set_coach_verified`) aprueba escribiendo `coaches.verified = true`, pero **nunca tocaba `profiles.role`** — y `role` es exactamente lo que `AuthRedirect`/`app/index.tsx` usa para mandar a `(coach)` vs `(tabs)`. Confirmado contra la base: el coach de prueba de Joaquín tenía `verified: true`, `application_status: 'aprobada'`, `role: 'user'`. Los demás coaches de prueba (Valentina Ríos, Tomás Aguirre, etc.) sí tienen `role: 'coach'` — pero porque se sembraron por SQL directo con el rol puesto a mano, no porque pasaran por esta función. **Nadie había ejercitado el flujo real de aprobación de punta a punta hasta hoy.**
+- Esto conecta con un hallazgo viejo de SCHEMA.md (16/07/2026, "dato sucio": coaches con `profiles.role='user'`) que en su momento se atribuyó solo a seeds de test desprolijos — en realidad, además de eso, **era un síntoma de este bug de fondo**, no solo ruido de datos.
+- Arreglado: `set_coach_verified` ahora también hace `profiles.update({role:'coach'})` cuando `verified=true`, en el mismo bloque donde ya escribe `application_status`/`application_reviewed_at` y notifica al coach. **No** se toca al revocar (`verified=false`) — revocar saca del catálogo, no convierte de nuevo en usuario final, mismo criterio asimétrico que esta función ya usa para `application_status`.
+- Desbloqueada la cuenta de prueba de Joaquín a mano (`update profiles set role='coach'`) para no perder el hilo de la prueba de la sesión 139.
+- Deployada y verificada por la respuesta: un POST con `coach_id` inválido da `{"error":"token inválido"}` con 401 — desde el código propio, confirma que arrancó sin errores de import.
+- `SCHEMA.md` actualizado, cruzando la nota vieja del 16/07 con la causa raíz encontrada hoy.
+- Typecheck y 287/287 tests limpios (el archivo de la función no corre por `tsc`, `supabase/functions` está excluido de `tsconfig.json`).
+
+- ✅ **Chequeado el mismo día si había coaches reales afectados** (`select ... where verified=true and role='user'`): solo 2 filas, y ninguna es un caso real. Una es el propio Andre (`profile_id` = su cuenta de siempre) — el mismo caso ya documentado desde el 16/07, cuenta de dev/test, no alguien que se haya dado de alta por el flujo real. La otra es una cuenta ya dada de baja (`name = 'Usuario eliminado'`, la anonimización de `deleteMyAccount()`) — inerte, no hay a quién avisarle. **El bug se atrapó antes de afectar a ningún coach real.**
+
+**Pendiente para la próxima sesión:**
+- Volver a intentar la prueba de la sesión 139 (tarjeta de "coach nuevo" en la Home) — ahora sí debería poder entrar como coach.
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 139)
 
 **Tocado:** `screens/CoachHomeScreen.tsx`.
