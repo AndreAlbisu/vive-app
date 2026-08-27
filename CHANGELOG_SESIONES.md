@@ -18,10 +18,7 @@
 - `RegisterScreen.tsx` (usuario final) **no tenía este bug**: ya pide el nombre en un campo propio desde siempre. El defecto era específico del atajo login+alta de `CoachLoginScreen`.
 - Corregido a mano el nombre de la cuenta de prueba ya creada (`"joaquinalbisu493+coachtest"` → `"Coach Test"`).
 - **Sobre el pedido de "una opción para elegir cómo lo nombra Vita, para coach y usuario"**: ya existe, no hacía falta construir nada — `/edit-profile` tiene el campo "Nombre" editable, y está enlazado desde el perfil del usuario (`ProfileOwnScreen`) y desde el del coach (`CoachProfileScreen`). Es la puerta correcta para los dos roles.
-- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo.
-
-**Pendiente para la próxima sesión:**
-- Confirmar en el teléfono: crear otra cuenta de coach de prueba (o revisar la actual) y ver que el campo "Tu nombre" aparezca después de un login fallido, y que la Home ya no se desborde.
+- Typecheck, lint y 287/287 tests limpios. ✅ **Confirmado en dispositivo el mismo día** — Joaquín: "ahora se ve bien" (Home sin desbordar, con el nombre corregido).
 
 ---
 
