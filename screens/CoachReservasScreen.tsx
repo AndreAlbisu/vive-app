@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useSegments } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
-import { supabase } from '@/lib/supabase';
+import { supabase, registrarEvento } from '@/lib/supabase';
 import { esperaConfirmacionDelCoach } from '@/lib/bookingHelpers';
 import { useAuth } from '@/context/AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
@@ -24,6 +24,7 @@ import { encryptMessage } from '@/lib/encryption';
 import { isCancelLate } from '@/lib/bookingHelpers';
 import { confirmBooking, rejectBooking } from '@/lib/coachBookingActions';
 import { AppBg } from '@/components/ui/AppBg';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
 const CARD = '#F7F2E7';
@@ -100,6 +101,47 @@ function startMs(date: string, time: string): number {
   return new Date(y, m - 1, d, h, min, 0).getTime();
 }
 
+// ── Agrupación de disponibilidad (estado vacío de Reservas) ────────────────
+// `coach_weekly_pattern` es una fila por (día, bloque) — un coach puede tener
+// más de un bloque el mismo día (mañana y tarde separadas). Acá se agrupa
+// SOLO para mostrar, no es un dato nuevo: días CONSECUTIVOS (Lun..Dom) con
+// exactamente el mismo horario configurado se muestran en una fila ("Lun a
+// Jue"); un día con varios bloques los muestra separados por coma en la
+// misma fila, en vez de inventar una fila por bloque.
+const DAY_ABBR_BY_ISO: Record<number, string> = { 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom' };
+
+type WeeklyBlock = { day_of_week: number; start_time: string; end_time: string };
+type AvailabilityRow = { label: string; hours: string; off: boolean };
+
+function groupAvailability(blocks: WeeklyBlock[]): AvailabilityRow[] {
+  const bySignature = (day: number): string => {
+    const dayBlocks = blocks
+      .filter(b => b.day_of_week === day)
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+    return dayBlocks.map(b => `${b.start_time}–${b.end_time}`).join(', ');
+  };
+
+  const rows: AvailabilityRow[] = [];
+  let day = 1;
+  while (day <= 7) {
+    const sig = bySignature(day);
+    let end = day;
+    while (end + 1 <= 7 && bySignature(end + 1) === sig) end += 1;
+
+    // "y" para un par de días (Sáb y Dom), "a" para 3 o más (Lun a Jue) — mismo
+    // criterio que el mockup, un rango de dos no se lee como un "a".
+    const label = end === day
+      ? DAY_ABBR_BY_ISO[day]
+      : end === day + 1
+        ? `${DAY_ABBR_BY_ISO[day]} y ${DAY_ABBR_BY_ISO[end]}`
+        : `${DAY_ABBR_BY_ISO[day]} a ${DAY_ABBR_BY_ISO[end]}`;
+    rows.push(sig ? { label, hours: sig.replace(/–/g, ' – '), off: false } : { label, hours: '', off: true });
+
+    day = end + 1;
+  }
+  return rows;
+}
+
 // ── Screen ───────────────────────────────────────────────────────────────────
 export default function CoachReservasScreen() {
   const router = useRouter();
@@ -114,6 +156,7 @@ export default function CoachReservasScreen() {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [weeklyBlocks, setWeeklyBlocks] = useState<WeeklyBlock[]>([]);
 
   /** Se inició un cobro y todavía no se acreditó.
    *  La regla vive en `lib/bookingHelpers.ts` porque la Home la necesita para
@@ -167,6 +210,15 @@ export default function CoachReservasScreen() {
     return groups;
   }, [confirmedUpcoming]);
 
+  // Estado vacío GLOBAL: ninguna de las dos categorías tiene nada. Distinto de
+  // "esta categoría en particular está vacía" — con eso alcanza para decidir
+  // si se muestra la card grande de "Tu agenda está libre" o el listado de
+  // siempre (ver el render: cada sección ahora se omite entera si no tiene
+  // contenido, en vez de mostrar una caja punteada diciendo que no hay nada).
+  const isFullyEmpty = pending.length === 0 && grouped.length === 0;
+
+  const availabilityRows = useMemo(() => groupAvailability(weeklyBlocks), [weeklyBlocks]);
+
   // La próxima sesión (para el botón "Preparar" si está a <24hs).
   const nextId = confirmedUpcoming[0]?.id ?? null;
   const nextWithin24h = confirmedUpcoming[0]
@@ -176,11 +228,17 @@ export default function CoachReservasScreen() {
   const loadBookings = useCallback(async () => {
     if (!user || !coachId) return;
 
-    const [{ data: rows, error }, { data: completed }] = await Promise.all([
+    const [{ data: rows, error }, { data: completed }, { data: pattern }] = await Promise.all([
       supabase.from('bookings').select('*').eq('coach_id', coachId)
         .in('status', ['pendiente', 'confirmada']).order('created_at', { ascending: false }),
       supabase.from('bookings').select('user_id').eq('coach_id', coachId).eq('status', 'completada'),
+      // Solo se usa para el estado vacío (sección "Cuándo estás disponible"),
+      // pero se pide siempre junto con lo demás — es una consulta liviana y
+      // así no hay que esperar a saber si la pantalla está vacía para pedirla.
+      supabase.from('coach_weekly_pattern').select('day_of_week, start_time, end_time').eq('coach_id', coachId),
     ]);
+
+    setWeeklyBlocks((pattern ?? []) as WeeklyBlock[]);
 
     if (error || !rows) { setLoading(false); return; }
 
@@ -337,16 +395,62 @@ export default function CoachReservasScreen() {
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={FOREST} colors={[FOREST]} />}>
 
-            {/* Por confirmar */}
-            <View style={s.stitle}>
-              <Text style={s.stitleB}>Por confirmar</Text>
-              {pending.length > 0 && <Text style={s.stitleSpan}>{pending.length} esperando</Text>}
-            </View>
+            {isFullyEmpty && (
+              <>
+                <SurfaceCard variant="elevated" tone="light" style={s.emptyCard}>
+                  <View style={s.emptyCardInner}>
+                    <View style={s.emptyIcon}>
+                      <Feather name="calendar" size={21} color={FOREST} />
+                    </View>
+                    <Text style={s.emptyTitle}>Tu agenda está libre</Text>
+                    <Text style={s.emptyTxt}>
+                      Cuando alguien reserve, la solicitud aparece acá para que la confirmes o propongas otro horario.
+                    </Text>
+                  </View>
+                </SurfaceCard>
 
-            {pending.length === 0 ? (
-              <View style={s.aldia}><Text style={s.aldiaTxt}>✓ Sin solicitudes pendientes. Estás al día</Text></View>
-            ) : (
-              pending.map(b => (
+                <View style={s.quietRow}>
+                  <View style={s.quietDot} />
+                  <Text style={s.quietTxt}>Te avisamos apenas llegue la primera</Text>
+                </View>
+
+                <Text style={s.sec}>Cuándo estás disponible</Text>
+                <SurfaceCard variant="elevated" tone="light" style={s.availCard}>
+                  <View style={s.availInner}>
+                    {availabilityRows.map((row, i) => (
+                      <View key={row.label} style={[s.slot, i < availabilityRows.length - 1 && s.slotDivider]}>
+                        <Text style={s.slotDay}>{row.label}</Text>
+                        {row.off ? (
+                          <Text style={s.slotOff}>Sin atención</Text>
+                        ) : (
+                          <Text style={s.slotHours}>{row.hours}</Text>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                </SurfaceCard>
+                <TouchableOpacity
+                  style={s.editAvailBtn}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    registrarEvento('disponibilidad_editada', {}).catch(() => {});
+                    router.push('/coach-weekly-pattern');
+                  }}>
+                  <Text style={s.editAvailBtnTxt}>Editar disponibilidad</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Por confirmar — se omite entera (ni header ni caja) si no hay
+                nada, en vez de repetir "no hay pendientes" cuando la pantalla
+                ya tiene contenido real más abajo. */}
+            {pending.length > 0 && (
+              <>
+                <View style={s.stitle}>
+                  <Text style={s.stitleB}>Por confirmar</Text>
+                  <Text style={s.stitleSpan}>{pending.length} esperando</Text>
+                </View>
+                {pending.map(b => (
                 <View key={b.id} style={s.req}>
                   <View style={s.reqTop}>
                     {b.avatarUrl ? (
@@ -379,19 +483,18 @@ export default function CoachReservasScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
-              ))
+                ))}
+              </>
             )}
 
-            {/* Confirmadas */}
-            <View style={s.stitle}>
-              <Text style={s.stitleB}>Confirmadas</Text>
-              {grouped.length > 0 && <Text style={s.stitleSpan}>ordenadas por día</Text>}
-            </View>
-
-            {grouped.length === 0 ? (
-              <View style={s.aldia}><Text style={s.aldiaTxt}>No tenés sesiones confirmadas próximas</Text></View>
-            ) : (
-              grouped.map(g => (
+            {/* Confirmadas — mismo criterio: se omite entera si está vacía. */}
+            {grouped.length > 0 && (
+              <>
+                <View style={s.stitle}>
+                  <Text style={s.stitleB}>Confirmadas</Text>
+                  <Text style={s.stitleSpan}>ordenadas por día</Text>
+                </View>
+                {grouped.map(g => (
                 <View key={g.key} style={s.dayg}>
                   <Text style={s.daygHead}>{g.label}</Text>
                   {g.items.map(b => (
@@ -418,7 +521,8 @@ export default function CoachReservasScreen() {
                     </View>
                   ))}
                 </View>
-              ))
+                ))}
+              </>
             )}
 
             <TouchableOpacity style={s.histLink} activeOpacity={0.7} onPress={() => router.push('/coach-agenda')}>
@@ -492,8 +596,37 @@ const s = StyleSheet.create({
   stitleB: { fontFamily: ViveFonts.title, fontSize: 17, color: FOREST },
   stitleSpan: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
 
-  aldia: { padding: 18, borderWidth: 1.5, borderColor: LINE, borderRadius: 20, borderStyle: 'dashed', alignItems: 'center' },
-  aldiaTxt: { textAlign: 'center', fontSize: 12.5, color: FOREST_SOFT, lineHeight: 18, fontFamily: ViveFonts.regular },
+  // Estado vacío (`isFullyEmpty`) — spec `coach-estados-vacios.html`. Las dos
+  // cajas punteadas de "sin nada" que había antes (`aldia`/`aldiaTxt`) se
+  // sacaron: esta es la única superficie que se muestra cuando no hay ninguna
+  // reserva, ni pendiente ni confirmada.
+  emptyCard: { marginTop: 18 },
+  emptyCardInner: { padding: 20 },
+  emptyIcon: {
+    width: 46, height: 46, borderRadius: 23, backgroundColor: '#DCE5CB',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 13,
+  },
+  emptyTitle: { fontFamily: ViveFonts.titleSemiBold, fontSize: 18, color: FOREST, lineHeight: 23 },
+  emptyTxt: { fontSize: 12.5, color: FOREST_SOFT, lineHeight: 19, marginTop: 7, fontFamily: ViveFonts.regular },
+
+  quietRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 },
+  quietDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#DCE5CB' },
+  quietTxt: { fontSize: 12, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
+
+  sec: { fontFamily: ViveFonts.titleSemiBold, fontSize: 16, color: FOREST, marginTop: 22, marginBottom: 10 },
+  availCard: {},
+  availInner: { paddingHorizontal: 18, paddingVertical: 6 },
+  slot: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 11 },
+  slotDivider: { borderBottomWidth: 1, borderBottomColor: LINE },
+  slotDay: { fontSize: 12, fontFamily: ViveFonts.semibold, color: FOREST, width: 78, flexShrink: 0 },
+  slotHours: { fontSize: 13.5, fontFamily: ViveFonts.medium, color: FOREST, flex: 1 },
+  slotOff: { fontSize: 11.5, color: FOREST_SOFT, fontFamily: ViveFonts.regular, fontStyle: 'italic' },
+
+  editAvailBtn: {
+    alignSelf: 'center', marginTop: 12,
+    borderWidth: 1.5, borderColor: FOREST, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 18,
+  },
+  editAvailBtnTxt: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: FOREST },
 
   // Avatares
   avSm: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(63,81,47,0.1)' },

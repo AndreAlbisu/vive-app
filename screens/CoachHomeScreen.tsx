@@ -15,12 +15,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
-import { supabase } from '@/lib/supabase';
+import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { personasQueSeCaen, haceCuanto, type PersonaEnRiesgo } from '@/lib/coachContinuity';
 import { COMMISSION_LOCAL_FIRST, COMMISSION_LOCAL_RECURRING } from '@/lib/pricing';
 import { AppBg } from '@/components/ui/AppBg';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { visibilityTeaser, type VisibilityTeaser } from '@/lib/coachVisibility';
+import { DOORS } from '@/constants/conexionesDoors';
 import { scheduledAtMs, daysFromTodayAr, todayInAr } from '@/lib/time';
 
 /** Una persona que se está cayendo, ya resuelta con lo que hace falta para
@@ -125,16 +127,6 @@ function nextDateLabel(date: string): string {
   return `${dayName} ${d} ${MONTHS[m - 1]}`;
 }
 
-// Texto del botón de la tarjeta de "coach nuevo" (ver `esCoachNuevo` más
-// abajo), por `ChecklistItem.key` — de `buildChecklist` en `lib/coachVisibility.ts`.
-// Solo hacen falta las que pueden ser `blocking: true` ahí; una clave nueva
-// que no esté acá cae en el genérico "Resolverlo", no rompe nada.
-const CTA_POR_ITEM: Record<string, string> = {
-  activo: 'Activar mi perfil',
-  topics: 'Elegir mis temas',
-  price: 'Poner mi precio',
-};
-
 export default function CoachHomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -152,6 +144,21 @@ export default function CoachHomeScreen() {
   const [seCaen, setSeCaen] = useState<PersonaCayendo[]>([]);
   const [repu, setRepu] = useState<{ completadas: number; vuelvenPct: number | null } | null>(null);
   const [sinCerrar, setSinCerrar] = useState<{ name: string; salaId: string; dias: number } | null>(null);
+
+  // ── Card de preparación (estado vacío de Inicio) ────────────────────────
+  // Los 3 pasos del checklist. `puertas` no tiene estado propio — se deriva
+  // de `doorLabels.length` (mismo dato que ya calcula `visibility.doorCount`,
+  // pero acá hace falta la lista completa para los chips, no solo el número).
+  const [prepPerfil, setPrepPerfil] = useState(false);
+  const [prepRecurso, setPrepRecurso] = useState(false);
+  const [doorLabels, setDoorLabels] = useState<string[]>([]);
+  // Si el coach tiene AL MENOS una fila en `bookings`, sin importar el
+  // estado (ni siquiera se excluye `cancelada`: si alguien reservó una vez,
+  // aunque se haya caído, ya no es "antes de tu primera sesión"). Reemplaza
+  // a la vieja `esCoachNuevo` (`!next && completadas===0`) como gate de esta
+  // card — esa condición no contaba una solicitud recién llegada como "ya
+  // pasó algo", y la card de acá tiene que desaparecer justo en ese momento.
+  const [hasAnyBookingEver, setHasAnyBookingEver] = useState(true); // true hasta confirmar — no mostrar de más mientras carga
 
   useEffect(() => {
     if (!user) return;
@@ -188,8 +195,15 @@ export default function CoachHomeScreen() {
     const monday = new Date(now); monday.setDate(now.getDate() - daysFromMonday); monday.setHours(0, 0, 0, 0);
     const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
 
-    const [{ data: profile }, { data: confirmed }, { data: coachRow }, { data: topicRows }] = await Promise.all([
-      supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
+    const [
+      { data: profile },
+      { data: confirmed },
+      { data: coachRow },
+      { data: topicRows },
+      { count: recursosCount },
+      { count: bookingsEverCount },
+    ] = await Promise.all([
+      supabase.from('profiles').select('name, avatar_url').eq('id', user.id).maybeSingle(),
       supabase
         .from('bookings')
         .select('id, user_id, scheduled_date, scheduled_time, sala_id, duration_minutes')
@@ -197,8 +211,15 @@ export default function CoachHomeScreen() {
         .eq('status', 'confirmada')
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true }),
-      supabase.from('coaches').select('verified, availability_status, price_per_session').eq('id', coachId).maybeSingle(),
+      supabase.from('coaches').select('verified, availability_status, price_per_session, bio, specialty').eq('id', coachId).maybeSingle(),
       supabase.from('coach_topics').select('topic').eq('coach_id', coachId),
+      // "Subiste un recurso" cuenta cualquier fila, sin filtrar por `status`:
+      // el checklist dice "Subir tu primer recurso" — es la acción, no que ya
+      // esté publicado.
+      supabase.from('coach_resources').select('id', { count: 'exact', head: true }).eq('coach_id', coachId),
+      // Para `hasAnyBookingEver` — ver más abajo. `head:true` + sin filtro de
+      // estado: alcanza con saber si existe una fila, no cuál ni cuántas.
+      supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('coach_id', coachId),
     ]);
 
     if (profile?.name) setCoachName(profile.name.split(' ')[0]);
@@ -209,6 +230,31 @@ export default function CoachHomeScreen() {
       topics: (topicRows ?? []).map(t => t.topic as string),
       price: (coachRow?.price_per_session ?? null) as number | null,
     }));
+
+    // ── Checklist de preparación ──────────────────────────────────────────
+    // Los tres `setXxx` usan la forma funcional para comparar contra el
+    // valor ANTERIOR y loguear `preparacion_paso_completado` solo en la
+    // transición false→true — no en cada `loadData()` (focus, refresh).
+    const topicsNow = (topicRows ?? []).map(t => t.topic as string);
+    const doorsNow = DOORS.filter(d => d.subtemas.some(t => topicsNow.includes(t))).map(d => d.label);
+    setDoorLabels(prev => {
+      if (prev.length === 0 && doorsNow.length > 0) registrarEvento('preparacion_paso_completado', { paso: 'puertas' }).catch(() => {});
+      return doorsNow;
+    });
+
+    const perfilCompletoNow = !!profile?.avatar_url && !!coachRow?.bio?.trim() && !!coachRow?.specialty?.trim();
+    setPrepPerfil(prev => {
+      if (!prev && perfilCompletoNow) registrarEvento('preparacion_paso_completado', { paso: 'perfil' }).catch(() => {});
+      return perfilCompletoNow;
+    });
+
+    const recursoNow = (recursosCount ?? 0) > 0;
+    setPrepRecurso(prev => {
+      if (!prev && recursoNow) registrarEvento('preparacion_paso_completado', { paso: 'recurso' }).catch(() => {});
+      return recursoNow;
+    });
+
+    setHasAnyBookingEver((bookingsEverCount ?? 0) > 0);
 
     const rows = confirmed ?? [];
     const sessions: Session[] = rows.map(b => ({
@@ -420,10 +466,22 @@ export default function CoachHomeScreen() {
   // distintos: uno con historial que está en un bache entre reservas (para
   // ese, "Ver reservas" tiene sentido) y uno que TODAVÍA NUNCA tuvo una
   // sesión — y a ese último enviarlo a una lista vacía es un callejón, justo
-  // cuando es el que más ayuda necesita. `completadas === 0` es la señal de
-  // "nunca tuvo una", no solo "no tiene la próxima" — un coach con historial
-  // en un bache tiene `completadas > 0` aunque `next` sea null.
-  const esCoachNuevo = !next && (repu?.completadas ?? 0) === 0;
+  // cuando es el que más ayuda necesita. `hasAnyBookingEver` (ver más arriba)
+  // es la señal de "nunca pasó nada todavía" — ya solo se evalúa dentro de la
+  // rama `!next` del ternario de abajo, así que no hace falta repetir esa
+  // condición acá.
+  const esCoachNuevo = !hasAnyBookingEver;
+
+  const prepPuertas = doorLabels.length > 0;
+  const prepDoneCount = [prepPerfil, prepPuertas, prepRecurso].filter(Boolean).length;
+  const prepMissing = 3 - prepDoneCount;
+  // La primera acción pendiente, en el mismo orden que se muestra el
+  // checklist — es la que ofrece el botón de abajo.
+  const prepNextAction: { label: string; route: string } | null =
+    !prepPerfil ? { label: 'Completar mi perfil', route: '/perfil' } :
+    !prepPuertas ? { label: 'Elegir mis temas', route: '/coach-topics' } :
+    !prepRecurso ? { label: 'Subir un recurso', route: '/coach-recurso-nuevo' } :
+    null;
 
   if (loading) {
     return (
@@ -562,50 +620,92 @@ export default function CoachHomeScreen() {
               )}
             </View>
           ) : esCoachNuevo ? (
-            // Coach que TODAVÍA NUNCA tuvo una sesión (ver `esCoachNuevo` más
-            // arriba). Reusa `visibility` —ya calculado más arriba, sin
-            // consulta nueva— pero en la posición donde antes había un
-            // callejón ("Sin sesiones programadas" → "Ver reservas", una
-            // pantalla vacía atrás de otra). Acá el link es al problema
-            // concreto, no a una lista sin nada.
-            <View style={s.newCoachCard}>
-              <Text style={s.newCoachEyebrow}>Antes de tu primera sesión</Text>
-              {visibility?.blocked ? (
-                <>
-                  <Text style={s.newCoachTitle}>{visibility.blocked.label}</Text>
-                  <Text style={s.newCoachTxt}>{visibility.blocked.hint}</Text>
-                  {visibility.blocked.route && (
-                    <TouchableOpacity
-                      style={s.newCoachBtn}
-                      activeOpacity={0.85}
-                      onPress={() => router.push(visibility.blocked!.route as any)}>
-                      <Text style={s.newCoachBtnTxt}>
-                        {CTA_POR_ITEM[visibility.blocked.key] ?? 'Resolverlo'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Text style={s.newCoachTitle}>
-                    Ya aparecés en {visibility?.doorCount ?? 0}{' '}
-                    {visibility?.doorCount === 1 ? 'puerta' : 'puertas'}
-                  </Text>
-                  <Text style={s.newCoachTxt}>
-                    Todavía no llegó tu primera reserva. Mirá qué lugar ocupás en cada una y qué podés mejorar mientras esperás.
-                  </Text>
-                  <TouchableOpacity style={s.newCoachBtn} activeOpacity={0.85} onPress={() => router.push('/coach-visibilidad')}>
-                    <Text style={s.newCoachBtnTxt}>Ver mi visibilidad</Text>
+            // Coach que TODAVÍA no recibió ninguna reserva (`hasAnyBookingEver`
+            // arriba). Reemplaza a la tarjeta de la sesión 139 (solo mostraba
+            // "Ya aparecés en N puertas") por el checklist completo — spec
+            // `coach-estados-vacios.html`. Desaparece sola apenas entra la
+            // primera reserva, sin importar en qué estado quede.
+            <SurfaceCard variant="elevated" tone="light" style={s.prepCard}>
+              <View style={s.prepCardInner}>
+                <Text style={s.prepEyebrow}>Antes de tu primera sesión</Text>
+                <Text style={s.prepTitle}>
+                  {prepMissing <= 1 ? 'Estás casi listo para recibir' : 'Preparemos tu perfil'}
+                </Text>
+
+                <View style={s.progWrap}>
+                  <View style={s.progBar}>
+                    <View style={[s.progFill, { width: `${(prepDoneCount / 3) * 100}%` }]} />
+                  </View>
+                  <View style={s.progLbl}>
+                    <Text style={s.progLblTxt}><Text style={s.progLblB}>{prepDoneCount} de 3</Text> pasos completos</Text>
+                    <Text style={s.progLblTxt}>{prepMissing === 0 ? 'Completo' : `Falta ${prepMissing}`}</Text>
+                  </View>
+                </View>
+
+                <View style={s.checkRow}>
+                  <View style={[s.checkBox, prepPerfil ? s.checkBoxDone : s.checkBoxTodo]}>
+                    {prepPerfil && <Feather name="check" size={11} color="#F3EEDF" />}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.checkLabel}>Perfil completo</Text>
+                    <Text style={s.checkSub}>Foto, bio y especialidades</Text>
+                  </View>
+                </View>
+
+                <View style={[s.checkRow, { marginTop: 13 }]}>
+                  <View style={[s.checkBox, prepPuertas ? s.checkBoxDone : s.checkBoxTodo]}>
+                    {prepPuertas && <Feather name="check" size={11} color="#F3EEDF" />}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.checkLabel}>
+                      {prepPuertas
+                        ? `Aparecés en ${doorLabels.length} ${doorLabels.length === 1 ? 'puerta' : 'puertas'}`
+                        : 'Elegí en qué puertas aparecer'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={s.doorChips}>
+                  {doorLabels.map(label => (
+                    <View key={label} style={s.doorChip}><Text style={s.doorChipTxt}>{label}</Text></View>
+                  ))}
+                  <TouchableOpacity style={s.doorChipAdd} activeOpacity={0.7} onPress={() => router.push('/coach-topics')}>
+                    <Text style={s.doorChipAddTxt}>+ agregar</Text>
                   </TouchableOpacity>
-                </>
-              )}
-            </View>
+                </View>
+
+                <View style={[s.checkRow, { marginTop: 13 }]}>
+                  <View style={[s.checkBox, prepRecurso ? s.checkBoxDone : s.checkBoxTodo]}>
+                    {prepRecurso && <Feather name="check" size={11} color="#F3EEDF" />}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.checkLabel}>Subir tu primer recurso</Text>
+                    <Text style={s.checkSub}>Los coaches con recursos reciben más reservas</Text>
+                  </View>
+                </View>
+
+                {prepNextAction && (
+                  <TouchableOpacity
+                    style={s.prepBtn}
+                    activeOpacity={0.85}
+                    onPress={() => router.push({ pathname: prepNextAction.route as any, params: prepNextAction.route === '/coach-recurso-nuevo' ? { coach_id: coachId } : undefined })}>
+                    <Text style={s.prepBtnTxt}>{prepNextAction.label}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </SurfaceCard>
           ) : (
             <View style={s.nextEmpty}>
               <Text style={s.nextEmptyTxt}>Sin sesiones programadas</Text>
               <TouchableOpacity style={s.nextEmptyBtn} activeOpacity={0.85} onPress={() => router.navigate('/reservas')}>
                 <Text style={s.nextEmptyBtnTxt}>Ver reservas</Text>
               </TouchableOpacity>
+            </View>
+          )}
+
+          {esCoachNuevo && (
+            <View style={s.prepQuietRow}>
+              <View style={s.prepQuietDot} />
+              <Text style={s.prepQuietTxt}>Cuando llegue tu primera reserva, esta card se va sola</Text>
             </View>
           )}
 
@@ -819,19 +919,46 @@ const s = StyleSheet.create({
   nextEmptyBtn: { backgroundColor: FOREST, borderRadius: 15, paddingVertical: 10, paddingHorizontal: 22 },
   nextEmptyBtnTxt: { color: GREEN_TXT, fontSize: 12.5, fontFamily: ViveFonts.semibold },
 
-  // Tarjeta de "coach nuevo" (`esCoachNuevo`) — mismo lenguaje visual que
-  // `nextEmpty` (misma tarjeta clara con borde) pero alineada a la izquierda
-  // y con más contenido: acá hay algo específico que decir, no solo un
-  // estado vacío.
-  newCoachCard: {
-    marginTop: 14, backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20,
-    padding: 18, gap: 8,
+  // Card de preparación (`esCoachNuevo`) — spec `coach-estados-vacios.html`.
+  // Reemplaza a la tarjeta de una línea de la sesión 139 por el checklist
+  // completo: barra de progreso + 3 pasos + chips de puertas + botón de la
+  // próxima acción.
+  prepCard: { marginTop: 14 },
+  prepCardInner: { padding: 20 },
+  prepEyebrow: {
+    fontSize: 10, fontFamily: ViveFonts.bold, letterSpacing: 1.1, textTransform: 'uppercase', color: TERRA,
   },
-  newCoachEyebrow: { fontSize: 10.5, letterSpacing: 0.8, textTransform: 'uppercase', color: FOREST_SOFT, fontFamily: ViveFonts.medium },
-  newCoachTitle: { fontFamily: ViveFonts.semibold, fontSize: 15, color: FOREST },
-  newCoachTxt: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: FOREST_SOFT, lineHeight: 18 },
-  newCoachBtn: { alignSelf: 'flex-start', marginTop: 6, backgroundColor: FOREST, borderRadius: 15, paddingVertical: 10, paddingHorizontal: 20 },
-  newCoachBtnTxt: { color: GREEN_TXT, fontSize: 12.5, fontFamily: ViveFonts.semibold },
+  prepTitle: { fontFamily: ViveFonts.titleSemiBold, fontSize: 18, color: FOREST, marginTop: 7 },
+
+  progWrap: { marginTop: 14 },
+  progBar: { height: 6, borderRadius: 4, backgroundColor: CREAM_DEEP, overflow: 'hidden' },
+  progFill: { height: '100%', borderRadius: 4, backgroundColor: FOREST_SOFT },
+  progLbl: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 7 },
+  progLblTxt: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
+  progLblB: { color: FOREST, fontFamily: ViveFonts.semibold },
+
+  checkRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  checkBox: {
+    width: 20, height: 20, borderRadius: 6, flexShrink: 0, marginTop: 1,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  checkBoxDone: { backgroundColor: FOREST },
+  checkBoxTodo: { borderWidth: 1.5, borderColor: LINE },
+  checkLabel: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: FOREST },
+  checkSub: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 1 },
+
+  doorChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 7, marginLeft: 30 },
+  doorChip: { backgroundColor: OK_BG, borderRadius: 11, paddingVertical: 5, paddingHorizontal: 10 },
+  doorChipTxt: { fontSize: 10.5, fontFamily: ViveFonts.semibold, color: OK_INK },
+  doorChipAdd: { borderWidth: 1.5, borderColor: LINE, borderStyle: 'dashed', borderRadius: 11, paddingVertical: 5, paddingHorizontal: 10 },
+  doorChipAddTxt: { fontSize: 10.5, fontFamily: ViveFonts.semibold, color: FOREST_SOFT },
+
+  prepBtn: { alignSelf: 'flex-start', marginTop: 15, backgroundColor: FOREST, borderRadius: 16, paddingVertical: 11, paddingHorizontal: 18 },
+  prepBtnTxt: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: GREEN_TXT },
+
+  prepQuietRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 },
+  prepQuietDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: OK_BG },
+  prepQuietTxt: { fontSize: 12, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
 
   // Cómo aparecer en Conexiones
   notaCard: {

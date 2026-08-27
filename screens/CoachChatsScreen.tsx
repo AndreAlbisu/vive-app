@@ -20,6 +20,7 @@ import { daysFromTodayAr, todayInAr } from '@/lib/time';
 import { useAuth } from '@/context/AuthContext';
 import { decryptMessage } from '@/lib/encryption';
 import { AppBg } from '@/components/ui/AppBg';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { useUnreadSalas } from '@/hooks/useUnreadSalas';
 
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
@@ -314,10 +315,27 @@ export default function CoachChatsScreen() {
         {loading ? (
           <View style={s.loadingState}><ActivityIndicator size="large" color={FOREST} /></View>
         ) : rooms.length === 0 ? (
-          <View style={s.emptyState}>
-            <Text style={s.emptyText}>
-              Todavía no atendiste a nadie.{'\n\n'}Cuando aceptes una solicitud, esa persona aparece acá — con sus sesiones, cuándo la viste por última vez y la conversación adentro.
-            </Text>
+          // Estado vacío — spec `coach-estados-vacios.html`. A propósito NO
+          // lleva checklist ni progreso: esta pantalla es un directorio de
+          // gente atendida, y sin nadie atendido no hay contenido propio que
+          // exista todavía. Esa preparación vive en Inicio (`CoachHomeScreen`)
+          // — la línea de abajo apunta ahí, no la duplica.
+          <View style={s.emptyWrap}>
+            <SurfaceCard variant="elevated" tone="light" style={s.emptyCard}>
+              <View style={s.emptyCardInner}>
+                <View style={s.emptyIcon}>
+                  <Feather name="users" size={21} color={FOREST} />
+                </View>
+                <Text style={s.emptyTitle}>Todavía no atendiste a nadie</Text>
+                <Text style={s.emptyTxt}>
+                  Cuando aceptes tu primera solicitud, esa persona aparece acá con sus sesiones, cuándo la viste por última vez y la conversación adentro.
+                </Text>
+              </View>
+            </SurfaceCard>
+            <View style={s.quietRow}>
+              <View style={s.quietDot} />
+              <Text style={s.quietTxt}>Tu preparación para recibir está en Inicio</Text>
+            </View>
           </View>
         ) : (
           <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
@@ -362,9 +380,23 @@ const s = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8 },
   title: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST },
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  emptyText: { fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST_SOFT, textAlign: 'center', lineHeight: 21 },
   container: { paddingHorizontal: 20, paddingTop: 4 },
+
+  // Estado vacío (spec `coach-estados-vacios.html`) — mismo lenguaje que el
+  // de Reservas (`CoachReservasScreen`): card elevada con ícono + línea
+  // tranquila, sin importar contenido de otra pantalla.
+  emptyWrap: { paddingHorizontal: 20, paddingTop: 18 },
+  emptyCard: {},
+  emptyCardInner: { padding: 20 },
+  emptyIcon: {
+    width: 46, height: 46, borderRadius: 23, backgroundColor: '#DCE5CB',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 13,
+  },
+  emptyTitle: { fontFamily: ViveFonts.titleSemiBold, fontSize: 18, color: FOREST, lineHeight: 23 },
+  emptyTxt: { fontSize: 12.5, color: FOREST_SOFT, lineHeight: 19, marginTop: 7, fontFamily: ViveFonts.regular },
+  quietRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 },
+  quietDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#DCE5CB' },
+  quietTxt: { fontSize: 12, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
 
   chat: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

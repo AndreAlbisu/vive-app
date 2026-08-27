@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 144)
+
+**Tocado:** `screens/CoachReservasScreen.tsx`, `screens/CoachChatsScreen.tsx`, `screens/CoachHomeScreen.tsx`.
+
+**Resumen — rediseño completo de los estados vacíos de Reservas, Tus personas e Inicio, con exploración y plan confirmados antes de codear (spec `docs`-externa `coach-estados-vacios.html`).**
+
+- **Principio del rediseño**: cada pantalla contesta una sola pregunta y su estado vacío se limita a eso — Inicio ("¿qué tengo que hacer?"), Reservas ("¿quién quiere sesión conmigo?"), Tus personas ("¿a quién estoy atendiendo?"). Ninguna pantalla importa contenido de otra para llenar espacio.
+- **Exploración previa (confirmada con Joaquín antes de tocar código)**: el sistema de disponibilidad (`coach_weekly_pattern`) YA existe — no era feature nueva. Los datos del checklist de Inicio (perfil completo, puertas, recursos) también existían, salvo la lista de recursos subidos, que se agregó como consulta nueva. La tipografía del mockup decía Fraunces 600 para los títulos — corregido a `ViveFonts.titleSemiBold` (Plus Jakarta Sans), porque Fraunces se sacó entera de la app en la sesión 126 y el mockup no se había actualizado.
+- **Reservas**: sacadas las dos cajas punteadas ("Sin solicitudes pendientes" / "No tenés sesiones confirmadas") y sus encabezados — ahora cada sección (`Por confirmar`, `Confirmadas`) se omite ENTERA si no tiene contenido, en vez de mostrar una caja diciendo que está vacía. Si las dos están vacías, aparece una sola card "Tu agenda está libre" + línea tranquila + sección nueva "Cuándo estás disponible" (agrupa `coach_weekly_pattern` por días consecutivos con el mismo horario — cálculo de presentación, `groupAvailability()`, no dato nuevo) + botón "Editar disponibilidad" → `/coach-weekly-pattern` (dispara `disponibilidad_editada`).
+- **Tus personas**: el texto que flotaba en el medio de la pantalla pasa a una `SurfaceCard` con ícono, mismo copy de siempre. Deliberadamente sin checklist ni progreso — es un directorio de gente atendida, sin nadie atendido no hay contenido propio.
+- **Inicio**: la card de la sesión 139 (una sola línea: "Ya aparecés en N puertas") se reemplaza por el checklist completo — eyebrow, título condicional ("Estás casi listo para recibir" si falta ≤1 paso, si no "Preparemos tu perfil"), barra de progreso, 3 pasos (perfil completo, puertas con chips + "+ agregar", subir un recurso) y el botón de la primera acción pendiente. Dispara `preparacion_paso_completado` por paso, solo en la transición de no-hecho a hecho (comparando contra el valor anterior con `setState` funcional, no en cada carga).
+- 🔴 **La condición para mostrar la card cambió y quedó MÁS estricta que antes**: la vieja `esCoachNuevo` (sesión 139) era `!next && completadas===0` — no contaba una solicitud recién llegada como "ya pasó algo". La nueva es `hasAnyBookingEver` (cualquier fila en `bookings`, cualquier estado, sin excluir `cancelada`) — pedido explícito de Joaquín: la card tiene que desaparecer apenas llega la primera reserva, no recién cuando se completa una sesión.
+- ⚠️ **Gap encontrado al codear, no estaba en el mockup**: el checklist nuevo (perfil/puertas/recurso) no cubre los casos que sí cubría la card vieja vía `visibility.blocked` — coach en pausa (`availability_status`) o sin precio cargado. Mientras `hasAnyBookingEver` sea `false`, esos dos casos no se muestran en ningún lado de Inicio (la card de "Cómo aparecer en Conexiones" que sí los mostraba queda suprimida para no duplicar contenido). Son casos raros en la práctica (precio y specialty son obligatorios en la postulación), pero quedan sin cobertura visual hasta la primera reserva. Se siguió el pedido explícito del spec tal cual — queda anotado para decidir si hace falta cubrirlo.
+- Typecheck, lint (limpio en las tres pantallas — de yapa, el fix también apagó un warning viejo de `OK_BG`/`OK_INK` sin usar en `CoachHomeScreen`) y 287/287 tests. No confirmado en dispositivo.
+
+**Pendiente para la próxima sesión:**
+- Confirmar visualmente las tres pantallas vacías en el teléfono, y que la card de Inicio desaparece al llegar la primera reserva (se puede simular con una reserva de prueba).
+- Decidir si el gap de "coach en pausa / sin precio" durante `hasAnyBookingEver=false` necesita cobertura, o si se acepta como está (casos raros, ya cubiertos apenas llegue la primera reserva vía la card de visibilidad de siempre).
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 143)
 
 **Tocado:** `components/SofiaAssistant.tsx`.
