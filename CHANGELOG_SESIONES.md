@@ -12,13 +12,11 @@
 **Resumen — implementado D6: sin ningún riel de cobro configurado, el coach ya no aparece en el catálogo.**
 
 - Venía del pendiente "las 3 puertas sin cartelito" (`PaymentBadges` devolviendo `null` para coaches sin ningún riel). Al ir a arreglarlo con copy, Joaquín frenó la solución cosmética: "¿no sería mejor que el coach tenga que sí o sí definir un método de pago?" — la respuesta correcta no era mejorar el texto de una tarjeta vacía, era no dejar llegar esa tarjeta al catálogo.
-- Encontrado que Andre ya había tomado esa decisión en `docs/decisiones-pagos.md` (**D6**, decidida 25/08/2026: "para publicar el perfil hay que tener al menos UN riel de cobro completo") pero **nunca quedó implementada en código**. Confirmado con Joaquín antes de tocar nada (impacto real: 3 de los 4 coaches de prueba actuales, todos sin riel conectado, iban a desaparecer del catálogo) — dio el visto bueno.
+- Encontrado que Andre ya había tomado esa decisión en `docs/decisiones-pagos.md` (**D6**, decidida 25/08/2026: "para publicar el perfil hay que tener al menos UN riel de cobro completo") pero **nunca quedó implementada en código**. Confirmado con Joaquín antes de tocar nada — dio el visto bueno.
 - Agregado `.or('mp_connected.eq.true,accepts_paypal.eq.true,accepts_usdt.eq.true')` en **las dos** consultas de coaches que existen en el código: `lib/coachesCache.ts` (`_doFetch`, la fuente principal) y la consulta de respaldo de `app/search3.tsx` (la que corre solo con el caché frío) — mismo patrón ya documentado antes para `verified`/`availability_status`: dos queries independientes, cualquier filtro nuevo tiene que ir en las dos o se desincronizan.
 - `SCHEMA.md` actualizado con la nota de D6 junto a `coaches.mp_connected`.
-- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo.
-
-**Pendiente para la próxima sesión:**
-- Ver en el catálogo real que los 3 coaches sin riel efectivamente desaparecieron y que el que sí tiene MP sigue visible.
+- Typecheck, lint y 287/287 tests limpios.
+- ✅ **Confirmado en dispositivo el mismo día.** El impacto real era más grande de lo estimado: hay **32 coaches** en la base (no 4, ese número era de una vista vieja/parcial), y de esos **solo 1 tiene algún riel conectado** ("Coach Prueba" — MP, PayPal y USDT los tres en `true`). Antes del reload la app seguía mostrando cero resultados por el caché en memoria de `coachesCache.ts` (no se resetea con un simple background-refresh); cerrando la app del todo y reabriendo, apareció el único coach que corresponde.
 
 **Corrección al toque, mismo día:** el punto de "próximo paso natural — `accepts_international` a dato derivado" que había dejado como pendiente **estaba desactualizado**: Andre ya lo había hecho el 25/08/2026 (`sync_accepts_international()`, `scripts/add-payout-rails.sql`) — llegó al repo en el merge grande de la sesión 130 y no lo había vuelto a chequear antes de escribir el pendiente. Ver `SCHEMA.md` §`coaches.accepts_international`. No hay nada para hacer acá.
 
