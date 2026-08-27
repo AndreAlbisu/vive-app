@@ -23,6 +23,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
+import { PaymentBadges } from '@/components/PaymentBadges';
 import { logResourceEvent } from '@/lib/resourceEvents';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
@@ -48,6 +49,9 @@ const DEFAULT_PROFESIONAL = {
   bio: null as string | null,
   acceptsInternational: false,
   priceUsd: null as number | null,
+  acceptsMp: false,
+  acceptsPaypal: false,
+  acceptsUsdt: false,
 };
 
 type LiveReview = { rating: number; comment: string | null; reviewerName: string };
@@ -145,7 +149,7 @@ export default function ProfesionalScreen() {
     if (!pid) return;
     supabase
       .from('coaches')
-      .select('id, specialty, bio, price_per_session, nationality, video_url, accepts_international, price_usd, profiles!inner(name, avatar_url)')
+      .select('id, specialty, bio, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, profiles!inner(name, avatar_url)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
@@ -164,6 +168,20 @@ export default function ProfesionalScreen() {
           // que la pantalla de pago no va a ofrecer.
           acceptsInternational: !!(data as any).accepts_international && (data as any).price_usd != null,
           priceUsd: (data as any).price_usd ?? null,
+          // Con qué se le puede pagar. Las tarjetas del deck y del buscador ya
+          // lo mostraban, pero el perfil —el paso del medio, donde se decide— lo
+          // perdía, y quien entra por link directo nunca pasó por una tarjeta:
+          // se enteraba recién en el checkout.
+          //
+          // 🔴 PayPal y USDT van atados a `price_usd`, igual que
+          // `acceptsInternational` acá arriba: sin precio en dólares
+          // `paypal-create-payment` y `usdt-create-payment` rechazan el cobro,
+          // así que el cartelito estaría anunciando un medio que el checkout no
+          // ofrece. Hoy hay coaches en esa situación — con el riel en `true` y
+          // el precio en null.
+          acceptsMp: !!(data as any).mp_connected,
+          acceptsPaypal: !!(data as any).accepts_paypal && (data as any).price_usd != null,
+          acceptsUsdt: !!(data as any).accepts_usdt && (data as any).price_usd != null,
         });
 
         supabase
@@ -475,6 +493,16 @@ export default function ProfesionalScreen() {
                 Desde el exterior: USD {prof.priceUsd}
               </Text>
             )}
+            {/* Sin `compact`: acá hay ancho de sobra (el footer apila precio y
+                botones), así que se muestran los tres si acepta los tres. En la
+                card del deck van recortados porque la fila se parte. */}
+            <View style={s.payRow}>
+              <PaymentBadges
+                mp={prof.acceptsMp}
+                paypal={prof.acceptsPaypal}
+                usdt={prof.acceptsUsdt}
+              />
+            </View>
           </View>
           <View style={s.footerButtons}>
             <TouchableOpacity
@@ -901,6 +929,7 @@ const s = StyleSheet.create({
     fontSize: 15,
     color: '#565E32',
   },
+  payRow: { marginTop: 6 },
   priceIntl: {
     fontFamily: ViveFonts.regular,
     fontSize: 12.5,
