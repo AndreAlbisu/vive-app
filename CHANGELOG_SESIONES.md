@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-08-27 — Andre (sesión 129)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `CoachChatsScreen.tsx`, `CoachReservasScreen.tsx`, `lib/bookingHelpers.ts`, `lib/weeklyReflection.ts`, `app/progreso.tsx`. Nuevos: `lib/coachContinuity.ts`, `lib/moodTrend.ts`, `scripts/add-mood-para-coach.sql` (**CORRIDO**), `scripts/add-archivar-salas.sql` (🔴 **PENDIENTE DE CORRER**), `docs/inicio-del-coach.md`, `docs/animo-compartido.md`, `docs/paquete-para-la-sesion.md`. 287 tests, `tsc` y lint limpios.
+
+**Resumen:**
+
+- ✅ **Inicio del coach**: dejó de ser una pantalla que solo sirve si ya tenés sesiones. Se sumaron continuidad (`personasQueSeCaen()` — mediana de la brecha × 2, piso 14 / techo 120 días), acceso a personas, notas y reputación. El contenido ya estaba calculado en `lib/coachVisibility.ts` y vivía comprimido en un renglón.
+- ✅ **Archivar chats como coach** (`salas.coach_archived`, nullable a propósito: `true` archivado, `false` desarchivado explícito, `null` regla automática). 🔴 **El SQL no se corrió — la función no anda hasta que se corra.**
+- ✅ **Ánimo hacia el coach (D)**: `mood_trend_for_client()` corrida y verificada, pero **el cliente quedó APAGADO** (`MOSTRAR_ANIMO_AL_COACH = false`). Dos bugs los encontró la verificación y no la revisión: `42804` (declarado `smallint`, la subconsulta devuelve `integer`) y `42P13` (falta `drop function if exists`).
+- 📝 **La consulta a una psicóloga cambió el diseño entero.** Mónica trabaja la asociación *en sesión*, preguntando y no afirmando, y **ya pide estos registros a mano** — o sea que la demanda existe y no era hipótesis nuestra. Eso movió la propuesta de "panel que el coach mira" a "paquete que la persona arma y manda". Queda en `docs/paquete-para-la-sesion.md` **como idea, sin implementar** (decisión de Andre, 27/08).
+- 📝 **Si el paquete se construye, jubila la feature D entera y probablemente la pregunta A.10 al abogado** — algo que la persona manda no necesita un permiso de fondo.
+- ✅ **"Sobre vos" filtraba mal**: se le escapaban etiquetas internas al texto que lee el usuario. El filtro chequea un *par* de ángulos y no un carácter suelto, para no tumbar prosa que use `<` o `>`.
+- 🔴 **Tercera vez en la sesión que un "bug" era un bundle viejo** (esta vez la bottom bar). Antes de mirar código: cerrar y reabrir la app. Costó bastante rato buscar una causa que no existía.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Correr `scripts/add-archivar-salas.sql`** — archivar chats está en la app y no funciona sin eso.
+- 🔴 **Probar una reserva real contra Mercado Pago** (viene de la 128): `mp-create-payment` v41 no se pudo smoke-testear sin JWT de usuario. Reservar con Coach Prueba ($1) y confirmar que se cobra 1.
+- 🔴 **Probar el bloque del coach en el teléfono** — se tocó navegación y nada se vio corriendo.
+- ⚠️ **Mandar el paquete al abogado**: ahora lleva A.10 (posiblemente sin objeto), A.11 más filosa y A.12, más una pregunta nueva sobre texto libre por el chat.
+- 📝 **A.11 se agravó**: la persona que manda algo eligió mostrarlo, y eso sube la expectativa de respuesta. En Vita hay coaches de hábitos y nutricionistas, no psicólogos. Un profesional que no lo lee es peor que no haber ofrecido nada, y no se arregla por código.
+- ⚠️ **El perfil del coach está fuera del design system** (sin `SurfaceCard` ni `theme/tokens`, tres paletas, siete radios). Diagnosticado, sin tocar.
+- **Onboarding del usuario**, sigue analizado y sin empezar.
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 144)
 
 **Tocado:** `screens/CoachReservasScreen.tsx`, `screens/CoachChatsScreen.tsx`, `screens/CoachHomeScreen.tsx`.
