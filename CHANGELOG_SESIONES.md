@@ -19,7 +19,8 @@
 
 **Pendiente para la próxima sesión:**
 - Ver en el catálogo real que los 3 coaches sin riel efectivamente desaparecieron y que el que sí tiene MP sigue visible.
-- `docs/decisiones-pagos.md` ya sugiere el siguiente paso natural: una vez que D6 esté firme, `accepts_international` podría pasar de flag a dato derivado (riel en dólares + `price_usd` cargado) — no es urgente, queda anotado.
+
+**Corrección al toque, mismo día:** el punto de "próximo paso natural — `accepts_international` a dato derivado" que había dejado como pendiente **estaba desactualizado**: Andre ya lo había hecho el 25/08/2026 (`sync_accepts_international()`, `scripts/add-payout-rails.sql`) — llegó al repo en el merge grande de la sesión 130 y no lo había vuelto a chequear antes de escribir el pendiente. Ver `SCHEMA.md` §`coaches.accepts_international`. No hay nada para hacer acá.
 
 ---
 
