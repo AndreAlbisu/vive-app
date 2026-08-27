@@ -51,6 +51,11 @@ const LINE   = 'rgba(63,81,47,0.14)';
 const ORB_SIZE       = 54;
 const HEADER_ORB      = 38;
 const EDGE_MARGIN    = 8;
+// Distancia a la que descansa el orbe cuando vuelve a la pared. Es la misma que
+// su posición inicial, para que soltarlo no lo deje en un lugar distinto del que
+// arrancó. `EDGE_MARGIN` (8) sigue siendo el límite mientras lo arrastrás: se
+// puede acercar más al borde con el dedo, pero se acomoda acá al soltar.
+const SNAP_MARGIN    = 18;
 const DRAG_THRESHOLD  = 6; // px — por debajo de esto, un toque cuenta como tap y no como arrastre.
 
 type Shortcut = {
@@ -79,6 +84,18 @@ const SHORTCUTS: Shortcut[] = [
   { id: 'coaches', label: 'Quiero ver a los profesionales',  icon: 'users',     route: '/(tabs)/conexiones' },
 ];
 
+/**
+ * A qué pared vuelve el orbe al soltarlo. Decide por el CENTRO y no por el borde
+ * izquierdo: soltado justo en la mitad de la pantalla, mirar el borde lo mandaría
+ * siempre a la derecha aunque se vea centrado.
+ */
+export function paredMasCercana(x: number, anchoPantalla: number): number {
+  const centro = x + ORB_SIZE / 2;
+  return centro < anchoPantalla / 2
+    ? SNAP_MARGIN
+    : anchoPantalla - ORB_SIZE - SNAP_MARGIN;
+}
+
 export function SofiaAssistant() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -100,7 +117,7 @@ export function SofiaAssistant() {
   // 📝 De paso deja de re-renderizar el árbol entero en cada soltada: la
   // posición la dibuja `pan`, que es un `Animated.ValueXY`, no el estado.
   const orbPos = useRef({
-    x: Dimensions.get('window').width - 18 - ORB_SIZE,
+    x: Dimensions.get('window').width - SNAP_MARGIN - ORB_SIZE,
     y: Dimensions.get('window').height - (insets.bottom + 8 + 56 + 14) - ORB_SIZE,
   });
   const insetsRef = useRef(insets);
@@ -160,12 +177,25 @@ export function SofiaAssistant() {
     };
   }
 
-  // Deja el orbe donde terminó el gesto: lo dibuja y lo confirma. Solo toca
-  // refs, así que no le afecta haber sido capturada en el primer render.
+  // Acomoda el orbe al soltarlo: vuelve a la pared más cercana y se queda a la
+  // altura donde lo dejaste. Solo toca refs, así que no le afecta haber sido
+  // capturada en el primer render.
+  //
+  // 📝 `orbPos` se apunta al destino FINAL de una, no al lugar donde lo soltaste:
+  // el resorte es solo lo que se ve. Si el próximo arrastre empieza antes de que
+  // termine, `onPanResponderGrant` corta la animación y corrige desde dónde sale.
   function confirmarPosicion(dx: number, dy: number) {
-    const next = clampToScreen(dragStart.current.x + dx, dragStart.current.y + dy);
-    pan.setValue(next);
-    orbPos.current = next;
+    const soltado = clampToScreen(dragStart.current.x + dx, dragStart.current.y + dy);
+    const destino = {
+      x: paredMasCercana(soltado.x, Dimensions.get('window').width),
+      y: soltado.y,
+    };
+    orbPos.current = destino;
+
+    if (reducedMotionRef.current) { pan.setValue(destino); return; }
+    // Resorte y no una curva de duración fija: la vuelta a la pared es un gesto
+    // físico, y con un resorte la distancia recorrida cambia el tiempo sola.
+    Animated.spring(pan, { toValue: destino, friction: 7, tension: 70, useNativeDriver: true }).start();
   }
 
   const panResponder = useRef(
@@ -173,7 +203,15 @@ export function SofiaAssistant() {
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 2 || Math.abs(g.dy) > 2,
       onPanResponderGrant: () => {
-        dragStart.current = orbPos.current;
+        // 🔴 Corta el resorte si todavía estaba volviendo a la pared. `orbPos` ya
+        // apunta al destino final, así que arrancar desde ahí haría saltar el
+        // orbe a mitad de vuelo hasta la pared. El valor que devuelve
+        // `stopAnimation` es dónde está DE VERDAD en este cuadro.
+        pan.stopAnimation((valor) => {
+          const donde = valor as { x: number; y: number };
+          dragStart.current = donde;
+          orbPos.current = donde;
+        });
       },
       onPanResponderMove: (_, g) => {
         const next = clampToScreen(dragStart.current.x + g.dx, dragStart.current.y + g.dy);
