@@ -24,6 +24,11 @@ export default function CoachLoginScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  // Se prende cuando ya sabemos que hace falta crear la cuenta (el intento de
+  // login de abajo falló) y todavía no tenemos un nombre real para ella. Ver
+  // el porqué en `handleSubmit`.
+  const [needsName, setNeedsName] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -174,6 +179,41 @@ export default function CoachLoginScreen() {
       return;
     }
 
+    // 🔴 Segunda vuelta: ya sabemos (por el intento de login de más abajo, en
+    // el submit anterior) que hace falta CREAR la cuenta, y ahora ya tenemos
+    // el nombre que se acaba de pedir. No se reintenta el login — ya sabemos
+    // que falla — se va directo a crear la cuenta.
+    if (needsName) {
+      const trimmedName = name.trim();
+      if (!trimmedName) { setError('Ingresá tu nombre'); return; }
+
+      setLoading(true);
+      setError(null);
+
+      // acceptedTerms / ageConfirmed = true: al tocar el botón el profesional ya
+      // aceptó y declaró la edad, según la nota de abajo. La edad se vuelve a
+      // chequear de forma dura contra `birth_date` en CoachApplicationScreen,
+      // que es donde hay un dato real.
+      const signUpError = await signUpWithEmail(trimmedEmail, trimmedPassword, trimmedName, true, true);
+
+      if (!signUpError) {
+        await validateAndNavigate(true);
+        return;
+      }
+
+      setLoading(false);
+      // La única forma de llegar hasta acá y que falle es que la cuenta en
+      // realidad SÍ existía (typeamos mal la contraseña del login de arriba,
+      // pero el mail es de una cuenta real) — el mismo caso que antes se
+      // detectaba en el primer intento.
+      if (signUpError.includes('already registered') || signUpError.includes('already been registered')) {
+        setError('No pudimos entrar con esa contraseña. Si creaste la cuenta con Google o Apple, entrá con ese botón');
+      } else {
+        setError('No pudimos crear la cuenta. Probá de nuevo');
+      }
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -184,31 +224,20 @@ export default function CoachLoginScreen() {
       return;
     }
 
-    // Intentar crear la cuenta si las credenciales no existen
-    const nameFromEmail = trimmedEmail.split('@')[0];
-    // acceptedTerms / ageConfirmed = true: al tocar "Continuar" el profesional ya
-    // aceptó y declaró la edad, según la línea de abajo del botón. Antes se creaba
-    // la cuenta sin registrar nada. La edad se vuelve a chequear de forma dura
-    // contra `birth_date` en CoachApplicationScreen, que es donde hay un dato real.
-    const signUpError = await signUpWithEmail(trimmedEmail, trimmedPassword, nameFromEmail, true, true);
-
-    if (!signUpError) {
-      await validateAndNavigate(true);
-      return;
-    }
-
+    // 🔴 Antes de acá se creaba la cuenta directo, con el nombre puesto a
+    // ciegas como `trimmedEmail.split('@')[0]` — la parte de antes de la
+    // arroba. Con un mail normal daba un nombre feo pero corto; con un alias
+    // tipo `+coachtest` quedaba larguísimo, y ESE valor terminaba siendo
+    // `profiles.name` PARA SIEMPRE, porque nada en el alta ni en la
+    // postulación vuelve a pedir el nombre — desbordaba la tarjeta de saludo
+    // de la Home (`Hola, {coachName}`, hallazgo 27/08/2026) y quedaba mal en
+    // cualquier lado que mostrara el nombre del coach.
+    //
+    // En vez de inventar un nombre, se pausa acá y se pide el real. El
+    // próximo submit (`needsName` ya prendido) va a crear la cuenta con lo
+    // que la persona escriba.
     setLoading(false);
-
-    // Si signUp también falla, la cuenta existe pero no entró con esa
-    // contraseña. Ojo: la causa más probable ya no es haberla tipeado mal, es
-    // que la cuenta se haya creado con Google o Apple y no tenga contraseña
-    // ninguna — ahí "contraseña incorrecta" a secas deja a la persona probando
-    // combinaciones de una clave que nunca existió.
-    if (signUpError.includes('already registered') || signUpError.includes('already been registered')) {
-      setError('No pudimos entrar con esa contraseña. Si creaste la cuenta con Google o Apple, entrá con ese botón');
-    } else {
-      setError('No pudimos acceder. Revisá el email y la contraseña');
-    }
+    setNeedsName(true);
   }
 
   // Un solo flag para deshabilitar: si no, se puede tocar Google mientras
@@ -319,6 +348,21 @@ export default function CoachLoginScreen() {
                 </View>
               </View>
 
+              {needsName && (
+                <View style={styles.field}>
+                  <Text style={styles.hint}>Es la primera vez que entrás con este mail — ¿cómo te llamamos?</Text>
+                  <Text style={styles.label}>Tu nombre</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Nombre y apellido"
+                    placeholderTextColor="rgba(135,131,92,0.45)"
+                    autoFocus
+                  />
+                </View>
+              )}
+
               {error && (
                 <View style={styles.errorBox}>
                   <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#C0392B" />
@@ -334,9 +378,9 @@ export default function CoachLoginScreen() {
               disabled={anyLoading}
             >
               {loading ? (
-                <Text style={styles.buttonText}>Ingresando...</Text>
+                <Text style={styles.buttonText}>{needsName ? 'Creando cuenta...' : 'Ingresando...'}</Text>
               ) : (
-                <Text style={styles.buttonText}>Continuar</Text>
+                <Text style={styles.buttonText}>{needsName ? 'Crear cuenta' : 'Continuar'}</Text>
               )}
             </TouchableOpacity>
 
@@ -463,6 +507,12 @@ const styles = StyleSheet.create({
     fontFamily: ViveFonts.medium,
     fontSize: 13,
     color: '#87835C',
+  },
+  hint: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: '#87835C',
+    marginBottom: 2,
   },
   input: {
     backgroundColor: 'rgba(255,248,240,0.48)',

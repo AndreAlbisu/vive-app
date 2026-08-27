@@ -445,7 +445,13 @@ export default function CoachHomeScreen() {
 
           {/* Header */}
           <View style={s.header}>
-            <Text style={s.hello}>Hola, {coachName || '—'}</Text>
+            {/* numberOfLines+ellipsizeMode de más: un nombre largo y sin
+                espacios (el bug del 27/08/2026, `profiles.name` heredando el
+                alias del mail) envolvía a varias líneas con la fuente de 28px
+                y empujaba los íconos de la derecha fuera de eje. La causa de
+                fondo ya se arregló en `CoachLoginScreen`, esto es defensivo
+                para cualquier nombre real igual de largo. */}
+            <Text style={s.hello} numberOfLines={1} ellipsizeMode="tail">Hola, {coachName || '—'}</Text>
             <View style={s.headerRight}>
               <TouchableOpacity onPress={() => router.push('/coach-notifications')} activeOpacity={0.7} hitSlop={8} style={s.bellBtn}>
                 <Feather name="bell" size={22} color={FOREST} />

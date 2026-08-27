@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 141)
+
+**Tocado:** `screens/CoachLoginScreen.tsx`, `screens/CoachHomeScreen.tsx`.
+
+**Resumen — otro hallazgo real del mismo alta de prueba (sesiones 139/140): el alta de coach por email inventaba el nombre a partir del mail, y ese valor quedaba para siempre.**
+
+- `CoachLoginScreen` combina login y alta en un solo formulario: intenta entrar, y si falla, crea la cuenta. Hasta hoy, al crearla usaba `trimmedEmail.split('@')[0]` (la parte antes de la `@`) como `profiles.name` — con un mail normal daba un nombre feo pero corto, pero con el alias `+coachtest` que se usó para probar (sesión 140) dio `"joaquinalbisu493+coachtest"`, que se guardó como el nombre del coach **para siempre**: nada en el alta ni en la postulación (`CoachApplicationScreen`) vuelve a pedir un nombre. Ese valor desbordaba la tarjeta de saludo de la Home ("Hola, …", 28px) y le pisaba los íconos de la derecha.
+- Arreglado en dos partes:
+  - **Causa raíz**: `CoachLoginScreen` ahora pausa cuando el login falla (`needsName`), en vez de crear la cuenta a ciegas — pide el nombre real en un campo nuevo ("¿Cómo te llamamos?") y recién con eso crea la cuenta. El segundo submit no reintenta el login (ya se sabe que falla), va directo al alta.
+  - **Defensivo**: la Home (`CoachHomeScreen`) le puso `numberOfLines={1}` + `ellipsizeMode="tail"` al saludo — cualquier nombre largo (de este bug o real) trunca con "…" en vez de desbordar el layout.
+- `RegisterScreen.tsx` (usuario final) **no tenía este bug**: ya pide el nombre en un campo propio desde siempre. El defecto era específico del atajo login+alta de `CoachLoginScreen`.
+- Corregido a mano el nombre de la cuenta de prueba ya creada (`"joaquinalbisu493+coachtest"` → `"Coach Test"`).
+- **Sobre el pedido de "una opción para elegir cómo lo nombra Vita, para coach y usuario"**: ya existe, no hacía falta construir nada — `/edit-profile` tiene el campo "Nombre" editable, y está enlazado desde el perfil del usuario (`ProfileOwnScreen`) y desde el del coach (`CoachProfileScreen`). Es la puerta correcta para los dos roles.
+- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo.
+
+**Pendiente para la próxima sesión:**
+- Confirmar en el teléfono: crear otra cuenta de coach de prueba (o revisar la actual) y ver que el campo "Tu nombre" aparezca después de un login fallido, y que la Home ya no se desborde.
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 140)
 
 **Tocado:** `supabase/functions/admin-actions/index.ts`, `SCHEMA.md`. Deployada: `admin-actions` **v20**.
