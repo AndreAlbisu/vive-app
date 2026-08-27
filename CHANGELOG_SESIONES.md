@@ -14,11 +14,7 @@
 - Al revisar `/coach-ajustes` (nueva, de Andre) para guiar la prueba en el teléfono, noté que linkea a `/admin` y `/cuentas-bloqueadas` — dos pantallas que **no** estaban en la lista de `<Stack.Screen>` de `app/_layout.tsx` con `headerShown: false`, a diferencia de literalmente todas las demás. Eso significa header nativo de Expo Router (título = nombre de archivo) dibujado ENCIMA del propio header que ya arma cada pantalla (`AdminScreen`, `BlockedAccountsScreen` — las dos tienen su `SafeAreaView` + `s.header` propios).
 - En vez de arreglar solo esas dos, se comparó la lista completa de `app/*.tsx` contra las entradas de `<Stack.Screen>` (`comm -23` entre las dos listas ordenadas). Aparecieron **tres más** con el mismo patrón (header propio, sin la entrada en `_layout.tsx`): `coach-reservas` (la pantalla de reservas del coach — no es un rincón, es un tab central), `pago-usdt` y `reembolso` (parte del flujo de USDT, ya probado con plata real en otras sesiones).
 - Agregadas las 5 con `headerShown: false`, mismo patrón que el resto de la app. Verificado con `comm` que no queda ninguna ruta de `app/*.tsx` sin su entrada correspondiente.
-- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo — ahora sí, a probar el bloque del coach como estaba planeado.
-
-**Pendiente para la próxima sesión:**
-- Probar en el teléfono, con cuenta de coach: engranaje (Home) → `/coach-ajustes` → recorrer sus tres secciones (Tu cuenta, Legales, Salir/Eliminar) y confirmar que `/cuentas-bloqueadas` y `/admin` (si aplica) ya no muestran el header duplicado.
-- De paso, confirmar visualmente que `coach-reservas`/`pago-usdt`/`reembolso` tampoco lo muestran — nadie lo había notado hasta ahora, así que vale la pena mirarlas aunque no sean parte del bloque nuevo.
+- Typecheck, lint y 287/287 tests limpios. ✅ **Confirmado en dispositivo el mismo día** — Joaquín recorrió engranaje → `/coach-ajustes` → sus tres secciones, y volvió: "todo se ve bien".
 
 ---
 
