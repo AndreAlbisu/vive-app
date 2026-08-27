@@ -7,12 +7,12 @@
 
 ## 2026-08-27 — Andre (sesión 129)
 
-**Tocado:** `screens/CoachHomeScreen.tsx`, `CoachChatsScreen.tsx`, `CoachReservasScreen.tsx`, `lib/bookingHelpers.ts`, `lib/weeklyReflection.ts`, `app/progreso.tsx`. Nuevos: `lib/coachContinuity.ts`, `lib/moodTrend.ts`, `scripts/add-mood-para-coach.sql` (**CORRIDO**), `scripts/add-archivar-salas.sql` (🔴 **PENDIENTE DE CORRER**), `docs/inicio-del-coach.md`, `docs/animo-compartido.md`, `docs/paquete-para-la-sesion.md`. 287 tests, `tsc` y lint limpios.
+**Tocado:** `screens/CoachHomeScreen.tsx`, `CoachChatsScreen.tsx`, `CoachReservasScreen.tsx`, `lib/bookingHelpers.ts`, `lib/weeklyReflection.ts`, `app/progreso.tsx`. Nuevos: `lib/coachContinuity.ts`, `lib/moodTrend.ts`, `scripts/add-mood-para-coach.sql` (**CORRIDO**), `scripts/add-archivar-salas.sql` (**CORRIDO**), `docs/inicio-del-coach.md`, `docs/animo-compartido.md`, `docs/paquete-para-la-sesion.md`. 287 tests, `tsc` y lint limpios.
 
 **Resumen:**
 
 - ✅ **Inicio del coach**: dejó de ser una pantalla que solo sirve si ya tenés sesiones. Se sumaron continuidad (`personasQueSeCaen()` — mediana de la brecha × 2, piso 14 / techo 120 días), acceso a personas, notas y reputación. El contenido ya estaba calculado en `lib/coachVisibility.ts` y vivía comprimido en un renglón.
-- ✅ **Archivar chats como coach** (`salas.coach_archived`, nullable a propósito: `true` archivado, `false` desarchivado explícito, `null` regla automática). 🔴 **El SQL no se corrió — la función no anda hasta que se corra.**
+- ✅ **Archivar chats como coach** (`salas.coach_archived`, nullable a propósito: `true` archivado, `false` desarchivado explícito, `null` regla automática). ✅ **SQL corrido y verificado el 27/08**: la columna existe (200 por REST contra el 400 `42703` de una inventada) y quedó `boolean` / nullable / sin default — los tres estados vivos, que era lo único que podía salir mal en silencio.
 - ✅ **Ánimo hacia el coach (D)**: `mood_trend_for_client()` corrida y verificada, pero **el cliente quedó APAGADO** (`MOSTRAR_ANIMO_AL_COACH = false`). Dos bugs los encontró la verificación y no la revisión: `42804` (declarado `smallint`, la subconsulta devuelve `integer`) y `42P13` (falta `drop function if exists`).
 - 📝 **La consulta a una psicóloga cambió el diseño entero.** Mónica trabaja la asociación *en sesión*, preguntando y no afirmando, y **ya pide estos registros a mano** — o sea que la demanda existe y no era hipótesis nuestra. Eso movió la propuesta de "panel que el coach mira" a "paquete que la persona arma y manda". Queda en `docs/paquete-para-la-sesion.md` **como idea, sin implementar** (decisión de Andre, 27/08).
 - 📝 **Si el paquete se construye, jubila la feature D entera y probablemente la pregunta A.10 al abogado** — algo que la persona manda no necesita un permiso de fondo.
@@ -21,7 +21,7 @@
 
 **Pendiente para la próxima sesión:**
 
-- 🔴 **Correr `scripts/add-archivar-salas.sql`** — archivar chats está en la app y no funciona sin eso.
+- 🔴 **Archivar un chat como Coach Prueba desde el teléfono.** El SQL ya está corrido, pero **que el coach pueda ESCRIBIR la columna no se probó**: se apoya en la policy que ya deja escribir `coach_last_read_at` y eso se asumió, no se confirmó. Se sacó del SQL a propósito — suplantar dentro de una transacción deja el resultado tapado por el `rollback`, y además probaría la policy y no la pantalla.
 - 🔴 **Probar una reserva real contra Mercado Pago** (viene de la 128): `mp-create-payment` v41 no se pudo smoke-testear sin JWT de usuario. Reservar con Coach Prueba ($1) y confirmar que se cobra 1.
 - 🔴 **Probar el bloque del coach en el teléfono** — se tocó navegación y nada se vio corriendo.
 - ⚠️ **Mandar el paquete al abogado**: ahora lleva A.10 (posiblemente sin objeto), A.11 más filosa y A.12, más una pregunta nueva sobre texto libre por el chat.
