@@ -15,10 +15,7 @@
 - `loadingLong`: se prende recién a los 3.5s de apretar "Reservar sesión" (no antes — el caso normal, en Argentina, dura menos que eso y no necesita el aviso). Cuando se prende, aparece un cartel informativo (mismo estilo celeste que ya usa `paymentInfoRow`, no uno nuevo) con "Esto está tardando más de lo normal — puede pasar si estás conectando desde lejos. Seguí esperando, no hace falta reintentar."
 - El botón, mientras `loading`, ahora muestra "Reservando…" al lado del spinner — antes era el spinner solo, sin texto.
 - 🔴 **De yapa, un bug real encontrado al tocar esto**: el `ActivityIndicator` del botón estaba pintado `color="#565E32"` — el mismo verde oscuro que el fondo del botón (`btn.backgroundColor`). Era, en los hechos, invisible; todo lo que se veía al tocar "Confirmar reserva" era el botón atenuándose un poco (`btnLoading: {opacity:0.7}`), sin ninguna señal clara de que algo estaba pasando. Corregido a `#F7EFE4` (el mismo claro que usa `btnText`).
-- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo.
-
-**Pendiente para la próxima sesión:**
-- Confirmar visualmente en el teléfono: que el spinner ahora se vea, y que el cartel de "tardando más de lo normal" aparezca pasados los 3.5s (probar con el propio Joaquín desde Australia sirve para esto, para variar).
+- Typecheck, lint y 287/287 tests limpios. ✅ **Confirmado en dispositivo el mismo día** — Joaquín probó desde Australia: "ahora sí se ve todo bien" (spinner visible + cartel de demora).
 
 ---
 
