@@ -59,7 +59,10 @@ export const DOORS: Door[] = [
   // es la razón equivocada para dividir una puerta.
   { id: 'descanso',       label: 'Descanso y energía',       tagline: 'Dormir y recargar',      icon: 'moon',        color: ViveColors.accent,  subtemas: ['Sueño', 'Energía'] },
   { id: 'nutricion',      label: 'Nutrición',                tagline: 'Comer mejor',            icon: 'coffee',      color: ViveColors.accent,  subtemas: ['Nutrición'] },
-  { id: 'movimiento',     label: 'Movimiento',               tagline: 'Mover el cuerpo',        icon: 'activity',    color: ViveColors.accent,  subtemas: ['Actividad física'] },
+  // El nombre queda inclusivo a propósito —"Entrenamiento" deja afuera al que
+  // solo quiere empezar a caminar, que es el que más lo necesita— y la bajada
+  // nombra las dos cosas, para el que sí busca entrenar en serio.
+  { id: 'movimiento',     label: 'Movimiento',               tagline: 'Mover y entrenar el cuerpo', icon: 'activity', color: ViveColors.accent,  subtemas: ['Actividad física'] },
   { id: 'sexualidad',     label: 'Sexualidad e intimidad',   tagline: 'Intimidad y deseo',      icon: 'heart',       color: ViveColors.accent,  subtemas: ['Sexualidad'] },
   // `Orientación vocacional` viaja con `Propósito` y no sola: es de los siete
   // subtemas que hoy no trabaja nadie, y una puerta construida solo sobre él
