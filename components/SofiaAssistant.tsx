@@ -320,11 +320,12 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     flex: 1,
-    // Empuja topGroup arriba del todo y bottomGroup abajo del todo, con el
-    // aire del medio como en la referencia — `sheet` ya tiene una altura
-    // definida por `top`+`bottom` absolutos, así que `flex:1` acá reparte
-    // ese espacio en vez de colapsar al contenido.
-    justifyContent: 'space-between',
+    // 🔴 Antes `justifyContent: 'space-between'`, que empujaba `topGroup`
+    // arriba del todo y `bottomGroup` abajo del todo — con poco contenido
+    // (4 atajos nomás), el aire del medio quedaba enorme y el panel se leía
+    // partido en dos, no como una sola tarjeta (pedido de Joaquín,
+    // 27/08/2026, con captura). El espacio entre los dos grupos ahora lo da
+    // `bottomGroup.marginTop`, fijo y chico, no lo que sobre de la pantalla.
     backgroundColor: CARD,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -353,7 +354,10 @@ const styles = StyleSheet.create({
   // `justifyContent: space-between` en el contenedor padre separa los dos
   // grupos con aire en el medio, como en la referencia.
   topGroup: {},
-  bottomGroup: {},
+  // 32 — mismo orden de magnitud que `greeting.marginTop:28` (el salto entre
+  // el header y el saludo), para que los dos grupos se lean como parte del
+  // mismo bloque de texto y no como dos secciones de la pantalla.
+  bottomGroup: { marginTop: 32 },
 
   sheetHeader: {
     flexDirection: 'row',

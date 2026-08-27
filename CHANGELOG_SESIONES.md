@@ -5,6 +5,21 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 143)
+
+**Tocado:** `components/SofiaAssistant.tsx`.
+
+**Resumen — la tarjeta de Sofía (el asistente) tenía un espacio enorme en el medio, entre el saludo y las opciones. Era a propósito, pero con poco contenido (4 atajos) se leía como dos secciones separadas, no una tarjeta.**
+
+- `sheet` usaba `justifyContent: 'space-between'` para empujar `topGroup` (header + saludo) arriba del todo y `bottomGroup` (aviso + atajos + input) abajo del todo — documentado en el código como intencional, "como en la referencia" (Banco Galicia). Con la altura casi completa del panel y poco contenido, ese reparto dejaba un hueco de ~90pt en el medio.
+- Sacado el `space-between`; el espacio entre los dos grupos ahora es `bottomGroup.marginTop: 32` — fijo, mismo orden de magnitud que el salto entre el header y el saludo (`greeting.marginTop: 28`), para que se lea como un solo bloque. El aire que sobra ahora queda abajo del todo (después del input/caption), que es el lugar normal para eso en una hoja inferior, no en el medio del texto.
+- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo.
+
+**Pendiente para la próxima sesión:**
+- Confirmar visualmente que la tarjeta de Sofía se ve como un solo bloque, sin el hueco grande del medio.
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 142)
 
 **Tocado:** `screens/CoachReservasScreen.tsx`, `screens/CoachChatsScreen.tsx`.
