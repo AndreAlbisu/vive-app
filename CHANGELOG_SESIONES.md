@@ -5,6 +5,21 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 133)
+
+**Tocado:** ninguno de código — solo verificación contra la base.
+
+**Resumen — cerrado el pendiente 🔴 de Andre (sesión 128): "probar una reserva real contra Mercado Pago" con `mp-create-payment` v41.**
+
+- No se había podido smoke-testear porque el gateway corta con 401 sin JWT de usuario real, así que hacía falta una reserva real desde el teléfono. Joaquín reservó una sesión con Coach Prueba (precio $1) y pagó con plata real.
+- Verificado contra `bookings` (por `supabase db query --linked`, ver sesión 132): `amount = 1` (sin desvío), `payment_status = 'aprobado'`, `payment_id` real de MP (`175826026790`), `platform_fee_pct = 15`. `status` quedó en `'pendiente'` — esperable, Coach Prueba no tiene `instant_booking`, así que espera aceptación del coach dentro de las 24hs.
+- `mp-create-payment` v41 queda confirmado funcionando de punta a punta con plata real.
+
+**Pendiente para la próxima sesión:**
+- Del resto de la lista de Andre (sesión 128) sigue abierto: probar en el teléfono el bloque nuevo de navegación del coach (`/coach-ajustes`), la Home del coach sin sesiones, y las decisiones de producto (cartelitos de pago siempre-los-3 vs. solo-aceptados, promo de fundador en rieles internacionales).
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 132)
 
 **Tocado:** `lib/coachesCache.ts`, `app/search3.tsx`, `SCHEMA.md`.
