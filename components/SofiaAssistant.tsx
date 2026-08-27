@@ -267,6 +267,11 @@ export function SofiaAssistant() {
       // Vuelve al orbe por el mismo camino, más rápido: una salida que dura lo
       // mismo que la entrada se siente lenta. El contenido se va primero, así no
       // se lo ve encogerse con el círculo.
+      // Se repone ACÁ y no al final: en este instante el orbe todavía está tapado
+      // por el derrame, así que reponerlo no se ve. En el callback del final se
+      // vería volver a su tamaño después de haber reaparecido.
+      orbeEscala.setValue(1);
+
       Animated.parallel([
         Animated.timing(backdropOpacity, { toValue: 0, duration: reducedMotion ? 80 : 180, useNativeDriver: true }),
         Animated.timing(contenido, { toValue: 0, duration: reducedMotion ? 60 : 120, useNativeDriver: true }),
@@ -276,7 +281,7 @@ export function SofiaAssistant() {
           easing: reducedMotion ? Easing.linear : Easing.bezier(0.4, 0, 0.7, 0.9),
           useNativeDriver: true,
         }),
-      ]).start(() => { setMounted(false); setGeo(null); orbeEscala.setValue(1); });
+      ]).start(() => { setMounted(false); setGeo(null); });
     }
   }, [open, reducedMotion, backdropOpacity, revelado, contenido, orbeEscala, insets.top]);
 
@@ -303,20 +308,33 @@ export function SofiaAssistant() {
 
   return (
     <View style={styles.layer} pointerEvents="box-none">
-      {!open && (
+      {/* 🔴 El orbe se muestra SIEMPRE y su visibilidad cuelga del derrame, no de
+          `open`. Colgado de `open` reaparecía de golpe apenas tocabas cerrar,
+          mientras el panel todavía se encogía: durante 260ms se veían las dos
+          cosas a la vez y el isotipo volvía volando sobre un orbe que ya estaba
+          puesto.
+          Colgado del derrame el cambio es invisible en los dos sentidos: en
+          `revelado = 0` el disco verde mide exactamente lo que el orbe y está en
+          el mismo lugar, así que uno se apaga mientras el otro ocupa su sitio. */}
+      <Animated.View
+        {...panResponder.panHandlers}
+        pointerEvents={open ? 'none' : 'auto'}
+        style={[
+          styles.orbAbs,
+          {
+            opacity: revelado.interpolate({ inputRange: [0, 0.12], outputRange: [1, 0], extrapolate: 'clamp' }),
+            transform: pan.getTranslateTransform(),
+          },
+        ]}
+      >
         <Animated.View
-          {...panResponder.panHandlers}
-          style={[styles.orbAbs, { transform: pan.getTranslateTransform() }]}
+          style={[styles.orb, { transform: [{ scale: orbeEscala }] }]}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir Sofía, tu asistente. Mantené presionado para moverla"
         >
-          <Animated.View
-            style={[styles.orb, { transform: [{ scale: orbeEscala }] }]}
-            accessibilityRole="button"
-            accessibilityLabel="Abrir Sofía, tu asistente. Mantené presionado para moverla"
-          >
-            <VitaMark size={34} color="#FFFFFF" strokeWidth={6} />
-          </Animated.View>
+          <VitaMark size={34} color="#FFFFFF" strokeWidth={6} />
         </Animated.View>
-      )}
+      </Animated.View>
 
       {mounted && (
         <Pressable style={StyleSheet.absoluteFillObject} onPress={close} accessibilityLabel="Cerrar el asistente">
