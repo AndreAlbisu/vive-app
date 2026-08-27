@@ -26,6 +26,10 @@
 
 Confirmado en dispositivo: los 3 coaches (Coach Prueba, María González, Martín Fuentes) aparecen en el catálogo, cada uno con su badge de pago correspondiente.
 
+**Dos pendientes de Andre (sesión 128) cerrados de paso:**
+- ✅ **"Conviene dejar una forma de consultar la base desde la sesión"** — resuelto: `supabase db query --linked "<sql>"` funciona sin service role key ni `psql` instalado (usa el Management API del CLI, ya autenticado). Es lo que se usó para todo lo de esta entrada.
+- ✅ **Probada la rama del DELETE del trigger** (`fix-payout-rails-trigger.sql`, chequeo 3), la única que había quedado sin ejercitar por falta de filas en `coach_payout_accounts`. Con una fila real (Sofía Herrera, de prueba): INSERT dejó `accepts_paypal=true`, DELETE la volvió a `false` sin error — el trigger resuelve bien `old.coach_id` en el camino de borrado.
+
 ---
 
 ## 2026-08-27 — Joaquín (sesión 131)
