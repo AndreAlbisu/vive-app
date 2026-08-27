@@ -119,14 +119,13 @@ describe('topicOptionsFrom — opciones del filtro derivadas del dato', () => {
     // Un encabezado sin nada debajo es peor que no mostrar la sección.
     const grupos = topicOptionsFrom([coach(['Sueño'])]);
     expect(grupos).toHaveLength(1);
-    // `descanso` se dividió en `sueno` + `energia` el 27/08/2026.
-    expect(grupos[0].id).toBe('sueno');
+    expect(grupos[0].id).toBe('descanso');
     expect(grupos.every(g => g.subtemas.length > 0)).toBe(true);
   });
 
   it('agrupa por puerta y respeta su orden', () => {
     const grupos = topicOptionsFrom([coach(['Propósito', 'Ansiedad', 'Sueño'])]);
-    expect(grupos.map(g => g.id)).toEqual(['ansiedad', 'sueno', 'proposito']);
+    expect(grupos.map(g => g.id)).toEqual(['ansiedad', 'descanso', 'proposito']);
   });
 
   it('sin coaches no ofrece nada, en vez de ofrecer los 38', () => {

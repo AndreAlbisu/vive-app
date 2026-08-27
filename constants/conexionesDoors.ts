@@ -5,7 +5,7 @@ import { ViveColors } from './theme';
 // Cada puerta mapea a ≥1 subtema canónico. Un coach entra en una puerta si su
 // `topics` incluye CUALQUIERA de los subtemas de la puerta. Los 38 subtemas
 // están particionados: cada uno aparece en exactamente una puerta (sin
-// duplicados, sin huérfanos → 3+6+1+5+2+8 + 1+1+1+1+1 + 2+1+1+2+2 = 38).
+// duplicados, sin huérfanos → 3+6+1+5+2+8 + 2+1+1+1 + 2+1+1+2+2 = 38).
 // `__tests__/conexionesDoors.test.ts` verifica la partición contra AXES.
 //
 // La taxonomía canónica (AXES en searchData.ts) NO se toca: la sigue usando
@@ -43,7 +43,7 @@ export const DOORS: Door[] = [
   // deja afuera — la irritabilidad estaba, la dificultad para decir que no, no.
   { id: 'comunicacion',   label: 'Comunicación',             tagline: 'Decir lo que necesitás', icon: 'message-circle', color: ViveColors.calm, subtemas: ['Comunicación', 'Asertividad'] },
   { id: 'foco',           label: 'Foco, hábitos y trabajo',  tagline: 'Enfoque y rutinas',      icon: 'target',      color: ViveColors.calm,    subtemas: ['Concentración', 'Procrastinación', 'Productividad', 'Hábitos mentales', 'Burnout (estrés laboral)', 'Hábitos', 'Equilibrio vida-trabajo', 'Liderazgo'] },
-  // 🔴 Físico y espiritual se abrieron de 3 puertas a 5 el 27/08/2026. El
+  // 🔴 Físico se abrió de 3 puertas a 4 y espiritual de 3 a 5 el 27/08/2026. El
   // catálogo está cargado hacia lo mental —25 de los 38 subtemas— así que esos
   // dos ejes mostraban una lista de tres renglones que se leía incompleta.
   //
@@ -51,8 +51,13 @@ export const DOORS: Door[] = [
   // presentación y siguen matcheando por los mismos subtemas, que no se tocaron.
   // La contra es que cada puerta queda más angosta — "Sueño" va a tener menos
   // gente que "Descanso y energía" — a cambio de ser más precisa al buscar.
-  { id: 'sueno',          label: 'Sueño',                    tagline: 'Dormir mejor',           icon: 'moon',        color: ViveColors.accent,  subtemas: ['Sueño'] },
-  { id: 'energia',        label: 'Energía',                  tagline: 'Recargar el día',        icon: 'zap',         color: ViveColors.accent,  subtemas: ['Energía'] },
+  // 📝 `Sueño` y `Energía` van JUNTOS. Se probaron separados el 27/08/2026 y se
+  // volvió atrás el mismo día: andar sin pilas no es un tema, es un SÍNTOMA —
+  // de dormir mal, de estar quemado, de cómo comés. Nadie busca un profesional
+  // "de energía", mientras que "no descanso bien y ando sin pilas" sí es una
+  // queja que alguien reconoce como propia. Separarlos alargaba la lista, que
+  // es la razón equivocada para dividir una puerta.
+  { id: 'descanso',       label: 'Descanso y energía',       tagline: 'Dormir y recargar',      icon: 'moon',        color: ViveColors.accent,  subtemas: ['Sueño', 'Energía'] },
   { id: 'nutricion',      label: 'Nutrición',                tagline: 'Comer mejor',            icon: 'coffee',      color: ViveColors.accent,  subtemas: ['Nutrición'] },
   { id: 'movimiento',     label: 'Movimiento',               tagline: 'Mover el cuerpo',        icon: 'activity',    color: ViveColors.accent,  subtemas: ['Actividad física'] },
   { id: 'sexualidad',     label: 'Sexualidad e intimidad',   tagline: 'Intimidad y deseo',      icon: 'heart',       color: ViveColors.accent,  subtemas: ['Sexualidad'] },
