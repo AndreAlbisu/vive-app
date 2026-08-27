@@ -103,32 +103,24 @@ export function SofiaAssistant() {
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   // ── Apertura: el panel sale DEL ORBE ────────────────────────────────────
   // Antes subía desde abajo de la pantalla, que es la animación de una hoja
-  // cualquiera y no tenía nada que ver con el botón que la abrió. Ahora nace en
-  // el centro del orbe —donde estuviera, que se puede arrastrar— y crece hasta
-  // su lugar.
+  // cualquiera y no tenía nada que ver con el botón que la abrió. Después pasó a
+  // crecer desde el orbe, pero escalando el panel entero: siempre era un
+  // rectángulo, chico primero y grande después.
   //
-  // Un solo valor maneja todo (`apertura`, 0 cerrado → 1 abierto) y los demás se
-  // derivan con `Animated.multiply` / `subtract`, que corren en el hilo nativo
-  // igual que el resto. El origen y la escala inicial NO pueden ir en el
-  // `outputRange` de un `interpolate` porque dependen de dónde quedó el orbe y
-  // del ancho de pantalla, y un `outputRange` es fijo por render — por eso van
-  // como valores animados que se fijan al abrir.
-  const apertura = useRef(new Animated.Value(0)).current;
-  const origenX = useRef(new Animated.Value(0)).current;
-  const origenY = useRef(new Animated.Value(0)).current;
-  /** Cuánta escala le falta al panel cuando está cerrado (1 - escala inicial). */
-  const faltaEscala = useRef(new Animated.Value(0)).current;
+  // 🔴 Ahora lo que se anima es la FORMA. El contenedor empieza siendo el orbe
+  // —mismo lugar, mismo tamaño, mismo redondeo, mismo verde— y se amolda hasta
+  // ser el panel; el contenido aparece después, cuando el espacio ya existe.
+  //
+  // ⚠️ Por eso este valor va con `useNativeDriver: false`: `width`, `height`,
+  // `borderRadius` y `backgroundColor` no se pueden animar en el hilo nativo,
+  // solo `transform` y `opacity`. El fondo oscuro sigue en el driver nativo
+  // aparte (es otro valor, así que la mezcla es legal).
+  const morfo = useRef(new Animated.Value(0)).current;
 
-  const inverso = Animated.subtract(1, apertura);
-  const sheetTx = Animated.multiply(origenX, inverso);
-  const sheetTy = Animated.multiply(origenY, inverso);
-  const sheetScale = Animated.subtract(1, Animated.multiply(inverso, faltaEscala));
-  // Entra opaco temprano: si se lo ve nítido mientras todavía es chico, se lee
-  // el panel entero en miniatura y parece un error de layout.
-  const sheetOpacity = apertura.interpolate({
-    inputRange: [0, 0.35, 1],
-    outputRange: [0, 1, 1],
-  });
+  // La geometría se fija al abrir y vive en estado porque el `outputRange` de un
+  // `interpolate` es fijo por render: el orbe se arrastra, así que de dónde sale
+  // cambia entre una apertura y la siguiente.
+  const [geo, setGeo] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
   function clampToScreen(x: number, y: number) {
     const { width, height } = Dimensions.get('window');
@@ -186,55 +178,49 @@ export function SofiaAssistant() {
 
   useEffect(() => {
     if (open) {
-      setMounted(true);
-      // De dónde sale. Se calcula al abrir y no antes: el orbe se arrastra, así
-      // que su centro cambia entre una apertura y la siguiente.
+      // De dónde sale y adónde llega. Se calcula al abrir: el orbe se arrastra.
       const { width, height } = Dimensions.get('window');
-      const centroPanelY = (insets.top + 44 + height) / 2;
-      const centroOrbe = {
-        x: orbPos.current.x + ORB_SIZE / 2,
-        y: orbPos.current.y + ORB_SIZE / 2,
-      };
-
-      // ⚠️ Con movimiento reducido no hay crecimiento ni viaje: queda un fundido
-      // en el lugar. Origen y escala en 0 apagan las dos cosas sin ramas en el
-      // render.
-      origenX.setValue(reducedMotion ? 0 : centroOrbe.x - width / 2);
-      origenY.setValue(reducedMotion ? 0 : centroOrbe.y - centroPanelY);
-      // Arranca del tamaño real del orbe contra el ancho del panel, así el primer
-      // cuadro coincide con lo que el dedo acaba de tocar.
-      faltaEscala.setValue(reducedMotion ? 0 : 1 - ORB_SIZE / width);
-      apertura.setValue(0);
+      setGeo({
+        x: orbPos.current.x,
+        y: orbPos.current.y,
+        w: width,
+        h: height - (insets.top + 44),
+      });
+      setMounted(true);
+      morfo.setValue(0);
 
       // Igual que en SobreVosMomento: sin esto, la animación de apertura compite
       // por el hilo de JS con lo que sea que esté pasando justo en ese instante
-      // (el propio tap, re-renders) y se siente lagueada.
+      // (el propio tap, re-renders) y se siente lagueada. Acá pesa más que antes,
+      // porque la forma se anima desde JS y no desde el hilo nativo.
       const task = InteractionManager.runAfterInteractions(() => {
         Animated.parallel([
-          Animated.timing(backdropOpacity, { toValue: 1, duration: reducedMotion ? 100 : 260, useNativeDriver: true }),
-          Animated.timing(apertura, {
+          Animated.timing(backdropOpacity, { toValue: 1, duration: reducedMotion ? 100 : 240, useNativeDriver: true }),
+          Animated.timing(morfo, {
             toValue: 1,
-            duration: reducedMotion ? 100 : 380,
-            easing: reducedMotion ? Easing.linear : Easing.bezier(0.32, 0.1, 0.25, 1),
-            useNativeDriver: true,
+            duration: reducedMotion ? 100 : 420,
+            // Sale rápido y frena largo: es lo que hace leer el final como que
+            // el panel "se asienta" en vez de llegar de golpe.
+            easing: reducedMotion ? Easing.linear : Easing.bezier(0.22, 1, 0.36, 1),
+            useNativeDriver: false,
           }),
         ]).start();
       });
       return () => task.cancel();
     } else {
-      // Al cerrar vuelve al orbe por el mismo camino, más rápido: una salida
-      // que dura lo mismo que la entrada se siente lenta.
+      // Vuelve al orbe por el mismo camino, más rápido: una salida que dura lo
+      // mismo que la entrada se siente lenta.
       Animated.parallel([
         Animated.timing(backdropOpacity, { toValue: 0, duration: reducedMotion ? 80 : 180, useNativeDriver: true }),
-        Animated.timing(apertura, {
+        Animated.timing(morfo, {
           toValue: 0,
-          duration: reducedMotion ? 80 : 230,
+          duration: reducedMotion ? 80 : 250,
           easing: reducedMotion ? Easing.linear : Easing.bezier(0.4, 0, 0.7, 0.9),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
-      ]).start(() => setMounted(false));
+      ]).start(() => { setMounted(false); setGeo(null); });
     }
-  }, [open, reducedMotion, backdropOpacity, apertura, origenX, origenY, faltaEscala, insets.top]);
+  }, [open, reducedMotion, backdropOpacity, morfo, insets.top]);
 
   function close() {
     setOpen(false);
@@ -280,28 +266,62 @@ export function SofiaAssistant() {
         </Pressable>
       )}
 
-      {mounted && (
+      {mounted && geo && (
         <Animated.View
           style={[
-            styles.sheet,
+            styles.sheetShape,
             {
-              top: insets.top + 44,
-              paddingBottom: 18 + insets.bottom,
-              opacity: sheetOpacity,
-              // El orden importa: primero viaja, después escala sobre su propio
-              // centro. Al revés, la escala multiplicaría el desplazamiento.
-              transform: [
-                { translateX: sheetTx },
-                { translateY: sheetTy },
-                { scale: sheetScale },
-              ],
+              // El contenedor ES el orbe al principio: mismo lugar, mismo
+              // tamaño, mismo redondeo y mismo verde. De ahí se amolda.
+              left:   morfo.interpolate({ inputRange: [0, 1], outputRange: [geo.x, 0] }),
+              top:    morfo.interpolate({ inputRange: [0, 1], outputRange: [geo.y, insets.top + 44] }),
+              width:  morfo.interpolate({ inputRange: [0, 1], outputRange: [ORB_SIZE, geo.w] }),
+              height: morfo.interpolate({ inputRange: [0, 1], outputRange: [ORB_SIZE, geo.h] }),
+              // Arriba termina en el redondeo del panel; abajo termina en cero,
+              // porque ese borde queda al ras del final de la pantalla y una
+              // esquina redondeada ahí se ve como un panel flotando mal apoyado.
+              borderTopLeftRadius:     morfo.interpolate({ inputRange: [0, 1], outputRange: [ORB_SIZE / 2, 28] }),
+              borderTopRightRadius:    morfo.interpolate({ inputRange: [0, 1], outputRange: [ORB_SIZE / 2, 28] }),
+              borderBottomLeftRadius:  morfo.interpolate({ inputRange: [0, 1], outputRange: [ORB_SIZE / 2, 0] }),
+              borderBottomRightRadius: morfo.interpolate({ inputRange: [0, 1], outputRange: [ORB_SIZE / 2, 0] }),
+              // El verde del orbe se derrite en el crema del panel. Termina antes
+              // que la forma para que el contenido no aparezca sobre verde.
+              backgroundColor: morfo.interpolate({
+                inputRange: [0, 0.45, 1],
+                outputRange: [FOREST, CARD, CARD],
+              }),
             },
           ]}
-          // 📝 Sin `shouldRasterizeIOS`: rasteriza la capa a su tamaño actual y
-          // después escala ese bitmap, así que el panel se vería borroso
-          // mientras crece. Servía cuando la animación era solo un desplazamiento.
-          renderToHardwareTextureAndroid
         >
+          {/* El isotipo se va apagando enseguida: mientras se ve, el contenedor
+              todavía es casi el orbe, así que la transición se lee continua —
+              no como que una cosa desapareció y otra apareció en su lugar. */}
+          <Animated.View
+            style={[
+              styles.morphMark,
+              { opacity: morfo.interpolate({ inputRange: [0, 0.22], outputRange: [1, 0], extrapolate: 'clamp' }) },
+            ]}
+            pointerEvents="none"
+          >
+            <VitaMark size={34} color="#FFFFFF" strokeWidth={6} />
+          </Animated.View>
+
+          {/* 🔴 Ancho y alto FIJOS, los finales. Si el contenido se midiera contra
+              el contenedor mientras crece, el texto se reacomodaría en cada
+              cuadro — caro y feo. Acá se maqueta una vez y el contenedor lo
+              recorta (`overflow: 'hidden'`) hasta que hay lugar. */}
+          <Animated.View
+            style={[
+              styles.sheetInner,
+              {
+                width: geo.w,
+                height: geo.h,
+                paddingBottom: 18 + insets.bottom,
+                // Aparece cuando el espacio ya está hecho, no mientras se hace.
+                opacity: morfo.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 0, 1] }),
+              },
+            ]}
+          >
           <View style={styles.grab} />
 
           <View style={styles.topGroup}>
@@ -360,6 +380,7 @@ export function SofiaAssistant() {
             </View>
             <Text style={styles.caption}>El chat está en desarrollo — probá las opciones de arriba mientras tanto</Text>
           </View>
+          </Animated.View>
         </Animated.View>
       )}
     </View>
@@ -415,32 +436,45 @@ const styles = StyleSheet.create({
   // Panel casi a pantalla completa (referencia: asistente de Banco Galicia) —
   // deja una franja arriba para que se note que es una hoja sobre la app, no
   // una pantalla nueva.
-  sheet: {
+  // La FORMA: lo que se amolda del orbe al panel. Posición, tamaño, redondeo y
+  // color los pone la animación — acá va solo lo que no cambia.
+  //
+  // 🔴 `overflow: 'hidden'` es lo que hace que esto funcione: el contenido está
+  // maquetado al tamaño final desde el primer cuadro, y este recorte es lo único
+  // que impide que se desborde mientras el espacio todavía es chico.
+  sheetShape: {
+    position: 'absolute',
+    overflow: 'hidden',
+    // ⚠️ Sin sombra en iOS: `overflow: 'hidden'` es `masksToBounds` en la capa, y
+    // eso RECORTA la sombra — quedaría declarada y sin dibujarse. Se podría
+    // reponer con una vista extra por fuera, pero sobre el fondo oscuro del
+    // backdrop no aporta nada visible. En Android la elevación se dibuja desde
+    // el contorno y el recorte no la afecta, así que esa queda.
+    ...Platform.select({
+      android: { elevation: 12 },
+    }),
+  },
+  // El isotipo del arranque, clavado arriba a la izquierda en una caja del
+  // tamaño del orbe: mientras se ve, el contenedor todavía mide eso.
+  morphMark: {
     position: 'absolute',
     left: 0,
-    right: 0,
-    bottom: 0,
-    flex: 1,
+    top: 0,
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // El CONTENIDO, a tamaño final fijo.
+  sheetInner: {
     // 🔴 Antes `justifyContent: 'space-between'`, que empujaba `topGroup`
     // arriba del todo y `bottomGroup` abajo del todo — con poco contenido
     // (4 atajos nomás), el aire del medio quedaba enorme y el panel se leía
     // partido en dos, no como una sola tarjeta (pedido de Joaquín,
     // 27/08/2026, con captura). El espacio entre los dos grupos ahora lo da
     // `bottomGroup.marginTop`, fijo y chico, no lo que sobre de la pantalla.
-    backgroundColor: CARD,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
     paddingHorizontal: 22,
     paddingTop: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#2E3624',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 20,
-      },
-      android: { elevation: 12 },
-    }),
   },
   grab: {
     width: 38,
