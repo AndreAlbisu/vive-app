@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 139)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`.
+
+**Resumen — cerrado el pendiente 🔴 de Andre (sesión 128): "Home del coach, quedó diagnosticada y sin tocar". La Home ahora tiene dos caras según si el coach tuvo alguna sesión, no solo según si tiene la próxima.**
+
+- El diagnóstico de Andre era exacto: "Sin sesiones programadas" + botón "Ver reservas" (una pantalla vacía) es un callejón, y le tocaba justo al coach que más ayuda necesita — el que recién empieza. El contenido que le serviría (`buildChecklist`/`blockingReason` de `lib/coachVisibility.ts`) ya estaba calculado en la pantalla, solo que comprimido en una tarjeta de un renglón más abajo, fácil de no ver.
+- Nueva señal `esCoachNuevo = !next && completadas === 0` — **no es lo mismo** que "no tiene la próxima sesión": un coach con historial en un bache entre reservas tiene `completadas > 0` aunque `next` sea `null`, y para ese el "Ver reservas" de siempre sigue siendo correcto. Solo cambia para el que NUNCA tuvo una.
+- Para ese caso, la tarjeta vacía se reemplaza por una que reusa `visibility` (ya estaba en el estado, cero consultas nuevas) reencuadrado como el paso siguiente concreto:
+  - Si está bloqueado (`visibility.blocked` — sin temas, sin precio, en pausa, etc.): título y explicación del motivo real, con un botón directo a resolverlo (`/coach-topics`, `/perfil`) en vez de a una lista vacía. Etiqueta del botón por ítem (`CTA_POR_ITEM`: "Elegir mis temas", "Poner mi precio", "Activar mi perfil") — más específico que un genérico "Resolver".
+  - Si NO está bloqueado (ya visible, solo que no le llegó la primera reserva): "Ya aparecés en N puertas" + botón a `/coach-visibilidad`, para que sepa que el problema no es su perfil, es esperar.
+  - La tarjeta "Cómo aparecer en Conexiones" de más abajo se oculta cuando `esCoachNuevo` mostró lo mismo arriba — evita decir lo mismo dos veces en la misma pantalla.
+- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo — hace falta una cuenta de coach con cero sesiones para verlo (todos los coaches de prueba actuales ya tuvieron alguna, salvo que se arme uno nuevo a propósito).
+
+**Pendiente para la próxima sesión:**
+- Confirmar visualmente: crear/usar un coach de prueba con `completadas = 0` y sin sesión próxima, y mirar las dos variantes (bloqueado vs. visible-sin-reservas todavía).
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 138)
 
 **Tocado:** `app/_layout.tsx`.

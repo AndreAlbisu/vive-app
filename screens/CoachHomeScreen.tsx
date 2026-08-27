@@ -125,6 +125,16 @@ function nextDateLabel(date: string): string {
   return `${dayName} ${d} ${MONTHS[m - 1]}`;
 }
 
+// Texto del botón de la tarjeta de "coach nuevo" (ver `esCoachNuevo` más
+// abajo), por `ChecklistItem.key` — de `buildChecklist` en `lib/coachVisibility.ts`.
+// Solo hacen falta las que pueden ser `blocking: true` ahí; una clave nueva
+// que no esté acá cae en el genérico "Resolverlo", no rompe nada.
+const CTA_POR_ITEM: Record<string, string> = {
+  activo: 'Activar mi perfil',
+  topics: 'Elegir mis temas',
+  price: 'Poner mi precio',
+};
+
 export default function CoachHomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -406,6 +416,15 @@ export default function CoachHomeScreen() {
 
   const canJoin = next ? Date.now() >= next.startMs - 10 * 60 * 1000 : false;
 
+  // 🔴 "Sin sesiones programadas" no distingue entre dos coaches muy
+  // distintos: uno con historial que está en un bache entre reservas (para
+  // ese, "Ver reservas" tiene sentido) y uno que TODAVÍA NUNCA tuvo una
+  // sesión — y a ese último enviarlo a una lista vacía es un callejón, justo
+  // cuando es el que más ayuda necesita. `completadas === 0` es la señal de
+  // "nunca tuvo una", no solo "no tiene la próxima" — un coach con historial
+  // en un bache tiene `completadas > 0` aunque `next` sea null.
+  const esCoachNuevo = !next && (repu?.completadas ?? 0) === 0;
+
   if (loading) {
     return (
       <AppBg>
@@ -536,6 +555,45 @@ export default function CoachHomeScreen() {
                 </View>
               )}
             </View>
+          ) : esCoachNuevo ? (
+            // Coach que TODAVÍA NUNCA tuvo una sesión (ver `esCoachNuevo` más
+            // arriba). Reusa `visibility` —ya calculado más arriba, sin
+            // consulta nueva— pero en la posición donde antes había un
+            // callejón ("Sin sesiones programadas" → "Ver reservas", una
+            // pantalla vacía atrás de otra). Acá el link es al problema
+            // concreto, no a una lista sin nada.
+            <View style={s.newCoachCard}>
+              <Text style={s.newCoachEyebrow}>Antes de tu primera sesión</Text>
+              {visibility?.blocked ? (
+                <>
+                  <Text style={s.newCoachTitle}>{visibility.blocked.label}</Text>
+                  <Text style={s.newCoachTxt}>{visibility.blocked.hint}</Text>
+                  {visibility.blocked.route && (
+                    <TouchableOpacity
+                      style={s.newCoachBtn}
+                      activeOpacity={0.85}
+                      onPress={() => router.push(visibility.blocked!.route as any)}>
+                      <Text style={s.newCoachBtnTxt}>
+                        {CTA_POR_ITEM[visibility.blocked.key] ?? 'Resolverlo'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Text style={s.newCoachTitle}>
+                    Ya aparecés en {visibility?.doorCount ?? 0}{' '}
+                    {visibility?.doorCount === 1 ? 'puerta' : 'puertas'}
+                  </Text>
+                  <Text style={s.newCoachTxt}>
+                    Todavía no llegó tu primera reserva. Mirá qué lugar ocupás en cada una y qué podés mejorar mientras esperás.
+                  </Text>
+                  <TouchableOpacity style={s.newCoachBtn} activeOpacity={0.85} onPress={() => router.push('/coach-visibilidad')}>
+                    <Text style={s.newCoachBtnTxt}>Ver mi visibilidad</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
           ) : (
             <View style={s.nextEmpty}>
               <Text style={s.nextEmptyTxt}>Sin sesiones programadas</Text>
@@ -617,8 +675,10 @@ export default function CoachHomeScreen() {
             </View>
           )}
 
-          {/* Cómo aparecer en Conexiones */}
-          {visibility && (
+          {/* Cómo aparecer en Conexiones — no se repite si `esCoachNuevo` ya
+              mostró exactamente esto mismo, reencuadrado, en la tarjeta de
+              arriba (`s.newCoachCard`). */}
+          {visibility && !esCoachNuevo && (
             <TouchableOpacity style={s.vis} activeOpacity={0.85} onPress={() => router.push('/coach-visibilidad')}>
               <View style={[s.visIcon, visibility.blocked && s.visIconWarn]}>
                 <Feather name={visibility.blocked ? 'alert-circle' : 'compass'} size={16} color={visibility.blocked ? TERRA : FOREST} />
@@ -752,6 +812,20 @@ const s = StyleSheet.create({
   nextEmptyTxt: { fontSize: 13.5, color: FOREST_SOFT, fontFamily: ViveFonts.medium },
   nextEmptyBtn: { backgroundColor: FOREST, borderRadius: 15, paddingVertical: 10, paddingHorizontal: 22 },
   nextEmptyBtnTxt: { color: GREEN_TXT, fontSize: 12.5, fontFamily: ViveFonts.semibold },
+
+  // Tarjeta de "coach nuevo" (`esCoachNuevo`) — mismo lenguaje visual que
+  // `nextEmpty` (misma tarjeta clara con borde) pero alineada a la izquierda
+  // y con más contenido: acá hay algo específico que decir, no solo un
+  // estado vacío.
+  newCoachCard: {
+    marginTop: 14, backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20,
+    padding: 18, gap: 8,
+  },
+  newCoachEyebrow: { fontSize: 10.5, letterSpacing: 0.8, textTransform: 'uppercase', color: FOREST_SOFT, fontFamily: ViveFonts.medium },
+  newCoachTitle: { fontFamily: ViveFonts.semibold, fontSize: 15, color: FOREST },
+  newCoachTxt: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: FOREST_SOFT, lineHeight: 18 },
+  newCoachBtn: { alignSelf: 'flex-start', marginTop: 6, backgroundColor: FOREST, borderRadius: 15, paddingVertical: 10, paddingHorizontal: 20 },
+  newCoachBtnTxt: { color: GREEN_TXT, fontSize: 12.5, fontFamily: ViveFonts.semibold },
 
   // Cómo aparecer en Conexiones
   notaCard: {
