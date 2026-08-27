@@ -354,10 +354,8 @@ const styles = StyleSheet.create({
   // `justifyContent: space-between` en el contenedor padre separa los dos
   // grupos con aire en el medio, como en la referencia.
   topGroup: {},
-  // 32 — mismo orden de magnitud que `greeting.marginTop:28` (el salto entre
-  // el header y el saludo), para que los dos grupos se lean como parte del
-  // mismo bloque de texto y no como dos secciones de la pantalla.
-  bottomGroup: { marginTop: 32 },
+  // 20 — Joaquín pidió juntarlo más después de ver el primer valor (32).
+  bottomGroup: { marginTop: 20 },
 
   sheetHeader: {
     flexDirection: 'row',
