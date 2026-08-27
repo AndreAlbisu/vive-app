@@ -7,7 +7,7 @@
 
 ## 2026-08-27 — Andre (sesión 129)
 
-**Tocado:** `screens/CoachHomeScreen.tsx`, `CoachChatsScreen.tsx`, `CoachReservasScreen.tsx`, `lib/bookingHelpers.ts`, `lib/weeklyReflection.ts`, `app/progreso.tsx`. Nuevos: `lib/coachContinuity.ts`, `lib/moodTrend.ts`, `scripts/add-mood-para-coach.sql` (**CORRIDO**), `scripts/add-archivar-salas.sql` (**CORRIDO**), `docs/inicio-del-coach.md`, `docs/animo-compartido.md`, `docs/paquete-para-la-sesion.md`. 287 tests, `tsc` y lint limpios.
+**Tocado:** `screens/CoachHomeScreen.tsx`, `CoachChatsScreen.tsx`, `CoachReservasScreen.tsx`, `lib/bookingHelpers.ts`, `lib/weeklyReflection.ts`, `app/progreso.tsx`. Nuevos: `lib/coachContinuity.ts`, `lib/moodTrend.ts`, `scripts/add-mood-para-coach.sql` (**CORRIDO**), `scripts/add-archivar-salas.sql` (**CORRIDO**), `docs/inicio-del-coach.md`, `docs/animo-compartido.md`, `docs/paquete-para-la-sesion.md`, `lib/coachVisibilityData.ts`, `__tests__/coachVisibilityHome.test.ts`. También `lib/coachVisibility.ts`, `screens/CoachVisibilityScreen.tsx`. 300 tests, `tsc` y lint limpios.
 
 **Resumen:**
 
@@ -17,13 +17,18 @@
 - 📝 **La consulta a una psicóloga cambió el diseño entero.** Mónica trabaja la asociación *en sesión*, preguntando y no afirmando, y **ya pide estos registros a mano** — o sea que la demanda existe y no era hipótesis nuestra. Eso movió la propuesta de "panel que el coach mira" a "paquete que la persona arma y manda". Queda en `docs/paquete-para-la-sesion.md` **como idea, sin implementar** (decisión de Andre, 27/08).
 - 📝 **Si el paquete se construye, jubila la feature D entera y probablemente la pregunta A.10 al abogado** — algo que la persona manda no necesita un permiso de fondo.
 - ✅ **"Sobre vos" filtraba mal**: se le escapaban etiquetas internas al texto que lee el usuario. El filtro chequea un *par* de ángulos y no un carácter suelto, para no tumbar prosa que use `<` o `>`.
+- ✅ **La tarjeta de visibilidad de la Home muestra el LUGAR, no el conteo de puertas.** "Aparecés en 4 puertas" contaba cuántas puertas tocan los temas elegidos: solo se movía si el coach editaba sus temas, y subía tildando más temas — premiaba amplitud, que puede diluir. 🔴 **Y el dato bueno ya existía sin usarse**: `analyzeDoors` calcula, por puerta y por lugar, si lo tenés ganado, si rotás entre varios, o qué te falta. La Home lo tiraba.
+- 📝 **`loadVisibilitySelf` salió de `CoachVisibilityScreen` a `lib/coachVisibilityData.ts`** para que la Home y el panel usen el mismo retrato del coach. Duplicar las 7 consultas habría dejado dos descripciones del mismo coach que divergen en silencio, a un tap de distancia. El cálculo va en un efecto diferido — la Home no puede esperarlo para pintarse — y mientras no llegó **no inventa un número**.
+- 📝 **Sin ningún lugar, informa la brecha del slot más ALCANZABLE y no la del más prestigioso.** Decirle "te faltan 12 reseñas para Recomendado" a quien no entra en ningún lado es cierto e inútil.
+- 📝 **Se respetó la decisión de Joaquín de hoy**: él le puso `!esCoachNuevo` a esa tarjeta (el coach nuevo ve el checklist). No se movió de lugar en la pantalla — **promover el estado bloqueado es decisión suya**, que es el dueño del spec de layout.
 - 🔴 **Tercera vez en la sesión que un "bug" era un bundle viejo** (esta vez la bottom bar). Antes de mirar código: cerrar y reabrir la app. Costó bastante rato buscar una causa que no existía.
 
 **Pendiente para la próxima sesión:**
 
 - 🔴 **Archivar un chat como Coach Prueba desde el teléfono.** El SQL ya está corrido, pero **que el coach pueda ESCRIBIR la columna no se probó**: se apoya en la policy que ya deja escribir `coach_last_read_at` y eso se asumió, no se confirmó. Se sacó del SQL a propósito — suplantar dentro de una transacción deja el resultado tapado por el `rollback`, y además probaría la policy y no la pantalla.
 - ✅ ~~Probar una reserva real contra Mercado Pago~~ — **ya lo cerró Joaquín en la sesión 133**: `amount = 1` sin desvío, `payment_status = 'aprobado'`, `payment_id` real de MP. v41 confirmada de punta a punta con plata real. 📝 Lo dejé anotado como pendiente por escribir la entrada sin leer las suyas primero, que es justo lo que el encabezado de este archivo pide no hacer.
-- 🔴 **Probar el bloque del coach en el teléfono** — se tocó navegación y nada se vio corriendo.
+- 🔴 **Probar el bloque del coach en el teléfono** — se tocó navegación y nada se vio corriendo. Ahora suma la tarjeta de visibilidad nueva: hay que verla con un coach que tenga lugar en alguna puerta y con uno que no entre en ninguna.
+- ⚠️ **Para Joaquín**: el estado bloqueado ("Hoy no aparecés en Conexiones") sigue en el mismo lugar de la pantalla. Es lo más urgente que la Home puede decir y quizás merece subir, pero el layout es suyo — queda a su criterio.
 - ⚠️ **Mandar el paquete al abogado**: ahora lleva A.10 (posiblemente sin objeto), A.11 más filosa y A.12, más una pregunta nueva sobre texto libre por el chat.
 - 📝 **A.11 se agravó**: la persona que manda algo eligió mostrarlo, y eso sube la expectativa de respuesta. En Vita hay coaches de hábitos y nutricionistas, no psicólogos. Un profesional que no lo lee es peor que no haber ofrecido nada, y no se arregla por código.
 - 📝 **Ya se puede consultar la base desde la sesión**: `npx supabase db query --linked "..."` funciona (lo resolvió Joaquín, sesión 132). Reemplaza el truco de la anon key por REST y las capturas del SQL Editor — verificado hoy contra `coach_archived`.
