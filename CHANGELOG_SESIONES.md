@@ -20,6 +20,12 @@
 
 **Corrección al toque, mismo día:** el punto de "próximo paso natural — `accepts_international` a dato derivado" que había dejado como pendiente **estaba desactualizado**: Andre ya lo había hecho el 25/08/2026 (`sync_accepts_international()`, `scripts/add-payout-rails.sql`) — llegó al repo en el merge grande de la sesión 130 y no lo había vuelto a chequear antes de escribir el pendiente. Ver `SCHEMA.md` §`coaches.accepts_international`. No hay nada para hacer acá.
 
+**De paso, mismo día — variedad de prueba en el catálogo.** Con solo 1 coach visible no había forma de probar `PaymentBadges` con distintas combinaciones ni ver el deck de Conexiones con más de una tarjeta. Conectados dos rieles más vía SQL directo (`coach_payout_accounts`, dejando que `trg_sync_intl_on_payout` derive los flags — no se tocaron las columnas de `coaches` a mano):
+- **María González** → PayPal (`paypal_email` de prueba).
+- **Martín Fuentes** → USDT (wallet TRC20 de prueba, generada respetando el CHECK `payout_wallet_formato`: primer intento con un `0` en la dirección rebotó porque el alfabeto base58 no lo admite).
+
+Confirmado en dispositivo: los 3 coaches (Coach Prueba, María González, Martín Fuentes) aparecen en el catálogo, cada uno con su badge de pago correspondiente.
+
 ---
 
 ## 2026-08-27 — Joaquín (sesión 131)
