@@ -30,6 +30,7 @@ import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
+import { altoDeEje } from '@/lib/ejesLayout';
 import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
 import { rankDeck, SLOT_COLORS, type DeckSlotKey } from '@/lib/coachDeckRanking';
 
@@ -960,18 +961,19 @@ const s = StyleSheet.create({
     paddingTop: 26,
     paddingBottom: 20,
     paddingHorizontal: 10,
-    // El alto lo fija esta línea y no el contenido. Sin ella la tarjeta mide lo
-    // que miden sus partes (~236pt) y queda chata: son columnas, y una columna
-    // que no es más alta que ancha no se lee como columna. El aire extra cae
-    // entre la bajada y la flecha, porque la flecha va anclada abajo.
+    // El alto lo fija esta línea y no el contenido: sin ella la tarjeta mide lo
+    // que miden sus partes (~236pt) y queda chata. El aire extra cae entre la
+    // bajada y la flecha, porque la flecha va anclada abajo.
     //
-    // 📝 354 contra ~110 de ancho da una proporción de 3,2 a 1. Presupuesto de
-    // pantalla medido, no estimado: en un 390×844 el bloque entero (título,
-    // búsqueda, ejes y tarjeta del quiz) entra con ~31pt de sobra. En un SE
-    // (667 de alto) hay que bajar ~73pt para llegar al quiz — con 290 también
-    // había que bajar, pero 9. Se acepta: los tres ejes se ven enteros sin
-    // scrollear, que es lo que esta pantalla tiene que resolver.
-    minHeight: 354,
+    // 🔴 Sale del ancho de pantalla, NO es un número fijo. Con 354 clavado la
+    // proporción se deformaba en los dos sentidos —4,08:1 en un SE contra
+    // 2,87:1 en un 15 Pro Max— porque el ancho de la columna sí es proporcional
+    // (`flex: 1`) y el alto no. Ver `lib/ejesLayout.ts`.
+    //
+    // ⚠️ `SCREEN_W` se lee una vez al cargar el módulo, como el resto de este
+    // archivo: no se recalcula al rotar. Es la limitación que ya tenía
+    // `cardPage`, no una nueva.
+    minHeight: altoDeEje(SCREEN_W),
   },
   menuKicker: {
     fontFamily: ViveFonts.medium,
