@@ -960,6 +960,11 @@ const s = StyleSheet.create({
     paddingTop: 26,
     paddingBottom: 20,
     paddingHorizontal: 10,
+    // El alto lo fija esta línea y no el contenido. Sin ella la tarjeta mide lo
+    // que miden sus partes (~236pt) y queda chata: son columnas, y una columna
+    // que no es más alta que ancha no se lee como columna. El aire extra cae
+    // entre la bajada y la flecha, porque la flecha va anclada abajo.
+    minHeight: 290,
   },
   menuKicker: {
     fontFamily: ViveFonts.medium,
