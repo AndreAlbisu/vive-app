@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 131)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`.
+
+**Resumen — cerrado el título/subtítulo de Conexiones (confirmado por Joaquín), y ajustada la barra de búsqueda para que quede a la misma altura que la barra "Hoy: ..." de Recursos.**
+
+- `marginTop: 2` de la sesión 130 (corregido el error de unidades px@3x vs. pt) **funcionó** — confirmado con captura.
+- **Nuevo pedido**: la barra de búsqueda un poco más abajo, a la misma altura que la barra "Hoy: Para dedicarle..." de `recursos.tsx`. Esta vez medido detectando el BORDE del pill (no el texto, que en la barra de búsqueda es gris clarito y no siempre cruza el umbral de detección) — 28px de diferencia real sobre la captura, **ya convertido a puntos** (28/3≈9pt) antes de aplicarlo, aprendiendo de la sesión 130.
+- `searchBar.marginTop` de 2 a **11**.
+- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo.
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 130)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`.

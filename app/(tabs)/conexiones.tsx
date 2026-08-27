@@ -739,12 +739,15 @@ const s = StyleSheet.create({
 
   // Pregunta editorial
   // Búsqueda por nombre
+  // marginTop: 11 — medido contra la barra "Hoy: ..." de recursos.tsx
+  // (detectando el borde del pill, no el texto): 28px de diferencia real
+  // sobre la captura @3x = 28/3 ≈ 9pt. 2 (valor previo) + 9 = 11.
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     marginHorizontal: 20,
-    marginTop: 2,
+    marginTop: 11,
     marginBottom: 4,
     paddingHorizontal: 14,
     height: 46,
