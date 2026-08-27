@@ -964,7 +964,14 @@ const s = StyleSheet.create({
     // que miden sus partes (~236pt) y queda chata: son columnas, y una columna
     // que no es más alta que ancha no se lee como columna. El aire extra cae
     // entre la bajada y la flecha, porque la flecha va anclada abajo.
-    minHeight: 290,
+    //
+    // 📝 354 contra ~110 de ancho da una proporción de 3,2 a 1. Presupuesto de
+    // pantalla medido, no estimado: en un 390×844 el bloque entero (título,
+    // búsqueda, ejes y tarjeta del quiz) entra con ~31pt de sobra. En un SE
+    // (667 de alto) hay que bajar ~73pt para llegar al quiz — con 290 también
+    // había que bajar, pero 9. Se acepta: los tres ejes se ven enteros sin
+    // scrollear, que es lo que esta pantalla tiene que resolver.
+    minHeight: 354,
   },
   menuKicker: {
     fontFamily: ViveFonts.medium,
