@@ -827,14 +827,15 @@ const s = StyleSheet.create({
   // y las cards de abajo — se achicó `marginTop` acá (antes heredaba el 10 de
   // `askWrap`) además del `marginBottom`, para traer el CONTENIDO hacia el
   // título sin tocar el título en sí.
-  // marginTop: 21 — medido en píxeles sobre capturas reales (no calculado a
-  // partir de los valores de layout, que llevaron a un número equivocado la
-  // primera vez: la cuenta de marginTop/lineHeight de cada pantalla no
-  // predice el renderizado real de Plus Jakarta Sans). Gap título→subtítulo
-  // en Conexiones vs. "Herramientas de Vita" en recursos.tsx: 54px vs. 83px
-  // antes de este ajuste — este valor lo empareja.
+  // marginTop: -36 — medido en píxeles sobre capturas reales, verificado con
+  // recorte visual (no solo el script). Con marginTop:21 el gap título→
+  // subtítulo daba 141px acá contra 84px en "Herramientas de Vita"
+  // (recursos.tsx) — 57px de más. Este valor los empareja. El intento
+  // anterior (21, sesión 129) partió de una medición de 54px vs 83px que no
+  // se sostuvo al aplicarse — quedó anotado como lección: medir DESPUÉS de
+  // aplicar el cambio, no confiar en que la relación se mantenga lineal.
   askWrapTight: {
-    marginTop: 21,
+    marginTop: -36,
     marginBottom: 2,
   },
   // Título de Fase 2 (nombre del eje elegido) — Fase 1 ya no tiene título propio.

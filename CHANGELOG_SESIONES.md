@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 130)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`.
+
+**Resumen — retomando el pendiente de la 129: "Elegí un área de bienestar para empezar" seguía sin coincidir con "Herramientas de Vita" en Recursos, y esta vez sí se cerró — midiendo DESPUÉS de aplicar el cambio, no antes.**
+
+- Joaquín mandó captura fresca de las dos pantallas al arrancar, como habíamos anotado como pendiente. Medido con el mismo script de filas de texto que la sesión 129, más verificación visual con recortes esta vez (no confiar solo en el número).
+- 🔴 **La medición de la sesión 129 (54px vs 83px) no se sostuvo al aplicar el `marginTop:21` calculado a partir de ella.** El gap real terminó en **141px** contra los **84px** de Recursos — 57px de más, casi el doble. La relación entre "cuánto cambia el margen" y "cuánto cambia el gap visible" con Plus Jakarta Sans **no es 1:1** — quedó como lección para no repetir: medir la ANTES/DESPUÉS de cada cambio real, no asumir que un delta de margen produce el mismo delta de gap visible.
+- **Arreglado**: `askWrapTight.marginTop` de 21 a **-36** (resta directamente los 57px de diferencia medidos).
+- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo — pendiente que Joaquín lo vea y avise si esta vez sí cerró.
+- De paso: se trajo el trabajo grande de Andre de ayer (fast-forward, sin conflictos) — reorganización completa del perfil del coach en 5 grupos, arreglo de un agujero de seguridad en el monto cobrado por Mercado Pago (venía del cliente, sin validar contra el precio real del coach), cierre de disputas de PayPal, features nuevas en la Home del coach (quién se está cayendo, notas de cierre de sesión, "tus personas").
+
+**Pendiente para la próxima sesión:**
+- Confirmar en dispositivo si el ajuste de -36 cerró el tema del espaciado, de una vez.
+
+---
+
 ## 2026-08-26 — Joaquín (sesión 129)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`.
