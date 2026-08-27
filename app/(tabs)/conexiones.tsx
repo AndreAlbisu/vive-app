@@ -579,21 +579,34 @@ export default function ConexionesScreen() {
                 <Text style={s.askSub}>Elegí un tema y te presento a los profesionales indicados</Text>
               </View>
 
+              {/* Una sola tarjeta con los temas adentro, no una tarjeta por tema.
+                  El eje mental tiene 6: seis tarjetas con sombra son seis objetos
+                  flotando, mucho ruido para una lista que se escanea. Y los
+                  separadores sueltos, sin contenedor, fallan al revés — con los 3
+                  de físico o espiritual se leen como una lista a la que le faltó
+                  cargar algo. Un contenedor único da las dos cosas: es un objeto
+                  solo, así que con 3 igual se ve terminado, y adentro es liviano.
+                  Mismo criterio que las columnas de la fase 1, que tampoco llevan
+                  sombra para leerse como una composición y no como tres objetos. */}
               <View style={s.doorsWrap}>
-                {doorsForEje(selectedAxis).map(d => (
-                  <ScaleCard
-                    key={d.id}
-                    style={s.doorCard}
-                    onPress={() => openDoor(d.id)}>
-                    <View style={[s.doorIcon, { backgroundColor: tint(d.color, 0.16) }]}>
-                      <Feather name={d.icon as any} size={20} color={d.color} />
-                    </View>
-                    <View style={s.doorTextWrap}>
-                      <Text style={s.doorTitle} numberOfLines={1}>{d.label}</Text>
-                      <Text style={s.doorTagline} numberOfLines={1}>{d.tagline}</Text>
-                    </View>
-                    <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
-                  </ScaleCard>
+                {doorsForEje(selectedAxis).map((d, i) => (
+                  <View key={d.id}>
+                    {i > 0 && <View style={s.doorSep} />}
+                    <ScaleCard style={s.doorRow} onPress={() => openDoor(d.id)}>
+                      {/* Lo único que lleva el color del eje. El resto —título,
+                          bajada, flecha— queda neutro a propósito: si la fila
+                          tuviera además borde y sombra propios, le competirían el
+                          protagonismo al único elemento que dice dónde estás. */}
+                      <View style={[s.doorIcon, { backgroundColor: tint(d.color, 0.16) }]}>
+                        <Feather name={d.icon as any} size={22} color={d.color} />
+                      </View>
+                      <View style={s.doorTextWrap}>
+                        <Text style={s.doorTitle} numberOfLines={1}>{d.label}</Text>
+                        <Text style={s.doorTagline} numberOfLines={1}>{d.tagline}</Text>
+                      </View>
+                      <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
+                    </ScaleCard>
+                  </View>
                 ))}
               </View>
             </SlideInView>
@@ -914,26 +927,39 @@ const s = StyleSheet.create({
   // Filas horizontales. Es el diseño que tenían también los ejes hasta el
   // 27/08/2026; acá se queda porque son hasta 6 ítems de largo variable y en
   // columnas no entrarían.
+  // 📝 Sin `overflow: 'hidden'`: en iOS es `masksToBounds` y recortaría la
+  // sombra del contenedor. No hace falta — las filas no pintan fondo (ScaleCard
+  // solo escala) y los separadores van con margen, así que nada llega a las
+  // esquinas redondeadas.
   doorsWrap: {
-    paddingHorizontal: 20,
-    gap: 10,
-  },
-  doorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
+    marginHorizontal: 20,
     backgroundColor: CARD,
     borderWidth: 1,
     borderColor: LINE,
-    borderRadius: 20,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    borderRadius: 24,
     ...shadow,
   },
+  doorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+  },
+  // Arranca donde arranca el texto, no en el borde: la línea corta bajo el
+  // título y deja pasar la columna de íconos, que se lee como una sola tira.
+  doorSep: {
+    height: 1,
+    backgroundColor: LINE,
+    marginLeft: 16 + 50 + 14,
+    marginRight: 16,
+  },
+  // Cuadrado redondeado y no círculo — es la forma que distingue a los temas de
+  // los ejes, que sí son redondos (tomado del boceto del 27/08/2026).
   doorIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
