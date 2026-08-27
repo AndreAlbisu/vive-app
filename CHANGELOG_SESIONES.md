@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 135)
+
+**Tocado:** `supabase/functions/mp-create-payment/index.ts`, `supabase/functions/paypal-create-payment/index.ts`. Deployadas: `mp-create-payment` **v42**, `paypal-create-payment` **v15**.
+
+**Resumen — la demora de la sesión 134 (cliente) no alcanzaba: seguía tardando mucho. El resto estaba del lado del servidor, en las mismas edge functions.**
+
+- `mp-create-payment` hacía 3 consultas en fila que no dependían una de otra: precio del coach, token de MP del coach (con su propio refresh condicional) y el conteo de sesiones del par para la comisión. Pasadas a `Promise.all` — el tiempo pasa a ser el de la más lenta de las tres, no la suma.
+- `paypal-create-payment` tenía el mismo patrón y uno más grave: pedía el token OAuth de PayPal (un viaje de red completo a la API de PayPal) recién DESPUÉS de validar reserva, coach, comisión y datos de cobro — en vez de arrancarlo apenas entra la request, ya que no depende de nada de eso. Ahora se dispara al toque y se espera (`await tokenPromise`) recién cuando hace falta, al final. De paso, el `select` del coach y el conteo de comisión también pasaron a `Promise.all` (mismo caso que en MP).
+- Ninguno de los dos cambios toca la llamada final a la API de MP/PayPal para crear el pago (`fetch` a `checkout/preferences` / `v2/checkout/orders`) — esa sigue siendo, inevitablemente, un viaje de red externo y probablemente el paso más lento que queda.
+- Deployadas y **verificadas por la respuesta**, no por el estado declarado (mismo criterio que la sesión 127 de Andre): un POST con la anon key en vez de un JWT de usuario da 401 `Unauthorized` **desde el código propio** (falla `auth.getUser`, no el gateway) — confirma que las dos arrancan sin errores de import y ejecutan su lógica.
+- No se corrió `tsc` sobre estos archivos: `supabase/functions` está excluido de `tsconfig.json` (Deno, imports por URL) — la verificación es la de arriba, por respuesta real.
+
+**Pendiente para la próxima sesión:**
+- Confirmar con Joaquín si esto alcanzó. Si la demora sigue sintiéndose fuerte, lo que queda son los dos `fetch` externos (crear preferencia/orden) y un eventual cold start de la función — ahí ya no hay más paralelismo posible del lado nuestro, habría que medir tiempos reales (Log Explorer del dashboard, no accesible por `supabase db query`) para saber cuál de los dos pesa más.
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 134)
 
 **Tocado:** `screens/BookingScreen_Confirm.tsx`.

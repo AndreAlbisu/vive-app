@@ -82,11 +82,28 @@ serve(async (req) => {
     // NO del body"): el riel de pesos era el único que faltaba.
     //
     // ⚠️ `booking.coach_id` es `coaches.id`, NO `profiles.id`.
-    const { data: coachPrecio } = await supabase
-      .from('coaches')
-      .select('price_per_session')
-      .eq('id', booking.coach_id)
-      .maybeSingle()
+    const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL') // ISO date, TBD
+
+    // 🔴 Las tres consultas de acá abajo son independientes entre sí — ninguna
+    // necesita el resultado de otra, solo `booking.coach_id`/`booking.user_id`,
+    // que ya están. Antes iban una atrás de la otra en el camino crítico entre
+    // apretar "Reservar sesión" y abrir el checkout; en paralelo, el tiempo
+    // total pasa a ser el de la más lenta de las tres, no la suma.
+    const [{ data: coachPrecio }, coachToken, { count }] = await Promise.all([
+      supabase.from('coaches').select('price_per_session').eq('id', booking.coach_id).maybeSingle(),
+      // Token del coach (split), refrescado si está por vencer. Sin cuenta MP
+      // conectada, no se puede cobrar.
+      getFreshCoachToken(supabase, booking.coach_id, MP_CLIENT_ID, MP_CLIENT_SECRET),
+      // Contador de comisión (ver más abajo) — no depende de `precio` ni del
+      // token, solo de quiénes son el user y el coach.
+      supabase
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', booking.user_id)
+        .eq('coach_id', booking.coach_id)
+        .eq('status', 'completada')
+        .or(PAIR_SESSION_FILTER),
+    ])
 
     const precio = Number(coachPrecio?.price_per_session)
     if (!Number.isFinite(precio) || precio <= 0) {
@@ -104,11 +121,6 @@ serve(async (req) => {
       await supabase.from('bookings').update({ amount: precio }).eq('id', booking.id)
     }
 
-    // Token del coach (split), refrescado si está por vencer. Sin cuenta MP
-    // conectada, no se puede cobrar.
-    const coachToken = await getFreshCoachToken(
-      supabase, booking.coach_id, MP_CLIENT_ID, MP_CLIENT_SECRET,
-    )
     if (!coachToken) return json({ error: 'Coach sin Mercado Pago conectado' }, 409)
 
     // Idempotente: si ya hay preferencia pendiente, reusarla — pero devolviendo el
@@ -154,15 +166,7 @@ serve(async (req) => {
     // se importa de _shared/commission.ts, al lado de la versión testeada. Antes
     // estaba escrito inline y quedó desactualizado apenas apareció el riel de
     // USDT: seguía mirando solo `preference_id`.
-    const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL') // ISO date, TBD
-    const { count } = await supabase
-      .from('bookings')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', booking.user_id)
-      .eq('coach_id', booking.coach_id)
-      .eq('status', 'completada')
-      .or(PAIR_SESSION_FILTER)
-
+    // `promoUntil` y el conteo (`count`) ya se pidieron en paralelo más arriba.
     // La decisión de tramo es pura y está en _shared/commission.ts, testeada.
     const commissionPct = commissionPctFor(count ?? 0, Date.now(), promoUntil, 'mp')
 

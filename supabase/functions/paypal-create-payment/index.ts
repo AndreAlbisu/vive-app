@@ -82,6 +82,13 @@ serve(async (req) => {
     return json({ error: 'Pago con PayPal no disponible' }, 503)
   }
 
+  // 🔴 Se pide ACÁ, ya — no depende de la reserva ni del coach, así que
+  // esperar a tenerlos resueltos antes de pedirlo solo suma un viaje de red
+  // entero (el OAuth de PayPal) al camino crítico entre apretar "Reservar
+  // sesión" y abrir el checkout. Se resuelve en paralelo con todo lo de abajo
+  // y se espera recién al final, cuando ya hace falta.
+  const tokenPromise = getAccessToken()
+
   // Identidad desde el JWT — lo único que el cliente no puede falsificar.
   const asCaller = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
@@ -104,11 +111,19 @@ serve(async (req) => {
   if (booking.user_id !== user.id) return json({ error: 'Unauthorized' }, 403)
   if (booking.payment_status === 'aprobado') return json({ error: 'Esta reserva ya está pagada' }, 409)
 
-  const { data: coach } = await admin
-    .from('coaches')
-    .select('id, price_usd, accepts_international')
-    .eq('id', booking.coach_id)
-    .maybeSingle()
+  // 🔴 El coach y el conteo de sesiones del par (comisión, más abajo) tampoco
+  // dependen entre sí — los dos solo necesitan `booking`, que ya está. Antes
+  // iban uno atrás del otro; en paralelo.
+  const [{ data: coach }, { count: sesionesDelPar }] = await Promise.all([
+    admin.from('coaches').select('id, price_usd, accepts_international').eq('id', booking.coach_id).maybeSingle(),
+    admin
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', booking.user_id)
+      .eq('coach_id', booking.coach_id)
+      .eq('status', 'completada')
+      .or(PAIR_SESSION_FILTER),
+  ])
 
   if (!coach?.accepts_international) {
     return json({ error: 'Este profesional no atiende sesiones desde el exterior' }, 409)
@@ -139,7 +154,7 @@ serve(async (req) => {
     return json({ error: 'Este profesional no acepta cobrar por PayPal' }, 409)
   }
 
-  const token = await getAccessToken()
+  const token = await tokenPromise
   if (!token) return json({ error: 'No se pudo conectar con PayPal' }, 502)
 
   // ── Comisión: el tramo del par, igual que en Mercado Pago ─────────────────
@@ -150,16 +165,9 @@ serve(async (req) => {
   //
   // Es la misma consulta que hace `mp-create-payment`, con el mismo filtro de
   // checkouts abandonados importado de `_shared/commission.ts` — si se toca una,
-  // se toca la otra.
+  // se toca la otra. `sesionesDelPar` ya se pidió en paralelo más arriba, junto
+  // con `coach`.
   const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL')
-  const { count: sesionesDelPar } = await admin
-    .from('bookings')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', booking.user_id)
-    .eq('coach_id', booking.coach_id)
-    .eq('status', 'completada')
-    .or(PAIR_SESSION_FILTER)
-
   const commissionPct = commissionPctFor(sesionesDelPar ?? 0, Date.now(), promoUntil, 'paypal')
 
   // ── Precio ─────────────────────────────────────────────────────────────────
