@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-08-27 — Joaquín (sesión 136)
+
+**Tocado:** ninguno de código — investigación y cierre de la demora de las sesiones 134/135.
+
+**Resumen — encontrada la causa real de "sigue tardando mucho" después de dos rondas de optimización: no era el código, era la distancia física. Joaquín está probando desde Australia.**
+
+- Después de las optimizaciones de las sesiones 134 (cliente) y 135 (servidor), la demora se seguía sintiendo igual. En vez de seguir adivinando, se armó acceso a los logs reales de las edge functions (Management API de Supabase, `analytics/endpoints/logs.all` — el token real vive en el llavero de macOS, "Supabase CLI"/"supabase", **no** en `~/.supabase/access-token`, que está desactualizado) y se midió `execution_time_ms` real por invocación.
+- **Comparación real, con geolocalización de cada pedido:**
+  | Cuándo | Origen real del pedido | Región que atendió | Tiempo de servidor |
+  |---|---|---|---|
+  | 26/08 ~15hs | Córdoba, Argentina | `sa-east-1` (São Paulo, la región del proyecto) | 0.8 – 1.4s |
+  | 27/08 (WiFi) | Sydney, Australia | `ap-southeast-2` (Sydney) | 1.7 – 5.5s |
+  | 27/08 (datos móviles) | Brisbane, Australia — operador **Vodafone Australia** | `ap-southeast-2` | 3.97s |
+- Descartadas por orden, con el usuario confirmando cada una: iCloud Private Relay (apagado), VPN clásica, Cloudflare WARP/1.1.1.1, bloqueadores tipo AdGuard/Guardian — ninguna activa. El dato que cerró la investigación: con **datos móviles** (sin WiFi de por medio) el operador que atendió la llamada fue **Vodafone Australia** en Brisbane — no una IP mal geolocalizada, el nombre real del operador. Eso solo se explica con el teléfono físicamente conectado a antenas australianas. Confirmado por Joaquín: **vive en Australia**.
+- **No es un bug.** São Paulo/Buenos Aires y Australia están en veredas opuestas del planeta — cada ida y vuelta de red tiene un piso de cientos de ms que ningún cambio de código baja. Las optimizaciones de 134/135 (client-side y server-side, sacar el tramo serial) son reales y sirven para los usuarios de verdad, que están en Argentina — los 0.8-1.4s de Córdoba del 26/08 lo confirman. Lo que Joaquín mide desde Australia va a sentirse lento siempre, sin relación con la calidad del código.
+
+**Pendiente para la próxima sesión:**
+- Si Joaquín necesita probar con una latencia realista (como la vería un usuario argentino), la opción es una VPN apuntando a Argentina/Sudamérica SOLO para probar — irónico después de haber descartado VPN como causa, pero acá cumple el rol contrario: simular la red de un usuario real, no ocultar la propia.
+- Nada que arreglar en el código por este hilo — cerrado.
+
+---
+
 ## 2026-08-27 — Joaquín (sesión 135)
 
 **Tocado:** `supabase/functions/mp-create-payment/index.ts`, `supabase/functions/paypal-create-payment/index.ts`. Deployadas: `mp-create-payment` **v42**, `paypal-create-payment` **v15**.
