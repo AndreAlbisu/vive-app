@@ -827,15 +827,17 @@ const s = StyleSheet.create({
   // y las cards de abajo — se achicó `marginTop` acá (antes heredaba el 10 de
   // `askWrap`) además del `marginBottom`, para traer el CONTENIDO hacia el
   // título sin tocar el título en sí.
-  // marginTop: -36 — medido en píxeles sobre capturas reales, verificado con
-  // recorte visual (no solo el script). Con marginTop:21 el gap título→
-  // subtítulo daba 141px acá contra 84px en "Herramientas de Vita"
-  // (recursos.tsx) — 57px de más. Este valor los empareja. El intento
-  // anterior (21, sesión 129) partió de una medición de 54px vs 83px que no
-  // se sostuvo al aplicarse — quedó anotado como lección: medir DESPUÉS de
-  // aplicar el cambio, no confiar en que la relación se mantenga lineal.
+  // marginTop: 2 — el -36 anterior fue un error de UNIDADES, no de la
+  // relación entre pantallas: las capturas del iPhone son @3x (1290px =
+  // 430pt), y los píxeles medidos sobre la captura se venían restando
+  // directo al `marginTop`, que es en PUNTOS. Con dos mediciones reales
+  // (marginTop -8 → gap 54px=18pt; marginTop 21 → gap 141px=47pt) la
+  // relación es exactamente lineal 1:1 EN PUNTOS (gap_pt = marginTop + 26) —
+  // el "3:1" que parecía haber no era la fuente, era no dividir por la
+  // densidad de la pantalla. Objetivo: 84px = 28pt (recursos.tsx) →
+  // marginTop = 28 − 26 = 2.
   askWrapTight: {
-    marginTop: -36,
+    marginTop: 2,
     marginBottom: 2,
   },
   // Título de Fase 2 (nombre del eje elegido) — Fase 1 ya no tiene título propio.

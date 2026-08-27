@@ -18,7 +18,13 @@
 - De paso: se trajo el trabajo grande de Andre de ayer (fast-forward, sin conflictos) — reorganización completa del perfil del coach en 5 grupos, arreglo de un agujero de seguridad en el monto cobrado por Mercado Pago (venía del cliente, sin validar contra el precio real del coach), cierre de disputas de PayPal, features nuevas en la Home del coach (quién se está cayendo, notas de cierre de sesión, "tus personas").
 
 **Pendiente para la próxima sesión:**
-- Confirmar en dispositivo si el ajuste de -36 cerró el tema del espaciado, de una vez.
+- ~~Confirmar en dispositivo si el ajuste de -36 cerró el tema del espaciado, de una vez.~~ **No cerró — encontrado el error real, ver abajo.**
+
+**Fix al toque, mismo día: el -36 pisó el título entero — "Elegí un área..." quedó escrito ENCIMA de "Conexiones".**
+
+- 🔴 **El error no era la relación entre pantallas — era una confusión de UNIDADES.** Las capturas del iPhone son @3x (1290px = 430pt de pantalla), y los píxeles medidos sobre la captura se venían restando/sumando DIRECTO al `marginTop`, que React Native mide en puntos, no en píxeles de imagen. Cada ajuste de hoy y de ayer estaba, en los hechos, aplicando **el triple** del cambio que parecía.
+- **Con las dos mediciones reales que sí hay** (`marginTop:-8` → gap 54px=18pt; `marginTop:21` → gap 141px=47pt), la relación es lineal **1:1 en puntos** (`gap_pt = marginTop + 26`) — nunca hizo falta sospechar de un comportamiento no lineal de Plus Jakarta Sans, esa hipótesis de la sesión 129 estaba mal. `marginTop` final: **2** (objetivo 84px=28pt, 28−26=2).
+- Typecheck, lint y 287/287 tests limpios. No confirmado en dispositivo.
 
 ---
 
