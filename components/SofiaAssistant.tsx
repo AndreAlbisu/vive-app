@@ -78,12 +78,27 @@ export function SofiaAssistant() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  const [orbPos, setOrbPos] = useState(() => ({
+  // 🔴 La posición vive en un ref y NO en estado, y los insets se espejan en
+  // otro. El motivo es el mismo para los dos: `PanResponder.create` corre una
+  // sola vez (está en un `useRef`), así que todo lo que sus handlers lean del
+  // render queda congelado en el PRIMER valor para siempre.
+  //
+  // Con `useState`, `onPanResponderGrant` hacía `dragStart.current = orbPos` y
+  // leía siempre la posición inicial. El primer arrastre andaba; del segundo en
+  // adelante el orbe saltaba a "posición original + desplazamiento" apenas lo
+  // movías. (Reportado el 27/08/2026: "funciona muy raro cuando la movés y
+  // soltás en algún lado".)
+  //
+  // 📝 De paso deja de re-renderizar el árbol entero en cada soltada: la
+  // posición la dibuja `pan`, que es un `Animated.ValueXY`, no el estado.
+  const orbPos = useRef({
     x: Dimensions.get('window').width - 18 - ORB_SIZE,
     y: Dimensions.get('window').height - (insets.bottom + 8 + 56 + 14) - ORB_SIZE,
-  }));
-  const pan = useRef(new Animated.ValueXY(orbPos)).current;
-  const dragStart = useRef(orbPos);
+  });
+  const insetsRef = useRef(insets);
+  insetsRef.current = insets;
+  const pan = useRef(new Animated.ValueXY(orbPos.current)).current;
+  const dragStart = useRef(orbPos.current);
 
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const sheetY = useRef(new Animated.Value(SHEET_OFFSCREEN)).current;
@@ -92,13 +107,24 @@ export function SofiaAssistant() {
     const { width, height } = Dimensions.get('window');
     const minX = EDGE_MARGIN;
     const maxX = width - ORB_SIZE - EDGE_MARGIN;
-    const minY = insets.top + EDGE_MARGIN;
+    // Por `insetsRef` y no por `insets`: esta función la llaman los handlers del
+    // PanResponder, que capturaron el primer render. Leído directo, un inset que
+    // llega tarde (o una rotación) dejaba el límite calculado con valores viejos.
+    const minY = insetsRef.current.top + EDGE_MARGIN;
     // No se deja bajar más que su posición de reposo — ahí abajo empieza la isla.
-    const maxY = height - (insets.bottom + 8 + 56 + 14) - ORB_SIZE;
+    const maxY = height - (insetsRef.current.bottom + 8 + 56 + 14) - ORB_SIZE;
     return {
       x: Math.min(Math.max(x, minX), maxX),
       y: Math.min(Math.max(y, minY), maxY),
     };
+  }
+
+  // Deja el orbe donde terminó el gesto: lo dibuja y lo confirma. Solo toca
+  // refs, así que no le afecta haber sido capturada en el primer render.
+  function confirmarPosicion(dx: number, dy: number) {
+    const next = clampToScreen(dragStart.current.x + dx, dragStart.current.y + dy);
+    pan.setValue(next);
+    orbPos.current = next;
   }
 
   const panResponder = useRef(
@@ -106,21 +132,27 @@ export function SofiaAssistant() {
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 2 || Math.abs(g.dy) > 2,
       onPanResponderGrant: () => {
-        dragStart.current = orbPos;
+        dragStart.current = orbPos.current;
       },
       onPanResponderMove: (_, g) => {
         const next = clampToScreen(dragStart.current.x + g.dx, dragStart.current.y + g.dy);
         pan.setValue(next);
       },
       onPanResponderRelease: (_, g) => {
-        const next = clampToScreen(dragStart.current.x + g.dx, dragStart.current.y + g.dy);
-        pan.setValue(next);
-        setOrbPos(next);
+        confirmarPosicion(g.dx, g.dy);
 
         // Sin esto, cualquier toque —arrastre incluido— abriría el panel al
         // soltar. Un desplazamiento chico se trata como tap.
         const moved = Math.hypot(g.dx, g.dy);
         if (moved < DRAG_THRESHOLD) setOpen(true);
+      },
+      // 🔴 Un gesto puede terminar sin soltarse: si otro responder se queda con
+      // el toque, `onPanResponderRelease` NO corre. Sin esto la posición quedaba
+      // dibujada donde el dedo la dejó pero sin confirmar en `orbPos`, y el
+      // arrastre siguiente volvía a saltar — el mismo síntoma, por otra puerta.
+      // No abre el panel: un gesto interrumpido no es un tap.
+      onPanResponderTerminate: (_, g) => {
+        confirmarPosicion(g.dx, g.dy);
       },
     })
   ).current;
