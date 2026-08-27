@@ -765,8 +765,19 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginHorizontal: 20,
-    marginTop: 11,
-    marginBottom: 4,
+    // Ritmo vertical del bloque de cabecera (27/08/2026). Antes: 13pt del
+    // subtítulo al buscador y 4 del buscador a las columnas — el buscador
+    // quedaba pegado a los ejes y los tres se leían como un solo bulto.
+    //
+    // 24 arriba (2 que aporta `askWrapTight` + 22) y 26 abajo. Va apretado
+    // adentro de un grupo y suelto entre grupos: el título y su bajada son UN
+    // bloque, el buscador es otro y las columnas son otro.
+    //
+    // ⚠️ El hueco título→bajada NO se toca. Su `marginTop: 2` está calculado
+    // para dar 28pt exactos, los mismos que `recursos.tsx`, y arriba de ese
+    // estilo está documentado el error de unidades que costó llegar ahí.
+    marginTop: 22,
+    marginBottom: 26,
     paddingHorizontal: 14,
     height: 46,
     borderRadius: 23,
