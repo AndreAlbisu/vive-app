@@ -52,7 +52,6 @@ const ORB_SIZE       = 54;
 const HEADER_ORB      = 38;
 const EDGE_MARGIN    = 8;
 const DRAG_THRESHOLD  = 6; // px — por debajo de esto, un toque cuenta como tap y no como arrastre.
-const SHEET_OFFSCREEN = 900;
 
 type Shortcut = {
   id: string;
@@ -102,7 +101,34 @@ export function SofiaAssistant() {
   const dragStart = useRef(orbPos.current);
 
   const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const sheetY = useRef(new Animated.Value(SHEET_OFFSCREEN)).current;
+  // ── Apertura: el panel sale DEL ORBE ────────────────────────────────────
+  // Antes subía desde abajo de la pantalla, que es la animación de una hoja
+  // cualquiera y no tenía nada que ver con el botón que la abrió. Ahora nace en
+  // el centro del orbe —donde estuviera, que se puede arrastrar— y crece hasta
+  // su lugar.
+  //
+  // Un solo valor maneja todo (`apertura`, 0 cerrado → 1 abierto) y los demás se
+  // derivan con `Animated.multiply` / `subtract`, que corren en el hilo nativo
+  // igual que el resto. El origen y la escala inicial NO pueden ir en el
+  // `outputRange` de un `interpolate` porque dependen de dónde quedó el orbe y
+  // del ancho de pantalla, y un `outputRange` es fijo por render — por eso van
+  // como valores animados que se fijan al abrir.
+  const apertura = useRef(new Animated.Value(0)).current;
+  const origenX = useRef(new Animated.Value(0)).current;
+  const origenY = useRef(new Animated.Value(0)).current;
+  /** Cuánta escala le falta al panel cuando está cerrado (1 - escala inicial). */
+  const faltaEscala = useRef(new Animated.Value(0)).current;
+
+  const inverso = Animated.subtract(1, apertura);
+  const sheetTx = Animated.multiply(origenX, inverso);
+  const sheetTy = Animated.multiply(origenY, inverso);
+  const sheetScale = Animated.subtract(1, Animated.multiply(inverso, faltaEscala));
+  // Entra opaco temprano: si se lo ve nítido mientras todavía es chico, se lee
+  // el panel entero en miniatura y parece un error de layout.
+  const sheetOpacity = apertura.interpolate({
+    inputRange: [0, 0.35, 1],
+    outputRange: [0, 1, 1],
+  });
 
   function clampToScreen(x: number, y: number) {
     const { width, height } = Dimensions.get('window');
@@ -161,14 +187,33 @@ export function SofiaAssistant() {
   useEffect(() => {
     if (open) {
       setMounted(true);
-      // Igual que en SobreVosMomento: sin esto, la animación de apertura
-      // compite por el hilo de JS con lo que sea que esté pasando justo en
-      // ese instante (el propio tap, re-renders) y se siente lagueada.
+      // De dónde sale. Se calcula al abrir y no antes: el orbe se arrastra, así
+      // que su centro cambia entre una apertura y la siguiente.
+      const { width, height } = Dimensions.get('window');
+      const centroPanelY = (insets.top + 44 + height) / 2;
+      const centroOrbe = {
+        x: orbPos.current.x + ORB_SIZE / 2,
+        y: orbPos.current.y + ORB_SIZE / 2,
+      };
+
+      // ⚠️ Con movimiento reducido no hay crecimiento ni viaje: queda un fundido
+      // en el lugar. Origen y escala en 0 apagan las dos cosas sin ramas en el
+      // render.
+      origenX.setValue(reducedMotion ? 0 : centroOrbe.x - width / 2);
+      origenY.setValue(reducedMotion ? 0 : centroOrbe.y - centroPanelY);
+      // Arranca del tamaño real del orbe contra el ancho del panel, así el primer
+      // cuadro coincide con lo que el dedo acaba de tocar.
+      faltaEscala.setValue(reducedMotion ? 0 : 1 - ORB_SIZE / width);
+      apertura.setValue(0);
+
+      // Igual que en SobreVosMomento: sin esto, la animación de apertura compite
+      // por el hilo de JS con lo que sea que esté pasando justo en ese instante
+      // (el propio tap, re-renders) y se siente lagueada.
       const task = InteractionManager.runAfterInteractions(() => {
         Animated.parallel([
-          Animated.timing(backdropOpacity, { toValue: 1, duration: reducedMotion ? 100 : 300, useNativeDriver: true }),
-          Animated.timing(sheetY, {
-            toValue: 0,
+          Animated.timing(backdropOpacity, { toValue: 1, duration: reducedMotion ? 100 : 260, useNativeDriver: true }),
+          Animated.timing(apertura, {
+            toValue: 1,
             duration: reducedMotion ? 100 : 380,
             easing: reducedMotion ? Easing.linear : Easing.bezier(0.32, 0.1, 0.25, 1),
             useNativeDriver: true,
@@ -177,12 +222,19 @@ export function SofiaAssistant() {
       });
       return () => task.cancel();
     } else {
+      // Al cerrar vuelve al orbe por el mismo camino, más rápido: una salida
+      // que dura lo mismo que la entrada se siente lenta.
       Animated.parallel([
-        Animated.timing(backdropOpacity, { toValue: 0, duration: reducedMotion ? 80 : 200, useNativeDriver: true }),
-        Animated.timing(sheetY, { toValue: SHEET_OFFSCREEN, duration: reducedMotion ? 80 : 220, useNativeDriver: true }),
+        Animated.timing(backdropOpacity, { toValue: 0, duration: reducedMotion ? 80 : 180, useNativeDriver: true }),
+        Animated.timing(apertura, {
+          toValue: 0,
+          duration: reducedMotion ? 80 : 230,
+          easing: reducedMotion ? Easing.linear : Easing.bezier(0.4, 0, 0.7, 0.9),
+          useNativeDriver: true,
+        }),
       ]).start(() => setMounted(false));
     }
-  }, [open, reducedMotion, backdropOpacity, sheetY]);
+  }, [open, reducedMotion, backdropOpacity, apertura, origenX, origenY, faltaEscala, insets.top]);
 
   function close() {
     setOpen(false);
@@ -235,10 +287,19 @@ export function SofiaAssistant() {
             {
               top: insets.top + 44,
               paddingBottom: 18 + insets.bottom,
-              transform: [{ translateY: sheetY }],
+              opacity: sheetOpacity,
+              // El orden importa: primero viaja, después escala sobre su propio
+              // centro. Al revés, la escala multiplicaría el desplazamiento.
+              transform: [
+                { translateX: sheetTx },
+                { translateY: sheetTy },
+                { scale: sheetScale },
+              ],
             },
           ]}
-          shouldRasterizeIOS
+          // 📝 Sin `shouldRasterizeIOS`: rasteriza la capa a su tamaño actual y
+          // después escala ese bitmap, así que el panel se vería borroso
+          // mientras crece. Servía cuando la animación era solo un desplazamiento.
           renderToHardwareTextureAndroid
         >
           <View style={styles.grab} />
