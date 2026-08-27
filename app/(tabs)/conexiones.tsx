@@ -578,18 +578,18 @@ export default function ConexionesScreen() {
                 <Text style={s.askSub}>Elegí un tema y te presento a los profesionales indicados</Text>
               </View>
 
-              <View style={s.menuWrap}>
+              <View style={s.doorsWrap}>
                 {doorsForEje(selectedAxis).map(d => (
                   <ScaleCard
                     key={d.id}
-                    style={s.menuCard}
+                    style={s.doorCard}
                     onPress={() => openDoor(d.id)}>
-                    <View style={[s.menuIcon, { backgroundColor: tint(d.color, 0.16) }]}>
+                    <View style={[s.doorIcon, { backgroundColor: tint(d.color, 0.16) }]}>
                       <Feather name={d.icon as any} size={20} color={d.color} />
                     </View>
-                    <View style={s.menuTextWrap}>
-                      <Text style={s.menuTitle} numberOfLines={1}>{d.label}</Text>
-                      <Text style={s.menuTagline} numberOfLines={1}>{d.tagline}</Text>
+                    <View style={s.doorTextWrap}>
+                      <Text style={s.doorTitle} numberOfLines={1}>{d.label}</Text>
+                      <Text style={s.doorTagline} numberOfLines={1}>{d.tagline}</Text>
                     </View>
                     <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
                   </ScaleCard>
@@ -657,16 +657,33 @@ export default function ConexionesScreen() {
                   {EJES.map(e => (
                     <ScaleCard
                       key={e.id}
-                      style={s.menuCard}
-                      onPress={() => selectAxis(e.id)}>
-                      <View style={[s.menuIcon, { backgroundColor: tint(e.color, 0.16) }]}>
-                        <Feather name={e.icon as any} size={20} color={e.color} />
+                      style={[s.menuCard, { backgroundColor: tint(e.color, 0.18) }]}
+                      onPress={() => selectAxis(e.id)}
+                      accessibilityLabel={`${e.label}. ${e.tagline}`}>
+                      <Feather name={e.icon as any} size={30} color={e.color} />
+
+                      {/* "Bienestar" va chico y arriba: lo comparten los tres, así
+                          que es la parte muda del nombre. Lo que distingue va
+                          grande. Entero en una línea no entra en una columna de
+                          ~110pt sin perder el cuerpo que le da carácter. */}
+                      <Text style={s.menuKicker}>Bienestar</Text>
+                      {/* ⚠️ Una sola línea, achicándose si hace falta.
+                          "Espiritual" a 18px ocupa casi los 90pt de ancho útil
+                          de la columna en una pantalla de 390, y en una de 320
+                          (SE) no entra: sin esto se partiría en dos renglones y
+                          las tres tarjetas quedarían desparejas. */}
+                      <Text style={s.menuTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                        {e.corto}
+                      </Text>
+
+                      <Text style={s.menuTagline}>{e.tagline}</Text>
+
+                      {/* Empujada al fondo con `marginTop: auto`: las bajadas
+                          ocupan dos o tres líneas según el eje, y sin esto las
+                          tres flechas quedaban a alturas distintas. */}
+                      <View style={[s.menuArrow, { borderColor: tint(e.color, 0.55) }]}>
+                        <Feather name="arrow-right" size={17} color={e.color} />
                       </View>
-                      <View style={s.menuTextWrap}>
-                        <Text style={s.menuTitle} numberOfLines={1}>{e.label}</Text>
-                        <Text style={s.menuTagline} numberOfLines={1}>{e.tagline}</Text>
-                      </View>
-                      <Feather name="chevron-right" size={20} color={tint(FOREST, 0.5)} />
                     </ScaleCard>
                   ))}
                 </View>
@@ -881,11 +898,15 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: FOREST_SOFT,
   },
-  menuWrap: {
+  // ── Puertas / temas (fase 2) ─────────────────────────────────────────────
+  // Filas horizontales. Es el diseño que tenían también los ejes hasta el
+  // 27/08/2026; acá se queda porque son hasta 6 ítems de largo variable y en
+  // columnas no entrarían.
+  doorsWrap: {
     paddingHorizontal: 20,
     gap: 10,
   },
-  menuCard: {
+  doorCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
@@ -897,7 +918,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     ...shadow,
   },
-  menuIcon: {
+  doorIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -905,17 +926,72 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  menuTextWrap: { flex: 1, minWidth: 0 },
-  menuTitle: {
+  doorTextWrap: { flex: 1, minWidth: 0 },
+  doorTitle: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15.5,
     color: INK,
   },
-  menuTagline: {
+  doorTagline: {
     fontFamily: ViveFonts.regular,
     fontSize: 12.5,
     color: FOREST_SOFT,
     marginTop: 2,
+  },
+
+  // ── Ejes de bienestar (fase 1) ───────────────────────────────────────────
+  // 🔴 Rediseño 27/08/2026. Antes eran tres filas horizontales idénticas — el
+  // patrón de lista que sirve igual para "Configuración" o "Ayuda", con el color
+  // del eje metido en un círculo de 48px, o sea el 3% de la superficie de la
+  // tarjeta. Ahora son tres columnas y el color ES la tarjeta.
+  //
+  // 📝 Sin sombra ni borde a propósito: el color de fondo ya separa cada columna
+  // del crema, y agregarle sombra encima las volvía tres objetos flotando en vez
+  // de una sola composición de tres partes.
+  menuWrap: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  menuCard: {
+    flex: 1,
+    alignItems: 'center',
+    borderRadius: 24,
+    paddingTop: 26,
+    paddingBottom: 20,
+    paddingHorizontal: 10,
+  },
+  menuKicker: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 10.5,
+    letterSpacing: 0.4,
+    color: FOREST_SOFT,
+    marginTop: 20,
+  },
+  menuTitle: {
+    fontFamily: ViveFonts.title,
+    fontSize: 18,
+    lineHeight: 24,
+    color: INK,
+    textAlign: 'center',
+  },
+  menuTagline: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: FOREST_SOFT,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  menuArrow: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 'auto',
+    marginBottom: 2,
   },
 
   // ── Deck header ──────────────────────────────────────────────────────────

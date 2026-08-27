@@ -61,15 +61,24 @@ export const DOOR_MAP: Record<string, Door> =
 export type Eje = {
   id: string;
   label: string;
+  /** La palabra que distingue al eje, sin el "Bienestar" que comparten los tres.
+   *  La tarjeta del menú la usa grande, con "Bienestar" arriba en chico: entera
+   *  en una sola línea no entra en una columna de ~110pt sin perder el cuerpo
+   *  que le da carácter. */
+  corto: string;
   tagline: string;
   icon: string;
   color: string;
 };
 
+// 📝 El `id` del segundo sigue siendo `emocional` aunque se llame "mental"
+// (27/08/2026): es la clave que usan el estado de la pantalla, los eventos y el
+// mapeo con las puertas. Renombrarlo solo cambiaría texto de cara al usuario en
+// un lugar y rompería el resto.
 export const EJES: Eje[] = [
-  { id: 'fisico',     label: 'Bienestar físico',     tagline: 'Cuerpo, descanso y energía',      icon: 'activity', color: ViveColors.accent },
-  { id: 'emocional',  label: 'Bienestar emocional',  tagline: 'Emociones, vínculos y foco',      icon: 'heart',    color: ViveColors.calm },
-  { id: 'espiritual', label: 'Bienestar espiritual', tagline: 'Propósito, identidad y sentido',  icon: 'sun',      color: ViveColors.primary },
+  { id: 'fisico',     label: 'Bienestar físico',     corto: 'Físico',     tagline: 'Cuerpo, descanso y energía',      icon: 'activity', color: ViveColors.accent },
+  { id: 'emocional',  label: 'Bienestar mental',     corto: 'Mental',     tagline: 'Emociones, vínculos y foco',      icon: 'heart',    color: ViveColors.calm },
+  { id: 'espiritual', label: 'Bienestar espiritual', corto: 'Espiritual', tagline: 'Propósito, identidad y sentido',  icon: 'sun',      color: ViveColors.primary },
 ];
 
 export const EJE_MAP: Record<string, Eje> =
