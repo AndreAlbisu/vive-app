@@ -39,12 +39,16 @@ const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 // El check-in se confirma sosteniendo el dedo, no con un toque suelto: un
 // anillo se completa alrededor del círculo y al cerrarse vibra corto.
 //
-// 500ms, ajustado a mano el 27/08/2026 (pasó por 750 y por 375). Sostener para
-// decir cómo te sentís tiene que sentirse deliberado, no lento, y esto se hace
-// todos los días. ⚠️ No bajar de ~300: ahí el gesto se confunde con un toque
-// suelto y el anillo no llega a verse, o sea que se pierden las dos cosas que
-// justifican mantener apretado.
-const HOLD_MS = 500;
+// 300ms, ajustado a mano en el dispositivo el 27/08/2026 — pasó por 750, 375 y
+// 500 antes de quedar acá. Sostener para decir cómo te sentís tiene que sentirse
+// deliberado, no lento, y esto se hace todos los días.
+//
+// ⚠️ Es el piso: por debajo de esto el gesto se confunde con un toque suelto y
+// el anillo no llega a verse, o sea que se pierden las dos cosas que justifican
+// mantener apretado. Si hiciera falta que se sienta aún más rápido, el número a
+// tocar NO es este sino la curva — hoy es lineal, y una que arranque rápido se
+// percibe más corta sin serlo.
+const HOLD_MS = 300;
 const ANILLO  = 40;              // lienzo del anillo (el círculo del ánimo mide 24)
 const R       = 16;              // radio: deja 4px de aire contra el círculo
 const TRAZO   = 2.5;
@@ -110,7 +114,7 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked }: Pro
     progreso.stopAnimation(() => {
       // Se desarma rápido en vez de saltar a cero: soltar antes de tiempo es
       // arrepentirse, y merece verse como que el anillo se vuelve.
-      Animated.timing(progreso, { toValue: 0, duration: 130, useNativeDriver: false })
+      Animated.timing(progreso, { toValue: 0, duration: 90, useNativeDriver: false })
         .start(() => setManteniendo(null));
     });
   }
