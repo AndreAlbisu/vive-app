@@ -140,11 +140,13 @@ No se tira nada de la maquinaria. Cambia qué produce, no cómo se decide:
 - **Nunca mezclar nivel con dirección** sigue en pie para cualquier frase que
   mencione la semana.
 - **Los guardarraíles sobre lo que escribe el modelo** (`rejectCopy`) siguen, y
-  necesitan reglas nuevas: nada de fingir sentir, nada de pedir nada.
-- **La postura de privacidad no se toca**: al modelo viajan la señal, el tono y
-  tres números. Ni valores de ánimo, ni historial, ni una palabra escrita por la
-  persona. Si la voz "recuerda la conversación" (3.1), eso hay que resolverlo
-  **sin** mandarle el diario a un modelo.
+  necesitan reglas nuevas: nada de fingir sentir (§3.5), nada de pedir una
+  reserva (§3.4).
+- **La línea de la privacidad no se mueve: cero texto escrito por la persona.**
+  Ni el diario, ni la gratitud, ni las notas. ⚠️ Lo que SÍ está en discusión es
+  cuánta señal estructurada viaja — hoy son tres números y por eso suena
+  genérica; ver §5 bis. Las dos cosas no se contradicen: se puede saber la forma
+  de los días de alguien sin leer una sola palabra suya.
 - **El piso sin red**: las reglas escriben al instante y la IA reescribe después.
   La tarjeta nunca queda vacía ni con un spinner.
 
