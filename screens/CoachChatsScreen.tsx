@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -46,6 +46,11 @@ type ChatRoom = {
   lastMessageAt: string | null;
   hasUnread: boolean;
   archived: boolean;
+  /** Lo que el coach decidió a mano (null = nunca opinó, manda la regla). Viaja
+   *  en la fila porque el parche en vivo tiene que poder recalcular `archived`
+   *  cuando entra un mensaje nuevo, y para eso necesita saber si lo de hoy
+   *  salió de la regla o de una decisión suya — que gana siempre. */
+  decidido: boolean | null;
   /** 🔴 El estado de la RELACIÓN, no de la conversación. Esta pantalla listaba
    *  a las personas correctas —las salas nacen de una reserva— pero las
    *  mostraba solo como hilos de mensajes. El coach no piensa en conversaciones
@@ -58,6 +63,47 @@ type ChatRoom = {
 };
 
 type ResourceMeta = { type?: string; resource_title?: string; recommendation_id?: string };
+
+/** Lo mínimo del último mensaje para pintar una fila. Coincide con lo que
+ *  devuelve `get_last_messages_per_sala` Y con lo que llega por realtime. */
+type UltimoMsg = { content: string; sender_type: string; metadata: unknown; created_at: string };
+
+/**
+ * Etiqueta y preview de una fila a partir de su último mensaje.
+ *
+ * 🔴 Vive acá afuera porque la usan DOS caminos: la carga inicial y el parche en
+ * vivo cuando entra un mensaje con la pantalla abierta. Duplicada, los dos
+ * podrían pintar la misma conversación distinto según cómo te enteraste.
+ */
+function armarPreview(m: UltimoMsg | null, abierto: boolean): { tag: Tag; preview: string } {
+  if (!m) return { tag: null, preview: 'Sin mensajes aún' };
+
+  const meta = (m.metadata as ResourceMeta | null) ?? null;
+  if (meta?.type === 'resource') {
+    return { tag: 'resource', preview: `Vos: ${meta.resource_title ?? 'recurso'} · ${abierto ? 'abierto ✓' : 'sin abrir'}` };
+  }
+
+  if (m.sender_type === 'system_confirmed') {
+    // El content es "Sesión reservada · fecha · hora\n{motivo}". Mostramos el motivo si hay.
+    const motivo = decryptMessage(m.content).split('\n')[1]?.trim();
+    return { tag: 'accepted', preview: motivo ? `«${motivo}»` : 'Sesión aceptada' };
+  }
+
+  // 🔴 "Vos:" cuando el último mensaje es del coach. Sin esto, "dale, nos vemos
+  // el jueves" se ve igual lo haya dicho él o la otra persona — y son dos
+  // situaciones opuestas: una está cerrada y la otra lo está esperando. Hoy hay
+  // que abrir la sala para saber cuál es. El caso del recurso ya lo hacía.
+  const texto = decryptMessage(m.content);
+  return { tag: null, preview: m.sender_type === 'coach' ? `Vos: ${texto}` : texto };
+}
+
+/** Regla automática de archivado: murió en un mensaje del sistema y ya pasó un
+ *  mes. Acá afuera por lo mismo que `armarPreview` — la evalúan los dos caminos. */
+function archivadoPorRegla(m: UltimoMsg | null, corteMs: number): boolean {
+  if (!m) return false;
+  return (m.sender_type === 'system' || m.sender_type === 'system_cancelled')
+    && new Date(m.created_at).getTime() < corteMs;
+}
 
 /** Una línea con el estado de la relación. Vacía cuando no hay nada que decir
  *  —alguien que reservó y todavía no tuvo su primera sesión— porque inventar
@@ -210,32 +256,13 @@ export default function CoachChatsScreen() {
 
     const results: ChatRoom[] = lasts.map(l => {
       const name = profileMap[l.userId]?.name ?? 'Usuario';
-      const m = l.lastMsg;
+      const m = (l.lastMsg as UltimoMsg | null) ?? null;
       const meta = (m?.metadata as ResourceMeta | null) ?? null;
-      const senderType = (m?.sender_type as string) ?? '';
-      const at = m ? (m.created_at as string) : null;
+      const at = m ? m.created_at : null;
 
-      let tag: Tag = null;
-      let preview = '';
-      if (meta?.type === 'resource') {
-        tag = 'resource';
-        const opened = meta.recommendation_id ? openedMap[meta.recommendation_id] : false;
-        preview = `Vos: ${meta.resource_title ?? 'recurso'} · ${opened ? 'abierto ✓' : 'sin abrir'}`;
-      } else if (senderType === 'system_confirmed') {
-        tag = 'accepted';
-        // El content es "Sesión reservada · fecha · hora\n{motivo}". Mostramos el motivo si hay.
-        const decoded = m ? decryptMessage(m.content as string) : '';
-        const motivo = decoded.split('\n')[1]?.trim();
-        preview = motivo ? `«${motivo}»` : 'Sesión aceptada';
-      } else {
-        preview = m ? decryptMessage(m.content as string) : 'Sin mensajes aún';
-      }
-
-      // Archivado: última actividad de solo sistema (cancelación/aviso) y vieja (>30d).
-      // Regla automática: la conversación terminó en un mensaje del sistema y
-      // ya pasó un mes. Sirve para lo que murió solo.
-      const porRegla = (senderType === 'system' || senderType === 'system_cancelled')
-        && !!at && new Date(at).getTime() < thirtyDaysAgo;
+      const abierto = meta?.recommendation_id ? openedMap[meta.recommendation_id] : false;
+      const { tag, preview } = armarPreview(m, abierto);
+      const porRegla = archivadoPorRegla(m, thirtyDaysAgo);
       // 🔴 Lo que el coach decidió GANA, en las dos direcciones: archivar algo
       // vivo y rescatar algo que la regla se llevó. Por eso `decidido` es de
       // tres estados y no un booleano — con dos, "todavía no opinó" y "quiere
@@ -252,6 +279,7 @@ export default function CoachChatsScreen() {
         lastMessageAt: at,
         hasUnread: unreadSalaIds.has(l.salaId),
         archived,
+        decidido: l.decidido ?? null,
         sesiones: rel.get(l.userId)?.sesiones ?? 0,
         ultimaIso: rel.get(l.userId)?.ultimaIso ?? null,
         proximaIso: rel.get(l.userId)?.proximaIso ?? null,
@@ -269,6 +297,64 @@ export default function CoachChatsScreen() {
   }, [user, unreadSalaIds]);
 
   useFocusEffect(useCallback(() => { loadRooms(); }, [loadRooms]));
+
+  // ── Mensajes en vivo ──────────────────────────────────────────────────────
+  // 🔴 Antes la lista solo se recargaba al ENFOCAR la pantalla: si llegaba un
+  // mensaje con la pantalla abierta no pasaba nada — ni subía la fila, ni
+  // cambiaba el preview, ni aparecía el punto. Y el layout del coach sí escucha
+  // en vivo, así que se prendía el puntito de la pestaña donde ya estabas
+  // parado, con la lista de abajo sin enterarse.
+  //
+  // Parchea la fila en el lugar en vez de recargar: recargar son cuatro
+  // consultas y un parpadeo, y acá ya tenemos todo lo que hace falta en el
+  // propio evento.
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`coach-chats-${user.id}-${Math.random().toString(36).slice(2)}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const nuevo = payload.new as { sala_id?: string } & UltimoMsg;
+        if (!nuevo?.sala_id) return;
+
+        setRooms(prev => {
+          // ⚠️ El filtro es del lado del cliente porque `postgres_changes` no
+          // filtra por "está en esta lista de salas". Si la sala no es de esta
+          // pantalla, se sale sin tocar el estado — y de paso, una conversación
+          // NUEVA aparece recién al volver a enfocar, que es aceptable: nace de
+          // una reserva, no de un mensaje suelto.
+          if (!prev.some(r => r.salaId === nuevo.sala_id)) return prev;
+
+          const corte = Date.now() - 30 * 24 * 60 * 60 * 1000;
+          const parcheadas = prev.map(r => {
+            if (r.salaId !== nuevo.sala_id) return r;
+            const { tag, preview } = armarPreview(nuevo, false);
+            return {
+              ...r,
+              tag,
+              preview,
+              lastMessageAt: nuevo.created_at,
+              // 📝 Se marca acá y no vía `useUnreadSalas`, que solo refresca al
+              // enfocar. Un mensaje propio (mandado desde otro lado) no lo
+              // prende, que es lo correcto.
+              hasUnread: nuevo.sender_type === 'user' ? true : r.hasUnread,
+              // Lo que el coach decidió gana; si nunca opinó, un mensaje nuevo
+              // saca la conversación de archivados sola.
+              archived: r.decidido ?? archivadoPorRegla(nuevo, corte),
+            };
+          });
+
+          return parcheadas.sort((a, b) => {
+            if (!a.lastMessageAt) return 1;
+            if (!b.lastMessageAt) return -1;
+            return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+          });
+        });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   const active = rooms.filter(r => !r.archived);
   const archived = rooms.filter(r => r.archived);
