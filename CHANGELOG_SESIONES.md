@@ -31,9 +31,9 @@
 
 ## 2026-08-28 — Andre (sesión 131)
 
-**Tocado:** `supabase/functions/create-meeting-room/index.ts`, `lib/meetingRoom.ts`, `screens/SalaScreen.tsx`, `screens/SessionsScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `lib/coachBookingActions.ts`, `SCHEMA.md`. Nuevo: `supabase/functions/daily-diagnostico/index.ts` (deployada, corrida y **borrada** el mismo día). `tsc` limpio, lint 0 errores, 312 tests.
+**Tocado:** `supabase/functions/create-meeting-room/index.ts`, `lib/meetingRoom.ts`, `screens/SalaScreen.tsx`, `screens/SessionsScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `lib/coachBookingActions.ts`, `screens/CoachChatsScreen.tsx`, `SCHEMA.md`. Nuevos: `supabase/functions/daily-diagnostico/index.ts` (deployada, corrida y **borrada** el mismo día), `lib/coachRoster.ts`, `__tests__/coachRoster.test.ts`, `docs/coach-tus-personas.html`. `tsc` limpio, lint 0 errores, 328 tests.
 
-**Resumen — se activó Daily.co, y activarlo destapó que la entrada a la videollamada nunca funcionó.**
+**Resumen — se activó Daily.co (y activarlo destapó que la entrada nunca funcionó), y "Tus personas" del coach dejó de ser una bandeja de mensajes.**
 
 - ✅ **Cuenta nueva de Daily activa.** `DAILY_API_KEY` actualizada el 28/08 (la que estaba era del 02/07, de la cuenta del plan gratuito). Dominio nuevo: **`veraapp`** — las salas ahora son `veraapp.daily.co/vive-<id>`.
 - ✅ **`daily-diagnostico`**, mismo patrón que `paypal-diagnostico`: se deploya, se invoca desde la base con `net.http_post` y la service_role del Vault, se lee el veredicto y se borra el deploy. Se hace desde adentro porque `supabase secrets list` devuelve los valores **hasheados** — desde afuera no hay forma de saber si la key cargada es la nueva o la vieja. Los 4 chequeos dieron OK: autentica, crea sala privada por API, acuña meeting token, `/meetings` consultable. El archivo queda en el repo: el chequeo vuelve a hacer falta entero el día que se cambie de cuenta o de plan.
@@ -44,8 +44,30 @@
 - 🔴 **Las 43 filas con `meeting_url` apuntan a `vive-app.daily.co`**, el dominio de la cuenta vieja. Reusarlas armaba la falla peor posible: el token se acuña bien contra la cuenta nueva, la URL abre el dominio viejo, y ahí el token no vale nada — o sea que fallaba **recién al tocar "Unirse", en una sesión real**. La función dejó de tomar la URL guardada como verdad: consulta la sala (`GET`, `POST` solo si da 404) y **corrige la fila sola** la primera vez que alguien entra. No hizo falta limpiar la base.
 - 📝 **Los dos calendarios escribían la URL de la sala en el evento del teléfono.** Con sala privada ese link muestra permiso denegado; ahora dicen que se entra desde la app. Un link que falla al tocarlo es peor que no ponerlo, y el token no se puede pegar ahí porque vence.
 
+### Rediseño de "Tus personas" (pantalla del coach)
+
+- 🔴 **La pantalla se llama "Tus personas" y estaba construida como bandeja de mensajes.** El dato que el profesional viene a buscar —cuándo vuelve a ver a alguien— **ya existía y se calculaba bien**, y se dibujaba en la letra más chica y más pálida de la tarjeta. La intención estaba escrita hace tiempo en un comentario del propio archivo (`CoachChatsScreen.tsx:53`, "el estado de la RELACIÓN, no de la conversación"); lo que faltaba era que el diseño la cumpliera. Diagnóstico y antes/después en `docs/coach-tus-personas.html`.
+- ✅ **La próxima sesión pasa a una pastilla en la columna derecha**, donde antes estaba el horario del último mensaje — el dato menos accionable de la fila. 📝 **Que la pastilla EXISTA ya es la información**: si está, esa persona está agendada. El riel derecho se escanea sin leer una palabra. Dice "hoy"/"mañana" como palabra y del tercer día en adelante la fecha.
+- 🔴 **La lista se parte en "Con sesión agendada" / "Sin próxima", y cada grupo se ordena con criterios OPUESTOS**: fecha ascendente contra conversación descendente. El sort único por `lastMessageAt` que había dejaba una sesión de mañana debajo de alguien que mandó "gracias" hoy — correcto para una bandeja, al revés para un roster. Los rótulos solo aparecen si los dos grupos tienen gente: sobre una lista de uno no clasifican nada.
+- 🔴 **Se fueron las pastillas "✓ SESIÓN ACEPTADA" y "RECURSO".** Repetían lo que el preview ya decía y le robaban media fila: cuando no hay motivo escrito, `armarPreview` devolvía el texto "Sesión aceptada" **y** prendía la etiqueta, así que el texto duplicado se cortaba a mitad de palabra ("Sesión acepta…"). No se veía prolijo porque no lo era. Queda un punto de 6px.
+- ✅ **La escala pasó de cinco tamaños en 4,5 puntos (9 · 10 · 11 · 11.5 · 13.5) a 16.5 / 12 / 12.** Cinco roles en un rango donde el ojo no distingue ninguno es literalmente lo que se siente como insulso: no hay dónde aterrizar la mirada. El nombre es el ancla de un directorio de gente.
+- 📝 **La jerarquía la lleva la SUPERFICIE**: agendada con sombra (valores de `shadow.subtle.light`), sin próxima plana con borde. Así no hace falta un segundo color ni una segunda tipografía para decir lo mismo. El borde al 14% que tenían todas era invisible sobre el crema.
+- 📝 **La fila sin próxima no lleva nada a la derecha** — ni el horario ni un "hace 5 semanas", que repetiría la línea de historia. El vacío es el dato.
+- 📝 **El aviso de mantener presionado bajó al pie**, después de Archivados. Con dos personas quedaba flotando en el centro geométrico de la pantalla, donde el ojo lo lee como si fuera contenido. Y el nombre se capitaliza: los perfiles guardan lo que la persona tipeó, y ahí entra "andre".
+- 📝 **Orden y rótulos salieron a `lib/coachRoster.ts`** con 16 tests, mismo criterio que `lib/ejesLayout.ts`: es la regla de negocio del orden y adentro del componente nadie la iba a mirar de nuevo.
+
+### Lado usuario
+
+- ✅ **La lista de chats de Mensajes baja cuando es lo primero de la pantalla.** La primera fila arrancaba a 76pt del área segura y es el destino más tocado de la pantalla, en la zona a la que el pulgar no llega sin recolocar la mano. El aire es **condicional** —solo si no hay banner de reembolso ni carrusel arriba, porque ahí el problema no existe— y sale del alto de pantalla (12%, piso 64, techo 132), no de un número clavado.
+
+### De paso
+
+- 🔴 **Cuarta vez que la bottom bar "rota" era un bundle viejo.** Se perdió un rato analizando `IslandTabBar`, el overlay de Sofía y los límites del padre en Android antes de mandar a cerrar y reabrir la app, que es exactamente lo que el changelog de la sesión 129 ya decía que hay que hacer primero.
+
 **Pendiente para la próxima sesión:**
 
+- 🔴 **Probar el rediseño de "Tus personas" en el teléfono.** Nada se vio corriendo. Los casos que importan: alguien con sesión hoy (pastilla verde plena), los dos grupos con gente (que aparezcan los rótulos), y un solo grupo (que NO aparezcan).
+- ⚠️ **Es pantalla de coach y el spec de layout es de Joaquín** (sesión 144). Se avanzó por pedido explícito de Andre — hay que pasárselo.
 - ✅ ~~Probar una sesión real desde el teléfono~~ — **confirmado el 28/08 con prueba en la base**, no por lo que se vio en pantalla: `session_attendance` del booking `e9c429a6…` quedó con `meetings_count 1`, `participants_count 1`, `first_join_at 19:16:57 UTC`, y `user_name: "andre"` en el crudo. A una sala privada no entra nadie sin token válido, así que eso prueba el camino de entrada entero. **Y era una de las 43 viejas**: su `meeting_url` pasó de `vive-app.daily.co` a `veraapp.daily.co` sola al entrar — la autocorrección funciona (quedan 42, se van corrigiendo de a una). La ventana `nbf`/`exp` también dio bien: sesión de las 16:00 ART, entrada 16:16 ART, aceptada. De yapa, el cron de `session-attendance` corrió a las 19:17 y levantó la asistencia contra la cuenta nueva.
 - 🔴 **Falta la llamada con DOS personas adentro.** `max_simultaneous` dio 1 — entró uno solo. Es el caso que importa y no está probado.
 - ⚠️ **Que el coach entre como owner no se pudo verificar desde acá**: el `/meetings` de Daily no devuelve ese flag. Hay que mirarlo en la llamada — el owner ve controles que el otro no.
