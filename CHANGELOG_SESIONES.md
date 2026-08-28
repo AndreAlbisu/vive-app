@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-08-27 — Andre (sesión 130)
+
+**Tocado:** `components/SofiaAssistant.tsx`, `components/MoodCheckIn.tsx`, `app/(tabs)/conexiones.tsx`, `constants/conexionesDoors.ts`, `screens/ProfesionalScreen.tsx`, `__tests__/taxonomia.test.ts`. Nuevos: `lib/ejesLayout.ts`, `__tests__/ejesLayout.test.ts`, `__tests__/sofiaOrbe.test.ts`, `docs/brief-ejes-conexiones.md`. 312 tests, `tsc` y lint limpios.
+
+**Resumen:**
+
+- ✅ **Los cartelitos de pago llegan al perfil del profesional.** Estaban en las tarjetas del deck y del buscador, pero el perfil —el paso del medio, donde se decide— los perdía y volvían recién en confirmar. 🔴 **PayPal y USDT van atados a `price_usd`**: sin precio en dólares las funciones de cobro rechazan la operación, así que el cartelito anunciaba un medio que el checkout no ofrece. No era hipotético — hay coaches hoy con el riel en `true` y `price_usd` en null.
+- ✅ **Sofía: el orbe es el isotipo de Vita invertido**, y el panel se abre con un **derrame circular** desde el orbe (anticipación al tocar, isotipo que viaja hasta el header, contenido escalonado). 📝 El derrame **volvió al driver nativo**: la versión intermedia animaba `width`/`height`/`borderRadius`, que solo corren en JS. Es la única idea que mejoró lo visual y el costo a la vez.
+- 🔴 **Dos bugs viejos del orbe.** El primero: `PanResponder.create` corre una sola vez, así que sus handlers leían la posición del PRIMER render — del segundo arrastre en adelante el orbe saltaba a "posición original + desplazamiento". El segundo: al cerrar, el orbe reaparecía de golpe porque su visibilidad colgaba de `open`; ahora cuelga del derrame y el reemplazo es invisible en los dos sentidos. Además vuelve a la pared más cercana al soltarlo.
+- ✅ **Conexiones, fase 1: los ejes pasan a tres columnas** y el color ES la tarjeta (antes vivía en un círculo de 48px, el 3% de la superficie). "Bienestar emocional" pasa a **"Bienestar mental"** — el `id` sigue siendo `emocional`, que es la clave del estado y del mapeo con las puertas.
+- 🔴 **El alto de las columnas sale del ancho de pantalla** (`lib/ejesLayout.ts`), no de un número fijo. Con 354 clavado la proporción se deformaba en los dos sentidos: 4,08:1 en un SE contra 2,87:1 en un 15 Pro Max. Ahora 3,22:1 en todos, con piso y techo que ningún teléfono real toca.
+- ✅ **Fase 2: los temas pasan a una sola tarjeta con filas adentro.** Seis tarjetas con sombra eran seis objetos flotando; los separadores sueltos fallaban al revés, con tres temas se leían como lista incompleta. El ícono es lo único que lleva el color del eje.
+- ✅ **Físico y espiritual se abrieron de 3 temas a 4 y 5.** Dividir no le pide nada a ningún profesional: las puertas son capa de presentación sobre los mismos subtemas, y el test de partición pasó sin tocarlo. ⚠️ **`Energía` volvió a ir con `Sueño`** el mismo día: andar sin pilas no es un tema, es un síntoma.
+- ✅ **El check-in diario se confirma manteniendo apretado** (300ms), con un anillo que se cierra y una vibración corta. 🔴 `onAccessibilityTap` confirma directo: los lectores de pantalla mandan un toque, no un gesto sostenido, y sin eso la función quedaba inaccesible.
+- 📝 **`docs/brief-ejes-conexiones.md`**: brief autocontenido para pedirle bocetos a un modelo sin acceso al repo. Incluye las restricciones reales de React Native y el detalle de que el color de cada eje carga lógica.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar todo esto en el teléfono.** Nada de la sesión se vio corriendo: la animación de Sofía (que se sienta liviana), el arrastre del orbe, el check-in sostenido y las dos fases de Conexiones.
+- 🔴 **La puerta "Comunicación" no lleva a nadie** — sus dos subtemas tienen cero profesionales. El filtro se protege solo (`topicOptionsFrom` deriva de coaches reales), pero la lista de temas de Conexiones la muestra igual. Se resuelve cuando arranque la búsqueda de gente; anotado para no olvidarlo.
+- ⚠️ **Las tarjetas del deck y del buscador no atan los rieles a `price_usd`** — mismo defecto que se arregló en el perfil, en dos pantallas más. Es una línea en `lib/coachesCache.ts`.
+- ⚠️ **"Movimiento" contra "Entrenamiento"**: se eligió el nombre inclusivo con la bajada nombrando las dos cosas. Conviene revisarlo cuando se sepa qué profesionales se anotan.
+- 📝 **`SCREEN_W` se lee una vez al cargar** en `conexiones.tsx`: no se recalcula al rotar. Limitación vieja (ya la tenía `cardPage`), ahora también la tiene el alto de los ejes.
+- 📝 **Si el check-in de 300ms se siente lento**, lo que hay que tocar es la curva y no el número: hoy es lineal.
+
+---
+
 ## 2026-08-27 — Andre (sesión 129)
 
 **Tocado:** `screens/CoachHomeScreen.tsx`, `CoachChatsScreen.tsx`, `CoachReservasScreen.tsx`, `lib/bookingHelpers.ts`, `lib/weeklyReflection.ts`, `app/progreso.tsx`. Nuevos: `lib/coachContinuity.ts`, `lib/moodTrend.ts`, `scripts/add-mood-para-coach.sql` (**CORRIDO**), `scripts/add-archivar-salas.sql` (**CORRIDO**), `docs/inicio-del-coach.md`, `docs/animo-compartido.md`, `docs/paquete-para-la-sesion.md`, `lib/coachVisibilityData.ts`, `__tests__/coachVisibilityHome.test.ts`. También `lib/coachVisibility.ts`, `screens/CoachVisibilityScreen.tsx`. 300 tests, `tsc` y lint limpios.
