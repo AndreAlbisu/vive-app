@@ -254,15 +254,22 @@ begin
     return;
   end if;
 
-  -- La forma esperada es: CHECK ((type = ANY (ARRAY['a'::text, ...])))
-  if position(']::text[]' in cdef) = 0 then
+  -- La forma real (confirmada contra la base el 28/08/2026) es:
+  --   CHECK ((type = ANY (ARRAY['reserva_nueva'::text, ..., 'postulacion_rechazada'::text])))
+  --
+  -- 🔴 El ancla es `::text]`, y funciona porque aparece UNA sola vez: de todos
+  -- los elementos del array, solo el último está pegado al corchete de cierre.
+  -- El primer intento ancló en `]::text[]` —un sufijo que este Postgres no
+  -- imprime— y el guard abortó la corrida entera. Que haya abortado es la
+  -- prueba de que el guard sirve: la alternativa era dejar el CHECK borrado.
+  if position('::text]' in cdef) = 0 then
     raise exception 'El CHECK de notifications.type no tiene la forma esperada (%). Extenderlo a mano.', cdef;
   end if;
 
   nuevo := replace(
     cdef,
-    ']::text[]',
-    ', ''credencial_verificada''::text, ''credencial_rechazada''::text]::text[]'
+    '::text]',
+    '::text, ''credencial_verificada''::text, ''credencial_rechazada''::text]'
   );
 
   execute format('alter table public.notifications drop constraint %I', cname);
