@@ -73,6 +73,35 @@ const H_PADDING = 16;   // tiene que seguir a `scrollContent.paddingHorizontal`
 const CARD_FULL = Dimensions.get('window').width - H_PADDING * 2;
 const CARD_W = Math.round(CARD_FULL * 0.86);
 
+/**
+ * Aire arriba de la lista de chats, y **solo cuando la lista es lo primero de la
+ * pantalla** — sin banner de reembolso ni carrusel de sesiones arriba.
+ *
+ * 🔴 Sin esto la primera fila arrancaba a 76pt del borde del área segura (20 de
+ * `header.paddingTop` + 40 de la línea del título + 16 de `marginBottom`), o sea
+ * arriba del todo. Y la fila no es decoración: es el destino más tocado de la
+ * pantalla, justo en la zona a la que el pulgar no llega sin recolocar la mano.
+ *
+ * Es condicional a propósito. Un `paddingTop` fijo también empujaría la lista
+ * los días que hay una sesión próxima arriba —una tarjeta de ~200pt— y ahí el
+ * problema no existe: solo se perderían filas visibles.
+ *
+ * Sale del alto de la pantalla y no de un número clavado, por lo mismo que
+ * `lib/ejesLayout.ts`: 100pt son el 12% de un iPhone 14 y el 15% de un SE, que
+ * no es el mismo gesto. El piso y el techo no los toca ningún teléfono real
+ * (un SE pide 80, un 15 Pro Max 111); están para que una tablet no abra un
+ * hueco absurdo.
+ *
+ * ⚠️ Se lee una sola vez al cargar el módulo: no se recalcula al rotar. Misma
+ * limitación que `CARD_FULL` acá al lado y que `SCREEN_W` en `conexiones.tsx`.
+ */
+const AIRE_RATIO = 0.12;
+const AIRE_MIN = 64;
+const AIRE_MAX = 132;
+const LISTA_AIRE = Math.round(
+  Math.max(AIRE_MIN, Math.min(AIRE_MAX, Dimensions.get('window').height * AIRE_RATIO)),
+);
+
 function formatMessageDate(isoString: string): string {
   const d = new Date(isoString);
   const now = new Date();
@@ -391,6 +420,10 @@ export default function SessionsScreen() {
     }
   }
 
+  // Si arriba de la lista ya hay algo (el banner de reembolso o el carrusel de
+  // sesiones próximas), la primera fila no queda alta y no hace falta el aire.
+  const hayContenidoArriba = !!refundPendiente || proximas.length > 0;
+
   return (
     <AppBg>
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -588,9 +621,12 @@ export default function SessionsScreen() {
             )}
 
 
-{/* Lista de salas */}
+{/* Lista de salas.
+                El aire de arriba solo aplica cuando no hay nada por encima —
+                ver `LISTA_AIRE`: es para que la primera fila, que es lo más
+                tocado de la pantalla, no quede fuera del alcance del pulgar. */}
             {salas.length > 0 ? (
-              <>
+              <View style={!hayContenidoArriba && styles.listaConAire}>
                 {salas.map((sala, index) => (
                   <SalaRow
                     key={sala.id}
@@ -612,7 +648,7 @@ export default function SessionsScreen() {
                     <Text style={styles.ctaSub}>Explorá coaches y psicólogos en Conexiones</Text>
                   </View>
                 </TouchableOpacity>
-              </>
+              </View>
             ) : (
               <Animated.View style={styles.emptyState}>
                 <MaterialCommunityIcons name="message-outline" size={52} color="rgba(135,131,92,0.45)" />
@@ -755,6 +791,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: 'rgba(86,94,50,0.07)',
   },
+
+  listaConAire: { paddingTop: LISTA_AIRE },
 
   scroll: { flex: 1 },
   scrollContent: { paddingTop: 0, paddingBottom: TAB_BAR_CLEARANCE, paddingHorizontal: 16, gap: 0 },
