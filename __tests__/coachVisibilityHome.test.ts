@@ -80,7 +80,10 @@ describe('homeStanding', () => {
 
 describe('copy de la tarjeta', () => {
   it('sin cálculo todavía NO inventa un número: invita', () => {
-    expect(tituloVisibilidad(null)).toBe('Tu lugar en Conexiones');
+    // 📝 El copy del coach no nombra la sección (que de cara al usuario pasó a
+    // llamarse "Profesionales" el 28/08): "aparecés en Profesionales" es un error
+    // de categoría, el coach ES un profesional. Dice qué le pasa a él.
+    expect(tituloVisibilidad(null)).toBe('Dónde te encuentran');
     expect(bajadaVisibilidad(null)).toMatch(/en qué lugar entrás/);
   });
 

@@ -62,10 +62,14 @@ export default function TabLayout() {
     }, [user?.id])
   );
 
-  // Orden nuevo (nav-isla-compacta v.C): Inicio → Conexiones → Recursos → Mensajes.
+  // Orden nuevo (nav-isla-compacta v.C): Inicio → Profesionales → Recursos → Mensajes.
+  // 📝 La ruta sigue siendo `conexiones` a propósito: renombrarla rompería los
+  // deep links, el menú de Sofía y la clave del tooltip (`vive_tooltip_conexiones`),
+  // que si cambia le vuelve a mostrar el tooltip a todo el que ya lo cerró.
+  // Solo cambió el texto que se ve.
   const tabs: IslandTab[] = [
     { name: 'index',      icon: 'home',            label: 'Inicio' },
-    { name: 'conexiones', icon: 'users',           label: 'Conexiones' },
+    { name: 'conexiones', icon: 'users',           label: 'Profesionales' },
     { name: 'recursos',   icon: 'book-open',       label: 'Recursos' },
     { name: 'mis-salas',  icon: 'message-square',  label: 'Mensajes', dot: hasDot },
   ];
@@ -82,7 +86,7 @@ export default function TabLayout() {
         screenOptions={{ lazy: true, animationEnabled: !reducedMotion }}
         tabBar={(props) => <IslandTabBar {...props} tabs={tabs} />}>
         <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
-        <Tabs.Screen name="conexiones" options={{ title: 'Conexiones' }} />
+        <Tabs.Screen name="conexiones" options={{ title: 'Profesionales' }} />
         <Tabs.Screen name="recursos" options={{ title: 'Recursos' }} />
         <Tabs.Screen name="mis-salas" options={{ title: 'Mensajes' }} />
       </Tabs>

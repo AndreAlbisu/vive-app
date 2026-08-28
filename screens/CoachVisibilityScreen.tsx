@@ -152,7 +152,7 @@ export default function CoachVisibilityScreen() {
           {/* Estado general */}
           <View style={s.hero}>
             <View style={s.heroGlow} pointerEvents="none" />
-            <Text style={s.heroEyebrow}>Tu lugar en Conexiones</Text>
+            <Text style={s.heroEyebrow}>Dónde te encuentran</Text>
             {blocked ? (
               <>
                 <Text style={s.heroTitle}>Hoy no aparecés</Text>

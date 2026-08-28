@@ -645,7 +645,7 @@ export default function SessionsScreen() {
                   <MaterialCommunityIcons name="plus" size={16} color="rgba(86,94,50,0.55)" />
                   <View>
                     <Text style={styles.ctaTitle}>Buscar profesionales</Text>
-                    <Text style={styles.ctaSub}>Explorá coaches y psicólogos en Conexiones</Text>
+                    <Text style={styles.ctaSub}>Explorá coaches y psicólogos</Text>
                   </View>
                 </TouchableOpacity>
               </View>

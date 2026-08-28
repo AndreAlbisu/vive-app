@@ -149,7 +149,7 @@ export default function AdminScreen() {
   function confirmCoach(c: PendingCoach) {
     Alert.alert(
       `¿Aprobar a ${c.name}?`,
-      'Va a aparecer en Conexiones y en las búsquedas, y va a poder recibir reservas.',
+      'Va a aparecer en Profesionales y en las búsquedas, y va a poder recibir reservas.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {

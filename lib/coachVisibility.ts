@@ -57,7 +57,11 @@ export type ChecklistItem = {
   key: string;
   label: string;
   done: boolean;
-  /** `true` = mientras esté sin resolver no aparecés en Conexiones, punto. */
+  /** `true` = mientras esté sin resolver no te encuentra nadie, punto.
+   *
+   *  📝 El copy del coach no nombra la sección (que de cara al usuario pasó a
+   *  llamarse "Profesionales" el 28/08): "no aparecés en Profesionales" es un
+   *  error de categoría — el coach ES un profesional. Se dice qué le pasa a él. */
   blocking: boolean;
   hint: string;
   route?: string;
@@ -216,7 +220,7 @@ export function buildChecklist(self: VisibilitySelf): ChecklistItem[] {
       label: 'Postulación aprobada',
       done: !!self.verified,
       blocking: true,
-      hint: 'Está en revisión de nuestro lado. Hasta que se apruebe no aparecés en Conexiones.',
+      hint: 'Está en revisión de nuestro lado. Hasta que se apruebe no te encuentra nadie.',
     },
     {
       key: 'activo',
@@ -393,7 +397,7 @@ export function homeStanding(doors: DoorStanding[]): HomeStanding | null {
  * invitación, que es cierta siempre.
  */
 export function tituloVisibilidad(st: HomeStanding | null): string {
-  if (!st) return 'Tu lugar en Conexiones';
+  if (!st) return 'Dónde te encuentran';
   if (st.kind === 'sin_lugar') return 'Todavía no entrás en ningún lugar';
   if (st.kind === 'ganado') return `«${st.slotLabel}» es tuyo en ${st.doorLabel}`;
   return `Entrás al sorteo de «${st.slotLabel}» en ${st.doorLabel}`;

@@ -278,7 +278,7 @@ export default function QuizScreen() {
                 style={s.backToDir}
                 onPress={() => router.back()}
                 activeOpacity={0.8}>
-                <Text style={s.backToDirText}>Volver a Conexiones</Text>
+                <Text style={s.backToDirText}>Volver a Profesionales</Text>
               </TouchableOpacity>
             </>
           )}

@@ -320,7 +320,7 @@ export default function ConexionesScreen() {
               <TouchableOpacity onPress={backToMenu} hitSlop={10} activeOpacity={0.7} style={s.backBtn}>
                 <Feather name="chevron-left" size={26} color={FOREST} />
               </TouchableOpacity>
-              <Text style={s.deckHeaderTitle}>Conexiones</Text>
+              <Text style={s.deckHeaderTitle}>Profesionales</Text>
               <View style={s.hicons}>
                 <TouchableOpacity onPress={() => (user ? router.push('/favoritos') : requestAuth())} activeOpacity={0.7} hitSlop={8}>
                   <Feather name="star" size={20} color={FOREST} />
@@ -523,7 +523,7 @@ export default function ConexionesScreen() {
 
           {/* ── Header ─────────────────────────────────────────────────── */}
           <View style={s.header}>
-            <Text style={s.title}>Conexiones</Text>
+            <Text style={s.title}>Profesionales</Text>
             <View style={s.hicons}>
               <TouchableOpacity
                 onPress={() => (user ? router.push('/notifications') : requestAuth())}

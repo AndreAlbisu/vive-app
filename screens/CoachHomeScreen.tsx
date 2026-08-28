@@ -821,7 +821,7 @@ export default function CoachHomeScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={s.visTitle}>
                   {visibility.blocked
-                    ? 'Hoy no aparecés en Conexiones'
+                    ? 'Hoy no te encuentran'
                     : tituloVisibilidad(standing)}
                 </Text>
                 <Text style={s.visTxt} numberOfLines={2}>
