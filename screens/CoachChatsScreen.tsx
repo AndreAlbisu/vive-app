@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
@@ -17,7 +18,7 @@ import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { haceCuanto } from '@/lib/coachContinuity';
 import { todayInAr } from '@/lib/time';
-import { agruparRoster, chipProxima, textoHistoria } from '@/lib/coachRoster';
+import { agruparRoster, chipProxima, filtrarRoster, textoHistoria, type FiltroRoster } from '@/lib/coachRoster';
 import { useAuth } from '@/context/AuthContext';
 import { decryptMessage } from '@/lib/encryption';
 import { AppBg } from '@/components/ui/AppBg';
@@ -37,6 +38,16 @@ const OK_INK = '#42542F';
 const RES_INK = '#8F4A2E';
 
 type Tag = 'accepted' | 'resource' | null;
+
+/** El orden es de más amplio a más acotado. "No leídas" va segunda —y solo
+ *  aparece si hay alguna— porque es la única que responde a algo que pasó
+ *  recién; las otras dos describen el estado de la relación. */
+const FILTROS: { id: FiltroRoster; label: string }[] = [
+  { id: 'todas', label: 'Todas' },
+  { id: 'noleidas', label: 'No leídas' },
+  { id: 'agendadas', label: 'Agendadas' },
+  { id: 'sinproxima', label: 'Sin próxima' },
+];
 
 type ChatRoom = {
   salaId: string;
@@ -125,6 +136,20 @@ export default function CoachChatsScreen() {
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const { unreadSalaIds } = useUnreadSalas({ userId: user?.id ?? null, role: 'coach' });
+
+  // 🔴 Buscador y filtros están acá y NO en "Mensajes" del lado usuario, y la
+  // razón es la escala, que es opuesta en las dos apps: un profesional puede
+  // tener 10 o 20 pacientes activos a la vez, mientras que una persona
+  // difícilmente pase de 4 profesionales. Los mismos controles sobre cuatro
+  // filas serían adorno; sobre veinte son la diferencia entre encontrar a
+  // alguien y scrollear. Del lado usuario, ese espacio se resuelve con aire
+  // (ver `LISTA_AIRE` en SessionsScreen).
+  //
+  // 📝 De paso empujan la primera fila fuera del borde superior, que es donde
+  // el pulgar no llega: el orden es el de WhatsApp —título, buscador, filtros,
+  // Archivados, lista— y ahí cada elemento se gana su lugar en vez de rellenar.
+  const [busqueda, setBusqueda] = useState('');
+  const [filtro, setFiltro] = useState<FiltroRoster>('todas');
 
   /** Archivar / desarchivar. Se escribe el valor EXPLÍCITO (true o false), no
    *  se vuelve a null: una vez que el coach opinó, su decisión manda sobre la
@@ -344,7 +369,8 @@ export default function CoachChatsScreen() {
   const archived = rooms.filter(r => r.archived);
 
   const hoy = todayInAr();
-  const { agendadas, sinProxima } = agruparRoster(active);
+  const visibles = filtrarRoster(active, filtro, busqueda);
+  const { agendadas, sinProxima } = agruparRoster(visibles);
   // Los encabezados solo aparecen si los dos grupos tienen gente. Con una sola
   // persona serían decoración: un rótulo sobre una lista de uno no clasifica
   // nada, solo agrega ruido arriba de la fila.
@@ -446,18 +472,60 @@ export default function CoachChatsScreen() {
             </View>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
-            {conRotulos && <Text style={s.grupo}>Con sesión agendada</Text>}
-            {agendadas.map(r => renderRoom(r))}
+          <ScrollView
+            contentContainerStyle={s.container}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled">
 
-            {conRotulos && <Text style={[s.grupo, s.grupoSegundo]}>Sin próxima</Text>}
-            {sinProxima.map(r => renderRoom(r, { plana: true }))}
+            <View style={s.buscador}>
+              <Feather name="search" size={16} color={FOREST_SOFT} />
+              <TextInput
+                style={s.buscadorInput}
+                value={busqueda}
+                onChangeText={setBusqueda}
+                placeholder="Buscar una persona"
+                placeholderTextColor={FOREST_SOFT}
+                returnKeyType="search"
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+              />
+            </View>
 
+            {/* Los filtros scrollean en horizontal porque son cuatro y el
+                ancho de un teléfono angosto no los banca sin achicar la letra
+                — misma solución que WhatsApp y Messenger. */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.filtros}>
+              {FILTROS.map(f => {
+                const activo = filtro === f.id;
+                // El conteo solo se muestra donde suma: "No leídas 3" es una
+                // razón para tocar, "Todas 7" es un número sin decisión atrás.
+                const n = f.id === 'noleidas' ? active.filter(r => r.hasUnread).length : 0;
+                if (f.id === 'noleidas' && n === 0) return null;
+                return (
+                  <TouchableOpacity
+                    key={f.id}
+                    style={[s.pill, activo && s.pillActiva]}
+                    onPress={() => setFiltro(f.id)}
+                    activeOpacity={0.75}>
+                    <Text style={[s.pillTxt, activo && s.pillTxtActiva]}>
+                      {f.label}{n > 0 ? ` ${n}` : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Archivados sube ACÁ, como en WhatsApp. Estaba al pie, y hoy hay
+                más gente archivada que activa: lo que más gente tenía era lo
+                que estaba enterrado. */}
             {archived.length > 0 && (
               <>
                 <TouchableOpacity style={s.archLink} activeOpacity={0.7} onPress={() => setShowArchived(v => !v)}>
-                  <Feather name={showArchived ? 'chevron-down' : 'chevron-right'} size={16} color={FOREST_SOFT} />
-                  <Text style={s.archLinkTxt}>Archivados ({archived.length})</Text>
+                  <Feather name="archive" size={16} color={FOREST_SOFT} />
+                  <Text style={s.archLinkTxt}>Archivados</Text>
                   {/* 🔴 Archivar NO silencia. Si alguien archivado escribe, el
                       punto aparece acá: la conversación deja de estar arriba,
                       pero el coach no se pierde a un cliente que lo buscó. Se
@@ -465,9 +533,29 @@ export default function CoachChatsScreen() {
                       porque deshacer una decisión del coach sin avisarle es
                       peor que un punto de más. */}
                   {archived.some(r => r.hasUnread) && <View style={s.archDot} />}
+                  <View style={s.archSpacer} />
+                  <Text style={s.archCount}>{archived.length}</Text>
+                  <Feather name={showArchived ? 'chevron-up' : 'chevron-down'} size={16} color={FOREST_SOFT} />
                 </TouchableOpacity>
                 {showArchived && archived.map(r => renderRoom(r, { plana: true, dimmed: true }))}
               </>
+            )}
+
+            {conRotulos && <Text style={s.grupo}>Con sesión agendada</Text>}
+            {agendadas.map(r => renderRoom(r))}
+
+            {conRotulos && <Text style={[s.grupo, s.grupoSegundo]}>Sin próxima</Text>}
+            {sinProxima.map(r => renderRoom(r, { plana: true }))}
+
+            {/* El filtro o la búsqueda pueden dejar la lista en cero teniendo
+                gente. Decir qué pasó y cómo salir es lo mínimo — una lista que
+                se vacía sin explicación se lee como que se rompió algo. */}
+            {visibles.length === 0 && (
+              <Text style={s.sinResultados}>
+                {busqueda
+                  ? `Ninguna persona coincide con «${busqueda.trim()}»`
+                  : 'Nadie en este filtro por ahora'}
+              </Text>
             )}
 
             {/* El gesto no se adivina, pero es una nota al pie — y va al pie.
@@ -593,6 +681,42 @@ const s = StyleSheet.create({
     textTransform: 'uppercase', color: CARD,
   },
 
-  archLink: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 14, paddingHorizontal: 4, marginTop: 4 },
-  archLinkTxt: { fontSize: 12.5, fontFamily: ViveFonts.medium, color: FOREST_SOFT },
+  // ── El bloque de arriba de la lista ──────────────────────────────────────
+  // Empuja la primera fila a ~215pt del área segura (la zona del pulgar) y cada
+  // pieza se gana el lugar a 10-20 pacientes. Orden calcado de WhatsApp.
+  buscador: {
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+    backgroundColor: 'rgba(63,81,47,0.06)', borderRadius: 14,
+    paddingHorizontal: 13, height: 44, marginBottom: 12,
+  },
+  buscadorInput: {
+    flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST,
+    // Sin esto, en Android el input trae su propio padding vertical y la
+    // altura de 44 deja el texto pegado arriba.
+    paddingVertical: 0,
+  },
+
+  filtros: { flexDirection: 'row', gap: 8, paddingRight: 20, paddingBottom: 14 },
+  pill: {
+    paddingHorizontal: 14, height: 34, justifyContent: 'center',
+    borderRadius: 17, borderWidth: 1, borderColor: LINE,
+    backgroundColor: 'rgba(247,242,231,0.5)',
+  },
+  pillActiva: { backgroundColor: FOREST, borderColor: FOREST },
+  pillTxt: { fontFamily: ViveFonts.medium, fontSize: 13, color: FOREST_SOFT },
+  pillTxtActiva: { color: CARD, fontFamily: ViveFonts.semibold },
+
+  archLink: {
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+    paddingVertical: 13, paddingHorizontal: 4, marginBottom: 6,
+    borderBottomWidth: 1, borderBottomColor: LINE,
+  },
+  archLinkTxt: { fontSize: 13.5, fontFamily: ViveFonts.medium, color: FOREST_SOFT },
+  archSpacer: { flex: 1 },
+  archCount: { fontSize: 13, fontFamily: ViveFonts.medium, color: FOREST_SOFT },
+
+  sinResultados: {
+    fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT,
+    textAlign: 'center', marginTop: 34, paddingHorizontal: 20, lineHeight: 20,
+  },
 });

@@ -76,6 +76,44 @@ export function agruparRoster<T extends FilaRoster>(filas: T[]): { agendadas: T[
 }
 
 /**
+ * Los filtros de arriba de la lista.
+ *
+ * 🔴 Existen por la ESCALA, y la escala de las dos apps es opuesta: un coach
+ * puede tener 10 o 20 pacientes activos a la vez, mientras que una persona
+ * difícilmente pase de 4 profesionales. Por eso esta pantalla lleva buscador y
+ * filtros y "Mensajes" del lado usuario no: ahí los mismos controles serían
+ * adorno sobre cuatro filas.
+ *
+ * ⚠️ No se pisan con los rótulos de sección. La pastilla ACOTA la lista, el
+ * rótulo la SEPARA — y cuando el filtro deja un solo grupo, el rótulo se apaga
+ * solo (`agruparRoster` devuelve un grupo vacío y la pantalla no lo dibuja).
+ */
+export type FiltroRoster = 'todas' | 'noleidas' | 'agendadas' | 'sinproxima';
+
+export type FilaFiltrable = FilaRoster & { userName: string; hasUnread: boolean };
+
+/** Normaliza para buscar: sin tildes y sin mayúsculas. Buscar "joaquin" tiene
+ *  que encontrar a "Joaquín" — si no, el buscador es peor que no tenerlo. */
+export function normalizar(s: string): string {
+  return s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+}
+
+export function filtrarRoster<T extends FilaFiltrable>(
+  filas: T[],
+  filtro: FiltroRoster,
+  busqueda: string,
+): T[] {
+  const q = normalizar(busqueda);
+  return filas.filter(f => {
+    if (q && !normalizar(f.userName).includes(q)) return false;
+    if (filtro === 'noleidas') return f.hasUnread;
+    if (filtro === 'agendadas') return !!f.proximaIso;
+    if (filtro === 'sinproxima') return !f.proximaIso;
+    return true;
+  });
+}
+
+/**
  * La línea de historia de la persona: cuántas sesiones y cuándo fue la última.
  *
  * 🔴 Ya NO nombra la próxima sesión — eso se mudó a la pastilla. Tenerlo en los

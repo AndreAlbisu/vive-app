@@ -1,4 +1,4 @@
-import { chipProxima, agruparRoster, textoHistoria, diasEntre } from '@/lib/coachRoster';
+import { chipProxima, agruparRoster, textoHistoria, diasEntre, filtrarRoster } from '@/lib/coachRoster';
 import { haceCuanto } from '@/lib/coachContinuity';
 
 describe('diasEntre', () => {
@@ -113,5 +113,49 @@ describe('textoHistoria', () => {
 
   it('queda vacío cuando todavía no hay historia que contar', () => {
     expect(textoHistoria({ sesiones: 0, ultimaIso: null }, haceCuanto, hoy)).toBe('');
+  });
+});
+
+describe('filtrarRoster', () => {
+  const fila = (userName: string, extra: Partial<{ proximaIso: string | null; hasUnread: boolean }> = {}) => ({
+    userName,
+    hasUnread: extra.hasUnread ?? false,
+    proximaIso: extra.proximaIso ?? null,
+    lastMessageAt: null,
+  });
+
+  const gente = [
+    fila('Andre', { proximaIso: '2026-08-28' }),
+    fila('Joaquín Albisu', { hasUnread: true }),
+    fila('Mónica', { proximaIso: '2026-09-10', hasUnread: true }),
+  ];
+
+  it('sin filtro ni búsqueda devuelve todo', () => {
+    expect(filtrarRoster(gente, 'todas', '').map(f => f.userName))
+      .toEqual(['Andre', 'Joaquín Albisu', 'Mónica']);
+  });
+
+  it('filtra por no leídas, agendadas y sin próxima', () => {
+    expect(filtrarRoster(gente, 'noleidas', '').map(f => f.userName)).toEqual(['Joaquín Albisu', 'Mónica']);
+    expect(filtrarRoster(gente, 'agendadas', '').map(f => f.userName)).toEqual(['Andre', 'Mónica']);
+    expect(filtrarRoster(gente, 'sinproxima', '').map(f => f.userName)).toEqual(['Joaquín Albisu']);
+  });
+
+  it('🔴 buscar sin tildes encuentra el nombre con tildes', () => {
+    expect(filtrarRoster(gente, 'todas', 'joaquin').map(f => f.userName)).toEqual(['Joaquín Albisu']);
+    expect(filtrarRoster(gente, 'todas', 'monica').map(f => f.userName)).toEqual(['Mónica']);
+  });
+
+  it('la búsqueda no distingue mayúsculas y acepta espacios de sobra', () => {
+    expect(filtrarRoster(gente, 'todas', '  ANDRE ').map(f => f.userName)).toEqual(['Andre']);
+  });
+
+  it('busca por cualquier parte del nombre, no solo el principio', () => {
+    expect(filtrarRoster(gente, 'todas', 'albisu').map(f => f.userName)).toEqual(['Joaquín Albisu']);
+  });
+
+  it('el filtro y la búsqueda se combinan', () => {
+    expect(filtrarRoster(gente, 'agendadas', 'mon').map(f => f.userName)).toEqual(['Mónica']);
+    expect(filtrarRoster(gente, 'noleidas', 'andre')).toEqual([]);
   });
 });

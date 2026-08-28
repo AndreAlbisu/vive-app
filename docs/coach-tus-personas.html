@@ -247,6 +247,28 @@ h2 {
 .stale { flex: none; font-size: 11px; color: var(--app-soft); align-self: center; }
 .unread { width: 9px; height: 9px; border-radius: 5px; background: var(--app-terra); flex: none; }
 
+/* Bloque de arriba de la lista — DESPUÉS */
+.search {
+  display: flex; align-items: center; gap: 9px;
+  background: rgba(63,81,47,0.06); border-radius: 14px;
+  padding: 0 13px; height: 40px; margin-bottom: 12px;
+  font-size: 13px; color: var(--app-soft);
+}
+.pills { display: flex; gap: 7px; padding-bottom: 13px; overflow: hidden; }
+.pill {
+  padding: 0 13px; height: 30px; display: grid; place-items: center;
+  border-radius: 15px; border: 1px solid var(--app-line);
+  background: rgba(247,242,231,0.5); font-size: 12px; color: var(--app-soft);
+  white-space: nowrap;
+}
+.pill.on { background: var(--app-forest); border-color: var(--app-forest); color: var(--app-card); font-weight: 600; }
+.archrow {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 4px; margin-bottom: 6px; font-size: 13px; color: var(--app-soft);
+  border-bottom: 1px solid var(--app-line);
+}
+.archrow .n { margin-left: auto; }
+
 /* ── Anatomía ───────────────────────────────────────────────────────────── */
 .anat { display: grid; gap: 1px; background: var(--board-line); border-radius: 14px; overflow: hidden; }
 .anat-row { background: var(--board-2); padding: 18px 22px; display: grid; gap: 6px; }
@@ -452,6 +474,15 @@ ol.work code {
           <div class="status"><span>4:30</span><span class="dots"><i></i><i></i><i></i></span></div>
           <h3 class="p-title">Tus personas</h3>
 
+          <div class="search">⌕&nbsp; Buscar una persona</div>
+          <div class="pills">
+            <span class="pill on">Todas</span>
+            <span class="pill">No leídas 1</span>
+            <span class="pill">Agendadas</span>
+            <span class="pill">Sin pró…</span>
+          </div>
+          <div class="archrow">🗀&nbsp; Archivados <span class="n">5 ⌄</span></div>
+
           <div class="grp">Con sesión agendada</div>
 
           <div class="row2">
@@ -477,7 +508,7 @@ ol.work code {
 
           <div class="arch">› Archivados (5)</div>
           <p class="hint">Mantené presionada una persona para archivarla</p>
-          <div class="void"></div>
+          <div class="void" style="height:70px"></div>
         </div>
       </div>
 
@@ -542,6 +573,34 @@ ol.work code {
     </div>
   </section>
 
+  <!-- ── Escala ────────────────────────────────────────────────────────── -->
+  <section>
+    <h2>Por qué acá va chrome y en la app del usuario no</h2>
+    <p class="sub">Las dos pantallas listan conversaciones y parecen la misma. La escala es opuesta,
+    y eso decide todo lo que va arriba de la lista.</p>
+
+    <div class="anat">
+      <div class="anat-row">
+        <div class="anat-k">El coach</div>
+        <p class="anat-v"><strong>10 o 20 pacientes activos a la vez.</strong> A esa escala el buscador y los
+        filtros no son relleno: son la diferencia entre encontrar a alguien y scrollear. Van los cuatro
+        elementos, en el orden de WhatsApp — título, buscador, filtros, Archivados, lista.</p>
+      </div>
+      <div class="anat-row">
+        <div class="anat-k">La persona</div>
+        <p class="anat-v"><strong>Cuatro profesionales como techo.</strong> Los mismos controles sobre cuatro
+        filas serían adorno con forma de función. Ahí el espacio se resuelve con aire calculado sobre el alto
+        de pantalla, que es lo que ya se aplicó en <code>SessionsScreen</code>.</p>
+      </div>
+      <div class="anat-row">
+        <div class="anat-k">Y de paso</div>
+        <p class="anat-v">El bloque deja la primera fila a <strong>222pt del área segura</strong> —WhatsApp la
+        deja a ~216— o sea dentro del alcance del pulgar. Pero eso es la consecuencia, no el motivo:
+        <strong>rellenar por rellenar habría sido padding con otro nombre</strong>.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- ── Trabajo ───────────────────────────────────────────────────────── -->
   <section>
     <h2>Qué hay que tocar</h2>
@@ -559,6 +618,9 @@ ol.work code {
       <li><strong>Subir la escala tipográfica</strong> de la fila a 16.5 / 12 / 12, y darle a la tarjeta la sombra
       de <code>SurfaceCard</code> en vez del borde al 14% que hoy casi no se ve.</li>
       <li><strong>Mover el aviso de archivar</strong> al pie, debajo de Archivados.</li>
+      <li><strong>Sumar el bloque de arriba</strong>: buscador (filtra por nombre, sin tildes ni mayúsculas),
+      cuatro filtros en scroll horizontal, y Archivados subiendo del pie a la cabecera. Con estado vacío propio
+      cuando el filtro o la búsqueda dejan la lista en cero.</li>
       <li><strong>Capitalizar el nombre</strong>: los perfiles guardan lo que la persona tipeó al registrarse,
       y ahí entra «andre» en minúscula. En un directorio de gente eso se lee como descuido.</li>
     </ol>
