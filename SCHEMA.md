@@ -10,6 +10,16 @@
 >
 > 18 de julio 2026 — `resource_events` instrumentado (view/play/complete/coach_profile_visit) + 2 funciones `SECURITY DEFINER` nuevas para que el coach lea sus stats agregadas (`get_my_resource_counts`, `get_my_resource_stats_month`), alimentando el tab F4 "Tus recursos". `resource_reminders` ya tiene RF1-RF3 completos (motor, UI, pantalla), documentado en CHANGELOG. Cerrado el hueco 05/07→13/07: pagos v1 y el trigger de reembolso estaban marcados "pendiente de correr" pero ya estaban corridos en prod (corregido); "puertas de Conexiones" resultó ser lógica de frontend pura contra `coach_topics` (ya documentado), sin migración propia — no había nada que documentar ahí.
 
+## Realtime (postgres_changes)
+
+🔴 **Cuatro tablas están publicadas en `supabase_realtime`: `messages`, `bookings`, `salas` y `notifications`** (`scripts/habilitar-realtime.sql`, ✅ **CORRIDO y VERIFICADO el 28/08/2026**), las cuatro con `REPLICA IDENTITY FULL`.
+
+📝 **Hasta ese día la publicación estaba VACÍA** y ninguna de las ocho suscripciones de la app recibía un solo evento — el chat no se actualizaba solo (`SalaScreen` no hace polling de mensajes), los puntitos de las dos barras no se movían, y el badge de Reservas del coach no se apagaba al aceptar. El código del cliente siempre estuvo bien: escuchaba un canal por el que no pasaba nada.
+
+⚠️ **Publicar no saltea RLS.** Realtime evalúa las políticas del usuario suscripto antes de entregarle una fila. Lo que se habilita es el transporte, no el permiso.
+
+⚠️ **`REPLICA IDENTITY FULL` no es opcional acá**: con la de por defecto (la PK) un UPDATE viaja sin los valores viejos, y los filtros del cliente (`coach_id=eq.…`) se evalúan contra una fila incompleta. Para los INSERT da igual; para los UPDATE es la diferencia entre que ande siempre y que ande a veces.
+
 ## Tablas y relaciones
 
 ### `profiles`

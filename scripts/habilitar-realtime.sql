@@ -22,6 +22,9 @@
 --   · La bandeja de personas del coach, que se hizo el 28/08 justamente para
 --     actualizarse en vivo.
 --
+-- ✅ CORRIDO y VERIFICADO el 28/08/2026: las cuatro tablas quedaron publicadas y
+-- las cuatro con `relreplident = 'f'` (FULL).
+--
 -- ⚠️ Publicar una tabla NO saltea RLS. Realtime evalúa las políticas del usuario
 -- suscripto antes de entregarle una fila: nadie va a recibir cambios de filas
 -- que no puede leer. Lo que se habilita es el transporte, no el permiso.
