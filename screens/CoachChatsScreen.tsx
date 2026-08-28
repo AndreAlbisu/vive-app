@@ -16,7 +16,8 @@ import { Feather } from '@expo/vector-icons';
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { haceCuanto } from '@/lib/coachContinuity';
-import { daysFromTodayAr, todayInAr } from '@/lib/time';
+import { todayInAr } from '@/lib/time';
+import { agruparRoster, chipProxima, textoHistoria } from '@/lib/coachRoster';
 import { useAuth } from '@/context/AuthContext';
 import { decryptMessage } from '@/lib/encryption';
 import { AppBg } from '@/components/ui/AppBg';
@@ -31,7 +32,8 @@ const TERRA = '#C06B4A';
 const LINE = 'rgba(63,81,47,0.14)';
 const OK_BG = '#DCE5CB';
 const OK_INK = '#42542F';
-const RES_BG = '#EAD3C6';
+// 📝 `RES_BG` salió con las pastillas: el fondo de la etiqueta "RECURSO" ya no
+// se usa en ningún lado. `RES_INK` sobrevive como color del punto.
 const RES_INK = '#8F4A2E';
 
 type Tag = 'accepted' | 'resource' | null;
@@ -105,33 +107,15 @@ function archivadoPorRegla(m: UltimoMsg | null, corteMs: number): boolean {
     && new Date(m.created_at).getTime() < corteMs;
 }
 
-/** Una línea con el estado de la relación. Vacía cuando no hay nada que decir
- *  —alguien que reservó y todavía no tuvo su primera sesión— porque inventar
- *  texto para llenar el renglón es exactamente lo que vuelve ilegible una lista. */
-function textoRelacion(r: { sesiones: number; ultimaIso: string | null; proximaIso: string | null }): string {
-  const partes: string[] = [];
-  if (r.sesiones > 0) partes.push(r.sesiones === 1 ? '1 sesión' : `${r.sesiones} sesiones`);
-  if (r.proximaIso) {
-    const d = new Date(`${r.proximaIso}T12:00:00-03:00`);
-    partes.push(`próxima ${d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}`);
-  } else if (r.ultimaIso) {
-    partes.push(haceCuanto(-daysFromTodayAr(r.ultimaIso)).toLowerCase());
-  }
-  return partes.join(' · ');
-}
-
 function getInitials(name: string): string {
   return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase() || '??';
 }
 
-function formatMessageDate(isoString: string | null): string {
-  if (!isoString) return '';
-  const d = new Date(isoString);
-  const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000);
-  if (diffDays === 0) return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-  if (diffDays === 1) return 'Ayer';
-  if (diffDays < 7) return ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][d.getDay()];
-  return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+/** El nombre propio va con mayúscula. Los perfiles guardan lo que la persona
+ *  escribió al registrarse y ahí entra "andre" en minúscula; en una pantalla
+ *  que es un directorio de gente, eso se lee como descuido. */
+function capitalizar(name: string): string {
+  return name.replace(/(^|\s)(\p{Ll})/gu, (_, sep: string, c: string) => sep + c.toUpperCase());
 }
 
 export default function CoachChatsScreen() {
@@ -271,7 +255,7 @@ export default function CoachChatsScreen() {
 
       return {
         salaId: l.salaId,
-        userName: name,
+        userName: capitalizar(name),
         initials: getInitials(name),
         avatarUrl: profileMap[l.userId]?.avatarUrl ?? null,
         tag,
@@ -359,11 +343,29 @@ export default function CoachChatsScreen() {
   const active = rooms.filter(r => !r.archived);
   const archived = rooms.filter(r => r.archived);
 
-  function renderRoom(room: ChatRoom, dimmed?: boolean) {
+  const hoy = todayInAr();
+  const { agendadas, sinProxima } = agruparRoster(active);
+  // Los encabezados solo aparecen si los dos grupos tienen gente. Con una sola
+  // persona serían decoración: un rótulo sobre una lista de uno no clasifica
+  // nada, solo agrega ruido arriba de la fila.
+  const conRotulos = agendadas.length > 0 && sinProxima.length > 0;
+
+  /**
+   * Una persona.
+   *
+   * 🔴 La jerarquía la lleva la SUPERFICIE y no un color más: quien tiene
+   * sesión agendada va en tarjeta con sombra, quien no, en tarjeta plana con
+   * borde. Antes las dos eran la misma caja y el estado de la relación solo se
+   * podía leer en la línea más chica de todas.
+   */
+  function renderRoom(room: ChatRoom, opts?: { plana?: boolean; dimmed?: boolean }) {
+    const historia = textoHistoria(room, haceCuanto, hoy);
+    const chip = room.proximaIso ? chipProxima(room.proximaIso, hoy) : null;
+
     return (
       <TouchableOpacity
         key={room.salaId}
-        style={[s.chat, dimmed && s.chatDimmed]}
+        style={[s.chat, opts?.plana && s.chatPlana, opts?.dimmed && s.chatDimmed]}
         onPress={() => router.push({ pathname: '/sala', params: { sala_id: room.salaId } })}
         onLongPress={() => preguntarArchivar(room)}
         delayLongPress={350}
@@ -373,22 +375,42 @@ export default function CoachChatsScreen() {
         ) : (
           <View style={[s.avatar, s.avatarFallback]}><Text style={s.avatarTxt}>{room.initials}</Text></View>
         )}
+
         <View style={s.chatInfo}>
-          <Text style={[s.chatName, room.hasUnread && s.chatNameUnread]} numberOfLines={1}>{room.userName}</Text>
+          <View style={s.nameRow}>
+            <Text style={s.chatName} numberOfLines={1}>{room.userName}</Text>
+            {/* El punto de no leído se mudó al lado del nombre: la columna
+                derecha ahora es de la próxima sesión. */}
+            {room.hasUnread && <View style={s.unread} />}
+          </View>
+
+          {!!historia && <Text style={s.relTxt} numberOfLines={1}>{historia}</Text>}
+
           <View style={s.prev}>
-            {room.tag === 'accepted' && <Text style={s.tagOk}>✓ SESIÓN ACEPTADA</Text>}
-            {room.tag === 'resource' && <Text style={s.tagRes}>RECURSO</Text>}
+            {/* 🔴 Antes acá iban las pastillas "✓ SESIÓN ACEPTADA" y "RECURSO".
+                Las dos repetían lo que el preview ya decía —y la primera dejaba
+                el texto cortado a mitad de palabra, "Sesión acepta…"— a cambio
+                de media fila. Queda un punto de 6px: mismo aviso, sin robar
+                ancho ni decir dos veces lo mismo. */}
+            {room.tag && <View style={[s.seed, room.tag === 'resource' && s.seedRes]} />}
             <Text style={[s.prevTxt, room.hasUnread && s.prevTxtUnread]} numberOfLines={1}>{room.preview}</Text>
           </View>
-          {/* La relación en una línea. Se prioriza la PRÓXIMA sobre la última:
-              lo primero que quiere saber un profesional al mirar un nombre es
-              si ya lo tiene agendado. Recién si no, cuánto hace que no lo ve. */}
-          <Text style={s.relTxt} numberOfLines={1}>{textoRelacion(room)}</Text>
         </View>
-        <View style={s.meta}>
-          <Text style={s.metaTime}>{formatMessageDate(room.lastMessageAt)}</Text>
-          {room.hasUnread && <View style={s.unread} />}
-        </View>
+
+        {/* Que la pastilla EXISTA ya es el dato: si está, esa persona está
+            agendada. El riel derecho se escanea sin leer una palabra. */}
+        {chip && (
+          <View style={[s.chip, chip.tipo === 'pronto' && s.chipPronto]}>
+            {chip.tipo === 'pronto' ? (
+              <Text style={s.chipPromptTxt}>{chip.texto}</Text>
+            ) : (
+              <>
+                <Text style={s.chipDia}>{chip.dia}</Text>
+                <Text style={s.chipMes}>{chip.mes}</Text>
+              </>
+            )}
+          </View>
+        )}
       </TouchableOpacity>
     );
   }
@@ -425,13 +447,11 @@ export default function CoachChatsScreen() {
           </View>
         ) : (
           <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
-            {active.map(r => renderRoom(r))}
+            {conRotulos && <Text style={s.grupo}>Con sesión agendada</Text>}
+            {agendadas.map(r => renderRoom(r))}
 
-            {/* El gesto no se adivina. Se dice una sola vez, al pie de la lista
-                activa, y solo cuando hay algo que archivar. */}
-            {active.length > 0 && (
-              <Text style={s.hintArch}>Mantené presionada una persona para archivarla</Text>
-            )}
+            {conRotulos && <Text style={[s.grupo, s.grupoSegundo]}>Sin próxima</Text>}
+            {sinProxima.map(r => renderRoom(r, { plana: true }))}
 
             {archived.length > 0 && (
               <>
@@ -446,8 +466,16 @@ export default function CoachChatsScreen() {
                       peor que un punto de más. */}
                   {archived.some(r => r.hasUnread) && <View style={s.archDot} />}
                 </TouchableOpacity>
-                {showArchived && archived.map(r => renderRoom(r, true))}
+                {showArchived && archived.map(r => renderRoom(r, { plana: true, dimmed: true }))}
               </>
+            )}
+
+            {/* El gesto no se adivina, pero es una nota al pie — y va al pie.
+                Antes salía justo debajo de la lista activa: con dos personas eso
+                la dejaba flotando en el centro geométrico de la pantalla, donde
+                el ojo la lee como si fuera contenido. */}
+            {active.length > 0 && (
+              <Text style={s.hintArch}>Mantené presionada una persona para archivarla</Text>
             )}
 
             <View style={{ height: TAB_BAR_CLEARANCE }} />
@@ -484,10 +512,34 @@ const s = StyleSheet.create({
   quietDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#DCE5CB' },
   quietTxt: { fontSize: 12, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
 
+  // Rótulo de grupo. Chico y espaciado: clasifica, no compite con los nombres.
+  grupo: {
+    fontFamily: ViveFonts.titleSemiBold, fontSize: 10.5,
+    letterSpacing: 1.1, textTransform: 'uppercase',
+    color: FOREST_SOFT, marginLeft: 6, marginBottom: 9,
+  },
+  grupoSegundo: { marginTop: 22 },
+
   chat: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20,
-    paddingVertical: 12, paddingHorizontal: 14, marginBottom: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 13,
+    backgroundColor: CARD, borderRadius: 20,
+    paddingVertical: 14, paddingHorizontal: 15, marginBottom: 9,
+    // Sombra de una capa, con los valores de `shadow.subtle.light` de
+    // theme/tokens.ts. El borde al 14% que había antes era invisible sobre el
+    // fondo crema: la tarjeta no se leía como objeto, y con dos filas en media
+    // pantalla vacía eso es justo lo que se sentía insulso.
+    shadowColor: '#2E261A',
+    shadowOpacity: 0.14,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  // Sin próxima sesión: plana y con borde. La jerarquía la lleva la superficie,
+  // así no hace falta un segundo color ni una segunda tipografía.
+  chatPlana: {
+    backgroundColor: 'rgba(247,242,231,0.55)',
+    borderWidth: 1, borderColor: LINE,
+    shadowOpacity: 0, elevation: 0,
   },
   chatDimmed: { opacity: 0.62 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(63,81,47,0.1)' },
@@ -504,22 +556,42 @@ const s = StyleSheet.create({
   },
   archDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: TERRA, marginLeft: 6 },
 
-  relTxt: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 11,
-    color: FOREST_SOFT,
-    marginTop: 3,
+  // 🔴 La escala. Antes eran cinco tamaños entre 9 y 13.5 — cinco roles
+  // repartidos en 4,5 puntos, donde el ojo no distingue ninguno y no hay dónde
+  // aterrizar. Ahora hay un salto real arriba (16.5, el nombre, que es el ancla
+  // de un directorio de gente) y dos niveles abajo que sí conviven en 12.
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  chatName: {
+    fontFamily: ViveFonts.titleSemiBold, fontSize: 16.5, color: FOREST,
+    letterSpacing: -0.2, flexShrink: 1,
   },
-  chatName: { fontSize: 13.5, fontFamily: ViveFonts.semibold, color: FOREST },
-  chatNameUnread: { fontFamily: ViveFonts.bold },
-  prev: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-  prevTxt: { flex: 1, fontSize: 11.5, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
+  relTxt: { fontFamily: ViveFonts.medium, fontSize: 12, color: FOREST_SOFT, marginTop: 3 },
+  prev: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 },
+  prevTxt: { flex: 1, fontSize: 12, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
   prevTxtUnread: { color: FOREST, fontFamily: ViveFonts.medium },
-  tagOk: { fontSize: 9, fontFamily: ViveFonts.bold, letterSpacing: 0.4, color: OK_INK, backgroundColor: OK_BG, borderRadius: 9, paddingVertical: 2, paddingHorizontal: 7, overflow: 'hidden' },
-  tagRes: { fontSize: 9, fontFamily: ViveFonts.bold, letterSpacing: 0.4, color: RES_INK, backgroundColor: RES_BG, borderRadius: 9, paddingVertical: 2, paddingHorizontal: 7, overflow: 'hidden' },
-  meta: { alignItems: 'flex-end', gap: 5, flexShrink: 0 },
-  metaTime: { fontSize: 10, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
-  unread: { width: 10, height: 10, borderRadius: 5, backgroundColor: TERRA },
+  // Lo que queda de las pastillas: un punto que dice de qué es el último
+  // mensaje sin gastar ancho ni repetir el texto que tiene al lado.
+  seed: { width: 6, height: 6, borderRadius: 3, backgroundColor: OK_INK, flexShrink: 0 },
+  seedRes: { backgroundColor: RES_INK },
+  unread: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: TERRA, flexShrink: 0 },
+
+  // La pastilla de la próxima sesión, en la columna que antes gastaba el
+  // horario del último mensaje — el dato menos accionable de la fila.
+  chip: {
+    flexShrink: 0, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: OK_BG, borderRadius: 13,
+    paddingVertical: 7, paddingHorizontal: 10, minWidth: 46,
+  },
+  chipPronto: { backgroundColor: FOREST, paddingHorizontal: 12 },
+  chipDia: { fontFamily: ViveFonts.title, fontSize: 15, lineHeight: 17, color: OK_INK },
+  chipMes: {
+    fontFamily: ViveFonts.titleSemiBold, fontSize: 8.5, letterSpacing: 0.9,
+    textTransform: 'uppercase', color: OK_INK, opacity: 0.78, marginTop: 2,
+  },
+  chipPromptTxt: {
+    fontFamily: ViveFonts.titleSemiBold, fontSize: 11, letterSpacing: 0.5,
+    textTransform: 'uppercase', color: CARD,
+  },
 
   archLink: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 14, paddingHorizontal: 4, marginTop: 4 },
   archLinkTxt: { fontSize: 12.5, fontFamily: ViveFonts.medium, color: FOREST_SOFT },

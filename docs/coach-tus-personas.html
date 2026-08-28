@@ -1,0 +1,573 @@
+<title>Tus personas, de bandeja a roster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap">
+
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   Paleta. Los tokens `app-*` salen 1:1 de constants/theme.ts y theme/tokens.ts
+   — no se inventó ningún color para las pantallas: si acá se ve distinto que
+   en el teléfono, el que está mal es este archivo.
+
+   El fondo de la PÁGINA sí es propio y es deliberadamente oscuro: las dos
+   pantallas son crema sobre crema, y sobre un board claro se perderían el
+   borde y la sombra de las tarjetas — justo lo que está en discusión. Sobre
+   verde profundo el crema es la única fuente de luz y se lee como pantalla.
+   Por eso también la página va a un solo tema: el tema del visor no puede
+   repintar una captura de la app sin mentir sobre los colores.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --board:        #1B2114;
+  --board-2:      #232B1A;
+  --board-line:   rgba(214,222,196,0.13);
+  --ink:          #E8EBDC;
+  --ink-soft:     #A8B295;
+  --ink-faint:    #77826A;
+
+  /* Sistema de la app — no tocar sin tocar constants/theme.ts */
+  --app-cream:    #F7EFE4;
+  --app-cream-2:  #F0E6D8;
+  --app-card:     #F7F2E7;
+  --app-forest:   #3F512F;
+  --app-soft:     #6B7A56;
+  --app-terra:    #C1694F;
+  --app-line:     rgba(63,81,47,0.14);
+  --app-ok-bg:    #DCE5CB;
+  --app-ok-ink:   #42542F;
+  --app-sage:     #8FA07C;
+
+  --display: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --body:    'Poppins', system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--board);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1120px; margin: 0 auto; padding: 56px 24px 96px; }
+
+/* ── Encabezado ─────────────────────────────────────────────────────────── */
+.eyebrow {
+  font-family: var(--display); font-weight: 700; font-size: 11px;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--app-sage);
+  margin: 0 0 14px;
+}
+h1 {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(34px, 6vw, 54px); line-height: 1.04;
+  letter-spacing: -0.025em; margin: 0; text-wrap: balance; color: #F4F0E2;
+}
+.lede {
+  max-width: 62ch; margin: 22px 0 0; font-size: 16.5px;
+  line-height: 1.66; color: var(--ink-soft);
+}
+.lede strong { color: var(--ink); font-weight: 600; }
+
+.quote {
+  margin: 30px 0 0; padding: 18px 22px;
+  border-left: 3px solid var(--app-sage);
+  background: var(--board-2); border-radius: 0 12px 12px 0;
+  max-width: 68ch;
+}
+.quote p { margin: 0; font-size: 14.5px; color: var(--ink-soft); font-style: italic; line-height: 1.62; }
+.quote cite {
+  display: block; margin-top: 10px; font-style: normal; font-size: 11.5px;
+  font-family: var(--display); font-weight: 600; letter-spacing: 0.05em;
+  color: var(--ink-faint);
+}
+
+/* ── Secciones ──────────────────────────────────────────────────────────── */
+section { margin-top: 76px; }
+h2 {
+  font-family: var(--display); font-weight: 700; font-size: 25px;
+  letter-spacing: -0.015em; margin: 0 0 8px; color: #F4F0E2;
+}
+.sub { margin: 0 0 30px; color: var(--ink-soft); max-width: 66ch; font-size: 14.5px; }
+
+/* ── Hallazgos ──────────────────────────────────────────────────────────── */
+.finds { display: grid; gap: 1px; background: var(--board-line); border-radius: 14px; overflow: hidden; }
+.find {
+  background: var(--board-2); padding: 20px 22px;
+  display: grid; grid-template-columns: 1fr; gap: 7px;
+}
+@media (min-width: 720px) { .find { grid-template-columns: 210px 1fr; gap: 24px; align-items: start; } }
+.find-what {
+  font-family: var(--display); font-weight: 700; font-size: 14.5px;
+  color: #F4F0E2; line-height: 1.4;
+}
+.find-why { margin: 0; font-size: 14px; color: var(--ink-soft); line-height: 1.62; }
+.find-why code {
+  font-family: var(--display); font-weight: 600; font-size: 12.5px;
+  background: rgba(143,160,124,0.16); color: #C3CFB0;
+  padding: 1px 6px; border-radius: 5px;
+}
+
+/* ── Escala tipográfica (el elemento firma) ─────────────────────────────── */
+.scales { display: grid; gap: 26px; }
+@media (min-width: 760px) { .scales { grid-template-columns: 1fr 1fr; gap: 34px; } }
+.scale { background: var(--board-2); border-radius: 16px; padding: 24px; }
+.scale h3 {
+  font-family: var(--display); font-weight: 700; font-size: 13px;
+  letter-spacing: 0.1em; text-transform: uppercase; margin: 0 0 4px;
+}
+.scale.bad h3 { color: var(--app-terra); }
+.scale.good h3 { color: var(--app-sage); }
+.scale .verdict { margin: 0 0 20px; font-size: 13px; color: var(--ink-soft); }
+.bars { display: grid; gap: 11px; }
+.bar { display: grid; grid-template-columns: 46px 1fr; align-items: center; gap: 12px; }
+.bar-n {
+  font-family: var(--display); font-weight: 700; font-size: 12px;
+  color: var(--ink-faint); text-align: right; font-variant-numeric: tabular-nums;
+}
+.bar-fill { height: 9px; border-radius: 5px; }
+.scale.bad  .bar-fill { background: linear-gradient(90deg, #8C5A44, var(--app-terra)); }
+.scale.good .bar-fill { background: linear-gradient(90deg, #5D6E4A, var(--app-sage)); }
+.bar-role {
+  grid-column: 2; font-size: 11.5px; color: var(--ink-faint); margin-top: -4px;
+}
+
+/* ── Board de pantallas ─────────────────────────────────────────────────── */
+.board { display: grid; gap: 40px; justify-items: center; }
+@media (min-width: 800px) { .board { grid-template-columns: 1fr 1fr; align-items: start; } }
+.panel { display: grid; gap: 16px; justify-items: center; width: 100%; }
+.panel-label {
+  font-family: var(--display); font-weight: 700; font-size: 12px;
+  letter-spacing: 0.13em; text-transform: uppercase;
+}
+.panel.before .panel-label { color: var(--app-terra); }
+.panel.after  .panel-label { color: var(--app-sage); }
+
+.phone {
+  width: 320px; max-width: 100%;
+  background: linear-gradient(170deg, var(--app-cream) 0%, var(--app-cream-2) 100%);
+  border-radius: 34px; padding: 16px 14px 20px;
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(214,222,196,0.10);
+  font-family: var(--body); color: var(--app-forest);
+}
+.status {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 2px 8px 14px; font-size: 11px; font-weight: 600; color: var(--app-forest);
+}
+.status .dots { display: flex; gap: 4px; }
+.status .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--app-soft); display: block; }
+.p-title {
+  font-family: var(--display); font-weight: 700; font-size: 25px;
+  color: var(--app-forest); margin: 0 6px 12px; letter-spacing: -0.02em;
+}
+
+/* Fila — ANTES. Medidas calcadas de CoachChatsScreen.tsx (s.chat, s.chatName…) */
+.row {
+  display: flex; gap: 12px; align-items: center;
+  background: var(--app-card); border: 1px solid var(--app-line);
+  border-radius: 20px; padding: 12px 14px; margin-bottom: 8px;
+}
+.av {
+  width: 44px; height: 44px; border-radius: 22px; flex: none;
+  display: grid; place-items: center;
+  font-family: var(--display); font-weight: 700; font-size: 15px; color: #fff;
+}
+.av.a { background: #6B5B4A; }
+.av.j { background: #6B6BD6; }
+.row-mid { flex: 1; min-width: 0; }
+.r-name { font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+.r-prevline { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+.tag-ok {
+  font-family: var(--display); font-weight: 700; font-size: 9px;
+  letter-spacing: 0.04em; color: var(--app-ok-ink); background: var(--app-ok-bg);
+  border-radius: 9px; padding: 2px 7px; white-space: nowrap; flex: none;
+}
+.r-prev {
+  font-size: 11.5px; color: var(--app-soft); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.r-rel { font-size: 11px; font-weight: 500; color: var(--app-soft); margin-top: 3px; }
+.r-time { font-size: 10px; color: var(--app-soft); flex: none; align-self: flex-start; }
+.hint {
+  font-size: 11px; color: var(--app-soft); opacity: 0.75;
+  text-align: center; margin: 14px 0 0;
+}
+.arch {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 500; color: var(--app-soft);
+  padding: 14px 4px 0;
+}
+.void { height: 190px; }
+.void-note {
+  height: 190px; display: grid; place-items: center; text-align: center;
+  font-size: 11px; color: rgba(107,122,86,0.5); font-style: italic;
+}
+
+/* Fila — DESPUÉS */
+.grp {
+  font-family: var(--display); font-weight: 700; font-size: 10.5px;
+  letter-spacing: 0.11em; text-transform: uppercase; color: var(--app-soft);
+  margin: 4px 6px 9px;
+}
+.grp.second { margin-top: 22px; }
+.row2 {
+  display: flex; gap: 13px; align-items: center;
+  background: var(--app-card); border-radius: 20px;
+  padding: 14px 15px; margin-bottom: 9px;
+  box-shadow: 0 1px 2px rgba(46,38,26,0.06), 0 10px 18px -12px rgba(46,38,26,0.28);
+}
+.row2.quiet { background: rgba(247,242,231,0.55); box-shadow: none; border: 1px solid var(--app-line); }
+.n2 {
+  font-family: var(--display); font-weight: 600; font-size: 16.5px;
+  letter-spacing: -0.01em; line-height: 1.25; color: var(--app-forest);
+}
+.rel2 { font-size: 12px; font-weight: 500; color: var(--app-soft); margin-top: 3px; }
+.prev2 {
+  font-size: 12px; color: var(--app-soft); margin-top: 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 6px;
+}
+.prev2 b { font-weight: 500; color: var(--app-forest); }
+.seed { width: 6px; height: 6px; border-radius: 3px; background: var(--app-sage); flex: none; }
+.chip {
+  flex: none; text-align: center; border-radius: 13px;
+  padding: 7px 10px; background: var(--app-ok-bg); align-self: center;
+}
+.chip .d {
+  font-family: var(--display); font-weight: 800; font-size: 15px;
+  line-height: 1; color: var(--app-ok-ink); font-variant-numeric: tabular-nums;
+}
+.chip .m {
+  font-family: var(--display); font-weight: 700; font-size: 8.5px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--app-ok-ink);
+  opacity: 0.78; margin-top: 3px; display: block;
+}
+.stale { flex: none; font-size: 11px; color: var(--app-soft); align-self: center; }
+.unread { width: 9px; height: 9px; border-radius: 5px; background: var(--app-terra); flex: none; }
+
+/* ── Anatomía ───────────────────────────────────────────────────────────── */
+.anat { display: grid; gap: 1px; background: var(--board-line); border-radius: 14px; overflow: hidden; }
+.anat-row { background: var(--board-2); padding: 18px 22px; display: grid; gap: 6px; }
+@media (min-width: 720px) { .anat-row { grid-template-columns: 150px 1fr; gap: 24px; align-items: baseline; } }
+.anat-k {
+  font-family: var(--display); font-weight: 700; font-size: 12px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--app-sage);
+}
+.anat-v { margin: 0; font-size: 14px; color: var(--ink-soft); line-height: 1.62; }
+.anat-v strong { color: var(--ink); font-weight: 600; }
+
+/* ── Trabajo ────────────────────────────────────────────────────────────── */
+ol.work { counter-reset: w; list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+ol.work li {
+  counter-increment: w; position: relative; padding-left: 44px;
+  font-size: 14.5px; color: var(--ink-soft); line-height: 1.6;
+}
+ol.work li::before {
+  content: counter(w); position: absolute; left: 0; top: 1px;
+  width: 28px; height: 28px; border-radius: 8px;
+  background: rgba(143,160,124,0.16); color: var(--app-sage);
+  font-family: var(--display); font-weight: 700; font-size: 12.5px;
+  display: grid; place-items: center;
+}
+ol.work li strong { color: var(--ink); font-weight: 600; }
+ol.work code {
+  font-family: var(--display); font-weight: 600; font-size: 12.5px;
+  background: rgba(143,160,124,0.16); color: #C3CFB0;
+  padding: 1px 6px; border-radius: 5px;
+}
+
+.foot {
+  margin-top: 72px; padding-top: 26px; border-top: 1px solid var(--board-line);
+  font-size: 13px; color: var(--ink-faint); max-width: 68ch;
+}
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Spec de rediseño · pantalla del coach</p>
+  <h1>Tus personas,<br>de bandeja a roster</h1>
+
+  <p class="lede">
+    La pantalla se llama <strong>Tus personas</strong> y está construida como una bandeja de mensajes.
+    Esa contradicción es todo el problema: el dato que el profesional viene a buscar
+    —<strong>cuándo vuelvo a ver a esta persona</strong>— existe, se calcula bien, y se dibuja
+    como lo más chico y más pálido de la tarjeta.
+  </p>
+
+  <div class="quote">
+    <p>El estado de la RELACIÓN, no de la conversación. Esta pantalla listaba a las personas
+    correctas —las salas nacen de una reserva— pero las mostraba solo como hilos de mensajes.
+    El coach no piensa en conversaciones ni en reservas: piensa en personas, y de cada una
+    quiere saber cuándo la vio por última vez y si tiene próxima.</p>
+    <cite>— Comentario ya escrito en CoachChatsScreen.tsx, línea 53</cite>
+  </div>
+
+  <p class="lede" style="margin-top:22px">
+    O sea que la intención ya estaba decidida y documentada. Lo que falta es que el diseño la cumpla.
+  </p>
+
+  <!-- ── Diagnóstico ───────────────────────────────────────────────────── -->
+  <section>
+    <h2>Qué es exactamente lo insulso</h2>
+    <p class="sub">Seis cosas medibles, no impresiones. Cada una está anclada a una línea del archivo.</p>
+
+    <div class="finds">
+      <div class="find">
+        <div class="find-what">La respuesta está en la letra más chica</div>
+        <p class="find-why">«29 sesiones · próxima 28 ago» se dibuja a <code>11pt</code> en <code>FOREST_SOFT</code>,
+        el color más apagado de la tarjeta. El preview del mensaje va a 11.5 y el nombre a 13.5:
+        <strong>lo más importante quedó último en la jerarquía</strong>.</p>
+      </div>
+
+      <div class="find">
+        <div class="find-what">La etiqueta y el texto dicen lo mismo</div>
+        <p class="find-why">Cuando no hay motivo escrito, <code>armarPreview</code> devuelve el texto
+        «Sesión aceptada» <em>y</em> además prende la etiqueta «✓ SESIÓN ACEPTADA». La pastilla se come
+        media fila, así que el texto duplicado se corta a mitad de palabra: «Sesión acepta…».
+        <strong>No se ve prolijo porque no lo es.</strong></p>
+      </div>
+
+      <div class="find">
+        <div class="find-what">Cinco tamaños en 4,5 puntos</div>
+        <p class="find-why">9 · 10 · 11 · 11.5 · 13.5. Cinco roles distintos repartidos en un rango
+        donde el ojo no distingue ninguno. No hay nada grande, así que <strong>no hay dónde
+        aterrizar la mirada</strong> — y eso es literalmente lo que se siente como insulso.</p>
+      </div>
+
+      <div class="find">
+        <div class="find-what">El orden es del chat, no de la persona</div>
+        <p class="find-why">La lista se ordena por <code>lastMessageAt</code>. Alguien con sesión mañana
+        queda debajo de alguien que mandó «gracias» hoy. Correcto para una bandeja,
+        <strong>al revés para un roster</strong>.</p>
+      </div>
+
+      <div class="find">
+        <div class="find-what">El horario ocupa el mejor lugar</div>
+        <p class="find-why">La columna derecha —el segundo lugar que se escanea— la ocupa «4:07 p. m.»,
+        el dato menos accionable de la fila. <strong>Ese espacio es el que le falta a la próxima sesión.</strong></p>
+      </div>
+
+      <div class="find">
+        <div class="find-what">Dos filas y media pantalla vacía</div>
+        <p class="find-why">Con 2 personas activas la lista ocupa el 20% de alto y el aviso
+        «Mantené presionada una persona…» —una nota al pie— queda flotando en el centro geométrico
+        de la pantalla, <strong>donde el ojo lo lee como si fuera contenido</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Escala ────────────────────────────────────────────────────────── -->
+  <section>
+    <h2>La escala, dibujada</h2>
+    <p class="sub">Cada barra es un tamaño de texto de la fila. La forma del bloque es el diagnóstico:
+    a la izquierda no hay escalón, hay una pared.</p>
+
+    <div class="scales">
+      <div class="scale bad">
+        <h3>Hoy</h3>
+        <p class="verdict">Rango de 4,5pt para cinco roles. Todo pesa lo mismo.</p>
+        <div class="bars">
+          <div class="bar"><span class="bar-n">13.5</span><span class="bar-fill" style="width:56%"></span></div>
+          <div class="bar-role">Nombre de la persona</div>
+          <div class="bar"><span class="bar-n">11.5</span><span class="bar-fill" style="width:48%"></span></div>
+          <div class="bar-role">Preview del mensaje</div>
+          <div class="bar"><span class="bar-n">11</span><span class="bar-fill" style="width:46%"></span></div>
+          <div class="bar-role">Sesiones y próxima ← la respuesta</div>
+          <div class="bar"><span class="bar-n">10</span><span class="bar-fill" style="width:42%"></span></div>
+          <div class="bar-role">Horario</div>
+          <div class="bar"><span class="bar-n">9</span><span class="bar-fill" style="width:38%"></span></div>
+          <div class="bar-role">Etiqueta</div>
+        </div>
+      </div>
+
+      <div class="scale good">
+        <h3>Propuesta</h3>
+        <p class="verdict">Un salto real arriba, y abajo dos niveles que sí conviven.</p>
+        <div class="bars">
+          <div class="bar"><span class="bar-n">16.5</span><span class="bar-fill" style="width:100%"></span></div>
+          <div class="bar-role">Nombre de la persona</div>
+          <div class="bar"><span class="bar-n">15</span><span class="bar-fill" style="width:88%"></span></div>
+          <div class="bar-role">Día de la próxima sesión (en la pastilla)</div>
+          <div class="bar"><span class="bar-n">12</span><span class="bar-fill" style="width:52%"></span></div>
+          <div class="bar-role">Sesiones e historia</div>
+          <div class="bar"><span class="bar-n">12</span><span class="bar-fill" style="width:52%"></span></div>
+          <div class="bar-role">Preview del mensaje</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Board ─────────────────────────────────────────────────────────── -->
+  <section>
+    <h2>Antes y después</h2>
+    <p class="sub">Los mismos datos reales de tu captura: Andre con 29 sesiones y próxima el 28 de agosto,
+    Joaquín con 2 sesiones y cinco semanas sin verse.</p>
+
+    <div class="board">
+
+      <!-- ANTES -->
+      <div class="panel before">
+        <span class="panel-label">Hoy</span>
+        <div class="phone">
+          <div class="status"><span>4:30</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <h3 class="p-title">Tus personas</h3>
+
+          <div class="row">
+            <div class="av a">A</div>
+            <div class="row-mid">
+              <div class="r-name">andre</div>
+              <div class="r-prevline">
+                <span class="tag-ok">✓ SESIÓN ACEPTADA</span>
+                <span class="r-prev">Sesión acepta…</span>
+              </div>
+              <div class="r-rel">29 sesiones · próxima 28 ago</div>
+            </div>
+            <span class="r-time">4:07 p.m.</span>
+          </div>
+
+          <div class="row">
+            <div class="av j">J</div>
+            <div class="row-mid">
+              <div class="r-name">Joaquin Albisu</div>
+              <div class="r-prevline"><span class="r-prev">El usuario canceló la sesión</span></div>
+              <div class="r-rel">2 sesiones · hace 5 semanas</div>
+            </div>
+            <span class="r-time">Ayer</span>
+          </div>
+
+          <p class="hint">Mantené presionada una persona para archivarla</p>
+          <div class="arch">› Archivados (5)</div>
+          <div class="void-note">medio teléfono vacío</div>
+        </div>
+      </div>
+
+      <!-- DESPUÉS -->
+      <div class="panel after">
+        <span class="panel-label">Propuesta</span>
+        <div class="phone">
+          <div class="status"><span>4:30</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <h3 class="p-title">Tus personas</h3>
+
+          <div class="grp">Con sesión agendada</div>
+
+          <div class="row2">
+            <div class="av a">A</div>
+            <div class="row-mid">
+              <div class="n2">Andre</div>
+              <div class="rel2">29 sesiones · la viste hace 6 días</div>
+              <div class="prev2"><span class="seed"></span><b>Vos:</b>&nbsp;dale, nos vemos el jueves</div>
+            </div>
+            <div class="chip"><span class="d">28</span><span class="m">ago</span></div>
+          </div>
+
+          <div class="grp second">Sin próxima</div>
+
+          <div class="row2 quiet">
+            <div class="av j">J</div>
+            <div class="row-mid">
+              <div class="n2">Joaquín Albisu</div>
+              <div class="rel2">2 sesiones · hace 5 semanas</div>
+              <div class="prev2">El usuario canceló la sesión</div>
+            </div>
+          </div>
+
+          <div class="arch">› Archivados (5)</div>
+          <p class="hint">Mantené presionada una persona para archivarla</p>
+          <div class="void"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Anatomía ──────────────────────────────────────────────────────── -->
+  <section>
+    <h2>Por qué cada decisión</h2>
+    <p class="sub">Ninguna es estética suelta: cada una responde a un hallazgo de arriba.</p>
+
+    <div class="anat">
+      <div class="anat-row">
+        <div class="anat-k">La pastilla</div>
+        <p class="anat-v">El día de la próxima sesión ocupa la columna derecha, donde hoy está el horario.
+        <strong>Que la pastilla exista ya es información</strong>: si está, esa persona está agendada; si no está,
+        no. El profesional escanea el riel derecho y ve su semana sin leer una palabra.</p>
+      </div>
+      <div class="anat-row">
+        <div class="anat-k">Los dos grupos</div>
+        <p class="anat-v">«Con sesión agendada» y «Sin próxima» es el triage real del profesional, y ordena
+        cada grupo por lo que corresponde: las agendadas por fecha ascendente —la más próxima primero—
+        y las otras por hace cuánto. <strong>Los encabezados solo aparecen si los dos grupos tienen gente</strong>;
+        con una sola persona serían decoración.</p>
+      </div>
+      <div class="anat-row">
+        <div class="anat-k">Sin etiqueta</div>
+        <p class="anat-v">Las pastillas «SESIÓN ACEPTADA» y «RECURSO» se van. Las dos repetían lo que el
+        preview ya decía y le robaban la mitad del ancho. Queda <strong>un punto de color de 6px</strong>
+        delante del preview: mismo aviso, 140pt menos de fila.</p>
+      </div>
+      <div class="anat-row">
+        <div class="anat-k">El nombre, en serio</div>
+        <p class="anat-v">De 13.5 a 16.5, en Plus Jakarta Sans 600 —la misma cara que ya usan los títulos
+        de la app—. La pantalla es un directorio de gente: <strong>el nombre es el ancla y tiene que
+        leerse como tal</strong>. Y «andre» pasa a «Andre»: capitalizar el nombre propio es respeto, no formato.</p>
+      </div>
+      <div class="anat-row">
+        <div class="anat-k">Peso por estado</div>
+        <p class="anat-v">Quien tiene sesión agendada va en tarjeta con sombra; quien no, en tarjeta
+        plana con borde. <strong>La jerarquía la lleva la superficie</strong>, así no hace falta un
+        segundo color ni una segunda tipografía para decir lo mismo.</p>
+      </div>
+      <div class="anat-row">
+        <div class="anat-k">Hoy y mañana</div>
+        <p class="anat-v">La pastilla dice <strong>«hoy»</strong> o <strong>«mañana»</strong> como palabra, en verde
+        pleno, en vez del número del día. Un profesional que mira su lista a la mañana necesita separar lo de
+        hoy de lo de dentro de tres semanas en un vistazo, y «28» no dice eso. Del tercer día en adelante la
+        fecha vuelve a ser lo más informativo.</p>
+      </div>
+      <div class="anat-row">
+        <div class="anat-k">Nada a la derecha</div>
+        <p class="anat-v">La fila sin próxima <strong>no lleva nada</strong> en la columna derecha — ni el horario
+        de antes ni un «hace 5 semanas», que repetiría la línea de historia que tiene al lado. El vacío es el
+        dato: si no hay pastilla, no hay sesión agendada.</p>
+      </div>
+      <div class="anat-row">
+        <div class="anat-k">La nota al pie</div>
+        <p class="anat-v">El aviso de mantener presionado baja al final, después de Archivados, y se acorta.
+        Es una nota al pie: <strong>tiene que estar al pie</strong>, no en el centro de la pantalla.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Trabajo ───────────────────────────────────────────────────────── -->
+  <section>
+    <h2>Qué hay que tocar</h2>
+    <p class="sub">Todo dentro de <code style="font-family:var(--display);font-weight:600">screens/CoachChatsScreen.tsx</code>.
+    No hace falta ninguna consulta nueva: los tres datos que mueven el diseño —<code>sesiones</code>,
+    <code>ultimaIso</code>, <code>proximaIso</code>— ya se traen y ya están en el tipo.</p>
+
+    <ol class="work">
+      <li><strong>Partir la lista en dos grupos</strong> por <code>proximaIso</code>, y ordenar cada uno por
+      su propio criterio en vez del <code>lastMessageAt</code> único de hoy.</li>
+      <li><strong>Reemplazar <code>s.meta</code></strong> (horario + punto) por la pastilla de fecha, con
+      el punto de no leído mudándose al lado del nombre.</li>
+      <li><strong>Sacar <code>s.tagOk</code> y <code>s.tagRes</code></strong>, y arreglar de paso el duplicado
+      de <code>armarPreview</code>: si no hay motivo escrito, que el preview no repita la etiqueta que acaba de irse.</li>
+      <li><strong>Subir la escala tipográfica</strong> de la fila a 16.5 / 12 / 12, y darle a la tarjeta la sombra
+      de <code>SurfaceCard</code> en vez del borde al 14% que hoy casi no se ve.</li>
+      <li><strong>Mover el aviso de archivar</strong> al pie, debajo de Archivados.</li>
+      <li><strong>Capitalizar el nombre</strong>: los perfiles guardan lo que la persona tipeó al registrarse,
+      y ahí entra «andre» en minúscula. En un directorio de gente eso se lee como descuido.</li>
+    </ol>
+  </section>
+
+  <p class="foot">
+    Lo que <em>no</em> cambia: la paleta, las fuentes, el radio de 20, el gesto de mantener presionado,
+    la regla de archivado automático y el punto de no leído en Archivados. El sistema visual está bien
+    — lo que estaba mal era qué dato mandaba en la fila.
+  </p>
+
+</div>
