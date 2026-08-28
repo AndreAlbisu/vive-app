@@ -66,12 +66,40 @@
 
 - ✅ **La lista de chats de Mensajes baja cuando es lo primero de la pantalla.** La primera fila arrancaba a 76pt del área segura y es el destino más tocado de la pantalla, en la zona a la que el pulgar no llega sin recolocar la mano. El aire es **condicional** —solo si no hay banner de reembolso ni carrusel arriba, porque ahí el problema no existe— y sale del alto de pantalla (12%, piso 64, techo 132), no de un número clavado.
 
+### Títulos y matrículas verificados por Vita
+
+- ✅ **Feature nueva de punta a punta.** El profesional carga sus credenciales, sube el documento que las respalda, un admin lo revisa desde el panel, y el perfil público muestra el dato en texto con la marca de verificado. `scripts/add-coach-credentials.sql` ✅ **CORRIDO y VERIFICADO** (8 chequeos), `admin-actions` **v22 deployada**.
+- 🔴 **Destapó un agujero previo más grande que la feature**: hoy se aprueban psicólogos **sin ningún respaldo documental** — la postulación pide un video y una bio, y `verified` se decide a ojo.
+- 🔴 **EL DOCUMENTO NO ES CONTENIDO PÚBLICO**, y esa es la decisión que ordena todo. Se descartó la galería de certificados por tres motivos, ninguno teórico: (1) un diploma lleva nombre completo, muchas veces DNI y firma — publicarlo expone datos personales del profesional a cualquiera y es descargable; (2) **una imagen es un canal de texto que ningún regex puede moderar**, o sea que saltea `contactInfoGuard` con el WhatsApp en una esquina del certificado; (3) un JPEG no prueba nada, y mostrarlo sería que Vita preste credibilidad a algo que no chequeó. Lo que verifica de verdad a un psicólogo en Argentina es la **matrícula**, que es un número consultable — por eso es campo propio y **obligatorio** cuando el tipo es matrícula.
+- 🔴 **`revoke update` + `grant update` por columnas nombradas.** RLS dice qué FILAS, no qué columnas: sin eso el coach hacía `update ... set status='verificada'` sobre su propia fila y **se auto-verificaba**, dejando toda la revisión como decoración. Verificado contra la base: `puede_escribir_status = false`.
+- 🔴 **Editar devuelve a revisión** (`trg_reset_credential_on_edit`). Sin eso el ataque es de un paso: cargar "Coach de hábitos", esperar la verificación, editarla a "Lic. en Psicología" — y la marca seguía puesta sobre un texto que nadie miró.
+- 📝 **Vista y no policy** para lo público: una policy de SELECT pública sobre la tabla dejaría `file_path` legible con la anon key. Verificado: `fugas_en_vista = 0`.
+- 📝 **Primer bucket PRIVADO del proyecto** (los cinco anteriores son públicos, así que el `getPublicUrl` que se copia en toda la app acá no sirve). El admin lo abre con una URL firmada de 5 minutos que emite `admin-actions`, y **abrirlo queda auditado**: es un documento de identidad, tiene que constar quién lo vio.
+- 🔴 **El script abortó la primera corrida, y estuvo bien.** El paso que extiende el CHECK de `notifications.type` anclaba en `]::text[]`, un sufijo que este Postgres no imprime; el guard frenó todo en vez de dejar el CHECK borrado. Corregido anclando en `::text]`, que aparece una sola vez. De paso quedó confirmado que `postulacion_aprobada`/`postulacion_rechazada` **sí están** en el CHECK — `SCHEMA.md` no los listaba y `notifyCoach` es best-effort, así que si no hubieran estado los avisos de postulación venían fallando en silencio desde agosto.
+- ⚠️ **`db query --linked` estuvo caído toda la sesión** (siete intentos, `LegacyDbConfigConnectTempRoleError`). Todo lo que se verificó contra la base se corrió a mano en el SQL Editor. La API de Supabase sí respondía — los deploys salieron sin problema.
+
+### "Conexiones" pasa a "Profesionales"
+
+- ✅ Feedback externo: la palabra no se entiende sin contexto. **La evidencia ya estaba en el repo** — en `SofiaAssistant`, la opción que lleva a esa misma pantalla dice *"Quiero ver a los profesionales"*. Cuando hubo que nombrarla para que se entendiera sola, no se usó "Conexiones".
+- 📝 **La barra de abajo no muestra label desde el 20/08**, así que la palabra no hacía trabajo de navegación: aparecía como título de pantalla, o sea después de tocar. El que orienta es el ícono.
+- 🔴 **Del lado COACH el copy dejó de nombrar la sección.** "No aparecés en Profesionales" es un error de categoría: el coach ES un profesional. Pasó a decir qué le pasa a él — "Hoy no te encuentran", "Dónde te encuentran", "Cómo te encuentran".
+- ⚠️ **No se renombró nada más que texto visible.** La ruta `/(tabs)/conexiones`, `constants/conexionesDoors.ts` y sobre todo la clave `vive_tooltip_conexiones` se quedan: cambiar esa última le vuelve a mostrar el tooltip a todos los que ya lo cerraron.
+
+### Reservas pendientes que sobreviven a su horario
+
+- 🔴 `expire_pending_bookings()` vencía por **antigüedad de la solicitud** (24hs desde `created_at`), no por el horario de la sesión. Una reserva pedida para dentro de 3 horas que el coach nunca acepta **cruza el horario y sigue `pendiente` otras 21 horas**: la persona ve "esperando confirmación" sobre una sesión que ya pasó, con la plata retenida si pagó, y el slot del coach ocupado por algo que ya no puede ocurrir. `scripts/expire-pending-past-session-time.sql` — ⚠️ **PENDIENTE DE CORRER**.
+- 📝 El guard de regex sobre `scheduled_time` no es defensivo de más: la columna es `text`, el cast tira si no parsea, y esto corre en un cron cada 5 minutos — una fila con basura abortaría la corrida y se llevaría puesto también el vencimiento de 24hs, que hoy no puede fallar. El `OR` de SQL no garantiza cortocircuito.
+
 ### De paso
 
 - 🔴 **Cuarta vez que la bottom bar "rota" era un bundle viejo.** Se perdió un rato analizando `IslandTabBar`, el overlay de Sofía y los límites del padre en Android antes de mandar a cerrar y reabrir la app, que es exactamente lo que el changelog de la sesión 129 ya decía que hay que hacer primero.
 
 **Pendiente para la próxima sesión:**
 
+- 🔴 **Probar el ciclo de credenciales en el teléfono**: cargar una como Coach Prueba, verificarla desde el panel, y confirmar que en el perfil público aparece **el dato y no el documento**. Nada de esto se vio corriendo.
+- 🔴 **Correr `scripts/expire-pending-past-session-time.sql`** — escrito y sin correr.
+- ⚠️ **Falta un párrafo en la política de privacidad**: ahora se recibe y se conserva un documento de identidad profesional. Va con los placeholders que esperan al abogado.
+- ⚠️ **`lib/coachBookingActions.ts:29` deja confirmar una sesión cuyo horario ya pasó** — la otra mitad del defecto de las pendientes, sin arreglar.
 - 🔴 **Probar el rediseño de "Tus personas" en el teléfono.** Nada se vio corriendo. Los casos que importan: alguien con sesión hoy (pastilla verde plena), los dos grupos con gente (que aparezcan los rótulos), y un solo grupo (que NO aparezcan).
 - ⚠️ **Es pantalla de coach y el spec de layout es de Joaquín** (sesión 144). Se avanzó por pedido explícito de Andre — hay que pasárselo.
 - ✅ ~~Probar una sesión real desde el teléfono~~ — **confirmado el 28/08 con prueba en la base**, no por lo que se vio en pantalla: `session_attendance` del booking `e9c429a6…` quedó con `meetings_count 1`, `participants_count 1`, `first_join_at 19:16:57 UTC`, y `user_name: "andre"` en el crudo. A una sala privada no entra nadie sin token válido, así que eso prueba el camino de entrada entero. **Y era una de las 43 viejas**: su `meeting_url` pasó de `vive-app.daily.co` a `veraapp.daily.co` sola al entrar — la autocorrección funciona (quedan 42, se van corrigiendo de a una). La ventana `nbf`/`exp` también dio bien: sesión de las 16:00 ART, entrada 16:16 ART, aceptada. De yapa, el cron de `session-attendance` corrió a las 19:17 y levantó la asistencia contra la cuenta nueva.
