@@ -7,6 +7,8 @@ import {
   Animated,
   Platform,
 } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { ViveFonts, ViveMoodColors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { localDayKey } from '@/lib/dates';
@@ -33,6 +35,20 @@ type MoodId = (typeof MOODS)[number]['id'];
 const GLASS        = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 
+// ── Confirmar manteniendo apretado ──────────────────────────────────────────
+// El check-in se confirma sosteniendo el dedo, no con un toque suelto: un
+// anillo se completa alrededor del círculo y al cerrarse vibra corto.
+//
+// 750ms y no 1000: sostener un segundo entero para decir cómo te sentís se
+// vuelve tedioso al tercer día, y esto se hace todos los días.
+const HOLD_MS = 750;
+const ANILLO  = 40;              // lienzo del anillo (el círculo del ánimo mide 24)
+const R       = 16;              // radio: deja 4px de aire contra el círculo
+const TRAZO   = 2.5;
+const VUELTA  = 2 * Math.PI * R; // largo del recorrido, para el dash
+
+const CirculoAnimado = Animated.createAnimatedComponent(Circle);
+
 interface Props {
   userId:        string | undefined;
   todayEntry:    MoodEntry | undefined;
@@ -53,6 +69,48 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked }: Pro
 
   const confirmOpacity = useRef(new Animated.Value(0)).current;
   const confirmY       = useRef(new Animated.Value(-4)).current;
+
+  // Cuál se está sosteniendo ahora. Uno solo a la vez, así que alcanza un valor
+  // animado compartido en vez de uno por ánimo.
+  const [manteniendo, setManteniendo] = useState<MoodId | null>(null);
+  const progreso = useRef(new Animated.Value(0)).current;
+  // El `start` de una animación completada dispara su callback y DESPUÉS llega
+  // el `onPressOut` del mismo gesto. Sin esta bandera, soltar el dedo después de
+  // confirmar cancelaba lo recién confirmado.
+  const confirmado = useRef(false);
+
+  function completar(id: MoodId) {
+    confirmado.current = true;
+    setManteniendo(null);
+    progreso.setValue(0);
+    // Corta y sola: es un acuse de recibo, no una celebración.
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    handlePress(id);
+  }
+
+  function empezarAMantener(id: MoodId) {
+    confirmado.current = false;
+    setManteniendo(id);
+    progreso.setValue(0);
+    Animated.timing(progreso, {
+      toValue: 1,
+      duration: HOLD_MS,
+      // ⚠️ `useNativeDriver: false` obligado: lo que se anima es
+      // `strokeDashoffset` de un SVG, que no existe en el hilo nativo. Es un
+      // trazo de una sola figura chica durante 750ms, no un layout.
+      useNativeDriver: false,
+    }).start(({ finished }) => { if (finished) completar(id); });
+  }
+
+  function soltar() {
+    if (confirmado.current) return;
+    progreso.stopAnimation(() => {
+      // Se desarma rápido en vez de saltar a cero: soltar antes de tiempo es
+      // arrepentirse, y merece verse como que el anillo se vuelve.
+      Animated.timing(progreso, { toValue: 0, duration: 140, useNativeDriver: false })
+        .start(() => setManteniendo(null));
+    });
+  }
 
   // Preload from parent's history query
   useEffect(() => {
@@ -136,28 +194,58 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked }: Pro
           return (
             <Pressable
               key={m.id}
-              onPress={() => handlePress(m.id)}
+              onPressIn={() => empezarAMantener(m.id)}
+              onPressOut={soltar}
+              // 🔴 Con lector de pantalla no hay "mantener": VoiceOver y
+              // TalkBack mandan un toque, no un gesto sostenido. Sin esto, la
+              // persona que usa un lector no podría hacer el check-in.
+              onAccessibilityTap={() => completar(m.id)}
               accessibilityLabel={m.label}
+              accessibilityHint="Mantené presionado para confirmar"
               accessibilityRole="radio"
               accessibilityState={{ selected: isSel }}
               style={s.moodItem}
             >
-              <Animated.View
-                style={[
-                  s.circle,
-                  { backgroundColor: color },
-                  isSel && Platform.OS === 'ios' && {
-                    shadowColor: color,
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0.55,
-                    shadowRadius: 5,
-                  },
-                  {
-                    transform: [{ scale: scales[i] }],
-                    opacity: opacities[i],
-                  },
-                ]}
-              />
+              <View style={s.circleWrap}>
+                {manteniendo === m.id && (
+                  <Svg width={ANILLO} height={ANILLO} style={s.anillo} pointerEvents="none">
+                    {/* Arranca arriba (de ahí el -90) y se cierra en sentido
+                        horario. `strokeDasharray` de una vuelta entera y el
+                        offset yendo de una vuelta a cero: el trazo se dibuja. */}
+                    <CirculoAnimado
+                      cx={ANILLO / 2}
+                      cy={ANILLO / 2}
+                      r={R}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth={TRAZO}
+                      strokeLinecap="round"
+                      strokeDasharray={`${VUELTA} ${VUELTA}`}
+                      strokeDashoffset={progreso.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [VUELTA, 0],
+                      })}
+                      transform={`rotate(-90 ${ANILLO / 2} ${ANILLO / 2})`}
+                    />
+                  </Svg>
+                )}
+                <Animated.View
+                  style={[
+                    s.circle,
+                    { backgroundColor: color },
+                    isSel && Platform.OS === 'ios' && {
+                      shadowColor: color,
+                      shadowOffset: { width: 0, height: 0 },
+                      shadowOpacity: 0.55,
+                      shadowRadius: 5,
+                    },
+                    {
+                      transform: [{ scale: scales[i] }],
+                      opacity: opacities[i],
+                    },
+                  ]}
+                />
+              </View>
               <Animated.Text
                 style={[
                   s.label,
@@ -229,6 +317,19 @@ const s = StyleSheet.create({
     gap: 5,
     zIndex: 1,
     paddingHorizontal: 2,
+  },
+  // Mide lo mismo que el círculo para no mover el layout: el anillo va
+  // absoluto por fuera, desbordando hacia los costados.
+  circleWrap: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  anillo: {
+    position: 'absolute',
+    left: (24 - ANILLO) / 2,
+    top: (24 - ANILLO) / 2,
   },
   circle: {
     width: 24,
