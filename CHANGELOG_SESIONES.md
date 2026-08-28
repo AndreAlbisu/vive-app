@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-08-28 — Andre (sesión 131)
+
+**Tocado:** `screens/CoachChatsScreen.tsx`, `app/(coach)/_layout.tsx`, `lib/meetingRoom.ts`, `screens/SalaScreen.tsx`, `SessionsScreen.tsx`, `BookingScreen_Confirm.tsx`, `lib/coachBookingActions.ts`, `supabase/functions/create-meeting-room/index.ts`, `SCHEMA.md`. Nuevos: `scripts/habilitar-realtime.sql` (**CORRIDO**), `supabase/functions/daily-diagnostico/`, `docs/la-voz-de-sofia.md`. 312 tests, `tsc` y lint limpios.
+
+**Resumen:**
+
+- 🔴 **NINGUNA tabla tenía realtime habilitado.** La publicación `supabase_realtime` estaba vacía, así que las **ocho** suscripciones de la app escuchaban un canal por el que no pasaba nada. El código del cliente siempre estuvo bien. Estaban rotos por esto: el **chat no se actualizaba solo** (`SalaScreen` no hace polling de mensajes — su único `setInterval` recalcula el estado de la sesión), los dos puntitos de las barras, la Home del coach, Reservas, Conexiones y la bandeja de personas. `scripts/habilitar-realtime.sql` ✅ **CORRIDO y VERIFICADO**: 4 tablas publicadas, las 4 con `REPLICA IDENTITY FULL`.
+- 🔴 **A la videollamada no se podía entrar.** La sala se crea `privacy: 'private'` y no se acuñaba ningún token: el botón "Unirse" daba permiso denegado. No se había detectado porque en el **plan gratuito de Daily no se pueden crear salas privadas por API**, y fallaba antes — el camino de entrada nunca se pudo probar entero. Ahora la función devuelve `room_url` (estable, guardable, la que usa `session-attendance`) y `url` (la entrada de quien llamó, con su token, que **no se guarda**). Del lado del cliente se parte en `ensureMeetingRoom` y `getJoinUrl`.
+- ✅ **El punto de Reservas del coach no se apagaba al aceptar.** Dos causas sumadas: contaba `status='pendiente'` a secas —incluyendo reservas que esperan la plata, no al coach— y además nunca se enteraba de nada por lo del realtime. 📝 `esperaConfirmacionDelCoach` existe justamente para que no haya dos copias de esa regla; este badge era la segunda y se separó igual.
+- ✅ **La bandeja de personas del coach**: "Vos:" en el preview cuando el último mensaje es suyo, y parche en vivo de la fila (sube al tope, cambia el preview, marca el punto) sin recargar. `armarPreview` y `archivadoPorRegla` salieron a funciones compartidas para que la carga inicial y el parche no puedan pintar la misma conversación distinto.
+- 📝 **Decisión de producto: "Sobre vos" pasa a ser la voz de Sofía** (`docs/la-voz-de-sofia.md`, nada implementado). Deja de ser una devolución sobre tu semana y pasa a ser presencia — la IA existe para acompañar ENTRE sesiones, y **no puede ni debe reemplazar al coach**. Queda escrito el riesgo (el modo de fallar del analista era "inútil", el del amigo es "falso"), las cinco reglas, y que la causa de que hoy suene básica **no es el prompt sino el presupuesto de datos**: al modelo le llegan tres números.
+- ⚠️ **`instant_booking` NO estaba roto.** Se auditó la cadena entera —permisos de columna, escritura del toggle, los dos caminos de confirmación— y estaba bien: el flag estaba apagado en la base para el único coach con Mercado Pago conectado.
+- 📝 **`supabase db query --linked` falla intermitentemente** con `Connection timed out`. La salida de error no trae `rows`, así que un lector ingenuo la reporta como "cero filas" — pasó acá y llevó a una conclusión sin evidencia que hubo que rehacer. **Chequear `_tag == 'Error'` antes de leer `rows`.**
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar la videollamada de punta a punta**: entrar desde los dos lados dentro de la ventana (abre 15 min antes, expira 1h después del fin), y **fuera** de la ventana — ese cálculo ya tuvo un bug grave. Después confirmar que `session-attendance` deje `participants_count > 0`.
+- 🔴 **Probar el chat en vivo con dos sesiones abiertas**, que es la prueba más directa de que el realtime quedó bien.
+- 🔴 **Borrar el deploy de `daily-diagnostico`** cuando termine de usarse. El archivo se queda en el repo; el deploy no.
+- ⚠️ **`session-attendance` no lo llama nadie desde la app** — cuelga de un cron. Verificar que el cron esté activo.
+- 📝 De la sesión 130 siguen abiertos: la puerta "Comunicación" sin profesionales, y que las tarjetas del deck y del buscador no atan los rieles a `price_usd`.
+
+---
+
 ## 2026-08-27 — Andre (sesión 130)
 
 **Tocado:** `components/SofiaAssistant.tsx`, `components/MoodCheckIn.tsx`, `app/(tabs)/conexiones.tsx`, `constants/conexionesDoors.ts`, `screens/ProfesionalScreen.tsx`, `__tests__/taxonomia.test.ts`. Nuevos: `lib/ejesLayout.ts`, `__tests__/ejesLayout.test.ts`, `__tests__/sofiaOrbe.test.ts`, `docs/brief-ejes-conexiones.md`. 312 tests, `tsc` y lint limpios.

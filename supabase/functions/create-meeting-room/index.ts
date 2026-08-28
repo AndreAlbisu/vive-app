@@ -45,13 +45,31 @@ const dailyHeaders = {
 /**
  * La sala de esta reserva, creándola si todavía no existe.
  *
- * 🔴 El caso "ya existe" no es raro ni es un error: la sala se crea al confirmar
- * y `bookings.meeting_url` se escribe DESPUÉS, en otra llamada a la base. Si esa
- * escritura falla, o si dos personas entran a la vez, el POST vuelve a intentar
- * crear un nombre que ya está tomado. Daily contesta 400 y hay que ir a
- * buscarla, no abortar — abortar dejaría la sesión sin sala teniéndola.
+ * 🔴 SE PREGUNTA SIEMPRE A DAILY, aunque `bookings.meeting_url` ya tenga algo.
+ * La URL guardada dice en qué dominio vivía la sala el día que se creó, y el
+ * dominio es de la CUENTA: al cambiar de cuenta (28/08/2026) las 43 filas que
+ * había quedaron apuntando a `vive-app.daily.co`, un dominio que ya no es
+ * nuestro. Reusar esa URL a ciegas arma una entrada rota de la peor forma: el
+ * token se acuña bien contra la cuenta nueva, la URL abre el dominio viejo, y
+ * el token ahí no vale nada. Falla recién al tocar "Unirse", en la sesión real.
+ *
+ * Preguntar cuesta una llamada por entrada —que pasa un puñado de veces por
+ * día— y a cambio la fila vieja se corrige sola la primera vez que alguien
+ * entra. Se consulta antes de crear porque el caso normal es que la sala ya
+ * exista: se crea al confirmar la reserva, y se entra después.
  */
 async function ensureRoom(roomName: string, nbf: number, exp: number): Promise<string> {
+  const get = await fetch(`${DAILY_API}/rooms/${encodeURIComponent(roomName)}`, {
+    headers: dailyHeaders,
+  })
+  if (get.ok) {
+    const room = await get.json()
+    return room.url as string
+  }
+  if (get.status !== 404) {
+    throw new Error(`Daily GET /rooms/${roomName} respondió ${get.status}: ${await get.text()}`)
+  }
+
   const res = await fetch(`${DAILY_API}/rooms`, {
     method: 'POST',
     headers: dailyHeaders,
@@ -67,21 +85,21 @@ async function ensureRoom(roomName: string, nbf: number, exp: number): Promise<s
     return room.url as string
   }
 
+  // Carrera: entre el GET y el POST alguien más la creó (las dos personas
+  // entrando a la vez). El nombre tomado es nuestra propia sala, no un error.
   const detail = await res.text()
-
-  // Nombre ya tomado → la sala es nuestra y ya está bien configurada.
   if (res.status === 400 && /exist/i.test(detail)) {
-    const get = await fetch(`${DAILY_API}/rooms/${encodeURIComponent(roomName)}`, {
+    const retry = await fetch(`${DAILY_API}/rooms/${encodeURIComponent(roomName)}`, {
       headers: dailyHeaders,
     })
-    if (get.ok) {
-      const room = await get.json()
+    if (retry.ok) {
+      const room = await retry.json()
       return room.url as string
     }
-    throw new Error(`Daily: la sala ${roomName} existe pero no se pudo leer (${get.status})`)
+    throw new Error(`Daily: la sala ${roomName} existe pero no se pudo leer (${retry.status})`)
   }
 
-  throw new Error(`Daily /rooms respondió ${res.status}: ${detail}`)
+  throw new Error(`Daily POST /rooms respondió ${res.status}: ${detail}`)
 }
 
 /** El pase de entrada de UNA persona a esa sala. Vence con la sesión. */
@@ -193,11 +211,11 @@ serve(async (req) => {
 
     const roomName = `vive-${(booking_id as string).replace(/-/g, '').slice(0, 16)}`
 
-    // La sala se reusa; el token no. Si ya hay URL guardada nos ahorramos el
-    // viaje a Daily, pero el token igual se acuña abajo — es lo que caducó.
-    let roomUrl = (booking.meeting_url as string | null) ?? null
-    if (!roomUrl) {
-      roomUrl = await ensureRoom(roomName, nbf, exp)
+    // La sala se reusa; el token no. La URL guardada no se toma como verdad
+    // (ver `ensureRoom`): se pregunta, y si lo que hay en la base quedó viejo se
+    // corrige de paso. Si no cambió nada, no se escribe.
+    const roomUrl = await ensureRoom(roomName, nbf, exp)
+    if (roomUrl !== booking.meeting_url) {
       await supabase
         .from('bookings')
         .update({ meeting_url: roomUrl })
