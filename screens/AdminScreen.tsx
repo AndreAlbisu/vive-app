@@ -37,16 +37,18 @@ import {
   listAuditLog,
   type PendingCoach, type AdminReport, type AdminClaim, type ReportResolution,
   type AuditEntry, type GuaranteeCheck,
+  listPendingCredentials, credentialFileUrl, reviewCredential, type AdminCredential,
 } from '@/lib/admin';
 
 const FOREST = '#3A4F2A';
 const OLIVE = '#87835C';
 const CLAY = '#B5533A';
 
-type Tab = 'coaches' | 'reportes' | 'garantias' | 'reembolsos' | 'pagos' | 'facturacion' | 'auditoria';
+type Tab = 'coaches' | 'credenciales' | 'reportes' | 'garantias' | 'reembolsos' | 'pagos' | 'facturacion' | 'auditoria';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'coaches',   label: 'Postulaciones' },
+  { key: 'credenciales', label: 'Credenciales' },
   { key: 'reportes',  label: 'Reportes' },
   { key: 'garantias', label: 'Garantías' },
   { key: 'reembolsos', label: 'Reembolsos' },
@@ -92,6 +94,10 @@ export default function AdminScreen() {
   const [payoutRef, setPayoutRef] = useState<Record<string, string>>({});
   const [factu, setFactu] = useState<CommissionReport>({ cobradas: [], reembolsadas: [], totales: {}, error: null });
   const [audit, setAudit] = useState<AuditEntry[]>([]);
+  const [creds, setCreds] = useState<AdminCredential[]>([]);
+  // Qué credencial tiene el campo de rechazo abierto y qué se escribió.
+  const [credRejecting, setCredRejecting] = useState<string | null>(null);
+  const [credReason, setCredReason] = useState('');
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<string | null>(null);
 
@@ -101,7 +107,7 @@ export default function AdminScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [c, rej, r, g, rf, pg, fc, a] = await Promise.all([
+    const [c, rej, r, g, rf, pg, fc, a, cr] = await Promise.all([
       listCoachApplications('pendiente'),
       listCoachApplications('rechazada'),
       listPendingReports(),
@@ -110,9 +116,10 @@ export default function AdminScreen() {
       listCoachPayouts(),
       listCommissionReport(),
       listAuditLog(),
+      listPendingCredentials(),
     ]);
     setCoaches(c); setRejected(rej); setReports(r); setClaims(g); setRefunds(rf);
-    setPayouts(pg.rows); setPayoutsError(pg.error); setFactu(fc); setAudit(a);
+    setPayouts(pg.rows); setPayoutsError(pg.error); setFactu(fc); setAudit(a); setCreds(cr);
     setLoading(false);
   }, []);
 
@@ -342,6 +349,104 @@ export default function AdminScreen() {
             )}
 
             {/* ── Reportes ────────────────────────────────────────────────── */}
+            {!loading && tab === 'credenciales' && (
+              <>
+                {creds.length === 0 && (
+                  <View style={s.empty}>
+                    <MaterialCommunityIcons name="school-outline" size={34} color="rgba(135,131,92,0.45)" />
+                    <Text style={s.emptyText}>No hay credenciales esperando revisión.</Text>
+                  </View>
+                )}
+
+                {creds.map(c => (
+                  <View key={c.id} style={s.card}>
+                    <Text style={s.cardTitle}>{c.coach_name ?? 'Profesional'}</Text>
+                    <Text style={s.cardMeta}>{c.specialty ?? '—'} · {formatDate(c.created_at)}</Text>
+
+                    <Text style={s.cardBody}>{c.title}</Text>
+                    <Text style={s.cardMeta}>
+                      {[c.institution, c.year ? String(c.year) : null].filter(Boolean).join(' · ') || '—'}
+                    </Text>
+                    {!!c.registration_number && (
+                      <Text style={s.cardMeta}>N° {c.registration_number}</Text>
+                    )}
+
+                    {/* 🔴 El documento se abre con una URL firmada de 5 minutos
+                        que emite la edge function, y abrirlo QUEDA AUDITADO: es
+                        un documento de identidad, tiene que constar quién lo vio. */}
+                    {c.has_file ? (
+                      <TouchableOpacity
+                        style={s.linkRow}
+                        activeOpacity={0.75}
+                        onPress={async () => {
+                          const r = await credentialFileUrl(c.id);
+                          if (r.error || !r.url) { Alert.alert('No se pudo abrir', r.error ?? ''); return; }
+                          await Linking.openURL(r.url);
+                        }}>
+                        <MaterialCommunityIcons name="file-eye-outline" size={16} color={ViveColors.primary} />
+                        <Text style={s.linkText}>Ver documento</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={s.cardMeta}>Sin documento adjunto</Text>
+                    )}
+
+                    {credRejecting === c.id ? (
+                      <View style={{ marginTop: 12 }}>
+                        <TextInput
+                          style={s.input}
+                          value={credReason}
+                          onChangeText={setCredReason}
+                          placeholder="Qué le falta o por qué no se pudo verificar"
+                          placeholderTextColor="rgba(135,131,92,0.6)"
+                          multiline
+                        />
+                        <View style={s.actions}>
+                          <TouchableOpacity
+                            onPress={() => { setCredRejecting(null); setCredReason(''); }}
+                            style={[s.btn, s.btnGhost]} activeOpacity={0.75}>
+                            <Text style={s.btnGhostText}>Cancelar</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[s.btn, s.btnDanger, { flex: 1 }]}
+                            activeOpacity={0.8}
+                            disabled={!credReason.trim() || working === c.id}
+                            onPress={() => act(
+                              c.id,
+                              () => reviewCredential(c.id, false, credReason.trim()),
+                              'Credencial rechazada y avisada',
+                            ).then(() => { setCredRejecting(null); setCredReason(''); })}>
+                            <Text style={s.btnPrimaryText}>Confirmar rechazo</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={s.actions}>
+                        <TouchableOpacity
+                          style={[s.btn, s.btnGhost]}
+                          activeOpacity={0.75}
+                          onPress={() => { setCredRejecting(c.id); setCredReason(''); }}>
+                          <Text style={s.btnGhostText}>Rechazar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[s.btn, s.btnPrimary, { flex: 1 }]}
+                          activeOpacity={0.8}
+                          disabled={working === c.id}
+                          onPress={() => act(
+                            c.id,
+                            () => reviewCredential(c.id, true),
+                            'Credencial verificada',
+                          )}>
+                          <Text style={s.btnPrimaryText}>
+                            {working === c.id ? 'Guardando…' : 'Verificar'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </>
+            )}
+
             {!loading && tab === 'reportes' && (
               reports.length === 0
                 ? <Empty icon="flag-outline" text="No hay reportes sin revisar." />

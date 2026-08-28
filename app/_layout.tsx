@@ -219,6 +219,7 @@ export default function RootLayout() {
           <Stack.Screen name="coach-weekly-pattern" options={{ headerShown: false }} />
           <Stack.Screen name="coach-visibilidad" options={{ headerShown: false }} />
           <Stack.Screen name="coach-datos-cobro" options={{ headerShown: false }} />
+          <Stack.Screen name="coach-credenciales" options={{ headerShown: false }} />
           <Stack.Screen name="coach-ajustes" options={{ headerShown: false }} />
           <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
           <Stack.Screen name="explorar-recursos" options={{ headerShown: false }} />

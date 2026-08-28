@@ -1082,6 +1082,18 @@ export default function CoachProfileScreen() {
           <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.58)" />
         </TouchableOpacity>
 
+        {/* Los títulos son lo primero que mira alguien que no te conoce, así que
+            la entrada vive al lado de la visibilidad y no enterrada en ajustes. */}
+        <TouchableOpacity
+          style={[s.availBtn, { marginTop: 8 }]}
+          onPress={() => router.push('/coach-credenciales')}
+          activeOpacity={0.75}
+        >
+          <MaterialCommunityIcons name="school-outline" size={18} color={ViveColors.primary} />
+          <Text style={s.availBtnText}>Tus títulos y matrícula</Text>
+          <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.58)" />
+        </TouchableOpacity>
+
         <View style={s.groupHead}>
           <Text style={s.groupTitle}>Tu reputación</Text>
           <Text style={s.groupHint}>Lo que dejaron las personas que atendiste</Text>

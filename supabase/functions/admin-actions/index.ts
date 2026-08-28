@@ -22,6 +22,9 @@
 //   { action: 'resolve_report', report_id, status: 'revisado'|'accionado'|'descartado' }
 //   { action: 'mark_usdt_refunded', booking_id, refund_tx_id }
 //   { action: 'mark_coach_paid', booking_ids: string[], payout_reference }
+//   { action: 'list_pending_credentials' }
+//   { action: 'credential_file_url', credential_id }
+//   { action: 'review_credential', credential_id, verified: boolean, notes? }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -84,7 +87,7 @@ async function audit(
 async function notifyCoach(
   admin: SupabaseClient,
   profileId: string,
-  type: 'postulacion_aprobada' | 'postulacion_rechazada',
+  type: 'postulacion_aprobada' | 'postulacion_rechazada' | 'credencial_verificada' | 'credencial_rechazada',
   title: string,
   body: string,
 ): Promise<void> {
@@ -447,6 +450,135 @@ serve(async (req) => {
         marcadas: data.length,
         pedidas: ids.length,
         ...(avisos.length ? { warning: avisos.join(' · ') } : {}),
+      })
+    }
+
+    // ── Credenciales: la cola de revisión ────────────────────────────────────
+    // 🔴 Todo esto pasa por acá y no por el cliente porque el bucket
+    // `coach-credentials` es PRIVADO —el primero del proyecto— y la tabla no
+    // tiene policy de lectura para admins a propósito: la única puerta al
+    // documento es esta función, con service role. Una policy de admin en
+    // storage sería una segunda puerta que mantener sincronizada con
+    // `profiles.is_admin`.
+    case 'list_pending_credentials': {
+      const { data, error } = await admin
+        .from('coach_credentials')
+        .select('id, coach_id, kind, title, institution, year, registration_number, file_path, created_at, review_notes, coaches(profile_id, specialty, profiles(name))')
+        .eq('status', 'pendiente')
+        .order('created_at', { ascending: true })
+        .limit(100)
+
+      if (error) return json({ error: error.message }, 500)
+      // `file_path` se devuelve solo para saber SI hay documento; la URL firmada
+      // se pide aparte y queda registrada en el log de la función.
+      return json({
+        result: 'ok',
+        credentials: (data ?? []).map((c: any) => ({
+          id: c.id,
+          coach_id: c.coach_id,
+          coach_name: c.coaches?.profiles?.name ?? null,
+          specialty: c.coaches?.specialty ?? null,
+          kind: c.kind,
+          title: c.title,
+          institution: c.institution,
+          year: c.year,
+          registration_number: c.registration_number,
+          has_file: !!c.file_path,
+          review_notes: c.review_notes,
+          created_at: c.created_at,
+        })),
+      })
+    }
+
+    // Una URL firmada y corta para mirar el documento. No se devuelve nunca al
+    // usuario final: esta acción exige `is_admin`, igual que todas las de acá.
+    case 'credential_file_url': {
+      if (!body.credential_id) return json({ error: 'falta credential_id' }, 400)
+
+      const { data: cred, error } = await admin
+        .from('coach_credentials')
+        .select('id, file_path')
+        .eq('id', body.credential_id)
+        .maybeSingle()
+
+      if (error) return json({ error: error.message }, 500)
+      if (!cred) return json({ error: 'no existe esa credencial' }, 404)
+      if (!cred.file_path) return json({ error: 'esa credencial no tiene documento' }, 404)
+
+      // 5 minutos: lo justo para mirarlo. Un link largo que se filtre por
+      // pantalla compartida o historial es el documento entero regalado.
+      const { data: signed, error: signErr } = await admin
+        .storage.from('coach-credentials')
+        .createSignedUrl(cred.file_path, 300)
+
+      if (signErr || !signed) return json({ error: signErr?.message ?? 'no se pudo firmar' }, 500)
+
+      // Se audita MIRAR, no solo decidir: es un documento de identidad y tiene
+      // que quedar quién lo abrió.
+      await audit(admin, {
+        ...actor,
+        action: 'credential_file_url',
+        targetType: 'coach_credential',
+        targetId: cred.id,
+        details: {},
+      })
+
+      return json({ result: 'ok', url: signed.signedUrl, expires_in: 300 })
+    }
+
+    case 'review_credential': {
+      if (!body.credential_id) return json({ error: 'falta credential_id' }, 400)
+      if (typeof body.verified !== 'boolean') return json({ error: 'verified tiene que ser booleano' }, 400)
+      // Rechazar sin decir por qué deja al coach sin nada que corregir, así que
+      // el motivo es obligatorio en ese lado y opcional en el otro.
+      if (!body.verified && !String(body.notes ?? '').trim()) {
+        return json({ error: 'para rechazar hace falta un motivo' }, 400)
+      }
+
+      const { data, error } = await admin
+        .from('coach_credentials')
+        .update({
+          status: body.verified ? 'verificada' : 'rechazada',
+          review_notes: body.notes ?? null,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', body.credential_id)
+        .select('id, title, coach_id, coaches(profile_id)')
+
+      if (error) return json({ error: error.message }, 500)
+      if (!data || data.length === 0) return json({ error: 'no existe esa credencial' }, 404)
+
+      const cred: any = data[0]
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'review_credential',
+        targetType: 'coach_credential',
+        targetId: cred.id,
+        details: { verified: body.verified, notes: body.notes ?? null },
+      })
+
+      const profileId = cred.coaches?.profile_id
+      if (profileId) {
+        if (body.verified) {
+          await notifyCoach(
+            admin, profileId, 'credencial_verificada',
+            'Credencial verificada ✓',
+            `«${cred.title}» ya se muestra en tu perfil con la marca de verificada.`,
+          )
+        } else {
+          await notifyCoach(
+            admin, profileId, 'credencial_rechazada',
+            'Revisá tu credencial',
+            `No pudimos verificar «${cred.title}». ${body.notes}`,
+          )
+        }
+      }
+
+      return json({
+        result: 'ok',
+        status: body.verified ? 'verificada' : 'rechazada',
+        ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}),
       })
     }
 

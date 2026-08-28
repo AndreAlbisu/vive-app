@@ -550,3 +550,58 @@ export async function listAuditLog(limit = 50): Promise<AuditEntry[]> {
     createdAt: e.created_at,
   }));
 }
+
+// ── Credenciales de profesionales ────────────────────────────────────────────
+// 🔴 Todo pasa por `admin-actions` y no por una query directa: el bucket
+// `coach-credentials` es privado y `coach_credentials` no tiene policy de
+// lectura para admins a propósito. La única puerta al documento es la edge
+// function con service role, que además audita quién lo abrió.
+
+export type AdminCredential = {
+  id: string;
+  coach_id: string;
+  coach_name: string | null;
+  specialty: string | null;
+  kind: 'titulo' | 'matricula' | 'certificacion';
+  title: string;
+  institution: string | null;
+  year: number | null;
+  registration_number: string | null;
+  has_file: boolean;
+  review_notes: string | null;
+  created_at: string;
+};
+
+export async function listPendingCredentials(): Promise<AdminCredential[]> {
+  const res = await callFunction('admin-actions', { action: 'list_pending_credentials' });
+  if (!res.ok) {
+    console.error('[admin] listPendingCredentials:', res.error);
+    return [];
+  }
+  return (res.data?.credentials ?? []) as AdminCredential[];
+}
+
+/** URL firmada, válida 5 minutos. Corta a propósito: un link largo que se
+ *  filtre por historial o pantalla compartida es el documento entero regalado. */
+export async function credentialFileUrl(credentialId: string): Promise<{ url?: string; error?: string }> {
+  const res = await callFunction('admin-actions', {
+    action: 'credential_file_url',
+    credential_id: credentialId,
+  });
+  if (!res.ok) return { error: res.error ?? 'no se pudo abrir el documento' };
+  return { url: res.data?.url as string };
+}
+
+export async function reviewCredential(
+  credentialId: string,
+  verified: boolean,
+  notes?: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await callFunction('admin-actions', {
+    action: 'review_credential',
+    credential_id: credentialId,
+    verified,
+    notes: notes ?? null,
+  });
+  return { ok: res.ok, error: res.error };
+}

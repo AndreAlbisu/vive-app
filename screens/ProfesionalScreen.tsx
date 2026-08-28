@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
+import { listPublicCredentials, lineaCredencial, KIND_LABEL, type PublicCredential } from '@/lib/coachCredentials';
 import ReportSheet from '@/components/ReportSheet';
 import UserActionsSheet from '@/components/UserActionsSheet';
 import { loadBlockedIds, onBlockedChange, isBlocked } from '@/lib/blocking';
@@ -19,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
@@ -144,6 +146,12 @@ export default function ProfesionalScreen() {
     return () => { mounted = false; off(); };
   }, [user, profileId]);
 
+  // 🔴 Solo las VERIFICADAS, y salen de la vista `coach_credentials_public`, no
+  // de la tabla: la tabla no tiene lectura pública y si la tuviera expondría
+  // `file_path` —el path del documento— porque RLS filtra filas, no columnas.
+  // El documento en sí no llega nunca hasta acá; lo que se muestra es el dato.
+  const [credenciales, setCredenciales] = useState<PublicCredential[]>([]);
+
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
     if (!pid) return;
@@ -154,6 +162,9 @@ export default function ProfesionalScreen() {
       .single()
       .then(({ data, error }) => {
         if (error || !data) return;
+        // ⚠️ `coaches.id`, no `profiles.id`: `coach_credentials.coach_id`
+        // apunta al PK de coaches, igual que `bookings.coach_id`.
+        void listPublicCredentials((data as any).id).then(setCredenciales);
         setFetchedData({
           name: (data as any).profiles.name,
           specialty: (data as any).specialty,
@@ -336,6 +347,54 @@ export default function ProfesionalScreen() {
             </View>
           )}
         </View>
+
+        {/* ── Formación ─────────────────────────────────────────────────────
+            Solo credenciales verificadas por Vita. NO se muestra el documento:
+            un diploma lleva nombre completo, a veces DNI y firma, y publicarlo
+            sería exponer datos personales del profesional a cualquier visitante
+            — además de abrir un canal de texto que ningún filtro puede moderar.
+            Lo que se muestra es el dato que Vita chequeó. */}
+        {credenciales.length > 0 && (
+          <View style={s.section}>
+            <View style={s.credHeader}>
+              <Text style={s.sectionTitle}>Formación</Text>
+              <View style={s.credBadge}>
+                <MaterialCommunityIcons name="shield-check" size={12} color="#42542F" />
+                <Text style={s.credBadgeTxt}>Verificado por Vita</Text>
+              </View>
+            </View>
+
+            <View style={s.credList}>
+              {credenciales.map(c => {
+                const linea = lineaCredencial(c);
+                return (
+                  <View key={c.id} style={s.credRow}>
+                    <MaterialCommunityIcons
+                      name={c.kind === 'matricula' ? 'card-account-details-outline' : 'school-outline'}
+                      size={18}
+                      color="#6B7A56"
+                      style={{ marginTop: 1 }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.credTitle}>{c.title}</Text>
+                      {!!linea && <Text style={s.credMeta}>{linea}</Text>}
+                      {/* El número de matrícula se muestra entero a propósito:
+                          es público por definición y es lo único de esta
+                          sección que un usuario puede ir a verificar por su
+                          cuenta. Ocultarlo le sacaría todo el valor. */}
+                      {!!c.registrationNumber && (
+                        <Text style={s.credNumber}>
+                          {KIND_LABEL[c.kind] === 'Matrícula' ? '' : `${KIND_LABEL[c.kind]} `}
+                          {c.registrationNumber}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* ── Video de introducción ─────────────────────────────────────── */}
         {prof.video_url && (
@@ -715,6 +774,22 @@ const s = StyleSheet.create({
     fontSize: 17,
     color: '#565E32',
     marginBottom: 14,
+  },
+
+  // ── Formación ───────────────────────────────────────────────────────
+  credHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  credBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#DCE5CB', borderRadius: 10,
+    paddingVertical: 3, paddingHorizontal: 8, marginBottom: 14,
+  },
+  credBadgeTxt: { fontFamily: ViveFonts.semibold, fontSize: 10.5, color: '#42542F', letterSpacing: 0.2 },
+  credList: { gap: 12 },
+  credRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  credTitle: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#565E32', lineHeight: 20 },
+  credMeta: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#87835C', marginTop: 1 },
+  credNumber: {
+    fontFamily: ViveFonts.medium, fontSize: 12.5, color: '#6B7A56', marginTop: 3,
   },
 
   // ── Recursos del coach ──────────────────────────────────────────────
