@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { withLayoutContext } from 'expo-router';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 
@@ -6,6 +6,7 @@ import { IslandTabBar, type IslandTab } from '@/components/ui/IslandTabBar';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useUnreadSalas } from '@/hooks/useUnreadSalas';
+import { esperaConfirmacionDelCoach } from '@/lib/bookingHelpers';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 // Ver comentario en app/(tabs)/_layout.tsx — mismo cambio bottom-tabs→material-top-tabs
@@ -32,15 +33,32 @@ export default function CoachTabLayout() {
       .then(({ data }) => { if (data) setCoachId(data.id); });
   }, [user]);
 
-  useEffect(() => {
+  // 🔴 El punto NO se cuenta con `status = 'pendiente'` a secas. Una reserva con
+  // un cobro iniciado y sin acreditar también está pendiente, pero ahí no espera
+  // al coach: espera a la plata, y él no la puede confirmar. Contándolas juntas,
+  // el coach aceptaba la única que sí lo esperaba y el punto seguía encendido —
+  // que es como se reportó el bug (28/08/2026).
+  //
+  // 📝 `esperaConfirmacionDelCoach` existe justamente para que no haya dos copias
+  // de esta regla; su comentario lo dice. `CoachReservasScreen` ya la usaba y
+  // este badge era la segunda copia, que se separó igual.
+  //
+  // ⚠️ Por eso no se puede usar `count` + `head: true`: hay que traer las
+  // columnas del cobro para poder aplicar la regla. Son las pendientes de un
+  // coach, no un volumen que preocupe.
+  const contarPendientes = useCallback(() => {
     if (!coachId) return;
     supabase
       .from('bookings')
-      .select('*', { count: 'exact', head: true })
+      .select('status, payment_status, preference_id, usdt_amount')
       .eq('coach_id', coachId)
       .eq('status', 'pendiente')
-      .then(({ count }) => setPendingCount(count ?? 0));
+      .then(({ data }) => {
+        setPendingCount((data ?? []).filter(esperaConfirmacionDelCoach).length);
+      });
   }, [coachId]);
+
+  useEffect(() => { contarPendientes(); }, [contarPendientes]);
 
   useEffect(() => {
     if (!coachId) return;
@@ -49,18 +67,11 @@ export default function CoachTabLayout() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bookings', filter: `coach_id=eq.${coachId}` },
-        () => {
-          supabase
-            .from('bookings')
-            .select('*', { count: 'exact', head: true })
-            .eq('coach_id', coachId)
-            .eq('status', 'pendiente')
-            .then(({ count }) => setPendingCount(count ?? 0));
-        },
+        () => contarPendientes(),
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [coachId]);
+  }, [coachId, contarPendientes]);
 
   useEffect(() => {
     if (!user) return;
