@@ -6,6 +6,28 @@
 
 ---
 
+## 0. Para qué existe la IA en Vita
+
+> **Para que la gente se sienta acompañada ENTRE las sesiones.**
+
+Alguien tiene una sesión por semana. Entre una y otra pasan cosas, y el
+profesional tiene que poder desconectarse — no está disponible un martes a las
+once de la noche, ni debería estarlo.
+
+🔴 **La IA no puede ni debe reemplazar al coach.** Es un amigo a distancia que te
+hace sentir acompañado; no interpreta, no trata, no aconseja lo que le toca a un
+profesional.
+
+De ahí sale el único criterio que importa para juzgar cualquier versión de esto:
+
+> **Un martes a la noche, con la sesión el sábado, ¿esto sirve de algo?**
+
+Y el fracaso concreto a evitar, dicho por Andre: *"que no se sienta como una
+tarjeta vacía, que terminás ignorando por lo básicas e inútiles de sus
+respuestas"*.
+
+---
+
 ## 1. Qué cambia
 
 La tarjeta del Inicio deja de ser **una devolución sobre tu semana** y pasa a ser
@@ -67,12 +89,21 @@ Una presencia idéntica cada mañana se vuelve empapelado en una semana. **A vec
 un amigo no dice nada**, y eso también es estar. La tarjeta tiene que poder
 callarse.
 
-### 3.4 Nunca pide nada
+### 3.4 Nunca pide una reserva — pero sí puede nombrar al profesional
 
 El día que la voz cálida sugiere reservar una sesión, deja de ser un amigo y es
 un vendedor. ⚠️ Esto ya se aprendió acá: `CoachSuggestionCard` se sacó en la
 sesión 97 por aparecer en el peor momento a pedir algo. **No reintroducirlo por
 la ventana.**
+
+📝 **Corrección del 28/08:** la regla estaba mal formulada como "nunca pide
+nada". Mencionar al profesional NO es vender. Un amigo que dice *"eso decíselo el
+sábado"* hace exactamente lo contrario de un vendedor: reconoce su límite. Un
+amigo que sabe hasta dónde llega es **más** creíble, no menos.
+
+Y le da a la voz un trabajo concreto entre sesiones: **sostener hasta la próxima
+sesión y ayudar a que llegue lo que pasó** — que enlaza directo con
+[`paquete-para-la-sesion.md`](paquete-para-la-sesion.md).
 
 ### 3.5 No finge sentir
 
@@ -117,6 +148,50 @@ No se tira nada de la maquinaria. Cambia qué produce, no cómo se decide:
 - **El piso sin red**: las reglas escriben al instante y la IA reescribe después.
   La tarjeta nunca queda vacía ni con un spinner.
 
+## 5 bis. Por qué hoy suena básica (la causa raíz)
+
+**No es el prompt ni el modelo.** Al modelo le llegan hoy tres cosas: el nombre
+de la señal, el tono, y tres números (racha, sesiones, prácticas). Con eso no se
+puede escribir nada que se sienta personal — cualquier modelo, por bueno que
+sea, produce genéricos. La causa de "básica e inútil" es **el presupuesto de
+datos**, no la redacción.
+
+Y ahí hay una tensión que conviene decidir a propósito en vez de heredarla: la
+postura de privacidad actual **produce genericidad**.
+
+Pero no es todo o nada. El camino intermedio:
+
+> Mandar **señales estructuradas más ricas**, sin una sola palabra escrita por la
+> persona. Por ejemplo: *"hoy bajón, ayer bajón, anteayer bien; última sesión
+> hace 5 días; próxima en 2; escribió 2 veces esta semana"*.
+
+Con eso un amigo tiene muchísimo para decir, y el diario sigue sin salir del
+teléfono. Es el único lugar donde "que no sea básica" y "que no lea lo tuyo"
+pueden convivir.
+
+📝 De paso resuelve a medias §3.1: la voz puede **recordar la forma de tus días
+sin leer tus palabras**.
+
+## 5 ter. El piso de seguridad
+
+🔴 **Falta, y en esta app no es opcional.** Si alguien registra el fondo varios
+días seguidos, una voz cálida no alcanza y no puede simular que sí. Tiene que
+haber un punto donde **deja de hacer de amigo** y dice algo real sobre buscar
+ayuda.
+
+Hoy la señal de bajón fuerte baja el tono y se corre, que está bien para un mal
+día — pero **no hay nada para el caso grave**. Eso hay que diseñarlo antes de
+darle más voz, no después.
+
+## 5 quater. Acompañar no es perseguir
+
+"Constantemente" no significa notificaciones. Un amigo a distancia aparece cuando
+pasa algo, pero **una IA que te escribe sola al teléfono es el camino más rápido
+a lo invasivo**.
+
+Criterio: que **reaccione a lo que la persona acaba de hacer dentro de la app**,
+y que no la persiga afuera. Al menos hasta que la voz tenga crédito ganado.
+
 ## 6. Lo que queda abierto
 
 - **El nombre.** "Sobre vos" anuncia un análisis. Si es una voz, se llama de otra
@@ -124,15 +199,19 @@ No se tira nada de la maquinaria. Cambia qué produce, no cómo se decide:
 - **Qué pasa al tocarla.** Hoy abre el "momento" a pantalla completa. Si la
   tarjeta es Sofía, lo natural es que abra su panel. Son dos superficies que hoy
   se pisan.
-- **Cómo se sostiene 3.1 sin leer el diario.** Es el problema más difícil del
-  documento y no está resuelto.
+- **Cuánto contexto se le manda al modelo** (§5 bis). Es la decisión que
+  determina si esto se siente personal o genérico, y hoy está tomada por
+  omisión.
 - **Cuándo callarse** (3.3): hace falta una regla, no una ausencia por azar.
 
 ## 7. Por dónde empezaría
 
 1. **Decidir el nombre y la identidad visual** — es barato y ordena todo lo demás.
-2. **Cambiar el registro de las frases a presente**, con las reglas actuales
+2. **Subir el presupuesto de datos** (§5 bis) a señales estructuradas ricas, sin
+   texto libre. Es lo que más mueve la aguja contra "básica e inútil".
+3. **Cambiar el registro de las frases a presente**, con las reglas actuales
    eligiendo cuándo y en qué tono. Sin tocar la arquitectura.
-3. **Agregar el silencio** (3.3) y los guardarraíles nuevos a `rejectCopy`.
-4. **Recién después** unificar con Sofía, y solo si para entonces el panel no
+4. **Diseñar el piso de seguridad** (§5 ter) antes de darle más voz.
+5. **Agregar el silencio** (3.3) y los guardarraíles nuevos a `rejectCopy`.
+6. **Recién después** unificar con Sofía, y solo si para entonces el panel no
    sigue prometiendo un chat que no existe.
