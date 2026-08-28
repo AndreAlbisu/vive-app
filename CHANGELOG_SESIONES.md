@@ -29,6 +29,31 @@
 
 ---
 
+## 2026-08-28 — Andre (sesión 131)
+
+**Tocado:** `supabase/functions/create-meeting-room/index.ts`, `lib/meetingRoom.ts`, `screens/SalaScreen.tsx`, `screens/SessionsScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `lib/coachBookingActions.ts`, `SCHEMA.md`. Nuevo: `supabase/functions/daily-diagnostico/index.ts` (deployada, corrida y **borrada** el mismo día). `tsc` limpio, lint 0 errores, 312 tests.
+
+**Resumen — se activó Daily.co, y activarlo destapó que la entrada a la videollamada nunca funcionó.**
+
+- ✅ **Cuenta nueva de Daily activa.** `DAILY_API_KEY` actualizada el 28/08 (la que estaba era del 02/07, de la cuenta del plan gratuito). Dominio nuevo: **`veraapp`** — las salas ahora son `veraapp.daily.co/vive-<id>`.
+- ✅ **`daily-diagnostico`**, mismo patrón que `paypal-diagnostico`: se deploya, se invoca desde la base con `net.http_post` y la service_role del Vault, se lee el veredicto y se borra el deploy. Se hace desde adentro porque `supabase secrets list` devuelve los valores **hasheados** — desde afuera no hay forma de saber si la key cargada es la nueva o la vieja. Los 4 chequeos dieron OK: autentica, crea sala privada por API, acuña meeting token, `/meetings` consultable. El archivo queda en el repo: el chequeo vuelve a hacer falta entero el día que se cambie de cuenta o de plan.
+- 🔴 **El bloqueante no era la cuenta: nadie podía entrar a la sala.** `create-meeting-room` la creaba `privacy: 'private'` y devolvía la URL **pelada**. A una sala privada de Daily no se entra abriendo su URL — hace falta un **meeting token**, o `enable_knocking: true` con un owner adentro admitiendo a mano, y no había ninguna de las dos. El botón "Unirse" abría una pantalla de permiso denegado. **No se había detectado porque en el plan gratuito fallaba antes**, en la creación misma de la sala privada, así que el camino de entrada nunca se pudo probar de punta a punta.
+- ✅ **El token se acuña por participante en cada llamada.** La función ya no corta temprano cuando la sala existe: la sala se reusa, el token no —vence con la sesión y lleva la identidad de una sola persona—. El coach entra como `is_owner` (es quien conduce, y es el único que podría admitir a alguien si algún día se prende el knocking).
+- 📝 **La función devuelve DOS URLs y confundirlas rompe la entrada**: `room_url` (pelada, estable, es la que se guarda y la que cruza `session_attendance`) y `url` (`room_url?t=<token>`, se abre y se descarta). Por eso `createOrGetMeetingUrl` se partió en `ensureMeetingRoom()` y `getJoinUrl()` — devolvía una sola cosa para dos usos que dejaron de ser el mismo.
+- 🔴 **Segundo camino de entrada, entero, que no pasaba por la función.** `SessionsScreen.handleJoin` abría `ses.meeting_url` directo (`WebBrowser.openBrowserAsync`), sin llamar a `create-meeting-room` en ningún momento. Arreglar solo `SalaScreen` habría dejado el bug vivo en la otra mitad de la app.
+- 🔴 **Las 43 filas con `meeting_url` apuntan a `vive-app.daily.co`**, el dominio de la cuenta vieja. Reusarlas armaba la falla peor posible: el token se acuña bien contra la cuenta nueva, la URL abre el dominio viejo, y ahí el token no vale nada — o sea que fallaba **recién al tocar "Unirse", en una sesión real**. La función dejó de tomar la URL guardada como verdad: consulta la sala (`GET`, `POST` solo si da 404) y **corrige la fila sola** la primera vez que alguien entra. No hizo falta limpiar la base.
+- 📝 **Los dos calendarios escribían la URL de la sala en el evento del teléfono.** Con sala privada ese link muestra permiso denegado; ahora dicen que se entra desde la app. Un link que falla al tocarlo es peor que no ponerlo, y el token no se puede pegar ahí porque vence.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar una sesión real desde el teléfono** — es lo único que falta y es lo que vale. Los dos lados: el coach (debería entrar como owner) y la persona. Sobre todo con una reserva **vieja**, de las 43 que tienen la URL del dominio muerto, para ver la autocorrección funcionando.
+- ⚠️ **`session-attendance` no puede traer la asistencia de las sesiones de la cuenta vieja** — la key nueva no ve esos `/meetings`. Son todas de prueba, así que no se pierde evidencia real, pero a las 24hs el cron las va a concluir como "no vino nadie".
+- 📝 **La videollamada sigue ocurriendo FUERA de la app** (`WebBrowser.openBrowserAsync`), que es la contradicción con la medida anti-fuga #4 ya anotada. Moverla adentro con `@daily-co/react-native-daily-js` requiere dev build. No se tocó.
+- 📝 **Lo de Jitsi sigue vestigial**: el trigger de `salas.room_url` sigue generando `meet.jit.si/vita-<hex>` y nadie lo abre. Se puede sacar cuando haya ganas.
+- 📝 **Presupuesto**: 10.000 minutos de participante gratis por mes = 83 sesiones de 60 min con dos personas; después USD 0,004 por minuto (USD 0,48 la sesión).
+
+---
+
 ## 2026-08-27 — Andre (sesión 130)
 
 **Tocado:** `components/SofiaAssistant.tsx`, `components/MoodCheckIn.tsx`, `app/(tabs)/conexiones.tsx`, `constants/conexionesDoors.ts`, `screens/ProfesionalScreen.tsx`, `__tests__/taxonomia.test.ts`. Nuevos: `lib/ejesLayout.ts`, `__tests__/ejesLayout.test.ts`, `__tests__/sofiaOrbe.test.ts`, `docs/brief-ejes-conexiones.md`. 312 tests, `tsc` y lint limpios.
