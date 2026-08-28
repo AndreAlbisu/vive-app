@@ -46,7 +46,9 @@
 
 **Pendiente para la próxima sesión:**
 
-- 🔴 **Probar una sesión real desde el teléfono** — es lo único que falta y es lo que vale. Los dos lados: el coach (debería entrar como owner) y la persona. Sobre todo con una reserva **vieja**, de las 43 que tienen la URL del dominio muerto, para ver la autocorrección funcionando.
+- ✅ ~~Probar una sesión real desde el teléfono~~ — **confirmado el 28/08 con prueba en la base**, no por lo que se vio en pantalla: `session_attendance` del booking `e9c429a6…` quedó con `meetings_count 1`, `participants_count 1`, `first_join_at 19:16:57 UTC`, y `user_name: "andre"` en el crudo. A una sala privada no entra nadie sin token válido, así que eso prueba el camino de entrada entero. **Y era una de las 43 viejas**: su `meeting_url` pasó de `vive-app.daily.co` a `veraapp.daily.co` sola al entrar — la autocorrección funciona (quedan 42, se van corrigiendo de a una). La ventana `nbf`/`exp` también dio bien: sesión de las 16:00 ART, entrada 16:16 ART, aceptada. De yapa, el cron de `session-attendance` corrió a las 19:17 y levantó la asistencia contra la cuenta nueva.
+- 🔴 **Falta la llamada con DOS personas adentro.** `max_simultaneous` dio 1 — entró uno solo. Es el caso que importa y no está probado.
+- ⚠️ **Que el coach entre como owner no se pudo verificar desde acá**: el `/meetings` de Daily no devuelve ese flag. Hay que mirarlo en la llamada — el owner ve controles que el otro no.
 - ⚠️ **`session-attendance` no puede traer la asistencia de las sesiones de la cuenta vieja** — la key nueva no ve esos `/meetings`. Son todas de prueba, así que no se pierde evidencia real, pero a las 24hs el cron las va a concluir como "no vino nadie".
 - 📝 **La videollamada sigue ocurriendo FUERA de la app** (`WebBrowser.openBrowserAsync`), que es la contradicción con la medida anti-fuga #4 ya anotada. Moverla adentro con `@daily-co/react-native-daily-js` requiere dev build. No se tocó.
 - 📝 **Lo de Jitsi sigue vestigial**: el trigger de `salas.room_url` sigue generando `meet.jit.si/vita-<hex>` y nadie lo abre. Se puede sacar cuando haya ganas.
