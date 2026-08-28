@@ -39,7 +39,7 @@ import { canCancelConfirmed } from '@/lib/bookingHelpers';
 import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { logError } from '@/lib/logging';
-import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
+import { ensureMeetingRoom, getJoinUrl } from '@/lib/meetingRoom';
 
 type ResourceMeta = {
   type: 'resource';
@@ -426,7 +426,7 @@ export default function SalaScreen() {
         // No la creamos para una sesión que ya terminó (finalizada) — no tiene sentido.
         if (booking?.status === 'confirmada' && !booking.meeting_url && state !== 'finalizada') {
           setIsCreatingRoom(true);
-          createOrGetMeetingUrl(booking.id).then(url => {
+          ensureMeetingRoom(booking.id).then(url => {
             if (url && mounted) {
               setActiveBooking(prev => prev ? { ...prev, meeting_url: url } : null);
             }
@@ -520,14 +520,14 @@ export default function SalaScreen() {
 
   async function handleJoin() {
     if (!activeBooking) return;
-    let url = activeBooking.meeting_url;
 
-    if (!url) {
-      setIsCreatingRoom(true);
-      url = await createOrGetMeetingUrl(activeBooking.id);
-      if (url) setActiveBooking(prev => prev ? { ...prev, meeting_url: url } : null);
-      setIsCreatingRoom(false);
-    }
+    // 🔴 `activeBooking.meeting_url` NO sirve para entrar, aunque esté cargada.
+    // La sala es privada: hace falta un token, que es de una sola persona y
+    // vence con la sesión. Por eso se pide siempre acá, en el momento, y lo que
+    // vuelve se abre y se descarta — nunca se guarda en el estado.
+    setIsCreatingRoom(true);
+    const url = await getJoinUrl(activeBooking.id);
+    setIsCreatingRoom(false);
 
     if (url) {
       await WebBrowser.openBrowserAsync(url);
@@ -584,8 +584,12 @@ export default function SalaScreen() {
         title,
         startDate,
         endDate,
-        notes: activeBooking.meeting_url ? `Videollamada: ${activeBooking.meeting_url}` : undefined,
-        location: activeBooking.meeting_url ?? undefined,
+        // 🔴 Acá iba la URL de la sala, y desde que la sala es privada ese link
+        // no deja entrar a nadie: sin token muestra permiso denegado. Un link
+        // que falla al tocarlo es peor que no ponerlo, y el token no se puede
+        // pegar acá — vence con la sesión y es de una sola persona.
+        notes: 'Entrá a la videollamada desde la app Vita, en tu sala con el profesional.',
+        location: 'App Vita',
       });
       Alert.alert('Listo ✓', 'La sesión fue agregada a tu calendario');
     } finally {

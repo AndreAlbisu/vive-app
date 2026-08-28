@@ -19,6 +19,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Calendar from 'expo-calendar';
 import * as WebBrowser from 'expo-web-browser';
+import { getJoinUrl } from '@/lib/meetingRoom';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { decryptMessage } from '@/lib/encryption';
@@ -334,8 +335,17 @@ export default function SessionsScreen() {
   );
 
   async function handleJoin(ses: NextSession) {
+    // 🔴 `ses.meeting_url` dice que la sala EXISTE, no abre la puerta: es
+    // privada y hace falta un token por participante que vence con la sesión.
+    // Hasta el 28/08/2026 esta pantalla abría la URL pelada — el mismo bug que
+    // tenía `SalaScreen`, en un segundo lugar.
     if (!ses.meeting_url) return;
-    await WebBrowser.openBrowserAsync(ses.meeting_url);
+    const url = await getJoinUrl(ses.bookingId);
+    if (url) {
+      await WebBrowser.openBrowserAsync(url);
+    } else {
+      Alert.alert('Error', 'No se pudo preparar la sala. Intentalo de nuevo en unos segundos');
+    }
   }
 
   async function handleAddToCalendar(ses: NextSession) {
@@ -371,7 +381,9 @@ export default function SessionsScreen() {
         title,
         startDate,
         endDate,
-        notes: ses.meeting_url ? `Videollamada: ${ses.meeting_url}` : undefined,
+        // Ver la nota en `SalaScreen`: la URL de una sala privada no deja
+        // entrar sin token, y un link que falla es peor que no ponerlo.
+        notes: 'Entrá a la videollamada desde la app Vita, en tu sala con el profesional.',
       });
       Alert.alert('Listo', 'La sesión fue agregada a tu calendario');
     } finally {

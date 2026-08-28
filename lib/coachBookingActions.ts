@@ -9,7 +9,7 @@
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { sendPushNotification } from '@/lib/notifications';
 import { encryptMessage } from '@/lib/encryption';
-import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
+import { ensureMeetingRoom } from '@/lib/meetingRoom';
 
 function formatBookingDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -132,7 +132,7 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
   }
 
   // Crear sala de videollamada en Daily.co en segundo plano
-  createOrGetMeetingUrl(bookingId).catch(() => {});
+  ensureMeetingRoom(bookingId).catch(() => {});
 
   return true;
 }

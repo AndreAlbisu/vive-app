@@ -25,7 +25,7 @@ import { sendPushNotification } from '@/lib/notifications';
 import * as WebBrowser from 'expo-web-browser';
 import { logError, logWarn } from '@/lib/logging';
 import { encryptMessage } from '@/lib/encryption';
-import { createOrGetMeetingUrl } from '@/lib/meetingRoom';
+import { ensureMeetingRoom } from '@/lib/meetingRoom';
 import { observedTz } from '@/lib/time';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -487,7 +487,7 @@ export default function BookingScreen_Confirm() {
         await supabase.from('bookings').update({ status: 'confirmada' }).eq('id', booking.id);
 
         // Crear sala de videollamada en Daily.co en segundo plano (no bloquea al usuario)
-        createOrGetMeetingUrl(booking.id).catch(() => {});
+        ensureMeetingRoom(booking.id).catch(() => {});
 
         // Reserva instantánea: mismos efectos que cuando el coach acepta
         // manualmente en CoachReservasScreen — notificación al usuario,
