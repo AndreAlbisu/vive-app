@@ -146,8 +146,11 @@ export default function CoachChatsScreen() {
   // (ver `LISTA_AIRE` en SessionsScreen).
   //
   // 📝 De paso empujan la primera fila fuera del borde superior, que es donde
-  // el pulgar no llega: el orden es el de WhatsApp —título, buscador, filtros,
-  // Archivados, lista— y ahí cada elemento se gana su lugar en vez de rellenar.
+  // el pulgar no llega — pero eso es la CONSECUENCIA, no el motivo: rellenar
+  // por rellenar habría sido padding con otro nombre.
+  //
+  // ⚠️ Se tomó el orden de WhatsApp menos una cosa: allá Archivados va arriba,
+  // acá va al pie. Ver el comentario en el render.
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState<FiltroRoster>('todas');
 
@@ -518,29 +521,6 @@ export default function CoachChatsScreen() {
               })}
             </ScrollView>
 
-            {/* Archivados sube ACÁ, como en WhatsApp. Estaba al pie, y hoy hay
-                más gente archivada que activa: lo que más gente tenía era lo
-                que estaba enterrado. */}
-            {archived.length > 0 && (
-              <>
-                <TouchableOpacity style={s.archLink} activeOpacity={0.7} onPress={() => setShowArchived(v => !v)}>
-                  <Feather name="archive" size={16} color={FOREST_SOFT} />
-                  <Text style={s.archLinkTxt}>Archivados</Text>
-                  {/* 🔴 Archivar NO silencia. Si alguien archivado escribe, el
-                      punto aparece acá: la conversación deja de estar arriba,
-                      pero el coach no se pierde a un cliente que lo buscó. Se
-                      eligió esto antes que desarchivar solo —como hace el mail—
-                      porque deshacer una decisión del coach sin avisarle es
-                      peor que un punto de más. */}
-                  {archived.some(r => r.hasUnread) && <View style={s.archDot} />}
-                  <View style={s.archSpacer} />
-                  <Text style={s.archCount}>{archived.length}</Text>
-                  <Feather name={showArchived ? 'chevron-up' : 'chevron-down'} size={16} color={FOREST_SOFT} />
-                </TouchableOpacity>
-                {showArchived && archived.map(r => renderRoom(r, { plana: true, dimmed: true }))}
-              </>
-            )}
-
             {conRotulos && <Text style={s.grupo}>Con sesión agendada</Text>}
             {agendadas.map(r => renderRoom(r))}
 
@@ -556,6 +536,32 @@ export default function CoachChatsScreen() {
                   ? `Ninguna persona coincide con «${busqueda.trim()}»`
                   : 'Nadie en este filtro por ahora'}
               </Text>
+            )}
+
+            {/* 🔴 Archivados va AL PIE, y acá se separa de WhatsApp a propósito.
+                Allá el archivo es un balde chico y estable; acá **crece para
+                siempre**: cada paciente que deja de venir termina adentro, así
+                que a los dos años es el grupo más grande y el menos relevante
+                de la pantalla. Un montón que solo engorda no puede ocupar el
+                lugar que se escanea primero. */}
+            {archived.length > 0 && (
+              <>
+                <TouchableOpacity style={s.archLink} activeOpacity={0.7} onPress={() => setShowArchived(v => !v)}>
+                  <Feather name="archive" size={16} color={FOREST_SOFT} />
+                  <Text style={s.archLinkTxt}>Archivados</Text>
+                  {/* Archivar NO silencia. Si alguien archivado escribe, el
+                      punto aparece acá: la conversación deja de estar arriba,
+                      pero el coach no se pierde a un cliente que lo buscó. Se
+                      eligió esto antes que desarchivar solo —como hace el mail—
+                      porque deshacer una decisión del coach sin avisarle es
+                      peor que un punto de más. */}
+                  {archived.some(r => r.hasUnread) && <View style={s.archDot} />}
+                  <View style={s.archSpacer} />
+                  <Text style={s.archCount}>{archived.length}</Text>
+                  <Feather name={showArchived ? 'chevron-up' : 'chevron-down'} size={16} color={FOREST_SOFT} />
+                </TouchableOpacity>
+                {showArchived && archived.map(r => renderRoom(r, { plana: true, dimmed: true }))}
+              </>
             )}
 
             {/* El gesto no se adivina, pero es una nota al pie — y va al pie.
@@ -708,8 +714,10 @@ const s = StyleSheet.create({
 
   archLink: {
     flexDirection: 'row', alignItems: 'center', gap: 9,
-    paddingVertical: 13, paddingHorizontal: 4, marginBottom: 6,
-    borderBottomWidth: 1, borderBottomColor: LINE,
+    paddingVertical: 13, paddingHorizontal: 4, marginTop: 10,
+    // El separador va ARRIBA: cierra la lista de gente activa en vez de
+    // encabezar una sección. Archivados es el pie, no un capítulo.
+    borderTopWidth: 1, borderTopColor: LINE,
   },
   archLinkTxt: { fontSize: 13.5, fontFamily: ViveFonts.medium, color: FOREST_SOFT },
   archSpacer: { flex: 1 },

@@ -268,6 +268,7 @@ h2 {
   border-bottom: 1px solid var(--app-line);
 }
 .archrow .n { margin-left: auto; }
+.archrow.foot { border-bottom: none; border-top: 1px solid var(--app-line); margin: 10px 0 0; }
 
 /* ── Anatomía ───────────────────────────────────────────────────────────── */
 .anat { display: grid; gap: 1px; background: var(--board-line); border-radius: 14px; overflow: hidden; }
@@ -481,8 +482,6 @@ ol.work code {
             <span class="pill">Agendadas</span>
             <span class="pill">Sin pró…</span>
           </div>
-          <div class="archrow">🗀&nbsp; Archivados <span class="n">5 ⌄</span></div>
-
           <div class="grp">Con sesión agendada</div>
 
           <div class="row2">
@@ -506,7 +505,7 @@ ol.work code {
             </div>
           </div>
 
-          <div class="arch">› Archivados (5)</div>
+          <div class="archrow foot">🗀&nbsp; Archivados <span class="n">5 ⌄</span></div>
           <p class="hint">Mantené presionada una persona para archivarla</p>
           <div class="void" style="height:70px"></div>
         </div>
@@ -583,8 +582,11 @@ ol.work code {
       <div class="anat-row">
         <div class="anat-k">El coach</div>
         <p class="anat-v"><strong>10 o 20 pacientes activos a la vez.</strong> A esa escala el buscador y los
-        filtros no son relleno: son la diferencia entre encontrar a alguien y scrollear. Van los cuatro
-        elementos, en el orden de WhatsApp — título, buscador, filtros, Archivados, lista.</p>
+        filtros no son relleno: son la diferencia entre encontrar a alguien y scrollear. Se tomó el orden de
+        WhatsApp menos una cosa: <strong>allá Archivados va arriba, acá va al pie</strong>. El archivo de
+        WhatsApp es un balde chico y estable; este <strong>crece para siempre</strong> —cada paciente que deja
+        de venir termina adentro— así que a los dos años es el grupo más grande y el menos relevante de la
+        pantalla. Un montón que solo engorda no puede ocupar el lugar que se escanea primero.</p>
       </div>
       <div class="anat-row">
         <div class="anat-k">La persona</div>
@@ -594,8 +596,8 @@ ol.work code {
       </div>
       <div class="anat-row">
         <div class="anat-k">Y de paso</div>
-        <p class="anat-v">El bloque deja la primera fila a <strong>222pt del área segura</strong> —WhatsApp la
-        deja a ~216— o sea dentro del alcance del pulgar. Pero eso es la consecuencia, no el motivo:
+        <p class="anat-v">El bloque deja la primera fila a <strong>170pt del área segura</strong>, dentro del
+        alcance del pulgar. Pero eso es la consecuencia, no el motivo:
         <strong>rellenar por rellenar habría sido padding con otro nombre</strong>.</p>
       </div>
     </div>
@@ -619,7 +621,7 @@ ol.work code {
       de <code>SurfaceCard</code> en vez del borde al 14% que hoy casi no se ve.</li>
       <li><strong>Mover el aviso de archivar</strong> al pie, debajo de Archivados.</li>
       <li><strong>Sumar el bloque de arriba</strong>: buscador (filtra por nombre, sin tildes ni mayúsculas),
-      cuatro filtros en scroll horizontal, y Archivados subiendo del pie a la cabecera. Con estado vacío propio
+      cuatro filtros en scroll horizontal, y Archivados quedándose al pie. Con estado vacío propio
       cuando el filtro o la búsqueda dejan la lista en cero.</li>
       <li><strong>Capitalizar el nombre</strong>: los perfiles guardan lo que la persona tipeó al registrarse,
       y ahí entra «andre» en minúscula. En un directorio de gente eso se lee como descuido.</li>
