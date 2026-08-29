@@ -29,6 +29,8 @@
 
 **Con esto la tanda recortada de Recursos v3 Fase 0 está COMPLETA** (schema + form + moderación). Nada confirmado en dispositivo todavía.
 
+**🔴 PENDIENTE PRINCIPAL (pedido de Joaquín al cerrar el 29/08): terminar el rediseño del apartado de Recursos.** Esta tanda cubrió la Fase 0 (lo que bloquea el lanzamiento), pero el rediseño visual/UX del apartado quedó a medio hacer. Retomarlo abarca los ítems diferidos de abajo + revisar el look & feel general de la biblioteca del usuario y de "Mis recursos" del coach contra el design system (SurfaceCard, paleta earth-tone, tipografía Plus Jakarta Sans). Falta también confirmar TODA esta tanda en dispositivo (subir un recurso con el selector nuevo, aprobarlo/rechazarlo desde Supabase, ver la notificación llegar).
+
 **Diferido a propósito (para cuando haya volumen de contenido que lo justifique):**
 - Reproductor: barra de progreso arrastrable (hoy hace seek por tap) y guardar posición para retomar.
 - `publish_at` + auto-publicación programada.
