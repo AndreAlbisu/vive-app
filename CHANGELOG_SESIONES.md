@@ -105,7 +105,9 @@
 
 ### Reservas pendientes que sobreviven a su horario
 
-- 🔴 `expire_pending_bookings()` vencía por **antigüedad de la solicitud** (24hs desde `created_at`), no por el horario de la sesión. Una reserva pedida para dentro de 3 horas que el coach nunca acepta **cruza el horario y sigue `pendiente` otras 21 horas**: la persona ve "esperando confirmación" sobre una sesión que ya pasó, con la plata retenida si pagó, y el slot del coach ocupado por algo que ya no puede ocurrir. `scripts/expire-pending-past-session-time.sql` — ⚠️ **PENDIENTE DE CORRER**.
+- 🔴 `expire_pending_bookings()` vencía por **antigüedad de la solicitud** (24hs desde `created_at`), no por el horario de la sesión. Una reserva pedida para dentro de 3 horas que el coach nunca acepta **cruza el horario y sigue `pendiente` otras 21 horas**: la persona ve "esperando confirmación" sobre una sesión que ya pasó, con la plata retenida si pagó, y el slot del coach ocupado por algo que ya no puede ocurrir. `scripts/expire-pending-past-session-time.sql` — ✅ **CORRIDO y VERIFICADO el 29/08/2026**: `pendientes_vencidas = 0`, `tiene_el_arreglo = true`, `guard_flojo = true`.
+- 🔴 **El guard salteaba en silencio lo que quería proteger, y lo encontré mirando una fila real y no el código.** El regex era `^[0-9]{2}:[0-9]{2}` y la base guarda horas de UN dígito: aparecieron `'0:00'` y `'2:00'` en las dos filas que miré. O sea que el guard quedaba **más estricto que el cast de Postgres** —que parsea `'0:00'` perfecto— y esas reservas seguían sobreviviendo a su horario, sin ningún error visible. Corregido a `{1,2}`. **La regla**: el guard tiene que tener exactamente la forma que el cast acepta, ni más (saltea válidos) ni menos (aborta el cron).
+- 📝 **Dos hallazgos de la verificación, los dos sanos.** (1) Una cancelada con pago `aprobado` que resultó ser la penalidad por cancelación tardía del usuario (`cancelled_by='usuario'` + `cancelled_late=true`), o sea la regla del 15/07 funcionando. (2) ⚠️ **Un reembolso trabado de verdad**: `refund_attempts = 6` sobre una reserva de prueba del 09/08 con `charged_amount` en null — el cron le viene pegando a la API de MP cada 5 minutos desde entonces para algo que no va a salir nunca. **Queda sin resolver**: antes de marcarla hay que confirmar en el panel de MP si el pago se cobró o no.
 - 📝 El guard de regex sobre `scheduled_time` no es defensivo de más: la columna es `text`, el cast tira si no parsea, y esto corre en un cron cada 5 minutos — una fila con basura abortaría la corrida y se llevaría puesto también el vencimiento de 24hs, que hoy no puede fallar. El `OR` de SQL no garantiza cortocircuito.
 
 ### De paso
@@ -115,7 +117,7 @@
 **Pendiente para la próxima sesión:**
 
 - 🔴 **Probar el ciclo de credenciales en el teléfono**: cargar una como Coach Prueba, verificarla desde el panel, y confirmar que en el perfil público aparece **el dato y no el documento**. Nada de esto se vio corriendo.
-- 🔴 **Correr `scripts/expire-pending-past-session-time.sql`** — escrito y sin correr.
+- ⚠️ **Sacar del dead-letter la reserva `2c72b126`** (`refund_attempts = 6`, MP, desde el 09/08). Confirmar primero en el panel de MP si el pago se cobró: si no se cobró, alcanza con marcarla `'reembolsado'`; si se cobró, hay que devolverlo de verdad.
 - ⚠️ **Falta un párrafo en la política de privacidad**: ahora se recibe y se conserva un documento de identidad profesional. Va con los placeholders que esperan al abogado.
 - ⚠️ **`lib/coachBookingActions.ts:29` deja confirmar una sesión cuyo horario ya pasó** — la otra mitad del defecto de las pendientes, sin arreglar.
 - 🔴 **Probar el rediseño de "Tus personas" en el teléfono.** Nada se vio corriendo. Los casos que importan: alguien con sesión hoy (pastilla verde plena), los dos grupos con gente (que aparezcan los rótulos), y un solo grupo (que NO aparezcan).
