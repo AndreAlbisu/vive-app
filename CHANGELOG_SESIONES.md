@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-29 — Joaquín (sesión 146)
+
+**Tocado:** `scripts/add-resource-wellness-goal.sql` (nuevo, **CORRIDO y VERIFICADO**), `SCHEMA.md`.
+
+**Resumen — arrancó "Recursos v3 Fase 0", pero la auditoría previa reveló que casi todo ya estaba, así que se recortó a lo que genera valor real.**
+
+- 🔴 **Auditoría antes de codear** (regla del brief): "Recursos v2" está MUCHO más implementado de lo que el brief asumía. Ya existen: la tabla `coach_resources` (con RLS correcta, CHECKs, bucket `resource-audio` público de 30MB), las tres tablas de eventos (`resource_recommendations`/`resource_saves`/`resource_events`), el formulario de subida del coach (`app/coach-recurso-nuevo.tsx`, 576 líneas, con grabador in-app), la lista "Mis recursos" con chips de estado y cap de 10 (`CoachResourcesScreen`), la Biblioteca del usuario leyendo published de la base (`recursos.tsx`), y el detalle+player (`app/coach-recurso.tsx`, 699 líneas: audio `expo-audio` con seek/skip, video `YoutubeIframe`, registra play/complete en `resource_events`). Paquetes todos instalados (`expo-audio`, `expo-video`, `react-native-youtube-iframe`, `expo-web-browser`) — cero dependencias nuevas.
+- **Decisión de alcance**: el sistema ya funciona de punta a punta, así que casi nada "bloquea el lanzamiento". Se recortó de la Fase 0 completa a la tajada que genera valor real: (1) `wellness_goal` ahora, (2) notificación al coach en cambio de estado, (3) guards baratos del upload (rechazo `.wav` + aviso de calidad de audio). Se difieren: `publish_at`/auto-publish (feature de calendario, problema de "mucho contenido"), barra arrastrable (el seek por tap ya anda), guardar posición para retomar (la feature ya estaba diferida a Fase 1), y reestructurar el form a 4 pasos (rearquitectura de algo que funciona).
+- **Sub-fase 1 (schema) — HECHA**: `scripts/add-resource-wellness-goal.sql` agrega `coach_resources.wellness_goal` (text + CHECK con 8 valores, nullable). Los 8 valores y "filas viejas en NULL" se aplicaron con los defaults (Joaquín no quiso frenar a confirmar). Corrida y verificada contra la base: 4 chequeos OK, las 11 filas viejas quedaron en NULL sin romper. Ver `SCHEMA.md` §`coach_resources`.
+
+**Pendiente para la próxima (dentro de esta misma tanda):**
+- Sub-fase 2: selector de `wellness_goal` en el formulario de subida (obligatorio para nuevos) + rechazo de `.wav` con mensaje + aviso de calidad de audio antes de elegir archivo.
+- Sub-fase 3: trigger de notificación al coach cuando cambia `coach_resources.status`.
+- (Reproductor: la barra arrastrable y guardar posición quedaron DIFERIDAS a propósito, no son de esta tanda.)
+
+---
+
 ## 2026-08-29 — Joaquín (sesión 145)
 
 **Tocado:** `lib/coachesCache.ts`, `app/search3.tsx`.
