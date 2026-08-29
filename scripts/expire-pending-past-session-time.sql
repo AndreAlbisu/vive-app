@@ -67,8 +67,15 @@ begin
         -- el vencimiento de 24hs, que hoy no puede fallar. El OR de SQL no
         -- garantiza cortocircuito, así que el guard tiene que estar pegado al
         -- cast y no alcanzaría con el orden de las condiciones.
+        --
+        -- ⚠️ `{1,2}` en la hora, no `{2}`. La primera versión exigía dos dígitos
+        -- y en la base hay filas con `'0:00'` — el cast las parsea perfecto, así
+        -- que el guard quedaba MÁS ESTRICTO que el cast y salteaba en silencio
+        -- casos válidos. Encontrado el 29/08/2026 mirando una fila real. La
+        -- regla es que el guard tenga exactamente la forma que el cast acepta:
+        -- ni más (saltea válidos) ni menos (aborta el cron).
         or (
-          scheduled_time ~ '^[0-9]{2}:[0-9]{2}'
+          scheduled_time ~ '^[0-9]{1,2}:[0-9]{2}'
           and (
             (scheduled_date::text || ' ' || scheduled_time)::timestamp
               at time zone 'America/Argentina/Buenos_Aires'
@@ -80,7 +87,7 @@ begin
       -- Para poder decirle a la persona lo que realmente pasó. Se recalcula
       -- sobre la fila ya actualizada, que conserva fecha y hora.
       (
-        scheduled_time ~ '^[0-9]{2}:[0-9]{2}'
+        scheduled_time ~ '^[0-9]{1,2}:[0-9]{2}'
         and (
           (scheduled_date::text || ' ' || scheduled_time)::timestamp
             at time zone 'America/Argentina/Buenos_Aires'
@@ -128,7 +135,7 @@ $$;
 --           min(scheduled_date) as mas_vieja
 --    from bookings
 --    where status = 'pendiente'
---      and scheduled_time ~ '^[0-9]{2}:[0-9]{2}'
+--      and scheduled_time ~ '^[0-9]{1,2}:[0-9]{2}'
 --      and ((scheduled_date::text || ' ' || scheduled_time)::timestamp
 --            at time zone 'America/Argentina/Buenos_Aires') < now();
 --
@@ -146,7 +153,7 @@ $$;
 --
 --    select id, payment_status from bookings
 --    where status = 'cancelada' and payment_status = 'aprobado'
---      and scheduled_time ~ '^[0-9]{2}:[0-9]{2}'
+--      and scheduled_time ~ '^[0-9]{1,2}:[0-9]{2}'
 --      and ((scheduled_date::text || ' ' || scheduled_time)::timestamp
 --            at time zone 'America/Argentina/Buenos_Aires') < now();
 --
