@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-08-29 — Joaquín (sesión 145)
+
+**Tocado:** `lib/coachesCache.ts`, `app/search3.tsx`.
+
+**Resumen — cerrado el pendiente de Andre (sesión 130): los cartelitos de PayPal/USDT del deck y del buscador no estaban atados a `price_usd`.**
+
+- Arranqué la sesión con la revisión de pendientes de Andre contra la base/código real (pedido de Joaquín, ver memoria). De la lista de Andre confirmé: `expire-pending-past-session-time.sql` ✅ ya corrida (con fix del 29/08), `daily-diagnostico` ✅ ya borrada, cron `session-attendance` ✅ activo. Este era el 🔴 de código más cerrado que quedaba abierto.
+- El defecto: `paypal-create-payment`/`usdt-create-payment` rechazan el cobro sin `price_usd` cargado, así que un coach con el flag del riel en `true` pero sin precio en dólares mostraba un cartelito de un medio que el checkout no ofrece. Andre ya lo había arreglado en el perfil (`ProfesionalScreen`, sesión 130); faltaba en las dos fuentes que alimentan el deck y el buscador.
+- Aplicada la misma regla que el perfil — `acceptsPaypal: !!accepts_paypal && price_usd != null` (ídem USDT) — en `lib/coachesCache.ts` (fuente del deck y del search con caché caliente) y en la consulta de respaldo de `app/search3.tsx` (caché frío). Los dos consumidores (tarjeta del deck, tarjeta del buscador, y de paso el filtro por medio de pago de search3) leen el valor ya corregido, no hizo falta tocarlos.
+- **Impacto verificado contra la base**: de los 3 coaches con algún riel de dólares en `true`, 2 tenían `price_usd` null (María González → PayPal, Martín Fuentes → USDT — los dos de prueba que se conectaron en la sesión 132 para tener variedad de badges). Antes mostraban un badge que no se podía pagar; ahora no lo muestran. Coach Prueba (price_usd 30) queda igual.
+- ⚠️ **Efecto secundario en datos de prueba, no en código**: María y Martín siguen apareciendo en el catálogo (el filtro D6 mira las columnas crudas `accepts_paypal`/`accepts_usdt` a nivel DB, que siguen en `true`) pero ahora **sin ningún badge de pago** — quedan como coaches visibles sin medio de cobro mostrable. Es artefacto de cómo los sembré para probar D6 (rieles sin precio). Si hace falta recuperar la variedad de badges para probar, alcanza con darles un `price_usd`. No lo toqué — queda a criterio de Joaquín.
+- Typecheck, lint y 346/346 tests limpios. No confirmado en dispositivo.
+
+**Pendiente para la próxima sesión:**
+- Ver en el catálogo real que María/Martín ya no muestran el badge de PayPal/USDT (o decidir darles `price_usd` para volver a tener variedad de prueba).
+
+---
+
 ## 2026-08-28 — Andre (sesión 131)
 
 **Tocado:** `screens/CoachChatsScreen.tsx`, `app/(coach)/_layout.tsx`, `lib/meetingRoom.ts`, `screens/SalaScreen.tsx`, `SessionsScreen.tsx`, `BookingScreen_Confirm.tsx`, `lib/coachBookingActions.ts`, `supabase/functions/create-meeting-room/index.ts`, `SCHEMA.md`. Nuevos: `scripts/habilitar-realtime.sql` (**CORRIDO**), `supabase/functions/daily-diagnostico/`, `docs/la-voz-de-sofia.md`. 312 tests, `tsc` y lint limpios.

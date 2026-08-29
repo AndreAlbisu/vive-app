@@ -90,8 +90,14 @@ async function _doFetch(): Promise<void> {
       // catálogo algo que la pantalla de pago después no ofrece.
       acceptsInternational: !!(c.accepts_international) && c.price_usd != null,
       acceptsMp: !!(c as any).mp_connected,
-      acceptsPaypal: !!(c as any).accepts_paypal,
-      acceptsUsdt: !!(c as any).accepts_usdt,
+      // 🔴 PayPal y USDT van atados a `price_usd`, igual que
+      // `acceptsInternational` arriba y que `ProfesionalScreen`: sin precio en
+      // dólares `paypal-create-payment`/`usdt-create-payment` rechazan el
+      // cobro, así que el cartelito del deck y del buscador estaría anunciando
+      // un medio que el checkout no ofrece. Hay coaches hoy con el riel en
+      // `true` y `price_usd` en null.
+      acceptsPaypal: !!(c as any).accepts_paypal && c.price_usd != null,
+      acceptsUsdt: !!(c as any).accepts_usdt && c.price_usd != null,
       priceUsd:    (c.price_usd ?? null) as number | null,
       avgRating:   null,
       reviewCount: 0,

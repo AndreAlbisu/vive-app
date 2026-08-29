@@ -225,8 +225,10 @@ export default function SearchScreen3() {
             topics: (c.coach_topics ?? []).map((t: any) => t.topic as string),
             acceptsInternational: !!c.accepts_international && c.price_usd != null,
             acceptsMp: !!c.mp_connected,
-            acceptsPaypal: !!c.accepts_paypal,
-            acceptsUsdt: !!c.accepts_usdt,
+            // Atados a `price_usd`, igual que `coachesCache.ts` y el perfil —
+            // sin precio en dólares el checkout rechaza estos rieles.
+            acceptsPaypal: !!c.accepts_paypal && c.price_usd != null,
+            acceptsUsdt: !!c.accepts_usdt && c.price_usd != null,
           };
         });
         applyAndSet(all);
