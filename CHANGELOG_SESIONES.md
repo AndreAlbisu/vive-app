@@ -19,7 +19,7 @@
 - Typecheck, lint y 346/346 tests limpios. No confirmado en dispositivo.
 
 **Pendiente para la próxima sesión:**
-- Ver en el catálogo real que María/Martín ya no muestran el badge de PayPal/USDT (o decidir darles `price_usd` para volver a tener variedad de prueba).
+- Ver en el catálogo real que María/Martín ya no muestran el badge de PayPal/USDT. **Resuelto el mismo día por la otra vía**: Joaquín eligió darles `price_usd` para recuperar la variedad de prueba — María González → 35 (badge PayPal), Martín Fuentes → 30 (badge USDT), vía SQL directo. El trigger `sync_accepts_international` derivó `accepts_international = true` en los dos, verificado contra la base. Los tres coaches de prueba vuelven a tener badge de pago visible.
 
 ---
 
