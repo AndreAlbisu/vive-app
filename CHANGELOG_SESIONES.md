@@ -7,7 +7,7 @@
 
 ## 2026-08-29 — Joaquín (sesión 146)
 
-**Tocado:** `scripts/add-resource-wellness-goal.sql` (nuevo, **CORRIDO y VERIFICADO**), `SCHEMA.md`, `app/coach-recurso-nuevo.tsx`.
+**Tocado:** `scripts/add-resource-wellness-goal.sql` + `scripts/add-resource-status-notification.sql` (nuevos, los dos **CORRIDOS y VERIFICADOS**), `SCHEMA.md`, `app/coach-recurso-nuevo.tsx`.
 
 **Resumen — arrancó "Recursos v3 Fase 0", pero la auditoría previa reveló que casi todo ya estaba, así que se recortó a lo que genera valor real.**
 
@@ -21,9 +21,20 @@
   - Analítica: `registrarEvento('recurso_subido', { formato, objetivo })` fire-and-forget al enviar. `wellness_goal` agregado al insert.
   - Typecheck, lint (solo un warning preexistente de `selectedFormat` sin usar) y 346 tests limpios. No confirmado en dispositivo.
 
-**Pendiente para la próxima (dentro de esta misma tanda):**
-- Sub-fase 3: trigger de notificación al coach cuando cambia `coach_resources.status` (published/rejected) + eventos `recurso_aprobado`/`recurso_rechazado`. Con la moderación por editor de tablas, el trigger sobre el UPDATE es la vía.
-- (Reproductor: la barra arrastrable y guardar posición quedaron DIFERIDAS a propósito, no son de esta tanda.)
+- **Sub-fase 3 (moderación) — HECHA**, `scripts/add-resource-status-notification.sql`:
+  - Trigger `trg_notify_resource_status` (AFTER UPDATE OF status en `coach_resources`, `security definer`). Cuando el admin cambia el status a `published`/`rejected` desde el editor de tablas, inserta la notificación in-app para el `profiles.id` del coach (nuevos tipos `recurso_publicado`/`recurso_rechazado`, el rechazo menciona la `rejection_rule`) y el evento de analítica (`recurso_aprobado`/`recurso_rechazado`, `{regla}` en el rechazo) — este último es la única vía de capturar esos eventos porque la moderación no pasa por código de cliente.
+  - CHECK de `notifications.type` **recreado entero** con la lista completa + los 2 tipos nuevos (no se parcheó el string — es donde Andre se quemó el 28/08).
+  - 📝 **In-app solo, sin push** (decisión de Joaquín tras evaluar el costo): el push desde el trigger requiere `pg_net` a exp.host, fire-and-forget sin poder observar/testear el envío ni limpiar tokens muertos. Para 5 coaches el in-app alcanza (y `notifications` está en realtime → con la app abierta aparece solo). Queda como aditivo si más adelante hace falta el push con app cerrada.
+  - ✅ **Verificado con prueba real contra la base**: se rechazó un recurso seed con regla 3 y se re-publicó → las 2 notificaciones con el texto correcto ("no cumple la regla 3" / "ya aparece en la biblioteca") y los 2 eventos (`{regla:3}` / `{}`). Los 4 artefactos de prueba se borraron y el recurso quedó en su estado original (`published`).
+
+**Con esto la tanda recortada de Recursos v3 Fase 0 está COMPLETA** (schema + form + moderación). Nada confirmado en dispositivo todavía.
+
+**Diferido a propósito (para cuando haya volumen de contenido que lo justifique):**
+- Reproductor: barra de progreso arrastrable (hoy hace seek por tap) y guardar posición para retomar.
+- `publish_at` + auto-publicación programada.
+- Reestructurar el form de subida a 4 pasos.
+- Push (con app cerrada) en la notificación de moderación.
+- (Opcional) CHECK de longitud de `title`/`description` a nivel DB (hoy se limita en cliente).
 
 ---
 
