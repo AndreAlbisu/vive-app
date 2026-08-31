@@ -34,6 +34,12 @@
 
 **Pendiente:** confirmar en el teléfono las tres vistas (Recursos, un formato con su deck, la vista de lista). Sigue abierto el resto del pendiente de Recursos que dejó Andre (eje `wellness_goal` vs. puertas — este rediseño usó los temas/`topic_id`, que es lo que existe; etiquetar a mano los 8 publicados con `wellness_goal` NULL).
 
+**🔴 PENDIENTE PARA MAÑANA (pedido de Joaquín al cerrar el 31/08): TODA la revisión en dispositivo de lo que se hizo hoy quedó sin hacer.** Nada de la sesión 148 se vio corriendo. Lista para revisar en el teléfono:
+- **Recursos usuario**: la grilla 2×2 de formatos, los eyebrows, que la card del coach quedó bien.
+- **Pantalla de formato**: el deck (peek, gradientes, grano, snap), los chips de tema, la búsqueda, los puntitos, los tres bloques (progreso, ver como lista, pedile reco al coach), y la vista de lista.
+- **coach-login** con el diseño nuevo (crema, ornamentos, "Usar email", flujo `needsName` intacto).
+- De Andre (sesión 147), también sin confirmar en dispositivo: la recuperación de contraseña de punta a punta desde el dev build.
+
 ---
 
 ## 2026-08-31 — Joaquín (sesión 148)
