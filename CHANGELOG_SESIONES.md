@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-08-31 — Joaquín (sesión 148 · Recursos usuario, checkpoint A)
+
+**Tocado:** `constants/theme.ts`, `app/(tabs)/recursos.tsx`.
+
+**Resumen — rediseño de la pantalla Recursos (lado usuario), primer checkpoint. Es rediseño de presentación: no cambia el modelo de datos ni de dónde salen los recursos.**
+
+- **Exploración previa** (regla del brief): confirmado que el progreso PARCIAL ("Continuar · faltan N min") **no existe** para `coach_resources` — el player (`app/coach-recurso.tsx`) solo loguea play/complete en `resource_events`, no guarda posición; `resource_completions` (con `progress_seconds`) es de las herramientas de Vita y siempre se escribe completo. Los COMPLETADOS sí se pueden derivar (`resource_events` event='complete'). El detalle/player existe (`/coach-recurso`). Paquetes y carrusel: el deck de Conexiones usa `pagingEnabled` full-width (sin peek) → para el peek de 79% del brief usaré `snapToInterval` en el checkpoint B.
+- **Token de color de formato centralizado**: `ResourceFormatColors`/`ResourceFormatLabels` + `mixHex`/`resourceFormatGradient` en `constants/theme.ts`. Antes el `FORMAT_COLOR` estaba duplicado en `recursos.tsx` y `coach-recurso.tsx`. Los gradientes del deck (checkpoint B) se derivan de acá, no son colores nuevos.
+- **Pantalla Recursos, de "Recomendado por tu profesional" para abajo**:
+  - Título → **eyebrow** ("DE TU PROFESIONAL · N", mayúsculas 9.5px con letter-spacing). En Fraunces competía con "Herramientas de Vita".
+  - La card del coach queda igual.
+  - 🔴 **Fila "Continuar" OMITIDA** (no hay dato parcial — documentado en el código donde estaba `ContinueCard`, que además era UI muerta: `lastInProgress` nunca tiene valor porque `recordCompletion` siempre escribe progreso completo).
+  - Biblioteca: dejó de ser lista. Se fueron los chips de tema y las filas con cuadrado de color (se mudan a la pantalla de formato del checkpoint B). En su lugar: eyebrow "BIBLIOTECA · N recursos" + **grilla 2×2 de formatos** (`FormatGrid`), cada tile con el ícono dentro de un anillo de 1.5px del color del formato, nombre en `ViveFonts.title` y el contador debajo. Conteo por formato vía una query liviana (solo la columna `format` de los publicados, cuenta en JS).
+- Limpieza: se removieron `ExploreSection` y sus imports/estado muertos (`selectedDoor`/`selectedFormat`/`exploreResources`, `DOORS`, `AccessibilityInfo`, `LayoutAnimation`, `TOOLS`, `logResourceEvent`, `toggleSave`, etc.). `recursos.tsx` queda **sin warnings de lint**.
+- ⚠️ **Los tiles navegan a `/formato?formato=X`, que se crea en el checkpoint B** — tocar un tile todavía no lleva a ningún lado hasta entonces. El resto de la pantalla funciona.
+- Typecheck y 346 tests limpios. No confirmado en dispositivo.
+
+**Pendiente (checkpoint B):** pantalla de formato nueva (`app/formato.tsx`) — header + descripción, chips de tema, deck horizontal `snapToInterval` con cards de gradiente de formato, puntitos, y los tres bloques (progreso del formato ✅ derivable, ver como lista, pedile una reco al coach si tiene sala). Analítica: `formato_abierto`/`deck_deslizado`/`vista_lista_abierta`/`recomendacion_pedida_a_coach`.
+
+---
+
 ## 2026-08-31 — Joaquín (sesión 148)
 
 **Tocado:** `screens/CoachLoginScreen.tsx`.

@@ -6,17 +6,13 @@ import {
   ScrollView,
   StatusBar,
   TouchableOpacity,
-  AccessibilityInfo,
-  LayoutAnimation,
-  Platform,
-  UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
-import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { ViveFonts, TAB_BAR_CLEARANCE, ResourceFormatColors, ResourceFormatLabels } from '@/constants/theme';
 import { ScaleCard } from '@/components/ScaleCard';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { AppBg } from '@/components/ui/AppBg';
@@ -26,13 +22,7 @@ import { supabase } from '@/lib/supabase';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { useResourceProgress } from '@/hooks/useResourceProgress';
 import { useRecommendedResource, type Reco, type MoodLite } from '@/hooks/useRecommendedResource';
-import { DOORS } from '@/constants/conexionesDoors';
-import { logResourceEvent } from '@/lib/resourceEvents';
-import { TOOLS, TOOL_MAP, type Tool, type IoniconName } from '@/constants/tools';
-
-if (Platform.OS === 'android') {
-  UIManager.setLayoutAnimationEnabledExperimental?.(true);
-}
+import { TOOL_MAP, type Tool, type IoniconName } from '@/constants/tools';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 // `Tool`, `IoniconName`, `TOOLS`, `TOOL_MAP` viven en @/constants/tools
@@ -52,18 +42,6 @@ type CoachRecoItem = {
     topic_id: string;
   };
   coaches: {
-    profiles: { name: string };
-  };
-};
-
-type CoachResourceItem = {
-  id: string;
-  title: string;
-  format: string;
-  duration_seconds: number | null;
-  topic_id: string;
-  coaches: {
-    profile_id: string;
     profiles: { name: string };
   };
 };
@@ -206,42 +184,12 @@ function RecommendedCard({
   );
 }
 
-// ─── ContinueCard ─────────────────────────────────────────────────────────────
-function ContinueCard({
-  resourceId,
-  progressSeconds,
-  durationSeconds,
-}: {
-  resourceId: string;
-  progressSeconds: number;
-  durationSeconds: number;
-}) {
-  const router = useRouter();
-  const tool = TOOL_MAP[resourceId];
-  if (!tool) return null;
-
-  const pct = progressSeconds / durationSeconds;
-  const remainingMin = Math.ceil((durationSeconds - progressSeconds) / 60);
-  const totalMin = Math.ceil(durationSeconds / 60);
-
-  return (
-    <ScaleCard
-      style={s.continueCard}
-      onPress={() => { if (tool.route) router.push(tool.route as any); }}
-      activeOpacity={0.88}>
-      <View style={s.continueIcon}>
-        <Ionicons name={tool.icon} size={22} color={FOREST} />
-      </View>
-      <View style={s.continueText}>
-        <Text style={s.continueTitle}>Continuar: {tool.label}</Text>
-        <Text style={s.continueSub}>Te quedan {remainingMin} min de {totalMin}</Text>
-        <View style={s.progressTrack}>
-          <View style={[s.progressFill, { width: `${Math.round(pct * 100)}%` as any }]} />
-        </View>
-      </View>
-    </ScaleCard>
-  );
-}
+// 📝 La fila "Continuar" (recurso a medias) del brief NO se construye: el
+// progreso PARCIAL no existe para `coach_resources` — el player solo loguea
+// play/complete en `resource_events`, no guarda posición. `resource_completions`
+// (con progress_seconds) es de las herramientas de Vita, y `recordCompletion`
+// siempre escribe progreso = duración, así que ni ahí hay "a medias". Cuando el
+// player guarde posición, esto se puede reponer sin tocar el resto.
 
 // LibraryResource alimenta la recomendación por eje (useRecommendedResource);
 // el carrusel "Recursos de nuestros coaches" se removió por pisarse con "Explorar
@@ -264,15 +212,11 @@ const LIBRARY_TYPE_ICON: Record<string, React.ComponentProps<typeof Ionicons>['n
   lectura_breve: 'book-outline',
 };
 
-const FORMAT_COLOR: Record<string, string> = {
-  audio:   '#C06B4A',
-  podcast: '#7E8CA8',
-  video:   '#8A6FA8',
-  lectura: '#6B7A56',
-};
-const FORMAT_LABEL: Record<string, string> = {
-  audio: 'Audio', podcast: 'Podcast', video: 'Video', lectura: 'Lectura',
-};
+// Fuente única: los colores y labels de formato viven en `constants/theme.ts`
+// (`ResourceFormatColors`/`ResourceFormatLabels`). Se aliasan acá para no tocar
+// cada uso. El ícono sí queda local — es un nombre de Ionicon, no un token.
+const FORMAT_COLOR = ResourceFormatColors;
+const FORMAT_LABEL = ResourceFormatLabels;
 const FORMAT_ICON: Record<string, IoniconName> = {
   audio:   'mic-outline',
   podcast: 'musical-notes-outline',
@@ -323,8 +267,11 @@ function CoachRecoSection({
 
   return (
     <View style={{ marginTop: 18, marginBottom: 4 }}>
-      <View style={s.libraryHeaderRow}>
-        <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Recomendado por tu profesional</Text>
+      {/* Eyebrow, no título grande: en Fraunces competía con "Herramientas de
+          Vita", dos encabezados del mismo peso peleando por ser lo principal. */}
+      <View style={s.eyebrowRow}>
+        <Text style={s.eyebrow}>De tu profesional</Text>
+        <Text style={s.eyebrowCount}>{recos.length}</Text>
       </View>
       <View style={{ gap: 10 }}>
         {visible.map(item => {
@@ -379,8 +326,8 @@ function CoachRecoSection({
   );
 }
 
-// ─── ExploreSection ───────────────────────────────────────────────────────────
-const FORMATS = ['audio', 'video', 'podcast', 'lectura'] as const;
+// Orden de los cuatro formatos en la grilla 2×2 y en el resto de la biblioteca.
+const FORMATS = ['audio', 'podcast', 'video', 'lectura'] as const;
 
 // Saca el prefijo "[SEED] " de los títulos de datos de prueba — solo al
 // mostrar, no toca el dato (Ajuste 5).
@@ -388,156 +335,43 @@ function displayTitle(title: string): string {
   return title.replace(/^\[SEED\]\s*/, '');
 }
 
-function ExploreSection({
-  resources,
-  savedIds,
-  onSave,
-  selectedDoor,
-  onSelectDoor,
-  selectedFormat,
-  onSelectFormat,
-  userId,
+// ─── FormatGrid ───────────────────────────────────────────────────────────────
+// La biblioteca dejó de ser una lista: es una grilla 2×2, un tile por formato.
+// El tile no es un cuadrado relleno — es el ícono adentro de un anillo fino en
+// el color del formato. Tocarlo abre la pantalla de ese formato (deck + lista).
+function FormatGrid({
+  counts,
+  total,
 }: {
-  resources: CoachResourceItem[];
-  savedIds: Set<string>;
-  onSave: (id: string) => void;
-  selectedDoor: string | null;
-  onSelectDoor: (id: string | null) => void;
-  selectedFormat: string | null;
-  onSelectFormat: (f: string | null) => void;
-  userId: string | undefined;
+  counts: Record<string, number>;
+  total: number;
 }) {
   const router = useRouter();
-  const [fmtOpen, setFmtOpen] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
-  }, []);
-
-  function toggleFmtOpen() {
-    if (!reduceMotion) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    }
-    setFmtOpen(v => !v);
-  }
-
   return (
-    <View style={{ marginTop: 8 }}>
-      <View style={s.libraryHeaderRow}>
-        <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Biblioteca</Text>
-        <Text style={s.sectionSubtitle}>Contenido de los profesionales de Vita</Text>
+    <View style={{ marginTop: 22 }}>
+      <View style={s.eyebrowRow}>
+        <Text style={s.eyebrow}>Biblioteca</Text>
+        <Text style={s.eyebrowCount}>{total} {total === 1 ? 'recurso' : 'recursos'}</Text>
       </View>
-
-      {/* Chips de puertas + botón de filtro */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.chipsRow}>
-        <TouchableOpacity
-          style={[s.chip, !selectedDoor && s.chipActive]}
-          onPress={() => onSelectDoor(null)}
-          activeOpacity={0.75}>
-          <Text style={[s.chipText, !selectedDoor && s.chipTextActive]}>Todos</Text>
-        </TouchableOpacity>
-        {DOORS.map(door => {
-          const active = selectedDoor === door.id;
+      <View style={s.formatGrid}>
+        {FORMATS.map(fmt => {
+          const color = FORMAT_COLOR[fmt] ?? TERRACOTTA;
+          const n = counts[fmt] ?? 0;
           return (
-            <TouchableOpacity
-              key={door.id}
-              style={[s.chip, active && s.chipActive]}
-              onPress={() => onSelectDoor(active ? null : door.id)}
-              activeOpacity={0.75}>
-              <Text style={[s.chipText, active && s.chipTextActive]}>{door.label}</Text>
-            </TouchableOpacity>
+            <ScaleCard
+              key={fmt}
+              style={s.formatTile}
+              onPress={() => router.push({ pathname: '/formato', params: { formato: fmt } } as any)}
+              activeOpacity={0.9}>
+              <View style={[s.formatRing, { borderColor: color }]}>
+                <Ionicons name={FORMAT_ICON[fmt] ?? 'book-outline'} size={22} color={color} />
+              </View>
+              <Text style={s.formatTileName}>{FORMAT_LABEL[fmt] ?? fmt}</Text>
+              <Text style={s.formatTileCount}>{n} {n === 1 ? 'recurso' : 'recursos'}</Text>
+            </ScaleCard>
           );
         })}
-        <TouchableOpacity
-          style={[s.filterBtn, fmtOpen && s.filterBtnActive]}
-          onPress={toggleFmtOpen}
-          activeOpacity={0.75}>
-          <Ionicons name="options-outline" size={16} color={fmtOpen ? '#F3EEDF' : FOREST} />
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Filtro de formato — colapsado detrás del botón de filtro */}
-      {fmtOpen && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.formatTabsRow}>
-          <TouchableOpacity
-            style={[s.formatTab, !selectedFormat && s.formatTabActive]}
-            onPress={() => onSelectFormat(null)}
-            activeOpacity={0.75}>
-            <Text style={[s.formatTabText, !selectedFormat && s.formatTabTextActive]}>Todo</Text>
-          </TouchableOpacity>
-          {FORMATS.map(f => {
-            const active = selectedFormat === f;
-            return (
-              <TouchableOpacity
-                key={f}
-                style={[s.formatTab, active && s.formatTabActive]}
-                onPress={() => onSelectFormat(active ? null : f)}
-                activeOpacity={0.75}>
-                <Text style={[s.formatTabText, active && s.formatTabTextActive]}>{FORMAT_LABEL[f]}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
-
-      {/* Lista de recursos */}
-      {resources.length === 0 ? (
-        <Text style={s.emptyText}>No hay recursos para este tema todavía</Text>
-      ) : (
-        <View style={{ marginTop: 12, gap: 9 }}>
-          {resources.map(r => {
-            const color = FORMAT_COLOR[r.format] ?? TERRACOTTA;
-            const isSaved = savedIds.has(r.id);
-            const coachName = r.coaches?.profiles?.name ?? 'un profesional';
-            const coachProfileId = r.coaches?.profile_id;
-            return (
-              <ScaleCard
-                key={r.id}
-                onPress={() => router.push({ pathname: '/coach-recurso', params: { id: r.id } } as any)}
-                activeOpacity={0.9}>
-                <SurfaceCard variant="subtle" backgroundColor={CARD} borderRadius={20}>
-                  <View style={s.exploreRow}>
-                    <View style={[s.exploreCover, { backgroundColor: color }]}>
-                      <Ionicons name={FORMAT_ICON[r.format] ?? 'book-outline'} size={15} color="#fff" />
-                      <Text style={s.exploreCoverLabel}>{(FORMAT_LABEL[r.format] ?? r.format).toUpperCase()}</Text>
-                    </View>
-                    <View style={s.exploreRowText}>
-                      <Text style={s.exploreRowTitle} numberOfLines={2}>{displayTitle(r.title)}</Text>
-                      <Text style={s.exploreRowMeta} numberOfLines={1}>
-                        {r.duration_seconds ? `${fmtDuration(r.duration_seconds)} · ` : ''}por{' '}
-                        <Text
-                          style={s.exploreRowAuthor}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            if (!coachProfileId) return;
-                            if (userId) logResourceEvent(userId, r.id, 'coach_profile_visit');
-                            router.push({ pathname: '/profesional', params: { profileId: coachProfileId, resourceId: r.id } } as any);
-                          }}>
-                          {coachName}
-                        </Text>
-                      </Text>
-                    </View>
-                    <TouchableOpacity onPress={() => onSave(r.id)} hitSlop={8}>
-                      <Ionicons
-                        name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                        size={18}
-                        color={isSaved ? TERRACOTTA : FOREST_SOFT}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </SurfaceCard>
-              </ScaleCard>
-            );
-          })}
-        </View>
-      )}
+      </View>
     </View>
   );
 }
@@ -600,9 +434,12 @@ export default function RecursosScreen() {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [libraryResources, setLibraryResources] = useState<LibraryResource[]>([]);
   const [coachRecos, setCoachRecos] = useState<CoachRecoItem[]>([]);
-  const [exploreResources, setExploreResources] = useState<CoachResourceItem[]>([]);
-  const [selectedDoor, setSelectedDoor] = useState<string | null>(null);
-  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  // Conteo de la biblioteca por formato — alimenta la grilla 2×2. Es liviano:
+  // trae solo la columna `format` de los publicados y cuenta en JS (el cliente
+  // de Supabase no hace GROUP BY cómodo). Los filtros por tema/formato ya no
+  // viven acá — se mudaron a la pantalla de cada formato.
+  const [formatCounts, setFormatCounts] = useState<Record<string, number>>({});
+  const libraryTotal = Object.values(formatCounts).reduce((a, b) => a + b, 0);
 
   // ── Cargar biblioteca de recursos publicados por coaches (tabla resources vieja) ──
   useEffect(() => {
@@ -639,23 +476,24 @@ export default function RecursosScreen() {
       .then(({ data }) => { if (data) setCoachRecos(data as any); });
   }, [user]);
 
-  // ── Explorar coach_resources con filtros ────────────────────────────────────
+  // ── Conteo de la biblioteca por formato ─────────────────────────────────────
   useEffect(() => {
-    let query = supabase
+    supabase
       .from('coach_resources')
-      .select('id, title, format, duration_seconds, topic_id, coaches!inner(profile_id, profiles!inner(name))')
+      .select('format')
       .eq('status', 'published')
-      .order('created_at', { ascending: false })
-      .limit(20);
-    if (selectedDoor) query = query.eq('topic_id', selectedDoor);
-    if (selectedFormat) query = query.eq('format', selectedFormat);
-    query.then(({ data }) => { if (data) setExploreResources(data as any); });
-  }, [selectedDoor, selectedFormat]);
+      .then(({ data }) => {
+        if (!data) return;
+        const counts: Record<string, number> = {};
+        for (const r of data) counts[r.format as string] = (counts[r.format as string] ?? 0) + 1;
+        setFormatCounts(counts);
+      });
+  }, []);
 
   const { entries: moodEntries } = useMoodHistory(user?.id, 1);
   const todayMoodEntry = moodEntries[0];
 
-  const { streak, weekActivity, lastInProgress, completedInLast7Days } =
+  const { streak, weekActivity, completedInLast7Days } =
     useResourceProgress(user?.id);
 
   const { reco } = useRecommendedResource({
@@ -679,21 +517,9 @@ export default function RecursosScreen() {
     });
   }, [user]);
 
-  async function toggleSave(resourceId: string, isCoachResource = false) {
-    if (!user) { requestAuth(); return; }
-    const isSaved = savedIds.has(resourceId);
-    setSavedIds(prev => {
-      const next = new Set(prev);
-      if (isSaved) next.delete(resourceId); else next.add(resourceId);
-      return next;
-    });
-    const table = isCoachResource ? 'resource_saves' : 'saved_resources';
-    if (isSaved) {
-      await supabase.from(table).delete().eq('user_id', user.id).eq('resource_id', resourceId);
-    } else {
-      await supabase.from(table).insert({ user_id: user.id, resource_id: resourceId });
-    }
-  }
+  // El guardado individual de recursos se mudó a la pantalla de cada formato
+  // (el bookmark de cada card del deck). Acá `savedIds` solo alimenta el
+  // contador del ícono de guardados del header.
 
   return (
     <AppBg>
@@ -752,11 +578,6 @@ export default function RecursosScreen() {
           />
           <ToolsCarousel />
 
-          {/* Continuar donde dejaste */}
-          {lastInProgress && (
-            <ContinueCard {...lastInProgress} />
-          )}
-
           {/* 2. Recomendado por tu coach — recomendaciones personalizadas por chat */}
           <CoachRecoSection
             recos={coachRecos}
@@ -778,17 +599,8 @@ export default function RecursosScreen() {
             }}
           />
 
-          {/* 3. Biblioteca — coach_resources publicados */}
-          <ExploreSection
-            resources={exploreResources}
-            savedIds={savedIds}
-            onSave={id => toggleSave(id, true)}
-            selectedDoor={selectedDoor}
-            onSelectDoor={setSelectedDoor}
-            selectedFormat={selectedFormat}
-            onSelectFormat={setSelectedFormat}
-            userId={user?.id}
-          />
+          {/* 3. Biblioteca — grilla 2×2 de formatos (cada uno abre su pantalla) */}
+          <FormatGrid counts={formatCounts} total={libraryTotal} />
 
           <View style={{ height: TAB_BAR_CLEARANCE }} />
         </ScrollView>
@@ -1018,6 +830,65 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   sectionTitleFlush: { marginTop: 0, marginBottom: 0, flexShrink: 1 },
+
+  // ── Eyebrow (encabezado chico) + grilla de formatos ────────────────────────
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  eyebrow: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 9.5,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: 'rgba(107,122,86,0.85)',
+  },
+  eyebrowCount: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 9.5,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: 'rgba(107,122,86,0.6)',
+  },
+  formatGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  formatTile: {
+    width: '47%',
+    flexGrow: 1,
+    backgroundColor: CREAM_LIGHT,
+    borderWidth: 1,
+    borderColor: 'rgba(63,81,47,0.10)',
+    borderRadius: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  formatRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  formatTileName: {
+    fontFamily: ViveFonts.title,
+    fontSize: 17,
+    color: FOREST,
+  },
+  formatTileCount: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: FOREST_SOFT,
+    marginTop: -6,
+  },
+
   exploreLink: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
