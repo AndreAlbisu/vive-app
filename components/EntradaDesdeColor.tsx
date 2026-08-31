@@ -24,12 +24,14 @@ export function EntradaDesdeColor({ tono }: { tono?: string | string[] }) {
 
   useEffect(() => {
     if (!color) return;
+    // 🔴 Sin `delay` y corto. El respiro que tenía acá se sumaba a la
+    // transición del stack y al tiempo de montaje, y las tres cosas juntas
+    // dejaban el color quieto casi un segundo después de que el ala terminó de
+    // crecer. La pantalla nueva ya está debajo desde el primer cuadro: lo único
+    // que falta es descubrirla, y eso no necesita antesala.
     Animated.timing(fade, {
       toValue: 0,
-      duration: 420,
-      // Un respiro antes de descubrir: sin él la pantalla nueva aparece encima
-      // del movimiento anterior y las dos mitades se pisan.
-      delay: 90,
+      duration: 300,
       useNativeDriver: true,
     }).start(() => setVisible(false));
   }, [color, fade]);

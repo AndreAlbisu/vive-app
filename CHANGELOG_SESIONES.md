@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · sacar el color quieto entre la animación y la pantalla nueva)
+
+**Tocado:** `app/_layout.tsx`, `components/EntradaDesdeColor.tsx`. 381 tests, `tsc` limpio.
+
+**Resumen:**
+
+- 🔴 **La animación estaba bien; lo que sobraba era la cola.** Andre reportó que después de que el ala termina de crecer la pantalla se queda en color casi un segundo. No era la expansión: eran **tres cosas encadenadas detrás de ella** — la transición del stack (~350ms), un `delay: 90` que le había puesto a la capa de entrada, y su fade de 420ms. Casi 900ms de color quieto.
+- **`animation: 'none'`** en `onboarding2` y `coach-login`, en vez del `fade` que había puesto antes. Se llega con la pantalla **entera** tapada por el color, así que cualquier transición es tiempo que no se ve: era la mayor parte del problema. Sin transición, la pantalla nueva ya está puesta debajo del color y lo único que queda por delante es descubrirla.
+- **Se fue el `delay` y el fade bajó de 420 a 300ms.** El respiro tenía sentido cuando la capa competía con la transición del stack; sin esa transición, no hay nada que esperar — la pantalla nueva está debajo desde el primer cuadro.
+- 📝 Total de cola: de ~900ms a 300ms, y esos 300 **son** el descubrimiento, no tiempo muerto. La duración de la expansión (700ms) no se tocó: Andre dijo que esa parte estaba bien.
+
+**Pendiente para la próxima sesión:**
+
+- 📝 **`animation: 'none'` también aplica al volver atrás** desde esas dos pantallas, que ahora corta en seco. Es el precio de sacar la transición y me pareció el lado correcto (la ida es el camino diseñado, la vuelta es rara), pero si molesta hay que separar el caso.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · corrección 2: lo que se expande es el ÁREA DE COLOR)
 
 **Tocado:** `screens/OnboardingBifurcacion.tsx`, `constants/onboardingTonos.ts`. 381 tests, `tsc` limpio, sin warnings de lint nuevos.

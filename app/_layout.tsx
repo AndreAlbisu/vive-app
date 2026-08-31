@@ -155,10 +155,14 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="onboarding-bifurcacion" options={{ headerShown: false }} />
-          {/* `fade` y no el slide por defecto: se llega desde la bifurcación tapado
-              por el color del ala (ver `EntradaDesdeColor`), y un deslizamiento
-              se vería asomar por el borde debajo de la capa. */}
-          <Stack.Screen name="onboarding2" options={{ headerShown: false, animation: 'fade' }} />
+          {/* 🔴 `none`, ni slide ni fade. Se llega desde la bifurcación con la
+              pantalla ENTERA tapada por el color del ala (ver
+              `EntradaDesdeColor`), así que cualquier transición es tiempo de
+              color quieto que no se ve: un fade de ~350ms acá era la mayor
+              parte del "se queda en verde un segundo". Sin transición, la
+              pantalla nueva ya está puesta debajo del color y lo único que
+              queda por delante es descubrirla. */}
+          <Stack.Screen name="onboarding2" options={{ headerShown: false, animation: 'none' }} />
           <Stack.Screen name="onboarding3" options={{ headerShown: false }} />
           <Stack.Screen name="onboarding4" options={{ headerShown: false }} />
           <Stack.Screen name="onboarding5" options={{ headerShown: false }} />
@@ -166,10 +170,14 @@ export default function RootLayout() {
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
           <Stack.Screen name="nueva-contrasena" options={{ headerShown: false }} />
-          {/* `fade` y no el slide por defecto: se llega desde la bifurcación tapado
-              por el color del ala (ver `EntradaDesdeColor`), y un deslizamiento
-              se vería asomar por el borde debajo de la capa. */}
-          <Stack.Screen name="coach-login" options={{ headerShown: false, animation: 'fade' }} />
+          {/* 🔴 `none`, ni slide ni fade. Se llega desde la bifurcación con la
+              pantalla ENTERA tapada por el color del ala (ver
+              `EntradaDesdeColor`), así que cualquier transición es tiempo de
+              color quieto que no se ve: un fade de ~350ms acá era la mayor
+              parte del "se queda en verde un segundo". Sin transición, la
+              pantalla nueva ya está puesta debajo del color y lo único que
+              queda por delante es descubrirla. */}
+          <Stack.Screen name="coach-login" options={{ headerShown: false, animation: 'none' }} />
           <Stack.Screen name="coach-application" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="(coach)" options={{ headerShown: false, gestureEnabled: false }} />
