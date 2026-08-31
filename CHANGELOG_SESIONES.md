@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · la sombra cortada del carrusel)
+
+**Tocado:** `screens/SessionsScreen.tsx`. `tsc` y lint limpios.
+
+**Resumen:**
+
+- 🔴 **La sombra de la card del carrusel se cortaba con un filo recto.** Andre lo vio; se confirmó **midiendo los píxeles de la captura**, no a ojo: bajo el borde de la card (y=774) la sombra arranca en (136,132,122) y degrada de a 2-3 por paso hasta (198,190,178) en y=812 — y en y=814 **salta de golpe** al fondo (241,232,218). Un escalón de 43 en un degradado que venía de a 2. A los costados, en cambio, entra y sale suave. O sea: sombra bien renderizada, recortada abajo.
+- **Causa: el carrusel es un `ScrollView` horizontal y un ScrollView recorta a su caja** (`clipsToBounds` en iOS, sin prop de RN que lo apague). La sombra solo tenía los `marginBottom: 16` de `heroCardWrap` para extenderse. Los 39px del corte en la captura son exactamente esos 16pt a la escala del screenshot (×2.35) — así se confirmó el culpable.
+- **Cuánto necesitaba: 30pt**, y sale del token, no de probar números. En `shadow.elevated.dark` la capa que más baja es la del halo: `offset.height 26 + radius 24` sobre una capa que está `inset 20` adentro de la card → 26 + 24 − 20 = 30. Quedó como constante `SOMBRA_ALCANCE` con la cuenta escrita al lado, para que si el token cambia se vea que hay que acompañarlo.
+- 📝 **`heroCardWrap.marginBottom` pasa a `SOMBRA_ALCANCE + 2` y deja de ser separación: es el lugar que la sombra necesita.** Para que la lista no baje 16pt, `carruselWrap.marginBottom` compensa de 20 a 4 — antes debajo de la card había 16 + 20 = 36, ahora 32 + 4 = 36. La altura de arranque de la lista no se mueve, que es justo lo que el slot de la entrada anterior vino a garantizar.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin verificar en dispositivo**: hay que ver que la sombra ahora muera sola y que la lista no se haya movido.
+- ⚠️ **Muy probablemente el mismo bug esté en el deck de Conexiones** (`app/(tabs)/conexiones.tsx:385`), y peor. Es el otro `SurfaceCard variant="elevated"` dentro de un ScrollView horizontal; su `cardPage` tiene `paddingVertical: 10` y el ScrollView no lleva alto propio (es content-driven), así que la sombra tiene 10pt donde `shadow.elevated.light` necesita 27 (26 + 23 − 22). **No se tocó**: es otra pantalla, no estaba en el pedido y no se vio la captura. Confirmar mirándola y, si está, es el mismo arreglo.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · la tarjeta de próxima sesión en Inicio)
 
 **Tocado:** `app/(tabs)/index.tsx`. 352 tests, `tsc` y lint limpios.

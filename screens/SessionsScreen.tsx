@@ -76,6 +76,21 @@ const CARD_FULL = Dimensions.get('window').width - H_PADDING * 2;
 const CARD_W = Math.round(CARD_FULL * 0.86);
 
 /**
+ * 🔴 Cuánto baja la sombra de la card del carrusel por debajo de su borde.
+ *
+ * El carrusel es un `ScrollView` horizontal, y un ScrollView RECORTA a su caja
+ * (`clipsToBounds` en iOS, sin prop de RN que lo apague). La sombra tenía solo
+ * los 16pt de `heroCardWrap.marginBottom` para extenderse, así que se cortaba
+ * con un filo recto: degradaba bien a los costados y abajo terminaba de golpe.
+ *
+ * El 30 sale de `shadow.elevated.dark` en `theme/tokens.ts`: la capa que más
+ * baja es la del halo, `offset.height 26 + radius 24`, sobre una capa que está
+ * `inset 20` adentro de la card → 26 + 24 − 20 = 30. ⚠️ Si esos tres números
+ * cambian en el token, este tiene que acompañar o la sombra se vuelve a cortar.
+ */
+const SOMBRA_ALCANCE = 30;
+
+/**
  * 🔴 El espacio de arriba de la lista es UN SLOT QUE NUNCA QUEDA VACÍO, y esa
  * es la regla que ordena esta pantalla.
  *
@@ -749,7 +764,7 @@ function SalaRow({
 }
 
 const styles = StyleSheet.create({
-  carruselWrap: { marginBottom: 20 },
+  carruselWrap: { marginBottom: 4 },  // 4 y no 20: los 16 que faltan ya los puso `heroCardWrap` para la sombra
   carrusel: { gap: CARD_GAP, paddingRight: H_PADDING },
   puntos: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingHorizontal: 4 },
   punto: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(135,131,92,0.28)' },
@@ -831,7 +846,9 @@ const styles = StyleSheet.create({
 
   // Hero
   heroCardWrap: {
-    marginBottom: 16,
+    // No es separación: es el lugar que la sombra necesita para no salirse del
+    // ScrollView y que la recorte. Ver `SOMBRA_ALCANCE`.
+    marginBottom: SOMBRA_ALCANCE + 2,
   },
   heroCard: {
     padding: 18,
