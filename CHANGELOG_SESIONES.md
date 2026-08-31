@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · brief de decisión sobre la bifurcación del onboarding)
+
+**Tocado:** nada de código. Nuevo: `docs/onboarding-bifurcacion-opciones.md`.
+
+**Resumen:**
+
+- 📝 **Brief autocontenido para que Andre lo discuta con Joaquín.** Junta el flujo completo del onboarding tal como está, los hallazgos de la revisión, lo que ya se arregló en esta sesión (para que no se re-descubra) y **cuatro opciones de reemplazo** con su a favor y su en contra. **La decisión NO está tomada.**
+- Las cuatro: **(A)** una sola pregunta sobre la persona —"¿Qué te trae por acá?"— que colapsa dos pantallas y elimina la de temas; **(B)** dos puertas, sacando "Sé qué necesito", dejando el guiado intacto; **(C)** ninguna pantalla, con la ayuda viviendo en contexto en las piezas que ya existen; **(D)** una sola oferta con salida, misma forma que el "Saltear la guía".
+- 🔗 **Versión web para pasar por link**: https://claude.ai/code/artifact/af7f5dc4-b063-4dfc-93ab-fea778217c83
+- ⚠️ Los tres hallazgos que más pesan en la discusión, para no perderlos: el onboarding **pregunta lo mismo tres veces** y nunca por la persona; el botón final dice "Ver profesionales" y abre un registro; y los temas del paso 3 son **una tercera taxonomía** que no habla el vocabulario de los coaches (dos categorías enteras con cero correspondencia).
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Elegir entre las cuatro** (Andre + Joaquín).
+- 🔴 **Instrumentar lo que sobreviva**: hoy el onboarding no tiene una sola línea de analítica, así que toda esta discusión se dio sobre hipótesis, no sobre datos.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · el eje declarado deja de pelearse con el topic)
 
 **Tocado:** `hooks/useRecommendedResource.ts`, `lib/quizPendiente.ts`, `lib/onboardingRespuestas.ts`, `__tests__/onboardingRespuestas.test.ts`, `SCHEMA.md`. Nuevo: `scripts/add-quiz-declared-axis.sql` (**CORRIDO y VERIFICADO el 31/08/2026**). 381 tests (eran 379), `tsc` y lint limpios.
