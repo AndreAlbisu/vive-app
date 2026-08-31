@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · UI de usuario filtrada a la vista del coach en la sala)
+
+**Tocado:** `screens/SalaScreen.tsx`. 352 tests, `tsc` limpio.
+
+**Resumen:**
+
+- 🔴 **El COACH veía "¿Querés reservar tu próxima sesión con [nombre del usuario]?"** al entrar a un chat con alguien con quien ya tuvo sesión. `SalaScreen` es compartida por los dos roles y la tarjeta de cierre (`sessionState === 'finalizada'`) era el único bloque de la pantalla **sin guard de rol**.
+- 🔴 **No era solo copy mal dirigido: el botón llevaba a un camino roto.** `handleReschedule` empuja a `/booking-calendar` con `coachId: recipientId`, y del lado del coach ese id es el del **usuario** — o sea que iba a pedir la agenda de alguien que no es coach.
+- **Arreglo: `recipientIsCoach &&` en el bloque** (la convención del archivo: "la otra parte es coach" = "yo soy el usuario"), que es el mismo guard que ya tenían la nota compartida y el botón de reservar del header. Se agregó además el guard adentro de `handleReschedule`, porque el nombre de la función no dice que sea solo del usuario.
+- 📝 **El coach no pierde nada**: el `finalizada` no tiene tarjeta en el header (la cadena de arriba cubre live/pendiente/confirmada), pero la pastilla de **Notas** sí se le sigue mostrando, que es su acción de post-sesión.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Hay un SEGUNDO caso del mismo bug, sin arreglar porque es decisión de copy.** La tarjeta de `sessionState === 'pendiente'` (línea ~959) tampoco tiene guard de rol, y al coach le dice **"Solicitud enviada"** y **"Esperando confirmación de [nombre del usuario]"** — al revés: la solicitud la recibió él y es él quien tiene que confirmar. El botón "Cancelar solicitud" sí funciona bien para los dos (`handleCancelBooking` ya distingue por `soyCoach`), así que es texto, no lógica.
+- ⚠️ Ligado a lo anterior: **al coach no se le ofrece confirmar desde la sala**, solo cancelar. Confirmar hoy vive en `CoachReservasScreen`. Si la sala le muestra la solicitud, o le da las dos acciones o no le muestra la tarjeta.
+- 📝 Vale barrer `SalaScreen` entera buscando más bloques sin guard: es una pantalla que sirve a dos roles y este ya apareció dos veces.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · achicar el hueco entre la card y los chats)
 
 **Tocado:** `screens/SessionsScreen.tsx`. `tsc` limpio.

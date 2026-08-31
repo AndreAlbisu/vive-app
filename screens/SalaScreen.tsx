@@ -537,7 +537,10 @@ export default function SalaScreen() {
   }
 
   function handleReschedule() {
-    if (!recipientId || !recipientProfile) return;
+    // Solo el usuario reserva. El nombre de la función no lo dice, así que el
+    // guard va acá y no solo en el render: con `recipientIsCoach` en false,
+    // `recipientId` es el del usuario y esto armaría una reserva al revés.
+    if (!recipientIsCoach || !recipientId || !recipientProfile) return;
     router.push({
       pathname: '/booking-calendar',
       params: {
@@ -1187,8 +1190,18 @@ export default function SalaScreen() {
           )}
 
           {/* Cierre de sesión + re-reserva: último mensaje del chat, cerca del input
-              (antes era un banner fijo arriba; se movió acá para quedar al alcance del dedo) */}
-          {!loading && sessionState === 'finalizada' && activeBooking && (
+              (antes era un banner fijo arriba; se movió acá para quedar al alcance del dedo)
+
+              🔴 `recipientIsCoach` = la otra parte es coach = **yo soy el
+              usuario**, y es la única mitad a la que esto le corresponde. Sin
+              ese guard el COACH veía "¿Querés reservar tu próxima sesión con
+              [nombre del usuario]?", y no era solo copy mal dirigido: el botón
+              llama a `handleReschedule`, que empuja a `/booking-calendar` con
+              `coachId: recipientId` — del lado del coach ese id es el del
+              USUARIO, así que iba a pedir la agenda de alguien que no es coach.
+              Mismo guard que ya usan la nota compartida (más arriba) y el botón
+              de reservar del header; acá se había quedado sin poner. */}
+          {!loading && recipientIsCoach && sessionState === 'finalizada' && activeBooking && (
             <View style={styles.endedCard}>
               <View style={styles.endedHeader}>
                 <MaterialCommunityIcons name="check-circle-outline" size={16} color="#87835C" />
