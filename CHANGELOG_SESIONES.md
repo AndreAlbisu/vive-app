@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · achicar el hueco entre la card y los chats)
+
+**Tocado:** `screens/SessionsScreen.tsx`. `tsc` limpio.
+
+**Resumen:**
+
+- **Pedido de Andre: menos distancia entre la tarjeta verde y la lista.** Eran 52pt, y 44 de esos no eran aire sino los `carrusel.paddingBottom` que existen para que la ScrollView no recorte la sombra. Bajarlos a secas devolvía el corte.
+- 🔴 **Se devuelven enteros con un margen negativo, no achicando la sombra.** El `paddingBottom` sigue ahí —que es lo que evita el recorte— pero `carruselWrapSolo` lo compensa con `marginBottom: 12 − SOMBRA_ALCANCE`, así que **la sombra le cae encima a la lista en vez de empujarla**, que es lo que hace una sombra de verdad. Quedan **12pt** de separación real (eran 52). Sobre la primera fila cae la cola de la sombra: a 26pt del borde ronda el 10%, y la fila arranca justo ahí por su propio `sessionRow.paddingVertical: 14`.
+- 📝 **Solo aplica con UNA sesión** (`proximas.length === 1`), que es cuando no hay puntitos y debajo de la sombra no queda nada que proteger. Con dos o más, los puntitos siguen debajo de la sombra y el margen normal de 8 los separa de la lista.
+- ⚠️ **Sin conflicto de gestos, y no por casualidad**: el margen negativo hace que la lista se superponga a los últimos 32pt de la ScrollView, pero justo en ese caso la ScrollView ya va con `scrollEnabled={false}` (hay una sola card), así que no hay swipe horizontal que robarle. Si algún día el carrusel se habilita con un solo ítem, esto hay que mirarlo de nuevo.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Verificar en dispositivo con captura**, los dos casos: una sesión (12pt hasta la primera fila, sombra cayendo sobre ella) y dos o más (puntitos alineados y debajo de la sombra).
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · la sombra del carrusel, segunda pasada)
 
 **Tocado:** `screens/SessionsScreen.tsx`. 352 tests, `tsc` limpio.

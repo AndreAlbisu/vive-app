@@ -511,7 +511,10 @@ export default function SessionsScreen() {
                 cae justo afuera del borde se lee como una sola tarjeta, y nadie
                 descubre que hay más. El contador de abajo refuerza lo mismo. */}
             {proximas.length > 0 && (
-              <View style={styles.carruselWrap}>
+              <View style={[
+                styles.carruselWrap,
+                proximas.length === 1 && styles.carruselWrapSolo,
+              ]}>
                 <RNScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -776,8 +779,24 @@ function SalaRow({
 const styles = StyleSheet.create({
   // A sangre para deshacer el `paddingHorizontal: 16` del scroll padre: la
   // ScrollView necesita ser más ancha que la card o le recorta la sombra.
-  // El aire de abajo lo pone `carrusel.paddingBottom`, no un margen de acá.
+  //
+  // Con puntitos: quedan DEBAJO de la sombra (ver `puntos`) y este margen es la
+  // separación real entre ellos y la lista.
   carruselWrap: { marginHorizontal: -H_PADDING, marginBottom: 8 },
+
+  /**
+   * Con UNA sola sesión no hay puntitos, o sea que debajo de la sombra no queda
+   * nada que proteger — y ahí los 44pt de `carrusel.paddingBottom` dejan de ser
+   * aire útil y se leen como un hueco.
+   *
+   * 🔴 Se devuelven enteros con margen negativo y quedan 12pt de separación de
+   * verdad. La sombra se sigue dibujando completa (el `paddingBottom` sigue
+   * ahí, que es lo que evita el recorte de la ScrollView), pero **le CAE ENCIMA
+   * a la lista en vez de empujarla**, que es lo que hace una sombra. Sobre la
+   * primera fila cae la cola: a 26pt del borde de la card ronda el 10% y la fila
+   * arranca justo ahí, por su propio `sessionRow.paddingVertical: 14`.
+   */
+  carruselWrapSolo: { marginBottom: 12 - SOMBRA_ALCANCE },
   carrusel: { gap: CARD_GAP, paddingHorizontal: H_PADDING, paddingBottom: SOMBRA_ALCANCE },
   // `H_PADDING + 4` y no 4: el wrap sale a sangre, así que los puntitos tienen
   // que recuperar por su cuenta el margen que el scroll padre ya no les da.
