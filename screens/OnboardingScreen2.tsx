@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveFonts } from '@/constants/theme';
+import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
 import { ScaleCard } from '@/components/ScaleCard';
 import { guardarCamino } from '@/lib/guiaContextual';
 import { AppBg } from '@/components/ui/AppBg';
@@ -51,6 +52,8 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function OnboardingScreen2() {
   const router = useRouter();
+  // Con qué color se llegó desde la bifurcación, si se llegó por ahí.
+  const { tono } = useLocalSearchParams<{ tono?: string }>();
   const [selected, setSelected] = useState<OptionId | null>(null);
 
   const titleAnim = useRef(new Animated.Value(0)).current;
@@ -102,6 +105,7 @@ export default function OnboardingScreen2() {
 
   return (
     <AppBg>
+      <EntradaDesdeColor tono={tono} />
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>

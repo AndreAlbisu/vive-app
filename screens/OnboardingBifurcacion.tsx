@@ -1,11 +1,15 @@
-import { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, useWindowDimensions } from 'react-native';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import {
+  View, Text, TouchableOpacity, StyleSheet, Animated, useWindowDimensions,
+  AccessibilityInfo, Easing,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { ViveFonts } from '@/constants/theme';
+import { TONOS, type Tono } from '@/constants/onboardingTonos';
 import { VitaWordmark } from '@/components/VitaWordmark';
 
 // Bifurcación usuario/profesional — rediseño 30/08/2026 (maqueta de Andre).
@@ -43,8 +47,8 @@ const DURAZNO_LINE = 'rgba(200,120,58,0.40)';
 const DURAZNO_RULE = 'rgba(200,120,58,0.45)';
 const TEXTO        = '#26402F';
 const TEXTO_SUAVE  = '#5C6B58';
-const VERDE_ICON   = '#3F512F';
-const NARANJA      = '#C4743A';
+const VERDE_ICON   = TONOS.crecer;
+const NARANJA      = TONOS.acompanar;
 
 // ── Geometría ────────────────────────────────────────────────────────────────
 // Coordenadas normalizadas (x en fracción del ancho, y en fracción del alto).
@@ -75,6 +79,10 @@ const BASE_CUELLO = 0.560;
 // de pantalla y no de un número clavado, igual que el resto de las medidas de
 // esta pantalla: 22pt son un gesto distinto en un SE que en un 15 Pro Max.
 const TITULO_SUBE = 0.05;
+
+// Diámetro del aro de la flecha. Tiene que seguir a `s.arrow.width`: es de
+// donde nace el derrame, y con otro número el círculo aparecería saltando.
+const ARO = 56;
 const BASE_PUNTA  = 0.235;
 const BASE = {
   c1: [0.500, 0.485] as const,
@@ -145,6 +153,7 @@ type Camino = {
   rule: string;
   accent: string;
   route: string;
+  tono: Tono;
 };
 
 const CAMINOS: Camino[] = [
@@ -156,6 +165,7 @@ const CAMINOS: Camino[] = [
     rule: SALVIA_RULE,
     accent: VERDE_ICON,
     route: '/onboarding2',
+    tono: 'crecer',
   },
   {
     id: 'acompañar',
@@ -165,6 +175,7 @@ const CAMINOS: Camino[] = [
     rule: DURAZNO_RULE,
     accent: NARANJA,
     route: '/coach-login',
+    tono: 'acompanar',
   },
 ];
 
@@ -183,6 +194,72 @@ export default function OnboardingBifurcacion() {
       Animated.timing(splitAnim, { toValue: 1, duration: 520, useNativeDriver: true }),
     ]).start();
   }, []);
+
+  /**
+   * El derrame de salida: un círculo del color del ala que nace en la flecha
+   * que tocaste y crece hasta tapar la pantalla. Recién cuando terminó se
+   * navega, y la pantalla que recibe monta cubierta por ese mismo color
+   * (`EntradaDesdeColor`), así las dos mitades se leen como un solo gesto.
+   *
+   * 🔴 Solo `scale`, igual que el derrame de Sofía: animar `width`/`height` o
+   * el `borderRadius` obliga a correr en el hilo de JS. El círculo se monta ya
+   * con su tamaño FINAL y arranca encogido.
+   *
+   * La geometría va en estado y no en constantes porque depende de dónde está
+   * la flecha, que son dos posiciones distintas, y el `outputRange` de un
+   * `interpolate` queda fijo por render.
+   */
+  const [salida, setSalida] = useState<{ cx: number; cy: number; d: number; s0: number; color: string } | null>(null);
+  const derrame = useRef(new Animated.Value(0)).current;
+  const flechas = useRef<Record<string, View | null>>({}).current;
+  const yendo = useRef(false);
+
+  function elegir(c: Camino) {
+    if (yendo.current) return;   // el segundo toque no dispara un segundo viaje
+    yendo.current = true;
+
+    const ir = () => router.push({ pathname: c.route, params: { tono: c.tono } } as any);
+    const nodo = flechas[c.id];
+
+    // ⚠️ Sin flecha medida o con "reducir movimiento" prendido se navega y ya:
+    // la transición es un adorno, no puede ser la única forma de avanzar.
+    AccessibilityInfo.isReduceMotionEnabled().then(reducir => {
+      if (reducir || !nodo) { ir(); return; }
+
+      nodo.measureInWindow((x, y, w, h) => {
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        // El círculo tiene que tapar la esquina MÁS lejana: contra las cuatro,
+        // y se toma la peor. Si no, queda una punta sin cubrir.
+        const alcance = Math.max(
+          Math.hypot(cx, cy), Math.hypot(width - cx, cy),
+          Math.hypot(cx, height - cy), Math.hypot(width - cx, height - cy),
+        );
+        const d = alcance * 2;
+
+        setSalida({ cx, cy, d, s0: ARO / d, color: c.accent });
+        derrame.setValue(0);
+        Animated.timing(derrame, {
+          toValue: 1,
+          duration: 460,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }).start(ir);
+      });
+    });
+  }
+
+  // 🔴 Se navega con `push`, así que esta pantalla queda MONTADA debajo. Al
+  // volver atrás seguiría tapada por el círculo a pantalla completa y con
+  // `yendo` trabado, o sea muerta: las dos alas dejarían de responder. Se
+  // repone todo al recuperar el foco.
+  useFocusEffect(
+    useCallback(() => {
+      yendo.current = false;
+      setSalida(null);
+      derrame.setValue(0);
+    }, [derrame]),
+  );
 
   const yCierre = height * BASE_CUELLO;
   const alas: Ala[] = ['left', 'right'];
@@ -245,7 +322,7 @@ export default function OnboardingBifurcacion() {
             activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel={`${c.title.replace('\n', ' ')}. ${c.desc}`}
-            onPress={() => router.push(c.route as any)}>
+            onPress={() => elegir(c)}>
             <View style={s.colTop}>
               <Ionicons name={c.icon} size={38} color={c.accent} />
               <Text style={s.colTitle}>{c.title}</Text>
@@ -254,12 +331,31 @@ export default function OnboardingBifurcacion() {
             </View>
             {/* La flecha va anclada al pie para que las dos queden a la misma
                 altura aunque las descripciones tengan distinta cantidad de líneas */}
-            <View style={[s.arrow, { borderColor: c.accent }]}>
+            <View
+              ref={n => { flechas[c.id] = n; }}
+              collapsable={false}
+              style={[s.arrow, { borderColor: c.accent }]}>
               <MaterialCommunityIcons name="arrow-right" size={22} color={TEXTO} />
             </View>
           </TouchableOpacity>
         ))}
       </View>
+
+      {salida && (
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: salida.cx - salida.d / 2,
+            top:  salida.cy - salida.d / 2,
+            width: salida.d,
+            height: salida.d,
+            borderRadius: salida.d / 2,
+            backgroundColor: salida.color,
+            transform: [{ scale: derrame.interpolate({ inputRange: [0, 1], outputRange: [salida.s0, 1] }) }],
+          }}
+        />
+      )}
     </View>
   );
 }

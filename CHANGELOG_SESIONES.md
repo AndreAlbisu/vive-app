@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · la bifurcación se derrama en color al elegir)
+
+**Tocado:** `screens/OnboardingBifurcacion.tsx`, `screens/OnboardingScreen2.tsx`, `screens/CoachLoginScreen.tsx`, `app/_layout.tsx`. Nuevos: `constants/onboardingTonos.ts`, `components/EntradaDesdeColor.tsx`. 381 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- ✅ **Pedido de Andre: al tocar un ala, que el color se expanda y la pantalla siguiente llegue con ese color.** Un círculo del verde (o del naranja) nace **en la flecha que tocaste**, crece hasta tapar la pantalla, y recién ahí se navega; la pantalla que recibe monta ya cubierta por ese mismo color y lo desvanece. Se lee como un solo movimiento, no como dos pantallas que se turnan.
+- 📝 **Misma técnica que el derrame de Sofía**, y por el mismo motivo: **solo `scale`**. El círculo se monta con su tamaño FINAL y arranca encogido — animar `width`/`height`/`borderRadius` obliga a correr en el hilo de JS, que es justo el error que la sesión 130 ya había corregido en `SofiaAssistant`.
+- 📝 El diámetro se calcula contra **las cuatro esquinas** y se toma la peor: desde una flecha que está abajo y a un costado, un círculo dimensionado a ojo deja una punta sin cubrir.
+- 🔴 **`animation: 'fade'` en `onboarding2` y `coach-login`.** Con el slide por defecto la pantalla nueva se ve asomar por el borde debajo de la capa de color y el truco se cae. Bajo una capa opaca, un fade es invisible.
+- 🔴 **La capa de la pantalla que recibe se pinta desde el PRIMER cuadro** (`useState` inicializado, no dentro de un efecto). Un cuadro de retraso alcanza para ver un destello de la pantalla nueva antes de que la tape, que es exactamente lo que la transición viene a evitar.
+- 🔴 **Se repone al recuperar el foco.** Se navega con `push`, así que la bifurcación queda montada debajo: al volver atrás desde coach-login seguiría **tapada por el círculo a pantalla completa y con el guard trabado**, o sea con las dos alas muertas. `useFocusEffect` limpia las dos cosas.
+- 📝 **Los dos colores se mudaron a `constants/onboardingTonos.ts`**, porque ahora los usan las dos puntas de la transición. Con una copia en cada lado se despegaban en la primera edición y el derrame terminaba en un tono distinto al que se fue.
+- ⚠️ **Respeta "reducir movimiento"** (`AccessibilityInfo.isReduceMotionEnabled`) y también el caso de que la flecha no se pueda medir: en los dos se navega derecho. La transición es un adorno y no puede ser la única forma de avanzar.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin ver en dispositivo.** Los casos: las dos alas; volver atrás desde coach-login y confirmar que la pantalla quedó usable; y con "reducir movimiento" prendido, que navegue sin animación.
+- 📝 La duración quedó en 460ms con `Easing.bezier(0.4, 0, 0.2, 1)`. Es lo primero a ajustar si se siente lento o abrupto.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · brief de decisión sobre la bifurcación del onboarding)
 
 **Tocado:** nada de código. Nuevo: `docs/onboarding-bifurcacion-opciones.md`.

@@ -5,10 +5,11 @@ import {
   LayoutAnimation, UIManager, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { User } from '@supabase/supabase-js';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { VitaWordmark } from '@/components/VitaWordmark';
@@ -36,6 +37,8 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function CoachLoginScreen() {
   const router = useRouter();
+  // Con qué color se llegó desde la bifurcación, si se llegó por ahí.
+  const { tono } = useLocalSearchParams<{ tono?: string }>();
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, signOut } = useAuth();
 
   const [showEmailForm, setShowEmailForm] = useState(false);
@@ -279,6 +282,7 @@ export default function CoachLoginScreen() {
 
   return (
     <View style={s.root}>
+      <EntradaDesdeColor tono={tono} />
       <StatusBar barStyle="dark-content" />
       <LineasEsquina />
       <SafeAreaView style={s.safe}>
