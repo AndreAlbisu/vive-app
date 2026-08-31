@@ -92,7 +92,11 @@ Títulos, matrículas y certificaciones de un profesional. `scripts/add-coach-cr
 - `created_at`, `updated_at`
 - Una fila por usuario (UNIQUE user_id); se hace upsert al re-hacer el quiz.
 - RLS: solo el dueño puede leer/escribir su propia fila (authenticated).
-- Escrita por `QuizScreen.tsx` al completar el quiz (además de AsyncStorage). Usada para personalización futura de sugerencias de coaches y home.
+- Escrita por `QuizScreen.tsx` al completar el quiz (además de AsyncStorage) y, **desde el 31/08/2026, también por el onboarding guiado** vía `lib/onboardingRespuestas.ts`. Leída por `hooks/useRecommendedResource.ts`, que mapea `topic` → eje (cuerpo/mente/alma) + etiqueta.
+- ⚠️ **El onboarding no puede escribir acá en el momento en que pregunta**: `user_id` es FK a `profiles` y en las pantallas 3-4-5 todavía no hay cuenta. Las respuestas se guardan en AsyncStorage y `AuthContext` las vuelca en el `onAuthStateChange`, **una sola vez** (flag `volcado` en el propio registro local). Sin ese flag, cada login reescribiría la respuesta del onboarding y **pisaría el quiz que la persona hizo después adentro de la app**, que es más nuevo y más deliberado. Si el upsert falla no se marca, así que se reintenta en el login siguiente.
+- 🔴 **`topic` y el onboarding son dos taxonomías distintas de lo mismo, y en tres casos se contradicen** (`CATEGORIA_A_TOPIC` en `lib/onboardingRespuestas.ts`): `sexualidad` y `vinculos` el onboarding las pone en cuerpo y mente, pero `relaciones` cae en alma; `trabajo` el onboarding lo pone en alma y `trabajo` cae en mente. El mapa va **por significado**, para que la etiqueta de la recomendación diga algo cierto — la consecuencia es que en esos tres el eje del recurso sugerido no coincide con el universo que la persona eligió. **No se arregla retocando el mapa**: o se reconcilian las dos taxonomías, o hace falta una columna para el universo declarado. Decisión de producto pendiente.
+- 📝 **`universo` y los `temas` elegidos no tienen columna** y se quedan solo en AsyncStorage. No es que se descarten: es que todavía no hay dónde ponerlos.
+- ⚠️ **`QuizScreen` tiene el mismo agujero sin tapar**: su upsert hace `if (!uid) return;` — alguien que hace el quiz sin cuenta escribe solo `vive_quiz_topic` en AsyncStorage, que `useRecommendedResource` no lee. Ese camino sigue perdiendo la respuesta.
 - Agregada el 07/07/2026 (`scripts/add-user-quiz-answers.sql`).
 
 ### `salas`

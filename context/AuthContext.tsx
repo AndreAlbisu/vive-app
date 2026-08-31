@@ -9,6 +9,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import { volcarRespuestas } from '@/lib/onboardingRespuestas';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -131,7 +132,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) fetchProfile(u.id).then(applyProfile);
+      if (u) {
+        fetchProfile(u.id).then(applyProfile);
+        // Lo que la persona contestó en el onboarding ANTES de tener cuenta.
+        // Es el único momento en que se puede escribir: `user_quiz_answers`
+        // cuelga de `profiles`. Corre una sola vez (el flag vive adentro) y no
+        // bloquea nada — si falla, se reintenta en el próximo login.
+        void volcarRespuestas(u.id);
+      }
       else applyProfile({ role: "user", isAdmin: false, name: null });
     });
 

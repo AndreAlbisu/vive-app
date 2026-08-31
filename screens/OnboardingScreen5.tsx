@@ -9,6 +9,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import { guardarRespuestas } from '@/lib/onboardingRespuestas';
 
 type UniversoId = 'cuerpo' | 'mente' | 'alma';
 
@@ -112,6 +113,13 @@ export default function OnboardingScreen5() {
 
   function handleContinue() {
     if (selected.length === 0) return;
+
+    // 🔴 Antes esta función era solo el `router.replace`: descartaba `selected`,
+    // `universo` y `categoria`. Tres pantallas de preguntas que no dejaban nada,
+    // y encima en la rama para la que existe el producto. Se guardan local
+    // porque todavía no hay cuenta; `AuthContext` las vuelca cuando la haya.
+    void guardarRespuestas({ universo: u, categoria: categoria ?? '', temas: selected });
+
     router.replace('/register');
   }
 

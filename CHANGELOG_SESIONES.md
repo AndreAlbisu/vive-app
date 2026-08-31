@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · el onboarding guiado deja de tirar las respuestas)
+
+**Tocado:** `screens/OnboardingScreen5.tsx`, `context/AuthContext.tsx`, `SCHEMA.md`. Nuevos: `lib/onboardingRespuestas.ts`, `__tests__/onboardingRespuestas.test.ts`. 371 tests (eran 362), `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- 🔴 **Cerrado el punto 3 de lo hablado.** `OnboardingScreen5.handleContinue()` era `if (selected.length === 0) return; router.replace('/register');` — descartaba `selected`, `universo` y `categoria`. Tres pantallas de preguntas que no dejaban nada, justo en la rama para la que existe el producto.
+- ⚠️ **Va a AsyncStorage y no directo a la base porque en ese momento no hay cuenta** (`user_quiz_answers.user_id` es FK a `profiles`). `AuthContext` las vuelca en el `onAuthStateChange`, que es el primer momento en que se puede escribir. Si la persona abandona el registro y vuelve mañana, lo que contestó sigue ahí.
+- 🔴 **El volcado corre UNA SOLA VEZ, y el flag es lo que lo garantiza.** Sin eso cada login reescribiría la respuesta del onboarding y **pisaría el quiz que la persona hizo después adentro de la app**, que es más nuevo y más deliberado. Si el upsert falla no se marca, así que se reintenta en el login siguiente en vez de perderse. Los dos casos tienen test.
+- 🔴 **Hallazgo que condicionó el diseño: el onboarding y `user_quiz_answers` son dos taxonomías distintas de lo mismo, y en tres casos se contradicen.** `sexualidad` y `vinculos` el onboarding las agrupa en cuerpo y mente, pero `relaciones` cae en alma según `useRecommendedResource`; `trabajo` el onboarding lo pone en alma y el mapeo lo lleva a mente. `CATEGORIA_A_TOPIC` mapea **por significado**, para que la etiqueta de la recomendación ("tus relaciones", "el trabajo") diga algo cierto; la consecuencia es que en esos tres el eje del recurso sugerido no coincide con el universo elegido. **Se documentó y NO se parcheó el mapa**: eso se arregla reconciliando las taxonomías o agregando una columna para el universo, y es decisión de producto.
+- 📝 **No se tocó el schema.** `universo` y los `temas` se quedan en AsyncStorage porque no tienen columna — no descartados, sin lugar todavía.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin probar en dispositivo.** El caso completo: elegir "No sé por dónde empezar", contestar las tres pantallas, registrarse, y confirmar en la base que `user_quiz_answers` quedó con el `topic` correcto. Y el segundo: volver a entrar y confirmar que NO se reescribe.
+- ⚠️ **`QuizScreen` tiene el mismo agujero sin tapar**: su upsert hace `if (!uid) return;`, así que alguien que hace el quiz sin cuenta escribe solo `vive_quiz_topic` en AsyncStorage, que `useRecommendedResource` no lee. Es el mismo arreglo y la pieza ya está hecha — sería engancharlo a `volcarRespuestas`.
+- 🔴 **Decisión de producto abierta: reconciliar las dos taxonomías** (universo del onboarding vs `topic` del quiz) o darle columna al universo declarado. Mientras no se decida, tres de las nueve categorías recomiendan sobre un eje distinto al que la persona eligió.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · la guía contextual y el onboarding de "¿Cómo te gustaría empezar?")
 
 **Tocado:** `components/FirstTimeTooltip.tsx`, `screens/OnboardingScreen2.tsx`. Nuevos: `lib/guiaContextual.ts`, `__tests__/guiaContextual.test.ts`. 362 tests (eran 352), `tsc` limpio, sin warnings de lint nuevos.
