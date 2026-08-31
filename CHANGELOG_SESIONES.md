@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-08-31 — Joaquín (sesión 148)
+
+**Tocado:** `screens/CoachLoginScreen.tsx`.
+
+**Resumen — `coach-login` al diseño nuevo de auth, cerrando un pendiente que dejó Andre (sesión 147).**
+
+- Arranqué con la revisión de inicio de los pendientes de Andre contra el código/base real (memoria `feedback_verificar_pendientes_inicio`): confirmé que `coach-login` seguía con el diseño viejo (`AppBg`, sin los ornamentos nuevos), que los 8 recursos publicados tienen `wellness_goal` en NULL, y que la recuperación de contraseña no es verificable sin dev build. El merge de Andre quedó sano (tsc + 346 tests).
+- Rediseño de `CoachLoginScreen` al mismo sistema que login/registro/bifurcación: crema plano (`#F7F2EA`) en vez del gradiente `<AppBg>`, `<LineasEsquina>` + `<VitaWordmark>` + `<ReglaConPunto>` + `<DivisorConPunto>` (los ornamentos compartidos de `components/ui/AuthOrnamentos.tsx`), botones sociales como tarjetas claras con ícono a la izquierda y texto centrado, "Usar email" contorneado que expande el form (mismo patrón que Register), título Plus Jakarta Sans a 32 en `#26402F`, terracota reservado a los links.
+- 🔴 **Toda la lógica del coach quedó verbatim**: `validateAndNavigate` (rol/verified/"solicitud en revisión"/bloqueo de mail ya-usuario), `esCuentaRecienCreada`, `handleOAuth`, y el flujo `needsName` (sesión 141 — pedir el nombre real al crear cuenta en vez de inventarlo del mail). Solo cambió la cáscara visual y se sumó el toggle `showEmailForm`.
+- Copy: "Tu espacio profesional" / "Entrá o creá tu cuenta de coach", y la nota de que la cuenta se activa al aprobar la postulación se mantiene. Footer "Volver" (`router.back()`) reemplaza al botón "Atrás" viejo.
+- Typecheck y 346 tests limpios. Lint: un solo warning de exhaustive-deps en el `useEffect` de la animación de montaje — mismo patrón (y mismo warning) que `LoginScreen`/`RegisterScreen` de Andre, se deja por consistencia. No confirmado en dispositivo.
+
+**Pendiente para la próxima:**
+- El pendiente principal sigue siendo **terminar el rediseño del apartado de Recursos** (Andre lo dejó analizado con decisiones tomadas, sesión 147 — falta que Joaquín confirme el eje de navegación `wellness_goal` vs. puertas, y etiquetar a mano los 8 publicados que tienen `wellness_goal` NULL).
+- De Andre siguen abiertos: probar la recuperación de contraseña en dev build, y decidir si el gradiente `<AppBg>` se va de todo el flujo.
+
+---
+
 ## 2026-08-31 — Andre (sesión 147)
 
 **Tocado:** `screens/OnboardingBifurcacion.tsx`, `screens/LoginScreen.tsx`, `screens/RegisterScreen.tsx`, `context/AuthContext.tsx`, `app/_layout.tsx`. Nuevos: `screens/NuevaContrasenaScreen.tsx`, `app/nueva-contrasena.tsx`, `components/ui/AuthOrnamentos.tsx`. `tsc` y lint limpios, 346/346 tests.

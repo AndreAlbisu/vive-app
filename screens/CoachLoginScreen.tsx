@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
   StyleSheet, Animated, KeyboardAvoidingView, Platform, ScrollView, Alert,
+  LayoutAnimation, UIManager, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,18 +11,34 @@ import type { User } from '@supabase/supabase-js';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { AppBg } from '@/components/ui/AppBg';
+import { VitaWordmark } from '@/components/VitaWordmark';
+import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
 import LegalSheet from '@/components/LegalSheet';
+
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
+
+// Mismo sistema que login/registro/bifurcación (rediseño de Andre, sesión 147):
+// crema plano en vez del gradiente de <AppBg>, verde oscuro para títulos,
+// terracota reservado a los links.
+const CREMA       = '#F7F2EA';
+const BOTON_BG    = '#FCFAF5';
+const BOTON_BORDE = 'rgba(86,94,50,0.16)';
+const TEXTO       = '#26402F';
+const TEXTO_SUAVE = '#5C6B58';
+const TERRACOTA   = '#C4743A';
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
-  transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+  transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
 });
 
 export default function CoachLoginScreen() {
   const router = useRouter();
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, signOut } = useAuth();
 
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -36,15 +53,31 @@ export default function CoachLoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [legalDoc, setLegalDoc] = useState<'terminos' | 'privacidad' | null>(null);
 
-  const headerAnim = useRef(new Animated.Value(0)).current;
-  const formAnim = useRef(new Animated.Value(0)).current;
+  const logoAnim    = useRef(new Animated.Value(0)).current;
+  const headingAnim = useRef(new Animated.Value(0)).current;
+  const btnsAnim    = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.stagger(120, [
-      Animated.timing(headerAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(formAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
+    Animated.stagger(80, [
+      Animated.timing(logoAnim,    { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(headingAnim, { toValue: 1, duration: 360, useNativeDriver: true }),
+      Animated.timing(btnsAnim,    { toValue: 1, duration: 360, useNativeDriver: true }),
     ]).start();
   }, []);
+
+  function toggleEmailForm() {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowEmailForm(prev => !prev);
+    if (showEmailForm) {
+      setEmail('');
+      setPassword('');
+      setName('');
+      setNeedsName(false);
+      setError(null);
+    }
+  }
+
+  // ── Lógica del coach — SIN CAMBIOS respecto del diseño viejo ────────────────
 
   async function validateAndNavigate(isNewSignup: boolean) {
     const { data: { user } } = await supabase.auth.getUser();
@@ -245,330 +278,239 @@ export default function CoachLoginScreen() {
   const anyLoading = loading || googleLoading || appleLoading;
 
   return (
-    <AppBg>
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Animated.View style={[styles.header, fadeUp(headerAnim)]}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-              <MaterialCommunityIcons name="arrow-left" size={20} color="#565E32" />
-              <Text style={styles.backText}>Atrás</Text>
-            </TouchableOpacity>
-          </Animated.View>
+    <View style={s.root}>
+      <StatusBar barStyle="dark-content" />
+      <LineasEsquina />
+      <SafeAreaView style={s.safe}>
+        <KeyboardAvoidingView
+          style={s.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView
+            contentContainerStyle={s.container}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
 
-          <Animated.View style={[styles.content, fadeUp(formAnim)]}>
-            <View style={styles.titleArea}>
-              <Text style={styles.title}>Accedé a tu cuenta</Text>
-              <Text style={styles.subtitle}>
-                Si todavía no tenés una, la creamos al instante.
-              </Text>
-            </View>
+            {/* Logo */}
+            <Animated.View style={[s.logoWrap, fadeUp(logoAnim)]}>
+              <VitaWordmark />
+              <ReglaConPunto />
+            </Animated.View>
 
-            <View style={styles.social}>
+            {/* Heading */}
+            <Animated.View style={[s.headingArea, fadeUp(headingAnim)]}>
+              <Text style={s.heading}>Tu espacio profesional</Text>
+              <Text style={s.subheading}>Entrá o creá tu cuenta de coach</Text>
+            </Animated.View>
+
+            {/* Botones */}
+            <Animated.View style={[s.btnsArea, fadeUp(btnsAnim)]}>
+
+              {/* Google */}
               <TouchableOpacity
-                style={[styles.googleBtn, anyLoading && styles.buttonDisabled]}
+                style={[s.socialBtn, anyLoading && { opacity: 0.6 }]}
                 onPress={() => handleOAuth('google')}
                 activeOpacity={0.85}
-                disabled={anyLoading}
-              >
-                {googleLoading
-                  ? <ActivityIndicator size="small" color="#4285F4" />
-                  : <MaterialCommunityIcons name="google" size={20} color="#4285F4" />}
-                <Text style={styles.googleBtnText}>Continuar con Google</Text>
+                disabled={anyLoading}>
+                <View style={s.btnIcon}>
+                  {googleLoading
+                    ? <ActivityIndicator size="small" color="#4285F4" />
+                    : <MaterialCommunityIcons name="google" size={21} color="#4285F4" />}
+                </View>
+                <Text style={s.btnText}>Continuar con Google</Text>
+                <View style={s.btnIcon} />
               </TouchableOpacity>
 
-              {/* Sign in with Apple no existe en Android, ocultar */}
+              {/* Apple — no existe en Android */}
               {Platform.OS === 'ios' && (
                 <TouchableOpacity
-                  style={[styles.appleBtn, anyLoading && styles.buttonDisabled]}
+                  style={[s.socialBtn, anyLoading && { opacity: 0.6 }]}
                   onPress={() => handleOAuth('apple')}
                   activeOpacity={0.85}
-                  disabled={anyLoading}
-                >
-                  {appleLoading
-                    ? <ActivityIndicator size="small" color="#FFFFFF" />
-                    : <MaterialCommunityIcons name="apple" size={20} color="#FFFFFF" />}
-                  <Text style={styles.appleBtnText}>Continuar con Apple</Text>
+                  disabled={anyLoading}>
+                  <View style={s.btnIcon}>
+                    {appleLoading
+                      ? <ActivityIndicator size="small" color="#1A1A1A" />
+                      : <MaterialCommunityIcons name="apple" size={22} color="#1A1A1A" />}
+                  </View>
+                  <Text style={s.btnText}>Continuar con Apple</Text>
+                  <View style={s.btnIcon} />
                 </TouchableOpacity>
               )}
 
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>o con tu email</Text>
-                <View style={styles.dividerLine} />
-              </View>
-            </View>
+              {/* El rol de profesional se activa al aprobar la postulación —
+                  esta pantalla es login Y alta a la vez. */}
+              <Text style={s.roleNote}>
+                Tu cuenta de profesional se activa cuando Vita aprueba tu solicitud.
+              </Text>
 
-            <View style={styles.form}>
-              <View style={styles.field}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="tu@email.com"
-                  placeholderTextColor="rgba(135,131,92,0.45)"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
+              {/* Aceptación implícita: la cláusula anti-solicitación de los T&C
+                  (§10) sostiene la medida anti-fuga, así que importa que el
+                  profesional pase por acá. */}
+              <Text style={s.legalNote}>
+                {'Al continuar declarás tener 18 años o más y aceptás los '}
+                <Text style={s.legalLink} onPress={() => setLegalDoc('terminos')}>
+                  Términos y condiciones
+                </Text>
+                {' y la '}
+                <Text style={s.legalLink} onPress={() => setLegalDoc('privacidad')}>
+                  Política de privacidad
+                </Text>
+                {' de Vita.'}
+              </Text>
 
-              <View style={styles.field}>
-                <Text style={styles.label}>Contraseña</Text>
-                <View style={styles.passwordWrap}>
+              {error && !showEmailForm && <Text style={s.serverError}>{error}</Text>}
+
+              <DivisorConPunto />
+
+              {/* Usar email — camino secundario, contorneado */}
+              <TouchableOpacity style={s.emailBtn} onPress={toggleEmailForm} activeOpacity={0.85}>
+                <View style={s.btnIcon}>
+                  <MaterialCommunityIcons name="email-outline" size={21} color={TEXTO} />
+                </View>
+                <Text style={s.btnText}>Usar email</Text>
+                <View style={s.btnIcon} />
+              </TouchableOpacity>
+
+              {showEmailForm && (
+                <View style={s.emailForm}>
                   <TextInput
-                    style={[styles.input, styles.passwordInput]}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="Mínimo 6 caracteres"
+                    style={s.input}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="tu@email.com"
                     placeholderTextColor="rgba(135,131,92,0.45)"
-                    secureTextEntry={!showPassword}
+                    keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
-                  <TouchableOpacity
-                    style={styles.eyeBtn}
-                    onPress={() => setShowPassword(v => !v)}
-                    hitSlop={8}
-                  >
-                    <MaterialCommunityIcons
-                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                      size={20}
-                      color="rgba(135,131,92,0.72)"
+
+                  <View style={s.inputRow}>
+                    <TextInput
+                      style={s.inputInner}
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder="Contraseña (mín. 6)"
+                      placeholderTextColor="rgba(135,131,92,0.45)"
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
                     />
+                    <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={8}>
+                      <MaterialCommunityIcons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={20}
+                        color="rgba(135,131,92,0.80)"
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {needsName && (
+                    <>
+                      <Text style={s.nameHint}>Es la primera vez que entrás con este mail — ¿cómo te llamamos?</Text>
+                      <TextInput
+                        style={s.input}
+                        value={name}
+                        onChangeText={setName}
+                        placeholder="Nombre y apellido"
+                        placeholderTextColor="rgba(135,131,92,0.45)"
+                        autoFocus
+                      />
+                    </>
+                  )}
+
+                  {error && <Text style={s.serverError}>{error}</Text>}
+
+                  <TouchableOpacity
+                    style={[s.enterBtn, anyLoading && s.enterBtnLoading]}
+                    onPress={handleSubmit}
+                    activeOpacity={0.85}
+                    disabled={anyLoading}>
+                    {loading
+                      ? <ActivityIndicator size="small" color="#F7EFE4" />
+                      : <Text style={s.enterBtnText}>{needsName ? 'Crear cuenta' : 'Continuar'}</Text>}
                   </TouchableOpacity>
                 </View>
-              </View>
-
-              {needsName && (
-                <View style={styles.field}>
-                  <Text style={styles.hint}>Es la primera vez que entrás con este mail — ¿cómo te llamamos?</Text>
-                  <Text style={styles.label}>Tu nombre</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="Nombre y apellido"
-                    placeholderTextColor="rgba(135,131,92,0.45)"
-                    autoFocus
-                  />
-                </View>
               )}
+            </Animated.View>
 
-              {error && (
-                <View style={styles.errorBox}>
-                  <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#C0392B" />
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
+            {/* Footer — volver a la pantalla anterior (la bifurcación) */}
+            <View style={s.footer}>
+              <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
+                <Text style={s.footerLink}>Volver</Text>
+              </TouchableOpacity>
             </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
-            <TouchableOpacity
-              style={[styles.button, anyLoading && styles.buttonDisabled]}
-              onPress={handleSubmit}
-              activeOpacity={0.85}
-              disabled={anyLoading}
-            >
-              {loading ? (
-                <Text style={styles.buttonText}>{needsName ? 'Creando cuenta...' : 'Ingresando...'}</Text>
-              ) : (
-                <Text style={styles.buttonText}>{needsName ? 'Crear cuenta' : 'Continuar'}</Text>
-              )}
-            </TouchableOpacity>
-
-            <Text style={styles.note}>
-              Podés entrar con Google, con Apple o con tu email. El rol de profesional se activa cuando Vita aprueba tu solicitud.
-            </Text>
-
-            {/* Aceptación implícita: esta pantalla es login Y alta de cuenta a la vez,
-                así que un checkbox obligatorio le sumaría fricción a quien solo entra.
-                Importa que el profesional pase por acá: la cláusula anti-solicitación
-                de los T&C (§10) es la que sostiene la medida anti-fuga. */}
-            <Text style={styles.legalNote}>
-              {'Al continuar declarás tener 18 años o más y aceptás los '}
-              <Text style={styles.legalLink} onPress={() => setLegalDoc('terminos')}>
-                Términos y condiciones
-              </Text>
-              {' y la '}
-              <Text style={styles.legalLink} onPress={() => setLegalDoc('privacidad')}>
-                Política de privacidad
-              </Text>
-              {' de Vita.'}
-            </Text>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      <LegalSheet
-        visible={legalDoc !== null}
-        doc={legalDoc ?? 'terminos'}
-        onClose={() => setLegalDoc(null)}
-      />
-    </SafeAreaView>
-    </AppBg>
+        <LegalSheet
+          visible={legalDoc !== null}
+          doc={legalDoc ?? 'terminos'}
+          onClose={() => setLegalDoc(null)}
+        />
+      </SafeAreaView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: { flexGrow: 1, paddingBottom: 40 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  backText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: '#87835C',
-  },
-  content: { flex: 1, paddingHorizontal: 24, paddingTop: 28, gap: 28 },
-  titleArea: { gap: 8 },
-  title: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 30,
-    color: '#565E32',
-    letterSpacing: -0.5,
-    lineHeight: 38,
-  },
-  subtitle: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 15,
-    color: '#87835C',
-    lineHeight: 22,
-  },
-  social: { gap: 12 },
-  googleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: CREMA },
+  safe: { flex: 1 },
+  flex: { flex: 1 },
+
+  container: {
+    flexGrow: 1,
+    paddingHorizontal: 28,
+    paddingTop: 52,
+    paddingBottom: 36,
     justifyContent: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(255,248,240,0.62)',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.60)',
-    paddingVertical: 15,
-  },
-  googleBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
-  },
-  appleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
-    paddingVertical: 15,
-  },
-  appleBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#FFFFFF',
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    // Centrar el separador entre los botones sociales y el formulario: el
-    // contenedor ya mete 28 por debajo (su `gap`) y acá arriba solo hay 12.
-    marginTop: 8,
-    marginBottom: -8,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255,248,240,0.65)',
-  },
-  dividerText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: 'rgba(135,131,92,0.72)',
+    gap: 30,
   },
 
-  form: { gap: 16 },
-  field: { gap: 6 },
-  label: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: '#87835C',
+  logoWrap: { alignItems: 'center', gap: 20 },
+
+  headingArea: { alignItems: 'center', gap: 10 },
+  heading: {
+    fontFamily: ViveFonts.title,
+    fontSize: 32,
+    color: TEXTO,
+    letterSpacing: -0.5,
+    textAlign: 'center',
   },
-  hint: {
+  subheading: {
     fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: '#87835C',
-    marginBottom: 2,
+    fontSize: 15.5,
+    color: TEXTO_SUAVE,
+    textAlign: 'center',
   },
-  input: {
-    backgroundColor: 'rgba(255,248,240,0.48)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontFamily: ViveFonts.regular,
-    fontSize: 15,
-    color: '#565E32',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.65)',
+
+  btnsArea: { gap: 14 },
+
+  btnIcon: { width: 26, alignItems: 'center' },
+  btnText: {
+    flex: 1,
+    textAlign: 'center',
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15.5,
+    color: TEXTO,
   },
-  passwordWrap: { position: 'relative' },
-  passwordInput: { paddingRight: 48 },
-  eyeBtn: {
-    position: 'absolute',
-    right: 14,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-  },
-  errorBox: {
+  socialBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(224,82,82,0.15)',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: BOTON_BG,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: BOTON_BORDE,
+    paddingVertical: 17,
+    paddingHorizontal: 18,
   },
-  errorText: {
+
+  roleNote: {
     fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#FF7070',
-    flex: 1,
-    lineHeight: 18,
-  },
-  button: {
-    backgroundColor: ViveColors.primary,
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 17,
-    color: '#565E32',
-    letterSpacing: 0.3,
-  },
-  note: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: 'rgba(135,131,92,0.72)',
+    fontSize: 12.5,
+    color: TEXTO_SUAVE,
     lineHeight: 18,
     textAlign: 'center',
+    marginTop: 2,
   },
   legalNote: {
     fontFamily: ViveFonts.regular,
@@ -576,10 +518,92 @@ const styles = StyleSheet.create({
     color: 'rgba(135,131,92,0.62)',
     lineHeight: 17,
     textAlign: 'center',
-    marginTop: 14,
   },
   legalLink: {
     fontFamily: ViveFonts.semibold,
     color: ViveColors.primary,
+  },
+  serverError: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#C0392B',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+
+  // "Usar email" contorneado y sin relleno: es el camino secundario.
+  emailBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(38,64,47,0.32)',
+    paddingVertical: 17,
+    paddingHorizontal: 18,
+  },
+
+  emailForm: { gap: 12, marginTop: 4 },
+  input: {
+    backgroundColor: 'rgba(86,94,50,0.12)',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.65)',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontFamily: ViveFonts.regular,
+    fontSize: 15,
+    color: '#565E32',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(86,94,50,0.12)',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.65)',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  inputInner: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 15,
+    color: '#565E32',
+    padding: 0,
+  },
+  nameHint: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12,
+    color: TEXTO_SUAVE,
+    marginTop: -2,
+    marginBottom: -4,
+  },
+  enterBtn: {
+    backgroundColor: '#565E32',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    minHeight: 52,
+    justifyContent: 'center',
+  },
+  enterBtnLoading: { opacity: 0.75 },
+  enterBtnText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 16,
+    color: '#F7EFE4',
+    letterSpacing: 0.2,
+  },
+
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerLink: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 14,
+    color: TERRACOTA,
   },
 });
