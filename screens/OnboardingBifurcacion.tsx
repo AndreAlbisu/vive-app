@@ -196,23 +196,30 @@ export default function OnboardingBifurcacion() {
   }, []);
 
   /**
-   * El derrame de salida: un círculo del color del ala que nace en la flecha
-   * que tocaste y crece hasta tapar la pantalla. Recién cuando terminó se
-   * navega, y la pantalla que recibe monta cubierta por ese mismo color
-   * (`EntradaDesdeColor`), así las dos mitades se leen como un solo gesto.
+   * La salida: **el propio botón crece**. No es un círculo nuevo del mismo
+   * color puesto encima — es el aro de la flecha que tocaste, que se llena de
+   * su color, se agranda desde su propio borde hasta tapar la pantalla, y
+   * mientras tanto todo lo demás se desvanece.
    *
-   * 🔴 Solo `scale`, igual que el derrame de Sofía: animar `width`/`height` o
-   * el `borderRadius` obliga a correr en el hilo de JS. El círculo se monta ya
-   * con su tamaño FINAL y arranca encogido.
+   * 🔴 Un solo `Animated.Value` para las cinco cosas que pasan, con el escalonado
+   * metido en los `inputRange`. Cinco animaciones en paralelo costarían cinco
+   * veces más y se verían igual — mismo criterio que la entrada de Sofía.
    *
-   * La geometría va en estado y no en constantes porque depende de dónde está
-   * la flecha, que son dos posiciones distintas, y el `outputRange` de un
-   * `interpolate` queda fijo por render.
+   * 🔴 Todo lo que se anima corre en el hilo nativo: `opacity` y `scale`, nunca
+   * `backgroundColor` (que no lo soporta). Por eso el relleno de color es una
+   * capa aparte adentro del aro a la que se le sube la opacidad, y no el
+   * `backgroundColor` del aro cambiando de valor.
    */
-  const [salida, setSalida] = useState<{ cx: number; cy: number; d: number; s0: number; color: string } | null>(null);
-  const derrame = useRef(new Animated.Value(0)).current;
+  const [salida, setSalida] = useState<{ id: string; escala: number } | null>(null);
+  const paso = useRef(new Animated.Value(0)).current;
   const flechas = useRef<Record<string, View | null>>({}).current;
   const yendo = useRef(false);
+
+  // Lo que NO es el botón elegido: se va antes de que el botón termine de
+  // crecer, así el crecimiento pasa sobre una pantalla ya vacía.
+  const desvanece = {
+    opacity: paso.interpolate({ inputRange: [0, 0.42], outputRange: [1, 0], extrapolate: 'clamp' as const }),
+  };
 
   function elegir(c: Camino) {
     if (yendo.current) return;   // el segundo toque no dispara un segundo viaje
@@ -224,25 +231,27 @@ export default function OnboardingBifurcacion() {
     // ⚠️ Sin flecha medida o con "reducir movimiento" prendido se navega y ya:
     // la transición es un adorno, no puede ser la única forma de avanzar.
     AccessibilityInfo.isReduceMotionEnabled().then(reducir => {
-      if (reducir || !nodo) { ir(); return; }
+      if (reducir || !nodo || typeof nodo.measureInWindow !== 'function') { ir(); return; }
 
       nodo.measureInWindow((x, y, w, h) => {
         const cx = x + w / 2;
         const cy = y + h / 2;
-        // El círculo tiene que tapar la esquina MÁS lejana: contra las cuatro,
-        // y se toma la peor. Si no, queda una punta sin cubrir.
+        // Cuánto tiene que crecer para tapar la esquina MÁS lejana. Se mide
+        // contra las cuatro y se toma la peor: la flecha está abajo y a un
+        // costado, así que a ojo siempre queda una punta sin cubrir.
         const alcance = Math.max(
           Math.hypot(cx, cy), Math.hypot(width - cx, cy),
           Math.hypot(cx, height - cy), Math.hypot(width - cx, height - cy),
         );
-        const d = alcance * 2;
 
-        setSalida({ cx, cy, d, s0: ARO / d, color: c.accent });
-        derrame.setValue(0);
-        Animated.timing(derrame, {
+        setSalida({ id: c.id, escala: (alcance * 2) / ARO });
+        paso.setValue(0);
+        Animated.timing(paso, {
           toValue: 1,
-          duration: 460,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          duration: 620,
+          // Sale despacio y termina rápido: el arranque es lo que se lee como
+          // "esto que toqué se está abriendo", el final ya es solo color.
+          easing: Easing.bezier(0.32, 0, 0.24, 1),
           useNativeDriver: true,
         }).start(ir);
       });
@@ -257,8 +266,8 @@ export default function OnboardingBifurcacion() {
     useCallback(() => {
       yendo.current = false;
       setSalida(null);
-      derrame.setValue(0);
-    }, [derrame]),
+      paso.setValue(0);
+    }, [paso]),
   );
 
   const yCierre = height * BASE_CUELLO;
@@ -267,7 +276,7 @@ export default function OnboardingBifurcacion() {
   return (
     <View style={s.root}>
       {/* El cuello: los dos paneles de color y el campo de líneas */}
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: splitAnim }]} pointerEvents="none">
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: splitAnim }, desvanece]} pointerEvents="none">
         <Svg width={width} height={height}>
           {alas.map(side => (
             <Path
@@ -298,7 +307,7 @@ export default function OnboardingBifurcacion() {
       </Animated.View>
 
       {/* Bloque superior — ocupa hasta el punto de convergencia */}
-      <View style={[s.top, { height: yCierre - height * 0.018 }]}>
+      <Animated.View style={[s.top, { height: yCierre - height * 0.018 }, desvanece]} pointerEvents="none">
         <SafeAreaView edges={['top']} />
         <View style={s.topInner}>
           <Animated.View style={fadeUp(brandAnim)}>
@@ -311,57 +320,85 @@ export default function OnboardingBifurcacion() {
             <Text style={s.title}>¿Qué buscás{'\n'}en Vita?</Text>
           </Animated.View>
         </View>
-      </View>
+      </Animated.View>
 
       {/* Columnas — transparentes: el color lo pone la capa de atrás */}
       <View style={s.columns}>
         {CAMINOS.map(c => (
           <TouchableOpacity
             key={c.id}
-            style={[s.col, { paddingTop: height * 0.006, paddingBottom: height * 0.115 }]}
+            // La elegida se pinta ENCIMA de la otra: el aro crece hasta taparlo
+            // todo, y sin esto su hermana quedaría dibujada arriba del color.
+            style={[
+              s.col,
+              { paddingTop: height * 0.006, paddingBottom: height * 0.115 },
+              salida?.id === c.id && { zIndex: 2 },
+            ]}
             activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel={`${c.title.replace('\n', ' ')}. ${c.desc}`}
             onPress={() => elegir(c)}>
-            <View style={s.colTop}>
+            <Animated.View style={[s.colTop, desvanece]}>
               <Ionicons name={c.icon} size={38} color={c.accent} />
               <Text style={s.colTitle}>{c.title}</Text>
               <View style={[s.rule, { backgroundColor: c.rule }]} />
               <Text style={s.colDesc}>{c.desc}</Text>
-            </View>
+            </Animated.View>
             {/* La flecha va anclada al pie para que las dos queden a la misma
                 altura aunque las descripciones tengan distinta cantidad de líneas */}
-            <View
-              ref={n => { flechas[c.id] = n; }}
+            {/* 🔴 El objeto que viaja. No se lo reemplaza por un círculo nuevo:
+                es este mismo aro el que se llena de su color y crece desde su
+                propio borde. Por eso el `ref` para medirlo y el `zIndex` de
+                arriba — lo que se agranda es el botón que la persona tocó. */}
+            <Animated.View
+              ref={n => { flechas[c.id] = n as unknown as View | null; }}
               collapsable={false}
-              style={[s.arrow, { borderColor: c.accent }]}>
-              <MaterialCommunityIcons name="arrow-right" size={22} color={TEXTO} />
-            </View>
+              style={[
+                s.arrow,
+                { borderColor: c.accent },
+                salida?.id === c.id && {
+                  transform: [{
+                    scale: paso.interpolate({
+                      inputRange: [0, 1], outputRange: [1, salida.escala],
+                    }),
+                  }],
+                },
+              ]}>
+              {/* El relleno, como capa aparte: `backgroundColor` no corre en el
+                  hilo nativo y `opacity` sí. Entra antes de que el aro empiece
+                  a crecer, si no se agranda un anillo vacío. */}
+              {salida?.id === c.id && (
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    StyleSheet.absoluteFill,
+                    {
+                      borderRadius: ARO / 2,
+                      backgroundColor: c.accent,
+                      opacity: paso.interpolate({
+                        inputRange: [0, 0.22], outputRange: [0, 1], extrapolate: 'clamp',
+                      }),
+                    },
+                  ]}
+                />
+              )}
+              <Animated.View style={salida?.id === c.id ? desvanece : undefined}>
+                <MaterialCommunityIcons name="arrow-right" size={22} color={TEXTO} />
+              </Animated.View>
+            </Animated.View>
           </TouchableOpacity>
         ))}
       </View>
 
-      {salida && (
-        <Animated.View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            left: salida.cx - salida.d / 2,
-            top:  salida.cy - salida.d / 2,
-            width: salida.d,
-            height: salida.d,
-            borderRadius: salida.d / 2,
-            backgroundColor: salida.color,
-            transform: [{ scale: derrame.interpolate({ inputRange: [0, 1], outputRange: [salida.s0, 1] }) }],
-          }}
-        />
-      )}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: CREMA },
+  // `overflow: 'visible'` en toda la cadena que contiene el aro: al crecer se
+  // sale de su columna por varias pantallas, y en Android un hijo fuera del
+  // padre se recorta salvo que se diga lo contrario.
+  root: { flex: 1, backgroundColor: CREMA, overflow: 'visible' },
 
   top: { paddingHorizontal: 24 },
   topInner: { flex: 1, alignItems: 'center', paddingTop: 12 },
@@ -378,12 +415,13 @@ const s = StyleSheet.create({
     color: TEXTO,
     textAlign: 'center',
   },
-  columns: { flex: 1, flexDirection: 'row' },
+  columns: { flex: 1, flexDirection: 'row', overflow: 'visible' },
   col: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    overflow: 'visible',
   },
   colTop: { alignItems: 'center', gap: 17 },
   colTitle: {

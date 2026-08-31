@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · corrección: el que crece es el BOTÓN, no un círculo nuevo)
+
+**Tocado:** `screens/OnboardingBifurcacion.tsx`. 381 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- 🔴 **La primera versión estaba mal y Andre la corrigió.** Yo había puesto un círculo NUEVO del color del ala que nacía en la flecha y se expandía por encima de todo. Lo que se pedía es que **se expanda el propio botón**, desde su propio borde, y que el resto de la pantalla se desvanezca. Los dos síntomas de por qué la versión anterior no se leía como el mismo objeto: el círculo aparecía **relleno desde el cuadro cero** mientras el botón real es un aro hueco (o sea, "apareció una cosa nueva", no "esto creció"), y **nada más se iba**, así que el color simplemente tapaba una pantalla intacta.
+- **Ahora es el aro de verdad el que viaja**: se llena de su color, crece desde su propio borde con `scale`, y todo lo demás —las alas de color, el wordmark, el título, la otra columna y el contenido de la propia— se desvanece antes de que termine de crecer, así el crecimiento pasa sobre una pantalla ya vacía.
+- 📝 **Un solo `Animated.Value` para las cinco cosas**, con el escalonado metido en los `inputRange` en vez de cinco animaciones en paralelo. Mismo criterio que la entrada del panel de Sofía: costarían cinco veces más y se verían igual.
+- 🔴 **El relleno es una capa aparte adentro del aro, no el `backgroundColor` del aro.** `backgroundColor` no corre en el hilo nativo y `opacity` sí. Entra antes de que empiece a crecer — si no, lo que se agranda es un anillo vacío.
+- 📝 El borde del aro (1.2px) se escala junto con él y termina siendo un anillo grueso, pero **es del mismo color que el relleno**, así que se funde y no se ve.
+- ⚠️ **`overflow: 'visible'` explícito en toda la cadena** (`root`, `columns`, `col`): el aro se sale de su columna por varias pantallas, y en Android un hijo que se pasa del padre se recorta salvo que se diga lo contrario. En iOS no hacía falta; se puso igual porque el bug sería invisible desde acá.
+- 📝 **La columna elegida sube a `zIndex: 2`**: sin eso su hermana quedaría dibujada por encima del color.
+- ⚠️ El `ref` de un `Animated.View` no garantiza `measureInWindow`; si no está, se navega derecho en vez de romper. Mismo criterio que el guard de "reducir movimiento".
+- 📝 Duración a 620ms con `Easing.bezier(0.32, 0, 0.24, 1)` — sale despacio y termina rápido: el arranque es lo que se lee como "esto que toqué se está abriendo", el final ya es solo color.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin ver en dispositivo, y es la segunda versión de lo mismo**: conviene mirarla antes de darla por buena. Las dos alas, el "reducir movimiento", y volver atrás desde coach-login.
+- ⚠️ **Mirarlo en Android específicamente** por lo del recorte: si el aro se corta al salirse de su columna, el `overflow: 'visible'` no alcanzó y hay que pasarlo a una capa absoluta a nivel raíz.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · la bifurcación se derrama en color al elegir)
 
 **Tocado:** `screens/OnboardingBifurcacion.tsx`, `screens/OnboardingScreen2.tsx`, `screens/CoachLoginScreen.tsx`, `app/_layout.tsx`. Nuevos: `constants/onboardingTonos.ts`, `components/EntradaDesdeColor.tsx`. 381 tests, `tsc` limpio, sin warnings de lint nuevos.
