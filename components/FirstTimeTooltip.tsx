@@ -8,9 +8,9 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import { guiaHabilitada, marcarVista, numeroDePaso, saltearGuia } from '@/lib/guiaContextual';
 
 type Props = {
   storageKey: string;
@@ -31,15 +31,25 @@ export function FirstTimeTooltip({
   delay = 600,
 }: Props) {
   const [visible, setVisible] = useState(false);
+  // null = esta card no se cuenta (la Sala). Ver `lib/guiaContextual.ts`.
+  const [paso, setPaso] = useState<{ paso: number; total: number } | null>(null);
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(48)).current;
 
   useEffect(() => {
-    AsyncStorage.getItem(storageKey).then((val) => {
-      if (!val) {
-        setTimeout(() => setVisible(true), delay);
-      }
-    });
+    let vivo = true;
+    (async () => {
+      // El número se lee ANTES de marcar nada, así la card dice cuántas van
+      // sin contarse a sí misma.
+      const [habilitada, n] = await Promise.all([
+        guiaHabilitada(storageKey),
+        numeroDePaso(storageKey),
+      ]);
+      if (!vivo || !habilitada) return;
+      setPaso(n);
+      setTimeout(() => { if (vivo) setVisible(true); }, delay);
+    })();
+    return () => { vivo = false; };
   }, [storageKey, delay]);
 
   useEffect(() => {
@@ -55,14 +65,27 @@ export function FirstTimeTooltip({
     ]).start();
   }, [visible, fadeAnim, slideAnim]);
 
-  function dismiss() {
+  /**
+   * `persistir` es la diferencia entre cerrarla y darla por vista.
+   *
+   * 🔴 Tocar fuera cierra SIN marcarla. Antes marcaba, así que un toque
+   * accidental —la card aparece sola 800ms después de entrar, es fácil— hacía
+   * perder para siempre una explicación que no se puede volver a pedir. Ahora
+   * la única forma de que no vuelva es decirlo: "Entendido" o "Saltear".
+   */
+  function cerrar(persistir: boolean) {
     Animated.parallel([
       Animated.timing(fadeAnim,  { toValue: 0, duration: 200, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 48, duration: 200, useNativeDriver: true }),
     ]).start(() => {
       setVisible(false);
-      AsyncStorage.setItem(storageKey, '1');
+      if (persistir) void marcarVista(storageKey);
     });
+  }
+
+  function saltear() {
+    void saltearGuia();
+    cerrar(true);
   }
 
   if (!visible) return null;
@@ -71,7 +94,7 @@ export function FirstTimeTooltip({
     <Modal transparent animationType="none" visible={visible} statusBarTranslucent>
       <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
         {/* Tap outside to dismiss */}
-        <TouchableWithoutFeedback onPress={dismiss}>
+        <TouchableWithoutFeedback onPress={() => cerrar(false)}>
           <View style={StyleSheet.absoluteFill} />
         </TouchableWithoutFeedback>
 
@@ -80,12 +103,25 @@ export function FirstTimeTooltip({
             <MaterialCommunityIcons name={icon} size={30} color={iconColor} />
           </View>
 
+          {paso && (
+            <Text style={styles.contador}>{paso.paso} de {paso.total}</Text>
+          )}
+
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.description}>{description}</Text>
 
-          <TouchableOpacity style={styles.btn} onPress={dismiss} activeOpacity={0.82}>
+          <TouchableOpacity style={styles.btn} onPress={() => cerrar(true)} activeOpacity={0.82}>
             <Text style={styles.btnText}>Entendido</Text>
           </TouchableOpacity>
+
+          {/* No dice "Siguiente": no hay una próxima card acá y al lado, la
+              siguiente aparece cuando la persona llega a esa pantalla. Lo que
+              sí hace falta es poder decir que no querés ninguna. */}
+          {paso && paso.paso < paso.total && (
+            <TouchableOpacity onPress={saltear} hitSlop={8} activeOpacity={0.7}>
+              <Text style={styles.saltear}>Saltear la guía</Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -115,6 +151,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
+  },
+  contador: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 11,
+    letterSpacing: 0.6,
+    color: ViveColors.text,
+    opacity: 0.45,
+  },
+  saltear: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: ViveColors.text,
+    opacity: 0.55,
+    textDecorationLine: 'underline',
+    paddingVertical: 4,
   },
   title: {
     fontFamily: ViveFonts.bold,

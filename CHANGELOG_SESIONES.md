@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · la guía contextual y el onboarding de "¿Cómo te gustaría empezar?")
+
+**Tocado:** `components/FirstTimeTooltip.tsx`, `screens/OnboardingScreen2.tsx`. Nuevos: `lib/guiaContextual.ts`, `__tests__/guiaContextual.test.ts`. 362 tests (eran 352), `tsc` limpio, sin warnings de lint nuevos.
+
+**Contexto — la revisión de la pantalla, antes del código:**
+
+- 🔴 **La elección no se guardaba en ningún lado.** `selected` era estado local que solo elegía la ruta. Buscado en todo el repo: `'explore'`, `'guide'` y `OptionId` no aparecían en ningún otro archivo. Se le pedía a la persona que se declarara en el peor momento —antes de saber qué es Vita— y después la app no se acordaba de nada.
+- 🔴 **Y la rama "No sé por dónde empezar" tira TODO lo que contestás.** `OnboardingScreen5.handleContinue()` hace `router.replace('/register')` y descarta `selected`, `universo` y `categoria`. Ninguna pantalla del onboarding escribe `user_quiz_answers`: el único que lo hace es `QuizScreen.tsx:122`, el quiz de adentro de la app. Son tres pantallas de preguntas que no dejan nada. **Sin arreglar todavía.**
+- 🔴 **Cero analítica en todo el onboarding** (ningún `registrarEvento` en `OnboardingScreen1-5` ni en la bifurcación): no hay forma de saber qué elige la gente.
+- 📝 El objetivo de cada rama, hablado con Andre: la 1 es **retención** (que pruebe algo gratis y vuelva), la 2 es la que **monetiza** (máxima intención, sacarle fricción), la 3 es **el usuario central** del producto — el problema #1 del overview es literalmente "no sé por dónde empezar".
+
+**Resumen de lo hecho:**
+
+- ✅ **La rama de más intención deja de chocar contra un muro.** "Sé qué necesito" iba a `/register`: el único muro de la pantalla, puesto justo en la rama de la persona que ya decidió que quiere un profesional. Profesionales anda sin cuenta (`requestAuth` la pide recién al reservar, igual que para quien elige explorar), así que el registro no protegía nada. Ahora va directo a `/(tabs)/conexiones`.
+- ✅ **La elección se persiste** (`guardarCamino`, AsyncStorage y no la base: todavía no hay cuenta, y en dos de los tres caminos puede no haberla nunca).
+- 🔴 **Las microguías YA EXISTÍAN.** Andre pidió "cartelitos que te vayan llevando por la app": `components/FirstTimeTooltip.tsx` ya estaba montado en Inicio, Profesionales, Recursos y Sala, con su copy y su clave de AsyncStorage. Lo que faltaba no era la pieza, era **el hilo**: sin contador, sin salida, y sin relación con lo que la persona eligió.
+- ⚠️ **Se descartó el tour lineal de 1/5 a 5/5 y quedaron contextuales** (corrección propuesta y aceptada por Andre): un tour explica cinco pantallas antes de que hayas usado ninguna, es el formato que se saltea por reflejo, y choca de frente con "si abruma, sobra". Las cards siguen apareciendo al llegar a cada pantalla, hablando de lo que estás mirando — pero ahora con **"N de 3"** y **"Saltear la guía"**, que apaga las cuatro de una sola vez.
+- 📝 **El número va por orden de APARICIÓN, no por posición fija.** Si alguien entra primero a Recursos, un número fijo le diría "3 de 3" en la primera card que ve. Se cuenta cuántas vio + 1, y se lee antes de marcar la actual para que no se cuente a sí misma.
+- 📝 **La Sala queda fuera del contador a propósito**: no la alcanza cualquiera —hace falta tener un profesional— y prometer "3 de 4" a alguien que quizá nunca abra un chat es una promesa incumplible. Sigue existiendo y respeta el "saltear", pero no se numera. Tampoco se apaga para quien eligió "Sé qué necesito": no es parte de la guía de bienvenida, es la explicación de una pantalla a la que acaba de llegar.
+- 📝 **Sin camino guardado la guía se muestra igual**: son las instalaciones anteriores a esto, es lo que ya les pasaba, y esconderla sería sacarles algo por una elección que nunca pudieron hacer.
+- 🔴 **Arreglado de paso: tocar fuera marcaba la card como vista.** La card aparece sola 800ms después de entrar a la pantalla, así que un toque accidental hacía perder para siempre una explicación que no se puede volver a pedir. Ahora tocar fuera solo cierra; para que no vuelva hay que decirlo ("Entendido" o "Saltear").
+- 📝 **El botón no dice "Siguiente"**, que era el pedido original: en el modelo contextual no hay una próxima card ahí al lado, la siguiente aparece cuando la persona llega a esa pantalla. Prometer "Siguiente" y no llevar a ningún lado sería mentir.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin probar en dispositivo.** Los casos: elegir explorar y ver 1 de 3 → 2 de 3 → 3 de 3 caminando la app; "Saltear la guía" en la primera y confirmar que no aparece ninguna más; elegir "Sé qué necesito" y confirmar que cae en Profesionales sin registro y sin cards; tocar fuera y confirmar que la card vuelve.
+- 🔴 **La rama "guide" sigue tirando las respuestas** (`OnboardingScreen5`). Es el punto 3 de lo hablado y falta decidir dónde se guardan: en ese momento no hay cuenta, así que van a AsyncStorage y hay que volcarlas a `user_quiz_answers` después del registro.
+- ⚠️ **Sigue sin analítica el onboarding entero.** Ahora que la elección se persiste, agregar `registrarEvento` es barato y es la única forma de saber si esta pantalla sirve.
+- 📝 Andre habló de 5 cartelitos y hoy son 4 (3 numerados + Sala). Si falta alguna pantalla, agregarla a `PASOS_GUIA` alcanza — el contador se ajusta solo.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · la card de nota solo mira la ÚLTIMA sesión)
 
 **Tocado:** `screens/CoachHomeScreen.tsx`. 352 tests, `tsc` y lint limpios.

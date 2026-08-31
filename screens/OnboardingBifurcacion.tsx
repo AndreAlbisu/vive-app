@@ -224,7 +224,6 @@ export default function OnboardingBifurcacion() {
           </Animated.View>
           <Animated.View style={[s.titleArea, fadeUp(titleAnim)]}>
             <Text style={s.title}>¿Qué buscás{'\n'}en Vita?</Text>
-            <Text style={s.subtitle}>Elegí cómo querés empezar.</Text>
           </Animated.View>
         </View>
       </View>
@@ -261,8 +260,10 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: CREMA },
 
   top: { paddingHorizontal: 24 },
-  topInner: { alignItems: 'center', paddingTop: 12 },
-  titleArea: { alignItems: 'center', marginTop: 34, gap: 14 },
+  topInner: { flex: 1, alignItems: 'center', paddingTop: 12 },
+  // Sin subtítulo el bloque superior queda holgado: el título se centra en el
+  // espacio que sobra entre el wordmark y el punto de convergencia.
+  titleArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   title: {
     fontFamily: ViveFonts.titleSemiBold,
     fontSize: 34,
@@ -271,14 +272,6 @@ const s = StyleSheet.create({
     color: TEXTO,
     textAlign: 'center',
   },
-  subtitle: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 15,
-    lineHeight: 21,
-    color: TEXTO_SUAVE,
-    textAlign: 'center',
-  },
-
   columns: { flex: 1, flexDirection: 'row' },
   col: {
     flex: 1,

@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveFonts } from '@/constants/theme';
 import { ScaleCard } from '@/components/ScaleCard';
+import { guardarCamino } from '@/lib/guiaContextual';
 import { AppBg } from '@/components/ui/AppBg';
 
 type OptionId = 'explore' | 'search' | 'guide';
@@ -79,8 +80,23 @@ export default function OnboardingScreen2() {
 
   function handleContinue() {
     if (!selected) return;
+
+    // 🔴 La elección se guardaba en ningún lado: era estado local que solo
+    // servía para elegir la ruta y se perdía al salir de la pantalla. Le
+    // pedíamos a la persona que se declarara en el peor momento —antes de saber
+    // qué es Vita— y después la app no se acordaba de nada. Ahora al menos
+    // decide si le mostramos la guía contextual.
+    void guardarCamino(selected);
+
     if (selected === 'explore') { router.replace('/(tabs)' as any); return; }
-    if (selected === 'search') { router.replace('/register'); return; }
+
+    // 🔴 Antes iba a `/register`. Era el único muro de la pantalla y estaba
+    // puesto justo en la rama de MÁS intención: la persona que ya decidió que
+    // quiere un profesional. Profesionales anda sin cuenta —`requestAuth` la
+    // pide recién al reservar, igual que para quien eligió explorar— así que el
+    // registro no protegía nada y frenaba a la única que venía a pagar.
+    if (selected === 'search') { router.replace('/(tabs)/conexiones' as any); return; }
+
     if (selected === 'guide') { router.push('/onboarding3'); return; }
   }
 
