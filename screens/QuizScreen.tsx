@@ -11,7 +11,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
@@ -19,6 +18,7 @@ import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCach
 import { QUIZ_AREAS as Q1_OPTIONS } from '@/constants/searchData';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { supabase } from '@/lib/supabase';
+import { guardarPendiente, volcarPendiente } from '@/lib/quizPendiente';
 
 const F  = '#3A4F2A';
 const FS = '#6B7A56';
@@ -114,16 +114,22 @@ export default function QuizScreen() {
     } else {
       const ms = computeMatches(coaches, q1 ?? '', q2 ?? '', q3 ?? '');
       setMatches(ms);
-      if (q1) AsyncStorage.setItem('vive_quiz_topic', q1).catch(() => {});
-      // Persistir en Supabase para personalización futura
-      supabase.auth.getSession().then(({ data }) => {
-        const uid = data.session?.user?.id;
-        if (!uid) return;
-        supabase.from('user_quiz_answers').upsert(
-          { user_id: uid, topic: q1, professional_type: q2, budget: q3, updated_at: new Date().toISOString() },
-          { onConflict: 'user_id' }
-        ).then(({ error }) => { if (error) console.warn('[quiz] upsert:', error.message); });
-      });
+      // 🔴 Antes esto era `if (!uid) return;`: quien hacía el quiz SIN cuenta
+      // perdía las tres respuestas en silencio. Lo único que quedaba era
+      // `vive_quiz_topic` en AsyncStorage, una clave que no lee nadie — o sea
+      // nada. Y el quiz se puede hacer sin cuenta: se llega desde Profesionales,
+      // que es navegable como anónimo.
+      //
+      // Ahora hay un solo camino: se encolan siempre, y si YA hay sesión se
+      // vuelcan en el acto para que la recomendación se actualice enseguida.
+      // Si no, quedan esperando y las vuelca `AuthContext` al registrarse.
+      guardarPendiente({ topic: q1, professionalType: q2, budget: q3 })
+        .then(() => supabase.auth.getSession())
+        .then(({ data }) => {
+          const uid = data.session?.user?.id;
+          if (uid) return volcarPendiente(uid);
+        })
+        .catch(e => console.warn('[quiz] no se pudo guardar:', e?.message ?? e));
       setStep(3);
     }
   }

@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · el quiz sin cuenta también deja de perderse)
+
+**Tocado:** `screens/QuizScreen.tsx`, `lib/onboardingRespuestas.ts`, `context/AuthContext.tsx`, `SCHEMA.md`. Nuevos: `lib/quizPendiente.ts`, `__tests__/quizPendiente.test.ts`. 379 tests (eran 371), `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- 🔴 **`QuizScreen` perdía las tres respuestas de quien lo hacía sin cuenta.** Su upsert hacía `if (!uid) return;` y seguía de largo en silencio. Lo único que quedaba era `AsyncStorage.setItem('vive_quiz_topic', q1)` — y esa clave **no la leía nadie** (`useRecommendedResource` lee la base), así que era escribir a la nada. **Y el quiz se puede hacer sin cuenta**: se llega desde Profesionales, que es navegable como anónimo.
+- **La plomería se extrajo a `lib/quizPendiente.ts`**, compartida por los dos caminos que preguntan sin cuenta (el onboarding guiado y el quiz). `lib/onboardingRespuestas.ts` queda con lo suyo: el vocabulario (`CATEGORIA_A_TOPIC`) y lo que no tiene columna (universo y temas).
+- 📝 **La cola mergea en vez de pisar.** El onboarding solo produce `topic` y el quiz los tres campos: reemplazar el registro entero haría que hacer el quiz después del onboarding borrara lo anterior, o al revés. Y el upsert manda **solo las columnas que existen**, así que un volcado parcial no pisa lo que ya había en la fila.
+- 🔴 **Guardar respuestas nuevas resetea `volcado`.** Si quedaran marcadas como ya escritas, un quiz hecho después de un volcado no llegaría nunca a la base. Tiene test.
+- 📝 **`QuizScreen` tiene ahora un solo camino**: encola siempre, y si ya hay sesión vuelca en el acto para que la recomendación se actualice enseguida. Se eliminó `vive_quiz_topic` y su import de AsyncStorage.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin probar en dispositivo.** Dos casos: hacer el quiz **sin cuenta**, registrarse y confirmar que `user_quiz_answers` quedó con topic + professional_type + budget; y hacer el onboarding guiado, registrarse, después el quiz, y confirmar que el quiz gana (es más nuevo y más deliberado).
+- 🔴 **Sigue abierta la decisión de las dos taxonomías** (universo del onboarding vs `topic`): tres de las nueve categorías recomiendan sobre un eje distinto al que la persona eligió. Se arregla reconciliándolas o dándole columna al universo, no retocando el mapa.
+- ⚠️ `universo` y los `temas` siguen sin columna, guardados solo en local.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · el onboarding guiado deja de tirar las respuestas)
 
 **Tocado:** `screens/OnboardingScreen5.tsx`, `context/AuthContext.tsx`, `SCHEMA.md`. Nuevos: `lib/onboardingRespuestas.ts`, `__tests__/onboardingRespuestas.test.ts`. 371 tests (eran 362), `tsc` limpio, sin warnings de lint nuevos.

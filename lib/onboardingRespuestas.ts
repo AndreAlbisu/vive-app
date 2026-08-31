@@ -5,20 +5,18 @@
 // temas elegidos. Tres pantallas de preguntas que no dejaban nada, justo en la
 // rama para la que existe el producto ("no sé por dónde empezar").
 //
-// ⚠️ Va a AsyncStorage y no directo a la base porque **en ese momento no hay
-// cuenta**: `user_quiz_answers.user_id` es FK a `profiles`. Se guarda local y se
-// vuelca cuando aparece la sesión (`AuthContext`). Si la persona abandona el
-// registro y vuelve mañana, lo que contestó sigue ahí.
+// ⚠️ En ese momento no hay cuenta (`user_quiz_answers.user_id` es FK a
+// `profiles`), así que el `topic` que sale de acá se encola en
+// `lib/quizPendiente.ts` y se vuelca cuando aparece la sesión. Si la persona
+// abandona el registro y vuelve mañana, lo que contestó sigue ahí.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '@/lib/supabase';
+import { guardarPendiente } from '@/lib/quizPendiente';
 
 export type RespuestasOnboarding = {
   universo: string;
   categoria: string;
   temas: string[];
-  /** Ya se escribió en la base. Ver `volcarRespuestas`. */
-  volcado?: boolean;
 };
 
 const KEY = 'vita_onboarding_respuestas';
@@ -61,7 +59,13 @@ export function topicDeCategoria(categoria: string): string | null {
 }
 
 export async function guardarRespuestas(r: RespuestasOnboarding): Promise<void> {
+  // Dos destinos, a propósito: el `topic` va a la cola compartida que se vuelca
+  // a la base, y el universo y los temas se quedan acá porque no tienen columna
+  // donde ir. No es que se descarten — es que todavía no hay dónde ponerlos.
   await AsyncStorage.setItem(KEY, JSON.stringify(r));
+
+  const topic = topicDeCategoria(r.categoria);
+  if (topic) await guardarPendiente({ topic });
 }
 
 export async function leerRespuestas(): Promise<RespuestasOnboarding | null> {
@@ -73,37 +77,4 @@ export async function leerRespuestas(): Promise<RespuestasOnboarding | null> {
     // Storage corrupto no puede romper el arranque de la app.
     return null;
   }
-}
-
-/**
- * Vuelca a `user_quiz_answers` lo que se había guardado sin cuenta.
- *
- * 🔴 UNA SOLA VEZ, y el flag es lo que lo garantiza. Sin eso, cada login
- * volvería a escribir la respuesta del onboarding y **pisaría el quiz que la
- * persona hizo después adentro de la app** — que es más nuevo y más deliberado.
- *
- * 📝 Solo viaja `topic`: `universo` y los `temas` no tienen columna donde ir y
- * se quedan guardados local. No es que se descarten — es que todavía no hay
- * dónde ponerlos, y esa es la misma decisión de producto de arriba.
- */
-export async function volcarRespuestas(userId: string): Promise<void> {
-  const r = await leerRespuestas();
-  if (!r || r.volcado) return;
-
-  const topic = topicDeCategoria(r.categoria);
-  if (!topic) return;
-
-  const { error } = await supabase
-    .from('user_quiz_answers')
-    .upsert(
-      { user_id: userId, topic, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id' },
-    );
-  if (error) {
-    // Sin marcar: se reintenta en el próximo login en vez de perderse.
-    console.warn('[onboarding] no se pudo volcar el quiz:', error.message);
-    return;
-  }
-
-  await guardarRespuestas({ ...r, volcado: true });
 }
