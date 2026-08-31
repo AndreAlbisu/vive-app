@@ -76,19 +76,30 @@ const CARD_FULL = Dimensions.get('window').width - H_PADDING * 2;
 const CARD_W = Math.round(CARD_FULL * 0.86);
 
 /**
- * 🔴 Cuánto baja la sombra de la card del carrusel por debajo de su borde.
+ * 🔴 Cuánto lugar necesita la sombra de la card del carrusel para no cortarse.
  *
- * El carrusel es un `ScrollView` horizontal, y un ScrollView RECORTA a su caja
- * (`clipsToBounds` en iOS, sin prop de RN que lo apague). La sombra tenía solo
- * los 16pt de `heroCardWrap.marginBottom` para extenderse, así que se cortaba
- * con un filo recto: degradaba bien a los costados y abajo terminaba de golpe.
+ * El carrusel es un `ScrollView` horizontal y un ScrollView RECORTA a su caja
+ * (`clipsToBounds` en iOS, sin prop de RN que lo apague). Recortaba **en los dos
+ * ejes** y se veía como una plancha gris con los bordes a cuchillo:
+ *   · abajo, la sombra solo tenía los 16pt de margen de la card;
+ *   · a los costados, la ScrollView mide exactamente `CARD_FULL` (pantalla − 32,
+ *     que es lo que ya aportaba el padding del padre), así que cortaba a ras del
+ *     borde. Medido sobre la captura: fondo 240 a un lado del borde, 225 al
+ *     otro, en 8px.
  *
- * El 30 sale de `shadow.elevated.dark` en `theme/tokens.ts`: la capa que más
- * baja es la del halo, `offset.height 26 + radius 24`, sobre una capa que está
- * `inset 20` adentro de la card → 26 + 24 − 20 = 30. ⚠️ Si esos tres números
- * cambian en el token, este tiene que acompañar o la sombra se vuelve a cortar.
+ * Se arregla dándole aire por dentro: la ScrollView sale a sangre
+ * (`carruselWrap.marginHorizontal: -H_PADDING`) y el padding se muda al
+ * `contentContainerStyle`, así hay 16pt de derrame por lado; y abajo entra este
+ * alcance como `paddingBottom`.
+ *
+ * ⚠️ El número NO sale de `offset.height + radius − inset` del token. Esa cuenta
+ * daba 30 y **se probó: a 30pt la sombra todavía valía 15 unidades sobre el
+ * fondo**, porque el desenfoque de CoreGraphics se extiende bastante más allá
+ * del `shadowRadius` nominal. 52 es el valor medido con margen. Si se toca
+ * `shadow.elevated.dark` en `theme/tokens.ts`, hay que volver a mirarlo en una
+ * captura, no recalcularlo.
  */
-const SOMBRA_ALCANCE = 30;
+const SOMBRA_ALCANCE = 44;
 
 /**
  * 🔴 El espacio de arriba de la lista es UN SLOT QUE NUNCA QUEDA VACÍO, y esa
@@ -105,9 +116,11 @@ const SOMBRA_ALCANCE = 30;
  *   · no hay ninguna        → la tarjeta de reservar (`sinProximaCard`)
  *   · no hay ni salas       → no se llega acá: manda el estado vacío entero
  *
- * Efecto secundario que importa tanto como el otro: la lista arranca SIEMPRE a
- * la misma altura, así que la fila de más arriba no se mueve de lugar entre una
- * apertura y la siguiente.
+ * ⚠️ Lo que el slot garantiza es que arriba SIEMPRE haya algo, no que la lista
+ * arranque a la misma altura: el carrusel mide ~195pt y la tarjeta de reservar
+ * ~70pt, así que la primera fila igual queda más abajo los días que hay sesión.
+ * Igualarlas pediría estirar la tarjeta chica hasta el alto de la grande, que es
+ * volver al hueco vacío por otro camino.
  *
  * ⚠️ El banner de reembolso NO es parte del slot: es una alerta, va por encima
  * de todo y empuja al resto hacia abajo.
@@ -509,10 +522,7 @@ export default function SessionsScreen() {
                   scrollEnabled={proximas.length > 1}
                   snapToInterval={CARD_W + CARD_GAP}
                   decelerationRate="fast"
-                  contentContainerStyle={[
-                    styles.carrusel,
-                    proximas.length === 1 && { paddingRight: 0 },
-                  ]}
+                  contentContainerStyle={styles.carrusel}
                   onMomentumScrollEnd={e => {
                     setIndiceVisible(Math.round(e.nativeEvent.contentOffset.x / (CARD_W + CARD_GAP)));
                   }}
@@ -526,7 +536,7 @@ export default function SessionsScreen() {
                       <SurfaceCard
                         key={ses.bookingId}
                         variant="elevated" tone="dark" backgroundColor="#3A4A28" borderRadius={22}
-                        style={[styles.heroCardWrap, { width: proximas.length > 1 ? CARD_W : CARD_FULL }]}
+                        style={{ width: proximas.length > 1 ? CARD_W : CARD_FULL }}
                       >
                         <LinearGradient
                           colors={['#42542F', '#354526']}
@@ -764,9 +774,19 @@ function SalaRow({
 }
 
 const styles = StyleSheet.create({
-  carruselWrap: { marginBottom: 4 },  // 4 y no 20: los 16 que faltan ya los puso `heroCardWrap` para la sombra
-  carrusel: { gap: CARD_GAP, paddingRight: H_PADDING },
-  puntos: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingHorizontal: 4 },
+  // A sangre para deshacer el `paddingHorizontal: 16` del scroll padre: la
+  // ScrollView necesita ser más ancha que la card o le recorta la sombra.
+  // El aire de abajo lo pone `carrusel.paddingBottom`, no un margen de acá.
+  carruselWrap: { marginHorizontal: -H_PADDING, marginBottom: 8 },
+  carrusel: { gap: CARD_GAP, paddingHorizontal: H_PADDING, paddingBottom: SOMBRA_ALCANCE },
+  // `H_PADDING + 4` y no 4: el wrap sale a sangre, así que los puntitos tienen
+  // que recuperar por su cuenta el margen que el scroll padre ya no les da.
+  // Quedan DEBAJO de la sombra, que es donde corresponde — un indicador de
+  // página metido adentro de la sombra de la card se lee como suciedad.
+  puntos: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 10, paddingHorizontal: H_PADDING + 4,
+  },
   punto: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(135,131,92,0.28)' },
   puntoActivo: { backgroundColor: ViveColors.primary, width: 16 },
   contador: { marginLeft: 6, fontFamily: ViveFonts.regular, fontSize: 11.5, color: 'rgba(135,131,92,0.75)' },
@@ -845,11 +865,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingTop: 0, paddingBottom: TAB_BAR_CLEARANCE, paddingHorizontal: 16, gap: 0 },
 
   // Hero
-  heroCardWrap: {
-    // No es separación: es el lugar que la sombra necesita para no salirse del
-    // ScrollView y que la recorte. Ver `SOMBRA_ALCANCE`.
-    marginBottom: SOMBRA_ALCANCE + 2,
-  },
+
   heroCard: {
     padding: 18,
   },

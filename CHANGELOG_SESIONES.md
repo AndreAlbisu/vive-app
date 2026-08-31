@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · la sombra del carrusel, segunda pasada)
+
+**Tocado:** `screens/SessionsScreen.tsx`. 352 tests, `tsc` limpio.
+
+**Resumen:**
+
+- 🔴 **El arreglo anterior estaba a medias y la medición lo mostró.** Andre dijo que se seguía viendo raro; midiendo la captura nueva: el corte de abajo se corrió de y=813 a y=851 y el escalón bajó de 43 a 9, o sea mejoró pero **no alcanzó**. A 30pt debajo de la card la sombra todavía valía 15 unidades sobre el fondo.
+- 🔴 **El cálculo de `SOMBRA_ALCANCE` desde el token era el error.** `offset.height + radius − inset` daba 30, y es de menos: **el desenfoque de CoreGraphics se extiende bastante más allá del `shadowRadius` nominal**. El valor ahora sale de la medición (~1 unidad cada 0.85pt → muere cerca de los 43) y quedó en 44, con la advertencia escrita de que si se toca el token hay que volver a mirarlo en una captura, no recalcularlo.
+- 🔴 **Y había un segundo corte que la primera pasada no vio: los costados.** En y=786, x=32 vale 240 (fondo) y x=40 vale 225 — un escalón de 16 en 8px, justo en el borde de la card; del lado derecho igual. La ScrollView mide exactamente `CARD_FULL` (pantalla − 32, que es lo que ya aportaba el `paddingHorizontal` del scroll padre), así que **recortaba a ras por los dos lados**. Eso es lo que hacía que se leyera como una plancha gris con bordes a cuchillo y no como una sombra. Probablemente pesaba más que el corte de abajo.
+- **Arreglo: la ScrollView sale a sangre** (`carruselWrap.marginHorizontal: -H_PADDING`) y el padding se muda al `contentContainerStyle` (`paddingHorizontal: H_PADDING`), así hay 16pt de derrame por lado; abajo entra `paddingBottom: SOMBRA_ALCANCE`. `heroCardWrap` desaparece: la card ya no lleva margen propio. Se sacó también el override `proximas.length === 1 && { paddingRight: 0 }`, que con padding simétrico dejaba la card corrida.
+- 📝 **Los puntitos recuperan el padding a mano** (`H_PADDING + 4`): viven dentro del wrap a sangre. Quedan **debajo** de la sombra y no adentro, que es lo correcto — un indicador de página metido en la sombra de la card se lee como suciedad.
+- ⚠️ **Corregido un comentario que afirmaba algo falso.** La entrada del slot decía que "la lista arranca SIEMPRE a la misma altura". **No es cierto**: el carrusel mide ~195pt y la tarjeta de reservar ~70pt, así que la primera fila queda más abajo los días que hay sesión. Lo que el slot garantiza es que arriba siempre haya algo, no que las dos variantes midan igual. El comentario del código ya lo dice bien.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Verificar en dispositivo, y con una captura**: es la tercera pasada sobre lo mismo y las dos anteriores se dieron por buenas sin mirar píxeles. Mirar los dos casos: una sesión (sin puntitos) y dos o más (que los puntitos queden alineados con el resto y debajo de la sombra).
+- ⚠️ Sigue abierto lo del deck de Conexiones (`app/(tabs)/conexiones.tsx:385`), que tiene el mismo recorte y encima en los dos ejes: `cardPage` da 10pt de `paddingVertical` y el ancho de página es `SCREEN_W` con la card adentro de un `paddingHorizontal: 20`.
+- 📝 **El título de la card repite la hora**: "Lun 31 ago · 10:00 hs · 10:00 para vos". Muestra la hora argentina y después la local sin chequear si son la misma. Detectado en la captura, no se tocó.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · la sombra cortada del carrusel)
 
 **Tocado:** `screens/SessionsScreen.tsx`. `tsc` y lint limpios.
