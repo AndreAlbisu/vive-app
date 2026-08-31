@@ -70,6 +70,11 @@ const NARANJA      = '#C4743A';
 // con tangente continua en el empalme:
 //   M .50 .560  C .50 .485, .42 .440, .30 .405   C .18 .370, .07 .320, 0 .235
 const BASE_CUELLO = 0.560;
+
+// Cuánto sube el título respecto del centro del bloque de arriba. Sale del alto
+// de pantalla y no de un número clavado, igual que el resto de las medidas de
+// esta pantalla: 22pt son un gesto distinto en un SE que en un 15 Pro Max.
+const TITULO_SUBE = 0.025;
 const BASE_PUNTA  = 0.235;
 const BASE = {
   c1: [0.500, 0.485] as const,
@@ -222,7 +227,10 @@ export default function OnboardingBifurcacion() {
           <Animated.View style={fadeUp(brandAnim)}>
             <VitaWordmark />
           </Animated.View>
-          <Animated.View style={[s.titleArea, fadeUp(titleAnim)]}>
+          {/* El paddingBottom es lo que lo sube: `titleArea` centra en el
+              espacio sobrante, así que acortarlo por abajo corre el centro
+              hacia arriba sin sacar el título de su caja. */}
+          <Animated.View style={[s.titleArea, { paddingBottom: height * TITULO_SUBE }, fadeUp(titleAnim)]}>
             <Text style={s.title}>¿Qué buscás{'\n'}en Vita?</Text>
           </Animated.View>
         </View>
@@ -262,7 +270,9 @@ const s = StyleSheet.create({
   top: { paddingHorizontal: 24 },
   topInner: { flex: 1, alignItems: 'center', paddingTop: 12 },
   // Sin subtítulo el bloque superior queda holgado: el título se centra en el
-  // espacio que sobra entre el wordmark y el punto de convergencia.
+  // espacio que sobra entre el wordmark y el punto de convergencia. El
+  // `paddingBottom` que lo sube un poco va inline, porque depende del alto de
+  // pantalla (ver `TITULO_SUBE`).
   titleArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   title: {
     fontFamily: ViveFonts.titleSemiBold,
