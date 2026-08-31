@@ -4,9 +4,12 @@
 // puntas de la transición: el ala que se expande al tocarla, y la pantalla que
 // recibe. Si cada una tuviera su copia, el color se despegaría en la primera
 // edición y el derrame terminaría en un tono que no es el que se fue.
+// 🔴 Son los rellenos de las ALAS, no los acentos de los íconos. El que se
+// expande al elegir es el área de color de fondo —la forma curva— así que la
+// pantalla que recibe tiene que llegar en ese mismo tono y no en el saturado.
 export const TONOS = {
-  crecer:    '#3F512F',  // VERDE_ICON — "Quiero crecer"
-  acompanar: '#C4743A',  // NARANJA    — "Quiero acompañar"
+  crecer:    '#E8E7DB',  // SALVIA  — el ala izquierda
+  acompanar: '#F8E7DA',  // DURAZNO — el ala derecha
 } as const;
 
 export type Tono = keyof typeof TONOS;

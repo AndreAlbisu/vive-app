@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · corrección 2: lo que se expande es el ÁREA DE COLOR)
+
+**Tocado:** `screens/OnboardingBifurcacion.tsx`, `constants/onboardingTonos.ts`. 381 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- 🔴 **Segunda corrección de Andre sobre la misma animación, y la anterior también estaba mal.** Primero hice un círculo nuevo encima; después hice crecer el aro de la flecha. Ninguna era: **lo que se expande es el área de color**, o sea **el ala** — la forma curva de fondo que ocupa media pantalla. El ícono, el título, la descripción y la flecha son "los otros elementos", y esos **se desvanecen**.
+- **Cómo funciona:** el ala elegida se vuelve a dibujar en una capa propia, encima del fondo y **debajo del contenido**. En el cuadro cero es idéntica a la que ya estaba —misma forma, mismo color, mismo lugar— así que no se ve aparecer nada; y mientras crece, todo lo que queda por encima ya se está yendo.
+- 🔴 **Crece desde un punto ADENTRO del ala, no desde el centro de la pantalla.** El centro cae justo sobre la costura que separa las dos mitades, y **un punto de la costura no se mueve al escalar**: la mitad de enfrente no se cubriría nunca, por mucho que se agrande. El punto elegido es la flecha que se tocó, que además es de donde la persona espera que salga el movimiento.
+- 🔴 **Escalar alrededor de un punto que no es el centro pide `translate` + `scale`, y el translate va animado también** (`t = P · (1 − s)`). Los dos interpolan del MISMO valor, así que la relación se mantiene en cada cuadro y el punto queda realmente fijo. Todo en el hilo nativo.
+- 📝 **El factor sale de la geometría, no de probar números.** El ala contiene un disco alrededor del punto: hacia el costado llega hasta la costura, hacia abajo hasta el borde, y el radio seguro es el menor de los dos. La distancia a cubrir se mide contra **las cuatro esquinas** y se toma la peor, más 15% de margen.
+- 🔴 **`TONOS` pasa a ser los rellenos de las ALAS** (`#E8E7DB` salvia / `#F8E7DA` durazno) y no los acentos de los íconos. Lo que termina cubriendo la pantalla es el ala, así que la pantalla que recibe tiene que llegar en ese tono y no en el saturado.
+- 📝 Se sacaron los `overflow: 'visible'` de la versión anterior: lo que crece ya no es un hijo adentro de una columna sino una capa a nivel raíz, así que no había nada que se pudiera recortar. Y se sacó `ARO`, que quedó sin uso.
+- 📝 Duración a 700ms (era 620) con `Easing.bezier(0.34, 0, 0.2, 1)`: el área es mucho más grande que un aro y el mismo tiempo se sentía apurado.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin ver en dispositivo, y es la TERCERA versión de esta animación.** Vale mirarla antes de tocar nada más.
+- ⚠️ **Lo que más dudo es la nitidez del borde mientras crece**: es un `<Path>` de `react-native-svg` dentro de una capa escalada, así que a mitad de camino el borde curvo puede verse suavizado. Si molesta, la alternativa es animar el `d` del path (se ve perfecto pero corre en el hilo de JS, que es lo que este repo viene evitando).
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · corrección: el que crece es el BOTÓN, no un círculo nuevo)
 
 **Tocado:** `screens/OnboardingBifurcacion.tsx`. 381 tests, `tsc` limpio, sin warnings de lint nuevos.

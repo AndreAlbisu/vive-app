@@ -39,16 +39,16 @@ import { VitaWordmark } from '@/components/VitaWordmark';
 // La navegación no cambia: /onboarding2 y /coach-login.
 
 const CREMA        = '#F7F2EA';
-const SALVIA       = '#E8E7DB';
+const SALVIA       = TONOS.crecer;
 const SALVIA_LINE  = 'rgba(86,110,60,0.38)';
 const SALVIA_RULE  = 'rgba(86,110,60,0.38)';
-const DURAZNO      = '#F8E7DA';
+const DURAZNO      = TONOS.acompanar;
 const DURAZNO_LINE = 'rgba(200,120,58,0.40)';
 const DURAZNO_RULE = 'rgba(200,120,58,0.45)';
 const TEXTO        = '#26402F';
 const TEXTO_SUAVE  = '#5C6B58';
-const VERDE_ICON   = TONOS.crecer;
-const NARANJA      = TONOS.acompanar;
+const VERDE_ICON   = '#3F512F';
+const NARANJA      = '#C4743A';
 
 // ── Geometría ────────────────────────────────────────────────────────────────
 // Coordenadas normalizadas (x en fracción del ancho, y en fracción del alto).
@@ -80,9 +80,6 @@ const BASE_CUELLO = 0.560;
 // esta pantalla: 22pt son un gesto distinto en un SE que en un 15 Pro Max.
 const TITULO_SUBE = 0.05;
 
-// Diámetro del aro de la flecha. Tiene que seguir a `s.arrow.width`: es de
-// donde nace el derrame, y con otro número el círculo aparecería saltando.
-const ARO = 56;
 const BASE_PUNTA  = 0.235;
 const BASE = {
   c1: [0.500, 0.485] as const,
@@ -154,6 +151,7 @@ type Camino = {
   accent: string;
   route: string;
   tono: Tono;
+  lado: Ala;
 };
 
 const CAMINOS: Camino[] = [
@@ -166,6 +164,7 @@ const CAMINOS: Camino[] = [
     accent: VERDE_ICON,
     route: '/onboarding2',
     tono: 'crecer',
+    lado: 'left',
   },
   {
     id: 'acompañar',
@@ -176,6 +175,7 @@ const CAMINOS: Camino[] = [
     accent: NARANJA,
     route: '/coach-login',
     tono: 'acompanar',
+    lado: 'right',
   },
 ];
 
@@ -196,29 +196,37 @@ export default function OnboardingBifurcacion() {
   }, []);
 
   /**
-   * La salida: **el propio botón crece**. No es un círculo nuevo del mismo
-   * color puesto encima — es el aro de la flecha que tocaste, que se llena de
-   * su color, se agranda desde su propio borde hasta tapar la pantalla, y
-   * mientras tanto todo lo demás se desvanece.
+   * La salida: **se expande el área de color**, o sea el ala.
    *
-   * 🔴 Un solo `Animated.Value` para las cinco cosas que pasan, con el escalonado
-   * metido en los `inputRange`. Cinco animaciones en paralelo costarían cinco
-   * veces más y se verían igual — mismo criterio que la entrada de Sofía.
+   * El ala elegida se vuelve a dibujar en una capa propia encima de la original
+   * —idéntica y en el mismo lugar, así que en el cuadro cero no se ve ningún
+   * cambio— y esa capa crece hasta que su forma cubre la pantalla entera.
+   * Todo lo demás (el ícono, el título, la descripción, la flecha, la otra ala
+   * y el campo de líneas) se desvanece mientras tanto.
    *
-   * 🔴 Todo lo que se anima corre en el hilo nativo: `opacity` y `scale`, nunca
-   * `backgroundColor` (que no lo soporta). Por eso el relleno de color es una
-   * capa aparte adentro del aro a la que se le sube la opacidad, y no el
-   * `backgroundColor` del aro cambiando de valor.
+   * 🔴 Crece desde un punto ADENTRO del ala, no desde el centro de la pantalla.
+   * El centro cae justo sobre la costura que separa las dos mitades, y un punto
+   * de la costura no se mueve al escalar: la mitad de enfrente **no se cubriría
+   * nunca**. El punto es la flecha que tocaste, que además es de donde la
+   * persona espera que salga el movimiento.
+   *
+   * 🔴 Escalar alrededor de un punto que no es el centro se hace con
+   * `translate` + `scale`, y el translate tiene que ir animado también:
+   * `t = P · (1 − s)`. Los dos salen del MISMO valor, así que la relación se
+   * mantiene en cada cuadro y el punto queda realmente fijo. Todo en el hilo
+   * nativo.
    */
-  const [salida, setSalida] = useState<{ id: string; escala: number } | null>(null);
+  const [salida, setSalida] = useState<
+    { lado: Ala; color: string; escala: number; tx: number; ty: number } | null
+  >(null);
   const paso = useRef(new Animated.Value(0)).current;
   const flechas = useRef<Record<string, View | null>>({}).current;
   const yendo = useRef(false);
 
-  // Lo que NO es el botón elegido: se va antes de que el botón termine de
+  // Todo lo que NO es el área de color: se va antes de que el ala termine de
   // crecer, así el crecimiento pasa sobre una pantalla ya vacía.
   const desvanece = {
-    opacity: paso.interpolate({ inputRange: [0, 0.42], outputRange: [1, 0], extrapolate: 'clamp' as const }),
+    opacity: paso.interpolate({ inputRange: [0, 0.38], outputRange: [1, 0], extrapolate: 'clamp' as const }),
   };
 
   function elegir(c: Camino) {
@@ -234,24 +242,39 @@ export default function OnboardingBifurcacion() {
       if (reducir || !nodo || typeof nodo.measureInWindow !== 'function') { ir(); return; }
 
       nodo.measureInWindow((x, y, w, h) => {
-        const cx = x + w / 2;
-        const cy = y + h / 2;
-        // Cuánto tiene que crecer para tapar la esquina MÁS lejana. Se mide
-        // contra las cuatro y se toma la peor: la flecha está abajo y a un
-        // costado, así que a ojo siempre queda una punta sin cubrir.
-        const alcance = Math.max(
-          Math.hypot(cx, cy), Math.hypot(width - cx, cy),
-          Math.hypot(cx, height - cy), Math.hypot(width - cx, height - cy),
-        );
+        const px = x + w / 2;
+        const py = y + h / 2;
 
-        setSalida({ id: c.id, escala: (alcance * 2) / ARO });
+        // Cuánto crecer. El ala contiene un disco alrededor del punto: hacia el
+        // costado llega hasta la costura, hacia abajo hasta el borde. El radio
+        // seguro es el menor de los dos, y con eso alcanza para cubrir la
+        // esquina más lejana — que se mide contra las cuatro, no a ojo.
+        const radioSeguro = Math.max(24, Math.min(Math.abs(width / 2 - px), height - py));
+        const alcance = Math.max(
+          Math.hypot(px, py), Math.hypot(width - px, py),
+          Math.hypot(px, height - py), Math.hypot(width - px, height - py),
+        );
+        const escala = (alcance / radioSeguro) * 1.15;   // 15% de margen
+
+        // El punto fijo, relativo al centro de la capa (que ocupa la pantalla).
+        const pxRel = px - width / 2;
+        const pyRel = py - height / 2;
+
+        setSalida({
+          lado: c.lado,
+          color: c.lado === 'left' ? SALVIA : DURAZNO,
+          escala,
+          tx: pxRel * (1 - escala),
+          ty: pyRel * (1 - escala),
+        });
+
         paso.setValue(0);
         Animated.timing(paso, {
           toValue: 1,
-          duration: 620,
-          // Sale despacio y termina rápido: el arranque es lo que se lee como
-          // "esto que toqué se está abriendo", el final ya es solo color.
-          easing: Easing.bezier(0.32, 0, 0.24, 1),
+          duration: 700,
+          // Arranca despacio y termina rápido: el comienzo es lo que se lee
+          // como "el área que toqué se está abriendo"; el final ya es color.
+          easing: Easing.bezier(0.34, 0, 0.2, 1),
           useNativeDriver: true,
         }).start(ir);
       });
@@ -306,6 +329,30 @@ export default function OnboardingBifurcacion() {
         </Svg>
       </Animated.View>
 
+      {/* El área de color que se expande.
+          Va ENCIMA del fondo y DEBAJO del contenido: en el cuadro cero es
+          idéntica al ala que ya estaba —misma forma, mismo color, mismo lugar—
+          así que no se ve aparecer nada; y mientras crece, lo que queda por
+          encima ya se está yendo. */}
+      {salida && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              transform: [
+                { translateX: paso.interpolate({ inputRange: [0, 1], outputRange: [0, salida.tx] }) },
+                { translateY: paso.interpolate({ inputRange: [0, 1], outputRange: [0, salida.ty] }) },
+                { scale:      paso.interpolate({ inputRange: [0, 1], outputRange: [1, salida.escala] }) },
+              ],
+            },
+          ]}>
+          <Svg width={width} height={height}>
+            <Path d={pagina(width, height, salida.lado)} fill={salida.color} />
+          </Svg>
+        </Animated.View>
+      )}
+
       {/* Bloque superior — ocupa hasta el punto de convergencia */}
       <Animated.View style={[s.top, { height: yCierre - height * 0.018 }, desvanece]} pointerEvents="none">
         <SafeAreaView edges={['top']} />
@@ -327,13 +374,7 @@ export default function OnboardingBifurcacion() {
         {CAMINOS.map(c => (
           <TouchableOpacity
             key={c.id}
-            // La elegida se pinta ENCIMA de la otra: el aro crece hasta taparlo
-            // todo, y sin esto su hermana quedaría dibujada arriba del color.
-            style={[
-              s.col,
-              { paddingTop: height * 0.006, paddingBottom: height * 0.115 },
-              salida?.id === c.id && { zIndex: 2 },
-            ]}
+            style={[s.col, { paddingTop: height * 0.006, paddingBottom: height * 0.115 }]}
             activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel={`${c.title.replace('\n', ' ')}. ${c.desc}`}
@@ -346,45 +387,13 @@ export default function OnboardingBifurcacion() {
             </Animated.View>
             {/* La flecha va anclada al pie para que las dos queden a la misma
                 altura aunque las descripciones tengan distinta cantidad de líneas */}
-            {/* 🔴 El objeto que viaja. No se lo reemplaza por un círculo nuevo:
-                es este mismo aro el que se llena de su color y crece desde su
-                propio borde. Por eso el `ref` para medirlo y el `zIndex` de
-                arriba — lo que se agranda es el botón que la persona tocó. */}
+            {/* La flecha se desvanece con todo lo demás. El `ref` sigue: es
+                el punto desde donde crece el área de color. */}
             <Animated.View
               ref={n => { flechas[c.id] = n as unknown as View | null; }}
               collapsable={false}
-              style={[
-                s.arrow,
-                { borderColor: c.accent },
-                salida?.id === c.id && {
-                  transform: [{
-                    scale: paso.interpolate({
-                      inputRange: [0, 1], outputRange: [1, salida.escala],
-                    }),
-                  }],
-                },
-              ]}>
-              {/* El relleno, como capa aparte: `backgroundColor` no corre en el
-                  hilo nativo y `opacity` sí. Entra antes de que el aro empiece
-                  a crecer, si no se agranda un anillo vacío. */}
-              {salida?.id === c.id && (
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    StyleSheet.absoluteFill,
-                    {
-                      borderRadius: ARO / 2,
-                      backgroundColor: c.accent,
-                      opacity: paso.interpolate({
-                        inputRange: [0, 0.22], outputRange: [0, 1], extrapolate: 'clamp',
-                      }),
-                    },
-                  ]}
-                />
-              )}
-              <Animated.View style={salida?.id === c.id ? desvanece : undefined}>
-                <MaterialCommunityIcons name="arrow-right" size={22} color={TEXTO} />
-              </Animated.View>
+              style={[s.arrow, { borderColor: c.accent }, desvanece]}>
+              <MaterialCommunityIcons name="arrow-right" size={22} color={TEXTO} />
             </Animated.View>
           </TouchableOpacity>
         ))}
@@ -395,10 +404,7 @@ export default function OnboardingBifurcacion() {
 }
 
 const s = StyleSheet.create({
-  // `overflow: 'visible'` en toda la cadena que contiene el aro: al crecer se
-  // sale de su columna por varias pantallas, y en Android un hijo fuera del
-  // padre se recorta salvo que se diga lo contrario.
-  root: { flex: 1, backgroundColor: CREMA, overflow: 'visible' },
+  root: { flex: 1, backgroundColor: CREMA },
 
   top: { paddingHorizontal: 24 },
   topInner: { flex: 1, alignItems: 'center', paddingTop: 12 },
@@ -415,13 +421,12 @@ const s = StyleSheet.create({
     color: TEXTO,
     textAlign: 'center',
   },
-  columns: { flex: 1, flexDirection: 'row', overflow: 'visible' },
+  columns: { flex: 1, flexDirection: 'row' },
   col: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    overflow: 'visible',
   },
   colTop: { alignItems: 'center', gap: 17 },
   colTitle: {
