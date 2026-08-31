@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · abandonar la postulación de coach te dejaba adentro como usuario)
+
+**Tocado:** `screens/CoachApplicationScreen.tsx`. 381 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- 🔴 **Empezar el alta de coach, NO terminar el formulario y volver atrás te dejaba logueado en el Inicio.** Reportado por Andre. La cadena, entera:
+  1. `CoachLoginScreen` llama a `signUpWithEmail`, que **crea la cuenta y abre sesión** (Supabase te firma al registrarte).
+  2. `validateAndNavigate(true)` hace `router.replace('/coach-application')` — ya con sesión viva y `profiles.role = 'user'`, que es el default del trigger.
+  3. Volver atrás cae en la bifurcación, que es una pantalla de onboarding.
+  4. El `AuthRedirect` de `app/_layout.tsx` ve sesión + pantalla de onboarding y hace `router.replace('/(tabs)')`.
+- **O sea: entrás a la app como usuario final sin haber terminado nada ni haberlo pedido**, y con una cuenta que creaste queriendo ser profesional.
+- 📝 **El propio archivo ya tenía el razonamiento escrito.** `handleSubmit` cierra sesión al enviar con el comentario *"no debe quedar una sesión activa que te deje usar la app como si ya estuvieras aceptado"*, y las otras dos ramas de `validateAndNavigate` (solicitud en revisión, cuenta ya registrada como usuario) también hacen `signOut()`. **Abandonar era el único camino de salida sin el guard.**
+- **Arreglo:** limpieza de `useFocusEffect` que cierra sesión al irse de la pantalla si no se envió. Cubre el botón de atrás, el botón físico de Android y el gesto de deslizar, que es por qué va ahí y no en el `onPress` del botón.
+- ⚠️ **Por refs y con `[]`.** Con `signOut` en las dependencias, cualquier re-render del contexto que le cambie la identidad correría la limpieza y **cerraría la sesión en medio del formulario**. El flag de "ya envié" también es ref y no estado, por lo mismo.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar en dispositivo el caso reportado**, y también que enviar la postulación siga funcionando (que la limpieza no cierre sesión de más).
+- ⚠️ **Queda un agujero que este arreglo NO cubre: matar la app parado en el formulario.** La limpieza de foco no corre, la sesión sobrevive en AsyncStorage, y al volver a abrir entrás como usuario. Taparlo de verdad pide **no crear la cuenta hasta el envío**, que es un rediseño del alta (hoy hace falta un usuario de auth para poder ser dueño de la fila de `coaches`). Vale decidirlo aparte.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · sacar el color quieto entre la animación y la pantalla nueva)
 
 **Tocado:** `app/_layout.tsx`, `components/EntradaDesdeColor.tsx`. 381 tests, `tsc` limpio.

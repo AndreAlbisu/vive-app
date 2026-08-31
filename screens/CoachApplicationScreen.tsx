@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, Animated, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -52,6 +52,35 @@ function displayToIso(display: string): string | null {
 export default function CoachApplicationScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
+
+  /**
+   * 🔴 Irse de acá sin enviar TIENE que cerrar la sesión.
+   *
+   * A esta pantalla se llega ya logueado: `signUpWithEmail` en
+   * `CoachLoginScreen` crea la cuenta **y abre sesión**, y recién después
+   * manda acá. Si la persona abandona el formulario y vuelve atrás, esa sesión
+   * queda viva con `profiles.role = 'user'` (el default del trigger) — y el
+   * `AuthRedirect` de `app/_layout.tsx`, al verla parada en una pantalla de
+   * onboarding con sesión, la manda derecho al Inicio. Resultado: entró a la
+   * app como usuario final sin haber terminado nada ni haberlo pedido.
+   *
+   * Es el mismo motivo por el que `handleSubmit` cierra sesión al enviar, y el
+   * mismo que ya aplican las otras dos ramas de `validateAndNavigate`. Este era
+   * el único camino de salida sin el guard puesto.
+   *
+   * ⚠️ Por refs y con `[]`: con `signOut` en las dependencias, cualquier
+   * re-render del contexto que cambie su identidad correría la limpieza y
+   * cerraría la sesión en medio del formulario.
+   */
+  const enviado = useRef(false);
+  const signOutRef = useRef(signOut);
+  signOutRef.current = signOut;
+
+  useFocusEffect(
+    useCallback(() => () => {
+      if (!enviado.current) void signOutRef.current();
+    }, []),
+  );
 
   const [specialty, setSpecialty] = useState<string | null>(null);
   const [bio, setBio] = useState('');
@@ -214,6 +243,7 @@ export default function CoachApplicationScreen() {
 
     // La solicitud queda pendiente de revisión — no debe quedar una sesión
     // activa que te deje usar la app como si ya estuvieras aceptado.
+    enviado.current = true;   // que la limpieza de foco no vuelva a cerrarla
     await signOut();
 
     setSubmitting(false);
