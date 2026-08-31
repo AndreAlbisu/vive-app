@@ -17,6 +17,50 @@ export async function getSessionNotes(bookingId: string): Promise<{ privateNote:
   };
 }
 
+export type SessionNote = {
+  id: string;
+  bookingId: string;
+  content: string;
+  shared: boolean;
+  createdAt: string;
+};
+
+/**
+ * Todas las notas de una RELACIÓN (este usuario con este coach), no las de una
+ * sesión suelta.
+ *
+ * 🔴 Existe porque el chat mostraba una sola nota, la de `activeBooking`, y
+ * `activeBooking` prioriza la sesión próxima sobre la que terminó: apenas se
+ * reservaba la siguiente, la nota de la anterior **desaparecía del chat** aunque
+ * siguiera en la base. Justo el momento en que el usuario la va a releer.
+ *
+ * ⚠️ Devuelve las privadas SOLO si `asCoach`. El RLS ya lo garantiza —la policy
+ * del usuario es `user_id = auth.uid() AND shared = true`— pero el filtro va
+ * igual y explícito: que la privacidad de la nota se pueda leer acá, sin tener
+ * que ir a buscar la policy para saber qué trae esta consulta.
+ */
+export async function getRelationshipNotes(
+  { userId, coachId, asCoach }: { userId: string; coachId: string; asCoach: boolean },
+): Promise<SessionNote[]> {
+  let q = supabase
+    .from('session_notes')
+    .select('id, booking_id, content, shared, created_at')
+    .eq('user_id', userId)
+    .eq('coach_id', coachId)
+    .order('created_at', { ascending: true });
+
+  if (!asCoach) q = q.eq('shared', true);
+
+  const { data } = await q;
+  return (data ?? []).map(r => ({
+    id: r.id as string,
+    bookingId: r.booking_id as string,
+    content: r.content as string,
+    shared: r.shared as boolean,
+    createdAt: r.created_at as string,
+  }));
+}
+
 /** Usuario: lee la nota compartida de una sesión (null si no hay). */
 export async function getSharedNote(bookingId: string): Promise<string | null> {
   const { data } = await supabase

@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · las notas de sesión pasan al hilo del chat)
+
+**Tocado:** `lib/sessionNotes.ts`, `screens/SalaScreen.tsx`, `SCHEMA.md`. 352 tests, `tsc` limpio, sin warnings de lint nuevos (5 antes, 5 después).
+
+**Resumen:**
+
+- **Decisión de Andre: las notas tienen que quedar TODAS en el chat, y la privada del coach visible solo para él.** Antes había una sola card, al pie del hilo, y solo del lado del usuario.
+- 🔴 **La nota compartida desaparecía sola, y ese era el bug de fondo.** Se pedía con `getSharedNote(activeBooking.id)`, o sea la de UNA reserva — y `activeBooking` prioriza la sesión próxima sobre la terminada (`upcoming ?? endedActive`). **Apenas el usuario reservaba la sesión siguiente, la nota de la anterior se iba del chat**, justo cuando más sentido tiene releerla. El comentario del propio código decía "la relee entre sesiones" y era exactamente lo que no podía hacer. La nota nunca se borró: dejaba de mostrarse.
+- **`getRelationshipNotes({ userId, coachId, asCoach })`** reemplaza esa consulta: trae todas las notas del par (usuario, coach) de la sala, no las de un `booking_id`. `asCoach` decide si vienen también las privadas. ⚠️ El RLS ya lo garantiza (la policy del usuario es `user_id = auth.uid() AND shared = true`), pero **el filtro va igual y explícito** para que la privacidad se lea en la consulta y no haya que ir a buscar la policy para saber qué trae.
+- **El hilo pasa a ser un `timeline`**: mensajes y notas se mezclan y se ordenan por fecha. Para eso `Message` suma `createdAt` (ISO crudo) — el `time` que ya tenía viene formateado y no sirve para ordenar. Se ordena comparando el ISO como string, que en UTC ordena bien y no construye un `Date` por comparación.
+- 📝 **La nota privada se ve distinta a propósito**: punteada, fondo neutro, candado y la línea "Solo la ves vos". Es un apunte de trabajo, no parte de la conversación, y el coach no puede tener que adivinar de un vistazo si el usuario lo está leyendo.
+- 📝 **`SessionNotesSheet` ya exponía un `onSaved` que `SalaScreen` no le pasaba.** Ahora sí: el coach guarda y la nota aparece en el hilo sin salir y volver a entrar.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin probar en dispositivo.** Los casos: usuario con notas de varias sesiones (que estén todas y en orden), coach viendo las compartidas y las privadas juntas, y que el usuario NO vea ninguna privada — esto último conviene mirarlo con una cuenta de usuario real, no razonando sobre el RLS.
+- ⚠️ **`session_notes` no está en la publicación de realtime** (están `messages`, `bookings`, `salas`, `notifications`). Una nota que el coach escribe mientras el usuario tiene el chat abierto le aparece recién al reabrir. Se puede sumar la tabla a la publicación si molesta.
+- 📝 Las notas se ubican por `created_at`. El sheet hace upsert tocando `updated_at`, así que editar una vieja no la mueve de lugar en el hilo — que es lo que se quiere, pero conviene confirmarlo mirándolo.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · UI de usuario filtrada a la vista del coach en la sala)
 
 **Tocado:** `screens/SalaScreen.tsx`. 352 tests, `tsc` limpio.

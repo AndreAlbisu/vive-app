@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -32,7 +32,7 @@ import ReportSheet from '@/components/ReportSheet';
 import UserActionsSheet from '@/components/UserActionsSheet';
 import { areBlocked, loadBlockedIds } from '@/lib/blocking';
 import SessionNotesSheet from '@/components/SessionNotesSheet';
-import { getSharedNote } from '@/lib/sessionNotes';
+import { getRelationshipNotes, type SessionNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
 import { sendPushNotification } from '@/lib/notifications';
 import { canCancelConfirmed } from '@/lib/bookingHelpers';
@@ -56,8 +56,16 @@ type Message = {
   sender: 'user' | 'coach';
   sender_type: 'user' | 'coach' | 'system' | 'system_confirmed' | 'system_cancelled';
   time: string;
+  /** ISO crudo. `time` ya viene formateado y no sirve para ordenar: hace falta
+   *  esto para intercalar las notas de sesión en el hilo. */
+  createdAt: string;
   metadata?: ResourceMeta | null;
 };
+
+/** Un ítem del hilo: o un mensaje, o una nota de sesión. */
+type TimelineItem =
+  | { kind: 'msg'; at: string; msg: Message }
+  | { kind: 'note'; at: string; note: SessionNote };
 
 type CoachResource = {
   id: string;
@@ -142,6 +150,10 @@ function nowTime() {
   return new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function hhmm(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+}
+
 function rowToMessage(row: Record<string, unknown>, userId: string): Message {
   const senderType = (row.sender_type as string) ?? 'user';
   return {
@@ -149,10 +161,8 @@ function rowToMessage(row: Record<string, unknown>, userId: string): Message {
     text: row.content as string,
     sender: (row.sender_id as string) === userId ? 'user' : 'coach',
     sender_type: senderType as Message['sender_type'],
-    time: new Date(row.created_at as string).toLocaleTimeString('es-AR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
+    time: hhmm(row.created_at as string),
+    createdAt: row.created_at as string,
     metadata: (row.metadata as ResourceMeta | null) ?? null,
   };
 }
@@ -184,7 +194,7 @@ export default function SalaScreen() {
   // una pill del header: si el atajo deja al coach a un tap más de distancia,
   // el aviso pide algo que no facilita.
   const [notesOpen, setNotesOpen] = useState(abrir_notas === '1');
-  const [sharedNote, setSharedNote] = useState<string | null>(null);
+  const [notes, setNotes] = useState<SessionNote[]>([]);
   const [recipientProfile, setRecipientProfile] = useState<RecipientProfile | null>(null);
   const [activeBooking, setActiveBooking] = useState<ActiveBooking>(null);
   const [hasSessionHistory, setHasSessionHistory] = useState(false);
@@ -497,14 +507,34 @@ export default function SalaScreen() {
     return () => { supabase.removeChannel(channel); };
   }, [salaId, user?.id]);
 
-  // Usuario (recipientIsCoach = la otra parte es coach): cargar la nota compartida
-  // de su sesión, si el coach dejó una. Es la razón de volver a la app entre sesiones.
-  useEffect(() => {
-    if (!recipientIsCoach || !activeBooking) { setSharedNote(null); return; }
-    let alive = true;
-    getSharedNote(activeBooking.id).then(n => { if (alive) setSharedNote(n); });
-    return () => { alive = false; };
-  }, [recipientIsCoach, activeBooking]);
+  // Todas las notas de la relación, para los DOS roles. Se piden por par
+  // (usuario, coach) y NO por `activeBooking`: atadas a la reserva activa, la
+  // nota de la sesión pasada se iba del chat apenas se reservaba la siguiente.
+  //
+  // `asCoach` decide si vienen también las privadas. Del lado del usuario el RLS
+  // ya las filtra; el flag está para que la consulta diga qué trae.
+  const fetchNotes = useCallback(async () => {
+    if (!user || !recipientId) { setNotes([]); return; }
+    const rows = await getRelationshipNotes({
+      userId:  recipientIsCoach ? user.id : recipientId,
+      coachId: recipientIsCoach ? recipientId : user.id,
+      asCoach: !recipientIsCoach,
+    });
+    setNotes(rows);
+  }, [user, recipientId, recipientIsCoach]);
+
+  useEffect(() => { void fetchNotes(); }, [fetchNotes]);
+
+  // Mensajes y notas viven en tablas distintas y se muestran en un solo hilo.
+  const timeline = useMemo<TimelineItem[]>(() => {
+    const items: TimelineItem[] = [
+      ...messages.map(m => ({ kind: 'msg' as const, at: m.createdAt, msg: m })),
+      ...notes.map(n => ({ kind: 'note' as const, at: n.createdAt, note: n })),
+    ];
+    // ISO en UTC ordena bien como string y no construye un Date por comparación.
+    items.sort((a, b) => a.at.localeCompare(b.at));
+    return items;
+  }, [messages, notes]);
 
   // Timer: recomputar sessionState cada 30s
   useEffect(() => {
@@ -794,7 +824,11 @@ export default function SalaScreen() {
     if (!salaId || !user) return;
     const encrypted = encryptMessage(text);
     const optimisticId = `opt_${Date.now()}`;
-    const optimistic: Message = { id: optimisticId, text: encrypted, sender: 'user', sender_type: 'user', time: nowTime() };
+    const nowIso = new Date().toISOString();
+    const optimistic: Message = {
+      id: optimisticId, text: encrypted, sender: 'user', sender_type: 'user',
+      time: nowTime(), createdAt: nowIso,
+    };
 
     getAnim(optimisticId, 0);
     setMessages(prev => [...prev, optimistic]);
@@ -1059,7 +1093,39 @@ export default function SalaScreen() {
           {!loading && messages.length === 0 && !isChatFrozen && (
             <Text style={styles.emptyText}>¡Empezá la conversación!</Text>
           )}
-          {messages.map((msg) => {
+          {timeline.map((item) => {
+            if (item.kind === 'note') {
+              const n = item.note;
+              // Privada = solo el coach. Llega únicamente si `asCoach`, así que
+              // acá no hay decisión de permisos, solo de presentación.
+              return (
+                <View
+                  key={n.id}
+                  style={[styles.noteCard, !n.shared && styles.notePrivateCard]}>
+                  <View style={styles.noteHeader}>
+                    <MaterialCommunityIcons
+                      name={n.shared ? 'note-text-outline' : 'lock-outline'}
+                      size={16}
+                      color={n.shared ? '#3A4F2A' : '#87835C'}
+                    />
+                    <Text style={styles.noteLabel}>
+                      {n.shared
+                        ? (recipientIsCoach
+                            ? `Nota de ${recipientProfile?.name ?? 'tu profesional'}`
+                            : 'Nota compartida')
+                        : 'Tu nota privada'}
+                    </Text>
+                    <Text style={styles.noteTime}>{hhmm(n.createdAt)}</Text>
+                  </View>
+                  <Text style={styles.noteText}>{n.content}</Text>
+                  {!n.shared && (
+                    <Text style={styles.notePrivateHint}>Solo la ves vos</Text>
+                  )}
+                </View>
+              );
+            }
+
+            const msg = item.msg;
             const isUser = msg.sender === 'user';
             const anim = getAnim(msg.id, 1);
 
@@ -1175,19 +1241,6 @@ export default function SalaScreen() {
             );
           })}
 
-          {/* Nota compartida de la sesión (lado usuario): la escribió el coach y la
-              relee entre sesiones. sharedNote solo se carga cuando recipientIsCoach. */}
-          {!loading && recipientIsCoach && sharedNote && (
-            <View style={styles.noteCard}>
-              <View style={styles.noteHeader}>
-                <MaterialCommunityIcons name="note-text-outline" size={16} color="#3A4F2A" />
-                <Text style={styles.noteLabel}>
-                  Nota de {recipientProfile?.name ?? 'tu profesional'}
-                </Text>
-              </View>
-              <Text style={styles.noteText}>{sharedNote}</Text>
-            </View>
-          )}
 
           {/* Cierre de sesión + re-reserva: último mensaje del chat, cerca del input
               (antes era un banner fijo arriba; se movió acá para quedar al alcance del dedo)
@@ -1381,6 +1434,7 @@ export default function SalaScreen() {
           bookingId={activeBooking.id}
           userId={recipientId}
           clientName={recipientProfile?.name ?? 'tu cliente'}
+          onSaved={fetchNotes}
         />
       )}
 
@@ -1612,6 +1666,25 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
     gap: 8,
+  },
+  // La privada se distingue del resto del hilo: es un apunte de trabajo, no
+  // parte de la conversación. Fondo neutro y punteada, para que el coach no la
+  // confunda de un vistazo con algo que el usuario está leyendo.
+  notePrivateCard: {
+    backgroundColor: 'rgba(135,131,92,0.07)',
+    borderColor: 'rgba(135,131,92,0.28)',
+    borderStyle: 'dashed',
+  },
+  notePrivateHint: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 11,
+    color: 'rgba(135,131,92,0.85)',
+  },
+  noteTime: {
+    marginLeft: 'auto',
+    fontFamily: ViveFonts.regular,
+    fontSize: 10.5,
+    color: 'rgba(135,131,92,0.70)',
   },
   noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   noteLabel: {
