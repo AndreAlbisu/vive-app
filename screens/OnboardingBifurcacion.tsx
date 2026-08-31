@@ -74,7 +74,7 @@ const BASE_CUELLO = 0.560;
 // Cuánto sube el título respecto del centro del bloque de arriba. Sale del alto
 // de pantalla y no de un número clavado, igual que el resto de las medidas de
 // esta pantalla: 22pt son un gesto distinto en un SE que en un 15 Pro Max.
-const TITULO_SUBE = 0.025;
+const TITULO_SUBE = 0.05;
 const BASE_PUNTA  = 0.235;
 const BASE = {
   c1: [0.500, 0.485] as const,
