@@ -89,7 +89,7 @@ Títulos, matrículas y certificaciones de un profesional. `scripts/add-coach-cr
 - `topic` (text, nullable) — respuesta Q1 del quiz: emocion | relaciones | trabajo | salud | proposito
 - `professional_type` (text, nullable) — respuesta Q2: coach | psicologo | nutricionista | any
 - `budget` (text, nullable) — respuesta Q3: low | mid | high | flex
-- `axis` (text, nullable) — **el eje que la persona declaró en el onboarding** (`cuerpo` | `mente` | `alma`, con CHECK; mismo vocabulario que `resource_axes` y `resource_proposals.axes`). Agregada 31/08/2026 (`scripts/add-quiz-declared-axis.sql`, **CORRIDA por Andre el 31/08/2026** — ⚠️ la consulta de verificación no se llegó a mirar, así que no está confirmado contra la base que el CHECK haya quedado puesto). Nullable a propósito: `QuizScreen` no pregunta universo, así que en esas filas queda null y el eje se sigue deduciendo del `topic`.
+- `axis` (text, nullable) — **el eje que la persona declaró en el onboarding** (`cuerpo` | `mente` | `alma`, con CHECK; mismo vocabulario que `resource_axes` y `resource_proposals.axes`). Agregada 31/08/2026 (`scripts/add-quiz-declared-axis.sql`, **CORRIDA y VERIFICADA por Andre el 31/08/2026** — columna `text` nullable y el CHECK puesto, confirmado contra la base). Nullable a propósito: `QuizScreen` no pregunta universo, así que en esas filas queda null y el eje se sigue deduciendo del `topic`.
 - `created_at`, `updated_at`
 - Una fila por usuario (UNIQUE user_id); se hace upsert al re-hacer el quiz.
 - RLS: solo el dueño puede leer/escribir su propia fila (authenticated).

@@ -1,7 +1,7 @@
 -- ============================================================
 -- Vita — guardar el EJE que la persona declaró en el onboarding
 -- Correr en: Supabase Dashboard → SQL Editor
--- ✅ CORRIDO por Andre el 31/08/2026 (verificación no mirada, ver abajo)
+-- ✅ CORRIDO y VERIFICADO por Andre el 31/08/2026
 -- Fecha: 2026-08-31
 --
 -- QUÉ RESUELVE

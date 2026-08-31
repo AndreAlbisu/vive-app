@@ -7,7 +7,7 @@
 
 ## 2026-08-31 — Andre (sesión 150 cont. · el eje declarado deja de pelearse con el topic)
 
-**Tocado:** `hooks/useRecommendedResource.ts`, `lib/quizPendiente.ts`, `lib/onboardingRespuestas.ts`, `__tests__/onboardingRespuestas.test.ts`, `SCHEMA.md`. Nuevo: `scripts/add-quiz-declared-axis.sql` (**CORRIDO el 31/08/2026**). 381 tests (eran 379), `tsc` y lint limpios.
+**Tocado:** `hooks/useRecommendedResource.ts`, `lib/quizPendiente.ts`, `lib/onboardingRespuestas.ts`, `__tests__/onboardingRespuestas.test.ts`, `SCHEMA.md`. Nuevo: `scripts/add-quiz-declared-axis.sql` (**CORRIDO y VERIFICADO el 31/08/2026**). 381 tests (eran 379), `tsc` y lint limpios.
 
 **Resumen:**
 
@@ -20,7 +20,7 @@
 
 **Pendiente para la próxima sesión:**
 
-- ✅ ~~Correr `scripts/add-quiz-declared-axis.sql`~~ — **corrido el 31/08/2026**. ⚠️ **La verificación no se miró**: no está confirmado contra la base que el CHECK haya quedado puesto. Si no quedó, el `esEje` del cliente sigue tapando el caso, así que no rompe nada — pero la columna aceptaría cualquier texto desde SQL.
+- ✅ ~~Correr `scripts/add-quiz-declared-axis.sql`~~ — **corrido y verificado el 31/08/2026**: la columna está y el CHECK quedó puesto.
 - 🔴 **Probar en dispositivo el caso que motivó todo**: onboarding → Cuerpo → "Sexualidad e intimidad" → registrarse, y confirmar que la recomendación sale del eje **cuerpo** y que el texto habla de **"tus relaciones"**. Antes eso era imposible de tener junto.
 - 📝 Los `temas` elegidos siguen sin columna, guardados solo en local.
 
