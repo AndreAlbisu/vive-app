@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · la card de "dejá una nota" del inicio del coach no se iba nunca)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `screens/SalaScreen.tsx`. 352 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- 🔴 **La card se quedaba puesta después de escribir la nota, y la nota se guardaba contra la sesión equivocada.** No era un bug de refresco: el cálculo de `sinCerrar` está bien y el inicio del coach ya recarga por foco (`useFocusEffect`, línea 456).
+- **La causa: la card sabía qué reserva le faltaba cerrar y tiraba ese dato al navegar.** Mandaba solo `sala_id` y `abrir_notas: '1'`, así que del otro lado `SessionNotesSheet` recibía `bookingId={activeBooking.id}` — y `activeBooking` se arma como `upcoming ?? endedActive ?? recentCompleted[0]`, donde `upcoming` sale de una consulta de reservas **futuras**. Con la próxima sesión ya agendada, la nota se escribía contra ESA. La sesión pasada seguía sin nota, el inicio la volvía a encontrar y la card reaparecía siempre.
+- ⚠️ **Hay un segundo camino al mismo error, incluso sin próxima sesión agendada**: la ventana de la card es de **una semana**, pero `endedActive` solo existe mientras `getSessionState` devuelve `'finalizada'`, que dura **24hs**. Para una sesión de hace tres días caía en `recentCompleted[0]`, que es "la última completada" y no necesariamente la que la card señalaba.
+- **Arreglo: la card pasa la reserva concreta** (`notas_booking`) y `SalaScreen` la usa como fuente de verdad del sheet (`notesBookingId`, con fallback a `activeBooking` para las entradas normales al chat). La pastilla "Notas" del header cuelga de lo mismo, así que también aparece cuando se llega desde la card sin reserva activa en la sala.
+- 📝 Se ordenó de paso la declaración: `notesBookingId` tuvo que moverse debajo de `activeBooking` — escrito arriba daba TDZ.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar en dispositivo el caso que lo destapa**: coach con sesión completada hace unos días **y la próxima ya agendada** con la misma persona. Escribir la nota desde la card y confirmar que la card se va. Sin la próxima agendada el bug podía no aparecer, que es probablemente por qué pasó desapercibido.
+- 📝 **El parámetro sobrevive mientras dure la navegación**: si el coach entra desde la card, guarda, y más tarde vuelve a abrir la pastilla sin salir de la sala, el sheet sigue apuntando a la sesión vieja. Es defendible (entró por esa), pero si molesta hay que limpiar el parámetro después del primer guardado.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · las notas de sesión pasan al hilo del chat)
 
 **Tocado:** `lib/sessionNotes.ts`, `screens/SalaScreen.tsx`, `SCHEMA.md`. 352 tests, `tsc` limpio, sin warnings de lint nuevos (5 antes, 5 después).

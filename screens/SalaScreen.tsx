@@ -173,8 +173,8 @@ function buildInitials(name: string): string {
 
 export default function SalaScreen() {
   const router = useRouter();
-  const { sala_id: salaIdParam, coach_id, abrir_notas } = useLocalSearchParams<{
-    sala_id?: string; coach_id?: string; abrir_notas?: string;
+  const { sala_id: salaIdParam, coach_id, abrir_notas, notas_booking } = useLocalSearchParams<{
+    sala_id?: string; coach_id?: string; abrir_notas?: string; notas_booking?: string;
   }>();
   const { user } = useAuth();
 
@@ -197,6 +197,19 @@ export default function SalaScreen() {
   const [notes, setNotes] = useState<SessionNote[]>([]);
   const [recipientProfile, setRecipientProfile] = useState<RecipientProfile | null>(null);
   const [activeBooking, setActiveBooking] = useState<ActiveBooking>(null);
+  /**
+   * Con qué sesión trabaja el sheet de notas.
+   *
+   * 🔴 `notas_booking` lo manda el inicio del coach, que sabe exactamente qué
+   * reserva le falta cerrar. Sin ese parámetro la sala caía en `activeBooking`,
+   * que se arma como `upcoming ?? endedActive ?? …` sobre reservas FUTURAS: con
+   * la próxima sesión ya agendada, la nota se guardaba contra esa y la sesión
+   * pasada quedaba sin cerrar, así que la card del inicio no se iba nunca.
+   */
+  const notesBookingId = (Array.isArray(notas_booking) ? notas_booking[0] : notas_booking)
+    ?? activeBooking?.id
+    ?? null;
+
   const [hasSessionHistory, setHasSessionHistory] = useState(false);
   const [sessionState, setSessionState] = useState<SessionState>('none');
   const [isCancelling, setIsCancelling] = useState(false);
@@ -939,7 +952,7 @@ export default function SalaScreen() {
 
         {/* Notas de la sesión: solo el coach (recipientIsCoach false = la otra parte
             es el usuario), y si hay una sesión sobre la cual anotar. */}
-        {!recipientIsCoach && activeBooking && recipientProfile && (
+        {!recipientIsCoach && notesBookingId && recipientProfile && (
           <TouchableOpacity
             style={styles.rebookPill}
             onPress={() => setNotesOpen(true)}
@@ -1427,11 +1440,11 @@ export default function SalaScreen() {
         salaId={salaId}
       />
 
-      {!recipientIsCoach && activeBooking && recipientId && (
+      {!recipientIsCoach && notesBookingId && recipientId && (
         <SessionNotesSheet
           visible={notesOpen}
           onClose={() => setNotesOpen(false)}
-          bookingId={activeBooking.id}
+          bookingId={notesBookingId}
           userId={recipientId}
           clientName={recipientProfile?.name ?? 'tu cliente'}
           onSaved={fetchNotes}

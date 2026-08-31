@@ -145,7 +145,7 @@ export default function CoachHomeScreen() {
   const [standing, setStanding] = useState<HomeStanding | null>(null);
   const [seCaen, setSeCaen] = useState<PersonaCayendo[]>([]);
   const [repu, setRepu] = useState<{ completadas: number; vuelvenPct: number | null } | null>(null);
-  const [sinCerrar, setSinCerrar] = useState<{ name: string; salaId: string; dias: number } | null>(null);
+  const [sinCerrar, setSinCerrar] = useState<{ name: string; salaId: string; bookingId: string; dias: number } | null>(null);
 
   // ── Card de preparación (estado vacío de Inicio) ────────────────────────
   // Los 3 pasos del checklist. `puertas` no tiene estado propio — se deriva
@@ -364,7 +364,7 @@ export default function CoachHomeScreen() {
       .lte('scheduled_date', todayInAr())
       .order('scheduled_date', { ascending: false });
 
-    let pendienteNota: { name: string; salaId: string; dias: number } | null = null;
+    let pendienteNota: { name: string; salaId: string; bookingId: string; dias: number } | null = null;
     if (recientes && recientes.length > 0) {
       // Una nota (privada o compartida) alcanza para darla por cerrada: la tabla
       // permite hasta dos por reserva y exigir las dos sería inventar un deber.
@@ -381,6 +381,13 @@ export default function CoachHomeScreen() {
         pendienteNota = {
           name: (quien?.name as string) ?? 'esa persona',
           salaId: primera.sala_id as string,
+          // 🔴 La reserva puntual que falta cerrar, no solo la sala. Sin esto la
+          // sala elige sola contra qué sesión escribir y elige mal: `SalaScreen`
+          // arma su `activeBooking` como `upcoming ?? …` sobre reservas
+          // FUTURAS, así que si ya hay próxima sesión agendada la nota se
+          // guardaba contra esa. La sesión de esta card seguía sin nota y la
+          // card volvía para siempre.
+          bookingId: primera.id as string,
           dias: -daysFromTodayAr(primera.scheduled_date as string),
         };
       }
@@ -747,7 +754,7 @@ export default function CoachHomeScreen() {
               activeOpacity={0.9}
               onPress={() => router.push({
                 pathname: '/sala',
-                params: { sala_id: sinCerrar.salaId, abrir_notas: '1' },
+                params: { sala_id: sinCerrar.salaId, abrir_notas: '1', notas_booking: sinCerrar.bookingId },
               })}>
               <View style={s.notaIcon}>
                 <Feather name="edit-3" size={15} color={FOREST} />
