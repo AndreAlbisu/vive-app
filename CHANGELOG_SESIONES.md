@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · el eje declarado deja de pelearse con el topic)
+
+**Tocado:** `hooks/useRecommendedResource.ts`, `lib/quizPendiente.ts`, `lib/onboardingRespuestas.ts`, `__tests__/onboardingRespuestas.test.ts`, `SCHEMA.md`. Nuevo: `scripts/add-quiz-declared-axis.sql` (**⚠️ FALTA CORRER**). 381 tests (eran 379), `tsc` y lint limpios.
+
+**Resumen:**
+
+- 🔴 **Se resolvió la decisión abierta de las dos taxonomías guardando las dos cosas, no eligiendo una.** `user_quiz_answers` suma `axis` (cuerpo/mente/alma, con CHECK, nullable): el **eje declarado** decide QUÉ recomendarle y el **topic** decide CÓMO nombrárselo. Antes había que sacrificar uno — o el mapa respetaba el universo y la etiqueta mentía ("algo para tu salud" a quien habló de sexualidad), o respetaba el significado y el recurso salía de un eje que la persona no eligió.
+- 📝 **La decisión se tomó midiendo, no a ojo.** `firstToolInAxis` devuelve la primera tool del eje y los conjuntos de `TOOL_AXES` se pisan tanto que **cuerpo y mente devuelven la MISMA tool** (respiración); solo alma difiere (meditación). O sea que el eje mueve poco y la etiqueta —lo único que la persona lee— mueve siempre. Eso descartó "cambiar el mapa". Y mover las categorías en el onboarding obligaba a sacar "Sexualidad e intimidad" de Cuerpo, que es peor que el problema: agrupar sexualidad con el cuerpo es defendible, no un error. Quedó la columna, que además **le da casa al universo**, hasta hoy varado en AsyncStorage.
+- ⚠️ **`useRecommendedResource` consulta con `select('*')` y no por nombre de columna, a propósito.** Pedir `axis` antes de correr el script devuelve error y `data` en null: un OTA que llegara antes de la migración **dejaría de leer también el `topic` y apagaría la recomendación entera**. Con `*` la app anda igual antes y después, así que no hay orden obligatorio de deploy.
+- 🔴 **El eje se valida antes de encolarlo** (`esEje`). `universo` llega por parámetro de ruta, o sea que puede ser cualquier string; un valor que el CHECK rechace haría fallar el upsert, y como el volcado **no se marca cuando falla**, reintentaría en cada login para siempre. Lo destapó un test que ya existía y cambió de resultado.
+- 📝 `axis` es nullable porque `QuizScreen` no pregunta universo: en esas filas queda null y el eje se sigue deduciendo del topic, exactamente como hoy.
+- 📝 `interestAxes` suma los dos ejes en vez de elegir: ahí no hay que decidir nada, es el conjunto de lo que le interesa.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **CORRER `scripts/add-quiz-declared-axis.sql`** en el SQL Editor. Es idempotente y trae su bloque de verificación comentado, incluido el insert que TIENE que fallar con 23514 para probar que el CHECK muerde. Hasta que se corra, `axis` no existe y todo sigue funcionando como antes (por el `select('*')`).
+- 🔴 **Probar en dispositivo el caso que motivó todo**: onboarding → Cuerpo → "Sexualidad e intimidad" → registrarse, y confirmar que la recomendación sale del eje **cuerpo** y que el texto habla de **"tus relaciones"**. Antes eso era imposible de tener junto.
+- 📝 Los `temas` elegidos siguen sin columna, guardados solo en local.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · la tarjeta de solicitud pendiente, por rol)
 
 **Tocado:** `screens/SalaScreen.tsx`. 379 tests, `tsc` limpio, sin warnings de lint nuevos.

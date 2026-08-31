@@ -13,7 +13,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 jest.mock('@/lib/supabase', () => ({ supabase: { from: () => ({ upsert: async () => ({ error: null }) }) } }));
 
 import {
-  CATEGORIA_A_TOPIC, topicDeCategoria, guardarRespuestas, leerRespuestas,
+  CATEGORIA_A_TOPIC, topicDeCategoria, esEje, guardarRespuestas, leerRespuestas,
 } from '@/lib/onboardingRespuestas';
 import { leerPendiente } from '@/lib/quizPendiente';
 
@@ -35,20 +35,35 @@ describe('CATEGORIA_A_TOPIC', () => {
   it('una categoría desconocida no rompe, devuelve null', () => {
     expect(topicDeCategoria('no_existe')).toBeNull();
   });
+
+  it('esEje acepta los tres del CHECK y nada más', () => {
+    for (const e of ['cuerpo', 'mente', 'alma']) expect(esEje(e)).toBe(true);
+    for (const e of ['espiritu', '', undefined, null]) expect(esEje(e)).toBe(false);
+  });
 });
 
 describe('guardarRespuestas', () => {
-  it('encola el topic mapeado y guarda aparte lo que no tiene columna', async () => {
+  it('encola el topic Y el eje declarado: son las dos mitades de la decisión', async () => {
     await guardarRespuestas({ universo: 'mente', categoria: 'sentirme', temas: ['ansiedad'] });
 
-    await expect(leerPendiente()).resolves.toMatchObject({ topic: 'emocion' });
-    // universo y temas no van a la base: se conservan local.
-    await expect(leerRespuestas()).resolves.toMatchObject({ universo: 'mente', temas: ['ansiedad'] });
+    // El eje decide QUÉ recomendar, el topic CÓMO nombrarlo.
+    await expect(leerPendiente()).resolves.toMatchObject({ topic: 'emocion', axis: 'mente' });
+    // Los temas siguen sin columna: se conservan solo local.
+    await expect(leerRespuestas()).resolves.toMatchObject({ temas: ['ansiedad'] });
   });
 
-  it('una categoría que no mapea no encola basura', async () => {
+  it('con una categoría que no mapea igual conserva el eje, que sí es una respuesta', async () => {
     await guardarRespuestas({ universo: 'mente', categoria: 'no_existe', temas: [] });
-    await expect(leerPendiente()).resolves.toBeNull();
+    const p = await leerPendiente();
+    expect(p?.axis).toBe('mente');
+    expect(p?.topic).toBeUndefined();
+  });
+
+  it('🔴 un universo inválido NO se encola: el CHECK lo rechazaría y el volcado reintentaría para siempre', async () => {
+    await guardarRespuestas({ universo: 'espiritu', categoria: 'sentirme', temas: [] });
+    const p = await leerPendiente();
+    expect(p?.axis).toBeUndefined();
+    expect(p?.topic).toBe('emocion');
   });
 
   it('storage corrupto no rompe el arranque', async () => {

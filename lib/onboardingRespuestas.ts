@@ -38,9 +38,10 @@ const KEY = 'vita_onboarding_respuestas';
  * consecuencia es que en esos tres el eje del recurso sugerido no va a ser el
  * universo que la persona eligió.
  *
- * ⚠️ Eso NO se arregla retocando este mapa: es que las dos taxonomías tienen
- * que reconciliarse, o `user_quiz_answers` necesita una columna para el universo
- * declarado. Decisión de producto, anotada y no tomada acá.
+ * ⚠️ La contradicción NO se arregla retocando este mapa — se resolvió guardando
+ * las dos cosas: `user_quiz_answers.axis` lleva el universo que la persona
+ * eligió y decide QUÉ recomendarle, y este `topic` decide CÓMO nombrárselo.
+ * Antes había que sacrificar uno de los dos. Ver `scripts/add-quiz-declared-axis.sql`.
  */
 export const CATEGORIA_A_TOPIC: Record<string, string> = {
   energia:      'salud',
@@ -58,14 +59,28 @@ export function topicDeCategoria(categoria: string): string | null {
   return CATEGORIA_A_TOPIC[categoria] ?? null;
 }
 
+/**
+ * 🔴 `universo` llega por parámetro de ruta, o sea que puede ser cualquier
+ * string. La columna tiene CHECK, así que un valor inválido haría fallar el
+ * upsert — y como el volcado NO se marca cuando falla, **reintentaría en cada
+ * login para siempre**. Se filtra acá, en la entrada.
+ */
+const EJES = ['cuerpo', 'mente', 'alma'];
+export function esEje(v: string | undefined | null): boolean {
+  return !!v && EJES.includes(v);
+}
+
 export async function guardarRespuestas(r: RespuestasOnboarding): Promise<void> {
   // Dos destinos, a propósito: el `topic` va a la cola compartida que se vuelca
   // a la base, y el universo y los temas se quedan acá porque no tienen columna
   // donde ir. No es que se descarten — es que todavía no hay dónde ponerlos.
   await AsyncStorage.setItem(KEY, JSON.stringify(r));
 
+  // El universo va tal cual y el topic sale del mapa. Guardar los DOS es lo que
+  // deshace el compromiso viejo: el eje declarado decide qué recomendarle y el
+  // topic decide cómo nombrárselo, sin que uno tenga que distorsionar al otro.
   const topic = topicDeCategoria(r.categoria);
-  if (topic) await guardarPendiente({ topic });
+  await guardarPendiente({ topic, axis: esEje(r.universo) ? r.universo : null });
 }
 
 export async function leerRespuestas(): Promise<RespuestasOnboarding | null> {

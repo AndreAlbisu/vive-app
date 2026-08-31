@@ -15,6 +15,12 @@ import { supabase } from '@/lib/supabase';
 
 export type QuizPendiente = {
   topic?: string | null;
+  /**
+   * El universo que la persona eligió en el onboarding (cuerpo/mente/alma).
+   * `QuizScreen` no lo pregunta, así que ahí viaja vacío y el eje se sigue
+   * deduciendo del topic. Ver `scripts/add-quiz-declared-axis.sql`.
+   */
+  axis?: string | null;
   professionalType?: string | null;
   budget?: string | null;
   /** Ya se escribió en la base. Ver `volcarPendiente`. */
@@ -70,6 +76,7 @@ export async function volcarPendiente(userId: string): Promise<void> {
 
   const fila: Record<string, unknown> = { user_id: userId, updated_at: new Date().toISOString() };
   if (p.topic)            fila.topic = p.topic;
+  if (p.axis)             fila.axis = p.axis;
   if (p.professionalType) fila.professional_type = p.professionalType;
   if (p.budget)           fila.budget = p.budget;
 

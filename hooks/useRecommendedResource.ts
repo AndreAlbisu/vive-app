@@ -87,15 +87,26 @@ export function useRecommendedResource(params: {
 }): RecommendationResult {
   const { userId, todayMood, library, recentlyDone } = params;
   const [quizTopic, setQuizTopic] = useState<string | null>(null);
+  const [quizAxis, setQuizAxis] = useState<Axis | null>(null);
 
   useEffect(() => {
-    if (!userId) { setQuizTopic(null); return; }
+    if (!userId) { setQuizTopic(null); setQuizAxis(null); return; }
     supabase
       .from('user_quiz_answers')
-      .select('topic')
+      // ⚠️ `*` y no `'topic, axis'` a propósito: `axis` la agrega
+      // `scripts/add-quiz-declared-axis.sql`, y pedir por nombre una columna que
+      // todavía no existe devuelve error y `data` en null — o sea que un OTA que
+      // llegue antes de correr el script dejaría de leer el topic también, y la
+      // recomendación se apagaría entera. Con `*` la app anda igual antes y
+      // después de la migración.
+      .select('*')
       .eq('user_id', userId)
       .maybeSingle()
-      .then(({ data }) => setQuizTopic((data?.topic as string) ?? null));
+      .then(({ data }) => {
+        setQuizTopic((data?.topic as string) ?? null);
+        const a = data?.axis as Axis | undefined;
+        setQuizAxis(a === 'cuerpo' || a === 'mente' || a === 'alma' ? a : null);
+      });
   }, [userId]);
 
   const reco = useMemo<Reco | null>(() => {
@@ -114,8 +125,18 @@ export function useRecommendedResource(params: {
     }
 
     // 2. TEMA DE INTERÉS (sin check-in hoy) — quiz declarado o comportamiento.
+    //
+    // 🔴 El eje DECLARADO gana sobre el que se deduce del topic, y ahí está el
+    // punto: son dos agrupamientos distintos de los mismos temas y en tres
+    // categorías se contradicen (sexualidad, vínculos, trabajo). El eje decide
+    // QUÉ recomendarle —es lo que la persona eligió con su nombre— y el topic
+    // decide CÓMO nombrárselo, que es la palabra que describe bien el tema.
+    // Antes había que sacrificar uno de los dos.
+    //
+    // 📝 `quizAxis` es null para quien hizo el quiz de la app, que no pregunta
+    // universo: ahí sigue mandando el topic, igual que antes.
     const quiz = quizTopic ? QUIZ_AXIS[quizTopic] : null;
-    const axis: Axis | null = quiz ? quiz.axis : dominantAxis([...recentlyDone]);
+    const axis: Axis | null = quizAxis ?? (quiz ? quiz.axis : dominantAxis([...recentlyDone]));
     if (axis) {
       const label = quiz ? quiz.label : AXIS_LABEL[axis];
       // Preferimos contenido de coach real para este eje (reemplaza la vieja
@@ -142,18 +163,20 @@ export function useRecommendedResource(params: {
 
     // 3. Sin señal → null (la UI cae al CTA de check-in de ánimo).
     return null;
-  }, [todayMood, quizTopic, library, recentlyDone]);
+  }, [todayMood, quizTopic, quizAxis, library, recentlyDone]);
 
   // Ejes de interés del usuario (quiz + comportamiento). Se exponen para rankear
   // la biblioteca de coaches por tema (no solo por recencia).
   const interestAxes = useMemo<Set<Axis>>(() => {
     const s = new Set<Axis>();
     const quiz = quizTopic ? QUIZ_AXIS[quizTopic] : null;
+    // Los dos: acá no hay que elegir uno, es el conjunto de lo que le interesa.
+    if (quizAxis) s.add(quizAxis);
     if (quiz) s.add(quiz.axis);
     const dom = dominantAxis([...recentlyDone]);
     if (dom) s.add(dom);
     return s;
-  }, [quizTopic, recentlyDone]);
+  }, [quizTopic, quizAxis, recentlyDone]);
 
   return {
     reco,
