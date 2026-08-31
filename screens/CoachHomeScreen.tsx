@@ -362,33 +362,46 @@ export default function CoachHomeScreen() {
       .eq('status', 'completada')
       .gte('scheduled_date', haceUnaSemana)
       .lte('scheduled_date', todayInAr())
-      .order('scheduled_date', { ascending: false });
+      .order('scheduled_date', { ascending: false })
+      // Segundo criterio: con dos sesiones el mismo día, "la última" la decidía
+      // el planner. Solo hace falta la primera fila, así que tiene que ser la
+      // correcta.
+      .order('scheduled_time', { ascending: false })
+      .limit(1);
 
     let pendienteNota: { name: string; salaId: string; bookingId: string; dias: number } | null = null;
-    if (recientes && recientes.length > 0) {
+
+    // 🔴 Solo la ÚLTIMA sesión, y solo si esa no tiene nota. Antes se buscaba la
+    // primera SIN nota recorriendo la semana hacia atrás (`find` sobre la lista
+    // ordenada), así que **apenas cerrabas la de ayer la card saltaba a la de
+    // hace cinco días** y el aviso se convertía en una lista de deudas. El
+    // recordatorio es sobre la sesión que acabás de tener: una que ya quedó
+    // atrás no se cierra de memoria, y proponerlo igual es pedir algo peor que
+    // nada. Si la última ya tiene nota, no hay card — aunque queden viejas sin.
+    const ultima = recientes?.[0];
+    if (ultima?.sala_id) {
       // Una nota (privada o compartida) alcanza para darla por cerrada: la tabla
       // permite hasta dos por reserva y exigir las dos sería inventar un deber.
       const { data: conNota } = await supabase
         .from('session_notes')
         .select('booking_id')
-        .in('booking_id', recientes.map(b => b.id as string));
-      const yaTiene = new Set((conNota ?? []).map(n => n.booking_id as string));
+        .eq('booking_id', ultima.id as string)
+        .limit(1);
 
-      const primera = recientes.find(b => !yaTiene.has(b.id as string) && b.sala_id);
-      if (primera) {
+      if (!conNota || conNota.length === 0) {
         const { data: quien } = await supabase
-          .from('profiles').select('name').eq('id', primera.user_id as string).maybeSingle();
+          .from('profiles').select('name').eq('id', ultima.user_id as string).maybeSingle();
         pendienteNota = {
           name: (quien?.name as string) ?? 'esa persona',
-          salaId: primera.sala_id as string,
+          salaId: ultima.sala_id as string,
           // 🔴 La reserva puntual que falta cerrar, no solo la sala. Sin esto la
           // sala elige sola contra qué sesión escribir y elige mal: `SalaScreen`
           // arma su `activeBooking` como `upcoming ?? …` sobre reservas
           // FUTURAS, así que si ya hay próxima sesión agendada la nota se
           // guardaba contra esa. La sesión de esta card seguía sin nota y la
           // card volvía para siempre.
-          bookingId: primera.id as string,
-          dias: -daysFromTodayAr(primera.scheduled_date as string),
+          bookingId: ultima.id as string,
+          dias: -daysFromTodayAr(ultima.scheduled_date as string),
         };
       }
     }

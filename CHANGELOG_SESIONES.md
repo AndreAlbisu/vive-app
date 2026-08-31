@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · la card de nota solo mira la ÚLTIMA sesión)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`. 352 tests, `tsc` y lint limpios.
+
+**Resumen:**
+
+- 🔴 **La card caminaba hacia atrás.** Buscaba la primera sesión SIN nota recorriendo la semana de más nueva a más vieja (`recientes.find(b => !yaTiene.has(b.id))`), así que **apenas cerrabas la de ayer saltaba a la de hace cinco días**. El aviso dejaba de ser un recordatorio y se convertía en una lista de deudas.
+- **Ahora mira solo la última sesión** (decisión de Andre): si esa ya tiene nota, no hay card — aunque queden viejas sin cerrar. El recordatorio es sobre la sesión que acabás de tener; una que ya quedó atrás no se cierra de memoria, y proponerlo igual pide algo peor que nada.
+- 📝 **Segundo criterio de orden en la consulta**: antes ordenaba solo por `scheduled_date`, así que con dos sesiones el mismo día "la última" la decidía el planner. Ahora ordena también por `scheduled_time` descendente. Importa más que antes, porque ahora se usa **una sola fila** (`.limit(1)`) en vez de recorrer la lista.
+- 📝 La consulta de notas pasa de `.in(...)` sobre toda la semana a un `.eq()` sobre esa reserva.
+- ⚠️ **Si la última sesión no tiene `sala_id`, no hay card y no se busca hacia atrás.** Es la consecuencia directa de la regla nueva: sin sala no hay a dónde navegar, y saltar a una anterior sería volver al comportamiento que se sacó.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar en dispositivo**: con dos sesiones completadas en la semana, escribir la nota de la más reciente y confirmar que la card desaparece en vez de saltar a la anterior.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · la card de "dejá una nota" del inicio del coach no se iba nunca)
 
 **Tocado:** `screens/CoachHomeScreen.tsx`, `screens/SalaScreen.tsx`. 352 tests, `tsc` limpio, sin warnings de lint nuevos.
