@@ -192,6 +192,7 @@ export default function RootLayout() {
           <Stack.Screen name="resource-proposal-new" options={{ headerShown: false }} />
           <Stack.Screen name="recurso" options={{ headerShown: false }} />
           <Stack.Screen name="coach-recurso" options={{ headerShown: false }} />
+          <Stack.Screen name="formato" options={{ headerShown: false }} />
           <Stack.Screen name="recursos-guardados" options={{ headerShown: false }} />
           <Stack.Screen name="notifications" options={{ headerShown: false }} />
           <Stack.Screen name="legal" options={{ headerShown: false }} />

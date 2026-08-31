@@ -5,9 +5,9 @@
 
 ---
 
-## 2026-08-31 — Joaquín (sesión 148 · Recursos usuario, checkpoint A)
+## 2026-08-31 — Joaquín (sesión 148 · Recursos usuario, rediseño completo)
 
-**Tocado:** `constants/theme.ts`, `app/(tabs)/recursos.tsx`.
+**Tocado:** `constants/theme.ts`, `app/(tabs)/recursos.tsx`. Nuevo: `app/formato.tsx` + registro en `app/_layout.tsx`.
 
 **Resumen — rediseño de la pantalla Recursos (lado usuario), primer checkpoint. Es rediseño de presentación: no cambia el modelo de datos ni de dónde salen los recursos.**
 
@@ -19,10 +19,20 @@
   - 🔴 **Fila "Continuar" OMITIDA** (no hay dato parcial — documentado en el código donde estaba `ContinueCard`, que además era UI muerta: `lastInProgress` nunca tiene valor porque `recordCompletion` siempre escribe progreso completo).
   - Biblioteca: dejó de ser lista. Se fueron los chips de tema y las filas con cuadrado de color (se mudan a la pantalla de formato del checkpoint B). En su lugar: eyebrow "BIBLIOTECA · N recursos" + **grilla 2×2 de formatos** (`FormatGrid`), cada tile con el ícono dentro de un anillo de 1.5px del color del formato, nombre en `ViveFonts.title` y el contador debajo. Conteo por formato vía una query liviana (solo la columna `format` de los publicados, cuenta en JS).
 - Limpieza: se removieron `ExploreSection` y sus imports/estado muertos (`selectedDoor`/`selectedFormat`/`exploreResources`, `DOORS`, `AccessibilityInfo`, `LayoutAnimation`, `TOOLS`, `logResourceEvent`, `toggleSave`, etc.). `recursos.tsx` queda **sin warnings de lint**.
-- ⚠️ **Los tiles navegan a `/formato?formato=X`, que se crea en el checkpoint B** — tocar un tile todavía no lleva a ningún lado hasta entonces. El resto de la pantalla funciona.
-- Typecheck y 346 tests limpios. No confirmado en dispositivo.
+- Los tiles navegan a `/formato?formato=X` (creada en el checkpoint B, abajo).
 
-**Pendiente (checkpoint B):** pantalla de formato nueva (`app/formato.tsx`) — header + descripción, chips de tema, deck horizontal `snapToInterval` con cards de gradiente de formato, puntitos, y los tres bloques (progreso del formato ✅ derivable, ver como lista, pedile una reco al coach si tiene sala). Analítica: `formato_abierto`/`deck_deslizado`/`vista_lista_abierta`/`recomendacion_pedida_a_coach`.
+**Checkpoint B — pantalla de formato (`app/formato.tsx`, nueva; registrada en `_layout.tsx` con `headerShown:false`):**
+- Header (atrás, nombre, contador, ícono de búsqueda que abre un input que filtra por título con normalización de tildes) + descripción del formato.
+- Chips de tema deslizables (Todos + los `topic_id` que existan en ese formato) que recortan el deck.
+- **Deck**: `FlatList` horizontal con `snapToInterval` (cards de 79% del ancho, peek de la siguiente), `decelerationRate="fast"`, `disableIntervalMomentum`. Cada card: gradiente del color del formato derivado con `resourceFormatGradient(formato, index)` (varía por índice), grano SVG a 9% (misma técnica que `SurfaceCard`), dos manchas de luz (clara arriba-derecha, oscura abajo-izquierda), pastilla ícono+duración, bookmark (relleno si guardado), título en `ViveFonts.title` 21px, autor, línea de contexto y botón "Empezar" blanco. Puntitos debajo con el activo alargado en terracota.
+- **Tres bloques** (crema, líneas finas): Progreso del formato ("Escuchaste/Leíste N de M" + minutos totales + barra en el color del formato, derivado de `resource_events` complete); "Ver como lista" (toggle a lista simple con separadores de pelo); y "Pedile una reco a [coach]" (avatar + nombre, navega a `/sala` del usuario) **solo si el usuario tiene una sala** (si no, no se muestra — no se reemplaza por un CTA de venta).
+- 🔴 **Degradaciones documentadas** (por datos que no existen): la línea de contexto de las cards omite "a medias" (sin progreso parcial) **y** "el sistema lo eligió" (no hay motivo por `coach_resource` — `useRecommendedResource` da uno global no atado a la biblioteca). Queda: coach recomendó → tema. El bloque de progreso y el de reco al coach se omiten si falta su dato, sin romper el resto.
+- Analítica: `formato_abierto` (al montar), `deck_deslizado` (solo la posición MÁXIMA por sesión, vía un ref), `vista_lista_abierta`, `recomendacion_pedida_a_coach`.
+- **Reduced-motion**: el deck es scroll manual sin animaciones de entrada ni auto-scroll → se respeta por construcción (documentado en el código).
+- **Colores y tipografía salen de tokens**: `ResourceFormatColors`/`resourceFormatGradient`/`ViveFonts`. Los hex locales (`FOREST`/`FOREST_SOFT`/`TERRACOTTA`/`CREAM_LIGHT`) son la misma paleta que ya usan las otras pantallas, no colores nuevos.
+- Queries verificadas contra la base real (los joins embebidos `coaches!inner(profiles!inner(name))` y `profiles!salas_coach_id_fkey` no dan 400). Typecheck, lint (formato.tsx sin warnings) y 346 tests limpios. **No confirmado en dispositivo.**
+
+**Pendiente:** confirmar en el teléfono las tres vistas (Recursos, un formato con su deck, la vista de lista). Sigue abierto el resto del pendiente de Recursos que dejó Andre (eje `wellness_goal` vs. puertas — este rediseño usó los temas/`topic_id`, que es lo que existe; etiquetar a mano los 8 publicados con `wellness_goal` NULL).
 
 ---
 
