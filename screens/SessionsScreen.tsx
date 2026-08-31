@@ -21,6 +21,7 @@ import * as Calendar from 'expo-calendar';
 import * as WebBrowser from 'expo-web-browser';
 import { getJoinUrl } from '@/lib/meetingRoom';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { ordenarSalas } from '@/lib/salaOrder';
 import { supabase } from '@/lib/supabase';
 import { decryptMessage } from '@/lib/encryption';
 import { canCancelConfirmed } from '@/lib/bookingHelpers';
@@ -39,6 +40,7 @@ type SalaItem = {
   lastMessage: string;
   lastMessageDate: string;
   lastMessageRaw: string | null;
+  createdAt: string | null;
   hasUnread: boolean;
 };
 
@@ -74,33 +76,27 @@ const CARD_FULL = Dimensions.get('window').width - H_PADDING * 2;
 const CARD_W = Math.round(CARD_FULL * 0.86);
 
 /**
- * Aire arriba de la lista de chats, y **solo cuando la lista es lo primero de la
- * pantalla** — sin banner de reembolso ni carrusel de sesiones arriba.
+ * 🔴 El espacio de arriba de la lista es UN SLOT QUE NUNCA QUEDA VACÍO, y esa
+ * es la regla que ordena esta pantalla.
  *
- * 🔴 Sin esto la primera fila arrancaba a 76pt del borde del área segura (20 de
- * `header.paddingTop` + 40 de la línea del título + 16 de `marginBottom`), o sea
- * arriba del todo. Y la fila no es decoración: es el destino más tocado de la
- * pantalla, justo en la zona a la que el pulgar no llega sin recolocar la mano.
+ * Antes era aire calculado (12% del alto, piso 64, techo 132) que aparecía solo
+ * cuando la lista era lo primero de la pantalla. Resolvía la ergonomía —bajar
+ * la primera fila, que es el destino más tocado, a donde llega el pulgar sin
+ * recolocar la mano— pero a costa de un hueco que no decía nada, y con dos
+ * alturas de arranque distintas según lo que hubiera ese día.
  *
- * Es condicional a propósito. Un `paddingTop` fijo también empujaría la lista
- * los días que hay una sesión próxima arriba —una tarjeta de ~200pt— y ahí el
- * problema no existe: solo se perderían filas visibles.
+ * Ahora ese mismo lugar lo ocupa siempre algo real:
+ *   · hay sesiones próximas → el carrusel
+ *   · no hay ninguna        → la tarjeta de reservar (`sinProximaCard`)
+ *   · no hay ni salas       → no se llega acá: manda el estado vacío entero
  *
- * Sale del alto de la pantalla y no de un número clavado, por lo mismo que
- * `lib/ejesLayout.ts`: 100pt son el 12% de un iPhone 14 y el 15% de un SE, que
- * no es el mismo gesto. El piso y el techo no los toca ningún teléfono real
- * (un SE pide 80, un 15 Pro Max 111); están para que una tablet no abra un
- * hueco absurdo.
+ * Efecto secundario que importa tanto como el otro: la lista arranca SIEMPRE a
+ * la misma altura, así que la fila de más arriba no se mueve de lugar entre una
+ * apertura y la siguiente.
  *
- * ⚠️ Se lee una sola vez al cargar el módulo: no se recalcula al rotar. Misma
- * limitación que `CARD_FULL` acá al lado y que `SCREEN_W` en `conexiones.tsx`.
+ * ⚠️ El banner de reembolso NO es parte del slot: es una alerta, va por encima
+ * de todo y empuja al resto hacia abajo.
  */
-const AIRE_RATIO = 0.12;
-const AIRE_MIN = 64;
-const AIRE_MAX = 132;
-const LISTA_AIRE = Math.round(
-  Math.max(AIRE_MIN, Math.min(AIRE_MAX, Dimensions.get('window').height * AIRE_RATIO)),
-);
 
 function formatMessageDate(isoString: string): string {
   const d = new Date(isoString);
@@ -188,7 +184,7 @@ export default function SessionsScreen() {
     const [salasRes, nextBookingRes, refundRes] = await Promise.all([
       supabase
         .from('salas')
-        .select('id, user_id, coach_id, user_last_read_at, coach_last_read_at')
+        .select('id, user_id, coach_id, user_last_read_at, coach_last_read_at, created_at')
         .or(`user_id.eq.${user.id},coach_id.eq.${user.id}`),
       // 🔴 Antes: `.limit(1).maybeSingle()`. La app mostraba UNA sola sesión
       // próxima —la más cercana— en todas sus pantallas, así que la segunda
@@ -278,11 +274,14 @@ export default function SessionsScreen() {
         lastMessage: lastMsg?.content ? decryptMessage(lastMsg.content) : '',
         lastMessageDate: lastMsg ? formatMessageDate(lastMsg.created_at) : '',
         lastMessageRaw: lastMsg?.created_at ?? null,
+        createdAt: (sala.created_at as string) ?? null,
         hasUnread,
       };
     });
 
-    setSalas(results);
+    // El orden vive en `lib/salaOrder.ts`: más reciente arriba, vacías al final.
+    // Antes no había ninguno — se guardaba lo que devolviera Postgres.
+    setSalas(ordenarSalas(results));
 
     // La primera va al hero; las demás a la lista de abajo. La misma consulta
     // alimenta las dos: antes se traía una sola y el resto no existía para nadie.
@@ -419,10 +418,6 @@ export default function SessionsScreen() {
       setIsAddingCalendar(false);
     }
   }
-
-  // Si arriba de la lista ya hay algo (el banner de reembolso o el carrusel de
-  // sesiones próximas), la primera fila no queda alta y no hace falta el aire.
-  const hayContenidoArriba = !!refundPendiente || proximas.length > 0;
 
   return (
     <AppBg>
@@ -620,13 +615,32 @@ export default function SessionsScreen() {
               </View>
             )}
 
+            {/* Segundo estado del slot: hay conversaciones pero ninguna sesión
+                agendada. Ocupa el lugar del carrusel, así que la lista arranca
+                a la misma altura que cuando sí hay una sesión. */}
+            {proximas.length === 0 && salas.length > 0 && (
+              <TouchableOpacity
+                style={styles.sinProximaCard}
+                onPress={() => router.push('/(tabs)/conexiones')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.sinProximaIcon}>
+                  <MaterialCommunityIcons name="calendar-plus" size={20} color={ViveColors.primary} />
+                </View>
+                <View style={styles.sinProximaTexto}>
+                  <Text style={styles.sinProximaTitulo}>Sin sesiones agendadas</Text>
+                  <Text style={styles.sinProximaSub}>Reservá con quien ya estás hablando</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.45)" />
+              </TouchableOpacity>
+            )}
 
-{/* Lista de salas.
-                El aire de arriba solo aplica cuando no hay nada por encima —
-                ver `LISTA_AIRE`: es para que la primera fila, que es lo más
-                tocado de la pantalla, no quede fuera del alcance del pulgar. */}
+            {/* Lista de salas.
+                Más reciente arriba (`lib/salaOrder.ts`); las salas sin ningún
+                mensaje van todas al final. Ya no lleva aire propio: lo que baja
+                la primera fila al alcance del pulgar es el slot de arriba. */}
             {salas.length > 0 ? (
-              <View style={!hayContenidoArriba && styles.listaConAire}>
+              <View>
                 {salas.map((sala, index) => (
                   <SalaRow
                     key={sala.id}
@@ -792,7 +806,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(86,94,50,0.07)',
   },
 
-  listaConAire: { paddingTop: LISTA_AIRE },
+  sinProximaCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255,248,240,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.65)',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 4,
+  },
+  sinProximaIcon: {
+    width: 38, height: 38, borderRadius: 19,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(232,116,59,0.14)',
+  },
+  sinProximaTexto: { flex: 1, gap: 2 },
+  sinProximaTitulo: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#3F512F' },
+  sinProximaSub: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: 'rgba(63,81,47,0.62)' },
 
   scroll: { flex: 1 },
   scrollContent: { paddingTop: 0, paddingBottom: TAB_BAR_CLEARANCE, paddingHorizontal: 16, gap: 0 },

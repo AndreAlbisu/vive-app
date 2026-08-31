@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 · Mensajes del usuario: orden y slot de arriba)
+
+**Tocado:** `screens/SessionsScreen.tsx`. Nuevos: `lib/salaOrder.ts`, `__tests__/salaOrder.test.ts`. 352 tests (eran 346), `tsc` limpio, lint sin errores nuevos.
+
+**Resumen:**
+
+- 🔴 **La lista de Mensajes del usuario no tenía orden. Ninguno.** La consulta de `salas` no llevaba `.order()` y la pantalla hacía `setSalas(results)` con lo que devolviera Postgres, así que la posición era arbitraria: en el teléfono de Andre el chat más reciente aparecía **tercero**, debajo de dos salas sin un solo mensaje. **El campo para ordenar ya se calculaba** (`lastMessageRaw`, línea 280) y no lo leía nadie — dato muerto desde que se escribió.
+- ⚠️ **La divergencia usuario/coach que decidimos en la sesión 131 se había ejecutado de un solo lado.** El coach se llevó su regla propia con tests (`lib/coachRoster.ts`, ordena por próxima sesión porque entra a preparar a quién ve mañana sobre 20 personas) y el usuario se quedó sin ninguna. Ahora tiene la suya en `lib/salaOrder.ts`, con el criterio opuesto a propósito: **más reciente arriba**, porque entra a seguir una conversación sobre tres o cuatro.
+- 📝 **Las salas sin mensajes van todas al final, no mezcladas por fecha** (decisión de Andre). Una sala recién creada es más nueva que cualquier conversación, así que un solo timestamp para todas pondría arriba justo las filas que no tienen nada para leer. Entre las vacías manda la más nueva (`salas.created_at`, columna sumada a la consulta): si acabás de reservar con alguien, esa es la que vas a querer abrir.
+- 🔴 **El aire condicional del 12% se eliminó entero y lo reemplaza un SLOT QUE NUNCA QUEDA VACÍO.** El aire (sesión 131: 12% del alto, piso 64, techo 132, solo cuando la lista era lo primero) resolvía la ergonomía pero abría un hueco que no decía nada, y dejaba dos alturas de arranque distintas según el día. Ahora el mismo lugar lo ocupa siempre algo real: carrusel si hay sesiones próximas, **tarjeta "Sin sesiones agendadas · Reservá con quien ya estás hablando"** si no hay ninguna, y si no hay ni salas no se llega ahí porque manda el estado vacío entero. Efecto secundario que importa tanto como el otro: **la lista arranca siempre a la misma altura**, la primera fila no se mueve entre una apertura y la siguiente. El banner de reembolso queda afuera del slot a propósito — es una alerta y va por encima de todo.
+- 📝 **El "Coach Prueba" duplicado de la captura NO es un bug**: `specialtyMap` está indexado por `profile_id`, así que dos salas con el mismo coach renderizarían forzosamente la misma especialidad. Como muestran dos distintas, son **dos perfiles de test que se llaman igual**, cada uno con su fila en `coaches` — la basura de cuentas de prueba que SCHEMA.md ya documenta. No se pudo confirmar contra la base (`db query --linked` sigue caído desde la sesión 145), pero el código no puede producir ese resultado de otra forma.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin probar en dispositivo.** Los casos que importan: con sesión próxima (que aparezca el carrusel y NO la tarjeta), sin ninguna (que aparezca la tarjeta y la lista arranque a la misma altura que en el otro caso), y que el orden se vea — más reciente arriba, vacías abajo.
+- ⚠️ **Limpiar los dos perfiles de test llamados "Coach Prueba"**, o al menos renombrar uno: hoy la lista no tiene forma de distinguirlos salvo por la especialidad.
+- 📝 **El CTA "Buscar profesionales" sigue al pie de la lista** y no se tocó. En la captura se veía cortado, pero es la posición de scroll — `scrollContent` tiene `paddingBottom: TAB_BAR_CLEARANCE` (110), así que entra completo al bajar. Si igual molesta, es composición, no bug.
+- 📝 El lado coach (`CoachChatsScreen` + `lib/coachRoster.ts`) **no se tocó**: ya estaba resuelto en la sesión 131 y las dos pantallas divergen a propósito.
+
+---
+
 ## 2026-08-31 — Andre (sesión 149 · pin para Recursos v2)
 
 **Tocado:** `components/PinButton.tsx`, `app/coach-recurso.tsx`, `app/(tabs)/index.tsx`, `SCHEMA.md`.
