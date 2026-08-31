@@ -330,46 +330,76 @@ export default function InicioScreen() {
     }, [user])
   );
 
-  useEffect(() => {
+  // 🔴 Esto era un `useEffect(…, [user])`: corría UNA sola vez, cuando el usuario
+  // aparecía, y no volvía a correr nunca más. Reservabas una sesión, volvías a
+  // Inicio y la tarjeta seguía mostrando lo de antes; el coach te confirmaba una
+  // pendiente y acá no pasaba nada; cancelabas y la sesión cancelada se quedaba
+  // en pantalla. Ahora recarga por las dos vías, que es el mismo par que ya usa
+  // `app/(tabs)/_layout.tsx` para el puntito de la barra: **foco** (volvés a la
+  // tab) y **realtime** (te cambian algo mientras estás parado acá). Ninguna de
+  // las dos alcanza sola — el foco no se dispara si nunca te fuiste, y el
+  // realtime no cubre lo que pasó con la app cerrada.
+  const fetchNextSession = useCallback(async () => {
     if (!user) return;
-    const today = new Date().toISOString().split('T')[0];
 
-    supabase
+    // ⚠️ `localDayKey()` y NO `toISOString()`. Con UTC, después de las 21:00 ART
+    // "hoy" ya es mañana, así que el `.gte()` dejaba afuera las sesiones de esta
+    // misma noche: la tarjeta desaparecía justo en el rato en que más importa.
+    // Mismo error que documenta `lib/moodStats.ts:18`.
+    const today = localDayKey();
+
+    const { data: booking } = await supabase
       .from('bookings')
       .select('id, coach_id, sala_id, scheduled_date, scheduled_time')
       .eq('user_id', user.id)
       .eq('status', 'confirmada')
       .gte('scheduled_date', today)
       .order('scheduled_date', { ascending: true })
+      // Sin este segundo criterio, con dos sesiones el mismo día la "próxima"
+      // salía a suerte del planner. Mismo orden que `SessionsScreen`.
+      .order('scheduled_time', { ascending: true })
       .limit(1)
-      .maybeSingle()
-      .then(async ({ data: booking }) => {
-        if (!booking) { setNextSession(null); return; }
+      .maybeSingle();
 
-        // bookings.coach_id → coaches.id (NO profiles.id — ver SCHEMA regla 2).
-        // Join de dos pasos: coaches.id → coaches.profile_id → profiles.name.
-        const { data: coachRow } = await supabase
-          .from('coaches')
-          .select('profile_id, specialty')
-          .eq('id', booking.coach_id)
-          .maybeSingle();
+    if (!booking) { setNextSession(null); return; }
 
-        const { data: profile } = coachRow?.profile_id
-          ? await supabase.from('profiles').select('name').eq('id', coachRow.profile_id).maybeSingle()
-          : { data: null };
+    // bookings.coach_id → coaches.id (NO profiles.id — ver SCHEMA regla 2).
+    // Join de dos pasos: coaches.id → coaches.profile_id → profiles.name.
+    const { data: coachRow } = await supabase
+      .from('coaches')
+      .select('profile_id, specialty')
+      .eq('id', booking.coach_id)
+      .maybeSingle();
 
-        setNextSession({
-          id: booking.id,
-          // profiles.id (= salas.coach_id) para navegar a la sala, no coaches.id
-          coach_id: coachRow?.profile_id ?? booking.coach_id,
-          sala_id: booking.sala_id ?? null,
-          date: booking.scheduled_date,
-          time: booking.scheduled_time,
-          coachName: profile?.name ?? 'Tu profesional',
-          coachSpecialty: coachRow?.specialty ?? null,
-        });
-      });
+    const { data: profile } = coachRow?.profile_id
+      ? await supabase.from('profiles').select('name').eq('id', coachRow.profile_id).maybeSingle()
+      : { data: null };
+
+    setNextSession({
+      id: booking.id,
+      // profiles.id (= salas.coach_id) para navegar a la sala, no coaches.id
+      coach_id: coachRow?.profile_id ?? booking.coach_id,
+      sala_id: booking.sala_id ?? null,
+      date: booking.scheduled_date,
+      time: booking.scheduled_time,
+      coachName: profile?.name ?? 'Tu profesional',
+      coachSpecialty: coachRow?.specialty ?? null,
+    });
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchNextSession();
+    // Sin filtro, igual que la suscripción a `bookings` de `(tabs)/_layout.tsx`:
+    // el RLS ya limita las filas que llegan, y la de esta tabla mira `user_id`.
+    const channel = supabase
+      .channel(`home-next-session-${user.id}-${Math.random().toString(36).slice(2)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchNextSession)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, fetchNextSession]);
+
+  useFocusEffect(useCallback(() => { fetchNextSession(); }, [fetchNextSession]));
 
   // `profiles.name` primero: es la fuente que ve el resto de la app y la única
   // que tiene el nombre de las cuentas de Apple (el id token no lo lleva). La

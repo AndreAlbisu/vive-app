@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · la tarjeta de próxima sesión en Inicio)
+
+**Tocado:** `app/(tabs)/index.tsx`. 352 tests, `tsc` y lint limpios.
+
+**Resumen:**
+
+- 🔴 **La tarjeta de "tu próxima sesión" del Inicio no se actualizaba nunca.** Era un `useEffect(…, [user])`: corría UNA sola vez, cuando el usuario aparecía, y no volvía a correr. Reservabas y volvías a Inicio → seguía lo de antes; el coach te confirmaba una pendiente → nada; cancelabas → la sesión cancelada se quedaba en pantalla hasta reabrir la app.
+- **Arreglo: foco + realtime, las dos.** Es el mismo par que `app/(tabs)/_layout.tsx` ya usaba para el puntito de la barra, y el mismo patrón que en ESTE archivo ya tenía la campanita de notificaciones (`fetchNotifCount` + canal + `useFocusEffect`) — la tarjeta era la única que se había quedado afuera. **Ninguna de las dos vías alcanza sola**: el foco no se dispara si nunca te fuiste de la tab, y el realtime no cubre lo que pasó con la app cerrada. `bookings` ya estaba publicada con `REPLICA IDENTITY FULL` desde la sesión 145, así que no hizo falta tocar la base.
+- 🔴 **Dos bugs más en la misma consulta, encontrados de paso:**
+  - **El "hoy" salía de `toISOString()`**, o sea UTC. Después de las 21:00 ART "hoy" ya es mañana, así que el `.gte('scheduled_date', today)` dejaba afuera las sesiones de esa misma noche: **la tarjeta desaparecía justo el rato en que más importa**. Pasa a `localDayKey()`, que ya estaba importado y usado en el archivo para el check-in. Era el último `toISOString().split('T')[0]` que quedaba en `index.tsx`. Mismo error que documenta `lib/moodStats.ts:18`.
+  - **Ordenaba solo por `scheduled_date`**, sin `scheduled_time`. Con dos sesiones el mismo día, cuál era "la próxima" lo decidía el planner. Ahora ordena por las dos, igual que `SessionsScreen`.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin probar en dispositivo.** Los tres casos: reservar y volver a Inicio (foco), que el coach confirme mientras estás parado en Inicio (realtime), y una sesión de hoy a la noche vista después de las 21:00 (el bug de UTC).
+- 📝 Vale revisar si hay más pantallas con el mismo `useEffect(…, [user])` de una sola pasada. Inicio tenía la campanita y los pinneados resueltos, y la tarjeta de sesión no — no hay razón para suponer que es la única en la app.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 · Mensajes del usuario: orden y slot de arriba)
 
 **Tocado:** `screens/SessionsScreen.tsx`. Nuevos: `lib/salaOrder.ts`, `__tests__/salaOrder.test.ts`. 352 tests (eran 346), `tsc` limpio, lint sin errores nuevos.
