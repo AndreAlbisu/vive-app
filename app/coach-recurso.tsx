@@ -19,6 +19,7 @@ import Markdown from 'react-native-markdown-display';
 import { ViveFonts, ViveColors } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { ReminderBell } from '@/components/ReminderBell';
+import { PinButton } from '@/components/PinButton';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { logResourceEvent } from '@/lib/resourceEvents';
@@ -486,6 +487,9 @@ export default function CoachRecursoScreen() {
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <ReminderBell kind="coach_resource" resourceRef={resource.id} title={resource.title} />
+            {/* Pin (inicio, tope 4) y bookmark (biblioteca ilimitada) son cosas
+                distintas y conviven acá, igual que en ResourceDetailScreen. */}
+            <PinButton resourceId={resource.id} icon="pin" inline inactiveColor={ViveColors.accent} />
             <TouchableOpacity style={s.saveBtn} onPress={toggleSave} hitSlop={8}>
               <Ionicons
                 name={saved ? 'bookmark' : 'bookmark-outline'}

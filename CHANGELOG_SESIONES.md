@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 149 · pin para Recursos v2)
+
+**Tocado:** `components/PinButton.tsx`, `app/coach-recurso.tsx`, `app/(tabs)/index.tsx`, `SCHEMA.md`.
+
+**Resumen:**
+- **Hallazgo:** el pin al inicio había quedado anclado al sistema viejo de recursos. Solo eran pinneables 8 de las 10 tools de VITA (Diario y Gratitud quedan afuera a propósito, son de registro diario) y los recursos de la tabla `resources` vía `ResourceDetailScreen`. **Toda la biblioteca `coach_resources` (Recursos v2) era impinneable** — o sea todo lo que ve el usuario después del rediseño de la sesión 148, porque el deck de `formato.tsx` navega a `/coach-recurso`, que solo tenía bookmark de guardado.
+- **Sin cambios de base de datos.** `pinned_resources.resource_id` es text sin FK y el trigger del tope solo cuenta filas, así que acepta los uuids de `coach_resources` tal cual. Todo el arreglo fue de frontend. SCHEMA.md quedó actualizado en la misma sesión.
+- `PinButton` se hizo reutilizable fuera del header de una tool: suma `icon` (`'bookmark'` default / `'pin'`), `inline` (sin el slot de 60) e `inactiveColor`. En `/coach-recurso` va con `icon="pin"` entre la campanita y el bookmark, porque ahí ya hay un bookmark de guardado y dos glyphs iguales no se distinguen (mismo criterio que `ResourceDetailScreen`).
+- El resolver de pins del inicio ya no asume `resources`: busca **en paralelo** en `resources` (`retired_at IS NULL`) y en `coach_resources` (`status = 'published'`) —por la forma del id son indistinguibles— y navega a `/recurso` o `/coach-recurso` según dónde caiga, con su tabla de íconos correspondiente (`PINNED_TYPE_ICON` por `type`, `PINNED_FORMAT_ICON` por `format`). Sin esto, un pin de v2 se habría guardado bien pero nunca se habría visto en el inicio.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **Sin probar en dispositivo** — solo pasa `tsc --noEmit`. Falta abrir un recurso de la biblioteca en Expo Go, pinnearlo y confirmar que aparece en el inicio y que navega de vuelta bien.
+- **Decisión de diseño abierta (para Joaquín):** el glyph del pin quedó dividido — `bookmark` en las tools, `pin` en las dos fichas de recurso. El copy del vacío del inicio ("entrá a un recurso y tocá el marcador") aplica a uno y no al otro. Hay que unificar glyph o copy.
+- Sigue abierto de la sesión 148: la revisión en dispositivo de todo el rediseño de Recursos.
+
+---
+
 ## 2026-08-31 — Joaquín (sesión 148 · Recursos usuario, rediseño completo)
 
 **Tocado:** `constants/theme.ts`, `app/(tabs)/recursos.tsx`. Nuevo: `app/formato.tsx` + registro en `app/_layout.tsx`.

@@ -13,7 +13,23 @@ import { ViveColors } from '@/constants/theme';
  * Ícono bookmark (antes pin) — unificado con el vocabulario de "guardar" que
  * ya usa Recursos, rediseño de herramientas sesión 76.
  */
-export function PinButton({ resourceId }: { resourceId: string }) {
+export function PinButton({
+  resourceId,
+  icon = 'bookmark',
+  inline = false,
+  inactiveColor = 'rgba(135,131,92,0.72)',
+}: {
+  resourceId: string;
+  /**
+   * 'bookmark' en las tools, donde el pin es el único marcador de la pantalla.
+   * 'pin' en las fichas de recurso, que ya tienen al lado el bookmark real de
+   * guardado (resource_saves): dos glyphs iguales no se podrían distinguir.
+   */
+  icon?: 'bookmark' | 'pin';
+  /** Sin el slot de 60: para headers que ya arman su propia fila de botones. */
+  inline?: boolean;
+  inactiveColor?: string;
+}) {
   const { user, requestAuth } = useAuth();
   const [pinned, setPinned] = useState(false);
   const [pinCount, setPinCount] = useState(0);
@@ -62,17 +78,17 @@ export function PinButton({ resourceId }: { resourceId: string }) {
     }
   }
 
-  return (
-    <View style={s.slot}>
-      <TouchableOpacity onPress={toggle} hitSlop={10}>
-        <MaterialCommunityIcons
-          name={pinned ? 'bookmark' : 'bookmark-outline'}
-          size={22}
-          color={pinned ? ViveColors.primary : 'rgba(135,131,92,0.72)'}
-        />
-      </TouchableOpacity>
-    </View>
+  const btn = (
+    <TouchableOpacity onPress={toggle} hitSlop={10}>
+      <MaterialCommunityIcons
+        name={(pinned ? icon : `${icon}-outline`) as any}
+        size={22}
+        color={pinned ? ViveColors.primary : inactiveColor}
+      />
+    </TouchableOpacity>
   );
+
+  return inline ? btn : <View style={s.slot}>{btn}</View>;
 }
 
 const s = StyleSheet.create({

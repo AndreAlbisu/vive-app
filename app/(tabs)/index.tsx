@@ -75,10 +75,19 @@ const RESOURCE_BUBBLE_BG  = ['rgba(232,116,59,0.18)', 'rgba(107,191,138,0.18)'];
 
 type PinnedResource = { id: string; title: string; icon: string; route: string | undefined };
 
+// `resources.type` — sistema viejo de recursos (/recurso)
 const PINNED_TYPE_ICON: Record<string, string> = {
   audio: 'volume-high',
   guia_pasos: 'format-list-numbered',
   lectura_breve: 'book-open-variant',
+};
+
+// `coach_resources.format` — Recursos v2 (/coach-recurso)
+const PINNED_FORMAT_ICON: Record<string, string> = {
+  audio: 'volume-high',
+  podcast: 'podcast',
+  video: 'play-circle-outline',
+  lectura: 'book-open-variant',
 };
 
 interface NextSession {
@@ -268,17 +277,42 @@ export default function InicioScreen() {
         if (!pins || pins.length === 0) { setDisplayResources([]); return; }
 
         const ids = pins.map(p => p.resource_id as string);
-        // Los ids de tools de VITA son slugs; los de recursos de coaches, uuids
+        // Los ids de tools de VITA son slugs; los de recursos de coaches, uuids.
+        // Esos uuids pueden ser de `resources` (sistema viejo, ficha /recurso) o
+        // de `coach_resources` (Recursos v2, ficha /coach-recurso) — hay que
+        // buscar en las dos, no se distinguen por la forma del id.
         const coachIds = ids.filter(id => !VITA_TOOL_MAP[id]);
 
-        let coachById = new Map<string, any>();
+        let coachById = new Map<string, PinnedResource>();
         if (coachIds.length > 0) {
-          const { data: rows } = await supabase
-            .from('resources')
-            .select('id, type, title')
-            .in('id', coachIds)
-            .is('retired_at', null);
-          coachById = new Map((rows ?? []).map(r => [r.id as string, r]));
+          const [legacy, v2] = await Promise.all([
+            supabase.from('resources')
+              .select('id, type, title')
+              .in('id', coachIds)
+              .is('retired_at', null),
+            supabase.from('coach_resources')
+              .select('id, format, title')
+              .in('id', coachIds)
+              .eq('status', 'published'),
+          ]);
+          // v2 primero y legacy después: si un uuid apareciera en las dos (no
+          // debería), gana el mapeo viejo, que es el que ya venía funcionando.
+          for (const r of v2.data ?? []) {
+            coachById.set(r.id as string, {
+              id: r.id as string,
+              title: r.title as string,
+              icon: PINNED_FORMAT_ICON[r.format as string] ?? 'book-open-variant',
+              route: `/coach-recurso?id=${r.id}`,
+            });
+          }
+          for (const r of legacy.data ?? []) {
+            coachById.set(r.id as string, {
+              id: r.id as string,
+              title: r.title as string,
+              icon: PINNED_TYPE_ICON[r.type as string] ?? 'book-open-variant',
+              route: `/recurso?id=${r.id}`,
+            });
+          }
         }
 
         if (!active) return;
@@ -287,14 +321,7 @@ export default function InicioScreen() {
         const mapped = ids.map(id => {
           const tool = VITA_TOOL_MAP[id];
           if (tool) return { id, title: tool.label, icon: tool.mdicon, route: tool.route };
-          const r = coachById.get(id);
-          if (r) return {
-            id: r.id as string,
-            title: r.title as string,
-            icon: PINNED_TYPE_ICON[r.type as string] ?? 'book-open-variant',
-            route: `/recurso?id=${r.id}`,
-          };
-          return null;
+          return coachById.get(id) ?? null;
         }).filter(Boolean) as PinnedResource[];
 
         setDisplayResources(mapped);
