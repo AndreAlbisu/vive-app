@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 147)
+
+**Tocado:** `screens/OnboardingBifurcacion.tsx`, `screens/LoginScreen.tsx`, `screens/RegisterScreen.tsx`, `context/AuthContext.tsx`, `app/_layout.tsx`. Nuevos: `screens/NuevaContrasenaScreen.tsx`, `app/nueva-contrasena.tsx`, `components/ui/AuthOrnamentos.tsx`. `tsc` y lint limpios, 346/346 tests.
+
+**Resumen — rediseño del onboarding temprano y la autenticación, más la recuperación de contraseña que no existía.**
+
+- **Bifurcación (`¿Qué buscás en Vita?`) rediseñada entera.** Sigue siendo una bifurcación de dos opciones (se evaluó y descartó un 70/30 con el profesional como línea al pie, y también sacarla del flujo: hoy conviene que el camino del profesional se vea, porque sumar profesionales es el cuello de botella). Fondo crema plano —primera pantalla que sale de `<AppBg>`—, dos paneles a sangre (greige y durazno) y el ornamento de líneas finas.
+  - 📝 **La geometría del ornamento costó ocho iteraciones y vale la pena no repetirlas.** Está documentado arriba del archivo: mandar todas las curvas a un mismo punto central se lee como el lomo de un libro abierto; hacerlas morir a alturas muy distintas con poca curva las achata en un abanico; doblar desde el arranque las vuelve arcos con un pico; y poner el control 1 a la misma altura que la punta lateral las deja horizontales contra los bordes. La forma correcta son **dos astas**: entran verticales al cuello del centro y se abren hacia afuera **conservando orientación erguida**. Curva base normalizada en el archivo, con `LINEAS[]` dando a cada asta su punta y su cuello propios. El relleno de color cierra sobre el path del asta de más adentro, así superficie y líneas no pueden desincronizarse.
+  - Copy: se mantuvo **"Quiero crecer"** y se rechazó "Quiero ser acompañado" — está en masculino (etiqueta mal en la primera pantalla) y es pasivo, deja afuera a quien entra a usar herramientas por su cuenta.
+  - Se sacó la flecha de "atrás": **no hacía nada**, porque `OnboardingScreen1` navega con `router.replace` y esta pantalla reemplaza a `index` en el stack.
+  - Tipografía al sistema (Plus Jakarta Sans, no Poppins) y wordmark vía `<VitaWordmark />`. 📌 La maqueta usa un serif y un wordmark liviano con tracking: **no se aplicaron**, son decisiones de sistema (Fraunces salió del proyecto el 24/08 y el wordmark es compartido con Home, login, registro y splash).
+
+- 🔴 **"¿Olvidaste tu contraseña?" no existía.** El `TouchableOpacity` no tenía `onPress` y no había ninguna función de recuperación en `AuthContext`: quien se olvidaba la contraseña no tenía salida. Ahora:
+  - `AuthContext.resetPassword(email)` manda el mail con `resetPasswordForEmail`. El redirect se arma igual que el de Google (`makeRedirectUri({ native: 'viveapp://nueva-contrasena' })`, ver el comentario largo de `signInWithGoogle` sobre por qué sin `native` devuelve la IP de Metro).
+  - Pantalla nueva `app/nueva-contrasena.tsx` → `NuevaContrasenaScreen`: canjea el `code` con `exchangeCodeForSession`, pide la contraseña nueva dos veces, valida mínimo 6 y coincidencia. Tres estados: canjeando / link vencido / listo.
+  - ⚠️ **El link viaja con `?code=` y no con tokens en el fragmento** porque el cliente usa `flowType: 'pkce'`. Consecuencia: **hay que abrir el mail en el mismo dispositivo donde se pidió**, porque el code verifier queda en su AsyncStorage. Está avisado en el copy de "link vencido".
+  - ⚠️ **`nueva-contrasena` NO está en `ONBOARDING_SCREENS`** (`app/_layout.tsx`) a propósito: al canjear el code el usuario queda logueado, y si estuviera en esa lista `AuthRedirect` lo patearía a `/(tabs)` antes de poder poner la contraseña.
+  - ✅ Andre agregó `viveapp://nueva-contrasena` a la allowlist de Supabase (Authentication → URL Configuration → Redirect URLs). El flujo loguea la URI que usa (`[auth] reset redirect URI:`) para poder compararla. **En Expo Go el redirect es una `exp://…` que cambia con la red: probarlo desde el dev build.**
+
+- **Login y Registro rediseñados** al mismo sistema que la bifurcación: crema plano, títulos en Plus Jakarta Sans a 32, verde oscuro `#26402F`, los tres botones con la misma forma (Google y Apple como tarjetas claras con el ícono a la izquierda y el texto centrado; "Usar email" contorneado, por ser el camino secundario), divisor con punto en vez de la "o", y terracota reservado para los links (pie y documentos legales).
+  - Copy: **"Hola de nuevo"** reemplaza a "Bienvenido de vuelta" (masculino) y **"Creamos una"** a "Registrate".
+  - `components/ui/AuthOrnamentos.tsx` — `ReglaConPunto`, `DivisorConPunto` y `LineasEsquina` compartidos, para que las pantallas de auth no se desincronicen. `coach-login` puede reusarlos.
+
+- 📝 **Se decidió NO unificar login y registro.** Con Google/Apple la distinción ya es ficticia (el mismo botón da de alta o entra), pero unificar obliga a mover los dos checkboxes legales a un camino condicional, y esa parte tiene razones escritas en `RegisterScreen`. Quedan separadas, con el link cruzado.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar la recuperación de contraseña de punta a punta** desde el dev build: pedir el mail, abrir el link en el mismo teléfono, cambiar la contraseña y entrar con la nueva. Nada de esto se confirmó en dispositivo todavía.
+- **`coach-login` quedó con el diseño viejo** y ahora desentona con las otras tres pantallas. Es aplicarle el mismo sistema; los ornamentos ya están en el componente compartido.
+- **Decidir si el gradiente `<AppBg>` sigue.** Ya hay tres pantallas del onboarding con crema plano; si se va, conviene que se vaya de todo el flujo de una vez y no de a pedazos.
+- 📌 **Recursos: se analizó a fondo y NO se implementó nada.** Sigue abierto el pendiente que dejó Joaquín el 29/08. Lo que quedó decidido en la conversación, para no volver a discutirlo:
+  - El motor de uso no es la exploración libre sino **el profesional asignando** entre sesiones; hoy esa sección está enterrada en el medio del scroll, limitada a un ítem visible y sin estado pendiente/hecho.
+  - **Contenido nativo**: el podcast (link externo) sale o queda como excepción; audio y lectura son el corazón; el video de YouTube se queda porque se reproduce embebido. No hacer video propio (no hay bucket y es caro).
+  - **No** se crea un formato "ejercicio con consigna" todavía: lo que falta no es un formato sino que lo asignado tenga estado, y eso sirve para los cinco.
+  - Las 6 herramientas construidas que no se ven en Recursos (sueño, meditación, escáner, relajación, lecturas, anclaje) **quedan afuera** por decisión de Andre.
+  - Falta confirmar el eje de navegación: la recomendación es `wellness_goal` (las 8 necesidades que Joaquín agregó el 29/08 y que ningún consumidor lee todavía) y no `topic_id`/DOORS. Los 8 recursos publicados tienen `wellness_goal` en NULL: hay que etiquetarlos a mano.
+- 📝 **El Notion (`docs/extracted/`) está muy desactualizado** — aviso explícito de Andre. Sirve como contexto histórico, no como especificación; en Recursos contradice lo construido (dice que la biblioteca base es de Vita y que las subidas de coaches son V2, cuando es exactamente al revés).
+
+---
+
 ## 2026-08-29 — Joaquín (sesión 146)
 
 **Tocado:** `scripts/add-resource-wellness-goal.sql` + `scripts/add-resource-status-notification.sql` (nuevos, los dos **CORRIDOS y VERIFICADOS**), `SCHEMA.md`, `app/coach-recurso-nuevo.tsx`.

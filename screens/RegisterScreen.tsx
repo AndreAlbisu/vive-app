@@ -19,14 +19,22 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
 import LegalSheet from '@/components/LegalSheet';
 import { supabase } from '@/lib/supabase';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
+
+// Misma paleta que login y la bifurcación.
+const CREMA        = '#F7F2EA';
+const BOTON_BG     = '#FCFAF5';
+const BOTON_BORDE  = 'rgba(86,94,50,0.16)';
+const TEXTO        = '#26402F';
+const TEXTO_SUAVE  = '#5C6B58';
+const TERRACOTA    = '#C4743A';
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
@@ -150,8 +158,9 @@ export default function RegisterScreen() {
   }
 
   return (
-    <AppBg>
+    <View style={s.root}>
       <StatusBar barStyle="dark-content" />
+      <LineasEsquina />
       <SafeAreaView style={s.safe}>
       <KeyboardAvoidingView
         style={s.flex}
@@ -165,6 +174,7 @@ export default function RegisterScreen() {
           {/* Logo */}
           <Animated.View style={[s.logoWrap, fadeUp(logoAnim)]}>
             <VitaWordmark />
+            <ReglaConPunto />
           </Animated.View>
 
           {/* ── Heading ──────────────────────────────────────────── */}
@@ -228,11 +238,13 @@ export default function RegisterScreen() {
               activeOpacity={0.85}
               disabled={googleLoading || loading || !canSubmit}
             >
-              {googleLoading
-                ? <ActivityIndicator size="small" color="#4285F4" />
-                : <MaterialCommunityIcons name="google" size={20} color="#4285F4" />
-              }
-              <Text style={s.googleBtnText}>Continuar con Google</Text>
+              <View style={s.btnIcon}>
+                {googleLoading
+                  ? <ActivityIndicator size="small" color="#4285F4" />
+                  : <MaterialCommunityIcons name="google" size={21} color="#4285F4" />}
+              </View>
+              <Text style={s.btnText}>Continuar con Google</Text>
+              <View style={s.btnIcon} />
             </TouchableOpacity>
 
             {/* Apple — Sign in with Apple no existe en Android, ocultar */}
@@ -243,11 +255,13 @@ export default function RegisterScreen() {
                 activeOpacity={0.85}
                 disabled={appleLoading || loading || !canSubmit}
               >
-                {appleLoading
-                  ? <ActivityIndicator size="small" color="#565E32" />
-                  : <MaterialCommunityIcons name="apple" size={20} color="#565E32" />
-                }
-                <Text style={s.appleBtnText}>Continuar con Apple</Text>
+                <View style={s.btnIcon}>
+                  {appleLoading
+                    ? <ActivityIndicator size="small" color="#1A1A1A" />
+                    : <MaterialCommunityIcons name="apple" size={22} color="#1A1A1A" />}
+                </View>
+                <Text style={s.btnText}>Continuar con Apple</Text>
+                <View style={s.btnIcon} />
               </TouchableOpacity>
             )}
 
@@ -256,16 +270,15 @@ export default function RegisterScreen() {
             )}
 
             {/* Separator */}
-            <View style={s.dividerRow}>
-              <View style={s.dividerLine} />
-              <Text style={s.dividerText}>o</Text>
-              <View style={s.dividerLine} />
-            </View>
+            <DivisorConPunto />
 
             {/* Usar email */}
             <TouchableOpacity style={s.emailBtn} onPress={toggleEmailForm} activeOpacity={0.85}>
-              <MaterialCommunityIcons name="email-outline" size={20} color="#565E32" />
-              <Text style={s.emailBtnText}>Usar email</Text>
+              <View style={s.btnIcon}>
+                <MaterialCommunityIcons name="email-outline" size={21} color={TEXTO} />
+              </View>
+              <Text style={s.btnText}>Usar email</Text>
+              <View style={s.btnIcon} />
             </TouchableOpacity>
 
             {/* Email form expandible */}
@@ -408,11 +421,12 @@ export default function RegisterScreen() {
       />
 
     </SafeAreaView>
-    </AppBg>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: CREMA },
   safe: { flex: 1 },
   flex: { flex: 1 },
   container: {
@@ -427,6 +441,7 @@ const s = StyleSheet.create({
   // Logo
   logoWrap: {
     alignItems: 'center',
+    gap: 20,
   },
 
   // Heading
@@ -435,102 +450,63 @@ const s = StyleSheet.create({
     gap: 8,
   },
   heading: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 24,
-    color: '#565E32',
-    letterSpacing: -0.4,
+    fontFamily: ViveFonts.title,
+    fontSize: 32,
+    color: TEXTO,
+    letterSpacing: -0.6,
     textAlign: 'center',
   },
   subheading: {
     fontFamily: ViveFonts.regular,
-    fontSize: 15,
-    color: '#565E32',
-    opacity: 0.6,
+    fontSize: 15.5,
+    color: TEXTO_SUAVE,
     textAlign: 'center',
   },
 
   // Buttons area
   btnsArea: {
-    gap: 12,
+    gap: 14,
+  },
+  btnIcon: { width: 26, alignItems: 'center' },
+  btnText: {
+    flex: 1,
+    textAlign: 'center',
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15.5,
+    color: TEXTO,
   },
 
   // Google button
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(86,94,50,0.12)',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.60)',
-    paddingVertical: 15,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#FFFFFF',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-      },
-      android: { elevation: 1 },
-    }),
+    backgroundColor: BOTON_BG,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: BOTON_BORDE,
+    paddingVertical: 17,
+    paddingHorizontal: 18,
   },
-  googleBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
-  },
-
-  // Apple button
   appleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: 16,
-    paddingVertical: 15,
+    backgroundColor: BOTON_BG,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: BOTON_BORDE,
+    paddingVertical: 17,
+    paddingHorizontal: 18,
   },
-  appleBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#FFFFFF',
-  },
-
-  // Divider
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginVertical: 2,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255,248,240,0.48)',
-  },
-  dividerText: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: 'rgba(135,131,92,0.52)',
-  },
-
-  // Email button
+  // "Usar email" contorneado y sin relleno: es el camino secundario.
   emailBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(86,94,50,0.12)',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: ViveColors.primary,
-    paddingVertical: 15,
-  },
-  emailBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
+    backgroundColor: 'transparent',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(38,64,47,0.32)',
+    paddingVertical: 17,
+    paddingHorizontal: 18,
   },
 
   // Email form
@@ -627,13 +603,13 @@ const s = StyleSheet.create({
   termsText: {
     flex: 1,
     fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#87835C',
-    lineHeight: 19,
+    fontSize: 13.5,
+    color: TEXTO_SUAVE,
+    lineHeight: 20,
   },
   termsLink: {
     fontFamily: ViveFonts.medium,
-    color: ViveColors.primary,
+    color: TERRACOTA,
   },
 
   // Footer
@@ -649,11 +625,11 @@ const s = StyleSheet.create({
   footerText: {
     fontFamily: ViveFonts.regular,
     fontSize: 14,
-    color: 'rgba(135,131,92,0.80)',
+    color: TEXTO_SUAVE,
   },
   footerLink: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
-    color: ViveColors.primary,
+    color: TERRACOTA,
   },
 });

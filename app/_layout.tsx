@@ -162,6 +162,7 @@ export default function RootLayout() {
           <Stack.Screen name="sala" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
+          <Stack.Screen name="nueva-contrasena" options={{ headerShown: false }} />
           <Stack.Screen name="coach-login" options={{ headerShown: false }} />
           <Stack.Screen name="coach-application" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />

@@ -19,13 +19,23 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
 import LegalSheet from '@/components/LegalSheet';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
+
+// Misma paleta que la bifurcación: crema plano (no el gradiente de <AppBg>),
+// verde oscuro para títulos y terracota sólo para el link del pie.
+const CREMA        = '#F7F2EA';
+const BOTON_BG     = '#FCFAF5';
+const BOTON_BORDE  = 'rgba(86,94,50,0.16)';
+const TEXTO        = '#26402F';
+const TEXTO_SUAVE  = '#5C6B58';
+const TERRACOTA    = '#C4743A';
+const LINEA        = 'rgba(86,94,50,0.18)';
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
@@ -34,7 +44,7 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signInWithEmail, signInWithGoogle, signInWithApple } = useAuth();
+  const { signInWithEmail, signInWithGoogle, signInWithApple, resetPassword } = useAuth();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,6 +57,28 @@ export default function LoginScreen() {
   const [appleLoading, setAppleLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [legalDoc, setLegalDoc] = useState<'terminos' | 'privacidad' | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
+
+  /** Recuperación de contraseña. Usa el mail que ya está escrito arriba en vez
+   *  de pedirlo de nuevo: si el formulario está abierto es porque la persona ya
+   *  lo tipeó. El mensaje de éxito NO confirma si la cuenta existe — decir "no
+   *  hay cuenta con ese mail" convierte esta pantalla en un verificador de qué
+   *  direcciones están registradas. Supabase responde igual en los dos casos. */
+  async function handleForgot() {
+    setServerError(null);
+    setResetMsg(null);
+    const mail = email.trim();
+    if (!mail) {
+      setEmailError(true);
+      setResetMsg('Escribí tu email arriba y volvé a tocar acá.');
+      return;
+    }
+    setResetLoading(true);
+    const err = await resetPassword(mail);
+    setResetLoading(false);
+    setResetMsg(err ?? `Si hay una cuenta con ${mail}, te llega un mail con el link. Abrilo en este mismo teléfono.`);
+  }
 
   const logoAnim    = useRef(new Animated.Value(0)).current;
   const headingAnim = useRef(new Animated.Value(0)).current;
@@ -119,8 +151,9 @@ export default function LoginScreen() {
   }
 
   return (
-    <AppBg>
+    <View style={s.root}>
       <StatusBar barStyle="dark-content" />
+      <LineasEsquina />
       <SafeAreaView style={s.safe}>
         <KeyboardAvoidingView
           style={s.flex}
@@ -133,11 +166,12 @@ export default function LoginScreen() {
             {/* Logo */}
             <Animated.View style={[s.logoWrap, fadeUp(logoAnim)]}>
               <VitaWordmark />
+              <ReglaConPunto />
             </Animated.View>
 
             {/* Heading */}
             <Animated.View style={[s.headingArea, fadeUp(headingAnim)]}>
-              <Text style={s.heading}>Bienvenido de vuelta</Text>
+              <Text style={s.heading}>Hola de nuevo</Text>
               <Text style={s.subheading}>Entrá a tu espacio</Text>
             </Animated.View>
 
@@ -150,10 +184,13 @@ export default function LoginScreen() {
                 onPress={handleGoogle}
                 activeOpacity={0.85}
                 disabled={googleLoading || loading}>
-                {googleLoading
-                  ? <ActivityIndicator size="small" color="#4285F4" />
-                  : <MaterialCommunityIcons name="google" size={20} color="#4285F4" />}
-                <Text style={s.googleBtnText}>Continuar con Google</Text>
+                <View style={s.btnIcon}>
+                  {googleLoading
+                    ? <ActivityIndicator size="small" color="#4285F4" />
+                    : <MaterialCommunityIcons name="google" size={21} color="#4285F4" />}
+                </View>
+                <Text style={s.btnText}>Continuar con Google</Text>
+                <View style={s.btnIcon} />
               </TouchableOpacity>
 
               {/* Apple — Sign in with Apple no existe en Android, ocultar */}
@@ -163,10 +200,13 @@ export default function LoginScreen() {
                   onPress={handleApple}
                   activeOpacity={0.85}
                   disabled={appleLoading || loading}>
-                  {appleLoading
-                    ? <ActivityIndicator size="small" color="#565E32" />
-                    : <MaterialCommunityIcons name="apple" size={20} color="#565E32" />}
-                  <Text style={s.appleBtnText}>Continuar con Apple</Text>
+                  <View style={s.btnIcon}>
+                    {appleLoading
+                      ? <ActivityIndicator size="small" color="#1A1A1A" />
+                      : <MaterialCommunityIcons name="apple" size={22} color="#1A1A1A" />}
+                  </View>
+                  <Text style={s.btnText}>Continuar con Apple</Text>
+                  <View style={s.btnIcon} />
                 </TouchableOpacity>
               )}
 
@@ -193,16 +233,15 @@ export default function LoginScreen() {
               )}
 
               {/* Separator */}
-              <View style={s.dividerRow}>
-                <View style={s.dividerLine} />
-                <Text style={s.dividerText}>o</Text>
-                <View style={s.dividerLine} />
-              </View>
+              <DivisorConPunto />
 
               {/* Usar email */}
               <TouchableOpacity style={s.emailBtn} onPress={toggleEmailForm} activeOpacity={0.85}>
-                <MaterialCommunityIcons name="email-outline" size={20} color="#565E32" />
-                <Text style={s.emailBtnText}>Usar email</Text>
+                <View style={s.btnIcon}>
+                  <MaterialCommunityIcons name="email-outline" size={21} color={TEXTO} />
+                </View>
+                <Text style={s.btnText}>Usar email</Text>
+                <View style={s.btnIcon} />
               </TouchableOpacity>
 
               {/* Email form expandible */}
@@ -262,9 +301,17 @@ export default function LoginScreen() {
                       : <Text style={s.enterBtnText}>Entrar</Text>}
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={s.forgotWrap} activeOpacity={0.7}>
-                    <Text style={s.forgotText}>¿Olvidaste tu contraseña?</Text>
+                  <TouchableOpacity
+                    style={s.forgotWrap}
+                    activeOpacity={0.7}
+                    onPress={handleForgot}
+                    disabled={resetLoading}>
+                    {resetLoading
+                      ? <ActivityIndicator size="small" color="#87835C" />
+                      : <Text style={s.forgotText}>¿Olvidaste tu contraseña?</Text>}
                   </TouchableOpacity>
+
+                  {resetMsg && <Text style={s.resetMsg}>{resetMsg}</Text>}
                 </View>
               )}
             </Animated.View>
@@ -273,7 +320,7 @@ export default function LoginScreen() {
             <Animated.View style={[s.footer, fadeUp(footerAnim)]}>
               <Text style={s.footerText}>¿No tenés cuenta? </Text>
               <TouchableOpacity onPress={() => router.replace('/register')} activeOpacity={0.7}>
-                <Text style={s.footerLink}>Registrate</Text>
+                <Text style={s.footerLink}>Creamos una</Text>
               </TouchableOpacity>
             </Animated.View>
           </ScrollView>
@@ -285,11 +332,12 @@ export default function LoginScreen() {
           onClose={() => setLegalDoc(null)}
         />
       </SafeAreaView>
-    </AppBg>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: CREMA },
   safe: { flex: 1 },
   flex: { flex: 1 },
 
@@ -315,57 +363,52 @@ const s = StyleSheet.create({
     gap: 32,
   },
 
-  logoWrap: { alignItems: 'center' },
+  logoWrap: { alignItems: 'center', gap: 20 },
 
-  headingArea: { alignItems: 'center', gap: 8 },
+  headingArea: { alignItems: 'center', gap: 10 },
   heading: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 24,
-    color: '#565E32',
-    letterSpacing: -0.4,
+    fontFamily: ViveFonts.title,
+    fontSize: 32,
+    color: TEXTO,
+    letterSpacing: -0.5,
     textAlign: 'center',
   },
   subheading: {
     fontFamily: ViveFonts.regular,
-    fontSize: 15,
-    color: '#87835C',
+    fontSize: 15.5,
+    color: TEXTO_SUAVE,
     textAlign: 'center',
   },
 
-  btnsArea: { gap: 12 },
+  btnsArea: { gap: 14 },
 
+  btnIcon: { width: 26, alignItems: 'center' },
+  btnText: {
+    flex: 1,
+    textAlign: 'center',
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15.5,
+    color: TEXTO,
+  },
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(255,248,240,0.62)',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.60)',
-    paddingVertical: 15,
+    backgroundColor: BOTON_BG,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: BOTON_BORDE,
+    paddingVertical: 17,
+    paddingHorizontal: 18,
   },
-  googleBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
-  },
-
   appleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: 16,
+    backgroundColor: BOTON_BG,
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
-    paddingVertical: 15,
-  },
-  appleBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#FFFFFF',
+    borderColor: BOTON_BORDE,
+    paddingVertical: 17,
+    paddingHorizontal: 18,
   },
 
   dividerRow: {
@@ -377,29 +420,24 @@ const s = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,248,240,0.65)',
+    backgroundColor: LINEA,
   },
   dividerText: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: 'rgba(135,131,92,0.72)',
+    color: TEXTO_SUAVE,
   },
 
+  // "Usar email" va contorneado y sin relleno: es el camino secundario.
   emailBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.70)',
-    paddingVertical: 15,
-  },
-  emailBtnText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
+    backgroundColor: 'transparent',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(38,64,47,0.32)',
+    paddingVertical: 17,
+    paddingHorizontal: 18,
   },
 
   emailForm: { gap: 12, marginTop: 4 },
@@ -456,7 +494,14 @@ const s = StyleSheet.create({
     color: '#F7EFE4',
     letterSpacing: 0.2,
   },
-  forgotWrap: { alignSelf: 'center' },
+  forgotWrap: { alignSelf: 'center', minHeight: 20, justifyContent: 'center' },
+  resetMsg: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: '#87835C',
+    textAlign: 'center',
+  },
   forgotText: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
@@ -471,11 +516,11 @@ const s = StyleSheet.create({
   footerText: {
     fontFamily: ViveFonts.regular,
     fontSize: 14,
-    color: '#87835C',
+    color: TEXTO_SUAVE,
   },
   footerLink: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
-    color: '#565E32',
+    color: TERRACOTA,
   },
 });
