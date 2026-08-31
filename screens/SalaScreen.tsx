@@ -24,6 +24,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Calendar from 'expo-calendar';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
+import { confirmBooking } from '@/lib/coachBookingActions';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { hasContactInfo } from '@/lib/contactInfoGuard';
@@ -213,6 +214,7 @@ export default function SalaScreen() {
   const [hasSessionHistory, setHasSessionHistory] = useState(false);
   const [sessionState, setSessionState] = useState<SessionState>('none');
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [isAddingCalendar, setIsAddingCalendar] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -643,6 +645,30 @@ export default function SalaScreen() {
     }
   }
 
+  /**
+   * Confirmar desde la sala, solo el coach.
+   *
+   * 🔴 Antes la tarjeta de "pendiente" le mostraba la solicitud y le daba una
+   * sola acción: cancelar. Le enseñaba el problema y solo la salida mala —
+   * confirmar vivía únicamente en Reservas. Reusa `confirmBooking`, que es la
+   * misma función que usa `CoachReservasScreen`: además de cambiar el estado
+   * avisa al usuario y limpia las reservas que competían por ese horario.
+   */
+  async function handleConfirmBooking() {
+    if (!activeBooking || !user || recipientIsCoach || isConfirming) return;
+    setIsConfirming(true);
+    const ok = await confirmBooking(activeBooking.id, user.id);
+    setIsConfirming(false);
+
+    if (!ok) { Alert.alert('No se pudo confirmar', 'Probá de nuevo en un momento'); return; }
+
+    // Local y no recarga: la pantalla ya actualiza así en otros lados, y el
+    // estado se recalcula solo desde el booking.
+    const confirmada = { ...activeBooking, status: 'confirmada' as const };
+    setActiveBooking(confirmada);
+    setSessionState(getSessionState(confirmada));
+  }
+
   async function handleCancelBooking() {
     if (!activeBooking || !user) return;
 
@@ -1004,17 +1030,42 @@ export default function SalaScreen() {
           </Animated.View>
         </LinearGradient>
       ) : sessionState === 'pendiente' ? (
+        /* 🔴 Esta tarjeta estaba escrita entera desde el punto de vista del
+           usuario y se le mostraba igual al coach: le decía "Solicitud enviada"
+           y "Esperando confirmación de [su propio cliente]". Al revés — él la
+           recibió, y es él quien tiene que confirmarla. */
         <View style={styles.sessionCard}>
           <View style={styles.sessionCardTop}>
             <MaterialCommunityIcons name="calendar-clock" size={14} color="#87835C" />
-            <Text style={styles.sessionCardLabel}>Solicitud enviada</Text>
+            <Text style={styles.sessionCardLabel}>
+              {recipientIsCoach ? 'Solicitud enviada' : 'Te pidió una sesión'}
+            </Text>
           </View>
           <Text style={styles.sessionCardDate}>
             {formatSalaDate(activeBooking!.scheduled_date)} · {activeBooking!.scheduled_time.slice(0, 5)} hs{tzSuffix(activeBooking!.scheduled_date, activeBooking!.scheduled_time)}
           </Text>
           <Text style={styles.sessionCardSub}>
-            Esperando confirmación de {recipientProfile?.name ?? 'tu profesional'}
+            {recipientIsCoach
+              ? `Esperando confirmación de ${recipientProfile?.name ?? 'tu profesional'}`
+              : 'Esperando que la confirmes'}
           </Text>
+
+          {/* El coach primero puede decir que sí. Rechazar queda como acción
+              secundaria, igual que en Reservas. */}
+          {!recipientIsCoach && (
+            <TouchableOpacity
+              style={[styles.confirmBtn, isConfirming && styles.confirmBtnDisabled]}
+              onPress={handleConfirmBooking}
+              disabled={isConfirming}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons name="check" size={16} color="#FFF6EC" />
+              <Text style={styles.confirmBtnText}>
+                {isConfirming ? 'Confirmando…' : 'Confirmar sesión'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={styles.cancelBtn}
             onPress={handleCancelBooking}
@@ -1022,7 +1073,9 @@ export default function SalaScreen() {
             activeOpacity={0.7}
           >
             <Text style={[styles.cancelBtnText, isCancelling && styles.cancelBtnTextDisabled]}>
-              {isCancelling ? 'Cancelando…' : 'Cancelar solicitud'}
+              {isCancelling
+                ? (recipientIsCoach ? 'Cancelando…' : 'Rechazando…')
+                : (recipientIsCoach ? 'Cancelar solicitud' : 'Rechazar')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1606,6 +1659,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   subBtnText: { fontFamily: ViveFonts.medium, fontSize: 12, color: '#565E32' },
+
+  confirmBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: ViveColors.primary,
+    borderRadius: 14,
+    paddingVertical: 13,
+    marginTop: 12,
+  },
+  confirmBtnDisabled: { opacity: 0.6 },
+  confirmBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#FFF6EC' },
 
   cancelBtn: { alignSelf: 'flex-start', marginTop: 8 },
   cancelBtnText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#E05252' },

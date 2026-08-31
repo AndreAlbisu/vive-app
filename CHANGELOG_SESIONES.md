@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · la tarjeta de solicitud pendiente, por rol)
+
+**Tocado:** `screens/SalaScreen.tsx`. 379 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- 🔴 **La tarjeta de `sessionState === 'pendiente'` estaba escrita entera desde el punto de vista del usuario y se le mostraba igual al coach.** Le decía **"Solicitud enviada"** y **"Esperando confirmación de [su propio cliente]"** — al revés: él la recibió, y es él quien tiene que confirmarla. Es el segundo caso del mismo bug de rol que ya había aparecido en la tarjeta de re-reserva; quedó anotado en esa entrada y ahora se cierra.
+- 🔴 **Y le mostraba el problema dándole solo la salida mala**: la única acción era cancelar. Confirmar vivía únicamente en `CoachReservasScreen`. Ahora el coach tiene **"Confirmar sesión"** como acción principal y "Rechazar" como secundaria, mismo orden que en Reservas.
+- 📝 **Reusa `confirmBooking` de `lib/coachBookingActions.ts`**, la misma que llama Reservas: además de cambiar el estado avisa al usuario y limpia las reservas que competían por ese horario. Duplicar eso acá habría sido una tercera copia de la regla.
+- 📝 El estado se actualiza local (`setActiveBooking` + recalcular `sessionState`) en vez de recargar, que es como la pantalla ya se actualiza en otros lados.
+- 📝 La lógica de cancelar no se tocó: `handleCancelBooking` ya distinguía por `soyCoach`. Lo único que cambia del lado del coach es la etiqueta ("Rechazar" en vez de "Cancelar solicitud").
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar en dispositivo el ciclo entero**: usuario pide sesión → el coach la ve en la sala con el copy correcto → confirma desde ahí → confirmar que al usuario le llega el aviso y que la tarjeta pasa a "confirmada" de los dos lados.
+- 📝 Vale barrer `SalaScreen` entera buscando más bloques sin guard de rol: es una pantalla que sirve a dos roles y este es el segundo caso que aparece.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · el quiz sin cuenta también deja de perderse)
 
 **Tocado:** `screens/QuizScreen.tsx`, `lib/onboardingRespuestas.ts`, `context/AuthContext.tsx`, `SCHEMA.md`. Nuevos: `lib/quizPendiente.ts`, `__tests__/quizPendiente.test.ts`. 379 tests (eran 371), `tsc` limpio, sin warnings de lint nuevos.
