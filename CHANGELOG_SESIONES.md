@@ -20,7 +20,9 @@
   - **Capa 3 — la CAUSA RAÍZ, que la captura del error reveló**: `The screen 'verificar-mail' was removed natively but didn't get removed from JS state ... 'beforeRemove' ... is not fully supported in native-stack`. El swipe de iOS **borra la pantalla a nivel NATIVO**, y `beforeRemove`+`preventDefault` no puede interceptarlo en native-stack (lo que usa expo-router) — el mecanismo de abandono de Andre funciona para el botón y el back de Android, pero **estructuralmente no para el swipe**. Fix definitivo: **`gestureEnabled: false`** en `verificar-mail` y `coach-application` (`app/_layout.tsx`). El alta es destructiva (abandonar borra la cuenta), así que se sale por el botón "Cancelar" explícito, no por un swipe casual; el back de Android sigue yendo por JS y lo maneja `beforeRemove`. Las capas 1 y 2 quedan igual porque siguen aplicando al back de Android.
 - 📝 **Bloqueante para probar el ciclo completo de verificación**: el código de 6 dígitos no llega porque falta la config de Supabase que Andre marcó como requisito (SMTP propio + plantilla Magic Link con `{{ .Token }}`) — es config fuera del repo, no un bug de código. Los caminos de ABANDONO igual se prueban sin el código (pasan antes de escribirlo).
 
-**Pendiente:** confirmar en dispositivo que el gesto de back ya no da error ni congela (debería ir directo a la bifurcación, como el botón). Seguir con: cerrar la app y reabrir, reintentar con el mismo mail, y el resto del checklist (Recursos, coach-login, onboarding color, baja de cuenta, recuperación de contraseña).
+**Alta de coach — CONFIRMADA EN DISPOSITIVO (01/09):** swipe deshabilitado (sin error), Cancelar → bifurcación con spinner, cerrar app y reabrir → retoma la verificación, reintentar con el mismo mail → deja crear. Los 4 caminos OK. (El ciclo con el código de 6 dígitos sigue bloqueado por la config de mail de Supabase, fuera del repo.)
+
+**Pendiente de la device review:** Recursos (grilla + deck + vista lista), coach-login rediseñado, onboarding con color, baja de cuenta ("BORRAR CUENTA"), recuperación de contraseña.
 
 ---
 
