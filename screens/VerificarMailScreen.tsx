@@ -24,6 +24,27 @@ const LARGO = 6;
 // forma de saber que el problema era esperar un rato más.
 const ESPERA_REENVIO = 60;   // segundos
 
+/**
+ * Qué salió mal al mandar el código, en criollo.
+ *
+ * ⚠️ El caso que NO se puede confundir es el del límite: Supabase corta por
+ * proyecto y por usuario, y el mensaje tiene que decir "esperá", porque si dice
+ * "probá de nuevo" la persona reintenta y estira el bloqueo.
+ */
+function motivoDeEnvio(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes('rate limit') || m.includes('too many') || m.includes('after'))
+    return 'Se enviaron demasiados códigos. Esperá unos minutos antes de pedir otro';
+  if (m.includes('smtp') || m.includes('sending') || m.includes('email provider'))
+    return 'No se pudo enviar el mail. Es un problema de configuración nuestro, no tuyo';
+  if (m.includes('signups not allowed') || m.includes('not found') || m.includes('user'))
+    return 'No encontramos una cuenta con ese mail';
+  if (m.includes('network') || m.includes('fetch'))
+    return 'Sin conexión. Revisá tu internet';
+  // Sin traducción: el texto crudo dice más que un genérico, aunque venga en inglés.
+  return msg;
+}
+
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
   transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
@@ -111,7 +132,11 @@ export default function VerificarMailScreen() {
 
     setReenviando(false);
     if (e) {
-      setError('No pudimos enviar el código. Revisá el mail y probá de nuevo');
+      // 🔴 El motivo real, no un genérico. Un "probá de nuevo" ante un límite de
+      // envíos hace que la persona reintente, que es exactamente lo que empeora
+      // el problema; y ante un SMTP mal configurado, que reintente para siempre.
+      console.warn('[mail] signInWithOtp falló:', e.message);
+      setError(motivoDeEnvio(e.message));
       return;
     }
     setEspera(ESPERA_REENVIO);
