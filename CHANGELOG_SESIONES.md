@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-09-01 — Andre (sesión 152 · el onboarding pregunta por la persona, no por la navegación)
+
+**Tocado:** `screens/OnboardingScreen2.tsx` (reescrita), `screens/OnboardingScreen4.tsx`, `screens/OnboardingBifurcacion.tsx`, `lib/onboardingRespuestas.ts`, `lib/guiaContextual.ts`, `app/(tabs)/conexiones.tsx`, `app/_layout.tsx`, `__tests__/onboardingRespuestas.test.ts`, `docs/onboarding-bifurcacion-opciones.md`. Borrados: `screens/OnboardingScreen3.tsx`, `screens/OnboardingScreen5.tsx`, `app/onboarding3.tsx`, `app/onboarding5.tsx`. 398 tests (eran 393), `tsc` limpio, sin warnings de lint nuevos (7 antes, 7 después).
+
+**Resumen:**
+
+- ✅ **Se cerró la decisión que quedó abierta ayer**: de las cuatro opciones de `docs/onboarding-bifurcacion-opciones.md`, Andre eligió la **A**. "¿Cómo te gustaría empezar?" se reemplazó por **"¿Qué te trae por acá?"** (cuerpo · cabeza · rumbo · solo mirando) y el onboarding pasó de **cuatro pantallas para todos a una para quien vino a mirar y dos para quien trae algo**.
+- 🔴 **El motivo no era visual.** Eran tres pantallas seguidas preguntando lo mismo con distinto grano, y ninguna preguntaba por la PERSONA: todas preguntaban cómo quiere usar el producto, en el único momento en que no lo puede saber. La pregunta nueva se come el viejo paso 1 (el universo cuerpo/mente/alma): es exactamente el mismo dato, pero preguntado por lo que le pasa a la persona en vez de disfrazado de navegación.
+- 🔴 **El botón dejó de mentir.** El flujo terminaba con "Ver profesionales" haciendo `router.replace('/register')`. Ahora la última pregunta lleva de verdad a Profesionales, **con la puerta del tema ya abierta**, y sin cuenta — `requestAuth` recién aparece al reservar.
+- 🔴 **Para eso hizo falta una CUARTA taxonomía**: `CATEGORIA_A_PUERTA` en `lib/onboardingRespuestas.ts`. Las puertas de Conexiones son capa de presentación y **no se derivan** ni del universo ni del `topic`, así que el mapa se escribe a mano. Tres tests lo cuidan: que las nueve categorías caigan en puertas que **existan** (un id inventado no falla — abre el menú, y se lee como que la respuesta se perdió), que no se repitan, y que una desconocida devuelva null sin romper.
+- ⚠️ **`app/(tabs)/conexiones.tsx` acepta ahora un parámetro `puerta`, y se aplica UNA SOLA VEZ** (ref). El parámetro se queda pegado a la ruta del tab después de navegar: sin el guard, cada vuelta al tab —o cada "volver al menú"— reabriría la puerta sola y no habría forma de salir de ella.
+- 📝 **"Solo estoy mirando" va a Recursos, no a Inicio.** Sin cuenta, Inicio es casi todo estados vacíos: quien contestó que venía a mirar aterrizaba en la prueba de que no hay nada para mirar.
+- 📝 **Las cuatro opciones pesan visualmente lo mismo, a propósito.** "¿Qué te trae?" pesa más que "¿cómo querés empezar?": si "solo estoy mirando" fuera un link chiquito al pie, la pantalla empujaría a inventar un problema para poder seguir.
+- ✅ **Primera analítica del onboarding, que hasta hoy tenía CERO líneas.** `onboarding_pregunta_vista` y `onboarding_respuesta`, con `pantalla`, `universo` y `respuesta`. Toda la discusión de ayer se dio sobre hipótesis; la próxima va a tener números.
+- 📝 **Los temas se sueltan** (decisión 4 del brief). El paso 3 salió del flujo: era el dato más específico que se recolectaba, pero su vocabulario no es el de los coaches (`Alimentación` 0 de 2, `Sexualidad` 0 de 3), así que nunca se pudo usar para filtrar. `RespuestasOnboarding.temas` quedó **opcional**, no borrado, para poder seguir leyendo lo que ya está guardado en dispositivos reales.
+- 📝 Aparte, sin relación: se sacó la línea más exterior del abanico de la bifurcación (`LINEAS`, de 5 trazadas a 4 por lado). Reponerla es volver a agregar `{ punta: 0.210, cuello: 0.525 }` como primer elemento.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin probar en dispositivo, y es lo que más importa acá.** Cuatro casos: (a) "solo estoy mirando" → aterriza en Recursos; (b) cuerpo → "Sexualidad e intimidad" → Profesionales abre el deck de la puerta *Sexualidad e intimidad*; (c) desde ese deck, "volver al menú" **no vuelve a abrir la puerta sola** (es el guard del ref); (d) registrarse después y confirmar que `user_quiz_answers` quedó con `axis` = cuerpo y `topic` = relaciones.
+- ⚠️ **El mapa `CATEGORIA_A_PUERTA` es criterio, no verdad.** Los dos que menos me cierran: `entender` ("ir a fondo en mis patrones") → *Autoestima y confianza*, que es lo más cercano que existe del lado del coach pero no es lo mismo; y `energia` → *Descanso y energía*, que deja afuera los hábitos. Vale revisarlos con Joaquín.
+- 📝 La bifurcación usuario/profesional y `OnboardingScreen1` **siguen sin analítica**. Ahora que el resto está instrumentado, son el hueco que queda para saber cuánta gente se cae antes de la primera pregunta.
+- 📝 El deck de la puerta puede estar vacío según el tema (la pantalla ya tiene su estado "todavía no hay profesionales en…"). Con `Nutrición` y `Sexualidad`, que son las puertas más flacas, conviene ver cómo se siente llegar ahí recién salido del onboarding.
+
+---
+
 ## 2026-09-01 — Joaquín (sesión 151 · device testing)
 
 **Tocado:** `screens/VerificarMailScreen.tsx`, `hooks/useCerrarSesionAlSalir.ts`.

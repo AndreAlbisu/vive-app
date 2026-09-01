@@ -14,7 +14,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -138,6 +138,19 @@ export default function ConexionesScreen() {
   const [rebookData, setRebookData]     = useState<RebookData | null>(null);
   const [unreadCount, setUnreadCount]   = useState(0);
 
+  // ── Llegar con una puerta ya abierta ──────────────────────────────────────
+  // El final del onboarding manda acá con la puerta de lo que la persona acaba
+  // de contar (`lib/onboardingRespuestas.ts` → `CATEGORIA_A_PUERTA`), así que
+  // aterriza en el deck de esa puerta y no en el menú de ejes. Es lo que hace
+  // cierto el "Ver profesionales" del botón anterior.
+  //
+  // 🔴 Se aplica UNA SOLA VEZ. El parámetro se queda pegado a la ruta del tab
+  // después de navegar, así que sin el ref cada vuelta al tab —o cada
+  // `backToMenu`— volvería a abrir la puerta sola y no habría forma de salir de
+  // ella.
+  const { puerta } = useLocalSearchParams<{ puerta?: string }>();
+  const puertaAplicada = useRef(false);
+
   // ── Cache poll ────────────────────────────────────────────────────────────
   useEffect(() => {
     prefetchCoaches();
@@ -150,6 +163,19 @@ export default function ConexionesScreen() {
     t = setInterval(check, 80);
     return () => clearInterval(t);
   }, []);
+
+  useEffect(() => {
+    if (!puerta || puertaAplicada.current) return;
+    const door = DOORS.find(d => d.id === puerta);
+    // ⚠️ Un id que no existe se ignora en silencio y la pantalla queda en el
+    // menú, que es su estado normal. Marcamos igual como aplicado: reintentar
+    // con un id inválido no lo va a volver válido.
+    puertaAplicada.current = true;
+    if (!door) return;
+    const eje = EJES.find(e => e.color === door.color);
+    if (eje) setSelectedAxisId(eje.id);
+    setSelectedDoorId(door.id);
+  }, [puerta]);
 
   // ── Notificaciones no leídas ──────────────────────────────────────────────
   const fetchNotifCount = useCallback(() => {

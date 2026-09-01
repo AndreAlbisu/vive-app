@@ -1,7 +1,8 @@
-// Lo que la persona contesta en el onboarding "guiado" (pantallas 3, 4 y 5).
+// Lo que la persona contesta en el onboarding: el universo (pantalla 2) y la
+// categoría (pantalla 4).
 //
-// 🔴 POR QUÉ EXISTE: hasta ahora se tiraba todo. `OnboardingScreen5` terminaba
-// con `router.replace('/register')` y descartaba `universo`, `categoria` y los
+// 🔴 POR QUÉ EXISTE: hasta ahora se tiraba todo. El final del guiado hacía
+// `router.replace('/register')` y descartaba `universo`, `categoria` y los
 // temas elegidos. Tres pantallas de preguntas que no dejaban nada, justo en la
 // rama para la que existe el producto ("no sé por dónde empezar").
 //
@@ -9,6 +10,12 @@
 // `profiles`), así que el `topic` que sale de acá se encola en
 // `lib/quizPendiente.ts` y se vuelca cuando aparece la sesión. Si la persona
 // abandona el registro y vuelve mañana, lo que contestó sigue ahí.
+//
+// 📝 `temas` quedó opcional el 01/09/2026, cuando el paso 3 salió del flujo con
+// la opción A: nadie los produce hoy. El campo se deja porque la decisión de
+// qué hacer con ellos —soltarlos o renombrarlos al vocabulario de los coaches—
+// sigue abierta, y porque lo que ya está guardado en dispositivos reales se
+// tiene que poder seguir leyendo.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { guardarPendiente } from '@/lib/quizPendiente';
@@ -16,7 +23,7 @@ import { guardarPendiente } from '@/lib/quizPendiente';
 export type RespuestasOnboarding = {
   universo: string;
   categoria: string;
-  temas: string[];
+  temas?: string[];
 };
 
 const KEY = 'vita_onboarding_respuestas';
@@ -57,6 +64,40 @@ export const CATEGORIA_A_TOPIC: Record<string, string> = {
 
 export function topicDeCategoria(categoria: string): string | null {
   return CATEGORIA_A_TOPIC[categoria] ?? null;
+}
+
+/**
+ * Categoría del onboarding → puerta de Profesionales (`constants/conexionesDoors.ts`).
+ *
+ * 🔴 Es lo que hace que el final del onboarding deje de mentir. El botón decía
+ * "Ver profesionales" y llevaba a `/register`; ahora lleva de verdad a la
+ * puerta de la que la persona acaba de hablar.
+ *
+ * ⚠️ Es una CUARTA taxonomía, y a diferencia de las otras tres esta no se puede
+ * derivar: las puertas son capa de presentación y no salen ni del universo ni
+ * del topic. Por eso el mapa se escribe a mano y `onboardingRespuestas.test.ts`
+ * verifica que las nueve categorías caigan en puertas que existan — un id
+ * inventado no falla, abre Profesionales en el menú y se lee como que la
+ * respuesta se perdió.
+ *
+ * 📝 Se mapea a UNA puerta y no a varias. Una puerta ya agrupa varios subtemas,
+ * y abrir el deck con la unión de dos puertas mezclaría gente que la pantalla
+ * no sabe explicar por qué está junta.
+ */
+export const CATEGORIA_A_PUERTA: Record<string, string> = {
+  energia:      'descanso',    // Sueño + Energía
+  alimentacion: 'nutricion',
+  sexualidad:   'sexualidad',
+  sentirme:     'animo',       // la puerta se llama "Estado de ánimo" y su bajada es, literal, "Sentirte mejor"
+  entender:     'autoestima',  // "ir a fondo en mis patrones": es la puerta más cercana que existe del lado del coach
+  vinculos:     'relaciones',
+  rumbo:        'proposito',
+  crecer:       'motivacion',
+  trabajo:      'foco',        // "Foco, hábitos y trabajo"
+};
+
+export function puertaDeCategoria(categoria: string): string | null {
+  return CATEGORIA_A_PUERTA[categoria] ?? null;
 }
 
 /**

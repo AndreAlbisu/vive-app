@@ -95,7 +95,6 @@ const BASE = {
 // última es la de más adentro y ES el borde del color — el relleno cierra sobre
 // ese mismo path, así superficie y líneas no pueden desincronizarse.
 const LINEAS = [
-  { punta: 0.210, cuello: 0.525 },
   { punta: 0.238, cuello: 0.532 },
   { punta: 0.266, cuello: 0.539 },
   { punta: 0.295, cuello: 0.546 },

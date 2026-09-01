@@ -8,6 +8,22 @@ import { ScaleCard } from '@/components/ScaleCard';
 import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import { guardarRespuestas, puertaDeCategoria } from '@/lib/onboardingRespuestas';
+import { registrarEvento } from '@/lib/supabase';
+
+// La única pregunta que queda después de "¿Qué te trae por acá?" — opción A del
+// brief (`docs/onboarding-bifurcacion-opciones.md`), elegida el 01/09/2026.
+//
+// 🔴 Antes era el paso 2 de 3 y venía detrás de otra pantalla que preguntaba el
+// universo por separado. Ese paso se colapsó en la pregunta anterior, así que
+// esta pasó a ser la última: dos pantallas para quien trae algo, donde antes
+// había cuatro para todos.
+//
+// 🔴 Y su botón dejó de mentir. El flujo terminaba con un tercer paso cuyo
+// botón decía "Ver profesionales" y hacía `router.replace('/register')`:
+// contestabas tres pantallas, te prometían profesionales y aparecía un campo de
+// email. Ahora la promesa se cumple en el acto y sin cuenta — Profesionales
+// anda como anónimo, `requestAuth` recién aparece al reservar.
 
 type UniversoId = 'cuerpo' | 'mente' | 'alma';
 
@@ -59,6 +75,10 @@ export default function OnboardingScreen4() {
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Segunda mitad de la analítica del onboarding: con esto y el evento de la
+    // pantalla anterior se puede ver dónde se cae la gente entre las dos.
+    registrarEvento('onboarding_pregunta_vista', { pantalla: 'categoria', universo: u }).catch(() => {});
+
     Animated.stagger(110, [
       Animated.timing(headerAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
       Animated.timing(progressAnim, { toValue: 1, duration: 360, useNativeDriver: true }),
@@ -78,7 +98,36 @@ export default function OnboardingScreen4() {
 
   function handleContinue() {
     if (!selected) return;
-    router.push({ pathname: '/onboarding5', params: { universo: u, categoria: selected } });
+
+    registrarEvento('onboarding_respuesta', { pantalla: 'categoria', universo: u, respuesta: selected }).catch(() => {});
+
+    // 🔴 Acá se guarda lo que la persona contestó, que antes se tiraba entero.
+    // Todavía no hay cuenta, así que se encola local y `AuthContext` lo vuelca
+    // a `user_quiz_answers` cuando aparezca la sesión — una sola vez, y sin
+    // pisar un quiz posterior. El eje declarado decide QUÉ recomendarle y el
+    // topic CÓMO nombrárselo.
+    //
+    // 📝 Sin `temas`: el paso 3 salió del flujo con la opción A. Era el dato
+    // más específico que se recolectaba, pero no lo podía usar nadie — su
+    // vocabulario no es el de los coaches (`Alimentación` 0 de 2 y
+    // `Sexualidad` 0 de 3 no existen del otro lado), así que "llevarte a
+    // profesionales filtrados por lo que dijiste" nunca se pudo hacer con
+    // ellos. Con universo + categoría sí.
+    void guardarRespuestas({ universo: u, categoria: selected });
+
+    // 🔴 `replace` y no `push`: es el final del onboarding. Con `push`, el
+    // gesto de back desde Profesionales devolvería a la pregunta que la persona
+    // ya contestó, en una pila que no lleva a ningún lado.
+    //
+    // ⚠️ Si la categoría no mapeara a ninguna puerta, se entra igual a
+    // Profesionales pero por el menú. Quedarse en el onboarding sería peor: la
+    // respuesta ya está guardada y la persona ya tocó "Ver profesionales".
+    const puerta = puertaDeCategoria(selected);
+    router.replace(
+      puerta
+        ? ({ pathname: '/(tabs)/conexiones', params: { puerta } } as any)
+        : ('/(tabs)/conexiones' as any),
+    );
   }
 
   return (
@@ -97,9 +146,14 @@ export default function OnboardingScreen4() {
         </Animated.View>
 
         <Animated.View style={[styles.progressArea, fadeUp(progressAnim)]}>
-          <Text style={styles.progressLabel}>Paso 2 de 3</Text>
+          {/* 📝 "Última pregunta" y no "Paso 2 de 2": la pantalla anterior no
+              muestra contador —una de sus cuatro opciones termina el flujo ahí
+              mismo, así que prometerle dos pasos a todo el mundo sería falso—
+              y un "2 de 2" que aparece sin haber visto un "1 de 2" se lee como
+              si te hubieras salteado algo. */}
+          <Text style={styles.progressLabel}>Última pregunta</Text>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '66%' }]} />
+            <View style={[styles.progressFill, { width: '100%' }]} />
           </View>
         </Animated.View>
 
@@ -152,7 +206,7 @@ export default function OnboardingScreen4() {
             activeOpacity={0.85}
             disabled={!selected}
           >
-            <Text style={styles.buttonText}>¿Seguimos?</Text>
+            <Text style={styles.buttonText}>Ver profesionales</Text>
           </TouchableOpacity>
         </Animated.View>
       </SafeAreaView>
