@@ -115,7 +115,20 @@ export default function VerificarMailScreen() {
   // que la pantalla se vaya. En `gate` no se toca nada — esa sesión ya era
   // legítima antes de entrar acá, y cerrarla por no confirmar un código en
   // medio de una reserva sería echar a la persona por un trámite.
-  const marcarTerminado = useCerrarSesionAlSalir(esAlta);
+  const { marcarTerminado, cancelar } = useCerrarSesionAlSalir(esAlta);
+
+  /**
+   * ⚠️ En el alta NO se usa `router.back()`: si se llegó acá retomando un alta
+   * a medias, el arranque navegó con `replace` y no hay nada atrás — el botón
+   * no hacía nada. Se limpia y se va a la bifurcación explícitamente.
+   *
+   * En `gate` sí: esa pantalla se abrió con `push` desde la reserva, y volver
+   * es literalmente volver a lo que la persona estaba haciendo.
+   */
+  function volver() {
+    if (!esAlta) { router.back(); return; }
+    void cancelar().then(() => router.replace('/onboarding-bifurcacion'));
+  }
 
   useEffect(() => {
     Animated.timing(anim, { toValue: 1, duration: 420, useNativeDriver: true }).start();
@@ -262,7 +275,7 @@ export default function VerificarMailScreen() {
             {/* En el alta, volver la cancela (la limpieza cierra la sesión). En
                 el gate, volver es solo volver. */}
             <View style={s.footer}>
-              <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
+              <TouchableOpacity onPress={volver} activeOpacity={0.7}>
                 <Text style={s.footerLink}>{esAlta ? 'Cancelar' : 'Ahora no'}</Text>
               </TouchableOpacity>
             </View>

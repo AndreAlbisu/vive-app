@@ -55,6 +55,23 @@ export function useCerrarSesionAlSalir(activo: boolean) {
     return unsub;
   }, [navigation]);
 
-  /** Llamar ANTES de navegar cuando la persona sí terminó el paso. */
-  return () => { terminado.current = true; };
+  return {
+    /** Llamar ANTES de navegar cuando la persona sí terminó el paso. */
+    marcarTerminado: () => { terminado.current = true; },
+
+    /**
+     * Abandonar a propósito, desde un botón.
+     *
+     * 🔴 Existe porque `router.back()` NO alcanza: cuando se retoma un alta a
+     * medias, el arranque llega con `router.replace` y **la pila queda vacía**,
+     * así que el botón de volver no hacía absolutamente nada. Acá se hace la
+     * limpieza y el que llama navega a donde corresponda, sin depender de que
+     * haya historia detrás.
+     */
+    cancelar: async () => {
+      terminado.current = true;   // la limpieza de `beforeRemove` ya no hace falta
+      await limpiarAlta();
+      await signOutRef.current();
+    },
+  };
 }

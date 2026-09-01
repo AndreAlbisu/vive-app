@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · el botón de cancelar no hacía nada al retomar el alta)
+
+**Tocado:** `hooks/useCerrarSesionAlSalir.ts`, `screens/VerificarMailScreen.tsx`, `screens/CoachApplicationScreen.tsx`. 393 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- ✅ **Confirmado que el arreglo de ayer anda**: reiniciar la app en medio del alta ahora retoma en "Confirmá tu mail" en vez de entrar como usuario.
+- 🔴 **Pero apareció el reverso: ahí el botón "Cancelar" no hacía nada.** El arranque retoma con `router.replace`, así que **la pila queda vacía** y el `router.back()` del botón no tiene a dónde volver. Por el flujo normal sí funcionaba —hay historia detrás— y por eso no se había visto.
+- **Arreglo: el botón deja de depender de la pila.** El hook expone `cancelar()`, que limpia la marca del alta y cierra sesión, y la pantalla navega a la bifurcación explícitamente. Funciona igual se haya llegado por el flujo o retomando.
+- 📝 **Mismo arreglo en la postulación**, que tenía el problema idéntico y por el mismo motivo: retomando en el paso `postular` también se llega con `replace`.
+- 📝 En modo `gate` (usuario que va a reservar) se sigue usando `router.back()`, y ahí es lo correcto: esa pantalla se abrió con `push` y volver es literalmente volver a la reserva que estaba haciendo.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar las dos formas de llegar a cada pantalla**, porque se comportan distinto: por el flujo (con historia) y retomando después de cerrar la app (sin historia). El bug vivía solo en la segunda.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · el SMTP propio es requisito, no un paso de producción)
 
 **Tocado:** `screens/VerificarMailScreen.tsx`, `docs/plantilla-mail-codigo.md`.

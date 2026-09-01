@@ -58,7 +58,13 @@ export default function CoachApplicationScreen() {
   // Irse sin enviar cierra la sesión, y la cierra ANTES de que la pantalla se
   // vaya: al alta se llega ya logueado, y una sesión que sobreviva al abandono
   // deja a la persona en el Inicio como usuario final sin haberlo pedido.
-  const marcarEnviado = useCerrarSesionAlSalir(true);
+  const { marcarTerminado: marcarEnviado, cancelar } = useCerrarSesionAlSalir(true);
+
+  // Mismo motivo que en la verificación: retomando un alta a medias se llega
+  // acá con `replace`, la pila queda vacía y `router.back()` no hace nada.
+  function volver() {
+    void cancelar().then(() => router.replace('/onboarding-bifurcacion'));
+  }
 
   const [specialty, setSpecialty] = useState<string | null>(null);
   const [bio, setBio] = useState('');
@@ -269,7 +275,7 @@ export default function CoachApplicationScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Animated.View style={[styles.header, fadeUp(headerAnim)]}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+            <TouchableOpacity onPress={volver} style={styles.backBtn} hitSlop={8}>
               <MaterialCommunityIcons name="arrow-left" size={20} color="#565E32" />
               <Text style={styles.backText}>Atrás</Text>
             </TouchableOpacity>
