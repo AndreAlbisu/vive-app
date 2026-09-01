@@ -1,7 +1,7 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveFonts } from '@/constants/theme';
 import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
@@ -141,7 +141,7 @@ export default function OnboardingScreen2() {
   // Sin botón de confirmar ya no hay estado de selección: la fila navega. El
   // guard evita que un doble tap dispare dos viajes.
   const yendo = useRef(false);
-  const medir = useRef(cronometro()).current;
+  const medir = useRef(cronometro());
 
   const titleAnim = useRef(new Animated.Value(0)).current;
   const subAnim   = useRef(new Animated.Value(0)).current;
@@ -168,6 +168,22 @@ export default function OnboardingScreen2() {
     ]).start();
   }, []);
 
+  // 🔴 Se navega con `push`, así que esta pantalla queda MONTADA debajo. Al
+  // volver atrás desde la pregunta siguiente, `yendo` seguiría trabado y las
+  // CUATRO filas quedarían muertas: se ven bien y no hacen nada. Es el mismo
+  // bug que ya tuvo la bifurcación (ver su `useFocusEffect`), y lo reintrodujo
+  // el cambio de "elegir + confirmar" a navegación directa.
+  //
+  // 📝 De paso se reinicia el cronómetro: si no, `segundos` acumularía el viaje
+  // de ida y vuelta y diría que tardó dos minutos en decidirse quien en
+  // realidad fue, volvió y eligió en cinco.
+  useFocusEffect(
+    useCallback(() => {
+      yendo.current = false;
+      medir.current = cronometro();
+    }, []),
+  );
+
   function elegir(id: TraeId) {
     if (yendo.current) return;
     yendo.current = true;
@@ -177,7 +193,7 @@ export default function OnboardingScreen2() {
       respuesta: id,
       // Sin paso de confirmación no hay `toques` que medir (ver (d) arriba); la
       // demora sigue siendo la señal de cuánto costó decidirse.
-      segundos: medir(),
+      segundos: medir.current(),
     });
 
     // 🔴 La elección se guardaba en ningún lado: era estado local que solo
