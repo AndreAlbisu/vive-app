@@ -29,7 +29,10 @@ select
   (select count(*) from public.salas     s where s.user_id    = u.id
                                               or s.coach_id   = u.id) as salas,
   (select count(*) from public.messages  m where m.sender_id  = u.id) as mensajes,
-  (select count(*) from public.reviews   r where r.user_id    = u.id) as resenas
+  -- ⚠️ `reviews` NO tiene `user_id`: son dos columnas, quien escribe y quien
+  -- recibe. Se cuentan las dos — cualquiera de las dos ata la fila a esta cuenta.
+  (select count(*) from public.reviews   r where r.reviewer_id = u.id
+                                              or r.reviewed_id = u.id) as resenas
 from auth.users u
 left join public.profiles p on p.id = u.id
 where u.email = 'pruebavita1234@gmail.com';
@@ -56,7 +59,7 @@ begin
       (select count(*) from public.bookings b where b.user_id  = v_id)
     + (select count(*) from public.salas    s where s.user_id  = v_id or s.coach_id = v_id)
     + (select count(*) from public.messages m where m.sender_id = v_id)
-    + (select count(*) from public.reviews  r where r.user_id  = v_id)
+    + (select count(*) from public.reviews  r where r.reviewer_id = v_id or r.reviewed_id = v_id)
   into v_freno;
 
   if v_freno > 0 then
