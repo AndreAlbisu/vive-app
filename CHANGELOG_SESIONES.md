@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · el cierre de sesión al abandonar perdía una carrera)
+
+**Tocado:** `screens/VerificarMailScreen.tsx`, `screens/CoachApplicationScreen.tsx`. Nuevo: `hooks/useCerrarSesionAlSalir.ts`. 390 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- 🔴 **El guard de abandono estaba puesto pero no servía.** Andre: mail cualquiera → verificación → "Cancelar" → **terminó en el Inicio del usuario igual**. La limpieza de `useFocusEffect` llamaba a `signOut()`, que es **asíncrono**: se disparaba mientras la navegación ya había ocurrido, y el `AuthRedirect` alcanzaba a ver la sesión todavía viva en una pantalla de onboarding. El bug volvía, solo que un instante después.
+- **Arreglo: `beforeRemove` en vez de la limpieza de foco.** Frena la salida, cierra la sesión, y recién entonces deja ir — para cuando la pantalla se desmonta ya no hay sesión que redirigir. De paso cubre las tres salidas (botón, back de Android, gesto de deslizar) con un solo mecanismo, que era lo que se buscaba con el `useFocusEffect`.
+- 📝 **Extraído a `hooks/useCerrarSesionAlSalir.ts`**, porque las dos pantallas del alta tenían el mismo guard copiado — y las dos tenían la misma carrera.
+- ⚠️ **La lección, para no repetirla**: `signOut()` asíncrono + navegación inmediata = el redirect global gana. Cualquier guard que dependa de "cerrar sesión al irse" tiene que **bloquear la salida**, no correr en paralelo con ella.
+- 📝 En `gate` (usuario que va a reservar) el hook queda desactivado: esa sesión ya era legítima antes de entrar.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Volver a probar el caso exacto**: crear cuenta de coach con un mail cualquiera, llegar a la verificación, tocar "Cancelar", y confirmar que queda **afuera** — no en el Inicio. Y lo mismo con el back de Android y el gesto.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · la plantilla del mail del código)
 
 **Tocado:** `SCHEMA.md`, `scripts/add-email-verified-at.sql` (marcado como corrido). Nuevos: `docs/plantilla-mail-codigo.md`, `docs/plantilla-mail-codigo.html`.

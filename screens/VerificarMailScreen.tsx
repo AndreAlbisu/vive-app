@@ -1,12 +1,13 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
   StyleSheet, StatusBar, Animated, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useCerrarSesionAlSalir } from '@/hooks/useCerrarSesionAlSalir';
 import { supabase } from '@/lib/supabase';
 import { VitaWordmark } from '@/components/VitaWordmark';
 
@@ -62,7 +63,7 @@ export default function VerificarMailScreen() {
   const router = useRouter();
   const { email, modo } = useLocalSearchParams<{ email?: string; modo?: string }>();
   const esAlta = (Array.isArray(modo) ? modo[0] : modo) !== 'gate';
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
 
   const mail = (Array.isArray(email) ? email[0] : email) ?? user?.email ?? '';
 
@@ -75,28 +76,11 @@ export default function VerificarMailScreen() {
 
   const anim = useRef(new Animated.Value(0)).current;
 
-  /**
-   * 🔴 Solo en el alta: irse sin terminar cierra la sesión. Es el mismo guard
-   * que `CoachApplicationScreen` — se llega logueado, y sin esto quedaría viva
-   * una sesión de usuario final que el `AuthRedirect` usa para mandar a la
-   * persona al Inicio sin que lo haya pedido.
-   *
-   * En `gate` NO se cierra nada: esa sesión ya era legítima antes de entrar acá.
-   *
-   * Por refs y con `[]` — con `signOut` o `esAlta` en las dependencias, un
-   * re-render correría la limpieza en medio del formulario.
-   */
-  const listo = useRef(false);
-  const signOutRef = useRef(signOut);
-  signOutRef.current = signOut;
-  const cierraAlSalir = useRef(esAlta);
-  cierraAlSalir.current = esAlta;
-
-  useFocusEffect(
-    useCallback(() => () => {
-      if (!listo.current && cierraAlSalir.current) void signOutRef.current();
-    }, []),
-  );
+  // Solo en el alta: irse sin confirmar cierra la sesión, y la cierra ANTES de
+  // que la pantalla se vaya. En `gate` no se toca nada — esa sesión ya era
+  // legítima antes de entrar acá, y cerrarla por no confirmar un código en
+  // medio de una reserva sería echar a la persona por un trámite.
+  const marcarTerminado = useCerrarSesionAlSalir(esAlta);
 
   useEffect(() => {
     Animated.timing(anim, { toValue: 1, duration: 420, useNativeDriver: true }).start();
@@ -158,7 +142,7 @@ export default function VerificarMailScreen() {
         .eq('id', user.id);
     }
 
-    listo.current = true;   // que la limpieza de foco no cierre la sesión
+    marcarTerminado();   // salió por la puerta buena: la sesión sigue
     setVerificando(false);
 
     // El alta sigue a la postulación; el gate vuelve a lo que la persona
