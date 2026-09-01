@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · la tarjeta del slot de Mensajes se sentía forzada)
+
+**Tocado:** `screens/SessionsScreen.tsx`. 393 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- 🔴 **Andre: "se siente muy forzada". Tenía razón, y el diagnóstico es que la tarjeta nació para tapar un hueco.** La puse esta misma sesión para que la lista no arrancara tan arriba; una pieza cuyo único motivo es ocupar espacio se siente forzada porque lo es. Tres cosas más la hundían:
+  - **Era un duplicado literal del Inicio.** Mismo texto, palabra por palabra: *"Sin sesiones agendadas"* / *"Reservá una sesión con tu profesional"* (`index.tsx:534`).
+  - **Anunciaba una ausencia, de un tema de otra pantalla.** Mensajes es para hablar con tus profesionales.
+  - **Era una card completa —ícono, título, subtítulo, chevron— para algo que no era una acción que quisieras ahí.** El peso visual prometía más de lo que entregaba.
+- ✅ **Ahora nombra a alguien**: *"¿Querés volver a ver a María?"*, con su avatar, y toca directo a reservar con ella. Es lo único que puede existir SOLO en esta pantalla — no habla de tu día, habla del vínculo que la pantalla lista. Y es la re-reserva en un tap, que es la medida anti-fuga #1 de la memoria de producto.
+- 📝 **En presente y sin contar el tiempo, a propósito.** *"Hace 3 semanas que no ves a María"* pasa factura; *"¿querés volver a verla?"* invita. El principio del producto es que acompañar no es perseguir.
+- 🔴 **Si nunca tuvo una sesión, no va NADA.** No hay a quién nombrar, y un cartel genérico sería volver exactamente al problema. Se aceptó que en ese caso la lista arranque más arriba: un relleno es peor que el hueco.
+- 📝 De quién habla: la sala de la **última sesión completada**, ordenando por fecha **y hora** (con dos el mismo día, cuál fue "la última" lo decidiría el planner — el mismo defecto que ya apareció dos veces hoy).
+- 📝 El avatar es de 42 y no de 50 como las filas de la lista: es una invitación, no una conversación, y tiene que pesar menos que lo que está abajo.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Verlo en dispositivo**, que es de lo que se trataba: con sesión pasada (invitación), sin ninguna (nada arriba) y con sesión próxima (carrusel).
+- 📝 Si con varios profesionales nombrar solo al último se siente arbitrario, la alternativa es no mostrar nada cuando no hay uno que destaque. Queda para verlo funcionando.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · cancelar el alta te bloqueaba tu propio mail)
 
 **Tocado:** `hooks/useCerrarSesionAlSalir.ts`, `SCHEMA.md`. 393 tests, `tsc` y lint limpios.

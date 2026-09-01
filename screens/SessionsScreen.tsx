@@ -111,16 +111,23 @@ const SOMBRA_ALCANCE = 44;
  * recolocar la mano— pero a costa de un hueco que no decía nada, y con dos
  * alturas de arranque distintas según lo que hubiera ese día.
  *
- * Ahora ese mismo lugar lo ocupa siempre algo real:
- *   · hay sesiones próximas → el carrusel
- *   · no hay ninguna        → la tarjeta de reservar (`sinProximaCard`)
- *   · no hay ni salas       → no se llega acá: manda el estado vacío entero
+ * Ahora ese lugar lo ocupa algo real, o nada:
+ *   · hay sesiones próximas          → el carrusel
+ *   · no, pero ya viste a alguien    → la invitación a volver a verlo
+ *                                      (`reinvitarCard`)
+ *   · no, y nunca tuviste sesión     → NADA
+ *   · no hay ni salas                → no se llega acá: manda el vacío entero
  *
- * ⚠️ Lo que el slot garantiza es que arriba SIEMPRE haya algo, no que la lista
- * arranque a la misma altura: el carrusel mide ~195pt y la tarjeta de reservar
- * ~70pt, así que la primera fila igual queda más abajo los días que hay sesión.
- * Igualarlas pediría estirar la tarjeta chica hasta el alto de la grande, que es
- * volver al hueco vacío por otro camino.
+ * ⚠️ El tercer caso queda a propósito sin nada. La primera versión ponía ahí un
+ * cartel genérico ("Sin sesiones agendadas · Reservá una sesión con tu
+ * profesional") que era el MISMO texto del Inicio y se sentía forzado — porque
+ * lo era: nació para tapar el hueco. Sin alguien a quien nombrar no hay nada
+ * que decir en esta pantalla, y un relleno es peor que el hueco.
+ *
+ * ⚠️ El slot NO garantiza que la lista arranque siempre a la misma altura — el
+ * carrusel mide ~195pt y la invitación ~70pt, y a veces no hay nada. Igualarlas
+ * pediría estirar la chica hasta el alto de la grande, que es volver al hueco
+ * vacío por otro camino.
  *
  * ⚠️ El banner de reembolso NO es parte del slot: es una alerta, va por encima
  * de todo y empuja al resto hacia abajo.
@@ -169,6 +176,8 @@ export default function SessionsScreen() {
   const router = useRouter();
   const { user, isLoggedIn, requestAuth } = useAuth();
   const [salas, setSalas] = useState<SalaItem[]>([]);
+  /** A quién invitar a volver a ver, cuando no hay ninguna sesión por delante. */
+  const [reinvitar, setReinvitar] = useState<SalaItem | null>(null);
   /** TODAS las sesiones próximas, en orden. Antes había una destacada y una
    *  lista aparte, y eso obligaba a cancelar en dos lugares distintos según
    *  cuál fuera. Ahora son todas iguales y se recorren de a una. */
@@ -209,11 +218,24 @@ export default function SessionsScreen() {
 
     const todayStr = new Date().toISOString().split('T')[0];
 
-    const [salasRes, nextBookingRes, refundRes] = await Promise.all([
+    const [salasRes, ultimaRes, nextBookingRes, refundRes] = await Promise.all([
       supabase
         .from('salas')
         .select('id, user_id, coach_id, user_last_read_at, coach_last_read_at, created_at')
         .or(`user_id.eq.${user.id},coach_id.eq.${user.id}`),
+      // La última sesión que YA ocurrió. Es de quien habla la invitación a volver
+      // a reservar: sin esto la tarjeta sería un cartel genérico, y con esto
+      // habla del vínculo concreto, que es lo único que existe en esta pantalla.
+      // ⚠️ Ordena también por hora: con dos sesiones el mismo día, cuál fue "la
+      // última" lo decidiría el planner.
+      supabase
+        .from('bookings')
+        .select('sala_id')
+        .eq('user_id', user.id)
+        .eq('status', 'completada')
+        .order('scheduled_date', { ascending: false })
+        .order('scheduled_time', { ascending: false })
+        .limit(1),
       // 🔴 Antes: `.limit(1).maybeSingle()`. La app mostraba UNA sola sesión
       // próxima —la más cercana— en todas sus pantallas, así que la segunda
       // existía en la base, iba a ocurrir, y era invisible: no se podía ver, ni
@@ -306,6 +328,11 @@ export default function SessionsScreen() {
         hasUnread,
       };
     });
+
+    // La sala de la última sesión pasada, para la invitación. Sale de `results`
+    // y no de otra consulta: ahí ya están el nombre, el avatar y la especialidad.
+    const ultimaSalaId = (ultimaRes.data?.[0]?.sala_id as string | undefined) ?? null;
+    setReinvitar(results.find(s => s.id === ultimaSalaId) ?? null);
 
     // El orden vive en `lib/salaOrder.ts`: más reciente arriba, vacías al final.
     // Antes no había ninguno — se guardaba lo que devolviera Postgres.
@@ -644,20 +671,50 @@ export default function SessionsScreen() {
             )}
 
             {/* Segundo estado del slot: hay conversaciones pero ninguna sesión
-                agendada. Ocupa el lugar del carrusel, así que la lista arranca
-                a la misma altura que cuando sí hay una sesión. */}
-            {proximas.length === 0 && salas.length > 0 && (
+                por delante.
+
+                🔴 Antes acá había una tarjeta que decía "Sin sesiones
+                agendadas · Reservá una sesión con tu profesional" — el MISMO
+                texto que ya está en el Inicio. Se sentía forzada, y con razón:
+                nació para tapar un hueco, anunciaba una ausencia de un tema que
+                es de otra pantalla, y la persona la veía dos veces.
+
+                Ahora nombra a alguien. Es lo único que puede existir SOLO acá:
+                no habla de tu día, habla del vínculo que esta pantalla lista.
+                Y es la re-reserva en un tap, que es la medida anti-fuga #1.
+
+                📝 En presente y sin contar el tiempo: "hace 3 semanas que no
+                ves a María" pasa factura, "¿querés volver a verla?" invita.
+                Acompañar no es perseguir.
+
+                📝 Si nunca tuvo una sesión no hay a quién nombrar, y entonces
+                no va nada: un cartel genérico sería volver al problema. */}
+            {proximas.length === 0 && reinvitar && (
               <TouchableOpacity
-                style={styles.sinProximaCard}
-                onPress={() => router.push('/(tabs)/conexiones')}
+                style={styles.reinvitarCard}
+                onPress={() => router.push({
+                  pathname: '/booking-calendar',
+                  params: {
+                    name: reinvitar.otherName,
+                    specialty: reinvitar.otherSpecialty ?? '',
+                    priceFrom: '',
+                    coachId: reinvitar.coach_id,
+                  },
+                } as any)}
                 activeOpacity={0.85}
               >
-                <View style={styles.sinProximaIcon}>
-                  <MaterialCommunityIcons name="calendar-plus" size={20} color={ViveColors.primary} />
-                </View>
-                <View style={styles.sinProximaTexto}>
-                  <Text style={styles.sinProximaTitulo}>Sin sesiones agendadas</Text>
-                  <Text style={styles.sinProximaSub}>Reservá con quien ya estás hablando</Text>
+                {reinvitar.otherAvatarUrl ? (
+                  <Image source={{ uri: reinvitar.otherAvatarUrl }} style={styles.reinvitarAvatar} />
+                ) : (
+                  <View style={[styles.reinvitarAvatar, styles.reinvitarAvatarFallback]}>
+                    <Text style={styles.reinvitarIniciales}>{reinvitar.otherInitials}</Text>
+                  </View>
+                )}
+                <View style={styles.reinvitarTexto}>
+                  <Text style={styles.reinvitarTitulo} numberOfLines={2}>
+                    ¿Querés volver a ver a {reinvitar.otherName}?
+                  </Text>
+                  <Text style={styles.reinvitarSub}>Reservá tu próxima sesión</Text>
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.45)" />
               </TouchableOpacity>
@@ -860,7 +917,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(86,94,50,0.07)',
   },
 
-  sinProximaCard: {
+  reinvitarCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -868,18 +925,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.65)',
     borderRadius: 18,
-    padding: 16,
+    padding: 14,
     marginBottom: 4,
   },
-  sinProximaIcon: {
-    width: 38, height: 38, borderRadius: 19,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(232,116,59,0.14)',
+  // 42 y no 50 como en las filas: es una invitación, no una conversación —
+  // tiene que pesar menos que la lista que está abajo.
+  reinvitarAvatar: { width: 42, height: 42, borderRadius: 21 },
+  reinvitarAvatarFallback: {
+    backgroundColor: ViveColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sinProximaTexto: { flex: 1, gap: 2 },
-  sinProximaTitulo: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#3F512F' },
-  sinProximaSub: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: 'rgba(63,81,47,0.62)' },
-
+  reinvitarIniciales: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#FFF6EC' },
+  reinvitarTexto: { flex: 1, gap: 2 },
+  reinvitarTitulo: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#3F512F' },
+  reinvitarSub: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: 'rgba(63,81,47,0.62)' },
   scroll: { flex: 1 },
   scrollContent: { paddingTop: 0, paddingBottom: TAB_BAR_CLEARANCE, paddingHorizontal: 16, gap: 0 },
 
