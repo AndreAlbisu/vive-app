@@ -126,6 +126,10 @@ export default function VerificarMailScreen() {
   const [codigo, setCodigo] = useState('');
   const [verificando, setVerificando] = useState(false);
   const [reenviando, setReenviando] = useState(false);
+  // Cancelar el alta borra la cuenta (una llamada de red) antes de navegar, así
+  // que sin feedback el botón se sentía congelado unos segundos. También frena
+  // el doble tap sobre una limpieza ya en curso.
+  const [cancelando, setCancelando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [espera, setEspera] = useState(0);
@@ -148,6 +152,8 @@ export default function VerificarMailScreen() {
    */
   function volver() {
     if (!esAlta) { router.back(); return; }
+    if (cancelando) return;   // ya está en curso, no reencolar
+    setCancelando(true);
     void cancelar().then(() => router.replace('/onboarding-bifurcacion'));
   }
 
@@ -304,8 +310,15 @@ export default function VerificarMailScreen() {
             {/* En el alta, volver la cancela (la limpieza cierra la sesión). En
                 el gate, volver es solo volver. */}
             <View style={s.footer}>
-              <TouchableOpacity onPress={volver} activeOpacity={0.7}>
-                <Text style={s.footerLink}>{esAlta ? 'Cancelar' : 'Ahora no'}</Text>
+              <TouchableOpacity onPress={volver} activeOpacity={0.7} disabled={cancelando}>
+                {cancelando ? (
+                  <View style={s.footerLoadingRow}>
+                    <ActivityIndicator size="small" color="#87835C" />
+                    <Text style={s.footerLink}>Cancelando…</Text>
+                  </View>
+                ) : (
+                  <Text style={s.footerLink}>{esAlta ? 'Cancelar' : 'Ahora no'}</Text>
+                )}
               </TouchableOpacity>
             </View>
 
@@ -403,6 +416,7 @@ const s = StyleSheet.create({
   reenviarQuieto: { color: TEXTO_SUAVE, opacity: 0.7 },
 
   footer: { alignItems: 'center' },
+  footerLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   footerLink: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,

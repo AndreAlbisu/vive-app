@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-09-01 — Joaquín (sesión 151 · device testing)
+
+**Tocado:** `screens/VerificarMailScreen.tsx`.
+
+**Resumen — arranca la device review acumulada (sesiones 147/148/150). Primer hallazgo, chico, en el alta de coach.**
+
+- Rutina de inicio: traído el batch de Andre (sesión 150, 46 commits — verificación de mail, onboarding con color, endurecimiento del alta de coach, baja de cuenta). Merge sano (393 tests, tsc limpio). Verificados contra la base sus dos migraciones nuevas: `profiles.email_verified_at` **existe** (el changelog se contradecía, quedó zanjado) y `user_quiz_answers.axis` **existe** — las dos corridas. El resto de sus pendientes es device testing.
+- **Hallazgo (alta de coach)**: al tocar "Cancelar" en la pantalla de verificación de mail, la app tardaba "un rato" y recién ahí llevaba a la bifurcación. Diagnóstico: **el comportamiento es correcto** (cancelar borra la cuenta a medio crear con `cancelar()` y va a `/onboarding-bifurcacion` = afuera, no en el Inicio de usuario), pero el botón no mostraba feedback durante el borrado (`void cancelar()` sin estado de carga) → se sentía congelado.
+- **Fix**: estado `cancelando` + spinner "Cancelando…" en el botón mientras corre `cancelar()`, con guard contra doble tap. tsc, lint y 393 tests limpios.
+- 📝 **Bloqueante para probar el ciclo completo de verificación**: el código de 6 dígitos no llega porque falta la config de Supabase que Andre marcó como requisito (SMTP propio + plantilla Magic Link con `{{ .Token }}`) — es config fuera del repo, no un bug de código. Los caminos de ABANDONO igual se prueban sin el código (pasan antes de escribirlo).
 ## 2026-08-31 — Andre (sesión 150 cont. · el camino elegido tiñe las pantallas que siguen)
 
 **Tocado:** `constants/onboardingTonos.ts`, `components/ui/AppBg.tsx`, `screens/OnboardingBifurcacion.tsx`, `OnboardingScreen2/3/4/5`, `CoachLoginScreen`, `VerificarMailScreen`, `CoachApplicationScreen`, `RegisterScreen`, `app/index.tsx`. Nuevo: `hooks/useTonoOnboarding.ts`. 393 tests, `tsc` limpio, sin warnings de lint nuevos (14 antes, 14 después).
