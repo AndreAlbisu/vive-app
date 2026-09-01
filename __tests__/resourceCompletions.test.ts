@@ -52,6 +52,26 @@ describe('recordCompletion', () => {
     expect(ev!.props.duration_seconds).toBeNull();
   });
 
+  it('🔴 sin cuenta anota el evento igual, pero NO escribe la fila', async () => {
+    // `resource_completions.user_id` es FK a `auth.users`, así que sin cuenta no
+    // hay fila posible. Pero el evento tiene que salir: es a donde el onboarding
+    // manda a quien dice "solo estoy mirando", y sin esto sus aperturas se
+    // leerían todas como abandono.
+    await recordCompletion(null, 'respiracion', 300);
+    await dejarCorrer();
+
+    expect(filas).toHaveLength(0);
+    const ev = eventos.find(e => e.nombre === 'recurso_completado');
+    expect(ev).toBeTruthy();
+    expect(ev!.props.con_cuenta).toBe(false);
+  });
+
+  it('con cuenta, el evento lo dice', async () => {
+    await recordCompletion('u1', 'respiracion', 300);
+    await dejarCorrer();
+    expect(eventos[0].props.con_cuenta).toBe(true);
+  });
+
   it('el evento lleva la sesión del dispositivo, como el resto de la analítica', async () => {
     await recordCompletion('u1', 'diario');
     await dejarCorrer();

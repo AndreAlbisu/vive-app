@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-09-01 — Andre (sesión 152 cont. · la sesión anónima nunca existió, y ya no hace falta)
+
+**Tocado:** `lib/supabase.ts`, `lib/resourceCompletions.ts`, las 8 pantallas de herramientas, `__tests__/resourceCompletions.test.ts`, `SCHEMA.md`. 412 tests (eran 410), `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- ✅ **Andre corrió la consulta y da CERO**: `select count(*) from auth.users where is_anonymous = true;`. O sea que `signInAnonymously()` **nunca funcionó**. Cada apertura de una herramienta hacía un round-trip que fallaba, y el `.catch(() => {})` de las ocho pantallas se lo comía en silencio.
+- ⚠️ **Corrección de lo que dije en la entrada anterior**: NO es cierto que las 8 herramientas nunca registraran una completación. `ensureAnonSession()` devolvía el id de la sesión existente cuando la había y solo intentaba el alta anónima si no, así que **para quien tiene cuenta siempre funcionaron**. Lo que nunca se registró es el uso **sin cuenta**.
+- 🔴 **`ensureAnonSession()` se eliminó**, y con él la idea de darle una fila de `auth.users` a cada visitante. La reemplaza `usuarioActualId(): Promise<string | null>`, que no intenta ningún alta. **Ya no hace falta**: lo único que la sesión anónima habilitaba era medir el uso sin cuenta, y eso ahora lo cubre `lib/analytics.ts` con un id de dispositivo, sin sesión y sin ensuciar `auth.users`.
+- 🔴 **`recordCompletion` acepta `null` y emite el evento SIEMPRE**, con `con_cuenta`. La fila sigue necesitando cuenta (`user_id` es FK), pero el evento no: sin esto, quien completa un recurso sin registrarse no dejaba rastro en ningún lado — **y es exactamente a donde el onboarding nuevo manda a quien dice "solo estoy mirando"**. Se cayó el `if (userIdRef.current)` que envolvía la llamada en las ocho pantallas; ahora decide la función, en un solo lugar.
+- 📝 **Por qué no fuimos por el otro camino** (prender las altas anónimas y arreglar el trigger): darle una fila de `auth.users` a cada visitante ensucia la tabla, cuenta para el MAU y deja perfiles huérfanos — todo para conseguir un id que ya tenemos gratis en el dispositivo. Y ni siquiera alcanzaba con prender el switch: `handle_new_user` escribe `profiles.email`, que es NOT NULL, y un usuario anónimo no tiene email.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar en dispositivo el par completo sin cuenta**: abrir Respiración sin registrarse, terminarla, y confirmar en `analytics_events` que están `recurso_iniciado` **y** `recurso_completado` con `con_cuenta: false` y el mismo `sesion`. Es el caso que hasta hoy era invisible.
+- 📝 Con cuenta, confirmar que la fila en `resource_completions` sigue apareciendo igual que antes — es lo único que el cambio podría haber roto.
+
+---
+
 ## 2026-09-01 — Andre (sesión 152 cont. · la sesión anónima se confundía con una cuenta real)
 
 **Tocado:** `context/AuthContext.tsx`, `lib/resourceCompletions.ts`, `screens/ProfesionalScreen.tsx`, `screens/ResourceDetailScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/ExploreResourcesScreen.tsx`, `screens/SessionsScreen.tsx`, las 8 pantallas de herramientas, `app/diario.tsx`, `app/gratitud.tsx`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `components/PinButton.tsx`, `components/ReminderBell.tsx`, `SCHEMA.md`. Renombrado: `lib/onboardingAnalytics.ts` → `lib/analytics.ts` (+ su test). Nuevos: `hooks/useRecursoAbierto.ts`, `__tests__/resourceCompletions.test.ts`. 410 tests (eran 406), `tsc` limpio, sin warnings de lint nuevos.
@@ -25,7 +44,7 @@
 
 **Pendiente para la próxima sesión:**
 
-- 🔴 **Confirmar contra la base si "Anonymous sign-ins" está habilitado**: `select count(*) from auth.users where is_anonymous = true;`. Si está apagado, `ensureAnonSession()` viene tirando y el `.catch(() => {})` se lo come — y entonces **las 8 herramientas nunca registraron una completación**. ⚠️ Sospecha concreta del porqué: el trigger `handle_new_user` escribe `profiles.email`, que es NOT NULL, y un usuario anónimo no tiene email. Hay algo roto en los dos escenarios; cuál, lo dice esa consulta.
+- ✅ ~~Confirmar si "Anonymous sign-ins" está habilitado~~ — **CONFIRMADO el 01/09/2026: la consulta da CERO**, `signInAnonymously()` nunca funcionó. Resuelto en la entrada de abajo.
 - 🔴 **Probar en dispositivo que el arreglo de la sesión anónima no rompió las herramientas**: abrir Respiración sin cuenta, completarla, y confirmar que (a) sigue apareciendo la fila en `resource_completions` y (b) que después de eso el botón de reservar **sí** pide cuenta, que antes no lo hacía.
 - 📝 Quedan los huecos 3, 4 y 5 de la auditoría: el **embudo de reserva** (los eventos están solo en la pantalla de confirmar; profesional → calendario → horario tienen cero, y es la rama que monetiza), **Sala y mensajes** (solo detección de contactos, siendo el bucle central del producto) y el **lado del coach**.
 

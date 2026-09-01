@@ -77,10 +77,27 @@ export async function registrarEvento(
   }
 }
 
-export async function ensureAnonSession(): Promise<string> {
+/**
+ * El id de la persona si tiene cuenta, o null.
+ *
+ * 🔴 REEMPLAZA A `ensureAnonSession()`, que intentaba `signInAnonymously()` y
+ * **nunca funcionó**: verificado contra la base el 01/09/2026, `auth.users` no
+ * tiene una sola fila con `is_anonymous = true`. Cada apertura de una
+ * herramienta hacía un round-trip que fallaba y el `.catch(() => {})` de las
+ * ocho pantallas se lo comía en silencio.
+ *
+ * 📝 Y ya no hace falta. La razón de ser de la sesión anónima era poder anotar
+ * el uso de una herramienta sin cuenta; eso ahora lo cubre `lib/analytics.ts`,
+ * que hila el recorrido con un id de dispositivo y no necesita sesión alguna.
+ * Lo único que sigue necesitando cuenta es la FILA en `resource_completions`,
+ * porque `user_id` es FK a `auth.users` — y eso es progreso personal, que sin
+ * cuenta no tiene dónde vivir ni a quién pertenecer.
+ *
+ * ⚠️ Volver a habilitar las altas anónimas no es solo prender el switch del
+ * panel: el trigger `handle_new_user` escribe `profiles.email`, que es NOT
+ * NULL, y un usuario anónimo no tiene email.
+ */
+export async function usuarioActualId(): Promise<string | null> {
   const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user?.id) return session.user.id;
-  const { data, error } = await supabase.auth.signInAnonymously();
-  if (error) throw error;
-  return data.user!.id;
+  return session?.user?.id ?? null;
 }

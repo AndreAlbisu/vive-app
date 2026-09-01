@@ -8,7 +8,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
-import { ensureAnonSession } from '@/lib/supabase';
+import { usuarioActualId } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
@@ -61,7 +61,7 @@ export default function RelajacionScreen() {
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    ensureAnonSession().then(uid => { userIdRef.current = uid; }).catch(() => {});
+    usuarioActualId().then(uid => { userIdRef.current = uid; }).catch(() => {});
   }, []);
 
   function stopTimer() {
@@ -99,9 +99,7 @@ export default function RelajacionScreen() {
           if (si + 1 >= STEPS.length) {
             stopTimer();
             setPhase('done');
-            if (userIdRef.current) {
-              recordCompletion(userIdRef.current, 'relajacion', TOTAL_S_LONG).catch(() => {});
-            }
+            recordCompletion(userIdRef.current, 'relajacion', TOTAL_S_LONG).catch(() => {});
           } else {
             si++;
             sp = 'tense';

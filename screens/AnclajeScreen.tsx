@@ -7,7 +7,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
-import { ensureAnonSession } from '@/lib/supabase';
+import { usuarioActualId } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
@@ -46,7 +46,7 @@ export default function AnclajeScreen() {
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    ensureAnonSession().then(uid => { userIdRef.current = uid; }).catch(() => {});
+    usuarioActualId().then(uid => { userIdRef.current = uid; }).catch(() => {});
   }, []);
 
   function handleStart() {
@@ -58,10 +58,8 @@ export default function AnclajeScreen() {
 
   function finish() {
     setPhase('done');
-    if (userIdRef.current) {
-      const elapsed = Math.round((Date.now() - startRef.current) / 1000);
-      recordCompletion(userIdRef.current, 'anclaje', elapsed).catch(() => {});
-    }
+    const elapsed = Math.round((Date.now() - startRef.current) / 1000);
+    recordCompletion(userIdRef.current, 'anclaje', elapsed).catch(() => {});
   }
 
   function handleNext() {

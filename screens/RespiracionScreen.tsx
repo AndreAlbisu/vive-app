@@ -8,7 +8,7 @@ import { ViveFonts } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
 import { ToolHeader } from '@/components/ui/ToolHeader';
-import { ensureAnonSession } from '@/lib/supabase';
+import { usuarioActualId } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
@@ -49,7 +49,7 @@ export default function RespiracionScreen() {
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    ensureAnonSession().then(uid => { userIdRef.current = uid; }).catch(() => {});
+    usuarioActualId().then(uid => { userIdRef.current = uid; }).catch(() => {});
   }, []);
 
   useEffect(() => { setRemaining(duration); }, [duration]);
@@ -111,9 +111,7 @@ export default function RespiracionScreen() {
       if (rem <= 0) {
         stopTimer();
         setPhase('done');
-        if (userIdRef.current) {
-          recordCompletion(userIdRef.current, 'respiracion', duration).catch(() => {});
-        }
+        recordCompletion(userIdRef.current, 'respiracion', duration).catch(() => {});
       }
     }, 1000);
   }
