@@ -548,10 +548,10 @@ const s = StyleSheet.create({
     flex: 1.5,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     alignItems: 'center',
     justifyContent: 'center',
   },
   saveBtnDisabled: { backgroundColor: `${ViveColors.primary}55` },
-  saveBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
+  saveBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#F7EFE4' },
 });

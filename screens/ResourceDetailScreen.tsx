@@ -615,12 +615,12 @@ const s = StyleSheet.create({
 
   notFoundText: { fontFamily: ViveFonts.regular, fontSize: 14, color: 'rgba(135,131,92,0.80)' },
   notFoundBtn: {
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 24,
   },
-  notFoundBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
+  notFoundBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#F7EFE4' },
 
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
   typeBadge: {
@@ -688,11 +688,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 14,
     paddingVertical: 14,
   },
-  audioBtnText: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#565E32' },
+  audioBtnText: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#F7EFE4' },
   audioTime: { fontFamily: ViveFonts.medium, fontSize: 12, color: '#87835C', textAlign: 'center' },
 
   video: { width: '100%', aspectRatio: 16 / 9, borderRadius: 12, backgroundColor: '#000', overflow: 'hidden' },

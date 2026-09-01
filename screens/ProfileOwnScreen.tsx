@@ -463,9 +463,6 @@ export default function ProfileOwnScreen() {
 }
 
 
-// La terracota de marca oscurecida 16%: el mínimo para que el crema encima
-// llegue a 4.5:1. Ver `guestBtnPrimary`.
-const TERRACOTA_TEXTO = '#A25842';
 // 🔴 El rojo de "Eliminar cuenta". Era `#FF7070`, que sobre el crema da 2.41:1
 // —abajo del mínimo AA de 4.5— y además es un rojo de semáforo que no pertenece
 // a una paleta de tierras. Este da 5.32:1 y se sigue leyendo como advertencia.
@@ -550,7 +547,7 @@ const styles = StyleSheet.create({
     // 📝 Es el ÚNICO botón con texto sobre terracota en la app —los otros usos
     // de `ViveColors.primary` son avatares, barras de progreso y franjas—, por
     // eso se corrige acá y no en el token de marca.
-    backgroundColor: TERRACOTA_TEXTO,
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 14,
     paddingVertical: 15,
     alignItems: 'center',
@@ -685,7 +682,7 @@ const styles = StyleSheet.create({
   profEmptyBtn: {
     // Mismo caso que `guestBtnPrimary`: verde oscuro sobre la terracota de
     // marca daba 1.78:1. Ver el comentario largo allá arriba.
-    backgroundColor: TERRACOTA_TEXTO,
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 12,
     paddingVertical: 11,
     paddingHorizontal: 20,

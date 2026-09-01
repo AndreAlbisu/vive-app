@@ -230,14 +230,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 10,
     paddingVertical: 10,
   },
   resubmitBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 13,
-    color: '#565E32',
+    color: '#F7EFE4',
   },
   notesLabel: {
     fontFamily: ViveFonts.medium,

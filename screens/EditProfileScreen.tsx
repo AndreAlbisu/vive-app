@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
 
   saveBtn: {
     marginHorizontal: 20,
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 14,
     paddingVertical: 15,
     alignItems: 'center',
@@ -581,6 +581,6 @@ const styles = StyleSheet.create({
   saveBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 16,
-    color: '#565E32',
+    color: '#F7EFE4',
   },
 });

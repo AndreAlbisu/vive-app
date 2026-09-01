@@ -1708,10 +1708,10 @@ const styles = StyleSheet.create({
   messageRowCoach: { justifyContent: 'flex-start' },
   avatarSmall: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: ViveColors.primary, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: ViveColors.primaryInk, alignItems: 'center', justifyContent: 'center',
     flexShrink: 0, marginBottom: 2,
   },
-  avatarSmallText: { fontFamily: ViveFonts.bold, fontSize: 9, color: '#565E32', letterSpacing: 0.3 },
+  avatarSmallText: { fontFamily: ViveFonts.bold, fontSize: 9, color: '#F7EFE4', letterSpacing: 0.3 },
   avatarSmallImage: { width: 28, height: 28, borderRadius: 14, flexShrink: 0, marginBottom: 2 },
   bubble: { maxWidth: '74%', paddingVertical: 10, paddingHorizontal: 14, gap: 4 },
   bubbleUser: {

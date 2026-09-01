@@ -1157,7 +1157,7 @@ const styles = StyleSheet.create({
   },
   emptyBtn: {
     marginTop: 12,
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 28,
@@ -1165,6 +1165,6 @@ const styles = StyleSheet.create({
   emptyBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 14,
-    color: '#565E32',
+    color: '#F7EFE4',
   },
 });

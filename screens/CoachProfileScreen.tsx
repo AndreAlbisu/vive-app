@@ -1479,7 +1479,7 @@ const s = StyleSheet.create({
     color: '#87835C',
   },
   priceSaveBtn: {
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     paddingVertical: 9,
     paddingHorizontal: 18,
     borderRadius: 18,
@@ -1489,7 +1489,7 @@ const s = StyleSheet.create({
   priceSaveBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 13,
-    color: '#565E32',
+    color: '#F7EFE4',
   },
 
   // Toggle

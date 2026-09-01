@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-09-01 — Andre (sesión 152 cont. · contraste: diez botones eran ilegibles y unos íconos invisibles)
+
+**Tocado:** `constants/theme.ts` (token nuevo), `screens/ProfileOwnScreen.tsx`, `CoachWeeklyPatternScreen`, `CoachProfileScreen`, `ProposeResourceScreen`, `EditProfileScreen`, `CoachApplicationScreen`, `SessionsScreen`, `ResourceDetailScreen` (×2), `ResourceProposalsScreen`, `SalaScreen`. 412 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen — arrancó como "esta pantalla está fea" y terminó siendo accesibilidad.**
+
+- 🔴 **`ViveColors.primary` (#C1694F) es demasiado clara para llevar texto encima.** Con ese fondo **ningún** color de texto llega al mínimo AA de 4.5:1 — ni el blanco puro, que da 3.89. O sea que el problema no se arregla cambiando el color del texto: hay que oscurecer el fondo.
+- 🔴 **Auditadas las 25 superficies de terracota con texto de toda la app.** Diez usaban el oliva `text` (#565E32) encima y daban **1.78:1** — ilegibles al sol. Entre ellas: "Guardar" de Editar perfil, el botón de la postulación de coach, el precio del coach, la propuesta de recurso, el audio de un recurso y el botón de "Crear cuenta" del perfil.
+- **Token nuevo `ViveColors.primaryInk` (#A25842)**: la misma terracota oscurecida un 16%, que es el mínimo para que el crema encima llegue a 4.5:1 (da 4.59). No es un color nuevo de la paleta — es el mismo, en el tono en que se puede leer. Los diez casos pasaron a ese fondo con texto crema.
+- ⚠️ **Quedan 14 en 3.6–3.9:1** (blanco o crema sobre `primary`): se leen, pero no cumplen AA para texto normal. Decisión de Andre no barrerlos todavía — cambiaría el aspecto de la app entera.
+- 🔴 **Y en el perfil con sesión había un bug aparte: los íconos de Configuración eran `rgba(255,255,255,0.75)` sobre el crema, 1.11:1.** O sea invisibles: la lista mostraba una columna de aire donde van los íconos. Era un color que quedó de cuando ese fondo era oscuro — el estado sin cuenta, veinte líneas más arriba, siempre usó el oliva correcto.
+- 🔴 El rojo de "Eliminar cuenta" (`#FF7070`) daba 2.41:1 sobre el crema, y además es un rojo de semáforo en una paleta de tierras. Pasó a `#B3392E` (5.32:1).
+- 📝 **Se sacó el avatar vacío del perfil sin cuenta.** Era el elemento más grande de la pantalla y no decía nada: quien no tiene cuenta no tiene perfil, así que mostrarle uno en blanco es enseñarle un vacío.
+- ⚠️ **Corrección de algo que dije mal en el camino**: afirmé que "Crear cuenta" era el único botón con texto sobre terracota. Lo dije mirando por encima los primeros resultados de un grep, y eran 25. El script de auditoría quedó en el historial de la sesión y se puede reusar.
+
+**Pendiente para la próxima sesión:**
+
+- ⚠️ **Decidir los 14 restantes** (blanco/crema sobre `primary`, 3.6–3.9:1). Pasarlos a `primaryInk` es mecánico, pero oscurece todos los botones primarios de la app: es decisión de diseño, no de accesibilidad pura.
+- 📝 Vale correr la misma auditoría sobre los otros fondos de color de la app (los acentos de cuerpo/mente/alma, los chips), no solo sobre la terracota.
+
+---
+
 ## 2026-09-01 — Andre (sesión 152 cont. · "¿Qué te trae por acá?" al boceto de Andre)
 
 **Tocado:** `screens/OnboardingScreen2.tsx` (rediseñada), `docs/onboarding-bifurcacion-opciones.md`. 412 tests, `tsc` limpio, sin warnings de lint nuevos.
