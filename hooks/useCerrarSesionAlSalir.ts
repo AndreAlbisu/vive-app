@@ -1,7 +1,39 @@
 import { useEffect, useRef } from 'react';
 import { useNavigation } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { limpiarAlta } from '@/lib/altaCoach';
+import { limpiarAlta, pasoDelAlta } from '@/lib/altaCoach';
+import { deleteMyAccount } from '@/lib/accountDeletion';
+
+/**
+ * Abandonar el alta **borra la cuenta**, no solo cierra la sesión.
+ *
+ * 🔴 Cerrar sesión no alcanzaba: la cuenta quedaba existiendo con
+ * `role = 'user'` y sin fila en `coaches`, así que al volver a intentar con el
+ * mismo mail el login entraba bien y el guard de `validateAndNavigate` la leía
+ * como **un usuario final que quiere postularse** — "esta cuenta ya está
+ * registrada como usuario, usá otro mail". La persona quedaba bloqueada de su
+ * propia dirección por haber cancelado.
+ *
+ * Abandonar tiene que no dejar nada. La función `delete-account` reescribe el
+ * mail a `deleted-<uuid>@vita.invalid`, así que **libera la dirección** y se
+ * puede volver a empezar con la misma.
+ *
+ * ⚠️ Solo se borra si hay un alta en curso. Esa marca se pone únicamente para
+ * cuentas que ESTE flujo acaba de crear (`isNewSignup`), así que es la garantía
+ * de que nunca se toca una cuenta que ya existía. Es una acción destructiva:
+ * el guard vale aunque hoy no haya forma de llegar sin la marca.
+ *
+ * 📝 Si el borrado falla igual se sigue: se limpia y se cierra sesión. Dejar a
+ * la persona atrapada en la pantalla porque no se pudo borrar sería peor que
+ * la cuenta huérfana.
+ */
+async function abandonarAlta(): Promise<void> {
+  if (await pasoDelAlta()) {
+    const res = await deleteMyAccount();
+    if (!res.ok) console.warn('[alta] no se pudo borrar la cuenta abandonada:', res.message);
+  }
+  await limpiarAlta();
+}
 
 /**
  * Cierra la sesión cuando la persona se va de una pantalla del alta sin
@@ -45,9 +77,7 @@ export function useCerrarSesionAlSalir(activo: boolean) {
       if (terminado.current || !activoRef.current) return;
 
       ev.preventDefault();
-      // La marca del alta se va con la sesión: si no, al volver a abrir la app
-      // el arranque intentaría retomar un alta que ya no tiene sesión detrás.
-      void limpiarAlta().then(() => signOutRef.current()).finally(() => {
+      void abandonarAlta().then(() => signOutRef.current()).finally(() => {
         // La misma acción que se frenó, ya sin sesión detrás.
         (navigation as unknown as { dispatch: (a: unknown) => void }).dispatch(ev.data.action);
       });
@@ -70,7 +100,7 @@ export function useCerrarSesionAlSalir(activo: boolean) {
      */
     cancelar: async () => {
       terminado.current = true;   // la limpieza de `beforeRemove` ya no hace falta
-      await limpiarAlta();
+      await abandonarAlta();
       await signOutRef.current();
     },
   };

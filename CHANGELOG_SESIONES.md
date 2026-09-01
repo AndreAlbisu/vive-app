@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · cancelar el alta te bloqueaba tu propio mail)
+
+**Tocado:** `hooks/useCerrarSesionAlSalir.ts`, `SCHEMA.md`. 393 tests, `tsc` y lint limpios.
+
+**Resumen:**
+
+- 🔴 **Cancelar la verificación y volver a intentar con el mismo mail decía "esta cuenta ya está registrada como usuario, usá otro".** Cerrar sesión no alcanzaba: **la cuenta quedaba existiendo** con `role = 'user'` (el default del trigger) y sin fila en `coaches`. Al reintentar, el login entraba bien y el guard de `validateAndNavigate` la leía como un usuario final que quiere postularse. **La persona quedaba bloqueada de su propia dirección por haber cancelado.**
+- **Arreglo: abandonar el alta BORRA la cuenta**, no solo cierra sesión. Reusa `deleteMyAccount()` / la función `delete-account`, que además reescribe el mail a `deleted-<uuid>@vita.invalid` — o sea que **libera la dirección** y se puede volver a empezar con la misma.
+- ⚠️ **Solo se borra si hay marca de alta en curso.** Esa marca se pone únicamente para cuentas que este flujo acaba de crear (`isNewSignup`), así que es la garantía de que nunca se toca una cuenta preexistente. Es una acción destructiva: el guard vale aunque hoy no haya forma de llegar sin la marca.
+- 📝 **Si el borrado falla, igual se sigue**: se limpia la marca y se cierra sesión. Dejar a la persona atrapada en la pantalla porque no se pudo borrar sería peor que una cuenta huérfana.
+- 📝 Aplica a los cuatro caminos de abandono, porque vive en el hook: botón, back de Android, gesto, y el cancelar de un alta retomada.
+
+**Pendiente para la próxima sesión:**
+
+- ⚠️ **Las cuentas de prueba creadas ANTES de este arreglo siguen existiendo** y van a seguir dando "ya registrada como usuario" con esos mails. Para reusarlos hay que limpiarlas — y 🔴 **no desde el panel de Authentication**, que deja la fila de `profiles` huérfana con el email UNIQUE y rompe ese mail para siempre (ver SCHEMA). Hay que borrar las dos filas por SQL, o usar direcciones nuevas mientras tanto.
+- 🔴 **Probar el ciclo**: crear con un mail, cancelar, y volver a crear con **el mismo mail** — tiene que dejar.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · el botón de cancelar no hacía nada al retomar el alta)
 
 **Tocado:** `hooks/useCerrarSesionAlSalir.ts`, `screens/VerificarMailScreen.tsx`, `screens/CoachApplicationScreen.tsx`. 393 tests, `tsc` limpio, sin warnings de lint nuevos.
