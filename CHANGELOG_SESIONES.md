@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-09-01 — Andre (sesión 152 cont. · "¿Qué te trae por acá?" al boceto de Andre)
+
+**Tocado:** `screens/OnboardingScreen2.tsx` (rediseñada), `docs/onboarding-bifurcacion-opciones.md`. 412 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- ✅ **La pantalla pasa al boceto de Andre**: filas en vez de tarjetas, título grande alineado a la izquierda, subtítulo que amortigua el peso de la pregunta, y **navegación directa al tocar la fila** (un tap en vez de dos). El boceto ya respetaba lo que más importaba: las cuatro opciones con el mismo peso visual.
+- 🔴 **Ajuste 1 — cada universo lleva SU color.** En el boceto tres círculos eran verde salvia y solo "Algo de la cabeza" naranja, lo que la volvía la recomendada de facto: el ojo va ahí primero. **Y ahora que medimos, eso contamina el dato**: `onboarding_opcion_tocada` estaría midiendo el acento visual en vez de la preferencia real. Van los tres colores que la pregunta siguiente ya usa por universo, así que además dan continuidad.
+- 🔴 **Ajuste 2 — las bajadas hablan de síntomas, no de categorías.** El boceto decía *"Sueño, energía, hábitos"*, que es una taxonomía. Quedó *"No dormís, andás sin pilas"*, *"Ansiedad, bajón, discusiones"*, *"No sabés para dónde vas"*. El boceto ganaba consistencia (las cuatro como listas) pero perdía justo lo que justificaba la opción A: **dejar de preguntar en el vocabulario del producto**.
+- 📝 **Ajuste 3 — "Solo estoy mirando" no lleva flecha.** Las otras tres llevan a una pregunta más; esa termina el onboarding y deja en Recursos. Con la misma flecha, las cuatro prometían lo mismo. La asimetría es la señal.
+- ⚠️ **Ajuste 4 — se fue el botón "¿Seguimos?", y eso tiene un costo de medición.** La navegación directa es mejor UX, pero **elimina `toques`** (cuántas opciones se tocaban antes de decidirse), que era la señal de duda: ahora el primer toque ya navega. Queda `segundos`. Por lo mismo, `onboarding_opcion_tocada` dejó de emitirse en esta pantalla — sería un duplicado exacto de `onboarding_respuesta`.
+- 📝 El gris de las bajadas del boceto quedaba por debajo del mínimo de contraste; se usó `#5C6B58`, que da ~4.6:1 sobre el crema (AA pide 4.5). Anotado en el código para que no se aclare sin volver a medir.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Verlo en dispositivo**, sobre todo la fila sin flecha: confirmar que se lee como "esta es distinta" y no como que falta algo.
+- 📝 **Queda una inconsistencia de interacción entre las dos preguntas**: esta navega al tocar y la de categoría sigue pidiendo elegir + "Ver profesionales". Para un flujo de dos pantallas conviene que las dos se comporten igual; no se tocó porque el boceto no la cubría. Decisión de Andre.
+
+---
+
 ## 2026-09-01 — Andre (sesión 152 cont. · la RLS rechazaba toda la analítica sin cuenta)
 
 **Tocado:** `SCHEMA.md`. Nuevo: `scripts/add-analytics-anon-insert.sql` (**CORRIDO el 01/09/2026**).

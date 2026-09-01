@@ -258,6 +258,7 @@ Detrás de "Dale" van las preguntas de la opción A.
 | Pantalla | Pregunta | Va a |
 |---|---|---|
 | `OnboardingScreen2` | **¿Qué te trae por acá?** — cuerpo · cabeza · rumbo · solo mirando | *mirando* → Recursos · el resto → abajo |
+| | *(rediseñada sobre el boceto de Andre, 01/09: filas en vez de tarjetas, título a la izquierda, navegación directa al tocar)* | |
 | `OnboardingScreen4` | **¿Qué aspecto querés explorar?** (*Última pregunta*) | Profesionales, **en el menú de su eje con su tema destacado** |
 
 ⚠️ **La primera versión abría el deck de la puerta** —el mazo de personas para
@@ -301,8 +302,8 @@ anónimo por dispositivo que viaja en `properties.sesion` de cada evento.
 | Evento | Dónde | Qué contesta |
 |---|---|---|
 | `onboarding_pantalla_vista` | bienvenida · bifurcación · las dos preguntas | Dónde se cae la gente |
-| `onboarding_opcion_tocada` | las dos preguntas | **Qué llama la atención**, con `orden`: el primer toque es lo que atrajo, los siguientes son los que se lo pensaron |
-| `onboarding_respuesta` | las cuatro pantallas | Qué elige, con `toques` y `segundos` — dos personas que eligen lo mismo, una en 2s y otra en 20s, no dicen lo mismo sobre la pregunta |
+| `onboarding_opcion_tocada` | la pregunta de categoría | **Qué llama la atención**, con `orden`: el primer toque es lo que atrajo, los siguientes son los que se lo pensaron |
+| `onboarding_respuesta` | las cuatro pantallas | Qué elige, con `segundos` (y `toques` donde hay paso de confirmación) — dos personas que eligen lo mismo, una en 2s y otra en 20s, no dicen lo mismo sobre la pregunta |
 | `onboarding_fin` | las dos preguntas | Dónde aterriza y con qué puerta sugerida |
 | `onboarding_registro` | `AuthContext` | **El puente**: única fila con `user_id` y `sesion` juntos |
 | `conexiones_puerta_abierta` | Profesionales | Con `sugerida`: **si abre la que le sugerimos u otra** |
@@ -311,6 +312,8 @@ anónimo por dispositivo que viaja en `properties.sesion` de cada evento.
 mayoría de los que llegan del onboarding abre una puerta distinta a la
 destacada, el mapa `CATEGORIA_A_PUERTA` está mal — y lo va a decir el dato, no
 una discusión.
+
+⚠️ **`onboarding_opcion_tocada` ya no sale de "¿Qué te trae por acá?"**: desde el rediseño del 01/09/2026 esa pantalla navega al tocar la fila, así que tocar **es** responder y el evento sería un duplicado de `onboarding_respuesta`. Se perdió `toques` como señal de duda ahí; queda `segundos`, que mide lo mismo por otro lado. La pregunta de categoría sí lo conserva, porque todavía tiene paso de confirmación.
 
 📝 **La bienvenida se mide aparte por una razón concreta**: avanza con un *long
 press*, así que tiene una forma de perder gente que ninguna otra pantalla tiene
