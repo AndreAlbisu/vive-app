@@ -128,6 +128,18 @@ export default function CoachLoginScreen() {
       return;
     }
 
+    // 🔴 Alta nueva → primero se confirma el mail. Es la única forma de saber
+    // que la casilla es de quien se postula, y de que la cuenta va a poder
+    // recuperarse: `resetPassword` manda un mail, así que una dirección mal
+    // tipeada deja una cuenta irrecuperable y sin aviso.
+    //
+    // Quien ENTRA (no se registra ahora) ya pasó por acá alguna vez o tiene
+    // fila en `coaches`, así que no se le vuelve a pedir.
+    if (isNewSignup) {
+      router.replace({ pathname: '/coach-verificacion', params: { email: user.email ?? '' } } as any);
+      return;
+    }
+
     router.replace('/coach-application');
   }
 

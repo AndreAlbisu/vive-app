@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · verificación de mail en el alta de coach)
+
+**Tocado:** `screens/CoachLoginScreen.tsx`, `app/_layout.tsx`, `SCHEMA.md`. Nuevos: `screens/CoachVerificationScreen.tsx`, `app/coach-verificacion.tsx`, `scripts/add-email-verified-at.sql` (**⚠️ FALTA CORRER**). 381 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- ✅ **El alta de coach ahora pide un código de 6 dígitos** antes de dejar postular. Dos cosas que hasta hoy no se comprobaban: quien se equivoca al tipear su dirección quedaba con una cuenta **irrecuperable y sin aviso** (`resetPassword` manda un mail a una casilla que no existe), y Vita aprobaba profesionales sin haber comprobado que la casilla desde la que se postulan fuera suya — en una verificación de credenciales, justo el tipo de cosa que no se puede dar por sentada.
+- 🔴 **Por qué OTP propio y no "Confirm email" de Supabase.** Ese ajuste es **del proyecto entero**: prenderlo frenaría también el registro de usuarios con un muro de mail en el peor momento, que se decidió NO hacer. Y con el ajuste apagado Supabase **auto-confirma a todos**, así que `auth.users.email_confirmed_at` viene lleno siempre y no distingue nada — de ahí la columna propia `profiles.email_verified_at`.
+- 📝 **Prenderlo además habría roto dos cosas en silencio**, que es lo que se revisó antes de descartarlo: (1) `validateAndNavigate` hace `getUser()` y sin sesión hace `return` sin mensaje, o sea que el botón de crear cuenta parecería no hacer nada; (2) `signUpWithEmail` escribe `accepted_terms`/`age_confirmed` en `profiles` solo `if (data.session && data.user)` — sin sesión quedarían solo en la metadata de auth, y según SCHEMA ese campo es lo que hace oponible la cláusula anti-solicitación.
+- 📝 **`shouldCreateUser: false`** en el `signInWithOtp`: la cuenta ya existe. Sin eso, un mail mal tipeado daría de alta una cuenta nueva en vez de fallar.
+- 📝 **Cuenta regresiva de 45s en el reenvío.** Sin eso la persona toca "Reenviar" tres veces seguidas y se come el límite de Supabase sin entender por qué.
+- 📝 **Mismo guard de abandono que `CoachApplicationScreen`**: irse sin confirmar cierra la sesión. También se llega acá logueado, así que sin eso el bug de esta mañana volvía por otra puerta.
+- ⚠️ **`coach-verificacion` NO se agregó a `ONBOARDING_SCREENS`** en `app/_layout.tsx`, y quedó escrito por qué: son pantallas a las que se llega CON sesión a propósito, y meterlas en ese set las mandaría de vuelta al Inicio apenas se montan.
+- 📝 El mail que se pasa a la pantalla sale de `user.email` (la sesión) y no del input: es el que Supabase realmente registró.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **CORRER `scripts/add-email-verified-at.sql`.** Hasta que se corra, el `update` de `email_verified_at` falla en silencio — la verificación igual funciona como gate, pero no deja constancia.
+- 🔴 **⚠️ HAY QUE EDITAR LA PLANTILLA DE MAIL EN SUPABASE, o esto no funciona.** La plantilla de *Magic Link* por defecto manda `{{ .ConfirmationURL }}`, o sea **un link y ningún código**. Para que llegue el número de 6 dígitos hay que incluir **`{{ .Token }}`** en la plantilla (Dashboard → Authentication → Email Templates → Magic Link). Sin ese cambio, la persona recibe un link que no lleva a ningún lado útil y la pantalla se queda esperando un código que nunca vio.
+- ⚠️ **El SMTP interno de Supabase tiene un límite bajo de mails por hora.** Alcanza para probar de a poco, pero para producción hace falta un SMTP propio — y conviene mirarlo antes de que un coach real se quede sin poder registrarse.
+- 🔴 **Sin probar en dispositivo**: el ciclo entero (código que llega, código correcto, código vencido, reenvío) y que abandonar en el medio cierre la sesión.
+- 📝 Queda pendiente la otra mitad de lo hablado: **exigir el mail verificado a los usuarios antes de reservar/pagar**, que es donde el mail importa de verdad sin frenar el alta.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · abandonar la postulación de coach te dejaba adentro como usuario)
 
 **Tocado:** `screens/CoachApplicationScreen.tsx`. 381 tests, `tsc` limpio, sin warnings de lint nuevos.
