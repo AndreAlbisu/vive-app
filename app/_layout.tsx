@@ -211,8 +211,17 @@ export default function RootLayout() {
               pantalla nueva ya está puesta debajo del color y lo único que
               queda por delante es descubrirla. */}
           <Stack.Screen name="coach-login" options={{ headerShown: false, animation: 'none' }} />
-          <Stack.Screen name="verificar-mail" options={{ headerShown: false }} />
-          <Stack.Screen name="coach-application" options={{ headerShown: false }} />
+          {/* 🔴 `gestureEnabled: false` en las dos pantallas del alta. El swipe
+              de iOS borra la pantalla a nivel NATIVO, y `beforeRemove` +
+              `preventDefault` (el mecanismo de abandono limpio) NO está
+              soportado para ese caso en native-stack: la pantalla se va nativa
+              pero el JS cree que sigue → "was removed natively but didn't get
+              removed from JS state" y cuelgue (device review 01/09). El alta es
+              destructiva (abandonar borra la cuenta), así que la salida tiene
+              que ser el botón "Cancelar" explícito, no un swipe casual. El back
+              de Android sí va por JS y lo sigue manejando `beforeRemove`. */}
+          <Stack.Screen name="verificar-mail" options={{ headerShown: false, gestureEnabled: false }} />
+          <Stack.Screen name="coach-application" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="(coach)" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="profesional" options={{ headerShown: false }} />
