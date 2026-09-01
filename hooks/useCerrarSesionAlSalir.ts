@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useNavigation } from 'expo-router';
+import { useNavigation, router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { limpiarAlta, pasoDelAlta } from '@/lib/altaCoach';
 import { deleteMyAccount } from '@/lib/accountDeletion';
@@ -56,6 +56,13 @@ async function abandonarAlta(): Promise<void> {
  * paso cubre las tres salidas —el botón, el back de Android y el gesto de
  * deslizar— con un solo mecanismo.
  *
+ * 🔴 NO se re-despacha el `GO_BACK` original: al alta se llega con
+ * `router.replace`, así que la pila queda VACÍA y ese `GO_BACK` no tiene a
+ * dónde ir — React Navigation tira "GO_BACK was not handled" y la pantalla
+ * queda congelada (hallazgo device review 01/09). Se navega EXPLÍCITO a la
+ * bifurcación, el mismo destino que el botón "Cancelar". El intercept solo
+ * corre en el alta (`activoRef`), y el alta siempre termina ahí.
+ *
  * ⚠️ Todo por refs: con `signOut` o `activo` en las dependencias, un re-render
  * del contexto volvería a suscribir el listener en medio del formulario.
  */
@@ -78,8 +85,10 @@ export function useCerrarSesionAlSalir(activo: boolean) {
 
       ev.preventDefault();
       void abandonarAlta().then(() => signOutRef.current()).finally(() => {
-        // La misma acción que se frenó, ya sin sesión detrás.
-        (navigation as unknown as { dispatch: (a: unknown) => void }).dispatch(ev.data.action);
+        // A la bifurcación explícito, ya sin sesión detrás. NO se re-despacha
+        // `ev.data.action` (GO_BACK): la pila del alta está vacía y falla —
+        // ver el comentario 🔴 de arriba.
+        router.replace('/onboarding-bifurcacion');
       });
     });
     return unsub;
