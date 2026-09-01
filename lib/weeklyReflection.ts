@@ -77,13 +77,48 @@ const CLINICAL = /\b(depresi[óo]n|depresiv|ansiedad generalizada|trastorno|s[í
 const GURU = re('\\b(transformar[áa]#|vas a lograr#|te lo mereces#|el universo#|energ[íi]a positiva#|todo pasa por algo#|s[óo]lo depende de vos#|solo depende de vos#)');
 
 /** Con tono `gentle` no se anima ni se pide nada: alguien la está pasando mal
- *  y arriba ya hay una tarjeta sugiriendo hablar con un profesional. */
+ *  y una devolución liviana sería lo contrario de acompañar. */
 const CHEER = re('\\b(felicit[a-záéíóúñ]*#|buen[íi]simo#|excelente#|genial#|orgullo[a-záéíóúñ]*#|segu[íi] as[íi]#|no bajes los brazos#)');
-const ASKS  = re('\\b(reserv[áa]#|prob[áa]#|anot[áa]te#|escrib[íi]le#|agend[áa]#|clicke[áa]#|toc[áa] (ac[áa]|aqu[íi])#)');
+const ASKS  = re('\\b(prob[áa]#|anot[áa]te#|escrib[íi]le#|clicke[áa]#|toc[áa] (ac[áa]|aqu[íi])#)');
+
+/** 🔴 Pedir una reserva. Corre en TODOS los tonos, no solo en `gentle`.
+ *
+ *  Hasta la sesión 153 `reservá` vivía adentro de `ASKS`, que solo se evalúa
+ *  con tono suave — o sea que en `warm` la tarjeta podía pedir un booking sin
+ *  que nada lo frenara. `docs/la-voz-de-sofia.md` §3.4 es explícito: el día que
+ *  la voz cálida sugiere reservar deja de ser un amigo y es un vendedor, y eso
+ *  no depende del ánimo del día. Ya se aprendió una vez acá — `CoachSuggestionCard`
+ *  se sacó en la sesión 97 por lo mismo.
+ *
+ *  ⚠️ Nombrar al profesional NO es vender (corrección del 28/08: *"eso decíselo
+ *  el sábado"* hace lo contrario de un vendedor, reconoce su límite). Por eso
+ *  los patrones apuntan al **pedido**, no a la palabra: `decíselo`, `hablalo`,
+ *  `tu sesión del sábado` pasan.
+ *
+ *  ⚠️ Compensación deliberada: `reserv[áa]#` también matchea el sustantivo
+ *  ("una reserva el sábado"), así que rechaza alguna frase legítima. Se deja
+ *  ancho a propósito — el costo de rechazar de más es caer al texto de las
+ *  reglas, que es bueno; el de dejar pasar es publicar un pedido de venta en el
+ *  peor momento posible. */
+const VENDE = re('\\b(reserv[áa]#|reserv[áa]te#|reservar una sesi[óo]n#|agend[áa]#|agendar una sesi[óo]n#|sac[áa] un turno#|ped[íi] (un )?turno#|contrat[áa]#)');
+
+/** 🔴 La app fingiendo sentir algo. `docs/la-voz-de-sofia.md` §3.5: *"«Me alegro
+ *  por vos» de una app es mentira. Cálida y presente, sí. Persona, no."*
+ *
+ *  Corre en todos los tonos. Los patrones son de **primera persona**: lo que
+ *  está prohibido es que el sistema se atribuya un estado, no que la frase hable
+ *  de lo que siente quien lee. Por eso `siento que` cae y `lo que sentís` pasa.
+ *
+ *  📌 Desde el 01/09/2026 esto además coincide con una obligación: el art. 50(1)
+ *  del Reglamento de IA europeo exige que se sepa que hay una IA del otro lado
+ *  (ver §3.6 del mismo doc). Una voz que dice "me alegro" está haciendo lo
+ *  contrario. */
+const FINGE_SENTIR = re('\\b(me alegr[a-záéíóúñ]*#|me pone#|me da (gusto|alegr[íi]a|orgullo|pena|tristeza|bronca)#|me emocion[a-záéíóúñ]*#|me encant[a-záéíóúñ]*#|te entiendo#|me siento#|siento que#|estoy orgullos[oa]#|me duele#|me alivia#)');
 
 export type CopyRejection =
   | 'vacío' | 'muy corto' | 'muy largo' | 'genera a la persona'
   | 'lenguaje clínico' | 'tono gurú' | 'anima en tono suave' | 'pide una acción en tono suave'
+  | 'pide una reserva' | 'finge sentir'
   | 'signos de exclamación' | 'markdown o comillas' | 'etiquetas internas';
 
 /** ¿Se puede mostrar esta frase? `null` = sí. Si no, el motivo — que se loguea
@@ -120,6 +155,12 @@ export function rejectCopy(text: string, tone: ReflectionTone): CopyRejection | 
   if (GENDERED.test(t)) return 'genera a la persona';
   if (CLINICAL.test(t)) return 'lenguaje clínico';
   if (GURU.test(t)) return 'tono gurú';
+
+  // Los dos que NO dependen del tono. Van con los de arriba y no en el bloque
+  // `gentle` de abajo a propósito: pedir una reserva y fingir un sentimiento
+  // están mal el día bueno igual que el malo.
+  if (VENDE.test(t)) return 'pide una reserva';
+  if (FINGE_SENTIR.test(t)) return 'finge sentir';
 
   if (tone === 'gentle') {
     if (CHEER.test(t)) return 'anima en tono suave';

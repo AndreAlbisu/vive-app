@@ -399,12 +399,43 @@ describe('rejectCopy — el guardarraíl sobre lo que escribe un modelo', () => 
   });
 
   it('en tono suave no deja animar ni pedir nada', () => {
-    // Arriba de la tarjeta hay otra sugiriendo hablar con un profesional. Esta
-    // no puede competir con eso ni celebrar el día en que alguien cayó fuerte.
+    // El día que alguien cayó fuerte, esta tarjeta es la única reacción que hay
+    // — no puede celebrarlo ni sumarle una tarea encima.
     expect(rejectCopy('Buenísimo que lo hayas registrado igual, seguí así toda la semana.', 'gentle')).toBe('anima en tono suave');
-    expect(rejectCopy('Hoy venís más abajo. Reservá una sesión y hablalo con alguien esta semana.', 'gentle')).toBe('pide una acción en tono suave');
+    expect(rejectCopy('Hoy venís más abajo. Probá alguna de tus herramientas esta semana.', 'gentle')).toBe('pide una acción en tono suave');
     // Las mismas frases en tono cálido no son un problema.
     expect(rejectCopy('Buenísimo que lo hayas registrado igual, seguí así toda la semana.', 'warm')).toBeNull();
+    expect(rejectCopy('Volviste a tus herramientas. Probá sostenerlo una semana más y mirá qué pasa.', 'warm')).toBeNull();
+  });
+
+  // ── §3.4 — pedir una reserva, en cualquier tono ──────────────────────────
+  it('nunca deja pedir una reserva, ni siquiera en tono cálido', () => {
+    // El bug que esto arregla: `reservá` vivía en el bloque `gentle`, así que
+    // en `warm` —el tono de las señales buenas, que es justo cuando un vendedor
+    // aprovecharía— no lo frenaba nadie.
+    expect(rejectCopy('Van 6 días seguidos de check-in. Reservá una sesión para no perder el envión.', 'warm')).toBe('pide una reserva');
+    expect(rejectCopy('Tu semana viene pareja. Agendá algo con tu profesional para la que viene.', 'neutral')).toBe('pide una reserva');
+    expect(rejectCopy('Hoy venís más abajo. Sacá un turno con alguien que te pueda escuchar.', 'gentle')).toBe('pide una reserva');
+  });
+
+  it('pero deja NOMBRAR al profesional — reconocer un límite no es vender', () => {
+    // Corrección del 28/08 en `docs/la-voz-de-sofia.md` §3.4: un amigo que dice
+    // "eso decíselo el sábado" hace lo contrario de un vendedor.
+    expect(rejectCopy('Eso que estás notando, guardalo para contárselo el sábado en tu sesión.', 'neutral')).toBeNull();
+    expect(rejectCopy('Hay cosas que no se resuelven solas. Hablalo con tu profesional cuando lo veas.', 'gentle')).toBeNull();
+  });
+
+  // ── §3.5 — la app no finge sentir ────────────────────────────────────────
+  it('no deja que la app se atribuya un sentimiento', () => {
+    expect(rejectCopy('Van 6 días seguidos sin saltearte el check-in y me alegro un montón por vos.', 'warm')).toBe('finge sentir');
+    expect(rejectCopy('Te entiendo, hay semanas que vienen más pesadas que otras y no pasa nada.', 'gentle')).toBe('finge sentir');
+    expect(rejectCopy('Siento que esta semana te costó más de lo habitual sostener el ritmo.', 'neutral')).toBe('finge sentir');
+    expect(rejectCopy('Volviste tres veces a tus herramientas esta semana y me pone contento verlo.', 'warm')).toBe('finge sentir');
+  });
+
+  it('pero sí deja hablar de lo que siente quien lee — la prohibición es de primera persona', () => {
+    expect(rejectCopy('Lo que sentís esta semana no tiene que tener una explicación prolija.', 'gentle')).toBeNull();
+    expect(rejectCopy('Registrás cómo te sentís hace 6 días seguidos. Eso después se nota.', 'warm')).toBeNull();
   });
 
   it('rechaza formato que delata que el modelo contestó otra cosa', () => {
@@ -462,13 +493,13 @@ describe('rejectCopy — el borde de palabra en español', () => {
   // Estos casos son todos los patrones que terminan en carácter acentuado.
 
   it('frena verbos en imperativo con tilde final', () => {
-    for (const frase of [
-      'Hoy venís más abajo. Reservá una sesión con alguien esta misma semana.',
-      'Hoy venís más abajo. Probá una respiración antes de irte a dormir hoy.',
-      'Hoy venís más abajo. Agendá algo para vos en los próximos días.',
-    ]) {
-      expect(rejectCopy(frase, 'gentle')).toBe('pide una acción en tono suave');
-    }
+    // Los dos que piden un booking los agarra `VENDE`, que corre en todos los
+    // tonos desde la sesión 153; el resto sigue en `ASKS`, gentle-only. Lo que
+    // este test cuida es el borde de palabra, no cuál de los dos patrones lo
+    // atrapa: los dos usan el mismo helper `re()` con el lookahead.
+    expect(rejectCopy('Hoy venís más abajo. Reservá una sesión con alguien esta misma semana.', 'gentle')).toBe('pide una reserva');
+    expect(rejectCopy('Hoy venís más abajo. Agendá algo para vos en los próximos días.', 'gentle')).toBe('pide una reserva');
+    expect(rejectCopy('Hoy venís más abajo. Probá una respiración antes de irte a dormir hoy.', 'gentle')).toBe('pide una acción en tono suave');
   });
 
   it('frena el aliento con tilde final', () => {

@@ -35,7 +35,8 @@ import { useDailyReflection } from '@/hooks/useDailyReflection';
 import { localDayKey, localDayKeyMinus } from '@/lib/dates';
 import { useWeeklySignals } from '@/hooks/useWeeklySignals';
 import { shouldShowMoment } from '@/lib/sobreVosMomento';
-import { getMomentPref, getLastShown, markMomentShown } from '@/lib/sobreVosMomentoStorage';
+import { getMomentPref, getLastShown, markMomentShown, getLastSpoken, markSpoken } from '@/lib/sobreVosMomentoStorage';
+import { shouldStaySilent } from '@/lib/sobreVosSilencio';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 // Colores del mockup `sobre-vos-momento.html` — deliberadamente NO ViveColors,
@@ -166,6 +167,34 @@ export default function InicioScreen() {
 
   const cardMoodColor = freshCheckIn?.color ?? (todayMoodEntry ? ViveMoodColors[todayMoodEntry.mood_id] : null);
   const cardReflection = freshCheckIn?.reflection ?? reflection;
+
+  // ── El silencio (§3.3) ───────────────────────────────────────────────────
+  // Arranca en `false`: mientras no se sepa, la tarjeta habla. Al revés —
+  // asumir silencio hasta que el storage conteste— la card parpadearía de
+  // callada a hablando en cada montaje, que se ve peor que hablar de más.
+  //
+  // `markSpoken` corre SOLO cuando la tarjeta efectivamente va a hablar. De eso
+  // depende que la regla alterne en vez de callarse para siempre: ver la nota en
+  // `lib/sobreVosMomentoStorage.ts`.
+  const [silent, setSilent] = useState(false);
+  const cardSignal = cardReflection.signal;
+
+  useEffect(() => {
+    // Sin check-in de hoy la card está en su estado neutro ("Contame cómo
+    // venís"), que es una invitación y no una devolución — eso no se calla
+    // nunca, o la persona nueva se queda sin saber para qué está la tarjeta.
+    if (!cardMoodColor) { setSilent(false); return; }
+
+    let cancelled = false;
+    (async () => {
+      const lastSpoken = await getLastSpoken();
+      if (cancelled) return;
+      const callar = shouldStaySilent({ signal: cardSignal, lastSpoken, dayKey: today });
+      setSilent(callar);
+      if (!callar) await markSpoken(today, cardSignal);
+    })();
+    return () => { cancelled = true; };
+  }, [cardSignal, cardMoodColor, today]);
 
   const handleMoodPicked = useCallback((
     mood: { id: number; label: string; color: string },
@@ -483,7 +512,7 @@ export default function InicioScreen() {
 
           {/* ── 4. SOBRE VOS ── */}
           <Animated.View style={fadeUp(a2)}>
-            <SobreVosCard reflection={cardReflection} moodColor={cardMoodColor} onPress={handleReopenMomento} />
+            <SobreVosCard reflection={cardReflection} moodColor={cardMoodColor} silent={silent} onPress={handleReopenMomento} />
           </Animated.View>
 
           {/* ── 5. TU PRÓXIMA SESIÓN ── */}
@@ -660,6 +689,15 @@ const s = StyleSheet.create({
     paddingTop: 22,
     paddingHorizontal: 18,
     paddingBottom: 16,
+  },
+  // El día callado la card es más baja: sin frase de dos líneas ni CTA, el
+  // padding de una card con texto la dejaría hueca.
+  selloContentQuiet: {
+    paddingTop: 26,
+    paddingBottom: 20,
+  },
+  selloQuietMark: {
+    alignItems: 'center',
   },
   selloReflect: {
     fontFamily: ViveFonts.feedback,
@@ -891,14 +929,21 @@ const s = StyleSheet.create({
  *  - Resuelto (con check-in hoy): sello y tinte de fondo con el color de ESE
  *    mood — el texto es el mismo que mostraría igual sin el rediseño.
  *
- *  Toda la card es tocable → reabre el momento completo (SobreVosMomento). */
+ *  - Callado (`silent`): hay check-in, pero hoy no hay nada nuevo que decir —
+ *    ver `lib/sobreVosSilencio.ts` y `docs/la-voz-de-sofia.md` §3.3. La card
+ *    sigue estando, con su sello y el color del mood, pero sin frase y sin CTA.
+ *
+ *  Toda la card es tocable → reabre el momento completo (SobreVosMomento).
+ *  Salvo callada: ahí no hay nada que reabrir. */
 function SobreVosCard({
   reflection,
   moodColor,
+  silent,
   onPress,
 }: {
   reflection: Reflection;
   moodColor: string | null;
+  silent: boolean;
   onPress: () => void;
 }) {
   const reducedMotion = useReducedMotion();
@@ -928,7 +973,9 @@ function SobreVosCard({
 
   const a11yLabel = isNeutral
     ? 'Contame cómo venís'
-    : `${reflection.before}${reflection.bold}${reflection.after}`;
+    : silent
+      ? 'Sobre vos. Hoy sin novedades'
+      : `${reflection.before}${reflection.bold}${reflection.after}`;
 
   return (
     <View style={s.selloOuter}>
@@ -938,7 +985,7 @@ function SobreVosCard({
         backgroundColor="#F7F2E7"
         borderRadius={20}
         grainOpacity={0.045}
-        onPress={onPress}
+        onPress={silent ? undefined : onPress}
         style={s.selloWrap}
       >
         <LinearGradient
@@ -949,13 +996,21 @@ function SobreVosCard({
           style={StyleSheet.absoluteFill}
         />
         <View
-          style={s.selloContent}
+          style={[s.selloContent, silent && s.selloContentQuiet]}
           accessible
-          accessibilityRole="button"
+          accessibilityRole={silent ? 'text' : 'button'}
           accessibilityLabel={a11yLabel}
-          accessibilityHint="Abre tu reflexión completa"
+          accessibilityHint={silent ? undefined : 'Abre tu reflexión completa'}
         >
-          {isNeutral ? (
+          {silent ? (
+            /* Sin frase y sin copy inventado a propósito: cualquier línea que
+               pusiéramos acá volvería a ser una devolución, que es justo lo que
+               el día callado no tiene. La marca al 22% ocupa el lugar del texto
+               para que se lea como "hoy no hay nada" y no como "esto se rompió". */
+            <View style={s.selloQuietMark}>
+              <VitaMark size={20} color={hexToRgba(SELLO_FOREST, 0.22)} strokeWidth={6} />
+            </View>
+          ) : isNeutral ? (
             <>
               <Text style={s.selloReflect}>Contame cómo venís</Text>
               <Text style={[s.selloCta, s.selloCtaUp]}>↑ Tocá un mood arriba</Text>

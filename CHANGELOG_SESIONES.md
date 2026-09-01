@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-09-01 — Andre (sesión 154 · el silencio de "Sobre vos" y los dos guardarraíles que faltaban)
+
+**Tocado:** `lib/weeklyReflection.ts`, `lib/sobreVosMomentoStorage.ts`, `app/(tabs)/index.tsx`, `supabase/functions/weekly-reflection/index.ts` (solo el prompt), `__tests__/weeklyReflection.test.ts`. Nuevos: `lib/sobreVosSilencio.ts`, `__tests__/sobreVosSilencio.test.ts`. **429 tests** (eran 414), `tsc` y lint limpios. Sin cambios de schema.
+
+**Resumen — lo primero del plan de `docs/la-voz-de-sofia.md` §7 que no espera a nadie. La IA sigue apagada: todo esto mejora el texto que la gente lee HOY, que es el de las reglas.**
+
+- 🔴 **Bug real encontrado al implementar §3.4: `reservá` vivía adentro de `ASKS`, que solo se evalúa con tono `gentle`.** O sea que en tono `warm` —el de las señales buenas, que es justo cuando un vendedor aprovecharía— la tarjeta podía pedir un booking y no lo frenaba nadie. Se partió en dos: **`VENDE`** (reservá, agendá, sacá un turno, pedí turno, contratá) corre **en todos los tonos**, y `ASKS` se queda con el resto (probá, anotate, escribíle, clickeá, tocá acá) gentle-only. Nueva razón de rechazo: `'pide una reserva'`.
+- **Se respetó la corrección del 28/08: nombrar al profesional NO es vender.** Los patrones apuntan al pedido, no a la palabra — *"eso guardalo para contárselo el sábado"* y *"hablalo con tu profesional cuando lo veas"* pasan, y hay tests que lo fijan. ⚠️ Compensación consciente: `reserv[áa]#` también matchea el sustantivo ("una reserva el sábado"), así que rechaza alguna frase legítima. Se dejó ancho a propósito: rechazar de más cae al texto de las reglas, que es bueno; dejar pasar publica un pedido de venta.
+- **§3.5 no tenía guardarraíl y ahora sí: `FINGE_SENTIR`.** Frena "me alegro", "te entiendo", "me pone contento", "siento que", "me emociona". Los patrones son de **primera persona** a propósito — lo prohibido es que el sistema se atribuya un estado, no que la frase hable de lo que siente quien lee: *"lo que sentís esta semana"* pasa. Nueva razón: `'finge sentir'`. Corre en todos los tonos.
+- **El silencio (§3.3), como regla y no como azar.** `lib/sobreVosSilencio.ts` (puro, 11 tests): la tarjeta se calla cuando la señal es `level` **y es la misma que se dijo ayer**. Se descartó a propósito resolverlo con el hash del día (el mismo truco de `variantFor`, que salía más barato): eso es azar disfrazado de regla — callaría días donde la señal recién cambió y hablaría en el tercer día idéntico.
+- **La clave del diseño: el día que se calla NO registra nada.** `markSpoken` solo corre cuando la tarjeta habla, así que al día siguiente lo último dicho queda a dos días y vuelve a hablar. En una racha de `level` eso da habla/calla/habla/calla — **nunca dos silencios seguidos**, que sería desaparecer en vez de callarse. Hay un test que recorre cinco días y fija esa alternancia; sin eso la tarjeta se apagaba para siempre en cuanto entraba en una racha.
+- **La lista de señales que pueden callarse es de inclusión, no de exclusión** (hoy solo `level`). Una señal nueva nace hablando y hay que habilitarla a mano. Al revés, un descuido silenciaría algo que había que decir — que es el modo de falla caro. `empty` queda afuera: es la invitación a registrar, sin ella la persona nueva no sabe para qué está la tarjeta.
+- **Cómo se ve el día callado:** la card sigue estando —sello, color del mood, tinte— pero sin frase, sin "→ Ver más" y sin `onPress`. En lugar del texto va el `VitaMark` al 22%. **No se inventó copy para ese estado a propósito**: cualquier línea ahí volvería a ser una devolución, que es justo lo que el día callado no tiene. La marca ocupa el lugar para que se lea como "hoy no hay nada" y no como "esto se rompió". El momento no se ve afectado: `level` ya estaba excluido de `shouldShowMoment`, así que un día callado nunca tuvo momento que reabrir.
+- **`silent` arranca en `false`** y se resuelve tras leer AsyncStorage. Al revés (asumir silencio hasta que conteste) la card parpadearía de callada a hablando en cada montaje, que se ve peor que hablar de más.
+- **El prompt de la edge function acompaña los dos guardarraíles nuevos**, para que el modelo no produzca lo que `rejectCopy` va a rechazar. De paso se limpiaron las dos referencias que quedaban a `CoachSuggestionCard` ("arriba de esta tarjeta ya hay otra sugiriéndole hablar con un profesional") — esa tarjeta se borró en la sesión 97 y el prompt seguía coordinando con un fantasma.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **Redeployar `weekly-reflection`**: le cambió el prompt y la versión desplegada (v2) quedó vieja. No corre por el flag apagado, pero el repo y lo deployado no coinciden. `npx supabase functions deploy weekly-reflection`.
+- **Probar el día callado en el dev build.** No se puede verificar de verdad sin dos días seguidos de `level` — los tests fijan la regla, no cómo se ve. Si la card callada queda demasiado hueca, lo que se ajusta es `selloContentQuiet`.
+- **Optimización conocida, no hecha:** `useDailyReflection` sigue pidiéndole la frase al modelo los días callados (nadie la ve). No se resolvió porque `silent` se sabe después de que el hook corrió, y una versión con race valía menos que una llamada cacheada de más. Cuando se prenda la IA, vale la pena.
+- **Sigue esperándote el piso de seguridad (§5 ter)**, que es el que más importa: faltan dos definiciones tuyas — cuántos días seguidos abajo disparan, y qué dice exactamente la frase. El resto está listo para escribirse en una sesión.
+
+---
+
 ## 2026-09-01 — Andre (sesión 153 · chequeo de viabilidad legal global de la IA, y lo que apareció al mirar)
 
 **Tocado:** `docs/paquete-abogado.md`, `docs/legal-instrucciones.md`, `docs/la-voz-de-sofia.md`, `constants/features.ts` (solo comentarios). Sin cambios de código ni de schema. `tsc` limpio, 414/414 tests.
