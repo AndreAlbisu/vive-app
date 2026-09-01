@@ -227,9 +227,11 @@ export default function ProfileOwnScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Animated.View style={[styles.guestSection, fadeUp(identityAnim)]}>
-            <View style={styles.guestAvatar}>
-              <MaterialCommunityIcons name="account" size={44} color="rgba(135,131,92,0.52)" />
-            </View>
+            {/* 📝 Se sacó el avatar vacío (un ícono gris de persona genérica en
+                un círculo de 80). Era el elemento MÁS GRANDE de la pantalla y
+                no decía nada: quien no tiene cuenta no tiene perfil, así que
+                mostrarle un perfil en blanco es enseñarle un vacío. Sin él, lo
+                primero que se lee es la pregunta. */}
             <Text style={styles.guestTitle}>¿Sos nuevo por acá?</Text>
             <Text style={styles.guestSubtitle}>
               Creá tu cuenta para guardar tu progreso y conectar con profesionales.
@@ -456,6 +458,9 @@ export default function ProfileOwnScreen() {
 }
 
 
+// La terracota de marca oscurecida 16%: el mínimo para que el crema encima
+// llegue a 4.5:1. Ver `guestBtnPrimary`.
+const TERRACOTA_TEXTO = '#A25842';
 const GLASS = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 
@@ -494,21 +499,17 @@ const styles = StyleSheet.create({
   // Guest state
   guestSection: {
     alignItems: 'center',
-    paddingTop: 56,
-    paddingBottom: 40,
+    // 📝 Menos aire arriba (56 → 40) ahora que no está el avatar de 80.
+    paddingTop: 40,
+    paddingBottom: 36,
     paddingHorizontal: 32,
     backgroundColor: GLASS,
+    // 📝 El borde inferior era blanco al 65% y, contra el degradado del fondo
+    // —que se va apagando hacia abajo— dibujaba una costura dura justo arriba
+    // de "Legal": se leía como dos pantallas pegadas. Un hairline oliva muy
+    // tenue separa las dos secciones sin cortar la pantalla al medio.
     borderBottomWidth: 1,
-    borderBottomColor: GLASS_BORDER,
-    marginBottom: 20,
-  },
-  guestAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(86,94,50,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderBottomColor: 'rgba(86,94,50,0.10)',
     marginBottom: 20,
   },
   guestTitle: {
@@ -528,23 +529,38 @@ const styles = StyleSheet.create({
   },
   guestBtnPrimary: {
     width: '100%',
-    backgroundColor: ViveColors.primary,
+    // 🔴 CONTRASTE. Tenía la terracota de marca (#C1694F) con texto verde
+    // oscuro (#565E32) encima: **1.78:1**, cuando el mínimo AA para texto
+    // normal es 4.5:1. Era ilegible al sol y muy justo en interiores.
+    //
+    // ⚠️ Con #C1694F NO hay ningún color de texto que pase: el máximo posible
+    // es blanco puro y da 3.89:1. O sea que había que mover el fondo. Es la
+    // terracota de marca oscurecida un 16%, el mínimo para que el crema pase
+    // (4.59:1), así que sigue siendo el mismo color y no uno nuevo.
+    //
+    // 📝 Es el ÚNICO botón con texto sobre terracota en la app —los otros usos
+    // de `ViveColors.primary` son avatares, barras de progreso y franjas—, por
+    // eso se corrige acá y no en el token de marca.
+    backgroundColor: TERRACOTA_TEXTO,
     borderRadius: 14,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: 'center',
     marginBottom: 12,
   },
   guestBtnPrimaryText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
-    color: '#565E32',
+    color: '#F7EFE4',
   },
   guestBtnSecondary: {
     width: '100%',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.72)',
+    // 📝 Era blanco al 72% sobre crema: prácticamente invisible, el botón se
+    // leía como un rectángulo flotando sin borde. El oliva de la marca al 28%
+    // lo dibuja sin competirle al primario.
+    borderColor: 'rgba(86,94,50,0.28)',
     borderRadius: 14,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: 'center',
   },
   guestBtnSecondaryText: {
