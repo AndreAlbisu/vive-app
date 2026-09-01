@@ -19,7 +19,7 @@
 
 **Pendiente para la próxima sesión:**
 
-- 🔴 **Pegar la plantilla en Supabase** (Authentication → Emails → Magic Link) y cambiar el asunto. Hasta que se haga, el código no llega y la verificación no se puede probar.
+- ✅ ~~Pegar la plantilla en Supabase~~ — **cargada por Andre el 31/08/2026** (asunto + cuerpo en la plantilla Magic Link). Falta confirmar que el mail llegue con los seis dígitos.
 - 🔴 **El SMTP interno NO alcanza para producción.** Con dos coaches registrándose el mismo día, el segundo no recibe nada y no tiene forma de enterarse. Antes de abrir el registro de verdad hay que conectar un SMTP propio (Resend, Postmark, SES).
 - 📝 El doc trae la lista de qué probar, incluido el síntoma de que la plantilla no se guardó: llega un mail con botón y sin números.
 

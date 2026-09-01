@@ -3,6 +3,9 @@
 > 31/08/2026. **Configuración que vive FUERA del repo**, en el panel de
 > Supabase. Sin este cambio la verificación de mail no funciona: la pantalla
 > pide un código de 6 dígitos que nunca llega.
+>
+> ✅ **APLICADO por Andre el 31/08/2026** — asunto y cuerpo cargados en la
+> plantilla Magic Link. Falta probar que el mail llegue de verdad.
 
 ---
 
