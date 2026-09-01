@@ -9,7 +9,7 @@ import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { guardarRespuestas, puertaDeCategoria } from '@/lib/onboardingRespuestas';
-import { registrarEvento } from '@/lib/supabase';
+import { anotar, cronometro } from '@/lib/onboardingAnalytics';
 
 // La única pregunta que queda después de "¿Qué te trae por acá?" — opción A del
 // brief (`docs/onboarding-bifurcacion-opciones.md`), elegida el 01/09/2026.
@@ -24,6 +24,12 @@ import { registrarEvento } from '@/lib/supabase';
 // contestabas tres pantallas, te prometían profesionales y aparecía un campo de
 // email. Ahora la promesa se cumple en el acto y sin cuenta — Profesionales
 // anda como anónimo, `requestAuth` recién aparece al reservar.
+//
+// ⚠️ Pero lleva al MENÚ de su eje con el tema destacado, no al mazo de personas
+// de esa puerta. La primera versión abría el deck y Andre lo frenó: se sentía
+// forzado. Arreglar un botón que miente no obliga a cumplir la promesa a
+// rajatabla — quien no sabe qué necesita no está listo para elegir a quién
+// pagarle, y son dos cosas distintas.
 
 type UniversoId = 'cuerpo' | 'mente' | 'alma';
 
@@ -63,6 +69,11 @@ export default function OnboardingScreen4() {
   const { universo } = useLocalSearchParams<{ universo: string }>();
   const [selected, setSelected] = useState<string | null>(null);
 
+  // Mismo criterio que la pantalla anterior: se miden los toques y la demora,
+  // no solo lo que quedó elegido. Ver `lib/onboardingAnalytics.ts`.
+  const toques = useRef(0);
+  const medir = useRef(cronometro()).current;
+
   const u = (universo as UniversoId) ?? 'cuerpo';
   const subcats = SUBCATEGORIAS[u] ?? SUBCATEGORIAS.cuerpo;
   const { accent, accentLight } = UNIVERSO_COLORS[u] ?? UNIVERSO_COLORS.cuerpo;
@@ -75,9 +86,9 @@ export default function OnboardingScreen4() {
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Segunda mitad de la analítica del onboarding: con esto y el evento de la
-    // pantalla anterior se puede ver dónde se cae la gente entre las dos.
-    registrarEvento('onboarding_pregunta_vista', { pantalla: 'categoria', universo: u }).catch(() => {});
+    // Con esto y el evento de la pantalla anterior se ve dónde se cae la gente
+    // entre las dos, y qué universo abandona más.
+    anotar('onboarding_pantalla_vista', { pantalla: 'categoria', universo: u });
 
     Animated.stagger(110, [
       Animated.timing(headerAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
@@ -99,7 +110,13 @@ export default function OnboardingScreen4() {
   function handleContinue() {
     if (!selected) return;
 
-    registrarEvento('onboarding_respuesta', { pantalla: 'categoria', universo: u, respuesta: selected }).catch(() => {});
+    anotar('onboarding_respuesta', {
+      pantalla: 'categoria',
+      universo: u,
+      respuesta: selected,
+      toques: toques.current,
+      segundos: medir(),
+    });
 
     // 🔴 Acá se guarda lo que la persona contestó, que antes se tiraba entero.
     // Todavía no hay cuenta, así que se encola local y `AuthContext` lo vuelca
@@ -120,9 +137,14 @@ export default function OnboardingScreen4() {
     // ya contestó, en una pila que no lleva a ningún lado.
     //
     // ⚠️ Si la categoría no mapeara a ninguna puerta, se entra igual a
-    // Profesionales pero por el menú. Quedarse en el onboarding sería peor: la
-    // respuesta ya está guardada y la persona ya tocó "Ver profesionales".
+    // Profesionales pero desde los ejes, sin nada destacado. Quedarse en el
+    // onboarding sería peor: la respuesta ya está guardada y la persona ya tocó
+    // "Ver profesionales".
     const puerta = puertaDeCategoria(selected);
+    // El destino final del recorrido, con la puerta que le sugerimos. Es lo que
+    // después deja comparar contra qué puerta abre de verdad
+    // (`conexiones_puerta_abierta`, con `sugerida`).
+    anotar('onboarding_fin', { destino: 'conexiones', desde: 'categoria', puerta });
     router.replace(
       puerta
         ? ({ pathname: '/(tabs)/conexiones', params: { puerta } } as any)
@@ -184,7 +206,13 @@ export default function OnboardingScreen4() {
                       elevation: 6,
                     },
                   ]}
-                  onPress={() => setSelected(sub.id)}
+                  onPress={() => {
+                    toques.current += 1;
+                    anotar('onboarding_opcion_tocada', {
+                      pantalla: 'categoria', universo: u, opcion: sub.id, orden: toques.current,
+                    });
+                    setSelected(sub.id);
+                  }}
                 >
                   <View style={[styles.iconBubble, { backgroundColor: isSelected ? 'rgba(86,94,50,0.14)' : 'rgba(255,248,240,0.48)' }]}>
                     <MaterialCommunityIcons name={sub.icon} size={26} color={isSelected ? accent : 'rgba(255,255,255,0.75)'} />

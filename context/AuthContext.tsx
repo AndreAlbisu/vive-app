@@ -10,6 +10,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { volcarPendiente } from '@/lib/quizPendiente';
+import { enlazarConCuenta } from '@/lib/onboardingAnalytics';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -140,6 +141,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // vive adentro) y no bloquea nada — si falla, se reintenta al próximo
         // login.
         void volcarPendiente(u.id);
+
+        // 🔴 El único punto donde el recorrido ANÓNIMO se puede unir con la
+        // persona. Todos los eventos del onboarding se escriben sin sesión, o
+        // sea con `user_id` en null, e hilados solo por `properties.sesion`;
+        // este evento lleva las dos cosas, así que es el que permite preguntar
+        // "de los que contestaron X, cuántos terminaron creando una cuenta".
+        // Sin él el embudo se corta justo antes de lo que más importa medir.
+        void enlazarConCuenta();
       }
       else applyProfile({ role: "user", isAdmin: false, name: null });
     });

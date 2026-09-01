@@ -8,7 +8,7 @@ import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
 import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { ScaleCard } from '@/components/ScaleCard';
 import { guardarCamino } from '@/lib/guiaContextual';
-import { registrarEvento } from '@/lib/supabase';
+import { anotar, cronometro } from '@/lib/onboardingAnalytics';
 import { AppBg } from '@/components/ui/AppBg';
 
 // "¿Qué te trae por acá?" — opción A del brief, elegida por Andre el 01/09/2026.
@@ -97,6 +97,13 @@ export default function OnboardingScreen2() {
   const { tono } = useLocalSearchParams<{ tono?: string }>();
   const [selected, setSelected] = useState<TraeId | null>(null);
 
+  // 🔴 Medimos los TOQUES, no solo la respuesta final. Lo que queremos saber es
+  // qué llama la atención y qué no: alguien que toca tres tarjetas antes de
+  // decidirse no está diciendo lo mismo que alguien que toca una sola, y del
+  // resultado guardado eso no se puede leer.
+  const toques = useRef(0);
+  const medir = useRef(cronometro()).current;
+
   const titleAnim = useRef(new Animated.Value(0)).current;
   const card0Anim = useRef(new Animated.Value(0)).current;
   const card1Anim = useRef(new Animated.Value(0)).current;
@@ -107,11 +114,10 @@ export default function OnboardingScreen2() {
   const cardAnims = [card0Anim, card1Anim, card2Anim, card3Anim];
 
   useEffect(() => {
-    // 🔴 Primera línea de analítica del onboarding. Hasta hoy no había ninguna
-    // —cero `registrarEvento` en las cinco pantallas y en la bifurcación—, así
-    // que la discusión sobre qué camino toma la gente se dio entera sobre
+    // 🔴 Hasta hoy el onboarding no tenía una sola línea de analítica, así que
+    // la discusión sobre qué camino toma la gente se dio entera sobre
     // hipótesis. Sin esto, la próxima también.
-    registrarEvento('onboarding_pregunta_vista', { pantalla: 'que_te_trae' }).catch(() => {});
+    anotar('onboarding_pantalla_vista', { pantalla: 'que_te_trae' });
 
     Animated.stagger(100, [
       Animated.timing(titleAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
@@ -133,7 +139,12 @@ export default function OnboardingScreen2() {
   function handleContinue() {
     if (!selected) return;
 
-    registrarEvento('onboarding_respuesta', { pantalla: 'que_te_trae', respuesta: selected }).catch(() => {});
+    anotar('onboarding_respuesta', {
+      pantalla: 'que_te_trae',
+      respuesta: selected,
+      toques: toques.current,
+      segundos: medir(),
+    });
 
     // 🔴 La elección se guardaba en ningún lado: era estado local que solo
     // servía para elegir la ruta y se perdía al salir de la pantalla. Le
@@ -153,7 +164,11 @@ export default function OnboardingScreen2() {
     // sesión—, o sea que quien contestó "solo estoy mirando" aterrizaba en la
     // prueba de que no hay nada para mirar. Recursos es lo único que da valor
     // solo, gratis y sin cuenta.
-    if (selected === 'mirando') { router.replace('/(tabs)/recursos' as any); return; }
+    if (selected === 'mirando') {
+      anotar('onboarding_fin', { destino: 'recursos', desde: 'que_te_trae' });
+      router.replace('/(tabs)/recursos' as any);
+      return;
+    }
 
     // Las otras tres llevan el universo a la única pregunta que queda.
     router.push({ pathname: '/onboarding4', params: { universo: selected } });
@@ -182,7 +197,17 @@ export default function OnboardingScreen2() {
               return (
                 <Animated.View key={option.id} style={[{ flex: 1 }, fadeUp(cardAnims[i])]}>
                   <ScaleCard
-                    onPress={() => setSelected(option.id)}
+                    onPress={() => {
+                      toques.current += 1;
+                      anotar('onboarding_opcion_tocada', {
+                        pantalla: 'que_te_trae',
+                        opcion: option.id,
+                        // Qué número de toque es: el primero es el que llamó la
+                        // atención, los siguientes son los que se lo pensaron.
+                        orden: toques.current,
+                      });
+                      setSelected(option.id);
+                    }}
                     style={[
                       styles.card,
                       { borderColor: isSelected ? option.accent : 'rgba(86,94,50,0.14)' },

@@ -430,6 +430,10 @@ Modelo: split payments, **Checkout Pro**, cobro al reservar + reembolso automát
 - `id` (uuid, PK)
 - `user_id` (uuid, FK → `auth.users.id`, nullable)
 - `event_name` (text), `properties` (jsonb), `created_at`
+- 🔴 **`user_id` es NULL en todo el onboarding**, y no es un bug: `registrarEvento` lo saca de la sesión, y durante el onboarding **no hay sesión**. Por eso los eventos del onboarding llevan **`properties.sesion`**, un id anónimo por dispositivo (`lib/onboardingAnalytics.ts`) que es lo único que permite hilar el recorrido de una persona. **Para cualquier embudo del onboarding hay que agrupar por `properties->>'sesion'`, no por `user_id`.**
+  - El puente entre las dos mitades es **`onboarding_registro`**: lo emite `AuthContext` cuando por fin aparece la cuenta, y es la única fila que lleva `user_id` **y** `sesion`. Con él se responde "de los que contestaron X, cuántos terminaron creando una cuenta"; sin él el embudo se corta justo antes de la conversión. Se emite una sola vez por dispositivo y solo si hubo recorrido previo.
+  - Eventos del onboarding (01/09/2026): `onboarding_pantalla_vista` · `onboarding_opcion_tocada` (con `orden`, qué número de toque es) · `onboarding_respuesta` (con `toques` y `segundos`) · `onboarding_fin` (con `destino`) · `onboarding_registro`. Y en Profesionales, `conexiones_puerta_abierta` (con `sugerida`), que es lo que permite comparar la puerta que el onboarding sugiere contra la que la persona abre de verdad.
+  - ⚠️ `properties.sesion` **no identifica a nadie**: es un número al azar guardado en el dispositivo, sin relación con el mail, el nombre ni el teléfono.
 
 ### `notifications`
 - `id` (uuid, PK)
