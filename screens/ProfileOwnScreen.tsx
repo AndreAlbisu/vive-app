@@ -379,7 +379,12 @@ export default function ProfileOwnScreen() {
                   <MaterialCommunityIcons
                     name={item.icon as any}
                     size={20}
-                    color={item.danger ? '#FF7070' : 'rgba(255,255,255,0.75)'}
+                    // 🔴 Era `rgba(255,255,255,0.75)`: blanco al 75% sobre el
+                    // crema, **1.11:1**. O sea invisible — la lista mostraba
+                    // una columna de aire donde van los íconos. El estado sin
+                    // cuenta, unas líneas más arriba, siempre usó el oliva; acá
+                    // se había quedado un color de cuando el fondo era oscuro.
+                    color={item.danger ? PELIGRO : '#87835C'}
                     style={styles.configIcon}
                   />
                   <Text style={[styles.configLabel, item.danger && styles.configLabelDanger]}>
@@ -461,6 +466,10 @@ export default function ProfileOwnScreen() {
 // La terracota de marca oscurecida 16%: el mínimo para que el crema encima
 // llegue a 4.5:1. Ver `guestBtnPrimary`.
 const TERRACOTA_TEXTO = '#A25842';
+// 🔴 El rojo de "Eliminar cuenta". Era `#FF7070`, que sobre el crema da 2.41:1
+// —abajo del mínimo AA de 4.5— y además es un rojo de semáforo que no pertenece
+// a una paleta de tierras. Este da 5.32:1 y se sigue leyendo como advertencia.
+const PELIGRO = '#B3392E';
 const GLASS = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 
@@ -674,15 +683,17 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   profEmptyBtn: {
-    backgroundColor: ViveColors.primary,
+    // Mismo caso que `guestBtnPrimary`: verde oscuro sobre la terracota de
+    // marca daba 1.78:1. Ver el comentario largo allá arriba.
+    backgroundColor: TERRACOTA_TEXTO,
     borderRadius: 12,
-    paddingVertical: 10,
+    paddingVertical: 11,
     paddingHorizontal: 20,
   },
   profEmptyBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 13,
-    color: '#565E32',
+    color: '#F7EFE4',
   },
   profRow: {
     flexDirection: 'row',
@@ -778,7 +789,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#565E32',
   },
-  configLabelDanger: { color: '#FF7070' },
+  configLabelDanger: { color: PELIGRO },
 
   // ── Confirmación de baja de cuenta ──────────────────────────────
   delOverlay: {
