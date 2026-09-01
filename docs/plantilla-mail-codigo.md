@@ -25,10 +25,39 @@ navegador y no le sirve para nada, mientras la app espera seis dígitos.
 
 La variable que hace falta es **`{{ .Token }}`**.
 
+## 🔴 Requisito que no es obvio: las plantillas dependen del SMTP propio
+
+**Al desactivar Custom SMTP, Supabase desactiva también las plantillas
+personalizadas** y vuelve a mandar las suyas. O sea que sin un SMTP propio
+configurado **no hay forma de meter `{{ .Token }}` en el mail**, y la
+verificación por código no puede funcionar.
+
+Esto convierte al SMTP propio en **requisito de la feature**, no en un paso de
+producción para más adelante. Se descubrió a los golpes el 31/08/2026:
+desactivar el SMTP (que estaba colgando y daba 504) hizo que volviera a llegar
+el link de fábrica en vez del código.
+
+📝 **Para probar no hace falta esperar el DNS.** Resend deja mandar desde
+`onboarding@resend.dev` sin verificar dominio, con la limitación de que solo
+llega a la casilla con la que se creó la cuenta de Resend. Alcanza para
+desarrollo; para producción hay que verificar `vitaapp.com.ar` y cambiar el
+remitente (ver más abajo).
+
 ## Dónde se cambia
 
 Panel de Supabase → **Authentication** → **Emails** (según la versión, *Email
-Templates*) → pestaña **Magic Link**.
+Templates*).
+
+🔴 **En DOS pestañas: `Magic Link` Y `Confirm signup`.** `signInWithOtp`
+normalmente dispara *Magic Link*, pero si "Confirm email" está activado y la
+cuenta todavía no se confirmó, puede disparar *Confirm signup*. Editar solo una
+deja el caso del medio mandando el texto de fábrica —un link y ningún código— y
+el síntoma es idéntico a que no se hubiera guardado nada. **Cargar la misma
+plantilla en las dos no tiene contra**: cada una se usa en un momento distinto y
+las dos tienen que mostrar el código.
+
+⚠️ **Hay que tocar `Save changes` en cada pestaña.** Cambiar de pestaña sin
+guardar descarta la edición sin avisar.
 
 Se editan las dos cosas:
 
@@ -37,6 +66,10 @@ Se editan las dos cosas:
 ```
 Tu código de Vita: {{ .Token }}
 ```
+
+⚠️ Con el texto adelante, no `{{ .Token }}` solo: la variable se reemplaza por el
+número, así que un asunto pelado llega a la bandeja como **"483920"** — un
+número suelto que no dice de qué app es ni para qué.
 
 📝 El código va en el asunto a propósito: se ve en la notificación del teléfono
 sin abrir el mail, que es la diferencia entre tipearlo de memoria y tener que
@@ -102,4 +135,5 @@ cambio de DNS en un `.com.ar` puede tardar.
 4. Tipear un código cualquiera → tiene que decir que no coincide.
 5. Esperar los 45 segundos y probar "Reenviar código".
 
-Si llega un mail con un botón y sin números, la plantilla no se guardó.
+Si llega un mail con un botón y sin números, pasó una de dos: la plantilla no se
+guardó, o se está usando la otra pestaña. Por eso van las dos.

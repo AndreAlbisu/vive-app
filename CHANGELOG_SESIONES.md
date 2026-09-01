@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · el SMTP propio es requisito, no un paso de producción)
+
+**Tocado:** `screens/VerificarMailScreen.tsx`, `docs/plantilla-mail-codigo.md`.
+
+**Resumen:**
+
+- 🔴 **Hallazgo de Andre que cambia el plan: al desactivar Custom SMTP, Supabase desactiva TAMBIÉN las plantillas personalizadas** y vuelve a mandar las suyas. Sin un SMTP propio configurado **no hay forma de meter `{{ .Token }}` en el mail**, así que la verificación por código no puede funcionar. El SMTP propio deja de ser "para producción más adelante" y pasa a ser **requisito de la feature**.
+- 📝 **Se descubrió a los golpes**, y vale dejar la secuencia porque explica dos síntomas que parecían no tener relación: el SMTP estaba mal configurado y colgaba → `signInWithOtp` devolvía **504** (timeout del gateway, con `x-envoy-attempt-count: 4`) → se desactivó el SMTP → volvió a llegar **el link de fábrica en vez del código**.
+- 📝 **Para probar no hace falta esperar el DNS de `vitaapp.com.ar`**: Resend manda desde `onboarding@resend.dev` sin verificar dominio, con la limitación de que solo llega a la casilla con la que se creó la cuenta. Para producción hay que verificar el dominio y cambiar el remitente.
+- 🔴 **Arreglado un bug que el log destapó**: en un 504 el error de Supabase **no llega como texto sino como el objeto `Response` entero**, y el traductor de motivos hacía `.toLowerCase()` sobre eso y reventaba — fallaba justo cuando más falta hacía. Ahora coacciona con cuidado, mira el `status`, y traduce el 502/504 a "el servicio de mail no está respondiendo".
+- 📝 **El asunto lleva texto adelante**, no `{{ .Token }}` pelado: la variable se reemplaza por el número, así que un asunto solo con la variable llega a la bandeja como "483920", sin decir de qué app es.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar el ciclo entero ahora que el mail sale**: crear cuenta de coach, que llegue el código, confirmarlo, y los cuatro caminos de abandono.
+- ⚠️ **Antes de abrir el registro de verdad**: verificar `vitaapp.com.ar` en Resend (SPF y DKIM en DonWeb) y cambiar el remitente a `no-responder@vitaapp.com.ar`. Con `onboarding@resend.dev` **solo llegan mails a la casilla de la cuenta de Resend**, así que en producción nadie recibiría nada.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · para darse de baja hay que escribir BORRAR CUENTA)
 
 **Tocado:** `screens/ProfileOwnScreen.tsx`, `screens/CoachSettingsScreen.tsx`. Nuevos: `lib/confirmarBorrado.ts`, `__tests__/confirmarBorrado.test.ts`. 393 tests (eran 390), `tsc` limpio, sin warnings de lint nuevos.
