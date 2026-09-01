@@ -55,9 +55,12 @@ import { AppBg } from '@/components/ui/AppBg';
 // sin pilas", que es algo que se reconoce como propio. Es literalmente lo que
 // justificaba la opción A: dejar de preguntar en el vocabulario del producto.
 //
-// 📝 (c) "Solo estoy mirando" NO lleva flecha. Las otras tres llevan a una
-// pregunta más; esta termina el onboarding y deja en Recursos. La asimetría es
-// la señal — con la misma flecha, las cuatro prometen lo mismo y no es así.
+// 📝 (c) "Solo estoy mirando" lleva flecha DIAGONAL (↗) y las otras tres recta
+// (→). Las tres siguen dentro del flujo —una pregunta más—; esta lo termina y
+// deja en Recursos. Con la misma flecha, las cuatro prometen lo mismo y no es
+// así. Se probó sacarle la flecha del todo y el problema era que se leía como
+// un elemento faltante, no como una diferencia a propósito; la diagonal es la
+// convención de "esto te lleva afuera" y dice lo mismo sin parecer un error.
 //
 // ⚠️ (d) Se fue el botón "¿Seguimos?": la fila navega al tocarla, un tap en vez
 // de dos. La contra es que se pierde `toques` (cuántas opciones se tocaban
@@ -72,8 +75,8 @@ const OPTIONS: {
   desc: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   accent: string;
-  /** Solo las que llevan a otra pregunta. Ver (c). */
-  sigue: boolean;
+  /** Recta = sigue el flujo. Diagonal = sale de él. Ver (c). */
+  flecha: keyof typeof MaterialCommunityIcons.glyphMap;
 }[] = [
   {
     id: 'cuerpo',
@@ -81,15 +84,20 @@ const OPTIONS: {
     desc: 'No dormís, andás sin pilas',
     icon: 'heart-outline',
     accent: '#E8743B',
-    sigue: true,
+    flecha: 'arrow-right',
   },
   {
     id: 'mente',
     title: 'Algo de la cabeza',
-    desc: 'Ansiedad, bajón, discusiones',
+    // 📝 "vínculos" y no "discusiones": lo segundo nombra un episodio puntual y
+    // deja afuera a quien está mal con la gente sin haber peleado con nadie.
+    // Es la única palabra de vocabulario de producto que sobrevive en las
+    // cuatro bajadas, y se la banca porque "ansiedad" y "bajón" ya pusieron el
+    // registro humano de la frase.
+    desc: 'Ansiedad, bajón, vínculos',
     icon: 'brain',
     accent: '#5B8DB8',
-    sigue: true,
+    flecha: 'arrow-right',
   },
   {
     id: 'alma',
@@ -97,7 +105,7 @@ const OPTIONS: {
     desc: 'No sabés para dónde vas',
     icon: 'star-four-points-outline',
     accent: '#9B7FD4',
-    sigue: true,
+    flecha: 'arrow-right',
   },
   {
     id: 'mirando',
@@ -105,7 +113,7 @@ const OPTIONS: {
     desc: 'Quiero ver qué hay',
     icon: 'eye-outline',
     accent: '#6B7A56',
-    sigue: false,
+    flecha: 'arrow-top-right',
   },
 ];
 
@@ -239,10 +247,8 @@ export default function OnboardingScreen2() {
                     <Text style={styles.filaTitulo}>{option.title}</Text>
                     <Text style={styles.filaDesc}>{option.desc}</Text>
                   </View>
-                  {/* Ver (c): la que no sigue no promete que siga. */}
-                  {option.sigue && (
-                    <MaterialCommunityIcons name="arrow-right" size={20} color={TEXTO_SUAVE} />
-                  )}
+                  {/* Ver (c): la diagonal dice "sale de acá", la recta "seguí". */}
+                  <MaterialCommunityIcons name={option.flecha} size={20} color={TEXTO_SUAVE} />
                 </ScaleCard>
               </Animated.View>
             ))}
@@ -275,18 +281,27 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 22,
-    paddingTop: 28,
+    // 📝 Anclado ARRIBA y no centrado. Centrado, el bloque se reparte el aire
+    // sobrante entre arriba y abajo y en pantallas altas queda flotando en el
+    // medio, lejos del header; así arranca donde termina el logo y todo el
+    // sobrante se va al pie, como en la maqueta. `paddingTop` es el número a
+    // mover si hay que subirlo o bajarlo más.
+    paddingTop: 24,
     paddingBottom: 20,
-    justifyContent: 'center',
-    gap: 34,
+    justifyContent: 'flex-start',
+    // 📝 20 y no 30: con más aire, la pregunta y las respuestas se leían como
+    // dos bloques separados. Son una sola cosa.
+    gap: 20,
   },
   // Alineado a la izquierda, como el boceto: centrado se leía como un cartel, y
   // así se lee como alguien que pregunta.
   pregunta: { gap: 12 },
   title: {
     fontFamily: ViveFonts.title,
-    fontSize: 38,
-    lineHeight: 46,
+    // 35 y no 38: a 38 le competía el protagonismo a las opciones, que son lo
+    // que hay que leer para decidir. Sigue siendo lo más grande de la pantalla.
+    fontSize: 35,
+    lineHeight: 43,
     letterSpacing: -0.8,
     color: TEXTO,
   },
