@@ -7,7 +7,7 @@
 
 ## 2026-09-01 — Andre (sesión 152 cont. · la RLS rechazaba toda la analítica sin cuenta)
 
-**Tocado:** `SCHEMA.md`. Nuevo: `scripts/add-analytics-anon-insert.sql` (**PENDIENTE DE CORRER**).
+**Tocado:** `SCHEMA.md`. Nuevo: `scripts/add-analytics-anon-insert.sql` (**CORRIDO el 01/09/2026**).
 
 **Resumen:**
 
@@ -19,7 +19,7 @@
 
 **Pendiente para la próxima sesión:**
 
-- 🔴 **Correr `scripts/add-analytics-anon-insert.sql`** y volver a abrir la app sin cuenta: la prueba real es que **no aparezca más el warn de RLS** en la consola. ⚠️ Correr el insert de prueba desde el SQL Editor NO sirve como verificación: ahí sos `postgres` y las políticas no se aplican.
+- ✅ ~~Correr `scripts/add-analytics-anon-insert.sql`~~ — **corrido el 01/09/2026**. Falta volver a abrir la app sin cuenta: la prueba real es que **no aparezca más el warn de RLS** en la consola. ⚠️ Correr el insert de prueba desde el SQL Editor NO sirve como verificación: ahí sos `postgres` y las políticas no se aplican.
 - 🔴 Recién después tienen sentido las verificaciones que quedaron anotadas arriba (el `sesion` compartido, `onboarding_registro` con `user_id`, el par abierto/completado sin cuenta): hasta que la política no esté, la tabla va a seguir vacía.
 
 ---
