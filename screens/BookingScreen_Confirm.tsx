@@ -505,8 +505,17 @@ export default function BookingScreen_Confirm() {
         // era una solicitud sin pagar.
         await supabase.from('bookings').update({ status: 'confirmada' }).eq('id', booking.id);
 
-        // Crear sala de videollamada en Daily.co en segundo plano (no bloquea al usuario)
-        ensureMeetingRoom(booking.id).catch(() => {});
+        // Crear sala de videollamada en Daily.co en segundo plano (no bloquea al usuario).
+        //
+        // ⚠️ Si falla, la reserva queda confirmada SIN sala. Es recuperable
+        // —`SalaScreen` vuelve a llamar a `ensureMeetingRoom` al entrar— pero
+        // el error se tragaba entero, así que un problema sistemático con Daily
+        // no dejaba ni un rastro y recién se notaba cuando alguien no podía
+        // entrar a su sesión. Se anota; no se le muestra nada a quien reserva,
+        // porque para esa persona todavía no hay nada roto.
+        ensureMeetingRoom(booking.id).catch((e) => {
+          console.warn('[booking] no se pudo crear la sala de video:', booking.id, e?.message ?? e);
+        });
 
         // Reserva instantánea: mismos efectos que cuando el coach acepta
         // manualmente en CoachReservasScreen — notificación al usuario,

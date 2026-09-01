@@ -861,7 +861,18 @@ export default function SalaScreen() {
 
   async function doSendMessage(text: string) {
     if (!salaId || !user) return;
-    const encrypted = encryptMessage(text);
+
+    // ⚠️ `encryptMessage` ahora FALLA CERRADO (antes devolvía el texto plano
+    // ante cualquier error y lo guardaba en claro sin avisar). Acá se atrapa
+    // para que el mensaje no se pierda en silencio: si no se puede preparar, se
+    // dice, con el mismo aviso que ya usa el error del insert.
+    let encrypted: string;
+    try {
+      encrypted = encryptMessage(text);
+    } catch {
+      Alert.alert('Error', 'No se pudo enviar el mensaje');
+      return;
+    }
     const optimisticId = `opt_${Date.now()}`;
     const nowIso = new Date().toISOString();
     const optimistic: Message = {

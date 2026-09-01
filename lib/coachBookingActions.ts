@@ -132,7 +132,11 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
   }
 
   // Crear sala de videollamada en Daily.co en segundo plano
-  ensureMeetingRoom(bookingId).catch(() => {});
+  // Ídem `BookingScreen_Confirm`: recuperable al entrar a la sala, pero un
+  // fallo sistemático de Daily no puede quedar sin rastro.
+  ensureMeetingRoom(bookingId).catch((e) => {
+    console.warn('[booking] no se pudo crear la sala de video:', bookingId, e?.message ?? e);
+  });
 
   return true;
 }

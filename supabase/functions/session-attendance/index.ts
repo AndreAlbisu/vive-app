@@ -25,6 +25,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { esServiceRole } from '../_shared/service-role.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -110,7 +111,7 @@ function resumir(data: unknown): Resumen {
 
 serve(async (req) => {
   const authHeader = req.headers.get('Authorization') ?? ''
-  if (!authHeader.includes(SUPABASE_SERVICE_ROLE_KEY)) {
+  if (!esServiceRole(authHeader, SUPABASE_SERVICE_ROLE_KEY)) {
     return new Response('Unauthorized', { status: 401 })
   }
   if (!DAILY_API_KEY) {

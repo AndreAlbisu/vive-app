@@ -21,9 +21,22 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const BOOKING_DEEP_LINK = Deno.env.get('BOOKING_DEEP_LINK') ?? 'viveapp://booking/result'
 
+// ⚠️ Lista blanca. Esta function es PÚBLICA (`verify_jwt = false`) y su salida
+// entra a la app por un deep link, así que reenviar TODO lo que llegue —que era
+// lo que hacía— convierte cualquier URL de internet en un canal para meter
+// parámetros arbitrarios adentro de la app. Hoy no los lee nadie y por eso era
+// inerte; el día que alguien lea uno, el agujero ya está puesto y nada en el
+// código lo recuerda. Son los tres que MP agrega de verdad.
+const PARAMS_DE_MP = ['payment_id', 'status', 'collection_status', 'external_reference', 'preference_id']
+
 serve((req) => {
   const url = new URL(req.url)
   const target = new URL(BOOKING_DEEP_LINK)
-  url.searchParams.forEach((value, key) => target.searchParams.set(key, value))
+  for (const key of PARAMS_DE_MP) {
+    const value = url.searchParams.get(key)
+    // Tope de largo: son ids y estados cortos. Nada que llegue acá justifica
+    // más que esto, y acota lo que puede empujarse por el deep link.
+    if (value !== null && value.length <= 128) target.searchParams.set(key, value)
+  }
   return Response.redirect(target.toString(), 302)
 })

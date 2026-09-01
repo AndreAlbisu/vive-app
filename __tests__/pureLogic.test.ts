@@ -121,6 +121,35 @@ describe('encryptMessage / decryptMessage', () => {
     expect(encryptMessage(original)).not.toBe(original);
   });
 
+  it('🔴 FALLA CERRADO sin clave: tira en vez de devolver el texto plano', () => {
+    // Antes hacía `catch { return text }`, o sea que ante cualquier problema
+    // guardaba el mensaje EN CLARO en una columna que todo el sistema trata
+    // como obfuscada — y como descifrar es tolerante, se leía bien y nadie se
+    // enteraba nunca. Guardar en claro sin decirlo es peor que no guardar.
+    jest.resetModules();
+    const anterior = process.env.EXPO_PUBLIC_ENCRYPTION_KEY;
+    delete process.env.EXPO_PUBLIC_ENCRYPTION_KEY;
+    try {
+      const sinClave = require('@/lib/encryption');
+      expect(() => sinClave.encryptMessage('hola')).toThrow(/EXPO_PUBLIC_ENCRYPTION_KEY/);
+      // Descifrar sí es tolerante: hay mensajes viejos guardados en claro y
+      // esconderlos sería perder historial de conversaciones reales.
+      expect(sinClave.decryptMessage('lo que sea')).toBe('lo que sea');
+    } finally {
+      process.env.EXPO_PUBLIC_ENCRYPTION_KEY = anterior;
+      jest.resetModules();
+    }
+  });
+
+  it('un emoji partido al medio no rompe el envío', () => {
+    // Un sustituto suelto (media mitad de un par) es lo ÚNICO que hacía fallar
+    // a `encodeURIComponent`, y por lo tanto la única causa real del camino de
+    // error. Llega al pegar texto de otra app o al truncar un emoji.
+    const partido = 'mira esto \uD83C';
+    expect(() => encryptMessage(partido)).not.toThrow();
+    expect(decryptMessage(encryptMessage(partido))).toContain('mira esto');
+  });
+
   // Los dos devuelven la entrada tal cual si algo falla, para no perder
   // mensajes. Un texto plano viejo tiene que sobrevivir a decryptMessage.
   it('descifrar algo que no está cifrado devuelve la entrada, no rompe', () => {

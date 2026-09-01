@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-09-01 — Andre (sesión 152 cont. · auditoría de seguridad de toda la app)
+
+**Tocado:** `lib/encryption.ts` (reescrito), `supabase/functions/_shared/booking-effects.ts`, `supabase/functions/booking-return/index.ts`, las 6 functions con chequeo de service role, `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `lib/coachBookingActions.ts`, `__tests__/pureLogic.test.ts`, `package.json`. Nuevos: `supabase/functions/_shared/service-role.ts`, `jest.setup.js`. 414 tests (eran 412), `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen — auditoría pedida por Andre: secretos, cifrado, autorización de las 20 edge functions, webhooks de pago, RLS, inyección, gateo de admin, errores tragados y fugas de recursos.**
+
+- ✅ **Lo que está bien, y no es poco.** Los webhooks de pago validan firma, son fail-closed y **no le creen al cuerpo de la notificación**: leen el pago desde la API del proveedor. El `state` del OAuth de MP va firmado con HMAC + PKCE. El cliente de Supabase tiene el shim de webcrypto para que PKCE no degrade a `plain`. La RLS usa grants por columna y vistas para filtrar columnas. **No hay inyección posible**: las únicas interpolaciones en filtros son UUIDs de sesión y fechas calculadas. `admin-actions` verifica `is_admin` server-side antes de tocar el service role.
+- 🔴 **1. El "cifrado" de mensajes fallaba ABIERTO.** `encryptMessage` hacía `catch { return text }`: ante cualquier error **guardaba el texto plano** en una columna que todo el sistema trata como obfuscada — y como descifrar es tolerante, el mensaje se leía bien y el problema quedaba invisible para siempre. Ahora tira, y el envío de la sala lo atrapa para avisar "no se pudo enviar" en vez de perderlo en silencio.
+  - 🔴 **Y había un fallback de clave hardcodeado en el repo** (`'vive_mvp_key_2026'`), en las dos puntas: un build o un deploy sin la variable "cifraba" con una clave pública sin avisar. Eliminado; ahora falta la clave y se rompe fuerte, al usar (no al importar, para que una pantalla que nunca manda un mensaje no se caiga por un secret que no necesita).
+  - 📝 **La única causa real de error era un emoji partido al medio** (un sustituto suelto rompe `encodeURIComponent`, y llega al pegar texto de otra app). Se sanea antes de codificar, así el mensaje sale igual perdiendo un glifo que ya se veía roto. Con test.
+  - ⚠️ **Sigue sin ser cifrado y no hay que llamarlo así**: XOR con clave repetida, y la clave viaja en el binario por ser `EXPO_PUBLIC_*`. Lo que protege los mensajes es la RLS de `messages`.
+- ⚠️ **2. `authHeader.includes(SERVICE_ROLE_KEY)`** en las seis functions que solo puede llamar el cron. Es una búsqueda de **subcadena**, no una igualdad —cualquier header que la contenga pasa, venga como venga— y la comparación de strings corta en el primer byte distinto, o sea que filtra por tiempo cuántos caracteres acertaste. No es explotable sin la clave, pero es un candado que no verifica lo que dice verificar, sobre el camino más privilegiado del sistema. Nuevo `_shared/service-role.ts`: extrae el token del `Bearer` y lo compara entero y en tiempo constante.
+- ⚠️ **3. `booking-return` reenviaba al deep link TODOS los query params** que le llegaran. Es una function **pública** (`verify_jwt = false`) cuya salida entra a la app, así que convertía cualquier URL de internet en un canal para meter parámetros arbitrarios adentro. Hoy no los lee nadie —por eso era inerte—, pero el agujero quedaba puesto para el día que alguien leyera uno. Ahora lista blanca de los cinco que MP manda de verdad, con tope de largo.
+- 📝 **4. `ensureMeetingRoom(...).catch(() => {})`** al confirmar una reserva: si falla, la reserva queda confirmada sin sala de video. Es recuperable (`SalaScreen` reintenta al entrar), pero el error se tragaba entero, así que un problema sistemático con Daily no dejaba ni un rastro y recién se notaba cuando alguien no podía entrar a su sesión. Ahora se loguea, en los dos lugares que la llaman.
+- 📝 `jest.setup.js` nuevo: jest no carga `.env`, y sin fallback hardcodeado los tests de ida y vuelta del cifrado se quedaban sin clave. Se define una de juguete, explícita.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Los cambios de las edge functions NO están deployados.** Hay que redeployar las siete tocadas (`booking-return`, `mp-process-refunds`, `paypal-process-refunds`, `paypal-diagnostico`, `session-attendance`, `usdt-check-payments`, `guarantee-claim`) y **confirmar que el secret `MESSAGE_ENCRYPTION_KEY` está seteado** — sin él, `applyPaidBookingEffects` ahora tira en vez de escribir el mensaje en claro.
+- 🔴 **Probar en dispositivo que se pueden mandar mensajes**, que es lo único que este cambio podría haber roto.
+- ⚠️ **Lo que la auditoría NO cubrió**: la RLS **real de la base** (verifiqué la documentada en SCHEMA.md, y el bug de `analytics_events` de hoy prueba que documentación y realidad se separan), y no se intentó explotar nada. Quedan además **50 catch vacíos** en el código: la mayoría inofensivos, pero es el patrón que hoy escondió dos fallas permanentes.
+- 📝 Tokens de sesión en AsyncStorage sin cifrar. Es el default de React Native, pero en un dispositivo con root o vía backup son legibles; `expo-secure-store` sería la alternativa.
+
+---
+
 ## 2026-09-01 — Andre (sesión 152 cont. · contraste: diez botones eran ilegibles y unos íconos invisibles)
 
 **Tocado:** `constants/theme.ts` (token nuevo), `screens/ProfileOwnScreen.tsx`, `CoachWeeklyPatternScreen`, `CoachProfileScreen`, `ProposeResourceScreen`, `EditProfileScreen`, `CoachApplicationScreen`, `SessionsScreen`, `ResourceDetailScreen` (×2), `ResourceProposalsScreen`, `SalaScreen`. 412 tests, `tsc` limpio, sin warnings de lint nuevos.

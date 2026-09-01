@@ -37,6 +37,7 @@
 // y el veredicto de la comparación.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { esServiceRole } from '../_shared/service-role.ts'
 
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -74,7 +75,7 @@ serve(async (req) => {
   // Mismo guardián que `paypal-process-refunds`: se invoca desde el SQL Editor
   // con la service_role key del Vault, así que ningún secret pasa por otro lado.
   const authHeader = req.headers.get('Authorization') ?? ''
-  if (!authHeader.includes(SUPABASE_SERVICE_ROLE_KEY)) {
+  if (!esServiceRole(authHeader, SUPABASE_SERVICE_ROLE_KEY)) {
     return new Response('Unauthorized', { status: 401 })
   }
 
