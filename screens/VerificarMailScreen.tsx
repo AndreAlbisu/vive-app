@@ -32,7 +32,16 @@ const ESPERA_REENVIO = 60;   // segundos
  * proyecto y por usuario, y el mensaje tiene que decir "esperá", porque si dice
  * "probá de nuevo" la persona reintenta y estira el bloqueo.
  */
-function motivoDeEnvio(err: unknown): string {
+/** El body de la respuesta de error, si se puede leer. Nunca tira. */
+async function leerCuerpo(err: unknown): Promise<string> {
+  try {
+    const r = err as { json?: () => Promise<unknown>; bodyUsed?: boolean };
+    if (typeof r?.json === 'function' && !r.bodyUsed) return JSON.stringify(await r.json());
+  } catch { /* body ya consumido o no-JSON */ }
+  return '';
+}
+
+function motivoDeEnvio(err: unknown, cuerpo = ''): string {
   // ⚠️ El error NO siempre es un `AuthError` con `.message` de texto: cuando
   // Supabase responde algo que no es JSON (un 504 del gateway, por ejemplo)
   // llega un objeto Response entero. Un `.toLowerCase()` sobre eso reventaba.
@@ -41,7 +50,7 @@ function motivoDeEnvio(err: unknown): string {
     : (err as { message?: unknown })?.message ?? '';
   const texto = typeof crudo === 'string' ? crudo : JSON.stringify(crudo);
   const status = (err as { status?: number })?.status;
-  const m = `${texto} ${status ?? ''}`.toLowerCase();
+  const m = `${texto} ${cuerpo} ${status ?? ''}`.toLowerCase();
 
   // 504 = el servicio de auth se quedó esperando al SMTP. Es lo que pasa con un
   // SMTP propio mal configurado: la conexión cuelga hasta que el gateway corta.
@@ -49,8 +58,12 @@ function motivoDeEnvio(err: unknown): string {
     return 'El servicio de mail no está respondiendo. Es un problema de configuración nuestro, no tuyo';
   if (status === 429 || m.includes('rate limit') || m.includes('too many'))
     return 'Se enviaron demasiados códigos. Esperá unos minutos antes de pedir otro';
-  if (m.includes('smtp') || m.includes('sending') || m.includes('email provider'))
-    return 'No se pudo enviar el mail. Es un problema de configuración nuestro, no tuyo';
+  // 500 con `unexpected_failure` en /otp es, casi siempre, el proveedor de mail
+  // rechazando el envío: remitente sin verificar, o un destinatario que el modo
+  // de prueba del proveedor no permite.
+  if (status === 500 || m.includes('unexpected_failure') || m.includes('smtp')
+      || m.includes('sending') || m.includes('email provider'))
+    return 'El proveedor de mail rechazó el envío. Es un problema de configuración nuestro, no tuyo';
   if (m.includes('signups not allowed') || m.includes('not found'))
     return 'No encontramos una cuenta con ese mail';
   if (m.includes('network') || m.includes('fetch'))
@@ -162,8 +175,13 @@ export default function VerificarMailScreen() {
       // 🔴 El motivo real, no un genérico. Un "probá de nuevo" ante un límite de
       // envíos hace que la persona reintente, que es exactamente lo que empeora
       // el problema; y ante un SMTP mal configurado, que reintente para siempre.
-      console.warn('[mail] signInWithOtp falló:', e.status ?? '', e.message ?? e);
-      setError(motivoDeEnvio(e));
+      // 🔴 El cuerpo de la respuesta trae el motivo REAL y supabase-js lo deja
+      // sin leer: en un 500 el log muestra un Blob de 72 bytes que no dice
+      // nada. Leerlo es la diferencia entre "algo falló" y "Resend rechazó el
+      // destinatario". No bloquea nada: es solo para la consola.
+      const cuerpo = await leerCuerpo(e);
+      console.warn('[mail] signInWithOtp falló:', e.status ?? '', cuerpo || e.message || e);
+      setError(motivoDeEnvio(e, cuerpo));
       return;
     }
     setEspera(ESPERA_REENVIO);
