@@ -79,6 +79,11 @@ salir de la app, abrir el correo y volver.
 
 ## Dos ajustes más, en la misma sección
 
+- ⚠️ **Cuántos dígitos tiene el código** — Authentication → Providers → Email →
+  *Email OTP Length*. Va de 6 a 10 y **este proyecto genera de 8**. La app
+  acepta todo el rango a propósito (`LARGO_MIN`/`LARGO_MAX` en
+  `screens/VerificarMailScreen.tsx`), así que cambiar este ajuste no la rompe —
+  pero si se pone fuera de 6–10, sí.
 - **Cuánto dura el código** — Authentication → Providers → Email → *Email OTP
   Expiration*. Por defecto **3600s (1 hora)**. La pantalla dice "el código no
   coincide o ya venció", así que el número tiene que ser razonable: una hora

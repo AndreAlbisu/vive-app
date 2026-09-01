@@ -18,7 +18,12 @@ const TEXTO       = '#26402F';
 const TEXTO_SUAVE = '#5C6B58';
 const TERRACOTA   = '#C4743A';
 
-const LARGO = 6;
+// 🔴 Un rango y no un número fijo. El largo del código lo decide un ajuste del
+// panel de Supabase (Email OTP Length, 6 a 10) — estaba clavado en 6 y el
+// proyecto genera de 8, así que la app rechazaba códigos válidos antes de
+// mandarlos. Aceptar el rango entero hace que cambiar ese ajuste no rompa nada.
+const LARGO_MIN = 6;
+const LARGO_MAX = 10;
 // 🔴 60 y no menos: Supabase tiene su propio "Minimum interval per user" (60s
 // por defecto). Con una cuenta regresiva más corta el botón se habilitaba antes
 // de que el servidor aceptara, así que "Reenviar" fallaba y la persona no tenía
@@ -190,7 +195,7 @@ export default function VerificarMailScreen() {
 
   async function verificar() {
     const limpio = codigo.replace(/\D/g, '');
-    if (limpio.length !== LARGO) { setError(`El código tiene ${LARGO} dígitos`); return; }
+    if (limpio.length < LARGO_MIN) { setError('Te falta parte del código'); return; }
 
     setVerificando(true);
     setError(null);
@@ -240,8 +245,11 @@ export default function VerificarMailScreen() {
             <Animated.View style={[s.headingArea, fadeUp(anim)]}>
               <Text style={s.heading}>Confirmá tu mail</Text>
               <Text style={s.subheading}>
+                {/* Sin decir cuántos dígitos: lo decide un ajuste del panel y
+                    prometer un número que después no coincide es peor que no
+                    decirlo. El código viene en el mail y en su asunto. */}
                 {esAlta
-                  ? `Te mandamos un código de ${LARGO} dígitos a`
+                  ? 'Te mandamos un código a'
                   : 'Antes de reservar necesitamos confirmar tu mail. Te mandamos un código a'}{'\n'}
                 <Text style={s.mail}>{mail}</Text>
               </Text>
@@ -251,13 +259,13 @@ export default function VerificarMailScreen() {
               <TextInput
                 style={s.input}
                 value={codigo}
-                onChangeText={t => { setCodigo(t.replace(/\D/g, '').slice(0, LARGO)); setError(null); }}
-                placeholder="000000"
+                onChangeText={t => { setCodigo(t.replace(/\D/g, '').slice(0, LARGO_MAX)); setError(null); }}
+                placeholder="Código"
                 placeholderTextColor="rgba(92,107,88,0.45)"
                 keyboardType="number-pad"
                 textContentType="oneTimeCode"
                 autoComplete="one-time-code"
-                maxLength={LARGO}
+                maxLength={LARGO_MAX}
                 autoFocus
                 editable={!verificando}
               />
