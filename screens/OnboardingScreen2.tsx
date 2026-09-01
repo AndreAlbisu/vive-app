@@ -289,9 +289,9 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 20,
     justifyContent: 'flex-start',
-    // 📝 20 y no 30: con más aire, la pregunta y las respuestas se leían como
-    // dos bloques separados. Son una sola cosa.
-    gap: 20,
+    // 📝 16 y no 30: con más aire, la pregunta y las respuestas se leían como
+    // dos bloques separados. Son una sola cosa — la pregunta y sus respuestas.
+    gap: 16,
   },
   // Alineado a la izquierda, como el boceto: centrado se leía como un cartel, y
   // así se lee como alguien que pregunta.
