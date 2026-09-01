@@ -289,13 +289,18 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 20,
     justifyContent: 'flex-start',
-    // 📝 16 y no 30: con más aire, la pregunta y las respuestas se leían como
-    // dos bloques separados. Son una sola cosa — la pregunta y sus respuestas.
-    gap: 16,
+    // 📝 Los dos huecos del bloque —título↔bajada y bajada↔opciones— guardan
+    // la proporción 3:4 (18 y 24). Se mueven juntos a propósito: subir o bajar
+    // las opciones cambiando SOLO este número las despega de la pregunta, que
+    // es lo que las volvía dos bloques separados. Si hay que moverlas más,
+    // mover los dos manteniendo la relación.
+    gap: 24,
   },
   // Alineado a la izquierda, como el boceto: centrado se leía como un cartel, y
   // así se lee como alguien que pregunta.
-  pregunta: { gap: 12 },
+  // El título no se mueve: arranca donde termina el header. Lo que baja es lo
+  // de abajo, y baja en proporción (ver el gap de `content`).
+  pregunta: { gap: 18 },
   title: {
     fontFamily: ViveFonts.title,
     // 35 y no 38: a 38 le competía el protagonismo a las opciones, que son lo
