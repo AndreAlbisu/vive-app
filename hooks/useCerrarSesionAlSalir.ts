@@ -84,7 +84,17 @@ export function useCerrarSesionAlSalir(activo: boolean) {
       if (terminado.current || !activoRef.current) return;
 
       ev.preventDefault();
-      void abandonarAlta().then(() => signOutRef.current()).finally(() => {
+      // 🔴 Marcar terminado ANTES de navegar. Sin esto se re-entra: el
+      // `router.replace` de abajo dispara otro `beforeRemove`, que —con
+      // `terminado` todavía en false— vuelve a interceptar y llama a
+      // `abandonarAlta`/`deleteMyAccount` una segunda vez, ya sin sesión y
+      // sobre una cuenta borrada → error y cuelgue (hallazgo device review
+      // 01/09). El botón "Cancelar" nunca lo tuvo porque `cancelar()` ya
+      // marca terminado antes de su propio `replace`.
+      terminado.current = true;
+      void abandonarAlta().then(() => signOutRef.current()).catch(err => {
+        console.warn('[alta] abandono por gesto/back falló:', err);
+      }).finally(() => {
         // A la bifurcación explícito, ya sin sesión detrás. NO se re-despacha
         // `ev.data.action` (GO_BACK): la pila del alta está vacía y falla —
         // ver el comentario 🔴 de arriba.
