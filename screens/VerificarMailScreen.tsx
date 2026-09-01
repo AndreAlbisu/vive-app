@@ -32,18 +32,31 @@ const ESPERA_REENVIO = 60;   // segundos
  * proyecto y por usuario, y el mensaje tiene que decir "esperá", porque si dice
  * "probá de nuevo" la persona reintenta y estira el bloqueo.
  */
-function motivoDeEnvio(msg: string): string {
-  const m = msg.toLowerCase();
-  if (m.includes('rate limit') || m.includes('too many') || m.includes('after'))
+function motivoDeEnvio(err: unknown): string {
+  // ⚠️ El error NO siempre es un `AuthError` con `.message` de texto: cuando
+  // Supabase responde algo que no es JSON (un 504 del gateway, por ejemplo)
+  // llega un objeto Response entero. Un `.toLowerCase()` sobre eso reventaba.
+  const crudo = typeof err === 'string'
+    ? err
+    : (err as { message?: unknown })?.message ?? '';
+  const texto = typeof crudo === 'string' ? crudo : JSON.stringify(crudo);
+  const status = (err as { status?: number })?.status;
+  const m = `${texto} ${status ?? ''}`.toLowerCase();
+
+  // 504 = el servicio de auth se quedó esperando al SMTP. Es lo que pasa con un
+  // SMTP propio mal configurado: la conexión cuelga hasta que el gateway corta.
+  if (status === 504 || status === 502 || m.includes('timeout') || m.includes('gateway'))
+    return 'El servicio de mail no está respondiendo. Es un problema de configuración nuestro, no tuyo';
+  if (status === 429 || m.includes('rate limit') || m.includes('too many'))
     return 'Se enviaron demasiados códigos. Esperá unos minutos antes de pedir otro';
   if (m.includes('smtp') || m.includes('sending') || m.includes('email provider'))
     return 'No se pudo enviar el mail. Es un problema de configuración nuestro, no tuyo';
-  if (m.includes('signups not allowed') || m.includes('not found') || m.includes('user'))
+  if (m.includes('signups not allowed') || m.includes('not found'))
     return 'No encontramos una cuenta con ese mail';
   if (m.includes('network') || m.includes('fetch'))
     return 'Sin conexión. Revisá tu internet';
   // Sin traducción: el texto crudo dice más que un genérico, aunque venga en inglés.
-  return msg;
+  return texto || 'No pudimos enviar el código';
 }
 
 const fadeUp = (anim: Animated.Value) => ({
@@ -136,8 +149,8 @@ export default function VerificarMailScreen() {
       // 🔴 El motivo real, no un genérico. Un "probá de nuevo" ante un límite de
       // envíos hace que la persona reintente, que es exactamente lo que empeora
       // el problema; y ante un SMTP mal configurado, que reintente para siempre.
-      console.warn('[mail] signInWithOtp falló:', e.message);
-      setError(motivoDeEnvio(e.message));
+      console.warn('[mail] signInWithOtp falló:', e.status ?? '', e.message ?? e);
+      setError(motivoDeEnvio(e));
       return;
     }
     setEspera(ESPERA_REENVIO);
