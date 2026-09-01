@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · para darse de baja hay que escribir BORRAR CUENTA)
+
+**Tocado:** `screens/ProfileOwnScreen.tsx`, `screens/CoachSettingsScreen.tsx`. Nuevos: `lib/confirmarBorrado.ts`, `__tests__/confirmarBorrado.test.ts`. 393 tests (eran 390), `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- ✅ **Pedido de Andre: la baja pide escribir `BORRAR CUENTA`.** Antes era un botón rojo al final de dos párrafos de advertencia — se puede tocar sin querer, o por inercia después de leer. La baja es irreversible **y dispara reembolsos**, así que tiene que costar un acto deliberado.
+- 📝 **La comparación perdona mayúsculas y espacios de más.** La fricción que se busca es escribir las dos palabras, no acertarle al teclado: alguien decidido a borrar su cuenta no tiene por qué pelear con el shift.
+- 🔴 **La frase vive en `lib/confirmarBorrado.ts` y no adentro de una pantalla**, porque la baja existe en **dos** lugares (perfil del usuario y ajustes del coach). Dos frases distintas serían una trampa: la persona escribe la que recuerda de la otra pantalla y no le funciona.
+- 📝 El botón queda deshabilitado y atenuado hasta que la frase coincida, y la caja se vacía cada vez que se abre el modal — un intento anterior no puede dejarla lista.
+
+**Pendiente para la próxima sesión:**
+
+- 📝 **Sin ver en dispositivo.** Los dos modales (usuario y coach), que el botón se habilite solo con la frase y que el teclado no tape el campo en pantallas chicas.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · cerrar la app en medio del alta ya no te deja adentro)
 
 **Tocado:** `app/_layout.tsx`, `screens/CoachLoginScreen.tsx`, `screens/VerificarMailScreen.tsx`, `screens/CoachApplicationScreen.tsx`, `hooks/useCerrarSesionAlSalir.ts`. Nuevo: `lib/altaCoach.ts`. 390 tests, `tsc` limpio, sin warnings de lint nuevos.

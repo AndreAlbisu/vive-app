@@ -8,6 +8,7 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,6 +17,7 @@ import { ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { AppBg } from '@/components/ui/AppBg';
 import { deleteMyAccount } from '@/lib/accountDeletion';
+import { FRASE_BORRAR, coincideBorrado } from '@/lib/confirmarBorrado';
 
 /**
  * Ajustes de la APP para el coach — lo que no es "ser profesional en VIVE".
@@ -51,6 +53,7 @@ export default function CoachSettingsScreen() {
   const router = useRouter();
   const { signOut, isAdmin } = useAuth();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [confirmTexto, setConfirmTexto] = useState('');
   const [deleting, setDeleting] = useState(false);
 
   async function handleSignOut() {
@@ -61,6 +64,8 @@ export default function CoachSettingsScreen() {
   // Misma baja que la del usuario y por el mismo camino: `deleteMyAccount` ya
   // distingue el caso del coach con sesiones agendadas, que no puede darse de
   // baja hasta cancelarlas — cada cancelación avisa y reembolsa.
+  const puedeBorrar = coincideBorrado(confirmTexto);
+
   async function handleDeleteAccount() {
     setDeleting(true);
     const res = await deleteMyAccount();
@@ -103,7 +108,7 @@ export default function CoachSettingsScreen() {
 
   const salida: ConfigItem[] = [
     { id: 'logout', icon: 'logout', label: 'Cerrar sesión', danger: true, onPress: handleSignOut },
-    { id: 'delete', icon: 'trash-can-outline', label: 'Eliminar mi cuenta', danger: true, onPress: () => setDeleteOpen(true) },
+    { id: 'delete', icon: 'trash-can-outline', label: 'Eliminar mi cuenta', danger: true, onPress: () => { setConfirmTexto(''); setDeleteOpen(true); } },
   ];
 
   const lista = (items: ConfigItem[]) => (
@@ -192,10 +197,27 @@ export default function CoachSettingsScreen() {
                 cada cancelación le avisa a la persona y le devuelve su dinero.
               </Text>
 
+
+              {/* 🔴 Escribir la frase, no solo tocar un botón: la baja es
+                  irreversible y dispara reembolsos, así que tiene que costar un
+                  acto deliberado y no un toque por inercia. */}
+              <Text style={s.delPrompt}>
+                Para confirmar, escribí <Text style={s.delPromptFrase}>{FRASE_BORRAR}</Text>
+              </Text>
+              <TextInput
+                style={s.delInput}
+                value={confirmTexto}
+                onChangeText={setConfirmTexto}
+                placeholder={FRASE_BORRAR}
+                placeholderTextColor="rgba(86,94,50,0.35)"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                editable={!deleting}
+              />
               <TouchableOpacity
-                style={[s.delConfirmBtn, deleting && { opacity: 0.6 }]}
+                style={[s.delConfirmBtn, (deleting || !puedeBorrar) && { opacity: 0.45 }]}
                 onPress={handleDeleteAccount}
-                disabled={deleting}
+                disabled={deleting || !puedeBorrar}
                 activeOpacity={0.85}>
                 {deleting
                   ? <ActivityIndicator size="small" color="#FFF" />
@@ -319,6 +341,28 @@ const s = StyleSheet.create({
     lineHeight: 19,
     color: '#87835C',
     textAlign: 'center',
+  },
+  delPrompt: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13.5,
+    color: '#5C6B58',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  delPromptFrase: { fontFamily: ViveFonts.semibold, color: '#C0392B', letterSpacing: 0.5 },
+  delInput: {
+    alignSelf: 'stretch',
+    backgroundColor: 'rgba(86,94,50,0.10)',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(192,57,43,0.25)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#2E3624',
+    textAlign: 'center',
+    letterSpacing: 1,
   },
   delConfirmBtn: {
     marginTop: 8,

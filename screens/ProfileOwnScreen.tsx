@@ -12,6 +12,7 @@ import {
   Modal,
   Alert,
   Switch,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -19,6 +20,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { supabase, registrarEvento } from '@/lib/supabase';
+import { FRASE_BORRAR, coincideBorrado } from '@/lib/confirmarBorrado';
 import { AppBg } from '@/components/ui/AppBg';
 import { deleteMyAccount } from '@/lib/accountDeletion';
 import { getMomentPref, setMomentPref } from '@/lib/sobreVosMomentoStorage';
@@ -45,6 +47,7 @@ export default function ProfileOwnScreen() {
   const [loadingData, setLoadingData] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [confirmTexto, setConfirmTexto] = useState('');
   const [deleting, setDeleting] = useState(false);
   // Parte E de "Sobre vos" — auto-disparo del momento completo. Vive en
   // AsyncStorage, no en `profiles` (ver lib/sobreVosMomentoStorage.ts).
@@ -136,6 +139,8 @@ export default function ProfileOwnScreen() {
   // propósito: es irreversible y borra diario, ánimo y guardados. Lo que se
   // conserva (reservas, reseñas, mensajes) se le dice explícitamente al usuario
   // en vez de dejarlo en la política, porque es lo que suele sorprender.
+  const puedeBorrar = coincideBorrado(confirmTexto);
+
   async function handleDeleteAccount() {
     setDeleting(true);
     const res = await deleteMyAccount();
@@ -189,7 +194,7 @@ export default function ProfileOwnScreen() {
     { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },
     { id: 'regret', icon: 'undo-variant', label: 'Botón de arrepentimiento', onPress: () => router.push('/legal?doc=arrepentimiento') },
     { id: 'logout', icon: 'logout', label: 'Cerrar sesión', danger: true, onPress: handleSignOut },
-    { id: 'delete', icon: 'trash-can-outline', label: 'Eliminar mi cuenta', danger: true, onPress: () => setDeleteOpen(true) },
+    { id: 'delete', icon: 'trash-can-outline', label: 'Eliminar mi cuenta', danger: true, onPress: () => { setConfirmTexto(''); setDeleteOpen(true); } },
   ];
 
   // El botón de arrepentimiento va TAMBIÉN en la lista de invitado: la Res.
@@ -408,10 +413,27 @@ export default function ProfileOwnScreen() {
               reembolsan.
             </Text>
 
+
+            {/* 🔴 Escribir la frase, no solo tocar un botón: la baja es
+                irreversible y dispara reembolsos, así que tiene que costar un
+                acto deliberado y no un toque por inercia. */}
+            <Text style={styles.delPrompt}>
+              Para confirmar, escribí <Text style={styles.delPromptFrase}>{FRASE_BORRAR}</Text>
+            </Text>
+            <TextInput
+              style={styles.delInput}
+              value={confirmTexto}
+              onChangeText={setConfirmTexto}
+              placeholder={FRASE_BORRAR}
+              placeholderTextColor="rgba(86,94,50,0.35)"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              editable={!deleting}
+            />
             <TouchableOpacity
-              style={[styles.delConfirmBtn, deleting && { opacity: 0.6 }]}
+              style={[styles.delConfirmBtn, (deleting || !puedeBorrar) && { opacity: 0.45 }]}
               onPress={handleDeleteAccount}
-              disabled={deleting}
+              disabled={deleting || !puedeBorrar}
               activeOpacity={0.85}>
               {deleting
                 ? <ActivityIndicator size="small" color="#FFF" />
@@ -767,6 +789,28 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: 'rgba(86,94,50,0.85)',
     textAlign: 'center',
+  },
+  delPrompt: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13.5,
+    color: '#5C6B58',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  delPromptFrase: { fontFamily: ViveFonts.semibold, color: '#C0392B', letterSpacing: 0.5 },
+  delInput: {
+    alignSelf: 'stretch',
+    backgroundColor: 'rgba(86,94,50,0.10)',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(192,57,43,0.25)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#2E3624',
+    textAlign: 'center',
+    letterSpacing: 1,
   },
   delConfirmBtn: {
     marginTop: 6,
