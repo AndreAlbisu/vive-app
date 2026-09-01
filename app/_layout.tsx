@@ -30,7 +30,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { registerForPushNotifications } from '@/lib/notifications';
 import { reconcileResourceReminders } from '@/lib/resourceReminders';
 
-// ⚠️ `coach-verificacion` y `coach-application` NO van acá: son pantallas a las
+// ⚠️ `verificar-mail` y `coach-application` NO van acá: son pantallas a las
 // que se llega CON sesión a propósito, y meterlas en este set las mandaría de
 // vuelta al Inicio apenas se montan.
 const ONBOARDING_SCREENS = new Set(['index', 'onboarding-bifurcacion', 'onboarding2', 'onboarding3', 'onboarding4', 'onboarding5', 'login', 'register']);
@@ -181,7 +181,7 @@ export default function RootLayout() {
               pantalla nueva ya está puesta debajo del color y lo único que
               queda por delante es descubrirla. */}
           <Stack.Screen name="coach-login" options={{ headerShown: false, animation: 'none' }} />
-          <Stack.Screen name="coach-verificacion" options={{ headerShown: false }} />
+          <Stack.Screen name="verificar-mail" options={{ headerShown: false }} />
           <Stack.Screen name="coach-application" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="(coach)" options={{ headerShown: false, gestureEnabled: false }} />

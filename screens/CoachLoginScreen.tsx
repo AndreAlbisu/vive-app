@@ -136,7 +136,7 @@ export default function CoachLoginScreen() {
     // Quien ENTRA (no se registra ahora) ya pasó por acá alguna vez o tiene
     // fila en `coaches`, así que no se le vuelve a pedir.
     if (isNewSignup) {
-      router.replace({ pathname: '/coach-verificacion', params: { email: user.email ?? '' } } as any);
+      router.replace({ pathname: '/verificar-mail', params: { email: user.email ?? '', modo: 'alta' } } as any);
       return;
     }
 

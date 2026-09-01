@@ -25,7 +25,17 @@ const fadeUp = (anim: Animated.Value) => ({
 });
 
 /**
- * Verificación del mail en el alta de coach.
+ * Verificación del mail. La usan DOS caminos, y se comportan distinto:
+ *
+ *   · `modo='alta'` — el alta de coach. Se llega con una sesión recién creada
+ *     que todavía no debería servir para nada: **abandonar cierra la sesión**,
+ *     y confirmar sigue a la postulación.
+ *   · `modo='gate'` — alguien que ya usa la app y va a reservar. Su sesión es
+ *     legítima: **abandonar NO la cierra**, solo vuelve. Confirmar vuelve
+ *     también, a terminar lo que estaba haciendo.
+ *
+ * 🔴 La diferencia importa: cerrarle la sesión a alguien por no confirmar un
+ * código en medio de una reserva sería sacarlo de la app por un trámite.
  *
  * 🔴 POR QUÉ EXISTE. Dos cosas que hasta ahora no se comprobaban:
  *   · quien se equivoca al tipear su dirección queda con una cuenta que **no
@@ -44,9 +54,10 @@ const fadeUp = (anim: Animated.Value) => ({
  * 📝 A esta pantalla se llega con sesión abierta (el alta ya la creó), así que
  * el `verifyOtp` no es para entrar: es para probar que la casilla es suya.
  */
-export default function CoachVerificationScreen() {
+export default function VerificarMailScreen() {
   const router = useRouter();
-  const { email } = useLocalSearchParams<{ email?: string }>();
+  const { email, modo } = useLocalSearchParams<{ email?: string; modo?: string }>();
+  const esAlta = (Array.isArray(modo) ? modo[0] : modo) !== 'gate';
   const { user, signOut } = useAuth();
 
   const mail = (Array.isArray(email) ? email[0] : email) ?? user?.email ?? '';
@@ -61,19 +72,25 @@ export default function CoachVerificationScreen() {
   const anim = useRef(new Animated.Value(0)).current;
 
   /**
-   * 🔴 Mismo guard que `CoachApplicationScreen`: a esta pantalla se llega ya
-   * logueado, así que irse sin terminar dejaría una sesión de usuario final
-   * viva y el `AuthRedirect` mandaría a la persona al Inicio sin que lo haya
-   * pedido. Por refs y con `[]` — con `signOut` en las dependencias, un
-   * re-render del contexto correría la limpieza en medio del formulario.
+   * 🔴 Solo en el alta: irse sin terminar cierra la sesión. Es el mismo guard
+   * que `CoachApplicationScreen` — se llega logueado, y sin esto quedaría viva
+   * una sesión de usuario final que el `AuthRedirect` usa para mandar a la
+   * persona al Inicio sin que lo haya pedido.
+   *
+   * En `gate` NO se cierra nada: esa sesión ya era legítima antes de entrar acá.
+   *
+   * Por refs y con `[]` — con `signOut` o `esAlta` en las dependencias, un
+   * re-render correría la limpieza en medio del formulario.
    */
   const listo = useRef(false);
   const signOutRef = useRef(signOut);
   signOutRef.current = signOut;
+  const cierraAlSalir = useRef(esAlta);
+  cierraAlSalir.current = esAlta;
 
   useFocusEffect(
     useCallback(() => () => {
-      if (!listo.current) void signOutRef.current();
+      if (!listo.current && cierraAlSalir.current) void signOutRef.current();
     }, []),
   );
 
@@ -139,7 +156,11 @@ export default function CoachVerificationScreen() {
 
     listo.current = true;   // que la limpieza de foco no cierre la sesión
     setVerificando(false);
-    router.replace('/coach-application');
+
+    // El alta sigue a la postulación; el gate vuelve a lo que la persona
+    // estaba haciendo (reservar), que es donde quedó el hilo.
+    if (esAlta) router.replace('/coach-application');
+    else router.back();
   }
 
   const puedeReenviar = espera === 0 && !reenviando && !verificando;
@@ -158,7 +179,9 @@ export default function CoachVerificationScreen() {
             <Animated.View style={[s.headingArea, fadeUp(anim)]}>
               <Text style={s.heading}>Confirmá tu mail</Text>
               <Text style={s.subheading}>
-                Te mandamos un código de {LARGO} dígitos a{'\n'}
+                {esAlta
+                  ? `Te mandamos un código de ${LARGO} dígitos a`
+                  : 'Antes de reservar necesitamos confirmar tu mail. Te mandamos un código a'}{'\n'}
                 <Text style={s.mail}>{mail}</Text>
               </Text>
             </Animated.View>
@@ -206,10 +229,11 @@ export default function CoachVerificationScreen() {
               </TouchableOpacity>
             </Animated.View>
 
-            {/* Volver cancela el alta: la limpieza de foco cierra la sesión */}
+            {/* En el alta, volver la cancela (la limpieza cierra la sesión). En
+                el gate, volver es solo volver. */}
             <View style={s.footer}>
               <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-                <Text style={s.footerLink}>Volver</Text>
+                <Text style={s.footerLink}>{esAlta ? 'Cancelar' : 'Ahora no'}</Text>
               </TouchableOpacity>
             </View>
 

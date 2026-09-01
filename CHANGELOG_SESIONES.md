@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · el mail verificado se exige antes de reservar)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`, `screens/VerificarMailScreen.tsx` (renombrada), `app/verificar-mail.tsx` (renombrada), `app/_layout.tsx`, `screens/CoachLoginScreen.tsx`, `SCHEMA.md`. Nuevos: `lib/emailVerificado.ts`, `__tests__/emailVerificado.test.ts`. 390 tests (eran 381), `tsc` y lint limpios.
+
+**Resumen:**
+
+- ✅ **Segunda mitad de lo hablado: el usuario final no se frena en el alta, se frena al reservar.** Un muro de mail en el registro para a alguien que quizá la está pasando mal, en el punto del embudo donde más gente se cae. En la confirmación de reserva el mail hace falta de verdad —confirmación, recordatorios y sobre todo el **reembolso** si algo sale mal— y la persona ya tiene un motivo propio para confirmarlo.
+- **El gate va en `onConfirm`, justo después del chequeo de sesión.** Manda a verificar y **vuelve a la misma pantalla**, así que el siguiente toque de "Confirmar" sigue de largo.
+- 📝 **A quien entró con Google o Apple no se le pide nada.** El proveedor ya entregó el mail verificado; pedirle un código sería pedirle que pruebe algo que Google ya probó. Se detecta por `app_metadata.provider`/`providers` — mirando la lista y no solo el primero, porque una cuenta puede tener más de una identidad.
+- 🔴 **`necesitaVerificarMail` falla ABIERTO, y es deliberado.** Ante cualquier error del select devuelve `false` y deja pasar. El caso concreto: si el script de la columna todavía no se corrió, un gate que se activara con ese error dejaría a **todo el mundo sin poder reservar**. Un mail sin verificar es un riesgo chico; una app donde nadie puede reservar, no. Tiene test.
+- 🔴 **La pantalla se renombró de `CoachVerificationScreen` a `VerificarMailScreen`** (ruta `/coach-verificacion` → `/verificar-mail`): ya no es del coach, la usan los dos caminos. Un nombre que miente sobre quién usa una pantalla compartida es de las cosas que muerden después.
+- ⚠️ **Los dos modos se comportan distinto al abandonar, y la diferencia importa.** En `alta` la sesión se cierra (es una cuenta recién creada que todavía no debería servir para nada); en `gate` **no se toca**, porque esa sesión ya era legítima — cerrarle la sesión a alguien por no confirmar un código en medio de una reserva sería echarlo de la app por un trámite.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sigue faltando correr `scripts/add-email-verified-at.sql`** y editar la plantilla de Magic Link con `{{ .Token }}`. Sin la columna, el gate no se activa nunca (falla abierto); sin la plantilla, el código no llega.
+- ⚠️ **Todas las cuentas existentes tienen `email_verified_at` en null**, así que la primera vez que vayan a reservar les va a pedir el código. Es el efecto buscado, pero conviene saberlo antes de que pase.
+- 📝 **Solo se gatea la reserva.** Si más adelante hay otros lugares donde el mail importe (por ejemplo el retiro de plata del coach), el helper ya está y es una línea.
+- 🔴 **Sin probar en dispositivo**: reservar con una cuenta de mail sin verificar, confirmar el código, y que al volver la reserva siga; y que una cuenta de Google no vea nada de esto.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · verificación de mail en el alta de coach)
 
 **Tocado:** `screens/CoachLoginScreen.tsx`, `app/_layout.tsx`, `SCHEMA.md`. Nuevos: `screens/CoachVerificationScreen.tsx`, `app/coach-verificacion.tsx`, `scripts/add-email-verified-at.sql` (**⚠️ FALTA CORRER**). 381 tests, `tsc` limpio, sin warnings de lint nuevos.

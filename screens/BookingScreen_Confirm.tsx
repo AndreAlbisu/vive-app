@@ -21,6 +21,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { necesitaVerificarMail } from '@/lib/emailVerificado';
 import { sendPushNotification } from '@/lib/notifications';
 import * as WebBrowser from 'expo-web-browser';
 import { logError, logWarn } from '@/lib/logging';
@@ -252,6 +253,24 @@ export default function BookingScreen_Confirm() {
 
   async function onConfirm() {
     if (!isLoggedIn || !user) { requestAuth(); return; }
+
+    // 🔴 El mail se exige ACÁ y no en el alta. Al registrarse, un muro de mail
+    // frena a alguien que quizá la está pasando mal, en el momento del embudo
+    // donde más gente se cae. Acá el mail hace falta de verdad —confirmación,
+    // recordatorios, y sobre todo el reembolso si algo sale mal— y la persona
+    // ya tiene un motivo propio para confirmarlo.
+    //
+    // Vuelve a esta misma pantalla al terminar, así que el siguiente toque de
+    // "confirmar" sigue de largo. Google y Apple no pasan por acá: su mail ya
+    // viene verificado por el proveedor.
+    if (await necesitaVerificarMail(user)) {
+      router.push({
+        pathname: '/verificar-mail',
+        params: { email: user.email ?? '', modo: 'gate' },
+      } as any);
+      return;
+    }
+
     if (!coachProfileIdParam) {
       setError('No encontramos el profesional. Volvé y elegí de nuevo');
       return;
