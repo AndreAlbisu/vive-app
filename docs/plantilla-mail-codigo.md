@@ -47,12 +47,49 @@ salir de la app, abrir el correo y volver.
   Expiration*. Por defecto **3600s (1 hora)**. La pantalla dice "el código no
   coincide o ya venció", así que el número tiene que ser razonable: una hora
   está bien, menos de diez minutos es hostil.
+- ⚠️ **Intervalo mínimo entre mails al mismo usuario** — *Minimum interval per
+  user*, 60s por defecto. **La cuenta regresiva de "Reenviar código" en la app
+  está atada a este número** (`ESPERA_REENVIO` en `screens/VerificarMailScreen.tsx`).
+  Si se cambia acá, hay que cambiarlo allá: con la cuenta regresiva más corta
+  que el intervalo, el botón se habilita antes de que el servidor acepte y el
+  reenvío falla sin que la persona entienda por qué.
 - ⚠️ **Cuántos mails por hora** — Authentication → Rate Limits. El SMTP interno
   de Supabase viene con un límite **muy bajo** (del orden de unos pocos mails
   por hora en todo el proyecto). **Alcanza para probar de a poco y NO alcanza
   para producción**: con dos coaches registrándose el mismo día, el segundo no
   recibe nada y no hay forma de que se entere. Antes de abrir el registro de
-  verdad hay que conectar un SMTP propio (Resend, Postmark, SES).
+  verdad hay que conectar un SMTP propio. Ver abajo.
+
+## SMTP propio (para producción, no para probar)
+
+⚠️ **No hace falta para probar la verificación**: el SMTP interno manda el
+código igual. Esto es para cuando se abra el registro de verdad.
+
+El remitente **tiene que ser un dominio propio y verificado por DNS** — no se
+puede poner un Gmail. Vita ya tiene **`vitaapp.com.ar`** (ver `docs/hosting.md`),
+así que el remitente sería algo como `no-responder@vitaapp.com.ar`.
+
+Con **Resend**, que es el más simple de los tres:
+
+| Campo | Valor |
+|---|---|
+| Sender email address | `no-responder@vitaapp.com.ar` |
+| Sender name | `Vita` |
+| Host | `smtp.resend.com` |
+| Port number | `465` |
+| Minimum interval per user | `60` (dejarlo como está, ver arriba) |
+| Username | `resend` — literalmente esa palabra, no un mail |
+| Password | la API key de Resend (empieza con `re_`) |
+
+Los pasos, en orden: crear la cuenta en Resend → agregar `vitaapp.com.ar` como
+dominio → cargar en DonWeb los registros DNS que Resend indique (SPF y DKIM) →
+esperar a que Resend lo marque verificado → recién ahí generar la API key y
+completar esta pantalla.
+
+🔴 **Sin los registros DNS el dominio no verifica y los mails no salen** (o
+salen y caen en spam, que es peor porque parece que funcionó). Y ojo con el
+plazo: la delegación de `vitaapp.com.ar` a Vercel ya está hecha, pero cualquier
+cambio de DNS en un `.com.ar` puede tardar.
 
 ## Cómo probar que quedó bien
 

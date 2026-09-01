@@ -17,7 +17,11 @@ const TEXTO_SUAVE = '#5C6B58';
 const TERRACOTA   = '#C4743A';
 
 const LARGO = 6;
-const ESPERA_REENVIO = 45;   // segundos
+// 🔴 60 y no menos: Supabase tiene su propio "Minimum interval per user" (60s
+// por defecto). Con una cuenta regresiva más corta el botón se habilitaba antes
+// de que el servidor aceptara, así que "Reenviar" fallaba y la persona no tenía
+// forma de saber que el problema era esperar un rato más.
+const ESPERA_REENVIO = 60;   // segundos
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
