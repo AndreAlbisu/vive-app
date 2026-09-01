@@ -529,8 +529,16 @@ export function useAuth() {
  */
 export const ERR_YA_REGISTRADO = 'Ya existe una cuenta con ese email';
 
+/**
+ * ⚠️ Supabase devuelve esto TANTO si la cuenta no existe como si la contraseña
+ * está mal — a propósito, para que no se pueda averiguar qué mails están
+ * registrados probando de a uno. O sea que este mensaje **no prueba** que la
+ * cuenta no exista; es el único caso en el que tiene sentido ofrecer crearla.
+ */
+export const ERR_CREDENCIALES = 'El email o la contraseña son incorrectos';
+
 function translateError(msg: string): string {
-  if (msg.includes('Invalid login credentials')) return 'El email o la contraseña son incorrectos';
+  if (msg.includes('Invalid login credentials')) return ERR_CREDENCIALES;
   if (msg.includes('Email not confirmed')) return 'Confirmá tu email antes de iniciar sesión';
   if (msg.includes('User already registered')) return ERR_YA_REGISTRADO;
   if (msg.includes('Password should be at least')) return 'La contraseña debe tener al menos 6 caracteres';

@@ -10,7 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { User } from '@supabase/supabase-js';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
-import { useAuth, ERR_YA_REGISTRADO } from '@/context/AuthContext';
+import { useAuth, ERR_YA_REGISTRADO, ERR_CREDENCIALES } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
@@ -259,7 +259,7 @@ export default function CoachLoginScreen() {
       // nunca — y todo, incluido el límite de intentos y la contraseña corta,
       // terminaba en un "probá de nuevo" que no decía nada.
       if (signUpError === ERR_YA_REGISTRADO) {
-        setError('No pudimos entrar con esa contraseña. Si creaste la cuenta con Google o Apple, entrá con ese botón');
+        setError('Ya existe una cuenta con ese mail y esa contraseña no es la suya. Si la creaste con Google o Apple, entrá con ese botón');
       } else {
         // El motivo real, no un genérico: es lo único que le dice a la persona
         // si tiene que esperar, cambiar la contraseña o revisar el mail.
@@ -290,6 +290,23 @@ export default function CoachLoginScreen() {
     // En vez de inventar un nombre, se pausa acá y se pide el real. El
     // próximo submit (`needsName` ya prendido) va a crear la cuenta con lo
     // que la persona escriba.
+    //
+    // 🔴 Pero SOLO si el login falló por credenciales. Antes se pasaba a pedir
+    // el nombre ante CUALQUIER error, sin mirar cuál — así que un mail sin
+    // confirmar, un límite de intentos o una caída de red se leían como "esta
+    // cuenta no existe" y empujaban a crear una que ya estaba. El resultado
+    // era el par de mensajes contradictorios que reportó Andre: el login dice
+    // que no entra y el alta dice que ya existe.
+    //
+    // ⚠️ Credenciales inválidas es el ÚNICO caso ambiguo: Supabase devuelve lo
+    // mismo si la cuenta no existe y si la contraseña está mal, para que no se
+    // pueda averiguar qué mails están registrados. Ahí sí vale ofrecer crearla.
+    if (signInError !== ERR_CREDENCIALES) {
+      setLoading(false);
+      setError(signInError);
+      return;
+    }
+
     setLoading(false);
     setNeedsName(true);
   }
