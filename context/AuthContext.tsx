@@ -191,7 +191,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // vale para age_confirmed, que es una declaración del mismo momento.
       options: { data: { name, accepted_terms: acceptedTerms, age_confirmed: ageConfirmed } },
     });
-    if (error) return translateError(error.message);
+    if (error) {
+      // El mensaje que sale a pantalla está traducido y pierde el detalle; el
+      // crudo es lo único que sirve para saber qué pasó de verdad.
+      console.warn('[auth] signUp falló:', error.message);
+      return translateError(error.message);
+    }
 
     // La fila de `profiles` la crea un trigger sobre auth.users, así que para
     // cuando signUp devuelve ya existe — pero nadie le escribía `accepted_terms`:
@@ -515,10 +520,19 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+/**
+ * 🔴 Constante y no un literal suelto: `CoachLoginScreen` necesita distinguir
+ * este caso para ofrecer entrar con Google/Apple, y comparaba contra el texto
+ * en INGLÉS de Supabase — que acá ya se tradujo, así que la condición no daba
+ * verdadero nunca y todos los errores caían en un genérico. Compartiendo la
+ * constante no se pueden volver a despegar.
+ */
+export const ERR_YA_REGISTRADO = 'Ya existe una cuenta con ese email';
+
 function translateError(msg: string): string {
   if (msg.includes('Invalid login credentials')) return 'El email o la contraseña son incorrectos';
   if (msg.includes('Email not confirmed')) return 'Confirmá tu email antes de iniciar sesión';
-  if (msg.includes('User already registered')) return 'Ya existe una cuenta con ese email';
+  if (msg.includes('User already registered')) return ERR_YA_REGISTRADO;
   if (msg.includes('Password should be at least')) return 'La contraseña debe tener al menos 6 caracteres';
   if (msg.includes('Unable to validate email') || msg.includes('valid email')) return 'El email no es válido';
   if (msg.includes('rate limit') || msg.includes('too many')) return 'Demasiados intentos. Esperá un momento';

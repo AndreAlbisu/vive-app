@@ -10,7 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { User } from '@supabase/supabase-js';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, ERR_YA_REGISTRADO } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
@@ -250,14 +250,20 @@ export default function CoachLoginScreen() {
       }
 
       setLoading(false);
-      // La única forma de llegar hasta acá y que falle es que la cuenta en
-      // realidad SÍ existía (typeamos mal la contraseña del login de arriba,
-      // pero el mail es de una cuenta real) — el mismo caso que antes se
-      // detectaba en el primer intento.
-      if (signUpError.includes('already registered') || signUpError.includes('already been registered')) {
+      // La cuenta en realidad SÍ existía: typeamos mal la contraseña del login
+      // de arriba, pero el mail es de una cuenta real.
+      //
+      // 🔴 Se compara contra la CONSTANTE, no contra el texto en inglés de
+      // Supabase. `signUpWithEmail` devuelve el mensaje ya traducido, así que
+      // el `includes('already registered')` que había acá no daba verdadero
+      // nunca — y todo, incluido el límite de intentos y la contraseña corta,
+      // terminaba en un "probá de nuevo" que no decía nada.
+      if (signUpError === ERR_YA_REGISTRADO) {
         setError('No pudimos entrar con esa contraseña. Si creaste la cuenta con Google o Apple, entrá con ese botón');
       } else {
-        setError('No pudimos crear la cuenta. Probá de nuevo');
+        // El motivo real, no un genérico: es lo único que le dice a la persona
+        // si tiene que esperar, cambiar la contraseña o revisar el mail.
+        setError(signUpError);
       }
       return;
     }
