@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigation } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { limpiarAlta } from '@/lib/altaCoach';
 
 /**
  * Cierra la sesión cuando la persona se va de una pantalla del alta sin
@@ -44,7 +45,9 @@ export function useCerrarSesionAlSalir(activo: boolean) {
       if (terminado.current || !activoRef.current) return;
 
       ev.preventDefault();
-      void signOutRef.current().finally(() => {
+      // La marca del alta se va con la sesión: si no, al volver a abrir la app
+      // el arranque intentaría retomar un alta que ya no tiene sesión detrás.
+      void limpiarAlta().then(() => signOutRef.current()).finally(() => {
         // La misma acción que se frenó, ya sin sesión detrás.
         (navigation as unknown as { dispatch: (a: unknown) => void }).dispatch(ev.data.action);
       });

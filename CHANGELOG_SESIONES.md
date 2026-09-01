@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · cerrar la app en medio del alta ya no te deja adentro)
+
+**Tocado:** `app/_layout.tsx`, `screens/CoachLoginScreen.tsx`, `screens/VerificarMailScreen.tsx`, `screens/CoachApplicationScreen.tsx`, `hooks/useCerrarSesionAlSalir.ts`. Nuevo: `lib/altaCoach.ts`. 390 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- 🔴 **Cerrado el agujero que quedaba anotado como "pide rediseño", porque Andre lo encontró.** Pedir el código, **cerrar la app**, volver a abrir → entraba como usuario normal. Ningún guard de navegación corre cuando la app se cierra: la sesión sobrevive en AsyncStorage y el `AuthRedirect` la ve como una sesión legítima.
+- **Arreglo: una marca de "alta en curso"** (`lib/altaCoach.ts`, AsyncStorage) que el arranque mira antes de redirigir a ningún lado. Con la marca puesta, esa sesión **no habilita nada**: se retoma el alta donde quedó.
+- 📝 **Guarda el PASO y no un booleano** (`verificar` / `postular`): quien ya confirmó el código y cierra la app en la postulación no tiene que volver a pedir un mail y tipear seis dígitos otra vez.
+- 🔴 **El `AuthRedirect` no redirige mientras no sepa si hay alta en curso** (`pasoAlta === undefined` → no hace nada). Leer la marca es asíncrono, y redirigir con la respuesta a medias es exactamente el bug que se está arreglando — la misma carrera que la de la entrada anterior, en otro lugar.
+- 📝 **Quién la limpia**: la postulación al enviarse (el alta terminó) y `useCerrarSesionAlSalir` al abandonar (se va junto con la sesión — si quedara, el arranque intentaría retomar un alta sin sesión detrás).
+- ⚠️ **`PANTALLAS_ALTA` es un set aparte de `ONBOARDING_SCREENS`**, y son opuestos: al primero se llega CON sesión a propósito, al segundo se lo echa por tenerla.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar los cuatro caminos de abandono**, que ahora son distintos entre sí: botón "Cancelar", back de Android, gesto de deslizar, y **cerrar la app** (que es el que faltaba). Los cuatro tienen que terminar sin sesión o retomando el alta, nunca en el Inicio.
+- 📝 Probar también el caso bueno: confirmar el código, cerrar la app, y que al volver retome en la **postulación** y no vuelva a pedir el código.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · el cierre de sesión al abandonar perdía una carrera)
 
 **Tocado:** `screens/VerificarMailScreen.tsx`, `screens/CoachApplicationScreen.tsx`. Nuevo: `hooks/useCerrarSesionAlSalir.ts`. 390 tests, `tsc` limpio, sin warnings de lint nuevos.

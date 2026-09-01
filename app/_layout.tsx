@@ -27,6 +27,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { pasoDelAlta, type PasoAlta } from '@/lib/altaCoach';
 import { registerForPushNotifications } from '@/lib/notifications';
 import { reconcileResourceReminders } from '@/lib/resourceReminders';
 
@@ -73,19 +74,48 @@ function NotificationSetup() {
   return null;
 }
 
+/** Las pantallas del alta de coach: se llega con sesión a propósito. */
+const PANTALLAS_ALTA = new Set(['verificar-mail', 'coach-application']);
+
 function AuthRedirect() {
   const { user, loading, role } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
+  // 🔴 Un alta de coach a medio hacer. Si la persona CIERRA LA APP en medio del
+  // alta no corre ningún guard de navegación: la sesión sobrevive en
+  // AsyncStorage y al volver a abrir esto la veía como una sesión normal y la
+  // depositaba en el Inicio como usuario final, con una cuenta que creó
+  // queriendo ser profesional.
+  //
+  // `undefined` = todavía no se sabe. Hasta saberlo NO se redirige nada:
+  // redirigir con la respuesta a medias es exactamente el bug.
+  const [pasoAlta, setPasoAlta] = useState<PasoAlta | null | undefined>(undefined);
   useEffect(() => {
-    if (loading) return;
+    if (!user) { setPasoAlta(null); return; }
+    setPasoAlta(undefined);
+    pasoDelAlta().then(setPasoAlta);
+  }, [user]);
+
+  useEffect(() => {
+    if (loading || pasoAlta === undefined) return;
     const inCoachGroup = segments[0] === '(coach)';
     const inTabsGroup = segments[0] === '(tabs)';
     const inOnboardingOrAuth = ONBOARDING_SCREENS.has(segments[0] as string);
 
     if (!user) {
       if (inCoachGroup) router.replace('/onboarding-bifurcacion');
+      return;
+    }
+
+    // El alta manda sobre todo lo demás: esta sesión existe pero todavía no
+    // habilita nada. Se retoma donde quedó en vez de dejarla entrar.
+    if (pasoAlta) {
+      if (!PANTALLAS_ALTA.has(segments[0] as string)) {
+        router.replace(pasoAlta === 'postular'
+          ? '/coach-application'
+          : { pathname: '/verificar-mail', params: { email: user.email ?? '', modo: 'alta' } } as any);
+      }
       return;
     }
 
@@ -98,7 +128,7 @@ function AuthRedirect() {
     } else if (role === 'user' && inCoachGroup) {
       router.replace('/(tabs)');
     }
-  }, [user, loading, role, segments, router]);
+  }, [user, loading, role, segments, router, pasoAlta]);
 
   return null;
 }

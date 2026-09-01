@@ -9,6 +9,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useCerrarSesionAlSalir } from '@/hooks/useCerrarSesionAlSalir';
+import { limpiarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { AXES } from '@/constants/searchData';
@@ -220,7 +221,8 @@ export default function CoachApplicationScreen() {
 
     // La solicitud queda pendiente de revisión — no debe quedar una sesión
     // activa que te deje usar la app como si ya estuvieras aceptado.
-    marcarEnviado();   // envió: el cierre de abajo es el que corresponde
+    marcarEnviado();      // envió: el cierre de abajo es el que corresponde
+    await limpiarAlta();  // el alta terminó: ya no hay nada que retomar
     await signOut();
 
     setSubmitting(false);

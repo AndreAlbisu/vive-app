@@ -8,6 +8,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useCerrarSesionAlSalir } from '@/hooks/useCerrarSesionAlSalir';
+import { marcarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
 import { VitaWordmark } from '@/components/VitaWordmark';
 
@@ -168,6 +169,9 @@ export default function VerificarMailScreen() {
     }
 
     marcarTerminado();   // salió por la puerta buena: la sesión sigue
+    // El alta sigue en curso, pero un paso más adelante: si cierra la app
+    // ahora, al volver retoma en la postulación y no le pide el código de nuevo.
+    if (esAlta) await marcarAlta('postular');
     setVerificando(false);
 
     // El alta sigue a la postulación; el gate vuelve a lo que la persona

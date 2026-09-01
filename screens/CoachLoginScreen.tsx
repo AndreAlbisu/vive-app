@@ -11,6 +11,7 @@ import type { User } from '@supabase/supabase-js';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
 import { useAuth, ERR_YA_REGISTRADO, ERR_CREDENCIALES } from '@/context/AuthContext';
+import { marcarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
@@ -136,6 +137,10 @@ export default function CoachLoginScreen() {
     // Quien ENTRA (no se registra ahora) ya pasó por acá alguna vez o tiene
     // fila en `coaches`, así que no se le vuelve a pedir.
     if (isNewSignup) {
+      // La marca es lo que hace que cerrar la app en medio del alta no termine
+      // en el Inicio como usuario final: al volver a abrir, el arranque la ve y
+      // retoma el alta en vez de dejar entrar.
+      await marcarAlta('verificar');
       router.replace({ pathname: '/verificar-mail', params: { email: user.email ?? '', modo: 'alta' } } as any);
       return;
     }
