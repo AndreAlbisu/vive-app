@@ -484,7 +484,7 @@ export default function ResourceDetailScreen() {
                 onPress={() => Linking.openURL(resource.content.url)}
                 activeOpacity={0.85}
               >
-                <MaterialCommunityIcons name="open-in-new" size={20} color="#565E32" />
+                <MaterialCommunityIcons name="open-in-new" size={20} color={ViveColors.onPrimaryInk} />
                 <Text style={s.audioBtnText}>Escuchar</Text>
               </TouchableOpacity>
             ) : (
@@ -497,7 +497,7 @@ export default function ResourceDetailScreen() {
                   <MaterialCommunityIcons
                     name={playerStatus.playing ? 'pause-circle-outline' : 'play-circle-outline'}
                     size={22}
-                    color="#565E32"
+                    color={ViveColors.onPrimaryInk}
                   />
                   <Text style={s.audioBtnText}>{playerStatus.playing ? 'Pausar' : 'Escuchar'}</Text>
                 </TouchableOpacity>
@@ -543,7 +543,7 @@ export default function ResourceDetailScreen() {
                   }}
                   activeOpacity={0.85}
                 >
-                  <MaterialCommunityIcons name="check-circle-outline" size={20} color="#565E32" />
+                  <MaterialCommunityIcons name="check-circle-outline" size={20} color={ViveColors.onPrimaryInk} />
                   <Text style={s.audioBtnText}>Completé esta guía</Text>
                 </TouchableOpacity>
               )}
@@ -556,7 +556,7 @@ export default function ResourceDetailScreen() {
               onPress={() => setReaderOpen(true)}
               activeOpacity={0.85}
             >
-              <MaterialCommunityIcons name="book-open-variant" size={22} color="#565E32" />
+              <MaterialCommunityIcons name="book-open-variant" size={22} color={ViveColors.onPrimaryInk} />
               <Text style={s.audioBtnText}>Comenzar lectura</Text>
             </TouchableOpacity>
           )}

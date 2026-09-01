@@ -26,6 +26,17 @@ export const ViveColors = {
    * normal. Pendiente de decidir si se barren también.
    */
   primaryInk: '#A25842',
+
+  /**
+   * El texto y los íconos que van ENCIMA de `primaryInk` (4.59:1).
+   *
+   * 📝 Es el mismo valor que `background`, con otro nombre a propósito: el par
+   * `primaryInk` + `onPrimaryInk` se puede grepear junto. La primera pasada de
+   * este arreglo dejó el crema como literal en diez archivos y se le
+   * escaparon los spinners y los íconos adentro de esos mismos botones —
+   * justamente porque no había nada que buscar.
+   */
+  onPrimaryInk: '#F7EFE4',
 };
 
 // 24/08/2026: se sacó Fraunces del proyecto (`frauncesSerif`/`frauncesSemiBold`

@@ -370,7 +370,7 @@ export default function EditProfileScreen() {
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator size="small" color="#565E32" />
+              <ActivityIndicator size="small" color={ViveColors.onPrimaryInk} />
             ) : (
               <Text style={styles.saveBtnText}>Guardar cambios</Text>
             )}

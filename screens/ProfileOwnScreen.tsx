@@ -544,9 +544,9 @@ const styles = StyleSheet.create({
     // terracota de marca oscurecida un 16%, el mínimo para que el crema pase
     // (4.59:1), así que sigue siendo el mismo color y no uno nuevo.
     //
-    // 📝 Es el ÚNICO botón con texto sobre terracota en la app —los otros usos
-    // de `ViveColors.primary` son avatares, barras de progreso y franjas—, por
-    // eso se corrige acá y no en el token de marca.
+    // 📝 Resultó NO ser el único: la auditoría del 01/09/2026 encontró 25
+    // superficies de terracota con texto, diez de ellas en 1.78:1. Por eso el
+    // color vive en `ViveColors.primaryInk` y no como un hex local acá.
     backgroundColor: ViveColors.primaryInk,
     borderRadius: 14,
     paddingVertical: 15,
