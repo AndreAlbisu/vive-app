@@ -14,6 +14,7 @@ import {
   ViveFonts, ResourceFormatColors, ResourceFormatLabels, resourceFormatGradient,
 } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
+import { ScaleCard } from '@/components/ScaleCard';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { DOORS } from '@/constants/conexionesDoors';
@@ -239,32 +240,37 @@ export default function FormatoScreen() {
     const saved = savedIds.has(item.id);
     return (
       <View style={s.cardWrap}>
-        <LinearGradient colors={[from, to]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.card}>
-          <Grain />
-          {/* Manchas de luz: clara arriba-derecha, oscura abajo-izquierda */}
-          <View style={s.blobLight} pointerEvents="none" />
-          <View style={s.blobDark} pointerEvents="none" />
+        {/* Toda la card es tocable con la animación de escala del resto de la
+            app (ScaleCard). El bookmark, como touchable interno, se queda con
+            su propio toque; "Empezar" pasa a ser visual (tocar la card abre). */}
+        <ScaleCard onPress={() => openResource(item.id)} activeOpacity={0.92}>
+          <LinearGradient colors={[from, to]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.card}>
+            <Grain />
+            {/* Manchas de luz: clara arriba-derecha, oscura abajo-izquierda */}
+            <View style={s.blobLight} pointerEvents="none" />
+            <View style={s.blobDark} pointerEvents="none" />
 
-          <View style={s.cardTop}>
-            <View style={s.durPill}>
-              <Ionicons name={FORMAT_ICON[formato] ?? 'book-outline'} size={13} color="#fff" />
-              {!!item.duration_seconds && <Text style={s.durPillText}>{fmtDuration(item.duration_seconds)}</Text>}
+            <View style={s.cardTop}>
+              <View style={s.durPill}>
+                <Ionicons name={FORMAT_ICON[formato] ?? 'book-outline'} size={13} color="#fff" />
+                {!!item.duration_seconds && <Text style={s.durPillText}>{fmtDuration(item.duration_seconds)}</Text>}
+              </View>
+              <TouchableOpacity onPress={() => toggleSave(item.id)} hitSlop={10} activeOpacity={0.8}>
+                <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color="#fff" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={() => toggleSave(item.id)} hitSlop={10} activeOpacity={0.8}>
-              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
 
-          <View style={{ flex: 1 }} />
+            <View style={{ flex: 1 }} />
 
-          <Text style={s.cardTitle} numberOfLines={3}>{displayTitle(item.title)}</Text>
-          <Text style={s.cardAuthor} numberOfLines={1}>{item.author}</Text>
-          <Text style={s.cardContext} numberOfLines={1}>{contextLine(item)}</Text>
+            <Text style={s.cardTitle} numberOfLines={3}>{displayTitle(item.title)}</Text>
+            <Text style={s.cardAuthor} numberOfLines={1}>{item.author}</Text>
+            <Text style={s.cardContext} numberOfLines={1}>{contextLine(item)}</Text>
 
-          <TouchableOpacity style={s.startBtn} onPress={() => openResource(item.id)} activeOpacity={0.85}>
-            <Text style={[s.startBtnText, { color: to }]}>Empezar</Text>
-          </TouchableOpacity>
-        </LinearGradient>
+            <View style={s.startBtn}>
+              <Text style={[s.startBtnText, { color: to }]}>Empezar</Text>
+            </View>
+          </LinearGradient>
+        </ScaleCard>
       </View>
     );
   };
@@ -400,7 +406,7 @@ export default function FormatoScreen() {
                   )}
 
                   {/* Ver como lista */}
-                  <TouchableOpacity style={s.block} onPress={openList} activeOpacity={0.75}>
+                  <ScaleCard style={s.block} onPress={openList} activeOpacity={0.9}>
                     <View style={s.blockRow}>
                       <View style={s.blockRowLeft}>
                         <Ionicons name="list-outline" size={18} color={FOREST} />
@@ -408,11 +414,11 @@ export default function FormatoScreen() {
                       </View>
                       <Ionicons name="chevron-forward" size={18} color={FOREST_SOFT} />
                     </View>
-                  </TouchableOpacity>
+                  </ScaleCard>
 
                   {/* Pedile una reco al coach — solo si tiene sala */}
                   {coach && (
-                    <TouchableOpacity style={s.block} onPress={pedirReco} activeOpacity={0.85}>
+                    <ScaleCard style={s.block} onPress={pedirReco} activeOpacity={0.9}>
                       <View style={s.blockRowLeft}>
                         {coach.avatarUrl ? (
                           <Image source={{ uri: coach.avatarUrl }} style={s.coachAvatar} />
@@ -427,7 +433,7 @@ export default function FormatoScreen() {
                         </View>
                         <Ionicons name="chevron-forward" size={18} color={FOREST_SOFT} />
                       </View>
-                    </TouchableOpacity>
+                    </ScaleCard>
                   )}
                 </View>
               </>
