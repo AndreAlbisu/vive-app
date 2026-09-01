@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-09-01 — Andre (sesión 152 cont. · la RLS rechazaba toda la analítica sin cuenta)
+
+**Tocado:** `SCHEMA.md`. Nuevo: `scripts/add-analytics-anon-insert.sql` (**PENDIENTE DE CORRER**).
+
+**Resumen:**
+
+- 🔴 **Andre lo probó en dispositivo y ningún evento llegaba**: `new row violates row-level security policy for table "analytics_events"`, una vez por evento. La política de INSERT de la tabla pide sesión.
+- 🔴 **Y eso invalida justo la mitad que importa**: las cuatro pantallas del onboarding ocurren sin cuenta, y `muro_cuenta_visto` —el punto de fricción más grande del producto— **por definición se emite cuando la persona no está registrada**. O sea que toda la instrumentación de hoy escribía en el `console.warn` y en ningún otro lado.
+- **`scripts/add-analytics-anon-insert.sql`** agrega una política de INSERT para el rol `anon` con dos candados: **solo INSERT** (no puede leer, actualizar ni borrar analítica) y **`user_id` obligatoriamente NULL** — sin eso, cualquiera con la anon key podría escribir eventos atribuidos a otra persona. Más una política para `authenticated` que solo deja escribir eventos propios. Idempotente, con una parte 1 que muestra las políticas actuales antes de tocar nada.
+- ⚠️ **Lo que el script acepta a conciencia**: con la anon key se pueden insertar filas de analítica basura. Es inherente a medir desde el cliente y no se evita sin mandar los eventos por una Edge Function. Se acepta porque el daño máximo es ensuciar una tabla de métricas —no toca datos de nadie ni deja leer nada— y porque `properties.sesion` permite descartar un origen entero si aparece ruido.
+- 📝 **El síntoma era visible solo porque `registrarEvento` avisa por consola.** Si hubiera fallado en silencio, habríamos dado por buena una analítica que no guardaba nada — que es peor que no tener ninguna, porque se toman decisiones creyendo que hay datos.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Correr `scripts/add-analytics-anon-insert.sql`** y volver a abrir la app sin cuenta: la prueba real es que **no aparezca más el warn de RLS** en la consola. ⚠️ Correr el insert de prueba desde el SQL Editor NO sirve como verificación: ahí sos `postgres` y las políticas no se aplican.
+- 🔴 Recién después tienen sentido las verificaciones que quedaron anotadas arriba (el `sesion` compartido, `onboarding_registro` con `user_id`, el par abierto/completado sin cuenta): hasta que la política no esté, la tabla va a seguir vacía.
+
+---
+
 ## 2026-09-01 — Andre (sesión 152 cont. · la sesión anónima nunca existió, y ya no hace falta)
 
 **Tocado:** `lib/supabase.ts`, `lib/resourceCompletions.ts`, las 8 pantallas de herramientas, `__tests__/resourceCompletions.test.ts`, `SCHEMA.md`. 412 tests (eran 410), `tsc` limpio, sin warnings de lint nuevos.
