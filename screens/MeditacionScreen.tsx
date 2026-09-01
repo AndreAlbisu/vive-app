@@ -11,6 +11,7 @@ import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
 import { ensureAnonSession } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
+import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 const FOREST      = '#3A4F2A';
 const FOREST_SOFT = '#6B7A56';
@@ -49,6 +50,7 @@ function getPrompt(elapsed: number, total: number) {
 }
 
 export default function MeditacionScreen() {
+  useRecursoAbierto('meditacion');
   const router = useRouter();
   const [phase, setPhase]     = useState<'idle' | 'running' | 'done'>('idle');
   const [duration, setDuration] = useState(DURATIONS[0].seconds);

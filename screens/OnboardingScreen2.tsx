@@ -8,7 +8,7 @@ import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
 import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { ScaleCard } from '@/components/ScaleCard';
 import { guardarCamino } from '@/lib/guiaContextual';
-import { anotar, cronometro } from '@/lib/onboardingAnalytics';
+import { anotar, cronometro } from '@/lib/analytics';
 import { AppBg } from '@/components/ui/AppBg';
 
 // "¿Qué te trae por acá?" — opción A del brief, elegida por Andre el 01/09/2026.

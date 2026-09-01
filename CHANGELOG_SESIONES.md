@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-09-01 — Andre (sesión 152 cont. · la sesión anónima se confundía con una cuenta real)
+
+**Tocado:** `context/AuthContext.tsx`, `lib/resourceCompletions.ts`, `screens/ProfesionalScreen.tsx`, `screens/ResourceDetailScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/ExploreResourcesScreen.tsx`, `screens/SessionsScreen.tsx`, las 8 pantallas de herramientas, `app/diario.tsx`, `app/gratitud.tsx`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `components/PinButton.tsx`, `components/ReminderBell.tsx`, `SCHEMA.md`. Renombrado: `lib/onboardingAnalytics.ts` → `lib/analytics.ts` (+ su test). Nuevos: `hooks/useRecursoAbierto.ts`, `__tests__/resourceCompletions.test.ts`. 410 tests (eran 406), `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen — pedido de Andre: "también en el resto de la aplicación, necesitamos saber qué funciona y qué no". La auditoría encontró un bug antes que los huecos.**
+
+- 🔴 **La sesión ANÓNIMA se trataba como una cuenta real, y nada en todo el repo las distinguía** (`grep -rn "is_anonymous"` → cero resultados; `isLoggedIn = !!user`). Las 8 pantallas de herramientas llaman a `ensureAnonSession()` al montarse —`signInAnonymously()`, una sesión de Supabase de verdad— para poder escribir en `resource_completions`. Tres consecuencias:
+  - **`volcarPendiente` escribía las respuestas del onboarding bajo el id anónimo** y las marcaba como volcadas. Al registrarse de verdad, `signUpWithEmail` crea un id distinto: quedaban varadas en una fila fantasma. **Es el mismo bug que se arregló ayer, entrando por otra puerta.**
+  - **`onboarding_registro` se emitía para la sesión anónima**, inflando la conversión con gente que nunca se registró — y como tiene guard de una-vez-por-dispositivo, el registro real no se anotaba nunca.
+  - **Los guards son `if (!user) requestAuth()`, así que quien abría una herramienta cruzaba el muro de la cuenta.** El changelog dice *"Booking requiere sesión real (no anónima)"* desde hace tiempo; **ese guard no estaba en el código**.
+  - **Arreglo en un solo lugar** (`esSesionAnonima` en `AuthContext`) y no en cada guard: para todo lo que no sea anotar el uso de una herramienta, una sesión anónima **es** no tener cuenta. Las herramientas siguen andando porque toman el id de `ensureAnonSession()` directo, no del contexto.
+- ✅ **El muro de la cuenta, medido.** `requestAuth` se llamaba desde **16 lugares y no se medía en ninguno**, siendo el punto de fricción más grande del producto. Ahora recibe un `motivo` y emite `muro_cuenta_visto` **desde adentro de `requestAuth`**: instrumentarlo ahí y no en cada pantalla es lo que garantiza que no quede una llamada sin medir. Los 16 motivos van de `reservar_sesion` a `pinear_recurso`.
+- ✅ **El par abrir/completar de recursos, que es lo que da la tasa de abandono.** Solo se medía `recurso_completado`, y con eso no se puede distinguir un recurso que **nadie abre** (problema de descubrimiento) de uno que **todos abandonan** (problema del recurso) — diagnósticos opuestos con el mismo dato de llegada.
+  - 🔴 **Y `recurso_completado` estaba suelto en 4 de las 11 pantallas que llaman a `recordCompletion`: siete recursos se completaban sin dejar rastro.** Se movió el evento adentro de `recordCompletion`, que es el cuello por el que pasan las once. Con test.
+  - `recurso_iniciado` sale de `hooks/useRecursoAbierto.ts` y **no necesita sesión** a propósito: mide a quien explora sin cuenta —que es a donde manda el onboarding nuevo— y además vuelve visible un problema que hoy sería invisible (aperturas con cero completaciones = la sesión anónima no se está creando).
+- ⚠️ **Cambio chico de datos que conviene saber**: `RuidoScreen` ahora pasa la duración a `recordCompletion`. Antes la omitía —la función la documenta como opcional "para recursos libres (Diario, Ruido blanco)"— pero **Ruido no es libre**: la persona elige 5/10/… minutos y la completación se dispara con ese timer. El evento suelto que había sí la mandaba, o sea que la tabla venía guardando menos que la analítica.
+- 📝 `lib/onboardingAnalytics.ts` pasó a `lib/analytics.ts`: el problema que resuelve no es del onboarding, es de todo lo que ocurre antes de que exista una cuenta — que en este producto son casi todos los eventos interesantes.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Confirmar contra la base si "Anonymous sign-ins" está habilitado**: `select count(*) from auth.users where is_anonymous = true;`. Si está apagado, `ensureAnonSession()` viene tirando y el `.catch(() => {})` se lo come — y entonces **las 8 herramientas nunca registraron una completación**. ⚠️ Sospecha concreta del porqué: el trigger `handle_new_user` escribe `profiles.email`, que es NOT NULL, y un usuario anónimo no tiene email. Hay algo roto en los dos escenarios; cuál, lo dice esa consulta.
+- 🔴 **Probar en dispositivo que el arreglo de la sesión anónima no rompió las herramientas**: abrir Respiración sin cuenta, completarla, y confirmar que (a) sigue apareciendo la fila en `resource_completions` y (b) que después de eso el botón de reservar **sí** pide cuenta, que antes no lo hacía.
+- 📝 Quedan los huecos 3, 4 y 5 de la auditoría: el **embudo de reserva** (los eventos están solo en la pantalla de confirmar; profesional → calendario → horario tienen cero, y es la rama que monetiza), **Sala y mensajes** (solo detección de contactos, siendo el bucle central del producto) y el **lado del coach**.
+
+---
+
 ## 2026-09-01 — Andre (sesión 152 · el onboarding pregunta por la persona, no por la navegación)
 
 **Tocado:** `screens/OnboardingScreen2.tsx` (reescrita), `screens/OnboardingScreen1.tsx`, `screens/OnboardingScreen4.tsx`, `screens/OnboardingBifurcacion.tsx`, `lib/onboardingRespuestas.ts`, `lib/guiaContextual.ts`, `context/AuthContext.tsx`, `app/(tabs)/conexiones.tsx`, `app/_layout.tsx`, `__tests__/onboardingRespuestas.test.ts`, `SCHEMA.md`, `docs/onboarding-bifurcacion-opciones.md`. Nuevos: `lib/onboardingAnalytics.ts`, `__tests__/onboardingAnalytics.test.ts`. Borrados: `screens/OnboardingScreen3.tsx`, `screens/OnboardingScreen5.tsx`, `app/onboarding3.tsx`, `app/onboarding5.tsx`. 406 tests (eran 393), `tsc` limpio, sin warnings de lint nuevos (7 antes, 7 después). **No cambió el schema** — `analytics_events` ya existía; lo que se documentó es la convención de consulta.

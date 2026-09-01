@@ -3,7 +3,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { AppBg } from '@/components/ui/AppBg';
-import { anotar, cronometro } from '@/lib/onboardingAnalytics';
+import { anotar, cronometro } from '@/lib/analytics';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

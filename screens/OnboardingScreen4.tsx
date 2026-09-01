@@ -9,7 +9,7 @@ import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { guardarRespuestas, puertaDeCategoria } from '@/lib/onboardingRespuestas';
-import { anotar, cronometro } from '@/lib/onboardingAnalytics';
+import { anotar, cronometro } from '@/lib/analytics';
 
 // La única pregunta que queda después de "¿Qué te trae por acá?" — opción A del
 // brief (`docs/onboarding-bifurcacion-opciones.md`), elegida el 01/09/2026.

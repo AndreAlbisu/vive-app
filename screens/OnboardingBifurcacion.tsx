@@ -10,7 +10,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 
 import { ViveFonts } from '@/constants/theme';
 import { TONOS, guardarTono, type Tono } from '@/constants/onboardingTonos';
-import { anotar, cronometro } from '@/lib/onboardingAnalytics';
+import { anotar, cronometro } from '@/lib/analytics';
 import { VitaWordmark } from '@/components/VitaWordmark';
 
 // Bifurcación usuario/profesional — rediseño 30/08/2026 (maqueta de Andre).

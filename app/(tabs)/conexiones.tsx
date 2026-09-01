@@ -33,7 +33,7 @@ import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { altoDeEje } from '@/lib/ejesLayout';
 import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
 import { rankDeck, SLOT_COLORS, type DeckSlotKey } from '@/lib/coachDeckRanking';
-import { anotar } from '@/lib/onboardingAnalytics';
+import { anotar } from '@/lib/analytics';
 
 // ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
 const FOREST      = '#3F512F';
@@ -295,7 +295,7 @@ export default function ConexionesScreen() {
   }
 
   function toggleFav(profileId: string) {
-    if (!user) { requestAuth(); return; }
+    if (!user) { requestAuth('contactar_profesional'); return; }
     toggleFavorite(profileId);
   }
 
@@ -368,7 +368,7 @@ export default function ConexionesScreen() {
               </TouchableOpacity>
               <Text style={s.deckHeaderTitle}>Profesionales</Text>
               <View style={s.hicons}>
-                <TouchableOpacity onPress={() => (user ? router.push('/favoritos') : requestAuth())} activeOpacity={0.7} hitSlop={8}>
+                <TouchableOpacity onPress={() => (user ? router.push('/favoritos') : requestAuth('ver_favoritos'))} activeOpacity={0.7} hitSlop={8}>
                   <Feather name="star" size={20} color={FOREST} />
                 </TouchableOpacity>
               </View>
@@ -572,7 +572,7 @@ export default function ConexionesScreen() {
             <Text style={s.title}>Profesionales</Text>
             <View style={s.hicons}>
               <TouchableOpacity
-                onPress={() => (user ? router.push('/notifications') : requestAuth())}
+                onPress={() => (user ? router.push('/notifications') : requestAuth('ver_notificaciones'))}
                 activeOpacity={0.7}
                 hitSlop={8}
                 style={s.bellBtn}>
@@ -580,7 +580,7 @@ export default function ConexionesScreen() {
                 {unreadCount > 0 && <View style={s.bellDot} />}
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => (user ? router.push('/favoritos') : requestAuth())}
+                onPress={() => (user ? router.push('/favoritos') : requestAuth('ver_favoritos'))}
                 activeOpacity={0.7}
                 hitSlop={8}>
                 <Feather name="star" size={22} color={FOREST} />

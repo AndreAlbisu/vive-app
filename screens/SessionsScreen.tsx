@@ -196,7 +196,7 @@ export default function SessionsScreen() {
   const listAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!isLoggedIn) requestAuth();
+    if (!isLoggedIn) requestAuth('ver_mensajes');
   }, []);
 
   useEffect(() => {

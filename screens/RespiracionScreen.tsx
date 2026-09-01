@@ -8,9 +8,10 @@ import { ViveFonts } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
 import { ToolHeader } from '@/components/ui/ToolHeader';
-import { ensureAnonSession, registrarEvento } from '@/lib/supabase';
+import { ensureAnonSession } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 const FOREST       = '#3A4F2A';
 const FOREST_SOFT  = '#6B7A56';
@@ -35,6 +36,7 @@ function formatTime(s: number) {
 }
 
 export default function RespiracionScreen() {
+  useRecursoAbierto('respiracion');
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const [phase, setPhase] = useState<'idle' | 'running' | 'done'>('idle');
@@ -111,7 +113,6 @@ export default function RespiracionScreen() {
         setPhase('done');
         if (userIdRef.current) {
           recordCompletion(userIdRef.current, 'respiracion', duration).catch(() => {});
-          registrarEvento('recurso_completado', { resource_id: 'respiracion', duration_seconds: duration, user_id: userIdRef.current }).catch(() => {});
         }
       }
     }, 1000);

@@ -545,14 +545,14 @@ export default function RecursosScreen() {
                 <StreakChip streak={streak} weekActivity={weekActivity} />
               )}
               <TouchableOpacity
-                onPress={() => (user ? router.push('/mis-recordatorios' as any) : requestAuth())}
+                onPress={() => (user ? router.push('/mis-recordatorios' as any) : requestAuth('ver_recordatorios'))}
                 hitSlop={8}
                 activeOpacity={0.7}
                 style={s.bellBtn}>
                 <MaterialCommunityIcons name="bell-outline" size={22} color={FOREST} />
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => (user ? router.push('/recursos-guardados') : requestAuth())}
+                onPress={() => (user ? router.push('/recursos-guardados') : requestAuth('ver_guardados'))}
                 hitSlop={8}
                 activeOpacity={0.7}
                 style={s.bookmarkBtnWrap}>

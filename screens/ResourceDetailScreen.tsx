@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
 import { recordCompletion } from '@/lib/resourceCompletions';
+import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 type Resource = {
   id: string;
@@ -66,6 +67,11 @@ export default function ResourceDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const resourceId = typeof params.id === 'string' ? params.id : undefined;
+  // El 11º recurso: los de coach, con id dinámico. Mismo par abierto/completado
+  // que las herramientas de Vita, así se pueden comparar entre sí — que es la
+  // pregunta que importa acá (¿los recursos de coach se terminan más o menos
+  // que los nuestros?).
+  useRecursoAbierto(resourceId ?? 'desconocido');
 
   const { user, requestAuth } = useAuth();
 
@@ -174,7 +180,7 @@ export default function ResourceDetailScreen() {
   }, [playerStatus.playing]);
 
   async function toggleSave() {
-    if (!user) { requestAuth(); return; }
+    if (!user) { requestAuth('guardar_recurso'); return; }
     if (!resourceId) return;
     const wasSaved = saved;
     setSaved(!wasSaved);
@@ -194,7 +200,7 @@ export default function ResourceDetailScreen() {
   }
 
   async function togglePin() {
-    if (!user) { requestAuth(); return; }
+    if (!user) { requestAuth('pinear_recurso'); return; }
     if (!resourceId) return;
 
     if (pinned) {

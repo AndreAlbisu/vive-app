@@ -15,7 +15,7 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 
-type Modulo = typeof import('@/lib/onboardingAnalytics');
+type Modulo = typeof import('@/lib/analytics');
 
 // ⚠️ Se re-importa en cada test a propósito. El módulo cachea el id en una
 // variable de módulo (para no ir a AsyncStorage en cada tap), y esa variable
@@ -32,7 +32,7 @@ beforeEach(() => {
   for (const k of Object.keys(mockStore)) delete mockStore[k];
   eventos.length = 0;
   jest.resetModules();
-  lib = require('@/lib/onboardingAnalytics');
+  lib = require('@/lib/analytics');
 });
 
 describe('el id de sesión', () => {

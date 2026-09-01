@@ -10,7 +10,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { volcarPendiente } from '@/lib/quizPendiente';
-import { enlazarConCuenta } from '@/lib/onboardingAnalytics';
+import { enlazarConCuenta, anotar } from '@/lib/analytics';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -36,7 +36,8 @@ interface AuthContextType {
    *  edite el perfil: el contexto solo se refresca al cambiar la sesión, así
    *  que sin esto el nombre nuevo no llega al home hasta reabrir la app. */
   refreshProfile: () => Promise<void>;
-  requestAuth: () => void;
+  /** Abre el muro de la cuenta. `motivo` = qué intentó hacer la persona (se mide). */
+  requestAuth: (motivo?: string) => void;
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
   signUpWithEmail: (email: string, password: string, name: string, acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
   signInWithGoogle: (acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
@@ -63,6 +64,36 @@ const AuthContext = createContext<AuthContextType>({
   resetPassword: async () => null,
   signOut: async () => {},
 });
+
+/**
+ * 🔴 La sesión ANÓNIMA no es una cuenta, y hasta el 01/09/2026 la app no las
+ * distinguía en ningún lado (`grep is_anonymous` no daba un solo resultado).
+ *
+ * Las ocho pantallas de herramientas llaman a `ensureAnonSession()` al montarse
+ * —`signInAnonymously()`, una sesión de Supabase de verdad— para poder anotar
+ * en `resource_completions`. Con `user` seteado a partir de esa sesión pasaban
+ * tres cosas, todas malas:
+ *
+ *   · `volcarPendiente` escribía las respuestas del onboarding bajo el id
+ *     ANÓNIMO y las marcaba como volcadas. Al registrarse de verdad,
+ *     `signUpWithEmail` crea un id distinto: las respuestas quedaban varadas en
+ *     una fila fantasma y no llegaban nunca a la cuenta real. Es el mismo bug
+ *     que se arregló el 31/08, entrando por otra puerta.
+ *   · `onboarding_registro` se emitía para la sesión anónima, inflando la
+ *     conversión con gente que nunca se registró.
+ *   · Todos los guards de la app son `if (!user) requestAuth()`, así que
+ *     alguien que abrió una herramienta cruzaba el muro de la cuenta. El
+ *     changelog dice "Booking requiere sesión real (no anónima)" desde hace
+ *     tiempo; ese guard no existía en el código.
+ *
+ * La corrección es acá y no en cada guard: para todo lo que no sea anotar el
+ * uso de una herramienta, una sesión anónima **es** no tener cuenta. Las
+ * herramientas no se ven afectadas porque toman el id de `ensureAnonSession()`
+ * directamente, no de este contexto.
+ */
+function esSesionAnonima(u: { is_anonymous?: boolean } | null): boolean {
+  return !!u?.is_anonymous;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -118,7 +149,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // para siempre. Sin sesión resuelta seguimos como anónimos, que es un
     // estado válido y navegable.
     supabase.auth.getSession().then(({ data: { session } }) => {
-      const u = session?.user ?? null;
+      const bruto = session?.user ?? null;
+      const u = esSesionAnonima(bruto) ? null : bruto;
       setUser(u);
       setLoading(false);
       if (u) fetchProfile(u.id).then(applyProfile);
@@ -131,7 +163,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user ?? null;
+      const bruto = session?.user ?? null;
+      // ⚠️ Una sesión anónima entra por acá igual que una real —la abre
+      // `ensureAnonSession()` al abrir cualquier herramienta— y todo lo de
+      // abajo asume que "apareció la cuenta". Ver `esSesionAnonima`.
+      const u = esSesionAnonima(bruto) ? null : bruto;
       setUser(u);
       if (u) {
         fetchProfile(u.id).then(applyProfile);
@@ -162,8 +198,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     applyProfile(await fetchProfile(session.user.id));
   }
 
-  function requestAuth() {
-    if (!user) setModalVisible(true);
+  /**
+   * El muro de la cuenta.
+   *
+   * 🔴 Es el punto de fricción más grande del producto y no se medía en ningún
+   * lado: se lo llama desde quince lugares distintos y no había forma de saber
+   * cuál empuja a la gente al muro, ni cuántos lo cruzan. Instrumentarlo acá y
+   * no en cada pantalla es lo que garantiza que no queden llamadas sin medir.
+   *
+   * `motivo` dice qué intentó hacer la persona cuando se le pidió la cuenta.
+   * Cruzado con `onboarding_registro` y con el alta, responde la pregunta que
+   * importa: qué acción vale la pena para registrarse y cuál solo espanta.
+   */
+  function requestAuth(motivo?: string) {
+    if (user) return;
+    anotar('muro_cuenta_visto', { motivo: motivo ?? 'sin_especificar' });
+    setModalVisible(true);
   }
 
   async function signInWithEmail(email: string, password: string): Promise<string | null> {

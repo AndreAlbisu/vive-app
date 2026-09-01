@@ -47,7 +47,7 @@ export function PinButton({
   }, [user, resourceId]);
 
   async function toggle() {
-    if (!user) { requestAuth(); return; }
+    if (!user) { requestAuth('pinear_recurso'); return; }
 
     if (pinned) {
       setPinned(false);

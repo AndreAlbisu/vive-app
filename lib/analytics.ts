@@ -1,8 +1,13 @@
-// La analítica del onboarding.
+// La analítica de la app.
+//
+// 📝 Nació como `onboardingAnalytics` y se renombró el 01/09/2026, cuando el
+// muro de la cuenta (`requestAuth`) pasó a medirse por acá: el problema que
+// resuelve no es del onboarding, es de cualquier evento que ocurra antes de que
+// exista una cuenta — que en este producto son casi todos los interesantes.
 //
 // 🔴 POR QUÉ EXISTE Y NO SE LLAMA A `registrarEvento` DERECHO: `registrarEvento`
-// escribe `user_id: session?.user?.id ?? null`, y en TODO el onboarding no hay
-// sesión. O sea que sin esto los eventos caen todos con `user_id` en null y son
+// escribe `user_id: session?.user?.id ?? null`, y buena parte de lo que hay que
+// medir pasa sin sesión. O sea que sin esto los eventos caen todos con `user_id` en null y son
 // indistinguibles entre sí: se podría contar cuánta gente tocó cada opción,
 // pero no se podría saber si las tres respuestas de una pantalla y la siguiente
 // son de la misma persona. Sin eso no hay embudo — que es justamente lo único

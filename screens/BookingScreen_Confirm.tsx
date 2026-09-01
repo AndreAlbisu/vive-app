@@ -252,7 +252,7 @@ export default function BookingScreen_Confirm() {
   };
 
   async function onConfirm() {
-    if (!isLoggedIn || !user) { requestAuth(); return; }
+    if (!isLoggedIn || !user) { requestAuth('confirmar_reserva'); return; }
 
     // 🔴 El mail se exige ACÁ y no en el alta. Al registrarse, un muro de mail
     // frena a alguien que quizá la está pasando mal, en el momento del embudo
