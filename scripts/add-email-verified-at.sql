@@ -1,7 +1,7 @@
 -- ============================================================
 -- Vita — dejar constancia de que un mail fue verificado de verdad
 -- Correr en: Supabase Dashboard → SQL Editor
--- ⚠️  REVISAR CON ANDRE ANTES DE CORRER
+-- ✅ CORRIDO por Andre el 31/08/2026
 -- Fecha: 2026-08-31
 --
 -- QUÉ RESUELVE

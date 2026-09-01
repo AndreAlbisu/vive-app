@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · la plantilla del mail del código)
+
+**Tocado:** `SCHEMA.md`, `scripts/add-email-verified-at.sql` (marcado como corrido). Nuevos: `docs/plantilla-mail-codigo.md`, `docs/plantilla-mail-codigo.html`.
+
+**Resumen:**
+
+- ✅ **`scripts/add-email-verified-at.sql` CORRIDO** por Andre el 31/08/2026. La columna existe, así que el gate de reserva ya se puede activar de verdad.
+- 🔴 **Queda documentada la configuración que vive FUERA del repo y sin la cual nada de esto funciona.** `signInWithOtp` dispara la plantilla **Magic Link**, y la de fábrica manda `{{ .ConfirmationURL }}` — **un link y ningún código**. La persona recibe un enlace que abre el navegador mientras la app espera seis dígitos. La variable que hace falta es **`{{ .Token }}`**.
+- 📝 **El código va también en el ASUNTO** (`Tu código de Vita: {{ .Token }}`): se ve en la notificación del teléfono sin abrir el mail, que es la diferencia entre tipearlo de memoria y tener que salir de la app, abrir el correo y volver.
+- 📝 La plantilla está escrita para clientes de mail y no para un navegador: tabla en vez de flex, estilos inline (Gmail descarta el `<style>`) y pila de fuentes del sistema, porque las tipografías de la app no se pueden cargar ahí.
+- ⚠️ **Dos ajustes más quedan anotados en el doc**: cuánto dura el código (Email OTP Expiration, 1 hora por defecto — está bien; menos de diez minutos sería hostil) y el **límite de mails por hora**, que en el SMTP interno de Supabase es muy bajo.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Pegar la plantilla en Supabase** (Authentication → Emails → Magic Link) y cambiar el asunto. Hasta que se haga, el código no llega y la verificación no se puede probar.
+- 🔴 **El SMTP interno NO alcanza para producción.** Con dos coaches registrándose el mismo día, el segundo no recibe nada y no tiene forma de enterarse. Antes de abrir el registro de verdad hay que conectar un SMTP propio (Resend, Postmark, SES).
+- 📝 El doc trae la lista de qué probar, incluido el síntoma de que la plantilla no se guardó: llega un mail con botón y sin números.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · el mail verificado se exige antes de reservar)
 
 **Tocado:** `screens/BookingScreen_Confirm.tsx`, `screens/VerificarMailScreen.tsx` (renombrada), `app/verificar-mail.tsx` (renombrada), `app/_layout.tsx`, `screens/CoachLoginScreen.tsx`, `SCHEMA.md`. Nuevos: `lib/emailVerificado.ts`, `__tests__/emailVerificado.test.ts`. 390 tests (eran 381), `tsc` y lint limpios.

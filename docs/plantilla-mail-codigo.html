@@ -1,0 +1,63 @@
+<!-- Vita — plantilla del mail con el código de verificación.
+     Pegar en: Supabase → Authentication → Emails → Magic Link → cuerpo.
+     Asunto sugerido:  Tu código de Vita: {{ .Token }}
+
+     Escrito para clientes de mail, no para un navegador: tabla en vez de flex,
+     estilos inline en vez de <style> (Gmail descarta la hoja), y una pila de
+     fuentes del sistema — las tipografías de la app no se pueden cargar acá. -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background-color:#F7EFE4;margin:0;padding:32px 16px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:440px;background-color:#FDF8F0;border-radius:20px;padding:36px 32px;">
+
+        <tr>
+          <td align="center"
+              style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+                     font-size:20px;font-weight:700;letter-spacing:-0.3px;color:#2D4A3E;padding-bottom:20px;">
+            vita
+          </td>
+        </tr>
+
+        <tr>
+          <td align="center"
+              style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+                     font-size:22px;font-weight:600;line-height:30px;color:#2D4A3E;padding-bottom:10px;">
+            Confirmá tu mail
+          </td>
+        </tr>
+
+        <tr>
+          <td align="center"
+              style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+                     font-size:15px;line-height:23px;color:#6E7350;padding-bottom:26px;">
+            Escribí este código en la app para seguir.
+          </td>
+        </tr>
+
+        <!-- El código. Grande y espaciado: se tipea mirando, no se copia. -->
+        <tr>
+          <td align="center" style="padding-bottom:26px;">
+            <div style="font-family:'SF Mono',Menlo,Consolas,monospace;
+                        font-size:34px;font-weight:700;letter-spacing:10px;
+                        color:#2D4A3E;background-color:#F1E7D8;
+                        border-radius:14px;padding:18px 20px 18px 30px;">
+              {{ .Token }}
+            </div>
+          </td>
+        </tr>
+
+        <tr>
+          <td align="center"
+              style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+                     font-size:13px;line-height:20px;color:#918B69;">
+            El código vence en una hora.<br>
+            Si no fuiste vos, podés ignorar este mail: sin el código no pasa nada.
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
