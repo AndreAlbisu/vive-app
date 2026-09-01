@@ -30,6 +30,12 @@
 > Abajo te dejo el contexto del negocio y las preguntas concretas, agrupadas
 > por si bloquean o no la publicación. Los textos completos van adjuntos.
 >
+> Una sola aclaración de alcance: escribí todo pensando en Argentina, pero hay
+> una función por salir que permite atender a personas que están en el exterior.
+> Si eso cambia el marco aplicable, es la pregunta **B.5** y prefiero saberlo
+> antes que después — incluso si la respuesta es que necesito a otra persona
+> para esa parte.
+>
 > Gracias,
 > Andre
 
@@ -98,10 +104,48 @@ de los Términos al registrarse, y se guarda fecha y una versión del texto
 aceptado. ¿Alcanza, o los datos sensibles necesitan un consentimiento
 **separado y específico**, con su propia pantalla?
 
-**A.3 — Transferencia internacional de datos (Política §7).**
-Los servidores están fuera de Argentina (Supabase). ¿Cómo hay que encuadrarlo
-bajo la Ley 25.326 — cláusulas contractuales, países con nivel adecuado, otra
-figura? ¿Y qué hay que decir en el texto?
+**A.3 — Transferencia internacional de datos (Política §7).** 🔴 *Es el punto
+más débil de todo el borrador, y el que más me sorprendió al revisarlo.*
+
+Hoy la Política §7 dice que Vita *"procurará que existan garantías adecuadas"*.
+Eso es una intención, no un instrumento — y mientras tanto la app ya transfiere
+datos a Estados Unidos todos los días, incluida la categoría más sensible que
+maneja.
+
+Los destinatarios reales, verificados contra el código:
+
+| Proveedor | Qué recibe | País |
+|---|---|---|
+| **Supabase** | todo: check-ins de ánimo, entradas de diario, gratitud, contenido de los mensajes | EEUU |
+| **Daily.co** | las videollamadas de las sesiones | EEUU |
+| **Expo** | notificaciones push | EEUU |
+| **Mercado Pago** | datos de pago | Argentina |
+
+Entiendo que **Estados Unidos no figura en la lista de países con nivel adecuado
+de protección de la AAIP** (que incluye UE/EEE, Reino Unido, Suiza, Canadá para
+el sector privado, Nueva Zelanda, Uruguay e Israel). Si eso es así, las tres
+primeras filas necesitan un instrumento propio.
+
+Mi lectura, para que la confirmes o la corrijas: el camino son las **Cláusulas
+Contractuales Modelo aprobadas por la Resolución AAIP 198/2023** (las de la Red
+Iberoamericana de Protección de Datos, de uso libre), en la variante
+responsable→encargado, o las de la Disposición DNPDP 60/2016.
+
+Preguntas:
+
+- [ ] ¿Es correcto que EEUU no es país adecuado y que hace falta instrumento?
+- [ ] ¿Sirven las CCM de la Res. 198/2023 para este caso, o hace falta otra
+      figura? ¿Alcanza con adherir a los términos de datos que cada proveedor ya
+      publica, o hay que firmar el modelo de la AAIP con cada uno?
+- [ ] ¿Cambia algo que el dato sea **sensible** (ánimo, diario, mensajes) y no
+      dato común?
+- [ ] ¿Qué tiene que decir el texto de la Política §7 una vez resuelto? Hoy no
+      dice nada verificable.
+
+⚠️ **Esta pregunta absorbe a C.3.** Cuando la escribí, la transferencia al
+proveedor de IA me parecía un problema aparte; revisándola, es la transferencia
+**más chica** de todas las que ya hago, por varios órdenes de magnitud. Si esto
+se resuelve, C.3 se resuelve con lo mismo.
 
 **A.4 — Aviso de salud y emergencias (T&C §5).**
 La redacción actual aclara que Vita no presta servicios de salud, no diagnostica
@@ -211,6 +255,54 @@ conservan.** Es la pregunta más delicada del modelo de borrado: son
 documentación del profesional sobre un tratamiento, y a la vez datos de alguien
 que pidió irse. ¿Qué corresponde?
 
+**B.5 — ¿Me alcanza el reglamento europeo?** 🔴 *Puede subir a la sección A si
+lanzamos la función que lo dispara.*
+
+Estamos por habilitar **"Sesiones desde el exterior"**: un profesional argentino
+puede atender a alguien que está fuera del país, y la app le muestra a esa
+persona los horarios convertidos a su huso. El caso que usamos para explicarlo
+internamente es literalmente *"alguien en Madrid"*.
+
+Entiendo que ofrecer un servicio a personas que están en la Unión Europea activa
+el **art. 3(2) del RGPD**, aunque la empresa esté acá y no tenga establecimiento
+allá. Si eso es así, sobre esos usuarios correrían las dos normativas a la vez.
+
+Un dato que juega a favor y que quiero confirmar que sigue vigente: **Argentina
+tiene decisión de adecuación de la Comisión Europea** (2003/490/CE), revisada y
+mantenida en enero de 2024 junto con las otras diez. O sea que el flujo
+UE→Argentina no necesitaría instrumento adicional; el problema sería el
+siguiente salto, Argentina→EEUU, que es el de A.3.
+
+Preguntas:
+
+- [ ] ¿Corresponde asumir que el RGPD aplica a los usuarios que estén en la UE?
+      ¿Y desde qué momento — desde que la función existe, o desde que hay un
+      usuario real allá?
+- [ ] Si aplica, ¿qué es lo mínimo que cambia en los documentos? ¿Hace falta un
+      texto distinto por región o alcanza con uno solo que cubra las dos?
+- [ ] ¿Es algo que ves vos, o me conviene una consulta local? No quiero
+      descubrirlo cuando ya haya usuarios.
+
+**B.6 — El Reglamento de IA europeo, si B.5 da que sí.**
+
+Dos cosas que ya revisamos por nuestra cuenta y queremos que confirmes o
+corrijas:
+
+1. **No somos un "sistema de reconocimiento de emociones".** El art. 3(39) lo
+   define como inferir emociones **a partir de datos biométricos**. En Vita la
+   persona elige su ánimo tocando un botón: es autorreporte, no inferencia. Las
+   guías de la Comisión aclaran incluso que el análisis de sentimiento sobre
+   texto tampoco entra, por el mismo motivo. Nuestra lectura es que quedamos
+   fuera de la prohibición y de las obligaciones específicas.
+2. **Sí nos alcanzaría el art. 50(1):** un sistema de IA que interactúa
+   directamente con personas tiene que informarle a la persona que está
+   interactuando con IA. Rige desde el 2 de agosto de 2026. Hay una excepción
+   cuando resulta "obvio", pero entendemos que no conviene apoyarse en ella.
+
+Preguntas: ¿son correctas las dos lecturas? Y sobre la segunda, ¿qué se
+considera suficiente para "informar" — una línea en la pantalla, una mención en
+la Política, una etiqueta visible en la propia tarjeta?
+
 ### C. Solo si decidimos que Sofía conversa — *decidir antes de enviar*
 
 > **Nota interna, borrar antes de mandar:** esta sección solo va si se decide
@@ -249,6 +341,18 @@ una sola palabra escrita por la persona, ni un identificador.**
 ¿Ese envío constituye tratamiento de dato **sensible**, o queda afuera por no
 ser información sobre la salud de un titular identificable? Si queda afuera,
 ¿alcanza con declarar al proveedor en la Política como destinatario?
+
+Un ancla que puede servir, por si ayuda a acortar la respuesta: el TJUE falló el
+**4 de septiembre de 2025 en *EDPS c/ JUR* (C-413/23 P)** que el carácter
+personal de un dato **no es absoluto** — los mismos datos seudonimizados pueden
+ser personales para quien los envía y no serlo para el receptor que no puede
+reidentificar. Acá el receptor no recibe identificador, ni clave, ni forma de
+volver a la persona. No sé si ese criterio se traslada al encuadre argentino;
+esa es justamente la pregunta.
+
+📌 Del lado técnico ya está pedido, sin depender de esta respuesta: el proveedor
+ofrece un modo de **retención cero** (el dato se descarta al terminar de
+procesarlo, no se conserva). Lo vamos a activar en cualquier escenario.
 
 > ⚠️ Independientemente de la respuesta legal, ya está decidido del lado del
 > producto que **la detección de expresiones de riesgo corre antes que
