@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-08-31 — Andre (sesión 150 cont. · el camino elegido tiñe las pantallas que siguen)
+
+**Tocado:** `constants/onboardingTonos.ts`, `components/ui/AppBg.tsx`, `screens/OnboardingBifurcacion.tsx`, `OnboardingScreen2/3/4/5`, `CoachLoginScreen`, `VerificarMailScreen`, `CoachApplicationScreen`, `RegisterScreen`, `app/index.tsx`. Nuevo: `hooks/useTonoOnboarding.ts`. 393 tests, `tsc` limpio, sin warnings de lint nuevos (14 antes, 14 después).
+
+**Resumen:**
+
+- ✅ **Pedido de Andre: después de la bifurcación, las pantallas toman el color del ala elegida.** El derrame ya llevaba el tono hasta la primera pantalla; ahora lo lleva **todo el camino** — salvia para "quiero crecer", durazno para "quiero acompañar".
+- 🔴 **El tono se PERSISTE, no se reenvía por parámetro.** Tiene que sobrevivir cinco pantallas (bifurcación → 2 → 3 → 4 → 5 → registro): reenviarlo en cada navegación significa que la primera que se olvide corta la cadena y de ahí en adelante todo vuelve al crema, **sin que nada falle de forma visible**.
+- 🔴 **Pero el hook lee primero el PARÁMETRO y después lo guardado**, en ese orden. La pantalla que recibe la transición trae el tono en la ruta y lo tiene en el **primer cuadro**; ir al storage es asíncrono, así que arrancaría en crema y cambiaría un cuadro después — un parpadeo justo mientras la capa de la transición se desvanece, que es el peor momento posible.
+- 📝 **`AppBg` acepta el tono y DERIVA el degradado** (`mixHex`) en vez de listar colores nuevos: el fondo teñido sigue siendo el mismo fondo, con el mismo gesto claro→apagado en diagonal, no otro diseño. Las tres pantallas de crema plano (login de coach, verificación, registro) lo aplican como color sólido.
+- ⚠️ **El tono se limpia al entrar a la app** (`app/index.tsx`). Sin eso queda guardado para siempre, y alguien que eligió "acompañar" hace meses vería la pantalla de registro en durazno al llegar por cualquier otro camino — un color que ya no significa nada.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Verlo en dispositivo, que es de lo que se trata.** Los dos caminos completos, y sobre todo **la continuidad con la transición**: el ala se expande, tapa la pantalla, y lo que aparece debajo tiene que ser del mismo color, sin un salto de tono ni un parpadeo.
+- 📝 Los dos tonos son muy suaves (`#E8E7DB` y `#F8E7DA` contra el crema `#F7F2EA`), así que puede quedar demasiado sutil. Si no se nota, se sube la saturación en `TONOS` — pero ojo, que esos mismos valores son el relleno de las alas.
+
+---
+
 ## 2026-08-31 — Andre (sesión 150 cont. · la tarjeta del slot de Mensajes se sentía forzada)
 
 **Tocado:** `screens/SessionsScreen.tsx`. 393 tests, `tsc` limpio, sin warnings de lint nuevos.

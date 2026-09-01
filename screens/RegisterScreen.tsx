@@ -20,6 +20,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
 import LegalSheet from '@/components/LegalSheet';
 import { supabase } from '@/lib/supabase';
@@ -43,6 +44,8 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function RegisterScreen() {
   const router = useRouter();
+  // El color del camino elegido en la bifurcación.
+  const tonoOnboarding = useTonoOnboarding();
   const { signUpWithEmail, signInWithGoogle, signInWithApple } = useAuth();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [name, setName] = useState('');
@@ -158,7 +161,7 @@ export default function RegisterScreen() {
   }
 
   return (
-    <View style={s.root}>
+    <View style={[s.root, tonoOnboarding ? { backgroundColor: tonoOnboarding } : null]}>
       <StatusBar barStyle="dark-content" />
       <LineasEsquina />
       <SafeAreaView style={s.safe}>

@@ -9,6 +9,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useCerrarSesionAlSalir } from '@/hooks/useCerrarSesionAlSalir';
+import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { limpiarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
@@ -53,6 +54,8 @@ function displayToIso(display: string): string | null {
 
 export default function CoachApplicationScreen() {
   const router = useRouter();
+  // El color del camino elegido en la bifurcación.
+  const tonoOnboarding = useTonoOnboarding();
   const { user, signOut } = useAuth();
 
   // Irse sin enviar cierra la sesión, y la cierra ANTES de que la pantalla se
@@ -237,7 +240,7 @@ export default function CoachApplicationScreen() {
 
   if (submitted) {
     return (
-      <AppBg>
+      <AppBg tono={tonoOnboarding}>
       <SafeAreaView style={styles.container}>
         <Animated.View style={[styles.successContainer, fadeUp(successAnim)]}>
           <View style={styles.successIcon}>
@@ -263,7 +266,7 @@ export default function CoachApplicationScreen() {
   }
 
   return (
-    <AppBg>
+    <AppBg tono={tonoOnboarding}>
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}

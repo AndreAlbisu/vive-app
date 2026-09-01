@@ -11,6 +11,7 @@ import { useCerrarSesionAlSalir } from '@/hooks/useCerrarSesionAlSalir';
 import { marcarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 
 // Mismo sistema que login/registro/bifurcación (rediseño de Andre, sesión 147).
 const CREMA       = '#F7F2EA';
@@ -114,6 +115,8 @@ const fadeUp = (anim: Animated.Value) => ({
  */
 export default function VerificarMailScreen() {
   const router = useRouter();
+  // El color del camino elegido en la bifurcación.
+  const tonoOnboarding = useTonoOnboarding();
   const { email, modo } = useLocalSearchParams<{ email?: string; modo?: string }>();
   const esAlta = (Array.isArray(modo) ? modo[0] : modo) !== 'gate';
   const { user } = useAuth();
@@ -232,7 +235,7 @@ export default function VerificarMailScreen() {
   const puedeReenviar = espera === 0 && !reenviando && !verificando;
 
   return (
-    <View style={s.root}>
+    <View style={[s.root, tonoOnboarding ? { backgroundColor: tonoOnboarding } : null]}>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={s.safe}>
         <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

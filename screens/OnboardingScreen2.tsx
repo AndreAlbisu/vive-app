@@ -5,6 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveFonts } from '@/constants/theme';
 import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
+import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { ScaleCard } from '@/components/ScaleCard';
 import { guardarCamino } from '@/lib/guiaContextual';
 import { AppBg } from '@/components/ui/AppBg';
@@ -52,6 +53,8 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function OnboardingScreen2() {
   const router = useRouter();
+  // El color del camino elegido en la bifurcación.
+  const tonoOnboarding = useTonoOnboarding();
   // Con qué color se llegó desde la bifurcación, si se llegó por ahí.
   const { tono } = useLocalSearchParams<{ tono?: string }>();
   const [selected, setSelected] = useState<OptionId | null>(null);
@@ -104,7 +107,7 @@ export default function OnboardingScreen2() {
   }
 
   return (
-    <AppBg>
+    <AppBg tono={tonoOnboarding}>
       <EntradaDesdeColor tono={tono} />
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container}>

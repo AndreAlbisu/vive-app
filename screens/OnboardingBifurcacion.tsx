@@ -9,7 +9,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { ViveFonts } from '@/constants/theme';
-import { TONOS, type Tono } from '@/constants/onboardingTonos';
+import { TONOS, guardarTono, type Tono } from '@/constants/onboardingTonos';
 import { VitaWordmark } from '@/components/VitaWordmark';
 
 // Bifurcación usuario/profesional — rediseño 30/08/2026 (maqueta de Andre).
@@ -233,6 +233,10 @@ export default function OnboardingBifurcacion() {
     if (yendo.current) return;   // el segundo toque no dispara un segundo viaje
     yendo.current = true;
 
+    // Se guarda además de viajar por parámetro: el tono tiene que sobrevivir
+    // cinco pantallas, y reenviarlo en cada navegación significa que la primera
+    // que se olvide corta la cadena sin que nada falle de forma visible.
+    void guardarTono(c.tono);
     const ir = () => router.push({ pathname: c.route, params: { tono: c.tono } } as any);
     const nodo = flechas[c.id];
 

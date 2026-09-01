@@ -10,6 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { User } from '@supabase/supabase-js';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
+import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { useAuth, ERR_YA_REGISTRADO, ERR_CREDENCIALES } from '@/context/AuthContext';
 import { marcarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
@@ -38,6 +39,8 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function CoachLoginScreen() {
   const router = useRouter();
+  // El color del camino elegido en la bifurcación.
+  const tonoOnboarding = useTonoOnboarding();
   // Con qué color se llegó desde la bifurcación, si se llegó por ahí.
   const { tono } = useLocalSearchParams<{ tono?: string }>();
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, signOut } = useAuth();
@@ -321,7 +324,7 @@ export default function CoachLoginScreen() {
   const anyLoading = loading || googleLoading || appleLoading;
 
   return (
-    <View style={s.root}>
+    <View style={[s.root, tonoOnboarding ? { backgroundColor: tonoOnboarding } : null]}>
       <EntradaDesdeColor tono={tono} />
       <StatusBar barStyle="dark-content" />
       <LineasEsquina />

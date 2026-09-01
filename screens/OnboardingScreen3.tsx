@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { ScaleCard } from '@/components/ScaleCard';
+import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
 
@@ -51,6 +52,8 @@ const fadeUp = (anim: Animated.Value) => ({
 
 export default function OnboardingScreen3() {
   const router = useRouter();
+  // El color del camino elegido en la bifurcación.
+  const tonoOnboarding = useTonoOnboarding();
   const [selected, setSelected] = useState<UniversoId | null>(null);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -84,7 +87,7 @@ export default function OnboardingScreen3() {
   }
 
   return (
-    <AppBg>
+    <AppBg tono={tonoOnboarding}>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container}>
         <Animated.View style={[styles.header, fadeUp(headerAnim)]}>
