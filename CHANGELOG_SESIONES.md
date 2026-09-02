@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-09-02 — Joaquín (sesión 156 · Recursos: bug de chips + rediseño del reproductor y la vista lista)
+
+**Tocado:** `app/formato.tsx`, `app/coach-recurso.tsx`. Nuevo: `components/FormatSurface.tsx`. `tsc`, lint y 429 tests limpios. Sin migraciones.
+
+**Resumen — dos ajustes sobre lo ya construido de Recursos, arrancando por un bug y por un dato sospechoso antes de tocar diseño.**
+
+- 🔴 **Bug de chips (Parte 0):** los chips de tema se estiraban vertical porque la fila (contentContainer horizontal) hereda `alignItems: 'stretch'`. Fix: `alignItems: 'center'` en `chipsRow` + `alignSelf: 'flex-start'` en el chip (cinturón y tirantes). **No es componente compartido** — cada pantalla inlinea sus chips; los otros scrolls horizontales (`coach-recurso-nuevo`, `ExploreResources`) no exhiben el bug (sus scrolls están acotados dentro de contenido vertical), así que se dejaron sin tocar.
+- 🔎 **Dato sospechoso 10:00 vs 0:08 → es de DATOS, no de UI.** `duration_seconds` es un campo que el coach **tipea a mano** en el alta (`coach-recurso-nuevo.tsx:172`, minutos → segundos); nunca se deriva del archivo. Las filas SEED tienen 600s ("10:00") pero su audio adjunto es un clip placeholder de ~8s. Los 3 uploads reales tienen `duration_seconds = null` → no muestran número falso. O sea el desfase **solo existe en data de seed**. Se dejó el comportamiento (hero muestra el declarado, player muestra el real). Pendiente menor: si molesta en demo, nulear las duraciones de seed (una línea, aparte).
+- **Componente nuevo `FormatSurface`:** un solo lugar para el tratamiento de superficie de color (gradiente derivado del token del formato con `resourceFormatGradient` + grano ~9% + dos manchas de luz). Lo usan **las cards del deck** y **el hero del reproductor**, para que abrir un recurso desde el deck se sienta como que la card se expandió.
+- **Reproductor (Parte 1):** header de 4 íconos → 2 (fuera campana y pin; quedan atrás + guardar + compartir). El bloque durazno pálido → hero de color con pastilla de formato arriba, y título en serif + autor + duración abajo. El player **sale de su caja**: barra de 5px con perilla visible (círculo del color, borde crema, sombra), tiempo **restante en negativo** a la derecha, play de 66px con gradiente del formato, y control de **velocidad** (1× / 1.25× / 1.5× / 2×) que cicla. Abajo, dos bloques crema: **"Quién lo hizo"** (autor + especialidad + N recursos → perfil) y **"Después de esto"** (relacionados por mismo tema, completando con mismo autor; sin señal de "más completados después", se dejó afuera; si no hay, no renderiza).
+- **Vista lista (Parte 2):** "Ver como deck/lista" pasó de link suelto a **control segmentado en el header** (líneas/cards), presente en **ambas** vistas y con preferencia **persistida** (AsyncStorage, global). El contador ya vive junto al título. Cada fila muestra ahora `duración · autor · tema`. Los bloques de abajo (progreso + coach) son de la pantalla y se muestran en las dos vistas. El copy del bloque del coach se adapta: **≤3 recursos** → "Todavía hay pocos [formato]"; más → "¿No encontrás lo que buscás?". Si no hay coach asignado, el bloque no aparece.
+- **Analítica:** `vista_cambiada {formato, vista}`, `velocidad_cambiada {velocidad}`, `relacionado_abierto {origen_id, destino_id}`.
+- **Tokens:** los colores de formato y **todos los gradientes** salen de `ResourceFormatColors` / `resourceFormatGradient` (nada hardcodeado). Tipografía 100% `ViveFonts` (`title` para serif-role, `semibold/regular/medium/bold`). Los olivas de texto (`FOREST`/`FOREST_SOFT`) son las constantes locales que ya existían en estas pantallas — no se inventaron valores nuevos.
+
+**Pendiente para la próxima sesión:**
+- No confirmado en dispositivo — Joaquín pidió ver reproductor + lista + deck con el toggle. Recargar y mirar.
+- Sigue abierta la charla de la tarjeta "Pedile una recomendación a [coach]" (qué la hace confusa).
+- Opcional: nulear `duration_seconds` de las filas SEED para que la demo no muestre 10:00 con un audio de 8s.
+
 ## 2026-09-02 — Joaquín (sesión 155 · device review cont. + animación de escala en los CTA)
 
 **Tocado:** `app/formato.tsx`, y los CTA de: `screens/{Ruido,Lecturas,Anclaje,Sueno,Meditacion,Escaner,Respiracion,Relajacion,ResourceDetail}Screen.tsx`, `screens/{Login,Register,CoachLogin,VerificarMail,NuevaContrasena}Screen.tsx`, `screens/BookingScreen_Confirm.tsx`.

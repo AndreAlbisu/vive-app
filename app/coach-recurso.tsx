@@ -8,32 +8,31 @@ import {
   ActivityIndicator,
   StatusBar,
   Linking,
+  Image,
+  Share,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import YoutubeIframe from 'react-native-youtube-iframe';
 import Markdown from 'react-native-markdown-display';
-import { ViveFonts, ViveColors } from '@/constants/theme';
+import {
+  ViveFonts, ViveColors, ResourceFormatColors, ResourceFormatLabels, resourceFormatGradient,
+} from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { ReminderBell } from '@/components/ReminderBell';
-import { PinButton } from '@/components/PinButton';
-import { supabase } from '@/lib/supabase';
+import { FormatSurface } from '@/components/FormatSurface';
+import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { logResourceEvent } from '@/lib/resourceEvents';
 
 // ─── Constantes de formato ────────────────────────────────────────────────────
-const FORMAT_COLOR: Record<string, string> = {
-  audio:   '#C06B4A',
-  podcast: '#7E8CA8',
-  video:   '#8A6FA8',
-  lectura: '#6B7A56',
-};
-const FORMAT_LABEL: Record<string, string> = {
-  audio: 'Audio', podcast: 'Podcast', video: 'Video', lectura: 'Lectura',
-};
+const FOREST = '#3A4F2A';
+const FOREST_SOFT = '#6B7A56';
+const CREAM = ViveColors.background; // borde de la perilla del reproductor
+
 function displayTitle(title: string): string {
   return title.replace(/^\[SEED\]\s*/, '');
 }
@@ -46,7 +45,7 @@ const FORMAT_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']>
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function fmtDuration(secs: number): string {
+function fmtClock(secs: number): string {
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
@@ -84,20 +83,35 @@ type Resource = {
   body_md: string | null;
   topic_id: string;
   duration_seconds: number | null;
+  coach_id: string;
   coaches: {
+    id: string;
     profile_id: string;
-    profiles: { name: string };
+    specialty: string | null;
+    profiles: { name: string; avatar_url: string | null };
   };
 };
 
+type Related = {
+  id: string;
+  title: string;
+  format: string;
+  duration_seconds: number | null;
+  author: string;
+};
+
 // ─── AudioPlayer ──────────────────────────────────────────────────────────────
+const SPEEDS = [1, 1.25, 1.5, 2] as const;
+
 function AudioPlayer({
   audioUrl,
+  format,
   color,
   userId,
   resourceId,
 }: {
   audioUrl: string;
+  format: string;
   color: string;
   userId: string | undefined;
   resourceId: string;
@@ -106,6 +120,7 @@ function AudioPlayer({
   const status = useAudioPlayerStatus(player);
   const loggedPlay = useRef(false);
   const loggedComplete = useRef(false);
+  const [speedIdx, setSpeedIdx] = useState(0);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
@@ -114,7 +129,8 @@ function AudioPlayer({
   const isPlaying = status.playing;
   const currentTime = status.currentTime ?? 0;
   const duration = status.duration ?? 0;
-  const progress = duration > 0 ? currentTime / duration : 0;
+  const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
+  const remaining = Math.max(0, duration - currentTime);
 
   useEffect(() => {
     if (!userId) return;
@@ -128,106 +144,143 @@ function AudioPlayer({
     }
   }, [isPlaying, currentTime, duration, userId, resourceId]);
 
-  function handleSeek(pct: number) {
-    if (duration > 0) player.seekTo(pct * duration);
+  function cycleSpeed() {
+    const next = (speedIdx + 1) % SPEEDS.length;
+    setSpeedIdx(next);
+    // Corrige el pitch para que subir la velocidad no suene "ardilla".
+    player.shouldCorrectPitch = true;
+    player.playbackRate = SPEEDS[next];
+    registrarEvento('velocidad_cambiada', { velocidad: SPEEDS[next] }).catch(() => {});
   }
 
+  const [gradFrom, gradTo] = resourceFormatGradient(format);
+
   return (
-    <View style={[ap.container, { borderColor: color + '33' }]}>
-      {/* Barra de progreso interactiva */}
+    <View style={ap.wrap}>
+      {/* Barra de progreso con perilla visible */}
       <TouchableOpacity
         style={ap.trackWrap}
         onPress={(e) => {
           const locationX = (e.nativeEvent as any).locationX ?? 0;
           const width = (e.nativeEvent as any).layoutMeasurement?.width ?? 280;
-          handleSeek(locationX / width);
+          if (duration > 0) player.seekTo((locationX / width) * duration);
         }}
         activeOpacity={1}>
         <View style={ap.track}>
           <View style={[ap.fill, { width: `${Math.round(progress * 100)}%` as any, backgroundColor: color }]} />
         </View>
+        <View
+          pointerEvents="none"
+          style={[ap.knob, { left: `${progress * 100}%` as any, backgroundColor: color }]}
+        />
       </TouchableOpacity>
 
-      {/* Tiempo */}
+      {/* Transcurrido a la izquierda, RESTANTE en negativo a la derecha */}
       <View style={ap.timeRow}>
-        <Text style={ap.timeText}>{fmtDuration(currentTime)}</Text>
-        <Text style={ap.timeText}>{duration > 0 ? fmtDuration(duration) : '--:--'}</Text>
+        <Text style={ap.timeText}>{fmtClock(currentTime)}</Text>
+        <Text style={ap.timeText}>−{fmtClock(remaining)}</Text>
       </View>
 
-      {/* Controles */}
+      {/* Controles: −15s, play (con el gradiente del formato), +15s */}
       <View style={ap.controls}>
         <TouchableOpacity
           style={ap.skipBtn}
           onPress={() => player.seekTo(Math.max(0, currentTime - 15))}
-          hitSlop={8}>
-          <Ionicons name="play-back" size={20} color="#3A4F2A" />
-          <Text style={ap.skipLabel}>15s</Text>
+          hitSlop={10}>
+          <Ionicons name="play-back" size={22} color={FOREST} />
+          <Text style={ap.skipLabel}>15</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[ap.playBtn, { backgroundColor: color }]}
-          onPress={() => isPlaying ? player.pause() : player.play()}
+          onPress={() => (isPlaying ? player.pause() : player.play())}
           activeOpacity={0.85}>
-          <Ionicons
-            name={isPlaying ? 'pause' : 'play'}
-            size={28}
-            color="#fff"
-          />
+          <LinearGradient
+            colors={[gradFrom, gradTo]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[ap.playBtn, { shadowColor: color }]}>
+            <Ionicons name={isPlaying ? 'pause' : 'play'} size={30} color="#fff" style={isPlaying ? undefined : { marginLeft: 3 }} />
+          </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={ap.skipBtn}
           onPress={() => player.seekTo(Math.min(duration, currentTime + 15))}
-          hitSlop={8}>
-          <Ionicons name="play-forward" size={20} color="#3A4F2A" />
-          <Text style={ap.skipLabel}>15s</Text>
+          hitSlop={10}>
+          <Ionicons name="play-forward" size={22} color={FOREST} />
+          <Text style={ap.skipLabel}>15</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Velocidad — cicla 1× → 1.25× → 1.5× → 2× */}
+      <TouchableOpacity style={ap.speedBtn} onPress={cycleSpeed} hitSlop={10} activeOpacity={0.7}>
+        <Text style={ap.speedText}>{SPEEDS[speedIdx]}×</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const ap = StyleSheet.create({
-  container: {
-    borderRadius: 20,
-    borderWidth: 1,
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    padding: 20,
-    gap: 14,
-    marginBottom: 20,
-  },
-  trackWrap: { paddingVertical: 8 },
+  // Sin caja: los controles van directo sobre el fondo crema.
+  wrap: { gap: 12, marginTop: 8, marginBottom: 24 },
+  trackWrap: { height: 24, justifyContent: 'center' },
   track: {
     height: 5,
     borderRadius: 3,
-    backgroundColor: 'rgba(58,79,42,0.12)',
+    backgroundColor: 'rgba(58,79,42,0.14)',
     overflow: 'hidden',
   },
   fill: { height: '100%', borderRadius: 3 },
+  knob: {
+    position: 'absolute',
+    top: 5,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    marginLeft: -7,
+    borderWidth: 2,
+    borderColor: CREAM,
+    shadowColor: '#3A4F2A',
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between' },
   timeText: {
     fontFamily: ViveFonts.regular,
-    fontSize: 11,
-    color: '#6B7A56',
+    fontSize: 12,
+    color: FOREST_SOFT,
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 28,
+    gap: 34,
+    marginTop: 4,
   },
   playBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
-  skipBtn: { alignItems: 'center', gap: 2 },
+  skipBtn: { alignItems: 'center', gap: 1 },
   skipLabel: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 9,
-    color: '#6B7A56',
+    fontFamily: ViveFonts.medium,
+    fontSize: 10,
+    color: FOREST_SOFT,
+  },
+  speedBtn: { alignSelf: 'center', paddingVertical: 4, paddingHorizontal: 12, marginTop: 2 },
+  speedText: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13,
+    color: FOREST_SOFT,
   },
 });
 
@@ -347,6 +400,7 @@ const pc = StyleSheet.create({
     backgroundColor: '#3B7FC4',
     borderRadius: 16,
     paddingVertical: 16,
+    marginTop: 4,
     marginBottom: 20,
   },
   text: {
@@ -380,6 +434,18 @@ const mdStyles = StyleSheet.create({
   hr: { backgroundColor: 'rgba(58,79,42,0.12)', height: 1, marginVertical: 16 },
 });
 
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+function Avatar({ url, name, size }: { url: string | null; name: string; size: number }) {
+  if (url) {
+    return <Image source={{ uri: url }} style={{ width: size, height: size, borderRadius: size / 2 }} />;
+  }
+  return (
+    <View style={[s.avatarFallback, { width: size, height: size, borderRadius: size / 2 }]}>
+      <Text style={[s.avatarFallbackText, { fontSize: size * 0.4 }]}>{(name[0] ?? '?').toUpperCase()}</Text>
+    </View>
+  );
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function CoachRecursoScreen() {
   const router = useRouter();
@@ -392,12 +458,15 @@ export default function CoachRecursoScreen() {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [savingBookmark, setSavingBookmark] = useState(false);
+  const [authorCount, setAuthorCount] = useState<number | null>(null);
+  const [related, setRelated] = useState<Related[]>([]);
 
   useEffect(() => {
     if (!id) return;
+    setLoading(true);
     supabase
       .from('coach_resources')
-      .select('id, title, description, format, source, url, storage_path, body_md, topic_id, duration_seconds, coaches!inner(profile_id, profiles!inner(name))')
+      .select('id, title, description, format, source, url, storage_path, body_md, topic_id, duration_seconds, coach_id, coaches!inner(id, profile_id, specialty, profiles!inner(name, avatar_url))')
       .eq('id', id)
       .single()
       .then(async ({ data }) => {
@@ -415,6 +484,47 @@ export default function CoachRecursoScreen() {
         setLoading(false);
       });
   }, [id]);
+
+  // ── "Quién lo hizo" (conteo del autor) + "Después de esto" (relacionados) ────
+  // Relacionados: mismo tema primero, se completa con otros del mismo autor. No
+  // hay señal de "los que más se completan después" (no guardamos secuencia), así
+  // que ese criterio queda afuera en vez de inventarlo. Si no sale nada, el
+  // bloque no se renderiza.
+  useEffect(() => {
+    if (!resource) return;
+    let cancelled = false;
+    const coachId = resource.coach_id;
+    const topicId = resource.topic_id;
+    (async () => {
+      const [countRes, relRes] = await Promise.all([
+        supabase.from('coach_resources')
+          .select('id', { count: 'exact', head: true })
+          .eq('coach_id', coachId).eq('status', 'published'),
+        supabase.from('coach_resources')
+          .select('id, title, format, duration_seconds, topic_id, coach_id, coaches!inner(profiles!inner(name))')
+          .eq('status', 'published')
+          .neq('id', resource.id)
+          .or(`topic_id.eq.${topicId},coach_id.eq.${coachId}`)
+          .limit(12),
+      ]);
+      if (cancelled) return;
+      setAuthorCount(countRes.count ?? null);
+
+      const rows = (relRes.data ?? []) as any[];
+      // Mismo tema primero, después el resto (mismo autor).
+      rows.sort((a, b) => {
+        const at = a.topic_id === topicId ? 0 : 1;
+        const bt = b.topic_id === topicId ? 0 : 1;
+        return at - bt;
+      });
+      setRelated(rows.slice(0, 3).map(r => ({
+        id: r.id, title: r.title, format: r.format,
+        duration_seconds: r.duration_seconds,
+        author: r.coaches?.profiles?.name ?? 'un profesional',
+      })));
+    })();
+    return () => { cancelled = true; };
+  }, [resource]);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -441,6 +551,11 @@ export default function CoachRecursoScreen() {
     setSavingBookmark(false);
   }
 
+  const onShare = useCallback(() => {
+    if (!resource) return;
+    Share.share({ message: `${displayTitle(resource.title)} — en Vita` }).catch(() => {});
+  }, [resource]);
+
   if (loading) {
     return (
       <AppBg>
@@ -464,8 +579,12 @@ export default function CoachRecursoScreen() {
     );
   }
 
-  const color = FORMAT_COLOR[resource.format] ?? ViveColors.primary;
-  const coachName = (resource.coaches as any)?.profiles?.name ?? '';
+  const format = resource.format;
+  const color = ResourceFormatColors[format] ?? ViveColors.primary;
+  const label = ResourceFormatLabels[format] ?? format;
+  const coachName = resource.coaches?.profiles?.name ?? '';
+  const coachAvatar = resource.coaches?.profiles?.avatar_url ?? null;
+  const coachSpecialty = resource.coaches?.specialty ?? null;
   const coachProfileId = resource.coaches?.profile_id ?? null;
   const resourceId = resource.id;
 
@@ -475,27 +594,34 @@ export default function CoachRecursoScreen() {
     router.push({ pathname: '/profesional', params: { profileId: coachProfileId, resourceId } } as any);
   }
 
+  function openRelated(r: Related) {
+    registrarEvento('relacionado_abierto', { origen_id: resourceId, destino_id: r.id }).catch(() => {});
+    router.push({ pathname: '/coach-recurso', params: { id: r.id } } as any);
+  }
+
+  const authorMeta = [coachSpecialty, authorCount != null ? `${authorCount} ${authorCount === 1 ? 'recurso' : 'recursos'}` : null]
+    .filter(Boolean).join(' · ');
+
   return (
     <AppBg>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={s.safe} edges={['top']}>
 
-        {/* Header */}
+        {/* Header: atrás | guardar + compartir */}
         <View style={s.header}>
-          <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={8}>
+          <TouchableOpacity style={s.headerBtn} onPress={() => router.back()} hitSlop={8}>
             <Ionicons name="arrow-back" size={22} color={ViveColors.accent} />
           </TouchableOpacity>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            <ReminderBell kind="coach_resource" resourceRef={resource.id} title={resource.title} />
-            {/* Pin (inicio, tope 4) y bookmark (biblioteca ilimitada) son cosas
-                distintas y conviven acá, igual que en ResourceDetailScreen. */}
-            <PinButton resourceId={resource.id} icon="pin" inline inactiveColor={ViveColors.accent} />
-            <TouchableOpacity style={s.saveBtn} onPress={toggleSave} hitSlop={8}>
+          <View style={s.headerRight}>
+            <TouchableOpacity style={s.headerBtn} onPress={toggleSave} hitSlop={8}>
               <Ionicons
                 name={saved ? 'bookmark' : 'bookmark-outline'}
                 size={22}
                 color={saved ? ViveColors.primary : ViveColors.accent}
               />
+            </TouchableOpacity>
+            <TouchableOpacity style={s.headerBtn} onPress={onShare} hitSlop={8}>
+              <Ionicons name="share-outline" size={22} color={ViveColors.accent} />
             </TouchableOpacity>
           </View>
         </View>
@@ -505,7 +631,7 @@ export default function CoachRecursoScreen() {
           contentContainerStyle={s.container}
           showsVerticalScrollIndicator={false}>
 
-          {/* Nota del coach — solo si se llegó por una recomendación (Ajuste 6) */}
+          {/* Nota del coach — solo si se llegó por una recomendación */}
           {noteText && fromCoachNameText ? (
             <View style={s.recoNoteBanner}>
               <Text style={s.recoNoteBannerText}>
@@ -514,55 +640,103 @@ export default function CoachRecursoScreen() {
             </View>
           ) : null}
 
-          {/* Cover — solo para audio y lectura; video muestra el player directo */}
-          {resource.format !== 'video' && (
-            <View style={[s.cover, { backgroundColor: color + '15' }]}>
-              <View style={[s.coverIcon, { backgroundColor: color + '25' }]}>
-                <Ionicons name={FORMAT_ICON[resource.format] ?? 'book-outline'} size={40} color={color} />
+          {format === 'video' ? (
+            // Video: el player ES el hero. El título queda en el cuerpo.
+            <>
+              {resource.url && <VideoPlayer url={resource.url} userId={user?.id} resourceId={resource.id} />}
+              <Text style={s.title}>{displayTitle(resource.title)}</Text>
+              {coachName ? (
+                <TouchableOpacity onPress={goToCoachProfile} disabled={!coachProfileId} hitSlop={4}>
+                  <Text style={[s.coach, coachProfileId && s.coachLink]}>Por {coachName}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </>
+          ) : (
+            // Audio / podcast / lectura: hero de color con el mismo tratamiento
+            // que las cards del deck. El título vive acá, no en el cuerpo.
+            <FormatSurface format={format} style={s.hero}>
+              <View style={s.heroPill}>
+                <Ionicons name={FORMAT_ICON[format] ?? 'book-outline'} size={13} color="#fff" />
+                <Text style={s.heroPillText}>{label}</Text>
               </View>
-              <View style={[s.formatBadge, { backgroundColor: color }]}>
-                <Text style={s.formatBadgeText}>{FORMAT_LABEL[resource.format] ?? resource.format}</Text>
+              <View style={{ flex: 1 }} />
+              <Text style={s.heroTitle} numberOfLines={3}>{displayTitle(resource.title)}</Text>
+              <View style={s.heroMetaRow}>
+                <Avatar url={coachAvatar} name={coachName || '?'} size={24} />
+                <Text style={s.heroAuthor} numberOfLines={1}>{coachName}</Text>
+                {resource.duration_seconds ? (
+                  <Text style={s.heroDuration}>{fmtClock(resource.duration_seconds)}</Text>
+                ) : null}
               </View>
-            </View>
+            </FormatSurface>
           )}
 
-          {/* Video player — arriba de todo */}
-          {resource.format === 'video' && resource.url && (
-            <VideoPlayer url={resource.url} userId={user?.id} resourceId={resource.id} />
-          )}
-
-          {/* Info */}
-          <Text style={s.title}>{displayTitle(resource.title)}</Text>
-          {coachName ? (
-            <TouchableOpacity onPress={goToCoachProfile} disabled={!coachProfileId} hitSlop={4}>
-              <Text style={[s.coach, coachProfileId && s.coachLink]}>Por {coachName}</Text>
-            </TouchableOpacity>
-          ) : null}
-          {resource.duration_seconds ? (
-            <Text style={s.duration}>{fmtDuration(resource.duration_seconds)}</Text>
-          ) : null}
           {resource.description ? (
             <Text style={s.description}>{resource.description}</Text>
           ) : null}
 
           {/* Reproductor según formato */}
-          {resource.format === 'audio' && audioUrl && (
-            <AudioPlayer audioUrl={audioUrl} color={color} userId={user?.id} resourceId={resource.id} />
+          {format === 'audio' && audioUrl && (
+            <AudioPlayer audioUrl={audioUrl} format={format} color={color} userId={user?.id} resourceId={resource.id} />
           )}
-          {resource.format === 'audio' && !audioUrl && !loading && (
+          {format === 'audio' && !audioUrl && !loading && (
             <View style={s.audioUnavailable}>
-              <Ionicons name="cloud-offline-outline" size={20} color="#6B7A56" />
+              <Ionicons name="cloud-offline-outline" size={20} color={FOREST_SOFT} />
               <Text style={s.audioUnavailableText}>Audio no disponible aún</Text>
             </View>
           )}
 
-          {resource.format === 'podcast' && resource.url && (
+          {format === 'podcast' && resource.url && (
             <PodcastCTA url={resource.url} userId={user?.id} resourceId={resource.id} />
           )}
 
-          {resource.format === 'lectura' && resource.body_md && (
+          {format === 'lectura' && resource.body_md && (
             <View style={s.lecturaCard}>
               <Markdown style={mdStyles as any}>{resource.body_md}</Markdown>
+            </View>
+          )}
+
+          {/* ── Quién lo hizo ─────────────────────────────────────────────── */}
+          {coachName ? (
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>Quién lo hizo</Text>
+              <TouchableOpacity
+                style={s.authorCard}
+                onPress={goToCoachProfile}
+                disabled={!coachProfileId}
+                activeOpacity={0.85}>
+                <Avatar url={coachAvatar} name={coachName} size={44} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.authorName} numberOfLines={1}>{coachName}</Text>
+                  {authorMeta ? <Text style={s.authorMeta} numberOfLines={1}>{authorMeta}</Text> : null}
+                </View>
+                {coachProfileId ? <Ionicons name="chevron-forward" size={18} color={FOREST_SOFT} /> : null}
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {/* ── Después de esto ───────────────────────────────────────────── */}
+          {related.length > 0 && (
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>Después de esto</Text>
+              <View style={s.relCard}>
+                {related.map((r, i) => (
+                  <TouchableOpacity
+                    key={r.id}
+                    style={[s.relRow, i < related.length - 1 && s.relDivider]}
+                    onPress={() => openRelated(r)}
+                    activeOpacity={0.7}>
+                    <Text style={s.relNum}>{i + 1}</Text>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={s.relTitle} numberOfLines={1}>{displayTitle(r.title)}</Text>
+                      <Text style={s.relMeta} numberOfLines={1}>
+                        {[r.duration_seconds ? fmtClock(r.duration_seconds) : null, r.author].filter(Boolean).join(' · ')}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={FOREST_SOFT} />
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           )}
 
@@ -586,8 +760,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
-  backBtn: { padding: 4 },
-  saveBtn: { padding: 4 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  headerBtn: { padding: 4 },
 
   recoNoteBanner: {
     backgroundColor: '#F3EEDF',
@@ -607,34 +781,30 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.semibold,
   },
 
-  cover: {
-    height: 150,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+  // Hero de color
+  hero: {
+    minHeight: 208,
+    borderRadius: 24,
+    padding: 20,
+    overflow: 'hidden',
     marginBottom: 20,
   },
-  coverIcon: {
-    width: 68,
-    height: 68,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+  heroPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20, paddingHorizontal: 11, paddingVertical: 5,
   },
-  formatBadge: {
-    position: 'absolute',
-    bottom: 12,
-    right: 12,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  formatBadgeText: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 11,
-    color: '#fff',
-  },
+  heroPillText: { fontFamily: ViveFonts.semibold, fontSize: 12, color: '#fff' },
+  heroTitle: { fontFamily: ViveFonts.title, fontSize: 24, color: '#fff', lineHeight: 30 },
+  heroMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  heroAuthor: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 13, color: 'rgba(255,255,255,0.9)' },
+  heroDuration: { fontFamily: ViveFonts.semibold, fontSize: 13, color: 'rgba(255,255,255,0.95)' },
 
+  avatarFallback: {
+    backgroundColor: 'rgba(255,255,255,0.28)', alignItems: 'center', justifyContent: 'center',
+  },
+  avatarFallbackText: { fontFamily: ViveFonts.bold, color: '#fff' },
+
+  // Cuerpo (solo video usa title/coach; el resto va en el hero)
   title: {
     fontFamily: ViveFonts.title,
     fontSize: 24,
@@ -652,18 +822,12 @@ const s = StyleSheet.create({
   coachLink: {
     textDecorationLine: 'underline',
   },
-  duration: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: '#6B7A56',
-    marginBottom: 14,
-  },
   description: {
     fontFamily: ViveFonts.regular,
     fontSize: 14.5,
     color: '#3A4F2A',
     lineHeight: 22,
-    marginBottom: 22,
+    marginBottom: 8,
   },
 
   lecturaCard: {
@@ -672,6 +836,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.65)',
     padding: 18,
+    marginTop: 12,
     marginBottom: 20,
   },
 
@@ -688,6 +853,34 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: '#6B7A56',
   },
+
+  // Bloques de abajo — crema, líneas finas, sin color fuerte
+  section: { marginTop: 18 },
+  sectionTitle: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13,
+    color: FOREST_SOFT,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  authorCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: 'rgba(255,248,240,0.5)', borderWidth: 1, borderColor: 'rgba(58,79,42,0.12)',
+    borderRadius: 18, padding: 14,
+  },
+  authorName: { fontFamily: ViveFonts.semibold, fontSize: 15, color: FOREST },
+  authorMeta: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: FOREST_SOFT, marginTop: 2 },
+
+  relCard: {
+    backgroundColor: 'rgba(255,248,240,0.5)', borderWidth: 1, borderColor: 'rgba(58,79,42,0.12)',
+    borderRadius: 18, paddingHorizontal: 14,
+  },
+  relRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  relDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(58,79,42,0.14)' },
+  relNum: { fontFamily: ViveFonts.title, fontSize: 16, color: 'rgba(58,79,42,0.35)', width: 16, textAlign: 'center' },
+  relTitle: { fontFamily: ViveFonts.semibold, fontSize: 14, color: FOREST },
+  relMeta: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, marginTop: 2 },
 
   errorText: {
     fontFamily: ViveFonts.regular,

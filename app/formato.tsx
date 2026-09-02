@@ -7,14 +7,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Defs, Pattern, Circle, Rect } from 'react-native-svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   ViveFonts, ResourceFormatColors, ResourceFormatLabels, resourceFormatGradient,
 } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { ScaleCard } from '@/components/ScaleCard';
+import { FormatSurface } from '@/components/FormatSurface';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { DOORS } from '@/constants/conexionesDoors';
@@ -29,6 +29,12 @@ const FOREST_SOFT = '#6B7A56';
 const TERRACOTTA = '#C06B4A';
 const CREAM_LIGHT = '#F3EEDF';
 
+// Preferencia de vista (lista/deck) — una sola, global a Recursos, para que la
+// próxima vez que se abra un formato aparezca en la vista elegida.
+const VIEW_PREF_KEY = 'recursos_vista_pref';
+// Umbral de "pocos" recursos para adaptar el copy del bloque del coach.
+const POCOS_THRESHOLD = 3;
+
 const FORMAT_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   audio: 'mic-outline', podcast: 'musical-notes-outline', video: 'videocam-outline', lectura: 'book-outline',
 };
@@ -37,6 +43,9 @@ const FORMAT_DESC: Record<string, string> = {
   podcast: 'Para escuchar mientras hacés otra cosa',
   video:   'Técnicas explicadas paso a paso',
   lectura: 'Textos breves para pensar',
+};
+const FORMAT_PLURAL: Record<string, string> = {
+  audio: 'audios', podcast: 'podcasts', video: 'videos', lectura: 'lecturas',
 };
 
 type Resource = {
@@ -59,28 +68,6 @@ function topicLabel(id: string): string {
 }
 function norm(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-
-// Grano de papel a ~9% — misma técnica que SurfaceCard (patrón SVG de puntos,
-// sin PNG externo), como overlay sobre el gradiente de color de la card.
-const GRAIN_TILE = 48;
-const GRAIN_DOTS = Array.from({ length: 42 }, () => ({
-  x: Math.random() * GRAIN_TILE, y: Math.random() * GRAIN_TILE,
-  r: 0.35 + Math.random() * 0.7, o: 0.15 + Math.random() * 0.4,
-}));
-function Grain() {
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <Svg width="100%" height="100%" style={{ opacity: 0.09 }}>
-        <Defs>
-          <Pattern id="g" patternUnits="userSpaceOnUse" width={GRAIN_TILE} height={GRAIN_TILE}>
-            {GRAIN_DOTS.map((d, i) => <Circle key={i} cx={d.x} cy={d.y} r={d.r} fill="#000" fillOpacity={d.o} />)}
-          </Pattern>
-        </Defs>
-        <Rect width="100%" height="100%" fill="url(#g)" />
-      </Svg>
-    </View>
-  );
 }
 
 export default function FormatoScreen() {
@@ -113,6 +100,13 @@ export default function FormatoScreen() {
   useEffect(() => {
     registrarEvento('formato_abierto', { formato }).catch(() => {});
   }, [formato]);
+
+  // ── Preferencia de vista guardada ──────────────────────────────────────────
+  useEffect(() => {
+    AsyncStorage.getItem(VIEW_PREF_KEY)
+      .then(v => { if (v === 'lista') setListView(true); else if (v === 'deck') setListView(false); })
+      .catch(() => {});
+  }, []);
 
   // ── Recursos del formato + guardados + completados + recos + coach ──────────
   useEffect(() => {
@@ -214,6 +208,13 @@ export default function FormatoScreen() {
     return topicLabel(r.topic_id);
   }
 
+  function listMeta(r: Resource): string {
+    // "32 min · Coach Prueba · Foco, hábitos y trabajo" — duración, autor, tema.
+    // Cada parte se omite si falta el dato, sin dejar separadores colgados.
+    return [fmtDuration(r.duration_seconds), r.author, topicLabel(r.topic_id)]
+      .filter(Boolean).join(' · ');
+  }
+
   function onDeckScrollEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const idx = Math.round(e.nativeEvent.contentOffset.x / SNAP);
     setDeckIndex(idx);
@@ -224,9 +225,12 @@ export default function FormatoScreen() {
     }
   }
 
-  function openList() {
-    setListView(true);
-    registrarEvento('vista_lista_abierta', { formato }).catch(() => {});
+  // ── Toggle de vista (persistido + analítica) ───────────────────────────────
+  function setView(list: boolean) {
+    if (list === listView) return;
+    setListView(list);
+    AsyncStorage.setItem(VIEW_PREF_KEY, list ? 'lista' : 'deck').catch(() => {});
+    registrarEvento('vista_cambiada', { formato, vista: list ? 'lista' : 'deck' }).catch(() => {});
   }
 
   function pedirReco() {
@@ -236,7 +240,8 @@ export default function FormatoScreen() {
   }
 
   const renderCard = ({ item, index }: { item: Resource; index: number }) => {
-    const [from, to] = resourceFormatGradient(formato, index);
+    // `to` (tono oscuro del gradiente) tiñe el texto del botón "Empezar".
+    const [, to] = resourceFormatGradient(formato, index);
     const saved = savedIds.has(item.id);
     return (
       <View style={s.cardWrap}>
@@ -244,12 +249,7 @@ export default function FormatoScreen() {
             app (ScaleCard). El bookmark, como touchable interno, se queda con
             su propio toque; "Empezar" pasa a ser visual (tocar la card abre). */}
         <ScaleCard onPress={() => openResource(item.id)} activeOpacity={0.92}>
-          <LinearGradient colors={[from, to]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.card}>
-            <Grain />
-            {/* Manchas de luz: clara arriba-derecha, oscura abajo-izquierda */}
-            <View style={s.blobLight} pointerEvents="none" />
-            <View style={s.blobDark} pointerEvents="none" />
-
+          <FormatSurface format={formato} variant={index} style={s.card}>
             <View style={s.cardTop}>
               <View style={s.durPill}>
                 <Ionicons name={FORMAT_ICON[formato] ?? 'book-outline'} size={13} color="#fff" />
@@ -269,17 +269,63 @@ export default function FormatoScreen() {
             <View style={s.startBtn}>
               <Text style={[s.startBtnText, { color: to }]}>Empezar</Text>
             </View>
-          </LinearGradient>
+          </FormatSurface>
         </ScaleCard>
       </View>
     );
   };
 
+  // ── Bloques debajo de la vista (progreso + coach) — compartidos por lista y
+  //    deck: son de la pantalla, no de la vista. ─────────────────────────────
+  const renderBlocks = () => (
+    <View style={s.blocks}>
+      {/* Progreso del formato */}
+      {total > 0 && (
+        <View style={s.block}>
+          <View style={s.blockRow}>
+            <Text style={s.blockTitle}>
+              {formato === 'lectura' ? 'Leíste' : 'Escuchaste'} {done} de {total}
+            </Text>
+            {totalMin > 0 && <Text style={s.blockMeta}>{totalMin} min en total</Text>}
+          </View>
+          <View style={s.progressTrack}>
+            <View style={[s.progressFill, { width: `${total ? Math.round((done / total) * 100) : 0}%`, backgroundColor: color }]} />
+          </View>
+        </View>
+      )}
+
+      {/* Pedile una reco al coach — solo si tiene sala. El copy se adapta a
+          cuántos recursos hay en el formato (pocos vs. varios). */}
+      {coach && (
+        <ScaleCard style={s.block} onPress={pedirReco} activeOpacity={0.9}>
+          <View style={s.blockRowLeft}>
+            {coach.avatarUrl ? (
+              <Image source={{ uri: coach.avatarUrl }} style={s.coachAvatar} />
+            ) : (
+              <View style={[s.coachAvatar, s.coachAvatarFallback]}>
+                <Text style={s.coachAvatarText}>{(coach.name[0] ?? '?').toUpperCase()}</Text>
+              </View>
+            )}
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={s.blockTitle}>
+                {total <= POCOS_THRESHOLD
+                  ? `Todavía hay pocos ${FORMAT_PLURAL[formato] ?? 'recursos'}`
+                  : '¿No encontrás lo que buscás?'}
+              </Text>
+              <Text style={s.blockSub} numberOfLines={1}>Pedile una recomendación a {coach.name}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={FOREST_SOFT} />
+          </View>
+        </ScaleCard>
+      )}
+    </View>
+  );
+
   return (
     <AppBg>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={s.safe} edges={['top']}>
-        {/* Header */}
+        {/* Header: atrás | título+contador | toggle de vista + búsqueda */}
         <View style={s.header}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={s.headerBtn}>
             <Ionicons name="arrow-back" size={22} color={FOREST} />
@@ -287,6 +333,20 @@ export default function FormatoScreen() {
           <View style={{ flex: 1 }}>
             <Text style={s.headerTitle}>{label}</Text>
             <Text style={s.headerCount}>{total} {total === 1 ? 'recurso' : 'recursos'}</Text>
+          </View>
+          {/* Control segmentado: líneas = lista, cards = deck. Vive en las dos
+              vistas, siempre en el mismo lugar. */}
+          <View style={s.segment}>
+            <TouchableOpacity
+              style={[s.segmentBtn, listView && s.segmentBtnActive]}
+              onPress={() => setView(true)} hitSlop={6} activeOpacity={0.8}>
+              <Ionicons name="list" size={17} color={listView ? FOREST : FOREST_SOFT} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.segmentBtn, !listView && s.segmentBtnActive]}
+              onPress={() => setView(false)} hitSlop={6} activeOpacity={0.8}>
+              <Ionicons name="albums" size={16} color={!listView ? FOREST : FOREST_SOFT} />
+            </TouchableOpacity>
           </View>
           <TouchableOpacity onPress={() => setSearchOpen(v => !v)} hitSlop={8} style={s.headerBtn}>
             <Ionicons name={searchOpen ? 'close' : 'search'} size={21} color={FOREST} />
@@ -336,106 +396,57 @@ export default function FormatoScreen() {
                   {searchText.trim() || selectedTopic ? 'No hay recursos con ese filtro.' : `Todavía no hay ${label.toLowerCase()} en la biblioteca.`}
                 </Text>
               </View>
-            ) : listView ? (
-              // ── Vista de lista ────────────────────────────────────────────
-              <View style={s.listWrap}>
-                {filtered.map((r, i) => (
-                  <TouchableOpacity
-                    key={r.id}
-                    style={[s.listRow, i < filtered.length - 1 && s.listRowDivider]}
-                    onPress={() => openResource(r.id)}
-                    activeOpacity={0.7}>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={s.listTitle} numberOfLines={1}>{displayTitle(r.title)}</Text>
-                      <Text style={s.listMeta} numberOfLines={1}>
-                        {topicLabel(r.topic_id)}{r.duration_seconds ? ` · ${fmtDuration(r.duration_seconds)}` : ''}
-                      </Text>
-                    </View>
-                    <TouchableOpacity onPress={() => toggleSave(r.id)} hitSlop={10} activeOpacity={0.8}>
-                      <Ionicons name={savedIds.has(r.id) ? 'bookmark' : 'bookmark-outline'} size={19} color={FOREST_SOFT} />
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                ))}
-                <TouchableOpacity style={s.backToDeck} onPress={() => setListView(false)} activeOpacity={0.7}>
-                  <Ionicons name="albums-outline" size={16} color={TERRACOTTA} />
-                  <Text style={s.backToDeckText}>Ver como deck</Text>
-                </TouchableOpacity>
-              </View>
             ) : (
               <>
-                {/* Deck */}
-                <FlatList
-                  data={filtered}
-                  keyExtractor={r => r.id}
-                  renderItem={renderCard}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  snapToInterval={SNAP}
-                  snapToAlignment="start"
-                  decelerationRate="fast"
-                  disableIntervalMomentum
-                  contentContainerStyle={s.deckContent}
-                  onMomentumScrollEnd={onDeckScrollEnd}
-                  scrollEventThrottle={16}
-                />
-
-                {/* Puntitos */}
-                {filtered.length > 1 && (
-                  <View style={s.dotsRow}>
-                    {filtered.map((_, i) => (
-                      <View key={i} style={[s.dot, i === deckIndex && s.dotActive]} />
+                {listView ? (
+                  // ── Vista de lista ──────────────────────────────────────────
+                  <View style={s.listWrap}>
+                    {filtered.map((r, i) => (
+                      <TouchableOpacity
+                        key={r.id}
+                        style={[s.listRow, i < filtered.length - 1 && s.listRowDivider]}
+                        onPress={() => openResource(r.id)}
+                        activeOpacity={0.7}>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={s.listTitle} numberOfLines={1}>{displayTitle(r.title)}</Text>
+                          <Text style={s.listMeta} numberOfLines={1}>{listMeta(r)}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => toggleSave(r.id)} hitSlop={10} activeOpacity={0.8}>
+                          <Ionicons name={savedIds.has(r.id) ? 'bookmark' : 'bookmark-outline'} size={19} color={FOREST_SOFT} />
+                        </TouchableOpacity>
+                      </TouchableOpacity>
                     ))}
                   </View>
+                ) : (
+                  // ── Vista deck ──────────────────────────────────────────────
+                  <>
+                    <FlatList
+                      data={filtered}
+                      keyExtractor={r => r.id}
+                      renderItem={renderCard}
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      snapToInterval={SNAP}
+                      snapToAlignment="start"
+                      decelerationRate="fast"
+                      disableIntervalMomentum
+                      contentContainerStyle={s.deckContent}
+                      onMomentumScrollEnd={onDeckScrollEnd}
+                      scrollEventThrottle={16}
+                    />
+
+                    {filtered.length > 1 && (
+                      <View style={s.dotsRow}>
+                        {filtered.map((_, i) => (
+                          <View key={i} style={[s.dot, i === deckIndex && s.dotActive]} />
+                        ))}
+                      </View>
+                    )}
+                  </>
                 )}
 
-                {/* Bloques */}
-                <View style={s.blocks}>
-                  {/* Progreso del formato */}
-                  {total > 0 && (
-                    <View style={s.block}>
-                      <View style={s.blockRow}>
-                        <Text style={s.blockTitle}>
-                          {formato === 'lectura' ? 'Leíste' : 'Escuchaste'} {done} de {total}
-                        </Text>
-                        {totalMin > 0 && <Text style={s.blockMeta}>{totalMin} min en total</Text>}
-                      </View>
-                      <View style={s.progressTrack}>
-                        <View style={[s.progressFill, { width: `${total ? Math.round((done / total) * 100) : 0}%`, backgroundColor: color }]} />
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Ver como lista */}
-                  <ScaleCard style={s.block} onPress={openList} activeOpacity={0.9}>
-                    <View style={s.blockRow}>
-                      <View style={s.blockRowLeft}>
-                        <Ionicons name="list-outline" size={18} color={FOREST} />
-                        <Text style={s.blockTitle}>Ver como lista</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={18} color={FOREST_SOFT} />
-                    </View>
-                  </ScaleCard>
-
-                  {/* Pedile una reco al coach — solo si tiene sala */}
-                  {coach && (
-                    <ScaleCard style={s.block} onPress={pedirReco} activeOpacity={0.9}>
-                      <View style={s.blockRowLeft}>
-                        {coach.avatarUrl ? (
-                          <Image source={{ uri: coach.avatarUrl }} style={s.coachAvatar} />
-                        ) : (
-                          <View style={[s.coachAvatar, s.coachAvatarFallback]}>
-                            <Text style={s.coachAvatarText}>{(coach.name[0] ?? '?').toUpperCase()}</Text>
-                          </View>
-                        )}
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text style={s.blockTitle}>¿No encontrás lo que buscás?</Text>
-                          <Text style={s.blockSub} numberOfLines={1}>Pedile una recomendación a {coach.name}</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color={FOREST_SOFT} />
-                      </View>
-                    </ScaleCard>
-                  )}
-                </View>
+                {/* Bloques compartidos por ambas vistas */}
+                {renderBlocks()}
               </>
             )}
           </ScrollView>
@@ -456,6 +467,21 @@ const s = StyleSheet.create({
   headerCount: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, marginTop: -1 },
   formatDesc: { fontFamily: ViveFonts.regular, fontSize: 13.5, color: FOREST_SOFT, paddingHorizontal: 20, marginBottom: 12 },
 
+  // Control segmentado lista/deck
+  segment: {
+    flexDirection: 'row', backgroundColor: 'rgba(63,81,47,0.08)',
+    borderRadius: 12, padding: 3, gap: 2,
+  },
+  segmentBtn: {
+    width: 32, height: 28, borderRadius: 9,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  segmentBtnActive: {
+    backgroundColor: '#FFFDF8',
+    shadowColor: '#3F512F', shadowOpacity: 0.16, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+
   searchRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 20, marginBottom: 12,
@@ -463,8 +489,13 @@ const s = StyleSheet.create({
   },
   searchInput: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST, padding: 0 },
 
-  chipsRow: { gap: 8, paddingHorizontal: 20, paddingBottom: 14 },
+  // `alignItems: 'center'` evita que la fila (contentContainer horizontal)
+  // herede el `stretch` por defecto y estire cada chip al alto del ScrollView.
+  chipsRow: { gap: 8, paddingHorizontal: 20, paddingBottom: 14, alignItems: 'center' },
   chip: {
+    // `alignSelf: 'flex-start'` es el cinturón y tirantes: el chip conserva su
+    // alto natural aunque el contenedor tenga alto de más.
+    alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,248,240,0.6)', borderWidth: 1, borderColor: 'rgba(63,81,47,0.14)',
     borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
   },
@@ -482,14 +513,6 @@ const s = StyleSheet.create({
   card: {
     height: Math.round(CARD_W * 1.28),
     borderRadius: 26, padding: 20, overflow: 'hidden',
-  },
-  blobLight: {
-    position: 'absolute', top: -50, right: -50, width: 160, height: 160, borderRadius: 80,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-  blobDark: {
-    position: 'absolute', bottom: -60, left: -50, width: 170, height: 170, borderRadius: 85,
-    backgroundColor: 'rgba(0,0,0,0.14)',
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   durPill: {
@@ -534,6 +557,4 @@ const s = StyleSheet.create({
   listRowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(63,81,47,0.16)' },
   listTitle: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: FOREST },
   listMeta: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, marginTop: 2 },
-  backToDeck: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 18 },
-  backToDeckText: { fontFamily: ViveFonts.medium, fontSize: 13, color: TERRACOTTA },
 });
