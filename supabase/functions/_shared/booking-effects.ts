@@ -55,9 +55,21 @@ function formatDate(dateStr: string): string {
 // ⚠️ La clave TIENE que ser la misma de las dos puntas: `MESSAGE_ENCRYPTION_KEY`
 // acá y `EXPO_PUBLIC_ENCRYPTION_KEY` en el `.env` de la app. Si no coincide, el
 // mensaje se escribe igual y se lee ilegible.
-const ENCRYPTION_KEY = Deno.env.get('MESSAGE_ENCRYPTION_KEY') ?? 'vive_mvp_key_2026'
+// 🔴 Sin fallback hardcodeado, a propósito. Antes caía en `'vive_mvp_key_2026'`,
+// una clave versionada en este mismo repo: un deploy sin el secret "cifraba"
+// con una clave pública y nadie se enteraba. Se resuelve al USAR y no al
+// importar, así una function a la que no le importan los mensajes no se cae por
+// un secret que no necesita.
+const ENCRYPTION_KEY = Deno.env.get('MESSAGE_ENCRYPTION_KEY')
 
 export function encryptMessage(text: string): string {
+  if (!ENCRYPTION_KEY) {
+    throw new Error(
+      'Falta el secret MESSAGE_ENCRYPTION_KEY. Tiene que ser LA MISMA clave que ' +
+      '`EXPO_PUBLIC_ENCRYPTION_KEY` en la app, o los mensajes de sistema se leen ' +
+      'como basura del lado del cliente.',
+    )
+  }
   try {
     const plain = encodeURIComponent(text)
     let out = ''
@@ -65,8 +77,12 @@ export function encryptMessage(text: string): string {
       out += String.fromCharCode(plain.charCodeAt(i) ^ ENCRYPTION_KEY.charCodeAt(i % ENCRYPTION_KEY.length))
     }
     return btoa(out)
-  } catch {
-    return text
+  } catch (e) {
+    // ⚠️ FALLA CERRADO. Antes devolvía el texto plano, o sea que escribía el
+    // mensaje en claro en una columna que todo el sistema trata como obfuscada
+    // — y como el `decryptMessage` del cliente es tolerante, se leía bien y el
+    // problema quedaba invisible para siempre.
+    throw new Error(`No se pudo preparar el mensaje de sistema: ${(e as Error)?.message ?? e}`)
   }
 }
 

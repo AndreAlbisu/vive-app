@@ -31,7 +31,17 @@ export const PASOS_GUIA = [
 /** Una sola clave apaga todas las cards, incluida la de la Sala. */
 const SALTEADA_KEY = 'vita_guia_salteada';
 
-/** Qué eligió la persona en "¿Cómo te gustaría empezar?" */
+/**
+ * Qué eligió la persona en la primera pregunta del onboarding.
+ *
+ * 📝 Los nombres son los de "¿Cómo te gustaría empezar?", la pantalla que
+ * "¿Qué te trae por acá?" reemplazó el 01/09/2026. Se conservan porque son la
+ * clave que ya está escrita en dispositivos reales: renombrarlos le mostraría
+ * la guía de nuevo a todo el que ya la vio. Hoy se guarda `explore` para "solo
+ * estoy mirando" y `guide` para los tres universos; `search` ya no lo produce
+ * nadie —"Sé qué necesito" no era un camino, ver
+ * `docs/onboarding-bifurcacion-opciones.md`— y sigue acá solo por lo guardado.
+ */
 const CAMINO_KEY = 'vita_onboarding_camino';
 export type Camino = 'explore' | 'search' | 'guide';
 
@@ -45,8 +55,9 @@ export async function guardarCamino(camino: Camino): Promise<void> {
 /**
  * Si esta card tiene que mostrarse.
  *
- * Los pasos numerados son para quien eligió explorar: a alguien que entró
- * diciendo "sé qué necesito" no se le explica la app, se lo deja buscar.
+ * Los pasos numerados son para quien eligió mirar: a alguien que entró
+ * contando lo que le pasa no se le explica la app —aterriza directo en los
+ * profesionales de su tema—, se lo deja buscar.
  *
  * ⚠️ Sin camino guardado la guía SÍ se muestra. Son las instalaciones que
  * vienen de antes de esto: es lo que ya les pasaba, y esconderla sería sacarles

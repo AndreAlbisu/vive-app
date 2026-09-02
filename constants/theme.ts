@@ -5,6 +5,38 @@ export const ViveColors = {
   text: '#565E32',       // Oliva — texto principal
   accent: '#2D4A3E',     // Forest — progreso, confirmaciones
   calm: '#87835C',       // Oliva muted
+
+  /**
+   * 🔴 La terracota PARA SUPERFICIES QUE LLEVAN TEXTO ENCIMA.
+   *
+   * `primary` (#C1694F) es demasiado clara para eso: con ese fondo **ningún**
+   * color de texto llega al mínimo AA de 4.5:1 — ni el blanco puro, que da
+   * 3.89. O sea que no se arregla cambiando el color del texto, hay que
+   * oscurecer el fondo.
+   *
+   * Esta es la misma terracota oscurecida un 16%, que es lo mínimo para que el
+   * crema encima llegue a 4.5:1 (da 4.59). No es un color nuevo de la paleta:
+   * es el mismo, en el tono en que se puede leer.
+   *
+   * ⚠️ Auditado el 01/09/2026: había 25 superficies de terracota con texto
+   * encima, todas por debajo de AA. Diez de ellas usaban el oliva `text`
+   * (#565E32) y daban **1.78:1** — ilegibles al sol. Esas se pasaron a este
+   * token con texto crema. Las otras quince usan blanco o crema sobre
+   * `primary` y quedan en 3.6–3.9:1: se leen, pero no cumplen AA para texto
+   * normal. Pendiente de decidir si se barren también.
+   */
+  primaryInk: '#A25842',
+
+  /**
+   * El texto y los íconos que van ENCIMA de `primaryInk` (4.59:1).
+   *
+   * 📝 Es el mismo valor que `background`, con otro nombre a propósito: el par
+   * `primaryInk` + `onPrimaryInk` se puede grepear junto. La primera pasada de
+   * este arreglo dejó el crema como literal en diez archivos y se le
+   * escaparon los spinners y los íconos adentro de esos mismos botones —
+   * justamente porque no había nada que buscar.
+   */
+  onPrimaryInk: '#F7EFE4',
 };
 
 // 24/08/2026: se sacó Fraunces del proyecto (`frauncesSerif`/`frauncesSemiBold`

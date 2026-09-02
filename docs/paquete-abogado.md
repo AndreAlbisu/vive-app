@@ -30,6 +30,12 @@
 > Abajo te dejo el contexto del negocio y las preguntas concretas, agrupadas
 > por si bloquean o no la publicación. Los textos completos van adjuntos.
 >
+> Una sola aclaración de alcance: escribí todo pensando en Argentina, pero hay
+> una función por salir que permite atender a personas que están en el exterior.
+> Si eso cambia el marco aplicable, es la pregunta **B.5** y prefiero saberlo
+> antes que después — incluso si la respuesta es que necesito a otra persona
+> para esa parte.
+>
 > Gracias,
 > Andre
 
@@ -50,13 +56,28 @@ Categoría A. Facturación tipo C, sin IVA discriminado.
 2. **Contenido propio de bienestar.** Herramientas de 5-10 minutos: respiración,
    meditación, diario personal, registro diario de estado de ánimo.
 
-**Cómo circula el dinero.** El cobro es con **Mercado Pago en modalidad
-marketplace**: el usuario paga al reservar, Mercado Pago **retiene
-automáticamente la comisión de Vita** y le acredita el resto al profesional. La
-comisión es del **20% en la primera sesión de cada vínculo usuario–profesional y
-15% en las siguientes**. Vita nunca tiene los fondos del profesional en su
-cuenta. Los reembolsos se ejecutan contra el pago original, así que **salen de
+**Cómo circula el dinero.** La comisión de Vita es del **20% en la primera
+sesión de cada vínculo usuario–profesional y 15% en las siguientes**, en los tres
+rieles. Los reembolsos se ejecutan contra el pago original, así que **salen de
 los fondos del profesional** y Vita resigna su comisión.
+
+🔴 **Hay tres rieles de cobro y no se comportan igual. La diferencia importa para
+el encuadre**, así que la detallo en vez de resumirla:
+
+| Riel | Quién cobra | ¿Vita tiene los fondos? |
+|---|---|---|
+| **Mercado Pago** (pesos, Argentina) | split automático: MP retiene la comisión y le acredita el resto al profesional | **No.** Nunca pasan por una cuenta de Vita |
+| **PayPal** (dólares, exterior) | cobra **Vita**, y después le transfiere lo suyo al profesional | **Sí** |
+| **USDT** (dólares, exterior) | entra el total a la billetera de Vita y se transfiere después | **Sí** |
+
+Los dos rieles en dólares están **en producción**, cada uno probado con un pago
+real. No son un plan.
+
+⚠️ **Por qué cobra Vita en esos dos, y no es una preferencia:** si cada
+profesional cobrara por su cuenta del exterior, cada uno pasaría a ser
+**exportador de servicios**, con factura E y registro propio por cada sesión.
+Cobrando Vita, ese circuito es uno solo. Es una decisión tomada, pero es
+exactamente el punto donde quiero tu lectura — ver **A.7**.
 
 **Posicionamiento declarado.** Vita se declara **intermediaria** entre usuarios y
 profesionales (T&C §4) y **expresamente no prestadora de servicios de salud**
@@ -81,9 +102,10 @@ pero no está publicada.
 
 ### A. Bloquean la publicación
 
-Estos cinco están marcados dentro de los borradores como
+Los primeros están marcados dentro de los borradores como
 `[Validar con abogado…]` y son los que impiden sacar el aviso de "documento en
-borrador" que hoy se muestra en la app y en el sitio.
+borrador" que hoy se muestra en la app y en el sitio. Los últimos se sumaron
+después, a medida que el sistema creció.
 
 **A.1 — Jurisdicción frente a consumidores (T&C §22.2).**
 La cláusula hoy dice `[ordinarios de la Ciudad Autónoma de Buenos Aires / los que
@@ -98,10 +120,64 @@ de los Términos al registrarse, y se guarda fecha y una versión del texto
 aceptado. ¿Alcanza, o los datos sensibles necesitan un consentimiento
 **separado y específico**, con su propia pantalla?
 
-**A.3 — Transferencia internacional de datos (Política §7).**
-Los servidores están fuera de Argentina (Supabase). ¿Cómo hay que encuadrarlo
-bajo la Ley 25.326 — cláusulas contractuales, países con nivel adecuado, otra
-figura? ¿Y qué hay que decir en el texto?
+**A.3 — Transferencia internacional de datos (Política §7).** 🔴 *Es el punto
+más débil de todo el borrador, y el que más me sorprendió al revisarlo.*
+
+Hoy la Política §7 dice que Vita *"procurará que existan garantías adecuadas"*.
+Eso es una intención, no un instrumento — y mientras tanto la app ya transfiere
+datos a Estados Unidos todos los días, incluida la categoría más sensible que
+maneja.
+
+Los destinatarios reales, verificados contra el código y contra la consola de
+cada proveedor. **Separo a propósito dónde queda el dato de dónde está la
+empresa**, porque no es lo mismo y creo que las dos cosas cuentan:
+
+| Proveedor | Qué recibe | Dónde queda el dato | Sede |
+|---|---|---|---|
+| **Supabase** | todo lo sensible: check-ins de ánimo, diario, gratitud, contenido de los mensajes | **Brasil** — región `sa-east-1`, São Paulo (verificado, no estimado) | EEUU |
+| **Daily.co** | el audio y video de las sesiones, **en tránsito** | **En ningún lado**: no grabamos. Daily solo almacena si se activa su API de grabación, y no la usamos — nuestras salas se crean sin `enable_recording` | EEUU |
+| **Expo** | el token del dispositivo y el texto de la notificación | El token queda guardado; **el contenido no** (va por memoria y colas, no a una base) hasta entregarlo a Apple/Google | EEUU |
+| **Mercado Pago** | datos de pago | Argentina | Argentina |
+| **PayPal** | datos de pago del riel en dólares | EEUU | EEUU |
+
+Entiendo que **ni Brasil ni Estados Unidos figuran en la lista de países con
+nivel adecuado de la AAIP**. La lista de la Disposición 60-E/2016 son los
+Estados miembro de la UE y del EEE, Reino Unido, Suiza, Guernsey, Jersey, Isla de
+Man, Islas Feroe, Canadá (solo sector privado), Andorra, Nueva Zelanda, Uruguay e
+Israel (solo datos con tratamiento automatizado). Si eso es así, la primera fila
+—que es la que lleva todo lo sensible— necesita un instrumento propio, y
+probablemente también las dos siguientes.
+
+Tres preguntas que me quedan de la tabla misma:
+
+- [ ] ¿La sede de la empresa cuenta aparte de dónde está el servidor? Supabase es
+      estadounidense aunque el dato viva en Brasil, y su personal puede acceder.
+- [ ] Si Daily no almacena nada, ¿el tránsito del audio y video por sus servidores
+      es igualmente una transferencia internacional que hay que encuadrar?
+- [ ] ¿Cambiaría la respuesta si moviéramos la base a una región europea?
+      Técnicamente es una migración, no un rediseño, y la UE **sí** está en la
+      lista. Si eso resuelve el punto, es el camino que prefiero.
+
+Mi lectura, para que la confirmes o la corrijas: el camino son las **Cláusulas
+Contractuales Modelo aprobadas por la Resolución AAIP 198/2023** (las de la Red
+Iberoamericana de Protección de Datos, de uso libre), en la variante
+responsable→encargado, o las de la Disposición DNPDP 60/2016.
+
+Preguntas:
+
+- [ ] ¿Es correcto que EEUU no es país adecuado y que hace falta instrumento?
+- [ ] ¿Sirven las CCM de la Res. 198/2023 para este caso, o hace falta otra
+      figura? ¿Alcanza con adherir a los términos de datos que cada proveedor ya
+      publica, o hay que firmar el modelo de la AAIP con cada uno?
+- [ ] ¿Cambia algo que el dato sea **sensible** (ánimo, diario, mensajes) y no
+      dato común?
+- [ ] ¿Qué tiene que decir el texto de la Política §7 una vez resuelto? Hoy no
+      dice nada verificable.
+
+⚠️ **Esta pregunta absorbe a C.3.** Cuando la escribí, la transferencia al
+proveedor de IA me parecía un problema aparte; revisándola, es la transferencia
+**más chica** de todas las que ya hago, por varios órdenes de magnitud. Si esto
+se resuelve, C.3 se resuelve con lo mismo.
 
 **A.4 — Aviso de salud y emergencias (T&C §5).**
 La redacción actual aclara que Vita no presta servicios de salud, no diagnostica
@@ -186,6 +262,40 @@ A.11**, y una nueva: ¿cambia algo que la persona envíe texto libre suyo por el
 chat a su profesional, frente a compartirlo por un permiso? Nuestra lectura es
 que es un mensaje como cualquier otro y no una cesión a un tercero.
 
+**A.11 — El paquete que la persona le manda a su profesional antes de la sesión.**
+🔴 *Es la que reemplaza a A.10, y la que de verdad importa de las dos.*
+
+En vez de darle al profesional acceso permanente al ánimo de su cliente (A.10,
+descartado), la persona **arma y envía un paquete puntual antes de cada sesión**.
+Cómo funciona:
+
+- **Lo inicia siempre la persona.** El profesional no puede pedirlo ni verlo
+  aparecer solo.
+- **Ventana por defecto: desde la última sesión** — "qué pasó entre que nos
+  vimos", que es el encuadre del propio trabajo.
+- Incluye siempre los **check-ins de ánimo** con su fecha. Opcionalmente: una
+  nota corta por día que escribe la persona, y **entradas de diario o gratitud
+  elegidas UNA POR UNA**.
+- **Se revisa entero antes de mandarlo.** Se arma, se muestra completo, se puede
+  sacar cualquier pieza, y recién ahí se envía. Nada se genera y se manda solo.
+
+Nuestra lectura, para que la confirmes o la corrijas: esto **no es una cesión a
+un tercero** sino la persona mostrándole algo suyo a quien la atiende, del mismo
+modo que llevarle una hoja del cuaderno al terapeuta. La distinción con A.10 es
+que allá había un permiso de fondo y acá hay un acto puntual, revisado y
+revocable por omisión (si no lo manda, no existe).
+
+Preguntas:
+
+- [ ] ¿Esa lectura se sostiene, o sigue haciendo falta un consentimiento
+      específico registrado, como el que pediría A.10?
+- [ ] ¿Cambia algo que el destinatario sea un **coach** y no personal de salud?
+- [ ] ¿Hay que dejar constancia de qué se mandó y cuándo, o alcanza con que la
+      persona lo haya visto antes de enviarlo?
+- [ ] Relacionada: ¿cambia algo que la persona escriba lo mismo **por el chat**
+      de la app a su profesional? Nuestra lectura es que ahí es un mensaje como
+      cualquier otro y no una cesión.
+
 ### B. No bloquean, pero quiero tu lectura
 
 **B.1 — Limitación de responsabilidad e indemnidad (T&C §18–19).**
@@ -210,6 +320,54 @@ Cuando alguien pide eliminar su cuenta, se borran o anonimizan sus datos. Pero
 conservan.** Es la pregunta más delicada del modelo de borrado: son
 documentación del profesional sobre un tratamiento, y a la vez datos de alguien
 que pidió irse. ¿Qué corresponde?
+
+**B.5 — ¿Me alcanza el reglamento europeo?** 🔴 *Puede subir a la sección A si
+lanzamos la función que lo dispara.*
+
+Estamos por habilitar **"Sesiones desde el exterior"**: un profesional argentino
+puede atender a alguien que está fuera del país, y la app le muestra a esa
+persona los horarios convertidos a su huso. El caso que usamos para explicarlo
+internamente es literalmente *"alguien en Madrid"*.
+
+Entiendo que ofrecer un servicio a personas que están en la Unión Europea activa
+el **art. 3(2) del RGPD**, aunque la empresa esté acá y no tenga establecimiento
+allá. Si eso es así, sobre esos usuarios correrían las dos normativas a la vez.
+
+Un dato que juega a favor y que quiero confirmar que sigue vigente: **Argentina
+tiene decisión de adecuación de la Comisión Europea** (2003/490/CE), revisada y
+mantenida en enero de 2024 junto con las otras diez. O sea que el flujo
+UE→Argentina no necesitaría instrumento adicional; el problema sería el
+siguiente salto, Argentina→EEUU, que es el de A.3.
+
+Preguntas:
+
+- [ ] ¿Corresponde asumir que el RGPD aplica a los usuarios que estén en la UE?
+      ¿Y desde qué momento — desde que la función existe, o desde que hay un
+      usuario real allá?
+- [ ] Si aplica, ¿qué es lo mínimo que cambia en los documentos? ¿Hace falta un
+      texto distinto por región o alcanza con uno solo que cubra las dos?
+- [ ] ¿Es algo que ves vos, o me conviene una consulta local? No quiero
+      descubrirlo cuando ya haya usuarios.
+
+**B.6 — El Reglamento de IA europeo, si B.5 da que sí.**
+
+Dos cosas que ya revisamos por nuestra cuenta y queremos que confirmes o
+corrijas:
+
+1. **No somos un "sistema de reconocimiento de emociones".** El art. 3(39) lo
+   define como inferir emociones **a partir de datos biométricos**. En Vita la
+   persona elige su ánimo tocando un botón: es autorreporte, no inferencia. Las
+   guías de la Comisión aclaran incluso que el análisis de sentimiento sobre
+   texto tampoco entra, por el mismo motivo. Nuestra lectura es que quedamos
+   fuera de la prohibición y de las obligaciones específicas.
+2. **Sí nos alcanzaría el art. 50(1):** un sistema de IA que interactúa
+   directamente con personas tiene que informarle a la persona que está
+   interactuando con IA. Rige desde el 2 de agosto de 2026. Hay una excepción
+   cuando resulta "obvio", pero entendemos que no conviene apoyarse en ella.
+
+Preguntas: ¿son correctas las dos lecturas? Y sobre la segunda, ¿qué se
+considera suficiente para "informar" — una línea en la pantalla, una mención en
+la Política, una etiqueta visible en la propia tarjeta?
 
 ### C. Solo si decidimos que Sofía conversa — *decidir antes de enviar*
 
@@ -249,6 +407,20 @@ una sola palabra escrita por la persona, ni un identificador.**
 ¿Ese envío constituye tratamiento de dato **sensible**, o queda afuera por no
 ser información sobre la salud de un titular identificable? Si queda afuera,
 ¿alcanza con declarar al proveedor en la Política como destinatario?
+
+Un ancla que puede servir, por si ayuda a acortar la respuesta: el TJUE falló el
+**4 de septiembre de 2025 en *EDPS c/ JUR* (C-413/23 P)** que el carácter
+personal de un dato **no es absoluto** — los mismos datos seudonimizados pueden
+ser personales para quien los envía y no serlo para el receptor que no puede
+reidentificar. Acá el receptor no recibe identificador, ni clave, ni forma de
+volver a la persona. No sé si ese criterio se traslada al encuadre argentino;
+esa es justamente la pregunta.
+
+📌 Del lado técnico, y sin depender de esta respuesta: el proveedor ofrece un
+modo de **retención cero** (el dato se descarta al terminar de procesarlo, no se
+conserva). Todavía no lo activamos, pero lo vamos a pedir en cualquier
+escenario — si eso alcanza para cerrar el punto, decímelo y lo hacemos antes de
+encender nada.
 
 > ⚠️ Independientemente de la respuesta legal, ya está decidido del lado del
 > producto que **la detección de expresiones de riesgo corre antes que

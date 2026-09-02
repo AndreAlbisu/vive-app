@@ -861,7 +861,18 @@ export default function SalaScreen() {
 
   async function doSendMessage(text: string) {
     if (!salaId || !user) return;
-    const encrypted = encryptMessage(text);
+
+    // ⚠️ `encryptMessage` ahora FALLA CERRADO (antes devolvía el texto plano
+    // ante cualquier error y lo guardaba en claro sin avisar). Acá se atrapa
+    // para que el mensaje no se pierda en silencio: si no se puede preparar, se
+    // dice, con el mismo aviso que ya usa el error del insert.
+    let encrypted: string;
+    try {
+      encrypted = encryptMessage(text);
+    } catch {
+      Alert.alert('Error', 'No se pudo enviar el mensaje');
+      return;
+    }
     const optimisticId = `opt_${Date.now()}`;
     const nowIso = new Date().toISOString();
     const optimistic: Message = {
@@ -1708,10 +1719,10 @@ const styles = StyleSheet.create({
   messageRowCoach: { justifyContent: 'flex-start' },
   avatarSmall: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: ViveColors.primary, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: ViveColors.primaryInk, alignItems: 'center', justifyContent: 'center',
     flexShrink: 0, marginBottom: 2,
   },
-  avatarSmallText: { fontFamily: ViveFonts.bold, fontSize: 9, color: '#565E32', letterSpacing: 0.3 },
+  avatarSmallText: { fontFamily: ViveFonts.bold, fontSize: 9, color: '#F7EFE4', letterSpacing: 0.3 },
   avatarSmallImage: { width: 28, height: 28, borderRadius: 14, flexShrink: 0, marginBottom: 2 },
   bubble: { maxWidth: '74%', paddingVertical: 10, paddingHorizontal: 14, gap: 4 },
   bubbleUser: {

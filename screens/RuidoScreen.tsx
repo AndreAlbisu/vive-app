@@ -12,8 +12,9 @@ import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
 import { ToolHeader } from '@/components/ui/ToolHeader';
 import { SoundEqualizer } from '@/components/ui/SoundEqualizer';
-import { ensureAnonSession, registrarEvento } from '@/lib/supabase';
+import { usuarioActualId } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
+import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 const FOREST      = '#3A4F2A';
 const FOREST_SOFT = '#6B7A56';
@@ -49,6 +50,7 @@ function formatTime(s: number) {
 }
 
 export default function RuidoScreen() {
+  useRecursoAbierto('ruido');
   const router = useRouter();
   const [selectedSound, setSelectedSound] = useState(SOUNDS[0].id);
   const [duration, setDuration]           = useState(DURATIONS[0].seconds);
@@ -77,7 +79,7 @@ export default function RuidoScreen() {
   const allPlayers = [playerLluvia, playerBosque, playerOlas, playerBlanco];
 
   useEffect(() => {
-    ensureAnonSession().then(uid => { userIdRef.current = uid; }).catch(() => {});
+    usuarioActualId().then(uid => { userIdRef.current = uid; }).catch(() => {});
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
     // Arrancar todos en silencio para que no haya delay al presionar Iniciar.
     // El audio ya está corriendo — solo subimos el volumen cuando el usuario lo pide.
@@ -139,10 +141,12 @@ export default function RuidoScreen() {
         stopTimer();
         silenceAll();
         setPhase('done');
-        if (userIdRef.current) {
-          recordCompletion(userIdRef.current, 'ruido').catch(() => {});
-          registrarEvento('recurso_completado', { resource_id: 'ruido', duration_seconds: duration, user_id: userIdRef.current }).catch(() => {});
-        }
+        // ⚠️ Ahora pasa la duración. Antes se omitía —la función la documenta
+        // como opcional "para recursos libres (Diario, Ruido blanco)"— pero
+        // Ruido no es libre: la persona ELIGE 5/10/… minutos y la completación
+        // se dispara con ese timer. El evento suelto que había acá sí la
+        // mandaba, así que la tabla estaba guardando menos que la analítica.
+        recordCompletion(userIdRef.current, 'ruido', duration).catch(() => {});
       }
     }, 1000);
   }

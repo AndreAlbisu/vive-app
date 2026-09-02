@@ -18,9 +18,10 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { PASTEL_SALVIA, PASTEL_DURAZNO } from '@/constants/tools';
 import { ToolHeader } from '@/components/ui/ToolHeader';
 import { useAuth } from '@/context/AuthContext';
-import { supabase, registrarEvento } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { logError } from '@/lib/logging';
 import { recordCompletion } from '@/lib/resourceCompletions';
+import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 const CREAM_DEEP = '#EAE2D0';
 
@@ -71,6 +72,7 @@ const shadow = Platform.select({
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function GratitudScreen() {
+  useRecursoAbierto('gratitud');
   const router = useRouter();
   const [items, setItems] = useState<[string, string, string]>(['', '', '']);
   const [focused, setFocused] = useState<[boolean, boolean, boolean]>([false, false, false]);
@@ -140,7 +142,7 @@ export default function GratitudScreen() {
 
   async function handleSave() {
     if (!canSave || saved) return;
-    if (!isLoggedIn || !user) { requestAuth(); return; }
+    if (!isLoggedIn || !user) { requestAuth('guardar_gratitud'); return; }
 
     Animated.sequence([
       Animated.spring(saveScale, { toValue: 0.95, useNativeDriver: true, damping: 20, stiffness: 300 }),
@@ -166,7 +168,6 @@ export default function GratitudScreen() {
 
     setEntries(prev => [data, ...prev]);
     recordCompletion(user.id, 'gratitud', 300).catch(() => {});
-    registrarEvento('recurso_completado', { resource_id: 'gratitud', duration_seconds: 300, user_id: user.id }).catch(() => {});
 
     setItems(['', '', '']);
     setSaved(true);

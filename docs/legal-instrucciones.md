@@ -58,7 +58,7 @@ No son legales puras, son tuyas (con tu contador/abogado):
 ### Paso 3 — Revisión legal (obligatoria)
 
 > 📦 **El paquete listo para enviar está en `docs/paquete-abogado.md`.** Junta
-> el contexto del negocio, los cinco puntos que bloquean, los cuatro que no, y
+> el contexto del negocio, los once puntos que bloquean, los seis que no, y
 > las tres consultas de IA — redactado para que se entienda sin conocer la app.
 > Este archivo es el interno (estado, qué se destraba con cada respuesta); ese
 > otro es el que se manda. ⚠️ Antes de enviarlo hay que **decidir si va la
@@ -67,7 +67,7 @@ Llevá los dos borradores ya completados (pasos 1 y 2) a un/a abogado/a. Puntos 
 
 - [ ] **Cláusula de jurisdicción frente a consumidores** (T&C §22) — tiene límites estrictos en Argentina; no se puede perjudicar al consumidor.
 - [ ] **Mecanismo de consentimiento de datos sensibles** (Política §3) — cómo se obtiene y registra el consentimiento explícito para mood/diario/mensajes.
-- [ ] **Transferencia internacional de datos** (Política §7) — encuadre bajo Ley 25.326 / AAIP (servidores fuera de AR).
+- [ ] 🔴 **Transferencia internacional de datos** (Política §7) — **el punto más flojo del borrador.** Ni Brasil ni EEUU están en la lista de países adecuados de la AAIP, y ahí van hoy el ánimo, el diario, la gratitud y los mensajes (Supabase, región `sa-east-1` / São Paulo). §7 solo dice que Vita "procurará" garantías adecuadas. El instrumento probable son las **CCM de la Res. AAIP 198/2023**. Ver la sección "Chequeo de jurisdicciones" más abajo.
 - [ ] **Limitación de responsabilidad e indemnidad** (T&C §18–19) — qué se sostiene ante un juez argentino.
 - [ ] **Aviso de salud y emergencias** (T&C §5) — redacción fina, sobre todo por tener psicólogos/as en la plataforma.
 - [ ] **Cláusula anti-solicitación / no elusión** (T&C §10) — que sea ejecutable.
@@ -134,6 +134,26 @@ puede cambiar la respuesta:
 - [ ] Si queda fuera, ¿alcanza con declarar al proveedor en Política §6 como
       destinatario, sin el consentimiento específico que sí pediría el punto
       anterior?
+
+> 🔴 **Reencuadre del 01/09/2026 — esta consulta dejó de ser autónoma.**
+> Se escribió como si la transferencia al proveedor de IA fuera un problema
+> nuevo. No lo es: es la transferencia **más chica** que hace la app, por varios
+> órdenes de magnitud. Supabase ya guarda en EEUU el ánimo, el diario, la
+> gratitud y el contenido de los mensajes — identificados y completos — y EEUU no
+> está en la lista de países adecuados de la AAIP. **Si se resuelve el encuadre
+> de esas transferencias, esta se resuelve con el mismo instrumento.** Mantener
+> el flag apagado no protege de nada de lo anterior.
+>
+> **Ancla nueva a favor**, por si acorta la respuesta: TJUE, *EDPS c/ JUR*
+> (C-413/23 P), 04/09/2025 — el carácter personal de un dato **no es absoluto**;
+> los mismos datos seudonimizados pueden ser personales para quien los envía y
+> no serlo para el receptor que no puede reidentificar. Acá el receptor no recibe
+> identificador ni clave. Queda por confirmar si ese criterio se traslada al
+> encuadre argentino.
+>
+> 📌 **Acción que no depende de ninguna respuesta:** pedirle a Anthropic el modo
+> de **retención cero** (el dato se descarta al procesarlo). Achica la pregunta
+> en cualquier escenario y no cuesta nada.
 
 ⚠️ **Independiente de la respuesta legal, hay un requisito de producto que no se negocia:**
 la detección de crisis tiene que ser **determinística y correr ANTES del modelo**, no
@@ -259,6 +279,121 @@ borrador sin revisión legal; esto lo confirma.
 
 ---
 
+## Chequeo de jurisdicciones — 01/09/2026
+
+> **Qué es esto.** Un relevamiento de qué normativa aplica más allá de Argentina,
+> hecho al evaluar si la devolución con IA de Inicio es viable "a nivel global".
+> **No es asesoramiento legal** — es material para que la consulta sea una
+> pregunta afilada y no un pedido de razonar desde cero. Lo que se decide, lo
+> decide el abogado/a; lo que está acá es para no volver a averiguarlo.
+>
+> Las preguntas que salieron de esto ya están escritas en
+> `docs/paquete-abogado.md`: **A.3** (el instrumento de las transferencias),
+> **B.5** (si aplica el RGPD) y **B.6** (Reglamento de IA).
+
+### Lo que disparó el chequeo
+
+La pregunta era si se podía encender la devolución escrita por IA. La respuesta
+corta es **sí**, y el encuadre elegido —la señal se decide en el teléfono, al
+modelo le llegan una etiqueta y tres enteros sin identificador— es lo que la hace
+fácil. Pero el chequeo devolvió que **el riesgo real no estaba ahí**.
+
+### Argentina
+
+- **La lista de países adecuados de la AAIP** (Disposición 60-E/2016) son los
+  Estados miembro de la UE y del EEE, Reino Unido, Suiza, Guernsey, Jersey, Isla
+  de Man, Islas Feroe, Canadá (solo sector privado), Andorra, Nueva Zelanda,
+  Uruguay e Israel (solo datos con tratamiento automatizado). **Ni Brasil ni
+  Estados Unidos están.**
+- 📌 **Dónde está el dato — verificado el 01/09/2026 con `supabase projects list`
+  y contra el código, no estimado:**
+  - **Supabase** → región **`sa-east-1`, São Paulo (Brasil)**. Ahí vive TODO lo
+    sensible: ánimo, diario, gratitud, contenido de los mensajes. Empresa
+    estadounidense, dato en Brasil — son dos preguntas distintas.
+  - **Daily.co** → **no almacena nada**. Solo guarda si se activa su API de
+    grabación, y `create-meeting-room` crea las salas sin `enable_recording`.
+    Transporta audio y video, no los conserva.
+  - **Expo** → guarda el **token** del dispositivo; el contenido de la
+    notificación va por memoria y colas hasta entregarlo a Apple/Google, no a una
+    base.
+- ⚠️ **Corrección del 01/09:** la primera versión de esta sección puso a Supabase
+  en EEUU sin verificarlo, y así viajó al paquete del abogado. El dato está en
+  Brasil. La conclusión no cambia (tampoco es país adecuado), pero el país
+  determina el instrumento. Comparado con esa primera fila, el payload de la IA
+  sigue siendo ruido.
+- El instrumento probable son las **Cláusulas Contractuales Modelo de la
+  Resolución AAIP 198/2023** (las de la RIPD, de uso libre, variante
+  responsable→encargado), o las de la **Disposición DNPDP 60/2016**.
+- Del lado del proveedor de IA eso ya viene resuelto: el DPA con las SCCs
+  europeas (Módulos 2 y 3) está incorporado a los términos comerciales de la API
+  desde el 01/01/2026, sin firmar nada aparte.
+
+### Unión Europea — aplica solo si hay usuarios allá
+
+Lo dispara **"Sesiones desde el exterior"** (`docs/cobro-internacional-coaches.md`),
+que está pensada explícitamente para que *"alguien en Madrid"* reserve. Ofrecer
+servicios a personas en la UE activa el **art. 3(2) del RGPD**.
+
+- ✅ **A favor: Argentina tiene decisión de adecuación de la UE** (2003/490/CE),
+  revisada y mantenida en enero de 2024 junto con las otras diez, valorando la
+  adhesión al Convenio 108+. El flujo UE→Argentina no necesita instrumento
+  adicional. El problema sería el salto siguiente, Argentina→EEUU, que es el
+  mismo de arriba.
+- ✅ **A favor, y conviene que quede escrito: Vita NO es un "sistema de
+  reconocimiento de emociones" del Reglamento de IA.** El art. 3(39) lo define
+  como inferir emociones **a partir de datos biométricos**; acá la persona elige
+  su ánimo tocando un botón. Es autorreporte, no inferencia. Las guías de la
+  Comisión aclaran que ni siquiera el análisis de sentimiento sobre texto entra,
+  por el mismo motivo. **Esto se anota para no volver a discutirlo**: es la clase
+  de objeción que alguien va a levantar como bloqueante dentro de un año.
+- ⚠️ **En contra: el art. 50(1)** — un sistema de IA que interactúa directamente
+  con personas tiene que informarle a la persona que está interactuando con IA.
+  Rige **desde el 02/08/2026**. Hay excepción cuando es "obvio", pero las guías
+  de la Comisión advierten contra apoyarse en ella. Ver la consecuencia de
+  producto en `docs/la-voz-de-sofia.md`.
+
+### Estados Unidos — solo antes de expandir
+
+La **My Health My Data Act de Washington** (vigente desde 03/2024) define
+*consumer health data* incluyendo el **estado de salud mental**, exige
+consentimiento opt-in para recolectar y compartir, autorización firmada aparte
+para vender, política específica publicada, y tiene **acción privada** más multas
+de hasta USD 7.500 por infracción. Es la norma más exigente del mundo para lo que
+hace Vita. **No aplica sin residentes de Washington** — es un ítem a revisar antes
+de cualquier expansión a EEUU, no ahora.
+
+### Dispositivo médico — afuera, pero con un borde
+
+Mientras Vita no reclame diagnosticar, tratar ni manejar una enfermedad, queda
+fuera del MDR europeo: la norma dice que las apps de bienestar no son software de
+dispositivo médico, y lo que define la línea es el **propósito declarado**. T&C §4
+y §5 ya declaran intermediario y no prestador, así que el encuadre está bien.
+
+⚠️ **El borde es el piso de seguridad** pendiente en `docs/la-voz-de-sofia.md`
+§5 ter. Un mecanismo con umbral fijo que muestra las líneas de T&C §5.3 es
+**derivación**, y es seguro. Uno que *evalúa el nivel de riesgo* empieza a
+parecerse a triage — que es exactamente lo que ya se preguntó para la
+recomendación asistida por IA. La distinción hay que tenerla a la vista desde el
+diseño, no después.
+
+### Por qué NO se tocó la Política de Privacidad todavía
+
+Tentación evidente y equivocada, anotada para que no la repita el próximo que lea
+esto:
+
+- **§6 no puede declarar todavía al proveedor de IA como destinatario.** El flag
+  está apagado: no recibe nada. Declarar un destinatario que no recibe datos es
+  una afirmación falsa, igual que omitir uno que sí.
+- **§7 no puede decir que hay cláusulas contractuales en vigor** hasta que las
+  haya. El texto actual (*"procurará que existan garantías adecuadas"*) es débil,
+  pero es honesto y lleva su `[Validar con abogado]`. Reemplazarlo por una
+  garantía inexistente sería peor que dejarlo flojo.
+
+Las dos se escriben **después** de la respuesta, no antes. El trabajo real de este
+hallazgo es el de la lista de acciones del Paso 5, no un cambio de redacción.
+
+---
+
 ## Paso 5 — Decisiones que esperan la respuesta legal
 
 Esta sección existe porque el resto del archivo está escrito **hacia** el
@@ -286,10 +421,17 @@ Lo construido está en el duodécimo y decimotercer bloque del changelog del
 **Si la respuesta es que el payload NO es dato sensible** (una etiqueta de
 categoría y tres enteros, sin identificador):
 1. Declarar al proveedor de IA en **Política §6** como destinatario, y la
-   transferencia internacional en **§7**.
-2. Cargar `ANTHROPIC_API_KEY` en Supabase.
-3. `npx supabase functions deploy weekly-reflection`.
-4. `EXPO_PUBLIC_AI_REFLECTION=true` y rebuild.
+   transferencia internacional en **§7** — con el instrumento que el abogado/a
+   haya indicado en A.3, no con una fórmula genérica. Correr `npm run sync:legal`.
+2. ~~Cargar `ANTHROPIC_API_KEY` en Supabase.~~ **Hecho** (sesión del 30/08, la
+   key está cargada y verificada con `supabase secrets list`).
+3. ~~`npx supabase functions deploy weekly-reflection`.~~ **Hecha** — v2, activa.
+4. Pedir **retención cero** al proveedor. No depende de la respuesta legal: se
+   pide igual, y achica la pregunta en cualquier escenario.
+5. `EXPO_PUBLIC_AI_REFLECTION=true` y rebuild. ⚠️ `.env` está gitignoreado — hay
+   que agregarlo también en la máquina de quien lo pruebe.
+6. Si para entonces hay usuarios en la UE, la tarjeta necesita además decir que
+   el texto lo escribe una IA (art. 50(1) — ver "Chequeo de jurisdicciones").
 
 Los cuatro son independientes y **cualquiera que falte deja la app en el texto
 determinístico sin romperse** — se puede avanzar de a uno.
@@ -299,8 +441,15 @@ específico y separado, con su propia pantalla, antes de encenderlo. En ese caso
 conviene evaluar si vale la pena: la ganancia es de redacción, no de
 funcionalidad, y el costo pasa a ser una fricción nueva en el onboarding.
 
-**Si la respuesta no llega o queda en duda:** no hay que hacer nada. Es el
-estado actual y la tarjeta funciona.
+**Si la respuesta no llega o queda en duda:** no hay que hacer nada *con la IA*.
+Es el estado actual y la tarjeta funciona con el texto determinístico.
+
+⚠️ **Pero eso NO deja la app en un estado seguro**, y hasta el 01/09/2026 este
+archivo daba a entender que sí. El flag apagado solo evita una transferencia
+mínima y anónima; las transferencias grandes —ánimo, diario, mensajes a
+Supabase— ocurren igual, todos los días, con o sin IA. **Lo que hay que destrabar
+es A.3, y eso no espera a ninguna decisión de producto.** Ver "Chequeo de
+jurisdicciones".
 
 ### 5.2 — Recomendación de profesional asistida por IA 🔒 sin construir
 

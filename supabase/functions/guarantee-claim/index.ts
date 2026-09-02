@@ -31,6 +31,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { guaranteeFailures, scheduledAtMs } from '../_shared/guarantee.ts'
+import { esServiceRole } from '../_shared/service-role.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -56,7 +57,7 @@ function json(body: unknown, status = 200) {
  *  el mismo problema que un `is_admin` que viniera del cliente. Para el runbook
  *  (service role) no hay identidad que derivar y ahí sí vale lo que mande. */
 async function authorize(authHeader: string): Promise<{ ok: boolean; identity: string | null }> {
-  if (authHeader.includes(SUPABASE_SERVICE_ROLE_KEY)) return { ok: true, identity: null }
+  if (esServiceRole(authHeader, SUPABASE_SERVICE_ROLE_KEY)) return { ok: true, identity: null }
   if (!authHeader.startsWith('Bearer ')) return { ok: false, identity: null }
 
   const asCaller = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {

@@ -227,9 +227,11 @@ export default function ProfileOwnScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Animated.View style={[styles.guestSection, fadeUp(identityAnim)]}>
-            <View style={styles.guestAvatar}>
-              <MaterialCommunityIcons name="account" size={44} color="rgba(135,131,92,0.52)" />
-            </View>
+            {/* 📝 Se sacó el avatar vacío (un ícono gris de persona genérica en
+                un círculo de 80). Era el elemento MÁS GRANDE de la pantalla y
+                no decía nada: quien no tiene cuenta no tiene perfil, así que
+                mostrarle un perfil en blanco es enseñarle un vacío. Sin él, lo
+                primero que se lee es la pregunta. */}
             <Text style={styles.guestTitle}>¿Sos nuevo por acá?</Text>
             <Text style={styles.guestSubtitle}>
               Creá tu cuenta para guardar tu progreso y conectar con profesionales.
@@ -377,7 +379,12 @@ export default function ProfileOwnScreen() {
                   <MaterialCommunityIcons
                     name={item.icon as any}
                     size={20}
-                    color={item.danger ? '#FF7070' : 'rgba(255,255,255,0.75)'}
+                    // 🔴 Era `rgba(255,255,255,0.75)`: blanco al 75% sobre el
+                    // crema, **1.11:1**. O sea invisible — la lista mostraba
+                    // una columna de aire donde van los íconos. El estado sin
+                    // cuenta, unas líneas más arriba, siempre usó el oliva; acá
+                    // se había quedado un color de cuando el fondo era oscuro.
+                    color={item.danger ? PELIGRO : '#87835C'}
                     style={styles.configIcon}
                   />
                   <Text style={[styles.configLabel, item.danger && styles.configLabelDanger]}>
@@ -456,6 +463,10 @@ export default function ProfileOwnScreen() {
 }
 
 
+// 🔴 El rojo de "Eliminar cuenta". Era `#FF7070`, que sobre el crema da 2.41:1
+// —abajo del mínimo AA de 4.5— y además es un rojo de semáforo que no pertenece
+// a una paleta de tierras. Este da 5.32:1 y se sigue leyendo como advertencia.
+const PELIGRO = '#B3392E';
 const GLASS = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 
@@ -494,21 +505,17 @@ const styles = StyleSheet.create({
   // Guest state
   guestSection: {
     alignItems: 'center',
-    paddingTop: 56,
-    paddingBottom: 40,
+    // 📝 Menos aire arriba (56 → 40) ahora que no está el avatar de 80.
+    paddingTop: 40,
+    paddingBottom: 36,
     paddingHorizontal: 32,
     backgroundColor: GLASS,
+    // 📝 El borde inferior era blanco al 65% y, contra el degradado del fondo
+    // —que se va apagando hacia abajo— dibujaba una costura dura justo arriba
+    // de "Legal": se leía como dos pantallas pegadas. Un hairline oliva muy
+    // tenue separa las dos secciones sin cortar la pantalla al medio.
     borderBottomWidth: 1,
-    borderBottomColor: GLASS_BORDER,
-    marginBottom: 20,
-  },
-  guestAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(86,94,50,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderBottomColor: 'rgba(86,94,50,0.10)',
     marginBottom: 20,
   },
   guestTitle: {
@@ -528,23 +535,38 @@ const styles = StyleSheet.create({
   },
   guestBtnPrimary: {
     width: '100%',
-    backgroundColor: ViveColors.primary,
+    // 🔴 CONTRASTE. Tenía la terracota de marca (#C1694F) con texto verde
+    // oscuro (#565E32) encima: **1.78:1**, cuando el mínimo AA para texto
+    // normal es 4.5:1. Era ilegible al sol y muy justo en interiores.
+    //
+    // ⚠️ Con #C1694F NO hay ningún color de texto que pase: el máximo posible
+    // es blanco puro y da 3.89:1. O sea que había que mover el fondo. Es la
+    // terracota de marca oscurecida un 16%, el mínimo para que el crema pase
+    // (4.59:1), así que sigue siendo el mismo color y no uno nuevo.
+    //
+    // 📝 Resultó NO ser el único: la auditoría del 01/09/2026 encontró 25
+    // superficies de terracota con texto, diez de ellas en 1.78:1. Por eso el
+    // color vive en `ViveColors.primaryInk` y no como un hex local acá.
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 14,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: 'center',
     marginBottom: 12,
   },
   guestBtnPrimaryText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15,
-    color: '#565E32',
+    color: '#F7EFE4',
   },
   guestBtnSecondary: {
     width: '100%',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.72)',
+    // 📝 Era blanco al 72% sobre crema: prácticamente invisible, el botón se
+    // leía como un rectángulo flotando sin borde. El oliva de la marca al 28%
+    // lo dibuja sin competirle al primario.
+    borderColor: 'rgba(86,94,50,0.28)',
     borderRadius: 14,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: 'center',
   },
   guestBtnSecondaryText: {
@@ -658,15 +680,17 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   profEmptyBtn: {
-    backgroundColor: ViveColors.primary,
+    // Mismo caso que `guestBtnPrimary`: verde oscuro sobre la terracota de
+    // marca daba 1.78:1. Ver el comentario largo allá arriba.
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 12,
-    paddingVertical: 10,
+    paddingVertical: 11,
     paddingHorizontal: 20,
   },
   profEmptyBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 13,
-    color: '#565E32',
+    color: '#F7EFE4',
   },
   profRow: {
     flexDirection: 'row',
@@ -762,7 +786,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#565E32',
   },
-  configLabelDanger: { color: '#FF7070' },
+  configLabelDanger: { color: PELIGRO },
 
   // ── Confirmación de baja de cuenta ──────────────────────────────
   delOverlay: {

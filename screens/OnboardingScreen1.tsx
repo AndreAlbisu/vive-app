@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { AppBg } from '@/components/ui/AppBg';
+import { anotar, cronometro } from '@/lib/analytics';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -148,6 +149,11 @@ function useRingAnimProps(
 
 export default function OnboardingScreen1() {
   const router  = useRouter();
+  // 🔴 El techo del embudo. Esta pantalla avanza con un LONG PRESS ("mantené
+  // presionado"), o sea que tiene una forma de perder gente que ninguna otra
+  // tiene: no entender que hay que sostener. Sin medirla, una caída acá se
+  // leería como que la app no le interesó a nadie.
+  const abandono = useRef(cronometro()).current;
   const [hintText, setHintText] = useState('mantené presionado');
   const [entryDone, setEntryDone] = useState(false);
 
@@ -166,6 +172,9 @@ export default function OnboardingScreen1() {
   }, [router]);
 
   const triggerReveal = useCallback(() => {
+    // `segundos` acá es cuánto tardó en descubrir el gesto, no en decidir nada.
+    anotar('onboarding_respuesta', { pantalla: 'bienvenida', respuesta: 'mantuvo', segundos: abandono() });
+
     diagOp.value = withTiming(0,   { duration: 750 });
     diagSc.value = withTiming(1.4, { duration: 950 });
     hintOp.value = withTiming(0,   { duration: 280 });
@@ -175,6 +184,8 @@ export default function OnboardingScreen1() {
 
   // ── Entry animation on mount ──────────────────────────────────────────────
   useEffect(() => {
+    anotar('onboarding_pantalla_vista', { pantalla: 'bienvenida' });
+
     entryP.value = withTiming(1, { duration: ENTRY_MS }, (finished) => {
       if (finished) {
         hintOp.value = withTiming(1, { duration: 600 });

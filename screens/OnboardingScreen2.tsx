@@ -1,55 +1,135 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveFonts } from '@/constants/theme';
 import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
 import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { ScaleCard } from '@/components/ScaleCard';
+import { VitaWordmark } from '@/components/VitaWordmark';
 import { guardarCamino } from '@/lib/guiaContextual';
+import { anotar, cronometro } from '@/lib/analytics';
 import { AppBg } from '@/components/ui/AppBg';
 
-type OptionId = 'explore' | 'search' | 'guide';
+// "¿Qué te trae por acá?" — opción A del brief, elegida por Andre el 01/09/2026.
+// Ver `docs/onboarding-bifurcacion-opciones.md`.
+//
+// 🔴 Lo que reemplaza: "¿Cómo te gustaría empezar?" (explorar la app / sé qué
+// necesito / no sé por dónde empezar). El problema no era visual. Eran tres
+// pantallas seguidas preguntando lo mismo con distinto grano —"¿cómo te
+// gustaría empezar?", "¿por dónde querés empezar?", "¿qué aspecto querés
+// explorar?"— y ninguna preguntaba por la PERSONA: todas preguntaban cómo
+// quiere usar el producto, en el único momento en que no lo puede saber.
+//
+// 📝 Y "Sé qué necesito" no era un camino: desembocaba en el mismo lugar que
+// "no sé por dónde empezar" (un profesional), y se diferenciaba de "explorar"
+// en qué tab abría primero. Eso es una preferencia de pantalla inicial, no una
+// bifurcación de producto. Los perfiles que llegan son tres pero los caminos
+// son dos: el que trae algo y el que vino a mirar.
+//
+// 🔴 Esta pantalla se come el viejo paso 1 de 3 (el universo cuerpo/mente/alma):
+// es exactamente el mismo dato, pero preguntado por lo que le pasa a la persona
+// en vez de disfrazado de pregunta de navegación. De ahí sale
+// `user_quiz_answers.axis`, que ya tiene columna.
+//
+// ⚠️ Las CUATRO opciones pesan visualmente lo mismo, a propósito. "¿Qué te
+// trae?" pesa más que "¿cómo querés empezar?", así que si "Solo estoy mirando"
+// fuera un link chiquito al pie, la pantalla estaría empujando a inventar un
+// problema para poder seguir.
+//
+// ── Del boceto de Andre (01/09/2026) ────────────────────────────────────────
+// Filas en vez de tarjetas, título grande alineado a la izquierda y navegación
+// directa al tocar. Cuatro ajustes sobre el boceto, todos con motivo:
+//
+// 🔴 (a) CADA universo lleva SU color, no tres iguales y uno distinto. En el
+// boceto tres círculos eran verdes y solo "Algo de la cabeza" naranja, lo que
+// la volvía la recomendada de facto: el ojo va ahí primero. Y ahora que
+// medimos, `onboarding_opcion_tocada` estaría midiendo el acento visual en vez
+// de la preferencia — justo el dato que necesitamos limpio. Son los mismos
+// colores que ya usa la pregunta siguiente para cada universo, así que además
+// dan continuidad.
+//
+// 🔴 (b) Las bajadas hablan de SÍNTOMAS, no de categorías. El boceto decía
+// "Sueño, energía, hábitos", que es una taxonomía; acá dice "No dormís, andás
+// sin pilas", que es algo que se reconoce como propio. Es literalmente lo que
+// justificaba la opción A: dejar de preguntar en el vocabulario del producto.
+//
+// 📝 (c) "Solo estoy mirando" lleva flecha DIAGONAL (↗) y las otras tres recta
+// (→). Las tres siguen dentro del flujo —una pregunta más—; esta lo termina y
+// deja en Recursos. Con la misma flecha, las cuatro prometen lo mismo y no es
+// así. Se probó sacarle la flecha del todo y el problema era que se leía como
+// un elemento faltante, no como una diferencia a propósito; la diagonal es la
+// convención de "esto te lleva afuera" y dice lo mismo sin parecer un error.
+//
+// ⚠️ (d) Se fue el botón "¿Seguimos?": la fila navega al tocarla, un tap en vez
+// de dos. La contra es que se pierde `toques` (cuántas opciones se tocaban
+// antes de decidirse), que era señal de duda: ahora el primer toque ya navega.
+// Queda `segundos`, que mide lo mismo por otro lado.
+
+type TraeId = 'cuerpo' | 'mente' | 'alma' | 'mirando';
 
 const OPTIONS: {
-  id: OptionId;
+  id: TraeId;
   title: string;
   desc: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   accent: string;
-  accentLight: string;
+  /** Recta = sigue el flujo. Diagonal = sale de él. Ver (c). */
+  flecha: keyof typeof MaterialCommunityIcons.glyphMap;
 }[] = [
   {
-    id: 'explore',
-    title: 'Quiero explorar la app',
-    desc: 'Ver todo lo que ofrece Vita',
-    icon: 'map-outline',
+    id: 'cuerpo',
+    title: 'Algo del cuerpo',
+    desc: 'No dormís, andás sin pilas',
+    icon: 'heart-outline',
     accent: '#E8743B',
-    accentLight: 'rgba(232, 116, 59, 0.30)',
+    flecha: 'arrow-right',
   },
   {
-    id: 'search',
-    title: 'Sé qué necesito',
-    desc: 'Busco el profesional indicado',
-    icon: 'compass-outline',
+    id: 'mente',
+    title: 'Algo de la cabeza',
+    // 📝 "vínculos" y no "discusiones": lo segundo nombra un episodio puntual y
+    // deja afuera a quien está mal con la gente sin haber peleado con nadie.
+    // Es la única palabra de vocabulario de producto que sobrevive en las
+    // cuatro bajadas, y se la banca porque "ansiedad" y "bajón" ya pusieron el
+    // registro humano de la frase.
+    desc: 'Ansiedad, bajón, vínculos',
+    icon: 'brain',
     accent: '#5B8DB8',
-    accentLight: 'rgba(91, 141, 184, 0.30)',
+    flecha: 'arrow-right',
   },
   {
-    id: 'guide',
-    title: 'No sé por dónde empezar',
-    desc: 'Necesito que me orienten',
-    icon: 'shimmer',
+    id: 'alma',
+    title: 'Algo del rumbo',
+    desc: 'No sabés para dónde vas',
+    icon: 'star-four-points-outline',
     accent: '#9B7FD4',
-    accentLight: 'rgba(155, 127, 212, 0.30)',
+    flecha: 'arrow-right',
+  },
+  {
+    id: 'mirando',
+    title: 'Solo estoy mirando',
+    desc: 'Quiero ver qué hay',
+    icon: 'eye-outline',
+    accent: '#6B7A56',
+    flecha: 'arrow-top-right',
   },
 ];
 
+const TEXTO       = '#26402F';
+const TEXTO_SUAVE = '#5C6B58';
+const LINEA       = 'rgba(63,81,47,0.12)';
+
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
-  transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
+  transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }) }],
 });
+
+function tint(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${alpha})`;
+}
 
 export default function OnboardingScreen2() {
   const router = useRouter();
@@ -57,53 +137,91 @@ export default function OnboardingScreen2() {
   const tonoOnboarding = useTonoOnboarding();
   // Con qué color se llegó desde la bifurcación, si se llegó por ahí.
   const { tono } = useLocalSearchParams<{ tono?: string }>();
-  const [selected, setSelected] = useState<OptionId | null>(null);
+
+  // Sin botón de confirmar ya no hay estado de selección: la fila navega. El
+  // guard evita que un doble tap dispare dos viajes.
+  const yendo = useRef(false);
+  const medir = useRef(cronometro());
 
   const titleAnim = useRef(new Animated.Value(0)).current;
+  const subAnim   = useRef(new Animated.Value(0)).current;
   const card0Anim = useRef(new Animated.Value(0)).current;
   const card1Anim = useRef(new Animated.Value(0)).current;
   const card2Anim = useRef(new Animated.Value(0)).current;
-  const buttonAnim = useRef(new Animated.Value(0)).current;
+  const card3Anim = useRef(new Animated.Value(0)).current;
 
-  const cardAnims = [card0Anim, card1Anim, card2Anim];
+  const cardAnims = [card0Anim, card1Anim, card2Anim, card3Anim];
 
   useEffect(() => {
-    Animated.stagger(110, [
+    // 🔴 Hasta hoy el onboarding no tenía una sola línea de analítica, así que
+    // la discusión sobre qué camino toma la gente se dio entera sobre
+    // hipótesis. Sin esto, la próxima también.
+    anotar('onboarding_pantalla_vista', { pantalla: 'que_te_trae' });
+
+    Animated.stagger(90, [
       Animated.timing(titleAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
-      Animated.timing(card0Anim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(card1Anim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(card2Anim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(subAnim,   { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(card0Anim, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(card1Anim, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(card2Anim, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(card3Anim, { toValue: 1, duration: 380, useNativeDriver: true }),
     ]).start();
   }, []);
 
-  useEffect(() => {
-    Animated.timing(buttonAnim, {
-      toValue: selected ? 1 : 0,
-      duration: 280,
-      useNativeDriver: true,
-    }).start();
-  }, [selected]);
+  // 🔴 Se navega con `push`, así que esta pantalla queda MONTADA debajo. Al
+  // volver atrás desde la pregunta siguiente, `yendo` seguiría trabado y las
+  // CUATRO filas quedarían muertas: se ven bien y no hacen nada. Es el mismo
+  // bug que ya tuvo la bifurcación (ver su `useFocusEffect`), y lo reintrodujo
+  // el cambio de "elegir + confirmar" a navegación directa.
+  //
+  // 📝 De paso se reinicia el cronómetro: si no, `segundos` acumularía el viaje
+  // de ida y vuelta y diría que tardó dos minutos en decidirse quien en
+  // realidad fue, volvió y eligió en cinco.
+  useFocusEffect(
+    useCallback(() => {
+      yendo.current = false;
+      medir.current = cronometro();
+    }, []),
+  );
 
-  function handleContinue() {
-    if (!selected) return;
+  function elegir(id: TraeId) {
+    if (yendo.current) return;
+    yendo.current = true;
+
+    anotar('onboarding_respuesta', {
+      pantalla: 'que_te_trae',
+      respuesta: id,
+      // Sin paso de confirmación no hay `toques` que medir (ver (d) arriba); la
+      // demora sigue siendo la señal de cuánto costó decidirse.
+      segundos: medir.current(),
+    });
 
     // 🔴 La elección se guardaba en ningún lado: era estado local que solo
     // servía para elegir la ruta y se perdía al salir de la pantalla. Le
     // pedíamos a la persona que se declarara en el peor momento —antes de saber
-    // qué es Vita— y después la app no se acordaba de nada. Ahora al menos
-    // decide si le mostramos la guía contextual.
-    void guardarCamino(selected);
+    // qué es Vita— y después la app no se acordaba de nada. Ahora decide si le
+    // mostramos la guía contextual.
+    //
+    // ⚠️ Los tres universos se guardan como 'guide' y no como tres caminos
+    // nuevos: `guiaContextual` decide con eso a quién le explica la app, y a
+    // quien vino con un problema concreto no se le explica, se lo lleva. Los
+    // tres valores de `Camino` siguen siendo los que ya estaban guardados en
+    // dispositivos reales.
+    void guardarCamino(id === 'mirando' ? 'explore' : 'guide');
 
-    if (selected === 'explore') { router.replace('/(tabs)' as any); return; }
+    // 🔴 Va a Recursos y no a Inicio. Sin cuenta, Inicio es casi todo estados
+    // vacíos —pinneados vacíos, un check-in que pide registrarse, sin próxima
+    // sesión—, o sea que quien contestó "solo estoy mirando" aterrizaba en la
+    // prueba de que no hay nada para mirar. Recursos es lo único que da valor
+    // solo, gratis y sin cuenta.
+    if (id === 'mirando') {
+      anotar('onboarding_fin', { destino: 'recursos', desde: 'que_te_trae' });
+      router.replace('/(tabs)/recursos' as any);
+      return;
+    }
 
-    // 🔴 Antes iba a `/register`. Era el único muro de la pantalla y estaba
-    // puesto justo en la rama de MÁS intención: la persona que ya decidió que
-    // quiere un profesional. Profesionales anda sin cuenta —`requestAuth` la
-    // pide recién al reservar, igual que para quien eligió explorar— así que el
-    // registro no protegía nada y frenaba a la única que venía a pagar.
-    if (selected === 'search') { router.replace('/(tabs)/conexiones' as any); return; }
-
-    if (selected === 'guide') { router.push('/onboarding3'); return; }
+    // Las otras tres llevan el universo a la única pregunta que queda.
+    router.push({ pathname: '/onboarding4', params: { universo: id } });
   }
 
   return (
@@ -112,60 +230,46 @@ export default function OnboardingScreen2() {
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => { console.log('[vita back] onboarding2 → back'); router.back(); }} style={styles.backBtn} hitSlop={8}>
-            <MaterialCommunityIcons name="arrow-left" size={20} color="#565E32" />
+          <TouchableOpacity
+            onPress={() => { console.log('[vita back] onboarding2 → back'); router.back(); }}
+            style={styles.backBtn}
+            hitSlop={8}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={20} color={TEXTO} />
             <Text style={styles.backText}>Atrás</Text>
           </TouchableOpacity>
+          <View style={styles.logoRow}><VitaWordmark /></View>
+          <View style={styles.headerSide} />
         </View>
 
         <View style={styles.content}>
-          <Animated.View style={fadeUp(titleAnim)}>
-            <Text style={styles.title}>¿Cómo te gustaría empezar?</Text>
-          </Animated.View>
+          <View style={styles.pregunta}>
+            <Animated.Text style={[styles.title, fadeUp(titleAnim)]}>
+              ¿Qué te trae por acá?
+            </Animated.Text>
+            <Animated.Text style={[styles.subtitle, fadeUp(subAnim)]}>
+              Elegí lo que más se acerque a cómo estás hoy.
+            </Animated.Text>
+          </View>
 
-          <View style={styles.cards}>
-            {OPTIONS.map((option, i) => {
-              const isSelected = selected === option.id;
-              return (
-                <Animated.View key={option.id} style={[{ flex: 1 }, fadeUp(cardAnims[i])]}>
-                  <ScaleCard
-                    onPress={() => setSelected(option.id)}
-                    style={[
-                      styles.card,
-                      { borderColor: isSelected ? option.accent : 'rgba(86,94,50,0.14)' },
-                      isSelected && {
-                        backgroundColor: option.accentLight,
-                        shadowColor: option.accent,
-                        shadowOpacity: 0.22,
-                        shadowRadius: 14,
-                        elevation: 6,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.iconBubble, { backgroundColor: isSelected ? 'rgba(86,94,50,0.14)' : 'rgba(255,248,240,0.48)' }]}>
-                      <MaterialCommunityIcons name={option.icon} size={26} color={isSelected ? option.accent : 'rgba(255,255,255,0.75)'} />
-                    </View>
-                    <View style={styles.cardText}>
-                      <Text style={styles.cardTitle}>{option.title}</Text>
-                      <Text style={styles.cardDesc}>{option.desc}</Text>
-                    </View>
-                  </ScaleCard>
-                </Animated.View>
-              );
-            })}
+          <View style={styles.filas}>
+            {OPTIONS.map((option, i) => (
+              <Animated.View key={option.id} style={fadeUp(cardAnims[i])}>
+                <ScaleCard style={styles.fila} onPress={() => elegir(option.id)}>
+                  <View style={[styles.iconBubble, { backgroundColor: tint(option.accent, 0.14) }]}>
+                    <MaterialCommunityIcons name={option.icon} size={24} color={option.accent} />
+                  </View>
+                  <View style={styles.filaTexto}>
+                    <Text style={styles.filaTitulo}>{option.title}</Text>
+                    <Text style={styles.filaDesc}>{option.desc}</Text>
+                  </View>
+                  {/* Ver (c): la diagonal dice "sale de acá", la recta "seguí". */}
+                  <MaterialCommunityIcons name={option.flecha} size={20} color={TEXTO_SUAVE} />
+                </ScaleCard>
+              </Animated.View>
+            ))}
           </View>
         </View>
-
-        <Animated.View style={[styles.footer, { opacity: buttonAnim }]}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleContinue}
-            activeOpacity={0.85}
-            disabled={!selected}
-          >
-            <Text style={styles.buttonText}>¿Seguimos?</Text>
-          </TouchableOpacity>
-        </Animated.View>
       </SafeAreaView>
     </AppBg>
   );
@@ -176,85 +280,94 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 4,
   },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minWidth: 70 },
   backText: {
     fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: 'rgba(135,131,92,0.80)',
+    fontSize: 14,
+    color: TEXTO,
   },
+  logoRow: { flexDirection: 'row', alignItems: 'center' },
+  headerSide: { minWidth: 70 },
+
   content: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 22,
+    // 📝 Anclado ARRIBA y no centrado. Centrado, el bloque se reparte el aire
+    // sobrante entre arriba y abajo y en pantallas altas queda flotando en el
+    // medio, lejos del header; así arranca donde termina el logo y todo el
+    // sobrante se va al pie, como en la maqueta. `paddingTop` es el número a
+    // mover si hay que subirlo o bajarlo más.
     paddingTop: 24,
-    paddingBottom: 12,
-    gap: 32,
+    paddingBottom: 20,
+    justifyContent: 'flex-start',
+    // 📝 Los dos huecos del bloque —título↔bajada y bajada↔opciones— guardan
+    // la proporción 3:4 (18 y 24). Se mueven juntos a propósito: subir o bajar
+    // las opciones cambiando SOLO este número las despega de la pregunta, que
+    // es lo que las volvía dos bloques separados. Si hay que moverlas más,
+    // mover los dos manteniendo la relación.
+    gap: 24,
   },
+  // Alineado a la izquierda, como el boceto: centrado se leía como un cartel, y
+  // así se lee como alguien que pregunta.
+  // El título no se mueve: arranca donde termina el header. Lo que baja es lo
+  // de abajo, y baja en proporción (ver el gap de `content`).
+  pregunta: { gap: 18 },
   title: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 34,
-    color: '#565E32',
-    letterSpacing: -0.5,
-    lineHeight: 42,
-    textAlign: 'center',
+    fontFamily: ViveFonts.title,
+    // 35 y no 38: a 38 le competía el protagonismo a las opciones, que son lo
+    // que hay que leer para decidir. Sigue siendo lo más grande de la pantalla.
+    fontSize: 35,
+    lineHeight: 43,
+    letterSpacing: -0.8,
+    color: TEXTO,
   },
-  cards: { flex: 1, gap: 12 },
-  card: {
-    flex: 1,
+  subtitle: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 16,
+    lineHeight: 24,
+    color: TEXTO_SUAVE,
+  },
+
+  filas: { gap: 14 },
+  // Píldora ancha y baja, casi del color del fondo: se lee como una lista y no
+  // como cuatro objetos flotando.
+  fila: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    backgroundColor: 'rgba(255,248,240,0.48)',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: 'rgba(86,94,50,0.14)',
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    borderRadius: 44,
+    borderWidth: 1,
+    borderColor: LINEA,
+    backgroundColor: 'rgba(255,252,246,0.42)',
   },
   iconBubble: {
     width: 52,
     height: 52,
-    borderRadius: 14,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  cardText: { flex: 1, gap: 4, alignItems: 'center' },
-  cardTitle: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 16,
-    color: '#565E32',
-    lineHeight: 22,
-    textAlign: 'center',
-  },
-  cardDesc: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: '#87835C',
-    lineHeight: 18,
-    textAlign: 'center',
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 24,
-  },
-  button: {
-    backgroundColor: '#565E32',
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
-  },
-  buttonText: {
+  filaTexto: { flex: 1, gap: 3 },
+  filaTitulo: {
     fontFamily: ViveFonts.semibold,
     fontSize: 17,
-    color: '#F7EFE4',
-    letterSpacing: 0.3,
+    lineHeight: 23,
+    color: TEXTO,
+  },
+  // ⚠️ #5C6B58 sobre el crema da ~4.6:1, apenas arriba del mínimo AA (4.5). El
+  // gris del boceto quedaba por debajo. No aclararlo más sin volver a medir.
+  filaDesc: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: TEXTO_SUAVE,
   },
 });

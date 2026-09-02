@@ -5,6 +5,228 @@
 
 ---
 
+## 2026-09-01 — Andre (sesión 154 · el silencio de "Sobre vos" y los dos guardarraíles que faltaban)
+
+**Tocado:** `lib/weeklyReflection.ts`, `lib/sobreVosMomentoStorage.ts`, `app/(tabs)/index.tsx`, `supabase/functions/weekly-reflection/index.ts` (solo el prompt), `__tests__/weeklyReflection.test.ts`. Nuevos: `lib/sobreVosSilencio.ts`, `__tests__/sobreVosSilencio.test.ts`. **429 tests** (eran 414), `tsc` y lint limpios. Sin cambios de schema.
+
+**Resumen — lo primero del plan de `docs/la-voz-de-sofia.md` §7 que no espera a nadie. La IA sigue apagada: todo esto mejora el texto que la gente lee HOY, que es el de las reglas.**
+
+- 🔴 **Bug real encontrado al implementar §3.4: `reservá` vivía adentro de `ASKS`, que solo se evalúa con tono `gentle`.** O sea que en tono `warm` —el de las señales buenas, que es justo cuando un vendedor aprovecharía— la tarjeta podía pedir un booking y no lo frenaba nadie. Se partió en dos: **`VENDE`** (reservá, agendá, sacá un turno, pedí turno, contratá) corre **en todos los tonos**, y `ASKS` se queda con el resto (probá, anotate, escribíle, clickeá, tocá acá) gentle-only. Nueva razón de rechazo: `'pide una reserva'`.
+- **Se respetó la corrección del 28/08: nombrar al profesional NO es vender.** Los patrones apuntan al pedido, no a la palabra — *"eso guardalo para contárselo el sábado"* y *"hablalo con tu profesional cuando lo veas"* pasan, y hay tests que lo fijan. ⚠️ Compensación consciente: `reserv[áa]#` también matchea el sustantivo ("una reserva el sábado"), así que rechaza alguna frase legítima. Se dejó ancho a propósito: rechazar de más cae al texto de las reglas, que es bueno; dejar pasar publica un pedido de venta.
+- **§3.5 no tenía guardarraíl y ahora sí: `FINGE_SENTIR`.** Frena "me alegro", "te entiendo", "me pone contento", "siento que", "me emociona". Los patrones son de **primera persona** a propósito — lo prohibido es que el sistema se atribuya un estado, no que la frase hable de lo que siente quien lee: *"lo que sentís esta semana"* pasa. Nueva razón: `'finge sentir'`. Corre en todos los tonos.
+- **El silencio (§3.3), como regla y no como azar.** `lib/sobreVosSilencio.ts` (puro, 11 tests): la tarjeta se calla cuando la señal es `level` **y es la misma que se dijo ayer**. Se descartó a propósito resolverlo con el hash del día (el mismo truco de `variantFor`, que salía más barato): eso es azar disfrazado de regla — callaría días donde la señal recién cambió y hablaría en el tercer día idéntico.
+- **La clave del diseño: el día que se calla NO registra nada.** `markSpoken` solo corre cuando la tarjeta habla, así que al día siguiente lo último dicho queda a dos días y vuelve a hablar. En una racha de `level` eso da habla/calla/habla/calla — **nunca dos silencios seguidos**, que sería desaparecer en vez de callarse. Hay un test que recorre cinco días y fija esa alternancia; sin eso la tarjeta se apagaba para siempre en cuanto entraba en una racha.
+- **La lista de señales que pueden callarse es de inclusión, no de exclusión** (hoy solo `level`). Una señal nueva nace hablando y hay que habilitarla a mano. Al revés, un descuido silenciaría algo que había que decir — que es el modo de falla caro. `empty` queda afuera: es la invitación a registrar, sin ella la persona nueva no sabe para qué está la tarjeta.
+- **Cómo se ve el día callado:** la card sigue estando —sello, color del mood, tinte— pero sin frase, sin "→ Ver más" y sin `onPress`. En lugar del texto va el `VitaMark` al 22%. **No se inventó copy para ese estado a propósito**: cualquier línea ahí volvería a ser una devolución, que es justo lo que el día callado no tiene. La marca ocupa el lugar para que se lea como "hoy no hay nada" y no como "esto se rompió". El momento no se ve afectado: `level` ya estaba excluido de `shouldShowMoment`, así que un día callado nunca tuvo momento que reabrir.
+- **`silent` arranca en `false`** y se resuelve tras leer AsyncStorage. Al revés (asumir silencio hasta que conteste) la card parpadearía de callada a hablando en cada montaje, que se ve peor que hablar de más.
+- **El prompt de la edge function acompaña los dos guardarraíles nuevos**, para que el modelo no produzca lo que `rejectCopy` va a rechazar. De paso se limpiaron las dos referencias que quedaban a `CoachSuggestionCard` ("arriba de esta tarjeta ya hay otra sugiriéndole hablar con un profesional") — esa tarjeta se borró en la sesión 97 y el prompt seguía coordinando con un fantasma.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **Redeployar `weekly-reflection`**: le cambió el prompt y la versión desplegada (v2) quedó vieja. No corre por el flag apagado, pero el repo y lo deployado no coinciden. `npx supabase functions deploy weekly-reflection`.
+- **Probar el día callado en el dev build.** No se puede verificar de verdad sin dos días seguidos de `level` — los tests fijan la regla, no cómo se ve. Si la card callada queda demasiado hueca, lo que se ajusta es `selloContentQuiet`.
+- **Optimización conocida, no hecha:** `useDailyReflection` sigue pidiéndole la frase al modelo los días callados (nadie la ve). No se resolvió porque `silent` se sabe después de que el hook corrió, y una versión con race valía menos que una llamada cacheada de más. Cuando se prenda la IA, vale la pena.
+- **Sigue esperándote el piso de seguridad (§5 ter)**, que es el que más importa: faltan dos definiciones tuyas — cuántos días seguidos abajo disparan, y qué dice exactamente la frase. El resto está listo para escribirse en una sesión.
+
+---
+
+## 2026-09-01 — Andre (sesión 153 · chequeo de viabilidad legal global de la IA, y lo que apareció al mirar)
+
+**Tocado:** `docs/paquete-abogado.md`, `docs/legal-instrucciones.md`, `docs/la-voz-de-sofia.md`, `constants/features.ts` (solo comentarios). Sin cambios de código ni de schema. `tsc` limpio, 414/414 tests.
+
+**Resumen — la pregunta era si se puede encender la devolución con IA "a nivel global". La respuesta es sí. El hallazgo es que el riesgo estaba en otro lado.**
+
+- **La consulta de IA que teníamos escrita se contesta bien, y ahora tiene ancla.** El TJUE falló el 04/09/2025 en *EDPS c/ JUR* (C-413/23 P) que el carácter personal de un dato **no es absoluto**: los mismos datos seudonimizados pueden ser personales para quien los manda y no serlo para el receptor que no puede reidentificar. Es exactamente el caso del payload de `weekly-reflection` (una etiqueta, tres enteros, sin identificador). Se agregó como ancla en `paquete-abogado.md` C.3 para que el abogado/a no razone desde cero.
+- 🔴 **Hallazgo principal, y es incómodo: el flag apagado no nos estaba protegiendo de lo que creíamos.** EEUU **no está** en la lista de países con nivel adecuado de la AAIP (que sí tiene UE/EEE, UK, Suiza, Canadá sector privado, Nueva Zelanda, Uruguay, Israel). Y a EEUU ya le mandamos todos los días ánimo, diario, gratitud y contenido de mensajes (Supabase), video (Daily.co) y push (Expo) — dato sensible, identificado, completo. El payload de la IA es la transferencia **más chica** que hace la app. Mantener `AI_REFLECTION_ENABLED=false` evita eso y nada más; todo lo demás pasa igual. **A.3 del paquete se reescribió entera** con la tabla de destinatarios reales y el instrumento probable (Cláusulas Contractuales Modelo de la **Res. AAIP 198/2023**, las de la RIPD, uso libre; o Disp. DNPDP 60/2016), y absorbe a C.3.
+- **Preguntas nuevas para el abogado/a (B.5 y B.6): ¿nos alcanza el RGPD?** Lo dispara "Sesiones desde el exterior", que está pensada explícitamente para que *"alguien en Madrid"* reserve — eso activa el art. 3(2). A favor: **Argentina tiene adecuación de la UE** (2003/490/CE), revisada y mantenida en enero de 2024, así que la pata UE→AR no necesita instrumento; el problema sería el salto siguiente, que es el mismo A.3. Se avisó en el mail de encuadre, porque puede ser que necesitemos a otra persona para esa parte.
+- ✅ **Alivio que conviene tener escrito: NO somos un "sistema de reconocimiento de emociones" del Reglamento de IA.** El art. 3(39) exige que la inferencia sea **a partir de datos biométricos**; acá la persona elige su ánimo tocando un botón. Las guías de la Comisión aclaran que ni el análisis de sentimiento sobre texto entra. Quedamos fuera de la prohibición y de las obligaciones específicas. Se registró en `legal-instrucciones.md` justamente para que nadie lo redescubra dentro de un año como si fuera un bloqueante.
+- ⚠️ **Lo que sí nos alcanzaría es el art. 50(1)**: un sistema de IA que interactúa directamente con personas tiene que informar que es una IA. Rige desde el 02/08/2026. Se anotó como **regla 3.6 en `la-voz-de-sofia.md`** porque no es un checkbox legal, es una restricción de diseño sobre el objetivo nuevo de la tarjeta: una voz pensada para *sentirse* como alguien que está, que además tiene que declararse máquina. Lo bueno es que **§3.5 ("cálida y presente, sí; persona, no") ya venía haciendo ese trabajo** dos meses antes de que rigiera. Queda un test útil: si la tarjeta necesita que no se sepa que es IA para funcionar, está mal diseñada.
+- **Dos ítems de frontera anotados:** (1) la **My Health My Data Act de Washington** —consentimiento opt-in para dato de salud mental, acción privada, USD 7.500 por infracción— es la norma más exigente del mundo para lo que hace Vita; no aplica sin residentes de WA, es un ítem *antes* de expandir a EEUU, no ahora. (2) Seguimos fuera del **MDR** europeo mientras no reclamemos diagnosticar ni tratar, pero el **piso de seguridad** pendiente de `la-voz-de-sofia.md` §5 ter es justo el borde: umbral fijo que muestra las líneas de T&C §5.3 es **derivación** (seguro); evaluar nivel de riesgo empieza a parecerse a **triage**, que es lo que ya preguntamos para la recomendación asistida.
+- 📌 **Acción que no depende de ninguna respuesta legal:** pedirle a Anthropic el modo de **retención cero**. Se agregó como paso 4 del Paso 5.1. El DPA con SCCs europeas (Módulos 2 y 3) ya viene incorporado a los términos comerciales de la API desde el 01/01/2026, sin firmar nada aparte.
+- 🔴 **Decisión consciente: NO se tocó la Política de Privacidad.** Quedó escrito por qué, para que no lo repita el próximo que lea esto. **§6** no puede declarar todavía al proveedor de IA como destinatario: el flag está apagado, no recibe nada, y declarar un destinatario que no recibe datos es tan falso como omitir uno que sí. **§7** no puede decir que hay cláusulas contractuales en vigor hasta que las haya — el texto actual (*"procurará que existan garantías adecuadas"*) es flojo pero honesto, y reemplazarlo por una garantía inexistente sería peor. Las dos se escriben **después** de la respuesta. Por lo mismo, **no hizo falta correr `npm run sync:legal`**: ninguno de los archivos tocados entra en el sync.
+
+**Corrección posterior — verificación del paquete antes de mandarlo, y cuatro defectos (uno mío).**
+
+- 🔴 **La sección 1 le afirmaba al abogado algo falso: *"Vita nunca tiene los fondos del profesional en su cuenta"*.** Es cierto solo para Mercado Pago. `usdt-create-payment/index.ts:129` dice "entra el total a la billetera de VIVE y se transfiere después" y `paypal-create-payment/index.ts:7` "PayPal no hace split de marketplace en esta configuración" — los dos rieles en producción con pagos reales. Esa frase sostiene el encuadre de intermediario de T&C §4, que es justo lo que A.7 pide evaluar: el abogado habría razonado sobre un sistema que no es el nuestro. **Es el mismo defecto del 25/08** (los T&C describían un sistema que ya no existía), esta vez en el paquete. Reemplazada por una tabla de los tres rieles con quién cobra en cada uno.
+- 🔴 **Error propio: la tabla de destinatarios ponía a Supabase en EEUU sin verificarlo.** Está en **`sa-east-1`, São Paulo** (`supabase projects list`). La conclusión no cambia —Brasil tampoco está en la lista de la Disp. 60-E/2016— pero el país determina el instrumento, y el dato viajaba mal al abogado. De paso se verificó el resto en vez de suponerlo: **Daily.co no almacena nada** (solo guarda con su API de grabación, y `create-meeting-room` crea las salas sin `enable_recording`), y **Expo** guarda el token pero no el contenido de la notificación. La tabla ahora separa **dónde queda el dato** de **dónde está la empresa**, que no es lo mismo.
+- ⚠️ **A.10 remitía a "A.11" y A.11 no existía.** Se escribió: es la pregunta sobre el paquete pre-sesión de `docs/paquete-para-la-sesion.md`, que era el camino que reemplazó a A.10 y había quedado sin redactar.
+- ⚠️ El encabezado de la sección A decía "estos cinco" y son once. Corregido acá y en `legal-instrucciones.md`.
+- ⚠️ Se ablandó una afirmación propia en C.3: decía que la retención cero "ya está pedida" y no lo está.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **A.3 es ahora el punto que más urge, y no espera a ninguna decisión de producto.** Destrabarlo destraba de paso la IA; dejarlo abierto no se arregla manteniendo la IA apagada.
+- **Decidir si "Sesiones desde el exterior" sale antes o después de tener respuesta a B.5.** Hoy el orden está tomado por omisión.
+- Pedir retención cero a Anthropic (no espera nada).
+- Sigue abierto todo el plan de producto de `la-voz-de-sofia.md` §7 — el silencio (3.3) y los guardarraíles nuevos de `rejectCopy` (3.4/3.5) son los dos que no dependen de ninguna respuesta pendiente.
+- ⚠️ Nada de este chequeo es asesoramiento legal. Es material para que la consulta sea una pregunta afilada; la firma sigue siendo del abogado/a.
+
+---
+
+## 2026-09-01 — Andre (sesión 152 cont. · auditoría de seguridad de toda la app)
+
+**Tocado:** `lib/encryption.ts` (reescrito), `supabase/functions/_shared/booking-effects.ts`, `supabase/functions/booking-return/index.ts`, las 6 functions con chequeo de service role, `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `lib/coachBookingActions.ts`, `__tests__/pureLogic.test.ts`, `package.json`. Nuevos: `supabase/functions/_shared/service-role.ts`, `jest.setup.js`. 414 tests (eran 412), `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen — auditoría pedida por Andre: secretos, cifrado, autorización de las 20 edge functions, webhooks de pago, RLS, inyección, gateo de admin, errores tragados y fugas de recursos.**
+
+- ✅ **Lo que está bien, y no es poco.** Los webhooks de pago validan firma, son fail-closed y **no le creen al cuerpo de la notificación**: leen el pago desde la API del proveedor. El `state` del OAuth de MP va firmado con HMAC + PKCE. El cliente de Supabase tiene el shim de webcrypto para que PKCE no degrade a `plain`. La RLS usa grants por columna y vistas para filtrar columnas. **No hay inyección posible**: las únicas interpolaciones en filtros son UUIDs de sesión y fechas calculadas. `admin-actions` verifica `is_admin` server-side antes de tocar el service role.
+- 🔴 **1. El "cifrado" de mensajes fallaba ABIERTO.** `encryptMessage` hacía `catch { return text }`: ante cualquier error **guardaba el texto plano** en una columna que todo el sistema trata como obfuscada — y como descifrar es tolerante, el mensaje se leía bien y el problema quedaba invisible para siempre. Ahora tira, y el envío de la sala lo atrapa para avisar "no se pudo enviar" en vez de perderlo en silencio.
+  - 🔴 **Y había un fallback de clave hardcodeado en el repo** (`'vive_mvp_key_2026'`), en las dos puntas: un build o un deploy sin la variable "cifraba" con una clave pública sin avisar. Eliminado; ahora falta la clave y se rompe fuerte, al usar (no al importar, para que una pantalla que nunca manda un mensaje no se caiga por un secret que no necesita).
+  - 📝 **La única causa real de error era un emoji partido al medio** (un sustituto suelto rompe `encodeURIComponent`, y llega al pegar texto de otra app). Se sanea antes de codificar, así el mensaje sale igual perdiendo un glifo que ya se veía roto. Con test.
+  - ⚠️ **Sigue sin ser cifrado y no hay que llamarlo así**: XOR con clave repetida, y la clave viaja en el binario por ser `EXPO_PUBLIC_*`. Lo que protege los mensajes es la RLS de `messages`.
+- ⚠️ **2. `authHeader.includes(SERVICE_ROLE_KEY)`** en las seis functions que solo puede llamar el cron. Es una búsqueda de **subcadena**, no una igualdad —cualquier header que la contenga pasa, venga como venga— y la comparación de strings corta en el primer byte distinto, o sea que filtra por tiempo cuántos caracteres acertaste. No es explotable sin la clave, pero es un candado que no verifica lo que dice verificar, sobre el camino más privilegiado del sistema. Nuevo `_shared/service-role.ts`: extrae el token del `Bearer` y lo compara entero y en tiempo constante.
+- ⚠️ **3. `booking-return` reenviaba al deep link TODOS los query params** que le llegaran. Es una function **pública** (`verify_jwt = false`) cuya salida entra a la app, así que convertía cualquier URL de internet en un canal para meter parámetros arbitrarios adentro. Hoy no los lee nadie —por eso era inerte—, pero el agujero quedaba puesto para el día que alguien leyera uno. Ahora lista blanca de los cinco que MP manda de verdad, con tope de largo.
+- 📝 **4. `ensureMeetingRoom(...).catch(() => {})`** al confirmar una reserva: si falla, la reserva queda confirmada sin sala de video. Es recuperable (`SalaScreen` reintenta al entrar), pero el error se tragaba entero, así que un problema sistemático con Daily no dejaba ni un rastro y recién se notaba cuando alguien no podía entrar a su sesión. Ahora se loguea, en los dos lugares que la llaman.
+- 📝 `jest.setup.js` nuevo: jest no carga `.env`, y sin fallback hardcodeado los tests de ida y vuelta del cifrado se quedaban sin clave. Se define una de juguete, explícita.
+
+**Pendiente para la próxima sesión:**
+
+- ✅ ~~Redeployar las siete edge functions~~ — **DEPLOYADAS y VERIFICADAS el 01/09/2026.** Las cinco de service role devuelven 401 sin credencial; `booking-return` devuelve 302 sin credencial (sigue pública, como tiene que ser) y **la lista blanca quedó probada en vivo**: un `?malicioso=...` en la URL no llega al deep link.
+- 🔴 **Hallazgo del deploy: `MESSAGE_ENCRYPTION_KEY` NO estaba seteado**, o sea que las edge functions venían usando el fallback hardcodeado. Se seteó **con ese mismo valor** para no cambiar comportamiento (cualquier otro habría vuelto ilegibles todos los mensajes de sistema ya guardados).
+- 📝 **La clave de producción es `vive_mvp_key_2026`, la que estuvo versionada en el repo — y NO hay que rotarla.** El repo es privado y no lo vio nadie de afuera (confirmado por Andre), pero eso ni siquiera es lo que decide: la clave es `EXPO_PUBLIC_*`, así que **se inlinea en el build y viaja dentro del .ipa/.apk**. Cualquiera que baje la app y la descomprima la lee, sin haber visto nunca el código. Rotarla no cambiaría nada porque la nueva viajaría igual. **El vector nunca fue el repo, es el binario**, y de ahí que la única mejora real sea E2E de verdad (necesita dev client). Mientras tanto la posición ya documentada es la correcta: esto es ofuscación, y lo que protege los mensajes es la RLS de `messages`.
+- 🔴 **Probar en dispositivo que se pueden mandar mensajes**, que es lo único que este cambio podría haber roto.
+- ✅ **`mp-webhook` y `paypal-webhook` también deployadas** (01/09/2026), así que ya no queda ningún escritor de mensajes de sistema con el `booking-effects` que falla abierto. **Verificadas con un pago falsificado**: `mp-webhook` devuelve `200 ignored (unsigned)` —acepta el request para que MP no reintente para siempre, pero no lo procesa— y `paypal-webhook` devuelve `401 invalid signature`. Las dos siguen públicas y ninguna actuó sobre la notificación forjada.
+- ⚠️ **Lo que la auditoría NO cubrió**: la RLS **real de la base** (verifiqué la documentada en SCHEMA.md, y el bug de `analytics_events` de hoy prueba que documentación y realidad se separan), y no se intentó explotar nada. Quedan además **50 catch vacíos** en el código: la mayoría inofensivos, pero es el patrón que hoy escondió dos fallas permanentes.
+- 📝 Tokens de sesión en AsyncStorage sin cifrar. Es el default de React Native, pero en un dispositivo con root o vía backup son legibles; `expo-secure-store` sería la alternativa.
+
+---
+
+## 2026-09-01 — Andre (sesión 152 cont. · contraste: diez botones eran ilegibles y unos íconos invisibles)
+
+**Tocado:** `constants/theme.ts` (token nuevo), `screens/ProfileOwnScreen.tsx`, `CoachWeeklyPatternScreen`, `CoachProfileScreen`, `ProposeResourceScreen`, `EditProfileScreen`, `CoachApplicationScreen`, `SessionsScreen`, `ResourceDetailScreen` (×2), `ResourceProposalsScreen`, `SalaScreen`. 412 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen — arrancó como "esta pantalla está fea" y terminó siendo accesibilidad.**
+
+- 🔴 **`ViveColors.primary` (#C1694F) es demasiado clara para llevar texto encima.** Con ese fondo **ningún** color de texto llega al mínimo AA de 4.5:1 — ni el blanco puro, que da 3.89. O sea que el problema no se arregla cambiando el color del texto: hay que oscurecer el fondo.
+- 🔴 **Auditadas las 25 superficies de terracota con texto de toda la app.** Diez usaban el oliva `text` (#565E32) encima y daban **1.78:1** — ilegibles al sol. Entre ellas: "Guardar" de Editar perfil, el botón de la postulación de coach, el precio del coach, la propuesta de recurso, el audio de un recurso y el botón de "Crear cuenta" del perfil.
+- **Token nuevo `ViveColors.primaryInk` (#A25842)**: la misma terracota oscurecida un 16%, que es el mínimo para que el crema encima llegue a 4.5:1 (da 4.59). No es un color nuevo de la paleta — es el mismo, en el tono en que se puede leer. Los diez casos pasaron a ese fondo con texto crema.
+- ⚠️ **Quedan 14 en 3.6–3.9:1** (blanco o crema sobre `primary`): se leen, pero no cumplen AA para texto normal. Decisión de Andre no barrerlos todavía — cambiaría el aspecto de la app entera.
+- 🔴 **Y en el perfil con sesión había un bug aparte: los íconos de Configuración eran `rgba(255,255,255,0.75)` sobre el crema, 1.11:1.** O sea invisibles: la lista mostraba una columna de aire donde van los íconos. Era un color que quedó de cuando ese fondo era oscuro — el estado sin cuenta, veinte líneas más arriba, siempre usó el oliva correcto.
+- 🔴 El rojo de "Eliminar cuenta" (`#FF7070`) daba 2.41:1 sobre el crema, y además es un rojo de semáforo en una paleta de tierras. Pasó a `#B3392E` (5.32:1).
+- 📝 **Se sacó el avatar vacío del perfil sin cuenta.** Era el elemento más grande de la pantalla y no decía nada: quien no tiene cuenta no tiene perfil, así que mostrarle uno en blanco es enseñarle un vacío.
+- ⚠️ **Corrección de algo que dije mal en el camino**: afirmé que "Crear cuenta" era el único botón con texto sobre terracota. Lo dije mirando por encima los primeros resultados de un grep, y eran 25. El script de auditoría quedó en el historial de la sesión y se puede reusar.
+
+**Pendiente para la próxima sesión:**
+
+- ⚠️ **Decidir los 14 restantes** (blanco/crema sobre `primary`, 3.6–3.9:1). Pasarlos a `primaryInk` es mecánico, pero oscurece todos los botones primarios de la app: es decisión de diseño, no de accesibilidad pura.
+- 📝 Vale correr la misma auditoría sobre los otros fondos de color de la app (los acentos de cuerpo/mente/alma, los chips), no solo sobre la terracota.
+
+---
+
+## 2026-09-01 — Andre (sesión 152 cont. · "¿Qué te trae por acá?" al boceto de Andre)
+
+**Tocado:** `screens/OnboardingScreen2.tsx` (rediseñada), `docs/onboarding-bifurcacion-opciones.md`. 412 tests, `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- ✅ **La pantalla pasa al boceto de Andre**: filas en vez de tarjetas, título grande alineado a la izquierda, subtítulo que amortigua el peso de la pregunta, y **navegación directa al tocar la fila** (un tap en vez de dos). El boceto ya respetaba lo que más importaba: las cuatro opciones con el mismo peso visual.
+- 🔴 **Ajuste 1 — cada universo lleva SU color.** En el boceto tres círculos eran verde salvia y solo "Algo de la cabeza" naranja, lo que la volvía la recomendada de facto: el ojo va ahí primero. **Y ahora que medimos, eso contamina el dato**: `onboarding_opcion_tocada` estaría midiendo el acento visual en vez de la preferencia real. Van los tres colores que la pregunta siguiente ya usa por universo, así que además dan continuidad.
+- 🔴 **Ajuste 2 — las bajadas hablan de síntomas, no de categorías.** El boceto decía *"Sueño, energía, hábitos"*, que es una taxonomía. Quedó *"No dormís, andás sin pilas"*, *"Ansiedad, bajón, discusiones"*, *"No sabés para dónde vas"*. El boceto ganaba consistencia (las cuatro como listas) pero perdía justo lo que justificaba la opción A: **dejar de preguntar en el vocabulario del producto**.
+- 📝 **Ajuste 3 — "Solo estoy mirando" no lleva flecha.** Las otras tres llevan a una pregunta más; esa termina el onboarding y deja en Recursos. Con la misma flecha, las cuatro prometían lo mismo. La asimetría es la señal.
+- ⚠️ **Ajuste 4 — se fue el botón "¿Seguimos?", y eso tiene un costo de medición.** La navegación directa es mejor UX, pero **elimina `toques`** (cuántas opciones se tocaban antes de decidirse), que era la señal de duda: ahora el primer toque ya navega. Queda `segundos`. Por lo mismo, `onboarding_opcion_tocada` dejó de emitirse en esta pantalla — sería un duplicado exacto de `onboarding_respuesta`.
+- 📝 El gris de las bajadas del boceto quedaba por debajo del mínimo de contraste; se usó `#5C6B58`, que da ~4.6:1 sobre el crema (AA pide 4.5). Anotado en el código para que no se aclare sin volver a medir.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Verlo en dispositivo**, sobre todo la fila sin flecha: confirmar que se lee como "esta es distinta" y no como que falta algo.
+- 📝 **Queda una inconsistencia de interacción entre las dos preguntas**: esta navega al tocar y la de categoría sigue pidiendo elegir + "Ver profesionales". Para un flujo de dos pantallas conviene que las dos se comporten igual; no se tocó porque el boceto no la cubría. Decisión de Andre.
+
+---
+
+## 2026-09-01 — Andre (sesión 152 cont. · la RLS rechazaba toda la analítica sin cuenta)
+
+**Tocado:** `SCHEMA.md`. Nuevo: `scripts/add-analytics-anon-insert.sql` (**CORRIDO el 01/09/2026**).
+
+**Resumen:**
+
+- 🔴 **Andre lo probó en dispositivo y ningún evento llegaba**: `new row violates row-level security policy for table "analytics_events"`, una vez por evento. La política de INSERT de la tabla pide sesión.
+- 🔴 **Y eso invalida justo la mitad que importa**: las cuatro pantallas del onboarding ocurren sin cuenta, y `muro_cuenta_visto` —el punto de fricción más grande del producto— **por definición se emite cuando la persona no está registrada**. O sea que toda la instrumentación de hoy escribía en el `console.warn` y en ningún otro lado.
+- **`scripts/add-analytics-anon-insert.sql`** agrega una política de INSERT para el rol `anon` con dos candados: **solo INSERT** (no puede leer, actualizar ni borrar analítica) y **`user_id` obligatoriamente NULL** — sin eso, cualquiera con la anon key podría escribir eventos atribuidos a otra persona. Más una política para `authenticated` que solo deja escribir eventos propios. Idempotente, con una parte 1 que muestra las políticas actuales antes de tocar nada.
+- ⚠️ **Lo que el script acepta a conciencia**: con la anon key se pueden insertar filas de analítica basura. Es inherente a medir desde el cliente y no se evita sin mandar los eventos por una Edge Function. Se acepta porque el daño máximo es ensuciar una tabla de métricas —no toca datos de nadie ni deja leer nada— y porque `properties.sesion` permite descartar un origen entero si aparece ruido.
+- 📝 **El síntoma era visible solo porque `registrarEvento` avisa por consola.** Si hubiera fallado en silencio, habríamos dado por buena una analítica que no guardaba nada — que es peor que no tener ninguna, porque se toman decisiones creyendo que hay datos.
+
+**Pendiente para la próxima sesión:**
+
+- ✅ ~~Correr `scripts/add-analytics-anon-insert.sql`~~ — **corrido el 01/09/2026**. Falta volver a abrir la app sin cuenta: la prueba real es que **no aparezca más el warn de RLS** en la consola. ⚠️ Correr el insert de prueba desde el SQL Editor NO sirve como verificación: ahí sos `postgres` y las políticas no se aplican.
+- 🔴 Recién después tienen sentido las verificaciones que quedaron anotadas arriba (el `sesion` compartido, `onboarding_registro` con `user_id`, el par abierto/completado sin cuenta): hasta que la política no esté, la tabla va a seguir vacía.
+
+---
+
+## 2026-09-01 — Andre (sesión 152 cont. · la sesión anónima nunca existió, y ya no hace falta)
+
+**Tocado:** `lib/supabase.ts`, `lib/resourceCompletions.ts`, las 8 pantallas de herramientas, `__tests__/resourceCompletions.test.ts`, `SCHEMA.md`. 412 tests (eran 410), `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen:**
+
+- ✅ **Andre corrió la consulta y da CERO**: `select count(*) from auth.users where is_anonymous = true;`. O sea que `signInAnonymously()` **nunca funcionó**. Cada apertura de una herramienta hacía un round-trip que fallaba, y el `.catch(() => {})` de las ocho pantallas se lo comía en silencio.
+- ⚠️ **Corrección de lo que dije en la entrada anterior**: NO es cierto que las 8 herramientas nunca registraran una completación. `ensureAnonSession()` devolvía el id de la sesión existente cuando la había y solo intentaba el alta anónima si no, así que **para quien tiene cuenta siempre funcionaron**. Lo que nunca se registró es el uso **sin cuenta**.
+- 🔴 **`ensureAnonSession()` se eliminó**, y con él la idea de darle una fila de `auth.users` a cada visitante. La reemplaza `usuarioActualId(): Promise<string | null>`, que no intenta ningún alta. **Ya no hace falta**: lo único que la sesión anónima habilitaba era medir el uso sin cuenta, y eso ahora lo cubre `lib/analytics.ts` con un id de dispositivo, sin sesión y sin ensuciar `auth.users`.
+- 🔴 **`recordCompletion` acepta `null` y emite el evento SIEMPRE**, con `con_cuenta`. La fila sigue necesitando cuenta (`user_id` es FK), pero el evento no: sin esto, quien completa un recurso sin registrarse no dejaba rastro en ningún lado — **y es exactamente a donde el onboarding nuevo manda a quien dice "solo estoy mirando"**. Se cayó el `if (userIdRef.current)` que envolvía la llamada en las ocho pantallas; ahora decide la función, en un solo lugar.
+- 📝 **Por qué no fuimos por el otro camino** (prender las altas anónimas y arreglar el trigger): darle una fila de `auth.users` a cada visitante ensucia la tabla, cuenta para el MAU y deja perfiles huérfanos — todo para conseguir un id que ya tenemos gratis en el dispositivo. Y ni siquiera alcanzaba con prender el switch: `handle_new_user` escribe `profiles.email`, que es NOT NULL, y un usuario anónimo no tiene email.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probar en dispositivo el par completo sin cuenta**: abrir Respiración sin registrarse, terminarla, y confirmar en `analytics_events` que están `recurso_iniciado` **y** `recurso_completado` con `con_cuenta: false` y el mismo `sesion`. Es el caso que hasta hoy era invisible.
+- 📝 Con cuenta, confirmar que la fila en `resource_completions` sigue apareciendo igual que antes — es lo único que el cambio podría haber roto.
+
+---
+
+## 2026-09-01 — Andre (sesión 152 cont. · la sesión anónima se confundía con una cuenta real)
+
+**Tocado:** `context/AuthContext.tsx`, `lib/resourceCompletions.ts`, `screens/ProfesionalScreen.tsx`, `screens/ResourceDetailScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/ExploreResourcesScreen.tsx`, `screens/SessionsScreen.tsx`, las 8 pantallas de herramientas, `app/diario.tsx`, `app/gratitud.tsx`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `components/PinButton.tsx`, `components/ReminderBell.tsx`, `SCHEMA.md`. Renombrado: `lib/onboardingAnalytics.ts` → `lib/analytics.ts` (+ su test). Nuevos: `hooks/useRecursoAbierto.ts`, `__tests__/resourceCompletions.test.ts`. 410 tests (eran 406), `tsc` limpio, sin warnings de lint nuevos.
+
+**Resumen — pedido de Andre: "también en el resto de la aplicación, necesitamos saber qué funciona y qué no". La auditoría encontró un bug antes que los huecos.**
+
+- 🔴 **La sesión ANÓNIMA se trataba como una cuenta real, y nada en todo el repo las distinguía** (`grep -rn "is_anonymous"` → cero resultados; `isLoggedIn = !!user`). Las 8 pantallas de herramientas llaman a `ensureAnonSession()` al montarse —`signInAnonymously()`, una sesión de Supabase de verdad— para poder escribir en `resource_completions`. Tres consecuencias:
+  - **`volcarPendiente` escribía las respuestas del onboarding bajo el id anónimo** y las marcaba como volcadas. Al registrarse de verdad, `signUpWithEmail` crea un id distinto: quedaban varadas en una fila fantasma. **Es el mismo bug que se arregló ayer, entrando por otra puerta.**
+  - **`onboarding_registro` se emitía para la sesión anónima**, inflando la conversión con gente que nunca se registró — y como tiene guard de una-vez-por-dispositivo, el registro real no se anotaba nunca.
+  - **Los guards son `if (!user) requestAuth()`, así que quien abría una herramienta cruzaba el muro de la cuenta.** El changelog dice *"Booking requiere sesión real (no anónima)"* desde hace tiempo; **ese guard no estaba en el código**.
+  - **Arreglo en un solo lugar** (`esSesionAnonima` en `AuthContext`) y no en cada guard: para todo lo que no sea anotar el uso de una herramienta, una sesión anónima **es** no tener cuenta. Las herramientas siguen andando porque toman el id de `ensureAnonSession()` directo, no del contexto.
+- ✅ **El muro de la cuenta, medido.** `requestAuth` se llamaba desde **16 lugares y no se medía en ninguno**, siendo el punto de fricción más grande del producto. Ahora recibe un `motivo` y emite `muro_cuenta_visto` **desde adentro de `requestAuth`**: instrumentarlo ahí y no en cada pantalla es lo que garantiza que no quede una llamada sin medir. Los 16 motivos van de `reservar_sesion` a `pinear_recurso`.
+- ✅ **El par abrir/completar de recursos, que es lo que da la tasa de abandono.** Solo se medía `recurso_completado`, y con eso no se puede distinguir un recurso que **nadie abre** (problema de descubrimiento) de uno que **todos abandonan** (problema del recurso) — diagnósticos opuestos con el mismo dato de llegada.
+  - 🔴 **Y `recurso_completado` estaba suelto en 4 de las 11 pantallas que llaman a `recordCompletion`: siete recursos se completaban sin dejar rastro.** Se movió el evento adentro de `recordCompletion`, que es el cuello por el que pasan las once. Con test.
+  - `recurso_iniciado` sale de `hooks/useRecursoAbierto.ts` y **no necesita sesión** a propósito: mide a quien explora sin cuenta —que es a donde manda el onboarding nuevo— y además vuelve visible un problema que hoy sería invisible (aperturas con cero completaciones = la sesión anónima no se está creando).
+- ⚠️ **Cambio chico de datos que conviene saber**: `RuidoScreen` ahora pasa la duración a `recordCompletion`. Antes la omitía —la función la documenta como opcional "para recursos libres (Diario, Ruido blanco)"— pero **Ruido no es libre**: la persona elige 5/10/… minutos y la completación se dispara con ese timer. El evento suelto que había sí la mandaba, o sea que la tabla venía guardando menos que la analítica.
+- 📝 `lib/onboardingAnalytics.ts` pasó a `lib/analytics.ts`: el problema que resuelve no es del onboarding, es de todo lo que ocurre antes de que exista una cuenta — que en este producto son casi todos los eventos interesantes.
+
+**Pendiente para la próxima sesión:**
+
+- ✅ ~~Confirmar si "Anonymous sign-ins" está habilitado~~ — **CONFIRMADO el 01/09/2026: la consulta da CERO**, `signInAnonymously()` nunca funcionó. Resuelto en la entrada de abajo.
+- 🔴 **Probar en dispositivo que el arreglo de la sesión anónima no rompió las herramientas**: abrir Respiración sin cuenta, completarla, y confirmar que (a) sigue apareciendo la fila en `resource_completions` y (b) que después de eso el botón de reservar **sí** pide cuenta, que antes no lo hacía.
+- 📝 Quedan los huecos 3, 4 y 5 de la auditoría: el **embudo de reserva** (los eventos están solo en la pantalla de confirmar; profesional → calendario → horario tienen cero, y es la rama que monetiza), **Sala y mensajes** (solo detección de contactos, siendo el bucle central del producto) y el **lado del coach**.
+
+---
+
+## 2026-09-01 — Andre (sesión 152 · el onboarding pregunta por la persona, no por la navegación)
+
+**Tocado:** `screens/OnboardingScreen2.tsx` (reescrita), `screens/OnboardingScreen1.tsx`, `screens/OnboardingScreen4.tsx`, `screens/OnboardingBifurcacion.tsx`, `lib/onboardingRespuestas.ts`, `lib/guiaContextual.ts`, `context/AuthContext.tsx`, `app/(tabs)/conexiones.tsx`, `app/_layout.tsx`, `__tests__/onboardingRespuestas.test.ts`, `SCHEMA.md`, `docs/onboarding-bifurcacion-opciones.md`. Nuevos: `lib/onboardingAnalytics.ts`, `__tests__/onboardingAnalytics.test.ts`. Borrados: `screens/OnboardingScreen3.tsx`, `screens/OnboardingScreen5.tsx`, `app/onboarding3.tsx`, `app/onboarding5.tsx`. 406 tests (eran 393), `tsc` limpio, sin warnings de lint nuevos (7 antes, 7 después). **No cambió el schema** — `analytics_events` ya existía; lo que se documentó es la convención de consulta.
+
+**Resumen:**
+
+- ✅ **Se cerró la decisión que quedó abierta ayer**: de las cuatro opciones de `docs/onboarding-bifurcacion-opciones.md`, Andre eligió la **A**. "¿Cómo te gustaría empezar?" se reemplazó por **"¿Qué te trae por acá?"** (cuerpo · cabeza · rumbo · solo mirando) y el onboarding pasó de **cuatro pantallas para todos a una para quien vino a mirar y dos para quien trae algo**.
+- 🔴 **El motivo no era visual.** Eran tres pantallas seguidas preguntando lo mismo con distinto grano, y ninguna preguntaba por la PERSONA: todas preguntaban cómo quiere usar el producto, en el único momento en que no lo puede saber. La pregunta nueva se come el viejo paso 1 (el universo cuerpo/mente/alma): es exactamente el mismo dato, pero preguntado por lo que le pasa a la persona en vez de disfrazado de navegación.
+- 🔴 **El botón dejó de mentir.** El flujo terminaba con "Ver profesionales" haciendo `router.replace('/register')`. Ahora la última pregunta lleva de verdad a Profesionales, sin cuenta — `requestAuth` recién aparece al reservar.
+- 🔴 **Corrección de Andre en la misma sesión, y tenía razón: la primera versión abría el DECK de la puerta y "se siente como que lo querés forzar".** El error fue de razonamiento: el defecto era "el botón miente", y lo arreglé cumpliendo la promesa a rajatabla en vez de preguntarme si la promesa estaba bien. El perfil para el que existe este camino es *"el que tiene un problema y no sabe qué necesita"* — **no saber qué necesitás no es estar listo para pagarle a alguien**, y ponerle un mazo de personas adelante a los 60 segundos de abrir la app colapsa las dos cosas. Ahora aterriza en el **menú de su eje con su tema destacado** (fondo teñido, sin borde ni badge: la señalamos, no elegimos por ella) y la bajada dice "empezaría por el tema destacado — pero elegí el que quieras".
+- 🔴 **Para eso hizo falta una CUARTA taxonomía**: `CATEGORIA_A_PUERTA` en `lib/onboardingRespuestas.ts`. Las puertas de Conexiones son capa de presentación y **no se derivan** ni del universo ni del `topic`, así que el mapa se escribe a mano. Tres tests lo cuidan: que las nueve categorías caigan en puertas que **existan** (un id inventado no falla — abre el menú, y se lee como que la respuesta se perdió), que no se repitan, y que una desconocida devuelva null sin romper.
+- ⚠️ **`app/(tabs)/conexiones.tsx` acepta ahora un parámetro `puerta`, y se aplica UNA SOLA VEZ** (ref). El parámetro se queda pegado a la ruta del tab después de navegar: sin el guard, cada vuelta al tab —o cada "volver a las áreas"— reabriría el eje solo y no habría forma de salir de él.
+- 📝 **"Solo estoy mirando" va a Recursos, no a Inicio.** Sin cuenta, Inicio es casi todo estados vacíos: quien contestó que venía a mirar aterrizaba en la prueba de que no hay nada para mirar.
+- 📝 **Las cuatro opciones pesan visualmente lo mismo, a propósito.** "¿Qué te trae?" pesa más que "¿cómo querés empezar?": si "solo estoy mirando" fuera un link chiquito al pie, la pantalla empujaría a inventar un problema para poder seguir.
+- ✅ **El onboarding entero quedó instrumentado** (pedido de Andre: *"todo es prueba y testeo, necesitamos saber qué cosas tocan y deciden los usuarios"*). Tenía CERO líneas de analítica; ahora se miden las cuatro pantallas del embudo, incluidas la bienvenida y la bifurcación que no se tocaron en su diseño. Nuevo: `lib/onboardingAnalytics.ts` + `__tests__/onboardingAnalytics.test.ts`. La tabla de eventos está en `docs/onboarding-bifurcacion-opciones.md` §7 y la convención de consulta en `SCHEMA.md`.
+- 🔴 **Y el problema que había que resolver ANTES de instrumentar nada: `registrarEvento` saca el `user_id` de la sesión, y en el onboarding no hay sesión.** Los eventos caían todos con `user_id` null, o sea indistinguibles entre sí: habría conteos ("cuántos tocaron cuerpo") pero **no embudo** ("de los que tocaron cuerpo, cuántos siguieron"), que es lo único que sirve para decidir. Se resolvió con un id anónimo por dispositivo en `properties.sesion`, y `onboarding_registro` —emitido desde `AuthContext` cuando aparece la cuenta— como el único puente que lleva `user_id` y `sesion` juntos.
+- 🔴 **Un test destapó una carrera real en el id de sesión.** Se cacheaba el VALOR, así que varios eventos disparados en el mismo tick (la vista de la pantalla y un toque rápido) encontraban los tres el cache vacío, salían los tres a leer el storage y **creaban tres ids distintos** — el recorrido de una persona partido en tres, justo lo que el id venía a evitar. Se cachea la promesa, no el valor.
+- 📝 **Se miden los TOQUES y la demora, no solo la respuesta.** `onboarding_opcion_tocada` lleva `orden` (el primer toque es lo que llamó la atención, los siguientes son los que se lo pensaron) y `onboarding_respuesta` lleva `toques` y `segundos`. Dos personas que eligen lo mismo, una en 2 segundos y otra en 20, no están diciendo lo mismo sobre la pregunta.
+- 📝 **`conexiones_puerta_abierta` con `sugerida` es la que evalúa la decisión de hoy**: si la mayoría de los que llegan del onboarding abre una puerta distinta a la destacada, el mapa `CATEGORIA_A_PUERTA` está mal, y lo va a decir el dato en vez de una discusión.
+- 📝 **Los temas se sueltan** (decisión 4 del brief). El paso 3 salió del flujo: era el dato más específico que se recolectaba, pero su vocabulario no es el de los coaches (`Alimentación` 0 de 2, `Sexualidad` 0 de 3), así que nunca se pudo usar para filtrar. `RespuestasOnboarding.temas` quedó **opcional**, no borrado, para poder seguir leyendo lo que ya está guardado en dispositivos reales.
+- 📝 Aparte, sin relación: se sacó la línea más exterior del abanico de la bifurcación (`LINEAS`, de 5 trazadas a 4 por lado). Reponerla es volver a agregar `{ punta: 0.210, cuello: 0.525 }` como primer elemento.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Sin probar en dispositivo, y es lo que más importa acá.** Cuatro casos: (a) "solo estoy mirando" → aterriza en Recursos; (b) cuerpo → "Sexualidad e intimidad" → Profesionales abre el **menú de Bienestar físico** con *Sexualidad e intimidad* destacada, sin entrar sola a ningún mazo; (c) "volver a áreas de bienestar" **no vuelve a abrir el eje solo** (es el guard del ref); (d) registrarse después y confirmar que `user_quiz_answers` quedó con `axis` = cuerpo y `topic` = relaciones.
+- 🔴 **Verificar en la base que los eventos llegan**, que es lo único que no se puede dar por hecho de la analítica: hacer un recorrido completo y confirmar que `analytics_events` tiene las filas con el **mismo `properties.sesion`**, y que al registrarse aparece `onboarding_registro` con `user_id`. Si eso no pasa, todo lo demás no sirve.
+- ⚠️ **El mapa `CATEGORIA_A_PUERTA` es criterio, no verdad.** Los dos que menos me cierran: `entender` ("ir a fondo en mis patrones") → *Autoestima y confianza*, que es lo más cercano que existe del lado del coach pero no es lo mismo; y `energia` → *Descanso y energía*, que deja afuera los hábitos. Vale revisarlos con Joaquín.
+- 📝 La bifurcación usuario/profesional y `OnboardingScreen1` **siguen sin analítica**. Ahora que el resto está instrumentado, son el hueco que queda para saber cuánta gente se cae antes de la primera pregunta.
+- 📝 El deck de la puerta puede estar vacío según el tema (la pantalla ya tiene su estado "todavía no hay profesionales en…"). Con `Nutrición` y `Sexualidad`, que son las puertas más flacas, conviene ver cómo se siente llegar ahí recién salido del onboarding.
+
+---
+
 ## 2026-09-01 — Joaquín (sesión 151 · device testing)
 
 **Tocado:** `screens/VerificarMailScreen.tsx`, `hooks/useCerrarSesionAlSalir.ts`.

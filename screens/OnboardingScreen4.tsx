@@ -8,6 +8,28 @@ import { ScaleCard } from '@/components/ScaleCard';
 import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import { guardarRespuestas, puertaDeCategoria } from '@/lib/onboardingRespuestas';
+import { anotar, cronometro } from '@/lib/analytics';
+
+// La única pregunta que queda después de "¿Qué te trae por acá?" — opción A del
+// brief (`docs/onboarding-bifurcacion-opciones.md`), elegida el 01/09/2026.
+//
+// 🔴 Antes era el paso 2 de 3 y venía detrás de otra pantalla que preguntaba el
+// universo por separado. Ese paso se colapsó en la pregunta anterior, así que
+// esta pasó a ser la última: dos pantallas para quien trae algo, donde antes
+// había cuatro para todos.
+//
+// 🔴 Y su botón dejó de mentir. El flujo terminaba con un tercer paso cuyo
+// botón decía "Ver profesionales" y hacía `router.replace('/register')`:
+// contestabas tres pantallas, te prometían profesionales y aparecía un campo de
+// email. Ahora la promesa se cumple en el acto y sin cuenta — Profesionales
+// anda como anónimo, `requestAuth` recién aparece al reservar.
+//
+// ⚠️ Pero lleva al MENÚ de su eje con el tema destacado, no al mazo de personas
+// de esa puerta. La primera versión abría el deck y Andre lo frenó: se sentía
+// forzado. Arreglar un botón que miente no obliga a cumplir la promesa a
+// rajatabla — quien no sabe qué necesita no está listo para elegir a quién
+// pagarle, y son dos cosas distintas.
 
 type UniversoId = 'cuerpo' | 'mente' | 'alma';
 
@@ -47,6 +69,11 @@ export default function OnboardingScreen4() {
   const { universo } = useLocalSearchParams<{ universo: string }>();
   const [selected, setSelected] = useState<string | null>(null);
 
+  // Mismo criterio que la pantalla anterior: se miden los toques y la demora,
+  // no solo lo que quedó elegido. Ver `lib/onboardingAnalytics.ts`.
+  const toques = useRef(0);
+  const medir = useRef(cronometro()).current;
+
   const u = (universo as UniversoId) ?? 'cuerpo';
   const subcats = SUBCATEGORIAS[u] ?? SUBCATEGORIAS.cuerpo;
   const { accent, accentLight } = UNIVERSO_COLORS[u] ?? UNIVERSO_COLORS.cuerpo;
@@ -59,6 +86,10 @@ export default function OnboardingScreen4() {
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Con esto y el evento de la pantalla anterior se ve dónde se cae la gente
+    // entre las dos, y qué universo abandona más.
+    anotar('onboarding_pantalla_vista', { pantalla: 'categoria', universo: u });
+
     Animated.stagger(110, [
       Animated.timing(headerAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
       Animated.timing(progressAnim, { toValue: 1, duration: 360, useNativeDriver: true }),
@@ -78,7 +109,47 @@ export default function OnboardingScreen4() {
 
   function handleContinue() {
     if (!selected) return;
-    router.push({ pathname: '/onboarding5', params: { universo: u, categoria: selected } });
+
+    anotar('onboarding_respuesta', {
+      pantalla: 'categoria',
+      universo: u,
+      respuesta: selected,
+      toques: toques.current,
+      segundos: medir(),
+    });
+
+    // 🔴 Acá se guarda lo que la persona contestó, que antes se tiraba entero.
+    // Todavía no hay cuenta, así que se encola local y `AuthContext` lo vuelca
+    // a `user_quiz_answers` cuando aparezca la sesión — una sola vez, y sin
+    // pisar un quiz posterior. El eje declarado decide QUÉ recomendarle y el
+    // topic CÓMO nombrárselo.
+    //
+    // 📝 Sin `temas`: el paso 3 salió del flujo con la opción A. Era el dato
+    // más específico que se recolectaba, pero no lo podía usar nadie — su
+    // vocabulario no es el de los coaches (`Alimentación` 0 de 2 y
+    // `Sexualidad` 0 de 3 no existen del otro lado), así que "llevarte a
+    // profesionales filtrados por lo que dijiste" nunca se pudo hacer con
+    // ellos. Con universo + categoría sí.
+    void guardarRespuestas({ universo: u, categoria: selected });
+
+    // 🔴 `replace` y no `push`: es el final del onboarding. Con `push`, el
+    // gesto de back desde Profesionales devolvería a la pregunta que la persona
+    // ya contestó, en una pila que no lleva a ningún lado.
+    //
+    // ⚠️ Si la categoría no mapeara a ninguna puerta, se entra igual a
+    // Profesionales pero desde los ejes, sin nada destacado. Quedarse en el
+    // onboarding sería peor: la respuesta ya está guardada y la persona ya tocó
+    // "Ver profesionales".
+    const puerta = puertaDeCategoria(selected);
+    // El destino final del recorrido, con la puerta que le sugerimos. Es lo que
+    // después deja comparar contra qué puerta abre de verdad
+    // (`conexiones_puerta_abierta`, con `sugerida`).
+    anotar('onboarding_fin', { destino: 'conexiones', desde: 'categoria', puerta });
+    router.replace(
+      puerta
+        ? ({ pathname: '/(tabs)/conexiones', params: { puerta } } as any)
+        : ('/(tabs)/conexiones' as any),
+    );
   }
 
   return (
@@ -97,9 +168,14 @@ export default function OnboardingScreen4() {
         </Animated.View>
 
         <Animated.View style={[styles.progressArea, fadeUp(progressAnim)]}>
-          <Text style={styles.progressLabel}>Paso 2 de 3</Text>
+          {/* 📝 "Última pregunta" y no "Paso 2 de 2": la pantalla anterior no
+              muestra contador —una de sus cuatro opciones termina el flujo ahí
+              mismo, así que prometerle dos pasos a todo el mundo sería falso—
+              y un "2 de 2" que aparece sin haber visto un "1 de 2" se lee como
+              si te hubieras salteado algo. */}
+          <Text style={styles.progressLabel}>Última pregunta</Text>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '66%' }]} />
+            <View style={[styles.progressFill, { width: '100%' }]} />
           </View>
         </Animated.View>
 
@@ -130,7 +206,13 @@ export default function OnboardingScreen4() {
                       elevation: 6,
                     },
                   ]}
-                  onPress={() => setSelected(sub.id)}
+                  onPress={() => {
+                    toques.current += 1;
+                    anotar('onboarding_opcion_tocada', {
+                      pantalla: 'categoria', universo: u, opcion: sub.id, orden: toques.current,
+                    });
+                    setSelected(sub.id);
+                  }}
                 >
                   <View style={[styles.iconBubble, { backgroundColor: isSelected ? 'rgba(86,94,50,0.14)' : 'rgba(255,248,240,0.48)' }]}>
                     <MaterialCommunityIcons name={sub.icon} size={26} color={isSelected ? accent : 'rgba(255,255,255,0.75)'} />
@@ -152,7 +234,7 @@ export default function OnboardingScreen4() {
             activeOpacity={0.85}
             disabled={!selected}
           >
-            <Text style={styles.buttonText}>¿Seguimos?</Text>
+            <Text style={styles.buttonText}>Ver profesionales</Text>
           </TouchableOpacity>
         </Animated.View>
       </SafeAreaView>

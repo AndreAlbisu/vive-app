@@ -519,7 +519,7 @@ export default function ProfesionalScreen() {
           <TouchableOpacity
             style={s.reportLink}
             onPress={() => {
-              if (!isLoggedIn) { requestAuth(); return; }
+              if (!isLoggedIn) { requestAuth('reportar_profesional'); return; }
               setActionsOpen(true);
             }}
             activeOpacity={0.7}
@@ -569,7 +569,8 @@ export default function ProfesionalScreen() {
               activeOpacity={0.85}
               disabled={blocked}
               onPress={() => {
-                if (!isLoggedIn) { requestAuth(); return; }
+                // El motivo de más valor de todos: es la rama que monetiza.
+                if (!isLoggedIn) { requestAuth('reservar_sesion'); return; }
                 const resourceId = Array.isArray(params.resourceId) ? params.resourceId[0] : params.resourceId;
                 if (resourceId && user) logResourceEvent(user.id, resourceId, 'booking_started');
                 router.push({
@@ -589,7 +590,7 @@ export default function ProfesionalScreen() {
             <TouchableOpacity
               style={[s.btnSecondary, saved && s.btnSecondaryActive]}
               onPress={() => {
-                if (!isLoggedIn) { requestAuth(); return; }
+                if (!isLoggedIn) { requestAuth('guardar_profesional'); return; }
                 if (profileId) toggleFavorite(profileId);
               }}
               activeOpacity={0.8}>

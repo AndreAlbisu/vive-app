@@ -16,10 +16,11 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts, ViveMoodColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { supabase, registrarEvento } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { ToolHeader } from '@/components/ui/ToolHeader';
+import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface JournalEntry {
@@ -72,6 +73,7 @@ const shadow = Platform.select({
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function DiarioScreen() {
+  useRecursoAbierto('diario');
   const router = useRouter();
   const [journalText, setJournalText] = useState('');
   const [textFocused, setTextFocused] = useState(false);
@@ -110,7 +112,7 @@ export default function DiarioScreen() {
 
   async function handleSave() {
     if (!canSave || saved) return;
-    if (!isLoggedIn || !user) { requestAuth(); return; }
+    if (!isLoggedIn || !user) { requestAuth('guardar_diario'); return; }
 
     Animated.sequence([
       Animated.spring(saveScale, { toValue: 0.95, useNativeDriver: true, damping: 20, stiffness: 300 }),
@@ -131,7 +133,6 @@ export default function DiarioScreen() {
       setEntries(prev => [data, ...prev]);
       // Diario es "libre" (sin duración) → completación sin duration_seconds.
       recordCompletion(user.id, 'diario').catch(() => {});
-      registrarEvento('recurso_completado', { resource_id: 'diario', user_id: user.id }).catch(() => {});
     }
 
     setJournalText('');

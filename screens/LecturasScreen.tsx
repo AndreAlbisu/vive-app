@@ -8,8 +8,9 @@ import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
-import { ensureAnonSession } from '@/lib/supabase';
+import { usuarioActualId } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
+import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 const FOREST      = '#3A4F2A';
 const FOREST_SOFT = '#6B7A56';
@@ -87,21 +88,20 @@ Ese pequeño giro —de huir a permanecer— es, paradójicamente, lo que nos da
 ];
 
 export default function LecturasScreen() {
+  useRecursoAbierto('lecturas');
   const router = useRouter();
   const [idx, setIdx]     = useState(0);
   const [done, setDone]   = useState(false);
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    ensureAnonSession().then(uid => { userIdRef.current = uid; }).catch(() => {});
+    usuarioActualId().then(uid => { userIdRef.current = uid; }).catch(() => {});
   }, []);
 
   function handleNext() {
     if (idx + 1 >= READINGS.length) {
       setDone(true);
-      if (userIdRef.current) {
-        recordCompletion(userIdRef.current, 'lecturas', 420).catch(() => {});
-      }
+      recordCompletion(userIdRef.current, 'lecturas', 420).catch(() => {});
     } else {
       setIdx(idx + 1);
     }

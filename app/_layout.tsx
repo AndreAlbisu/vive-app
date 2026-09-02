@@ -34,7 +34,7 @@ import { reconcileResourceReminders } from '@/lib/resourceReminders';
 // ⚠️ `verificar-mail` y `coach-application` NO van acá: son pantallas a las
 // que se llega CON sesión a propósito, y meterlas en este set las mandaría de
 // vuelta al Inicio apenas se montan.
-const ONBOARDING_SCREENS = new Set(['index', 'onboarding-bifurcacion', 'onboarding2', 'onboarding3', 'onboarding4', 'onboarding5', 'login', 'register']);
+const ONBOARDING_SCREENS = new Set(['index', 'onboarding-bifurcacion', 'onboarding2', 'onboarding4', 'login', 'register']);
 
 function NotificationSetup() {
   const { user } = useAuth();
@@ -196,9 +196,7 @@ export default function RootLayout() {
               pantalla nueva ya está puesta debajo del color y lo único que
               queda por delante es descubrirla. */}
           <Stack.Screen name="onboarding2" options={{ headerShown: false, animation: 'none' }} />
-          <Stack.Screen name="onboarding3" options={{ headerShown: false }} />
           <Stack.Screen name="onboarding4" options={{ headerShown: false }} />
-          <Stack.Screen name="onboarding5" options={{ headerShown: false }} />
           <Stack.Screen name="sala" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />

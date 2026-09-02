@@ -9,8 +9,9 @@ import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
-import { ensureAnonSession } from '@/lib/supabase';
+import { usuarioActualId } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
+import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 const FOREST      = '#3A4F2A';
 const FOREST_SOFT = '#6B7A56';
@@ -41,6 +42,7 @@ function formatTime(s: number) {
 }
 
 export default function EscanerScreen() {
+  useRecursoAbierto('escaner');
   const router = useRouter();
   const [phase, setPhase]   = useState<'idle' | 'running' | 'done'>('idle');
   const [stepIdx, setStepIdx] = useState(0);
@@ -51,7 +53,7 @@ export default function EscanerScreen() {
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    ensureAnonSession().then(uid => { userIdRef.current = uid; }).catch(() => {});
+    usuarioActualId().then(uid => { userIdRef.current = uid; }).catch(() => {});
   }, []);
 
   function stopTimer() {
@@ -75,9 +77,7 @@ export default function EscanerScreen() {
         if (si + 1 >= STEPS.length) {
           stopTimer();
           setPhase('done');
-          if (userIdRef.current) {
-            recordCompletion(userIdRef.current, 'escaner', TOTAL_SECONDS).catch(() => {});
-          }
+          recordCompletion(userIdRef.current, 'escaner', TOTAL_SECONDS).catch(() => {});
         } else {
           si++;
           se = 0;

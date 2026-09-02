@@ -10,6 +10,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 
 import { ViveFonts } from '@/constants/theme';
 import { TONOS, guardarTono, type Tono } from '@/constants/onboardingTonos';
+import { anotar, cronometro } from '@/lib/analytics';
 import { VitaWordmark } from '@/components/VitaWordmark';
 
 // Bifurcación usuario/profesional — rediseño 30/08/2026 (maqueta de Andre).
@@ -95,7 +96,6 @@ const BASE = {
 // última es la de más adentro y ES el borde del color — el relleno cierra sobre
 // ese mismo path, así superficie y líneas no pueden desincronizarse.
 const LINEAS = [
-  { punta: 0.210, cuello: 0.525 },
   { punta: 0.238, cuello: 0.532 },
   { punta: 0.266, cuello: 0.539 },
   { punta: 0.295, cuello: 0.546 },
@@ -187,7 +187,12 @@ export default function OnboardingBifurcacion() {
   const titleAnim = useRef(new Animated.Value(0)).current;
   const splitAnim = useRef(new Animated.Value(0)).current;
 
+  // Cuánto tarda en decidirse entre las dos alas. Ver `elegir`.
+  const medir = useRef(cronometro()).current;
+
   useEffect(() => {
+    anotar('onboarding_pantalla_vista', { pantalla: 'bifurcacion' });
+
     Animated.stagger(130, [
       Animated.timing(brandAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
       Animated.timing(titleAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
@@ -232,6 +237,12 @@ export default function OnboardingBifurcacion() {
   function elegir(c: Camino) {
     if (yendo.current) return;   // el segundo toque no dispara un segundo viaje
     yendo.current = true;
+
+    // 🔴 La bifurcación es la primera decisión real del producto y no se medía.
+    // Sumar profesionales es el cuello de botella, así que qué proporción elige
+    // "quiero acompañar" —y cuánto tarda en decidirlo— es de lo más importante
+    // que hay para saber acá.
+    anotar('onboarding_respuesta', { pantalla: 'bifurcacion', respuesta: c.id, segundos: medir() });
 
     // Se guarda además de viajar por parámetro: el tono tiene que sobrevivir
     // cinco pantallas, y reenviarlo en cada navegación significa que la primera

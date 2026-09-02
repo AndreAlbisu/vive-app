@@ -68,7 +68,8 @@ encuadre es **más defendible**, no menos exigente.
 era *inútil*; el del amigo es *falso*. Una app actuando intimidad da vergüenza
 ajena en una semana, y de ahí no se vuelve.
 
-Las cinco reglas que la hacen creíble, y sin las cuales no hay que construirla:
+Las seis reglas que la hacen creíble, y sin las cuales no hay que construirla
+(la 3.6 se sumó el 01/09/2026 y es la única que además es una obligación legal):
 
 ### 3.1 Recuerda la conversación, no los datos
 
@@ -108,6 +109,39 @@ sesión y ayudar a que llegue lo que pasó** — que enlaza directo con
 ### 3.5 No finge sentir
 
 *"Me alegro por vos"* de una app es mentira. Cálida y presente, sí. Persona, no.
+
+### 3.6 Se sabe que es una IA — y ahora además es obligatorio
+
+📝 **Agregado el 01/09/2026, al chequear viabilidad legal fuera de Argentina.**
+
+El **art. 50(1) del Reglamento de IA europeo** exige que un sistema que interactúa
+directamente con personas le informe a la persona que está interactuando con una
+IA. Rige desde el **02/08/2026**. Hay una excepción cuando resulta "obvio para una
+persona razonablemente informada y observadora", pero las guías de la Comisión
+advierten expresamente contra apoyarse en ella. Nos alcanza solo si hay usuarios
+en la UE — cosa que "Sesiones desde el exterior" invita explícitamente. El
+relevamiento completo está en `docs/legal-instrucciones.md`, sección "Chequeo de
+jurisdicciones".
+
+Lo interesante es que **§3.5 ya venía haciendo ese trabajo**, dos meses antes de
+que la norma rigiera: *"Cálida y presente, sí. Persona, no."* La regla de producto
+y la obligación legal apuntan al mismo lado.
+
+⚠️ **Pero la tensión con el objetivo de §1 es real y no se resuelve sola.** Una
+voz diseñada para *sentirse* como alguien que está, que además tiene que
+declararse máquina. Se puede —Sofía tiene nombre y cara, y nadie la confunde con
+una persona— pero es una restricción de diseño, no un checkbox al pie:
+
+- La declaración no puede ser una nota legal escondida. Si la voz se vuelve más
+  cálida y la aclaración se vuelve más chica, se está construyendo justo lo que
+  §3 llama *falso*.
+- Sirve de test: **si la tarjeta necesita que no se sepa que es una IA para
+  funcionar, está mal diseñada.** Un amigo a distancia que además es un programa
+  sigue acompañando; uno que depende de que lo confundas con una persona, no.
+
+Ojo con el **art. 50(2)** (marcado del contenido generado en formato legible por
+máquina): entendemos que recae sobre quien provee el sistema generativo, no sobre
+quien lo despliega, pero está preguntado — ver `docs/paquete-abogado.md` B.6.
 
 ## 4. Una voz, no dos
 
@@ -213,7 +247,13 @@ y que no la persiga afuera. Al menos hasta que la voz tenga crédito ganado.
    texto libre. Es lo que más mueve la aguja contra "básica e inútil".
 3. **Cambiar el registro de las frases a presente**, con las reglas actuales
    eligiendo cuándo y en qué tono. Sin tocar la arquitectura.
-4. **Diseñar el piso de seguridad** (§5 ter) antes de darle más voz.
+4. **Diseñar el piso de seguridad** (§5 ter) antes de darle más voz. ⚠️ Con la
+   distinción *derivación vs. triage* a la vista desde el principio — es lo que
+   mantiene a Vita fuera del encuadre de dispositivo médico (ver "Chequeo de
+   jurisdicciones" en `legal-instrucciones.md`).
 5. **Agregar el silencio** (3.3) y los guardarraíles nuevos a `rejectCopy`.
+5 bis. **Resolver cómo se declara que es IA** (3.6), en el mismo momento en que
+   se decide el nombre y la identidad — no después. Es más barato diseñar la voz
+   sabiendo que lleva la etiqueta que agregársela a una voz ya escrita.
 6. **Recién después** unificar con Sofía, y solo si para entonces el panel no
    sigue prometiendo un chat que no existe.

@@ -347,7 +347,7 @@ export default function CoachWeeklyPatternScreen() {
                       disabled={!canSave || saving}
                     >
                       {saving ? (
-                        <ActivityIndicator size="small" color="#565E32" />
+                        <ActivityIndicator size="small" color={ViveColors.onPrimaryInk} />
                       ) : (
                         <Text style={s.saveBtnText}>Guardar bloque</Text>
                       )}
@@ -530,9 +530,14 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.60)',
   },
-  durationChipActive: { backgroundColor: ViveColors.primary, borderColor: ViveColors.primary },
+  durationChipActive: { backgroundColor: ViveColors.primaryInk, borderColor: ViveColors.primaryInk },
   durationChipText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#87835C' },
-  durationChipTextActive: { color: '#565E32' },
+  // 🔴 Se escapó de la primera barrida: era oliva sobre la terracota clara
+  // (1.78:1), o sea que ELEGIR una duración volvía a ese chip el más difícil de
+  // leer de la fila — el estado seleccionado señalaba al revés. La auditoría no
+  // lo encontró porque solo emparejaba estilos `<nombre>Text`, y este se llama
+  // `durationChipTextActive`.
+  durationChipTextActive: { color: ViveColors.onPrimaryInk },
 
   formActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
   cancelBtn: {
@@ -548,10 +553,15 @@ const s = StyleSheet.create({
     flex: 1.5,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveBtnDisabled: { backgroundColor: `${ViveColors.primary}55` },
-  saveBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
+  // 🔴 Atenúa el botón ENTERO en vez de lavarle el fondo. Lavándolo, el fondo
+  // se aclaraba hasta ~#D7B8AA y el texto crema quedaba en 1.63:1 — invisible
+  // justo cuando hay que leer qué falta completar. Con `opacity`, el texto y su
+  // fondo bajan juntos y conservan sus 4.59:1; el control se apaga contra la
+  // página, que es lo que "deshabilitado" tiene que comunicar.
+  saveBtnDisabled: { opacity: 0.45 },
+  saveBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#F7EFE4' },
 });

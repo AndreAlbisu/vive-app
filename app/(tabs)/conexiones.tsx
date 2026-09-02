@@ -14,7 +14,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,6 +33,7 @@ import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { altoDeEje } from '@/lib/ejesLayout';
 import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
 import { rankDeck, SLOT_COLORS, type DeckSlotKey } from '@/lib/coachDeckRanking';
+import { anotar } from '@/lib/analytics';
 
 // ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
 const FOREST      = '#3F512F';
@@ -138,6 +139,27 @@ export default function ConexionesScreen() {
   const [rebookData, setRebookData]     = useState<RebookData | null>(null);
   const [unreadCount, setUnreadCount]   = useState(0);
 
+  // ── Llegar desde el onboarding ────────────────────────────────────────────
+  // El final del onboarding manda acá con la puerta de lo que la persona acaba
+  // de contar (`lib/onboardingRespuestas.ts` → `CATEGORIA_A_PUERTA`).
+  //
+  // 🔴 Abre el MENÚ de su eje con su tema destacado, NO el deck de esa puerta.
+  // La primera versión abría el deck y Andre lo frenó: se sentía forzado, y
+  // tenía razón. El perfil para el que existe este camino es "el que tiene un
+  // problema y no sabe qué necesita" — no saber qué necesitás no es estar listo
+  // para pagarle a alguien, y ponerle un mazo de personas adelante a los
+  // sesenta segundos de abrir la app colapsa las dos cosas. Acá ve que hay
+  // gente de lo suyo, pero elige ella si entra.
+  //
+  // 🔴 Se aplica UNA SOLA VEZ. El parámetro se queda pegado a la ruta del tab
+  // después de navegar, así que sin el ref cada vuelta al tab —o cada
+  // `backToAxes`— volvería a abrir el eje solo y no habría forma de salir de él.
+  const { puerta } = useLocalSearchParams<{ puerta?: string }>();
+  const puertaAplicada = useRef(false);
+  // La puerta que el onboarding sugiere. Solo destaca una fila del menú: no
+  // filtra, no reordena y no navega.
+  const [puertaSugerida, setPuertaSugerida] = useState<string | null>(null);
+
   // ── Cache poll ────────────────────────────────────────────────────────────
   useEffect(() => {
     prefetchCoaches();
@@ -150,6 +172,20 @@ export default function ConexionesScreen() {
     t = setInterval(check, 80);
     return () => clearInterval(t);
   }, []);
+
+  useEffect(() => {
+    if (!puerta || puertaAplicada.current) return;
+    const door = DOORS.find(d => d.id === puerta);
+    // ⚠️ Un id que no existe se ignora en silencio y la pantalla queda en el
+    // menú, que es su estado normal. Marcamos igual como aplicado: reintentar
+    // con un id inválido no lo va a volver válido.
+    puertaAplicada.current = true;
+    if (!door) return;
+    const eje = EJES.find(e => e.color === door.color);
+    if (!eje) return;
+    setSelectedAxisId(eje.id);
+    setPuertaSugerida(door.id);
+  }, [puerta]);
 
   // ── Notificaciones no leídas ──────────────────────────────────────────────
   const fetchNotifCount = useCallback(() => {
@@ -259,7 +295,7 @@ export default function ConexionesScreen() {
   }
 
   function toggleFav(profileId: string) {
-    if (!user) { requestAuth(); return; }
+    if (!user) { requestAuth('contactar_profesional'); return; }
     toggleFavorite(profileId);
   }
 
@@ -283,6 +319,16 @@ export default function ConexionesScreen() {
     setSelectedAxisId(null);
   }
   function openDoor(id: string) {
+    // 🔴 Es la medición que cierra el círculo del onboarding: comparar la puerta
+    // que le SUGERIMOS con la que abre de verdad. Si la mayoría abre otra, el
+    // mapa `CATEGORIA_A_PUERTA` está mal y esto lo dice sin que haya que
+    // adivinarlo. `sugerida` es null cuando no vino del onboarding.
+    anotar('conexiones_puerta_abierta', {
+      puerta: id,
+      sugerida: puertaSugerida ? id === puertaSugerida : null,
+      desde_onboarding: !!puertaSugerida,
+    });
+
     // Aseguro que el eje quede fijado (por si se abre desde los chips del deck).
     const door = DOORS.find(d => d.id === id);
     const eje = EJES.find(e => door && e.color === door.color);
@@ -322,7 +368,7 @@ export default function ConexionesScreen() {
               </TouchableOpacity>
               <Text style={s.deckHeaderTitle}>Profesionales</Text>
               <View style={s.hicons}>
-                <TouchableOpacity onPress={() => (user ? router.push('/favoritos') : requestAuth())} activeOpacity={0.7} hitSlop={8}>
+                <TouchableOpacity onPress={() => (user ? router.push('/favoritos') : requestAuth('ver_favoritos'))} activeOpacity={0.7} hitSlop={8}>
                   <Feather name="star" size={20} color={FOREST} />
                 </TouchableOpacity>
               </View>
@@ -526,7 +572,7 @@ export default function ConexionesScreen() {
             <Text style={s.title}>Profesionales</Text>
             <View style={s.hicons}>
               <TouchableOpacity
-                onPress={() => (user ? router.push('/notifications') : requestAuth())}
+                onPress={() => (user ? router.push('/notifications') : requestAuth('ver_notificaciones'))}
                 activeOpacity={0.7}
                 hitSlop={8}
                 style={s.bellBtn}>
@@ -534,7 +580,7 @@ export default function ConexionesScreen() {
                 {unreadCount > 0 && <View style={s.bellDot} />}
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => (user ? router.push('/favoritos') : requestAuth())}
+                onPress={() => (user ? router.push('/favoritos') : requestAuth('ver_favoritos'))}
                 activeOpacity={0.7}
                 hitSlop={8}>
                 <Feather name="star" size={22} color={FOREST} />
@@ -576,7 +622,11 @@ export default function ConexionesScreen() {
 
               <View style={s.askWrap}>
                 <Text style={s.askTitle}>{selectedAxis.label}</Text>
-                <Text style={s.askSub}>Elegí un tema y te presento a los profesionales indicados</Text>
+                <Text style={s.askSub}>
+                  {puertaSugerida
+                    ? 'Por lo que contaste, empezaría por el tema destacado — pero elegí el que quieras'
+                    : 'Elegí un tema y te presento a los profesionales indicados'}
+                </Text>
               </View>
 
               {/* Una sola tarjeta con los temas adentro, no una tarjeta por tema.
@@ -592,7 +642,14 @@ export default function ConexionesScreen() {
                 {doorsForEje(selectedAxis).map((d, i) => (
                   <View key={d.id}>
                     {i > 0 && <View style={s.doorSep} />}
-                    <ScaleCard style={s.doorRow} onPress={() => openDoor(d.id)}>
+                    {/* 📝 La sugerida se destaca SOLO con un fondo teñido del
+                        color que su ícono ya tiene. Nada de borde, sombra ni
+                        badge: sigue siendo una fila más de la lista, que es el
+                        punto — la estamos señalando, no eligiendo por ella. */}
+                    <ScaleCard
+                      style={[s.doorRow, d.id === puertaSugerida && { backgroundColor: tint(d.color, 0.10) }]}
+                      onPress={() => openDoor(d.id)}
+                    >
                       {/* Lo único que lleva el color del eje. El resto —título,
                           bajada, flecha— queda neutro a propósito: si la fila
                           tuviera además borde y sombra propios, le competirían el

@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   button: {
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 17,
-    color: '#565E32',
+    color: '#F7EFE4',
     letterSpacing: 0.3,
   },
   successContainer: {

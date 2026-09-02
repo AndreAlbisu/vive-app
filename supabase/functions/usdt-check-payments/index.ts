@@ -13,6 +13,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { USDT_TRC20_CONTRACT, findPayment, type TronTransfer } from '../_shared/usdt.ts'
 import { applyPaidBookingEffects } from '../_shared/booking-effects.ts'
+import { esServiceRole } from '../_shared/service-role.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -25,7 +26,7 @@ const VENTANA_MS = 24 * 60 * 60 * 1000
 
 serve(async (req) => {
   const authHeader = req.headers.get('Authorization') ?? ''
-  if (!authHeader.includes(SUPABASE_SERVICE_ROLE_KEY)) {
+  if (!esServiceRole(authHeader, SUPABASE_SERVICE_ROLE_KEY)) {
     return new Response('Unauthorized', { status: 401 })
   }
   if (!USDT_WALLET) {

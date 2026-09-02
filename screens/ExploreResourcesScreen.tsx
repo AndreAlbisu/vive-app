@@ -138,7 +138,7 @@ export default function ExploreResourcesScreen() {
   }
 
   async function toggleSave(resourceId: string) {
-    if (!user) { requestAuth(); return; }
+    if (!user) { requestAuth('explorar_recursos'); return; }
     const isSaved = savedIds.has(resourceId);
     setSavedIds(prev => {
       const next = new Set(prev);

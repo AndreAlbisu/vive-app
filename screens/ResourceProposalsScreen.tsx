@@ -65,7 +65,7 @@ function ProposalCard({ proposal }: { proposal: Proposal }) {
           onPress={() => router.push({ pathname: '/resource-proposal-new', params: { proposalId: proposal.id } })}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons name="pencil-outline" size={14} color="#565E32" />
+          <MaterialCommunityIcons name="pencil-outline" size={14} color={ViveColors.onPrimaryInk} />
           <Text style={styles.resubmitBtnText}>Ajustar y reenviar</Text>
         </TouchableOpacity>
       )}
@@ -230,14 +230,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 10,
     paddingVertical: 10,
   },
   resubmitBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 13,
-    color: '#565E32',
+    color: '#F7EFE4',
   },
   notesLabel: {
     fontFamily: ViveFonts.medium,

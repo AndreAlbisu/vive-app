@@ -64,7 +64,7 @@ export function ReminderBell({
   return (
     <>
       <TouchableOpacity
-        onPress={() => (user ? setSheetOpen(true) : requestAuth())}
+        onPress={() => (user ? setSheetOpen(true) : requestAuth('poner_recordatorio'))}
         hitSlop={10}>
         <MaterialCommunityIcons
           name={active ? 'bell' : 'bell-outline'}

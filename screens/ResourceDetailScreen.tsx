@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
 import { recordCompletion } from '@/lib/resourceCompletions';
+import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 type Resource = {
   id: string;
@@ -67,6 +68,11 @@ export default function ResourceDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const resourceId = typeof params.id === 'string' ? params.id : undefined;
+  // El 11º recurso: los de coach, con id dinámico. Mismo par abierto/completado
+  // que las herramientas de Vita, así se pueden comparar entre sí — que es la
+  // pregunta que importa acá (¿los recursos de coach se terminan más o menos
+  // que los nuestros?).
+  useRecursoAbierto(resourceId ?? 'desconocido');
 
   const { user, requestAuth } = useAuth();
 
@@ -175,7 +181,7 @@ export default function ResourceDetailScreen() {
   }, [playerStatus.playing]);
 
   async function toggleSave() {
-    if (!user) { requestAuth(); return; }
+    if (!user) { requestAuth('guardar_recurso'); return; }
     if (!resourceId) return;
     const wasSaved = saved;
     setSaved(!wasSaved);
@@ -195,7 +201,7 @@ export default function ResourceDetailScreen() {
   }
 
   async function togglePin() {
-    if (!user) { requestAuth(); return; }
+    if (!user) { requestAuth('pinear_recurso'); return; }
     if (!resourceId) return;
 
     if (pinned) {
@@ -479,7 +485,7 @@ export default function ResourceDetailScreen() {
                 onPress={() => Linking.openURL(resource.content.url)}
                 activeOpacity={0.85}
               >
-                <MaterialCommunityIcons name="open-in-new" size={20} color="#565E32" />
+                <MaterialCommunityIcons name="open-in-new" size={20} color={ViveColors.onPrimaryInk} />
                 <Text style={s.audioBtnText}>Escuchar</Text>
               </TouchableOpacity>
             ) : (
@@ -492,7 +498,7 @@ export default function ResourceDetailScreen() {
                   <MaterialCommunityIcons
                     name={playerStatus.playing ? 'pause-circle-outline' : 'play-circle-outline'}
                     size={22}
-                    color="#565E32"
+                    color={ViveColors.onPrimaryInk}
                   />
                   <Text style={s.audioBtnText}>{playerStatus.playing ? 'Pausar' : 'Escuchar'}</Text>
                 </TouchableOpacity>
@@ -538,7 +544,7 @@ export default function ResourceDetailScreen() {
                   }}
                   activeOpacity={0.85}
                 >
-                  <MaterialCommunityIcons name="check-circle-outline" size={20} color="#565E32" />
+                  <MaterialCommunityIcons name="check-circle-outline" size={20} color={ViveColors.onPrimaryInk} />
                   <Text style={s.audioBtnText}>Completé esta guía</Text>
                 </TouchableOpacity>
               )}
@@ -551,7 +557,7 @@ export default function ResourceDetailScreen() {
               onPress={() => setReaderOpen(true)}
               activeOpacity={0.85}
             >
-              <MaterialCommunityIcons name="book-open-variant" size={22} color="#565E32" />
+              <MaterialCommunityIcons name="book-open-variant" size={22} color={ViveColors.onPrimaryInk} />
               <Text style={s.audioBtnText}>Comenzar lectura</Text>
             </TouchableOpacity>
           )}
@@ -610,12 +616,12 @@ const s = StyleSheet.create({
 
   notFoundText: { fontFamily: ViveFonts.regular, fontSize: 14, color: 'rgba(135,131,92,0.80)' },
   notFoundBtn: {
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 24,
   },
-  notFoundBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
+  notFoundBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#F7EFE4' },
 
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
   typeBadge: {
@@ -683,11 +689,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     borderRadius: 14,
     paddingVertical: 14,
   },
-  audioBtnText: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#565E32' },
+  audioBtnText: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#F7EFE4' },
   audioTime: { fontFamily: ViveFonts.medium, fontSize: 12, color: '#87835C', textAlign: 'center' },
 
   video: { width: '100%', aspectRatio: 16 / 9, borderRadius: 12, backgroundColor: '#000', overflow: 'hidden' },

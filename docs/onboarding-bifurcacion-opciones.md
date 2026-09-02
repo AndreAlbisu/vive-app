@@ -1,8 +1,11 @@
 # Qué hacer con "¿Cómo te gustaría empezar?"
 
-> 31/08/2026. Revisión de la pantalla hecha con Andre. **La decisión NO está
-> tomada**: este documento existe para que Andre y Joaquín elijan entre cuatro
-> caminos. Lo que sí se arregló en la misma sesión está marcado como tal.
+> 31/08/2026. Revisión de la pantalla hecha con Andre. Lo que se arregló en la
+> misma sesión está marcado como tal.
+>
+> ✅ **DECIDIDO el 01/09/2026 por Andre: la opción A**, y ya está implementada
+> (ver §6). El resto del documento se deja como estaba — es el razonamiento que
+> llevó a la decisión, y sirve para entender por qué el flujo quedó así.
 >
 > Autocontenido a propósito: se puede leer sin abrir el repo.
 >
@@ -234,3 +237,85 @@ Detrás de "Dale" van las preguntas de la opción A.
    gratis y sin cuenta.
 4. **Qué pasa con los temas** si se eligen A, C o D: se sueltan, o se renombran
    al vocabulario de los coaches aceptando perder los que no tienen contraparte.
+
+---
+
+## 6. Lo decidido y construido — 01/09/2026
+
+**Andre eligió A.** Las cuatro decisiones de §5 quedaron cerradas así:
+
+1. **Opción A.** El onboarding pasa de cuatro pantallas para todos a **una para
+   quien vino a mirar y dos para quien trae algo**.
+2. **Instrumentado el embudo entero** (ver §7), no solo las dos pantallas
+   nuevas. La próxima vez que se discuta esto va a haber números.
+3. **"Solo estoy mirando" va a Recursos**, no a Inicio.
+4. **Los temas se sueltan.** No se renombran: el paso 3 salió del flujo. El
+   campo `temas` sigue existiendo, opcional, para poder leer lo que ya está
+   guardado en dispositivos reales.
+
+**El flujo ahora:**
+
+| Pantalla | Pregunta | Va a |
+|---|---|---|
+| `OnboardingScreen2` | **¿Qué te trae por acá?** — cuerpo · cabeza · rumbo · solo mirando | *mirando* → Recursos · el resto → abajo |
+| | *(rediseñada sobre el boceto de Andre, 01/09: filas en vez de tarjetas, título a la izquierda, navegación directa al tocar)* | |
+| `OnboardingScreen4` | **¿Qué aspecto querés explorar?** (*Última pregunta*) | Profesionales, **en el menú de su eje con su tema destacado** |
+
+⚠️ **La primera versión abría el deck de la puerta** —el mazo de personas para
+reservar— y Andre lo frenó: *"se siente como que lo querés forzar un poco"*.
+Tenía razón, y el error fue de razonamiento: el defecto original era "el botón
+miente", y lo arreglé cumpliendo la promesa a rajatabla en vez de preguntarme si
+la promesa estaba bien. El perfil para el que existe este camino es **"el que
+tiene un problema y no sabe qué necesita"**, y no saber qué necesitás no es lo
+mismo que estar listo para pagarle a alguien. Ahora ve que hay gente de lo suyo
+—su tema destacado entre los del eje— pero elige ella si entra.
+
+**Lo que se borró**: `OnboardingScreen3` (el universo, que se comió la pantalla
+2) y `OnboardingScreen5` (los temas), con sus rutas. Están en git.
+
+**La cuarta taxonomía**: para poder abrir la puerta correcta hizo falta un mapa
+nuevo, `CATEGORIA_A_PUERTA` en `lib/onboardingRespuestas.ts` — las puertas son
+capa de presentación y no se derivan ni del universo ni del `topic`. Es a mano,
+y un test verifica que las nueve categorías caigan en puertas que existan, que
+no se repitan y que un id desconocido no rompa nada.
+
+📝 **Lo que NO se tocó en su diseño**: `OnboardingScreen1` (la bienvenida) y la
+bifurcación usuario/profesional. Las dos sí quedaron instrumentadas.
+
+---
+
+## 7. La instrumentación — 01/09/2026
+
+> *"Todo es prueba y testeo: necesitamos saber qué cosas tocan y deciden los
+> usuarios, para ver qué llama la atención, qué no, qué sirve y qué no."* — Andre
+
+🔴 **El problema que había que resolver primero**: `registrarEvento` escribe
+`user_id` sacándolo de la sesión, y **en todo el onboarding no hay sesión**. Sin
+más, los eventos caían todos con `user_id` en null y eran indistinguibles entre
+sí: se podría contar cuánta gente tocó cada opción, pero **no si dos eventos son
+de la misma persona** — o sea, habría conteos pero no embudo, que es lo único
+que sirve para decidir. Por eso existe `lib/onboardingAnalytics.ts`: un id
+anónimo por dispositivo que viaja en `properties.sesion` de cada evento.
+
+**Los eventos:**
+
+| Evento | Dónde | Qué contesta |
+|---|---|---|
+| `onboarding_pantalla_vista` | bienvenida · bifurcación · las dos preguntas | Dónde se cae la gente |
+| `onboarding_opcion_tocada` | la pregunta de categoría | **Qué llama la atención**, con `orden`: el primer toque es lo que atrajo, los siguientes son los que se lo pensaron |
+| `onboarding_respuesta` | las cuatro pantallas | Qué elige, con `segundos` (y `toques` donde hay paso de confirmación) — dos personas que eligen lo mismo, una en 2s y otra en 20s, no dicen lo mismo sobre la pregunta |
+| `onboarding_fin` | las dos preguntas | Dónde aterriza y con qué puerta sugerida |
+| `onboarding_registro` | `AuthContext` | **El puente**: única fila con `user_id` y `sesion` juntos |
+| `conexiones_puerta_abierta` | Profesionales | Con `sugerida`: **si abre la que le sugerimos u otra** |
+
+📝 **`conexiones_puerta_abierta` es la que evalúa la decisión de hoy.** Si la
+mayoría de los que llegan del onboarding abre una puerta distinta a la
+destacada, el mapa `CATEGORIA_A_PUERTA` está mal — y lo va a decir el dato, no
+una discusión.
+
+⚠️ **`onboarding_opcion_tocada` ya no sale de "¿Qué te trae por acá?"**: desde el rediseño del 01/09/2026 esa pantalla navega al tocar la fila, así que tocar **es** responder y el evento sería un duplicado de `onboarding_respuesta`. Se perdió `toques` como señal de duda ahí; queda `segundos`, que mide lo mismo por otro lado. La pregunta de categoría sí lo conserva, porque todavía tiene paso de confirmación.
+
+📝 **La bienvenida se mide aparte por una razón concreta**: avanza con un *long
+press*, así que tiene una forma de perder gente que ninguna otra pantalla tiene
+—no entender que hay que sostener—, y sin medirla una caída ahí se leería como
+que la app no le interesó a nadie.

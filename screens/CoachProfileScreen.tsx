@@ -634,7 +634,7 @@ export default function CoachProfileScreen() {
               {uploadingAvatar ? (
                 <ActivityIndicator size="small" color="#F7EFE4" />
               ) : (
-                <MaterialCommunityIcons name="camera-outline" size={16} color="#565E32" />
+                <MaterialCommunityIcons name="camera-outline" size={16} color={ViveColors.onPrimaryInk} />
               )}
             </TouchableOpacity>
           </View>
@@ -702,7 +702,7 @@ export default function CoachProfileScreen() {
                   activeOpacity={0.85}
                 >
                   {savingBio ? (
-                    <ActivityIndicator size="small" color="#565E32" />
+                    <ActivityIndicator size="small" color={ViveColors.onPrimaryInk} />
                   ) : (
                     <Text style={s.priceSaveBtnText}>Guardar</Text>
                   )}
@@ -835,7 +835,7 @@ export default function CoachProfileScreen() {
                   activeOpacity={0.85}
                 >
                   {savingPrice ? (
-                    <ActivityIndicator size="small" color="#565E32" />
+                    <ActivityIndicator size="small" color={ViveColors.onPrimaryInk} />
                   ) : (
                     <Text style={s.priceSaveBtnText}>Guardar</Text>
                   )}
@@ -1245,7 +1245,10 @@ const s = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: ViveColors.primary,
+    // Botón de solo ícono: no lo agarró la barrida porque no tiene estilo de
+    // texto. Su ícono estaba en 1.78:1 mientras su propio spinner ya venía en
+    // crema — el mismo botón se contradecía.
+    backgroundColor: ViveColors.primaryInk,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -1479,7 +1482,7 @@ const s = StyleSheet.create({
     color: '#87835C',
   },
   priceSaveBtn: {
-    backgroundColor: ViveColors.primary,
+    backgroundColor: ViveColors.primaryInk,
     paddingVertical: 9,
     paddingHorizontal: 18,
     borderRadius: 18,
@@ -1489,7 +1492,7 @@ const s = StyleSheet.create({
   priceSaveBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 13,
-    color: '#565E32',
+    color: '#F7EFE4',
   },
 
   // Toggle

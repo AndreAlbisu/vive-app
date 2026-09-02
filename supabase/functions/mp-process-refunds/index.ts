@@ -15,6 +15,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getFreshCoachToken } from '../_shared/mp.ts'
+import { esServiceRole } from '../_shared/service-role.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -27,7 +28,7 @@ const MAX_ATTEMPTS = 6
 serve(async (req) => {
   // Solo service role (lo llama el cron con la service key en el Authorization).
   const authHeader = req.headers.get('Authorization') ?? ''
-  if (!authHeader.includes(SUPABASE_SERVICE_ROLE_KEY)) {
+  if (!esServiceRole(authHeader, SUPABASE_SERVICE_ROLE_KEY)) {
     return new Response('Unauthorized', { status: 401 })
   }
 
