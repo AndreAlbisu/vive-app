@@ -58,7 +58,7 @@ No son legales puras, son tuyas (con tu contador/abogado):
 ### Paso 3 — Revisión legal (obligatoria)
 
 > 📦 **El paquete listo para enviar está en `docs/paquete-abogado.md`.** Junta
-> el contexto del negocio, los cinco puntos que bloquean, los cuatro que no, y
+> el contexto del negocio, los once puntos que bloquean, los seis que no, y
 > las tres consultas de IA — redactado para que se entienda sin conocer la app.
 > Este archivo es el interno (estado, qué se destraba con cada respuesta); ese
 > otro es el que se manda. ⚠️ Antes de enviarlo hay que **decidir si va la
@@ -67,7 +67,7 @@ Llevá los dos borradores ya completados (pasos 1 y 2) a un/a abogado/a. Puntos 
 
 - [ ] **Cláusula de jurisdicción frente a consumidores** (T&C §22) — tiene límites estrictos en Argentina; no se puede perjudicar al consumidor.
 - [ ] **Mecanismo de consentimiento de datos sensibles** (Política §3) — cómo se obtiene y registra el consentimiento explícito para mood/diario/mensajes.
-- [ ] 🔴 **Transferencia internacional de datos** (Política §7) — **el punto más flojo del borrador.** EEUU no está en la lista de países adecuados de la AAIP, y hoy le mandamos ahí ánimo, diario, gratitud y mensajes (Supabase), video (Daily) y push (Expo). §7 solo dice que Vita "procurará" garantías adecuadas. El instrumento probable son las **CCM de la Res. AAIP 198/2023**. Ver la sección "Chequeo de jurisdicciones" más abajo.
+- [ ] 🔴 **Transferencia internacional de datos** (Política §7) — **el punto más flojo del borrador.** Ni Brasil ni EEUU están en la lista de países adecuados de la AAIP, y ahí van hoy el ánimo, el diario, la gratitud y los mensajes (Supabase, región `sa-east-1` / São Paulo). §7 solo dice que Vita "procurará" garantías adecuadas. El instrumento probable son las **CCM de la Res. AAIP 198/2023**. Ver la sección "Chequeo de jurisdicciones" más abajo.
 - [ ] **Limitación de responsabilidad e indemnidad** (T&C §18–19) — qué se sostiene ante un juez argentino.
 - [ ] **Aviso de salud y emergencias** (T&C §5) — redacción fina, sobre todo por tener psicólogos/as en la plataforma.
 - [ ] **Cláusula anti-solicitación / no elusión** (T&C §10) — que sea ejecutable.
@@ -300,13 +300,27 @@ fácil. Pero el chequeo devolvió que **el riesgo real no estaba ahí**.
 
 ### Argentina
 
-- **EEUU no está en la lista de países con nivel adecuado de la AAIP.** La lista
-  tiene UE/EEE, Reino Unido, Suiza, Canadá (sector privado), Nueva Zelanda,
-  Uruguay e Israel.
-- La app ya transfiere a EEUU **dato sensible identificado y completo**: ánimo,
-  diario, gratitud y contenido de mensajes (Supabase), video de las sesiones
-  (Daily.co), notificaciones (Expo). Comparado con eso, el payload de la IA es
-  ruido.
+- **La lista de países adecuados de la AAIP** (Disposición 60-E/2016) son los
+  Estados miembro de la UE y del EEE, Reino Unido, Suiza, Guernsey, Jersey, Isla
+  de Man, Islas Feroe, Canadá (solo sector privado), Andorra, Nueva Zelanda,
+  Uruguay e Israel (solo datos con tratamiento automatizado). **Ni Brasil ni
+  Estados Unidos están.**
+- 📌 **Dónde está el dato — verificado el 01/09/2026 con `supabase projects list`
+  y contra el código, no estimado:**
+  - **Supabase** → región **`sa-east-1`, São Paulo (Brasil)**. Ahí vive TODO lo
+    sensible: ánimo, diario, gratitud, contenido de los mensajes. Empresa
+    estadounidense, dato en Brasil — son dos preguntas distintas.
+  - **Daily.co** → **no almacena nada**. Solo guarda si se activa su API de
+    grabación, y `create-meeting-room` crea las salas sin `enable_recording`.
+    Transporta audio y video, no los conserva.
+  - **Expo** → guarda el **token** del dispositivo; el contenido de la
+    notificación va por memoria y colas hasta entregarlo a Apple/Google, no a una
+    base.
+- ⚠️ **Corrección del 01/09:** la primera versión de esta sección puso a Supabase
+  en EEUU sin verificarlo, y así viajó al paquete del abogado. El dato está en
+  Brasil. La conclusión no cambia (tampoco es país adecuado), pero el país
+  determina el instrumento. Comparado con esa primera fila, el payload de la IA
+  sigue siendo ruido.
 - El instrumento probable son las **Cláusulas Contractuales Modelo de la
   Resolución AAIP 198/2023** (las de la RIPD, de uso libre, variante
   responsable→encargado), o las de la **Disposición DNPDP 60/2016**.
