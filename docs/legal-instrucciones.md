@@ -5,6 +5,7 @@ y **Política de Privacidad** de "borrador" a "publicado". Leé esto antes de to
 los otros dos archivos.
 
 ## Archivos
+- [`consentimiento-datos-sensibles.md`](./consentimiento-datos-sensibles.md) — 🆕 **la respuesta investigada a A.2 y B.3**: por qué el checkbox de T&C no alcanza para dato sensible, el diseño concreto del opt-in, el texto propuesto para Política §3, y cómo se hace el registro ante la AAIP (gratis, por TAD). ⚠️ Incluye un hallazgo incómodo: la letra del art. 7 es más dura que la práctica que todos aplican.
 - [`transferencias-internacionales.md`](./transferencias-internacionales.md) — 🆕 **la respuesta investigada a A.3**: dónde está cada dato (verificado), qué instrumento lo ampara, qué hay que hacer y el texto propuesto para Política §6/§7. Se escribió para no depender de una consulta paga.
 - [`terminos-y-condiciones.md`](./terminos-y-condiciones.md) — T&C (24 secciones).
 - [`politica-de-privacidad.md`](./politica-de-privacidad.md) — Política de Privacidad (14 secciones).
@@ -67,7 +68,7 @@ No son legales puras, son tuyas (con tu contador/abogado):
 Llevá los dos borradores ya completados (pasos 1 y 2) a un/a abogado/a. Puntos donde su revisión vale más (están marcados `[Validar con abogado]` en los textos):
 
 - [ ] **Cláusula de jurisdicción frente a consumidores** (T&C §22) — tiene límites estrictos en Argentina; no se puede perjudicar al consumidor.
-- [ ] **Mecanismo de consentimiento de datos sensibles** (Política §3) — cómo se obtiene y registra el consentimiento explícito para mood/diario/mensajes.
+- [ ] **Mecanismo de consentimiento de datos sensibles** (Política §3) — cómo se obtiene y registra el consentimiento explícito para mood/diario/mensajes. 📌 **Investigado**: ver `consentimiento-datos-sensibles.md`. Queda una sola pregunta de fondo, y es para la AAIP, no para un estudio.
 - [ ] 🔴 **Transferencia internacional de datos** (Política §7) — **el punto más flojo del borrador.** Ni Brasil ni EEUU están en la lista de países adecuados de la AAIP, y ahí van hoy el ánimo, el diario, la gratitud y los mensajes (Supabase, región `sa-east-1` / São Paulo). §7 solo dice que Vita "procurará" garantías adecuadas. El instrumento probable son las **CCM de la Res. AAIP 198/2023**. Ver la sección "Chequeo de jurisdicciones" más abajo.
 - [ ] **Limitación de responsabilidad e indemnidad** (T&C §18–19) — qué se sostiene ante un juez argentino.
 - [ ] **Aviso de salud y emergencias** (T&C §5) — redacción fina, sobre todo por tener psicólogos/as en la plataforma.

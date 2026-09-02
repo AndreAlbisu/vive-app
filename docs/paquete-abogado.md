@@ -114,6 +114,17 @@ tienen límites estrictos. ¿Qué corresponde poner, considerando que opero desd
 **Córdoba** y los usuarios pueden estar en cualquier provincia?
 
 **A.2 — Consentimiento de datos sensibles (Política §3).**
+📌 *Investigué esto antes de preguntarte — el relevamiento está en
+`docs/consentimiento-datos-sensibles.md`. Lo que sigue es lo que no pude
+resolver solo.*
+
+Me llamó la atención que el **art. 7 no menciona el consentimiento** entre las
+bases para tratar dato sensible, y que el inciso 3 prohíba directamente formar el
+archivo salvo para iglesias, partidos y sindicatos. Entiendo que la práctica
+admite el consentimiento expreso y escrito integrando el art. 7 con el art. 5,
+pero quiero saber **qué tan firme es esa lectura**, porque de eso depende toda la
+mitad de bienestar de la app y no una función suelta.
+
 ¿Cómo hay que **obtener y registrar** el consentimiento explícito para el
 registro de ánimo, el diario y los mensajes? Hoy hay un checkbox de aceptación
 de los Términos al registrarse, y se guarda fecha y una versión del texto
