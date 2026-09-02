@@ -12,7 +12,9 @@ import {
   Share,
   Animated,
   Easing,
+  PanResponder,
   type LayoutChangeEvent,
+  type GestureResponderEvent,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -52,6 +54,10 @@ function fmtClock(secs: number): string {
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function clamp01(x: number): number {
+  return Math.max(0, Math.min(1, x));
 }
 
 function extractYouTubeId(url: string): string | null {
@@ -119,18 +125,30 @@ function AudioPlayer({
   userId: string | undefined;
   resourceId: string;
 }) {
-  const player = useAudioPlayer(audioUrl);
+  // `downloadFirst` baja el archivo al device al crear el player (o sea, al abrir
+  // la pantalla), así el play arranca desde local en vez de esperar la descarga
+  // — clave con el storage en sa-east-1 y el usuario lejos. `updateInterval` más
+  // corto hace que el estado (buffering/playing) y la barra reaccionen antes.
+  const player = useAudioPlayer(audioUrl, { updateInterval: 250, downloadFirst: true });
   const status = useAudioPlayerStatus(player);
   const loggedPlay = useRef(false);
   const loggedComplete = useRef(false);
   const [speedIdx, setSpeedIdx] = useState(0);
   const [trackW, setTrackW] = useState(0);
+  const [pendingPlay, setPendingPlay] = useState(false);
+  const [scrubbing, setScrubbing] = useState(false);
+  const [scrubProgress, setScrubProgress] = useState(0);
 
   // Progreso animado: la barra la mueve el native driver de forma continua, en
   // vez de saltar con cada update de status (que llega ~cada 500ms y se veía
   // lagueado). Se re-sincroniza al valor real en cada tick.
   const anim = useRef(new Animated.Value(0)).current;
   const runningAnim = useRef<Animated.CompositeAnimation | null>(null);
+  // Espejos del último valor para leer dentro del PanResponder (creado una sola
+  // vez) sin quedar con la closure vieja.
+  const trackWRef = useRef(0);
+  const durationRef = useRef(0);
+  const scrubbingRef = useRef(false);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
@@ -180,6 +198,8 @@ function AudioPlayer({
   // pasar por el hilo de JS.
   useEffect(() => {
     runningAnim.current?.stop();
+    // Mientras el dedo arrastra, la barra la maneja el PanResponder — no pisar.
+    if (scrubbing) return;
     anim.setValue(progress);
     if (isPlaying && duration > 0 && remaining > 0) {
       const a = Animated.timing(anim, {
@@ -193,7 +213,13 @@ function AudioPlayer({
     }
     return () => { runningAnim.current?.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, duration, currentTime, rate]);
+  }, [isPlaying, duration, currentTime, rate, scrubbing]);
+
+  // Feedback de arranque: al tocar play, mostrar spinner hasta que suene de
+  // verdad (con downloadFirst suele ser instantáneo, pero cubre el buffering).
+  useEffect(() => {
+    if (isPlaying) setPendingPlay(false);
+  }, [isPlaying]);
 
   function cycleSpeed() {
     const next = (speedIdx + 1) % SPEEDS.length;
@@ -206,24 +232,63 @@ function AudioPlayer({
     setTrackW(e.nativeEvent.layout.width);
   }
 
+  // Espejos leídos por el PanResponder (ver arriba).
+  trackWRef.current = trackW;
+  durationRef.current = duration;
+  scrubbingRef.current = scrubbing;
+
+  function togglePlay() {
+    if (isPlaying) { player.pause(); return; }
+    setPendingPlay(true);
+    player.play();
+  }
+
+  // Arrastre de la barra: el mismo responder cubre tap (grant+release sin mover)
+  // y drag. Durante el arrastre movemos la barra bajo el dedo y recién soltamos
+  // el seek al release, para no bombardear seekTo en cada frame.
+  const pan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (e: GestureResponderEvent) => {
+        const p = clamp01((e.nativeEvent.locationX ?? 0) / (trackWRef.current || 1));
+        setScrubbing(true);
+        setScrubProgress(p);
+        anim.stopAnimation();
+        anim.setValue(p);
+      },
+      onPanResponderMove: (e: GestureResponderEvent) => {
+        const p = clamp01((e.nativeEvent.locationX ?? 0) / (trackWRef.current || 1));
+        setScrubProgress(p);
+        anim.setValue(p);
+      },
+      onPanResponderRelease: (e: GestureResponderEvent) => {
+        const p = clamp01((e.nativeEvent.locationX ?? 0) / (trackWRef.current || 1));
+        if (durationRef.current > 0) player.seekTo(p * durationRef.current);
+        anim.setValue(p);
+        setScrubProgress(p);
+        setScrubbing(false);
+      },
+      onPanResponderTerminate: () => setScrubbing(false),
+    })
+  ).current;
+
   // translateX de un fill de ancho completo, recortado por el track (overflow
   // hidden): de -trackW (vacío) a 0 (lleno). La perilla va de 0 a trackW.
   const fillTranslate = anim.interpolate({ inputRange: [0, 1], outputRange: [-trackW, 0] });
   const knobTranslate = anim.interpolate({ inputRange: [0, 1], outputRange: [0, trackW] });
 
+  // Tiempos mostrados: durante el arrastre, siguen al dedo.
+  const shownTime = scrubbing ? scrubProgress * duration : currentTime;
+  const shownRemaining = Math.max(0, duration - shownTime);
+  const showSpinner = pendingPlay && !isPlaying;
+
   const [gradFrom, gradTo] = resourceFormatGradient(format);
 
   return (
     <View style={ap.wrap}>
-      {/* Barra de progreso con perilla visible */}
-      <TouchableOpacity
-        style={ap.trackWrap}
-        onPress={(e) => {
-          const locationX = (e.nativeEvent as any).locationX ?? 0;
-          const width = trackW || (e.nativeEvent as any).layoutMeasurement?.width || 280;
-          if (duration > 0) player.seekTo((locationX / width) * duration);
-        }}
-        activeOpacity={1}>
+      {/* Barra de progreso: tap para saltar, o arrastrar la perilla */}
+      <View style={ap.trackWrap} {...pan.panHandlers}>
         <View style={ap.track} onLayout={onTrackLayout}>
           <Animated.View
             style={[ap.fill, { width: trackW, backgroundColor: color, transform: [{ translateX: fillTranslate }] }]}
@@ -231,14 +296,18 @@ function AudioPlayer({
         </View>
         <Animated.View
           pointerEvents="none"
-          style={[ap.knob, { backgroundColor: color, transform: [{ translateX: knobTranslate }] }]}
+          style={[
+            ap.knob,
+            scrubbing && ap.knobActive,
+            { backgroundColor: color, transform: [{ translateX: knobTranslate }] },
+          ]}
         />
-      </TouchableOpacity>
+      </View>
 
       {/* Transcurrido a la izquierda, RESTANTE en negativo a la derecha */}
       <View style={ap.timeRow}>
-        <Text style={ap.timeText}>{fmtClock(currentTime)}</Text>
-        <Text style={ap.timeText}>−{fmtClock(remaining)}</Text>
+        <Text style={ap.timeText}>{fmtClock(shownTime)}</Text>
+        <Text style={ap.timeText}>−{fmtClock(shownRemaining)}</Text>
       </View>
 
       {/* Controles: −15s, play (con el gradiente del formato), +15s */}
@@ -252,14 +321,19 @@ function AudioPlayer({
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => (isPlaying ? player.pause() : player.play())}
+          onPress={togglePlay}
+          disabled={showSpinner}
           activeOpacity={0.85}>
           <LinearGradient
             colors={[gradFrom, gradTo]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[ap.playBtn, { shadowColor: color }]}>
-            <Ionicons name={isPlaying ? 'pause' : 'play'} size={30} color="#fff" style={isPlaying ? undefined : { marginLeft: 3 }} />
+            {showSpinner ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Ionicons name={isPlaying ? 'pause' : 'play'} size={30} color="#fff" style={isPlaying ? undefined : { marginLeft: 3 }} />
+            )}
           </LinearGradient>
         </TouchableOpacity>
 
@@ -307,6 +381,9 @@ const ap = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 2,
   },
+  // Al arrastrar, la perilla crece un poco (feedback). Se compensa top/marginLeft
+  // para que siga centrada sobre el punto.
+  knobActive: { width: 18, height: 18, borderRadius: 9, top: 3, marginLeft: -9 },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between' },
   timeText: {
     fontFamily: ViveFonts.regular,
