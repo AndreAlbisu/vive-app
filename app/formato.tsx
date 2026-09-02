@@ -371,7 +371,7 @@ export default function FormatoScreen() {
 
         {/* Chips de tema */}
         {topics.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipsScroll} contentContainerStyle={s.chipsRow}>
             <TouchableOpacity style={[s.chip, !selectedTopic && s.chipActive]} onPress={() => setSelectedTopic(null)} activeOpacity={0.8}>
               <Text style={[s.chipText, !selectedTopic && s.chipTextActive]}>Todos</Text>
             </TouchableOpacity>
@@ -389,7 +389,7 @@ export default function FormatoScreen() {
         {loading ? (
           <View style={s.loadingBox}><ActivityIndicator color={FOREST} /></View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
             {filtered.length === 0 ? (
               <View style={s.emptyBox}>
                 <Text style={s.emptyText}>
@@ -489,12 +489,14 @@ const s = StyleSheet.create({
   },
   searchInput: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST, padding: 0 },
 
-  // `alignItems: 'center'` evita que la fila (contentContainer horizontal)
-  // herede el `stretch` por defecto y estire cada chip al alto del ScrollView.
-  chipsRow: { gap: 8, paddingHorizontal: 20, paddingBottom: 14, alignItems: 'center' },
+  // La ScrollView horizontal, sin alto acotado, se estiraba a ~460px (era el
+  // espacio en blanco de la vista lista). `chipsScroll` la fija al alto de los
+  // chips (maxHeight); `alignItems:'center'` + `alignSelf` en el chip evitan que
+  // se estiren adentro. Las tres cosas juntas — sin la altura acotada el resto
+  // no alcanza.
+  chipsScroll: { flexGrow: 0, maxHeight: 46, marginBottom: 14 },
+  chipsRow: { gap: 8, paddingHorizontal: 20, alignItems: 'center' },
   chip: {
-    // `alignSelf: 'flex-start'` es el cinturón y tirantes: el chip conserva su
-    // alto natural aunque el contenedor tenga alto de más.
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,248,240,0.6)', borderWidth: 1, borderColor: 'rgba(63,81,47,0.14)',
     borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
