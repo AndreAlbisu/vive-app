@@ -278,15 +278,16 @@ function AudioPlayer({
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e: GestureResponderEvent) => {
         const p = clamp01((e.nativeEvent.locationX ?? 0) / (trackWRef.current || 1));
+        // Frenar la animación nativa y NO tocar `anim` durante el gesto: la barra
+        // se dibuja desde `scrubProgress` (estado plano). Llamar setValue en cada
+        // move sobre un valor con native driver los desincroniza → salta.
+        anim.stopAnimation();
         setScrubbing(true);
         setScrubProgress(p);
-        anim.stopAnimation();
-        anim.setValue(p);
       },
       onPanResponderMove: (e: GestureResponderEvent) => {
         const p = clamp01((e.nativeEvent.locationX ?? 0) / (trackWRef.current || 1));
         setScrubProgress(p);
-        anim.setValue(p);
       },
       onPanResponderRelease: (e: GestureResponderEvent) => {
         const p = clamp01((e.nativeEvent.locationX ?? 0) / (trackWRef.current || 1));
@@ -305,8 +306,14 @@ function AudioPlayer({
 
   // translateX de un fill de ancho completo, recortado por el track (overflow
   // hidden): de -trackW (vacío) a 0 (lleno). La perilla va de 0 a trackW.
-  const fillTranslate = anim.interpolate({ inputRange: [0, 1], outputRange: [-trackW, 0] });
-  const knobTranslate = anim.interpolate({ inputRange: [0, 1], outputRange: [0, trackW] });
+  // En reproducción sale del valor animado (native driver); mientras se arrastra,
+  // de `scrubProgress` (número plano) para que siga al dedo sin pelear con nativo.
+  const fillTranslate = scrubbing
+    ? -trackW * (1 - scrubProgress)
+    : anim.interpolate({ inputRange: [0, 1], outputRange: [-trackW, 0] });
+  const knobTranslate = scrubbing
+    ? trackW * scrubProgress
+    : anim.interpolate({ inputRange: [0, 1], outputRange: [0, trackW] });
 
   // Tiempos mostrados: durante el arrastre, siguen al dedo.
   const shownTime = scrubbing ? scrubProgress * duration : currentTime;
