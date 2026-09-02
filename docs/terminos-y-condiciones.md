@@ -196,7 +196,9 @@ El Usuario puede dar de baja su cuenta en cualquier momento. Vita puede suspende
 
 22.1. Estos Términos se rigen por las leyes de la República Argentina.
 
-22.2. Para toda controversia, las partes se someten a los tribunales [ordinarios de la Ciudad Autónoma de Buenos Aires / los que correspondan]. **Respecto de los Clientes que revistan la calidad de consumidores, se estará a la jurisdicción y a los derechos irrenunciables que establece la Ley de Defensa del Consumidor (Ley 24.240) y normas concordantes** — no se aplicarán prórrogas de jurisdicción en su perjuicio. [Validar redacción de esta cláusula con abogado: las cláusulas de jurisdicción frente a consumidores tienen límites estrictos.]
+22.2. **Clientes consumidores.** Para toda controversia con un Usuario que revista la calidad de consumidor, será competente el tribunal correspondiente al lugar donde el consumidor recibió o debió recibir la prestación, conforme al artículo 1109 del Código Civil y Comercial de la Nación. **No se aplicarán prórrogas de jurisdicción en perjuicio del consumidor**, y quedan a salvo la jurisdicción y los derechos irrenunciables que establece la Ley 24.240 de Defensa del Consumidor y normas concordantes.
+
+22.3. **Profesionales.** Para toda controversia con un Profesional, que contrata con Vita en su carácter de prestador y no de consumidor, serán competentes los tribunales ordinarios de la Ciudad de Córdoba, Provincia de Córdoba.
 
 ## 23. Disposiciones Generales
 

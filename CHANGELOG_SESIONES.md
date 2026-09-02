@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-09-02 — Andre (sesión 157 · investigar la consulta legal en vez de pagarla)
+
+**Tocado:** `docs/terminos-y-condiciones.md` (§22), `docs/politica-de-privacidad.md` (§9), `docs/legal-instrucciones.md`, `docs/paquete-abogado.md`, `constants/legal.ts` + `web/legal/` (regenerados). Nuevos: `docs/transferencias-internacionales.md`, `docs/consentimiento-datos-sensibles.md`, `docs/consumo.md`, `docs/encuadre-salud-y-responsabilidad.md`. Sin cambios de código ni de schema.
+
+**Resumen — Andre no puede contratar un abogado, así que se investigaron las once preguntas que bloquean. Cuatro quedaron cerradas, dos con posición armada, y dos con peores noticias de las que había.**
+
+- ✅ **A.1 CERRADA y aplicada.** CCyC art. 1109: en contratos a distancia la jurisdicción la fija el lugar donde el consumidor recibió la prestación y **"la cláusula de prórroga de jurisdicción se tiene por no escrita"**. Poner CABA no era riesgoso, era inútil. §22 reescrito con dos párrafos: consumidores por el 1109, y Profesionales —que no son consumidores— en Córdoba, donde ahí sí se puede pactar.
+- ✅ **Política §9 completada gratis.** El corchete pedía "la mención informativa que la normativa exija respecto de la AAIP". La Disposición 10/2008 que la imponía **está derogada** por la Resolución AAIP 14/2018, cuyo art. 3 fija la leyenda vigente — se transcribió literal, más el derecho de acceso gratuito semestral del art. 14.3 de la 25.326.
+- 📉 **De 15 placeholders quedan 9, y 6 son fechas.** Los tres reales que sobreviven son A.5, A.2 y A.3, y los tres tienen texto propuesto esperando que exista lo que describen.
+- ✅ **A.3** (`transferencias-internacionales.md`): las CCM de la Res. 198/2023 **no son obligatorias**, admiten otro contrato equivalente y **no hay que registrarlas**. El DPA de Supabase se incorpora al aceptar los términos, trae las SCC europeas y su cláusula 6.1 obliga a mantener el dato en la región elegida. Daily no almacena nada; Expo guarda el token y no el contenido.
+- ✅ **A.2 + B.3** (`consentimiento-datos-sensibles.md`): 🔴 la letra del art. 7 es más dura que la práctica —el inc. 3 prohíbe formar el archivo salvo iglesias, partidos y sindicatos— y eso quedó dicho sin suavizar. El checkbox de T&C no alcanza, y Política §3 hoy da el consentimiento por conducta cuando la ley lo pide expreso. Diseño del opt-in, tabla `user_consents` escrita desde edge function, y el registro ante la AAIP que es gratis y por TAD.
+- ✅ **A.9 CERRADA**, y con norma que nadie tenía: la Res. 7/2002 **está derogada** por la **Res. 4/2025**. Sigue siendo obligatorio exhibir en pesos y la moneda extranjera ya no va en caracteres más chicos. El caso que no cierra es el coach que solo acepta rieles en dólares.
+- ⚠️ **A.5 y A.6 sin respuesta en la norma.** El CCyC 1116 no contempla la sesión ya prestada entre las excepciones al derecho de revocar, y Argentina no copió la regla europea del pago proporcional. Queda armada la mejor posición construible. De paso se explicó el desajuste ya anotado: §9.1 y §9.4 mezclan **cancelación** con **revocación**, que son institutos distintos, y "no se puede cancelar" es más atacable que "se cancela sin reembolso".
+- 🔴 **A.4 y A.7 resultaron el mismo problema, y es el peor** (`encuadre-salud-y-responsabilidad.md`). Por el art. 40 LDC y el precedente **Mercado Libre**, declararse intermediaria no decide nada: el tribunal miró el **rol real** y contaron Compra Protegida, Mercado Pago, Mercado Envíos y la comisión. **Vita marca en las cuatro** (garantía §9.3, opera el cobro, provee la sala, comisión) y suma dos: cura y verifica prestadores, y la anti-elusión §10 —que como prueba **juega en contra**. ⚠️ Empeoró con los rieles en dólares: con solo MP nunca tocaba los fondos, y con PayPal y USDT cobra ella. Y en A.4 el riesgo no era el aviso —que está bien— sino que **coaches y psicólogos/as se presentan igual**, cuando la Ley 23.277 reserva el diagnóstico y el tratamiento a quien tiene matrícula. Lo bueno: `coach_credentials` ya distingue matrícula, el coach no puede auto-verificarse y editar resetea a pendiente. Falta que la distinción llegue a la pantalla.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Averiguar un seguro de responsabilidad civil.** Es la mitigación que corresponde a una solidaria del art. 40 y preguntar el costo es gratis.
+- 🔴 **Mostrar antes de reservar si es psicólogo/a matriculado/a o coach.** Es la mitigación más barata de todo el documento.
+- **Consulta gratuita a la AAIP** por dos cosas: si el consentimiento habilita el tratamiento de dato sensible (art. 7), y si el DPA de Supabase satisface el estándar argentino.
+- Los tres textos propuestos (§3, §7 y el de §9.1) **no se publican** hasta que exista lo que describen.
+- Ninguna de estas investigaciones es asesoramiento legal. Sirven para que la consulta, si alguna vez se hace, sea una pregunta afilada.
+
+---
+
 ## 2026-09-02 — Joaquín (sesión 156 · Recursos: bug de chips + rediseño del reproductor y la vista lista)
 
 **Tocado:** `app/formato.tsx`, `app/coach-recurso.tsx`. Nuevo: `components/FormatSurface.tsx`. `tsc`, lint y 429 tests limpios. Sin migraciones.

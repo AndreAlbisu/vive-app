@@ -89,7 +89,9 @@ Algunos de los proveedores mencionados pueden almacenar o procesar datos en serv
 
 Conforme a la Ley 25.326, el Usuario tiene derecho a **acceder** a sus datos, **rectificarlos**, **actualizarlos** y **suprimirlos**, así como a solicitar información sobre su tratamiento. Para ejercerlos, puede escribir a vitaappar@gmail.com. Vita responderá en los plazos legales.
 
-La AAIP, órgano de control de la Ley 25.326, tiene la atribución de atender denuncias y reclamos de quienes vean afectados sus derechos. [Incluir la mención informativa que la normativa vigente requiera respecto de la AAIP.]
+El ejercicio del derecho de acceso es **gratuito**, y puede ejercerse a intervalos no inferiores a seis meses, salvo que se acredite un interés legítimo, conforme al artículo 14 inciso 3 de la Ley 25.326.
+
+> LA AGENCIA DE ACCESO A LA INFORMACIÓN PÚBLICA, en su carácter de Órgano de Control de la Ley N° 25.326, tiene la atribución de atender las denuncias y reclamos que interpongan quienes resulten afectados en sus derechos por incumplimiento de las normas vigentes en materia de protección de datos personales.
 
 ## 10. Conservación de los Datos
 

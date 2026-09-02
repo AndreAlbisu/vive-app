@@ -191,7 +191,9 @@ El Usuario puede dar de baja su cuenta en cualquier momento. Vita puede suspende
 
 22.1. Estos Términos se rigen por las leyes de la República Argentina.
 
-22.2. Para toda controversia, las partes se someten a los tribunales [ordinarios de la Ciudad Autónoma de Buenos Aires / los que correspondan]. **Respecto de los Clientes que revistan la calidad de consumidores, se estará a la jurisdicción y a los derechos irrenunciables que establece la Ley de Defensa del Consumidor (Ley 24.240) y normas concordantes** — no se aplicarán prórrogas de jurisdicción en su perjuicio. [Validar redacción de esta cláusula con abogado: las cláusulas de jurisdicción frente a consumidores tienen límites estrictos.]
+22.2. **Clientes consumidores.** Para toda controversia con un Usuario que revista la calidad de consumidor, será competente el tribunal correspondiente al lugar donde el consumidor recibió o debió recibir la prestación, conforme al artículo 1109 del Código Civil y Comercial de la Nación. **No se aplicarán prórrogas de jurisdicción en perjuicio del consumidor**, y quedan a salvo la jurisdicción y los derechos irrenunciables que establece la Ley 24.240 de Defensa del Consumidor y normas concordantes.
+
+22.3. **Profesionales.** Para toda controversia con un Profesional, que contrata con Vita en su carácter de prestador y no de consumidor, serán competentes los tribunales ordinarios de la Ciudad de Córdoba, Provincia de Córdoba.
 
 ## 23. Disposiciones Generales
 
@@ -289,7 +291,9 @@ Algunos de los proveedores mencionados pueden almacenar o procesar datos en serv
 
 Conforme a la Ley 25.326, el Usuario tiene derecho a **acceder** a sus datos, **rectificarlos**, **actualizarlos** y **suprimirlos**, así como a solicitar información sobre su tratamiento. Para ejercerlos, puede escribir a vitaappar@gmail.com. Vita responderá en los plazos legales.
 
-La AAIP, órgano de control de la Ley 25.326, tiene la atribución de atender denuncias y reclamos de quienes vean afectados sus derechos. [Incluir la mención informativa que la normativa vigente requiera respecto de la AAIP.]
+El ejercicio del derecho de acceso es **gratuito**, y puede ejercerse a intervalos no inferiores a seis meses, salvo que se acredite un interés legítimo, conforme al artículo 14 inciso 3 de la Ley 25.326.
+
+> LA AGENCIA DE ACCESO A LA INFORMACIÓN PÚBLICA, en su carácter de Órgano de Control de la Ley N° 25.326, tiene la atribución de atender las denuncias y reclamos que interpongan quienes resulten afectados en sus derechos por incumplimiento de las normas vigentes en materia de protección de datos personales.
 
 ## 10. Conservación de los Datos
 
@@ -367,7 +371,7 @@ Vita — Andre Albisu Lambertini, CUIT 20-46034087-0, De los Extremeños 5069, C
 `;
 
 /** Placeholders sin completar detectados al generar este archivo. */
-export const LEGAL_PLACEHOLDERS: string[] = ["[Incluir la mención informativa que la normativa vigente requiera respecto de la AAIP.]","[Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]","[Validar con abogado el mecanismo de obtención y registro del consentimiento explícito.]","[Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]","[Validar redacción de esta cláusula con abogado: las cláusulas de jurisdicción frente a consumidores tienen límites estrictos.]","[fecha]","[ordinarios de la Ciudad Autónoma de Buenos Aires / los que correspondan]"];
+export const LEGAL_PLACEHOLDERS: string[] = ["[Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]","[Validar con abogado el mecanismo de obtención y registro del consentimiento explícito.]","[Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]","[fecha]"];
 
 /** Identifica la versión EXACTA de los T&C + Política que el Usuario acepta.
  *  Es el sha256 (12 hex) del contenido de esos dos documentos, así que cambia
@@ -375,7 +379,7 @@ export const LEGAL_PLACEHOLDERS: string[] = ["[Incluir la mención informativa q
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '416392a6c15a';
+export const LEGAL_VERSION = '1aa3c074e84d';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

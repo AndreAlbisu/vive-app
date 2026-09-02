@@ -5,6 +5,7 @@ y **Política de Privacidad** de "borrador" a "publicado". Leé esto antes de to
 los otros dos archivos.
 
 ## Archivos
+- [`encuadre-salud-y-responsabilidad.md`](./encuadre-salud-y-responsabilidad.md) — 🆕 **A.4 y A.7, que resultaron ser el mismo problema.** 🔴 El documento con peores noticias: declararse intermediaria probablemente no alcance (art. 40 LDC + el precedente Mercado Libre), y el riesgo del encuadre de salud no es el aviso sino que coaches y psicólogos/as se presenten igual.
 - [`consumo.md`](./consumo.md) — 🆕 **la respuesta investigada a A.1, A.5, A.6 y A.9.** A.1 y A.9 quedan cerradas con texto listo; A.5 y A.6 no tienen respuesta en la norma y está dicho por qué.
 - [`consentimiento-datos-sensibles.md`](./consentimiento-datos-sensibles.md) — 🆕 **la respuesta investigada a A.2 y B.3**: por qué el checkbox de T&C no alcanza para dato sensible, el diseño concreto del opt-in, el texto propuesto para Política §3, y cómo se hace el registro ante la AAIP (gratis, por TAD). ⚠️ Incluye un hallazgo incómodo: la letra del art. 7 es más dura que la práctica que todos aplican.
 - [`transferencias-internacionales.md`](./transferencias-internacionales.md) — 🆕 **la respuesta investigada a A.3**: dónde está cada dato (verificado), qué instrumento lo ampara, qué hay que hacer y el texto propuesto para Política §6/§7. Se escribió para no depender de una consulta paga.
