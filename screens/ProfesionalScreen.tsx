@@ -151,6 +151,9 @@ export default function ProfesionalScreen() {
   // `file_path` —el path del documento— porque RLS filtra filas, no columnas.
   // El documento en sí no llega nunca hasta acá; lo que se muestra es el dato.
   const [credenciales, setCredenciales] = useState<PublicCredential[]>([]);
+  // `coach_credentials_public` ya filtra por `verificada`, así que basta con que
+  // exista una de tipo matrícula: la vista no devuelve pendientes ni rechazadas.
+  const tieneMatricula = credenciales.some(c => c.kind === 'matricula');
 
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
@@ -346,6 +349,45 @@ export default function ProfesionalScreen() {
               ))}
             </View>
           )}
+        </View>
+
+        {/* ── Qué es este profesional ───────────────────────────────────────
+            🔴 Este bloque se renderiza SIEMPRE, y ese es todo el punto.
+            Antes la única señal era el bloque "Formación", que es aditivo:
+            muestra lo que hay. Un coach sin matrícula no se veía distinto de un
+            psicólogo matriculado — se veía igual, con una sección menos. La
+            ausencia no comunicaba nada, y esa es justo la confusión que importa
+            evitar acá: la Ley 23.277 reserva el diagnóstico y el tratamiento a
+            quien tiene matrícula, así que alguien que la está pasando mal tiene
+            que poder distinguir terapia de acompañamiento ANTES de reservar.
+            Ver `docs/encuadre-salud-y-responsabilidad.md` §2.
+
+            ⚠️ Dos cuidados de redacción, los dos deliberados:
+            · Se afirma lo que Vita verificó, no lo que la persona es. No tener
+              matrícula cargada acá no prueba que no la tenga en la realidad, y
+              el texto no puede decir lo contrario.
+            · No se nombra la profesión. `kind === 'matricula'` dice que hay una
+              matrícula verificada, no de qué profesión — el título es texto
+              libre. Decir "psicólogo/a" sería inventar un dato. */}
+        <View style={s.section}>
+          <View style={[s.roleCard, tieneMatricula ? s.roleCardPro : s.roleCardCoach]}>
+            <MaterialCommunityIcons
+              name={tieneMatricula ? 'shield-check' : 'information-outline'}
+              size={18}
+              color={tieneMatricula ? '#42542F' : '#8A6A3B'}
+              style={{ marginTop: 1 }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.roleTitle, !tieneMatricula && s.roleTitleCoach]}>
+                {tieneMatricula ? 'Matrícula verificada por Vita' : 'Acompañamiento, no tratamiento'}
+              </Text>
+              <Text style={s.roleBody}>
+                {tieneMatricula
+                  ? 'Vita chequeó la matrícula habilitante de este profesional. El número está más abajo y podés verificarlo por tu cuenta.'
+                  : 'Vita no verificó una matrícula habilitante para este profesional. Sus sesiones son de acompañamiento y no constituyen atención psicológica.'}
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* ── Formación ─────────────────────────────────────────────────────
@@ -778,6 +820,19 @@ const s = StyleSheet.create({
   },
 
   // ── Formación ───────────────────────────────────────────────────────
+  // El estado sin matrícula NO va en rojo ni con ícono de alerta: no es una
+  // advertencia contra el coach, es información sobre qué tipo de sesión es.
+  // Pintarlo de peligro sería castigar a alguien que no hizo nada mal.
+  roleCard: {
+    flexDirection: 'row', gap: 10, alignItems: 'flex-start',
+    borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14,
+  },
+  roleCardPro:   { backgroundColor: '#DCE5CB' },
+  roleCardCoach: { backgroundColor: '#F0E7D6' },
+  roleTitle: { fontFamily: ViveFonts.semibold, fontSize: 13.5, color: '#42542F', marginBottom: 3 },
+  roleTitleCoach: { color: '#7A5B2E' },
+  roleBody: { fontFamily: ViveFonts.regular, fontSize: 12.5, lineHeight: 18, color: '#5F6647' },
+
   credHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   credBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
