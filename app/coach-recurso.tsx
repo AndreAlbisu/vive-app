@@ -125,11 +125,11 @@ function AudioPlayer({
   userId: string | undefined;
   resourceId: string;
 }) {
-  // `downloadFirst` baja el archivo al device al crear el player (o sea, al abrir
-  // la pantalla), así el play arranca desde local en vez de esperar la descarga
-  // — clave con el storage en sa-east-1 y el usuario lejos. `updateInterval` más
-  // corto hace que el estado (buffering/playing) y la barra reaccionen antes.
-  const player = useAudioPlayer(audioUrl, { updateInterval: 250, downloadFirst: true });
+  // Streaming (no `downloadFirst`): con el storage en sa-east-1 y el usuario
+  // lejos, bajar el archivo entero antes de arrancar dejaba el play colgado
+  // cargando para siempre. Streaming arranca en 1-2s (el spinner cubre esa
+  // espera). `updateInterval` corto → estado y barra reaccionan antes.
+  const player = useAudioPlayer(audioUrl, { updateInterval: 250 });
   const status = useAudioPlayerStatus(player);
   const loggedPlay = useRef(false);
   const loggedComplete = useRef(false);
@@ -234,10 +234,18 @@ function AudioPlayer({
   }, [isPlaying, duration, currentTime, rate, scrubbing]);
 
   // Feedback de arranque: al tocar play, mostrar spinner hasta que suene de
-  // verdad (con downloadFirst suele ser instantáneo, pero cubre el buffering).
+  // verdad (cubre el buffering inicial del streaming).
   useEffect(() => {
     if (isPlaying) setPendingPlay(false);
   }, [isPlaying]);
+
+  // Red de seguridad: si el play no arranca (error de red, etc.), soltar el
+  // spinner a los 8s para que el botón no quede trabado cargando.
+  useEffect(() => {
+    if (!pendingPlay) return;
+    const t = setTimeout(() => setPendingPlay(false), 8000);
+    return () => clearTimeout(t);
+  }, [pendingPlay]);
 
   function cycleSpeed() {
     const next = (speedIdx + 1) % SPEEDS.length;
