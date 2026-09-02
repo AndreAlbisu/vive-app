@@ -15,6 +15,7 @@ import {
   PanResponder,
   type LayoutChangeEvent,
   type GestureResponderEvent,
+  type PanResponderGestureState,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -144,11 +145,17 @@ function AudioPlayer({
   // lagueado). Se re-sincroniza al valor real en cada tick.
   const anim = useRef(new Animated.Value(0)).current;
   const runningAnim = useRef<Animated.CompositeAnimation | null>(null);
+  // Valor dedicado al arrastre: JS puro (nunca native driver), así `setValue` en
+  // cada frame no se pelea con nada y mueve la barra sin re-renderizar React.
+  const scrubAnim = useRef(new Animated.Value(0)).current;
   // Espejos del último valor para leer dentro del PanResponder (creado una sola
   // vez) sin quedar con la closure vieja.
+  const trackRef = useRef<View>(null);
+  const trackLeftRef = useRef(0);   // x absoluta del track en pantalla
   const trackWRef = useRef(0);
   const durationRef = useRef(0);
-  const scrubbingRef = useRef(false);
+  const scrubProgressRef = useRef(0);
+  const scrubTextTsRef = useRef(0); // throttle del texto de tiempo durante drag
   // Tras soltar un seek, el status sigue reportando la posición vieja por ~un
   // tick. `pendingSeek` mantiene la barra en el destino hasta que el status
   // converja ahí (o venza el timeout de seguridad) — así no parpadea.
@@ -256,12 +263,18 @@ function AudioPlayer({
 
   function onTrackLayout(e: LayoutChangeEvent) {
     setTrackW(e.nativeEvent.layout.width);
+    // Posición absoluta en pantalla para mapear el toque con precisión (locationX
+    // se vuelve relativo a subvistas durante el drag y salta). Solo importa la x,
+    // que no cambia al hacer scroll vertical.
+    trackRef.current?.measureInWindow((x, _y, w) => {
+      trackLeftRef.current = x;
+      if (w) trackWRef.current = w;
+    });
   }
 
   // Espejos leídos por el PanResponder (ver arriba).
-  trackWRef.current = trackW;
+  trackWRef.current = trackW || trackWRef.current;
   durationRef.current = duration;
-  scrubbingRef.current = scrubbing;
 
   function togglePlay() {
     if (isPlaying) { player.pause(); return; }
@@ -269,28 +282,37 @@ function AudioPlayer({
     player.play();
   }
 
-  // Arrastre de la barra: el mismo responder cubre tap (grant+release sin mover)
-  // y drag. Durante el arrastre movemos la barra bajo el dedo y recién soltamos
-  // el seek al release, para no bombardear seekTo en cada frame.
+  // Arrastre de la barra. Coordenada = x absoluta del toque menos el borde
+  // izquierdo real del track (medido). La barra la mueve `scrubAnim` (JS, sin
+  // re-render por frame); el texto de tiempo se actualiza throttled. El seek se
+  // dispara recién al soltar. El mismo responder cubre tap y drag.
+  const setScrubFromX = (absX: number) => {
+    const p = clamp01((absX - trackLeftRef.current) / (trackWRef.current || 1));
+    scrubProgressRef.current = p;
+    scrubAnim.setValue(p);
+    return p;
+  };
   const pan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (e: GestureResponderEvent) => {
-        const p = clamp01((e.nativeEvent.locationX ?? 0) / (trackWRef.current || 1));
-        // Frenar la animación nativa y NO tocar `anim` durante el gesto: la barra
-        // se dibuja desde `scrubProgress` (estado plano). Llamar setValue en cada
-        // move sobre un valor con native driver los desincroniza → salta.
+      onPanResponderGrant: (_e: GestureResponderEvent, g: PanResponderGestureState) => {
         anim.stopAnimation();
+        const p = setScrubFromX(g.x0);
+        setScrubProgress(p);
         setScrubbing(true);
-        setScrubProgress(p);
       },
-      onPanResponderMove: (e: GestureResponderEvent) => {
-        const p = clamp01((e.nativeEvent.locationX ?? 0) / (trackWRef.current || 1));
-        setScrubProgress(p);
+      onPanResponderMove: (_e: GestureResponderEvent, g: PanResponderGestureState) => {
+        const p = setScrubFromX(g.moveX);
+        // Texto de tiempo: como mucho ~cada 90ms (la barra ya es fluida aparte).
+        const now = Date.now();
+        if (now - scrubTextTsRef.current > 90) {
+          scrubTextTsRef.current = now;
+          setScrubProgress(p);
+        }
       },
-      onPanResponderRelease: (e: GestureResponderEvent) => {
-        const p = clamp01((e.nativeEvent.locationX ?? 0) / (trackWRef.current || 1));
+      onPanResponderRelease: (_e: GestureResponderEvent, g: PanResponderGestureState) => {
+        const p = setScrubFromX(g.moveX);
         if (durationRef.current > 0) {
           player.seekTo(p * durationRef.current);
           pendingSeekRef.current = p;
@@ -306,14 +328,11 @@ function AudioPlayer({
 
   // translateX de un fill de ancho completo, recortado por el track (overflow
   // hidden): de -trackW (vacío) a 0 (lleno). La perilla va de 0 a trackW.
-  // En reproducción sale del valor animado (native driver); mientras se arrastra,
-  // de `scrubProgress` (número plano) para que siga al dedo sin pelear con nativo.
-  const fillTranslate = scrubbing
-    ? -trackW * (1 - scrubProgress)
-    : anim.interpolate({ inputRange: [0, 1], outputRange: [-trackW, 0] });
-  const knobTranslate = scrubbing
-    ? trackW * scrubProgress
-    : anim.interpolate({ inputRange: [0, 1], outputRange: [0, trackW] });
+  // Reproducción → `anim` (native driver). Arrastre → `scrubAnim` (JS). Los dos
+  // son Animated, así que ningún modo re-renderiza React por frame.
+  const activeVal = scrubbing ? scrubAnim : anim;
+  const fillTranslate = activeVal.interpolate({ inputRange: [0, 1], outputRange: [-trackW, 0] });
+  const knobTranslate = activeVal.interpolate({ inputRange: [0, 1], outputRange: [0, trackW] });
 
   // Tiempos mostrados: durante el arrastre, siguen al dedo.
   const shownTime = scrubbing ? scrubProgress * duration : currentTime;
@@ -326,7 +345,7 @@ function AudioPlayer({
     <View style={ap.wrap}>
       {/* Barra de progreso: tap para saltar, o arrastrar la perilla */}
       <View style={ap.trackWrap} {...pan.panHandlers}>
-        <View style={ap.track} onLayout={onTrackLayout}>
+        <View ref={trackRef} style={ap.track} onLayout={onTrackLayout}>
           <Animated.View
             style={[ap.fill, { width: trackW, backgroundColor: color, transform: [{ translateX: fillTranslate }] }]}
           />
@@ -394,7 +413,9 @@ function AudioPlayer({
 const ap = StyleSheet.create({
   // Sin caja: los controles van directo sobre el fondo crema.
   wrap: { gap: 12, marginTop: 8, marginBottom: 24 },
-  trackWrap: { height: 24, justifyContent: 'center' },
+  // Banda de toque alta (40px) para agarrar la barra cómodo; el track visual
+  // sigue siendo fino (5px) y centrado.
+  trackWrap: { height: 40, justifyContent: 'center' },
   track: {
     height: 5,
     borderRadius: 3,
@@ -404,7 +425,7 @@ const ap = StyleSheet.create({
   fill: { position: 'absolute', left: 0, top: 0, height: '100%', borderRadius: 3 },
   knob: {
     position: 'absolute',
-    top: 5,
+    top: 13,
     left: 0,
     width: 14,
     height: 14,
@@ -420,7 +441,7 @@ const ap = StyleSheet.create({
   },
   // Al arrastrar, la perilla crece un poco (feedback). Se compensa top/marginLeft
   // para que siga centrada sobre el punto.
-  knobActive: { width: 18, height: 18, borderRadius: 9, top: 3, marginLeft: -9 },
+  knobActive: { width: 18, height: 18, borderRadius: 9, top: 11, marginLeft: -9 },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between' },
   timeText: {
     fontFamily: ViveFonts.regular,
