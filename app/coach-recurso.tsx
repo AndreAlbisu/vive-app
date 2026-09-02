@@ -149,6 +149,11 @@ function AudioPlayer({
   const trackWRef = useRef(0);
   const durationRef = useRef(0);
   const scrubbingRef = useRef(false);
+  // Tras soltar un seek, el status sigue reportando la posición vieja por ~un
+  // tick. `pendingSeek` mantiene la barra en el destino hasta que el status
+  // converja ahí (o venza el timeout de seguridad) — así no parpadea.
+  const pendingSeekRef = useRef<number | null>(null);
+  const pendingSeekAtRef = useRef(0);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
@@ -159,7 +164,6 @@ function AudioPlayer({
   const currentTime = status.currentTime ?? 0;
   const duration = status.duration ?? 0;
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
-  const remaining = Math.max(0, duration - currentTime);
   const rate = SPEEDS[speedIdx];
 
   useEffect(() => {
@@ -200,11 +204,25 @@ function AudioPlayer({
     runningAnim.current?.stop();
     // Mientras el dedo arrastra, la barra la maneja el PanResponder — no pisar.
     if (scrubbing) return;
-    anim.setValue(progress);
-    if (isPlaying && duration > 0 && remaining > 0) {
+
+    // Punto base = posición real, salvo que haya un seek pendiente cuyo destino
+    // el status todavía no refleja: en ese caso se sostiene el destino hasta que
+    // converja (o venza el timeout), evitando el parpadeo al soltar.
+    let base = progress;
+    const target = pendingSeekRef.current;
+    if (target !== null && duration > 0) {
+      const converged = Math.abs(currentTime - target * duration) <= 0.6;
+      const expired = Date.now() - pendingSeekAtRef.current > 1500;
+      if (converged || expired) pendingSeekRef.current = null;
+      else base = target;
+    }
+
+    anim.setValue(base);
+    const remainFromBase = duration * (1 - base);
+    if (isPlaying && duration > 0 && remainFromBase > 0) {
       const a = Animated.timing(anim, {
         toValue: 1,
-        duration: (remaining / rate) * 1000,
+        duration: (remainFromBase / rate) * 1000,
         easing: Easing.linear,
         useNativeDriver: true,
       });
@@ -264,7 +282,11 @@ function AudioPlayer({
       },
       onPanResponderRelease: (e: GestureResponderEvent) => {
         const p = clamp01((e.nativeEvent.locationX ?? 0) / (trackWRef.current || 1));
-        if (durationRef.current > 0) player.seekTo(p * durationRef.current);
+        if (durationRef.current > 0) {
+          player.seekTo(p * durationRef.current);
+          pendingSeekRef.current = p;
+          pendingSeekAtRef.current = Date.now();
+        }
         anim.setValue(p);
         setScrubProgress(p);
         setScrubbing(false);
