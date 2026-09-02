@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
   ActivityIndicator, Linking, Image,
 } from 'react-native';
+import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -331,9 +332,9 @@ export default function ResourceDetailScreen() {
             {feedbackState === 'submitted' && (
               <Text style={s.feedbackThanks}>Gracias por tu respuesta</Text>
             )}
-            <TouchableOpacity style={s.primaryBtn} onPress={closeReader} activeOpacity={0.85}>
+            <ScaleCard style={s.primaryBtn} onPress={closeReader} activeOpacity={0.85}>
               <Text style={s.primaryBtnText}>Volver</Text>
-            </TouchableOpacity>
+            </ScaleCard>
           </View>
         ) : (
           <>
@@ -367,7 +368,7 @@ export default function ResourceDetailScreen() {
                 <Text style={s.bodyText}>{pages[pageIdx]}</Text>
               </View>
 
-              <TouchableOpacity
+              <ScaleCard
                 style={s.primaryBtn}
                 onPress={() => {
                   if (isLast) {
@@ -381,7 +382,7 @@ export default function ResourceDetailScreen() {
                 activeOpacity={0.85}
               >
                 <Text style={s.primaryBtnText}>{isLast ? 'Terminé' : 'Siguiente'}</Text>
-              </TouchableOpacity>
+              </ScaleCard>
 
               <View style={{ height: 32 }} />
             </ScrollView>

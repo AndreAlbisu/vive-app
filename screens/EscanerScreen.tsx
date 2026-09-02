@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -125,9 +126,9 @@ export default function EscanerScreen() {
                   </View>
                 ))}
               </View>
-              <TouchableOpacity style={s.primaryBtn} onPress={handleStart} activeOpacity={0.85}>
+              <ScaleCard style={s.primaryBtn} onPress={handleStart} activeOpacity={0.85}>
                 <Text style={s.primaryBtnText}>Iniciar</Text>
-              </TouchableOpacity>
+              </ScaleCard>
             </>
           )}
 
@@ -167,9 +168,9 @@ export default function EscanerScreen() {
                 Recorriste todo el cuerpo de manera consciente.{'\n'}
                 Eso ya es mucho.
               </Text>
-              <TouchableOpacity style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
+              <ScaleCard style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
                 <Text style={s.primaryBtnText}>Volver</Text>
-              </TouchableOpacity>
+              </ScaleCard>
             </>
           )}
         </View>

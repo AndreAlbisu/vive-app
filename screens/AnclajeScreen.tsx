@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -109,9 +110,9 @@ export default function AnclajeScreen() {
                   </View>
                 ))}
               </View>
-              <TouchableOpacity style={s.primaryBtn} onPress={handleStart} activeOpacity={0.85}>
+              <ScaleCard style={s.primaryBtn} onPress={handleStart} activeOpacity={0.85}>
                 <Text style={s.primaryBtnText}>Empezar</Text>
-              </TouchableOpacity>
+              </ScaleCard>
             </>
           )}
 
@@ -145,7 +146,7 @@ export default function AnclajeScreen() {
                 ))}
               </View>
 
-              <TouchableOpacity
+              <ScaleCard
                 style={[s.primaryBtn, !complete && s.primaryBtnDisabled]}
                 onPress={handleNext}
                 disabled={!complete}
@@ -153,7 +154,7 @@ export default function AnclajeScreen() {
                 <Text style={[s.primaryBtnText, !complete && s.primaryBtnTextDisabled]}>
                   {isLast ? 'Terminar' : 'Siguiente'}
                 </Text>
-              </TouchableOpacity>
+              </ScaleCard>
             </>
           )}
 
@@ -165,9 +166,9 @@ export default function AnclajeScreen() {
                 Recorriste tus cinco sentidos.{'\n'}
                 Estás acá, ahora. Eso ya es mucho.
               </Text>
-              <TouchableOpacity style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
+              <ScaleCard style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
                 <Text style={s.primaryBtnText}>Volver</Text>
-              </TouchableOpacity>
+              </ScaleCard>
             </>
           )}
         </View>

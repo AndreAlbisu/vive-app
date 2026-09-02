@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
+import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -178,9 +179,9 @@ export default function RuidoScreen() {
             <MaterialCommunityIcons name="check-circle-outline" size={72} color={TERRACOTTA} />
             <Text style={s.subtitle}>Tiempo completado</Text>
             <Text style={s.description}>{formatTime(duration)} de descanso.</Text>
-            <TouchableOpacity style={s.primaryBtn} onPress={() => setPhase('idle')} activeOpacity={0.85}>
+            <ScaleCard style={s.primaryBtn} onPress={() => setPhase('idle')} activeOpacity={0.85}>
               <Text style={s.primaryBtnText}>Volver</Text>
-            </TouchableOpacity>
+            </ScaleCard>
           </View>
         ) : (
           <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
@@ -231,13 +232,13 @@ export default function RuidoScreen() {
               ))}
             </View>
 
-            <TouchableOpacity
+            <ScaleCard
               style={[s.primaryBtn, isRunning && s.stopBtn]}
               onPress={isRunning ? handleStop : handleStart}
               activeOpacity={0.85}>
               <MaterialCommunityIcons name={isRunning ? 'stop' : 'play'} size={16} color={CREAM_LIGHT} />
               <Text style={s.primaryBtnText}>{isRunning ? 'Detener' : 'Iniciar'}</Text>
-            </TouchableOpacity>
+            </ScaleCard>
 
             {isRunning && (
               <View style={s.runningBlock}>

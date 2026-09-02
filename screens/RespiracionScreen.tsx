@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, StatusBar } from 'react-native';
+import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -167,10 +168,10 @@ export default function RespiracionScreen() {
               </View>
               {orb}
               <Text style={[s.phaseSub, { marginTop: -8 }]}>{PHASE_S} segundos</Text>
-              <TouchableOpacity style={s.primaryBtn} onPress={handleStart} activeOpacity={0.85}>
+              <ScaleCard style={s.primaryBtn} onPress={handleStart} activeOpacity={0.85}>
                 <MaterialCommunityIcons name="play" size={16} color={CREAM_LIGHT} />
                 <Text style={s.primaryBtnText}>Iniciar</Text>
-              </TouchableOpacity>
+              </ScaleCard>
               <Text style={s.footerHint}>Se detiene sola al terminar — no necesitás hacer nada más.</Text>
             </>
           )}
@@ -198,9 +199,9 @@ export default function RespiracionScreen() {
               <Text style={s.doneSub}>
                 Completaste {formatTime(duration)} de respiración consciente.
               </Text>
-              <TouchableOpacity style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
+              <ScaleCard style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
                 <Text style={s.primaryBtnText}>Volver</Text>
-              </TouchableOpacity>
+              </ScaleCard>
             </>
           )}
         </View>

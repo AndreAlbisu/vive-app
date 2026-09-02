@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -133,9 +134,9 @@ export default function LecturasScreen() {
               Leíste {READINGS.length} textos cortos.{'\n'}
               Tomarte este espacio importa.
             </Text>
-            <TouchableOpacity style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
+            <ScaleCard style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
               <Text style={s.primaryBtnText}>Volver</Text>
-            </TouchableOpacity>
+            </ScaleCard>
           </View>
         ) : (
           <>
@@ -166,9 +167,9 @@ export default function LecturasScreen() {
                 <Text style={s.bodyText}>{reading.body}</Text>
               </View>
 
-              <TouchableOpacity style={s.primaryBtn} onPress={handleNext} activeOpacity={0.85}>
+              <ScaleCard style={s.primaryBtn} onPress={handleNext} activeOpacity={0.85}>
                 <Text style={s.primaryBtnText}>{isLast ? 'Terminé' : 'Siguiente'}</Text>
-              </TouchableOpacity>
+              </ScaleCard>
 
               <View style={{ height: 32 }} />
             </ScrollView>
