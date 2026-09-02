@@ -10,6 +10,9 @@ import {
   Linking,
   Image,
   Share,
+  Animated,
+  Easing,
+  type LayoutChangeEvent,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -121,16 +124,25 @@ function AudioPlayer({
   const loggedPlay = useRef(false);
   const loggedComplete = useRef(false);
   const [speedIdx, setSpeedIdx] = useState(0);
+  const [trackW, setTrackW] = useState(0);
+
+  // Progreso animado: la barra la mueve el native driver de forma continua, en
+  // vez de saltar con cada update de status (que llega ~cada 500ms y se veía
+  // lagueado). Se re-sincroniza al valor real en cada tick.
+  const anim = useRef(new Animated.Value(0)).current;
+  const runningAnim = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
   }, []);
 
   const isPlaying = status.playing;
+  const isLoaded = status.isLoaded;
   const currentTime = status.currentTime ?? 0;
   const duration = status.duration ?? 0;
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
   const remaining = Math.max(0, duration - currentTime);
+  const rate = SPEEDS[speedIdx];
 
   useEffect(() => {
     if (!userId) return;
@@ -144,14 +156,60 @@ function AudioPlayer({
     }
   }, [isPlaying, currentTime, duration, userId, resourceId]);
 
+  // Aplica la velocidad elegida. Se usa el método (no asignar `playbackRate`
+  // directo, que tira error en nativo) y se corrige el pitch para que no suene
+  // "ardilla". Guardado por isLoaded + try/catch para no romper la pantalla.
+  function applyRate(r: number) {
+    try {
+      if (status.isLoaded) player.setPlaybackRate(r, 'high');
+    } catch {
+      // el audio todavía no está listo; se re-aplica al cargar (efecto de abajo)
+    }
+  }
+
+  // Reaplica la velocidad cuando el audio termina de cargar (algunas plataformas
+  // resetean el rate al preparar la fuente).
+  useEffect(() => {
+    if (isLoaded) applyRate(rate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
+
+  // Motor de la barra suave: en cada cambio de estado real, frena la animación,
+  // fija el valor verdadero, y —si está sonando— la lanza hacia el final en
+  // tiempo real (segundos restantes / velocidad). useNativeDriver → 60fps sin
+  // pasar por el hilo de JS.
+  useEffect(() => {
+    runningAnim.current?.stop();
+    anim.setValue(progress);
+    if (isPlaying && duration > 0 && remaining > 0) {
+      const a = Animated.timing(anim, {
+        toValue: 1,
+        duration: (remaining / rate) * 1000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      });
+      runningAnim.current = a;
+      a.start();
+    }
+    return () => { runningAnim.current?.stop(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, duration, currentTime, rate]);
+
   function cycleSpeed() {
     const next = (speedIdx + 1) % SPEEDS.length;
     setSpeedIdx(next);
-    // Corrige el pitch para que subir la velocidad no suene "ardilla".
-    player.shouldCorrectPitch = true;
-    player.playbackRate = SPEEDS[next];
+    applyRate(SPEEDS[next]);
     registrarEvento('velocidad_cambiada', { velocidad: SPEEDS[next] }).catch(() => {});
   }
+
+  function onTrackLayout(e: LayoutChangeEvent) {
+    setTrackW(e.nativeEvent.layout.width);
+  }
+
+  // translateX de un fill de ancho completo, recortado por el track (overflow
+  // hidden): de -trackW (vacío) a 0 (lleno). La perilla va de 0 a trackW.
+  const fillTranslate = anim.interpolate({ inputRange: [0, 1], outputRange: [-trackW, 0] });
+  const knobTranslate = anim.interpolate({ inputRange: [0, 1], outputRange: [0, trackW] });
 
   const [gradFrom, gradTo] = resourceFormatGradient(format);
 
@@ -162,16 +220,18 @@ function AudioPlayer({
         style={ap.trackWrap}
         onPress={(e) => {
           const locationX = (e.nativeEvent as any).locationX ?? 0;
-          const width = (e.nativeEvent as any).layoutMeasurement?.width ?? 280;
+          const width = trackW || (e.nativeEvent as any).layoutMeasurement?.width || 280;
           if (duration > 0) player.seekTo((locationX / width) * duration);
         }}
         activeOpacity={1}>
-        <View style={ap.track}>
-          <View style={[ap.fill, { width: `${Math.round(progress * 100)}%` as any, backgroundColor: color }]} />
+        <View style={ap.track} onLayout={onTrackLayout}>
+          <Animated.View
+            style={[ap.fill, { width: trackW, backgroundColor: color, transform: [{ translateX: fillTranslate }] }]}
+          />
         </View>
-        <View
+        <Animated.View
           pointerEvents="none"
-          style={[ap.knob, { left: `${progress * 100}%` as any, backgroundColor: color }]}
+          style={[ap.knob, { backgroundColor: color, transform: [{ translateX: knobTranslate }] }]}
         />
       </TouchableOpacity>
 
@@ -230,10 +290,11 @@ const ap = StyleSheet.create({
     backgroundColor: 'rgba(58,79,42,0.14)',
     overflow: 'hidden',
   },
-  fill: { height: '100%', borderRadius: 3 },
+  fill: { position: 'absolute', left: 0, top: 0, height: '100%', borderRadius: 3 },
   knob: {
     position: 'absolute',
     top: 5,
+    left: 0,
     width: 14,
     height: 14,
     borderRadius: 7,
