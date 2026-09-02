@@ -4,6 +4,7 @@ import {
   StyleSheet, Animated, KeyboardAvoidingView, Platform, ScrollView, Alert,
   LayoutAnimation, UIManager, StatusBar,
 } from 'react-native';
+import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -467,7 +468,7 @@ export default function CoachLoginScreen() {
 
                   {error && <Text style={s.serverError}>{error}</Text>}
 
-                  <TouchableOpacity
+                  <ScaleCard
                     style={[s.enterBtn, anyLoading && s.enterBtnLoading]}
                     onPress={handleSubmit}
                     activeOpacity={0.85}
@@ -475,7 +476,7 @@ export default function CoachLoginScreen() {
                     {loading
                       ? <ActivityIndicator size="small" color="#F7EFE4" />
                       : <Text style={s.enterBtnText}>{needsName ? 'Crear cuenta' : 'Continuar'}</Text>}
-                  </TouchableOpacity>
+                  </ScaleCard>
                 </View>
               )}
             </Animated.View>

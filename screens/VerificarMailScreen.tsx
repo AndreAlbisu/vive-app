@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
   StyleSheet, StatusBar, Animated, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ViveFonts } from '@/constants/theme';
@@ -282,7 +283,7 @@ export default function VerificarMailScreen() {
               {!!error && <Text style={s.error}>{error}</Text>}
               {!error && !!aviso && <Text style={s.aviso}>{aviso}</Text>}
 
-              <TouchableOpacity
+              <ScaleCard
                 style={[s.enterBtn, verificando && s.enterBtnLoading]}
                 onPress={verificar}
                 activeOpacity={0.85}
@@ -290,7 +291,7 @@ export default function VerificarMailScreen() {
                 {verificando
                   ? <ActivityIndicator size="small" color="#F7EFE4" />
                   : <Text style={s.enterBtnText}>Confirmar</Text>}
-              </TouchableOpacity>
+              </ScaleCard>
 
               <TouchableOpacity
                 onPress={() => enviarCodigo()}

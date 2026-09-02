@@ -5,6 +5,21 @@
 
 ---
 
+## 2026-09-02 — Joaquín (sesión 155 · device review cont. + animación de escala en los CTA)
+
+**Tocado:** `app/formato.tsx`, y los CTA de: `screens/{Ruido,Lecturas,Anclaje,Sueno,Meditacion,Escaner,Respiracion,Relajacion,ResourceDetail}Screen.tsx`, `screens/{Login,Register,CoachLogin,VerificarMail,NuevaContrasena}Screen.tsx`, `screens/BookingScreen_Confirm.tsx`.
+
+**Resumen — sale de la device review de Recursos: transiciones smooth al tocar, y luego pasada de esa animación a los CTA principales de la app (opción A acordada).**
+
+- **Recursos / deck**: pedido de Joaquín — "que tocar una card tenga la transición smooth como el resto de la app". Las cards del deck y los bloques de acción (ver como lista, pedile reco) pasaron de `TouchableOpacity` a `ScaleCard` (el press-scale que ya usa el resto). La card entera es tocable; el bookmark queda como touchable interno.
+- **"Todos los botones" → opción A**: Joaquín pidió la animación en todos los botones. Se acordó **no** hacerlo literal (448 `TouchableOpacity` en 84 archivos, muchos son íconos/links/filas/back/tab-bar que se verían raros y sería un sweep riesgoso a ciegas). En su lugar, **pasada enfocada en los CTA principales** de los flujos más tocados:
+  - Batch 1: los 19 `primaryBtn` de las 9 pantallas de herramientas/recursos.
+  - Batch 2: los `enterBtn` de las 5 pantallas de auth (login, registro, coach-login, verificar-mail, nueva-contraseña) + el "Confirmar reserva" de `BookingScreen_Confirm`.
+  - Conversión con reemplazo preciso por archivo (`\bprimaryBtn\b`/`\benterBtn\b` en el tag de apertura, que no matchea `...BtnText`/`...BtnLoading`; import agregado donde faltaba). Los secundarios/íconos/links (`backBtn`, `ghostBtn`, `emailBtn`, `cancelBtn`, chevrons, tab bar) quedan **afuera** a propósito.
+- 📝 **Queda un long tail de CTA one-off** con nombres sueltos (`confirmBtn`, `saveBtn`, `submitBtn`, `heroBtn`, etc.) en coach/admin/otras pantallas, sin convertir — menor valor y más riesgo por edición. Se puede extender si Joaquín quiere, como tanda aparte.
+- Typecheck, lint y 429 tests limpios (se traía el batch de Andre de la sesión 154: `primaryInk`/`onPrimaryInk` para contraste, "Sobre vos", legal — merge sano). No confirmado en dispositivo.
+
+**Pendiente de la device review (sigue):** ver el resultado de la animación en el teléfono; y lo que faltaba — Recursos (grilla + deck + lista), coach-login, onboarding con color, baja de cuenta, recuperación de contraseña. 📝 Consultá abierta de Joaquín: no le cerraba la tarjeta "Pedile una recomendación a [coach]" del formato — falta charlarlo (qué la hace confusa: el concepto, el copy, o que muestra "Coach Prueba").
 ## 2026-09-01 — Andre (sesión 154 · el silencio de "Sobre vos" y los dos guardarraíles que faltaban)
 
 **Tocado:** `lib/weeklyReflection.ts`, `lib/sobreVosMomentoStorage.ts`, `app/(tabs)/index.tsx`, `supabase/functions/weekly-reflection/index.ts` (solo el prompt), `__tests__/weeklyReflection.test.ts`. Nuevos: `lib/sobreVosSilencio.ts`, `__tests__/sobreVosSilencio.test.ts`. **429 tests** (eran 414), `tsc` y lint limpios. Sin cambios de schema.

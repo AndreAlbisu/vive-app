@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
+import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -97,12 +98,12 @@ export default function NuevaContrasenaScreen() {
                   abrirlo en el mismo teléfono donde lo pediste. Pedí uno nuevo desde el inicio de
                   sesión.
                 </Text>
-                <TouchableOpacity
+                <ScaleCard
                   style={s.enterBtn}
                   onPress={() => router.replace('/login')}
                   activeOpacity={0.85}>
                   <Text style={s.enterBtnText}>Volver al inicio de sesión</Text>
-                </TouchableOpacity>
+                </ScaleCard>
               </View>
             )}
 
@@ -110,12 +111,12 @@ export default function NuevaContrasenaScreen() {
               <View style={s.headingArea}>
                 <Text style={s.heading}>Listo</Text>
                 <Text style={s.subheading}>Ya podés entrar con tu contraseña nueva.</Text>
-                <TouchableOpacity
+                <ScaleCard
                   style={s.enterBtn}
                   onPress={() => router.replace('/(tabs)' as any)}
                   activeOpacity={0.85}>
                   <Text style={s.enterBtnText}>Entrar</Text>
-                </TouchableOpacity>
+                </ScaleCard>
               </View>
             )}
 
@@ -158,7 +159,7 @@ export default function NuevaContrasenaScreen() {
 
                   {error && <Text style={s.serverError}>{error}</Text>}
 
-                  <TouchableOpacity
+                  <ScaleCard
                     style={s.enterBtn}
                     onPress={guardar}
                     activeOpacity={0.85}
@@ -166,7 +167,7 @@ export default function NuevaContrasenaScreen() {
                     {guardando
                       ? <ActivityIndicator size="small" color="#F7EFE4" />
                       : <Text style={s.enterBtnText}>Guardar contraseña</Text>}
-                  </TouchableOpacity>
+                  </ScaleCard>
                 </View>
               </>
             )}

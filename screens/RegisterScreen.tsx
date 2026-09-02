@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
+import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -377,7 +378,7 @@ export default function RegisterScreen() {
                   <Text style={s.serverError}>{serverError}</Text>
                 )}
 
-                <TouchableOpacity
+                <ScaleCard
                   style={[s.enterBtn, (!canSubmit || loading) && s.enterBtnDisabled]}
                   onPress={handleRegister}
                   activeOpacity={0.85}
@@ -387,7 +388,7 @@ export default function RegisterScreen() {
                     ? <ActivityIndicator size="small" color="#565E32" />
                     : <Text style={s.enterBtnText}>Crear cuenta</Text>
                   }
-                </TouchableOpacity>
+                </ScaleCard>
               </View>
             )}
           </Animated.View>

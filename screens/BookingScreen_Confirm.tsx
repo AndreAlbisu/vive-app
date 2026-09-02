@@ -19,6 +19,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
+import { ScaleCard } from '@/components/ScaleCard';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { necesitaVerificarMail } from '@/lib/emailVerificado';
@@ -1050,7 +1051,7 @@ export default function BookingScreen_Confirm() {
             </View>
           )}
 
-          <TouchableOpacity
+          <ScaleCard
             style={[s.btn, loading && s.btnLoading]}
             onPress={onConfirm}
             disabled={loading}
@@ -1063,7 +1064,7 @@ export default function BookingScreen_Confirm() {
             ) : (
               <Text style={s.btnText}>Confirmar reserva</Text>
             )}
-          </TouchableOpacity>
+          </ScaleCard>
 
           {/* Acá iba "Garantía de primera sesión — si no quedás conforme, te
               devolvemos el dinero". Se sacó el 10/08/2026: es una promesa

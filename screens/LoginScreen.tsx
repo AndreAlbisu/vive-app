@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
+import { ScaleCard } from '@/components/ScaleCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -291,7 +292,7 @@ export default function LoginScreen() {
                     <Text style={s.serverError}>{serverError}</Text>
                   )}
 
-                  <TouchableOpacity
+                  <ScaleCard
                     style={[s.enterBtn, loading && s.enterBtnLoading]}
                     onPress={handleEmailLogin}
                     activeOpacity={0.85}
@@ -299,7 +300,7 @@ export default function LoginScreen() {
                     {loading
                       ? <ActivityIndicator size="small" color="#1A1A2E" />
                       : <Text style={s.enterBtnText}>Entrar</Text>}
-                  </TouchableOpacity>
+                  </ScaleCard>
 
                   <TouchableOpacity
                     style={s.forgotWrap}
