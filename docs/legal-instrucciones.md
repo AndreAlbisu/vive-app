@@ -5,6 +5,7 @@ y **Política de Privacidad** de "borrador" a "publicado". Leé esto antes de to
 los otros dos archivos.
 
 ## Archivos
+- [`transferencias-internacionales.md`](./transferencias-internacionales.md) — 🆕 **la respuesta investigada a A.3**: dónde está cada dato (verificado), qué instrumento lo ampara, qué hay que hacer y el texto propuesto para Política §6/§7. Se escribió para no depender de una consulta paga.
 - [`terminos-y-condiciones.md`](./terminos-y-condiciones.md) — T&C (24 secciones).
 - [`politica-de-privacidad.md`](./politica-de-privacidad.md) — Política de Privacidad (14 secciones).
 - Ambos son **BORRADORES**. No se publican ni entran en vigencia sin revisión de un/a abogado/a matriculado/a en Argentina.

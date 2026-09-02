@@ -158,6 +158,14 @@ Tres preguntas que me quedan de la tabla misma:
       Técnicamente es una migración, no un rediseño, y la UE **sí** está en la
       lista. Si eso resuelve el punto, es el camino que prefiero.
 
+📌 **Investigué esto por mi cuenta antes de preguntarte, así que la consulta es
+más chica de lo que parece.** El relevamiento completo está en
+`docs/transferencias-internacionales.md`. En resumen: los tres proveedores tienen
+acuerdos de tratamiento de datos, y el de Supabase incorpora las cláusulas tipo
+europeas y se acepta con los términos, sin firma. La Res. 198/2023 admite
+expresamente contratos distintos de su modelo si reflejan los mismos principios.
+**Mi posición es que eso alcanza. Lo que necesito saber es si me equivoco.**
+
 Mi lectura, para que la confirmes o la corrijas: el camino son las **Cláusulas
 Contractuales Modelo aprobadas por la Resolución AAIP 198/2023** (las de la Red
 Iberoamericana de Protección de Datos, de uso libre), en la variante
