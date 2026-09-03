@@ -2,7 +2,24 @@
 --
 -- Consentimiento específico para el tratamiento de datos sensibles.
 --
--- ⚠️ PENDIENTE DE CORRER al 03/09/2026.
+-- ✅ CORRIDO y VERIFICADO el 03/09/2026. Las tres verificaciones dieron bien:
+-- la tabla y la vista existen (401 con la anon key contra 404 de una tabla
+-- inventada), `authenticated` tiene **solo SELECT**, y hay una sola policy
+-- (`user_consents_select_own`, cmd = r).
+--
+-- 🔴 PERO LA PRIMERA CORRIDA DEJÓ UN HUECO, y quedó anotado porque es
+-- instructivo: el `revoke` original decía `insert, update, delete` y eso NO
+-- alcanza. Supabase concede por default `TRUNCATE`, `REFERENCES` y `TRIGGER` a
+-- `authenticated` sobre todo `public`, así que después de correr el script la
+-- verificación devolvía SELECT + TRUNCATE + REFERENCES + TRIGGER.
+--
+-- `TRUNCATE` es el que importa: **la RLS no lo filtra**. Las policies aplican a
+-- select/insert/update/delete, no a truncate — o sea que `user_consents_select_own`
+-- no protegía nada contra vaciar la tabla entera. El `revoke` de abajo ya está
+-- corregido; se corrió aparte y la verificación quedó limpia.
+--
+-- 📌 El hueco es de TODO el proyecto, no de esta tabla: ver
+-- `scripts/revoke-truncate-trigger-references.sql`.
 --
 -- ── Por qué existe ───────────────────────────────────────────────────────────
 -- Hasta hoy la única constancia era `profiles.accepted_terms`: un checkbox de
@@ -85,7 +102,12 @@ create policy user_consents_select_own on public.user_consents
 -- Sin policies de insert/update/delete a propósito: con RLS activa y sin
 -- policy, la operación se rechaza. El service role las saltea por definición.
 
-revoke insert, update, delete on public.user_consents from authenticated;
+-- ⚠️ `truncate` va en la lista y no es un detalle: la RLS NO lo filtra. Sin él,
+-- cualquier usuario autenticado podría vaciar la tabla entera aunque la policy
+-- solo le deje ver sus propias filas. `references` y `trigger` van por higiene —
+-- tampoco tienen por qué estar, y también los concede Supabase por default.
+revoke insert, update, delete, truncate, references, trigger
+  on public.user_consents from authenticated;
 revoke all on public.user_consents from anon;
 
 
@@ -143,8 +165,10 @@ grant select on public.user_consents_current to authenticated;
 --   from information_schema.role_table_grants
 --   where table_schema = 'public' and table_name = 'user_consents'
 --     and grantee = 'authenticated';
---   -- esperado: SELECT y nada más. Si aparece INSERT o UPDATE, el revoke no
---   -- corrió y la constancia vuelve a ser falsificable por su titular.
+--   -- esperado: SELECT y nada más. Si aparece INSERT o UPDATE, la constancia
+--   -- vuelve a ser falsificable por su titular. Si aparece TRUNCATE, cualquiera
+--   -- puede vaciar la tabla: la RLS no filtra truncate.
+--   -- ✅ 03/09/2026: devolvió SELECT, y nada más.
 --
 --   -- 3) RLS activa y con una sola policy
 --   select relrowsecurity from pg_class
