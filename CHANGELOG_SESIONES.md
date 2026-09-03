@@ -5,6 +5,34 @@
 
 ---
 
+## 2026-09-03 — Andre (sesión 159 · revisión crítica de las propuestas de Joaquín, y un bug que salió de ahí)
+
+**Tocado:** `lib/weeklyReflection.ts`, `lib/sobreVosMomento.ts`, `hooks/useDailyReflection.ts`, `supabase/functions/weekly-reflection/index.ts`, `__tests__/weeklyReflection.test.ts`. **438 tests** (eran 429), `tsc` y lint limpios. Sin schema.
+
+**Resumen — se hizo la revisión crítica que pidió Joaquín en las sesiones 156/158. Salieron seis objeciones, dos decisiones cerradas y un bug real que ya estaba en producción.**
+
+- 🔴 **BUG ARREGLADO: con UN solo check-in la card decía "Tu semana viene pareja".** `empty` solo cubría cero registros, `sustained-low` y las dos de tendencia exigen `MIN_SAMPLE = 3`, así que uno o dos registros caían derecho al fallback `level` — que afirma algo sobre **la semana** a partir de **un día**. Y le tocaba justo a quien recién llega, que es el caso más común mientras la base sea chica. Señal nueva **`early`** entre medio.
+- ⚠️ **La primera versión del arreglo tenía una regresión, y me la encontró el test viejo.** Alguien que registra un único día y ese día es un bajón recibía la invitación neutra a seguir registrando — o sea, no acusar recibo justo cuando más hace falta. `early` quedó con **dos juegos de variantes**: gentle si el promedio es ≤ 2 (nombra el día, cede el tono, nunca dice "semana"), neutral si no.
+- **`early` va DESPUÉS de sesiones/racha/prácticas a propósito.** Esas señales no dependen de cuántos moods haya: una sesión de esta semana es cierta con un check-in o con siete. Lo único que había que frenar era la afirmación sobre el nivel de la semana. Hay tests que fijan las dos cosas.
+- **Alineado el resto:** `early` se suma a `LOW_VALUE_SIGNALS` (no dispara el momento — es una invitación, no una noticia), `useDailyReflection` no le pide frase al modelo (lo único honesto ahí es "todavía no sé lo suficiente", y para eso no hace falta un modelo), y la edge function acepta la señal y sabe qué hacer con ella.
+- 📝 **El test viejo documentaba el bug como intencional** (`casos: [[1], [2], ...]` con el comentario "a la rama de nivel llegan con una o dos entradas"). Se actualizó: los niveles 1 y 2 ya no llegan a `level` por ningún camino.
+
+**Revisión crítica de las dos propuestas — lo que se le devuelve a Joaquín:**
+
+- 🔴 **El catálogo invalida la Fase 1 y él mismo lo encontró.** Hay 8 objetivos y 8 recursos de coaches: **uno por objetivo**. El ranker no elige entre varios, devuelve el único que hay. Para que un peso mueva el resultado hacen falta 3-4 por objetivo, o sea **25-30 recursos**. Debajo de eso lo que sirve es un **filtro por intención**, que es un `where` y no un módulo con pesos.
+- 🔴 **La Fase 1 no está destrabada legalmente.** El §6 dice que el comportamiento no es dato sensible. **No se sostiene:** TJUE **C-184/20** (01/08/2022) — los datos que por "una operación intelectual de comparación o deducción" revelan información sensible **son** categoría especial. "Escuchaste tres audios de ansiedad" es una deducción de un paso. Y la My Health My Data de Washington define health care services como *"cualquier servicio para evaluar, medir, mejorar o aprender sobre la salud mental o física"* y protege el hecho de **buscarlos**. → **`user_consents` pasa de Fase 2 a prerrequisito**, y ⚠️ **`docs/consentimiento-datos-sensibles.md` hay que actualizarlo**: el opt-in que diseñé cubre ánimo/diario/gratitud y ahora tiene que cubrir también qué recursos usás.
+- ✅ **Decisión cerrada con Andre: NO toda card lleva acción.** La capa 3 pedía una acción cada vez que la card habla, y eso choca con `sobreVosSilencio.ts`. Motivo de Andre: **satura**. Día con señal, habla y ofrece; día sin señal, se calla y no pide nada. La decisión 1 de `card-sobre-vos.md` queda respondida.
+- ✅ **Decisión cerrada: el paquete va primero.** La decisión 4 no era una decisión — es una dependencia de una sola vía. El paquete no necesita a la card (demanda comprobada, Mónica ya lo hace a mano); la card sin el paquete pierde la capa 2 entera y la mitad de las acciones aterrizan en el aire.
+- **El `why` del ranker tiene que ser un enum cerrado**, no texto libre: "porque escuchaste tres audios de foco" está bien, "porque venís con ansiedad" es el modo analista que la propuesta rechaza, y `rejectCopy` no está diseñado para detectar eso.
+- **Aclaración pedida por Andre:** el recomendador va en Recursos. El motor (`resourceRanking.ts`) es puro y compartido; la card de momento vive en Recursos; Inicio como mucho hace un ofrecimiento de una línea y manda para allá. Así se resuelve la decisión 5 sin romper "una voz, no dos".
+
+**Pendiente para la próxima sesión:**
+- **Actualizar `docs/consentimiento-datos-sensibles.md`** con el hallazgo de C-184/20: el opt-in tiene que cubrir el comportamiento, no solo ánimo/diario/gratitud.
+- **Pasarle la devolución a Joaquín** — está toda acá, falta escribirla como respuesta.
+- La conversación del catálogo (§7 del plan paraguas) sigue siendo la que más mueve la aguja y no es de código.
+
+---
+
 ## 2026-09-03 — Joaquín (sesión 158 · la barra del reproductor, hasta que quedó fluida)
 
 **Tocado:** `app/coach-recurso.tsx`, `app/formato.tsx`, `screens/SalaScreen.tsx`. `tsc`, lint (solo warnings pre-existentes de `user`) y 429 tests limpios. Sin schema.

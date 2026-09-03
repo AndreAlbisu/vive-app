@@ -44,7 +44,10 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
     if (!AI_REFLECTION_ENABLED || !userId) { setCopy(null); return; }
     // Sin datos no hay nada que redactar mejor que la invitación de las reglas,
     // y sería gastar una llamada por cada persona que abre la app sin registrar.
-    if (rules.signal === 'empty') { setCopy(null); return; }
+    // `early` (uno o dos registros) va por el mismo camino: lo único honesto que
+    // se puede decir ahí es "todavía no sé lo suficiente", y para eso no hace
+    // falta un modelo.
+    if (rules.signal === 'empty' || rules.signal === 'early') { setCopy(null); return; }
 
     let cancelled = false;
 

@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
@@ -137,7 +137,6 @@ export default function ConexionesScreen() {
   const [coachQuery, setCoachQuery]     = useState('');
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [rebookData, setRebookData]     = useState<RebookData | null>(null);
-  const [unreadCount, setUnreadCount]   = useState(0);
 
   // ── Llegar desde el onboarding ────────────────────────────────────────────
   // El final del onboarding manda acá con la puerta de lo que la persona acaba
@@ -186,29 +185,6 @@ export default function ConexionesScreen() {
     setSelectedAxisId(eje.id);
     setPuertaSugerida(door.id);
   }, [puerta]);
-
-  // ── Notificaciones no leídas ──────────────────────────────────────────────
-  const fetchNotifCount = useCallback(() => {
-    if (!user) return;
-    supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('recipient_id', user.id)
-      .eq('read', false)
-      .then(({ count }) => setUnreadCount(count ?? 0));
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-    fetchNotifCount();
-    const channel = supabase
-      .channel(`notif-conexiones-${user.id}-${Math.random().toString(36).slice(2)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${user.id}` }, fetchNotifCount)
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user, fetchNotifCount]);
-
-  useFocusEffect(useCallback(() => { fetchNotifCount(); }, [fetchNotifCount]));
 
   // ── Re-book query ─────────────────────────────────────────────────────────
   const loadRebook = useCallback(async () => {
@@ -571,14 +547,6 @@ export default function ConexionesScreen() {
           <View style={s.header}>
             <Text style={s.title}>Profesionales</Text>
             <View style={s.hicons}>
-              <TouchableOpacity
-                onPress={() => (user ? router.push('/notifications') : requestAuth('ver_notificaciones'))}
-                activeOpacity={0.7}
-                hitSlop={8}
-                style={s.bellBtn}>
-                <MaterialCommunityIcons name={unreadCount > 0 ? 'bell' : 'bell-outline'} size={22} color={FOREST} />
-                {unreadCount > 0 && <View style={s.bellDot} />}
-              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => (user ? router.push('/favoritos') : requestAuth('ver_favoritos'))}
                 activeOpacity={0.7}
@@ -1348,15 +1316,4 @@ const s = StyleSheet.create({
   quizTitle: { fontFamily: ViveFonts.semibold, fontSize: 14, color: FOREST },
   quizSub: { fontFamily: ViveFonts.regular, fontSize: 11.5, color: '#8F6A55', marginTop: 2 },
   quizArrow: { fontSize: 22, color: TERRACOTTA, lineHeight: 26 },
-
-  bellBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  bellDot: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E05252',
-  },
 });

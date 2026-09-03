@@ -128,6 +128,62 @@ describe('buildReflection — prioridad de señales', () => {
   });
 });
 
+describe('buildReflection — primeros días (el bug de sobreafirmar con un registro)', () => {
+  // 🔴 Antes de la sesión 159, UN solo check-in devolvía "Tu semana viene pareja":
+  // `empty` solo cubría cero registros, las dos ramas que comparan exigen
+  // MIN_SAMPLE, y el fallback `level` afirmaba sobre LA SEMANA a partir de un día.
+  it('con un solo registro no afirma nada sobre la semana', () => {
+    const r = buildReflection(on({ recentMoods: [3], historicMoods: [] }));
+    expect(r.signal).toBe('early');
+    const texto = `${r.before}${r.bold}${r.after}`.toLowerCase();
+    expect(texto).not.toContain('semana');
+  });
+
+  it('con dos registros tampoco — el umbral es MIN_SAMPLE', () => {
+    expect(buildReflection(on({ recentMoods: [3, 4], historicMoods: [] })).signal).toBe('early');
+  });
+
+  it('con tres ya puede hablar del nivel', () => {
+    expect(buildReflection(on({ recentMoods: [3, 3, 3], historicMoods: [] })).signal).toBe('level');
+  });
+
+  it('sin ningún registro sigue siendo empty, no early', () => {
+    expect(buildReflection(on({ recentMoods: [], historicMoods: [] })).signal).toBe('empty');
+  });
+
+  // `early` va DESPUÉS de sesiones/racha/prácticas a propósito: esas no dependen
+  // de cuántos moods haya. Una sesión de esta semana es cierta con un check-in.
+  // La primera versión de este arreglo tenía una regresión: alguien que registra
+  // UN día y ese día es un bajón recibía la invitación neutra a seguir
+  // registrando. Se acusa recibo del DÍA, sin hablar de la semana.
+  it('con un único registro bajo acusa recibo en vez de invitar', () => {
+    const r = buildReflection(on({ recentMoods: [1], historicMoods: [] }));
+    expect(r.signal).toBe('early');
+    expect(r.tone).toBe('gentle');
+    expect(`${r.before}${r.bold}${r.after}`.toLowerCase()).not.toContain('semana');
+  });
+
+  it('con un único registro alto no baja el tono sin motivo', () => {
+    expect(buildReflection(on({ recentMoods: [4], historicMoods: [] })).tone).toBe('neutral');
+  });
+
+  it('no le gana a una sesión, que es cierta con un solo check-in', () => {
+    const r = buildReflection(on({ recentMoods: [3], sessionsThisWeek: 1 }));
+    expect(r.signal).toBe('sessions');
+  });
+
+  it('no le gana a las prácticas', () => {
+    const r = buildReflection(on({ recentMoods: [3], resourcesThisWeek: 2 }));
+    expect(r.signal).toBe('practices');
+  });
+
+  // Y sí le cede a las dos señales que importan de verdad.
+  it('cede ante un bajón fuerte, que con dos registros ya es real', () => {
+    const r = buildReflection(on({ recentMoods: [1, 4], sharpDrop: true }));
+    expect(r.signal).toBe('sharp-drop');
+  });
+});
+
 describe('buildReflection — umbrales', () => {
   it('no llama cambio a un movimiento menor al umbral', () => {
     // 3,33 contra 3,0 → 0,33, por debajo de 0,4. Es ruido, no una semana mejor.
@@ -261,11 +317,12 @@ describe('buildReflection — la variante del día', () => {
   });
 
   it('las etiquetas de nivel solo aparecen concordando con "semana"', () => {
-    // El marco tiene que ser "(Tu|La) semana viene ___" en las cinco etiquetas.
-    // ⚠️ Los niveles 1 y 2 con muestra completa caen en `sustained-low`, no
-    // acá: a la rama de nivel llegan con una o dos entradas, que es el caso de
-    // alguien que recién arranca y registró un par de días malos.
-    const casos: number[][] = [[1], [2], [3, 3, 3], [4, 4, 4], [5, 5, 5]];
+    // El marco tiene que ser "(Tu|La) semana viene ___".
+    // ⚠️ Cambió en la sesión 159: los niveles 1 y 2 ya NO llegan a esta rama.
+    // Con muestra completa caen en `sustained-low`, y con una o dos entradas
+    // caen en `early` — antes caían acá y la card afirmaba sobre "la semana" con
+    // un solo registro. Quedan los tres niveles que sí pueden llegar.
+    const casos: number[][] = [[3, 3, 3], [4, 4, 4], [5, 5, 5]];
     for (const moods of casos) {
       for (const dayKey of ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04']) {
         const r = buildReflection(on({ recentMoods: moods, historicMoods: moods, dayKey }));

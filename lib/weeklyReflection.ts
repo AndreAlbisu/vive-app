@@ -328,7 +328,39 @@ export function buildReflection(input: ReflectionInput): Reflection {
     ]);
   }
 
-  // ── 8. Nivel, sin comparar ────────────────────────────────────────────────
+  // ── 8. Primeros días ──────────────────────────────────────────────────────
+  // 🔴 Con UN check-in, la rama de abajo decía "Tu semana viene pareja".
+  // `empty` solo cubre cero registros, y las dos ramas que comparan exigen
+  // `MIN_SAMPLE`, así que uno o dos registros caían directo al fallback — que
+  // afirma algo sobre LA SEMANA a partir de un día. Es sobreafirmar, y le tocaba
+  // justo a quien recién llega, que es el caso más común mientras la base sea
+  // chica.
+  //
+  // Va acá abajo y no arriba a propósito: `sessions`, `streak` y `practices` no
+  // dependen de cuántos moods haya. Si esta semana hubo una sesión, eso es cierto
+  // con un check-in o con siete, y merece decirse. Lo único que hay que frenar es
+  // la afirmación sobre el nivel de la semana.
+  if (recentMoods.length < MIN_SAMPLE) {
+    // ⚠️ Dos juegos de variantes, y la distinción importa. Alguien que registró
+    // UN día y ese día fue un bajón no puede recibir una invitación neutra a
+    // seguir registrando: eso es no acusar recibo justo cuando más hace falta.
+    // Lo que no se puede es hablar de "la semana" —no hay semana todavía—, pero
+    // sí del día. Se nombra el día y se cede el tono, igual que `sharp-drop`.
+    if (avgRecent <= 2) {
+      return pick(dayKey, [
+        r('Arrancaste registrando ', 'un día difícil', '. Todavía no sé lo suficiente para decirte nada más, pero lo anoté.', 'gentle', 'early'),
+        r('', 'Un día pesado', ', y lo registraste igual. Con eso alcanza por ahora.', 'gentle', 'early'),
+        r('Empezaste por ', 'un día de los que cuestan', '. No hace falta que sea otra cosa.', 'gentle', 'early'),
+      ]);
+    }
+    return pick(dayKey, [
+      r('Recién empezamos a conocernos. Unos días más de registro y ', 'te puedo devolver algo', ' que valga la pena.', 'neutral', 'early'),
+      r('Ya tengo tus primeros registros. Todavía son pocos para ', 'sacar una conclusión', ', pero por algo se arranca.', 'neutral', 'early'),
+      r('', 'Por ahora te escucho', '. Con unos registros más te empiezo a contar lo que voy notando.', 'neutral', 'early'),
+    ]);
+  }
+
+  // ── 9. Nivel, sin comparar ────────────────────────────────────────────────
   // Último recurso: no hay cambio, ni sesión, ni racha, ni práctica. Se dice el
   // nivel y nada más — sin "que de costumbre", que es lo que rompía antes.
   //

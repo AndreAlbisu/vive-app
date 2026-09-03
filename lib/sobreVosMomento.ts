@@ -11,11 +11,13 @@
 
 // Señales sin una noticia real detrás. `level` es el fallback sin comparación
 // (le toca a cualquiera con ánimo parejo y poca actividad, literalmente todos
-// los días — ver el comentario en weeklyReflection.ts sobre esa rama) y `empty`
-// es la invitación a sumar más check-ins. Interrumpir a pantalla completa por
+// los días — ver el comentario en weeklyReflection.ts sobre esa rama), y `empty`
+// y `early` son las dos invitaciones a sumar registros: la primera sin nada
+// cargado, la segunda con uno o dos. Ninguna de las dos tiene una noticia que
+// justifique interrumpir a pantalla completa. Interrumpir a pantalla completa por
 // cualquiera de las dos, todos los días, sería pedir lo mismo una y otra vez en
 // vez de compartir algo que pasó.
-const LOW_VALUE_SIGNALS = new Set(['level', 'empty']);
+const LOW_VALUE_SIGNALS = new Set(['level', 'empty', 'early']);
 
 export function isSignalWorthMoment(signal: string): boolean {
   return !LOW_VALUE_SIGNALS.has(signal);

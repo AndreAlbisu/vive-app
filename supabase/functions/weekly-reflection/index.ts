@@ -32,7 +32,7 @@ const MODEL = Deno.env.get('REFLECTION_MODEL') ?? 'claude-haiku-4-5'
 const SOPORTA_EFFORT = !MODEL.startsWith('claude-haiku')
 
 const SIGNALS = [
-  'empty', 'level', 'trend-up', 'trend-down',
+  'empty', 'early', 'level', 'trend-up', 'trend-down',
   'sustained-low', 'sessions', 'streak', 'practices', 'sharp-drop',
 ]
 const TONES = ['gentle', 'neutral', 'warm']
@@ -65,6 +65,7 @@ Sin el segundo tiempo es un rótulo con punto final. "Esta semana hiciste 3 prá
 
 # Las señales
 - empty: todavía no registró nada. Invitá sin presionar.
+- early: registró una o dos veces, todavía no alcanza para comparar nada. Acusá recibo de que empezó y no afirmes NADA sobre su semana — no hay con qué.
 - level: la semana viene estable, en el nivel que te paso. El nivel concuerda con "semana" (femenino): decilo como "tu semana viene ___", nunca "venís ___".
 - trend-up: mejoró respecto del mes anterior. Hablá SOLO de la dirección, nunca del nivel absoluto.
 - trend-down: viene peor que el mes anterior. Solo dirección. Sin dramatizar y sin minimizar.
