@@ -104,9 +104,17 @@ números crudos (proyecto de test / pre-launch):
 2. **Reordenar pesos:** para `coach_resources`, **`topic_id` (8/8) es el factor
    estructural principal, NO el eje (0/8)**. El eje +3 baja o se condiciona por
    catálogo. El eje solo aplica al catálogo curado `resources`.
-3. **La Fase 2 necesita un pre-paso de datos:** poblar `wellness_goal`. Barato:
-   (a) backfill de los 8 publicados, y/o (b) hacer el campo obligatorio/prompteado
-   en el alta del coach. Sin eso, "por intención" no arranca.
+3. ✅ **La Fase 2 ya tiene con qué — backfill HECHO (03/09).** Se pobló
+   `wellness_goal` en los **8/8** publicados (0/8 → 8/8), cada uno mapeado por
+   título/tema: `calmar_ansiedad`, `dormir_mejor`(×2), `construir_habitos`,
+   `mover_el_cuerpo`, `mejorar_animo`, `entender_emociones`(×2). Queda pendiente
+   lo estructural: **hacer el campo obligatorio/prompteado en el alta del coach**
+   para que no vuelva a quedar en null en recursos nuevos.
+   - 🔴 **Hallazgo de taxonomía para Andre:** los 8 objetivos **no cubren
+     "relaciones"** — el recurso "El mapa de tus relaciones" (topic `relaciones`)
+     tuvo que caer en `entender_emociones` como lo menos malo. Y `ganar_foco` /
+     `alimentacion` quedaron sin ningún recurso. Vale revisar si la lista de 8
+     objetivos es la correcta antes de construir el filtro por intención.
 4. **La Fase 3 (colaborativo) no está gateada solo por consent — está gateada por
    tener BASE de usuarios.** Con 2-5 no hay co-ocurrencia posible. Es "cuando haya
    gente", no "más adelante".
