@@ -244,7 +244,15 @@ Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contac
 
 ## 3. Datos Sensibles y Consentimiento Explícito
 
-Ciertos datos que el Usuario ingresa —en especial los registros de estado de ánimo, el diario y el contenido de las conversaciones o notas que puedan revelar información sobre su salud o su vida emocional— pueden constituir **datos sensibles** en los términos de la Ley 25.326. Su tratamiento se realiza **con el consentimiento libre, expreso e informado del Usuario**, otorgado al utilizar las funcionalidades correspondientes, y con el único fin de prestar el servicio. El Usuario puede abstenerse de utilizar estas funcionalidades y puede solicitar la supresión de estos datos conforme a la sección 9. [Validar con abogado el mecanismo de obtención y registro del consentimiento explícito.]
+Ciertos datos vinculados al Usuario —los registros de estado de ánimo, las entradas de diario y de gratitud, el contenido de las conversaciones o notas que pueda revelar información sobre su salud, y **el registro de qué contenidos de bienestar utiliza**— constituyen **datos sensibles** en los términos de la Ley 25.326, sea porque el Usuario los declara o porque permiten deducir información sobre su salud.
+
+3.1. Su tratamiento requiere el **consentimiento libre, expreso e informado** del Usuario. Ese consentimiento se solicita **de forma específica y separada de la aceptación de estos documentos**, la primera vez que el Usuario accede a estas funcionalidades, mostrando previamente qué datos se tratan y con qué finalidad. Vita deja constancia de la fecha y de la versión del texto informado.
+
+3.2. **Prestarlo es voluntario y no es condición para utilizar la Plataforma.** El Usuario que no lo preste puede reservar Sesiones, comunicarse con Profesionales y acceder a los contenidos, sin las funcionalidades de registro de bienestar ni las recomendaciones basadas en su uso.
+
+3.3. El Usuario puede **revocar el consentimiento en cualquier momento** desde su perfil o escribiendo a vitaappar@gmail.com, y solicitar la supresión de los datos ya registrados conforme a la sección 9. La revocación no afecta la licitud del tratamiento realizado con anterioridad.
+
+3.4. **Estos datos no se comparten con los Profesionales ni con ningún tercero**, salvo que el propio Usuario decida enviarlos, en cada caso y de forma expresa.
 
 ## 4. Finalidades del Tratamiento
 
@@ -371,7 +379,7 @@ Vita — Andre Albisu Lambertini, CUIT 20-46034087-0, De los Extremeños 5069, C
 `;
 
 /** Placeholders sin completar detectados al generar este archivo. */
-export const LEGAL_PLACEHOLDERS: string[] = ["[Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]","[Validar con abogado el mecanismo de obtención y registro del consentimiento explícito.]","[Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]","[fecha]"];
+export const LEGAL_PLACEHOLDERS: string[] = ["[Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]","[Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]","[fecha]"];
 
 /** Identifica la versión EXACTA de los T&C + Política que el Usuario acepta.
  *  Es el sha256 (12 hex) del contenido de esos dos documentos, así que cambia
@@ -379,7 +387,7 @@ export const LEGAL_PLACEHOLDERS: string[] = ["[Validar con abogado el encuadre d
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '1aa3c074e84d';
+export const LEGAL_VERSION = 'b787a467bed6';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

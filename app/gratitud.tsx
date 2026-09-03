@@ -18,6 +18,8 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { PASTEL_SALVIA, PASTEL_DURAZNO } from '@/constants/tools';
 import { ToolHeader } from '@/components/ui/ToolHeader';
 import { useAuth } from '@/context/AuthContext';
+import { useConsentGate } from '@/hooks/useConsentGate';
+import { ConsentSheet } from '@/components/ConsentSheet';
 import { supabase } from '@/lib/supabase';
 import { logError } from '@/lib/logging';
 import { recordCompletion } from '@/lib/resourceCompletions';
@@ -81,6 +83,9 @@ export default function GratitudScreen() {
   const [streak, setStreak] = useState(0);
 
   const { user, isLoggedIn, requestAuth } = useAuth();
+  // Mismo criterio que el diario y el check-in: es dato sensible, así que el
+  // consentimiento va antes de guardar.
+  const consentGate = useConsentGate(user?.id);
   const saveScale = useRef(new Animated.Value(1)).current;
 
   const canSave = items.some(i => i.trim().length > 0);
@@ -143,6 +148,10 @@ export default function GratitudScreen() {
   async function handleSave() {
     if (!canSave || saved) return;
     if (!isLoggedIn || !user) { requestAuth('guardar_gratitud'); return; }
+
+    // Antes de la animación a propósito: si dice que no, el botón no tiene que
+    // haber hecho el gesto de guardar algo que no se guardó.
+    if (!(await consentGate.pedir())) return;
 
     Animated.sequence([
       Animated.spring(saveScale, { toValue: 0.95, useNativeDriver: true, damping: 20, stiffness: 300 }),
@@ -281,6 +290,8 @@ export default function GratitudScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ConsentSheet {...consentGate.sheetProps} />
     </SafeAreaView>
   );
 }

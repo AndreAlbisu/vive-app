@@ -16,6 +16,8 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts, ViveMoodColors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useConsentGate } from '@/hooks/useConsentGate';
+import { ConsentSheet } from '@/components/ConsentSheet';
 import { supabase } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
@@ -84,6 +86,10 @@ export default function DiarioScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
   const { user, isLoggedIn, requestAuth } = useAuth();
+  // El diario y la gratitud son texto libre sobre cómo está la persona: dato
+  // sensible del art. 7 igual que el check-in de ánimo. El gate va antes de
+  // escribir, no después.
+  const consentGate = useConsentGate(user?.id);
   const saveScale = useRef(new Animated.Value(1)).current;
 
   const canSave = journalText.trim().length > 0;
@@ -113,6 +119,10 @@ export default function DiarioScreen() {
   async function handleSave() {
     if (!canSave || saved) return;
     if (!isLoggedIn || !user) { requestAuth('guardar_diario'); return; }
+
+    // Antes de la animación a propósito: si dice que no, el botón no tiene que
+    // haber hecho el gesto de guardar algo que no se guardó.
+    if (!(await consentGate.pedir())) return;
 
     Animated.sequence([
       Animated.spring(saveScale, { toValue: 0.95, useNativeDriver: true, damping: 20, stiffness: 300 }),
@@ -326,6 +336,8 @@ export default function DiarioScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      <ConsentSheet {...consentGate.sheetProps} />
     </SafeAreaView>
   );
 }

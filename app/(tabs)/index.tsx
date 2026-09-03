@@ -38,7 +38,7 @@ import { shouldShowMoment } from '@/lib/sobreVosMomento';
 import { getMomentPref, getLastShown, markMomentShown, getLastSpoken, markSpoken } from '@/lib/sobreVosMomentoStorage';
 import { shouldStaySilent } from '@/lib/sobreVosSilencio';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { useConsent } from '@/hooks/useConsent';
+import { useConsentGate } from '@/hooks/useConsentGate';
 import { ConsentSheet } from '@/components/ConsentSheet';
 
 // Colores del mockup `sobre-vos-momento.html` — deliberadamente NO ViveColors,
@@ -165,21 +165,10 @@ export default function InicioScreen() {
   const [freshCheckIn, setFreshCheckIn] = useState<{ color: string; reflection: Reflection } | null>(null);
 
   // ── Consentimiento de datos sensibles (Ley 25.326 art. 7) ────────────────
-  // El check-in de ánimo es la puerta de entrada al dato sensible, así que el
-  // pedido vive acá. Se le pasa a `MoodCheckIn` una promesa que se resuelve
-  // cuando la persona contesta el sheet: hasta entonces el toque no hace nada.
-  const consent = useConsent(user?.id);
-  const [resolverConsent, setResolverConsent] = useState<((ok: boolean) => void) | null>(null);
-
-  const requireConsent = useCallback(async (): Promise<boolean> => {
-    if (consent.puede) return true;
-    // ⚠️ Mientras no se sepa, no se guarda. Es la misma decisión fail-closed que
-    // toma `getConsent` ante un error: tratar dato sensible sobre un estado que
-    // todavía no se leyó sería asumir un permiso que nadie confirmó. La ventana
-    // es de unos milisegundos al montar la pantalla.
-    if (consent.loading) return false;
-    return new Promise<boolean>(resolve => setResolverConsent(() => resolve));
-  }, [consent.puede, consent.loading]);
+  // El check-in de ánimo es la puerta de entrada al dato sensible. `MoodCheckIn`
+  // recibe la promesa: hasta que la persona conteste el sheet, el toque no hace
+  // nada. Misma plomería que diario y gratitud, de ahí el hook compartido.
+  const consentGate = useConsentGate(user?.id);
   // El momento vive fuera de Inicio (app/(tabs)/_layout.tsx, sibling de
   // <Tabs>) para poder sacarle el <Modal> propio — ver SobreVosMomentoContext.
   const { open: openMomento } = useSobreVosMomento();
@@ -526,7 +515,7 @@ export default function InicioScreen() {
               todayEntry={todayMoodEntry}
               onRequestAuth={requestAuth}
               onPicked={handleMoodPicked}
-              requireConsent={requireConsent}
+              requireConsent={consentGate.pedir}
             />
           </Animated.View>
 
@@ -629,14 +618,7 @@ export default function InicioScreen() {
           <View style={{ height: TAB_BAR_CLEARANCE }} />
         </ScrollView>
 
-        <ConsentSheet
-          visible={!!resolverConsent}
-          onResponder={consent.responder}
-          onCerrar={granted => {
-            resolverConsent?.(granted);
-            setResolverConsent(null);
-          }}
-        />
+        <ConsentSheet {...consentGate.sheetProps} />
       </SafeAreaView>
     </AppBg>
   );
