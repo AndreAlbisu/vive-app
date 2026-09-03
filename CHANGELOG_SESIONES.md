@@ -22,8 +22,15 @@
 - **`LO_QUE_CUBRE` incluye "qué recursos usás"**, con un test que lo fija. Entró por TJUE C-184/20 (ver sesión 159). Si esa línea desaparece, la pantalla deja de informar algo que sí se trata.
 - 📝 **Deliberado: NO se re-pide el consentimiento cuando cambia `LEGAL_VERSION`.** Es un hash del texto entero, así que se mueve con una corrección de tipeo — re-pedirlo por eso lo convierte en ruido, que es cómo un consentimiento deja de ser informado. Cuando cambie la FINALIDAD hay que volver a pedirlo, y eso es una decisión de producto. Falta el mecanismo para forzarlo a mano.
 
+**Cerrado en la misma sesión — corrido, deployado y verificado contra la base.**
+
+- ✅ **`add-user-consents.sql` CORRIDO.** Tabla y vista existen, `authenticated` con **solo SELECT**, una sola policy (`user_consents_select_own`, cmd = r). **`user-consent` deployada, v1 ACTIVE**, `verify_jwt = true`. Ya se puede buildear.
+- 🔴 **Verificando eso apareció un hueco de seguridad de todo el proyecto.** El `revoke` original decía `insert, update, delete` y la verificación devolvió igual **SELECT + TRUNCATE + REFERENCES + TRIGGER**: Supabase los concede por default sobre todo `public`. El barrido confirmó que estaban en **todas** las tablas y vistas — `mood_entries`, `journal_entries`, `messages`, `profiles`, `bookings`, `coach_payout_accounts` incluidas.
+- 🔴 **`TRUNCATE` es el que importa porque la RLS NO lo filtra.** Las policies se evalúan sobre select/insert/update/delete; truncate no pasa por ahí. Toda la protección por filas del proyecto no decía nada sobre vaciar una tabla entera. ✅ **No era explotable desde la app** —PostgREST no expone TRUNCATE por HTTP—, así que era un permiso sobrante y no un incidente; dejaría de ser teórico el día que exista una RPC con SQL dinámico.
+- ✅ **`revoke-truncate-trigger-references.sql` CORRIDO y verificado**: el barrido devuelve 0 filas, y el control confirma que no se llevó puesto nada (las cinco tablas de escritura conservan sus permisos, `user_consents` quedó en SELECT). Toca además `alter default privileges` para que la próxima tabla no nazca igual — sin esa parte vuelve, que es lo que le pasó a `user_consents`.
+- 📝 **Por qué se le escapó a la auditoría de la 152:** esa revisión miró RLS, policies y autorización de las functions, que es donde uno mira. Los grants de tabla son la capa de abajo, y la RLS da la sensación de que ya está cubierto. Apareció solo porque se verificó un `revoke` propio en vez de darlo por bueno.
+
 **Pendiente para la próxima sesión:**
-- 🔴 **Correr el script y deployar la function, EN ESE ORDEN, antes de cualquier build.**
 - **Gatear el resto de las superficies.** Hoy el gate está solo en el check-in de ánimo, que es la puerta principal. Faltan diario, gratitud y —cuando exista el recomendador— `resource_events`.
 - **Destrabar Política §45**: con esto construido, el texto propuesto en `docs/consentimiento-datos-sensibles.md` §5 ya describe algo que existe. Correr `npm run sync:legal` después.
 - **Sin confirmar en dispositivo**: el sheet, el gate, y la revocación desde el perfil.

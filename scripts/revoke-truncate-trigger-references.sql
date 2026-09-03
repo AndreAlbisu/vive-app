@@ -4,7 +4,21 @@
 -- por default sobre todo `public` y que la app no usa nunca: TRUNCATE,
 -- REFERENCES y TRIGGER.
 --
--- ⚠️ PENDIENTE DE CORRER al 03/09/2026.
+-- ✅ CORRIDO y VERIFICADO el 03/09/2026. Las dos verificaciones que importan:
+--
+--   · El barrido devuelve **0 filas**: no queda TRUNCATE, REFERENCES ni TRIGGER
+--     para `authenticated` ni `anon` en ninguna tabla o vista de `public`.
+--   · El control de que no se llevó puesto nada:
+--       bookings           → DELETE, INSERT, SELECT
+--       gratitude_entries  → DELETE, INSERT, SELECT, UPDATE
+--       journal_entries    → DELETE, INSERT, SELECT, UPDATE
+--       messages           → DELETE, INSERT, SELECT, UPDATE
+--       mood_entries       → DELETE, INSERT, SELECT, UPDATE
+--       user_consents      → SELECT
+--
+--     Ese último contraste es la mejor prueba de que el revoke tocó exactamente
+--     lo que tenía que tocar: la app sigue escribiendo donde escribe, y la
+--     constancia del consentimiento sigue siendo de solo lectura para su titular.
 --
 -- ── Cómo apareció ────────────────────────────────────────────────────────────
 -- Verificando `add-user-consents.sql` recién corrido. El `revoke` de ese script
