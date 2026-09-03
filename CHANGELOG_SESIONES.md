@@ -19,8 +19,10 @@
 - 🔴 **Tap congelado:** el `Pan` con `minDistance(0)` no resuelve bien un toque sin movimiento y `scrubbing` quedaba pegado. Se separó en dos gestos (**patrón slider**): un **`Tap`** dedicado (solo hace seek, nunca toca `scrubbing`, no se puede colgar) y el **`Pan`** para arrastrar, compuestos con **`Exclusive(pan, tap)`** — el pan con un `minDistance` chico así un toque quieto lo agarra el tap. El seek del pan va en `onEnd` (solo en drag real); `onFinalize` solo resetea `scrubbing` por si se cancela.
 - 📝 **Aprendizaje para la próxima:** una barra/slider con animación continua + gesto se hace con **Reanimated + gesture-handler desde el arranque**, no con RN `Animated` + `PanResponder`. El native driver ayuda en reproducción pero el gesto sobre JS tironea en dev; y tap vs. drag se separan en dos gestos, no se fuerzan en un Pan con `minDistance(0)`.
 
+**Device review — HECHA.** Joaquín revisó todo en el teléfono: reproductor (barra fluida en reproducción/arrastre/tap), vista lista + deck con el toggle, hero, bloques "Quién lo hizo" / "Después de esto", y el borrador de la tarjeta de recomendación. Todo funciona. **El bloque de Recursos (sesiones 156/158) queda cerrado.**
+
 **Pendiente para la próxima sesión:**
-- Device review del resto de Recursos: vista lista + deck con el toggle, hero, bloques "Quién lo hizo" / "Después de esto", y el borrador de la tarjeta de recomendación (que abra el chat con el mensaje escrito).
+- Nada abierto de Recursos. Retomar con lo que Joaquín decida (o los pendientes de Andre del lado legal/matrícula, si se coordina).
 
 ## 2026-09-02 — Andre (sesión 157 · investigar la consulta legal en vez de pagarla)
 
