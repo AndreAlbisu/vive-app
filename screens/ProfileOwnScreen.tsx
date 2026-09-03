@@ -24,6 +24,7 @@ import { FRASE_BORRAR, coincideBorrado } from '@/lib/confirmarBorrado';
 import { AppBg } from '@/components/ui/AppBg';
 import { deleteMyAccount } from '@/lib/accountDeletion';
 import { getMomentPref, setMomentPref } from '@/lib/sobreVosMomentoStorage';
+import { useConsent } from '@/hooks/useConsent';
 type Profesional = {
   id: string;
   name: string;
@@ -52,6 +53,10 @@ export default function ProfileOwnScreen() {
   // Parte E de "Sobre vos" — auto-disparo del momento completo. Vive en
   // AsyncStorage, no en `profiles` (ver lib/sobreVosMomentoStorage.ts).
   const [momentoEnabled, setMomentoEnabled] = useState(true);
+  // El consentimiento de datos sensibles se revoca desde acá. No es un extra:
+  // la Ley 25.326 y el Decreto 1558/2001 lo hacen REVOCABLE en cualquier
+  // momento, y el sheet que lo pide promete que se puede hacer desde el perfil.
+  const consent = useConsent(user?.id);
 
   useEffect(() => { getMomentPref().then(setMomentoEnabled); }, []);
 
@@ -358,6 +363,30 @@ export default function ProfileOwnScreen() {
               <Switch
                 value={momentoEnabled}
                 onValueChange={toggleMomento}
+                trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor={`${ViveColors.text}25`}
+              />
+            </View>
+
+            {/* 🔴 Revocación del consentimiento de datos sensibles. Va junto a
+                las preferencias y no escondido en Configuración: la revocación
+                tiene que ser tan fácil como el otorgamiento, o el consentimiento
+                deja de ser libre. Apagarlo no borra lo ya guardado — eso se pide
+                aparte, y el texto lo dice. */}
+            <View style={[styles.preferenceCard, { marginTop: 10 }]}>
+              <View style={styles.preferenceInfo}>
+                <Text style={styles.preferenceTitle}>Guardar cómo venís</Text>
+                <Text style={styles.preferenceDesc}>
+                  {consent.puede
+                    ? 'Tu ánimo, tu diario y qué recursos usás. Si lo apagás dejamos de registrarlo; para borrar lo que ya está, escribinos.'
+                    : 'Está apagado. Sin esto no podemos guardar tu check-in de ánimo ni tu diario.'}
+                </Text>
+              </View>
+              <Switch
+                value={consent.puede}
+                disabled={consent.loading}
+                onValueChange={value => { void consent.responder(value); }}
                 trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
                 thumbColor="#FFFFFF"
                 ios_backgroundColor={`${ViveColors.text}25`}

@@ -66,9 +66,16 @@ interface Props {
    *  un mood distinto habiendo ya hecho el check-in hoy también dispara esto,
    *  pero con `firstToday: false`. */
   onPicked?: (mood: { id: MoodId; label: string; color: string }, opts: { firstToday: boolean }) => void;
+  /** Se consulta ANTES de tocar nada. Si devuelve `false`, el check-in no ocurre
+   *  — ni animación, ni callback, ni upsert.
+   *
+   *  🔴 El orden importa: el ánimo es dato sensible (Ley 25.326 art. 7) y el
+   *  consentimiento tiene que estar ANTES del tratamiento, no después. Guardar
+   *  primero y preguntar al toque siguiente sería tratar sin permiso una vez. */
+  requireConsent?: () => Promise<boolean>;
 }
 
-export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked }: Props) {
+export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked, requireConsent }: Props) {
   const [selectedId, setSelectedId] = useState<MoodId | null>(null);
 
   const scales   = useRef(MOODS.map(() => new Animated.Value(1))).current;
@@ -151,6 +158,10 @@ export function MoodCheckIn({ userId, todayEntry, onRequestAuth, onPicked }: Pro
 
   async function handlePress(id: MoodId) {
     if (!userId) { onRequestAuth(); return; }
+
+    // Antes de la animación a propósito: si la persona dice que no, no tiene que
+    // quedar una carita marcada como si algo se hubiera guardado.
+    if (requireConsent && !(await requireConsent())) return;
 
     setSelectedId(id);
     applyCircleAnimation(id);

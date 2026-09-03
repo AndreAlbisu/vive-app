@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-09-03 — Andre (sesión 160 · `user_consents`: el consentimiento de datos sensibles, construido)
+
+**Tocado:** `components/MoodCheckIn.tsx`, `app/(tabs)/index.tsx`, `screens/ProfileOwnScreen.tsx`, `SCHEMA.md`. Nuevos: `scripts/add-user-consents.sql`, `supabase/functions/user-consent/`, `lib/consentRules.ts`, `lib/consent.ts`, `hooks/useConsent.ts`, `components/ConsentSheet.tsx`, `__tests__/consentRules.test.ts`. **446 tests** (eran 438), `tsc` limpio, lint sin errores nuevos.
+
+**Resumen — se construyó lo que `docs/consentimiento-datos-sensibles.md` dejó diseñado en la 157. Era el primero del orden propuesto en la revisión de las propuestas de Joaquín, y ahora es prerrequisito de la Fase 1 del recomendador.**
+
+- 🔴 **ORDEN DE DESPLIEGUE, Y SI SE INVIERTE SE ROMPE EL CHECK-IN.** Antes de buildear: (1) correr `scripts/add-user-consents.sql`, (2) `npx supabase functions deploy user-consent`. Si el build sale primero, `getConsent` falla contra una tabla que no existe, el fail-closed devuelve null, y **nadie puede registrar su ánimo**. Es a propósito que rompa fuerte: un fallback que dejara pasar el check-in "porque todavía no está la tabla" sería tratar dato sensible sin consentimiento, que es justo lo que esto viene a impedir. Está avisado en el encabezado de `lib/consent.ts`.
+- 🔴 **El titular NO puede escribir su propia fila.** `insert`/`update`/`delete` revocados para `authenticated`, RLS con una sola policy de select. Se escribe solo desde la edge function, que verifica el JWT y deja que la base ponga la fecha con su reloj. **Es la corrección del defecto que `SCHEMA.md` ya documentaba** sobre `profiles.accepted_terms`: esas columnas las escribe el cliente, o sea que son falsificables por su titular. El Decreto 1558/2001 admite el consentimiento por medio no escrito pero exige asegurar **autoría e integridad**, y una fila que el titular fecha como quiera no asegura ninguna.
+- **Tabla y no columnas, porque lo que se prueba es la historia.** Se inserta una fila por acto; otorgado → revocado → otorgado queda entero. Un `update` lo borraría. La app lee `user_consents_current`, una vista con `distinct on` y `security_invoker = true` que hereda la RLS.
+- **Fail-closed en tres lugares**, y los tres a propósito: `getConsent` devuelve null si la query falla; `useConsent` arranca con `puede = false` mientras carga; y `requireConsent` en Inicio devuelve false mientras no sepa. Asumir el permiso hasta que la consulta conteste sería tratar dato sensible sobre un estado no leído.
+- **El gate va ANTES de la animación del check-in.** Si la persona dice que no, no queda una carita marcada como si algo se hubiera guardado. Y el `requireConsent` de `MoodCheckIn` es una promesa, así que el toque simplemente no hace nada hasta que conteste el sheet.
+- **La pantalla pide en el PRIMER USO, no en el alta.** El consentimiento tiene que ser informado, y en el registro nadie lee. Acá la persona acaba de tocar una carita: el pedido tiene contexto.
+- **"Ahora no" es una salida real y visible**, no un link gris. Ley 25.326 art. 7.1: nadie puede ser obligado a dar datos sensibles, así que esto no puede ser condición para usar la app — y el pie del sheet lo dice explícito. Tampoco hay X al costado: un consentimiento es un acto y una X no dice si aceptaste.
+- **Revocación en el perfil, junto a las preferencias y no escondida en Configuración.** La revocación tiene que ser tan fácil como el otorgamiento o el consentimiento deja de ser libre. 📝 Se construyó **porque el copy del sheet la promete** — dejarla para después habría sido prometer algo que no existe, el mismo error que se viene evitando en los textos legales.
+- **`LO_QUE_CUBRE` incluye "qué recursos usás"**, con un test que lo fija. Entró por TJUE C-184/20 (ver sesión 159). Si esa línea desaparece, la pantalla deja de informar algo que sí se trata.
+- 📝 **Deliberado: NO se re-pide el consentimiento cuando cambia `LEGAL_VERSION`.** Es un hash del texto entero, así que se mueve con una corrección de tipeo — re-pedirlo por eso lo convierte en ruido, que es cómo un consentimiento deja de ser informado. Cuando cambie la FINALIDAD hay que volver a pedirlo, y eso es una decisión de producto. Falta el mecanismo para forzarlo a mano.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr el script y deployar la function, EN ESE ORDEN, antes de cualquier build.**
+- **Gatear el resto de las superficies.** Hoy el gate está solo en el check-in de ánimo, que es la puerta principal. Faltan diario, gratitud y —cuando exista el recomendador— `resource_events`.
+- **Destrabar Política §45**: con esto construido, el texto propuesto en `docs/consentimiento-datos-sensibles.md` §5 ya describe algo que existe. Correr `npm run sync:legal` después.
+- **Sin confirmar en dispositivo**: el sheet, el gate, y la revocación desde el perfil.
+- 📝 **Sin resolver, y es para la consulta legal:** la FK contra `auth.users` es `on delete cascade`, así que al darse de baja se borra también la constancia de que el tratamiento pasado fue lícito. Conservarla exige cambiar la FK.
+
+---
+
 ## 2026-09-03 — Andre (sesión 159 · revisión crítica de las propuestas de Joaquín, y un bug que salió de ahí)
 
 **Tocado:** `lib/weeklyReflection.ts`, `lib/sobreVosMomento.ts`, `hooks/useDailyReflection.ts`, `supabase/functions/weekly-reflection/index.ts`, `__tests__/weeklyReflection.test.ts`. **438 tests** (eran 429), `tsc` y lint limpios. Sin schema.
