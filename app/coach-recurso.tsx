@@ -271,28 +271,33 @@ function AudioPlayer({
 
   // ── Callbacks JS del gesto (corren fuera del worklet, vía runOnJS). Estables
   //    (useCallback) para poder memoizar el gesto y no recrearlo en cada tick. ──
-  const onScrubStart = useCallback((p: number) => {
-    setScrubbing(true);
-    setScrubProgress(p);
-  }, []);
-  const onScrubText = useCallback((p: number) => setScrubProgress(p), []);
-  const onScrubEnd = useCallback((p: number) => {
+  const doSeek = useCallback((p: number) => {
     if (durationRef.current > 0) {
       player.seekTo(p * durationRef.current);
       seekBaseRef.current = p; // el motor arranca de acá → sin parpadeo
       setSeekTick(t => t + 1);
     }
     setScrubProgress(p);
-    setScrubbing(false);
   }, [player]);
+  const onScrubStart = useCallback((p: number) => {
+    setScrubbing(true);
+    setScrubProgress(p);
+  }, []);
+  const onScrubText = useCallback((p: number) => setScrubProgress(p), []);
+  const onScrubEnd = useCallback((p: number) => {
+    doSeek(p);
+    setScrubbing(false);
+  }, [doSeek]);
+  const resetScrub = useCallback(() => setScrubbing(false), []);
 
-  // Arrastre en el hilo de UI. `e.x` ya es relativo al GestureDetector (= track),
-  // sin medir nada. `pos.value = p` mueve la barra a 60fps sin tocar JS; el texto
-  // de tiempo se actualiza solo cuando cambia el segundo (throttle en worklet).
-  // Memoizado para que un re-render por status no recree el gesto en pleno drag.
+  // Dos gestos separados (patrón de slider): TAP para tocar-y-saltar (siempre se
+  // reconoce, nunca toca el estado `scrubbing`, así que no se puede colgar) y PAN
+  // para arrastrar. `Exclusive(pan, tap)` da prioridad al pan: si arrastrás gana
+  // el pan; si solo tocás (sin mover), gana el tap. `e.x` ya es relativo al
+  // GestureDetector (= track). `pos.value` mueve la barra a 60fps en el hilo de UI.
   const panGesture = useMemo(() => Gesture.Pan()
-    .minDistance(0) // activa también con tap (sin mover) → tap-para-saltar
-    .onBegin((e) => {
+    .minDistance(4) // un toque quieto NO activa el pan → lo agarra el tap
+    .onStart((e) => {
       'worklet';
       cancelAnimation(pos);
       const p = Math.max(0, Math.min(1, e.x / (trackWsv.value || 1)));
@@ -312,13 +317,31 @@ function AudioPlayer({
         runOnJS(onScrubText)(p);
       }
     })
-    // El seek final va en onFinalize (SIEMPRE dispara: tap o soltar un drag). En
-    // un tap `onEnd` no dispara de forma confiable y la barra quedaba congelada.
-    .onFinalize(() => {
+    .onEnd(() => {
       'worklet';
       runOnJS(onScrubEnd)(lastPSv.value);
+    })
+    .onFinalize(() => {
+      'worklet';
+      runOnJS(resetScrub)(); // seguro por si el pan se cancela sin onEnd
     }),
-    [pos, trackWsv, durationSv, lastSecSv, lastPSv, onScrubStart, onScrubText, onScrubEnd],
+    [pos, trackWsv, durationSv, lastSecSv, lastPSv, onScrubStart, onScrubText, onScrubEnd, resetScrub],
+  );
+
+  const tapGesture = useMemo(() => Gesture.Tap()
+    .maxDistance(20)
+    .onEnd((e) => {
+      'worklet';
+      const p = Math.max(0, Math.min(1, e.x / (trackWsv.value || 1)));
+      pos.value = p; // salta la barra al toque en el acto (hilo de UI)
+      runOnJS(doSeek)(p);
+    }),
+    [pos, trackWsv, doSeek],
+  );
+
+  const barGesture = useMemo(
+    () => Gesture.Exclusive(panGesture, tapGesture),
+    [panGesture, tapGesture],
   );
 
   // Estilos animados (hilo de UI). Fill: ancho completo recortado por el track
@@ -340,7 +363,7 @@ function AudioPlayer({
   return (
     <View style={ap.wrap}>
       {/* Barra de progreso: tap para saltar, o arrastrar la perilla */}
-      <GestureDetector gesture={panGesture}>
+      <GestureDetector gesture={barGesture}>
         <View style={ap.trackWrap}>
           <View style={ap.track} onLayout={onTrackLayout}>
             <Animated.View
