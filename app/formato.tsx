@@ -47,6 +47,15 @@ const FORMAT_DESC: Record<string, string> = {
 const FORMAT_PLURAL: Record<string, string> = {
   audio: 'audios', podcast: 'podcasts', video: 'videos', lectura: 'lecturas',
 };
+// Mensaje que la tarjeta "Pedile una recomendación" deja escrito (borrador, sin
+// enviar) al abrir el chat con el coach — así la tarjeta cumple lo que promete
+// en vez de dejar al usuario en una conversación vacía.
+const RECO_DRAFT: Record<string, string> = {
+  audio:   'Hola, ¿me recomendás algún audio para escuchar?',
+  podcast: 'Hola, ¿me recomendás algún podcast?',
+  video:   'Hola, ¿me recomendás algún video para ver?',
+  lectura: 'Hola, ¿me recomendás algo para leer?',
+};
 
 type Resource = {
   id: string;
@@ -236,7 +245,8 @@ export default function FormatoScreen() {
   function pedirReco() {
     if (!coach) return;
     registrarEvento('recomendacion_pedida_a_coach', { formato }).catch(() => {});
-    router.push({ pathname: '/sala', params: { sala_id: coach.salaId } } as any);
+    const draft = RECO_DRAFT[formato] ?? 'Hola, ¿me recomendás algún recurso?';
+    router.push({ pathname: '/sala', params: { sala_id: coach.salaId, draft } } as any);
   }
 
   const renderCard = ({ item, index }: { item: Resource; index: number }) => {

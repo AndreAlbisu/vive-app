@@ -7,9 +7,12 @@
 
 ## 2026-09-03 — Joaquín (sesión 158 · la barra del reproductor, hasta que quedó fluida)
 
-**Tocado:** `app/coach-recurso.tsx`. `tsc`, lint (solo el warning pre-existente de `user`) y 429 tests limpios. Sin schema.
+**Tocado:** `app/coach-recurso.tsx`, `app/formato.tsx`, `screens/SalaScreen.tsx`. `tsc`, lint (solo warnings pre-existentes de `user`) y 429 tests limpios. Sin schema.
 
-**Resumen — la barra de progreso pasó por varias vueltas hasta quedar fluida en reproducción, arrastre y tap. Confirmado en dispositivo por Joaquín.**
+**Resumen — la barra de progreso pasó por varias vueltas hasta quedar fluida en reproducción, arrastre y tap. Confirmado en dispositivo por Joaquín. Además: la tarjeta de recomendación ahora abre el chat con un borrador escrito, y se nulearon las duraciones de audio de seed.**
+
+- **Tarjeta "Pedile una recomendación" (formato.tsx):** a Joaquín no le cerraba porque **prometía pedir una reco pero te dejaba en el chat vacío** — sin mensaje ni contexto de que mirabas ese formato. Ahora al tocarla abre la sala con un **borrador ya escrito** (sin enviar), por formato ("Hola, ¿me recomendás algún audio para escuchar?", etc.). La sala acepta un param `draft` que siembra el input una vez al montar (mismo patrón que `abrir_notas`/`notas_booking`). El usuario lo edita o manda.
+- **Duraciones de seed (base, sin migración):** las dos filas de **audio** SEED tenían `duration_seconds` inventado (600s/480s) con un archivo placeholder de ~8s → mostraban "10:00" con un audio de 8s. Se nulearon (solo audio; podcast/video son referencias externas sin archivo que las contradiga, se dejaron).
 
 - 🔴 **Lag en reproducción:** el motor reiniciaba un `Animated.timing` en **cada tick de status (~4/seg)** y recreaba los nodos de interpolación en cada render → el native driver rearmaba el grafo y tironeaba. Fix: **una sola animación** hacia el final, reinicio **solo en eventos discretos** (play/pausa/velocidad/seek) + un detector de saltos aparte para los ±15s; interpolaciones memoizadas. Eso dejó la reproducción fluida.
 - 🔴 **Lag en el arrastre:** seguía tironeando porque corría en el **hilo de JS** (`PanResponder` + `Animated.setValue`), que en dev se satura con los re-renders de status. Se pasó **toda la barra a Reanimated + gesture-handler** (shared value + `withTiming` + `Gesture.Pan`), 100% en el **hilo de UI** → inmune a los re-renders. Coordenada = `e.x` relativo al `GestureDetector` (sin medir nada). Texto de tiempo con throttle por segundo dentro del worklet. Antes de usar Reanimated se verificó que el plugin de worklets ya está configurado (OnboardingScreen1 usa `'worklet'` + `useSharedValue`) → sin riesgo de build.
@@ -17,9 +20,7 @@
 - 📝 **Aprendizaje para la próxima:** una barra/slider con animación continua + gesto se hace con **Reanimated + gesture-handler desde el arranque**, no con RN `Animated` + `PanResponder`. El native driver ayuda en reproducción pero el gesto sobre JS tironea en dev; y tap vs. drag se separan en dos gestos, no se fuerzan en un Pan con `minDistance(0)`.
 
 **Pendiente para la próxima sesión:**
-- Device review del resto de Recursos: vista lista + deck con el toggle, hero, bloques "Quién lo hizo" / "Después de esto".
-- Charla de la tarjeta "Pedile una recomendación a [coach]" (qué la hace confusa).
-- Opcional: nulear `duration_seconds` de las filas SEED para que la demo no muestre 10:00 con un audio de 8s.
+- Device review del resto de Recursos: vista lista + deck con el toggle, hero, bloques "Quién lo hizo" / "Después de esto", y el borrador de la tarjeta de recomendación (que abra el chat con el mensaje escrito).
 
 ## 2026-09-02 — Andre (sesión 157 · investigar la consulta legal en vez de pagarla)
 

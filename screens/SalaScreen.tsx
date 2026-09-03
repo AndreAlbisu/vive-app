@@ -174,13 +174,16 @@ function buildInitials(name: string): string {
 
 export default function SalaScreen() {
   const router = useRouter();
-  const { sala_id: salaIdParam, coach_id, abrir_notas, notas_booking } = useLocalSearchParams<{
-    sala_id?: string; coach_id?: string; abrir_notas?: string; notas_booking?: string;
+  const { sala_id: salaIdParam, coach_id, abrir_notas, notas_booking, draft } = useLocalSearchParams<{
+    sala_id?: string; coach_id?: string; abrir_notas?: string; notas_booking?: string; draft?: string;
   }>();
   const { user } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
+  // La tarjeta "Pedile una recomendación" (formato.tsx) abre la sala con un
+  // borrador ya escrito (sin enviar); se siembra el input una vez al montar.
+  const draftText = Array.isArray(draft) ? draft[0] : (draft ?? '');
+  const [inputText, setInputText] = useState(draftText);
   const [salaId, setSalaId] = useState<string | null>(null);
   const [recipientId, setRecipientId] = useState<string | null>(null);
   const [recipientIsCoach, setRecipientIsCoach] = useState(false);
