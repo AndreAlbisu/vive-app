@@ -69,6 +69,60 @@ los recursos (qué ofrecer) y la voz (cómo nombrarlo) son las dos mitades de lo
 mismo. El ranker le da a la voz de qué hablar. Por eso conviene construirlos
 juntos.
 
+## 4 bis. 🔴 Auditoría de señales (03/09/2026) — LEER, cambia los pesos y el orden de fases
+
+Antes de escribir una línea, Joaquín + Claude Code chequearon contra la base si
+**realmente** tenemos con qué alimentar esto. Resultado: **la mitad de las
+señales del plan original están vacías o apuntan al catálogo equivocado.** Los
+números crudos (proyecto de test / pre-launch):
+
+- **Hay DOS catálogos, no uno:**
+  - `resources` (biblioteca **curada** de Vita): **3 items**, 100% con eje
+    (`resource_axes`). `resource_axes` **FK apunta acá**, no a coach_resources.
+  - `coach_resources` (lo que sube el coach, el deck de `formato.tsx`): **8
+    publicados**, 100% con `topic_id`, **0% con `wellness_goal`, 0% con eje**.
+- **`wellness_goal` = 0 de 8 publicados.** Se captura en el alta pero **ningún
+  recurso publicado lo tiene**. → La **Fase 2 (descubrir por intención) no tiene
+  con qué** hoy.
+- **Eje en coach_resources = 0 de 8.** → El factor #1 del ranker que propuse
+  (match de eje, +3) **está muerto para el deck de coaches**. El eje solo existe
+  en el catálogo curado `resources` (3 items).
+- **Comportamiento poblacional ≈ nulo:** `resource_events` = 91 view / 25 play /
+  16 complete, pero de **solo 2-3 usuarios** (cuentas de test). `resource_saves`
+  = 2, `pinned` = 4, `saved_resources` = 1.
+- **Perfil declarado flaco:** `user_quiz_answers` = 3 filas, **1 con eje**.
+  `mood_entries` = 42 filas / **5 usuarios** (decente por-usuario, ínfimo en
+  población).
+
+**Qué implica (concreto, esto SÍ cambia el plan):**
+
+1. **El cold-start es el caso DEFAULT, no un borde.** Con 2-5 usuarios, casi
+   todos son cold-start. La propuesta original framea el comportamiento como
+   central; la realidad dice que **lo declarado (quiz) + lo estructural
+   (`topic_id`) + orden editorial + novedad cargan el peso**, y el comportamiento
+   es un bonus cuando existe. Hay que reordenar la prioridad del ranker (§5.1).
+2. **Reordenar pesos:** para `coach_resources`, **`topic_id` (8/8) es el factor
+   estructural principal, NO el eje (0/8)**. El eje +3 baja o se condiciona por
+   catálogo. El eje solo aplica al catálogo curado `resources`.
+3. **La Fase 2 necesita un pre-paso de datos:** poblar `wellness_goal`. Barato:
+   (a) backfill de los 8 publicados, y/o (b) hacer el campo obligatorio/prompteado
+   en el alta del coach. Sin eso, "por intención" no arranca.
+4. **La Fase 3 (colaborativo) no está gateada solo por consent — está gateada por
+   tener BASE de usuarios.** Con 2-5 no hay co-ocurrencia posible. Es "cuando haya
+   gente", no "más adelante".
+5. **La buena noticia:** el comportamiento existe **por-usuario** (Joaquín tiene
+   plays/completes), así que el loop personal *"porque escuchaste X"* **funciona
+   para un individuo sin necesidad de multitud**. La Fase 1 **personal** (no
+   colaborativa) es viable ya.
+6. **Decisión de superficie nueva (§10):** ¿el ranker apunta primero a
+   `coach_resources` (deck/momento, matchea por `topic_id`) o a `resources`
+   (home curado, matchea por eje, pero son 3 items)? Son cosas distintas.
+
+📝 Nada de esto invalida la propuesta — la **afina**. El mensaje de fondo: hoy el
+motor tiene que ser bueno en **cold-start con señal declarada + estructural**, y
+tratar el comportamiento/colaborativo como algo que **crece con la base**, no
+como el punto de partida.
+
 ## 5. Cómo se construiría (dos módulos puros + una card)
 
 Todo con **reglas/plantillas hoy** (la IA sigue apagada); cuando se prenda, es un
