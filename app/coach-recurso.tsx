@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -139,6 +139,7 @@ function AudioPlayer({
   const [pendingPlay, setPendingPlay] = useState(false);
   const [scrubbing, setScrubbing] = useState(false);
   const [scrubProgress, setScrubProgress] = useState(0);
+  const [seekTick, setSeekTick] = useState(0); // bump → el motor re-sincroniza
 
   // Progreso animado: la barra la mueve el native driver de forma continua, en
   // vez de saltar con cada update de status (que llega ~cada 500ms y se veía
@@ -156,11 +157,11 @@ function AudioPlayer({
   const durationRef = useRef(0);
   const scrubProgressRef = useRef(0);
   const scrubTextTsRef = useRef(0); // throttle del texto de tiempo durante drag
-  // Tras soltar un seek, el status sigue reportando la posición vieja por ~un
-  // tick. `pendingSeek` mantiene la barra en el destino hasta que el status
-  // converja ahí (o venza el timeout de seguridad) — así no parpadea.
-  const pendingSeekRef = useRef<number | null>(null);
-  const pendingSeekAtRef = useRef(0);
+  // Punto de partida tras un seek (scrub) para que el motor arranque de ahí sin
+  // esperar a que el status lo refleje; y último currentTime para el detector de
+  // saltos.
+  const seekBaseRef = useRef<number | null>(null);
+  const prevTimeRef = useRef(0);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
@@ -203,28 +204,18 @@ function AudioPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
-  // Motor de la barra suave: en cada cambio de estado real, frena la animación,
-  // fija el valor verdadero, y —si está sonando— la lanza hacia el final en
-  // tiempo real (segundos restantes / velocidad). useNativeDriver → 60fps sin
-  // pasar por el hilo de JS.
+  // Motor de la barra: se lanza UNA sola animación nativa hacia el final y se
+  // reinicia SOLO en eventos discretos (play/pausa/velocidad/seek) — NO en cada
+  // tick de status. Reiniciarla 4 veces por segundo era lo que la hacía tironear.
+  // `seekBaseRef` (seteado por el scrub) o `progress` fijan el punto de partida.
   useEffect(() => {
     runningAnim.current?.stop();
-    // Mientras el dedo arrastra, la barra la maneja el PanResponder — no pisar.
-    if (scrubbing) return;
+    if (scrubbing) return; // el dedo maneja la barra (scrubAnim)
 
-    // Punto base = posición real, salvo que haya un seek pendiente cuyo destino
-    // el status todavía no refleja: en ese caso se sostiene el destino hasta que
-    // converja (o venza el timeout), evitando el parpadeo al soltar.
-    let base = progress;
-    const target = pendingSeekRef.current;
-    if (target !== null && duration > 0) {
-      const converged = Math.abs(currentTime - target * duration) <= 0.6;
-      const expired = Date.now() - pendingSeekAtRef.current > 1500;
-      if (converged || expired) pendingSeekRef.current = null;
-      else base = target;
-    }
-
+    const base = seekBaseRef.current ?? progress;
+    seekBaseRef.current = null;
     anim.setValue(base);
+
     const remainFromBase = duration * (1 - base);
     if (isPlaying && duration > 0 && remainFromBase > 0) {
       const a = Animated.timing(anim, {
@@ -238,7 +229,21 @@ function AudioPlayer({
     }
     return () => { runningAnim.current?.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, duration, currentTime, rate, scrubbing]);
+  }, [isPlaying, duration, rate, scrubbing, seekTick]);
+
+  // Detector de saltos: los ±15s (y cualquier seek externo) mueven `currentTime`
+  // de golpe. Un tick normal avanza ~rate*intervalo; si el salto es mayor,
+  // gatillamos un resync (bump de `seekTick`) sin reiniciar en cada tick normal.
+  useEffect(() => {
+    const prev = prevTimeRef.current;
+    prevTimeRef.current = currentTime;
+    if (scrubbing) return;
+    const expected = isPlaying ? rate * 0.4 : 0.1;
+    if (Math.abs(currentTime - prev) > expected + 1) {
+      setSeekTick(t => t + 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTime]);
 
   // Feedback de arranque: al tocar play, mostrar spinner hasta que suene de
   // verdad (cubre el buffering inicial del streaming).
@@ -315,8 +320,9 @@ function AudioPlayer({
         const p = setScrubFromX(g.moveX);
         if (durationRef.current > 0) {
           player.seekTo(p * durationRef.current);
-          pendingSeekRef.current = p;
-          pendingSeekAtRef.current = Date.now();
+          // El motor arranca de acá (sin esperar al status) → sin parpadeo.
+          seekBaseRef.current = p;
+          setSeekTick(t => t + 1);
         }
         anim.setValue(p);
         setScrubProgress(p);
@@ -328,11 +334,16 @@ function AudioPlayer({
 
   // translateX de un fill de ancho completo, recortado por el track (overflow
   // hidden): de -trackW (vacío) a 0 (lleno). La perilla va de 0 a trackW.
-  // Reproducción → `anim` (native driver). Arrastre → `scrubAnim` (JS). Los dos
-  // son Animated, así que ningún modo re-renderiza React por frame.
-  const activeVal = scrubbing ? scrubAnim : anim;
-  const fillTranslate = activeVal.interpolate({ inputRange: [0, 1], outputRange: [-trackW, 0] });
-  const knobTranslate = activeVal.interpolate({ inputRange: [0, 1], outputRange: [0, trackW] });
+  // Reproducción → `anim` (native driver). Arrastre → `scrubAnim` (JS). Las
+  // interpolaciones se MEMOIZAN (solo cambian con trackW) para no recrear los
+  // nodos en cada render — recrearlos hacía que el native driver rearmara el
+  // grafo y tironeara.
+  const animFill = useMemo(() => anim.interpolate({ inputRange: [0, 1], outputRange: [-trackW, 0] }), [anim, trackW]);
+  const animKnob = useMemo(() => anim.interpolate({ inputRange: [0, 1], outputRange: [0, trackW] }), [anim, trackW]);
+  const scrubFill = useMemo(() => scrubAnim.interpolate({ inputRange: [0, 1], outputRange: [-trackW, 0] }), [scrubAnim, trackW]);
+  const scrubKnob = useMemo(() => scrubAnim.interpolate({ inputRange: [0, 1], outputRange: [0, trackW] }), [scrubAnim, trackW]);
+  const fillTranslate = scrubbing ? scrubFill : animFill;
+  const knobTranslate = scrubbing ? scrubKnob : animKnob;
 
   // Tiempos mostrados: durante el arrastre, siguen al dedo.
   const shownTime = scrubbing ? scrubProgress * duration : currentTime;
