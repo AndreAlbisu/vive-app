@@ -10,14 +10,16 @@ import {
   Linking,
   Image,
   Share,
-  Animated,
-  Easing,
-  PanResponder,
   type LayoutChangeEvent,
-  type GestureResponderEvent,
-  type PanResponderGestureState,
   useWindowDimensions,
 } from 'react-native';
+// La barra de progreso corre 100% en el hilo de UI: animación con Reanimated
+// (shared values + withTiming) y arrastre con gesture-handler. Así los re-renders
+// de status (cada 250ms) y la carga del hilo de JS en dev no la tironean.
+import Animated, {
+  useSharedValue, useAnimatedStyle, withTiming, cancelAnimation, runOnJS, Easing,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,9 +59,6 @@ function fmtClock(secs: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function clamp01(x: number): number {
-  return Math.max(0, Math.min(1, x));
-}
 
 function extractYouTubeId(url: string): string | null {
   const patterns = [
@@ -141,22 +140,14 @@ function AudioPlayer({
   const [scrubProgress, setScrubProgress] = useState(0);
   const [seekTick, setSeekTick] = useState(0); // bump → el motor re-sincroniza
 
-  // Progreso animado: la barra la mueve el native driver de forma continua, en
-  // vez de saltar con cada update de status (que llega ~cada 500ms y se veía
-  // lagueado). Se re-sincroniza al valor real en cada tick.
-  const anim = useRef(new Animated.Value(0)).current;
-  const runningAnim = useRef<Animated.CompositeAnimation | null>(null);
-  // Valor dedicado al arrastre: JS puro (nunca native driver), así `setValue` en
-  // cada frame no se pelea con nada y mueve la barra sin re-renderizar React.
-  const scrubAnim = useRef(new Animated.Value(0)).current;
-  // Espejos del último valor para leer dentro del PanResponder (creado una sola
-  // vez) sin quedar con la closure vieja.
-  const trackRef = useRef<View>(null);
-  const trackLeftRef = useRef(0);   // x absoluta del track en pantalla
-  const trackWRef = useRef(0);
+  // Shared values (hilo de UI): posición de la barra 0..1, ancho del track y
+  // duración/último-segundo para calcular el texto dentro del worklet de gesto.
+  const pos = useSharedValue(0);
+  const trackWsv = useSharedValue(0);
+  const durationSv = useSharedValue(0);
+  const lastSecSv = useSharedValue(-1); // throttle del texto: solo al cambiar de segundo
+  // Espejos leídos desde callbacks JS del gesto sin closure vieja.
   const durationRef = useRef(0);
-  const scrubProgressRef = useRef(0);
-  const scrubTextTsRef = useRef(0); // throttle del texto de tiempo durante drag
   // Punto de partida tras un seek (scrub) para que el motor arranque de ahí sin
   // esperar a que el status lo refleje; y último currentTime para el detector de
   // saltos.
@@ -204,32 +195,29 @@ function AudioPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
-  // Motor de la barra: se lanza UNA sola animación nativa hacia el final y se
-  // reinicia SOLO en eventos discretos (play/pausa/velocidad/seek) — NO en cada
-  // tick de status. Reiniciarla 4 veces por segundo era lo que la hacía tironear.
-  // `seekBaseRef` (seteado por el scrub) o `progress` fijan el punto de partida.
+  // Motor de la barra: lanza UNA animación (en el hilo de UI vía Reanimated) hacia
+  // el final y se reinicia SOLO en eventos discretos (play/pausa/velocidad/seek),
+  // NO en cada tick. `seekBaseRef` (del scrub) o `progress` fijan el arranque.
   useEffect(() => {
-    runningAnim.current?.stop();
-    if (scrubbing) return; // el dedo maneja la barra (scrubAnim)
+    cancelAnimation(pos);
+    if (scrubbing) return; // el dedo maneja la barra (gesto)
 
     const base = seekBaseRef.current ?? progress;
     seekBaseRef.current = null;
-    anim.setValue(base);
+    pos.value = base;
 
     const remainFromBase = duration * (1 - base);
     if (isPlaying && duration > 0 && remainFromBase > 0) {
-      const a = Animated.timing(anim, {
-        toValue: 1,
+      pos.value = withTiming(1, {
         duration: (remainFromBase / rate) * 1000,
         easing: Easing.linear,
-        useNativeDriver: true,
       });
-      runningAnim.current = a;
-      a.start();
     }
-    return () => { runningAnim.current?.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, duration, rate, scrubbing, seekTick]);
+
+  // Mantener los shared values de duración en sync (para el worklet del gesto).
+  useEffect(() => { durationSv.value = duration; }, [duration, durationSv]);
 
   // Detector de saltos: los ±15s (y cualquier seek externo) mueven `currentTime`
   // de golpe. Un tick normal avanza ~rate*intervalo; si el salto es mayor,
@@ -267,18 +255,11 @@ function AudioPlayer({
   }
 
   function onTrackLayout(e: LayoutChangeEvent) {
-    setTrackW(e.nativeEvent.layout.width);
-    // Posición absoluta en pantalla para mapear el toque con precisión (locationX
-    // se vuelve relativo a subvistas durante el drag y salta). Solo importa la x,
-    // que no cambia al hacer scroll vertical.
-    trackRef.current?.measureInWindow((x, _y, w) => {
-      trackLeftRef.current = x;
-      if (w) trackWRef.current = w;
-    });
+    const w = e.nativeEvent.layout.width;
+    setTrackW(w);
+    trackWsv.value = w;
   }
 
-  // Espejos leídos por el PanResponder (ver arriba).
-  trackWRef.current = trackW || trackWRef.current;
   durationRef.current = duration;
 
   function togglePlay() {
@@ -287,65 +268,70 @@ function AudioPlayer({
     player.play();
   }
 
-  // Arrastre de la barra. Coordenada = x absoluta del toque menos el borde
-  // izquierdo real del track (medido). La barra la mueve `scrubAnim` (JS, sin
-  // re-render por frame); el texto de tiempo se actualiza throttled. El seek se
-  // dispara recién al soltar. El mismo responder cubre tap y drag.
-  const setScrubFromX = (absX: number) => {
-    const p = clamp01((absX - trackLeftRef.current) / (trackWRef.current || 1));
-    scrubProgressRef.current = p;
-    scrubAnim.setValue(p);
-    return p;
-  };
-  const pan = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (_e: GestureResponderEvent, g: PanResponderGestureState) => {
-        anim.stopAnimation();
-        const p = setScrubFromX(g.x0);
-        setScrubProgress(p);
-        setScrubbing(true);
-      },
-      onPanResponderMove: (_e: GestureResponderEvent, g: PanResponderGestureState) => {
-        const p = setScrubFromX(g.moveX);
-        // Texto de tiempo: como mucho ~cada 90ms (la barra ya es fluida aparte).
-        const now = Date.now();
-        if (now - scrubTextTsRef.current > 90) {
-          scrubTextTsRef.current = now;
-          setScrubProgress(p);
-        }
-      },
-      onPanResponderRelease: (_e: GestureResponderEvent, g: PanResponderGestureState) => {
-        const p = setScrubFromX(g.moveX);
-        if (durationRef.current > 0) {
-          player.seekTo(p * durationRef.current);
-          // El motor arranca de acá (sin esperar al status) → sin parpadeo.
-          seekBaseRef.current = p;
-          setSeekTick(t => t + 1);
-        }
-        anim.setValue(p);
-        setScrubProgress(p);
-        setScrubbing(false);
-      },
-      onPanResponderTerminate: () => setScrubbing(false),
+  // ── Callbacks JS del gesto (corren fuera del worklet, vía runOnJS). Estables
+  //    (useCallback) para poder memoizar el gesto y no recrearlo en cada tick. ──
+  const onScrubStart = useCallback((p: number) => {
+    setScrubbing(true);
+    setScrubProgress(p);
+  }, []);
+  const onScrubText = useCallback((p: number) => setScrubProgress(p), []);
+  const onScrubEnd = useCallback((p: number) => {
+    if (durationRef.current > 0) {
+      player.seekTo(p * durationRef.current);
+      seekBaseRef.current = p; // el motor arranca de acá → sin parpadeo
+      setSeekTick(t => t + 1);
+    }
+    setScrubProgress(p);
+    setScrubbing(false);
+  }, [player]);
+
+  // Arrastre en el hilo de UI. `e.x` ya es relativo al GestureDetector (= track),
+  // sin medir nada. `pos.value = p` mueve la barra a 60fps sin tocar JS; el texto
+  // de tiempo se actualiza solo cuando cambia el segundo (throttle en worklet).
+  // Memoizado para que un re-render por status no recree el gesto en pleno drag.
+  const panGesture = useMemo(() => Gesture.Pan()
+    .minDistance(0) // activa también con tap (sin mover) → tap-para-saltar
+    .onBegin((e) => {
+      'worklet';
+      cancelAnimation(pos);
+      const p = Math.max(0, Math.min(1, e.x / (trackWsv.value || 1)));
+      pos.value = p;
+      lastSecSv.value = Math.floor(p * durationSv.value);
+      runOnJS(onScrubStart)(p);
     })
-  ).current;
+    .onUpdate((e) => {
+      'worklet';
+      const p = Math.max(0, Math.min(1, e.x / (trackWsv.value || 1)));
+      pos.value = p;
+      const sec = Math.floor(p * durationSv.value);
+      if (sec !== lastSecSv.value) {
+        lastSecSv.value = sec;
+        runOnJS(onScrubText)(p);
+      }
+    })
+    .onEnd((e) => {
+      'worklet';
+      const p = Math.max(0, Math.min(1, e.x / (trackWsv.value || 1)));
+      pos.value = p;
+      runOnJS(onScrubEnd)(p);
+    })
+    .onFinalize(() => {
+      'worklet';
+      runOnJS(setScrubbing)(false);
+    }),
+    [pos, trackWsv, durationSv, lastSecSv, onScrubStart, onScrubText, onScrubEnd],
+  );
 
-  // translateX de un fill de ancho completo, recortado por el track (overflow
-  // hidden): de -trackW (vacío) a 0 (lleno). La perilla va de 0 a trackW.
-  // Reproducción → `anim` (native driver). Arrastre → `scrubAnim` (JS). Las
-  // interpolaciones se MEMOIZAN (solo cambian con trackW) para no recrear los
-  // nodos en cada render — recrearlos hacía que el native driver rearmara el
-  // grafo y tironeara.
-  const animFill = useMemo(() => anim.interpolate({ inputRange: [0, 1], outputRange: [-trackW, 0] }), [anim, trackW]);
-  const animKnob = useMemo(() => anim.interpolate({ inputRange: [0, 1], outputRange: [0, trackW] }), [anim, trackW]);
-  const scrubFill = useMemo(() => scrubAnim.interpolate({ inputRange: [0, 1], outputRange: [-trackW, 0] }), [scrubAnim, trackW]);
-  const scrubKnob = useMemo(() => scrubAnim.interpolate({ inputRange: [0, 1], outputRange: [0, trackW] }), [scrubAnim, trackW]);
-  const fillTranslate = scrubbing ? scrubFill : animFill;
-  const knobTranslate = scrubbing ? scrubKnob : animKnob;
+  // Estilos animados (hilo de UI). Fill: ancho completo recortado por el track
+  // (overflow hidden), translateX de -trackW (vacío) a 0 (lleno). Perilla: 0..trackW.
+  const fillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: -trackWsv.value * (1 - pos.value) }],
+  }));
+  const knobStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: trackWsv.value * pos.value }],
+  }));
 
-  // Tiempos mostrados: durante el arrastre, siguen al dedo.
+  // Tiempos mostrados: durante el arrastre, siguen al dedo (por segundo).
   const shownTime = scrubbing ? scrubProgress * duration : currentTime;
   const shownRemaining = Math.max(0, duration - shownTime);
   const showSpinner = pendingPlay && !isPlaying;
@@ -355,21 +341,19 @@ function AudioPlayer({
   return (
     <View style={ap.wrap}>
       {/* Barra de progreso: tap para saltar, o arrastrar la perilla */}
-      <View style={ap.trackWrap} {...pan.panHandlers}>
-        <View ref={trackRef} style={ap.track} onLayout={onTrackLayout}>
+      <GestureDetector gesture={panGesture}>
+        <View style={ap.trackWrap}>
+          <View style={ap.track} onLayout={onTrackLayout}>
+            <Animated.View
+              style={[ap.fill, { width: trackW, backgroundColor: color }, fillStyle]}
+            />
+          </View>
           <Animated.View
-            style={[ap.fill, { width: trackW, backgroundColor: color, transform: [{ translateX: fillTranslate }] }]}
+            pointerEvents="none"
+            style={[ap.knob, scrubbing && ap.knobActive, { backgroundColor: color }, knobStyle]}
           />
         </View>
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            ap.knob,
-            scrubbing && ap.knobActive,
-            { backgroundColor: color, transform: [{ translateX: knobTranslate }] },
-          ]}
-        />
-      </View>
+      </GestureDetector>
 
       {/* Transcurrido a la izquierda, RESTANTE en negativo a la derecha */}
       <View style={ap.timeRow}>
