@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-09-03 — Joaquín (sesión 158 · la barra del reproductor, hasta que quedó fluida)
+
+**Tocado:** `app/coach-recurso.tsx`. `tsc`, lint (solo el warning pre-existente de `user`) y 429 tests limpios. Sin schema.
+
+**Resumen — la barra de progreso pasó por varias vueltas hasta quedar fluida en reproducción, arrastre y tap. Confirmado en dispositivo por Joaquín.**
+
+- 🔴 **Lag en reproducción:** el motor reiniciaba un `Animated.timing` en **cada tick de status (~4/seg)** y recreaba los nodos de interpolación en cada render → el native driver rearmaba el grafo y tironeaba. Fix: **una sola animación** hacia el final, reinicio **solo en eventos discretos** (play/pausa/velocidad/seek) + un detector de saltos aparte para los ±15s; interpolaciones memoizadas. Eso dejó la reproducción fluida.
+- 🔴 **Lag en el arrastre:** seguía tironeando porque corría en el **hilo de JS** (`PanResponder` + `Animated.setValue`), que en dev se satura con los re-renders de status. Se pasó **toda la barra a Reanimated + gesture-handler** (shared value + `withTiming` + `Gesture.Pan`), 100% en el **hilo de UI** → inmune a los re-renders. Coordenada = `e.x` relativo al `GestureDetector` (sin medir nada). Texto de tiempo con throttle por segundo dentro del worklet. Antes de usar Reanimated se verificó que el plugin de worklets ya está configurado (OnboardingScreen1 usa `'worklet'` + `useSharedValue`) → sin riesgo de build.
+- 🔴 **Tap congelado:** el `Pan` con `minDistance(0)` no resuelve bien un toque sin movimiento y `scrubbing` quedaba pegado. Se separó en dos gestos (**patrón slider**): un **`Tap`** dedicado (solo hace seek, nunca toca `scrubbing`, no se puede colgar) y el **`Pan`** para arrastrar, compuestos con **`Exclusive(pan, tap)`** — el pan con un `minDistance` chico así un toque quieto lo agarra el tap. El seek del pan va en `onEnd` (solo en drag real); `onFinalize` solo resetea `scrubbing` por si se cancela.
+- 📝 **Aprendizaje para la próxima:** una barra/slider con animación continua + gesto se hace con **Reanimated + gesture-handler desde el arranque**, no con RN `Animated` + `PanResponder`. El native driver ayuda en reproducción pero el gesto sobre JS tironea en dev; y tap vs. drag se separan en dos gestos, no se fuerzan en un Pan con `minDistance(0)`.
+
+**Pendiente para la próxima sesión:**
+- Device review del resto de Recursos: vista lista + deck con el toggle, hero, bloques "Quién lo hizo" / "Después de esto".
+- Charla de la tarjeta "Pedile una recomendación a [coach]" (qué la hace confusa).
+- Opcional: nulear `duration_seconds` de las filas SEED para que la demo no muestre 10:00 con un audio de 8s.
+
 ## 2026-09-02 — Andre (sesión 157 · investigar la consulta legal en vez de pagarla)
 
 **Tocado:** `docs/terminos-y-condiciones.md` (§22), `docs/politica-de-privacidad.md` (§9), `docs/legal-instrucciones.md`, `docs/paquete-abogado.md`, `constants/legal.ts` + `web/legal/` (regenerados). Nuevos: `docs/transferencias-internacionales.md`, `docs/consentimiento-datos-sensibles.md`, `docs/consumo.md`, `docs/encuadre-salud-y-responsabilidad.md`. Sin cambios de código ni de schema.
