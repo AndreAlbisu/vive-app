@@ -146,6 +146,7 @@ function AudioPlayer({
   const trackWsv = useSharedValue(0);
   const durationSv = useSharedValue(0);
   const lastSecSv = useSharedValue(-1); // throttle del texto: solo al cambiar de segundo
+  const lastPSv = useSharedValue(0);    // última posición del gesto (para el seek final)
   // Espejos leídos desde callbacks JS del gesto sin closure vieja.
   const durationRef = useRef(0);
   // Punto de partida tras un seek (scrub) para que el motor arranque de ahí sin
@@ -296,6 +297,7 @@ function AudioPlayer({
       cancelAnimation(pos);
       const p = Math.max(0, Math.min(1, e.x / (trackWsv.value || 1)));
       pos.value = p;
+      lastPSv.value = p;
       lastSecSv.value = Math.floor(p * durationSv.value);
       runOnJS(onScrubStart)(p);
     })
@@ -303,23 +305,20 @@ function AudioPlayer({
       'worklet';
       const p = Math.max(0, Math.min(1, e.x / (trackWsv.value || 1)));
       pos.value = p;
+      lastPSv.value = p;
       const sec = Math.floor(p * durationSv.value);
       if (sec !== lastSecSv.value) {
         lastSecSv.value = sec;
         runOnJS(onScrubText)(p);
       }
     })
-    .onEnd((e) => {
-      'worklet';
-      const p = Math.max(0, Math.min(1, e.x / (trackWsv.value || 1)));
-      pos.value = p;
-      runOnJS(onScrubEnd)(p);
-    })
+    // El seek final va en onFinalize (SIEMPRE dispara: tap o soltar un drag). En
+    // un tap `onEnd` no dispara de forma confiable y la barra quedaba congelada.
     .onFinalize(() => {
       'worklet';
-      runOnJS(setScrubbing)(false);
+      runOnJS(onScrubEnd)(lastPSv.value);
     }),
-    [pos, trackWsv, durationSv, lastSecSv, onScrubStart, onScrubText, onScrubEnd],
+    [pos, trackWsv, durationSv, lastSecSv, lastPSv, onScrubStart, onScrubText, onScrubEnd],
   );
 
   // Estilos animados (hilo de UI). Fill: ancho completo recortado por el track
