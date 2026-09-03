@@ -21,6 +21,37 @@ que entran. La Política §3 ya lo dice y está bien dicho. **No hay margen para
 discutir esto**, y conviene no intentarlo: la posición de "en realidad no es
 sensible" es la que peor envejece.
 
+### 🔴 Ampliación del 03/09/2026: el comportamiento también entra
+
+La primera versión de este documento cubría solo lo que la persona **escribe o
+declara**. Eso quedó corto. Revisando la propuesta de recomendación de recursos
+—que asumía que el comportamiento es dato no sensible y por eso "sale sin
+bloqueo"— apareció que **qué recursos usás también revela salud**.
+
+*"Escuchaste tres audios de ansiedad esta semana"* dice lo mismo sobre tu salud
+mental que un check-in, solo que por deducción en vez de por declaración. Dos
+apoyos:
+
+- **TJUE, C-184/20** (01/08/2022): los datos que, *"mediante una operación
+  intelectual de comparación o deducción"*, permiten revelar información
+  sensible **son datos de categoría especial** del art. 9. El caso era sobre
+  orientación sexual deducida del nombre de una pareja — datos que en sí mismos
+  no eran sensibles. Es exactamente la forma del problema acá.
+- **My Health My Data (Washington)** define *health care services* como
+  "cualquier servicio prestado a una persona para evaluar, medir, mejorar o
+  aprender sobre su salud mental o física", y protege expresamente el dato que
+  identifica a alguien **buscando** esos servicios. Un audio para calmar la
+  ansiedad es literalmente eso.
+
+En Argentina no hay un fallo equivalente, pero el art. 2 dice "información
+**referente a** la salud", que es redacción amplia, y no se ve por qué la AAIP
+razonaría distinto.
+
+**Consecuencia práctica:** el opt-in de la sección 4 tiene que cubrir también
+**qué recursos usás** (`resource_events`, `resource_saves`, `pinned_resources`),
+no solo lo que escribís. Es la misma pantalla y la misma tabla — cambia el texto
+informado, no la arquitectura.
+
 ## 2. 🔴 La letra de la ley es más dura de lo que todo el mundo aplica
 
 Esto es lo que más me sorprendió y es la parte que no quiero suavizar.
@@ -103,8 +134,10 @@ aceptando; en el alta es ruido que nadie lee.
 
 **Qué mostrar**, en la pantalla y antes del botón:
 
-- Qué se guarda: ánimo, diario, gratitud.
-- Para qué: prestar el servicio y devolverle a la persona su propio registro.
+- Qué se guarda: ánimo, diario, gratitud, **y qué recursos usás** (ver la
+  ampliación del 03/09 en la sección 1 — el comportamiento también revela salud).
+- Para qué: prestar el servicio, devolverle a la persona su propio registro, y
+  **ofrecerle recursos que encajen con lo que viene haciendo**.
 - **Que no se comparte con nadie**, ni con los profesionales, salvo que ella lo
   mande explícitamente (eso es A.11).
 - Que puede **no** aceptar y seguir usando el resto de la app.
@@ -140,10 +173,12 @@ Reemplaza el `[Validar con abogado…]` y saca el consentimiento por conducta.
 
 > ### 3. Datos Sensibles y Consentimiento Explícito
 >
-> Ciertos datos que el Usuario ingresa —los registros de estado de ánimo, el
-> diario, los ejercicios de gratitud, y el contenido de las conversaciones que
-> pueda revelar información sobre su salud— constituyen **datos sensibles** en
-> los términos de la Ley 25.326.
+> Ciertos datos vinculados al Usuario —los registros de estado de ánimo, el
+> diario, los ejercicios de gratitud, el contenido de las conversaciones que
+> pueda revelar información sobre su salud, y **el registro de qué contenidos de
+> bienestar utiliza**— constituyen **datos sensibles** en los términos de la Ley
+> 25.326, sea porque los declara o porque permiten deducir información sobre su
+> salud.
 >
 > Su tratamiento requiere el **consentimiento libre, expreso e informado** del
 > Usuario, que se solicita **de forma específica y separada de la aceptación de
@@ -154,7 +189,7 @@ Reemplaza el `[Validar con abogado…]` y saca el consentimiento por conducta.
 > **Prestar este consentimiento es voluntario y no es condición para usar la
 > Plataforma.** El Usuario que no lo preste puede reservar sesiones, comunicarse
 > con Profesionales y acceder a los contenidos, sin las funcionalidades de
-> registro de bienestar.
+> registro de bienestar y sin recomendaciones basadas en su uso.
 >
 > El Usuario puede **revocar este consentimiento en cualquier momento** desde su
 > perfil o escribiendo a vitaappar@gmail.com, y solicitar la supresión de los

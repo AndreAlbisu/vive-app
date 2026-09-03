@@ -26,9 +26,10 @@
 - **El `why` del ranker tiene que ser un enum cerrado**, no texto libre: "porque escuchaste tres audios de foco" está bien, "porque venís con ansiedad" es el modo analista que la propuesta rechaza, y `rejectCopy` no está diseñado para detectar eso.
 - **Aclaración pedida por Andre:** el recomendador va en Recursos. El motor (`resourceRanking.ts`) es puro y compartido; la card de momento vive en Recursos; Inicio como mucho hace un ofrecimiento de una línea y manda para allá. Así se resuelve la decisión 5 sin romper "una voz, no dos".
 
+- ✅ **`docs/consentimiento-datos-sensibles.md` ampliado**: sección nueva en §1 con el hallazgo de C-184/20 y la MHMDA, y el opt-in de §4 y el texto de §5 ahora cubren también qué recursos usás. Misma pantalla y misma tabla — cambia el texto informado.
+- ✅ **Devolución escrita para Joaquín en `docs/revision-propuestas.md`**, con los siete puntos, el orden propuesto y el balance de decisiones (de diez quedan seis abiertas).
+
 **Pendiente para la próxima sesión:**
-- **Actualizar `docs/consentimiento-datos-sensibles.md`** con el hallazgo de C-184/20: el opt-in tiene que cubrir el comportamiento, no solo ánimo/diario/gratitud.
-- **Pasarle la devolución a Joaquín** — está toda acá, falta escribirla como respuesta.
 - La conversación del catálogo (§7 del plan paraguas) sigue siendo la que más mueve la aguja y no es de código.
 
 ---
