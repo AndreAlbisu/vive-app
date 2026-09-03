@@ -22,7 +22,10 @@
 **Device review — HECHA.** Joaquín revisó todo en el teléfono: reproductor (barra fluida en reproducción/arrastre/tap), vista lista + deck con el toggle, hero, bloques "Quién lo hizo" / "Después de esto", y el borrador de la tarjeta de recomendación. Todo funciona. **El bloque de Recursos (sesiones 156/158) queda cerrado.**
 
 **Pendiente para la próxima sesión:**
-- Nada abierto de Recursos. Retomar con lo que Joaquín decida (o los pendientes de Andre del lado legal/matrícula, si se coordina).
+- Nada abierto de código en Recursos.
+- 🔴 **PARA ANDRE — necesita tu OK antes de arrancar (decisión de los dos):** Joaquín y su Claude Code dejaron una propuesta detallada, en criollo, para darle valor real al apartado de Recursos con un **motor de recomendación + "momento" de la voz** → **`docs/recomendacion-recursos.md`**. La idea en una línea: que la app te devuelva lo que registraste, te ofrezca el recurso concreto que encaja, y lo hondo lo mande al coach ("presencia + puente", NO interpretar/prescribir — alineado con `la-voz-de-sofia.md`). Toca tu tema: la presencia emocional depende de `user_consents` (sesión 157), aunque la Fase 1 sale sin bloqueo usando solo comportamiento no-sensible.
+  - **Pedido explícito:** leelo y pasáselo a **tu Claude Code para una revisión crítica** — que busque puntos débiles, casos borde (usuario nuevo sin datos, señales pobres), dónde roza la línea legal o la de "presencia vs. interpretación", y que **agregue cosas de valor**. Cuanto más lo rompan antes de construir, mejor.
+  - **Si das el OK**, arrancamos por los dos módulos puros (`lib/resourceRanking.ts` + `lib/momentoRecurso.ts`) con tests, sin UI. Cualquier duda, está todo en el doc (incluidas las 5 decisiones que faltan cerrar entre los dos).
 
 ## 2026-09-02 — Andre (sesión 157 · investigar la consulta legal en vez de pagarla)
 
