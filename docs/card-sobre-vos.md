@@ -17,6 +17,41 @@ Inicio.
 
 ---
 
+## 0. ✅ Reconciliado con la devolución de Andre (04/09) — LEER PRIMERO
+
+Andre hizo la revisión crítica (`docs/revision-propuestas.md`). Cerró dos de las
+decisiones y una "decisión abierta" resultó ser un bug ya arreglado. Esto manda
+sobre lo que sigue (que se deja como historia):
+
+- ✅ **Decisión 1 CERRADA — NO toda card lleva acción.** La capa 3 pedía una
+  acción cada vez que la card habla; **choca con `sobreVosSilencio.ts`** y
+  **satura** (una pregunta diaria sin responder se acumula como algo pendiente,
+  por más suave que sea). **Resuelto:** día **con** señal, habla y ofrece una
+  acción; día **sin** señal, se calla y no pide nada. La capa 3 se aplica solo
+  cuando la card ya iba a hablar.
+- ✅ **Decisión 4 CERRADA — el paquete va PRIMERO.** No era una decisión, es una
+  dependencia de una vía: el paquete no necesita la card (demanda comprobada,
+  Mónica ya lo hace a mano), pero la card **sin** el paquete pierde la capa 2
+  entera y la mitad de las acciones de la capa 3 aterrizan en el aire.
+- ✅ **El usuario nuevo NO era una decisión abierta — era un bug, ya arreglado.**
+  Con un solo check-in la card decía *"Tu semana viene pareja"* (afirmaba sobre
+  la semana con un día). Andre lo arregló en la sesión 159 con la señal **`early`**
+  (dos juegos de variantes: gentle si el ánimo es bajo, neutral si no). El
+  cold-start es el default (lo dice la auditoría), así que esto era lo primero a
+  cerrar, no lo último.
+- 📌 **La capa 1 (giro a presente) es el arranque.** En el orden acordado va
+  temprano: es barato, mejora el texto que la gente lee **hoy**, y no depende de
+  nada. Se hace en `weeklyReflection.ts`.
+- 📌 **El ofrecimiento de recurso de la capa 3** usa el **enum cerrado** del `why`
+  (ver `recomendacion-recursos.md` §0), nunca texto libre — así no se cuela una
+  interpretación sobre la persona.
+
+**Decisiones que siguen abiertas entre los dos:** seco vs. para-qué suave · el
+check-in como acción principal · la relación con la card de Sofía ("una voz, no
+dos").
+
+---
+
 ## El problema, en una línea
 
 El doc de la voz (`la-voz-de-sofia.md` §1) ya decidió el 28/08 que la card deje

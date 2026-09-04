@@ -19,6 +19,36 @@ Todo esto sirve a **un** norte, el que ya está escrito en `la-voz-de-sofia.md`
 conozca y te ayude — que te encuentre donde estás y te baje, en palabras y en un
 recurso, cómo encarar lo que te pasa. Sin diagnosticar, sin vender, sin fingir.
 
+## 0 bis. ✅ Reconciliado con la devolución de Andre (04/09) — MANDA sobre el resto
+
+Andre hizo la revisión crítica (`docs/revision-propuestas.md`). El rumbo quedó
+bien; cambian **el orden, el alcance y algunas decisiones**. Esto supersede el
+roadmap del §4 y el orden del §8:
+
+- 🔴 **El ranker con pesos → filtro por intención** hasta que el catálogo llegue
+  a 25-30 recursos (hoy hay 11, uno por objetivo → los pesos no mueven nada).
+- 🔴 **`user_consents` pasa de Fase 2 a PRERREQUISITO** (TJUE C-184/20: el
+  comportamiento que deduce lo sensible ES sensible). Ya lo construyó Andre; el
+  opt-in ahora cubre también "qué recursos usás".
+- ✅ **Cerradas:** NO toda card lleva acción (día sin señal se calla) · el
+  paquete va primero (dependencia de una vía) · el usuario nuevo no era decisión
+  sino un bug ya arreglado (`early`, sesión 159) · el `why` es enum cerrado · el
+  motor es puro/compartido y la card vive en Recursos, Inicio solo ofrece una
+  línea.
+
+**El orden acordado (reemplaza el §8):**
+1. `user_consents` (hecho) · 2. **el paquete de la sesión** · 3. **capa 1 de la
+card** (giro a presente en `weeklyReflection.ts`) · 4. **la conversación del
+catálogo** (§7, lo que más mueve la aguja) · 5. **recién ahí el ranker/filtro**.
+
+**Abiertas (de 10 quedan 6):** seco vs. para-qué suave · pesos del ranker
+(después del catálogo) · formato de la card · check-in como acción principal ·
+relación con Sofía · **cómo crece el catálogo** (la más importante).
+
+Detalle por doc: `recomendacion-recursos.md §0` y `card-sobre-vos.md §0`.
+
+---
+
 ## 1. Las dos mitades de la misma cosa
 
 No son dos features sueltas: son la misma tesis en **dos superficies**.

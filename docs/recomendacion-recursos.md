@@ -11,6 +11,46 @@
 
 ---
 
+## 0. ✅ Reconciliado con la devolución de Andre (04/09) — LEER PRIMERO
+
+Andre hizo la revisión crítica (`docs/revision-propuestas.md`). El rumbo quedó
+bien; lo que cambió es **el orden y el alcance**. Esto manda sobre lo que sigue
+más abajo (que es la propuesta original, se deja como historia):
+
+- 🔴 **El "ranker con pesos" es sobre-ingeniería HOY. Pasa a ser un filtro por
+  intención (un `where`).** Con 8 objetivos y 8 recursos (uno por objetivo), el
+  ranker no elige entre varios: devuelve el único que hay. Los pesos no mueven
+  nada. El ranker con pesos vuelve a tener sentido con **25-30 recursos**
+  (3-4 por objetivo). Hasta entonces: "mostrame lo de dormir" = filtro por
+  `wellness_goal`. **Los pesos de §5.1 quedan congelados** hasta que haya catálogo.
+- 🔴 **La Fase 1 NO estaba destrabada legalmente. `user_consents` es
+  PRERREQUISITO, no Fase 2.** El §6 (que decía que el comportamiento no-sensible
+  sale sin opt-in) **queda corregido**: TJUE C-184/20 — "volviste a los audios de
+  ansiedad" es una deducción de un dato sensible, así que ES categoría especial.
+  Andre ya amplió `consentimiento-datos-sensibles.md` para que el opt-in cubra
+  también "qué recursos usás". Nada se recomienda sin ese consentimiento.
+- ✅ **El `why` es un ENUM CERRADO, no texto libre** (§4bis lo confirma como
+  fuga al modo analista): `mismo_tema`, `mismo_coach`, `formato_preferido`,
+  `guardado_antes` — con la plantilla escrita de antemano. El ranker elige de una
+  lista, no redacta. "Porque venís con ansiedad" no puede existir.
+- ✅ **Dónde vive (decisión 5, resuelta):** el motor (`resourceRanking.ts`) es
+  puro y compartido, corre donde se lo llame; la **card de momento vive en
+  Recursos**; Inicio a lo sumo hace un ofrecimiento de una línea y manda para
+  allá. No rompe "una voz, no dos".
+
+**El orden acordado (de Andre, y sale de MI propia auditoría):**
+1. `user_consents` (ya construido por Andre) · 2. el **paquete de la sesión**
+(demanda comprobada, no depende del catálogo) · 3. la **capa 1 de la card** (giro
+a presente en `weeklyReflection.ts`, barato, mejora hoy) · 4. la **conversación
+del catálogo** (lo que más mueve la aguja, no es código) · 5. **recién ahí el
+ranker/filtro**, cuando haya qué rankear.
+
+**Decisiones que siguen abiertas entre los dos:** los pesos del ranker (después
+de que haya catálogo) · a qué catálogo apunta primero · y **cómo crece el
+catálogo** (la más importante).
+
+---
+
 ## 1. Qué queremos lograr (en criollo)
 
 Que la persona sienta que **la app lo conoce y lo ayuda**: que en el momento
