@@ -87,9 +87,14 @@ La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Prof
 
 ## 9. Cancelaciones, Reembolsos y Garantía
 
-9.1. **Cancelación por el Cliente.** El Cliente puede cancelar una Sesión desde la Plataforma **hasta 24 horas antes** del horario agendado, y en ese caso tiene derecho al **reembolso total**, que se procesa de forma automática a través del procesador de pagos.
+9.1. **Cancelación por el Cliente.** El Cliente **puede cancelar una Sesión desde la Plataforma en cualquier momento**. Lo que varía según la antelación es el reembolso:
 
-Dentro de las 24 horas previas al horario agendado, la Sesión **no puede cancelarse desde la Plataforma**. El Cliente puede solicitar al Profesional, a través del chat de la Sesión, que la cancele; si el Profesional accede, el reembolso se procesa igualmente de forma automática. Esta política se informa al Cliente antes de confirmar la reserva.
+- **Con 24 horas o más de antelación** respecto del horario agendado: **reembolso total**, que se procesa de forma automática a través del procesador de pagos.
+- **Dentro de las 24 horas previas**: la Sesión se cancela igualmente, pero **no da lugar a reembolso**, por corresponder al tiempo que el Profesional reservó y no puede reasignar. El Cliente puede, no obstante, solicitar al Profesional a través del chat de la Sesión que sea él quien la cancele; si el Profesional accede, el reembolso se procesa de forma automática.
+
+Esta política se informa al Cliente **antes de confirmar la reserva**.
+
+⚠️ Lo previsto en esta cláusula **no afecta ni limita** el derecho de revocación del punto 9.4, que es irrenunciable y prevalece dentro de su plazo.
 
 9.2. **Cancelación o rechazo por el Profesional.** Si el Profesional rechaza o cancela una Sesión ya abonada, o si la reserva pendiente vence sin confirmarse, el Cliente tendrá derecho al reembolso, que se procesará de forma automática a través del procesador de pagos. Los tiempos de acreditación dependen de dicho procesador y del medio de pago.
 
@@ -387,7 +392,7 @@ export const LEGAL_PLACEHOLDERS: string[] = ["[Validar con abogado el encuadre d
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = 'b787a467bed6';
+export const LEGAL_VERSION = '5796e754b3f3';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

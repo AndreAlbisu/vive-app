@@ -23,14 +23,27 @@ export function isCancelLate(scheduledDate: string, scheduledTime: string): bool
   if (!Number.isFinite(sessionMs)) return false;
   return Date.now() > sessionMs - 24 * 60 * 60 * 1000;
 }
-/** ¿Se puede cancelar una sesión confirmada? Solo con 24hs o más de margen.
+/** ¿Le devuelven la plata si cancela AHORA? Es la contracara de `isCancelLate`.
  *
- *  Es la contracara de `isCancelLate` y vivía duplicada dentro de SalaScreen.
- *  Se mudó acá al necesitarla también en la lista de próximas sesiones: dos
- *  copias de la regla de las 24hs se desincronizan tarde o temprano, y el día
- *  que pase, una pantalla va a permitir lo que la otra prohíbe.
+ *  🔴 **Antes se llamaba `canCancelConfirmed` y decidía si se podía cancelar.**
+ *  Cambió el 04/09/2026, y el motivo no es de estilo:
+ *
+ *  · **El cliente le prohibía algo que la base permite.** `mark_refund_on_cancel`
+ *    acepta la cancelación tardía: marca `cancelled_late = true`, deja el
+ *    `payment_status` en `aprobado` y no reembolsa. O sea que el servidor ya
+ *    implementaba "siempre se puede cancelar, tarde no se devuelve" — el bloqueo
+ *    de las pantallas era una regla paralela que contradecía a la única que
+ *    manda.
+ *  · **Y legalmente pesaba en contra.** Impedirle a alguien terminar el contrato
+ *    es más atacable bajo el art. 37 de la Ley 24.240 que cobrarle por hacerlo
+ *    tarde. Además chocaba con T&C §9.4: el derecho de revocación de 10 días es
+ *    irrenunciable, y una política de cancelación no puede derogarlo. Ver
+ *    `docs/consumo.md`.
+ *
+ *  Lo que la pantalla hace con esto ya no es habilitar un botón, es **decir qué
+ *  va a pasar con la plata** antes de confirmar.
  */
-export function canCancelConfirmed(scheduledDate: string, scheduledTime: string): boolean {
+export function hayReembolsoAlCancelar(scheduledDate: string, scheduledTime: string): boolean {
   return !isCancelLate(scheduledDate, scheduledTime);
 }
 

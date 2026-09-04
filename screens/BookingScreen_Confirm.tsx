@@ -952,12 +952,17 @@ export default function BookingScreen_Confirm() {
         {/* Política de cancelación. Va acá y no escondida en los T&C porque §9.1
             dice que se informa ANTES de confirmar la reserva — si no está en esta
             pantalla, esa cláusula es falsa. El número tiene que seguir a
-            `isCancelLate` / `canCancelConfirmed` (24hs, lib/bookingHelpers.ts). */}
+            `isCancelLate` / `hayReembolsoAlCancelar` (24hs, lib/bookingHelpers.ts).
+
+            ⚠️ Actualizado el 04/09/2026: antes decía que después de las 24hs "la
+            sesión no se puede cancelar desde la app", y eso dejó de ser cierto —
+            se puede, lo que no hay es reembolso. Era además lo que hacía que §9.1
+            contradijera al derecho de revocación de §9.4. */}
         <View style={s.noticeRow}>
           <MaterialIcons name="event-busy" size={15} color={ViveColors.accent} />
           <Text style={s.noticeText}>
-            Podés cancelar hasta 24hs antes y te devolvemos todo. Después de esa hora
-            la sesión no se puede cancelar desde la app
+            Podés cancelar cuando quieras. Hasta 24hs antes te devolvemos todo;
+            después de esa hora la sesión se cancela igual pero sin reembolso
           </Text>
         </View>
 

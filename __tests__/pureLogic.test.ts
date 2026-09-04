@@ -1,4 +1,4 @@
-import { isCancelLate, esperaConfirmacionDelCoach } from '../lib/bookingHelpers';
+import { hayReembolsoAlCancelar, isCancelLate, esperaConfirmacionDelCoach } from '../lib/bookingHelpers';
 import { hasContactInfo } from '../lib/contactInfoGuard';
 import { encryptMessage, decryptMessage } from '../lib/encryption';
 
@@ -185,5 +185,47 @@ describe('esperaConfirmacionDelCoach', () => {
   it('lo que no está pendiente no espera a nadie', () => {
     expect(esperaConfirmacionDelCoach({ ...base, status: 'confirmada' })).toBe(false);
     expect(esperaConfirmacionDelCoach({ ...base, status: 'cancelada' })).toBe(false);
+  });
+});
+
+describe('hayReembolsoAlCancelar — siempre se puede cancelar, lo que cambia es la plata', () => {
+  // 🔴 Antes se llamaba `canCancelConfirmed` y las pantallas la usaban para
+  // BLOQUEAR la cancelación tardía. Eso contradecía a la base: el trigger
+  // `mark_refund_on_cancel` acepta la cancelación tardía, marca `cancelled_late`
+  // y no reembolsa. Y legalmente pesaba en contra — impedir terminar el contrato
+  // es más atacable que cobrar por hacerlo tarde, y chocaba con el derecho de
+  // revocación de 10 días, que es irrenunciable (ver `docs/consumo.md`).
+  const enHoras = (h: number) => {
+    const d = new Date(Date.now() + h * 3600_000);
+    // La hora se guarda en hora de Argentina; para el test alcanza con que el
+    // helper reciba un instante suficientemente lejos o cerca del borde.
+    return {
+      fecha: d.toISOString().slice(0, 10),
+      hora: `${String(d.getUTCHours()).padStart(2, '0')}:00:00`,
+    };
+  };
+
+  it('con mucha antelación hay reembolso', () => {
+    const { fecha, hora } = enHoras(24 * 7);
+    expect(hayReembolsoAlCancelar(fecha, hora)).toBe(true);
+  });
+
+  it('a último momento no hay reembolso', () => {
+    const { fecha, hora } = enHoras(1);
+    expect(hayReembolsoAlCancelar(fecha, hora)).toBe(false);
+  });
+
+  it('es exactamente la contracara de isCancelLate — una sola fuente de la regla', () => {
+    for (const h of [-5, 1, 12, 23, 25, 48, 24 * 30]) {
+      const { fecha, hora } = enHoras(h);
+      expect(hayReembolsoAlCancelar(fecha, hora)).toBe(!isCancelLate(fecha, hora));
+    }
+  });
+
+  // Con datos ilegibles se asume lo conservador: que SÍ hay reembolso. Quien
+  // decide de verdad es el trigger, y prometer de menos sobre la plata de otro
+  // es peor que prometer de más y que la base corrija.
+  it('con una fecha rota no niega el reembolso', () => {
+    expect(hayReembolsoAlCancelar('no-es-fecha', '99:99:99')).toBe(true);
   });
 });

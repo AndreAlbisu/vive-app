@@ -36,7 +36,7 @@ import SessionNotesSheet from '@/components/SessionNotesSheet';
 import { getRelationshipNotes, type SessionNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
 import { sendPushNotification } from '@/lib/notifications';
-import { canCancelConfirmed } from '@/lib/bookingHelpers';
+import { hayReembolsoAlCancelar } from '@/lib/bookingHelpers';
 import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { logError } from '@/lib/logging';
@@ -677,11 +677,11 @@ export default function SalaScreen() {
 
     const soyCoach = !recipientIsCoach;
 
-    if (!soyCoach && activeBooking.status === 'confirmada'
-        && !canCancelConfirmed(activeBooking.scheduled_date, activeBooking.scheduled_time)) {
-      Alert.alert('No se puede cancelar', 'Las sesiones confirmadas solo se pueden cancelar con al menos 24hs de anticipación');
-      return;
-    }
+    // 🔴 Ya NO se bloquea la cancelación tardía. Lo que cambia es la plata, y se
+    // dice en el cartel de confirmación. Ver `hayReembolsoAlCancelar`.
+    const hayReembolso = soyCoach
+      || activeBooking.status !== 'confirmada'
+      || hayReembolsoAlCancelar(activeBooking.scheduled_date, activeBooking.scheduled_time);
 
     const esSolicitud = activeBooking.status === 'pendiente';
     // 🔴 El cartel NOMBRA la sesión, con fecha y hora. Es la última barrera antes
@@ -692,7 +692,11 @@ export default function SalaScreen() {
       esSolicitud ? '¿Cancelar solicitud?' : '¿Cancelar sesión?',
       esSolicitud
         ? `Vas a cancelar tu solicitud del ${cual}.`
-        : `Vas a cancelar la sesión del ${cual}. No se puede deshacer.`,
+        : `Vas a cancelar la sesión del ${cual}. No se puede deshacer.${
+            hayReembolso
+              ? ' Te devolvemos lo que pagaste.'
+              : ' Faltan menos de 24hs, así que no se devuelve el dinero.'
+          }`,
       [
         { text: 'No', style: 'cancel' },
         {

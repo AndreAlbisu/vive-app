@@ -178,8 +178,16 @@ importen renuncia o restricción de los derechos del consumidor.
    prevalece cuando corresponde.
 3. Casilla de conformidad expresa en el checkout cuando la sesión cae dentro de
    los 10 días de la reserva.
-4. Alinear el código con eso: hoy `canCancelConfirmed` implementa la versión que
-   prohíbe.
+4. Alinear el código con eso.
+
+✅ **Los cuatro hechos el 04/09/2026.** `canCancelConfirmed` pasó a llamarse
+`hayReembolsoAlCancelar` y dejó de bloquear nada: las pantallas siempre dejan
+cancelar y el cartel de confirmación dice si vuelve la plata o no. Apareció de
+paso que **el cliente le prohibía algo que la base permite** — el trigger
+`mark_refund_on_cancel` ya aceptaba la cancelación tardía, marcaba
+`cancelled_late` y no reembolsaba. O sea que el servidor implementaba la política
+correcta desde el 19/08 y el bloqueo del cliente era una regla paralela que lo
+contradecía.
 
 ## Qué queda para preguntar
 

@@ -24,7 +24,7 @@ import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { ordenarSalas } from '@/lib/salaOrder';
 import { supabase } from '@/lib/supabase';
 import { decryptMessage } from '@/lib/encryption';
-import { canCancelConfirmed } from '@/lib/bookingHelpers';
+import { hayReembolsoAlCancelar } from '@/lib/bookingHelpers';
 import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { AppBg } from '@/components/ui/AppBg';
@@ -369,17 +369,21 @@ export default function SessionsScreen() {
   async function cancelarProxima(ses: NextSession & { coachProfileId: string }) {
     if (!user || cancelandoId) return;
 
-    // Misma regla que en la sala: confirmada solo con 24hs. No se duplica el
-    // criterio — sale de `canCancelConfirmed`, que es la única fuente.
-    if (ses.status === 'confirmada' && !canCancelConfirmed(ses.scheduled_date, ses.scheduled_time)) {
-      Alert.alert('No se puede cancelar', 'Las sesiones confirmadas solo se pueden cancelar con al menos 24hs de anticipación');
-      return;
-    }
+    // Misma regla que en la sala, y sale de la misma función: siempre se puede
+    // cancelar, lo que cambia es si vuelve la plata.
+    const hayReembolso = ses.status !== 'confirmada'
+      || hayReembolsoAlCancelar(ses.scheduled_date, ses.scheduled_time);
 
     const esSolicitud = ses.status === 'pendiente';
     Alert.alert(
       esSolicitud ? '¿Cancelar solicitud?' : '¿Cancelar sesión?',
-      `${formatSalaDate(ses.scheduled_date)} · ${ses.scheduled_time.slice(0, 5)} hs con ${ses.coachName}`,
+      `${formatSalaDate(ses.scheduled_date)} · ${ses.scheduled_time.slice(0, 5)} hs con ${ses.coachName}${
+        esSolicitud
+          ? ''
+          : hayReembolso
+            ? '\n\nTe devolvemos lo que pagaste.'
+            : '\n\nFaltan menos de 24hs, así que no se devuelve el dinero.'
+      }`,
       [
         { text: 'No', style: 'cancel' },
         {

@@ -72,6 +72,24 @@
 
 ---
 
+## 2026-09-04 — Andre (sesión 165 · siempre se puede cancelar; el cliente prohibía lo que la base permite)
+
+**Tocado:** `lib/bookingHelpers.ts`, `screens/SalaScreen.tsx`, `screens/SessionsScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `docs/terminos-y-condiciones.md` (§9.1), `docs/consumo.md`, `docs/legal-instrucciones.md`, `__tests__/pureLogic.test.ts`. **477 tests** (eran 473), `tsc` limpio, lint sin errores nuevos. `sync:legal` corrido. Sin schema.
+
+**Resumen — el ítem A.6 de `docs/consumo.md`. Al implementarlo apareció que el bloqueo del cliente contradecía a la propia base desde agosto.**
+
+- 🔴 **El cliente le prohibía algo que la base permite.** `mark_refund_on_cancel` (`add-late-cancel-server-side.sql`, 19/08) **acepta** la cancelación tardía: marca `cancelled_late = true`, deja el `payment_status` en `aprobado` y no reembolsa. O sea que el servidor ya implementaba *"siempre se puede cancelar, tarde no se devuelve"* — y el bloqueo de `canCancelConfirmed` en las pantallas era una **regla paralela que contradecía a la única que manda**. Nadie lo había notado porque la pantalla nunca dejaba llegar el caso a la base.
+- **Y legalmente pesaba en contra**, que es lo que lo puso en la lista: impedirle a alguien terminar el contrato es más atacable bajo el art. 37 de la Ley 24.240 que cobrarle por hacerlo tarde. Además chocaba con §9.4 — el derecho de revocación de 10 días es irrenunciable y una política de cancelación no puede derogarlo. Era el desajuste anotado desde el 25/08.
+- **`canCancelConfirmed` → `hayReembolsoAlCancelar`.** El renombre es el cambio: ya no responde "¿se puede?" sino "¿vuelve la plata?". Las pantallas dejaron de bloquear y ahora **lo dicen en el cartel de confirmación** — *"te devolvemos lo que pagaste"* o *"faltan menos de 24hs, así que no se devuelve el dinero"*.
+- **§9.1 reescrita** con la política en dos incisos y una aclaración explícita de que **no afecta al derecho de revocación de §9.4**. Y el aviso previo a reservar en `BookingScreen_Confirm` dejó de decir que "la sesión no se puede cancelar desde la app", que había dejado de ser cierto.
+- **4 tests nuevos**, incluido el que fija que es exactamente la contracara de `isCancelLate` — una sola fuente de la regla de las 24hs — y el borde: con una fecha ilegible **no niega el reembolso**, porque prometer de menos sobre la plata de otro es peor que prometer de más y que la base corrija.
+
+**Pendiente para la próxima sesión:**
+- **Probar la cancelación tardía en dispositivo.** Es el camino que hasta hoy la pantalla nunca dejaba llegar a la base, así que es la primera vez que se va a ejercitar de verdad: cancelar una sesión confirmada a menos de 24hs y confirmar que se cancela, que `cancelled_late` queda en `true` y que **no** se dispara reembolso.
+- Con esto, de la investigación legal quedan sin implementar solo el precio en pesos (espera decisión de Andre) y A.5, que la norma no contempla.
+
+---
+
 ## 🔴 PARA JOAQUÍN — device review pendiente de las sesiones 157 a 163
 
 **Se pararon los cambios acá a propósito.** Andre trabajó cinco tandas seguidas sin poder probar en dispositivo, y lo que se acumuló **no es cosmético: el consentimiento gatea los tres flujos de bienestar**. Si el sheet no cierra bien o el gate se traba, la app quedó peor que antes en las tres pantallas más usadas. Seguir apilando features sobre eso hace que, cuando algo falle, no se sepa cuál de las cinco tandas lo rompió.
