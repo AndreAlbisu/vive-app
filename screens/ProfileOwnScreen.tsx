@@ -392,8 +392,12 @@ export default function ProfileOwnScreen() {
               </View>
               <Switch
                 value={consent.puede}
-                disabled={consent.loading}
-                onValueChange={value => { void consent.responder(value); }}
+                disabled={consent.loading || consent.guardando}
+                onValueChange={value => {
+                  void consent.responder(value).then(ok => {
+                    if (!ok) Alert.alert('No se pudo guardar', 'Revisá tu conexión y probá de nuevo.');
+                  });
+                }}
                 trackColor={{ false: `${ViveColors.text}25`, true: ViveColors.accent }}
                 thumbColor="#FFFFFF"
                 ios_backgroundColor={`${ViveColors.text}25`}

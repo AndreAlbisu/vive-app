@@ -13,6 +13,7 @@ import { necesitaPedir, puedeTratar, type ConsentState, type ConsentType } from 
 export function useConsent(userId: string | undefined, type: ConsentType = 'datos_sensibles_bienestar') {
   const [estado, setEstado] = useState<ConsentState>(null);
   const [loading, setLoading] = useState(true);
+  const [guardando, setGuardando] = useState(false);
 
   const refrescar = useCallback(async () => {
     if (!userId) { setEstado(null); setLoading(false); return; }
@@ -24,16 +25,24 @@ export function useConsent(userId: string | undefined, type: ConsentType = 'dato
 
   useEffect(() => { void refrescar(); }, [refrescar]);
 
-  /** Registra la respuesta y deja el estado local al día sin esperar otra query. */
+  /** Registra la respuesta. Optimista a propósito: mueve el estado local EN EL
+   *  ACTO para que el switch del Perfil no espere el round-trip a la edge
+   *  function (que con el server lejos + cold-start eran 1-2s de lag visible).
+   *  Si el guardado falla, re-lee del servidor → revierte a la verdad. Seguro
+   *  porque el gate real (`getConsent`) lee del server aparte, así que este
+   *  estado optimista no decide qué se trata, solo qué muestra el switch. */
   const responder = useCallback(async (granted: boolean): Promise<boolean> => {
-    const ok = await setConsent(granted, type);
-    if (!ok) return false;
+    setGuardando(true);
     setEstado({ granted, grantedAt: new Date().toISOString(), policyVersion: null });
+    const ok = await setConsent(granted, type);
+    setGuardando(false);
+    if (!ok) { await refrescar(); return false; }
     return true;
-  }, [type]);
+  }, [type, refrescar]);
 
   return {
     loading,
+    guardando,
     puede: puedeTratar(estado),
     hayQuePedir: !loading && necesitaPedir(estado),
     responder,
