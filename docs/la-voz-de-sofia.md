@@ -219,6 +219,50 @@ Hoy la señal de bajón fuerte baja el tono y se corre, que está bien para un m
 día — pero **no hay nada para el caso grave**. Eso hay que diseñarlo antes de
 darle más voz, no después.
 
+### 📌 Estado al 04/09/2026 — construido y apagado
+
+La maquinaria está entera: `lib/pisoSeguridad.ts` (puro, 9 tests) decide cuándo,
+y `buildReflection()` tiene la rama **arriba de todo**, incluso de `sharp-drop`.
+Detrás de `SAFETY_FLOOR_ENABLED`, en `false`.
+
+**El umbral: los últimos 5 registros en 1 o 2, dentro de los últimos 14 días.**
+
+🔴 **Y una decisión que conviene entender, porque es contraintuitiva: el umbral
+NO sale de un instrumento clínico.** La tentación era tomar el corte del PHQ-9
+("más de la mitad de los días durante dos semanas"). Sería un error — un umbral
+derivado de un instrumento diagnóstico convierte a Vita en una herramienta de
+**screening**, que es exactamente la línea que
+[`encuadre-salud-y-responsabilidad.md`](./encuadre-salud-y-responsabilidad.md)
+dice no cruzar. Ahí la derivación se vuelve triage.
+
+Por eso es deliberadamente **grueso**: no afirma "cumplís criterios", afirma
+"esto viene pasando hace rato" — un hecho sobre lo que la persona registró, no
+una lectura de su estado. Solo tiene que no gritar lobo y no ser tan raro que
+nunca aparezca. **Ese número lo podemos decidir nosotros; el texto no.**
+
+Se cuentan **registros y no días de calendario**: la gente no registra todos los
+días, y contar días haría que la señal se saltee por un fin de semana sin abrir
+la app. Saltearse justo ahí es el peor modo de falla posible.
+
+**Lo que falta para prenderlo, y ninguna de las dos cosas es código:**
+
+1. 🔴 **Que una profesional revise el texto.** Es la única frase de la app donde
+   equivocarse sale caro de verdad. Mónica Grando ya corrigió el enfoque del
+   paquete para la sesión y esa corrección mejoró el diseño; es la consulta
+   natural.
+2. **La pantalla con las líneas de T&C §5.3** (135 · 0800-345-1435 · 911), con
+   los números tocables. No entran en una frase de tarjeta, y meterlos ahí sería
+   ilegible justo cuando importa que se lean. ⚠️ **Prender el flag sin esto
+   mostraría el reconocimiento del límite sin la salida, que es peor que no
+   mostrar nada.**
+
+Tres garantías que ya están fijadas con tests: **nunca la redacta un modelo**
+(requisito escrito en `legal-instrucciones.md`), **el silencio no puede callarla**
+(`PUEDEN_CALLARSE` es lista de inclusión), y **no dispara el momento a pantalla
+completa** — no por poco importante sino al revés: el momento muestra una señal
+UNA vez y no la repite, y esto tiene que seguir estando todos los días que dure
+la condición.
+
 ## 5 quater. Acompañar no es perseguir
 
 "Constantemente" no significa notificaciones. Un amigo a distancia aparece cuando

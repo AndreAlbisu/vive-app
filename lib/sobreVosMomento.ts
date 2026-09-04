@@ -14,10 +14,17 @@
 // los días — ver el comentario en weeklyReflection.ts sobre esa rama), y `empty`
 // y `early` son las dos invitaciones a sumar registros: la primera sin nada
 // cargado, la segunda con uno o dos. Ninguna de las dos tiene una noticia que
-// justifique interrumpir a pantalla completa. Interrumpir a pantalla completa por
+// justifique interrumpir a pantalla completa.
+//
+// 🔴 `piso-seguridad` está en la lista por el motivo OPUESTO, y conviene que se
+// entienda: no es que no valga, es que el momento está diseñado para una noticia
+// —se muestra UNA vez y no repite la misma señal—, y esto no es una noticia sino
+// un ofrecimiento que tiene que seguir estando todos los días que dure la
+// condición. Pasarlo por este gate lo mostraría una sola vez y nunca más, que es
+// exactamente lo que no puede pasar. Vive en la tarjeta, persistente. Interrumpir a pantalla completa por
 // cualquiera de las dos, todos los días, sería pedir lo mismo una y otra vez en
 // vez de compartir algo que pasó.
-const LOW_VALUE_SIGNALS = new Set(['level', 'empty', 'early']);
+const LOW_VALUE_SIGNALS = new Set(['level', 'empty', 'early', 'piso-seguridad']);
 
 export function isSignalWorthMoment(signal: string): boolean {
   return !LOW_VALUE_SIGNALS.has(signal);

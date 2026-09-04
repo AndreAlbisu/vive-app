@@ -30,3 +30,27 @@
  */
 export const AI_REFLECTION_ENABLED =
   process.env.EXPO_PUBLIC_AI_REFLECTION === 'true';
+
+/**
+ * ¿La tarjeta "Sobre vos" muestra el **piso de seguridad**?
+ *
+ * Es el punto donde deja de hacer de amigo: cuando alguien viene registrando el
+ * fondo, una voz cálida no alcanza y no puede simular que sí
+ * (`docs/la-voz-de-sofia.md` §5 ter).
+ *
+ * 🔴 **Queda en `false` hasta que el texto esté revisado por una profesional.**
+ * La maquinaria está entera y testeada —`lib/pisoSeguridad.ts` decide cuándo, y
+ * `buildReflection` tiene la rama arriba de todo—, pero lo que se muestra es la
+ * única frase de la app donde equivocarse sale caro de verdad. El umbral lo
+ * podemos decidir nosotros (y está justificado en el encabezado de
+ * `pisoSeguridad.ts`); el texto no.
+ *
+ * 📌 Falta además la presentación de las líneas de ayuda de T&C §5.3 (135,
+ * 0800-345-1435, 911): no entran en una frase de tarjeta y necesitan su propia
+ * superficie, con los números tocables. Prender esto sin eso mostraría el
+ * reconocimiento del límite sin la salida, que es peor que no mostrar nada.
+ *
+ * A diferencia de `AI_REFLECTION_ENABLED`, este flag NO espera nada legal:
+ * espera una revisión de contenido y una pantalla.
+ */
+export const SAFETY_FLOOR_ENABLED = false;

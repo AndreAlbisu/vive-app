@@ -4,6 +4,15 @@ describe('isSignalWorthMoment', () => {
   it('level y empty no valen un momento — son el fallback sin comparación y la invitación vacía', () => {
     expect(isSignalWorthMoment('level')).toBe(false);
     expect(isSignalWorthMoment('empty')).toBe(false);
+    expect(isSignalWorthMoment('early')).toBe(false);
+  });
+
+  // 🔴 Está excluida por el motivo OPUESTO a las otras: el momento se muestra
+  // UNA vez y no repite la misma señal, y el piso de seguridad tiene que seguir
+  // estando todos los días que dure la condición. Pasarlo por este gate lo
+  // mostraría una sola vez y nunca más.
+  it('el piso de seguridad no va por el momento: vive en la tarjeta, persistente', () => {
+    expect(isSignalWorthMoment('piso-seguridad')).toBe(false);
   });
 
   it('el resto de las señales sí — todas tienen una noticia real detrás', () => {

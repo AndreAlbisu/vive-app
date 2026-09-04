@@ -11,6 +11,7 @@ const base: ReflectionInput = {
   sessionsThisWeek: 0,
   writingThisWeek: 0,
   sharpDrop: false,
+  pisoSeguridad: false,
   dayKey: '2026-08-15',
 };
 
@@ -70,6 +71,56 @@ describe('buildReflection — el bug que reemplaza', () => {
     const r = buildReflection(on({ recentMoods: [3, 3, 3], historicMoods: [3, 3, 3] }));
     expect(r.signal).toBe('level');
     expect(`${r.before}${r.bold}${r.after}`).not.toMatch(/costumbre|que las anteriores|más que|mejor|peor/i);
+  });
+});
+
+describe('buildReflection — el piso de seguridad gana sobre todo', () => {
+  // Es el punto donde la tarjeta deja de hacer de amigo (la-voz-de-sofia §5 ter).
+  // Si alguna señal le ganara, la app le estaría diciendo algo cálido a alguien
+  // que viene registrando el fondo, que es justo lo que no puede pasar.
+  it('le gana incluso a sharp-drop, que es la que ganaba antes', () => {
+    const r = buildReflection(on({ pisoSeguridad: true, sharpDrop: true }));
+    expect(r.signal).toBe('piso-seguridad');
+  });
+
+  it('le gana a una sesión de esta semana', () => {
+    const r = buildReflection(on({ pisoSeguridad: true, sessionsThisWeek: 2 }));
+    expect(r.signal).toBe('piso-seguridad');
+  });
+
+  it('le gana a una racha larga', () => {
+    const r = buildReflection(on({ pisoSeguridad: true, streak: 30 }));
+    expect(r.signal).toBe('piso-seguridad');
+  });
+
+  it('sale en tono gentle', () => {
+    expect(buildReflection(on({ pisoSeguridad: true })).tone).toBe('gentle');
+  });
+
+  // A propósito NO rota por día: las demás señales varían su redacción para no
+  // volverse un cartel, pero cuando lo que hay que decir es "acá hay ayuda",
+  // decirlo distinto cada mañana sería tratarlo como copy.
+  it('dice exactamente lo mismo todos los días', () => {
+    const dias = ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04'];
+    const textos = dias.map(dayKey => {
+      const r = buildReflection(on({ pisoSeguridad: true, dayKey }));
+      return `${r.before}${r.bold}${r.after}`;
+    });
+    expect(new Set(textos).size).toBe(1);
+  });
+
+  it('sin la condición no aparece por ningún otro camino', () => {
+    const dias = ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04'];
+    for (const dayKey of dias) {
+      for (const caso of [
+        { recentMoods: [1, 1, 1], sharpDrop: true },
+        { recentMoods: [1, 1, 1, 1] },
+        { recentMoods: [3, 3, 3], streak: 10 },
+        { recentMoods: [] },
+      ]) {
+        expect(buildReflection(on({ ...caso, dayKey })).signal).not.toBe('piso-seguridad');
+      }
+    }
   });
 });
 

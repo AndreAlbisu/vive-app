@@ -195,6 +195,11 @@ export type ReflectionInput = {
   writingThisWeek: number;
   /** ¿El ánimo cayó fuerte hoy respecto del check-in anterior? Ver decisión 3. */
   sharpDrop: boolean;
+  /** ¿Corresponde el piso de seguridad? Lo decide `lib/pisoSeguridad.ts`, que
+   *  mira la secuencia de registros y no promedios. Llega ya calculado —y ya
+   *  pasado por el flag— porque este archivo es puro y la decisión de encenderlo
+   *  no le corresponde. */
+  pisoSeguridad: boolean;
   /** Fecha local (YYYY-MM-DD). Fija la variante del día — ver `variantFor`. */
   dayKey: string;
 };
@@ -236,11 +241,33 @@ export function buildReflection(input: ReflectionInput): Reflection {
   const {
     recentMoods, historicMoods, streak,
     resourcesThisWeek, sessionsThisWeek, writingThisWeek,
-    sharpDrop, dayKey,
+    sharpDrop, pisoSeguridad, dayKey,
   } = input;
 
   const r = (before: string, bold: string, after: string, tone: ReflectionTone, signal: string): Reflection =>
     ({ before, bold, after, tone, signal, source: 'rules' });
+
+  // ── 0. El piso de seguridad ───────────────────────────────────────────────
+  // 🔴 GANA SOBRE TODO, incluida `sharp-drop`. Es el punto donde la tarjeta deja
+  // de hacer de amigo: `docs/la-voz-de-sofia.md` §5 ter dice que una voz cálida
+  // no alcanza cuando alguien viene registrando el fondo, y que no puede simular
+  // que sí.
+  //
+  // ⚠️ Va PRIMERO y sin variantes por día. Las otras señales rotan su redacción
+  // para no volverse un cartel; esta no. Cuando lo que hay que decir es "acá hay
+  // ayuda", decirlo distinto cada mañana sería tratarlo como copy.
+  //
+  // 📌 El texto de acá es CORTO a propósito: los números de las líneas de ayuda
+  // no entran en una frase de tarjeta, y meterlos ahí sería ilegible justo
+  // cuando importa que se lean. Su presentación es trabajo aparte, y espera el
+  // texto revisado — ver el pendiente en CHANGELOG_SESIONES.
+  if (pisoSeguridad) {
+    return r(
+      'Hace varios días que venís registrando lo mismo. ',
+      'Esto es más de lo que una app puede acompañar',
+      '.', 'gentle', 'piso-seguridad',
+    );
+  }
 
   // ── 1. El ánimo cayó fuerte hoy ───────────────────────────────────────────
   // Arriba hay una tarjeta sugiriendo hablar con alguien. Acá no se agrega otra

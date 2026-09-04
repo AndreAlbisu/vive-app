@@ -47,7 +47,14 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
     // `early` (uno o dos registros) va por el mismo camino: lo único honesto que
     // se puede decir ahí es "todavía no sé lo suficiente", y para eso no hace
     // falta un modelo.
-    if (rules.signal === 'empty' || rules.signal === 'early') { setCopy(null); return; }
+    // 🔴 `piso-seguridad` NUNCA lo redacta un modelo. Es requisito escrito en
+    // `docs/legal-instrucciones.md`: la reacción ante señales de riesgo es
+    // determinística y corre antes de cualquier modelo. Que además sea texto
+    // fijo lo hace revisable por una profesional, cosa que una frase generada no
+    // puede ser.
+    if (rules.signal === 'empty' || rules.signal === 'early' || rules.signal === 'piso-seguridad') {
+      setCopy(null); return;
+    }
 
     let cancelled = false;
 

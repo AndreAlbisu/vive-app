@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-09-04 — Andre (sesión 162 · el piso de seguridad, construido y apagado)
+
+**Tocado:** `lib/weeklyReflection.ts`, `lib/sobreVosMomento.ts`, `hooks/useDailyReflection.ts`, `app/(tabs)/index.tsx`, `constants/features.ts`, `docs/la-voz-de-sofia.md`, y los tests de reflexión/silencio/momento. Nuevos: `lib/pisoSeguridad.ts`, `__tests__/pisoSeguridad.test.ts`. **462 tests** (eran 446), `tsc` y lint limpios. Sin schema.
+
+**Resumen — el ítem de `la-voz-de-sofia.md` §5 ter que venía frenando el resto del plan. Andre no tenía los números, así que primero se replanteó de dónde tenían que salir.**
+
+- 🔴 **El umbral NO sale de un instrumento clínico, y eso fue el hallazgo.** El instinto era tomar el corte del PHQ-9 ("más de la mitad de los días durante dos semanas"). **Sería un error:** un umbral derivado de un instrumento diagnóstico convierte a Vita en una herramienta de **screening**, que es la línea que `encuadre-salud-y-responsabilidad.md` dice no cruzar — ahí la derivación se vuelve triage. Por eso es deliberadamente **grueso**: no afirma "cumplís criterios", afirma "esto viene pasando hace rato", que es un hecho sobre lo registrado y no una lectura del estado. **Con eso el número deja de necesitar validación clínica y lo podemos decidir nosotros.**
+- **Umbral: los últimos 5 registros en 1 o 2, dentro de los últimos 14 días.** Se cuentan **registros y no días de calendario** — la gente no registra todos los días, y contar días haría que la señal se saltee por un fin de semana sin abrir la app; saltearse justo ahí es el peor modo de falla posible. La ventana de 14 días resuelve el problema opuesto: cinco días malos repartidos en dos meses no son un tramo sostenido.
+- **`lib/pisoSeguridad.ts`** (puro, 9 tests) con los tres umbrales como constantes exportadas y un test que los fija: si alguien los mueve, que sea a propósito y en un solo lugar.
+- **La rama va ARRIBA DE TODO en `buildReflection`, incluso de `sharp-drop`**, con tests que lo fijan contra sesiones, rachas y el propio `sharp-drop`. Y **no rota por día**: las demás señales varían su redacción para no volverse un cartel, pero cuando lo que hay que decir es "acá hay ayuda", decirlo distinto cada mañana sería tratarlo como copy.
+- **Tres garantías fijadas con tests:** nunca la redacta un modelo (`useDailyReflection` la saltea — requisito ya escrito en `legal-instrucciones.md`), el silencio no puede callarla (`PUEDEN_CALLARSE` es lista de inclusión, y por eso se eligió así), y **no dispara el momento a pantalla completa** — no por poco importante sino al revés: el momento muestra una señal UNA vez y no la repite, y esto tiene que seguir estando todos los días que dure la condición.
+- 🔴 **Queda APAGADO** detrás de `SAFETY_FLOOR_ENABLED`. A diferencia de `AI_REFLECTION_ENABLED`, este flag **no espera nada legal**: espera una revisión de contenido y una pantalla.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Que una profesional revise el texto.** Es la única frase de la app donde equivocarse sale caro de verdad. Mónica Grando ya corrigió el enfoque del paquete para la sesión, y esa corrección mejoró el diseño — es la consulta natural. El umbral no necesita su validación; el texto sí.
+- 🔴 **La pantalla con las líneas de T&C §5.3** (135 · 0800-345-1435 · 911), con los números tocables. No entran en una frase de tarjeta. ⚠️ **Prender el flag sin esto mostraría el reconocimiento del límite sin la salida, que es peor que no mostrar nada.**
+- Con esas dos cosas, encender es cambiar un string y un booleano.
+
+---
+
 ## 2026-09-03 — Andre (sesión 161 · la matrícula al catálogo, y un defecto peor que apareció en el camino)
 
 **Tocado:** `lib/coachesCache.ts`, `app/search3.tsx`, `SCHEMA.md`. Nuevo: `scripts/add-coach-has-matricula.sql` (⚠️ **pendiente de correr**). 446 tests, `tsc` y lint limpios.

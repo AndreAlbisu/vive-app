@@ -30,6 +30,8 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import type { MoodEntry } from '@/hooks/useMoodHistory';
 import { computeMoodStreak, detectMoodDrop } from '@/lib/moodStats';
+import { detectarPisoSeguridad } from '@/lib/pisoSeguridad';
+import { SAFETY_FLOOR_ENABLED } from '@/constants/features';
 import { buildReflection, type Reflection } from '@/lib/weeklyReflection';
 import { useDailyReflection } from '@/hooks/useDailyReflection';
 import { localDayKey, localDayKeyMinus } from '@/lib/dates';
@@ -141,6 +143,20 @@ export default function InicioScreen() {
   // el recompute optimista de `handleMoodPicked`, más abajo.
   const sharpDrop = detectMoodDrop(moodEntries) !== null;
 
+  // El piso de seguridad mira la SECUENCIA de registros, no un promedio, así que
+  // recibe `moodEntries` entero (37 días) y no la ventana de 7 — cinco registros
+  // seguidos abajo pueden abarcar más de una semana si la persona no registra
+  // todos los días.
+  //
+  // ⚠️ El flag se aplica ACÁ y no adentro de `buildReflection`, que es puro y
+  // testeable: la decisión de encenderlo es de producto, no de las reglas. Ver
+  // `constants/features.ts` — está apagado hasta que el texto lo revise una
+  // profesional y exista la pantalla con las líneas de ayuda.
+  const pisoSeguridad = SAFETY_FLOOR_ENABLED && detectarPisoSeguridad(
+    moodEntries.map(e => ({ moodId: e.mood_id, dayKey: e.entry_date })),
+    today,
+  );
+
   // Las reglas eligen QUÉ decir y salen en el acto; si la redacción por IA está
   // encendida, el hook cambia solo el texto cuando llega. Nunca hay spinner:
   // la tarjeta arranca con el texto determinístico.
@@ -152,6 +168,7 @@ export default function InicioScreen() {
     sessionsThisWeek: weekly.sessionsThisWeek,
     writingThisWeek: weekly.writingThisWeek,
     sharpDrop,
+    pisoSeguridad,
     dayKey: today,
   });
 
@@ -222,6 +239,10 @@ export default function InicioScreen() {
       sessionsThisWeek: weekly.sessionsThisWeek,
       writingThisWeek: weekly.writingThisWeek,
       sharpDrop: detectMoodDrop(augmented) !== null,
+      pisoSeguridad: SAFETY_FLOOR_ENABLED && detectarPisoSeguridad(
+        augmented.map(e => ({ moodId: e.mood_id, dayKey: e.entry_date })),
+        today,
+      ),
       dayKey: today,
     });
 

@@ -53,7 +53,7 @@ describe('shouldStaySilent', () => {
   // Este es el que sostiene toda la feature: las señales con una noticia real
   // detrás no se callan nunca, por más que se repitan días seguidos.
   it('NUNCA se calla en una señal que no sea level, ni repitiéndose', () => {
-    for (const signal of ['sharp-drop', 'sustained-low', 'trend-up', 'trend-down', 'sessions', 'streak', 'practices', 'empty']) {
+    for (const signal of ['sharp-drop', 'sustained-low', 'trend-up', 'trend-down', 'sessions', 'streak', 'practices', 'empty', 'piso-seguridad']) {
       expect(shouldStaySilent({
         signal,
         lastSpoken: { date: '2026-09-14', signal },
