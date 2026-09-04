@@ -45,10 +45,11 @@ export const AI_REFLECTION_ENABLED =
  * podemos decidir nosotros (y está justificado en el encabezado de
  * `pisoSeguridad.ts`); el texto no.
  *
- * 📌 Falta además la presentación de las líneas de ayuda de T&C §5.3 (135,
- * 0800-345-1435, 911): no entran en una frase de tarjeta y necesitan su propia
- * superficie, con los números tocables. Prender esto sin eso mostraría el
- * reconocimiento del límite sin la salida, que es peor que no mostrar nada.
+ * ✅ **La pantalla de las líneas ya existe** (`/ayuda`, 04/09/2026), con los
+ * números de T&C §5.3 tocables. Al construirla apareció que no dependía de la
+ * revisión del texto —los números ya están escritos y verificados en los T&C—,
+ * así que se separó de este flag. **Queda una sola cosa pendiente, y es un
+ * mail.**
  *
  * A diferencia de `AI_REFLECTION_ENABLED`, este flag NO espera nada legal:
  * espera una revisión de contenido y una pantalla.

@@ -250,11 +250,17 @@ la app. Saltearse justo ahí es el peor modo de falla posible.
    equivocarse sale caro de verdad. Mónica Grando ya corrigió el enfoque del
    paquete para la sesión y esa corrección mejoró el diseño; es la consulta
    natural.
-2. **La pantalla con las líneas de T&C §5.3** (135 · 0800-345-1435 · 911), con
-   los números tocables. No entran en una frase de tarjeta, y meterlos ahí sería
-   ilegible justo cuando importa que se lean. ⚠️ **Prender el flag sin esto
-   mostraría el reconocimiento del límite sin la salida, que es peor que no
-   mostrar nada.**
+2. ~~La pantalla con las líneas de T&C §5.3.~~ ✅ **Hecha el 04/09/2026**
+   (`/ayuda`). Al construirla se vio que no dependía de la revisión del texto:
+   los números ya están escritos y con la vigencia verificada en los T&C. Lo que
+   espera a una profesional es la **frase de la tarjeta**, no la pantalla.
+
+   🔴 **Y una decisión de esa pantalla que importa más que su diseño: se llega
+   también desde el perfil, logueado y como invitado.** Si los números solo
+   aparecieran cuando el algoritmo decide que corresponde, no estarían
+   disponibles el día que alguien los necesita y la condición no se cumple — y
+   ese día existe. Un umbral es una heurística; la necesidad no espera a
+   cumplirla.
 
 Tres garantías que ya están fijadas con tests: **nunca la redacta un modelo**
 (requisito escrito en `legal-instrucciones.md`), **el silencio no puede callarla**

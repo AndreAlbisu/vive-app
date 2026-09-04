@@ -18,10 +18,14 @@
 - **Tres garantías fijadas con tests:** nunca la redacta un modelo (`useDailyReflection` la saltea — requisito ya escrito en `legal-instrucciones.md`), el silencio no puede callarla (`PUEDEN_CALLARSE` es lista de inclusión, y por eso se eligió así), y **no dispara el momento a pantalla completa** — no por poco importante sino al revés: el momento muestra una señal UNA vez y no la repite, y esto tiene que seguir estando todos los días que dure la condición.
 - 🔴 **Queda APAGADO** detrás de `SAFETY_FLOOR_ENABLED`. A diferencia de `AI_REFLECTION_ENABLED`, este flag **no espera nada legal**: espera una revisión de contenido y una pantalla.
 
+- ✅ **Hecha la pantalla `/ayuda` en la misma sesión** (`screens/AyudaScreen.tsx` + `app/ayuda.tsx`), con las líneas de T&C §5.3 tocables — un `tel:` por número, con aviso si el dispositivo no puede llamar (el número igual quedó visible). **Al construirla se vio que no dependía de la revisión del texto**: los números ya están escritos y verificados en los T&C. Lo que espera a una profesional es la frase de la tarjeta, no la pantalla. **El piso de seguridad queda a una sola cosa, y es un mail.**
+- 🔴 **La decisión que más importa de esa pantalla no es su diseño: se llega también desde el perfil, logueado Y como invitado.** Si los números solo aparecieran cuando el algoritmo decide que corresponde, no estarían disponibles el día que alguien los necesita y la condición no se cumple — y ese día existe. Un umbral es una heurística; la necesidad no espera a cumplirla. Va **primera** en las dos listas de configuración.
+- **La pantalla no pregunta nada y no es cálida**, a propósito. Ni "¿cómo estás?", ni una carita: quien llega ahí no viene a interactuar con una app, y cada elemento que no sea un número tocable es un obstáculo. El resto de Vita tiene voz; esta pantalla no — ponerse tierna justo ahí sería ponerse en el medio de algo que no le corresponde.
+- 📝 `.expo/types/router.d.ts` se parcheó a mano para que `tsc` reconociera `/ayuda`. Es un archivo **generado y gitignoreado**: se regenera solo al levantar el dev server, y ahí va a incluir la ruta de verdad.
+
 **Pendiente para la próxima sesión:**
-- 🔴 **Que una profesional revise el texto.** Es la única frase de la app donde equivocarse sale caro de verdad. Mónica Grando ya corrigió el enfoque del paquete para la sesión, y esa corrección mejoró el diseño — es la consulta natural. El umbral no necesita su validación; el texto sí.
-- 🔴 **La pantalla con las líneas de T&C §5.3** (135 · 0800-345-1435 · 911), con los números tocables. No entran en una frase de tarjeta. ⚠️ **Prender el flag sin esto mostraría el reconocimiento del límite sin la salida, que es peor que no mostrar nada.**
-- Con esas dos cosas, encender es cambiar un string y un booleano.
+- 🔴 **Que una profesional revise el texto de la tarjeta** (ya no la pantalla). Es la única frase de la app donde equivocarse sale caro de verdad. Mónica Grando ya corrigió el enfoque del paquete para la sesión, y esa corrección mejoró el diseño — es la consulta natural. El umbral no necesita su validación; el texto sí.
+- Con eso, encender es cambiar un string y un booleano.
 
 ---
 

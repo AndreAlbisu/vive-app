@@ -190,6 +190,12 @@ export default function ProfileOwnScreen() {
     // de notificación en la base ni i18n en el proyecto, así que no era cablear
     // algo existente sino prometer dos features que no están. Guideline 2.1 de
     // Apple cubre funcionalidad visible que no funciona. Vuelven cuando existan.
+    // 🔴 Primero de la lista, y también en la de invitado más abajo. Las líneas
+    // de crisis no pueden depender de estar logueado ni de que un algoritmo
+    // decida que corresponde mostrarlas: el piso de seguridad las muestra cuando
+    // detecta un patrón, pero un umbral es una heurística y la necesidad no
+    // espera a cumplirla. Tiene que haber siempre un camino estable hasta acá.
+    { id: 'ayuda', icon: 'lifebuoy', label: 'Si necesitás ayuda ahora', onPress: () => router.push('/ayuda') },
     { id: 'blocked', icon: 'account-cancel-outline', label: 'Cuentas bloqueadas', onPress: () => router.push('/cuentas-bloqueadas') },
     // Solo visible para admins. Ocultarlo no es la protección — `admin-actions`
     // revalida contra el JWT en cada escritura — pero no tiene sentido mostrarle
@@ -206,6 +212,7 @@ export default function ProfileOwnScreen() {
   // 424/2020 pide que sea accesible sin registro previo, así que esconderlo
   // detrás del login sería exactamente lo que la norma no admite.
   const guestConfigItems: ConfigItem[] = [
+    { id: 'ayuda', icon: 'lifebuoy', label: 'Si necesitás ayuda ahora', onPress: () => router.push('/ayuda') },
     { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => router.push('/legal?doc=terminos') },
     { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },
     { id: 'regret', icon: 'undo-variant', label: 'Botón de arrepentimiento', onPress: () => router.push('/legal?doc=arrepentimiento') },
