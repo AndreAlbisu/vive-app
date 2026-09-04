@@ -17,8 +17,9 @@
 - **`coaches.has_matricula`**: derivada por `trg_sync_matricula` desde `coach_credentials`, con el `update` **revocado**. Mismo criterio que `accepts_international` — como casilla podría contradecir a los datos y el catálogo anunciaría una matrícula que nadie verificó. El trigger va **sin `of` en columnas** porque editar una credencial la devuelve a `pendiente` (`trg_reset_credential_on_edit`) y ese reset tiene que apagar la marca.
 - **Insignia en la tarjeta del buscador**, y solo cuando hay matrícula verificada. **No se muestra nada en el caso contrario**: en una grilla, una marca de "sin matrícula" en cada tarjeta se leería como advertencia contra profesionales que no hicieron nada mal. La distinción completa —qué es cada uno y qué significa— vive en el perfil, que es donde hay lugar para explicarla.
 
+- ✅ **`add-coach-has-matricula.sql` CORRIDO y verificado el mismo día**: columna creada, `authenticated` con **solo SELECT** —el catálogo la lee, el coach no la escribe— y el backfill con **0 filas de diferencia** contra las credenciales verificadas. 📝 Las dos verificaciones salieron mal escritas la primera vez: la del backfill pedía `coaches.name`, que no existe (el nombre vive en `profiles`), y la de privilegios decía "esperado 0 filas" cuando `SELECT` **tiene que estar**. Corregidas en el script.
+
 **Pendiente para la próxima sesión:**
-- 🔴 **Correr `scripts/add-coach-has-matricula.sql`.** La verificación que importa es la tercera: que el backfill coincida con la realidad (0 filas de diferencia). Hasta que corra, `has_matricula` no existe y el select va a fallar — **no buildear antes**.
 - **Llevar la insignia también al deck de Conexiones y a la confirmación de reserva.** Hoy quedó en el buscador; el deck y el checkout siguen sin mostrarla.
 - **Decidir el campo estructurado de profesión.** Es lo único que cierra del todo el problema de `inferType`.
 - Sin confirmar en dispositivo.

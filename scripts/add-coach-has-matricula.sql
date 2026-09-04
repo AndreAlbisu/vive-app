@@ -3,7 +3,17 @@
 -- `coaches.has_matricula` — si el profesional tiene una matrícula VERIFICADA.
 -- Derivada de `coach_credentials` por trigger, con el `update` revocado.
 --
--- ⚠️ PENDIENTE DE CORRER al 03/09/2026.
+-- ✅ CORRIDO y VERIFICADO el 03/09/2026:
+--   · la columna existe (boolean, NOT NULL, default false);
+--   · `authenticated` tiene **SELECT y nada más** — el catálogo la lee, el coach
+--     no la escribe;
+--   · el backfill coincide con la realidad: **0 filas de diferencia** entre
+--     `has_matricula` y lo que dicen las credenciales verificadas.
+--
+-- 📝 Las verificaciones de abajo salieron mal escritas la primera vez y quedó
+-- anotado: la 3 pedía `c.name`, que no existe —el nombre vive en `profiles`—, y
+-- la 2 decía "esperado 0 filas" cuando SELECT **tiene que estar**. Las dos ya
+-- están corregidas acá.
 --
 -- ── Por qué existe ───────────────────────────────────────────────────────────
 -- Sale de `docs/encuadre-salud-y-responsabilidad.md` §2. La Ley 23.277 reserva
@@ -127,7 +137,8 @@ update public.coaches c
 --   from information_schema.column_privileges
 --   where table_schema = 'public' and table_name = 'coaches'
 --     and column_name = 'has_matricula' and grantee = 'authenticated';
---   -- 🔴 esperado: 0 filas. Si aparece UPDATE, el coach puede anunciarse
+--   -- esperado: **SELECT y nada más**. El catálogo necesita leerla, así que
+--   -- SELECT tiene que estar. 🔴 Si aparece UPDATE, el coach puede anunciarse
 --   -- matriculado sin serlo, que es el daño exacto que esto evita.
 --
 --   -- 2) el trigger está
@@ -136,11 +147,14 @@ update public.coaches c
 --   -- esperado: incluye trg_sync_matricula (y trg_reset_credential_on_edit)
 --
 --   -- 3) 🔴 el backfill coincide con la realidad — este es el que importa
---   select c.id, c.name, c.has_matricula,
+--   -- ⚠️ El nombre sale de `profiles`, no de `coaches` — esta tabla no tiene
+--   -- columna `name`. (La primera versión de esta query lo asumía y fallaba.)
+--   select c.id, p.name, c.has_matricula,
 --          exists (select 1 from public.coach_credentials cc
 --                   where cc.coach_id = c.id and cc.kind = 'matricula'
 --                     and cc.status = 'verificada') as deberia
 --   from public.coaches c
+--   join public.profiles p on p.id = c.profile_id
 --   where c.has_matricula is distinct from exists (
 --     select 1 from public.coach_credentials cc
 --      where cc.coach_id = c.id and cc.kind = 'matricula' and cc.status = 'verificada');
