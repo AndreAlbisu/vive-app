@@ -4,14 +4,29 @@
 /**
  * ¿La devolución de la tarjeta "Sobre vos" la redacta un modelo?
  *
- * 🔴 **Queda en `false` hasta que haya respuesta legal.** Aunque lo que sale
- * del dispositivo es mínimo —el nombre de la señal, el tono y dos números, sin
- * valores de ánimo ni texto libre— sigue siendo una transferencia
- * internacional que hay que encuadrar.
+ * ✅ **ENCENDIDA el 04/09/2026**, sin consulta paga. El análisis está en
+ * `docs/transferencias-internacionales.md` §5 bis y se resume así: **al proveedor
+ * no le llega ningún identificador ni seudónimo**, y nada se almacena que ligue
+ * una llamada con una persona — pasada la llamada, ni Vita puede reconstruir de
+ * quién era. La Ley 25.326 art. 2 define dato personal como el referido a
+ * personas *determinadas o determinables*; una etiqueta de categoría y tres
+ * enteros no describen a nadie determinable, así que el art. 12 no se activa.
  *
- * 📌 **La consulta y los pasos para encenderla están en
- * `docs/legal-instrucciones.md`: la pregunta en el Paso 3, qué hacer con cada
- * respuesta posible en el Paso 5.1.** No prendas esto sin pasar por ahí.
+ * Declarado igualmente en Política §6 y §7 — no porque haga falta, sino porque
+ * es honesto y porque si alguien discute el encuadre, haber declarado juega a
+ * favor.
+ *
+ * 🔴 **ESTO NO HABILITA MANDAR MÁS DATOS.** El §5 bis de `la-voz-de-sofia.md`
+ * propone enviar la forma de los días ("hoy bajón, ayer bajón, anteayer bien").
+ * Una secuencia larga empieza a singularizar y el contenido pasa a ser
+ * inequívocamente sobre la salud de alguien: **las dos patas del análisis se
+ * caen**. Es otra decisión y pide otro análisis. Si estás por agregar campos al
+ * `facts` que se manda, pará y leé esa sección primero.
+ *
+ * 📌 Pendiente y recomendado, aunque no bloquea: **pedirle retención cero a
+ * Anthropic**. No hace falta para el encuadre —si no es dato personal, cuánto se
+ * guarda es indiferente— pero elimina el único punto donde el contenido persiste
+ * y abarata el escenario en que alguien lea el encuadre distinto.
  *
  * ⚠️ **Lo que este flag NO protege (chequeo del 01/09/2026).** Tenerlo apagado
  * evita una transferencia anónima de tres enteros. Las transferencias grandes

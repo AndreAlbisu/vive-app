@@ -279,6 +279,7 @@ Vita **no vende** los datos personales de los Usuarios. Los compartimos únicame
 - **Proveedores de identidad, solo si el Usuario elige registrarse o iniciar sesión con ellos:**
   - **Google** y **Apple**. En ese caso, el proveedor conoce que el Usuario accede a Vita y le comunica a Vita los datos mínimos de la cuenta (nombre y correo electrónico). Si el Usuario se registra con correo y contraseña, ninguno de los dos interviene.
 - **Contenido embebido de terceros:** algunas fichas de recursos incluyen un reproductor de **YouTube** insertado dentro de la aplicación. Al cargarse, YouTube recibe la dirección IP y datos técnicos del dispositivo, y puede utilizar cookies o tecnologías similares conforme a sus propias políticas. Ocurre solo al abrir una ficha que contenga ese reproductor.
+- **Redacción asistida de la frase de bienestar:** la pantalla de inicio muestra una frase breve sobre cómo viene el Usuario. **Qué decir lo decide la propia aplicación en el dispositivo**, con reglas fijas; a un proveedor externo (**Anthropic**) se le pide únicamente **redactar** esa frase. Lo que se le envía es el nombre de una categoría (por ejemplo, "racha" o "tendencia en alza"), un tono, y dos o tres números enteros —días de registro consecutivos, sesiones y prácticas de la semana—. **No se le envía identificador alguno del Usuario, ni sus registros de estado de ánimo, ni su historial, ni una sola palabra escrita por él**, y Vita no conserva vinculación entre ese envío y la persona. Si el proveedor no responde, o si el texto que devuelve no supera los controles de contenido de Vita, se muestra el texto redactado por la propia aplicación.
 - **Analítica:** Vita **no utiliza proveedores de analítica de terceros**. Las métricas de uso se registran en la propia base de datos de Vita (alojada en Supabase) y no se comparten con terceros con fines publicitarios ni comerciales.
 - **Otros Usuarios:** la información necesaria para la interacción (por ejemplo, el perfil del Profesional es visible para los Clientes; el nombre/foto del Cliente puede ser visible para el Profesional con quien tiene una Sesión).
 - **Autoridades competentes:** cuando exista obligación legal o requerimiento válido.
@@ -291,6 +292,8 @@ La lista anterior comprende la totalidad de los proveedores con los que Vita com
 ## 7. Transferencia Internacional de Datos
 
 Algunos de los proveedores mencionados pueden almacenar o procesar datos en servidores ubicados fuera de la Argentina. En dichos casos, Vita procurará que existan garantías adecuadas conforme a la Ley 25.326 y a las normas de la AAIP sobre transferencia internacional de datos. [Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]
+
+**Redacción asistida de la frase de bienestar.** El envío descripto en la sección 6 **no incluye identificador ni seudónimo del Usuario**, y Vita no conserva vinculación alguna entre ese envío y su persona, por lo que no se trata de información referida a una persona determinada o determinable. Se lo declara igualmente en esta Política para que el Usuario conozca la totalidad de los servicios que intervienen en el funcionamiento de la aplicación.
 
 ## 8. Seguridad de los Datos
 
@@ -392,7 +395,7 @@ export const LEGAL_PLACEHOLDERS: string[] = ["[Validar con abogado el encuadre d
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '5796e754b3f3';
+export const LEGAL_VERSION = '02e2317593ef';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

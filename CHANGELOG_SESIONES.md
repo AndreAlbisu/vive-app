@@ -121,9 +121,18 @@
 - ⚠️ **Riesgo residual nombrado, sin maquillar:** es una interpretación y no una certeza; si la AAIP leyera que el vínculo momentáneo en el servidor alcanza, lo que corresponde es el mismo instrumento que ya hace falta para Supabase — **no es un escenario catastrófico, es trabajo que ya está pendiente por otra vía**.
 - 🔴 **Y el límite que importa: esto NO habilita subir el presupuesto de datos.** Mandar la forma de los días (§5 bis de `la-voz-de-sofia.md`) hace que una secuencia larga empiece a singularizar, y ahí el análisis hay que rehacerlo. Encender la redacción y enriquecer la señal son **dos decisiones distintas**, y esta cubre una sola.
 
+**✅ ENCENDIDA en la misma sesión, con la decisión de Andre.**
+
+- **Política §6 y §7 declaran el proveedor**, describiendo con precisión qué se le manda y qué no: *"no se le envía identificador alguno del Usuario, ni sus registros de estado de ánimo, ni su historial, ni una sola palabra escrita por él"*. §7 agrega por qué se declara igual algo que según el análisis no es dato personal — para que el Usuario conozca todos los servicios que intervienen. `npm run sync:legal` corrido.
+- **Estado verificado contra el backend, no contra el changelog:** `ANTHROPIC_API_KEY` cargada (19/08), `weekly-reflection` **v15 ACTIVE**, y `EXPO_PUBLIC_AI_REFLECTION=true` en el `.env`. ⚠️ El `.env` está gitignoreado: **en la máquina de Joaquín hay que setearlo aparte** o le va a seguir saliendo el texto determinístico.
+- **Toma efecto al recargar la app**, no requiere deploy: Expo inlinea las `EXPO_PUBLIC_*` en tiempo de build.
+- 🔴 **Se dejó una advertencia grande en `constants/features.ts`**, dirigida a quien vaya a tocar el `facts` que se envía: **esto NO habilita mandar más datos**. Si se agrega la forma de los días (§5 bis de `la-voz-de-sofia.md`), una secuencia larga empieza a singularizar y el contenido pasa a ser inequívocamente sobre la salud de alguien — **las dos patas del análisis se caen**. Es otra decisión y pide otro análisis.
+- 📌 **Retención cero: sigue pendiente y no bloquea.** Si no es dato personal, cuánto se guarda es indiferente para el encuadre. Pero elimina el único punto donde el contenido persiste y abarata el escenario en que alguien lo lea distinto. Es un mail.
+
 **Pendiente para la próxima sesión:**
-- 🔴 **Pedir retención cero a Anthropic.** Es lo único que separa a la feature de poder encenderse, y es un mail.
-- Después: escribir §6/§7, `npm run sync:legal`, `EXPO_PUBLIC_AI_REFLECTION=true` y rebuild. Los cuatro son independientes y cualquiera que falte deja la app en el texto determinístico sin romperse.
+- **Pedirle retención cero a Anthropic** (recomendado, no bloqueante).
+- **Ver la primera frase generada en el teléfono.** Es la primera vez que el modelo escribe algo que ve un usuario: vale mirar que `rejectCopy` no esté rechazando todo (se loguea con el motivo) ni dejando pasar algo raro.
+- **Costo medido por Joaquín: USD 7,50/mes con 200 usuarios activos diarios**, con caché de una llamada por día y por señal.
 - 📌 **Contexto de por qué salió esto ahora:** Andre preguntó si no convenía fijar reglas y que la IA cree las frases, en vez de 32 escritas a mano. La respuesta es que **ese ya es el diseño** y estaba trabado por lo legal — pero con la advertencia de que encenderlo **arregla "repetitivo", no "básico"**: con tres números de entrada, cualquier modelo produce genéricos. Lo segundo necesita el presupuesto de datos, que es la otra decisión.
 
 ---

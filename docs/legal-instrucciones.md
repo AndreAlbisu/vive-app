@@ -408,7 +408,7 @@ qué se destraba con ella.
 **Nada de lo de abajo está pendiente de programar.** Está construido, apagado y
 sin deployar. Lo que falta es una decisión, no trabajo.
 
-### 5.1 — Devolución escrita por IA en Inicio 🔒 apagada
+### 5.1 — Devolución escrita por IA en Inicio ✅ ENCENDIDA el 04/09/2026
 
 Lo construido está en el duodécimo y decimotercer bloque del changelog del
 15-16/08/2026. La consulta correspondiente es la **segunda** del Paso 3
@@ -416,9 +416,9 @@ Lo construido está en el duodécimo y decimotercer bloque del changelog del
 
 | Estado | Dónde |
 |---|---|
-| Flag del cliente | `constants/features.ts` → `AI_REFLECTION_ENABLED` (`false`) |
-| Flag del servidor | ausencia de `ANTHROPIC_API_KEY` → la función devuelve 503 |
-| Edge function | `supabase/functions/weekly-reflection/` — **escrita, no deployada** |
+| Flag del cliente | `constants/features.ts` → `AI_REFLECTION_ENABLED` — **`true`** (`EXPO_PUBLIC_AI_REFLECTION` en `.env`) |
+| Flag del servidor | `ANTHROPIC_API_KEY` **cargada** (19/08). Sin ella la función devuelve 503 y el cliente cae a las reglas |
+| Edge function | `supabase/functions/weekly-reflection/` — **v15 deployada y ACTIVE** |
 | Guardarraíl | `rejectCopy()` en `lib/weeklyReflection.ts`, con tests |
 | Piso si algo falla | las reglas de `buildReflection()` — la app funciona igual |
 
