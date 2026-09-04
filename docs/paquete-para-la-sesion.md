@@ -127,6 +127,31 @@ La función `mood_trend_for_client` puede quedar como está —apagada— o borr
   paquete y del otro lado no pasa nada, es peor que no haberlo ofrecido. No hay
   arreglo técnico; hay que decidir si se le pide algo al profesional.
 
+## 8 bis. 📌 Estado al 04/09/2026 — las reglas, construidas
+
+`lib/paquete.ts` (puro, 15 tests). Es el paso previo a cualquier pantalla: las
+decisiones que este documento deja tomadas, escritas donde se pueden revisar en
+aislado. **Todavía no hay UI ni tabla.**
+
+Dos decisiones que el doc no cerraba y hubo que tomar para poder codearlo:
+
+- **`TOPE_DIAS = 30`.** La ventana es "desde la última sesión", pero la primera
+  vez no hay tal cosa. Sin tope, quien registra hace tres meses manda noventa
+  días — y ahí aparece el otro modo de falla que el §4 nombra: *un paquete que
+  nadie va a leer*. El paquete avisa cuándo se topeó (`ventanaTopeada`), porque
+  no es lo mismo "esto es todo lo que pasó desde que nos vimos" que "esto es el
+  último mes".
+- **`OFRECER_DESDE_DIAS = 3`.** Se ofrece hasta tres días antes y hasta el mismo
+  día de la sesión. Antes queda viejo; después ya no hay qué preparar.
+
+Y una que sí estaba y quedó fijada con un test: **el día de la sesión anterior NO
+entra en la ventana**. Es lo que pasó *después* de verse; incluirlo mezclaría
+material ya conversado con material nuevo.
+
+⚠️ **Hay un test que fija la FORMA del paquete** —que no devuelva promedios, ni
+tendencias, ni nada de "Sobre vos"—. No es un test de tipos: es el §3 puesto
+donde se rompa si alguien alguna vez agrega una lectura de la app.
+
 ## 9. Por dónde empezaría
 
 1. **Check-ins con fecha + nota propia**, ventana desde la última sesión,

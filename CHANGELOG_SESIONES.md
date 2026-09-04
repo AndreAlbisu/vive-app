@@ -90,6 +90,24 @@
 
 ---
 
+## 2026-09-04 — Andre (sesión 166 · las reglas del paquete para la sesión)
+
+**Tocado:** `docs/paquete-para-la-sesion.md`. Nuevos: `lib/paquete.ts`, `__tests__/paquete.test.ts`. **492 tests** (eran 477), `tsc` y lint limpios. Sin schema, sin UI.
+
+**Resumen — el #2 del orden acordado con Joaquín (`user_consents` → **paquete** → capa 1 → catálogo → ranker). Se arrancó por las reglas puras, igual que con el silencio y el piso de seguridad: las palabras y los umbrales se revisan en aislado antes de que exista una pantalla.**
+
+- **Dos decisiones que el doc no cerraba y hubo que tomar.** **`TOPE_DIAS = 30`**: la ventana es "desde la última sesión", pero la primera vez no hay tal cosa, y sin tope quien registra hace tres meses manda noventa días — el modo de falla que el propio §4 nombra, *un paquete que nadie va a leer*. El paquete devuelve `ventanaTopeada` porque no es lo mismo "esto es todo lo que pasó desde que nos vimos" que "esto es el último mes". Y **`OFRECER_DESDE_DIAS = 3`**: antes queda viejo, después ya no hay qué preparar.
+- **El día de la sesión anterior NO entra en la ventana**, con test: es lo que pasó *después* de verse, e incluirlo mezclaría material ya conversado con material nuevo.
+- 🔴 **Hay un test que fija la FORMA del paquete** — que no devuelva promedios, ni tendencias, ni nada de "Sobre vos". No es un test de tipos: es el §3 (*material, no conclusión*) puesto donde se rompa si alguien agrega una lectura de la app. Es la línea que salió de la consulta a Mónica Grando y la que más fácil se pierde de vista al construir la pantalla.
+- **`debeOfrecerse` codifica los tres no negociables** del §6: lo inicia la persona (la función decide si se OFRECE, nunca si se arma o manda), se ofrece una vez y no insiste (*"si insiste, la app deja de acompañar y pasa a exigir"*), y no se ofrece sin material — proponerle armar algo a quien no registró nada es pedirle trabajo para producir una hoja en blanco.
+
+**Pendiente para la próxima sesión:**
+- **La nota por día no tiene dónde vivir.** `mood_entries` no tiene columna de nota, y el apareamiento *"eso que sintió con lo que estaba sucediendo"* es lo que le da sentido al número. Es la próxima migración.
+- **Después**: la pantalla de armado y revisión, y el envío por el chat. El §9 del doc dice que el diario entra **último**, a propósito.
+- ⚠️ **Sigue abierta la pregunta A.11** y el doc la marca como *más* filosa con esto construido: en Vita hay coaches que no son clínicos, y la persona que manda un paquete **eligió deliberadamente** mostrar algo, lo que sube la expectativa de respuesta. Si manda algo duro y no le contestan en tres días, hay que decidir qué se le pide al profesional. **No hay arreglo técnico para eso.**
+
+---
+
 ## 🔴 PARA JOAQUÍN — device review pendiente de las sesiones 157 a 163
 
 **Se pararon los cambios acá a propósito.** Andre trabajó cinco tandas seguidas sin poder probar en dispositivo, y lo que se acumuló **no es cosmético: el consentimiento gatea los tres flujos de bienestar**. Si el sheet no cierra bien o el gate se traba, la app quedó peor que antes en las tres pantallas más usadas. Seguir apilando features sobre eso hace que, cuando algo falle, no se sepa cuál de las cinco tandas lo rompió.
