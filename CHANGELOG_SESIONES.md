@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-09-03 — Andre (sesión 161 · la matrícula al catálogo, y un defecto peor que apareció en el camino)
+
+**Tocado:** `lib/coachesCache.ts`, `app/search3.tsx`, `SCHEMA.md`. Nuevo: `scripts/add-coach-has-matricula.sql` (⚠️ **pendiente de correr**). 446 tests, `tsc` y lint limpios.
+
+**Resumen — se fue a llevar la distinción de matrícula del perfil al catálogo, y apareció que el buscador estaba haciendo una afirmación profesional sin ninguna verificación detrás.**
+
+- 🔴 **EL HALLAZGO: `inferType()` en `search3.tsx` decidía "Psicólogo" con `specialty.includes('psicolog')`.** Sobre un campo de **texto libre que escribe el propio profesional**, y con un filtro por ese tipo en la UI. O sea que cualquiera que pusiera "acompañamiento en psicología positiva" aparecía bajo el filtro Psicólogo — **y quien filtra por Psicólogo es exactamente la persona que está buscando terapia**. La Ley 23.277 reserva el diagnóstico y el tratamiento a quien tiene matrícula, y la app estaba haciendo esa afirmación por su cuenta, desde una fuente que nadie verifica, en el contexto donde más importa.
+- **Arreglado:** la palabra clave sigue siendo necesaria pero **ya no alcanza** — hace falta además `has_matricula`. Sin matrícula verificada, el tipo es `Coach`, sin importar lo que diga la presentación.
+- ⚠️ **Y sigue sin ser perfecto, que también quedó escrito:** `has_matricula` dice que hay UNA matrícula chequeada, no de qué profesión —el título es texto libre—, así que un nutricionista matriculado que mencione psicología todavía podría caer ahí. Cerrarlo del todo pide un **campo estructurado de profesión** en `coaches`, que es decisión de producto y no un parche.
+- **`coaches.has_matricula`**: derivada por `trg_sync_matricula` desde `coach_credentials`, con el `update` **revocado**. Mismo criterio que `accepts_international` — como casilla podría contradecir a los datos y el catálogo anunciaría una matrícula que nadie verificó. El trigger va **sin `of` en columnas** porque editar una credencial la devuelve a `pendiente` (`trg_reset_credential_on_edit`) y ese reset tiene que apagar la marca.
+- **Insignia en la tarjeta del buscador**, y solo cuando hay matrícula verificada. **No se muestra nada en el caso contrario**: en una grilla, una marca de "sin matrícula" en cada tarjeta se leería como advertencia contra profesionales que no hicieron nada mal. La distinción completa —qué es cada uno y qué significa— vive en el perfil, que es donde hay lugar para explicarla.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/add-coach-has-matricula.sql`.** La verificación que importa es la tercera: que el backfill coincida con la realidad (0 filas de diferencia). Hasta que corra, `has_matricula` no existe y el select va a fallar — **no buildear antes**.
+- **Llevar la insignia también al deck de Conexiones y a la confirmación de reserva.** Hoy quedó en el buscador; el deck y el checkout siguen sin mostrarla.
+- **Decidir el campo estructurado de profesión.** Es lo único que cierra del todo el problema de `inferType`.
+- Sin confirmar en dispositivo.
+
+---
+
 ## 2026-09-03 — Andre (sesión 160 · `user_consents`: el consentimiento de datos sensibles, construido)
 
 **Tocado:** `components/MoodCheckIn.tsx`, `app/(tabs)/index.tsx`, `screens/ProfileOwnScreen.tsx`, `SCHEMA.md`. Nuevos: `scripts/add-user-consents.sql`, `supabase/functions/user-consent/`, `lib/consentRules.ts`, `lib/consent.ts`, `hooks/useConsent.ts`, `components/ConsentSheet.tsx`, `__tests__/consentRules.test.ts`. **446 tests** (eran 438), `tsc` limpio, lint sin errores nuevos.

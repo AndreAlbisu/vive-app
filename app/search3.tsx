@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
@@ -201,7 +202,7 @@ export default function SearchScreen3() {
     setLoadingCoaches(true);
     supabase
       .from('coaches')
-      .select('id, specialty, bio, price_per_session, nationality, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
+      .select('id, specialty, bio, price_per_session, nationality, has_matricula, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
       .eq('verified', true)
       // D6 (docs/decisiones-pagos.md): mismo filtro que `coachesCache.ts` — sin
       // esto, con el caché frío esta consulta de respaldo volvía a mostrar
@@ -217,6 +218,7 @@ export default function SearchScreen3() {
             id: profile?.id as string,
             name: profile?.name as string,
             specialty: c.specialty as string,
+            hasMatricula: !!c.has_matricula,
             priceFrom: c.price_per_session as number,
             nationality: (c.nationality ?? '') as string,
             gender: (profile?.gender ?? '') as string,
@@ -269,11 +271,31 @@ export default function SearchScreen3() {
     return () => { cancelled = true; };
   }, [rawCoaches]);
 
-  // Heurística de "tipo" a partir del texto libre de specialty — no hay
-  // columna estructurada para esto en coaches todavía (decisión: usar esto
-  // por ahora, en vez de agregar una columna nueva).
-  function inferType(specialty: string): 'Coach' | 'Psicólogo' | 'Nutricionista' {
-    const s = normalize(specialty);
+  // Heurística de "tipo" a partir del texto libre de `specialty`.
+  //
+  // 🔴 CORREGIDO el 03/09/2026, y el defecto era serio. La versión anterior
+  // decidía "Psicólogo" con `s.includes('psicolog')` sobre un campo de texto
+  // libre **que escribe el propio profesional**. O sea: cualquiera que pusiera
+  // "acompañamiento en psicología positiva" en su presentación aparecía bajo el
+  // filtro Psicólogo — y quien filtra por Psicólogo es exactamente la persona
+  // que está buscando terapia.
+  //
+  // La Ley 23.277 reserva el diagnóstico y el tratamiento a quien tiene
+  // matrícula. La app estaba haciendo esa afirmación profesional por su cuenta,
+  // desde una fuente que nadie verifica, en el contexto donde más importa. Ver
+  // `docs/encuadre-salud-y-responsabilidad.md` §2.
+  //
+  // Ahora la palabra clave sigue siendo necesaria pero **ya no alcanza**: hace
+  // falta además una matrícula verificada por Vita.
+  //
+  // ⚠️ Sigue sin ser perfecto y conviene saber por qué: `has_matricula` dice que
+  // hay UNA matrícula chequeada, no de qué profesión —el título es texto libre—.
+  // Así que un nutricionista matriculado que mencione "psicología" en su bio
+  // todavía podría caer acá. Cerrarlo del todo pide un campo estructurado de
+  // profesión en `coaches`, que es una decisión de producto, no un parche.
+  function inferType(c: { specialty: string; hasMatricula?: boolean }): 'Coach' | 'Psicólogo' | 'Nutricionista' {
+    const s = normalize(c.specialty);
+    if (!c.hasMatricula) return 'Coach';
     if (s.includes('psicolog')) return 'Psicólogo';
     if (s.includes('nutricion')) return 'Nutricionista';
     return 'Coach';
@@ -307,7 +329,7 @@ export default function SearchScreen3() {
     if (filters.maxPrice < MAX_PRICE && p.priceFrom > filters.maxPrice) return false;
     if (filters.nationality !== 'Todas' && p.nationality !== filters.nationality) return false;
     if (filters.sex !== 'Todos' && p.gender !== SEX_TO_GENDER[filters.sex]) return false;
-    if (filters.type !== 'Todos' && inferType(p.specialty) !== filters.type) return false;
+    if (filters.type !== 'Todos' && inferType(p) !== filters.type) return false;
     if (filters.minRating > 0 && (avgRatingById[p.id] ?? 0) < filters.minRating) return false;
     if (filters.international && !p.acceptsInternational) return false;
     if (filters.payment === 'mp' && !p.acceptsMp) return false;
@@ -429,7 +451,23 @@ export default function SearchScreen3() {
                     </View>
                   )}
                 </View>
-                <Text style={s.cardSpecialty} numberOfLines={1}>{p.specialty}</Text>
+                <View style={s.specialtyRow}>
+                  <Text style={s.cardSpecialty} numberOfLines={1}>{p.specialty}</Text>
+                  {/* 🔴 La insignia solo aparece cuando Vita verificó la
+                      matrícula. NO se muestra nada en el caso contrario: en una
+                      grilla, una marca de "sin matrícula" en cada tarjeta se
+                      leería como una advertencia contra esos profesionales, y
+                      no hicieron nada mal. La distinción completa —qué es cada
+                      uno y qué significa— vive en el perfil, que es donde hay
+                      lugar para explicarla. Acá alcanza con que lo verificado
+                      se distinga. */}
+                  {p.hasMatricula && (
+                    <View style={s.matPill}>
+                      <MaterialCommunityIcons name="shield-check" size={10} color="#42542F" />
+                      <Text style={s.matPillText}>Matrícula</Text>
+                    </View>
+                  )}
+                </View>
                 {topics.length > 0 && (
                   <View style={s.tagsRow}>
                     {topics.map(t => (
@@ -808,7 +846,14 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   newPillText: { fontFamily: ViveFonts.semibold, fontSize: 10.5, color: ViveColors.primary },
-  cardSpecialty: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: ViveColors.primary },
+  cardSpecialty: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: ViveColors.primary, flexShrink: 1 },
+  specialtyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  matPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#DCE5CB', borderRadius: 8,
+    paddingVertical: 2, paddingHorizontal: 6,
+  },
+  matPillText: { fontFamily: ViveFonts.semibold, fontSize: 9.5, color: '#42542F', letterSpacing: 0.2 },
   cardPrice: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST, marginTop: 2 },
   cardPriceUnit: { fontFamily: ViveFonts.regular, fontSize: 11, color: FOREST_SOFT },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 1 },
