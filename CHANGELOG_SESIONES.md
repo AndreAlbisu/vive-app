@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-09-04 — Joaquín (sesión 163 · fix del gate de consentimiento, punto 6 de la device review)
+
+**Tocado:** `hooks/useConsentGate.ts`, `app/(tabs)/index.tsx`. `tsc`, lint y 462 tests limpios. Sin schema.
+
+**Resumen — pre-vuelo del gate de consentimiento antes de la device review de Andre; se encontró y arregló por análisis estático el bug del punto 6, el que él marcó como "no se pudo verificar de ninguna forma desde la máquina".**
+
+- 🔴 **Bug del punto 6, confirmado y arreglado:** revocar el consentimiento desde el Perfil y después tocar una carita en Inicio **guardaba el check-in sin volver a pedir** → trataba dato sensible después de revocado, justo lo que el gate existe para impedir. **Causa:** Inicio es una **tab**, no se re-monta al navegar, y su `useConsentGate` leía el consentimiento **una sola vez al montar**; como el Perfil tiene su propia instancia de `useConsent` sin nada que las sincronice (no hay contexto/store/realtime), el estado de Inicio quedaba **stale en `true`**. Encima el gate **ni exponía `refrescar`**. **Fix:** `useConsentGate` ahora devuelve `refrescar`, e Inicio lo llama en **cada foco** de la tab (`useFocusEffect`). Diario/gratitud no tenían el bug (son pantallas pusheadas, re-montan y leen fresco).
+- ✅ **Validados por análisis (están bien):** punto 1 (la carita no queda marcada con el sheet abierto — el `await requireConsent()` corre antes de `setSelectedId`), punto 2 ("Ahora no" no guarda y re-pregunta), punto 8 (modo avión → "Sí, guardalo" no cierra el sheet).
+- ⚠️ **Falta confirmar el fix EN DISPOSITIVO** (punto 6): revocar en Perfil → volver a Inicio → tocar carita → tiene que volver a pedir. El resto de la device review 157-163 (consentimiento, matrícula, "Sobre vos" early, ayuda) sigue pendiente de Joaquín.
+
 ## 2026-09-04 — Andre (sesión 162 · el piso de seguridad, construido y apagado)
 
 **Tocado:** `lib/weeklyReflection.ts`, `lib/sobreVosMomento.ts`, `hooks/useDailyReflection.ts`, `app/(tabs)/index.tsx`, `constants/features.ts`, `docs/la-voz-de-sofia.md`, y los tests de reflexión/silencio/momento. Nuevos: `lib/pisoSeguridad.ts`, `__tests__/pisoSeguridad.test.ts`. **462 tests** (eran 446), `tsc` y lint limpios. Sin schema.

@@ -186,6 +186,12 @@ export default function InicioScreen() {
   // recibe la promesa: hasta que la persona conteste el sheet, el toque no hace
   // nada. Misma plomería que diario y gratitud, de ahí el hook compartido.
   const consentGate = useConsentGate(user?.id);
+  // 🔴 Inicio es una tab: no se re-monta al navegar, así que su estado de
+  // consentimiento quedaría stale si se revoca/otorga desde el Perfil. Se re-lee
+  // en cada foco para que el switch del Perfil se refleje al volver — sin esto,
+  // revocar y después tocar una carita guardaba dato sensible sin volver a pedir.
+  const refrescarConsent = consentGate.refrescar;
+  useFocusEffect(useCallback(() => { void refrescarConsent(); }, [refrescarConsent]));
   // El momento vive fuera de Inicio (app/(tabs)/_layout.tsx, sibling de
   // <Tabs>) para poder sacarle el <Modal> propio — ver SobreVosMomentoContext.
   const { open: openMomento } = useSobreVosMomento();

@@ -42,5 +42,9 @@ export function useConsentGate(userId: string | undefined, type?: ConsentType) {
     },
   };
 
-  return { pedir, sheetProps, puede: consent.puede, loading: consent.loading };
+  // `refrescar` se expone para las pantallas que NO se re-montan al navegar (la
+  // tab Inicio): sin esto, revocar/otorgar desde el Perfil dejaría su estado de
+  // consentimiento stale, y el gate seguiría con el permiso viejo. Diario y
+  // gratitud no lo necesitan —son pantallas pusheadas que leen fresco al montar—.
+  return { pedir, sheetProps, puede: consent.puede, loading: consent.loading, refrescar: consent.refrescar };
 }
