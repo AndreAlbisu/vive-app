@@ -137,6 +137,27 @@
 
 ---
 
+## 2026-09-04 — Andre (sesión 168 · el ensayo del payload rico y la nota del paquete)
+
+**Tocado:** `docs/paquete-para-la-sesion.md`. Nuevos: `scripts/ensayo-payload-rico.mjs`, `scripts/add-mood-nota.sql` (⚠️ **pendiente de correr**). Sin código de app.
+
+**Resumen — de los tres caminos que harían que "Sobre vos" sirva, se avanzaron los dos que no dependen de un tercero.**
+
+- 🔴 **`ensayo-payload-rico.mjs` — probar antes de decidir.** El §5 bis de `la-voz-de-sofia.md` afirma que la card suena básica porque al modelo le llegan tres números, y propone mandar señales más ricas. **Eso es una inferencia sin probar**, y decidirlo tiene costo: obliga a rehacer el análisis legal, porque una secuencia larga empieza a singularizar y el encuadre actual se cae. El script manda las dos versiones —la de hoy y una rica— al mismo modelo, con el mismo system, en la misma corrida, para tres casos y dos tiradas cada uno. **Los datos son inventados: no sale una fila de la base, así que no toca nada legal.**
+  - ⚠️ **Lo corre Andre**, no yo: la API key solo se ve como hash en los secrets, y así no pasa por el chat.
+  - 📌 **Qué mirar, y no es "cuál suena más lindo":** si la versión rica dice algo que la de hoy **no podría** decir; si nombra algo específico de esa persona o es genérica con más adornos; y sobre todo **si empieza a interpretar** — con más contexto el modelo se tienta con "estás mejor porque volviste a respirar", que es el modo analista y es el costo escondido.
+- **`mood_entries.nota`** — la pieza que le da sentido al paquete. *"Un check-in solo es un número del 1 al 5 con una fecha"*; el paquete vale por el **apareamiento**, no por la lista. Columna y no tabla: es 1:1 con el día, hereda la RLS own-only y el borrado de cuenta, y **fuerza el apareamiento por construcción** — no se puede anotar sobre un día que no registraste.
+- 🔴 **La verificación #3 del script es la que importa**: que el `upsert` del check-in **no pise la nota**. `MoodCheckIn` hace upsert sin mandar `nota`, y si eso la borrara, la persona perdería lo que escribió al cambiar su mood. Se prueba a mano, no se supone.
+- **Duda de Andre sobre el diario, y salieron dos cosas que no estaban en el doc.** (1) Lo incómodo no es la extracción sino **el ofrecimiento**: aunque elija entrada por entrada, si la app propone agregar algo del diario, empuja hacia adentro de lo privado. → **Regla nueva: la app no ofrece el diario**, está disponible si lo buscan. (2) **La nota y una entrada de diario no son lo mismo aunque digan lo mismo**: la nota se escribe **sabiendo que se va a compartir**, el diario se escribió para uno. De ahí que **si la nota funciona, el diario quizás no necesite entrar nunca** — y la duda se disuelve sola.
+- **El tope de 280 caracteres no es técnico**: es una señal de para qué es el campo. Sin límite, invita a escribir ahí lo que va en el diario, y ahí sí estaríamos moviendo lo íntimo de lugar.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr el ensayo**: `ANTHROPIC_API_KEY=sk-ant-... node scripts/ensayo-payload-rico.mjs`. Si la columna RICO no gana claramente, la discusión legal del payload no vale la pena y se cierra el tema.
+- **Correr `add-mood-nota.sql`** y hacer la verificación #3 a mano.
+- 🔴 **El mail a Mónica sigue siendo lo único que separa al piso de seguridad de encenderse.** Es el más barato de los tres y el único que reduce daño.
+
+---
+
 ## 🔴 PARA JOAQUÍN — device review pendiente de las sesiones 157 a 163
 
 **Se pararon los cambios acá a propósito.** Andre trabajó cinco tandas seguidas sin poder probar en dispositivo, y lo que se acumuló **no es cosmético: el consentimiento gatea los tres flujos de bienestar**. Si el sheet no cierra bien o el gate se traba, la app quedó peor que antes en las tres pantallas más usadas. Seguir apilando features sobre eso hace que, cuando algo falle, no se sepa cuál de las cinco tandas lo rompió.

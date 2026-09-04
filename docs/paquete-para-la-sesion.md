@@ -152,6 +152,36 @@ material ya conversado con material nuevo.
 tendencias, ni nada de "Sobre vos"—. No es un test de tipos: es el §3 puesto
 donde se rompa si alguien alguna vez agrega una lectura de la app.
 
+## 8 ter. 📌 La nota, y por qué probablemente el diario no haga falta
+
+> 04/09/2026, a partir de una duda de Andre: *"tienen su diario personal, podrían
+> leerlo; me da la duda si podría ser un poco invasivo leerlo y extraer los datos
+> para hacer un paquete."*
+
+La duda es correcta y el §5 ya la contesta a medias —lo invasivo sería que **la
+app extraiga**; lo diseñado es que **la persona elija entrada por entrada**—.
+Pero hay dos cosas que no estaban.
+
+**1. Lo incómodo no es la extracción, es el ofrecimiento.** Aunque elija una por
+una, si la app propone *"¿querés agregar algo del diario?"*, empuja hacia adentro
+de lo privado. Repetido, eso corre el límite aunque cada acto individual sea
+voluntario. 🔴 **Regla nueva: la app no ofrece el diario.** Que esté disponible
+si la persona lo busca, pero que nunca lo proponga. La diferencia entre "está ahí
+si querés" y "¿no querés?" es toda.
+
+**2. La nota y una entrada de diario no son lo mismo aunque digan lo mismo.** La
+nota **se escribe sabiendo que se va a compartir**; el diario se escribió para
+uno. Un texto cambia de naturaleza según para quién fue escrito.
+
+De ahí sale lo que puede resolver la duda entera: **si la nota funciona, el
+diario quizás no necesita entrar nunca.** El §9 ya lo pone último; puede que la
+respuesta sea que no vaya.
+
+`scripts/add-mood-nota.sql` (⚠️ pendiente de correr) agrega `mood_entries.nota`,
+con tope de 280 caracteres. El tope es también una señal de para qué es: un campo
+sin límite invita a escribir ahí lo que va en el diario, y entonces sí estaríamos
+moviendo lo íntimo de lugar.
+
 ## 9. Por dónde empezaría
 
 1. **Check-ins con fecha + nota propia**, ventana desde la última sesión,
