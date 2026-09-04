@@ -308,19 +308,24 @@ export function buildReflection(input: ReflectionInput): Reflection {
   if (recentMoods.length >= MIN_SAMPLE && historicMoods.length >= MIN_SAMPLE) {
     const delta = avgRecent - average(historicMoods);
 
+    // 📌 Giro a presente (capa 1, `la-voz-de-sofia.md` §1): la tendencia se
+    // nombra en PRESENTE y se pregunta, en vez de reportar una comparación con
+    // "las anteriores" (que era el modo devolución/pasado). El delta sigue
+    // decidiendo QUÉ rama, pero la frase ya no dice "más/menos que antes".
+    // Se mantiene la invariante de que la tendencia NO nombra un nivel absoluto.
     if (delta >= CHANGE_THRESHOLD) {
       return pick(dayKey, [
-        r('Esta semana venís ', 'mejor', ' que las anteriores. No sé qué cambió, pero algo cambió.', 'warm', 'trend-up'),
-        r('Algo se ', 'acomodó', ' esta semana. Vale la pena registrar qué hiciste distinto.', 'warm', 'trend-up'),
-        r('Venís ', 'levantando', ' respecto del último mes. Esas cosas no pasan solas.', 'warm', 'trend-up'),
+        r('Algo se está ', 'acomodando', ' estos días. ¿Lo notás vos también?', 'warm', 'trend-up'),
+        r('Se te nota un ', 'cambio', ' esta semana, para arriba. No sé qué se movió, pero algo se movió.', 'warm', 'trend-up'),
+        r('Venís ', 'levantando', ', y eso no pasa solo. Algo estás haciendo distinto, aunque no lo tengas del todo claro.', 'warm', 'trend-up'),
       ]);
     }
 
     if (delta <= -CHANGE_THRESHOLD) {
       return pick(dayKey, [
-        r('Esta semana viene ', 'más pesada', ' que las anteriores. Pasa, y no dice nada malo de vos.', 'gentle', 'trend-down'),
-        r('Venís ', 'un poco más abajo', ' que el último mes. Si necesitás bajar el ritmo, bajalo.', 'gentle', 'trend-down'),
-        r('La semana viene ', 'más cargada', ' que el último mes. No todas tienen que rendir.', 'gentle', 'trend-down'),
+        r('Estos días vienen ', 'más cuesta arriba', '. Si necesitás bajar un cambio, bajalo.', 'gentle', 'trend-down'),
+        r('Venís ', 'un poco más abajo', ' de lo habitual. Pasa, y no dice nada malo de vos.', 'gentle', 'trend-down'),
+        r('La semana viene ', 'más cargada', '. No todas tienen que rendir.', 'gentle', 'trend-down'),
       ]);
     }
   }
@@ -329,11 +334,14 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // Antes que la racha: una sesión es lo más importante que pasó esa semana.
   if (sessionsThisWeek > 0) {
     const varias = sessionsThisWeek > 1;
+    // 📌 Giro a presente: en vez de reportar "esta semana te sentaste", refiere
+    // lo que pasó y pregunta por el ahora (la-voz §3.1: usar lo que sabe para
+    // preguntar, no para informar).
     return pick(dayKey, [
       varias
-        ? r('Esta semana te sentaste a hablar con alguien ', `${sessionsThisWeek} veces`, '. Sostener eso cuesta más de lo que parece desde afuera.', 'warm', 'sessions')
-        : r('Esta semana te sentaste a ', 'hablar con alguien', '. Cuesta más de lo que parece desde afuera.', 'warm', 'sessions'),
-      r('Te hiciste el tiempo para ', varias ? `${sessionsThisWeek} sesiones` : 'una sesión', '. Entre todo lo demás, no es poco.', 'warm', 'sessions'),
+        ? r('Te sentaste a hablar con alguien ', `${sessionsThisWeek} veces`, ' esta semana. ¿Cómo venís después?', 'warm', 'sessions')
+        : r('Te estás haciendo el tiempo para ', 'hablar con alguien', '. ¿Cómo venís después?', 'warm', 'sessions'),
+      r('Sentarte a hablar con alguien ', 'sostiene', ' más de lo que parece desde afuera. No es poco.', 'warm', 'sessions'),
     ]);
   }
 
@@ -349,9 +357,11 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // ── 7. Práctica ───────────────────────────────────────────────────────────
   const practices = resourcesThisWeek + writingThisWeek;
   if (practices >= 2) {
+    // 📌 Giro a presente: refiere el conteo y pregunta por el ahora, en vez de
+    // reportar la actividad como un logro cerrado.
     return pick(dayKey, [
-      r('Volviste ', `${practices} veces`, ' a tus herramientas esta semana. Eso ya es una rutina, aunque todavía no la llames así.', 'warm', 'practices'),
-      r('Esta semana usaste tus prácticas ', `${practices} veces`, '. De a poco se arma.', 'warm', 'practices'),
+      r('Volviste ', `${practices} veces`, ' a tus herramientas esta semana. ¿Alguna te está sirviendo?', 'warm', 'practices'),
+      r('Ya usaste tus prácticas ', `${practices} veces`, ' esta semana. De a poco se arma en rutina.', 'warm', 'practices'),
     ]);
   }
 
