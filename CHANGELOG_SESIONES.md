@@ -33,6 +33,64 @@
 
 ---
 
+## 🔴 PARA JOAQUÍN — device review pendiente de las sesiones 157 a 163
+
+**Se pararon los cambios acá a propósito.** Andre trabajó cinco tandas seguidas sin poder probar en dispositivo, y lo que se acumuló **no es cosmético: el consentimiento gatea los tres flujos de bienestar**. Si el sheet no cierra bien o el gate se traba, la app quedó peor que antes en las tres pantallas más usadas. Seguir apilando features sobre eso hace que, cuando algo falle, no se sepa cuál de las cinco tandas lo rompió.
+
+**Estado de la base: las tres migraciones están CORRIDAS y verificadas**, y las dos edge functions nuevas deployadas. **Se puede buildear directo.**
+
+### 1. Consentimiento de datos sensibles — lo más nuevo, toca tres flujos
+
+Contexto en una línea: el ánimo, el diario y la gratitud son dato sensible (Ley 25.326 art. 7) y ahora requieren un opt-in expreso antes de guardar. Detalle en `docs/consentimiento-datos-sensibles.md`.
+
+Usá una cuenta **sin fila en `user_consents`** — o revocá desde el perfil para volver al estado inicial.
+
+1. **Inicio → tocar una carita.** Aparece el sheet. 🔴 **La carita NO tiene que quedar marcada** mientras el sheet está abierto: el gate corre antes de la animación, y si se marca quedó en el orden equivocado.
+2. **"Ahora no"** → cierra, no guarda, la carita sigue sin marcar. Tocás de nuevo → vuelve a pedir.
+3. **"Sí, guardalo"** → cierra, se guarda, la card "Sobre vos" reacciona.
+4. **Tocar otra carita** → ya no pregunta.
+5. **Diario** → escribir y guardar. No pregunta (ya consintió).
+6. 🔴 **Perfil → switch "Guardar cómo venís" → apagar → volver a Inicio → tocar una carita → tiene que volver a pedir.** Es el punto donde se cruzan el hook, la edge function y la RLS, y es lo único que no se pudo verificar de ninguna forma desde la máquina.
+7. **Gratitud** con el consentimiento apagado → también pide.
+8. **Modo avión → "Sí, guardalo"** → el sheet **no** se cierra. Es deliberado: cerrarlo daría a entender que quedó registrado y no quedó.
+
+### 2. Matrícula — la distinción entre coach y profesional matriculado
+
+Sale de `docs/encuadre-salud-y-responsabilidad.md` §2: la Ley 23.277 reserva el diagnóstico y el tratamiento a quien tiene matrícula, y la app los mostraba igual.
+
+⚠️ **Preparación**: hoy **ningún coach tiene matrícula verificada** — la única credencial aprobada del proyecto es un `titulo` ("LIC EN PSICOLOGIA"). Para ver el caso positivo hay que cargar una credencial **Matrícula** con su número desde el perfil del coach y aprobarla desde el panel de admin. Al aprobarla, `coaches.has_matricula` tiene que pasar sola a `true` — eso prueba el trigger en vivo.
+
+1. **Perfil de un coach CON matrícula** → tarjeta verde salvia arriba de "Formación": *"Matrícula verificada por Vita"*.
+2. **Perfil SIN** → tarjeta arena: *"Acompañamiento, no tratamiento"*.
+3. **Espaciado** entre esa tarjeta y "Formación" — son dos secciones con `paddingTop: 28`. Si queda hueco, avisá.
+4. **Insignia** en: buscador, deck de Conexiones, lista de resultados, y **confirmación de reserva** (la que más importa: es la última pantalla antes de pagar).
+5. **Filtro tipo → "Psicólogo"** 🔴 Si nadie tiene matrícula, **devuelve vacío y eso es correcto**. Antes devolvía a cualquiera que escribiera "psicología" en su presentación, que es el defecto que se arregló.
+6. **Alta de credencial**: el selector ahora arranca en **Matrícula**, y hay una línea que dice qué habilita cada tipo.
+7. **Panel de admin**: al revisar un título de un coach sin matrícula verificada, aparece un aviso.
+
+### 3. "Sobre vos" — la señal `early`
+
+Cuenta **nueva**, sin check-ins previos.
+
+1. **Un check-in con carita 4 o 5** → *"Recién empezamos a conocernos…"*. 🔴 Si dice **"Tu semana viene pareja"**, el arreglo no tomó (era un bug: afirmaba sobre la semana con un solo registro).
+2. **Un check-in con carita 1 o 2** → tono suave, nombra **el día** y no la semana.
+3. **Al tercer check-in** ya puede hablar del nivel de la semana.
+
+### 4. La pantalla de líneas de ayuda
+
+**Perfil → "Si necesitás ayuda ahora"** (primero de la lista, y también visible sin login). Los cuatro números tienen que abrir el marcador. En simulador no va a poder llamar y tiene que avisar por qué, con el número igual visible.
+
+### 5. No se puede probar todavía
+
+**El silencio de la card**: necesita dos días seguidos con señal `level`. Cuando pase, la card queda con el sello y el color del mood pero **sin frase, sin "→ Ver más" y no tocable**.
+
+### Lo que quedó sin hacer a propósito
+
+- **T&C §9.1 + `canCancelConfirmed`** — que siempre se pueda cancelar (sin reembolso dentro de las 24hs). Resuelve la contradicción con §9.4 ya anotada y mejora la posición legal gratis. **Se frenó a mitad de camino para no apilar más sobre lo no probado.**
+- **El precio en pesos** (Res. 4/2025): necesita una decisión de Andre — convertir, o no ofrecerle ese coach a quien está en Argentina.
+
+---
+
 ## 2026-09-03 — Andre (sesión 161 · la matrícula al catálogo, y un defecto peor que apareció en el camino)
 
 **Tocado:** `lib/coachesCache.ts`, `app/search3.tsx`, `SCHEMA.md`. Nuevo: `scripts/add-coach-has-matricula.sql` (⚠️ **pendiente de correr**). 446 tests, `tsc` y lint limpios.
