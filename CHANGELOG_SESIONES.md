@@ -23,6 +23,10 @@
 - **La pantalla no pregunta nada y no es cálida**, a propósito. Ni "¿cómo estás?", ni una carita: quien llega ahí no viene a interactuar con una app, y cada elemento que no sea un número tocable es un obstáculo. El resto de Vita tiene voz; esta pantalla no — ponerse tierna justo ahí sería ponerse en el medio de algo que no le corresponde.
 - 📝 `.expo/types/router.d.ts` se parcheó a mano para que `tsc` reconociera `/ayuda`. Es un archivo **generado y gitignoreado**: se regenera solo al levantar el dev server, y ahí va a incluir la ruta de verdad.
 
+- ✅ **Cerrado el hueco de A.4: la insignia de matrícula llegó al deck de Conexiones, a su lista de resultados y a la confirmación de reserva.** Estaba solo en el perfil y el buscador, y se podía reservar sin pasar por ninguno de los dos — que era exactamente el problema original. **La confirmación es la que más importa**: es la última pantalla antes de pagar, y de ahí no hay otro paso donde enterarse.
+- **Se extrajo `components/MatriculaPill.tsx`** en vez de dejar la cuarta copia. Con copias sueltas la quinta superficie se olvida, y "se olvidó de mostrarlo" acá significa que alguien reserva sin saber si eligió terapia o acompañamiento. Tiene variante `compact` (solo el escudo) para el deck, donde la tarjeta es chica y el nombre ya compite por el ancho.
+- 📝 **Sigue sin existir la variante "sin matrícula"**, y es deliberado: en una grilla, una marca negativa en cada tarjeta se leería como advertencia contra profesionales que no hicieron nada mal. La distinción completa vive en el perfil, que es donde hay lugar para explicarla.
+
 **Pendiente para la próxima sesión:**
 - 🔴 **Que una profesional revise el texto de la tarjeta** (ya no la pantalla). Es la única frase de la app donde equivocarse sale caro de verdad. Mónica Grando ya corrigió el enfoque del paquete para la sesión, y esa corrección mejoró el diseño — es la consulta natural. El umbral no necesita su validación; el texto sí.
 - Con eso, encender es cambiar un string y un booleano.

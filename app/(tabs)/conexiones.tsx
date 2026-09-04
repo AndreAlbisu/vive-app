@@ -21,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
+import { MatriculaPill } from '@/components/MatriculaPill';
 import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -444,7 +445,10 @@ export default function ConexionesScreen() {
                               )}
                             </View>
 
-                            <Text style={s.cardName} numberOfLines={1}>{coach.name}</Text>
+                            <View style={s.cardNameRow}>
+                              <Text style={s.cardName} numberOfLines={1}>{coach.name}</Text>
+                              {coach.hasMatricula && <MatriculaPill compact />}
+                            </View>
                             <Text style={s.cardMeta} numberOfLines={1}>
                               {coach.specialty}
                               {(coach.reviewCount ?? 0) >= 1 ? (
@@ -679,7 +683,10 @@ export default function ConexionesScreen() {
                           </View>
                         )}
                         <View style={s.resultText}>
-                          <Text style={s.resultName} numberOfLines={1}>{coach.name}</Text>
+                          <View style={s.cardNameRow}>
+                            <Text style={s.resultName} numberOfLines={1}>{coach.name}</Text>
+                            {coach.hasMatricula && <MatriculaPill compact />}
+                          </View>
                           {coach.specialty ? (
                             <Text style={s.resultSpecialty} numberOfLines={1}>{coach.specialty}</Text>
                           ) : null}
@@ -1172,6 +1179,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  cardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   cardName: {
     fontFamily: ViveFonts.titleSemiBold, // Jakarta 600 — antes Fraunces 600, HTML §B2
     fontSize: 20,

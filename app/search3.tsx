@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MatriculaPill } from '@/components/MatriculaPill';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
@@ -461,12 +461,7 @@ export default function SearchScreen3() {
                       uno y qué significa— vive en el perfil, que es donde hay
                       lugar para explicarla. Acá alcanza con que lo verificado
                       se distinga. */}
-                  {p.hasMatricula && (
-                    <View style={s.matPill}>
-                      <MaterialCommunityIcons name="shield-check" size={10} color="#42542F" />
-                      <Text style={s.matPillText}>Matrícula</Text>
-                    </View>
-                  )}
+                  {p.hasMatricula && <MatriculaPill />}
                 </View>
                 {topics.length > 0 && (
                   <View style={s.tagsRow}>
@@ -848,12 +843,6 @@ const s = StyleSheet.create({
   newPillText: { fontFamily: ViveFonts.semibold, fontSize: 10.5, color: ViveColors.primary },
   cardSpecialty: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: ViveColors.primary, flexShrink: 1 },
   specialtyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  matPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#DCE5CB', borderRadius: 8,
-    paddingVertical: 2, paddingHorizontal: 6,
-  },
-  matPillText: { fontFamily: ViveFonts.semibold, fontSize: 9.5, color: '#42542F', letterSpacing: 0.2 },
   cardPrice: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST, marginTop: 2 },
   cardPriceUnit: { fontFamily: ViveFonts.regular, fontSize: 11, color: FOREST_SOFT },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 1 },

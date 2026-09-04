@@ -19,6 +19,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
+import { MatriculaPill } from '@/components/MatriculaPill';
 import { ScaleCard } from '@/components/ScaleCard';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -67,6 +68,10 @@ export default function BookingScreen_Confirm() {
   const [error, setError] = useState<string | null>(null);
   const [userMessage, setUserMessage] = useState('');
   const [instantBooking, setInstantBooking] = useState(false);
+  // 🔴 Última pantalla antes de pagar. Es el punto donde más importa que la
+  // persona sepa si está reservando terapia o acompañamiento — de acá no hay
+  // otro paso donde enterarse. Ver `docs/encuadre-salud-y-responsabilidad.md` §2.
+  const [hasMatricula, setHasMatricula] = useState(false);
   const [internacionalDisponible, setInternacionalDisponible] = useState(false);
   const [aceptaPaypal, setAceptaPaypal] = useState(false);
   const [aceptaUsdt, setAceptaUsdt] = useState(false);
@@ -114,10 +119,11 @@ export default function BookingScreen_Confirm() {
     (async () => {
       const { data } = await supabase
         .from('coaches')
-        .select('instant_booking, accepts_international, accepts_paypal, accepts_usdt, price_usd, price_per_session')
+        .select('instant_booking, has_matricula, accepts_international, accepts_paypal, accepts_usdt, price_usd, price_per_session')
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
       setInstantBooking(!!data?.instant_booking);
+      setHasMatricula(!!data?.has_matricula);
       // Los medios internacionales (USDT y PayPal) solo existen si el coach
       // puede cobrarlos: acepta internacional y fijó su precio en dólares. Sin
       // eso, las dos `*-create-payment` devuelven 409 y la persona vería un
@@ -843,7 +849,10 @@ export default function BookingScreen_Confirm() {
               <MaterialIcons name="person" size={34} color="rgba(135,131,92,0.80)" />
             </View>
             <View style={s.coachInfo}>
-              <Text style={s.coachName}>{coachName}</Text>
+              <View style={s.coachNameRow}>
+                <Text style={s.coachName}>{coachName}</Text>
+                {hasMatricula && <MatriculaPill />}
+              </View>
               <Text style={s.coachSpecialty}>{specialty}</Text>
             </View>
             <MaterialIcons name="verified" size={18} color={ViveColors.accent} />
@@ -1239,6 +1248,7 @@ const s = StyleSheet.create({
     marginRight: 14,
   },
   coachInfo: { flex: 1 },
+  coachNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   coachName: {
     fontFamily: ViveFonts.semibold,
     fontSize: 17,
