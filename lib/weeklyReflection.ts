@@ -285,7 +285,7 @@ export function buildReflection(input: ReflectionInput): Reflection {
     return pick(dayKey, [
       r('Todavía no nos conocemos mucho. Contame cómo venís unos días y ', 'empiezo a devolverte', ' lo que voy viendo.', 'neutral', 'empty'),
       r('Acá te voy a ir contando lo que noto en tu semana. Para eso necesito que ', 'me cuentes cómo venís', '.', 'neutral', 'empty'),
-      r('Recién arrancamos. Registrá cómo venís unos días y ', 'esto se pone interesante', '.', 'neutral', 'empty'),
+      r('Recién arrancamos. Con un par de registros más, ', 'esto se pone interesante', '.', 'neutral', 'empty'),
     ]);
   }
 
@@ -308,6 +308,20 @@ export function buildReflection(input: ReflectionInput): Reflection {
   if (recentMoods.length >= MIN_SAMPLE && historicMoods.length >= MIN_SAMPLE) {
     const delta = avgRecent - average(historicMoods);
 
+    // ⚠️ Dos cosas que la revisión de voz del 04/09 sacó de acá y conviene no
+    // volver a poner:
+    //
+    //  · **Inferir sobre la persona.** Una variante decía "algo estás haciendo
+    //    distinto, aunque no lo tengas del todo claro". El dato es que el
+    //    promedio subió — no que cambió una conducta, y menos que la persona no
+    //    se dio cuenta. Eso es el modo analista y contradice §2: la app no tiene
+    //    ventaja de información sobre vos. Preguntar "¿sabés qué se movió?" dice
+    //    lo mismo sin afirmar nada.
+    //  · **"Se te nota…"** El `SYSTEM` de la edge function prohíbe arrancar con
+    //    "Parece que", "Se nota que", "Veo que". Las reglas tienen que cumplir lo
+    //    que le exigen al modelo, o el día que se prenda la IA vamos a estar
+    //    rechazándole frases que las nuestras usan.
+    //
     // 📌 Giro a presente (capa 1, `la-voz-de-sofia.md` §1): la tendencia se
     // nombra en PRESENTE y se pregunta, en vez de reportar una comparación con
     // "las anteriores" (que era el modo devolución/pasado). El delta sigue
@@ -316,8 +330,8 @@ export function buildReflection(input: ReflectionInput): Reflection {
     if (delta >= CHANGE_THRESHOLD) {
       return pick(dayKey, [
         r('Algo se está ', 'acomodando', ' estos días. ¿Lo notás vos también?', 'warm', 'trend-up'),
-        r('Se te nota un ', 'cambio', ' esta semana, para arriba. No sé qué se movió, pero algo se movió.', 'warm', 'trend-up'),
-        r('Venís ', 'levantando', ', y eso no pasa solo. Algo estás haciendo distinto, aunque no lo tengas del todo claro.', 'warm', 'trend-up'),
+        r('Hay un ', 'cambio', ' esta semana, para arriba. No sé qué se movió, pero algo se movió.', 'warm', 'trend-up'),
+        r('Venís ', 'levantando', ', y eso no pasa solo. ¿Sabés qué se movió?', 'warm', 'trend-up'),
       ]);
     }
 
@@ -340,8 +354,14 @@ export function buildReflection(input: ReflectionInput): Reflection {
     return pick(dayKey, [
       varias
         ? r('Te sentaste a hablar con alguien ', `${sessionsThisWeek} veces`, ' esta semana. ¿Cómo venís después?', 'warm', 'sessions')
-        : r('Te estás haciendo el tiempo para ', 'hablar con alguien', '. ¿Cómo venís después?', 'warm', 'sessions'),
+        : r('Te estás haciendo el tiempo para ', 'hablar con alguien', '. ¿Te dejó algo dando vueltas?', 'warm', 'sessions'),
       r('Sentarte a hablar con alguien ', 'sostiene', ' más de lo que parece desde afuera. No es poco.', 'warm', 'sessions'),
+      // ⚠️ Las dos ramas del ternario son el MISMO slot —plural y singular de la
+      // variante 1—, así que nunca conviven; la que sí convive con las dos es la
+      // de acá arriba. Al revisar el copy hay que mirar ese par, no las tres
+      // líneas sueltas: la primera corrección del 04/09 le devolvió a la rama
+      // singular el cierre "más de lo que parece desde afuera" y quedó pisándose
+      // con esta, que ya lo tenía.
     ]);
   }
 
@@ -361,7 +381,7 @@ export function buildReflection(input: ReflectionInput): Reflection {
     // reportar la actividad como un logro cerrado.
     return pick(dayKey, [
       r('Volviste ', `${practices} veces`, ' a tus herramientas esta semana. ¿Alguna te está sirviendo?', 'warm', 'practices'),
-      r('Ya usaste tus prácticas ', `${practices} veces`, ' esta semana. De a poco se arma en rutina.', 'warm', 'practices'),
+      r('Ya van ', `${practices} veces`, ' que volvés a tus prácticas esta semana. ¿Se está armando algo?', 'warm', 'practices'),
     ]);
   }
 

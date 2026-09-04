@@ -272,6 +272,71 @@ describe('buildReflection — umbrales', () => {
   });
 });
 
+describe('buildReflection — las variantes no se pisan entre sí', () => {
+  // 🔴 Sale de un error real del 04/09. Al revisar el giro a presente se le
+  // devolvió a una variante de `sessions` la frase "más de lo que parece desde
+  // afuera", que otra variante de la MISMA señal ya tenía. Los textos completos
+  // eran distintos, así que ningún test lo veía — pero para quien lo lee dos
+  // días seguidos es la misma frase con otro principio, que es justo lo que el
+  // sistema de variantes existe para evitar.
+  //
+  // ⚠️ La primera versión de este test comparaba el cierre EXACTO y NO agarraba
+  // el bug: los dos cierres diferían en el arranque (". Cuesta más de lo que
+  // parece…" contra " más de lo que parece… No es poco."). Un test que no
+  // detecta el caso para el que se escribió es peor que ninguno, porque da
+  // confianza falsa. Por eso mira **secuencias de palabras compartidas**.
+  const CORRIDA_MAXIMA = 5;
+
+  function palabras(t: string): string[] {
+    return t.toLowerCase().replace(/[.,¿?¡!—]/g, ' ').split(/\s+/).filter(Boolean);
+  }
+
+  /** La secuencia de palabras más larga que comparten dos frases. */
+  function corridaCompartida(a: string, b: string): string | null {
+    const pa = palabras(a), pb = palabras(b);
+    for (let n = Math.min(pa.length, pb.length); n >= CORRIDA_MAXIMA; n--) {
+      for (let i = 0; i + n <= pa.length; i++) {
+        const seq = pa.slice(i, i + n).join(' ');
+        if (pb.join(' ').includes(seq)) return seq;
+      }
+    }
+    return null;
+  }
+
+  const CASOS: { signal: string; input: Partial<ReflectionInput> }[] = [
+    { signal: 'empty',         input: { recentMoods: [] } },
+    { signal: 'early',         input: { recentMoods: [4] } },
+    { signal: 'sharp-drop',    input: { sharpDrop: true } },
+    { signal: 'sustained-low', input: { recentMoods: [1, 2, 1, 2] } },
+    { signal: 'trend-up',      input: { recentMoods: [4, 5, 4], historicMoods: [2, 2, 3] } },
+    { signal: 'trend-down',    input: { recentMoods: [2, 3, 2], historicMoods: [4, 4, 5] } },
+    { signal: 'sessions',      input: { recentMoods: [3, 3, 3], sessionsThisWeek: 1 } },
+    { signal: 'sessions varias', input: { recentMoods: [3, 3, 3], sessionsThisWeek: 3 } },
+    { signal: 'streak',        input: { recentMoods: [3, 3, 3], streak: 6 } },
+    { signal: 'practices',     input: { recentMoods: [3, 3, 3], resourcesThisWeek: 3 } },
+    { signal: 'level',         input: { recentMoods: [3, 3, 3] } },
+  ];
+
+  // 40 días alcanzan para recorrer todas las variantes de cualquier señal: la
+  // que más tiene son cuatro.
+  const DIAS = Array.from({ length: 40 }, (_, i) => `2026-10-${String(i + 1).padStart(2, '0')}`);
+
+  it.each(CASOS)('$signal: ninguna variante repite una frase de otra', ({ input }) => {
+    const vistos = new Set<string>();
+    for (const dayKey of DIAS) {
+      const r = buildReflection(on({ ...input, dayKey }));
+      vistos.add(`${r.before}${r.bold}${r.after}`);
+    }
+    const todas = [...vistos];
+    for (let i = 0; i < todas.length; i++) {
+      for (let j = i + 1; j < todas.length; j++) {
+        const comun = corridaCompartida(todas[i], todas[j]);
+        expect(comun ? `«${comun}» se repite en:\n  ${todas[i]}\n  ${todas[j]}` : null).toBeNull();
+      }
+    }
+  });
+});
+
 describe('buildReflection — la variante del día', () => {
   it('es la misma dentro del mismo día', () => {
     // La tarjeta se re-monta cada vez que volvés a Inicio. Si la frase cambiara

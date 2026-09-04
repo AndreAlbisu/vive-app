@@ -49,6 +49,29 @@
 
 ---
 
+## 2026-09-04 — Andre (sesión 164 · revisión de voz del giro a presente, y un test que no servía)
+
+**Tocado:** `lib/weeklyReflection.ts`, `__tests__/weeklyReflection.test.ts`. **473 tests** (eran 462), `tsc` y lint limpios. Sin schema.
+
+**Resumen — Joaquín pidió el visto bueno de voz sobre las cuatro señales que giró a presente (sesión 163). El trabajo estaba bien; salieron cuatro ajustes, uno de fondo, y un bug propio al arreglarlos.**
+
+- 🔴 **`trend-up` volvía al modo analista.** Decía *"Algo estás haciendo distinto, aunque no lo tengas del todo claro"*. Afirma dos cosas que la app no sabe: que la persona cambió una conducta (el dato es que el promedio subió) y que no se dio cuenta — o sea, se pone por encima suyo. Es lo que `la-voz-de-sofia.md` §2 prohíbe: la app no tiene ventaja de información. La vieja decía *"esas cosas no pasan solas"*, una observación sobre el mundo; la nueva inferiría sobre la persona. → *"¿Sabés qué se movió?"*, que dice lo mismo sin afirmar nada.
+- ⚠️ **`trend-up` rompía una regla nuestra.** Arrancaba con *"Se te nota un cambio…"*, y el `SYSTEM` de la edge function prohíbe expresamente *"Parece que", "Se nota que", "Veo que"*. Las reglas tienen que cumplir lo que le exigen al modelo, o el día que se prenda la IA vamos a rechazarle frases que las nuestras usan. → *"Hay un cambio esta semana, para arriba"*.
+- ⚠️ **`sessions`: dos variantes cerraban con la misma pregunta**, y **`practices` #2 no había girado** (seguía siendo reporte + comentario, y *"se arma en rutina"* no cerraba). Corregidas.
+- ✅ **`trend-down` no se tocó**: las tres mantienen la dirección sin nombrar nivel absoluto, y *"de lo habitual"* resuelve la comparación sin reportarla. Es el mejor trabajo de las cuatro.
+
+**Y el bug propio, que es la parte instructiva.**
+
+- 🔴 **Al arreglar `sessions` creé una colisión peor:** le devolví a la rama singular el cierre *"más de lo que parece desde afuera"*, que la otra variante ya tenía. ⚠️ **Las dos ramas del ternario son el MISMO slot** (plural y singular de la variante 1) y nunca conviven — la que sí convive con las dos es la tercera. Hay que mirar ese par, no las tres líneas sueltas. Queda comentado en el código.
+- 🔴 **El primer test que escribí para eso NO agarraba el bug.** Comparaba el cierre EXACTO, y los dos cierres diferían en el arranque (`". Cuesta más de lo que…"` contra `" más de lo que… No es poco."`). Se verificó reintroduciendo la colisión a propósito: pasaba igual. **Un test que no detecta el caso para el que se escribió es peor que ninguno, porque da confianza falsa.** Reescrito para comparar **secuencias de palabras compartidas** (5 o más), y re-verificado con la misma mutación: ahora falla como corresponde.
+- 📌 **El test nuevo encontró de paso una colisión preexistente en `empty`**, de la versión original de la sesión 91: dos variantes compartían *"cómo venís unos días y"*. Corregida.
+
+**Pendiente para la próxima sesión:**
+- **`level` y `sustained-low` siguen sin girar a presente** — Joaquín las dejó a propósito por ser lo más sensible de la voz. `level` es además la que más se muestra.
+- Sigue en pie todo lo del bloque de device review de abajo.
+
+---
+
 ## 🔴 PARA JOAQUÍN — device review pendiente de las sesiones 157 a 163
 
 **Se pararon los cambios acá a propósito.** Andre trabajó cinco tandas seguidas sin poder probar en dispositivo, y lo que se acumuló **no es cosmético: el consentimiento gatea los tres flujos de bienestar**. Si el sheet no cierra bien o el gate se traba, la app quedó peor que antes en las tres pantallas más usadas. Seguir apilando features sobre eso hace que, cuando algo falle, no se sepa cuál de las cinco tandas lo rompió.
