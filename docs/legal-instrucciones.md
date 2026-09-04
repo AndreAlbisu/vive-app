@@ -422,6 +422,26 @@ Lo construido está en el duodécimo y decimotercer bloque del changelog del
 | Guardarraíl | `rejectCopy()` en `lib/weeklyReflection.ts`, con tests |
 | Piso si algo falla | las reglas de `buildReflection()` — la app funciona igual |
 
+> 🔴 **ACTUALIZACIÓN 04/09/2026 — esto dejó de esperar a un abogado.** Andre no
+> puede pagar la consulta, así que se evaluó la viabilidad con lo que hay.
+> **Conclusión: se puede encender**, y el análisis completo está en
+> `transferencias-internacionales.md` §5 bis.
+>
+> Lo que lo cambió fue mirar el código en vez de el documento: **al proveedor no
+> le llega ningún identificador ni seudónimo**, y nada se almacena que ligue una
+> llamada con una persona — pasada la llamada, ni Vita puede reconstruir de quién
+> era. O sea que no es dato *seudonimizado* (que ya alcanzaría por TJUE
+> C-413/23 P) sino **anónimo**: el art. 2 define dato personal como el referido a
+> personas *determinadas o determinables*, y esto no describe a nadie
+> determinable. Si no es dato personal, el art. 12 no se activa.
+>
+> **Tres pasos antes de encender**, ninguno cuesta plata: pedir retención cero,
+> declararlo igual en §6/§7, y que el análisis quede escrito de antemano (hecho).
+> Y la consulta gratuita a la AAIP va **en paralelo**, sin bloquear.
+>
+> ⚠️ **No habilita subir el presupuesto de datos.** Mandar la forma de los días
+> (§5 bis de `la-voz-de-sofia.md`) es otra decisión y hay que rehacer el análisis.
+
 **Si la respuesta es que el payload NO es dato sensible** (una etiqueta de
 categoría y tres enteros, sin identificador):
 1. Declarar al proveedor de IA en **Política §6** como destinatario, y la

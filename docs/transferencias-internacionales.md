@@ -187,6 +187,107 @@ Y en **§6**, agregar la fila que falta:
 Declarar un destinatario que no recibe datos es tan falso como omitir uno que sí.
 Se agrega el día que se encienda, no antes.
 
+## 5 bis. 🔴 La devolución con IA: por qué es viable sin abogado
+
+> **04/09/2026.** Andre no puede pagar una consulta y pidió evaluar la
+> viabilidad. Esto es investigación y una recomendación, **no asesoramiento
+> legal** — el riesgo residual está nombrado al final, sin maquillar.
+
+### Qué sale exactamente, verificado en el código
+
+`hooks/useDailyReflection.ts` manda a la edge function, y la function le manda a
+Anthropic **una sola línea**:
+
+```
+señal: streak
+tono: warm
+datos: {"racha":6,"sesiones":1,"practicas":2}
+```
+
+Y nada más. Verificado línea por línea:
+
+- **La identidad NUNCA llega al proveedor.** El JWT del usuario autentica contra
+  *la edge function*; la llamada a Anthropic es un `fetch` aparte con la API key
+  de Vita. Anthropic no ve el token, ni el `user_id`, ni un seudónimo.
+- **El payload se filtra contra listas cerradas.** `signal` y `tone` tienen que
+  estar en un enum; de `facts` solo pasan números finitos y la etiqueta `level`
+  con tope de 20 caracteres. Cualquier otra cosa se descarta antes del prompt.
+- **No se loguea el body.** El único `console.error` imprime la excepción, no el
+  contenido.
+
+### 🔴 El punto que cambia el análisis: no es seudonimizado, es anónimo
+
+Yo mismo lo había escrito como "datos seudonimizados", apoyándome en el fallo
+**EDPS c/ JUR (C-413/23 P)** — que ya alcanzaría, porque establece que el
+carácter personal no es absoluto y unos datos pueden no serlo para el receptor
+que no puede reidentificar.
+
+Pero mirando el código, es **más fuerte que eso**. Un dato seudonimizado tiene
+una clave que alguien guarda. **Acá no hay clave.** No hay identificador, no hay
+seudónimo estable, y nada se almacena que ligue una llamada con una persona — ni
+del lado de Anthropic ni del de Vita. Pasada la llamada, **ni siquiera Vita puede
+reconstruir de quién era**.
+
+La **Ley 25.326 art. 2** define dato personal como información referida a
+personas *"determinadas o determinables"*. Una etiqueta de categoría y tres
+enteros, sin nada que ate eso a alguien, **no describe a una persona
+determinable**. Y si no es dato personal, el régimen de transferencia
+internacional del art. 12 **no se activa** — no hay nada que encuadrar.
+
+⚠️ Con una salvedad honesta: en el instante de la llamada, la function sí sabe
+quién es (verificó el JWT). Lo que se transmite no lo lleva. Esa es exactamente
+la distinción que resolvió el TJUE: el emisor sabe, el receptor no.
+
+### Qué hacer para que la posición quede sólida
+
+Tres cosas, ninguna cuesta plata ni espera a nadie:
+
+- [ ] **1. Pedir retención cero a Anthropic** antes de encender. Elimina el único
+      punto donde el contenido persiste. Con eso el análisis deja de depender de
+      cuánto tiempo se guarda algo.
+- [ ] **2. Declararlo igual en Política §6 y §7.** Aunque el análisis diga que no
+      es dato personal, declararlo es gratis y es honesto. Y si alguna vez
+      alguien discute el encuadre, haber declarado juega a favor: no se ocultó
+      nada. El texto propuesto está en la sección 5 de este documento.
+- [ ] **3. Que este análisis quede escrito ANTES de encender**, que es lo que
+      hace esta sección. Una posición documentada de antemano vale; una
+      improvisada después de una consulta, no.
+
+### 📌 Y el respaldo gratuito, en paralelo
+
+La **AAIP atiende consultas de responsables sin costo**, y es la autoridad que
+aplicaría el art. 12. Se puede preguntar **sin bloquear el encendido**: la
+pregunta es corta y concreta.
+
+> *"¿Constituye tratamiento de dato personal el envío a un proveedor externo de
+> una etiqueta de categoría y tres números enteros, sin identificador ni
+> seudónimo del titular, cuando el emisor no conserva ninguna vinculación entre
+> el envío y la persona?"*
+
+### Riesgo residual, sin maquillar
+
+1. **Es una interpretación, no una certeza.** La AAIP podría leer que el vínculo
+   momentáneo en el servidor alcanza para considerarlo tratamiento de dato
+   personal. Si eso pasara, lo que corresponde es el instrumento de la sección 3
+   — el mismo que ya hace falta para Supabase. **No es un escenario catastrófico:
+   es el mismo trabajo que ya está pendiente por otra vía.**
+2. 🔴 **El análisis NO sobrevive a un payload más rico.** El §5 bis de
+   `la-voz-de-sofia.md` propone mandar la forma de los días (*"hoy bajón, ayer
+   bajón, anteayer bien"*). Una secuencia larga empieza a ser un patrón que
+   singulariza, y ahí esto hay que rehacerlo. **Encender la redacción NO habilita
+   subir el presupuesto de datos.** Son dos decisiones y esta cubre una sola.
+3. **Correlación por tiempo.** Alguien con los logs de Anthropic *y* los de Vita
+   podría cruzar marcas temporales. Exige comprometer los dos lados; se nombra
+   por completitud, no como bloqueo.
+
+### Recomendación
+
+**Se puede encender**, con los tres pasos de arriba hechos primero y en ese
+orden. Lo que se transmite no describe a una persona determinable, no se
+conserva, y no se puede reconstruir. Es la transferencia más chica que hace la
+app — órdenes de magnitud por debajo de lo que ya viaja a Supabase todos los
+días, que es lo que de verdad hay que resolver.
+
 ## 6. Un punto que no estaba en el paquete
 
 **Acceso desde Australia.** Joaquín trabaja desde allá y accede a la base de

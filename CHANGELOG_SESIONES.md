@@ -108,6 +108,26 @@
 
 ---
 
+## 2026-09-04 — Andre (sesión 167 · la devolución con IA se puede encender, y no hace falta abogado)
+
+**Tocado:** `docs/transferencias-internacionales.md` (§5 bis nuevo), `docs/legal-instrucciones.md` (Paso 5.1). Sin código.
+
+**Resumen — Andre no puede pagar la consulta y pidió evaluar la viabilidad. Mirando el código en vez del documento, la posición resultó bastante más fuerte de la que estaba escrita.**
+
+- 🔴 **No es dato seudonimizado: es anónimo, y eso cambia el análisis.** Se verificó línea por línea qué sale: la identidad **nunca llega al proveedor** —el JWT autentica contra la edge function, y la llamada a Anthropic es un `fetch` aparte con la API key de Vita—, el payload se filtra contra listas cerradas, y el body no se loguea. **No hay identificador, no hay seudónimo estable, y nada se almacena que ligue una llamada con una persona: pasada la llamada, ni Vita puede reconstruir de quién era.**
+- **Un dato seudonimizado tiene una clave que alguien guarda; acá no hay clave.** El TJUE **C-413/23 P** ya alcanzaría —el carácter personal no es absoluto—, pero esto es más fuerte: la **Ley 25.326 art. 2** define dato personal como el referido a personas *"determinadas o determinables"*, y una etiqueta de categoría más tres enteros no describe a nadie determinable. **Si no es dato personal, el art. 12 no se activa** — no hay transferencia que encuadrar.
+- **Tres pasos antes de encender, ninguno cuesta plata ni espera a nadie:** pedir **retención cero** a Anthropic (elimina el único punto donde el contenido persiste), **declararlo igual en Política §6/§7** (gratis, honesto, y juega a favor si alguien discute el encuadre), y que **el análisis quede escrito de antemano** — que es lo que hace el §5 bis nuevo. Una posición documentada antes vale; una improvisada después, no.
+- **La consulta gratuita a la AAIP va en paralelo, sin bloquear**, y quedó redactada como una sola pregunta concreta.
+- ⚠️ **Riesgo residual nombrado, sin maquillar:** es una interpretación y no una certeza; si la AAIP leyera que el vínculo momentáneo en el servidor alcanza, lo que corresponde es el mismo instrumento que ya hace falta para Supabase — **no es un escenario catastrófico, es trabajo que ya está pendiente por otra vía**.
+- 🔴 **Y el límite que importa: esto NO habilita subir el presupuesto de datos.** Mandar la forma de los días (§5 bis de `la-voz-de-sofia.md`) hace que una secuencia larga empiece a singularizar, y ahí el análisis hay que rehacerlo. Encender la redacción y enriquecer la señal son **dos decisiones distintas**, y esta cubre una sola.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Pedir retención cero a Anthropic.** Es lo único que separa a la feature de poder encenderse, y es un mail.
+- Después: escribir §6/§7, `npm run sync:legal`, `EXPO_PUBLIC_AI_REFLECTION=true` y rebuild. Los cuatro son independientes y cualquiera que falte deja la app en el texto determinístico sin romperse.
+- 📌 **Contexto de por qué salió esto ahora:** Andre preguntó si no convenía fijar reglas y que la IA cree las frases, en vez de 32 escritas a mano. La respuesta es que **ese ya es el diseño** y estaba trabado por lo legal — pero con la advertencia de que encenderlo **arregla "repetitivo", no "básico"**: con tres números de entrada, cualquier modelo produce genéricos. Lo segundo necesita el presupuesto de datos, que es la otra decisión.
+
+---
+
 ## 🔴 PARA JOAQUÍN — device review pendiente de las sesiones 157 a 163
 
 **Se pararon los cambios acá a propósito.** Andre trabajó cinco tandas seguidas sin poder probar en dispositivo, y lo que se acumuló **no es cosmético: el consentimiento gatea los tres flujos de bienestar**. Si el sheet no cierra bien o el gate se traba, la app quedó peor que antes en las tres pantallas más usadas. Seguir apilando features sobre eso hace que, cuando algo falle, no se sepa cuál de las cinco tandas lo rompió.
