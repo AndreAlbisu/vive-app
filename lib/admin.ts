@@ -568,6 +568,11 @@ export type AdminCredential = {
   year: number | null;
   registration_number: string | null;
   has_file: boolean;
+  /** ¿Ese coach YA tiene una matrícula verificada? Aprobar un título no habilita
+   *  la marca de profesional en el perfil: solo la matrícula lo hace. Sin este
+   *  dato el admin aprueba a ciegas y el coach no entiende por qué su perfil no
+   *  cambió. */
+  coach_has_matricula: boolean;
   review_notes: string | null;
   created_at: string;
 };

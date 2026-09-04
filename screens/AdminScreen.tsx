@@ -371,6 +371,23 @@ export default function AdminScreen() {
                       <Text style={s.cardMeta}>N° {c.registration_number}</Text>
                     )}
 
+                    {/* Aprobar un título NO habilita la marca de profesional
+                        matriculado en el perfil público: eso cuelga solo de una
+                        credencial `matricula` verificada (Ley 23.277 — hace
+                        falta título habilitante Y matrícula). Sin este aviso el
+                        admin aprueba pensando que resolvió algo y el coach no
+                        entiende por qué su perfil no cambió. Pasó el 03/09/2026
+                        con un "LIC EN PSICOLOGIA" cargado como título. */}
+                    {c.kind !== 'matricula' && !c.coach_has_matricula && (
+                      <View style={s.credWarn}>
+                        <MaterialCommunityIcons name="information-outline" size={14} color="#8A6A3B" />
+                        <Text style={s.credWarnTxt}>
+                          Este profesional no tiene matrícula verificada. Aprobar esto suma a su
+                          formación pero no lo marca como matriculado en su perfil.
+                        </Text>
+                      </View>
+                    )}
+
                     {/* 🔴 El documento se abre con una URL firmada de 5 minutos
                         que emite la edge function, y abrirlo QUEDA AUDITADO: es
                         un documento de identidad, tiene que constar quién lo vio. */}
@@ -1042,6 +1059,15 @@ const s = StyleSheet.create({
   cardMuted: { opacity: 0.72 },
   cardTitle: { fontFamily: ViveFonts.semibold, fontSize: 15.5, color: FOREST },
   cardMeta: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: 'rgba(135,131,92,0.95)' },
+  credWarn: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    backgroundColor: '#F0E7D6', borderRadius: 10,
+    paddingVertical: 8, paddingHorizontal: 10, marginTop: 10,
+  },
+  credWarnTxt: {
+    flex: 1, fontFamily: ViveFonts.regular, fontSize: 11.5,
+    lineHeight: 16.5, color: '#7A5B2E',
+  },
   cardBody: { fontFamily: ViveFonts.regular, fontSize: 13.5, color: FOREST, lineHeight: 20, marginTop: 6 },
   mono: { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 10.5, color: 'rgba(135,131,92,0.75)', marginTop: 6 },
 

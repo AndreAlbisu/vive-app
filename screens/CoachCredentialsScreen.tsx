@@ -44,7 +44,12 @@ export default function CoachCredentialsScreen() {
   const [loading, setLoading] = useState(true);
 
   const [abierto, setAbierto] = useState(false);
-  const [kind, setKind] = useState<CredentialKind>('titulo');
+  // 🔴 Arranca en `matricula` y no en `titulo`, y no es un capricho: **la
+  // matrícula es la única que habilita la marca de profesional en el perfil
+  // público**. Con el default anterior el camino natural era subir el título
+  // primero, verlo verificado, y no entender por qué el perfil seguía diciendo
+  // "acompañamiento, no tratamiento". Pasó de verdad el 03/09/2026.
+  const [kind, setKind] = useState<CredentialKind>('matricula');
   const [title, setTitle] = useState('');
   const [institution, setInstitution] = useState('');
   const [year, setYear] = useState('');
@@ -230,6 +235,17 @@ export default function CoachCredentialsScreen() {
                       ))}
                     </View>
 
+                    {/* La Ley 23.277 exige título habilitante Y matrícula: un
+                        diploma solo no autoriza a ejercer. Por eso la marca del
+                        perfil cuelga de la matrícula, y por eso hay que decirlo
+                        acá — sin esta línea, subir el título y no ver ningún
+                        cambio se lee como que el sistema falló. */}
+                    <Text style={s.kindHint}>
+                      {kind === 'matricula'
+                        ? 'Es la que habilita la marca de profesional matriculado en tu perfil público.'
+                        : 'Suma a tu formación, pero la marca de profesional matriculado la da la matrícula.'}
+                    </Text>
+
                     <Text style={s.label}>
                       {kind === 'matricula' ? 'Qué matrícula es' : 'Nombre del título'}
                     </Text>
@@ -373,6 +389,10 @@ const s = StyleSheet.create({
 
   form: { backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: LINE, padding: 16, gap: 4 },
   label: { fontFamily: ViveFonts.semibold, fontSize: 12.5, color: FOREST, marginTop: 10, marginBottom: 6 },
+  kindHint: {
+    fontFamily: ViveFonts.regular, fontSize: 11.5, lineHeight: 17,
+    color: FOREST_SOFT, marginTop: 8,
+  },
   input: {
     backgroundColor: 'rgba(63,81,47,0.05)', borderRadius: 12, paddingHorizontal: 13,
     height: 46, fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST,

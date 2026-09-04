@@ -19,6 +19,13 @@
 
 - ✅ **`add-coach-has-matricula.sql` CORRIDO y verificado el mismo día**: columna creada, `authenticated` con **solo SELECT** —el catálogo la lee, el coach no la escribe— y el backfill con **0 filas de diferencia** contra las credenciales verificadas. 📝 Las dos verificaciones salieron mal escritas la primera vez: la del backfill pedía `coaches.name`, que no existe (el nombre vive en `profiles`), y la de privilegios decía "esperado 0 filas" cuando `SELECT` **tiene que estar**. Corregidas en el script.
 
+**Probado en dispositivo, y salió un problema de producto (no de código).**
+
+- Andre aprobó "la matrícula" de un coach y el cartel *"Acompañamiento, no tratamiento"* no desapareció. **No estaba roto**: consultando la vista pública contra la base, la única credencial verificada del proyecto es `kind = 'titulo'`, título *"LIC EN PSICOLOGIA"*. La tarjeta lee `kind === 'matricula'`, así que decía la verdad, y `has_matricula` en `false` también era correcto.
+- 🔴 **Pero el producto sí tenía un problema.** El criterio legal está bien —la Ley 23.277 exige título habilitante **Y** matrícula, y la matrícula es lo único que un tercero puede chequear— pero desde la silla del coach se ve como una falla: subís tu título de Lic. en Psicología, te lo verifican, y tu perfil sigue diciendo que no hacés tratamiento. **Nada en la pantalla explicaba que la que cuenta es la matrícula**, y el selector arrancaba en `titulo`.
+- **`CoachCredentialsScreen`**: el default pasó a `matricula`, y hay una línea bajo el selector que dice qué habilita cada tipo — *"es la que habilita la marca de profesional matriculado en tu perfil público"* contra *"suma a tu formación, pero la marca la da la matrícula"*.
+- **Panel de admin**: al revisar una credencial que no es matrícula de un coach que **no tiene matrícula verificada**, aparece un aviso. Aprobar un título suma a la formación pero no lo marca como matriculado, y sin ese aviso el admin aprueba pensando que resolvió algo. `list_pending_credentials` devuelve ahora `coach_has_matricula` (una query extra por lote, no por fila). **`admin-actions` redeployada.**
+
 **Pendiente para la próxima sesión:**
 - **Llevar la insignia también al deck de Conexiones y a la confirmación de reserva.** Hoy quedó en el buscador; el deck y el checkout siguen sin mostrarla.
 - **Decidir el campo estructurado de profesión.** Es lo único que cierra del todo el problema de `inferType`.

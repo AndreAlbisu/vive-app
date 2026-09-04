@@ -469,11 +469,30 @@ serve(async (req) => {
         .limit(100)
 
       if (error) return json({ error: error.message }, 500)
+
+      // 📌 Para cada coach de la lista, si YA tiene una matrícula verificada.
+      // Sirve para lo que el panel muestra al revisar: aprobar un título de una
+      // profesión de salud a alguien que no tiene matrícula cargada NO le
+      // habilita la marca de profesional en su perfil — y el 03/09/2026 eso
+      // desconcertó de verdad. El admin tiene que poder verlo antes de aprobar.
+      const coachIds = [...new Set((data ?? []).map((c: any) => c.coach_id))]
+      const conMatricula = new Set<string>()
+      if (coachIds.length > 0) {
+        const { data: mats } = await admin
+          .from('coach_credentials')
+          .select('coach_id')
+          .in('coach_id', coachIds)
+          .eq('kind', 'matricula')
+          .eq('status', 'verificada')
+        for (const m of mats ?? []) conMatricula.add((m as any).coach_id)
+      }
+
       // `file_path` se devuelve solo para saber SI hay documento; la URL firmada
       // se pide aparte y queda registrada en el log de la función.
       return json({
         result: 'ok',
         credentials: (data ?? []).map((c: any) => ({
+          coach_has_matricula: conMatricula.has(c.coach_id),
           id: c.id,
           coach_id: c.coach_id,
           coach_name: c.coaches?.profiles?.name ?? null,
