@@ -147,9 +147,12 @@ números crudos (proyecto de test / pre-launch):
 3. ✅ **La Fase 2 ya tiene con qué — backfill HECHO (03/09).** Se pobló
    `wellness_goal` en los **8/8** publicados (0/8 → 8/8), cada uno mapeado por
    título/tema: `calmar_ansiedad`, `dormir_mejor`(×2), `construir_habitos`,
-   `mover_el_cuerpo`, `mejorar_animo`, `entender_emociones`(×2). Queda pendiente
-   lo estructural: **hacer el campo obligatorio/prompteado en el alta del coach**
-   para que no vuelva a quedar en null en recursos nuevos.
+   `mover_el_cuerpo`, `mejorar_animo`, `entender_emociones`(×2). ✅ **Lo
+   estructural YA estaba hecho** (verificado 04/09): el alta del coach
+   (`coach-recurso-nuevo.tsx`, `validate()`) **ya exige `wellness_goal`** — bloquea
+   el guardado con "Elegí para qué sirve el recurso" si falta. El 0/8 era solo la
+   data de seed (creada por un script que saltea el form), ya backfilleada. Los
+   uploads reales de coach nunca pudieron quedar en null.
    - 🔴 **Hallazgo de taxonomía para Andre:** los 8 objetivos **no cubren
      "relaciones"** — el recurso "El mapa de tus relaciones" (topic `relaciones`)
      tuvo que caer en `entender_emociones` como lo menos malo. Y `ganar_foco` /
