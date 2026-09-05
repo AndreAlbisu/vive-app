@@ -53,18 +53,23 @@ interface ToolGroup {
   toolIds: string[];
 }
 
+// ⚠️ El orden de esta lista ES el orden de los tiles en pantalla: `ToolsCarousel`
+// la aplana en el orden en que está escrita. `title` y `subtitle` hoy no se
+// muestran en ningún lado (los grupos quedaron como agrupación conceptual
+// después del rediseño de la fila), así que lo único que cambia al reordenar es
+// la fila de herramientas.
 const TOOL_GROUPS: ToolGroup[] = [
-  {
-    id: 'calma',
-    title: 'Para calmarte ahora',
-    subtitle: 'Cuando la mente va rápido',
-    toolIds: ['respiracion', 'ruido'],
-  },
   {
     id: 'reflexion',
     title: 'Para reflexionar',
     subtitle: 'Poner en palabras lo que pasa',
     toolIds: ['diario', 'gratitud'],
+  },
+  {
+    id: 'calma',
+    title: 'Para calmarte ahora',
+    subtitle: 'Cuando la mente va rápido',
+    toolIds: ['ruido', 'respiracion'],
   },
 ];
 
@@ -405,7 +410,7 @@ function ToolCard({ tool }: { tool: Tool }) {
 
 // ─── ToolsCarousel ────────────────────────────────────────────────────────────
 // Todas las tools de Vita en una fila fija (no scrollea — son 4, entran enteras).
-// El orden preserva la intención de TOOL_GROUPS (calma → reflexión).
+// El orden sale de TOOL_GROUPS, aplanado: Diario, Gratitud, Ruidos, Respirar.
 function ToolsCarousel() {
   const seen = new Set<string>();
   const tools: Tool[] = [];
