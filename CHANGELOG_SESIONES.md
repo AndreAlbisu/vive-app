@@ -200,6 +200,14 @@
 - 📌 **Los tests usan las frases textuales que salieron del ensayo**, no casos imaginados.
 - ⚠️ **Sobre la pregunta original, la respuesta sigue sin ser clara.** RICO acierta más, pero produjo *"eso que repetís la respiración y te cuidás el sueño está funcionando"* — la interpretación causal exacta que se había anticipado como el costo. **Y buena parte de lo que RICO parecía ganar era que HOY estaba roto.** Hay que volver a comparar ahora que HOY funciona.
 
+**Y se aplicó el copy de `level` y `sustained-low`, que venía propuesto y sin aplicar.**
+
+- **`sustained-low`:** salieron dos frases. *"dice bastante de vos"* concluía sobre **quién sos** a partir de que abriste la app — reconocer el acto está bien y en `gentle` es casi lo único que se puede hacer, pero sacar conclusiones de la persona es de la misma familia que el *"algo estás haciendo distinto"* que se quitó de `trend-up`. Y *"a veces solo hay que atravesarlo"* es consejo, que a alguien con días abajo le suena liviano. La primera variante ahora **pregunta** —*"¿pasó algo, o es más difuso que eso?"*— y **valida explícitamente que no haya causa**, que es el caso más común y el que peor se siente cuando te piden explicarlo.
+- **`level`: solo la primera variante pregunta, y es deliberado.** Es la señal que más se muestra; si las cuatro preguntaran, en una racha plana la app estaría interrogando todas las mañanas. Quedó *"Tu semana viene {nivel}, según lo que registraste. ¿Vos la sentís así?"* — y **"según lo que registraste" no es relleno**: dice de dónde sale la lectura. La app no sabe cómo viene tu semana, sabe qué anotaste, y admitirlo es lo que le da derecho a preguntar.
+- 🔴 **Mis propios tests frenaron el cambio dos veces, y las dos tenían razón a medias.**
+  - El de colisiones marcó el marco *"Tu semana viene ___"*, que es **compartido a propósito** —las etiquetas concuerdan con "semana" en femenino y sacarlas de ahí las haría misgenerizar—. **Falso positivo del test:** comparaba el texto entero. Ahora compara solo el `after`, que es donde vive la observación. Re-verificado con la misma mutación de `sessions`: sigue agarrando el bug que lo motivó.
+  - El de "ninguna devolución es un dato pelado" pidió 10 palabras y la frase tenía 9. **Ahí el test tenía razón** y el arreglo mejoró el copy en vez de aflojar la regla.
+
 **Pendiente para la próxima sesión:**
 - 🔴 **3ª corrida del ensayo**, ahora que HOY acierta la señal y `pareja` no se malinterpreta. Recién ahí la comparación es justa.
 - **`rejectCopy` sigue sin detectar invención ni inferencia causal.** Es otra clase de problema que "esta palabra está prohibida", y no está resuelto. Si la columna RICO no gana claramente, la discusión legal del payload no vale la pena y se cierra el tema.

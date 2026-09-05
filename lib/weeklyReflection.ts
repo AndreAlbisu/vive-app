@@ -319,9 +319,24 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // de un mes peor. El nivel manda sobre la tendencia cuando el nivel es bajo.
   if (recentMoods.length >= MIN_SAMPLE && avgRecent <= 2) {
     return pick(dayKey, [
-      r('Venís atravesando ', 'días difíciles', '. Registrarlo igual, cuando cuesta, dice bastante de vos.', 'gentle', 'sustained-low'),
+      // 📌 Revisión de voz del 04/09. Dos cambios, y ninguno es "sacar el
+      // reconocimiento" — reconocer está bien y en `gentle` es casi lo único que
+      // se puede hacer. Lo que se sacó es otra cosa:
+      //
+      //  · *"dice bastante de vos"* concluía sobre **quién sos** a partir de que
+      //    abriste la app. Reconocer el acto sí; sacar conclusiones de la persona
+      //    es de la misma familia que el "algo estás haciendo distinto" que se
+      //    quitó de `trend-up`.
+      //  · *"a veces solo hay que atravesarlo"* es consejo, y a alguien que lleva
+      //    días abajo le suena liviano. Le dice qué hacer con eso.
+      //
+      // La primera variante ahora **pregunta**, que es el movimiento que la
+      // psicóloga consultada usa: abrir, no cerrar. Y no presume que haya una
+      // causa — valida explícitamente que no la haya, que es el caso más común y
+      // el que peor se siente cuando alguien te pide explicarlo.
+      r('Hace unos días que ', 'venís abajo', '. ¿Pasó algo, o es más difuso que eso?', 'gentle', 'sustained-low'),
+      r('', 'Días difíciles', ', y los registrás igual. Eso no es poco.', 'gentle', 'sustained-low'),
       r('La semana viene ', 'cuesta arriba', '. No tiene que estar buena para que valga la pena anotarla.', 'gentle', 'sustained-low'),
-      r('Hace unos días que ', 'venís abajo', '. No siempre hay algo que arreglar — a veces solo hay que atravesarlo.', 'gentle', 'sustained-low'),
     ]);
   }
 
@@ -454,8 +469,18 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // ("venís pareja" a un varón, "venís cansada" a quien no lo es). Lo que
   // varía entre variantes es la segunda oración, nunca el marco.
   const level = LEVEL_LABEL[Math.round(avgRecent)] ?? 'pareja';
+  // 📌 La primera variante PREGUNTA, y solo la primera. `level` es la que más se
+  // muestra: si las cuatro preguntaran, en una racha plana la app estaría
+  // interrogando todas las mañanas, que es la otra forma de volverse empapelado.
+  //
+  // Y esa pregunta hace algo que ninguna otra frase de este archivo hace: en vez
+  // de informar, **ofrece corregir**. Responde de frente a la objeción de §2 del
+  // doc de la voz —que la app no sabe nada que vos no sepas— admitiéndolo.
   return pick(dayKey, [
-    r('Tu semana viene ', level, '. No todo tiene que ser un antes y un después.', 'neutral', 'level'),
+    // "según lo que registraste" no es relleno para llegar al mínimo de palabras:
+    // dice de dónde sale la lectura. La app no sabe cómo viene tu semana, sabe
+    // qué anotaste — y admitirlo es lo que le da derecho a preguntar.
+    r('Tu semana viene ', level, ', según lo que registraste. ¿Vos la sentís así?', 'neutral', 'level'),
     r('La semana viene ', level, ', sin grandes sobresaltos. A veces sostener ya es bastante.', 'neutral', 'level'),
     r('Tu semana viene ', level, '. Está bien que algunas sean así.', 'neutral', 'level'),
     r('La semana viene ', level, '. No hace falta que pase algo para que cuente.', 'neutral', 'level'),

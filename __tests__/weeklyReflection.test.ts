@@ -321,11 +321,21 @@ describe('buildReflection — las variantes no se pisan entre sí', () => {
   // que más tiene son cuatro.
   const DIAS = Array.from({ length: 40 }, (_, i) => `2026-10-${String(i + 1).padStart(2, '0')}`);
 
+  // ⚠️ Se compara SOLO el `after` — el segundo tiempo—, no el texto entero.
+  //
+  // El arranque puede ser compartido a propósito: las cuatro variantes de
+  // `level` empiezan con "(Tu|La) semana viene ___" porque las etiquetas
+  // concuerdan con "semana" en femenino y sacarlas de ese marco las haría
+  // misgenerizar. Comparando el texto completo, ese marco intencional daba
+  // falso positivo.
+  //
+  // 📌 Y el `after` alcanza para el bug que motivó el test: en `sessions` las
+  // dos variantes compartían "más de lo que parece desde afuera", que vive ahí.
   it.each(CASOS)('$signal: ninguna variante repite una frase de otra', ({ input }) => {
     const vistos = new Set<string>();
     for (const dayKey of DIAS) {
       const r = buildReflection(on({ ...input, dayKey }));
-      vistos.add(`${r.before}${r.bold}${r.after}`);
+      if (r.after.trim().length > 1) vistos.add(r.after);
     }
     const todas = [...vistos];
     for (let i = 0; i < todas.length; i++) {
