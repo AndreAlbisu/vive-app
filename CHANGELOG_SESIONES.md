@@ -151,8 +151,18 @@
 - **Duda de Andre sobre el diario, y salieron dos cosas que no estaban en el doc.** (1) Lo incómodo no es la extracción sino **el ofrecimiento**: aunque elija entrada por entrada, si la app propone agregar algo del diario, empuja hacia adentro de lo privado. → **Regla nueva: la app no ofrece el diario**, está disponible si lo buscan. (2) **La nota y una entrada de diario no son lo mismo aunque digan lo mismo**: la nota se escribe **sabiendo que se va a compartir**, el diario se escribió para uno. De ahí que **si la nota funciona, el diario quizás no necesite entrar nunca** — y la duda se disuelve sola.
 - **El tope de 280 caracteres no es técnico**: es una señal de para qué es el campo. Sin límite, invita a escribir ahí lo que va en el diario, y ahí sí estaríamos moviendo lo íntimo de lugar.
 
+**El ensayo se corrió, y el hallazgo no fue el esperado.**
+
+- 🔴 **La columna HOY —la que está en producción— hablaba de la señal equivocada.** Con `sustained-low` (alguien una semana en el fondo) el modelo contestó *"hace cinco días que estás acá sin faltar. Es quieto lo que hacés, pero es consistente"*: le felicitó la **constancia** y **no mencionó el bajón**. Con `trend-up` habló de la racha en vez de la mejora. Y con `level` inventó *"encontraste ritmo con alguien para practicar"* cuando el payload decía `sesiones: 0`. **Tres de seis salidas sobre otro tema, y una fabricando un hecho.**
+- **La causa: se le mandaban los tres números siempre, y el modelo agarra el más grande.** En `sustained-low` recibía `racha: 5` y escribía sobre eso.
+- ✅ **Arreglado, y el arreglo manda MENOS datos.** `factsDeLaSeñal()` envía únicamente el número que la frase de esa señal usaría — y mirando las variantes escritas a mano, solo `sessions`, `streak`, `practices` y `level` interpolan algo. `sharp-drop`, `sustained-low` y las dos de tendencia no llevan ningún número. Efecto lateral bueno: cada número que no viaja es uno menos que justificar.
+- ✅ **Prompt reforzado** con un bloque al principio —*"escribís sobre esa señal y sobre nada más"* y *"nunca inventes un hecho: si no te lo pasé, no pasó"*— y con qué NO decir en cada señal. `sustained-low` ahora prohíbe explícitamente mencionar la racha: felicitarle la asistencia a alguien que la está pasando mal es lo peor que se puede hacer ahí. **Function redeployada.**
+- ⚠️ **De RICO, lo predicho se confirmó y peor:** *"te escribís poco en el diario, como si ni eso te saliera ahora"* — interpretación sobre el estado interno de alguien frágil, **y encima falsa**: el payload decía 4 entradas. Sí acertó la señal, que es lo que compra.
+- 🔴 **Y quedó claro que `rejectCopy` tiene un hueco: no detecta invención ni inferencia sobre la persona.** Mira vocabulario. *"Algo estás haciendo bien"* y la sesión inventada pasan los once controles.
+
 **Pendiente para la próxima sesión:**
-- 🔴 **Correr el ensayo**: `ANTHROPIC_API_KEY=sk-ant-... node scripts/ensayo-payload-rico.mjs`. Si la columna RICO no gana claramente, la discusión legal del payload no vale la pena y se cierra el tema.
+- 🔴 **Volver a correr el ensayo** con el prompt nuevo. Si HOY empieza a acertar la señal, la brecha con RICO se achica y la pregunta legal del payload puede no valer la pena.
+- 🔴 **La API key quedó visible en una captura: hay que rotarla** y actualizar el secret de Supabase. Si la columna RICO no gana claramente, la discusión legal del payload no vale la pena y se cierra el tema.
 - **Correr `add-mood-nota.sql`** y hacer la verificación #3 a mano.
 - 🔴 **El mail a Mónica sigue siendo lo único que separa al piso de seguridad de encenderse.** Es el más barato de los tres y el único que reduce daño.
 

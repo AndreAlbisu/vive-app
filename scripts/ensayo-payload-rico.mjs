@@ -23,10 +23,49 @@
 //
 // La clave sale de la variable de entorno y no se imprime nunca.
 
-const API_KEY = process.env.ANTHROPIC_API_KEY;
+// ⚠️ Se limpia antes de usarla. La causa más común de un 401 no es que la clave
+// esté mal sino cómo se pegó: un salto de línea al final, comillas alrededor, o
+// el prefijo "Bearer " arrastrado de otro lado. Se corrige en silencio y se
+// avisa qué se sacó, para no mandar a nadie a buscar un problema que no existe.
+const CRUDA = process.env.ANTHROPIC_API_KEY ?? '';
+const API_KEY = CRUDA.trim().replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '');
+
 if (!API_KEY) {
   console.error('Falta ANTHROPIC_API_KEY. Corré:\n  ANTHROPIC_API_KEY=sk-ant-... node scripts/ensayo-payload-rico.mjs');
   process.exit(1);
+}
+if (API_KEY !== CRUDA) {
+  console.log('📌 A la clave se le sacaron espacios, comillas o el prefijo Bearer.');
+}
+
+// Preflight: una llamada mínima para separar "la clave está mal" de "el ensayo
+// falló". Sin esto, un 401 se repite doce veces y no queda claro qué pasó.
+{
+  // La forma se chequea sin imprimir la clave: prefijo y largo alcanzan para
+  // detectar que se pegó otra cosa.
+  const forma = `${API_KEY.slice(0, 7)}… (${API_KEY.length} caracteres)`;
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: process.env.REFLECTION_MODEL ?? 'claude-haiku-4-5', max_tokens: 8, messages: [{ role: 'user', content: 'hola' }] }),
+  });
+  if (!r.ok) {
+    const cuerpo = await r.text();
+    console.error(`\n🔴 La clave no funciona. HTTP ${r.status}`);
+    console.error(`   forma de lo que se mandó: ${forma}`);
+    console.error(`   respuesta: ${cuerpo.slice(0, 200)}\n`);
+    if (r.status === 401) {
+      console.error('   Una clave de Anthropic arranca con "sk-ant-api03-" y tiene ~108 caracteres.');
+      console.error('   Si la forma de arriba no se parece, se pegó otra cosa.');
+      console.error('   Si se parece, la clave puede estar revocada o ser de otra organización:');
+      console.error('   console.anthropic.com → API Keys.\n');
+      console.error('   ⚠️ Y si es la MISMA que está en los secrets de Supabase, la card en');
+      console.error('   producción tampoco está usando el modelo: la función devuelve 502 y');
+      console.error('   el cliente cae al texto escrito a mano, sin avisar.\n');
+    }
+    process.exit(1);
+  }
+  console.log('✓ la clave responde\n');
 }
 
 const MODEL = process.env.REFLECTION_MODEL ?? 'claude-haiku-4-5';
@@ -42,6 +81,11 @@ Hablás como un amigo sabio, no como un sistema. Español rioplatense real, de "
 La línea tiene DOS TIEMPOS:
 1. lo que se nota — la señal que te paso, dicha en palabras
 2. qué te parece eso — una observación breve, humana
+
+# 🔴 Lo primero: de qué hablás
+Te paso UNA señal. **Escribís sobre esa señal y sobre nada más.** Si además te paso un número, es porque la frase de ESA señal lo usa — no es una invitación a hablar de otra cosa.
+
+Y **nunca inventes un hecho.** Si no te lo pasé, no pasó. No hay sesiones si no te pasé sesiones, no hay racha si no te pasé una racha, no hay nadie acompañando a quien lee salvo que yo lo diga.
 
 # Reglas que no se rompen
 - NUNCA le asignes género a quien lee.
@@ -66,7 +110,9 @@ const CASOS = [
   {
     nombre: 'Alguien que viene remontando',
     señal: 'trend-up', tono: 'warm',
-    flaco: { racha: 4, sesiones: 1, practicas: 2 },
+    // ⚠️ Actualizado el 04/09 tras la primera corrida: HOY ya no manda los tres
+    // números siempre, solo el que esa señal usa. `trend-up` no usa ninguno.
+    flaco: {},
     rico: {
       animo_ultimos_7: ['bien', 'bien', 'normal', 'bien', 'cansado', 'normal', 'bien'],
       animo_mes_previo_promedio: 'cansado',
@@ -79,7 +125,7 @@ const CASOS = [
   {
     nombre: 'Una semana pareja, sin nada destacable',
     señal: 'level', tono: 'neutral',
-    flaco: { racha: 6, sesiones: 0, practicas: 1, level: 'pareja' },
+    flaco: { level: 'pareja' },
     rico: {
       animo_ultimos_7: ['normal', 'normal', 'bien', 'normal', 'normal', 'normal', 'normal'],
       animo_mes_previo_promedio: 'normal',
@@ -92,7 +138,7 @@ const CASOS = [
   {
     nombre: 'Un tramo malo sostenido',
     señal: 'sustained-low', tono: 'gentle',
-    flaco: { racha: 5, sesiones: 0, practicas: 0 },
+    flaco: {},
     rico: {
       animo_ultimos_7: ['bajon', 'cansado', 'bajon', 'bajon', 'cansado', 'bajon', 'cansado'],
       animo_mes_previo_promedio: 'normal',
@@ -128,6 +174,8 @@ async function pedir(señal, tono, datos) {
 }
 
 console.log(`\nmodelo: ${MODEL}`);
+console.log('2ª corrida: el prompt ahora dice de qué habla cada señal y de qué no,');
+console.log('y HOY manda solo el dato que su propia frase usa.');
 console.log('Los datos son inventados. Ninguna fila sale de la base.\n');
 
 for (const c of CASOS) {

@@ -26,6 +26,26 @@ import { buildReflection, rejectCopy, type Reflection, type ReflectionInput } fr
 const CACHE_PREFIX = 'vita:reflection:';
 const FUNCTIONS_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 
+/** Los datos que esa señal —y solo esa— necesita para escribirse.
+ *
+ *  Sale del ensayo del 04/09: pasarle los tres números siempre lo llevaba a
+ *  hablar del más grande en vez de la señal. Si una señal no interpola nada en
+ *  su versión escrita a mano, tampoco necesita números acá. */
+function factsDeLaSeñal(signal: string, input: ReflectionInput): Record<string, number | string> {
+  switch (signal) {
+    case 'sessions':  return { sesiones: input.sessionsThisWeek };
+    case 'streak':    return { racha: input.streak };
+    case 'practices': return { practicas: input.resourcesThisWeek + input.writingThisWeek };
+    // `level` interpola la etiqueta, no un número. La calcula `buildReflection`
+    // y viaja como texto porque es lo único que la frase necesita.
+    case 'level':     return {};
+    // `sharp-drop`, `sustained-low`, `trend-up` y `trend-down` no llevan ningún
+    // número en su versión escrita a mano: son sobre una dirección o un día, no
+    // sobre una cuenta. Mandarle uno era invitarlo a hablar de eso.
+    default:          return {};
+  }
+}
+
 /** Reemplaza el texto de una `Reflection` conservando su señal y su tono. */
 function withCopy(base: Reflection, linea: string): Reflection {
   return { ...base, before: linea, bold: '', after: '', source: 'ai' };
@@ -76,13 +96,23 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
           body: JSON.stringify({
             signal: rules.signal,
             tone: rules.tone,
-            // Solo los números que ya aparecen en el texto. NO viajan valores
-            // de ánimo, ni el historial, ni nada escrito por la persona.
-            facts: {
-              racha: input.streak,
-              sesiones: input.sessionsThisWeek,
-              practicas: input.resourcesThisWeek + input.writingThisWeek,
-            },
+            // 🔴 Solo el número que ESA señal usa, no los tres siempre.
+            //
+            // El ensayo del 04/09 (`scripts/ensayo-payload-rico.mjs`) mostró que
+            // mandar los tres hacía que el modelo **hablara de la señal
+            // equivocada**: en `sustained-low` recibía `racha: 5` y contestaba
+            // *"hace cinco días que estás acá sin faltar"* — le hablaba de su
+            // constancia a alguien que llevaba una semana en el fondo, sin
+            // mencionar el bajón. Tres de seis salidas hablaban de otra cosa.
+            //
+            // El modelo agarra el número más grande que le pasás. Así que se le
+            // pasa solo el que su propia frase usaría: mirá las variantes de
+            // `buildReflection` y vas a ver que únicamente `sessions`, `streak`,
+            // `practices` y `level` interpolan algo. El resto no lleva números.
+            //
+            // 📌 Efecto lateral bueno: se manda MENOS. Cada número que no viaja
+            // es uno menos que justificar.
+            facts: factsDeLaSeñal(rules.signal, input),
           }),
         });
 
