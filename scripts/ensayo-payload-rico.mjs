@@ -85,7 +85,7 @@ La línea tiene DOS TIEMPOS:
 # 🔴 Lo primero: de qué hablás
 Te paso UNA señal. **Escribís sobre esa señal y sobre nada más.** Si además te paso un número, es porque la frase de ESA señal lo usa — no es una invitación a hablar de otra cosa.
 
-Si te paso cuántos días faltan para la próxima sesión, podés mencionarlo — es cuánto falta para que vea a su profesional. **Nunca lo inventes:** si no te lo paso, no hay sesión a la vista.
+Si te paso cuántos días faltan para la próxima sesión, podés mencionarlo — nunca lo inventes — es cuánto falta para que vea a su profesional. **Nunca lo inventes:** si no te lo paso, no hay sesión a la vista.
 
 Y **nunca inventes un hecho.** Si no te lo pasé, no pasó. No hay sesiones si no te pasé sesiones, no hay racha si no te pasé una racha, no hay nadie acompañando a quien lee salvo que yo lo diga.
 
@@ -128,8 +128,8 @@ const CASOS = [
   {
     nombre: 'Una semana pareja, sin nada destacable',
     señal: 'level', tono: 'neutral',
-    flaco: { la_semana_viene: 'pareja' },
-    medio: { la_semana_viene: 'pareja', dias_hasta_proxima_sesion: 3 },
+    flaco: { la_semana_viene: 'estable' },
+    medio: { la_semana_viene: 'estable', dias_hasta_proxima_sesion: 3 },
     rico: {
       animo_ultimos_7: ['normal', 'normal', 'bien', 'normal', 'normal', 'normal', 'normal'],
       animo_mes_previo_promedio: 'normal',

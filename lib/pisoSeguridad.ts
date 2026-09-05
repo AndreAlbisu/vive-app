@@ -31,6 +31,8 @@
 // que la persona registró y no una lectura clínica de su estado. Solo tiene que
 // cumplir dos cosas: no gritar lobo, y no ser tan raro que nunca aparezca.
 
+import { diasEntreDias } from '@/lib/dates';
+
 /** Un registro de ánimo, con su día. Ordenados del MÁS RECIENTE al más viejo —
  *  mismo contrato que devuelve `useMoodHistory`. */
 export type RegistroAnimo = { moodId: number; dayKey: string };
@@ -44,12 +46,6 @@ export const VENTANA_DIAS = 14;
 /** Qué se considera "abajo" en la escala de 1 a 5. */
 export const UMBRAL_ANIMO = 2;
 
-function diasEntre(a: string, b: string): number {
-  const [ay, am, ad] = a.split('-').map(Number);
-  const [by, bm, bd] = b.split('-').map(Number);
-  const ms = Date.UTC(ay, am - 1, ad) - Date.UTC(by, bm - 1, bd);
-  return Math.abs(Math.round(ms / 86400000));
-}
 
 /** ¿Corresponde mostrar el piso de seguridad?
  *
@@ -74,5 +70,5 @@ export function detectarPisoSeguridad(entries: RegistroAnimo[], hoy: string): bo
   // El más viejo de los cinco es el último del corte, porque vienen en orden
   // descendente.
   const masViejo = ultimos[ultimos.length - 1].dayKey;
-  return diasEntre(hoy, masViejo) <= VENTANA_DIAS;
+  return Math.abs(diasEntreDias(masViejo, hoy)) <= VENTANA_DIAS;
 }

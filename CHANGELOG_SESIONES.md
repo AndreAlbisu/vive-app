@@ -208,8 +208,17 @@
   - El de colisiones marcó el marco *"Tu semana viene ___"*, que es **compartido a propósito** —las etiquetas concuerdan con "semana" en femenino y sacarlas de ahí las haría misgenerizar—. **Falso positivo del test:** comparaba el texto entero. Ahora compara solo el `after`, que es donde vive la observación. Re-verificado con la misma mutación de `sessions`: sigue agarrando el bug que lo motivó.
   - El de "ninguna devolución es un dato pelado" pidió 10 palabras y la frase tenía 9. **Ahí el test tenía razón** y el arreglo mejoró el copy en vez de aflojar la regla.
 
+**Cerrada la pregunta del presupuesto de datos: MEDIO alcanza.**
+
+- 🔴 **`pareja` → `estable`, y hubo que llegar hasta acá.** El modelo leía la etiqueta como **pareja sentimental**: escribió *"la pareja está en tu cabeza hoy"*, *"tenés a la pareja en el radar… cuando la veas"* y *"esta semana tenés pareja"* — le hablaba de su relación a alguien que había tenido una semana estable, en la señal que **más se muestra**. Se intentó desambiguar dos veces desde afuera —el prompt ya lo decía, después se cambió la clave a `la_semana_viene`— y **las dos fallaron**. La palabra es demasiado fuerte. Lo único que lo resolvió fue sacarla. 📌 Y `estable` es **neutra en género**, así que esa etiqueta deja de depender del marco "semana" para no misgenerizar.
+- ✅ **`dias_hasta_proxima_sesion` entra al payload, y la secuencia de ánimo NO.** Cuatro corridas mostraron que lo único que el payload enriquecido ganaba de verdad era la cercanía a la sesión: *"en dos días ves a tu profesional, eso ya es algo"* — y justo en `sustained-low`, que es cuando más falta hace. **Es un entero de calendario: no describe el ánimo de nadie**, así que **no obliga a rehacer el análisis de `transferencias-internacionales.md` §5 bis**. La discusión legal del §5 bis queda cerrada sin abrirla.
+- **Solo si falta una semana o menos, y nunca en `sessions`** — acaba de tener una, hablarle de la próxima confunde. Y entra en la clave del caché: `nextSession` resuelve async, y sin eso la frase quedaría cacheada sin la sesión todo el día, justo cuando es lo más útil que se puede decir.
+- **El prompt le prohíbe a `level` comparar.** HOY escribió *"mantenés el mismo nivel que la semana pasada"*, y `level` es precisamente la señal que **no compara** — si hubiera un cambio, la cascada habría elegido `trend-up` o `trend-down`. Era afirmar una comparación que nadie hizo.
+- **`diasEntreDias` a `lib/dates.ts`.** Era la tercera copia de la misma cuenta —`pisoSeguridad`, `paquete` y ahora Inicio—, y tres copias de una cuenta de días se desincronizan solas.
+- 📝 **Las 32 frases escritas a mano no usan el campo nuevo.** Es solo para el modelo, y queda anotado en el tipo para que nadie lo busque en las reglas.
+
 **Pendiente para la próxima sesión:**
-- 🔴 **3ª corrida del ensayo**, ahora que HOY acierta la señal y `pareja` no se malinterpreta. Recién ahí la comparación es justa.
+- **Corrida de control** con la etiqueta `estable` y el `level` que no compara, para confirmar que los dos arreglos tomaron.
 - **`rejectCopy` sigue sin detectar invención ni inferencia causal.** Es otra clase de problema que "esta palabra está prohibida", y no está resuelto. Si la columna RICO no gana claramente, la discusión legal del payload no vale la pena y se cierra el tema.
 - **Correr `add-mood-nota.sql`** y hacer la verificación #3 a mano.
 - 🔴 **El mail a Mónica sigue siendo lo único que separa al piso de seguridad de encenderse.** Es el más barato de los tres y el único que reduce daño.

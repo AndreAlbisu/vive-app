@@ -61,6 +61,21 @@ function factsDeLaSeñal(rules: Reflection, input: ReflectionInput): Record<stri
   }
 }
 
+/** Los datos de la señal, más la proximidad de la sesión cuando aplica.
+ *
+ *  ⚠️ Solo si falta una semana o menos. Más lejos no sirve para nada y encima
+ *  invita al modelo a decir algo vago sobre "tu próxima sesión" que no ayuda.
+ *  Y `sessions` queda afuera: acaba de tener una, hablarle de la próxima
+ *  confunde. */
+function factsParaElModelo(rules: Reflection, input: ReflectionInput): Record<string, number | string> {
+  const base = factsDeLaSeñal(rules, input);
+  const dias = input.diasHastaProximaSesion;
+  if (rules.signal !== 'sessions' && dias != null && dias >= 0 && dias <= 7) {
+    return { ...base, dias_hasta_proxima_sesion: dias };
+  }
+  return base;
+}
+
 /** Reemplaza el texto de una `Reflection` conservando su señal y su tono. */
 function withCopy(base: Reflection, linea: string): Reflection {
   return { ...base, before: linea, bold: '', after: '', source: 'ai' };
@@ -73,7 +88,11 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
   const rules = buildReflection(input);
   const [copy, setCopy] = useState<string | null>(null);
 
-  const key = `${CACHE_PREFIX}${userId}:${input.dayKey}:${rules.signal}`;
+  // La proximidad de la sesión entra en la clave: `nextSession` se resuelve
+  // async, así que la primera vez la frase puede generarse sin ese dato. Sin
+  // esto quedaría cacheada sin la sesión por todo el día, justo cuando la
+  // sesión es lo más útil que se puede decir.
+  const key = `${CACHE_PREFIX}${userId}:${input.dayKey}:${rules.signal}:${input.diasHastaProximaSesion ?? '-'}`;
 
   useEffect(() => {
     if (!AI_REFLECTION_ENABLED || !userId) { setCopy(null); return; }
@@ -127,7 +146,7 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
             //
             // 📌 Efecto lateral bueno: se manda MENOS. Cada número que no viaja
             // es uno menos que justificar.
-            facts: factsDeLaSeñal(rules, input),
+            facts: factsParaElModelo(rules, input),
           }),
         });
 

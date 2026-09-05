@@ -20,6 +20,8 @@
 // Y por eso también las devoluciones de "Sobre vos" quedan afuera: son palabras
 // de la app, no de la persona.
 
+import { diasEntreDias } from '@/lib/dates';
+
 /** Un día de la ventana, con lo que la persona registró ese día. */
 export type DiaDelPaquete = {
   dayKey: string;
@@ -48,12 +50,6 @@ export const TOPE_DIAS = 30;
 
 /** Con cuánta anticipación se ofrece armarlo. */
 export const OFRECER_DESDE_DIAS = 3;
-
-function diasEntre(a: string, b: string): number {
-  const [ay, am, ad] = a.split('-').map(Number);
-  const [by, bm, bd] = b.split('-').map(Number);
-  return Math.round((Date.UTC(ay, am - 1, ad) - Date.UTC(by, bm - 1, bd)) / 86400000);
-}
 
 function restarDias(dayKey: string, n: number): string {
   const [y, m, d] = dayKey.split('-').map(Number);
@@ -112,7 +108,7 @@ export function debeOfrecerse(params: {
   if (!proximaSesion) return false;
   if (diasConRegistro === 0) return false;
 
-  const faltan = diasEntre(proximaSesion, hoy);
+  const faltan = diasEntreDias(hoy, proximaSesion);
   // Una sesión que ya pasó no se prepara, y una a un mes tampoco: ofrecerlo con
   // demasiada anticipación es pedirle que arme algo que va a quedar viejo.
   return faltan >= 0 && faltan <= OFRECER_DESDE_DIAS;

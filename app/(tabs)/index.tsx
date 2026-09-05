@@ -34,7 +34,7 @@ import { detectarPisoSeguridad } from '@/lib/pisoSeguridad';
 import { SAFETY_FLOOR_ENABLED } from '@/constants/features';
 import { buildReflection, type Reflection } from '@/lib/weeklyReflection';
 import { useDailyReflection } from '@/hooks/useDailyReflection';
-import { localDayKey, localDayKeyMinus } from '@/lib/dates';
+import { localDayKey, localDayKeyMinus, diasEntreDias } from '@/lib/dates';
 import { useWeeklySignals } from '@/hooks/useWeeklySignals';
 import { shouldShowMoment } from '@/lib/sobreVosMomento';
 import { getMomentPref, getLastShown, markMomentShown, getLastSpoken, markSpoken } from '@/lib/sobreVosMomentoStorage';
@@ -143,6 +143,18 @@ export default function InicioScreen() {
   // el recompute optimista de `handleMoodPicked`, más abajo.
   const sharpDrop = detectMoodDrop(moodEntries) !== null;
 
+  // Cuántos días faltan para la próxima sesión. Solo se lo usa el modelo — las
+  // 32 frases escritas a mano no lo mencionan— y demostró valer en el ensayo del
+  // 04/09: *"en dos días ves a tu profesional, eso ya es algo"* fue lo único que
+  // el payload enriquecido ganaba de verdad, y justo en `sustained-low`.
+  //
+  // 📌 Se eligió esto sobre mandar la secuencia de ánimo del §5 bis porque es un
+  // entero de calendario: no describe el ánimo de nadie, así que no obliga a
+  // rehacer el análisis de `transferencias-internacionales.md` §5 bis.
+  const diasHastaProximaSesion = nextSession
+    ? diasEntreDias(today, nextSession.date)
+    : null;
+
   // El piso de seguridad mira la SECUENCIA de registros, no un promedio, así que
   // recibe `moodEntries` entero (37 días) y no la ventana de 7 — cinco registros
   // seguidos abajo pueden abarcar más de una semana si la persona no registra
@@ -169,6 +181,7 @@ export default function InicioScreen() {
     writingThisWeek: weekly.writingThisWeek,
     sharpDrop,
     pisoSeguridad,
+    diasHastaProximaSesion,
     dayKey: today,
   });
 

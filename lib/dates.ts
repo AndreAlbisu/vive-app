@@ -27,3 +27,18 @@ export function localDayKeyMinus(n: number, from: Date = new Date()): string {
   d.setDate(d.getDate() - n);
   return localDayKey(d);
 }
+
+/** Días de calendario entre dos claves `YYYY-MM-DD`, sin mirar el reloj.
+ *
+ *  Positivo si `hasta` es posterior a `desde`. Se compara en UTC a propósito:
+ *  las dos claves ya representan días locales, así que armarlas como instantes
+ *  UTC evita que un cambio de horario de verano mueva la cuenta.
+ *
+ *  Vivía duplicada en `lib/pisoSeguridad.ts` y `lib/paquete.ts`, y la tercera
+ *  copia —en Inicio, para la proximidad de la sesión— fue la que empujó a
+ *  sacarla acá. Tres copias de una cuenta de días se desincronizan solas. */
+export function diasEntreDias(desde: string, hasta: string): number {
+  const [dy, dm, dd] = desde.split('-').map(Number);
+  const [hy, hm, hd] = hasta.split('-').map(Number);
+  return Math.round((Date.UTC(hy, hm - 1, hd) - Date.UTC(dy, dm - 1, dd)) / 86400000);
+}

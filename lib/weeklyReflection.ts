@@ -224,6 +224,17 @@ export type ReflectionInput = {
   pisoSeguridad: boolean;
   /** Fecha local (YYYY-MM-DD). Fija la variante del día — ver `variantFor`. */
   dayKey: string;
+  /** Cuántos días faltan para la próxima sesión agendada, o `null`.
+   *
+   *  📌 **Las reglas escritas a mano NO lo usan** — ninguna de las 32 frases lo
+   *  menciona. Está acá solo para pasárselo al modelo, que es donde demostró
+   *  valer: en el ensayo del 04/09, *"en dos días ves a tu profesional, eso ya es
+   *  algo"* fue lo único que la versión enriquecida ganaba de verdad, y en
+   *  `sustained-low`, que es cuando más falta hace.
+   *
+   *  Es un entero de calendario: **no describe el ánimo de nadie**, y por eso se
+   *  eligió sobre mandar la secuencia de días del §5 bis. */
+  diasHastaProximaSesion?: number | null;
 };
 
 // Cuánto tiene que moverse el promedio para llamarlo un cambio y no ruido.
@@ -234,8 +245,26 @@ const CHANGE_THRESHOLD = 0.4;
 // Mínimo de registros para poder comparar dos períodos sin decir cualquier cosa.
 const MIN_SAMPLE = 3;
 
+// ⚠️ Las etiquetas concuerdan con **"semana"** (femenino), así que solo se
+// pueden usar en el marco "(Tu|La) semana viene ___". Metidas en una frase cuyo
+// sujeto sea la persona la misgenerizan.
+//
+// 🔴 `pareja` fue `pareja` hasta el 04/09 y se cambió a `estable` por una razón
+// que solo apareció al probar el modelo: **lo leía como pareja sentimental.**
+// Escribió *"la pareja está en tu cabeza hoy"*, *"tenés a la pareja en el radar…
+// cuando la veas"* y *"esta semana tenés pareja"* — le hablaba de su relación a
+// alguien que había tenido una semana estable. Y `level` es la señal que MÁS se
+// muestra.
+//
+// Se intentó primero desambiguar desde afuera: primero en el prompt (ya lo
+// decía), después mandando la clave `la_semana_viene` en vez de `level`. **Las
+// dos fallaron**: la palabra es demasiado fuerte y el modelo la agarra igual. Lo
+// único que lo resolvió fue sacar la palabra.
+//
+// 📌 Y `estable` trae un beneficio que no buscábamos: **es neutra en género**,
+// así que esa etiqueta deja de depender del marco para no misgenerizar.
 const LEVEL_LABEL: Record<number, string> = {
-  1: 'para abajo', 2: 'cansada', 3: 'pareja', 4: 'bien', 5: 'muy bien',
+  1: 'para abajo', 2: 'cansada', 3: 'estable', 4: 'bien', 5: 'muy bien',
 };
 
 function average(xs: number[]): number {
@@ -468,7 +497,7 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // metidas en una frase cuyo sujeto sea la persona misma la misgenerizan
   // ("venís pareja" a un varón, "venís cansada" a quien no lo es). Lo que
   // varía entre variantes es la segunda oración, nunca el marco.
-  const level = LEVEL_LABEL[Math.round(avgRecent)] ?? 'pareja';
+  const level = LEVEL_LABEL[Math.round(avgRecent)] ?? 'estable';
   // 📌 La primera variante PREGUNTA, y solo la primera. `level` es la que más se
   // muestra: si las cuatro preguntaran, en una racha plana la app estaría
   // interrogando todas las mañanas, que es la otra forma de volverse empapelado.
