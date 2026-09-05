@@ -13,7 +13,10 @@ import { ScaleCard } from '@/components/ScaleCard';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { localDayKey } from '@/lib/dates';
-import { armarPaquete, TOPE_DIAS, type DiaDelPaquete, type Paquete } from '@/lib/paquete';
+import {
+  armarPaquete, componerTextoPaquete, fechaLegiblePaquete,
+  TOPE_DIAS, type DiaDelPaquete, type Paquete,
+} from '@/lib/paquete';
 
 // ── La pantalla de armado del paquete para la sesión ─────────────────────────
 //
@@ -33,15 +36,6 @@ import { armarPaquete, TOPE_DIAS, type DiaDelPaquete, type Paquete } from '@/lib
 //
 // 📌 El ofrecimiento proactivo (paso 2, `debeOfrecerse` en lib/paquete.ts) es
 // aparte. Por ahora se llega desde la sala; ver el botón que agregué allá.
-
-const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-const DIAS = ['dom','lun','mar','mié','jue','vie','sáb'];
-
-function fechaLegible(dayKey: string): string {
-  const [y, m, d] = dayKey.split('-').map(Number);
-  const dt = new Date(y, m - 1, d);
-  return `${DIAS[dt.getDay()]} ${d} ${MESES[m - 1]}`;
-}
 
 export default function PaqueteScreen() {
   const router = useRouter();
@@ -138,12 +132,11 @@ export default function PaqueteScreen() {
 
   function enviar() {
     if (!salaId || incluidos.length === 0) return;
-    const lineas = incluidos.map(d => {
-      const nota = (notas[d.dayKey] ?? '').trim();
-      return `• ${fechaLegible(d.dayKey)} — ${d.moodLabel}${nota ? `: ${nota}` : ''}`;
-    });
-    const texto = `Lo que registré desde la última vez que nos vimos:\n\n${lineas.join('\n')}`;
-    registrarEvento('paquete_enviado', { dias: incluidos.length, con_nota: incluidos.filter(d => (notas[d.dayKey] ?? '').trim()).length }).catch(() => {});
+    // Se resuelve la nota final de cada día (la edición local manda) y se
+    // delega el texto a `componerTextoPaquete` — puro y testeado.
+    const conNota = incluidos.map(d => ({ ...d, nota: (notas[d.dayKey] ?? '').trim() || null }));
+    const texto = componerTextoPaquete(conNota);
+    registrarEvento('paquete_enviado', { dias: incluidos.length, con_nota: conNota.filter(d => d.nota).length }).catch(() => {});
     // Al chat con el borrador: la persona lo revisa una vez más y lo manda ella.
     router.replace({ pathname: '/sala', params: { sala_id: salaId, draft: texto } } as any);
   }
@@ -188,7 +181,7 @@ export default function PaqueteScreen() {
                   <View style={s.diaTop}>
                     <View style={s.diaTopLeft}>
                       <View style={[s.moodDot, { backgroundColor: color }]} />
-                      <Text style={s.diaFecha}>{fechaLegible(d.dayKey)}</Text>
+                      <Text style={s.diaFecha}>{fechaLegiblePaquete(d.dayKey)}</Text>
                       <Text style={s.diaMood}>· {d.moodLabel}</Text>
                     </View>
                     <TouchableOpacity onPress={() => toggleExcluir(d.dayKey)} hitSlop={8}>

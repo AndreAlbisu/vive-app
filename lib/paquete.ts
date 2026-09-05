@@ -113,3 +113,29 @@ export function debeOfrecerse(params: {
   // demasiada anticipación es pedirle que arme algo que va a quedar viejo.
   return faltan >= 0 && faltan <= OFRECER_DESDE_DIAS;
 }
+
+// ── El texto que se manda al chat ────────────────────────────────────────────
+// 🔴 MATERIAL, NO CONCLUSIÓN (§3): el mensaje lleva SOLO el registro crudo —
+// fecha, ánimo y la nota que escribió la persona. Nunca un promedio, una
+// tendencia, ni una lectura de la app. Hay un test que se rompe si alguien
+// alguna vez agrega una línea de resumen acá.
+
+const MESES_PAQUETE = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const DIAS_PAQUETE = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+/** Fecha corta y legible de un dayKey (YYYY-MM-DD), en hora local. */
+export function fechaLegiblePaquete(dayKey: string): string {
+  const [y, m, d] = dayKey.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return `${DIAS_PAQUETE[dt.getDay()]} ${d} ${MESES_PAQUETE[m - 1]}`;
+}
+
+/** Compone el mensaje que la persona manda al chat. Puro: entra la lista ya
+ *  filtrada (las piezas que sacó quedan afuera) con la nota final de cada día. */
+export function componerTextoPaquete(dias: DiaDelPaquete[]): string {
+  const lineas = dias.map(d => {
+    const nota = (d.nota ?? '').trim();
+    return `• ${fechaLegiblePaquete(d.dayKey)} — ${d.moodLabel}${nota ? `: ${nota}` : ''}`;
+  });
+  return `Lo que registré desde la última vez que nos vimos:\n\n${lineas.join('\n')}`;
+}
