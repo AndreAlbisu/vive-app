@@ -579,6 +579,9 @@ describe('rejectCopy — el guardarraíl sobre lo que escribe un modelo', () => 
     // La etiqueta de nivel aplicada a la PERSONA en vez de a la semana.
     expect(rejectCopy('Llevás una semana parejo. Nada que te haya movido mucho hacia un lado ni hacia el otro.', 'neutral')).toBe('genera a la persona');
     expect(rejectCopy('Estos días te sentís plano, sin puntas. Es difícil cuando nada te mueve mucho.', 'gentle')).toBe('genera a la persona');
+    // Las dos de abajo también son textuales, de la corrida de control del 04/09.
+    expect(rejectCopy('La semana que viene se ve pareja. Tranquilo mantener el ritmo.', 'neutral')).toBe('genera a la persona');
+    expect(rejectCopy('Lleva una semana complicada y no está solo en esto. A veces el cuerpo necesita tiempo.', 'gentle')).toBe('genera a la persona');
     expect(rejectCopy('Venís sostenido en días difíciles y eso dice bastante de vos.', 'gentle')).toBe('genera a la persona');
   });
 
@@ -640,6 +643,13 @@ describe('rejectCopy — el guardarraíl sobre lo que escribe un modelo', () => 
     expect(rejectCopy('Venís mejor que el mes pasado. No sé qué se movió, pero algo se movió.', 'warm')).toBeNull();
     expect(rejectCopy('La semana viene cansada, sin grandes sobresaltos. A veces sostener ya es bastante.', 'neutral')).toBeNull();
     expect(rejectCopy('Tu semana viene pareja. No todo tiene que ser un antes y un después.', 'neutral')).toBeNull();
+    // 🔴 El FEMENINO de esas mismas palabras es legítimo: concuerda con
+    // "semana", que es de lo que habla la frase. Solo se frena el masculino.
+    expect(rejectCopy('La semana viene tranquila, sin grandes sobresaltos. A veces sostener ya es bastante.', 'neutral')).toBeNull();
+    // Y `solo` como ADVERBIO no describe a nadie. Esta frase es una variante
+    // propia y la lista suelta la rechazaba — por eso quedó acotada a
+    // "estás solo".
+    expect(rejectCopy('Venís levantando, y eso no pasa solo. ¿Sabés qué se movió?', 'warm')).toBeNull();
   });
 
   it('rechaza formato que delata que el modelo contestó otra cosa', () => {

@@ -77,7 +77,7 @@ const GENDERED = /\bven[íi]s\s+(?!a |m[áa]s |un |bien|mejor|peor|para |atraves
  *  estar" en el medio no lo ve. */
 const GENDERED_PERIFRASIS = re('\\b(ven[íi]s|est[áa]s|and[áa]s|segu[íi]s) de (estar|andar|sentirte|venir) [^.]{0,24}?[a-záéíóúñ]+(ad[oa]|id[oa]|os[oa])#');
 
-/** Las etiquetas de nivel en MASCULINO.
+/** Adjetivos en masculino que solo pueden estar describiendo a **la persona**.
  *
  *  `LEVEL_LABEL` las define en femenino a propósito, para concordar con
  *  "semana" — ver la nota de la rama de nivel. Así que un `cansado` o un
@@ -87,8 +87,28 @@ const GENDERED_PERIFRASIS = re('\\b(ven[íi]s|est[áa]s|and[áa]s|segu[íi]s) de
  *  🔴 También salió de una frase real: *"llevás una semana **parejo**"*. Un
  *  regex genérico de adjetivos no la agarraba sin rechazar de paso "el mes
  *  **pasado**", así que la regla se hizo angosta: solo estas palabras, que no
- *  tienen otro uso legítimo acá. */
-const NIVEL_MASCULINO = re('\\b(cansado|parejo|plano)#');
+ *  tienen otro uso legítimo acá.
+ *
+ *  📌 La lista creció el 04/09 con las que el modelo produjo de verdad en las
+ *  corridas del ensayo: *"**Tranquilo** mantener el ritmo"* y *"no está **solo**
+ *  en esto"*. **El femenino sí puede ser legítimo** —"la semana viene tranquila"
+ *  concuerda con "semana"— así que solo entran las formas masculinas; hay un
+ *  test que lo fija.
+ *
+ *  ⚠️ Dos palabras se probaron y salieron, y el motivo importa:
+ *
+ *   · **`solo` suelto** rechazaba una frase propia — *"eso no pasa **solo**"*,
+ *     donde es adverbio y no describe a nadie. Quedó acotado a `estás solo`,
+ *     que sí es sobre la persona.
+ *   · **`contento`** le ganaba a `FINGE_SENTIR` en *"me pone contento verlo"*,
+ *     que es la app atribuyéndose un sentimiento — un motivo de rechazo más
+ *     preciso. Se fue de la lista; esa frase la frena la otra regla.
+ *
+ *  ⚠️ Es una lista, no una regla general, y va a quedar corta. Es a propósito:
+ *  cada palabra que se agrega se paga en falsos rechazos, y un rechazo cae al
+ *  texto escrito a mano, que es bueno. Ampliar cuando aparezca una frase real,
+ *  no por anticipación. */
+const NIVEL_MASCULINO = re('\\b(cansado|parejo|plano|tranquilo|preocupado|perdido)#|\\best[áa]s?\\s+solo#');
 
 /** Vocabulario clínico o de diagnóstico. La app acompaña, no diagnostica. */
 const CLINICAL = /\b(depresi[óo]n|depresiv|ansiedad generalizada|trastorno|s[íi]ntoma|diagn[óo]stic|patol[óo]g|terapia cognitiv|episodio)/i;

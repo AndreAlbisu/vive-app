@@ -217,8 +217,17 @@
 - **`diasEntreDias` a `lib/dates.ts`.** Era la tercera copia de la misma cuenta —`pisoSeguridad`, `paquete` y ahora Inicio—, y tres copias de una cuenta de días se desincronizan solas.
 - 📝 **Las 32 frases escritas a mano no usan el campo nuevo.** Es solo para el modelo, y queda anotado en el tipo para que nadie lo busque en las reglas.
 
+**Corrida de control: la decisión queda confirmada, y se para de afinar el prompt.**
+
+- ✅ **`estable` funciona donde el modelo usa la etiqueta**, y desapareció la pareja sentimental. **MEDIO es consistentemente la mejor columna** — la mejor frase de las 18 fue *"días así están para sobrellevarlos, no para resolverlos. En dos días hablás con tu profesional"*, que es exactamente lo que la card tenía que aprender a decir.
+- ⚠️ **Pero el modelo genera `pareja`/`parejo` por su cuenta**, como sinónimo, aunque la etiqueta ya no lo diga. Eso lo frena `NIVEL_MASCULINO` y la frase cae al texto escrito a mano — el guardarraíl haciendo su trabajo.
+- **Dos arreglos baratos más:** `tranquilo`, `preocupado` y `perdido` a la lista (salieron de *"Tranquilo mantener el ritmo"*), y el prompt le aclara a `level` que habla de **la semana que pasó**, nunca de "la semana que viene" — el modelo hablaba del futuro dos veces.
+- 🔴 **Dos palabras se probaron y salieron, y el motivo es instructivo.** `solo` suelto **rechazaba una frase propia** —*"eso no pasa solo"*, donde es adverbio— así que quedó acotado a `estás solo`. Y `contento` **le ganaba a `FINGE_SENTIR`** en *"me pone contento verlo"*, que es un motivo de rechazo más preciso; se fue de la lista y esa frase la frena la otra regla. **Los dos los encontraron los tests existentes**, no una revisión.
+- 🔴 **Se para de afinar el prompt acá, y queda dicho por qué.** De los cuatro problemas de la corrida, el guardarraíl frena uno y los arreglos cubren dos. **El cuarto —la interpretación causal— no se resuelve así:** *"eso que hacés está funcionando"* y *"algo estás haciendo distinto"* no tienen ninguna palabra prohibida. `rejectCopy` mira vocabulario, y detectar "esto es una inferencia sobre la persona" es otra clase de problema. A partir de acá el retorno de seguir tocando el prompt cae.
+
 **Pendiente para la próxima sesión:**
-- **Corrida de control** con la etiqueta `estable` y el `level` que no compara, para confirmar que los dos arreglos tomaron.
+- 🔴 **La inferencia causal sigue sin solución**, y es el hueco más grande que queda en la voz. No es de prompt.
+- **Correr `add-mood-nota.sql`** para poder seguir con el paquete.
 - **`rejectCopy` sigue sin detectar invención ni inferencia causal.** Es otra clase de problema que "esta palabra está prohibida", y no está resuelto. Si la columna RICO no gana claramente, la discusión legal del payload no vale la pena y se cierra el tema.
 - **Correr `add-mood-nota.sql`** y hacer la verificación #3 a mano.
 - 🔴 **El mail a Mónica sigue siendo lo único que separa al piso de seguridad de encenderse.** Es el más barato de los tres y el único que reduce daño.
