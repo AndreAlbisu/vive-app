@@ -14,9 +14,11 @@
 - 🔴→✅ **El upsert de `MoodCheckIn` preserva `nota`.** El check-in hace `upsert({user_id, mood_id, mood_label, entry_date}, {onConflict:'user_id,entry_date'})` **sin** `nota`. Se replicó el upsert exacto contra la base real (fila descartable, fecha centinela `2020-01-01`, limpiada después): tras el upsert quedó `mood_id`/`mood_label` actualizados y **`nota` intacta**. Motivo: PostgREST genera el `ON CONFLICT DO UPDATE SET` **solo con las columnas del body**, así que una columna ausente (nota) no se toca en el UPDATE. **La pantalla de armado del paquete ya se puede construir encima** (era el bloqueo que Andre puso en la sesión 168).
 - 📝 No se pudo probar vía REST (solo hay anon key y la RLS de `mood_entries` bloquea escrituras anónimas), así que se replicó el SQL que PostgREST genera vía el Management API — equivalente y definitivo para esta pregunta.
 
+- 🟢 **Pantalla del paquete (paso 1 del §9) construida: `app/paquete.tsx`.** Arma la ventana con `armarPaquete` (`lib/paquete.ts`), muestra los check-ins con fecha+ánimo, deja **editar una nota por día** (persiste en `mood_entries.nota` con `.update`, que toca solo esa columna), **sacar cualquier pieza**, y "Enviar a [coach]". 🔴 **Fiel a los NO NEGOCIABLES del §6:** material no conclusión (registro crudo, cero promedios/tendencias/"Sobre vos"); se revisa antes de mandar; y **va al chat como un mensaje más SIN duplicar la lógica de envío** — compone el texto y navega a la sala con el param `draft` (el que agregué en la 158), donde la persona lo revisa una vez más y lo manda ella, reusando `doSendMessage` (encriptación fail-closed + anti-fuga + chequeo de bloqueo). El diario NO entra ni se ofrece (§8ter). `tsc`/lint/499 tests limpios. ⚠️ **No hay mockup — el layout es primera pasada, Andre lo restylea; es su feature.**
+
 **Pendiente para la próxima sesión:**
-- La pantalla de armado del paquete + envío por chat (reglas ya en `lib/paquete.ts`, 15 tests) — ahora desbloqueada, pero es UI grande y toca coordinar con Andre.
-- Sigue la device review de Joaquín (matrícula en vivo, Diario nuevo, "Sobre vos" early, ayuda).
+- 🔴 **El punto de entrada = el paso 2 (`debeOfrecerse`): el ofrecimiento antes de la sesión** ("tenés sesión el sábado, ¿armás algo?"), una vez y descartable (necesita AsyncStorage para el "ya se ofreció"). **Toca la sala/Inicio** (alto tráfico, código fresco de Andre) — conviene alinearlo con él y probarlo en dispositivo, no cablearlo a ciegas. Hasta que exista, la pantalla se llega por ruta `/paquete?sala_id=…&coach_id=…&coachName=…`.
+- Device review de Joaquín (matrícula en vivo, Diario nuevo, "Sobre vos" early, ayuda) + probar la pantalla del paquete en el teléfono.
 
 ## 2026-09-04 — Andre (sesión 164 · rediseño del Diario)
 
