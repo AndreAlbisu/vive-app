@@ -2,7 +2,19 @@
 --
 -- `mood_entries.nota` — lo que la persona escribe sobre ese día.
 --
--- ⚠️ PENDIENTE DE CORRER al 04/09/2026.
+-- ✅ CORRIDO el 04/09/2026. Dos de las tres verificaciones dieron bien:
+--   · la columna existe (probado contra la base: `select=nota` responde como
+--     `mood_id`, mientras que una columna inventada devuelve 42703);
+--   · el CHECK está: `CHECK (((nota IS NULL) OR (char_length(nota) <= 280)))`.
+--
+-- 🔴 **FALTA LA TERCERA, y es la que importa: que el check-in NO pise la nota.**
+-- `MoodCheckIn` hace `upsert ... on conflict` sin mandar `nota`. Si el upsert la
+-- borrara, la persona perdería lo que escribió cada vez que cambia su ánimo del
+-- día — y eso rompe el paquete antes de empezar. PostgREST solo debería tocar
+-- las columnas que recibe, pero es justo el supuesto que no conviene dar por
+-- bueno: si falla, no se nota hasta que alguien pierde algo suyo.
+--
+-- Cómo se prueba (2 minutos, ver el bloque de verificación al final).
 --
 -- ── Por qué existe ───────────────────────────────────────────────────────────
 -- Es la pieza que le da sentido al paquete para la sesión

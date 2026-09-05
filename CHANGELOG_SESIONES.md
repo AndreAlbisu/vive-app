@@ -226,8 +226,19 @@
 - 🔴 **Se para de afinar el prompt acá, y queda dicho por qué.** De los cuatro problemas de la corrida, el guardarraíl frena uno y los arreglos cubren dos. **El cuarto —la interpretación causal— no se resuelve así:** *"eso que hacés está funcionando"* y *"algo estás haciendo distinto"* no tienen ninguna palabra prohibida. `rejectCopy` mira vocabulario, y detectar "esto es una inferencia sobre la persona" es otra clase de problema. A partir de acá el retorno de seguir tocando el prompt cae.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **La inferencia causal sigue sin solución**, y es el hueco más grande que queda en la voz. No es de prompt.
-- **Correr `add-mood-nota.sql`** para poder seguir con el paquete.
+
+🔴 **`add-mood-nota.sql` CORRIDO, pero falta la verificación que importa.** Se confirmó contra la base que la columna existe y que el CHECK está. **Falta probar que el check-in no pise la nota**: `MoodCheckIn` hace `upsert ... on conflict` sin mandar `nota`, y si la borrara, la persona perdería lo que escribió cada vez que cambia su ánimo del día. Son tres pasos —poner una nota por SQL, cambiar el mood desde la app, volver a leer— y están en el bloque de verificación del script. **No construir la pantalla del paquete encima hasta confirmarlo.**
+
+**Lo que sigue, en orden:**
+1. Esa verificación.
+2. **La pantalla de armado del paquete** y el envío por chat. Las reglas ya están en `lib/paquete.ts` con 15 tests.
+3. 🔴 **El mail a Mónica** — el piso de seguridad está terminado, testeado y apagado desde el 04/09. Es lo único que lo separa de encenderse, y es el único de los tres caminos que **reduce daño** en vez de agregar valor.
+
+**Abierto y sin solución conocida:**
+- 🔴 **La inferencia causal en la voz.** *"Eso que hacés está funcionando"* no tiene ninguna palabra prohibida, así que `rejectCopy` —que mira vocabulario— no la ve. Es el hueco más grande que queda y **no se arregla con el prompt**: cuatro corridas del ensayo lo confirmaron.
+- **La device review 157-163 sigue a medias** (bloque más abajo). Joaquín confirmó el consentimiento; faltan matrícula, `early` y la pantalla de ayuda.
+
+**Decisiones que esperan a Andre:** el campo estructurado de profesión · el seguro de responsabilidad civil · la consulta gratuita a la AAIP · el registro en TAD · las seis decisiones abiertas con Joaquín, sobre todo **cómo crece el catálogo**.
 - **`rejectCopy` sigue sin detectar invención ni inferencia causal.** Es otra clase de problema que "esta palabra está prohibida", y no está resuelto. Si la columna RICO no gana claramente, la discusión legal del payload no vale la pena y se cierra el tema.
 - **Correr `add-mood-nota.sql`** y hacer la verificación #3 a mano.
 - 🔴 **El mail a Mónica sigue siendo lo único que separa al piso de seguridad de encenderse.** Es el más barato de los tres y el único que reduce daño.
