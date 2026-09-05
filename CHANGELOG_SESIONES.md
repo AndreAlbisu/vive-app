@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-09-04 — Andre (sesión 164 · rediseño del Diario)
+
+**Tocado:** `app/diario.tsx`, `constants/theme.ts`, `components/MoodCheckIn.tsx`, `SCHEMA.md`. Nuevos: `lib/semanaDiario.ts`, `__tests__/semanaDiario.test.ts`, `design/diario-contexto-rediseno.md`. 499 tests, `tsc` y eslint limpios. Sin migraciones.
+
+**Resumen:**
+- **El ánimo del Diario pasa a ser por entrada.** `journal_entries.mood` era una copia del check-in del día; ahora es "¿cómo estás **ahora**?", elegido en la propia pantalla con los 5 niveles de siempre. Motivo: el ánimo cambia durante el día y el check-in no puede representar un mal momento de la tarde sin redefinir el día entero. `SCHEMA.md` actualizado — es un cambio de **semántica** de una columna, no de esquema.
+- **Decisión tomada con Andre entre dos opciones (queda para discutir con Joaquín).** Se evaluó (A) que el Diario también alimente el check-in diario, o (B) que sea independiente con vocabulario emocional propio (ansioso/enojado/tranquilo, que la escala actual no tiene: es un termómetro de valencia, no una rueda de emociones). **Se hizo A.** B se descartó por ahora porque no es un cambio de diseño sino de qué se trata el diario: obliga a reescribir los 6 prompts y rompe el color del historial (`ViveMoodColors` es una rampa ordenada peor→mejor; las emociones no se ordenan y no hay paleta categórica en la app). Queda anotado en `design/diario-contexto-rediseno.md`.
+- **Cómo se implementó A, que es la parte delicada:** al guardar, si no hay check-in de hoy, la entrada lo crea — con `insert`, **nunca** con `upsert`. El `UNIQUE(user_id, entry_date)` es lo que garantiza que no se pise, así que ni una carrera con Inicio puede romper la regla. Un upsert dejaría que un mal momento de las 23:00 moviera la tendencia que ve el profesional. La pantalla lo avisa, para que la carita no aparezca sola en Inicio al día siguiente.
+- ⚠️ **Efecto que conviene mirar en los números:** se sacó la card "Todavía no contaste cómo venís hoy / Registrar", que era el único recordatorio del check-in fuera de Inicio. La creación automática lo compensa, pero el camino cambió.
+
+**🔴 Tres bugs pre-existentes que aparecieron leyendo la pantalla:**
+1. **Si fallaba el guardado, la entrada se perdía en silencio.** `setJournalText('')` y `setSaved(true)` estaban **afuera** del `if (!error && data)`: un error de red limpiaba el campo, mostraba "Guardado" con su tilde, y no había guardado nada. Ahora el guardado es optimista con rollback — vuelve el texto y aparece un mensaje.
+2. **La fecha del día se calculaba en UTC** (`toISOString().split('T')[0]`), así que después de las 21:00 en Argentina el Diario buscaba el check-in de *mañana*, no lo encontraba y caía al prompt genérico — justo a la hora en que más se escribe. Pasa a `localDayKey()`, que existe en `lib/dates.ts` para exactamente esto y era la única pantalla que no lo usaba.
+3. **El link "Tus últimas entradas →" nunca funcionó**: `scrollRef` estaba declarado pero jamás se le pasaba al `ScrollView`, así que `measureLayout` recibía `null` y moría en el callback de error vacío. Se eliminó (el historial está justo abajo).
+
+**Rediseño visual** (3 rondas de bocetos con ChatGPT, contexto y decisiones en `design/diario-contexto-rediseno.md`):
+- La pregunta salió de su card: ahora es tipografía sobre el fondo, partida en `lead` / `pregunta` / `cierre`, y **se congela apenas hay texto escrito** (que se reescriba sola al mover el ánimo era insoportable). Sin entradas todavía, gana un texto de bienvenida.
+- **Estado colapsado con el teclado abierto**: ánimo y pregunta se reducen a dos chips desplegables. Sin esto, entre header, ánimo, pregunta, hint y botón, al área de escritura le quedaban ~5 líneas visibles en la única pantalla cuyo propósito es escribir.
+- **Franja "Esta semana"**: lunes a domingo, un solo color (escribiste / no escribiste, **no** el ánimo — pintada por nivel hablaría del check-in y se pisaría con el gráfico de Progreso). El anillo marca hoy y **no** reemplaza al relleno. No aparece hasta la primera entrada: siete círculos vacíos el día uno se leen como un reproche. La lógica se extrajo a `lib/semanaDiario.ts` con 6 tests — uno es específicamente que una entrada de las 23:30 cuente para hoy y no para mañana.
+- **Estado "guardado"** deja de ser un cartel de 2,5 s y pasa a ser un estado de cierre con "Escribir otra entrada". El historial muestra **fecha y hora** (desde que hay varias entradas por día, dos filas que dicen "4 de septiembre" no se distinguen).
+- **El modal de una entrada vieja** mostraba un badge con una pregunta fija que esa entrada probablemente nunca vio (no se guarda qué prompt le tocó a cada una). Se reemplazó por el ánimo con el que se escribió, que sí es un dato real de la fila.
+- El Diario usa `AppBg`: era la única pantalla de la app con el crema plano en vez del gradiente.
+- **Contraste, medido y no a ojo**: el texto secundario usaba oliva al 50% y al 33%, que dan **2,2 y 1,6** contra el mínimo AA de 4,5. En esta paleta no hay gris intermedio que pase (`calm` da 3,39), así que la jerarquía la dan ahora el tamaño y el peso, no la opacidad. Única excepción: el placeholder, que a contraste pleno hace ver un campo vacío como escrito.
+- De paso: el historial se traía **todas** las entradas de la historia de la persona en cada apertura, sin `limit`. Ahora tiene techo.
+
+**Pendiente para la próxima sesión:**
+- Probar en dispositivo real: el colapso con el teclado (que el área de escritura respire de verdad), que la franja se llene sola al guardar, y que el ánimo por entrada se entienda sin explicación.
+- **Hablarlo con Joaquín**: la opción B (vocabulario emocional propio del Diario) y el efecto de sacar la card de invitación al check-in.
+- Sin decidir todavía: si las 15 superficies de terracota que quedan en 3,6–3,9:1 se barren también (viene de la auditoría del 01/09).
+
 ## 2026-09-04 — Joaquín (sesión 163 · fix del gate de consentimiento, punto 6 de la device review)
 
 **Tocado:** `hooks/useConsentGate.ts`, `hooks/useConsent.ts`, `app/(tabs)/index.tsx`, `screens/ProfileOwnScreen.tsx`. `tsc`, lint y 462 tests limpios. Sin schema.

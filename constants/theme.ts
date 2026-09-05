@@ -105,6 +105,22 @@ export function resourceFormatGradient(format: string, variant = 0): [string, st
   return [mixHex(base, 0.22 - shift), mixHex(base, -0.28 - shift)];
 }
 
+// Los 5 niveles del check-in — id + etiqueta. Vivían como const local en
+// `components/MoodCheckIn.tsx`; el Diario necesita la MISMA lista para su
+// selector de ánimo por entrada (rediseño sesión 164), y una segunda copia
+// sería el tercer mapeo de ánimo del proyecto — ya hubo un bug por dos mapeos
+// mood→recurso en desacuerdo (`MOOD_CFG` vs `MOOD_RECS`, sesión 81). Los
+// colores de cada nivel están en `ViveMoodColors`, con la misma clave.
+export const ViveMoods = [
+  { id: 1, label: 'Bajón'     },
+  { id: 2, label: 'Cansado'   },
+  { id: 3, label: 'Normal'    },
+  { id: 4, label: 'Bien'      },
+  { id: 5, label: 'Brillando' },
+] as const;
+
+export type ViveMoodId = (typeof ViveMoods)[number]['id'];
+
 // Escala de mood check-in (5 niveles, de más bajo a más alto) — un solo lugar,
 // usada en todo lo que represente nivel de ánimo (check-in, gráficos, etc.)
 // para que nunca diverjan hex sueltos entre pantallas.

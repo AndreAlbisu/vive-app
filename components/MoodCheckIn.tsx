@@ -9,18 +9,15 @@ import {
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import { ViveFonts, ViveMoodColors } from '@/constants/theme';
+import { ViveFonts, ViveMoodColors, ViveMoods } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { localDayKey } from '@/lib/dates';
 import type { MoodEntry } from '@/hooks/useMoodHistory';
 
-const MOODS = [
-  { id: 1, label: 'Bajón'     },
-  { id: 2, label: 'Cansado'   },
-  { id: 3, label: 'Normal'    },
-  { id: 4, label: 'Bien'      },
-  { id: 5, label: 'Brillando' },
-] as const;
+// La lista vive en `constants/theme.ts` — la comparte con el selector de
+// ánimo del Diario. Acá solo se le pone el nombre corto que ya usaba el resto
+// del archivo.
+const MOODS = ViveMoods;
 
 const DAYS_ES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
