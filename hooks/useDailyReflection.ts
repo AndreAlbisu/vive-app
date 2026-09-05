@@ -31,14 +31,29 @@ const FUNCTIONS_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
  *  Sale del ensayo del 04/09: pasarle los tres números siempre lo llevaba a
  *  hablar del más grande en vez de la señal. Si una señal no interpola nada en
  *  su versión escrita a mano, tampoco necesita números acá. */
-function factsDeLaSeñal(signal: string, input: ReflectionInput): Record<string, number | string> {
-  switch (signal) {
+function factsDeLaSeñal(rules: Reflection, input: ReflectionInput): Record<string, number | string> {
+  switch (rules.signal) {
     case 'sessions':  return { sesiones: input.sessionsThisWeek };
     case 'streak':    return { racha: input.streak };
     case 'practices': return { practicas: input.resourcesThisWeek + input.writingThisWeek };
-    // `level` interpola la etiqueta, no un número. La calcula `buildReflection`
-    // y viaja como texto porque es lo único que la frase necesita.
-    case 'level':     return {};
+    // 🔴 `level` viaja con su MARCO, no suelto, y la clave lo lleva adentro.
+    //
+    // La 2ª corrida del ensayo (04/09) mostró por qué: mandando
+    // `{level: "pareja"}` el modelo leyó **pareja sentimental** y escribió *"la
+    // pareja está en tu cabeza hoy"* y *"la relación está presente en tu día"* —
+    // le hablaba de su relación a alguien que había tenido una semana estable.
+    //
+    // Y lo destapó el arreglo anterior: antes iban `racha` y `sesiones` al lado,
+    // que daban contexto suficiente para desambiguar. Al mandar solo el label, la
+    // palabra suelta domina. `level` es la señal que MÁS se muestra, así que le
+    // tocaba a casi todos.
+    //
+    // La clave `la_semana_viene` mete el marco en el dato mismo, donde el modelo
+    // no lo puede perder. No alcanza con decirlo en el prompt: el prompt ya lo
+    // decía.
+    // La etiqueta ya está en `bold` — es lo que la frase escrita a mano resalta.
+    // No hace falta recalcularla ni exponerla aparte.
+    case 'level':     return rules.bold ? { la_semana_viene: rules.bold } : {};
     // `sharp-drop`, `sustained-low`, `trend-up` y `trend-down` no llevan ningún
     // número en su versión escrita a mano: son sobre una dirección o un día, no
     // sobre una cuenta. Mandarle uno era invitarlo a hablar de eso.
@@ -112,7 +127,7 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
             //
             // 📌 Efecto lateral bueno: se manda MENOS. Cada número que no viaja
             // es uno menos que justificar.
-            facts: factsDeLaSeñal(rules.signal, input),
+            facts: factsDeLaSeñal(rules, input),
           }),
         });
 

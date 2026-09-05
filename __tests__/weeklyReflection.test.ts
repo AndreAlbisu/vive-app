@@ -558,6 +558,17 @@ describe('rejectCopy — el guardarraíl sobre lo que escribe un modelo', () => 
 
   it('rechaza lo que le asigna un género a quien lee', () => {
     expect(rejectCopy('Venís cansada esta semana, pero seguís apareciendo igual.', 'neutral')).toBe('genera a la persona');
+
+    // 🔴 Las tres de abajo son frases que el modelo escribió DE VERDAD el
+    // 04/09/2026 y que pasaban los once controles. Salieron del ensayo, no de
+    // imaginar casos — por eso están textuales.
+    //
+    // El rodeo "de estar" separa el adjetivo del verbo, y `GENDERED` lo busca
+    // pegado.
+    expect(rejectCopy('Venís de estar más cansado el mes pasado y ahora la mayoría de los días estás bien.', 'warm')).toBe('genera a la persona');
+    // La etiqueta de nivel aplicada a la PERSONA en vez de a la semana.
+    expect(rejectCopy('Llevás una semana parejo. Nada que te haya movido mucho hacia un lado ni hacia el otro.', 'neutral')).toBe('genera a la persona');
+    expect(rejectCopy('Estos días te sentís plano, sin puntas. Es difícil cuando nada te mueve mucho.', 'gentle')).toBe('genera a la persona');
     expect(rejectCopy('Venís sostenido en días difíciles y eso dice bastante de vos.', 'gentle')).toBe('genera a la persona');
   });
 
@@ -609,6 +620,16 @@ describe('rejectCopy — el guardarraíl sobre lo que escribe un modelo', () => 
   it('pero sí deja hablar de lo que siente quien lee — la prohibición es de primera persona', () => {
     expect(rejectCopy('Lo que sentís esta semana no tiene que tener una explicación prolija.', 'gentle')).toBeNull();
     expect(rejectCopy('Registrás cómo te sentís hace 6 días seguidos. Eso después se nota.', 'warm')).toBeNull();
+  });
+
+  // ⚠️ El contrapeso: la regla angosta NO puede comerse las frases legítimas.
+  // "el mes pasado" tiene un adjetivo en masculino y no generiza a nadie; un
+  // regex genérico de adjetivos la rechazaba, y por eso la regla se acotó a las
+  // etiquetas de nivel.
+  it('deja pasar el masculino que no describe a la persona', () => {
+    expect(rejectCopy('Venís mejor que el mes pasado. No sé qué se movió, pero algo se movió.', 'warm')).toBeNull();
+    expect(rejectCopy('La semana viene cansada, sin grandes sobresaltos. A veces sostener ya es bastante.', 'neutral')).toBeNull();
+    expect(rejectCopy('Tu semana viene pareja. No todo tiene que ser un antes y un después.', 'neutral')).toBeNull();
   });
 
   it('rechaza formato que delata que el modelo contestó otra cosa', () => {

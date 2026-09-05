@@ -160,9 +160,19 @@
 - ⚠️ **De RICO, lo predicho se confirmó y peor:** *"te escribís poco en el diario, como si ni eso te saliera ahora"* — interpretación sobre el estado interno de alguien frágil, **y encima falsa**: el payload decía 4 entradas. Sí acertó la señal, que es lo que compra.
 - 🔴 **Y quedó claro que `rejectCopy` tiene un hueco: no detecta invención ni inferencia sobre la persona.** Mira vocabulario. *"Algo estás haciendo bien"* y la sesión inventada pasan los once controles.
 
+**2ª corrida del ensayo: el arreglo funcionó y destapó algo peor.**
+
+- ✅ **Lo que se arregló, se arregló.** `sustained-low` dejó de felicitar la constancia — ahora dice *"lleva tiempo estar así, a veces lo importante es simplemente seguir"* — y `trend-up` habla de la tendencia y no de la racha.
+- 🔴 **Pero apareció que `pareja` se lee como PAREJA SENTIMENTAL.** Con `{level: "pareja"}` suelto, el modelo escribió *"la pareja está en tu cabeza hoy"* y *"la relación está presente en tu día"*: le hablaba de su relación a alguien que había tenido una semana estable. **Y lo destapó el arreglo anterior** — antes iban `racha` y `sesiones` al lado y desambiguaban; al mandar solo el label, la palabra suelta domina. `level` es la señal que **más se muestra**.
+- ✅ **Arreglado metiendo el marco en la clave**: `{la_semana_viene: "pareja"}` en vez de `{level: "pareja"}`. **No alcanzaba con decirlo en el prompt — el prompt ya lo decía.** El label sale de `rules.bold`, que es lo que la frase escrita a mano resalta, así que no se recalcula nada.
+- 🔴 **Y se confirmó el hueco de `rejectCopy`: no detecta que se generice a la persona si el adjetivo no está pegado al verbo.** Tres frases que el modelo escribió de verdad pasaban los once controles: *"venís **de estar** más cansado"*, *"llevás una semana **parejo**"*, *"te sentís **plano**"*.
+- **Dos reglas nuevas, y la segunda es angosta a propósito.** `GENDERED_PERIFRASIS` cubre el rodeo "de estar/andar/sentirte". Y `NIVEL_MASCULINO` frena `cansado|parejo|plano`: las etiquetas están definidas **en femenino** para concordar con "semana", así que el masculino solo puede estar describiendo a la persona. ⚠️ Se probó primero un regex genérico de adjetivos y **rechazaba "el mes pasado"** — por eso la regla se acotó a esas tres palabras, que no tienen otro uso legítimo acá. Hay un test que fija que el masculino legítimo siga pasando.
+- 📌 **Los tests usan las frases textuales que salieron del ensayo**, no casos imaginados.
+- ⚠️ **Sobre la pregunta original, la respuesta sigue sin ser clara.** RICO acierta más, pero produjo *"eso que repetís la respiración y te cuidás el sueño está funcionando"* — la interpretación causal exacta que se había anticipado como el costo. **Y buena parte de lo que RICO parecía ganar era que HOY estaba roto.** Hay que volver a comparar ahora que HOY funciona.
+
 **Pendiente para la próxima sesión:**
-- 🔴 **Volver a correr el ensayo** con el prompt nuevo. Si HOY empieza a acertar la señal, la brecha con RICO se achica y la pregunta legal del payload puede no valer la pena.
-- 🔴 **La API key quedó visible en una captura: hay que rotarla** y actualizar el secret de Supabase. Si la columna RICO no gana claramente, la discusión legal del payload no vale la pena y se cierra el tema.
+- 🔴 **3ª corrida del ensayo**, ahora que HOY acierta la señal y `pareja` no se malinterpreta. Recién ahí la comparación es justa.
+- **`rejectCopy` sigue sin detectar invención ni inferencia causal.** Es otra clase de problema que "esta palabra está prohibida", y no está resuelto. Si la columna RICO no gana claramente, la discusión legal del payload no vale la pena y se cierra el tema.
 - **Correr `add-mood-nota.sql`** y hacer la verificación #3 a mano.
 - 🔴 **El mail a Mónica sigue siendo lo único que separa al piso de seguridad de encenderse.** Es el más barato de los tres y el único que reduce daño.
 

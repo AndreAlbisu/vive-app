@@ -70,6 +70,26 @@ const re = (body: string) => new RegExp(body.replace(/#/g, FIN), 'i');
 /** Adjetivo que generiza a la persona: "venís cansada", "venís sostenido". */
 const GENDERED = /\bven[íi]s\s+(?!a |m[áa]s |un |bien|mejor|peor|para |atravesando|levantando)\w+(ada|ado|osa|oso|ida|ido)\b/i;
 
+/** El mismo error con un rodeo en el medio: *"venís **de estar** más cansado"*.
+ *
+ *  🔴 Salió de una frase real que el modelo escribió el 04/09 y que **pasó los
+ *  once controles**. `GENDERED` busca el adjetivo pegado al verbo; con "de
+ *  estar" en el medio no lo ve. */
+const GENDERED_PERIFRASIS = re('\\b(ven[íi]s|est[áa]s|and[áa]s|segu[íi]s) de (estar|andar|sentirte|venir) [^.]{0,24}?[a-záéíóúñ]+(ad[oa]|id[oa]|os[oa])#');
+
+/** Las etiquetas de nivel en MASCULINO.
+ *
+ *  `LEVEL_LABEL` las define en femenino a propósito, para concordar con
+ *  "semana" — ver la nota de la rama de nivel. Así que un `cansado` o un
+ *  `parejo` solo pueden estar describiendo a **la persona**, que es justo lo que
+ *  no se puede hacer sin saber su género.
+ *
+ *  🔴 También salió de una frase real: *"llevás una semana **parejo**"*. Un
+ *  regex genérico de adjetivos no la agarraba sin rechazar de paso "el mes
+ *  **pasado**", así que la regla se hizo angosta: solo estas palabras, que no
+ *  tienen otro uso legítimo acá. */
+const NIVEL_MASCULINO = re('\\b(cansado|parejo|plano)#');
+
 /** Vocabulario clínico o de diagnóstico. La app acompaña, no diagnostica. */
 const CLINICAL = /\b(depresi[óo]n|depresiv|ansiedad generalizada|trastorno|s[íi]ntoma|diagn[óo]stic|patol[óo]g|terapia cognitiv|episodio)/i;
 
@@ -152,7 +172,9 @@ export function rejectCopy(text: string, tone: ReflectionTone): CopyRejection | 
   // interna a la persona en su pantalla de inicio.
   if (/<[^>]*>/.test(t)) return 'etiquetas internas';
 
-  if (GENDERED.test(t)) return 'genera a la persona';
+  if (GENDERED.test(t) || GENDERED_PERIFRASIS.test(t) || NIVEL_MASCULINO.test(t)) {
+    return 'genera a la persona';
+  }
   if (CLINICAL.test(t)) return 'lenguaje clínico';
   if (GURU.test(t)) return 'tono gurú';
 
