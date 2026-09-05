@@ -85,6 +85,8 @@ La línea tiene DOS TIEMPOS:
 # 🔴 Lo primero: de qué hablás
 Te paso UNA señal. **Escribís sobre esa señal y sobre nada más.** Si además te paso un número, es porque la frase de ESA señal lo usa — no es una invitación a hablar de otra cosa.
 
+Si te paso cuántos días faltan para la próxima sesión, podés mencionarlo — es cuánto falta para que vea a su profesional. **Nunca lo inventes:** si no te lo paso, no hay sesión a la vista.
+
 Y **nunca inventes un hecho.** Si no te lo pasé, no pasó. No hay sesiones si no te pasé sesiones, no hay racha si no te pasé una racha, no hay nadie acompañando a quien lee salvo que yo lo diga.
 
 # Reglas que no se rompen
@@ -113,6 +115,7 @@ const CASOS = [
     // ⚠️ Actualizado el 04/09 tras la primera corrida: HOY ya no manda los tres
     // números siempre, solo el que esa señal usa. `trend-up` no usa ninguno.
     flaco: {},
+    medio: { dias_hasta_proxima_sesion: 4 },
     rico: {
       animo_ultimos_7: ['bien', 'bien', 'normal', 'bien', 'cansado', 'normal', 'bien'],
       animo_mes_previo_promedio: 'cansado',
@@ -125,7 +128,8 @@ const CASOS = [
   {
     nombre: 'Una semana pareja, sin nada destacable',
     señal: 'level', tono: 'neutral',
-    flaco: { level: 'pareja' },
+    flaco: { la_semana_viene: 'pareja' },
+    medio: { la_semana_viene: 'pareja', dias_hasta_proxima_sesion: 3 },
     rico: {
       animo_ultimos_7: ['normal', 'normal', 'bien', 'normal', 'normal', 'normal', 'normal'],
       animo_mes_previo_promedio: 'normal',
@@ -139,11 +143,12 @@ const CASOS = [
     nombre: 'Un tramo malo sostenido',
     señal: 'sustained-low', tono: 'gentle',
     flaco: {},
+    medio: { dias_hasta_proxima_sesion: 2 },
     rico: {
       animo_ultimos_7: ['bajon', 'cansado', 'bajon', 'bajon', 'cansado', 'bajon', 'cansado'],
       animo_mes_previo_promedio: 'normal',
       dias_desde_ultima_sesion: 19,
-      dias_hasta_proxima_sesion: null,
+      dias_hasta_proxima_sesion: 2,
       practicas_esta_semana: [],
       escribio_diario_veces: 4,
     },
@@ -174,8 +179,11 @@ async function pedir(señal, tono, datos) {
 }
 
 console.log(`\nmodelo: ${MODEL}`);
-console.log('2ª corrida: el prompt ahora dice de qué habla cada señal y de qué no,');
-console.log('y HOY manda solo el dato que su propia frase usa.');
+console.log('3 columnas: HOY (lo que va a producción), MEDIO (HOY + cuántos días');
+console.log('faltan para la sesión) y RICO (la forma de los días, §5 bis).');
+console.log('MEDIO existe porque las corridas anteriores mostraron que lo único que');
+console.log('RICO gana de verdad es la cercanía a la sesión — y eso es un entero de');
+console.log('calendario, no una historia clínica.');
 console.log('Los datos son inventados. Ninguna fila sale de la base.\n');
 
 for (const c of CASOS) {
@@ -184,18 +192,28 @@ for (const c of CASOS) {
   // Dos tiradas de cada uno: una sola muestra no distingue "mejor" de "tuvo
   // suerte". Con dos se ve si la mejora es consistente o es ruido.
   for (const intento of [1, 2]) {
-    const [a, b] = await Promise.all([
+    const [a, m, b] = await Promise.all([
       pedir(c.señal, c.tono, c.flaco),
+      pedir(c.señal, c.tono, c.medio),
       pedir(c.señal, c.tono, c.rico),
     ]);
     console.log(`  ${intento}. HOY   → ${a}`);
+    console.log(`     MEDIO → ${m}`);
     console.log(`     RICO  → ${b}\n`);
   }
 }
 
 console.log('─'.repeat(76));
 console.log(`
-Qué mirar, y no es "cuál suena más lindo":
+Qué mirar:
+
+  🔴 La pregunta ya no es "HOY o RICO". Es: **¿MEDIO alcanza?**
+     Si con un solo entero de calendario la frase gana lo que tenía que ganar,
+     no hace falta mandar la forma de los días — y eso evita rehacer entero el
+     análisis legal, porque un número de días hasta una cita no describe el
+     ánimo de nadie.
+
+Y lo de siempre:
 
   · ¿La versión RICA dice algo que la de HOY no PODRÍA decir? Si las dos dicen
     lo mismo con otras palabras, más datos no compran nada.
