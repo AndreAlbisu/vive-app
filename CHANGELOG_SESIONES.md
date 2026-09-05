@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-09-05 — Joaquín (sesión 169 · verificada la nota del ánimo: el paquete queda desbloqueado)
+
+**Tocado:** solo `CHANGELOG_SESIONES.md` (verificación contra la base, sin código). Merge de las sesiones 164-168 de Andre integrado: `tsc` 0, **499 tests** limpios — la capa 1 (mi giro a presente) convive bien con los guardarrales nuevos de Andre y su level/sustained-low.
+
+**Resumen — se hizo la verificación #3 que Andre dejó marcada como bloqueante (sesión 168): que el check-in de ánimo NO pise la `nota` del ánimo (el dato del paquete). Confirmado: no la pisa.**
+
+- 🔴→✅ **El upsert de `MoodCheckIn` preserva `nota`.** El check-in hace `upsert({user_id, mood_id, mood_label, entry_date}, {onConflict:'user_id,entry_date'})` **sin** `nota`. Se replicó el upsert exacto contra la base real (fila descartable, fecha centinela `2020-01-01`, limpiada después): tras el upsert quedó `mood_id`/`mood_label` actualizados y **`nota` intacta**. Motivo: PostgREST genera el `ON CONFLICT DO UPDATE SET` **solo con las columnas del body**, así que una columna ausente (nota) no se toca en el UPDATE. **La pantalla de armado del paquete ya se puede construir encima** (era el bloqueo que Andre puso en la sesión 168).
+- 📝 No se pudo probar vía REST (solo hay anon key y la RLS de `mood_entries` bloquea escrituras anónimas), así que se replicó el SQL que PostgREST genera vía el Management API — equivalente y definitivo para esta pregunta.
+
+**Pendiente para la próxima sesión:**
+- La pantalla de armado del paquete + envío por chat (reglas ya en `lib/paquete.ts`, 15 tests) — ahora desbloqueada, pero es UI grande y toca coordinar con Andre.
+- Sigue la device review de Joaquín (matrícula en vivo, Diario nuevo, "Sobre vos" early, ayuda).
+
 ## 2026-09-04 — Andre (sesión 164 · rediseño del Diario)
 
 **Tocado:** `app/diario.tsx`, `constants/theme.ts`, `components/MoodCheckIn.tsx`, `SCHEMA.md`. Nuevos: `lib/semanaDiario.ts`, `__tests__/semanaDiario.test.ts`, `design/diario-contexto-rediseno.md`. 499 tests, `tsc` y eslint limpios. Sin migraciones.
