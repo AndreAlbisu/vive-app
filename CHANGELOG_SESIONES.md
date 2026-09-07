@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-09-07 — Joaquín (sesión 170 · el ofrecimiento del paquete + device review del item 1, confirmado)
+
+**Tocado:** `components/OfrecerPaqueteBanner.tsx` (nuevo), `lib/paqueteOfrecimiento.ts` (nuevo), `app/paquete.tsx`, `screens/SalaScreen.tsx`, `app/_layout.tsx`. `tsc`/lint/503 tests limpios. Sin schema.
+
+**Resumen — se construyó el paso 2 (el ofrecimiento) y se probó el paquete completo en dispositivo. Anduvo todo el flujo; salieron y se arreglaron varios bugs de integración.**
+
+- 🟢 **Ofrecimiento (paso 2):** `OfrecerPaqueteBanner` (autocontenido, `debeOfrecerse` + registro) enganchado en la sala con el gate cliente-vs-coach + sesión próxima. Storage "por sesión" en `lib/paqueteOfrecimiento.ts`.
+- ✅ **Device review del PAQUETE (item 1) — confirmado end-to-end por Joaquín:** banner → armar → nota por día → sacar/reentrar piezas → enviar (borrador al chat) → mandar. Todo funciona.
+- 🔴 **Bugs encontrados y arreglados en la review:**
+  1. **Barra negra arriba** de `/paquete` (y `/ayuda`): las rutas nuevas no estaban en el `<Stack>` de `_layout.tsx` (que pone `headerShown:false` por pantalla) → header nativo por default. Agregadas.
+  2. **El banner se consumía al aceptar** (marcaba al tocar "Armar") → al volver no se podía reentrar. Ahora solo lo calla el descarte (✕) o el ENVÍO; aceptar sin mandar no lo consume. Flag renombrado a `paquete_descartado`.
+  3. **El banner seguía apareciendo tras mandar** el paquete → ahora al enviar se marca resuelto (con `booking_id`) y el banner re-chequea en cada **foco** de la sala (`useFocusEffect`) y desaparece.
+  4. **El teclado no se podía bajar** en la sala (hueco pre-existente): `keyboardDismissMode="interactive"` + `keyboardShouldPersistTaps="handled"`, y `Keyboard.dismiss()` al mandar.
+  5. **El banner repetía el anuncio de la sesión** (decía "Tenés sesión mañana" encima de la tarjeta "Próxima sesión") → ahora solo ofrece.
+- ⚠️ Para Andre: restylear copy/lugar del banner (es su feature); el `maxLength=500` del chat puede truncar un paquete largo (decisión suya). Refinamiento hecho: "marcar al enviar" (el pendiente que había quedado).
+- 📌 Nota de test: se movió el booking de prueba (Coach Prueba) a **2026-09-08** para poder ver el banner (la sesión estaba a 19 días y el ofrecimiento es ≤3 días). Data de prueba; se puede volver a 26 sep cuando se quiera.
+
+**Pendiente:** items 2-4 de la device review (matrícula en vivo, Diario nuevo, consentimiento, "Sobre vos" early, ayuda).
+
 ## 2026-09-05 — Joaquín (sesión 169 · verificada la nota del ánimo: el paquete queda desbloqueado)
 
 **Tocado:** solo `CHANGELOG_SESIONES.md` (verificación contra la base, sin código). Merge de las sesiones 164-168 de Andre integrado: `tsc` 0, **499 tests** limpios — la capa 1 (mi giro a presente) convive bien con los guardarrales nuevos de Andre y su level/sustained-low.
