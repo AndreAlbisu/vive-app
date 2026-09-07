@@ -4,6 +4,32 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 175 · la lista de Mensajes dejó de reordenarse sola: cada profesional tiene su fila)
+
+**Tocado:** `lib/salaOrder.ts` (reescrito), `__tests__/salaOrder.test.ts` (reescrito), `screens/SessionsScreen.tsx`, `screens/CoachChatsScreen.tsx`. **515 tests** (eran 508), `tsc` limpio, eslint sin errores nuevos. Sin schema.
+
+**Resumen — se cerró el pendiente de diseño de Mensajes que venía dando vueltas desde la sesión 150. Se pasó por el council (5 asesores + 3 peer reviews) y el resultado fue distinto del que habíamos supuesto los dos.**
+
+- 🔴 **El diagnóstico de fondo: veníamos comprando ALCANCE con CONTENIDO, y ese trueque nunca cierra porque la pieza se elige por dónde está y no por qué es.** De ahí las cuatro iteraciones sobre el mismo hueco (aire calculado del 12% → tarjeta genérica "se siente muy forzada" → tarjeta que nombra a alguien → carrusel) y de ahí que el propio código confesara que la pieza *"nació para tapar un hueco"*. **La respuesta no era una card mejor: era que la posición fuera estable.** Con 2-4 filas la victoria no es "abajo", es "siempre en el mismo lugar" — una fila que no se mueve se acierta bien aunque esté alta, porque no hay que LEER antes de tocar.
+- 🔴 **`ordenarSalas` pasa de recencia a POSICIÓN FIJA por antigüedad del vínculo (`created_at` ASCENDENTE).** El ascendente es el punto entero y es contraintuitivo: con la sala más vieja arriba, **un profesional nuevo se agrega al final y no mueve a nadie**; descendente empujaría a todos una fila cada vez que reservás con alguien más, que es justo la inestabilidad que el orden viene a eliminar. Hay un test dedicado a ese invariante.
+- 📝 **Quedó MÁS CHICO que lo que había:** un solo `sort`, sin los dos grupos. **La regla "las vacías al final" no se borró, se volvió consecuencia**: una sala recién creada es la más nueva, así que cae última sola. Y `lastMessageRaw` salió de `SalaItem` — ya no lo lee nadie, y dejar dato muerto era exactamente el pecado que el archivo viejo denunciaba en su encabezado.
+- 🔴 **El NO LEÍDO a propósito NO toca el orden.** Ya se dice con el punto y la negrita de la fila, y con 2-4 filas visibles a la vez eso alcanza. Promoverlo además era decir dos veces lo mismo y devolvía el movimiento por la ventana (la fila se te acomodaba delante de los ojos al volver de leer). Se descartó junto con la maquinaria que pedía: congelar el orden mientras la pantalla está montada, y el corte por inactividad.
+- ⚠️ **La contra, dicha de frente:** un profesional con el que hablaste una vez y nunca más queda arriba para siempre. Se acepta — con 2-4 filas "arriba" no es un lugar privilegiado. Si molesta, la salida es archivar del lado usuario (como ya existe del lado coach), NO un corte por inactividad.
+- ✅ **Verificado por mutación** (lección de la 164): se dio vuelta el sort a descendente y fallan 4 de los 7 tests, incluidos los dos del invariante; restaurado, pasan los 7.
+- 🟢 **Lado coach: el buscador se colapsó detrás de una lupa en el header** (`buscando` + `toggleBuscador`). Ocupaba ~56pt permanentes del tope —el lugar más caro y el que menos alcanza el pulgar— para un control que con 10-20 personas se usa de vez en cuando. **Los chips se quedan**: esos son el triage de todos los días. Al cerrar se limpia `busqueda`, porque un filtro escondido que esconde gente es un bug esperando. La lupa no aparece en el estado vacío.
+- 📌 **Se descartó explícitamente anclar la lista abajo** (`flexGrow:1 + justifyContent:'flex-end'`), que era la propuesta inicial: la Y de cada fila pasaría a depender de CUÁNTAS salas tenés (reservás con un tercero y todo se mueve 72pt), rompe `RefreshControl` en Android, hace saltar los skeletons y pelea con la animación escalonada. Cambiaba un problema de alcance por uno de inestabilidad. **También se descartó invertir la cronología** (unánime en el council) y **las filas más ricas de dos líneas**.
+- 📌 **La divergencia usuario/coach se refuerza, no se rompe.** El coach sigue ordenando por próxima sesión (`lib/coachRoster.ts`): tiene 20 personas, NO las ve todas juntas y entra a preparar a quién ve mañana, así que ahí el orden sí es la herramienta para encontrar. El usuario las ve todas: no tiene nada que buscar.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Verlo en dispositivo**, que es lo único que falta: que el orden no se mueva al recibir un mensaje, que una sala nueva aparezca al final, y la lupa del coach (abrir, buscar, cerrar y que la lista vuelva entera).
+- ⚠️ **El punto ciego que marcó el council y no atacamos:** el día del lanzamiento el usuario modal tiene **0 o 1 salas**, no 2-4. Toda esta discusión está afinada para un estado al que casi nadie llega en semanas. Vale mirar el estado vacío antes que cualquier quinta vuelta sobre esta pantalla.
+- 📝 **El paso siguiente del diseño, si se quiere seguir: mudar la re-reserva ADENTRO de la fila.** Eso disuelve el SLOT como concepto —no hay hueco que tapar porque no hay nada arriba que empujar— y hace que el anti-fuga #1 pase de condicional a permanente. Conviene decidirlo con la lista ya quieta en el teléfono, no antes.
+- 📝 Otras del council, sin urgencia: el coach usa `ScrollView` + `.map()` con 20+ filas (quiere `FlatList`), y Dynamic Type rompe la aritmética en pt de las dos pantallas.
+- Sigue: el mail a Mónica con el encuadre de §2 bis, la etiqueta de la card, el restyle del banner del paquete, el coach de $1 y la disciplina de lenguaje en los perfiles.
+
+---
+
 
 ## 2026-09-07 — Andre (sesión 174 · el cartel medía a media plataforma contra una casilla que nunca iban a poder llenar)
 

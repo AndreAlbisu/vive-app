@@ -154,6 +154,25 @@ export default function CoachChatsScreen() {
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState<FiltroRoster>('todas');
 
+  /** 🔴 El buscador arranca COLAPSADO detrás de la lupa del header.
+   *
+   *  Estaba siempre visible arriba de los filtros, y era el peor de los dos
+   *  mundos: ocupaba ~56pt permanentes del tope de la pantalla —el lugar más
+   *  caro y el que menos alcanza el pulgar— para un control que con 10-20
+   *  personas se usa muy de vez en cuando. Los CHIPS sí se quedan: esos son el
+   *  triage de todos los días.
+   *
+   *  ⚠️ Al cerrarlo se limpia la búsqueda. Sin eso, la lupa podría dejar la
+   *  lista filtrada sin nada visible que explique por qué falta gente — un
+   *  filtro escondido es un bug esperando. */
+  const [buscando, setBuscando] = useState(false);
+  const toggleBuscador = () => {
+    setBuscando(v => {
+      if (v) setBusqueda('');
+      return !v;
+    });
+  };
+
   /** Archivar / desarchivar. Se escribe el valor EXPLÍCITO (true o false), no
    *  se vuelve a null: una vez que el coach opinó, su decisión manda sobre la
    *  regla automática para siempre. Volver a null sería "olvidate de lo que
@@ -447,7 +466,26 @@ export default function CoachChatsScreen() {
   return (
     <AppBg>
       <SafeAreaView style={s.safe} edges={['top']}>
-        <View style={s.header}><Text style={s.title}>Tus personas</Text></View>
+        <View style={s.header}>
+          <Text style={s.title}>Tus personas</Text>
+          {/* La lupa solo existe si hay a quién buscar: en el estado vacío
+              sería un control que no puede hacer nada. */}
+          {rooms.length > 0 && (
+            <TouchableOpacity
+              style={[s.lupa, buscando && s.lupaActiva]}
+              onPress={toggleBuscador}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel={buscando ? 'Cerrar la búsqueda' : 'Buscar una persona'}
+              activeOpacity={0.75}>
+              <Feather
+                name={buscando ? 'x' : 'search'}
+                size={18}
+                color={buscando ? CARD : FOREST}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
 
         {loading ? (
           <View style={s.loadingState}><ActivityIndicator size="large" color={FOREST} /></View>
@@ -480,19 +518,25 @@ export default function CoachChatsScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled">
 
-            <View style={s.buscador}>
-              <Feather name="search" size={16} color={FOREST_SOFT} />
-              <TextInput
-                style={s.buscadorInput}
-                value={busqueda}
-                onChangeText={setBusqueda}
-                placeholder="Buscar una persona"
-                placeholderTextColor={FOREST_SOFT}
-                returnKeyType="search"
-                autoCorrect={false}
-                clearButtonMode="while-editing"
-              />
-            </View>
+            {/* Solo cuando el coach lo pide con la lupa. Ver `buscando`. */}
+            {buscando && (
+              <View style={s.buscador}>
+                <Feather name="search" size={16} color={FOREST_SOFT} />
+                <TextInput
+                  style={s.buscadorInput}
+                  value={busqueda}
+                  onChangeText={setBusqueda}
+                  placeholder="Buscar una persona"
+                  placeholderTextColor={FOREST_SOFT}
+                  returnKeyType="search"
+                  autoCorrect={false}
+                  clearButtonMode="while-editing"
+                  // Se abre para escribir: pedir un toque más sobre el campo
+                  // que acaba de aparecer sería un paso de más.
+                  autoFocus
+                />
+              </View>
+            )}
 
             {/* Los filtros scrollean en horizontal porque son cuatro y el
                 ancho de un teléfono angosto no los banca sin achicar la letra
@@ -585,8 +629,20 @@ const s = StyleSheet.create({
   // paddingTop: 20 — mismo ajuste y mismo motivo que CoachReservasScreen: sin
   // el paddingTop:12 del `container` que tienen Home/CoachResourcesScreen,
   // quedaba ~12pt más arriba que los otros títulos (hallazgo 27/08/2026).
-  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8 },
+  header: {
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
   title: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST },
+  lupa: {
+    width: 38, height: 38, borderRadius: 19,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: LINE,
+    backgroundColor: 'rgba(247,242,231,0.5)',
+  },
+  // Abierto se invierte, igual que un chip activo: es el mismo botón diciendo
+  // "estás adentro de esto", y el ✕ de adentro dice cómo salir.
+  lupaActiva: { backgroundColor: FOREST, borderColor: FOREST },
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   container: { paddingHorizontal: 20, paddingTop: 4 },
 

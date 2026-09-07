@@ -39,7 +39,6 @@ type SalaItem = {
   otherSpecialty?: string;
   lastMessage: string;
   lastMessageDate: string;
-  lastMessageRaw: string | null;
   createdAt: string | null;
   hasUnread: boolean;
 };
@@ -323,7 +322,6 @@ export default function SessionsScreen() {
         otherSpecialty: specialtyMap[sala.coach_id],
         lastMessage: lastMsg?.content ? decryptMessage(lastMsg.content) : '',
         lastMessageDate: lastMsg ? formatMessageDate(lastMsg.created_at) : '',
-        lastMessageRaw: lastMsg?.created_at ?? null,
         createdAt: (sala.created_at as string) ?? null,
         hasUnread,
       };
@@ -334,7 +332,7 @@ export default function SessionsScreen() {
     const ultimaSalaId = (ultimaRes.data?.[0]?.sala_id as string | undefined) ?? null;
     setReinvitar(results.find(s => s.id === ultimaSalaId) ?? null);
 
-    // El orden vive en `lib/salaOrder.ts`: más reciente arriba, vacías al final.
+    // El orden vive en `lib/salaOrder.ts`: posición fija por antigüedad del vínculo.
     // Antes no había ninguno — se guardaba lo que devolviera Postgres.
     setSalas(ordenarSalas(results));
 
@@ -725,9 +723,10 @@ export default function SessionsScreen() {
             )}
 
             {/* Lista de salas.
-                Más reciente arriba (`lib/salaOrder.ts`); las salas sin ningún
-                mensaje van todas al final. Ya no lleva aire propio: lo que baja
-                la primera fila al alcance del pulgar es el slot de arriba. */}
+                🔴 POSICIÓN FIJA por antigüedad del vínculo (`lib/salaOrder.ts`):
+                cada profesional tiene su fila y no se mueve, ni cuando escribe
+                ni cuando reservás con alguien nuevo. Lo que hace que la primera
+                fila se pueda tocar sin leer es eso, NO el slot de arriba. */}
             {salas.length > 0 ? (
               <View>
                 {salas.map((sala, index) => (
