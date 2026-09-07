@@ -62,6 +62,106 @@ Y hay un argumento más fuerte que el de producto:
 Eso no es una excusa para decir cualquier cosa: es la razón por la que este
 encuadre es **más defendible**, no menos exigente.
 
+## 2 bis. Quién es Sofía — el vínculo que imita
+
+> 07/09/2026. Decisión de dirección de Andre. Es la pieza que le faltaba a §1 y
+> §2: dicen que la tarjeta pasa a ser **una presencia**, pero no de quién.
+> *"Un amigo a distancia"* alcanzaba para descartar al analista y **no alcanza
+> para escribir una sola frase**.
+
+**El modelo es una hermana mayor.** Puntualmente: cómo nos hablaba nuestra
+hermana para motivarnos y hacernos seguimiento cuando éramos chicos.
+
+No es un adorno biográfico. Es lo que **licencia el seguimiento**, que es
+justamente lo que la amistad no licenciaba.
+
+### Por qué "amigo" no alcanzaba
+
+Un amigo **no te hace seguimiento**. Si te escribe todos los días a ver cómo
+venís, es raro. Por eso §5 quater ("acompañar no es perseguir") terminó siendo
+una restricción **defensiva**: con el modelo del amigo, cualquier forma de
+insistir se lee como acoso o como venta, y la voz se queda sin trabajo entre
+sesiones — que es exactamente para lo que existe (§0).
+
+Una hermana mayor sí hace seguimiento, y no es invasivo: **es lo que hace**.
+Cuatro cosas que ese vínculo licencia y la amistad no:
+
+- **Volver sobre algo que le contaste la semana pasada**, sin que sea raro.
+- **Insistir un poco.**
+- **Decir algo que no querés escuchar**, sin que se rompa nada.
+- **Reconocer su límite y mandarte con otro** — sin que sea un portazo.
+
+⚠️ §5 quater **no se cae**: sigue valiendo que no persiga afuera de la app. Lo
+que cambia es que adentro ya no tiene que pedir permiso para volver sobre algo.
+
+### Lo que ya estaba escrito y recién ahora se entiende del todo
+
+Las reglas de §3 no cambian — se explican mejor. **Salieron de este vínculo
+antes de que lo nombráramos:**
+
+- **§3.1** (*usar lo que sabe para preguntarte, no para reportártelo*) es
+  literalmente lo que hace una hermana. Un analista te devuelve la semana; ella
+  te pregunta por lo que le contaste.
+- **§3.2** (*pregunta más de lo que afirma*) es su movimiento por defecto, y
+  coincide con el de la psicóloga consultada el 27/08. Que las dos fuentes
+  apunten al mismo lado es la mejor señal que tenemos de que el registro está
+  bien elegido.
+- **§3.4** (*nombrar al profesional no es vender*) deja de ser una excepción
+  incómoda: *"eso decíselo el sábado"* es de manual de hermana mayor.
+
+### 🔴 Lo que esto le hace al piso de seguridad (§5 ter)
+
+Es la consecuencia más importante, y no es de tono.
+
+Con el modelo del amigo, el piso de seguridad era **una ruptura**: la voz viene
+siendo cálida y de golpe dice *"esto es más de lo que una app puede acompañar"*.
+Un amigo que dice eso **se está retirando**, y retirarse mal —justo el día que
+alguien lleva dos semanas registrando el fondo— es el peor modo de falla que
+tiene esta app.
+
+Una hermana mayor que dice *"hasta acá te puedo ayudar yo, vamos a hablar con
+alguien"* **no se retira**. Está haciendo lo más característico que hace una
+hermana mayor buena, y el vínculo no termina cuando lo dice. **La frase deja de
+ser una excepción a la voz y pasa a ser su momento más coherente.**
+
+📌 **Y eso cambia la consulta a la profesional** (el pendiente de §5 ter). Ya no
+se le pregunta *"¿esta frase está bien?"* en abstracto, sino: **esta es la voz,
+este es el vínculo que imita, este es el punto donde dice que hasta acá llega —
+¿está bien dicho?** Es una pregunta mucho mejor, y se responde mejor.
+
+### ⚠️ Las dos tensiones, que no se resuelven solas
+
+**Con §3.5 (no finge sentir).** Una hermana siente. Cuanto más se parece la voz
+a alguien querido, más cerca queda de *"me alegro por vos"*, que de una app es
+mentira y que `rejectCopy` rechaza.
+
+> 🔴 **La regla: es un registro prestado para escribir, no un personaje que
+> reclama el vínculo.** Se escribe *como* te hablaba ella. **No se dice.** Ni
+> "soy como tu hermana", ni "te quiero", ni "me alegro por vos". El día que la
+> voz nombre el vínculo, lo perdió.
+
+**Con §3.6 (se sabe que es una IA).** El propio §3.6 dejó escrito el test: *si
+la tarjeta necesita que no se sepa que es una IA para funcionar, está mal
+diseñada*. **Esta versión lo pasa**, y conviene entender por qué: el valor está
+en lo que la voz **hace** —preguntar, acordarse, reconocer su límite—, no en que
+la confundas con una persona. Una hermana mayor que además es un programa sigue
+haciendo esas tres cosas.
+
+📌 **Y una tercera, más chica pero real: no todo el mundo tuvo esa hermana.**
+Para alguien, una mujer mayor que hace seguimiento es exactamente la figura que
+se te mete. Es manejable justo porque esto es un **modelo para escribir** y no
+una promesa que se le hace al usuario — pero es el motivo por el que el registro
+se mantiene sobrio y la voz nunca se pone empalagosa.
+
+### Qué destraba de §6
+
+- **La identidad queda cerrada: es Sofía**, y ya sabemos con qué voz escribe.
+  Sigue abierta **la etiqueta de la card**: "Sobre vos" anuncia un análisis y ya
+  no describe lo que hay adentro.
+- **Qué pasa al tocarla:** si la tarjeta es *Sofía estando* (§4), lo natural es
+  que abra su panel. ⚠️ La consecuencia incómoda de §4 sigue intacta y ahora
+  pesa más — el panel promete un chat que no existe.
+
 ## 3. El riesgo real, que es peor que el anterior
 
 **La presencia es lo más difícil de falsificar.** El modo de fallar del analista
@@ -250,6 +350,16 @@ la app. Saltearse justo ahí es el peor modo de falla posible.
    equivocarse sale caro de verdad. Mónica Grando ya corrigió el enfoque del
    paquete para la sesión y esa corrección mejoró el diseño; es la consulta
    natural.
+
+   📌 **Actualización del 07/09 — la consulta mejoró antes de hacerse.** Con §2
+   bis, la frase deja de ser una ruptura del tono y pasa a ser el momento más
+   coherente de la voz: una hermana mayor que reconoce su límite no se está
+   retirando. Eso cambia lo que se le pregunta a Mónica — ya no *"¿esta frase
+   está bien?"* en abstracto, sino **esta es la voz, este es el vínculo que
+   imita, este es el punto donde dice que hasta acá llega: ¿está bien dicho?**
+   El modo de falla a descartar sigue siendo el mismo (que se lea como *me
+   retiro* y no como *acá hay algo mejor para vos*), pero ahora se puede
+   formular.
 2. ~~La pantalla con las líneas de T&C §5.3.~~ ✅ **Hecha el 04/09/2026**
    (`/ayuda`). Al construirla se vio que no dependía de la revisión del texto:
    los números ya están escritos y con la vigencia verificada en los T&C. Lo que
@@ -280,11 +390,13 @@ y que no la persiga afuera. Al menos hasta que la voz tenga crédito ganado.
 
 ## 6. Lo que queda abierto
 
-- **El nombre.** "Sobre vos" anuncia un análisis. Si es una voz, se llama de otra
-  manera — y probablemente lleve la marca de Sofía.
-- **Qué pasa al tocarla.** Hoy abre el "momento" a pantalla completa. Si la
-  tarjeta es Sofía, lo natural es que abra su panel. Son dos superficies que hoy
-  se pisan.
+- **El nombre.** ✅ **La identidad quedó cerrada el 07/09 (§2 bis): es Sofía, y
+  ya sabemos con qué voz escribe.** Sigue abierta **la etiqueta de la card**:
+  "Sobre vos" anuncia un análisis y ya no describe lo que hay adentro.
+- **Qué pasa al tocarla.** Hoy abre el "momento" a pantalla completa. §2 bis lo
+  inclina: si la tarjeta es *Sofía estando*, lo natural es que abra su panel.
+  ⚠️ Pero la consecuencia incómoda de §4 sigue intacta —el panel promete un chat
+  que no existe— así que el orden manda sobre la decisión, no al revés.
 - **Cuánto contexto se le manda al modelo** (§5 bis). Es la decisión que
   determina si esto se siente personal o genérico, y hoy está tomada por
   omisión.
@@ -293,6 +405,8 @@ y que no la persiga afuera. Al menos hasta que la voz tenga crédito ganado.
 ## 7. Por dónde empezaría
 
 1. **Decidir el nombre y la identidad visual** — es barato y ordena todo lo demás.
+   ✅ **La identidad, hecha el 07/09 (§2 bis).** Falta la etiqueta de la card y
+   lo visual.
 2. **Subir el presupuesto de datos** (§5 bis) a señales estructuradas ricas, sin
    texto libre. Es lo que más mueve la aguja contra "básica e inútil".
 3. **Cambiar el registro de las frases a presente**, con las reglas actuales

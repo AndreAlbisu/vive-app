@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-09-07 — Andre (sesión 171 · quién es Sofía: el vínculo que imita)
+
+**Tocado:** `docs/la-voz-de-sofia.md` (§2 bis nuevo; §5 ter, §6 y §7 actualizados). Sin código, sin schema.
+
+**Resumen — la pieza que le faltaba al doc de la voz desde el 28/08. §1 y §2 decían que la tarjeta pasa a ser una presencia, pero no de quién: *"un amigo a distancia"* alcanzaba para descartar al analista y no para escribir una sola frase.**
+
+- 🟢 **El modelo es una hermana mayor** — cómo nos hablaba nuestra hermana para motivarnos y hacernos seguimiento cuando éramos chicos. No es un adorno: **es lo que licencia el seguimiento**, que es lo que la amistad no licenciaba. Un amigo que te escribe todos los días a ver cómo venís es raro, y por eso §5 quater ("acompañar no es perseguir") había quedado como una restricción defensiva que dejaba a la voz sin trabajo entre sesiones — que es para lo que existe (§0). Una hermana mayor sí hace seguimiento y no es invasivo: es lo que hace. Cuatro cosas que el vínculo licencia y la amistad no: volver sobre algo de la semana pasada, insistir un poco, decir algo que no querés escuchar, y reconocer su límite mandándote con otro.
+- ✅ **Las seis reglas de §3 no cambian — se explican mejor.** Salieron de este vínculo antes de que lo nombráramos: §3.1 (usar lo que sabe para preguntarte, no para reportártelo) es literalmente lo que hace una hermana; §3.2 (preguntar más que afirmar) es además el movimiento de la psicóloga consultada el 27/08 — que las dos fuentes apunten al mismo lado es la mejor señal de que el registro está bien elegido; y §3.4 (*"eso decíselo el sábado"*) deja de ser una excepción incómoda.
+- 🔴 **La consecuencia que importa es sobre el piso de seguridad, y no es de tono.** Con el modelo del amigo, *"esto es más de lo que una app puede acompañar"* era **una ruptura**: un amigo que dice eso se está retirando, y retirarse mal el día que alguien lleva dos semanas registrando el fondo es el peor modo de falla de la app. Una hermana mayor que dice *"hasta acá te puedo ayudar yo, vamos a hablar con alguien"* no se retira. **La frase deja de ser una excepción a la voz y pasa a ser su momento más coherente.**
+- 📌 **Y eso mejoró la consulta a Mónica antes de hacerse.** Ya no se le pregunta "¿esta frase está bien?" en abstracto, sino **esta es la voz, este es el vínculo que imita, este es el punto donde dice que hasta acá llega: ¿está bien dicho?** El modo de falla a descartar sigue siendo el mismo (que se lea como *me retiro* y no como *acá hay algo mejor para vos*), pero ahora se puede formular. El mail sigue siendo lo único que separa al piso de seguridad de encenderse.
+- ⚠️ **Dos tensiones que quedan escritas porque no se resuelven solas.** Con §3.5: una hermana siente, y cuanto más se parece la voz a alguien querido más cerca queda de *"me alegro por vos"*. 🔴 **La regla que lo acota: es un registro prestado para escribir, no un personaje que reclama el vínculo — se escribe *como* te hablaba ella, no se dice.** El día que la voz nombre el vínculo, lo perdió. Con §3.6: el test del propio doc (*si necesita que no se sepa que es una IA, está mal diseñada*) lo pasa, porque el valor está en lo que hace —preguntar, acordarse, reconocer el límite— y no en que la confundas. Tercera, más chica: no todo el mundo tuvo esa hermana; para alguien es la figura que se te mete. Es el motivo por el que el registro se mantiene sobrio.
+- ✅ **Destraba §6.** La identidad queda cerrada (es Sofía). Sigue abierta la **etiqueta de la card** — "Sobre vos" anuncia un análisis y ya no describe lo que hay adentro — y qué pasa al tocarla, donde §2 bis inclina a que abra el panel pero ⚠️ la consecuencia incómoda de §4 sigue intacta: el panel promete un chat que no existe.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **El mail a Mónica**, ahora con el encuadre de §2 bis adentro. Sigue siendo lo único que separa al piso de seguridad de encenderse, y el único camino abierto que reduce daño en vez de agregar valor.
+- **La etiqueta de la card** y su identidad visual (§7 punto 1, la mitad que falta).
+- Del paquete: restylear el copy y el lugar del banner de Joaquín, y decidir qué hacer con el `maxLength=500` del chat, que puede truncar un paquete largo.
+
 ## 2026-09-07 — Joaquín (sesión 170 · el ofrecimiento del paquete + device review del item 1, confirmado)
 
 **Tocado:** `components/OfrecerPaqueteBanner.tsx` (nuevo), `lib/paqueteOfrecimiento.ts` (nuevo), `app/paquete.tsx`, `screens/SalaScreen.tsx`, `app/_layout.tsx`. `tsc`/lint/503 tests limpios. Sin schema.
