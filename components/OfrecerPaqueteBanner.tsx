@@ -22,18 +22,6 @@ import { yaSeDescarto, marcarDescartado } from '@/lib/paqueteOfrecimiento';
 // Autocontenido: decide solo si mostrarse. Se pone en la sala del cliente con su
 // coach; ver el gate `recipientIsCoach` donde se lo monta.
 
-function cuandoTexto(dayKey: string): string {
-  const hoy = localDayKey();
-  if (dayKey === hoy) return 'hoy';
-  // Mañana
-  const m = new Date(`${hoy}T00:00:00Z`);
-  m.setUTCDate(m.getUTCDate() + 1);
-  if (dayKey === m.toISOString().slice(0, 10)) return 'mañana';
-  const dias = ['el domingo', 'el lunes', 'el martes', 'el miércoles', 'el jueves', 'el viernes', 'el sábado'];
-  const [y, mo, d] = dayKey.split('-').map(Number);
-  return dias[new Date(y, mo - 1, d).getDay()];
-}
-
 export function OfrecerPaqueteBanner({
   salaId, coachId, coachName, proximaSesion, bookingId,
 }: {
@@ -93,9 +81,11 @@ export function OfrecerPaqueteBanner({
 
   return (
     <View style={s.banner}>
+      {/* No anuncia CUÁNDO es la sesión: eso ya lo dice la tarjeta "Próxima
+          sesión" justo debajo. El banner es solo el ofrecimiento. */}
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={s.titulo}>Tenés sesión {cuandoTexto(proximaSesion)}</Text>
-        <Text style={s.sub} numberOfLines={2}>¿Querés armar algo para llevarle a {coachName}?</Text>
+        <Text style={s.titulo}>¿Querés armar algo para llevar?</Text>
+        <Text style={s.sub} numberOfLines={2}>Lo que registraste desde la última vez, para {coachName}.</Text>
       </View>
       <TouchableOpacity onPress={abrir} style={s.armarBtn} activeOpacity={0.85}>
         <Text style={s.armarText}>Armar</Text>
