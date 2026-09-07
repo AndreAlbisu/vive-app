@@ -145,12 +145,12 @@ export default function PaqueteScreen() {
     <AppBg>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={s.safe} edges={['top']}>
+        {/* Sin título: se llega desde "armar algo para la sesión", así que un
+            header "Para la sesión" repite el contexto. Solo la flecha atrás. */}
         <View style={s.header}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={s.headerBtn}>
             <Ionicons name="arrow-back" size={22} color={ViveColors.accent} />
           </TouchableOpacity>
-          <Text style={s.headerTitle}>Para la sesión</Text>
-          <View style={s.headerBtn} />
         </View>
 
         {loading ? (
@@ -236,7 +236,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 18, paddingVertical: 12,
   },
   headerBtn: { width: 30, padding: 4 },
-  headerTitle: { fontFamily: ViveFonts.title, fontSize: 18, color: FOREST },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   emptyText: { fontFamily: ViveFonts.regular, fontSize: 14.5, color: FOREST_SOFT, textAlign: 'center', lineHeight: 22 },
 
