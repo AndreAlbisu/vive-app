@@ -35,6 +35,7 @@ import { areBlocked, loadBlockedIds } from '@/lib/blocking';
 import SessionNotesSheet from '@/components/SessionNotesSheet';
 import { getRelationshipNotes, type SessionNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
+import { OfrecerPaqueteBanner } from '@/components/OfrecerPaqueteBanner';
 import { sendPushNotification } from '@/lib/notifications';
 import { hayReembolsoAlCancelar } from '@/lib/bookingHelpers';
 import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
@@ -1017,6 +1018,20 @@ export default function SalaScreen() {
       </Animated.View>
 
       <View style={styles.headerDivider} />
+
+      {/* Ofrecimiento del paquete (paso 2, §9). Solo al CLIENTE (por eso
+          `recipientIsCoach`: con quien habla es coach → él es el cliente) y con
+          una sesión próxima no finalizada. El banner es autocontenido: decide
+          solo si mostrarse (`debeOfrecerse` + "una vez por sesión"). */}
+      {recipientIsCoach && salaId && activeBooking?.scheduled_date && sessionState !== 'finalizada' && (
+        <OfrecerPaqueteBanner
+          salaId={salaId}
+          coachId={coach_id}
+          coachName={recipientProfile?.name ?? 'tu profesional'}
+          proximaSesion={activeBooking.scheduled_date}
+          bookingId={activeBooking.id}
+        />
+      )}
 
       {/* Session card */}
       {sessionState === 'live' ? (
