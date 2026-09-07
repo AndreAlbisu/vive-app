@@ -15,6 +15,7 @@ import {
   StatusBar,
   Image,
   Modal,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -891,6 +892,7 @@ export default function SalaScreen() {
     getAnim(optimisticId, 0);
     setMessages(prev => [...prev, optimistic]);
     setInputText('');
+    Keyboard.dismiss(); // al mandar, baja el teclado (sobre todo tras un paquete largo)
     Animated.timing(getAnim(optimisticId), { toValue: 1, duration: 280, useNativeDriver: true }).start();
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
 

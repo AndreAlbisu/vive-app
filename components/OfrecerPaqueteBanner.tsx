@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import { ViveFonts, ViveColors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -35,7 +35,10 @@ export function OfrecerPaqueteBanner({
   const { user } = useAuth();
   const [mostrar, setMostrar] = useState(false);
 
-  useEffect(() => {
+  // Se re-evalúa en cada FOCO de la sala (no solo al montar): cuando la persona
+  // manda el paquete, la pantalla marca el descarte y al volver a la sala este
+  // re-chequeo lo oculta. Sin esto, tras mandar seguía apareciendo el banner.
+  useFocusEffect(useCallback(() => {
     if (!user) return;
     let cancelled = false;
     (async () => {
@@ -64,14 +67,15 @@ export function OfrecerPaqueteBanner({
       }));
     })();
     return () => { cancelled = true; };
-  }, [user, proximaSesion, bookingId]);
+  }, [user, proximaSesion, bookingId]));
 
   if (!mostrar) return null;
 
   function abrir() {
-    // NO se marca: aceptar abre la pantalla y el banner sigue disponible para
-    // reentrar si la persona vuelve sin mandar. Se queda visible detrás.
-    router.push({ pathname: '/paquete', params: { sala_id: salaId, coach_id: coachId ?? '', coachName } } as any);
+    // NO se marca acá: aceptar abre la pantalla y el banner sigue disponible para
+    // reentrar si la persona vuelve SIN mandar. Al MANDAR, la pantalla marca el
+    // descarte (con el booking_id) y el re-chequeo de foco lo oculta al volver.
+    router.push({ pathname: '/paquete', params: { sala_id: salaId, coach_id: coachId ?? '', coachName, booking_id: bookingId } } as any);
   }
 
   function descartar() {

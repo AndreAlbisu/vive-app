@@ -13,6 +13,7 @@ import { ScaleCard } from '@/components/ScaleCard';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { localDayKey } from '@/lib/dates';
+import { marcarDescartado } from '@/lib/paqueteOfrecimiento';
 import {
   armarPaquete, componerTextoPaquete, fechaLegiblePaquete,
   TOPE_DIAS, type DiaDelPaquete, type Paquete,
@@ -40,10 +41,11 @@ import {
 export default function PaqueteScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const params = useLocalSearchParams<{ sala_id?: string; coach_id?: string; coachName?: string }>();
+  const params = useLocalSearchParams<{ sala_id?: string; coach_id?: string; coachName?: string; booking_id?: string }>();
   const salaId = Array.isArray(params.sala_id) ? params.sala_id[0] : params.sala_id;
   const coachId = Array.isArray(params.coach_id) ? params.coach_id[0] : params.coach_id;
   const coachName = (Array.isArray(params.coachName) ? params.coachName[0] : params.coachName) ?? 'tu profesional';
+  const bookingId = Array.isArray(params.booking_id) ? params.booking_id[0] : params.booking_id;
 
   const hoy = localDayKey();
   const [loading, setLoading] = useState(true);
@@ -130,13 +132,17 @@ export default function PaqueteScreen() {
     [paquete, excluidos],
   );
 
-  function enviar() {
+  async function enviar() {
     if (!salaId || incluidos.length === 0) return;
     // Se resuelve la nota final de cada día (la edición local manda) y se
     // delega el texto a `componerTextoPaquete` — puro y testeado.
     const conNota = incluidos.map(d => ({ ...d, nota: (notas[d.dayKey] ?? '').trim() || null }));
     const texto = componerTextoPaquete(conNota);
     registrarEvento('paquete_enviado', { dias: incluidos.length, con_nota: conNota.filter(d => d.nota).length }).catch(() => {});
+    // Ya armaste y estás mandando: el ofrecimiento queda resuelto para esta
+    // sesión, así el banner de la sala no vuelve a aparecer. Se AWAITEA para que
+    // el flag esté escrito antes de que la sala re-chequee al volver.
+    if (bookingId) await marcarDescartado(bookingId);
     // Al chat con el borrador: la persona lo revisa una vez más y lo manda ella.
     router.replace({ pathname: '/sala', params: { sala_id: salaId, draft: texto } } as any);
   }
@@ -145,12 +151,12 @@ export default function PaqueteScreen() {
     <AppBg>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={s.safe} edges={['top']}>
-        {/* Sin título: se llega desde "armar algo para la sesión", así que un
-            header "Para la sesión" repite el contexto. Solo la flecha atrás. */}
         <View style={s.header}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={8} style={s.headerBtn}>
             <Ionicons name="arrow-back" size={22} color={ViveColors.accent} />
           </TouchableOpacity>
+          <Text style={s.headerTitle}>Para la sesión</Text>
+          <View style={s.headerBtn} />
         </View>
 
         {loading ? (
@@ -236,6 +242,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 18, paddingVertical: 12,
   },
   headerBtn: { width: 30, padding: 4 },
+  headerTitle: { fontFamily: ViveFonts.title, fontSize: 18, color: FOREST },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   emptyText: { fontFamily: ViveFonts.regular, fontSize: 14.5, color: FOREST_SOFT, textAlign: 'center', lineHeight: 22 },
 
