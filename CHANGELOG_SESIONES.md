@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 174 · la card se llama Sofía)
+
+**Tocado:** `app/(tabs)/index.tsx`, `components/SobreVosMomento.tsx`, `docs/la-voz-de-sofia.md` (§6 y §7 cerrados). `tsc` limpio, 515 tests. Sin schema.
+
+**Resumen — los dos ítems que §2 bis había destrabado esta misma mañana. Los dos estaban abiertos desde el 28/08.**
+
+- 🟢 **El sello de la card dice "Sofía", no "Sobre vos".** *"Sobre vos" anunciaba un análisis*, y **la card hace rato que no lo hace**: ya hablaba en primera persona ("Contame cómo venís"). La etiqueta era lo único que seguía nombrándola como una devolución. 📌 **El símbolo no cambió y no hizo falta**: el orbe de Sofía es el isotipo de Vita invertido, así que la marca que ya iba al lado del texto se lee como su firma sin agregar nada nuevo.
+- 🟢 **El momento a pantalla completa firma "Sofía" en vez de "vita".** Es la card abierta: con dos firmas distintas serían dos voces, que es justo lo que §4 viene a cerrar. Se cambió **la palabra y no el símbolo** — el isotipo es el mismo y el watermark grande sigue igual, así que la marca de la app no se pierde.
+- 🔴 **NO se unificó con el panel del orbe, y es la decisión que importa.** §4 lo propone ("la tarjeta es Sofía estando, el panel es Sofía hablando") pero avisa de la consecuencia incómoda: **unificar hace MÁS visible el chat que falta, no menos.** Con el panel prometiendo *"todavía estoy aprendiendo a conversar"*, mandar cada toque de la card ahí pondría la promesa rota al frente del Inicio. Quedan **dos superficies y una sola voz**, que es lo que §4 pide de verdad; unificarlas sigue disponible el día que el panel deje de prometer conversación o la conversación exista. **Es reversible; lo otro no.**
+- 📝 **Los nombres internos no se tocaron** (`SobreVosCard`, `SobreVosMomento`, `lib/sobreVosSilencio.ts`). Renombrarlos es churn que rompe todas las referencias de los docs y del changelog sin cambiarle nada a ningún usuario.
+- ✅ Con esto **§6 queda con un solo ítem de identidad abierto** (lo visual, que ya no bloquea) y el punto 1 de §7 cerrado.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **El mail a Mónica** — sigue siendo lo único que separa al piso de seguridad de encenderse, y ahora con el encuadre de §2 bis adentro.
+- El coach de $1 (`e58d2ec3`) espera un número; la nullability de `price_per_session` espera la service key.
+- Device review: matrícula en vivo, cancelación tardía, Diario nuevo, "Sobre vos" early, `/ayuda`.
+
 ## 2026-09-07 — Andre (sesión 175 · la lista de Mensajes dejó de reordenarse sola: cada profesional tiene su fila)
 
 **Tocado:** `lib/salaOrder.ts` (reescrito), `__tests__/salaOrder.test.ts` (reescrito), `screens/SessionsScreen.tsx`, `screens/CoachChatsScreen.tsx`. **515 tests** (eran 508), `tsc` limpio, eslint sin errores nuevos. Sin schema.

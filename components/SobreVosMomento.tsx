@@ -133,9 +133,17 @@ export function SobreVosMomento() {
 
         <View style={s.grab} />
 
+        {/* 🔴 Firma "Sofía", no "vita" (07/09/2026). El momento es la card
+            abierta, así que si el sello de la card es suyo este también tiene
+            que serlo — con dos firmas distintas serían dos voces, que es lo que
+            `la-voz-de-sofia.md` §4 viene a cerrar.
+            ⚠️ Se cambió la PALABRA y no el símbolo: el isotipo es el mismo de
+            Vita y también es el de Sofía (su orbe es el mismo invertido), así
+            que la marca de la app no se pierde — el watermark grande de abajo
+            sigue siendo el de siempre. */}
         <View style={s.markRow}>
           <VitaMark size={18} color="rgba(255,248,239,0.85)" strokeWidth={7} />
-          <Text style={s.markText}>vita</Text>
+          <Text style={s.markText}>Sofía</Text>
         </View>
 
         <View style={s.watermarkWrap} pointerEvents="none">

@@ -390,13 +390,23 @@ y que no la persiga afuera. Al menos hasta que la voz tenga crédito ganado.
 
 ## 6. Lo que queda abierto
 
-- **El nombre.** ✅ **La identidad quedó cerrada el 07/09 (§2 bis): es Sofía, y
-  ya sabemos con qué voz escribe.** Sigue abierta **la etiqueta de la card**:
-  "Sobre vos" anuncia un análisis y ya no describe lo que hay adentro.
-- **Qué pasa al tocarla.** Hoy abre el "momento" a pantalla completa. §2 bis lo
-  inclina: si la tarjeta es *Sofía estando*, lo natural es que abra su panel.
-  ⚠️ Pero la consecuencia incómoda de §4 sigue intacta —el panel promete un chat
-  que no existe— así que el orden manda sobre la decisión, no al revés.
+- ~~**El nombre.**~~ ✅ **CERRADO el 07/09.** La identidad la fijó §2 bis y la
+  etiqueta se cambió el mismo día: **el sello de la card dice "Sofía"**. "Sobre
+  vos" anunciaba un análisis que la card hace rato no hacía —ya hablaba en
+  primera persona ("Contame cómo venís")—, así que la etiqueta era lo único que
+  seguía nombrándola como una devolución. 📌 El símbolo no cambió: el orbe de
+  Sofía **es el isotipo de Vita invertido**, así que la marca que ya estaba al
+  lado del texto se lee como su firma sin agregar nada.
+- ~~**Qué pasa al tocarla.**~~ ✅ **DECIDIDO el 07/09: sigue abriendo el momento,
+  y el momento pasa a ser de Sofía** (firma "Sofía" en vez de "vita"). **NO se
+  unificó con el panel del orbe**, y el motivo es la consecuencia incómoda de
+  §4: unificar hoy pondría la promesa rota —el chat que no existe— al frente del
+  Inicio, en cada toque de la card. Con esto quedan **dos superficies y una sola
+  voz**, que es lo que §4 pide; unificarlas de verdad sigue disponible el día que
+  el panel deje de prometer conversación o la conversación exista.
+  ⚠️ **Los nombres internos no se tocaron** (`SobreVosCard`, `SobreVosMomento`,
+  `sobreVosSilencio.ts`): renombrar archivos y símbolos es churn que rompe todas
+  las referencias de los docs y el changelog sin cambiarle nada a nadie.
 - **Cuánto contexto se le manda al modelo** (§5 bis). Es la decisión que
   determina si esto se siente personal o genérico, y hoy está tomada por
   omisión.
@@ -404,9 +414,9 @@ y que no la persiga afuera. Al menos hasta que la voz tenga crédito ganado.
 
 ## 7. Por dónde empezaría
 
-1. **Decidir el nombre y la identidad visual** — es barato y ordena todo lo demás.
-   ✅ **La identidad, hecha el 07/09 (§2 bis).** Falta la etiqueta de la card y
-   lo visual.
+1. ~~**Decidir el nombre y la identidad visual**~~ ✅ **HECHO el 07/09**: la
+   identidad en §2 bis, el nombre en §6 (el sello dice "Sofía", el momento firma
+   igual). Falta solo lo visual, que ya no bloquea nada.
 2. **Subir el presupuesto de datos** (§5 bis) a señales estructuradas ricas, sin
    texto libre. Es lo que más mueve la aguja contra "básica e inútil".
 3. **Cambiar el registro de las frases a presente**, con las reglas actuales

@@ -1025,7 +1025,7 @@ function SobreVosCard({
   const a11yLabel = isNeutral
     ? 'Contame cómo venís'
     : silent
-      ? 'Sobre vos. Hoy sin novedades'
+      ? 'Sofía. Hoy sin novedades'
       : `${reflection.before}${reflection.bold}${reflection.after}`;
 
   return (
@@ -1084,7 +1084,15 @@ function SobreVosCard({
           sobresalir por encima del borde superior de la card. */}
       <Animated.View style={[s.seal, { backgroundColor: sealColor, transform: [{ scale: pulse }] }]}>
         <VitaMark size={13} color="#FFF8EF" strokeWidth={9} />
-        <Text style={s.sealText}>Sobre vos</Text>
+        {/* 🔴 Dice "Sofía" y no "Sobre vos" desde el 07/09/2026 — decisión de
+            `docs/la-voz-de-sofia.md` §6, que quedó destrabada por §2 bis. "Sobre
+            vos" **anuncia un análisis**, y la card hace rato que no lo hace: ya
+            habla en primera persona ("Contame cómo venís"). La etiqueta era lo
+            único que seguía nombrándola como una devolución.
+            📌 La marca que va al lado ya era suya: el orbe de Sofía es el
+            isotipo de Vita invertido, así que el sello no necesita un símbolo
+            nuevo para leerse como su firma. */}
+        <Text style={s.sealText}>Sofía</Text>
       </Animated.View>
     </View>
   );
