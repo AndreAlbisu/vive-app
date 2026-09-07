@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-09-07 — Andre (sesión 173 · el chat truncaba el paquete a los dos días)
+
+**Tocado:** `screens/SalaScreen.tsx`, `lib/paquete.ts`, `app/paquete.tsx`, `app/search3.tsx`, `__tests__/paqueteTexto.test.ts`. Nuevo: `constants/chat.ts`. **508 tests** (eran 506), `tsc` limpio, eslint sin errores nuevos. Sin schema.
+
+**Resumen — los dos pendientes que había dejado la sesión 172. El del `maxLength` resultó bastante peor de lo que decía la nota.**
+
+- 🔴 **El `maxLength=500` del chat no "podía truncar un paquete largo": truncaba casi cualquiera.** Medido contra el compositor real: **con notas al tope se pasa a los DOS días**, y **sin una sola nota, a los 18**. El peor caso posible (`TOPE_DIAS = 30` × `TOPE_NOTA = 280`) son **9.261 caracteres, 18 veces el límite**. Y `TextInput` trunca **por el final**, o sea que lo que se pierde son los días más recientes — los que más importan de un material que la persona eligió deliberadamente mandarle a su profesional.
+- **La base nunca fue el límite:** `messages.content` es `text` pelado, sin restricción (SCHEMA.md), y lo que se guarda es el XOR+base64. Los 500 eran **solo de UI**, y nunca fueron un límite pensado para un mensaje compuesto por la app: eran el tope de tipeo de un chat, y **el paquete no se tipea**.
+- **El fix:** nuevo `constants/chat.ts` con `MAX_LARGO_MENSAJE = 10000`, y el input lo usa. 🔴 **El número no es de gusto — lo fija el peor caso del paquete**, y hay un test que ata las dos puntas (`largoPeorCasoPaquete()` ≤ `MAX_LARGO_MENSAJE`): si alguien sube `TOPE_DIAS` o `TOPE_NOTA` sin subir el límite, rompe acá y no en el teléfono de alguien. ✅ **Verificado por mutación**, que es la lección de la 164: se puso el límite de vuelta en 500 y el test falla; con 10000 pasa. Un test que no detecta el caso para el que se escribió es peor que ninguno.
+- 📝 **`TOPE_NOTA = 280` salió de un `.slice(0, 280)` suelto en `app/paquete.tsx` y ahora vive en `lib/paquete.ts`**, al lado de `TOPE_DIAS`. Son los dos números que determinan el largo del mensaje: tenerlos separados era la forma de que se desincronizaran sin que nadie se enterara.
+- ⚠️ **La contra, dicha de frente:** ahora se puede pegar un mensaje de 10.000 caracteres en el chat a mano. No rompe nada (la base no tiene límite) pero es una burbuja enorme. Si molesta, la salida no es bajar el número sino que el paquete deje de pasar por el input — y eso contradice la decisión de la 169 de no duplicar la lógica de envío.
+- 🟢 **El guard del buscador, puesto igual.** `search3.tsx` era la única de las tres superficies de precio que llamaba `.toLocaleString()` a ciegas; ahora cae a "Precio a confirmar" como ya hacían el perfil y el checkout. **No se pudo confirmar si `price_per_session` es NOT NULL** —esa definición está en el endpoint OpenAPI de PostgREST, que exige `service_role`— así que se puso el guard igual: si la columna resulta nullable era un crash, y si no lo es el costo es una rama muerta de tres líneas.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **El coach de $1 sigue vivo** (`e58d2ec3`, verificado y activo, con MP conectado). **No se tocó a propósito: es data y hay que saber qué precio va.** Con la anon key no se puede escribir. Cuando decidas el número: `update coaches set price_per_session = <N> where id = 'e58d2ec3-2a71-402c-a589-913de0982238';` — o borrarlo del catálogo con `availability_status = 'en_pausa'` si era solo de prueba.
+- Confirmar la nullability de `price_per_session` cuando haya service key a mano (decide si el guard nuevo es necesario o decorativo).
+- Sigue: el mail a Mónica con el encuadre de §2 bis, la etiqueta de la card, y el restyle del banner del paquete.
+
 ## 2026-09-07 — Andre (sesión 172 · el precio en pesos, que era una pantalla y no una cotización)
 
 **Tocado:** `screens/BookingScreen_Confirm.tsx`, `lib/time.ts`, `app/(tabs)/conexiones.tsx`, `docs/consumo.md`, `__tests__/time.test.ts`. **506 tests** (eran 503), `tsc` y eslint limpios. Sin schema.

@@ -25,6 +25,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Calendar from 'expo-calendar';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
+import { MAX_LARGO_MENSAJE } from '@/constants/chat';
 import { confirmBooking } from '@/lib/coachBookingActions';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { supabase, registrarEvento } from '@/lib/supabase';
@@ -1428,7 +1429,9 @@ export default function SalaScreen() {
                 placeholder="Escribí un mensaje..."
                 placeholderTextColor="rgba(135,131,92,0.55)"
                 multiline
-                maxLength={500}
+                // Ver `constants/chat.ts`: lo fija el peor caso del paquete, no
+                // el gusto. Con 500 un paquete de 18 días se truncaba solo.
+                maxLength={MAX_LARGO_MENSAJE}
               />
               <TouchableOpacity
                 style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}

@@ -16,7 +16,7 @@ import { localDayKey } from '@/lib/dates';
 import { marcarDescartado } from '@/lib/paqueteOfrecimiento';
 import {
   armarPaquete, componerTextoPaquete, fechaLegiblePaquete,
-  TOPE_DIAS, type DiaDelPaquete, type Paquete,
+  TOPE_DIAS, TOPE_NOTA, type DiaDelPaquete, type Paquete,
 } from '@/lib/paquete';
 
 // ── La pantalla de armado del paquete para la sesión ─────────────────────────
@@ -119,7 +119,7 @@ export default function PaqueteScreen() {
   // check-in). `.update` toca SOLO `nota`; verificado que el check-in no la pisa.
   async function guardarNota(dayKey: string) {
     if (!user) return;
-    const texto = (notas[dayKey] ?? '').trim().slice(0, 280);
+    const texto = (notas[dayKey] ?? '').trim().slice(0, TOPE_NOTA);
     await supabase
       .from('mood_entries')
       .update({ nota: texto || null })

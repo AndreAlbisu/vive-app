@@ -312,17 +312,6 @@ export default function ProfesionalScreen() {
             <MaterialIcons name="verified" size={14} color="#565E32" />
             <Text style={s.verifiedText}>Verificado por Vita</Text>
           </View>
-
-          {/* Atiende desde el exterior. Hasta ahora este dato solo se leía en
-              `BookingScreen_Confirm` para decidir si dibujaba el botón de USDT,
-              o sea que alguien desde afuera recorría el catálogo entero sin
-              saber quién lo atiende. Es público a propósito. */}
-          {prof.acceptsInternational && (
-            <View style={s.intlBadge}>
-              <MaterialIcons name="public" size={14} color="#565E32" />
-              <Text style={s.verifiedText}>Atiende desde el exterior</Text>
-            </View>
-          )}
         </View>
 
         {/* ── Info básica ──────────────────────────────────────────────── */}
@@ -584,11 +573,14 @@ export default function ProfesionalScreen() {
                 ? `Desde $${prof.priceFrom.toLocaleString('es-AR')} por sesión`
                 : 'Cargando precio…'}
             </Text>
-            {/* Va acá y no arriba con el badge de verificado porque es
-                información de PRECIO: quien está afuera necesita el número en
-                dólares, no la etiqueta. Verlo recién en el checkout —que es lo
-                que pasaba hasta ahora— obliga a recorrer todo el flujo para
-                averiguar cuánto sale. */}
+            {/* La única superficie del perfil que habla del exterior. Había
+                además un cartel "Atiende desde el exterior" pegado al de
+                verificado, y se sacó: decía la lectura equivocada de las dos
+                que SCHEMA.md separa —que el PROFESIONAL está afuera— cuando el
+                hecho es que el cliente puede estarlo, y con el estilo del badge
+                de verificado se leía como un atributo de la persona. El precio
+                en dólares dice lo mismo sin ambigüedad: quien está afuera
+                necesita el número, no la etiqueta. */}
             {prof.acceptsInternational && prof.priceUsd != null && (
               <Text style={s.priceIntl}>
                 Desde el exterior: USD {prof.priceUsd}
@@ -724,18 +716,6 @@ const s = StyleSheet.create({
   photoImage: {
     width: '100%',
     height: '100%',
-  },
-  intlBadge: {
-    position: 'absolute',
-    bottom: 54,
-    left: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: ViveColors.accent,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    gap: 5,
   },
   verifiedBadge: {
     position: 'absolute',

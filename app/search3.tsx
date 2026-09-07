@@ -472,9 +472,16 @@ export default function SearchScreen3() {
                     ))}
                   </View>
                 )}
+                {/* ⚠️ El guard existe porque esta era la ÚNICA de las tres
+                    superficies de precio que llamaba `.toLocaleString()` a
+                    ciegas — el perfil y el checkout ya lo tenían. Hoy no rompe
+                    (0 de 34 filas con `price_per_session` en null, verificado
+                    el 07/09), pero si la columna resulta ser nullable esto es
+                    un crash esperando al primer coach sin precio. */}
                 <Text style={s.cardPrice}>
-                  Desde ${p.priceFrom.toLocaleString('es-AR')}
-                  <Text style={s.cardPriceUnit}> · por sesión</Text>
+                  {p.priceFrom != null
+                    ? <>Desde ${p.priceFrom.toLocaleString('es-AR')}<Text style={s.cardPriceUnit}> · por sesión</Text></>
+                    : 'Precio a confirmar'}
                 </Text>
                 <PaymentBadges mp={p.acceptsMp} paypal={p.acceptsPaypal} usdt={p.acceptsUsdt} />
               </View>

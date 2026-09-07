@@ -130,6 +130,32 @@ export function fechaLegiblePaquete(dayKey: string): string {
   return `${DIAS_PAQUETE[dt.getDay()]} ${d} ${MESES_PAQUETE[m - 1]}`;
 }
 
+/** Cuánto puede escribir la persona en la nota de un día.
+ *
+ *  Vivía suelto como un `.slice(0, 280)` en `app/paquete.tsx`. Está acá porque
+ *  es uno de los dos números que determinan cuán largo puede salir el mensaje
+ *  —el otro es `TOPE_DIAS`— y el chat tiene que poder recibirlo entero: un test
+ *  ata las dos puntas. */
+export const TOPE_NOTA = 280;
+
+/** El peor caso que `componerTextoPaquete` puede producir, en caracteres.
+ *
+ *  🔴 Existe porque el largo del mensaje **no es una cuestión de estilo**: si el
+ *  input del chat corta por debajo de esto, la app trunca en silencio material
+ *  que la persona eligió deliberadamente mandarle a su profesional. Y trunca por
+ *  el final, o sea que se pierden los días más recientes.
+ *
+ *  Con `TOPE_DIAS = 30` y `TOPE_NOTA = 280` son ~9.300 caracteres. Sin una sola
+ *  nota, 30 días ya son ~800: el límite viejo de 500 se pasaba a los 18 días sin
+ *  notas, o a los 2 con notas al tope. */
+export function largoPeorCasoPaquete(): number {
+  // "• " + fecha (10) + " — " + la etiqueta más larga + ": " + nota al tope.
+  const lineaMasLarga = 2 + 10 + 3 + 9 + 2 + TOPE_NOTA;
+  return ENCABEZADO_PAQUETE.length + TOPE_DIAS * lineaMasLarga + (TOPE_DIAS - 1);
+}
+
+const ENCABEZADO_PAQUETE = 'Lo que registré desde la última vez que nos vimos:\n\n';
+
 /** Compone el mensaje que la persona manda al chat. Puro: entra la lista ya
  *  filtrada (las piezas que sacó quedan afuera) con la nota final de cada día. */
 export function componerTextoPaquete(dias: DiaDelPaquete[]): string {
@@ -137,5 +163,5 @@ export function componerTextoPaquete(dias: DiaDelPaquete[]): string {
     const nota = (d.nota ?? '').trim();
     return `• ${fechaLegiblePaquete(d.dayKey)} — ${d.moodLabel}${nota ? `: ${nota}` : ''}`;
   });
-  return `Lo que registré desde la última vez que nos vimos:\n\n${lineas.join('\n')}`;
+  return `${ENCABEZADO_PAQUETE}${lineas.join('\n')}`;
 }
