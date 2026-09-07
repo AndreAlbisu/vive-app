@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { localDayKey } from '@/lib/dates';
 import { debeOfrecerse, TOPE_DIAS } from '@/lib/paquete';
-import { yaSeOfrecio, marcarOfrecido } from '@/lib/paqueteOfrecimiento';
+import { yaSeDescarto, marcarDescartado } from '@/lib/paqueteOfrecimiento';
 
 // El ofrecimiento del paquete antes de la sesión (paso 2 del §9).
 //
@@ -56,20 +56,22 @@ export function OfrecerPaqueteBanner({
       desde.setUTCDate(desde.getUTCDate() - TOPE_DIAS);
       const desdeKey = desde.toISOString().slice(0, 10);
 
-      const [countRes, ofrecido] = await Promise.all([
+      const [countRes, descartado] = await Promise.all([
         supabase
           .from('mood_entries')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', user.id)
           .gte('entry_date', desdeKey),
-        yaSeOfrecio(bookingId),
+        yaSeDescarto(bookingId),
       ]);
       if (cancelled) return;
 
+      // `debeOfrecerse` corta si ya se "ofreció"; le pasamos el DESCARTE, que es
+      // lo único que debe callarlo (aceptar no lo consume — ver el lib).
       setMostrar(debeOfrecerse({
         proximaSesion,
         hoy,
-        yaSeOfrecio: ofrecido,
+        yaSeOfrecio: descartado,
         diasConRegistro: countRes.count ?? 0,
       }));
     })();
@@ -79,13 +81,13 @@ export function OfrecerPaqueteBanner({
   if (!mostrar) return null;
 
   function abrir() {
-    void marcarOfrecido(bookingId);
-    setMostrar(false);
+    // NO se marca: aceptar abre la pantalla y el banner sigue disponible para
+    // reentrar si la persona vuelve sin mandar. Se queda visible detrás.
     router.push({ pathname: '/paquete', params: { sala_id: salaId, coach_id: coachId ?? '', coachName } } as any);
   }
 
   function descartar() {
-    void marcarOfrecido(bookingId);
+    void marcarDescartado(bookingId);
     setMostrar(false);
   }
 
