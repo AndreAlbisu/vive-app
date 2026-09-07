@@ -58,3 +58,65 @@ export function validarCredencial(input: CredentialInput): string | null {
   if (!input.filePath) return 'Falta adjuntar el documento que la respalda';
   return null;
 }
+
+// ─── El encuadre de la sesión ────────────────────────────────────────────────
+//
+// 🔴 Lo que la ley reserva es el ACTO, no el tema ni el título. La Ley 23.277
+// deja el diagnóstico, el pronóstico y el tratamiento en manos de quien tiene
+// MATRÍCULA — así que la matrícula es el único eje que decide esto, y un título
+// sin matrícula no habilita nada. Ver `docs/encuadre-salud-y-responsabilidad.md`
+// §2.
+//
+// ⚠️ Y por eso mismo la matrícula NO sirve como medida de la formación. No
+// existe matrícula de coaching, ni de sexología, ni de mindfulness: quien
+// trabaja ahí nunca va a poder cargarla y **no le falta nada**. Medir a todos
+// contra esa casilla le pone una carencia permanente a media plataforma, que es
+// lo que hacía el cartel anterior ("Acompañamiento, no tratamiento") y lo que
+// esta separación viene a evitar: una etiqueta dice QUÉ ES LA SESIÓN, la otra
+// dice QUÉ VERIFICÓ VITA, y ninguna juzga a la persona.
+
+export type Encuadre = {
+  /** Hay matrícula verificada: puede diagnosticar y tratar. */
+  habilitado: boolean;
+  /**
+   * 🔴 El caso más confuso de la app: título verificado (pongamos "Lic. en
+   * Psicología") SIN matrícula. El perfil dice "sesiones de acompañamiento" y
+   * abajo muestra un título de psicología con el escudo de verificado — las dos
+   * cosas son ciertas y se contradicen a la vista, y el usuario le cree al
+   * título. Es además el perfil legalmente más riesgoso: se reserva creyendo
+   * que es terapia. Necesita una aclaración pegada a esa credencial.
+   */
+  tituloSinMatricula: boolean;
+  /** Lo que se muestra arriba. Nunca la palabra "tratamiento": Vita no sabe si
+   *  esta sesión lo es —un matriculado puede dar sesiones que no son clínicas—
+   *  y rotularla así sería caracterizar la prestación, justo lo que T&C §5
+   *  declara que no hace. */
+  etiqueta: string;
+};
+
+export function encuadreDeSesion(credenciales: Pick<PublicCredential, 'kind'>[]): Encuadre {
+  const habilitado = credenciales.some(c => c.kind === 'matricula');
+  return {
+    habilitado,
+    tituloSinMatricula: !habilitado && credenciales.some(c => c.kind === 'titulo'),
+    etiqueta: habilitado ? 'Matrícula verificada' : 'Sesiones de acompañamiento',
+  };
+}
+
+/**
+ * El mismo encuadre cuando lo único que hay a mano es la columna derivada
+ * `coaches.has_matricula` — el caso del checkout, que no trae la lista de
+ * credenciales.
+ *
+ * ⚠️ `tituloSinMatricula` queda SIEMPRE en false acá, y es correcto: esa
+ * aclaración va pegada a la credencial que la genera, en el bloque Formación
+ * del perfil. Fuera de ahí no hay título a la vista que pueda contradecir a la
+ * etiqueta, así que no hay nada que desambiguar.
+ */
+export function encuadreDesdeFlag(hasMatricula: boolean): Encuadre {
+  return {
+    habilitado: hasMatricula,
+    tituloSinMatricula: false,
+    etiqueta: hasMatricula ? 'Matrícula verificada' : 'Sesiones de acompañamiento',
+  };
+}

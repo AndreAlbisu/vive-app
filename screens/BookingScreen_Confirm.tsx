@@ -19,7 +19,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { MatriculaPill } from '@/components/MatriculaPill';
+import { encuadreDesdeFlag } from '@/lib/credentialRules';
+import { EncuadrePill } from '@/components/EncuadrePill';
+import { EncuadreSheet } from '@/components/EncuadreSheet';
 import { ScaleCard } from '@/components/ScaleCard';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -72,6 +74,7 @@ export default function BookingScreen_Confirm() {
   // persona sepa si está reservando terapia o acompañamiento — de acá no hay
   // otro paso donde enterarse. Ver `docs/encuadre-salud-y-responsabilidad.md` §2.
   const [hasMatricula, setHasMatricula] = useState(false);
+  const [encuadreOpen, setEncuadreOpen] = useState(false);
   const [internacionalDisponible, setInternacionalDisponible] = useState(false);
   const [aceptaPaypal, setAceptaPaypal] = useState(false);
   const [aceptaUsdt, setAceptaUsdt] = useState(false);
@@ -851,9 +854,21 @@ export default function BookingScreen_Confirm() {
             <View style={s.coachInfo}>
               <View style={s.coachNameRow}>
                 <Text style={s.coachName}>{coachName}</Text>
-                {hasMatricula && <MatriculaPill />}
               </View>
               <Text style={s.coachSpecialty}>{specialty}</Text>
+              {/* 🔴 Acá va la etiqueta COMPLETA, con sus dos variantes, y no la
+                  `MatriculaPill` que se usa en las grillas. En una grilla una
+                  marca negativa por tarjeta se leería como advertencia contra
+                  profesionales que no hicieron nada mal, así que ahí solo va la
+                  positiva; acá es el último momento antes de pagar y no hay
+                  ninguna pantalla más donde enterarse, así que la distinción
+                  tiene que estar entera y explicable de un toque. */}
+              <View style={s.encuadreRow}>
+                <EncuadrePill
+                  encuadre={encuadreDesdeFlag(hasMatricula)}
+                  onInfo={() => setEncuadreOpen(true)}
+                />
+              </View>
             </View>
             <MaterialIcons name="verified" size={18} color={ViveColors.accent} />
           </View>
@@ -1169,6 +1184,12 @@ export default function BookingScreen_Confirm() {
           </SafeAreaView>
         </View>
       )}
+
+      <EncuadreSheet
+        visible={encuadreOpen}
+        encuadre={encuadreDesdeFlag(hasMatricula)}
+        onCerrar={() => setEncuadreOpen(false)}
+      />
     </AppBg>
   );
 }
@@ -1277,6 +1298,7 @@ const s = StyleSheet.create({
   },
   coachInfo: { flex: 1 },
   coachNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  encuadreRow: { marginTop: 6 },
   coachName: {
     fontFamily: ViveFonts.semibold,
     fontSize: 17,

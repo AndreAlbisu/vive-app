@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-09-07 — Andre (sesión 174 · el cartel medía a media plataforma contra una casilla que nunca iban a poder llenar)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `lib/credentialRules.ts`, `components/EncuadrePill.tsx` (nuevo), `components/EncuadreSheet.tsx` (nuevo), `__tests__/coachCredentials.test.ts`
+
+**Resumen:**
+
+- ✅ **Se sacó el badge "Atiende desde el exterior" del perfil.** Decía la lectura equivocada de las dos que `SCHEMA.md` §"el profesional está en Argentina" separa explícitamente: el hecho es que el **cliente** puede estar afuera, no el profesional — que está en Argentina, y de eso depende todo el schema (la hora sin zona, el CBU de 22 dígitos, el OAuth MLA). Encima estaba pegado al de "Verificado por Vita" con el mismo estilo, así que se leía como un atributo de la persona. Quedan la línea `Desde el exterior: USD X` y los `PaymentBadges`, que dicen el hecho real —con qué se le puede pagar y cuánto sale— sin afirmar dónde vive nadie. `accepts_international` se sigue leyendo para esa línea: la query y el filtro del buscador no se tocaron.
+
+- 🔴 **El cartel "Acompañamiento, no tratamiento" se reemplazó por etiqueta + sheet + evidencia.** La distinción tiene que existir (Ley 23.277, `docs/encuadre-salud-y-responsabilidad.md` §2) pero la forma estaba mal: era **asimétrica** —escudo verde para el matriculado, bloque naranja tamaño aviso-de-error para el resto—, empezaba con una negación y se leía como una acusación contra alguien que no hizo nada malo. Ahora son tres niveles: **etiqueta** de una línea siempre visible pegada a la especialidad (`EncuadrePill`, las dos variantes con el mismo peso y el ⓘ en las dos), **explicación** a un toque (`EncuadreSheet`, que muestra SIEMPRE las dos categorías — contarle al perfil sin matrícula solo lo que no puede hacer sería el cartel viejo con otra forma), y **evidencia** abajo en Formación.
+
+- 🔴 **La etiqueta positiva NO dice "tratamiento", y hay un test que lo verifica.** Dos motivos: la matrícula dice que la persona **puede**, no que esa sesión **sea** clínica —una matriculada puede dar sesiones que no lo son—; y rotularla así sería que Vita caracterice la prestación, justo lo que T&C §5 declara que no hace. Con `docs/encuadre-salud-y-responsabilidad.md` §1 diciendo que ya marcamos en los cuatro indicadores del caso Mercado Libre, sumar un quinto gratis no tiene sentido. Queda `Matrícula verificada` / `Sesiones de acompañamiento`.
+
+- 🔴 **La matrícula sirve para decidir si puede tratar; NO sirve como medida de la formación.** No existe matrícula de coaching, ni de sexología, ni de mindfulness — quien trabaja ahí nunca va a poder cargarla y **no le falta nada**. El cartel viejo medía a todos contra esa casilla. El sheet ahora lo dice explícito en la variante sin matrícula. La lógica quedó en `lib/credentialRules.ts` (`encuadreDeSesion`, sin imports, testeable), no repartida entre pantallas.
+
+- 🔴 **El caso título-sin-matrícula tiene aclaración propia, en Formación.** Un perfil con `titulo` = "Lic. en Psicología" verificado y sin matrícula muestra la etiqueta de acompañamiento arriba y un título de psicología con el escudo de Vita abajo: las dos son ciertas, se contradicen a la vista y el usuario le cree al título. Es además el perfil **legalmente más expuesto** de la app. La aclaración va pegada a la credencial que la genera y no arriba, donde volvería a ser el cartel que sacamos.
+
+- ✅ **La distinción llegó también a `BookingScreen_Confirm`**, que es lo que pedía la recomendación 1 del doc: último momento antes de pagar, no hay otra pantalla donde enterarse. Ahí va la etiqueta **completa** con sus dos variantes (`encuadreDesdeFlag`, que lee la columna derivada `has_matricula`). En las grillas —buscador, deck— sigue yendo solo `MatriculaPill`, la positiva: una marca negativa por tarjeta se leería como advertencia contra profesionales que no hicieron nada mal.
+
+**Contexto — el marco legal que ordenó todas estas decisiones.** Se repasó de punta a punta qué exige matrícula y qué no, y la conclusión que gobierna el diseño es que **la ley reserva el ACTO, no el tema ni el título**: ningún tema del catálogo exige matrícula por sí solo y ninguno la exime. Sexualidad es el mejor ejemplo — "sexólogo/a" **no es profesión matriculada en Argentina** (son posgrados: AASES, SASH), educar y orientar es libre, diagnosticar y tratar una disfunción no. **Nutrición es el borde más expuesto y no es psicología**: la Ley 24.301 reserva el **plan alimentario individualizado** al licenciado en nutrición o al médico, así que un "coach nutricional" que manda una dieta está ejerciendo sin título. Y "Burnout", como subtema, ya nombra un diagnóstico de la CIE-11.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Disciplina de lenguaje en los perfiles** (recomendación 2 del doc, y es la que más rinde de las que quedan): un profesional sin matrícula no puede usar **verbos de tratamiento** — "trato la ansiedad", "te ayudo a superar la depresión". Puede decir "acompaño", "trabajamos", "exploramos". La frontera son los **verbos, no los temas**, y va en la moderación de perfiles, que ya existe por anti-fuga.
+- ⚠️ **Decidir si ciertos subtemas exigen matrícula para poder elegirse.** Nutrición es el candidato más claro; Ansiedad, Duelo y Burnout son los que siguen. Es decisión de producto y de riesgo, no de implementación.
+- ⚠️ **La matrícula no vence en la base.** Se verifica una vez y `has_matricula` queda en `true` para siempre; en la realidad se renueva y se puede suspender. No es urgente, pero el dato envejece sin que nadie se entere.
+- 📝 **Sin abogado por ahora, y el plan se reordenó sabiéndolo.** Lo que baja el riesgo es gratis y es casi todo nuestro: esto que se hizo hoy, la disciplina de lenguaje, y mantener documentada la verificación de credenciales (que ya está: el coach no puede auto-verificarse, editar devuelve a `pendiente`, el documento no se publica) — eso **es** la prueba de diligencia. Dos averiguaciones que no cuestan nada: **cotizar un seguro de responsabilidad civil** y **pedirle al profesional que declare su seguro de mala praxis**. La consulta legal queda para cuando haya ingreso o aparezca una vía gratuita (consultorios jurídicos de facultades y del Colegio Público, incubadoras con mentoría legal). `docs/paquete-abogado.md` hace que esa hora rinda como cinco.
+- 📝 El doc **no es autoridad** — es investigación nuestra y lo dice en su encabezado. Lo que sí es firme son las leyes y el precedente; sus recomendaciones de en-qué-pantallas son criterio de producto y se pueden discutir.
+
+---
+
 ## 2026-09-07 — Andre (sesión 173 · el chat truncaba el paquete a los dos días)
 
 **Tocado:** `screens/SalaScreen.tsx`, `lib/paquete.ts`, `app/paquete.tsx`, `app/search3.tsx`, `__tests__/paqueteTexto.test.ts`. Nuevo: `constants/chat.ts`. **508 tests** (eran 506), `tsc` limpio, eslint sin errores nuevos. Sin schema.

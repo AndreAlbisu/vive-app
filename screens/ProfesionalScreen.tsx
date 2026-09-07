@@ -3,6 +3,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import { listPublicCredentials, lineaCredencial, KIND_LABEL, type PublicCredential } from '@/lib/coachCredentials';
+import { encuadreDeSesion } from '@/lib/credentialRules';
+import { EncuadrePill } from '@/components/EncuadrePill';
+import { EncuadreSheet } from '@/components/EncuadreSheet';
 import ReportSheet from '@/components/ReportSheet';
 import UserActionsSheet from '@/components/UserActionsSheet';
 import { loadBlockedIds, onBlockedChange, isBlocked } from '@/lib/blocking';
@@ -132,6 +135,7 @@ export default function ProfesionalScreen() {
   const [blocked, setBlocked] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [coachResources, setCoachResources] = useState<CoachResource[]>([]);
+  const [encuadreOpen, setEncuadreOpen] = useState(false);
 
   // Acá alcanza con el cache propio (a diferencia de la Sala, donde hacen falta
   // las dos direcciones): a este perfil se llega desde el catálogo, y el
@@ -153,7 +157,7 @@ export default function ProfesionalScreen() {
   const [credenciales, setCredenciales] = useState<PublicCredential[]>([]);
   // `coach_credentials_public` ya filtra por `verificada`, así que basta con que
   // exista una de tipo matrícula: la vista no devuelve pendientes ni rechazadas.
-  const tieneMatricula = credenciales.some(c => c.kind === 'matricula');
+  const encuadre = encuadreDeSesion(credenciales);
 
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
@@ -319,6 +323,14 @@ export default function ProfesionalScreen() {
           <Text style={s.name}>{prof.name}</Text>
           <Text style={s.specialty}>{prof.specialty}</Text>
 
+          {/* El encuadre va acá, pegado a la especialidad, y no en un bloque
+              propio más abajo: dice de qué TIPO es lo que esta persona ofrece,
+              así que pertenece al renglón que dice qué ofrece. Ver
+              `EncuadrePill` para por qué las dos variantes pesan igual. */}
+          <View style={s.encuadreRow}>
+            <EncuadrePill encuadre={encuadre} onInfo={() => setEncuadreOpen(true)} />
+          </View>
+
           <Text style={s.metaLine}>
             {prof.age} · {prof.nationality} · {prof.gender}
           </Text>
@@ -340,45 +352,6 @@ export default function ProfesionalScreen() {
           )}
         </View>
 
-        {/* ── Qué es este profesional ───────────────────────────────────────
-            🔴 Este bloque se renderiza SIEMPRE, y ese es todo el punto.
-            Antes la única señal era el bloque "Formación", que es aditivo:
-            muestra lo que hay. Un coach sin matrícula no se veía distinto de un
-            psicólogo matriculado — se veía igual, con una sección menos. La
-            ausencia no comunicaba nada, y esa es justo la confusión que importa
-            evitar acá: la Ley 23.277 reserva el diagnóstico y el tratamiento a
-            quien tiene matrícula, así que alguien que la está pasando mal tiene
-            que poder distinguir terapia de acompañamiento ANTES de reservar.
-            Ver `docs/encuadre-salud-y-responsabilidad.md` §2.
-
-            ⚠️ Dos cuidados de redacción, los dos deliberados:
-            · Se afirma lo que Vita verificó, no lo que la persona es. No tener
-              matrícula cargada acá no prueba que no la tenga en la realidad, y
-              el texto no puede decir lo contrario.
-            · No se nombra la profesión. `kind === 'matricula'` dice que hay una
-              matrícula verificada, no de qué profesión — el título es texto
-              libre. Decir "psicólogo/a" sería inventar un dato. */}
-        <View style={s.section}>
-          <View style={[s.roleCard, tieneMatricula ? s.roleCardPro : s.roleCardCoach]}>
-            <MaterialCommunityIcons
-              name={tieneMatricula ? 'shield-check' : 'information-outline'}
-              size={18}
-              color={tieneMatricula ? '#42542F' : '#8A6A3B'}
-              style={{ marginTop: 1 }}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={[s.roleTitle, !tieneMatricula && s.roleTitleCoach]}>
-                {tieneMatricula ? 'Matrícula verificada por Vita' : 'Acompañamiento, no tratamiento'}
-              </Text>
-              <Text style={s.roleBody}>
-                {tieneMatricula
-                  ? 'Vita chequeó la matrícula habilitante de este profesional. El número está más abajo y podés verificarlo por tu cuenta.'
-                  : 'Vita no verificó una matrícula habilitante para este profesional. Sus sesiones son de acompañamiento y no constituyen atención psicológica.'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
         {/* ── Formación ─────────────────────────────────────────────────────
             Solo credenciales verificadas por Vita. NO se muestra el documento:
             un diploma lleva nombre completo, a veces DNI y firma, y publicarlo
@@ -394,6 +367,25 @@ export default function ProfesionalScreen() {
                 <Text style={s.credBadgeTxt}>Verificado por Vita</Text>
               </View>
             </View>
+
+            {/* 🔴 El perfil más confuso de la app, y el único que la pill de
+                arriba no alcanza a desambiguar: título verificado SIN matrícula
+                —pongamos "Lic. en Psicología · UBA" con el escudo de Vita— y
+                arriba una etiqueta que dice "Sesiones de acompañamiento". Las
+                dos son ciertas y se contradicen a la vista; entre las dos, el
+                usuario le cree al título y reserva creyendo que es terapia. Es
+                además el caso legalmente más expuesto, así que la aclaración va
+                acá, pegada a la evidencia que la genera, y no arriba donde
+                volvería a ser el cartel que sacamos. */}
+            {encuadre.tituloSinMatricula && (
+              <View style={s.credNota}>
+                <MaterialCommunityIcons name="information-outline" size={15} color="#8A6A3B" style={{ marginTop: 1 }} />
+                <Text style={s.credNotaTxt}>
+                  Un título no habilita por sí solo: en Argentina lo que permite diagnosticar
+                  y tratar es la matrícula, y de este profesional no verificamos ninguna.
+                </Text>
+              </View>
+            )}
 
             <View style={s.credList}>
               {credenciales.map(c => {
@@ -657,6 +649,12 @@ export default function ProfesionalScreen() {
         reportedName={prof.name}
         reportedId={profileId ?? ''}
       />
+
+      <EncuadreSheet
+        visible={encuadreOpen}
+        encuadre={encuadre}
+        onCerrar={() => setEncuadreOpen(false)}
+      />
     </AppBg>
   );
 }
@@ -803,21 +801,22 @@ const s = StyleSheet.create({
   // El estado sin matrícula NO va en rojo ni con ícono de alerta: no es una
   // advertencia contra el coach, es información sobre qué tipo de sesión es.
   // Pintarlo de peligro sería castigar a alguien que no hizo nada mal.
-  roleCard: {
-    flexDirection: 'row', gap: 10, alignItems: 'flex-start',
-    borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14,
-  },
-  roleCardPro:   { backgroundColor: '#DCE5CB' },
-  roleCardCoach: { backgroundColor: '#F0E7D6' },
-  roleTitle: { fontFamily: ViveFonts.semibold, fontSize: 13.5, color: '#42542F', marginBottom: 3 },
-  roleTitleCoach: { color: '#7A5B2E' },
-  roleBody: { fontFamily: ViveFonts.regular, fontSize: 12.5, lineHeight: 18, color: '#5F6647' },
-
   credHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   credBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#DCE5CB', borderRadius: 10,
     paddingVertical: 3, paddingHorizontal: 8, marginBottom: 14,
+  },
+  encuadreRow: { marginTop: 8, marginBottom: 2 },
+
+  credNota: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 7,
+    backgroundColor: 'rgba(138,106,59,0.08)', borderRadius: 12,
+    padding: 11, marginBottom: 12,
+  },
+  credNotaTxt: {
+    flex: 1, fontFamily: ViveFonts.regular, fontSize: 12.5,
+    lineHeight: 18.5, color: '#7A6540',
   },
   credBadgeTxt: { fontFamily: ViveFonts.semibold, fontSize: 10.5, color: '#42542F', letterSpacing: 0.2 },
   credList: { gap: 12 },
