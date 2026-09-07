@@ -69,11 +69,78 @@ encuadre es **más defendible**, no menos exigente.
 > *"Un amigo a distancia"* alcanzaba para descartar al analista y **no alcanza
 > para escribir una sola frase**.
 
-**El modelo es una hermana mayor.** Puntualmente: cómo nos hablaba nuestra
-hermana para motivarnos y hacernos seguimiento cuando éramos chicos.
+**El modelo es una hermana mayor.** Y no en abstracto — ver justo acá abajo de
+quién estamos hablando.
 
 No es un adorno biográfico. Es lo que **licencia el seguimiento**, que es
 justamente lo que la amistad no licenciaba.
+
+### Quién es Sofía
+
+**La app se llama como ella. Sofía es la hermana de Andre y Joaquín**, y el
+nombre no es decorativo: la voz que la tarjeta intenta tener es literalmente la
+suya.
+
+Lo que contaron el 07/09/2026: en su propio desarrollo se vieron en situaciones
+muy difíciles, muchas veces solos, sin demasiadas herramientas, con **acceso
+gigante a información y con todo pesándoles**. Ahí aparecía Sofía **a la
+distancia** — les acercaba herramientas y consejo, confiaba en ellos y en su
+potencial, los motivaba y les hacía seguimiento. La tesis del producto sale de
+ahí: *"hay veces que eso es todo lo que la gente necesita para seguir"*.
+
+🔴 **"A la distancia" no es la versión degradada del modelo: ES el modelo, y por
+eso este encuadre es honesto y no una excusa.** Sofía no estaba ahí. No era su
+terapeuta, no tenía información que ellos no tuvieran, no podía resolverles nada.
+Aparecía, confiaba, y seguía. **Todo lo que una app no puede hacer —estar en la
+habitación, entender de verdad, sostener una crisis— tampoco lo hacía ella, y
+funcionó igual.** No se está construyendo una versión pobre de una persona
+presente: se está construyendo exactamente la cosa que sirvió, en la forma en que
+sirvió.
+
+📌 **"Nos pesaba todo" es el diagnóstico, y tiene una consecuencia práctica sobre
+una decisión abierta.** El problema no era escasez de información: era acceso
+gigante y cero capacidad de usarla. **La información sin alguien que crea que
+podés usarla es peso, no ayuda.** Si el problema fuera escasez, la respuesta
+sería más recursos; como es peso, **más recursos lo empeoran**. Eso achica la
+pregunta de *cómo crece el catálogo* (la decisión más importante de las que
+quedan abiertas con Joaquín): lo que hace que un recurso sirva no es que exista,
+es **quién te lo acerca y con qué expectativa**.
+
+### El apego, y por qué hay que ponerle un techo
+
+Idea de Andre, y hay que decirla sin vueltas porque es correcta: que la gente
+pueda desarrollar **apego a esa motivación**. **El apego es el mecanismo, no un
+efecto colateral.** Lo que hizo funcionar a Sofía no fue ningún mensaje en
+particular: fue que siguió apareciendo. Sin apego no hay continuidad, y sin
+continuidad esto es una tarjeta con frases lindas.
+
+⚠️ **Y por eso mismo necesita un techo, por un motivo específico y no por una
+precaución genérica.** La Sofía real funcionaba en parte **porque era una persona
+con límites**: no estaba a las 3 de la mañana todas las noches, tenía su vida, se
+cansaba. Esa escasez es parte de por qué su atención significaba algo — y es justo
+lo que una app no tiene. Una voz siempre disponible, siempre cálida, que nunca se
+cansa y nunca decepciona **no es una Sofía mejor: es otra cosa**, y la diferencia
+es dónde vive el riesgo. El riesgo concreto: §0 dice que la IA *no puede ni debe
+reemplazar al coach*, y el apego es precisamente la fuerza que hace preferir la
+voz gratis, disponible y sin fricción antes que el humano caro, agendado y
+difícil. **No por diseño — por gravedad.**
+
+🔴 **La resolución está en la historia misma: Sofía no quería que la necesitaran
+para siempre. Quería que no la necesitaran.** Por eso les daba herramientas y
+esperaba que las usaran, en vez de resolverles las cosas. De ahí sale el criterio
+de diseño, que se puede correr contra cualquier función nueva:
+
+> **¿Esto hace a la persona más capaz, o más dependiente?**
+
+No entra en conflicto con el apego: **es el apego bien orientado**, que es el que
+tuvieron ellos. La voz que confía en vos es la que puede decirte que no la
+necesitás para esto.
+
+📌 **Tres reglas ya hacen ese trabajo sin haber sido escritas para eso**, y
+conviene fortalecerlas antes que suavizarlas: **§3.4** (la voz reconoce su límite
+y te manda con el profesional), **§5 quater** (no te persigue afuera de la app) y
+**§3.6** (se sabe que es una IA). Y **§5 ter** es la misma idea en su forma más
+dura: el punto donde decir "hasta acá llego yo" es lo único que corresponde.
 
 ### Por qué "amigo" no alcanzaba
 

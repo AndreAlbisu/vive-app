@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 175 · de dónde sale Sofía, y el techo del apego)
+
+**Tocado:** `docs/la-voz-de-sofia.md` (§2 bis: dos secciones nuevas). Sin código, sin schema.
+
+**Resumen — se escribió el origen del producto, que hasta hoy no estaba en ningún lado. Explica más decisiones que cualquier argumento, y en dos años no se lo acuerda nadie.**
+
+- 🟢 **La app se llama como ella: Sofía es la hermana de Andre y Joaquín.** El nombre no era decorativo. En su propio desarrollo se vieron en situaciones muy difíciles, muchas veces solos, sin herramientas, con acceso gigante a información y con todo pesándoles — y ella aparecía **a la distancia**, les acercaba herramientas y consejo, confiaba en ellos y en su potencial, los motivaba y les hacía seguimiento. De ahí sale la tesis: *"hay veces que eso es todo lo que la gente necesita para seguir"*.
+- 🔴 **"A la distancia" no es la versión degradada del modelo: ES el modelo, y por eso el encuadre es honesto y no una excusa.** Sofía no estaba ahí, no era su terapeuta, no tenía información que ellos no tuvieran y no podía resolverles nada. **Todo lo que una app no puede hacer tampoco lo hacía ella, y funcionó igual.** No se está construyendo una versión pobre de una persona presente.
+- 📌 **"Nos pesaba todo" es el diagnóstico, y le pega a una decisión abierta.** El problema no era escasez de información sino acceso gigante y cero capacidad de usarla: **la información sin alguien que crea que podés usarla es peso, no ayuda.** Si fuera escasez la respuesta sería más recursos; como es peso, **más recursos lo empeoran**. Eso achica la pregunta de *cómo crece el catálogo* — lo que hace que un recurso sirva no es que exista, es quién te lo acerca y con qué expectativa.
+- 🟢 **El apego (idea de Andre) queda escrito como mecanismo, no como efecto colateral.** Lo que hizo funcionar a Sofía no fue ningún mensaje: fue que siguió apareciendo. Sin apego no hay continuidad.
+- ⚠️ **Y con un techo, por un motivo específico y no por precaución genérica: la Sofía real funcionaba en parte PORQUE era una persona con límites.** No estaba a las 3 de la mañana todas las noches. Esa escasez es parte de por qué su atención significaba algo, y es justo lo que una app no tiene. Una voz siempre disponible, siempre cálida, que nunca se cansa, **no es una Sofía mejor: es otra cosa**. El riesgo concreto: §0 dice que la IA no reemplaza al coach, y el apego es la fuerza que hace preferir la voz gratis y sin fricción antes que el humano caro y agendado. **No por diseño — por gravedad.**
+- 🔴 **La resolución sale de la historia misma: Sofía no quería que la necesitaran para siempre, quería que no la necesitaran.** De ahí el criterio de diseño, que se corre contra cualquier función nueva: **¿esto hace a la persona más capaz, o más dependiente?** No pelea con el apego — es el apego bien orientado. 📌 Tres reglas ya hacían ese trabajo sin haber sido escritas para eso (§3.4, §5 quater, §3.6) y conviene **fortalecerlas antes que suavizarlas**; §5 ter es la misma idea en su forma más dura.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Sigue el mail a Mónica** — lo único que separa al piso de seguridad de encenderse.
+- 📌 **Anotado de la conversación, sin decidir:** la voz hoy no puede **recordar** (§3.1 lo pide desde el 28/08 y `ReflectionInput` solo recibe 7 días + los 30 anteriores) ni **confiar con evidencia** — decirle a alguien *"esto ya lo pasaste en julio"*, que es un hecho sobre lo que registró y no una lectura de su estado, y que hoy es imposible por la ventana de datos. Sería `pisoSeguridad` corrido al revés: buscar un tramo malo que **terminó**. Es lo que más acercaría la card a lo que Sofía hacía.
+- El coach de $1, la nullability de `price_per_session`, y la device review.
+
 ## 2026-09-07 — Andre (sesión 174 · la card se llama Sofía)
 
 **Tocado:** `app/(tabs)/index.tsx`, `components/SobreVosMomento.tsx`, `docs/la-voz-de-sofia.md` (§6 y §7 cerrados). `tsc` limpio, 515 tests. Sin schema.
