@@ -1184,6 +1184,11 @@ export default function SalaScreen() {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          // Sin esto el teclado quedaba trabado: no había forma de bajarlo desde
+          // el chat. `interactive` lo baja arrastrando (iOS); `handled` deja que
+          // tocar un mensaje/botón siga funcionando y tocar el vacío lo cierre.
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
         >
           {loading && (
