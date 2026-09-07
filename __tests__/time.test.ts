@@ -7,6 +7,7 @@ import {
   TZ_SUPPORTED,
   AR_TZ,
   observedTz,
+  enArgentina,
 } from '@/lib/time';
 
 describe('entorno de test', () => {
@@ -197,5 +198,35 @@ describe('observedTz', () => {
     const tz = observedTz();
     expect(tz === null || typeof tz === 'string').toBe(true);
     if (tz !== null) expect(tz.length).toBeGreaterThan(0);
+  });
+});
+
+describe('enArgentina — a quién hay que exhibirle el precio en pesos', () => {
+  // Res. 4/2025: la obligación es territorial y sigue al consumidor, no a la
+  // sede. Ver `docs/consumo.md` A.9 y el uso en `BookingScreen_Confirm`.
+
+  it('reconoce las zonas modernas de Argentina', () => {
+    expect(enArgentina(AR_TZ)).toBe(true);
+    expect(enArgentina('America/Argentina/Cordoba')).toBe(true);
+    expect(enArgentina('America/Argentina/Ushuaia')).toBe(true);
+  });
+
+  // Los alias viejos de la tzdata siguen vivos en teléfonos configurados hace
+  // años. Un prefijo solo los dejaría afuera, y a esa persona no se le
+  // exhibiría el precio en pesos teniendo que exhibírselo.
+  it('reconoce los alias viejos, que no tienen el prefijo', () => {
+    expect(enArgentina('America/Buenos_Aires')).toBe(true);
+    expect(enArgentina('America/Cordoba')).toBe(true);
+    expect(enArgentina('America/Mendoza')).toBe(true);
+  });
+
+  it('no confunde con países del mismo huso', () => {
+    // Uruguay y Brasil comparten offset con Argentina en varias épocas del año,
+    // así que una comparación por offset —como `deviceIsOffArgentina`— los daría
+    // por argentinos. Esta función mira el NOMBRE de la zona, no la hora.
+    expect(enArgentina('America/Montevideo')).toBe(false);
+    expect(enArgentina('America/Sao_Paulo')).toBe(false);
+    expect(enArgentina('Europe/Madrid')).toBe(false);
+    expect(enArgentina('UTC')).toBe(false);
   });
 });

@@ -29,7 +29,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { logError, logWarn } from '@/lib/logging';
 import { encryptMessage } from '@/lib/encryption';
 import { ensureMeetingRoom } from '@/lib/meetingRoom';
-import { observedTz } from '@/lib/time';
+import { observedTz, enArgentina } from '@/lib/time';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MONTH_NAMES = [
@@ -909,6 +909,29 @@ export default function BookingScreen_Confirm() {
                     ? `$${priceFrom.toLocaleString('es-AR')} por sesión`
                     : '—'}
               </Text>
+              {/* 🔴 Exhibición del precio en pesos — Res. 4/2025, ver
+                  `docs/consumo.md` A.9. Es obligatorio exhibir en moneda de
+                  curso legal a quien está en Argentina, y con un coach sin riel
+                  de Mercado Pago `metodoPago` nunca puede ser 'mp': el precio en
+                  pesos se veía en el buscador y en el perfil, y desaparecía
+                  justo en la única pantalla donde se compra.
+
+                  📌 **Es el precio que el coach ya fijó (`price_per_session`), NO
+                  una conversión.** La app no tiene ni quiere tener un tipo de
+                  cambio: `price_usd` tampoco se deriva de uno (SCHEMA.md). Y por
+                  eso dice "se cobra en dólares" en el mismo renglón — el monto
+                  final en pesos lo fija la tarjeta el día que liquida, no
+                  nosotros, así que prometerlo sería peor que no mostrarlo.
+
+                  ⚠️ Va como referencia y no reemplaza al valor de arriba: el
+                  precio principal tiene que seguir al método elegido, que es lo
+                  que arregló el problema descrito en el comentario anterior. */}
+              {metodoPago !== 'mp' && priceUsd != null
+                && priceFrom != null && enArgentina() && (
+                <Text style={s.detailValueRef}>
+                  Referencia: ${priceFrom.toLocaleString('es-AR')} · se cobra en dólares
+                </Text>
+              )}
             </View>
           </View>
 
@@ -1294,6 +1317,17 @@ const s = StyleSheet.create({
     fontSize: 15,
     color: '#565E32',
     lineHeight: 21,
+  },
+  // Referencia en pesos: subordinada al precio real, pero legible. No se le baja
+  // la opacidad — es información que la ley obliga a exhibir, no un pie de
+  // página. El contraste de este oliva sobre el fondo de la tarjeta es el mismo
+  // que usa `detailValue`; lo que la subordina son el cuerpo y el peso.
+  detailValueRef: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#565E32',
+    lineHeight: 18,
+    marginTop: 2,
   },
 
   modalityBox: {

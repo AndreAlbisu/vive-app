@@ -91,6 +91,46 @@ obligación de exhibir en pesos**. Dos salidas, y las dos son de producto:
 ⚠️ Esto se cruza con `bookings.user_tz_observed`, que existe justamente para
 saber dónde estaba quien reservó. La decisión de qué mostrar depende de eso.
 
+### ✅ RESUELTO E IMPLEMENTADO — 07/09/2026
+
+**Se eligió la salida 1 (mostrar igual el precio en pesos), y al mirar el código
+resultó bastante más chica de lo que este documento suponía.**
+
+- 🔴 **El precio en pesos YA existía y YA se exhibía.** `coaches.price_per_session`
+  está cargado en las 34 filas (verificado contra la base: **0 nulls**), y se
+  muestra en el buscador (`search3.tsx`), el deck de Conexiones, el quiz y el
+  perfil público — que además ya mostraba los dos juntos. **La salida 1 no
+  necesitaba ninguna conversión: el número ya estaba.**
+- 🔴 **El agujero estaba en una sola pantalla: el checkout.**
+  `BookingScreen_Confirm` hace que el precio siga al método elegido, así que con
+  `metodoPago !== 'mp'` mostraba solo dólares. Y para un coach **sin riel de
+  Mercado Pago, `metodoPago` nunca puede ser `'mp'`** — o sea que el usuario
+  argentino veía pesos en todo el recorrido y solo dólares **en la única pantalla
+  donde compra**. Eso venía de un arreglo anterior correcto (mostrar pesos
+  mientras se cobraba USDT confundía, y el monto de USDT ni siquiera coincide con
+  el precio redondo porque lleva el identificador en los centavos).
+- **El fix:** cuando la persona está en Argentina, el renglón de precio suma
+  *"Referencia: $X · se cobra en dólares"* **debajo** del valor en dólares, sin
+  reemplazarlo. Nuevo `enArgentina()` en `lib/time.ts` (por nombre de zona, con
+  los alias viejos de la tzdata; 4 tests).
+- 🔴 **Por qué NO se convierte, que es la decisión de fondo.** El cobro se
+  ejecuta en dólares y el monto en pesos lo fija el banco o la tarjeta el día que
+  liquida — cualquier número convertido diferiría del real, y si quedara **por
+  debajo** se cambiaría un incumplimiento formal por uno peor (arts. 7 y 8 de la
+  Ley 24.240: el precio exhibido obliga). Además la app **no tiene ni quiere
+  tener un tipo de cambio**: `price_usd` tampoco se deriva de una cotización, y
+  está escrito así en `SCHEMA.md` y en `cobro-internacional-coaches.md`. Por eso
+  el renglón dice explícitamente que se cobra en dólares.
+- ✅ **La salida 2 (no ofrecer ese coach en Argentina) queda descartada**, y no
+  por costo de implementación: le sacaría oferta a gente que efectivamente quiere
+  pagar en dólares. La obligación es **exhibir** en pesos, no **cobrar** en pesos
+  — son cosas distintas y la norma solo pide la primera.
+
+📌 **A quién afecta hoy, verificado contra la base el 07/09:** dos coaches
+verificados y activos sin riel de MP y con precio en dólares — uno solo PayPal
+(`$6.000` / USD 35) y otro solo USDT (`$4.500` / USD 30). Los dos reservables
+ahora mismo, así que el incumplimiento estaba vivo, no era hipotético.
+
 ## A.5 y A.6 — Acá no hay respuesta cómoda
 
 🔴 **Estas dos no las cierro, y el motivo es que la ley argentina no las

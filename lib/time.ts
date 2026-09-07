@@ -262,6 +262,36 @@ export function localEquivalent(date: string, time: string, tz: string = deviceT
   return { time: `${hh}:${mm}`, dayShift, weekday: DIAS[new Date(diaUser).getUTCDay()] };
 }
 
+/** Zonas que son Argentina. Además del prefijo moderno `America/Argentina/…`
+ *  están los alias viejos de la tzdata, que siguen vivos en dispositivos
+ *  configurados hace años y resuelven al mismo lugar. */
+const TZ_ARGENTINA = new Set([
+  'America/Buenos_Aires', 'America/Catamarca', 'America/Cordoba',
+  'America/Jujuy', 'America/Mendoza', 'America/Rosario',
+]);
+
+/**
+ * ¿El dispositivo está en Argentina?
+ *
+ * Se usa para decidir si hay que **exhibir el precio en pesos** (Res. 4/2025 de
+ * la Secretaría de Industria y Comercio: exhibir en moneda de curso legal es
+ * obligatorio para quien ofrece en el mercado argentino). Ver `docs/consumo.md`
+ * A.9 — la obligación es territorial y sigue al consumidor, no a la sede.
+ *
+ * 📌 **Usa `deviceTz()` y no `observedTz()` a propósito**, que es lo contrario
+ * de lo que hace la observación de la reserva. Allá un default silencioso
+ * ensuciaría un dato que después se clasifica; acá el fallback es Argentina y lo
+ * único que provoca es mostrarle una referencia en pesos de más a alguien que
+ * quizá no la necesita. Errar hacia mostrar el precio es el lado barato.
+ *
+ * ⚠️ La zona es una aproximación: se cambia a mano y una VPN no la mueve. Para
+ * exhibir un precio alcanza — equivocarse acá no cobra distinto, solo muestra un
+ * renglón de más o de menos.
+ */
+export function enArgentina(tz: string = deviceTz()): boolean {
+  return tz.startsWith('America/Argentina/') || TZ_ARGENTINA.has(tz);
+}
+
 /** Frase corta para mostrar debajo de un horario argentino. `null` si el
  *  usuario está en la misma hora que Argentina y no hay nada que aclarar. */
 export function localEquivalentLabel(date: string, time: string, tz: string = deviceTz()): string | null {

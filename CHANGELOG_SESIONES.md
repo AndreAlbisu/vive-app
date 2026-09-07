@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-09-07 — Andre (sesión 172 · el precio en pesos, que era una pantalla y no una cotización)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`, `lib/time.ts`, `app/(tabs)/conexiones.tsx`, `docs/consumo.md`, `__tests__/time.test.ts`. **506 tests** (eran 503), `tsc` y eslint limpios. Sin schema.
+
+**Resumen — se cerró A.9 de `consumo.md`, el último ítem de la investigación legal que esperaba una decisión. Al mirar el código, el problema era mucho más chico de lo que el documento suponía.**
+
+- 🔴 **Primero, el encuadre: la obligación de exhibir en pesos (Res. 4/2025) es TERRITORIAL, sigue al consumidor y no a la sede.** Tener la empresa en Argentina no obliga a mostrarle pesos a alguien en Madrid. Es la misma lógica que `consumo.md` ya había fijado para A.1 (*"que operes desde Córdoba tampoco cambia nada"*). Y no es por nacionalidad sino por **dónde está la persona**: un argentino en Madrid no la dispara, un español en Buenos Aires sí.
+- 🔴 **El precio en pesos YA existía y YA se exhibía — la salida "convertir" no hacía falta.** `price_per_session` está cargado en las **34 filas** (verificado contra la base: 0 nulls) y se muestra en el buscador, el deck, el quiz y el perfil. **El agujero era una sola pantalla:** el checkout hace que el precio siga al método elegido, y con un coach sin riel de MP `metodoPago` nunca puede ser `'mp'` — así que el usuario argentino veía pesos en todo el recorrido y **solo dólares en la única pantalla donde compra**. Venía de un arreglo anterior correcto (mostrar pesos mientras se cobraba USDT confundía).
+- **El fix:** en Argentina, el renglón suma *"Referencia: $X · se cobra en dólares"* **debajo** del valor en dólares, sin reemplazarlo. Nuevo **`enArgentina()`** en `lib/time.ts`, por nombre de zona y con los alias viejos de la tzdata (`America/Cordoba` y compañía siguen vivos en teléfonos configurados hace años), +4 tests. Usa `deviceTz()` y **no** `observedTz()` a propósito: acá el fallback a Argentina solo muestra un renglón de más, mientras que allá ensuciaría un dato que después se clasifica.
+- 🔴 **Por qué NO se convierte, que es la decisión de fondo.** El cobro va en dólares y el monto en pesos lo fija la tarjeta el día que liquida: cualquier conversión diferiría del real, y **si quedara por debajo se cambiaría un incumplimiento formal por uno peor** (Ley 24.240 arts. 7 y 8 — el precio exhibido obliga). Además la app no tiene ni quiere tener un tipo de cambio: `price_usd` tampoco se deriva de uno. Por eso el renglón aclara que se cobra en dólares.
+- ✅ **Descartada la salida 2** (no ofrecer ese coach en Argentina): le saca oferta a gente que sí quiere pagar en dólares. **Exhibir en pesos y cobrar en pesos son cosas distintas, y la norma solo pide la primera.**
+- 📌 **El incumplimiento estaba vivo, no era hipotético:** dos coaches verificados y activos sin MP y con precio en dólares — uno solo PayPal ($6.000 / USD 35) y otro solo USDT ($4.500 / USD 30), los dos reservables ahora mismo.
+- 🟢 **Aparte: el teaser "¿No sabés por dónde empezar?" sale de las pantallas de adentro de cada eje** y queda solo en la primera (`{!selectedAxis && …}`). Adentro de un eje la persona ya eligió por dónde empezar, así que ofrecerle orientarse ahí contradice lo que acaba de hacer. Sigue apareciendo mientras se busca por nombre, que es la misma pantalla.
+
+**Hallazgos de la verificación contra la base (no se tocó nada):**
+- ⚠️ **`search3.tsx:476` llama a `.toLocaleString()` sobre `priceFrom` sin chequear null**, mientras el perfil y el checkout sí guardan el caso. Hoy no rompe (0 filas con `price_per_session` en null), pero **no se pudo confirmar si la columna es NOT NULL**: esa definición vive en el endpoint OpenAPI de PostgREST, que exige `service_role`, y acá solo hay anon key. Si es nullable, es un crash esperando al primer coach sin precio.
+- 🔴 **Un coach del catálogo tiene `price_per_session = 1`** (`e58d2ec3`, verificado y activo, con MP conectado). Casi seguro es resto de las pruebas de PayPal con USD 1. Desde el 26/08 `mp-create-payment` deriva el precio de esa columna, así que una reserva contra ese coach cobraría $1 de verdad — y no hay CHECK ni trigger que lo valide en la base. No se tocó porque puede estar en uso.
+
+**Pendiente para la próxima sesión:**
+- Los dos hallazgos de arriba: el guard del buscador (necesita la service key para decidir si hace falta) y el coach de $1.
+- Sigue: el mail a Mónica con el encuadre de §2 bis, la etiqueta de la card, el restyle del banner del paquete y el `maxLength=500` del chat.
+
 ## 2026-09-07 — Andre (sesión 171 · quién es Sofía: el vínculo que imita)
 
 **Tocado:** `docs/la-voz-de-sofia.md` (§2 bis nuevo; §5 ter, §6 y §7 actualizados). Sin código, sin schema.

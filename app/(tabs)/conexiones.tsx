@@ -738,22 +738,27 @@ export default function ConexionesScreen() {
           )}
 
           {/* ── Teaser del quiz de orientación ─────────────────────────── */}
-          <ScaleCard style={s.quizWrap} onPress={() => router.push('/quiz')}>
-            <LinearGradient
-              colors={[TC_SOFT, '#F0DDD2']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={s.quizCard}>
-              <View style={s.quizIcon}>
-                <Feather name="message-circle" size={20} color="#FFF6EC" />
-              </View>
-              <View style={s.quizText}>
-                <Text style={s.quizTitle}>¿No sabés por dónde empezar?</Text>
-                <Text style={s.quizSub}>Respondé unas preguntas y te orientamos</Text>
-              </View>
-              <Text style={s.quizArrow}>›</Text>
-            </LinearGradient>
-          </ScaleCard>
+          {/* Solo en la fase 1. Adentro de un eje la persona YA eligió por dónde
+              empezar, así que ofrecerle orientarse ahí contradice lo que acaba
+              de hacer — y el quiz la sacaría de la elección que tomó. */}
+          {!selectedAxis && (
+            <ScaleCard style={s.quizWrap} onPress={() => router.push('/quiz')}>
+              <LinearGradient
+                colors={[TC_SOFT, '#F0DDD2']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.quizCard}>
+                <View style={s.quizIcon}>
+                  <Feather name="message-circle" size={20} color="#FFF6EC" />
+                </View>
+                <View style={s.quizText}>
+                  <Text style={s.quizTitle}>¿No sabés por dónde empezar?</Text>
+                  <Text style={s.quizSub}>Respondé unas preguntas y te orientamos</Text>
+                </View>
+                <Text style={s.quizArrow}>›</Text>
+              </LinearGradient>
+            </ScaleCard>
+          )}
 
           <View style={{ height: TAB_BAR_CLEARANCE + 16 }} />
         </ScrollView>
