@@ -714,7 +714,15 @@ export function buildReflection(input: ReflectionInput): Reflection {
     // Se mantiene la invariante de que la tendencia NO nombra un nivel absoluto.
     if (delta >= CHANGE_THRESHOLD) {
       return pick(dayKey, [
-        r('Algo se está ', 'acomodando', ' estos días. ¿Lo notás vos también?', 'warm', 'trend-up'),
+        // 🔴 Antes cerraba con *"¿Lo notás vos también?"*, y el usuario del
+        // consejo del 08/09 la señaló por nombre: *"me suena a chatbot de call
+        // center tratando de sonar cercano"*.
+        //
+        // 📌 Y tenía razón por un motivo de regla, no de gusto: *"vos también"*
+        // afirma que **la app lo notó**. Es la misma postura de testigo que
+        // `rejectCopy` frena desde el 07/09 —solo que dicha al revés, así que
+        // ningún patrón la agarraba—. La app no nota nada: le llegó un promedio.
+        r('Algo se está ', 'acomodando', ' estos días. Y no fue magia.', 'warm', 'trend-up'),
         r('Hay un ', 'cambio', ' esta semana, para arriba. No sé qué se movió, pero algo se movió.', 'warm', 'trend-up'),
         r('Venís ', 'levantando', ', y eso no pasa solo. ¿Sabés qué se movió?', 'warm', 'trend-up'),
       ]);
@@ -848,6 +856,15 @@ export function buildReflection(input: ReflectionInput): Reflection {
     // que la persona siguió mirando.
     r('La semana viene ', level, ', y la venís mirando igual. Eso lo sostenés vos.', 'neutral', 'level'),
     r('Tu semana viene ', level, '. Está bien que algunas sean así.', 'neutral', 'level'),
-    r('La semana viene ', level, '. No hace falta que pase algo para que cuente.', 'neutral', 'level'),
+    // 📌 C5, 08/09: **el problema de la voz no era que faltara humor — era que
+    // todo estaba dicho en tono solemne.** §3.5 nunca prohibió la calidez (dice
+    // textual *"cálida y presente, sí"*); simplemente nadie usó el permiso.
+    //
+    // Del consejo: la frase que el usuario común rescató fue *"un día flojo no
+    // borra la semana"*, porque **habla llano**. No porque tenga chiste. Ella era
+    // *"amable para los problemas del resto"* (§2 ter): no te agrandaba el
+    // problema. Una semana pareja es una semana pareja, y tratarla como un
+    // acontecimiento es lo que hace sonar a la app impostada.
+    r('La semana viene ', level, '. Ni épica ni desastre, que también es un resultado.', 'neutral', 'level'),
   ]);
 }

@@ -496,6 +496,20 @@ sesión y ayudar a que llegue lo que pasó** — que enlaza directo con
 
 *"Me alegro por vos"* de una app es mentira. Cálida y presente, sí. Persona, no.
 
+📌 **Aclaración del 08/09, porque la regla se venía leyendo de más.** Lo que
+prohíbe es **atribuirse un estado**, no ser cálida — la regla dice *"cálida y
+presente, sí"* con todas las letras. Pero las 22 frases se escribieron como si
+prohibiera las dos cosas, y el resultado fue una voz **uniformemente solemne**:
+§2 ter dice que Sofía era *"graciosa, cálida, amable para los problemas del
+resto"*, y ninguna frase tenía una pizca de liviandad.
+
+🔴 **Y el diagnóstico correcto no es "falta humor".** El único dato real que hay
+es del usuario del consejo: rescató *"un día flojo no borra la semana"* —*"tiene
+onda, se siente como algo que diría un amigo"*— y rechazó *"¿lo notás vos
+también?"* —*"me suena a chatbot de call center tratando de sonar cercano"*. **La
+diferencia no es chiste contra seriedad: es hablar llano contra actuar
+cercanía.** Lo que hay que sacar no es la seriedad, es la impostación.
+
 ### 3.6 Se sabe que es una IA — y ahora además es obligatorio
 
 📝 **Agregado el 01/09/2026, al chequear viabilidad legal fuera de Argentina.**

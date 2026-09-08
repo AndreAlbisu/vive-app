@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 198 · C5: el problema no era que faltara humor)
+
+**Tocado:** `lib/weeklyReflection.ts`, `docs/la-voz-de-sofia.md` (§3.5), `docs/problemas-abiertos.md`. 549 tests, `tsc` limpio.
+
+**Resumen — C5 estaba anotado como "cero humor". Al mirarlo, el diagnóstico estaba mal por dos lados.**
+
+- 🔴 **§3.5 nunca prohibió la calidez.** La regla completa dice: *"«Me alegro por vos» de una app es mentira. **Cálida y presente, sí.** Persona, no."* Lo que prohíbe es **atribuirse un estado**. Pero las 22 frases se escribieron como si prohibiera las dos cosas. **Misma forma que B6: el permiso estaba y nadie lo usó.**
+- 🔴 **Y "falta humor" tampoco era el diagnóstico.** El único dato real que hay es del usuario común del consejo: rescató *"un día flojo no borra la semana"* —*"tiene onda, se siente como algo que diría un amigo"*— y rechazó *"¿lo notás vos también?"* —*"me suena a chatbot de call center tratando de sonar cercano"*. **La diferencia no es chiste contra seriedad: es hablar llano contra actuar cercanía.** Lo que hay que sacar no es la seriedad, es la impostación.
+- 🟢 **Cambiada la que el usuario señaló por nombre**, y resultó tener un motivo de regla y no de gusto: *"¿Lo notás vos también?"* afirma que **la app lo notó**. Es la misma postura de testigo que `rejectCopy` frena desde el 07/09 — solo que dicha al revés, así que ningún patrón la agarraba. La app no nota nada: le llegó un promedio. → *"Algo se está acomodando estos días. **Y no fue magia.**"*
+- 🟢 **Y una de `level`, que es donde la solemnidad más sobra** (es la señal que más se muestra, y es literalmente *"no pasó nada destacable"*): *"No hace falta que pase algo para que cuente"* → *"**Ni épica ni desastre, que también es un resultado.**"* §2 ter dice que ella era *"amable para los problemas del resto"*: no te agrandaba el problema. **Tratar una semana pareja como un acontecimiento es lo que hace sonar impostada a la app.**
+- 📝 **§3.5 quedó aclarada en el doc** para que no se vuelva a leer de más.
+- ⚠️ **Queda pendiente el resto del banco**: se tocaron dos frases, no las veintidós. Y es el cambio más discutible de todos los de estos días — **necesita el ojo de Andre más que los otros.**
+
+**Pendiente para la próxima sesión:**
+- **De Joaquín:** A1 y el bloque de device review.
+- **De Andre:** E6, el *"¡Hoy estás brillando!"* del Diario, y el visto bueno de voz — que ya viene acumulando las frases de C1/C2, B2, C3 y estas dos.
+- **Libre:** C6 (la negrita que se pierde con la IA).
+
 ## 2026-09-08 — Andre (sesión 197 · C3: las preguntas dejan de morir en el aire)
 
 **Tocado:** `lib/weeklyReflection.ts`, `app/diario.tsx`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `docs/problemas-abiertos.md`. **549 tests** (eran 546), `tsc` limpio.
