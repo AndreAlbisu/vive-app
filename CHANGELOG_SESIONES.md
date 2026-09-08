@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 193 · E6: ¿la voz puede tratarte en género?)
+
+**Tocado:** `docs/problemas-abiertos.md` (E6 nuevo, con análisis). Sin código — queda como decisión abierta.
+
+**Resumen — idea de Andre: que la IA lea el género del perfil, en vez de escribir siempre en neutro. El dato existe; el análisis dice que la versión buena de la idea no es leer ese campo.**
+
+- ✅ **Lo que hay, verificado:** `profiles.gender` con cuatro opciones —`Prefiero no decir` (**el default**), `Masculino`, `Femenino`, `No binario`—, y **un solo uso en toda la app**: `search3.tsx:331`, el filtro para elegir profesional por sexo.
+- **Lo que se ganaría es real:** **cuatro de los catorce guardarrales existen solo porque la app no sabe** (`GENDERED`, `GENDERED_PERIFRASIS`, `NIVEL_MASCULINO`, `CONCORDANCIA_SEMANA`). Desaparecería la gimnasia de *"que el adjetivo califique a la semana y no a la persona"*, y desbloquearía calidez hoy imposible: *"no estás sola"*, *"venís cansada"*. Se cruza con **C5**.
+- ⚠️ **Pero solo sirve para dos de las cuatro opciones.** `Prefiero no decir` es el default y `No binario` no tiene forma gramatical en español que no sea la neutra: **la voz neutra tiene que existir igual**. No se elimina trabajo — se agrega un segundo banco de frases.
+- 🔴 **Y el problema que decide: el campo se pidió para otra cosa.** Alguien lo completó **para que le ofrezcan una psicóloga mujer**, no para autorizar que la app le hable con adjetivos todos los días. ⚠️ **El modo de falla es concreto:** una persona trans que puso `Masculino` para el filtro, o que no actualizó el campo, y la app la trata en masculino todas las mañanas. **El costo cae justo sobre quien la app tenía que cuidar mejor — que es el motivo por el que la regla existe.**
+- 🟢 **La versión propuesta, sin decidir: preguntar aparte.** *"¿Cómo preferís que te hable?"*, un toque, con el propósito dicho. No repurposea nada, le da control sobre **cómo le hablan** (distinto de su género) y deja *"me da igual"* como respuesta válida. 📌 **Y el dato no tiene por qué ir al modelo**: el motor de reglas corre en el teléfono, así que si solo las 35 frases lo usan, **no se toca el encuadre legal ni viaja un dato más**.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **A1** (dos ramas del piso sin probar) y **A2** (el coach de $1). Van varias sesiones apareciendo primeras.
+- **E6**: decidir si se pregunta aparte.
+- **C7**: barrer las otras superficies donde habla Sofía.
+
 ## 2026-09-08 — Andre (sesión 192 · la voz vive en más pantallas de las que vigilamos)
 
 **Tocado:** `app/diario.tsx`, `lib/weeklyReflection.ts` (comentario), `docs/problemas-abiertos.md` (C7 nuevo). 546 tests, `tsc` limpio.

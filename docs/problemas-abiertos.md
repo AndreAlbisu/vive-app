@@ -98,7 +98,52 @@ superficies pasó nunca por las reglas, y todas son la misma voz.
 | **E2** | **Los dos Sofía / el orbe** (D-1 y D-2 de `consejo-sofia.md`). ✅ Verificado que apagarlo no deja nada inaccesible. | Pausado con Joaquín | C3 |
 | **E3** | **Consentimiento en el onboarding** (PC-4). La página `sobre-nosotros` existe, pero **hay que ir a buscarla** — que es la letra chica que PC-4 critica. | Andre | — |
 | **E4** | **Hablar con Sofía (la persona) y dejar algo escrito.** Hoy **no tiene voz formal en un producto que lleva su nombre**, y nadie calculó el costo reputacional para ella si el producto falla en una crisis. | Andre | — |
+| **E6** | 🔴 **¿La voz puede tratarte en género?** Idea de Andre (08/09). Hoy la app no sabe, y **cuatro de los catorce guardarrales existen solo por eso** (`GENDERED`, `GENDERED_PERIFRASIS`, `NIVEL_MASCULINO`, `CONCORDANCIA_SEMANA`). Saberlo desbloquearía calidez hoy imposible: *"no estás sola"*, *"venís cansada"*. **Ver el análisis abajo.** | Andre | C5 |
 | **E5** | **Visto bueno de voz** sobre la frase nueva de `sustained-low` y sobre *"estar ahí con vos"* (§1 la avala, §3.5 la roza). | Andre | — |
+
+---
+
+### E6 — ¿la voz puede tratarte en género? (análisis del 08/09)
+
+**El dato existe**: `profiles.gender`, con cuatro opciones —`Prefiero no decir`
+(**el default**), `Masculino`, `Femenino`, `No binario`— editable en el perfil.
+✅ Verificado: **hoy tiene un solo uso en toda la app**, `search3.tsx:331`, el
+filtro para elegir profesional por sexo.
+
+**Lo que se ganaría** es real: desaparecería toda la gimnasia de *"que el
+adjetivo califique a la semana y no a la persona"*, y con ella cuatro reglas.
+
+**Tres problemas, y el tercero es el que decide:**
+
+1. **Solo sirve para dos de las cuatro opciones.** `Prefiero no decir` es el
+   default y `No binario` no tiene forma gramatical en español que no sea la
+   neutra. **La voz neutra tiene que existir igual** — no se elimina trabajo, se
+   agrega un segundo banco de frases.
+2. **No se sabe cuántos lo completaron** (la RLS no deja contarlo con la anon
+   key) y el default es "prefiero no decir".
+3. 🔴 **El campo se pidió para otra cosa.** Alguien lo completó **para que le
+   ofrezcan una psicóloga mujer**, no para autorizar que la app le hable con
+   adjetivos todos los días. ⚠️ **El modo de falla es concreto:** una persona
+   trans que puso `Masculino` para el filtro, o que no actualizó el campo, y la
+   app empieza a tratarla en masculino todas las mañanas. **El costo cae justo
+   sobre quien la app tenía que cuidar mejor — que es el motivo por el que la
+   regla existe.**
+
+**Propuesta (sin decidir):**
+
+- 🟢 **No leer el campo: preguntar aparte.** *"¿Cómo preferís que te hable?"*, un
+  toque, con el propósito dicho. No repurposea nada, le da control sobre **cómo
+  le hablan** —que es distinto de su género— y deja *"me da igual"* como
+  respuesta válida y probablemente la más elegida.
+- 🟢 **Y el dato no tiene por qué ir al modelo.** El motor de reglas corre en el
+  teléfono: si las 35 frases usan el género y el payload sigue siendo el de
+  siempre, **no se toca el encuadre legal ni viaja un dato más**. Se acepta que
+  lo que escribe la IA sigue siendo neutro.
+- **Los guardarrales quedan en pie** para todos los que no contesten, que van a
+  ser la mayoría.
+
+📌 Se cruza con **C5** (la voz no tiene humor ni calidez propia): parte de esa
+frialdad viene de que no puede usar un solo adjetivo sobre la persona.
 
 ---
 
