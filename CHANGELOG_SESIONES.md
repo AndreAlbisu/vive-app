@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 189 · B6 descartado: los guardarrales no eran el problema)
+
+**Tocado:** `docs/problemas-abiertos.md`. Sin código.
+
+**Resumen — se corrió la prueba de resta de B6, que era la que bloqueaba todo el bloque C. La hipótesis quedó descartada, y el resultado es la mejor noticia de los tres consejos.**
+
+- ✅ **Los guardarrales NO bloquean los movimientos que faltan. 11 de 11 frases candidatas pasan**: la expectativa (*"Eso no te lo dio nadie"*), la confianza con evidencia (*"Ya saliste de tramos así antes"*), el recurso del coach, el empujón al paquete, la memoria (*"Ayer también marcaste bajón, van tres seguidos"*) y hasta el humor liviano. **Los dos controles se rechazan bien**: el elogio vacío por `anima en tono suave`, el consejo por `pide una acción en tono suave`.
+- 🔴 **El diagnóstico correcto es más simple y mucho más barato: nadie las escribió.** Los guardarrales eliminan los gestos cálidos **baratos** —elogiar, aconsejar, prometer, fingir sentir— y dejan **absolver** como camino de menor resistencia: es cálido, **no requiere saber nada de la persona, y ninguna regla lo apunta**. No es que el filtro castigue la especificidad: es que **la especificidad cuesta escribirla y la absolución no**.
+- ✅ **C1 y C2 quedan DESBLOQUEADOS.** Reescribir el banco sí va a funcionar; no hay que rehacer los guardarrales.
+- 🔴 **Y apareció una dependencia concreta para B2:** *"Tu coach te dejó algo"* hoy se rechaza con `inventa que hay alguien acompañando`, porque con `facts: {}` el guardarraíl no puede saber que el coach existe. **Al conectar `resource_recommendations` hay que mandar un flag en los `facts`** (ej. `hay_recurso_del_coach`) o el guardarraíl va a frenar justo la frase correcta. Queda anotado en el registro.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **A1** (dos ramas del piso sin probar) y **A2** (el coach de $1) siguen arriba de todo: son de Andre y no compiten con nada.
+- **C1/C2**: reescribir la distribución del banco, ahora que se sabe que entra.
+- **B2**: conectar `resource_recommendations`, con el flag en los facts.
+
 ## 2026-09-08 — Andre (sesión 188 · dos consejos más, y el registro de problemas abiertos)
 
 **Tocado:** `docs/la-voz-de-sofia.md`, `docs/consejo-sofia.md` (links). Nuevo: **`docs/problemas-abiertos.md`**. Sin código.
