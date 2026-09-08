@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { AI_REFLECTION_ENABLED } from '@/constants/features';
-import { buildReflection, rejectCopy, type Reflection, type ReflectionInput } from '@/lib/weeklyReflection';
+import { buildReflection, rejectCopy, puedeRedactarloElModelo, type Reflection, type ReflectionInput } from '@/lib/weeklyReflection';
 
 // La devolución del día, redactada por un modelo cuando corresponde y por las
 // reglas cuando no.
@@ -101,12 +101,10 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
     // `early` (uno o dos registros) va por el mismo camino: lo único honesto que
     // se puede decir ahí es "todavía no sé lo suficiente", y para eso no hace
     // falta un modelo.
-    // 🔴 `piso-seguridad` NUNCA lo redacta un modelo. Es requisito escrito en
-    // `docs/legal-instrucciones.md`: la reacción ante señales de riesgo es
-    // determinística y corre antes de cualquier modelo. Que además sea texto
-    // fijo lo hace revisable por una profesional, cosa que una frase generada no
-    // puede ser.
-    if (rules.signal === 'empty' || rules.signal === 'early' || rules.signal === 'piso-seguridad') {
+    // Qué se saltea el modelo y por qué vive en `puedeRedactarloElModelo`
+    // (`lib/weeklyReflection.ts`), que es puro y tiene tests. Acá adentro del
+    // efecto era una condición suelta creciendo sin que nada la fijara.
+    if (!puedeRedactarloElModelo(rules.signal, rules.tone)) {
       setCopy(null); return;
     }
 

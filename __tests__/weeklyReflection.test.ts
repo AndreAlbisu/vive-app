@@ -1,4 +1,4 @@
-import { buildReflection, rejectCopy, type ReflectionInput } from '@/lib/weeklyReflection';
+import { buildReflection, rejectCopy, puedeRedactarloElModelo, type ReflectionInput } from '@/lib/weeklyReflection';
 import { localDayKey, localDayKeyMinus } from '@/lib/dates';
 
 // Base neutra: sin actividad, sin racha, sin histórico. Cada test enciende
@@ -887,4 +887,62 @@ describe('🔴 las frases propias cumplen lo que le exigen al modelo', () => {
       expect(vistas.size).toBeGreaterThan(0);
     });
   }
+});
+
+describe('puedeRedactarloElModelo — qué NO escribe una IA', () => {
+  // 🔴 `piso-seguridad` es un requisito escrito (`legal-instrucciones.md`): la
+  // reacción ante señales de riesgo es determinística. Si esto se rompe, la
+  // frase más delicada de la app pasa a ser generada — y deja de ser revisable
+  // por una profesional, que es la mitad del motivo.
+  it('el piso de seguridad NUNCA lo redacta un modelo', () => {
+    expect(puedeRedactarloElModelo('piso-seguridad', 'gentle')).toBe(false);
+    // Ni siquiera si alguien le cambiara el tono.
+    expect(puedeRedactarloElModelo('piso-seguridad', 'warm')).toBe(false);
+  });
+
+  it('sin datos no hay nada que redactar mejor que la invitación de las reglas', () => {
+    expect(puedeRedactarloElModelo('empty', 'neutral')).toBe(false);
+    expect(puedeRedactarloElModelo('early', 'neutral')).toBe(false);
+  });
+
+  // 🔴 Apagado el 07/09 tras tres corridas del ensayo contra tres versiones del
+  // prompt. El motivo largo está en el encabezado de la función; el resumen es
+  // que en `gentle` el modelo rechazaba ~30%, reintroducía fórmulas ya
+  // descartadas, inventaba acompañantes, y llegó a escribir "lo que importa es
+  // que seguís viniendo acá" — la app elogiando que vuelvas a la app.
+  it('ninguna señal en tono gentle la redacta un modelo', () => {
+    for (const señal of ['sustained-low', 'sharp-drop', 'trend-down', 'level']) {
+      expect(puedeRedactarloElModelo(señal, 'gentle')).toBe(false);
+    }
+  });
+
+  it('warm y neutral SÍ — es donde hay margen y equivocarse sale barato', () => {
+    expect(puedeRedactarloElModelo('trend-up', 'warm')).toBe(true);
+    expect(puedeRedactarloElModelo('sessions', 'warm')).toBe(true);
+    expect(puedeRedactarloElModelo('streak', 'warm')).toBe(true);
+    expect(puedeRedactarloElModelo('practices', 'warm')).toBe(true);
+    expect(puedeRedactarloElModelo('level', 'neutral')).toBe(true);
+  });
+
+  // Cierra el círculo con `buildReflection`: si mañana alguien le cambia el tono
+  // a una señal, este test dice qué pasa a manos del modelo sin querer.
+  it('📌 hoy el modelo solo toca cinco de las diez señales — las cinco gentle quedan afuera', () => {
+    const escenarios: Array<[string, Partial<ReflectionInput>]> = [
+      ['piso-seguridad', { pisoSeguridad: true }],
+      ['sharp-drop',     { sharpDrop: true }],
+      ['empty',          { recentMoods: [], historicMoods: [] }],
+      ['sustained-low',  { recentMoods: [1, 2, 2, 1], historicMoods: [] }],
+      ['trend-up',       { recentMoods: [4, 4, 4, 4], historicMoods: [2, 2, 3, 2, 2, 3] }],
+      ['trend-down',     { recentMoods: [2, 2, 3, 2], historicMoods: [4, 4, 5, 4, 4, 5] }],
+      ['sessions',       { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], sessionsThisWeek: 2 }],
+      ['streak',         { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], streak: 5 }],
+      ['practices',      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], resourcesThisWeek: 3 }],
+      ['level',          { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3] }],
+    ];
+    const conModelo = escenarios
+      .map(([, base]) => buildReflection(on(base)))
+      .filter(r => puedeRedactarloElModelo(r.signal, r.tone))
+      .map(r => r.signal);
+    expect(new Set(conModelo)).toEqual(new Set(['trend-up', 'sessions', 'streak', 'practices', 'level']));
+  });
 });

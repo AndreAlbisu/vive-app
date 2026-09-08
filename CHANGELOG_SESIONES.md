@@ -4,6 +4,30 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 184 · en tono `gentle` no escribe un modelo, y es un paso atrás a propósito)
+
+**Tocado:** `lib/weeklyReflection.ts`, `hooks/useDailyReflection.ts`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md`. **536 tests** (eran 531), `tsc` limpio. Sin schema, sin deploy (el cambio es del cliente).
+
+**Resumen — tercera corrida del ensayo, contra v22. La conclusión de las tres juntas es que en `gentle` el modelo aporta negativo, así que se apaga ahí. `warm` y `neutral` siguen con IA.**
+
+**La evidencia, que son tres corridas contra tres versiones del prompt y no una impresión:**
+- **~30% rechazado por el guardarraíl** en cada corrida. En la última **`trend-down` quedó 3 de 3**: ahí el modelo no aporta nada, cae a las reglas igual.
+- 🔴 **Inventa un acompañante sistemáticamente** —*"contárselo a quien te acompaña"* con `facts` vacío— **pese a que el `SYSTEM` lo prohíbe explícito desde la sesión 182**. Cinco de quince en la última, hedgeadas con *"si tenés"* como si la condicional lo arreglara. 📌 **Es un dato sobre cuánto confiar en un prompt: orienta, no garantiza. El que lo frena es el guardarraíl.**
+- **Reintroduce fórmulas que Andre ya había descartado** en la revisión de voz del 04/09: *"Eso es lo que cuenta"*, *"No es poco empezar"*.
+- 🔴 **Escribió *"lo que importa es que seguís viniendo acá"***: **la app elogiando que vuelvas a la app.** Pasa los quince controles y va en contra directa del techo del apego (§2 bis) y del criterio *"¿más capaz o más dependiente?"* que se escribió esta misma mañana. Ninguna palabra prohibida.
+- 📌 **Sus dos mejores salidas eran copias TEXTUALES de ejemplos del prompt** — *"Eso lo estás sosteniendo vos"* (el ejemplo que se agregó ayer) y la de `sharp-drop`, idéntica tres corridas seguidas. **El modelo no aprendió el patrón: le dimos una frase y la repitió.** Eso explica por qué agregar ejemplos parecía funcionar.
+
+- ⚠️ **Y `gentle` es el tono con el que la app le habla a alguien que la está pasando mal**: donde una frase mala cuesta más y donde las reglas ya son mejores. **Se apaga donde el riesgo es alto y el aporte es negativo.**
+- 🟢 **La decisión salió del `useEffect` y pasó a `puedeRedactarloElModelo()`** en `lib/weeklyReflection.ts` — pura, con el motivo largo escrito y **5 tests**. Adentro del hook era una condición suelta creciendo sin que nada la fijara; ahora hay un test que dice que el piso de seguridad no lo redacta un modelo **ni siquiera si alguien le cambiara el tono**, y otro que fija qué cinco señales quedan a manos del modelo hoy.
+
+**Efecto neto:** de las diez señales, el modelo ahora toca cinco (`trend-up`, `sessions`, `streak`, `practices`, `level`). Las cinco `gentle` son 100% reglas.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Probar el piso de seguridad en dispositivo** (sesión 179) — es lo más importante del backlog y sigue sin verse corriendo.
+- Decidir lo de *"estar ahí con vos"* (§1 lo avala, §3.5 lo roza).
+- **La inferencia causal sigue sin solución**, y el ensayo sumó un ejemplo del peor tipo: *"No es que hayas dejado de intentar"* — niega una causa que nadie planteó y al negarla la introduce.
+- Visto bueno de voz sobre la frase nueva de `sustained-low`.
+
 ## 2026-09-07 — Andre (sesión 183 · segunda corrida: los guardarrales funcionan, y apareció uno mal anclado)
 
 **Tocado:** `lib/weeklyReflection.ts`, `supabase/functions/weekly-reflection/index.ts`, `__tests__/weeklyReflection.test.ts`. **531 tests** (eran 530), `tsc` limpio. ✅ **Deployada v21 → v22.**

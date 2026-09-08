@@ -325,6 +325,58 @@ export type Reflection = {
   source: 'rules' | 'ai';
 };
 
+/** ¿Esta frase la puede redactar un modelo, o va sí o sí la de las reglas?
+ *
+ *  Puro y acá —en vez de suelto adentro del `useEffect` del hook— porque es una
+ *  decisión de producto con historia, y merece un test que la fije.
+ *
+ *  ── Lo que se saltea, y por qué cada uno ──────────────────────────────────
+ *
+ *  🔴 **`piso-seguridad`: requisito escrito**, no una preferencia.
+ *  `docs/legal-instrucciones.md` exige que la reacción ante señales de riesgo
+ *  sea determinística. Que además sea texto fijo es lo que la vuelve revisable
+ *  por una profesional, cosa que una frase generada no puede ser.
+ *
+ *  **`empty` y `early`: no hay con qué.** Lo único honesto que se puede decir es
+ *  "todavía no sé lo suficiente", y para eso no hace falta un modelo — sería
+ *  gastar una llamada por cada persona que abre la app sin registrar.
+ *
+ *  🔴 **Tono `gentle`: APAGADO el 07/09/2026, y es un paso atrás a propósito.**
+ *
+ *  Sale de tres corridas de `scripts/ensayo-gentle.mjs` contra tres versiones
+ *  del prompt (v20, v21, v22), no de una impresión. Lo que devolvieron:
+ *
+ *  · **~30% rechazado por el guardarraíl** en cada corrida, y `trend-down` quedó
+ *    **3 de 3** en la última: ahí el modelo no aporta nada, siempre cae a las
+ *    reglas igual.
+ *  · **Inventa un acompañante de forma sistemática** —*"contárselo a quien te
+ *    acompaña"* con `facts` vacío— pese a que el `SYSTEM` lo prohíbe explícito.
+ *    Cinco de quince en la última corrida. La instrucción no alcanzó.
+ *  · **Reintroduce fórmulas ya descartadas** en la revisión de voz del 04/09:
+ *    *"Eso es lo que cuenta"*, *"No es poco empezar"* — la app dictaminando, que
+ *    es justo lo que §2 ter pide sacar.
+ *  · 🔴 **Escribió *"lo que importa es que seguís viniendo acá"*** — la app
+ *    elogiando que vuelvas a la app. Pasa los quince controles y va en contra
+ *    directa del techo del apego (`la-voz-de-sofia.md` §2 bis) y del criterio
+ *    *"¿más capaz o más dependiente?"*.
+ *  · **Sus dos mejores salidas eran copias textuales de ejemplos del prompt.**
+ *    El modelo no aprendió el patrón: le dimos una frase y la repitió.
+ *
+ *  ⚠️ Y `gentle` es el tono con el que la app le habla a alguien que la está
+ *  pasando mal — o sea donde una frase mala cuesta más y donde las reglas ya son
+ *  mejores. **Se apaga donde el riesgo es alto y el aporte es negativo; `warm` y
+ *  `neutral` siguen con modelo, que es donde hay margen y equivocarse sale
+ *  barato.**
+ *
+ *  📌 Es reversible en esta función, y `ensayo-gentle.mjs` queda para volver a
+ *  probarlo cuando cambie el modelo o el prompt. */
+export function puedeRedactarloElModelo(signal: string, tone: ReflectionTone): boolean {
+  if (signal === 'piso-seguridad') return false;
+  if (signal === 'empty' || signal === 'early') return false;
+  if (tone === 'gentle') return false;
+  return true;
+}
+
 export type ReflectionInput = {
   /** mood_id (1-5) de los últimos 7 días. Orden indistinto. */
   recentMoods: number[];

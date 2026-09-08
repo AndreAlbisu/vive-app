@@ -375,6 +375,38 @@ mande, la regla absoluta hay que aflojarla.
 escrita a mano — el modelo está copiando el ejemplo del prompt en vez de escribir.
 No está arreglado.
 
+### 🔴 Decisión del 07/09: en tono `gentle` NO escribe un modelo
+
+Después de **tres corridas del ensayo contra tres versiones del prompt** (v20,
+v21, v22), la conclusión es un paso atrás a propósito: **`gentle` vuelve a ser
+100% de las reglas.** `warm` y `neutral` siguen con modelo.
+
+Lo que devolvieron las corridas, y ninguna es una impresión:
+
+- **~30% rechazado por el guardarraíl** en cada una. En la última, **`trend-down`
+  quedó 3 de 3**: ahí el modelo no aporta nada, cae a las reglas igual.
+- **Inventa un acompañante sistemáticamente** —*"contárselo a quien te
+  acompaña"* con `facts` vacío— **pese a que el `SYSTEM` lo prohíbe explícito**.
+  Cinco de quince en la última corrida, hedgeadas con *"si tenés"* como si la
+  condicional lo arreglara. 📌 **Dato sobre cuánto confiar en el prompt: orienta,
+  no garantiza. El que lo frena es el guardarraíl.**
+- **Reintroduce fórmulas ya descartadas** en la revisión de voz del 04/09:
+  *"Eso es lo que cuenta"*, *"No es poco empezar"*.
+- 🔴 **Escribió *"lo que importa es que seguís viniendo acá"*** — la app elogiando
+  que vuelvas a la app. Pasa los quince controles y va **en contra directa del
+  techo del apego** (§2 bis) y del criterio *"¿más capaz o más dependiente?"*.
+- 📌 **Sus dos mejores salidas eran copias TEXTUALES de ejemplos del prompt**
+  (*"Eso lo estás sosteniendo vos"*, y la de `sharp-drop`, idéntica tres corridas
+  seguidas). **El modelo no aprendió el patrón: le dimos una frase y la repitió.**
+
+⚠️ Y `gentle` es el tono con el que la app le habla a alguien que la está pasando
+mal: **donde una frase mala cuesta más y donde las reglas ya son mejores.** Se
+apaga donde el riesgo es alto y el aporte es negativo.
+
+Vive en `puedeRedactarloElModelo()` (`lib/weeklyReflection.ts`), puro y con
+tests. Es reversible ahí, y `scripts/ensayo-gentle.mjs` queda para volver a
+probarlo cuando cambie el modelo o el prompt.
+
 ### 🔴 Lo que esto le pide al código
 
 Cinco huecos, en orden de cuánto cambian:
