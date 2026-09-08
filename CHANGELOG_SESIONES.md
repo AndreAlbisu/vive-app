@@ -4,6 +4,27 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 176 · el consejo sobre Sofía, y lo que nadie había visto)
+
+**Tocado:** `docs/la-voz-de-sofia.md` (§2 bis: link al consejo). Nuevo: `docs/consejo-sofia.md`. Sin código, sin schema.
+
+**Resumen — se pasó la dirección de Sofía por cinco perspectivas independientes (contrarian, primeros principios, expansionista, outsider, ejecutor) y después tres revisores las leyeron anonimizadas y se las criticaron entre sí. Lo más importante que salió no estaba en ninguna de las cinco respuestas.**
+
+- ✅ **Nadie propuso volver atrás.** Ningún advisor dijo que la tarjeta debería seguir llamándose "Sobre vos", que el modelo de la hermana mayor esté mal, ni que la tesis sea falsa. El expansionista sostuvo sin refutación que **la historia de origen real es un activo inimitable** (Headspace tiene voz corporativa; esto tiene una historia verdadera). Lo que se discutió es **con qué frenos**.
+- 🔴 **El veredicto: la dirección es correcta, el orden está invertido — se encendió la máquina de apego y se dejó apagada la red.** Tres advisors llegaron por caminos independientes al piso de seguridad apagado. Textual: *"el piso de seguridad construido y apagado es la prueba: la salvaguarda más importante está desactivada. No es un detalle técnico, es la prioridad real hablando."*
+- 🔴 **Cinco puntos ciegos, y CUATRO son sobre personas concretas.** Ninguno salió de los advisors: aparecieron recién cuando se leyeron entre ellos. (1) **Nadie representa a Sofía, la persona** — su nombre está en un producto que no controla, y nadie calculó el costo reputacional **para ella** si falla en una crisis. (2) **El piso de seguridad probablemente se puede desacoplar**: no hace falta la revisión completa para tener un filtro mínimo, y hoy no hay ninguna red activa. (3) Dejarlo apagado es **negligencia potencial**, no un ítem de backlog. (4) El consentimiento informado tiene que ser **onboarding, no letra chica**: la persona tiene derecho a saber que es un producto antes de que se forme el apego. (5) **No hay gobernanza** — nadie definió quién vetea cuando "más apego" compite con "más seguridad", y sin métrica de capacidad el engagement gana por default.
+- 🟡 **El único choque frontal fue el apego.** El expansionista lo trata como foso competitivo; contrarian y primeros principios como mecanismo sin frenos. **Las dos revisiones de fondo marcaron el bloque de negocio como el punto ciego más grande del consejo** — una lo llamó *"la respuesta más peligrosa de las cinco si alguien la toma como guía"*, por reencuadrar riesgos de seguridad como oportunidades sin mencionar daño. Queda registrado con esa advertencia al lado (X-1).
+- ⚠️ **El outsider encontró algo que ningún doc había visto: los dos Sofía confunden.** *"Se siente como dos productos pegados con el mismo nombre, y eso me haría dudar de la seriedad de la app."* Choca de frente con la decisión de la 174 de no unificar — que se tomó por un motivo bueno. **D-1 y D-2 se resuelven juntas o no se resuelven.**
+- 📌 **El doc queda organizado para decidir, no como transcripción:** 5 ACCIONES (no necesitan decisión, hay que hacerlas), 9 DECISIONES numeradas que esperan a Andre, y 4 ABIERTOS.
+
+**🔴 Lo que el consejo dejó expuesto y queda pendiente: LA PERSONALIDAD DE SOFÍA.**
+§2 bis define **el vínculo** (una hermana mayor) y §3 define **las prohibiciones**. Entre las dos falta la del medio: **cómo ES ella.** No es lo mismo una hermana tierna que una irónica, una que te deja en paz que una que insiste. Hoy las 32 frases tienen tono coherente **por accidente** —las escribió una persona en una tarde— y eso no escala: ni a más frases, ni a un modelo redactando, ni a que Joaquín escriba una. ⚠️ **Y hace falta para que el mail a Mónica sea completo**: se le va a pedir que evalúe una frase en el contexto de una voz que todavía no está descrita.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **A-1: el mail.** Sigue siendo lo primero, y el consejo lo confirmó desde dos ángulos.
+- 🔴 **La personalidad de Sofía** — la próxima pieza del doc de la voz.
+- Las 9 decisiones de `consejo-sofia.md` §5, empezando por D-1/D-2 (el chat prometido y los dos Sofía), que van juntas.
+
 ## 2026-09-07 — Andre (sesión 175 · de dónde sale Sofía, y el techo del apego)
 
 **Tocado:** `docs/la-voz-de-sofia.md` (§2 bis: dos secciones nuevas). Sin código, sin schema.

@@ -142,6 +142,14 @@ y te manda con el profesional), **§5 quater** (no te persigue afuera de la app)
 **§3.6** (se sabe que es una IA). Y **§5 ter** es la misma idea en su forma más
 dura: el punto donde decir "hasta acá llego yo" es lo único que corresponde.
 
+📌 **Todo esto se pasó por un consejo de cinco perspectivas independientes el
+mismo día — ver [`consejo-sofia.md`](./consejo-sofia.md).** El veredicto no fue
+sobre la dirección (nadie propuso volver atrás) sino sobre el orden: *se encendió
+la máquina de apego y se dejó apagada la red*. Ahí están las cinco cosas que
+nadie había visto, las acciones y las decisiones abiertas. 🔴 **Y lo que ese
+consejo dejó expuesto: falta la personalidad de Sofía** — §2 bis define el
+vínculo y §3 las prohibiciones, pero entre las dos falta cómo ES ella.
+
 ### Por qué "amigo" no alcanzaba
 
 Un amigo **no te hace seguimiento**. Si te escribe todos los días a ver cómo
