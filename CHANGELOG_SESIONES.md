@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 189 · Diario y Gratitud pasan a ser pinneables)
+
+**Tocado:** `app/diario.tsx`, `app/gratitud.tsx`. **541 tests** (sin cambios), `tsc` limpio, eslint sin nada nuevo. Sin schema.
+
+**Resumen:**
+
+- 🟢 **Las 10 herramientas de Vita ya son pinneables. Faltaban dos: Diario y Gratitud.** Alcanzó con sumarles el `PinButton` al slot `right` de su `ToolHeader` — **toda la infraestructura ya las soportaba** y estaba sin usar: `VITA_TOOL_MAP` (`constants/vitaTools.ts`) las tiene con su `mdicon` y su `route`, el resolver de pinneados del inicio las resuelve por slug sin tocar la base, y `pinned_resources.resource_id` es `text` sin FK, así que acepta el slug igual que los otros ocho. Cero cambios de schema, cero consultas nuevas.
+- 📌 **Esto REVIERTE una decisión de la sesión 149**, que las había dejado afuera a propósito "porque son de registro diario". Decisión de Andre: si alguien usa el Diario todos los días, es justamente el que más gana con tenerlo a un toque desde el inicio — el argumento de la 149 servía para justificar por qué no estaban, no para probar que no debían estar.
+- 📝 **La pastilla de fecha va primero y el marcador último.** En las otras ocho herramientas el pin es siempre lo más a la derecha del header, y esa posición es la que se busca sin mirar. Va con `inline` (sin el slot de 60) porque el `right` de `ToolHeader` ya arma su propia fila.
+- 📝 **No se les sumó `ReminderBell`**: no se pidió, y un recordatorio para una herramienta de registro diario es otra discusión.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Probarlo en dispositivo**: fijar Diario y Gratitud, que aparezcan en el inicio con su ícono y su nombre, que el toque lleve a la pantalla correcta, y que el tope de 4 siga avisando.
+- Sigue la device review de Mensajes (sesiones 175 y 188): orden que no se mueve, sala nueva al final, el "Reservar" de la fila y su toque anidado, la lupa del coach, y el header de la sala sin el botón que se sacó.
+
+---
+
 ## 2026-09-07 — Andre (sesión 188 · la tarjeta "¿Querés volver a ver a X?" se disolvió: la re-reserva vive en la fila)
 
 **Tocado:** `screens/SessionsScreen.tsx`, `screens/SalaScreen.tsx`. **541 tests** (ninguno mío: los 26 nuevos respecto de la 175 son de las sesiones 176-187, que corrieron en paralelo), `tsc` limpio, eslint sin errores nuevos. Sin schema.

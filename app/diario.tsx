@@ -22,6 +22,7 @@ import { supabase } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { ToolHeader } from '@/components/ui/ToolHeader';
+import { PinButton } from '@/components/PinButton';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 import { AppBg } from '@/components/ui/AppBg';
 import { localDayKey } from '@/lib/dates';
@@ -348,7 +349,15 @@ export default function DiarioScreen() {
         <ToolHeader
           title="Diario"
           onBack={() => router.back()}
-          right={<Text style={s.datePillText}>{formatTodayShort()}</Text>}
+          right={
+            // La pastilla de fecha va primero y el marcador último: en las otras
+            // ocho herramientas el pin es SIEMPRE lo más a la derecha del header,
+            // y esa posición es la que se busca sin mirar.
+            <>
+              <Text style={s.datePillText}>{formatTodayShort()}</Text>
+              <PinButton resourceId="diario" inline />
+            </>
+          }
         />
         <View style={s.headerDivider} />
 

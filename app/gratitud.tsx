@@ -17,6 +17,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { PASTEL_SALVIA, PASTEL_DURAZNO } from '@/constants/tools';
 import { ToolHeader } from '@/components/ui/ToolHeader';
+import { PinButton } from '@/components/PinButton';
 import { useAuth } from '@/context/AuthContext';
 import { useConsentGate } from '@/hooks/useConsentGate';
 import { ConsentSheet } from '@/components/ConsentSheet';
@@ -189,7 +190,15 @@ export default function GratitudScreen() {
       <ToolHeader
         title="Gratitud"
         onBack={() => router.back()}
-        right={<Text style={s.datePillText}>{formatTodayShort()}</Text>}
+        right={
+          // La pastilla de fecha va primero y el marcador último: en las otras
+          // ocho herramientas el pin es SIEMPRE lo más a la derecha del header,
+          // y esa posición es la que se busca sin mirar.
+          <>
+            <Text style={s.datePillText}>{formatTodayShort()}</Text>
+            <PinButton resourceId="gratitud" inline />
+          </>
+        }
       />
       <View style={s.headerDivider} />
 
