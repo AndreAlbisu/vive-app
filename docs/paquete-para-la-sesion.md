@@ -189,6 +189,15 @@ moviendo lo íntimo de lugar.
 2. **El ofrecimiento antes de la sesión**, una vez y descartable.
 3. **El diario, entrada por entrada.** Último a propósito: es lo más valioso y lo
    único que necesita que el resto ya esté bien hecho.
+   > **PENDIENTE — decisión con Andre (2026-09-08).** Los pasos 1 y 2 están hechos
+   > y probados en dispositivo. El paso 3 no se arrancó a propósito: el §8ter deja
+   > abierta la duda de si el diario debe entrar (*"si la nota funciona, el diario
+   > quizás no necesita entrar nunca… puede que la respuesta sea que no vaya"*), y
+   > la nota por día ya cubre el rol de contexto. Antes de construir un UI de
+   > compartir-diario —lo más sensible, y con las reglas más estrictas: la app no
+   > lo ofrece (§8ter), entrada por entrada (§5), nunca "compartir mi diario"
+   > (§10)— hay que decidir **si el diario suma sobre la nota o la nota alcanza**.
+   > Es feature de Andre y toca la línea de privacidad → se decide entre los dos.
 
 ## 10. Lo que NO haría
 
