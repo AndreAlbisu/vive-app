@@ -4,6 +4,29 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 188 · dos consejos más, y el registro de problemas abiertos)
+
+**Tocado:** `docs/la-voz-de-sofia.md`, `docs/consejo-sofia.md` (links). Nuevo: **`docs/problemas-abiertos.md`**. Sin código.
+
+**Resumen — se pasaron por consejo dos preguntas grandes: qué hace Vita frente al riesgo real, y si la arquitectura de la tarjeta sirve para el objetivo declarado. Las dos volvieron con hallazgos que ningún advisor solo había visto.**
+
+- 🔴 **El veredicto sobre la arquitectura: el resultado NO sirve todavía, y el motivo es estructural, no de copy.** Ningún advisor lo defendió. El que simuló ser usuario: *"a la segunda semana la esquivo con la vista, como los banners de «completá tu perfil»... si desapareciera no la extrañaría."*
+- 🔴 **El diagnóstico de raíz: la tarjeta es AUTORA cuando debería ser MENSAJERA.** Todos los días tiene que inventar algo con casi ninguna entrada — de ahí el horóscopo, la absolución sistemática y que el modelo copie los ejemplos del prompt. **Hay cosas reales para entregar que no necesitan ni memoria ni texto libre**, y entregarlas resuelve tres problemas de una. 📌 **Y da vuelta el techo del apego**: si el vínculo se ata al paquete y a lo que manda el coach, el apego **empuja hacia el profesional en vez de competir con él** — la única versión donde el engagement de Sofía y la retención paga tiran para el mismo lado.
+- ✅ **Hallazgo concreto y verificado: `resource_recommendations` existe con 7 filas reales** (coach → persona, con nota y registro de apertura) y **la tarjeta no la mira nunca**. El movimiento 5 marcaba 0 de 22 no por un límite de arquitectura sino porque **nadie unió dos partes que ya existen**.
+- ⚠️ **La hipótesis que más explica y que hay que verificar antes de tocar una frase: los 14 guardarrales premian lo genérico por diseño.** Es más fácil que una frase vacía pase el filtro que una específica. Si es cierta, **reescribir el banco de frases es inútil** — hay que arreglar los guardarrales. Salió del peer review, ninguno de los cinco advisors la vio.
+- 🔴 **Una distinción que veníamos mezclando, y la adjudicación la separó: la falla es "cero memoria", NO "cero texto".** Son ejes distintos. ⚠️ Pero **memoria de señales no es gratis**: una trayectoria de meses de ánimo día a día **singulariza igual que un diario** aunque no haya una palabra escrita. Client-side cambia el análisis legal, no el ético. La versión mínima segura es **aflojar la ventana** (un agregado de 7 días) y no guardar historia.
+- 📌 **El error de raíz, dicho con precisión:** *"calcaron el modelo de voz de alguien que SÍ recuerda sobre un sistema que decidió no hacerlo."*
+- 🔴 **Del consejo sobre riesgo: me equivoqué en un argumento y quedó corregido.** Preguntar *"¿pensaste en hacerte daño?"* **no es screening** — screening es aplicar un instrumento que mide severidad. Era un error categorial. **Pero la conclusión sobrevive por una razón mejor:** preguntar y contestar con una pantalla de teléfonos **es funcionalmente idéntico a no preguntar, y le costó a la persona decir que sí.** No hay que decidir si preguntar: hay que **hacer que la respuesta valga algo**. Tercera vía propuesta: *"¿querés que alguien te llame ahora?"* con la llamada en un tap.
+- ⚠️ **Y el reproche de método, que las tres revisiones marcaron:** *"las cinco respuestas debaten calidad de frases mientras hay riesgo de seguridad y plata real corriendo sin auditar"*. Dos ramas del piso sin probar, y un coach cobrando $1 real. **Un equipo grande paraleliza; dos hermanos no.**
+
+**🟢 `docs/problemas-abiertos.md`: registro con IDs estables (A1, B2, C3…) para hablar por número.** Seis bloques: **A** exposición (riesgo vivo), **B** arquitectura de la voz, **C** contenido de las 35 frases, **D** abierto sin solución conocida, **E** decisiones frenadas, **F** el problema de método. Marca lo verificado contra lo que es hipótesis. Linkeado desde `la-voz-de-sofia.md` y `consejo-sofia.md`.
+
+**Pendiente para la próxima sesión, en orden de exposición y no de calidad de argumento:**
+- 🔴 **A1** — las dos ramas del piso sin probar. 15 minutos.
+- 🔴 **A2** — el coach de $1. Una línea.
+- ⚠️ **B6** — la prueba de resta, antes de tocar el banco de frases.
+- **F** — mandar la versión reglas-only a 5-10 personas reales dos semanas. *"Esa respuesta vale más que los 540 tests."*
+
 ## 2026-09-08 — Joaquín (sesión 191 · device review cerrada: matrícula en vivo y Diario, + fix de sincronización de Inicio)
 
 **Tocado:** `hooks/useMoodHistory.ts`, `app/(tabs)/index.tsx`. `tsc`/lint/541 tests limpios. Sin schema.

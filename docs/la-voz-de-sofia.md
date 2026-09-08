@@ -441,6 +441,13 @@ Cinco huecos, en orden de cuánto cambian:
 5. **El recurso va último y condicionado** — nunca como apertura, y nunca
    fabricado.
 
+📌 **El registro consolidado de lo que falta está en
+[`problemas-abiertos.md`](./problemas-abiertos.md)**, con IDs estables para
+hablar por número. Lo más importante de ahí: 🔴 **B1** (la tarjeta es autora
+cuando debería ser mensajera) y ⚠️ **B6** (la hipótesis de que los guardarrales
+premian lo genérico, que si es cierta explica el resto y hay que verificar antes
+de reescribir una sola frase).
+
 ## 3. El riesgo real, que es peor que el anterior
 
 **La presencia es lo más difícil de falsificar.** El modo de fallar del analista

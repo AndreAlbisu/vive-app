@@ -13,6 +13,11 @@
 > Los cinco puntos ciegos del §3 aparecieron recién cuando los advisors se
 > leyeron entre ellos.
 
+📌 **Este doc es del primer consejo (la dirección de Sofía).** Los otros dos
+—sobre el riesgo, y sobre si la arquitectura sirve para el objetivo— están
+consolidados con sus conclusiones en
+[`problemas-abiertos.md`](./problemas-abiertos.md).
+
 ---
 
 ## 1. El veredicto, en una línea
