@@ -30,7 +30,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { COMMISSION_INTL_FIRST, COMMISSION_INTL_RECURRING } from '@/lib/pricing';
+import { COMMISSION_INTL_FIRST, COMMISSION_INTL_RECURRING, COMMISSION_LOCAL_FIRST, COMMISSION_LOCAL_RECURRING } from '@/lib/pricing';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
@@ -206,8 +206,27 @@ export default function CoachPayoutScreen() {
         ) : (
           <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+              {/* 🔴 La comisión de las sesiones locales vivía en la Home, abajo
+                  del "% de tus personas vuelve". Se movió acá porque en la
+                  pantalla de saludo se lee "me van a cobrar" y no como lo que
+                  es. Además era el ÚNICO lugar de toda la app donde el coach
+                  podía enterarse de cuánto retenemos en Argentina: sacarla de
+                  la Home sin traerla acá la habría hecho desaparecer.
+
+                  El encuadre se mantiene entero — es la medida anti-fuga #3, y
+                  lo que la hace funcionar no es "baja por volumen" sino "te
+                  cobramos por presentarte, no por tu relación". */}
               <Text style={s.subtitle}>
-                Solo para las sesiones con personas fuera de Argentina. Esas no te entran por Mercado
+                Las sesiones con personas en Argentina las cobrás vos, directo a tu cuenta de
+                Mercado Pago. De cada una retenemos {COMMISSION_LOCAL_FIRST}% la primera vez con
+                cada persona y {COMMISSION_LOCAL_RECURRING}% de ahí en adelante, y no se reinicia
+                nunca.{'\n\n'}
+                <Text style={s.subtitleStrong}>Te cobramos por presentarte a alguien, no por tu
+                relación con esa persona.</Text>
+              </Text>
+
+              <Text style={s.subtitle}>
+                Y aparte, las sesiones con personas fuera de Argentina. Esas no te entran por Mercado
                 Pago: las cobra VIVE y te las transferimos cada semana, por sesiones ya realizadas.
                 {'\n\n'}
                 De cada una retenemos {COMMISSION_INTL_FIRST}% la primera vez con cada persona y{' '}
@@ -396,6 +415,7 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19,
     color: 'rgba(135,131,92,0.80)', marginBottom: 22,
   },
+  subtitleStrong: { fontFamily: ViveFonts.semibold, color: '#565E32' },
   label: {
     fontFamily: ViveFonts.semibold, fontSize: 13,
     color: '#565E32', marginBottom: 8, marginTop: 18,

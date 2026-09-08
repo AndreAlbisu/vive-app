@@ -156,13 +156,53 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
 
   const userName = (userProfile?.name as string | null) ?? 'Un usuario'
 
-  await sendPush(
-    coachProfile?.push_token,
-    isInstant ? 'Nueva reserva confirmada 📅' : 'Nueva solicitud de sesión 📅',
-    isInstant
-      ? `${userName} reservó una sesión el ${fecha} a las ${hora} hs. Ya está confirmada.`
-      : `${userName} quiere reservar una sesión el ${fecha} a las ${hora} hs`,
-  )
+  const avisoCoachTitle = isInstant ? 'Nueva reserva confirmada 📅' : 'Nueva solicitud de sesión 📅'
+  const avisoCoachBody = isInstant
+    ? `${userName} reservó una sesión el ${fecha} a las ${hora} hs. Ya está confirmada.`
+    : `${userName} quiere reservar una sesión el ${fecha} a las ${hora} hs`
+
+  await sendPush(coachProfile?.push_token, avisoCoachTitle, avisoCoachBody)
+
+  // 🔴 La fila en `notifications` que faltaba desde siempre. El push de arriba
+  // ya existía, pero es EFÍMERO: sin permisos de notificación, descartado, o
+  // con el teléfono cambiado, no quedaba ningún rastro de la reserva y la
+  // campana del coach mostraba cero. A las 24hs `expire_pending_bookings()` la
+  // cancelaba y devolvía la plata, sin que el coach se hubiera enterado nunca.
+  // El tipo `reserva_nueva` estaba en el CHECK del schema desde el principio y
+  // ningún código lo insertaba. Ver SCHEMA.md → `notifications`.
+  //
+  // Va DESPUÉS del push y no antes porque la fila es la red, no el aviso: si
+  // esto fallara, el push ya salió.
+  //
+  // ⚠️ Va para las dos ramas. Con `instant_booking` la reserva nace confirmada
+  // y no hay nada que aceptar, pero el coach igual tiene una sesión nueva en la
+  // agenda y esa es exactamente la clase de cosa que tiene que quedar escrita.
+  if (coach?.profile_id) {
+    // Los webhooks reintentan, y esta función es la que corre en cada intento.
+    // La confirmación de abajo se protege sola con el `.eq('status','pendiente')`;
+    // un insert no, así que se pregunta antes. El peor caso de perder la carrera
+    // son dos filas iguales en la campana: molesto, no roto.
+    const { data: yaAvisado } = await admin
+      .from('notifications')
+      .select('id')
+      .eq('recipient_id', coach.profile_id)
+      .eq('booking_id', booking.id)
+      .eq('type', 'reserva_nueva')
+      .maybeSingle()
+
+    if (!yaAvisado) {
+      const { error: errNotif } = await admin.from('notifications').insert({
+        recipient_id: coach.profile_id,
+        type: 'reserva_nueva',
+        booking_id: booking.id,
+        title: avisoCoachTitle,
+        body: avisoCoachBody,
+      })
+      // Mismo criterio que el push: un aviso que no se pudo guardar no puede
+      // tumbar la acreditación del pago.
+      if (errNotif) console.error('[booking-effects] no se pudo guardar el aviso al coach:', errNotif.message)
+    }
+  }
 
   // Sin reserva instantánea la sesión sigue siendo una SOLICITUD: la confirma el
   // coach desde CoachReservasScreen, con los mismos efectos de abajo. Pagar no

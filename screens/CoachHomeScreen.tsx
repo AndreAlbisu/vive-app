@@ -18,11 +18,11 @@ import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { personasQueSeCaen, haceCuanto, type PersonaEnRiesgo } from '@/lib/coachContinuity';
-import { COMMISSION_LOCAL_FIRST, COMMISSION_LOCAL_RECURRING } from '@/lib/pricing';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { visibilityTeaser, analyzeDoors, homeStanding, tituloVisibilidad, bajadaVisibilidad, type VisibilityTeaser, type HomeStanding } from '@/lib/coachVisibility';
 import { loadVisibilitySelf } from '@/lib/coachVisibilityData';
+import { SLOT_ORDER } from '@/lib/coachDeckRanking';
 import { DOORS } from '@/constants/conexionesDoors';
 import { scheduledAtMs, daysFromTodayAr, todayInAr } from '@/lib/time';
 
@@ -516,10 +516,29 @@ export default function CoachHomeScreen() {
     (async () => {
       const cargado = await loadVisibilitySelf(user.id);
       if (!vivo || !cargado) return;
-      setStanding(homeStanding(analyzeDoors(cargado.self, cargado.pool)));
+      // 🔴 Compuerta de pre-lanzamiento: solo se habla del LUGAR en los temas
+      // donde el lugar significa algo. Cada tema reparte 4 lugares, así que con
+      // 4 coaches o menos compitiendo no hay competencia: "ganaste" quiere decir
+      // "sos el único que se anotó". Dicho en la Home, sin que nadie lo pida,
+      // eso es a la vez mentira y ansiedad competitiva contra rivales que no
+      // existen — y el día del lanzamiento TODOS los temas van a estar así.
+      //
+      // No se borra nada: la tarjeta ya sabe caer a la línea sin número
+      // (`standing` en null), que es lo que se ve mientras la consulta viaja. Y
+      // el cálculo entero sigue vivo en `/coach-visibilidad`, que es la pantalla
+      // donde el coach VA A BUSCAR el detalle y donde los números están
+      // explicados. La compuerta es sobre el titular no pedido, no sobre el dato.
+      const conCompetencia = analyzeDoors(cargado.self, cargado.pool)
+        .filter(d => d.total > SLOT_ORDER.length);
+      setStanding(homeStanding(conCompetencia));
     })();
     return () => { vivo = false; };
   }, [user, esCoachNuevo, visibilityLista, visibilityBloqueada]);
+
+  // La semana solo se dibuja si hay algo que contar — ver el comentario en el
+  // render. Mientras `weekData` está vacío (primer pintado) también da false,
+  // que es lo correcto: nada que mostrar todavía.
+  const semanaConAlgo = weekData.some(d => d.count > 0);
 
   const prepPuertas = doorLabels.length > 0;
   const prepDoneCount = [prepPerfil, prepPuertas, prepRecurso].filter(Boolean).length;
@@ -582,7 +601,13 @@ export default function CoachHomeScreen() {
             </View>
           </View>
 
-          {/* Tu semana */}
+          {/* Tu semana — 🔴 solo si la semana tiene ALGO. Siete círculos vacíos
+              no informan nada: no dicen "todavía no arrancaste", dicen "esto
+              está muerto", y son lo primero que ve un coach recién aprobado
+              debajo de su propio nombre. El día del lanzamiento van a estar así
+              para todos. Cuando entra la primera sesión aparece sola, que es
+              exactamente cuando el dato empieza a valer. */}
+          {semanaConAlgo && (
           <TouchableOpacity style={s.week} activeOpacity={0.9} onPress={() => router.push('/coach-agenda')}>
             {weekData.map((d, i) => (
               <View key={i} style={[s.wd, d.isToday && s.wdToday]}>
@@ -593,6 +618,7 @@ export default function CoachHomeScreen() {
               </View>
             ))}
           </TouchableOpacity>
+          )}
 
           {/* Tu próxima sesión */}
           {next ? (
@@ -706,10 +732,21 @@ export default function CoachHomeScreen() {
                     {prepPuertas && <Feather name="check" size={11} color="#F3EEDF" />}
                   </View>
                   <View style={{ flex: 1 }}>
+                    {/* 🔴 Decía "puertas" y es jerga NUESTRA: no aparece a la
+                        vista en ningún lado de la app —ni en Conexiones, donde
+                        el usuario ve los nombres y nunca la palabra— así que
+                        acá es la primera y única vez que el coach la lee, en el
+                        paso 2 de su checklist, sin nada que se la explique. Se
+                        traba ahí y se traba en el onboarding entero.
+
+                        "Temas" no pierde nada: los chips de abajo son
+                        `DOORS[].label` y se leen exactamente así ("Ansiedad y
+                        estrés", "Descanso y energía"). La diferencia entre
+                        subtema y puerta es de nuestro modelo, no del suyo. */}
                     <Text style={s.checkLabel}>
                       {prepPuertas
-                        ? `Aparecés en ${doorLabels.length} ${doorLabels.length === 1 ? 'puerta' : 'puertas'}`
-                        : 'Elegí en qué puertas aparecer'}
+                        ? `Aparecés en ${doorLabels.length} ${doorLabels.length === 1 ? 'tema' : 'temas'}`
+                        : 'Elegí en qué temas aparecer'}
                     </Text>
                   </View>
                 </View>
@@ -853,15 +890,22 @@ export default function CoachHomeScreen() {
           )}
 
           {/* ── Lo que construiste acá ─────────────────────────────────────
-              🔴 Va ÚLTIMO a propósito: no es accionable, es el cierre. Y va
-              JUNTO con la comisión, no separado, porque separados los dos
-              pierden. "El 60% vuelve" solo es una palmada; "el 60% vuelve, y
-              cuando vuelve te cobramos menos" es el argumento entero — la
-              medida anti-fuga #3, pendiente desde el 06/08/2026.
+              Va ÚLTIMO a propósito: no es accionable, es el cierre.
 
-              El encuadre que funciona NO es "baja por volumen" sino "te
-              cobramos por presentarte, no por tu relación". Dicho al lado de su
-              propio número de recompra, es donde más se entiende. */}
+              ⚠️ 08/09/2026 — LA NOTA DE COMISIÓN SE FUE DE ACÁ, a "Cómo te
+              pagamos" (`CoachPayoutScreen`). Estaba pegada al "% vuelve" con un
+              argumento que sigue siendo bueno —"el 60% vuelve, y cuando vuelve
+              te cobramos menos" es más fuerte que cualquiera de las dos mitades
+              sueltas— pero perdía por dónde estaba dicho: en la pantalla de
+              saludo, sin que nadie pregunte, hablar de plata se lee "me van a
+              cobrar" y no como generosidad. El encuadre entero se mudó, no se
+              recortó.
+
+              🔴 Esta tarjeta no se gatea a mano y no hace falta: `repu.completadas > 0`
+              ya la esconde el día 1, y `rebooking_rate` es NULL con menos de 5
+              sesiones completadas, así que el "% vuelve" no aparece hasta tener
+              muestra. Es el único bloque de la Home que ya nacía con su propia
+              compuerta bien puesta. */}
           {repu && repu.completadas > 0 && (
             <View style={s.repuWrap}>
               <Text style={s.repuEyebrow}>LO QUE CONSTRUISTE ACÁ</Text>
@@ -879,13 +923,6 @@ export default function CoachHomeScreen() {
                   </View>
                 )}
               </View>
-              <Text style={s.repuNota}>
-                Y cuando vuelven te cobramos menos: {COMMISSION_LOCAL_FIRST}% la primera sesión
-                con cada persona, {COMMISSION_LOCAL_RECURRING}% de ahí en adelante, y no se
-                reinicia nunca.{' '}
-                <Text style={s.repuNotaB}>Te cobramos por presentarte a alguien, no por tu
-                relación con esa persona.</Text>
-              </Text>
             </View>
           )}
 
@@ -1042,14 +1079,6 @@ const s = StyleSheet.create({
   repuItem: { flexShrink: 1 },
   repuNum: { fontFamily: ViveFonts.title, fontSize: 26, color: FOREST },
   repuLbl: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, marginTop: 2 },
-  repuNota: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: FOREST_SOFT,
-  },
-  repuNotaB: { fontFamily: ViveFonts.semibold, color: FOREST },
-
   caenWrap: {
     backgroundColor: CARD,
     borderRadius: 18,

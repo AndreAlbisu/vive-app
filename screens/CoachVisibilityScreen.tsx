@@ -167,11 +167,11 @@ export default function CoachVisibilityScreen() {
               <>
                 <Text style={s.heroTitle}>
                   {winnable > 0
-                    ? `Entrás al sorteo en ${winnable} de ${doors.length} ${doors.length === 1 ? 'puerta' : 'puertas'}`
-                    : `Aparecés en ${doors.length} ${doors.length === 1 ? 'puerta' : 'puertas'}`}
+                    ? `Entrás al sorteo en ${winnable} de ${doors.length} ${doors.length === 1 ? 'tema' : 'temas'}`
+                    : `Aparecés en ${doors.length} ${doors.length === 1 ? 'tema' : 'temas'}`}
                 </Text>
                 <Text style={s.heroSub}>
-                  Cada puerta tiene 4 lugares. No los gana el mejor de la lista: entran todos los que cruzan la
+                  Cada tema tiene 4 lugares. No los gana el mejor de la lista: entran todos los que cruzan la
                   barra y se sortea entre ellos, distinto para cada persona y cada día. Ocupás el lugar más alto
                   para el que califiques.
                 </Text>
@@ -193,8 +193,8 @@ export default function CoachVisibilityScreen() {
             <View style={s.emptyCard}>
               <Text style={s.emptyCardTitle}>No elegiste temas todavía</Text>
               <Text style={s.emptyCardTxt}>
-                Los temas deciden en qué puertas competís. Es lo que más te conviene resolver primero: podés
-                elegir una puerta con menos coaches y ocupar un lugar desde el día uno.
+                Los temas deciden dónde competís. Es lo que más te conviene resolver primero: podés
+                elegir uno con menos coaches y ocupar un lugar desde el día uno.
               </Text>
               <TouchableOpacity style={s.emptyCardBtn} activeOpacity={0.85} onPress={() => router.push('/coach-topics')}>
                 <Text style={s.emptyCardBtnTxt}>Elegir temas</Text>
@@ -202,7 +202,7 @@ export default function CoachVisibilityScreen() {
             </View>
           ) : (
             <>
-              <Text style={s.sectionTitle}>Tus puertas</Text>
+              <Text style={s.sectionTitle}>Tus temas</Text>
               {doors.map(d => {
                 const expanded = openDoor === d.door.id;
                 const badge = d.best ? STATUS_STYLE[d.best.status] : null;
@@ -236,7 +236,7 @@ export default function CoachVisibilityScreen() {
                           <View style={s.fallbackRow}>
                             <Feather name="eye-off" size={13} color={FOREST_SOFT} />
                             <Text style={s.fallbackTxt}>
-                              Hoy no ocupás ningún lugar de esta puerta, así que no aparecés en las
+                              Hoy no ocupás ningún lugar de este tema, así que no aparecés en las
                               recomendaciones. Seguís en “Ver lista completa”, donde están todos.
                             </Text>
                           </View>

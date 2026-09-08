@@ -4,6 +4,26 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 201 · se empezó a aplicar lo de la 200)
+
+**Tocado:** `supabase/functions/_shared/booking-effects.ts`, `screens/CoachHomeScreen.tsx`, `screens/CoachVisibilityScreen.tsx`, `screens/CoachPayoutScreen.tsx`, `docs/inicio-del-coach.md`. **553 tests**, `tsc` limpio. ⚠️ **`booking-effects.ts` NO está deployada** — ver pendientes.
+
+**Resumen — se aplicó todo lo que no dependía de una decisión abierta. Cuatro cambios.**
+
+- 🔴 **La fila en `notifications` que faltaba desde siempre.** El push al coach ya salía (`booking-effects.ts:159`), pero es efímero: sin permisos, descartado o con el teléfono cambiado **no quedaba ningún rastro** de la reserva y la campana mostraba cero; a las 24hs `expire_pending_bookings()` la cancelaba y devolvía la plata sin que el coach se hubiera enterado. Ahora inserta `type='reserva_nueva'` para `coach.profile_id`, **en las dos ramas** (con `instant_booking` no hay nada que aceptar, pero hay una sesión nueva en la agenda y eso tiene que quedar escrito). 🟢 **No hizo falta tocar nada más**: `CoachNotificationsScreen` es agnóstica al tipo y hace tappable cualquier notificación con `booking_id`, y la campana del Inicio cuenta por `recipient_id`, que es `profiles.id` — el mismo que `coaches.profile_id`. ⚠️ **Los webhooks reintentan**, así que el insert pregunta antes por `(recipient_id, booking_id, type)`; el `.eq('status','pendiente')` de la confirmación ya se protegía solo, un insert no.
+- 🟢 **Compuerta de la tira semanal:** solo se dibuja si la semana tiene algo (`semanaConAlgo`). **Siete círculos vacíos no dicen "todavía no arrancaste", dicen "esto está muerto"** — y eso es lo primero que ve un coach recién aprobado, debajo de su nombre. El día del lanzamiento van a estar así para todos.
+- 🟢 **Compuerta del `standing`:** el Inicio solo habla del LUGAR en los temas donde hay más coaches que lugares (`d.total > SLOT_ORDER.length`, o sea más de 4 — el mismo 4 que reparte el deck, sacado de ahí y no puesto a mano). Con 4 o menos, "ganaste" significa "sos el único que se anotó": mentira y ansiedad contra rivales inexistentes. 📌 **No se borró nada**: la tarjeta ya sabía caer a la línea sin número, y el cálculo completo sigue vivo en `/coach-visibilidad`, que es donde el coach VA A BUSCARLO y donde está explicado. **La compuerta es sobre el titular no pedido, no sobre el dato.**
+- 🟢 **"Puertas" → "temas"** en `CoachHomeScreen` (checklist) y `CoachVisibilityScreen` (5 lugares). Es jerga NUESTRA: **no aparece a la vista en ninguna otra parte de la app** —ni en Conexiones, donde el usuario ve los nombres y nunca la palabra— así que el paso 2 del checklist era la primera y única vez que un coach la leía, sin nada que se la explicara. No pierde nada: los chips son `DOORS[].label` y se leen así ("Ansiedad y estrés"). ⚠️ **No fue un reemplazo ciego**: *"Los temas deciden en qué puertas competís"* se habría vuelto una frase circular, se reescribió; y *"la otra puerta de entrada a tu perfil"* se dejó, que es castellano corriente y no jerga.
+- 🟢 **La nota de comisión se mudó del Inicio a "Cómo te pagamos"** (`CoachPayoutScreen`). En la pantalla de saludo, sin que nadie pregunte, hablar de plata se lee *"me van a cobrar"*. 🔴 **Y no era opcional mudarla en vez de borrarla:** `COMMISSION_LOCAL_*` se usaba **solo ahí**, así que sacarla de la Home la habría hecho desaparecer de la app entera — el coach no habría tenido dónde ver cuánto retenemos en Argentina. El encuadre anti-fuga #3 se mudó completo, no recortado.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **DEPLOYAR `booking-effects.ts`.** Es `_shared`, así que hay que redeployar las tres que la importan: `mp-webhook`, `paypal-webhook` y `usdt-check-payments`. **Sin eso, el arreglo del aviso no está vivo en producción.** Verificar después con una reserva de prueba que quede la fila y se prenda el punto de la campana.
+- **Decisión de Andre (bloquea al resto):** la forma del link público — ver `docs/camino-del-cliente-1.md`.
+- **Decisión de Andre:** el default de `instant_booking`. 📌 Sigue siendo un `ALTER TABLE ... SET DEFAULT` de diez minutos, y sigue sacando del camino crítico la card de reservas pendientes.
+- **Decisión de Andre:** la comisión sobre clientes que trae el coach.
+- **No hecho a propósito:** "Escribirle" → "Proponerle un horario" (es una re-reserva iniciada por el coach, no un cambio de label: hay que decidir si propone slots libres de su agenda o abre el calendario) y el cuarto paso del checklist (*"Traé a tus primeros clientes"*), que necesita el link.
+- **De Joaquín:** A1 y el bloque de device review. **De Andre (viejo):** E6, el visto bueno de voz acumulado, el *"¡Hoy estás brillando!"* del Diario. **Del registro:** B1, B4, B7, D1-D6, E1-E6.
+
 ## 2026-09-08 — Andre (sesión 200 · el Inicio del coach, revisado con criterio de pre-lanzamiento)
 
 **Tocado:** `docs/inicio-del-coach.md` (nueva sección 0), `docs/camino-del-cliente-1.md` (nuevo), `SCHEMA.md` (`notifications`). ⚠️ **Sesión de análisis: no se tocó una línea de código de la app.** Todo lo de abajo es diagnóstico verificado y decisiones pendientes.

@@ -147,6 +147,15 @@ ser la parte chica: medio día de trabajo.**
 copy + compuertas → cuarto paso del checklist → y el proyecto de verdad, que ya
 no es esta pantalla.
 
+> ✅ **08/09/2026 — aplicado todo lo que no dependía de una decisión abierta:**
+> el insert de `reserva_nueva`, la compuerta de la tira semanal, la compuerta
+> del `standing` por competencia real, "puertas" → "temas" en las dos pantallas
+> del coach, y la nota de comisión mudada a "Cómo te pagamos". ⚠️ **Queda sin
+> hacer**, y a propósito: `instant_booking` (decisión), "Escribirle" →
+> "Proponerle un horario" (es una re-reserva, no un cambio de label) y el cuarto
+> paso del checklist (necesita el link, que necesita la decisión 1). Detalle en
+> la entrada de la sesión 201 del CHANGELOG.
+
 ### 0.5 Lo que queda decidido por Andre
 
 1. 🔴 **La forma del link público: ¿reserva y cobra en web, o muestra el perfil y
