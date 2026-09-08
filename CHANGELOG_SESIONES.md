@@ -4,6 +4,29 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 181 · el ensayo del prompt nuevo, y que el viejo probaba otro prompt)
+
+**Tocado:** `scripts/ensayo-payload-rico.mjs` (advertencia). Nuevo: `scripts/ensayo-gentle.mjs`. Sin código de app, sin schema.
+
+**Resumen — el prompt nuevo de `gentle` se deployó (v20) pero nunca se lo vio escribir. Al armar el ensayo apareció un problema en el ensayo viejo.**
+
+- 🔴 **El `SYSTEM` de `ensayo-payload-rico.mjs` NO es el de producción, y quedó así hace tiempo.** Se copió a mano con la idea de traerlo cuando el de la función cambiara, y no pasó. Le falta **la sección entera de señales** (qué dice y qué no cada una), la mitad del detalle de "Reglas que no se rompen", y el detalle del tono. **Las conclusiones del ensayo del 04/09 se sacaron contra un prompt distinto al que corre.** No lo invalida —los hallazgos fueron reales y se arreglaron— pero "el ensayo validó el prompt" es más débil de lo que suena. Queda advertido en el encabezado del script; no se actualizó porque cambiaría la base de comparación de esa corrida.
+- 🟢 **`scripts/ensayo-gentle.mjs` no puede tener ese problema: LEE el `SYSTEM` del archivo de la función** con un regex, y **aborta ruidosamente** si no lo encuentra en vez de correr con un prompt inventado. Además chequea que el prompt leído tenga la instrucción nueva: si alguien revierte el cambio del 07/09, el ensayo se detiene y avisa, porque dejó de tener sentido. Verificado: extrae 5.776 caracteres, contra la copia recortada del script viejo.
+- **Qué prueba:** las **cinco señales con tono `gentle`** (`sustained-low` con y sin sesión a la vista, `sharp-drop`, `trend-down`, `early`), N corridas cada una, con el mismo `max_tokens`, el mismo modelo y la misma forma de mensaje que usa la función.
+- **Once alertas automáticas** sobre modos de falla conocidos: concluir sobre quién es la persona (*"sos capaz"*), aliento genérico, elogio vacío, ironía, exclamaciones, fingir sentir, pedir reserva, lenguaje clínico, género, adjetivo masculino, arranque prohibido.
+- 🔴 **Y el ensayo dice explícitamente que cero alertas NO es aprobado.** Las alertas miran vocabulario, y el problema que se busca —**que la app se quede de sujeto en vez de devolverle el hecho a la persona**— no tiene ninguna palabra prohibida. Es la misma clase de hueco que la inferencia causal, que cuatro corridas del otro ensayo confirmaron que no se arregla con el prompt. **Hay que leerlas.**
+
+**Cómo correrlo** (necesita la clave, que vive como secret de Supabase y no está en `.env`):
+```
+ANTHROPIC_API_KEY=sk-ant-... node scripts/ensayo-gentle.mjs
+ANTHROPIC_API_KEY=sk-ant-... CORRIDAS=5 node scripts/ensayo-gentle.mjs
+```
+
+**Pendiente para la próxima sesión:**
+- **Correr el ensayo y leer las frases.** Es lo único que puede decir si el cambio de prompt hizo lo que queríamos.
+- Probar el piso de seguridad en dispositivo (sesión 179) — sigue siendo lo más importante del backlog.
+- Visto bueno de voz sobre la frase nueva de `sustained-low`.
+
 ## 2026-09-07 — Andre (sesión 180 · que la voz pueda motivar, y un diagnóstico mío que estaba mal)
 
 **Tocado:** `supabase/functions/weekly-reflection/index.ts` (el `SYSTEM`), `lib/weeklyReflection.ts`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md` (§2 ter). **526 tests** (eran 516), `tsc` limpio. Sin schema. ✅ **`weekly-reflection` deployada: v19 → v20**, ACTIVE, `verify_jwt` sigue en `true`. Smoke test con la anon key: `401 {"error":"token inválido"}` — el mensaje es propio de la función y no de la plataforma, así que el handler corre.

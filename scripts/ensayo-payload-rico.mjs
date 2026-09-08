@@ -70,9 +70,21 @@ if (API_KEY !== CRUDA) {
 
 const MODEL = process.env.REFLECTION_MODEL ?? 'claude-haiku-4-5';
 
-// El MISMO system que usa la función en producción. Se copia y no se importa
-// porque la función es Deno y esto es Node — si el de allá cambia, hay que
-// traerlo. Está anotado en el encabezado de `weekly-reflection/index.ts`.
+// 🔴 ESTE SYSTEM NO ES EL DE PRODUCCIÓN — quedó desactualizado (visto 07/09/2026).
+//
+// Se copió a mano con la idea de traerlo cuando el de allá cambiara, y no pasó.
+// Comparado con `weekly-reflection/index.ts` le falta: **la sección entera de
+// señales** (qué dice y qué no cada una), la mitad del detalle de "Reglas que no
+// se rompen", y el detalle del tono. O sea que **las conclusiones del ensayo del
+// 04/09 se sacaron contra un prompt distinto al que corre.**
+//
+// ⚠️ No se actualizó acá porque este script prueba otra pregunta (payload rico) y
+// tocarlo cambiaría la base de comparación de esa corrida. **Si volvés a correr
+// este ensayo, traé el SYSTEM primero.**
+//
+// ✅ `scripts/ensayo-gentle.mjs` (07/09) NO tiene este problema: **lee el SYSTEM
+// del archivo de la función** con un regex y aborta si no lo encuentra. Es el
+// patrón a copiar para cualquier ensayo nuevo.
 const SYSTEM = `Escribís UNA línea para la pantalla de inicio de Vita, una app argentina de bienestar y desarrollo personal. Se muestra abajo del check-in diario de ánimo.
 
 # La voz
