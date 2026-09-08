@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 194 · A2: el coach de prueba se queda, y deja de depender de la memoria)
+
+**Tocado:** `docs/problemas-abiertos.md`. Nuevo: `scripts/verificar-pre-lanzamiento.sql`. Sin código de app.
+
+**Resumen — decisión de Andre sobre A2, y la mitigación que la acompaña.**
+
+- ⏸️ **"Coach Prueba" se queda hasta el lanzamiento.** ✅ Identificado: `e58d2ec3`, especialidad *"Especialidad de prueba"*, `verified` y `activo`, MP conectado, `price_per_session = 1`. **La decisión es correcta**: hace falta un coach para ejercitar los flujos y con cero usuarios reales el riesgo es cero.
+- 🔴 **Pero el riesgo no es tenerlo: es olvidárselo el día que abran.** Y **ya llevaba varias sesiones apareciendo en "pendiente" sin que eso lo moviera** — un renglón más en el changelog no lo iba a salvar.
+- 🟢 **`scripts/verificar-pre-lanzamiento.sql`**, siguiendo la convención que el repo ya usa (`verificar-riel-paypal.sql`): **solo lectura, cada chequeo devuelve filas SOLO si hay un problema, todo vacío = pasa.** Se corre con la service key antes de dejar entrar a la primera persona.
+- **Los cinco chequeos, todos derivados de cosas que ya pasaron en este proyecto:** (1) coaches publicados con **precio irrisorio** — el caso que lo motivó, y no hay CHECK ni trigger que lo valide en la base; (2) coaches visibles **sin precio**, que es el crash latente de `search3.tsx` y de paso responde A3 el día que aparezca uno; (3) coaches que **anuncian internacional sin `price_usd`**, que el catálogo mostraría y la pantalla de pago rechazaría con 409; (4) **reservas confirmadas a futuro con coach en pausa o sin verificar** — durante las pruebas se mueven fechas a mano (el banner del paquete, las ramas del piso) y una confirmada que nadie va a atender le promete una sesión a alguien; (5) **filas de ánimo con fecha centinela**, que las verificaciones contra la base usan y a veces no se limpian.
+- 📌 **Dice explícitamente qué NO chequea**: las feature flags viven en el bundle y no en la base, y lo que solo se verifica en dispositivo está en el bloque A del registro.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **A1** — las dos ramas del piso sin probar. Es lo único de exposición que sigue abierto, y el SQL para forzar los dos casos ya está escrito.
+- **E6** (el género en la voz), **C7** (las otras superficies donde habla Sofía).
+
 ## 2026-09-08 — Andre (sesión 193 · E6: ¿la voz puede tratarte en género?)
 
 **Tocado:** `docs/problemas-abiertos.md` (E6 nuevo, con análisis). Sin código — queda como decisión abierta.
