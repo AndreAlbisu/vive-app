@@ -393,6 +393,22 @@ export type Reflection = {
  *
  *  📌 Es reversible en esta función, y `ensayo-gentle.mjs` queda para volver a
  *  probarlo cuando cambie el modelo o el prompt. */
+/** ¿La tarjeta está preguntando algo?
+ *
+ *  🔴 Existe porque **preguntar sin buzón es peor que no preguntar**. Del consejo
+ *  del 08/09, el usuario común: *"es como si alguien te pregunta algo en la calle
+ *  y se va caminando. Si no hay buzón, no preguntes."* Siete de las 22 frases
+ *  preguntaban al vacío.
+ *
+ *  📌 **Detecta el signo y no una marca en cada frase, a propósito.** Una marca
+ *  hay que acordarse de ponerla en la frase 36 y en la que escriba el modelo; el
+ *  signo de apertura es obligatorio en español y no se puede olvidar. El
+ *  guardarraíl ya garantiza que no haya markdown ni comillas raras, así que la
+ *  única fuente de `¿` es una pregunta de verdad. */
+export function esPregunta(r: Pick<Reflection, 'before' | 'bold' | 'after'>): boolean {
+  return `${r.before}${r.bold}${r.after}`.includes('¿');
+}
+
 export function puedeRedactarloElModelo(signal: string, tone: ReflectionTone): boolean {
   if (signal === 'piso-seguridad') return false;
   if (signal === 'empty' || signal === 'early') return false;

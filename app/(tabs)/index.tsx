@@ -32,7 +32,7 @@ import type { MoodEntry } from '@/hooks/useMoodHistory';
 import { computeMoodStreak, detectMoodDrop } from '@/lib/moodStats';
 import { detectarPisoSeguridad } from '@/lib/pisoSeguridad';
 import { SAFETY_FLOOR_ENABLED } from '@/constants/features';
-import { buildReflection, type Reflection } from '@/lib/weeklyReflection';
+import { buildReflection, esPregunta, type Reflection } from '@/lib/weeklyReflection';
 import { useDailyReflection } from '@/hooks/useDailyReflection';
 import { localDayKey, localDayKeyMinus, diasEntreDias } from '@/lib/dates';
 import { useWeeklySignals } from '@/hooks/useWeeklySignals';
@@ -288,6 +288,17 @@ export default function InicioScreen() {
     }, 350);
   }, [moodEntries, today, recentCutoff, weekly.resourcesThisWeek, weekly.sessionsThisWeek, weekly.writingThisWeek, openMomento]);
 
+  /** La oración que pregunta, sin el hecho que la precede.
+   *
+   *  La tarjeta dice *"Hace unos días que venís abajo. ¿Pasó algo, o es más
+   *  difuso que eso?"* — al Diario va solo la segunda mitad: el hecho ya lo sabe
+   *  quien lo vivió, y repetírselo arriba del teclado es ruido. */
+  function preguntaDeLaCard(r: Reflection): string {
+    const texto = `${r.before}${r.bold}${r.after}`;
+    const desde = texto.indexOf('¿');
+    return desde >= 0 ? texto.slice(desde).trim() : texto.trim();
+  }
+
   function handleReopenMomento() {
     // 🔴 EL PISO DE SEGURIDAD NO ABRE EL MOMENTO: abre `/ayuda`.
     //
@@ -310,6 +321,23 @@ export default function InicioScreen() {
     if (cardReflection.signal === 'recurso-del-coach') {
       registrarEvento('reflexion_vista', { origen: 'recurso_coach' });
       router.push('/mis-recomendaciones');
+      return;
+    }
+    // 🔴 Si Sofía preguntó, el toque va a donde se puede contestar.
+    //
+    // Del consejo del 08/09: *"es como si alguien te pregunta algo en la calle y
+    // se va caminando. Si no hay buzón, no preguntes."* El buzón ya existía —el
+    // Diario— y nadie los había unido. Y lo que se escriba ahí termina en el
+    // paquete que la persona le manda a su profesional, así que la pregunta no
+    // muere en la app.
+    //
+    // ⚠️ Va DESPUÉS del piso y del recurso: los dos preguntan por su cuenta y
+    // tienen destinos propios que no se negocian.
+    if (cardReflection.signal !== 'piso-seguridad'
+        && cardReflection.signal !== 'recurso-del-coach'
+        && esPregunta(cardReflection)) {
+      registrarEvento('reflexion_vista', { origen: 'pregunta_al_diario' });
+      router.push({ pathname: '/diario', params: { pregunta: preguntaDeLaCard(cardReflection) } });
       return;
     }
     if (cardReflection.signal === 'piso-seguridad') {
@@ -1123,7 +1151,9 @@ function SobreVosCard({
                   ? '→ Si lo necesitás, hay líneas de ayuda'
                   : reflection.signal === 'recurso-del-coach'
                     ? '→ Ver lo que te dejó'
-                    : '→ Ver más'}
+                    : esPregunta(reflection)
+                      ? '→ Contestalo en tu Diario'
+                      : '→ Ver más'}
               </Text>
             </>
           )}

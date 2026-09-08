@@ -1,4 +1,4 @@
-import { buildReflection, rejectCopy, puedeRedactarloElModelo, type ReflectionInput } from '@/lib/weeklyReflection';
+import { buildReflection, rejectCopy, puedeRedactarloElModelo, esPregunta, type ReflectionInput } from '@/lib/weeklyReflection';
 import { localDayKey, localDayKeyMinus } from '@/lib/dates';
 
 // Base neutra: sin actividad, sin racha, sin histórico. Cada test enciende
@@ -1059,5 +1059,40 @@ describe('recurso-del-coach — la única señal que es una noticia', () => {
     const conDatos = { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], streak: 5 };
     expect(buildReflection(on({ ...conDatos, recursoSinAbrir: false })).signal).toBe('streak');
     expect(buildReflection(on(conDatos)).signal).toBe('streak');
+  });
+});
+
+describe('esPregunta — si no hay buzón, no preguntes', () => {
+  // Del consejo del 08/09, el usuario común: *"es como si alguien te pregunta
+  // algo en la calle y se va caminando"*. Siete de las 22 frases preguntaban al
+  // vacío; desde hoy el toque lleva al Diario con esa pregunta.
+
+  it('reconoce las frases que preguntan', () => {
+    expect(esPregunta({ before: 'Hace unos días que ', bold: 'venís abajo', after: '. ¿Pasó algo, o es más difuso que eso?' })).toBe(true);
+    expect(esPregunta({ before: 'Venís ', bold: 'levantando', after: ', y eso no pasa solo. ¿Sabés qué se movió?' })).toBe(true);
+  });
+
+  it('y las que no', () => {
+    expect(esPregunta({ before: '', bold: 'Días difíciles', after: ', y los registrás igual. Eso lo estás sosteniendo vos.' })).toBe(false);
+    expect(esPregunta({ before: 'Hace varios días que venís registrando lo mismo. ', bold: 'Llevalo a tu próxima sesión', after: '.' })).toBe(false);
+  });
+
+  it('📌 hay preguntas en varias señales, no en una sola', () => {
+    // Si un día quedan cero, el camino al Diario deja de existir en silencio.
+    const escenarios: Array<Partial<ReflectionInput>> = [
+      { recentMoods: [1, 2, 2, 1], historicMoods: [] },
+      { recentMoods: [4, 4, 4, 4], historicMoods: [2, 2, 3, 2, 2, 3] },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], resourcesThisWeek: 3 },
+      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3] },
+    ];
+    const dias = Array.from({ length: 40 }, (_, i) => new Date(Date.UTC(2026, 7, 1 + i)).toISOString().slice(0, 10));
+    const conPregunta = new Set<string>();
+    for (const base of escenarios) {
+      for (const dayKey of dias) {
+        const r = buildReflection(on({ ...base, dayKey }));
+        if (esPregunta(r)) conPregunta.add(r.signal);
+      }
+    }
+    expect(conPregunta.size).toBeGreaterThanOrEqual(3);
   });
 });

@@ -4,6 +4,27 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 197 · C3: las preguntas dejan de morir en el aire)
+
+**Tocado:** `lib/weeklyReflection.ts`, `app/diario.tsx`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `docs/problemas-abiertos.md`. **549 tests** (eran 546), `tsc` limpio.
+
+**Resumen — la queja más visceral del consejo tenía arreglo barato: el buzón ya existía y nadie lo había unido.**
+
+> *"¿Pasó algo? — che, ¿y ahora qué hago con eso? Es como si alguien te pregunta algo en la calle y se va caminando. **Si no hay buzón, no preguntes.**"*
+
+- 🟢 **Cuando Sofía pregunta, tocar la tarjeta abre el Diario con esa pregunta.** CTA: *"→ Contestalo en tu Diario"*. Es el mismo patrón que ya se usó dos veces hoy (`piso-seguridad` → `/ayuda`, `recurso-del-coach` → `/mis-recomendaciones`): **si la tarjeta dice algo, tocarla lleva ahí**.
+- ✅ **Y no hizo falta el chat que no existe.** C3 estaba anotado como cruzado con E2 (los dos Sofía, pausado con Joaquín); resulta que no dependía de eso.
+- 🔴 **Lo que lo vuelve más que un atajo: lo que se escriba ahí termina en el paquete que la persona le manda a su profesional.** La pregunta no muere en la app — sale hacia la sesión, que es donde §2 ter dice que las cosas se trabajan.
+- 📌 **La pregunta le gana incluso a la bienvenida de la primera vez.** Si alguien llegó al Diario desde una pregunta concreta, explicarle qué es el Diario sería cambiarle el tema.
+- 📌 **Al Diario va solo la oración que pregunta**, sin el hecho que la precede: *"Hace unos días que venís abajo"* ya lo sabe quien lo vivió, y repetírselo arriba del teclado es ruido.
+- 📌 **`esPregunta()` detecta el signo `¿` y no una marca por frase, a propósito:** una marca hay que acordarse de ponerla en la frase 36 y en la que escriba el modelo; **el signo de apertura es obligatorio en español y no se puede olvidar**. Y el guardarraíl ya garantiza que no haya markdown ni comillas raras, así que la única fuente de `¿` es una pregunta de verdad.
+- 🟢 **Un test fija que hay preguntas en al menos tres señales distintas**: si un día quedan cero, el camino al Diario **dejaría de existir en silencio**.
+
+**Pendiente para la próxima sesión:**
+- **De Joaquín:** A1 y el bloque de device review. 📌 Ahora también: que el camino tarjeta → Diario funcione y que la pregunta llegue.
+- **De Andre:** E6, el visto bueno de voz, y el *"¡Hoy estás brillando!"* del Diario.
+- **Libre:** C5 (el humor), C6 (la negrita que se pierde con la IA).
+
 ## 2026-09-08 — Andre (sesión 196 · C7: el barrido de las otras superficies)
 
 **Tocado:** `app/gratitud.tsx`, `docs/problemas-abiertos.md`. 546 tests, `tsc` limpio.

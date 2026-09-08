@@ -12,7 +12,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts, ViveMoodColors, ViveMoods } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -180,10 +180,24 @@ export default function DiarioScreen() {
   // Se congela apenas hay algo escrito: que la pregunta se reescriba sola
   // mientras escribís —porque moviste el ánimo a mitad de una frase— es
   // insoportable. Se fija la primera vez que hay texto y se suelta al vaciarse.
+  const params = useLocalSearchParams<{ pregunta?: string }>();
   const promptFijado = useRef<Prompt | null>(null);
-  const promptBase = entries.length === 0
-    ? PROMPT_BIENVENIDA
-    : (MOOD_PROMPTS[entryMood] ?? PROMPT_BIENVENIDA);
+  // 🔴 Si Sofía preguntó algo en Inicio, ESA es la pregunta — no la del ánimo.
+  //
+  // Sin esto, la tarjeta preguntaba *"¿Pasó algo, o es más difuso que eso?"*, la
+  // persona tocaba, y el Diario le preguntaba otra cosa. La pregunta se perdía en
+  // el camino, que es la versión silenciosa del problema que marcó el consejo:
+  // *"si no hay buzón, no preguntes"*.
+  //
+  // ⚠️ Le gana incluso a la bienvenida de la primera vez: si alguien llegó acá
+  // desde una pregunta concreta, explicarle qué es el Diario sería cambiarle el
+  // tema.
+  const preguntaDeSofia = Array.isArray(params.pregunta) ? params.pregunta[0] : params.pregunta;
+  const promptBase: Prompt = preguntaDeSofia
+    ? { lead: 'Sofía te preguntó esto.', pregunta: preguntaDeSofia, cierre: 'Contestalo acá si querés.' }
+    : entries.length === 0
+      ? PROMPT_BIENVENIDA
+      : (MOOD_PROMPTS[entryMood] ?? PROMPT_BIENVENIDA);
   const prompt = promptFijado.current ?? promptBase;
 
   function handleChangeText(t: string) {
