@@ -384,7 +384,18 @@ export function buildReflection(input: ReflectionInput): Reflection {
       // causa — valida explícitamente que no la haya, que es el caso más común y
       // el que peor se siente cuando alguien te pide explicarlo.
       r('Hace unos días que ', 'venís abajo', '. ¿Pasó algo, o es más difuso que eso?', 'gentle', 'sustained-low'),
-      r('', 'Días difíciles', ', y los registrás igual. Eso no es poco.', 'gentle', 'sustained-low'),
+      // 📌 Revisión del 07/09 (`la-voz-de-sofia.md` §2 ter). Antes cerraba con
+      // *"Eso no es poco"*, que es la app **validando**: la frase empieza y
+      // termina en ella. El movimiento 4 de Sofía era el contrario — te subía el
+      // piso y después **te lo dejaba a cargo** ("y así debía mantenerme").
+      //
+      // 🔴 Y por qué NO dice "sos capaz": eso concluiría sobre quién es la
+      // persona a partir de cinco registros de ánimo, que es el modo analista
+      // que §2 prohíbe. Ella podía decirlo porque los conocía hace años; la app
+      // no. Lo que sí puede hacer es **material y no conclusión**: nombrar un
+      // hecho que la persona efectivamente hizo y atribuírselo. El sujeto de la
+      // frase deja de ser la app y pasa a ser ella.
+      r('', 'Días difíciles', ', y los registrás igual. Eso lo estás sosteniendo vos.', 'gentle', 'sustained-low'),
       r('La semana viene ', 'cuesta arriba', '. No tiene que estar buena para que valga la pena anotarla.', 'gentle', 'sustained-low'),
     ]);
   }

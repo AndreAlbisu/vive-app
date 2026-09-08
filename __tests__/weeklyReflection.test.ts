@@ -749,3 +749,58 @@ describe('rejectCopy — el borde de palabra en español', () => {
     expect(rejectCopy('Tu semana viene pareja, sin la genialidad de otras pero igual de válida.', 'gentle')).toBeNull();
   });
 });
+
+describe('🔴 las frases propias cumplen lo que le exigen al modelo', () => {
+  // El principio ya estaba escrito en `weeklyReflection.ts` desde la sesión 164,
+  // pero no había nada que lo hiciera cumplir:
+  //
+  //   "Las reglas tienen que cumplir lo que le exigen al modelo, o el día que se
+  //    prenda la IA vamos a estar rechazándole frases que las nuestras usan."
+  //
+  // Ese día llegó: `AI_REFLECTION_ENABLED` está en true. Y el bug que motivó la
+  // frase —una variante de `trend-up` que arrancaba con "Se te nota…", prohibido
+  // por el `SYSTEM` de la edge function— lo encontró Andre leyendo, no un test.
+  //
+  // Esto lo barre solo: recorre las nueve señales, y de cada una TODAS sus
+  // variantes (el pick rota por `dayKey`, así que 40 días alcanzan), y le pasa
+  // cada frase a `rejectCopy` **con su propio tono**.
+
+  const escenarios: Array<[string, Partial<ReflectionInput>]> = [
+    ['piso-seguridad', { pisoSeguridad: true }],
+    ['sharp-drop',     { sharpDrop: true }],
+    ['empty',          { recentMoods: [], historicMoods: [] }],
+    ['sustained-low',  { recentMoods: [1, 2, 2, 1], historicMoods: [] }],
+    ['trend-up',       { recentMoods: [4, 4, 4, 4], historicMoods: [2, 2, 3, 2, 2, 3] }],
+    ['trend-down',     { recentMoods: [2, 2, 3, 2], historicMoods: [4, 4, 5, 4, 4, 5] }],
+    ['sessions',       { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], sessionsThisWeek: 2 }],
+    ['streak',         { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], streak: 5 }],
+    ['practices',      { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], resourcesThisWeek: 3 }],
+    ['level',          { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3] }],
+  ];
+
+  // 40 días consecutivos: más que suficiente para agotar las variantes de
+  // cualquier señal, porque `variantFor` hashea el dayKey.
+  const dias = Array.from({ length: 40 }, (_, i) => {
+    const d = new Date(Date.UTC(2026, 7, 1 + i));
+    return d.toISOString().slice(0, 10);
+  });
+
+  for (const [nombre, base] of escenarios) {
+    it(`ninguna variante de ${nombre} sería rechazada por rejectCopy`, () => {
+      const vistas = new Set<string>();
+      for (const dayKey of dias) {
+        const r = buildReflection(on({ ...base, dayKey }));
+        const frase = `${r.before}${r.bold}${r.after}`.trim();
+        if (vistas.has(frase)) continue;
+        vistas.add(frase);
+        const motivo = rejectCopy(frase, r.tone);
+        expect(
+          motivo === null ? null : `[${r.signal}/${r.tone}] "${frase}" → ${motivo}`,
+        ).toBeNull();
+      }
+      // Si una señal deja de producir frases, el test pasaría vacío y no
+      // probaría nada.
+      expect(vistas.size).toBeGreaterThan(0);
+    });
+  }
+});

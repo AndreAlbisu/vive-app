@@ -341,12 +341,32 @@ contradicción.**
 
 Cinco huecos, en orden de cuánto cambian:
 
-1. **`CHEER` prohíbe motivar en tono `gentle`, y los movimientos 3 y 4 son
-   motivación.** Hay que separar el elogio vacío (que sigue prohibido) de la
-   **expectativa** (*"sos capaz, sostenelo"*), que hoy no tiene forma de existir.
+1. ~~**`CHEER` prohíbe motivar en tono `gentle`**~~ ✅ **HECHO el 07/09, y el
+   diagnóstico estaba mal.** `CHEER` es una lista de palabras (*felicitaciones,
+   buenísimo, genial, seguí así*) y una frase como *"eso lo estás sosteniendo
+   vos"* no matchea ninguna: **nunca fue el bloqueo.** El bloqueo real estaba en
+   el `SYSTEM` de la edge function — *"gentle → NO la animes, NO le pidas nada,
+   NO celebres"*, que sí es categórico — más que ninguna de las 32 frases lo
+   hacía. Se reescribió esa instrucción y se giró una variante de
+   `sustained-low`.
+
+   🔴 **Y la parte difícil, que conviene entender: la app NO puede decir "sos
+   capaz".** Eso concluiría sobre quién es la persona a partir de cinco registros
+   de ánimo — el modo analista que §2 prohíbe. Sofía podía decirlo **porque los
+   conocía hacía años**; la app no la conoce. Lo que sí puede hacer es el
+   equivalente estructural bajo *material, no conclusión*: **nombrar un hecho que
+   la persona efectivamente hizo y atribuírselo**, para que el sujeto de la frase
+   deje de ser la app. *"Días difíciles, y los registrás igual. **Eso no es
+   poco**"* → *"**Eso lo estás sosteniendo vos**"*. La primera es la app
+   validando; la segunda le devuelve el hecho.
+
+   ⚠️ **Es una sola frase, y es copy en la voz de Andre — espera su visto bueno.**
+   El barrido de las 32 es un trabajo aparte.
 2. **El tono se computa del dato en vez de leerse de la persona.** Es el cambio
    más profundo y el más caro; queda planteado, no resuelto.
-3. **Falta "nunca sarcástica ni irónica"** en `rejectCopy`.
+3. **"Nunca sarcástica ni irónica"** ✅ agregada al `SYSTEM` del modelo el 07/09
+   (era una línea, en el mismo archivo). ⚠️ **Falta todavía en `rejectCopy`**, que
+   es el que la frena si el modelo igual la escribe.
 4. **El silencio necesita el criterio de no-reabrir**, en vez de una lista.
 5. **El recurso va último y condicionado** — nunca como apertura, y nunca
    fabricado.

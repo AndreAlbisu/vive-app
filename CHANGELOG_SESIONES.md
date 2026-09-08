@@ -4,6 +4,30 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 180 · que la voz pueda motivar, y un diagnóstico mío que estaba mal)
+
+**Tocado:** `supabase/functions/weekly-reflection/index.ts` (el `SYSTEM`), `lib/weeklyReflection.ts`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md` (§2 ter). **526 tests** (eran 516), `tsc` limpio. Sin schema. ⚠️ **La edge function necesita re-deploy** para que el prompt nuevo corra.
+
+**Resumen — el hueco #1 de §2 ter: los movimientos 3 y 4 de Sofía (motivar, hacerte creer en vos) no existían en la voz. Al ir a arreglarlo, el diagnóstico que yo había dado estaba equivocado.**
+
+- 🔴 **`CHEER` NUNCA fue el bloqueo.** Es una lista de palabras (*felicitaciones, buenísimo, excelente, genial, orgullo, "seguí así", "no bajes los brazos"*) y una frase como *"eso lo estás sosteniendo vos"* no matchea ninguna. **El bloqueo real estaba en el `SYSTEM` de la edge function**, línea 69: *"gentle → NO la animes, NO le pidas nada, NO celebres. Acusás recibo y te corrés."* Eso sí es categórico — y sumado a que ninguna de las 32 frases motivaba, ahí estaba el hueco.
+- 🟢 **Reescrita esa instrucción.** Sigue prohibido el aliento genérico (*"seguí así"*, *"sos capaz"*) con el motivo dicho: **le sirve a cualquiera, o sea a nadie, y encima afirma algo sobre la persona que el modelo no sabe.** Lo que se habilita es nombrar UN hecho de los que se le pasan —que registró, que volvió, que escribió— **y dejárselo a ella en vez de cerrarlo la app**.
+- 🔴 **La parte difícil, y conviene que quede clara: la app NO puede decir "sos capaz".** Concluiría sobre quién es la persona a partir de cinco registros de ánimo — el modo analista que §2 prohíbe. **Sofía podía decirlo porque los conocía hacía años; la app no la conoce.** Lo que sí puede es el equivalente estructural bajo *material, no conclusión*: nombrar un hecho real y atribuírselo, para que el sujeto de la frase deje de ser la app.
+- 🟢 **Una variante de `sustained-low` girada:** *"Días difíciles, y los registrás igual. **Eso no es poco**"* → *"**Eso lo estás sosteniendo vos**"*. La primera es la app validando —empieza y termina en ella—; la segunda le devuelve el hecho. Es el movimiento 4 ("te subía el piso y después te lo dejaba a cargo"). ⚠️ **Es copy en la voz de Andre y espera su visto bueno**; el barrido de las 32 es un trabajo aparte.
+- 🟢 **Hueco #3 de paso: "nunca irónica ni sarcástica" al `SYSTEM`** (era una línea, mismo archivo). ⚠️ Falta todavía en `rejectCopy`, que es el que la frena si el modelo igual la escribe.
+
+**🔴 Y un test que faltaba desde la sesión 164, que es el más valioso de la sesión.**
+
+El principio ya estaba escrito en el código: *"las reglas tienen que cumplir lo que le exigen al modelo, o el día que se prenda la IA vamos a estar rechazándole frases que las nuestras usan."* **Pero no había nada que lo hiciera cumplir** — el bug que motivó esa frase (una variante de `trend-up` que arrancaba con *"Se te nota…"*, prohibido por el `SYSTEM`) lo encontró Andre leyendo, no un test. **Y ese día llegó: `AI_REFLECTION_ENABLED` está en `true`.**
+
+Ahora hay un barrido: recorre las nueve señales, agota **todas** sus variantes (40 días, porque el pick rota por `dayKey`) y le pasa cada frase a `rejectCopy` **con su propio tono**. Hoy pasan las 32. ✅ **Verificado por mutación**: se envenenó una frase con *"Eso es genial, seguí así"* y el test falla nombrando la señal, el tono, la frase y el motivo (`anima en tono suave`).
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **Re-deployar `weekly-reflection`** — el prompt nuevo no corre hasta entonces.
+- **Visto bueno de voz de Andre** sobre la frase nueva de `sustained-low`.
+- Probar el piso de seguridad en dispositivo (sesión 179).
+- Huecos que quedan de §2 ter: #2 (el tono leído de la persona y no computado del dato — el más profundo), #3 en `rejectCopy`, #4 (silencio por criterio de no-reabrir), #5 (el recurso último y condicionado).
+
 ## 2026-09-07 — Andre (sesión 179 · el piso de seguridad ENCENDIDO, y la puerta que no existía)
 
 **Tocado:** `constants/features.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md` (§5 ter), `docs/consejo-sofia.md` (D-3). **516 tests** (eran 515), `tsc` y eslint limpios. Sin schema.
