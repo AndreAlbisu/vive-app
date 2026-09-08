@@ -3,6 +3,159 @@
 > 26/08/2026. Escrito a pedido de Andre: qué podría servirle a un profesional en
 > su pantalla de inicio, incluyendo ideas nuevas. No es un plan cerrado — es
 > material para decidir. Nada de acá está implementado.
+>
+> ⚠️ **08/09/2026 — esa última frase ya no es cierta y el criterio cambió.** B, D,
+> E, F y G se implementaron; A y C no. Y la pregunta pasó a ser de
+> pre-lanzamiento. **Leer primero la sección 0**; lo que sigue desde la 1 se deja
+> tal cual como el análisis original, que sigue siendo el razonamiento de fondo.
+---
+
+## 0. Segunda pasada — 08/09/2026, con el criterio de pre-lanzamiento
+
+> Escrita a pedido de Andre. La primera pasada (todo lo que sigue desde la
+> sección 1) preguntaba *"¿qué le serviría al coach?"*. Esta pregunta cambió:
+> **no hay clientes, ni coaches reales, ni recursos activos porque la app no se
+> lanzó todavía — lo que hay que hacer es la estructura base para lanzar.**
+>
+> El criterio ya no es *"¿hay data que justifique esta card?"* sino **"¿el camino
+> funciona de punta a punta para el coach #1 y el cliente #1 el día del
+> lanzamiento?"**. Lo que está en el camino crítico de la primera transacción es
+> bloqueante; lo que solo se vuelve interesante con volumen **se gatea por
+> cantidad de datos, no se borra**. Corolario que ordena todo: **el estado vacío
+> no es un caso borde, es el estado de lanzamiento** — lo van a ver todos los
+> coaches del día 1.
+
+### 0.1 Qué se implementó de la primera pasada
+
+| | Idea | Estado al 08/09/2026 |
+|---|---|---|
+| A | Un solo siguiente paso | **No.** La Home quedó multi-card. Lo único parecido es `prepNextAction` dentro del checklist del coach nuevo. |
+| B | Quién se está cayendo | **Sí** — `seCaen` / `lib/coachContinuity.ts`, card "Hace rato que no los ves". ⚠️ El botón dice **"Escribirle"** y abre el chat; el doc pedía *proponerle un horario*, que es la anti-fuga #1. |
+| C | "Tus personas" (roster) | **No.** Hay spec (`docs/coach-tus-personas.html`) y cero código. |
+| D | El arco del cliente (ánimo) | **Sí, acotada**: solo de la persona de la próxima sesión, dentro de "Preparar sesión", en palabras y no en números, detrás de `MOSTRAR_ANIMO_AL_COACH` + RPC `mood_trend_for_client`. Ver `docs/animo-compartido.md`. |
+| E | Cerrar la sesión que pasó | **Sí** — card `sinCerrar` → `/sala` con `abrir_notas`. |
+| F | Reputación visible | **Sí** — bloque "LO QUE CONSTRUISTE ACÁ". |
+| G | Comisión decreciente dicha | **Sí**, y fusionada con F como recomendaba el doc. |
+| — | "Cuánto ganaste" | Correctamente **no** está. |
+
+Agregado después y que no venía del doc: el checklist **"Antes de tu primera
+sesión"** (spec `coach-estados-vacios.html`) y la card de visibilidad con
+`standing`, que reemplazó al conteo *"aparecés en N puertas"*.
+
+### 0.2 Hechos verificados contra el código (dos creencias eran falsas)
+
+Se chequearon uno por uno antes de decidir nada. **Importa porque dos análisis
+seguidos razonaron sobre premisas equivocadas.**
+
+- ✅ **El push al coach por reserva nueva YA existe.** `booking-effects.ts:159`
+  manda *"Nueva solicitud de sesión 📅"* apenas se aprueba el pago. Se había
+  concluido que no había ningún aviso: era falso.
+- 🔴 **Lo que falta es la fila en `notifications` con `type='reserva_nueva'`.**
+  El tipo está en el CHECK del schema hace meses y **ningún código lo inserta**
+  (ya estaba anotado en el CHANGELOG y quedó ahí). Consecuencia: la push es
+  efímera — sin permisos, descartada, o con teléfono nuevo, **no queda rastro** y
+  la campana muestra cero.
+- 🔴 **La Home no menciona en ningún lado que hay reservas esperando.** El coach
+  se entera por un punto rojo de 6px en la pestaña Reservas.
+- ✅ **El timeout YA existe.** `expire_pending_bookings()` (pg_cron cada 5 min)
+  cancela toda `pendiente` de más de 24hs, notifica y marca el reembolso. También
+  se lo había dado por faltante: era falso.
+- ✅ **`coaches.instant_booking` YA existe y funciona** (switch en el perfil; con
+  él prendido la reserva nace `confirmada`). **Hoy el default es `false`.**
+- ✅ **Un cliente no puede elegir un horario que el coach no declaró**:
+  `BookingScreen_Time.tsx:70` solo ofrece slots de `coach_availability` con
+  `blocked = false`.
+- 🔴 **El link público del coach no es "un día de trabajo".** Están
+  `react-native-web` y `react-dom`, y `app.json` tiene `web.output: "static"` —
+  pero **no hay hosting ni dominio deployado, no existe `coaches.slug`, no hay
+  lectura pública del perfil por anon, y `app.json` no tiene `associatedDomains`
+  (iOS) ni `intentFilters` (Android)**. Hoy un link no abre la app ni cae en
+  ningún lado. Es la única infraestructura **nueva** del lanzamiento.
+
+### 0.3 El veredicto del consejo (dos rondas, `/llm-council`)
+
+La primera ronda razonó con *"no hay volumen, no construyas"* y quedó
+invalidada por el reencuadre. La segunda, con el criterio de pre-lanzamiento,
+se movió a un lugar distinto y **casi unánime**:
+
+- 🔴 **El link público del coach dejó de ser idea #12 y pasó a ser el centro.**
+  Los cinco asesores lo nombraron sin coordinarse. La tesis: el día 1 VIVE no
+  tiene demanda propia, pero cada coach llega con 4-10 clientes que ya le pagan
+  por transferencia. Dicho crudo: *"el día 1 VIVE no es un marketplace, es un
+  riel de cobro + video + notas para transacciones que ya existían afuera"*.
+- **`instant_booking = true` por default** (4 de 5). Si el cliente lo trae el
+  coach, `pendiente` no protege nada: mete 24hs de espera y un reembolso en el
+  momento más frágil del producto. **Ese default colapsa la mitad del backlog**:
+  saca del camino crítico la card de pendientes, el punto rojo y el timeout.
+- **El checklist necesita un cuarto paso: "Traé a tus primeros clientes"**, con
+  el link ya generado y texto listo para pegar en WhatsApp. Los tres pasos
+  actuales son tarea administrativa y **ninguno contesta la única pregunta que el
+  coach tiene abierta: de dónde salen los clientes.** *"Nadie completa tres pasos
+  por fe."*
+- **"Puertas" → "temas"**, ahora como bloqueante de onboarding y no como detalle
+  de copy: es jerga que funciona adentro del equipo y afuera es un acertijo.
+
+**Dónde el consejo se peleó:**
+
+- **¿Gatear las cards vacías?** El ejecutor dijo *no toques nada, vacío no rompe*.
+  Tres de cinco revisores lo marcaron como el peor punto ciego: vacío no rompe el
+  código, **rompe la confianza**. Siete ceros, *"Sin sesiones"*, *"Lo que
+  construiste: 0"* y un ranking contra rivales inexistentes no se leen como
+  *"recién arrancás"* sino como **"esto está muerto"**. Es la única primera
+  impresión que no se repite. → **Se gatean.**
+- 🔴 **La objeción que no tuvo respuesta:** si la jugada es que el coach traiga su
+  propia gente, entonces **la comisión decreciente cobra el máximo justo en la
+  primera sesión con clientes que él ya tenía y que hoy le pagan el 100%**. Ese
+  coach hace la cuenta en la sesión 2. **Es un problema de pricing, no de UI**, y
+  hay que resolverlo antes de vender el paso 4 del checklist. Ver
+  `docs/camino-del-cliente-1.md`.
+- **¿El aviso es software o una persona?** Se propuso escalación humana (WhatsApp
+  al coach a los 30 min). Descartado: *"no es un entregable, es un turno de
+  guardia sin dueño ni horario"* — y con `instant_booking` en true no hace falta.
+
+**El punto ciego que cazó la revisión, y es el hallazgo de la ronda:** 🔴 **nadie
+caminó el lado del cliente.** Las dos rondas discutieron la Home del coach; pero
+el cliente #1 llega por WhatsApp a una app que no conoce y tiene que instalar,
+registrarse, pasar un onboarding pensado para *descubrimiento* (no para "vengo a
+ver a Sofía") y pagar. **Ahí se cae el embudo, no en la card 6.** Se abrió
+`docs/camino-del-cliente-1.md` para eso.
+
+También quedó anotado, sin dueño: **no hay screening de coaches ni protocolo de
+crisis**, en una app que toca ánimo bajo Ley 25.326.
+
+### 0.4 Qué hacer con la Home, entonces
+
+**La pregunta "qué cards van en el Inicio del coach" está respondida, y resultó
+ser la parte chica: medio día de trabajo.**
+
+- **Se muestran:** header, próxima sesión (con "Preparar sesión"), sesión sin
+  cerrar, y el checklist — que es **la** card del día 1.
+- **Se gatean por datos** (el código queda, se le pone una compuerta):
+  - `week` — que no renderice si la semana está en cero.
+  - **Card 6, visibilidad/standing** — por tamaño del pool. Con 4 coaches el
+    ranking es mentira; con 40 es el mejor dato de la pantalla.
+  - **Card 7** — ya se auto-esconde bien (`rebooking_rate` es NULL con menos de 5
+    completadas). Lo único a hacer es **mover la nota de comisión a cobros**: en
+    la pantalla de saludo se lee *"me van a cobrar"*, no como generosidad.
+- **Se cambia copy:** "puertas" → "temas"; "Escribirle" → "Proponerle un horario".
+- **Se agrega:** el cuarto paso del checklist.
+- **No se construye ahora:** A (motor de prioridades sin tráfico para calibrarlo;
+  ordenar y colapsar da el 80% gratis) ni C (no está en el camino crítico de la
+  primera transacción). D queda como está.
+
+**Orden sugerido:** `instant_booking` default → insert de `reserva_nueva` →
+copy + compuertas → cuarto paso del checklist → y el proyecto de verdad, que ya
+no es esta pantalla.
+
+### 0.5 Lo que queda decidido por Andre
+
+1. 🔴 **La forma del link público: ¿reserva y cobra en web, o muestra el perfil y
+   manda a la store?** Es lo único que no se puede decidir después: define si el
+   lanzamiento tiene un embudo o solo un botón de instalar.
+2. **El default de `instant_booking`** (el consejo dice `true`; es un
+   `ALTER TABLE ... SET DEFAULT`, decisión de política, no de código).
+3. **La comisión sobre clientes que trae el coach** — ver 0.3.
+
 
 ## 1. El diagnóstico, en una frase
 

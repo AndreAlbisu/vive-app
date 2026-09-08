@@ -4,6 +4,28 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 200 · el Inicio del coach, revisado con criterio de pre-lanzamiento)
+
+**Tocado:** `docs/inicio-del-coach.md` (nueva sección 0), `docs/camino-del-cliente-1.md` (nuevo), `SCHEMA.md` (`notifications`). ⚠️ **Sesión de análisis: no se tocó una línea de código de la app.** Todo lo de abajo es diagnóstico verificado y decisiones pendientes.
+
+**Resumen — se empezó preguntando qué cards van en el Inicio del coach y se terminó en otro lado.**
+
+- 📝 **La pregunta cambió a mitad de camino, y eso invalidó el primer análisis.** La primera pasada (26/08) y una primera ronda de `/llm-council` razonaron con *"no hay volumen, no construyas"*. Andre corrigió: **no hay clientes ni coaches ni recursos porque la app no se lanzó — hay que hacer la estructura base para lanzar.** El criterio pasó a ser *"¿funciona el camino de punta a punta para el coach #1 y el cliente #1?"*, y con eso **el estado vacío deja de ser un caso borde: es el estado de lanzamiento.**
+- 🔴 **Dos creencias sobre el código eran falsas, y las dos habían sobrevivido a un análisis entero.** (1) Se daba por hecho que el coach no recibía ningún aviso de reserva nueva: **el push sí existe** (`booking-effects.ts:159`). (2) Se daba por faltante el timeout de las solicitudes: **`expire_pending_bookings()` ya lo hace** hace meses. 📌 La lección barata: verificar contra el repo ANTES de que el consejo razone, no después — las dos rondas se apoyaron parcialmente en aire.
+- 🔴 **El hueco real, verificado con grep sobre todo el repo: `notifications.type = 'reserva_nueva'` está en el CHECK y ningún código lo inserta.** Como la push es efímera, un coach sin permisos de notificación (o con teléfono nuevo) **no tiene ningún rastro de la reserva** y la campana muestra cero; a las 24hs se cancela sola y se devuelve la plata. **Anotado en SCHEMA.md**, donde faltaba. El arreglo es un insert al lado del push.
+- 🟢 **La respuesta a la pregunta original resultó chica: medio día.** Las cards que hay están bien. Se **gatean por datos** (no se borran) la tira de la semana, la de visibilidad/standing —con 4 coaches el ranking es mentira— y la nota de comisión, que en la pantalla de saludo se lee *"me van a cobrar"*. Se cambia copy (**"puertas" → "temas"**, jerga interna que traba el onboarding; **"Escribirle" → "Proponerle un horario"**). **No se construyen** A ni C: ninguna desbloquea la transacción #1.
+- 🔴 **Y el peso se movió: el lanzamiento no depende de la Home del coach sino del camino que va del WhatsApp del coach a la primera sesión pagada.** El día 1 no hay demanda propia; el único que tiene clientes es el coach. **El link público es la única infraestructura NUEVA del lanzamiento** — y verificado: no hay hosting ni dominio, no existe `coaches.slug`, no hay lectura anon del perfil, y `app.json` no tiene `associatedDomains` ni `intentFilters`. **No es "un día de trabajo".** Se abrió `docs/camino-del-cliente-1.md` con el embudo escrito entero.
+- ⚠️ **La objeción que quedó sin respuesta, y es de pricing y no de UI:** si el coach trae a su propia gente, **la comisión decreciente le cobra el máximo justo en la primera sesión con clientes que él ya tenía y que hoy le pagan el 100%**. Hace la cuenta en la sesión 2 y se va. Hay que resolverlo **antes** de pedirle que comparta el link.
+- 📌 **Anotado sin dueño:** no hay screening de coaches ni protocolo de crisis, en una app que toca ánimo bajo Ley 25.326.
+
+**Pendiente para la próxima sesión:**
+- **Decisión de Andre, y bloquea a las otras:** 🔴 **la forma del link público — ¿reserva y cobra en web, o muestra el perfil y manda a la store?** Define si el lanzamiento tiene un embudo o solo un botón de instalar. ⚠️ Chequear antes si la app está aprobada en las tiendas: si no, el segundo camino no lleva a ningún lado.
+- **Decisión de Andre:** el default de `instant_booking` (el consejo dice `true`; es un `ALTER TABLE ... SET DEFAULT` + update a las filas existentes). Con `pendiente` casi sin ocurrir, se cae la mitad del backlog de la Home. 📌 La objeción de que confirmar solo mete reservas donde el coach no está **no aplica**: `BookingScreen_Time.tsx:70` solo ofrece slots declarados en `coach_availability`.
+- **Decisión de Andre:** la comisión sobre clientes que trae el coach.
+- **Para implementar cuando estén esas tres:** insert de `reserva_nueva`; compuertas y copy de la Home; cuarto paso del checklist (*"Traé a tus primeros clientes"*).
+- **De Joaquín:** A1 y el bloque de device review. **De Andre (del registro viejo):** E6, el visto bueno de voz acumulado, y el *"¡Hoy estás brillando!"* del Diario.
+- **Del registro, lo que queda:** B1, B4, B7, D1-D6, E1-E6.
+
 ## 2026-09-08 — Andre (sesión 199 · C6: la tarjeta dejaba de tener negrita cuando escribía la IA)
 
 **Tocado:** `lib/weeklyReflection.ts`, `hooks/useDailyReflection.ts`, `supabase/functions/weekly-reflection/index.ts`, `__tests__/weeklyReflection.test.ts`, `docs/problemas-abiertos.md`. **553 tests** (eran 549), `tsc` limpio. ✅ **Deployada v22 → v23** (verificado con `functions list`; el deploy fallido no consumió número).
