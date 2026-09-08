@@ -1,4 +1,4 @@
-import { buildReflection, rejectCopy, puedeRedactarloElModelo, esPregunta, type ReflectionInput } from '@/lib/weeklyReflection';
+import { buildReflection, rejectCopy, puedeRedactarloElModelo, esPregunta, partirDestacado, type ReflectionInput } from '@/lib/weeklyReflection';
 import { localDayKey, localDayKeyMinus } from '@/lib/dates';
 
 // Base neutra: sin actividad, sin racha, sin histórico. Cada test enciende
@@ -1094,5 +1094,54 @@ describe('esPregunta — si no hay buzón, no preguntes', () => {
       }
     }
     expect(conPregunta.size).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('partirDestacado — el modelo no puede romper la tarjeta con esto', () => {
+  // 🔴 Existe porque la tarjeta se veía distinta según qué camino ganó: las
+  // frases de las reglas tienen una parte destacada y las del modelo llegaban
+  // planas. El mismo componente renderizaba dos diseños sin que nadie lo hubiera
+  // decidido.
+  //
+  // 📌 El invariante que importa NO es que parta bien: es que **toda falla
+  // degrade a texto plano**, que se ve bien. El modelo puede no mejorar la
+  // tarjeta; no puede romperla.
+
+  const linea = 'Días difíciles, y los registrás igual. Eso lo estás sosteniendo vos.';
+
+  it('parte cuando el destacado es un trozo literal', () => {
+    const r = partirDestacado(linea, 'Días difíciles');
+    expect(r.before).toBe('');
+    expect(r.bold).toBe('Días difíciles');
+    expect(r.after).toBe(', y los registrás igual. Eso lo estás sosteniendo vos.');
+    expect(`${r.before}${r.bold}${r.after}`).toBe(linea);
+  });
+
+  it('parte en el medio sin perder nada', () => {
+    const r = partirDestacado(linea, 'lo estás sosteniendo vos');
+    expect(r.bold).toBe('lo estás sosteniendo vos');
+    expect(`${r.before}${r.bold}${r.after}`).toBe(linea);
+  });
+
+  it('🔴 cae a texto plano en TODAS las formas de fallar', () => {
+    for (const malo of [
+      undefined, null, '', '   ',
+      'una frase que no está',              // no es un trozo
+      'Dias dificiles',                      // sin acentos: no matchea
+      linea,                                 // la línea entera
+      `  ${linea}  `,                        // la línea entera con espacios
+    ]) {
+      const r = partirDestacado(linea, malo as any);
+      expect(r.bold).toBe('');
+      expect(r.before).toBe(linea);
+      expect(`${r.before}${r.bold}${r.after}`).toBe(linea);
+    }
+  });
+
+  it('nunca pierde ni agrega texto, pase lo que pase', () => {
+    for (const d of ['Días', 'vos.', 'igual', 'x', '', 'no está']) {
+      const r = partirDestacado(linea, d);
+      expect(`${r.before}${r.bold}${r.after}`).toBe(linea);
+    }
   });
 });

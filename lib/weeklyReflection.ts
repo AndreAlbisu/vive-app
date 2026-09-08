@@ -405,6 +405,32 @@ export type Reflection = {
  *  signo de apertura es obligatorio en español y no se puede olvidar. El
  *  guardarraíl ya garantiza que no haya markdown ni comillas raras, así que la
  *  única fuente de `¿` es una pregunta de verdad. */
+/** Parte la línea del modelo en `before` / `bold` / `after`.
+ *
+ *  🔴 Existe porque **la tarjeta se veía distinta según qué camino ganó**: las
+ *  frases de las reglas tienen una parte destacada —"el pico de la oración"— y
+ *  las del modelo llegaban como texto plano, así que el mismo componente
+ *  renderizaba dos diseños distintos sin que nadie lo hubiera decidido.
+ *
+ *  📌 **Toda falla degrada a lo de antes**, que se ve bien: si `destacado` viene
+ *  vacío, no es un trozo de la línea, o es la línea entera —destacar todo es lo
+ *  mismo que no destacar nada—, sale texto plano. **El modelo no puede romper la
+ *  tarjeta con esto, solo puede no mejorarla.**
+ *
+ *  ⚠️ `rejectCopy` sigue corriendo sobre la línea COMPLETA y no sobre las
+ *  partes: el destacado es una decisión de presentación, y el guardarraíl mira
+ *  lo que la persona lee. */
+export function partirDestacado(linea: string, destacado?: string | null): {
+  before: string; bold: string; after: string;
+} {
+  const plano = { before: linea, bold: '', after: '' };
+  const d = (destacado ?? '').trim();
+  if (!d || d === linea.trim()) return plano;
+  const i = linea.indexOf(d);
+  if (i < 0) return plano;
+  return { before: linea.slice(0, i), bold: d, after: linea.slice(i + d.length) };
+}
+
 export function esPregunta(r: Pick<Reflection, 'before' | 'bold' | 'after'>): boolean {
   return `${r.before}${r.bold}${r.after}`.includes('¿');
 }

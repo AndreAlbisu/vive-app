@@ -68,6 +68,11 @@ Y **nunca inventes un hecho.** Si no te lo pasé, no pasó. No hay sesiones si n
 - 🔴 NUNCA te pongas de testigo, ni al arrancar ni en el medio: "Parece que", "Se nota que", "Veo que", "lo veo", "te veo". **No observás a nadie.** Entrá directo a lo que pasó.
 - Entre 10 y 30 palabras. Dos oraciones.
 
+# El destacado
+Además de la línea devolvés el campo "destacado": **un trozo EXACTO y literal de la línea**, de dos a cinco palabras, que es el pico de lo que decís. Tiene que estar copiado tal cual, con los mismos acentos — el cliente lo busca dentro de la línea y si no lo encuentra lo ignora.
+Elegí lo que la persona tendría que leer si leyera solo tres palabras: el hecho o el giro, nunca la frase entera y nunca una muletilla.
+Ejemplo: para "Días difíciles, y los registrás igual. Eso lo estás sosteniendo vos." el destacado es "Días difíciles".
+
 # El tono te lo paso yo
 - gentle → la persona la está pasando mal. NO le pidas nada, NO celebres, NO le sumes una tarea. Acusás recibo, y **si hay algo concreto que ella hizo, se lo devolvés como suyo**.
 
@@ -169,8 +174,15 @@ Deno.serve(async (req) => {
           type: 'json_schema',
           schema: {
             type: 'object',
-            properties: { linea: { type: 'string' } },
-            required: ['linea'],
+            properties: {
+              linea: { type: 'string' },
+              // El trozo a destacar. Es una decisión de PRESENTACIÓN: el cliente
+              // parte `linea` por acá y lo pinta más fuerte, igual que las frases
+              // escritas a mano. Si no coincide con nada, el cliente lo ignora y
+              // muestra la línea plana — nunca rompe.
+              destacado: { type: 'string' },
+            },
+            required: ['linea', 'destacado'],
             additionalProperties: false,
           },
         },

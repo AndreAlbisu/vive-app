@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 199 · C6: la tarjeta dejaba de tener negrita cuando escribía la IA)
+
+**Tocado:** `lib/weeklyReflection.ts`, `hooks/useDailyReflection.ts`, `supabase/functions/weekly-reflection/index.ts`, `__tests__/weeklyReflection.test.ts`, `docs/problemas-abiertos.md`. **553 tests** (eran 549), `tsc` limpio. ✅ **Deployada v22 → v24.**
+
+**Resumen — el mismo componente renderizaba dos diseños distintos según qué camino ganó, y nadie lo había decidido.**
+
+- 🔴 **El problema:** las frases de las reglas tienen una parte destacada —"el pico de la oración"— y las del modelo llegaban planas (`withCopy` dejaba `bold` vacío). Como el modelo escribe **`level`**, que es la señal que más se muestra, en la práctica la tarjeta cambiaba de diseño de un día para otro sin motivo visible.
+- 🟢 **El arreglo salió casi gratis porque la función ya usaba salida estructurada:** se le sumó un campo `destacado` al schema JSON — un trozo **exacto y literal** de la línea, de dos a cinco palabras.
+- 🔴 **El invariante que importa no es que parta bien, es que TODA falla degrade a texto plano** (que es como se veía antes y se ve bien): destacado vacío, con acentos distintos, que no sea un trozo de la línea, o que sea la línea entera. **El modelo puede no mejorar la tarjeta; no puede romperla.** Hay un test que recorre las seis formas de fallar y otro que verifica que nunca se pierde ni se agrega texto.
+- ⚠️ **El cache guarda línea y destacado juntos.** Si guardara solo la línea, la tarjeta se vería con destacado el día que se genera y **sin él al reabrir la app** — exactamente el problema que este cambio viene a arreglar. Con lectura tolerante: una entrada vieja no es JSON, así que se usa tal cual y nadie se queda con la tarjeta vacía el primer día.
+
+**📌 Y un error mío que conviene anotar, porque se puede repetir:** el primer deploy **falló** porque metí backticks en el texto que agregué al `SYSTEM`, que es un template literal. `tsc` no lo agarró: **la edge function es Deno y está fuera de su alcance**. Lo agarró el deploy con un 400. Desde ahora conviene el chequeo barato que se usó para arreglarlo — extraer el `SYSTEM` con el mismo regex que usa `scripts/ensayo-gentle.mjs` y ver si parsea, antes de deployar.
+
+**Pendiente para la próxima sesión:**
+- **De Joaquín:** A1 y el bloque de device review. 📌 Ahora también: que la tarjeta se vea igual venga de donde venga.
+- **De Andre:** E6, el visto bueno de voz acumulado, y el *"¡Hoy estás brillando!"* del Diario.
+- **Del registro, lo que queda:** B1 (el resto de "mensajera"), B4 (la memoria, con su advertencia de privacidad), B7, D1-D6, E1-E6.
+
 ## 2026-09-08 — Andre (sesión 198 · C5: el problema no era que faltara humor)
 
 **Tocado:** `lib/weeklyReflection.ts`, `docs/la-voz-de-sofia.md` (§3.5), `docs/problemas-abiertos.md`. 549 tests, `tsc` limpio.

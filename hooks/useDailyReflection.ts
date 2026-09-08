@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { AI_REFLECTION_ENABLED } from '@/constants/features';
-import { buildReflection, rejectCopy, puedeRedactarloElModelo, type Reflection, type ReflectionInput } from '@/lib/weeklyReflection';
+import { buildReflection, rejectCopy, puedeRedactarloElModelo, partirDestacado, type Reflection, type ReflectionInput } from '@/lib/weeklyReflection';
 
 // La devolución del día, redactada por un modelo cuando corresponde y por las
 // reglas cuando no.
@@ -77,8 +77,8 @@ function factsParaElModelo(rules: Reflection, input: ReflectionInput): Record<st
 }
 
 /** Reemplaza el texto de una `Reflection` conservando su señal y su tono. */
-function withCopy(base: Reflection, linea: string): Reflection {
-  return { ...base, before: linea, bold: '', after: '', source: 'ai' };
+function withCopy(base: Reflection, linea: string, destacado?: string): Reflection {
+  return { ...base, ...partirDestacado(linea, destacado), source: 'ai' };
 }
 
 export function useDailyReflection(userId: string | undefined, input: ReflectionInput): Reflection {
@@ -86,7 +86,8 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
   // mientras el modelo responde, y el que queda si algo falla. La tarjeta
   // nunca aparece vacía ni con un spinner.
   const rules = buildReflection(input);
-  const [copy, setCopy] = useState<string | null>(null);
+  type Copy = { linea: string; destacado?: string };
+  const [copy, setCopy] = useState<Copy | null>(null);
 
   // La proximidad de la sesión entra en la clave: `nextSession` se resuelve
   // async, así que la primera vez la frase puede generarse sin ese dato. Sin
@@ -114,7 +115,14 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
       try {
         const cached = await AsyncStorage.getItem(key);
         if (cancelled) return;
-        if (cached) { setCopy(cached); return; }
+        if (cached) {
+          // ⚠️ Hasta el 08/09 acá se guardaba la línea pelada. Una entrada vieja
+          // no es JSON, así que se usa tal cual — sin esto, el primer día
+          // después del cambio la tarjeta quedaría vacía para quien ya tenía
+          // algo cacheado.
+          try { setCopy(JSON.parse(cached)); } catch { setCopy({ linea: cached }); }
+          return;
+        }
 
         const { data: { session } } = await supabase.auth.getSession();
         if (!session || cancelled) return;
@@ -152,7 +160,7 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
         if (cancelled) return;
         if (!res.ok) return;  // 503 = apagada; 502 = falló. En los dos casos, reglas.
 
-        const { linea } = await res.json();
+        const { linea, destacado } = await res.json();
         if (cancelled || typeof linea !== 'string') return;
 
         // El mismo guardarraíl que verifican los tests sobre las reglas, ahora
@@ -171,8 +179,11 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
           return;
         }
 
-        await AsyncStorage.setItem(key, linea);
-        if (!cancelled) setCopy(linea);
+        // 📌 Se cachea la línea Y el destacado juntos: si se guardara solo la
+        // línea, la tarjeta se vería con destacado el día que se genera y sin él
+        // al reabrir la app — el mismo problema que este cambio viene a arreglar.
+        await AsyncStorage.setItem(key, JSON.stringify({ linea, destacado }));
+        if (!cancelled) setCopy({ linea, destacado });
       } catch (e) {
         // Sin red, timeout, JSON roto: se queda el texto de las reglas.
         console.warn('[reflection] no se pudo generar:', e);
@@ -182,5 +193,5 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
     return () => { cancelled = true; };
   }, [key, userId, rules.signal, rules.tone, input.streak, input.sessionsThisWeek, input.resourcesThisWeek, input.writingThisWeek]);
 
-  return copy ? withCopy(rules, copy) : rules;
+  return copy ? withCopy(rules, copy.linea, copy.destacado) : rules;
 }
