@@ -553,7 +553,10 @@ export function buildReflection(input: ReflectionInput): Reflection {
     return pick(dayKey, [
       r('Hoy venís ', 'más abajo', '. No hace falta que hagas nada con eso ahora — alcanza con haberlo registrado.', 'gentle', 'sharp-drop'),
       r('', 'Un día flojo', ' no borra la semana. Mañana es otro día y no le debés nada a nadie.', 'gentle', 'sharp-drop'),
-      r('Registraste un día difícil, y eso ya es ', 'mirarse de frente', '. Quedate tranqui.', 'gentle', 'sharp-drop'),
+      // 📌 Antes: *"Registraste un día difícil, y eso ya es mirarse de frente"*.
+      // La app dictaminando qué significa lo que hizo. Ahora el hecho se lo
+      // devuelve: el contraste con "el día" es lo que lo vuelve suyo.
+      r('Hoy costó, y lo registraste igual. ', 'Eso es tuyo', ', no del día.', 'gentle', 'sharp-drop'),
     ]);
   }
 
@@ -602,7 +605,10 @@ export function buildReflection(input: ReflectionInput): Reflection {
       // hecho que la persona efectivamente hizo y atribuírselo. El sujeto de la
       // frase deja de ser la app y pasa a ser ella.
       r('', 'Días difíciles', ', y los registrás igual. Eso lo estás sosteniendo vos.', 'gentle', 'sustained-low'),
-      r('La semana viene ', 'cuesta arriba', '. No tiene que estar buena para que valga la pena anotarla.', 'gentle', 'sustained-low'),
+      // 📌 Antes cerraba con *"no tiene que estar buena para que valga la pena
+      // anotarla"* — permiso, no devolución. Sigue sin exigirle nada, pero el
+      // sujeto de la segunda mitad ahora es ella.
+      r('La semana viene ', 'cuesta arriba', '. Y la venís caminando igual.', 'gentle', 'sustained-low'),
     ]);
   }
 
@@ -642,7 +648,10 @@ export function buildReflection(input: ReflectionInput): Reflection {
       return pick(dayKey, [
         r('Estos días vienen ', 'más cuesta arriba', '. Si necesitás bajar un cambio, bajalo.', 'gentle', 'trend-down'),
         r('Venís ', 'un poco más abajo', ' de lo habitual. Pasa, y no dice nada malo de vos.', 'gentle', 'trend-down'),
-        r('La semana viene ', 'más cargada', '. No todas tienen que rendir.', 'gentle', 'trend-down'),
+        // 📌 *"No todas tienen que rendir"* era la tercera absolución seguida de
+        // esta señal. Se deja una sola (la de arriba, que está bien) y esta pasa
+        // a nombrar lo que la persona sigue haciendo.
+        r('La semana viene ', 'más cargada', ', y seguís marcando igual. Eso lo elegís vos cada día.', 'gentle', 'trend-down'),
       ]);
     }
   }
@@ -658,7 +667,9 @@ export function buildReflection(input: ReflectionInput): Reflection {
       varias
         ? r('Te sentaste a hablar con alguien ', `${sessionsThisWeek} veces`, ' esta semana. ¿Cómo venís después?', 'warm', 'sessions')
         : r('Te estás haciendo el tiempo para ', 'hablar con alguien', '. ¿Te dejó algo dando vueltas?', 'warm', 'sessions'),
-      r('Sentarte a hablar con alguien ', 'sostiene', ' más de lo que parece desde afuera. No es poco.', 'warm', 'sessions'),
+      // 📌 *"sostiene más de lo que parece... No es poco"* es la app tasando el
+      // valor de lo que hizo. Ahora se nombra lo que le costó y se le atribuye.
+      r('Sentarte a hablar con alguien ', 'no es cómodo', ', y lo hiciste igual. Eso es tuyo.', 'warm', 'sessions'),
       // ⚠️ Las dos ramas del ternario son el MISMO slot —plural y singular de la
       // variante 1—, así que nunca conviven; la que sí convive con las dos es la
       // de acá arriba. Al revisar el copy hay que mirar ese par, no las tres
@@ -672,8 +683,15 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // Desde 3 días: menos que eso no es una racha, es haber entrado dos veces.
   if (streak >= 3) {
     return pick(dayKey, [
-      r('Van ', `${streak} días seguidos`, ' parando un segundo a ver cómo venís. Es más de lo que parece.', 'warm', 'streak'),
-      r('', `${streak} días`, ' sin saltearte el check-in. Esa constancia después se nota en otras cosas.', 'warm', 'streak'),
+      // 📌 Las dos cerraban con la app tasando (*"es más de lo que parece"*) o
+      // prometiendo (*"después se nota en otras cosas"* — que además es una
+      // promesa sobre el futuro, de la familia que `GURU` frena).
+      //
+      // 🔴 *"no de la app"* es deliberado y es la tesis del producto: §2 bis
+      // dice que el objetivo de Sofía era que la seguridad se te volviera
+      // PROPIA. Atribuirle la constancia a la app sería lo contrario.
+      r('Van ', `${streak} días seguidos`, ' parando a ver cómo venís. Eso lo armaste vos, día por día.', 'warm', 'streak'),
+      r('', `${streak} días`, ' sin saltearte el check-in. Esa constancia es tuya, no de la app.', 'warm', 'streak'),
     ]);
   }
 
@@ -747,7 +765,12 @@ export function buildReflection(input: ReflectionInput): Reflection {
     // dice de dónde sale la lectura. La app no sabe cómo viene tu semana, sabe
     // qué anotaste — y admitirlo es lo que le da derecho a preguntar.
     r('Tu semana viene ', level, ', según lo que registraste. ¿Vos la sentís así?', 'neutral', 'level'),
-    r('La semana viene ', level, ', sin grandes sobresaltos. A veces sostener ya es bastante.', 'neutral', 'level'),
+    // 📌 Antes cerraba con *"a veces sostener ya es bastante"* — la app tasando.
+    // 🔴 `level` es la señal QUE MÁS SE MUESTRA (le toca a cualquiera con ánimo
+    // parejo), así que si las cuatro variantes absuelven, la voz absuelve casi
+    // todos los días. Esta pasa a devolver el único hecho que la señal tiene:
+    // que la persona siguió mirando.
+    r('La semana viene ', level, ', y la venís mirando igual. Eso lo sostenés vos.', 'neutral', 'level'),
     r('Tu semana viene ', level, '. Está bien que algunas sean así.', 'neutral', 'level'),
     r('La semana viene ', level, '. No hace falta que pase algo para que cuente.', 'neutral', 'level'),
   ]);

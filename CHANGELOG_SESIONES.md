@@ -4,6 +4,36 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 190 · C1 y C2: la app deja de tasar lo que hiciste)
+
+**Tocado:** `lib/weeklyReflection.ts`, `docs/problemas-abiertos.md`. **541 tests**, `tsc` limpio. Sin schema, sin deploy.
+
+**Resumen — con B6 descartado se supo que el banco sí entra por el filtro, así que se reescribieron 7 de las 22 frases. El movimiento que faltaba pasó de 1 a 8; la absolución de 10 a 5.**
+
+**El patrón de todos los cambios es el mismo:** las frases viejas cerraban con **la app tasando el valor de lo que hiciste** —*"es más de lo que parece"*, *"no es poco"*, *"ya es bastante"*, *"eso ya es mirarse de frente"*—. Las nuevas **nombran el hecho y se lo devuelven**, para que el sujeto de la segunda mitad sea la persona.
+
+| antes | ahora |
+|---|---|
+| *"Registraste un día difícil, y eso ya es mirarse de frente"* | *"Hoy costó, y lo registraste igual. **Eso es tuyo, no del día.**"* |
+| *"La semana viene cuesta arriba. No tiene que estar buena para que valga la pena anotarla"* | *"La semana viene cuesta arriba. **Y la venís caminando igual.**"* |
+| *"La semana viene más cargada. No todas tienen que rendir"* | *"…y seguís marcando igual. **Eso lo elegís vos cada día.**"* |
+| *"Sentarte a hablar sostiene más de lo que parece. No es poco"* | *"Sentarte a hablar con alguien no es cómodo, y lo hiciste igual. **Eso es tuyo.**"* |
+| *"Van X días… Es más de lo que parece"* | *"Van X días seguidos parando a ver cómo venís. **Eso lo armaste vos, día por día.**"* |
+| *"X días sin saltearte… Esa constancia después se nota en otras cosas"* | *"X días sin saltearte el check-in. **Esa constancia es tuya, no de la app.**"* |
+| *"La semana viene estable, sin sobresaltos. A veces sostener ya es bastante"* | *"…y la venís mirando igual. **Eso lo sostenés vos.**"* |
+
+- 🔴 **"No de la app" es deliberado y es la tesis del producto.** §2 bis dice que el objetivo de Sofía era que la seguridad **se te volviera propia**; atribuirle la constancia a la app sería exactamente lo contrario. Es también el criterio *"¿más capaz o más dependiente?"* aplicado a una frase.
+- 📌 **`level` se tocó a propósito aunque parecía la menos urgente: es la señal QUE MÁS SE MUESTRA.** Si sus cuatro variantes absuelven, la voz absuelve casi todos los días.
+- ✅ **No se eliminó la absolución, dejó de ser el default.** Quedan 5, y son las que corresponden: un día que recién se cayó (*"no hace falta que hagas nada con eso ahora"*), una semana pareja. La devolución de Mónica va en esa dirección: no exigirle a alguien que está mal.
+- 📌 **Un test viejo cazó un error mío en el camino**: *"ninguna devolución es un dato pelado"* rechazó una frase que quedó en una sola oración. El `SYSTEM` pide **dos tiempos** —lo que se nota y qué te parece eso— y una cláusula sola es un rótulo. Corregida.
+- ⚠️ **Es copy en la voz de Andre: espera su visto bueno**, igual que la frase de `sustained-low` de la sesión 180.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **A1** (dos ramas del piso sin probar) y **A2** (el coach de $1). Siguen arriba de todo.
+- **Visto bueno de voz sobre las 8 frases nuevas.**
+- **B2**: conectar `resource_recommendations`, con el flag `hay_recurso_del_coach` en los facts.
+- **C3**: las 7 preguntas que no tienen dónde contestarse.
+
 ## 2026-09-08 — Andre (sesión 189 · B6 descartado: los guardarrales no eran el problema)
 
 **Tocado:** `docs/problemas-abiertos.md`. Sin código.
