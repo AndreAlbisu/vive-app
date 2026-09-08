@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 195 · A1 pasa a Joaquín, con la receta escrita)
+
+**Tocado:** `docs/problemas-abiertos.md` (A1 asignado + receta + backlog de device review). Sin código.
+
+**Resumen — Andre deja la device review del piso de seguridad para Joaquín. Se escribió la receta completa en el doc para que la agarre en frío, sin tener que reconstruirla del chat.**
+
+- ⏭️ **A1 asignado a Joaquín.** Contexto para él en una línea: **el piso se encendió en producción el 07/09 y solo se vio correr una de sus tres ramas** — y esa única prueba encontró un bug que 540 tests no habían visto.
+- 📌 **Son TRES estados, no dos**, y ese es el detalle que se pierde si no queda escrito: el fix del 07/09 cambió lo que sale con la configuración actual, así que **ese tampoco está confirmado**. (1) *"Eso es de lo que conviene hablar en sesión"* — sin setup, es donde estaba el bug; (2) *"Llevalo a tu próxima sesión"* — **nadie la vio nunca**; (3) *"Hay gente preparada para acompañar esto"*.
+- **La receta incluye el SQL de los tres casos** (mueve fechas en vez de borrar, así se revierte), el `user_id` con la advertencia de cambiarlo si prueba con su cuenta, y **qué mirar**: el CTA correcto, que abra `/ayuda` y no el momento, que los teléfonos marquen, que al día siguiente **siga apareciendo**, y sobre todo 🔴 **que no se contradiga con la sección de abajo** — *el bug del 07/09 no estaba en una función, estaba en la relación entre dos partes de la pantalla*, que es lo que ningún test puede ver.
+- 🟢 **Se consolidó el resto del backlog de device review en el mismo lugar**, que venía arrastrándose de las sesiones 157-163 sin cerrarse: **matrícula en vivo** (lo único que no se puede verificar estáticamente), **cancelación tardía** (lo único pendiente que toca plata, y es un camino que la pantalla nunca dejó llegar a la base hasta la 165), el Diario nuevo, "Sobre vos" early, y el aviso nuevo de `recurso-del-coach`.
+
+**Pendiente para la próxima sesión:**
+- **De Joaquín:** A1 y el resto del bloque de device review.
+- **De Andre:** E6 (el género en la voz), y el visto bueno de voz sobre las frases de C1/C2 y B2.
+- **Disponible para agarrar:** C7 (barrer las otras superficies donde habla Sofía), C3, C5, C6.
+
 ## 2026-09-08 — Andre (sesión 194 · A2: el coach de prueba se queda, y deja de depender de la memoria)
 
 **Tocado:** `docs/problemas-abiertos.md`. Nuevo: `scripts/verificar-pre-lanzamiento.sql`. Sin código de app.

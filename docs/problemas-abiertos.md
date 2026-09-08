@@ -22,9 +22,85 @@ dos hermanos no.
 
 | ID | Problema | Solución | Costo |
 |---|---|---|---|
-| **A1** | 🔴 **Dos de las tres ramas del piso de seguridad nunca se probaron.** Es la única feature que le habla a alguien en crisis. ✅ El 07/09 una hora de teléfono encontró un bug que **540 tests no vieron** (le prometía una sesión inexistente), porque el bug no estaba en una función sino en la relación entre dos partes de una pantalla. | Forzar los dos casos que faltan: sin ninguna sesión, y con una agendada. | 15 min |
+| **A1** | ⏭️ **ASIGNADO A JOAQUÍN el 08/09** (device review). 🔴 **Dos de las tres ramas del piso de seguridad nunca se probaron.** Es la única feature que le habla a alguien en crisis. ✅ El 07/09 una hora de teléfono encontró un bug que **540 tests no vieron** (le prometía una sesión inexistente), porque el bug no estaba en una función sino en la relación entre dos partes de una pantalla. | Forzar los dos casos que faltan: sin ninguna sesión, y con una agendada. | 15 min |
 | **A2** | ⏸️ **DECIDIDO el 08/09: se queda hasta el lanzamiento.** Es **"Coach Prueba"** (`e58d2ec3`, especialidad *"Especialidad de prueba"*), `verified` y `activo`, con MP conectado y `price_per_session = 1` — `mp-create-payment` deriva el precio de esa columna, así que cobraría $1 real. **Andre lo deja porque hace falta un coach para ejercitar los flujos, y con cero usuarios el riesgo es cero.** 🔴 **El riesgo no es tenerlo: es olvidárselo el día que abran** — y ya llevaba varias sesiones apareciendo en "pendiente" sin que eso lo moviera. | ✅ **Mitigado, no resuelto: `scripts/verificar-pre-lanzamiento.sql`** (solo lectura, 5 chequeos, devuelve filas solo si hay problema). Correrlo con la service key **antes de dejar entrar a la primera persona** deja de depender de que alguien se acuerde. | — |
 | **A3** | **Nullability de `price_per_session` sin confirmar.** El guard que se agregó al buscador es necesario o decorativo, y no sabemos cuál. ⚠️ El endpoint OpenAPI de PostgREST exige `service_role`. | Una consulta con la service key. | 2 min |
+
+### A1 — receta para Joaquín (device review del piso de seguridad)
+
+> Andre lo dejó para vos el 08/09. **Contexto en una línea:** el piso de
+> seguridad —la única pantalla que le habla a alguien en crisis— se encendió en
+> producción el 07/09 y **solo se vio correr una de sus tres ramas**. Esa prueba
+> encontró un bug que 540 tests no habían visto.
+
+**Setup, una sola vez:** los 5 registros bajos ya están cargados (dentro de los
+14 días). Abrí la app y **tocá Bajón** para que haya check-in de hoy — sin eso la
+tarjeta muestra su estado neutro y no se ve nada.
+
+⚠️ El `user_id` de las consultas es el de Andre
+(`8b16e5b7-e0e3-4988-9ccc-f8ba447fcb8c`); si probás con tu cuenta, cambialo y
+cargá primero los 5 registros bajos (5 días distintos dentro de 14, todos en 1
+o 2, y que sean **los 5 más recientes**).
+
+**Son TRES estados, no dos** — el fix del 07/09 cambió lo que sale con la
+configuración actual, así que ese tampoco está confirmado:
+
+| # | qué tiene que decir | setup |
+|---|---|---|
+| 1 | *"Eso es de lo que conviene hablar **en sesión**."* | **Ninguno.** Es lo que sale con sesión completada esta semana y ninguna agendada. 🔴 Ayer en ese mismo estado salía *"Llevalo a tu próxima sesión"* mientras abajo decía "Sin sesiones agendadas" — **ese era el bug**. |
+| 2 | *"**Llevalo a tu próxima sesión**."* | Una reserva `confirmada` con fecha ≥ hoy (ver SQL abajo). **Nadie la vio nunca.** |
+| 3 | *"**Hay gente preparada para acompañar esto**."* | Ninguna `confirmada` futura **ni** ninguna `completada` en los últimos 7 días. |
+
+```sql
+-- Ver dónde estás parado
+select id, scheduled_date, status from bookings
+where user_id = '8b16e5b7-e0e3-4988-9ccc-f8ba447fcb8c'
+order by scheduled_date desc limit 5;
+
+-- Estado 2: una confirmada a futuro
+update bookings set scheduled_date = current_date + 2, status = 'confirmada'
+where id = 'PEGÁ_UNO_DE_ARRIBA';
+
+-- Estado 3: sin nadie. Mueve fechas al pasado en vez de borrar, así se revierte.
+update bookings set scheduled_date = current_date - 30
+where user_id = '8b16e5b7-e0e3-4988-9ccc-f8ba447fcb8c'
+  and scheduled_date >= current_date - 7;
+```
+
+**Qué mirar en los tres:**
+
+- El CTA dice **"→ Si lo necesitás, hay líneas de ayuda"**, no *"Ver más"*.
+- **Tocarla abre `/ayuda`**, no el momento a pantalla completa con *"Ver mi
+  progreso completo"* — ofrecerle eso a alguien que lleva dos semanas en el fondo
+  era el agujero que se tapó el 07/09.
+- 🔴 **Que no se contradiga con la sección de abajo** ("Tu próxima sesión"). Ese
+  fue exactamente el bug del 07/09 y es el que más fácil vuelve: **el bug no
+  estaba en una función, estaba en la relación entre dos partes de la pantalla**,
+  que es lo que ningún test puede ver.
+- Que los teléfonos de `/ayuda` **marquen** de verdad.
+- **Al día siguiente: que siga apareciendo.** No es una noticia que se muestra
+  una vez — tiene que estar todos los días que dure la condición.
+
+📌 No interfiere el aviso nuevo de `recurso-del-coach` aunque tengas
+recomendaciones sin abrir: el piso le gana.
+
+### Lo demás de device review, también de Joaquín
+
+Viene arrastrándose de las sesiones 157-163 y ninguna se cerró:
+
+- 🔴 **Matrícula en vivo** — cargar una credencial, aprobarla desde admin, ver que
+  `has_matricula` pasa sola a `true` y aparece la insignia. **Es lo único de todo
+  el backlog que no se puede verificar estáticamente**; el pre-flight ya validó
+  las 4 superficies y el trigger por lectura. Hoy 0 coaches con matrícula, así
+  que nada lo ejercita.
+- 🔴 **Cancelación tardía** — cancelar una confirmada a menos de 24hs y confirmar
+  que `cancelled_late` queda en `true` y **no** se dispara reembolso. Es un camino
+  que la pantalla nunca dejó llegar a la base hasta la sesión 165, así que es la
+  primera vez que se ejercita de verdad. **De todo lo pendiente, es lo que toca
+  plata.**
+- **Diario nuevo** (el colapso con el teclado, que la franja se llene sola al
+  guardar), **"Sobre vos" early**, y **el aviso de `recurso-del-coach`** (hay 7
+  filas reales; con una en `opened_at = null` la tarjeta debería avisarlo).
 
 ---
 
