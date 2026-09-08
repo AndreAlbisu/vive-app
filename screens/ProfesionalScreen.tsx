@@ -842,27 +842,27 @@ const s = StyleSheet.create({
   // El estado sin matrícula NO va en rojo ni con ícono de alerta: no es una
   // advertencia contra el coach, es información sobre qué tipo de sesión es.
   // Pintarlo de peligro sería castigar a alguien que no hizo nada mal.
-  credHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  credBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#DCE5CB', borderRadius: 10,
-    paddingVertical: 3, paddingHorizontal: 8, marginBottom: 14,
-  },
   encuadreRow: { marginTop: 8, marginBottom: 2 },
 
-  credNota: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 7,
-    backgroundColor: 'rgba(138,106,59,0.08)', borderRadius: 12,
-    padding: 11, marginBottom: 12,
-  },
-  credNotaTxt: {
-    flex: 1, fontFamily: ViveFonts.regular, fontSize: 12.5,
-    lineHeight: 18.5, color: '#7A6540',
-  },
-  credBadgeTxt: { fontFamily: ViveFonts.semibold, fontSize: 10.5, color: '#42542F', letterSpacing: 0.2 },
-  credList: { gap: 12 },
+  credList: { gap: 12, marginTop: 12 },
   credRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  credTitle: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#565E32', lineHeight: 20 },
+  credTitleRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', gap: 8,
+  },
+  // Verde de la marca y no ámbar, y sin caja: es la constatación de un hecho,
+  // no una alerta. `flexShrink: 0` para que un título largo lo corte a él y no
+  // al revés — el que se acorta con "…" tiene que ser el nombre, que sigue
+  // legible, y no la palabra que califica la credencial.
+  credVerif: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
+  credVerifTxt: {
+    fontFamily: ViveFonts.semibold, fontSize: 10.5,
+    color: '#42542F', letterSpacing: 0.2,
+  },
+  credTitle: {
+    fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#565E32',
+    lineHeight: 20, flexShrink: 1,
+  },
   credMeta: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#87835C', marginTop: 1 },
   credNumber: {
     fontFamily: ViveFonts.medium, fontSize: 12.5, color: '#6B7A56', marginTop: 3,

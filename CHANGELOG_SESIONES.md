@@ -4,6 +4,27 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 190 · el cartel de Formación se borró arreglando el badge que lo hacía necesario)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`. **541 tests** (sin cambios), `tsc` limpio, eslint sin nada nuevo. Sin schema.
+
+**Resumen — Andre: el cartel abajo de Formación "da inseguridad", ¿hace falta?, ¿no se puede esconder en un botón? La respuesta terminó siendo mejor que las dos opciones de la pregunta, y salió de una objeción suya.**
+
+- 🔴 **La objeción que resolvió el problema: "ya lo dijimos en la información de sesión de acompañamiento". Es cierto, y cambia el diagnóstico.** El `EncuadreSheet` ya dice *"Vita no verificó una matrícula habilitante para este profesional, así que sus sesiones son de acompañamiento"*. Con eso, el cartel de Formación era **la CUARTA vez** que la app decía lo mismo: etiqueta siempre visible pegada a la especialidad, sheet a un toque, checkout antes de pagar, y el cartel. **No aportaba un hecho nuevo.**
+- 🔴 **Entonces, ¿para qué estaba? Para compensar que el escudo "Verificado por Vita" prometía más de lo que Vita chequeó.** Un escudo a nivel SECCIÓN cubre todo lo de abajo por igual, así que sobre un "Lic. en Psicología · UBA" se leía como *Vita responde por este psicólogo*. **Un badge que sobreafirma no se arregla con un párrafo que lo desmienta abajo: se arregla haciendo que diga lo que hizo.**
+- ✅ **El escudo bajó de la cabecera a cada credencial** (`credVerif`), donde es exacto: `coach_credentials_public` solo devuelve verificadas, así que todas las filas de la lista lo son. Sin escudo de sección no hay sobreafirmación, y sin sobreafirmación el cartel no tiene nada que compensar — se borró, junto con sus estilos ámbar.
+- 📌 **NO se escondió detrás de un botón, y era la otra opción sobre la mesa.** El motivo: un aviso así existe para quien NO lo está buscando. El que toca un ⓘ ya sospecha que hay algo que aclarar; el que reserva creyendo que es terapia no lo toca nunca. Un aviso detrás de un toque protege al que no lo necesitaba.
+- 📌 **La divulgación NO se perdió**, que es lo que había que chequear antes de borrar algo que la 174 puso citando `docs/encuadre-salud-y-responsabilidad.md`: siguen la etiqueta "Sesiones de acompañamiento" siempre visible, el sheet, y la etiqueta completa en `BookingScreen_Confirm` antes de pagar. Lo que se borró es la repetición, no el aviso.
+- 📝 **El "Verificado" va en la línea del título, verde de marca y sin caja** — es la constatación de un hecho, no una alerta, y el ámbar era la mitad de la sensación de advertencia. `credTitle` lleva `flexShrink: 1` y el marcador `flexShrink: 0`: con un título largo se corta el nombre con "…" y no la palabra que califica la credencial.
+- ⚠️ **`encuadre.tituloSinMatricula` queda calculado y sin usar** (`lib/credentialRules.ts`, con 4 tests). Se dejó a propósito y no se borró: es lógica pura, testeada, y nombra una distinción real que la disciplina de lenguaje en los perfiles —pendiente de la 174— probablemente necesite. Si en dos sesiones sigue sin usarse, borrarla.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Verlo en dispositivo con los tres perfiles**: con matrícula, con título sin matrícula (el caso que motivó todo), y con varias credenciales — sobre todo que un título largo no le rompa el renglón al "Verificado".
+- Sigue la device review de Mensajes (175, 188), los pins de Diario y Gratitud (189), y la disciplina de lenguaje en los perfiles (174).
+
+---
+
 ## 2026-09-07 — Andre (sesión 189 · Diario y Gratitud pasan a ser pinneables)
 
 **Tocado:** `app/diario.tsx`, `app/gratitud.tsx`. **541 tests** (sin cambios), `tsc` limpio, eslint sin nada nuevo. Sin schema.
