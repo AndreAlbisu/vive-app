@@ -4,6 +4,27 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 177 · cómo ES Sofía, y la arquitectura de salida que ya estaba)
+
+**Tocado:** `docs/la-voz-de-sofia.md` (§2 ter nuevo), `docs/consejo-sofia.md` (§6 bis). Sin código, sin schema.
+
+**Resumen — se escribió la personalidad preguntándole a Andre por su hermana. No es una caracterización inventada: son sus respuestas a cuatro preguntas. Y dos hallazgos del consejo quedaron contestados desde el material original.**
+
+- 🟢 **Los cinco movimientos, y el orden importa:** escuchaba → te hacía pensar si había soluciones (no te las daba) → te motivaba → **te hacía creer en vos, te daba seguridad PROPIA** ("me hacía sentir que era una gran persona, inteligente y capaz, **y así debía mantenerme**") → te daba un recurso **si lo tenía a mano**.
+- 🔴 **"Y así debía mantenerme" no es elogio: es una expectativa.** Ahí está la diferencia entre *"sos genial"* —que `CHEER` prohíbe con razón, porque no habla de nada— y *"sos capaz, y eso hay que sostenerlo"*. **Te subía el piso y después te lo dejaba a cargo.** Por eso no sonaba vacía.
+- 🔴 **"Seguridad PROPIA" es la arquitectura de salida que el consejo dijo que faltaba (PC-2), y estaba en el material desde el principio.** El objetivo nunca fue que le pidieras seguridad prestada cada vez: era que se te volviera tuya. El criterio *"¿más capaz o más dependiente?"* deja de ser un principio agregado por prudencia y pasa a **describir lo que ella hacía**.
+- 🔴 **El consejo planteó mal el techo del apego.** Asumió que el problema es que la app está siempre disponible. **Sofía también lo estaba** ("respondía apenas podía"). Su límite no era la escasez: era **no reabrir un tema que la otra persona no retomó**. Se puede estar disponible sin invadir — y ese sí es un criterio implementable, a diferencia de la lista arbitraria que hoy usa `sobreVosSilencio.ts`.
+- ✅ **El piso de seguridad quedó fundado.** Ella aligeraba el golpe en lo común, **pero en situaciones serias daba su opinión 100% transparente**. El piso es una situación seria: ahí no se aligera. **La frase actual resulta correcta por principio y no por intuición** — directa, sin variantes, sin suavizantes.
+- ⚠️ **El registro: graciosa, cálida y amable para los problemas del resto. Nunca sarcástica ni irónica.** Hoy la voz no tiene NADA de humor y eso es una omisión, no una decisión — pero su humor era **calidez y liviandad**, no chistes. Regla nueva para `rejectCopy`: nada de ironía (es además el registro al que más fácil cae un modelo al que se le pide "que no suene acartonado").
+- 🔴 **La seriedad la convoca la otra persona, no ella** ("escuchaba con seriedad si así se lo planteaba"). **Hoy la app hace lo contrario**: el `tone` se computa desde el `mood_id`, o sea que el sistema decide qué tan grave es tu día. Es la diferencia entre alguien que te escucha y alguien que te clasifica. Es el cambio más profundo y el más caro; queda planteado, no resuelto.
+- 📌 **El recurso va ÚLTIMO y condicionado**, nunca como apertura y **nunca fabricado** ("si lo tenía a mano"). Consecuencia directa sobre la decisión del catálogo: un recurso ofrecido porque el slot existe y no porque sirva es exactamente lo que ella no hacía.
+- ⚠️ **Queda contestado y NO resuelto:** si aligerar el golpe en lo común es mejor o peor. Andre dice que lo debatieron y que no lo sabe. Se registra sin cerrarlo.
+
+**Pendiente para la próxima sesión:**
+- **Los cinco huecos que §2 ter le dejó al código**, en orden: (1) separar elogio vacío de expectativa para que la motivación pueda existir en `gentle`; (2) el tono leído de la persona y no computado del dato; (3) "ni irónica" en `rejectCopy`; (4) el silencio por criterio de no-reabrir; (5) el recurso último y condicionado.
+- 🔴 **A-1 bis: racionalizar el texto del piso de seguridad y encenderlo.** Mónica no responde; el contrafáctico no es un texto revisado, es nada. §2 ter ya le dio la fundamentación que le faltaba.
+- Las decisiones D-1/D-2 de `consejo-sofia.md` (el chat prometido y los dos Sofía), que van juntas.
+
 ## 2026-09-07 — Andre (sesión 176 · el consejo sobre Sofía, y lo que nadie había visto)
 
 **Tocado:** `docs/la-voz-de-sofia.md` (§2 bis: link al consejo). Nuevo: `docs/consejo-sofia.md`. Sin código, sin schema.

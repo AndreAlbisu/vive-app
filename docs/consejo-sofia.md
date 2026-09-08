@@ -187,7 +187,35 @@ nombre.
 
 ---
 
-## 7. 🔴 Lo que el consejo NO resolvió: la personalidad de Sofía
+## 6 bis. ✅ Lo que §2 ter respondió del consejo (07/09, mismo día)
+
+Se escribió la personalidad (`la-voz-de-sofia.md` §2 ter) preguntándole a Andre por
+su hermana, y **dos de los hallazgos del consejo quedaron contestados desde el
+material original**, no desde una decisión de diseño:
+
+- 🔴 **PC-2 / D-4 — "no hay arquitectura de salida".** La hay, y estaba desde el
+  principio: Sofía **daba seguridad PROPIA**. *"Me hacía sentir que era una gran
+  persona, inteligente y capaz, y así debía mantenerme."* El objetivo nunca fue que
+  le pidieras seguridad prestada cada vez — era que se te volviera tuya. El
+  criterio *"¿más capaz o más dependiente?"* deja de ser un principio prudencial
+  agregado a posteriori y pasa a describir **lo que ella hacía**.
+- 🔴 **El techo del apego estaba mal planteado por el consejo.** Los advisors
+  asumieron que el problema es que la app está siempre disponible. **Sofía también
+  lo estaba** (*"respondía apenas podía"*). Su límite no era la escasez: era **no
+  reabrir un tema que la otra persona no retomó**. Se puede estar disponible sin
+  invadir, y eso sí es implementable.
+- ✅ **El piso de seguridad quedó fundado.** Ella aligeraba el golpe en lo común
+  pero en situaciones serias era **100% transparente**. El piso es una situación
+  seria: ahí no se aligera. La frase actual es correcta por principio y no por
+  intuición.
+
+⚠️ **Lo que §2 ter NO resolvió y sigue abierto:** si aligerar el golpe en lo común
+es mejor o peor. Andre dice que lo debatieron en su momento y que no lo sabe.
+Queda registrado como contestado, no cerrado.
+
+---
+
+## 7. ~~🔴 Lo que el consejo NO resolvió~~ ✅ La personalidad de Sofía — HECHA el 07/09
 
 §2 bis definió **el vínculo** (una hermana mayor) y §3 define **las prohibiciones**
 (no fingir sentir, no concluir, no vender, no animar en tono suave). Entre esas
@@ -202,4 +230,8 @@ que Joaquín escriba una.
 ⚠️ **Y es lo que hace falta para que el mail a Mónica sea completo**: se le va a
 pedir que evalúe una frase en el contexto de una voz que todavía no está descrita.
 
-Queda pendiente y es la próxima pieza del doc de la voz.
+✅ **Escrita el mismo día en `la-voz-de-sofia.md` §2 ter**, a partir de cuatro
+preguntas a Andre sobre su hermana. Dejó cinco huecos concretos en el código (ver
+el final de esa sección), de los cuales el más grande es que **`CHEER` prohíbe
+motivar en tono suave y los movimientos 3 y 4 de Sofía son motivación** — falta
+separar el elogio vacío de la expectativa.
