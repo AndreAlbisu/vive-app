@@ -508,7 +508,39 @@ Hoy la señal de bajón fuerte baja el tono y se corre, que está bien para un m
 día — pero **no hay nada para el caso grave**. Eso hay que diseñarlo antes de
 darle más voz, no después.
 
-### 📌 Estado al 04/09/2026 — construido y apagado
+### ✅ Estado al 07/09/2026 — ENCENDIDO
+
+`SAFETY_FLOOR_ENABLED = true`. Se encendió **sin la revisión profesional**, y el
+motivo queda escrito porque la decisión es discutible:
+
+🔴 **El contrafáctico no era "un texto revisado": era NADA.** Se le pidió a Mónica
+y no hubo respuesta. Con el flag apagado, quien lleva dos semanas registrando el
+fondo recibía una tarjeta cálida y ninguna mención de que existe ayuda —
+**teniendo `/ayuda` construida y con los números verificados desde el 04/09**.
+Esperar indefinidamente algo que puede no llegar, con la red apagada mientras
+tanto, es la peor opción disponible.
+
+✅ **Y la frase quedó fundada, que era lo que faltaba.** §2 ter: Sofía aligeraba
+el golpe en lo común **pero en situaciones serias daba su opinión 100%
+transparente**. El piso es una situación seria por definición, así que ahí no se
+aligera. La frase directa, sin variantes por día y sin suavizantes, es correcta
+**por principio y no por intuición**.
+
+🔴 **Y se arregló un agujero que la revisión no habría encontrado, porque no era
+del texto: la tarjeta nombraba el límite y no abría ninguna puerta.** Tocarla
+abría el momento a pantalla completa —con el gradiente del color del ánimo— y
+ofrecía **"Seguir"** y **"Ver mi progreso completo"**. No había un solo camino a
+`/ayuda` en todo el flujo. Encender sin arreglar eso habría shippeado el modo de
+falla exacto que el piso viene a evitar: *nombrar el límite y después nada* **es**
+retirarse. Ahora la tarjeta va a `/ayuda` y el CTA dice a dónde va (*"Ver líneas
+de ayuda"*, no *"Ver más"*).
+
+⚠️ **El pedido a Mónica sigue abierto y ahora es más barato**: tiene el texto
+escrito para corregir en vez de una consigna para redactar. Corregir son dos
+minutos; redactar es tarea, y puede ser por eso que no contestó. **Y no tiene que
+ser ella** — que una persona esté ocupada no puede tener de rehén una salvaguarda.
+
+### 📌 Estado al 04/09/2026 — construido y apagado (historia)
 
 La maquinaria está entera: `lib/pisoSeguridad.ts` (puro, 9 tests) decide cuándo,
 y `buildReflection()` tiene la rama **arriba de todo**, incluso de `sharp-drop`.
@@ -533,7 +565,7 @@ Se cuentan **registros y no días de calendario**: la gente no registra todos lo
 días, y contar días haría que la señal se saltee por un fin de semana sin abrir
 la app. Saltearse justo ahí es el peor modo de falla posible.
 
-**Lo que falta para prenderlo, y ninguna de las dos cosas es código:**
+**Lo que faltaba para prenderlo** (resuelto el 07/09, ver arriba):
 
 1. 🔴 **Que una profesional revise el texto.** Es la única frase de la app donde
    equivocarse sale caro de verdad. Mónica Grando ya corrigió el enfoque del

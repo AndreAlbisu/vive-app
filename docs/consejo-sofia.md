@@ -159,8 +159,12 @@ nada). El componente y su animación quedan intactos, `paredMasCercana` sigue
 testeada, y volver es cambiar un booleano. Resuelve D-1 y D-2 de una sin decidir
 todavía qué es el orbe — que es justamente la pregunta que necesita a los dos.
 
-**D-3 — ¿Se desacopla el piso de seguridad?** (PC-2) ¿Va un filtro mínimo mientras
-el mail circula, o se espera la revisión completa? Espera A-1.
+**D-3 — ~~¿Se desacopla el piso de seguridad?~~** ✅ **RESUELTO el 07/09: se
+encendió entero**, no un filtro mínimo. La revisión no llegó y el contrafáctico
+era nada; §2 ter le dio la fundamentación que le faltaba. Y de paso apareció que
+el problema no era solo el texto: **la tarjeta nombraba el límite y no abría
+ninguna puerta** — tocarla llevaba al momento con "Ver mi progreso completo".
+Ahora va a `/ayuda`. **PC-2 y PC-3 quedan cerrados: ya hay red activa.**
 
 **D-4 — El apego: ¿meta o subproducto?** Es el único choque frontal del consejo. La
 síntesis del chairman: la historia de origen sí es un activo y nadie lo refutó;

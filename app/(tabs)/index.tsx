@@ -282,6 +282,26 @@ export default function InicioScreen() {
   }, [moodEntries, today, recentCutoff, weekly.resourcesThisWeek, weekly.sessionsThisWeek, weekly.writingThisWeek, openMomento]);
 
   function handleReopenMomento() {
+    // 🔴 EL PISO DE SEGURIDAD NO ABRE EL MOMENTO: abre `/ayuda`.
+    //
+    // Hasta el 07/09/2026 caía en el camino de abajo como cualquier otra señal,
+    // y el resultado era el modo de falla exacto que el piso viene a evitar: la
+    // tarjeta decía "esto es más de lo que una app puede acompañar", la persona
+    // tocaba, y se encontraba con el momento a pantalla completa ofreciéndole
+    // **"Seguir"** y **"Ver mi progreso completo"** — a alguien que lleva dos
+    // semanas registrando el fondo. Nombrar el límite y no abrir ninguna puerta
+    // ES retirarse, que es lo único que esta señal no puede hacer
+    // (`docs/la-voz-de-sofia.md` §2 bis).
+    //
+    // 📌 No alcanzaba con cambiarle el texto al momento: el momento está armado
+    // para una devolución (gradiente del color del ánimo, "ver mi progreso"), y
+    // lo que hace falta acá es lo contrario — la pantalla de las líneas, que a
+    // propósito no es cálida ni pregunta nada (§5 ter).
+    if (cardReflection.signal === 'piso-seguridad') {
+      registrarEvento('ayuda_abierta', { origen: 'piso_seguridad' });
+      router.push('/ayuda');
+      return;
+    }
     if (!cardMoodColor) {
       Alert.alert('Elegí cómo venís hoy', 'Así vas a poder ver tu reflexión completa');
       return;
@@ -1073,7 +1093,14 @@ function SobreVosCard({
                 <Text style={s.selloReflectBold}>{reflection.bold}</Text>
                 {reflection.after}
               </Text>
-              <Text style={s.selloCta}>→ Ver más</Text>
+              {/* El CTA es la puerta, así que tiene que decir a dónde va. "Ver
+                  más" servía cuando abría la reflexión completa; con el piso de
+                  seguridad sería el peor eufemismo posible. Dice lo que hay del
+                  otro lado, y nada más — la pantalla de ayuda no es cálida a
+                  propósito y el camino hacia ella tampoco debería serlo. */}
+              <Text style={s.selloCta}>
+                {reflection.signal === 'piso-seguridad' ? '→ Ver líneas de ayuda' : '→ Ver más'}
+              </Text>
             </>
           )}
         </View>

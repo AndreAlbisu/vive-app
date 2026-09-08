@@ -53,7 +53,36 @@ export const AI_REFLECTION_ENABLED =
  * fondo, una voz cálida no alcanza y no puede simular que sí
  * (`docs/la-voz-de-sofia.md` §5 ter).
  *
- * 🔴 **Queda en `false` hasta que el texto esté revisado por una profesional.**
+ * ✅ **ENCENDIDO el 07/09/2026, sin la revisión profesional, y con el motivo
+ * escrito porque la decisión es discutible.**
+ *
+ * 🔴 **El contrafáctico no era "un texto revisado": era NADA.** Se le pidió la
+ * revisión a Mónica Grando y no hubo respuesta. Con el flag apagado, quien lleva
+ * dos semanas registrando el fondo recibe una tarjeta cálida y **ninguna mención
+ * de que existe ayuda**, teniendo `/ayuda` construida con los números de T&C
+ * §5.3 verificados. Esperar indefinidamente una revisión que puede no llegar, con
+ * la red apagada mientras tanto, es peor que una frase imperfecta pero fundada.
+ *
+ * **Y desde el 07/09 la frase está fundada, que es lo que faltaba.**
+ * `la-voz-de-sofia.md` §2 ter (la personalidad de Sofía, contada por Andre): ella
+ * aligeraba el golpe en lo común, **pero en situaciones serias daba su opinión
+ * 100% transparente**. El piso es, por definición, una situación seria — así que
+ * ahí no se aligera. La frase directa, sin variantes por día y sin suavizantes,
+ * resulta correcta **por principio y no por intuición**.
+ *
+ * 📌 **Y se arregló lo que la revisión no habría visto**, porque no era del
+ * texto: la tarjeta **nombraba el límite y no abría ninguna puerta**. Tocarla
+ * abría el momento a pantalla completa con "Seguir" y "Ver mi progreso completo".
+ * Ahora va a `/ayuda` y el CTA dice a dónde va. Encender sin ese arreglo habría
+ * shippeado el modo de falla exacto que el piso viene a evitar.
+ *
+ * ⚠️ **El pedido a Mónica sigue abierto y ahora es más barato:** tiene el texto
+ * escrito para corregir, en vez de una consigna para redactar. Corregir son dos
+ * minutos; redactar es tarea, y puede ser por eso que no contestó. **Y no tiene
+ * que ser ella**: que una persona esté ocupada no puede tener de rehén una
+ * salvaguarda.
+ *
+ * 📝 Estuvo en `false` desde el 04/09 con este motivo, que se deja como historia:
  * La maquinaria está entera y testeada —`lib/pisoSeguridad.ts` decide cuándo, y
  * `buildReflection` tiene la rama arriba de todo—, pero lo que se muestra es la
  * única frase de la app donde equivocarse sale caro de verdad. El umbral lo
@@ -69,4 +98,4 @@ export const AI_REFLECTION_ENABLED =
  * A diferencia de `AI_REFLECTION_ENABLED`, este flag NO espera nada legal:
  * espera una revisión de contenido y una pantalla.
  */
-export const SAFETY_FLOOR_ENABLED = false;
+export const SAFETY_FLOOR_ENABLED = true;

@@ -4,6 +4,26 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 179 · el piso de seguridad ENCENDIDO, y la puerta que no existía)
+
+**Tocado:** `constants/features.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md` (§5 ter), `docs/consejo-sofia.md` (D-3). **516 tests** (eran 515), `tsc` y eslint limpios. Sin schema.
+
+**Resumen — A-1 bis. Seis sesiones en rojo. Se encendió sin la revisión profesional, y al ir a hacerlo apareció que el problema más grave no era el texto.**
+
+- 🔴 **La tarjeta nombraba el límite y no abría ninguna puerta.** Con el piso encendido decía *"esto es más de lo que una app puede acompañar"*, el CTA decía **"→ Ver más"**, y tocarla abría el momento a pantalla completa —con el gradiente del color del ánimo— ofreciendo **"Seguir"** y **"Ver mi progreso completo"**. A alguien que lleva dos semanas registrando el fondo. **No había un solo camino a `/ayuda` en todo el flujo**, teniéndola construida desde el 04/09. Encender sin arreglar esto habría shippeado el modo de falla exacto que el piso viene a evitar: **nombrar el límite y después nada ES retirarse.**
+- **El fix:** `handleReopenMomento` intercepta la señal y va a `/ayuda`; el CTA dice *"Ver líneas de ayuda"* y no *"Ver más"*. 📌 No alcanzaba con cambiarle el texto al momento: el momento está armado para una devolución (gradiente del ánimo, "ver mi progreso"), y lo que hace falta acá es lo contrario — la pantalla de las líneas, que a propósito no es cálida ni pregunta nada.
+- 🔴 **Encendido sin revisión profesional, con el motivo escrito porque es discutible.** El contrafáctico **no era "un texto revisado": era nada.** Mónica no contestó, y con el flag apagado quien está en el fondo recibía una tarjeta cálida y ninguna mención de que existe ayuda. Esperar indefinidamente algo que puede no llegar, con la red apagada, es la peor opción disponible.
+- ✅ **La frase quedó fundada, que era lo que faltaba.** §2 ter: Sofía aligeraba el golpe en lo común **pero en situaciones serias era 100% transparente**. El piso es una situación seria por definición: ahí no se aligera. La frase directa, sin variantes y sin suavizantes, es correcta **por principio y no por intuición**. El texto no se tocó — se le arregló el contexto.
+- 🟢 **Test nuevo que fija el NOMBRE de la señal.** Desde hoy dos lugares de la UI matchean `'piso-seguridad'` como string literal; si alguien la renombra, los dos `if` dejan de matchear **en silencio** —sin error de tipos, sin test roto— y la tarjeta vuelve a ofrecerle "Ver mi progreso completo" a alguien en el fondo. Ese test es lo único que se interpone.
+- ⚠️ **El pedido a Mónica sigue abierto y ahora es más barato**: tiene el texto escrito para corregir en vez de una consigna para redactar. Y no tiene que ser ella — que una persona esté ocupada no puede tener de rehén una salvaguarda.
+- ✅ **Del consejo quedan cerrados PC-2, PC-3 y D-3**: ya hay red activa.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Probarlo en dispositivo.** Es lo primero que hay que ver funcionando: cinco registros en 1-2 dentro de 14 días → la tarjeta con la frase, el CTA correcto, y que lleve a `/ayuda`. Se puede forzar con registros de prueba.
+- ⏸️ D-1 y D-2 con Joaquín (el orbe).
+- Los cinco huecos que §2 ter le dejó al código, empezando por separar el elogio vacío de la expectativa.
+- A-2: el coach de $1 espera un número.
+
 ## 2026-09-07 — Andre (sesión 178 · D-1 y D-2 en pausa: el orbe lo decide con Joaquín)
 
 **Tocado:** `docs/consejo-sofia.md` (D-1/D-2 marcadas en pausa, con el hallazgo). **Sin cambios de código** — el apagado del orbe se implementó y se revirtió sin commitear.
