@@ -4,6 +4,18 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Joaquín (sesión 191 · device review cerrada: matrícula en vivo y Diario, + fix de sincronización de Inicio)
+
+**Tocado:** `hooks/useMoodHistory.ts`, `app/(tabs)/index.tsx`. `tsc`/lint/541 tests limpios. Sin schema.
+
+**Resumen — se cerró la device review (items 1-4). Se probó en dispositivo lo que faltaba (matrícula en vivo y el Diario nuevo) y salió un bug de sincronización, arreglado.**
+
+- ✅ **Matrícula EN VIVO — probado por primera vez.** El trigger `sync_has_matricula` nunca se había ejercitado (0 credenciales de matrícula en la base). Se insertó una Matrícula pendiente para Coach Prueba, Joaquín la aprobó desde admin → `has_matricula` pasó sola a `true`. La insignia aparece en el perfil (con el rework de la 190 de Andre: escudo por credencial, sin cartel de Formación) y en la confirmación de reserva. **⚠️ Data de test que quedó:** Coach Prueba ahora tiene matrícula verificada (sirve como referencia "con matrícula" para los tres perfiles del pendiente de Andre); el booking de prueba `e9be9124` quedó movido a `2026-09-08` (se movió para testear el ofrecimiento del paquete). Reversibles.
+- ✅ **Diario nuevo (sesión 164 de Andre) — confirmado:** pantalla de escritura, colapso ánimo+pregunta con el teclado, pregunta congelada, guardado, franja "Esta semana", y **la creación del check-in del día al guardar** (probado de cero: sin check-in → guardar entrada "Cansado" → check-in creado "Cansado", verificado contra la base).
+- 🔴 **Bug encontrado y arreglado: el check-in creado por el Diario no se veía marcado en Inicio.** Inicio es tab (no re-monta) y `useMoodHistory` cargaba una sola vez, así que un check-in creado en OTRA pantalla no aparecía hasta un remonte. Se expuso `refetch` en el hook y se llama en cada foco de Inicio (mismo patrón que el fix del consentimiento de la 163). El pick hecho EN Inicio sigue cubierto por `freshCheckIn`.
+
+**Pendiente:** los extras que sumó Andre (Diario/Gratitud pinneables, foto de perfil, "Sobre nosotros", EncuadreSheet, el piso de seguridad) no se recorrieron en esta review. Y sigue: el filtro por intención (tras el catálogo), encender IA/piso, opción B del Diario — decisiones con Andre.
+
 ## 2026-09-07 — Andre (sesión 190 · el cartel de Formación se borró arreglando el badge que lo hacía necesario)
 
 **Tocado:** `screens/ProfesionalScreen.tsx`. **541 tests** (sin cambios), `tsc` limpio, eslint sin nada nuevo. Sin schema.
