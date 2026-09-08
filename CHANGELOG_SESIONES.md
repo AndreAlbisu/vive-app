@@ -6,7 +6,7 @@
 ---
 ## 2026-09-08 — Andre (sesión 199 · C6: la tarjeta dejaba de tener negrita cuando escribía la IA)
 
-**Tocado:** `lib/weeklyReflection.ts`, `hooks/useDailyReflection.ts`, `supabase/functions/weekly-reflection/index.ts`, `__tests__/weeklyReflection.test.ts`, `docs/problemas-abiertos.md`. **553 tests** (eran 549), `tsc` limpio. ✅ **Deployada v22 → v24.**
+**Tocado:** `lib/weeklyReflection.ts`, `hooks/useDailyReflection.ts`, `supabase/functions/weekly-reflection/index.ts`, `__tests__/weeklyReflection.test.ts`, `docs/problemas-abiertos.md`. **553 tests** (eran 549), `tsc` limpio. ✅ **Deployada v22 → v23** (verificado con `functions list`; el deploy fallido no consumió número).
 
 **Resumen — el mismo componente renderizaba dos diseños distintos según qué camino ganó, y nadie lo había decidido.**
 
