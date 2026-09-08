@@ -4,6 +4,28 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 187 · la tarjeta "¿Querés volver a ver a X?" se disolvió: la re-reserva vive en la fila)
+
+**Tocado:** `screens/SessionsScreen.tsx`. **540 tests** (sin cambios: los 25 nuevos respecto de la 175 son de las sesiones 176-186), `tsc` limpio, eslint sin errores nuevos. Sin schema.
+
+**Resumen — continuación directa de la 175. Con el orden fijo andando, la tarjeta perdió el motivo por el que estaba ahí y hubo que juzgarla sola. No sobrevivió.**
+
+- 🔴 **La tarjeta nació como el TERCER inquilino de un hueco que ya no existe.** Ese lugar tuvo cuatro (aire calculado del 12% → cartel genérico → "¿Querés volver a ver a María?" → carrusel) y los cuatro existían para lo mismo: bajar la primera fila hasta el pulgar. Con la posición fija de la 175, eso dejó de hacer falta.
+- 🔴 **Cuatro problemas que se caen juntos al mudar la re-reserva a la fila:** (1) **nombraba a UNO SOLO**, el de la última sesión completada — con 2-4 profesionales, elegir a uno es elegir mal casi siempre (era el pendiente sin resolver de la 150); (2) **repetía a María** tres centímetros arriba de la fila de María, con el mismo avatar y sin nada que dijera en qué se diferencian; (3) **desaparecía con cualquier sesión próxima**, o sea que el anti-fuga #1 vivía en la única pieza evaporable de la pantalla; (4) **preguntaba y no dejaba de preguntar** — sin descarte ni estado, cada apertura repetía la pregunta y el usuario volvía a decir que no ignorándola, que roza el "acompañar no es perseguir".
+- ✅ **Ahora cada fila lleva una pastilla "Reservar"** en el riel derecho, **solo si con esa persona no hay sesión por delante** (`salasConProxima`, derivado de `proximas`, que ya trae el `salaId` — cero consultas nuevas). Que la pastilla exista es la información, mismo criterio que la pastilla de próxima sesión del lado coach. Contorno y no relleno: la fila entera ya es un destino (abre el chat) y este botón se ofrece sin competirle.
+- 📝 **Dice "Reservar", no un ícono.** Es la superficie que defiende el modelo de negocio: tiene que leerse sin adivinar.
+- 🟢 **Se borró una consulta.** La cuarta del `Promise.all` (última sesión completada) existía solo para saber a quién nombrar en la tarjeta. Sin tarjeta, se fue con ella — junto al estado `reinvitar` y sus seis estilos.
+- 📝 **El copy viejo no era el problema** ("¿Querés volver a ver a María?", en presente y sin contar el tiempo, estaba bien pensado). El problema era que fuera una tarjeta.
+- ⚠️ **Sin probar en dispositivo.** Los casos: con sesión próxima con alguien (que NO aparezca su pastilla), sin ninguna (que aparezcan todas), y que tocar la pastilla no abra el chat — son dos `TouchableOpacity` anidados y el de adentro tiene que ganar.
+
+**Pendiente para la próxima sesión:**
+
+- 🔴 **Device review de las dos pantallas de Mensajes**, que es lo único que falta de la 175 y la 187 juntas: orden que no se mueve, sala nueva al final, pastilla "Reservar" (incluido el toque anidado), y la lupa del coach (abrir, buscar, cerrar y que la lista vuelva entera).
+- ⚠️ **El punto ciego del council, sin atacar:** el día del lanzamiento el usuario modal tiene **0 o 1 salas**, no 2-4. El estado vacío merece más atención que cualquier vuelta nueva sobre esta pantalla.
+- 📝 Del council, sin urgencia: el coach usa `ScrollView` + `.map()` con 20+ filas (quiere `FlatList`), y Dynamic Type rompe la aritmética en pt de las dos pantallas.
+
+---
+
 ## 2026-09-07 — Andre (sesión 186 · contestó Mónica, y encontró un error de DISEÑO, no de texto)
 
 **Tocado:** `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md` (§5 ter). **540 tests** (eran 536), `tsc` limpio. Sin schema.

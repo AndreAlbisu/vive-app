@@ -101,34 +101,29 @@ const CARD_W = Math.round(CARD_FULL * 0.86);
 const SOMBRA_ALCANCE = 44;
 
 /**
- * 🔴 El espacio de arriba de la lista es UN SLOT QUE NUNCA QUEDA VACÍO, y esa
- * es la regla que ordena esta pantalla.
+ * 🔴 EL SLOT SE DISOLVIÓ. Arriba de la lista va el carrusel de sesiones
+ * próximas, o no va nada — y que no vaya nada está bien.
  *
- * Antes era aire calculado (12% del alto, piso 64, techo 132) que aparecía solo
- * cuando la lista era lo primero de la pantalla. Resolvía la ergonomía —bajar
- * la primera fila, que es el destino más tocado, a donde llega el pulgar sin
- * recolocar la mano— pero a costa de un hueco que no decía nada, y con dos
- * alturas de arranque distintas según lo que hubiera ese día.
+ * Historia, porque es la lección de la pantalla: ese lugar tuvo cuatro
+ * inquilinos (aire calculado del 12% del alto → cartel genérico "Sin sesiones
+ * agendadas", que era el mismo texto del Inicio y "se sentía forzado" →
+ * tarjeta "¿Querés volver a ver a María?" → carrusel). Los cuatro existían
+ * para lo mismo: BAJAR LA PRIMERA FILA hasta donde llega el pulgar. Es decir,
+ * se compraba alcance con contenido, y ese trueque no cierra nunca, porque la
+ * pieza termina elegida por dónde está y no por qué es. Por eso todas se
+ * sentían forzadas: lo eran.
  *
- * Ahora ese lugar lo ocupa algo real, o nada:
- *   · hay sesiones próximas          → el carrusel
- *   · no, pero ya viste a alguien    → la invitación a volver a verlo
- *                                      (`reinvitarCard`)
- *   · no, y nunca tuviste sesión     → NADA
- *   · no hay ni salas                → no se llega acá: manda el vacío entero
+ * Lo que resolvió el problema fue otra cosa: que la fila de cada profesional
+ * esté SIEMPRE EN EL MISMO LUGAR (`lib/salaOrder.ts`). Una fila que no se
+ * mueve se acierta de memoria aunque esté alta; no hay que leer antes de
+ * tocar, y entonces la altura deja de importar. Con eso el hueco dejó de ser
+ * un problema que haya que tapar.
  *
- * ⚠️ El tercer caso queda a propósito sin nada. La primera versión ponía ahí un
- * cartel genérico ("Sin sesiones agendadas · Reservá una sesión con tu
- * profesional") que era el MISMO texto del Inicio y se sentía forzado — porque
- * lo era: nació para tapar el hueco. Sin alguien a quien nombrar no hay nada
- * que decir en esta pantalla, y un relleno es peor que el hueco.
+ * Y la re-reserva —que era el contenido de la última tarjeta y es la medida
+ * anti-fuga #1— se mudó ADENTRO de cada fila (ver `SalaRow`), donde es
+ * permanente y no obliga a elegir a quién nombrar.
  *
- * ⚠️ El slot NO garantiza que la lista arranque siempre a la misma altura — el
- * carrusel mide ~195pt y la invitación ~70pt, y a veces no hay nada. Igualarlas
- * pediría estirar la chica hasta el alto de la grande, que es volver al hueco
- * vacío por otro camino.
- *
- * ⚠️ El banner de reembolso NO es parte del slot: es una alerta, va por encima
+ * ⚠️ El banner de reembolso NO es parte de esto: es una alerta, va por encima
  * de todo y empuja al resto hacia abajo.
  */
 
@@ -175,8 +170,6 @@ export default function SessionsScreen() {
   const router = useRouter();
   const { user, isLoggedIn, requestAuth } = useAuth();
   const [salas, setSalas] = useState<SalaItem[]>([]);
-  /** A quién invitar a volver a ver, cuando no hay ninguna sesión por delante. */
-  const [reinvitar, setReinvitar] = useState<SalaItem | null>(null);
   /** TODAS las sesiones próximas, en orden. Antes había una destacada y una
    *  lista aparte, y eso obligaba a cancelar en dos lugares distintos según
    *  cuál fuera. Ahora son todas iguales y se recorren de a una. */
@@ -217,24 +210,15 @@ export default function SessionsScreen() {
 
     const todayStr = new Date().toISOString().split('T')[0];
 
-    const [salasRes, ultimaRes, nextBookingRes, refundRes] = await Promise.all([
+    // 📝 Acá había una cuarta consulta —la última sesión completada— que existía
+    // solo para saber a quién nombrar en la tarjeta "¿Querés volver a ver a X?".
+    // Con la re-reserva adentro de cada fila no hay que elegir a nadie, así que
+    // la consulta se fue con la tarjeta.
+    const [salasRes, nextBookingRes, refundRes] = await Promise.all([
       supabase
         .from('salas')
         .select('id, user_id, coach_id, user_last_read_at, coach_last_read_at, created_at')
         .or(`user_id.eq.${user.id},coach_id.eq.${user.id}`),
-      // La última sesión que YA ocurrió. Es de quien habla la invitación a volver
-      // a reservar: sin esto la tarjeta sería un cartel genérico, y con esto
-      // habla del vínculo concreto, que es lo único que existe en esta pantalla.
-      // ⚠️ Ordena también por hora: con dos sesiones el mismo día, cuál fue "la
-      // última" lo decidiría el planner.
-      supabase
-        .from('bookings')
-        .select('sala_id')
-        .eq('user_id', user.id)
-        .eq('status', 'completada')
-        .order('scheduled_date', { ascending: false })
-        .order('scheduled_time', { ascending: false })
-        .limit(1),
       // 🔴 Antes: `.limit(1).maybeSingle()`. La app mostraba UNA sola sesión
       // próxima —la más cercana— en todas sus pantallas, así que la segunda
       // existía en la base, iba a ocurrir, y era invisible: no se podía ver, ni
@@ -326,11 +310,6 @@ export default function SessionsScreen() {
         hasUnread,
       };
     });
-
-    // La sala de la última sesión pasada, para la invitación. Sale de `results`
-    // y no de otra consulta: ahí ya están el nombre, el avatar y la especialidad.
-    const ultimaSalaId = (ultimaRes.data?.[0]?.sala_id as string | undefined) ?? null;
-    setReinvitar(results.find(s => s.id === ultimaSalaId) ?? null);
 
     // El orden vive en `lib/salaOrder.ts`: posición fija por antigüedad del vínculo.
     // Antes no había ninguno — se guardaba lo que devolviera Postgres.
@@ -475,6 +454,10 @@ export default function SessionsScreen() {
       setIsAddingCalendar(false);
     }
   }
+
+  /** Con quién ya hay sesión por delante. Sale de `proximas`, que ya trae el
+   *  `salaId`: no hace falta ninguna consulta más para saberlo. */
+  const salasConProxima = new Set(proximas.map(p => p.salaId));
 
   return (
     <AppBg>
@@ -672,56 +655,6 @@ export default function SessionsScreen() {
               </View>
             )}
 
-            {/* Segundo estado del slot: hay conversaciones pero ninguna sesión
-                por delante.
-
-                🔴 Antes acá había una tarjeta que decía "Sin sesiones
-                agendadas · Reservá una sesión con tu profesional" — el MISMO
-                texto que ya está en el Inicio. Se sentía forzada, y con razón:
-                nació para tapar un hueco, anunciaba una ausencia de un tema que
-                es de otra pantalla, y la persona la veía dos veces.
-
-                Ahora nombra a alguien. Es lo único que puede existir SOLO acá:
-                no habla de tu día, habla del vínculo que esta pantalla lista.
-                Y es la re-reserva en un tap, que es la medida anti-fuga #1.
-
-                📝 En presente y sin contar el tiempo: "hace 3 semanas que no
-                ves a María" pasa factura, "¿querés volver a verla?" invita.
-                Acompañar no es perseguir.
-
-                📝 Si nunca tuvo una sesión no hay a quién nombrar, y entonces
-                no va nada: un cartel genérico sería volver al problema. */}
-            {proximas.length === 0 && reinvitar && (
-              <TouchableOpacity
-                style={styles.reinvitarCard}
-                onPress={() => router.push({
-                  pathname: '/booking-calendar',
-                  params: {
-                    name: reinvitar.otherName,
-                    specialty: reinvitar.otherSpecialty ?? '',
-                    priceFrom: '',
-                    coachId: reinvitar.coach_id,
-                  },
-                } as any)}
-                activeOpacity={0.85}
-              >
-                {reinvitar.otherAvatarUrl ? (
-                  <Image source={{ uri: reinvitar.otherAvatarUrl }} style={styles.reinvitarAvatar} />
-                ) : (
-                  <View style={[styles.reinvitarAvatar, styles.reinvitarAvatarFallback]}>
-                    <Text style={styles.reinvitarIniciales}>{reinvitar.otherInitials}</Text>
-                  </View>
-                )}
-                <View style={styles.reinvitarTexto}>
-                  <Text style={styles.reinvitarTitulo} numberOfLines={2}>
-                    ¿Querés volver a ver a {reinvitar.otherName}?
-                  </Text>
-                  <Text style={styles.reinvitarSub}>Reservá tu próxima sesión</Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.45)" />
-              </TouchableOpacity>
-            )}
-
             {/* Lista de salas.
                 🔴 POSICIÓN FIJA por antigüedad del vínculo (`lib/salaOrder.ts`):
                 cada profesional tiene su fila y no se mueve, ni cuando escribe
@@ -734,6 +667,18 @@ export default function SessionsScreen() {
                     key={sala.id}
                     sala={sala}
                     onPress={() => router.push({ pathname: '/sala', params: { sala_id: sala.id } })}
+                    // Solo donde falta: con una sesión ya agendada con esa
+                    // persona, ofrecerle reservar otra es ruido.
+                    puedeReservar={!salasConProxima.has(sala.id)}
+                    onReservar={() => router.push({
+                      pathname: '/booking-calendar',
+                      params: {
+                        name: sala.otherName,
+                        specialty: sala.otherSpecialty ?? '',
+                        priceFrom: '',
+                        coachId: sala.coach_id,
+                      },
+                    } as any)}
                     delay={index * 60}
                   />
                 ))}
@@ -777,13 +722,41 @@ export default function SessionsScreen() {
   );
 }
 
+/**
+ * 🔴 La re-reserva vive ACÁ ADENTRO, y no en una tarjeta arriba de la lista.
+ *
+ * Antes era una card: "¿Querés volver a ver a María?", con su avatar, arriba
+ * de todo. Tenía cuatro problemas y los cuatro se caen juntos al mudarla a la
+ * fila:
+ *   · nombraba a UNO SOLO, el de la última sesión completada — con 2-4
+ *     profesionales, elegir a uno es elegir mal casi siempre. Acá cada uno
+ *     tiene el suyo y no hay que elegir a nadie;
+ *   · repetía a María tres centímetros arriba de la fila de María, con el
+ *     mismo avatar, y la diferencia entre las dos no estaba dicha en ningún
+ *     lado;
+ *   · desaparecía cuando había cualquier sesión próxima — o sea que la
+ *     medida anti-fuga #1 vivía en la única pieza de la pantalla que se podía
+ *     evaporar. Acá es permanente;
+ *   · preguntaba, y no dejaba de preguntar nunca: no tenía descarte ni
+ *     estado, así que cada apertura te volvía a hacer la misma pregunta y vos
+ *     volvías a decir que no ignorándola. Acompañar no es perseguir. Un botón
+ *     en la fila NO pregunta: está disponible como está disponible un número
+ *     de teléfono en un contacto.
+ *
+ * 📝 Dice "Reservar" y no un ícono: es la superficie que defiende el modelo de
+ * negocio, tiene que leerse sin adivinar.
+ */
 function SalaRow({
   sala,
   onPress,
+  puedeReservar,
+  onReservar,
   delay,
 }: {
   sala: SalaItem;
   onPress: () => void;
+  puedeReservar: boolean;
+  onReservar: () => void;
   delay: number;
 }) {
   const anim = useRef(new Animated.Value(0)).current;
@@ -829,6 +802,19 @@ function SalaRow({
             {preview}
           </Text>
         </View>
+
+        {puedeReservar && (
+          <TouchableOpacity
+            style={styles.reservarPill}
+            onPress={onReservar}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={`Reservar una sesión con ${sala.otherName}`}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.reservarPillTxt}>Reservar</Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
 
       <View style={styles.rowDivider} />
@@ -920,29 +906,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(86,94,50,0.07)',
   },
 
-  reinvitarCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(255,248,240,0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 4,
-  },
-  // 42 y no 50 como en las filas: es una invitación, no una conversación —
-  // tiene que pesar menos que la lista que está abajo.
-  reinvitarAvatar: { width: 42, height: 42, borderRadius: 21 },
-  reinvitarAvatarFallback: {
-    backgroundColor: ViveColors.primary,
-    alignItems: 'center',
+  // La re-reserva, adentro de la fila. Ver el comentario de `SalaRow`.
+  // Contorno y no relleno: la fila entera ya es un destino (abre el chat), así
+  // que este botón tiene que ofrecerse sin competirle. Que exista es la
+  // información — si no está, con esa persona ya tenés sesión.
+  reservarPill: {
+    paddingHorizontal: 12,
+    height: 30,
     justifyContent: 'center',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.22)',
+    backgroundColor: 'rgba(255,248,240,0.5)',
+    flexShrink: 0,
   },
-  reinvitarIniciales: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#FFF6EC' },
-  reinvitarTexto: { flex: 1, gap: 2 },
-  reinvitarTitulo: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#3F512F' },
-  reinvitarSub: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: 'rgba(63,81,47,0.62)' },
+  reservarPillTxt: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 12.5,
+    color: 'rgba(86,94,50,0.9)',
+  },
   scroll: { flex: 1 },
   scrollContent: { paddingTop: 0, paddingBottom: TAB_BAR_CLEARANCE, paddingHorizontal: 16, gap: 0 },
 
