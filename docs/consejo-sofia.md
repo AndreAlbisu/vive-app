@@ -80,11 +80,43 @@ de capacidad, *engagement* gana por default porque es lo único que sí se mide.
 
 | id | qué | costo | quién lo levantó |
 |---|---|---|---|
-| **A-1** | 🔴 Mandar el mail a Mónica | 10 min | Executor + Contrarian, convergentes |
+| **A-1** | 🔴 ~~Mandar el mail a Mónica~~ → **ya se le habló y no responde.** Ver A-1 bis | — | Executor + Contrarian, convergentes |
 | **A-2** | 🔴 Sacar el coach de $1 del catálogo de producción | 1 línea de SQL | Executor (*"antes del café"*) |
 | **A-3** | Agendar la device review pendiente | — | Executor |
 | **A-4** | Blanquear quién es Sofía en un "sobre nosotros" | una tarde | Outsider + revisión |
 | **A-5** | Hablar con Sofía (la persona) y dejar algo escrito | una charla | PC-1 |
+
+### A-1 bis — Mónica no responde. Qué hacer con eso (07/09/2026)
+
+Andre ya le habló y no hubo respuesta. Eso **cambia el problema**: A-1 dejó de ser
+"mandar un mail" y pasó a ser "qué hacemos sin la revisión".
+
+🔴 **La decisión se toma contra el contrafáctico correcto, y el contrafáctico NO
+es "un texto revisado".** Es **nada**. Hoy el piso está apagado: quien lleva dos
+semanas registrando el fondo recibe una tarjeta cálida y ninguna mención de que
+existe ayuda. Esperar indefinidamente una revisión que puede no llegar, con la red
+apagada mientras tanto, es la peor de las opciones disponibles — es exactamente lo
+que PC-3 llama negligencia potencial.
+
+**Entonces: se racionaliza el texto nosotros y se enciende.** Pero no como "lo
+adivinamos" — como un juicio documentado:
+
+1. **Escribir el razonamiento** de la frase: qué hace cada parte, contra qué modos
+   de falla se la probó (que no se lea como *me retiro*, que no suene a
+   diagnóstico), y por qué se eligió esa y no otra.
+2. **Encender la versión más conservadora**, no la más linda.
+3. **Dejar el pedido abierto con el texto adjunto.**
+
+📌 **Y una hipótesis sobre por qué no respondió, que conviene probar antes de dar
+por perdida la consulta: puede que el pedido haya sido caro.** *"¿Me ayudás con el
+texto?"* es tarea. *"Esta es la frase, ¿le cambiarías algo?"* son dos minutos.
+**Corregir es mucho más barato que redactar**, y cambiar la forma del pedido puede
+destrabarlo solo.
+
+⚠️ **Y no tiene que ser ella.** Su precedente vale (ya corrigió el enfoque del
+paquete y esa corrección mejoró el diseño), pero **que una sola persona esté
+ocupada no puede tener de rehén a una salvaguarda**. Cualquier psicóloga clínica
+puede mirar una frase.
 
 ---
 
