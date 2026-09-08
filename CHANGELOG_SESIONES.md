@@ -4,6 +4,35 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 183 · segunda corrida: los guardarrales funcionan, y apareció uno mal anclado)
+
+**Tocado:** `lib/weeklyReflection.ts`, `supabase/functions/weekly-reflection/index.ts`, `__tests__/weeklyReflection.test.ts`. **531 tests** (eran 530), `tsc` limpio. ✅ **Deployada v21 → v22.**
+
+**Resumen — se volvió a correr el ensayo contra v21 y se pasaron las 13 frases por el guardarraíl REAL en vez de estimar a ojo. 4 de 13 rechazadas, y todas por las reglas que se agregaron en la sesión anterior.**
+
+- ✅ **Los guardarrales nuevos hacen trabajo real:** 3 rechazos por *"a quien te acompaña"* (`ACOMPANANTE`) y 1 por *"**Viene más pesado** que el mes pasado"* (`CONCORDANCIA_SEMANA`) — exactamente la clase de bug de la corrida anterior, ahora frenada. **Y esta corrida no tuvo ni un día inventado ni un tuteo.**
+- ⚠️ **Pero el modelo sigue escribiendo "a quien te acompaña" pese a la prohibición explícita del prompt** — tres de quince, ahora hedgeadas con *"si tenés"* / *"si lo necesitás"*, como si la condicional lo arreglara. **La instrucción no alcanza; el que lo frena es el guardarraíl.** Es un dato sobre cómo confiar en el prompt: sirve para orientar, no para garantizar.
+
+**🔴 Y un guardarraíl que estaba mal escrito desde el principio.**
+
+*"Días complicados, **lo veo**."* pasaba los catorce controles. El `SYSTEM` prohíbe ponerse de testigo desde siempre, pero **estaba redactado como una regla de ARRANQUE** (*"No empieces con Parece que, Se nota que, Veo que"*) y el guardarraíl la copiaba **anclada con `^`**. La segunda corrida la esquivó sin proponérselo, moviéndola al medio de la frase.
+
+⚠️ **La prohibición nunca fue sobre la posición sino sobre la POSTURA**: la app no observa a nadie, y ponerse de testigo es el modo analista que §2 rechaza. Ahora corre en toda la frase (`lo veo`, `te veo`, `se te nota`, `veo que`, `noto que`) y el prompt se reescribió igual. 📌 Con un test que fija que *"en dos días **ves** al profesional"* sigue pasando: la regla es sobre **quién observa a quién**, no sobre el verbo.
+
+**Lo que sigue sin arreglo:**
+- 🔴 **Inferencia causal, ejemplo nuevo y del peor tipo:** *"La semana vino más pesada que hace un mes. **No es que hayas dejado de intentar** — simplemente los días costaron más."* Niega una causa que nadie planteó, y al negarla **introduce la idea de que la persona podría haber dejado de intentar**. Es un reproche de contrabando dentro de un consuelo. Ninguna palabra prohibida. Sigue sin solución conocida.
+- ⚠️ **`sharp-drop` produjo las tres frases idénticas otra vez**, y otra vez calcadas de la variante escrita a mano. El modelo copia el ejemplo del prompt en vez de escribir. No aporta nada ahí (tampoco daña).
+- 📌 **El patrón nuevo aterrizó UNA vez de quince:** *"Empezaste a registrar. Eso es el primer paso, **y lo estás dando vos**."* Es exactamente el movimiento 4. Las demás siguen cerrando con la app dictaminando (*"eso es lo que cuenta"*).
+
+**Una para decidir, que NO es un defecto:**
+- *"No es momento de presionar nada, solo de **estar ahí con vos** en esto."* La app se pone de compañía. ⚠️ **Está en la línea entre §1 y §3.5**: §1 pide presente y presencia (*"acá estoy"* es su ejemplo textual), §3.5 prohíbe fingir. No la marqué como defecto porque §1 la avala — pero es decisión de Andre si la voz puede decir eso.
+
+**Pendiente para la próxima sesión:**
+- Correr el ensayo contra v22.
+- Decidir lo de *"estar ahí con vos"*.
+- `sharp-drop` copiando el ejemplo.
+- Probar el piso de seguridad en dispositivo — sigue siendo lo más importante del backlog.
+
 ## 2026-09-07 — Andre (sesión 182 · el ensayo encontró cuatro defectos con cero alertas)
 
 **Tocado:** `lib/weeklyReflection.ts`, `hooks/useDailyReflection.ts`, `supabase/functions/weekly-reflection/index.ts`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md`. **530 tests** (eran 526), `tsc` limpio. ✅ **`weekly-reflection` deployada v20 → v21.** Sin schema.

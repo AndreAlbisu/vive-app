@@ -679,6 +679,23 @@ describe('rejectCopy — el guardarraíl sobre lo que escribe un modelo', () => 
       .toBe('inventa un día de la semana');
   });
 
+  it('🔴 la app no se pone de testigo, y no solo al arrancar la frase', () => {
+    // El `SYSTEM` lo prohíbe desde siempre, pero como regla de ARRANQUE, y el
+    // guardarraíl la copiaba anclada. La segunda corrida del ensayo del 07/09
+    // la esquivó sin proponérselo, con el prompt ya corregido:
+    expect(rejectCopy('Días complicados, lo veo. Guardá para contárselo en dos días, que para eso está.', 'gentle'))
+      .toBe('la app se pone de testigo');
+    // Y las de arranque, que ya se frenaban, se siguen frenando.
+    expect(rejectCopy('Veo que la semana vino más pesada de lo habitual y no hace falta forzar nada.', 'gentle'))
+      .toBe('la app se pone de testigo');
+    expect(rejectCopy('Se te nota un cambio esta semana, y no sé bien de dónde salió.', 'warm'))
+      .toBe('la app se pone de testigo');
+    // ⚠️ Que la frase hable de lo que ve la PERSONA sigue siendo legítimo: la
+    // regla es sobre quién observa a quién.
+    expect(rejectCopy('En dos días ves al profesional, guardá esto para contárselo entonces.', 'gentle'))
+      .toBeNull();
+  });
+
   it('🔴 frena el tuteo — la voz es rioplatense y el SYSTEM lo pide', () => {
     // Real del ensayo del 07/09: "Llevas unos días complicados".
     expect(rejectCopy('Llevas unos días complicados. En dos días ves al profesional, guardá esto.', 'gentle'))

@@ -220,7 +220,8 @@ export type CopyRejection =
   | 'lenguaje clínico' | 'tono gurú' | 'anima en tono suave' | 'pide una acción en tono suave'
   | 'pide una reserva' | 'finge sentir'
   | 'signos de exclamación' | 'markdown o comillas' | 'etiquetas internas'
-  | 'tutea' | 'inventa un día de la semana' | 'inventa que hay alguien acompañando';
+  | 'tutea' | 'inventa un día de la semana' | 'inventa que hay alguien acompañando'
+  | 'la app se pone de testigo';
 
 /** ¿Se puede mostrar esta frase? `null` = sí. Si no, el motivo — que se loguea
  *  para poder ver qué rechaza el guardarraíl sin tener que adivinar. */
@@ -242,6 +243,21 @@ export function rejectCopy(
   // Un modelo que devuelve markdown o se pone a citar está respondiendo a otra
   // pregunta, no escribiendo la línea.
   if (/[*_#`]|^["“']/.test(t)) return 'markdown o comillas';
+
+  // 🔴 La app declarando que percibe. El `SYSTEM` lo prohíbe —*No empieces con
+  // "Parece que", "Se nota que", "Veo que"*— pero **estaba escrito como una
+  // regla de ARRANQUE**, y el guardarraíl la copiaba anclada con `^`.
+  //
+  // El ensayo del 07/09 (segunda corrida, ya con el prompt corregido) la esquivó
+  // sin proponérselo: *"Días complicados, **lo veo**."* Mismo movimiento, mitad
+  // de la frase, y pasaba los catorce controles.
+  //
+  // ⚠️ La prohibición nunca fue sobre la posición sino sobre la POSTURA: la app
+  // no observa a nadie, y ponerse de testigo es el modo analista que §2 rechaza.
+  // Por eso ahora corre en toda la frase.
+  if (/\b(lo veo|te veo|se te nota|se nota que|veo que|noto que)\b/i.test(t)) {
+    return 'la app se pone de testigo';
+  }
   if (/!/.test(t)) return 'signos de exclamación';
 
   // 🔴 Etiquetas internas del modelo. Hoy no puede pasar —la función corre en
