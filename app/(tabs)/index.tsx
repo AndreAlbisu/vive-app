@@ -1095,11 +1095,18 @@ function SobreVosCard({
               </Text>
               {/* El CTA es la puerta, así que tiene que decir a dónde va. "Ver
                   más" servía cuando abría la reflexión completa; con el piso de
-                  seguridad sería el peor eufemismo posible. Dice lo que hay del
-                  otro lado, y nada más — la pantalla de ayuda no es cálida a
-                  propósito y el camino hacia ella tampoco debería serlo. */}
+                  seguridad sería el peor eufemismo posible.
+
+                  📌 Dice "si lo necesitás" desde el 07/09, con la devolución de
+                  Mónica: el piso puede dispararse sobre alguien cuyo tratamiento
+                  está funcionando —las sesiones destapan angustia como parte del
+                  proceso— y a esa persona un imperativo la asusta sin motivo.
+                  **Ofrece en vez de imponer, y las líneas siguen a un toque en
+                  los dos casos.** */}
               <Text style={s.selloCta}>
-                {reflection.signal === 'piso-seguridad' ? '→ Ver líneas de ayuda' : '→ Ver más'}
+                {reflection.signal === 'piso-seguridad'
+                  ? '→ Si lo necesitás, hay líneas de ayuda'
+                  : '→ Ver más'}
               </Text>
             </>
           )}

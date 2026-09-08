@@ -4,6 +4,38 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 186 · contestó Mónica, y encontró un error de DISEÑO, no de texto)
+
+**Tocado:** `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md` (§5 ter). **540 tests** (eran 536), `tsc` limpio. Sin schema.
+
+**Resumen — llegó la revisión que se esperaba seis sesiones. No corrigió la frase: encontró que estábamos midiendo una cosa y afirmando otra.**
+
+**Lo que dijo** (con la advertencia de Andre, que es la clave para leerla: *ella mira desde la sesión, donde puede preguntar y actuar sobre la respuesta; la app no puede hacer ninguna de las dos*):
+- ✅ **Está bien señalar que se observa que los últimos días no viene bien.**
+- 🔴 **Pero una persona puede no sentirse bien una semana, o hacer una involución en el proceso, sin que eso sea una emergencia.**
+- 🔴 **Y lo que nos faltaba entero: "las sesiones pueden destapar ansiedades y generar falta de apetito, angustia, etcétera, como parte del proceso de sanación."**
+- Para conductas de riesgo propone preguntas directas: si se quiere hacer daño, si quiere dejar de vivir, si se siente en peligro.
+- 📌 Y nombra un caso que la escala de ánimo **no puede ver nunca**: sentir que la vida corre riesgo por una situación de violencia intrafamiliar.
+
+**🔴 El error que eso destapó: fundíamos dos cosas en un mecanismo.** El detector detecta *"hace rato que viene así"*; el texto afirmaba *"esto es más de lo que una app puede acompañar"*, que es una afirmación sobre la **gravedad** — justo lo único que NO medimos. **Modo de falla concreto: el piso puede dispararse sobre alguien cuyo tratamiento está funcionando**, y decirle que lo suyo excede lo que la app puede acompañar. No es peligroso, pero es falso y puede leerse como que su proceso no sirve.
+
+**Lo que se cambió:**
+- **El texto deja de dictaminar sobre la gravedad.** Nombra el hecho y ofrece, que es lo que ella validó.
+- 🔴 **Se ramifica según si hay un profesional en juego — el hallazgo que sale directo de su devolución.** El dato ya existía y **el piso lo ignoraba por completo**. Con profesional: *"Llevalo a tu próxima sesión"*. Sin: *"Hay gente preparada para acompañar esto"*. ⚠️ `sessionsThisWeek` entra en la condición además de la sesión agendada: quedarse sin la rama correcta por un hueco de agenda sería exactamente el caso que ella describe.
+- **El CTA ofrece en vez de imponer:** *"Si lo necesitás, hay líneas de ayuda"*. Las líneas siguen a un toque en las dos ramas.
+- 🟢 **Cuatro tests nuevos**, y uno es un invariante de fondo: **ninguna rama puede afirmar cuán grave es lo que le pasa**. ✅ Verificado por mutación — se puso el texto viejo y falla.
+
+**🔴 Por qué NO se implementan sus preguntas directas, escrito para que dentro de un año nadie lo lea como que se desoyó una devolución clínica.** Son tres motivos independientes: (1) **es screening**, la línea que `encuadre-salud-y-responsabilidad.md` dice no cruzar — el mismo motivo por el que el umbral no salió del PHQ-9; (2) **crea el problema que ya está abierto y sin respuesta (A.11, deber de actuar)**: si alguien contesta que sí, ¿qué hace la app? **Sin respuesta a eso, preguntar es peor que no preguntar** — se abre algo que no se puede sostener; (3) recolecta el dato más sensible que existe sobre gente que ya sabemos que no tenemos cómo cuidar bien. **No es que ella se equivoque: su herramienta tiene un profesional del otro lado y la nuestra no.**
+
+- ✅ **Lo de la violencia intrafamiliar refuerza una decisión ya tomada** (§5 ter, 04/09): `/ayuda` se llega **siempre** desde el perfil, con o sin cuenta. Alguien puede estar en peligro por motivos que la escala de ánimo no ve, y ese día el algoritmo no se entera.
+
+**⚠️ Lo que queda sin resolver:** el umbral sigue sin distinguir "mal tramo" de "riesgo", y **no sabemos cómo hacerlo sin preguntar**. Lo que se hizo fue **dejar de afirmar la distinción que no podemos medir**. La pregunta de fondo —qué hace Vita frente al riesgo real— sigue abierta y atada a A.11.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Probarlo en dispositivo**, ahora con las dos ramas: con sesión próxima y sin ninguna.
+- **Mostrarle a Mónica el texto nuevo.** Ahora sí es una corrección de dos minutos, y ella ya está en la conversación.
+- A.11 sigue siendo la pregunta de fondo.
+
 ## 2026-09-07 — Andre (sesión 185 · "Sobre nosotros": quién es Sofía, antes y no después)
 
 **Tocado:** `scripts/sync-legal.mjs`, `app/legal.tsx`, `screens/ProfileOwnScreen.tsx`, `constants/legal.ts` (generado), `docs/consejo-sofia.md`. Nuevo: `docs/sobre-nosotros.md`. 536 tests, `tsc` limpio, eslint sin errores nuevos.

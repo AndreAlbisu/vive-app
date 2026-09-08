@@ -93,6 +93,60 @@ describe('buildReflection — el piso de seguridad gana sobre todo', () => {
     expect(r.signal).toBe('piso-seguridad');
   });
 
+  // ── La devolución de Mónica Grando (07/09) ────────────────────────────────
+  // Encontró un error de DISEÑO, no de texto: el detector detecta "hace rato que
+  // viene así" y el texto afirmaba "esto excede lo que una app puede acompañar",
+  // que es una afirmación sobre la GRAVEDAD — justo lo que no medimos.
+  //
+  // Su frase textual, que es la que abrió el agujero: *"las sesiones pueden
+  // destapar ansiedades y generar falta de apetito, angustia, etcétera, como
+  // parte del proceso de sanación"*. O sea que **el piso puede dispararse sobre
+  // alguien cuyo tratamiento está funcionando.**
+
+  it('🔴 con un profesional en juego, manda a la sesión y NO a una línea de crisis', () => {
+    const conSesion = buildReflection(on({ pisoSeguridad: true, diasHastaProximaSesion: 2 }));
+    expect(conSesion.signal).toBe('piso-seguridad');
+    expect(`${conSesion.before}${conSesion.bold}${conSesion.after}`).toMatch(/sesión/i);
+
+    // ⚠️ También cuando tuvo sesiones esta semana pero no tiene la próxima
+    // agendada: quedarse sin la rama correcta por un hueco de agenda sería
+    // exactamente el caso que Mónica describe.
+    const sinAgendar = buildReflection(on({ pisoSeguridad: true, sessionsThisWeek: 1 }));
+    expect(`${sinAgendar.before}${sinAgendar.bold}${sinAgendar.after}`).toMatch(/sesión/i);
+  });
+
+  it('sin nadie en juego, ofrece ayuda sin dictaminar sobre la gravedad', () => {
+    const solo = buildReflection(on({ pisoSeguridad: true }));
+    const texto = `${solo.before}${solo.bold}${solo.after}`;
+    expect(texto).toMatch(/gente preparada/i);
+    expect(texto).not.toMatch(/sesión/i);
+  });
+
+  it('🔴 NINGUNA de las dos ramas afirma cuán grave es lo que le pasa', () => {
+    // El texto viejo decía "Esto es más de lo que una app puede acompañar", que
+    // dictamina sobre la gravedad — y la gravedad es lo único que el detector NO
+    // mide. Si vuelve a aparecer una afirmación así, este test la frena.
+    const gravedad = /más de lo que una app|excede|no alcanza para esto|grave|urgente|emergencia/i;
+    for (const input of [
+      { pisoSeguridad: true },
+      { pisoSeguridad: true, diasHastaProximaSesion: 2 },
+      { pisoSeguridad: true, sessionsThisWeek: 1 },
+    ]) {
+      const r = buildReflection(on(input));
+      expect(`${r.before}${r.bold}${r.after}`).not.toMatch(gravedad);
+    }
+  });
+
+  it('las dos ramas pasan el guardarraíl que se le exige al modelo', () => {
+    for (const [input, ctx] of [
+      [{ pisoSeguridad: true }, { signal: 'piso-seguridad', facts: {} }],
+      [{ pisoSeguridad: true, diasHastaProximaSesion: 2 }, { signal: 'piso-seguridad', facts: { dias_hasta_proxima_sesion: 2 } }],
+    ] as const) {
+      const r = buildReflection(on(input));
+      expect(rejectCopy(`${r.before}${r.bold}${r.after}`, r.tone, ctx)).toBeNull();
+    }
+  });
+
   // 🔴 El nombre de la señal es una INTERFAZ, no un detalle interno. Desde el
   // 07/09/2026 dos lugares de la UI lo matchean como string literal:
   //

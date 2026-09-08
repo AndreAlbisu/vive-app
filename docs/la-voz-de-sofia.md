@@ -598,6 +598,86 @@ Hoy la señal de bajón fuerte baja el tono y se corre, que está bien para un m
 día — pero **no hay nada para el caso grave**. Eso hay que diseñarlo antes de
 darle más voz, no después.
 
+### 🔴 La devolución de Mónica Grando (07/09/2026) — y por qué el diseño estaba mal
+
+Llegó la revisión que se venía esperando seis sesiones. **Encontró un error de
+diseño que no era del texto**, y hay que leerla con la advertencia que puso
+Andre: *ella mira desde la sesión, donde puede preguntar y actuar sobre la
+respuesta. La app no puede hacer ninguna de las dos cosas.*
+
+**Lo que dijo, en sus términos:**
+
+- ✅ **Está bien señalar que se está observando que los últimos días no viene
+  bien.** La observación, validada.
+- 🔴 **Pero una persona puede no sentirse bien una semana, o hacer una involución
+  en el proceso, y eso NO significa una situación de emergencia.**
+- 🔴 **Hay que distinguir el malestar que se intensificó pero tiene intervención
+  terapéutica** —y acá está lo que nos faltaba entero— **porque las sesiones
+  pueden destapar ansiedades y generar falta de apetito, angustia, etcétera,
+  como parte del proceso de sanación.**
+- **De las conductas de riesgo, que son otra cosa.** Para eso propone preguntas
+  directas: si se quiere hacer daño, si quiere dejar de vivir, si se siente en
+  peligro.
+- 📌 Y agrega un caso que la escala de ánimo **no puede ver nunca**: alguien puede
+  sentir que su vida corre riesgo por estar en una situación de violencia
+  intrafamiliar.
+
+#### Lo que eso significa para el diseño
+
+🔴 **Estábamos fundiendo dos cosas distintas en un solo mecanismo.** El detector
+detecta *"hace rato que viene así"*; el texto afirmaba *"esto excede lo que una
+app puede acompañar"*, que es una afirmación sobre la **gravedad**. Son dos
+cosas, y solo la primera es la que medimos.
+
+⚠️ **El modo de falla concreto, que no habíamos visto: el piso puede dispararse
+sobre alguien cuyo tratamiento está funcionando.** Si las sesiones destapan
+angustia como parte del proceso, esa persona registra el fondo durante dos
+semanas — y la app le dice que lo suyo excede lo que puede acompañar y le ofrece
+líneas de crisis. No es peligroso, pero **es falso, puede asustar, y puede leerse
+como que el proceso que está haciendo no sirve.**
+
+#### 🔴 Por qué NO se implementan sus preguntas directas
+
+En una sesión son correctas. En la app son otra cosa, y son tres motivos
+independientes:
+
+1. **Es screening**, que es la línea que
+   [`encuadre-salud-y-responsabilidad.md`](./encuadre-salud-y-responsabilidad.md)
+   dice no cruzar — el mismo motivo por el que el umbral no salió del PHQ-9.
+2. **Crea el problema que ya está abierto y sin respuesta** (A.11, deber de
+   actuar): si alguien contesta que sí, **¿qué hace la app?** Sin una respuesta a
+   eso, **preguntar es peor que no preguntar** — se abre algo que no se puede
+   sostener.
+3. **Recolecta el dato más sensible que existe** sobre personas de las que ya
+   sabemos que no tenemos cómo cuidar bien.
+
+📌 **No es que ella se equivoque: es que su herramienta tiene un profesional del
+otro lado y la nuestra no.** Queda escrito así para que dentro de un año nadie lo
+lea como que se desoyó una devolución clínica.
+
+#### Qué se cambió con esto (07/09)
+
+1. **El texto deja de dictaminar sobre la gravedad.** Nombra el hecho y ofrece,
+   que es lo que ella validó.
+2. 🔴 **Se ramifica según si hay un profesional en juego, que es el hallazgo que
+   sale directo de lo que dijo.** El dato ya existía (`diasHastaProximaSesion`,
+   `sessionsThisWeek`) y **el piso lo ignoraba por completo**:
+   - **Con profesional** → *"Llevalo a tu próxima sesión"*. Si el malestar puede
+     ser parte del proceso, el lugar donde se trabaja es la sesión, no una línea
+     de crisis.
+   - **Sin profesional** → *"Hay gente preparada para acompañar esto"*.
+3. **Las líneas quedan a un toque en los dos casos**, pero el CTA ofrece en vez
+   de imponer: *"Si lo necesitás, hay líneas de ayuda"*.
+4. ✅ **Lo de la violencia intrafamiliar refuerza una decisión que ya estaba
+   tomada** (§5 ter, 04/09): `/ayuda` se llega **siempre** desde el perfil, con o
+   sin cuenta. Alguien puede estar en peligro por motivos que la escala de ánimo
+   no ve nunca, y ese día el algoritmo no se va a enterar.
+
+⚠️ **Lo que queda sin resolver:** el umbral sigue sin distinguir "mal tramo" de
+"riesgo", y **no sabemos cómo hacerlo sin preguntar**. Lo que se hizo fue dejar
+de afirmar la distinción que no podemos medir. La pregunta de fondo —qué hace
+Vita frente al riesgo real— sigue abierta y está atada a A.11.
+
 ### ✅ Estado al 07/09/2026 — ENCENDIDO
 
 `SAFETY_FLOOR_ENABLED = true`. Se encendió **sin la revisión profesional**, y el

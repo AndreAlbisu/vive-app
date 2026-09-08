@@ -488,11 +488,41 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // cuando importa que se lean. Su presentación es trabajo aparte, y espera el
   // texto revisado — ver el pendiente en CHANGELOG_SESIONES.
   if (pisoSeguridad) {
-    return r(
-      'Hace varios días que venís registrando lo mismo. ',
-      'Esto es más de lo que una app puede acompañar',
-      '.', 'gentle', 'piso-seguridad',
-    );
+    // 🔴 REESCRITO el 07/09/2026 con la devolución de Mónica Grando, que
+    // encontró un error de diseño y no de texto (ver `la-voz-de-sofia.md` §5 ter).
+    //
+    // Decía *"Esto es más de lo que una app puede acompañar"*, que es una
+    // afirmación sobre la GRAVEDAD — y la gravedad es justo lo que no medimos.
+    // El detector detecta "hace rato que viene así", que es otra cosa.
+    //
+    // ⚠️ El modo de falla que eso abría: **una persona en tratamiento puede
+    // registrar el fondo dos semanas porque el tratamiento está FUNCIONANDO.**
+    // Textual de Mónica: *"las sesiones pueden destapar ansiedades y generar
+    // falta de apetito, angustia, etcétera, como parte del proceso de sanación"*.
+    // A esa persona le decíamos que lo suyo excedía lo que la app puede
+    // acompañar, y le ofrecíamos líneas de crisis. No es peligroso, pero es
+    // falso y puede leerse como que su proceso no sirve.
+    //
+    // 🔴 Y de ahí sale la rama: **si hay un profesional en juego, el lugar donde
+    // esto se trabaja es la sesión, no una línea de crisis.** El dato ya existía
+    // y esta señal lo ignoraba por completo.
+    //
+    // ⚠️ `sessionsThisWeek` entra en la condición además de la sesión agendada:
+    // alguien en tratamiento puede no tener la próxima ya reservada, y quedarse
+    // sin la rama correcta por un hueco de agenda sería exactamente el caso que
+    // Mónica describe.
+    //
+    // 📌 Sigue SIN variantes por día — ver la nota de abajo. Esto no es
+    // rotación: son dos situaciones distintas, no dos maneras de decir lo mismo.
+    const dias = input.diasHastaProximaSesion;
+    const hayProfesional = (dias != null && dias >= 0) || sessionsThisWeek > 0;
+    return hayProfesional
+      ? r('Hace varios días que venís registrando lo mismo. ',
+          'Llevalo a tu próxima sesión',
+          '.', 'gentle', 'piso-seguridad')
+      : r('Hace varios días que venís registrando lo mismo. ',
+          'Hay gente preparada para acompañar esto',
+          '.', 'gentle', 'piso-seguridad');
   }
 
   // ── 1. El ánimo cayó fuerte hoy ───────────────────────────────────────────
