@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export interface MoodEntry {
@@ -12,7 +12,11 @@ export function useMoodHistory(userId: string | undefined, days = 7) {
   const [entries, setEntries] = useState<MoodEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // `refetch` se expone para que Inicio (que es una tab y no se re-monta) pueda
+  // re-leer al volver a foco: un check-in creado en OTRA pantalla —el Diario lo
+  // crea al guardar— no se veía marcado hasta un remonte. Ver el `useFocusEffect`
+  // en `app/(tabs)/index.tsx`.
+  const refetch = useCallback(() => {
     if (!userId) { setEntries([]); setLoading(false); return; }
 
     const from = new Date();
@@ -31,5 +35,7 @@ export function useMoodHistory(userId: string | undefined, days = 7) {
       });
   }, [userId, days]);
 
-  return { entries, loading };
+  useEffect(() => { refetch(); }, [refetch]);
+
+  return { entries, loading, refetch };
 }

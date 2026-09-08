@@ -120,7 +120,7 @@ export default function InicioScreen() {
 
   // 37 días: los últimos 7 son "esta semana" y los 30 anteriores la base
   // histórica contra la que la devolución compara.
-  const { entries: moodEntries } = useMoodHistory(user?.id, 37);
+  const { entries: moodEntries, refetch: refetchMood } = useMoodHistory(user?.id, 37);
   // Fecha LOCAL, no UTC: con `toISOString()` el día saltaba a las 21:00, así
   // que después de esa hora `todayMoodEntry` buscaba la entrada de MAÑANA, no
   // la encontraba, y el check-in de hoy se veía como no hecho.
@@ -206,6 +206,11 @@ export default function InicioScreen() {
   // revocar y después tocar una carita guardaba dato sensible sin volver a pedir.
   const refrescarConsent = consentGate.refrescar;
   useFocusEffect(useCallback(() => { void refrescarConsent(); }, [refrescarConsent]));
+  // Mismo motivo, para el ánimo: un check-in creado en OTRA pantalla (el Diario
+  // lo crea al guardar) no se veía marcado en Inicio hasta un remonte, porque el
+  // historial se cargaba una sola vez. Se re-lee en cada foco. (El pick hecho EN
+  // Inicio sigue cubierto por `freshCheckIn`, que manda sobre esto.)
+  useFocusEffect(useCallback(() => { refetchMood(); }, [refetchMood]));
   // El momento vive fuera de Inicio (app/(tabs)/_layout.tsx, sibling de
   // <Tabs>) para poder sacarle el <Modal> propio — ver SobreVosMomentoContext.
   const { open: openMomento } = useSobreVosMomento();
