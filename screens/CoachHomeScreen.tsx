@@ -19,6 +19,8 @@ import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { personasQueSeCaen, haceCuanto, type PersonaEnRiesgo } from '@/lib/coachContinuity';
 import { mensajeDePropuesta } from '@/lib/coachPropose';
+import { esperaConfirmacionDelCoach } from '@/lib/bookingHelpers';
+import { confirmBooking } from '@/lib/coachBookingActions';
 import { proximosHuecos } from '@/lib/coachProposeData';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -101,6 +103,16 @@ type AnimoCliente = {
   direccion: 'sube' | 'baja' | 'igual';
 };
 
+/** Una solicitud que espera que el coach diga que sí. */
+type Pendiente = {
+  bookingId: string;
+  name: string;
+  initials: string;
+  avatarUrl: string | null;
+  dateLabel: string;
+  timeStr: string;
+};
+
 type PrepResource = { id: string; title: string; opened: boolean; roomId: string | null };
 type Prep = { lastDaysAgo: number | null; resources: PrepResource[]; animo: AnimoCliente | null };
 
@@ -148,6 +160,8 @@ export default function CoachHomeScreen() {
   const [seCaen, setSeCaen] = useState<PersonaCayendo[]>([]);
   const [repu, setRepu] = useState<{ completadas: number; vuelvenPct: number | null } | null>(null);
   const [sinCerrar, setSinCerrar] = useState<{ name: string; salaId: string; bookingId: string; dias: number } | null>(null);
+  const [pendientes, setPendientes] = useState<Pendiente[]>([]);
+  const [aceptando, setAceptando] = useState<string | null>(null);
 
   // ── Card de preparación (estado vacío de Inicio) ────────────────────────
   // Los 3 pasos del checklist. `puertas` no tiene estado propio — se deriva
@@ -205,6 +219,7 @@ export default function CoachHomeScreen() {
       { data: topicRows },
       { count: recursosCount },
       { count: bookingsEverCount },
+      { data: pendingRows },
     ] = await Promise.all([
       supabase.from('profiles').select('name, avatar_url').eq('id', user.id).maybeSingle(),
       supabase
@@ -223,6 +238,19 @@ export default function CoachHomeScreen() {
       // Para `hasAnyBookingEver` — ver más abajo. `head:true` + sin filtro de
       // estado: alcanza con saber si existe una fila, no cuál ni cuántas.
       supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('coach_id', coachId),
+      // 🔴 Las solicitudes que esperan respuesta. Se piden acá y no se derivan de
+      // `confirmed` porque son otro estado. Traen las columnas de pago porque la
+      // regla de "espera al coach" las necesita — ver `esperaConfirmacionDelCoach`.
+      supabase
+        .from('bookings')
+        .select('id, user_id, scheduled_date, scheduled_time, status, payment_status, preference_id, usdt_amount')
+        .eq('coach_id', coachId)
+        .eq('status', 'pendiente')
+        // `todayInAr()` y no `todayStr`: `scheduled_date` está guardado en día
+        // de Argentina, y un coach de viaje se comía o se inventaba un día.
+        .gte('scheduled_date', todayInAr())
+        .order('scheduled_date', { ascending: true })
+        .order('scheduled_time', { ascending: true }),
     ]);
 
     if (profile?.name) setCoachName(profile.name.split(' ')[0]);
@@ -265,6 +293,42 @@ export default function CoachHomeScreen() {
       time: (b.scheduled_time as string).slice(0, 5),
       date: b.scheduled_date as string,
     }));
+
+    // ── Solicitudes que esperan respuesta ────────────────────────────────
+    // 🔴 La Home no las mencionaba en ningún lado: el coach se enteraba por un
+    // punto rojo de 6px en la pestaña Reservas. Con `instant_booking` en `false`
+    // por default —decisión de Andre del 08/09/2026: no se puede obligar a nadie
+    // a aceptar sesiones de gente que no eligió— este NO es un caso raro, es el
+    // camino normal de toda reserva. Y si no se responde en 24hs,
+    // `expire_pending_bookings()` la cancela y devuelve la plata.
+    //
+    // ⚠️ `esperaConfirmacionDelCoach` y no `status === 'pendiente'`: una reserva
+    // con el cobro iniciado y sin acreditar también está pendiente, pero esa
+    // espera a la PLATA, no al coach — y él no puede confirmarla. Es la misma
+    // regla que usa el badge de la pestaña, a propósito: si la Home contara
+    // distinto que el punto rojo, una de las dos estaría mintiendo.
+    const esperando = (pendingRows ?? []).filter(esperaConfirmacionDelCoach);
+    if (esperando.length === 0) {
+      setPendientes([]);
+    } else {
+      const { data: quienes } = await supabase
+        .from('profiles')
+        .select('id, name, avatar_url')
+        .in('id', [...new Set(esperando.map(b => b.user_id as string))]);
+      const porId = new Map((quienes ?? []).map(q => [q.id as string, q]));
+      setPendientes(esperando.map(b => {
+        const perfil = porId.get(b.user_id as string);
+        const nombre = (perfil?.name as string | null) ?? 'Alguien';
+        return {
+          bookingId: b.id as string,
+          name: nombre,
+          initials: getInitials(nombre),
+          avatarUrl: (perfil?.avatar_url as string | null) ?? null,
+          dateLabel: nextDateLabel(b.scheduled_date as string),
+          timeStr: (b.scheduled_time as string).slice(0, 5),
+        };
+      }));
+    }
 
     // Franja semanal (conteo por día + hoy)
     const week: DayEntry[] = WEEK_ABBRS.map((abbr, i) => {
@@ -566,6 +630,25 @@ export default function CoachHomeScreen() {
     }
   }, [coachId, router]);
 
+  const aceptarPendiente = useCallback(async (bookingId: string) => {
+    if (!user) return;
+    setAceptando(bookingId);
+    try {
+      // La misma función que usa Reservas — su comentario de cabecera dice que
+      // se extrajo justamente para que Inicio y Reservas confirmen idéntico
+      // (crea la sala, notifica, deja el mensaje de sistema y cancela a los
+      // competidores del slot). Duplicar eso acá sería la peor forma de tenerlo.
+      const ok = await confirmBooking(bookingId, user.id);
+      // Se saca de la lista al toque en vez de esperar el refresh: confirmar
+      // toca cinco tablas y el ida y vuelta se siente. Si falló no se toca nada
+      // y `loadData` la deja como estaba.
+      if (ok) setPendientes(prev => prev.filter(p => p.bookingId !== bookingId));
+      loadData();
+    } finally {
+      setAceptando(null);
+    }
+  }, [user, loadData]);
+
   const prepPuertas = doorLabels.length > 0;
   const prepDoneCount = [prepPerfil, prepPuertas, prepRecurso].filter(Boolean).length;
   const prepMissing = 3 - prepDoneCount;
@@ -626,6 +709,53 @@ export default function CoachHomeScreen() {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* ── Reservas esperando tu respuesta ───────────────────────────
+              🔴 Va PRIMERO, arriba incluso de la semana: es lo único de esta
+              pantalla que tiene a alguien del otro lado esperando, con la plata
+              ya retenida y un reloj de 24hs corriendo. Todo lo demás es del día;
+              esto es de los próximos minutos. */}
+          {pendientes.length > 0 && (
+            <View style={s.pendWrap}>
+              <Text style={s.pendEyebrow}>
+                {pendientes.length === 1
+                  ? 'Una persona espera tu respuesta'
+                  : `${pendientes.length} personas esperan tu respuesta`}
+              </Text>
+              {pendientes.map(p => (
+                <View key={p.bookingId} style={s.pendRow}>
+                  {p.avatarUrl ? (
+                    <Image source={{ uri: p.avatarUrl }} style={s.pendAv} />
+                  ) : (
+                    <View style={[s.pendAv, s.pendAvFallback]}>
+                      <Text style={s.pendInitials}>{p.initials}</Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.pendName} numberOfLines={1}>{p.name}</Text>
+                    <Text style={s.pendMeta} numberOfLines={1}>{p.dateLabel} · {p.timeStr} hs</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[s.pendBtn, aceptando === p.bookingId && s.pendBtnOff]}
+                    activeOpacity={0.85}
+                    disabled={aceptando === p.bookingId}
+                    onPress={() => aceptarPendiente(p.bookingId)}>
+                    <Text style={s.pendBtnTxt}>{aceptando === p.bookingId ? '...' : 'Aceptar'}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {/* Aceptar es la respuesta de un toque; rechazar pide un motivo que
+                  le llega a la persona, así que esa vive en Reservas y no se
+                  duplica acá. */}
+              <TouchableOpacity
+                style={s.pendVer}
+                activeOpacity={0.7}
+                onPress={() => router.navigate('/reservas')}>
+                <Text style={s.pendVerTxt}>Ver en Reservas</Text>
+                <Feather name="chevron-right" size={14} color={FOREST_SOFT} />
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Tu semana — se muestra SIEMPRE, también con los siete días en cero.
               📌 Decisión de Andre el 08/09/2026, en contra de la compuerta que
@@ -1109,6 +1239,34 @@ const s = StyleSheet.create({
   repuItem: { flexShrink: 1 },
   repuNum: { fontFamily: ViveFonts.title, fontSize: 26, color: FOREST },
   repuLbl: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, marginTop: 2 },
+  // Reservas esperando respuesta — el bloque más urgente de la pantalla, así
+  // que es el único con el borde en terracota.
+  pendWrap: {
+    backgroundColor: CARD, borderRadius: 18, padding: 16, marginTop: 14,
+    borderWidth: 1, borderColor: TERRA_SOFT,
+  },
+  pendEyebrow: {
+    fontFamily: ViveFonts.semibold, fontSize: 12, letterSpacing: 0.3,
+    color: TERRA, marginBottom: 12,
+  },
+  pendRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  pendAv: { width: 36, height: 36, borderRadius: 18 },
+  pendAvFallback: { backgroundColor: CREAM_DEEP, alignItems: 'center', justifyContent: 'center' },
+  pendInitials: { fontFamily: ViveFonts.semibold, fontSize: 12, color: FOREST },
+  pendName: { fontFamily: ViveFonts.semibold, fontSize: 14, color: FOREST },
+  pendMeta: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, marginTop: 1 },
+  pendBtn: {
+    backgroundColor: FOREST, borderRadius: 999,
+    paddingHorizontal: 16, paddingVertical: 8,
+  },
+  pendBtnOff: { opacity: 0.5 },
+  pendBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 13, color: GREEN_TXT },
+  pendVer: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    paddingTop: 8, borderTopWidth: 1, borderTopColor: LINE, marginTop: 2,
+  },
+  pendVerTxt: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT },
+
   caenWrap: {
     backgroundColor: CARD,
     borderRadius: 18,

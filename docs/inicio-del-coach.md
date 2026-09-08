@@ -160,10 +160,26 @@ no es esta pantalla.
 
 1. 🔴 **La forma del link público: ¿reserva y cobra en web, o muestra el perfil y
    manda a la store?** Es lo único que no se puede decidir después: define si el
-   lanzamiento tiene un embudo o solo un botón de instalar.
-2. **El default de `instant_booking`** (el consejo dice `true`; es un
-   `ALTER TABLE ... SET DEFAULT`, decisión de política, no de código).
-3. **La comisión sobre clientes que trae el coach** — ver 0.3.
+   lanzamiento tiene un embudo o solo un botón de instalar. **Abierta.**
+2. ~~El default de `instant_booking`~~ → ✅ **RESUELTA el 08/09/2026: sigue en
+   `false`**, contra la recomendación del consejo. *No se puede obligar a un
+   coach a aceptar sesiones de gente random* — la reserva instantánea no es
+   fricción a eliminar, es el único control que el profesional tiene sobre con
+   quién trabaja. 🔴 **Consecuencia: se cae el argumento de que ese default
+   "colapsaba la mitad del backlog", y la card "Reservas esperando tu respuesta"
+   vuelve al camino crítico del lanzamiento.** Ver `docs/camino-del-cliente-1.md`
+   §6. También se descartó la excepción por origen (instantánea para quien entra
+   por el link): **el coach igual tiene que aprobar si el horario le queda
+   cómodo** — conocer a la persona no vuelve conveniente el martes a las 8.
+   ✅ **Y la card "Reservas esperando tu respuesta" ya está hecha** (sesión 203).
+3. ~~La comisión sobre clientes que trae el coach~~ → ✅ **RESUELTA el
+   08/09/2026: no se toca la comisión, el link ofrece un DESCUENTO a quien entra
+   por él, lo absorbe VIVE, y vale solo la primera sesión de esa persona.** El
+   beneficio cambia de sujeto: paga menos la persona invitada, y el coach gana un
+   motivo para compartir el link en vez de un motivo para evitarlo. Falta solo
+   **el porcentaje**: el techo local es 20% (la comisión de MP no toca la porción
+   de VIVE), pero el que manda es el riel internacional, donde PayPal cobra
+   5,40% + USD 0,30. Ver `docs/camino-del-cliente-1.md` §2.1.
 
 
 ## 1. El diagnóstico, en una frase

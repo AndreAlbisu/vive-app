@@ -4,6 +4,34 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 203 · tres decisiones de producto y la card que esperaba a una de ellas)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `docs/camino-del-cliente-1.md`, `docs/inicio-del-coach.md`. **560 tests**, `tsc` limpio.
+
+**Resumen — Andre cerró tres decisiones que estaban trabadas, y una de ellas destrabó la card que faltaba.**
+
+- ✅ **`instant_booking` sigue en `false` por default, contra la recomendación del consejo** (4 de 5 asesores decían `true`). *No se puede obligar a un coach a aceptar sesiones de gente random.* 🔴 **Lo que el consejo no pesó: la reserva instantánea no es fricción a eliminar, es el único control que el profesional tiene sobre con quién se sienta a trabajar.**
+- ❌ **Y también se descartó la excepción por origen** (instantánea para quien entra por el link del coach, manual para el catálogo), que parecía conciliar las dos cosas. El motivo de Andre es mejor que la propuesta: **el horario es una segunda pregunta, independiente de quién sea la persona.** Conocer a quien reserva no vuelve conveniente el martes a las 8.
+- 🔴 **Consecuencia directa, y es la que importa: se cayó el argumento de que ese default "colapsaba la mitad del backlog".** Con `pendiente` como camino NORMAL de toda reserva, la card **"Reservas esperando tu respuesta"** volvió al camino crítico — y se hizo en esta sesión.
+- ✅ **Descuento por link de referido, en vez de tocar la comisión.** Cambia el sujeto del beneficio: paga menos la persona invitada, y el coach gana un motivo para compartir el link en vez de uno para evitarlo. **Lo absorbe VIVE** (no el precio del coach: eso lo habría empeorado) y **vale solo la primera sesión** de esa persona, para no subsidiar transacciones que iban a ocurrir igual.
+- 📊 **Andre preguntó cuánto descuento aguanta el margen, dado que parte de la comisión cubre el costo de cobrar. Verificado, y la respuesta cambia según el riel** (detalle en `camino-del-cliente-1.md` §2.1): en **Argentina no hay piso** —`marketplace_fee` es comisión pura y la tarifa de MP se descuenta del lado del cobrador, no de la porción de VIVE— así que el techo duro es 20%. En el **internacional sí hay piso**: PayPal cobra 5,40% + USD 0,30 y el costo operativo se come ~5 de los 25 puntos. 📌 **Conclusión: fijar el número mirando el riel internacional, no el local.** ⚠️ Y confirmar contra el pago real de $1 del 09/08 que la tarifa de MP efectivamente no toca la porción de VIVE — si ese supuesto está mal, el techo local baja de 20% a ~14%.
+- 📌 **Una anomalía aparente que no lo es:** con 10% de descuento la primera sesión rinde 10% y las recurrentes 15%, o sea que la escalera se invierte. Es coherente: el 20% de la primera existe porque *"recupera el costo de ADQUISICIÓN"* (`_shared/commission.ts`), y **en una reserva por el link del coach VIVE no pagó ninguna adquisición**.
+- ✅ **La columna de origen en `bookings` se diseña junto con el link**, no antes: el link define cómo llega el dato (slug, query param, código).
+
+**La card, en detalle:**
+- Va **arriba de todo**, incluso de la tira semanal: es lo único de la pantalla con alguien del otro lado esperando, la plata ya retenida y un reloj de 24hs corriendo.
+- 🟢 **Usa `esperaConfirmacionDelCoach` y no `status === 'pendiente'`.** Ese helper ya existía en `lib/bookingHelpers.ts` y su comentario decía textualmente que vivía ahí *"porque la Home la necesita para contar quién espera al coach"* — estaba escrito antes de que la Home lo usara. Una reserva con el cobro iniciado y sin acreditar **espera a la plata, no al coach**. Es la misma regla que usa el badge de la pestaña, a propósito: si la Home contara distinto que el punto rojo, una de las dos estaría mintiendo.
+- 🟢 **Aceptar reusa `confirmBooking`** (`lib/coachBookingActions.ts`), cuyo comentario de cabecera ya anticipaba este uso: se extrajo *"para que Inicio y Reservas la ejecuten idéntica"*. Crea la sala, notifica, deja el mensaje de sistema y cancela a los competidores del slot.
+- 📌 **Rechazar NO está en la Home**: pide un motivo que le llega a la persona. Aceptar es la respuesta de un toque; lo demás vive en Reservas.
+- 📌 `scheduled_date` se filtra con `todayInAr()` y no con la fecha del dispositivo — un coach de viaje se comía o se inventaba un día.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **La forma del link público es la ÚNICA decisión grande que queda** — `docs/camino-del-cliente-1.md` §4.
+- **El porcentaje del descuento** (§2.1), mirando el riel internacional, y confirmar el supuesto de la tarifa de MP contra el pago real.
+- **Prueba de punta a punta del aviso**: una reserva real → fila `reserva_nueva` + punto en la campana + la card nueva.
+- **Después del link:** columna de origen en `bookings`, cuarto paso del checklist, onboarding del invitado, qué ve el cliente al terminar la sesión 1.
+- **De Joaquín:** A1 y el bloque de device review. **De Andre (viejo):** E6, el visto bueno de voz acumulado, el *"¡Hoy estás brillando!"* del Diario. **Del registro:** B1, B4, B7, D1-D6, E1-E6.
+
 ## 2026-09-08 — Andre (sesión 202 · deploy, la semana vuelve, y "Escribirle" pasa a proponer)
 
 **Tocado:** `lib/coachPropose.ts` (nuevo), `lib/coachProposeData.ts` (nuevo), `__tests__/coachPropose.test.ts` (nuevo), `screens/CoachHomeScreen.tsx`. **560 tests** (eran 553), `tsc` limpio. ✅ **Deployadas y verificadas**: `mp-webhook` v30→**v31**, `paypal-webhook` v21→**v22**, `usdt-check-payments` v20→**v21**, los tres `verify_jwt` sin cambio.
