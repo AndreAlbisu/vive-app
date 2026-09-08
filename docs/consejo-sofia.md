@@ -70,6 +70,11 @@ no enviado, eso es negligencia potencial."*
 chica.** La persona tiene derecho a saber que es un producto —y no alguien
 mirándole el ánimo— **antes** de que se forme el apego.
 
+⚠️ **A medias el 07/09.** La página existe (A-4) y dice lo que tiene que decir,
+pero **hay que ir a buscarla**: eso es exactamente la letra chica que PC-4
+critica. Lo que falta es la otra mitad —que aparezca sin buscarla, antes del
+apego— y eso es **D-6**, que sigue abierta.
+
 **PC-5 — No hay gobernanza.** Nadie definió quién tiene **poder de veto** cuando
 "más apego" compita con "más seguridad", ni con qué dato se resuelve. Sin métrica
 de capacidad, *engagement* gana por default porque es lo único que sí se mide.
@@ -83,7 +88,7 @@ de capacidad, *engagement* gana por default porque es lo único que sí se mide.
 | **A-1** | 🔴 ~~Mandar el mail a Mónica~~ → **ya se le habló y no responde.** Ver A-1 bis | — | Executor + Contrarian, convergentes |
 | **A-2** | 🔴 Sacar el coach de $1 del catálogo de producción | 1 línea de SQL | Executor (*"antes del café"*) |
 | **A-3** | Agendar la device review pendiente | — | Executor |
-| **A-4** | Blanquear quién es Sofía en un "sobre nosotros" | una tarde | Outsider + revisión |
+| **A-4** | ✅ **HECHO el 07/09** — `docs/sobre-nosotros.md`, en Perfil (logueado **y** invitado) | — | Outsider + revisión |
 | **A-5** | Hablar con Sofía (la persona) y dejar algo escrito | una charla | PC-1 |
 
 ### A-1 bis — Mónica no responde. Qué hacer con eso (07/09/2026)

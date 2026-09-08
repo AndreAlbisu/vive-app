@@ -4,6 +4,29 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 185 · "Sobre nosotros": quién es Sofía, antes y no después)
+
+**Tocado:** `scripts/sync-legal.mjs`, `app/legal.tsx`, `screens/ProfileOwnScreen.tsx`, `constants/legal.ts` (generado), `docs/consejo-sofia.md`. Nuevo: `docs/sobre-nosotros.md`. 536 tests, `tsc` limpio, eslint sin errores nuevos.
+
+**Resumen — A-4 del consejo. Sale de la reacción más visceral del outsider: *"si se filtra y yo ya le conté mis días de mierda a Sofía creyendo que era un producto neutral, me sentiría cagado — como si le hubiera hablado a la hermana de un desconocido sin saberlo."***
+
+- 🟢 **La página existe y se llega desde el Perfil, logueado Y como invitado** — mismo criterio que `/ayuda`.
+- 🔴 **Lo que más importa de la página no es la historia sino el desmentido, y va en su propia sección:** Sofía la persona **no trabaja en Vita, no lee nada y no tiene acceso a ninguna cuenta**. La Sofía de la app es un programa. **En los días difíciles no interviene ningún modelo** (que desde la sesión 184 es literalmente cierto: `gentle` es 100% reglas). Y **nada de lo que la persona escribe viaja a un modelo** — ni diario, ni gratitud, ni notas, ni mensajes.
+- ⚠️ **Cuidado deliberado con lo que NO se afirma:** no dice "nadie lee lo que escribís". La Política §8.2 es explícita en que los mensajes **no tienen cifrado de extremo a extremo** y que Vita podría técnicamente acceder. Una página institucional no puede prometer más que el documento que manda; dice lo que es verificable y remite a la Política.
+- 📌 **Reusa el visor de markdown que ya existía** (`docs/*.md` → `constants/legal.ts` → `/legal?doc=…`). Hacer un segundo visor para una sola página sería duplicar la plomería.
+- 🟢 **Se agregó `web: false` al sync**, contraparte del `app: false` que ya tenía. Las páginas de `web/legal/` existen para las tiendas y la Res. 424/2020 —son un set legal con un nav que la norma quiere limpio— y una página institucional ahí le agrega ruido. Verificado: siguen siendo 4 páginas web.
+- ⚠️ **Queda anotado en `legal.tsx`:** si algún día el aviso de borrador pasa a ser por documento en vez de global, este tiene que quedar afuera — no espera a ningún abogado.
+
+**⚠️ Y lo que esto NO cierra, dicho en el doc del consejo:**
+**PC-4 queda a medias.** La página dice lo que tiene que decir, pero **hay que ir a buscarla** — y eso es exactamente la letra chica que PC-4 critica: *"la persona tiene derecho a saber que es un producto antes de que se forme el apego"*. La otra mitad —que aparezca sin buscarla— es **D-6**, que sigue abierta.
+
+**🔴 El texto habla de una persona real, así que es de Andre.** Está escrito a partir de §2 bis y §2 ter, con la nota interna en el encabezado del `.md` (el sync la saca antes de que llegue a la app). Editarlo con toda libertad y correr `npm run sync:legal` después.
+
+**Pendiente para la próxima sesión:**
+- **Que Andre lea y edite el texto** — sobre todo la parte que habla de su hermana.
+- Probar el piso de seguridad en dispositivo — sigue siendo lo más importante del backlog.
+- D-6 (el consentimiento en el onboarding), A-2 (el coach de $1) y A-5 (hablar con Sofía).
+
 ## 2026-09-07 — Andre (sesión 184 · en tono `gentle` no escribe un modelo, y es un paso atrás a propósito)
 
 **Tocado:** `lib/weeklyReflection.ts`, `hooks/useDailyReflection.ts`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md`. **536 tests** (eran 531), `tsc` limpio. Sin schema, sin deploy (el cambio es del cliente).

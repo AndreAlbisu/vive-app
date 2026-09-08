@@ -15,16 +15,21 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
 import { ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { TERMS_MD, PRIVACY_MD, REGRET_MD, LEGAL_IS_DRAFT } from '@/constants/legal';
+import { TERMS_MD, PRIVACY_MD, REGRET_MD, ABOUT_MD, LEGAL_IS_DRAFT } from '@/constants/legal';
 
 const FOREST = '#3A4F2A';
 
-export type LegalDoc = 'terminos' | 'privacidad' | 'arrepentimiento';
+export type LegalDoc = 'terminos' | 'privacidad' | 'arrepentimiento' | 'sobre-nosotros';
 
 const DOCS: Record<LegalDoc, { title: string; body: string }> = {
   terminos:       { title: 'Términos y condiciones', body: TERMS_MD },
   privacidad:     { title: 'Política de privacidad', body: PRIVACY_MD },
   arrepentimiento:{ title: 'Botón de arrepentimiento', body: REGRET_MD },
+  // ⚠️ No es un documento legal — usa esta pantalla porque ya sabe renderizar
+  // markdown y hacer un segundo visor para una página sería duplicar la
+  // plomería. Si algún día el aviso de borrador se muestra por documento y no
+  // global, este tiene que quedar afuera: no espera a ningún abogado.
+  'sobre-nosotros':{ title: 'Sobre nosotros', body: ABOUT_MD },
 };
 
 export default function LegalScreen() {

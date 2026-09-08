@@ -41,6 +41,14 @@ const DOCS = [
   // que el texto viajaría en el bundle sin que ninguna pantalla lo lea. Los
   // placeholders del documento se siguen contando igual.
   { key: 'DELETE',  file: 'docs/eliminar-cuenta.md', app: false },
+  // No es un documento legal, pero usa exactamente el mismo camino: markdown en
+  // docs/ → constants/legal.ts → la pantalla que ya sabe renderizarlo. Hacer un
+  // segundo visor de markdown para una sola página sería duplicar la plomería.
+  //
+  // 🔴 Existe por el hallazgo del consejo del 07/09 (`docs/consejo-sofia.md`):
+  // que alguien se entere de que Sofía es una persona real DESPUÉS de haberle
+  // confiado sus peores días es la peor forma de que se entere.
+  { key: 'ABOUT',   file: 'docs/sobre-nosotros.md', web: false },
 ];
 
 /** Saca el bloque de citas inicial (aviso interno de borrador).
@@ -99,7 +107,11 @@ const parts = [];
 const placeholders = [];
 const forWeb = [];
 
-for (const { key, file, app = true } of DOCS) {
+// `web = false` es la contraparte de `app = false`: el documento entra al bundle
+// pero NO genera página pública. Las de `web/legal/` existen para cumplir
+// requisitos de las tiendas y de la Res. 424/2020 —son un set legal— y meter ahí
+// una página institucional le agrega ruido a un nav que la norma quiere limpio.
+for (const { key, file, app = true, web = true } of DOCS) {
   const raw = readFileSync(join(root, file), 'utf8');
   const { md, offset } = stripLeadingBlockquote(raw);
   const clean = flattenRelativeLinks(md);
@@ -107,7 +119,7 @@ for (const { key, file, app = true } of DOCS) {
     ...findPlaceholders(clean).map((p) => ({ ...p, file, line: p.line + offset }))
   );
   if (app) parts.push(`export const ${key}_MD = ${toTemplateLiteral(clean)};`);
-  forWeb.push({ key, md: clean });
+  if (web) forWeb.push({ key, md: clean });
 }
 
 const unique = [...new Set(placeholders.map((p) => p.text))].sort();

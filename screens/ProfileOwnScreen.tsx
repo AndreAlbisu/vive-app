@@ -201,6 +201,7 @@ export default function ProfileOwnScreen() {
     // revalida contra el JWT en cada escritura — pero no tiene sentido mostrarle
     // a nadie una puerta que no puede abrir.
     ...(isAdmin ? [{ id: 'admin', icon: 'shield-account-outline' as const, label: 'Administración', onPress: () => router.push('/admin') }] : []),
+    { id: 'about', icon: 'account-heart-outline', label: 'Sobre nosotros', onPress: () => router.push('/legal?doc=sobre-nosotros') },
     { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => router.push('/legal?doc=terminos') },
     { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },
     { id: 'regret', icon: 'undo-variant', label: 'Botón de arrepentimiento', onPress: () => router.push('/legal?doc=arrepentimiento') },
@@ -213,6 +214,7 @@ export default function ProfileOwnScreen() {
   // detrás del login sería exactamente lo que la norma no admite.
   const guestConfigItems: ConfigItem[] = [
     { id: 'ayuda', icon: 'lifebuoy', label: 'Si necesitás ayuda ahora', onPress: () => router.push('/ayuda') },
+    { id: 'about', icon: 'account-heart-outline', label: 'Sobre nosotros', onPress: () => router.push('/legal?doc=sobre-nosotros') },
     { id: 'terms', icon: 'file-document-outline', label: 'Términos y condiciones', onPress: () => router.push('/legal?doc=terminos') },
     { id: 'privacy', icon: 'lock-outline', label: 'Política de privacidad', onPress: () => router.push('/legal?doc=privacidad') },
     { id: 'regret', icon: 'undo-variant', label: 'Botón de arrepentimiento', onPress: () => router.push('/legal?doc=arrepentimiento') },
