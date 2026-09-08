@@ -984,19 +984,12 @@ export default function SalaScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Re-reserva persistente: acceso fijo a reservar de nuevo con este coach,
-            no solo en la ventana de 24hs de la card post-sesión. Solo del lado del
-            usuario (recipientIsCoach = la otra parte es coach → puedo reservarle). */}
-        {recipientIsCoach && recipientProfile && !pairBlocked && (
-          <TouchableOpacity
-            style={styles.rebookPill}
-            onPress={handleReschedule}
-            activeOpacity={0.8}
-            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
-            <MaterialCommunityIcons name="calendar-plus" size={15} color="#3A4F2A" />
-            <Text style={styles.rebookPillText}>Reservar</Text>
-          </TouchableOpacity>
-        )}
+        {/* 📝 Acá había un "Reservar" fijo al lado del nombre del coach. Se sacó
+            cuando la re-reserva pasó a vivir en cada fila de la lista de
+            Mensajes (`SessionsScreen`): el usuario ya la tiene una pantalla
+            antes, y dentro del chat competía con el nombre de la persona con
+            la que está hablando. La re-reserva desde adentro sigue existiendo
+            en la tarjeta de cierre de sesión, que es su momento. */}
 
         {/* Notas de la sesión: solo el coach (recipientIsCoach false = la otra parte
             es el usuario), y si hay una sesión sobre la cual anotar. */}
