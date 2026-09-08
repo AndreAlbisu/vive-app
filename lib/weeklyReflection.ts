@@ -514,15 +514,36 @@ export function buildReflection(input: ReflectionInput): Reflection {
     //
     // 📌 Sigue SIN variantes por día — ver la nota de abajo. Esto no es
     // rotación: son dos situaciones distintas, no dos maneras de decir lo mismo.
+    // 🔴 SON TRES RAMAS Y NO DOS, y la del medio salió de la primera prueba en
+    // dispositivo (07/09). Con dos, la pantalla se contradecía a sí misma:
+    // la tarjeta decía *"Llevalo a tu próxima sesión"* y diez píxeles más abajo
+    // la sección "Tu próxima sesión" decía **"Sin sesiones agendadas"**.
+    //
+    // La causa: la condición era `sesión próxima || sesiones esta semana`, pero
+    // `sessionsThisWeek` cuenta reservas **ya completadas** (ver
+    // `useWeeklySignals`). O sea que alguien que tuvo sesión el martes y no
+    // agendó la próxima entraba por la rama que le prometía una que no existe.
+    //
+    // ⚠️ Prometerle una sesión inexistente a alguien que lleva dos semanas en
+    // el fondo no es un error de copy: es mandarlo a un lugar que no está.
+    //
+    // 📌 Y NO se agrega "agendá una": pedirle una reserva a alguien en el fondo
+    // es exactamente el vendedor que §3.4 prohíbe, y no depende del tono.
     const dias = input.diasHastaProximaSesion;
-    const hayProfesional = (dias != null && dias >= 0) || sessionsThisWeek > 0;
-    return hayProfesional
-      ? r('Hace varios días que venís registrando lo mismo. ',
-          'Llevalo a tu próxima sesión',
-          '.', 'gentle', 'piso-seguridad')
-      : r('Hace varios días que venís registrando lo mismo. ',
-          'Hay gente preparada para acompañar esto',
-          '.', 'gentle', 'piso-seguridad');
+    if (dias != null && dias >= 0) {
+      return r('Hace varios días que venís registrando lo mismo. ',
+               'Llevalo a tu próxima sesión',
+               '.', 'gentle', 'piso-seguridad');
+    }
+    if (sessionsThisWeek > 0) {
+      // Tiene profesional pero no tiene fecha: se nombra el lugar, no la cita.
+      return r('Hace varios días que venís registrando lo mismo. ',
+               'Eso es de lo que conviene hablar en sesión',
+               '.', 'gentle', 'piso-seguridad');
+    }
+    return r('Hace varios días que venís registrando lo mismo. ',
+             'Hay gente preparada para acompañar esto',
+             '.', 'gentle', 'piso-seguridad');
   }
 
   // ── 1. El ánimo cayó fuerte hoy ───────────────────────────────────────────

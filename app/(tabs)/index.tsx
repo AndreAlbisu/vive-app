@@ -162,8 +162,9 @@ export default function InicioScreen() {
   //
   // ⚠️ El flag se aplica ACÁ y no adentro de `buildReflection`, que es puro y
   // testeable: la decisión de encenderlo es de producto, no de las reglas. Ver
-  // `constants/features.ts` — está apagado hasta que el texto lo revise una
-  // profesional y exista la pantalla con las líneas de ayuda.
+  // `constants/features.ts` — ENCENDIDO desde el 07/09/2026, con el motivo
+  // escrito ahí (la revisión de Mónica llegó y encontró un error de diseño, no
+  // de texto; la pantalla de líneas existe desde el 04/09).
   const pisoSeguridad = SAFETY_FLOOR_ENABLED && detectarPisoSeguridad(
     moodEntries.map(e => ({ moodId: e.mood_id, dayKey: e.entry_date })),
     today,

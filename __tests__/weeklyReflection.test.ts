@@ -108,11 +108,24 @@ describe('buildReflection — el piso de seguridad gana sobre todo', () => {
     expect(conSesion.signal).toBe('piso-seguridad');
     expect(`${conSesion.before}${conSesion.bold}${conSesion.after}`).toMatch(/sesión/i);
 
-    // ⚠️ También cuando tuvo sesiones esta semana pero no tiene la próxima
-    // agendada: quedarse sin la rama correcta por un hueco de agenda sería
-    // exactamente el caso que Mónica describe.
+  });
+
+  it('🔴 con profesional pero SIN fecha, no le promete una sesión que no existe', () => {
+    // Salió de la primera prueba en dispositivo (07/09): la tarjeta decía
+    // "Llevalo a tu próxima sesión" y diez píxeles más abajo la pantalla decía
+    // "Sin sesiones agendadas". `sessionsThisWeek` cuenta reservas YA
+    // COMPLETADAS, así que alguien que tuvo sesión el martes y no agendó la
+    // próxima entraba por la rama equivocada.
+    //
+    // ⚠️ Mandar a alguien que lleva dos semanas en el fondo a un lugar que no
+    // está no es un error de copy.
     const sinAgendar = buildReflection(on({ pisoSeguridad: true, sessionsThisWeek: 1 }));
-    expect(`${sinAgendar.before}${sinAgendar.bold}${sinAgendar.after}`).toMatch(/sesión/i);
+    const texto = `${sinAgendar.before}${sinAgendar.bold}${sinAgendar.after}`;
+    expect(texto).toMatch(/en sesión/i);
+    expect(texto).not.toMatch(/próxima sesión/i);
+    // 📌 Y NO le pide que reserve: eso es el vendedor que §3.4 prohíbe, y menos
+    // todavía a alguien en el fondo.
+    expect(rejectCopy(texto, 'gentle', { signal: 'piso-seguridad', facts: {} })).toBeNull();
   });
 
   it('sin nadie en juego, ofrece ayuda sin dictaminar sobre la gravedad', () => {

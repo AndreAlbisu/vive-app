@@ -4,6 +4,30 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 187 · el piso probado en dispositivo, y la pantalla se contradecía sola)
+
+**Tocado:** `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`. **541 tests** (eran 540), `tsc` limpio.
+
+**Resumen — PRIMERA prueba en dispositivo del piso de seguridad, que estaba encendido en producción desde la mañana sin haberse visto nunca correr. Funcionó, y encontró un bug que ningún test podía encontrar porque no está en una función: está en la pantalla.**
+
+**✅ Lo que anduvo:** el piso disparó con 5 registros en 1-2 (cuatro insertados por SQL, el quinto desde la app), la tarjeta mostró el sello de Sofía con el texto nuevo, el CTA dijo **"→ Si lo necesitás, hay líneas de ayuda"** y no "Ver más", y tocarla abrió `/ayuda` con los cuatro teléfonos.
+
+**🔴 El bug: la tarjeta decía *"Llevalo a tu próxima sesión"* y diez píxeles más abajo la sección "Tu próxima sesión" decía **"Sin sesiones agendadas"**.** La misma pantalla, contradiciéndose.
+
+- **La causa:** la condición era `sesión próxima || sesiones esta semana`, pero **`sessionsThisWeek` cuenta reservas ya `completada`** (`useWeeklySignals` lo filtra así a propósito: *"una reserva futura no es algo que hiciste esta semana"*). Alguien que tuvo sesión el martes y no agendó la próxima entraba por la rama que le promete una que no existe.
+- ⚠️ **Prometerle una sesión inexistente a alguien que lleva dos semanas en el fondo no es un error de copy: es mandarlo a un lugar que no está.**
+- **El fix: tres ramas y no dos.** (1) sesión agendada → *"Llevalo a tu próxima sesión"*; (2) tuvo sesiones pero sin fecha → *"Eso es de lo que conviene hablar en sesión"* — se nombra el lugar, no la cita; (3) nadie → *"Hay gente preparada para acompañar esto"*.
+- 📌 **Y NO se agrega "agendá una".** Pedirle una reserva a alguien en el fondo es exactamente el vendedor que §3.4 prohíbe, y eso no depende del tono. Hay un test que lo fija pasando la frase por `rejectCopy`.
+- ✅ **Verificado por mutación:** se reintrodujo la condición vieja y el test falla.
+- 📝 De paso: el comentario de `index.tsx` todavía decía que el piso *"está apagado hasta que el texto lo revise una profesional y exista la pantalla"*. Las dos cosas pasaron hoy.
+
+**📌 Lo que esto confirma, y conviene que quede escrito.** El Executor del consejo dijo que las 16 sesiones de voz de hoy eran *"procrastinación productiva — se siente como avanzar porque hay commits, pero no achica ningún riesgo real"*, y que probar en dispositivo iba primero. **Tenía razón:** una hora de teléfono encontró un bug en la feature más delicada de la app que 541 tests no podían encontrar, **porque el bug no está en una función — está en la relación entre dos partes de una pantalla.**
+
+**Pendiente para la próxima sesión:**
+- **Probar las otras dos ramas**: sin ninguna sesión (para ver *"Hay gente preparada"*) y con una agendada.
+- Que el piso **siga apareciendo mañana** — no es una noticia que se muestra una vez.
+- Del consejo sobre riesgo: sacar el acceso a crisis del control del detector, y el socio externo.
+
 ## 2026-09-07 — Andre (sesión 187 · la tarjeta "¿Querés volver a ver a X?" se disolvió: la re-reserva vive en la fila)
 
 **Tocado:** `screens/SessionsScreen.tsx`. **540 tests** (sin cambios: los 25 nuevos respecto de la 175 son de las sesiones 176-186), `tsc` limpio, eslint sin errores nuevos. Sin schema.
