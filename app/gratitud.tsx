@@ -217,7 +217,13 @@ export default function GratitudScreen() {
             <View style={s.introIconWrap}>
               <MaterialCommunityIcons name="heart-outline" size={26} color="#C1694F" />
             </View>
-            <Text style={s.introTitle}>¿Por qué estás agradecido hoy?</Text>
+            {/* 🔴 Antes: *"¿Por qué estás agradecido hoy?"* — le asignaba género a
+                quien lee. Es la misma familia que *"cansado"* en el Diario y
+                *"parejo"* en la tarjeta, y la regla es la misma: si hace falta un
+                adjetivo, que califique a algo y no a la persona. Acá directamente
+                no hace falta ninguno. Encontrado el 08/09 barriendo las
+                superficies donde habla Sofía (`problemas-abiertos.md` C7). */}
+            <Text style={s.introTitle}>¿Qué agradecés hoy?</Text>
             <Text style={s.introSubtitle}>
               Tres cosas, grandes o pequeñas.{'\n'}Lo que importa es que sean tuyas.
             </Text>

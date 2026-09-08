@@ -4,6 +4,25 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 196 · C7: el barrido de las otras superficies)
+
+**Tocado:** `app/gratitud.tsx`, `docs/problemas-abiertos.md`. 546 tests, `tsc` limpio.
+
+**Resumen — se barrieron las superficies donde habla Sofía fuera de la tarjeta, buscando los patrones que las reglas ya frenan ahí. Apareció una violación más, del mismo tipo exacto que la del Diario.**
+
+- 🔴 **Gratitud: *"¿Por qué estás **agradecido** hoy?"*** — le asigna género a quien lee. Es la misma familia que *"cansado"* en el Diario y *"parejo"* en la tarjeta. ✅ Corregido: **"¿Qué agradecés hoy?"**, que además no necesita ningún adjetivo.
+- ✅ **Limpias:** el check-in (su copy sale de `ViveMoods` y de texto dinámico, no hay frases fijas dirigidas a la persona) y el panel del orbe (sus cuatro atajos no generan ni observan; su problema es otro y está en E2).
+- 📌 **No se tocó *"¡Empezá la conversación!"*** de la sala: tiene exclamación, pero **no es la voz de Sofía** — es el vacío del chat entre dos personas. Superficie distinta, registro distinto.
+- 📌 **Dos violaciones en total, en dos pantallas distintas, y las dos del mismo tipo: un adjetivo masculino sobre quien lee.** No es casualidad — **es el error más fácil de cometer en español**, y es el único que la tarjeta tiene **cuatro reglas** para evitar mientras el resto de la app no tiene ninguna. 📌 Se cruza con **E6**: si algún día la app sabe cómo tratarte, este error deja de existir por construcción.
+
+**🔴 Lo que el barrido dejó abierto, y es lo más importante de la sesión: nada verifica esto.**
+Fue a mano, y **no queda nada que impida que la próxima pantalla nazca con el mismo error**. La tarjeta tiene un test que barre sus 35 frases contra `rejectCopy`; el resto de la app no tiene equivalente, y **no es obvio cómo hacerlo**: el copy vive suelto en JSX, no en un banco enumerable. Queda anotado en C7.
+
+**Pendiente para la próxima sesión:**
+- **De Joaquín:** A1 y el bloque de device review.
+- **De Andre:** E6, el visto bueno de voz, y la decisión del *"¡Hoy estás brillando!"* del Diario.
+- **Libre:** C3 (las preguntas sin buzón — tengo una propuesta), C5, C6.
+
 ## 2026-09-08 — Andre (sesión 195 · A1 pasa a Joaquín, con la receta escrita)
 
 **Tocado:** `docs/problemas-abiertos.md` (A1 asignado + receta + backlog de device review). Sin código.

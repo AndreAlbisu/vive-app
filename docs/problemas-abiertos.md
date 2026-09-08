@@ -147,9 +147,30 @@ existieran, y **nada los verifica**.
 | *"Un día **tranquilo**."* (ánimo 3) | ⚠️ **Falso positivo del guardarraíl, no del prompt.** Ahí `tranquilo` concuerda con *"día"* y es correcto. En la tarjeta nunca puede serlo (el sujeto tácito es *la semana*). Anotado en `NIVEL_MASCULINO`. |
 | *"**¡**Hoy estás brillando**!**"* (ánimo 5) | 📌 **Decisión de Andre**: el `SYSTEM` prohíbe exclamaciones en la tarjeta. ¿Vale la misma regla en el Diario, o es otro registro a propósito? |
 
-🔴 **Lo que esto abre y no está resuelto: ¿dónde más habla Sofía?** El check-in,
-la gratitud, el onboarding, los vacíos, las notificaciones. Ninguna de esas
-superficies pasó nunca por las reglas, y todas son la misma voz.
+#### ✅ Barrido completo del 08/09
+
+Se recorrieron las otras superficies buscando los patrones que las reglas ya
+frenan en la tarjeta: adjetivo con género sobre quien lee, la app de testigo,
+exclamaciones, tuteo.
+
+| superficie | resultado |
+|---|---|
+| **Gratitud** | 🔴 **Una violación real: *"¿Por qué estás **agradecido** hoy?"*** — mismo bug que *"cansado"* y *"parejo"*. ✅ Corregido: **"¿Qué agradecés hoy?"**, que además no necesita ningún adjetivo. |
+| **Check-in** (`MoodCheckIn`) | ✅ Limpio. Su copy sale de `ViveMoods` y de texto dinámico; no hay frases fijas dirigidas a la persona. |
+| **Panel del orbe** | ✅ Limpio en cuanto a reglas. Sus cuatro atajos no generan ni observan. (Su problema es otro y está en E2.) |
+| **Sala / chat** | 📌 *"¡Empezá la conversación!"* tiene exclamación, **pero no es la voz de Sofía**: es el vacío del chat entre dos personas. Superficie distinta, registro distinto. No se tocó. |
+| **Diario** | Ya barrido arriba: 1 corregida, 1 falso positivo del guardarraíl, 1 decisión de Andre. |
+
+📌 **Dos violaciones en total, en dos pantallas distintas, y las dos del mismo
+tipo: un adjetivo masculino sobre quien lee.** No es casualidad — es el error más
+fácil de cometer en español y el único que **la tarjeta tiene cuatro reglas para
+evitar** mientras el resto de la app no tiene ninguna.
+
+🔴 **Lo que sigue abierto: nada verifica esto.** El barrido fue a mano y no queda
+nada que impida que la próxima pantalla nazca con el mismo error. La tarjeta
+tiene un test que barre sus 35 frases contra `rejectCopy`; **el resto de la app
+no tiene equivalente**, y no es obvio cómo hacerlo (el copy vive suelto en JSX,
+no en un banco enumerable).
 
 ---
 
