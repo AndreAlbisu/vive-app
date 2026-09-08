@@ -20,7 +20,7 @@ import {
   Image,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -279,6 +279,17 @@ export default function ProfesionalScreen() {
 
   const videoPlayer = useVideoPlayer(prof.video_url, p => { p.loop = false; });
 
+  // 🔴 La foto arranca en y = 0 a propósito —es una portada a sangre, el patrón
+  // de siempre para esto— pero el scroll no está adentro de ningún SafeArea, así
+  // que en un teléfono con notch o isla los primeros ~60pt de la imagen quedan
+  // TAPADOS: en un retrato eso es media cara. Se compensa haciendo el contenedor
+  // más alto por exactamente lo que mide el recorte, así queda visible la misma
+  // foto de 300 que en un teléfono sin notch en vez de 240 mal cortados.
+  //
+  // ⚠️ No alcanza con un `paddingTop`: eso empujaría la imagen y dejaría una
+  // banda vacía arriba, que es perder la portada para arreglar el recorte.
+  const insets = useSafeAreaInsets();
+
   return (
     <AppBg>
       <StatusBar barStyle="dark-content" />
@@ -302,7 +313,7 @@ export default function ProfesionalScreen() {
         showsVerticalScrollIndicator={false}>
 
         {/* ── Foto grande ──────────────────────────────────────────────── */}
-        <View style={s.photoContainer}>
+        <View style={[s.photoContainer, { height: 300 + insets.top }]}>
           {prof.avatar_url ? (
             <Image source={{ uri: prof.avatar_url }} style={s.photoImage} />
           ) : (
@@ -703,6 +714,9 @@ const s = StyleSheet.create({
   // ── Foto ──────────────────────────────────────────────────────────────
   photoContainer: {
     width: '100%',
+    // La altura real la pone el render sumándole el alto del notch. 300 es el
+    // piso —lo que se ve en un teléfono sin recorte— y el valor que usan las
+    // medidas de abajo (el badge de verificado va anclado al pie, no al alto).
     height: 300,
   },
   photoPlaceholder: {
