@@ -47,7 +47,17 @@ type Prompt = { lead: string; pregunta: string; cierre?: string };
 
 const MOOD_PROMPTS: Record<number, Prompt> = {
   1: { lead: 'Hoy venís con un bajón.',   pregunta: '¿Qué es lo que más te está pesando?',        cierre: 'Soltalo acá, sin filtro.' },
-  2: { lead: 'Se nota que estás cansado.', pregunta: '¿Qué te está drenando la energía estos días?' },
+  // 🔴 Antes: *"Se nota que estás cansado."* — rompía DOS reglas de la voz, y
+  // ninguna es discutible (`docs/la-voz-de-sofia.md`):
+  //  · **"Se nota que"** es la app poniéndose de testigo. El `SYSTEM` lo prohíbe
+  //    por nombre y `rejectCopy` lo frena desde el 07/09.
+  //  · **"cansado"** le asigna género a quien lee. Es exactamente el bug que
+  //    Andre cazó con *"parejo"* en la tarjeta, y está en `NIVEL_MASCULINO`.
+  //
+  // ⚠️ Los prompts del Diario son la MISMA voz en otra pantalla y nadie los
+  // había revisado: se escribieron antes de que las reglas existieran, y no hay
+  // nada que los verifique. Encontrado el 08/09 pasándolos por `rejectCopy`.
+  2: { lead: 'Hoy venís con poca energía.', pregunta: '¿Qué te está drenando la energía estos días?' },
   3: { lead: 'Un día tranquilo.',          pregunta: '¿Qué anduvo dando vueltas por tu cabeza hoy?' },
   4: { lead: 'Venís bien hoy.',            pregunta: '¿Qué fue lo que sumó para sentirte así?' },
   5: { lead: '¡Hoy estás brillando!',      pregunta: '¿Qué hizo especial este día?',              cierre: 'Dejalo guardado acá.' },

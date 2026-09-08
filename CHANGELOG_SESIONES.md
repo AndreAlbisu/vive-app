@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 192 · la voz vive en más pantallas de las que vigilamos)
+
+**Tocado:** `app/diario.tsx`, `lib/weeklyReflection.ts` (comentario), `docs/problemas-abiertos.md` (C7 nuevo). 546 tests, `tsc` limpio.
+
+**Resumen — se pasaron los prompts del Diario por `rejectCopy` y salió que son la MISMA voz de Sofía en otra pantalla, escritos antes de que las reglas existieran, sin nada que los verifique. De cinco, tres saltaron — pero solo una es una violación real, y las otras dos enseñan cosas distintas.**
+
+- 🔴 **Violación real y doble (ánimo 2):** *"**Se nota que** estás **cansado**."* Rompe dos reglas independientes: *"se nota que"* es la app poniéndose de testigo —prohibido **por nombre** en el `SYSTEM` y frenado por `rejectCopy` desde el 07/09— y *"cansado"* **le asigna género a quien lee**, que es exactamente el bug que Andre cazó con *"parejo"* en la tarjeta. ✅ Corregido: *"Hoy venís con poca energía."*, que mantiene el paralelismo con el prompt del ánimo 1.
+- ⚠️ **Falso positivo MÍO (ánimo 3):** *"Un día tranquilo."* salió marcado por `NIVEL_MASCULINO`, y **el prompt está bien**: ahí `tranquilo` concuerda con *"día"*. En la tarjeta nunca puede serlo, porque el sujeto tácito de esas frases es siempre *la semana*, femenino. **Es el mismo problema que evité con `complicado`** —que por eso no está en la lista y se resolvió con la regla posicional—. Queda anotado en el código: si algún día `rejectCopy` se usa en otra superficie, esa línea es la primera a revisar.
+- 📌 **Decisión de Andre (ánimo 5):** *"¡Hoy estás brillando!"* tiene exclamación, que el `SYSTEM` prohíbe en la tarjeta. ¿Vale la misma regla en el Diario, o es otro registro a propósito? No lo toqué.
+
+**🔴 Y lo que esto abre, que es más grande que los tres prompts: ¿dónde más habla Sofía?**
+El check-in, la gratitud, el onboarding, los estados vacíos, las notificaciones. **Ninguna de esas superficies pasó nunca por las reglas, y todas son la misma voz.** Doce secciones de doc y 546 tests vigilan **una sola pantalla**. Queda como **C7** en el registro.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **A1** (dos ramas del piso sin probar) y **A2** (el coach de $1).
+- **C7**: barrer las otras superficies donde habla Sofía.
+- Visto bueno de voz sobre las frases de C1/C2, B2 y esta.
+
 ## 2026-09-08 — Andre (sesión 191 · B2: la tarjeta deja de ser autora en un caso)
 
 **Tocado:** `lib/weeklyReflection.ts`, `hooks/useWeeklySignals.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `docs/problemas-abiertos.md`. **546 tests** (eran 541), `tsc` limpio. Sin schema, sin deploy.

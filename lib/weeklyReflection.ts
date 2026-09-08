@@ -108,6 +108,15 @@ const GENDERED_PERIFRASIS = re('\\b(ven[íi]s|est[áa]s|and[áa]s|segu[íi]s) de
  *  cada palabra que se agrega se paga en falsos rechazos, y un rechazo cae al
  *  texto escrito a mano, que es bueno. Ampliar cuando aparezca una frase real,
  *  no por anticipación. */
+// ⚠️ **Sabemos que `tranquilo` sobre-rechaza fuera de esta tarjeta.** El 08/09 se
+// pasaron los prompts del Diario por acá y *"Un día tranquilo."* salió marcado —
+// pero ahí concuerda con "día" y es correcto. **En la tarjeta no puede serlo**:
+// el sujeto tácito de estas frases es siempre *la semana*, femenino. Es el mismo
+// motivo por el que `complicado` NO está en esta lista y se resolvió con la
+// regla posicional `CONCORDANCIA_SEMANA`.
+//
+// 📌 Se deja como está: la lista es de esta tarjeta. Si algún día `rejectCopy`
+// se usa en otra superficie, esta línea es la primera que hay que revisar.
 const NIVEL_MASCULINO = re('\\b(cansado|parejo|plano|tranquilo|preocupado|perdido)#|\\best[áa]s?\\s+solo#');
 
 /** Vocabulario clínico o de diagnóstico. La app acompaña, no diagnostica. */

@@ -59,6 +59,24 @@ Lo que falta es escribirlas, no arreglar el filtro.
 
 ---
 
+### C7 — nueva (08/09): la voz vive en más de una pantalla y solo una está vigilada
+
+✅ **Encontrado pasando los prompts del Diario por `rejectCopy`.** Son la **misma
+voz de Sofía en otra pantalla**, se escribieron antes de que las reglas
+existieran, y **nada los verifica**.
+
+| prompt | veredicto |
+|---|---|
+| *"Se nota que estás **cansado**."* (ánimo 2) | 🔴 **Violación real y doble**: *"se nota que"* es la app de testigo (prohibido por nombre en el `SYSTEM`) y *"cansado"* le asigna género a quien lee — el mismo bug que Andre cazó con *"parejo"*. ✅ **Corregido**: *"Hoy venís con poca energía."* |
+| *"Un día **tranquilo**."* (ánimo 3) | ⚠️ **Falso positivo del guardarraíl, no del prompt.** Ahí `tranquilo` concuerda con *"día"* y es correcto. En la tarjeta nunca puede serlo (el sujeto tácito es *la semana*). Anotado en `NIVEL_MASCULINO`. |
+| *"**¡**Hoy estás brillando**!**"* (ánimo 5) | 📌 **Decisión de Andre**: el `SYSTEM` prohíbe exclamaciones en la tarjeta. ¿Vale la misma regla en el Diario, o es otro registro a propósito? |
+
+🔴 **Lo que esto abre y no está resuelto: ¿dónde más habla Sofía?** El check-in,
+la gratitud, el onboarding, los vacíos, las notificaciones. Ninguna de esas
+superficies pasó nunca por las reglas, y todas son la misma voz.
+
+---
+
 ## D. Abierto y sin solución conocida
 
 | ID | Problema | Estado |
