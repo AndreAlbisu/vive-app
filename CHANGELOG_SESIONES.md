@@ -4,6 +4,28 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 202 · deploy, la semana vuelve, y "Escribirle" pasa a proponer)
+
+**Tocado:** `lib/coachPropose.ts` (nuevo), `lib/coachProposeData.ts` (nuevo), `__tests__/coachPropose.test.ts` (nuevo), `screens/CoachHomeScreen.tsx`. **560 tests** (eran 553), `tsc` limpio. ✅ **Deployadas y verificadas**: `mp-webhook` v30→**v31**, `paypal-webhook` v21→**v22**, `usdt-check-payments` v20→**v21**, los tres `verify_jwt` sin cambio.
+
+**Resumen — se deployó lo de la 201 y se corrigieron dos cosas de esa misma sesión.**
+
+- ✅ **El arreglo del aviso ya está vivo.** `booking-effects.ts` es `_shared`, así que hubo que redeployar las tres funciones que la importan. `verify_jwt` quedó como estaba (false en los dos webhooks, true en `usdt-check-payments`) porque está declarado en `supabase/config.toml` y el deploy lo respeta. **Falta la prueba de punta a punta con una reserva real**: que quede la fila y se prenda el punto de la campana.
+- 🔙 **La barra semanal vuelve a mostrarse siempre, también con los siete días en cero** — decisión de Andre, en contra de la compuerta que se había puesto unas horas antes. El argumento perdedor era que siete círculos vacíos se leen como *"esto está muerto"*; el que ganó es que **la tira es la orientación de la pantalla** —dónde estoy parado en la semana— y eso no depende de que haya sesiones. **Una Home que cambia de forma según si hay agenda es peor que una tira vacía: el coach no aprende dónde mirar.** Queda anotado en el código para que no se vuelva a "arreglar".
+- 🟢 **"Escribirle" → "Proponer horario"** (`lib/coachPropose.ts`). El botón abría un chat vacío y le dejaba al coach el trabajo entero: acordarse de sus horarios, escribirlos y redactar el mensaje incómodo. Ahora busca sus próximos huecos libres y **siembra un borrador** en el input del chat. 🟢 **Enganchó sin tocar `SalaScreen`**: ya aceptaba un parámetro `draft` que siembra el input.
+- ⚠️ **Es una propuesta, no una reserva, y es a propósito.** El coach no puede ocupar la agenda de otro ni cobrarle: se ahorra el trabajo de escribir, **no se saltea el consentimiento**. Y es un BORRADOR, no un envío — queda en el input para leerlo, corregirlo o borrarlo. Ahorrarle la parte tediosa no es hablar por él.
+- 📌 **Un hueco está libre con criterio más estricto que el del usuario:** cuenta como ocupada cualquier `pendiente` o `confirmada`, **de quien sea**. Al usuario se le muestran los slots con solicitudes ajenas porque puede competir por ellos; ofrecerle a alguien un horario que ya tiene una solicitud encima sería prometer algo que quizás no se cumpla.
+- 📌 **La consulta va al tocar el botón, no al cargar la Home**: son varias filas por cada persona de la lista y casi nadie lo va a tocar. Si falla devuelve `[]` y el chat se abre con el saludo solo — que es exactamente lo que hacía el botón viejo.
+- 📌 **El corte puro/IO es el del repo** (`coachVisibility` / `coachVisibilityData`): la lógica pura no importa `supabase`, o el test se cae arrastrando AsyncStorage. Se descubrió al escribir el test, no antes.
+- 🐛 **Y el test encontró un bug de verdad en el código recién escrito:** el fallback del nombre vacío era `|| 'Hola'`, así que el mensaje arrancaba con *"Hola Hola, ¿cómo venís?"*.
+
+**Pendiente para la próxima sesión:**
+- **Prueba de punta a punta del aviso**: una reserva real → fila `reserva_nueva` + punto en la campana.
+- **Decisión de Andre (bloquea al resto):** la forma del link público — `docs/camino-del-cliente-1.md` §4.
+- **Decisión de Andre:** el default de `instant_booking`, y la comisión sobre clientes que trae el coach.
+- **No hecho todavía:** el cuarto paso del checklist (*"Traé a tus primeros clientes"*), que necesita el link.
+- **De Joaquín:** A1 y el bloque de device review. **De Andre (viejo):** E6, el visto bueno de voz acumulado, el *"¡Hoy estás brillando!"* del Diario. **Del registro:** B1, B4, B7, D1-D6, E1-E6.
+
 ## 2026-09-08 — Andre (sesión 201 · se empezó a aplicar lo de la 200)
 
 **Tocado:** `supabase/functions/_shared/booking-effects.ts`, `screens/CoachHomeScreen.tsx`, `screens/CoachVisibilityScreen.tsx`, `screens/CoachPayoutScreen.tsx`, `docs/inicio-del-coach.md`. **553 tests**, `tsc` limpio. ⚠️ **`booking-effects.ts` NO está deployada** — ver pendientes.

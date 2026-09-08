@@ -18,6 +18,8 @@ import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { personasQueSeCaen, haceCuanto, type PersonaEnRiesgo } from '@/lib/coachContinuity';
+import { mensajeDePropuesta } from '@/lib/coachPropose';
+import { proximosHuecos } from '@/lib/coachProposeData';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { visibilityTeaser, analyzeDoors, homeStanding, tituloVisibilidad, bajadaVisibilidad, type VisibilityTeaser, type HomeStanding } from '@/lib/coachVisibility';
@@ -535,10 +537,34 @@ export default function CoachHomeScreen() {
     return () => { vivo = false; };
   }, [user, esCoachNuevo, visibilityLista, visibilityBloqueada]);
 
-  // La semana solo se dibuja si hay algo que contar — ver el comentario en el
-  // render. Mientras `weekData` está vacío (primer pintado) también da false,
-  // que es lo correcto: nada que mostrar todavía.
-  const semanaConAlgo = weekData.some(d => d.count > 0);
+  // ── Proponerle un horario a quien se está cayendo ──────────────────────
+  // 🔴 Antes este botón decía "Escribirle" y abría un chat vacío: el coach
+  // tenía que acordarse de sus propios horarios, escribirlos a mano y encima
+  // redactar el mensaje incómodo. Es la mitad que faltaba de la anti-fuga #1
+  // (la re-reserva de un toque existe hace rato, pero solo del lado del
+  // usuario). Ver `lib/coachPropose.ts`.
+  //
+  // ⚠️ NO reserva nada: siembra un BORRADOR en el chat y la reserva la sigue
+  // haciendo la persona por el camino de siempre. El coach no puede ocupar la
+  // agenda de otro ni cobrarle.
+  const [proponiendo, setProponiendo] = useState<string | null>(null);
+  const proponerHorario = useCallback(async (p: PersonaCayendo) => {
+    if (!p.salaId || !coachId) return;
+    setProponiendo(p.userId);
+    try {
+      // Se buscan los huecos ACÁ y no al cargar la Home: son varias filas por
+      // cada persona de la lista y casi nadie va a tocar el botón. Si la
+      // consulta falla, `proximosHuecos` devuelve [] y el chat se abre igual
+      // con el saludo — que es exactamente lo que hacía el botón viejo.
+      const huecos = await proximosHuecos(coachId);
+      router.push({
+        pathname: '/sala',
+        params: { sala_id: p.salaId, draft: mensajeDePropuesta(p.name, huecos) },
+      });
+    } finally {
+      setProponiendo(null);
+    }
+  }, [coachId, router]);
 
   const prepPuertas = doorLabels.length > 0;
   const prepDoneCount = [prepPerfil, prepPuertas, prepRecurso].filter(Boolean).length;
@@ -601,13 +627,15 @@ export default function CoachHomeScreen() {
             </View>
           </View>
 
-          {/* Tu semana — 🔴 solo si la semana tiene ALGO. Siete círculos vacíos
-              no informan nada: no dicen "todavía no arrancaste", dicen "esto
-              está muerto", y son lo primero que ve un coach recién aprobado
-              debajo de su propio nombre. El día del lanzamiento van a estar así
-              para todos. Cuando entra la primera sesión aparece sola, que es
-              exactamente cuando el dato empieza a valer. */}
-          {semanaConAlgo && (
+          {/* Tu semana — se muestra SIEMPRE, también con los siete días en cero.
+              📌 Decisión de Andre el 08/09/2026, en contra de la compuerta que
+              se había puesto un rato antes ese mismo día. El argumento de la
+              compuerta era que siete círculos vacíos se leen como "esto está
+              muerto"; el que ganó es que la tira es la ORIENTACIÓN de la
+              pantalla —dónde estoy parado en la semana— y eso no depende de que
+              haya sesiones. Una Home que cambia de forma según si hay o no
+              agenda es peor que una tira vacía: el coach no aprende dónde
+              mirar. */}
           <TouchableOpacity style={s.week} activeOpacity={0.9} onPress={() => router.push('/coach-agenda')}>
             {weekData.map((d, i) => (
               <View key={i} style={[s.wd, d.isToday && s.wdToday]}>
@@ -618,7 +646,6 @@ export default function CoachHomeScreen() {
               </View>
             ))}
           </TouchableOpacity>
-          )}
 
           {/* Tu próxima sesión */}
           {next ? (
@@ -858,8 +885,11 @@ export default function CoachHomeScreen() {
                     <TouchableOpacity
                       style={s.caenBtn}
                       activeOpacity={0.85}
-                      onPress={() => router.push({ pathname: '/sala', params: { sala_id: p.salaId } })}>
-                      <Text style={s.caenBtnTxt}>Escribirle</Text>
+                      disabled={proponiendo === p.userId}
+                      onPress={() => proponerHorario(p)}>
+                      <Text style={s.caenBtnTxt}>
+                        {proponiendo === p.userId ? 'Buscando…' : 'Proponer horario'}
+                      </Text>
                     </TouchableOpacity>
                   )}
                 </View>
