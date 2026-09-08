@@ -4,6 +4,32 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 182 · el ensayo encontró cuatro defectos con cero alertas)
+
+**Tocado:** `lib/weeklyReflection.ts`, `hooks/useDailyReflection.ts`, `supabase/functions/weekly-reflection/index.ts`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md`. **530 tests** (eran 526), `tsc` limpio. ✅ **`weekly-reflection` deployada v20 → v21.** Sin schema.
+
+**Resumen — se corrió el ensayo del prompt nuevo. 15 frases, CERO alertas automáticas, y cuatro defectos reales. Es exactamente lo que el script advertía: las alertas miran vocabulario y ninguno de los cuatro tiene una palabra prohibida.**
+
+- 🔴 **El cambio de prompt no había alcanzado.** De las 15 frases, solo tres devolvían un hecho — y las tres seguían siendo **la app validando** (*"eso cuenta"*, *"eso importa"*). Ninguna hizo que el sujeto pasara a ser la persona. Se reescribió la instrucción con el **patrón explícito y tres ejemplos contrastados**, porque la diferencia es de sujeto y no de palabras: *"Eso lo estás sosteniendo vos"* ✅ contra *"Eso no es poco"* ❌ — las dos nombran el mismo hecho, solo una se lo devuelve.
+
+**Los cuatro defectos, todos salidos de frases reales, todos con guardarraíl nuevo:**
+1. 🔴 **Inventó un acompañante, dos veces**: *"contárselo a quien te acompaña"* con `facts` vacío. El `SYSTEM` ya lo prohibía. **Decirle a alguien que puede no tener a nadie que tiene a alguien es de las peores maneras de errarle.**
+2. 🔴 **Inventó un día**: con `dias_hasta_proxima_sesion: 2` escribió *"El sábado hablás con tu profesional"*. Si hoy es martes, la sesión es el jueves.
+3. 🔴 **`"Viene más complicado que hace un mes"`** — masculino sobre la persona. Sus dos variantes hermanas decían "pesada" y "complicada". `NIVEL_MASCULINO` no lo agarró porque `complicado` no está en la lista, **y meterlo suelto rechazaría "un día complicado", que es correcto**. Por eso la regla nueva es posicional: en estas frases el sujeto tácito de `viene` es siempre *la semana*.
+4. ⚠️ **`"Llevas unos días complicados"`** — tuteo. Ninguna forma de la lista nueva es válida en rioplatense, así que no hay falso positivo posible.
+
+- 🔴 **El hallazgo estructural: `rejectCopy` no podía distinguir un hecho de un invento porque no sabía qué se le había mandado al modelo.** Ahora recibe el contexto (`signal` + `facts`) — el **mismo objeto** que viajó, no una reconstrucción. Eso es lo que vuelve chequeable *"tu profesional"*: legítimo con una sesión a la vista, inventado sin ella. **Cierra la mitad detectable del hueco más viejo del guardarraíl**, abierto desde la sesión 168. ⚠️ La **inferencia causal** sigue afuera y sigue sin solución conocida.
+- 📌 **§3.4 no cambió: se volvió CONDICIONAL.** Nombrar al profesional sigue siendo legítimo —"reconocer un límite es lo contrario de vender"— pero solo si existe. El test viejo se reescribió para expresar eso en vez de debilitarlo, y se le sumó el caso de la señal `sessions`, donde el profesional existe con seguridad.
+- ⚠️ **Un orden que importa y casi meto mal:** las reglas de invención van **después** de `VENDE`. *"Agendá algo con tu profesional"* rompe las dos, pero pedir una reserva es lo más grave y lo más específico — con el orden invertido, un pedido de venta se logueaba como "inventa que hay alguien acompañando" y el bug real quedaba disfrazado. Lo cazó un test existente.
+- 📌 **Alternativa abierta, que sería mejor producto:** mandarle el **día** en los `facts`. El cliente lo sabe y *"el jueves"* es más concreto que *"en dos días"*. Hoy no se manda, así que nombrarlo es inventarlo; el día que se mande, la regla absoluta hay que aflojarla.
+- ⚠️ **Sin arreglar: `sharp-drop` produjo tres frases casi idénticas** entre sí y con la variante escrita a mano. El modelo copia el ejemplo del prompt en vez de escribir.
+
+**Pendiente para la próxima sesión:**
+- **Volver a correr el ensayo** con el prompt v21 — es la única forma de saber si el patrón explícito hizo que la persona pase a ser el sujeto.
+- Probar el piso de seguridad en dispositivo (sesión 179) — sigue siendo lo más importante del backlog.
+- `sharp-drop` copiando el ejemplo.
+- Visto bueno de voz sobre la frase nueva de `sustained-low`.
+
 ## 2026-09-07 — Andre (sesión 181 · el ensayo del prompt nuevo, y que el viejo probaba otro prompt)
 
 **Tocado:** `scripts/ensayo-payload-rico.mjs` (advertencia). Nuevo: `scripts/ensayo-gentle.mjs`. Sin código de app, sin schema.

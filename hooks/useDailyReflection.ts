@@ -121,6 +121,7 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
         const { data: { session } } = await supabase.auth.getSession();
         if (!session || cancelled) return;
 
+        const facts = factsParaElModelo(rules, input);
         const res = await fetch(`${FUNCTIONS_URL}/weekly-reflection`, {
           method: 'POST',
           headers: {
@@ -146,7 +147,7 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
             //
             // 📌 Efecto lateral bueno: se manda MENOS. Cada número que no viaja
             // es uno menos que justificar.
-            facts: factsParaElModelo(rules, input),
+            facts,
           }),
         });
 
@@ -160,7 +161,13 @@ export function useDailyReflection(userId: string | undefined, input: Reflection
         // sobre lo que escribió el modelo. Si no pasa, no se muestra Y NO SE
         // CACHEA — así el próximo intento puede salir bien en vez de dejar una
         // frase mala fija por 24 horas.
-        const motivo = rejectCopy(linea, rules.tone);
+        // 🔴 El contexto es lo que le permite al guardarraíl distinguir un HECHO
+        // de un INVENTO: sin saber qué se le mandó, "el sábado hablás con tu
+        // profesional" es indistinguible de una frase legítima. Es exactamente
+        // el mismo objeto que viajó, no una reconstrucción — si se recalculara
+        // acá podrían divergir y el chequeo miraría otra cosa que la que el
+        // modelo vio.
+        const motivo = rejectCopy(linea, rules.tone, { signal: rules.signal, facts });
         if (motivo) {
           console.warn(`[reflection] descartada (${motivo}): ${linea}`);
           return;

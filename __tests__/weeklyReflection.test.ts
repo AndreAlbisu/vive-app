@@ -634,8 +634,75 @@ describe('rejectCopy — el guardarraíl sobre lo que escribe un modelo', () => 
   it('pero deja NOMBRAR al profesional — reconocer un límite no es vender', () => {
     // Corrección del 28/08 en `docs/la-voz-de-sofia.md` §3.4: un amigo que dice
     // "eso decíselo el sábado" hace lo contrario de un vendedor.
-    expect(rejectCopy('Eso que estás notando, guardalo para contárselo el sábado en tu sesión.', 'neutral')).toBeNull();
-    expect(rejectCopy('Hay cosas que no se resuelven solas. Hablalo con tu profesional cuando lo veas.', 'gentle')).toBeNull();
+    //
+    // 📌 Afinado el 07/09: §3.4 no cambió, se volvió CONDICIONAL. Nombrar al
+    // profesional sigue siendo legítimo, pero **solo si existe** — y quien sabe
+    // eso es el contexto, no la frase. El ensayo de ese día mostró al modelo
+    // escribiendo "guardá eso para contárselo a quien te acompaña" con `facts`
+    // VACÍO: le inventó un acompañante a alguien que puede no tener ninguno,
+    // que es una forma particularmente fea de errarle.
+    const conSesion = { signal: 'sustained-low', facts: { dias_hasta_proxima_sesion: 3 } };
+    expect(rejectCopy('Eso que estás notando, guardalo para contárselo en tu próxima sesión.', 'neutral', conSesion)).toBeNull();
+    expect(rejectCopy('Hay cosas que no se resuelven solas. Hablalo con tu profesional cuando lo veas.', 'gentle', conSesion)).toBeNull();
+
+    // La señal `sessions` también lo autoriza: ahí el hecho es que YA tuvo
+    // sesiones esta semana, así que el profesional existe con seguridad.
+    expect(rejectCopy('Te sentaste a hablar con alguien esta semana. Eso con tu profesional sigue.', 'warm', { signal: 'sessions' })).toBeNull();
+  });
+
+  // ── El hueco más viejo del guardarraíl: inventar hechos ──────────────────
+  it('🔴 frena al modelo cuando se inventa un acompañante que nadie le pasó', () => {
+    // La frase es REAL — salió del ensayo del 07/09 con `facts: {}` — y ninguna
+    // de las once alertas automáticas del ensayo la marcó.
+    const sinNada = { signal: 'sustained-low', facts: {} };
+    expect(rejectCopy('Hace días que la semana te viene pesada. Guardá eso para contárselo a quien te acompaña.', 'gentle', sinNada))
+      .toBe('inventa que hay alguien acompañando');
+    expect(rejectCopy('Vino más complicada que el mes pasado. Si algo te pesa, guardalo para tu profesional.', 'gentle', sinNada))
+      .toBe('inventa que hay alguien acompañando');
+  });
+
+  it('🔴 ningún día de la semana puede ser verdadero: nunca se le pasa uno', () => {
+    // 🔴 La regla es ABSOLUTA y por eso es barata: `facts` solo lleva números
+    // (y `level`, una etiqueta), así que un día nombrado está siempre inventado.
+    // Real del ensayo: con `dias_hasta_proxima_sesion: 2` escribió "El sábado
+    // hablás con tu profesional". Si hoy es martes, la sesión es el jueves.
+    //
+    // 📌 Queda una alternativa abierta, que sería mejor producto y es otra
+    // decisión: **mandarle el día en los `facts`**. El cliente lo sabe (tiene la
+    // fecha), solo que hoy no lo manda — y "el jueves" es más concreto que "en
+    // dos días". Anotado en `la-voz-de-sofia.md`.
+    const conSesion = { signal: 'sustained-low', facts: { dias_hasta_proxima_sesion: 2 } };
+    expect(rejectCopy('Hace días que la estás peleando. El sábado hablás con tu profesional, que no es poco.', 'gentle', conSesion))
+      .toBe('inventa un día de la semana');
+    // Ni siquiera con la sesión a la vista: el número de días no dice qué día es.
+    expect(rejectCopy('En dos días tenés sesión. Guardá eso para el jueves y no lo cargues solo hasta entonces.', 'gentle', conSesion))
+      .toBe('inventa un día de la semana');
+  });
+
+  it('🔴 frena el tuteo — la voz es rioplatense y el SYSTEM lo pide', () => {
+    // Real del ensayo del 07/09: "Llevas unos días complicados".
+    expect(rejectCopy('Llevas unos días complicados. En dos días ves al profesional, guardá esto.', 'gentle'))
+      .toBe('tutea');
+    expect(rejectCopy('Tienes una semana por delante y no hace falta que la resuelvas entera hoy.', 'neutral'))
+      .toBe('tutea');
+    // El voseo equivalente pasa.
+    expect(rejectCopy('Llevás unos días cuesta arriba, y no hace falta que los resuelvas hoy.', 'gentle'))
+      .toBeNull();
+  });
+
+  it('🔴 agarra el masculino que se cuela por "viene", donde el sujeto es la semana', () => {
+    // Real del ensayo: "Viene más complicado que hace un mes" — y sus dos
+    // variantes hermanas decían "pesada" y "complicada", concordando bien.
+    expect(rejectCopy('Viene más complicado que hace un mes. Eso que estás registrando importa igual.', 'gentle'))
+      .toBe('genera a la persona');
+    // La forma correcta, concordando con "semana", pasa.
+    expect(rejectCopy('Viene más complicada que hace un mes. Eso que estás registrando importa igual.', 'gentle'))
+      .toBeNull();
+    // ⚠️ Y "un día complicado" sigue siendo legítimo: ahí concuerda con "día".
+    // Es el motivo por el que la regla es posicional y no una palabra más en la
+    // lista de `NIVEL_MASCULINO`.
+    expect(rejectCopy('Registraste un día complicado, y eso ya es mirarse de frente. Quedate tranqui.', 'gentle'))
+      .toBeNull();
   });
 
   // ── §3.5 — la app no finge sentir ────────────────────────────────────────
@@ -793,7 +860,7 @@ describe('🔴 las frases propias cumplen lo que le exigen al modelo', () => {
         const frase = `${r.before}${r.bold}${r.after}`.trim();
         if (vistas.has(frase)) continue;
         vistas.add(frase);
-        const motivo = rejectCopy(frase, r.tone);
+        const motivo = rejectCopy(frase, r.tone, { signal: r.signal });
         expect(
           motivo === null ? null : `[${r.signal}/${r.tone}] "${frase}" → ${motivo}`,
         ).toBeNull();

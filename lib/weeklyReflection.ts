@@ -155,15 +155,80 @@ const VENDE = re('\\b(reserv[áa]#|reserv[áa]te#|reservar una sesi[óo]n#|agend
  *  contrario. */
 const FINGE_SENTIR = re('\\b(me alegr[a-záéíóúñ]*#|me pone#|me da (gusto|alegr[íi]a|orgullo|pena|tristeza|bronca)#|me emocion[a-záéíóúñ]*#|me encant[a-záéíóúñ]*#|te entiendo#|me siento#|siento que#|estoy orgullos[oa]#|me duele#|me alivia#)');
 
+/** 🔴 Concordancia rota con "la semana", que es el sujeto elidido de estas frases.
+ *
+ *  `GENDERED` mira `venís + adjetivo` y **excluye `más`** (porque "venís más
+ *  bien/mejor/peor" es legítimo), así que no ve dos huecos que el ensayo del
+ *  07/09 encontró en una sola corrida: la **tercera persona** (`viene`, `vino`)
+ *  y el `más` en el medio. La frase real fue *"Viene más **complicado** que hace
+ *  un mes"* — y sus dos variantes hermanas decían "pesada" y "complicada",
+ *  concordando bien. `NIVEL_MASCULINO` no la agarró porque `complicado` no está
+ *  en la lista, y **meterlo suelto rechazaría "un día complicado", que es
+ *  correcto** (ahí concuerda con "día").
+ *
+ *  Por eso la regla es posicional y no una palabra más: en estas frases el
+ *  sujeto tácito de `viene`/`vino` es siempre **la semana**, así que un
+ *  adjetivo masculino ahí solo puede estar describiendo a la persona. */
+const CONCORDANCIA_SEMANA = re('\\b(viene|vino)\\s+(m[áa]s\\s+)?[a-záéíóúñ]+(ad|id|os)o#');
+
+/** Tuteo. La voz es rioplatense de "vos" y el `SYSTEM` lo pide explícitamente.
+ *
+ *  Salió del ensayo del 07/09: *"**Llevas** unos días complicados"*. Ninguna de
+ *  estas formas es válida en rioplatense —todas tienen su par en voseo, que se
+ *  distingue por el acento— así que no hay falso positivo posible. */
+const TUTEO = re('\\b(tienes|puedes|quieres|llevas|vienes|sientes|sabes|debes|haces|necesitas|piensas|empiezas|vuelves|registras|escribes|eres|est[aá]s tú)#');
+
+/** Días de la semana. **Al modelo NUNCA se le pasa uno.**
+ *
+ *  🔴 `facts` solo lleva números (y `level`, que es una etiqueta de nivel), así
+ *  que un día nombrado en la salida está SIEMPRE inventado. Del ensayo del
+ *  07/09: con `dias_hasta_proxima_sesion: 2` el modelo escribió *"**El sábado**
+ *  hablás con tu profesional"*. Si hoy es martes, la sesión es el jueves.
+ *
+ *  📌 Que la regla pueda ser absoluta es lo que la hace barata: no hay que
+ *  mirar el contexto, porque no existe el caso legítimo. */
+const DIA_INVENTADO = re('\\b(lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado|domingo)#');
+
+/** Alguien acompañando a la persona.
+ *
+ *  El `SYSTEM` ya lo dice —*"no hay nadie acompañando a quien lee salvo que yo
+ *  lo diga"*— y el modelo lo rompió igual, **dos veces en una corrida**:
+ *  *"guardá eso para contárselo **a quien te acompaña**"*, con `facts` vacío.
+ *
+ *  ⚠️ A diferencia de la anterior, esta NO puede ser absoluta: nombrar al
+ *  profesional es legítimo y §3.4 lo defiende expresamente ("eso decíselo el
+ *  sábado" hace lo contrario de vender). Lo que la vuelve chequeable es que hay
+ *  un dato que lo autoriza — por eso `rejectCopy` ahora recibe el contexto. */
+const ACOMPANANTE = re('\\b(quien te acompa[ñn]a|tu profesional|tu psic[óo]log[ao]|tu coach|tu terapeuta|con quien te ves)#');
+
+/** Lo que el modelo efectivamente sabía cuando escribió.
+ *
+ *  🔴 Sin esto `rejectCopy` no puede distinguir un hecho de un invento, que es
+ *  el hueco más viejo del guardarraíl — está anotado como abierto desde la
+ *  sesión 168. No lo cierra entero (la **inferencia causal** sigue afuera: *"eso
+ *  que hacés está funcionando"* no tiene ninguna palabra prohibida), pero sí
+ *  cierra la invención de HECHOS, que es la mitad detectable. */
+export type CopyContext = {
+  /** La señal que se le pidió. */
+  signal?: string;
+  /** Los `facts` que viajaron — lo ÚNICO que el modelo sabe del mundo. */
+  facts?: Record<string, number | string>;
+};
+
 export type CopyRejection =
   | 'vacío' | 'muy corto' | 'muy largo' | 'genera a la persona'
   | 'lenguaje clínico' | 'tono gurú' | 'anima en tono suave' | 'pide una acción en tono suave'
   | 'pide una reserva' | 'finge sentir'
-  | 'signos de exclamación' | 'markdown o comillas' | 'etiquetas internas';
+  | 'signos de exclamación' | 'markdown o comillas' | 'etiquetas internas'
+  | 'tutea' | 'inventa un día de la semana' | 'inventa que hay alguien acompañando';
 
 /** ¿Se puede mostrar esta frase? `null` = sí. Si no, el motivo — que se loguea
  *  para poder ver qué rechaza el guardarraíl sin tener que adivinar. */
-export function rejectCopy(text: string, tone: ReflectionTone): CopyRejection | null {
+export function rejectCopy(
+  text: string,
+  tone: ReflectionTone,
+  ctx: CopyContext = {},
+): CopyRejection | null {
   const t = text.trim();
   if (!t) return 'vacío';
 
@@ -192,9 +257,11 @@ export function rejectCopy(text: string, tone: ReflectionTone): CopyRejection | 
   // interna a la persona en su pantalla de inicio.
   if (/<[^>]*>/.test(t)) return 'etiquetas internas';
 
-  if (GENDERED.test(t) || GENDERED_PERIFRASIS.test(t) || NIVEL_MASCULINO.test(t)) {
+  if (GENDERED.test(t) || GENDERED_PERIFRASIS.test(t) || NIVEL_MASCULINO.test(t)
+      || CONCORDANCIA_SEMANA.test(t)) {
     return 'genera a la persona';
   }
+  if (TUTEO.test(t)) return 'tutea';
   if (CLINICAL.test(t)) return 'lenguaje clínico';
   if (GURU.test(t)) return 'tono gurú';
 
@@ -203,6 +270,26 @@ export function rejectCopy(text: string, tone: ReflectionTone): CopyRejection | 
   // están mal el día bueno igual que el malo.
   if (VENDE.test(t)) return 'pide una reserva';
   if (FINGE_SENTIR.test(t)) return 'finge sentir';
+
+  // ── Invención de hechos ────────────────────────────────────────────────────
+  // 🔴 VAN DESPUÉS DE `VENDE` A PROPÓSITO, y el orden importa para el motivo que
+  // se loguea. *"Agendá algo con tu profesional"* menciona a alguien Y pide una
+  // reserva: las dos cosas están mal, pero **pedir una reserva es el problema
+  // más grave y el más específico**, así que es el que tiene que aparecer en el
+  // log. Con el orden invertido, un pedido de venta se reportaba como "inventa
+  // que hay alguien acompañando" y el bug real quedaba disfrazado.
+  //
+  // Corren en TODOS los tonos: inventar un hecho no es peor un día que otro. Y
+  // las dos salieron de frases REALES del ensayo del 07/09, no de imaginar qué
+  // podría salir mal.
+  if (DIA_INVENTADO.test(t)) return 'inventa un día de la semana';
+  if (ACOMPANANTE.test(t)) {
+    // Nombrar al profesional es legítimo cuando hay uno a la vista, o cuando la
+    // señal ES sobre las sesiones que ya tuvo. Sin ninguna de las dos, se lo
+    // inventó.
+    const haySesion = ctx.facts?.dias_hasta_proxima_sesion != null;
+    if (!haySesion && ctx.signal !== 'sessions') return 'inventa que hay alguien acompañando';
+  }
 
   if (tone === 'gentle') {
     if (CHEER.test(t)) return 'anima en tono suave';

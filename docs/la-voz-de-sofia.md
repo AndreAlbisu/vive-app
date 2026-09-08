@@ -337,6 +337,44 @@ Y de paso explica el resto: si en lo común aligeraba, la voz cálida de todos l
 días está bien como está. **Las dos cosas conviven porque hay un umbral, no una
 contradicción.**
 
+### 📌 Lo que el ensayo del 07/09 devolvió (y por qué "cero alertas" no alcanza)
+
+Se corrió `scripts/ensayo-gentle.mjs` con el prompt nuevo: **15 frases, 0 alertas
+automáticas, y cuatro defectos reales.** Es exactamente lo que el propio script
+advierte — las alertas miran vocabulario, y estos no tienen ninguna palabra
+prohibida.
+
+**El cambio de prompt no alcanzó.** De las 15, solo tres devolvían un hecho, y
+las tres seguían siendo **la app validando**: *"eso cuenta"*, *"eso importa"*.
+Ninguna hizo que el sujeto pasara a ser la persona. Por eso la instrucción se
+volvió a escribir con el patrón explícito y tres ejemplos contrastados: **la
+diferencia es de sujeto, no de palabras.**
+
+**Los cuatro defectos, todos con su guardarraíl nuevo:**
+
+| lo que escribió | qué está mal | ahora lo frena |
+|---|---|---|
+| *"contárselo **a quien te acompaña**"* (con `facts` vacío, **dos veces**) | le inventa un acompañante a alguien que puede no tener ninguno | `ACOMPANANTE` + contexto |
+| *"**El sábado** hablás con tu profesional"* (le pasamos "faltan 2 días") | no sabe qué día es hoy | `DIA_INVENTADO` |
+| *"Viene más **complicado** que hace un mes"* | masculino sobre la persona; sus dos hermanas decían "pesada"/"complicada" | `CONCORDANCIA_SEMANA` |
+| *"**Llevas** unos días complicados"* | tuteo | `TUTEO` |
+
+🔴 **Y el hallazgo estructural: `rejectCopy` no podía distinguir un hecho de un
+invento porque no sabía qué se le había mandado al modelo.** Ahora recibe el
+contexto (`signal` + `facts`), que es lo que vuelve chequeable *"tu profesional"*:
+legítimo con una sesión a la vista, inventado sin ella. **§3.4 no cambió — se
+volvió condicional.** Cierra la mitad detectable del hueco más viejo del
+guardarraíl; la **inferencia causal** sigue afuera y sigue sin solución conocida.
+
+📌 **Alternativa abierta, que sería mejor producto:** mandarle el **día** en los
+`facts`. El cliente lo sabe —tiene la fecha— y *"el jueves"* es más concreto que
+*"en dos días"*. Hoy no se manda, así que nombrarlo es inventarlo; el día que se
+mande, la regla absoluta hay que aflojarla.
+
+⚠️ **`sharp-drop` produjo tres frases casi idénticas** entre sí y con la variante
+escrita a mano — el modelo está copiando el ejemplo del prompt en vez de escribir.
+No está arreglado.
+
 ### 🔴 Lo que esto le pide al código
 
 Cinco huecos, en orden de cuánto cambian:
