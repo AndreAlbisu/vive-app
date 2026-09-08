@@ -6,6 +6,7 @@ import { listPublicCredentials, lineaCredencial, KIND_LABEL, type PublicCredenti
 import { encuadreDeSesion } from '@/lib/credentialRules';
 import { EncuadrePill } from '@/components/EncuadrePill';
 import { EncuadreSheet } from '@/components/EncuadreSheet';
+import { FotoAmpliada } from '@/components/FotoAmpliada';
 import ReportSheet from '@/components/ReportSheet';
 import UserActionsSheet from '@/components/UserActionsSheet';
 import { loadBlockedIds, onBlockedChange, isBlocked } from '@/lib/blocking';
@@ -14,6 +15,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Platform,
   StatusBar,
@@ -136,6 +138,7 @@ export default function ProfesionalScreen() {
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [coachResources, setCoachResources] = useState<CoachResource[]>([]);
   const [encuadreOpen, setEncuadreOpen] = useState(false);
+  const [fotoAmpliada, setFotoAmpliada] = useState(false);
 
   // Acá alcanza con el cache propio (a diferencia de la Sala, donde hacen falta
   // las dos direcciones): a este perfil se llega desde el catálogo, y el
@@ -315,7 +318,21 @@ export default function ProfesionalScreen() {
         {/* ── Foto grande ──────────────────────────────────────────────── */}
         <View style={[s.photoContainer, { height: 300 + insets.top }]}>
           {prof.avatar_url ? (
-            <Image source={{ uri: prof.avatar_url }} style={s.photoImage} />
+            // La portada recorta a sangre, así que de un retrato se ve una
+            // franja. Tocarla la abre entera — es lo que espera cualquiera que
+            // ve una foto de alguien a quien está por elegir, y hasta ahora la
+            // única forma de verle bien la cara era no haberla recortado.
+            //
+            // 🔴 Sin `Pressable` cuando no hay foto: el placeholder es un ícono
+            // genérico, y abrirlo en grande sería prometer algo que no hay.
+            <Pressable
+              onPress={() => setFotoAmpliada(true)}
+              accessibilityRole="imagebutton"
+              accessibilityLabel={`Foto de ${prof.name}. Tocá para verla en grande.`}
+              style={s.photoImage}
+            >
+              <Image source={{ uri: prof.avatar_url }} style={s.photoImage} />
+            </Pressable>
           ) : (
             <View style={s.photoPlaceholder}>
               <MaterialIcons name="person" size={90} color="rgba(135,131,92,0.65)" />
@@ -371,32 +388,28 @@ export default function ProfesionalScreen() {
             Lo que se muestra es el dato que Vita chequeó. */}
         {credenciales.length > 0 && (
           <View style={s.section}>
-            <View style={s.credHeader}>
-              <Text style={s.sectionTitle}>Formación</Text>
-              <View style={s.credBadge}>
-                <MaterialCommunityIcons name="shield-check" size={12} color="#42542F" />
-                <Text style={s.credBadgeTxt}>Verificado por Vita</Text>
-              </View>
-            </View>
+            {/* 🔴 El escudo "Verificado por Vita" estaba ACÁ, en la cabecera, y
+                de ahí salían los dos problemas que esta sección tenía.
 
-            {/* 🔴 El perfil más confuso de la app, y el único que la pill de
-                arriba no alcanza a desambiguar: título verificado SIN matrícula
-                —pongamos "Lic. en Psicología · UBA" con el escudo de Vita— y
-                arriba una etiqueta que dice "Sesiones de acompañamiento". Las
-                dos son ciertas y se contradicen a la vista; entre las dos, el
-                usuario le cree al título y reserva creyendo que es terapia. Es
-                además el caso legalmente más expuesto, así que la aclaración va
-                acá, pegada a la evidencia que la genera, y no arriba donde
-                volvería a ser el cartel que sacamos. */}
-            {encuadre.tituloSinMatricula && (
-              <View style={s.credNota}>
-                <MaterialCommunityIcons name="information-outline" size={15} color="#8A6A3B" style={{ marginTop: 1 }} />
-                <Text style={s.credNotaTxt}>
-                  Un título no habilita por sí solo: en Argentina lo que permite diagnosticar
-                  y tratar es la matrícula, y de este profesional no verificamos ninguna.
-                </Text>
-              </View>
-            )}
+                Un escudo a nivel sección cubre todo lo que hay debajo por
+                igual, así que sobre un "Lic. en Psicología · UBA" se leía como
+                *Vita responde por este psicólogo* — cuando lo que Vita chequeó
+                fue ese título y nada más. Para compensarlo había abajo un
+                cartel ámbar ("un título no habilita por sí solo…") que era la
+                CUARTA vez que la app decía lo mismo: ya está en la etiqueta
+                siempre visible pegada a la especialidad, en el sheet que abre
+                al tocarla, y otra vez completa en el checkout antes de pagar.
+                Y estaba pintado como alerta, así que se leía como una
+                advertencia contra alguien que no hizo nada malo.
+
+                Un badge que sobreafirma no se arregla con un párrafo que lo
+                desmienta: se arregla haciendo que diga lo que hizo. Ahora el
+                "Verificado" va por credencial (`credVerif`), donde es exacto —
+                `coach_credentials_public` solo devuelve verificadas, así que
+                todas las filas de esta lista lo son. Sin escudo de sección no
+                hay sobreafirmación, y sin sobreafirmación el cartel no tiene
+                nada que compensar. */}
+            <Text style={s.sectionTitle}>Formación</Text>
 
             <View style={s.credList}>
               {credenciales.map(c => {
@@ -410,7 +423,16 @@ export default function ProfesionalScreen() {
                       style={{ marginTop: 1 }}
                     />
                     <View style={{ flex: 1 }}>
-                      <Text style={s.credTitle}>{c.title}</Text>
+                      {/* El "Verificado" va en la línea del título y no debajo:
+                          es lo que califica a ESA credencial, y separado de
+                          ella volvería a flotar sobre toda la fila. */}
+                      <View style={s.credTitleRow}>
+                        <Text style={s.credTitle}>{c.title}</Text>
+                        <View style={s.credVerif}>
+                          <MaterialCommunityIcons name="shield-check" size={11} color="#42542F" />
+                          <Text style={s.credVerifTxt}>Verificado</Text>
+                        </View>
+                      </View>
                       {!!linea && <Text style={s.credMeta}>{linea}</Text>}
                       {/* El número de matrícula se muestra entero a propósito:
                           es público por definición y es lo único de esta
@@ -659,6 +681,11 @@ export default function ProfesionalScreen() {
         onClose={() => setReportOpen(false)}
         reportedName={prof.name}
         reportedId={profileId ?? ''}
+      />
+
+      <FotoAmpliada
+        uri={fotoAmpliada ? prof.avatar_url : null}
+        onCerrar={() => setFotoAmpliada(false)}
       />
 
       <EncuadreSheet
