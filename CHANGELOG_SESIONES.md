@@ -6,7 +6,7 @@
 ---
 ## 2026-09-07 — Andre (sesión 180 · que la voz pueda motivar, y un diagnóstico mío que estaba mal)
 
-**Tocado:** `supabase/functions/weekly-reflection/index.ts` (el `SYSTEM`), `lib/weeklyReflection.ts`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md` (§2 ter). **526 tests** (eran 516), `tsc` limpio. Sin schema. ⚠️ **La edge function necesita re-deploy** para que el prompt nuevo corra.
+**Tocado:** `supabase/functions/weekly-reflection/index.ts` (el `SYSTEM`), `lib/weeklyReflection.ts`, `__tests__/weeklyReflection.test.ts`, `docs/la-voz-de-sofia.md` (§2 ter). **526 tests** (eran 516), `tsc` limpio. Sin schema. ✅ **`weekly-reflection` deployada: v19 → v20**, ACTIVE, `verify_jwt` sigue en `true`. Smoke test con la anon key: `401 {"error":"token inválido"}` — el mensaje es propio de la función y no de la plataforma, así que el handler corre.
 
 **Resumen — el hueco #1 de §2 ter: los movimientos 3 y 4 de Sofía (motivar, hacerte creer en vos) no existían en la voz. Al ir a arreglarlo, el diagnóstico que yo había dado estaba equivocado.**
 
@@ -23,7 +23,7 @@ El principio ya estaba escrito en el código: *"las reglas tienen que cumplir lo
 Ahora hay un barrido: recorre las nueve señales, agota **todas** sus variantes (40 días, porque el pick rota por `dayKey`) y le pasa cada frase a `rejectCopy` **con su propio tono**. Hoy pasan las 32. ✅ **Verificado por mutación**: se envenenó una frase con *"Eso es genial, seguí así"* y el test falla nombrando la señal, el tono, la frase y el motivo (`anima en tono suave`).
 
 **Pendiente para la próxima sesión:**
-- ⚠️ **Re-deployar `weekly-reflection`** — el prompt nuevo no corre hasta entonces.
+- ⚠️ **El prompt nuevo está deployado pero NUNCA se lo vio escribir.** Lo que falta es ver qué produce de verdad en `gentle` con la instrucción nueva — el ensayo del 04/09 es el precedente: cuatro corridas encontraron cosas que ninguna lectura del prompt había anticipado.
 - **Visto bueno de voz de Andre** sobre la frase nueva de `sustained-low`.
 - Probar el piso de seguridad en dispositivo (sesión 179).
 - Huecos que quedan de §2 ter: #2 (el tono leído de la persona y no computado del dato — el más profundo), #3 en `rejectCopy`, #4 (silencio por criterio de no-reabrir), #5 (el recurso último y condicionado).
