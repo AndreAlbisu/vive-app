@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-07 — Andre (sesión 178 · D-1 y D-2 en pausa: el orbe lo decide con Joaquín)
+
+**Tocado:** `docs/consejo-sofia.md` (D-1/D-2 marcadas en pausa, con el hallazgo). **Sin cambios de código** — el apagado del orbe se implementó y se revirtió sin commitear.
+
+**Resumen:**
+
+- ⏸️ **El orbe queda como está.** Se llegó a implementar el apagado detrás de un flag (`SOFIA_ORB_ENABLED`) y se revirtió: Andre lo va a discutir con Joaquín antes de decidir. **Es correcto que sea de a dos** — el orbe es donde Joaquín hizo el trabajo de animación (el derrame circular desde el isotipo, sesión 130) y las dos decisiones tocan una promesa hecha a futuro.
+- ✅ **Lo que sí quedó del intento, y es lo que hace falta para esa charla: apagar el orbe NO deja nada inaccesible.** De los cuatro atajos, tres van a tabs y el cuarto al Diario, que se llega desde Recursos como una de las dos "prácticas" (`constants/tools.ts:31`). ⚠️ **Parecía al revés en la primera búsqueda**: el orbe es el único lugar del código con la string `/diario` literal, porque el resto navega por `tool.route` desde las constantes. Si me hubiera quedado con esa primera lectura, la conclusión habría sido que apagarlo dejaba varado el Diario que Andre rediseñó en la 164.
+- 📌 **Apareció una tercera opción que el consejo no había visto: apagar el orbe entero por ahora**, con un flag y sin borrar nada. Resuelve D-1 y D-2 de una sin tener que decidir todavía QUÉ es el orbe — que es justamente la pregunta que necesita a los dos. Queda anotada en `consejo-sofia.md` al lado de las otras tres.
+- ✅ **También quedó verificado que `SobreVosMomento` es independiente del orbe**, pese a que un comentario del layout sugiere lo contrario: son siblings, comparten el patrón de montaje sin `<Modal>` y nada más.
+
+**Pendiente para la próxima sesión:**
+- ⏸️ **D-1 y D-2 con Joaquín** — el chat prometido y los dos Sofía. Van juntas.
+- 🔴 **A-1 bis: racionalizar el texto del piso de seguridad y encenderlo.** Mónica no responde, y §2 ter ya le dio la fundamentación que le faltaba (en situaciones serias ella era 100% transparente, así que ahí no se aligera el golpe).
+- Los cinco huecos que §2 ter le dejó al código, empezando por separar el elogio vacío de la expectativa.
+- Del consejo: D-4/D-5/D-6 juntas (el apego, el sensor, el consentimiento), y las sueltas D-3/D-7/D-8/D-9.
+
 ## 2026-09-07 — Andre (sesión 177 · cómo ES Sofía, y la arquitectura de salida que ya estaba)
 
 **Tocado:** `docs/la-voz-de-sofia.md` (§2 ter nuevo), `docs/consejo-sofia.md` (§6 bis). Sin código, sin schema.

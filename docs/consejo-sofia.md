@@ -122,6 +122,17 @@ puede mirar una frase.
 
 ## 5. DECISIONES — necesitan una respuesta de Andre
 
+> ⏸️ **D-1 y D-2 quedaron EN PAUSA el 07/09** — Andre las va a discutir con
+> Joaquín antes de decidir. Se llegó a implementar el apagado del orbe detrás de
+> un flag y **se revirtió sin commitear**: el orbe sigue exactamente como estaba.
+> Lo único que quedó del intento es el hallazgo verificado de que **apagarlo no
+> deja nada inaccesible** (ver abajo).
+>
+> 📌 **Por qué es de a dos y no de uno:** el orbe es la superficie donde Joaquín
+> hizo el trabajo de animación (el derrame circular desde el isotipo, sesión 130),
+> y las dos decisiones tocan una promesa hecha a futuro. No es una decisión de
+> implementación.
+
 **D-1 — El chat deshabilitado del orbe.** Hoy promete *"Muy pronto vas a poder
 escribirme"* sin plan ni fecha. Consenso de tres advisors: **sacarlo del build o
 ponerle fecha, no hay tercera opción.** ¿Cuál?
@@ -133,6 +144,20 @@ dice "soy Sofía" y no puede conversar. ⚠️ Choca de frente con la decisión 
 sesión 174 de **no** unificar todavía — que se tomó por un motivo bueno (§4: unificar
 hace más visible el chat que falta). D-1 y D-2 se resuelven juntas o no se
 resuelven.
+
+✅ **Verificado el 07/09, para que la charla con Joaquín parta de un dato y no de
+una duda: apagar el orbe NO deja nada inaccesible.** De sus cuatro atajos, tres
+van a tabs (Inicio, Recursos, Profesionales) y el cuarto al **Diario**, que se
+llega desde Recursos — es una de las dos "prácticas" (`constants/tools.ts:31`).
+⚠️ Lo parecía al revés en una primera búsqueda: el orbe es el único lugar del
+código con la string `/diario`, porque el resto navega por `tool.route` desde las
+constantes.
+
+📌 **Y una tercera opción que apareció recién al mirar el código, que no estaba en
+las tres del consejo: apagar el orbe entero por ahora** (un flag, sin borrar
+nada). El componente y su animación quedan intactos, `paredMasCercana` sigue
+testeada, y volver es cambiar un booleano. Resuelve D-1 y D-2 de una sin decidir
+todavía qué es el orbe — que es justamente la pregunta que necesita a los dos.
 
 **D-3 — ¿Se desacopla el piso de seguridad?** (PC-2) ¿Va un filtro mínimo mientras
 el mail circula, o se espera la revisión completa? Espera A-1.
