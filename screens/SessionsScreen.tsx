@@ -798,23 +798,27 @@ function SalaRow({
           {!!sala.otherSpecialty && (
             <Text style={styles.specialtyText} numberOfLines={1}>{sala.otherSpecialty}</Text>
           )}
-          <Text style={[styles.lastMessage, sala.hasUnread && styles.lastMessageUnread]} numberOfLines={1}>
-            {preview}
-          </Text>
-        </View>
+          <View style={styles.previewRow}>
+            <Text
+              style={[styles.lastMessage, sala.hasUnread && styles.lastMessageUnread]}
+              numberOfLines={1}
+            >
+              {preview}
+            </Text>
 
-        {puedeReservar && (
-          <TouchableOpacity
-            style={styles.reservarPill}
-            onPress={onReservar}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel={`Reservar una sesión con ${sala.otherName}`}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.reservarPillTxt}>Reservar</Text>
-          </TouchableOpacity>
-        )}
+            {puedeReservar && (
+              <TouchableOpacity
+                onPress={onReservar}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Reservar una sesión con ${sala.otherName}`}
+                activeOpacity={0.6}
+              >
+                <Text style={styles.reservarTxt}>Reservar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
       </TouchableOpacity>
 
       <View style={styles.rowDivider} />
@@ -906,24 +910,33 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(86,94,50,0.07)',
   },
 
-  // La re-reserva, adentro de la fila. Ver el comentario de `SalaRow`.
-  // Contorno y no relleno: la fila entera ya es un destino (abre el chat), así
-  // que este botón tiene que ofrecerse sin competirle. Que exista es la
-  // información — si no está, con esa persona ya tenés sesión.
-  reservarPill: {
-    paddingHorizontal: 12,
-    height: 30,
-    justifyContent: 'center',
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(86,94,50,0.22)',
-    backgroundColor: 'rgba(255,248,240,0.5)',
-    flexShrink: 0,
-  },
-  reservarPillTxt: {
-    fontFamily: ViveFonts.medium,
+  /**
+   * La re-reserva, adentro de la fila. Ver el comentario de `SalaRow`.
+   *
+   * 🔴 SIN CROMO, y en la línea del preview. La primera versión era una
+   * pastilla con borde en el riel derecho y se veía tosca por tres motivos:
+   *   · un borde importaba lenguaje de TARJETA a una lista que no tiene ni
+   *     uno (acá los únicos bordes son los del carrusel y el banner);
+   *   · abría un SEGUNDO riel derecho, en otro eje vertical que la fecha y el
+   *     punto de no leído, y dos rieles se pelean;
+   *   · centrada contra un bloque de tres líneas, flotaba sin nada con qué
+   *     alinearse.
+   *
+   * Bajándola a la última línea gana un compañero de alineación —el preview,
+   * misma baseline— y deja el riel derecho para lo que ya estaba. Es una
+   * palabra, no un botón: la fila entera ya es un destino (abre el chat) y
+   * esto se ofrece sin competirle.
+   *
+   * 📝 Lo que la separa del preview y la hace tocable a la vista es el COLOR y
+   * el peso, no una caja: verde de la marca contra el gris apagado del
+   * mensaje. El `hitSlop` de 12 le da el área táctil que el texto no tiene.
+   */
+  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  reservarTxt: {
+    fontFamily: ViveFonts.semibold,
     fontSize: 12.5,
-    color: 'rgba(86,94,50,0.9)',
+    color: 'rgba(86,94,50,0.82)',
+    flexShrink: 0,
   },
   scroll: { flex: 1 },
   scrollContent: { paddingTop: 0, paddingBottom: TAB_BAR_CLEARANCE, paddingHorizontal: 16, gap: 0 },
@@ -1086,6 +1099,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#87835C',
     lineHeight: 18,
+    // Se lleva el sobrante para que "Reservar" no salga empujado de la fila:
+    // el mensaje se corta con "…" y la palabra queda siempre a la derecha.
+    flex: 1,
   },
   lastMessageUnread: { fontFamily: ViveFonts.medium, color: '#565E32' },
   rowDivider: {
