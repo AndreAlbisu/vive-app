@@ -4,6 +4,28 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 191 · B2: la tarjeta deja de ser autora en un caso)
+
+**Tocado:** `lib/weeklyReflection.ts`, `hooks/useWeeklySignals.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `docs/problemas-abiertos.md`. **546 tests** (eran 541), `tsc` limpio. Sin schema, sin deploy.
+
+**Resumen — el movimiento 5 pasó de 0 de 22 a existir, y no hubo que construir nada: `resource_recommendations` tiene filas reales desde agosto y la tarjeta no la miraba.**
+
+- 🟢 **Nueva señal `recurso-del-coach`.** Si hay una recomendación con `opened_at IS NULL`, la tarjeta avisa: *"Tu coach te dejó algo. **Está en Recursos cuando tengas ganas**, no hay apuro."* El CTA dice *"Ver lo que te dejó"* y tocarla lleva a `/mis-recomendaciones`.
+- 🔴 **Es la primera vez que la tarjeta es MENSAJERA y no autora** (B1). Es **la única de las once señales que no es una lectura de los datos que la persona ya vio al registrarlos**: es un hecho que hizo otro ser humano por ella.
+- **Prioridad: debajo del piso y de `sharp-drop`, arriba de todo lo demás.** ⚠️ Debajo de `sharp-drop` a propósito — el día que alguien se cayó fuerte la regla es acusar recibo y correrse, y **un recurso, por bienvenido que sea, es una tarea**.
+- 📌 **El texto no apura y no rota.** *"No hay apuro"* está para que no se vuelva una notificación con culpa; sin variantes porque avisar dos veces distinto es ruido.
+- 🔴 **La señal NO la escribe un modelo**, y eso resolvió mejor de lo previsto la dependencia que había quedado anotada. La idea era mandar un flag `hay_recurso_del_coach` en los `facts`; en cambio se dejó afuera del modelo — **es un aviso, no una devolución, no hay nada que agregar** — y así **no viaja ni un dato más al proveedor**.
+- ⚠️ **Un test cazó lo que una revisión no habría visto:** el guardarraíl frenó la frase propia *"Tu coach te dejó algo"* con `inventa que hay alguien acompañando`. **No lo inventaba — el guardarraíl no tenía cómo saberlo.** Ahora `ACOMPANANTE` acepta tres pruebas de que el profesional existe: sesión próxima en los facts, señal `sessions`, o señal `recurso-del-coach` (que sale de una fila que alguien escribió).
+- 📌 **Sin JOIN a propósito en la query.** `mis-recomendaciones` trae el nombre del coach con `coaches!inner(profiles!inner(name))`, y SCHEMA.md documenta la trampa: si el `profiles.role` del coach no es `'coach'`, la RLS hace fallar el join y **la fila entera desaparece sin error**. Acá solo hace falta saber SI hay algo.
+- 📌 **Sin ventana de 7 días**, a diferencia del resto de `useWeeklySignals`: un recurso que el coach dejó hace diez días y no se abrió **sigue sin abrirse**. No es "algo que hiciste esta semana", es algo que está esperando.
+- ✅ **Corregido en el registro: B2 no dependía de E1.** Un coach recomienda desde el catálogo que ya existe.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **A1** (dos ramas del piso sin probar) y **A2** (el coach de $1). Siguen arriba de todo y son de Andre.
+- **Probar B2 en dispositivo**: hay 7 filas reales, así que con una que tenga `opened_at` en null la tarjeta debería avisarlo.
+- **Visto bueno de voz** sobre las 8 frases de C1/C2 y esta.
+- **C3**: las 7 preguntas sin dónde contestarse.
+
 ## 2026-09-08 — Andre (sesión 190 · C1 y C2: la app deja de tasar lo que hiciste)
 
 **Tocado:** `lib/weeklyReflection.ts`, `docs/problemas-abiertos.md`. **541 tests**, `tsc` limpio. Sin schema, sin deploy.

@@ -16,11 +16,23 @@ export type WeeklySignals = {
   resourcesThisWeek: number;
   sessionsThisWeek: number;
   writingThisWeek: number;
+  /** ¿Hay algo que un profesional le dejó y todavía no abrió?
+   *
+   *  🔴 Es la única señal de la tarjeta que NO es una lectura de sus propios
+   *  datos: es un hecho que hizo otra persona. Ver `la-voz-de-sofia.md` §2 ter,
+   *  movimiento 5 — *"te daba un recurso si lo tenía a mano"*.
+   *
+   *  ⚠️ **Sin JOIN a propósito.** `mis-recomendaciones` trae el nombre del coach
+   *  con `coaches!inner(profiles!inner(name))`, y SCHEMA.md documenta la trampa:
+   *  si el `profiles.role` del coach no es `'coach'`, la RLS de `profiles` hace
+   *  fallar el join y **la fila entera desaparece sin error**. Acá solo hace
+   *  falta saber SI hay algo, así que se pregunta eso y nada más. */
+  recursoSinAbrir: boolean;
   loading: boolean;
 };
 
 const EMPTY: WeeklySignals = {
-  resourcesThisWeek: 0, sessionsThisWeek: 0, writingThisWeek: 0, loading: false,
+  resourcesThisWeek: 0, sessionsThisWeek: 0, writingThisWeek: 0, recursoSinAbrir: false, loading: false,
 };
 
 export function useWeeklySignals(userId: string | undefined): WeeklySignals {
@@ -39,7 +51,7 @@ export function useWeeklySignals(userId: string | undefined): WeeklySignals {
       const weekAgoTs = `${weekAgoDay}T00:00:00`;
       const today = localDayKey();
 
-      const [resources, sessions, journal, gratitude] = await Promise.all([
+      const [resources, sessions, journal, gratitude, reco] = await Promise.all([
         // ⚠️ Se cuentan FILAS, no "recursos terminados". `resource_completions`
         // tiene `progress_seconds` para distinguir a medias de completo, pero
         // `duration_seconds` es NULL en los recursos libres (Diario, Ruido
@@ -69,6 +81,14 @@ export function useWeeklySignals(userId: string | undefined): WeeklySignals {
           .select('id', { count: 'exact', head: true })
           .eq('user_id', userId)
           .gte('created_at', weekAgoTs),
+
+        // 📌 Sin ventana de 7 días, a diferencia de todo lo de arriba: un recurso
+        // que el coach dejó hace diez días y no se abrió sigue sin abrirse. No es
+        // "algo que hiciste esta semana", es algo que está esperando.
+        supabase.from('resource_recommendations')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .is('opened_at', null),
       ]);
 
       if (cancelled) return;
@@ -85,6 +105,7 @@ export function useWeeklySignals(userId: string | undefined): WeeklySignals {
         resourcesThisWeek: count(resources, 'recursos'),
         sessionsThisWeek: count(sessions, 'sesiones'),
         writingThisWeek: count(journal, 'diario') + count(gratitude, 'gratitud'),
+        recursoSinAbrir: count(reco, 'recomendaciones') > 0,
         loading: false,
       });
     })();

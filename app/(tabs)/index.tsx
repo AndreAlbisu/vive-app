@@ -182,6 +182,7 @@ export default function InicioScreen() {
     writingThisWeek: weekly.writingThisWeek,
     sharpDrop,
     pisoSeguridad,
+    recursoSinAbrir: weekly.recursoSinAbrir,
     diasHastaProximaSesion,
     dayKey: today,
   });
@@ -303,6 +304,14 @@ export default function InicioScreen() {
     // para una devolución (gradiente del color del ánimo, "ver mi progreso"), y
     // lo que hace falta acá es lo contrario — la pantalla de las líneas, que a
     // propósito no es cálida ni pregunta nada (§5 ter).
+    // El aviso del recurso lleva a donde está el recurso. Misma lógica que el
+    // piso con `/ayuda`: si la tarjeta anuncia algo, tocarla tiene que llevar a
+    // eso — no a una reflexión sobre la semana.
+    if (cardReflection.signal === 'recurso-del-coach') {
+      registrarEvento('reflexion_vista', { origen: 'recurso_coach' });
+      router.push('/mis-recomendaciones');
+      return;
+    }
     if (cardReflection.signal === 'piso-seguridad') {
       registrarEvento('ayuda_abierta', { origen: 'piso_seguridad' });
       router.push('/ayuda');
@@ -1112,7 +1121,9 @@ function SobreVosCard({
               <Text style={s.selloCta}>
                 {reflection.signal === 'piso-seguridad'
                   ? '→ Si lo necesitás, hay líneas de ayuda'
-                  : '→ Ver más'}
+                  : reflection.signal === 'recurso-del-coach'
+                    ? '→ Ver lo que te dejó'
+                    : '→ Ver más'}
               </Text>
             </>
           )}

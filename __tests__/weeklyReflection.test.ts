@@ -1013,3 +1013,51 @@ describe('puedeRedactarloElModelo — qué NO escribe una IA', () => {
     expect(new Set(conModelo)).toEqual(new Set(['trend-up', 'sessions', 'streak', 'practices', 'level']));
   });
 });
+
+describe('recurso-del-coach — la única señal que es una noticia', () => {
+  // 🔴 Cierra el movimiento 5 de §2 ter, que marcaba 0 de 22. No hubo que
+  // construir nada: `resource_recommendations` tiene filas reales desde agosto y
+  // la tarjeta no la miraba.
+
+  it('le gana a todo salvo al piso y a la caída de hoy', () => {
+    for (const otra of [
+      { streak: 30 }, { sessionsThisWeek: 3 }, { resourcesThisWeek: 5 },
+      { recentMoods: [1, 2, 2, 1], historicMoods: [] },      // sustained-low
+      { recentMoods: [], historicMoods: [] },                 // empty
+      { recentMoods: [4, 4, 4, 4], historicMoods: [2, 2, 2] },// trend-up
+    ]) {
+      expect(buildReflection(on({ ...otra, recursoSinAbrir: true })).signal)
+        .toBe('recurso-del-coach');
+    }
+  });
+
+  it('🔴 pero NO le gana al piso de seguridad ni a la caída de hoy', () => {
+    // El día que alguien se cayó fuerte la regla es acusar recibo y correrse.
+    // Un recurso, por bienvenido que sea, es una tarea.
+    expect(buildReflection(on({ recursoSinAbrir: true, sharpDrop: true })).signal)
+      .toBe('sharp-drop');
+    expect(buildReflection(on({ recursoSinAbrir: true, pisoSeguridad: true })).signal)
+      .toBe('piso-seguridad');
+  });
+
+  it('no apura: avisa que está, y dice que no hay apuro', () => {
+    const r = buildReflection(on({ recursoSinAbrir: true }));
+    const texto = `${r.before}${r.bold}${r.after}`;
+    expect(texto).toMatch(/no hay apuro/i);
+    // Y no le pide nada — `ASKS` y `VENDE` corren igual sobre las frases propias.
+    expect(rejectCopy(texto, r.tone, { signal: r.signal })).toBeNull();
+  });
+
+  it('🔴 no la redacta un modelo', () => {
+    // Para escribirla el modelo tendría que recibir que el recurso existe, y sin
+    // ese contexto el guardarraíl la frena por inventar un acompañante. Dejarla
+    // afuera evita el problema en vez de resolverlo, y no viaja ni un dato más.
+    expect(puedeRedactarloElModelo('recurso-del-coach', 'warm')).toBe(false);
+  });
+
+  it('sin recurso sin abrir, la señal no existe', () => {
+    const conDatos = { recentMoods: [3, 3, 3], historicMoods: [3, 3, 3], streak: 5 };
+    expect(buildReflection(on({ ...conDatos, recursoSinAbrir: false })).signal).toBe('streak');
+    expect(buildReflection(on(conDatos)).signal).toBe('streak');
+  });
+});

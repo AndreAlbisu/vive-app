@@ -303,8 +303,22 @@ export function rejectCopy(
     // Nombrar al profesional es legítimo cuando hay uno a la vista, o cuando la
     // señal ES sobre las sesiones que ya tuvo. Sin ninguna de las dos, se lo
     // inventó.
+    // 🔴 Tres cosas autorizan a nombrar al profesional, y las tres son PRUEBA de
+    // que existe — que es de lo único que trata esta regla:
+    //  · hay una sesión próxima en los `facts`;
+    //  · la señal ES sobre las sesiones que ya tuvo;
+    //  · la señal es `recurso-del-coach`, que sale de una fila real en
+    //    `resource_recommendations` — alguien la escribió.
+    //
+    // 📌 La tercera se agregó el 08/09 y la encontró un test, no una revisión:
+    // al conectar el aviso del recurso, el guardarraíl frenó la frase propia
+    // *"Tu coach te dejó algo"* por inventar un acompañante. **No lo inventaba —
+    // el guardarraíl no tenía cómo saberlo.**
     const haySesion = ctx.facts?.dias_hasta_proxima_sesion != null;
-    if (!haySesion && ctx.signal !== 'sessions') return 'inventa que hay alguien acompañando';
+    const pruebaDeQueExiste = haySesion
+      || ctx.signal === 'sessions'
+      || ctx.signal === 'recurso-del-coach';
+    if (!pruebaDeQueExiste) return 'inventa que hay alguien acompañando';
   }
 
   if (tone === 'gentle') {
@@ -373,6 +387,13 @@ export type Reflection = {
 export function puedeRedactarloElModelo(signal: string, tone: ReflectionTone): boolean {
   if (signal === 'piso-seguridad') return false;
   if (signal === 'empty' || signal === 'early') return false;
+  // 🔴 `recurso-del-coach` es un AVISO de un hecho puntual, no una devolución.
+  // No hay nada que un modelo pueda agregar, y sí hay algo que puede romper:
+  // para redactarlo tendría que recibir que existe el recurso, y el guardarraíl
+  // frena *"tu coach te dejó algo"* con `inventa que hay alguien acompañando`
+  // salvo que se le mande el contexto. Dejarlo afuera **evita el problema en vez
+  // de resolverlo** — y de paso no viaja ni un dato más al proveedor.
+  if (signal === 'recurso-del-coach') return false;
   if (tone === 'gentle') return false;
   return true;
 }
@@ -392,6 +413,14 @@ export type ReflectionInput = {
   writingThisWeek: number;
   /** ¿El ánimo cayó fuerte hoy respecto del check-in anterior? Ver decisión 3. */
   sharpDrop: boolean;
+  /** ¿Un profesional le dejó un recurso que todavía no abrió?
+   *
+   *  🔴 **Es la única señal que NO es una lectura de sus propios datos**: es un
+   *  hecho que hizo otra persona. `la-voz-de-sofia.md` §2 ter, movimiento 5 —
+   *  *"te daba un recurso si lo tenía a mano"*, que marcaba **0 de 22** hasta
+   *  hoy. No faltaba construirlo: `resource_recommendations` existe con filas
+   *  reales desde agosto y la tarjeta no la miraba. */
+  recursoSinAbrir?: boolean;
   /** ¿Corresponde el piso de seguridad? Lo decide `lib/pisoSeguridad.ts`, que
    *  mira la secuencia de registros y no promedios. Llega ya calculado —y ya
    *  pasado por el flag— porque este archivo es puro y la decisión de encenderlo
@@ -467,7 +496,7 @@ export function buildReflection(input: ReflectionInput): Reflection {
   const {
     recentMoods, historicMoods, streak,
     resourcesThisWeek, sessionsThisWeek, writingThisWeek,
-    sharpDrop, pisoSeguridad, dayKey,
+    sharpDrop, pisoSeguridad, recursoSinAbrir, dayKey,
   } = input;
 
   const r = (before: string, bold: string, after: string, tone: ReflectionTone, signal: string): Reflection =>
@@ -558,6 +587,28 @@ export function buildReflection(input: ReflectionInput): Reflection {
       // devuelve: el contraste con "el día" es lo que lo vuelve suyo.
       r('Hoy costó, y lo registraste igual. ', 'Eso es tuyo', ', no del día.', 'gentle', 'sharp-drop'),
     ]);
+  }
+
+  // ── 1 bis. Tu coach te dejó algo ──────────────────────────────────────────
+  // 🔴 Va acá —debajo del piso y de la caída de hoy, ARRIBA de todo lo demás—
+  // por una diferencia de clase: **es la única señal que es una NOTICIA.** Las
+  // otras nueve son lecturas de los mismos datos que la persona ya vio al
+  // registrarlos; esta es algo que hizo otro ser humano por ella.
+  //
+  // ⚠️ Debajo de `sharp-drop` a propósito: el día que alguien se cayó fuerte, la
+  // regla es acusar recibo y correrse, no sumarle una tarea. Un recurso, por
+  // bienvenido que sea, es una tarea.
+  //
+  // 📌 **El texto no apura.** Es la diferencia entre avisar y pedir: *"no hay
+  // apuro"* está ahí para que la tarjeta no se vuelva una notificación con
+  // culpa. Y por eso tampoco rota por día: es un aviso, y avisar dos veces
+  // distinto es ruido.
+  if (recursoSinAbrir) {
+    return r(
+      'Tu coach te dejó algo. ',
+      'Está en Recursos cuando tengas ganas',
+      ', no hay apuro.', 'warm', 'recurso-del-coach',
+    );
   }
 
   // ── 2. Todavía no hay con qué ─────────────────────────────────────────────
