@@ -79,7 +79,7 @@ function NotificationSetup() {
 const PANTALLAS_ALTA = new Set(['verificar-mail', 'coach-application']);
 
 function AuthRedirect() {
-  const { user, loading, role } = useAuth();
+  const { user, loading, role, mailPendiente } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -120,6 +120,33 @@ function AuthRedirect() {
       return;
     }
 
+    // 🔴 El muro del mail, para TODO el mundo y no solo para coaches.
+    //
+    // No existe por el abuso —de eso se ocupa el CAPTCHA, que corre en el
+    // servidor antes de crear la cuenta (ver `lib/captcha.ts`)— sino por el
+    // motivo que ya estaba escrito en `VerificarMailScreen`: quien se equivoca
+    // al tipear su dirección queda con una cuenta que **no puede recuperar
+    // nunca**, porque `resetPassword` manda el mail a una casilla que no
+    // existe, y sin forma de enterarse.
+    //
+    // ⚠️ Cuelga de `profiles.email_verified_at`, o sea del SERVIDOR, y no del
+    // `AsyncStorage` del que cuelga el alta de coach acá arriba: esa marca vive
+    // en el teléfono y borrar los datos de la app la saltea.
+    //
+    // 📝 `undefined` = todavía no se sabe; no se redirige con la respuesta a
+    // medias, igual que con `pasoAlta`. Google y Apple dan `false` sin
+    // consultar nada: su mail ya lo verificó el proveedor.
+    if (mailPendiente === undefined) return;
+    if (mailPendiente) {
+      if (segments[0] !== 'verificar-mail') {
+        router.replace({
+          pathname: '/verificar-mail',
+          params: { email: user.email ?? '', modo: 'usuario' },
+        } as any);
+      }
+      return;
+    }
+
     const destination = role === 'coach' ? '/(coach)' : '/(tabs)';
 
     if (inOnboardingOrAuth) {
@@ -129,7 +156,7 @@ function AuthRedirect() {
     } else if (role === 'user' && inCoachGroup) {
       router.replace('/(tabs)');
     }
-  }, [user, loading, role, segments, router, pasoAlta]);
+  }, [user, loading, role, segments, router, pasoAlta, mailPendiente]);
 
   return null;
 }

@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { pedirCaptchaToken } from '@/lib/captcha';
+import { necesitaVerificarMail } from '@/lib/emailVerificado';
 import { cancelAllResourceReminders } from '@/lib/resourceReminders';
 import { clearBlockedCache } from '@/lib/blocking';
 import { LEGAL_VERSION } from '@/constants/legal';
@@ -47,6 +48,17 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<string | null>;
   signInWithApple: (acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
   signOut: () => Promise<void>;
+  /** ¿Esta persona todavía no probó que la casilla es suya?
+   *
+   *  `undefined` = todavía no se sabe. Igual que `pasoAlta` en el layout: hasta
+   *  saberlo NO se redirige nada, porque redirigir con la respuesta a medias es
+   *  exactamente el bug. `false` para Google y Apple, que entregan el mail ya
+   *  verificado por el proveedor. Ver `lib/emailVerificado.ts`. */
+  mailPendiente: boolean | undefined;
+  /** La pantalla de verificación acaba de escribir `profiles.email_verified_at`.
+   *  Se marca en memoria en vez de volver a consultar: la escritura pasó recién,
+   *  y una lectura inmediata puede llegar antes de que se vea. */
+  marcarMailVerificado: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -64,6 +76,11 @@ const AuthContext = createContext<AuthContextType>({
   signInWithApple: async () => null,
   resetPassword: async () => null,
   signOut: async () => {},
+  // `false` y no `undefined`: sin Provider no hay sesión que verificar, y
+  // `undefined` significaría "esperá, estoy averiguando" — el layout se quedaría
+  // sin redirigir nunca.
+  mailPendiente: false,
+  marcarMailVerificado: () => {},
 });
 
 /**
@@ -103,6 +120,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [mailPendiente, setMailPendiente] = useState<boolean | undefined>(undefined);
+
+  /** Se resuelve aparte del perfil y no en la misma consulta a propósito: la
+   *  respuesta manda a la persona a otra pantalla, así que mientras no se sepa
+   *  vale `undefined` y el layout no redirige. Meterla en `fetchProfile` haría
+   *  que un error de esa consulta —que hoy cae a rol 'user' y sigue— también
+   *  decidiera sobre el muro del mail. */
+  const resolverMailPendiente = useCallback((u: User | null) => {
+    if (!u) { setMailPendiente(false); return; }
+    setMailPendiente(undefined);
+    necesitaVerificarMail(u).then(setMailPendiente);
+  }, []);
+
+  const marcarMailVerificado = useCallback(() => setMailPendiente(false), []);
 
   type Perfil = { role: UserRole; isAdmin: boolean; name: string | null };
 
@@ -154,11 +185,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const u = esSesionAnonima(bruto) ? null : bruto;
       setUser(u);
       setLoading(false);
+      resolverMailPendiente(u);
       if (u) fetchProfile(u.id).then(applyProfile);
       else applyProfile({ role: "user", isAdmin: false, name: null });
     }).catch((e) => {
       console.warn('[auth] getSession fallo, sigo como anonimo:', e?.message ?? e);
       setUser(null);
+      setMailPendiente(false);
       applyProfile({ role: "user", isAdmin: false, name: null });
       setLoading(false);
     });
@@ -170,6 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // abajo asume que "apareció la cuenta". Ver `esSesionAnonima`.
       const u = esSesionAnonima(bruto) ? null : bruto;
       setUser(u);
+      resolverMailPendiente(u);
       if (u) {
         fetchProfile(u.id).then(applyProfile);
         // Lo que la persona contestó SIN cuenta, en el onboarding guiado o en
@@ -573,7 +607,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       user, loading, isLoggedIn, role, isAdmin, displayName, refreshProfile,
       requestAuth, signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, signOut,
-      resetPassword,
+      resetPassword, mailPendiente, marcarMailVerificado,
     }}>
       {children}
       <AuthModal

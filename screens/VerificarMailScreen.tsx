@@ -86,17 +86,24 @@ const fadeUp = (anim: Animated.Value) => ({
 });
 
 /**
- * Verificación del mail. La usan DOS caminos, y se comportan distinto:
+ * Verificación del mail. La usan TRES caminos, y se comportan distinto:
  *
  *   · `modo='alta'` — el alta de coach. Se llega con una sesión recién creada
- *     que todavía no debería servir para nada: **abandonar cierra la sesión**,
+ *     que todavía no debería servir para nada: **abandonar borra la cuenta**,
  *     y confirmar sigue a la postulación.
+ *   · `modo='usuario'` — el muro del alta de usuario final, que lo pone el
+ *     `AuthRedirect` de `app/_layout.tsx` mirando `profiles.email_verified_at`.
+ *     La cuenta es legítima y se queda: **abandonar solo cierra la sesión**
+ *     (`abandonarAlta` no borra nada sin marca de alta de coach). Confirmar
+ *     entra a la app.
  *   · `modo='gate'` — alguien que ya usa la app y va a reservar. Su sesión es
  *     legítima: **abandonar NO la cierra**, solo vuelve. Confirmar vuelve
  *     también, a terminar lo que estaba haciendo.
  *
  * 🔴 La diferencia importa: cerrarle la sesión a alguien por no confirmar un
- * código en medio de una reserva sería sacarlo de la app por un trámite.
+ * código en medio de una reserva sería sacarlo de la app por un trámite. Los
+ * otros dos sí son muros: se llega recién creada la cuenta y no hay nada
+ * empezado que perder.
  *
  * 🔴 POR QUÉ EXISTE. Dos cosas que hasta ahora no se comprobaban:
  *   · quien se equivoca al tipear su dirección queda con una cuenta que **no
@@ -120,8 +127,14 @@ export default function VerificarMailScreen() {
   // El color del camino elegido en la bifurcación.
   const tonoOnboarding = useTonoOnboarding();
   const { email, modo } = useLocalSearchParams<{ email?: string; modo?: string }>();
-  const esAlta = (Array.isArray(modo) ? modo[0] : modo) !== 'gate';
-  const { user } = useAuth();
+  const cual = (Array.isArray(modo) ? modo[0] : modo) ?? 'alta';
+  const esGate = cual === 'gate';
+  const esAltaCoach = cual === 'alta';
+  /** Los dos muros (alta de coach y alta de usuario) comparten todo el
+   *  comportamiento de salida: irse sin confirmar cierra la sesión. Lo único
+   *  que los separa es a dónde va quien confirma. */
+  const esMuro = !esGate;
+  const { user, role, marcarMailVerificado } = useAuth();
 
   const mail = (Array.isArray(email) ? email[0] : email) ?? user?.email ?? '';
 
@@ -142,7 +155,7 @@ export default function VerificarMailScreen() {
   // que la pantalla se vaya. En `gate` no se toca nada — esa sesión ya era
   // legítima antes de entrar acá, y cerrarla por no confirmar un código en
   // medio de una reserva sería echar a la persona por un trámite.
-  const { marcarTerminado, cancelar } = useCerrarSesionAlSalir(esAlta);
+  const { marcarTerminado, cancelar } = useCerrarSesionAlSalir(esMuro);
 
   /**
    * ⚠️ En el alta NO se usa `router.back()`: si se llegó acá retomando un alta
@@ -153,7 +166,7 @@ export default function VerificarMailScreen() {
    * es literalmente volver a lo que la persona estaba haciendo.
    */
   function volver() {
-    if (!esAlta) { router.back(); return; }
+    if (esGate) { router.back(); return; }
     if (cancelando) return;   // ya está en curso, no reencolar
     setCancelando(true);
     void cancelar().then(() => router.replace('/onboarding-bifurcacion'));
@@ -235,14 +248,25 @@ export default function VerificarMailScreen() {
     }
 
     marcarTerminado();   // salió por la puerta buena: la sesión sigue
-    // El alta sigue en curso, pero un paso más adelante: si cierra la app
-    // ahora, al volver retoma en la postulación y no le pide el código de nuevo.
-    if (esAlta) await marcarAlta('postular');
+    // El alta de coach sigue en curso, pero un paso más adelante: si cierra la
+    // app ahora, al volver retoma en la postulación y no le pide el código otra
+    // vez.
+    if (esAltaCoach) await marcarAlta('postular');
+    // 🔴 Sin esto el muro rebota: `AuthRedirect` mira `mailPendiente`, que
+    // sigue en `true` en memoria, y devuelve a esta misma pantalla. Se marca en
+    // vez de releer porque el UPDATE de arriba acaba de pasar y una lectura
+    // inmediata puede no verlo todavía.
+    marcarMailVerificado();
     setVerificando(false);
 
-    // El alta sigue a la postulación; el gate vuelve a lo que la persona
-    // estaba haciendo (reservar), que es donde quedó el hilo.
-    if (esAlta) router.replace('/coach-application');
+    // Cada camino vuelve a lo suyo: el alta de coach a la postulación, el muro
+    // del usuario a la app, y el gate a lo que la persona estaba haciendo
+    // (reservar), que es donde quedó el hilo.
+    if (esAltaCoach) router.replace('/coach-application');
+    // 🔴 Se mira el rol y no se manda derecho a `/(tabs)`: por este muro pasa
+    // también un coach ya aprobado que nunca verificó, y `AuthRedirect` lo
+    // rebotaría de tabs a `/(coach)` — se corrige solo, pero con un parpadeo.
+    else if (esMuro) router.replace(role === 'coach' ? '/(coach)' : '/(tabs)');
     else router.back();
   }
 
@@ -265,9 +289,15 @@ export default function VerificarMailScreen() {
                 {/* Sin decir cuántos dígitos: lo decide un ajuste del panel y
                     prometer un número que después no coincide es peor que no
                     decirlo. El código viene en el mail y en su asunto. */}
-                {esAlta
-                  ? 'Te mandamos un código a'
-                  : 'Antes de reservar necesitamos confirmar tu mail. Te mandamos un código a'}{'\n'}
+                {esGate
+                  ? 'Antes de reservar necesitamos confirmar tu mail. Te mandamos un código a'
+                  : esAltaCoach
+                    ? 'Te mandamos un código a'
+                    // El muro del usuario dice POR QUÉ. Quien acaba de crear la
+                    // cuenta no pidió este paso y no lo esperaba: sin el motivo
+                    // se lee como un trámite, y con el motivo se lee como lo que
+                    // es — que la cuenta se pueda recuperar.
+                    : 'Confirmá tu mail para poder recuperar tu cuenta si alguna vez perdés el acceso. Te mandamos un código a'}{'\n'}
                 <Text style={s.mail}>{mail}</Text>
               </Text>
             </Animated.View>
@@ -318,6 +348,9 @@ export default function VerificarMailScreen() {
             {/* En el alta, volver la cancela (la limpieza cierra la sesión). En
                 el gate, volver es solo volver. */}
             <View style={s.footer}>
+              {/* En el gate se puede posponer de verdad: "Ahora no" vuelve a la
+                  reserva. En los dos muros irse es cerrar sesión, así que el
+                  texto no puede prometer que se sigue sin hacerlo. */}
               <TouchableOpacity onPress={volver} activeOpacity={0.7} disabled={cancelando}>
                 {cancelando ? (
                   <View style={s.footerLoadingRow}>
@@ -325,7 +358,7 @@ export default function VerificarMailScreen() {
                     <Text style={s.footerLink}>Cancelando…</Text>
                   </View>
                 ) : (
-                  <Text style={s.footerLink}>{esAlta ? 'Cancelar' : 'Ahora no'}</Text>
+                  <Text style={s.footerLink}>{esGate ? 'Ahora no' : 'Cancelar'}</Text>
                 )}
               </TouchableOpacity>
             </View>

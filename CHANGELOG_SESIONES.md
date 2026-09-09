@@ -4,6 +4,26 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 223 cont. 2 · el muro del mail para usuarios finales, colgado del servidor)
+
+**Tocado:** `context/AuthContext.tsx`, `app/_layout.tsx`, `screens/VerificarMailScreen.tsx`, `lib/captcha.ts`, `components/CaptchaHost.tsx`. **575 tests**, `tsc` y `eslint` limpios.
+
+**Resumen — la verificación de mail vuelve, pero por el motivo correcto y no por el que la pedimos al principio.**
+
+- 📌 **El motivo NO es el abuso.** De eso se ocupa el CAPTCHA, que corre en el servidor antes de crear la cuenta. El motivo es el que ya estaba escrito en `VerificarMailScreen` desde que se construyó: **quien se equivoca al tipear su dirección queda con una cuenta que no puede recuperar nunca** —`resetPassword` manda el mail a una casilla que no existe— y sin forma de enterarse. La pantalla existía, funcionaba, y **solo la veían los coaches**.
+- 🟢 **El muro cuelga de `profiles.email_verified_at`, o sea del SERVIDOR**, y no del `AsyncStorage` del que cuelga el alta de coach. 📌 **Eso cierra de paso el pendiente que veníamos arrastrando**: la marca del coach vive en el teléfono y borrar los datos de la app la saltea; esta no.
+- 🟢 **`mailPendiente` en `AuthContext`**, con la misma disciplina que `pasoAlta`: `undefined` = todavía no se sabe, y con la respuesta a medias **no se redirige nada**. Google y Apple dan `false` sin consultar: su mail ya lo verificó el proveedor.
+- 📌 **Tercer modo en `VerificarMailScreen`** (`alta` / `usuario` / `gate`). Los dos muros comparten la salida —irse cierra la sesión— y lo único que los separa es a dónde va quien confirma. **`abandonarAlta()` no borra nada sin marca de alta de coach**, así que reusar el hook fue seguro: la cuenta del usuario se queda.
+- 🐛 **Y un rebote que había que atajar**: `AuthRedirect` mira `mailPendiente`, que sigue en `true` en memoria después de confirmar, y devolvía a la misma pantalla. Se marca en memoria en vez de releer, porque el UPDATE acaba de pasar y una lectura inmediata puede no verlo.
+- 📌 Al confirmar se mira **el rol**: por este muro pasa también un coach ya aprobado que nunca verificó, y mandarlo a `/(tabs)` lo hacía rebotar a `/(coach)` con parpadeo.
+- 🐛 **Tres bugs del CAPTCHA, encontrados probando en dispositivo** (tardaba ~20s y creaba la cuenta sin token): (1) **carrera silenciosa** — antes de que el widget esté listo `window.ejecutarCaptcha` no existe y el `&&` hacía que no pasara NADA, ni llamada ni error; ahora se encola; (2) **WebView de 0x0** — un WKWebView con área cero puede no correr su JS en iOS; pasa a 1x1 fuera de pantalla; (3) **todo lo de adentro del WebView era invisible** — ahora `window.onerror`, chequeo a los 10s de que el script de Cloudflare cargue, y el código de error de Turnstile salen por consola con `[captcha]`.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **NO se probó en dispositivo todavía** — ni el muro ni los arreglos del CAPTCHA. El alta con Turnstile seguía fallando abierto cuando se cortó; falta leer qué dice `[captcha]` en la consola de Metro.
+- 🔴 **Al prender esto, TODAS las cuentas existentes sin `email_verified_at` quedan contra el muro** en la próxima apertura, las nuestras incluidas. No hay grandfathering — se decidió que un mail sin verificar lo es sin importar cuándo se creó la cuenta, y estamos pre-lanzamiento. **Si molesta en las pruebas, el arreglo es una cláusula por fecha de alta.**
+- 🔴 **El muro crea una dependencia nueva del correo: si el SMTP falla, nadie entra.** `necesitaVerificarMail` falla ABIERTO ante un error de base, pero no ante un mail que no llega — ahí la única salida es "Cancelar", que cierra la sesión. Vale la pena pensar un escape.
+- 📌 La pantalla manda un código **al montarse**, así que el día que se prenda hay un pico de envíos de todos los que abran la app.
+
 ## 2026-09-09 — Andre (sesión 223 cont. · Turnstile en vez de hCaptcha: el modo que necesitábamos costaba US$139/mes)
 
 **Tocado:** `lib/captcha.ts`, `components/CaptchaHost.tsx`, `app/_layout.tsx`, `docs/anti-abuso-altas.md`. **575 tests**, `tsc` y `eslint` limpios. ⚠️ Sigue **NO prendido**.
