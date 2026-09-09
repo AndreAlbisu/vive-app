@@ -168,6 +168,40 @@ antes de decidir su forma.
 ⚠️ **Y hay un supuesto que nadie chequeó:** si la app todavía no está aprobada en
 las tiendas, el segundo camino no lleva a ninguna parte.
 
+## 4 bis. Por qué el código por mail es OBLIGATORIO en la web
+
+> Anotado el 09/09/2026, al descubrir que en la app **el usuario final no
+> verifica su mail**.
+
+`profiles.email_verified_at` queda en **NULL para todos los usuarios finales**:
+solo los coaches pasan por el código, como parte de su alta
+(`lib/altaCoach.ts`). Es una decisión tomada y documentada, no un olvido.
+
+🔴 **Pero lo que es razonable en la app deja de serlo en la web, y el motivo no
+es de seguridad sino de canal.**
+
+En la app, que alguien se registre con el mail mal tipeado es tolerable: tiene la
+app instalada, ve el estado de su reserva adentro y le llegan las push. **El mail
+es un canal más.**
+
+Quien entra por el link del coach no tiene nada de eso. Si paga y su mail tiene
+un error, no se entera de nada: ni de que la reserva quedó pendiente, ni de que
+el coach la confirmó, ni de que **se venció a las 24hs y se le devolvió la
+plata** (`expire_pending_bookings`). En la web el mail no es un canal más: **es
+el único.**
+
+📌 **Por eso el código de seis dígitos no es solo una forma de identificarse: es
+la única manera de garantizar que el canal de contacto funciona ANTES de
+cobrarle a alguien.** Cobrar sin tener cómo avisar es el problema que evita.
+
+⚠️ **Esto se va a ver como una fricción innecesaria** cuando alguien mire el
+embudo buscando pasos para sacar — "¿por qué le pedimos un código si ya puso el
+mail?". La respuesta es esta, y por eso queda escrita acá y no solo en el código.
+
+🟢 Y lo caro ya está hecho: **el código de seis dígitos existe y funciona**
+(`VerificarMailScreen`, `signInWithOtp` + `verifyOtp`, plantilla con
+`{{ .Token }}`). Se construyó para el alta de coach. La web usa lo mismo.
+
 ## 5. El embudo, escrito entero
 
 Lo que hoy no está caminado, paso por paso. Cada uno corta:
