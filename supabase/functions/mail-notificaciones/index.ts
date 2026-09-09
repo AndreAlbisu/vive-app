@@ -35,16 +35,23 @@ import { enviarMail } from '../_shared/email.ts'
 const VENTANA_MINUTOS = 180
 const TOPE_POR_CORRIDA = 50
 
+const SITIO = Deno.env.get('WEB_BASE_URL') ?? 'https://vitaapp.com.ar'
+
 /**
  * Qué se manda y con qué título. La `body` de la notificación ya está escrita
  * para la campana y sirve tal cual; lo que agrega el mail es el encabezado y,
  * cuando corresponde, la explicación de qué pasa con la plata — que en la app
  * se ve en pantalla y en el mail hay que decir.
  */
-const PLANTILLAS: Record<string, { titulo: string; pie?: string }> = {
+const PLANTILLAS: Record<string, { titulo: string; pie?: string; conLinkSala?: boolean }> = {
   reserva_confirmada: {
     titulo: '¡Listo! Tu sesión está confirmada',
-    pie: 'Te vamos a mandar el enlace de la videollamada antes de la sesión.',
+    // 🔴 El link a la sala va ACÁ y no "antes de la sesión" como decía antes:
+    // este mail es el único lugar donde queda guardado. Y dice explícitamente
+    // que es desde el navegador porque **las apps no están publicadas** — sin
+    // eso, la persona busca dónde bajarla y no hay dónde.
+    conLinkSala: true,
+    pie: 'La sesión es por videollamada, desde el navegador: no hace falta instalar nada. La sala se abre 15 minutos antes.',
   },
   reserva_rechazada: {
     titulo: 'Tu reserva no se pudo confirmar',
@@ -75,7 +82,7 @@ serve(async () => {
 
   const { data: pendientes, error } = await admin
     .from('notifications')
-    .select('id, recipient_id, type, title, body, created_at')
+    .select('id, recipient_id, type, title, body, booking_id, created_at')
     .is('emailed_at', null)
     .gte('created_at', desde)
     .in('type', Object.keys(PLANTILLAS))
@@ -109,11 +116,18 @@ serve(async () => {
       continue
     }
 
+    const lineas = [(n.body as string) || '']
+    if (plantilla.conLinkSala && n.booking_id) {
+      lineas.push(
+        `<a href="${SITIO}/sala?booking=${n.booking_id}" style="color:#C1694F;font-weight:bold">Entrar a la sesión</a>`,
+      )
+    }
+
     const ok = await enviarMail({
       para,
       asunto: (n.title as string) || plantilla.titulo,
       titulo: plantilla.titulo,
-      lineas: [(n.body as string) || ''],
+      lineas,
       pie: plantilla.pie,
     })
 

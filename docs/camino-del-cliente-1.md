@@ -243,8 +243,25 @@ hecho, probado y deployado desde el 28/08.
 Falta una página `/sala` que lea la sesión, llame a esa función con el
 `booking_id` y muestre la sala. La misma pieza sirve para las dos puntas.
 
-⚠️ **Hasta entonces, `CHECKOUT_HABILITADO` está bloqueado por ESTO y no por los
-mails**, que ya están.
+✅ **HECHO el 09/09/2026**: `web/sala/index.html`. Lee la sesión, llama a
+`create-meeting-room` con el `booking_id` y abre la sala de Daily en un iframe.
+El link va en el mail de confirmación y en `/reserva`.
+
+📌 **Una consecuencia del diseño que conviene entender**: el token de acceso de
+Supabase dura una hora y no se guarda el de refresco, así que **quien entre
+desde el mail el día de la sesión SIEMPRE va a tener que confirmar su mail de
+nuevo**. No es un caso raro, es el normal — por eso la pantalla del código está
+pensada como parte del camino y no como un error. `create_user: false` ahí: la
+cuenta ya existe, y crear una nueva por un mail mal tipeado dejaría a la persona
+mirando una sesión que no es suya.
+
+⚠️ **Lo que esto NO resuelve: las apps siguen sin publicar.** La web ahora
+entrega la sesión entera, así que el lanzamiento deja de depender de las
+tiendas — pero el coach también necesita entrar, y hoy entra por la app. Si el
+coach de la primera sesión no tiene la app instalada (dev build), no hay sala
+para él. `web/sala` sirve para las dos puntas —`create-meeting-room` acepta al
+coach y lo hace owner— así que el mismo link le funciona; falta que en algún
+lado se lo demos.
 
 ## 5. El embudo, escrito entero
 

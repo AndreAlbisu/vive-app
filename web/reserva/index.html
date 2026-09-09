@@ -125,8 +125,9 @@ function pintar(b) {
   // app, así que si no se lo decimos acá y por mail, no se entera por ningún
   // lado. `expire_pending_bookings()` cancela y devuelve a las 24hs.
   const pasos = confirmada
-    ? [`Te esperamos a la hora de la sesión.`,
-       `Te mandamos el enlace de la videollamada por mail.`]
+    ? [`La sesión es por videollamada, <b>desde el navegador</b>: no hace falta instalar nada.`,
+       `<a href="/sala?booking=${encodeURIComponent(b.id)}" style="color:#C1694F">Entrar a la sesión</a> — la sala se abre 15 minutos antes.`,
+       `Te mandamos este mismo enlace por mail.`]
     : [`${coach} tiene hasta <b>24 horas</b> para confirmar el horario.`,
        `Apenas lo haga, te avisamos por mail.`,
        `Si no llega a confirmarlo, la reserva se cancela sola y <b>te devolvemos todo</b>, sin que tengas que pedirlo.`];
