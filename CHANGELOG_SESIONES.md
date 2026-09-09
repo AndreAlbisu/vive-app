@@ -20,7 +20,7 @@
 - ⚠️ **Ningún mail hace fallar lo que lo llama.** Sin key, con destinatario inválido o con Resend rechazando, devuelve `false` y sigue. Un mail que no sale es un problema; una acreditación perdida por un mail es peor.
 
 **Pendiente para la próxima sesión:**
-- **Confirmar la primera corrida del cron**: buscar en `net._http_response` una respuesta que diga `sin pendientes` (se distingue de las de USDT, que dicen `acreditadas`). Si diera **401**, es el Vault — el mismo problema del cron de reembolsos de agosto.
+- ✅ **El cron quedó verificado contra su RESPUESTA y no contra `active = true`**: `200` con `sin pendientes` a las 19:10:00. 📌 La distinción importa — el cron de reembolsos estuvo dando 401 semanas con `active = true` porque el Vault tenía un placeholder.
 - 🔴 **Y entonces sí, la decisión de prender `CHECKOUT_HABILITADO`.** Era el único bloqueante técnico que quedaba. Antes de darlo vuelta conviene una prueba entera con el interruptor de prueba: reservar, pagar, que llegue el mail, que el coach acepte y que llegue el segundo.
 - **El DMARC**, que sigue sin estar.
 - **La comisión del link** (recomendación del consejo: primera sesión sin comisión) y **el origen de la reserva**, que `web-book` todavía no marca.

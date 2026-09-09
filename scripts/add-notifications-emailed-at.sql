@@ -3,7 +3,13 @@
 -- `notifications.emailed_at` — cuándo se mandó por mail esa notificación.
 --
 -- ✅ CORRIDO el 09/09/2026, y el backfill verificado: **0 pendientes**.
--- ✅ Cron `mail-notificaciones` agendado (job 11, cada 5 minutos).
+-- ✅ Cron `mail-notificaciones` agendado (job 11, cada 5 minutos) **y verificado
+--    contra su RESPUESTA, no contra `active = true`**: `net._http_response` tiene
+--    un **200 con `sin pendientes`** a las 19:10:00 del 09/09.
+--
+-- 📌 Esa distinción no es formalismo: el cron de reembolsos estuvo dando 401
+--    cada 5 minutos durante semanas con `active = true`, porque el Vault tenía
+--    un placeholder. Lo único que prueba que un cron anda es su respuesta.
 --
 -- 📌 La prueba de que el backfill quedó bien no fue mirar la tabla: se invocó la
 -- función a mano y devolvió **"sin pendientes"**. Si el backfill hubiera
