@@ -120,6 +120,7 @@
 
 <main>
   <p class="marca">Vita</p>
+  <p class="cta-nota" id="avisoPrueba" hidden style="text-align:left;margin:-16px 0 20px;color:#B3392E;opacity:1"></p>
 
   <div id="cargando" class="estado"><p>Cargando…</p></div>
 
@@ -224,7 +225,14 @@
 // el consentimiento se pide para una finalidad concreta, no por las dudas.
 //
 // Se prende en el mismo cambio que habilite el pago, no antes.
-const CHECKOUT_HABILITADO = false;
+//
+// 📌 `?probar=1` lo enciende para una visita, sin encenderlo para nadie más.
+// Existe para poder probar el camino REAL —con plata real, contra las funciones
+// deployadas— sin abrirle a cualquiera que llegue a la página un flujo que
+// todavía promete mails que no existen. No es seguridad: es que la puerta no
+// esté abierta por accidente mientras se prueba.
+const CHECKOUT_HABILITADO =
+  false || new URLSearchParams(location.search).get('probar') === '1';
 
 const SUPABASE_URL = 'https://ggygiihhnkjrerpinhha.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdneWdpaWhobmtqcmVycGluaGhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mjc5NjEsImV4cCI6MjA5NzEwMzk2MX0.lHPjyKjJIYD_lUTCF7uMBCKj9tCK_67OyrIFkCLQ-BI';
@@ -251,6 +259,12 @@ function iniciales(nombre) {
 
 function precioArs(n) {
   return '$' + Number(n).toLocaleString('es-AR', { maximumFractionDigits: 0 });
+}
+
+// Que nadie confunda una prueba con producción, ni de un lado ni del otro.
+if (CHECKOUT_HABILITADO) {
+  $('avisoPrueba').textContent = '⚠️ Modo prueba: la reserva y el cobro son REALES.';
+  $('avisoPrueba').hidden = false;
 }
 
 async function cargar() {
