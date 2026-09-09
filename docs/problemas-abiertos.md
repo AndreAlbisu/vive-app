@@ -29,6 +29,23 @@ dos hermanos no.
 
 ### A1 — receta para Joaquín (device review del piso de seguridad)
 
+> **HECHO (09/09, Joaquín) — CERRADO.** Se probaron en dispositivo los TRES
+> estados, y los tres consistentes con la sección "Tu próxima sesión" de abajo
+> (que es donde vivía el bug del 07/09):
+> · Estado 1 (completada esta semana, ninguna agendada) → *"Eso es de lo que
+>   conviene hablar en sesión"*, abre `/ayuda`. ✅
+> · Estado 2 (confirmada futura) → *"Llevalo a tu próxima sesión"* y abajo aparece
+>   esa sesión — el estado que **no había visto nadie**. ✅
+> · Estado 3 (ni confirmada futura ni completada en 7 días) → *"Hay gente
+>   preparada para acompañar esto"*, vacío abajo. ✅
+> El bug del 07/09 (la tarjeta contradiciendo la sección de abajo) está corregido
+> en los tres. **Persistencia "al día siguiente": garantizada por construcción** —
+> la tarjeta sale pura de `detectarPisoSeguridad(...)`, sin ningún flag de
+> "ya vista/descartada" en `index.tsx`, así que reaparece cada día que la
+> condición se cumpla; el modo de falla de "noticia que se muestra una vez" no
+> existe. Data de prueba (5 check-ins bajos + fechas de reserva) revertida.
+> ⏭️ Único bonus sin cerrar: que los teléfonos de `/ayuda` marquen de verdad.
+
 > Andre lo dejó para vos el 08/09. **Contexto en una línea:** el piso de
 > seguridad —la única pantalla que le habla a alguien en crisis— se encendió en
 > producción el 07/09 y **solo se vio correr una de sus tres ramas**. Esa prueba

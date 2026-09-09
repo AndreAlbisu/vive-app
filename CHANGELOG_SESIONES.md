@@ -4,6 +4,21 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Joaquín (sesión 211 · A1 CERRADO — device review del piso de seguridad, los 3 estados)
+
+**Tocado:** `docs/problemas-abiertos.md`. Sin código ni schema (solo device review + data de prueba, ya revertida).
+
+**Resumen — se probó en dispositivo el piso de seguridad, que se encendió el 07/09 y del que solo se había visto correr 1 de 3 ramas (y esa ya había destapado un bug).**
+
+- ✅ **Los TRES estados, verificados y consistentes con la sección "Tu próxima sesión" de abajo** (donde vivía el bug del 07/09): Estado 1 (completada esta semana) → *"Eso es de lo que conviene hablar en sesión"* + abre `/ayuda`; Estado 2 (confirmada futura) → *"Llevalo a tu próxima sesión"* + la sesión aparece abajo (el estado que no había visto nadie); Estado 3 (sin sesiones) → *"Hay gente preparada para acompañar esto"* + vacío abajo. **El bug de la contradicción está corregido en los tres.**
+- ✅ **Persistencia "al día siguiente": garantizada por construcción.** La tarjeta sale pura de `detectarPisoSeguridad(...)` (5 check-ins más recientes ≤2, el más viejo dentro de 14 días), sin ningún flag de "ya vista/descartada" en `index.tsx`. Reaparece cada día que la condición se cumpla; el modo de falla de "noticia que se muestra una vez" no existe. No hizo falta esperar a mañana.
+- 🧹 **Setup y reversión:** para forzar los estados en la cuenta de Joaquín se insertó un check-in bajo (09-06) y se movió la fecha/estado de la reserva `e9be9124`. Todo revertido: reserva de vuelta a `confirmada / 2026-09-26`, check-in insertado borrado. (El Bajón de hoy que registró Joaquín tocando la app se dejó — es un registro real; con eso el piso queda apagado, su estado verdadero.)
+- ⏭️ **Único bonus sin cerrar:** que los teléfonos de `/ayuda` marquen de verdad (30 seg cuando tenga ganas).
+
+**Pendiente para la próxima sesión:**
+- **Cancelación tardía** (device, toca plata) y el aviso de `recurso-del-coach` — lo que queda de device review.
+- 🟡 Para Andre: la vista pública del catálogo (mejora de A4). Y sigue: paquete paso 3, encender IA/piso, opción B del Diario, el link público, el % del descuento.
+
 ## 2026-09-09 — Joaquín (sesión 210 · A4 fase 3 — A4 CERRADO: authenticated ya no lee el mail ni el push_token de los coaches)
 
 **Tocado:** `scripts/restrict-authenticated-profiles-columns.sql` (nuevo), `SCHEMA.md`, `docs/problemas-abiertos.md`. **Sin cambios de código de app** (la auditoría garantizó que no hacía falta). ✅ **CORRIDO y VERIFICADO el 09/09.**
