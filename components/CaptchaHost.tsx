@@ -121,6 +121,26 @@ function CaptchaNativo() {
       }}
       javaScriptEnabled
       domStorageEnabled
+      // 🔴 SIN ESTO EL WIDGET NO FUNCIONA. Turnstile dibuja el desafío en un
+      // iframe con `srcdoc`, y el `originWhitelist` por defecto de
+      // react-native-webview es solo `http://*` y `https://*`: `about:srcdoc`
+      // queda afuera, así que RN se lo pasa al sistema para abrirlo como link
+      // externo ("Unable to open URL: about:srcdoc. Add about to
+      // LSApplicationQueriesSchemes"), el iframe nunca carga y Turnstile
+      // contesta `300031` — su error genérico de desafío fallado, que no dice
+      // nada de todo esto.
+      originWhitelist={['*']}
+      // Abrir la lista de orígenes deja al WebView navegar a donde sea, así que
+      // acá se vuelve a cerrar a mano: solo lo que el widget necesita de verdad.
+      // Lo que no está en la lista no se carga y queda anotado.
+      onShouldStartLoadWithRequest={req => {
+        const permitido =
+          req.url.startsWith('about:') ||
+          req.url.startsWith('https://challenges.cloudflare.com') ||
+          req.url.startsWith(CAPTCHA_ORIGEN);
+        if (!permitido) console.warn('[captcha] navegación bloqueada:', req.url);
+        return permitido;
+      }}
       // Sin esto el WebView pinta blanco sobre la pantalla mientras está en 0x0
       // en algunos Android.
       style={styles.transparente}
