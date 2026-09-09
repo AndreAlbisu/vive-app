@@ -1276,20 +1276,23 @@ export default function SalaScreen() {
                     <View style={styles.avatarSmall}><Text style={styles.avatarSmallText}>{displayInitials}</Text></View>
                   )}
                   <View style={styles.recoCard}>
-                    <View style={[styles.recoCardStrip, { backgroundColor: cardColor }]}>
-                      <Text style={styles.recoCardFormatLabel}>{fmtLabel[meta.resource_format] ?? meta.resource_format}</Text>
+                    {/* Tarjeta blanca; el color del formato queda como acento fino
+                        (label + borde/texto del botón), no como superficie con
+                        texto blanco encima — que era poco legible. */}
+                    <View style={styles.recoCardStrip}>
+                      <Text style={[styles.recoCardFormatLabel, { color: cardColor }]}>{fmtLabel[meta.resource_format] ?? meta.resource_format}</Text>
                     </View>
                     <View style={styles.recoCardBody}>
                       <Text style={styles.recoCardTitle} numberOfLines={2}>{meta.resource_title}</Text>
                       {meta.note ? <Text style={styles.recoCardNote} numberOfLines={2}>“{meta.note}”</Text> : null}
                       <TouchableOpacity
-                        style={[styles.recoCardBtn, { backgroundColor: cardColor }]}
+                        style={[styles.recoCardBtn, { borderColor: cardColor }]}
                         onPress={() => {
                           if (meta.recommendation_id) markRecoOpened(meta.recommendation_id);
                           router.push({ pathname: '/coach-recurso', params: { id: meta.resource_id } } as any);
                         }}
                         activeOpacity={0.85}>
-                        <Text style={styles.recoCardBtnText}>Abrir</Text>
+                        <Text style={[styles.recoCardBtnText, { color: cardColor }]}>Abrir</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1902,18 +1905,20 @@ const styles = StyleSheet.create({
     maxWidth: 260,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,248,240,0.85)',
+    backgroundColor: 'rgba(255,255,255,0.94)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
+    borderColor: 'rgba(58,79,42,0.12)',
   },
   recoCardStrip: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingTop: 10,
+    paddingBottom: 2,
   },
   recoCardFormatLabel: {
     fontFamily: ViveFonts.semibold,
     fontSize: 10,
-    color: '#fff',
+    // color se pasa inline con el color del formato (acento fino sobre blanco).
+    color: '#87835C',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
@@ -1939,11 +1944,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: 'center',
     marginTop: 4,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    // borderColor se pasa inline con el color del formato.
   },
   recoCardBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 13,
-    color: '#fff',
+    // color se pasa inline con el color del formato.
+    color: '#3A4F2A',
   },
 
   // ── Bottom sheet ──────────────────────────────────────────────────────────

@@ -4,6 +4,18 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Joaquín (sesión 214 · tarjetas de recurso en la sala: blancas, no naranjas)
+
+**Tocado:** `screens/SalaScreen.tsx` (solo estilos de la tarjeta de recurso recomendado). `tsc` 0, 570 tests. Sin schema.
+
+**Resumen — decisión de diseño de Joaquín: las tarjetas de recomendación en el chat eran difíciles de leer (texto blanco sobre terracota/naranja).**
+
+- 🎨 **La tarjeta de recurso recomendado pasa a blanca.** Antes el strip superior y el botón "Abrir" iban rellenos con el color del formato (audio/default = terracota `#C1694F`) y texto blanco encima — el combo poco legible que el propio theme tiene marcado. Ahora la tarjeta es blanca con texto oscuro, y **el color del formato queda como acento fino**: el label ("AUDIO"/"PODCAST"/…) va en el color, y el botón "Abrir" es blanco con borde + texto en el color. Se conserva la señal de formato de un vistazo, pero legible.
+- 📌 Elegido entre dos opciones (acento fino vs neutra total); Joaquín eligió mantener el acento de formato. Solo afecta la tarjeta embebida en el chat, no el picker de recomendar (que ya usa un punto de color chico).
+
+**Pendiente para la próxima sesión:**
+- 🟡 Para Andre: vista pública del catálogo, paquete paso 3, encender IA/piso, opción B del Diario, link público, % del descuento. (El bloque de device review de Joaquín quedó cerrado.)
+
 ## 2026-09-09 — Joaquín (sesión 213 · cancelación tardía verificada — el camino que toca plata)
 
 **Tocado:** `docs/problemas-abiertos.md`. Sin código ni schema (device review + data de prueba, revertida).
