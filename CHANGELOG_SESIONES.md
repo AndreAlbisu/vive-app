@@ -6,7 +6,7 @@
 ---
 ## 2026-09-08 — Andre (sesión 207 · `coaches.slug`, lo que las dos opciones del link necesitan igual)
 
-**Tocado:** `scripts/add-coach-slug.sql` (nuevo), `SCHEMA.md`. ⚠️ **PENDIENTE DE CORRER.** Sin cambios de código de app.
+**Tocado:** `scripts/add-coach-slug.sql` (nuevo), `SCHEMA.md`. ✅ **CORRIDO y VERIFICADO el 08/09/2026.** Sin cambios de código de app.
 
 **Resumen — se hizo la parte del link que no depende de la decisión que sigue abierta.**
 
@@ -15,10 +15,11 @@
 - 🟢 **El coach no lo puede escribir, y no hubo que hacer nada para eso.** `lock-privileged-columns.sql` dejó `coaches` con `revoke update` + grants columna por columna, así que **toda columna nueva nace de solo lectura**. 📌 **El trabajo viejo hizo que este saliera seguro por construcción** — vale anotarlo como el resultado que esa clase de arreglo da meses después. Y está bien que sea así: un slug editable es una invitación a hacerse pasar por otro (`dra-martinez`) o a ocupar el nombre de un colega.
 - 📌 **La ruta lleva prefijo (`/c/<slug>`) a propósito.** Sin él, un slug como `terminos` o `privacidad` chocaría con las páginas que ya viven en `vitaapp.com.ar` (`docs/hosting.md`), y una lista de palabras reservadas no envejece bien. Con prefijo el problema no existe.
 - 📝 `slugify()` sin `unaccent`: esa extensión puede no estar instalada y no vale la pena pedirla para esto; `translate` cubre el español, que es lo que hay.
+- ✅ **Verificado desde afuera con la anon key: 34 coaches, 34 con slug, 34 distintos**, acentos resueltos sin `unaccent` (`Andrés Maldonado` → `andres-maldonado`). 🟢 **Y el camino entero está probado**: la consulta real de la página pública —buscar por `slug` con `profiles!inner(name, avatar_url, gender)`— anda **sin sesión**, y devuelve justo las columnas que `anon` quedó pudiendo leer tras el revoke de la 205. Las dos sesiones cierran bien juntas.
+- 📝 Un caso que no es error pero conviene tener visto: hay un coach cuyo nombre es una sola palabra en minúscula ("andre") y su slug quedó `andre`. Anda, pero los de una palabra chocan más fácil y se identifican peor — es el primer caso a mirar si algún día se ofrece slug personalizado.
 - ⚠️ **Asimetría que queda anotada:** el SELECT de `anon` sobre `profiles` ahora es **por columnas** (sesión 205) y sobre `coaches` sigue siendo **por tabla**. O sea que una columna sensible nueva en `coaches` **no queda cerrada sola** — al revés de lo que pasa con el `update`, que sí.
 
 **Pendiente para la próxima sesión:**
-- **CORRER `scripts/add-coach-slug.sql`** y mirar la verificación 2 (cómo quedaron los slugs con los nombres reales — ahí se ven los nombres raros o vacíos).
 - 🔴 **La forma del link público** — `docs/camino-del-cliente-1.md` §4. Es lo único grande que queda. El consejo votó A por unanimidad; sus revisores dejaron la pregunta de qué gana el coach mandándolo, que ahora se contesta con la tabla de netos.
 - **El porcentaje del descuento** que se lleva el coach.
 - 🔴 **`authenticated` ve las 17 columnas de todos los coaches** (mail y `push_token`). No es de dos líneas: hay que mover al servidor el envío de push (client-side en 6 lugares) y la lectura de mails del panel, y después una vista pública para el catálogo. **Va después del link**, no antes.

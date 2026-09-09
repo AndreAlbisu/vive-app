@@ -3,7 +3,22 @@
 -- `coaches.slug` — el identificador del profesional en una URL pública.
 -- `vitaapp.com.ar/c/sofia-herrera`.
 --
--- ⚠️ PENDIENTE DE CORRER.
+-- ✅ CORRIDO el 08/09/2026, y VERIFICADO desde afuera con la anon key:
+--   · **34 coaches, 34 con slug, 34 distintos** — el backfill no dejó ninguno
+--     afuera ni repitió;
+--   · los acentos salieron bien (`Andrés Maldonado` → `andres-maldonado`,
+--     `Carla Benítez` → `carla-benitez`, `Joaquín Silva` → `joaquin-silva`), o
+--     sea que el `translate` alcanzó y no hizo falta `unaccent`;
+--   · **la consulta REAL de la página pública anda sin sesión**: buscar por
+--     `slug=eq.joaquin-silva` devuelve el coach con su perfil embebido
+--     (`profiles!inner(name, avatar_url, gender)`), que son justo las columnas
+--     que `anon` puede leer después de `restrict-anon-profiles-columns.sql`.
+--     El camino entero, de la URL al dato, está probado.
+--
+-- 📝 Un caso a tener en cuenta y que no es un error: hay un coach cuyo nombre es
+-- una sola palabra en minúscula ("andre"), y su slug quedó `andre`. Anda, pero
+-- los slugs de una palabra chocan más fácil y se identifican peor. Si algún día
+-- se ofrece slug personalizado, ese es el primer caso a mirar.
 --
 -- ── Por qué ahora, antes de decidir la forma del link ────────────────────────
 --
