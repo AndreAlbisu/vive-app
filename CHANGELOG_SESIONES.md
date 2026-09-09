@@ -4,6 +4,25 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 218 · ✅ el mail sale de verdad — se destrabó el checkout web)
+
+**Tocado:** `docs/plantilla-mail-codigo.md`, `docs/camino-del-cliente-1.md`. Sin código ni schema.
+
+**Resumen — se resolvió el bloqueante que impedía empezar el checkout web, y en el camino apareció por qué el código por mail no es opcional ahí.**
+
+- ✅ **El mail sale.** Dominio *Verified* en Resend (09/09, 9:59), remitente cambiado a `no-responder@vitaapp.com.ar`, y **probado a una casilla ajena con `200`** — `joaquinalbisu493+prueba2@gmail.com`, con id de mensaje.
+- 🔴 **Y quedó registrada la falla que esto arregla, que es lo que vale guardar.** El log anterior era un **403** al MISMO destinatario, con el motivo escrito por Resend: *"the resend.dev domain can only send to your own email address"*. Ya se le había intentado mandar un código a alguien que no era la casilla de la cuenta **y el mail nunca salió**, sin que del lado de la app se notara — un envío rechazado se parece bastante a uno que tarda. **No era un riesgo teórico: era una falla ya ocurrida y no vista.**
+- 📝 **De paso se descubrió que el usuario final NO verifica su mail** (`email_verified_at` queda NULL para todos; solo los coaches pasan por el código, como parte de `lib/altaCoach.ts`). Está documentado y es deliberado.
+- 🔴 **Eso cambia algo del flujo web y quedó escrito en `camino-del-cliente-1.md` §4 bis: en la web el código pasa de preferible a OBLIGATORIO.** En la app un mail mal tipeado es tolerable porque la app es el canal —ve su reserva adentro, le llegan las push—; quien entra por el link **no tiene ninguna de esas cosas**. Si paga con el mail mal escrito no se entera ni de que se venció a las 24hs y se le devolvió la plata. **Ahí el mail no es un canal más, es el único**, así que el código no es una forma de identificarse: es la única manera de garantizar el canal antes de cobrar.
+- 🟢 **Y lo caro ya estaba hecho:** el código de seis dígitos existe y funciona desde el alta de coach (`signInWithOtp` + `verifyOtp`, plantilla con `{{ .Token }}`). La web usa lo mismo.
+- ⚠️ **Corregido en el doc**: decía que los registros DNS iban en DonWeb, y la zona vive en **Vercel** — el dominio está delegado ahí.
+
+**Pendiente para la próxima sesión:**
+- **Confirmar que además de salir, LLEGA**: un `200` de Resend es "lo acepté", no "está en la bandeja". La fila tiene que pasar a *Delivered*, y en Gmail SPF y DKIM decir PASS con **Mostrar original**.
+- **Agregar el DMARC** (verificado con `dig`: sigue sin estar). Sin él Gmail y Yahoo tratan peor a un remitente nuevo.
+- 📝 El `Sender name` es `VITA` en mayúsculas y la marca es `Vita`. Es lo primero que se ve en la bandeja.
+- 🔴 **Y con el mail destrabado, el checkout web puede empezar.** Faltan las dos decisiones de Andre: **si el flujo web registra el origen de la reserva** desde el día uno (lo que habilita el descuento del coach) y **el porcentaje**.
+
 ## 2026-09-09 — Andre (sesión 217 · el mail: el DNS ya estaba hecho, y el doc mandaba al panel equivocado)
 
 **Tocado:** `docs/plantilla-mail-codigo.md`. Sin código ni schema.

@@ -150,15 +150,25 @@ Consultados con `dig` el 09/09/2026, los tres resuelven:
 "verificado"** —eso lo marca Resend en su panel— pero del lado del DNS no falta
 nada.
 
-### Lo que sí falta
+### ✅ RESUELTO el 09/09/2026 — el mail sale de verdad
 
-1. **Confirmar en Resend que el dominio figura *Verified*.**
-2. **Cambiar el remitente en Supabase** (Authentication → Emails → SMTP
-   Settings): de `onboarding@resend.dev` a `no-responder@vitaapp.com.ar`. El
-   resto de los campos son los de la tabla de arriba. 🔴 **Hasta que esto se
-   cambie no llega ningún mail a nadie**: `onboarding@resend.dev` solo entrega a
-   la casilla de la cuenta de Resend.
-3. **Agregar DMARC**, que no está. Sin él Gmail y Yahoo tratan peor a un
+1. ✅ **Dominio *Verified* en Resend** (el panel lo marcó el 09/09 a las 9:59).
+2. ✅ **Remitente cambiado a `no-responder@vitaapp.com.ar`.**
+3. ✅ **Probado a una casilla ajena y con 200**: envío a
+   `joaquinalbisu493+prueba2@gmail.com`, `from: "VITA" <no-responder@vitaapp.com.ar>`,
+   Resend devolvió `200` con id de mensaje.
+
+🔴 **Y quedó registrada la falla que esto arregla, que es lo que vale guardar.**
+El log anterior de Resend era un **403** al mismo destinatario, con el motivo
+escrito: *"The resend.dev domain is for testing and can only send to your own
+email address"*. O sea que ya se había intentado mandarle un código a alguien
+que no era la casilla de la cuenta, **y el mail nunca salió** — sin que del lado
+de la app se notara, porque un envío rechazado se parece bastante a uno que
+tarda. Ese 403 es la prueba de que el problema no era teórico.
+
+### Lo que todavía falta
+
+1. **Agregar DMARC**, que sigue sin estar (verificado con `dig` el 09/09). Sin él Gmail y Yahoo tratan peor a un
    remitente nuevo y el mail puede caer en spam — que es peor que no llegar,
    porque parece que funcionó. Un TXT en `_dmarc.vitaapp.com.ar`:
 
@@ -169,6 +179,17 @@ nada.
    `p=none` es modo observación: no rechaza nada, solo reporta. Es el que
    corresponde al arrancar; endurecer a `quarantine` recién cuando se vea que
    todo lo legítimo pasa.
+
+2. **Confirmar que además de salir, LLEGA.** Un `200` de Resend es "lo acepté
+   para entregar", no "está en la bandeja". En la lista de Resend la fila pasa
+   después a *Delivered* y, si lo abren, a *Opened* — eso es lo que confirma la
+   entrega. Y conviene mirarlo en Gmail con **Mostrar original**: SPF y DKIM
+   tienen que decir PASS.
+
+3. 📝 **El `Sender name` es `VITA` en mayúsculas** y la marca en todo el resto
+   del producto es `Vita`. Es lo primero que ve alguien en su bandeja, y en
+   mayúsculas se lee más a promoción que a una app de bienestar. Cambio de un
+   campo, decisión de Andre.
 
 ## Cómo probar que quedó bien
 
