@@ -74,6 +74,22 @@
   .hora[aria-pressed="true"] { background: #3A4F2A; color: #F7EFE4; border-color: #3A4F2A; }
   .agenda-vacia { font-size: .9rem; opacity: .65; margin: 0; }
 
+  .paso { margin-bottom: 22px; padding-top: 18px; border-top: 1px solid rgba(58,79,42,.15); }
+  .paso h2 { font-size: .95rem; margin: 0 0 4px; }
+  .paso p.ayuda { font-size: .85rem; opacity: .7; margin: 0 0 12px; }
+  .campo {
+    width: 100%; padding: .7rem .8rem; border-radius: 10px; font-size: 1rem;
+    font-family: inherit; color: inherit; background: transparent;
+    border: 1px solid rgba(58,79,42,.28); margin-bottom: 10px;
+  }
+  .campo:focus { outline: 2px solid #C1694F; outline-offset: 1px; }
+  .codigo { letter-spacing: .35em; text-align: center; font-size: 1.25rem; }
+  .legales { display: flex; gap: 9px; align-items: flex-start; font-size: .82rem; line-height: 1.45; margin-bottom: 14px; opacity: .85; }
+  .legales input { margin-top: .2rem; flex-shrink: 0; }
+  .legales a { color: #C1694F; }
+  .error { font-size: .85rem; color: #B3392E; margin: 0 0 10px; }
+  .ok { font-size: .9rem; margin: 0; }
+
   .cta {
     display: block; width: 100%; padding: .85rem 1rem; border: 0; border-radius: 12px;
     background: #C1694F; color: #FFF6EC; font-size: 1rem; font-weight: 700;
@@ -135,6 +151,43 @@
       <h2>Elegí un horario</h2>
       <div id="dias"></div>
       <p class="agenda-vacia" id="agendaVacia" hidden></p>
+    </section>
+
+    <!-- ── Identificación ──────────────────────────────────────────────────
+         🔴 El código no es un trámite de seguridad, es el ÚNICO canal.
+         Quien entra por el link no tiene la app: si su mail está mal escrito,
+         paga y no se entera de nada — ni de que el coach confirmó, ni de que
+         se venció a las 24hs y se le devolvió la plata. Ver
+         `docs/camino-del-cliente-1.md` §4 bis. -->
+    <section class="paso" id="identificacion" hidden>
+      <h2>¿A dónde te avisamos?</h2>
+      <p class="ayuda">Te mandamos un código para confirmar tu mail. Ahí te va a llegar todo lo de tu sesión.</p>
+
+      <div id="pasoMail">
+        <input class="campo" id="mail" type="email" inputmode="email" autocomplete="email"
+               placeholder="tu@mail.com" spellcheck="false">
+        <!-- Es venta a distancia: los Términos y la privacidad tienen que estar
+             accesibles ANTES de pagar, no después. Las dos páginas ya viven en
+             este dominio. -->
+        <label class="legales">
+          <input type="checkbox" id="acepto">
+          <span>Acepto los <a href="/legal/terminos" target="_blank" rel="noopener">Términos</a> y la
+          <a href="/legal/privacidad" target="_blank" rel="noopener">Política de privacidad</a>.</span>
+        </label>
+        <p class="error" id="errorMail" hidden></p>
+        <button class="cta" id="btnCodigo">Enviarme el código</button>
+      </div>
+
+      <div id="pasoCodigo" hidden>
+        <p class="ayuda" id="mandadoA"></p>
+        <input class="campo codigo" id="codigo" inputmode="numeric" autocomplete="one-time-code"
+               maxlength="8" placeholder="······">
+        <p class="error" id="errorCodigo" hidden></p>
+        <button class="cta" id="btnConfirmar">Confirmar</button>
+        <p class="cta-nota"><a href="#" id="otroMail">Usar otro mail</a></p>
+      </div>
+
+      <p class="ok" id="identificado" hidden></p>
     </section>
 
     <button class="cta" id="cta" disabled>Elegir un horario</button>
@@ -279,10 +332,8 @@ function elegir(btn, fecha, hora) {
   for (const b of document.querySelectorAll('.hora')) b.setAttribute('aria-pressed', 'false');
   btn.setAttribute('aria-pressed', 'true');
   elegido = { fecha, hora };
-  // El botón todavía no lleva a ningún lado —el pago es el paso que sigue— pero
-  // ya confirma la elección en palabras, que es lo que evita que la persona
-  // dude de si el tap se registró.
-  $('ctaNota').textContent = `Elegiste ${etiquetaDia(fecha)} a las ${hora} hs. El pago online se habilita en los próximos días.`;
+  mostrar('identificacion');
+  actualizarCta();
 }
 
 async function cargarHorarios() {
@@ -349,6 +400,131 @@ async function cargarHorarios() {
 
   mostrar('agenda');
 }
+
+// ── Identificación por código ────────────────────────────────────────────────
+// Se habla con la API de auth por HTTP y no con la librería de Supabase: la
+// página entera es fetch y traer el SDK por un par de llamadas la volvería
+// pesada para lo que hace.
+//
+// 📌 Es el MISMO mecanismo que ya usa la app para el alta de coach
+// (`signInWithOtp` + `verifyOtp`, plantilla con `{{ .Token }}`). No se está
+// construyendo nada nuevo: se está reusando algo que ya sale y ya llega.
+
+let sesion = null;   // { access_token, email } una vez confirmado
+
+function mostrarError(id, msg) {
+  const el = $(id);
+  el.textContent = msg;
+  el.hidden = !msg;
+}
+
+async function pedirCodigo() {
+  const mail = $('mail').value.trim().toLowerCase();
+  mostrarError('errorMail', '');
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)) {
+    return mostrarError('errorMail', 'Revisá el mail: parece que falta algo.');
+  }
+  if (!$('acepto').checked) {
+    return mostrarError('errorMail', 'Para seguir tenés que aceptar los Términos y la Política de privacidad.');
+  }
+
+  $('btnCodigo').disabled = true;
+  $('btnCodigo').textContent = 'Enviando…';
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/otp`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      // `create_user: true` porque quien entra por el link puede no tener cuenta
+      // — al revés que en el alta de coach, donde la cuenta ya existe.
+      body: JSON.stringify({ email: mail, create_user: true }),
+    });
+    if (!r.ok) {
+      const cuerpo = await r.json().catch(() => ({}));
+      // El límite de envíos es el error esperable y merece decirse en criollo:
+      // "probá de nuevo" ante un límite de tiempo es exactamente lo que no hay
+      // que hacer.
+      if (r.status === 429) {
+        return mostrarError('errorMail', 'Ya te mandamos uno recién. Esperá un minuto y volvé a intentar.');
+      }
+      console.error('[otp] fallo', r.status, cuerpo);
+      return mostrarError('errorMail', 'No pudimos mandar el código. Probá en un momento.');
+    }
+    $('mandadoA').textContent = `Te mandamos un código a ${mail}. Puede tardar un minuto.`;
+    ocultar('pasoMail'); mostrar('pasoCodigo');
+    $('codigo').focus();
+  } catch (e) {
+    console.error('[otp]', e);
+    mostrarError('errorMail', 'No pudimos mandar el código. Probá en un momento.');
+  } finally {
+    $('btnCodigo').disabled = false;
+    $('btnCodigo').textContent = 'Enviarme el código';
+  }
+}
+
+async function confirmarCodigo() {
+  const mail = $('mail').value.trim().toLowerCase();
+  const token = $('codigo').value.replace(/\D/g, '');
+  mostrarError('errorCodigo', '');
+  if (!token) return mostrarError('errorCodigo', 'Escribí el código que te llegó.');
+
+  $('btnConfirmar').disabled = true;
+  $('btnConfirmar').textContent = 'Confirmando…';
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: mail, token, type: 'email' }),
+    });
+    const cuerpo = await r.json().catch(() => ({}));
+    if (!r.ok || !cuerpo?.access_token) {
+      console.warn('[verify] fallo', r.status, cuerpo);
+      // Se distingue el motivo en vez de decir siempre "no coincide": si el
+      // problema es un límite o el servicio, mandar a revisar el código es
+      // mandar a buscar un error que no está ahí. Verificado contra la API: un
+      // token malo o vencido devuelve 403 `otp_expired`.
+      const msg = r.status === 429
+        ? 'Probaste varias veces seguidas. Esperá un momento.'
+        : (r.status === 403 || r.status === 400)
+          ? 'Ese código no coincide, o ya venció. Pedí uno nuevo.'
+          : 'No pudimos confirmar el código ahora. Probá en un momento.';
+      return mostrarError('errorCodigo', msg);
+    }
+    sesion = { access_token: cuerpo.access_token, email: mail };
+    ocultar('pasoCodigo');
+    $('identificado').textContent = `Listo, ${mail}.`;
+    mostrar('identificado');
+    actualizarCta();
+  } catch (e) {
+    console.error('[verify]', e);
+    mostrarError('errorCodigo', 'No pudimos confirmar el código. Probá de nuevo.');
+  } finally {
+    $('btnConfirmar').disabled = false;
+    $('btnConfirmar').textContent = 'Confirmar';
+  }
+}
+
+function volverAlMail() {
+  ocultar('pasoCodigo'); mostrar('pasoMail');
+  $('codigo').value = '';
+  mostrarError('errorCodigo', '');
+  $('mail').focus();
+}
+
+// El botón de abajo dice en qué paso está la persona, en vez de estar siempre
+// apagado sin explicar por qué.
+function actualizarCta() {
+  const cta = $('cta');
+  if (!elegido) { cta.textContent = 'Elegir un horario'; cta.disabled = true; return; }
+  if (!sesion)  { cta.textContent = 'Confirmá tu mail para seguir'; cta.disabled = true; return; }
+  cta.textContent = 'Ir a pagar';
+  cta.disabled = true;   // el cobro es el paso que sigue
+  $('ctaNota').textContent = `${etiquetaDia(elegido.fecha)} a las ${elegido.hora} hs · el pago online se habilita en los próximos días.`;
+}
+
+$('btnCodigo').addEventListener('click', pedirCodigo);
+$('btnConfirmar').addEventListener('click', confirmarCodigo);
+$('otroMail').addEventListener('click', (e) => { e.preventDefault(); volverAlMail(); });
 
 cargar();
 </script>
