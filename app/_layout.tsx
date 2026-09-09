@@ -25,6 +25,7 @@ import 'react-native-reanimated';
 import * as Notifications from 'expo-notifications';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import CaptchaHost from '@/components/CaptchaHost';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { pasoDelAlta, type PasoAlta } from '@/lib/altaCoach';
@@ -288,6 +289,13 @@ export default function RootLayout() {
           <Stack.Screen name="search3" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
+        {/* Fuera del <Stack> a propósito: el widget tiene que sobrevivir a la
+            navegación. El alta pide el token en `register`, el desafío puede
+            abrirse encima y el reenvío de OTP lo vuelve a pedir ya en
+            `verificar-mail` — si el host viviera en una pantalla, el segundo
+            pedido llegaría a un widget desmontado. No dibuja nada salvo que
+            hCaptcha decida desafiar. */}
+        <CaptchaHost />
         <StatusBar style="auto" />
       </ThemeProvider>
     </AuthProvider>

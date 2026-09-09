@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { pedirCaptchaToken } from '@/lib/captcha';
 import { cancelAllResourceReminders } from '@/lib/resourceReminders';
 import { clearBlockedCache } from '@/lib/blocking';
 import { LEGAL_VERSION } from '@/constants/legal';
@@ -217,7 +218,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signInWithEmail(email: string, password: string): Promise<string | null> {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // El login también: es el endpoint con el que se prueban contraseñas a lo
+    // bruto, y el CAPTCHA de Supabase, una vez prendido, los cubre a todos —
+    // no solo al alta. Sin token acá, entrar dejaría de funcionar.
+    const captchaToken = await pedirCaptchaToken();
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
     if (error) return translateError(error.message);
     return null;
   }
@@ -241,6 +246,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signUpWithEmail(email: string, password: string, name: string, acceptedTerms = false, ageConfirmed = false): Promise<string | null> {
+    // 🔴 La razón por la que existe todo el aparato del CAPTCHA: este es el
+    // endpoint del alta masiva. Ver `lib/captcha.ts`.
+    const captchaToken = await pedirCaptchaToken();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -248,7 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // sobrevive si el signUp no devuelve sesión (confirmación de mail activada),
       // y deja el dato en auth.users para poder backfillear después. Lo mismo
       // vale para age_confirmed, que es una declaración del mismo momento.
-      options: { data: { name, accepted_terms: acceptedTerms, age_confirmed: ageConfirmed } },
+      options: { data: { name, accepted_terms: acceptedTerms, age_confirmed: ageConfirmed }, captchaToken },
     });
     if (error) {
       // El mensaje que sale a pantalla está traducido y pierde el detalle; el
@@ -337,8 +345,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function resetPassword(email: string): Promise<string | null> {
     const redirectUrl = AuthSession.makeRedirectUri({ native: 'viveapp://nueva-contrasena' });
     console.log('[auth] reset redirect URI:', redirectUrl);
+    // Manda un mail a una dirección que elige quien llama: sin portero es un
+    // cañón para bombardear casillas ajenas desde nuestro dominio, y quemar la
+    // reputación del SMTP propio.
+    const captchaToken = await pedirCaptchaToken();
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: redirectUrl,
+      captchaToken,
     });
     if (error) return translateError(error.message);
     return null;

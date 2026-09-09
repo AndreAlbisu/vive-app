@@ -4,6 +4,28 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 223 · el portero contra el alta masiva, y por qué la verificación de mail no era uno)
+
+**Tocado:** `lib/captcha.ts` (nuevo), `components/CaptchaHost.tsx` (nuevo), `context/AuthContext.tsx`, `screens/VerificarMailScreen.tsx`, `app/_layout.tsx`, `docs/anti-abuso-altas.md` (nuevo). **575 tests**, `tsc` y `eslint` limpios. ⚠️ **NO prendido todavía** — falta la parte de dashboard.
+
+**Resumen — pedir verificación de mail siempre NO frena el alta masiva de cuentas, y el pedido original era ese.**
+
+- 🔴 **Corrección de premisa.** El pedido era "pedir verificación de mail siempre para que no nos tumben los servidores con cientos de cuentas falsas". La verificación de mail **no sirve para eso y no fue construida para eso**: cuando la pantalla del código aparece, `signUp` ya creó la fila en `auth.users` y la de `profiles` del trigger. Y un script de abuso **no abre la app** — le pega directo al endpoint de Supabase. La app es el cliente, no el portero.
+- 📌 **Estado que había, que tampoco era el que se creía:** los usuarios finales **no verifican nada** en el alta; el único gate está en la confirmación de reserva (`BookingScreen_Confirm.tsx`) y **falla abierto a propósito**. Los coaches sí verifican, pero ese gate vive en `AsyncStorage` (`lib/altaCoach.ts`), o sea en el teléfono. Google y Apple ya estaban exentos desde antes (`mailVieneDeProveedor`).
+- 🟢 **El portero real: CAPTCHA de hCaptcha validado por Supabase**, del lado del servidor, antes de crear nada. Los cuatro call sites que Supabase cubre ya mandan token: `signUp`, `signInWithPassword`, `resetPasswordForEmail` y el reenvío de `signInWithOtp`. **OAuth queda afuera** — quien entra con Google o Apple no ve nada nuevo.
+- 📌 **Widget invisible, host único en la raíz.** Se eligió una función que devuelve una promesa (`pedirCaptchaToken()`) en vez de un componente por pantalla: tres de las cuatro llamadas viven dentro de `AuthContext`, que no dibuja nada, y un componente por pantalla habría obligado a cambiar todos los llamadores. El WebView mide 0x0 salvo que hCaptcha decida desafiar, y ahí pasa a un `Modal` **sin recrearse** (recrearlo perdería el `execute()` en curso).
+- ⚠️ **Falla abierto en el cliente, y acá el motivo es distinto al de `emailVerificado.ts`:** sin `EXPO_PUBLIC_HCAPTCHA_SITE_KEY` no se monta nada y las llamadas salen como hoy. Eso es lo que hace que prenderlo sea un cambio de config y no un despliegue coordinado. No es un agujero: **quien decide es el server**, y si tiene el CAPTCHA prendido rechaza al que no manda token.
+- 🔴 **El orden de encendido no es negociable, y toca lo de TestFlight.** Prender el CAPTCHA en el dashboard **rompe toda build que no mande token**, incluidas las instaladas: no podrían registrarse **ni entrar**. Primero la site key, después el build distribuido, **recién ahí** el dashboard. Escrito en `docs/anti-abuso-altas.md`.
+- 📌 **Rate limits: el default es holgadísimo** — 30 requests / 5 min por IP en `signup`, o sea 360 altas por hora por IP. Propuesta en el runbook: 10 / 5 min altas y login, 6 / 5 min los que mandan mail, y **0 anónimos** (la app no los usa desde la sesión 152). ⚠️ El límite es **por IP, no por persona**: una oficina o una red móvil con NAT salen todos por la misma.
+- 📌 **La base de datos no se tocó**, así que SCHEMA.md queda como estaba.
+- ⏭️ **Se descartó prender "Confirm email" del proyecto** (era la opción 3 que ofrecí): revierte la decisión de la sesión 147 y no era necesaria para el problema planteado. Sigue disponible si algún día se quiere el muro de mail en el alta.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Los dos ajustes de dashboard, que son los que hacen que esto exista**: crear la site key en hCaptcha (con hostname verification APAGADA), cargar `EXPO_PUBLIC_HCAPTCHA_SITE_KEY` en `.env` y en EAS, distribuir el build, y **recién después** prender el CAPTCHA y bajar los rate limits. Todo el paso a paso, con el `curl` de verificación que tiene que dar **400**, en `docs/anti-abuso-altas.md`.
+- **Nunca se probó en dispositivo**: el widget no se puede ejercitar sin site key. La primera prueba real es el paso A.4 del runbook.
+- **El gate de alta de coach sigue colgando de `AsyncStorage`** — borrar los datos de la app lo saltea. Debería ser una columna del servidor.
+- **`necesitaVerificarMail()` sigue fallando abierto.** Estaba bien defendido cuando la columna podía no existir; hoy ya existe.
+
 ## 2026-09-09 — Andre (sesión 222 · el link para la compu, un bug de mails duplicados, y las pruebas pasan a Joaquín)
 
 **Tocado:** `screens/CoachHomeScreen.tsx`, `supabase/functions/mail-notificaciones/index.ts`, `docs/problemas-abiertos.md` (A5). **575 tests**, `tsc` limpio. ✅ Deployada.

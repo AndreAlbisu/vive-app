@@ -11,6 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCerrarSesionAlSalir } from '@/hooks/useCerrarSesionAlSalir';
 import { marcarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
+import { pedirCaptchaToken } from '@/lib/captcha';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 
@@ -180,9 +181,15 @@ export default function VerificarMailScreen() {
 
     // `shouldCreateUser: false`: la cuenta ya existe. Sin esto, un mail mal
     // tipeado daría de alta una cuenta nueva en vez de fallar.
+    //
+    // El CAPTCHA acá no es por el alta —esta llamada no crea a nadie— sino por
+    // el mail: es un botón que dispara un envío por cada toque, y el reenvío ya
+    // tiene un cooldown en pantalla que solo existe en pantalla. Ver
+    // `lib/captcha.ts`.
+    const captchaToken = await pedirCaptchaToken();
     const { error: e } = await supabase.auth.signInWithOtp({
       email: mail,
-      options: { shouldCreateUser: false },
+      options: { shouldCreateUser: false, captchaToken },
     });
 
     setReenviando(false);
