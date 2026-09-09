@@ -3,7 +3,19 @@
 -- `email_es_de_coach(text)` — contesta si un mail ya pertenece a una cuenta de
 -- profesional, sin exponer ningún mail.
 --
--- ⚠️ PENDIENTE DE CORRER.
+-- ✅ CORRIDO el 08/09/2026, y VERIFICADO desde afuera con la anon key:
+--   · la RPC es llamable por `anon` y devuelve **false** para un mail
+--     inventado, también con espacios y mayúsculas de más (el `lower(trim())`
+--     hace lo suyo);
+--   · `profiles.email` sigue devolviendo **42501** — la función no reabrió la
+--     columna por la ventana;
+--   · el catálogo sigue dando 200 con los perfiles embebidos.
+--
+-- ⚠️ **El caso POSITIVO no se pudo probar desde afuera, y eso es la prueba de
+-- que el arreglo funciona**: para verificarlo haría falta el mail de un coach, y
+-- justamente ya no hay forma de conseguirlo con la anon key. Se prueba con la
+-- verificación 2 de abajo (desde el editor SQL) o registrándose con el mail de
+-- una cuenta de profesional y viendo el mensaje correcto.
 --
 -- ── Por qué existe: un chequeo que rompí yo ──────────────────────────────────
 --
