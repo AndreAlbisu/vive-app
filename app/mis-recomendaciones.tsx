@@ -78,10 +78,18 @@ export default function MisRecomendacionesScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  async function openReco(item: Reco) {
+  function openReco(item: Reco) {
     if (!item.opened_at) {
-      await supabase.from('resource_recommendations').update({ opened_at: new Date().toISOString() }).eq('id', item.id).is('opened_at', null);
-      setRecos(prev => prev.map(r => r.id === item.id ? { ...r, opened_at: new Date().toISOString() } : r));
+      // Optimista + en segundo plano, SIN await: navegar no puede esperar el
+      // round-trip a Supabase (São Paulo). Con la app usada de lejos (Australia),
+      // ese await antes de abrir el recurso se sentía como una transición lenta.
+      // Marcar es fire-and-forget: si falla, el recurso ya se abrió y el aviso
+      // reaparece —que es lo correcto, porque no quedó marcada—.
+      const now = new Date().toISOString();
+      setRecos(prev => prev.map(r => r.id === item.id ? { ...r, opened_at: now } : r));
+      supabase.from('resource_recommendations')
+        .update({ opened_at: now }).eq('id', item.id).is('opened_at', null)
+        .then(({ error }) => { if (error) console.warn('[reco] no se pudo marcar abierta:', error.message); });
     }
     router.push({
       pathname: '/coach-recurso',
