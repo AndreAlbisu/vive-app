@@ -57,11 +57,16 @@ function esc(s: unknown): string {
  */
 function armarHtml(titulo: string, lineas: string[], pie?: string): string {
   const cuerpo = lineas.map(l => `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#2D4A3E">${l}</p>`).join('')
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F7EFE4;padding:32px 16px">
+  // 📝 El color va en los ACENTOS, no en el fondo. La primera versión tenía dos
+  // capas de crema —fondo `#F7EFE4` y tarjeta `#FDF8F0`— y en la bandeja se
+  // leía marrón: en una pantalla chica, dos beiges juntos se funden en uno solo
+  // y opaco. La tarjeta pasa a blanca y el fondo a un crema mucho más claro, y
+  // la marca queda donde se nota — la línea de arriba, el nombre y los links.
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FBF8F3;padding:32px 16px">
   <tr><td align="center">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background-color:#FDF8F0;border-radius:14px;padding:28px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background-color:#FFFFFF;border-radius:14px;border-top:3px solid #C1694F;padding:28px">
       <tr><td>
-        <p style="margin:0 0 22px;font-size:12px;letter-spacing:.12em;color:#87835C;text-transform:uppercase">Vita</p>
+        <p style="margin:0 0 22px;font-size:12px;letter-spacing:.12em;color:#C1694F;text-transform:uppercase;font-weight:bold">Vita</p>
         <h1 style="margin:0 0 18px;font-size:20px;line-height:1.3;color:#2D4A3E">${titulo}</h1>
         ${cuerpo}
         ${pie ? `<p style="margin:22px 0 0;font-size:12px;line-height:1.5;color:#87835C">${pie}</p>` : ''}

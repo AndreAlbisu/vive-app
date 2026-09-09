@@ -191,6 +191,28 @@ tarda. Ese 403 es la prueba de que el problema no era teórico.
    mayúsculas se lee más a promoción que a una app de bienestar. Cambio de un
    campo, decisión de Andre.
 
+## Los mails transaccionales (no los de auth)
+
+📌 **Son otra cosa y salen por otro camino.** Los de autenticación —el código de
+6 dígitos— los manda Supabase por el SMTP configurado en Authentication. Los de
+una reserva los manda `supabase/functions/_shared/email.ts` por la **API de
+Resend**, con su propia key (`RESEND_API_KEY`, de solo envío) y el mismo
+remitente y dominio.
+
+✅ **Probado el 09/09/2026**: entregado en la **bandeja principal** de Gmail,
+todavía sin DMARC.
+
+🎨 **La plantilla se aclaró después de verla en el teléfono.** La primera tenía
+fondo `#F7EFE4` y tarjeta `#FDF8F0` —dos capas de crema— y en pantalla chica se
+leía marrón: **dos beiges juntos se funden en uno solo y opaco**. La tarjeta pasó
+a blanca, el fondo a un crema apenas perceptible, y el color quedó en los
+acentos: la línea de 3px arriba, el "VITA" y los links. Un mail transaccional con
+un baño de color se lee como publicidad.
+
+📌 **La key es de SOLO ENVÍO**, a propósito. La contra a tener presente: no se
+puede consultar el estado de un envío con ella (`GET /emails/{id}` devuelve 401),
+así que para saber si algo se entregó hay que mirar el panel de Resend.
+
 ## Cómo probar que quedó bien
 
 1. Crear una cuenta de coach con un mail al que tengas acceso.
