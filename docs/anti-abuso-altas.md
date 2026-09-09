@@ -47,8 +47,32 @@ Cuenta en https://dashboard.hcaptcha.com → **New site**.
   `baseUrl: 'https://vitaapp.com.ar'` (la constante `CAPTCHA_ORIGEN` de
   `lib/captcha.ts`), pero con la verificación prendida esto es frágil entre
   iOS y Android. Si se cambia el dominio, se cambia esa constante.
-- De ahí salen dos claves: la **sitekey** (pública, va en la app) y el
-  **secret** (va en Supabase, NO en la app).
+- De ahí salen dos claves, **y viven en dos páginas distintas** (es donde se
+  traba todo el mundo):
+  - **sitekey** — pública, va en la app — en https://dashboard.hcaptcha.com/sites
+  - **secret** — va en Supabase, NO en la app — en
+    https://dashboard.hcaptcha.com/settings. Es **de la cuenta, no del site**,
+    por eso no aparece en la página del site.
+- El paso de "Installation" que ofrece el dashboard (un `<script>` y un
+  `<div class="h-captcha">`) **no va**: es para un sitio web común. En la app
+  eso lo hace `components/CaptchaHost.tsx`. De esa pantalla solo se sacan las
+  claves.
+
+### A.1.bis Probar el circuito ANTES de tener claves reales
+
+hCaptcha publica un par de prueba que acepta cualquier cosa:
+
+```
+sitekey: 10000000-ffff-ffff-ffff-000000000001
+secret:  0x0000000000000000000000000000000000000000
+```
+
+Con la sitekey de prueba en `.env` y la app en Expo Go se puede comprobar que el
+widget se monta y que el alta sigue funcionando — que es lo único que no se pudo
+ejercitar cuando se escribió el código, porque sin clave el host no se monta.
+
+⚠️ **Solo en `.env` local.** No dan ninguna protección: si llegan a un build de
+EAS, el portero es de utilería.
 
 ### A.2 La app
 
