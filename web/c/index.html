@@ -61,6 +61,19 @@
   .precio b { font-size: 1.35rem; }
   .precio span { font-size: .85rem; opacity: .65; }
 
+  .agenda { margin-bottom: 22px; }
+  .agenda h2 { font-size: .95rem; margin: 0 0 12px; }
+  .dia { margin-bottom: 14px; }
+  .dia-nombre { font-size: .82rem; opacity: .6; margin: 0 0 6px; text-transform: capitalize; }
+  .horas { display: flex; flex-wrap: wrap; gap: 7px; }
+  .hora {
+    font-size: .875rem; padding: .4rem .75rem; border-radius: 10px; cursor: pointer;
+    background: transparent; color: inherit; font-family: inherit;
+    border: 1px solid rgba(58,79,42,.28);
+  }
+  .hora[aria-pressed="true"] { background: #3A4F2A; color: #F7EFE4; border-color: #3A4F2A; }
+  .agenda-vacia { font-size: .9rem; opacity: .65; margin: 0; }
+
   .cta {
     display: block; width: 100%; padding: .85rem 1rem; border: 0; border-radius: 12px;
     background: #C1694F; color: #FFF6EC; font-size: 1rem; font-weight: 700;
@@ -79,6 +92,8 @@
 
   @media (prefers-color-scheme: dark) {
     body { background: #1A1C16; color: #E4E0D2; }
+    .hora { border-color: rgba(228,224,210,.28); }
+    .hora[aria-pressed="true"] { background: #E4E0D2; color: #1A1C16; border-color: #E4E0D2; }
     .foto { background: rgba(228,224,210,.08); }
     .tema { background: rgba(228,224,210,.06); border-color: rgba(228,224,210,.16); }
     .precio { border-color: rgba(228,224,210,.18); }
@@ -116,8 +131,14 @@
       <span>por sesión</span>
     </div>
 
-    <button class="cta" id="cta" disabled>Elegir horario</button>
-    <p class="cta-nota" id="ctaNota">La reserva online se habilita en los próximos días.</p>
+    <section class="agenda" id="agenda" hidden>
+      <h2>Elegí un horario</h2>
+      <div id="dias"></div>
+      <p class="agenda-vacia" id="agendaVacia" hidden></p>
+    </section>
+
+    <button class="cta" id="cta" disabled>Elegir un horario</button>
+    <p class="cta-nota" id="ctaNota">El pago online se habilita en los próximos días.</p>
   </article>
 
   <p class="pie">
@@ -223,6 +244,110 @@ async function cargar() {
     $('precio').textContent = precioArs(coach.price_per_session);
     mostrar('precioBloque');
   }
+
+  // Los horarios van DESPUÉS de pintar el perfil y sin `await`: el perfil es lo
+  // que la persona vino a ver, y no tiene que esperar a una segunda consulta
+  // para aparecer.
+  cargarHorarios();
+}
+
+// ── Los horarios libres ──────────────────────────────────────────────────────
+// 🔴 No se calculan acá y no es por comodidad: un horario está libre si el coach
+// lo declaró Y no hay una reserva viva encima, y lo segundo exige leer
+// `bookings`, que `anon` no puede — ni debe. La función `slots_libres`
+// (`scripts/add-slots-libres.sql`) contesta la pregunta correcta —"¿qué queda
+// libre?"— sin devolver una sola fila de reservas.
+
+const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function etiquetaDia(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  // Una fecha de calendario es el mismo día en cualquier zona, así que
+  // construirla con componentes locales es seguro (mismo criterio que la app).
+  const fecha = new Date(y, m - 1, d);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const dias = Math.round((fecha - hoy) / 86400000);
+  if (dias === 0) return 'hoy';
+  if (dias === 1) return 'mañana';
+  return `${DIAS_SEMANA[fecha.getDay()]} ${d} ${MESES[m - 1]}`;
+}
+
+let elegido = null;
+
+function elegir(btn, fecha, hora) {
+  for (const b of document.querySelectorAll('.hora')) b.setAttribute('aria-pressed', 'false');
+  btn.setAttribute('aria-pressed', 'true');
+  elegido = { fecha, hora };
+  // El botón todavía no lleva a ningún lado —el pago es el paso que sigue— pero
+  // ya confirma la elección en palabras, que es lo que evita que la persona
+  // dude de si el tap se registró.
+  $('ctaNota').textContent = `Elegiste ${etiquetaDia(fecha)} a las ${hora} hs. El pago online se habilita en los próximos días.`;
+}
+
+async function cargarHorarios() {
+  let slots = null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/slots_libres`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_slug: slug }),
+    });
+    if (r.ok) slots = await r.json();
+  } catch (e) {
+    console.error('[horarios] no se pudieron cargar:', e);
+  }
+
+  // ⚠️ `slots === null` es "no se pudo preguntar" (la función todavía no está
+  // corrida, o se cayó la consulta) y `[]` es "no hay horarios". Son cosas
+  // distintas y se dicen distinto: el perfil YA se mostró, así que un problema
+  // acá no puede llevarse puesta la página entera.
+  if (slots === null) {
+    $('agendaVacia').textContent = 'No pudimos cargar los horarios en este momento.';
+    ocultar('dias'); mostrar('agendaVacia'); mostrar('agenda');
+    return;
+  }
+  if (slots.length === 0) {
+    $('agendaVacia').textContent = 'No hay horarios disponibles por ahora. Volvé a mirar en unos días.';
+    ocultar('dias'); mostrar('agendaVacia'); mostrar('agenda');
+    return;
+  }
+
+  // La función ya devuelve ordenado por fecha y por hora numérica; acá solo se
+  // agrupa, conservando ese orden.
+  const porDia = new Map();
+  for (const s of slots) {
+    if (!porDia.has(s.fecha)) porDia.set(s.fecha, []);
+    porDia.get(s.fecha).push(s.hora);
+  }
+
+  const cont = $('dias');
+  cont.innerHTML = '';
+  for (const [fecha, horas] of porDia) {
+    const bloque = document.createElement('div');
+    bloque.className = 'dia';
+
+    const titulo = document.createElement('p');
+    titulo.className = 'dia-nombre';
+    titulo.textContent = etiquetaDia(fecha);
+    bloque.appendChild(titulo);
+
+    const fila = document.createElement('div');
+    fila.className = 'horas';
+    for (const hora of horas) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'hora';
+      b.setAttribute('aria-pressed', 'false');
+      b.textContent = hora;
+      b.addEventListener('click', () => elegir(b, fecha, hora));
+      fila.appendChild(b);
+    }
+    bloque.appendChild(fila);
+    cont.appendChild(bloque);
+  }
+
+  mostrar('agenda');
 }
 
 cargar();
