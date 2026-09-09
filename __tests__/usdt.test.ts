@@ -23,10 +23,28 @@ describe('conversión y montos', () => {
     expect(fromRaw('1000000')).toBe(1);
   });
 
-  it('arma el monto único con el nonce en los decimales', () => {
-    expect(uniqueAmount(50, 37)).toBeCloseTo(50.37, 6);
+  it('arma el monto único RESTANDO el nonce de los decimales', () => {
+    expect(uniqueAmount(50, 37)).toBeCloseTo(49.63, 6);
     expect(uniqueAmount(50, 0)).toBe(50);
-    expect(uniqueAmount(120, 99)).toBeCloseTo(120.99, 6);
+    expect(uniqueAmount(120, 99)).toBeCloseTo(119.01, 6);
+  });
+
+  // 🔴 El invariante de la decisión del 08/09/2026: el cliente NUNCA paga más
+  // que el precio del profesional. Antes se sumaba y pagaba hasta 0,99 de más,
+  // que se quedaba VIVE sin que nadie lo hubiera decidido.
+  it('el cliente nunca paga más que el precio', () => {
+    for (const precio of [20, 50, 120]) {
+      for (let n = 0; n < 100; n++) {
+        expect(uniqueAmount(precio, n)).toBeLessThanOrEqual(precio);
+      }
+    }
+  });
+
+  // El piso de precio es USD 20 y el descuento máximo 0,99, así que el monto no
+  // puede caer a cero ni cruzar al precio de abajo.
+  it('nunca baja del precio entero anterior', () => {
+    expect(uniqueAmount(20, 99)).toBeCloseTo(19.01, 6);
+    expect(uniqueAmount(20, 99)).toBeGreaterThan(19);
   });
 
   it('rechaza nonces fuera de rango', () => {
@@ -34,15 +52,24 @@ describe('conversión y montos', () => {
     expect(() => uniqueAmount(50, -1)).toThrow();
   });
 
-  // El identificador vive en los decimales: un precio con decimales se le suma
-  // y lo corrompe (120,5 + 0,9999 = 121,4999 → nonce 4999, no 9999).
+  // El identificador vive en los decimales: un precio con decimales se mezcla
+  // con él y lo corrompe.
   it('RECHAZA un precio con decimales, que corrompería el identificador', () => {
-    expect(() => uniqueAmount(120.5, 9999)).toThrow(/entero/);
+    expect(() => uniqueAmount(120.5, 99)).toThrow(/entero/);
   });
 
   it('extrae el nonce de un monto', () => {
     expect(nonceOf(50.37)).toBe(37);
     expect(nonceOf(49.37)).toBe(37);   // sobrevive a una comisión entera
+  });
+
+  // 🟢 Lo que hace que restar no rompa nada: el identificador se deriva del
+  // monto esperado, no del nonce con el que se creó. `uniqueAmount(50, 37)` da
+  // 49.63 y se reconoce por su 63 — el 37 original no se usa en ningún lado.
+  it('el identificador del monto restado es su propia fracción', () => {
+    const monto = uniqueAmount(50, 37);
+    expect(monto).toBeCloseTo(49.63, 6);
+    expect(nonceOf(monto)).toBe(63);
   });
 
   // 🔴 La restricción que manda: las billeteras solo dejan tipear 2 decimales

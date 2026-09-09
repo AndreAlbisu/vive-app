@@ -58,6 +58,23 @@ export const MAX_PRICE_USD = 10000;
  *  convierta en PayPal — decisión de Andre, 19/08/2026. Si algún día se retira
  *  dejando que PayPal convierta, este número deja de reflejar el costo real y
  *  hay que revisar el precio. */
+/** La tarifa que Mercado Pago le cobra al COACH por cobrar, en porcentaje.
+ *
+ * 🔴 **Es una observación, no una tarifa publicada, y por eso el nombre lo dice.**
+ * Sale del único pago real donde se pudo medir (payment `172923514332`, 09/08/2026,
+ * split validado): sobre $1, `application_fee` 0,20 para VIVE, `mercadopago_fee`
+ * 0,04, y `net_received_amount` 0,76 para el coach. O sea 4%.
+ *
+ * ⚠️ Tres motivos para no tratarlo como exacto: fue sobre **$1**, donde cualquier
+ * componente fijo de la tarifa distorsionaría el porcentaje; la tarifa de Checkout
+ * Pro **depende del plazo de acreditación** que tenga configurado la cuenta; y no
+ * se sabe si ese 4% ya incluye IVA. Por eso donde se muestra va con un "≈" y
+ * aclarando que la fija Mercado Pago y no VIVE.
+ *
+ * 📌 Quién la paga NO es una duda: en el split el `collector` es la cuenta del
+ * coach, y el `fee_details` del pago real trae `fee_payer: "collector"`. */
+export const MP_FEE_PCT_OBSERVED = 4;
+
 export const PAYPAL_PCT = 0.054;
 export const PAYPAL_FIXED_USD = 0.30;
 

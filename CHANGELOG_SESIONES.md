@@ -4,6 +4,29 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 204 · hipertransparencia con el coach, y un margen que nadie había decidido cobrar)
+
+**Tocado:** `supabase/functions/_shared/usdt.ts`, `supabase/functions/usdt-create-payment/index.ts`, `lib/pricing.ts`, `lib/desglosePago.ts` (nuevo), `screens/CoachPayoutScreen.tsx`, `__tests__/usdt.test.ts`, `__tests__/desglosePago.test.ts` (nuevo), `SCHEMA.md`, `docs/decisiones-pagos.md`. **570 tests** (eran 560), `tsc` limpio. ⚠️ **`usdt-create-payment` y `usdt-check-payments` NO están deployadas.**
+
+**Resumen — Andre pidió ser hipertransparente con el coach sobre por qué cobramos lo que cobramos. Al ir a escribirlo aparecieron dos cosas que no se podían contar como estaban.**
+
+- 🔴 **La app le prometía 20% y le llegaba 76%.** En el riel local la tarifa de Mercado Pago la paga el coach —en el split él es el `collector`, y el `fee_details` del pago real trae `fee_payer: "collector"`— pero la pantalla decía "retenemos 20%" y **no la mencionaba**. El dato estaba en `SCHEMA.md` y en los T&C §8.5: dos lugares donde no va a entrar nunca. **La comisión sin el neto no es transparencia, es la mitad cómoda.**
+- 🟢 **"Cómo te pagamos" ahora muestra el desglose real, con el número del coach y no con un porcentaje**: qué paga la persona, qué se lleva MP, qué se lleva VIVE, qué le queda. Usa su propio precio si lo tiene; si no, un ejemplo marcado como tal. Más un bloque de **por qué cada número es el que es**: el primer tramo recupera adquisición, el segundo es retención, y los 5 puntos extra del internacional son el procesamiento que ahí paga VIVE y en Argentina paga él. La matemática vive en `lib/desglosePago.ts`, con tests.
+- 🔴 **Y el hallazgo incómodo, que es el que le da sentido al pedido: había un margen que nadie decidió cobrar.** En USDT el identificador del pago vive en los centavos y **se sumaba**, así que el cliente pagaba siempre entre 0 y 0,99 de más y la diferencia quedaba en VIVE. `SCHEMA.md` lo describía como "~0,8%", pero **el sobrante es fijo en dólares, así que pesa más cuanto más barata la sesión**: sobre el piso de USD 20 el peor caso es ~5%. Justo las sesiones de los coaches que recién arrancan.
+- ✅ **Decisión de Andre: restar en vez de sumar, y lo paga VIVE.** `uniqueAmount(50, 37)` ahora da **49,63**. El cliente nunca paga más que el precio del profesional, el coach cobra siempre sobre el precio entero (`amount`), y el hueco sale de la comisión. 📌 La otra opción evaluada era pagarle al coach sobre lo efectivamente recibido, y se descartó porque **el que pagaba de más era el cliente: eso habría sido repartir, no devolver** (y devolvérselo de verdad es impracticable — mandar 0,37 USDT por TRC20 cuesta más en red que el monto).
+- 🟢 **El cambio no tocó el matcheo, y ese fue el hallazgo que lo hizo barato:** `findPayment` deriva el identificador del **monto esperado** (`nonceOf(esperado.monto)`), no del nonce con el que se creó, así que 49,63 se reconoce por su 63 igual que antes 50,37 por su 37. **Las reservas viejas siguen andando** porque el matcheo usa el `usdt_amount` guardado. Los 18 tests de USDT pasan sin tocar `findPayment`.
+- 📝 **`MP_FEE_PCT_OBSERVED = 4` en `lib/pricing.ts`**, con el nombre diciendo lo que es: sale de un solo pago real, sobre **$1**, donde un componente fijo distorsionaría el porcentaje; depende del plazo de acreditación; y no se sabe si incluye IVA. Por eso donde se muestra va con "≈" y aclarando que la fija MP y no VIVE.
+- 📊 **Nueva tabla de netos en `docs/decisiones-pagos.md`.** Existía la comisión escrita en cinco lugares y el neto en ninguno. 🔴 **Y muestra una propiedad que conviene no romper sin darse cuenta: los 5 puntos extra del riel internacional compensan casi exactamente el ≈4% del local — 76% contra 75%, un punto de diferencia.** Hoy el coach cobra prácticamente lo mismo venga de donde venga la persona.
+- 🧹 **`SCHEMA.md` tenía dos bullets de plata que el código contradecía** y se marcaron: que en PayPal el recargo lo paga el cliente con gross-up (eliminado el 20/08) y que el riel internacional es 25% plano (D3 le devolvió la escalera el 25/08). No se borraron: se marcan como viejos con la corrección al lado, porque el resto del texto sigue siendo la historia de por qué no hay gross-up.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **DEPLOYAR `usdt-create-payment` y `usdt-check-payments`** (las dos importan `_shared/usdt.ts`). Sin eso el cambio del identificador no está vivo. ⚠️ **Verificar con un pago chico de verdad**, porque toca el mecanismo que reconoce la plata.
+- **Medir de nuevo la tarifa de MP contra un pago de precio real** (el del 19/08 por $4.500 sirve) y ajustar `MP_FEE_PCT_OBSERVED` si difiere. Hoy el desglose que ve el coach depende de ese número.
+- 🔴 **La forma del link público sigue siendo la única decisión grande abierta** — `docs/camino-del-cliente-1.md` §4. El consejo votó A por unanimidad (reserva y cobra en web) y quedó pendiente el hallazgo de sus revisores: **nadie preguntó qué gana el coach mandándolo**. Con la tabla de netos ahora se puede contestar con números.
+- **El porcentaje del descuento del link**, que Andre definió que se lo lleva el coach y no el cliente.
+- **Prueba de punta a punta del aviso de reserva** (fila `reserva_nueva` + campana + card nueva).
+- **De Joaquín:** A1 y el bloque de device review. **De Andre (viejo):** E6, el visto bueno de voz acumulado, el *"¡Hoy estás brillando!"* del Diario. **Del registro:** B1, B4, B7, D1-D6, E1-E6.
+
 ## 2026-09-08 — Andre (sesión 203 · tres decisiones de producto y la card que esperaba a una de ellas)
 
 **Tocado:** `screens/CoachHomeScreen.tsx`, `docs/camino-del-cliente-1.md`, `docs/inicio-del-coach.md`. **560 tests**, `tsc` limpio.

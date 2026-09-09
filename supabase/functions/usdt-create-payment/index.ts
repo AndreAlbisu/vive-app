@@ -143,10 +143,12 @@ serve(async (req) => {
         payment_provider: 'usdt',
         payment_status: 'pendiente',
         currency: 'USD',
-        // `amount` es el precio real; `usdt_amount` es ese precio MÁS el nonce
-        // en los centavos. La comisión y lo que se le paga al coach se calculan
-        // siempre sobre `amount` — el sobrante de hasta 0,99 USD es el
-        // identificador del pago, no parte del precio de la sesión.
+        // `amount` es el precio real; `usdt_amount` es ese precio MENOS el
+        // nonce en los centavos (ver `uniqueAmount`). La comisión y lo que se le
+        // paga al coach se calculan siempre sobre `amount`, así que el cliente
+        // paga hasta 0,99 USD menos que el precio y **esa diferencia la absorbe
+        // VIVE de su comisión** — decisión de Andre del 08/09/2026. Antes se
+        // sumaba y la pagaba el cliente sin que nadie lo hubiera decidido.
         amount: coach.price_usd,
         usdt_amount: monto,
         platform_fee_pct: commissionPct,

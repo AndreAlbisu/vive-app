@@ -56,6 +56,41 @@ coach, no la del cliente.** Esto corrige lo que este documento afirmaba antes.
 
 ---
 
+## Qué le queda de verdad al coach, por riel
+
+> Agregada el 08/09/2026. **Existía la comisión escrita en cinco lugares y el
+> NETO en ninguno**, así que nadie podía contestar "¿cuánto cobra el coach?" sin
+> rehacer la cuenta. Es la tabla que sostiene el desglose que ahora ve el coach
+> en "Cómo te pagamos" (`lib/desglosePago.ts`).
+
+| Riel | Paga el cliente | VIVE | Procesador | **Le queda al coach** |
+|---|---|---|---|---|
+| **Mercado Pago** · 1.ª sesión | precio | 20% | ≈4% — **lo paga el coach** | **≈76%** |
+| **Mercado Pago** · recurrente | precio | 15% | ≈4% — **lo paga el coach** | **≈81%** |
+| **PayPal** · 1.ª / recurrente | precio | 25% / 20% | 5,40% + USD 0,30 — **lo paga VIVE** | **75% / 80%** |
+| **USDT** · 1.ª / recurrente | precio (o hasta 0,99 menos) | 25% / 20% | no hay | **75% / 80%** |
+
+🔴 **La propiedad que conviene no romper sin darse cuenta: los cinco puntos extra
+del riel internacional compensan casi exactamente el ≈4% que en el local paga el
+coach.** La diferencia entre 76% y 75% es de un punto. Hoy el coach cobra
+prácticamente lo mismo venga de donde venga la persona, y eso hace que la
+elección de riel sea del cliente y no una decisión de plata para él. Cualquier
+cambio en una escalera tiene que mirar la otra.
+
+⚠️ **El ≈4% es una sola observación**, no una tarifa publicada: sale del pago real
+`172923514332` (09/08/2026, sobre $1 — `mercadopago_fee` 0,04 y
+`net_received_amount` 0,76). Fue sobre un monto donde un componente fijo
+distorsionaría el porcentaje, la tarifa de Checkout Pro depende del plazo de
+acreditación de la cuenta, y no se sabe si incluye IVA. **Vale medirlo de nuevo
+contra un pago de precio real** — el del 19/08 por $4.500 sirve. Vive en
+`lib/pricing.ts` como `MP_FEE_PCT_OBSERVED`.
+
+📌 **En USDT el cliente paga hasta 0,99 MENOS que el precio desde el 08/09/2026**
+(antes pagaba hasta 0,99 de más y se lo quedaba VIVE). El coach cobra siempre
+sobre el precio entero; el hueco lo absorbe VIVE. Ver `SCHEMA.md` → `bookings`.
+
+---
+
 ## D1 · ¿VIVE es principal o agente? — ✅ DECIDIDA: **AGENTE** (25/08/2026)
 
 > **Decisión de Andre, 25/08/2026.** Y no fue elegir entre dos opciones abiertas:

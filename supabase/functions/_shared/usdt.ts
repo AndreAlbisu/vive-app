@@ -55,17 +55,36 @@ export function fromRaw(value: string): number {
 }
 
 /**
- * Monto único de una reserva: el precio más el nonce en los últimos decimales.
- * `uniqueAmount(50, 37)` → 50.37
+ * Monto único de una reserva: el precio MENOS el nonce en los últimos decimales.
+ * `uniqueAmount(50, 37)` → 49.63
+ *
+ * 🔴 **RESTA, y hasta el 08/09/2026 sumaba.** El identificador tiene que vivir
+ * en los decimales para poder reconocer la transferencia, pero eso no obliga a
+ * cobrarlos: sumando, el cliente pagaba SIEMPRE un poco más que el precio (entre
+ * +0,00 y +0,99) y esa diferencia se la quedaba VIVE. **Era un margen que nadie
+ * decidió cobrar** — salió como subproducto del mecanismo de identificación— y
+ * como el sobrante es fijo en dólares, pesaba más cuanto más barata la sesión:
+ * ~5% en el peor caso sobre el piso de USD 20, contra el ~0,8% que figuraba en
+ * `SCHEMA.md`, calculado sobre un precio alto.
+ *
+ * Decisión de Andre, 08/09/2026: **lo paga VIVE**. El cliente nunca paga más que
+ * el precio del profesional, y el coach sigue cobrando sobre el precio entero
+ * (`bookings.amount`), así que el hueco sale de la comisión del 25%.
+ *
+ * 🟢 No hizo falta tocar `nonceOf` ni `findPayment`: el identificador se deriva
+ * del MONTO ESPERADO (`nonceOf(esperado.monto)`), no del nonce original, así que
+ * 49.63 se reconoce por su 63 igual que antes 50.37 se reconocía por su 37. Y
+ * las reservas viejas siguen andando: el matcheo usa el `usdt_amount` guardado.
  *
  * 🔴 EL PRECIO TIENE QUE SER ENTERO, y no es una comodidad: el identificador
- * vive en los decimales, así que cualquier decimal del precio se le suma y lo
- * corrompe. `uniqueAmount(120.5, 9999)` daría 121.4999, y de ahí `nonceOf`
- * devuelve 4999 en vez de 9999 — la transferencia sería irreconocible y el pago
- * quedaría sin acreditar. Encontrado por los tests al escribirlos.
+ * vive en los decimales, así que cualquier decimal del precio se mezcla con él y
+ * lo corrompe. `uniqueAmount(120.5, 99)` dejaría los decimales del precio dentro
+ * del identificador y la transferencia sería irreconocible: el pago quedaría sin
+ * acreditar. Encontrado por los tests al escribirlos.
  *
  * Es una restricción barata: las sesiones internacionales se cotizan en dólares
- * redondos (USD 50, no USD 50,50).
+ * redondos (USD 50, no USD 50,50), y el piso es USD 20, así que restar hasta
+ * 0,99 nunca puede dar un monto negativo ni cero.
  */
 export function uniqueAmount(precio: number, nonce: number): number {
   if (!Number.isInteger(precio)) {
@@ -74,10 +93,14 @@ export function uniqueAmount(precio: number, nonce: number): number {
   if (!Number.isInteger(nonce) || nonce < 0 || nonce >= 10 ** NONCE_DIGITS) {
     throw new Error(`nonce fuera de rango: ${nonce}`);
   }
-  return Math.round(precio * NONCE_SCALE + nonce) / NONCE_SCALE;
+  return Math.round(precio * NONCE_SCALE - nonce) / NONCE_SCALE;
 }
 
-/** El identificador de un monto. `49.37` → 37 */
+/** El identificador de un monto. `49.63` → 63.
+ *
+ * 📌 No devuelve el nonce con el que se creó el monto (ese era 37, no 63) y no
+ * hace falta que lo haga: lo único que se compara es la fracción del monto
+ * esperado contra la del recibido. Ver la nota en `uniqueAmount`. */
 export function nonceOf(monto: number): number {
   return Math.round(monto * NONCE_SCALE) % 10 ** NONCE_DIGITS;
 }

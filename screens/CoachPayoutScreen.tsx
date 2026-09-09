@@ -30,7 +30,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { COMMISSION_INTL_FIRST, COMMISSION_INTL_RECURRING, COMMISSION_LOCAL_FIRST, COMMISSION_LOCAL_RECURRING } from '@/lib/pricing';
+import { COMMISSION_INTL_FIRST, COMMISSION_INTL_RECURRING, COMMISSION_LOCAL_FIRST, COMMISSION_LOCAL_RECURRING, MP_FEE_PCT_OBSERVED } from '@/lib/pricing';
+import { desglose, type Riel } from '@/lib/desglosePago';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
@@ -72,18 +73,25 @@ export default function CoachPayoutScreen() {
   const [wallet, setWallet] = useState('');
   const [network, setNetwork] = useState<Network>('TRC20');
   const [paypalEmail, setPaypalEmail] = useState('');
+  const [precioArs, setPrecioArs] = useState<number | null>(null);
+  const [precioUsd, setPrecioUsd] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     (async () => {
       const { data: coachRow } = await supabase
         .from('coaches')
-        .select('id')
+        .select('id, price_per_session, price_usd')
         .eq('profile_id', user.id)
         .maybeSingle();
 
       if (!coachRow?.id) { setLoading(false); return; }
       setCoachId(coachRow.id);
+      // Para el desglose de abajo. Si todavía no fijó precio se muestra el
+      // ejemplo redondo, que es mejor que no mostrar nada: el punto es que
+      // entienda la mecánica, y con su propio número la entiende mejor.
+      setPrecioArs((coachRow.price_per_session as number | null) ?? null);
+      setPrecioUsd((coachRow.price_usd as number | null) ?? null);
 
       const { data: payout } = await supabase
         .from('coach_payout_accounts')
@@ -206,33 +214,96 @@ export default function CoachPayoutScreen() {
         ) : (
           <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-              {/* 🔴 La comisión de las sesiones locales vivía en la Home, abajo
-                  del "% de tus personas vuelve". Se movió acá porque en la
-                  pantalla de saludo se lee "me van a cobrar" y no como lo que
-                  es. Además era el ÚNICO lugar de toda la app donde el coach
-                  podía enterarse de cuánto retenemos en Argentina: sacarla de
-                  la Home sin traerla acá la habría hecho desaparecer.
+              {/* ── Hipertransparencia con el coach ──────────────────────────
+                  🔴 Decisión de Andre, 08/09/2026: el coach tiene que poder ver
+                  POR QUÉ cobramos lo que cobramos, y eso empieza por un número
+                  que la app nunca le decía.
 
-                  El encuadre se mantiene entero — es la medida anti-fuga #3, y
-                  lo que la hace funcionar no es "baja por volumen" sino "te
-                  cobramos por presentarte, no por tu relación". */}
+                  Hasta hoy esta pantalla decía "retenemos 20%" y **no mencionaba
+                  la tarifa de Mercado Pago**, que en el riel local la paga él
+                  (en el split, el `collector` es su cuenta). Leía 20 y recibía
+                  76. El dato existía en `SCHEMA.md` y en los T&C §8.5, o sea en
+                  dos lugares donde no va a entrar nunca. La comisión sin el neto
+                  no es transparencia, es la mitad cómoda.
+
+                  Por eso lo que se muestra grande es **lo que le queda**, y el
+                  porcentaje de comisión es una línea del desglose, no el
+                  titular. La matemática vive en `lib/desglosePago.ts`. */}
+              <Text style={s.bloqueTitulo}>Qué pasa con la plata</Text>
               <Text style={s.subtitle}>
-                Las sesiones con personas en Argentina las cobrás vos, directo a tu cuenta de
-                Mercado Pago. De cada una retenemos {COMMISSION_LOCAL_FIRST}% la primera vez con
-                cada persona y {COMMISSION_LOCAL_RECURRING}% de ahí en adelante, y no se reinicia
-                nunca.{'\n\n'}
-                <Text style={s.subtitleStrong}>Te cobramos por presentarte a alguien, no por tu
-                relación con esa persona.</Text>
+                Todo lo de acá abajo es sobre una sesión con alguien nuevo, que es cuando más
+                retenemos. A partir de la segunda con esa misma persona baja, y no se reinicia
+                nunca.
               </Text>
 
-              <Text style={s.subtitle}>
-                Y aparte, las sesiones con personas fuera de Argentina. Esas no te entran por Mercado
-                Pago: las cobra VIVE y te las transferimos cada semana, por sesiones ya realizadas.
-                {'\n\n'}
-                De cada una retenemos {COMMISSION_INTL_FIRST}% la primera vez con cada persona y{' '}
-                {COMMISSION_INTL_RECURRING}% de ahí en adelante, e incluye todos los costos de
-                cobrarte del exterior y transferirte.
-              </Text>
+              {([
+                { riel: 'mp' as Riel, titulo: 'En Argentina', precio: precioArs ?? 20000, moneda: '$', suyo: precioArs != null },
+                { riel: 'paypal' as Riel, titulo: 'Del exterior', precio: precioUsd ?? 50, moneda: 'USD ', suyo: precioUsd != null },
+              ]).map(({ riel, titulo, precio, moneda, suyo }) => {
+                const d = desglose(precio, riel, 'primera');
+                const fmt = (n: number) => `${moneda}${n.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`;
+                return (
+                  <View key={riel} style={s.desgloseCard}>
+                    <View style={s.desgloseHead}>
+                      <Text style={s.desgloseTitulo}>{titulo}</Text>
+                      {!suyo && <Text style={s.desgloseEjemplo}>ejemplo</Text>}
+                    </View>
+
+                    <View style={s.desgloseFila}>
+                      <Text style={s.desgloseLbl}>Paga la persona</Text>
+                      <Text style={s.desgloseVal}>{fmt(d.cliente)}</Text>
+                    </View>
+                    {d.procesador?.loPaga === 'coach' && (
+                      <View style={s.desgloseFila}>
+                        <Text style={s.desgloseLbl}>Mercado Pago, por cobrar  ≈</Text>
+                        <Text style={s.desgloseVal}>−{fmt(d.procesador.monto)}</Text>
+                      </View>
+                    )}
+                    <View style={s.desgloseFila}>
+                      <Text style={s.desgloseLbl}>VIVE</Text>
+                      <Text style={s.desgloseVal}>−{fmt(d.vive)}</Text>
+                    </View>
+                    <View style={[s.desgloseFila, s.desgloseTotal]}>
+                      <Text style={s.desgloseLblFuerte}>Te queda</Text>
+                      <Text style={s.desgloseValFuerte}>{fmt(d.coach)}</Text>
+                    </View>
+
+                    <Text style={s.desgloseNota}>
+                      {riel === 'mp'
+                        ? `Lo cobrás vos, directo a tu Mercado Pago. Esa tarifa de ≈${MP_FEE_PCT_OBSERVED}% te la cobra Mercado Pago a vos, no nosotros: en este riel el que vende sos vos y le pagás a tu propio procesador, como cualquiera que cobre con MP. El número exacto depende del plazo de acreditación que tengas configurado.`
+                        : 'Estas no te entran por Mercado Pago: las cobra VIVE y te las transferimos cada semana, por sesiones ya realizadas. Acá el procesador nos cobra a nosotros, así que sale de nuestra parte y a vos te llega limpio — por eso retenemos 5 puntos más que en Argentina.'}
+                    </Text>
+                  </View>
+                );
+              })}
+
+              {/* El porqué de cada número. Es la parte que convierte el desglose
+                  en transparencia: sin esto son tres restas. */}
+              <View style={s.porqueCard}>
+                <Text style={s.porqueTitulo}>Por qué cobramos lo que cobramos</Text>
+
+                <Text style={s.porqueItem}>
+                  <Text style={s.porqueB}>{COMMISSION_LOCAL_FIRST}% la primera sesión con cada persona. </Text>
+                  Es lo que cuesta traerte a alguien que no te conocía.
+                </Text>
+                <Text style={s.porqueItem}>
+                  <Text style={s.porqueB}>{COMMISSION_LOCAL_RECURRING}% de ahí en adelante, para siempre. </Text>
+                  Cuando esa persona vuelve, ya no te la estamos presentando.{' '}
+                  <Text style={s.porqueB}>Te cobramos por presentarte a alguien, no por tu relación
+                  con esa persona.</Text>
+                </Text>
+                <Text style={s.porqueItem}>
+                  <Text style={s.porqueB}>{COMMISSION_INTL_FIRST}% y {COMMISSION_INTL_RECURRING}% en el exterior. </Text>
+                  Son los mismos dos tramos más 5 puntos, y esos 5 puntos no son margen: es lo que
+                  cuesta cobrar afuera y transferirte, que ahí lo pagamos nosotros y en Argentina lo
+                  pagás vos. Por eso, al final, te queda casi lo mismo por los dos caminos.
+                </Text>
+                <Text style={s.porqueItem}>
+                  <Text style={s.porqueB}>Nada más. </Text>
+                  No hay costo de alta, ni mensualidad, ni cargo por cancelar, ni comisión sobre lo
+                  que te reembolsamos. Si una sesión se cae, no cobramos nada.
+                </Text>
+              </View>
 
               <Text style={s.label}>Cómo aceptás cobrar</Text>
               <View style={s.methodRow}>
@@ -415,7 +486,34 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19,
     color: 'rgba(135,131,92,0.80)', marginBottom: 22,
   },
-  subtitleStrong: { fontFamily: ViveFonts.semibold, color: '#565E32' },
+  bloqueTitulo: { fontFamily: ViveFonts.semibold, fontSize: 16, color: '#565E32', marginBottom: 6 },
+  desgloseCard: {
+    backgroundColor: 'rgba(255,255,255,0.55)', borderRadius: 14, padding: 14,
+    borderWidth: 1, borderColor: 'rgba(135,131,92,0.18)', marginBottom: 12,
+  },
+  desgloseHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  desgloseTitulo: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
+  desgloseEjemplo: {
+    fontFamily: ViveFonts.regular, fontSize: 10, color: 'rgba(135,131,92,0.75)',
+    backgroundColor: 'rgba(135,131,92,0.10)', borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2,
+  },
+  desgloseFila: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 3 },
+  desgloseLbl: { fontFamily: ViveFonts.regular, fontSize: 13, color: 'rgba(135,131,92,0.90)' },
+  desgloseVal: { fontFamily: ViveFonts.regular, fontSize: 13, color: 'rgba(135,131,92,0.90)' },
+  desgloseTotal: { borderTopWidth: 1, borderTopColor: 'rgba(135,131,92,0.18)', marginTop: 6, paddingTop: 8 },
+  desgloseLblFuerte: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
+  desgloseValFuerte: { fontFamily: ViveFonts.semibold, fontSize: 16, color: '#565E32' },
+  desgloseNota: {
+    fontFamily: ViveFonts.regular, fontSize: 11, lineHeight: 16,
+    color: 'rgba(135,131,92,0.72)', marginTop: 10,
+  },
+  porqueCard: { marginTop: 4, marginBottom: 8 },
+  porqueTitulo: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32', marginBottom: 10 },
+  porqueItem: {
+    fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19,
+    color: 'rgba(135,131,92,0.88)', marginBottom: 10,
+  },
+  porqueB: { fontFamily: ViveFonts.semibold, color: '#565E32' },
   label: {
     fontFamily: ViveFonts.semibold, fontSize: 13,
     color: '#565E32', marginBottom: 8, marginTop: 18,
