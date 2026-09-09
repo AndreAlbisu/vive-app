@@ -3,7 +3,13 @@
 -- `bookings.payer_fingerprint` — una huella del pagador de Mercado Pago, para
 -- poder saber si dos cuentas distintas son la misma persona.
 --
--- ⚠️ PENDIENTE DE CORRER.
+-- ✅ CORRIDO el 09/09/2026. La columna y el índice existen.
+-- ✅ `PAYER_FINGERPRINT_SALT` creada por CLI (`supabase secrets set`) el mismo
+--    día, y `mp-webhook` redeployada a **v33** con el código que la usa.
+--
+-- ⚠️ **Falta la prueba que importa**: un pago real de Mercado Pago y ver que la
+-- columna se llena (verificación 4 de abajo). Hasta entonces está armado pero
+-- no ejercitado.
 --
 -- ── Por qué ahora y no después ───────────────────────────────────────────────
 --
