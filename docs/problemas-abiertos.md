@@ -43,8 +43,8 @@ dos hermanos no.
 > la tarjeta sale pura de `detectarPisoSeguridad(...)`, sin ningún flag de
 > "ya vista/descartada" en `index.tsx`, así que reaparece cada día que la
 > condición se cumpla; el modo de falla de "noticia que se muestra una vez" no
-> existe. Data de prueba (5 check-ins bajos + fechas de reserva) revertida.
-> ⏭️ Único bonus sin cerrar: que los teléfonos de `/ayuda` marquen de verdad.
+> existe. Data de prueba (5 check-ins bajos + fechas de reserva) revertida. Y los
+> teléfonos de `/ayuda` marcan de verdad (verificado). Nada queda abierto de A1.
 
 > Andre lo dejó para vos el 08/09. **Contexto en una línea:** el piso de
 > seguridad —la única pantalla que le habla a alguien en crisis— se encendió en

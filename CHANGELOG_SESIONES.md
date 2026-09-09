@@ -13,7 +13,7 @@
 - ✅ **Los TRES estados, verificados y consistentes con la sección "Tu próxima sesión" de abajo** (donde vivía el bug del 07/09): Estado 1 (completada esta semana) → *"Eso es de lo que conviene hablar en sesión"* + abre `/ayuda`; Estado 2 (confirmada futura) → *"Llevalo a tu próxima sesión"* + la sesión aparece abajo (el estado que no había visto nadie); Estado 3 (sin sesiones) → *"Hay gente preparada para acompañar esto"* + vacío abajo. **El bug de la contradicción está corregido en los tres.**
 - ✅ **Persistencia "al día siguiente": garantizada por construcción.** La tarjeta sale pura de `detectarPisoSeguridad(...)` (5 check-ins más recientes ≤2, el más viejo dentro de 14 días), sin ningún flag de "ya vista/descartada" en `index.tsx`. Reaparece cada día que la condición se cumpla; el modo de falla de "noticia que se muestra una vez" no existe. No hizo falta esperar a mañana.
 - 🧹 **Setup y reversión:** para forzar los estados en la cuenta de Joaquín se insertó un check-in bajo (09-06) y se movió la fecha/estado de la reserva `e9be9124`. Todo revertido: reserva de vuelta a `confirmada / 2026-09-26`, check-in insertado borrado. (El Bajón de hoy que registró Joaquín tocando la app se dejó — es un registro real; con eso el piso queda apagado, su estado verdadero.)
-- ⏭️ **Único bonus sin cerrar:** que los teléfonos de `/ayuda` marquen de verdad (30 seg cuando tenga ganas).
+- ✅ **Los teléfonos de `/ayuda` marcan de verdad** (verificado en dispositivo). Nada queda abierto de A1.
 
 **Pendiente para la próxima sesión:**
 - **Cancelación tardía** (device, toca plata) y el aviso de `recurso-del-coach` — lo que queda de device review.
