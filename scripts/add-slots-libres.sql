@@ -3,7 +3,20 @@
 -- `slots_libres(slug, dias)` — los horarios libres de un profesional, para la
 -- página pública `/c/<slug>`.
 --
--- ⚠️ PENDIENTE DE CORRER.
+-- ✅ CORRIDO el 09/09/2026, y VERIFICADO desde afuera con la anon key sobre
+-- `coach-prueba`, que es el único con disponibilidad futura cargada:
+--   · **240 horarios libres en 21 días** (el tope de `p_dias` se aplica);
+--   · **el orden numérico es correcto en todos los días** — `9:00` antes que
+--     `10:00`, que es lo que un `order by` de texto habría roto;
+--   · **el filtro de "ya pasó" anda**: hoy declara 9 horarios y devuelve 8,
+--     descartando el de las 9:00;
+--   · un slug inexistente devuelve `[]`, y `joaquin-silva` también — no tiene
+--     disponibilidad cargada, así que el 0 es correcto y no un falso negativo.
+--
+-- ⚠️ **Lo que NO se pudo verificar desde afuera es justamente lo que la función
+-- viene a hacer**: que un turno RESERVADO no se ofrezca. `anon` no puede leer
+-- `bookings` —ese es el motivo de que esta función exista— así que hace falta la
+-- verificación 3 de abajo, desde el editor SQL.
 --
 -- ── Por qué una función y no una consulta desde la página ────────────────────
 --
