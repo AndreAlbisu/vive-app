@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 223 cont. 3 · el CAPTCHA anda: el iframe de Turnstile no cargaba, y el error no lo decía)
+
+**Tocado:** `components/CaptchaHost.tsx`, `lib/captcha.ts`, `docs/anti-abuso-altas.md`. **575 tests**, `tsc` y `eslint` limpios. ✅ **Probado en dispositivo (iOS).**
+
+**Resumen — el cliente del CAPTCHA quedó terminado y verificado; falta solo lo de dashboard.**
+
+- 🐛 **La causa: `about:srcdoc` fuera del `originWhitelist`.** Turnstile dibuja el desafío en un **iframe con `srcdoc`**, y el default de `react-native-webview` es solo `http://*` y `https://*` — así que RN se lo pasaba al sistema para abrirlo como link externo (`Unable to open URL: about:srcdoc`). El iframe nunca cargaba.
+- 🔴 **Y el error no decía nada de eso**: Turnstile contestaba `300031`, su genérico de "desafío fallado / bot detectado". Buscar por ese código no lleva a ningún lado. Los dos indicios reales eran la línea del `Unable to open URL` y que el alta tardara ~20s antes de seguir sin token. **Quedó escrito en el runbook (A.5) porque es de las que vuelven a morder.**
+- 📌 **Se abrió la lista y se volvió a cerrar a mano** con `onShouldStartLoadWithRequest`: `about:`, `challenges.cloudflare.com` y nuestro propio origen. `originWhitelist={['*']}` solo habría dejado al WebView navegar a cualquier lado.
+- 🟢 **Verificado en dispositivo**: `[captcha] activo (Turnstile)` + `token obtenido: sí (709 chars)`, sin que la persona vea nada. 📌 **Y con la site key REAL, no las de prueba** — eso descarta de paso el riesgo del hostname, que era el que más preocupaba: un dominio mal configurado habría dado `110200`, y las claves de prueba no lo ejercitan porque andan en cualquier dominio.
+- 🔴 **"Sin site key" y "widget funcionando" se veían EXACTAMENTE IGUAL desde afuera** —alta instantánea, consola limpia— y son opuestos: uno es el portero puesto y el otro es no tener ninguno. Ahora una línea al arrancar dice cuál es. La alternativa para distinguirlos era prender el CAPTCHA en el server y ver si la app se rompía.
+- 📌 **Nada de esto se podía diagnosticar antes de instrumentar.** Los dos primeros intentos solo mostraban un botón trabado 20 segundos; las dos líneas que explicaban todo no salían por ningún lado.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Lo único que falta del CAPTCHA es de dashboard**, y en orden: build distribuido → prender en Supabase con la Secret Key → bajar los rate limits. El `curl` de verificación tiene que dar **400**. Todo en `docs/anti-abuso-altas.md`.
+- 🔴 **El muro del mail NO se probó en dispositivo todavía** — es de la entrada de abajo y sigue abierto, con sus tres avisos (cuentas existentes contra el muro, dependencia nueva del SMTP, pico de envíos al prender).
+
 ## 2026-09-09 — Andre (sesión 223 cont. 2 · el muro del mail para usuarios finales, colgado del servidor)
 
 **Tocado:** `context/AuthContext.tsx`, `app/_layout.tsx`, `screens/VerificarMailScreen.tsx`, `lib/captcha.ts`, `components/CaptchaHost.tsx`. **575 tests**, `tsc` y `eslint` limpios.

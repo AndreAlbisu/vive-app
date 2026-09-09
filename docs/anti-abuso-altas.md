@@ -1,8 +1,13 @@
 # Runbook — Anti-abuso del alta de cuentas (CAPTCHA + rate limits)
 
-> ⚠️ **Todavía NO está prendido.** El código del cliente está en `main` desde el
-> 09/09/2026; los dos ajustes de Supabase de abajo son manuales y quedan
-> pendientes. Hasta que se hagan, no hay ningún portero.
+> ⚠️ **Todavía NO está prendido.** Los dos ajustes de Supabase de abajo son
+> manuales y quedan pendientes. Hasta que se hagan, no hay ningún portero.
+>
+> ✅ **El cliente sí está terminado y PROBADO EN DISPOSITIVO** (09/09/2026, iOS,
+> con la site key real): el widget se monta y devuelve un token de 709 chars sin
+> mostrarle nada a la persona. Eso confirma de paso que el hostname del widget
+> está bien configurado — un dominio mal puesto daría `110200`, y las claves de
+> prueba no lo ejercitan.
 > `<PROJECT>` en las URLs es `ggygiihhnkjrerpinhha`.
 
 ## Qué problema resuelve, y cuál no
@@ -154,6 +159,22 @@ source .env && curl -s -o /dev/null -w '%{http_code}\n' \
 
 Esperado: **400** con `captcha protection: request disallowed`. Si devuelve
 200, el CAPTCHA no quedó prendido y no hay portero.
+
+### A.5 La trampa del WebView, para que no muerda de nuevo
+
+Turnstile dibuja su desafío en un **iframe con `srcdoc`**. El `originWhitelist`
+por defecto de `react-native-webview` es solo `http://*` y `https://*`, así que
+`about:srcdoc` queda afuera y RN se lo pasa al sistema para abrirlo como link
+externo. El iframe nunca carga.
+
+El síntoma **no dice nada de esto**: Turnstile contesta `300031`, su error
+genérico de "desafío fallado / bot detectado". Los dos indicios reales son la
+línea `Unable to open URL: about:srcdoc` en la consola, y que el alta tarde ~20
+segundos antes de seguir sin token.
+
+Está resuelto en `components/CaptchaHost.tsx` con `originWhitelist={['*']}` y un
+`onShouldStartLoadWithRequest` que vuelve a cerrar la lista a mano. **Si alguna
+vez se toca ese WebView, esas dos props no son decorativas.**
 
 ## B. Rate limits
 
