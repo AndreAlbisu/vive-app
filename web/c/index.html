@@ -145,6 +145,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // `/c/sofia-herrera` → `sofia-herrera`. La ruta lleva prefijo `/c/` a propósito
 // (ver `scripts/add-coach-slug.sql`): sin él, un slug como `terminos` chocaría
 // con las páginas que ya viven en este dominio.
+//
+// 📌 El rewrite de `vercel.json` es `/c/:slug` → **`/c`**, y el destino sin
+// `.html` NO es cosmético: con `cleanUrls: true` Vercel redirige
+// `/c/index.html` a `/c`, y un rewrite que apunta a una ruta que redirige
+// devuelve **404**. Primer intento fue `destination: "/c/index.html"` y el
+// síntoma fue exactamente ese: `/c` daba 200 y `/c/<slug>` daba 404.
 const slug = decodeURIComponent(location.pathname.replace(/^\/c\/?/, '').replace(/\/$/, ''));
 
 const $ = (id) => document.getElementById(id);
