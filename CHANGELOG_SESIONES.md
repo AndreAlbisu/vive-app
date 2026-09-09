@@ -4,6 +4,27 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 207 · `coaches.slug`, lo que las dos opciones del link necesitan igual)
+
+**Tocado:** `scripts/add-coach-slug.sql` (nuevo), `SCHEMA.md`. ⚠️ **PENDIENTE DE CORRER.** Sin cambios de código de app.
+
+**Resumen — se hizo la parte del link que no depende de la decisión que sigue abierta.**
+
+- **Por qué ahora:** la forma del link (reservar en web o mandar a la store) sigue sin decidirse, pero **las dos opciones necesitan lo mismo** — una URL estable que identifique a un profesional. Es la intersección, así que no se tira trabajo con ninguna.
+- 🔴 **El slug NO sigue al nombre, y es la decisión que importa.** El trigger es `before insert` **y nada más**: se calcula una vez y queda. Un link ya repartido por WhatsApp tiene que seguir andando el mes que viene, y si el slug siguiera al nombre, **cada corrección de tipeo rompería todos los links compartidos**. Los choques se resuelven con sufijo numérico.
+- 🟢 **El coach no lo puede escribir, y no hubo que hacer nada para eso.** `lock-privileged-columns.sql` dejó `coaches` con `revoke update` + grants columna por columna, así que **toda columna nueva nace de solo lectura**. 📌 **El trabajo viejo hizo que este saliera seguro por construcción** — vale anotarlo como el resultado que esa clase de arreglo da meses después. Y está bien que sea así: un slug editable es una invitación a hacerse pasar por otro (`dra-martinez`) o a ocupar el nombre de un colega.
+- 📌 **La ruta lleva prefijo (`/c/<slug>`) a propósito.** Sin él, un slug como `terminos` o `privacidad` chocaría con las páginas que ya viven en `vitaapp.com.ar` (`docs/hosting.md`), y una lista de palabras reservadas no envejece bien. Con prefijo el problema no existe.
+- 📝 `slugify()` sin `unaccent`: esa extensión puede no estar instalada y no vale la pena pedirla para esto; `translate` cubre el español, que es lo que hay.
+- ⚠️ **Asimetría que queda anotada:** el SELECT de `anon` sobre `profiles` ahora es **por columnas** (sesión 205) y sobre `coaches` sigue siendo **por tabla**. O sea que una columna sensible nueva en `coaches` **no queda cerrada sola** — al revés de lo que pasa con el `update`, que sí.
+
+**Pendiente para la próxima sesión:**
+- **CORRER `scripts/add-coach-slug.sql`** y mirar la verificación 2 (cómo quedaron los slugs con los nombres reales — ahí se ven los nombres raros o vacíos).
+- 🔴 **La forma del link público** — `docs/camino-del-cliente-1.md` §4. Es lo único grande que queda. El consejo votó A por unanimidad; sus revisores dejaron la pregunta de qué gana el coach mandándolo, que ahora se contesta con la tabla de netos.
+- **El porcentaje del descuento** que se lleva el coach.
+- 🔴 **`authenticated` ve las 17 columnas de todos los coaches** (mail y `push_token`). No es de dos líneas: hay que mover al servidor el envío de push (client-side en 6 lugares) y la lectura de mails del panel, y después una vista pública para el catálogo. **Va después del link**, no antes.
+- **Verificaciones con plata/teléfono:** un pago chico en USDT, una reserva de prueba (fila `reserva_nueva` + campana + card del Inicio), el caso positivo del registro con el mail de un coach, y el ≈4% de MP contra el pago de $4.500 del 19/08.
+- **De Joaquín:** A1 y el bloque de device review. **De Andre (viejo):** E6, el visto bueno de voz acumulado, el *"¡Hoy estás brillando!"* del Diario. **Del registro:** B1, B4, B7, D1-D6, E1-E6.
+
 ## 2026-09-08 — Andre (sesión 206 · el revoke rompió un chequeo del registro, y falló abierto)
 
 **Tocado:** `screens/RegisterScreen.tsx`, `scripts/add-email-es-de-coach.sql` (nuevo). **570 tests**, `tsc` limpio. ✅ **CORRIDO y VERIFICADO el 08/09/2026** con la anon key: la RPC contesta `false` a un mail inventado (y tolera espacios y mayúsculas), `profiles.email` sigue en 42501 y el catálogo sigue dando 200. ⚠️ **El caso positivo no se pudo probar desde afuera — y eso ES la prueba de que el arreglo funciona**: haría falta el mail de un coach, que es justo lo que ya no se puede conseguir.
