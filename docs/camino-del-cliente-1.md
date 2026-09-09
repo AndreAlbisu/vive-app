@@ -135,10 +135,27 @@ depende de qué ve esa persona al terminar la sesión 1 — y hoy no está dise�
 del backlog es ejecución sobre cosas que ya existen. Por eso no se puede estimar
 antes de decidir su forma.
 
-## 4. La decisión que bloquea a las demás
+## 4. La decisión que bloquea a las demás — ✅ DECIDIDA: **A** (09/09/2026)
 
-🔴 **¿El link reserva y cobra en web, o solo muestra el perfil y manda a la
-store?**
+> ✅ **Decisión de Andre: el link RESERVA Y COBRA EN EL NAVEGADOR.** La app queda
+> para después de tener la sesión agendada, que es cuando la persona tiene un
+> motivo real para instalarla.
+>
+> **El consejo la votó 5 de 5**, y el argumento que cerró la discusión es que el
+> pago **ya** ocurre en el navegador: Checkout Pro exige `back_urls` https, por
+> eso existe `booking-return`. A no agrega un riel de cobro — le cambia el
+> destino al 302.
+>
+> La objeción que sus revisores dejaron abierta —*nadie preguntó qué gana el
+> coach mandando el link*— quedó resuelta antes, con el descuento yendo a él:
+> cobra ~86% contra el 76% de siempre (§2.1).
+>
+> 📌 **Y buena parte de lo que el consejo creía faltante ya estaba**: el dominio
+> `vitaapp.com.ar` apunta a Vercel desde el 14/08, las páginas legales están
+> publicadas, `coaches.slug` quedó corrido el 08/09 y la lectura pública del
+> perfil tiene las columnas justas.
+
+🔴 **La pregunta original, que queda como registro de por qué:**
 
 - **Si cobra en web:** el embudo se cierra en el navegador y la app queda para
   después de la reserva. Requiere hosting, checkout web y decidir qué riel de

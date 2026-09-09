@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reservá tu sesión — Vita</title>
+
+<!-- 🔴 La vista previa de WhatsApp es parte del producto, no un detalle de SEO.
+     El link llega por chat pidiendo datos, y en Argentina eso tiene la forma
+     exacta de una estafa: lo que lo separa de una es que se vea de dónde viene.
+     ⚠️ Estas etiquetas son ESTÁTICAS y por lo tanto iguales para todos los
+     profesionales: WhatsApp lee el HTML del servidor y no ejecuta JavaScript,
+     así que no puede ver el nombre ni la foto que pinta esta página. Para
+     personalizarlas hace falta renderizar del lado del servidor (una función en
+     `/api` que devuelva el HTML con las meta ya resueltas). Queda pendiente;
+     mientras tanto, marca genérica es mucho mejor que nada. -->
+<meta name="description" content="Reservá una sesión online con un profesional del bienestar en Vita.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Vita">
+<meta property="og:title" content="Reservá tu sesión en Vita">
+<meta property="og:description" content="Sesiones online con profesionales del bienestar. Elegís horario y reservás.">
+<meta name="twitter:card" content="summary">
+
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 20px 64px;
+    background: #F7EFE4; color: #3A4F2A;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px; line-height: 1.6;
+  }
+  main { max-width: 560px; margin: 0 auto; }
+
+  .marca { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; opacity: .55; margin-bottom: 28px; }
+
+  .perfil { display: flex; gap: 16px; align-items: center; margin-bottom: 22px; }
+  .foto { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: rgba(58,79,42,.10); }
+  .iniciales {
+    width: 84px; height: 84px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #C1694F; color: #FFF6EC; font-size: 1.6rem; font-weight: 700;
+  }
+  h1 { font-size: 1.5rem; line-height: 1.2; margin: 0 0 4px; }
+  .especialidad { margin: 0; font-size: .95rem; opacity: .75; }
+  .meta { margin: 4px 0 0; font-size: .85rem; opacity: .6; }
+
+  .bio { margin: 0 0 24px; }
+
+  .temas { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 26px; }
+  .tema {
+    font-size: .8rem; padding: .3rem .65rem; border-radius: 999px;
+    background: rgba(58,79,42,.08); border: 1px solid rgba(58,79,42,.14);
+  }
+
+  .precio {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 16px 0; border-top: 1px solid rgba(58,79,42,.15);
+    border-bottom: 1px solid rgba(58,79,42,.15); margin-bottom: 22px;
+  }
+  .precio b { font-size: 1.35rem; }
+  .precio span { font-size: .85rem; opacity: .65; }
+
+  .cta {
+    display: block; width: 100%; padding: .85rem 1rem; border: 0; border-radius: 12px;
+    background: #C1694F; color: #FFF6EC; font-size: 1rem; font-weight: 700;
+    font-family: inherit; text-align: center; text-decoration: none; cursor: pointer;
+  }
+  .cta[disabled] { opacity: .5; cursor: default; }
+  .cta-nota { margin: 10px 0 0; font-size: .8rem; opacity: .6; text-align: center; }
+
+  .estado { padding: 48px 0; text-align: center; opacity: .7; }
+  .estado h1 { font-size: 1.2rem; margin-bottom: .5rem; }
+
+  .pie { margin-top: 40px; font-size: .8rem; opacity: .55; text-align: center; }
+  .pie a { color: #C1694F; }
+
+  [hidden] { display: none !important; }
+
+  @media (prefers-color-scheme: dark) {
+    body { background: #1A1C16; color: #E4E0D2; }
+    .foto { background: rgba(228,224,210,.08); }
+    .tema { background: rgba(228,224,210,.06); border-color: rgba(228,224,210,.16); }
+    .precio { border-color: rgba(228,224,210,.18); }
+  }
+</style>
+</head>
+<body>
+
+<main>
+  <p class="marca">Vita</p>
+
+  <div id="cargando" class="estado"><p>Cargando…</p></div>
+
+  <div id="noEncontrado" class="estado" hidden>
+    <h1>No encontramos este perfil</h1>
+    <p>Puede que el enlace esté mal copiado, o que el profesional ya no esté disponible.</p>
+  </div>
+
+  <article id="perfil" hidden>
+    <div class="perfil">
+      <img id="foto" class="foto" alt="" hidden>
+      <div id="iniciales" class="iniciales" aria-hidden="true" hidden></div>
+      <div>
+        <h1 id="nombre"></h1>
+        <p id="especialidad" class="especialidad"></p>
+        <p id="meta" class="meta"></p>
+      </div>
+    </div>
+
+    <p id="bio" class="bio"></p>
+    <div id="temas" class="temas"></div>
+
+    <div id="precioBloque" class="precio" hidden>
+      <b id="precio"></b>
+      <span>por sesión</span>
+    </div>
+
+    <button class="cta" id="cta" disabled>Elegir horario</button>
+    <p class="cta-nota" id="ctaNota">La reserva online se habilita en los próximos días.</p>
+  </article>
+
+  <p class="pie">
+    <a href="/">Sobre Vita</a> ·
+    <a href="/legal/terminos">Términos</a> ·
+    <a href="/legal/privacidad">Privacidad</a>
+  </p>
+</main>
+
+<script>
+// ── Configuración ────────────────────────────────────────────────────────────
+// 🔴 Esta clave es PÚBLICA POR DISEÑO: es la misma que viaja dentro de la app
+// publicada en las tiendas, así que cualquiera que instale la app ya la tiene.
+// No es un secreto filtrado — ponerla acá no expone nada nuevo.
+//
+// ⚠️ Lo que protege los datos NO es esconder esta clave, es la RLS y los grants
+// por columna: `anon` solo puede leer `id`, `name`, `avatar_url` y `gender` de
+// `profiles` (`scripts/restrict-anon-profiles-columns.sql`) y solo filas de
+// coaches. Si alguna vez hace falta esconder una clave para que algo sea
+// seguro, es que la policy está mal, no la clave.
+const SUPABASE_URL = 'https://ggygiihhnkjrerpinhha.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdneWdpaWhobmtqcmVycGluaGhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mjc5NjEsImV4cCI6MjA5NzEwMzk2MX0.lHPjyKjJIYD_lUTCF7uMBCKj9tCK_67OyrIFkCLQ-BI';
+
+// ── El slug sale de la URL ───────────────────────────────────────────────────
+// `/c/sofia-herrera` → `sofia-herrera`. La ruta lleva prefijo `/c/` a propósito
+// (ver `scripts/add-coach-slug.sql`): sin él, un slug como `terminos` chocaría
+// con las páginas que ya viven en este dominio.
+const slug = decodeURIComponent(location.pathname.replace(/^\/c\/?/, '').replace(/\/$/, ''));
+
+const $ = (id) => document.getElementById(id);
+const mostrar = (id) => { $(id).hidden = false; };
+const ocultar = (id) => { $(id).hidden = true; };
+
+function iniciales(nombre) {
+  return nombre.split(' ').slice(0, 2).map(p => p[0] || '').join('').toUpperCase() || '?';
+}
+
+function precioArs(n) {
+  return '$' + Number(n).toLocaleString('es-AR', { maximumFractionDigits: 0 });
+}
+
+async function cargar() {
+  if (!slug) { ocultar('cargando'); mostrar('noEncontrado'); return; }
+
+  // ⚠️ `verified=eq.true` no es una optimización: un profesional que todavía no
+  // pasó la revisión NO tiene página pública. El link es de él, pero la
+  // moderación es nuestra.
+  const campos = 'slug,specialty,bio,price_per_session,nationality,verified,availability_status,' +
+                 'profiles!inner(name,avatar_url,gender),coach_topics(topic)';
+  const url = `${SUPABASE_URL}/rest/v1/coaches?slug=eq.${encodeURIComponent(slug)}` +
+              `&verified=eq.true&availability_status=eq.activo&select=${campos}&limit=1`;
+
+  let coach = null;
+  try {
+    const r = await fetch(url, { headers: { apikey: SUPABASE_ANON_KEY } });
+    if (r.ok) coach = (await r.json())[0] || null;
+  } catch (e) {
+    // Sin red o con la consulta caída se muestra lo mismo que si no existiera:
+    // para quien mira, "no pudimos traerlo" y "no existe" son el mismo problema,
+    // y un error técnico en la primera pantalla no ayuda a nadie.
+    console.error('[perfil] no se pudo cargar:', e);
+  }
+
+  ocultar('cargando');
+  if (!coach) { mostrar('noEncontrado'); return; }
+  mostrar('perfil');
+
+  const perfil = Array.isArray(coach.profiles) ? coach.profiles[0] : coach.profiles;
+  const nombre = (perfil && perfil.name) || 'Profesional';
+
+  document.title = `${nombre} — Vita`;
+
+  if (perfil && perfil.avatar_url) {
+    $('foto').src = perfil.avatar_url;
+    $('foto').alt = nombre;
+    mostrar('foto');
+  } else {
+    $('iniciales').textContent = iniciales(nombre);
+    mostrar('iniciales');
+  }
+
+  $('nombre').textContent = nombre;
+  $('especialidad').textContent = coach.specialty || '';
+  $('meta').textContent = coach.nationality || '';
+  $('bio').textContent = coach.bio || '';
+
+  const temas = (coach.coach_topics || []).map(t => t.topic).filter(Boolean);
+  $('temas').innerHTML = '';
+  for (const t of temas.slice(0, 8)) {
+    const chip = document.createElement('span');
+    chip.className = 'tema';
+    chip.textContent = t;          // textContent y no innerHTML: el contenido lo escribe el coach.
+    $('temas').appendChild(chip);
+  }
+
+  if (coach.price_per_session) {
+    $('precio').textContent = precioArs(coach.price_per_session);
+    mostrar('precioBloque');
+  }
+}
+
+cargar();
+</script>
+
+</body>
+</html>
