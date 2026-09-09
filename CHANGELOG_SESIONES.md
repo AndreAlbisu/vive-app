@@ -4,6 +4,28 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 220 · los mails transaccionales, que eran el bloqueante del checkout)
+
+**Tocado:** `supabase/functions/_shared/email.ts` (nuevo), `_shared/booking-effects.ts`, `supabase/functions/mail-notificaciones/index.ts` (nuevo), `scripts/add-notifications-emailed-at.sql` (nuevo), `docs/plantilla-mail-codigo.md`. **575 tests**. ✅ Deployadas y **CORRIDO** el SQL, con el cron agendado (job 11).
+
+**Resumen — faltaban cinco mails y resultaron ser dos mecanismos, no cinco.**
+
+- 🔴 **El hallazgo que ahorró el trabajo: los cuatro eventos que faltaban YA insertan una fila en `notifications`** —aprobación del coach, vencimiento, cancelación y solicitud nueva—, incluido el vencimiento, que lo hace el cron SQL `expire_pending_bookings()`. O sea que **ya existía el registro de "pasó algo que esta persona tiene que saber"**: el mail no es un evento nuevo, es **otro transporte del mismo evento**, igual que la push. Por eso hay una sola función (`mail-notificaciones`, cron cada 5 min) y no cuatro caminos con cuatro formas de fallar.
+- 📌 **El quinto va aparte y está bien que así sea**: "recibimos tu reserva" sale directo desde `booking-effects.ts` porque ese caso **no inserta notificación para el usuario** (la que se inserta es para el coach). Uno avisa de un evento registrado; el otro, de uno que no lo está.
+- 🔴 **Lo más peligroso del cambio no era la función, era el backfill.** Sin marcar como enviadas las notificaciones existentes, **la primera corrida del cron le manda un mail a cada persona por cada notificación vieja** — meses de historia de golpe, y no se puede deshacer. Es el error clásico de poner una cola sobre una tabla con datos. ✅ Verificado invocando la función a mano: devolvió **"sin pendientes"**.
+- 🛡️ **Tres cinturones más en la función**: solo notificaciones de las últimas 3 horas (si el cron estuvo caído dos días, al volver no vomita dos días de mails), tope de 50 por corrida, y **lista blanca de tipos** — no lista negra, porque con una negra un tipo nuevo se mandaría solo. Y las que no tienen dirección se marcan igual como enviadas: una cola que no se vacía deja de ser una cola.
+- ✅ **`_shared/email.ts`**: manda por la **API de Resend**, no por el SMTP de Auth (ese es solo para el código de 6 dígitos). Key propia de **solo envío** — con la contra, descubierta en el camino, de que no permite consultar el estado de un envío (`GET /emails/{id}` da 401), así que la entrega se mira en el panel.
+- ✅ **Probado con plata real y entregado en BANDEJA PRINCIPAL de Gmail**, todavía sin DMARC.
+- 🎨 **La plantilla se aclaró después de verla en el teléfono.** Tenía fondo `#F7EFE4` y tarjeta `#FDF8F0` —dos capas de crema— y se leía marrón: **dos beiges juntos se funden en uno solo y opaco en pantalla chica**. Tarjeta blanca, fondo apenas tostado, y el color en los acentos (línea de 3px, el nombre, los links). **Lo señaló Andre mirándolo en Gmail, no leyendo el código.**
+- ⚠️ **Ningún mail hace fallar lo que lo llama.** Sin key, con destinatario inválido o con Resend rechazando, devuelve `false` y sigue. Un mail que no sale es un problema; una acreditación perdida por un mail es peor.
+
+**Pendiente para la próxima sesión:**
+- **Confirmar la primera corrida del cron**: buscar en `net._http_response` una respuesta que diga `sin pendientes` (se distingue de las de USDT, que dicen `acreditadas`). Si diera **401**, es el Vault — el mismo problema del cron de reembolsos de agosto.
+- 🔴 **Y entonces sí, la decisión de prender `CHECKOUT_HABILITADO`.** Era el único bloqueante técnico que quedaba. Antes de darlo vuelta conviene una prueba entera con el interruptor de prueba: reservar, pagar, que llegue el mail, que el coach acepte y que llegue el segundo.
+- **El DMARC**, que sigue sin estar.
+- **La comisión del link** (recomendación del consejo: primera sesión sin comisión) y **el origen de la reserva**, que `web-book` todavía no marca.
+- 📝 Falta un mail propio de "te devolvimos la plata": hoy lo cubre el de vencimiento/cancelación, que ya dice que el reembolso es automático. `mp-process-refunds` no inserta notificación, así que agregarlo requiere un tipo nuevo en el CHECK.
+
 ## 2026-09-09 — Andre (sesión 219 · el checkout web, entero pero APAGADO)
 
 **Tocado:** `supabase/functions/web-book/index.ts` (nuevo), `supabase/functions/mp-create-payment/index.ts`, `supabase/functions/booking-return/index.ts`, `web/c/index.html`, `web/reserva/index.html` (nuevo). ✅ **Deployadas**: `web-book` v2, `mp-create-payment` v47, `booking-return` v17, más el secret `WEB_RETURN_URL`.
