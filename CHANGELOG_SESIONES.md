@@ -6,7 +6,7 @@
 ---
 ## 2026-09-08 — Andre (sesión 204 · hipertransparencia con el coach, y un margen que nadie había decidido cobrar)
 
-**Tocado:** `supabase/functions/_shared/usdt.ts`, `supabase/functions/usdt-create-payment/index.ts`, `lib/pricing.ts`, `lib/desglosePago.ts` (nuevo), `screens/CoachPayoutScreen.tsx`, `__tests__/usdt.test.ts`, `__tests__/desglosePago.test.ts` (nuevo), `SCHEMA.md`, `docs/decisiones-pagos.md`. **570 tests** (eran 560), `tsc` limpio. ⚠️ **`usdt-create-payment` y `usdt-check-payments` NO están deployadas.**
+**Tocado:** `supabase/functions/_shared/usdt.ts`, `supabase/functions/usdt-create-payment/index.ts`, `lib/pricing.ts`, `lib/payout.ts`, `lib/desglosePago.ts` (nuevo), `screens/CoachPayoutScreen.tsx`, `__tests__/usdt.test.ts`, `__tests__/desglosePago.test.ts` (nuevo), `SCHEMA.md`, `docs/decisiones-pagos.md`. **570 tests** (eran 560), `tsc` limpio. ✅ **Deployadas y verificadas**: `usdt-create-payment` y `usdt-check-payments`, las dos a **v22**.
 
 **Resumen — Andre pidió ser hipertransparente con el coach sobre por qué cobramos lo que cobramos. Al ir a escribirlo aparecieron dos cosas que no se podían contar como estaban.**
 
@@ -19,8 +19,11 @@
 - 📊 **Nueva tabla de netos en `docs/decisiones-pagos.md`.** Existía la comisión escrita en cinco lugares y el neto en ninguno. 🔴 **Y muestra una propiedad que conviene no romper sin darse cuenta: los 5 puntos extra del riel internacional compensan casi exactamente el ≈4% del local — 76% contra 75%, un punto de diferencia.** Hoy el coach cobra prácticamente lo mismo venga de donde venga la persona.
 - 🧹 **`SCHEMA.md` tenía dos bullets de plata que el código contradecía** y se marcaron: que en PayPal el recargo lo paga el cliente con gross-up (eliminado el 20/08) y que el riel internacional es 25% plano (D3 le devolvió la escalera el 25/08). No se borraron: se marcan como viejos con la corrección al lado, porque el resto del texto sigue siendo la historia de por qué no hay gross-up.
 
+- 🧹 **Y dos comentarios de plata en `lib/payout.ts` que quedaron viejos, del mismo tipo que los de `SCHEMA.md`: correctos en la conclusión y engañosos en el motivo**, que es la peor combinación para el que lea el archivo en seis meses. (1) El bloque de `USDT_NETWORK_FEE_USD` seguía explicando por qué **se le descuenta al coach** y decía *"le baja el cobro de 75% a 72%"* — argumento derogado por D5 veinte líneas más abajo, **en el mismo archivo**. (2) El de `coachNetFor` decía que pagarle sobre `usdt_amount` *"sería regalarle hasta 0,99 USD"*; con la resta de esta misma sesión **el error cambió de signo** y ahora sería quitárselos. Los dos quedan con el argumento viejo citado y el motivo por el que cayó, que vale más que la conclusión.
+- 📌 **De paso quedó confirmado qué cobra el coach en USDT** (pregunta de Andre): `bookings.amount` menos `platform_fee_pct`, o sea **75% la primera sesión con cada persona y 80% de ahí en adelante**, sin ningún otro descuento. La base es el precio entero, no lo que efectivamente transfirió el cliente — así que el hueco del identificador lo absorbe VIVE, como se decidió.
+
 **Pendiente para la próxima sesión:**
-- 🔴 **DEPLOYAR `usdt-create-payment` y `usdt-check-payments`** (las dos importan `_shared/usdt.ts`). Sin eso el cambio del identificador no está vivo. ⚠️ **Verificar con un pago chico de verdad**, porque toca el mecanismo que reconoce la plata.
+- ⚠️ **Verificar el cambio del identificador con un pago chico de verdad.** Está deployado y los 18 tests de USDT pasan, pero toca el mecanismo que reconoce la plata y eso no se prueba solo con tests.
 - **Medir de nuevo la tarifa de MP contra un pago de precio real** (el del 19/08 por $4.500 sirve) y ajustar `MP_FEE_PCT_OBSERVED` si difiere. Hoy el desglose que ve el coach depende de ese número.
 - 🔴 **La forma del link público sigue siendo la única decisión grande abierta** — `docs/camino-del-cliente-1.md` §4. El consejo votó A por unanimidad (reserva y cobra en web) y quedó pendiente el hallazgo de sus revisores: **nadie preguntó qué gana el coach mandándolo**. Con la tabla de netos ahora se puede contestar con números.
 - **El porcentaje del descuento del link**, que Andre definió que se lo lleva el coach y no el cliente.

@@ -91,9 +91,15 @@ export function normalizarCbu(cbu: string): string {
  * pagó en el momento del cobro y no hay nada que transferir.
  *
  * ⚠️ El monto base es `bookings.amount` (el precio), NO `usdt_amount`: ese
- * último trae el identificador del pago en los centavos, y pagárselo al coach
- * sería regalarle hasta 0,99 USD por sesión de una plata que existe solo para
- * reconocer la transferencia.
+ * último trae el identificador del pago en los centavos.
+ *
+ * 📝 **El motivo se dio vuelta el 08/09/2026 y la conclusión no.** Antes el
+ * identificador se SUMABA, así que `usdt_amount` era mayor que el precio y
+ * pagárselo al coach habría sido regalarle hasta 0,99 USD de una plata que
+ * existe solo para reconocer la transferencia. Desde que RESTA (ver
+ * `_shared/usdt.ts`), `usdt_amount` es MENOR: usarlo acá le sacaría hasta 0,99
+ * de lo que le corresponde. El error cambió de signo; el campo correcto sigue
+ * siendo `amount`, que es el precio que él fijó y sobre el que se le paga.
  *
  * ⚠️ El redondeo replica el de `marketplaceFeeFor` en
  * `supabase/functions/_shared/commission.ts` —multiplicar antes de dividir— para
@@ -114,14 +120,24 @@ export function coachNetFor(amount: number, feePct: number): number {
  * sesión de USD 50 el costo es del 3% si el profesional hizo una sola esa semana
  * y del 0,3% si hizo diez. No lo determina el precio, lo determina su volumen.
  *
- * Por eso se lo descuenta **a quien lo elige**: pidió que le manden dólares por
- * blockchain, controla la causa y paga el costo — mismo criterio que en Mercado
- * Pago, donde la comisión del procesador sale de la parte del profesional. Y cae
- * solo donde corresponde: al de una sesión semanal le baja el cobro de 75% a
- * 72%, y al de cuatro le descuenta un 1% que no nota.
+ * 🔴 **ESTE COSTO YA NO SE LE DESCUENTA AL COACH — lo absorbe VIVE desde el
+ * 25/08/2026 (D5).** La constante quedó porque el costo existe igual y el panel
+ * necesita poder mostrarlo; lo que cambió es quién lo paga. Ver
+ * `platformDeliveryCost` acá abajo, que es donde vive la regla vigente.
  *
- * Sin este descuento, el mínimo de USD 20 no llegaría al 10% de margen en el
- * peor caso (6,2%); con él da 13,7% en todos.
+ * 📝 Se deja escrito el argumento con el que SÍ se le descontaba, porque explica
+ * la constante y porque el motivo por el que cayó vale más que la conclusión:
+ * *"se lo descuenta a quien lo elige — pidió que le manden dólares por
+ * blockchain, controla la causa y paga el costo, mismo criterio que en Mercado
+ * Pago"*. **La regla espejo (D4) le sacó el piso**: elegir riel dejó de ser una
+ * preferencia libre, porque define qué clientes pueden pagarle.
+ *
+ * ⚠️ Y con él caen también las cuentas que lo acompañaban, que ya no describen
+ * lo que cobra nadie: que al de una sesión semanal *"le baja el cobro de 75% a
+ * 72%"* (hoy cobra 75% u 80% limpio), y que sin el descuento el mínimo de USD 20
+ * no llegaría al 10% de margen en el peor caso. **Ese último sigue siendo un
+ * dato vivo, pero ahora es un problema de VIVE y no del coach**: el margen fino
+ * sobre el mínimo lo comemos nosotros.
  *
  * ⚠️ Valor de Andre, 20/08/2026. Si cambia el precio de TRX o se stakea TRX para
  * energía, este número cambia — y no hay nada que lo detecte solo.
