@@ -25,6 +25,7 @@ dos hermanos no.
 | **A1** | ⏭️ **ASIGNADO A JOAQUÍN el 08/09** (device review). 🔴 **Dos de las tres ramas del piso de seguridad nunca se probaron.** Es la única feature que le habla a alguien en crisis. ✅ El 07/09 una hora de teléfono encontró un bug que **540 tests no vieron** (le prometía una sesión inexistente), porque el bug no estaba en una función sino en la relación entre dos partes de una pantalla. | Forzar los dos casos que faltan: sin ninguna sesión, y con una agendada. | 15 min |
 | **A2** | ⏸️ **DECIDIDO el 08/09: se queda hasta el lanzamiento.** Es **"Coach Prueba"** (`e58d2ec3`, especialidad *"Especialidad de prueba"*), `verified` y `activo`, con MP conectado y `price_per_session = 1` — `mp-create-payment` deriva el precio de esa columna, así que cobraría $1 real. **Andre lo deja porque hace falta un coach para ejercitar los flujos, y con cero usuarios el riesgo es cero.** 🔴 **El riesgo no es tenerlo: es olvidárselo el día que abran** — y ya llevaba varias sesiones apareciendo en "pendiente" sin que eso lo moviera. | ✅ **Mitigado, no resuelto: `scripts/verificar-pre-lanzamiento.sql`** (solo lectura, 5 chequeos, devuelve filas solo si hay problema). Correrlo con la service key **antes de dejar entrar a la primera persona** deja de depender de que alguien se acuerde. | — |
 | **A4** | ⏭️ **ASIGNADO A JOAQUÍN el 08/09.** 🔴 **`authenticated` puede leer las 17 columnas de `profiles` de TODOS los coaches** — mail y `push_token` incluidos. El agujero que se cerró para `anon` ese mismo día **está a un registro de distancia**. | No es de dos líneas: hay que mover al servidor el envío de push (client-side en 6 lugares) y la lectura de mails del panel, y después una vista pública para el catálogo. **Receta abajo.** | Media sesión larga |
+| **A5** | ⏭️ **ASIGNADO A JOAQUÍN el 09/09.** 🔴 **El camino del cliente #1 está construido entero y hay tres cosas que solo se prueban con un teléfono y plata.** Sin eso no se puede prender `CHECKOUT_HABILITADO`. | Tres pruebas cortas. **Receta abajo.** | Una hora, más la del 18 |
 | **A3** | **Nullability de `price_per_session` sin confirmar.** El guard que se agregó al buscador es necesario o decorativo, y no sabemos cuál. ⚠️ El endpoint OpenAPI de PostgREST exige `service_role`. | Una consulta con la service key. | 2 min |
 
 ### A1 — receta para Joaquín (device review del piso de seguridad)
@@ -101,6 +102,85 @@ where user_id = '8b16e5b7-e0e3-4988-9ccc-f8ba447fcb8c'
 
 📌 No interfiere el aviso nuevo de `recurso-del-coach` aunque tengas
 recomendaciones sin abrir: el piso le gana.
+
+### A5 — receta para Joaquín (las pruebas que faltan del checkout web)
+
+> Andre te las dejó el 09/09. **Contexto en una línea:** ese día se construyó y
+> se probó el camino entero del cliente que entra por el link del coach —
+> `/c/<slug>` → horario → código por mail → pago → `/reserva` → sala web — y
+> quedaron tres cosas que **no se pueden verificar sin un teléfono y plata
+> real**.
+>
+> 🔴 **Mientras no estén, `CHECKOUT_HABILITADO` no se prende** (está en
+> `web/c/index.html`). Con el interruptor apagado la página muestra perfil y
+> horarios pero no pide nada; con `?probar=1` se enciende **solo para vos**, y
+> avisa en rojo que la reserva y el cobro son reales.
+
+**Lo que ya está probado y no hace falta repetir** (09/09, con plata real): la
+reserva se crea, el pago se acredita, el horario desaparece de los disponibles,
+`/reserva` muestra el estado, y **los dos mails llegan** — "Recibimos tu reserva"
+al instante y "Sesión confirmada" por el cron, a bandeja principal.
+
+#### Prueba 1 — el checkout, otra vez, mirando el nombre
+
+El 09/09 la prueba salió bien salvo una cosa: **el coach veía "Alguien"** en vez
+del nombre de quien reservó. La cuenta nace del código, que solo pedía el mail,
+así que `profiles.name` quedaba vacío. Se arregló pidiendo el nombre, **y ese
+arreglo no se volvió a probar.**
+
+1. `vitaapp.com.ar/c/coach-prueba?probar=1` — es el único con horarios cargados,
+   y su precio es **$1**.
+2. Elegí un horario, poné **nombre y mail** (usá un alias `+algo` de tu Gmail),
+   aceptá los Términos, confirmá el código, pagá.
+3. 🔴 **Entrá a la app como coach y mirá la tarjeta "espera tu respuesta":
+   tiene que aparecer TU NOMBRE**, no "Alguien". Eso es lo único nuevo a probar.
+4. De paso: que la card esté **debajo** de "Tu próxima sesión" (decisión de Andre
+   del 09/09), y que al tocar Aceptar desaparezca.
+
+#### Prueba 2 — la videollamada, el 18/09 a las 11:00
+
+Es la única parte del camino que **nunca se ejercitó**, y solo se puede el día de
+la sesión: la sala se abre 15 minutos antes.
+
+1. **Vos como cliente**, desde el navegador: `vitaapp.com.ar/sala?booking=<id>`.
+   El link también llega en el mail de "Sesión confirmada".
+   ⚠️ **Te va a pedir el código de nuevo, y es normal**: el token de acceso dura
+   una hora, así que quien entra el día de la sesión siempre se re-identifica. Si
+   eso se siente mal, decilo — es lo primero que revisaríamos.
+2. **El coach desde la compu**: en el Inicio, tarjeta de la próxima sesión,
+   **"Hacerla desde la computadora"** → comparte el link, lo abrís en el
+   escritorio. Es como va a trabajar de verdad: la app es solo móvil y nadie da
+   una sesión de una hora con el teléfono en la mano.
+3. Que **se vean y se escuchen las dos puntas**. Ahí el camino está cerrado.
+
+#### Prueba 3 — cuánto cobra Mercado Pago de verdad
+
+📊 **Todo el desglose que el coach ve en "Cómo te pagamos" depende de un número
+medido sobre un pago de $1**: `mercadopago_fee` 0,04 sobre 1,00, o sea ≈4%. A ese
+monto, cualquier componente fijo de la tarifa distorsiona el porcentaje.
+
+Buscá en el panel de Mercado Pago el pago **de $4.500 del 19/08/2026** (segunda
+sesión pagada de verdad, par Joaquín + Coach Prueba) y mirá el desglose:
+
+- cuánto se llevó **Mercado Pago**,
+- cuánto se llevó **VIVE** (`application_fee`),
+- cuánto quedó **neto para el coach**.
+
+Si el porcentaje de MP no da ~4%, hay que actualizar `MP_FEE_PCT_OBSERVED` en
+`lib/pricing.ts` — y con él cambia lo que la app le promete al coach.
+
+#### Y una cosa de DNS, si te queda a mano
+
+**Falta el DMARC** de `vitaapp.com.ar`. Sin él, Gmail y Yahoo son más duros con
+un remitente nuevo y los mails pueden caer en spam — que es peor que no llegar,
+porque parece que funcionó. La zona vive en **Vercel** (no en DonWeb, ver
+`docs/hosting.md`): un TXT en `_dmarc` con
+
+```
+v=DMARC1; p=none; rua=mailto:andrealbisu@gmail.com
+```
+
+`p=none` no rechaza nada, solo reporta.
 
 ### A4 — receta para Joaquín (`authenticated` lee el mail de todos los coaches)
 

@@ -4,6 +4,27 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 222 · el link para la compu, un bug de mails duplicados, y las pruebas pasan a Joaquín)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `supabase/functions/mail-notificaciones/index.ts`, `docs/problemas-abiertos.md` (A5). **575 tests**, `tsc` limpio. ✅ Deployada.
+
+**Resumen — cierre del bloque del checkout web: lo que faltaba construir, una revisión de lo escrito hoy, y el traspaso.**
+
+- 🟢 **"Hacerla desde la computadora"** en la tarjeta de la próxima sesión del coach. 🔴 **No es una comodidad: la app es SOLO MÓVIL, y una sesión de 60 minutos un profesional la quiere hacer en la compu.** Hasta hoy la única forma de entrar era el botón de la tarjeta, o sea el teléfono en la mano una hora. La sala web ya servía para las dos puntas —`create-meeting-room` acepta al coach y lo hace owner—, faltaba darle el link. 📌 Se **comparte** en vez de copiarse: lo que hace falta no es el texto en el portapapeles del teléfono, es el link **en la otra máquina**.
+- 🐛 **Y un bug de contraste propio al escribirlo**, del mismo tipo que la auditoría de la 172: el ícono quedó en `FOREST_SOFT`, que sobre el verde oscuro de esa tarjeta da **1.95:1** — invisible. Se detectó **calculando el ratio, no mirándolo**. Con `GREEN_EYEBROW` da 5.59:1.
+- 🔴 **Revisando lo escrito hoy apareció un bug real en los mails: se podían mandar DOS VECES.** Se mandaba y después se marcaba, y eso duplica por dos caminos — si el `update` falla la fila queda pendiente, y **si una corrida tarda más de los 5 minutos del cron, la siguiente toma las mismas filas sin marcar**. Ahora la fila se **reserva antes** de mandar, con un update condicionado a `emailed_at is null`: solo quien gana la carrera la recibe de vuelta. Si el envío falla, se libera para reintentar.
+- 📌 **Y queda un caso sin cubrir A PROPÓSITO**, escrito en el código: si el mail sale y el proceso muere justo después, se pierde un reintento que no hacía falta. **Se prefiere un mail perdido a uno duplicado** — el duplicado es el que erosiona la confianza en los avisos de plata.
+- ✅ **Verificado que NO es un bug**: `web-book` chequea el horario y después inserta, sin atomicidad, y dos personas podrían reservar el mismo turno. Parece un problema pero **es el modelo que ya usa la app**: se permiten varias `pendiente` compitiendo, y `cancelarCompetidores` las resuelve cuando una paga. Un índice único ahí rompería ese diseño.
+- ⏭️ **Las tres pruebas que faltan pasan a Joaquín (A5)**, con receta: (1) el checkout otra vez mirando **el nombre**, que es lo único que se arregló después de la prueba del 09/09 y no se volvió a probar; (2) **la videollamada el 18/09 a las 11:00**, la única parte del camino nunca ejercitada, con las dos puntas desde el navegador; (3) **medir la tarifa real de MP** contra el pago de $4.500 del 19/08 — todo el desglose que ve el coach depende de un número medido sobre un pago de $1. Más el DMARC si le queda a mano.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Prender `CHECKOUT_HABILITADO`** — cuando vuelvan las pruebas de A5.
+- **La comisión del link** (recomendación del consejo: primera sesión sin comisión). La columna de origen ya está, así que la decisión no tiene dependencias técnicas.
+- **Qué ve el cliente al terminar la sesión** — es donde vive el marketplace y hoy no existe. **De lo que queda, es lo único que cambia lo que VIVE ES y no cómo funciona.**
+- **Las `og:tags` de WhatsApp son genéricas**: la previsualización no muestra al coach, y eso es lo que separa el link de una estafa. Necesita render en servidor.
+- Menores: marcar `origen: 'app'` en las reservas de la app, el `Sender name` en mayúsculas, la vista pública del catálogo (de la 210).
+- **Sin dueño:** screening de coaches y protocolo de crisis.
+
 ## 2026-09-09 — Andre (sesión 221 · la sala web, y el origen de la reserva)
 
 **Tocado:** `web/sala/index.html` (nuevo), `web/reserva/index.html`, `web/c/index.html`, `supabase/functions/mail-notificaciones/index.ts`, `supabase/functions/web-book/index.ts`, `scripts/add-booking-origen.sql` (nuevo), `docs/camino-del-cliente-1.md`, `SCHEMA.md`. ✅ Deployadas y **CORRIDO** el SQL.
