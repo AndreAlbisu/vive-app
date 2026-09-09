@@ -190,6 +190,7 @@
       <p class="ok" id="identificado" hidden></p>
     </section>
 
+    <p class="error" id="errorPago" hidden></p>
     <button class="cta" id="cta" disabled>Elegir un horario</button>
     <p class="cta-nota" id="ctaNota"></p>
   </article>
@@ -425,7 +426,25 @@ async function cargarHorarios() {
 // (`signInWithOtp` + `verifyOtp`, plantilla con `{{ .Token }}`). No se está
 // construyendo nada nuevo: se está reusando algo que ya sale y ya llega.
 
-let sesion = null;   // { access_token, email } una vez confirmado
+// 🔴 La sesión se guarda en `sessionStorage` y no en una variable: pagar
+// implica IRSE a Mercado Pago y volver, y en el camino la página se recarga.
+// Una variable en memoria no sobrevive ese viaje, y la persona volvería sin
+// sesión justo después de pagar — sin poder ver el estado de lo que acaba de
+// comprar.
+//
+// ⚠️ `sessionStorage` y no `localStorage`: muere al cerrar la pestaña. Es un
+// token de acceso real, y esto se abre desde el WhatsApp de otra persona, a
+// veces en un teléfono prestado.
+const CLAVE_SESION = 'vita_sesion_web';
+
+function guardarSesion(s) {
+  try { sessionStorage.setItem(CLAVE_SESION, JSON.stringify(s)); } catch (e) { /* modo privado */ }
+}
+function leerSesion() {
+  try { return JSON.parse(sessionStorage.getItem(CLAVE_SESION) || 'null'); } catch { return null; }
+}
+
+let sesion = leerSesion();   // { access_token, email } una vez confirmado
 
 function mostrarError(id, msg) {
   const el = $(id);
@@ -506,6 +525,7 @@ async function confirmarCodigo() {
       return mostrarError('errorCodigo', msg);
     }
     sesion = { access_token: cuerpo.access_token, email: mail };
+    guardarSesion(sesion);
     ocultar('pasoCodigo');
     $('identificado').textContent = `Listo, ${mail}.`;
     mostrar('identificado');
@@ -552,9 +572,87 @@ function actualizarCta() {
 
   if (!sesion) { cta.textContent = 'Confirmá tu mail para seguir'; $('ctaNota').textContent = cuando; return; }
   cta.textContent = 'Ir a pagar';
-  $('ctaNota').textContent = cuando;
+  cta.disabled = false;
+  $('ctaNota').textContent = `${cuando} · vas a pagar en Mercado Pago.`;
 }
 
+// ── Reservar y cobrar ────────────────────────────────────────────────────────
+// Dos llamadas, a propósito: `web-book` crea la reserva (y vuelve a verificar el
+// horario del lado del servidor) y `mp-create-payment` cobra — la MISMA función
+// que usa la app, con sus reintentos y su webhook. Meter el cobro adentro de la
+// primera sería abrir una segunda puerta a la plata.
+async function irAPagar() {
+  if (!elegido || !sesion) return;
+  const cta = $('cta');
+  cta.disabled = true;
+  cta.textContent = 'Preparando el pago…';
+  mostrarError('errorPago', '');
+
+  const conSesion = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${sesion.access_token}`,
+    'Content-Type': 'application/json',
+  };
+
+  try {
+    // 1. La reserva. El horario NO se confía: `web-book` lo vuelve a preguntar.
+    const rBook = await fetch(`${SUPABASE_URL}/functions/v1/web-book`, {
+      method: 'POST',
+      headers: conSesion,
+      body: JSON.stringify({
+        slug,
+        fecha: elegido.fecha,
+        hora: elegido.hora,
+        // Dónde estaba quien reserva, en crudo (D2). El navegador lo sabe.
+        tz: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; } })(),
+      }),
+    });
+    const book = await rBook.json().catch(() => ({}));
+    if (!rBook.ok || !book?.bookingId) {
+      // 409 es el caso que de verdad va a pasar: alguien tomó el horario
+      // mientras esta persona lo miraba. Se dice eso, y se recargan los
+      // horarios en vez de dejarla mirando uno que ya no existe.
+      if (rBook.status === 409) {
+        mostrarError('errorPago', book?.error ?? 'Ese horario ya no está disponible.');
+        elegido = null;
+        await cargarHorarios();
+        actualizarCta();
+        return;
+      }
+      console.error('[web-book]', rBook.status, book);
+      mostrarError('errorPago', 'No pudimos reservar el horario. Probá de nuevo.');
+      return;
+    }
+
+    // 2. El cobro.
+    const rPago = await fetch(`${SUPABASE_URL}/functions/v1/mp-create-payment`, {
+      method: 'POST',
+      headers: conSesion,
+      body: JSON.stringify({ booking_id: book.bookingId, destino: 'web' }),
+    });
+    const pago = await rPago.json().catch(() => ({}));
+    if (!rPago.ok || !pago?.init_point) {
+      console.error('[mp-create-payment]', rPago.status, pago);
+      // ⚠️ La reserva YA existe y quedó 'pendiente'. No se cancela desde acá: si
+      // no se paga, `expire_unpaid_checkouts()` la libera a los 30 minutos. Es
+      // el mismo camino que sigue la app cuando alguien cierra el checkout.
+      mostrarError('errorPago', 'Reservamos el horario pero no pudimos abrir el pago. Probá de nuevo en un momento.');
+      return;
+    }
+
+    location.href = pago.init_point;
+  } catch (e) {
+    console.error('[pagar]', e);
+    mostrarError('errorPago', 'No pudimos abrir el pago. Probá en un momento.');
+  } finally {
+    if (!location.href.includes('mercadopago')) {
+      cta.disabled = false;
+      cta.textContent = 'Ir a pagar';
+    }
+  }
+}
+
+$('cta').addEventListener('click', irAPagar);
 $('btnCodigo').addEventListener('click', pedirCodigo);
 $('btnConfirmar').addEventListener('click', confirmarCodigo);
 $('otroMail').addEventListener('click', (e) => { e.preventDefault(); volverAlMail(); });

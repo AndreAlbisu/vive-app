@@ -57,8 +57,11 @@ serve(async (req) => {
     )
     if (authErr || !user) return json({ error: 'Unauthorized' }, 401)
 
-    const { booking_id } = await req.json()
+    const { booking_id, destino } = await req.json()
     if (!booking_id) return json({ error: 'Missing booking_id' }, 400)
+    // `destino: 'web'` lo manda la página pública `/c/<slug>`. Cambia UNA cosa:
+    // a dónde vuelve la persona después de pagar. Ver más abajo, en `back_urls`.
+    const vuelveALaWeb = destino === 'web'
 
     const { data: booking } = await supabase
       .from('bookings')
@@ -213,7 +216,17 @@ serve(async (req) => {
     // depende de esto en ningún caso — lo acredita `mp-webhook`, no el redirect;
     // lo único que se pierde es la vuelta automática a la app.
     if (CHECKOUT_RETURN_URL.startsWith('https://')) {
-      prefBody.back_urls = { success: CHECKOUT_RETURN_URL, failure: CHECKOUT_RETURN_URL, pending: CHECKOUT_RETURN_URL }
+      // Quien reservó desde la web no tiene la app: mandarlo al deep link lo
+      // deja en una pantalla en blanco. `booking-return` lee este `destino` y
+      // redirige a la web en vez de al deep link.
+      //
+      // ⚠️ Se marca acá, del lado del servidor, y no se acepta una URL de vuelta
+      // del cliente: `booking-return` es pública, y dejarle elegir el destino la
+      // convertiría en un redirector abierto con nuestro dominio adelante.
+      const vuelta = vuelveALaWeb
+        ? `${CHECKOUT_RETURN_URL}${CHECKOUT_RETURN_URL.includes('?') ? '&' : '?'}destino=web`
+        : CHECKOUT_RETURN_URL
+      prefBody.back_urls = { success: vuelta, failure: vuelta, pending: vuelta }
       prefBody.auto_return = 'approved'
     }
 

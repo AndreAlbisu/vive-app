@@ -21,6 +21,15 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const BOOKING_DEEP_LINK = Deno.env.get('BOOKING_DEEP_LINK') ?? 'viveapp://booking/result'
 
+// 🔴 La vuelta de quien reservó desde la WEB (`/c/<slug>`), que no tiene la app
+// y para quien el deep link no lleva a ningún lado.
+//
+// ⚠️ Es una constante de entorno y NO un parámetro: si la página pudiera mandar
+// a dónde volver, esta function —que es pública— se convertiría en un redirector
+// abierto, y un link de `vitaapp.com.ar` mandando a cualquier lado es
+// exactamente la forma de un phishing. El destino lo decide el servidor.
+const WEB_RETURN_URL = Deno.env.get('WEB_RETURN_URL') ?? 'https://vitaapp.com.ar/reserva'
+
 // ⚠️ Lista blanca. Esta function es PÚBLICA (`verify_jwt = false`) y su salida
 // entra a la app por un deep link, así que reenviar TODO lo que llegue —que era
 // lo que hacía— convierte cualquier URL de internet en un canal para meter
@@ -31,7 +40,11 @@ const PARAMS_DE_MP = ['payment_id', 'status', 'collection_status', 'external_ref
 
 serve((req) => {
   const url = new URL(req.url)
-  const target = new URL(BOOKING_DEEP_LINK)
+  // `destino=web` lo pone `mp-create-payment` al armar las `back_urls` cuando la
+  // reserva nació en la página pública. No viene del navegador de la persona:
+  // viaja adentro de la URL que MP recibió de nosotros.
+  const esWeb = url.searchParams.get('destino') === 'web'
+  const target = new URL(esWeb ? WEB_RETURN_URL : BOOKING_DEEP_LINK)
   for (const key of PARAMS_DE_MP) {
     const value = url.searchParams.get(key)
     // Tope de largo: son ids y estados cortos. Nada que llegue acá justifica

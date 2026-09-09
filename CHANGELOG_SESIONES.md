@@ -4,6 +4,25 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 219 · el checkout web, entero pero APAGADO)
+
+**Tocado:** `supabase/functions/web-book/index.ts` (nuevo), `supabase/functions/mp-create-payment/index.ts`, `supabase/functions/booking-return/index.ts`, `web/c/index.html`, `web/reserva/index.html` (nuevo). ✅ **Deployadas**: `web-book` v2, `mp-create-payment` v47, `booking-return` v17, más el secret `WEB_RETURN_URL`.
+
+**Resumen — se construyó el camino completo del cliente #1, y se dejó apagado a propósito.**
+
+- 🔴 **Lo primero fue apagar lo de ayer.** La página estaba VIVA pidiendo el mail con el cobro sin terminar: cualquiera podía dar su casilla, aceptar los Términos, recibir un código y **quedar con una cuenta creada** para no poder reservar nada. Eso es pedir datos y consentimiento para una operación que no puede completarse. Ahora hay un interruptor (`CHECKOUT_HABILITADO`) que se prende **en el mismo cambio que habilite el pago**. Y se sacó la frase *"se habilita en los próximos días"*: era un plazo que no controlamos, prometido en una página pública. **Lo señaló Andre.**
+- 🟢 **`web-book`**: crea la reserva que nace en `/c/<slug>`. 🔴 **No se hizo desde el JavaScript de la página y el motivo no es comodidad: el horario no se puede validar en el cliente.** Si la página mandara fecha y hora y el servidor insertara sin mirar, cualquiera reservaría un turno no ofrecido o ya tomado cambiando dos campos en el navegador. La función **vuelve a preguntar con `slots_libres`, la MISMA que dibuja los horarios** — no se reimplementó la regla, porque dos copias terminan diciendo cosas distintas y gana la que reserva.
+- 📌 **Y tampoco se duplicó el armado de la reserva**: la app la construye con seis derivados (sala del par, duración del patrón, precio vigente, zona observada). La función hace lo mismo, del lado del servidor. ⚠️ Con el cuidado que SCHEMA marca en rojo: **`salas.coach_id` es el `profile_id`, no `coaches.id`**.
+- 🟢 **La vuelta del pago.** `mp-create-payment` acepta `destino: 'web'` y marca las `back_urls`; `booking-return` lee eso y redirige a la web en vez del deep link. ⚠️ **El destino lo decide el servidor, nunca el cliente**: `booking-return` es pública, y dejarle elegir a dónde volver la convertiría en un **redirector abierto con nuestro dominio adelante**, que es la forma de un phishing. ✅ **Verificado que el camino de la APP quedó intacto**: sin `destino` sigue yendo a `viveapp://booking/result`.
+- 🟢 **`/reserva`**: la pantalla de después de pagar, que el consejo llamó *"el producto entero"*. Dice cuándo es la sesión, que el coach tiene 24hs, y —lo que más importa— **qué pasa si no confirma: se cancela sola y se devuelve todo**. Sondea unos segundos porque `mp-webhook` puede llegar después del redirect, y ver "pendiente de pago" justo después de pagar es el peor momento para dudar.
+- 📌 **La sesión se guarda en `sessionStorage`**: pagar implica irse a MP y volver, y una variable en memoria no sobrevive ese viaje. `sessionStorage` y no `localStorage` porque es un token real y esto se abre desde el WhatsApp de otro, a veces en un teléfono prestado.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **LOS MAILS TRANSACCIONALES, y son el bloqueante para prender el interruptor.** `/reserva` promete "te avisamos por mail" tres veces y **no existe ninguno**: hoy solo sale el código. Faltan cinco — confirmación, aprobación del coach, vencimiento a las 24hs, reembolso y cancelación. **Quien reserva desde la web no tiene la app**: sin esos mails, si el coach no confirma y se le devuelve la plata, no se entera por ningún lado. Está marcado en el código de `/reserva`.
+- **Probar el camino entero con plata real** una vez prendido: reservar desde `/c/coach-prueba`, pagar, volver a `/reserva`, y que al coach le aparezca en el Inicio.
+- **El DMARC**, que sigue sin estar.
+- **La decisión de la comisión del link** (la recomendación del consejo: primera sesión sin comisión) y **el origen de la reserva**, que `web-book` todavía no marca.
+
 ## 2026-09-09 — Andre (sesión 218 · ✅ el mail sale de verdad — se destrabó el checkout web)
 
 **Tocado:** `docs/plantilla-mail-codigo.md`, `docs/camino-del-cliente-1.md`. Sin código ni schema.

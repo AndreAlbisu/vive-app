@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tu reserva — Vita</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 20px 64px;
+    background: #F7EFE4; color: #3A4F2A;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px; line-height: 1.6;
+  }
+  main { max-width: 520px; margin: 0 auto; }
+  .marca { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; opacity: .55; margin-bottom: 28px; }
+  h1 { font-size: 1.45rem; line-height: 1.25; margin: 0 0 12px; }
+  .cuando {
+    font-size: 1.05rem; padding: 14px 0; margin: 18px 0;
+    border-top: 1px solid rgba(58,79,42,.15); border-bottom: 1px solid rgba(58,79,42,.15);
+  }
+  .cuando b { display: block; font-size: 1.2rem; }
+  .que-sigue { font-size: .92rem; }
+  .que-sigue li { margin-bottom: .5rem; }
+  .nota { font-size: .85rem; opacity: .72; margin-top: 22px; }
+  .estado { padding: 40px 0; text-align: center; opacity: .7; }
+  .pie { margin-top: 40px; font-size: .8rem; opacity: .55; text-align: center; }
+  .pie a { color: #C1694F; }
+  [hidden] { display: none !important; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1A1C16; color: #E4E0D2; }
+    .cuando { border-color: rgba(228,224,210,.18); }
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="marca">Vita</p>
+
+  <div id="cargando" class="estado"><p>Buscando tu reserva…</p></div>
+
+  <div id="sinSesion" class="estado" hidden>
+    <h1>No pudimos mostrarte la reserva</h1>
+    <p>Puede que hayas abierto este link en otro navegador. Si pagaste, la reserva existe igual y te vamos a avisar por mail.</p>
+  </div>
+
+  <article id="listo" hidden>
+    <h1 id="titulo"></h1>
+    <div class="cuando">
+      <b id="fecha"></b>
+      <span id="conQuien"></span>
+    </div>
+    <div id="queSigue"></div>
+    <p class="nota" id="nota"></p>
+  </article>
+
+  <p class="pie">
+    <a href="/">Sobre Vita</a> ·
+    <a href="/legal/terminos">Términos</a> ·
+    <a href="/legal/arrepentimiento">Botón de arrepentimiento</a>
+  </p>
+</main>
+
+<script>
+const SUPABASE_URL = 'https://ggygiihhnkjrerpinhha.supabase.co';
+// Pública por diseño, igual que en `/c/<slug>` — ver el comentario largo ahí.
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdneWdpaWhobmtqcmVycGluaGhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mjc5NjEsImV4cCI6MjA5NzEwMzk2MX0.lHPjyKjJIYD_lUTCF7uMBCKj9tCK_67OyrIFkCLQ-BI';
+
+const $ = (id) => document.getElementById(id);
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+function fechaLarga(iso, hora) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const f = new Date(y, m - 1, d);
+  return `${DIAS[f.getDay()]} ${d} de ${MESES[m - 1]}, ${String(hora).slice(0, 5)} hs`;
+}
+
+const params = new URLSearchParams(location.search);
+const bookingId = params.get('external_reference');
+
+let sesion = null;
+try { sesion = JSON.parse(sessionStorage.getItem('vita_sesion_web') || 'null'); } catch { /* modo privado */ }
+
+/**
+ * 🔴 El estado lo escribe `mp-webhook`, que llega por su cuenta y puede tardar
+ * unos segundos más que el redirect del navegador. Por eso se sondea un rato en
+ * vez de leer una sola vez: si no, quien pagó ve "pendiente de pago" justo
+ * después de haber pagado, que es el peor momento para dudar.
+ */
+async function traerReserva(intento = 0) {
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}` +
+    `&select=id,scheduled_date,scheduled_time,status,payment_status,coach_name`,
+    { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${sesion.access_token}` } },
+  );
+  if (!r.ok) return null;
+  const filas = await r.json();
+  const b = filas[0] ?? null;
+  if (b && b.payment_status !== 'aprobado' && intento < 5) {
+    await new Promise(res => setTimeout(res, 1500));
+    return traerReserva(intento + 1);
+  }
+  return b;
+}
+
+function pintar(b) {
+  const pagado = b.payment_status === 'aprobado';
+  const confirmada = b.status === 'confirmada';
+  const coach = b.coach_name || 'tu profesional';
+
+  $('titulo').textContent = confirmada
+    ? '¡Listo! Tu sesión está confirmada'
+    : pagado
+      ? 'Pagaste. Falta que lo confirme tu profesional'
+      : 'Estamos confirmando tu pago';
+
+  $('fecha').textContent = fechaLarga(b.scheduled_date, b.scheduled_time);
+  $('conQuien').textContent = `con ${coach}`;
+
+  // ⚠️ Lo que esta pantalla tiene que dejar claro es lo que pasa DESPUÉS, y
+  // sobre todo qué pasa si no pasa nada: quien reserva desde la web no tiene la
+  // app, así que si no se lo decimos acá y por mail, no se entera por ningún
+  // lado. `expire_pending_bookings()` cancela y devuelve a las 24hs.
+  const pasos = confirmada
+    ? [`Te esperamos a la hora de la sesión.`,
+       `Te mandamos el enlace de la videollamada por mail.`]
+    : [`${coach} tiene hasta <b>24 horas</b> para confirmar el horario.`,
+       `Apenas lo haga, te avisamos por mail.`,
+       `Si no llega a confirmarlo, la reserva se cancela sola y <b>te devolvemos todo</b>, sin que tengas que pedirlo.`];
+
+  $('queSigue').innerHTML = '<ul class="que-sigue">' + pasos.map(p => `<li>${p}</li>`).join('') + '</ul>';
+
+  // 🔴 ATENCIÓN — ESTA PANTALLA PROMETE MAILS QUE TODAVÍA NO EXISTEN.
+  // "te avisamos por mail" aparece tres veces acá y **no hay ningún mail
+  // transaccional construido**: hoy solo sale el código de verificación. Los
+  // que faltan son cinco — confirmación de la reserva, aprobación del coach,
+  // vencimiento a las 24hs, reembolso y cancelación— y viven en `mp-webhook`,
+  // `expire_pending_bookings` y `confirmBooking`.
+  //
+  // ⚠️ NO SE PUEDE PRENDER `CHECKOUT_HABILITADO` SIN ESOS MAILS. Quien reserva
+  // desde la web no tiene la app: si el coach no confirma y se le devuelve la
+  // plata, sin mail no se entera por ningún lado — y esta pantalla ya le dijo
+  // que le íbamos a avisar.
+  $('nota').textContent = pagado
+    ? 'Te mandamos todo esto por mail también.'
+    : 'Si acabás de pagar, puede tardar unos segundos en aparecer. Podés cerrar esta página: te avisamos por mail igual.';
+
+  $('cargando').hidden = true;
+  $('listo').hidden = false;
+}
+
+(async () => {
+  if (!bookingId || !sesion?.access_token) {
+    $('cargando').hidden = true;
+    $('sinSesion').hidden = false;
+    return;
+  }
+  try {
+    const b = await traerReserva();
+    if (!b) { $('cargando').hidden = true; $('sinSesion').hidden = false; return; }
+    pintar(b);
+  } catch (e) {
+    console.error('[reserva]', e);
+    $('cargando').hidden = true;
+    $('sinSesion').hidden = false;
+  }
+})();
+</script>
+</body>
+</html>
