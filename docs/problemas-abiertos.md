@@ -214,11 +214,13 @@ Viene arrastrándose de las sesiones 157-163 y ninguna se cerró:
   el backlog que no se puede verificar estáticamente**; el pre-flight ya validó
   las 4 superficies y el trigger por lectura. Hoy 0 coaches con matrícula, así
   que nada lo ejercita.
-- 🔴 **Cancelación tardía** — cancelar una confirmada a menos de 24hs y confirmar
-  que `cancelled_late` queda en `true` y **no** se dispara reembolso. Es un camino
-  que la pantalla nunca dejó llegar a la base hasta la sesión 165, así que es la
-  primera vez que se ejercita de verdad. **De todo lo pendiente, es lo que toca
-  plata.**
+- ✅ **Cancelación tardía — HECHO (09/09), verificado en dispositivo + base.**
+  Usuario canceló una confirmada a ~2hs (pago aprobado): el trigger
+  `mark_refund_on_cancel` marcó `cancelled_late = true` y dejó `payment_status`
+  en `aprobado` (NO `reembolso_pendiente`) — o sea que **no se disparó reembolso**,
+  y el mensaje al usuario fue el de política ("cancelaste con menos de 24hs… no
+  corresponde reembolso"). Era el camino que toca plata y no se había ejercitado
+  nunca. Data de prueba revertida (reserva a confirmada / 09-26).
 - **Diario nuevo** (el colapso con el teclado, que la franja se llene sola al
   guardar), **"Sobre vos" early**, y ~~**el aviso de `recurso-del-coach`**~~.
   - ✅ **`recurso-del-coach` HECHO (09/09) — con bug encontrado y arreglado.** La

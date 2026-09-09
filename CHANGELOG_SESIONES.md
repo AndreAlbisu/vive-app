@@ -4,6 +4,20 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Joaquín (sesión 213 · cancelación tardía verificada — el camino que toca plata)
+
+**Tocado:** `docs/problemas-abiertos.md`. Sin código ni schema (device review + data de prueba, revertida).
+
+**Resumen — se ejercitó por primera vez la cancelación tardía, lo único pendiente que toca dinero.**
+
+- ✅ Setup: reserva confirmada a ~2hs con `payment_status='aprobado'`. Joaquín la canceló desde la app (como usuario). Resultado verificado en la base: `cancelled_late=true`, `payment_status` quedó en **`aprobado`** (NO `reembolso_pendiente`), `refunded_at=null` → **no se disparó reembolso**, que es la política (cancelar <24hs pierde el reembolso). El mensaje al usuario fue el correcto ("no corresponde reembolso").
+- 📌 De paso quedó confirmada la lógica del trigger `mark_refund_on_cancel`: reembolsa SIEMPRE salvo `cancelled_by='usuario' AND tardía`. (SCHEMA línea 188 estaba imprecisa: decía que `cancelled_late` es null cuando cancela el usuario, pero el trigger sí lo setea.)
+- 🧹 Data de prueba revertida: reserva `e9be9124` de vuelta a `confirmada / 2026-09-26 13:00`.
+
+**Pendiente para la próxima sesión:**
+- 🟡 Para Andre: vista pública del catálogo, paquete paso 3, encender IA/piso, opción B del Diario, link público, % del descuento.
+- Con esto **el bloque de device review de Joaquín queda cerrado** (A1, matrícula, Diario, recurso-del-coach, cancelación tardía).
+
 ## 2026-09-09 — Joaquín (sesión 212 · aviso de recurso-del-coach — device review + bug de refresco arreglado)
 
 **Tocado:** `hooks/useWeeklySignals.ts`, `app/(tabs)/index.tsx`, `docs/problemas-abiertos.md`. `tsc` 0, **570 tests**. Sin schema.
