@@ -3,7 +3,22 @@
 -- `anon` deja de poder leer TODAS las columnas de `profiles` y pasa a leer solo
 -- las cuatro que el catálogo público necesita.
 --
--- ⚠️ PENDIENTE DE CORRER.
+-- ✅ CORRIDO el 08/09/2026, y VERIFICADO desde afuera con la anon key —que es
+-- exactamente lo que tiene un atacante— y no solo contra el catálogo de
+-- privilegios:
+--   · `select=email`, `select=push_token` y `select=*` → **42501, permission
+--     denied for table profiles**;
+--   · `select=id,name,avatar_url,gender` → anda;
+--   · la consulta REAL de `coachesCache` (con `profiles!inner(...)` y todos sus
+--     filtros) → **200, con los perfiles embebidos completos**;
+--   · la de `ProfesionalScreen` → anda.
+--
+-- 📌 Que el catálogo siga andando no era obvio: el `!inner` embebe `profiles`, y
+-- si faltara una columna del grant fallaría con el mismo 42501. Se probó la
+-- consulta entera y no una aproximación, justamente porque del lado de la app
+-- este error no se ve como error sino como "no hay coaches".
+--
+-- ⚠️ **FALTA correr la verificación 3** (qué ve `authenticated`).
 --
 -- ── Qué encontró esto ────────────────────────────────────────────────────────
 --

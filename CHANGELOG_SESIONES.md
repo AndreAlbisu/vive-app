@@ -6,7 +6,7 @@
 ---
 ## 2026-09-08 — Andre (sesión 205 · la policy pública ya existía, y era más ancha de lo que debía)
 
-**Tocado:** `scripts/restrict-anon-profiles-columns.sql` (nuevo), `SCHEMA.md`. ⚠️ **PENDIENTE DE CORRER.** Sin cambios de código de app; 570 tests, `tsc` limpio.
+**Tocado:** `scripts/restrict-anon-profiles-columns.sql` (nuevo), `SCHEMA.md`. ✅ **CORRIDO y VERIFICADO el 08/09/2026.** Sin cambios de código de app; 570 tests, `tsc` limpio.
 
 **Resumen — se iba a agregar `coaches.slug` + una policy de lectura anon para la página pública del coach. Al verificar si hacía falta, resultó que la policy ya existía y el problema era otro.**
 
@@ -16,10 +16,11 @@
 - 📌 **Era un problema de COLUMNAS y no de filas, y por eso el arreglo es un grant y no una policy:** la RLS dice qué filas, los grants dicen qué columnas. `anon` queda con **`id`, `name`, `avatar_url`, `gender`**. No hizo falta tocar la policy ni la RLS.
 - 📝 **Las cuatro columnas salieron de recorrer todo lo que lee `profiles` sin sesión**, no de adivinar: `coachesCache` y `search3` piden `(id, name, avatar_url, gender)`, `ProfesionalScreen` pide `(name, avatar_url)`, y el resto son subconjuntos. **`gender` se queda a propósito** — se muestra en el perfil público y es filtro de búsqueda, no es un descuido. **`nationality` no entra**: la que se muestra sale de `coaches.nationality`. **`birth_date` tampoco**: el campo `age` de `ProfesionalScreen` nunca se llena desde la base.
 - 🔴 **Lo que el script NO arregla, y es la mitad que queda: qué ve `authenticated`.** Si un usuario logueado también lee el mail de todos los coaches, entonces alcanza con registrarse para scrapear el roster y el agujero sigue abierto por otra puerta. La verificación 3 del script lo deja a la vista de una consulta.
+- ✅ **Corrido y verificado el mismo día, y no solo contra `information_schema`:** se probó con la anon key —lo que tiene un atacante— que `email`, `push_token` y `select=*` devuelven **42501 permission denied**, y que la consulta REAL de `coachesCache` (con `profiles!inner(...)` y todos sus filtros) sigue dando **200 con los perfiles embebidos completos**. 📌 Eso último no era obvio: si faltara una columna en el grant, el `!inner` fallaría con el mismo 42501 — y **del lado de la app ese error no se ve como error, se ve como "no hay coaches"**. Por eso se probó la consulta entera y no una aproximación.
 - 📌 **No se llegó a hacer el `coaches.slug`**, que era el trabajo original. Sigue siendo la intersección de las dos opciones del link (web o landing), así que no se tira ninguna de las dos.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **CORRER `scripts/restrict-anon-profiles-columns.sql`** y mirar la verificación 3 (`authenticated`). ⚠️ Después del revoke conviene abrir el catálogo sin sesión y confirmar que sigue cargando: es un cambio de permisos que del lado de la app se ve como "no hay coaches", no como un error.
+- 🔴 **Correr la verificación 3 del script** (`authenticated`): es la mitad que falta. Es un solo SELECT.
 - **Decidir qué hacer con `authenticated`** según lo que devuelva esa verificación.
 - **`coaches.slug`**, que quedó sin empezar.
 - 🔴 **La forma del link público** — `docs/camino-del-cliente-1.md` §4. Y el porcentaje del descuento.
