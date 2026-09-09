@@ -112,16 +112,27 @@ export default function RegisterScreen() {
 
     setLoading(true);
 
-    const { data: existingProfile } = await supabase
-      .from('profiles').select('id').eq('email', email.trim().toLowerCase()).maybeSingle();
-    if (existingProfile) {
-      const { data: coachRow } = await supabase
-        .from('coaches').select('id').eq('profile_id', existingProfile.id).maybeSingle();
-      if (coachRow) {
-        setLoading(false);
-        setServerError('Esta cuenta ya está registrada como profesional. No podés crear una cuenta de usuario con el mismo mail.');
-        return;
-      }
+    // 🔴 Antes esto eran dos consultas: buscar el perfil por mail y después ver
+    // si tenía fila en `coaches`. La primera **filtraba por `profiles.email`**, y
+    // filtrar por una columna exige privilegio de SELECT sobre ella — así que
+    // cuando `restrict-anon-profiles-columns.sql` se lo sacó a `anon`
+    // (08/09/2026), empezó a devolver 42501.
+    //
+    // 📌 Y falló ABIERTO: el `const { data } = await …` descartaba el error, así
+    // que con `data` en null el chequeo se salteaba y el alta seguía. No se
+    // rompió el registro, se rompió el AVISO — la persona terminaba viendo el
+    // error genérico de auth en vez de que su mail ya es de un profesional.
+    //
+    // La pregunta que esta pantalla necesita no es "dame los mails" sino "¿este
+    // mail ya es de un profesional?", que es un booleano. Por eso ahora es una
+    // función `security definer` (`scripts/add-email-es-de-coach.sql`): contesta
+    // sin exponer la columna, y de paso son dos consultas menos.
+    const { data: yaEsCoach } = await supabase
+      .rpc('email_es_de_coach', { p_email: email.trim().toLowerCase() });
+    if (yaEsCoach) {
+      setLoading(false);
+      setServerError('Esta cuenta ya está registrada como profesional. No podés crear una cuenta de usuario con el mismo mail.');
+      return;
     }
 
     const error = await signUpWithEmail(email.trim(), password, name.trim(), acceptedTerms, ageConfirmed);

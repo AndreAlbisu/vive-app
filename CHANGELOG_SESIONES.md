@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 206 · el revoke rompió un chequeo del registro, y falló abierto)
+
+**Tocado:** `screens/RegisterScreen.tsx`, `scripts/add-email-es-de-coach.sql` (nuevo). **570 tests**, `tsc` limpio. ⚠️ **El script está PENDIENTE DE CORRER — hasta entonces el chequeo sigue roto.**
+
+**Resumen — el revoke de la 205 tuvo un daño colateral que encontré barriendo, no probando.**
+
+- 🔴 **`RegisterScreen.tsx:116` FILTRABA por `profiles.email`** (`.select('id').eq('email', …)`), y **filtrar por una columna exige privilegio de SELECT sobre esa columna**, no solo sobre las que se piden. Después del revoke esa consulta devuelve **42501**. Verificado con la anon key contra producción.
+- 📌 **Falló ABIERTO y por eso no se veía**: el código hace `const { data: existingProfile } = await …` y **descarta el error**. Con `data` en null el `if` no entra y el alta sigue. O sea que **no se rompió el registro, se rompió el AVISO**: quien intentaba crearse una cuenta de usuario con el mail de su cuenta de profesional dejaba de ver *"Esta cuenta ya está registrada como profesional"* y pasaba a recibir el error genérico de auth. Un fallo de permisos disfrazado de peor mensaje.
+- 🟢 **Arreglado con una función `security definer`** (`email_es_de_coach`) en vez de devolverle el grant, que habría reabierto el agujero entero. **La pregunta que la pantalla necesita no es "dame los mails" sino "¿este mail ya es de un profesional?"**, que es un booleano. De paso son dos consultas menos.
+- ⚠️ **Lo que sigue siendo posible, dicho de frente:** probar mails de a uno para saber si son de un coach. Es enumeración, mucho más débil que el volcado que había, hay que conocer el mail para preguntar, y **es la misma información que filtra el alta de Supabase al responder "User already registered"**.
+- 📝 **El barrido que lo encontró vale más que el arreglo**, y queda como receta: después de tocar grants de columnas, buscar no solo quién SELECCIONA esa columna sino quién **FILTRA** por ella. Se revisaron los 59 filtros sobre `profiles` de todo el código de app: 29 por `id`, 15 `in('id')`, y **uno solo por `email`**. `CoachLoginScreen` lee `role`, pero después de `auth.getUser()`, o sea como `authenticated`, que no se tocó.
+- 📌 **Y quedó dimensionado el problema de `authenticated`**, con las cuatro policies de `profiles` a la vista: *"Perfiles de coaches visibles para todos"* (`role = 'coach' OR auth.uid() = id`), *"Users can view their own profile"*, *"coaches_can_view_their_users_profiles"* y *"profiles_select_admin"*. 🟢 **Un usuario logueado NO puede leer perfiles de otros usuarios** — ninguna policy lo permite. 🔴 **Pero sí las 17 columnas de todos los coaches**, mail y `push_token` incluidos: el agujero que cerramos para `anon` está **a un registro de distancia**.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **CORRER `scripts/add-email-es-de-coach.sql`.** Hasta entonces el aviso del registro sigue roto (falla abierto, no bloquea a nadie).
+- 🔴 **Decidir qué hacer con `authenticated`, y NO es de dos líneas.** Sacarle `email` y `push_token` exige mover primero dos cosas al servidor, o rompemos lo que acabamos de arreglar: (1) **el envío de push es client-side en 6 lugares** (`coachBookingActions`, `bookingCancel`, `SalaScreen` ×2, `BookingScreen_Confirm`, `CoachReservasScreen`) — el que manda lee el `push_token` del que recibe desde el dispositivo; (2) el panel de admin lee `name, email` desde `lib/admin.ts` y debería ir por `admin-actions`, que ya corre con service role. 📌 Y hay un problema de fondo detrás: **con las columnas solas no se puede decir "tu propia fila entera, la de los coaches solo cuatro campos"** — los grants son por rol, no por fila. La salida correcta es una vista pública para el catálogo y dejar la tabla para la fila propia.
+- Lo demás sigue igual: `coaches.slug`, la forma del link, el porcentaje del descuento, y las verificaciones con plata/teléfono (pago USDT chico, reserva de prueba, el ≈4% contra el pago de $4.500).
+
 ## 2026-09-08 — Andre (sesión 205 · la policy pública ya existía, y era más ancha de lo que debía)
 
 **Tocado:** `scripts/restrict-anon-profiles-columns.sql` (nuevo), `SCHEMA.md`. ✅ **CORRIDO y VERIFICADO el 08/09/2026.** Sin cambios de código de app; 570 tests, `tsc` limpio.
