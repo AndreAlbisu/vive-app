@@ -191,7 +191,7 @@
     </section>
 
     <button class="cta" id="cta" disabled>Elegir un horario</button>
-    <p class="cta-nota" id="ctaNota">El pago online se habilita en los próximos días.</p>
+    <p class="cta-nota" id="ctaNota"></p>
   </article>
 
   <p class="pie">
@@ -212,6 +212,19 @@
 // `profiles` (`scripts/restrict-anon-profiles-columns.sql`) y solo filas de
 // coaches. Si alguna vez hace falta esconder una clave para que algo sea
 // seguro, es que la policy está mal, no la clave.
+// 🔴 EL INTERRUPTOR DEL CHECKOUT. En `false`, la página muestra el perfil y los
+// horarios pero **no pide el mail ni crea cuentas**.
+//
+// Por qué existe: esta página es PÚBLICA y está viva. Con la identificación
+// prendida y el cobro sin terminar, cualquiera que llegue puede dar su mail,
+// aceptar los Términos, recibir un código y **quedar con una cuenta creada**
+// para después no poder reservar nada. Eso es pedir datos personales y
+// consentimiento para una operación que no puede completarse — y bajo la 25.326
+// el consentimiento se pide para una finalidad concreta, no por las dudas.
+//
+// Se prende en el mismo cambio que habilite el pago, no antes.
+const CHECKOUT_HABILITADO = false;
+
 const SUPABASE_URL = 'https://ggygiihhnkjrerpinhha.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdneWdpaWhobmtqcmVycGluaGhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mjc5NjEsImV4cCI6MjA5NzEwMzk2MX0.lHPjyKjJIYD_lUTCF7uMBCKj9tCK_67OyrIFkCLQ-BI';
 
@@ -267,6 +280,7 @@ async function cargar() {
 
   const perfil = Array.isArray(coach.profiles) ? coach.profiles[0] : coach.profiles;
   const nombre = (perfil && perfil.name) || 'Profesional';
+  nombreCoach = nombre.split(' ')[0] || nombre;
 
   document.title = `${nombre} — Vita`;
 
@@ -327,12 +341,13 @@ function etiquetaDia(iso) {
 }
 
 let elegido = null;
+let nombreCoach = 'tu profesional';
 
 function elegir(btn, fecha, hora) {
   for (const b of document.querySelectorAll('.hora')) b.setAttribute('aria-pressed', 'false');
   btn.setAttribute('aria-pressed', 'true');
   elegido = { fecha, hora };
-  mostrar('identificacion');
+  if (CHECKOUT_HABILITADO) mostrar('identificacion');
   actualizarCta();
 }
 
@@ -515,11 +530,29 @@ function volverAlMail() {
 // apagado sin explicar por qué.
 function actualizarCta() {
   const cta = $('cta');
-  if (!elegido) { cta.textContent = 'Elegir un horario'; cta.disabled = true; return; }
-  if (!sesion)  { cta.textContent = 'Confirmá tu mail para seguir'; cta.disabled = true; return; }
+  cta.disabled = true;
+
+  if (!elegido) {
+    cta.textContent = 'Elegir un horario';
+    $('ctaNota').textContent = '';
+    return;
+  }
+
+  const cuando = `${etiquetaDia(elegido.fecha)} a las ${elegido.hora} hs`;
+
+  // ⚠️ Sin el checkout, la página NO promete una fecha. Decía "se habilita en
+  // los próximos días" y eso es un plazo que no controlamos, dicho en una
+  // página pública a alguien que vino a reservar. Se dice lo que sí es cierto:
+  // que todavía no se reserva desde acá, y que el horario existe.
+  if (!CHECKOUT_HABILITADO) {
+    cta.textContent = 'Todavía no se reserva desde acá';
+    $('ctaNota').textContent = `${cuando} · coordinalo directamente con ${nombreCoach}.`;
+    return;
+  }
+
+  if (!sesion) { cta.textContent = 'Confirmá tu mail para seguir'; $('ctaNota').textContent = cuando; return; }
   cta.textContent = 'Ir a pagar';
-  cta.disabled = true;   // el cobro es el paso que sigue
-  $('ctaNota').textContent = `${etiquetaDia(elegido.fecha)} a las ${elegido.hora} hs · el pago online se habilita en los próximos días.`;
+  $('ctaNota').textContent = cuando;
 }
 
 $('btnCodigo').addEventListener('click', pedirCodigo);
