@@ -119,13 +119,16 @@ where pronamespace = 'public'::regnamespace and proname = 'slots_libres';
 -- 2) Devuelve algo para un coach real, ordenado de verdad.
 --    ⚠️ Mirá que las horas suban (9:00 antes que 10:00): si aparece "10:00"
 --    primero, el orden numérico no se aplicó.
-select * from public.slots_libres('joaquin-silva') limit 15;
+--    📌 Va con `coach-prueba` y no con cualquiera: al 09/09 es el ÚNICO con
+--    disponibilidad futura cargada. Con otro slug esto da 0 y parece un bug
+--    cuando en realidad no hay nada que ofrecer.
+select * from public.slots_libres('coach-prueba') limit 15;
 
 -- 3) 🔴 La prueba que importa: un turno RESERVADO no aparece.
 --    Compara los slots declarados de un día contra los que devuelve la función.
 --    `declarados - libres` tiene que ser exactamente la cantidad de reservas
 --    vivas de ese día.
-with c as (select id from coaches where slug = 'joaquin-silva'),
+with c as (select id from coaches where slug = 'coach-prueba'),
      dia as (
        select a.date
        from coach_availability a join c on a.coach_id = c.id
@@ -136,7 +139,7 @@ with c as (select id from coaches where slug = 'joaquin-silva'),
 select
   (select count(*) from coach_availability a join c on a.coach_id = c.id
      where a.date = (select date from dia) and a.blocked = false)          as declarados,
-  (select count(*) from public.slots_libres('joaquin-silva')
+  (select count(*) from public.slots_libres('coach-prueba')
      where fecha = (select date from dia))                                 as libres,
   (select count(*) from bookings b join c on b.coach_id = c.id
      where b.scheduled_date = (select date from dia)

@@ -4,6 +4,29 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 216 · DECIDIDO el link: opción A, y la página pública ya existe)
+
+**Tocado:** `web/c/index.html` (nuevo), `vercel.json`, `scripts/add-slots-libres.sql` (nuevo), `lib/coachPropose.ts`, `lib/coachProposeData.ts`, `__tests__/coachPropose.test.ts`, `docs/camino-del-cliente-1.md`. **575 tests** (eran 570), `tsc` limpio. ✅ `add-slots-libres.sql` **CORRIDO y VERIFICADO**.
+
+**Resumen — se tomó la decisión que bloqueaba todo el lanzamiento y se construyeron los dos primeros pasos.**
+
+- ✅ **DECISIÓN DE ANDRE: opción A — el link reserva y cobra en el navegador.** La app queda para después de tener la sesión agendada, que es cuando la persona tiene un motivo real para instalarla. El consejo la votó 5 de 5, y el argumento que la cierra es que **el pago ya ocurre en el navegador**: Checkout Pro exige `back_urls` https y por eso existe `booking-return`. A no agrega un riel de cobro, le cambia el destino al 302.
+- 🟢 **`/c/<slug>` existe y anda en producción.** Página estática que lee el slug del path y consulta Supabase con la anon key — encaja con el `web/` que ya vivía en Vercel, sin exportar la app entera (que arrastraría Daily, calendario y push). 📌 **Solo coaches aprobados tienen página** (`verified` + `activo`): el link es del coach, la moderación es nuestra.
+- 🐛 **Primer intento: 404.** El archivo estaba deployado —`/c` daba 200— pero `/c/<slug>` no. **Con `cleanUrls: true`, Vercel redirige `/c/index.html` a `/c`, y un rewrite que apunta a una ruta que redirige devuelve 404.** El destino va sin `.html`. Diagnosticado contra el sitio en vivo comparando las dos rutas, no adivinando. Queda anotado en la página con el síntoma.
+- 🔴 **Y apareció un bug MÍO de la 202, al ir a calcular disponibilidad**: `proximosHuecos` comparaba las horas con `slice(0, 5)`. Las dos tablas guardan la hora como **texto y con formatos distintos** —`coach_availability.time` sin cero inicial (`"9:00"`, verificado) y `bookings.scheduled_time` con él— así que `"9:00"` nunca matcheaba `"09:00"`: **el turno ocupado pasaba el filtro y se le proponía igual a la persona.** Arreglado con la regla de `coach_availability_status`, en el módulo puro y con tests. 📌 **Salió por mirar cómo lo hace la app en vez de escribir un criterio nuevo para la web.**
+- 🟢 **`slots_libres(slug, dias)` para el paso del horario.** La página no puede calcular la disponibilidad sola: un turno está libre si el coach lo declaró Y no hay reserva viva encima, y lo segundo exige leer `bookings`, que `anon` no puede **ni debe**. La función contesta *"¿qué queda libre?"* y **no devuelve una sola fila de reservas** — un turno tomado simplemente no aparece. Resuelve del lado del servidor las dos cosas que en JS volverían a fallar: la normalización de horas y el **orden numérico** (siendo texto, `order by` pone `"10:00"` antes que `"9:00"`).
+- ✅ **Verificado con `coach-prueba`**, el único con disponibilidad futura: 240 slots en 21 días, orden correcto en todos los días, y hoy declara 9 y ofrece 8 —descarta el de las 9:00 por pasado—. ⚠️ **Lo único que no se pudo verificar desde afuera es que un turno RESERVADO no se ofrezca**, porque `anon` no ve `bookings` — que es el motivo de que la función exista. Queda la verificación 3 del script.
+- 📌 **Las verificaciones del script apuntaban a `joaquin-silva` y se corrigieron a `coach-prueba`**: el primero no tiene disponibilidad cargada, así que habrían dado 0 y parecido un bug cuando no hay nada que ofrecer.
+- 📌 **La página degrada sin romperse**: distingue *"no pudimos cargar los horarios"* de *"no hay horarios"*, y el perfil se pinta antes y sin `await`. Se probó a propósito con la función todavía sin correr (404).
+
+**Pendiente para la próxima sesión:**
+- 🔴 **El paso que toca plata: cuenta + checkout.** Andre pidió ver el flujo antes de que se escriba.
+- ⚠️ **La vista previa de WhatsApp es genérica para todos los coaches**: las `og:tags` son estáticas y WhatsApp no ejecuta JS. Personalizarla necesita render en servidor (una función en `/api`). **Importa más de lo que parece** — el consejo señaló que un link por WhatsApp pidiendo datos tiene la forma de una estafa, y la previsualización es lo que lo desmiente.
+- **La verificación 3 de `add-slots-libres.sql`** (que un turno reservado no se ofrezca), desde el editor.
+- **El porcentaje del descuento** que se lleva el coach.
+- 🟡 **La vista pública del catálogo** — Joaquín la dejó para Andre en la 210.
+- **Verificaciones con plata/teléfono:** pago chico en USDT, reserva de prueba (fila `reserva_nueva` + campana + card del Inicio), caso positivo del registro, y el ≈4% de MP contra el pago de $4.500.
+
 ## 2026-09-09 — Andre (sesión 215 · auditoría del patrón "hook que no re-lee en foco" — cerrado, sin tercera aparición)
 
 **Tocado:** solo este archivo. Sin cambios de código ni de schema. `tsc` 0, **570 tests** (verificados sobre el árbol de Joaquín, no sobre el mío).
