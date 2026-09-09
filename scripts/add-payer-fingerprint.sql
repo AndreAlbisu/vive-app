@@ -7,9 +7,23 @@
 -- ✅ `PAYER_FINGERPRINT_SALT` creada por CLI (`supabase secrets set`) el mismo
 --    día, y `mp-webhook` redeployada a **v33** con el código que la usa.
 --
--- ⚠️ **Falta la prueba que importa**: un pago real de Mercado Pago y ver que la
--- columna se llena (verificación 4 de abajo). Hasta entonces está armado pero
--- no ejercitado.
+-- ✅ **PROBADO CON PLATA REAL el 09/09/2026, y con el caso exacto que motiva
+-- todo esto** — apareció solo, probando el checkout web:
+--
+--     reservas_con_huella | pagadores_distintos | cuentas_distintas
+--              3          |          1          |         2
+--
+-- 🔴 **Dos cuentas de la app distintas, un solo pagador.** Es literalmente el
+-- escenario que esta columna viene a detectar: la misma persona reservando
+-- desde dos usuarios diferentes, reconocible solo por el medio de pago. Salió
+-- de que Andre probó el flujo con su mail y con un alias, pagando las dos veces
+-- con la misma cuenta de Mercado Pago. **Vale más que cualquier test**: es el
+-- caso real, con plata real, y demuestra que la huella identifica a la PERSONA
+-- y no al pago.
+--
+-- 📌 Los otros 8 pagos por MP de la base no tienen huella y está bien: son
+-- anteriores al deploy. Por eso se hizo antes de seguir — hacia atrás no se
+-- reconstruye.
 --
 -- ── Por qué ahora y no después ───────────────────────────────────────────────
 --
@@ -86,6 +100,30 @@ from information_schema.column_privileges
 where grantee in ('authenticated', 'anon')
   and table_schema = 'public' and table_name = 'bookings'
   and privilege_type = 'UPDATE' and column_name = 'payer_fingerprint';
+
+-- 4 bis) 🔴 LA CONSULTA QUE ESTO HABILITA — el mismo pagador desde cuentas
+--    distintas, con el mismo coach. Es la señal de que una relación se "lavó"
+--    a una cuenta nueva para caer en la tarifa del link.
+--
+--    ⚠️ **No es una acusación por sí sola**: una pareja que comparte la cuenta
+--    de Mercado Pago, o alguien que le paga la sesión a otro, dan lo mismo. Es
+--    el punto de partida de una conversación, no una regla automática — y
+--    encaja con la medida anti-fuga #5, la detección diferida.
+--
+--    ⚠️ Y antes de usarla para negarle una tarifa a alguien hay que declarar la
+--    finalidad en la política de privacidad (ver arriba).
+select
+  b.coach_id,
+  b.payer_fingerprint,
+  count(distinct b.user_id) as cuentas_distintas,
+  count(*)                  as reservas,
+  min(b.created_at)         as primera,
+  max(b.created_at)         as ultima
+from public.bookings b
+where b.payer_fingerprint is not null
+group by b.coach_id, b.payer_fingerprint
+having count(distinct b.user_id) > 1
+order by cuentas_distintas desc, reservas desc;
 
 -- 4) Después del primer pago real: que se esté llenando.
 --    Esperado: al menos 1 fila con huella, de las pagadas por Mercado Pago.
