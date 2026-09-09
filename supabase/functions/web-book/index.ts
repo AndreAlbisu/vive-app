@@ -162,6 +162,14 @@ serve(async (req) => {
       scheduled_time: hora,
       amount: monto,
       status: 'pendiente',
+      // 🔴 Por dónde entró. Toda reserva que nace acá viene del link público del
+      // coach, por definición: esta función solo la llama `/c/<slug>`.
+      //
+      // No se puede reconstruir después —una reserva sin marca es
+      // indistinguible de una del catálogo—, y es lo que después permite
+      // cobrarle distinto al coach por los clientes que trae él y saber si el
+      // canal sirvió. Ver `scripts/add-booking-origen.sql`.
+      origen: 'link',
       // D2: se guarda la OBSERVACIÓN cruda, no una conclusión. Acá la manda el
       // navegador (`Intl.DateTimeFormat().resolvedOptions().timeZone`), igual
       // que la app manda la del dispositivo.

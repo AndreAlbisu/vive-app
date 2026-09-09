@@ -4,6 +4,27 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 221 · la sala web, y el origen de la reserva)
+
+**Tocado:** `web/sala/index.html` (nuevo), `web/reserva/index.html`, `web/c/index.html`, `supabase/functions/mail-notificaciones/index.ts`, `supabase/functions/web-book/index.ts`, `scripts/add-booking-origen.sql` (nuevo), `docs/camino-del-cliente-1.md`, `SCHEMA.md`. ✅ Deployadas y **CORRIDO** el SQL.
+
+**Resumen — se probó el checkout entero, salió bien, y de una pregunta de Andre salió el bloqueante más caro de toda esta línea.**
+
+- ✅ **El checkout web anda de punta a punta con plata real**: reserva, pago, los dos mails llegaron (*"Recibimos tu reserva"* al instante, *"Sesión confirmada"* por el cron), y el horario desapareció de los disponibles.
+- 🐛 **Y apareció lo único que faltaba: el coach veía "Alguien".** La cuenta nace del código, que solo pide el mail, así que `profiles.name` quedaba vacío. **En un producto de acompañamiento eso no es un detalle de UI**: el coach no sabe a quién va a atender. Se pide el nombre en el mismo paso, y se guarda **solo si el perfil no tiene uno** — pisar el nombre de alguien que ya tiene cuenta con lo que tipeó apurado en un checkout lo dejaría peor.
+- 🔴 **El hallazgo grande, de una pregunta que parecía de marketing** (*"¿el mail no debería hacerte descargar la app?"*): **el camino web vendía una sesión que nadie podía atender.** La videollamada solo existía dentro de la app —`create-meeting-room` invocada desde `SalaScreen`— y **las apps no están publicadas**. Alguien podía entrar por el link, pagar, recibir los dos mails y no tener forma de asistir. De la misma familia que el resto, pero el más caro: acá ya hay plata cobrada.
+- 📌 **Y cambió la prioridad de la estrategia.** El argumento del consejo para elegir la opción A era *"la app queda para después"*. Sin tiendas, **la web tiene que entregar la sesión entera o no hay lanzamiento**: el upside que el Expansionista mencionó al pasar —*"VIVE deja de necesitar la store para existir"*— pasó de ventaja a requisito.
+- 🟢 **La sala web resultó chica**, y ese fue el hallazgo que la hizo posible: `create-meeting-room` **ya devolvía `room_url?t=<token>`, una URL de Daily que abre en cualquier navegador**, con el token acuñado por participante y el coach entrando como owner. Faltaba la página. `web/sala` la llama y la muestra en un iframe; el link va en el mail de confirmación y en `/reserva`, diciendo **explícitamente que es desde el navegador** — sin eso la persona busca dónde bajar una app que no existe.
+- 📌 **Una consecuencia del diseño, anotada porque va a parecer un bug**: el token de acceso dura una hora y no se guarda el de refresco, así que **quien entre desde el mail el día de la sesión SIEMPRE va a tener que confirmar su mail**. Es el caso normal, no el raro, y por eso la pantalla del código es parte del camino. Ahí `create_user: false`: la cuenta ya existe, y crear una nueva por un mail mal tipeado dejaría a la persona mirando una sesión ajena.
+- 🟢 **`bookings.origen`**, que Andre había decidido diseñar junto con el link. Del mismo tipo que la huella del pagador: **no se puede reconstruir**. Texto acotado y no booleano —`es_del_link` obligaría a otra columna mañana— y **`null` es "no sabemos", no "app"**.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Prender `CHECKOUT_HABILITADO`.** Ya no lo bloquea nada técnico: es la decisión de abrir la puerta.
+- ⚠️ **El coach también necesita entrar a la sala, y hoy entra por la app.** `web/sala` le sirve igual (`create-meeting-room` lo hace owner), pero **no se le da el link por ningún lado**. Es chico y hay que hacerlo antes de la primera sesión real.
+- **La prueba que solo se puede hacer el 18**: entrar a la sala de verdad, los dos, y ver que la videollamada funciona en el navegador. Es lo único del camino que queda sin probar.
+- **El DMARC**, que sigue sin estar.
+- **La comisión del link** — la columna de origen ya está, así que la decisión ya no tiene dependencias técnicas.
+
 ## 2026-09-09 — Andre (sesión 220 · los mails transaccionales, que eran el bloqueante del checkout)
 
 **Tocado:** `supabase/functions/_shared/email.ts` (nuevo), `_shared/booking-effects.ts`, `supabase/functions/mail-notificaciones/index.ts` (nuevo), `scripts/add-notifications-emailed-at.sql` (nuevo), `docs/plantilla-mail-codigo.md`. **575 tests**. ✅ Deployadas y **CORRIDO** el SQL, con el cron agendado (job 11).
