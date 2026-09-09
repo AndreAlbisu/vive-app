@@ -19,7 +19,7 @@ import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { esperaConfirmacionDelCoach } from '@/lib/bookingHelpers';
 import { useAuth } from '@/context/AuthContext';
-import { sendPushNotification } from '@/lib/notifications';
+import { notifyViaServer } from '@/lib/notifications';
 import { encryptMessage } from '@/lib/encryption';
 import { isCancelLate } from '@/lib/bookingHelpers';
 import { confirmBooking, rejectBooking } from '@/lib/coachBookingActions';
@@ -329,10 +329,8 @@ export default function CoachReservasScreen() {
                 });
               }
 
-              const [{ data: userProfile }, { data: coachProfile }] = await Promise.all([
-                supabase.from('profiles').select('push_token').eq('id', booking.user_id).maybeSingle(),
-                supabase.from('profiles').select('name').eq('id', user!.id).maybeSingle(),
-              ]);
+              const { data: coachProfile } = await supabase
+                .from('profiles').select('name').eq('id', user!.id).maybeSingle();
               const notifTitle = 'Sesión cancelada';
               const notifBody = `${coachProfile?.name ?? 'Tu profesional'} canceló la sesión del ${fullDate(booking.scheduled_date)}`;
               await Promise.all([
@@ -340,7 +338,7 @@ export default function CoachReservasScreen() {
                   recipient_id: booking.user_id, type: 'reserva_cancelada', booking_id: booking.id,
                   title: notifTitle, body: notifBody,
                 }),
-                userProfile?.push_token ? sendPushNotification(userProfile.push_token, notifTitle, notifBody) : Promise.resolve(),
+                notifyViaServer({ bookingId: booking.id, recipientId: booking.user_id, title: notifTitle, body: notifBody }),
               ]);
 
               await loadBookings();

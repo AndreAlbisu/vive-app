@@ -13,7 +13,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { encryptMessage } from '@/lib/encryption';
-import { sendPushNotification } from '@/lib/notifications';
+import { notifyViaServer } from '@/lib/notifications';
 import { isCancelLate } from '@/lib/bookingHelpers';
 
 export type CancelActor = 'coach' | 'usuario';
@@ -103,9 +103,6 @@ export async function cancelBookingFlow(p: CancelBookingParams): Promise<CancelR
       ? 'Tu profesional canceló la sesión agendada'
       : 'El usuario canceló la sesión agendada';
 
-    const { data: perfil } = await supabase
-      .from('profiles').select('push_token').eq('id', p.recipientId).maybeSingle();
-
     await Promise.all([
       supabase.from('notifications').insert({
         recipient_id: p.recipientId,
@@ -114,7 +111,7 @@ export async function cancelBookingFlow(p: CancelBookingParams): Promise<CancelR
         title,
         body,
       }),
-      perfil?.push_token ? sendPushNotification(perfil.push_token, title, body) : Promise.resolve(),
+      notifyViaServer({ bookingId: p.bookingId, recipientId: p.recipientId, title, body }),
     ]).catch(e => console.warn('[cancel] no se pudo notificar:', e));
   }
 

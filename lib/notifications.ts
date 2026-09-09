@@ -66,22 +66,34 @@ export async function registerForPushNotifications(userId: string): Promise<stri
   }
 }
 
-export async function sendPushNotification(
-  expoPushToken: string,
-  title: string,
-  body: string,
-): Promise<void> {
+// Manda un push al destinatario a través de la edge function `send-push`, que
+// busca el `push_token` con service role y valida que el que llama comparta con
+// el destinatario la sala o el booking. Best-effort: un fallo no interrumpe el
+// flujo (igual que cuando el envío era client-side).
+//
+// 🔴 Reemplaza el patrón viejo `select push_token` + envío directo a exp.host,
+// que obligaba a que CUALQUIER usuario logueado pudiera leer el `push_token` de
+// los coaches. Se pasa `salaId` O `bookingId` según el contexto: la función lo
+// usa para autorizar el envío. Ver A4 en docs/problemas-abiertos.md.
+export async function notifyViaServer(args: {
+  salaId?: string;
+  bookingId?: string;
+  recipientId: string | null | undefined;
+  title: string;
+  body: string;
+}): Promise<void> {
+  if (!args.recipientId) return;
   try {
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Accept-Encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
+    await supabase.functions.invoke('send-push', {
+      body: {
+        salaId: args.salaId,
+        bookingId: args.bookingId,
+        recipientId: args.recipientId,
+        title: args.title,
+        body: args.body,
       },
-      body: JSON.stringify({ to: expoPushToken, sound: 'default', title, body }),
     });
   } catch (e) {
-    console.error('[Notifs] Error enviando notificación:', e);
+    console.warn('[Notifs] no se pudo enviar el push por el servidor:', e);
   }
 }

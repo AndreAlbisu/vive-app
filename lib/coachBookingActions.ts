@@ -7,7 +7,7 @@
 // después refrescan su propia data.
 
 import { supabase, registrarEvento } from '@/lib/supabase';
-import { sendPushNotification } from '@/lib/notifications';
+import { notifyViaServer } from '@/lib/notifications';
 import { encryptMessage } from '@/lib/encryption';
 import { ensureMeetingRoom } from '@/lib/meetingRoom';
 
@@ -33,8 +33,7 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
 
   const booking = data[0];
 
-  const [{ data: userProfile }, { data: coachProfile }, { data: conflicting }] = await Promise.all([
-    supabase.from('profiles').select('push_token').eq('id', booking.user_id).maybeSingle(),
+  const [{ data: coachProfile }, { data: conflicting }] = await Promise.all([
     supabase.from('profiles').select('name').eq('id', coachAuthUserId).maybeSingle(),
     supabase
       .from('bookings')
@@ -57,9 +56,7 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
       title: notifTitle,
       body: notifBody,
     }),
-    userProfile?.push_token
-      ? sendPushNotification(userProfile.push_token, notifTitle, notifBody)
-      : Promise.resolve(),
+    notifyViaServer({ bookingId, recipientId: booking.user_id, title: notifTitle, body: notifBody }),
     // Analytics: el coach ACEPTÓ una reserva pendiente. Distinto de
     // 'reserva_confirmada' (ese lo dispara el usuario al reservar). registrarEvento
     // anota user_id = coach (su sesión); client_id guarda al usuario de la reserva.
@@ -87,15 +84,6 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
   }
 
   if (conflicting && conflicting.length > 0) {
-    const conflictUserIds = conflicting.map(b => b.user_id);
-    const { data: conflictProfiles } = await supabase
-      .from('profiles')
-      .select('id, push_token')
-      .in('id', conflictUserIds);
-
-    const tokenMap: Record<string, string | null> = {};
-    conflictProfiles?.forEach(p => { tokenMap[p.id] = p.push_token ?? null; });
-
     const cancelTitle = 'Horario no disponible';
     const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu profesional';
     const cancelDateStr = formatBookingDate(booking.scheduled_date);
@@ -124,8 +112,10 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
             })
           );
         }
-        const token = tokenMap[cb.user_id];
-        if (token) ops.push(sendPushNotification(token, cancelTitle, cancelBody));
+        // El destinatario es un competidor: el push se autoriza porque comparte
+        // con quien confirmó el mismo coach+día+hora. Se pasa el booking ganador
+        // (`bookingId`) como contexto — el cliente ya pasó `cb` a 'cancelada'.
+        ops.push(notifyViaServer({ bookingId, recipientId: cb.user_id, title: cancelTitle, body: cancelBody }));
         return Promise.all(ops);
       })
     );
@@ -157,10 +147,8 @@ export async function rejectBooking(bookingId: string, coachAuthUserId: string):
     .maybeSingle();
   if (!booking) return true;
 
-  const [{ data: userProfile }, { data: coachProfile }] = await Promise.all([
-    supabase.from('profiles').select('push_token').eq('id', booking.user_id).maybeSingle(),
-    supabase.from('profiles').select('name').eq('id', coachAuthUserId).maybeSingle(),
-  ]);
+  const { data: coachProfile } = await supabase
+    .from('profiles').select('name').eq('id', coachAuthUserId).maybeSingle();
 
   const notifTitle = 'Ese horario no está disponible';
   const notifBody = `${coachProfile?.name ?? 'Tu profesional'} no puede en ese horario. Podés elegir otro horario disponible u otro profesional`;
@@ -173,9 +161,7 @@ export async function rejectBooking(bookingId: string, coachAuthUserId: string):
       title: notifTitle,
       body: notifBody,
     }),
-    userProfile?.push_token
-      ? sendPushNotification(userProfile.push_token, notifTitle, notifBody)
-      : Promise.resolve(),
+    notifyViaServer({ bookingId, recipientId: booking.user_id, title: notifTitle, body: notifBody }),
   ]);
 
   return true;

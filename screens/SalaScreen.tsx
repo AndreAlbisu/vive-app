@@ -38,7 +38,7 @@ import SessionNotesSheet from '@/components/SessionNotesSheet';
 import { getRelationshipNotes, type SessionNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
 import { OfrecerPaqueteBanner } from '@/components/OfrecerPaqueteBanner';
-import { sendPushNotification } from '@/lib/notifications';
+import { notifyViaServer } from '@/lib/notifications';
 import { hayReembolsoAlCancelar } from '@/lib/bookingHelpers';
 import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
@@ -816,12 +816,7 @@ export default function SalaScreen() {
 
       setRecoSheetOpen(false);
 
-      if (recipientId) {
-        const { data: pushData } = await supabase.from('profiles').select('push_token').eq('id', recipientId).maybeSingle();
-        if (pushData?.push_token) {
-          await sendPushNotification(pushData.push_token, 'Recurso recomendado', selectedReco.title.slice(0, 60));
-        }
-      }
+      await notifyViaServer({ salaId, recipientId, title: 'Recurso recomendado', body: selectedReco.title.slice(0, 60) });
     } catch {
       Alert.alert('Error', 'No se pudo enviar la recomendación');
     } finally {
@@ -912,13 +907,7 @@ export default function SalaScreen() {
       return;
     }
 
-    if (recipientId) {
-      const { data: recipientPushData } = await supabase
-        .from('profiles').select('push_token').eq('id', recipientId).maybeSingle();
-      if (recipientPushData?.push_token) {
-        await sendPushNotification(recipientPushData.push_token, 'Nuevo mensaje', text.slice(0, 50));
-      }
-    }
+    await notifyViaServer({ salaId, recipientId, title: 'Nuevo mensaje', body: text.slice(0, 50) });
   }
 
   const isCurrentUserCoach = !recipientIsCoach;

@@ -87,6 +87,19 @@ recomendaciones sin abrir: el piso le gana.
 
 ### A4 — receta para Joaquín (`authenticated` lee el mail de todos los coaches)
 
+> **ESTADO (09/09, Joaquín): FASE 1 HECHA.** El envío de push se movió al server:
+> nueva edge function `send-push` (validada por contexto — el que llama tiene que
+> compartir sala o booking con el destinatario, cierra el vector de spam), y los
+> 9 reads client-side de `push_token` (5 archivos) pasan por ella vía
+> `notifyViaServer` en `lib/notifications.ts`. `sendPushNotification` (envío
+> directo) se borró. Deployada y verificada con JWT real: sala/booking ajenos →
+> 403, sin auth → 401. tsc 0, 570 tests. **Falta la fase 2** (mover la lectura de
+> mails del admin, `lib/admin.ts` → `admin-actions`) **y la fase 3** (vista
+> pública para el catálogo + revocar `email`/`push_token` a `authenticated`, con
+> la trampa del FILTRO). El `.update({push_token})` del propio dispositivo en
+> `registerForPushNotifications` se queda: necesita UPDATE, no SELECT, así que la
+> revocación de la fase 3 no lo toca.
+
 > Andre lo dejó para vos el 08/09. **Contexto en una línea:** ese día se cerró
 > que **cualquiera con la anon key** pudiera leer el mail y el `push_token` de
 > los 34 coaches, y quedó abierto que **cualquiera con una cuenta** todavía

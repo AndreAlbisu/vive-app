@@ -26,7 +26,7 @@ import { ScaleCard } from '@/components/ScaleCard';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { necesitaVerificarMail } from '@/lib/emailVerificado';
-import { sendPushNotification } from '@/lib/notifications';
+import { notifyViaServer } from '@/lib/notifications';
 import * as WebBrowser from 'expo-web-browser';
 import { logError, logWarn } from '@/lib/logging';
 import { encryptMessage } from '@/lib/encryption';
@@ -490,24 +490,19 @@ export default function BookingScreen_Confirm() {
       // `confirmedNow` = la reserva queda confirmada ya mismo: es instantánea Y
       // no quedó nada por cobrar (coach sin MP, o pago aprobado).
       const applyBookingEffects = async (confirmedNow: boolean) => {
-        // Notificar al coach (push token vive en profiles, vía coachProfileId)
-        const { data: coachProfile } = await supabase
-          .from('profiles')
-          .select('push_token, name')
-          .eq('id', coachProfileId)
-          .maybeSingle();
-
+        // Notificar al coach. El push lo manda la edge function (busca el token
+        // con service role); acá solo se declara el contexto — el booking, del
+        // que quien reserva es participante.
         const userName = user.user_metadata?.name ?? 'Un usuario';
 
-        if (coachProfile?.push_token) {
-          await sendPushNotification(
-            coachProfile.push_token,
-            confirmedNow ? 'Nueva reserva confirmada 📅' : 'Nueva solicitud de sesión 📅',
-            confirmedNow
-              ? `${userName} reservó una sesión el ${formatDate(dateStr)} a las ${time} hs. Ya está confirmada.`
-              : `${userName} quiere reservar una sesión el ${formatDate(dateStr)} a las ${time} hs`,
-          );
-        }
+        await notifyViaServer({
+          bookingId: booking.id,
+          recipientId: coachProfileId,
+          title: confirmedNow ? 'Nueva reserva confirmada 📅' : 'Nueva solicitud de sesión 📅',
+          body: confirmedNow
+            ? `${userName} reservó una sesión el ${formatDate(dateStr)} a las ${time} hs. Ya está confirmada.`
+            : `${userName} quiere reservar una sesión el ${formatDate(dateStr)} a las ${time} hs`,
+        });
 
         if (!confirmedNow) return;
 
@@ -563,15 +558,6 @@ export default function BookingScreen_Confirm() {
           .neq('id', booking.id);
 
         if (conflicting && conflicting.length > 0) {
-          const conflictUserIds = conflicting.map(b => b.user_id);
-          const { data: conflictProfiles } = await supabase
-            .from('profiles')
-            .select('id, push_token')
-            .in('id', conflictUserIds);
-
-          const tokenMap: Record<string, string | null> = {};
-          conflictProfiles?.forEach(p => { tokenMap[p.id] = p.push_token ?? null; });
-
           const cancelTitle = 'Horario no disponible';
           const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu profesional';
           const cancelSystemMsg = `Solicitud cancelada automáticamente\n${formatDate(dateStr)} · ${time} hs`;
@@ -598,8 +584,10 @@ export default function BookingScreen_Confirm() {
                   })
                 );
               }
-              const token = tokenMap[cb.user_id];
-              if (token) ops.push(sendPushNotification(token, cancelTitle, cancelBody));
+              // Competidor: el push se autoriza porque comparte el mismo
+              // coach+día+hora con el booking ganador (`booking.id`), que es de
+              // quien reserva. `cb` ya quedó 'cancelada' arriba.
+              ops.push(notifyViaServer({ bookingId: booking.id, recipientId: cb.user_id, title: cancelTitle, body: cancelBody }));
               return Promise.all(ops);
             })
           );
