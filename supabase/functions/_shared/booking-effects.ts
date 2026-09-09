@@ -28,6 +28,8 @@
 // sistema en la sala. El paso de 'pendiente' → 'confirmada' sí lleva su propia
 // guarda, porque ahí compite además con el coach aceptando a mano.
 
+import { enviarMail, fechaLarga, nombreSeguro } from './email.ts'
+
 // deno-lint-ignore no-explicit-any
 type Admin = any
 
@@ -151,7 +153,7 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
     coach?.profile_id
       ? admin.from('profiles').select('push_token').eq('id', coach.profile_id).maybeSingle()
       : Promise.resolve({ data: null }),
-    admin.from('profiles').select('name').eq('id', booking.user_id).maybeSingle(),
+    admin.from('profiles').select('name, email').eq('id', booking.user_id).maybeSingle(),
   ])
 
   const userName = (userProfile?.name as string | null) ?? 'Un usuario'
@@ -202,6 +204,42 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
       // tumbar la acreditación del pago.
       if (errNotif) console.error('[booking-effects] no se pudo guardar el aviso al coach:', errNotif.message)
     }
+  }
+
+  // ── El mail a quien reservó ─────────────────────────────────────────────
+  // 🔴 Va SIEMPRE, no solo en el camino instantáneo, y no es simetría con el
+  // push del coach: **quien reservó desde la web no tiene la app**. Sin este
+  // mail pagó y no tiene dónde mirar qué pasó — y si el coach no confirma,
+  // `expire_pending_bookings()` le devuelve la plata a las 24hs sin que se
+  // entere de nada.
+  //
+  // Para quien reservó desde la app es redundante con la push, y está bien que
+  // lo sea: el mail es el canal que no depende de tener permisos, ni la app
+  // instalada, ni el mismo teléfono.
+  const mailUsuario = (userProfile?.email as string | null) ?? null
+  if (mailUsuario) {
+    const cuando = fechaLarga(booking.scheduled_date as string, hora)
+    await enviarMail(isInstant
+      ? {
+          para: mailUsuario,
+          asunto: `Tu sesión con ${coachName} quedó confirmada`,
+          titulo: '¡Listo! Tu sesión está confirmada',
+          lineas: [
+            `<b>${nombreSeguro(cuando)}</b>, con ${nombreSeguro(coachName)}.`,
+            'Te vamos a mandar el enlace de la videollamada antes de la sesión.',
+          ],
+        }
+      : {
+          para: mailUsuario,
+          asunto: `Recibimos tu reserva con ${coachName}`,
+          titulo: 'Recibimos tu reserva',
+          lineas: [
+            `<b>${nombreSeguro(cuando)}</b>, con ${nombreSeguro(coachName)}.`,
+            `Falta que ${nombreSeguro(coachName)} confirme el horario. Tiene hasta <b>24 horas</b> para hacerlo, y apenas lo haga te avisamos.`,
+            'Si no llega a confirmarlo, la reserva se cancela sola y <b>te devolvemos todo</b>, sin que tengas que pedirlo.',
+          ],
+          pie: 'No hace falta que hagas nada. Te escribimos cuando haya novedades.',
+        })
   }
 
   // Sin reserva instantánea la sesión sigue siendo una SOLICITUD: la confirma el
