@@ -174,6 +174,9 @@ export default function CoachHomeScreen() {
   const [prepPerfil, setPrepPerfil] = useState(false);
   const [prepRecurso, setPrepRecurso] = useState(false);
   const [doorLabels, setDoorLabels] = useState<string[]>([]);
+  // El link público del coach. `null` mientras no esté aprobado: `/c/<slug>`
+  // filtra por `verified`, así que ofrecérselo antes sería darle un link roto.
+  const [linkPublico, setLinkPublico] = useState<string | null>(null);
   // Si el coach tiene AL MENOS una fila en `bookings`, sin importar el
   // estado (ni siquiera se excluye `cancelada`: si alguien reservó una vez,
   // aunque se haya caído, ya no es "antes de tu primera sesión"). Reemplaza
@@ -234,7 +237,7 @@ export default function CoachHomeScreen() {
         .eq('status', 'confirmada')
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true }),
-      supabase.from('coaches').select('verified, availability_status, price_per_session, bio, specialty').eq('id', coachId).maybeSingle(),
+      supabase.from('coaches').select('verified, availability_status, price_per_session, bio, specialty, slug').eq('id', coachId).maybeSingle(),
       supabase.from('coach_topics').select('topic').eq('coach_id', coachId),
       // "Subiste un recurso" cuenta cualquier fila, sin filtrar por `status`:
       // el checklist dice "Subir tu primer recurso" — es la acción, no que ya
@@ -277,6 +280,15 @@ export default function CoachHomeScreen() {
       if (prev.length === 0 && doorsNow.length > 0) registrarEvento('preparacion_paso_completado', { paso: 'puertas' }).catch(() => {});
       return doorsNow;
     });
+
+    // ⚠️ Solo si está aprobado Y activo: son los dos filtros que aplica la
+    // página pública. Con cualquiera de los dos en falso el link muestra "no
+    // encontramos este perfil", y mandarlo a repartir eso es peor que no darlo.
+    setLinkPublico(
+      coachRow?.verified && coachRow?.availability_status === 'activo' && coachRow?.slug
+        ? `${SITIO_WEB}/c/${coachRow.slug}`
+        : null,
+    );
 
     const perfilCompletoNow = !!profile?.avatar_url && !!coachRow?.bio?.trim() && !!coachRow?.specialty?.trim();
     setPrepPerfil(prev => {
@@ -913,6 +925,51 @@ export default function CoachHomeScreen() {
                   </View>
                 </View>
 
+                {/* ── El paso que contesta la pregunta que el coach tiene ────
+                    🔴 Los tres de arriba son tarea administrativa: perfil,
+                    temas, recurso. **Ninguno contesta lo único que el coach se
+                    está preguntando, que es de dónde salen los clientes** — y
+                    nadie completa tres pasos por fe.
+
+                    Este es el cuarto, y el consejo lo pidió como el más grande
+                    de todos: su link, listo para mandar. La mayoría de los
+                    profesionales llega con 4-10 personas que ya le pagan por
+                    transferencia; eso es la demanda que existe el día 1.
+
+                    📌 Va SEPARADO de los tres checks y sin casilla a propósito:
+                    no es un estado que se completa, es algo que se hace muchas
+                    veces. Contarlo como paso 4 de 4 obligaría a inventar cuándo
+                    está "hecho". */}
+                {linkPublico ? (
+                  <View style={s.traerWrap}>
+                    <Text style={s.traerTitulo}>Traé a tus primeros clientes</Text>
+                    <Text style={s.traerTxt}>
+                      Mandales tu link a las personas que ya atendés. Reservan y te pagan desde ahí,
+                      sin instalar nada.
+                    </Text>
+                    <Text style={s.traerLink} numberOfLines={1}>{linkPublico.replace('https://', '')}</Text>
+                    <TouchableOpacity
+                      style={s.traerBtn}
+                      activeOpacity={0.85}
+                      onPress={() => Share.share({
+                        // El texto va escrito para que el coach lo mande TAL CUAL.
+                        // Si tiene que redactarlo él, no lo manda.
+                        message: `Hola! Ahora podés reservar y pagar nuestras sesiones acá: ${linkPublico}\nElegís el horario que te quede bien y listo.`,
+                      }).catch(() => {})}>
+                      <Feather name="share-2" size={14} color="#F3EEDF" />
+                      <Text style={s.traerBtnTxt}>Compartir mi link</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={s.traerWrap}>
+                    <Text style={s.traerTitulo}>Traé a tus primeros clientes</Text>
+                    <Text style={s.traerTxt}>
+                      Cuando aprobemos tu perfil vas a tener un link propio para mandarles a las
+                      personas que ya atendés, y reservan desde ahí.
+                    </Text>
+                  </View>
+                )}
+
                 {prepNextAction && (
                   <TouchableOpacity
                     style={s.prepBtn}
@@ -1308,6 +1365,25 @@ const s = StyleSheet.create({
     paddingTop: 8, borderTopWidth: 1, borderTopColor: LINE, marginTop: 2,
   },
   pendVerTxt: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT },
+
+  traerWrap: {
+    marginTop: 18, paddingTop: 16, borderTopWidth: 1, borderTopColor: LINE,
+  },
+  traerTitulo: { fontFamily: ViveFonts.semibold, fontSize: 15, color: FOREST, marginBottom: 4 },
+  traerTxt: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: FOREST_SOFT },
+  // ⚠️ `FOREST` y no `TERRA`: el link es TEXTO QUE HAY QUE LEER —el coach lo va
+  // a mirar para reconocerlo— y la terracota sobre este crema da 2.99:1. Con el
+  // verde da 6.5:1. La terracota queda para lo que se toca, no para lo que se
+  // lee. Mismo criterio que la auditoría de contraste de la sesión 172.
+  traerLink: {
+    fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST, marginTop: 10,
+    backgroundColor: CREAM_DEEP, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10,
+  },
+  traerBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    marginTop: 10, backgroundColor: FOREST, borderRadius: 12, paddingVertical: 12,
+  },
+  traerBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#F3EEDF' },
 
   actCompu: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,

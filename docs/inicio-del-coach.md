@@ -155,6 +155,17 @@ no es esta pantalla.
 > "Proponerle un horario" (es una re-reserva, no un cambio de label) y el cuarto
 > paso del checklist (necesita el link, que necesita la decisión 1). Detalle en
 > la entrada de la sesión 201 del CHANGELOG.
+>
+> ✅ **09/09/2026 — el veredicto quedó APLICADO ENTERO.** Se destrabó lo que
+> faltaba: la decisión del link se tomó (opción A), el link se construyó, y con
+> él llegó **el cuarto paso del checklist**. También se hizo "Escribirle" →
+> "Proponer horario", que era una re-reserva y no un cambio de label.
+>
+> 📝 Y dos cosas **NO se hicieron, en contra del veredicto y con razón**: la tira
+> semanal se muestra siempre —decisión de Andre: es la orientación de la
+> pantalla y una Home que cambia de forma según el día hace que el coach no sepa
+> dónde mirar— y las reservas pendientes van **debajo** de "Tu próxima sesión",
+> no arriba: urgente no es lo mismo que principal.
 
 ### 0.5 Lo que queda decidido por Andre
 
