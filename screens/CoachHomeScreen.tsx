@@ -710,53 +710,6 @@ export default function CoachHomeScreen() {
             </View>
           </View>
 
-          {/* ── Reservas esperando tu respuesta ───────────────────────────
-              🔴 Va PRIMERO, arriba incluso de la semana: es lo único de esta
-              pantalla que tiene a alguien del otro lado esperando, con la plata
-              ya retenida y un reloj de 24hs corriendo. Todo lo demás es del día;
-              esto es de los próximos minutos. */}
-          {pendientes.length > 0 && (
-            <View style={s.pendWrap}>
-              <Text style={s.pendEyebrow}>
-                {pendientes.length === 1
-                  ? 'Una persona espera tu respuesta'
-                  : `${pendientes.length} personas esperan tu respuesta`}
-              </Text>
-              {pendientes.map(p => (
-                <View key={p.bookingId} style={s.pendRow}>
-                  {p.avatarUrl ? (
-                    <Image source={{ uri: p.avatarUrl }} style={s.pendAv} />
-                  ) : (
-                    <View style={[s.pendAv, s.pendAvFallback]}>
-                      <Text style={s.pendInitials}>{p.initials}</Text>
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.pendName} numberOfLines={1}>{p.name}</Text>
-                    <Text style={s.pendMeta} numberOfLines={1}>{p.dateLabel} · {p.timeStr} hs</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[s.pendBtn, aceptando === p.bookingId && s.pendBtnOff]}
-                    activeOpacity={0.85}
-                    disabled={aceptando === p.bookingId}
-                    onPress={() => aceptarPendiente(p.bookingId)}>
-                    <Text style={s.pendBtnTxt}>{aceptando === p.bookingId ? '...' : 'Aceptar'}</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-              {/* Aceptar es la respuesta de un toque; rechazar pide un motivo que
-                  le llega a la persona, así que esa vive en Reservas y no se
-                  duplica acá. */}
-              <TouchableOpacity
-                style={s.pendVer}
-                activeOpacity={0.7}
-                onPress={() => router.navigate('/reservas')}>
-                <Text style={s.pendVerTxt}>Ver en Reservas</Text>
-                <Feather name="chevron-right" size={14} color={FOREST_SOFT} />
-              </TouchableOpacity>
-            </View>
-          )}
-
           {/* Tu semana — se muestra SIEMPRE, también con los siete días en cero.
               📌 Decisión de Andre el 08/09/2026, en contra de la compuerta que
               se había puesto un rato antes ese mismo día. El argumento de la
@@ -949,6 +902,61 @@ export default function CoachHomeScreen() {
             <View style={s.prepQuietRow}>
               <View style={s.prepQuietDot} />
               <Text style={s.prepQuietTxt}>Cuando llegue tu primera reserva, esta card se va sola</Text>
+            </View>
+          )}
+
+          {/* ── Reservas esperando tu respuesta ───────────────────────────
+              Va DEBAJO de "Tu próxima sesión" — decisión de Andre del
+              09/09/2026, en contra de cómo se había construido.
+
+              📝 El argumento que perdió, anotado porque va a volver: esto es lo
+              único de la pantalla con alguien del otro lado esperando, la plata
+              ya retenida y un reloj de 24hs corriendo, así que "debería ir
+              primero". El que ganó es mejor: **la próxima sesión es el ancla de
+              la pantalla**, es a lo que el coach entra a mirar. Moverla del tope
+              cada vez que entra una solicitud hace que el Inicio cambie de forma
+              según el día, y el coach deja de saber dónde mirar — el mismo
+              motivo por el que la tira semanal se muestra siempre, también
+              vacía. Urgente no es lo mismo que principal. */}
+          {pendientes.length > 0 && (
+            <View style={s.pendWrap}>
+              <Text style={s.pendEyebrow}>
+                {pendientes.length === 1
+                  ? 'Una persona espera tu respuesta'
+                  : `${pendientes.length} personas esperan tu respuesta`}
+              </Text>
+              {pendientes.map(p => (
+                <View key={p.bookingId} style={s.pendRow}>
+                  {p.avatarUrl ? (
+                    <Image source={{ uri: p.avatarUrl }} style={s.pendAv} />
+                  ) : (
+                    <View style={[s.pendAv, s.pendAvFallback]}>
+                      <Text style={s.pendInitials}>{p.initials}</Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.pendName} numberOfLines={1}>{p.name}</Text>
+                    <Text style={s.pendMeta} numberOfLines={1}>{p.dateLabel} · {p.timeStr} hs</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[s.pendBtn, aceptando === p.bookingId && s.pendBtnOff]}
+                    activeOpacity={0.85}
+                    disabled={aceptando === p.bookingId}
+                    onPress={() => aceptarPendiente(p.bookingId)}>
+                    <Text style={s.pendBtnTxt}>{aceptando === p.bookingId ? '...' : 'Aceptar'}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {/* Aceptar es la respuesta de un toque; rechazar pide un motivo que
+                  le llega a la persona, así que esa vive en Reservas y no se
+                  duplica acá. */}
+              <TouchableOpacity
+                style={s.pendVer}
+                activeOpacity={0.7}
+                onPress={() => router.navigate('/reservas')}>
+                <Text style={s.pendVerTxt}>Ver en Reservas</Text>
+                <Feather name="chevron-right" size={14} color={FOREST_SOFT} />
+              </TouchableOpacity>
             </View>
           )}
 
