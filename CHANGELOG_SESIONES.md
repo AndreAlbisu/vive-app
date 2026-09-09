@@ -22,9 +22,9 @@
 **Pendiente para la próxima sesión:**
 - 🔴 **La forma del link público** — `docs/camino-del-cliente-1.md` §4. Es lo único grande que queda. El consejo votó A por unanimidad; sus revisores dejaron la pregunta de qué gana el coach mandándolo, que ahora se contesta con la tabla de netos.
 - **El porcentaje del descuento** que se lleva el coach.
-- 🔴 **`authenticated` ve las 17 columnas de todos los coaches** (mail y `push_token`). No es de dos líneas: hay que mover al servidor el envío de push (client-side en 6 lugares) y la lectura de mails del panel, y después una vista pública para el catálogo. **Va después del link**, no antes.
 - **Verificaciones con plata/teléfono:** un pago chico en USDT, una reserva de prueba (fila `reserva_nueva` + campana + card del Inicio), el caso positivo del registro con el mail de un coach, y el ≈4% de MP contra el pago de $4.500 del 19/08.
-- **De Joaquín:** A1 y el bloque de device review. **De Andre (viejo):** E6, el visto bueno de voz acumulado, el *"¡Hoy estás brillando!"* del Diario. **Del registro:** B1, B4, B7, D1-D6, E1-E6.
+- ⏭️ **De Joaquín, NUEVO: A4** — `authenticated` puede leer el mail y el `push_token` de todos los coaches, o sea que el agujero que se cerró para `anon` sigue **a un registro de distancia**. Andre se lo dejó a él al cerrar la sesión. 📝 **Se escribió como RECETA y no como una línea de pendientes** (`docs/problemas-abiertos.md` §A4), porque él no estuvo en esta sesión y tiene que poder arrancarlo en frío: qué NO hay que rehacer (la RLS ya está bien), el problema de fondo que define la solución (los grants son por rol y no por fila, así que no se puede decir "tu fila entera, la de los coaches cuatro campos"), **el orden obligatorio** —mover el push al servidor primero, o se rompen las notificaciones de reserva que se deployaron hoy— y la trampa que ya pisamos una vez.
+- **De Joaquín (viejo):** A1 y el bloque de device review. **De Andre:** E6, el visto bueno de voz acumulado, el *"¡Hoy estás brillando!"* del Diario. **Del registro:** B1, B4, B7, D1-D6, E1-E6.
 
 ## 2026-09-08 — Andre (sesión 206 · el revoke rompió un chequeo del registro, y falló abierto)
 
