@@ -53,14 +53,28 @@ function CaptchaNativo() {
     resolver?.(token);
   }, []);
 
+  // 🔴 El widget tarda en estar listo (cargar el WebView + bajar el script de
+  // Cloudflare + renderizar). Antes de eso `window.ejecutarCaptcha` no existe, y
+  // el `&&` de la línea inyectada hacía que no pasara NADA: sin llamada, sin
+  // mensaje de vuelta, sin error. El botón quedaba colgado hasta el timeout de
+  // 60s. Quien toca "Crear cuenta" apenas abre la app cae justo ahí.
+  const listo = useRef(false);
+  const enEspera = useRef(false);
+
+  const disparar = useCallback(() => {
+    web.current?.injectJavaScript('window.ejecutarCaptcha && window.ejecutarCaptcha(); true;');
+  }, []);
+
   const ejecutar = useCallback((resolver: Resolver) => {
     // Un segundo pedido con uno en curso: se corta el viejo en vez de pisarlo.
     // Sin esto, el `resolve` del anterior no se llama nunca y su `await` queda
     // colgado hasta el timeout.
     pendiente.current?.(undefined);
     pendiente.current = resolver;
-    web.current?.injectJavaScript('window.ejecutarCaptcha && window.ejecutarCaptcha(); true;');
-  }, []);
+    // Si todavía no está listo, se encola: lo dispara el aviso `listo`.
+    if (listo.current) disparar();
+    else enEspera.current = true;
+  }, [disparar]);
 
   useEffect(() => {
     registrarCaptchaHost(ejecutar);
@@ -82,9 +96,14 @@ function CaptchaNativo() {
     // bueno con `undefined`. Solo baja el telón; quien contesta es `token` o
     // `error`.
     if (m.tipo === 'cerrado') { setDesafiando(false); return; }
-    if (m.tipo === 'listo') return;
+    if (m.tipo === 'listo') {
+      listo.current = true;
+      if (enEspera.current) { enEspera.current = false; disparar(); }
+      return;
+    }
 
     setDesafiando(false);
+    enEspera.current = false;
     if (m.tipo === 'token') { responder(m.token); return; }
     console.warn('[captcha] el widget falló:', m.detalle);
     responder(undefined);
@@ -203,7 +222,11 @@ function CaptchaWeb() {
 
 const styles = StyleSheet.create({
   transparente: { backgroundColor: 'transparent' },
-  oculto: { position: 'absolute', width: 0, height: 0, opacity: 0 },
+  // 🔴 1x1 y fuera de pantalla, NO 0x0. Un WKWebView con frame de área cero
+  // puede no llegar a correr su JavaScript en iOS, que es la clase de falla que
+  // se ve como "el widget nunca contesta". `opacity: 0` + `left` negativo lo
+  // saca de la vista sin sacarlo del layout.
+  oculto: { position: 'absolute', left: -1000, top: 0, width: 1, height: 1, opacity: 0 },
   lleno: { flex: 1 },
   fondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
 });

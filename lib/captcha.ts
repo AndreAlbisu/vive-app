@@ -104,21 +104,42 @@ export function htmlDelWidget(siteKey: string): string {
 </head><body><div id="c"></div><script>
   var id = null;
   function avisar(m){ window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify(m)); }
+
+  // 🔴 Todo lo que pase adentro del WebView es invisible desde afuera: sin esto,
+  // un error de JS o un script que no carga se ven igual que "el widget tarda",
+  // y el síntoma en la app es un botón colgado sin ninguna pista. Cada motivo
+  // sale por la consola de Metro con el prefijo [captcha].
+  window.onerror = function(msg, url, linea){
+    avisar({ tipo: 'error', detalle: 'js: ' + msg + ' @' + linea });
+    return true;
+  };
+  // Si a los 10s el script de Cloudflare no definió \`turnstile\`, no va a
+  // definirlo más: red bloqueada, sin conexión, o el dominio filtrado.
+  setTimeout(function(){
+    if (typeof turnstile === 'undefined') {
+      avisar({ tipo: 'error', detalle: 'el script de Cloudflare no cargó (10s)' });
+    }
+  }, 10000);
+
   function alCargar(){
     id = turnstile.render('#c', {
       sitekey: ${JSON.stringify(siteKey)},
       ${OPCIONES_RENDER},
       callback: function(t){ avisar({ tipo: 'token', token: t }); },
-      'error-callback': function(e){ avisar({ tipo: 'error', detalle: String(e) }); return true; },
+      // 🔴 El argumento es el CÓDIGO de error de Turnstile y es el dato que
+      // resuelve el diagnóstico: '110200' = el hostname no está en los dominios
+      // del widget, que es la falla más probable acá porque el WebView no tiene
+      // dominio propio y usa el 'baseUrl' que le declaramos.
+      'error-callback': function(e){ avisar({ tipo: 'error', detalle: 'codigo ' + String(e) }); return true; },
       'expired-callback': function(){ avisar({ tipo: 'error', detalle: 'expirado' }); },
       'timeout-callback': function(){ avisar({ tipo: 'error', detalle: 'timeout' }); },
       // 🔴 Navegador que Turnstile no soporta. Sin esto el widget se queda mudo
       // y el \`await\` cuelga hasta el timeout de 60s con el botón trabado.
       'unsupported-callback': function(){ avisar({ tipo: 'error', detalle: 'no soportado' }); return true; },
       // Cuando Turnstile decide que esta sesión no le cierra, pasa a modo
-      // interactivo. El WebView mide 0x0 mientras tanto, así que sin estos dos
-      // avisos el desafío se dibujaría en un recuadro invisible y el alta
-      // quedaría colgada para siempre sin que la persona vea por qué.
+      // interactivo. El WebView mide 1x1 fuera de pantalla mientras tanto, así
+      // que sin estos dos avisos el desafío se dibujaría donde nadie lo ve y el
+      // alta quedaría colgada para siempre sin que la persona sepa por qué.
       'before-interactive-callback': function(){ avisar({ tipo: 'abierto' }); },
       'after-interactive-callback': function(){ avisar({ tipo: 'cerrado' }); },
     });
@@ -129,8 +150,14 @@ export function htmlDelWidget(siteKey: string): string {
   // iOS y Android y es una fuente clásica de mensajes que no llegan nunca.
   window.ejecutarCaptcha = function(){
     if (id === null) { avisar({ tipo: 'error', detalle: 'sin widget' }); return; }
-    turnstile.reset(id);
-    turnstile.execute('#c');
+    // ⚠️ En try: si 'reset' o 'execute' tiran, sin esto no contesta nadie y el
+    // botón queda colgado hasta el timeout de 60s del lado de la app.
+    try {
+      turnstile.reset(id);
+      turnstile.execute('#c');
+    } catch (e) {
+      avisar({ tipo: 'error', detalle: 'execute: ' + String(e) });
+    }
   };
 </script></body></html>`;
 }
