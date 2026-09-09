@@ -12,21 +12,30 @@
 // Este archivo es solo la mitad del cliente: conseguir el token que ese
 // chequeo del servidor va a pedir.
 //
+// 📌 POR QUÉ TURNSTILE Y NO hCAPTCHA. Supabase acepta los dos. hCaptcha cobra
+// el modo de baja fricción ("99.9% Passive") como parte de Pro, US$139/mes; en
+// el tier gratis el desafío visible aparece seguido, que es exactamente la
+// fricción en el alta que la sesión 147 decidió no poner. Turnstile es gratis,
+// sin límite de requests, y no interactivo por diseño en vez de por upgrade.
+// Del lado de Supabase el campo es el mismo `captchaToken` para los dos, así
+// que volver atrás es cambiar este archivo y nada más.
+//
 // ⚠️ FALLA ABIERTO A PROPÓSITO, y acá el motivo es distinto al de
-// `emailVerificado.ts`. Sin `EXPO_PUBLIC_HCAPTCHA_SITE_KEY` esto devuelve
+// `emailVerificado.ts`. Sin `EXPO_PUBLIC_TURNSTILE_SITE_KEY` esto devuelve
 // `undefined` y las llamadas de auth salen exactamente como salen hoy. Eso es
 // lo que hace que prender el CAPTCHA sea un cambio de config y no un
 // despliegue coordinado, y es lo que mantiene vivo el desarrollo local sin
 // clave. No es un agujero: si el server tiene el CAPTCHA prendido y el cliente
 // no manda token, **el server rechaza igual**. Quien decide es el server.
 
-import { Platform } from 'react-native';
+export const CAPTCHA_SITE_KEY = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY;
 
-export const CAPTCHA_SITE_KEY = process.env.EXPO_PUBLIC_HCAPTCHA_SITE_KEY;
-
-/** El origen que se le declara al WebView. Tiene que estar en los hostnames
- *  permitidos de la site key de hCaptcha (o la verificación de hostname
- *  apagada, que es lo normal para apps nativas: un WebView no tiene dominio). */
+/** El origen que se le declara al WebView. Tiene que estar en los dominios del
+ *  widget en el panel de Cloudflare: un WebView no tiene dominio propio, así
+ *  que el que vale es el que declaramos acá. Si cambia el dominio, cambia esto.
+ *
+ *  ⚠️ Es lo ÚNICO que las claves de prueba no ejercitan — andan en cualquier
+ *  dominio a propósito. Ver `docs/anti-abuso-altas.md`. */
 export const CAPTCHA_ORIGEN = 'https://vitaapp.com.ar';
 
 export function captchaActivo(): boolean {
@@ -46,13 +55,13 @@ export function registrarCaptchaHost(fn: ((resolver: Resolver) => void) | null) 
 /**
  * Un token de un solo uso para la próxima llamada de auth.
  *
- * ⚠️ NO se cachea: hCaptcha los quema al validarlos y Supabase valida uno por
+ * ⚠️ NO se cachea: Turnstile los quema al validarlos y Supabase valida uno por
  * request. Reusar el de un intento fallido de login haría fallar el siguiente
  * por un motivo que no tiene nada que ver con la contraseña.
  *
  * 📝 El timeout no es un límite de paciencia: el desafío visible puede tardar
  * lo que la persona tarde. Es contra el caso en que el widget nunca contesta
- * (hCaptcha bloqueado en la red, WebView que no cargó) — ahí devolver
+ * (Turnstile bloqueado en la red, WebView que no cargó) — ahí devolver
  * `undefined` y dejar que el server conteste es mejor que colgar el botón.
  */
 export function pedirCaptchaToken(): Promise<string | undefined> {
@@ -73,29 +82,45 @@ export function pedirCaptchaToken(): Promise<string | undefined> {
   });
 }
 
-/** El HTML del widget invisible. Se usa dentro de un WebView en nativo; en web
- *  el script se inyecta en el documento real y esto no hace falta. */
+/** Las opciones de `turnstile.render()`, compartidas por el WebView y por web.
+ *
+ *  `execution: 'execute'` — no arranca solo al renderizar; lo dispara
+ *  `turnstile.execute()` cuando alguien pide un token. Sin esto el widget
+ *  gastaría un desafío al abrir la app, y ese token estaría vencido para cuando
+ *  se use.
+ *
+ *  `appearance: 'interaction-only'` — solo se muestra si hace falta que la
+ *  persona haga algo. En el camino normal no se ve nada. */
+export const OPCIONES_RENDER = "execution: 'execute', appearance: 'interaction-only'";
+
+/** El HTML del widget. Se usa dentro de un WebView en nativo; en web el script
+ *  se inyecta en el documento real y esto no hace falta. */
 export function htmlDelWidget(siteKey: string): string {
   return `<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}</style>
-<script src="https://js.hcaptcha.com/1/api.js?render=explicit&onload=alCargar" async defer></script>
+<style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}
+#c{display:flex;align-items:center;justify-content:center;min-height:100vh}</style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=alCargar" defer></script>
 </head><body><div id="c"></div><script>
   var id = null;
   function avisar(m){ window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify(m)); }
   function alCargar(){
-    id = hcaptcha.render('c', {
+    id = turnstile.render('#c', {
       sitekey: ${JSON.stringify(siteKey)},
-      size: 'invisible',
+      ${OPCIONES_RENDER},
       callback: function(t){ avisar({ tipo: 'token', token: t }); },
-      'error-callback': function(e){ avisar({ tipo: 'error', detalle: String(e) }); },
+      'error-callback': function(e){ avisar({ tipo: 'error', detalle: String(e) }); return true; },
       'expired-callback': function(){ avisar({ tipo: 'error', detalle: 'expirado' }); },
-      // Cuando hCaptcha decide que esta sesión no le cierra, abre un desafío
-      // visible. El WebView mide 0x0 mientras tanto, así que sin estos dos
+      'timeout-callback': function(){ avisar({ tipo: 'error', detalle: 'timeout' }); },
+      // 🔴 Navegador que Turnstile no soporta. Sin esto el widget se queda mudo
+      // y el \`await\` cuelga hasta el timeout de 60s con el botón trabado.
+      'unsupported-callback': function(){ avisar({ tipo: 'error', detalle: 'no soportado' }); return true; },
+      // Cuando Turnstile decide que esta sesión no le cierra, pasa a modo
+      // interactivo. El WebView mide 0x0 mientras tanto, así que sin estos dos
       // avisos el desafío se dibujaría en un recuadro invisible y el alta
       // quedaría colgada para siempre sin que la persona vea por qué.
-      'open-callback': function(){ avisar({ tipo: 'abierto' }); },
-      'close-callback': function(){ avisar({ tipo: 'cerrado' }); },
+      'before-interactive-callback': function(){ avisar({ tipo: 'abierto' }); },
+      'after-interactive-callback': function(){ avisar({ tipo: 'cerrado' }); },
     });
     avisar({ tipo: 'listo' });
   }
@@ -104,11 +129,8 @@ export function htmlDelWidget(siteKey: string): string {
   // iOS y Android y es una fuente clásica de mensajes que no llegan nunca.
   window.ejecutarCaptcha = function(){
     if (id === null) { avisar({ tipo: 'error', detalle: 'sin widget' }); return; }
-    hcaptcha.reset(id);
-    hcaptcha.execute(id);
+    turnstile.reset(id);
+    turnstile.execute('#c');
   };
 </script></body></html>`;
 }
-
-/** En web no hay WebView: el script va al documento de verdad. */
-export const ES_WEB = Platform.OS === 'web';

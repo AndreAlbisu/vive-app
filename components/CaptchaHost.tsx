@@ -1,6 +1,6 @@
-// El único lugar donde vive el widget de hCaptcha. Se monta una sola vez, en la
-// raíz (`app/_layout.tsx`), y las pantallas de auth no lo tocan: piden un token
-// con `pedirCaptchaToken()` y no saben que existe.
+// El único lugar donde vive el widget de Turnstile. Se monta una sola vez, en
+// la raíz (`app/_layout.tsx`), y las pantallas de auth no lo tocan: piden un
+// token con `pedirCaptchaToken()` y no saben que existe.
 //
 // 🔴 POR QUÉ IMPERATIVO Y NO UN COMPONENTE POR PANTALLA. El token lo necesitan
 // cuatro llamadas repartidas en tres archivos (alta, login, recuperar
@@ -43,9 +43,15 @@ export default function CaptchaHost() {
 function CaptchaNativo() {
   const web = useRef<WebView>(null);
   const pendiente = useRef<Resolver | null>(null);
-  // Solo se abre cuando hCaptcha decide desafiar. En el camino normal —que es
-  // el de casi todo el mundo— nadie ve nada.
+  // Solo se abre cuando Turnstile pasa a modo interactivo. En el camino
+  // normal —que es el de casi todo el mundo— nadie ve nada.
   const [desafiando, setDesafiando] = useState(false);
+
+  const responder = useCallback((token: string | undefined) => {
+    const resolver = pendiente.current;
+    pendiente.current = null;
+    resolver?.(token);
+  }, []);
 
   const ejecutar = useCallback((resolver: Resolver) => {
     // Un segundo pedido con uno en curso: se corta el viejo en vez de pisarlo.
@@ -70,19 +76,18 @@ function CaptchaNativo() {
     try { m = JSON.parse(crudo); } catch { return; }
 
     if (m.tipo === 'abierto') { setDesafiando(true); return; }
-    // 🔴 `cerrado` NO resuelve: hCaptcha lo manda también al cerrar el desafío
-    // que la persona acaba de RESOLVER BIEN, y en ese caso el `callback` con el
-    // token llega después. Resolver acá mataría el token bueno con `undefined`.
-    // Solo baja el telón; quien contesta es `token` o `error`.
+    // 🔴 `cerrado` NO resuelve: Turnstile lo manda también al salir del modo
+    // interactivo que la persona acaba de RESOLVER BIEN, y en ese caso el
+    // `callback` con el token llega después. Resolver acá mataría el token
+    // bueno con `undefined`. Solo baja el telón; quien contesta es `token` o
+    // `error`.
     if (m.tipo === 'cerrado') { setDesafiando(false); return; }
     if (m.tipo === 'listo') return;
 
     setDesafiando(false);
-    const resolver = pendiente.current;
-    pendiente.current = null;
-    if (m.tipo === 'token') { resolver?.(m.token); return; }
+    if (m.tipo === 'token') { responder(m.token); return; }
     console.warn('[captcha] el widget falló:', m.detalle);
-    resolver?.(undefined);
+    responder(undefined);
   }
 
   const vista = (
@@ -92,16 +97,15 @@ function CaptchaNativo() {
       onMessage={e => alRecibir(e.nativeEvent.data)}
       onError={() => {
         console.warn('[captcha] el WebView no cargó');
-        const resolver = pendiente.current;
-        pendiente.current = null;
-        resolver?.(undefined);
+        setDesafiando(false);
+        responder(undefined);
       }}
       javaScriptEnabled
       domStorageEnabled
       // Sin esto el WebView pinta blanco sobre la pantalla mientras está en 0x0
       // en algunos Android.
       style={styles.transparente}
-      // El desafío de hCaptcha se dibuja adentro del propio WebView, así que
+      // El desafío de Turnstile se dibuja adentro del propio WebView, así que
       // cuando hay desafío el WebView tiene que ocupar la pantalla entera.
       containerStyle={desafiando ? styles.lleno : styles.oculto}
     />
@@ -121,40 +125,67 @@ function CaptchaNativo() {
 
 function CaptchaWeb() {
   const pendiente = useRef<Resolver | null>(null);
-  const widget = useRef<number | string | null>(null);
 
   useEffect(() => {
     const w = window as any;
+
+    // 🔴 NO se esconde con `display:none`. Con `appearance: 'interaction-only'`
+    // el widget se muestra cuando hace falta que la persona haga algo, y un
+    // contenedor apagado dejaría ese desafío invisible: el alta quedaría
+    // colgada sin que se vea por qué (el mismo bug que en nativo resuelve el
+    // Modal). Se mantiene montado y sin ocupar lugar, y se enciende cuando
+    // Turnstile avisa que pasa a interactivo.
     const caja = document.createElement('div');
-    caja.style.display = 'none';
+    caja.style.cssText =
+      'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;' +
+      'justify-content:center;background:rgba(0,0,0,0.55);visibility:hidden;pointer-events:none';
+    const ranura = document.createElement('div');
+    caja.appendChild(ranura);
     document.body.appendChild(caja);
 
+    const mostrar = (visible: boolean) => {
+      caja.style.visibility = visible ? 'visible' : 'hidden';
+      caja.style.pointerEvents = visible ? 'auto' : 'none';
+    };
+    const responder = (token: string | undefined) => {
+      mostrar(false);
+      const r = pendiente.current;
+      pendiente.current = null;
+      r?.(token);
+    };
+
+    let id: string | undefined;
     function render() {
-      widget.current = w.hcaptcha.render(caja, {
+      id = w.turnstile.render(ranura, {
         sitekey: CAPTCHA_SITE_KEY,
-        size: 'invisible',
-        callback: (t: string) => { const r = pendiente.current; pendiente.current = null; r?.(t); },
-        'error-callback': () => { const r = pendiente.current; pendiente.current = null; r?.(undefined); },
-        'expired-callback': () => { const r = pendiente.current; pendiente.current = null; r?.(undefined); },
+        execution: 'execute',
+        appearance: 'interaction-only',
+        callback: (t: string) => responder(t),
+        'error-callback': () => { responder(undefined); return true; },
+        'expired-callback': () => responder(undefined),
+        'timeout-callback': () => responder(undefined),
+        'unsupported-callback': () => { responder(undefined); return true; },
+        'before-interactive-callback': () => mostrar(true),
+        // No resuelve, igual que en nativo: el token bueno llega después.
+        'after-interactive-callback': () => mostrar(false),
       });
       registrarCaptchaHost(resolver => {
         pendiente.current?.(undefined);
         pendiente.current = resolver;
-        w.hcaptcha.reset(widget.current);
-        w.hcaptcha.execute(widget.current);
+        w.turnstile.reset(id);
+        w.turnstile.execute(ranura);
       });
     }
 
     // El script se carga una sola vez aunque el efecto vuelva a correr.
-    if (w.hcaptcha?.render) {
+    if (w.turnstile?.render) {
       render();
     } else {
       w.alCargarCaptcha = render;
       const s = document.createElement('script');
-      s.src = 'https://js.hcaptcha.com/1/api.js?render=explicit&onload=alCargarCaptcha';
-      s.async = true;
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=alCargarCaptcha';
       s.defer = true;
-      s.onerror = () => console.warn('[captcha] no se pudo cargar hCaptcha');
+      s.onerror = () => console.warn('[captcha] no se pudo cargar Turnstile');
       document.head.appendChild(s);
     }
 
@@ -162,6 +193,7 @@ function CaptchaWeb() {
       registrarCaptchaHost(null);
       pendiente.current?.(undefined);
       pendiente.current = null;
+      if (id !== undefined) w.turnstile?.remove?.(id);
       caja.remove();
     };
   }, []);

@@ -294,7 +294,7 @@ export default function RootLayout() {
             abrirse encima y el reenvío de OTP lo vuelve a pedir ya en
             `verificar-mail` — si el host viviera en una pantalla, el segundo
             pedido llegaría a un widget desmontado. No dibuja nada salvo que
-            hCaptcha decida desafiar. */}
+            Turnstile decida desafiar. */}
         <CaptchaHost />
         <StatusBar style="auto" />
       </ThemeProvider>

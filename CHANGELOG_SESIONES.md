@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 223 cont. · Turnstile en vez de hCaptcha: el modo que necesitábamos costaba US$139/mes)
+
+**Tocado:** `lib/captcha.ts`, `components/CaptchaHost.tsx`, `app/_layout.tsx`, `docs/anti-abuso-altas.md`. **575 tests**, `tsc` y `eslint` limpios. ⚠️ Sigue **NO prendido**.
+
+**Resumen — el proveedor cambió al ir a sacar las claves, y el motivo es de plata, no técnico.**
+
+- 🔴 **hCaptcha cobra la baja fricción.** El modo "99.9% Passive" —desafío visible solo a quien parece riesgoso, que es exactamente para lo que estaba escrito el código— **figura como beneficio de Pro: US$139/mes o US$99/año**. En el tier gratis el puzzle aparece seguido, o sea la fricción en el alta que la sesión 147 decidió no poner. 📌 **El tier gratis protege igual: lo que compra Pro es fricción baja, no seguridad.**
+- 🟢 **Turnstile (Cloudflare) es gratis, sin límite de requests, y no interactivo POR DISEÑO en vez de por upgrade.** Supabase acepta los dos con el mismo campo `captchaToken`, así que el cambio no tocó ninguno de los cuatro call sites: todo lo específico del proveedor vivía en `lib/captcha.ts` y en la rama de web de `CaptchaHost.tsx`. Volver atrás sería igual de barato.
+- 📌 **El mapeo de la API salió parejo:** `before-interactive-callback` / `after-interactive-callback` son el equivalente exacto de los `open`/`close` de hCaptcha, así que el manejo del desafío (WebView 0x0 → `Modal`) quedó igual, incluido el motivo por el que `cerrado` **no** resuelve.
+- 🟢 **Dos cosas que Turnstile tiene y hCaptcha no**, y se aprovecharon: `unsupported-callback` (navegador no soportado — sin él el `await` colgaba 60s con el botón trabado) y `timeout-callback`.
+- 📌 **En web ya no se esconde con `display:none`.** Con `appearance: 'interaction-only'` el widget aparece cuando hace falta interactuar, y un contenedor apagado dejaría ese desafío invisible — el mismo bug que en nativo resuelve el `Modal`. Ahora es un overlay fijo que se enciende con los callbacks de interactivo.
+- 🔴 **Lo que las claves de prueba NO prueban: el hostname.** Andan en cualquier dominio a propósito, así que el `baseUrl` del WebView contra la lista de dominios de Cloudflare **recién se ejercita con la clave real**. Es el punto más probable de falla en la primera prueba de verdad, y está escrito en el runbook.
+- 🟢 **Y hay una clave de prueba que fuerza el desafío interactivo** (`3x00000000000000000000FF`): es la única forma de ejercitar el camino del `Modal`, que en producción casi nunca se va a abrir y es por eso el más frágil.
+
+**Pendiente para la próxima sesión:**
+- Lo mismo que la entrada de abajo, con Turnstile en lugar de hCaptcha y `EXPO_PUBLIC_TURNSTILE_SITE_KEY` en vez de `EXPO_PUBLIC_HCAPTCHA_SITE_KEY`. Runbook actualizado entero.
+- **Sigue sin probarse en dispositivo.** Ahora hay receta: `1x...BB` para el camino normal, `3x...FF` para el `Modal`.
+
 ## 2026-09-09 — Andre (sesión 223 · el portero contra el alta masiva, y por qué la verificación de mail no era uno)
 
 **Tocado:** `lib/captcha.ts` (nuevo), `components/CaptchaHost.tsx` (nuevo), `context/AuthContext.tsx`, `screens/VerificarMailScreen.tsx`, `app/_layout.tsx`, `docs/anti-abuso-altas.md` (nuevo). **575 tests**, `tsc` y `eslint` limpios. ⚠️ **NO prendido todavía** — falta la parte de dashboard.
