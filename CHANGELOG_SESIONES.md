@@ -16,8 +16,9 @@
 - 📌 **Patrón que ya salió dos veces (191 y ahora): un hook que alimenta una tarjeta de Inicio y se puede invalidar desde OTRA pantalla tiene que re-leer en foco.** Quedan por mirar los otros `useFocusEffect` de Inicio (consent, notif, próxima sesión ya lo hacen); los hooks de datos que no, son candidatos al mismo bug.
 - 🟢 **Y de paso, un segundo hallazgo en dispositivo: la transición al abrir un recurso se sentía lenta.** `openReco` en `mis-recomendaciones` hacía `await` del UPDATE de `opened_at` ANTES de navegar — o sea que el tap esperaba un round-trip a Supabase (São Paulo) antes de abrir el recurso, y desde Australia eso se nota. Ahora marca optimista + en segundo plano (sin await) y navega ya. Si el update falla, el recurso igual se abrió y el aviso reaparece (correcto). `app/mis-recomendaciones.tsx`.
 
+**Verificado en dispositivo (09/09):** los dos fixes confirmados — al volver a Inicio la tarjeta ya no aparece (sin remontar), y la transición al abrir el recurso ahora es fluida.
+
 **Pendiente para la próxima sesión:**
-- **Verificar el fix en dispositivo:** con una recomendación reseteada a `opened_at = null`, abrirla y confirmar que al volver a Inicio la tarjeta YA no aparece (sin remontar la app).
 - **Cancelación tardía** (device, toca plata) — lo que queda de device review.
 - 🟡 Para Andre: vista pública del catálogo, paquete paso 3, encender IA/piso, opción B del Diario, link público, % del descuento.
 
