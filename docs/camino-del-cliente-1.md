@@ -202,6 +202,50 @@ mail?". La respuesta es esta, y por eso queda escrita acá y no solo en el códi
 (`VerificarMailScreen`, `signInWithOtp` + `verifyOtp`, plantilla con
 `{{ .Token }}`). Se construyó para el alta de coach. La web usa lo mismo.
 
+## 4 ter. 🔴 EL BLOQUEANTE REAL: la sesión ocurre en una app que no está publicada
+
+> Encontrado el 09/09/2026, después de probar el checkout web de punta a punta
+> con plata real. **Es el hallazgo más caro de todo este documento**, y apareció
+> de una pregunta de Andre que parecía de marketing: *"¿el mail no debería
+> hacerte descargar la app?"*.
+
+**Hoy el camino web vende algo que el comprador no puede consumir.** Alguien
+entra por el link del coach, elige horario, se identifica, paga, recibe los dos
+mails… y la sesión es una videollamada que **solo existe dentro de la app**
+(`lib/meetingRoom.ts` → `create-meeting-room`, abierta en `SalaScreen`).
+
+Y las apps **no están publicadas**. No hay tienda de dónde bajarla; tampoco hay
+links a las tiendas en ningún lado del repo. O sea: no es que haya fricción para
+asistir, es que **no hay forma de asistir**, y en ningún momento se le dice.
+
+🔴 **Es de la misma familia que los otros problemas de esta línea —prometer lo
+que no se puede cumplir— pero es el más caro, porque acá ya hay plata cobrada.**
+
+### Lo que cambia
+
+El argumento del consejo para elegir la opción A fue *"la app queda para después,
+que es cuando la persona tiene un motivo real para instalarla"*. Con las tiendas
+sin publicar eso deja de ser una comodidad: **la web tiene que poder entregar la
+sesión entera, o no hay lanzamiento.**
+
+📌 El upside que el Expansionista mencionó al pasar —*"si la reserva vive en la
+web, VIVE deja de necesitar la store para existir"*— **pasó de ventaja a
+requisito.**
+
+### 🟢 Y la buena noticia: la sala web es chica
+
+`create-meeting-room` ya recibe un `booking_id` y el JWT de quien llama, y
+devuelve **`room_url?t=<token>`: una URL de Daily que abre en cualquier
+navegador**. Ya acuña el meeting token por participante y hace entrar al coach
+como owner. Lo difícil —crear la sala privada, los tokens, la propiedad— está
+hecho, probado y deployado desde el 28/08.
+
+Falta una página `/sala` que lea la sesión, llame a esa función con el
+`booking_id` y muestre la sala. La misma pieza sirve para las dos puntas.
+
+⚠️ **Hasta entonces, `CHECKOUT_HABILITADO` está bloqueado por ESTO y no por los
+mails**, que ya están.
+
 ## 5. El embudo, escrito entero
 
 Lo que hoy no está caminado, paso por paso. Cada uno corta:
