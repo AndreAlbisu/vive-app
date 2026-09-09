@@ -16,7 +16,7 @@
 
 **Pendiente para la próxima sesión:**
 - 🔴 **A4 fase 3 (la última):** vista pública para el catálogo (`id, name, avatar_url, gender` de coaches), repuntar `coachesCache`/`search3`/`ProfesionalScreen`/`FavoritosScreen` a la vista, y **recién ahí** revocar `email`/`push_token` a `authenticated`. Ojo con la trampa del FILTRO (la que rompió `RegisterScreen` en la 206): buscar quién FILTRA por la columna, no solo quién la selecciona.
-- **Verificar en dispositivo** que el panel de admin sigue listando las postulaciones (ahora vía la función). Es lo único de la fase 2 que no se probó desde la terminal.
+- ✅ **Device check de la fase 2 (09/09): OK.** El panel muestra la cola vacía — correcto: los 34 coaches están todos `aprobada`, 0 pendientes y 0 rechazadas, y el panel solo lista esas dos. Se confirmó aparte que la query de la función devuelve los 34 aprobados con nombre y mail, así que el camino feliz queda probado a nivel datos+auth (la UI poblada recién se puede ver cuando haya una postulación pendiente real).
 - Sigue lo de siempre: A1 (device review del piso), paquete paso 3 (decisión con Andre).
 
 ## 2026-09-09 — Joaquín (sesión 208 · A4 fase 1 — el envío de push se fue al servidor)
