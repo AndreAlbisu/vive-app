@@ -13,12 +13,12 @@
 - 🟢 **Nueva edge function `send-push`, validada por contexto.** El envío de push era client-side en 6 lugares (9 reads de `push_token` en 5 archivos): el que mandaba leía el token del que recibía desde el dispositivo. Ahora pasa por `send-push`, que identifica al que llama por su JWT, **valida que comparta sala o booking con el destinatario** (incluye el caso "competidor" — usuario con reserva en el mismo coach+día+hora), busca el token con service role y manda. Patrón copiado de `booking-effects.ts`.
 - 🔴 **Por qué la validación de relación y no un `send-push(recipientId, title, body)` a secas:** sin ella, cualquiera con una cuenta podría mandarle un push a cualquiera — se cambiaba un agujero (leer el token) por otro (spam). La decisión fue de Joaquín entre las dos opciones.
 - 🧹 **`sendPushNotification` (envío directo a exp.host desde el cliente) borrado.** Lo reemplaza `notifyViaServer` en `lib/notifications.ts`. El único `push_token` que queda del lado cliente es el `.update` del propio token del dispositivo en `registerForPushNotifications` — necesita UPDATE, no SELECT, así que la revocación de la fase 3 no lo rompe.
-- ✅ **Verificado con JWT real (usuario de diagnóstico), no solo estático:** sala ajena → **403**, booking ajeno → **403** (ejercita el join `booking→coaches`, sin 500), sin auth → **401**, anon como Bearer → **401**, sin contexto → **400**. El camino feliz (que el push llegue) se confirma en dispositivo mandando un mensaje.
+- ✅ **Verificado con JWT real (usuario de diagnóstico), no solo estático:** sala ajena → **403**, booking ajeno → **403** (ejercita el join `booking→coaches`, sin 500), sin auth → **401**, anon como Bearer → **401**, sin contexto → **400**.
+- ✅ **Camino feliz confirmado en dispositivo (09/09):** los push de reserva y chat siguen llegando, ahora vía server. Fase 1 cerrada del todo.
 
 **Pendiente para la próxima sesión:**
 - 🔴 **A4 fase 2:** mover la lectura de mails del panel de admin (`lib/admin.ts` lee `profiles!inner(name, email)`) a `admin-actions` (service role).
 - 🔴 **A4 fase 3:** vista pública para el catálogo (`id, name, avatar_url, gender`), repuntar `coachesCache`/`search3`/`ProfesionalScreen`/`FavoritosScreen`, y **recién ahí** revocar `email`/`push_token` a `authenticated`. Ojo con la trampa del FILTRO (buscar quién filtra por la columna, no solo quién la selecciona).
-- **Verificar en dispositivo** que los push de reserva/chat siguen llegando (ahora vía server). Es lo único de la fase 1 que no se probó desde la terminal.
 - Sigue lo de siempre: A1 (device review del piso), paquete paso 3 (decisión con Andre).
 
 ## 2026-09-08 — Andre (sesión 207 · `coaches.slug`, lo que las dos opciones del link necesitan igual)
