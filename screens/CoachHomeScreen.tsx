@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -76,6 +77,10 @@ const OK_INK = '#42542F';
 const LINE = 'rgba(63,81,47,0.14)';
 const GREEN_TXT = '#F3EEDF';
 const GREEN_EYEBROW = '#C9CFAF';
+
+/** El sitio público. Vive acá y no en `.env` porque es una constante del
+ *  producto, no de configuración: cambiarlo rompería los links ya compartidos. */
+const SITIO_WEB = 'https://vitaapp.com.ar';
 
 const WEEK_ABBRS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -761,6 +766,35 @@ export default function CoachHomeScreen() {
                 </TouchableOpacity>
               </View>
 
+              {/* ── Hacerla desde la computadora ──────────────────────────────
+                  🔴 No es una comodidad: **la app es solo móvil, y una sesión de
+                  60 minutos un profesional la quiere hacer en la compu.** Hasta
+                  ahora la única forma de entrar era el botón de arriba, o sea el
+                  teléfono en la mano durante una hora.
+
+                  La sala web (`/sala`) existe desde el 09/09 y sirve para las
+                  dos puntas: `create-meeting-room` acepta al coach y lo hace
+                  owner, así que este link le abre la MISMA sala.
+
+                  📌 Se comparte en vez de copiarse a propósito: lo que la
+                  persona necesita no es el texto en el portapapeles del
+                  teléfono, es el link EN LA OTRA MÁQUINA — y para eso el camino
+                  real es mandárselo por mail o WhatsApp. Además evita sumar
+                  `expo-clipboard` para un botón. */}
+              <TouchableOpacity
+                style={s.actCompu}
+                activeOpacity={0.7}
+                onPress={() => Share.share({
+                  message: `Tu sesión con ${next.userName} — ${next.dateLabel} ${next.timeStr} hs\n${SITIO_WEB}/sala?booking=${next.bookingId}`,
+                }).catch(() => {})}>
+                {/* ⚠️ `GREEN_EYEBROW` y no `FOREST_SOFT`: esta tarjeta tiene
+                    fondo verde oscuro (#3E4E2C), y el oliva da 1.9:1 encima —
+                    invisible. Con este da 5.6:1. Mismo error que la auditoría
+                    de contraste de la sesión 172. */}
+                <Feather name="monitor" size={13} color={GREEN_EYEBROW} />
+                <Text style={s.actCompuTxt}>Hacerla desde la computadora</Text>
+              </TouchableOpacity>
+
               {prepOpen && (
                 <View style={s.prep}>
                   <Text style={s.prepLine}>
@@ -1274,6 +1308,12 @@ const s = StyleSheet.create({
     paddingTop: 8, borderTopWidth: 1, borderTopColor: LINE, marginTop: 2,
   },
   pendVerTxt: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT },
+
+  actCompu: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(201,207,175,0.22)',
+  },
+  actCompuTxt: { fontFamily: ViveFonts.regular, fontSize: 12, color: GREEN_EYEBROW },
 
   caenWrap: {
     backgroundColor: CARD,
