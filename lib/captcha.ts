@@ -42,6 +42,16 @@ export function captchaActivo(): boolean {
   return !!CAPTCHA_SITE_KEY;
 }
 
+// 🔴 Al arrancar, y una sola vez. "Sin site key" y "widget funcionando" se ven
+// EXACTAMENTE IGUAL desde afuera —alta instantánea, consola limpia— y son cosas
+// opuestas: una es el portero puesto y la otra es no tener ninguno. Sin esta
+// línea, la única forma de distinguirlos es prender el CAPTCHA en el server y
+// ver si la app se rompe, que es tarde.
+console.log(captchaActivo()
+  ? '[captcha] activo (Turnstile)'
+  : '[captcha] SIN site key: las llamadas de auth salen sin token. ' +
+    'En local revisá .env (EXPO_PUBLIC_TURNSTILE_SITE_KEY); en un build de EAS, `eas env:list`.');
+
 type Resolver = (token: string | undefined) => void;
 
 /** Lo publica `CaptchaHost` al montarse. Sin host montado no hay forma de
@@ -78,7 +88,13 @@ export function pedirCaptchaToken(): Promise<string | undefined> {
       console.warn('[captcha] sin respuesta del widget, sigue sin token');
       unaVez(undefined);
     }, 60_000);
-    ejecutar!(token => { clearTimeout(t); unaVez(token); });
+    ejecutar!(token => {
+      clearTimeout(t);
+      // Solo en desarrollo: confirma que el token llegó de verdad. En release
+      // no va — es ruido por cada login, y el token es material sensible.
+      if (__DEV__) console.log('[captcha] token obtenido:', token ? `sí (${token.length} chars)` : 'NO');
+      unaVez(token);
+    });
   });
 }
 
