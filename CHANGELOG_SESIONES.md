@@ -4,6 +4,21 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Joaquín (sesión 209 · A4 fase 2 — el mail del coach en el admin se fue al servidor)
+
+**Tocado:** `supabase/functions/admin-actions/index.ts`, `lib/admin.ts`, `docs/problemas-abiertos.md`. `tsc` 0, **570 tests**. Sin cambios de schema. ✅ **Deployada y verificada el 09/09.**
+
+**Resumen — segunda de las tres fases de A4.**
+
+- 🟢 **La única lectura del panel de admin que traía el MAIL del coach pasó al server.** `listCoachApplications` leía `coaches` + `profiles!inner(name, email)` directo desde el cliente. Ahora va por `admin-actions` (nueva acción `list_coach_applications`): confirma `is_admin` —igual que todas las acciones de esa función— y lee con service role. El mapeo a `PendingCoach` quedó en un solo lado (la función lo devuelve ya mapeado).
+- 📌 **Los otros reads directos de admin NO son del scope de A4 y se dejan:** `listPendingReports` lee `profiles(id, name)` (nombre, no mail); `listCoachPayouts` lee `coach_payout_accounts.paypal_email`, que es otra tabla con su propia RLS. A4 es específicamente `profiles.email`/`push_token` de coaches.
+- ✅ **Verificado con JWT real:** un usuario **no-admin** llamando `list_coach_applications` → **403** "no autorizado". Y se confirmó que la query directa `coaches→profiles.email` **todavía devuelve filas** para un `authenticated` no-admin — o sea que el agujero sigue abierto y es exactamente lo que cierra la fase 3. El camino feliz (el panel lista con mails vía la función) se confirma en dispositivo con una sesión admin.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **A4 fase 3 (la última):** vista pública para el catálogo (`id, name, avatar_url, gender` de coaches), repuntar `coachesCache`/`search3`/`ProfesionalScreen`/`FavoritosScreen` a la vista, y **recién ahí** revocar `email`/`push_token` a `authenticated`. Ojo con la trampa del FILTRO (la que rompió `RegisterScreen` en la 206): buscar quién FILTRA por la columna, no solo quién la selecciona.
+- **Verificar en dispositivo** que el panel de admin sigue listando las postulaciones (ahora vía la función). Es lo único de la fase 2 que no se probó desde la terminal.
+- Sigue lo de siempre: A1 (device review del piso), paquete paso 3 (decisión con Andre).
+
 ## 2026-09-09 — Joaquín (sesión 208 · A4 fase 1 — el envío de push se fue al servidor)
 
 **Tocado:** `supabase/functions/send-push/index.ts` (nuevo), `lib/notifications.ts`, `lib/coachBookingActions.ts`, `lib/bookingCancel.ts`, `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/CoachReservasScreen.tsx`, `docs/problemas-abiertos.md`. `tsc` 0, **570 tests**. Sin cambios de schema. ✅ **Deployada y verificada el 09/09.**

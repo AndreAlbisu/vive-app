@@ -25,6 +25,7 @@
 //   { action: 'list_pending_credentials' }
 //   { action: 'credential_file_url', credential_id }
 //   { action: 'review_credential', credential_id, verified: boolean, notes? }
+//   { action: 'list_coach_applications', status? }   // lee el mail del coach (A4)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -598,6 +599,54 @@ serve(async (req) => {
         result: 'ok',
         status: body.verified ? 'verificada' : 'rechazada',
         ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}),
+      })
+    }
+
+    // ── Postulaciones de coaches: la cola de revisión ────────────────────────
+    // 🔴 Lee el MAIL del coach, y por eso pasa por acá y no por el cliente
+    // (A4 fase 2, docs/problemas-abiertos.md). Con la lectura client-side
+    // —`profiles!inner(name, email)` desde `lib/admin.ts`— cualquier usuario
+    // logueado podía leer el mail de todos los coaches: el mismo agujero de A4,
+    // una puerta más adentro. Acá se lee con service role, DESPUÉS de confirmar
+    // `is_admin` arriba. Es una lectura, así que no se audita (mismo criterio
+    // que `list_pending_credentials`).
+    case 'list_coach_applications': {
+      const status = body.status ?? 'pendiente'
+      if (!['pendiente', 'aprobada', 'rechazada'].includes(status)) {
+        return json({ error: `status inválido: ${status}` }, 400)
+      }
+
+      const { data, error } = await admin
+        .from('coaches')
+        .select('id, profile_id, specialty, bio, price_per_session, nationality, application_video_url, created_at, verified, application_status, application_notes, application_reviewed_at, profiles!inner(name, email)')
+        .eq('application_status', status)
+        .order('created_at', { ascending: true })
+
+      if (error) return json({ error: error.message }, 500)
+
+      return json({
+        result: 'ok',
+        // Se devuelve ya mapeado a la forma que consume el panel (`PendingCoach`),
+        // para que el mapeo viva en un solo lado.
+        applications: (data ?? []).map((c: any) => {
+          const p = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles
+          return {
+            coachId: c.id,
+            profileId: c.profile_id,
+            name: p?.name ?? 'Sin nombre',
+            email: p?.email ?? null,
+            specialty: c.specialty ?? '',
+            bio: c.bio ?? null,
+            price: c.price_per_session ?? null,
+            nationality: c.nationality ?? null,
+            applicationVideoUrl: c.application_video_url ?? null,
+            createdAt: c.created_at ?? null,
+            verified: !!c.verified,
+            status: c.application_status ?? 'pendiente',
+            notes: c.application_notes ?? null,
+            reviewedAt: c.application_reviewed_at ?? null,
+          }
+        }),
       })
     }
 

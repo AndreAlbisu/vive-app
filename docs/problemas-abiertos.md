@@ -93,12 +93,22 @@ recomendaciones sin abrir: el piso le gana.
 > 9 reads client-side de `push_token` (5 archivos) pasan por ella vía
 > `notifyViaServer` en `lib/notifications.ts`. `sendPushNotification` (envío
 > directo) se borró. Deployada y verificada con JWT real: sala/booking ajenos →
-> 403, sin auth → 401. tsc 0, 570 tests. **Falta la fase 2** (mover la lectura de
-> mails del admin, `lib/admin.ts` → `admin-actions`) **y la fase 3** (vista
-> pública para el catálogo + revocar `email`/`push_token` a `authenticated`, con
-> la trampa del FILTRO). El `.update({push_token})` del propio dispositivo en
-> `registerForPushNotifications` se queda: necesita UPDATE, no SELECT, así que la
-> revocación de la fase 3 no lo toca.
+> 403, sin auth → 401. tsc 0, 570 tests. Push confirmado en dispositivo.
+>
+> **FASE 2 HECHA (09/09).** La única lectura de admin que traía el MAIL del coach
+> (`listCoachApplications`, `profiles!inner(name, email)` desde `lib/admin.ts`)
+> pasó a `admin-actions` (nueva acción `list_coach_applications`, tras confirmar
+> `is_admin`, con service role). Verificado: un no-admin recibe 403. Los otros
+> reads directos de admin son `name` (reports) o `paypal_email` de otra tabla,
+> fuera del scope de A4. Confirmado además que la query directa
+> `coaches`→`profiles.email` TODAVÍA devuelve filas para un `authenticated`
+> no-admin: eso es lo que cierra la fase 3.
+>
+> **Falta la fase 3:** vista pública para el catálogo + revocar `email`/`push_token`
+> a `authenticated`, con la trampa del FILTRO (buscar quién FILTRA por la columna,
+> no solo quién la selecciona). El `.update({push_token})` del propio dispositivo
+> en `registerForPushNotifications` se queda: necesita UPDATE, no SELECT, así que
+> la revocación de la fase 3 no lo toca.
 
 > Andre lo dejó para vos el 08/09. **Contexto en una línea:** ese día se cerró
 > que **cualquiera con la anon key** pudiera leer el mail y el `push_token` de

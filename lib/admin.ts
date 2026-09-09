@@ -2,7 +2,9 @@
 //
 // Las LECTURAS van directo a Supabase: `add-admin-flag.sql` agrega políticas de
 // SELECT que se habilitan con `is_admin()`, así que la pantalla lista sin
-// intermediarios.
+// intermediarios. ⚠️ EXCEPCIÓN: `listCoachApplications` va por `admin-actions`
+// porque lee el MAIL del coach — con la lectura client-side, cualquier usuario
+// logueado podía leer el mail de todos los coaches (A4 fase 2).
 //
 // Las ESCRITURAS van todas por la edge function `admin-actions`. No es una
 // vuelta de más: `lock-privileged-columns.sql` cerró `coaches.verified` para
@@ -86,36 +88,16 @@ export type PendingCoach = {
  *  aprobar. Son dos preguntas distintas — `verified` es "¿está en el catálogo?"
  *  y `application_status` es "¿en qué estado está la revisión?". */
 export async function listCoachApplications(status: ApplicationStatus = 'pendiente'): Promise<PendingCoach[]> {
-  const { data, error } = await supabase
-    .from('coaches')
-    .select('id, profile_id, specialty, bio, price_per_session, nationality, application_video_url, created_at, verified, application_status, application_notes, application_reviewed_at, profiles!inner(name, email)')
-    .eq('application_status', status)
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    console.warn('[admin] no se pudieron leer las postulaciones:', error.message);
+  // 🔴 Pasa por `admin-actions` y no por una query directa porque LEE EL MAIL del
+  // coach (A4 fase 2). Con la lectura client-side, cualquier usuario logueado
+  // podía leer el mail de todos los coaches. La función confirma `is_admin` y
+  // lee con service role; devuelve la lista ya mapeada a `PendingCoach`.
+  const res = await callAdmin({ action: 'list_coach_applications', status });
+  if (!res.ok) {
+    console.warn('[admin] no se pudieron leer las postulaciones:', res.error);
     return [];
   }
-
-  return (data ?? []).map((c: any) => {
-    const p = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
-    return {
-      coachId: c.id,
-      profileId: c.profile_id,
-      name: p?.name ?? 'Sin nombre',
-      email: p?.email ?? null,
-      specialty: c.specialty ?? '',
-      bio: c.bio ?? null,
-      price: c.price_per_session ?? null,
-      nationality: c.nationality ?? null,
-      applicationVideoUrl: c.application_video_url ?? null,
-      createdAt: c.created_at ?? null,
-      verified: !!c.verified,
-      status: (c.application_status ?? 'pendiente') as ApplicationStatus,
-      notes: c.application_notes ?? null,
-      reviewedAt: c.application_reviewed_at ?? null,
-    };
-  });
+  return (res.data?.applications ?? []) as PendingCoach[];
 }
 
 export function setCoachVerified(coachId: string, verified: boolean, notes?: string) {
