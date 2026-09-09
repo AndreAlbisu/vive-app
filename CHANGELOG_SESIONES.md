@@ -4,6 +4,28 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-08 — Andre (sesión 205 · la policy pública ya existía, y era más ancha de lo que debía)
+
+**Tocado:** `scripts/restrict-anon-profiles-columns.sql` (nuevo), `SCHEMA.md`. ⚠️ **PENDIENTE DE CORRER.** Sin cambios de código de app; 570 tests, `tsc` limpio.
+
+**Resumen — se iba a agregar `coaches.slug` + una policy de lectura anon para la página pública del coach. Al verificar si hacía falta, resultó que la policy ya existía y el problema era otro.**
+
+- 🔴 **`anon` podía leer TODAS las columnas del perfil de los 32 coaches**: `email`, `push_token`, `birth_date`, `nationality`, `is_admin`, `email_verified_at`, `deleted_at`, `accepted_terms*`, `role`, `created_at`. **Y la anon key viaja dentro de la app publicada, así que es pública por definición** — no hace falta ninguna credencial para esto.
+- 🟢 **Lo que sí estaba bien, y se verificó igual en vez de asumirlo:** la RLS filtra por `role = 'coach'` (0 filas con `role='user'`, o sea que los perfiles de usuarios finales NO se veían), y lo sensible está cerrado — `mood_entries`, `journal_entries`, `messages`, `bookings` y `session_notes` devuelven `[]` para anon, y `coach_payout_accounts` tiene el SELECT revocado. **El radio era datos personales de coaches, no de usuarios.**
+- 🔴 **Por qué importaba igual, en orden:** (1) cualquiera podía bajarse el roster completo de coaches con su mail — **es la estrategia anti-fuga al revés**, una plataforma competidora los scrapea y les escribe uno por uno; (2) con un `push_token` de Expo alcanza para mandarle una notificación al teléfono de esa persona; (3) `birth_date` y `nationality` son datos personales bajo 25.326 publicados sin consentimiento para esa finalidad; (4) `is_admin` decía qué cuentas atacar.
+- 📌 **Era un problema de COLUMNAS y no de filas, y por eso el arreglo es un grant y no una policy:** la RLS dice qué filas, los grants dicen qué columnas. `anon` queda con **`id`, `name`, `avatar_url`, `gender`**. No hizo falta tocar la policy ni la RLS.
+- 📝 **Las cuatro columnas salieron de recorrer todo lo que lee `profiles` sin sesión**, no de adivinar: `coachesCache` y `search3` piden `(id, name, avatar_url, gender)`, `ProfesionalScreen` pide `(name, avatar_url)`, y el resto son subconjuntos. **`gender` se queda a propósito** — se muestra en el perfil público y es filtro de búsqueda, no es un descuido. **`nationality` no entra**: la que se muestra sale de `coaches.nationality`. **`birth_date` tampoco**: el campo `age` de `ProfesionalScreen` nunca se llena desde la base.
+- 🔴 **Lo que el script NO arregla, y es la mitad que queda: qué ve `authenticated`.** Si un usuario logueado también lee el mail de todos los coaches, entonces alcanza con registrarse para scrapear el roster y el agujero sigue abierto por otra puerta. La verificación 3 del script lo deja a la vista de una consulta.
+- 📌 **No se llegó a hacer el `coaches.slug`**, que era el trabajo original. Sigue siendo la intersección de las dos opciones del link (web o landing), así que no se tira ninguna de las dos.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **CORRER `scripts/restrict-anon-profiles-columns.sql`** y mirar la verificación 3 (`authenticated`). ⚠️ Después del revoke conviene abrir el catálogo sin sesión y confirmar que sigue cargando: es un cambio de permisos que del lado de la app se ve como "no hay coaches", no como un error.
+- **Decidir qué hacer con `authenticated`** según lo que devuelva esa verificación.
+- **`coaches.slug`**, que quedó sin empezar.
+- 🔴 **La forma del link público** — `docs/camino-del-cliente-1.md` §4. Y el porcentaje del descuento.
+- **Verificaciones con plata/teléfono:** un pago chico en USDT (identificador que ahora resta, v22), una reserva de prueba (fila `reserva_nueva` + campana + card del Inicio), y el pago de $4.500 del 19/08 en el panel de MP para confirmar el ≈4%.
+- **De Joaquín:** A1 y el bloque de device review. **De Andre (viejo):** E6, el visto bueno de voz acumulado, el *"¡Hoy estás brillando!"* del Diario. **Del registro:** B1, B4, B7, D1-D6, E1-E6.
+
 ## 2026-09-08 — Andre (sesión 204 · hipertransparencia con el coach, y un margen que nadie había decidido cobrar)
 
 **Tocado:** `supabase/functions/_shared/usdt.ts`, `supabase/functions/usdt-create-payment/index.ts`, `lib/pricing.ts`, `lib/payout.ts`, `lib/desglosePago.ts` (nuevo), `screens/CoachPayoutScreen.tsx`, `__tests__/usdt.test.ts`, `__tests__/desglosePago.test.ts` (nuevo), `SCHEMA.md`, `docs/decisiones-pagos.md`. **570 tests** (eran 560), `tsc` limpio. ✅ **Deployadas y verificadas**: `usdt-create-payment` y `usdt-check-payments`, las dos a **v22**.
