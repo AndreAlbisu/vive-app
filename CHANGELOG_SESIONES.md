@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Joaquín (sesión 210 · A4 fase 3 — A4 CERRADO: authenticated ya no lee el mail ni el push_token de los coaches)
+
+**Tocado:** `scripts/restrict-authenticated-profiles-columns.sql` (nuevo), `SCHEMA.md`, `docs/problemas-abiertos.md`. **Sin cambios de código de app** (la auditoría garantizó que no hacía falta). ✅ **CORRIDO y VERIFICADO el 09/09.**
+
+**Resumen — la última de las tres fases de A4. Cierra el agujero: cualquiera con una cuenta podía scrapear el roster de coaches con sus mails, y con un push_token mandarle notificaciones al teléfono.**
+
+- 🟢 **`email` y `push_token` revocados a `authenticated` sobre `profiles`.** Se le sacó el SELECT a nivel TABLA (era `authenticated=ardm`; un grant de tabla cubre todas las columnas y Postgres no deja revocar un subconjunto) y se re-granteó el SELECT de las **15 columnas restantes**. Mismo patrón que el revoke de `anon` de la 205.
+- 🔍 **Auditoría primero (la regla de la trampa del FILTRO):** se barrió TODO el código de app. Nada lee `email`/`push_token` de `profiles` desde el cliente — ni de otros ni de la fila propia (el mail propio sale de la sesión de auth; el `push_token` solo se ESCRIBE en `registerForPushNotifications`, que usa un grant de UPDATE aparte). `RegisterScreen` ya no filtra por `email` (usa la RPC `email_es_de_coach` desde la 206). Por eso el revoke NO rompe nada y NO hizo falta tocar código.
+- 🟢 **Efecto lateral bueno:** al pasar `authenticated` de grant de tabla a grant de columnas, una columna sensible NUEVA en `profiles` ya no queda legible sola — cierra la asimetría que Andre anotó en la 207 (para `profiles`; para `coaches` sigue abierta).
+- ✅ **Verificado en vivo con JWT `authenticated` real** (no solo contra el catálogo de privilegios): `coaches→profiles.email` y `push_token` → **42501 permission denied**; el catálogo (`coachesCache`, `search3`) y las columnas seguras de la fila propia → **OK**. `tsc`/tests sin cambios (no se tocó TS): seguían en 570.
+- 🟡 **Decisión de Joaquín: revoke-only en vez de la vista de la receta.** La vista pública que proponía Andre taparía además `is_admin`/`birth_date`/`nationality` y sería a prueba de columnas futuras, pero NO cierra nada de A4 (ya cerrado) y repuntar el catálogo (que embebe `profiles` vía PostgREST desde `coaches`) a una vista es un refactor con riesgo de regresión — territorio de arquitectura de Andre. Esas tres columnas NO se pueden revocar sin la vista porque las lee la fila PROPIA (`EditProfileScreen`).
+
+**Pendiente para la próxima sesión:**
+- 🟡 **Para ANDRE — la vista pública del catálogo** (mejora, no bloqueante): taparía `is_admin`/`birth_date`/`nationality` a `authenticated` y cerraría la asimetría también para `coaches`. Ver `docs/problemas-abiertos.md §A4`.
+- Sigue lo de siempre: A1 (device review del piso), paquete paso 3 (decisión con Andre).
+
 ## 2026-09-09 — Joaquín (sesión 209 · A4 fase 2 — el mail del coach en el admin se fue al servidor)
 
 **Tocado:** `supabase/functions/admin-actions/index.ts`, `lib/admin.ts`, `docs/problemas-abiertos.md`. `tsc` 0, **570 tests**. Sin cambios de schema. ✅ **Deployada y verificada el 09/09.**

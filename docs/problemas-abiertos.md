@@ -104,11 +104,35 @@ recomendaciones sin abrir: el piso le gana.
 > `coaches`→`profiles.email` TODAVÍA devuelve filas para un `authenticated`
 > no-admin: eso es lo que cierra la fase 3.
 >
-> **Falta la fase 3:** vista pública para el catálogo + revocar `email`/`push_token`
-> a `authenticated`, con la trampa del FILTRO (buscar quién FILTRA por la columna,
-> no solo quién la selecciona). El `.update({push_token})` del propio dispositivo
-> en `registerForPushNotifications` se queda: necesita UPDATE, no SELECT, así que
-> la revocación de la fase 3 no lo toca.
+> **FASE 3 HECHA (09/09) — A4 CERRADO.** `authenticated` ya no puede leer `email`
+> ni `push_token` de `profiles`. `scripts/restrict-authenticated-profiles-columns.sql`:
+> se le sacó el SELECT a nivel TABLA (era `authenticated=ardm`, un grant de tabla
+> cubre todas las columnas y no se puede revocar un subconjunto) y se re-granteó
+> el SELECT de las 15 columnas restantes. Efecto lateral bueno: al pasar de tabla
+> a columnas, una columna sensible NUEVA en `profiles` ya no queda legible sola
+> (cierra la asimetría de la 207, para `profiles`).
+>
+> **Decisión (Joaquín, 09/09): revoke-only en vez de la vista.** La auditoría
+> mostró que NADA client-side lee `email`/`push_token` de `profiles` (ni de otros
+> ni de la fila propia — el mail propio sale de la sesión de auth; el push_token
+> solo se ESCRIBE), y que los 4 lectores del catálogo piden solo columnas seguras.
+> Así que el revoke de las dos columnas cierra el agujero sin tocar el catálogo ni
+> el código. La trampa del FILTRO se auditó: `RegisterScreen` ya no filtra por
+> `email` (usa la RPC `email_es_de_coach` desde la 206), y nada más filtra por
+> esas columnas.
+>
+> ✅ Verificado en vivo con JWT `authenticated` real: `coaches→email` y
+> `push_token` → **42501**; catálogo (coachesCache/search3) y columnas seguras de
+> la fila propia → **OK**. Sin cambios de código de app.
+>
+> 🟡 **QUEDA COMO MEJORA APARTE, PARA ANDRE — la vista pública.** No cierra nada de
+> A4 (ya cerrado), pero taparía además `is_admin`, `birth_date` y `nationality` de
+> `authenticated` y sería a prueba de columnas futuras. No se hizo ahora porque el
+> catálogo embebe `profiles` vía PostgREST desde `coaches` (`profiles!inner(...)`),
+> y repuntarlo a una vista es un refactor con riesgo de regresión en búsqueda/
+> catálogo — territorio de arquitectura de Andre. 🔴 Esas tres columnas NO se
+> pueden revocar sin la vista: los grants son por rol y `EditProfileScreen` lee
+> `birth_date/gender/nationality` de la fila PROPIA.
 
 > Andre lo dejó para vos el 08/09. **Contexto en una línea:** ese día se cerró
 > que **cualquiera con la anon key** pudiera leer el mail y el `push_token` de
