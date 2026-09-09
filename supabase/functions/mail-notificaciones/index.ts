@@ -103,16 +103,36 @@ serve(async () => {
   let mandados = 0
   let sinMail = 0
 
+  // 🔴 RESERVAR ANTES DE MANDAR. Antes se mandaba y después se marcaba, y eso
+  // duplica mails por dos caminos: (1) si el `update` falla, la fila queda
+  // pendiente y la próxima corrida la manda de nuevo; (2) si una corrida tarda
+  // más de los 5 minutos del cron, **la siguiente arranca y toma las mismas
+  // filas sin marcar**.
+  //
+  // El `.is('emailed_at', null)` hace la reserva ATÓMICA: solo la corrida que
+  // gana la carrera recibe la fila de vuelta. Las que llegan tarde reciben cero
+  // filas y no mandan nada.
+  const ahora = new Date().toISOString()
+  const { data: tomadas } = await admin
+    .from('notifications')
+    .update({ emailed_at: ahora })
+    .in('id', pendientes.map((n) => n.id))
+    .is('emailed_at', null)
+    .select('id')
+
+  const mias = new Set((tomadas ?? []).map((t) => t.id as string))
+  if (mias.size === 0) return new Response('otra corrida las tomó', { status: 200 })
+
   for (const n of pendientes) {
+    if (!mias.has(n.id as string)) continue
     const para = mailDe.get(n.recipient_id as string)
     const plantilla = PLANTILLAS[n.type as string]
 
-    // ⚠️ Sin dirección se marca IGUAL como enviada. Si no, esa fila queda para
-    // siempre en la cola, se reintenta en cada corrida y no va a salir nunca:
-    // una cola que no se vacía deja de ser una cola.
+    // ⚠️ Sin dirección queda marcada y no se libera. Si se liberara, esa fila
+    // volvería a la cola en cada corrida y no saldría nunca: una cola que no se
+    // vacía deja de ser una cola.
     if (!para || !plantilla) {
       if (!para) sinMail++
-      await admin.from('notifications').update({ emailed_at: new Date().toISOString() }).eq('id', n.id)
       continue
     }
 
@@ -131,13 +151,21 @@ serve(async () => {
       pie: plantilla.pie,
     })
 
-    // 📌 Se marca solo si salió. Si Resend rechazó, la fila queda pendiente y la
-    // próxima corrida lo reintenta —mientras esté dentro de la ventana—. Pasada
-    // la ventana deja de intentarse, que es lo correcto: un aviso de algo que
-    // pasó hace tres horas ya no le sirve a nadie.
+    // 📌 Si NO salió se libera, para que la próxima corrida lo reintente
+    // mientras siga dentro de la ventana. Pasada la ventana deja de intentarse,
+    // que es lo correcto: un aviso de algo que pasó hace tres horas ya no le
+    // sirve a nadie.
+    //
+    // ⚠️ El caso que queda sin cubrir: que el mail salga y esta liberación no
+    // haga falta pero el proceso muera justo acá. Ahí el mail salió y la fila
+    // quedó marcada — o sea, se pierde un reintento que no hacía falta. Es el
+    // lado bueno de la moneda: **se prefiere un mail perdido a un mail
+    // duplicado**, porque el duplicado es el que erosiona la confianza en los
+    // avisos de plata.
     if (ok) {
-      await admin.from('notifications').update({ emailed_at: new Date().toISOString() }).eq('id', n.id)
       mandados++
+    } else {
+      await admin.from('notifications').update({ emailed_at: null }).eq('id', n.id)
     }
   }
 
