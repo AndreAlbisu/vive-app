@@ -27,6 +27,25 @@ export type Hueco = { date: string; time: string };
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
+/**
+ * La hora en forma comparable: `HH:MM` con cero inicial.
+ *
+ * 🔴 Existe porque las dos tablas guardan la hora como TEXTO y **no con el
+ * mismo formato**: `coach_availability.time` viene sin cero inicial (`"9:00"`,
+ * verificado contra la base) y `bookings.scheduled_time` puede venir con él.
+ * Comparar los textos crudos —o recortarlos con `slice(0, 5)`, que es lo que
+ * había acá al principio— deja `"9:00"` de un lado y `"09:00"` del otro: **no
+ * matchean, y un horario ya ocupado se le ofrece igual a la persona.**
+ *
+ * Es la misma regla que usa la vista `coach_availability_status`
+ * (`lpad(split_part(...), 2, '0')`), que es el precedente del repo para esta
+ * comparación. Si cambia una, cambia la otra.
+ */
+export function horaComparable(t: unknown): string {
+  const [h = '', m = ''] = String(t).split(':');
+  return `${h.padStart(2, '0')}:${m.slice(0, 2)}`;
+}
+
 /** "Jue 11 sep · 15:00". Una fecha de calendario tiene el mismo día en cualquier
  *  zona, así que acá `new Date` con componentes locales es seguro (mismo
  *  criterio que `nextDateLabel` en `CoachHomeScreen`). */

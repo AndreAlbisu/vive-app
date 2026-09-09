@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { todayInAr } from './time';
-import type { Hueco } from './coachPropose';
+import { horaComparable, type Hueco } from './coachPropose';
 
 /** La mitad con base de `coachPropose.ts`. Va aparte para que la lógica pura se
  *  pueda testear sin arrastrar el cliente de Supabase — mismo corte que
@@ -40,17 +40,27 @@ export async function proximosHuecos(coachId: string, cuantos = 3, hoy = todayIn
         .in('status', ['pendiente', 'confirmada']),
     ]);
 
-    // La hora viene con el padding de Postgres ("15:00:00") en una tabla y
-    // puede no venir igual en la otra; se compara siempre por HH:MM. Es el
-    // mismo cuidado que ya tiene la vista `coach_availability_status`.
+    // 🔴 Las dos tablas guardan la hora como TEXTO y **no con el mismo formato**:
+    // `coach_availability.time` viene sin cero inicial (`"9:00"`, verificado
+    // contra la base) y `bookings.scheduled_time` puede venir con él. Un
+    // `slice(0, 5)` —que es lo que había acá— deja `"9:00"` de un lado y
+    // `"09:00"` del otro: **no matchean, y el hueco ocupado se ofrece igual**.
+    //
+    // Se normaliza con la misma regla que ya usa la vista
+    // `coach_availability_status` (`scripts/add-coach-availability-view.sql`),
+    // que es el precedente del repo para esta comparación.
     const tomados = new Set(
-      (ocupados ?? []).map(b => `${b.scheduled_date}T${String(b.scheduled_time).slice(0, 5)}`),
+      (ocupados ?? []).map(b => `${b.scheduled_date}T${horaComparable(b.scheduled_time)}`),
     );
 
     return (slots ?? [])
-      .map(s => ({ date: s.date as string, time: String(s.time).slice(0, 5) }))
-      .filter(h => !tomados.has(`${h.date}T${h.time}`))
-      .slice(0, cuantos);
+      // Se conserva el texto ORIGINAL en `time` —es lo que se le muestra al
+      // coach y lo que la app usa en otras pantallas— y se normaliza solo para
+      // comparar.
+      .map(s => ({ date: s.date as string, time: String(s.time), _cmp: horaComparable(s.time) }))
+      .filter(h => !tomados.has(`${h.date}T${h._cmp}`))
+      .slice(0, cuantos)
+      .map(({ date, time }) => ({ date, time }));
   } catch {
     return [];
   }
