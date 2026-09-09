@@ -24,6 +24,7 @@ dos hermanos no.
 |---|---|---|---|
 | **A1** | ⏭️ **ASIGNADO A JOAQUÍN el 08/09** (device review). 🔴 **Dos de las tres ramas del piso de seguridad nunca se probaron.** Es la única feature que le habla a alguien en crisis. ✅ El 07/09 una hora de teléfono encontró un bug que **540 tests no vieron** (le prometía una sesión inexistente), porque el bug no estaba en una función sino en la relación entre dos partes de una pantalla. | Forzar los dos casos que faltan: sin ninguna sesión, y con una agendada. | 15 min |
 | **A2** | ⏸️ **DECIDIDO el 08/09: se queda hasta el lanzamiento.** Es **"Coach Prueba"** (`e58d2ec3`, especialidad *"Especialidad de prueba"*), `verified` y `activo`, con MP conectado y `price_per_session = 1` — `mp-create-payment` deriva el precio de esa columna, así que cobraría $1 real. **Andre lo deja porque hace falta un coach para ejercitar los flujos, y con cero usuarios el riesgo es cero.** 🔴 **El riesgo no es tenerlo: es olvidárselo el día que abran** — y ya llevaba varias sesiones apareciendo en "pendiente" sin que eso lo moviera. | ✅ **Mitigado, no resuelto: `scripts/verificar-pre-lanzamiento.sql`** (solo lectura, 5 chequeos, devuelve filas solo si hay problema). Correrlo con la service key **antes de dejar entrar a la primera persona** deja de depender de que alguien se acuerde. | — |
+| **A4** | ⏭️ **ASIGNADO A JOAQUÍN el 08/09.** 🔴 **`authenticated` puede leer las 17 columnas de `profiles` de TODOS los coaches** — mail y `push_token` incluidos. El agujero que se cerró para `anon` ese mismo día **está a un registro de distancia**. | No es de dos líneas: hay que mover al servidor el envío de push (client-side en 6 lugares) y la lectura de mails del panel, y después una vista pública para el catálogo. **Receta abajo.** | Media sesión larga |
 | **A3** | **Nullability de `price_per_session` sin confirmar.** El guard que se agregó al buscador es necesario o decorativo, y no sabemos cuál. ⚠️ El endpoint OpenAPI de PostgREST exige `service_role`. | Una consulta con la service key. | 2 min |
 
 ### A1 — receta para Joaquín (device review del piso de seguridad)
@@ -83,6 +84,62 @@ where user_id = '8b16e5b7-e0e3-4988-9ccc-f8ba447fcb8c'
 
 📌 No interfiere el aviso nuevo de `recurso-del-coach` aunque tengas
 recomendaciones sin abrir: el piso le gana.
+
+### A4 — receta para Joaquín (`authenticated` lee el mail de todos los coaches)
+
+> Andre lo dejó para vos el 08/09. **Contexto en una línea:** ese día se cerró
+> que **cualquiera con la anon key** pudiera leer el mail y el `push_token` de
+> los 34 coaches, y quedó abierto que **cualquiera con una cuenta** todavía
+> puede. Es el mismo agujero, una puerta más adentro.
+
+**Por qué importa más de lo que parece un dato de contacto.** No es solo
+privacidad: **es la estrategia anti-fuga al revés.** Con una cuenta gratis,
+una plataforma competidora se baja el roster entero de VIVE con los mails y les
+escribe uno por uno. Es el activo más difícil de construir que tenemos.
+
+**Lo que ya está hecho y no hay que rehacer** (sesión 205):
+- `anon` quedó con **`id`, `name`, `avatar_url`, `gender`** y nada más, por
+  grants de columna (`scripts/restrict-anon-profiles-columns.sql`, corrido).
+- Verificado que la RLS **sí** está bien: las cuatro policies de `profiles` no
+  le dejan a un usuario logueado leer perfiles de **otros usuarios**. El
+  problema es solo con las filas de coaches, por la policy *"Perfiles de coaches
+  visibles para todos"* (`role = 'coach' OR auth.uid() = id`).
+
+**El problema de fondo, que es el que define la solución.** Con grants de
+columna **no se puede decir "tu propia fila entera, la de los coaches solo
+cuatro campos"**: los grants son por ROL, no por fila. Por eso no alcanza con
+repetir lo que se hizo con `anon`.
+
+**El orden importa — al revés se rompen las notificaciones de reserva que se
+arreglaron el mismo día (sesión 201, ya deployada).**
+
+1. **Mover el envío de push al servidor.** Hoy es client-side en **6 lugares**:
+   `lib/coachBookingActions.ts` (×2), `lib/bookingCancel.ts`,
+   `screens/SalaScreen.tsx` (×2), `screens/BookingScreen_Confirm.tsx` y
+   `screens/CoachReservasScreen.tsx`. En todos, **el que manda lee el
+   `push_token` del que recibe desde el dispositivo**. El patrón a copiar ya
+   existe y anda: `supabase/functions/_shared/booking-effects.ts` manda push con
+   service role.
+2. **Mover la lectura de mails del panel de admin.** `lib/admin.ts` lee
+   `profiles!inner(name, email)` desde el cliente; va a `admin-actions`, que ya
+   corre con service role.
+3. **Recién ahí**, achicar lo que ve `authenticated`. La salida correcta es una
+   **vista pública** para el catálogo (`id, name, avatar_url, gender` de los
+   coaches) y dejar la tabla `profiles` para la fila propia. Hay que repuntar
+   `coachesCache`, `search3`, `ProfesionalScreen` y `FavoritosScreen` a la vista.
+
+🔴 **La trampa que ya pisamos una vez, no la pises de nuevo.** Al sacarle
+`email` a `anon` se rompió `RegisterScreen`, que **filtraba** por esa columna
+(`.eq('email', …)`): **filtrar por una columna exige SELECT sobre ella**, no
+solo seleccionarla. Y **falló abierto** —el código descartaba el error— así que
+no se vio hasta el barrido. Antes de tocar grants, buscá quién FILTRA por la
+columna, no solo quién la selecciona. Se arregló con una función
+`security definer` (`scripts/add-email-es-de-coach.sql`).
+
+📌 **Cómo verificar sin adivinar:** el `.env` tiene la anon key, y con `curl`
+contra `/rest/v1/` se prueba exactamente lo que ve un atacante. Es como se
+verificaron los tres scripts de ese día. Para el rol `authenticated` hace falta
+una sesión real, así que ahí sí conviene el teléfono o un token de prueba.
 
 ### Lo demás de device review, también de Joaquín
 
