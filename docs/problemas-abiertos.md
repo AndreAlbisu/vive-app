@@ -220,8 +220,17 @@ Viene arrastrándose de las sesiones 157-163 y ninguna se cerró:
   primera vez que se ejercita de verdad. **De todo lo pendiente, es lo que toca
   plata.**
 - **Diario nuevo** (el colapso con el teclado, que la franja se llene sola al
-  guardar), **"Sobre vos" early**, y **el aviso de `recurso-del-coach`** (hay 7
-  filas reales; con una en `opened_at = null` la tarjeta debería avisarlo).
+  guardar), **"Sobre vos" early**, y ~~**el aviso de `recurso-del-coach`**~~.
+  - ✅ **`recurso-del-coach` HECHO (09/09) — con bug encontrado y arreglado.** La
+    tarjeta *"Tu coach te dejó algo"* aparece bien con una recomendación en
+    `opened_at = null`, y tocarla lleva a `mis-recomendaciones`. 🔴 **Pero al
+    abrir las recomendaciones y volver a Inicio, la tarjeta SEGUÍA** — `opened_at`
+    se marcaba bien en la base, pero `useWeeklySignals` cargaba una sola vez y no
+    re-leía al volver a foco (Inicio es tab, no re-monta). **El mismo bug que
+    `useMoodHistory` en la 191.** Arreglado igual: `refetch` en el hook +
+    `useFocusEffect` en `index.tsx`. `tsc` 0, 570 tests.
+  - **Matrícula en vivo** y **Diario nuevo** de arriba: ya cerrados por Joaquín en
+    la sesión 191 (este doc los listaba sin saberlo).
 
 ---
 

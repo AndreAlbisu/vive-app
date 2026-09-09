@@ -212,6 +212,11 @@ export default function InicioScreen() {
   // historial se cargaba una sola vez. Se re-lee en cada foco. (El pick hecho EN
   // Inicio sigue cubierto por `freshCheckIn`, que manda sobre esto.)
   useFocusEffect(useCallback(() => { refetchMood(); }, [refetchMood]));
+  // Ídem para las señales semanales: abrir una recomendación del coach en
+  // `mis-recomendaciones` marca `opened_at`, pero sin re-leer al volver a foco la
+  // tarjeta "tu coach te dejó algo" seguía apareciendo con la sesión ya abierta.
+  const refetchWeekly = weekly.refetch;
+  useFocusEffect(useCallback(() => { refetchWeekly(); }, [refetchWeekly]));
   // El momento vive fuera de Inicio (app/(tabs)/_layout.tsx, sibling de
   // <Tabs>) para poder sacarle el <Modal> propio — ver SobreVosMomentoContext.
   const { open: openMomento } = useSobreVosMomento();

@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Joaquín (sesión 212 · aviso de recurso-del-coach — device review + bug de refresco arreglado)
+
+**Tocado:** `hooks/useWeeklySignals.ts`, `app/(tabs)/index.tsx`, `docs/problemas-abiertos.md`. `tsc` 0, **570 tests**. Sin schema.
+
+**Resumen — device review del aviso "Tu coach te dejó algo", que sacó a la luz un bug de sincronización (el mismo de la 191).**
+
+- ✅ **La tarjeta aparece bien** con una recomendación en `opened_at = null`, y tocarla lleva a `mis-recomendaciones`, donde el recurso abre bien.
+- 🔴 **Bug encontrado en dispositivo: al abrir las recomendaciones y volver a Inicio, la tarjeta seguía ahí.** `opened_at` se marcaba correctamente en la base (verificado: 0 sin abrir), pero `useWeeklySignals` corría en un `useEffect` con dep `[userId]` — cargaba una vez y no re-leía al volver a foco. Como Inicio es una tab y no se re-monta, la señal `recursoSinAbrir` quedaba vieja. **Es exactamente el bug de `useMoodHistory` de la 191.**
+- 🟢 **Arreglado con el mismo patrón:** se expuso `refetch` en `useWeeklySignals` y se llama en un `useFocusEffect` de `index.tsx`, al lado del de `refetchMood`. El `useEffect` de montaje propaga el cleanup de cancelación (`return refetch()`).
+- 📌 **Patrón que ya salió dos veces (191 y ahora): un hook que alimenta una tarjeta de Inicio y se puede invalidar desde OTRA pantalla tiene que re-leer en foco.** Quedan por mirar los otros `useFocusEffect` de Inicio (consent, notif, próxima sesión ya lo hacen); los hooks de datos que no, son candidatos al mismo bug.
+
+**Pendiente para la próxima sesión:**
+- **Verificar el fix en dispositivo:** con una recomendación reseteada a `opened_at = null`, abrirla y confirmar que al volver a Inicio la tarjeta YA no aparece (sin remontar la app).
+- **Cancelación tardía** (device, toca plata) — lo que queda de device review.
+- 🟡 Para Andre: vista pública del catálogo, paquete paso 3, encender IA/piso, opción B del Diario, link público, % del descuento.
+
 ## 2026-09-09 — Joaquín (sesión 211 · A1 CERRADO — device review del piso de seguridad, los 3 estados)
 
 **Tocado:** `docs/problemas-abiertos.md`. Sin código ni schema (solo device review + data de prueba, ya revertida).

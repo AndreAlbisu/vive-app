@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { localDayKey, localDayKeyMinus } from '@/lib/dates';
 
@@ -35,10 +35,15 @@ const EMPTY: WeeklySignals = {
   resourcesThisWeek: 0, sessionsThisWeek: 0, writingThisWeek: 0, recursoSinAbrir: false, loading: false,
 };
 
-export function useWeeklySignals(userId: string | undefined): WeeklySignals {
+export function useWeeklySignals(userId: string | undefined): WeeklySignals & { refetch: () => void } {
   const [signals, setSignals] = useState<WeeklySignals>({ ...EMPTY, loading: true });
 
-  useEffect(() => {
+  // `refetch` se expone para que Inicio (que es una tab y no se re-monta) pueda
+  // re-leer al volver a foco: abrir una recomendación del coach en OTRA pantalla
+  // (`mis-recomendaciones`) marca `opened_at`, pero sin este refetch la señal
+  // `recursoSinAbrir` quedaba vieja y la tarjeta "tu coach te dejó algo" seguía
+  // apareciendo al volver. Mismo patrón que `useMoodHistory` (fix de la 191).
+  const refetch = useCallback(() => {
     if (!userId) { setSignals(EMPTY); return; }
 
     let cancelled = false;
@@ -113,5 +118,9 @@ export function useWeeklySignals(userId: string | undefined): WeeklySignals {
     return () => { cancelled = true; };
   }, [userId]);
 
-  return signals;
+  // `return refetch()` propaga el cleanup de cancelación (`cancelled = true`) al
+  // desmontar o al cambiar de usuario.
+  useEffect(() => refetch(), [refetch]);
+
+  return { ...signals, refetch };
 }
