@@ -4,6 +4,25 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 217 · el mail: el DNS ya estaba hecho, y el doc mandaba al panel equivocado)
+
+**Tocado:** `docs/plantilla-mail-codigo.md`. Sin código ni schema.
+
+**Resumen — se fue a destrabar el envío de mails, que bloquea todo el checkout web, y resultó estar más avanzado de lo que decía el registro.**
+
+- ✅ **Los tres registros DNS que pide Resend YA ESTÁN cargados y resuelven** (consultados con `dig`): el SPF y el MX en `send.vitaapp.com.ar`, y el DKIM en `resend._domainkey.vitaapp.com.ar`. El pendiente que venía desde agosto —*"verificar `vitaapp.com.ar` en Resend (SPF y DKIM)"*— estaba hecho del lado del DNS y nadie lo había anotado.
+- 🔴 **Y el doc mandaba al panel equivocado.** Decía "cargar en DonWeb los registros", pero `vitaapp.com.ar` está delegado a `ns1/ns2.vercel-dns.com`: **la zona vive en Vercel**. DonWeb es dónde se compró el dominio, no dónde se edita el DNS. Quien siguiera esa instrucción no habría encontrado la zona.
+- 📌 **Que resuelvan no es lo mismo que "verificado"** — eso lo marca Resend en su panel y no se puede ver desde acá. Pero del lado del DNS no falta nada.
+- 🔴 **Lo que sí falta y es lo que bloquea:** cambiar el remitente en Supabase de `onboarding@resend.dev` a `no-responder@vitaapp.com.ar`. **Con el remitente de prueba no llega un solo mail a nadie** — solo entrega a la casilla de la cuenta de Resend.
+- ⚠️ **Falta DMARC**, que no estaba. Sin él Gmail y Yahoo tratan peor a un remitente nuevo y el mail puede caer en spam, que es peor que no llegar porque parece que funcionó. Se dejó el registro escrito (`p=none`, modo observación).
+- 🟢 **Hallazgo que simplifica el checkout web: el código de 6 dígitos YA EXISTE y funciona.** Se construyó para el registro de coaches, con la plantilla `{{ .Token }}`. La página pública va a poder usar el mismo `signInWithOtp` — **de las tres decisiones del flujo, la de identificación queda resuelta por lo que ya hay.**
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Confirmar en Resend que el dominio figura *Verified*** y **cambiar el remitente en Supabase**. Es lo único que separa al checkout web de poder empezarse.
+- **Agregar el DMARC.**
+- **Probar que un mail llega de verdad a una casilla ajena** una vez cambiado el remitente. Es la prueba que importa: con `onboarding@resend.dev` "funcionaba" solo para Andre.
+- Del flujo del checkout, siguen abiertas las otras dos decisiones: **si el flujo web registra el origen de la reserva** (y con eso el descuento del coach), y **el porcentaje**.
+
 ## 2026-09-09 — Andre (sesión 216 · DECIDIDO el link: opción A, y la página pública ya existe)
 
 **Tocado:** `web/c/index.html` (nuevo), `vercel.json`, `scripts/add-slots-libres.sql` (nuevo), `lib/coachPropose.ts`, `lib/coachProposeData.ts`, `__tests__/coachPropose.test.ts`, `docs/camino-del-cliente-1.md`. **575 tests** (eran 570), `tsc` limpio. ✅ `add-slots-libres.sql` **CORRIDO y VERIFICADO**.

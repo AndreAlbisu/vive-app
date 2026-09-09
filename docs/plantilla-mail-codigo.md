@@ -123,14 +123,52 @@ Con **Resend**, que es el más simple de los tres:
 | Password | la API key de Resend (empieza con `re_`) |
 
 Los pasos, en orden: crear la cuenta en Resend → agregar `vitaapp.com.ar` como
-dominio → cargar en DonWeb los registros DNS que Resend indique (SPF y DKIM) →
-esperar a que Resend lo marque verificado → recién ahí generar la API key y
-completar esta pantalla.
+dominio → cargar los registros DNS que Resend indique (SPF y DKIM) → esperar a
+que Resend lo marque verificado → recién ahí generar la API key y completar esta
+pantalla.
 
 🔴 **Sin los registros DNS el dominio no verifica y los mails no salen** (o
-salen y caen en spam, que es peor porque parece que funcionó). Y ojo con el
-plazo: la delegación de `vitaapp.com.ar` a Vercel ya está hecha, pero cualquier
-cambio de DNS en un `.com.ar` puede tardar.
+salen y caen en spam, que es peor porque parece que funcionó).
+
+## Estado del DNS — ✅ los tres registros YA ESTÁN (verificado el 09/09/2026)
+
+⚠️ **Corrección: los registros NO van en DonWeb.** `vitaapp.com.ar` está delegado
+a `ns1/ns2.vercel-dns.com` (ver `docs/hosting.md`), así que la zona vive en
+**Vercel**. Este archivo decía "cargar en DonWeb" y mandaba al panel equivocado:
+en DonWeb no está esa zona. DonWeb es dónde se compró el dominio, no dónde se
+edita el DNS.
+
+Consultados con `dig` el 09/09/2026, los tres resuelven:
+
+| Registro | Valor |
+|---|---|
+| `send.vitaapp.com.ar` TXT | `v=spf1 include:amazonses.com ~all` |
+| `send.vitaapp.com.ar` MX | `feedback-smtp.sa-east-1.amazonses.com` |
+| `resend._domainkey.vitaapp.com.ar` TXT | la clave DKIM (219 bytes) |
+
+📌 Son exactamente los tres que pide Resend. **Que resuelvan no es lo mismo que
+"verificado"** —eso lo marca Resend en su panel— pero del lado del DNS no falta
+nada.
+
+### Lo que sí falta
+
+1. **Confirmar en Resend que el dominio figura *Verified*.**
+2. **Cambiar el remitente en Supabase** (Authentication → Emails → SMTP
+   Settings): de `onboarding@resend.dev` a `no-responder@vitaapp.com.ar`. El
+   resto de los campos son los de la tabla de arriba. 🔴 **Hasta que esto se
+   cambie no llega ningún mail a nadie**: `onboarding@resend.dev` solo entrega a
+   la casilla de la cuenta de Resend.
+3. **Agregar DMARC**, que no está. Sin él Gmail y Yahoo tratan peor a un
+   remitente nuevo y el mail puede caer en spam — que es peor que no llegar,
+   porque parece que funcionó. Un TXT en `_dmarc.vitaapp.com.ar`:
+
+   ```
+   v=DMARC1; p=none; rua=mailto:andrealbisu@gmail.com
+   ```
+
+   `p=none` es modo observación: no rechaza nada, solo reporta. Es el que
+   corresponde al arrancar; endurecer a `quarantine` recién cuando se vea que
+   todo lo legítimo pasa.
 
 ## Cómo probar que quedó bien
 
