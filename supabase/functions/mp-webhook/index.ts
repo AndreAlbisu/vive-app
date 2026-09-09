@@ -20,6 +20,34 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { verifyWebhookSignature, getFreshCoachToken } from '../_shared/mp.ts'
 import { applyPaidBookingEffects } from '../_shared/booking-effects.ts'
 
+/**
+ * `sha256(sal + id del pagador)`, o `null` si no se puede.
+ *
+ * 🔴 La sal (`PAYER_FINGERPRINT_SALT`) no es opcional: el `payer.id` de Mercado
+ * Pago es un número corto, así que sin sal la huella se revierte probando. Y si
+ * la sal cambia, las huellas viejas dejan de ser comparables con las nuevas —
+ * no se rompe nada, se pierde la continuidad.
+ *
+ * ⚠️ Devuelve `null` en vez de tirar: esto corre en el camino de acreditar un
+ * pago, y ningún dato analítico vale una acreditación perdida.
+ */
+async function huellaDelPagador(payerId: unknown): Promise<string | null> {
+  const sal = Deno.env.get('PAYER_FINGERPRINT_SALT')
+  if (!sal) {
+    console.warn('[mp-webhook] sin PAYER_FINGERPRINT_SALT: la huella del pagador queda vacía')
+    return null
+  }
+  if (payerId == null || String(payerId).trim() === '') return null
+  try {
+    const datos = new TextEncoder().encode(`${sal}:${String(payerId).trim()}`)
+    const buf = await crypto.subtle.digest('SHA-256', datos)
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
+  } catch (e) {
+    console.error('[mp-webhook] no se pudo calcular la huella del pagador:', e)
+    return null
+  }
+}
+
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!    // token de la app plataforma (fallback)
@@ -113,7 +141,27 @@ serve(async (req) => {
     if (!newStatus) return new Response('unhandled status', { status: 200 })
 
     const patch: Record<string, unknown> = { payment_status: newStatus, payment_id: String(paymentId) }
-    if (newStatus === 'aprobado') patch.paid_at = new Date().toISOString()
+    if (newStatus === 'aprobado') {
+      patch.paid_at = new Date().toISOString()
+      // 🔴 La huella del pagador. Se guarda ACÁ y en ningún otro lado porque
+      // este es el único momento en que el objeto del pago pasa por nosotros:
+      // los pagos que entren sin esto quedan ciegos para siempre.
+      //
+      // Para qué: al coach se le cobra menos por los clientes que trae él, y eso
+      // crea el incentivo de pedirle a un cliente que VIVE le consiguió que se
+      // haga una cuenta nueva con su link. Con mail nuevo no hay forma de
+      // notarlo — salvo por el medio de pago, porque **la misma persona casi
+      // siempre paga con la misma cuenta de Mercado Pago**.
+      //
+      // 📌 Se guarda una HUELLA y no el `payer.id`: lo que se necesita responder
+      // es "¿es el mismo pagador?", y para eso alcanza comparar. Quien acceda a
+      // la base no se lleva identificadores de MP de nadie.
+      //
+      // ⚠️ Nunca hace fallar la acreditación. Si no hay `payer.id`, o no está la
+      // sal, o el hash rompe, la huella queda en null y el pago sigue su camino:
+      // es un dato para después, no una condición para cobrar.
+      patch.payer_fingerprint = await huellaDelPagador(payment?.payer?.id)
+    }
     // Los dos comparten `refunded_at`: es cuándo volvió la plata, no por qué.
     if (newStatus === 'reembolsado' || newStatus === 'contracargo') {
       patch.refunded_at = new Date().toISOString()
