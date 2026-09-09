@@ -4,6 +4,25 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 215 · auditoría del patrón "hook que no re-lee en foco" — cerrado, sin tercera aparición)
+
+**Tocado:** solo este archivo. Sin cambios de código ni de schema. `tsc` 0, **570 tests** (verificados sobre el árbol de Joaquín, no sobre el mío).
+
+**Resumen — Joaquín anotó en la 212 que el patrón ya había salido dos veces (191 y 212) y que quedaban candidatos sin mirar. Se auditaron los cuatro hooks de datos de Inicio antes de que saliera una tercera. No hay tercera.**
+
+- ✅ `useMoodHistory` → `refetchMood()` en foco. `useWeeklySignals` → `refetchWeekly()`, el arreglo de la 212.
+- ✅ `useConsent` / `useConsentGate` → `refrescarConsent()` en foco, **ya estaba** (191), con el escenario escrito al lado: *"revocar y después tocar una carita guardaba dato sensible sin volver a pedir"*.
+- ✅ `useDailyReflection` → **cubierto transitivamente y por eso no necesita refetch propio**: no lee la base por su cuenta, sus inputs salen de `weekly` y `moodStreak`, así que cuando esos dos se refrescan su efecto vuelve a correr. 📌 Vale anotarlo porque es la excepción que hace que el patrón NO sea "todo hook necesita un `useFocusEffect`": el que **deriva** de otro hereda su frescura, y agregarle uno propio sería ruido.
+- 📌 **Casi reporto un bug que no existe, y el motivo es la lección:** `hooks/useConsent.ts` efectivamente solo lee al montar, así que mirando el HOOK parece stale. Lo que lo salva está en el LLAMADOR, `index.tsx`. **Para este patrón, auditar el hook no alcanza — hay que mirar quién lo usa.**
+- ✅ **Primero se verificó que el árbol de Joaquín y lo de la 201-207 conviven**: `confirmBooking` mantuvo la firma tras su refactor de push, así que la card "Reservas esperando tu respuesta" del Inicio del coach ahora manda el aviso por `send-push` —con su validación de relación— sin haber tocado nada. Coach y usuario comparten booking, así que pasa.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **La forma del link público** — `docs/camino-del-cliente-1.md` §4. Con A4 y la device review de Joaquín cerrados, **es lo único grande abierto**.
+- **El porcentaje del descuento** que se lleva el coach.
+- 🟡 **La vista pública del catálogo** — Joaquín la dejó explícitamente para Andre en la 210: no cierra nada de A4 (ya cerrado), pero taparía `is_admin`/`birth_date`/`nationality` a `authenticated` y cerraría la asimetría también para `coaches`. Es decisión de arquitectura, no de seguridad urgente.
+- **Verificaciones con plata/teléfono** que siguen sin hacerse: pago chico en USDT (identificador que ahora resta, v22), reserva de prueba (fila `reserva_nueva` + campana + card del Inicio), caso positivo del registro, y el ≈4% de MP contra el pago de $4.500 del 19/08.
+- **De Andre:** paquete paso 3, encender IA/piso, opción B del Diario, E6 y el visto bueno de voz acumulado.
+
 ## 2026-09-09 — Joaquín (sesión 214 · tarjetas de recurso en la sala: blancas, no naranjas)
 
 **Tocado:** `screens/SalaScreen.tsx` (solo estilos de la tarjeta de recurso recomendado). `tsc` 0, 570 tests. Sin schema.
