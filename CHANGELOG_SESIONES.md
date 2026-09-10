@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-10 — Andre (sesión 224 cont. 3 · recuperar la contraseña mandaba al muro a esperar un código que nunca salía)
+
+**Tocado:** `lib/emailVerificado.ts`, `screens/VerificarMailScreen.tsx`, `__tests__/emailVerificado.test.ts`, `SCHEMA.md`. **577 tests** (+2: la sesión que ya prueba la casilla entra; si el servidor no contesta, sigue pendiente), `tsc` limpio. ⚠️ No está en el development build 19, pero es solo JS: lo toma recargando Metro.
+
+**Resumen — probando "olvidé mi contraseña" en el development build.**
+
+- 🐛 **Síntoma**: llegaba el mail con el link, se abría la app, y el muro esperaba un código que no llegaba nunca. En la base: una sesión `recovery` a las 14:17 y **ningún envío de código después**.
+- 🔴 **Causa 1, de diseño: el link de recuperación YA prueba la casilla**, igual que un código — y `marcar_mail_verificado()` ya aceptaba `recovery`. Pero nadie le preguntaba al servidor: la app veía "sin verificar" y mandaba al muro. Ahora **`necesitaVerificarMail()`, cuando la base dice "sin verificar", le pide al servidor que marque** si la sesión se abrió con algo mandado al mail. Recuperación y códigos de la web entran directo; una sesión de contraseña sigue viendo el muro.
+- 🔴 **Causa 2, error mío del mismo día**: la "segunda defensa" de la sesión 224 cont. tragaba en silencio el 429 del primer envío, suponiendo "ya hay un código en camino". **El límite de 60s es por MAIL, no por tipo de mensaje**: lo último que había salido era el link, no un código. La persona esperaba un código que nunca se mandó, sin ninguna pista. Ahora se dice qué pasó y cuándo puede pedirlo.
+- 📌 **Patrón que ya van tres veces hoy**: un arreglo que supone qué significa una respuesta (el `&&` que no dispara nada, el WebView "que es el mismo", el 429 "que es un código en camino") sin haberlo mirado. Esta vez lo encontró una prueba que no estaba en la lista.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Recargar Metro para tomar esto** (el development build 19 lo toma sin rebuild: es solo JS) y repetir: recuperar contraseña → entrar directo, sin muro. Y mirar la base: tiene que quedar verificado.
+- Siguen las pruebas A (muro con código) y B (desafío del CAPTCHA con `3x...FF`) del development build.
+
+---
 ## 2026-09-10 — Andre (sesión 224 cont. 2 · email_verified_at nunca se pudo escribir, y el desafío del CAPTCHA colgaba la app)
 
 **Tocado:** `scripts/add-marcar-mail-verificado.sql` (nuevo), `screens/VerificarMailScreen.tsx`, `components/CaptchaHost.tsx`, `lib/captcha.ts`, `SCHEMA.md`, `docs/anti-abuso-altas.md`. **575 tests**, `tsc` limpio. ⚠️ **SQL sin correr; nada de esto está en el build 18.**
