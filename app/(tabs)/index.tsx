@@ -252,6 +252,31 @@ export default function InicioScreen() {
     return () => { cancelled = true; };
   }, [cardSignal, cardMoodColor, today]);
 
+  // ── D6: que el equipo se ENTERE de que el piso de seguridad disparó ──────────
+  // Hasta acá solo se registraba el TAP (`ayuda_abierta`, más abajo); el disparo
+  // en sí —la persona que ve "esto es más de lo que una app puede acompañar" y
+  // NO toca /ayuda— no dejaba ningún rastro, así que no había forma de saber
+  // cuántas veces aparece ni de mirar el día siguiente. Ese era D6 en
+  // `docs/problemas-abiertos.md`.
+  //
+  // Usa la misma plomería que el resto de la analítica (`registrarEvento` →
+  // `analytics_events`, ya por-usuario, igual que el `ayuda_abierta` del piso):
+  // no abre una superficie de datos nueva. El piso nunca se silencia
+  // (`PUEDEN_CALLARSE` solo tiene `level`), así que cuando es la señal activa,
+  // está a la vista.
+  //
+  // ⚠️ Cubre SOLO la mitad "enterarse / aprender" de D6. La otra mitad —una
+  // alerta o un seguimiento por-persona en tiempo real— necesita una decisión de
+  // privacidad/consentimiento que sigue ABIERTA (D6), y a propósito no se
+  // construye acá.
+  const pisoDisparoLogueado = useRef(false);
+  useEffect(() => {
+    if (cardSignal !== 'piso-seguridad') { pisoDisparoLogueado.current = false; return; }
+    if (pisoDisparoLogueado.current) return;
+    pisoDisparoLogueado.current = true;
+    registrarEvento('piso_seguridad_mostrado', { dia: today });
+  }, [cardSignal, today]);
+
   const handleMoodPicked = useCallback((
     mood: { id: number; label: string; color: string },
     opts: { firstToday: boolean },
