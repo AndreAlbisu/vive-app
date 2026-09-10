@@ -43,6 +43,8 @@
     .campo { border-color: rgba(228,224,210,.28); }
   }
 </style>
+<!-- El token de Turnstile para el pedido de código. Ver /captcha.js. -->
+<script src="/captcha.js"></script>
 </head>
 <body>
 
@@ -176,10 +178,18 @@ async function pedirCodigo() {
     // ⚠️ `create_user: false`: acá la cuenta YA existe (reservó). Sin esto, un
     // mail mal tipeado crearía una cuenta nueva y la persona quedaría mirando
     // una sesión que no es suya.
+    // 🔴 Con el CAPTCHA de Supabase prendido, este endpoint rechaza el pedido
+    // sin token. Ver `web/captcha.js`. Si el script no cargó, sale sin token y
+    // decide el servidor.
+    const captchaToken = await window.pedirCaptchaToken?.();
     const r = await fetch(`${SUPABASE_URL}/auth/v1/otp`, {
       method: 'POST',
       headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: mail, create_user: false }),
+      body: JSON.stringify({
+        email: mail,
+        create_user: false,
+        gotrue_meta_security: { captcha_token: captchaToken },
+      }),
     });
     if (!r.ok) {
       return mostrarError('errorMail', r.status === 429

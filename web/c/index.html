@@ -115,6 +115,9 @@
     .precio { border-color: rgba(228,224,210,.18); }
   }
 </style>
+<!-- El token de Turnstile para el pedido de código. Ruta ABSOLUTA: esta
+     página se sirve en /c/<slug>, y una relativa buscaría /c/captcha.js. -->
+<script src="/captcha.js"></script>
 </head>
 <body>
 
@@ -496,12 +499,20 @@ async function pedirCodigo() {
   $('btnCodigo').disabled = true;
   $('btnCodigo').textContent = 'Enviando…';
   try {
+    // 🔴 Con el CAPTCHA de Supabase prendido, este endpoint rechaza el pedido
+    // sin token. Ver `web/captcha.js`. El `?.` es a propósito: si el script no
+    // cargó, sale sin token y decide el servidor, igual que en la app.
+    const captchaToken = await window.pedirCaptchaToken?.();
     const r = await fetch(`${SUPABASE_URL}/auth/v1/otp`, {
       method: 'POST',
       headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
       // `create_user: true` porque quien entra por el link puede no tener cuenta
       // — al revés que en el alta de coach, donde la cuenta ya existe.
-      body: JSON.stringify({ email: mail, create_user: true }),
+      body: JSON.stringify({
+        email: mail,
+        create_user: true,
+        gotrue_meta_security: { captcha_token: captchaToken },
+      }),
     });
     if (!r.ok) {
       const cuerpo = await r.json().catch(() => ({}));

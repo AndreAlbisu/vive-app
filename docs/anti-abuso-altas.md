@@ -155,6 +155,34 @@ call sites del cliente ya mandan token:
 | `signInWithPassword` | `context/AuthContext.tsx` |
 | `resetPasswordForEmail` | `context/AuthContext.tsx` |
 | `signInWithOtp` (reenvío del código) | `screens/VerificarMailScreen.tsx` |
+| `POST /auth/v1/otp` (checkout del link) | `web/c/index.html` |
+| `POST /auth/v1/otp` (sala desde la compu) | `web/sala/index.html` |
+
+🔴 **Las dos de la web se agregaron el 10/09/2026, antes de prender nada.** Le
+pegan a `/auth/v1/otp` con un `fetch` directo, sin `supabase-js`, y el CAPTCHA
+cubre el endpoint para todo el mundo, no solo para la app: sin token, **nadie
+habría podido entrar por la web**. Mandan `gotrue_meta_security.captcha_token`,
+que es el campo que `supabase-js` arma por dentro, y el token sale de
+`web/captcha.js` — la contraparte web de `CaptchaHost`, con las mismas reglas
+(invisible, un token por envío, falla abierto).
+
+⚠️ **Por eso el orden de encendido tiene un paso más**: la web tiene que estar
+DEPLOYADA en Vercel con `web/captcha.js` antes de prender el CAPTCHA, igual que
+la app tiene que estar en el build nuevo. Comprobarlo: abrir
+`https://vitaapp.com.ar/captcha.js` — tiene que devolver el script, no un 404.
+
+⚠️ En una **preview de Vercel** (`*.vercel.app`) el widget falla porque ese
+hostname no está en la lista de Cloudflare, y el pedido sale sin token. Con el
+CAPTCHA prendido, el pedido de código no se puede probar en previews.
+
+📌 **Toda llamada nueva que pida código, cree cuenta o inicie sesión con mail
+tiene que mandar token.** En la app, con `pedirCaptchaToken()` de
+`lib/captcha.ts`; en la web, con `window.pedirCaptchaToken()` de
+`web/captcha.js`. Si no, anda en desarrollo (CAPTCHA apagado) y se rompe en
+producción. `grep -rn "auth/v1/otp\|signInWithOtp\|signUp\|signInWithPassword\|resetPasswordForEmail"` es el chequeo.
+
+📌 `scripts/test-supabase.mjs` hace `signInWithPassword` sin token: con el
+CAPTCHA prendido ese script de prueba deja de andar. Es esperable.
 
 Google y Apple **no** pasan por acá: `signInWithOAuth` y `signInWithIdToken` no
 llevan `captchaToken` y Supabase no se los pide. Quien entra con un botón no ve

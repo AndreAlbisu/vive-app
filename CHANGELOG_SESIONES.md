@@ -4,6 +4,25 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-10 — Andre (sesión 224 · el CAPTCHA habría dejado la web sin poder entrar)
+
+**Tocado:** `web/captcha.js` (nuevo), `web/c/index.html`, `web/sala/index.html`, `docs/anti-abuso-altas.md`. En EAS: `EXPO_PUBLIC_AI_REFLECTION=true` en los tres entornos. Build **18** mandado a TestFlight (commit `7ea3ab7e`).
+
+**Resumen — paso 1 del encendido del CAPTCHA (el build), y un hueco que apareció al preguntar "¿después podemos seguir modificando?".**
+
+- 🔴 **El CAPTCHA de Supabase cubre `/auth/v1/otp` para TODO el mundo, no solo para la app.** Las dos páginas web que piden código —`/c/<slug>` (el checkout del link) y `/sala` (la sesión desde la compu)— le pegan con un `fetch` directo, sin token. **Prenderlo como estaba planeado habría dejado a nadie entrando por la web**, y el runbook listaba solo los cuatro call sites de la app.
+- 🟢 **`web/captcha.js`**, la contraparte web de `CaptchaHost`, con las mismas reglas: invisible, un token por envío, falla abierto. Las dos páginas mandan `gotrue_meta_security.captcha_token`, el campo que `supabase-js` arma por dentro (sacado de `node_modules`, no de memoria). Se prepara al cargar la página para no sumar la espera al "Enviando…".
+- 📌 **El orden de encendido suma un paso**: la web deployada en Vercel con `captcha.js` antes de prender el CAPTCHA. Y en previews de Vercel (`*.vercel.app`) el pedido de código no va a andar con el CAPTCHA prendido: ese hostname no está en Cloudflare.
+- 🔴 **`EXPO_PUBLIC_AI_REFLECTION` estaba en el `.env` local pero NO en EAS**: los builds de store salían con la IA apagada mientras en Expo Go se veía prendida. Se cargó en los tres entornos (decisión de Andre) antes del build 18. Sin esto, el tope que Joaquín dejó vivo ayer no se habría ejercitado nunca desde la app instalada.
+- 📌 El build de store no era el 3 sino el **18**: el 17 ya se había mandado el 09/09 desde `2c4ad6f3`.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Pushear** para que Vercel deploye la web con `captcha.js`, y comprobar que `https://vitaapp.com.ar/captcha.js` responde. Sin eso, **no se prende el CAPTCHA**.
+- 🔴 El build 18 en TestFlight: instalarlo y ver `[captcha] activo` + `token obtenido: sí`.
+- 🔴 Recién después, prender el CAPTCHA (paso A.3) y el `curl` de A.4 → **400**. Probar además el checkout web y la sala web con el CAPTCHA prendido: son las dos piezas que no pasaron por ninguna prueba.
+- ⚠️ `web/captcha.js` **no se probó en un navegador**: solo sintaxis. La primera prueba real es con la web deployada.
+
+---
 ## 2026-09-10 — Joaquín (el tope de la IA queda VIVO + rate limits del anti-abuso aplicados)
 
 **Tocado:** `SCHEMA.md`, `docs/anti-abuso-altas.md`, `CHANGELOG_SESIONES.md`. En producción: `scripts/add-ai-usage.sql` corrido, `weekly-reflection` deployada (v28), y config de auth ajustada (rate limits + anónimos). Ningún cambio de código de app.
