@@ -170,7 +170,12 @@
              coach recibe una reserva de "Alguien" — no sabe a quién va a
              atender, ni puede reconocerla como su cliente de siempre. En una
              sesión de acompañamiento eso no es un detalle de UI. -->
-        <input class="campo" id="nombre" type="text" autocomplete="name"
+        <!-- 🔴 id="tuNombre", NO "nombre": el <h1> del nombre del COACH ya usa
+             id="nombre", y dos elementos con el mismo id hacen que
+             getElementById devuelva el <h1>. Con id="nombre" acá, pedirCodigo
+             leía `$('nombre').value` sobre el <h1> (value = undefined) y tiraba
+             una excepción no atrapada: el botón "no hacía nada". -->
+        <input class="campo" id="tuNombre" type="text" autocomplete="name"
                placeholder="Tu nombre" spellcheck="false">
         <input class="campo" id="mail" type="email" inputmode="email" autocomplete="email"
                placeholder="tu@mail.com" spellcheck="false">
@@ -475,7 +480,7 @@ function mostrarError(id, msg) {
 
 async function pedirCodigo() {
   const mail = $('mail').value.trim().toLowerCase();
-  const nombre = $('nombre').value.trim();
+  const nombre = $('tuNombre').value.trim();
   mostrarError('errorMail', '');
 
   if (nombre.length < 2) {
@@ -566,18 +571,20 @@ async function confirmarCodigo() {
 }
 
 /**
- * Guarda el nombre en el perfil, **solo si todavía no tiene uno**.
+ * Guarda el nombre en el perfil, **solo si no tiene uno real**.
  *
  * 🔴 El `if` no es prolijidad: quien ya tiene cuenta en la app puso su nombre
  * ahí, y pisarlo con lo que tipeó apurado en un checkout sería dejarlo peor de
- * lo que estaba. Esto es para las cuentas que nacen acá, que no tienen ninguno.
+ * lo que estaba. Pero una cuenta nacida del código NO nace sin nombre: el
+ * trigger `handle_new_user` le pone el placeholder 'Usuario', que hay que tratar
+ * como "sin nombre" y pisar — si no, el coach ve "Usuario".
  *
  * ⚠️ No hace fallar nada: si falla, la reserva sigue y el coach ve el fallback.
  * Un nombre que no se guardó es un problema; una reserva perdida por un nombre
  * es peor.
  */
 async function guardarNombre(userId) {
-  const nombre = $('nombre').value.trim();
+  const nombre = $('tuNombre').value.trim();
   if (!userId || !nombre) return;
   const headers = {
     apikey: SUPABASE_ANON_KEY,
@@ -588,7 +595,13 @@ async function guardarNombre(userId) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=name`, { headers });
     const filas = r.ok ? await r.json() : [];
     const actual = (filas[0]?.name ?? '').trim();
-    if (actual) return;   // ya tenía nombre: no se toca
+    // 🔴 'Usuario' es el DEFAULT del trigger `handle_new_user`
+    // (coalesce(meta.name, meta.full_name, 'Usuario')), no un nombre que puso la
+    // persona. Una cuenta nacida del código nace con ese placeholder, así que
+    // hay que tratarlo como "sin nombre" y pisarlo — si no, el coach ve
+    // "Usuario" en vez del nombre que se tipeó. Solo se respeta un nombre real.
+    const NOMBRE_PLACEHOLDER = 'Usuario';
+    if (actual && actual !== NOMBRE_PLACEHOLDER) return;   // ya tenía nombre real: no se toca
 
     await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
       method: 'PATCH',

@@ -681,11 +681,14 @@ Sistema **paralelo e independiente** al de `resource_proposals`→`resources` de
 - Bucket `resource-audio`: límite subido de 20MB a 30MB el 13/07/2026 (mismo bucket que usa el sistema viejo de `resources`, compartido entre ambos pipelines).
   - ⚠️ **Otra trampa `coach_id` vs `auth.uid()` encontrada 16/07/2026**: la policy `resource_audio_coach_insert` exige `(storage.foldername(name))[1] = auth.uid()::text` — la carpeta tiene que ser el `profiles.id` del coach, NO `coaches.id`. `app/coach-recurso-nuevo.tsx` armaba la ruta con el `coach_id` (`coaches.id`) que le llega por param, y el upload fallaba siempre con "new row violates row-level security policy". Fix: usar `user.id` (de `useAuth`) para la carpeta, `coach_id` solo para el INSERT en `coach_resources`. Mismo tipo de mezcla que la trampa de arriba — dos ids distintos con nombres parecidos es una fuente de bugs recurrente en este módulo.
 
-### `ai_usage` (09/09/2026) — ⚠️ **PENDIENTE DE CORRER**
+### `ai_usage` (09/09/2026) — ✅ **CORRIDO y VERIFICADO el 10/09/2026**
 
-> 🔴 **Todavía NO está en la base.** `scripts/add-ai-usage.sql` está escrito y sin
-> correr. Es la única sección de este archivo que describe algo que no existe
-> todavía; se saca este aviso el día que se corra.
+> `scripts/add-ai-usage.sql` corrido contra la base (vía `supabase db query --linked`)
+> y verificado con sus 4 chequeos: la tabla existe con RLS prendido, **0 políticas**,
+> **0 permisos** para `anon`/`authenticated`, y `registrar_uso_ia()` suma y corta
+> —`(true,1)` en la 1ra llamada, `(false,2)` en la 2da con tope 1— con la fila de
+> prueba borrada. `weekly-reflection` **v28 deployada** después del SQL (el orden
+> importa: la función sin la RPC daría 503).
 
 - `user_id` (uuid, FK → `auth.users.id`, on delete cascade) · `dia` (date) · `feature` (text, CHECK IN `weekly_reflection`) · `llamadas` (integer). **PK compuesta** `(user_id, dia, feature)`.
 - **Para qué**: el tope de gasto por persona y por día de las features que llaman a un modelo. Hoy solo `weekly-reflection`.

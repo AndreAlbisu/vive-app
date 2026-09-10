@@ -1,7 +1,13 @@
 # Runbook — Anti-abuso del alta de cuentas (CAPTCHA + rate limits)
 
-> ⚠️ **Todavía NO está prendido.** Los dos ajustes de Supabase de abajo son
-> manuales y quedan pendientes. Hasta que se hagan, no hay ningún portero.
+> ⚠️ **El CAPTCHA (paso A.3) todavía NO está prendido** — es manual y necesita la
+> Secret Key + la build distribuida. Hasta que se prenda, no hay portero de bots.
+>
+> ✅ **Rate limits (paso B) APLICADOS el 10/09/2026** vía Management API:
+> `rate_limit_verify=10`, `rate_limit_otp=6`, y anónimos **deshabilitados**
+> (`external_anonymous_users_enabled=false`). Ver la nota en B: la API no acepta
+> `rate_limit_anonymous_users=0` (mínimo 1), así que se apagó la feature entera,
+> que es más fuerte y coincide con la intención.
 >
 > ✅ **El cliente sí está terminado y PROBADO EN DISPOSITIVO** (09/09/2026, iOS,
 > con la site key real): el widget se monta y devuelve un token de 709 chars sin
@@ -126,6 +132,20 @@ igual que hoy. Es a propósito: ver el comentario de cabecera de
 Dashboard → **Settings → Authentication → Bot and Abuse Protection** →
 *Enable CAPTCHA protection*, proveedor **Turnstile**, pegar la **Secret Key**.
 
+> ⚠️ **Al 10/09/2026 el provider en la config quedó en `hcaptcha` (viejo) y
+> `security_captcha_enabled=false`.** Prenderlo hay que cambiar las tres cosas:
+> `security_captcha_enabled=true`, `security_captcha_provider=turnstile`,
+> `security_captcha_secret=<SECRET KEY>`.
+>
+> Alternativa sin dashboard, por Management API (una sola llamada), cuando tengas
+> la Secret Key **y** confirmes que la build distribuida lleva la site key:
+> ```bash
+> curl -X PATCH 'https://api.supabase.com/v1/projects/ggygiihhnkjrerpinhha/config/auth' \
+>   -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' \
+>   -d '{"security_captcha_enabled":true,"security_captcha_provider":"turnstile","security_captcha_secret":"<SECRET KEY>"}'
+> ```
+> Después correr el `curl` de A.4 — tiene que dar **400**.
+
 Cubre `signup`, `token` (login con contraseña), `recover` y `otp`. Los cuatro
 call sites del cliente ya mandan token:
 
@@ -192,16 +212,32 @@ apretado y aflojar si molesta, no al revés):
 | Password recovery + OTP (`/recover`, `/otp`, `/magiclink`, `/resend`) | 30 / 5 min | **6 / 5 min** |
 | Anonymous sign-ins | 30 / hora | **0** — la app no los usa desde la sesión 152 |
 
-Lo mismo por Management API si se prefiere versionarlo. Los tres campos
+Lo mismo por Management API si se prefiere versionarlo. Los campos
 existen en `PATCH /v1/projects/{ref}/config/auth`, pero el mapeo campo →
 grupo de endpoints no está documentado con precisión: **verificar contra el
 dashboard después de correrlo**, que es la fuente de verdad.
 
+✅ **APLICADO el 10/09/2026** (Management API, token del CLI en el keychain —
+ver `[[reference_supabase_run_sql_deploy]]`). Quedó `rate_limit_verify=10`,
+`rate_limit_otp=6`, `external_anonymous_users_enabled=false`.
+
+🔴 **Corrección al plan original:** la API **rechaza `rate_limit_anonymous_users=0`**
+con `Too small: expected number to be >=1`. El "0 anónimos" del cuadro se logra
+apagando la feature (`external_anonymous_users_enabled:false`), no bajando su
+rate limit — y es más fuerte: no hay ningún alta anónima, no una limitada.
+
 ```bash
+# verify + otp (esto sí toma los números tal cual)
 curl -X PATCH 'https://api.supabase.com/v1/projects/ggygiihhnkjrerpinhha/config/auth' \
   -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
   -H 'Content-Type: application/json' \
-  -d '{"rate_limit_verify":10,"rate_limit_otp":6,"rate_limit_anonymous_users":0}'
+  -d '{"rate_limit_verify":10,"rate_limit_otp":6}'
+
+# anónimos: apagar la feature, NO poner el rate en 0 (la API lo rechaza)
+curl -X PATCH 'https://api.supabase.com/v1/projects/ggygiihhnkjrerpinhha/config/auth' \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"external_anonymous_users_enabled":false}'
 ```
 
 ⚠️ **El límite por IP no es por persona.** Una oficina, una facultad o una red
