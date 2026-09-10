@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-10 — Joaquín (Tier 2 de hardening: 4 agujeros chicos, algunos sin depender de terceros)
+
+**Tocado:** `lib/emailVerificado.ts`, `lib/vozCompartida.ts` (nuevo), `app/diario.tsx`, `app/gratitud.tsx`, `lib/altaCoach.ts`, `scripts/add-coach-alta-paso.sql` (nuevo), `app/(tabs)/index.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, + 3 tests nuevos. **612 tests** (575→612), `tsc` limpio. Rama `tier2-hardening` (aparte del PR #1 de IA/rate limits).
+
+**Resumen — cuatro items del backlog que se podían hacer sin la mano de Andre.**
+
+- 🔒 **#5 `necesitaVerificarMail` estrechado.** Fallaba ABIERTO ante cualquier error de lectura; el único motivo legítimo era que la columna no existiera. Ya existe, así que ahora solo el error de esquema (`42703`/`PGRST204` o el mensaje) deja pasar como red ante rollback; cualquier otro error falla CERRADO. +2 tests.
+- ✍️ **#7 (C7) copy fuera de la tarjeta, verificado.** El copy de Diario y Gratitud es la misma voz de Sofía y nada lo chequeaba: nació con el bug de "adjetivo con género sobre quien lee" dos veces (cansado, agradecido). Se movió a `lib/vozCompartida.ts` (single source of truth, importado por las pantallas) + `rejectVozCompartida()` con el subconjunto transversal ya decidido, generalizado para cazar también "estás agradecido" (que `NIVEL_MASCULINO` no agarraba). Test barre el banco. NO enforce exclamaciones (decisión de Andre abierta). +25 tests.
+- 🖥️ **#4 gate de alta de coach al servidor.** Vivía en `AsyncStorage`: borrar los datos de la app lo salteaba y el AuthRedirect dejaba entrar como usuario a una cuenta que nunca terminó su alta. Ahora cuelga de `profiles.coach_alta_paso`. `lib/altaCoach.ts` lee del servidor y cae a `AsyncStorage` si la columna no existe o hay error de red (anda corra o no el script); misma API, 5 callers sin cambios. +10 tests. 🔴 **`scripts/add-coach-alta-paso.sql` SIN CORRER** — cambio estructural de auth, se revisa entre Andre y Joaquín (regla #6) + prueba en dispositivo del arranque.
+- 📊 **#6 (D6) el piso de seguridad ahora loguea el disparo.** Antes solo el tap a `/ayuda`; si la persona veía el piso y no tocaba, no quedaba rastro. Ahora emite `piso_seguridad_mostrado` en `analytics_events`. Cubre la mitad "enterarse/aprender"; la alerta/seguimiento por-persona en tiempo real sigue abierta (necesita decisión de privacidad).
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/add-coach-alta-paso.sql`** tras revisión con Andre, y probar el arranque en dispositivo (el AuthRedirect tiene historia de rebotes). Hasta entonces el código usa el fallback a AsyncStorage y todo anda como antes.
+- 📌 Con Tier 2 cerrado, sigue el **Tier 1** (A5: las 3 pruebas del checkout con teléfono + plata; DMARC; prender `CHECKOUT_HABILITADO`).
+
+---
 ## 2026-09-09 — Andre (sesión 223 cont. 4 · el tope de la IA: lo que se cae no es el servidor, es la factura)
 
 **Tocado:** `scripts/add-ai-usage.sql` (nuevo), `supabase/functions/weekly-reflection/index.ts`, `SCHEMA.md`. **575 tests**, `tsc` limpio. ⚠️ **SQL sin correr y función sin deployar.**
