@@ -3,9 +3,12 @@
 -- `marcar_mail_verificado()` — la única forma de escribir
 -- `profiles.email_verified_at`, y la marca la pone el SERVIDOR.
 --
--- ⚠️ PENDIENTE DE CORRER (escrito el 10/09/2026). Tiene que correr ANTES de que
--- alguien use un build con el cliente nuevo: sin la función, `verificar()` falla
--- cerrado y la persona no puede pasar el muro.
+-- ✅ CORRIDO el 10/09/2026 y VERIFICADO: la ejecuta `authenticated` y no `anon`,
+-- es `SECURITY DEFINER`, la columna sigue sin UPDATE para el cliente, y con una
+-- sesión simulada (en transacción con rollback) **se niega con `amr=password`
+-- y marca con `amr=otp`**. Quedó en 0 verificados después del rollback.
+-- Tenía que correr antes de cualquier build con el cliente nuevo: sin la
+-- función, `verificar()` falla cerrado y nadie pasa el muro.
 --
 -- ── El bug que esto arregla ──────────────────────────────────────────────────
 --

@@ -17,7 +17,7 @@
 - 🔴 **El desafío del CAPTCHA colgaba la app entera.** Primera vez que Turnstile decidió desafiar (al tocar "Reenviar"): pantalla oscura, nada visible, ningún toque funcionaba. `CaptchaHost` alternaba entre `<Modal>` y `<View>` como padre del WebView, **con un comentario mío que decía que el WebView era "el mismo"** — falso: React desmonta el hijo cuando cambia el tipo del padre. Ahora es un solo `View` que cambia de estilo, con "Cancelar", y el timeout cierra el desafío. Era el camino que te marqué como el más frágil y que no se probó con `3x...FF`.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **Correr `scripts/add-marcar-mail-verificado.sql` ANTES del build 19**: sin la función, el cliente nuevo falla cerrado y nadie pasa el muro.
+- ✅ **`scripts/add-marcar-mail-verificado.sql` CORRIDO y VERIFICADO** (10/09): permisos correctos, y probado con una sesión simulada en transacción con rollback — **se niega con `amr=password`, marca con `amr=otp`**. Prod quedó en 0 verificados después del rollback.
 - 🔴 **Build 19.** El 18 tiene los dos bugs: nadie que entre con mail pasa el muro, y un desafío de CAPTCHA cuelga la app. **Con el 18 no se puede prender el CAPTCHA ni sumar testers.**
 - 🔴 **Antes de mandar el 19, probar en desarrollo con la site key `3x00000000000000000000FF`** (fuerza el desafío) y verificar el mail **mirando la base**, no la pantalla.
 
