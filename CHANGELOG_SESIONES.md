@@ -15,9 +15,14 @@
 - 🔴 **Causa 2, error mío del mismo día**: la "segunda defensa" de la sesión 224 cont. tragaba en silencio el 429 del primer envío, suponiendo "ya hay un código en camino". **El límite de 60s es por MAIL, no por tipo de mensaje**: lo último que había salido era el link, no un código. La persona esperaba un código que nunca se mandó, sin ninguna pista. Ahora se dice qué pasó y cuándo puede pedirlo.
 - 📌 **Patrón que ya van tres veces hoy**: un arreglo que supone qué significa una respuesta (el `&&` que no dispara nada, el WebView "que es el mismo", el 429 "que es un código en camino") sin haberlo mirado. Esta vez lo encontró una prueba que no estaba en la lista.
 
+**Probado en el development build 19** (iOS, 10/09/2026, con Metro conectado — las dos pruebas anteriores de la tarde habían corrido sin querer en el build 18 de TestFlight, porque el QR `viveapp://` lo abría esa app):
+- ✅ **Prueba A, el muro con código**: entra directo, sin error (reportado por Andre; no se miró la base después).
+- ✅ **Prueba B, el desafío del CAPTCHA** con la site key `3x00000000000000000000FF`: el desafío aparece en el centro, se resuelve y sigue, y **"Cancelar" lo cierra y la pantalla vuelve a responder** — el bug que colgaba la app en el 18. `.env` volvió a la site key real.
+- 📌 Pregunta de Andre al ver el desafío en el login: ¿no debería ser solo para el alta? **No se puede**: el CAPTCHA de Supabase es un solo interruptor (`security_captcha_enabled/provider/secret`, sin lista de endpoints) y cubre alta, login y recuperación. Y con la clave real casi nadie ve nada.
+
 **Pendiente para la próxima sesión:**
-- 🔴 **Recargar Metro para tomar esto** (el development build 19 lo toma sin rebuild: es solo JS) y repetir: recuperar contraseña → entrar directo, sin muro. Y mirar la base: tiene que quedar verificado.
-- Siguen las pruebas A (muro con código) y B (desafío del CAPTCHA con `3x...FF`) del development build.
+- 🔴 **Build 20 de producción a TestFlight** con todos los arreglos del día (el 19 fue de `development`; los números son compartidos).
+- 🔴 Con la gente en el 20: prender el CAPTCHA (A.3), `curl` sin token → **400**, y probar con el CAPTCHA prendido el alta en la app, el checkout web y la sala web.
 
 ---
 ## 2026-09-10 — Andre (sesión 224 cont. 2 · email_verified_at nunca se pudo escribir, y el desafío del CAPTCHA colgaba la app)
