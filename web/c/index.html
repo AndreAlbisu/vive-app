@@ -170,7 +170,12 @@
              coach recibe una reserva de "Alguien" — no sabe a quién va a
              atender, ni puede reconocerla como su cliente de siempre. En una
              sesión de acompañamiento eso no es un detalle de UI. -->
-        <input class="campo" id="nombre" type="text" autocomplete="name"
+        <!-- 🔴 id="tuNombre", NO "nombre": el <h1> del nombre del COACH ya usa
+             id="nombre", y dos elementos con el mismo id hacen que
+             getElementById devuelva el <h1>. Con id="nombre" acá, pedirCodigo
+             leía `$('nombre').value` sobre el <h1> (value = undefined) y tiraba
+             una excepción no atrapada: el botón "no hacía nada". -->
+        <input class="campo" id="tuNombre" type="text" autocomplete="name"
                placeholder="Tu nombre" spellcheck="false">
         <input class="campo" id="mail" type="email" inputmode="email" autocomplete="email"
                placeholder="tu@mail.com" spellcheck="false">
@@ -475,7 +480,7 @@ function mostrarError(id, msg) {
 
 async function pedirCodigo() {
   const mail = $('mail').value.trim().toLowerCase();
-  const nombre = $('nombre').value.trim();
+  const nombre = $('tuNombre').value.trim();
   mostrarError('errorMail', '');
 
   if (nombre.length < 2) {
@@ -577,7 +582,7 @@ async function confirmarCodigo() {
  * es peor.
  */
 async function guardarNombre(userId) {
-  const nombre = $('nombre').value.trim();
+  const nombre = $('tuNombre').value.trim();
   if (!userId || !nombre) return;
   const headers = {
     apikey: SUPABASE_ANON_KEY,
