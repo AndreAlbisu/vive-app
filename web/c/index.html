@@ -571,11 +571,13 @@ async function confirmarCodigo() {
 }
 
 /**
- * Guarda el nombre en el perfil, **solo si todavía no tiene uno**.
+ * Guarda el nombre en el perfil, **solo si no tiene uno real**.
  *
  * 🔴 El `if` no es prolijidad: quien ya tiene cuenta en la app puso su nombre
  * ahí, y pisarlo con lo que tipeó apurado en un checkout sería dejarlo peor de
- * lo que estaba. Esto es para las cuentas que nacen acá, que no tienen ninguno.
+ * lo que estaba. Pero una cuenta nacida del código NO nace sin nombre: el
+ * trigger `handle_new_user` le pone el placeholder 'Usuario', que hay que tratar
+ * como "sin nombre" y pisar — si no, el coach ve "Usuario".
  *
  * ⚠️ No hace fallar nada: si falla, la reserva sigue y el coach ve el fallback.
  * Un nombre que no se guardó es un problema; una reserva perdida por un nombre
@@ -593,7 +595,13 @@ async function guardarNombre(userId) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=name`, { headers });
     const filas = r.ok ? await r.json() : [];
     const actual = (filas[0]?.name ?? '').trim();
-    if (actual) return;   // ya tenía nombre: no se toca
+    // 🔴 'Usuario' es el DEFAULT del trigger `handle_new_user`
+    // (coalesce(meta.name, meta.full_name, 'Usuario')), no un nombre que puso la
+    // persona. Una cuenta nacida del código nace con ese placeholder, así que
+    // hay que tratarlo como "sin nombre" y pisarlo — si no, el coach ve
+    // "Usuario" en vez del nombre que se tipeó. Solo se respeta un nombre real.
+    const NOMBRE_PLACEHOLDER = 'Usuario';
+    if (actual && actual !== NOMBRE_PLACEHOLDER) return;   // ya tenía nombre real: no se toca
 
     await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
       method: 'PATCH',
