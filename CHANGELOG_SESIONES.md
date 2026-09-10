@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-10 — Andre (sesión 224 cont. · el muro rebotaba en TestFlight: una respuesta vieja pisaba la verificación)
+
+**Tocado:** `context/AuthContext.tsx`, `screens/VerificarMailScreen.tsx`. **575 tests**, `tsc` limpio. ⚠️ **No está en el build 18**: sale en el próximo.
+
+**Resumen — el primer uso del build 18 encontró un bug del muro que en Expo Go no se había visto.**
+
+- 🐛 **Síntoma**: en TestFlight, al poner el código correcto aparecía "Se enviaron demasiados códigos. Esperá unos minutos". Ese mensaje sale **solo del ENVÍO**, nunca de la verificación — o sea que la pantalla se había vuelto a abrir sola y pedido otro código, y Supabase lo frenaba por el límite de 60s por mail.
+- 🔴 **Causa: una carrera.** `verifyOtp` renueva la sesión y dispara `SIGNED_IN` (confirmado en `supabase-js`), que re-consulta `necesitaVerificarMail`. Esa consulta salía **antes** de que se escribiera `email_verified_at` —contestaba "pendiente"— y llegaba **después** de `marcarMailVerificado()`, pisándolo. El muro devolvía a la pantalla del código. **En Expo Go no se vio porque las respuestas llegaron en el otro orden**: el paso 2 de la prueba de ayer ("sin rebote") pasó por suerte de timing, no porque estuviera bien.
+- 🟢 **Arreglo: número de turno.** Cada consulta lleva uno, y marcar como verificado también gasta uno; una respuesta que vuelve con un turno viejo se descarta.
+- 🟢 **Y una segunda defensa en la pantalla**: si el envío AUTOMÁTICO del montaje choca con el límite, no se muestra como error — quiere decir que hay un código de hace menos de un minuto que sigue sirviendo. El reenvío manual sí muestra el motivo.
+- 📌 **Quien lo sufra en el build 18 se destraba cerrando y reabriendo la app**: la verificación sí se guardó, lo que fallaba era la navegación.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Build 19** con este arreglo antes de que alguien más que nosotros use el muro. Decisión de Andre si se hace ya o se junta con otros cambios.
+- ⚠️ **No se pudo reproducir en desarrollo**, así que la única prueba real es en TestFlight: verificar el mail en el build 19 y que entre directo, sin mensaje.
+- Sigue en pie todo lo de la entrada de abajo (instalar, prender el CAPTCHA, `curl` → 400, probar la web).
+
+---
 ## 2026-09-10 — Andre (sesión 224 · el CAPTCHA habría dejado la web sin poder entrar)
 
 **Tocado:** `web/captcha.js` (nuevo), `web/c/index.html`, `web/sala/index.html`, `docs/anti-abuso-altas.md`. En EAS: `EXPO_PUBLIC_AI_REFLECTION=true` en los tres entornos. Build **18** mandado a TestFlight (commit `7ea3ab7e`).

@@ -216,6 +216,18 @@ export default function VerificarMailScreen() {
       // destinatario". No bloquea nada: es solo para la consola.
       const cuerpo = await leerCuerpo(e);
       console.warn('[mail] signInWithOtp falló:', e.status ?? '', cuerpo || e.message || e);
+      // 📌 El envío AUTOMÁTICO al abrir la pantalla, frenado por el límite de
+      // Supabase, no es un error para la persona: quiere decir que ya se mandó
+      // un código hace menos de un minuto, y ese código sigue sirviendo. Pasa
+      // cuando la pantalla se vuelve a abrir enseguida (salir y volver, o el
+      // rebote del 10/09 que ya se arregló en `AuthContext`). Mostrar "Se
+      // enviaron demasiados códigos" ahí asusta y además es falso: la persona
+      // no pidió ninguno. Se arranca la cuenta regresiva y listo. El reenvío
+      // manual sí muestra el motivo, porque ahí la persona tocó el botón.
+      if (inicial && e.status === 429) {
+        setEspera(ESPERA_REENVIO);
+        return;
+      }
       setError(motivoDeEnvio(e, cuerpo));
       return;
     }

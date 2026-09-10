@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useRef, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { pedirCaptchaToken } from '@/lib/captcha';
@@ -127,13 +127,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    *  vale `undefined` y el layout no redirige. Meterla en `fetchProfile` haría
    *  que un error de esa consulta —que hoy cae a rol 'user' y sigue— también
    *  decidiera sobre el muro del mail. */
+  //
+  // 🔴 LA CARRERA QUE ESTO EVITA (TestFlight, 10/09/2026): al confirmar el
+  // código, `verifyOtp` renueva la sesión y dispara `SIGNED_IN`, que vuelve a
+  // llamar a esto. Esa consulta sale ANTES de que `VerificarMailScreen` termine
+  // de escribir `email_verified_at`, así que contesta "pendiente" — y llegaba
+  // DESPUÉS de `marcarMailVerificado()`, pisándolo. El muro devolvía a la
+  // pantalla del código, que al montarse pide otro, y Supabase lo frenaba por
+  // el límite de 60s por mail: "Se enviaron demasiados códigos". En Expo Go no
+  // se vio porque las respuestas llegaron en el otro orden.
+  //
+  // Cada consulta lleva un número de turno, y marcar como verificado también
+  // gasta uno: una respuesta que vuelve cuando ya pasó otro turno se descarta.
+  const turnoMail = useRef(0);
   const resolverMailPendiente = useCallback((u: User | null) => {
+    const turno = ++turnoMail.current;
     if (!u) { setMailPendiente(false); return; }
     setMailPendiente(undefined);
-    necesitaVerificarMail(u).then(setMailPendiente);
+    necesitaVerificarMail(u).then(pendiente => {
+      if (turno === turnoMail.current) setMailPendiente(pendiente);
+    });
   }, []);
 
-  const marcarMailVerificado = useCallback(() => setMailPendiente(false), []);
+  const marcarMailVerificado = useCallback(() => {
+    turnoMail.current++;   // invalida cualquier consulta que esté viajando
+    setMailPendiente(false);
+  }, []);
 
   type Perfil = { role: UserRole; isAdmin: boolean; name: string | null };
 
