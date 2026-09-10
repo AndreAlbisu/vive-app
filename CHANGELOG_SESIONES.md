@@ -19,7 +19,8 @@
 
 **Pendiente para la próxima sesión:**
 - 🔴 **Lo único que falta del CAPTCHA es de dashboard**, y en orden: build distribuido → prender en Supabase con la Secret Key → bajar los rate limits. El `curl` de verificación tiene que dar **400**. Todo en `docs/anti-abuso-altas.md`.
-- 🔴 **El muro del mail NO se probó en dispositivo todavía** — es de la entrada de abajo y sigue abierto, con sus tres avisos (cuentas existentes contra el muro, dependencia nueva del SMTP, pico de envíos al prender).
+- ✅ **El muro del mail quedó PROBADO en dispositivo** (iOS, 09/09/2026), los cuatro caminos: (1) reabrir la app sin verificar **vuelve a mostrar el muro** —que es lo que valida el rediseño, porque el gate viejo del coach vive en `AsyncStorage` y se salteaba borrando datos de la app—; (2) poner el código lleva al Inicio **sin rebote**; (3) Google y Apple **no ven el muro**; (4) ya verificado, reabrir no pide nada.
+- 🔴 **Siguen en pie los tres avisos del muro**, que no son bugs sino consecuencias asumidas: las cuentas existentes sin verificar quedan todas contra el muro, si el SMTP falla nadie entra, y al prenderlo hay un pico de envíos.
 
 ## 2026-09-09 — Andre (sesión 223 cont. 2 · el muro del mail para usuarios finales, colgado del servidor)
 
