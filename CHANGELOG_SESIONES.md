@@ -4,6 +4,25 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-09 — Andre (sesión 223 cont. 4 · el tope de la IA: lo que se cae no es el servidor, es la factura)
+
+**Tocado:** `scripts/add-ai-usage.sql` (nuevo), `supabase/functions/weekly-reflection/index.ts`, `SCHEMA.md`. **575 tests**, `tsc` limpio. ⚠️ **SQL sin correr y función sin deployar.**
+
+**Resumen — el otro vector real, que apareció al preguntar "¿ya estamos tranquilos?".**
+
+- 🔴 **`weekly-reflection` llama a Anthropic y no tenía NINGÚN tope por usuario.** Estaba bien defendida en lo que se propuso defender —exige token de usuario real y no la anon key, con el comentario explicando que si no cualquiera con la clave pública quema la cuota, y valida las entradas contra listas cerradas— pero el único freno de **frecuencia** era un caché en `AsyncStorage`, o sea **en el teléfono de quien llama**. Un script con un token válido la llamaba las veces que quisiera.
+- 📌 **El CAPTCHA lo encarece de rebote** —conseguir mil tokens válidos deja de ser gratis— **pero no lo cierra**: una sola cuenta legítima alcanza.
+- 🟢 **`ai_usage` + `registrar_uso_ia()`**, una fila por persona/día/feature. **Suma y contesta en una sola sentencia**: leer y después escribir dejaría una ventana entre las dos y dos llamadas simultáneas pasarían las dos, que es justo lo que hace quien abusa. ⚠️ **Suma antes de preguntar**, así el intento rechazado también cuenta y quien se pasó no sigue golpeando gratis.
+- ⚠️ **Falla CERRADO, al revés que `lib/emailVerificado.ts`**, y la diferencia es el costo de equivocarse: allá fallar cerrado dejaba a todo el mundo sin poder reservar; **acá la tarjeta cae al texto determinístico de `buildReflection()`, que es bueno y es lo que ve todo el mundo con la feature apagada.** Degradar a eso no le cuesta nada a nadie; dejar el gasto sin techo porque una consulta falló, sí.
+- 📌 **El cliente no necesitó ni una línea**: ya caía a las reglas ante cualquier `!res.ok`, así que el 429 entra por un camino que existía.
+- 📌 **El tope (20/día) vive en la edge function** (`REFLECTION_TOPE_DIARIO`), no en la base: se ajusta con `supabase secrets set` y sin migración. La tabla cuenta; quién decide cuánto es demasiado es la aplicación.
+- 📌 **RLS prendido y sin políticas**: entra solo el service role. Que el titular tampoco lea es deliberado — saber cuánto le queda del tope solo le sirve a quien lo quiere agotar.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/add-ai-usage.sql`** (tiene su sección de verificación, con el caso de que el contador corte) **y deployar `weekly-reflection`**. Hasta las dos cosas, no hay tope. ⚠️ Si se deploya la función SIN correr el SQL, la RPC no existe → 503 → **la tarjeta pierde la IA para todo el mundo** (falla cerrado). **El SQL va primero.**
+- 🔴 **La edge function no se pudo typechequear**: no hay Deno instalado en el entorno. Revisar al deployar.
+- 📌 `SCHEMA.md` documenta `ai_usage` con un aviso de **PENDIENTE DE CORRER** — es la única sección del archivo que describe algo que todavía no existe. Sacar el aviso al correrlo.
+
 ## 2026-09-09 — Andre (sesión 223 cont. 3 · el CAPTCHA anda: el iframe de Turnstile no cargaba, y el error no lo decía)
 
 **Tocado:** `components/CaptchaHost.tsx`, `lib/captcha.ts`, `docs/anti-abuso-altas.md`. **575 tests**, `tsc` y `eslint` limpios. ✅ **Probado en dispositivo (iOS).**

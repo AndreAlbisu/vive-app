@@ -677,6 +677,22 @@ Sistema **paralelo e independiente** al de `resource_proposals`→`resources` de
 - Bucket `resource-audio`: límite subido de 20MB a 30MB el 13/07/2026 (mismo bucket que usa el sistema viejo de `resources`, compartido entre ambos pipelines).
   - ⚠️ **Otra trampa `coach_id` vs `auth.uid()` encontrada 16/07/2026**: la policy `resource_audio_coach_insert` exige `(storage.foldername(name))[1] = auth.uid()::text` — la carpeta tiene que ser el `profiles.id` del coach, NO `coaches.id`. `app/coach-recurso-nuevo.tsx` armaba la ruta con el `coach_id` (`coaches.id`) que le llega por param, y el upload fallaba siempre con "new row violates row-level security policy". Fix: usar `user.id` (de `useAuth`) para la carpeta, `coach_id` solo para el INSERT en `coach_resources`. Mismo tipo de mezcla que la trampa de arriba — dos ids distintos con nombres parecidos es una fuente de bugs recurrente en este módulo.
 
+### `ai_usage` (09/09/2026) — ⚠️ **PENDIENTE DE CORRER**
+
+> 🔴 **Todavía NO está en la base.** `scripts/add-ai-usage.sql` está escrito y sin
+> correr. Es la única sección de este archivo que describe algo que no existe
+> todavía; se saca este aviso el día que se corra.
+
+- `user_id` (uuid, FK → `auth.users.id`, on delete cascade) · `dia` (date) · `feature` (text, CHECK IN `weekly_reflection`) · `llamadas` (integer). **PK compuesta** `(user_id, dia, feature)`.
+- **Para qué**: el tope de gasto por persona y por día de las features que llaman a un modelo. Hoy solo `weekly-reflection`.
+- 🔴 **Por qué existe.** `weekly-reflection` llama a la API de Anthropic y no tenía **ningún** tope por usuario. Exige token de usuario real (no la anon key), pero el único freno de FRECUENCIA vivía en un caché de `AsyncStorage` — o sea **en el teléfono de quien llama**. Un script con un token válido la llamaba las veces que quisiera, y cada llamada es plata. 📌 El CAPTCHA del alta lo encarece de rebote, pero no lo cierra: una sola cuenta legítima alcanza.
+- **`dia` es la fecha de ARGENTINA, no UTC**: es la ventana que ve la persona, y con UTC el día se cortaría a las 21:00 hora local. Mismo supuesto transversal que el resto del esquema.
+- **`registrar_uso_ia(p_user, p_feature, p_tope)`** — `SECURITY DEFINER`, devuelve `(permitido, usadas)`. Suma y contesta **en una sola sentencia**: leer y después escribir dejaría una ventana entre las dos, y dos llamadas simultáneas pasarían las dos. ⚠️ **Suma antes de preguntar**, así el intento rechazado también cuenta y quien se pasa no puede seguir golpeando gratis.
+- **El tope NO vive en la base**: es `REFLECTION_TOPE_DIARIO` en la edge function (default 20). Se ajusta con `supabase secrets set` y sin migración.
+- **RLS prendido y SIN políticas**: ni `anon` ni `authenticated` leen ni escriben nada; entra solo el service role, o sea la edge function. Que el titular tampoco lea es deliberado — saber cuánto le queda del tope solo le sirve a quien lo quiere agotar.
+- ⚠️ **La edge function falla CERRADO** si esta consulta falla (503), al revés que `lib/emailVerificado.ts`. La diferencia es el costo de equivocarse: acá degradar significa que la tarjeta muestre el texto determinístico de `buildReflection()`, que es bueno; allá significaba que nadie pudiera reservar.
+- 📌 **No es analítica.** Si hace falta medir uso de la IA, esa pregunta va a `analytics_events`. Acá vive solo el dato que la decisión de cortar necesita.
+
 ## Reglas críticas
 
 1. **`coaches.id` ≠ `profiles.id`** — son valores distintos. El dato que conecta es `coaches.profile_id`.

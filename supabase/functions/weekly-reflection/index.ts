@@ -17,13 +17,26 @@
 //
 // Se apaga sola: sin `ANTHROPIC_API_KEY` devuelve 503 y el cliente usa el texto
 // determinístico. El cliente además tiene su propio flag.
+//
+// ⚠️ TIENE UN TOPE POR PERSONA Y POR DÍA, del lado del servidor
+// (`registrar_uso_ia`, ver `scripts/add-ai-usage.sql`). El caché de
+// `AsyncStorage` del cliente NO es un límite: vive en el teléfono de quien
+// llama. Pasado el tope se devuelve 429 y el cliente cae a las reglas, igual
+// que con cualquier otro error.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.68.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
+
+// Llamadas por persona y por día. Generoso para cualquiera de buena fe —el
+// cliente cachea una por día por señal, así que un uso normal no pasa de un
+// puñado— y acotado para quien no lo es. Va por env para poder ajustarlo con
+// `supabase secrets set` y sin tocar la base.
+const TOPE_DIARIO = Number(Deno.env.get('REFLECTION_TOPE_DIARIO') ?? '20')
 const MODEL = Deno.env.get('REFLECTION_MODEL') ?? 'claude-haiku-4-5'
 
 // Haiku no acepta `effort` ni la configuración de thinking de los modelos 4.6+.
@@ -128,6 +141,42 @@ Deno.serve(async (req) => {
   })
   const { data: { user } } = await asCaller.auth.getUser()
   if (!user) return json({ error: 'token inválido' }, 401)
+
+  // ── El tope de gasto ───────────────────────────────────────────────────────
+  //
+  // 🔴 Exigir un usuario real —lo de arriba— encarece el abuso pero no lo
+  // cierra: una sola cuenta legítima puede llamar a esto en loop, y cada
+  // llamada es plata. El único freno de frecuencia que había vivía en el
+  // `AsyncStorage` del cliente, o sea en el teléfono de quien abusa.
+  //
+  // Va ANTES de Anthropic a propósito: lo que se está protegiendo es la
+  // llamada, no el resultado. Ver `scripts/add-ai-usage.sql`.
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+  const { data: uso, error: errUso } = await admin
+    .rpc('registrar_uso_ia', { p_user: user.id, p_feature: 'weekly_reflection', p_tope: TOPE_DIARIO })
+    .maybeSingle()
+
+  // ⚠️ FALLA CERRADO, al revés que `lib/emailVerificado.ts`, y la diferencia es
+  // el costo de equivocarse. Allá fallar cerrado dejaba a todo el mundo sin
+  // poder reservar; acá la tarjeta cae al texto determinístico de
+  // `buildReflection()`, que es bueno y es lo que ve todo el mundo cuando la
+  // feature está apagada. Degradar a eso no le cuesta nada a nadie; dejar el
+  // gasto sin techo porque una consulta falló, sí.
+  if (errUso) {
+    console.error('[weekly-reflection] no se pudo registrar el uso:', errUso.message)
+    return json({ error: 'no se pudo verificar el uso' }, 503)
+  }
+  // `!uso` no debería pasar —la función devuelve siempre una fila— pero si pasa
+  // se corta igual: la regla de arriba es fallar cerrado, y "no sé cuántas
+  // llevás" no es permiso para seguir.
+  if (!uso) {
+    console.error('[weekly-reflection] registrar_uso_ia no devolvió fila')
+    return json({ error: 'no se pudo verificar el uso' }, 503)
+  }
+  if (!uso.permitido) {
+    console.warn(`[weekly-reflection] tope diario alcanzado: ${user.id} (${uso.usadas})`)
+    return json({ error: 'tope diario alcanzado' }, 429)
+  }
 
   let body: { signal?: string; tone?: string; facts?: Record<string, unknown> }
   try {
