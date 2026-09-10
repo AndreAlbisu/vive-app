@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-10 — Andre (sesión 224 cont. 2 · email_verified_at nunca se pudo escribir, y el desafío del CAPTCHA colgaba la app)
+
+**Tocado:** `scripts/add-marcar-mail-verificado.sql` (nuevo), `screens/VerificarMailScreen.tsx`, `components/CaptchaHost.tsx`, `lib/captcha.ts`, `SCHEMA.md`, `docs/anti-abuso-altas.md`. **575 tests**, `tsc` limpio. ⚠️ **SQL sin correr; nada de esto está en el build 18.**
+
+**Resumen — dos bugs graves en el primer uso real del build 18. Los dos venían de caminos que "estaban probados" y no lo estaban.**
+
+- 🔴 **`profiles.email_verified_at` NUNCA se pudo escribir desde la app.** Se agregó el 31/08, después de `lock-privileged-columns.sql` (13/08), que deja `profiles` con permisos columna por columna; nadie la sumó y el UPDATE fallaba en silencio. **Confirmado en prod: 0 de 82 perfiles.** Consecuencias desde el 31/08: el alta de coach nunca dejó constancia, el gate de reserva volvía a pedir el código, y **desde el muro del 09/09 nadie que entre con mail puede pasarlo** — al reabrir la base dice "sin verificar". 📌 **Esto corrige el diagnóstico de la entrada de abajo**: el rebote no era principalmente una carrera, era esto. El arreglo del turno sigue sirviendo, pero no era la causa.
+- 🔴 **Y el paso 4 de la prueba de ayer ("verificado, reabrir no pide nada") no pudo haber pasado como se leyó**: la columna no se escribía. Probablemente se hizo con la cuenta de Google. **Las pruebas de estado persistente hay que leerlas contra la base, no contra la pantalla.**
+- 🟢 **`marcar_mail_verificado()`, del lado del servidor**, y NO un `grant update`: con el permiso, cualquiera se marcaría verificado con una llamada. La función exige que el token traiga `amr.method = 'otp'` — la única forma de tener eso es haber leído un código de esa casilla. El nombre del método **se sacó de `auth.mfa_amr_claims` de prod**, no de la documentación (que lista los valores pero no dice cuál usa el OTP por mail).
+- 🟢 **`verificar()` ahora falla CERRADO** si no se pudo guardar: marcar solo en memoria era lo que hacía volver al muro al reabrir.
+- 🔴 **El desafío del CAPTCHA colgaba la app entera.** Primera vez que Turnstile decidió desafiar (al tocar "Reenviar"): pantalla oscura, nada visible, ningún toque funcionaba. `CaptchaHost` alternaba entre `<Modal>` y `<View>` como padre del WebView, **con un comentario mío que decía que el WebView era "el mismo"** — falso: React desmonta el hijo cuando cambia el tipo del padre. Ahora es un solo `View` que cambia de estilo, con "Cancelar", y el timeout cierra el desafío. Era el camino que te marqué como el más frágil y que no se probó con `3x...FF`.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/add-marcar-mail-verificado.sql` ANTES del build 19**: sin la función, el cliente nuevo falla cerrado y nadie pasa el muro.
+- 🔴 **Build 19.** El 18 tiene los dos bugs: nadie que entre con mail pasa el muro, y un desafío de CAPTCHA cuelga la app. **Con el 18 no se puede prender el CAPTCHA ni sumar testers.**
+- 🔴 **Antes de mandar el 19, probar en desarrollo con la site key `3x00000000000000000000FF`** (fuerza el desafío) y verificar el mail **mirando la base**, no la pantalla.
+
+---
 ## 2026-09-10 — Andre (sesión 224 cont. · el muro rebotaba en TestFlight: una respuesta vieja pisaba la verificación)
 
 **Tocado:** `context/AuthContext.tsx`, `screens/VerificarMailScreen.tsx`. **575 tests**, `tsc` limpio. ⚠️ **No está en el build 18**: sale en el próximo.

@@ -252,11 +252,24 @@ export default function VerificarMailScreen() {
     }
 
     // Queda constancia: es lo que le permite a la moderación saber que esta
-    // dirección se comprobó y no se dio por buena.
-    if (user) {
-      await supabase.from('profiles')
-        .update({ email_verified_at: new Date().toISOString() })
-        .eq('id', user.id);
+    // dirección se comprobó y no se dio por buena, y lo que mira el muro.
+    //
+    // 🔴 La escribe el SERVIDOR, no la app. Antes acá había un
+    // `update profiles set email_verified_at` directo que **nunca funcionó**: la
+    // columna no está entre las que `authenticated` puede modificar
+    // (`lock-privileged-columns.sql`), el error no se miraba, y 0 de 82 perfiles
+    // la tenían. `marcar_mail_verificado()` la escribe solo si la sesión se abrió
+    // con el código que acabamos de verificar (claim `amr`), así que no se puede
+    // falsificar desde afuera. Ver `scripts/add-marcar-mail-verificado.sql`.
+    //
+    // ⚠️ Y si falla, NO se da por verificado: dejarla pasar solo en memoria es lo
+    // que hacía que el muro volviera a aparecer al reabrir la app.
+    const { data: marcado, error: errMarca } = await supabase.rpc('marcar_mail_verificado');
+    if (errMarca || marcado !== true) {
+      console.warn('[mail] no se pudo guardar la verificación:', errMarca?.message ?? `devolvió ${marcado}`);
+      setVerificando(false);
+      setError('El código es correcto, pero no pudimos guardar la verificación. Probá de nuevo en un momento');
+      return;
     }
 
     marcarTerminado();   // salió por la puerta buena: la sesión sigue

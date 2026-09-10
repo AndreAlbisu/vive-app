@@ -224,6 +224,23 @@ Está resuelto en `components/CaptchaHost.tsx` con `originWhitelist={['*']}` y u
 `onShouldStartLoadWithRequest` que vuelve a cerrar la lista a mano. **Si alguna
 vez se toca ese WebView, esas dos props no son decorativas.**
 
+### A.6 El desafío visible, y por qué no hay un `<Modal>`
+
+Encontrado en el build 18 de TestFlight (10/09/2026), la primera vez que
+Turnstile decidió mostrar un desafío: la pantalla se oscurecía, no aparecía
+nada y **no se podía tocar nada** hasta cerrar la app.
+
+`CaptchaHost` alternaba entre `<Modal>{webview}</Modal>` y `<View>{webview}</View>`.
+Cuando cambia el tipo del padre, **React desmonta el hijo y monta uno nuevo**:
+el WebView del desafío era otro, cargaba el widget de cero sin `execute()` y no
+mostraba nada, mientras el Modal tapaba la pantalla. El timeout de 60s resolvía
+el pedido pero no cerraba el Modal.
+
+Ahora es un solo `View` que cambia de estilo (escondido ↔ capa encima de todo),
+con un botón "Cancelar", y el timeout cierra el desafío. **Si alguna vez se toca
+ese render: el WebView no puede cambiar de padre.** Es el camino que ejercita la
+clave de prueba `3x00000000000000000000FF` — usarla antes de mandar un build.
+
 ## B. Rate limits
 
 Dashboard → **Authentication → Rate Limits**. Los defaults de Supabase son
