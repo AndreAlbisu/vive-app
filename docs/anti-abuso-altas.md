@@ -1,7 +1,20 @@
 # Runbook — Anti-abuso del alta de cuentas (CAPTCHA + rate limits)
 
-> ⚠️ **El CAPTCHA (paso A.3) todavía NO está prendido** — es manual y necesita la
-> Secret Key + la build distribuida. Hasta que se prenda, no hay portero de bots.
+> ✅ **CAPTCHA PRENDIDO el 11/09/2026** (Secret Key cargada por Andre en el
+> dashboard), con el build 20 ya en TestFlight (desde `6dc135e8`, con todos los
+> arreglos del 10/09). Verificado sin token contra `/auth/v1/token` (login) y
+> `/auth/v1/otp` (lo que usa la web): **`400 captcha_failed — no captcha_token
+> found`**. Se probó con llamadas sin efectos, no con el `curl` de alta de A.4:
+> si el CAPTCHA no hubiera quedado prendido, ese creaba una cuenta basura y
+> mandaba un mail a un dominio inexistente.
+>
+> ⚠️ **Falta confirmar que el proveedor quedó en `turnstile`** (al 10/09 estaba
+> en `hcaptcha`, ver A.3). Un `curl` sin token rebota igual con cualquier
+> proveedor, así que no lo prueba. Lo prueba **entrar con mail en el build 20**:
+> si el proveedor quedó mal, los tokens de Turnstile se rechazan todos y nadie
+> entra con mail.
+>
+> 🔴 **Si algo se rompe, se apaga en el dashboard y vuelve todo al instante.**
 >
 > ✅ **Rate limits (paso B) APLICADOS el 10/09/2026** vía Management API:
 > `rate_limit_verify=10`, `rate_limit_otp=6`, y anónimos **deshabilitados**
@@ -132,8 +145,9 @@ igual que hoy. Es a propósito: ver el comentario de cabecera de
 Dashboard → **Settings → Authentication → Bot and Abuse Protection** →
 *Enable CAPTCHA protection*, proveedor **Turnstile**, pegar la **Secret Key**.
 
-> ⚠️ **Al 10/09/2026 el provider en la config quedó en `hcaptcha` (viejo) y
-> `security_captcha_enabled=false`.** Prenderlo hay que cambiar las tres cosas:
+> ✅ **Prendido el 11/09/2026** (ver arriba). ⚠️ Nota original de Joaquín, que
+> sigue valiendo para confirmar el proveedor: **al 10/09/2026 el provider en la
+> config había quedado en `hcaptcha` (viejo) y `security_captcha_enabled=false`.** Prenderlo hay que cambiar las tres cosas:
 > `security_captcha_enabled=true`, `security_captcha_provider=turnstile`,
 > `security_captcha_secret=<SECRET KEY>`.
 >

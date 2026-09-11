@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-11 — Andre (sesión 225 · el CAPTCHA queda PRENDIDO)
+
+**Tocado:** `docs/anti-abuso-altas.md`, `CHANGELOG_SESIONES.md`. En producción: CAPTCHA de Supabase **prendido**, por Andre desde el dashboard. Ningún cambio de código.
+
+**Resumen — el portero existe; falta confirmar que quedó con el proveedor correcto.**
+
+- ✅ **Verificado sin token**: `/auth/v1/token` (login) y `/auth/v1/otp` (lo que usan `/c/<slug>` y `/sala`) devuelven **`400 captcha_failed — no captcha_token found`**.
+- 📌 **Se verificó con llamadas sin efectos** —login con datos falsos, código con `create_user:false` a un mail inexistente— y no con el `curl` de alta de A.4, que si el CAPTCHA no hubiera quedado prendido creaba una cuenta basura y mandaba un mail que rebota.
+- ✅ **El orden se respetó**: build **20** de producción (desde `6dc135e8`) armado y enviado a TestFlight antes de prender.
+- ⚠️ **El proveedor NO está confirmado.** Joaquín dejó anotado que al 10/09 estaba en `hcaptcha`. Los `curl` sin token rebotan con cualquier proveedor, y desde acá no hay acceso a la API de administración para leerlo.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Entrar con mail en el build 20** — confirma el proveedor de una: si quedó en `hcaptcha`, nadie entra con mail. Si falla, apagar el CAPTCHA en el dashboard y corregir el desplegable.
+- 🔴 **Probar el checkout web y la sala web** con el CAPTCHA prendido: nunca corrieron el widget en un navegador.
+- 🔴 Cualquiera en un build anterior al 20 no puede registrarse ni entrar con mail (Google y Apple siguen andando). Confirmar que Joaquín esté en el 20.
+
+---
 ## 2026-09-10 — Andre (sesión 224 cont. 3 · recuperar la contraseña mandaba al muro a esperar un código que nunca salía)
 
 **Tocado:** `lib/emailVerificado.ts`, `screens/VerificarMailScreen.tsx`, `__tests__/emailVerificado.test.ts`, `SCHEMA.md`. **577 tests** (+2: la sesión que ya prueba la casilla entra; si el servidor no contesta, sigue pendiente), `tsc` limpio. ⚠️ No está en el development build 19, pero es solo JS: lo toma recargando Metro.
