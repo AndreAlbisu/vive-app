@@ -42,6 +42,7 @@ import { shouldStaySilent } from '@/lib/sobreVosSilencio';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useConsentGate } from '@/hooks/useConsentGate';
 import { ConsentSheet } from '@/components/ConsentSheet';
+import { TextoQueSeEscribe } from '@/components/TextoQueSeEscribe';
 
 // Colores del mockup `sobre-vos-momento.html` — deliberadamente NO ViveColors,
 // que son tonos parecidos pero no idénticos (terracota #C1694F vs #C06B4A del
@@ -1136,11 +1137,20 @@ function SobreVosCard({
             </>
           ) : (
             <>
-              <Text style={s.selloReflect}>
-                {reflection.before}
-                <Text style={s.selloReflectBold}>{reflection.bold}</Text>
-                {reflection.after}
-              </Text>
+              {/* `key` = el texto: la frase entra palabra por palabra solo cuando
+                  es NUEVA (llega la de la IA, o una recién hecha con el check-in).
+                  Volver a la pestaña no remonta nada. */}
+              <TextoQueSeEscribe
+                key={`${reflection.before}${reflection.bold}${reflection.after}`}
+                tramos={[
+                  { texto: reflection.before },
+                  { texto: reflection.bold, fuerte: true },
+                  { texto: reflection.after },
+                ]}
+                style={s.selloReflect}
+                fuerteStyle={s.selloReflectBold}
+                sinMovimiento={reducedMotion}
+              />
               {/* El CTA es la puerta, así que tiene que decir a dónde va. "Ver
                   más" servía cuando abría la reflexión completa; con el piso de
                   seguridad sería el peor eufemismo posible.

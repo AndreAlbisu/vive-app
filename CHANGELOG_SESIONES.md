@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-11 — Andre (sesión 225 cont. 6 · el texto de Sofía entra palabra por palabra)
+
+**Tocado:** `components/TextoQueSeEscribe.tsx` (nuevo), `lib/agruparPalabras.ts` (nuevo), `app/(tabs)/index.tsx`, `__tests__/agruparPalabras.test.ts` (nuevo). **595 tests** (+5), `tsc` limpio. ⚠️ Sin probar en dispositivo; sale en el próximo build.
+
+**Resumen — pedido de Andre: que el texto de la tarjeta de Sofía no aparezca de una.**
+
+- 📌 **Solo cuando el texto es NUEVO.** El componente lleva `key` = la frase: anima al montar, y volver a la pestaña no remonta nada. La tarjeta se ve decenas de veces por día; animarla en cada visita sería cobrarle la animación a quien más la usa.
+- 📌 **Y eso resuelve un cambio brusco que ya existía**: la tarjeta muestra primero el texto de las reglas y, uno o dos segundos después, lo reemplaza por el de la IA. Ahora ese reemplazo entra palabra por palabra y se lee como Sofía escribiendo, no como la pantalla corrigiéndose.
+- 📌 **Cada palabra es su propio `Animated.Text`** en una fila que envuelve: no se puede animar la opacidad de un tramo DENTRO de un `<Text>` (iOS arma el párrafo entero como una pieza). Opacidad sola, 260 ms con curva de salida fuerte, 35 ms entre palabras y tope de 900 ms para que nunca haya que esperar a Sofía. Layout animations de Reanimated: corren en el hilo de UI, sin `setState` por palabra.
+- 🐛 **La negrita pegada a un signo** ("**Días difíciles**, y…") habría dejado la coma como palabra suelta si se partía por tramos. `agruparPalabras` agrupa por palabras reales; está en `lib/` y con tests.
+- ♿ **Con "reducir movimiento" se dibuja igual que antes**, de una. La accesibilidad no cambia: el contenedor ya tenía la frase completa en `accessibilityLabel`.
+
+**Pendiente para la próxima sesión:**
+- Verlo en dispositivo (development build con Metro, o el próximo build): la primera apertura del día, el reemplazo reglas → IA, y el check-in recién hecho. Mirar que los renglones corten igual que antes y que la palabra en negrita no quede con otro interlineado.
+
+---
 ## 2026-09-11 — Andre (sesión 225 cont. 5 · la comisión del link: la primera sesión, sin comisión)
 
 **Tocado:** `supabase/functions/_shared/commission.ts`, `supabase/functions/{mp,paypal,usdt}-create-payment/index.ts`, `__tests__/commission.test.ts`, `docs/decisiones-pagos.md` (D13). ⚠️ **Las tres funciones sin deployar.**
