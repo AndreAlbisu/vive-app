@@ -17,7 +17,7 @@
 - ⚠️ **Los T&C (8.3) todavía dicen "20% sobre la primera Sesión"**: no se tocaron, porque cambian `LEGAL_VERSION`. Y **el coach no se entera** del beneficio en ningún lado todavía.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **Deployar `mp-create-payment`, `paypal-create-payment` y `usdt-create-payment`.**
+- ✅ **DEPLOYADAS el 11/09 a las 17:10**, con OK de Andre: `mp-create-payment` v50, `paypal-create-payment` v22, `usdt-create-payment` v27. Verificado que las tres arrancan (con la anon key como token responden `{"error":"Unauthorized"}` de la función misma, no del gateway). La regla en sí se prueba con una reserva real.
 - Probar: una reserva nueva por `/c/coach-prueba?probar=1` con un cliente nuevo → `platform_fee_pct = 0` y el pago de MP sin comisión en `fee_details`.
 - Decidir (Andre): la redacción de 8.3 de los T&C, y cómo se le cuenta al coach.
 
