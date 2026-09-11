@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-11 — Andre (sesión 225 cont. 5 · la comisión del link: la primera sesión, sin comisión)
+
+**Tocado:** `supabase/functions/_shared/commission.ts`, `supabase/functions/{mp,paypal,usdt}-create-payment/index.ts`, `__tests__/commission.test.ts`, `docs/decisiones-pagos.md` (D13). ⚠️ **Las tres funciones sin deployar.**
+
+**Resumen — apareció al preguntar si el link le había generado un descuento al coach. No: la reserva de prueba por el link pagó el 20%.**
+
+- 🔴 **`bookings.origen` se escribía y no lo leía nadie.** La decisión estaba pendiente desde la sesión 216 (cuatro entradas seguidas).
+- 🟢 **DECIDIDO (Andre): la primera sesión de cada cliente nuevo que llega por el link, al 0%, en los tres rieles.** El 20% es costo de adquisición; si el cliente lo trajo el coach, Vita no aportó nada que cobrar.
+- 📌 **Salió chico porque la escalera ya contaba por par**: "cliente nuevo" es exactamente el caso del 20% (contador del par en cero). `commissionPctFor` recibe el origen y los tres pagos se lo pasan.
+- 📌 **Con comisión 0, Mercado Pago no recibe `marketplace_fee`** en vez de recibir `0`, que nunca se probó. Protege también a la promo fundador, que tenía el mismo caso sin probar.
+- ⚠️ **Los T&C (8.3) todavía dicen "20% sobre la primera Sesión"**: no se tocaron, porque cambian `LEGAL_VERSION`. Y **el coach no se entera** del beneficio en ningún lado todavía.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Deployar `mp-create-payment`, `paypal-create-payment` y `usdt-create-payment`.**
+- Probar: una reserva nueva por `/c/coach-prueba?probar=1` con un cliente nuevo → `platform_fee_pct = 0` y el pago de MP sin comisión en `fee_details`.
+- Decidir (Andre): la redacción de 8.3 de los T&C, y cómo se le cuenta al coach.
+
+---
 ## 2026-09-11 — Andre (sesión 225 cont. 4 · la sala web pasa con el CAPTCHA, y quien llegaba temprano veía a Daily en inglés)
 
 **Tocado:** `supabase/functions/create-meeting-room/index.ts`, `lib/meetingRoom.ts`, `screens/SessionsScreen.tsx`, `screens/SalaScreen.tsx`, `web/sala/index.html`. **585 tests**, `tsc` limpio; la función y la web, solo chequeo de sintaxis (no hay Deno). ⚠️ **Función sin deployar, web sin pushear.**

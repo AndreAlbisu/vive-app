@@ -103,7 +103,7 @@ serve(async (req) => {
 
   const { data: booking } = await admin
     .from('bookings')
-    .select('id, user_id, coach_id, payment_status, payment_provider, preference_id, charged_amount')
+    .select('id, user_id, coach_id, payment_status, payment_provider, preference_id, charged_amount, origen')
     .eq('id', booking_id)
     .maybeSingle()
 
@@ -168,7 +168,8 @@ serve(async (req) => {
   // se toca la otra. `sesionesDelPar` ya se pidió en paralelo más arriba, junto
   // con `coach`.
   const promoUntil = Deno.env.get('FOUNDER_PROMO_UNTIL')
-  const commissionPct = commissionPctFor(sesionesDelPar ?? 0, Date.now(), promoUntil, 'paypal')
+  // `origen`: la primera sesión de un cliente traído por el link va al 0% (D13).
+  const commissionPct = commissionPctFor(sesionesDelPar ?? 0, Date.now(), promoUntil, 'paypal', booking.origen)
 
   // ── Precio ─────────────────────────────────────────────────────────────────
   //

@@ -55,7 +55,7 @@ serve(async (req) => {
 
   const { data: booking } = await admin
     .from('bookings')
-    .select('id, user_id, coach_id, payment_status, payment_provider, usdt_amount')
+    .select('id, user_id, coach_id, payment_status, payment_provider, usdt_amount, origen')
     .eq('id', booking_id)
     .maybeSingle()
 
@@ -123,7 +123,8 @@ serve(async (req) => {
     .eq('status', 'completada')
     .or(PAIR_SESSION_FILTER)
 
-  const commissionPct = commissionPctFor(sesionesDelPar ?? 0, Date.now(), promoUntil, 'usdt')
+  // `origen`: la primera sesión de un cliente traído por el link va al 0% (D13).
+  const commissionPct = commissionPctFor(sesionesDelPar ?? 0, Date.now(), promoUntil, 'usdt', booking.origen)
 
   // 🔴 Acá el porcentaje es lo ÚNICO que dice cuánto se le debe al coach: no hay
   // split, entra el total a la billetera de VIVE y se transfiere después.

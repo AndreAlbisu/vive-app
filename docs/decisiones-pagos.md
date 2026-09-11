@@ -1191,3 +1191,38 @@ cualquiera, en cualquier país.
 ⚠️ **Y el documento de cobro internacional está escrito para un coach argentino de
 punta a punta** — habla de CBU, de monotributo, de bajar dólares a un banco
 argentino. Con coaches afuera hace falta otra versión, o una que no asuma el país.
+
+## D13 · La comisión del link — ✅ DECIDIDA: **la primera sesión, sin comisión** (11/09/2026)
+
+**Decisión de Andre**, la recomendación del consejo que estaba pendiente desde la
+sesión 216. **La primera sesión de cada cliente nuevo que llega por el link del
+coach (`/c/<slug>`) no paga comisión, en los tres rieles** (Mercado Pago, PayPal y
+USDT). De la segunda en adelante, la escalera de siempre.
+
+**Por qué.** El 20% de la primera sesión es el **costo de adquisición**: cobra que
+Vita aportó al cliente. Si al cliente lo trajo el coach, Vita no aportó nada que
+cobrar — sería cobrarle su propia cartera. Y es el incentivo para que traiga a
+las 4-10 personas que ya le pagan por transferencia, que es la demanda que existe
+el día 1.
+
+**Cómo está hecho.** `commissionPctFor` recibe `bookings.origen`; con `'link'` y
+el contador del par en cero devuelve `COMMISSION_LINK_FIRST = 0`. Los tres
+`*-create-payment` le pasan el origen. Con comisión 0, Mercado Pago recibe la
+preferencia **sin** `marketplace_fee` (omitirlo = cobrar cero, y no depende de
+que MP acepte un `0`, que nunca se probó).
+
+**Bordes, a propósito:**
+- "Primera" es la del contador del par, el mismo que decide el 20%. Dos reservas
+  por el link antes de que se cumpla la primera salen las dos al 0% — igual que
+  hoy saldrían las dos al 20%.
+- Un cliente que ya tuvo una sesión cumplida por la app no es "nuevo": va al 15%.
+- Las reservas sin `origen` (todas las viejas) no cambian.
+
+**⚠️ Pendiente, de Andre: los T&C.** La cláusula 8.3 dice "**20%** sobre la
+primera Sesión completada de cada vínculo". El 0% favorece al Profesional y 8.3
+admite "promociones", pero esta no es por tiempo limitado. Actualizar 8.3 cambia
+`LEGAL_VERSION` (el hash que se guarda en cada aceptación), así que no se tocó.
+
+**⚠️ Pendiente: que el coach lo sepa.** Un incentivo que no se comunica no
+incentiva. La tarjeta "Traé a tus primeros clientes" del Inicio y "Tu link" del
+Perfil son los lugares naturales.

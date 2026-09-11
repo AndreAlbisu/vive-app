@@ -10,6 +10,7 @@
 //
 // Esquema (ver memoria project_vive_payments):
 //   0% promo fundador (hasta FOUNDER_PROMO_UNTIL) ·
+//   0% la PRIMERA sesión del par si el cliente llegó por el LINK del coach ·
 //   20% la PRIMERA sesión COMPLETADA del par coach-usuario ·
 //   15% de la 2da en adelante (permanente).
 // El 20% es el costo de adquisición: Vita aporta el cliente nuevo. El descuento
@@ -18,6 +19,27 @@
 export const COMMISSION_FIRST = 20;
 export const COMMISSION_RECURRING = 15;
 export const COMMISSION_PROMO = 0;
+
+/**
+ * La primera sesión de un cliente que TRAJO EL COACH, por su link (`/c/<slug>`).
+ *
+ * 🔴 Decisión de Andre del 11/09/2026 (D13 en `docs/decisiones-pagos.md`), la
+ * recomendación del consejo. **El 20% de la primera sesión es el costo de
+ * ADQUISICIÓN**: cobra que Vita aportó al cliente. Cuando el cliente lo trajo el
+ * coach, Vita no aportó nada que cobrar — cobrarle el 20% sería cobrarle su
+ * propia cartera. Y es el incentivo para que traiga a la gente que ya atiende
+ * por transferencia, que es la demanda que existe el día 1.
+ *
+ * Solo la PRIMERA: de la segunda en adelante vale la escalera de siempre (15%),
+ * que no es por adquisición sino por retención y por lo que cuesta cobrar.
+ * Aplica igual en los tres rieles.
+ *
+ * ⚠️ "Primera" es la del contador del par (`completedPairSessions < 1`), el mismo
+ * que decide el 20%. Si el cliente reserva dos sesiones por el link antes de que
+ * se cumpla la primera, las dos salen al 0% — exactamente como hoy las dos
+ * saldrían al 20%. Es la semántica que ya tenía la escalera, no una excepción.
+ */
+export const COMMISSION_LINK_FIRST = 0;
 
 /**
  * Comisión de los rieles PayPal y USDT.
@@ -149,6 +171,8 @@ export function commissionPctFor(
   now: number,
   founderPromoUntil?: string | null,
   rail: CommissionRail = 'mp',
+  /** `bookings.origen`. Solo `'link'` cambia algo; null = "no sabemos". */
+  origen?: string | null,
 ): number {
   if (founderPromoUntil) {
     const until = Date.parse(founderPromoUntil);
@@ -161,7 +185,10 @@ export function commissionPctFor(
   // caso "pagó una vez por PayPal y después por Mercado Pago" se resuelve solo: la
   // segunda es recurrente y se cobra 15% porque ocurrió por el riel local.
   const tier = RAIL_TIERS[rail];
-  return completedPairSessions < 1 ? tier.first : tier.recurring;
+  if (completedPairSessions < 1) {
+    return origen === 'link' ? COMMISSION_LINK_FIRST : tier.first;
+  }
+  return tier.recurring;
 }
 
 /**

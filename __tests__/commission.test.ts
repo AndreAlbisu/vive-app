@@ -8,6 +8,7 @@ import {
   COMMISSION_FIRST,
   COMMISSION_RECURRING,
   COMMISSION_PROMO,
+  COMMISSION_LINK_FIRST,
   type BookingForCount,
 } from '../supabase/functions/_shared/commission';
 
@@ -117,6 +118,36 @@ describe('commissionPctFor', () => {
 
   it('el tramo del 15% no se resetea nunca', () => {
     expect(commissionPctFor(50, now)).toBe(COMMISSION_RECURRING);
+  });
+
+  // D13 (11/09/2026): el cliente que trajo el coach por su link no paga
+  // comisión de adquisición en la primera — Vita no aportó ese cliente.
+  describe('cliente traído por el link del coach', () => {
+    it('🔴 la primera sesión del par va al 0%, en los tres rieles', () => {
+      expect(commissionPctFor(0, now, null, 'mp', 'link')).toBe(COMMISSION_LINK_FIRST);
+      expect(commissionPctFor(0, now, null, 'paypal', 'link')).toBe(COMMISSION_LINK_FIRST);
+      expect(commissionPctFor(0, now, null, 'usdt', 'link')).toBe(COMMISSION_LINK_FIRST);
+      expect(COMMISSION_LINK_FIRST).toBe(0);
+    });
+
+    it('🔴 de la segunda en adelante, la escalera de siempre', () => {
+      expect(commissionPctFor(1, now, null, 'mp', 'link')).toBe(COMMISSION_RECURRING);
+      expect(commissionPctFor(1, now, null, 'paypal', 'link')).toBe(COMMISSION_INTERNATIONAL_RECURRING);
+    });
+
+    it('un cliente que llegó por la app paga el 20% de adquisición, como siempre', () => {
+      expect(commissionPctFor(0, now, null, 'mp', 'app')).toBe(COMMISSION_FIRST);
+      expect(commissionPctFor(0, now, null, 'mp', 'catalogo')).toBe(COMMISSION_FIRST);
+    });
+
+    it('sin origen (todas las reservas viejas) no cambia nada', () => {
+      expect(commissionPctFor(0, now, null, 'mp', null)).toBe(COMMISSION_FIRST);
+      expect(commissionPctFor(0, now, null, 'mp')).toBe(COMMISSION_FIRST);
+    });
+
+    it('la promo fundador sigue ganando: 0% igual', () => {
+      expect(commissionPctFor(3, now, '2026-12-31T00:00:00Z', 'mp', 'link')).toBe(COMMISSION_PROMO);
+    });
   });
 
   describe('promo fundador', () => {
