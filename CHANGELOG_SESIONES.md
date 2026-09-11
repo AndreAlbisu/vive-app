@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-11 — Andre (sesión 225 cont. 2 · el checkout web pasa con el CAPTCHA prendido)
+
+**Tocado:** `docs/anti-abuso-altas.md`, `docs/problemas-abiertos.md`. Ningún cambio de código.
+
+**Resumen — la prueba que confirmó el proveedor.**
+
+- ✅ **Checkout web con el CAPTCHA prendido**: `vitaapp.com.ar/c/coach-prueba?probar=1` → nombre + mail nuevo → "Enviarme el código" → **llegó el código**, se confirmó y se reservó (16:33, `origen = link`).
+- ✅ **Eso confirma el proveedor `turnstile`**, que era lo que faltaba: el pedido lleva un token de Turnstile, y con `hcaptcha` (como estaba el 10/09) Supabase lo habría rechazado. Y es la primera vez que `web/captcha.js` corre en un navegador real.
+- ✅ **De paso, la Prueba 1 de A5 de Joaquín, a medias**: el nombre de quien reservó quedó guardado en `profiles.name` (no "Usuario"). Falta verlo en la tarjeta "espera tu respuesta" de la app.
+- 📌 **La cuenta nacida en la web queda con `email_verified_at` en null** aunque acaba de probar la casilla con un código: la web no llama a `marcar_mail_verificado()`. No rompe nada hoy (esa persona no tiene contraseña; para entrar a la app pasaría por "olvidé mi contraseña", y esa sesión la verifica sola), pero la constancia se pierde. Arreglarlo es una llamada después del `verify` en `web/c/index.html` y `web/sala/index.html`.
+
+**Pendiente para la próxima sesión:**
+- Entrar con mail en el build 20 (la app instalada con el CAPTCHA prendido; la web ya pasó).
+- La sala web (`/sala`) con el CAPTCHA prendido.
+- Terminar la Prueba 1 de A5: la tarjeta del coach de prueba tiene que mostrar el nombre.
+
+---
 ## 2026-09-11 — Andre (sesión 225 cont. · el coach con clientes no encontraba su link)
 
 **Tocado:** `lib/linkCoach.ts` (nuevo), `screens/CoachProfileScreen.tsx`, `screens/CoachHomeScreen.tsx`, `__tests__/linkCoach.test.ts` (nuevo). **585 tests** (+8), `tsc` limpio.

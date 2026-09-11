@@ -8,11 +8,12 @@
 > si el CAPTCHA no hubiera quedado prendido, ese creaba una cuenta basura y
 > mandaba un mail a un dominio inexistente.
 >
-> ⚠️ **Falta confirmar que el proveedor quedó en `turnstile`** (al 10/09 estaba
-> en `hcaptcha`, ver A.3). Un `curl` sin token rebota igual con cualquier
-> proveedor, así que no lo prueba. Lo prueba **entrar con mail en el build 20**:
-> si el proveedor quedó mal, los tokens de Turnstile se rechazan todos y nadie
-> entra con mail.
+> ✅ **Proveedor confirmado: `turnstile`** (11/09/2026). Lo probó el checkout
+> web con el CAPTCHA prendido: `/c/coach-prueba?probar=1` → "Enviarme el código"
+> → **llegó el código y la reserva se creó**. Ese pedido lleva un token de
+> Turnstile; si el proveedor hubiera quedado en `hcaptcha` (como estaba el
+> 10/09), Supabase lo habría rechazado. Queda probado de paso que
+> `web/captcha.js` funciona en un navegador real.
 >
 > 🔴 **Si algo se rompe, se apaga en el dashboard y vuelve todo al instante.**
 >

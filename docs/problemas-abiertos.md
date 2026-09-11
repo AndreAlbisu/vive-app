@@ -134,6 +134,10 @@ arreglo no se volvió a probar.**
    aceptá los Términos, confirmá el código, pagá.
 3. 🔴 **Entrá a la app como coach y mirá la tarjeta "espera tu respuesta":
    tiene que aparecer TU NOMBRE**, no "Alguien". Eso es lo único nuevo a probar.
+   - ✅ **11/09/2026, a medias (Andre)**: reserva desde el link a las 16:33 con
+     el CAPTCHA prendido, y **en la base el nombre quedó guardado** (no
+     "Usuario") — el arreglo de `d1f19296` funciona. La reserva quedó
+     `pendiente`. **Falta mirar la tarjeta en la app como coach de prueba.**
 4. De paso: que la card esté **debajo** de "Tu próxima sesión" (decisión de Andre
    del 09/09), y que al tocar Aceptar desaparezca.
 
