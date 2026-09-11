@@ -16,6 +16,8 @@
 - 🟢 **"Contraseña" en los ajustes de los dos roles** → `NuevaContrasenaScreen` sin link: con sesión abierta va directo al formulario, y al guardar vuelve atrás (no a `/(tabs)`, que haría rebotar a un coach). **Opcional, no forzada**: quien entra con código puede seguir haciéndolo siempre.
 - ⏭️ **La línea en la web ("entrá a la app con este mail") se dejó para el lanzamiento**, a propósito: decirle a quien reservó que use una app que todavía no está en la App Store es prometer algo que no puede bajar — el mismo problema que la página ya tuvo con los mails.
 
+**Probado en el build 20, con el CAPTCHA prendido (11/09):** la cuenta nacida en la web usó "¿Olvidaste tu contraseña?" en la app → link en el mismo iPhone → contraseña nueva. **La cuenta quedó verificada (16:47)** sin pasar por el muro. 📌 Es una deducción, no una observación: al mirar, esa cuenta no tenía **ninguna** sesión en `auth.sessions` (Supabase las borra al cerrar sesión y al cambiar la contraseña), así que no quedó rastro del `amr`. Pero `email_verified_at` solo lo escribe `marcar_mail_verificado()`, que con `amr = password` se niega y que la web no llama: tuvo que ser la sesión `recovery`. Queda probado de paso `resetPasswordForEmail` con token en la app instalada.
+
 **Pendiente para la próxima sesión:**
 - Probar en dispositivo (development build con Metro, o el próximo build): login → "Entrá con un código" con la cuenta nacida en la web → entra, y queda verificada en la base. Y Ajustes → Contraseña → guardar → volver.
 - Al lanzar: la línea en `web/reserva/index.html`.
