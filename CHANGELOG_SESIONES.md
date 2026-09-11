@@ -17,7 +17,9 @@
 - 📌 **La web no necesitaba cambios para mostrar el aviso** (una respuesta OK sin `url` ya caía ahí); solo se le agregó el título para "La sesión terminó". En la app, `getJoinUrl` ahora devuelve el motivo y las dos pantallas lo muestran en vez de "No se pudo preparar la sala, intentalo de nuevo" — que hacía reintentar a quien solo llegó temprano.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **Deployar `create-meeting-room` y pushear, ANTES de la sesión del 12/09 a las 11:00.** Sin eso, quien entre temprano ve a Daily en inglés.
+- ✅ **`create-meeting-room` DEPLOYADA (v31)** el 11/09, con OK de Andre. Verificado que arranca: llamada con la anon key como token → `{"error":"Unauthorized"}` **de la función misma** (no el `UNAUTHORIZED_NO_AUTH_HEADER` del gateway, que corta antes de ejecutar el código). La rama de fuera de horario solo se puede ejercitar con una sesión real.
+- 📌 **La web publicada ya muestra el aviso con la función nueva, sin push**: una respuesta OK sin `url` ya caía en "Todavía no es la hora". El push suma el título "La sesión terminó".
+- 🔴 **Pushear** (web: título para la sesión terminada).
 - Probar: entrar al link de la sala antes de las 10:45 → "Todavía no es la hora" + "La sala se abre el 12/9 a las 10:45". Y a las 11:00, la videollamada con las dos puntas (Prueba 2 de A5).
 - La app (build 20) con la función nueva: fuera de horario, `getJoinUrl` devuelve `null` → "No se pudo preparar la sala". No rompe; el aviso bueno llega con el próximo build.
 
