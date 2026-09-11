@@ -58,6 +58,17 @@ const dailyHeaders = {
  * entra. Se consulta antes de crear porque el caso normal es que la sala ya
  * exista: se crea al confirmar la reserva, y se entra después.
  */
+/** "12/9 a las 10:45", en hora de Argentina. Las edge functions corren en
+ *  UTC: sin la zona explícita el aviso diría tres horas menos. */
+function fechaHoraAR(segundos: number): string {
+  const partes = new Intl.DateTimeFormat('es-AR', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date(segundos * 1000))
+  const p = (t: string) => partes.find(x => x.type === t)?.value ?? ''
+  return `${p('day')}/${p('month')} a las ${p('hour')}:${p('minute')}`
+}
+
 async function ensureRoom(roomName: string, nbf: number, exp: number): Promise<string> {
   const get = await fetch(`${DAILY_API}/rooms/${encodeURIComponent(roomName)}`, {
     headers: dailyHeaders,
@@ -220,6 +231,31 @@ serve(async (req) => {
         .from('bookings')
         .update({ meeting_url: roomUrl })
         .eq('id', booking_id)
+    }
+
+    // ── Fuera de horario: la sala existe, la entrada todavía (o ya) no ────────
+    //
+    // 🔴 Antes se devolvía el link de entrada a cualquier hora, y quien llegaba
+    // antes de tiempo caía en la pantalla de Daily: "This meeting is not
+    // available yet", en inglés, sin decir cuándo abre (encontrado el 11/09 en
+    // `/sala`, un día antes de la sesión). La web tenía preparado un aviso
+    // propio para esto que nunca se mostraba, porque el servidor nunca lo pedía.
+    //
+    // ⚠️ 200 y NO 422, a propósito. `ensureMeetingRoom` (se llama al confirmar
+    // la reserva, días antes) usa `functions.invoke`, que trata todo lo que no
+    // es 2xx como error: con un 422 la reserva dejaría de dejar la sala creada.
+    // Por eso la sala se crea igual y se devuelve `room_url`; lo único que falta
+    // es `url` —el link con token— y en su lugar va el aviso.
+    const ahoraS = Math.floor(Date.now() / 1000)
+    if (ahoraS < nbf || ahoraS > exp) {
+      const estado = ahoraS < nbf ? 'temprano' : 'terminada'
+      const aviso = estado === 'temprano'
+        ? `La sala se abre el ${fechaHoraAR(nbf)}.`
+        : 'Esta sesión ya terminó.'
+      return new Response(
+        JSON.stringify({ room_url: roomUrl, fuera_de_horario: true, estado, error: aviso }),
+        { headers: { ...cors, 'Content-Type': 'application/json' } }
+      )
     }
 
     // El nombre que ve la otra persona en la llamada. Si el perfil no tiene

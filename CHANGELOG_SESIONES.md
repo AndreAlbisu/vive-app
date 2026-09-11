@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-11 — Andre (sesión 225 cont. 4 · la sala web pasa con el CAPTCHA, y quien llegaba temprano veía a Daily en inglés)
+
+**Tocado:** `supabase/functions/create-meeting-room/index.ts`, `lib/meetingRoom.ts`, `screens/SessionsScreen.tsx`, `screens/SalaScreen.tsx`, `web/sala/index.html`. **585 tests**, `tsc` limpio; la función y la web, solo chequeo de sintaxis (no hay Deno). ⚠️ **Función sin deployar, web sin pushear.**
+
+**Resumen**
+
+- ✅ **La sala web pasa con el CAPTCHA prendido**: `/sala?booking=…` → mail → **llegó el código**. Con esto está probado todo lo que pide token: la app instalada (alta, login, recuperación, reenvío) y las dos páginas web.
+- 🐛 **Pero después del código apareció la pantalla de Daily: "This meeting is not available yet"**, en inglés y sin decir cuándo abre (la sesión es el 12/09 11:00). `create-meeting-room` devolvía el link de entrada **a cualquier hora**, y era el `nbf` de Daily el que frenaba. La web tenía un aviso propio para esto ("Todavía no es la hora") **que no se mostraba nunca**: esperaba que el servidor lo pidiera, y el servidor solo devolvía 422 con la fecha ilegible.
+- 🟢 **Fuera de horario la función devuelve la sala sin la entrada**: `room_url`, `fuera_de_horario`, `estado` (`temprano`/`terminada`) y el aviso ("La sala se abre el 12/9 a las 10:45", en hora de Argentina).
+- ⚠️ **200 y NO 422, a propósito**: `ensureMeetingRoom` se llama al confirmar la reserva (días antes) con `functions.invoke`, que trata todo lo no-2xx como error. Con un 422, la reserva dejaba de dejar la sala creada.
+- 📌 **La web no necesitaba cambios para mostrar el aviso** (una respuesta OK sin `url` ya caía ahí); solo se le agregó el título para "La sesión terminó". En la app, `getJoinUrl` ahora devuelve el motivo y las dos pantallas lo muestran en vez de "No se pudo preparar la sala, intentalo de nuevo" — que hacía reintentar a quien solo llegó temprano.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Deployar `create-meeting-room` y pushear, ANTES de la sesión del 12/09 a las 11:00.** Sin eso, quien entre temprano ve a Daily en inglés.
+- Probar: entrar al link de la sala antes de las 10:45 → "Todavía no es la hora" + "La sala se abre el 12/9 a las 10:45". Y a las 11:00, la videollamada con las dos puntas (Prueba 2 de A5).
+- La app (build 20) con la función nueva: fuera de horario, `getJoinUrl` devuelve `null` → "No se pudo preparar la sala". No rompe; el aviso bueno llega con el próximo build.
+
+---
 ## 2026-09-11 — Andre (sesión 225 cont. 3 · quien reservó por la web no tenía cómo entrar a la app)
 
 **Tocado:** `screens/LoginScreen.tsx`, `screens/VerificarMailScreen.tsx`, `screens/NuevaContrasenaScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/CoachSettingsScreen.tsx`. **585 tests**, `tsc` limpio. ⚠️ No está en el build 20: sale en el próximo (es solo JS).

@@ -71,9 +71,9 @@
   </div>
 
   <div id="temprano" hidden>
-    <h1>Todavía no es la hora</h1>
+    <h1 id="tempranoTitulo">Todavía no es la hora</h1>
     <p id="tempranoDetalle"></p>
-    <p class="ayuda">La sala se abre <b>15 minutos antes</b>. Volvé a entrar con este mismo link.</p>
+    <p class="ayuda" id="tempranoAyuda">La sala se abre <b>15 minutos antes</b>. Volvé a entrar con este mismo link.</p>
   </div>
 
   <div id="problema" hidden>
@@ -153,7 +153,12 @@ async function intentarEntrar() {
   if (r.status === 404) {
     return problema('No encontramos esta sesión', 'Puede que el enlace esté incompleto.');
   }
-  // 422: la fecha no es válida o la ventana todavía no abrió.
+  // 🔴 Fuera de horario llega con 200 y SIN `url` (ver `create-meeting-room`):
+  // hasta el 11/09 la función devolvía el link a cualquier hora, y quien llegaba
+  // temprano caía en la pantalla de Daily en inglés. Y 422 = fecha ilegible.
+  const terminada = cuerpo?.estado === 'terminada';
+  $('tempranoTitulo').textContent = terminada ? 'La sesión terminó' : 'Todavía no es la hora';
+  $('tempranoAyuda').hidden = terminada;
   ocultar('cargando');
   $('tempranoDetalle').textContent = cuerpo?.error
     ? String(cuerpo.error)
