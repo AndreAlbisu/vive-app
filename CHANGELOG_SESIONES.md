@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-11 — Andre (sesión 225 cont. · el coach con clientes no encontraba su link)
+
+**Tocado:** `lib/linkCoach.ts` (nuevo), `screens/CoachProfileScreen.tsx`, `screens/CoachHomeScreen.tsx`, `__tests__/linkCoach.test.ts` (nuevo). **585 tests** (+8), `tsc` limpio.
+
+**Resumen — apareció al buscar el link para probar el checkout web con el CAPTCHA prendido.**
+
+- 🔴 **El link público (`/c/<slug>`) estaba en UN solo lugar**: la tarjeta "Traé a tus primeros clientes" del Inicio, que se muestra **solo si el coach nunca tuvo una reserva** (`esCoachNuevo`). Con la primera reserva se iba, y el link no aparecía en ningún otro lado. **Justo el coach que ya tiene clientes —el que más lo va a querer compartir— se quedaba sin forma de encontrarlo.** La cuenta de coach de Andre (slug `andre`, 2 reservas) estaba en ese caso.
+- 🟢 **Ahora está fijo en el Perfil**, primero del grupo "Tu perfil público": el link + "Compartir mi link". La tarjeta del Inicio para coaches nuevos queda como estaba.
+- 📌 **Tres estados, y el de la pausa es nuevo**: aprobado y activo (link + compartir), aprobado y **en pausa** (se ve el link pero sin botón, con la explicación: la página pública no lo muestra mientras tanto), sin aprobar (todavía no hay link). El Inicio escondía el link entero en pausa; en el Perfil se muestra porque es del coach aunque hoy no se pueda repartir.
+- 📌 **`lib/linkCoach.ts`**: el link, cuándo es compartible y el mensaje salen de un solo lugar, con tests. Antes la regla (aprobado Y activo, los dos filtros de `web/c/index.html`) y el texto vivían sueltos en el Inicio.
+
+**Pendiente para la próxima sesión:**
+- Verlo en dispositivo: Perfil → "Tu link", y que "Compartir mi link" abra la hoja de compartir con el mensaje.
+- Sigue lo de la entrada de abajo: probar el checkout web (`vitaapp.com.ar/c/andre`) y la sala web con el CAPTCHA prendido, y entrar con mail en el build 20 para confirmar el proveedor.
+
+---
 ## 2026-09-11 — Andre (sesión 225 · el CAPTCHA queda PRENDIDO)
 
 **Tocado:** `docs/anti-abuso-altas.md`, `CHANGELOG_SESIONES.md`. En producción: CAPTCHA de Supabase **prendido**, por Andre desde el dashboard. Ningún cambio de código.

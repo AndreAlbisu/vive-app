@@ -17,6 +17,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase, registrarEvento } from '@/lib/supabase';
+import { SITIO_WEB, linkCompartible, linkDelCoach, mensajeParaCompartir } from '@/lib/linkCoach';
 import { useAuth } from '@/context/AuthContext';
 import { personasQueSeCaen, haceCuanto, type PersonaEnRiesgo } from '@/lib/coachContinuity';
 import { mensajeDePropuesta } from '@/lib/coachPropose';
@@ -80,7 +81,6 @@ const GREEN_EYEBROW = '#C9CFAF';
 
 /** El sitio público. Vive acá y no en `.env` porque es una constante del
  *  producto, no de configuración: cambiarlo rompería los links ya compartidos. */
-const SITIO_WEB = 'https://vitaapp.com.ar';
 
 const WEEK_ABBRS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -284,11 +284,7 @@ export default function CoachHomeScreen() {
     // ⚠️ Solo si está aprobado Y activo: son los dos filtros que aplica la
     // página pública. Con cualquiera de los dos en falso el link muestra "no
     // encontramos este perfil", y mandarlo a repartir eso es peor que no darlo.
-    setLinkPublico(
-      coachRow?.verified && coachRow?.availability_status === 'activo' && coachRow?.slug
-        ? `${SITIO_WEB}/c/${coachRow.slug}`
-        : null,
-    );
+    setLinkPublico(coachRow && linkCompartible(coachRow) ? linkDelCoach(coachRow) : null);
 
     const perfilCompletoNow = !!profile?.avatar_url && !!coachRow?.bio?.trim() && !!coachRow?.specialty?.trim();
     setPrepPerfil(prev => {
@@ -951,11 +947,7 @@ export default function CoachHomeScreen() {
                     <TouchableOpacity
                       style={s.traerBtn}
                       activeOpacity={0.85}
-                      onPress={() => Share.share({
-                        // El texto va escrito para que el coach lo mande TAL CUAL.
-                        // Si tiene que redactarlo él, no lo manda.
-                        message: `Hola! Ahora podés reservar y pagar nuestras sesiones acá: ${linkPublico}\nElegís el horario que te quede bien y listo.`,
-                      }).catch(() => {})}>
+                      onPress={() => Share.share({ message: mensajeParaCompartir(linkPublico) }).catch(() => {})}>
                       <Feather name="share-2" size={14} color="#F3EEDF" />
                       <Text style={s.traerBtnTxt}>Compartir mi link</Text>
                     </TouchableOpacity>
