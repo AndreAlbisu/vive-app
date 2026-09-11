@@ -18,6 +18,10 @@
 
 **Probado en el build 20, con el CAPTCHA prendido (11/09):** la cuenta nacida en la web usó "¿Olvidaste tu contraseña?" en la app → link en el mismo iPhone → contraseña nueva. **La cuenta quedó verificada (16:47)** sin pasar por el muro. 📌 Es una deducción, no una observación: al mirar, esa cuenta no tenía **ninguna** sesión en `auth.sessions` (Supabase las borra al cerrar sesión y al cambiar la contraseña), así que no quedó rastro del `amr`. Pero `email_verified_at` solo lo escribe `marcar_mail_verificado()`, que con `amr = password` se niega y que la web no llama: tuvo que ser la sesión `recovery`. Queda probado de paso `resetPasswordForEmail` con token en la app instalada.
 
+**Y el login con contraseña, también en el build 20 con el CAPTCHA prendido (11/09):** el coach de prueba entró con mail + contraseña a las 16:50 (`amr = password` en su sesión) y **aceptó la reserva** que había entrado por el link: quedó `confirmada`, `payment_status = aprobado` (se pagó el $1) y con sala creada. Con esto, **de la app instalada está probado todo lo que pide token**: alta, login, recuperación y reenvío de código. Falta solo la sala web.
+
+📌 **Hay una sesión real para el 12/09 a las 11:00** (coach de prueba ↔ la cuenta nacida en la web). Es la primera oportunidad de ejercitar la videollamada —la Prueba 2 de A5, planeada para el 18/09— casi una semana antes.
+
 **Pendiente para la próxima sesión:**
 - Probar en dispositivo (development build con Metro, o el próximo build): login → "Entrá con un código" con la cuenta nacida en la web → entra, y queda verificada en la base. Y Ajustes → Contraseña → guardar → volver.
 - Al lanzar: la línea en `web/reserva/index.html`.
