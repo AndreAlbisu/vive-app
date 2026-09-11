@@ -1218,11 +1218,15 @@ que MP acepte un `0`, que nunca se probó).
 - Un cliente que ya tuvo una sesión cumplida por la app no es "nuevo": va al 15%.
 - Las reservas sin `origen` (todas las viejas) no cambian.
 
-**⚠️ Pendiente, de Andre: los T&C.** La cláusula 8.3 dice "**20%** sobre la
-primera Sesión completada de cada vínculo". El 0% favorece al Profesional y 8.3
-admite "promociones", pero esta no es por tiempo limitado. Actualizar 8.3 cambia
-`LEGAL_VERSION` (el hash que se guarda en cada aceptación), así que no se tocó.
+**✅ T&C actualizados (11/09, decisión de Andre).** 8.3 suma la excepción: la
+primera Sesión de un vínculo que llega por el enlace del Profesional no tiene
+comisión. `LEGAL_VERSION` pasó a `c5c287eb06d7`. Sin consecuencias hoy: los T&C
+son un borrador sin publicar, y la versión solo se guarda al registrarse — no hay
+nada que les vuelva a pedir la aceptación a los usuarios. Entra en la revisión
+legal con el resto.
 
-**⚠️ Pendiente: que el coach lo sepa.** Un incentivo que no se comunica no
-incentiva. La tarjeta "Traé a tus primeros clientes" del Inicio y "Tu link" del
-Perfil son los lugares naturales.
+**✅ El coach lo sabe (11/09).** Está en los tres lugares donde se decide traer a
+alguien: la tarjeta "Traé a tus primeros clientes" del Inicio, la sección "Tu
+link" del Perfil, y la explicación de la comisión del Perfil ("te cobramos por
+presentarte a alguien nuevo… por eso, si la persona llega por tu link, la primera
+sesión no paga comisión").

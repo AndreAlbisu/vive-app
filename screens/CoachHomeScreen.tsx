@@ -941,7 +941,9 @@ export default function CoachHomeScreen() {
                     <Text style={s.traerTitulo}>Traé a tus primeros clientes</Text>
                     <Text style={s.traerTxt}>
                       Mandales tu link a las personas que ya atendés. Reservan y te pagan desde ahí,
-                      sin instalar nada.
+                      sin instalar nada. {/* D13: sin esta línea el incentivo no existe — nadie
+                      trae clientes por un beneficio que no sabe que tiene. */}
+                      <Text style={s.traerTxtFuerte}>La primera sesión de cada una no paga comisión.</Text>
                     </Text>
                     <Text style={s.traerLink} numberOfLines={1}>{linkPublico.replace('https://', '')}</Text>
                     <TouchableOpacity
@@ -1363,6 +1365,7 @@ const s = StyleSheet.create({
   },
   traerTitulo: { fontFamily: ViveFonts.semibold, fontSize: 15, color: FOREST, marginBottom: 4 },
   traerTxt: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: FOREST_SOFT },
+  traerTxtFuerte: { fontFamily: ViveFonts.semibold, color: FOREST },
   // ⚠️ `FOREST` y no `TERRA`: el link es TEXTO QUE HAY QUE LEER —el coach lo va
   // a mirar para reconocerlo— y la terracota sobre este crema da 2.99:1. Con el
   // verde da 6.5:1. La terracota queda para lo que se toca, no para lo que se

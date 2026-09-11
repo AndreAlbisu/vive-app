@@ -86,6 +86,10 @@ function TuLink({ coach }: { coach: CoachProfile }) {
   return (
     <>
       <Text style={s.linkTxt} numberOfLines={1}>{link.replace('https://', '')}</Text>
+      {/* D13: el beneficio va al lado del link, que es donde se decide mandarlo. */}
+      <Text style={[s.linkNota, s.linkBeneficio]}>
+        La primera sesión de cada persona que llegue por tu link no paga comisión.
+      </Text>
       {linkCompartible(coach) ? (
         <TouchableOpacity
           style={s.linkBtn}
@@ -998,7 +1002,8 @@ export default function CoachProfileScreen() {
             <Text style={s.commissionStrong}>20%</Text> en la primera sesión con cada persona y{' '}
             <Text style={s.commissionStrong}>15%</Text> de la segunda en adelante. Te cobramos por
             presentarte a alguien nuevo, no por la relación que construís después: el contador es por
-            persona y nunca se reinicia.
+            persona y nunca se reinicia. Por eso, si la persona llega por{' '}
+            <Text style={s.commissionStrong}>tu link</Text>, la primera sesión no paga comisión.
           </Text>
         </View>
 
@@ -1417,6 +1422,7 @@ const s = StyleSheet.create({
   },
   linkBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#F3EEDF' },
   linkNota: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: '#6B7A56' },
+  linkBeneficio: { marginTop: 10 },
 
   // Encabezado de GRUPO — un nivel por encima de `sectionTitle`. Existe porque
   // esta pantalla es un scroll largo con doce secciones, y sin jerarquía todas

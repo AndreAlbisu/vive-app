@@ -19,7 +19,7 @@
 **Pendiente para la próxima sesión:**
 - ✅ **DEPLOYADAS el 11/09 a las 17:10**, con OK de Andre: `mp-create-payment` v50, `paypal-create-payment` v22, `usdt-create-payment` v27. Verificado que las tres arrancan (con la anon key como token responden `{"error":"Unauthorized"}` de la función misma, no del gateway). La regla en sí se prueba con una reserva real.
 - Probar: una reserva nueva por `/c/coach-prueba?probar=1` con un cliente nuevo → `platform_fee_pct = 0` y el pago de MP sin comisión en `fee_details`.
-- Decidir (Andre): la redacción de 8.3 de los T&C, y cómo se le cuenta al coach.
+- ✅ **Las dos, aplicadas (decisión de Andre)**: 8.3 de los T&C suma la excepción del link (`LEGAL_VERSION` → `c5c287eb06d7`; sin consecuencias hoy, son un borrador sin publicar y nada pide re-aceptar), y el beneficio aparece en la tarjeta "Traé a tus primeros clientes", en "Tu link" y en la explicación de la comisión del Perfil. Sale en el próximo build; la página web de los T&C, con el push.
 
 ---
 ## 2026-09-11 — Andre (sesión 225 cont. 4 · la sala web pasa con el CAPTCHA, y quien llegaba temprano veía a Daily en inglés)
