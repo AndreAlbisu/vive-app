@@ -130,10 +130,15 @@ export default function VerificarMailScreen() {
   const cual = (Array.isArray(modo) ? modo[0] : modo) ?? 'alta';
   const esGate = cual === 'gate';
   const esAltaCoach = cual === 'alta';
+  /** Entrar a la app con un código, SIN sesión. Es la puerta de quien reservó
+   *  desde la web: esa cuenta nace de un código y no tiene contraseña, y la app
+   *  solo dejaba entrar con contraseña, Google o Apple. Se llega desde el login. */
+  const esEntrar = cual === 'entrar';
   /** Los dos muros (alta de coach y alta de usuario) comparten todo el
    *  comportamiento de salida: irse sin confirmar cierra la sesión. Lo único
-   *  que los separa es a dónde va quien confirma. */
-  const esMuro = !esGate;
+   *  que los separa es a dónde va quien confirma. `entrar` y `gate` no son
+   *  muros: en uno no hay sesión que cerrar, y en el otro es legítima. */
+  const esMuro = esAltaCoach || cual === 'usuario';
   const { user, role, marcarMailVerificado } = useAuth();
 
   const mail = (Array.isArray(email) ? email[0] : email) ?? user?.email ?? '';
@@ -166,7 +171,7 @@ export default function VerificarMailScreen() {
    * es literalmente volver a lo que la persona estaba haciendo.
    */
   function volver() {
-    if (esGate) { router.back(); return; }
+    if (esGate || esEntrar) { router.back(); return; }
     if (cancelando) return;   // ya está en curso, no reencolar
     setCancelando(true);
     void cancelar().then(() => router.replace('/onboarding-bifurcacion'));
@@ -226,6 +231,15 @@ export default function VerificarMailScreen() {
       // fue el link de recuperación de contraseña, no hay ningún código en
       // camino, y la persona se quedaba esperando uno que nunca se mandó. Se
       // dice lo que pasó y cuándo puede pedirlo.
+      // 🔒 En `entrar`, "no hay cuenta con ese mail" NO se dice. El login ya
+      // decidió no revelar qué direcciones están registradas (`handleForgot` en
+      // LoginScreen): decirlo acá convertiría esta pantalla en el verificador
+      // que allá se evitó. Se sigue como si se hubiera mandado — el texto de
+      // arriba ya dice "si hay una cuenta con ese mail".
+      if (esEntrar && /signups not allowed|not found/i.test(`${e.message ?? ''} ${cuerpo}`)) {
+        setEspera(ESPERA_REENVIO);
+        return;
+      }
       if (inicial && e.status === 429) {
         setEspera(ESPERA_REENVIO);
         setAviso('Hace un momento te mandamos otro mail, así que hay que esperar un minuto. Si no te llega un código, tocá "Reenviar código" cuando termine la cuenta');
@@ -291,6 +305,9 @@ export default function VerificarMailScreen() {
     // del usuario a la app, y el gate a lo que la persona estaba haciendo
     // (reservar), que es donde quedó el hilo.
     if (esAltaCoach) router.replace('/coach-application');
+    // Sin sesión previa, el rol todavía no se conoce en este instante: `/`
+    // espera a que cargue y manda a cada uno a lo suyo (`app/index.tsx`).
+    else if (esEntrar) router.replace('/' as any);
     // 🔴 Se mira el rol y no se manda derecho a `/(tabs)`: por este muro pasa
     // también un coach ya aprobado que nunca verificó, y `AuthRedirect` lo
     // rebotaría de tabs a `/(coach)` — se corrige solo, pero con un parpadeo.
@@ -312,12 +329,14 @@ export default function VerificarMailScreen() {
             </Animated.View>
 
             <Animated.View style={[s.headingArea, fadeUp(anim)]}>
-              <Text style={s.heading}>Confirmá tu mail</Text>
+              <Text style={s.heading}>{esEntrar ? 'Entrá con un código' : 'Confirmá tu mail'}</Text>
               <Text style={s.subheading}>
                 {/* Sin decir cuántos dígitos: lo decide un ajuste del panel y
                     prometer un número que después no coincide es peor que no
                     decirlo. El código viene en el mail y en su asunto. */}
-                {esGate
+                {esEntrar
+                  ? 'Si hay una cuenta con ese mail, te mandamos un código a'
+                  : esGate
                   ? 'Antes de reservar necesitamos confirmar tu mail. Te mandamos un código a'
                   : esAltaCoach
                     ? 'Te mandamos un código a'
@@ -386,7 +405,7 @@ export default function VerificarMailScreen() {
                     <Text style={s.footerLink}>Cancelando…</Text>
                   </View>
                 ) : (
-                  <Text style={s.footerLink}>{esGate ? 'Ahora no' : 'Cancelar'}</Text>
+                  <Text style={s.footerLink}>{esGate ? 'Ahora no' : esEntrar ? 'Volver' : 'Cancelar'}</Text>
                 )}
               </TouchableOpacity>
             </View>

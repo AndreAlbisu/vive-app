@@ -197,6 +197,9 @@ export default function ProfileOwnScreen() {
     // espera a cumplirla. Tiene que haber siempre un camino estable hasta acá.
     { id: 'ayuda', icon: 'lifebuoy', label: 'Si necesitás ayuda ahora', onPress: () => router.push('/ayuda') },
     { id: 'blocked', icon: 'account-cancel-outline', label: 'Cuentas bloqueadas', onPress: () => router.push('/cuentas-bloqueadas') },
+    // Crear o cambiar la contraseña. Sobre todo para quien entró con un código
+    // (la cuenta nacida en la web no tiene), pero sirve para cualquiera.
+    { id: 'password', icon: 'key-outline', label: 'Contraseña', onPress: () => router.push('/nueva-contrasena' as any) },
     // Solo visible para admins. Ocultarlo no es la protección — `admin-actions`
     // revalida contra el JWT en cada escritura — pero no tiene sentido mostrarle
     // a nadie una puerta que no puede abrir.

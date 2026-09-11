@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-11 — Andre (sesión 225 cont. 3 · quien reservó por la web no tenía cómo entrar a la app)
+
+**Tocado:** `screens/LoginScreen.tsx`, `screens/VerificarMailScreen.tsx`, `screens/NuevaContrasenaScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/CoachSettingsScreen.tsx`. **585 tests**, `tsc` limpio. ⚠️ No está en el build 20: sale en el próximo (es solo JS).
+
+**Resumen — apareció al querer entrar a la app con la cuenta recién creada en el checkout web.**
+
+- 🔴 **El hueco**: la cuenta que nace en la web (por código) **no tiene contraseña**, y la app solo dejaba entrar con mail + contraseña, Google o Apple. La única salida era "¿Olvidaste tu contraseña?" por una contraseña que la persona nunca puso. Le iba a pasar a **todo cliente que llega por el link de un coach**.
+- 🟢 **"¿No tenés contraseña? Entrá con un código"** en el login. Es un **cuarto modo de `VerificarMailScreen`** (`entrar`, sin sesión), así que reusa el envío, el CAPTCHA, la cuenta regresiva y el marcado de la verificación — que sale solo, porque esa sesión se abre con código (`amr = otp`). Al entrar va a `/`, que manda a cada rol a lo suyo.
+- 🔒 **En `entrar` no se dice "no hay cuenta con ese mail"**: el login ya había decidido no revelar qué direcciones están registradas (`handleForgot`). La pantalla dice "si hay una cuenta con ese mail, te mandamos un código" y sigue igual.
+- 🟢 **"Contraseña" en los ajustes de los dos roles** → `NuevaContrasenaScreen` sin link: con sesión abierta va directo al formulario, y al guardar vuelve atrás (no a `/(tabs)`, que haría rebotar a un coach). **Opcional, no forzada**: quien entra con código puede seguir haciéndolo siempre.
+- ⏭️ **La línea en la web ("entrá a la app con este mail") se dejó para el lanzamiento**, a propósito: decirle a quien reservó que use una app que todavía no está en la App Store es prometer algo que no puede bajar — el mismo problema que la página ya tuvo con los mails.
+
+**Pendiente para la próxima sesión:**
+- Probar en dispositivo (development build con Metro, o el próximo build): login → "Entrá con un código" con la cuenta nacida en la web → entra, y queda verificada en la base. Y Ajustes → Contraseña → guardar → volver.
+- Al lanzar: la línea en `web/reserva/index.html`.
+
+---
 ## 2026-09-11 — Andre (sesión 225 cont. 2 · el checkout web pasa con el CAPTCHA prendido)
 
 **Tocado:** `docs/anti-abuso-altas.md`, `docs/problemas-abiertos.md`. Ningún cambio de código.
