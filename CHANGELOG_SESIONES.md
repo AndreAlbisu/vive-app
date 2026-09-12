@@ -118,6 +118,25 @@
 - Sigue lo de la entrada de abajo: probar el checkout web (`vitaapp.com.ar/c/andre`) y la sala web con el CAPTCHA prendido, y entrar con mail en el build 20 para confirmar el proveedor.
 
 ---
+## 2026-09-12 — Andre (sesión 226 cont. · empezar a MIRAR la fuga, sin castigar a nadie)
+
+**Tocado:** `scripts/diagnostico-fuga.sql` (nuevo), `screens/SalaScreen.tsx`. **596 tests**, `tsc` y `eslint` limpios.
+
+**Resumen — Andre quiere un algoritmo que penalice a los coaches que sacan las sesiones de la app. La respuesta fue: hoy no se puede, y estas son las dos cosas que hay que hacer para poder.**
+
+- 🔴 **No hay muestra.** 12 coaches con al menos una sesión completada y **UNO SOLO con 5 o más**, que es el piso que el propio deck exige para que `rebooking_rate` cuente. Un algoritmo con eso castiga ruido: a un coach con 3 clientes, que uno se mude lo manda de 33% a 0%.
+- 🔴 **Y `rebooking_rate` mide otra cosa.** Baja por cuatro motivos: el que se lleva la gente afuera, el que atiende consultas únicas, **el que atiende gente que se cura** —el mejor resultado posible— y el que es malo (ya penalizado por reseñas). Un número, cuatro causas.
+- 📌 **La firma de la fuga es más específica**: un cliente que **Vita le presentó**, que dejó de reservar, **y** con el que hubo intercambio de contacto. Las tres juntas.
+- 🟢 **`scripts/diagnostico-fuga.sql`**: consulta de solo lectura (no crea vista ni tabla) que arma las dos primeras señales. Usa **el mismo criterio de "se cae" que ya ve el coach** (`lib/coachContinuity.ts`: 21 días si hubo una sola sesión, el doble de la cadencia con piso de 14, techo de 120) para no inventar un segundo criterio que después no coincida con su pantalla. Y **no cuenta como fuga al cliente que trajo el coach por su link** (`origen`): nunca fue de Vita.
+- 🐛 **El evento `mensaje_contacto_detectado` no servía para esto**: guardaba `role` y `sent_anyway` y nada más, así que se sabía cuántas veces pasaba pero **nunca entre quiénes**. Ahora lleva el par (coach, usuario, sala). Van ids, no el texto del mensaje: alcanza para cruzar y no mete contenido privado en una tabla de métricas. **Al 12/09 ese evento nunca se disparó: 0 filas.**
+- 📌 **Primera corrida**: solo dos coaches con caídos (`martin-fuentes` 1, de Vita, 57 días; `andre`, 84 de promedio). Confirma que el SQL anda y que la señal todavía no existe.
+
+**Pendiente para la próxima sesión:**
+- ⏸️ **El algoritmo, deliberadamente NO construido.** Retomar cuando haya 30-40 coaches con muestra y el evento de contacto tenga filas. 📌 Y si se construye: **no un castigo en el ranking** —el deck v3 sacó el podio a propósito, los slots son pisos y el que se muestra sale sorteado—, sino **dejar de regalar lo que Vita da gratis**: que el coach con señales fuertes salga del pool de "Recomendado por Vita" y del de clientes nuevos. Proporcional y explicable en una línea.
+- 🔴 **Transparencia primero (pedido de Andre, y tiene razón).** Si esto se hace, va antes en los T&C y en la pantalla de visibilidad del coach, con su regla de escritura: *"siempre un número concreto y alcanzable, nunca una posición relativa"*. Un castigo que el coach descubre por sus resultados es indistinguible de un algoritmo arbitrario.
+- 📌 Mientras tanto, la palanca que más sirve no es el castigo: que re-reservar adentro sea más fácil que una transferencia (medida anti-fuga #1, ya construida).
+
+---
 ## 2026-09-12 — Andre (sesión 226 · el onboarding: se va la segunda pregunta, y las guías se prenden para todos)
 
 **Tocado:** `screens/OnboardingScreen2.tsx`, `app/(tabs)/conexiones.tsx`, `lib/guiaContextual.ts`, `lib/onboardingRespuestas.ts`, `hooks/useRecommendedResource.ts`, `__tests__/guiaContextual.test.ts`. **596 tests**, `tsc` y `eslint` limpios. Sin probar en dispositivo.

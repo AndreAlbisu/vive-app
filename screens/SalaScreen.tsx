@@ -851,15 +851,31 @@ export default function SalaScreen() {
     // desenlace para medir cuánto pasa y si la advertencia disuade.
     if (hasContactInfo(text)) {
       const role = isCurrentUserCoach ? 'coach' : 'user';
+      // 🔴 El PAR, no solo el rol (12/09/2026). Hasta hoy el evento guardaba
+      // `role` y `sent_anyway` y nada más, así que se podía saber CUÁNTAS veces
+      // pasaba pero nunca ENTRE QUIÉNES — y sin eso no se puede distinguir un
+      // cliente que se fue por afuera de uno que simplemente dejó de venir, que
+      // es la única distinción que importa para la fuga. Ver
+      // `scripts/diagnostico-fuga.sql`.
+      //
+      // ⚠️ Van los ids del PAR y del chat, no el texto del mensaje: alcanza para
+      // cruzar con las reservas y no mete contenido de una conversación privada
+      // en una tabla de métricas.
+      const par = {
+        role,
+        sala_id: salaId ?? null,
+        coach_id: isCurrentUserCoach ? user?.id ?? null : recipientId,
+        user_id:  isCurrentUserCoach ? recipientId : user?.id ?? null,
+      };
       Alert.alert(
         '¿Compartir datos de contacto?',
         'Por tu seguridad, mantené la conversación y los pagos dentro de VIVE. Si arreglás por fuera, perdés las protecciones de la app.',
         [
-          { text: 'Cancelar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { role, sent_anyway: false }) },
+          { text: 'Cancelar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: false }) },
           {
             text: 'Enviar igual',
             style: 'destructive',
-            onPress: () => { registrarEvento('mensaje_contacto_detectado', { role, sent_anyway: true }); doSendMessage(text); },
+            onPress: () => { registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: true }); doSendMessage(text); },
           },
         ],
       );
