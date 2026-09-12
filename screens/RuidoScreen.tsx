@@ -22,11 +22,15 @@ const CREAM_LIGHT = '#F3EEDF';
 const TERRACOTTA  = '#C1694F';
 const GLASS_BG    = 'rgba(255,248,240,0.55)';
 
+// `desc` = para qué sirve cada uno, en una línea. Se muestra como caption del
+// sonido elegido (no en cada tarjeta, que las amontona). El `id` 'blanco' NO
+// cambia —mapea al archivo de audio y a la analítica—; solo cambia el label:
+// "Ruido marrón" no le decía nada a nadie ("suena a algo roto"), "Ruido parejo" sí.
 const SOUNDS = [
-  { id: 'lluvia',   icon: 'weather-rainy' as const,   label: 'Lluvia suave',  bg: PASTEL_AZUL },
-  { id: 'bosque',   icon: 'tree-outline' as const,    label: 'Bosque',        bg: PASTEL_SALVIA },
-  { id: 'olas',     icon: 'waves' as const,            label: 'Olas del mar',  bg: PASTEL_TEAL },
-  { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido marrón',  bg: PASTEL_DURAZNO },
+  { id: 'lluvia',   icon: 'weather-rainy' as const,   label: 'Lluvia suave',  desc: 'De fondo para aflojar, leer o dormir.',         bg: PASTEL_AZUL },
+  { id: 'bosque',   icon: 'tree-outline' as const,    label: 'Bosque',        desc: 'Para cortar con el ruido del día.',             bg: PASTEL_SALVIA },
+  { id: 'olas',     icon: 'waves' as const,            label: 'Olas del mar',  desc: 'Un ritmo lento, para desacelerar.',             bg: PASTEL_TEAL },
+  { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido parejo',  desc: 'Tapa lo de afuera para concentrarte o dormir.', bg: PASTEL_DURAZNO },
 ];
 
 // Grabaciones reales con licencia CC0 (freesound.org), recortadas a 90s
@@ -183,6 +187,9 @@ export default function RuidoScreen() {
             <MaterialCommunityIcons name="check-circle-outline" size={72} color={TERRACOTTA} />
             <Text style={s.subtitle}>Tiempo completado</Text>
             <Text style={s.description}>{formatTime(duration)} de descanso.</Text>
+            <Text style={s.doneCoach}>
+              ¿Alguno te ayuda a arrancar o a dormir? Contáselo a tu coach — puede armarte una rutina.
+            </Text>
             <ScaleCard style={s.primaryBtn} onPress={() => setPhase('idle')} activeOpacity={0.85}>
               <Text style={s.primaryBtnText}>Volver</Text>
             </ScaleCard>
@@ -219,6 +226,9 @@ export default function RuidoScreen() {
                 );
               })}
             </View>
+
+            {/* Para qué sirve el sonido elegido — una línea que cambia con la selección */}
+            <Text style={s.soundDesc}>{SOUNDS.find(x => x.id === selectedSound)?.desc}</Text>
 
             {/* Duration */}
             <View style={s.durationRow}>
@@ -269,6 +279,8 @@ const s = StyleSheet.create({
   subtitle:     { fontFamily: ViveFonts.title, fontSize: 26, color: FOREST, textAlign: 'center' },
   screenTitle:  { fontFamily: ViveFonts.semibold, fontSize: 22, color: FOREST, textAlign: 'center' },
   description:  { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
+  soundDesc:    { fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST_SOFT, textAlign: 'center', lineHeight: 20, marginTop: -6 },
+  doneCoach:    { fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST_SOFT, textAlign: 'center', lineHeight: 21, paddingHorizontal: 8 },
 
   soundGrid: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
   soundCard: {
