@@ -154,7 +154,9 @@ export default function ConexionesScreen() {
   // 🔴 Se aplica UNA SOLA VEZ. El parámetro se queda pegado a la ruta del tab
   // después de navegar, así que sin el ref cada vuelta al tab —o cada
   // `backToAxes`— volvería a abrir el eje solo y no habría forma de salir de él.
-  const { puerta } = useLocalSearchParams<{ puerta?: string }>();
+  // `eje` lo manda el onboarding desde el 12/09/2026; `puerta` queda para los
+  // links viejos y para cuando algo quiera abrir un tema puntual.
+  const { puerta, eje: ejeParam } = useLocalSearchParams<{ puerta?: string; eje?: string }>();
   const puertaAplicada = useRef(false);
   // La puerta que el onboarding sugiere. Solo destaca una fila del menú: no
   // filtra, no reordena y no navega.
@@ -172,6 +174,16 @@ export default function ConexionesScreen() {
     t = setInterval(check, 80);
     return () => clearInterval(t);
   }, []);
+
+  // Llega del onboarding con el eje que la persona acaba de contar: se abre su
+  // menú, sin destacar ninguna puerta. No filtra ni elige por ella — eso lo
+  // decide la persona, que es lo que se quiso desde que se frenó la versión que
+  // abría el mazo de gente a los sesenta segundos.
+  useEffect(() => {
+    if (!ejeParam || puertaAplicada.current) return;
+    puertaAplicada.current = true;
+    if (EJE_MAP[ejeParam]) setSelectedAxisId(ejeParam);
+  }, [ejeParam]);
 
   useEffect(() => {
     if (!puerta || puertaAplicada.current) return;

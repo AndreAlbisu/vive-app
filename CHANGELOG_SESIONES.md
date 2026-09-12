@@ -118,6 +118,26 @@
 - Sigue lo de la entrada de abajo: probar el checkout web (`vitaapp.com.ar/c/andre`) y la sala web con el CAPTCHA prendido, y entrar con mail en el build 20 para confirmar el proveedor.
 
 ---
+## 2026-09-12 — Andre (sesión 226 · el onboarding: se va la segunda pregunta, y las guías se prenden para todos)
+
+**Tocado:** `screens/OnboardingScreen2.tsx`, `app/(tabs)/conexiones.tsx`, `lib/guiaContextual.ts`, `lib/onboardingRespuestas.ts`, `__tests__/guiaContextual.test.ts`. **596 tests**, `tsc` limpio. Sin probar en dispositivo.
+
+**Resumen — dos rondas de consejo y una discusión larga con Andre sobre para qué está el onboarding. El resultado no fue rediseñar la pregunta: fue arreglar lo que venía después.**
+
+- 🔴 **El diagnóstico, en una línea: la pregunta no fallaba por ser mala pregunta, fallaba porque lo que venía después ignoraba la respuesta.** La persona contaba algo y recibía un MENÚ de catorce puertas. Andre: *"evidentemente es una pantalla que no ayuda demasiado"*. Las dos rondas del consejo coincidieron (5/5 en la segunda: "hoy no sirve"), incluido el Expansionista, que se retractó de la primera.
+- 🟢 **Se sacó del flujo la segunda pregunta** ("¿Qué aspecto querés explorar?", `/onboarding4`): pedía elegir entre tres temas que nadie puede distinguir ("Sentirme mejor" vs "Entender qué me pasa"), costaba dos toques más y su respuesta solo servía para destacar una fila. El archivo queda, sin entrada, hasta construir lo que sigue.
+- 🟢 **El destino ahora es Profesionales con SU EJE abierto**, no el menú de ejes. `EJE_DE_UNIVERSO` traduce cuerpo/mente/alma → fisico/emocional/espiritual: es la quinta taxonomía del módulo, pero la única que no agrega información — es traducción de vocabulario entre el idioma de la persona y el de la oferta.
+- 🔴 **Las guías contextuales se prenden para TODOS.** Estaban apagadas justo para los tres universos, con este motivo escrito: *"a alguien que entró contando lo que le pasa no se le explica la app —aterriza directo en los profesionales de su tema—"*. Ese argumento dependía del destino, y el destino era el problema: **se le apagaba la explicación al que más perdido estaba, a cambio de nada.** 📌 Esto contesta la pregunta de Andre sobre si hacía falta un recorrido previo: no hace falta un tour, hacía falta dejar de apagar lo que ya existe.
+- 🔴 **El eje ya NO viaja a la base: vive solo en el teléfono** (`guardarEjeLocal`). Lo que alguien contesta ahí —"algo de la cabeza: ansiedad, bajón"— es dato de salud bajo la Ley 25.326, y **`LO_QUE_CUBRE` del consentimiento enumera el check-in, el diario y qué recursos usa: el onboarding no está.** Mandarlo a `user_quiz_answers` era tratar dato sensible fuera de lo consentido.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **DECISIÓN DE ANDRE, y tiene una consecuencia ya activa**: `useRecommendedResource` lee el eje de `user_quiz_answers`, así que **para las cuentas nuevas la recomendación deja de ver el eje declarado** y cae al topic o al comportamiento. Dos salidas: (a) que el hook lea también el eje local —acotado, no toca nada legal—, o (b) sumar la línea a `LO_QUE_CUBRE`, volver a pedir el consentimiento y volcarlo. Hasta que se elija, la recomendación queda degradada para quien se registre desde hoy.
+- 📌 Las instalaciones que YA tienen un eje encolado lo van a volcar igual en su próximo login: `volcarPendiente` no cambió. Si se elige (a), conviene limpiarlo.
+- 🔴 **La pantalla que falta**: en vez del menú del eje, mostrar dos o tres personas que trabajan eso con una línea que diga por qué — lo que el brief del 01/09 prometía y nunca se construyó. `doorsForEje` y `coachesForDoor` ya existen.
+- 📌 **El Inicio sin cuenta sigue siendo un mal lugar para aterrizar**: el check-in llama a `requestAuth` y siete bloques se cortan con `if (!user) return`. Es el trabajo que de verdad desbloquea el primer día.
+- Probar en dispositivo: que las tres opciones abran el eje correcto y que las guías aparezcan ahora también para quien elige un universo.
+
+---
 ## 2026-09-11 — Andre (sesión 225 · el CAPTCHA queda PRENDIDO)
 
 **Tocado:** `docs/anti-abuso-altas.md`, `CHANGELOG_SESIONES.md`. En producción: CAPTCHA de Supabase **prendido**, por Andre desde el dashboard. Ningún cambio de código.

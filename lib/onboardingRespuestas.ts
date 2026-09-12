@@ -96,6 +96,40 @@ export const CATEGORIA_A_PUERTA: Record<string, string> = {
   trabajo:      'foco',        // "Foco, hábitos y trabajo"
 };
 
+/**
+ * Universo del onboarding (cuerpo/mente/alma) → eje de Conexiones.
+ *
+ * 🔴 Son el MISMO trío con dos nombres, y esta es la quinta taxonomía del
+ * módulo — pero la única que no agrega información: es una traducción de
+ * vocabulario, no un agrupamiento nuevo. Existe porque el onboarding habla el
+ * idioma de la persona ("algo del cuerpo") y Conexiones el de la oferta
+ * ("Bienestar físico"), y ninguno de los dos se va a renombrar por el otro.
+ */
+export const EJE_DE_UNIVERSO: Record<string, string> = {
+  cuerpo: 'fisico',
+  mente:  'emocional',
+  alma:   'espiritual',
+};
+
+/**
+ * Guarda el eje que la persona acaba de contar, SOLO en el teléfono.
+ *
+ * 🔴 NO se encola para la base, y es a propósito (12/09/2026). Lo que alguien
+ * contesta acá —"algo de la cabeza: ansiedad, bajón"— es dato de salud bajo la
+ * Ley 25.326, y el consentimiento que la app pide hoy NO lo cubre: `LO_QUE_CUBRE`
+ * enumera el check-in, el diario y qué recursos usa, y nada más. Mandarlo a
+ * `user_quiz_answers` sería tratar dato sensible fuera de lo consentido.
+ *
+ * En el teléfono alcanza para lo que hoy se usa: la recomendación de recursos y
+ * abrir el eje en Profesionales. Si algún día tiene que viajar, primero se suma
+ * la línea a `LO_QUE_CUBRE` y se vuelve a pedir el consentimiento.
+ */
+export async function guardarEjeLocal(universo: string): Promise<void> {
+  if (!esEje(universo)) return;
+  const previo = (await leerRespuestas()) ?? { universo, categoria: '' };
+  await AsyncStorage.setItem(KEY, JSON.stringify({ ...previo, universo }));
+}
+
 export function puertaDeCategoria(categoria: string): string | null {
   return CATEGORIA_A_PUERTA[categoria] ?? null;
 }
