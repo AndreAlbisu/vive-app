@@ -1,5 +1,5 @@
 let mockFila: { email_verified_at: string | null } | null = null;
-let mockError: { message: string } | null = null;
+let mockError: { message: string; code?: string } | null = null;
 // Lo que contesta `marcar_mail_verificado()`: `true` si la sesión se abrió con
 // algo mandado al mail (código, link de recuperación), `false` con contraseña.
 let mockMarca: { data: boolean | null; error: { message: string } | null } = { data: false, error: null };
@@ -85,9 +85,25 @@ describe('necesitaVerificarMail', () => {
     await expect(necesitaVerificarMail(null)).resolves.toBe(false);
   });
 
-  it('🔴 falla ABIERTO: un error de esquema no puede dejar a todos sin reservar', async () => {
-    // El caso real: el script de la columna todavía no se corrió.
+  it('🔴 falla ABIERTO solo ante error de ESQUEMA (columna inexistente), por mensaje', async () => {
+    // El caso que justificaba el fail-open: la columna no existe (rollback).
     mockError = { message: 'column profiles.email_verified_at does not exist' };
     await expect(necesitaVerificarMail(usuario({ provider: 'email' }))).resolves.toBe(false);
+  });
+
+  it('🔴 falla ABIERTO ante error de esquema por CÓDIGO (42703 / PGRST204)', async () => {
+    mockError = { code: '42703', message: 'undefined column' };
+    await expect(necesitaVerificarMail(usuario({ provider: 'email' }))).resolves.toBe(false);
+    mockError = { code: 'PGRST204', message: 'column not found in schema cache' };
+    await expect(necesitaVerificarMail(usuario({ provider: 'email' }))).resolves.toBe(false);
+  });
+
+  it('🔒 falla CERRADO ante un error que NO es de esquema (transitorio, permisos)', async () => {
+    // Antes esto dejaba pasar; ahora que la columna existe, un error de lectura
+    // no es permiso para saltear la verificación.
+    mockError = { code: 'PGRST301', message: 'JWT expired' };
+    await expect(necesitaVerificarMail(usuario({ provider: 'email' }))).resolves.toBe(true);
+    mockError = { message: 'TypeError: Network request failed' };
+    await expect(necesitaVerificarMail(usuario({ provider: 'email' }))).resolves.toBe(true);
   });
 });

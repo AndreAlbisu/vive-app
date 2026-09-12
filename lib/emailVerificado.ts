@@ -20,15 +20,39 @@ export function mailVieneDeProveedor(user: User | null | undefined): boolean {
 }
 
 /**
- * ⚠️ NO es solo una lectura: si no hay constancia, le pide al servidor que la
- * escriba en el caso de que la sesión actual ya pruebe la casilla (ver abajo).
+ * Un error de PostgREST/Postgres que dice que la columna no existe en el
+ * esquema. Es el ÚNICO motivo por el que este gate se deja pasar ante un error.
  *
- * ⚠️ Falla ABIERTO: ante cualquier problema devuelve `false` y deja pasar.
+ * `42703` es el `undefined_column` de Postgres; `PGRST204` es el equivalente de
+ * PostgREST cuando la columna no está en su cache de esquema. El chequeo del
+ * mensaje es cinturón y tiradores por si el código no viaja.
+ */
+function esColumnaInexistente(error: { code?: string; message?: string }): boolean {
+  if (error.code === '42703' || error.code === 'PGRST204') return true;
+  const m = (error.message ?? '').toLowerCase();
+  return m.includes('email_verified_at') && m.includes('does not exist');
+}
+
+/**
+ * Antes fallaba ABIERTO ante CUALQUIER error, y el motivo era uno solo:
+ * `email_verified_at` podía no existir todavía (el script sin correr), y un gate
+ * que se activara por ese error dejaba a **todo el mundo sin poder reservar** por
+ * un problema de esquema.
  *
- * Si `email_verified_at` todavía no existe —el script no se corrió— el select
- * devuelve error, y un gate que se activara con ese error dejaría a **todo el
- * mundo sin poder reservar** por un problema de esquema. Un mail sin verificar
- * es un riesgo chico; una app donde nadie puede reservar, no.
+ * ⚠️ La columna YA existe (corrida en 09/2026), así que ese motivo desapareció y
+ * el fallback se estrechó a exactamente él: **solo un error de ESQUEMA (columna
+ * inexistente) deja pasar**, como red de seguridad ante un rollback. Cualquier
+ * otro error —transitorio, de permisos— ahora falla **CERRADO**: no poder
+ * confirmar la verificación no es permiso para saltearla.
+ *
+ * 📌 Fallar cerrado ante un error transitorio es tolerable en los dos
+ * llamadores: en la reserva, sin red la reserva falla igual un paso después; en
+ * el muro de mail, se recupera al reabrir la app.
+ *
+ * ⚠️ NO es solo una lectura: si no hay constancia en la base, le pregunta al
+ * servidor (`marcar_mail_verificado`) si ESTA sesión ya prueba la casilla —quien
+ * entró por el link de recuperación o por un código al mail ya la leyó—, y en ese
+ * caso la marca y no pide nada. Ver el comentario en el cuerpo.
  */
 export async function necesitaVerificarMail(user: User | null | undefined): Promise<boolean> {
   if (!user) return false;
@@ -41,8 +65,12 @@ export async function necesitaVerificarMail(user: User | null | undefined): Prom
     .maybeSingle();
 
   if (error) {
-    console.warn('[mail] no se pudo leer email_verified_at:', error.message);
-    return false;
+    if (esColumnaInexistente(error)) {
+      console.warn('[mail] email_verified_at no existe en el esquema, se deja pasar:', error.message);
+      return false;
+    }
+    console.warn('[mail] no se pudo leer email_verified_at, se pide verificar:', error.message);
+    return true;
   }
   if (data?.email_verified_at) return false;
 

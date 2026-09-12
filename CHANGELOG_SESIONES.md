@@ -4,6 +4,20 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-12 — Joaquín (recursos: respiración diafragmática + contexto; y PR #2 reconciliado contra andre/main)
+
+**Tocado:** `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx` (feature, rama aparte); reconciliación de `lib/emailVerificado.ts`, `__tests__/emailVerificado.test.ts`, `CHANGELOG_SESIONES.md`, `SCHEMA.md` contra andre/main. tsc limpio, 595 tests.
+
+**Resumen — sumar profundidad a los recursos, y ordenar el PR #2 contra el trabajo nuevo de Andre.**
+
+- 🟢 **Recursos (respiración/sonidos).** Salió de una consulta al council: en vez de una "biblioteca" (peso), contexto barato. Respiración pasó de un patrón fijo a un **sistema de patrones** con tiempos por fase, y se sumó la **diafragmática** (inhala 4 / exhala 6, selector con Cuadrada por default). Cada patrón trae su "para qué" (afuera la línea clínica del "sistema nervioso"). Sonidos: una línea de propósito por sonido, "Ruido marrón" → "Ruido parejo", empujón al coach. Solo copy + lógica, cero audio. **PR draft en AndreAlbisu/vive-app #1, espera el ok de voz de Andre.**
+- 🔧 **PR #2 (Tier 2) reconciliado contra andre/main.** Andre había tocado `lib/emailVerificado.ts` y `app/(tabs)/index.tsx` (los mismos de #5 y #6). El merge combinó lo mejor: en `necesitaVerificarMail` conviven **nuestro fail-cerrado-salvo-esquema** (en el error) y **el `marcar_mail_verificado` de Andre** (cuando la sesión ya prueba la casilla). Conflictos resueltos en emailVerificado, su test y este changelog. #2 vuelve a quedar merge-ready.
+- 📌 **Divergencia origin/andre:** `andre/main` es el main real (superset); `origin` quedó atrás. Los PRs nuevos se basan en andre/main y se abren en el repo de Andre.
+
+**Pendiente para la próxima sesión:**
+- 🔴 Voz de Andre sobre el copy de recursos (PR AndreAlbisu#1) y la diafragmática.
+- 🔴 Sigue el SQL de `coach_alta_paso` (PR #2) esperando review de Andre (regla #6).
+
 ## 2026-09-11 — Andre (sesión 225 cont. 6 · el texto de Sofía entra palabra por palabra)
 
 **Tocado:** `components/TextoQueSeEscribe.tsx` (nuevo), `lib/agruparPalabras.ts` (nuevo), `app/(tabs)/index.tsx`, `__tests__/agruparPalabras.test.ts` (nuevo). **595 tests** (+5), `tsc` limpio. ⚠️ Sin probar en dispositivo; sale en el próximo build.
@@ -211,6 +225,38 @@
 - ⚠️ `web/captcha.js` **no se probó en un navegador**: solo sintaxis. La primera prueba real es con la web deployada.
 
 ---
+
+## 2026-09-10 — Joaquín (checkout web: el arreglo del nombre del 09/09 nunca funcionó — dos bugs, y Prueba 1 cerrada)
+
+**Tocado:** `web/c/index.html` (PRs #3 y #4, ya en main y deployados vía Vercel). En producción: cuentas de prueba del checkout borradas. Ningún cambio de app.
+
+**Resumen — probando A5 Prueba 1 se cayó el arreglo del nombre del 09/09, que "no se había vuelto a probar".**
+
+- 🐛 **Bug 1 (#3): `id="nombre"` duplicado.** El arreglo del 09/09 agregó un `<input id="nombre">` para el nombre del usuario, pero el `<h1>` del nombre del coach ya usaba ese id. `getElementById` devuelve el primero (el h1), así que `pedirCodigo` hacía `$('nombre').value` sobre el h1 → `undefined.trim()` → excepción no atrapada → el botón "Enviarme el código" **no hacía nada** y no salía ningún OTP. Fix: el input pasó a `id="tuNombre"`.
+- 🐛 **Bug 2 (#4): el placeholder `'Usuario'` no se pisaba.** El trigger `handle_new_user` crea el perfil con `name='Usuario'` por defecto, y `guardarNombre` solo escribía si el nombre estaba vacío → el coach veía "Usuario". Fix: `guardarNombre` trata `'Usuario'` como "sin nombre" y lo pisa (respeta un nombre real de quien ya tiene cuenta).
+- ✅ **Prueba 1 CERRADA**, confirmado contra la base: reserva nueva con `payment_status=aprobado` y el coach la ve con el nombre real, sin tocar nada a mano. El envío de OTP está sano (llega a Principal; el DKIM de Resend ya está). El 500 inicial era por probar con `example.com`, que Resend bloquea como destinatario.
+- 🧹 Cuentas de prueba (`+otpdiag`, `+prueba3`, `+prueba4`) y todo lo asociado (reservas, salas, notificaciones) borradas de producción.
+- 📌 **Deploy web:** el sitio lo sirve Vercel desde el remote **andre** (`AndreAlbisu/vive-app`), no `origin`. Un cambio web se publica con merge en origin + `git push andre origin/main:main`.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Prueba 3, DMARC y CAPTCHA A.3 son de ANDRE** (dependen de accesos de infra) — todo el detalle en `docs/pendientes-andre-2026-09-10.md`.
+- Prueba 2 (videollamada) el 18/09, y prender `CHECKOUT_HABILITADO` cuando cierren las pruebas.
+
+## 2026-09-10 — Joaquín (Tier 2 de hardening: 4 agujeros chicos, algunos sin depender de terceros)
+
+**Tocado:** `lib/emailVerificado.ts`, `lib/vozCompartida.ts` (nuevo), `app/diario.tsx`, `app/gratitud.tsx`, `lib/altaCoach.ts`, `scripts/add-coach-alta-paso.sql` (nuevo), `app/(tabs)/index.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, + 3 tests nuevos. **612 tests** (575→612), `tsc` limpio. Rama `tier2-hardening` (aparte del PR #1 de IA/rate limits).
+
+**Resumen — cuatro items del backlog que se podían hacer sin la mano de Andre.**
+
+- 🔒 **#5 `necesitaVerificarMail` estrechado.** Fallaba ABIERTO ante cualquier error de lectura; el único motivo legítimo era que la columna no existiera. Ya existe, así que ahora solo el error de esquema (`42703`/`PGRST204` o el mensaje) deja pasar como red ante rollback; cualquier otro error falla CERRADO. +2 tests.
+- ✍️ **#7 (C7) copy fuera de la tarjeta, verificado.** El copy de Diario y Gratitud es la misma voz de Sofía y nada lo chequeaba: nació con el bug de "adjetivo con género sobre quien lee" dos veces (cansado, agradecido). Se movió a `lib/vozCompartida.ts` (single source of truth, importado por las pantallas) + `rejectVozCompartida()` con el subconjunto transversal ya decidido, generalizado para cazar también "estás agradecido" (que `NIVEL_MASCULINO` no agarraba). Test barre el banco. NO enforce exclamaciones (decisión de Andre abierta). +25 tests.
+- 🖥️ **#4 gate de alta de coach al servidor.** Vivía en `AsyncStorage`: borrar los datos de la app lo salteaba y el AuthRedirect dejaba entrar como usuario a una cuenta que nunca terminó su alta. Ahora cuelga de `profiles.coach_alta_paso`. `lib/altaCoach.ts` lee del servidor y cae a `AsyncStorage` si la columna no existe o hay error de red (anda corra o no el script); misma API, 5 callers sin cambios. +10 tests. 🔴 **`scripts/add-coach-alta-paso.sql` SIN CORRER** — cambio estructural de auth, se revisa entre Andre y Joaquín (regla #6) + prueba en dispositivo del arranque.
+- 📊 **#6 (D6) el piso de seguridad ahora loguea el disparo.** Antes solo el tap a `/ayuda`; si la persona veía el piso y no tocaba, no quedaba rastro. Ahora emite `piso_seguridad_mostrado` en `analytics_events`. Cubre la mitad "enterarse/aprender"; la alerta/seguimiento por-persona en tiempo real sigue abierta (necesita decisión de privacidad).
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/add-coach-alta-paso.sql`** tras revisión con Andre, y probar el arranque en dispositivo (el AuthRedirect tiene historia de rebotes). Hasta entonces el código usa el fallback a AsyncStorage y todo anda como antes.
+- 📌 Con Tier 2 cerrado, sigue el **Tier 1** (A5: las 3 pruebas del checkout con teléfono + plata; DMARC; prender `CHECKOUT_HABILITADO`).
+
 ## 2026-09-10 — Joaquín (el tope de la IA queda VIVO + rate limits del anti-abuso aplicados)
 
 **Tocado:** `SCHEMA.md`, `docs/anti-abuso-altas.md`, `CHANGELOG_SESIONES.md`. En producción: `scripts/add-ai-usage.sql` corrido, `weekly-reflection` deployada (v28), y config de auth ajustada (rate limits + anónimos). Ningún cambio de código de app.
