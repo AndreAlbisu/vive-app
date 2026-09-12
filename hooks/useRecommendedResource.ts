@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { leerRespuestas } from '@/lib/onboardingRespuestas';
 import { MOOD_RESOURCES } from '@/constants/moodResources';
 
 // Vocabulario de ejes compartido con resource_axes (recursos de coach).
@@ -90,7 +91,26 @@ export function useRecommendedResource(params: {
   const [quizAxis, setQuizAxis] = useState<Axis | null>(null);
 
   useEffect(() => {
-    if (!userId) { setQuizTopic(null); setQuizAxis(null); return; }
+    let vivo = true;
+
+    // 🔴 El eje del onboarding vive en el TELÉFONO desde el 12/09/2026: lo que
+    // la persona contesta ahí es dato de salud y el consentimiento que se pide
+    // hoy no lo cubre, así que dejó de viajar a `user_quiz_answers`. Ver
+    // `guardarEjeLocal`. Sin esta lectura, la recomendación se quedaba sin el
+    // eje declarado para toda cuenta nueva.
+    //
+    // 📌 Efecto lateral bueno: ahora también funciona SIN CUENTA. Quien entra
+    // sin registrarse y cae en Recursos recibe algo elegido por lo que contó,
+    // que antes no pasaba — el efecto cortaba antes de leer nada.
+    void leerRespuestas().then(r => {
+      const u = r?.universo;
+      if (!vivo || !(u === 'cuerpo' || u === 'mente' || u === 'alma')) return;
+      // `?? u`: si la base ya contestó con un eje, ese manda. Es el mismo dato,
+      // pero el de la base es el que sobrevive a reinstalar la app.
+      setQuizAxis(prev => prev ?? u);
+    });
+
+    if (!userId) { setQuizTopic(null); return () => { vivo = false; }; }
     supabase
       .from('user_quiz_answers')
       // ⚠️ `*` y no `'topic, axis'` a propósito: `axis` la agrega
@@ -103,10 +123,16 @@ export function useRecommendedResource(params: {
       .eq('user_id', userId)
       .maybeSingle()
       .then(({ data }) => {
+        if (!vivo) return;
         setQuizTopic((data?.topic as string) ?? null);
         const a = data?.axis as Axis | undefined;
-        setQuizAxis(a === 'cuerpo' || a === 'mente' || a === 'alma' ? a : null);
+        // ⚠️ Solo pisa si la base trae un eje válido. Antes seteaba `null` en el
+        // caso contrario, y ahora eso borraría el eje local que acaba de leerse
+        // —que para las cuentas nuevas es el ÚNICO que hay—.
+        if (a === 'cuerpo' || a === 'mente' || a === 'alma') setQuizAxis(a);
       });
+
+    return () => { vivo = false; };
   }, [userId]);
 
   const reco = useMemo<Reco | null>(() => {

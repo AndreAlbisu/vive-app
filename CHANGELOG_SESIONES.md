@@ -120,7 +120,7 @@
 ---
 ## 2026-09-12 — Andre (sesión 226 · el onboarding: se va la segunda pregunta, y las guías se prenden para todos)
 
-**Tocado:** `screens/OnboardingScreen2.tsx`, `app/(tabs)/conexiones.tsx`, `lib/guiaContextual.ts`, `lib/onboardingRespuestas.ts`, `__tests__/guiaContextual.test.ts`. **596 tests**, `tsc` limpio. Sin probar en dispositivo.
+**Tocado:** `screens/OnboardingScreen2.tsx`, `app/(tabs)/conexiones.tsx`, `lib/guiaContextual.ts`, `lib/onboardingRespuestas.ts`, `hooks/useRecommendedResource.ts`, `__tests__/guiaContextual.test.ts`. **596 tests**, `tsc` y `eslint` limpios. Sin probar en dispositivo.
 
 **Resumen — dos rondas de consejo y una discusión larga con Andre sobre para qué está el onboarding. El resultado no fue rediseñar la pregunta: fue arreglar lo que venía después.**
 
@@ -131,8 +131,10 @@
 - 🔴 **El eje ya NO viaja a la base: vive solo en el teléfono** (`guardarEjeLocal`). Lo que alguien contesta ahí —"algo de la cabeza: ansiedad, bajón"— es dato de salud bajo la Ley 25.326, y **`LO_QUE_CUBRE` del consentimiento enumera el check-in, el diario y qué recursos usa: el onboarding no está.** Mandarlo a `user_quiz_answers` era tratar dato sensible fuera de lo consentido.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **DECISIÓN DE ANDRE, y tiene una consecuencia ya activa**: `useRecommendedResource` lee el eje de `user_quiz_answers`, así que **para las cuentas nuevas la recomendación deja de ver el eje declarado** y cae al topic o al comportamiento. Dos salidas: (a) que el hook lea también el eje local —acotado, no toca nada legal—, o (b) sumar la línea a `LO_QUE_CUBRE`, volver a pedir el consentimiento y volcarlo. Hasta que se elija, la recomendación queda degradada para quien se registre desde hoy.
-- 📌 Las instalaciones que YA tienen un eje encolado lo van a volcar igual en su próximo login: `volcarPendiente` no cambió. Si se elige (a), conviene limpiarlo.
+- ✅ **RESUELTO en la misma sesión (opción A, decidida por mí a pedido de Andre: "no sé qué opción")**: `useRecommendedResource` lee el eje del teléfono cuando la base no lo trae. El criterio fue una sola pregunta —¿este dato tiene que sobrevivir al cambio de teléfono o verlo el servidor?—: hoy se usa para recomendar un recurso y abrir el eje en Profesionales, las dos cosas dentro del teléfono. Mismo criterio que ya se usó para la preferencia de apagado (sesión 150): si no necesita sincronizarse, no abre columna.
+  - 📌 **Efecto lateral bueno: la recomendación ahora funciona SIN CUENTA.** El efecto cortaba antes de leer nada si no había `userId`; quien entra sin registrarse y cae en Recursos ahora recibe algo elegido por lo que contó. Es justo el caso que motivó toda la discusión.
+  - ⚠️ **Lo que se pierde**: si reinstala la app o cambia de celular, el eje se pierde y vuelve a recomendar por comportamiento. Reversible: el día que haga falta del lado del servidor, se hace (b) con el texto ya actualizado.
+- 📌 Las instalaciones que YA tienen un eje encolado lo van a volcar igual en su próximo login: `volcarPendiente` no cambió. Es dato viejo ya consentido de hecho; limpiarlo es opcional.
 - 🔴 **La pantalla que falta**: en vez del menú del eje, mostrar dos o tres personas que trabajan eso con una línea que diga por qué — lo que el brief del 01/09 prometía y nunca se construyó. `doorsForEje` y `coachesForDoor` ya existen.
 - 📌 **El Inicio sin cuenta sigue siendo un mal lugar para aterrizar**: el check-in llama a `requestAuth` y siete bloques se cortan con `if (!user) return`. Es el trabajo que de verdad desbloquea el primer día.
 - Probar en dispositivo: que las tres opciones abran el eje correcto y que las guías aparezcan ahora también para quien elige un universo.
