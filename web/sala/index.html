@@ -229,10 +229,32 @@ async function confirmarCodigo() {
         : 'Ese código no coincide, o ya venció.');
     }
     guardarSesion({ access_token: cuerpo.access_token, email: mail });
+    await marcarMailVerificado(cuerpo.access_token);
     ocultar('identificar'); ver('cargando');
     await intentarEntrar();
   } finally {
     $('btnConfirmar').disabled = false; $('btnConfirmar').textContent = 'Entrar';
+  }
+}
+
+// Deja constancia de que esta persona probó su casilla: la sesión se abrió con un
+// código al mail (`amr = otp`), y `marcar_mail_verificado()` escribe
+// `profiles.email_verified_at` solo en ese caso (no se puede falsificar desde acá).
+// Sin esto, quien entra a la sala por la web queda "sin verificar" pese a haber
+// leído el código. Best-effort: si falla, entrar a la sala sigue igual.
+async function marcarMailVerificado(accessToken) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/marcar_mail_verificado`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    });
+  } catch (e) {
+    console.error('[mail] no se pudo marcar verificado:', e);
   }
 }
 
