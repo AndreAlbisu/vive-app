@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -23,6 +24,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { File } from 'expo-file-system';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { linkCompartible, linkDelCoach, mensajeParaCompartir } from '@/lib/linkCoach';
 import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { priceUsdError } from '@/lib/pricing';
@@ -46,6 +48,9 @@ type CoachProfile = {
   accepts_usdt: boolean;
   availability_status: 'activo' | 'en_pausa';
   avatar_url: string | null;
+  // Para el link público (`/c/<slug>`). Ver `lib/linkCoach.ts`.
+  slug: string | null;
+  verified: boolean;
 };
 
 type ReceivedReview = {
@@ -55,6 +60,53 @@ type ReceivedReview = {
   createdAt: string;
   isPrivate: boolean;
 };
+
+/**
+ * El link público del coach, SIEMPRE a mano.
+ *
+ * 🔴 Existe porque antes solo estaba en la tarjeta "Traé a tus primeros
+ * clientes" del Inicio, que desaparece con la primera reserva: el coach que ya
+ * tiene clientes se quedaba sin forma de encontrar su link. Ver
+ * `lib/linkCoach.ts`.
+ *
+ * Tres estados: aprobado y activo (link + compartir), aprobado y en pausa (el
+ * link, pero sin botón: la página pública no lo muestra mientras tanto), y sin
+ * aprobar (todavía no hay link).
+ */
+function TuLink({ coach }: { coach: CoachProfile }) {
+  const link = linkDelCoach(coach);
+  if (!link) {
+    return (
+      <Text style={s.linkNota}>
+        Cuando aprobemos tu perfil vas a tener un link propio para mandarles a las personas
+        que ya atendés, y reservan desde ahí.
+      </Text>
+    );
+  }
+  return (
+    <>
+      <Text style={s.linkTxt} numberOfLines={1}>{link.replace('https://', '')}</Text>
+      {/* D13: el beneficio va al lado del link, que es donde se decide mandarlo. */}
+      <Text style={[s.linkNota, s.linkBeneficio]}>
+        La primera sesión de cada persona que llegue por tu link no paga comisión.
+      </Text>
+      {linkCompartible(coach) ? (
+        <TouchableOpacity
+          style={s.linkBtn}
+          activeOpacity={0.85}
+          onPress={() => Share.share({ message: mensajeParaCompartir(link) }).catch(() => {})}>
+          <MaterialCommunityIcons name="share-variant" size={15} color="#F3EEDF" />
+          <Text style={s.linkBtnTxt}>Compartir mi link</Text>
+        </TouchableOpacity>
+      ) : (
+        <Text style={s.linkNota}>
+          Estás en pausa: mientras tanto, quien entre al link no va a ver tu perfil. Cuando
+          vuelvas a estar disponible, lo vas a poder compartir.
+        </Text>
+      )}
+    </>
+  );
+}
 
 function formatReviewDate(isoString: string): string {
   const d = new Date(isoString);
@@ -105,7 +157,7 @@ export default function CoachProfileScreen() {
     (async () => {
       const [{ data: profileRow }, { data: coachRow }] = await Promise.all([
         supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single(),
-        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status, mp_connected, accepts_international, accepts_paypal, accepts_usdt, price_usd').eq('profile_id', user.id).maybeSingle(),
+        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status, slug, verified, mp_connected, accepts_international, accepts_paypal, accepts_usdt, price_usd').eq('profile_id', user.id).maybeSingle(),
       ]);
 
       setProfile({
@@ -122,6 +174,8 @@ export default function CoachProfileScreen() {
         accepts_usdt: coachRow?.accepts_usdt ?? false,
         availability_status: (coachRow?.availability_status ?? 'activo') as 'activo' | 'en_pausa',
         avatar_url: profileRow?.avatar_url ?? null,
+        slug: coachRow?.slug ?? null,
+        verified: coachRow?.verified ?? false,
       });
       setCoachId(coachRow?.id ?? null);
       setMpConnected(coachRow?.mp_connected ?? false);
@@ -669,6 +723,13 @@ export default function CoachProfileScreen() {
           <Text style={s.groupHint}>Lo que ve quien entra a tu perfil</Text>
         </View>
 
+        {/* ── Tu link ─────────────────────────────────────────
+            Primero del grupo: es la puerta a todo lo que sigue. */}
+        <Text style={s.sectionTitle}>Tu link</Text>
+        <View style={[s.bioCard, s.linkCard]}>
+          {profile && <TuLink coach={profile} />}
+        </View>
+
         {/* ── Presentación ──────────────────────────────────── */}
         <Text style={s.sectionTitle}>Presentación</Text>
         <View style={s.bioCard}>
@@ -941,7 +1002,8 @@ export default function CoachProfileScreen() {
             <Text style={s.commissionStrong}>20%</Text> en la primera sesión con cada persona y{' '}
             <Text style={s.commissionStrong}>15%</Text> de la segunda en adelante. Te cobramos por
             presentarte a alguien nuevo, no por la relación que construís después: el contador es por
-            persona y nunca se reinicia.
+            persona y nunca se reinicia. Por eso, si la persona llega por{' '}
+            <Text style={s.commissionStrong}>tu link</Text>, la primera sesión no paga comisión.
           </Text>
         </View>
 
@@ -1345,6 +1407,22 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
   },
   sectionSpaced: { marginTop: 28 },
+
+  // Tu link. Mismos valores que la tarjeta del Inicio del coach.
+  // ⚠️ El link en verde (#3F512F) y no en terracota: es texto que hay que LEER,
+  // y la terracota sobre crema no llega al contraste (auditoría de la 172).
+  linkCard: { marginBottom: 28 },
+  linkTxt: {
+    fontFamily: ViveFonts.semibold, fontSize: 13, color: '#3F512F',
+    backgroundColor: '#EAE2D0', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10,
+  },
+  linkBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    marginTop: 10, backgroundColor: '#3F512F', borderRadius: 12, paddingVertical: 12,
+  },
+  linkBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#F3EEDF' },
+  linkNota: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: '#6B7A56' },
+  linkBeneficio: { marginTop: 10 },
 
   // Encabezado de GRUPO — un nivel por encima de `sectionTitle`. Existe porque
   // esta pantalla es un scroll largo con doce secciones, y sin jerarquía todas

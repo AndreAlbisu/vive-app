@@ -43,7 +43,7 @@ import { hayReembolsoAlCancelar } from '@/lib/bookingHelpers';
 import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { logError } from '@/lib/logging';
-import { ensureMeetingRoom, getJoinUrl } from '@/lib/meetingRoom';
+import { ensureMeetingRoom, getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
 
 type ResourceMeta = {
   type: 'resource';
@@ -580,8 +580,12 @@ export default function SalaScreen() {
     const url = await getJoinUrl(activeBooking.id);
     setIsCreatingRoom(false);
 
-    if (url) {
-      await WebBrowser.openBrowserAsync(url);
+    if (url && 'url' in url) {
+      await WebBrowser.openBrowserAsync(url.url);
+    } else if (url) {
+      // Fuera de horario: se dice cuándo abre, no "no se pudo" — eso haría
+      // reintentar a alguien que solo llegó temprano.
+      Alert.alert(tituloDeAviso(url.estado), url.aviso);
     } else {
       Alert.alert('Error', 'No se pudo preparar la sala. Intentalo de nuevo en unos segundos');
     }

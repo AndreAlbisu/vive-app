@@ -15,7 +15,7 @@
 // `undefined`. Ver el comentario de cabecera de `lib/captcha.ts`.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
   CAPTCHA_ORIGEN,
@@ -76,14 +76,21 @@ function CaptchaNativo() {
     else enEspera.current = true;
   }, [disparar]);
 
+  /** Cierra el desafío sin token: el botón "Cancelar" y el timeout de 60s. */
+  const cancelar = useCallback(() => {
+    setDesafiando(false);
+    enEspera.current = false;
+    responder(undefined);
+  }, [responder]);
+
   useEffect(() => {
-    registrarCaptchaHost(ejecutar);
+    registrarCaptchaHost(ejecutar, cancelar);
     return () => {
       registrarCaptchaHost(null);
       pendiente.current?.(undefined);
       pendiente.current = null;
     };
-  }, [ejecutar]);
+  }, [ejecutar, cancelar]);
 
   function alRecibir(crudo: string) {
     let m: Aviso;
@@ -144,20 +151,36 @@ function CaptchaNativo() {
       // Sin esto el WebView pinta blanco sobre la pantalla mientras está en 0x0
       // en algunos Android.
       style={styles.transparente}
-      // El desafío de Turnstile se dibuja adentro del propio WebView, así que
-      // cuando hay desafío el WebView tiene que ocupar la pantalla entera.
-      containerStyle={desafiando ? styles.lleno : styles.oculto}
+      containerStyle={styles.lleno}
     />
   );
 
-  // 🔴 El WebView es el MISMO en los dos casos, y a propósito: recrearlo al
-  // abrir el desafío perdería el widget que ya está corriendo `execute()`. Lo
-  // que cambia es dónde se dibuja, no cuál es.
-  return desafiando
-    ? <Modal transparent animationType="fade" onRequestClose={() => setDesafiando(false)}>
-        <View style={styles.fondo}>{vista}</View>
-      </Modal>
-    : <View style={styles.oculto} pointerEvents="none">{vista}</View>;
+  // 🔴 UN SOLO ÁRBOL, que cambia de ESTILO y nunca de FORMA (TestFlight,
+  // 10/09/2026). La versión anterior alternaba entre `<Modal>{vista}</Modal>` y
+  // `<View>{vista}</View>`, con un comentario que decía que el WebView era "el
+  // mismo" en los dos casos. **Era falso**: cuando cambia el tipo del padre,
+  // React desmonta el hijo y monta uno nuevo. Al abrirse el desafío se creaba
+  // un WebView nuevo, que cargaba el widget de cero sin `execute()` — no
+  // mostraba nada — mientras el Modal oscurecía la pantalla y tragaba todos los
+  // toques. La app quedaba inutilizable hasta cerrarla. Era el camino que nunca
+  // se probó (la clave `3x...FF` estaba para eso).
+  //
+  // Ahora el contenedor es siempre el mismo `View`: escondido, o tapando la
+  // pantalla con el desafío en el medio. El botón "Cancelar" va DESPUÉS del
+  // WebView, así su aparición no cambia la posición del WebView en el árbol.
+  return (
+    <View
+      style={desafiando ? styles.capa : styles.oculto}
+      pointerEvents={desafiando ? 'auto' : 'none'}
+    >
+      <View style={desafiando ? styles.marco : styles.lleno}>{vista}</View>
+      {desafiando && (
+        <TouchableOpacity onPress={cancelar} style={styles.cancelar} activeOpacity={0.7}>
+          <Text style={styles.cancelarTxt}>Cancelar</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
 }
 
 // ── Web: el script va al documento de verdad ─────────────────────────────────
@@ -248,5 +271,18 @@ const styles = StyleSheet.create({
   // saca de la vista sin sacarlo del layout.
   oculto: { position: 'absolute', left: -1000, top: 0, width: 1, height: 1, opacity: 0 },
   lleno: { flex: 1 },
-  fondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
+  // Encima de todo: el host se monta después del <Stack> en la raíz, así que
+  // como hermano posterior ya se dibuja arriba; el zIndex/elevation lo asegura.
+  capa: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
+    elevation: 9999,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // El widget interactivo de Turnstile mide ~300x65; el marco le da aire.
+  marco: { width: 340, height: 180 },
+  cancelar: { marginTop: 16, paddingVertical: 10, paddingHorizontal: 20 },
+  cancelarTxt: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
 });

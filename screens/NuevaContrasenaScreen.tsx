@@ -42,6 +42,11 @@ const MIN_PASS = 6;
 export default function NuevaContrasenaScreen() {
   const router = useRouter();
   const { code } = useLocalSearchParams<{ code?: string }>();
+  // Sin `code` no se llega por el link de recuperación sino desde los ajustes,
+  // con una sesión abierta: "Crear o cambiar tu contraseña". Existe sobre todo
+  // para quien entró con un código (la cuenta nacida en la web no tiene
+  // contraseña), pero sirve para cualquiera.
+  const desdeAjustes = !code;
 
   const [estado, setEstado] = useState<Estado>('canjeando');
   const [pass, setPass] = useState('');
@@ -51,7 +56,12 @@ export default function NuevaContrasenaScreen() {
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
-    if (!code) { setEstado('invalido'); return; }
+    if (!code) {
+      supabase.auth.getSession()
+        .then(({ data }) => setEstado(data.session ? 'listo' : 'invalido'))
+        .catch(() => setEstado('invalido'));
+      return;
+    }
     supabase.auth
       .exchangeCodeForSession(code)
       .then(({ error: e }) => setEstado(e ? 'invalido' : 'listo'))
@@ -66,7 +76,14 @@ export default function NuevaContrasenaScreen() {
     setGuardando(true);
     const { error: e } = await supabase.auth.updateUser({ password: pass });
     setGuardando(false);
-    if (e) { setError('No se pudo cambiar la contraseña. Probá de nuevo'); return; }
+    if (e) {
+      // Con "Secure password change" prendido, Supabase pide haber entrado hace
+      // poco. Decirlo concreto: un "probá de nuevo" haría reintentar sin sentido.
+      setError(/reauth/i.test(e.message)
+        ? 'Por seguridad, cerrá sesión, volvé a entrar y probá de nuevo'
+        : 'No se pudo cambiar la contraseña. Probá de nuevo');
+      return;
+    }
     setEstado('guardado');
   }
 
@@ -110,12 +127,16 @@ export default function NuevaContrasenaScreen() {
             {estado === 'guardado' && (
               <View style={s.headingArea}>
                 <Text style={s.heading}>Listo</Text>
-                <Text style={s.subheading}>Ya podés entrar con tu contraseña nueva.</Text>
+                <Text style={s.subheading}>
+                  {desdeAjustes ? 'Tu contraseña quedó guardada.' : 'Ya podés entrar con tu contraseña nueva.'}
+                </Text>
                 <ScaleCard
                   style={s.enterBtn}
-                  onPress={() => router.replace('/(tabs)' as any)}
+                  // Desde los ajustes se vuelve adonde estaba: mandar a `/(tabs)`
+                  // haría rebotar a un coach hasta `/(coach)`.
+                  onPress={() => (desdeAjustes ? router.back() : router.replace('/(tabs)' as any))}
                   activeOpacity={0.85}>
-                  <Text style={s.enterBtnText}>Entrar</Text>
+                  <Text style={s.enterBtnText}>{desdeAjustes ? 'Volver' : 'Entrar'}</Text>
                 </ScaleCard>
               </View>
             )}
@@ -123,8 +144,12 @@ export default function NuevaContrasenaScreen() {
             {estado === 'listo' && (
               <>
                 <View style={s.headingArea}>
-                  <Text style={s.heading}>Elegí una contraseña nueva</Text>
-                  <Text style={s.subheading}>Mínimo {MIN_PASS} caracteres.</Text>
+                  <Text style={s.heading}>{desdeAjustes ? 'Tu contraseña' : 'Elegí una contraseña nueva'}</Text>
+                  <Text style={s.subheading}>
+                    {desdeAjustes
+                      ? `Para entrar sin esperar un código por mail. Mínimo ${MIN_PASS} caracteres.`
+                      : `Mínimo ${MIN_PASS} caracteres.`}
+                  </Text>
                 </View>
 
                 <View style={s.form}>

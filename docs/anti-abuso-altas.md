@@ -1,7 +1,21 @@
 # Runbook — Anti-abuso del alta de cuentas (CAPTCHA + rate limits)
 
-> ⚠️ **El CAPTCHA (paso A.3) todavía NO está prendido** — es manual y necesita la
-> Secret Key + la build distribuida. Hasta que se prenda, no hay portero de bots.
+> ✅ **CAPTCHA PRENDIDO el 11/09/2026** (Secret Key cargada por Andre en el
+> dashboard), con el build 20 ya en TestFlight (desde `6dc135e8`, con todos los
+> arreglos del 10/09). Verificado sin token contra `/auth/v1/token` (login) y
+> `/auth/v1/otp` (lo que usa la web): **`400 captcha_failed — no captcha_token
+> found`**. Se probó con llamadas sin efectos, no con el `curl` de alta de A.4:
+> si el CAPTCHA no hubiera quedado prendido, ese creaba una cuenta basura y
+> mandaba un mail a un dominio inexistente.
+>
+> ✅ **Proveedor confirmado: `turnstile`** (11/09/2026). Lo probó el checkout
+> web con el CAPTCHA prendido: `/c/coach-prueba?probar=1` → "Enviarme el código"
+> → **llegó el código y la reserva se creó**. Ese pedido lleva un token de
+> Turnstile; si el proveedor hubiera quedado en `hcaptcha` (como estaba el
+> 10/09), Supabase lo habría rechazado. Queda probado de paso que
+> `web/captcha.js` funciona en un navegador real.
+>
+> 🔴 **Si algo se rompe, se apaga en el dashboard y vuelve todo al instante.**
 >
 > ✅ **Rate limits (paso B) APLICADOS el 10/09/2026** vía Management API:
 > `rate_limit_verify=10`, `rate_limit_otp=6`, y anónimos **deshabilitados**
@@ -132,8 +146,9 @@ igual que hoy. Es a propósito: ver el comentario de cabecera de
 Dashboard → **Settings → Authentication → Bot and Abuse Protection** →
 *Enable CAPTCHA protection*, proveedor **Turnstile**, pegar la **Secret Key**.
 
-> ⚠️ **Al 10/09/2026 el provider en la config quedó en `hcaptcha` (viejo) y
-> `security_captcha_enabled=false`.** Prenderlo hay que cambiar las tres cosas:
+> ✅ **Prendido el 11/09/2026** (ver arriba). ⚠️ Nota original de Joaquín, que
+> sigue valiendo para confirmar el proveedor: **al 10/09/2026 el provider en la
+> config había quedado en `hcaptcha` (viejo) y `security_captcha_enabled=false`.** Prenderlo hay que cambiar las tres cosas:
 > `security_captcha_enabled=true`, `security_captcha_provider=turnstile`,
 > `security_captcha_secret=<SECRET KEY>`.
 >
@@ -155,6 +170,34 @@ call sites del cliente ya mandan token:
 | `signInWithPassword` | `context/AuthContext.tsx` |
 | `resetPasswordForEmail` | `context/AuthContext.tsx` |
 | `signInWithOtp` (reenvío del código) | `screens/VerificarMailScreen.tsx` |
+| `POST /auth/v1/otp` (checkout del link) | `web/c/index.html` |
+| `POST /auth/v1/otp` (sala desde la compu) | `web/sala/index.html` |
+
+🔴 **Las dos de la web se agregaron el 10/09/2026, antes de prender nada.** Le
+pegan a `/auth/v1/otp` con un `fetch` directo, sin `supabase-js`, y el CAPTCHA
+cubre el endpoint para todo el mundo, no solo para la app: sin token, **nadie
+habría podido entrar por la web**. Mandan `gotrue_meta_security.captcha_token`,
+que es el campo que `supabase-js` arma por dentro, y el token sale de
+`web/captcha.js` — la contraparte web de `CaptchaHost`, con las mismas reglas
+(invisible, un token por envío, falla abierto).
+
+⚠️ **Por eso el orden de encendido tiene un paso más**: la web tiene que estar
+DEPLOYADA en Vercel con `web/captcha.js` antes de prender el CAPTCHA, igual que
+la app tiene que estar en el build nuevo. Comprobarlo: abrir
+`https://vitaapp.com.ar/captcha.js` — tiene que devolver el script, no un 404.
+
+⚠️ En una **preview de Vercel** (`*.vercel.app`) el widget falla porque ese
+hostname no está en la lista de Cloudflare, y el pedido sale sin token. Con el
+CAPTCHA prendido, el pedido de código no se puede probar en previews.
+
+📌 **Toda llamada nueva que pida código, cree cuenta o inicie sesión con mail
+tiene que mandar token.** En la app, con `pedirCaptchaToken()` de
+`lib/captcha.ts`; en la web, con `window.pedirCaptchaToken()` de
+`web/captcha.js`. Si no, anda en desarrollo (CAPTCHA apagado) y se rompe en
+producción. `grep -rn "auth/v1/otp\|signInWithOtp\|signUp\|signInWithPassword\|resetPasswordForEmail"` es el chequeo.
+
+📌 `scripts/test-supabase.mjs` hace `signInWithPassword` sin token: con el
+CAPTCHA prendido ese script de prueba deja de andar. Es esperable.
 
 Google y Apple **no** pasan por acá: `signInWithOAuth` y `signInWithIdToken` no
 llevan `captchaToken` y Supabase no se los pide. Quien entra con un botón no ve
@@ -195,6 +238,23 @@ segundos antes de seguir sin token.
 Está resuelto en `components/CaptchaHost.tsx` con `originWhitelist={['*']}` y un
 `onShouldStartLoadWithRequest` que vuelve a cerrar la lista a mano. **Si alguna
 vez se toca ese WebView, esas dos props no son decorativas.**
+
+### A.6 El desafío visible, y por qué no hay un `<Modal>`
+
+Encontrado en el build 18 de TestFlight (10/09/2026), la primera vez que
+Turnstile decidió mostrar un desafío: la pantalla se oscurecía, no aparecía
+nada y **no se podía tocar nada** hasta cerrar la app.
+
+`CaptchaHost` alternaba entre `<Modal>{webview}</Modal>` y `<View>{webview}</View>`.
+Cuando cambia el tipo del padre, **React desmonta el hijo y monta uno nuevo**:
+el WebView del desafío era otro, cargaba el widget de cero sin `execute()` y no
+mostraba nada, mientras el Modal tapaba la pantalla. El timeout de 60s resolvía
+el pedido pero no cerraba el Modal.
+
+Ahora es un solo `View` que cambia de estilo (escondido ↔ capa encima de todo),
+con un botón "Cancelar", y el timeout cierra el desafío. **Si alguna vez se toca
+ese render: el WebView no puede cambiar de padre.** Es el camino que ejercita la
+clave de prueba `3x00000000000000000000FF` — usarla antes de mandar un build.
 
 ## B. Rate limits
 

@@ -81,6 +81,26 @@ export default function LoginScreen() {
     setResetMsg(err ?? `Si hay una cuenta con ${mail}, te llega un mail con el link. Abrilo en este mismo teléfono.`);
   }
 
+  /** Entrar con un código por mail, sin contraseña.
+   *
+   *  🔴 Es la puerta de quien reservó desde el link de un coach: esa cuenta nace
+   *  de un código en la web y NO tiene contraseña, y hasta ahora la única salida
+   *  era "¿Olvidaste tu contraseña?" por una contraseña que nunca puso. Sirve
+   *  igual para cualquiera que prefiera no usar contraseña.
+   *
+   *  Usa el mail que ya está escrito, igual que `handleForgot`. */
+  function entrarConCodigo() {
+    setServerError(null);
+    setResetMsg(null);
+    const mail = email.trim();
+    if (!mail) {
+      setEmailError(true);
+      setResetMsg('Escribí tu email arriba y volvé a tocar acá.');
+      return;
+    }
+    router.push({ pathname: '/verificar-mail', params: { email: mail, modo: 'entrar' } } as any);
+  }
+
   const logoAnim    = useRef(new Animated.Value(0)).current;
   const headingAnim = useRef(new Animated.Value(0)).current;
   const btnsAnim    = useRef(new Animated.Value(0)).current;
@@ -313,6 +333,10 @@ export default function LoginScreen() {
                   </TouchableOpacity>
 
                   {resetMsg && <Text style={s.resetMsg}>{resetMsg}</Text>}
+
+                  <TouchableOpacity style={s.forgotWrap} activeOpacity={0.7} onPress={entrarConCodigo}>
+                    <Text style={s.forgotText}>¿No tenés contraseña? Entrá con un código</Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </Animated.View>

@@ -43,6 +43,8 @@
     .campo { border-color: rgba(228,224,210,.28); }
   }
 </style>
+<!-- El token de Turnstile para el pedido de código. Ver /captcha.js. -->
+<script src="/captcha.js"></script>
 </head>
 <body>
 
@@ -69,9 +71,11 @@
   </div>
 
   <div id="temprano" hidden>
-    <h1>Todavía no es la hora</h1>
+    <h1 id="tempranoTitulo">Todavía no es la hora</h1>
     <p id="tempranoDetalle"></p>
-    <p class="ayuda">La sala se abre <b>15 minutos antes</b>. Volvé a entrar con este mismo link.</p>
+    <!-- La línea de arriba ya dice cuándo abre (la manda el servidor); esta
+         explica por qué y qué hacer, sin repetir "la sala se abre". -->
+    <p class="ayuda" id="tempranoAyuda">Se abre <b>15 minutos antes</b> de la sesión. A esa hora, volvé a entrar con este mismo link.</p>
   </div>
 
   <div id="problema" hidden>
@@ -151,7 +155,12 @@ async function intentarEntrar() {
   if (r.status === 404) {
     return problema('No encontramos esta sesión', 'Puede que el enlace esté incompleto.');
   }
-  // 422: la fecha no es válida o la ventana todavía no abrió.
+  // 🔴 Fuera de horario llega con 200 y SIN `url` (ver `create-meeting-room`):
+  // hasta el 11/09 la función devolvía el link a cualquier hora, y quien llegaba
+  // temprano caía en la pantalla de Daily en inglés. Y 422 = fecha ilegible.
+  const terminada = cuerpo?.estado === 'terminada';
+  $('tempranoTitulo').textContent = terminada ? 'La sesión terminó' : 'Todavía no es la hora';
+  $('tempranoAyuda').hidden = terminada;
   ocultar('cargando');
   $('tempranoDetalle').textContent = cuerpo?.error
     ? String(cuerpo.error)
@@ -176,10 +185,18 @@ async function pedirCodigo() {
     // ⚠️ `create_user: false`: acá la cuenta YA existe (reservó). Sin esto, un
     // mail mal tipeado crearía una cuenta nueva y la persona quedaría mirando
     // una sesión que no es suya.
+    // 🔴 Con el CAPTCHA de Supabase prendido, este endpoint rechaza el pedido
+    // sin token. Ver `web/captcha.js`. Si el script no cargó, sale sin token y
+    // decide el servidor.
+    const captchaToken = await window.pedirCaptchaToken?.();
     const r = await fetch(`${SUPABASE_URL}/auth/v1/otp`, {
       method: 'POST',
       headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: mail, create_user: false }),
+      body: JSON.stringify({
+        email: mail,
+        create_user: false,
+        gotrue_meta_security: { captcha_token: captchaToken },
+      }),
     });
     if (!r.ok) {
       return mostrarError('errorMail', r.status === 429

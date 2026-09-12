@@ -1,8 +1,13 @@
 let mockFila: { email_verified_at: string | null } | null = null;
 let mockError: { message: string; code?: string } | null = null;
+// Lo que contesta `marcar_mail_verificado()`: `true` si la sesión se abrió con
+// algo mandado al mail (código, link de recuperación), `false` con contraseña.
+let mockMarca: { data: boolean | null; error: { message: string } | null } = { data: false, error: null };
+let mockLlamadasRpc = 0;
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
+    rpc: async () => { mockLlamadasRpc++; return mockMarca; },
     from: () => ({
       select: () => ({
         eq: () => ({
@@ -18,7 +23,12 @@ import { mailVieneDeProveedor, necesitaVerificarMail } from '@/lib/emailVerifica
 const usuario = (app_metadata: Record<string, unknown>) =>
   ({ id: 'u1', email: 'a@b.com', app_metadata } as never);
 
-beforeEach(() => { mockFila = { email_verified_at: null }; mockError = null; });
+beforeEach(() => {
+  mockFila = { email_verified_at: null };
+  mockError = null;
+  mockMarca = { data: false, error: null };   // por defecto, sesión de contraseña
+  mockLlamadasRpc = 0;
+});
 
 describe('mailVieneDeProveedor', () => {
   it('Google y Apple entregan el mail ya verificado', () => {
@@ -45,14 +55,30 @@ describe('necesitaVerificarMail', () => {
     await expect(necesitaVerificarMail(usuario({ provider: 'email' }))).resolves.toBe(true);
   });
 
-  it('con constancia, no', async () => {
+  it('con constancia, no — y ni se le pregunta al servidor', async () => {
     mockFila = { email_verified_at: '2026-08-31T12:00:00Z' };
     await expect(necesitaVerificarMail(usuario({ provider: 'email' }))).resolves.toBe(false);
+    expect(mockLlamadasRpc).toBe(0);
+  });
+
+  it('🔴 sin constancia, pero la sesión YA prueba la casilla: no', async () => {
+    // El caso del 10/09: entró por el link de recuperación de contraseña
+    // (`amr = recovery`). Antes se lo mandaba al muro a pedir OTRO código.
+    mockMarca = { data: true, error: null };
+    await expect(necesitaVerificarMail(usuario({ provider: 'email' }))).resolves.toBe(false);
+    expect(mockLlamadasRpc).toBe(1);
+  });
+
+  it('si el servidor no puede contestar, sigue pendiente', async () => {
+    // La lectura ya dijo que no hay constancia: un error no la vuelve buena.
+    mockMarca = { data: null, error: { message: 'red caída' } };
+    await expect(necesitaVerificarMail(usuario({ provider: 'email' }))).resolves.toBe(true);
   });
 
   it('a quien entró con Google no se le pide, ni se consulta la base', async () => {
     mockFila = { email_verified_at: null };
     await expect(necesitaVerificarMail(usuario({ provider: 'google' }))).resolves.toBe(false);
+    expect(mockLlamadasRpc).toBe(0);
   });
 
   it('sin usuario, no', async () => {

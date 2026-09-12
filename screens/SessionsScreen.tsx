@@ -19,7 +19,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Calendar from 'expo-calendar';
 import * as WebBrowser from 'expo-web-browser';
-import { getJoinUrl } from '@/lib/meetingRoom';
+import { getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { ordenarSalas } from '@/lib/salaOrder';
 import { supabase } from '@/lib/supabase';
@@ -405,8 +405,12 @@ export default function SessionsScreen() {
     // tenía `SalaScreen`, en un segundo lugar.
     if (!ses.meeting_url) return;
     const url = await getJoinUrl(ses.bookingId);
-    if (url) {
-      await WebBrowser.openBrowserAsync(url);
+    if (url && 'url' in url) {
+      await WebBrowser.openBrowserAsync(url.url);
+    } else if (url) {
+      // Fuera de horario: se dice cuándo abre, no "no se pudo" — eso haría
+      // reintentar a alguien que solo llegó temprano.
+      Alert.alert(tituloDeAviso(url.estado), url.aviso);
     } else {
       Alert.alert('Error', 'No se pudo preparar la sala. Intentalo de nuevo en unos segundos');
     }

@@ -4,6 +4,228 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-12 — Joaquín (recursos: respiración diafragmática + contexto; y PR #2 reconciliado contra andre/main)
+
+**Tocado:** `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx` (feature, rama aparte); reconciliación de `lib/emailVerificado.ts`, `__tests__/emailVerificado.test.ts`, `CHANGELOG_SESIONES.md`, `SCHEMA.md` contra andre/main. tsc limpio, 595 tests.
+
+**Resumen — sumar profundidad a los recursos, y ordenar el PR #2 contra el trabajo nuevo de Andre.**
+
+- 🟢 **Recursos (respiración/sonidos).** Salió de una consulta al council: en vez de una "biblioteca" (peso), contexto barato. Respiración pasó de un patrón fijo a un **sistema de patrones** con tiempos por fase, y se sumó la **diafragmática** (inhala 4 / exhala 6, selector con Cuadrada por default). Cada patrón trae su "para qué" (afuera la línea clínica del "sistema nervioso"). Sonidos: una línea de propósito por sonido, "Ruido marrón" → "Ruido parejo", empujón al coach. Solo copy + lógica, cero audio. **PR draft en AndreAlbisu/vive-app #1, espera el ok de voz de Andre.**
+- 🔧 **PR #2 (Tier 2) reconciliado contra andre/main.** Andre había tocado `lib/emailVerificado.ts` y `app/(tabs)/index.tsx` (los mismos de #5 y #6). El merge combinó lo mejor: en `necesitaVerificarMail` conviven **nuestro fail-cerrado-salvo-esquema** (en el error) y **el `marcar_mail_verificado` de Andre** (cuando la sesión ya prueba la casilla). Conflictos resueltos en emailVerificado, su test y este changelog. #2 vuelve a quedar merge-ready.
+- 📌 **Divergencia origin/andre:** `andre/main` es el main real (superset); `origin` quedó atrás. Los PRs nuevos se basan en andre/main y se abren en el repo de Andre.
+
+**Pendiente para la próxima sesión:**
+- 🔴 Voz de Andre sobre el copy de recursos (PR AndreAlbisu#1) y la diafragmática.
+- 🔴 Sigue el SQL de `coach_alta_paso` (PR #2) esperando review de Andre (regla #6).
+
+## 2026-09-11 — Andre (sesión 225 cont. 6 · el texto de Sofía entra palabra por palabra)
+
+**Tocado:** `components/TextoQueSeEscribe.tsx` (nuevo), `lib/agruparPalabras.ts` (nuevo), `app/(tabs)/index.tsx`, `__tests__/agruparPalabras.test.ts` (nuevo). **595 tests** (+5), `tsc` limpio. ⚠️ Sin probar en dispositivo; sale en el próximo build.
+
+**Resumen — pedido de Andre: que el texto de la tarjeta de Sofía no aparezca de una.**
+
+- 📌 **Solo cuando el texto es NUEVO.** El componente lleva `key` = la frase: anima al montar, y volver a la pestaña no remonta nada. La tarjeta se ve decenas de veces por día; animarla en cada visita sería cobrarle la animación a quien más la usa.
+- 📌 **Y eso resuelve un cambio brusco que ya existía**: la tarjeta muestra primero el texto de las reglas y, uno o dos segundos después, lo reemplaza por el de la IA. Ahora ese reemplazo entra palabra por palabra y se lee como Sofía escribiendo, no como la pantalla corrigiéndose.
+- 📌 **Cada palabra es su propio `Animated.Text`** en una fila que envuelve: no se puede animar la opacidad de un tramo DENTRO de un `<Text>` (iOS arma el párrafo entero como una pieza). Opacidad sola, 260 ms con curva de salida fuerte, 35 ms entre palabras y tope de 900 ms para que nunca haya que esperar a Sofía. Layout animations de Reanimated: corren en el hilo de UI, sin `setState` por palabra.
+- 🐛 **La negrita pegada a un signo** ("**Días difíciles**, y…") habría dejado la coma como palabra suelta si se partía por tramos. `agruparPalabras` agrupa por palabras reales; está en `lib/` y con tests.
+- ♿ **Con "reducir movimiento" se dibuja igual que antes**, de una. La accesibilidad no cambia: el contenedor ya tenía la frase completa en `accessibilityLabel`.
+
+**Pendiente para la próxima sesión:**
+- Verlo en dispositivo (development build con Metro, o el próximo build): la primera apertura del día, el reemplazo reglas → IA, y el check-in recién hecho. Mirar que los renglones corten igual que antes y que la palabra en negrita no quede con otro interlineado.
+
+---
+## 2026-09-11 — Andre (sesión 225 cont. 5 · la comisión del link: la primera sesión, sin comisión)
+
+**Tocado:** `supabase/functions/_shared/commission.ts`, `supabase/functions/{mp,paypal,usdt}-create-payment/index.ts`, `__tests__/commission.test.ts`, `docs/decisiones-pagos.md` (D13). ⚠️ **Las tres funciones sin deployar.**
+
+**Resumen — apareció al preguntar si el link le había generado un descuento al coach. No: la reserva de prueba por el link pagó el 20%.**
+
+- 🔴 **`bookings.origen` se escribía y no lo leía nadie.** La decisión estaba pendiente desde la sesión 216 (cuatro entradas seguidas).
+- 🟢 **DECIDIDO (Andre): la primera sesión de cada cliente nuevo que llega por el link, al 0%, en los tres rieles.** El 20% es costo de adquisición; si el cliente lo trajo el coach, Vita no aportó nada que cobrar.
+- 📌 **Salió chico porque la escalera ya contaba por par**: "cliente nuevo" es exactamente el caso del 20% (contador del par en cero). `commissionPctFor` recibe el origen y los tres pagos se lo pasan.
+- 📌 **Con comisión 0, Mercado Pago no recibe `marketplace_fee`** en vez de recibir `0`, que nunca se probó. Protege también a la promo fundador, que tenía el mismo caso sin probar.
+- ⚠️ **Los T&C (8.3) todavía dicen "20% sobre la primera Sesión"**: no se tocaron, porque cambian `LEGAL_VERSION`. Y **el coach no se entera** del beneficio en ningún lado todavía.
+
+**Pendiente para la próxima sesión:**
+- ✅ **DEPLOYADAS el 11/09 a las 17:10**, con OK de Andre: `mp-create-payment` v50, `paypal-create-payment` v22, `usdt-create-payment` v27. Verificado que las tres arrancan (con la anon key como token responden `{"error":"Unauthorized"}` de la función misma, no del gateway). La regla en sí se prueba con una reserva real.
+- Probar: una reserva nueva por `/c/coach-prueba?probar=1` con un cliente nuevo → `platform_fee_pct = 0` y el pago de MP sin comisión en `fee_details`.
+- ⏸️ **¿Pedir más datos al registrarse? — PENDIENTE, Andre le pregunta a Mónica** (psicóloga) qué necesita saber sí o sí antes de una primera sesión con alguien nuevo. Mientras tanto no se agrega nada: el registro pide nombre, mail, contraseña, T&C y la declaración de mayoría de edad, y ninguna función necesita un dato de usuario que no tenga. 📌 **Lo que conteste probablemente NO va en el registro**: lo que necesita un profesional antes de la sesión es información para ESE profesional, y el lugar natural es el paso de reserva o el paquete para la sesión (`docs/paquete-para-la-sesion.md`), que ya tiene consentimiento y va solo al coach elegido. Si es dato de salud, pasa por `user_consents`.
+- ✅ **Las dos, aplicadas (decisión de Andre)**: 8.3 de los T&C suma la excepción del link (`LEGAL_VERSION` → `c5c287eb06d7`; sin consecuencias hoy, son un borrador sin publicar y nada pide re-aceptar), y el beneficio aparece en la tarjeta "Traé a tus primeros clientes", en "Tu link" y en la explicación de la comisión del Perfil. Sale en el próximo build; la página web de los T&C, con el push.
+
+---
+## 2026-09-11 — Andre (sesión 225 cont. 4 · la sala web pasa con el CAPTCHA, y quien llegaba temprano veía a Daily en inglés)
+
+**Tocado:** `supabase/functions/create-meeting-room/index.ts`, `lib/meetingRoom.ts`, `screens/SessionsScreen.tsx`, `screens/SalaScreen.tsx`, `web/sala/index.html`. **585 tests**, `tsc` limpio; la función y la web, solo chequeo de sintaxis (no hay Deno). ⚠️ **Función sin deployar, web sin pushear.**
+
+**Resumen**
+
+- ✅ **La sala web pasa con el CAPTCHA prendido**: `/sala?booking=…` → mail → **llegó el código**. Con esto está probado todo lo que pide token: la app instalada (alta, login, recuperación, reenvío) y las dos páginas web.
+- 🐛 **Pero después del código apareció la pantalla de Daily: "This meeting is not available yet"**, en inglés y sin decir cuándo abre (la sesión es el 12/09 11:00). `create-meeting-room` devolvía el link de entrada **a cualquier hora**, y era el `nbf` de Daily el que frenaba. La web tenía un aviso propio para esto ("Todavía no es la hora") **que no se mostraba nunca**: esperaba que el servidor lo pidiera, y el servidor solo devolvía 422 con la fecha ilegible.
+- 🟢 **Fuera de horario la función devuelve la sala sin la entrada**: `room_url`, `fuera_de_horario`, `estado` (`temprano`/`terminada`) y el aviso ("La sala se abre el 12/9 a las 10:45", en hora de Argentina).
+- ⚠️ **200 y NO 422, a propósito**: `ensureMeetingRoom` se llama al confirmar la reserva (días antes) con `functions.invoke`, que trata todo lo no-2xx como error. Con un 422, la reserva dejaba de dejar la sala creada.
+- 📌 **La web no necesitaba cambios para mostrar el aviso** (una respuesta OK sin `url` ya caía ahí); solo se le agregó el título para "La sesión terminó". En la app, `getJoinUrl` ahora devuelve el motivo y las dos pantallas lo muestran en vez de "No se pudo preparar la sala, intentalo de nuevo" — que hacía reintentar a quien solo llegó temprano.
+
+**Pendiente para la próxima sesión:**
+- ✅ **`create-meeting-room` DEPLOYADA (v31)** el 11/09, con OK de Andre. Verificado que arranca: llamada con la anon key como token → `{"error":"Unauthorized"}` **de la función misma** (no el `UNAUTHORIZED_NO_AUTH_HEADER` del gateway, que corta antes de ejecutar el código). La rama de fuera de horario solo se puede ejercitar con una sesión real.
+- 📌 **La web publicada ya muestra el aviso con la función nueva, sin push**: una respuesta OK sin `url` ya caía en "Todavía no es la hora". El push suma el título "La sesión terminó".
+- ✅ **Probado en el navegador (11/09)**: el link de la sala, un día antes → **"Todavía no es la hora — La sala se abre el 12/9 a las 10:45."**, con la web publicada de antes del push. Ya no aparece la pantalla de Daily.
+- 📌 Se corrigió de paso la línea de ayuda, que repetía "La sala se abre" debajo del aviso.
+- 🔴 **Pushear** (web: título para la sesión terminada y la línea de ayuda).
+- Probar: entrar al link de la sala antes de las 10:45 → "Todavía no es la hora" + "La sala se abre el 12/9 a las 10:45". Y a las 11:00, la videollamada con las dos puntas (Prueba 2 de A5).
+- La app (build 20) con la función nueva: fuera de horario, `getJoinUrl` devuelve `null` → "No se pudo preparar la sala". No rompe; el aviso bueno llega con el próximo build.
+
+---
+## 2026-09-11 — Andre (sesión 225 cont. 3 · quien reservó por la web no tenía cómo entrar a la app)
+
+**Tocado:** `screens/LoginScreen.tsx`, `screens/VerificarMailScreen.tsx`, `screens/NuevaContrasenaScreen.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/CoachSettingsScreen.tsx`. **585 tests**, `tsc` limpio. ⚠️ No está en el build 20: sale en el próximo (es solo JS).
+
+**Resumen — apareció al querer entrar a la app con la cuenta recién creada en el checkout web.**
+
+- 🔴 **El hueco**: la cuenta que nace en la web (por código) **no tiene contraseña**, y la app solo dejaba entrar con mail + contraseña, Google o Apple. La única salida era "¿Olvidaste tu contraseña?" por una contraseña que la persona nunca puso. Le iba a pasar a **todo cliente que llega por el link de un coach**.
+- 🟢 **"¿No tenés contraseña? Entrá con un código"** en el login. Es un **cuarto modo de `VerificarMailScreen`** (`entrar`, sin sesión), así que reusa el envío, el CAPTCHA, la cuenta regresiva y el marcado de la verificación — que sale solo, porque esa sesión se abre con código (`amr = otp`). Al entrar va a `/`, que manda a cada rol a lo suyo.
+- 🔒 **En `entrar` no se dice "no hay cuenta con ese mail"**: el login ya había decidido no revelar qué direcciones están registradas (`handleForgot`). La pantalla dice "si hay una cuenta con ese mail, te mandamos un código" y sigue igual.
+- 🟢 **"Contraseña" en los ajustes de los dos roles** → `NuevaContrasenaScreen` sin link: con sesión abierta va directo al formulario, y al guardar vuelve atrás (no a `/(tabs)`, que haría rebotar a un coach). **Opcional, no forzada**: quien entra con código puede seguir haciéndolo siempre.
+- ⏭️ **La línea en la web ("entrá a la app con este mail") se dejó para el lanzamiento**, a propósito: decirle a quien reservó que use una app que todavía no está en la App Store es prometer algo que no puede bajar — el mismo problema que la página ya tuvo con los mails.
+
+**Probado en el build 20, con el CAPTCHA prendido (11/09):** la cuenta nacida en la web usó "¿Olvidaste tu contraseña?" en la app → link en el mismo iPhone → contraseña nueva. **La cuenta quedó verificada (16:47)** sin pasar por el muro. 📌 Es una deducción, no una observación: al mirar, esa cuenta no tenía **ninguna** sesión en `auth.sessions` (Supabase las borra al cerrar sesión y al cambiar la contraseña), así que no quedó rastro del `amr`. Pero `email_verified_at` solo lo escribe `marcar_mail_verificado()`, que con `amr = password` se niega y que la web no llama: tuvo que ser la sesión `recovery`. Queda probado de paso `resetPasswordForEmail` con token en la app instalada.
+
+**Y el login con contraseña, también en el build 20 con el CAPTCHA prendido (11/09):** el coach de prueba entró con mail + contraseña a las 16:50 (`amr = password` en su sesión) y **aceptó la reserva** que había entrado por el link: quedó `confirmada`, `payment_status = aprobado` (se pagó el $1) y con sala creada. Con esto, **de la app instalada está probado todo lo que pide token**: alta, login, recuperación y reenvío de código. Falta solo la sala web.
+
+📌 **Hay una sesión real para el 12/09 a las 11:00** (coach de prueba ↔ la cuenta nacida en la web). Es la primera oportunidad de ejercitar la videollamada —la Prueba 2 de A5, planeada para el 18/09— casi una semana antes.
+
+**Pendiente para la próxima sesión:**
+- Probar en dispositivo (development build con Metro, o el próximo build): login → "Entrá con un código" con la cuenta nacida en la web → entra, y queda verificada en la base. Y Ajustes → Contraseña → guardar → volver.
+- Al lanzar: la línea en `web/reserva/index.html`.
+
+---
+## 2026-09-11 — Andre (sesión 225 cont. 2 · el checkout web pasa con el CAPTCHA prendido)
+
+**Tocado:** `docs/anti-abuso-altas.md`, `docs/problemas-abiertos.md`. Ningún cambio de código.
+
+**Resumen — la prueba que confirmó el proveedor.**
+
+- ✅ **Checkout web con el CAPTCHA prendido**: `vitaapp.com.ar/c/coach-prueba?probar=1` → nombre + mail nuevo → "Enviarme el código" → **llegó el código**, se confirmó y se reservó (16:33, `origen = link`).
+- ✅ **Eso confirma el proveedor `turnstile`**, que era lo que faltaba: el pedido lleva un token de Turnstile, y con `hcaptcha` (como estaba el 10/09) Supabase lo habría rechazado. Y es la primera vez que `web/captcha.js` corre en un navegador real.
+- ✅ **De paso, la Prueba 1 de A5 de Joaquín, CERRADA**: el nombre de quien reservó quedó en `profiles.name` (no "Usuario") y **la tarjeta del coach de prueba en la app lo muestra**.
+- 🔴 **Y apareció un hueco de producto**: la cuenta nacida en la web **no tiene contraseña**, y la app solo deja entrar con mail + contraseña, Google o Apple. Para entrar hay que usar "¿Olvidaste tu contraseña?" por una contraseña que la persona nunca puso — y la web, después de reservar, no le explica nada de esto. Propuesta: "Entrar con un código por mail" en el login de la app.
+- 📌 **La cuenta nacida en la web queda con `email_verified_at` en null** aunque acaba de probar la casilla con un código: la web no llama a `marcar_mail_verificado()`. No rompe nada hoy (esa persona no tiene contraseña; para entrar a la app pasaría por "olvidé mi contraseña", y esa sesión la verifica sola), pero la constancia se pierde. Arreglarlo es una llamada después del `verify` en `web/c/index.html` y `web/sala/index.html`.
+
+**Pendiente para la próxima sesión:**
+- Entrar con mail en el build 20 (la app instalada con el CAPTCHA prendido; la web ya pasó).
+- La sala web (`/sala`) con el CAPTCHA prendido.
+- 🔴 **Decidir cómo entra a la app quien reservó por la web** (hoy: "¿Olvidaste tu contraseña?"). Propuesta: "Entrar con un código por mail" en el login.
+
+---
+## 2026-09-11 — Andre (sesión 225 cont. · el coach con clientes no encontraba su link)
+
+**Tocado:** `lib/linkCoach.ts` (nuevo), `screens/CoachProfileScreen.tsx`, `screens/CoachHomeScreen.tsx`, `__tests__/linkCoach.test.ts` (nuevo). **585 tests** (+8), `tsc` limpio.
+
+**Resumen — apareció al buscar el link para probar el checkout web con el CAPTCHA prendido.**
+
+- 🔴 **El link público (`/c/<slug>`) estaba en UN solo lugar**: la tarjeta "Traé a tus primeros clientes" del Inicio, que se muestra **solo si el coach nunca tuvo una reserva** (`esCoachNuevo`). Con la primera reserva se iba, y el link no aparecía en ningún otro lado. **Justo el coach que ya tiene clientes —el que más lo va a querer compartir— se quedaba sin forma de encontrarlo.** La cuenta de coach de Andre (slug `andre`, 2 reservas) estaba en ese caso.
+- 🟢 **Ahora está fijo en el Perfil**, primero del grupo "Tu perfil público": el link + "Compartir mi link". La tarjeta del Inicio para coaches nuevos queda como estaba.
+- 📌 **Tres estados, y el de la pausa es nuevo**: aprobado y activo (link + compartir), aprobado y **en pausa** (se ve el link pero sin botón, con la explicación: la página pública no lo muestra mientras tanto), sin aprobar (todavía no hay link). El Inicio escondía el link entero en pausa; en el Perfil se muestra porque es del coach aunque hoy no se pueda repartir.
+- 📌 **`lib/linkCoach.ts`**: el link, cuándo es compartible y el mensaje salen de un solo lugar, con tests. Antes la regla (aprobado Y activo, los dos filtros de `web/c/index.html`) y el texto vivían sueltos en el Inicio.
+
+**Pendiente para la próxima sesión:**
+- Verlo en dispositivo: Perfil → "Tu link", y que "Compartir mi link" abra la hoja de compartir con el mensaje.
+- Sigue lo de la entrada de abajo: probar el checkout web (`vitaapp.com.ar/c/andre`) y la sala web con el CAPTCHA prendido, y entrar con mail en el build 20 para confirmar el proveedor.
+
+---
+## 2026-09-11 — Andre (sesión 225 · el CAPTCHA queda PRENDIDO)
+
+**Tocado:** `docs/anti-abuso-altas.md`, `CHANGELOG_SESIONES.md`. En producción: CAPTCHA de Supabase **prendido**, por Andre desde el dashboard. Ningún cambio de código.
+
+**Resumen — el portero existe; falta confirmar que quedó con el proveedor correcto.**
+
+- ✅ **Verificado sin token**: `/auth/v1/token` (login) y `/auth/v1/otp` (lo que usan `/c/<slug>` y `/sala`) devuelven **`400 captcha_failed — no captcha_token found`**.
+- 📌 **Se verificó con llamadas sin efectos** —login con datos falsos, código con `create_user:false` a un mail inexistente— y no con el `curl` de alta de A.4, que si el CAPTCHA no hubiera quedado prendido creaba una cuenta basura y mandaba un mail que rebota.
+- ✅ **El orden se respetó**: build **20** de producción (desde `6dc135e8`) armado y enviado a TestFlight antes de prender.
+- ⚠️ **El proveedor NO está confirmado.** Joaquín dejó anotado que al 10/09 estaba en `hcaptcha`. Los `curl` sin token rebotan con cualquier proveedor, y desde acá no hay acceso a la API de administración para leerlo.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Entrar con mail en el build 20** — confirma el proveedor de una: si quedó en `hcaptcha`, nadie entra con mail. Si falla, apagar el CAPTCHA en el dashboard y corregir el desplegable.
+- 🔴 **Probar el checkout web y la sala web** con el CAPTCHA prendido: nunca corrieron el widget en un navegador.
+- 🔴 Cualquiera en un build anterior al 20 no puede registrarse ni entrar con mail (Google y Apple siguen andando). Confirmar que Joaquín esté en el 20.
+
+---
+## 2026-09-10 — Andre (sesión 224 cont. 3 · recuperar la contraseña mandaba al muro a esperar un código que nunca salía)
+
+**Tocado:** `lib/emailVerificado.ts`, `screens/VerificarMailScreen.tsx`, `__tests__/emailVerificado.test.ts`, `SCHEMA.md`. **577 tests** (+2: la sesión que ya prueba la casilla entra; si el servidor no contesta, sigue pendiente), `tsc` limpio. ⚠️ No está en el development build 19, pero es solo JS: lo toma recargando Metro.
+
+**Resumen — probando "olvidé mi contraseña" en el development build.**
+
+- 🐛 **Síntoma**: llegaba el mail con el link, se abría la app, y el muro esperaba un código que no llegaba nunca. En la base: una sesión `recovery` a las 14:17 y **ningún envío de código después**.
+- 🔴 **Causa 1, de diseño: el link de recuperación YA prueba la casilla**, igual que un código — y `marcar_mail_verificado()` ya aceptaba `recovery`. Pero nadie le preguntaba al servidor: la app veía "sin verificar" y mandaba al muro. Ahora **`necesitaVerificarMail()`, cuando la base dice "sin verificar", le pide al servidor que marque** si la sesión se abrió con algo mandado al mail. Recuperación y códigos de la web entran directo; una sesión de contraseña sigue viendo el muro.
+- 🔴 **Causa 2, error mío del mismo día**: la "segunda defensa" de la sesión 224 cont. tragaba en silencio el 429 del primer envío, suponiendo "ya hay un código en camino". **El límite de 60s es por MAIL, no por tipo de mensaje**: lo último que había salido era el link, no un código. La persona esperaba un código que nunca se mandó, sin ninguna pista. Ahora se dice qué pasó y cuándo puede pedirlo.
+- 📌 **Patrón que ya van tres veces hoy**: un arreglo que supone qué significa una respuesta (el `&&` que no dispara nada, el WebView "que es el mismo", el 429 "que es un código en camino") sin haberlo mirado. Esta vez lo encontró una prueba que no estaba en la lista.
+
+**Probado en el development build 19** (iOS, 10/09/2026, con Metro conectado — las dos pruebas anteriores de la tarde habían corrido sin querer en el build 18 de TestFlight, porque el QR `viveapp://` lo abría esa app):
+- ✅ **Prueba A, el muro con código**: entra directo, sin error (reportado por Andre; no se miró la base después).
+- ✅ **Prueba B, el desafío del CAPTCHA** con la site key `3x00000000000000000000FF`: el desafío aparece en el centro, se resuelve y sigue, y **"Cancelar" lo cierra y la pantalla vuelve a responder** — el bug que colgaba la app en el 18. `.env` volvió a la site key real.
+- 📌 Pregunta de Andre al ver el desafío en el login: ¿no debería ser solo para el alta? **No se puede**: el CAPTCHA de Supabase es un solo interruptor (`security_captcha_enabled/provider/secret`, sin lista de endpoints) y cubre alta, login y recuperación. Y con la clave real casi nadie ve nada.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Build 20 de producción a TestFlight** con todos los arreglos del día (el 19 fue de `development`; los números son compartidos).
+- 🔴 Con la gente en el 20: prender el CAPTCHA (A.3), `curl` sin token → **400**, y probar con el CAPTCHA prendido el alta en la app, el checkout web y la sala web.
+
+---
+## 2026-09-10 — Andre (sesión 224 cont. 2 · email_verified_at nunca se pudo escribir, y el desafío del CAPTCHA colgaba la app)
+
+**Tocado:** `scripts/add-marcar-mail-verificado.sql` (nuevo), `screens/VerificarMailScreen.tsx`, `components/CaptchaHost.tsx`, `lib/captcha.ts`, `SCHEMA.md`, `docs/anti-abuso-altas.md`. **575 tests**, `tsc` limpio. ⚠️ **SQL sin correr; nada de esto está en el build 18.**
+
+**Resumen — dos bugs graves en el primer uso real del build 18. Los dos venían de caminos que "estaban probados" y no lo estaban.**
+
+- 🔴 **`profiles.email_verified_at` NUNCA se pudo escribir desde la app.** Se agregó el 31/08, después de `lock-privileged-columns.sql` (13/08), que deja `profiles` con permisos columna por columna; nadie la sumó y el UPDATE fallaba en silencio. **Confirmado en prod: 0 de 82 perfiles.** Consecuencias desde el 31/08: el alta de coach nunca dejó constancia, el gate de reserva volvía a pedir el código, y **desde el muro del 09/09 nadie que entre con mail puede pasarlo** — al reabrir la base dice "sin verificar". 📌 **Esto corrige el diagnóstico de la entrada de abajo**: el rebote no era principalmente una carrera, era esto. El arreglo del turno sigue sirviendo, pero no era la causa.
+- 🔴 **Y el paso 4 de la prueba de ayer ("verificado, reabrir no pide nada") no pudo haber pasado como se leyó**: la columna no se escribía. Probablemente se hizo con la cuenta de Google. **Las pruebas de estado persistente hay que leerlas contra la base, no contra la pantalla.**
+- 🟢 **`marcar_mail_verificado()`, del lado del servidor**, y NO un `grant update`: con el permiso, cualquiera se marcaría verificado con una llamada. La función exige que el token traiga `amr.method = 'otp'` — la única forma de tener eso es haber leído un código de esa casilla. El nombre del método **se sacó de `auth.mfa_amr_claims` de prod**, no de la documentación (que lista los valores pero no dice cuál usa el OTP por mail).
+- 🟢 **`verificar()` ahora falla CERRADO** si no se pudo guardar: marcar solo en memoria era lo que hacía volver al muro al reabrir.
+- 🔴 **El desafío del CAPTCHA colgaba la app entera.** Primera vez que Turnstile decidió desafiar (al tocar "Reenviar"): pantalla oscura, nada visible, ningún toque funcionaba. `CaptchaHost` alternaba entre `<Modal>` y `<View>` como padre del WebView, **con un comentario mío que decía que el WebView era "el mismo"** — falso: React desmonta el hijo cuando cambia el tipo del padre. Ahora es un solo `View` que cambia de estilo, con "Cancelar", y el timeout cierra el desafío. Era el camino que te marqué como el más frágil y que no se probó con `3x...FF`.
+
+**Pendiente para la próxima sesión:**
+- ✅ **`scripts/add-marcar-mail-verificado.sql` CORRIDO y VERIFICADO** (10/09): permisos correctos, y probado con una sesión simulada en transacción con rollback — **se niega con `amr=password`, marca con `amr=otp`**. Prod quedó en 0 verificados después del rollback.
+- 🔴 **Build 19.** El 18 tiene los dos bugs: nadie que entre con mail pasa el muro, y un desafío de CAPTCHA cuelga la app. **Con el 18 no se puede prender el CAPTCHA ni sumar testers.**
+- 🔴 **Antes de mandar el 19, probar en desarrollo con la site key `3x00000000000000000000FF`** (fuerza el desafío) y verificar el mail **mirando la base**, no la pantalla.
+
+---
+## 2026-09-10 — Andre (sesión 224 cont. · el muro rebotaba en TestFlight: una respuesta vieja pisaba la verificación)
+
+**Tocado:** `context/AuthContext.tsx`, `screens/VerificarMailScreen.tsx`. **575 tests**, `tsc` limpio. ⚠️ **No está en el build 18**: sale en el próximo.
+
+**Resumen — el primer uso del build 18 encontró un bug del muro que en Expo Go no se había visto.**
+
+- 🐛 **Síntoma**: en TestFlight, al poner el código correcto aparecía "Se enviaron demasiados códigos. Esperá unos minutos". Ese mensaje sale **solo del ENVÍO**, nunca de la verificación — o sea que la pantalla se había vuelto a abrir sola y pedido otro código, y Supabase lo frenaba por el límite de 60s por mail.
+- 🔴 **Causa: una carrera.** `verifyOtp` renueva la sesión y dispara `SIGNED_IN` (confirmado en `supabase-js`), que re-consulta `necesitaVerificarMail`. Esa consulta salía **antes** de que se escribiera `email_verified_at` —contestaba "pendiente"— y llegaba **después** de `marcarMailVerificado()`, pisándolo. El muro devolvía a la pantalla del código. **En Expo Go no se vio porque las respuestas llegaron en el otro orden**: el paso 2 de la prueba de ayer ("sin rebote") pasó por suerte de timing, no porque estuviera bien.
+- 🟢 **Arreglo: número de turno.** Cada consulta lleva uno, y marcar como verificado también gasta uno; una respuesta que vuelve con un turno viejo se descarta.
+- 🟢 **Y una segunda defensa en la pantalla**: si el envío AUTOMÁTICO del montaje choca con el límite, no se muestra como error — quiere decir que hay un código de hace menos de un minuto que sigue sirviendo. El reenvío manual sí muestra el motivo.
+- 📌 **Quien lo sufra en el build 18 se destraba cerrando y reabriendo la app**: la verificación sí se guardó, lo que fallaba era la navegación.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Build 19** con este arreglo antes de que alguien más que nosotros use el muro. Decisión de Andre si se hace ya o se junta con otros cambios.
+- ⚠️ **No se pudo reproducir en desarrollo**, así que la única prueba real es en TestFlight: verificar el mail en el build 19 y que entre directo, sin mensaje.
+- Sigue en pie todo lo de la entrada de abajo (instalar, prender el CAPTCHA, `curl` → 400, probar la web).
+
+---
+## 2026-09-10 — Andre (sesión 224 · el CAPTCHA habría dejado la web sin poder entrar)
+
+**Tocado:** `web/captcha.js` (nuevo), `web/c/index.html`, `web/sala/index.html`, `docs/anti-abuso-altas.md`. En EAS: `EXPO_PUBLIC_AI_REFLECTION=true` en los tres entornos. Build **18** mandado a TestFlight (commit `7ea3ab7e`).
+
+**Resumen — paso 1 del encendido del CAPTCHA (el build), y un hueco que apareció al preguntar "¿después podemos seguir modificando?".**
+
+- 🔴 **El CAPTCHA de Supabase cubre `/auth/v1/otp` para TODO el mundo, no solo para la app.** Las dos páginas web que piden código —`/c/<slug>` (el checkout del link) y `/sala` (la sesión desde la compu)— le pegan con un `fetch` directo, sin token. **Prenderlo como estaba planeado habría dejado a nadie entrando por la web**, y el runbook listaba solo los cuatro call sites de la app.
+- 🟢 **`web/captcha.js`**, la contraparte web de `CaptchaHost`, con las mismas reglas: invisible, un token por envío, falla abierto. Las dos páginas mandan `gotrue_meta_security.captcha_token`, el campo que `supabase-js` arma por dentro (sacado de `node_modules`, no de memoria). Se prepara al cargar la página para no sumar la espera al "Enviando…".
+- 📌 **El orden de encendido suma un paso**: la web deployada en Vercel con `captcha.js` antes de prender el CAPTCHA. Y en previews de Vercel (`*.vercel.app`) el pedido de código no va a andar con el CAPTCHA prendido: ese hostname no está en Cloudflare.
+- 🔴 **`EXPO_PUBLIC_AI_REFLECTION` estaba en el `.env` local pero NO en EAS**: los builds de store salían con la IA apagada mientras en Expo Go se veía prendida. Se cargó en los tres entornos (decisión de Andre) antes del build 18. Sin esto, el tope que Joaquín dejó vivo ayer no se habría ejercitado nunca desde la app instalada.
+- 📌 El build de store no era el 3 sino el **18**: el 17 ya se había mandado el 09/09 desde `2c4ad6f3`.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Pushear** para que Vercel deploye la web con `captcha.js`, y comprobar que `https://vitaapp.com.ar/captcha.js` responde. Sin eso, **no se prende el CAPTCHA**.
+- 🔴 El build 18 en TestFlight: instalarlo y ver `[captcha] activo` + `token obtenido: sí`.
+- 🔴 Recién después, prender el CAPTCHA (paso A.3) y el `curl` de A.4 → **400**. Probar además el checkout web y la sala web con el CAPTCHA prendido: son las dos piezas que no pasaron por ninguna prueba.
+- ⚠️ `web/captcha.js` **no se probó en un navegador**: solo sintaxis. La primera prueba real es con la web deployada.
+
+---
+
 ## 2026-09-10 — Joaquín (checkout web: el arreglo del nombre del 09/09 nunca funcionó — dos bugs, y Prueba 1 cerrada)
 
 **Tocado:** `web/c/index.html` (PRs #3 y #4, ya en main y deployados vía Vercel). En producción: cuentas de prueba del checkout borradas. Ningún cambio de app.

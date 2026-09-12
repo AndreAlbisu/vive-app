@@ -65,7 +65,7 @@ serve(async (req) => {
 
     const { data: booking } = await supabase
       .from('bookings')
-      .select('id, user_id, coach_id, coach_name, amount, currency, payment_status, preference_id, platform_fee_pct')
+      .select('id, user_id, coach_id, coach_name, amount, currency, payment_status, preference_id, platform_fee_pct, origen')
       .eq('id', booking_id)
       .single()
 
@@ -171,7 +171,9 @@ serve(async (req) => {
     // USDT: seguía mirando solo `preference_id`.
     // `promoUntil` y el conteo (`count`) ya se pidieron en paralelo más arriba.
     // La decisión de tramo es pura y está en _shared/commission.ts, testeada.
-    const commissionPct = commissionPctFor(count ?? 0, Date.now(), promoUntil, 'mp')
+    // `origen`: la primera sesión de un cliente que trajo el coach por su link
+    // va al 0% (D13). Ver `COMMISSION_LINK_FIRST`.
+    const commissionPct = commissionPctFor(count ?? 0, Date.now(), promoUntil, 'mp', booking.origen)
 
     // marketplace_fee = comisión pura (20/15%), SIN IVA — y así queda.
     // Figura fiscal DECIDIDA (Andre, 06/08/2026): persona humana en Monotributo.
@@ -205,7 +207,10 @@ serve(async (req) => {
       notification_url: MP_WEBHOOK_URL,
     }
     // Split: comisión VITA (tier server-side). Se puede apagar para diagnóstico.
-    if (MP_SPLIT_ENABLED) prefBody.marketplace_fee = marketplaceFee
+    // Con comisión 0 (el link, o la promo fundador) no se manda: omitirlo es lo
+    // mismo que cobrar cero, y no depende de que Mercado Pago acepte un
+    // `marketplace_fee: 0`, que nunca se probó.
+    if (MP_SPLIT_ENABLED && marketplaceFee > 0) prefBody.marketplace_fee = marketplaceFee
     // MP EXIGE back_urls https (un deep link `viveapp://` da error `invalid_back_urls`
     // → "algo salió mal" al aprobar). Por eso la vuelta pasa por `booking-return`,
     // que es https y hace el 302 al deep link.

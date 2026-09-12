@@ -97,6 +97,8 @@ export default function CoachSettingsScreen() {
     // Solo para admins. Esconderlo no es la protección —`admin-actions` revalida
     // contra el JWT en cada escritura— pero no tiene sentido mostrar una puerta
     // que no se puede abrir. Mismo criterio que en la pantalla del usuario.
+    // Crear o cambiar la contraseña (ver el mismo ítem en ProfileOwnScreen).
+    { id: 'password', icon: 'key-outline', label: 'Contraseña', onPress: () => router.push('/nueva-contrasena' as any) },
     ...(isAdmin ? [{ id: 'admin', icon: 'shield-account-outline' as const, label: 'Administración', onPress: () => router.push('/admin') }] : []),
   ];
 

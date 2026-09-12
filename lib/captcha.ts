@@ -57,9 +57,16 @@ type Resolver = (token: string | undefined) => void;
 /** Lo publica `CaptchaHost` al montarse. Sin host montado no hay forma de
  *  resolver un desafío, así que `pedirCaptchaToken` devuelve `undefined`. */
 let ejecutar: ((resolver: Resolver) => void) | null = null;
+/** Cierra un desafío abierto. Lo llama el timeout de abajo: si no, el pedido se
+ *  resuelve pero el desafío queda dibujado encima de todo, tapando la app. */
+let cancelarHost: (() => void) | null = null;
 
-export function registrarCaptchaHost(fn: ((resolver: Resolver) => void) | null) {
+export function registrarCaptchaHost(
+  fn: ((resolver: Resolver) => void) | null,
+  cancelar: (() => void) | null = null,
+) {
   ejecutar = fn;
+  cancelarHost = cancelar;
 }
 
 /**
@@ -86,6 +93,7 @@ export function pedirCaptchaToken(): Promise<string | undefined> {
     };
     const t = setTimeout(() => {
       console.warn('[captcha] sin respuesta del widget, sigue sin token');
+      cancelarHost?.();
       unaVez(undefined);
     }, 60_000);
     ejecutar!(token => {

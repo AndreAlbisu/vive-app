@@ -73,7 +73,7 @@ La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Prof
 
 8.2. **Procesamiento de pagos.** Los pagos se procesan a través de Mercado Pago mediante un modelo de marketplace (pago dividido). El Cliente autoriza el cobro al momento de reservar. Cada Profesional conecta su propia cuenta de Mercado Pago para recibir el pago correspondiente. Vita no almacena datos completos de tarjetas; el procesamiento se rige también por los términos de Mercado Pago.
 
-8.3. **Comisión de la Plataforma.** Vita percibe una comisión sobre el precio de cada Sesión, retenida automáticamente en el momento del pago. La comisión vigente es: **20%** sobre la primera Sesión completada de cada vínculo Cliente–Profesional y **15%** a partir de la segunda, de manera permanente. Vita puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. Vita puede modificar sus comisiones a futuro, notificando con antelación razonable.
+8.3. **Comisión de la Plataforma.** Vita percibe una comisión sobre el precio de cada Sesión, retenida automáticamente en el momento del pago. La comisión vigente es: **20%** sobre la primera Sesión completada de cada vínculo Cliente–Profesional y **15%** a partir de la segunda, de manera permanente. **Excepción:** cuando el Cliente llega a la Plataforma a través del enlace propio del Profesional, la primera Sesión de ese vínculo no tiene comisión; a partir de la segunda rige el 15%. Vita puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. Vita puede modificar sus comisiones a futuro, notificando con antelación razonable.
 
 8.4. **Impuestos.** Vita opera bajo el **Régimen Simplificado para Pequeños Contribuyentes (Monotributo)**. En consecuencia, los comprobantes que emite son **facturas tipo C, que no discriminan IVA**, y la comisión indicada en 8.3 es el importe total que percibe Vita por su servicio de intermediación, sin adicionales impositivos.
 
@@ -453,7 +453,7 @@ export const LEGAL_PLACEHOLDERS: string[] = ["[Validar con abogado el encuadre d
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '02e2317593ef';
+export const LEGAL_VERSION = 'c5c287eb06d7';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la
