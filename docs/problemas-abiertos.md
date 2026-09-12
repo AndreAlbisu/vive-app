@@ -141,10 +141,25 @@ arreglo no se volvió a probar.**
 4. De paso: que la card esté **debajo** de "Tu próxima sesión" (decisión de Andre
    del 09/09), y que al tocar Aceptar desaparezca.
 
-#### Prueba 2 — la videollamada, el 18/09 a las 11:00
+#### Prueba 2 — la videollamada — ⏸️ SIGUE ABIERTA
 
 Es la única parte del camino que **nunca se ejercitó**, y solo se puede el día de
 la sesión: la sala se abre 15 minutos antes.
+
+> 🔴 **Se perdió la oportunidad del 12/09.** Había una sesión real a las 11:00
+> (coach de prueba ↔ la cuenta nacida en el checkout web, pagada) y **nadie
+> entró**. La reserva quedó `completada`, pero eso no prueba nada: lo marca el
+> cron `complete-sessions` por horario.
+>
+> 📌 **Lo único que dejó, y sirve**: el 13/09 después de las 11:00, la función
+> `session-attendance` tiene que escribir una fila con `participants_count = 0`
+> — el cron corre al minuto 17 de cada hora y espera 24 h antes de concluir que
+> la sala quedó vacía. Si la escribe, queda probado el registro de "nadie
+> entró", que es la prueba que hace falta cuando alguien reclama una sesión que
+> no dio. Si NO la escribe, hay un bug en ese camino.
+>
+> ⚠️ Para volver a intentarlo hace falta una sesión nueva: la sala de la del
+> 12/09 ya venció (`exp` = fin + 1 hora).
 
 1. **Vos como cliente**, desde el navegador: `vitaapp.com.ar/sala?booking=<id>`.
    El link también llega en el mail de "Sesión confirmada".

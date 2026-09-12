@@ -118,6 +118,20 @@
 - Sigue lo de la entrada de abajo: probar el checkout web (`vitaapp.com.ar/c/andre`) y la sala web con el CAPTCHA prendido, y entrar con mail en el build 20 para confirmar el proveedor.
 
 ---
+## 2026-09-12 — Andre (sesión 226 cont. 2 · la videollamada del 12/09 no se probó)
+
+**Tocado:** `docs/problemas-abiertos.md` (A5, Prueba 2). Sin cambios de código.
+
+- 🔴 **Nadie entró a la sala de las 11:00.** La sesión existía y estaba pagada; la Prueba 2 de A5 —la videollamada, lo único del camino que nunca se ejercitó— **sigue abierta**.
+- 📌 **`completada` no probaba lo contrario**: lo marca el cron `complete-sessions` por horario, no por asistencia. Verificado de paso que las 0 filas de `session_attendance` tampoco eran un bug: la función espera **24 horas** antes de escribir el "nadie entró", justamente para no convertir una foto temprana en una conclusión falsa.
+- 🟢 **Queda algo que sí se puede verificar solo**: el 13/09 después de las 11:00 tiene que aparecer una fila con `participants_count = 0`. Si aparece, queda probado el registro de asistencia vacía (la prueba que hace falta si alguien reclama una sesión que no dio). Si no aparece, hay un bug.
+- ⚠️ La sala del 12/09 ya venció (`exp` = fin + 1 h): para reintentar hace falta una reserva nueva.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Agendar otra sesión de prueba y hacer la videollamada.** Dos formas: repetir el camino real desde `/c/coach-prueba?probar=1` con otro mail (cuesta $1 y de paso vuelve a ejercitar el checkout), o insertar una reserva confirmada directo en la base con service role (gratis, no pasa por el checkout) — **decisión de Andre**.
+- 📌 Verificar el 13/09 la fila de asistencia vacía.
+
+---
 ## 2026-09-12 — Andre (sesión 226 cont. · empezar a MIRAR la fuga, sin castigar a nadie)
 
 **Tocado:** `scripts/diagnostico-fuga.sql` (nuevo), `screens/SalaScreen.tsx`. **596 tests**, `tsc` y `eslint` limpios.
