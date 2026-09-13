@@ -4,6 +4,27 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-13 — Andre (sesión 228 cont. 4 · el SQL corrido y verificado, y de paso se cerró la medición que bloqueaba todo)
+
+**Tocado:** `docs/no-show.md`, `scripts/complete-confirmed-sessions.sql` (comentarios), `SCHEMA.md`. Sin cambios de lógica. ✅ **El SQL de la entrada de abajo está CORRIDO en producción.**
+
+**Resumen — Andre corrió el SQL. Se verificó contra la base y una de las consultas de control terminó contestando la pregunta que estaba frenando el resto del bloque.**
+
+- ✅ **La función nueva quedó**: `pg_get_functiondef(...) like '%max_simultaneous%'` → **true**.
+- ✅ **Verificación 2 — 0 filas**, y **verificación 3 — 0**. No hay completadas falsas pendientes ni reservas trabadas por falta de fila de asistencia. Nada roto.
+- 🔴 **Pero un chequeo de cordura que no estaba en el script destapó lo importante: `max_simultaneous >= 2` NUNCA se dio.** Hay **6 filas** de `session_attendance`, **5 son salas vacías** y la sexta tiene **un solo participante durante 5 segundos**. O sea que **el guard recién corrido no tiene un solo caso positivo en la base**: si nadie lo mira, la primera videollamada real de dos puntas es también la primera prueba de que completa algo.
+- 📌 **Y eso no era un campo mal leído, que era la sospecha**: `max_simultaneous` viene `null` en las salas vacías (el `|| null` del resumen convierte el 0) y `1` en la única con gente. La derivación está bien; lo que falta es una sesión de verdad.
+- 🟢 **MEDICIÓN 1 CERRADA — Daily SÍ devuelve `user_id` por participante**, que era la única marcada como bloqueante en `docs/no-show.md` y la que sostiene todo el paso 2 de la regla. Verificado contra el `raw` real: `data[].participants[]` trae **`user_id`, `user_name`, `participant_id`, `join_time`, `duration`**, y `data[]` trae `max_participants`.
+- 🔴 **Y lo que de verdad había que confirmar: ese `user_id` es NUESTRO uuid de perfil, no un id interno de Daily.** Cruzó exacto contra `bookings.user_id` de la reserva (`es_el_cliente: true`, `es_el_coach: false`). **El paso 2 —quién no cumplió— ya es calculable desde `raw`, sin pedirle nada nuevo a Daily.**
+- ⚠️ **Lo que sigue sin probarse, y es el límite honesto de esto**: el caso de **dos** personas. El cruce coach-vs-cliente está verificado de un lado solo. Por eso el `where` se deja en `max_simultaneous >= 2` y no gradúa todavía a la vista del veredicto.
+- 📌 **Hallazgo de herramienta, útil para el futuro**: `npx supabase db query --linked` ejecuta SQL contra producción sin service role key ni `psql`. Hasta ahora toda verificación pasaba por el editor del panel a mano.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **La videollamada real de dos puntas** pasa a ser la prueba que destraba dos cosas a la vez: que el guard complete algo, y que el cruce coach-vs-cliente funcione del lado del coach.
+- 📌 **Construir la vista del veredicto** ya no está bloqueado por ninguna medición — solo por esa prueba.
+- Sigue pendiente medir `money_release_date` y la pregunta al account manager de MP.
+
+---
 ## 2026-09-13 — Andre (sesión 228 cont. 3 · la sesión deja de darse por cumplida sola, y la regla se dice en las dos pantallas)
 
 **Tocado:** `scripts/complete-confirmed-sessions.sql` (reescrita), `docs/terminos-y-condiciones.md` (§9.5 nueva), `constants/legal.ts` + `web/legal/terminos.html` (regenerados), `screens/SalaScreen.tsx`, `screens/CoachHomeScreen.tsx`, `docs/legal-instrucciones.md`, `SCHEMA.md`. **596 tests**, `tsc` limpio. ⚠️ **El SQL NO está corrido** y las pantallas salen en el próximo build.

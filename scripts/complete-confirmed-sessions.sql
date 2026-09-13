@@ -40,13 +40,18 @@
 --
 -- 📌 **Por qué `max_simultaneous` y no el solapamiento real de 10 minutos**, que
 -- es lo que dice la regla: el solapamiento exige identificar QUIÉN es cada
--- participante (`user_id` por participante dentro de `raw`), y **eso todavía no
--- se verificó contra una respuesta real de Daily** — es la medición 1 de
--- docs/no-show.md. Escribir esa lógica ahora sería colgarla de un campo que
--- puede no venir. `max_simultaneous` sale del resumen que la edge function YA
--- deriva y guarda, así que no asume nada nuevo.
---   → Cuando esa medición esté, este `where` pasa a leer la vista derivada del
---     veredicto y esta función no vuelve a cambiar.
+-- participante, y cuando esto se escribió eso no estaba verificado.
+--
+-- ✅ **Verificado el 13/09/2026, después de correr esta función**: Daily devuelve
+-- `user_id`, `user_name`, `participant_id`, `join_time` y `duration` por
+-- participante, y el `user_id` **es nuestro uuid de perfil** (cruzó exacto
+-- contra `bookings.user_id`). O sea que el paso 2 de la regla —quién no
+-- cumplió— **ya se puede calcular** desde `raw`, sin pedirle nada nuevo a Daily.
+--   → Este `where` puede graduar de `max_simultaneous >= 2` a la vista derivada
+--     del veredicto. Se dejó en `max_simultaneous` a propósito hasta que exista
+--     una videollamada real de DOS puntas: hoy la única fila con datos tiene un
+--     solo participante, así que el cruce coach-vs-cliente está probado de un
+--     lado nada más.
 --
 -- ── LO QUE ESTA FUNCIÓN A PROPÓSITO **NO** HACE ─────────────────────────────
 --

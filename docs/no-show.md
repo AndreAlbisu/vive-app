@@ -333,10 +333,29 @@ sesión y además sancionar a alguien en crisis es el peor error posible acá.
 
 ## Lo que hay que medir antes de construir
 
-1. 🔴 **Que Daily devuelva `user_id` por participante.** Toda la regla cuelga de
-   poder distinguir al coach del cliente. `create-meeting-room` acuña el token
-   con `user_id` e `is_owner: true`, pero **nunca se miró una respuesta real de
-   `/v1/meetings`**. Se mira en la primera videollamada real, abriendo el JSON.
+1. ✅ **RESUELTA el 13/09/2026 — Daily SÍ devuelve `user_id` por participante.**
+   Era la única medición bloqueante: toda la regla cuelga de poder distinguir al
+   coach del cliente. Verificado contra la respuesta real guardada en
+   `session_attendance.raw` (la única fila con gente, del 28/08):
+   - `data[].participants[]` trae **`user_id`, `user_name`, `participant_id`,
+     `join_time`, `duration`** — o sea las tres cosas que hacen falta: identidad,
+     cuándo entró y cuánto se quedó.
+   - Y el `user_id` **es nuestro uuid de perfil, no un id interno de Daily**:
+     cruzó exacto contra `bookings.user_id` de esa reserva (`es_el_cliente:
+     true`, `es_el_coach: false`).
+   - `data[]` trae además **`max_participants`**, que es de donde sale
+     `max_simultaneous`.
+
+   📌 **Consecuencia: el paso 2 de la regla (quién no cumplió) queda
+   desbloqueado.** El solapamiento real y la asignación de responsabilidad se
+   pueden calcular desde `raw` sin pedirle nada nuevo a Daily, y el `where` de
+   `complete_confirmed_sessions()` puede graduar de `max_simultaneous >= 2` a la
+   vista derivada del veredicto.
+
+   ⚠️ **Lo que sigue sin probarse es el caso de DOS personas.** La única fila con
+   datos tiene un solo participante durante 5 segundos: nunca hubo una
+   videollamada real de dos puntas, así que el cruce coach-vs-cliente está
+   verificado de un lado solo.
 
 2. 🔴 **Cuántos coaches tienen `push_token`.** El aviso preventivo al coach es la
    única medida que evita el problema en vez de administrarlo, y
