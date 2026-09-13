@@ -1156,6 +1156,18 @@ export default function SalaScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.sessionCardHint}>Disponible 10 min antes de la sesión</Text>
+          {/* 🔴 La regla de ausencias, dicha ANTES y no después (T&C §9.5, ver
+              docs/no-show.md). Quien está esperando solo en una sala no sabe si
+              el problema es el coach o su conexión, y menos todavía si va a
+              perder la plata. Decirlo acá —en la tarjeta que mira antes de
+              entrar— es lo que convierte una política escrita en una promesa
+              que la persona conoce cuando la necesita.
+              📌 Va la frase del CLIENTE; la del coach vive en su propia tarjeta
+              (`CoachHomeScreen`), porque el plazo que le aplica es otro: él
+              tiene que esperar hasta 20 minutos. */}
+          <Text style={styles.sessionCardHint}>
+            Si tu coach no está en los primeros 10 minutos, no pagás
+          </Text>
           {/* 🔴 Faltaba. `handleCancelBooking` ya manejaba el caso confirmado
               —chequea las 24hs y escribe `cancelled_late`— pero ningún botón lo
               llamaba en este estado: la función estaba escrita y era inalcanzable.

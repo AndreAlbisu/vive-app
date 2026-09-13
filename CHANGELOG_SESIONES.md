@@ -4,6 +4,26 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-13 — Andre (sesión 228 cont. 3 · la sesión deja de darse por cumplida sola, y la regla se dice en las dos pantallas)
+
+**Tocado:** `scripts/complete-confirmed-sessions.sql` (reescrita), `docs/terminos-y-condiciones.md` (§9.5 nueva), `constants/legal.ts` + `web/legal/terminos.html` (regenerados), `screens/SalaScreen.tsx`, `screens/CoachHomeScreen.tsx`, `docs/legal-instrucciones.md`, `SCHEMA.md`. **596 tests**, `tsc` limpio. ⚠️ **El SQL NO está corrido** y las pantallas salen en el próximo build.
+
+**Resumen — se implementó lo único del bloque del no-show que ya estaba haciendo daño, y el pedido de Andre de que la regla quede explícita a las dos partes.**
+
+- 🔴 **`complete_confirmed_sessions()` dejaba de mirar el reloj y pasa a exigir prueba.** Dos cambios: corre **después del FIN de la sesión** (`inicio + duration_minutes`) y no a los 20 minutos del inicio —con la tolerancia del cliente en 20, a los 20 una sesión con alguien demorado recién empieza—, y exige `max_simultaneous >= 2` sobre `session_attendance`, **la tabla que se puebla desde el 25/08 y que hasta hoy no consumía nadie**. Con eso se cortan de una las cuatro consecuencias: la invitación a reseñar al cliente plantado, el tramo de comisión reducida, el candado del payout internacional (`mark_coach_paid` exige `completada`) y el permiso para dejar reseña.
+- 📌 **Se usa `max_simultaneous` y NO el solapamiento real de 10 minutos que dice la regla, a propósito**: el solapamiento exige identificar quién es cada participante (`user_id` dentro de `raw`), y **eso sigue sin verificarse contra una respuesta real de Daily**. Escribirlo ahora sería colgarlo de un campo que puede no venir. `max_simultaneous` sale del resumen que la edge function ya deriva y guarda, así que no asume nada nuevo — y cuando la medición esté, ese `where` pasa a leer la vista del veredicto y la función no vuelve a cambiar.
+- 🔴 **NO se inventó un estado nuevo** tipo `no_realizada`, y la razón es medible: **`bookings.status` no tiene CHECK** (los únicos de la tabla son sobre `payment_status`) y hay **31 lugares en 17 archivos** filtrando por `'completada'` o `in ('pendiente','confirmada')`. Un quinto valor se colaría en silencio por todos. La sesión sin evidencia **no se marca** y queda en `confirmada` para el panel.
+- ⚠️ **Modo de falla nuevo, escrito en el propio script**: si `session-attendance` se cae, **nada se completa**. Es el lado correcto en el que equivocarse —demorar una invitación a reseñar es barato; afirmar que una sesión ocurrió sin prueba es lo que rompía las cuatro cosas— pero antes no existía. El script trae las tres consultas de verificación, incluida la que lista **las reservas que la versión vieja habría marcado y esta no**.
+- 🟢 **T&C §9.5 "Ausencias"** (nueva). ⚠️ **§9.4 ya estaba ocupada** por el botón de arrepentimiento, así que la vieja 9.5 (cláusula de cierre) pasó a **9.6**. Fija los dos plazos asimétricos, la permanencia del coach hasta el minuto 20, el caso en que no va ninguno, y **que la asistencia se constata por metadatos de conexión y nunca por contenido** — Vita no accede a audio, video ni transcripción. `LEGAL_VERSION`: `c5c287eb06d7` → **`3a2108db8138`**.
+- 🟢 **Y la regla se dice en las dos pantallas, que era el pedido**: en la tarjeta de la próxima sesión del cliente (`SalaScreen`), *"si tu coach no está en los primeros 10 minutos, no pagás"*; en la del coach (`CoachHomeScreen`), *"esperá hasta 20 minutos, si no llega la sesión se te paga igual"*. **No se puede escribir una sola frase para los dos porque los plazos son distintos**, y ese es justo el motivo por el que tiene que estar en cada lado: el coach que se va a los 5 minutos no sabe que acaba de quedar como ausente, y el que espera 12 cree que perdió la sesión.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr el SQL** y después las tres verificaciones que trae el script — sobre todo la 2, que lista las completadas falsas que estaban por ocurrir.
+- 🔴 **Sigue bloqueante la medición de Daily**: que `/v1/meetings` devuelva `user_id` por participante. Sin eso no hay veredicto de culpa, solo "hubo dos personas".
+- Las dos pantallas salen en el próximo build; no se probaron en dispositivo.
+- Lo demás de las entradas de abajo no cambia.
+
+---
 ## 2026-09-13 — Andre (sesión 228 cont. 2 · el cliente que llega tarde tiene 20 minutos, y eso obligó a reescribir la obligación del coach)
 
 **Tocado:** `docs/no-show.md`. Sin cambios de código.

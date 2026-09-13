@@ -803,6 +803,24 @@ export default function CoachHomeScreen() {
                 <Text style={s.actCompuTxt}>Hacerla desde la computadora</Text>
               </TouchableOpacity>
 
+              {/* ── La regla de ausencias, del lado del coach (T&C §9.5) ──────
+                  🔴 El plazo del coach NO es el mismo que el del cliente, y por
+                  eso no se puede escribir una sola frase para los dos: el
+                  cliente puede irse a los 10 minutos, el coach tiene que esperar
+                  hasta 20. Ver docs/no-show.md.
+
+                  📌 Se dice ACÁ y no en un ToS que nadie abre, porque es
+                  exactamente el momento en que hace falta: el coach mirando la
+                  tarjeta de la sesión que está por empezar. Sin esto, el que
+                  espera 12 minutos y se va cree que perdió la sesión, y el que
+                  se va a los 5 no sabe que acaba de quedar como ausente.
+
+                  ⚠️ Mismo criterio de color que el botón de arriba:
+                  `GREEN_EYEBROW` sobre el verde oscuro de esta tarjeta. */}
+              <Text style={[s.actCompuTxt, { textAlign: 'center', marginTop: 8, opacity: 0.85 }]}>
+                Esperá hasta 20 minutos. Si no llega, la sesión se te paga igual.
+              </Text>
+
               {prepOpen && (
                 <View style={s.prep}>
                   <Text style={s.prepLine}>
