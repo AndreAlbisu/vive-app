@@ -182,37 +182,68 @@ números no coinciden:
 | Web `/c/<slug>` | **21 días** | `slots_libres(p_slug, p_dias default 21)`, techo duro de 60; la web llama sin `p_dias` |
 | Colchón de MP | **~14 días** | release por default post-aprobación |
 
-**La app vende sesiones hasta 42 días más allá de donde llega la protección.** Y
-hay un defecto aparte, independiente del no-show: **el mismo coach ofrece dos
-agendas distintas según la puerta por la que entró el cliente.**
+**La app vende sesiones hasta 42 días más allá de donde llega el colchón.** Eso
+no es de por sí un problema —ver abajo por qué acortar el horizonte fue la
+respuesta equivocada— pero sí es una franja de reservas cuyo reembolso depende
+del balance del coach y no de fondos retenidos, y hasta hoy nadie sabía cuán
+ancha es.
 
-### Decidido: horizonte de 10 días, mismo valor en las dos superficies
+Y hay un defecto aparte, independiente del no-show y de todo lo demás: **el mismo
+coach ofrece dos agendas distintas según la puerta por la que entró el cliente.**
 
-No 14: poner el horizonte igual al colchón deja margen cero. La cuenta es la del
-camino completo, no la de la sesión:
+### Decidido: horizonte de 30 días, mismo valor en las dos superficies
 
-```
-t=0        pago aprobado
-t=H        la sesión
-t=H+1      veredicto de no-show (el cron es horario)
-t=H+1..3   el paso humano (mail → Andre aprieta el botón)
-t≈14       MP libera los fondos
-```
+🔴 **La primera versión de esta decisión fue 10 días, y estaba mal.** Queda
+escrito el error para que nadie lo "arregle" de vuelta: se derivó mirando **solo**
+el colchón de MP —hacer entrar toda sesión y su eventual reembolso dentro de los
+~14 días— y se pagó con restricciones sobre los casos más comunes. Las tres que
+lo rompen, planteadas por Andre:
 
-Con H=10 quedan 3-4 días de margen. Con H=14 no queda ninguno.
+1. 🔴 **El coach lleno.** Si sus próximos 14 días están ocupados, con tope de 10
+   **aparece con cero disponibilidad y desaparece en la práctica**. El sistema
+   castiga exactamente a los coaches que mejor funcionan, y se agrava solo:
+   cuanta más demanda, menos reservable.
+2. 🔴 **Reservar el mes.** Un vínculo de acompañamiento es "cuatro sesiones, una
+   por semana"; con 10 días entran dos. Y **quien quiere dejar cerradas las
+   cuatro y no puede, las arregla por afuera con el coach** — o sea que el tope
+   empujaba justo la fuga que el proyecto entero trata de evitar.
+3. **El viaje.** Alguien que sabe su agenda y reserva a dos semanas es el cliente
+   más organizado que hay, y quedaba bloqueado.
 
-**Y 10 no aprieta nada en la práctica**: una cadencia semanal necesita 7 días de
-horizonte, y la re-reserva 1-tap al terminar cada sesión —medida 1 del
-anti-fuga— entra siempre. El horizonte largo solo sirve para el caso que hoy no
-existe: agendar a dos meses.
+📌 **El error de razonamiento, anotado porque es reutilizable:** se trató "la
+sesión cae fuera del colchón" como si fuera "el reembolso es imposible", y no lo
+es. Pasados los ~14 días el refund **sigue saliendo del balance del coach**;
+falla solo si además retiró y no le quedó saldo. Es una falla probabilística y
+poco frecuente, y se la estaba previniendo con un candado que rompe casos de
+todos los días.
+
+**El horizonte deja de ser la protección.** Se elige por demanda:
+
+- **30 días**, mismo valor en la app y en la web. Cubre el paquete mensual, el
+  viaje y al coach lleno, y es la mitad de los 56 actuales — que nadie eligió:
+  salieron de la generación de slots.
+- Se sigue arreglando el defecto real, que es independiente de todo esto: hoy
+  **el mismo coach ofrece 56 días por la app y 21 por la web**. Eso no era una
+  decisión, era una inconsistencia.
+- La exposición pasa de **prevenirse** a **verse**: las reservas con
+  `scheduled_date - paid_at > 14 días` son una consulta. Saber cuántas son y
+  cuánta plata representan vale más que prohibirlas.
 
 📌 **El tope va en la reserva, no en la generación.** `generateWeeklySlots()`
 sigue poblando 56 días: eso es el coach declarando disponibilidad, que es otra
 cosa. Lo que se acota es hasta dónde se puede **comprar**.
 
-El costo de equivocarse es asimétrico y reversible en una sola dirección: subir
-el tope después es cambiar un número; recuperar plata de un coach que ya retiró
-no tiene mecanismo — el runbook de garantía ya lo dice.
+### Lo que lo resolvería de verdad, y por qué no ahora
+
+**Cobrar cerca de la sesión y no al reservar**: la reserva se hace a 60 días y el
+cobro sale 10 días antes. Así **toda sesión queda dentro del colchón sin importar
+con cuánta anticipación se reservó**, y de paso habilita los paquetes.
+
+Pero cambia el modelo entero —hoy es cobro al reservar, y de ahí cuelgan
+`expire_unpaid_checkouts()`, el split, la comisión y los tres rieles— y crea una
+falla nueva: el cobro que falla después, con la sesión agendada y el horario
+tomado. No es para ahora, pero **es la respuesta correcta el día que haya
+paquetes**.
 
 ### En el riel internacional no hay nada que construir
 
@@ -292,7 +323,15 @@ sesión y además sancionar a alguien en crisis es el peor error posible acá.
 3. **`money_release_date` real**, que vuelve en la respuesta del pago de MP. El
    "~14 días" sale de la documentación, no de un pago medido. Ya hay una tarea
    abierta que abre ese JSON (la medición de la tarifa real de MP, A5): leerlo en
-   la misma pasada cuesta cero, y con ese número el 10 se ajusta con fundamento.
+   la misma pasada cuesta cero, y es lo que dice cuán ancha es de verdad la
+   franja de reservas expuestas.
+
+4. **Cómo se comporta un refund de MP cuando los fondos YA se liberaron**: si
+   sale igual contra el balance del coach, si puede dejarlo en negativo, o si lo
+   rechaza. De esto depende cuán grave es la exposición de las reservas fuera del
+   colchón — y por lo tanto si el horizonte de 30 días está bien. **No está en el
+   repo ni en la documentación pública**: es pregunta para el account manager, la
+   misma conversación que ya quedó abierta para el timing del release.
 
 ## Defecto menor a corregir de paso
 

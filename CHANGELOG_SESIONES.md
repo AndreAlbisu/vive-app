@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-13 — Andre (sesión 228 cont. · el horizonte de 10 días estaba mal, y lo rompió una pregunta de Andre)
+
+**Tocado:** `docs/no-show.md`. Sin cambios de código.
+
+**Resumen — la decisión de la entrada de abajo duró una conversación. Andre preguntó por tres casos de uso y los tres la rompen.**
+
+- 🔴 **El horizonte de reserva pasa de 10 a 30 días.** El 10 se derivó mirando **solo** el colchón de ~14 días de Mercado Pago —hacer entrar toda sesión y su reembolso adentro— y se pagaba con restricciones sobre los casos más comunes.
+- 🔴 **El caso que la rompe del todo es el coach lleno**: si sus próximos 14 días están ocupados, con tope de 10 **aparece con cero disponibilidad y desaparece en la práctica**. El sistema castigaba exactamente a los coaches que mejor funcionan, y se agravaba solo — cuanta más demanda, menos reservable.
+- 🔴 **Y el segundo empujaba la fuga.** Un vínculo de acompañamiento es "cuatro sesiones, una por semana"; con 10 días entran dos, y **quien quiere dejar cerradas las cuatro y no puede las arregla por afuera con el coach**. La medida pensada para proteger la plata empujaba justo lo que el proyecto entero trata de evitar.
+- 📌 **El error de razonamiento, anotado porque es reutilizable**: se trató *"la sesión cae fuera del colchón"* como si fuera *"el reembolso es imposible"*, y no lo es — pasados los ~14 días el refund **sigue saliendo del balance del coach**, y falla solo si además retiró y no le quedó saldo. Una falla probabilística y poco frecuente, prevenida con un candado que rompía casos de todos los días.
+- 🟢 **El horizonte deja de ser la protección y pasa a elegirse por demanda.** La exposición pasa de **prevenirse** a **verse**: las reservas con `scheduled_date - paid_at > 14 días` son una consulta, y saber cuántas son vale más que prohibirlas. Lo que sí se mantiene es arreglar la inconsistencia real, que es independiente de todo esto: **el mismo coach ofrece 56 días por la app y 21 por la web.**
+- 📌 **Queda escrito cuál es la respuesta correcta de verdad, para cuando haya paquetes**: cobrar cerca de la sesión y no al reservar. Así toda sesión cae dentro del colchón sin importar la anticipación. No es para ahora — cambia el modelo entero y crea una falla nueva (el cobro que falla después, con el horario ya tomado).
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Pregunta para el account manager de MP, que es la que fija el número final**: cómo se comporta un refund cuando los fondos **ya se liberaron** — si sale igual contra el balance, si puede dejarlo en negativo, o si lo rechaza. Va junto con la del timing del release, que ya estaba abierta.
+- Lo demás de la entrada de abajo no cambia.
+
+---
 ## 2026-09-13 — Andre (sesión 228 · el no-show del coach: la regla, y tres cosas que no se podían dar por hechas)
 
 **Tocado:** `docs/no-show.md` (nuevo). **Sin cambios de código** — es una sesión de decisión, con el consejo de 5 corriendo en el medio.
