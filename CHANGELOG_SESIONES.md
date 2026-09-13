@@ -4,6 +4,28 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-13 — Andre (sesión 228 cont. 6 · la sala web ahora sabe quién está adentro)
+
+**Tocado:** `web/sala/index.html`, `supabase/functions/create-meeting-room/index.ts`, `docs/no-show.md`. `tsc` limpio, sintaxis del script verificada con `node --check`. ⚠️ **La función NO está deployada y la web NO está pusheada.**
+
+**Resumen — se construyó la primitiva de presencia, que es lo único que mejora la prueba del 18/09 antes de que ocurra.**
+
+- 🔴 **El motivo del apuro**: los datos de asistencia llegan igual por la API de Daily después, pero **los avisos en vivo solo se pueden ejercitar con dos personas reales en una sala**. Si el 18 se hace la videollamada sin esto, se gasta la única oportunidad de verlos y hay que esperar a la próxima.
+- 🟢 **`DailyIframe.wrap()` sobre el iframe que ya existía** → `participant-joined` / `participant-left` en el navegador, sin webhook de Daily ni backend nuevo. Hasta hoy la sala era un `<iframe>` con `src` y la página **no sabía quién estaba adentro**: quien esperaba solo no podía distinguir "el coach no vino" de "se me colgó el wifi", que es justo la única cosa que necesita saber en ese momento.
+- 🔴 **Falla abierto, y es la regla dura del cambio**: si el script de Daily no carga, se cae al `src` de siempre y la sesión entra igual sin avisos. **La presencia es una mejora, nunca una condición para entrar.** Mismo criterio que `web/captcha.js`.
+- 🔴 **Aparecieron dos datos que `create-meeting-room` ya calculaba y tiraba**, y sin ellos la pantalla hacía cosas mal: **`es_coach`** —sin eso el aviso *"tu coach todavía no llegó"* **se le mostraba al propio coach**, porque `web/sala` sirve a las dos puntas y no las distinguía— y **`empieza`**, porque los plazos de §9.5 se cuentan **desde el horario agendado** y `nbf` deja entrar 15 minutos antes: anclados a la entrada, quien llega temprano vería "no llegó nadie" a los 2 minutos de SU espera. `empieza` viaja ya resuelto a UTC para que la cuenta no dependa de la zona del dispositivo — el error exacto que ya se había cometido en `cancelled_late`.
+- 📌 **Los plazos asimétricos quedaron en el código, y al coach no se le dice nada antes de los 20 minutos**: antes de eso todavía está obligado a estar, y un cartel a los 2 lo invitaría a irse justo cuando la regla le pide quedarse.
+- ⏭️ **El push al coach queda AFUERA a propósito.** Suma dos lecturas más con sus caminos de error y, sobre todo, **depende de que el coach tenga `push_token`, que sigue sin medirse**. El aviso en pantalla paga seguro el 18; el push no.
+- ⚠️ **No se promete un monto** en el mensaje de los 10 minutos: la página no tiene el importe e inventarlo sería peor que no decirlo.
+- 🔴 **La versión de `daily-js` se verificó contra el CDN, y el primer pin estaba MAL.** Había puesto `0.72.2/dist/daily-iframe-esm.js` de memoria; el `package.json` real declara `module: dist/daily-esm.js` (el otro nombre es el legacy) y la versión vigente es **0.92.2**. Se confirmaron contra el bundle las **tres** cosas que el código usa: que hay un export `as default`, que existe `key:"wrap"`, y —lo que casi me come— **qué valida `wrap` antes de aceptar el iframe**: `!e.contentWindow || typeof e.src !== "string"`. El iframe de la sala **no tiene `src`**, pero la propiedad devuelve `""` (que es string) así que no tira. 📌 Queda pineado a versión exacta a propósito: `@latest` cambiaría la sala en vivo sin que nadie lo decida, y ahí adentro pasa una sesión de acompañamiento.
+- 📌 **Y en el medio me equivoqué una vez**: concluí que `wrap` no existía porque un grep con 90 caracteres de contexto no lo encontraba en el bundle minificado. Buscando la clave exacta (`key:"wrap"`) aparece. Vale anotarlo porque el error —dar por ausente algo que el grep no encontró— es de los que se repiten.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Deployar `create-meeting-room` y pushear la web** — sin las dos cosas juntas no hay avisos (la función vieja no manda `es_coach` ni `empieza`, y la página degrada en silencio a no avisar nada).
+- 🔴 **El 18/09 es la prueba**, y ahora ejercita tres cosas de una: los avisos en vivo, que el guard de `complete_confirmed_sessions()` complete algo por primera vez, y el cruce coach-vs-cliente del lado del coach.
+- 📌 Medir `push_token` en los coaches; de eso depende si el aviso preventivo se construye o no.
+
+---
 ## 2026-09-13 — Andre (sesión 228 cont. 5 · A3 cerrada: la columna sí es nullable, así que el guard era necesario)
 
 **Tocado:** `docs/problemas-abiertos.md` (A3), `app/search3.tsx` (comentario). `tsc` limpio. Sin cambios de lógica.

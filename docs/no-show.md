@@ -170,9 +170,10 @@ quedarse no cambia el resultado.
 el que no cumplió fue el coach—, así que la regla lo protege sin necesidad de
 registrar el abandono sugerido como hecho aparte.
 
-### 🔴 El mecanismo no existe todavía, y la causa no es el cron
+### ✅ Construido el 13/09/2026 — y la causa del bloqueo no era el cron
 
-Ninguna de las dos puntas sabe quién está en la sala en tiempo real:
+**Hasta ese día ninguna de las dos puntas sabía quién estaba en la sala en
+tiempo real**, y el consejo lo atribuyó al cron horario. Era otra cosa:
 
 - `web/sala` → `entrar(url)` hace `f.src = url` sobre un `<iframe>` pelado. Cero
   eventos.
@@ -193,6 +194,35 @@ entrando" y reprogramar en un tap.
 `send-push` ya acepta `{ bookingId, recipientId, title, body }` y autoriza por
 relación, y la página tiene el `bookingId` y un `access_token` válido — así que
 el aviso al coach **no necesita nada nuevo del lado del servidor**.
+
+#### Lo que se construyó, y lo que quedó afuera a propósito
+
+✅ **Hecho** (`web/sala/index.html` + `create-meeting-room`):
+
+- `DailyIframe.wrap()` sobre el iframe que ya existía → `participant-joined` /
+  `participant-left` en el navegador, sin webhook ni backend.
+- **Falla abierto**: si el script de Daily no carga, se cae al `src` de siempre y
+  la sesión entra igual, sin avisos. La presencia es una mejora, **nunca** una
+  condición para entrar — mismo criterio que `web/captcha.js`.
+- Los avisos de los **2 / 10 / 20 minutos**, con los plazos asimétricos ya
+  aplicados. 📌 **Al coach no se le dice nada antes de los 20**: antes de eso
+  todavía está obligado a estar, y un cartel a los 2 minutos lo invitaría a irse
+  justo cuando la regla le pide quedarse.
+- `create-meeting-room` pasó a devolver **`es_coach`** y **`empieza`**, dos datos
+  que ya calculaba y tiraba. Sin el primero, el aviso *"tu coach no llegó"* se le
+  mostraba **al propio coach**. Sin el segundo, los plazos se anclarían al
+  momento en que la persona entró — y `nbf` deja entrar 15 minutos antes, así que
+  quien llega temprano vería "no llegó nadie" a los 2 minutos **de su espera** y
+  no del horario. `empieza` viaja ya resuelto a UTC para que la cuenta no dependa
+  de la zona del dispositivo (el error ya cometido en `cancelled_late`).
+
+⏭️ **Afuera a propósito**: el **push al coach**. Suma dos lecturas más y sus
+caminos de error, y sobre todo **depende de que el coach tenga `push_token`, que
+sigue sin medirse**. El aviso en pantalla paga seguro el 18/09; el push no.
+
+⚠️ **Y no se promete un monto** en el mensaje de los 10 minutos: la página no
+tiene el importe, e inventarlo sería peor que no decirlo. Queda para cuando
+`create-meeting-room` lo devuelva.
 
 ## La plata: el colchón de Mercado Pago y el horizonte de reserva
 
