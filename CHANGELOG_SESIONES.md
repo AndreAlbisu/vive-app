@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-13 — Andre (sesión 228 cont. 2 · el cliente que llega tarde tiene 20 minutos, y eso obligó a reescribir la obligación del coach)
+
+**Tocado:** `docs/no-show.md`. Sin cambios de código.
+
+**Resumen — Andre preguntó cuánto tiene que esperar el coach para poder irse cobrando, y de ahí salió que los dos plazos no deberían ser el mismo número.**
+
+- 🟢 **Los plazos pasan a ser asimétricos: el coach tiene 10 minutos para aparecer, el cliente 20 para llegar.** El argumento de Andre: **el coach cobra igual**, así que el que llega tarde debería poder **alcanzar** la sesión en vez de perder la plata. Un cliente 12 minutos tarde —tráfico, un llamado que se estiró, un chico— es muchísimo más común que uno que no viene, y con 40 minutos por delante todavía hay sesión.
+- 🔴 **Subir el número solo rompía la regla en silencio.** Con "puntual = estaba en el minuto 10" y dos umbrales distintos aparece este caso: coach entra 15:00 y se va 15:11, cliente entra 15:15 → los dos "puntuales" y **solapamiento cero**. La fila que la tabla declaraba imposible se volvía posible, y **el coach cobraba habiéndose ido antes de que venciera el plazo del otro**.
+- 🟢 **El arreglo es reformular la obligación del coach, no el número**: no es "estar en el minuto 10", es **estar desde el horario y quedarse hasta que el cliente entre o hasta el minuto 20**. Con eso la propiedad de consistencia vuelve a cerrar: si los dos cumplieron, se solaparon sí o sí.
+- 📌 **En los ToS siguen siendo dos frases, una por parte, sin tabla**: *"si tu coach no está en los primeros 10 minutos, no pagás"* / *"si llegás más de 20 minutos tarde, la sesión se cobra igual"*. El solapamiento mínimo de 10 **no se publica**: es el criterio interno de "¿pasó suficiente sesión?", y decirlo invita a discutir el reloj en vez del hecho.
+- 🔴 **Consecuencia que esto destapa: `complete_confirmed_sessions()` no solo tiene que mirar asistencia, tiene que CORRER DESPUÉS DEL FIN DE LA SESIÓN.** Hoy corre a los 20 minutos del horario — o sea que con la tolerancia del cliente en 20, evaluaría justo cuando una sesión con alguien demorado recién está empezando. Las dos correcciones se resuelven juntas.
+- 📌 **Dos mensajes nuevos, los dos espejo de los que ya había**: al coach que esperó hasta los 20, *"podés cerrar — esta sesión se te paga igual"* (sin eso, el que esperó de más no sabe si puede irse); y al que llega tarde y encuentra la sala vacía, *"tu coach esperó hasta las 15:20 y se fue"* — es la diferencia entre una regla y un portazo.
+- ⚠️ **El costo, dicho de frente**: el coach plantado ahora pierde 20 minutos en vez de 10.
+
+**Pendiente para la próxima sesión:**
+- Lo de las dos entradas de abajo no cambia. El arreglo de `complete_confirmed_sessions()` ahora incluye moverle el horario, no solo la condición.
+
+---
 ## 2026-09-13 — Andre (sesión 228 cont. · el horizonte de 10 días estaba mal, y lo rompió una pregunta de Andre)
 
 **Tocado:** `docs/no-show.md`. Sin cambios de código.

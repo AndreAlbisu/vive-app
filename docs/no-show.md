@@ -6,8 +6,9 @@
 >
 > Se escribe como decisión y no como fix por el mismo motivo que
 > `docs/decisiones-pagos.md`: no hay un solo cliente real, así que esto es fijar
-> el comportamiento correcto antes del primer usuario. Quien vea después el
-> umbral de 10 minutos sin este contexto va a pensar que es arbitrario.
+> el comportamiento correcto antes del primer usuario. Quien vea después los
+> umbrales —10 para el coach, 20 para el cliente, 10 de solapamiento— sin este
+> contexto va a pensar que son arbitrarios, o peor, va a "emparejarlos".
 
 ## El estado de hoy, que es peor que "no hay política"
 
@@ -25,31 +26,60 @@ coach no apareció:
 Un solo cambio de condición cierra las cuatro. Es lo primero que hay que hacer y
 no depende de ninguna de las decisiones de abajo.
 
+🔴 **Y además hay que moverla en el tiempo.** Con la tolerancia del cliente en 20
+minutos, una sesión con alguien demorado **recién está empezando** cuando esa
+función corre. No alcanza con que mire asistencia: **tiene que correr después del
+fin de la sesión**, no a los 20 minutos del inicio. Las dos cosas se resuelven
+juntas.
+
 ## La regla
 
 Se miden **dos hechos por parte**, los dos derivables de `join_time` +
 `duration` por participante dentro de `session_attendance.raw`:
 
-- **Puntualidad** — ¿estaba en la sala en el minuto 10 desde el horario
-  agendado, o se cruzó con el otro antes de eso?
-- **Solapamiento** — ¿cuánto tiempo estuvieron los dos a la vez?
+- **Cumplimiento** — cada parte tiene el suyo, y **no son el mismo número**:
+  - **El coach** tiene que estar desde el horario y **quedarse hasta que llegue
+    el cliente o hasta el minuto 20**.
+  - **El cliente** tiene que llegar **antes del minuto 20**; y si el coach no
+    está, puede irse **desde el minuto 10** sin perder nada.
+- **Solapamiento** — ¿cuánto tiempo estuvieron los dos a la vez? El mínimo es
+  **10 minutos**, y es una pregunta distinta de las de arriba.
 
 El veredicto sale en **dos pasos, no en uno**:
 
 **Paso 1 — ¿ocurrió?** Solapamiento ≥ 10 min → sí. El coach cobra, sin importar
 quién llegó tarde. Se terminó ahí.
 
-**Paso 2 — si no ocurrió, ¿quién lo causó?** El que no fue puntual:
+**Paso 2 — si no ocurrió, ¿quién lo causó?** El que no cumplió:
 
-| Coach puntual | Cliente puntual | Veredicto |
+| Coach cumplió | Cliente cumplió | Veredicto |
 |---|---|---|
 | sí | no | Responsabilidad del cliente. **Coach cobra** |
 | no | sí | **No-show del coach.** Reembolso |
 | no | no | Sin culpable. Reembolso, **sin sanción** |
-| sí | sí | Imposible — si los dos estuvieron en el minuto 10, se solaparon |
+| sí | sí | Imposible — si el coach se quedó hasta que el otro llegó y el otro llegó antes de los 20, se solaparon |
 
 La última fila es la prueba de que la regla es consistente: no hay ningún caso
 donde los dos cumplieron y aun así nadie es responsable.
+
+### Por qué los plazos son asimétricos, y por qué la obligación del coach no es "estar en el minuto 10"
+
+**Decidido el 13/09 a propuesta de Andre:** el coach cobra igual, así que el que
+llega tarde debería poder **alcanzar** la sesión en vez de perder la plata. Un
+cliente 12 minutos tarde —tráfico, un llamado que se estiró, un chico— es
+muchísimo más común que uno que no viene, y con 40 minutos por delante todavía
+hay sesión. Por eso el plazo del cliente es 20 y no 10.
+
+🔴 **Pero subir el número solo, sin reformular la obligación del coach, rompe la
+regla en silencio.** Con "puntual = estaba en el minuto 10" y dos umbrales
+distintos aparece este caso: coach entra 15:00 y se va 15:11; cliente entra
+15:15. Los dos "puntuales", **solapamiento cero** — la fila imposible se vuelve
+posible, y el coach cobraría habiéndose ido antes de que venciera el plazo del
+otro.
+
+Por eso el cumplimiento del coach **se extiende hasta el plazo del cliente**:
+tiene que quedarse hasta el minuto 20 o hasta que el otro entre. Con eso la
+propiedad vuelve a cerrar.
 
 ### Por qué dos pasos y no un umbral
 
@@ -62,23 +92,26 @@ minutos y se lleva una cancelación gratis**: el veredicto daba "no ocurrió, si
 culpable" → reembolso, coach sin cobrar y nadie sancionado. La regla del
 solapamiento es simétrica y solo se la había pensado contra el coach.
 
-Con los dos pasos, ese cliente no estaba en el minuto 10 y el coach sí → fila 1,
-el coach cobra.
+Con los dos pasos, ese cliente no llegó antes del minuto 20 y el coach sí
+cumplió → fila 1, el coach cobra.
 
 Y arregla un segundo caso que la versión anterior también fallaba: **coach entra
 en el minuto 2, ve la sala vacía, se va en el minuto 5; el cliente entra en el
-minuto 7.** Con "¿entró el coach? sí" zafaba. Midiendo la puntualidad *al final
-de la ventana*, no estaba en el minuto 10 y no se cruzó con nadie → no-show del
-coach. Esperar 3 minutos no es haber estado.
+minuto 7.** Con "¿entró el coach? sí" zafaba. Midiendo el cumplimiento *como
+permanencia y no como un instante*, se fue mucho antes del minuto 20 y no se
+cruzó con nadie → no-show del coach. Esperar 3 minutos no es haber estado.
 
-### Un solo número, dos usos
+### Cómo se dice sin tabla de verdad
 
-Los 10 minutos son **la tolerancia** (cuánto hay que esperar al otro) **y el
-mínimo de solapamiento** (cuánto juntos cuenta como sesión). Que sea el mismo
-número no es una coincidencia cómoda: es lo que permite escribirlo en los ToS en
-una línea, sin tabla de verdad.
+Son **dos frases, una por parte**. Si la regla necesita una tabla para
+entenderse, no es una política: es una especificación interna.
 
-> **Si tu coach no está en los primeros 10 minutos, no pagás.**
+> Si tu coach no está en los primeros **10 minutos**, no pagás.
+> Si llegás más de **20 minutos** tarde, la sesión se cobra igual.
+
+El **solapamiento mínimo de 10 minutos** no se publica como número: es el criterio
+interno de "¿pasó suficiente sesión?", y decirlo invita a discutir el reloj en vez
+del hecho.
 
 El veredicto vive en una **vista derivada, no en una columna**: el umbral se va a
 querer mover después de las primeras diez sesiones reales, y en una columna eso
@@ -114,6 +147,8 @@ esa es la diferencia con §9.3, cuyo intake es por mail porque el hecho que eval
 | +2 min | Al cliente: *"todavía no llegó nadie"* — lo importante no es la plata, es que sepa **que el problema no es su conexión** |
 | +5 min | Segundo push al coach |
 | +10 min | Al cliente: podés irte, **con el monto y el plazo dichos** |
+| +20 min | Al coach que esperó y no vino nadie: *"podés cerrar — esta sesión se te paga igual"*. Es el espejo del mensaje del cliente: sin esto, el que esperó de más se queda sin saber si puede irse |
+| Cuando el que llegó tarde entra a una sala vacía | *"Tu coach esperó hasta las 15:20 y se fue"* (o al revés). Cuesta casi nada una vez que hay presencia, y es la diferencia entre una regla y un portazo |
 
 📌 **El aviso al coach va en el horario, no cuando el cliente entra**: `nbf` deja
 entrar 15 minutos antes, y avisar en el minuto −15 es ruido que enseña a ignorar
@@ -131,8 +166,8 @@ una trampa. Quitarle la consecuencia a la decisión es mejor que ofrecerla: irse
 quedarse no cambia el resultado.
 
 🟢 **Esto resuelve solo el conflicto entre relojes.** El cliente que se va a los
-10 minutos porque la app se lo dijo **ya cumplió la puntualidad** —estaba ahí
-cuando venció la tolerancia—, así que la regla lo protege sin necesidad de
+10 minutos porque la app se lo dijo **ya cumplió** —estaba ahí desde el horario, y
+el que no cumplió fue el coach—, así que la regla lo protege sin necesidad de
 registrar el abandono sugerido como hecho aparte.
 
 ### 🔴 El mecanismo no existe todavía, y la causa no es el cron
@@ -255,9 +290,13 @@ cuelga de un `completada` que no verifica nada.
 
 ## No-show del cliente
 
-**El coach cobra el 100%, con la misma tolerancia de 10 minutos.** Sale de la
-fila 1 de la tabla: si el coach estuvo y el cliente no, la responsabilidad es del
-cliente.
+**El coach cobra el 100%, con tolerancia de 20 minutos.** Sale de la fila 1 de la
+tabla: si el coach cumplió —estuvo desde el horario y esperó hasta el minuto 20—
+y el cliente no llegó, la responsabilidad es del cliente.
+
+⚠️ **El coach plantado pierde 20 minutos y no 10**, que es el costo real de esta
+decisión. Se paga a cambio de que el cliente demorado alcance la sesión en vez de
+perder la plata, y se compensa avisándole bien a los 20 (ver el escalonado).
 
 ⚠️ **Pero el evento no debería disparar castigo, sino reenganche.** En un
 producto de acompañamiento, el que falta muchas veces no falta por fraude: falta
