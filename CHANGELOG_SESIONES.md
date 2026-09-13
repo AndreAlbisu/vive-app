@@ -4,6 +4,20 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-13 — Andre (sesión 228 cont. 5 · A3 cerrada: la columna sí es nullable, así que el guard era necesario)
+
+**Tocado:** `docs/problemas-abiertos.md` (A3), `app/search3.tsx` (comentario). `tsc` limpio. Sin cambios de lógica.
+
+**Resumen — A3 estaba abierta hacía cinco días por falta de una consulta que ahora se puede hacer sola.**
+
+- ✅ **`coaches.price_per_session` es `numeric`, `is_nullable = YES`, sin default** (y `price_usd` igual). O sea que **el guard del buscador es NECESARIO, no decorativo** — que era literalmente la pregunta de A3.
+- 📌 Es exactamente la condición que el propio comentario de `app/search3.tsx` nombraba como *"un crash esperando al primer coach sin precio"*: sin el guard, `.toLocaleString()` sobre null revienta la tarjeta. **Hoy no dispara** (0 de 34 filas en null, medido el 07/09) pero nada lo impide: no hay `NOT NULL`, no hay default, y el alta de coach no exige precio.
+- 📌 **Lo que la destrabó fue la herramienta, no el dato.** A3 decía *"el endpoint OpenAPI de PostgREST exige `service_role`"* — cierto, pero había otro camino: `npx supabase db query --linked` ejecuta SQL contra producción con el login del CLI. La tarea estimada en "2 min" llevaba cinco días esperando una credencial que no hacía falta.
+
+**Pendiente para la próxima sesión:**
+- Lo de las entradas de abajo no cambia.
+
+---
 ## 2026-09-13 — Andre (sesión 228 cont. 4 · el SQL corrido y verificado, y de paso se cerró la medición que bloqueaba todo)
 
 **Tocado:** `docs/no-show.md`, `scripts/complete-confirmed-sessions.sql` (comentarios), `SCHEMA.md`. Sin cambios de lógica. ✅ **El SQL de la entrada de abajo está CORRIDO en producción.**
