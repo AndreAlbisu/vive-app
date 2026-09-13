@@ -6,7 +6,7 @@
 ---
 ## 2026-09-13 — Andre (sesión 228 cont. 6 · la sala web ahora sabe quién está adentro)
 
-**Tocado:** `web/sala/index.html`, `supabase/functions/create-meeting-room/index.ts`, `docs/no-show.md`. `tsc` limpio, sintaxis del script verificada con `node --check`. ⚠️ **La función NO está deployada y la web NO está pusheada.**
+**Tocado:** `web/sala/index.html`, `supabase/functions/create-meeting-room/index.ts`, `docs/no-show.md`. `tsc` limpio, sintaxis del script verificada con `node --check`. ✅ **Web pusheada (Andre) y `create-meeting-room` DEPLOYADA (v32)** el 13/09 a las 17:09 UTC.
 
 **Resumen — se construyó la primitiva de presencia, que es lo único que mejora la prueba del 18/09 antes de que ocurra.**
 
@@ -21,7 +21,8 @@
 - 📌 **Y en el medio me equivoqué una vez**: concluí que `wrap` no existía porque un grep con 90 caracteres de contexto no lo encontraba en el bundle minificado. Buscando la clave exacta (`key:"wrap"`) aparece. Vale anotarlo porque el error —dar por ausente algo que el grep no encontró— es de los que se repiten.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **Deployar `create-meeting-room` y pushear la web** — sin las dos cosas juntas no hay avisos (la función vieja no manda `es_coach` ni `empieza`, y la página degrada en silencio a no avisar nada).
+- ✅ **HECHO el 13/09**: web pusheada y `create-meeting-room` **v32** deployada. Verificado contra la API (no contra el mensaje del CLI, que en este proyecto ya mintió una vez): `version: 32`, `verify_jwt: true`. Y smoke test → `{"error":"Unauthorized"}` con HTTP 401, que es el cuerpo **de la función**, no el del gateway — o sea que el código nuevo está corriendo.
+- ⚠️ **Pero los campos nuevos están desplegados y SIN EJERCITAR.** `es_coach` y `empieza` solo salen en una respuesta exitosa, que exige un JWT real de un participante y la ventana de sala abierta (`nbf` = horario − 15 min). No hay forma de probarlo hasta el 18/09 — **el deploy verificado no es lo mismo que la feature verificada**, y conviene no confundirlos cuando se lea esto en dos meses.
 - 🔴 **El 18/09 es la prueba**, y ahora ejercita tres cosas de una: los avisos en vivo, que el guard de `complete_confirmed_sessions()` complete algo por primera vez, y el cruce coach-vs-cliente del lado del coach.
 - 📌 Medir `push_token` en los coaches; de eso depende si el aviso preventivo se construye o no.
 
