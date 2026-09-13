@@ -4,6 +4,29 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-13 — Andre (sesión 228 · el no-show del coach: la regla, y tres cosas que no se podían dar por hechas)
+
+**Tocado:** `docs/no-show.md` (nuevo). **Sin cambios de código** — es una sesión de decisión, con el consejo de 5 corriendo en el medio.
+
+**Resumen — se discutió qué pasa cuando el coach no aparece. El mecanismo de detección ya estaba construido; lo que faltaba era mirarlo, y mirándolo aparecieron tres cosas más grandes que la pregunta original.**
+
+- 🔴 **Hoy el no-show termina en el peor estado posible, y no es "no hay política".** `complete_confirmed_sessions()` marca `completada` a los 20 minutos **sin mirar asistencia**: la sesión donde el coach no apareció queda como cumplida, le dispara al cliente plantado la `invitacion_review`, cuenta para el tramo de comisión reducida **y habilita el pago al coach en el riel internacional** — porque `mark_coach_paid` exige `status = 'completada'`, y ese guard parece verificar que la sesión ocurrió cuando verifica que pasó la hora. **Un solo cambio de condición cierra las cuatro**, y es lo primero que hay que hacer.
+- 🟢 **La detección ya existe desde el 25/08 y nadie la consume**: `session_attendance` trae de Daily quién entró, cuándo y cuánto. Y **se puede distinguir al coach del cliente** — `create-meeting-room` acuña el token con `user_id` e `is_owner: true`. El resumen tira el detalle (colapsa los participantes en un `Set`), pero está entero en `raw`, que es exactamente para lo que se diseñó así.
+- 🔴 **La primera versión de la regla tenía un agujero que la invalidaba, y lo encontró el consejo**: usaba un solo número para dos preguntas distintas. El solapamiento dice *si ocurrió*, no *quién lo impidió*. Con un umbral solo, **el cliente arrepentido entra en el minuto 51, solapa 9 y se lleva una cancelación gratis** con el coach sin cobrar. La regla quedó en **dos pasos** (¿ocurrió? → ¿quién no fue puntual?) y de paso arregla el coach que espera 3 minutos y se va.
+- 🔴 **"Retener el payout" —lo que el consejo puso como bloqueante de todo— no se puede hacer en Mercado Pago.** Ya estaba investigado y anotado en `mp-create-payment:189`: Checkout Pro **no tiene parámetro para demorar el release por transacción**, y en marketplace el split le paga al coach en el momento del cobro. Lo que sí hay es el colchón de ~14 días del release por default. **Y los tres números no coinciden: la app vende a 56 días, la web a 21, el colchón llega a 14.** Decidido bajar el horizonte de reserva a **10 días** en las dos superficies (el tope va en la reserva, no en la generación de slots). De paso quedó a la vista un defecto propio: **el mismo coach ofrece dos agendas distintas según la puerta por la que entró el cliente.**
+- 🔴 **El escalonado en vivo no se puede construir hoy, y la causa no es la que dijo el consejo** (dos revisores culparon al cron horario). Verificado: `web/sala` embebe la videollamada en un **`<iframe>` pelado** y `SalaScreen` abre la URL afuera — **ninguna punta sabe quién está en la sala en tiempo real**. Decidido: la primitiva de presencia va **solo en `web/sala`** (`DailyIframe.createFrame()`, una función, un archivo), y **no se toca la app**: las apps no están publicadas y la web ya sirve a las dos puntas desde la 222.
+- ⚠️ **Y el aviso preventivo al coach —la única medida que evita el problema en vez de administrarlo— puede no llegar a nadie.** `registerForPushNotifications` exige `Device.isDevice` + token de Expo, o sea la app en un teléfono real. **Cuántos coaches tienen `push_token` cargado no lo sabe nadie**, y si la cobertura es baja la medida no hace nada, en silencio — el mismo modo de falla que la publicación de realtime vacía y el service-role key con el placeholder. **El mail no es reemplazo**: un cron de 5 minutos no entrega un aviso de 2 minutos.
+- 📌 **Lo que la regla NO resuelve, escrito a propósito**: `session_attendance` prueba **presencia, no servicio** (el coach que entra con la cámara apagada pasa con nota). Ese caso **ya tiene mecanismo** — la garantía §9.3, que no exige expresar motivo — y no hay que resolverlo dos veces.
+- 📌 **Se descartó reemplazar al coach en el momento**, que tres advisors pidieron: prometer un pool on-call que no existe es una oferta publicada que obliga (Ley 24.240), y acá **el vínculo es el servicio** — ofrecer un desconocido en dos horas se lee como descarte, no como reparación.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **El arreglo de `complete_confirmed_sessions()`**, que es lo único que ya está haciendo daño hoy y no depende de ninguna decisión de arriba.
+- 🔴 **Dos mediciones antes de construir**: que Daily devuelva `user_id` por participante (se mira en la primera videollamada real, abriendo el JSON) y **cuántos coaches tienen `push_token`** (la consulta está en `docs/no-show.md`).
+- 📌 **`money_release_date` real**, que vuelve en la respuesta del pago de MP: se lee en la misma pasada que la medición de la tarifa ya asignada en A5, y con ese número el horizonte de 10 días se ajusta con fundamento.
+- 📌 El horizonte de reserva (56 en la app, 21 en la web) y la primitiva de presencia en `web/sala` quedan especificados y sin escribir.
+- ⚠️ **Sin dueño, y ahora con un caso que lo toca**: el protocolo de crisis — nadie definió quién chequea a la persona plantada si estaba mal.
+
+---
 ## 2026-09-11 — Andre (sesión 225 cont. 6 · el texto de Sofía entra palabra por palabra)
 
 **Tocado:** `components/TextoQueSeEscribe.tsx` (nuevo), `lib/agruparPalabras.ts` (nuevo), `app/(tabs)/index.tsx`, `__tests__/agruparPalabras.test.ts` (nuevo). **595 tests** (+5), `tsc` limpio. ⚠️ Sin probar en dispositivo; sale en el próximo build.
