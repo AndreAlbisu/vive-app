@@ -4,6 +4,29 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-13 — Andre (sesión 228 cont. 7 · el backup existe de verdad, y su propia verificación estaba rota)
+
+**Tocado:** `scripts/backup.sh` (reescrito). ✅ **PRIMER BACKUP REAL CORRIDO Y VERIFICADO.** Instalado `libpq` 18.6 por brew (decisión de Andre).
+
+**Resumen — el script estaba escrito desde la 227 y nunca se había podido correr. Al hacerlo funcionar aparecieron dos bugs en su propia verificación.**
+
+- 🔴 **`supabase db dump` SIEMPRE levanta pg_dump en un contenedor y no tiene ningún flag para evitarlo.** Docker no está instalado en esta máquina, así que el script moría en el paso 1/3 con `failed to run docker`. Dos corridas anteriores habían dejado un `roles.sql` de **0 bytes** cada una.
+- 🟢 **La salida fue `--dry-run`**: el CLI **imprime el script de pg_dump en vez de ejecutarlo**, y ese script se corre con un `pg_dump` nativo (`libpq`, keg-only). Tres ventajas: no hace falta Docker, **los flags los sigue definiendo Supabase** (exclusiones de schemas internos y el pipeline de `sed`, así que si ellos los cambian esto lo hereda), y **no hay que guardar ninguna contraseña**.
+- 🔴 **Y por qué el script se genera y se ejecuta EN EL ACTO**: el CLI acuña un rol temporal (`cli_login_postgres`) con vencimiento rodante. Un script capturado cinco minutos antes **falla con `password authentication failed`** — verificado, y confirmado contra `pg_roles`, donde ese rol aparece con un `rolvaliduntil` que se corre en cada llamada. Guardarlo habría producido un backup que funciona el día que se escribe y falla en silencio después.
+- 🔴 **DOS defectos en la verificación del propio `backup.sh`, los dos del mismo tipo: guards que habrían cantado falla sobre un backup CORRECTO.**
+  - **El chequeo de tablas buscaba sin comillas.** El dump usa `--quote-all-identifier`, así que emite `COPY "public"."bookings"` y el literal `public.bookings` **no aparece nunca**: medido, 0 coincidencias sin comillas y 1 con comillas, para las 7 tablas probadas. El script habría avisado *"falta bookings en los datos"* y salido con código 1.
+  - **El piso de 1000 bytes era uno solo para los tres archivos**, y `roles.sql` pesa legítimamente **297**: el pipeline de `sed` de Supabase comenta todos los roles de plataforma, así que lo único que sobrevive es la configuración no-default (tres `ALTER ROLE ... SET statement_timeout`). Ahora los umbrales son **por archivo**, y el de roles es un chequeo de **contenido** (que haya `CREATE|ALTER|GRANT`) y no de tamaño — porque el archivo es chico por diseño.
+- ✅ **El backup, verificado aparte y no por el cartel del script**: `roles.sql` 297 B (3 sentencias), `schema.sql` 158.633 B (**45 `CREATE TABLE`, 113 `CREATE POLICY`, 36 funciones** — las policies de RLS son lo más caro de perder), `datos.sql` 874.371 B con las 7 tablas clave presentes. Los tres con permisos `600`. `complete_confirmed_sessions` aparece 6 veces en el schema, así que la función de hoy quedó capturada.
+- ⚠️ **`--dry-run` del CLI imprime en pantalla la contraseña del rol temporal.** Ya había pasado en la 227 y volvió a pasar acá: **segunda vez**. Queda avisado en el encabezado del script. Andre decidió **no rotarla** por ser un rol temporal.
+- 📌 De regalo, `libpq` trae `psql`, así que el camino de restore que el script documenta desde la 227 **ahora se puede ejecutar de verdad** — hasta hoy no había con qué.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **Quedaron dos directorios basura** en `~/vita-backups` (`2026-09-13-1155` y `2026-09-13-1711`), cada uno con un `roles.sql` de 0 bytes de las corridas que fallaron. En un listado parecen backups — conviene borrarlos.
+- 🔴 **Confirmar el plan de Supabase** en el panel, que sigue sin hacerse desde la 227. Si es el gratuito, esto pasa a ser rutina y no una tarea.
+- 📌 **El Storage sigue sin respaldo** (videos de presentación, fotos, audios): es otro mecanismo.
+- 📌 Automatizarlo es el paso siguiente; el script ya está listo para que lo llame una tarea programada.
+
+---
 ## 2026-09-13 — Andre (sesión 228 cont. 6 · la sala web ahora sabe quién está adentro)
 
 **Tocado:** `web/sala/index.html`, `supabase/functions/create-meeting-room/index.ts`, `docs/no-show.md`. `tsc` limpio, sintaxis del script verificada con `node --check`. ✅ **Web pusheada (Andre) y `create-meeting-room` DEPLOYADA (v32)** el 13/09 a las 17:09 UTC.
