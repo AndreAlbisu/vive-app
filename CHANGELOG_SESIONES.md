@@ -118,6 +118,25 @@
 - Sigue lo de la entrada de abajo: probar el checkout web (`vitaapp.com.ar/c/andre`) y la sala web con el CAPTCHA prendido, y entrar con mail en el build 20 para confirmar el proveedor.
 
 ---
+## 2026-09-13 — Andre (sesión 227 · backups de la base, que no existían)
+
+**Tocado:** `scripts/backup.sh` (nuevo), `.gitignore`. Sin cambios de app.
+
+**Resumen — Andre preguntó si se podía hacer backup de Supabase. La respuesta corta es que hoy, probablemente, no hay ninguno.**
+
+- 🔴 **En el plan gratuito de Supabase NO hay backups automáticos.** Falta confirmar el plan (Settings → Billing; no se puede leer desde el CLI ni sin token de administración), pero si es el gratuito **hoy no hay de dónde volver**: la base tiene **70 MB**, 84 perfiles, 184 reservas, 149 mensajes y pagos reales.
+- 🟢 **`scripts/backup.sh`**: los tres volcados que hacen falta —roles, schema y datos—, con fecha en la carpeta, `chmod 600` y **verificación**: chequea que ningún archivo venga vacío o truncado y que los datos incluyan `bookings`, `profiles` y `messages`. Un dump truncado pesa poco y se ve igual de bien en un listado; sin ese chequeo, el backup se descubre roto el día que hace falta.
+- 🔴 **Guarda contra el peor error posible**: si el destino cae adentro del repo, el script se corta antes de escribir. El archivo de datos tiene mails, mensajes y registros de ánimo de gente real, y en git no se puede sacar del todo una vez que entró. `.gitignore` es la segunda red.
+- 📌 **Tiene `--dry-run`**, y es como se verificó sin bajar datos personales al disco.
+- ⚠️ **Lo que el backup NO cubre, escrito en el propio script**: los archivos del Storage (videos de presentación, fotos, audios), los secrets de las edge functions y la configuración del panel (auth, CAPTCHA, rate limits, crons). Las functions y los scripts SQL sí, pero porque viven en el repo.
+- ⚠️ **Aviso aparte**: al verificar el volcado, `supabase db dump --dry-run` imprimió en consola la contraseña temporal del rol de login que crea el CLI. No es la contraseña de la base, pero quedó en el historial de la sesión; rotarla desde el panel es gratis.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr el backup** (`./scripts/backup.sh`) y **confirmar el plan** en el panel. Si es gratuito, esto pasa a ser rutina, no una tarea.
+- 📌 Si se quiere automatizar de verdad, el paso siguiente es una tarea programada; el script ya está listo para que la llame.
+- 📌 El Storage queda sin respaldo: si algún video de presentación importa, es otro mecanismo.
+
+---
 ## 2026-09-12 — Andre (sesión 226 cont. 2 · la videollamada del 12/09 no se probó)
 
 **Tocado:** `docs/problemas-abiertos.md` (A5, Prueba 2). Sin cambios de código.
