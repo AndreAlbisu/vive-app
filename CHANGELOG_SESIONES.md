@@ -312,6 +312,29 @@
 - Sigue lo de la entrada de abajo: probar el checkout web (`vitaapp.com.ar/c/andre`) y la sala web con el CAPTCHA prendido, y entrar con mail en el build 20 para confirmar el proveedor.
 
 ---
+## 2026-09-14 — Andre (sesión 228 cont. · la burbuja del chat se le escapó a la auditoría de contraste del 01/09)
+
+**Tocado:** `screens/SalaScreen.tsx`. **596 tests**, `tsc` y `eslint` limpios. Sin ver en dispositivo.
+
+**Resumen — Andre trajo un análisis externo de Reservas / Tus personas / Chat. De los cinco puntos, uno era un defecto real y los demás no.**
+
+- 🔴 **El contraste de la burbuja propia, confirmado y PEOR de lo que decía el análisis**: el texto daba **1.78:1** y la hora **1.01:1** — o sea, la hora era literalmente del mismo tono que el fondo. AA pide 4.5.
+- 🔴 **Y no era un hallazgo nuevo: era una que se escapó.** La auditoría del 01/09 encontró 25 superficies de terracota con texto encima; **diez** usaban el oliva `#565E32` sobre `primary` y daban exactamente 1.78 ("ilegibles al sol"), y se pasaron a `primaryInk` + `onPrimaryInk`. **La burbuja del chat era una de esas diez y quedó afuera del barrido.**
+- 🟢 **Arreglado con el par que el proyecto ya define** (4.59:1), no con un color nuevo. La sombra también: usaba `shadowColor: primary`, el color viejo del fondo.
+- 🐛 **Y me equivoqué en el camino, en el mismo error que causó el bug original.** Puse la hora al 78% "para que fuera secundaria": eso da **3.46** y no cumple. Ninguna opacidad intermedia llega (al 92%, 4.16). Quedó al 100% — la jerarquía la dan el tamaño (10 contra 15) y la posición. **Bajar opacidad para "hacer secundario" es justo lo que había dejado esa hora en 1.01.**
+- 📌 **La corrección que proponía el análisis no alcanzaba**: crema sobre `primary` da 3.41, sigue por debajo de AA.
+
+**Lo que del análisis NO era un problema, verificado contra el código:**
+- ❌ **Las zonas horarias ya están resueltas**: `localEquivalentLabel` devuelve `null` si el dispositivo está en Argentina, así que "11:00 hs · 11:00 para vos" no puede pasar — la segunda hora aparece solo si hay diferencia real.
+- ❌ **El texto "si tu coach no está en los primeros 10 minutos, no pagás"**: el código tiene un comentario explícito de que es la frase del CLIENTE y que la del coach vive en su propia tarjeta, porque su plazo es otro (20 minutos). Esa pantalla ya distingue rol en varios lugares, incluida una corrección anterior por este mismo motivo.
+- ✅ **El "hace 2 semanas" de Tus personas: el análisis tiene razón.** `ultimaIso` se llena **solo con sesiones completadas** (`CoachChatsScreen:277`), así que significa "última sesión hace 2 semanas" y el texto no lo dice.
+
+**Pendiente para la próxima sesión:**
+- **"32 sesiones · última hace 2 semanas"** en Tus personas, y **"1 pendiente"** en vez de "1 esperando" en Reservas. Los dos acordados, no hechos todavía.
+- ⏸️ **Las otras QUINCE superficies de terracota** (blanco o crema sobre `primary`, 3.6–3.9:1) siguen con el "pendiente de decidir si se barren también" que dejó la auditoría. En esta pantalla son el botón "Confirmar" (3.64), el de unirse a la llamada (3.35) y las iniciales del avatar (3.89). **No se tocaron: están así a conciencia.** 📌 Dato para decidir: con `primary` ningún color de texto llega a AA —ni el blanco puro— así que no se arregla cambiando el texto, hay que oscurecer el fondo.
+- Ver la burbuja en dispositivo, con sol si se puede: es la condición en la que se detectó el problema original.
+
+---
 ## 2026-09-14 — Andre (sesión 228 · el botón de mail parecía apagado en las tres puertas de entrada)
 
 **Tocado:** `screens/CoachLoginScreen.tsx`, `screens/LoginScreen.tsx`, `screens/RegisterScreen.tsx`. **596 tests**, `tsc` y `eslint` limpios. Sin probar en dispositivo.

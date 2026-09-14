@@ -1774,10 +1774,20 @@ const styles = StyleSheet.create({
   avatarSmallText: { fontFamily: ViveFonts.bold, fontSize: 9, color: '#F7EFE4', letterSpacing: 0.3 },
   avatarSmallImage: { width: 28, height: 28, borderRadius: 14, flexShrink: 0, marginBottom: 2 },
   bubble: { maxWidth: '74%', paddingVertical: 10, paddingHorizontal: 14, gap: 4 },
+  // 🔴 `primaryInk` y no `primary` (14/09/2026). Con `primary` (#C1694F) de
+  // fondo, el texto (#565E32) daba **1.78:1** y la hora (#87835C) **1.01:1** —
+  // o sea que la hora era literalmente del mismo tono que el fondo. AA pide 4.5.
+  //
+  // 📌 No es un color nuevo: es el par que este proyecto ya define y documenta
+  // en `theme.ts` — "la terracota PARA SUPERFICIES QUE LLEVAN TEXTO ENCIMA",
+  // con `onPrimaryInk` arriba, que da **4.59:1**. La auditoría del 01/09 corrigió
+  // 25 superficies con este mismo defecto y **el chat quedó afuera**.
+  //
+  // ⚠️ La sombra también: era `shadowColor: primary`, el color viejo del fondo.
   bubbleUser: {
-    backgroundColor: ViveColors.primary, borderRadius: 18, borderBottomRightRadius: 4,
+    backgroundColor: ViveColors.primaryInk, borderRadius: 18, borderBottomRightRadius: 4,
     ...Platform.select({
-      ios: { shadowColor: ViveColors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.22, shadowRadius: 6 },
+      ios: { shadowColor: ViveColors.primaryInk, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.22, shadowRadius: 6 },
       android: { elevation: 3 },
     }),
   },
@@ -1789,10 +1799,18 @@ const styles = StyleSheet.create({
     }),
   },
   bubbleText: { fontFamily: ViveFonts.regular, fontSize: 15, lineHeight: 22 },
-  bubbleTextUser: { color: '#565E32' },
+  bubbleTextUser: { color: ViveColors.onPrimaryInk },
   bubbleTextCoach: { color: '#565E32' },
   bubbleTime: { fontFamily: ViveFonts.regular, fontSize: 10, alignSelf: 'flex-end' },
-  bubbleTimeUser: { color: '#87835C' },
+  // 🔴 La hora va al 100%, sin bajarle la opacidad, y lo medí porque la primera
+  // versión de este arreglo la puso al 78% "para que fuera secundaria": eso da
+  // **3.46:1** y NO cumple AA. Ninguna opacidad intermedia llega — al 92% da
+  // 4.16. El único valor que cumple es el color entero (4.59:1).
+  //
+  // 📌 La jerarquía la dan el tamaño (10 contra 15) y la posición, que es lo que
+  // corresponde: bajar opacidad para "hacer secundario" es justo lo que había
+  // dejado esta hora invisible (1.01:1 sobre el fondo viejo).
+  bubbleTimeUser: { color: ViveColors.onPrimaryInk },
   bubbleTimeCoach: { color: 'rgba(135,131,92,0.80)' },
 
   // Nota compartida de la sesión (lado usuario)
