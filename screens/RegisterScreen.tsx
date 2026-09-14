@@ -513,32 +513,25 @@ const s = StyleSheet.create({
     paddingHorizontal: 18,
   },
   // "Usar email" contorneado y sin relleno: es el camino secundario.
-  // 🔴 Mismo crema y mismo borde que Google y Apple (14/09/2026). Era el único
-  // `transparent` de los tres, y entre dos botones con fondo eso no se lee como
-  // "opción secundaria" sino como **botón inhabilitado**.
+  // 🔴 CONTORNEADO A PROPÓSITO, y es lo que lo diferencia del login de usuario
+  // (14/09/2026, decisión de Andre). Esta pantalla **crea cuentas**, o sea que
+  // es el momento en que se decide con qué se registra la persona — y conviene
+  // que elija Google o Apple: esas cuentas traen el mail ya verificado por el
+  // proveedor, así que **no pasan por el muro del mail, no dependen del SMTP,
+  // no tienen código que puede no llegar ni contraseña que se olvide**. Toda la
+  // fragilidad del alta está del lado del mail.
   //
-  // 📌 La jerarquía queda dada por el ORDEN, no por el color: Google y Apple van
-  // primero, con su ícono de marca; este va tercero, con un sobre genérico.
-  // ⚠️ Es una jerarquía DÉBIL — los tres botones son ahora visualmente iguales y
-  // solo cambia el texto. Si hace falta empujar más lo social, la palanca es el
-  // peso del texto o un separador, NO volver a apagarle el fondo a este.
-  // Registrarse con Google
-  // o Apple es mejor para la persona y para nosotros —el mail ya viene
-  // verificado por el proveedor, así que esa cuenta no pasa por el muro del
-  // mail, no depende del SMTP, no tiene código que puede no llegar ni
-  // contraseña que se olvide— y la pantalla lo empuja. Lo que no hace es
-  // castigar al que necesita el mail.
-  //
-  // ⚠️ Y hay alguien que NO puede usar Google ni Apple: quien reservó por el
-  // link de un coach nace con cuenta de mail y sin contraseña. Para esa persona
-  // esta es la única puerta, y por eso no podía verse apagada.
+  // ⚠️ NO copiar este estilo a `LoginScreen`: ahí no se decide nada (la cuenta
+  // ya existe) y apagarlo solo le pone fricción a quien no tiene otra opción —
+  // el cliente que llegó por el link de un coach, que nace con cuenta de mail y
+  // sin contraseña. Ver el comentario de allá.
   emailBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: BOTON_BG,
+    backgroundColor: 'transparent',
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: BOTON_BORDE,
+    borderColor: 'rgba(38,64,47,0.32)',
     paddingVertical: 17,
     paddingHorizontal: 18,
   },

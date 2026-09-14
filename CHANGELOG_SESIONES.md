@@ -323,9 +323,24 @@
 - ⚠️ **Corrección en el camino**: el comentario que escribí decía que el botón de mail "no lleva ícono", y **sí lo lleva** (un sobre, en las tres). Se corrigió antes de commitear. Con eso, la jerarquía quedó **débil**: los tres botones son visualmente iguales y solo cambia el texto. Si hace falta empujar más lo social, la palanca es el peso del texto o un separador — **no volver a apagarle el fondo al de mail**.
 - 📌 **Los datos no ayudan a decidir y conviene decirlo**: hay 8 cuentas (7 por mail, 1 por Google) y son todas de prueba. No hay señal de preferencia real.
 
+**Resuelto en la misma sesión — y la respuesta NO es la misma para las tres pantallas.**
+
+Andre: *"si quiero que poca gente use «Usar mail», ¿cuál elegirías?"*. La pregunta destapó que las tres pantallas no hacen lo mismo:
+
+| Pantalla | Qué hace | Cómo quedó |
+|---|---|---|
+| `RegisterScreen` | **crea** cuentas | contorneado |
+| `CoachLoginScreen` | crea **y** deja entrar | contorneado |
+| `LoginScreen` | **solo** deja entrar | igualado al crema |
+
+- 🟢 **Contorneado donde se CREA la cuenta**: ahí es el momento en que se decide con qué se registra, y conviene empujar a Google/Apple porque toda la fragilidad del alta está del lado del mail (muro, SMTP, código, contraseña).
+- 🔴 **Igualado donde solo se ENTRA, y este es el punto**: en el login no se decide nada —la cuenta ya existe—, así que apagar el botón no reduce el uso del mail; **solo le pone fricción a quien no tiene otra opción.** El cliente que reservó por el link de un coach nace con cuenta de mail y sin contraseña: viéndolo apagado no se pasa a lo social, **no puede**, se queda afuera. Y es el canal de lanzamiento.
+- 📌 **Apareció que el contorno era deliberado**, no inercia: el comentario del render del login de coach ya decía *"camino secundario, contorneado"*. Lo había dado por descuido porque no encontré ningún comentario que lo explicara — estaba, en una sola de las tres.
+- 📌 **Y que ya había separador** (`DivisorConPunto`) entre lo social y el mail en las tres. La jerarquía nunca dependió solo del color.
+- 📌 Si hace falta desalentar más el mail en el registro, la palanca más fuerte es el TEXTO ("Registrarme con mi email", más chico y sin ícono), no el borde.
+
 **Pendiente para la próxima sesión:**
-- ⏸️ **Decisión de Andre**: si quiere recuperar jerarquía visual entre lo social y el mail, o dejar los tres iguales.
-- Verlo en dispositivo: las tres pantallas de entrada.
+- Verlo en dispositivo: las tres pantallas de entrada, y confirmar que en el login de usuario el camino del mail se encuentra rápido (es la puerta del cliente que llega por un link).
 
 ---
 ## 2026-09-13 — Andre (sesión 227 · backups de la base, que no existían)
