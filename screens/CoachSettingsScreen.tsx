@@ -92,6 +92,15 @@ export default function CoachSettingsScreen() {
   // los ve. Ponerla también acá sería el mismo defecto que se acaba de sacar de
   // la sección de sesiones del exterior: dos accesos al mismo destino con dos
   // nombres distintos.
+  // 🔴 Va ARRIBA de "Tu cuenta" y no entre los legales. No es un documento que
+  // se firma: son las reglas con las que trabaja —cómo lo encuentran, cuánto le
+  // queda, qué pasa si el otro no aparece—. Tenerlo al lado de los T&C sería
+  // enterrarlo en el lugar que nadie abre, que es justamente de donde se lo
+  // quiso sacar.
+  const guia: ConfigItem[] = [
+    { id: 'como-funciona', icon: 'book-open-outline', label: 'Cómo funciona', onPress: () => router.push('/coach-como-funciona' as any) },
+  ];
+
   const cuenta: ConfigItem[] = [
     { id: 'blocked', icon: 'account-cancel-outline', label: 'Cuentas bloqueadas', onPress: () => router.push('/cuentas-bloqueadas') },
     // Solo para admins. Esconderlo no es la protección —`admin-actions` revalida
@@ -166,7 +175,10 @@ export default function CoachSettingsScreen() {
             <MaterialCommunityIcons name="chevron-right" size={20} color="rgba(135,131,92,0.52)" />
           </TouchableOpacity>
 
-          <Text style={s.groupTitle}>Tu cuenta</Text>
+          <Text style={s.groupTitle}>Cómo funciona</Text>
+          {lista(guia)}
+
+          <Text style={[s.groupTitle, s.groupSpaced]}>Tu cuenta</Text>
           {lista(cuenta)}
 
           <Text style={[s.groupTitle, s.groupSpaced]}>Legales</Text>

@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-14 — Andre (sesión 231 · la regla de ausencias sale de la Home y se dice bien)
+
+**Tocado:** `screens/CoachComoFuncionaScreen.tsx` (nuevo), `app/coach-como-funciona.tsx` (nuevo), `screens/CoachHomeScreen.tsx`, `screens/CoachSettingsScreen.tsx`, `docs/no-show.md`. **599 tests**, `tsc` limpio, lint sin errores. ⚠️ Sin probar en dispositivo.
+
+**Resumen — salió de que a Andre le molestaba la línea de los 20 minutos debajo de "Tu próxima sesión".**
+
+- 🔴 **La línea no solo repetía: estaba mal dicha.** *"Esperá hasta 20 minutos. Si no llega, la sesión se te paga igual."* omitía que la espera se termina antes si la persona llega, y omitía el umbral que realmente decide la plata: **10 minutos de solapamiento = la sesión ocurrió y se cobra, sin importar quién llegó tarde** (`docs/no-show.md`). Una regla a medias sobre plata es peor que ninguna.
+- 📌 **Nueva pantalla `Cómo funciona`** (Ajustes → grupo propio, arriba de "Tu cuenta"): cinco bloques —cómo te encuentran, cuándo y cuánto cobrás, si la persona no aparece, cancelaciones, qué no se puede hacer—. Cada número sale de una fuente del repo, ninguno se redactó de memoria: ausencias de `docs/no-show.md`, comisiones de `_shared/commission.ts` (20 / 15 / 0 por link), cancelaciones de T&C §9.1–9.2, no elusión de §10.
+- 📌 **Va en su propio grupo y no entre los legales a propósito**: no es un documento que se firma, son las reglas con las que trabaja. Al lado de los T&C quedaba enterrado en el lugar del que se lo quiso sacar.
+- 📌 Tres bloques tienen puntero a la pantalla donde la cosa efectivamente se hace (`/coach-visibilidad`, `/coach-datos-cobro`, `/legal?doc=terminos`), así que es guía y no un callejón.
+- 🟢 La línea se borró de `CoachHomeScreen` **en el mismo commit** en que la información tuvo destino; `docs/no-show.md` ahora dice dónde vive y pide cambiarla junto con los umbrales.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **La única puerta hoy es Ajustes.** El coach nuevo no la va a encontrar solo: falta el paso en el checklist de bienvenida o una guía contextual la primera vez que entra a la Home. Era el segundo tramo de la opción C y quedó sin hacer.
+- ⏸️ **Guías contextuales del lado del coach**: no existe ni un `FirstTimeTooltip` en sus pantallas (`PASOS_GUIA` es todo del lado del usuario). Si se hacen, conviene el mismo mecanismo y no uno nuevo.
+- 📌 Sigue abierto de la 230: correr `scripts/normalize-hour-padding.sql` y deployar las cuatro Edge functions.
+
+---
 ## 2026-09-14 — Andre (sesión 230 · la sala no abría: la hora `7:00` sin cero)
 
 **Tocado:** `supabase/functions/_shared/guarantee.ts`, `supabase/functions/session-attendance/index.ts`, `supabase/functions/web-book/index.ts`, `lib/availabilityGenerator.ts`, `screens/CoachWeeklyPatternScreen.tsx`, `screens/CoachAvailabilityScreen.tsx`, `__tests__/guarantee.test.ts`, `scripts/normalize-hour-padding.sql` (nuevo). **599 tests**, `tsc` limpio.

@@ -62,6 +62,18 @@ quién llegó tarde. Se terminó ahí.
 La última fila es la prueba de que la regla es consistente: no hay ningún caso
 donde los dos cumplieron y aun así nadie es responsable.
 
+### Dónde se le dice esto al coach
+
+En **Ajustes → Cómo funciona** (`screens/CoachComoFuncionaScreen.tsx`, bloque
+`ausencias`). Antes vivía en una línea suelta debajo de la tarjeta de la próxima
+sesión, en el Inicio, y decía *"Esperá hasta 20 minutos. Si no llega, la sesión
+se te paga igual."* — **mal dicho en dos puntos**: la espera se termina antes si
+la persona llega, y con 10 minutos de solapamiento la sesión ya ocurrió y se
+cobra sin importar quién llegó tarde. Se sacó de la Home el 14/09/2026.
+
+⚠️ Si cambia alguno de los tres umbrales (20 del coach, 20 del cliente, 10 de
+solapamiento), esa pantalla cambia en el mismo commit.
+
 ### Por qué los plazos son asimétricos, y por qué la obligación del coach no es "estar en el minuto 10"
 
 **Decidido el 13/09 a propuesta de Andre:** el coach cobra igual, así que el que
