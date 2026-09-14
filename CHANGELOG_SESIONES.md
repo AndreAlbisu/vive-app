@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-14 — Andre (sesión 230 · la sala no abría: la hora `7:00` sin cero)
+
+**Tocado:** `supabase/functions/_shared/guarantee.ts`, `supabase/functions/session-attendance/index.ts`, `supabase/functions/web-book/index.ts`, `lib/availabilityGenerator.ts`, `screens/CoachWeeklyPatternScreen.tsx`, `screens/CoachAvailabilityScreen.tsx`, `__tests__/guarantee.test.ts`, `scripts/normalize-hour-padding.sql` (nuevo). **599 tests**, `tsc` limpio.
+
+**Resumen — salió de un `[meetingRoom] Edge function error: non-2xx` en la consola.**
+
+- 🐛 **`create-meeting-room` devolvía 422 "Fecha de la sesión inválida"** para la reserva del 21/09 a las `7:00`. `scheduledAtMs` exigía `^\d{2}:\d{2}` y la hora venía sin cero. Nadie habría podido entrar a esa sesión. Pega igual en `guarantee-claim` (mismo helper). Ahora acepta `{1,2}`, igual que el guard de `expire_pending_bookings`.
+- 🔴 **Origen**: `lib/availabilityGenerator.ts` (`formatTime`) y `dateToTimeStr` en las dos pantallas del coach escribían `${h}:MM`. La reserva copia la hora del slot. Medido en prod: **51/185 bookings, 362/2297 coach_availability, 7/8 coach_weekly_pattern** sin cero. Los tres generadores ahora escriben HH:MM; `web-book` normaliza con `hhmm` antes de insertar.
+- 🐛 De paso: `session-attendance` armaba el ISO con `slice(0,5)` → `T7:00:00` inválido → NaN → la sesión vacía nunca se concluía.
+- 📌 **`scripts/normalize-hour-padding.sql`**: normaliza las tres tablas y agrega triggers BEFORE INSERT/UPDATE (`normalize_hhmm`) para que los builds viejos no vuelvan a escribir `7:00`. 19 slots existían en las dos formas (`9:00` y `09:00`, julio 2026, sin bloquear) y chocan con el UNIQUE `(coach_id,date,time)`: se borra la versión sin cero. **Escrito pero NO corrido** — el clasificador de permisos bloqueó la escritura a prod.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/normalize-hour-padding.sql`** y verificar con las 3 queries del final (tienen que dar 0). Sin esto las reservas viejas siguen con `7:00` (las funciones ya las toleran una vez deployadas, pero los triggers no existen).
+- 🔴 **Deployar** `create-meeting-room`, `guarantee-claim`, `session-attendance`, `web-book` — también bloqueado. Hasta entonces la sala del 21/09 sigue dando 422.
+- ⚠️ **Sin tocar, parece bug aparte**: `send_session_reminders()` hace `to_char(b.scheduled_time, 'HH24:MI')` sobre una columna `text` — no existe `to_char(text, text)`, así que el recordatorio del día anterior probablemente falla siempre. Verificar en logs del cron antes de arreglar.
+
+---
 ## 2026-09-14 — Andre (sesión 229 · "hace 1 días", y las tarjetas de Tus personas que no medían igual)
 
 **Tocado:** `lib/coachContinuity.ts`, `screens/CoachChatsScreen.tsx`, `__tests__/coachContinuity.test.ts`. **596 tests**, `tsc` limpio. ⚠️ Sin probar en dispositivo; sale en el próximo build.
