@@ -31,11 +31,12 @@
 - 🐛 **`create-meeting-room` devolvía 422 "Fecha de la sesión inválida"** para la reserva del 21/09 a las `7:00`. `scheduledAtMs` exigía `^\d{2}:\d{2}` y la hora venía sin cero. Nadie habría podido entrar a esa sesión. Pega igual en `guarantee-claim` (mismo helper). Ahora acepta `{1,2}`, igual que el guard de `expire_pending_bookings`.
 - 🔴 **Origen**: `lib/availabilityGenerator.ts` (`formatTime`) y `dateToTimeStr` en las dos pantallas del coach escribían `${h}:MM`. La reserva copia la hora del slot. Medido en prod: **51/185 bookings, 362/2297 coach_availability, 7/8 coach_weekly_pattern** sin cero. Los tres generadores ahora escriben HH:MM; `web-book` normaliza con `hhmm` antes de insertar.
 - 🐛 De paso: `session-attendance` armaba el ISO con `slice(0,5)` → `T7:00:00` inválido → NaN → la sesión vacía nunca se concluía.
-- 📌 **`scripts/normalize-hour-padding.sql`**: normaliza las tres tablas y agrega triggers BEFORE INSERT/UPDATE (`normalize_hhmm`) para que los builds viejos no vuelvan a escribir `7:00`. 19 slots existían en las dos formas (`9:00` y `09:00`, julio 2026, sin bloquear) y chocan con el UNIQUE `(coach_id,date,time)`: se borra la versión sin cero. **Escrito pero NO corrido** — el clasificador de permisos bloqueó la escritura a prod.
+- 📌 **`scripts/normalize-hour-padding.sql`**: normaliza las tres tablas y agrega triggers BEFORE INSERT/UPDATE (`normalize_hhmm`) para que los builds viejos no vuelvan a escribir `7:00`. 19 slots existían en las dos formas (`9:00` y `09:00`, julio 2026, sin bloquear) y chocan con el UNIQUE `(coach_id,date,time)`: se borra la versión sin cero. ✅ **Corrido por Andre** y verificado: 0/0/0 sin cero, 2297 → 2278 slots, 3 triggers, la reserva del 21/09 quedó `07:00`.
+- ✅ **Deployadas** `create-meeting-room`, `guarantee-claim`, `session-attendance`, `web-book` (las corrió Andre: el clasificador de permisos bloqueó deploy y escritura a prod desde la sesión).
+- 📝 `supabase db query --linked "$(cat archivo.sql)"` **falla** si el archivo empieza con un comentario `--`: la CLI lo toma como flag. Usar `-f archivo.sql`.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **Correr `scripts/normalize-hour-padding.sql`** y verificar con las 3 queries del final (tienen que dar 0). Sin esto las reservas viejas siguen con `7:00` (las funciones ya las toleran una vez deployadas, pero los triggers no existen).
-- 🔴 **Deployar** `create-meeting-room`, `guarantee-claim`, `session-attendance`, `web-book` — también bloqueado. Hasta entonces la sala del 21/09 sigue dando 422.
+- 🟡 Abrir la sala de la reserva del 21/09 antes de la hora y confirmar que muestra el aviso "La sala se abre el…" en vez del error.
 - ⚠️ **Sin tocar, parece bug aparte**: `send_session_reminders()` hace `to_char(b.scheduled_time, 'HH24:MI')` sobre una columna `text` — no existe `to_char(text, text)`, así que el recordatorio del día anterior probablemente falla siempre. Verificar en logs del cron antes de arreglar.
 
 ---
