@@ -312,6 +312,20 @@
 - Sigue lo de la entrada de abajo: probar el checkout web (`vitaapp.com.ar/c/andre`) y la sala web con el CAPTCHA prendido, y entrar con mail en el build 20 para confirmar el proveedor.
 
 ---
+## 2026-09-14 — Andre (sesión 228 cont. 2 · achicar las tarjetas de Tus personas)
+
+**Tocado:** `screens/CoachChatsScreen.tsx`. **597 tests**, `tsc` y `eslint` limpios. Sin ver en dispositivo.
+
+- 🟢 **Cada fila pasó de 97 a 83 puntos de alto (–14%)**: padding 14 → 11, separación 9 → 7, `chatInfo.minHeight` 60 → 54. En una pantalla útil de ~700 puntos, entran 8 filas donde antes entraban 7.
+- 📌 **Se apretó el AIRE, no el contenido**, y es la decisión de fondo. Se evaluó sacar una de las tres líneas —fusionar la historia con el preview bajaba la fila a ~70 (–28%)— y **se descartó**: la línea de historia ("32 sesiones · última hace 2 semanas") es lo que distingue Tus personas de una lista de chats. Sacarla para ganar 13 puntos la convierte en Mensajes, que es justo lo que el análisis de Andre rescataba de esta pantalla.
+- 📌 **También se descartó achicar las tipografías**: gana poco alto y empeora una pantalla que existe para escanear rápido.
+- 📝 **El `minHeight` casi no estaba agregando aire**: las tres líneas de texto suman ~58 por sí solas, así que bajarlo de 60 a 54 no aprieta nada — solo deja de reservar espacio de más en las filas sin preview.
+- ⚠️ **El mínimo táctil no se tocó**: lo marca el avatar (44), y la fila sigue muy por encima aun con el padding más chico.
+
+**Pendiente para la próxima sesión:**
+- Verlo en dispositivo y decidir si quedó bien o si conviene apretar un poco más. Es fácil de ajustar en una segunda pasada; con la pantalla delante se ve enseguida.
+
+---
 ## 2026-09-14 — Andre (sesión 228 cont. · la burbuja del chat se le escapó a la auditoría de contraste del 01/09)
 
 **Tocado:** `screens/SalaScreen.tsx`. **596 tests**, `tsc` y `eslint` limpios. Sin ver en dispositivo.

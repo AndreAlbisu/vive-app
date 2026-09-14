@@ -673,7 +673,17 @@ const s = StyleSheet.create({
   chat: {
     flexDirection: 'row', alignItems: 'center', gap: 13,
     backgroundColor: CARD, borderRadius: 20,
-    paddingVertical: 14, paddingHorizontal: 15, marginBottom: 9,
+    // 🔴 14 → 11 de padding y 9 → 7 de separación (14/09/2026). Con tres líneas
+    // de texto adentro, cada fila medía 97 puntos y entraban pocas personas en
+    // pantalla — y esta es una lista para ESCANEAR, no para leer de a una.
+    //
+    // 📌 Se apretó el aire, NO el contenido: la línea de historia ("32 sesiones ·
+    // última hace 2 semanas") es lo que distingue Tus personas de una lista de
+    // chats. Sacarla para ganar alto la convertiría en Mensajes.
+    //
+    // ⚠️ El piso táctil lo marca el avatar (44) y no se tocó: la fila sigue muy
+    // por encima del mínimo, aun con el padding más chico.
+    paddingVertical: 11, paddingHorizontal: 15, marginBottom: 7,
     // Sombra de una capa, con los valores de `shadow.subtle.light` de
     // theme/tokens.ts. El borde al 14% que había antes era invisible sobre el
     // fondo crema: la tarjeta no se leía como objeto, y con dos filas en media
@@ -708,7 +718,10 @@ const s = StyleSheet.create({
   //
   // El número sale del layout de tres renglones: nombre (~20) + relTxt (~16,
   // con su marginTop 3) + preview (~16, con su marginTop 5).
-  chatInfo: { flex: 1, minWidth: 0, minHeight: 60, justifyContent: 'center' },
+  // 60 → 54: el `minHeight` casi no agregaba aire —las tres líneas suman ~58 por
+  // sí solas— así que bajarlo no aprieta el texto; solo deja de reservar espacio
+  // de más en las filas sin preview.
+  chatInfo: { flex: 1, minWidth: 0, minHeight: 54, justifyContent: 'center' },
   hintArch: {
     fontFamily: ViveFonts.regular,
     fontSize: 11,
