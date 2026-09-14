@@ -695,7 +695,20 @@ const s = StyleSheet.create({
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(63,81,47,0.1)' },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
   avatarTxt: { fontFamily: ViveFonts.bold, fontSize: 15, color: FOREST },
-  chatInfo: { flex: 1, minWidth: 0 },
+  // ⚠️ `minHeight` y no un relleno de texto: la línea de historia se renderiza
+  // condicionalmente (`{!!historia && …}`), así que a quien no tiene sesiones
+  // previas la tarjeta le perdía un renglón entero y quedaba visiblemente más
+  // baja que las de al lado — en una lista corta, esa diferencia se lee como
+  // desprolijidad y no como información.
+  //
+  // 📌 Se reserva la altura acá, en la columna de texto, y NO se rellena el
+  // hueco con una frase inventada: `textoHistoria` devuelve '' a propósito
+  // cuando todavía no hay historia que contar (hay un test que lo fija). Eso es
+  // una decisión de producto; emparejar la caja es presentación.
+  //
+  // El número sale del layout de tres renglones: nombre (~20) + relTxt (~16,
+  // con su marginTop 3) + preview (~16, con su marginTop 5).
+  chatInfo: { flex: 1, minWidth: 0, minHeight: 60, justifyContent: 'center' },
   hintArch: {
     fontFamily: ViveFonts.regular,
     fontSize: 11,

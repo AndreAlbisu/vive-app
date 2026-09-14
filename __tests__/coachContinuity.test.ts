@@ -92,6 +92,9 @@ describe('personasQueSeCaen', () => {
 describe('haceCuanto', () => {
   it('habla en la unidad en la que se piensa una agenda', () => {
     expect(haceCuanto(5)).toBe('Hace 5 días');
+    // 🔴 El singular. `textoHistoria` ya decía "1 sesión" y le concatenaba
+    // "hace 1 días": la misma línea bien escrita en una mitad y mal en la otra.
+    expect(haceCuanto(1)).toBe('Hace 1 día');
     expect(haceCuanto(21)).toBe('Hace 3 semanas');
     expect(haceCuanto(30)).toBe('Hace 4 semanas');
     expect(haceCuanto(60)).toBe('Hace 2 meses');

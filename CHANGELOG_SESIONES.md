@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-14 — Andre (sesión 229 · "hace 1 días", y las tarjetas de Tus personas que no medían igual)
+
+**Tocado:** `lib/coachContinuity.ts`, `screens/CoachChatsScreen.tsx`, `__tests__/coachContinuity.test.ts`. **596 tests**, `tsc` limpio. ⚠️ Sin probar en dispositivo; sale en el próximo build.
+
+**Resumen — salió de dos capturas de la interfaz del coach que mandó Andre.**
+
+- 🐛 **`haceCuanto` no pluralizaba**: devolvía `Hace ${dias} días` para cualquier número. Lo gracioso es que **la misma línea quedaba bien escrita en una mitad y mal en la otra** — `textoHistoria` sí hace `1 sesión` / `29 sesiones` y después le concatenaba `hace 1 días`. Una línea, más un test que fija el singular.
+- 📌 Ningún test fijaba el texto viejo (los asserts existentes usan 5, 21, 30, 32 y 60 días), así que el arreglo no rompió nada.
+- 🟢 **Y la diferencia de tamaño entre tarjetas tenía una causa concreta**: la línea de historia se renderiza condicionalmente (`{!!historia && …}`), así que **a quien no tiene sesiones previas la tarjeta le perdía un renglón entero** (~19px) y quedaba visiblemente más baja. En una lista corta eso se lee como desprolijidad, no como información.
+- 📌 **Se arregló reservando la altura (`minHeight` en `chatInfo`) y NO rellenando el hueco con una frase.** `textoHistoria` devuelve `''` a propósito cuando todavía no hay historia que contar, y hay un test que lo fija: eso es una decisión de producto, y emparejar la caja es presentación. Mezclarlas habría convertido un ajuste estético en un cambio de copy.
+- 📌 La jerarquía de superficie queda intacta: `chatPlana` solo cambia fondo, borde y sombra, no la altura, así que el "con sombra vs. plana" sigue diciendo lo mismo.
+
+**Pendiente para la próxima sesión:**
+- ⏸️ **`haceCuanto(0)` sigue diciendo "hace 0 días"** para alguien visto hoy. Es el mismo defecto pero ya es cambio de copy, así que **espera decisión** — debería decir "hoy". 📌 Solo es alcanzable desde el roster: el otro llamador (`CoachHomeScreen:1118`) filtra con `diasSinVerse < umbral`, así que nunca recibe 0 ni 1.
+- 🔴 **Sin tocar: el perfil con `name = 'Usuario'` de la reserva del 18/09.** Está guardado así en la base (el default del trigger `handle_new_user`), **no** es un fallback de la pantalla, y `origen` viene en `null` — o sea que esa reserva no entró por el link web y el arreglo de Joaquín del 10/09 nunca la tocó. Son 2 perfiles de 84, uno con reserva futura. **El coach va a ver "Usuario" el día de la prueba.**
+- 📌 Dos cosas que son diseño y no bugs, por si molestan: la tarjeta puede decir *"El usuario canceló la sesión"* y a la vez tener pastilla verde de próxima sesión (una pinta el último mensaje, la otra la próxima reserva), y hay una reserva de prueba a las **0:00 del 24/09**.
+
+---
 ## 2026-09-14 — Andre (sesión 228 cont. 8 · el plan es el gratuito: el backup manual es la única red que hay)
 
 **Tocado:** `scripts/backup.sh` (encabezado), `CHANGELOG_SESIONES.md`. Borrados dos directorios basura fuera del repo.
