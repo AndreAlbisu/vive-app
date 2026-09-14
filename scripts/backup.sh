@@ -12,6 +12,12 @@
 #
 # Se puede cambiar con:  DESTINO=/otra/ruta ./scripts/backup.sh
 #
+# 🔴 EL PLAN DE SUPABASE ES EL GRATUITO (confirmado por Andre el 14/09/2026), y
+# el gratuito **no tiene backups automáticos**. O sea que esto no es una red de
+# respaldo además de la del proveedor: **es la única que hay**. Si no se corre,
+# no hay de dónde volver — y adentro hay pagos reales, mensajes y registros de
+# ánimo de personas.
+#
 # ── POR QUÉ NO USA `supabase db dump` DIRECTO (13/09/2026) ───────────────────
 #
 # 🔴 `supabase db dump` **siempre levanta pg_dump adentro de un contenedor**, y

@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-14 — Andre (sesión 228 cont. 8 · el plan es el gratuito: el backup manual es la única red que hay)
+
+**Tocado:** `scripts/backup.sh` (encabezado), `CHANGELOG_SESIONES.md`. Borrados dos directorios basura fuera del repo.
+
+**Resumen — se confirmó lo que estaba pendiente desde la 227, y la respuesta es la mala.**
+
+- 🔴 **El plan de Supabase es el GRATUITO**, así que **no hay backups automáticos**. Esto cambia lo que significa `scripts/backup.sh`: no es una red adicional a la del proveedor, **es la única**. Si nadie lo corre, no hay de dónde volver — y la base tiene pagos reales, mensajes y registros de ánimo de gente. Queda escrito en el encabezado del script, que es donde se lee en el momento de usarlo.
+- ✅ **Borrados los dos directorios de las corridas fallidas** (`2026-09-13-1155` y `2026-09-13-1711`), cada uno con un `roles.sql` de 0 bytes. Se borraron con una guarda que solo elimina si **no hay ningún archivo con contenido**, para no llevarse por delante un backup bueno por un error de tipeo en la fecha.
+- 📌 **Queda un solo backup válido**: `~/vita-backups/2026-09-13-1721`, del 13/09.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Automatizarlo, que ahora sí es prioridad y no una mejora.** Con plan gratuito y un único backup manual de ayer, la ventana de pérdida es todo lo que pase desde entonces. El camino natural en esta máquina es un agente de `launchd` — con la salvedad de que solo corre con la laptop encendida.
+- 📌 **Decidir la retención**: hoy cada corrida crea un directorio nuevo y nada borra los viejos. Tres backups de 1 MB no molestan; en seis meses sí.
+- 📌 **El Storage sigue sin respaldo** (videos de presentación, fotos, audios): es otro mecanismo y no lo cubre este script.
+
+---
 ## 2026-09-13 — Andre (sesión 228 cont. 7 · el backup existe de verdad, y su propia verificación estaba rota)
 
 **Tocado:** `scripts/backup.sh` (reescrito). ✅ **PRIMER BACKUP REAL CORRIDO Y VERIFICADO.** Instalado `libpq` 18.6 por brew (decisión de Andre).
