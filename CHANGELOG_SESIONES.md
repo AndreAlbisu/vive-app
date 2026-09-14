@@ -19,7 +19,7 @@
 **Pendiente para la próxima sesión:**
 - ⚠️ **La única puerta hoy es Ajustes.** El coach nuevo no la va a encontrar solo: falta el paso en el checklist de bienvenida o una guía contextual la primera vez que entra a la Home. Era el segundo tramo de la opción C y quedó sin hacer.
 - ⏸️ **Guías contextuales del lado del coach**: no existe ni un `FirstTimeTooltip` en sus pantallas (`PASOS_GUIA` es todo del lado del usuario). Si se hacen, conviene el mismo mecanismo y no uno nuevo.
-- 📌 Sigue abierto de la 230: correr `scripts/normalize-hour-padding.sql` y deployar las cuatro Edge functions.
+- 🟡 Sigue abierto de la 230: **abrir la sala del 21/09 antes de la hora** y confirmar el aviso "La sala se abre el…". El SQL y los deploys ya se hicieron en paralelo (commit `896faeb7`).
 
 ---
 ## 2026-09-14 — Andre (sesión 230 · la sala no abría: la hora `7:00` sin cero)
