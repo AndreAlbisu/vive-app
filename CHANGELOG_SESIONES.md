@@ -312,6 +312,22 @@
 - Sigue lo de la entrada de abajo: probar el checkout web (`vitaapp.com.ar/c/andre`) y la sala web con el CAPTCHA prendido, y entrar con mail en el build 20 para confirmar el proveedor.
 
 ---
+## 2026-09-14 — Andre (sesión 228 · el botón de mail parecía apagado en las tres puertas de entrada)
+
+**Tocado:** `screens/CoachLoginScreen.tsx`, `screens/LoginScreen.tsx`, `screens/RegisterScreen.tsx`. **596 tests**, `tsc` y `eslint` limpios. Sin probar en dispositivo.
+
+- 🐛 **Andre lo vio en el login de coach y estaba en las TRES**: Google y Apple con fondo crema (`#FCFAF5`) y borde suave, y el de mail `transparent` con un borde verde más marcado. Entre dos botones con fondo, el tercero sin fondo no se lee como "opción secundaria" sino como **botón inhabilitado**.
+- 📌 **Pregunta de Andre, y es la que ordena la decisión: "¿no es mejor que se registren con Google o Apple?"** Sí, y el motivo más fuerte no es la conversión: **es que del lado del mail está toda la fragilidad del alta.** Google y Apple traen el mail ya verificado por el proveedor, así que esas cuentas **no ven el muro del mail, no dependen del SMTP, no tienen código que puede no llegar ni contraseña que se olvide** — justo la cadena de problemas de las sesiones 224-225. Apple suma "Ocultar mi correo", que en una app cerca de salud mental no es un detalle.
+- 🟢 **Entonces la jerarquía se mantiene, pero no con el color**: los tres comparten fondo y borde; lo social va primero y con ícono de marca.
+- 🔴 **Y hay alguien que NO puede usar Google ni Apple: el cliente que llega por el link de un coach.** Nace con cuenta de mail y sin contraseña (reservó por la web con un código), así que esa es su única puerta — y era la que se veía apagada. Por eso el cambio no es cosmético.
+- ⚠️ **Corrección en el camino**: el comentario que escribí decía que el botón de mail "no lleva ícono", y **sí lo lleva** (un sobre, en las tres). Se corrigió antes de commitear. Con eso, la jerarquía quedó **débil**: los tres botones son visualmente iguales y solo cambia el texto. Si hace falta empujar más lo social, la palanca es el peso del texto o un separador — **no volver a apagarle el fondo al de mail**.
+- 📌 **Los datos no ayudan a decidir y conviene decirlo**: hay 8 cuentas (7 por mail, 1 por Google) y son todas de prueba. No hay señal de preferencia real.
+
+**Pendiente para la próxima sesión:**
+- ⏸️ **Decisión de Andre**: si quiere recuperar jerarquía visual entre lo social y el mail, o dejar los tres iguales.
+- Verlo en dispositivo: las tres pantallas de entrada.
+
+---
 ## 2026-09-13 — Andre (sesión 227 · backups de la base, que no existían)
 
 **Tocado:** `scripts/backup.sh` (nuevo), `.gitignore`. Sin cambios de app.
