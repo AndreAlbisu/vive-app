@@ -330,7 +330,9 @@
 - ✅ **El "hace 2 semanas" de Tus personas: el análisis tiene razón.** `ultimaIso` se llena **solo con sesiones completadas** (`CoachChatsScreen:277`), así que significa "última sesión hace 2 semanas" y el texto no lo dice.
 
 **Pendiente para la próxima sesión:**
-- **"32 sesiones · última hace 2 semanas"** en Tus personas, y **"1 pendiente"** en vez de "1 esperando" en Reservas. Los dos acordados, no hechos todavía.
+- ✅ **Hechos en la misma sesión**: **"32 sesiones · última hace 2 semanas"** en Tus personas (`textoHistoria`) y **"1 pendiente"** en Reservas. **597 tests** (+1).
+  - 📝 Verificado antes de escribirlo: `haceCuanto` devuelve **siempre** la forma "Hace X" —nunca "ayer" ni "hoy"—, así que "última hace 1 día" también queda bien escrito. Era el riesgo del cambio y se midió en vez de suponerlo; se sumó el test del singular.
+  - 📌 En Reservas el motivo del cambio es más concreto que "suena mejor": la fila de abajo puede decir **"Esperando el pago"**, y dos "esperando" con sujetos distintos en la misma tarjeta se leen como el mismo estado. Acá espera el coach; ahí, la plata. También se pluralizó ("2 pendientes").
 - ⏸️ **Las otras QUINCE superficies de terracota** (blanco o crema sobre `primary`, 3.6–3.9:1) siguen con el "pendiente de decidir si se barren también" que dejó la auditoría. En esta pantalla son el botón "Confirmar" (3.64), el de unirse a la llamada (3.35) y las iniciales del avatar (3.89). **No se tocaron: están así a conciencia.** 📌 Dato para decidir: con `primary` ningún color de texto llega a AA —ni el blanco puro— así que no se arregla cambiando el texto, hay que oscurecer el fondo.
 - Ver la burbuja en dispositivo, con sol si se puede: es la condición en la que se detectó el problema original.
 
