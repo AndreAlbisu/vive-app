@@ -19,6 +19,22 @@
 - Mirar en dispositivo la fila nueva en la confirmación: son dos oraciones y la pantalla ya tiene varias filas de aviso; si pesa, evaluar juntarla con la de cancelación.
 
 ---
+## 2026-09-14 — Andre (sesión 232 · la costura debajo del carrusel, medida en la captura)
+
+**Tocado:** `screens/SessionsScreen.tsx`. **599 tests**, `tsc` limpio, lint sin errores. ⚠️ Sin verificar en dispositivo.
+
+**Resumen — salió de una captura de Andre marcando una línea horizontal debajo de la tarjeta de sesión.**
+
+- 🐛 **La sombra del carrusel se seguía cortando**, y es la tercera pasada sobre el mismo bug: 30 → 44 → 64. Las dos anteriores estimaron y se quedaron cortas.
+- 📐 **Esta vez se midió la captura** (804×1714, 2px por punto, decodificada con un PNG parser propio porque no hay PIL): borde inferior de la card en `y=668`, corte en `y=757` — exactamente los 44pt de `paddingBottom` —, y ahí la sombra valía **227.0 contra un fondo de 232.1**: un escalón de 5 niveles de golpe. La cola decae ~0.64 cada 10px, así que el escalón cae por debajo de 1 nivel recién a `y≈795` → **64pt**. El comentario del archivo decía "52 es el valor medido" mientras la constante decía 44; las dos cosas quedaron corregidas contra la medición.
+- 🔴 **El corte cruzaba toda la pantalla, no solo debajo de la card**: la ScrollView sale a sangre, así que su línea de clip es del ancho completo. Por eso se leía como una costura y no como un borde de tarjeta — las dos marcas amarillas de la captura eran la misma línea.
+- 📌 **`GAP_PUNTOS` (nueva constante)**: la posición de los puntitos colgaba de `SOMBRA_ALCANCE`, así que subirlo los habría alejado 20pt sin que nadie lo pidiera. Ahora el aire que necesita la sombra y la distancia a la que se ven los puntitos son dos números distintos; los puntitos quedan donde estaban (54pt del borde de la card).
+
+**Pendiente para la próxima sesión:**
+- 🟡 **Verificar en el teléfono** que la costura desapareció y que los puntitos no se movieron. Se midió sobre una captura, no sobre el dispositivo.
+- ⚠️ **Sin resolver: la barra de abajo del coach dejó de responder a los toques** (el swipe sí funcionaba) y se curó re-logueando. Descartados con evidencia: la barra y los layouts (el mismo componente andaba del lado usuario), capas encima (la Home del coach solo tiene un brillo con `pointerEvents="none"`), el `AuthModal` (es `<Modal>` de verdad: habría matado el swipe también), el muro del mail (es un `replace`, te habría sacado de la pantalla) y callbacks inestables (`refreshUnread` está memoizado). El síntoma —swipe vivo, toques muertos— es la firma de **hilo de JS trabado**. Si vuelve a pasar: probar si responde el scroll y algún botón de tarjeta ANTES de re-loguear, que es lo que distingue "no llegó el toque" de "no navegó".
+
+---
 ## 2026-09-14 — Andre (sesión 231 · la regla de ausencias sale de la Home y se dice bien)
 
 **Tocado:** `screens/CoachComoFuncionaScreen.tsx` (nuevo), `app/coach-como-funciona.tsx` (nuevo), `screens/CoachHomeScreen.tsx`, `screens/CoachSettingsScreen.tsx`, `docs/no-show.md`. **599 tests**, `tsc` limpio, lint sin errores. ⚠️ Sin probar en dispositivo.

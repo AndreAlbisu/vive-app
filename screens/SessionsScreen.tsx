@@ -92,13 +92,36 @@ const CARD_W = Math.round(CARD_FULL * 0.86);
  * alcance como `paddingBottom`.
  *
  * ⚠️ El número NO sale de `offset.height + radius − inset` del token. Esa cuenta
- * daba 30 y **se probó: a 30pt la sombra todavía valía 15 unidades sobre el
- * fondo**, porque el desenfoque de CoreGraphics se extiende bastante más allá
- * del `shadowRadius` nominal. 52 es el valor medido con margen. Si se toca
- * `shadow.elevated.dark` en `theme/tokens.ts`, hay que volver a mirarlo en una
- * captura, no recalcularlo.
+ * daba 30, y cada pasada que lo estimó se quedó corta: 30 dejaba 15 unidades de
+ * escalón, y 44 —el valor anterior— dejaba 5. El desenfoque de CoreGraphics se
+ * extiende bastante más allá del `shadowRadius` nominal.
+ *
+ * 📐 64 sale de MEDIR la captura del 14/09/2026 (804×1714, 2px por punto):
+ * borde inferior de la card en y=668, corte en y=757 (= los 44pt de entonces),
+ * y ahí la sombra valía 227.0 contra un fondo de 232.1. La cola decae ~0.64
+ * cada 10px, así que el escalón baja de 5 niveles a menos de 1 recién a y≈795,
+ * o sea 64pt. Es el ancho de la sangría, no un margen de diseño.
+ *
+ * 🔴 Y el corte cruzaba TODA la pantalla, no solo debajo de la card: la
+ * ScrollView sale a sangre, así que su línea de clip es del ancho completo y se
+ * leía como una costura horizontal por encima de los puntitos.
+ *
+ * Si se toca `shadow.elevated.dark` en `theme/tokens.ts`, hay que volver a
+ * medirlo en una captura, no recalcularlo.
  */
-const SOMBRA_ALCANCE = 44;
+const SOMBRA_ALCANCE = 64;
+
+/**
+ * A cuánto del borde inferior de la card van los puntitos.
+ *
+ * 🔴 Existe como constante propia porque su posición colgaba de
+ * `SOMBRA_ALCANCE`: los puntitos se apoyan en el borde de la ScrollView, o sea
+ * ya vienen empujados por ese `paddingBottom`. Subir el alcance de 44 a 64 los
+ * habría alejado 20pt sin que nadie lo pidiera. Separando las dos ideas, el
+ * aire que necesita la sombra y la distancia a la que se ven los puntitos
+ * dejan de ser el mismo número: 54 es lo que había (44 + 10) y es lo que queda.
+ */
+const GAP_PUNTOS = 54;
 
 /**
  * 🔴 EL SLOT SE DISOLVIÓ. Arriba de la lista va el carrusel de sesiones
@@ -840,8 +863,8 @@ const styles = StyleSheet.create({
 
   /**
    * Con UNA sola sesión no hay puntitos, o sea que debajo de la sombra no queda
-   * nada que proteger — y ahí los 44pt de `carrusel.paddingBottom` dejan de ser
-   * aire útil y se leen como un hueco.
+   * nada que proteger — y ahí los `SOMBRA_ALCANCE` puntos de
+   * `carrusel.paddingBottom` dejan de ser aire útil y se leen como un hueco.
    *
    * 🔴 Se devuelven enteros con margen negativo y quedan 12pt de separación de
    * verdad. La sombra se sigue dibujando completa (el `paddingBottom` sigue
@@ -858,7 +881,10 @@ const styles = StyleSheet.create({
   // página metido adentro de la sombra de la card se lee como suciedad.
   puntos: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 10, paddingHorizontal: H_PADDING + 4,
+    // Negativo a propósito: la ScrollView ya los empujó `SOMBRA_ALCANCE` puntos
+    // con su `paddingBottom`, y de esa distancia solo `GAP_PUNTOS` es aire
+    // querido — el resto es lugar para la sombra. Ver `GAP_PUNTOS`.
+    marginTop: GAP_PUNTOS - SOMBRA_ALCANCE, paddingHorizontal: H_PADDING + 4,
   },
   punto: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(135,131,92,0.28)' },
   puntoActivo: { backgroundColor: ViveColors.primary, width: 16 },
