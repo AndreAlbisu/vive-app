@@ -239,7 +239,7 @@ export default function RespiracionScreen() {
                 {patron.fases[faseIdx]}
               </Text>
               <Text style={s.phaseSub}>{patron.segundos[faseIdx]} segundos</Text>
-              <TouchableOpacity style={s.ghostBtn} onPress={() => { stopTimer(); router.back(); }} activeOpacity={0.8}>
+              <TouchableOpacity style={s.ghostBtn} onPress={() => { stopTimer(); setRemaining(duration); setPhase('idle'); }} activeOpacity={0.8}>
                 <Text style={s.ghostBtnText}>Detener</Text>
               </TouchableOpacity>
             </>
