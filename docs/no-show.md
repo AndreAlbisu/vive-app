@@ -121,6 +121,25 @@ entenderse, no es una política: es una especificación interna.
 > Si tu coach no está en los primeros **10 minutos**, no pagás.
 > Si llegás más de **20 minutos** tarde, la sesión se cobra igual.
 
+### Dónde se le dice esto al cliente
+
+**Una vez, al reservar**: en `BookingScreen_Confirm`, debajo de la política de
+cancelación, con las dos frases. **Y en el momento**, en `web/sala` (avisos de
+los 2 y 10 minutos).
+
+📌 Hasta el 14/09/2026 la primera frase vivía también en la tarjeta de la próxima
+sesión de `SalaScreen`. Se sacó: repetida en cada sesión futura, antes de que
+pasara nada, se leía como anticipar que el coach iba a faltar, y decía solo la
+mitad que le conviene al cliente. Además la veía el coach (la pantalla es también
+su chat), hablándole de "tu coach".
+
+⚠️ **Hueco aceptado**: "Unirse" en la app abre Daily directo, sin `web/sala`, así
+que desde la app no hay aviso en el momento — solo lo que se leyó al reservar.
+Mismo criterio que "No se toca `SalaScreen`" más abajo.
+
+⚠️ Si cambia alguno de los umbrales, cambian en el mismo commit
+`BookingScreen_Confirm`, `CoachComoFuncionaScreen` y `web/sala`.
+
 El **solapamiento mínimo de 10 minutos** no se publica como número: es el criterio
 interno de "¿pasó suficiente sesión?", y decirlo invita a discutir el reloj en vez
 del hecho.

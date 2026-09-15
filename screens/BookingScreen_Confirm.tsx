@@ -992,6 +992,19 @@ export default function BookingScreen_Confirm() {
           </Text>
         </View>
 
+        {/* La regla de ausencias (T&C §9.5, docs/no-show.md), dicha UNA vez y acá:
+            es plata, y se lee como parte de lo que se acepta al pagar. Antes vivía
+            en la tarjeta de la próxima sesión de la Sala y se repetía como una
+            advertencia. Van las dos mitades —la que protege al cliente y la que
+            protege al profesional—; si cambian los umbrales (10 / 20), cambia acá. */}
+        <View style={s.noticeRow}>
+          <MaterialIcons name="schedule" size={15} color={ViveColors.accent} />
+          <Text style={s.noticeText}>
+            Si tu profesional no llega en los primeros 10 minutos, no pagás la sesión.
+            Si llegás más de 20 minutos tarde, se cobra igual
+          </Text>
+        </View>
+
         {/* Mensaje opcional */}
         <View style={s.messageSection}>
           <Text style={s.messageTitle}>

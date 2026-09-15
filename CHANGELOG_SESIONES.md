@@ -4,6 +4,21 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-14 — Andre (sesión 232 · la regla de ausencias sale también de la Sala)
+
+**Tocado:** `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `docs/no-show.md`. `tsc` limpio, lint sin errores nuevos. ⚠️ Sin probar en dispositivo.
+
+**Resumen — sigue a la 231: Andre vio la línea de los 10 minutos en el chat del coach.**
+
+- 🐛 **"Si tu coach no está en los primeros 10 minutos, no pagás" la veía el coach**: la tarjeta de la próxima sesión de `SalaScreen` no estaba condicionada por rol, y esa pantalla es también el chat del coach.
+- 📌 **Se sacó para los dos, no solo para el coach.** Del lado del cliente, repetida en cada sesión futura antes de que pasara nada, se leía como anticipar que el coach iba a faltar, y decía solo la mitad que le conviene al cliente (faltaba "si llegás más de 20 minutos tarde, se cobra igual").
+- 🟢 **La regla se dice una vez, al reservar**: fila nueva en `BookingScreen_Confirm` debajo de la política de cancelación, con las dos frases. Ahí es plata y se lee como parte de lo que se acepta al pagar. En el momento la siguen diciendo los avisos de 2/10 min de `web/sala`.
+- ⚠️ **Hueco aceptado y documentado** en `docs/no-show.md`: "Unirse" en la app abre Daily directo, sin `web/sala`, así que desde la app no hay aviso en el momento.
+
+**Pendiente para la próxima sesión:**
+- Mirar en dispositivo la fila nueva en la confirmación: son dos oraciones y la pantalla ya tiene varias filas de aviso; si pesa, evaluar juntarla con la de cancelación.
+
+---
 ## 2026-09-14 — Andre (sesión 231 · la regla de ausencias sale de la Home y se dice bien)
 
 **Tocado:** `screens/CoachComoFuncionaScreen.tsx` (nuevo), `app/coach-como-funciona.tsx` (nuevo), `screens/CoachHomeScreen.tsx`, `screens/CoachSettingsScreen.tsx`, `docs/no-show.md`. **599 tests**, `tsc` limpio, lint sin errores. ⚠️ Sin probar en dispositivo.
