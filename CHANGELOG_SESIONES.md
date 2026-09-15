@@ -4,6 +4,288 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-14 — Andre (sesión 233 · el contador de guardados contaba lo que la lista no mostraba)
+
+**Tocado:** `screens/RecursosGuardadosScreen.tsx`, `app/(tabs)/recursos.tsx`, `SCHEMA.md`. **599 tests**, `tsc` limpio, lint sin errores. ⚠️ Sin verificar en dispositivo.
+
+**Resumen — salió de una pregunta de Andre: "el número sobre el ícono de guardados, ¿funciona realmente?".**
+
+- 🔴 **Funcionaba a medias, y la raíz no era el badge: hay DOS tablas de guardados para una sola idea de producto.** `saved_resources` (texto: slugs de herramientas + uuids de `resources`) y `resource_saves` (uuid con FK a `coach_resources`). El contador une las dos; la pantalla de guardados leía **solo la vieja**.
+- 🐛 **Consecuencia:** todo lo guardado desde el deck (`app/formato.tsx`) —que es **el camino principal hoy**, el bookmark se mudó ahí— subía el número y **no aparecía nunca en la lista**.
+- 🐛 **Cuarto defecto, encontrado de paso:** la pantalla resolvía los uuids contra `resources`, pero los de `resource_saves` son de `coach_resources`, que es **otra tabla** (`add-resources.sql` vs `recursos-v2-migration.sql`, sin vista entre ellas). Ni leyendo la tabla correcta habrían aparecido.
+- 🐛 **`unsave` borraba en una sola tabla**: un recurso guardado por los dos caminos reaparecía al recargar. Ahora borra en las dos.
+- 🐛 **El contador no se refrescaba**: su efecto colgaba de `[user]` sin `useFocusEffect`, así que guardabas algo, volvías y el número seguía igual hasta remontar la pantalla. La pantalla de guardados sí usaba foco; ahora están de acuerdo.
+- 📌 **La consulta a `coach_resources` va plana, sin `coaches!inner(profiles!inner(name))`**, esquivando a propósito la trampa de RLS documentada en SCHEMA.md (16/07/2026): la policy permite `status = 'published'` a cualquiera, pero el join embebido arrastra la política de `profiles`.
+
+**Pendiente para la próxima sesión:**
+- 🟡 **Verificar en el teléfono**: guardar algo desde el deck, volver a Recursos (el número tiene que subir solo) y abrir la lista (tiene que estar ahí).
+- ⏸️ **Unificar las dos tablas — documentado en SCHEMA.md con su dirección.** Tiene que ser hacia `saved_resources` (columna TEXT), porque `resource_saves.resource_id` es uuid con FK y no puede alojar los slugs de las herramientas. No se hizo junto con esto porque toca `get_my_resource_counts()`, `get_my_resource_stats_month()` y `delete-account`, y eso quiere su propia verificación contra la base.
+- ⚠️ **Hay DOS entradas numeradas 232** (esta sesión y la paralela que movió la regla de ausencias a la Sala). No se renumeró ninguna para no pisar el árbol de la otra; queda para quien cierre.
+
+---
+## 2026-09-14 — Andre (sesión 232 · la regla de ausencias sale también de la Sala)
+
+**Tocado:** `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `docs/no-show.md`. `tsc` limpio, lint sin errores nuevos. ⚠️ Sin probar en dispositivo.
+
+**Resumen — sigue a la 231: Andre vio la línea de los 10 minutos en el chat del coach.**
+
+- 🐛 **"Si tu coach no está en los primeros 10 minutos, no pagás" la veía el coach**: la tarjeta de la próxima sesión de `SalaScreen` no estaba condicionada por rol, y esa pantalla es también el chat del coach.
+- 📌 **Se sacó para los dos, no solo para el coach.** Del lado del cliente, repetida en cada sesión futura antes de que pasara nada, se leía como anticipar que el coach iba a faltar, y decía solo la mitad que le conviene al cliente (faltaba "si llegás más de 20 minutos tarde, se cobra igual").
+- 🟢 **La regla se dice una vez, al reservar**: fila nueva en `BookingScreen_Confirm` debajo de la política de cancelación, con las dos frases. Ahí es plata y se lee como parte de lo que se acepta al pagar. En el momento la siguen diciendo los avisos de 2/10 min de `web/sala`.
+- ⚠️ **Hueco aceptado y documentado** en `docs/no-show.md`: "Unirse" en la app abre Daily directo, sin `web/sala`, así que desde la app no hay aviso en el momento.
+- 🎨 **`OfrecerPaqueteBanner` ("¿Querés armar algo para llevar?") pasó al final del hilo del chat** (`SalaScreen`, dentro del `ScrollView`, después de la tarjeta de re-reserva). Fijo entre el header y la tarjeta de la sesión quedaba como un cartel ajeno a la conversación; ahí se lee como parte del chat, que es además adonde termina llegando lo que se arma. El componente perdió `marginHorizontal`/`marginTop` porque `scrollContent` ya los pone. Probado por Andre en dispositivo lo de la regla de ausencias; esto último **sin probar**.
+
+**Pendiente para la próxima sesión:**
+- Mirar en dispositivo la fila nueva en la confirmación: son dos oraciones y la pantalla ya tiene varias filas de aviso; si pesa, evaluar juntarla con la de cancelación.
+
+---
+## 2026-09-14 — Andre (sesión 232 · la costura debajo del carrusel, medida en la captura)
+
+**Tocado:** `screens/SessionsScreen.tsx`. **599 tests**, `tsc` limpio, lint sin errores. ⚠️ Sin verificar en dispositivo.
+
+**Resumen — salió de una captura de Andre marcando una línea horizontal debajo de la tarjeta de sesión.**
+
+- 🐛 **La sombra del carrusel se seguía cortando**, y es la tercera pasada sobre el mismo bug: 30 → 44 → 64. Las dos anteriores estimaron y se quedaron cortas.
+- 📐 **Esta vez se midió la captura** (804×1714, 2px por punto, decodificada con un PNG parser propio porque no hay PIL): borde inferior de la card en `y=668`, corte en `y=757` — exactamente los 44pt de `paddingBottom` —, y ahí la sombra valía **227.0 contra un fondo de 232.1**: un escalón de 5 niveles de golpe. La cola decae ~0.64 cada 10px, así que el escalón cae por debajo de 1 nivel recién a `y≈795` → **64pt**. El comentario del archivo decía "52 es el valor medido" mientras la constante decía 44; las dos cosas quedaron corregidas contra la medición.
+- 🔴 **El corte cruzaba toda la pantalla, no solo debajo de la card**: la ScrollView sale a sangre, así que su línea de clip es del ancho completo. Por eso se leía como una costura y no como un borde de tarjeta — las dos marcas amarillas de la captura eran la misma línea.
+- 📌 **`GAP_PUNTOS` (nueva constante)**: la posición de los puntitos colgaba de `SOMBRA_ALCANCE`, así que subirlo los habría alejado 20pt sin que nadie lo pidiera. Ahora el aire que necesita la sombra y la distancia a la que se ven los puntitos son dos números distintos; los puntitos quedan donde estaban (54pt del borde de la card).
+
+**Pendiente para la próxima sesión:**
+- 🟡 **Verificar en el teléfono** que la costura desapareció y que los puntitos no se movieron. Se midió sobre una captura, no sobre el dispositivo.
+- ⚠️ **Sin resolver: la barra de abajo del coach dejó de responder a los toques** (el swipe sí funcionaba) y se curó re-logueando. Descartados con evidencia: la barra y los layouts (el mismo componente andaba del lado usuario), capas encima (la Home del coach solo tiene un brillo con `pointerEvents="none"`), el `AuthModal` (es `<Modal>` de verdad: habría matado el swipe también), el muro del mail (es un `replace`, te habría sacado de la pantalla) y callbacks inestables (`refreshUnread` está memoizado). El síntoma —swipe vivo, toques muertos— es la firma de **hilo de JS trabado**. Si vuelve a pasar: probar si responde el scroll y algún botón de tarjeta ANTES de re-loguear, que es lo que distingue "no llegó el toque" de "no navegó".
+
+---
+## 2026-09-14 — Andre (sesión 231 · la regla de ausencias sale de la Home y se dice bien)
+
+**Tocado:** `screens/CoachComoFuncionaScreen.tsx` (nuevo), `app/coach-como-funciona.tsx` (nuevo), `screens/CoachHomeScreen.tsx`, `screens/CoachSettingsScreen.tsx`, `docs/no-show.md`. **599 tests**, `tsc` limpio, lint sin errores. ⚠️ Sin probar en dispositivo.
+
+**Resumen — salió de que a Andre le molestaba la línea de los 20 minutos debajo de "Tu próxima sesión".**
+
+- 🔴 **La línea no solo repetía: estaba mal dicha.** *"Esperá hasta 20 minutos. Si no llega, la sesión se te paga igual."* omitía que la espera se termina antes si la persona llega, y omitía el umbral que realmente decide la plata: **10 minutos de solapamiento = la sesión ocurrió y se cobra, sin importar quién llegó tarde** (`docs/no-show.md`). Una regla a medias sobre plata es peor que ninguna.
+- 📌 **Nueva pantalla `Cómo funciona`** (Ajustes → grupo propio, arriba de "Tu cuenta"): cinco bloques —cómo te encuentran, cuándo y cuánto cobrás, si la persona no aparece, cancelaciones, qué no se puede hacer—. Cada número sale de una fuente del repo, ninguno se redactó de memoria: ausencias de `docs/no-show.md`, comisiones de `_shared/commission.ts` (20 / 15 / 0 por link), cancelaciones de T&C §9.1–9.2, no elusión de §10.
+- 📌 **Va en su propio grupo y no entre los legales a propósito**: no es un documento que se firma, son las reglas con las que trabaja. Al lado de los T&C quedaba enterrado en el lugar del que se lo quiso sacar.
+- 📌 Tres bloques tienen puntero a la pantalla donde la cosa efectivamente se hace (`/coach-visibilidad`, `/coach-datos-cobro`, `/legal?doc=terminos`), así que es guía y no un callejón.
+- 🟢 La línea se borró de `CoachHomeScreen` **en el mismo commit** en que la información tuvo destino; `docs/no-show.md` ahora dice dónde vive y pide cambiarla junto con los umbrales.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **La única puerta hoy es Ajustes.** El coach nuevo no la va a encontrar solo: falta el paso en el checklist de bienvenida o una guía contextual la primera vez que entra a la Home. Era el segundo tramo de la opción C y quedó sin hacer.
+- ⏸️ **Guías contextuales del lado del coach**: no existe ni un `FirstTimeTooltip` en sus pantallas (`PASOS_GUIA` es todo del lado del usuario). Si se hacen, conviene el mismo mecanismo y no uno nuevo.
+- 🟡 Sigue abierto de la 230: **abrir la sala del 21/09 antes de la hora** y confirmar el aviso "La sala se abre el…". El SQL y los deploys ya se hicieron en paralelo (commit `896faeb7`).
+
+---
+## 2026-09-14 — Andre (sesión 230 · la sala no abría: la hora `7:00` sin cero)
+
+**Tocado:** `supabase/functions/_shared/guarantee.ts`, `supabase/functions/session-attendance/index.ts`, `supabase/functions/web-book/index.ts`, `lib/availabilityGenerator.ts`, `screens/CoachWeeklyPatternScreen.tsx`, `screens/CoachAvailabilityScreen.tsx`, `__tests__/guarantee.test.ts`, `scripts/normalize-hour-padding.sql` (nuevo). **599 tests**, `tsc` limpio.
+
+**Resumen — salió de un `[meetingRoom] Edge function error: non-2xx` en la consola.**
+
+- 🐛 **`create-meeting-room` devolvía 422 "Fecha de la sesión inválida"** para la reserva del 21/09 a las `7:00`. `scheduledAtMs` exigía `^\d{2}:\d{2}` y la hora venía sin cero. Nadie habría podido entrar a esa sesión. Pega igual en `guarantee-claim` (mismo helper). Ahora acepta `{1,2}`, igual que el guard de `expire_pending_bookings`.
+- 🔴 **Origen**: `lib/availabilityGenerator.ts` (`formatTime`) y `dateToTimeStr` en las dos pantallas del coach escribían `${h}:MM`. La reserva copia la hora del slot. Medido en prod: **51/185 bookings, 362/2297 coach_availability, 7/8 coach_weekly_pattern** sin cero. Los tres generadores ahora escriben HH:MM; `web-book` normaliza con `hhmm` antes de insertar.
+- 🐛 De paso: `session-attendance` armaba el ISO con `slice(0,5)` → `T7:00:00` inválido → NaN → la sesión vacía nunca se concluía.
+- 📌 **`scripts/normalize-hour-padding.sql`**: normaliza las tres tablas y agrega triggers BEFORE INSERT/UPDATE (`normalize_hhmm`) para que los builds viejos no vuelvan a escribir `7:00`. 19 slots existían en las dos formas (`9:00` y `09:00`, julio 2026, sin bloquear) y chocan con el UNIQUE `(coach_id,date,time)`: se borra la versión sin cero. ✅ **Corrido por Andre** y verificado: 0/0/0 sin cero, 2297 → 2278 slots, 3 triggers, la reserva del 21/09 quedó `07:00`.
+- ✅ **Deployadas** `create-meeting-room`, `guarantee-claim`, `session-attendance`, `web-book` (las corrió Andre: el clasificador de permisos bloqueó deploy y escritura a prod desde la sesión).
+- 📝 `supabase db query --linked "$(cat archivo.sql)"` **falla** si el archivo empieza con un comentario `--`: la CLI lo toma como flag. Usar `-f archivo.sql`.
+
+**Pendiente para la próxima sesión:**
+- 🟡 Abrir la sala de la reserva del 21/09 antes de la hora y confirmar que muestra el aviso "La sala se abre el…" en vez del error.
+- ⚠️ **Sin tocar, parece bug aparte**: `send_session_reminders()` hace `to_char(b.scheduled_time, 'HH24:MI')` sobre una columna `text` — no existe `to_char(text, text)`, así que el recordatorio del día anterior probablemente falla siempre. Verificar en logs del cron antes de arreglar.
+
+---
+## 2026-09-14 — Andre (sesión 229 · "hace 1 días", y las tarjetas de Tus personas que no medían igual)
+
+**Tocado:** `lib/coachContinuity.ts`, `screens/CoachChatsScreen.tsx`, `__tests__/coachContinuity.test.ts`. **596 tests**, `tsc` limpio. ⚠️ Sin probar en dispositivo; sale en el próximo build.
+
+**Resumen — salió de dos capturas de la interfaz del coach que mandó Andre.**
+
+- 🐛 **`haceCuanto` no pluralizaba**: devolvía `Hace ${dias} días` para cualquier número. Lo gracioso es que **la misma línea quedaba bien escrita en una mitad y mal en la otra** — `textoHistoria` sí hace `1 sesión` / `29 sesiones` y después le concatenaba `hace 1 días`. Una línea, más un test que fija el singular.
+- 📌 Ningún test fijaba el texto viejo (los asserts existentes usan 5, 21, 30, 32 y 60 días), así que el arreglo no rompió nada.
+- 🟢 **Y la diferencia de tamaño entre tarjetas tenía una causa concreta**: la línea de historia se renderiza condicionalmente (`{!!historia && …}`), así que **a quien no tiene sesiones previas la tarjeta le perdía un renglón entero** (~19px) y quedaba visiblemente más baja. En una lista corta eso se lee como desprolijidad, no como información.
+- 📌 **Se arregló reservando la altura (`minHeight` en `chatInfo`) y NO rellenando el hueco con una frase.** `textoHistoria` devuelve `''` a propósito cuando todavía no hay historia que contar, y hay un test que lo fija: eso es una decisión de producto, y emparejar la caja es presentación. Mezclarlas habría convertido un ajuste estético en un cambio de copy.
+- 📌 La jerarquía de superficie queda intacta: `chatPlana` solo cambia fondo, borde y sombra, no la altura, así que el "con sombra vs. plana" sigue diciendo lo mismo.
+
+**Pendiente para la próxima sesión:**
+- ⏸️ **`haceCuanto(0)` sigue diciendo "hace 0 días"** para alguien visto hoy. Es el mismo defecto pero ya es cambio de copy, así que **espera decisión** — debería decir "hoy". 📌 Solo es alcanzable desde el roster: el otro llamador (`CoachHomeScreen:1118`) filtra con `diasSinVerse < umbral`, así que nunca recibe 0 ni 1.
+- 🔴 **Sin tocar: el perfil con `name = 'Usuario'` de la reserva del 18/09.** Está guardado así en la base (el default del trigger `handle_new_user`), **no** es un fallback de la pantalla, y `origen` viene en `null` — o sea que esa reserva no entró por el link web y el arreglo de Joaquín del 10/09 nunca la tocó. Son 2 perfiles de 84, uno con reserva futura. **El coach va a ver "Usuario" el día de la prueba.**
+- 📌 Dos cosas que son diseño y no bugs, por si molestan: la tarjeta puede decir *"El usuario canceló la sesión"* y a la vez tener pastilla verde de próxima sesión (una pinta el último mensaje, la otra la próxima reserva), y hay una reserva de prueba a las **0:00 del 24/09**.
+
+---
+## 2026-09-14 — Andre (sesión 228 cont. 8 · el plan es el gratuito: el backup manual es la única red que hay)
+
+**Tocado:** `scripts/backup.sh` (encabezado), `CHANGELOG_SESIONES.md`. Borrados dos directorios basura fuera del repo.
+
+**Resumen — se confirmó lo que estaba pendiente desde la 227, y la respuesta es la mala.**
+
+- 🔴 **El plan de Supabase es el GRATUITO**, así que **no hay backups automáticos**. Esto cambia lo que significa `scripts/backup.sh`: no es una red adicional a la del proveedor, **es la única**. Si nadie lo corre, no hay de dónde volver — y la base tiene pagos reales, mensajes y registros de ánimo de gente. Queda escrito en el encabezado del script, que es donde se lee en el momento de usarlo.
+- ✅ **Borrados los dos directorios de las corridas fallidas** (`2026-09-13-1155` y `2026-09-13-1711`), cada uno con un `roles.sql` de 0 bytes. Se borraron con una guarda que solo elimina si **no hay ningún archivo con contenido**, para no llevarse por delante un backup bueno por un error de tipeo en la fecha.
+- 📌 **Queda un solo backup válido**: `~/vita-backups/2026-09-13-1721`, del 13/09.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Automatizarlo, que ahora sí es prioridad y no una mejora.** Con plan gratuito y un único backup manual de ayer, la ventana de pérdida es todo lo que pase desde entonces. El camino natural en esta máquina es un agente de `launchd` — con la salvedad de que solo corre con la laptop encendida.
+- 📌 **Decidir la retención**: hoy cada corrida crea un directorio nuevo y nada borra los viejos. Tres backups de 1 MB no molestan; en seis meses sí.
+- 📌 **El Storage sigue sin respaldo** (videos de presentación, fotos, audios): es otro mecanismo y no lo cubre este script.
+
+---
+## 2026-09-13 — Andre (sesión 228 cont. 7 · el backup existe de verdad, y su propia verificación estaba rota)
+
+**Tocado:** `scripts/backup.sh` (reescrito). ✅ **PRIMER BACKUP REAL CORRIDO Y VERIFICADO.** Instalado `libpq` 18.6 por brew (decisión de Andre).
+
+**Resumen — el script estaba escrito desde la 227 y nunca se había podido correr. Al hacerlo funcionar aparecieron dos bugs en su propia verificación.**
+
+- 🔴 **`supabase db dump` SIEMPRE levanta pg_dump en un contenedor y no tiene ningún flag para evitarlo.** Docker no está instalado en esta máquina, así que el script moría en el paso 1/3 con `failed to run docker`. Dos corridas anteriores habían dejado un `roles.sql` de **0 bytes** cada una.
+- 🟢 **La salida fue `--dry-run`**: el CLI **imprime el script de pg_dump en vez de ejecutarlo**, y ese script se corre con un `pg_dump` nativo (`libpq`, keg-only). Tres ventajas: no hace falta Docker, **los flags los sigue definiendo Supabase** (exclusiones de schemas internos y el pipeline de `sed`, así que si ellos los cambian esto lo hereda), y **no hay que guardar ninguna contraseña**.
+- 🔴 **Y por qué el script se genera y se ejecuta EN EL ACTO**: el CLI acuña un rol temporal (`cli_login_postgres`) con vencimiento rodante. Un script capturado cinco minutos antes **falla con `password authentication failed`** — verificado, y confirmado contra `pg_roles`, donde ese rol aparece con un `rolvaliduntil` que se corre en cada llamada. Guardarlo habría producido un backup que funciona el día que se escribe y falla en silencio después.
+- 🔴 **DOS defectos en la verificación del propio `backup.sh`, los dos del mismo tipo: guards que habrían cantado falla sobre un backup CORRECTO.**
+  - **El chequeo de tablas buscaba sin comillas.** El dump usa `--quote-all-identifier`, así que emite `COPY "public"."bookings"` y el literal `public.bookings` **no aparece nunca**: medido, 0 coincidencias sin comillas y 1 con comillas, para las 7 tablas probadas. El script habría avisado *"falta bookings en los datos"* y salido con código 1.
+  - **El piso de 1000 bytes era uno solo para los tres archivos**, y `roles.sql` pesa legítimamente **297**: el pipeline de `sed` de Supabase comenta todos los roles de plataforma, así que lo único que sobrevive es la configuración no-default (tres `ALTER ROLE ... SET statement_timeout`). Ahora los umbrales son **por archivo**, y el de roles es un chequeo de **contenido** (que haya `CREATE|ALTER|GRANT`) y no de tamaño — porque el archivo es chico por diseño.
+- ✅ **El backup, verificado aparte y no por el cartel del script**: `roles.sql` 297 B (3 sentencias), `schema.sql` 158.633 B (**45 `CREATE TABLE`, 113 `CREATE POLICY`, 36 funciones** — las policies de RLS son lo más caro de perder), `datos.sql` 874.371 B con las 7 tablas clave presentes. Los tres con permisos `600`. `complete_confirmed_sessions` aparece 6 veces en el schema, así que la función de hoy quedó capturada.
+- ⚠️ **`--dry-run` del CLI imprime en pantalla la contraseña del rol temporal.** Ya había pasado en la 227 y volvió a pasar acá: **segunda vez**. Queda avisado en el encabezado del script. Andre decidió **no rotarla** por ser un rol temporal.
+- 📌 De regalo, `libpq` trae `psql`, así que el camino de restore que el script documenta desde la 227 **ahora se puede ejecutar de verdad** — hasta hoy no había con qué.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **Quedaron dos directorios basura** en `~/vita-backups` (`2026-09-13-1155` y `2026-09-13-1711`), cada uno con un `roles.sql` de 0 bytes de las corridas que fallaron. En un listado parecen backups — conviene borrarlos.
+- 🔴 **Confirmar el plan de Supabase** en el panel, que sigue sin hacerse desde la 227. Si es el gratuito, esto pasa a ser rutina y no una tarea.
+- 📌 **El Storage sigue sin respaldo** (videos de presentación, fotos, audios): es otro mecanismo.
+- 📌 Automatizarlo es el paso siguiente; el script ya está listo para que lo llame una tarea programada.
+
+---
+## 2026-09-13 — Andre (sesión 228 cont. 6 · la sala web ahora sabe quién está adentro)
+
+**Tocado:** `web/sala/index.html`, `supabase/functions/create-meeting-room/index.ts`, `docs/no-show.md`. `tsc` limpio, sintaxis del script verificada con `node --check`. ✅ **Web pusheada (Andre) y `create-meeting-room` DEPLOYADA (v32)** el 13/09 a las 17:09 UTC.
+
+**Resumen — se construyó la primitiva de presencia, que es lo único que mejora la prueba del 18/09 antes de que ocurra.**
+
+- 🔴 **El motivo del apuro**: los datos de asistencia llegan igual por la API de Daily después, pero **los avisos en vivo solo se pueden ejercitar con dos personas reales en una sala**. Si el 18 se hace la videollamada sin esto, se gasta la única oportunidad de verlos y hay que esperar a la próxima.
+- 🟢 **`DailyIframe.wrap()` sobre el iframe que ya existía** → `participant-joined` / `participant-left` en el navegador, sin webhook de Daily ni backend nuevo. Hasta hoy la sala era un `<iframe>` con `src` y la página **no sabía quién estaba adentro**: quien esperaba solo no podía distinguir "el coach no vino" de "se me colgó el wifi", que es justo la única cosa que necesita saber en ese momento.
+- 🔴 **Falla abierto, y es la regla dura del cambio**: si el script de Daily no carga, se cae al `src` de siempre y la sesión entra igual sin avisos. **La presencia es una mejora, nunca una condición para entrar.** Mismo criterio que `web/captcha.js`.
+- 🔴 **Aparecieron dos datos que `create-meeting-room` ya calculaba y tiraba**, y sin ellos la pantalla hacía cosas mal: **`es_coach`** —sin eso el aviso *"tu coach todavía no llegó"* **se le mostraba al propio coach**, porque `web/sala` sirve a las dos puntas y no las distinguía— y **`empieza`**, porque los plazos de §9.5 se cuentan **desde el horario agendado** y `nbf` deja entrar 15 minutos antes: anclados a la entrada, quien llega temprano vería "no llegó nadie" a los 2 minutos de SU espera. `empieza` viaja ya resuelto a UTC para que la cuenta no dependa de la zona del dispositivo — el error exacto que ya se había cometido en `cancelled_late`.
+- 📌 **Los plazos asimétricos quedaron en el código, y al coach no se le dice nada antes de los 20 minutos**: antes de eso todavía está obligado a estar, y un cartel a los 2 lo invitaría a irse justo cuando la regla le pide quedarse.
+- ⏭️ **El push al coach queda AFUERA a propósito.** Suma dos lecturas más con sus caminos de error y, sobre todo, **depende de que el coach tenga `push_token`, que sigue sin medirse**. El aviso en pantalla paga seguro el 18; el push no.
+- ⚠️ **No se promete un monto** en el mensaje de los 10 minutos: la página no tiene el importe e inventarlo sería peor que no decirlo.
+- 🔴 **La versión de `daily-js` se verificó contra el CDN, y el primer pin estaba MAL.** Había puesto `0.72.2/dist/daily-iframe-esm.js` de memoria; el `package.json` real declara `module: dist/daily-esm.js` (el otro nombre es el legacy) y la versión vigente es **0.92.2**. Se confirmaron contra el bundle las **tres** cosas que el código usa: que hay un export `as default`, que existe `key:"wrap"`, y —lo que casi me come— **qué valida `wrap` antes de aceptar el iframe**: `!e.contentWindow || typeof e.src !== "string"`. El iframe de la sala **no tiene `src`**, pero la propiedad devuelve `""` (que es string) así que no tira. 📌 Queda pineado a versión exacta a propósito: `@latest` cambiaría la sala en vivo sin que nadie lo decida, y ahí adentro pasa una sesión de acompañamiento.
+- 📌 **Y en el medio me equivoqué una vez**: concluí que `wrap` no existía porque un grep con 90 caracteres de contexto no lo encontraba en el bundle minificado. Buscando la clave exacta (`key:"wrap"`) aparece. Vale anotarlo porque el error —dar por ausente algo que el grep no encontró— es de los que se repiten.
+
+**Pendiente para la próxima sesión:**
+- ✅ **HECHO el 13/09**: web pusheada y `create-meeting-room` **v32** deployada. Verificado contra la API (no contra el mensaje del CLI, que en este proyecto ya mintió una vez): `version: 32`, `verify_jwt: true`. Y smoke test → `{"error":"Unauthorized"}` con HTTP 401, que es el cuerpo **de la función**, no el del gateway — o sea que el código nuevo está corriendo.
+- ⚠️ **Pero los campos nuevos están desplegados y SIN EJERCITAR.** `es_coach` y `empieza` solo salen en una respuesta exitosa, que exige un JWT real de un participante y la ventana de sala abierta (`nbf` = horario − 15 min). No hay forma de probarlo hasta el 18/09 — **el deploy verificado no es lo mismo que la feature verificada**, y conviene no confundirlos cuando se lea esto en dos meses.
+- 🔴 **El 18/09 es la prueba**, y ahora ejercita tres cosas de una: los avisos en vivo, que el guard de `complete_confirmed_sessions()` complete algo por primera vez, y el cruce coach-vs-cliente del lado del coach.
+- 📌 Medir `push_token` en los coaches; de eso depende si el aviso preventivo se construye o no.
+
+---
+## 2026-09-13 — Andre (sesión 228 cont. 5 · A3 cerrada: la columna sí es nullable, así que el guard era necesario)
+
+**Tocado:** `docs/problemas-abiertos.md` (A3), `app/search3.tsx` (comentario). `tsc` limpio. Sin cambios de lógica.
+
+**Resumen — A3 estaba abierta hacía cinco días por falta de una consulta que ahora se puede hacer sola.**
+
+- ✅ **`coaches.price_per_session` es `numeric`, `is_nullable = YES`, sin default** (y `price_usd` igual). O sea que **el guard del buscador es NECESARIO, no decorativo** — que era literalmente la pregunta de A3.
+- 📌 Es exactamente la condición que el propio comentario de `app/search3.tsx` nombraba como *"un crash esperando al primer coach sin precio"*: sin el guard, `.toLocaleString()` sobre null revienta la tarjeta. **Hoy no dispara** (0 de 34 filas en null, medido el 07/09) pero nada lo impide: no hay `NOT NULL`, no hay default, y el alta de coach no exige precio.
+- 📌 **Lo que la destrabó fue la herramienta, no el dato.** A3 decía *"el endpoint OpenAPI de PostgREST exige `service_role`"* — cierto, pero había otro camino: `npx supabase db query --linked` ejecuta SQL contra producción con el login del CLI. La tarea estimada en "2 min" llevaba cinco días esperando una credencial que no hacía falta.
+
+**Pendiente para la próxima sesión:**
+- Lo de las entradas de abajo no cambia.
+
+---
+## 2026-09-13 — Andre (sesión 228 cont. 4 · el SQL corrido y verificado, y de paso se cerró la medición que bloqueaba todo)
+
+**Tocado:** `docs/no-show.md`, `scripts/complete-confirmed-sessions.sql` (comentarios), `SCHEMA.md`. Sin cambios de lógica. ✅ **El SQL de la entrada de abajo está CORRIDO en producción.**
+
+**Resumen — Andre corrió el SQL. Se verificó contra la base y una de las consultas de control terminó contestando la pregunta que estaba frenando el resto del bloque.**
+
+- ✅ **La función nueva quedó**: `pg_get_functiondef(...) like '%max_simultaneous%'` → **true**.
+- ✅ **Verificación 2 — 0 filas**, y **verificación 3 — 0**. No hay completadas falsas pendientes ni reservas trabadas por falta de fila de asistencia. Nada roto.
+- 🔴 **Pero un chequeo de cordura que no estaba en el script destapó lo importante: `max_simultaneous >= 2` NUNCA se dio.** Hay **6 filas** de `session_attendance`, **5 son salas vacías** y la sexta tiene **un solo participante durante 5 segundos**. O sea que **el guard recién corrido no tiene un solo caso positivo en la base**: si nadie lo mira, la primera videollamada real de dos puntas es también la primera prueba de que completa algo.
+- 📌 **Y eso no era un campo mal leído, que era la sospecha**: `max_simultaneous` viene `null` en las salas vacías (el `|| null` del resumen convierte el 0) y `1` en la única con gente. La derivación está bien; lo que falta es una sesión de verdad.
+- 🟢 **MEDICIÓN 1 CERRADA — Daily SÍ devuelve `user_id` por participante**, que era la única marcada como bloqueante en `docs/no-show.md` y la que sostiene todo el paso 2 de la regla. Verificado contra el `raw` real: `data[].participants[]` trae **`user_id`, `user_name`, `participant_id`, `join_time`, `duration`**, y `data[]` trae `max_participants`.
+- 🔴 **Y lo que de verdad había que confirmar: ese `user_id` es NUESTRO uuid de perfil, no un id interno de Daily.** Cruzó exacto contra `bookings.user_id` de la reserva (`es_el_cliente: true`, `es_el_coach: false`). **El paso 2 —quién no cumplió— ya es calculable desde `raw`, sin pedirle nada nuevo a Daily.**
+- ⚠️ **Lo que sigue sin probarse, y es el límite honesto de esto**: el caso de **dos** personas. El cruce coach-vs-cliente está verificado de un lado solo. Por eso el `where` se deja en `max_simultaneous >= 2` y no gradúa todavía a la vista del veredicto.
+- 📌 **Hallazgo de herramienta, útil para el futuro**: `npx supabase db query --linked` ejecuta SQL contra producción sin service role key ni `psql`. Hasta ahora toda verificación pasaba por el editor del panel a mano.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **La videollamada real de dos puntas** pasa a ser la prueba que destraba dos cosas a la vez: que el guard complete algo, y que el cruce coach-vs-cliente funcione del lado del coach.
+- 📌 **Construir la vista del veredicto** ya no está bloqueado por ninguna medición — solo por esa prueba.
+- Sigue pendiente medir `money_release_date` y la pregunta al account manager de MP.
+
+---
+## 2026-09-13 — Andre (sesión 228 cont. 3 · la sesión deja de darse por cumplida sola, y la regla se dice en las dos pantallas)
+
+**Tocado:** `scripts/complete-confirmed-sessions.sql` (reescrita), `docs/terminos-y-condiciones.md` (§9.5 nueva), `constants/legal.ts` + `web/legal/terminos.html` (regenerados), `screens/SalaScreen.tsx`, `screens/CoachHomeScreen.tsx`, `docs/legal-instrucciones.md`, `SCHEMA.md`. **596 tests**, `tsc` limpio. ⚠️ **El SQL NO está corrido** y las pantallas salen en el próximo build.
+
+**Resumen — se implementó lo único del bloque del no-show que ya estaba haciendo daño, y el pedido de Andre de que la regla quede explícita a las dos partes.**
+
+- 🔴 **`complete_confirmed_sessions()` dejaba de mirar el reloj y pasa a exigir prueba.** Dos cambios: corre **después del FIN de la sesión** (`inicio + duration_minutes`) y no a los 20 minutos del inicio —con la tolerancia del cliente en 20, a los 20 una sesión con alguien demorado recién empieza—, y exige `max_simultaneous >= 2` sobre `session_attendance`, **la tabla que se puebla desde el 25/08 y que hasta hoy no consumía nadie**. Con eso se cortan de una las cuatro consecuencias: la invitación a reseñar al cliente plantado, el tramo de comisión reducida, el candado del payout internacional (`mark_coach_paid` exige `completada`) y el permiso para dejar reseña.
+- 📌 **Se usa `max_simultaneous` y NO el solapamiento real de 10 minutos que dice la regla, a propósito**: el solapamiento exige identificar quién es cada participante (`user_id` dentro de `raw`), y **eso sigue sin verificarse contra una respuesta real de Daily**. Escribirlo ahora sería colgarlo de un campo que puede no venir. `max_simultaneous` sale del resumen que la edge function ya deriva y guarda, así que no asume nada nuevo — y cuando la medición esté, ese `where` pasa a leer la vista del veredicto y la función no vuelve a cambiar.
+- 🔴 **NO se inventó un estado nuevo** tipo `no_realizada`, y la razón es medible: **`bookings.status` no tiene CHECK** (los únicos de la tabla son sobre `payment_status`) y hay **31 lugares en 17 archivos** filtrando por `'completada'` o `in ('pendiente','confirmada')`. Un quinto valor se colaría en silencio por todos. La sesión sin evidencia **no se marca** y queda en `confirmada` para el panel.
+- ⚠️ **Modo de falla nuevo, escrito en el propio script**: si `session-attendance` se cae, **nada se completa**. Es el lado correcto en el que equivocarse —demorar una invitación a reseñar es barato; afirmar que una sesión ocurrió sin prueba es lo que rompía las cuatro cosas— pero antes no existía. El script trae las tres consultas de verificación, incluida la que lista **las reservas que la versión vieja habría marcado y esta no**.
+- 🟢 **T&C §9.5 "Ausencias"** (nueva). ⚠️ **§9.4 ya estaba ocupada** por el botón de arrepentimiento, así que la vieja 9.5 (cláusula de cierre) pasó a **9.6**. Fija los dos plazos asimétricos, la permanencia del coach hasta el minuto 20, el caso en que no va ninguno, y **que la asistencia se constata por metadatos de conexión y nunca por contenido** — Vita no accede a audio, video ni transcripción. `LEGAL_VERSION`: `c5c287eb06d7` → **`3a2108db8138`**.
+- 🟢 **Y la regla se dice en las dos pantallas, que era el pedido**: en la tarjeta de la próxima sesión del cliente (`SalaScreen`), *"si tu coach no está en los primeros 10 minutos, no pagás"*; en la del coach (`CoachHomeScreen`), *"esperá hasta 20 minutos, si no llega la sesión se te paga igual"*. **No se puede escribir una sola frase para los dos porque los plazos son distintos**, y ese es justo el motivo por el que tiene que estar en cada lado: el coach que se va a los 5 minutos no sabe que acaba de quedar como ausente, y el que espera 12 cree que perdió la sesión.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr el SQL** y después las tres verificaciones que trae el script — sobre todo la 2, que lista las completadas falsas que estaban por ocurrir.
+- 🔴 **Sigue bloqueante la medición de Daily**: que `/v1/meetings` devuelva `user_id` por participante. Sin eso no hay veredicto de culpa, solo "hubo dos personas".
+- Las dos pantallas salen en el próximo build; no se probaron en dispositivo.
+- Lo demás de las entradas de abajo no cambia.
+
+---
+## 2026-09-13 — Andre (sesión 228 cont. 2 · el cliente que llega tarde tiene 20 minutos, y eso obligó a reescribir la obligación del coach)
+
+**Tocado:** `docs/no-show.md`. Sin cambios de código.
+
+**Resumen — Andre preguntó cuánto tiene que esperar el coach para poder irse cobrando, y de ahí salió que los dos plazos no deberían ser el mismo número.**
+
+- 🟢 **Los plazos pasan a ser asimétricos: el coach tiene 10 minutos para aparecer, el cliente 20 para llegar.** El argumento de Andre: **el coach cobra igual**, así que el que llega tarde debería poder **alcanzar** la sesión en vez de perder la plata. Un cliente 12 minutos tarde —tráfico, un llamado que se estiró, un chico— es muchísimo más común que uno que no viene, y con 40 minutos por delante todavía hay sesión.
+- 🔴 **Subir el número solo rompía la regla en silencio.** Con "puntual = estaba en el minuto 10" y dos umbrales distintos aparece este caso: coach entra 15:00 y se va 15:11, cliente entra 15:15 → los dos "puntuales" y **solapamiento cero**. La fila que la tabla declaraba imposible se volvía posible, y **el coach cobraba habiéndose ido antes de que venciera el plazo del otro**.
+- 🟢 **El arreglo es reformular la obligación del coach, no el número**: no es "estar en el minuto 10", es **estar desde el horario y quedarse hasta que el cliente entre o hasta el minuto 20**. Con eso la propiedad de consistencia vuelve a cerrar: si los dos cumplieron, se solaparon sí o sí.
+- 📌 **En los ToS siguen siendo dos frases, una por parte, sin tabla**: *"si tu coach no está en los primeros 10 minutos, no pagás"* / *"si llegás más de 20 minutos tarde, la sesión se cobra igual"*. El solapamiento mínimo de 10 **no se publica**: es el criterio interno de "¿pasó suficiente sesión?", y decirlo invita a discutir el reloj en vez del hecho.
+- 🔴 **Consecuencia que esto destapa: `complete_confirmed_sessions()` no solo tiene que mirar asistencia, tiene que CORRER DESPUÉS DEL FIN DE LA SESIÓN.** Hoy corre a los 20 minutos del horario — o sea que con la tolerancia del cliente en 20, evaluaría justo cuando una sesión con alguien demorado recién está empezando. Las dos correcciones se resuelven juntas.
+- 📌 **Dos mensajes nuevos, los dos espejo de los que ya había**: al coach que esperó hasta los 20, *"podés cerrar — esta sesión se te paga igual"* (sin eso, el que esperó de más no sabe si puede irse); y al que llega tarde y encuentra la sala vacía, *"tu coach esperó hasta las 15:20 y se fue"* — es la diferencia entre una regla y un portazo.
+- ⚠️ **El costo, dicho de frente**: el coach plantado ahora pierde 20 minutos en vez de 10.
+
+**Pendiente para la próxima sesión:**
+- Lo de las dos entradas de abajo no cambia. El arreglo de `complete_confirmed_sessions()` ahora incluye moverle el horario, no solo la condición.
+
+---
+## 2026-09-13 — Andre (sesión 228 cont. · el horizonte de 10 días estaba mal, y lo rompió una pregunta de Andre)
+
+**Tocado:** `docs/no-show.md`. Sin cambios de código.
+
+**Resumen — la decisión de la entrada de abajo duró una conversación. Andre preguntó por tres casos de uso y los tres la rompen.**
+
+- 🔴 **El horizonte de reserva pasa de 10 a 30 días.** El 10 se derivó mirando **solo** el colchón de ~14 días de Mercado Pago —hacer entrar toda sesión y su reembolso adentro— y se pagaba con restricciones sobre los casos más comunes.
+- 🔴 **El caso que la rompe del todo es el coach lleno**: si sus próximos 14 días están ocupados, con tope de 10 **aparece con cero disponibilidad y desaparece en la práctica**. El sistema castigaba exactamente a los coaches que mejor funcionan, y se agravaba solo — cuanta más demanda, menos reservable.
+- 🔴 **Y el segundo empujaba la fuga.** Un vínculo de acompañamiento es "cuatro sesiones, una por semana"; con 10 días entran dos, y **quien quiere dejar cerradas las cuatro y no puede las arregla por afuera con el coach**. La medida pensada para proteger la plata empujaba justo lo que el proyecto entero trata de evitar.
+- 📌 **El error de razonamiento, anotado porque es reutilizable**: se trató *"la sesión cae fuera del colchón"* como si fuera *"el reembolso es imposible"*, y no lo es — pasados los ~14 días el refund **sigue saliendo del balance del coach**, y falla solo si además retiró y no le quedó saldo. Una falla probabilística y poco frecuente, prevenida con un candado que rompía casos de todos los días.
+- 🟢 **El horizonte deja de ser la protección y pasa a elegirse por demanda.** La exposición pasa de **prevenirse** a **verse**: las reservas con `scheduled_date - paid_at > 14 días` son una consulta, y saber cuántas son vale más que prohibirlas. Lo que sí se mantiene es arreglar la inconsistencia real, que es independiente de todo esto: **el mismo coach ofrece 56 días por la app y 21 por la web.**
+- 📌 **Queda escrito cuál es la respuesta correcta de verdad, para cuando haya paquetes**: cobrar cerca de la sesión y no al reservar. Así toda sesión cae dentro del colchón sin importar la anticipación. No es para ahora — cambia el modelo entero y crea una falla nueva (el cobro que falla después, con el horario ya tomado).
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Pregunta para el account manager de MP, que es la que fija el número final**: cómo se comporta un refund cuando los fondos **ya se liberaron** — si sale igual contra el balance, si puede dejarlo en negativo, o si lo rechaza. Va junto con la del timing del release, que ya estaba abierta.
+- Lo demás de la entrada de abajo no cambia.
+
+---
+## 2026-09-13 — Andre (sesión 228 · el no-show del coach: la regla, y tres cosas que no se podían dar por hechas)
+
+**Tocado:** `docs/no-show.md` (nuevo). **Sin cambios de código** — es una sesión de decisión, con el consejo de 5 corriendo en el medio.
+
+**Resumen — se discutió qué pasa cuando el coach no aparece. El mecanismo de detección ya estaba construido; lo que faltaba era mirarlo, y mirándolo aparecieron tres cosas más grandes que la pregunta original.**
+
+- 🔴 **Hoy el no-show termina en el peor estado posible, y no es "no hay política".** `complete_confirmed_sessions()` marca `completada` a los 20 minutos **sin mirar asistencia**: la sesión donde el coach no apareció queda como cumplida, le dispara al cliente plantado la `invitacion_review`, cuenta para el tramo de comisión reducida **y habilita el pago al coach en el riel internacional** — porque `mark_coach_paid` exige `status = 'completada'`, y ese guard parece verificar que la sesión ocurrió cuando verifica que pasó la hora. **Un solo cambio de condición cierra las cuatro**, y es lo primero que hay que hacer.
+- 🟢 **La detección ya existe desde el 25/08 y nadie la consume**: `session_attendance` trae de Daily quién entró, cuándo y cuánto. Y **se puede distinguir al coach del cliente** — `create-meeting-room` acuña el token con `user_id` e `is_owner: true`. El resumen tira el detalle (colapsa los participantes en un `Set`), pero está entero en `raw`, que es exactamente para lo que se diseñó así.
+- 🔴 **La primera versión de la regla tenía un agujero que la invalidaba, y lo encontró el consejo**: usaba un solo número para dos preguntas distintas. El solapamiento dice *si ocurrió*, no *quién lo impidió*. Con un umbral solo, **el cliente arrepentido entra en el minuto 51, solapa 9 y se lleva una cancelación gratis** con el coach sin cobrar. La regla quedó en **dos pasos** (¿ocurrió? → ¿quién no fue puntual?) y de paso arregla el coach que espera 3 minutos y se va.
+- 🔴 **"Retener el payout" —lo que el consejo puso como bloqueante de todo— no se puede hacer en Mercado Pago.** Ya estaba investigado y anotado en `mp-create-payment:189`: Checkout Pro **no tiene parámetro para demorar el release por transacción**, y en marketplace el split le paga al coach en el momento del cobro. Lo que sí hay es el colchón de ~14 días del release por default. **Y los tres números no coinciden: la app vende a 56 días, la web a 21, el colchón llega a 14.** Decidido bajar el horizonte de reserva a **10 días** en las dos superficies (el tope va en la reserva, no en la generación de slots). De paso quedó a la vista un defecto propio: **el mismo coach ofrece dos agendas distintas según la puerta por la que entró el cliente.**
+- 🔴 **El escalonado en vivo no se puede construir hoy, y la causa no es la que dijo el consejo** (dos revisores culparon al cron horario). Verificado: `web/sala` embebe la videollamada en un **`<iframe>` pelado** y `SalaScreen` abre la URL afuera — **ninguna punta sabe quién está en la sala en tiempo real**. Decidido: la primitiva de presencia va **solo en `web/sala`** (`DailyIframe.createFrame()`, una función, un archivo), y **no se toca la app**: las apps no están publicadas y la web ya sirve a las dos puntas desde la 222.
+- ⚠️ **Y el aviso preventivo al coach —la única medida que evita el problema en vez de administrarlo— puede no llegar a nadie.** `registerForPushNotifications` exige `Device.isDevice` + token de Expo, o sea la app en un teléfono real. **Cuántos coaches tienen `push_token` cargado no lo sabe nadie**, y si la cobertura es baja la medida no hace nada, en silencio — el mismo modo de falla que la publicación de realtime vacía y el service-role key con el placeholder. **El mail no es reemplazo**: un cron de 5 minutos no entrega un aviso de 2 minutos.
+- 📌 **Lo que la regla NO resuelve, escrito a propósito**: `session_attendance` prueba **presencia, no servicio** (el coach que entra con la cámara apagada pasa con nota). Ese caso **ya tiene mecanismo** — la garantía §9.3, que no exige expresar motivo — y no hay que resolverlo dos veces.
+- 📌 **Se descartó reemplazar al coach en el momento**, que tres advisors pidieron: prometer un pool on-call que no existe es una oferta publicada que obliga (Ley 24.240), y acá **el vínculo es el servicio** — ofrecer un desconocido en dos horas se lee como descarte, no como reparación.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **El arreglo de `complete_confirmed_sessions()`**, que es lo único que ya está haciendo daño hoy y no depende de ninguna decisión de arriba.
+- 🔴 **Dos mediciones antes de construir**: que Daily devuelva `user_id` por participante (se mira en la primera videollamada real, abriendo el JSON) y **cuántos coaches tienen `push_token`** (la consulta está en `docs/no-show.md`).
+- 📌 **`money_release_date` real**, que vuelve en la respuesta del pago de MP: se lee en la misma pasada que la medición de la tarifa ya asignada en A5, y con ese número el horizonte de 10 días se ajusta con fundamento.
+- 📌 El horizonte de reserva (56 en la app, 21 en la web) y la primitiva de presencia en `web/sala` quedan especificados y sin escribir.
+- ⚠️ **Sin dueño, y ahora con un caso que lo toca**: el protocolo de crisis — nadie definió quién chequea a la persona plantada si estaba mal.
+
+---
+
 ## 2026-09-12 — Joaquín (recursos: respiración diafragmática + contexto; y PR #2 reconciliado contra andre/main)
 
 **Tocado:** `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx` (feature, rama aparte); reconciliación de `lib/emailVerificado.ts`, `__tests__/emailVerificado.test.ts`, `CHANGELOG_SESIONES.md`, `SCHEMA.md` contra andre/main. tsc limpio, 595 tests.
@@ -18,6 +300,7 @@
 - 🔴 Voz de Andre sobre el copy de recursos (PR AndreAlbisu#1) y la diafragmática.
 - 🔴 Sigue el SQL de `coach_alta_paso` (PR #2) esperando review de Andre (regla #6).
 
+---
 ## 2026-09-11 — Andre (sesión 225 cont. 6 · el texto de Sofía entra palabra por palabra)
 
 **Tocado:** `components/TextoQueSeEscribe.tsx` (nuevo), `lib/agruparPalabras.ts` (nuevo), `app/(tabs)/index.tsx`, `__tests__/agruparPalabras.test.ts` (nuevo). **595 tests** (+5), `tsc` limpio. ⚠️ Sin probar en dispositivo; sale en el próximo build.
@@ -130,6 +413,154 @@
 **Pendiente para la próxima sesión:**
 - Verlo en dispositivo: Perfil → "Tu link", y que "Compartir mi link" abra la hoja de compartir con el mensaje.
 - Sigue lo de la entrada de abajo: probar el checkout web (`vitaapp.com.ar/c/andre`) y la sala web con el CAPTCHA prendido, y entrar con mail en el build 20 para confirmar el proveedor.
+
+---
+## 2026-09-14 — Andre (sesión 228 cont. 2 · achicar las tarjetas de Tus personas)
+
+**Tocado:** `screens/CoachChatsScreen.tsx`. **597 tests**, `tsc` y `eslint` limpios. Sin ver en dispositivo.
+
+- 🟢 **Cada fila pasó de 97 a 83 puntos de alto (–14%)**: padding 14 → 11, separación 9 → 7, `chatInfo.minHeight` 60 → 54. En una pantalla útil de ~700 puntos, entran 8 filas donde antes entraban 7.
+- 📌 **Se apretó el AIRE, no el contenido**, y es la decisión de fondo. Se evaluó sacar una de las tres líneas —fusionar la historia con el preview bajaba la fila a ~70 (–28%)— y **se descartó**: la línea de historia ("32 sesiones · última hace 2 semanas") es lo que distingue Tus personas de una lista de chats. Sacarla para ganar 13 puntos la convierte en Mensajes, que es justo lo que el análisis de Andre rescataba de esta pantalla.
+- 📌 **También se descartó achicar las tipografías**: gana poco alto y empeora una pantalla que existe para escanear rápido.
+- 📝 **El `minHeight` casi no estaba agregando aire**: las tres líneas de texto suman ~58 por sí solas, así que bajarlo de 60 a 54 no aprieta nada — solo deja de reservar espacio de más en las filas sin preview.
+- ⚠️ **El mínimo táctil no se tocó**: lo marca el avatar (44), y la fila sigue muy por encima aun con el padding más chico.
+
+**Pendiente para la próxima sesión:**
+- Verlo en dispositivo y decidir si quedó bien o si conviene apretar un poco más. Es fácil de ajustar en una segunda pasada; con la pantalla delante se ve enseguida.
+
+---
+## 2026-09-14 — Andre (sesión 228 cont. · la burbuja del chat se le escapó a la auditoría de contraste del 01/09)
+
+**Tocado:** `screens/SalaScreen.tsx`. **596 tests**, `tsc` y `eslint` limpios. Sin ver en dispositivo.
+
+**Resumen — Andre trajo un análisis externo de Reservas / Tus personas / Chat. De los cinco puntos, uno era un defecto real y los demás no.**
+
+- 🔴 **El contraste de la burbuja propia, confirmado y PEOR de lo que decía el análisis**: el texto daba **1.78:1** y la hora **1.01:1** — o sea, la hora era literalmente del mismo tono que el fondo. AA pide 4.5.
+- 🔴 **Y no era un hallazgo nuevo: era una que se escapó.** La auditoría del 01/09 encontró 25 superficies de terracota con texto encima; **diez** usaban el oliva `#565E32` sobre `primary` y daban exactamente 1.78 ("ilegibles al sol"), y se pasaron a `primaryInk` + `onPrimaryInk`. **La burbuja del chat era una de esas diez y quedó afuera del barrido.**
+- 🟢 **Arreglado con el par que el proyecto ya define** (4.59:1), no con un color nuevo. La sombra también: usaba `shadowColor: primary`, el color viejo del fondo.
+- 🐛 **Y me equivoqué en el camino, en el mismo error que causó el bug original.** Puse la hora al 78% "para que fuera secundaria": eso da **3.46** y no cumple. Ninguna opacidad intermedia llega (al 92%, 4.16). Quedó al 100% — la jerarquía la dan el tamaño (10 contra 15) y la posición. **Bajar opacidad para "hacer secundario" es justo lo que había dejado esa hora en 1.01.**
+- 📌 **La corrección que proponía el análisis no alcanzaba**: crema sobre `primary` da 3.41, sigue por debajo de AA.
+
+**Lo que del análisis NO era un problema, verificado contra el código:**
+- ❌ **Las zonas horarias ya están resueltas**: `localEquivalentLabel` devuelve `null` si el dispositivo está en Argentina, así que "11:00 hs · 11:00 para vos" no puede pasar — la segunda hora aparece solo si hay diferencia real.
+- ❌ **El texto "si tu coach no está en los primeros 10 minutos, no pagás"**: el código tiene un comentario explícito de que es la frase del CLIENTE y que la del coach vive en su propia tarjeta, porque su plazo es otro (20 minutos). Esa pantalla ya distingue rol en varios lugares, incluida una corrección anterior por este mismo motivo.
+- ✅ **El "hace 2 semanas" de Tus personas: el análisis tiene razón.** `ultimaIso` se llena **solo con sesiones completadas** (`CoachChatsScreen:277`), así que significa "última sesión hace 2 semanas" y el texto no lo dice.
+
+**Pendiente para la próxima sesión:**
+- ✅ **Hechos en la misma sesión**: **"32 sesiones · última hace 2 semanas"** en Tus personas (`textoHistoria`) y **"1 pendiente"** en Reservas. **597 tests** (+1).
+  - 📝 Verificado antes de escribirlo: `haceCuanto` devuelve **siempre** la forma "Hace X" —nunca "ayer" ni "hoy"—, así que "última hace 1 día" también queda bien escrito. Era el riesgo del cambio y se midió en vez de suponerlo; se sumó el test del singular.
+  - 📌 En Reservas el motivo del cambio es más concreto que "suena mejor": la fila de abajo puede decir **"Esperando el pago"**, y dos "esperando" con sujetos distintos en la misma tarjeta se leen como el mismo estado. Acá espera el coach; ahí, la plata. También se pluralizó ("2 pendientes").
+- ⏸️ **Las otras QUINCE superficies de terracota** (blanco o crema sobre `primary`, 3.6–3.9:1) siguen con el "pendiente de decidir si se barren también" que dejó la auditoría. En esta pantalla son el botón "Confirmar" (3.64), el de unirse a la llamada (3.35) y las iniciales del avatar (3.89). **No se tocaron: están así a conciencia.** 📌 Dato para decidir: con `primary` ningún color de texto llega a AA —ni el blanco puro— así que no se arregla cambiando el texto, hay que oscurecer el fondo.
+- Ver la burbuja en dispositivo, con sol si se puede: es la condición en la que se detectó el problema original.
+
+---
+## 2026-09-14 — Andre (sesión 228 · el botón de mail parecía apagado en las tres puertas de entrada)
+
+**Tocado:** `screens/CoachLoginScreen.tsx`, `screens/LoginScreen.tsx`, `screens/RegisterScreen.tsx`. **596 tests**, `tsc` y `eslint` limpios. Sin probar en dispositivo.
+
+- 🐛 **Andre lo vio en el login de coach y estaba en las TRES**: Google y Apple con fondo crema (`#FCFAF5`) y borde suave, y el de mail `transparent` con un borde verde más marcado. Entre dos botones con fondo, el tercero sin fondo no se lee como "opción secundaria" sino como **botón inhabilitado**.
+- 📌 **Pregunta de Andre, y es la que ordena la decisión: "¿no es mejor que se registren con Google o Apple?"** Sí, y el motivo más fuerte no es la conversión: **es que del lado del mail está toda la fragilidad del alta.** Google y Apple traen el mail ya verificado por el proveedor, así que esas cuentas **no ven el muro del mail, no dependen del SMTP, no tienen código que puede no llegar ni contraseña que se olvide** — justo la cadena de problemas de las sesiones 224-225. Apple suma "Ocultar mi correo", que en una app cerca de salud mental no es un detalle.
+- 🟢 **Entonces la jerarquía se mantiene, pero no con el color**: los tres comparten fondo y borde; lo social va primero y con ícono de marca.
+- 🔴 **Y hay alguien que NO puede usar Google ni Apple: el cliente que llega por el link de un coach.** Nace con cuenta de mail y sin contraseña (reservó por la web con un código), así que esa es su única puerta — y era la que se veía apagada. Por eso el cambio no es cosmético.
+- ⚠️ **Corrección en el camino**: el comentario que escribí decía que el botón de mail "no lleva ícono", y **sí lo lleva** (un sobre, en las tres). Se corrigió antes de commitear. Con eso, la jerarquía quedó **débil**: los tres botones son visualmente iguales y solo cambia el texto. Si hace falta empujar más lo social, la palanca es el peso del texto o un separador — **no volver a apagarle el fondo al de mail**.
+- 📌 **Los datos no ayudan a decidir y conviene decirlo**: hay 8 cuentas (7 por mail, 1 por Google) y son todas de prueba. No hay señal de preferencia real.
+
+**Resuelto en la misma sesión — y la respuesta NO es la misma para las tres pantallas.**
+
+Andre: *"si quiero que poca gente use «Usar mail», ¿cuál elegirías?"*. La pregunta destapó que las tres pantallas no hacen lo mismo:
+
+| Pantalla | Qué hace | Cómo quedó |
+|---|---|---|
+| `RegisterScreen` | **crea** cuentas | contorneado |
+| `CoachLoginScreen` | crea **y** deja entrar | contorneado |
+| `LoginScreen` | **solo** deja entrar | igualado al crema |
+
+- 🟢 **Contorneado donde se CREA la cuenta**: ahí es el momento en que se decide con qué se registra, y conviene empujar a Google/Apple porque toda la fragilidad del alta está del lado del mail (muro, SMTP, código, contraseña).
+- 🔴 **Igualado donde solo se ENTRA, y este es el punto**: en el login no se decide nada —la cuenta ya existe—, así que apagar el botón no reduce el uso del mail; **solo le pone fricción a quien no tiene otra opción.** El cliente que reservó por el link de un coach nace con cuenta de mail y sin contraseña: viéndolo apagado no se pasa a lo social, **no puede**, se queda afuera. Y es el canal de lanzamiento.
+- 📌 **Apareció que el contorno era deliberado**, no inercia: el comentario del render del login de coach ya decía *"camino secundario, contorneado"*. Lo había dado por descuido porque no encontré ningún comentario que lo explicara — estaba, en una sola de las tres.
+- 📌 **Y que ya había separador** (`DivisorConPunto`) entre lo social y el mail en las tres. La jerarquía nunca dependió solo del color.
+- 📌 Si hace falta desalentar más el mail en el registro, la palanca más fuerte es el TEXTO ("Registrarme con mi email", más chico y sin ícono), no el borde.
+
+**Pendiente para la próxima sesión:**
+- Verlo en dispositivo: las tres pantallas de entrada, y confirmar que en el login de usuario el camino del mail se encuentra rápido (es la puerta del cliente que llega por un link).
+
+---
+## 2026-09-13 — Andre (sesión 227 · backups de la base, que no existían)
+
+**Tocado:** `scripts/backup.sh` (nuevo), `.gitignore`. Sin cambios de app.
+
+**Resumen — Andre preguntó si se podía hacer backup de Supabase. La respuesta corta es que hoy, probablemente, no hay ninguno.**
+
+- 🔴 **En el plan gratuito de Supabase NO hay backups automáticos.** Falta confirmar el plan (Settings → Billing; no se puede leer desde el CLI ni sin token de administración), pero si es el gratuito **hoy no hay de dónde volver**: la base tiene **70 MB**, 84 perfiles, 184 reservas, 149 mensajes y pagos reales.
+- 🟢 **`scripts/backup.sh`**: los tres volcados que hacen falta —roles, schema y datos—, con fecha en la carpeta, `chmod 600` y **verificación**: chequea que ningún archivo venga vacío o truncado y que los datos incluyan `bookings`, `profiles` y `messages`. Un dump truncado pesa poco y se ve igual de bien en un listado; sin ese chequeo, el backup se descubre roto el día que hace falta.
+- 🔴 **Guarda contra el peor error posible**: si el destino cae adentro del repo, el script se corta antes de escribir. El archivo de datos tiene mails, mensajes y registros de ánimo de gente real, y en git no se puede sacar del todo una vez que entró. `.gitignore` es la segunda red.
+- 📌 **Tiene `--dry-run`**, y es como se verificó sin bajar datos personales al disco.
+- ⚠️ **Lo que el backup NO cubre, escrito en el propio script**: los archivos del Storage (videos de presentación, fotos, audios), los secrets de las edge functions y la configuración del panel (auth, CAPTCHA, rate limits, crons). Las functions y los scripts SQL sí, pero porque viven en el repo.
+- ⚠️ **Aviso aparte**: al verificar el volcado, `supabase db dump --dry-run` imprimió en consola la contraseña temporal del rol de login que crea el CLI. No es la contraseña de la base, pero quedó en el historial de la sesión; rotarla desde el panel es gratis.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr el backup** (`./scripts/backup.sh`) y **confirmar el plan** en el panel. Si es gratuito, esto pasa a ser rutina, no una tarea.
+- 📌 Si se quiere automatizar de verdad, el paso siguiente es una tarea programada; el script ya está listo para que la llame.
+- 📌 El Storage queda sin respaldo: si algún video de presentación importa, es otro mecanismo.
+
+---
+## 2026-09-12 — Andre (sesión 226 cont. 2 · la videollamada del 12/09 no se probó)
+
+**Tocado:** `docs/problemas-abiertos.md` (A5, Prueba 2). Sin cambios de código.
+
+- 🔴 **Nadie entró a la sala de las 11:00.** La sesión existía y estaba pagada; la Prueba 2 de A5 —la videollamada, lo único del camino que nunca se ejercitó— **sigue abierta**.
+- 📌 **`completada` no probaba lo contrario**: lo marca el cron `complete-sessions` por horario, no por asistencia. Verificado de paso que las 0 filas de `session_attendance` tampoco eran un bug: la función espera **24 horas** antes de escribir el "nadie entró", justamente para no convertir una foto temprana en una conclusión falsa.
+- 🟢 **Queda algo que sí se puede verificar solo**: el 13/09 después de las 11:00 tiene que aparecer una fila con `participants_count = 0`. Si aparece, queda probado el registro de asistencia vacía (la prueba que hace falta si alguien reclama una sesión que no dio). Si no aparece, hay un bug.
+- ⚠️ La sala del 12/09 ya venció (`exp` = fin + 1 h): para reintentar hace falta una reserva nueva.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Agendar otra sesión de prueba y hacer la videollamada.** Dos formas: repetir el camino real desde `/c/coach-prueba?probar=1` con otro mail (cuesta $1 y de paso vuelve a ejercitar el checkout), o insertar una reserva confirmada directo en la base con service role (gratis, no pasa por el checkout) — **decisión de Andre**.
+- 📌 Verificar el 13/09 la fila de asistencia vacía.
+
+---
+## 2026-09-12 — Andre (sesión 226 cont. · empezar a MIRAR la fuga, sin castigar a nadie)
+
+**Tocado:** `scripts/diagnostico-fuga.sql` (nuevo), `screens/SalaScreen.tsx`. **596 tests**, `tsc` y `eslint` limpios.
+
+**Resumen — Andre quiere un algoritmo que penalice a los coaches que sacan las sesiones de la app. La respuesta fue: hoy no se puede, y estas son las dos cosas que hay que hacer para poder.**
+
+- 🔴 **No hay muestra.** 12 coaches con al menos una sesión completada y **UNO SOLO con 5 o más**, que es el piso que el propio deck exige para que `rebooking_rate` cuente. Un algoritmo con eso castiga ruido: a un coach con 3 clientes, que uno se mude lo manda de 33% a 0%.
+- 🔴 **Y `rebooking_rate` mide otra cosa.** Baja por cuatro motivos: el que se lleva la gente afuera, el que atiende consultas únicas, **el que atiende gente que se cura** —el mejor resultado posible— y el que es malo (ya penalizado por reseñas). Un número, cuatro causas.
+- 📌 **La firma de la fuga es más específica**: un cliente que **Vita le presentó**, que dejó de reservar, **y** con el que hubo intercambio de contacto. Las tres juntas.
+- 🟢 **`scripts/diagnostico-fuga.sql`**: consulta de solo lectura (no crea vista ni tabla) que arma las dos primeras señales. Usa **el mismo criterio de "se cae" que ya ve el coach** (`lib/coachContinuity.ts`: 21 días si hubo una sola sesión, el doble de la cadencia con piso de 14, techo de 120) para no inventar un segundo criterio que después no coincida con su pantalla. Y **no cuenta como fuga al cliente que trajo el coach por su link** (`origen`): nunca fue de Vita.
+- 🐛 **El evento `mensaje_contacto_detectado` no servía para esto**: guardaba `role` y `sent_anyway` y nada más, así que se sabía cuántas veces pasaba pero **nunca entre quiénes**. Ahora lleva el par (coach, usuario, sala). Van ids, no el texto del mensaje: alcanza para cruzar y no mete contenido privado en una tabla de métricas. **Al 12/09 ese evento nunca se disparó: 0 filas.**
+- 📌 **Primera corrida**: solo dos coaches con caídos (`martin-fuentes` 1, de Vita, 57 días; `andre`, 84 de promedio). Confirma que el SQL anda y que la señal todavía no existe.
+
+**Pendiente para la próxima sesión:**
+- ⏸️ **El algoritmo, deliberadamente NO construido.** Retomar cuando haya 30-40 coaches con muestra y el evento de contacto tenga filas. 📌 Y si se construye: **no un castigo en el ranking** —el deck v3 sacó el podio a propósito, los slots son pisos y el que se muestra sale sorteado—, sino **dejar de regalar lo que Vita da gratis**: que el coach con señales fuertes salga del pool de "Recomendado por Vita" y del de clientes nuevos. Proporcional y explicable en una línea.
+- 🔴 **Transparencia primero (pedido de Andre, y tiene razón).** Si esto se hace, va antes en los T&C y en la pantalla de visibilidad del coach, con su regla de escritura: *"siempre un número concreto y alcanzable, nunca una posición relativa"*. Un castigo que el coach descubre por sus resultados es indistinguible de un algoritmo arbitrario.
+- 📌 Mientras tanto, la palanca que más sirve no es el castigo: que re-reservar adentro sea más fácil que una transferencia (medida anti-fuga #1, ya construida).
+
+---
+## 2026-09-12 — Andre (sesión 226 · el onboarding: se va la segunda pregunta, y las guías se prenden para todos)
+
+**Tocado:** `screens/OnboardingScreen2.tsx`, `app/(tabs)/conexiones.tsx`, `lib/guiaContextual.ts`, `lib/onboardingRespuestas.ts`, `hooks/useRecommendedResource.ts`, `__tests__/guiaContextual.test.ts`. **596 tests**, `tsc` y `eslint` limpios. Sin probar en dispositivo.
+
+**Resumen — dos rondas de consejo y una discusión larga con Andre sobre para qué está el onboarding. El resultado no fue rediseñar la pregunta: fue arreglar lo que venía después.**
+
+- 🔴 **El diagnóstico, en una línea: la pregunta no fallaba por ser mala pregunta, fallaba porque lo que venía después ignoraba la respuesta.** La persona contaba algo y recibía un MENÚ de catorce puertas. Andre: *"evidentemente es una pantalla que no ayuda demasiado"*. Las dos rondas del consejo coincidieron (5/5 en la segunda: "hoy no sirve"), incluido el Expansionista, que se retractó de la primera.
+- 🟢 **Se sacó del flujo la segunda pregunta** ("¿Qué aspecto querés explorar?", `/onboarding4`): pedía elegir entre tres temas que nadie puede distinguir ("Sentirme mejor" vs "Entender qué me pasa"), costaba dos toques más y su respuesta solo servía para destacar una fila. El archivo queda, sin entrada, hasta construir lo que sigue.
+- 🟢 **El destino ahora es Profesionales con SU EJE abierto**, no el menú de ejes. `EJE_DE_UNIVERSO` traduce cuerpo/mente/alma → fisico/emocional/espiritual: es la quinta taxonomía del módulo, pero la única que no agrega información — es traducción de vocabulario entre el idioma de la persona y el de la oferta.
+- 🔴 **Las guías contextuales se prenden para TODOS.** Estaban apagadas justo para los tres universos, con este motivo escrito: *"a alguien que entró contando lo que le pasa no se le explica la app —aterriza directo en los profesionales de su tema—"*. Ese argumento dependía del destino, y el destino era el problema: **se le apagaba la explicación al que más perdido estaba, a cambio de nada.** 📌 Esto contesta la pregunta de Andre sobre si hacía falta un recorrido previo: no hace falta un tour, hacía falta dejar de apagar lo que ya existe.
+- 🔴 **El eje ya NO viaja a la base: vive solo en el teléfono** (`guardarEjeLocal`). Lo que alguien contesta ahí —"algo de la cabeza: ansiedad, bajón"— es dato de salud bajo la Ley 25.326, y **`LO_QUE_CUBRE` del consentimiento enumera el check-in, el diario y qué recursos usa: el onboarding no está.** Mandarlo a `user_quiz_answers` era tratar dato sensible fuera de lo consentido.
+
+**Pendiente para la próxima sesión:**
+- ✅ **RESUELTO en la misma sesión (opción A, decidida por mí a pedido de Andre: "no sé qué opción")**: `useRecommendedResource` lee el eje del teléfono cuando la base no lo trae. El criterio fue una sola pregunta —¿este dato tiene que sobrevivir al cambio de teléfono o verlo el servidor?—: hoy se usa para recomendar un recurso y abrir el eje en Profesionales, las dos cosas dentro del teléfono. Mismo criterio que ya se usó para la preferencia de apagado (sesión 150): si no necesita sincronizarse, no abre columna.
+  - 📌 **Efecto lateral bueno: la recomendación ahora funciona SIN CUENTA.** El efecto cortaba antes de leer nada si no había `userId`; quien entra sin registrarse y cae en Recursos ahora recibe algo elegido por lo que contó. Es justo el caso que motivó toda la discusión.
+  - ⚠️ **Lo que se pierde**: si reinstala la app o cambia de celular, el eje se pierde y vuelve a recomendar por comportamiento. Reversible: el día que haga falta del lado del servidor, se hace (b) con el texto ya actualizado.
+- 📌 Las instalaciones que YA tienen un eje encolado lo van a volcar igual en su próximo login: `volcarPendiente` no cambió. Es dato viejo ya consentido de hecho; limpiarlo es opcional.
+- ⏸️ **PENDIENTE, esperando decisión de Andre (12/09): qué le devuelve la app después de la pregunta.** Hoy le devuelve un MENÚ de temas del eje, o sea otra pregunta. Las dos variantes, planteadas y sin elegir:
+  - **(a) Gente.** "Tres personas que trabajan lo que contaste", con nombre, profesión, precio y **una línea que diga por qué esas** ("trabaja sueño y energía, que es de lo que viniste a hablar"), más "ver todos". Es lo que prometía el brief del 01/09. ⚠️ **Se parece a lo que Andre frenó** cuando la versión que abría el mazo "se sentía forzada": las diferencias son que son dos o tres y no una pila para descartar, que viene el motivo, y que hay salida. Misma familia de idea, así que necesita su criterio.
+  - **(b) Algo para hacer.** "Para arrancar hoy: respiración para dormir, 4 minutos", y más abajo, sin gritar, *"cuando quieras, hay 6 personas que trabajan esto"*. Primero algo gratis que puede hacer sola; los profesionales disponibles pero en segundo plano.
+  - 📌 Las dos resuelven lo mismo —que la respuesta deje de caer en el vacío—; cambia qué se ofrece primero. Las piezas técnicas ya están para las dos: `doorsForEje` y `coachesForDoor` para (a), la recomendación por eje para (b).
+  - 🔴 **Hasta que se elija, el destino queda como quedó hoy**: Profesionales con el eje abierto. Es mejor que el menú de catorce puertas de antes, pero sigue siendo un menú.
+- 📌 **El Inicio sin cuenta sigue siendo un mal lugar para aterrizar**: el check-in llama a `requestAuth` y siete bloques se cortan con `if (!user) return`. Es el trabajo que de verdad desbloquea el primer día.
+- Probar en dispositivo: que las tres opciones abran el eje correcto y que las guías aparezcan ahora también para quien elige un universo.
 
 ---
 ## 2026-09-11 — Andre (sesión 225 · el CAPTCHA queda PRENDIDO)

@@ -202,7 +202,10 @@ serve(async (req) => {
     // Solo se escribe el cero cuando ya pasó tiempo suficiente como para que sea
     // una conclusión y no una foto sacada temprano.
     if (!hubo) {
-      const finAprox = Date.parse(`${b.scheduled_date}T${String(b.scheduled_time).slice(0, 5)}:00-03:00`)
+      // `padStart`: con `7:00` sin cero el ISO quedaba inválido, daba NaN y la
+      // sesión vacía nunca se concluía.
+      const [hh = '', mm = ''] = String(b.scheduled_time).split(':')
+      const finAprox = Date.parse(`${b.scheduled_date}T${hh.padStart(2, '0')}:${mm.slice(0, 2)}:00-03:00`)
       const horas = (Date.now() - finAprox) / 3600000
       if (!Number.isFinite(horas) || horas < HORAS_PARA_CONCLUIR_VACIO) {
         sinDatosTodavia++

@@ -26,7 +26,7 @@ dos hermanos no.
 | **A2** | ⏸️ **DECIDIDO el 08/09: se queda hasta el lanzamiento.** Es **"Coach Prueba"** (`e58d2ec3`, especialidad *"Especialidad de prueba"*), `verified` y `activo`, con MP conectado y `price_per_session = 1` — `mp-create-payment` deriva el precio de esa columna, así que cobraría $1 real. **Andre lo deja porque hace falta un coach para ejercitar los flujos, y con cero usuarios el riesgo es cero.** 🔴 **El riesgo no es tenerlo: es olvidárselo el día que abran** — y ya llevaba varias sesiones apareciendo en "pendiente" sin que eso lo moviera. | ✅ **Mitigado, no resuelto: `scripts/verificar-pre-lanzamiento.sql`** (solo lectura, 5 chequeos, devuelve filas solo si hay problema). Correrlo con la service key **antes de dejar entrar a la primera persona** deja de depender de que alguien se acuerde. | — |
 | **A4** | ⏭️ **ASIGNADO A JOAQUÍN el 08/09.** 🔴 **`authenticated` puede leer las 17 columnas de `profiles` de TODOS los coaches** — mail y `push_token` incluidos. El agujero que se cerró para `anon` ese mismo día **está a un registro de distancia**. | No es de dos líneas: hay que mover al servidor el envío de push (client-side en 6 lugares) y la lectura de mails del panel, y después una vista pública para el catálogo. **Receta abajo.** | Media sesión larga |
 | **A5** | ⏭️ **ASIGNADO A JOAQUÍN el 09/09.** 🔴 **El camino del cliente #1 está construido entero y hay tres cosas que solo se prueban con un teléfono y plata.** Sin eso no se puede prender `CHECKOUT_HABILITADO`. | Tres pruebas cortas. **Receta abajo.** | Una hora, más la del 18 |
-| **A3** | **Nullability de `price_per_session` sin confirmar.** El guard que se agregó al buscador es necesario o decorativo, y no sabemos cuál. ⚠️ El endpoint OpenAPI de PostgREST exige `service_role`. | Una consulta con la service key. | 2 min |
+| **A3** | ✅ **RESUELTA el 13/09/2026: la columna ES nullable, así que el guard es NECESARIO.** `information_schema.columns` sobre `public.coaches` devuelve `price_per_session` → `numeric`, **`is_nullable = YES`, sin default** (y `price_usd` igual). Es exactamente la condición que el propio comentario de `app/search3.tsx` nombraba como *"un crash esperando al primer coach sin precio"*: sin el guard, `.toLocaleString()` sobre null revienta la tarjeta. 📌 Hoy **no dispara** —0 de 34 filas en null, medido el 07/09— pero nada lo impide: no hay `NOT NULL` ni default, y el alta de coach no exige precio. 📌 **Cómo se resolvió sin service key**: `npx supabase db query --linked`, que ejecuta SQL contra producción con el login del CLI — la nota de que "el endpoint OpenAPI de PostgREST exige `service_role`" era cierta pero había otro camino. | ✅ Hecha. | — |
 
 ### A1 — receta para Joaquín (device review del piso de seguridad)
 
@@ -141,10 +141,25 @@ arreglo no se volvió a probar.**
 4. De paso: que la card esté **debajo** de "Tu próxima sesión" (decisión de Andre
    del 09/09), y que al tocar Aceptar desaparezca.
 
-#### Prueba 2 — la videollamada, el 18/09 a las 11:00
+#### Prueba 2 — la videollamada — ⏸️ SIGUE ABIERTA
 
 Es la única parte del camino que **nunca se ejercitó**, y solo se puede el día de
 la sesión: la sala se abre 15 minutos antes.
+
+> 🔴 **Se perdió la oportunidad del 12/09.** Había una sesión real a las 11:00
+> (coach de prueba ↔ la cuenta nacida en el checkout web, pagada) y **nadie
+> entró**. La reserva quedó `completada`, pero eso no prueba nada: lo marca el
+> cron `complete-sessions` por horario.
+>
+> 📌 **Lo único que dejó, y sirve**: el 13/09 después de las 11:00, la función
+> `session-attendance` tiene que escribir una fila con `participants_count = 0`
+> — el cron corre al minuto 17 de cada hora y espera 24 h antes de concluir que
+> la sala quedó vacía. Si la escribe, queda probado el registro de "nadie
+> entró", que es la prueba que hace falta cuando alguien reclama una sesión que
+> no dio. Si NO la escribe, hay un bug en ese camino.
+>
+> ⚠️ Para volver a intentarlo hace falta una sesión nueva: la sala de la del
+> 12/09 ya venció (`exp` = fin + 1 hora).
 
 1. **Vos como cliente**, desde el navegador: `vitaapp.com.ar/sala?booking=<id>`.
    El link también llega en el mail de "Sesión confirmada".

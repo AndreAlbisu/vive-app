@@ -123,7 +123,16 @@ Condiciones:
 - Ejercida la revocación, Vita reintegrará la totalidad de lo abonado, sin cargo. El reintegro se procesa a través del procesador de pagos; los tiempos de acreditación dependen de dicho procesador y del medio de pago.
 - [Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]
 
-9.5. Nada de lo previsto en esta cláusula limita los derechos que la normativa de defensa del consumidor reconozca al Cliente.
+9.5. **Ausencias.** Si alguna de las partes no se presenta a una Sesión confirmada, rige lo siguiente:
+
+- **Ausencia del Profesional.** Si el Profesional no ingresa a la videollamada dentro de los **primeros 10 minutos** contados desde el horario agendado, el Cliente **no paga la Sesión** y se le reintegra la totalidad de lo abonado. El Cliente puede retirarse a partir de ese momento sin que ello afecte su derecho al reintegro.
+- **Permanencia del Profesional.** El Profesional debe encontrarse en la videollamada desde el horario agendado y **permanecer hasta que el Cliente ingrese o hasta transcurridos 20 minutos**, lo que ocurra primero. Retirarse antes equivale a no haberse presentado.
+- **Demora del Cliente.** Si el Cliente ingresa con **más de 20 minutos de demora** respecto del horario agendado, o no ingresa, la Sesión **se cobra íntegramente** y el Profesional percibe su importe.
+- **Si no se presenta ninguna de las partes**, el Cliente recibe el reintegro total y ello no se computa como incumplimiento del Profesional.
+- **Cómo se determina.** Vita constata la asistencia a partir de los **registros de conexión a la videollamada** —quién ingresó, cuándo y por cuánto tiempo—, que son **metadatos de conexión y en ningún caso contenido**: Vita no accede al audio, al video ni a transcripción alguna de las Sesiones, conforme a la Política de Privacidad.
+- Lo previsto en esta cláusula **no desplaza** la garantía de la cláusula 9.3, que cubre un supuesto distinto: la insatisfacción del Cliente con una Sesión efectivamente prestada.
+
+9.6. Nada de lo previsto en esta cláusula limita los derechos que la normativa de defensa del consumidor reconozca al Cliente.
 
 ## 10. Uso Exclusivo de la Plataforma (No Elusión)
 

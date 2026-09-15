@@ -567,6 +567,7 @@ async function confirmarCodigo() {
     }
     sesion = { access_token: cuerpo.access_token, email: mail };
     guardarSesion(sesion);
+    await marcarMailVerificado(cuerpo.access_token);
     await guardarNombre(cuerpo?.user?.id);
     ocultar('pasoCodigo');
     $('identificado').textContent = `Listo, ${mail}.`;
@@ -621,6 +622,33 @@ async function guardarNombre(userId) {
     });
   } catch (e) {
     console.error('[nombre] no se pudo guardar:', e);
+  }
+}
+
+/**
+ * Deja constancia en el servidor de que esta persona probó su casilla. La sesión
+ * se abrió con un código al mail (`amr = otp`), y `marcar_mail_verificado()`
+ * escribe `profiles.email_verified_at` solo en ese caso — no se puede falsificar
+ * desde acá (la columna no tiene UPDATE para el cliente).
+ *
+ * 🔴 Sin esto, la cuenta nacida en la web queda "sin verificar" aunque acaba de
+ * leer el código, y el muro de la app se lo vuelve a pedir. Best-effort: si falla,
+ * el checkout sigue igual (la persona no tiene contraseña, entra por "olvidé mi
+ * contraseña", que verifica sola — pero la constancia se pierde).
+ */
+async function marcarMailVerificado(accessToken) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/marcar_mail_verificado`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    });
+  } catch (e) {
+    console.error('[mail] no se pudo marcar verificado:', e);
   }
 }
 

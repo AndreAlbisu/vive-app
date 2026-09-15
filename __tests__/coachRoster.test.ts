@@ -100,15 +100,22 @@ describe('textoHistoria', () => {
     expect(textoHistoria({ sesiones: 29, ultimaIso: null }, haceCuanto, hoy)).toBe('29 sesiones');
   });
 
-  it('suma cuándo fue la última vez', () => {
+  // 🔴 "última hace X": pegado a "29 sesiones", un "hace 6 días" suelto no dice
+  // de qué hace 6 días — y la fila muestra al lado el último mensaje.
+  it('suma cuándo fue la última SESIÓN, y lo dice', () => {
     expect(textoHistoria({ sesiones: 29, ultimaIso: '2026-08-22' }, haceCuanto, hoy))
-      .toBe('29 sesiones · hace 6 días');
+      .toBe('29 sesiones · última hace 6 días');
+  });
+
+  it('también queda bien escrito en singular', () => {
+    expect(textoHistoria({ sesiones: 1, ultimaIso: '2026-08-27' }, haceCuanto, hoy))
+      .toBe('1 sesión · última hace 1 día');
   });
 
   it('🔴 ya no nombra la próxima sesión — eso lo dice la pastilla', () => {
     const txt = textoHistoria({ sesiones: 2, ultimaIso: '2026-07-24' }, haceCuanto, hoy);
     expect(txt).not.toMatch(/próxima/);
-    expect(txt).toBe('2 sesiones · hace 5 semanas');
+    expect(txt).toBe('2 sesiones · última hace 5 semanas');
   });
 
   it('queda vacío cuando todavía no hay historia que contar', () => {

@@ -513,6 +513,18 @@ const s = StyleSheet.create({
     paddingHorizontal: 18,
   },
   // "Usar email" contorneado y sin relleno: es el camino secundario.
+  // 🔴 CONTORNEADO A PROPÓSITO, y es lo que lo diferencia del login de usuario
+  // (14/09/2026, decisión de Andre). Esta pantalla **crea cuentas**, o sea que
+  // es el momento en que se decide con qué se registra la persona — y conviene
+  // que elija Google o Apple: esas cuentas traen el mail ya verificado por el
+  // proveedor, así que **no pasan por el muro del mail, no dependen del SMTP,
+  // no tienen código que puede no llegar ni contraseña que se olvide**. Toda la
+  // fragilidad del alta está del lado del mail.
+  //
+  // ⚠️ NO copiar este estilo a `LoginScreen`: ahí no se decide nada (la cuenta
+  // ya existe) y apagarlo solo le pone fricción a quien no tiene otra opción —
+  // el cliente que llegó por el link de un coach, que nace con cuenta de mail y
+  // sin contraseña. Ver el comentario de allá.
   emailBtn: {
     flexDirection: 'row',
     alignItems: 'center',

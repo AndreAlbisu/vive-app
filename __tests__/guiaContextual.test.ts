@@ -28,14 +28,23 @@ describe('guiaHabilitada', () => {
     await expect(guiaHabilitada(INICIO)).resolves.toBe(true);
   });
 
-  it('a quien venía a buscar profesional no se le explica la app', async () => {
-    await guardarCamino('search');
-    await expect(guiaHabilitada(INICIO)).resolves.toBe(false);
-    await expect(guiaHabilitada(RECURSOS)).resolves.toBe(false);
+  // 🔴 Desde el 12/09/2026 el camino elegido NO decide quién ve la guía.
+  // Antes se le apagaba a los tres universos ('guide') con el argumento de que
+  // "aterriza directo en los profesionales de su tema"; ese argumento dependía
+  // del destino, y el destino era el problema. Ver `lib/guiaContextual.ts`.
+  it('🔴 al que contó lo que le pasa TAMBIÉN se le explica la app', async () => {
+    await guardarCamino('guide');
+    await expect(guiaHabilitada(INICIO)).resolves.toBe(true);
+    await expect(guiaHabilitada(RECURSOS)).resolves.toBe(true);
   });
 
-  it('pero la card de la Sala sí, porque no es parte de la guía numerada', async () => {
+  it('lo mismo para el camino viejo de "sé qué necesito"', async () => {
     await guardarCamino('search');
+    await expect(guiaHabilitada(INICIO)).resolves.toBe(true);
+  });
+
+  it('la card de la Sala se muestra igual', async () => {
+    await guardarCamino('guide');
     await expect(guiaHabilitada(SALA)).resolves.toBe(true);
   });
 

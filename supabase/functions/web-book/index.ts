@@ -159,7 +159,8 @@ serve(async (req) => {
       coach_name: perfilCoach?.name ?? null,
       coach_specialty: coach.specialty ?? null,
       scheduled_date: fecha,
-      scheduled_time: hora,
+      // Normalizada: la página puede mandar `7:00`, y la sala valida HH:MM.
+      scheduled_time: hhmm(hora),
       amount: monto,
       status: 'pendiente',
       // 🔴 Por dónde entró. Toda reserva que nace acá viene del link público del

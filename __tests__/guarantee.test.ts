@@ -139,4 +139,15 @@ describe('scheduledAtMs', () => {
   it('tolera segundos en scheduled_time', () => {
     expect(scheduledAtMs('2026-08-10', '15:00:00')).toBe(scheduledAtMs('2026-08-10', '15:00'));
   });
+
+  // Había reservas guardadas como `7:00` y la sala devolvía 422 (14/09/2026).
+  it('acepta la hora sin cero inicial', () => {
+    expect(scheduledAtMs('2026-09-21', '7:00')).toBe(scheduledAtMs('2026-09-21', '07:00'));
+    expect(scheduledAtMs('2026-09-21', '0:00')).toBe(Date.parse('2026-09-21T03:00:00Z'));
+  });
+
+  it('sigue rechazando horas ilegibles', () => {
+    expect(scheduledAtMs('2026-09-21', '7')).toBeNaN();
+    expect(scheduledAtMs('2026-09-21', '123:00')).toBeNaN();
+  });
 });

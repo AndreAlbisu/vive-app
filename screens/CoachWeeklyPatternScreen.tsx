@@ -34,7 +34,7 @@ type PatternBlock = {
 };
 
 function dateToTimeStr(d: Date): string {
-  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function makeDefaultStart(): Date {
