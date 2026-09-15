@@ -4,6 +4,25 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-14 — Andre (sesión 233 · el contador de guardados contaba lo que la lista no mostraba)
+
+**Tocado:** `screens/RecursosGuardadosScreen.tsx`, `app/(tabs)/recursos.tsx`, `SCHEMA.md`. **599 tests**, `tsc` limpio, lint sin errores. ⚠️ Sin verificar en dispositivo.
+
+**Resumen — salió de una pregunta de Andre: "el número sobre el ícono de guardados, ¿funciona realmente?".**
+
+- 🔴 **Funcionaba a medias, y la raíz no era el badge: hay DOS tablas de guardados para una sola idea de producto.** `saved_resources` (texto: slugs de herramientas + uuids de `resources`) y `resource_saves` (uuid con FK a `coach_resources`). El contador une las dos; la pantalla de guardados leía **solo la vieja**.
+- 🐛 **Consecuencia:** todo lo guardado desde el deck (`app/formato.tsx`) —que es **el camino principal hoy**, el bookmark se mudó ahí— subía el número y **no aparecía nunca en la lista**.
+- 🐛 **Cuarto defecto, encontrado de paso:** la pantalla resolvía los uuids contra `resources`, pero los de `resource_saves` son de `coach_resources`, que es **otra tabla** (`add-resources.sql` vs `recursos-v2-migration.sql`, sin vista entre ellas). Ni leyendo la tabla correcta habrían aparecido.
+- 🐛 **`unsave` borraba en una sola tabla**: un recurso guardado por los dos caminos reaparecía al recargar. Ahora borra en las dos.
+- 🐛 **El contador no se refrescaba**: su efecto colgaba de `[user]` sin `useFocusEffect`, así que guardabas algo, volvías y el número seguía igual hasta remontar la pantalla. La pantalla de guardados sí usaba foco; ahora están de acuerdo.
+- 📌 **La consulta a `coach_resources` va plana, sin `coaches!inner(profiles!inner(name))`**, esquivando a propósito la trampa de RLS documentada en SCHEMA.md (16/07/2026): la policy permite `status = 'published'` a cualquiera, pero el join embebido arrastra la política de `profiles`.
+
+**Pendiente para la próxima sesión:**
+- 🟡 **Verificar en el teléfono**: guardar algo desde el deck, volver a Recursos (el número tiene que subir solo) y abrir la lista (tiene que estar ahí).
+- ⏸️ **Unificar las dos tablas — documentado en SCHEMA.md con su dirección.** Tiene que ser hacia `saved_resources` (columna TEXT), porque `resource_saves.resource_id` es uuid con FK y no puede alojar los slugs de las herramientas. No se hizo junto con esto porque toca `get_my_resource_counts()`, `get_my_resource_stats_month()` y `delete-account`, y eso quiere su propia verificación contra la base.
+- ⚠️ **Hay DOS entradas numeradas 232** (esta sesión y la paralela que movió la regla de ausencias a la Sala). No se renumeró ninguna para no pisar el árbol de la otra; queda para quien cierre.
+
+---
 ## 2026-09-14 — Andre (sesión 232 · la regla de ausencias sale también de la Sala)
 
 **Tocado:** `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `docs/no-show.md`. `tsc` limpio, lint sin errores nuevos. ⚠️ Sin probar en dispositivo.

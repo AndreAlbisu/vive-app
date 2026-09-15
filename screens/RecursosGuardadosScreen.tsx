@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ViveColors, ViveFonts, ResourceFormatLabels } from '@/constants/theme';
 import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
@@ -38,6 +38,42 @@ const COACH_TYPE_LABEL: Record<string, string> = {
   lectura_breve: 'Lectura breve',
 };
 
+/**
+ * 🔴 Los guardados viven en TRES universos, no en uno, y esta pantalla mostraba
+ * solo dos tercios del primero.
+ *
+ *   1. Slugs de herramientas de Vita   → `saved_resources`, se resuelven con `VITA_TOOL_MAP`
+ *   2. uuids de la biblioteca editorial → `saved_resources`, tabla `resources`
+ *   3. uuids de recursos de coaches     → `resource_saves`,  tabla `coach_resources`
+ *
+ * El (3) es Recursos v2 y es **el camino principal hoy**: el bookmark de cada
+ * card del deck (`app/formato.tsx`) y el de la pantalla de un recurso de coach
+ * escriben ahí. Esta pantalla no leía esa tabla, así que todo lo guardado desde
+ * el deck era invisible acá — mientras el contador del header de Recursos, que
+ * sí une las dos tablas, lo contaba. De ahí que el número no coincidiera nunca
+ * con la lista.
+ *
+ * ⚠️ La procedencia se sabe por la TABLA de origen, no por la forma del id: (2)
+ * y (3) son los dos uuids y no se distinguen mirándolos.
+ *
+ * 📌 La consulta a `coach_resources` va PLANA (sin `coaches!inner(...)`) a
+ * propósito: la RLS de SELECT permite `status = 'published'` a cualquiera, pero
+ * el join embebido arrastra la política de `profiles` y ahí está la trampa
+ * documentada en SCHEMA.md (16/07/2026). Sin join, no hay trampa.
+ */
+const V2_FORMAT_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  audio: 'volume-medium-outline',
+  podcast: 'mic-outline',
+  video: 'play-circle-outline',
+  lectura: 'book-outline',
+};
+
+function fmtDuration(secs: number | null): string {
+  if (!secs) return '';
+  const m = Math.ceil(secs / 60);
+  return m < 60 ? `${m} min` : `${Math.round(m / 60)}h`;
+}
+
 export default function RecursosGuardadosScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -47,33 +83,62 @@ export default function RecursosGuardadosScreen() {
   const load = useCallback(async () => {
     if (!user) { setItems([]); setLoading(false); return; }
 
-    const { data: saved } = await supabase
-      .from('saved_resources')
-      .select('resource_id, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    const [viejos, nuevos] = await Promise.all([
+      supabase.from('saved_resources').select('resource_id, created_at').eq('user_id', user.id),
+      supabase.from('resource_saves').select('resource_id, created_at').eq('user_id', user.id),
+    ]);
 
-    // saved_resources no tiene UNIQUE(user_id, resource_id) y toggleSave hace insert
-    // (no upsert), así que puede haber filas duplicadas — dedup para no repetir keys.
-    const ids = [...new Set((saved ?? []).map(r => r.resource_id as string))];
-    if (ids.length === 0) { setItems([]); setLoading(false); return; }
+    // `saved_resources` no tiene UNIQUE(user_id, resource_id) en toda su historia
+    // y el guardado hace insert (no upsert), así que puede haber filas repetidas
+    // — dedup para no repetir keys. El orden es por fecha de guardado MEZCLANDO
+    // las dos tablas: lo último que guardaste va arriba, venga de donde venga.
+    type Fila = { id: string; cuando: string; esV2: boolean };
+    const filas: Fila[] = [
+      ...(viejos.data ?? []).map(r => ({ id: r.resource_id as string, cuando: (r.created_at as string) ?? '', esV2: false })),
+      ...(nuevos.data ?? []).map(r => ({ id: r.resource_id as string, cuando: (r.created_at as string) ?? '', esV2: true })),
+    ].sort((a, b) => (a.cuando < b.cuando ? 1 : -1));
 
-    // slugs = tools de Vita; uuids = recursos de coaches
-    const coachIds = ids.filter(id => !VITA_TOOL_MAP[id]);
-    let coachById = new Map<string, any>();
-    if (coachIds.length > 0) {
-      const { data: rows } = await supabase
-        .from('resources')
-        .select('id, type, title, duration_min')
-        .in('id', coachIds)
-        .is('retired_at', null);
-      coachById = new Map((rows ?? []).map(r => [r.id as string, r]));
-    }
+    const vistos = new Set<string>();
+    const unicas = filas.filter(f => {
+      if (vistos.has(f.id)) return false;
+      vistos.add(f.id);
+      return true;
+    });
+    if (unicas.length === 0) { setItems([]); setLoading(false); return; }
 
-    const mapped = ids.map(id => {
+    const idsBiblioteca = unicas.filter(f => !f.esV2 && !VITA_TOOL_MAP[f.id]).map(f => f.id);
+    const idsCoach = unicas.filter(f => f.esV2).map(f => f.id);
+
+    const [bibRows, coachRows] = await Promise.all([
+      idsBiblioteca.length > 0
+        ? supabase.from('resources').select('id, type, title, duration_min').in('id', idsBiblioteca).is('retired_at', null)
+        : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+      // Plana, sin `coaches!inner(...)`: ver el comentario de `V2_FORMAT_ICON`.
+      // `status = 'published'` es además lo único que la RLS deja ver de otro.
+      idsCoach.length > 0
+        ? supabase.from('coach_resources').select('id, title, format, duration_seconds').in('id', idsCoach).eq('status', 'published')
+        : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+    ]);
+    const bibById = new Map((bibRows.data ?? []).map((r: any) => [r.id as string, r]));
+    const coachById = new Map((coachRows.data ?? []).map((r: any) => [r.id as string, r]));
+
+    const mapped = unicas.map(({ id, esV2 }) => {
+      if (esV2) {
+        const r = coachById.get(id);
+        if (!r) return null;
+        const etiqueta = ResourceFormatLabels[r.format as string] ?? (r.format as string);
+        const dur = fmtDuration(r.duration_seconds as number | null);
+        return {
+          id: r.id as string,
+          title: r.title as string,
+          icon: V2_FORMAT_ICON[r.format as string] ?? 'book-outline',
+          meta: dur ? `${etiqueta} · ${dur}` : etiqueta,
+          route: `/coach-recurso?id=${r.id}`,
+        };
+      }
       const tool = VITA_TOOL_MAP[id];
       if (tool) return { id, title: tool.label, icon: tool.ionicon, meta: tool.duration, route: tool.route };
-      const r = coachById.get(id);
+      const r = bibById.get(id);
       if (r) return {
         id: r.id as string,
         title: r.title as string,
@@ -93,11 +158,14 @@ export default function RecursosGuardadosScreen() {
   async function unsave(id: string) {
     if (!user) return;
     setItems(prev => prev.filter(i => i.id !== id));
-    await supabase
-      .from('saved_resources')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('resource_id', id);
+    // 🔴 Borra en las DOS tablas y no en la de origen: un mismo recurso pudo
+    // guardarse por los dos caminos (el deck escribe en `resource_saves`, el
+    // detalle en `saved_resources`), y borrando una sola volvía a aparecer al
+    // recargar. El delete que no matchea nada no es un error, no cuesta nada.
+    await Promise.all([
+      supabase.from('saved_resources').delete().eq('user_id', user.id).eq('resource_id', id),
+      supabase.from('resource_saves').delete().eq('user_id', user.id).eq('resource_id', id),
+    ]);
   }
 
   return (
