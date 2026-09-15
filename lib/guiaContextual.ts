@@ -64,17 +64,12 @@ export async function guardarCamino(camino: Camino): Promise<void> {
  * algo por una elección que nunca tuvieron la chance de hacer.
  */
 export async function guiaHabilitada(storageKey: string): Promise<boolean> {
-  const esPasoNumerado = (PASOS_GUIA as readonly string[]).includes(storageKey);
-
-  const pares = await AsyncStorage.multiGet([SALTEADA_KEY, CAMINO_KEY, storageKey]);
+  const pares = await AsyncStorage.multiGet([SALTEADA_KEY, storageKey]);
   const valor = (k: string) => pares.find(([key]) => key === k)?.[1] ?? null;
 
   if (valor(SALTEADA_KEY)) return false;
   if (valor(storageKey)) return false;                 // esta ya se vio
-  if (!esPasoNumerado) return true;                    // la Sala solo respeta el saltear
-
-  const camino = valor(CAMINO_KEY);
-  return camino === null || camino === 'explore';
+  return true;
 }
 
 /**

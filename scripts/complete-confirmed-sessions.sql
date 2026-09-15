@@ -2,46 +2,80 @@
 -- Vita — Auto-completado de sesiones + invitación a review
 -- Correr en: Supabase Dashboard → SQL Editor
 -- ⚠️  REVISAR CON ANDRE/JOAQUÍN ANTES DE CORRER
--- Fecha: 2026-07-01 (creada), corrida en Supabase el 01/07/2026
 --
--- HALLAZGO IMPORTANTE (01/07/2026): esta función se documentó en su
--- momento (23/06/2026, ver Notion "Decisiones estratégicas") como
--- "✅ Completado y verificado en Supabase", junto con el cron job
--- `complete-sessions` (pg_cron, cada 5 minutos, ya agendado y activo
--- llamando a `complete_confirmed_sessions()`). Pero la función en sí
--- NUNCA quedó persistida en la base — confirmado con
--- `pg_get_functiondef` (no existe), búsqueda por nombre en `pg_proc`
--- (no existe) y búsqueda por contenido `'invitacion_review'` en el
--- body de cualquier función (no existe en ningún lado). Mismo patrón
--- que el incidente ya documentado del 19/06 (código/schema
--- documentado como corrido que en realidad nunca se ejecutó contra
--- producción).
+-- Creada 2026-07-01. **REESCRITA el 2026-09-13** — ver abajo.
+-- ============================================================
 --
--- Consecuencia real: desde que se agendó el cron job, cada corrida
--- (cada 5 minutos) fallaba en silencio — ningún booking se marcó
--- 'completada' automáticamente nunca, y no se generó ninguna
--- notificación 'invitacion_review' para nadie (ni usuario ni coach).
--- El CHECK constraint de `notifications.type` sí incluye
--- 'invitacion_review' (confirmado con `pg_get_constraintdef`) — esa
--- parte del trabajo del 23/06 sí quedó persistida, solo la función
--- faltaba.
+-- ── POR QUÉ SE REESCRIBIÓ (13/09/2026, ver docs/no-show.md) ──────────────────
 --
--- Esta versión ya nace unidireccional (usuario → coach), por decisión
--- de producto del 01/07/2026 (ver Notion, sección "Reviews:
--- unidireccionales"): solo inserta la notificación para
--- `bookings.user_id`, nunca para el coach. No hubo que "sacar" un
--- INSERT del lado coach — nunca existió tal INSERT porque la función
--- nunca corrió.
+-- 🔴 La versión anterior marcaba `completada` **20 minutos después del horario,
+-- mirando SOLO el reloj**. O sea que una sesión donde el profesional no apareció
+-- quedaba registrada como cumplida, con cuatro consecuencias y ninguna visible:
 --
--- No manda push real (pg_net/Edge Function) — mismo alcance que
--- expire_pending_bookings() (ver scripts/expire-pending-bookings.sql),
--- solo inserta la fila en `notifications` que la UI in-app lee.
+--   1. le disparaba la notificación `invitacion_review` al cliente plantado
+--      — el peor mail posible, y salía solo;
+--   2. contaba para el tramo de comisión reducida en `mp-create-payment`,
+--      que cuenta `status = 'completada'`;
+--   3. habilitaba el pago al coach en el riel internacional: `admin-actions →
+--      mark_coach_paid` exige `status = 'completada'`, así que ese guard
+--      **parecía** verificar que la sesión ocurrió cuando verificaba que pasó
+--      la hora;
+--   4. habilitaba dejar una reseña (`harden-reviews-insert.sql` exige una
+--      sesión propia y `completada`) sobre una sesión que no pasó.
 --
--- No hace falta tocar `cron.job` — el job `complete-sessions` ya
--- estaba agendado y activo, llamando a `complete_confirmed_sessions()`
--- sin prefijo de schema (resuelve por `search_path`, que incluye
--- `public` por default). Apenas la función existe, la próxima corrida
--- (máximo 5 min después) empieza a funcionar por primera vez.
+-- Es el mismo patrón que ya había mordido con los checkouts abandonados: 16
+-- reservas nunca pagadas llegaron a `completada` por esta misma función (ver
+-- `scripts/expire-unpaid-checkouts.sql`).
+--
+-- ── LOS DOS CAMBIOS ─────────────────────────────────────────────────────────
+--
+-- **(1) Corre después del FIN de la sesión, no a los 20 minutos del inicio.**
+-- Con la tolerancia de llegada del cliente en 20 minutos (docs/no-show.md), a
+-- los 20 minutos una sesión con alguien demorado **recién está empezando**.
+-- Ahora el corte es `inicio + duration_minutes`.
+--
+-- **(2) Exige EVIDENCIA de que hubo dos personas en la sala.** `max_simultaneous
+-- >= 2` sobre `session_attendance`, que ya se puebla desde el 25/08 y que hasta
+-- hoy no consumía nadie.
+--
+-- 📌 **Por qué `max_simultaneous` y no el solapamiento real de 10 minutos**, que
+-- es lo que dice la regla: el solapamiento exige identificar QUIÉN es cada
+-- participante, y cuando esto se escribió eso no estaba verificado.
+--
+-- ✅ **Verificado el 13/09/2026, después de correr esta función**: Daily devuelve
+-- `user_id`, `user_name`, `participant_id`, `join_time` y `duration` por
+-- participante, y el `user_id` **es nuestro uuid de perfil** (cruzó exacto
+-- contra `bookings.user_id`). O sea que el paso 2 de la regla —quién no
+-- cumplió— **ya se puede calcular** desde `raw`, sin pedirle nada nuevo a Daily.
+--   → Este `where` puede graduar de `max_simultaneous >= 2` a la vista derivada
+--     del veredicto. Se dejó en `max_simultaneous` a propósito hasta que exista
+--     una videollamada real de DOS puntas: hoy la única fila con datos tiene un
+--     solo participante, así que el cruce coach-vs-cliente está probado de un
+--     lado nada más.
+--
+-- ── LO QUE ESTA FUNCIÓN A PROPÓSITO **NO** HACE ─────────────────────────────
+--
+-- 🔴 **No inventa un estado nuevo** tipo `no_realizada`. `bookings.status` **no
+-- tiene CHECK** (los únicos CHECK de la tabla son sobre `payment_status`), y hay
+-- 31 lugares en 17 archivos filtrando por `'completada'` o por
+-- `in ('pendiente','confirmada')`. Un quinto valor se colaría en silencio por
+-- todos ellos. La sesión sin evidencia simplemente **no se marca**: se queda en
+-- `confirmada` y la levanta el panel. Crear el estado es una decisión aparte,
+-- deliberada, y con los 31 call sites revisados.
+--
+-- ⚠️ **Consecuencia conocida y aceptada:** una sesión que ocurrió de verdad pero
+-- cuya fila de asistencia todavía no llegó **no se completa hasta que llegue**.
+-- `session-attendance` corre cada hora, así que el retraso normal es < 1h. Es el
+-- lado correcto en el que equivocarse: demorar una invitación a reseñar es
+-- barato, y afirmar que una sesión ocurrió cuando no hay prueba es lo que
+-- rompía las cuatro cosas de arriba.
+--
+-- ⚠️ Y si `session-attendance` se cae del todo, **nada se completa**. Es
+-- deliberado —sin evidencia no se afirma— pero es un modo de falla nuevo que
+-- antes no existía: mirarlo si aparecen reservas viejas en `confirmada`.
+--
+-- No manda push real (pg_net/Edge Function), igual que antes: solo inserta la
+-- fila en `notifications` que la UI in-app lee.
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.complete_confirmed_sessions()
@@ -51,14 +85,23 @@ SECURITY DEFINER
 AS $$
 BEGIN
   WITH completed AS (
-    UPDATE public.bookings
+    UPDATE public.bookings b
     SET status = 'completada'
-    WHERE status = 'confirmada'
+    WHERE b.status = 'confirmada'
+      -- (1) La sesión TERMINÓ. `duration_minutes` es nullable: 60 es el mismo
+      -- default que usa `create-meeting-room` para la ventana de la sala.
       AND (
-        (scheduled_date::text || ' ' || scheduled_time)::timestamp
+        (b.scheduled_date::text || ' ' || b.scheduled_time)::timestamp
           AT TIME ZONE 'America/Argentina/Buenos_Aires'
-      ) + interval '20 minutes' < now()
-    RETURNING id, user_id, coach_name
+      ) + make_interval(mins => coalesce(b.duration_minutes, 60)) < now()
+      -- (2) Y hay PRUEBA de que hubo dos personas en la sala.
+      AND EXISTS (
+        SELECT 1
+        FROM public.session_attendance sa
+        WHERE sa.booking_id = b.id
+          AND coalesce(sa.max_simultaneous, 0) >= 2
+      )
+    RETURNING b.id, b.user_id, b.coach_name
   )
   INSERT INTO public.notifications (recipient_id, type, booking_id, title, body)
   SELECT
@@ -71,17 +114,38 @@ BEGIN
 END;
 $$;
 
--- El cron job ya existe y está activo — se deja documentado acá por
--- las dudas (cron.schedule() con el mismo nombre es idempotente, así
--- que re-correr esto no duplica ni rompe nada si hiciera falta):
--- SELECT cron.schedule(
---   'complete-sessions',
---   '*/5 * * * *',
---   $$SELECT public.complete_confirmed_sessions();$$
--- );
+-- El cron job `complete-sessions` (cada 5 minutos) ya existe y está activo
+-- llamando a `complete_confirmed_sessions()`. No hay que tocarlo: cambia el
+-- cuerpo, no la firma.
+--   SELECT cron.schedule('complete-sessions', '*/5 * * * *',
+--                        $$SELECT public.complete_confirmed_sessions();$$);
 
--- Para revertir si hace falta:
--- DROP FUNCTION IF EXISTS public.complete_confirmed_sessions();
--- (el cron job seguiría agendado y volvería a fallar en silencio cada
--- 5 minutos, igual que antes de este fix — considerar
--- `SELECT cron.unschedule('complete-sessions');` también)
+-- ── VERIFICACIÓN (correr DESPUÉS, en el SQL editor) ─────────────────────────
+--
+-- 1. Que la función nueva quedó (tiene que aparecer `max_simultaneous`):
+--      select pg_get_functiondef('public.complete_confirmed_sessions()'::regprocedure)
+--             like '%max_simultaneous%' as tiene_el_guard;
+--
+-- 2. 🔴 Las que la versión vieja habría marcado y esta NO — o sea las que
+--    estaban por convertirse en completadas falsas. Si devuelve filas, cada una
+--    es una sesión terminada sin prueba de que alguien haya entrado:
+--      select b.id, b.scheduled_date, b.scheduled_time, b.coach_name,
+--             sa.max_simultaneous, sa.participants_count
+--      from bookings b
+--      left join session_attendance sa on sa.booking_id = b.id
+--      where b.status = 'confirmada'
+--        and ((b.scheduled_date::text || ' ' || b.scheduled_time)::timestamp
+--              at time zone 'America/Argentina/Buenos_Aires')
+--            + make_interval(mins => coalesce(b.duration_minutes, 60)) < now()
+--      order by b.scheduled_date desc;
+--
+-- 3. Que no quedaron reservas viejas trabadas por falta de fila de asistencia
+--    (esto es el modo de falla nuevo — ver arriba):
+--      select count(*) as sin_fila_de_asistencia
+--      from bookings b
+--      where b.status = 'confirmada'
+--        and b.scheduled_date < current_date - 2
+--        and not exists (select 1 from session_attendance sa where sa.booking_id = b.id);
+
+-- Para volver atrás: re-correr la versión anterior de este archivo
+-- (git show HEAD~1:scripts/complete-confirmed-sessions.sql).

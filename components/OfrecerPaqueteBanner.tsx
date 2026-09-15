@@ -85,8 +85,8 @@ export function OfrecerPaqueteBanner({
 
   return (
     <View style={s.banner}>
-      {/* No anuncia CUÁNDO es la sesión: eso ya lo dice la tarjeta "Próxima
-          sesión" justo debajo. El banner es solo el ofrecimiento. */}
+      {/* No anuncia CUÁNDO es la sesión: eso ya lo dice la tarjeta de la sesión,
+          fija arriba del chat. El banner es solo el ofrecimiento. */}
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={s.titulo}>¿Querés armar algo para llevar?</Text>
         <Text style={s.sub} numberOfLines={2}>Lo que registraste desde la última vez, para {coachName}.</Text>
@@ -106,7 +106,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: 'rgba(255,248,240,0.7)', borderWidth: 1, borderColor: 'rgba(58,79,42,0.14)',
     borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14,
-    marginHorizontal: 16, marginTop: 10,
+    // Sin márgenes propios: vive al final del hilo del chat, y el `scrollContent`
+    // de la sala ya pone los 16 de costado y el `gap` entre elementos.
   },
   titulo: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#3A4F2A' },
   sub: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#6B7A56', marginTop: 2 },

@@ -37,6 +37,18 @@
   #sala { position: fixed; inset: 0; border: 0; width: 100%; height: 100%; display: none; }
   body.en-sala { background: #1A1C16; }
 
+  /* El aviso de presencia (T&C §9.5). Va ENCIMA de la videollamada y arriba,
+     donde no tapa las caras ni los controles de Daily, que viven abajo.
+     `pointer-events:none` para que nunca se coma un click de la llamada: es
+     información, no un control. */
+  #aviso {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    margin: 0; padding: 12px 16px;
+    background: rgba(26,28,22,.92); color: #F7EFE4;
+    font-size: .92rem; line-height: 1.45; text-align: center;
+    pointer-events: none;
+  }
+
   [hidden] { display: none !important; }
   @media (prefers-color-scheme: dark) {
     body { background: #1A1C16; color: #E4E0D2; }
@@ -49,6 +61,7 @@
 <body>
 
 <iframe id="sala" allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"></iframe>
+<p id="aviso" hidden></p>
 
 <div class="pantalla" id="ui">
   <p class="marca">Vita</p>
@@ -113,14 +126,107 @@ function problema(titulo, detalle) {
   ver('problema');
 }
 
+// ── Presencia ───────────────────────────────────────────────────────────────
+//
+// 🔴 POR QUÉ: hasta el 13/09/2026 la sala era un `<iframe>` pelado con `src`, o
+// sea que **la página no sabía quién estaba adentro**. Quien esperaba solo veía
+// una pantalla negra y no podía distinguir "el coach no vino" de "se me colgó el
+// wifi" — y esa distinción es lo único que necesita en ese momento. Con
+// `DailyIframe.wrap()` el mismo iframe pasa a emitir `participant-joined` /
+// `participant-left`, sin webhook ni backend.
+//
+// ⚠️ REGLA DURA: esto es una MEJORA, nunca una condición para entrar. Si el
+// script de Daily no carga, se cae al `src` de siempre y la sesión funciona
+// igual sin avisos. Mismo criterio de fallar-abierto que `web/captcha.js`.
+//
+// Los plazos son los de T&C §9.5 y NO son simétricos (ver docs/no-show.md):
+// el coach tiene 10 minutos para aparecer, el cliente 20 para llegar.
+// ⚠️ Versión y archivo VERIFICADOS contra el CDN el 13/09/2026, no elegidos de
+// memoria: `package.json@0.92.2` declara `module: dist/daily-esm.js` (el nombre
+// `daily-iframe-esm.js` es el legacy), el bundle trae **un** export `as default`
+// y expone `key:"wrap"`. Las tres cosas que este código usa.
+// 📌 Pineado a una versión exacta a propósito: `@latest` cambiaría la sala en
+// vivo sin que nadie lo decida, y acá adentro pasa una sesión de acompañamiento.
+const DAILY_JS = 'https://unpkg.com/@daily-co/daily-js@0.92.2/dist/daily-esm.js';
+const MIN_AVISO       = 2;   // "todavía no llegó nadie" — que sepa que no es su conexión
+const MIN_CLIENTE_VA  = 10;  // el cliente puede irse sin perder nada
+const MIN_COACH_VA    = 20;  // el coach ya cumplió y cobra igual
+
+let esCoach = false, empiezaMs = null, otroPresente = false, avisoTimer = null;
+
+/** Minutos desde el HORARIO AGENDADO (no desde que entré). Negativo = temprano. */
+function minutosDesdeElHorario() {
+  if (!empiezaMs) return null;
+  return (Date.now() - empiezaMs) / 60000;
+}
+
+function pintarAviso(texto) {
+  const el = $('aviso');
+  if (!texto) { el.hidden = true; return; }
+  el.textContent = texto;
+  el.hidden = false;
+}
+
+/** Decide qué decir. Se llama por timer y ante cada cambio de presencia. */
+function revisarPresencia() {
+  if (otroPresente) return pintarAviso('');          // llegó: nada que decir
+  const m = minutosDesdeElHorario();
+  if (m == null || m < MIN_AVISO) return pintarAviso('');
+
+  if (esCoach) {
+    // 📌 Al coach NO se le dice nada hasta que venció SU espera: antes de los 20
+    // todavía está obligado a estar, y un cartel a los 2 minutos lo invitaría a
+    // irse justo cuando la regla le pide quedarse.
+    if (m >= MIN_COACH_VA) {
+      pintarAviso('No llegó nadie. Podés cerrar: esta sesión se te paga igual.');
+    }
+    return;
+  }
+
+  if (m >= MIN_CLIENTE_VA) {
+    // ⚠️ No se promete un monto porque la página no lo tiene — inventarlo sería
+    // peor que no decirlo. Cuando `create-meeting-room` devuelva el importe, acá
+    // va "te devolvemos $X en hasta N días" (ver docs/no-show.md).
+    pintarAviso('Tu coach no llegó. Podés irte: no se te cobra esta sesión.');
+  } else {
+    pintarAviso('Todavía no llegó nadie. No es tu conexión — te avisamos acá.');
+  }
+}
+
+function seguirPresencia(frame) {
+  const recontar = () => {
+    // El "otro" es cualquier participante que no sea uno mismo.
+    try { otroPresente = Object.keys(frame.participants() || {}).some(k => k !== 'local'); }
+    catch { otroPresente = false; }
+    revisarPresencia();
+  };
+  frame.on('joined-meeting', recontar)
+       .on('participant-joined', recontar)
+       .on('participant-left', recontar);
+  clearInterval(avisoTimer);
+  avisoTimer = setInterval(revisarPresencia, 20000);  // por si nadie entra nunca
+  revisarPresencia();
+}
+
 /** Abre la sala adentro de la página. Daily funciona en el navegador sin
  *  instalar nada — que es exactamente lo que hace falta acá. */
-function entrar(url) {
+async function entrar(url) {
   $('ui').hidden = true;
   document.body.classList.add('en-sala');
   const f = $('sala');
-  f.src = url;
   f.style.display = 'block';
+
+  try {
+    const { default: DailyIframe } = await import(DAILY_JS);
+    const frame = DailyIframe.wrap(f, { showLeaveButton: true });
+    seguirPresencia(frame);
+    await frame.join({ url });
+  } catch (e) {
+    // Falla abierto: la videollamada vale más que el aviso.
+    console.error('[sala] sin presencia, entro derecho:', e);
+    pintarAviso('');
+    f.src = url;
+  }
 }
 
 async function intentarEntrar() {
@@ -144,7 +250,16 @@ async function intentarEntrar() {
     return problema('No pudimos abrir la sesión', 'Revisá tu conexión y volvé a intentar.');
   }
 
-  if (r.ok && cuerpo?.url) return entrar(cuerpo.url);
+  if (r.ok && cuerpo?.url) {
+    // 📌 Los dos campos que `create-meeting-room` empezó a devolver el 13/09.
+    // Si vinieran vacíos —una versión vieja de la función todavía deployada—,
+    // `esCoach` queda en false y `empiezaMs` en null: los avisos no salen y la
+    // sesión entra igual. Degradar en silencio es correcto acá.
+    esCoach = cuerpo.es_coach === true;
+    const t = Date.parse(cuerpo.empieza ?? '');
+    empiezaMs = Number.isFinite(t) ? t : null;
+    return entrar(cuerpo.url);
+  }
 
   // 401 es el caso NORMAL, no un error: el token venció. Se pide el código.
   if (r.status === 401) return pedirIdentificacion();

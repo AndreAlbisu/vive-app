@@ -279,8 +279,29 @@ serve(async (req) => {
       exp,
     })
 
+    // 📌 `es_coach` y `empieza` son para la SALA WEB, que sirve a las dos puntas
+    // y hasta ahora no podía distinguirlas (13/09/2026, ver docs/no-show.md).
+    //
+    // 🔴 Sin `es_coach`, el aviso "tu coach todavía no llegó" se le mostraría al
+    // propio coach. La función ya lo sabe —lo usa para `isOwner`— y lo tiraba.
+    //
+    // 🔴 Sin `empieza`, los avisos por tiempo tendrían que anclarse al momento en
+    // que la persona entró, y `nbf` deja entrar 15 minutos antes: quien llega
+    // temprano vería "no llegó nadie" a los 2 minutos de estar esperando, no a
+    // los 2 minutos del horario. Los plazos de §9.5 se cuentan desde el horario
+    // agendado, así que el ancla tiene que ser ese instante y no el del cliente.
+    //
+    // Se manda el instante ya resuelto a UTC: acá `startMs` se calculó con el
+    // offset de Argentina (`scheduledAtMs`), y hacer esa cuenta de nuevo en el
+    // navegador la haría depender de la zona del dispositivo — el mismo error
+    // que ya se corrigió en `cancelled_late` (ver SCHEMA.md, 19/08/2026).
     return new Response(
-      JSON.stringify({ url: `${roomUrl}?t=${token}`, room_url: roomUrl }),
+      JSON.stringify({
+        url: `${roomUrl}?t=${token}`,
+        room_url: roomUrl,
+        es_coach: isCoach,
+        empieza: new Date(startMs).toISOString(),
+      }),
       { headers: { ...cors, 'Content-Type': 'application/json' } }
     )
   } catch (err) {

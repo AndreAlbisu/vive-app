@@ -9,6 +9,7 @@ import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { ScaleCard } from '@/components/ScaleCard';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { guardarCamino } from '@/lib/guiaContextual';
+import { EJE_DE_UNIVERSO, guardarEjeLocal } from '@/lib/onboardingRespuestas';
 import { anotar, cronometro } from '@/lib/analytics';
 import { AppBg } from '@/components/ui/AppBg';
 
@@ -220,8 +221,19 @@ export default function OnboardingScreen2() {
       return;
     }
 
-    // Las otras tres llevan el universo a la única pregunta que queda.
-    router.push({ pathname: '/onboarding4', params: { universo: id } });
+    // 🔴 Las otras tres van DIRECTO a Profesionales, con su eje abierto. Antes
+    // pasaban por "¿Qué aspecto querés explorar?" (`/onboarding4`), que se sacó
+    // del flujo el 12/09/2026: pedía elegir entre tres temas que la persona no
+    // puede distinguir ("Sentirme mejor" contra "Entender qué me pasa"), costaba
+    // dos toques más, y su respuesta solo servía para destacar una fila de un
+    // menú. El eje alcanza para lo mismo, y la recomendación de recursos no se
+    // rompe: ya prioriza el eje declarado sobre el tema.
+    //
+    // ⚠️ El eje se guarda ACÁ, que antes lo hacía la pantalla que se fue.
+    // Por ahora solo en el teléfono: ver `guardarEjeLocal`.
+    void guardarEjeLocal(id);
+    anotar('onboarding_fin', { destino: 'conexiones', desde: 'que_te_trae', eje: id });
+    router.replace({ pathname: '/(tabs)/conexiones', params: { eje: EJE_DE_UNIVERSO[id] } } as any);
   }
 
   return (

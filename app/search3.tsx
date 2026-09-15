@@ -476,8 +476,12 @@ export default function SearchScreen3() {
                     superficies de precio que llamaba `.toLocaleString()` a
                     ciegas — el perfil y el checkout ya lo tenían. Hoy no rompe
                     (0 de 34 filas con `price_per_session` en null, verificado
-                    el 07/09), pero si la columna resulta ser nullable esto es
-                    un crash esperando al primer coach sin precio. */}
+                    el 07/09).
+                    ✅ **Y la duda que quedaba acá está contestada (13/09/2026,
+                    A3): la columna SÍ es nullable** — `numeric`, `is_nullable =
+                    YES`, sin default, y el alta de coach no exige precio. O sea
+                    que el guard es NECESARIO y no decorativo: sacarlo deja un
+                    crash esperando al primer coach sin precio cargado. */}
                 <Text style={s.cardPrice}>
                   {p.priceFrom != null
                     ? <>Desde ${p.priceFrom.toLocaleString('es-AR')}<Text style={s.cardPriceUnit}> · por sesión</Text></>

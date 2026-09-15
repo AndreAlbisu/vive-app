@@ -446,7 +446,11 @@ export default function CoachReservasScreen() {
               <>
                 <View style={s.stitle}>
                   <Text style={s.stitleB}>Por confirmar</Text>
-                  <Text style={s.stitleSpan}>{pending.length} esperando</Text>
+                  {/* "pendiente" y no "esperando": la fila de abajo puede decir "Esperando el
+                      pago", y dos "esperando" con sujetos distintos en la misma
+                      tarjeta se leen como el mismo estado. Acá espera el COACH; ahí,
+                      la plata. */}
+                  <Text style={s.stitleSpan}>{pending.length === 1 ? '1 pendiente' : `${pending.length} pendientes`}</Text>
                 </View>
                 {pending.map(b => (
                 <View key={b.id} style={s.req}>

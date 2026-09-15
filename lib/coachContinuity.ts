@@ -95,7 +95,10 @@ export function personasQueSeCaen(
 /** "Hace 3 semanas", "Hace 2 meses". En semanas hasta el mes y medio porque es
  *  la unidad en la que un profesional piensa su agenda. */
 export function haceCuanto(dias: number): string {
-  if (dias < 14) return `Hace ${dias} días`;
+  // ⚠️ Pluralizar acá no es cosmético: `textoHistoria` ya dice "1 sesión" en
+  // singular y le concatenaba "hace 1 días", así que la misma línea quedaba
+  // bien escrita en una mitad y mal en la otra.
+  if (dias < 14) return `Hace ${dias} ${dias === 1 ? 'día' : 'días'}`;
   if (dias < 45) return `Hace ${Math.round(dias / 7)} semanas`;
   const meses = Math.round(dias / 30);
   return meses === 1 ? 'Hace un mes' : `Hace ${meses} meses`;

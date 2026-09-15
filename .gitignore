@@ -46,3 +46,11 @@ app-example
 
 # Supabase CLI local state
 supabase/.temp/
+
+# Backups de la base. El script los deja FUERA del repo (~/vita-backups) y se
+# niega a escribir adentro, pero esto es la segunda red: un dump de datos tiene
+# mails, mensajes y registros de ánimo de personas reales, y en git no hay
+# forma de sacarlo del todo una vez que entró.
+vita-backups/
+*-backup-*.sql
+datos.sql

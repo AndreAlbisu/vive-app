@@ -124,6 +124,14 @@ export function filtrarRoster<T extends FilaFiltrable>(
  * Devuelve vacío cuando no hay nada que decir —alguien que reservó y todavía no
  * tuvo su primera sesión— porque inventar texto para llenar el renglón es
  * exactamente lo que vuelve ilegible una lista.
+ *
+ * 🔴 Dice "última hace X" y no solo "hace X" (14/09/2026). Pegado a "32
+ * sesiones", un "hace 2 semanas" suelto no decía de QUÉ hacía dos semanas: se
+ * podía leer como el último mensaje, que es lo que muestra la fila de al lado.
+ * Es la última SESIÓN CUMPLIDA — `ultimaIso` se llena solo con `completada`.
+ *
+ * 📝 Sale bien escrito siempre porque `haceCuanto` devuelve siempre la forma
+ * "Hace X" (nunca "ayer" ni "hoy"), así que "última hace 1 día" también cierra.
  */
 export function textoHistoria(
   r: { sesiones: number; ultimaIso: string | null },
@@ -132,6 +140,6 @@ export function textoHistoria(
 ): string {
   const partes: string[] = [];
   if (r.sesiones > 0) partes.push(r.sesiones === 1 ? '1 sesión' : `${r.sesiones} sesiones`);
-  if (r.ultimaIso) partes.push(haceCuanto(diasEntre(r.ultimaIso, hoyIso)).toLowerCase());
+  if (r.ultimaIso) partes.push(`última ${haceCuanto(diasEntre(r.ultimaIso, hoyIso)).toLowerCase()}`);
   return partes.join(' · ');
 }

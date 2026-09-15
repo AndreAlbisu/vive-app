@@ -95,9 +95,13 @@ function arOffsetMsAt(instantMs: number): number {
  */
 export function scheduledAtMs(date: string, time: string): number {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return NaN;
-  if (!/^\d{2}:\d{2}(:\d{2})?$/.test(time)) return NaN;
+  // 🔴 `{1,2}` en la hora, no `{2}`: la disponibilidad se generaba como `7:00`
+  // y hay reservas guardadas así. Con `{2}` la sala de esas sesiones no se
+  // podía abrir (422 "Fecha de la sesión inválida", 14/09/2026). Mismo guard
+  // que `expire_pending_bookings` en SQL.
+  if (!/^\d{1,2}:\d{2}(:\d{2})?$/.test(time)) return NaN;
   const [y, mo, d] = date.split('-').map(Number);
-  const [h, mi] = time.slice(0, 5).split(':').map(Number);
+  const [h, mi] = time.split(':').map(Number);
   const asIfUtc = Date.UTC(y, mo - 1, d, h, mi, 0);
   // Dos pasadas: en un salto de DST el offset del instante estimado puede no ser
   // el del instante real. Sin DST las dos dan igual.

@@ -12,10 +12,11 @@ function parseTime(t: string): number {
 }
 
 function formatTime(totalMinutes: number): string {
-  // 540 → "9:00", 810 → "13:30"
+  // 540 → "09:00", 810 → "13:30". Siempre HH:MM: las edge functions validan
+  // la hora con ese formato y `7:00` dejaba la sala sin poder abrirse.
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
-  return `${h}:${String(m).padStart(2, '0')}`;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 function formatDate(d: Date): string {

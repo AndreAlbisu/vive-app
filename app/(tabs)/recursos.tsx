@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import { ViveFonts, TAB_BAR_CLEARANCE, ResourceFormatColors, ResourceFormatLabels } from '@/constants/theme';
 import { ScaleCard } from '@/components/ScaleCard';
@@ -509,18 +509,28 @@ export default function RecursosScreen() {
   });
 
   // ── Cargar guardados ────────────────────────────────────────────────────────
-  useEffect(() => {
+  //
+  // 🔴 `useFocusEffect` y no `useEffect([user])`: el guardado NO se hace acá
+  // —se mudó al bookmark de cada card del deck (`app/formato.tsx`)— así que con
+  // el efecto colgado del usuario el contador se cargaba una vez y se quedaba
+  // viejo para siempre: guardabas algo, volvías a esta pestaña y el número
+  // seguía igual hasta que la pantalla se remontara. La pantalla de guardados
+  // ya usaba foco; esto las pone de acuerdo.
+  useFocusEffect(useCallback(() => {
     if (!user) return;
+    let cancelado = false;
     Promise.all([
       supabase.from('saved_resources').select('resource_id').eq('user_id', user.id),
       supabase.from('resource_saves').select('resource_id').eq('user_id', user.id),
     ]).then(([old, newer]) => {
+      if (cancelado) return;
       const ids = new Set<string>();
       (old.data ?? []).forEach(r => ids.add(r.resource_id as string));
       (newer.data ?? []).forEach(r => ids.add(r.resource_id as string));
       setSavedIds(ids);
     });
-  }, [user]);
+    return () => { cancelado = true; };
+  }, [user]));
 
   // El guardado individual de recursos se mudó a la pantalla de cada formato
   // (el bookmark de cada card del deck). Acá `savedIds` solo alimenta el

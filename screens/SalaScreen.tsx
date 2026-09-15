@@ -851,15 +851,31 @@ export default function SalaScreen() {
     // desenlace para medir cuánto pasa y si la advertencia disuade.
     if (hasContactInfo(text)) {
       const role = isCurrentUserCoach ? 'coach' : 'user';
+      // 🔴 El PAR, no solo el rol (12/09/2026). Hasta hoy el evento guardaba
+      // `role` y `sent_anyway` y nada más, así que se podía saber CUÁNTAS veces
+      // pasaba pero nunca ENTRE QUIÉNES — y sin eso no se puede distinguir un
+      // cliente que se fue por afuera de uno que simplemente dejó de venir, que
+      // es la única distinción que importa para la fuga. Ver
+      // `scripts/diagnostico-fuga.sql`.
+      //
+      // ⚠️ Van los ids del PAR y del chat, no el texto del mensaje: alcanza para
+      // cruzar con las reservas y no mete contenido de una conversación privada
+      // en una tabla de métricas.
+      const par = {
+        role,
+        sala_id: salaId ?? null,
+        coach_id: isCurrentUserCoach ? user?.id ?? null : recipientId,
+        user_id:  isCurrentUserCoach ? recipientId : user?.id ?? null,
+      };
       Alert.alert(
         '¿Compartir datos de contacto?',
         'Por tu seguridad, mantené la conversación y los pagos dentro de VIVE. Si arreglás por fuera, perdés las protecciones de la app.',
         [
-          { text: 'Cancelar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { role, sent_anyway: false }) },
+          { text: 'Cancelar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: false }) },
           {
             text: 'Enviar igual',
             style: 'destructive',
-            onPress: () => { registrarEvento('mensaje_contacto_detectado', { role, sent_anyway: true }); doSendMessage(text); },
+            onPress: () => { registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: true }); doSendMessage(text); },
           },
         ],
       );
@@ -1008,20 +1024,6 @@ export default function SalaScreen() {
 
       <View style={styles.headerDivider} />
 
-      {/* Ofrecimiento del paquete (paso 2, §9). Solo al CLIENTE (por eso
-          `recipientIsCoach`: con quien habla es coach → él es el cliente) y con
-          una sesión próxima no finalizada. El banner es autocontenido: decide
-          solo si mostrarse (`debeOfrecerse` + "una vez por sesión"). */}
-      {recipientIsCoach && salaId && activeBooking?.scheduled_date && sessionState !== 'finalizada' && (
-        <OfrecerPaqueteBanner
-          salaId={salaId}
-          coachId={coach_id}
-          coachName={recipientProfile?.name ?? 'tu profesional'}
-          proximaSesion={activeBooking.scheduled_date}
-          bookingId={activeBooking.id}
-        />
-      )}
-
       {/* Session card */}
       {sessionState === 'live' ? (
         <LinearGradient colors={['#42542F', '#354526']} style={styles.sessionCardLive}>
@@ -1140,6 +1142,12 @@ export default function SalaScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.sessionCardHint}>Disponible 10 min antes de la sesión</Text>
+          {/* 📌 Acá había "Si tu coach no está en los primeros 10 minutos, no
+              pagás". Se sacó el 14/09/2026: repetida en cada sesión futura, antes
+              de que pase nada, se leía como anticipar que el coach va a faltar
+              (y el coach la veía también, hablándole de "tu coach"). La regla se
+              dice una vez al reservar (`BookingScreen_Confirm`) y en el momento
+              en `web/sala`. Ver docs/no-show.md. */}
           {/* 🔴 Faltaba. `handleCancelBooking` ya manejaba el caso confirmado
               —chequea las 24hs y escribe `cancelled_late`— pero ningún botón lo
               llamaba en este estado: la función estaba escrita y era inalcanzable.
@@ -1366,6 +1374,25 @@ export default function SalaScreen() {
                 <Text style={styles.endedBtnText}>Reservar próxima sesión</Text>
               </TouchableOpacity>
             </View>
+          )}
+
+          {/* Ofrecimiento del paquete (paso 2, §9). Solo al CLIENTE (por eso
+              `recipientIsCoach`: con quien habla es coach → él es el cliente) y con
+              una sesión próxima no finalizada. El banner es autocontenido: decide
+              solo si mostrarse (`debeOfrecerse` + "una vez por sesión").
+              📌 Va al final del hilo, no fijo arriba (14/09/2026): pegado entre el
+              header y la tarjeta de la sesión quedaba como un cartel ajeno a la
+              conversación. Acá se lee como parte del chat, mismo patrón que la
+              tarjeta de re-reserva de arriba, y lo que se arma termina mandándose
+              a este mismo hilo. */}
+          {recipientIsCoach && salaId && activeBooking?.scheduled_date && sessionState !== 'finalizada' && (
+            <OfrecerPaqueteBanner
+              salaId={salaId}
+              coachId={coach_id}
+              coachName={recipientProfile?.name ?? 'tu profesional'}
+              proximaSesion={activeBooking.scheduled_date}
+              bookingId={activeBooking.id}
+            />
           )}
         </ScrollView>
 
@@ -1746,10 +1773,20 @@ const styles = StyleSheet.create({
   avatarSmallText: { fontFamily: ViveFonts.bold, fontSize: 9, color: '#F7EFE4', letterSpacing: 0.3 },
   avatarSmallImage: { width: 28, height: 28, borderRadius: 14, flexShrink: 0, marginBottom: 2 },
   bubble: { maxWidth: '74%', paddingVertical: 10, paddingHorizontal: 14, gap: 4 },
+  // 🔴 `primaryInk` y no `primary` (14/09/2026). Con `primary` (#C1694F) de
+  // fondo, el texto (#565E32) daba **1.78:1** y la hora (#87835C) **1.01:1** —
+  // o sea que la hora era literalmente del mismo tono que el fondo. AA pide 4.5.
+  //
+  // 📌 No es un color nuevo: es el par que este proyecto ya define y documenta
+  // en `theme.ts` — "la terracota PARA SUPERFICIES QUE LLEVAN TEXTO ENCIMA",
+  // con `onPrimaryInk` arriba, que da **4.59:1**. La auditoría del 01/09 corrigió
+  // 25 superficies con este mismo defecto y **el chat quedó afuera**.
+  //
+  // ⚠️ La sombra también: era `shadowColor: primary`, el color viejo del fondo.
   bubbleUser: {
-    backgroundColor: ViveColors.primary, borderRadius: 18, borderBottomRightRadius: 4,
+    backgroundColor: ViveColors.primaryInk, borderRadius: 18, borderBottomRightRadius: 4,
     ...Platform.select({
-      ios: { shadowColor: ViveColors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.22, shadowRadius: 6 },
+      ios: { shadowColor: ViveColors.primaryInk, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.22, shadowRadius: 6 },
       android: { elevation: 3 },
     }),
   },
@@ -1761,10 +1798,18 @@ const styles = StyleSheet.create({
     }),
   },
   bubbleText: { fontFamily: ViveFonts.regular, fontSize: 15, lineHeight: 22 },
-  bubbleTextUser: { color: '#565E32' },
+  bubbleTextUser: { color: ViveColors.onPrimaryInk },
   bubbleTextCoach: { color: '#565E32' },
   bubbleTime: { fontFamily: ViveFonts.regular, fontSize: 10, alignSelf: 'flex-end' },
-  bubbleTimeUser: { color: '#87835C' },
+  // 🔴 La hora va al 100%, sin bajarle la opacidad, y lo medí porque la primera
+  // versión de este arreglo la puso al 78% "para que fuera secundaria": eso da
+  // **3.46:1** y NO cumple AA. Ninguna opacidad intermedia llega — al 92% da
+  // 4.16. El único valor que cumple es el color entero (4.59:1).
+  //
+  // 📌 La jerarquía la dan el tamaño (10 contra 15) y la posición, que es lo que
+  // corresponde: bajar opacidad para "hacer secundario" es justo lo que había
+  // dejado esta hora invisible (1.01:1 sobre el fondo viejo).
+  bubbleTimeUser: { color: ViveColors.onPrimaryInk },
   bubbleTimeCoach: { color: 'rgba(135,131,92,0.80)' },
 
   // Nota compartida de la sesión (lado usuario)

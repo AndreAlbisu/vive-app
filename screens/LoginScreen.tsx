@@ -454,13 +454,27 @@ const s = StyleSheet.create({
   },
 
   // "Usar email" va contorneado y sin relleno: es el camino secundario.
+  // 🔴 IGUALADO a Google y Apple (14/09/2026), al revés que en `RegisterScreen`
+  // y `CoachLoginScreen`, que lo dejan contorneado. La diferencia no es
+  // estética: **esta pantalla no crea cuentas, solo deja entrar**, así que acá
+  // no se decide con qué se registra nadie — ya está decidido. Quien se anotó
+  // con Google va a tocar Google igual, por más que el botón de mail brille.
+  //
+  // 🔴 Y apagarlo tiene un costo concreto: **el cliente que reservó por el link
+  // de un coach no puede usar Google ni Apple.** Su cuenta nació de un código en
+  // la web, no tiene contraseña y no está vinculada a ningún proveedor: esta es
+  // su ÚNICA puerta. Viéndola apagada no se pasa a lo social —no puede—, se
+  // queda afuera. Y es el canal de lanzamiento.
+  //
+  // 📌 La jerarquía igual existe: `DivisorConPunto` separa los caminos rápidos
+  // de este, y lo social va primero y con ícono de marca.
   emailBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: BOTON_BG,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: 'rgba(38,64,47,0.32)',
+    borderColor: BOTON_BORDE,
     paddingVertical: 17,
     paddingHorizontal: 18,
   },
