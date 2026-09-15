@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppBg } from '@/components/ui/AppBg';
-import { ViveFonts } from '@/constants/theme';
+import { ViveFonts, ViveColors } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
 import { ToolHeader } from '@/components/ui/ToolHeader';
@@ -73,6 +73,13 @@ function formatTime(s: number) {
   const m = Math.floor(s / 60);
   const sec = s % 60;
   return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+// Misma pastilla de fecha que Diario y Gratitud (arriba a la derecha).
+function formatTodayShort() {
+  return new Date()
+    .toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+    .replace('.', '');
 }
 
 export default function RespiracionScreen() {
@@ -182,8 +189,9 @@ export default function RespiracionScreen() {
           onBack={() => { stopTimer(); router.back(); }}
           right={
             <>
+              <Text style={s.datePillText}>{formatTodayShort()}</Text>
               <ReminderBell kind="tool" resourceRef="respiracion" title="Respiración" />
-              <PinButton resourceId="respiracion" />
+              <PinButton resourceId="respiracion" inline />
             </>
           }
         />
@@ -271,6 +279,20 @@ export default function RespiracionScreen() {
 const s = StyleSheet.create({
   safe:    { flex: 1 },
   headerDivider: { height: 1, backgroundColor: 'rgba(58,79,42,0.08)' },
+
+  // Pastilla de fecha del header — idéntica a Diario/Gratitud.
+  datePillText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.text,
+    backgroundColor: 'rgba(255,255,255,0.70)',
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.14)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    overflow: 'hidden',
+  },
 
   content:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 16 },
   subtitle:    { fontFamily: ViveFonts.semibold, fontSize: 22, color: FOREST, textAlign: 'center' },
