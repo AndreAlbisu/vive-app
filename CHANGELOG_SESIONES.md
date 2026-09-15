@@ -4,6 +4,30 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-15 — Andre (sesión 234 · sonidos ambientales: diagnóstico a medias, sin tocar código)
+
+**Tocado:** nada de código. Solo este registro. La sesión se cerró antes de decidir el arreglo.
+
+**Planteo de Andre:** *"lo trucho que se escuchan los sonidos ambientales, además de que la gente no sabe para qué sirven"*. Son **dos problemas distintos** y conviene no mezclarlos: uno es de archivo, el otro es de producto.
+
+**Lo que SÍ quedó medido (`afinfo` sobre los 4 archivos de `assets/sounds/`):**
+
+- 🔴 **Los cuatro son mono, 22.050 Hz, AAC a ~31 kbps, 90 segundos, ~360 KB.** Eso es calidad de teléfono de los 90: 22 kHz recorta todo arriba de ~11 kHz, que es justo donde vive el brillo de la lluvia y la espuma de las olas; mono mata la sensación de estar adentro del ambiente; y 31 kbps sobre ruido de banda ancha —lo más difícil de comprimir que existe— mete artefactos de "chapoteo". **Esa es la causa física de que suenen truchos, y ninguna de las tres se arregla desde el código de la app.**
+- ⚠️ **Se reproducen en loop de 90s** (`expo-audio`, `useAudioPlayer`, uno por sonido) con sesiones de 5/15/30 min: o sea que el mismo minuto y medio se repite hasta 20 veces. **Sin verificar**: si el recorte no tiene cruce, hay un click audible en cada vuelta — sería el segundo motivo de "trucho" y ese sí es gratis de arreglar.
+- 📌 Origen declarado en el código: grabaciones CC0 de freesound.org recortadas a 90s. **Habría que volver a la fuente y re-exportar** (48 kHz, estéreo, ~128 kbps, loop con crossfade) antes de tocar una línea de la pantalla. Costo: ~1,5 MB por sonido en vez de 360 KB.
+
+**Lo segundo — "no se sabe para qué sirven" — tiene evidencia concreta y es de copy, no de audio:**
+
+- 🐛 **El nombre no coincide consigo mismo**: el id `blanco` se muestra como **"Ruido marrón"** en la pantalla (`RuidoScreen.tsx:29`), mientras `constants/tools.ts` y `constants/vitaTools.ts` lo llaman **"Ruido blanco"**, y la campanita de recordatorio también. Cuatro nombres para lo mismo, y encima marrón y blanco **no son el mismo ruido**.
+- 🐛 **La duración se contradice**: la tarjeta en Recursos dice **"Libre"** (`tools.ts:38`) pero la pantalla obliga a elegir **5/15/30 min**.
+- 🔴 **En ningún lado dice para qué sirve.** El copy es *"Elegí un sonido y por cuánto tiempo"* — instrucciones de uso, no motivo. Nada dice cuándo conviene (dormir, concentrarse, tapar ruido de afuera, bajar la ansiedad antes de una sesión), que es exactamente lo que Andre reporta que falta.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Decidir el orden**: el copy es barato y se puede hacer ya; el audio exige conseguir y re-exportar los archivos, que es trabajo fuera del repo. Mi recomendación es empezar por el audio —si suena trucho, explicar mejor para qué sirve no lo salva—, pero la decisión es de Andre.
+- ⚠️ **Verificar el click del loop** antes de asumir que el problema es solo el bitrate.
+- ⏸️ Unificar las dos tablas de guardados (de la 233, sigue abierta).
+
+---
 ## 2026-09-14 — Andre (sesión 233 · el contador de guardados contaba lo que la lista no mostraba)
 
 **Tocado:** `screens/RecursosGuardadosScreen.tsx`, `app/(tabs)/recursos.tsx`, `SCHEMA.md`. **599 tests**, `tsc` limpio, lint sin errores. ⚠️ Sin verificar en dispositivo.
