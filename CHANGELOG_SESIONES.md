@@ -37,6 +37,9 @@
 
 **Pendiente para la próxima sesión:**
 - Mirar en dispositivo la fila nueva en la confirmación: son dos oraciones y la pantalla ya tiene varias filas de aviso; si pesa, evaluar juntarla con la de cancelación.
+- Probar en dispositivo el cartel del paquete al final del chat (commit `6ab673e9`).
+- 🟡 **Replanteo del paquete para la sesión, sin decidir** (detalle en `docs/paquete-para-la-sesion.md` §9): a Andre le parece poco útil mandar check-ins (un ánimo en un momento del día). Medido: 53 check-ins, 1 con nota. Propuesta: "anotar para la sesión" en el momento en que pasa, y que el paquete sean esas anotaciones. No se tocó código.
+- 📝 Ya comentado en la 230, sigue abierto: `send_session_reminders()` hace `to_char` sobre `scheduled_time` text — probablemente el recordatorio del día anterior nunca sale.
 
 ---
 ## 2026-09-14 — Andre (sesión 232 · la costura debajo del carrusel, medida en la captura)
