@@ -1024,20 +1024,6 @@ export default function SalaScreen() {
 
       <View style={styles.headerDivider} />
 
-      {/* Ofrecimiento del paquete (paso 2, §9). Solo al CLIENTE (por eso
-          `recipientIsCoach`: con quien habla es coach → él es el cliente) y con
-          una sesión próxima no finalizada. El banner es autocontenido: decide
-          solo si mostrarse (`debeOfrecerse` + "una vez por sesión"). */}
-      {recipientIsCoach && salaId && activeBooking?.scheduled_date && sessionState !== 'finalizada' && (
-        <OfrecerPaqueteBanner
-          salaId={salaId}
-          coachId={coach_id}
-          coachName={recipientProfile?.name ?? 'tu profesional'}
-          proximaSesion={activeBooking.scheduled_date}
-          bookingId={activeBooking.id}
-        />
-      )}
-
       {/* Session card */}
       {sessionState === 'live' ? (
         <LinearGradient colors={['#42542F', '#354526']} style={styles.sessionCardLive}>
@@ -1388,6 +1374,25 @@ export default function SalaScreen() {
                 <Text style={styles.endedBtnText}>Reservar próxima sesión</Text>
               </TouchableOpacity>
             </View>
+          )}
+
+          {/* Ofrecimiento del paquete (paso 2, §9). Solo al CLIENTE (por eso
+              `recipientIsCoach`: con quien habla es coach → él es el cliente) y con
+              una sesión próxima no finalizada. El banner es autocontenido: decide
+              solo si mostrarse (`debeOfrecerse` + "una vez por sesión").
+              📌 Va al final del hilo, no fijo arriba (14/09/2026): pegado entre el
+              header y la tarjeta de la sesión quedaba como un cartel ajeno a la
+              conversación. Acá se lee como parte del chat, mismo patrón que la
+              tarjeta de re-reserva de arriba, y lo que se arma termina mandándose
+              a este mismo hilo. */}
+          {recipientIsCoach && salaId && activeBooking?.scheduled_date && sessionState !== 'finalizada' && (
+            <OfrecerPaqueteBanner
+              salaId={salaId}
+              coachId={coach_id}
+              coachName={recipientProfile?.name ?? 'tu profesional'}
+              proximaSesion={activeBooking.scheduled_date}
+              bookingId={activeBooking.id}
+            />
           )}
         </ScrollView>
 

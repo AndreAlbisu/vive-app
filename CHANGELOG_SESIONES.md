@@ -14,6 +14,7 @@
 - 📌 **Se sacó para los dos, no solo para el coach.** Del lado del cliente, repetida en cada sesión futura antes de que pasara nada, se leía como anticipar que el coach iba a faltar, y decía solo la mitad que le conviene al cliente (faltaba "si llegás más de 20 minutos tarde, se cobra igual").
 - 🟢 **La regla se dice una vez, al reservar**: fila nueva en `BookingScreen_Confirm` debajo de la política de cancelación, con las dos frases. Ahí es plata y se lee como parte de lo que se acepta al pagar. En el momento la siguen diciendo los avisos de 2/10 min de `web/sala`.
 - ⚠️ **Hueco aceptado y documentado** en `docs/no-show.md`: "Unirse" en la app abre Daily directo, sin `web/sala`, así que desde la app no hay aviso en el momento.
+- 🎨 **`OfrecerPaqueteBanner` ("¿Querés armar algo para llevar?") pasó al final del hilo del chat** (`SalaScreen`, dentro del `ScrollView`, después de la tarjeta de re-reserva). Fijo entre el header y la tarjeta de la sesión quedaba como un cartel ajeno a la conversación; ahí se lee como parte del chat, que es además adonde termina llegando lo que se arma. El componente perdió `marginHorizontal`/`marginTop` porque `scrollContent` ya los pone. Probado por Andre en dispositivo lo de la regla de ausencias; esto último **sin probar**.
 
 **Pendiente para la próxima sesión:**
 - Mirar en dispositivo la fila nueva en la confirmación: son dos oraciones y la pantalla ya tiene varias filas de aviso; si pesa, evaluar juntarla con la de cancelación.
