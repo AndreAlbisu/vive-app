@@ -1,3 +1,7 @@
+-- ⚠️ DEFINICIÓN DESACTUALIZADA — este script es el ORIGEN, no el estado actual.
+-- `scripts/fix-stats-reembolsos.sql` la reemplaza: además de las canceladas se
+-- excluye la plata que volvió. Lo de abajo se deja tal cual quedó el 11/07/2026.
+--
 -- coach_trending_stats
 -- Agregado por coach para el slot "En tendencia" del deck de Conexiones.
 -- Expone SOLO un número agregado por coach; nunca filas de bookings individuales.

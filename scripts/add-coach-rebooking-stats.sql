@@ -1,3 +1,8 @@
+-- ⚠️ DEFINICIÓN DESACTUALIZADA — este script es el ORIGEN, no el estado actual.
+-- `scripts/fix-stats-reembolsos.sql` la reemplaza: una sesión reembolsada por la
+-- garantía §9.3 o contracargada ya no cuenta como completada, y se agregó
+-- `reembolsadas_count`. Lo de abajo se deja tal cual quedó el 10/07/2026.
+--
 -- coach_rebooking_stats
 -- Agregado por coach para el ranking del deck de Conexiones (criterio v1, sección 4 del spec).
 -- Expone SOLO números agregados por coach; nunca filas de bookings individuales.

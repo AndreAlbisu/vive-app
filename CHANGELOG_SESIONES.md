@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-15 — Andre (sesión 239 · la garantía le estaba subiendo el ranking al coach)
+
+**Tocado:** `scripts/fix-stats-reembolsos.sql` (nuevo), `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `SCHEMA.md`, cabeceras de `scripts/add-coach-rebooking-stats.sql` y `add-coach-trending-stats.sql`.
+
+**Resumen:**
+- 🔴 **Las dos vistas que rankean el deck de Conexiones contaban la plata devuelta como señal positiva.** `coach_rebooking_stats` y `coach_trending_stats` colgaban solo de `bookings.status`, y `status` no sabe nada de la plata: `mp-process-refunds` nunca lo toca, así que una sesión reembolsada por la garantía §9.3 o contracargada seguía siendo `'completada'` y seguía sirviendo para cruzar la barra de "Recomendado por Vita". El incentivo perverso: cuanto peor atiende un coach, más sesiones se le reembolsan, y cada una lo empuja igual hacia arriba. Arrancó como una pregunta de Andre sobre si convenía mirar las reservas no reembolsadas.
+- **El criterio es por la negativa y no por la positiva, y ese fue el hallazgo del medio.** La primera versión exigía `payment_status = 'aprobado'`, hasta que apareció que una reserva con coach sin Mercado Pago se confirma **sin cobro** (`BookingScreen_Confirm`, `confirmedNow`) y queda en `'no_iniciado'`: pedir pago aprobado le habría borrado sesiones reales a esos coaches y a todo lo anterior a agosto 2026. Queda entonces excluir `('reembolsado','contracargo','reembolso_pendiente')` en las dos vistas. Las cancelaciones tempranas del usuario —el grueso de los reembolsos, y las que no dicen nada del coach— ya quedaban afuera por `status = 'cancelada'`.
+- **El reagendamiento se dejó intacto** a propósito: volver a reservar es intención, y lo que pase después con esa segunda reserva no la borra. Filtrarlo también haría que una garantía reclamada castigue dos veces.
+- **Decisión de producto (Andre): el número que le baja al coach se le explica.** Por eso la vista suma `reembolsadas_count` —la diferencia exacta entre la definición vieja y la nueva—, que el deck no lee y que existe solo para el texto del panel de visibilidad (`notaReembolsos`). Un número que baja solo, sin que nadie diga por qué, se lee como panel roto.
+- **DB:** `scripts/fix-stats-reembolsos.sql` ⚠️ **PENDIENTE DE CORRER**. Son dos `create or replace view`, sin backfill ni migración de datos. SCHEMA.md ya quedó actualizado con las dos definiciones nuevas.
+
+**Pendiente para la próxima sesión:**
+- **Correr el script** y, antes, la consulta de impacto que trae comentada arriba (`payment_status in (...)` agrupado por `status`): si no hay ninguna fila con `status <> 'cancelada'`, el cambio es puramente preventivo y no le mueve el número a nadie hoy. Después, los 3 chequeos del pie — sobre todo el de `security_invoker=false`, que es lo único que si sale mal sale mal en serio: estas vistas leen `bookings` de toda la plataforma.
+- **Sin tests nuevos.** `notaReembolsos` es un texto y no un criterio, y llegar a él desde un test pide armar una puerta entera. Los 45 de `deckRanking` + `coachVisibilityHome` siguen en verde.
+- 📌 **Inexactitud vieja que quedó a la vista y no se tocó**: el panel dice "con N sesiones completadas" pero `completadas_count` cuenta **personas distintas**, no sesiones. Un coach que atendió 5 veces a la misma persona ve "5 sesiones completadas" y tiene 1. Es copy, no cálculo — decidir si se corrige el texto o el número.
+- **Tendencia sigue sin cubrir un caso**: una reserva `pendiente` que nadie pagó suma hasta que la expiración la cancela (60 min a 24 h). Distinguir "no pagó todavía" de "no había nada que pagar" es mirar `preference_id`, y es otra decisión.
+
+---
 ## 2026-09-15 — Andre (sesión 238 · los dos SQL "pendientes" hacía semanas que estaban corridos)
 
 **Tocado:** `scripts/add-ai-usage.sql`, `scripts/fix-payout-rails-trigger.sql` (solo cabeceras), `SCHEMA.md`. Sin cambios de código ni de schema. Commits `425a5702` y el de cierre.
