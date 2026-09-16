@@ -107,6 +107,25 @@
 - 🔴 **Dos sesiones escribiendo el mismo repo a la vez se pisan.** Pasó hoy con `git add -A`. Si van a trabajar en paralelo, conviene que cada una commitee solo sus archivos por nombre.
 
 ---
+## 2026-09-16 — Andre (sesión 241 · la escalera de sanciones, que la app prometía y no existía)
+
+**Tocado:** `scripts/add-coach-sanctions.sql` (nuevo), `supabase/functions/admin-actions/index.ts`, `lib/admin.ts`, `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `lib/coachesCache.ts`, `app/search3.tsx`, `screens/AdminScreen.tsx`, `screens/CoachHomeScreen.tsx`, `__tests__/coachSanciones.test.ts` (nuevo), `SCHEMA.md`.
+
+**Resumen:**
+- **La pregunta de Andre fue si el sistema anti-fuga estaba aplicado y era transparente. La respuesta era: transparente sí, aplicado no.** Lo dicho está bien dicho —T&C §10.2 y `CoachComoFuncionaScreen` le explican al coach qué cuenta como fuga, que puede terminar en *"advertencia, suspensión o baja"*, y también el límite (la gente que ya era suya es suya, y por eso su link no paga comisión la primera vez)—. Pero abajo **no había nada**: el único acto posible era sacarle `verified` a mano, sin motivo guardado, sin registro y sin escalón intermedio. La app prometía tres escalones y tenía uno, el más grande de los tres.
+- **Decisión de Andre: escalera MANUAL con evidencia, no detección automática.** Es la correcta y el motivo ya estaba escrito en `scripts/diagnostico-fuga.sql`: hay UN coach con muestra suficiente, y `rebooking_rate` baja por cuatro causas distintas (el que se lleva gente, el que atiende consultas de una vez, el que atiende gente que se cura, y el que es malo) — sancionar por métrica le pega a tres inocentes por cada culpable. La tabla no reemplaza al criterio humano: le da un lugar donde quedar escrito.
+- **Segunda decisión de Andre: una suspensión respeta las sesiones ya agendadas.** El trigger es solo BEFORE INSERT. Cancelarlas dejaría sin sesión a clientes que no hicieron nada y cada reembolso saldría de la caja de VIVE.
+- 🔴 **La transparencia es la mitad del diseño, no un adorno.** `motivo` es NOT NULL con largo mínimo y **se le muestra al coach tal cual se escribe**: en un banner arriba de su Inicio, en el panel de visibilidad (ítem bloqueante que va primero, por encima de todo lo demás) y en una notificación nueva. Una sanción secreta deja a la persona viendo que dejó de entrar gente sin saber por qué ni qué corregir. Eso obligó a romper a conciencia la "regla no punitiva" de las notificaciones (`add-notifications-propuesta-types.sql`): aquella valía para un descarte que no es accionable; una sanción trae motivo y escalón, y el coach tiene que enterarse por nosotros.
+- 🔴 **`'infinity'` (la baja) no es una fecha parseable en JS.** `new Date('infinity')` es Invalid Date, así que un lector ingenuo leería una baja como "sin sanción" — el error más caro posible de todo esto. Está chequeado aparte en los tres lectores y tiene test.
+- **La defensa real es el trigger, no el filtro del catálogo.** `coachesCache` y `search3` filtran para que el suspendido no se vea, pero eso es UX: un link guardado esquiva cualquier filtro del cliente. Lo que impide de verdad la reserva es `trg_block_bookings_coach_suspendido`, server-side, venga de donde venga el insert.
+- **Panel:** pestaña nueva "Sanciones" en Administración — aplicar (profesional, escalón, días, motivo, evidencia), ver el historial completo y levantar. Levantar no borra la fila: escribe por qué se levantó, para que el historial pueda contar también nuestros errores. 📌 Se usó input en la tarjeta y no `Alert.prompt`, que existe solo en iOS y en Android habría sido un botón que no hace nada.
+
+**Pendiente para la próxima sesión:**
+- **Correr `scripts/add-coach-sanctions.sql`** y después la prueba 4 del pie, que es la que vale: sancionar a un coach de prueba, ver que `coaches.suspendido_hasta` se llena solo, que una reserva contra él rebota con `coach_suspendido`, y borrar la fila para que vuelva a null. La función `admin-actions` hay que **deployarla** (tiene tres acciones nuevas).
+- **Nada de esto detecta la fuga todavía**, y no debe hasta que haya muestra. La firma sigue siendo la de `diagnostico-fuga.sql`: cliente que VITA presentó + dejó de reservar + hubo intercambio de contacto. La tercera mitad ya se registra desde el 12/09; falta volumen, no código.
+- 📌 **Sigue sin haber un aviso al USUARIO** cuando su profesional es suspendido o dado de baja. Hoy se entera porque deja de encontrarlo. Sus sesiones agendadas siguen en pie, así que no es urgente, pero es la contracara que falta.
+
+---
 ## 2026-09-16 — Andre (sesión 240 · qué necesita saber un profesional antes de atender)
 
 **Tocado:** `scripts/add-booking-tema-origen.sql` (nuevo), `lib/time.ts`, `screens/CoachReservasScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/BookingScreen_Calendar.tsx`, `screens/BookingScreen_Time.tsx`, `screens/ProfesionalScreen.tsx`, `app/(tabs)/conexiones.tsx`, `app/search3.tsx`, `SCHEMA.md`.
