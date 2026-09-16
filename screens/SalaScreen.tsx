@@ -542,9 +542,81 @@ export default function SalaScreen() {
       asCoach: !recipientIsCoach,
     });
     setNotes(rows);
-  }, [user, recipientId, recipientIsCoach]);
+    // `refreshKey` (no se usa adentro): recargar al volver a la pantalla, igual
+    // que los mensajes. Sin él las notas quedaban como estaban al montar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, recipientId, recipientIsCoach, refreshKey]);
 
   useEffect(() => { void fetchNotes(); }, [fetchNotes]);
+
+  // 🔴 LAS NOTAS NO SE COMPORTABAN COMO UN MENSAJE, y en dos lugares distintos.
+  //
+  // Uno: la suscripción de tiempo real de más arriba escucha SOLO `messages`, así
+  // que una nota compartida mientras el chat está abierto no aparecía.
+  // Dos: al volver a la pantalla, `refreshKey` recarga los mensajes pero
+  // `fetchNotes` no dependía de él — o sea que las notas se traían una sola vez,
+  // al montar, y quedaban congeladas hasta salir de la Sala del todo. El único
+  // que veía la suya al instante era el coach que la escribía, por `onSaved`.
+  //
+  // Canal aparte y no un `.on()` más en el de mensajes: aquel depende de
+  // `salaId`, este del PAR (usuario, coach) —`session_notes` no conoce la sala—,
+  // y mezclarlos obligaría a resuscribir el chat entero cada vez que resuelve el
+  // destinatario. El sufijo random del topic es por lo mismo que allá.
+  //
+  // ⚠️ Necesita `session_notes` publicada en `supabase_realtime`:
+  // `scripts/publicar-notas-en-realtime.sql`. Sin eso esto escucha un silencio,
+  // exactamente como pasó el 28/08 con las otras cuatro tablas.
+  useEffect(() => {
+    if (!user || !recipientId) return;
+
+    // El filtro del servidor solo puede mirar UNA columna; la otra punta del par
+    // se chequea acá abajo. El RLS ya garantiza que al cliente solo le lleguen
+    // las compartidas: la policy del usuario es `user_id = auth.uid() AND shared`.
+    const soyCliente = recipientIsCoach;
+    const filtro = soyCliente ? `user_id=eq.${user.id}` : `coach_id=eq.${user.id}`;
+
+    const canal = supabase
+      .channel(`notas:${user.id}-${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'session_notes', filter: filtro },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as Record<string, unknown> | null;
+          if (!row?.id) return;
+          if ((soyCliente ? row.coach_id : row.user_id) !== recipientId) return;
+
+          const id = row.id as string;
+
+          // Se escucha '*' y no solo INSERT porque la nota es editable: la tabla
+          // tiene `unique (booking_id, shared)` y el sheet hace upsert, así que
+          // corregir una nota ya compartida llega como UPDATE.
+          const desapareció = payload.eventType === 'DELETE'
+            || (soyCliente && row.shared === false);   // el coach dejó de compartirla
+          if (desapareció) {
+            setNotes(prev => prev.filter(n => n.id !== id));
+            return;
+          }
+
+          const nota: SessionNote = {
+            id,
+            bookingId: row.booking_id as string,
+            content:   row.content as string,
+            shared:    row.shared as boolean,
+            createdAt: row.created_at as string,
+          };
+          setNotes(prev => {
+            const i = prev.findIndex(n => n.id === id);
+            if (i === -1) return [...prev, nota];
+            const copia = [...prev];
+            copia[i] = nota;
+            return copia;
+          });
+        },
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(canal); };
+  }, [user, recipientId, recipientIsCoach]);
 
   // Mensajes y notas viven en tablas distintas y se muestran en un solo hilo.
   const timeline = useMemo<TimelineItem[]>(() => {

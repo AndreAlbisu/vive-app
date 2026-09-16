@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Calendar from 'expo-calendar';
 import * as WebBrowser from 'expo-web-browser';
 import { getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
+import { getLatestSharedNotesByCoach } from '@/lib/sessionNotes';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { ordenarSalas } from '@/lib/salaOrder';
 import { supabase } from '@/lib/supabase';
@@ -297,10 +298,13 @@ export default function SessionsScreen() {
     // Ninguna de estas tres depende del resultado de las otras — antes iban
     // en serie (profiles → coaches → último mensaje), cada round-trip suma
     // de lleno en una red móvil real. En paralelo.
-    const [{ data: profiles }, { data: coachRows }, { data: lastMsgs }] = await Promise.all([
+    const [{ data: profiles }, { data: coachRows }, { data: lastMsgs }, notasPorCoach] = await Promise.all([
       supabase.from('profiles').select('id, name, avatar_url').in('id', uniqueOtherIds),
       supabase.from('coaches').select('profile_id, specialty').in('profile_id', uniqueCoachIds),
       supabase.rpc('get_last_messages_per_sala', { sala_ids: salasData.map(s => s.id) }),
+      // El preview salía de `get_last_messages_per_sala`, que lee solo
+      // `messages`: una nota compartida no cambiaba nada en esta lista.
+      getLatestSharedNotesByCoach(user.id),
     ]);
 
     const profileMap: Record<string, { name: string; avatarUrl: string | null }> = {};
@@ -320,6 +324,12 @@ export default function SessionsScreen() {
 
       const hasUnread = unreadSalaIds.has(sala.id as string);
 
+      // Lo último que pasó en el chat puede ser una nota y no un mensaje. Solo
+      // aplica del lado del cliente: en una sala donde yo soy el coach, la nota
+      // la escribí yo y no es novedad para mí.
+      const nota = isUserSide ? notasPorCoach[sala.coach_id as string] : undefined;
+      const ultimoEsNota = !!nota && (!lastMsg || nota.createdAt > lastMsg.created_at);
+
       return {
         id: sala.id,
         coach_id: sala.coach_id,
@@ -327,8 +337,12 @@ export default function SessionsScreen() {
         otherInitials: getInitials(otherName),
         otherAvatarUrl: profileMap[otherId]?.avatarUrl ?? null,
         otherSpecialty: specialtyMap[sala.coach_id],
-        lastMessage: lastMsg?.content ? decryptMessage(lastMsg.content) : '',
-        lastMessageDate: lastMsg ? formatMessageDate(lastMsg.created_at) : '',
+        lastMessage: ultimoEsNota
+          ? `Nota: ${nota!.content}`
+          : (lastMsg?.content ? decryptMessage(lastMsg.content) : ''),
+        lastMessageDate: ultimoEsNota
+          ? formatMessageDate(nota!.createdAt)
+          : (lastMsg ? formatMessageDate(lastMsg.created_at) : ''),
         createdAt: (sala.created_at as string) ?? null,
         hasUnread,
       };

@@ -61,6 +61,43 @@ export async function getRelationshipNotes(
   }));
 }
 
+/**
+ * Usuario: la ÚLTIMA nota compartida de cada uno de sus coaches.
+ *
+ * 🔴 Existe porque una nota compartida no existía fuera de la Sala. El puntito
+ * de no leídos (`hooks/useUnreadSalas`) y el preview de cada chat en Sesiones se
+ * calculaban **solo contra `messages`**, así que el coach compartía una nota y
+ * del otro lado no pasaba nada: ni punto, ni cambio en la lista, ni orden
+ * distinto. La única forma de enterarse era entrar a la Sala por otro motivo y
+ * encontrarla intercalada entre mensajes viejos.
+ *
+ * 📌 Va por `coach_id` y no por sala: `session_notes` no conoce la sala —cuelga
+ * de (booking, coach, usuario)—. Quien llama mapea coach → sala, que es dato que
+ * ya tiene.
+ *
+ * ⚠️ Solo tiene sentido del lado del USUARIO. Las notas las escribe siempre el
+ * coach, así que para él nunca son "algo que llegó": serían su propio texto
+ * marcándole no leído.
+ */
+export async function getLatestSharedNotesByCoach(
+  userId: string,
+): Promise<Record<string, { content: string; createdAt: string }>> {
+  const { data } = await supabase
+    .from('session_notes')
+    .select('coach_id, content, created_at')
+    .eq('user_id', userId)
+    .eq('shared', true)
+    .order('created_at', { ascending: false });
+
+  const ultima: Record<string, { content: string; createdAt: string }> = {};
+  for (const r of data ?? []) {
+    const cid = r.coach_id as string;
+    // Vienen ordenadas desc: la primera de cada coach es la última.
+    if (!ultima[cid]) ultima[cid] = { content: r.content as string, createdAt: r.created_at as string };
+  }
+  return ultima;
+}
+
 /** Usuario: lee la nota compartida de una sesión (null si no hay). */
 export async function getSharedNote(bookingId: string): Promise<string | null> {
   const { data } = await supabase

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '@/lib/supabase';
+import { getLatestSharedNotesByCoach } from '@/lib/sessionNotes';
 
 interface Options {
   userId: string | null;
@@ -17,7 +18,7 @@ export function useUnreadSalas({ userId, role }: Options) {
 
     const { data: salas } = await supabase
       .from('salas')
-      .select('id, user_last_read_at, coach_last_read_at')
+      .select('id, coach_id, user_last_read_at, coach_last_read_at')
       .eq(roleCol, userId);
 
     if (!salas?.length) { setUnreadSalaIds(new Set()); return; }
@@ -37,6 +38,24 @@ export function useUnreadSalas({ userId, role }: Options) {
       const sid = m.sala_id as string;
       if (!latestAt[sid]) latestAt[sid] = m.created_at as string;
     });
+
+    // 🔴 Una nota compartida también es algo que llegó y no se leyó. Esto se
+    // calculaba solo contra `messages`, así que el coach compartía una nota y
+    // del otro lado no se encendía nada: había que entrar a la Sala por otro
+    // motivo para encontrarla. Se compara contra el MISMO `user_last_read_at`
+    // que los mensajes, así que abrir el chat apaga las dos cosas a la vez.
+    //
+    // Solo del lado del usuario: las notas las escribe el coach, y marcarle no
+    // leído su propio texto no tendría sentido.
+    if (role === 'user') {
+      const notas = await getLatestSharedNotesByCoach(userId);
+      salas.forEach(sala => {
+        const nota = notas[sala.coach_id as string];
+        if (!nota) return;
+        const sid = sala.id as string;
+        if (!latestAt[sid] || nota.createdAt > latestAt[sid]) latestAt[sid] = nota.createdAt;
+      });
+    }
 
     const unread = new Set<string>();
     salas.forEach(sala => {

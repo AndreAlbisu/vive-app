@@ -54,7 +54,18 @@
   - 🔴 **El caso que más cambia es el calendario.** Los días eran un `<Text>{day}</Text>` adentro de un touchable: el lector de pantalla leía *"15"* a secas, sin mes y sin decir si se podía reservar. Ahora leen "15 de Octubre" con el estado de seleccionado. Los días sin turno ya iban `disabled`, así que el foco no se para en ellos.
   - **Medido después: quedan 0 botones de solo ícono sin etiqueta en el recorrido crítico**, y **91 en 50 archivos** en el resto de la app. El grueso está en las pantallas de coach (agenda, disponibilidad, patrón semanal, reservas) y en `app/formato.tsx`, `conexiones` y `ProposeResourceScreen`.
 
+**Cuarta parte — las notas del chat no se comportaban como mensajes (salió de una duda de Andre).**
+
+- 🔴 **Tres agujeros distintos, y el peor no era el que estaba documentado.** SCHEMA.md decía desde el 31/08 que una nota compartida "le aparece al usuario recién al reabrir el chat". **Tampoco al reabrir**: `refreshKey` recarga los mensajes al volver a la pantalla, pero `fetchNotes` no dependía de él, así que las notas se traían **una sola vez, al montar**, y quedaban congeladas hasta salir de la Sala del todo. El único que veía la suya al instante era el coach que la escribía, por `onSaved`.
+- 🔴 **Y no existían fuera de la Sala.** El puntito de no leídos (`hooks/useUnreadSalas`) y el preview de cada chat en Sesiones (`get_last_messages_per_sala`) se calculan **solo contra `messages`**. O sea: el coach compartía una nota y del otro lado no se encendía nada. Sumado a que las notas se ubican en el hilo **por hora de creación** —no al final—, el cliente podía no enterarse nunca.
+- 🟢 **Arreglado en los tres lugares**: canal de realtime propio para `session_notes` (aparte del de mensajes: aquel cuelga de `salaId` y este del PAR usuario+coach, porque la tabla no conoce la sala), `refreshKey` en las dependencias de `fetchNotes`, y `getLatestSharedNotesByCoach` nuevo en `lib/sessionNotes.ts` alimentando el puntito y el preview (`"Nota: …"` cuando es lo último que pasó).
+- 📌 **Escucha `*` y no solo INSERT**: `session_notes` tiene `unique (booking_id, shared)` y el sheet hace upsert, así que **corregir una nota ya compartida llega como UPDATE**. Se contempla también que el coach deje de compartirla.
+- 📌 **El no leído se compara contra el MISMO `user_last_read_at` que los mensajes**, así que abrir el chat apaga las dos cosas de una. Y solo aplica del lado del usuario: las notas las escribe el coach.
+- 📌 **Corrección de algo que dije en la conversación**: la lista de chats **no se reordena por recencia** —ni con mensajes ni con notas—. `lib/salaOrder.ts` fija la posición por antigüedad del vínculo, a propósito y documentado.
+- ⚠️ **`scripts/publicar-notas-en-realtime.sql` — PENDIENTE DE CORRER.** Sin eso el canal nuevo escucha un silencio, exactamente como pasó el 28/08 con las otras cuatro tablas. Las otras dos partes del arreglo (recarga al volver, puntito y preview) **sí funcionan sin correr nada**. SCHEMA.md actualizado.
+
 **Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/publicar-notas-en-realtime.sql`** y probar en dos teléfonos: con el chat abierto del lado del cliente, que el coach comparta una nota y aparezca sola.
 - 🟡 **Probar el recorrido crítico con VoiceOver/TalkBack prendido.** Está etiquetado, no escuchado. El calendario es lo que más vale la pena oír.
 - ⏸️ **Etiquetas: quedan 91 controles en 50 archivos.** Se puede seguir por tandas; la próxima más lógica es el lado del coach.
 - 🟡 **Mirar la app en el teléfono después del cambio de contraste.** Son 38 archivos de un color que aparece en casi toda pantalla: está medido, no visto. Si algo quedó demasiado oscuro, es cambiar un valor.
