@@ -88,7 +88,8 @@ async function audit(
 async function notifyCoach(
   admin: SupabaseClient,
   profileId: string,
-  type: 'postulacion_aprobada' | 'postulacion_rechazada' | 'credencial_verificada' | 'credencial_rechazada',
+  type: 'postulacion_aprobada' | 'postulacion_rechazada' | 'credencial_verificada' | 'credencial_rechazada'
+    | 'sancion_aplicada' | 'sancion_levantada',
   title: string,
   body: string,
 ): Promise<void> {
@@ -285,6 +286,139 @@ serve(async (req) => {
       )
 
       return json({ result: 'ok', coach, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
+    // ── La escalera de sanciones ─────────────────────────────────────────────
+    //
+    // Advertencia → suspensión → baja. La aplica un HUMANO mirando un caso: no
+    // hay ni va a haber un algoritmo que sancione solo (ver
+    // `scripts/diagnostico-fuga.sql` — con la muestra de hoy, sancionar por
+    // métrica le pegaría a tres inocentes por cada culpable).
+    //
+    // 🔴 El motivo es obligatorio y **se le muestra al coach tal cual se escribe
+    // acá**. No es una nota interna: es lo que va a leer la persona sancionada.
+    // Sin eso la sanción es un castigo secreto, que es lo que hace que una
+    // plataforma se vuelva odiada — el coach ve que dejó de entrar gente, no
+    // sabe por qué, y no puede corregir nada.
+    case 'apply_sanction': {
+      if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
+
+      const nivel = String(body.nivel ?? '')
+      if (!['advertencia', 'suspension', 'baja'].includes(nivel)) {
+        return json({ error: 'nivel tiene que ser advertencia, suspension o baja' }, 400)
+      }
+
+      const motivo = String(body.motivo ?? '').trim()
+      // El mismo piso que el CHECK de la tabla. Se valida acá también para
+      // devolver un error legible en vez de un 500 de Postgres.
+      if (motivo.length < 10) {
+        return json({ error: 'el motivo es obligatorio y tiene que explicar algo (10 caracteres o más)' }, 400)
+      }
+
+      // `dias` solo aplica a la suspensión. La baja no vence y la advertencia no
+      // restringe nada, así que en los dos casos mandar días sería mentir sobre
+      // lo que va a pasar.
+      let hasta: string | null = null
+      if (nivel === 'suspension') {
+        const dias = Number(body.dias)
+        if (!Number.isFinite(dias) || dias < 1 || dias > 365) {
+          return json({ error: 'una suspensión necesita dias entre 1 y 365' }, 400)
+        }
+        hasta = new Date(Date.now() + dias * 86_400_000).toISOString()
+      } else if (nivel === 'baja') {
+        hasta = 'infinity'
+      }
+
+      const { data: coachRow } = await admin
+        .from('coaches').select('id, profile_id').eq('id', body.coach_id).maybeSingle()
+      if (!coachRow) return json({ error: 'no existe ese coach' }, 404)
+
+      const { data, error } = await admin
+        .from('coach_sanctions')
+        .insert({
+          coach_id: body.coach_id,
+          nivel,
+          motivo,
+          evidencia: typeof body.evidencia === 'string' ? body.evidencia.trim() || null : null,
+          hasta,
+          created_by: actor.adminId,
+        })
+        .select('id, nivel, motivo, hasta, created_at')
+        .single()
+
+      if (error) return json({ error: error.message }, 500)
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'apply_sanction',
+        targetType: 'coach',
+        targetId: body.coach_id,
+        details: { nivel, motivo, hasta, sancion_id: data.id },
+      })
+
+      // El aviso. Dice el escalón, el motivo y qué implica — las tres cosas, o
+      // el coach queda adivinando cuál de las tres le pasó.
+      const queImplica =
+        nivel === 'advertencia'
+          ? 'No cambia nada en tu perfil: seguís apareciendo y recibiendo reservas. Queda registrada.'
+          : nivel === 'suspension'
+            ? 'Mientras dure no aparecés en la app y no podés recibir reservas nuevas. Las sesiones que ya tenés agendadas siguen en pie y las atendés normalmente.'
+            : 'Tu perfil deja de estar publicado. Las sesiones que ya tenés agendadas siguen en pie y las atendés normalmente.'
+
+      await notifyCoach(
+        admin,
+        coachRow.profile_id,
+        'sancion_aplicada',
+        nivel === 'advertencia' ? 'Una advertencia sobre tu cuenta' : 'Tu cuenta quedó suspendida',
+        `${motivo} ${queImplica} Si creés que es un error, escribinos.`,
+      )
+
+      return json({ result: 'ok', sancion: data, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
+    // Levantar una sanción NO borra la fila: deja constancia de que se levantó y
+    // por qué. El historial tiene que poder contar también los errores nuestros.
+    case 'revoke_sanction': {
+      if (!body.sancion_id) return json({ error: 'falta sancion_id' }, 400)
+      const motivo = String(body.motivo ?? '').trim()
+      if (!motivo) return json({ error: 'hace falta decir por qué se levanta' }, 400)
+
+      const { data, error } = await admin
+        .from('coach_sanctions')
+        .update({
+          revocada_at: new Date().toISOString(),
+          revocada_por: actor.adminId,
+          revocada_motivo: motivo,
+        })
+        .eq('id', body.sancion_id)
+        .is('revocada_at', null)
+        .select('id, coach_id, nivel')
+
+      if (error) return json({ error: error.message }, 500)
+      if (!data || data.length === 0) return json({ error: 'no existe esa sanción, o ya estaba levantada' }, 404)
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'revoke_sanction',
+        targetType: 'coach',
+        targetId: data[0].coach_id,
+        details: { sancion_id: data[0].id, nivel: data[0].nivel, motivo },
+      })
+
+      const { data: coachRow } = await admin
+        .from('coaches').select('profile_id').eq('id', data[0].coach_id).maybeSingle()
+
+      if (coachRow?.profile_id && data[0].nivel !== 'advertencia') {
+        await notifyCoach(
+          admin,
+          coachRow.profile_id,
+          'sancion_levantada',
+          'Tu cuenta vuelve a estar activa',
+          `${motivo} Ya volvés a aparecer en la app y a recibir reservas.`,
+        )
+      }
+
+      return json({ result: 'ok', sancion: data[0], ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
     }
 
     // ── Moderar un reporte ───────────────────────────────────────────────────

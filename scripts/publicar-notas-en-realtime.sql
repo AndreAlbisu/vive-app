@@ -1,5 +1,14 @@
 -- Publicar `session_notes` para que las notas lleguen en vivo
 -- ---------------------------------------------------------------------------
+-- ✅ CORRIDO el 16/09/2026 contra la base de producción, vía
+--    `supabase db push` (migración `20260916000000_publicar_notas_en_realtime.sql`,
+--    mismo contenido). La salida fue `NOTICE: publicada: session_notes`, o sea que
+--    la tabla NO estaba publicada y ahora sí. El `replica identity full` corrió en
+--    la misma transacción, sin error.
+--    ⚠️ No se leyó de vuelta `pg_publication_tables` para confirmarlo por consulta:
+--    el CLI solo expone inspecciones fijas y no deja correr SQL arbitrario. La
+--    prueba que falta es la funcional, en dos teléfonos — está abajo.
+-- ---------------------------------------------------------------------------
 -- 🔴 EL PROBLEMA: una nota compartida no se comportaba como un mensaje. La
 -- suscripción de `SalaScreen` escucha solo `messages`, así que el coach
 -- compartía una nota y del otro lado no aparecía nada mientras el chat estaba

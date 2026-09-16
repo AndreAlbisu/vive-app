@@ -19,8 +19,19 @@
 --   reviews                25   ← 24 son cuatro frases repetidas, del 07/08/2026
 --   resources               3   ← tabla vieja; una se titula "alto tema"
 --
--- 🔴 OJO CON LOS CEROS. Estas otras dieron 0 con la anon key, pero eso NO quiere
---    decir que estén vacías: `bookings`, `messages`, `salas`, `session_notes`,
+-- 🔴 LOS CEROS ERAN MENTIRA, y el 16/09 se confirmó cuánto. Contando desde el
+--    CLI (`supabase inspect db table-stats`, que ve todo), las tablas que la anon
+--    key reportaba en cero tienen: **bookings ~185, messages ~154, salas ~53,
+--    profiles ~84, mood_entries ~54, journal_entries ~14**. Son estimaciones de
+--    `pg_class`, no un count exacto, pero alcanzan para lo que importa:
+--    🔴 **ESTA LIMPIEZA NO ES TRIVIAL.** Hay reservas y conversaciones colgando de
+--    esos coaches. Antes de borrar a nadie hay que mirar esas 185 reservas: casi
+--    seguro son de prueba, pero "casi seguro" no alcanza para un delete. Y el
+--    orden de borrado va a necesitar pasar por `bookings`, `messages` y `salas`,
+--    que este script hoy NO toca.
+--
+-- 🔴 POR QUÉ LA ANON KEY MENTÍA. Estas tablas dieron 0 con la anon key, pero eso
+--    NO quiere decir que estén vacías: `bookings`, `messages`, `salas`, `session_notes`,
 --    `notifications`, `mood_entries`, `journal_entries` y todas las tablas por
 --    usuario tienen RLS que solo deja ver las filas propias, y la anon key no es
 --    de nadie. O sea que un 0 acá significa "no puedo ver", no "no hay".

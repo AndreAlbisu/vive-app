@@ -208,6 +208,9 @@ export default function SearchScreen3() {
       // esto, con el caché frío esta consulta de respaldo volvía a mostrar
       // coaches sin ningún riel de cobro configurado.
       .or('mp_connected.eq.true,accepts_paypal.eq.true,accepts_usdt.eq.true')
+      // Mismo filtro que `coachesCache.ts`: un coach suspendido no aparece. Va
+      // acá también porque esta consulta es el respaldo con el caché frío.
+      .or(`suspendido_hasta.is.null,suspendido_hasta.lt.${new Date().toISOString()}`)
       .limit(50)
       .then(({ data, error }) => {
         if (cancelled) return;
