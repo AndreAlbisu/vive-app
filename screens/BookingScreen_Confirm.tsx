@@ -24,6 +24,7 @@ import { EncuadrePill } from '@/components/EncuadrePill';
 import { EncuadreSheet } from '@/components/EncuadreSheet';
 import { ScaleCard } from '@/components/ScaleCard';
 import { supabase, registrarEvento } from '@/lib/supabase';
+import { detectContactInfo } from '@/lib/contactInfoGuard';
 import { useAuth } from '@/context/AuthContext';
 import { necesitaVerificarMail } from '@/lib/emailVerificado';
 import { notifyViaServer } from '@/lib/notifications';
@@ -265,7 +266,29 @@ export default function BookingScreen_Confirm() {
     return false;
   };
 
-  async function onConfirm() {
+  // El mensaje al profesional es el primer texto que cruza entre los dos, antes
+  // de que exista un chat. Mismo aviso que el chat: avisa y deja seguir. Nunca
+  // frena una reserva — es el paso donde más se pierde gente, y un falso
+  // positivo acá costaría una sesión.
+  function onConfirm() {
+    const senal = isLoggedIn && user && userMessage.trim() ? detectContactInfo(userMessage) : null;
+    if (!senal) { void doConfirm(); return; }
+
+    const par = { role: 'user', canal: 'mensaje_reserva', senal, coach_id: coachProfileIdParam ?? null, user_id: user?.id ?? null };
+    Alert.alert(
+      '¿Compartir datos de contacto?',
+      'Tu mensaje parece incluir datos de contacto o de pago. Si arreglás por fuera de VIVE, perdés las protecciones de la app: el reembolso, la garantía y el registro de la sesión.',
+      [
+        { text: 'Editar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: false }) },
+        {
+          text: 'Reservar igual',
+          onPress: () => { registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: true }); void doConfirm(); },
+        },
+      ],
+    );
+  }
+
+  async function doConfirm() {
     if (!isLoggedIn || !user) { requestAuth('confirmar_reserva'); return; }
 
     // 🔴 El mail se exige ACÁ y no en el alta. Al registrarse, un muro de mail

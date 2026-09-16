@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-16 — Andre (sesión 243 · el detector de contacto detectaba 3 de 17)
+
+**Tocado:** `lib/contactInfoGuard.ts` (reescrito), `__tests__/contactInfoGuard.test.ts` (nuevo), `screens/SalaScreen.tsx`, `components/SessionNotesSheet.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/ReviewScreen.tsx`, `app/coach-recurso-nuevo.tsx`, `screens/ProposeResourceScreen.tsx`. Sin cambios de base.
+
+**Resumen:**
+- **Andre preguntó si el sistema ya detecta intercambio de contacto, alias y redes.** Se midió en vez de suponerlo: contra 17 formas comunes de pasarse el contacto ("ig", "insta", "guasap", "juan gmail" sin arroba, "por fuera de la app", "en efectivo", un número dictado en palabras, "zoom"…) **detectaba 3**. Y solo miraba dos lugares: la bio (bloquea) y el chat (avisa).
+- **Detector reescrito, 17 de 17**, y probado igual de fuerte contra lo que NO tiene que disparar: 12 frases que van a aparecer en una charla terapéutica o en una bio. 🔴 **Bug que ya estaba en producción**: la palabra "transferencia" sola bloqueaba la presentación, y en psicología es un concepto clínico central — un psicoanalista no podía guardar su bio. Ahora solo dispara la frase de pago ("por transferencia", "te transfiero"). Mismo criterio con "efectivo" (solo "en efectivo") y "por fuera" (solo "por fuera de la app"). 🔴 **Otro falso positivo encontrado antes de salir**: la primera versión contaba palabras-número en todo el mensaje, y "una"/"uno" son artículos — "fue una semana dura, una de esas donde uno siente…" disparaba. Ahora cuenta solo una corrida seguida, que es como se dicta un teléfono.
+- **Regla que queda: público bloquea, privado avisa.** Bloquea: bio (ya estaba), **reseñas**, y **el link de un recurso** si va a redes, WhatsApp, linktree o un acortador. Avisa y deja seguir: chat (ahora también el teléfono partido en dos mensajes), **notas compartidas**, **nota de una recomendación**, **mensaje al reservar**, y título/descripción de recursos y propuestas (que además los revisa VITA). En lo privado nunca se bloquea: los falsos positivos en una charla de salud mental enseñan a evadir, y se pierde el registro. El cuerpo largo de una lectura no se revisa a propósito: cita cifras y fuentes.
+- **El evento ahora dice dónde y qué**: `mensaje_contacto_detectado` suma `canal` (chat, nota_compartida, mensaje_reserva…) y `senal` (teléfono, red_social, pago_externo…) — el TIPO, nunca el texto. Al 16/09 había **0 eventos** en producción en toda la historia, así que no hay línea de base.
+
+**Pendiente para la próxima sesión:**
+- **Detección del lado del servidor, pendiente a propósito**: implica que VIVE revise el contenido de los mensajes, que es una finalidad nueva bajo la Ley 25.326 y tiene que estar en la política de privacidad antes (mismo criterio que `payer_fingerprint`). Hoy todo corre en el teléfono de quien escribe, así que una versión vieja de la app no avisa.
+- 📌 **`scripts/diagnostico-fuga.sql` tiene el encabezado desactualizado**: dice que el evento no guarda entre quiénes pasó, y lo guarda desde el 12/09 — y desde hoy también canal y señal. La consulta todavía no lo cruza con las reservas; es la pieza que conecta "hubo intercambio" con "el cliente dejó de venir".
+- **Lo que ningún detector ve es la videollamada.** La defensa de fondo siguen siendo los incentivos y la escalera de sanciones.
+
+---
 ## 2026-09-16 — Andre (sesión 242 · auditoría de 18 puntos de cumplimiento, y lo que apareció en la base)
 
 **Tocado:** `scripts/limpiar-datos-de-prueba.sql` (nuevo, **NO corrido**). Sin código de app. ⚠️ Sesión en paralelo con la 240/241 — mi commit (`16422e01`) toca solo ese archivo.

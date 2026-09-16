@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, Animated, KeyboardAvoidingView, Platform, ActivityIndicator,
+  StyleSheet, Animated, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -10,7 +10,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { supabase, registrarEvento } from '@/lib/supabase';
+import { detectContactInfo, isContactLink } from '@/lib/contactInfoGuard';
 import { AppBg } from '@/components/ui/AppBg';
 import { AXES } from '@/constants/searchData';
 
@@ -254,7 +255,30 @@ export default function ProposeResourceScreen() {
     return null;
   }
 
-  async function handleSubmit() {
+  // Mismo criterio que `coach-recurso-nuevo`: el link de la fuente se bloquea si
+  // lleva a una red o un linktree; título y descripción solo avisan, porque la
+  // propuesta la revisa VITA antes de publicar. Los pasos y las páginas no se
+  // miran acá: son largos y citan cifras, y ahí los falsos positivos serían
+  // constantes.
+  function handleSubmit() {
+    if (readingSource.trim() && isContactLink(readingSource)) {
+      setSubmitError('La fuente no puede llevar a redes sociales, WhatsApp ni a un linktree');
+      return;
+    }
+    const senal = title.trim() || description.trim() ? detectContactInfo(`${title}\n${description}`) : null;
+    if (!senal) { void doSubmit(); return; }
+    registrarEvento('mensaje_contacto_detectado', { role: 'coach', canal: 'propuesta_recurso', senal, coach_id: user?.id ?? null });
+    Alert.alert(
+      '¿Datos de contacto en la propuesta?',
+      'El título o la descripción parecen incluir datos de contacto o de pago. Los recursos son públicos: si los tiene, no se van a publicar en la revisión.',
+      [
+        { text: 'Editar', style: 'cancel' },
+        { text: 'Enviar igual', onPress: () => { void doSubmit(); } },
+      ],
+    );
+  }
+
+  async function doSubmit() {
     if (!type) { setSubmitError('Elegí un tipo de recurso'); return; }
     if (!title.trim()) { setSubmitError('Ponele un título'); return; }
     if (axes.length === 0) { setSubmitError('Elegí al menos un eje: Cuerpo, Mente o Alma'); return; }

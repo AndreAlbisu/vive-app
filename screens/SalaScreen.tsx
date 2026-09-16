@@ -29,7 +29,7 @@ import { MAX_LARGO_MENSAJE } from '@/constants/chat';
 import { confirmBooking } from '@/lib/coachBookingActions';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { supabase, registrarEvento } from '@/lib/supabase';
-import { hasContactInfo } from '@/lib/contactInfoGuard';
+import { detectContactInfo, detectContactInfoAcross } from '@/lib/contactInfoGuard';
 import { useAuth } from '@/context/AuthContext';
 import ReportSheet from '@/components/ReportSheet';
 import UserActionsSheet from '@/components/UserActionsSheet';
@@ -843,7 +843,29 @@ export default function SalaScreen() {
     setRecoSheetOpen(true);
   }
 
-  async function sendRecommendation() {
+  // La nota de una recomendación es texto del coach que le llega a la persona:
+  // mismo aviso que el chat (avisa, no bloquea). Envuelve al envío real.
+  function sendRecommendation() {
+    if (!selectedReco || !salaId || !user || !coachInternalId || !recipientId) return;
+    const senal = recoNote.trim() ? detectContactInfo(recoNote) : null;
+    if (!senal) { void doSendRecommendation(); return; }
+
+    const par = { role: 'coach', canal: 'nota_recomendacion', senal, sala_id: salaId, coach_id: user.id, user_id: recipientId };
+    Alert.alert(
+      '¿Compartir datos de contacto?',
+      'La nota parece incluir datos de contacto o de pago. Mantené la conversación y los pagos dentro de VIVE.',
+      [
+        { text: 'Editar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: false }) },
+        {
+          text: 'Enviar igual',
+          style: 'destructive',
+          onPress: () => { registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: true }); void doSendRecommendation(); },
+        },
+      ],
+    );
+  }
+
+  async function doSendRecommendation() {
     if (!selectedReco || !salaId || !user || !coachInternalId || !recipientId) return;
     setSendingReco(true);
     try {
@@ -921,7 +943,17 @@ export default function SalaScreen() {
     // advertir antes de enviar (no se bloquea duro: en una charla hay más falsos
     // positivos que en la bio, y a veces es legítimo). Se registra el evento con el
     // desenlace para medir cuánto pasa y si la advertencia disuade.
-    if (hasContactInfo(text)) {
+    // El mensaje anterior PROPIO, si fue hace poco: es lo que permite ver un
+    // teléfono partido en dos mensajes ("11 5555" y después "4444"). Cinco
+    // minutos alcanzan para eso y no juntan números de charlas distintas.
+    const anteriorPropio = [...messages].reverse().find(m =>
+      m.sender === 'user' && (m.sender_type === 'user' || m.sender_type === 'coach'));
+    const anteriorTexto = anteriorPropio && Date.now() - new Date(anteriorPropio.createdAt).getTime() < 5 * 60_000
+      ? decryptMessage(anteriorPropio.text)
+      : null;
+    const senal = detectContactInfoAcross(anteriorTexto, text);
+
+    if (senal) {
       const role = isCurrentUserCoach ? 'coach' : 'user';
       // 🔴 El PAR, no solo el rol (12/09/2026). Hasta hoy el evento guardaba
       // `role` y `sent_anyway` y nada más, así que se podía saber CUÁNTAS veces
@@ -933,8 +965,15 @@ export default function SalaScreen() {
       // ⚠️ Van los ids del PAR y del chat, no el texto del mensaje: alcanza para
       // cruzar con las reservas y no mete contenido de una conversación privada
       // en una tabla de métricas.
+      //
+      // 📌 `senal` es el TIPO de lo que se encontró (teléfono, red social, pago
+      // por fuera…), nunca el texto. Sirve para ver qué se escapa y qué avisos
+      // molestan sin guardar la conversación. `canal` distingue el chat de los
+      // otros lugares que avisan con el mismo evento (notas, recomendaciones).
       const par = {
         role,
+        canal: 'chat',
+        senal,
         sala_id: salaId ?? null,
         coach_id: isCurrentUserCoach ? user?.id ?? null : recipientId,
         user_id:  isCurrentUserCoach ? recipientId : user?.id ?? null,

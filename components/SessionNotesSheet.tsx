@@ -15,6 +15,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ViveFonts } from '@/constants/theme';
 import { getSessionNotes, saveSessionNote } from '@/lib/sessionNotes';
+import { detectContactInfo } from '@/lib/contactInfoGuard';
+import { registrarEvento } from '@/lib/supabase';
 import { sheetStyles } from '@/components/ui/sheetStyles';
 
 interface Props {
@@ -41,7 +43,30 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
       .finally(() => setLoading(false));
   }, [visible, bookingId]);
 
-  async function handleSave() {
+  // Solo se revisa la COMPARTIDA: es la que le llega a la persona. La privada la
+  // ve únicamente el coach, así que ahí un teléfono no es un canal de nada.
+  // Avisa y deja guardar igual, como el chat — nunca bloquea texto privado.
+  function handleSave() {
+    if (!user || saving) return;
+    const senal = sharedNote.trim() ? detectContactInfo(sharedNote) : null;
+    if (!senal) { void doSave(); return; }
+
+    const par = { role: 'coach', canal: 'nota_compartida', senal, booking_id: bookingId, coach_id: user.id, user_id: userId };
+    Alert.alert(
+      '¿Compartir datos de contacto?',
+      `La nota que ve ${clientName || 'la persona'} parece incluir datos de contacto o de pago. Mantené la conversación y los pagos dentro de VIVE.`,
+      [
+        { text: 'Editar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: false }) },
+        {
+          text: 'Guardar igual',
+          style: 'destructive',
+          onPress: () => { registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: true }); void doSave(); },
+        },
+      ],
+    );
+  }
+
+  async function doSave() {
     if (!user || saving) return;
     setSaving(true);
     const base = { bookingId, coachId: user.id, userId };
