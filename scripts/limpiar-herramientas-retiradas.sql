@@ -7,6 +7,12 @@
 -- ruta ahora redirige a /recursos. Un recordatorio así dispara un push que no
 -- lleva a ningún lado.
 --
+-- ✅ **CORRIDO EL 15/09/2026 (paso 1): 0 filas.** No había nada que limpiar — el
+-- leak existía pero nadie lo ejerció, porque no hay usuarios todavía. El paso 2
+-- NO se corrió y no hace falta. El script queda para el día que se retire otra
+-- herramienta, o si alguna de las 6 vuelve a ofrecerse por error: es la consulta
+-- que dice si quedó suciedad.
+--
 -- ⚠️ CORRER EL PASO 1 PRIMERO. Si devuelve 0 filas, no hay nada que hacer y el
 -- paso 2 no se corre. Si devuelve filas, mirá de quién son antes de borrar:
 -- con 0 usuarios reales deberían ser solo cuentas de prueba.
