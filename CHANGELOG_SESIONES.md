@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-15 — Andre (sesión 237 · Respiración: la interfaz se retira a los 30 segundos)
+
+**Tocado:** `screens/RespiracionScreen.tsx`. **607 tests**, `tsc` limpio, lint sin errores nuevos (queda el warning pre-existente de `animScale`). ⚠️ **Sin probar en dispositivo** — es un cambio visual con tiempos, hay que verlo corriendo.
+
+**Resumen:**
+
+- **El problema, que no era la respiración sino la interfaz:** la herramienta pretende bajar revoluciones pero obligaba a mirar el teléfono los 3 u 8 minutos enteros para saber en qué fase estabas. Seguir el orbe con los ojos abiertos mantiene la atención **afuera del cuerpo**, que es lo contrario de lo que la práctica busca. Es además lo que el Outsider del consejo dijo de la app en general: *"para relajarme tengo que quedarme mirando el celular leyendo"*.
+- **El arreglo es sacar, no agregar.** A los 30 segundos (`RETIRO_S`) —ya van casi dos ciclos completos de 16s, el patrón está aprendido— el cronómetro y el label de fase se atenúan a 0,22 en 2,5s, y en el lugar de "4 segundos" (el dato más inútil de la pantalla a esa altura) aparece: *"Ya encontraste el ritmo. Cerrá los ojos si querés."*
+- **El orbe sigue animando y el texto no se apaga del todo, a propósito:** alguien que abre los ojos a los 4 minutos tiene que poder retomar sin tocar nada. La invitación es lo único que NO se atenúa.
+- **Respeta `useReducedMotion`:** con "reducir movimiento" activo la atenuación es directa, sin animar. El pedido ahí es no animar, no dejar de retirarse.
+- Se descartaron dos alternativas: **háptico** (la vibración del teléfono tiene una asociación aprendida con "notificación / prestá atención" — estarías peleando contra el medio) y **audio modulado** que suba con la inhalación y baje con la exhalación. El audio es la buena idea de fondo y es factible (ya está `expo-audio`, y el cambio de fase dispara en el frame exacto donde colgar la rampa de volumen), pero es un proyecto aparte y va después de lanzar.
+
+**Pendiente para la próxima sesión:**
+- **Verlo en el teléfono.** Son tiempos: 30s hasta la retirada, 2,5s de atenuación. En pantalla puede quedar muy rápido o muy lento.
+- 🔴 **Contradicción sin resolver, ahora más visible:** la pantalla activa `expo-keep-awake` y el copy promete *"La pantalla no se apaga mientras dura"*. Si el objetivo es que te olvides del teléfono, tener la pantalla encendida a full 8 minutos para alguien con los ojos cerrados es al revés. No se tocó porque el timer de JS se frena con la pantalla bloqueada y la sesión se cortaría por la mitad (es justo el bug que arregló `81e59533`). Se destraba con audio: si la guía suena, la pantalla puede dormir.
+- **El patrón en sí no se tocó y hay tres versiones dando vueltas:** el código hace **4-4-4-4** (respiración cuadrada, y la pantalla lo dice así), `design/recursos-v2-definiciones.md` dice *"incluye 4-7-8"* —que no existe—, y la literatura de slow-paced breathing trabaja alrededor de 6 respiraciones/min (≈5-5), contra las 3,75/min de hoy. Son objetivos distintos: la cuadrada es regulación aguda, la resonante apunta a coherencia sostenida. Cambiar el patrón es cambiar qué hace la herramienta, y obliga a renombrarla. **Decisión de producto pendiente, no de código.**
+- Respiración sigue terminando en "Bien hecho" y nada más: la métrica `recurso → perfil → reserva` sigue sin instrumentarse (ver `docs/consejo-herramientas.md`).
+
 ## 2026-09-15 — Andre (sesión 236 · las herramientas retiradas seguían alcanzables, y en tres lugares distintos)
 
 **Tocado:** `constants/tools.ts`, `app/progreso.tsx`, `app/(tabs)/recursos.tsx`, `hooks/useRecommendedResource.ts`, las 6 rutas retiradas (`app/{sueno,meditacion,escaner,relajacion,lecturas,anclaje}.tsx`). Nuevos: `__tests__/herramientasVisibles.test.ts`, `scripts/limpiar-herramientas-retiradas.sql`. **607 tests** (8 nuevos), `tsc` limpio, lint sin errores. ⚠️ **Sin probar en dispositivo.** ⚠️ **El script SQL no se corrió.**

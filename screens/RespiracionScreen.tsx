@@ -27,6 +27,21 @@ const PHASE_TARGETS = [1.0, 1.0, 0.4, 0.4] as const; // scale objetivo de cada f
 const PHASE_S = 4; // 4s por fase, 16s de ciclo total — coincide con la descripción en pantalla
 const KEEP_AWAKE_TAG = 'vive-respiracion';
 
+// Segundos de sesión después de los cuales la interfaz se retira.
+//
+// 🔴 El principio: la guía existe para enseñar el ritmo, no para sostenerlo. A
+// los 30s ya diste casi dos ciclos completos de 16s y el patrón está aprendido —
+// a partir de ahí la pantalla deja de aportar y empieza a pedir: seguir el orbe
+// con los ojos abiertos mantiene la atención AFUERA del cuerpo, que es lo
+// contrario de lo que la herramienta busca. Así que el orbe sigue animando (si
+// abrís los ojos, la guía está) pero el texto se atenúa y la pantalla te invita
+// explícitamente a dejar de mirarla.
+//
+// No se apaga del todo a propósito: alguien que abre los ojos a los 4 minutos
+// tiene que poder retomar sin tocar nada.
+const RETIRO_S = 30;
+const RETIRO_OPACIDAD = 0.22;
+
 const DURATIONS = [
   { label: '3 min', seconds: 180 },
   { label: '8 min', seconds: 480 },
@@ -46,8 +61,10 @@ export default function RespiracionScreen() {
   const [duration, setDuration] = useState(DURATIONS[0].seconds);
   const [remaining, setRemaining] = useState(DURATIONS[0].seconds);
   const [breathPhase, setBreathPhase] = useState(0);
+  const [retirada, setRetirada] = useState(false);
 
   const animScale = useRef(new Animated.Value(0.4)).current;
+  const animTexto = useRef(new Animated.Value(1)).current;
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const userIdRef = useRef<string | null>(null);
 
@@ -130,13 +147,29 @@ export default function RespiracionScreen() {
     if (timerRef.current) clearInterval(timerRef.current);
   }
 
+  // La atenuación del texto guía. Se anima salvo que "reducir movimiento" esté
+  // activo, donde el cambio es directo — el pedido ahí es no animar, no dejar de
+  // retirarse.
+  useEffect(() => {
+    if (reducedMotion) { animTexto.setValue(retirada ? RETIRO_OPACIDAD : 1); return; }
+    Animated.timing(animTexto, {
+      toValue: retirada ? RETIRO_OPACIDAD : 1,
+      duration: 2500,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [retirada, reducedMotion, animTexto]);
+
   function handleStart() {
     setPhase('running');
+    setRetirada(false);
+    animTexto.setValue(1);
 
     let rem = duration;
     timerRef.current = setInterval(() => {
       rem -= 1;
       setRemaining(rem);
+      if (duration - rem >= RETIRO_S) setRetirada(true);
       if (rem <= 0) {
         stopTimer();
         setPhase('done');
@@ -207,12 +240,22 @@ export default function RespiracionScreen() {
 
           {phase === 'running' && (
             <>
-              <Text style={s.timer}>{formatTime(remaining)}</Text>
+              <Animated.Text style={[s.timer, { opacity: animTexto }]}>
+                {formatTime(remaining)}
+              </Animated.Text>
               {orb}
-              <Text style={[s.phaseLabel, { color: PHASE_COLORS[breathPhase] }]}>
+              <Animated.Text
+                style={[s.phaseLabel, { color: PHASE_COLORS[breathPhase], opacity: animTexto }]}>
                 {PHASES[breathPhase]}
-              </Text>
-              <Text style={s.phaseSub}>{PHASE_S} segundos</Text>
+              </Animated.Text>
+              {/* Lo único que NO se atenúa: la invitación a dejar de mirar. Ocupa
+                  el lugar de "4 segundos", que a esta altura es el dato más
+                  inútil de la pantalla. */}
+              {retirada ? (
+                <Text style={s.retiroHint}>Ya encontraste el ritmo. Cerrá los ojos si querés.</Text>
+              ) : (
+                <Text style={s.phaseSub}>{PHASE_S} segundos</Text>
+              )}
               <TouchableOpacity style={s.ghostBtn} onPress={() => { stopTimer(); router.back(); }} activeOpacity={0.8}>
                 <Text style={s.ghostBtnText}>Detener</Text>
               </TouchableOpacity>
@@ -261,6 +304,7 @@ const s = StyleSheet.create({
   timer:      { fontFamily: ViveFonts.bold, fontSize: 52, color: FOREST, letterSpacing: -1 },
   phaseLabel: { fontFamily: ViveFonts.bold, fontSize: 32, letterSpacing: -0.3 },
   phaseSub:   { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT },
+  retiroHint: { fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST_SOFT, textAlign: 'center', paddingHorizontal: 32, lineHeight: 20 },
 
   primaryBtn:     { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: FOREST, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 48, marginTop: 4 },
   primaryBtnText: { fontFamily: ViveFonts.semibold, fontSize: 16, color: CREAM_LIGHT },
