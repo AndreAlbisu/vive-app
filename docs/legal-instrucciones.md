@@ -487,6 +487,12 @@ texto trae expresiones de riesgo, el flujo corta y muestra las líneas de
 T&C §5.3 (911 / 135) sin devolver recomendación ni precio. Eso se construye
 primero, o no se construye nada.
 
+## Para preguntarle al abogado/a — agregado el 16/09/2026
+
+- 🔴 **Dos destinatarios que faltaban en Política §6, ahora declarados: Cloudflare y unpkg.com.** Cloudflare es el sistema anti-alta-automatizada (Turnstile): interviene en la app y en la web al crear cuenta y al pedir código, recibe la IP y pone una cookie técnica en el navegador. unpkg.com es el CDN desde donde la sala web carga el componente de videollamada, y también ve la IP. **Los dos ya venían funcionando** — lo que cambió es la declaración, no el tratamiento.
+  **La pregunta:** `lib/consentRules.ts` deja escrito que cuando cambian *la finalidad o los destinatarios* hay que volver a pedir el consentimiento. Acá no hay finalidad nueva ni categoría de dato nueva, y la IP ya iba a esos proveedores igual, así que el criterio interno fue tratarlo como **corrección de la declaración** y no re-pedir. Hay que confirmarlo. ⚠️ Además, hoy **no existe el mecanismo para forzar el re-pedido a mano** (está anotado como pendiente en ese mismo archivo); si la respuesta es que sí hay que re-pedir, primero hay que construirlo.
+- **Política §13 — Cookies y Tecnologías Similares (sección nueva).** Afirma que la app móvil no usa cookies (es cierto: la sesión va en el almacenamiento del dispositivo), que en la web las únicas son la técnica de Cloudflare y el almacenamiento local de la sesión, y que **por ser estrictamente necesarias no se muestra un panel de preferencias**. Ese último tramo es el que conviene que revise: es el encuadre bajo Ley 25.326, que no tiene un régimen de cookies como el europeo. Si en algún momento hay usuarios en la UE, cambia (ver "Unión Europea — aplica solo si hay usuarios allá").
+
 ## Mantenimiento
 - Actualizar la **fecha** de cada documento cada vez que cambie.
 - **Revisar el Paso 5 apenas vuelva el abogado/a**, aunque la consulta haya sido

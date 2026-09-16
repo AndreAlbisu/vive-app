@@ -285,8 +285,10 @@ Vita **no vende** los datos personales de los Usuarios. Los compartimos únicame
   - **Mercado Pago** — procesamiento de pagos (sujeto a sus propias políticas).
   - **Daily.co** — realización de las videollamadas de las Sesiones.
   - **Expo / proveedor de notificaciones push** — envío de notificaciones.
+  - **Cloudflare** — protección contra la creación automatizada de cuentas. Interviene al crear una cuenta y al solicitar un código de acceso, tanto en la aplicación como en las páginas web de Vita. Recibe la dirección IP y datos técnicos del dispositivo, y en el navegador coloca una cookie técnica necesaria para distinguir a una persona de un programa automatizado. **No recibe el nombre, el correo electrónico ni ningún contenido del Usuario.**
 - **Proveedores de identidad, solo si el Usuario elige registrarse o iniciar sesión con ellos:**
   - **Google** y **Apple**. En ese caso, el proveedor conoce que el Usuario accede a Vita y le comunica a Vita los datos mínimos de la cuenta (nombre y correo electrónico). Si el Usuario se registra con correo y contraseña, ninguno de los dos interviene.
+- **Entrega de componentes desde redes de distribución (CDN):** la sala de Sesión a la que se accede por navegador carga el componente de videollamada desde **unpkg.com**. Al hacerlo, ese servicio recibe la dirección IP y datos técnicos del dispositivo. No recibe datos de la cuenta ni contenido alguno de la Sesión.
 - **Contenido embebido de terceros:** algunas fichas de recursos incluyen un reproductor de **YouTube** insertado dentro de la aplicación. Al cargarse, YouTube recibe la dirección IP y datos técnicos del dispositivo, y puede utilizar cookies o tecnologías similares conforme a sus propias políticas. Ocurre solo al abrir una ficha que contenga ese reproductor.
 - **Redacción asistida de la frase de bienestar:** la pantalla de inicio muestra una frase breve sobre cómo viene el Usuario. **Qué decir lo decide la propia aplicación en el dispositivo**, con reglas fijas; a un proveedor externo (**Anthropic**) se le pide únicamente **redactar** esa frase. Lo que se le envía es el nombre de una categoría (por ejemplo, "racha" o "tendencia en alza"), un tono, y dos o tres números enteros —días de registro consecutivos, sesiones y prácticas de la semana—. **No se le envía identificador alguno del Usuario, ni sus registros de estado de ánimo, ni su historial, ni una sola palabra escrita por él**, y Vita no conserva vinculación entre ese envío y la persona. Si el proveedor no responde, o si el texto que devuelve no supera los controles de contenido de Vita, se muestra el texto redactado por la propia aplicación.
 - **Analítica:** Vita **no utiliza proveedores de analítica de terceros**. Las métricas de uso se registran en la propia base de datos de Vita (alojada en Supabase) y no se comparten con terceros con fines publicitarios ni comerciales.
@@ -342,11 +344,24 @@ La Plataforma está dirigida a personas mayores de 18 años. No recolectamos del
 
 Con el consentimiento del Usuario (otorgado a nivel del sistema operativo del dispositivo), Vita envía notificaciones relacionadas con el servicio. El Usuario puede desactivarlas desde la configuración de su dispositivo.
 
-## 13. Cambios a esta Política
+## 13. Cookies y Tecnologías Similares
+
+La **aplicación móvil de Vita no utiliza cookies**. Guarda en el propio dispositivo la información técnica necesaria para funcionar —la sesión iniciada y algunas preferencias de uso—, que no se comparte con terceros ni se utiliza con fines publicitarios.
+
+En las **páginas web de Vita** no se utilizan cookies publicitarias, de seguimiento ni de analítica. Las únicas tecnologías de almacenamiento que intervienen son:
+
+- Una **cookie técnica de Cloudflare**, colocada por el sistema de protección contra la creación automatizada de cuentas descripto en §6. No se utiliza para seguir al Usuario entre sitios.
+- **Almacenamiento local del navegador**, para mantener la sesión iniciada mientras el Usuario utiliza la reserva o la sala de Sesión.
+
+Ambas son estrictamente necesarias para prestar el servicio que el Usuario solicita. Vita **no utiliza cookies de terceros con fines publicitarios ni de perfilado**, y por eso no muestra un panel de preferencias de cookies.
+
+El contenido embebido de terceros mencionado en §6 puede colocar sus propias cookies cuando el Usuario decide reproducirlo; en ese caso rigen las políticas de ese tercero.
+
+## 14. Cambios a esta Política
 
 Vita puede actualizar esta Política. Los cambios sustanciales se notificarán por medios razonables. La versión vigente estará siempre disponible en la Plataforma.
 
-## 14. Contacto
+## 15. Contacto
 
 Consultas o ejercicio de derechos: vitaappar@gmail.com — Andre Albisu Lambertini, De los Extremeños 5069, Córdoba, Provincia de Córdoba.
 `;
@@ -462,7 +477,7 @@ export const LEGAL_PLACEHOLDERS: string[] = ["[Validar con abogado el encuadre d
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '3a2108db8138';
+export const LEGAL_VERSION = 'eb147443caec';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la
