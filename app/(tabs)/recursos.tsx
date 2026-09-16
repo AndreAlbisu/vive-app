@@ -22,11 +22,14 @@ import { supabase } from '@/lib/supabase';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { useResourceProgress } from '@/hooks/useResourceProgress';
 import { useRecommendedResource, type Reco, type MoodLite } from '@/hooks/useRecommendedResource';
-import { TOOL_MAP, type Tool, type IoniconName } from '@/constants/tools';
+import { TOOL_MAP, TOOL_GROUPS, type Tool, type IoniconName } from '@/constants/tools';
+
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 // `Tool`, `IoniconName`, `TOOLS`, `TOOL_MAP` viven en @/constants/tools
-// (fuente única, compartida con Progreso/Hábitos).
+// (fuente única, compartida con Progreso/Hábitos). `TOOL_GROUPS` se mudó ahí el
+// 15/09/2026: la grilla ES la lista de herramientas visibles, así que vivía en
+// el lugar equivocado — la pantalla la definía y el catálogo no se enteraba.
 
 type CoachRecoItem = {
   id: string;
@@ -45,33 +48,6 @@ type CoachRecoItem = {
     profiles: { name: string };
   };
 };
-
-interface ToolGroup {
-  id: string;
-  title: string;
-  subtitle: string;
-  toolIds: string[];
-}
-
-// ⚠️ El orden de esta lista ES el orden de los tiles en pantalla: `ToolsCarousel`
-// la aplana en el orden en que está escrita. `title` y `subtitle` hoy no se
-// muestran en ningún lado (los grupos quedaron como agrupación conceptual
-// después del rediseño de la fila), así que lo único que cambia al reordenar es
-// la fila de herramientas.
-const TOOL_GROUPS: ToolGroup[] = [
-  {
-    id: 'reflexion',
-    title: 'Para reflexionar',
-    subtitle: 'Poner en palabras lo que pasa',
-    toolIds: ['diario', 'gratitud'],
-  },
-  {
-    id: 'calma',
-    title: 'Para calmarte ahora',
-    subtitle: 'Cuando la mente va rápido',
-    toolIds: ['ruido', 'respiracion'],
-  },
-];
 
 // ─── Colores locales ─────────────────────────────────────────────────────────
 // Herramientas/Recomendado/Biblioteca (Ajustes 1-5) usan los tokens planos del

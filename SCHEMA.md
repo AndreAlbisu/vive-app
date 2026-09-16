@@ -587,6 +587,7 @@ El 04/08 se creó esta tabla con el nombre **`resource_recommendations`**, que *
 - UNIQUE(`user_id`, `tool_id`) — una práctica aparece una sola vez en la rutina
 - Índice en `(user_id, sort_order)`
 - RLS: SELECT/INSERT/UPDATE/DELETE solo si `user_id = auth.uid()`
+- ⚠️ **`tool_id` puede apuntar a una herramienta retirada de la vista** (15/09/2026): el picker de hábitos ofrecía las 10 del catálogo aunque la grilla mostrara 4, así que puede haber filas hacia `sueno`/`meditacion`/`escaner`/`relajacion`/`lecturas`/`anclaje`. El picker ya filtra por `visible` (ver `constants/tools.ts`) y las rutas redirigen, pero **las filas viejas siguen ahí y `resource_reminders` puede tener recordatorios que disparan un push hacia ningún lado**. Limpieza en `scripts/limpiar-herramientas-retiradas.sql` — pendiente de correr. La lista de hábitos ya elegidos resuelve contra `TOOL_MAP` completo a propósito: un hábito viejo tiene que renderizar con su nombre, no desaparecer en silencio.
 - Agregada 23/07/2026 (`scripts/add-user-habits.sql`). Guarda **solo la rutina** (qué prácticas VITA eligió el usuario) para la sección "Hábitos de hoy" de Progreso. El "hecho hoy" NO se guarda acá — se deriva de `resource_completions` (atado al uso real: completar la herramienta tilda el hábito). Rutina inicial (`respiracion`+`gratitud`) sembrada client-side la 1ª vez vía `lib/habits.ts` con guard en AsyncStorage (`vita_habits_seeded_<userId>`) para no re-sembrar si el usuario borra todo. Queries en `lib/habits.ts`, UI en `app/progreso.tsx`.
 
 ### `favorite_coaches`

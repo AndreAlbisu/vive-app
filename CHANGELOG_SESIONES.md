@@ -4,6 +4,27 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-15 — Andre (sesión 236 · las herramientas retiradas seguían alcanzables, y en tres lugares distintos)
+
+**Tocado:** `constants/tools.ts`, `app/progreso.tsx`, `app/(tabs)/recursos.tsx`, `hooks/useRecommendedResource.ts`, las 6 rutas retiradas (`app/{sueno,meditacion,escaner,relajacion,lecturas,anclaje}.tsx`). Nuevos: `__tests__/herramientasVisibles.test.ts`, `scripts/limpiar-herramientas-retiradas.sql`. **607 tests** (8 nuevos), `tsc` limpio, lint sin errores. ⚠️ **Sin probar en dispositivo.** ⚠️ **El script SQL no se corrió.**
+
+**Resumen — salió de repasar las herramientas prácticas con el consejo de asesores, y el hallazgo no era de producto sino de ejecución.**
+
+- **El recorte a 4 (Diario, Gratitud, Sonidos ambientales, Respiración) SÍ estaba hecho**, contra lo que yo creía al empezar: `TOOL_GROUPS` ya aplanaba exactamente esas cuatro. Lo que faltaba era el flag: las otras 6 estaban fuera de la grilla pero **el resto de la app seguía leyendo el catálogo crudo y las ofrecía por omisión**. Tres fugas, ninguna ruidosa:
+  1. `app/progreso.tsx` — el picker de "Hábitos de hoy" filtraba sobre `TOOLS` entero. Alguien podía agendarse Meditación como hábito diario y **recibir un push** hacia una pantalla que el equipo decidió no sostener.
+  2. `hooks/useRecommendedResource.ts` — `firstToolInAxis` recorría `TOOL_AXES` (las 10). Para el eje **`alma` la primera es `meditacion`**: cualquiera sin check-in del día y con ese eje recibía hoy una recomendación hacia una retirada. `cuerpo` y `mente` tenían el mismo agujero un paso más adelante, vía `exclude` (bastaba haber hecho Respiración hace poco para caer en `anclaje`).
+  3. Las 6 rutas respondían igual que antes, así que un hábito o recordatorio viejo aterrizaba en la pantalla entera.
+- **La decisión de dónde arreglarlo importa más que el arreglo.** No se parchearon las pantallas: el flag `visible` vive en `constants/tools.ts` y se expone `VISIBLE_TOOLS`/`VISIBLE_TOOL_IDS`. Si se parcheaba en `progreso.tsx`, el próximo consumidor de `TOOLS` volvía a heredar el leak — que es exactamente lo que había pasado ya dos veces.
+- **`TOOL_GROUPS` se mudó de `app/(tabs)/recursos.tsx` a `constants/tools.ts`.** Era la única definición de "qué ve el usuario" y vivía dentro de una pantalla, así que el resto de la app no tenía forma de consultarla. Ahí está la causa raíz de las tres fugas.
+- **Las 6 rutas ahora redirigen a `/(tabs)/recursos`.** Las pantallas NO se borran: `screens/*Screen.tsx` siguen enteras, como pide `design/recursos-v2-definiciones.md` ("se retiran de la vista, sin borrar su código"). Se cierra el acceso, no el código.
+- **Distinción que quedó escrita en el código:** `VISIBLE_TOOLS` es para **ofrecer** (grilla, picker, sugerencias); `TOOLS`/`TOOL_MAP` completos siguen siendo para **resolver** un id ya guardado (hábito viejo, pin, completion), que tiene que renderizar con su label aunque la herramienta ya no se ofrezca.
+- **8 tests nuevos** que afirman que las tres fuentes dicen lo mismo: la grilla ⟺ `visible`, el mapeo de ánimo nunca apunta a una retirada, la rutina sembrada tampoco, y las dos copias del catálogo (`tools.ts` / `vitaTools.ts`) cubren los mismos ids con los mismos labels.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/limpiar-herramientas-retiradas.sql`** (paso 1 primero, que es solo lectura). Puede haber filas de `user_habits` y `resource_reminders` apuntando a las 6 retiradas. Un recordatorio así dispara un push que ya no lleva a ningún lado. No se corrió: es destructivo sobre prod. `resource_completions`/`saved_resources`/`pinned_resources` no se tocan a propósito — son historia y curaduría, no promesas a futuro.
+- La unificación del catálogo quedó a medias: `constants/vitaTools.ts` sigue existiendo como copia (íconos MaterialCommunityIcons para el inicio y guardados). El test nuevo evita que se desincronicen, pero la copia sigue ahí.
+- **Del consejo de asesores, sin decidir todavía:** (1) las 4 visibles no llevan a ningún coach — la métrica declarada `recurso → perfil → reserva` no está instrumentada; (2) Sonidos ambientales está en la grilla pero **`moodResources.ts` no lo sugiere nunca**; (3) tres asesores querían sacar Sonidos ambientales del tile y el que razonaba como usuario decía que es el mejor de los cuatro — no se tocó ningún tile, y con 0 usuarios conviene que siga así; (4) la racha de Gratitud contra el principio de "racha suave"; (5) el hueco señalado: ninguna herramienta dura menos de un minuto.
+
 ## 2026-09-15 — Andre (sesión 235 · los ambientales: el loop y el copy, los dos problemas de la 234)
 
 **Tocado:** `assets/sounds/*.m4a` (los 4), `screens/RuidoScreen.tsx`, `constants/tools.ts`, `constants/vitaTools.ts`, `app/(tabs)/recursos.tsx`, `scripts/preparar-sonidos-loop.py` (nuevo). **599 tests**, `tsc` limpio, lint sin errores nuevos. ⚠️ **Sin escuchar en dispositivo.**
