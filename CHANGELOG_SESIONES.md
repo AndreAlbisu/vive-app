@@ -4,6 +4,37 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-16 — Andre (sesión 242 · auditoría de 18 puntos de cumplimiento, y lo que apareció en la base)
+
+**Tocado:** `scripts/limpiar-datos-de-prueba.sql` (nuevo, **NO corrido**). Sin código de app. ⚠️ Sesión en paralelo con la 240/241 — mi commit (`16422e01`) toca solo ese archivo.
+
+**Resumen — Andre trajo una lista de 18 puntos para chequear si los tenemos. Se verificaron uno por uno contra el repo y contra la base.**
+
+- ✅ **Lo que está y no necesita trabajo:** política de privacidad, T&C y política de reembolsos (T&C §9 + botón de arrepentimiento), datos fiscales completos en los tres documentos, borrado de cuenta en las dos apps con retención declarada por categoría, declaración de 18+ con constancia en `profiles.age_confirmed`, consentimiento expreso de datos sensibles separado del checkbox de T&C. Sin dark patterns. Sin cargos ocultos: el cliente paga el precio publicado y la comisión sale del lado del coach.
+- ⚠️ **`LEGAL_IS_DRAFT = true`** — los tres documentos siguen sin revisión de abogado.
+- 🔴 **Dos terceros sin declarar en la política**: Cloudflare Turnstile (`web/captcha.js` — recibe IP y es la única cookie real del producto) y `unpkg.com` (la sala web carga `daily-js` desde ahí). La lista §6 nombra Supabase, Mercado Pago, Daily.co, Expo push, Google/Apple, y aparte YouTube y Anthropic. Esos dos faltan. **De paso queda resuelto el punto de cookies**: la app nativa no usa, la única es la de Turnstile, y bajo Ley 25.326 no hay obligación de banner tipo GDPR — es decisión de alcance, no incumplimiento.
+- 🔴 **Contraste: medido, falla de forma sistémica.** `#6B7A56`, el color de TODO el texto secundario (38 archivos), da **4.05:1** sobre el fondo crema `#F7EFE4` — AA pide 4.5. Las variantes con alpha son peores: **2.69** en el pie de Respiración, **2.91** en la línea chica que agregué el 15/09 en Sonidos. `#C1694F` da 3.41: pasa solo en tamaño grande. No es un ajuste puntual, es oscurecer un token del sistema de diseño.
+- 🔴 **Afirmaciones sin respaldo**: `RespiracionScreen.tsx:214` *"Un patrón que calma el sistema nervioso rápidamente"*, más dos en el seed (*"calmar el sistema nervioso"*, *"según la neurociencia del comportamiento"*).
+- ⚠️ **Etiquetas de accesibilidad en 15 de 182 pantallas.** Teclado: solo aplica a la web; `web/c` está bien resuelto (foco visible, `aria-pressed`), la sala y las legales no tienen estilos de foco.
+- ✅ **Auditoría de SDKs, con buen resultado**: 53 dependencias, todas Expo/React salvo `@supabase/supabase-js`, markdown-display, webview, youtube-iframe, svg y reanimated. **Cero SDKs de analítica o publicidad** — la política dice la verdad cuando afirma que no hay analítica de terceros.
+
+**🔴 Lo que apareció al verificar el punto de reseñas falsas — consultando la base con la anon key:**
+
+- **Corrección de lo que dije el 15/09**: el coach al que están atribuidos los recursos `[SEED]` **no es un coach real**, es una cuenta de prueba (slug `coach-prueba`, especialidad "Especialidad de prueba", bio "linda aaaaaa", precio $1). Ningún profesional de verdad tiene su nombre puesto en material ajeno.
+- **Los 8 recursos `[SEED]` son el 100% de la biblioteca publicada.** `coach_resources` tiene 8 filas, las 8 sembradas, las 8 en `published`, las 8 con `is_author_declared = true`. **Dos apuntan a `dQw4w9WgXcQ`** — Rick Astley. Hoy la app rickrollea a quien abra "Técnica de reencuadre para emociones difíciles". Otras dos van a URLs de Spotify que no existen.
+- **24 reseñas falsas, públicas.** `reviews` tiene 25 filas; 24 son cuatro frases repetidas en loop, todas del 07/08/2026, todas con `is_private = false`, todas colgadas de `booking_id` inventados. Alimentan el promedio de estrellas de los perfiles.
+- **El padrón es sintético**: 34 coaches, los 34 con `verified = true`, `aprobada` y `activo`. Entre ellos `coach-test`, `prueba3`, `coach-prueba` y uno con slug `usuario-eliminado`.
+- 📌 **`scripts/seed-recursos.sql` es la causa y no debe correrse nunca más contra la base de verdad**: busca el primer coach con `role='coach'` y le cuelga 8 recursos publicados declarando autoría en su nombre.
+
+**📌 Cuidado metodológico para la próxima medición contra la base:** la anon key **solo ve las tablas públicas**. `bookings`, `messages`, `mood_entries`, `journal_entries` y todas las tablas por usuario tienen RLS por `auth.uid()`, así que devuelven 0 sin error — y ese 0 significa "no puedo ver", no "no hay". Los números reales salen del editor SQL. El script lo dice en mayúsculas.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Correr `scripts/limpiar-datos-de-prueba.sql` antes de lanzar** — Andre confirmó que los coaches falsos se borran antes del lanzamiento. El script está escrito y **no se corrió**: hay que editar la lista de `conservar` (hoy tiene solo `andre`), leer el control previo, y recién ahí borrar. No toca `verified` ni el storage a propósito.
+- 🟡 **Decidir qué significa `verified = true`** antes de abrir: hoy lo tienen los 34.
+- 🟡 Borrar a mano del storage `resource-audio/seed/*.mp3` y los videos de presentación de las cuentas de prueba.
+- ⏸️ **Quedan de la lista de 18, sin empezar**: declarar Turnstile y unpkg en la política, el contraste, las tres afirmaciones sin respaldo, las etiquetas de accesibilidad y el foco de teclado en la web. Andre pidió ir de a uno.
+
+---
 ## 2026-09-16 — Andre (sesión 241 · el checkout web creaba cuentas sin declarar la edad ni guardar la aceptación)
 
 **Tocado:** `web/c/index.html`, `scripts/sync-legal.mjs`, `web/legal-version.js` (nuevo, generado), `SCHEMA.md`. **607 tests**, `tsc` limpio. ⚠️ **Sin probar en el navegador.**
