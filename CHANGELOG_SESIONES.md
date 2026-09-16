@@ -4,9 +4,9 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
-## 2026-09-15 — Andre (sesión 235 · los ambientales loopean sin el bajón)
+## 2026-09-15 — Andre (sesión 235 · los ambientales: el loop y el copy, los dos problemas de la 234)
 
-**Tocado:** `assets/sounds/*.m4a` (los 4), `screens/RuidoScreen.tsx` (solo el comentario), `scripts/preparar-sonidos-loop.py` (nuevo). **599 tests**, `tsc` limpio, lint sin errores nuevos. ⚠️ **Sin escuchar en dispositivo.**
+**Tocado:** `assets/sounds/*.m4a` (los 4), `screens/RuidoScreen.tsx`, `constants/tools.ts`, `constants/vitaTools.ts`, `app/(tabs)/recursos.tsx`, `scripts/preparar-sonidos-loop.py` (nuevo). **599 tests**, `tsc` limpio, lint sin errores nuevos. ⚠️ **Sin escuchar en dispositivo.**
 
 **Resumen — cierra la verificación que la 234 dejó pendiente, y el resultado cambia el diagnóstico.**
 
@@ -16,9 +16,17 @@
 - 📌 **Sigue en pie lo de la 234 sobre el origen**: mono, 22 kHz, de un corte CC0 ya comprimido a 31 kbps. Eso **no se arregla desde el repo** y es lo que queda del "suena trucho" después de este arreglo. Upsamplear no inventa lo que el corte tiró; si se quiere 48 kHz estéreo hay que volver a freesound y re-exportar.
 - 📌 **`scripts/preparar-sonidos-loop.py`** deja el procedimiento repetible (recorte + crossfade + encode, todo con stdlib y `afconvert`). **No es idempotente** — correrlo dos veces come otros 2 s; está avisado en el docstring. Ojo que `scripts/gen_sounds.py` es otra cosa, el sintetizador viejo de 45 s en WAV, que ya no alimenta a estos archivos.
 
+**Segunda parte — el copy, que era el otro problema de la 234 y se hizo en la misma sesión:**
+
+- 🔬 **Se midió el espectro antes de ponerle nombre al cuarto sonido, en vez de elegir entre "blanco" y "marrón" a ojo.** El archivo cae **-8,7 dB por octava** entre 250 Hz y 4 kHz (FFT de 4096, promediada sobre 24 ventanas). Blanco sería 0, rosa -3, marrón -6: **es todavía más grave que el marrón**, así que las dos etiquetas que convivían estaban mal, y "blanco" era directamente falso. Se llama **"Ruido grave"**, que es lo que se oye y no exige saber la convención de colores. Los otros tres midieron consistentes con su nombre (lluvia y bosque suben hacia los agudos, olas cae -5,1).
+- 🔴 **"Ruido blanco" tampoco era el nombre correcto de la herramienta**, y esa era la raíz del lío: la tarjeta de Recursos decía "Ruido blanco" y abría una pantalla titulada "Sonidos ambientales" con lluvia, bosque, olas y ruido. Ahora la herramienta se llama **"Sonidos ambientales"** en `tools.ts`, `vitaTools.ts` y la campanita de recordatorio — los cuatro nombres para lo mismo pasaron a ser uno. El tile corto de Recursos dice "Sonidos" (era "Ruidos"). **Los ids no se tocaron** (`ruido`, `blanco`): viajan en completions, guardados, hábitos y recordatorios.
+- 🐛 **`duration: 'Libre'` → `'5–30 min'`** en las dos tablas. Se ve en el catálogo de Hábitos (`progreso.tsx:481`) y en la lista de guardados; prometía algo que la pantalla no da desde que obliga a elegir 5/15/30.
+- 🟢 **Cada sonido dice para qué sirve** (`hint` en `SOUNDS`, una línea de 11px bajo el label): dormirte / concentrarte / bajar un cambio / tapar el ruido. Y el texto de arriba pasó de explicar **cómo se usa** ("Elegí un sonido y por cuánto tiempo") a explicar **por qué lo usarías**; la instrucción sigue, en chico, debajo.
+
 **Pendiente para la próxima sesión:**
-- 🔴 **Escuchar una sesión de 15 min en el teléfono** — el arreglo está medido pero no oído. Lo que hay que escuchar es el minuto 1:20–1:30 (la primera vuelta) en lluvia y en olas.
-- 🟡 **El copy sigue entero sin tocar** (todo lo de la 234): `blanco` se muestra como **"Ruido marrón"** en `RuidoScreen.tsx:29` y como "Ruido blanco" en `tools.ts` / `vitaTools.ts` / la campanita — cuatro nombres para lo mismo, y encima marrón y blanco no son el mismo ruido; la tarjeta dice duración **"Libre"** pero la pantalla obliga a 5/15/30; y **en ningún lado dice para qué sirve** cada sonido, que es la mitad de lo que Andre reportó.
+- 🔴 **Escuchar una sesión de 15 min en el teléfono** — el arreglo del loop está medido pero no oído. Lo que hay que escuchar es el minuto 1:20–1:30 (la primera vuelta) en lluvia y en olas.
+- 🟡 **Mirar la grilla de sonidos en pantalla**: las tarjetas pasaron de dos líneas a tres y son de 47% de ancho. "para bajar un cambio" es el hint más largo; si parte feo, acortarlo es cambiar una string.
+- 🟡 **"Sonidos ambientales" es más largo que "Ruido blanco"** en el catálogo de Hábitos y en guardados. No se le puso `numberOfLines` a propósito —mejor que envuelva a que se corte— pero conviene verlo.
 - ⏸️ Unificar las dos tablas de guardados (de la 233, sigue abierta).
 - 📝 De la 230, sigue abierto: `send_session_reminders()` hace `to_char` sobre `scheduled_time` text.
 

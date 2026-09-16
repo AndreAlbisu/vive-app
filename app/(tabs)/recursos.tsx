@@ -385,7 +385,7 @@ function FormatGrid({
 // intacto para el resto de los consumidores (ReminderBell, headers de tool, etc.).
 const TILE_LABEL: Record<string, string> = {
   respiracion: 'Respirar',
-  ruido: 'Ruidos',
+  ruido: 'Sonidos',
 };
 
 // ─── ToolCard ─────────────────────────────────────────────────────────────────

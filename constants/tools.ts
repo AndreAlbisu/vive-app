@@ -35,7 +35,10 @@ export const TOOLS: Tool[] = [
   { id: 'meditacion',  label: 'Meditación',       icon: 'leaf-outline',          duration: '10–15 min',  route: '/meditacion',  color: PASTEL_SALVIA  },
   { id: 'escaner',     label: 'Escáner corporal', icon: 'body-outline',          duration: '8 min',      route: '/escaner',     color: PASTEL_AZUL    },
   { id: 'relajacion',  label: 'Relajación',       icon: 'musical-notes-outline', duration: '10 min',     route: '/relajacion',  color: PASTEL_DURAZNO },
-  { id: 'ruido',       label: 'Ruido blanco',     icon: 'volume-medium-outline', duration: 'Libre',      route: '/ruido',       color: PASTEL_SALVIA  },
+  // No es "Ruido blanco": la pantalla ofrece lluvia, bosque, olas y un ruido grave,
+  // y de blanco no tiene nada (medido: -8,7 dB/octava). Tampoco es "Libre" — obliga
+  // a elegir 5, 15 o 30 min. El id queda: viaja en completions, guardados y hábitos.
+  { id: 'ruido',       label: 'Sonidos ambientales', icon: 'volume-medium-outline', duration: '5–30 min', route: '/ruido',       color: PASTEL_SALVIA  },
   { id: 'lecturas',    label: 'Lecturas breves',  icon: 'library-outline',       duration: '5–10 min',   route: '/lecturas',    color: PASTEL_AZUL    },
   { id: 'anclaje',     label: 'Anclaje',          icon: 'locate-outline',        duration: '2–3 min',    route: '/anclaje',     color: PASTEL_DURAZNO },
 ];

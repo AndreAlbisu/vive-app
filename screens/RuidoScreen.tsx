@@ -22,11 +22,18 @@ const CREAM_LIGHT = '#F3EEDF';
 const TERRACOTTA  = '#C1694F';
 const GLASS_BG    = 'rgba(255,248,240,0.55)';
 
+// `hint` es para qué sirve cada uno: sin eso la pantalla explicaba cómo se usa
+// (elegí sonido, elegí tiempo) y nunca por qué elegirías uno y no otro.
+// El id `blanco` quedó del primer corte y ya no describe nada: medido, el archivo
+// cae -8,7 dB por octava entre 250 Hz y 4 kHz. Blanco sería 0, rosa -3, marrón -6
+// — o sea que es todavía más grave que el marrón, y "blanco" era directamente
+// falso. Se muestra por lo que se oye; el id no se toca porque viaja en
+// completions, guardados y recordatorios.
 const SOUNDS = [
-  { id: 'lluvia',   icon: 'weather-rainy' as const,   label: 'Lluvia suave',  bg: PASTEL_AZUL },
-  { id: 'bosque',   icon: 'tree-outline' as const,    label: 'Bosque',        bg: PASTEL_SALVIA },
-  { id: 'olas',     icon: 'waves' as const,            label: 'Olas del mar',  bg: PASTEL_TEAL },
-  { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido marrón',  bg: PASTEL_DURAZNO },
+  { id: 'lluvia',   icon: 'weather-rainy' as const,    label: 'Lluvia suave',  hint: 'para dormirte',        bg: PASTEL_AZUL },
+  { id: 'bosque',   icon: 'tree-outline' as const,     label: 'Bosque',        hint: 'para concentrarte',    bg: PASTEL_SALVIA },
+  { id: 'olas',     icon: 'waves' as const,            label: 'Olas del mar',  hint: 'para bajar un cambio', bg: PASTEL_TEAL },
+  { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido grave',   hint: 'para tapar el ruido',  bg: PASTEL_DURAZNO },
 ];
 
 // Grabaciones reales con licencia CC0 (freesound.org).
@@ -178,7 +185,7 @@ export default function RuidoScreen() {
           onBack={() => { stopTimer(); pauseAll(); router.back(); }}
           right={
             <>
-              <ReminderBell kind="tool" resourceRef="ruido" title="Ruido blanco" />
+              <ReminderBell kind="tool" resourceRef="ruido" title="Sonidos ambientales" />
               <PinButton resourceId="ruido" />
             </>
           }
@@ -198,8 +205,12 @@ export default function RuidoScreen() {
           <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
             <Text style={s.screenTitle}>Sonidos ambientales</Text>
             <Text style={s.description}>
-              Elegí un sonido y por cuánto tiempo.{'\n'}
-              Se detiene solo cuando termina — no necesitás hacer nada más.
+              Un fondo parejo tapa el ruido de afuera y le da a la cabeza algo
+              que no cambia. Sirve para dormirte, para concentrarte, o para
+              bajar un cambio antes de una sesión.
+            </Text>
+            <Text style={s.descriptionSmall}>
+              Elegí uno y por cuánto tiempo. Se detiene solo.
             </Text>
 
             {/* Sound selector */}
@@ -222,6 +233,7 @@ export default function RuidoScreen() {
                       <MaterialCommunityIcons name={sound.icon} size={22} color={FOREST} />
                     </View>
                     <Text style={s.soundLabel}>{sound.label}</Text>
+                    <Text style={s.soundHint}>{sound.hint}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -276,6 +288,7 @@ const s = StyleSheet.create({
   subtitle:     { fontFamily: ViveFonts.title, fontSize: 26, color: FOREST, textAlign: 'center' },
   screenTitle:  { fontFamily: ViveFonts.semibold, fontSize: 22, color: FOREST, textAlign: 'center' },
   description:  { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
+  descriptionSmall: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT, textAlign: 'center', opacity: 0.8, marginTop: -8 },
 
   soundGrid: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
   soundCard: {
@@ -300,6 +313,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   soundLabel: { fontFamily: ViveFonts.medium, fontSize: 13, color: FOREST },
+  soundHint:  { fontFamily: ViveFonts.regular, fontSize: 11, color: FOREST_SOFT, textAlign: 'center', marginTop: -4 },
 
   durationRow:       { flexDirection: 'row', gap: 8, justifyContent: 'center' },
   durationBtn:       { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(63,81,47,0.25)', backgroundColor: GLASS_BG },
