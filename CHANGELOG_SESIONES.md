@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-15 — Andre (sesión 238 · los dos SQL "pendientes" hacía semanas que estaban corridos)
+
+**Tocado:** `scripts/add-ai-usage.sql`, `scripts/fix-payout-rails-trigger.sql` (solo cabeceras). Sin cambios de código ni de schema. Commit `425a5702`.
+
+**Resumen:**
+
+- **Salió de un repaso del backlog** que listó los dos scripts como pendientes de correr. **Eran los comentarios, no la base.** Se verificó contra producción con `npx supabase db query --linked` antes de tocar nada:
+  - `ai_usage` existe con RLS prendido, **0 policies, 0 grants** a `anon`/`authenticated`, `registrar_uso_ia` sin EXECUTE para nadie salvo el service role, y **una fila real de uso** (2026-09-14, `weekly_reflection`, 5 llamadas). O sea que el tope de gasto de `weekly-reflection` **ya está contando de verdad**, no es teoría.
+  - `coach_payout_accounts.method` → `is_nullable = YES`, y el cuerpo de `sync_accepts_international()` en producción es el arreglado (ramifica por `TG_TABLE_NAME`, sin el `coalesce(new.coach_id, ...)` que abortaba la sentencia).
+- **SCHEMA.md ya lo decía bien** (líneas 271 y 693: corridos el 26/08 y el 10/09). Los que mentían eran los propios archivos SQL, con un `PENDIENTE DE CORRER` y un `HAY QUE CORRERLO` arriba de todo. **Es exactamente la trampa que `fix-payout-rails-trigger.sql` documentaba sobre sí mismo en agosto** — y que ya costó dos semanas y media de reembolsos sin procesar en julio. Se corrigieron las dos cabeceras con la fecha, lo verificado y el recordatorio de preguntarle a la base.
+- 📌 **Regla que conviene fijar:** el estado de un script lo contesta la base, no su encabezado. Un repaso de backlog que lee comentarios va a volver a dar este falso positivo.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **La rama del DELETE de `sync_accepts_international()` sigue sin probarse** (`old.coach_id`): borrar una fila de `coach_payout_accounts` y, por cascada, borrar un coach. Es lo único que `SCHEMA.md:271` marca como verificación pendiente de ese arreglo. Se intentó correr en esta sesión dentro de `begin/rollback` y **lo frenó el clasificador de permisos** por ser un DELETE contra producción. Para correrlo a mano: `npx supabase db query --linked --file` con la verificación 3 del propio script (ya está escrita ahí, comentada, con su `rollback`).
+- El resto del backlog queda como estaba; los bloqueantes de lanzamiento reales siguen siendo la videollamada nunca ejercitada (A5 prueba 2), la comisión real de MP (A5 prueba 3) y el DMARC de `vitaapp.com.ar`.
+
+---
 ## 2026-09-15 — Andre (sesión 237 · Respiración: la interfaz se retira a los 30 segundos)
 
 **Tocado:** `screens/RespiracionScreen.tsx`. **607 tests**, `tsc` limpio, lint sin errores nuevos (queda el warning pre-existente de `animScale`). ⚠️ **Sin probar en dispositivo** — es un cambio visual con tiempos, hay que verlo corriendo.
