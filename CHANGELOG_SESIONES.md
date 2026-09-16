@@ -73,7 +73,17 @@
   - ⚠️ **CORRECCIÓN, y viene del mismo error de la anon key**: el script tenía un delete de "reseñas colgadas de una reserva que no existe", basado en que las 24 sembradas tendrían `booking_id` inventados. **Falso**: eso salió de ver `bookings` en cero, y `reviews.booking_id` es FK real a `bookings.id`, así que esos ids existen. El delete se sacó. Las 24 se van igual por pertenecer a las cuentas de prueba, que es lo que sí está verificado.
   - 📌 **No borra cuentas de USUARIO de prueba**: quedan los ~84 perfiles. Quién es persona real y quién prueba no se deduce del esquema — es decisión de Andre.
 
+**Quinta parte — auditoría de la base antes de limpiar, y un hallazgo que frena el borrado.**
+
+- 📌 **Cómo se leyó la base, y por qué es feo.** Desde acá no había forma limpia: la anon key solo ve tablas públicas (ese 0 ya había producido dos conclusiones falsas), `supabase db dump` necesita Docker (no instalado), `inspect db` trae consultas fijas y `supabase db` no tiene `execute`. La única vía era una **migración de solo lectura con `raise notice`**. Quedan dos entradas en el historial (`20260916010000` y `20260916020000`), que **no cambian nada** — están marcadas como tales. ⚠️ Si esto se necesita seguido, conviene resolver el acceso de verdad en vez de repetir el truco.
+- 📊 **Lo que hay**: 185 reservas — **99 canceladas, 80 completadas, 6 confirmadas a futuro (17 al 26/09)**. 84 perfiles, de los cuales los de más actividad son `andre` (89 reservas, 11 de diario, 31 ánimos), `Joaquin Albisu` (32), cuatro "Usuario Seed" (9 cada uno) y varios "Usuario eliminado". 32 coaches.
+- 🔴 **EL HALLAZGO QUE FRENA EL BORRADO: hay plata que se movió de verdad.** 4 reservas de PayPal en `reembolsado` con monto cargado — **30 + 30 + 30 + 1 = USD 91**, entre el 25 y el 29/08 —, que son las pruebas con plata real documentadas en SCHEMA.md. Más 15 en `aprobado` (14 de MP + 1 de USDT) y 17 en `reembolsado`/`reembolso_pendiente`. 🔴 **La Política de Privacidad §10 promete conservar reservas y transacciones 10 años, disociadas, por obligación contable-fiscal.** Borrarlas contradice lo que el producto le dice al usuario y elimina el único registro propio de esos movimientos.
+- 🟢 **El script ahora excluye toda reserva donde la plata se movió** (`payment_status` fuera de `no_iniciado`/`pendiente`, o `charged_amount > 0`). Consecuencia buscada: si un coach de la lista tiene una de esas, **su fila no se va a poder borrar por FK y el script va a fallar** — mejor que falle y se mire, a que se lleve puesto un registro contable en silencio.
+- ⚠️ **Las 6 reservas confirmadas a futuro** (17 al 26/09) hay que mirarlas una por una antes de borrar: si alguna es de una persona real, se queda sin sesión y sin aviso. La consulta está en el script.
+
 **Pendiente para la próxima sesión:**
+- 🔴 **Decidir qué pasa con las reservas que movieron plata** (USD 91 en PayPal + 15 aprobadas). Es decisión de Andre y tiene consecuencias fuera del producto: hoy el script las conserva.
+- 🔴 **Mirar las 6 reservas confirmadas a futuro** antes de correr la limpieza.
 - 🔴 **Probar en dos teléfonos que la nota compartida aparece sola** (el realtime ya está corrido): con el chat abierto del lado del cliente, que el coach comparta una nota y aparezca sola.
 - 🟡 **Probar el recorrido crítico con VoiceOver/TalkBack prendido.** Está etiquetado, no escuchado. El calendario es lo que más vale la pena oír.
 - ⏸️ **Etiquetas: quedan 91 controles en 50 archivos.** Se puede seguir por tandas; la próxima más lógica es el lado del coach.

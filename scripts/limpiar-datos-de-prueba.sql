@@ -133,9 +133,39 @@ where reviewed_id in (select profile_id from a_borrar)
 delete from public.resource_recommendations
 where coach_id in (select coach_id from a_borrar);
 
+-- 🔴 ACÁ ESTÁ EL PROBLEMA QUE LA AUDITORÍA DEL 16/09/2026 DESTAPÓ, y que hay
+--    que decidir antes de correr esto.
+--
+--    De las 185 reservas, **hay plata que se movió de verdad**:
+--      · 4 de PayPal en estado `reembolsado`, con monto cargado: 30 + 30 + 30 + 1
+--        = **USD 91**, entre el 25 y el 29/08/2026. Son las pruebas con plata
+--        real que documenta SCHEMA.md.
+--      · 15 en `aprobado` (14 de Mercado Pago + 1 de USDT) y 17 más en
+--        `reembolsado` / `reembolso_pendiente`.
+--
+--    🔴 **La Política de Privacidad §10 dice que las reservas y transacciones se
+--    conservan 10 años, disociadas, por obligación contable-fiscal.** Borrar
+--    estas filas contradice lo que el producto le promete al usuario y borra el
+--    único registro propio de esos movimientos.
+--
+--    Por eso el delete de abajo **excluye toda reserva donde la plata se movió**.
+--    Si Andre decide que esas también se van, se saca el `and` — pero es una
+--    decisión con consecuencias fuera del producto, no una preferencia técnica.
+--
+--    ⚠️ CONSECUENCIA: si un coach de la lista tiene alguna de esas reservas, su
+--    fila de `coaches` NO se va a poder borrar (FK). Es a propósito: mejor que
+--    falle y se mire, a que se lleve puesto un registro contable en silencio.
+--
+-- ⚠️ Y OJO: hay **6 reservas `confirmada` con fecha futura** (17 al 26/09/2026).
+--    Si alguna es de una persona real esperando una sesión, borrarla la deja sin
+--    sesión y sin aviso. Mirarlas una por una:
+--      select id, coach_id, user_id, scheduled_date, scheduled_time
+--        from public.bookings where status = 'confirmada' and scheduled_date >= current_date;
 delete from public.bookings
-where coach_id in (select coach_id from a_borrar)      -- coaches.id
-   or user_id  in (select profile_id from a_borrar);
+where (coach_id in (select coach_id from a_borrar)      -- coaches.id
+    or user_id  in (select profile_id from a_borrar))
+  and coalesce(payment_status, 'no_iniciado') in ('no_iniciado', 'pendiente')
+  and coalesce(charged_amount, 0) = 0;
 
 delete from public.messages
 where sala_id in (
