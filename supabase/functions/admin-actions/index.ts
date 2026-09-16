@@ -85,6 +85,18 @@ async function audit(
  *
  *  Es best-effort a propósito: que falle el aviso no puede desarmar una
  *  aprobación ya escrita. Queda en el log. */
+// Los tipos de archivo que acepta la evidencia de una sanción, y la extensión
+// con la que se guardan. Tiene que coincidir con `allowed_mime_types` del bucket
+// `sanction-evidence`: si acá se acepta algo que el bucket no, la subida firmada
+// falla recién en storage, con un error mucho menos claro.
+const EVIDENCE_MIMES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'application/pdf': 'pdf',
+}
+
 async function notifyCoach(
   admin: SupabaseClient,
   profileId: string,
@@ -427,7 +439,7 @@ serve(async (req) => {
     case 'list_sanctions': {
       const { data, error } = await admin
         .from('coach_sanctions')
-        .select('id, coach_id, nivel, motivo, evidencia, hasta, created_at, revocada_at, revocada_motivo, coaches!inner(profile_id, profiles!inner(name))')
+        .select('id, coach_id, nivel, motivo, evidencia, hasta, created_at, revocada_at, revocada_motivo, coaches!inner(profile_id, profiles!inner(name)), coach_sanction_evidence(id, mime, created_at)')
         .order('created_at', { ascending: false })
         .limit(200)
 
@@ -449,9 +461,120 @@ serve(async (req) => {
             createdAt: r.created_at,
             revocadaAt: r.revocada_at ?? null,
             revocadaMotivo: r.revocada_motivo ?? null,
+            adjuntos: (r.coach_sanction_evidence ?? [])
+              .map((e: any) => ({ id: e.id, mime: e.mime, createdAt: e.created_at }))
+              .sort((x: any, y: any) => String(x.createdAt).localeCompare(String(y.createdAt))),
           }
         }),
       })
+    }
+
+    // ── Adjuntos de evidencia ────────────────────────────────────────────────
+    //
+    // Tres pasos y no uno, para que el archivo NUNCA pase por esta función (una
+    // captura de 5MB en base64 dentro de un JSON es lenta y frágil):
+    //   1. `sanction_evidence_upload` — valida al admin y la sanción, elige el
+    //      path, y devuelve una URL de subida firmada a ESE path.
+    //   2. el cliente sube el archivo directo a storage con esa URL.
+    //   3. `sanction_evidence_register` — confirma que el objeto existe y lo
+    //      anota. Si el paso 2 falló, no queda una fila apuntando a la nada.
+    //
+    // El bucket no tiene ninguna policy: esta función es la única puerta, igual
+    // que con `coach-credentials`.
+    case 'sanction_evidence_upload': {
+      if (!body.sancion_id) return json({ error: 'falta sancion_id' }, 400)
+      const mime = String(body.mime ?? '')
+      if (!EVIDENCE_MIMES[mime]) {
+        return json({ error: 'solo imágenes (jpg, png, webp, heic) o PDF' }, 400)
+      }
+
+      const { data: sancion } = await admin
+        .from('coach_sanctions').select('id').eq('id', body.sancion_id).maybeSingle()
+      if (!sancion) return json({ error: 'no existe esa sanción' }, 404)
+
+      // El path lo decide el servidor, nunca el cliente: así un admin no puede
+      // pisar la evidencia de otra sanción eligiendo a mano el nombre.
+      const path = `${sancion.id}/${crypto.randomUUID()}.${EVIDENCE_MIMES[mime]}`
+      const { data: signed, error: signErr } = await admin
+        .storage.from('sanction-evidence')
+        .createSignedUploadUrl(path)
+
+      if (signErr || !signed) return json({ error: signErr?.message ?? 'no se pudo firmar la subida' }, 500)
+      return json({ result: 'ok', path: signed.path, token: signed.token })
+    }
+
+    case 'sanction_evidence_register': {
+      if (!body.sancion_id || !body.path) return json({ error: 'falta sancion_id o path' }, 400)
+      const path = String(body.path)
+      const mime = String(body.mime ?? '')
+      if (!EVIDENCE_MIMES[mime]) return json({ error: 'tipo de archivo no permitido' }, 400)
+
+      // El path tiene que ser de ESTA sanción. Sin este chequeo se podría colgar
+      // de una sanción un archivo subido para otra.
+      const [carpeta, archivo] = path.split('/')
+      if (carpeta !== String(body.sancion_id) || !archivo) {
+        return json({ error: 'ese archivo no pertenece a esta sanción' }, 400)
+      }
+
+      // Que el objeto exista de verdad: si la subida falló a mitad de camino, no
+      // se registra nada.
+      const { data: listado } = await admin
+        .storage.from('sanction-evidence')
+        .list(carpeta, { search: archivo, limit: 1 })
+      if (!listado || listado.length === 0) {
+        return json({ error: 'el archivo no llegó a subirse' }, 409)
+      }
+
+      const { data: sancion } = await admin
+        .from('coach_sanctions').select('id, coach_id').eq('id', carpeta).maybeSingle()
+      if (!sancion) return json({ error: 'no existe esa sanción' }, 404)
+
+      const { data, error } = await admin
+        .from('coach_sanction_evidence')
+        .insert({ sancion_id: sancion.id, file_path: path, mime, created_by: actor.adminId })
+        .select('id, mime, created_at')
+        .single()
+      if (error) return json({ error: error.message }, 500)
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'sanction_evidence_register',
+        targetType: 'coach',
+        targetId: sancion.coach_id,
+        details: { sancion_id: sancion.id, evidencia_id: data.id, mime },
+      })
+
+      return json({ result: 'ok', adjunto: data, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
+    // Mirar un adjunto. 5 minutos y auditado, igual que un documento de
+    // identidad: es muy probable que la captura tenga mensajes privados de un
+    // cliente, y tiene que constar quién la abrió.
+    case 'sanction_evidence_url': {
+      if (!body.evidencia_id) return json({ error: 'falta evidencia_id' }, 400)
+
+      const { data: ev } = await admin
+        .from('coach_sanction_evidence')
+        .select('id, file_path, sancion_id, coach_sanctions!inner(coach_id)')
+        .eq('id', body.evidencia_id)
+        .maybeSingle()
+      if (!ev) return json({ error: 'no existe ese adjunto' }, 404)
+
+      const { data: signed, error: signErr } = await admin
+        .storage.from('sanction-evidence')
+        .createSignedUrl(ev.file_path, 300)
+      if (signErr || !signed) return json({ error: signErr?.message ?? 'no se pudo firmar' }, 500)
+
+      const s2: any = Array.isArray((ev as any).coach_sanctions) ? (ev as any).coach_sanctions[0] : (ev as any).coach_sanctions
+      await audit(admin, {
+        ...actor,
+        action: 'sanction_evidence_url',
+        targetType: 'coach',
+        targetId: s2?.coach_id ?? ev.sancion_id,
+        details: { sancion_id: ev.sancion_id, evidencia_id: ev.id },
+      })
+
+      return json({ result: 'ok', url: signed.signedUrl, expires_in: 300 })
     }
 
     // ── Moderar un reporte ───────────────────────────────────────────────────

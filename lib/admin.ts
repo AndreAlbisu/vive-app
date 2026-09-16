@@ -11,6 +11,7 @@
 // el cliente justo para que nadie se auto-apruebe, y `reports` nunca tuvo
 // UPDATE desde el cliente. Escribir directo exigiría reabrir esas columnas.
 
+import { File } from 'expo-file-system';
 import { supabase } from '@/lib/supabase';
 import { REPORT_REASONS, type ReportReason } from '@/lib/reports';
 import { coachNetFor, platformDeliveryCost, type PayoutRail } from '@/lib/payout';
@@ -161,6 +162,9 @@ export type AdminSancion = {
   createdAt: string;
   revocadaAt: string | null;
   revocadaMotivo: string | null;
+  /** Capturas y PDFs. Solo los ve el equipo: el coach sancionado NO tiene acceso
+   *  (ni a esta lista ni al texto de `evidencia`) — ver `add-sanction-evidence.sql`. */
+  adjuntos: { id: string; mime: string; createdAt: string }[];
 };
 
 export async function listSanctions(): Promise<AdminSancion[]> {
@@ -170,6 +174,49 @@ export async function listSanctions(): Promise<AdminSancion[]> {
     return [];
   }
   return (res.data?.sanciones ?? []) as AdminSancion[];
+}
+
+/**
+ * Sube un adjunto de evidencia a una sanción ya creada.
+ *
+ * El archivo NO pasa por la edge function: ella firma una subida a un path que
+ * elige, el archivo va directo a storage, y después ella confirma que llegó y lo
+ * registra. Si la subida se corta a mitad de camino, no queda una fila huérfana.
+ *
+ * ⚠️ `mime` tiene que ser uno de los que acepta el bucket (jpeg, png, webp, heic,
+ * pdf). El selector de fotos devuelve JPEG si se le pide calidad < 1, que es lo
+ * que hace el panel — así una foto HEIC del iPhone no rebota.
+ */
+export async function uploadSanctionEvidence(
+  sancionId: string,
+  uri: string,
+  mime: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const firma = await callAdmin({ action: 'sanction_evidence_upload', sancion_id: sancionId, mime });
+    if (!firma.ok) return { ok: false, error: firma.error ?? 'no se pudo preparar la subida' };
+    const { path, token } = firma.data as { path: string; token: string };
+
+    const bytes = await new File(uri).bytes();
+    const { error: upErr } = await supabase.storage
+      .from('sanction-evidence')
+      .uploadToSignedUrl(path, token, bytes, { contentType: mime });
+    if (upErr) return { ok: false, error: upErr.message };
+
+    const reg = await callAdmin({ action: 'sanction_evidence_register', sancion_id: sancionId, path, mime });
+    if (!reg.ok) return { ok: false, error: reg.error ?? 'se subió pero no se pudo registrar' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+/** URL firmada de 5 minutos. Abrirla queda auditado: es muy probable que la
+ *  captura tenga mensajes privados de un cliente. */
+export async function sanctionEvidenceUrl(evidenciaId: string): Promise<{ url?: string; error?: string }> {
+  const res = await callAdmin({ action: 'sanction_evidence_url', evidencia_id: evidenciaId });
+  if (!res.ok) return { error: res.error ?? 'no se pudo abrir' };
+  return { url: (res.data as { url: string }).url };
 }
 
 /** ¿Esta sanción está pesando ahora mismo? Misma cuenta que `estaSuspendido`

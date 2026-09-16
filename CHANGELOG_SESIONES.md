@@ -95,6 +95,21 @@
 - ⏸️ **Quedan de la lista de 18, sin empezar**: declarar Turnstile y unpkg en la política, el contraste, las tres afirmaciones sin respaldo, las etiquetas de accesibilidad y el foco de teclado en la web. Andre pidió ir de a uno.
 
 ---
+## 2026-09-16 — Andre (sesión 242 · adjuntar evidencia, y la evidencia que se le filtraba al sancionado)
+
+**Tocado:** `scripts/add-sanction-evidence.sql` (nuevo), `supabase/functions/admin-actions/index.ts`, `lib/admin.ts`, `screens/AdminScreen.tsx`, `SCHEMA.md`.
+
+**Resumen:**
+- **Andre: *"no puedo adjuntar nada en las evidencias"*.** Tenía razón en que era un hueco de diseño: la evidencia era un campo de texto, y la evidencia real de una fuga es casi siempre una captura — el chat donde el coach pasó su WhatsApp, un comprobante de transferencia por fuera. Ahora en el panel se adjuntan capturas (desde la galería, varias a la vez) y PDFs, al aplicar la sanción o después desde su tarjeta, y se abren tocándolas.
+- 🔴 **Al diseñarlo apareció una fuga en lo que ya estaba en producción.** La tabla de sanciones heredó el permiso de lectura por defecto de Supabase, así que **el coach sancionado podía leer por la API el texto de evidencia de su propia sanción**, aunque la app no se lo mostrara. Y la evidencia no es suya: casi siempre sale del cliente que contó, de sus mensajes. Dársela al sancionado expone a quien denunció. Criterio que queda: **el coach sabe POR QUÉ (el motivo), no CON QUÉ se probó.** Se cerró por columna, y probado actuando como un coach real con sesión: leer la evidencia da `permission denied`, y el mismo coach sigue leyendo motivo y fecha, así que su aviso en el Inicio sigue andando.
+- **Sin segunda puerta al bucket.** Ni el bucket ni la tabla de adjuntos tienen policies: la única entrada es `admin-actions`, que firma la subida a un path que elige ella, confirma que el archivo llegó antes de anotarlo, y da URLs de 5 minutos para mirarlo. Abrir un adjunto queda auditado — es casi seguro que tenga mensajes privados de un tercero.
+- ✅ **Todo corrido, verificado y deployado desde el CLI** (9 de 9 en la base; `admin-actions` v31, arranca y rechaza al no-admin con nuestro mensaje). Primer deploy hecho por Claude con la regla de permiso que agregó Andre.
+
+**Pendiente para la próxima sesión:**
+- **La prueba de punta a punta desde el celular**: aplicar una advertencia a un coach de prueba adjuntando una captura, abrir la captura desde la tarjeta, y levantarla. Es lo único que no se pudo probar desde el CLI — la subida firmada necesita la sesión de un admin real. ⚠️ Esa advertencia le manda una notificación real al coach de prueba.
+- 📌 **Un adjunto no se puede borrar desde el panel**, a propósito por ahora: la evidencia es registro, igual que una sanción levantada no se borra. Si se sube algo equivocado (por ejemplo, la captura de otro caso), hoy se saca a mano. A decidir si hace falta.
+
+---
 ## 2026-09-16 — Andre (sesión 241 · el checkout web creaba cuentas sin declarar la edad ni guardar la aceptación)
 
 **Tocado:** `web/c/index.html`, `scripts/sync-legal.mjs`, `web/legal-version.js` (nuevo, generado), `SCHEMA.md`. **607 tests**, `tsc` limpio. ⚠️ **Sin probar en el navegador.**

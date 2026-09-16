@@ -23,6 +23,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
@@ -39,6 +41,7 @@ import {
   type AuditEntry, type GuaranteeCheck,
   listPendingCredentials, credentialFileUrl, reviewCredential, type AdminCredential,
   listSanctions, applySanction, revokeSanction, sancionVigente,
+  uploadSanctionEvidence, sanctionEvidenceUrl,
   type AdminSancion, type SancionNivel,
 } from '@/lib/admin';
 import { supabase } from '@/lib/supabase';
@@ -867,6 +870,46 @@ export default function AdminScreen() {
 // notificación. No es una nota interna. Es deliberado: una sanción secreta deja
 // a la persona viendo que dejó de entrar gente sin saber por qué ni qué
 // corregir, y eso es lo que convierte a una plataforma en algo que se odia.
+// Un adjunto elegido pero todavía no subido.
+type AdjuntoLocal = { uri: string; mime: string; nombre: string };
+
+const MAX_ADJUNTO = 10 * 1024 * 1024; // el límite del bucket `sanction-evidence`
+
+/**
+ * Capturas desde la galería, que es donde viven las capturas de pantalla.
+ *
+ * `quality: 0.8` no es para achicar: es lo que hace que el selector devuelva
+ * JPEG. Con calidad 1 un iPhone entrega HEIC tal cual, y aunque el bucket lo
+ * acepta, del otro lado no todos los visores lo abren.
+ */
+async function elegirCapturas(): Promise<AdjuntoLocal[]> {
+  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) {
+    Alert.alert('Sin acceso a las fotos', 'Habilitá el acceso a la galería en los ajustes del teléfono.');
+    return [];
+  }
+  const res = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsMultipleSelection: true,
+    quality: 0.8,
+  });
+  if (res.canceled) return [];
+  const grandes = res.assets.filter(a => (a.fileSize ?? 0) > MAX_ADJUNTO).length;
+  if (grandes > 0) Alert.alert('Algunas no entran', `${grandes} pesan más de 10 MB y quedaron afuera.`);
+  return res.assets
+    .filter(a => (a.fileSize ?? 0) <= MAX_ADJUNTO)
+    .map((a, i) => ({ uri: a.uri, mime: a.mimeType ?? 'image/jpeg', nombre: a.fileName ?? `captura ${i + 1}` }));
+}
+
+/** Un PDF — comprobantes de transferencia, sobre todo. */
+async function elegirPdf(): Promise<AdjuntoLocal[]> {
+  const res = await DocumentPicker.getDocumentAsync({ type: ['application/pdf'], copyToCacheDirectory: true });
+  if (res.canceled || !res.assets?.[0]) return [];
+  const a = res.assets[0];
+  if (a.size && a.size > MAX_ADJUNTO) { Alert.alert('Archivo muy grande', 'Tiene que pesar menos de 10 MB.'); return []; }
+  return [{ uri: a.uri, mime: 'application/pdf', nombre: a.name }];
+}
+
 function SanctionsPanel() {
   const [sanciones, setSanciones] = useState<AdminSancion[]>([]);
   const [coaches, setCoaches] = useState<{ id: string; name: string }[]>([]);
@@ -881,6 +924,9 @@ function SanctionsPanel() {
   const [busy, setBusy] = useState(false);
   const [levantando, setLevantando] = useState<string | null>(null);
   const [revokeMotivo, setRevokeMotivo] = useState('');
+  const [adjuntos, setAdjuntos] = useState<AdjuntoLocal[]>([]);
+  // Qué tarjeta está subiendo adjuntos ahora (para el spinner de esa sola).
+  const [subiendoEn, setSubiendoEn] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -907,7 +953,33 @@ function SanctionsPanel() {
 
   function reset() {
     setAbierto(false); setCoachId(null); setNivel('advertencia');
-    setMotivo(''); setDias('14'); setEvidencia('');
+    setMotivo(''); setDias('14'); setEvidencia(''); setAdjuntos([]);
+  }
+
+  // Sube de a uno y cuenta los que fallan, en vez de cortar en el primero: si de
+  // cinco capturas falla una, las otras cuatro tienen que quedar.
+  async function subirAdjuntos(sancionId: string, lista: AdjuntoLocal[]): Promise<number> {
+    let fallidos = 0;
+    for (const a of lista) {
+      const r = await uploadSanctionEvidence(sancionId, a.uri, a.mime);
+      if (!r.ok) { fallidos += 1; console.warn('[sanciones] adjunto:', a.nombre, r.error); }
+    }
+    return fallidos;
+  }
+
+  async function agregarATarjeta(sancionId: string, lista: AdjuntoLocal[]) {
+    if (lista.length === 0) return;
+    setSubiendoEn(sancionId);
+    const fallidos = await subirAdjuntos(sancionId, lista);
+    setSubiendoEn(null);
+    if (fallidos > 0) Alert.alert('No se subió todo', `${fallidos} de ${lista.length} no se pudieron subir. Probá de nuevo con esos.`);
+    void cargar();
+  }
+
+  async function verAdjunto(evidenciaId: string) {
+    const r = await sanctionEvidenceUrl(evidenciaId);
+    if (r.error || !r.url) { Alert.alert('No se pudo abrir', r.error ?? ''); return; }
+    await Linking.openURL(r.url);
   }
 
   async function aplicar() {
@@ -943,8 +1015,20 @@ function SanctionsPanel() {
               ...(nivel === 'suspension' ? { dias: n } : {}),
               ...(evidencia.trim() ? { evidencia: evidencia.trim() } : {}),
             });
+            if (!res.ok) { setBusy(false); Alert.alert('No se pudo', res.error ?? 'Probá de nuevo.'); return; }
+
+            // La sanción ya quedó aplicada. Los adjuntos van después porque
+            // necesitan su id; si alguno falla, la sanción NO se deshace — se
+            // avisa y se puede volver a adjuntar desde la tarjeta.
+            const nuevaId = (res as any).data?.sancion?.id as string | undefined;
+            const pendientes = adjuntos;
+            let fallidos = 0;
+            if (nuevaId && pendientes.length > 0) fallidos = await subirAdjuntos(nuevaId, pendientes);
             setBusy(false);
-            if (!res.ok) { Alert.alert('No se pudo', res.error ?? 'Probá de nuevo.'); return; }
+            if (fallidos > 0) {
+              Alert.alert('Sanción aplicada, pero faltan adjuntos',
+                `${fallidos} de ${pendientes.length} no se pudieron subir. Agregalos desde la tarjeta de la sanción.`);
+            }
             reset();
             void cargar();
           },
@@ -1021,10 +1105,33 @@ function SanctionsPanel() {
             placeholder="Qué pasó, en una o dos frases."
             placeholderTextColor="rgba(135,131,92,0.5)" />
 
-          <Text style={[s.cardMeta, { marginTop: 12 }]}>Evidencia (opcional)</Text>
+          {/* 🔴 La evidencia NO la ve el coach. Ve el motivo, que es lo que
+              necesita para entender y corregir; la evidencia casi siempre sale
+              de otra persona (el cliente que contó, sus mensajes) y dársela
+              al sancionado la expone. */}
+          <Text style={[s.cardMeta, { marginTop: 12 }]}>Evidencia — solo la ve el equipo, no el coach</Text>
           <TextInput style={s.input} value={evidencia} onChangeText={setEvidencia}
-            placeholder="Ids de reserva, capturas, lo que respalde la decisión."
+            placeholder="Notas: ids de reserva, qué se ve en las capturas."
             placeholderTextColor="rgba(135,131,92,0.5)" />
+          <View style={s.actions}>
+            <TouchableOpacity style={[s.btn, s.btnGhost]} activeOpacity={0.8}
+              onPress={async () => { const n = await elegirCapturas(); if (n.length) setAdjuntos(prev => [...prev, ...n]); }}>
+              <Text style={s.btnGhostText}>Adjuntar capturas</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.btn, s.btnGhost]} activeOpacity={0.8}
+              onPress={async () => { const n = await elegirPdf(); if (n.length) setAdjuntos(prev => [...prev, ...n]); }}>
+              <Text style={s.btnGhostText}>Adjuntar PDF</Text>
+            </TouchableOpacity>
+          </View>
+          {adjuntos.map((a, i) => (
+            <View key={`${a.uri}-${i}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+              <MaterialCommunityIcons name={a.mime === 'application/pdf' ? 'file-pdf-box' : 'image-outline'} size={16} color={OLIVE} />
+              <Text style={[s.cardMeta, { flex: 1 }]} numberOfLines={1}>{a.nombre}</Text>
+              <TouchableOpacity hitSlop={8} onPress={() => setAdjuntos(prev => prev.filter((_, j) => j !== i))}>
+                <MaterialCommunityIcons name="close" size={16} color={OLIVE} />
+              </TouchableOpacity>
+            </View>
+          ))}
 
           <View style={s.actions}>
             <TouchableOpacity style={[s.btn, s.btnGhost]} onPress={reset} activeOpacity={0.8}>
@@ -1052,6 +1159,34 @@ function SanctionsPanel() {
               </Text>
               <Text style={s.cardBody}>{x.motivo}</Text>
               {!!x.evidencia && <Text style={s.cardMeta}>{x.evidencia}</Text>}
+              {x.adjuntos.length > 0 && (
+                <View style={s.actions}>
+                  {x.adjuntos.map((adj, i) => (
+                    <TouchableOpacity key={adj.id} style={s.linkRow} activeOpacity={0.75} onPress={() => verAdjunto(adj.id)}>
+                      <MaterialCommunityIcons name={adj.mime === 'application/pdf' ? 'file-pdf-box' : 'image-outline'} size={16} color={ViveColors.primary} />
+                      <Text style={s.linkText}>{adj.mime === 'application/pdf' ? `PDF ${i + 1}` : `Captura ${i + 1}`}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              {/* Se puede agregar evidencia a CUALQUIER sanción, también vencida
+                  o levantada: el historial sirve cuando alguien reincide. */}
+              <View style={s.actions}>
+                {subiendoEn === x.id ? (
+                  <ActivityIndicator color={FOREST} />
+                ) : (
+                  <>
+                    <TouchableOpacity style={[s.btn, s.btnGhost]} activeOpacity={0.8}
+                      onPress={async () => agregarATarjeta(x.id, await elegirCapturas())}>
+                      <Text style={s.btnGhostText}>+ Capturas</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[s.btn, s.btnGhost]} activeOpacity={0.8}
+                      onPress={async () => agregarATarjeta(x.id, await elegirPdf())}>
+                      <Text style={s.btnGhostText}>+ PDF</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
               {!!x.revocadaMotivo && <Text style={s.cardMeta}>Se levantó: {x.revocadaMotivo}</Text>}
               {vigente && levantando !== x.id && (
                 <View style={s.actions}>
