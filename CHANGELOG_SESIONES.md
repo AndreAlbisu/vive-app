@@ -4,6 +4,28 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-16 — Andre (sesión 241 · el checkout web creaba cuentas sin declarar la edad ni guardar la aceptación)
+
+**Tocado:** `web/c/index.html`, `scripts/sync-legal.mjs`, `web/legal-version.js` (nuevo, generado), `SCHEMA.md`. **607 tests**, `tsc` limpio. ⚠️ **Sin probar en el navegador.**
+
+⚠️ **Estos cambios quedaron adentro del commit `3c003f1e` de la sesión 240**, no en uno propio: las dos sesiones estaban escribiendo el mismo repo a la vez y el `git add -A` de la otra se llevó lo que yo tenía staged. No se perdió nada, pero el mensaje de ese commit no menciona nada de esto — por eso queda escrito acá.
+
+**Resumen — salió de una pregunta de Andre: "la app es para mayores de edad, ¿no?".**
+
+- **Sí, y está bien dicho en los tres documentos**: T&C §3.1 (*"dirigida exclusivamente a personas mayores de 18 años"*), la Política de privacidad (no se recolectan datos de menores; si aparece uno se da de baja la cuenta) y `docs/etiquetas-privacidad-tiendas.md` (no aplica Play Families). En la app se pide en los tres caminos de alta, y en la postulación de coach **se verifica** contra `birth_date`, que es el único punto con una fecha real.
+- 🔴 **Pero el checkout web era la cuarta puerta y no pedía nada.** `web/c/index.html` crea cuenta con un código al mail —es el camino del cliente #1, el que se abre cuando se prenda `CHECKOUT_HABILITADO`— y **no mencionaba la edad en ninguna parte** (0 apariciones de "18 años" en el archivo). La cláusula §3.1 afirmaba ahí una declaración que nunca existía: exactamente el mismo agujero que se tapó en la app el 13/08.
+- 🐛 **Segundo hueco del mismo archivo, encontrado de paso: el tilde de Términos SE MOSTRABA y no guardaba nada.** Las cuentas nacidas del checkout quedaban sin `accepted_terms`, sin `accepted_terms_at` y sin `accepted_terms_version` — o sea sin ninguna prueba de qué texto leyó la persona, que es para lo único que esas columnas existen (§20).
+- 🟢 **Arreglado con dos tildes separados**, igual que `RegisterScreen`, y un mensaje de error por cada uno: un error que junte los dos manda a mirar el tilde que ya está marcado. `guardarConsentimiento()` escribe las cuatro columnas con **el mismo criterio idempotente de `AuthContext.markAccepted`** — solo lo que está en `false`, nunca pisa una declaración anterior, nunca escribe `false`. Es lo que evita que a quien ya tiene cuenta y entra por el link del coach se le pise *cuándo* aceptó de verdad.
+- 📌 **La versión de los legales llega por `web/legal-version.js`, que ahora genera `sync-legal.mjs`.** La página es HTML suelto sin bundler, no puede importar `constants/legal.ts`, y hardcodear el hash era justo el olvido que ese script existe para evitar: se edita el texto y quedan aceptaciones registradas contra una versión que nadie leyó. Se sirve desde la raíz igual que `/captcha.js`.
+- ✅ **Verificado contra prod que el PATCH va a pasar**: `authenticated` tiene `UPDATE` sobre las cuatro columnas de aceptación (`lock-privileged-columns.sql` corrido).
+
+**Pendiente para la próxima sesión:**
+- **Probarlo en el navegador** con `?probar=1`: que sin el tilde nuevo no deje pedir el código, y que después de confirmarlo la fila del perfil quede con `age_confirmed = true` y las tres de Términos escritas.
+- 📌 **Los 35 perfiles con `accepted_terms = true` y `age_confirmed = false`** son anteriores al 13/08 y **no se backfillean a propósito** (fabricar una constancia que no existió es peor que no tenerla). Dicho para que el número no asuste cuando aparezca.
+- ⚠️ **La limitación de fondo sigue abierta** (ya anotada en `SCHEMA.md:741`): las cuatro columnas las escribe el cliente, así que son falsificables por su propio titular. Cerrarlo exige moverlas a una edge function en el alta.
+- 🔴 **Dos sesiones escribiendo el mismo repo a la vez se pisan.** Pasó hoy con `git add -A`. Si van a trabajar en paralelo, conviene que cada una commitee solo sus archivos por nombre.
+
+---
 ## 2026-09-16 — Andre (sesión 240 · qué necesita saber un profesional antes de atender)
 
 **Tocado:** `scripts/add-booking-tema-origen.sql` (nuevo), `lib/time.ts`, `screens/CoachReservasScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/BookingScreen_Calendar.tsx`, `screens/BookingScreen_Time.tsx`, `screens/ProfesionalScreen.tsx`, `app/(tabs)/conexiones.tsx`, `app/search3.tsx`, `SCHEMA.md`.
