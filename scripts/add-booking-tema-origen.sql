@@ -2,7 +2,10 @@
 --
 -- `bookings.tema_origen` — por qué puerta entró la persona que reservó.
 --
--- ⚠️ PENDIENTE DE CORRER.
+-- ✅ CORRIDO el 16/09/2026. Línea de base medida en el momento de correrlo, con
+--    86 reservas (todas de prueba) y `tema_origen` todavía en null en todas:
+--    **59 a ciegas, o sea que solo el 31% había escrito el motivo**. Es el número
+--    contra el que se compara de acá en adelante.
 --
 -- ── Por qué ──────────────────────────────────────────────────────────────────
 --
