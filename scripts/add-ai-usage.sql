@@ -2,12 +2,21 @@
 --
 -- `ai_usage` — cuántas veces por día llamó cada persona a una feature de IA.
 --
--- ⚠️ PENDIENTE DE CORRER (escrito el 09/09/2026).
+-- ✅ CORRIDO Y VERIFICADO (escrito el 09/09/2026, corrido el 10/09/2026).
+--
+-- 📌 Re-confirmado contra producción el 15/09/2026 preguntándole a la base y no
+-- a este comentario, que hasta hoy seguía diciendo "PENDIENTE DE CORRER" y por
+-- eso el script aparecía como pendiente en dos repasos distintos: la tabla
+-- existe con RLS prendido, 0 policies, 0 grants a anon/authenticated, la función
+-- sin EXECUTE para nadie salvo el service role, y una fila real de uso
+-- (2026-09-14, weekly_reflection, 5 llamadas) — o sea que el tope ya está
+-- contando de verdad. Es idempotente igual (`create table if not exists` +
+-- `create or replace`), así que volver a correrlo no rompe nada.
 --
 -- ── Por qué ──────────────────────────────────────────────────────────────────
 --
--- 🔴 `weekly-reflection` llama a la API de Anthropic y **no tiene ningún tope
--- por usuario**. Está bien defendida en lo que se propuso defender: exige token
+-- 🔴 `weekly-reflection` llama a la API de Anthropic y **no tenía ningún tope
+-- por usuario** (lo de acá abajo describe el estado previo a este script). Está bien defendida en lo que se propuso defender: exige token
 -- de usuario real y no la anon key (el comentario en la función explica que si
 -- no, cualquiera con la clave pública quema la cuota), y valida las entradas
 -- contra listas cerradas para que no entre texto libre al prompt.

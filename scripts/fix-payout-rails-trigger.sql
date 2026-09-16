@@ -4,10 +4,20 @@
 -- la app hace todos los días, y ninguno de los dos avisa: el error sale del lado
 -- del cliente como "no se pudo guardar".
 --
--- 🔴 HAY QUE CORRERLO: `add-payout-rails.sql` YA ESTÁ CORRIDO en producción
+-- ✅ YA CORRIDO el 26/08/2026. Re-confirmado contra la base el 15/09/2026:
+-- `coach_payout_accounts.method` devuelve `is_nullable = YES` y el cuerpo de
+-- `sync_accepts_international()` en producción es el de abajo (ramifica por
+-- `TG_TABLE_NAME`, ya no tiene el `coalesce(new.coach_id, ...)`). Este bloque
+-- seguía diciendo "HAY QUE CORRERLO" y por eso el archivo volvió a aparecer
+-- como pendiente en un repaso — la misma trampa que el propio archivo
+-- documenta más abajo: preguntarle a la base, no a los documentos.
+-- ⚠️ Lo que SIGUE sin probarse es la rama del DELETE (`old.coach_id`): borrar
+-- una fila de cobro y, por cascada, borrar un coach. Ver la verificación 3.
+--
+-- Contexto de por qué se escribió: `add-payout-rails.sql` YA ESTABA CORRIDO en producción
 -- (confirmado contra la base el 25/08/2026 — las columnas de rieles responden
--- por REST), así que los dos defectos de abajo están VIVOS: hoy ningún coach
--- puede guardar su precio en dólares ni sus datos de cobro.
+-- por REST), así que los dos defectos de abajo estaban VIVOS: ningún coach
+-- podía guardar su precio en dólares ni sus datos de cobro.
 --
 -- 📝 El estado del script lo contestó la base y no los documentos, que decían
 -- cosas distintas: CHANGELOG_SESIONES.md "CORRIDO y VERIFICADO" y SCHEMA.md
