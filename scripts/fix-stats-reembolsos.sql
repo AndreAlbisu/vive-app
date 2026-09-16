@@ -70,12 +70,6 @@ select
   coach_id,
   count(*) filter (where has_completed)                  as completadas_count,
   count(*) filter (where has_completed and has_rebooked) as rebookers_count,
-  -- Usuarios que ANTES contaban y ahora no: todas sus sesiones completadas con
-  -- este coach terminaron con la plata de vuelta. Es exactamente la diferencia
-  -- entre la definición vieja y la nueva, y existe para poder EXPLICÁRSELO al
-  -- coach en su panel de visibilidad — un número que baja solo, sin que nadie
-  -- diga por qué, es peor que el número equivocado.
-  count(*) filter (where has_completed_any and not has_completed) as reembolsadas_count,
   case
     when count(*) filter (where has_completed) >= 5
       then round(
@@ -84,7 +78,19 @@ select
         3
       )
     else null
-  end                                                    as rebooking_rate
+  end                                                    as rebooking_rate,
+  -- Usuarios que ANTES contaban y ahora no: todas sus sesiones completadas con
+  -- este coach terminaron con la plata de vuelta. Es exactamente la diferencia
+  -- entre la definición vieja y la nueva, y existe para poder EXPLICÁRSELO al
+  -- coach en su panel de visibilidad — un número que baja solo, sin que nadie
+  -- diga por qué, es peor que el número equivocado.
+  --
+  -- ⚠️ VA ÚLTIMA Y NO EN EL MEDIO, y no es cosmético: `create or replace view`
+  -- solo deja AGREGAR columnas al final. Con la columna nueva antes de
+  -- `rebooking_rate`, Postgres lo lee como un intento de RENOMBRAR la tercera
+  -- columna y aborta con 42P16. Cualquier columna que se sume más adelante va
+  -- también acá abajo, o hay que dropear la vista (y volver a hacer los GRANT).
+  count(*) filter (where has_completed_any and not has_completed) as reembolsadas_count
 from per_user
 group by coach_id;
 
