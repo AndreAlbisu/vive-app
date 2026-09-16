@@ -209,9 +209,16 @@ export default function RespiracionScreen() {
           {phase === 'idle' && (
             <>
               <Text style={s.subtitle}>Respiración cuadrada</Text>
+              {/* 🔴 Decía "Un patrón que calma el sistema nervioso rápidamente".
+                  Es una promesa de efecto fisiológico, sin respaldo y sin
+                  matizar, y contradice el encuadre del propio producto: T&C §5
+                  declara que Vita no presta servicios de salud ni reemplaza
+                  atención profesional (ver docs/encuadre-salud-y-responsabilidad.md).
+                  Lo que sigue describe la práctica y cuándo se usa, que es lo
+                  que la persona necesita para decidir, sin prometer nada. */}
               <Text style={s.description}>
                 Inhalá 4 segundos, mantené 4, exhalá 4, mantené 4.{'\n'}
-                Un patrón que calma el sistema nervioso rápidamente.
+                Cuatro tiempos iguales, para que la respiración deje de ir apurada.
               </Text>
               <View style={s.durationRow}>
                 {DURATIONS.map(d => (
