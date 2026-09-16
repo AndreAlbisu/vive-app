@@ -4,7 +4,7 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
-## 2026-09-15 — Andre (sesión 239 · la garantía le estaba subiendo el ranking al coach)
+## 2026-09-16 — Andre (sesión 239 · la garantía le estaba subiendo el ranking al coach)
 
 **Tocado:** `scripts/fix-stats-reembolsos.sql` (nuevo), `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `SCHEMA.md`, cabeceras de `scripts/add-coach-rebooking-stats.sql` y `add-coach-trending-stats.sql`.
 
@@ -13,10 +13,12 @@
 - **El criterio es por la negativa y no por la positiva, y ese fue el hallazgo del medio.** La primera versión exigía `payment_status = 'aprobado'`, hasta que apareció que una reserva con coach sin Mercado Pago se confirma **sin cobro** (`BookingScreen_Confirm`, `confirmedNow`) y queda en `'no_iniciado'`: pedir pago aprobado le habría borrado sesiones reales a esos coaches y a todo lo anterior a agosto 2026. Queda entonces excluir `('reembolsado','contracargo','reembolso_pendiente')` en las dos vistas. Las cancelaciones tempranas del usuario —el grueso de los reembolsos, y las que no dicen nada del coach— ya quedaban afuera por `status = 'cancelada'`.
 - **El reagendamiento se dejó intacto** a propósito: volver a reservar es intención, y lo que pase después con esa segunda reserva no la borra. Filtrarlo también haría que una garantía reclamada castigue dos veces.
 - **Decisión de producto (Andre): el número que le baja al coach se le explica.** Por eso la vista suma `reembolsadas_count` —la diferencia exacta entre la definición vieja y la nueva—, que el deck no lee y que existe solo para el texto del panel de visibilidad (`notaReembolsos`). Un número que baja solo, sin que nadie diga por qué, se lee como panel roto.
-- **DB:** `scripts/fix-stats-reembolsos.sql` ⚠️ **PENDIENTE DE CORRER**. Son dos `create or replace view`, sin backfill ni migración de datos. SCHEMA.md ya quedó actualizado con las dos definiciones nuevas.
+- **DB:** `scripts/fix-stats-reembolsos.sql` ✅ **CORRIDO y VERIFICADO el 16/09/2026**. Son dos `create or replace view`, sin backfill ni migración de datos. Verificado que las dos conservan `security_invoker=false` —lo único que si se pierde se pierde en serio, porque leen `bookings` de toda la plataforma— y que los GRANT quedaron como estaban. SCHEMA.md actualizado.
+- 🔴 **Falló al primer intento con 42P16** y vale saber por qué: `create or replace view` solo deja agregar columnas **al final**, y `reembolsadas_count` estaba puesta antes de `rebooking_rate`, así que Postgres lo leyó como un intento de renombrar la tercera columna. Se movió al final; ni el cálculo ni los consumidores cambian (el cliente pide columnas por nombre).
+- 📌 **Hallazgo lateral**: `anon` y `authenticated` tienen INSERT/UPDATE/DELETE sobre estas vistas, no solo SELECT. Es inofensivo —una vista con `group by` no es actualizable y Postgres rechaza cualquier escritura— y viene de los default privileges del esquema público de Supabase, no de este cambio. Lo tiene cualquier vista del proyecto.
 
 **Pendiente para la próxima sesión:**
-- **Correr el script** y, antes, la consulta de impacto que trae comentada arriba (`payment_status in (...)` agrupado por `status`): si no hay ninguna fila con `status <> 'cancelada'`, el cambio es puramente preventivo y no le mueve el número a nadie hoy. Después, los 3 chequeos del pie — sobre todo el de `security_invoker=false`, que es lo único que si sale mal sale mal en serio: estas vistas leen `bookings` de toda la plataforma.
+- **Queda sin mirar cuánto movió la aguja**: el chequeo 2 (`reembolsadas_count` por coach) no se llegó a correr. No bloquea nada —si hay algún valor > 0, significa que a ese coach efectivamente le dejó de contar una sesión reembolsada—, pero es el dato que dice si el cambio fue preventivo o correctivo.
 - **Sin tests nuevos.** `notaReembolsos` es un texto y no un criterio, y llegar a él desde un test pide armar una puerta entera. Los 45 de `deckRanking` + `coachVisibilityHome` siguen en verde.
 - 📌 **Inexactitud vieja que quedó a la vista y no se tocó**: el panel dice "con N sesiones completadas" pero `completadas_count` cuenta **personas distintas**, no sesiones. Un coach que atendió 5 veces a la misma persona ve "5 sesiones completadas" y tiene 1. Es copy, no cálculo — decidir si se corrige el texto o el número.
 - **Tendencia sigue sin cubrir un caso**: una reserva `pendiente` que nadie pagó suma hasta que la expiración la cancela (60 min a 24 h). Distinguir "no pagó todavía" de "no había nada que pagar" es mirar `preference_id`, y es otra decisión.
