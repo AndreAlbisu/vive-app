@@ -958,7 +958,12 @@ export default function SalaScreen() {
           },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Volver">
           <MaterialCommunityIcons name="arrow-left" size={22} color="#565E32" />
         </TouchableOpacity>
 
@@ -1017,6 +1022,8 @@ export default function SalaScreen() {
           style={styles.menuBtn}
           onPress={() => setActionsOpen(true)}
           disabled={!recipientId}
+          accessibilityRole="button"
+          accessibilityLabel="Más opciones de la conversación"
           hitSlop={8}>
           <MaterialCommunityIcons name="dots-vertical" size={22} color="#565E32" />
         </TouchableOpacity>
@@ -1434,6 +1441,8 @@ export default function SalaScreen() {
                   style={styles.recoBtn}
                   onPress={openRecoSheet}
                   activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel="Recomendar un recurso"
                   hitSlop={8}>
                   <MaterialCommunityIcons name="plus" size={20} color="#87835C" />
                 </TouchableOpacity>
@@ -1454,6 +1463,9 @@ export default function SalaScreen() {
                 onPress={sendMessage}
                 disabled={!canSend}
                 activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel="Enviar mensaje"
+                accessibilityState={{ disabled: !canSend }}
               >
                 <MaterialCommunityIcons name="send" size={19} color="#565E32" style={{ marginLeft: 2 }} />
               </TouchableOpacity>

@@ -237,7 +237,11 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
                     onBlur={() => setFocused(null)}
                     editable={!loading}
                   />
-                  <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={8}>
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(v => !v)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}>
                     <MaterialCommunityIcons
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={18}

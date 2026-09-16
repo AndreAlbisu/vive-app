@@ -824,6 +824,8 @@ export default function BookingScreen_Confirm() {
             style={s.backBtn}
             onPress={() => router.back()}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Volver"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <MaterialIcons name="arrow-back-ios" size={18} color="#565E32" />
           </TouchableOpacity>

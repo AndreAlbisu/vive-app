@@ -158,6 +158,8 @@ export default function BookingScreen_Calendar() {
             style={s.backBtn}
             onPress={() => router.back()}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Volver"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <MaterialIcons name="arrow-back-ios" size={18} color="#565E32" />
           </TouchableOpacity>
@@ -175,6 +177,9 @@ export default function BookingScreen_Calendar() {
             onPress={prevMonth}
             style={s.navBtn}
             activeOpacity={isCurrentMonth ? 1 : 0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Mes anterior"
+            accessibilityState={{ disabled: isCurrentMonth }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <MaterialIcons
               name="chevron-left"
@@ -187,6 +192,8 @@ export default function BookingScreen_Calendar() {
             onPress={nextMonth}
             style={s.navBtn}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Mes siguiente"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <MaterialIcons name="chevron-right" size={28} color="#565E32" />
           </TouchableOpacity>
@@ -227,6 +234,12 @@ export default function BookingScreen_Calendar() {
                     ]}
                     onPress={() => selectDay(day)}
                     activeOpacity={available ? 0.75 : 1}
+                    // Sin esto el lector de pantalla lee "15" a secas: ni de qué
+                    // mes, ni si se puede reservar. Los días sin turno ya van
+                    // `disabled`, así que el foco ni se para en ellos.
+                    accessibilityRole="button"
+                    accessibilityLabel={`${day} de ${MONTH_NAMES[month]}`}
+                    accessibilityState={{ selected: isSelected, disabled: !available }}
                     disabled={!available}>
                     <Text style={[
                       s.dayText,

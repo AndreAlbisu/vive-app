@@ -27,7 +27,12 @@ export function ToolHeader({
   return (
     <View style={s.header}>
       <View style={s.left}>
-        <TouchableOpacity onPress={onBack} hitSlop={8} style={s.backBtn}>
+        <TouchableOpacity
+          onPress={onBack}
+          hitSlop={8}
+          style={s.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Volver">
           <MaterialCommunityIcons name="chevron-left" size={26} color={FOREST} />
         </TouchableOpacity>
         {title && <Text style={s.title} numberOfLines={1}>{title}</Text>}

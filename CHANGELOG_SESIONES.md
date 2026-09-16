@@ -49,7 +49,14 @@
   - Textos de ayuda con `opacity` `.55`–`.72` (la marca, `.ayuda`, `.nota`, `.estado`, `.cta-nota`) subidos a `.8`–`.85`: `.72` daba 3.90.
   - 📌 **Se edita `scripts/sync-legal.mjs`, no los HTML de `web/legal/`**, que son generados. ⚠️ Y ojo con una trampa: **ese CSS vive dentro de un template literal de JS**, así que un backtick en un comentario rompe el script entero. Pasó y se arregló; los comentarios de ahí adentro van sin backticks.
 
+- 🟢 **Punto 13 (etiquetas de accesibilidad) — arrancado por el recorrido crítico, no terminado.** Se etiquetaron **14 controles** en alta, reserva, pago y sala: los dos ojos de contraseña (alta y registro), las tres flechas de volver del flujo de reserva, las flechas de mes del calendario, los días del calendario, y en la Sala el volver, el menú de tres puntos, el "+" de recomendar recurso y el botón de enviar. Se siguió el criterio que ya usaban `MoodCheckIn` e `IslandTabBar`: `accessibilityLabel` + `accessibilityRole` + `accessibilityState` cuando hay estado.
+  - 📌 **`ToolHeader` es el de mayor rendimiento**: una sola etiqueta cubre el "volver" de **todas** las pantallas de herramientas, porque el header es compartido.
+  - 🔴 **El caso que más cambia es el calendario.** Los días eran un `<Text>{day}</Text>` adentro de un touchable: el lector de pantalla leía *"15"* a secas, sin mes y sin decir si se podía reservar. Ahora leen "15 de Octubre" con el estado de seleccionado. Los días sin turno ya iban `disabled`, así que el foco no se para en ellos.
+  - **Medido después: quedan 0 botones de solo ícono sin etiqueta en el recorrido crítico**, y **91 en 50 archivos** en el resto de la app. El grueso está en las pantallas de coach (agenda, disponibilidad, patrón semanal, reservas) y en `app/formato.tsx`, `conexiones` y `ProposeResourceScreen`.
+
 **Pendiente para la próxima sesión:**
+- 🟡 **Probar el recorrido crítico con VoiceOver/TalkBack prendido.** Está etiquetado, no escuchado. El calendario es lo que más vale la pena oír.
+- ⏸️ **Etiquetas: quedan 91 controles en 50 archivos.** Se puede seguir por tandas; la próxima más lógica es el lado del coach.
 - 🟡 **Mirar la app en el teléfono después del cambio de contraste.** Son 38 archivos de un color que aparece en casi toda pantalla: está medido, no visto. Si algo quedó demasiado oscuro, es cambiar un valor.
 - 🟡 **`ViveColors.calm` (#87835C) da 3.39 y se usa como `placeholderTextColor` del diario** (`app/diario.tsx:493`). No lo toqué porque subirle el contraste tiene una contra real: un placeholder muy oscuro se lee como texto ya escrito. Decisión de Andre.
 - 🔴 **Correr `scripts/limpiar-datos-de-prueba.sql` antes de lanzar** — Andre confirmó que los coaches falsos se borran antes del lanzamiento. El script está escrito y **no se corrió**: hay que editar la lista de `conservar` (hoy tiene solo `andre`), leer el control previo, y recién ahí borrar. No toca `verified` ni el storage a propósito.
