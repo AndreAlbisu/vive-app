@@ -11,6 +11,7 @@ import { ReminderBell } from '@/components/ReminderBell';
 import { ToolHeader } from '@/components/ui/ToolHeader';
 import { usuarioActualId } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
@@ -24,6 +25,7 @@ const PHASES = ['Inhalá', 'Mantené', 'Exhalá', 'Mantené'] as const;
 const PHASE_COLORS = ['#4A7A5A', '#6B7A56', '#C1694F', '#87835C'] as const;
 const PHASE_TARGETS = [1.0, 1.0, 0.4, 0.4] as const; // scale objetivo de cada fase (mantené = repite el valor previo)
 const PHASE_S = 4; // 4s por fase, 16s de ciclo total — coincide con la descripción en pantalla
+const KEEP_AWAKE_TAG = 'vive-respiracion';
 
 const DURATIONS = [
   { label: '3 min', seconds: 180 },
@@ -64,29 +66,42 @@ export default function RespiracionScreen() {
   // ease-in-out default (que hacía ver el círculo "todavía llegando" con
   // el label ya en "Mantené") ni el frenazo en seco de un easing lineal
   // (que se probó antes y quedaba muy brusco en el cambio de fase).
+  //
+  // 🐛 Con "reducir movimiento" activado esto hacía `return` antes de arrancar:
+  // el círculo quedaba fijo Y la fase no avanzaba nunca, así que la pantalla
+  // mostraba la palabra "Inhalá" congelada durante los 3 u 8 minutos enteros y
+  // al final registraba la sesión como completada igual. Reducir movimiento
+  // pide no animar, no dejar de guiar: ahora el ciclo corre por setTimeout y lo
+  // único que se pierde es el escalado del círculo.
   useEffect(() => {
-    if (reducedMotion) {
-      animScale.setValue(0.7);
-      setBreathPhase(0);
-      return;
-    }
-
-    animScale.setValue(0.4);
+    animScale.setValue(reducedMotion ? 0.7 : 0.4);
     setBreathPhase(0);
     let cancelled = false;
+    let legTimeout: ReturnType<typeof setTimeout> | null = null;
 
     function runLeg(i: number) {
       if (cancelled) return;
+
+      const avanzar = () => {
+        if (cancelled) return;
+        const next = (i + 1) % PHASES.length;
+        setBreathPhase(next);
+        runLeg(next);
+      };
+
+      if (reducedMotion) {
+        legTimeout = setTimeout(avanzar, PHASE_S * 1000);
+        return;
+      }
+
       Animated.timing(animScale, {
         toValue: PHASE_TARGETS[i],
         duration: PHASE_S * 1000,
         easing: Easing.inOut(Easing.quad),
         useNativeDriver: true,
       }).start(({ finished }) => {
-        if (!finished || cancelled) return;
-        const next = (i + 1) % PHASES.length;
-        setBreathPhase(next);
-        runLeg(next);
+        if (!finished) return;
+        avanzar();
       });
     }
 
@@ -94,9 +109,22 @@ export default function RespiracionScreen() {
 
     return () => {
       cancelled = true;
+      if (legTimeout) clearTimeout(legTimeout);
       animScale.stopAnimation();
     };
   }, [reducedMotion]);
+
+  // 🔴 Sin esto la herramienta solo funcionaba si tocabas la pantalla cada tanto:
+  // el teléfono se bloquea solo a los 30s–2min, y con la pantalla apagada el
+  // temporizador de JS se frena, así que la sesión se cortaba por la mitad. Toda
+  // la guía de esta pantalla es visual, o sea que el bloqueo la apaga entera.
+  // Se activa solo mientras corre —no mientras la pantalla está abierta— para no
+  // dejar el teléfono despierto porque alguien entró a mirar y se fue.
+  useEffect(() => {
+    if (phase !== 'running') return;
+    activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {});
+    return () => { deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {}); };
+  }, [phase]);
 
   function stopTimer() {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -171,7 +199,9 @@ export default function RespiracionScreen() {
                 <MaterialCommunityIcons name="play" size={16} color={CREAM_LIGHT} />
                 <Text style={s.primaryBtnText}>Iniciar</Text>
               </ScaleCard>
-              <Text style={s.footerHint}>Se detiene sola al terminar — no necesitás hacer nada más.</Text>
+              <Text style={s.footerHint}>
+                La pantalla no se apaga mientras dura, y se detiene sola al terminar.
+              </Text>
             </>
           )}
 
