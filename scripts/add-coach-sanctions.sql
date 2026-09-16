@@ -2,7 +2,13 @@
 --
 -- La escalera de sanciones al profesional: advertencia → suspensión → baja.
 --
--- ⚠️ PENDIENTE DE CORRER.
+-- ✅ CORRIDO y VERIFICADO el 16/09/2026, desde el CLI (`supabase db query --linked`).
+--    Prueba en vivo sobre un coach real, sin dejar rastro: la suspensión llena el
+--    espejo sola, una reserva nueva rebota con `coach_suspendido`, la baja queda
+--    como 'infinity', levantarla (sin borrar) libera al coach, el CHECK rechaza una
+--    suspensión sin fecha y un motivo corto, y `notifications` acepta
+--    `sancion_aplicada`. Al final: 0 sanciones, 0 reservas de prueba, 0 coaches
+--    suspendidos, 0 avisos.
 --
 -- ── Por qué ──────────────────────────────────────────────────────────────────
 --
@@ -231,10 +237,18 @@ where table_schema = 'public'
 order by table_name, column_name;
 
 -- 2) 🔴 El coach NO puede escribir su propia suspensión. Esperado: 0 filas.
+--
+--    ⚠️ Solo `authenticated`, y no es un descuido. `anon` tiene UPDATE a nivel de
+--    TABLA sobre `coaches` (default privileges de Supabase), y un revoke de
+--    columna no parte un permiso de tabla — así que `anon` aparece siempre acá,
+--    con este script o sin él. **No habilita nada**: la única policy de UPDATE es
+--    `coaches_update_own`, `TO authenticated` y con `profile_id = auth.uid()`, así
+--    que el RLS rebota todo update de `anon`. Visto el 16/09/2026. Si algún día
+--    alguien crea una policy de UPDATE para `public`, esto deja de ser inofensivo.
 select grantee, column_name from information_schema.column_privileges
 where table_schema = 'public' and table_name = 'coaches'
   and column_name = 'suspendido_hasta' and privilege_type = 'UPDATE'
-  and grantee in ('authenticated', 'anon');
+  and grantee = 'authenticated';
 
 -- 3) 🔴 Nadie puede insertarse una sanción desde el cliente. Esperado: solo la
 --    policy de SELECT.
