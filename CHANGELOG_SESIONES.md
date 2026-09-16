@@ -4,6 +4,25 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-15 — Andre (sesión 235 · los ambientales loopean sin el bajón)
+
+**Tocado:** `assets/sounds/*.m4a` (los 4), `screens/RuidoScreen.tsx` (solo el comentario), `scripts/preparar-sonidos-loop.py` (nuevo). **599 tests**, `tsc` limpio, lint sin errores nuevos. ⚠️ **Sin escuchar en dispositivo.**
+
+**Resumen — cierra la verificación que la 234 dejó pendiente, y el resultado cambia el diagnóstico.**
+
+- 🔴 **No había click en la costura: había un bajón.** Decodificando los 4 a WAV, el salto de muestra a muestra en la vuelta del loop queda **por debajo del ruido propio del material** (0,05–0,63× el delta p99) — en olas y lluvia es *menor* que los saltos normales del audio, o sea inaudible. Lo que sí se oía es otra cosa: **tres de los cuatro arrancaban en silencio y terminaban a volumen pleno**. `lluvia` tardaba **3.981 ms** en recuperar el 50% del nivel, `blanco` **3.073 ms**, `olas` **738 ms**. Cada 90 s el ambiente se cortaba en seco y volvía de a poco; en una sesión de 30 min, 20 veces. `bosque` (30 ms) era el único sano, y sirvió de control: confirma que la caída era de los archivos, no del reproductor.
+- 🟢 **Arreglado sobre los mismos archivos, sin conseguir material nuevo:** se recortó el fade de entrada (7,8 s en lluvia, 7,5 en blanco, 2,1 en olas) y la costura se cierra con **crossfade equal-power de 2 s** (sin/cos, no lineal: con ruido de banda ancha el lineal deja un pozo de nivel en el cruce). Medido después: nivel pleno desde el ms 0 y salto de costura 0,05–0,63× el p99. El pozo más hondo que deja el cruce (blanco, 0,36× a los 2 s) **entra dentro de la variación natural del propio archivo** (min 0,29, p10 0,48), así que no sobresale.
+- 📌 **Duran 80–88 s ahora, no 90**, y no se cuadraron a propósito: ninguna pantalla depende de la duración del clip. Re-encodeados a **AAC 64 kbps** (venían a 31) solo para no acumular pérdida en la segunda generación — **no gana calidad que no está**. Pesan ~650–700 KB cada uno en vez de 360 KB: **+1,3 MB en total** en el bundle.
+- 📌 **Sigue en pie lo de la 234 sobre el origen**: mono, 22 kHz, de un corte CC0 ya comprimido a 31 kbps. Eso **no se arregla desde el repo** y es lo que queda del "suena trucho" después de este arreglo. Upsamplear no inventa lo que el corte tiró; si se quiere 48 kHz estéreo hay que volver a freesound y re-exportar.
+- 📌 **`scripts/preparar-sonidos-loop.py`** deja el procedimiento repetible (recorte + crossfade + encode, todo con stdlib y `afconvert`). **No es idempotente** — correrlo dos veces come otros 2 s; está avisado en el docstring. Ojo que `scripts/gen_sounds.py` es otra cosa, el sintetizador viejo de 45 s en WAV, que ya no alimenta a estos archivos.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Escuchar una sesión de 15 min en el teléfono** — el arreglo está medido pero no oído. Lo que hay que escuchar es el minuto 1:20–1:30 (la primera vuelta) en lluvia y en olas.
+- 🟡 **El copy sigue entero sin tocar** (todo lo de la 234): `blanco` se muestra como **"Ruido marrón"** en `RuidoScreen.tsx:29` y como "Ruido blanco" en `tools.ts` / `vitaTools.ts` / la campanita — cuatro nombres para lo mismo, y encima marrón y blanco no son el mismo ruido; la tarjeta dice duración **"Libre"** pero la pantalla obliga a 5/15/30; y **en ningún lado dice para qué sirve** cada sonido, que es la mitad de lo que Andre reportó.
+- ⏸️ Unificar las dos tablas de guardados (de la 233, sigue abierta).
+- 📝 De la 230, sigue abierto: `send_session_reminders()` hace `to_char` sobre `scheduled_time` text.
+
+---
 ## 2026-09-15 — Andre (sesión 234 · sonidos ambientales: diagnóstico a medias, sin tocar código)
 
 **Tocado:** nada de código. Solo este registro. La sesión se cerró antes de decidir el arreglo.

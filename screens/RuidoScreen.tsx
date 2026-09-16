@@ -29,7 +29,14 @@ const SOUNDS = [
   { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido marrón',  bg: PASTEL_DURAZNO },
 ];
 
-// Grabaciones reales con licencia CC0 (freesound.org), recortadas a 90s
+// Grabaciones reales con licencia CC0 (freesound.org).
+// Preparados para loopear: se recortó el fade de entrada del corte original (lluvia
+// tardaba 4s en llegar al nivel, blanco 3s) y la costura se cierra con un crossfade
+// de 2s equal-power, así que el bajón que se oía cada 90s ya no está. Duran 80–88s
+// —no 90— y ninguna duración es múltiplo de otra a propósito: no hay por qué
+// cuadrarlas. AAC 64 kbps mono 22 kHz (sube de 31 kbps para no perder más en el
+// re-encode). Si algún día se re-exporta desde la fuente, ahí sí conviene 48 kHz
+// estéreo — eso no se arregla desde acá.
 const SOUND_FILES: Record<string, any> = {
   lluvia: require('../assets/sounds/lluvia.m4a'),
   bosque: require('../assets/sounds/bosque.m4a'),
