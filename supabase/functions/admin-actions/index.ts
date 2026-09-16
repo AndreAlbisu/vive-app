@@ -421,6 +421,39 @@ serve(async (req) => {
       return json({ result: 'ok', sancion: data[0], ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
     }
 
+    // El historial completo, vigentes y levantadas. Va por acá y no con la anon
+    // key porque el RLS de `coach_sanctions` solo le deja a cada coach ver las
+    // suyas — el panel necesita verlas todas.
+    case 'list_sanctions': {
+      const { data, error } = await admin
+        .from('coach_sanctions')
+        .select('id, coach_id, nivel, motivo, evidencia, hasta, created_at, revocada_at, revocada_motivo, coaches!inner(profile_id, profiles!inner(name))')
+        .order('created_at', { ascending: false })
+        .limit(200)
+
+      if (error) return json({ error: error.message }, 500)
+
+      return json({
+        result: 'ok',
+        sanciones: (data ?? []).map((r: any) => {
+          const c = Array.isArray(r.coaches) ? r.coaches[0] : r.coaches
+          const p = c && (Array.isArray(c.profiles) ? c.profiles[0] : c.profiles)
+          return {
+            id: r.id,
+            coachId: r.coach_id,
+            coachName: p?.name ?? 'Sin nombre',
+            nivel: r.nivel,
+            motivo: r.motivo,
+            evidencia: r.evidencia ?? null,
+            hasta: r.hasta ?? null,
+            createdAt: r.created_at,
+            revocadaAt: r.revocada_at ?? null,
+            revocadaMotivo: r.revocada_motivo ?? null,
+          }
+        }),
+      })
+    }
+
     // ── Moderar un reporte ───────────────────────────────────────────────────
     case 'resolve_report': {
       if (!body.report_id) return json({ error: 'falta report_id' }, 400)

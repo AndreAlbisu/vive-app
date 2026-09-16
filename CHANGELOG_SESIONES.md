@@ -68,8 +68,13 @@
 
 - 🔴 **Y al conectarse con el CLI apareció que los ceros de la anon key eran mentira, con números.** `supabase inspect db table-stats` ve todo, y las tablas que la anon key reportaba vacías tienen: **bookings ~185, messages ~154, salas ~53, profiles ~84, mood_entries ~54**. **Esto cambia el tamaño de la limpieza previa al lanzamiento**: hay reservas y conversaciones colgando de los coaches de prueba, y `scripts/limpiar-datos-de-prueba.sql` hoy **no toca `bookings`, `messages` ni `salas`**. Se corrigió la cabecera de ese script con los números reales y el aviso.
 
+- 🟢 **`limpiar-datos-de-prueba.sql` completado con `bookings`, `salas` y `messages`** (paso 3 bis), después de que Andre confirmara que las ~185 reservas son **reales pero de prueba**. Borrar `bookings` arrastra en cascada `session_notes`, `session_attendance` y `guarantee_claims`.
+  - 🔴 **La trampa que había que no pisar**: `bookings.coach_id` es `coaches.id` y `salas.coach_id` es `coaches.profile_id`. No son la misma columna — está documentado en SCHEMA.md y el script lo dice donde importa.
+  - ⚠️ **CORRECCIÓN, y viene del mismo error de la anon key**: el script tenía un delete de "reseñas colgadas de una reserva que no existe", basado en que las 24 sembradas tendrían `booking_id` inventados. **Falso**: eso salió de ver `bookings` en cero, y `reviews.booking_id` es FK real a `bookings.id`, así que esos ids existen. El delete se sacó. Las 24 se van igual por pertenecer a las cuentas de prueba, que es lo que sí está verificado.
+  - 📌 **No borra cuentas de USUARIO de prueba**: quedan los ~84 perfiles. Quién es persona real y quién prueba no se deduce del esquema — es decisión de Andre.
+
 **Pendiente para la próxima sesión:**
-- 🔴 **Correr `scripts/publicar-notas-en-realtime.sql`** y probar en dos teléfonos: con el chat abierto del lado del cliente, que el coach comparta una nota y aparezca sola.
+- 🔴 **Probar en dos teléfonos que la nota compartida aparece sola** (el realtime ya está corrido): con el chat abierto del lado del cliente, que el coach comparta una nota y aparezca sola.
 - 🟡 **Probar el recorrido crítico con VoiceOver/TalkBack prendido.** Está etiquetado, no escuchado. El calendario es lo que más vale la pena oír.
 - ⏸️ **Etiquetas: quedan 91 controles en 50 archivos.** Se puede seguir por tandas; la próxima más lógica es el lado del coach.
 - 🟡 **Mirar la app en el teléfono después del cambio de contraste.** Son 38 archivos de un color que aparece en casi toda pantalla: está medido, no visto. Si algo quedó demasiado oscuro, es cambiar un valor.

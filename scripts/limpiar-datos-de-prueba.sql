@@ -24,11 +24,10 @@
 --    key reportaba en cero tienen: **bookings ~185, messages ~154, salas ~53,
 --    profiles ~84, mood_entries ~54, journal_entries ~14**. Son estimaciones de
 --    `pg_class`, no un count exacto, pero alcanzan para lo que importa:
---    🔴 **ESTA LIMPIEZA NO ES TRIVIAL.** Hay reservas y conversaciones colgando de
---    esos coaches. Antes de borrar a nadie hay que mirar esas 185 reservas: casi
---    seguro son de prueba, pero "casi seguro" no alcanza para un delete. Y el
---    orden de borrado va a necesitar pasar por `bookings`, `messages` y `salas`,
---    que este script hoy NO toca.
+--    ✅ **Resuelto el 16/09/2026: Andre confirmó que esas reservas son reales
+--    pero de prueba.** El script ya pasa por `bookings`, `messages` y `salas`
+--    (paso 3 bis). Igual el control previo las cuenta: si el número creció mucho
+--    desde los ~185 de esa fecha, mirar antes de borrar.
 --
 -- 🔴 POR QUÉ LA ANON KEY MENTÍA. Estas tablas dieron 0 con la anon key, pero eso
 --    NO quiere decir que estén vacías: `bookings`, `messages`, `salas`, `session_notes`,
@@ -51,6 +50,11 @@
 --   · No borra el bucket de storage. Quedan `resource-audio/seed/*.mp3` y los
 --     videos de presentación de las cuentas de prueba, que hay que borrar a mano
 --     desde Supabase → Storage.
+--   · **No borra cuentas de USUARIO de prueba.** Borra los coaches de la lista y
+--     todo lo que cuelga de ellos —incluidas las reservas y salas de sus
+--     clientes—, pero los ~84 perfiles quedan. Quién de esos es una persona real
+--     y quién una prueba es una decisión aparte, y no se puede deducir del
+--     esquema.
 --   · No impide que alguien vuelva a correr `scripts/seed-recursos.sql`. Ese
 --     script busca el primer coach con role='coach' y le cuelga 8 recursos
 --     publicados con is_author_declared=true — o sea, declara autoría en nombre
@@ -74,8 +78,10 @@ where c.slug is null
 select 'coaches a borrar' as que, count(*) as cuantos from a_borrar
 union all select 'coaches que quedan', count(*) from public.coaches
   where slug in (select slug from conservar)
-union all select 'reservas — si no da 0, PARAR', count(*) from public.bookings
-union all select 'mensajes — si no da 0, PARAR', count(*) from public.messages
+union all select 'reservas que se van', count(*) from public.bookings
+  where coach_id in (select coach_id from a_borrar) or user_id in (select profile_id from a_borrar)
+union all select 'reservas en total (eran ~185 el 16/09)', count(*) from public.bookings
+union all select 'mensajes en total (eran ~154 el 16/09)', count(*) from public.messages
 union all select 'check-ins de animo', count(*) from public.mood_entries
 union all select 'entradas de diario', count(*) from public.journal_entries;
 
@@ -97,22 +103,50 @@ delete from public.coach_resources       where coach_id in (select coach_id from
 -- ── 3. Las reseñas sembradas ──────────────────────────────────────────────────
 -- Por las dos puntas: las que recibieron las cuentas de prueba y las que
 -- escribieron. `reviews` apunta a `profiles`, no a `coaches`.
+--
+-- 📌 Va ANTES que `bookings`: `reviews.booking_id` es FK a `bookings.id`.
+--
+-- ⚠️ CORRECCIÓN del 16/09/2026. Antes acá había un segundo delete que borraba
+--    "las reseñas colgadas de una reserva que no existe", diciendo que las 24
+--    sembradas tenían `booking_id` inventados. **Era un error de lectura**: esa
+--    conclusión salió de ver `bookings` en cero con la anon key, y `bookings`
+--    tiene ~185 filas. Los `booking_id` de esas reseñas son reales. El delete se
+--    sacó porque su criterio no se sostenía; las 24 se van igual, por ser de las
+--    cuentas de prueba, que es lo que sí está verificado (cuatro frases
+--    repetidas en loop, todas del 07/08/2026).
 delete from public.reviews
 where reviewed_id in (select profile_id from a_borrar)
    or reviewer_id in (select profile_id from a_borrar);
 
--- Y las que quedaron colgadas de una reserva que no existe. Son las 24 del
--- 07/08/2026 con las cuatro frases en loop: se sembraron con booking_id
--- inventados. Una reseña sin reserva detrás no se puede verificar, así que el
--- criterio es ese y no la fecha.
--- ⚠️ Mirar la lista primero. Desde el editor SQL se ven las reservas de verdad,
---    así que este `not exists` compara contra el total real, no contra lo que ve
---    la app. Si aparecen reseñas que no reconocés, parar.
--- select r.rating, r.comment, r.created_at, r.booking_id from public.reviews r
---   where not exists (select 1 from public.bookings b where b.id = r.booking_id)
---   order by r.created_at;
-delete from public.reviews r
-where not exists (select 1 from public.bookings b where b.id = r.booking_id);
+-- ── 3 bis. Reservas, salas y mensajes ─────────────────────────────────────────
+-- 🔴 Andre confirmó el 16/09/2026: las ~185 reservas son **reales pero de
+--    prueba**. O sea que se borran; no son historial de nadie.
+--
+-- 🔴 LA TRAMPA DE LOS DOS `coach_id`, documentada en SCHEMA.md y fácil de pisar
+--    acá: `bookings.coach_id` es **`coaches.id`**, y `salas.coach_id` es
+--    **`coaches.profile_id`**. No son la misma columna. Usar la que no va deja
+--    filas sin borrar y el delete de `coaches` falla por FK — que es el
+--    comportamiento que queremos, pero conviene entender por qué falló.
+--
+-- Borrar `bookings` arrastra en cascada `session_notes`, `session_attendance` y
+-- `guarantee_claims` (las tres con ON DELETE CASCADE). No hace falta tocarlas.
+delete from public.resource_recommendations
+where coach_id in (select coach_id from a_borrar);
+
+delete from public.bookings
+where coach_id in (select coach_id from a_borrar)      -- coaches.id
+   or user_id  in (select profile_id from a_borrar);
+
+delete from public.messages
+where sala_id in (
+  select id from public.salas
+   where coach_id in (select profile_id from a_borrar)  -- profiles.id
+      or user_id  in (select profile_id from a_borrar)
+);
+
+delete from public.salas
+where coach_id in (select profile_id from a_borrar)
+   or user_id  in (select profile_id from a_borrar);
 
 -- ── 4. El contenido personal de esas cuentas ──────────────────────────────────
 -- Misma lista que `PERSONAL_TABLES` en la edge function `delete-account`, que es
@@ -150,7 +184,11 @@ union all select 'coach_resources',   count(*) from public.coach_resources
 union all select 'reviews',           count(*) from public.reviews
 union all select 'resources',         count(*) from public.resources
 union all select 'coach_availability',count(*) from public.coach_availability
-union all select 'coach_topics',      count(*) from public.coach_topics;
+union all select 'coach_topics',      count(*) from public.coach_topics
+union all select 'bookings',          count(*) from public.bookings
+union all select 'salas',             count(*) from public.salas
+union all select 'messages',          count(*) from public.messages
+union all select 'session_notes (cae por cascada)', count(*) from public.session_notes;
 
 -- Huérfanos: tiene que dar 0 filas. Si da algo, hay una tabla que este script
 -- no conoce y que quedó apuntando a un coach que ya no existe.
@@ -158,7 +196,16 @@ select 'coach_resources' as tabla, count(*) as huerfanos from public.coach_resou
   where not exists (select 1 from public.coaches c where c.id = cr.coach_id)
 union all
 select 'reviews', count(*) from public.reviews r
-  where not exists (select 1 from public.profiles p where p.id = r.reviewed_id);
+  where not exists (select 1 from public.profiles p where p.id = r.reviewed_id)
+union all
+select 'bookings', count(*) from public.bookings b
+  where not exists (select 1 from public.coaches c where c.id = b.coach_id)
+union all
+select 'salas', count(*) from public.salas sa
+  where not exists (select 1 from public.profiles p where p.id = sa.coach_id)
+union all
+select 'messages', count(*) from public.messages m
+  where not exists (select 1 from public.salas sa where sa.id = m.sala_id);
 
 -- Si todo cierra: commit. Si algo no cuadra: rollback.
 commit;

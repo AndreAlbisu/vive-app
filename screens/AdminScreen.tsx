@@ -38,18 +38,22 @@ import {
   type PendingCoach, type AdminReport, type AdminClaim, type ReportResolution,
   type AuditEntry, type GuaranteeCheck,
   listPendingCredentials, credentialFileUrl, reviewCredential, type AdminCredential,
+  listSanctions, applySanction, revokeSanction, sancionVigente,
+  type AdminSancion, type SancionNivel,
 } from '@/lib/admin';
+import { supabase } from '@/lib/supabase';
 
 const FOREST = '#3A4F2A';
 const OLIVE = '#87835C';
 const CLAY = '#B5533A';
 
-type Tab = 'coaches' | 'credenciales' | 'reportes' | 'garantias' | 'reembolsos' | 'pagos' | 'facturacion' | 'auditoria';
+type Tab = 'coaches' | 'credenciales' | 'reportes' | 'sanciones' | 'garantias' | 'reembolsos' | 'pagos' | 'facturacion' | 'auditoria';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'coaches',   label: 'Postulaciones' },
   { key: 'credenciales', label: 'Credenciales' },
   { key: 'reportes',  label: 'Reportes' },
+  { key: 'sanciones', label: 'Sanciones' },
   { key: 'garantias', label: 'Garantías' },
   { key: 'reembolsos', label: 'Reembolsos' },
   { key: 'pagos',     label: 'Pagos' },
@@ -490,6 +494,9 @@ export default function AdminScreen() {
                 ))
             )}
 
+            {/* ── Sanciones ───────────────────────────────────────────────── */}
+            {!loading && tab === 'sanciones' && <SanctionsPanel />}
+
             {/* ── Garantías ───────────────────────────────────────────────── */}
             {!loading && tab === 'garantias' && (
               <GuaranteePanel claims={claims} onDone={load} />
@@ -849,6 +856,236 @@ export default function AdminScreen() {
  *
  *  ⚠️ Esto reemplaza el `curl` de docs/garantia-runbook.md, no lo duplica: llama
  *  a la misma función con el mismo payload. */
+// ─── Sanciones ───────────────────────────────────────────────────────────────
+//
+// La escalera de T&C §10: advertencia → suspensión → baja, aplicada por un
+// humano sobre un caso. No hay ni va a haber un algoritmo que sancione solo:
+// con la muestra de hoy la señal de fuga tiene cuatro causas y castigaría a
+// tres inocentes por cada culpable (`scripts/diagnostico-fuga.sql`).
+//
+// 🔴 El motivo que se escribe acá **lo lee el coach**, en su Inicio y en una
+// notificación. No es una nota interna. Es deliberado: una sanción secreta deja
+// a la persona viendo que dejó de entrar gente sin saber por qué ni qué
+// corregir, y eso es lo que convierte a una plataforma en algo que se odia.
+function SanctionsPanel() {
+  const [sanciones, setSanciones] = useState<AdminSancion[]>([]);
+  const [coaches, setCoaches] = useState<{ id: string; name: string }[]>([]);
+  const [cargando, setCargando] = useState(true);
+
+  const [abierto, setAbierto] = useState(false);
+  const [coachId, setCoachId] = useState<string | null>(null);
+  const [nivel, setNivel] = useState<SancionNivel>('advertencia');
+  const [motivo, setMotivo] = useState('');
+  const [dias, setDias] = useState('14');
+  const [evidencia, setEvidencia] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [levantando, setLevantando] = useState<string | null>(null);
+  const [revokeMotivo, setRevokeMotivo] = useState('');
+
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    // Los coaches salen con la key de siempre: `coaches` se lee público (es el
+    // catálogo). Las sanciones NO — su RLS solo le deja a cada coach ver las
+    // suyas, así que esas van por la edge function.
+    const [lista, { data: rows }] = await Promise.all([
+      listSanctions(),
+      supabase
+        .from('coaches')
+        .select('id, profiles!inner(name)')
+        .eq('verified', true)
+        .order('created_at', { ascending: true }),
+    ]);
+    setSanciones(lista);
+    setCoaches((rows ?? []).map((c: any) => {
+      const p = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
+      return { id: c.id as string, name: (p?.name as string) ?? 'Sin nombre' };
+    }));
+    setCargando(false);
+  }, []);
+
+  useEffect(() => { void cargar(); }, [cargar]);
+
+  function reset() {
+    setAbierto(false); setCoachId(null); setNivel('advertencia');
+    setMotivo(''); setDias('14'); setEvidencia('');
+  }
+
+  async function aplicar() {
+    if (!coachId) { Alert.alert('Falta el profesional', 'Elegí a quién se le aplica.'); return; }
+    if (motivo.trim().length < 10) {
+      Alert.alert('Falta el motivo', 'Lo va a leer el coach. Tiene que explicar qué pasó.');
+      return;
+    }
+    const n = Number(dias);
+    if (nivel === 'suspension' && (!Number.isFinite(n) || n < 1 || n > 365)) {
+      Alert.alert('Faltan los días', 'Una suspensión necesita una duración de 1 a 365 días.');
+      return;
+    }
+    const nombre = coaches.find(c => c.id === coachId)?.name ?? 'el profesional';
+    Alert.alert(
+      nivel === 'advertencia' ? `¿Advertir a ${nombre}?`
+        : nivel === 'suspension' ? `¿Suspender a ${nombre} ${n} días?`
+        : `¿Dar de baja a ${nombre}?`,
+      nivel === 'advertencia'
+        ? 'No cambia su visibilidad. Le llega una notificación con el motivo y queda registrada.'
+        : 'Sale del catálogo y no puede recibir reservas nuevas. Las sesiones ya agendadas las sigue atendiendo. Le llega una notificación con el motivo.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Aplicar',
+          style: 'destructive',
+          onPress: async () => {
+            setBusy(true);
+            const res = await applySanction({
+              coachId: coachId!,
+              nivel,
+              motivo: motivo.trim(),
+              ...(nivel === 'suspension' ? { dias: n } : {}),
+              ...(evidencia.trim() ? { evidencia: evidencia.trim() } : {}),
+            });
+            setBusy(false);
+            if (!res.ok) { Alert.alert('No se pudo', res.error ?? 'Probá de nuevo.'); return; }
+            reset();
+            void cargar();
+          },
+        },
+      ],
+    );
+  }
+
+  // Input en la tarjeta y no `Alert.prompt`: ese existe SOLO en iOS y en Android
+  // es `undefined`, así que el botón no habría hecho nada y sin ningún error.
+  // Es además el mismo patrón que usa el rechazo de postulaciones más arriba.
+  async function levantar(sancionId: string) {
+    const texto = revokeMotivo.trim();
+    if (!texto) { Alert.alert('Falta el motivo', 'Queda registrado: el historial tiene que poder contar también nuestros errores.'); return; }
+    setBusy(true);
+    const res = await revokeSanction(sancionId, texto);
+    setBusy(false);
+    if (!res.ok) { Alert.alert('No se pudo', res.error ?? 'Probá de nuevo.'); return; }
+    setLevantando(null); setRevokeMotivo('');
+    void cargar();
+  }
+
+  if (cargando) return <ActivityIndicator color={FOREST} style={{ marginTop: 40 }} />;
+
+  return (
+    <>
+      <Text style={s.note}>
+        Advertencia · suspensión · baja. La escalera de T&C §10. El motivo que escribas
+        lo lee el profesional en su app, así que escribilo como se lo dirías de frente.
+      </Text>
+
+      {!abierto ? (
+        <TouchableOpacity style={[s.btn, s.btnPrimary, { alignSelf: 'flex-start', marginBottom: 14 }]}
+          onPress={() => setAbierto(true)} activeOpacity={0.85}>
+          <Text style={s.btnPrimaryText}>Aplicar una sanción</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Nueva sanción</Text>
+
+          <Text style={s.cardMeta}>Profesional</Text>
+          <View style={s.actions}>
+            {coaches.map(c => (
+              <TouchableOpacity key={c.id}
+                style={[s.btn, coachId === c.id ? s.btnPrimary : s.btnGhost]}
+                onPress={() => setCoachId(c.id)} activeOpacity={0.8}>
+                <Text style={coachId === c.id ? s.btnPrimaryText : s.btnGhostText}>{c.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={[s.cardMeta, { marginTop: 12 }]}>Escalón</Text>
+          <View style={s.actions}>
+            {(['advertencia', 'suspension', 'baja'] as SancionNivel[]).map(n => (
+              <TouchableOpacity key={n}
+                style={[s.btn, nivel === n ? s.btnPrimary : s.btnGhost]}
+                onPress={() => setNivel(n)} activeOpacity={0.8}>
+                <Text style={nivel === n ? s.btnPrimaryText : s.btnGhostText}>{n}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {nivel === 'suspension' && (
+            <>
+              <Text style={[s.cardMeta, { marginTop: 12 }]}>Días</Text>
+              <TextInput style={s.input} value={dias} onChangeText={setDias}
+                keyboardType="number-pad" placeholder="14" placeholderTextColor="rgba(135,131,92,0.5)" />
+            </>
+          )}
+
+          <Text style={[s.cardMeta, { marginTop: 12 }]}>Motivo — lo lee el coach</Text>
+          <TextInput style={[s.input, { minHeight: 76 }]} value={motivo} onChangeText={setMotivo}
+            multiline textAlignVertical="top"
+            placeholder="Qué pasó, en una o dos frases."
+            placeholderTextColor="rgba(135,131,92,0.5)" />
+
+          <Text style={[s.cardMeta, { marginTop: 12 }]}>Evidencia (opcional)</Text>
+          <TextInput style={s.input} value={evidencia} onChangeText={setEvidencia}
+            placeholder="Ids de reserva, capturas, lo que respalde la decisión."
+            placeholderTextColor="rgba(135,131,92,0.5)" />
+
+          <View style={s.actions}>
+            <TouchableOpacity style={[s.btn, s.btnGhost]} onPress={reset} activeOpacity={0.8}>
+              <Text style={s.btnGhostText}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.btn, s.btnDanger]} onPress={aplicar} disabled={busy} activeOpacity={0.85}>
+              {busy ? <ActivityIndicator color="#F7EFE4" /> : <Text style={s.btnPrimaryText}>Aplicar</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {sanciones.length === 0
+        ? <Empty icon="shield-check-outline" text="Nunca se sancionó a nadie." />
+        : sanciones.map(x => {
+          const vigente = sancionVigente(x);
+          return (
+            <View key={x.id} style={s.card}>
+              <Text style={s.cardTitle}>{x.coachName} · {x.nivel}</Text>
+              <Text style={s.cardMeta}>
+                {formatDate(x.createdAt)}
+                {x.revocadaAt ? ` · levantada el ${formatDate(x.revocadaAt)}`
+                  : vigente ? (x.hasta === 'infinity' ? ' · sin vencimiento' : ` · hasta ${formatDate(x.hasta)}`)
+                  : x.nivel === 'advertencia' ? ' · registrada' : ' · vencida'}
+              </Text>
+              <Text style={s.cardBody}>{x.motivo}</Text>
+              {!!x.evidencia && <Text style={s.cardMeta}>{x.evidencia}</Text>}
+              {!!x.revocadaMotivo && <Text style={s.cardMeta}>Se levantó: {x.revocadaMotivo}</Text>}
+              {vigente && levantando !== x.id && (
+                <View style={s.actions}>
+                  <TouchableOpacity style={[s.btn, s.btnGhost]}
+                    onPress={() => { setLevantando(x.id); setRevokeMotivo(''); }} activeOpacity={0.8}>
+                    <Text style={s.btnGhostText}>Levantar</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {vigente && levantando === x.id && (
+                <>
+                  <TextInput style={[s.input, { marginTop: 10 }]} value={revokeMotivo} onChangeText={setRevokeMotivo}
+                    multiline textAlignVertical="top"
+                    placeholder="Por qué se levanta. Si fue un error nuestro, decilo así."
+                    placeholderTextColor="rgba(135,131,92,0.5)" />
+                  <View style={s.actions}>
+                    <TouchableOpacity style={[s.btn, s.btnGhost]}
+                      onPress={() => { setLevantando(null); setRevokeMotivo(''); }} activeOpacity={0.8}>
+                      <Text style={s.btnGhostText}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[s.btn, s.btnPrimary]} onPress={() => levantar(x.id)}
+                      disabled={busy} activeOpacity={0.85}>
+                      {busy ? <ActivityIndicator color="#F7EFE4" /> : <Text style={s.btnPrimaryText}>Levantar</Text>}
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </View>
+          );
+        })}
+    </>
+  );
+}
+
 function GuaranteePanel({ claims, onDone }: { claims: AdminClaim[]; onDone: () => void }) {
   const [bookingId, setBookingId] = useState('');
   const [checking, setChecking] = useState(false);

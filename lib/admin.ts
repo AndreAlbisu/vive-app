@@ -112,6 +112,76 @@ export function rejectCoachApplication(coachId: string, reason: string) {
   return callAdmin({ action: 'reject_coach_application', coach_id: coachId, reason });
 }
 
+// ─── Sanciones ───────────────────────────────────────────────────────────────
+// La escalera de T&C §10: advertencia → suspensión → baja. La aplica un humano
+// mirando un caso; no hay algoritmo que sancione solo, y con la muestra de hoy
+// tampoco debería haberlo (`scripts/diagnostico-fuga.sql`).
+
+export type SancionNivel = 'advertencia' | 'suspension' | 'baja';
+
+/**
+ * 🔴 `motivo` NO es una nota interna: es el texto que va a leer la persona
+ * sancionada, en su app y en la notificación. Escribirlo como si se lo dijeras
+ * de frente, porque es literalmente eso.
+ *
+ * `dias` solo se usa —y es obligatorio— para `suspension`. La baja no vence.
+ */
+export function applySanction(args: {
+  coachId: string;
+  nivel: SancionNivel;
+  motivo: string;
+  dias?: number;
+  evidencia?: string;
+}) {
+  return callAdmin({
+    action: 'apply_sanction',
+    coach_id: args.coachId,
+    nivel: args.nivel,
+    motivo: args.motivo,
+    ...(args.dias != null ? { dias: args.dias } : {}),
+    ...(args.evidencia ? { evidencia: args.evidencia } : {}),
+  });
+}
+
+/** Levantar no borra: la fila queda con el motivo por el que se levantó. El
+ *  historial tiene que poder contar también los errores nuestros. */
+export function revokeSanction(sancionId: string, motivo: string) {
+  return callAdmin({ action: 'revoke_sanction', sancion_id: sancionId, motivo });
+}
+
+export type AdminSancion = {
+  id: string;
+  coachId: string;
+  coachName: string;
+  nivel: SancionNivel;
+  motivo: string;
+  evidencia: string | null;
+  /** ISO, o 'infinity' para una baja. Null en las advertencias. */
+  hasta: string | null;
+  createdAt: string;
+  revocadaAt: string | null;
+  revocadaMotivo: string | null;
+};
+
+export async function listSanctions(): Promise<AdminSancion[]> {
+  const res = await callAdmin({ action: 'list_sanctions' });
+  if (!res.ok) {
+    console.warn('[admin] no se pudieron leer las sanciones:', res.error);
+    return [];
+  }
+  return (res.data?.sanciones ?? []) as AdminSancion[];
+}
+
+/** ¿Esta sanción está pesando ahora mismo? Misma cuenta que `estaSuspendido`
+ *  del lado del coach: 'infinity' (la baja) no es una fecha parseable. */
+export function sancionVigente(s: AdminSancion, now: Date = new Date()): boolean {
+  if (s.revocadaAt) return false;
+  if (s.nivel === 'advertencia') return false;   // no restringe nada, no "pesa"
+  if (s.hasta === 'infinity') return true;
+  const t = s.hasta ? new Date(s.hasta).getTime() : NaN;
+  return Number.isFinite(t) && t > now.getTime();
+}
+
 // ─── Reportes ────────────────────────────────────────────────────────────────
 
 export type AdminReport = {
