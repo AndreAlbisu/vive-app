@@ -43,7 +43,7 @@ import { AppBg } from '@/components/ui/AppBg';
 
 const CARD = '#F7F2E7';
 const FOREST = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const LINE = 'rgba(63,81,47,0.14)';
 const GREEN_BG = '#3E4E2C';
 const GREEN_TXT = '#F3EEDF';

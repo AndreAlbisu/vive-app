@@ -17,7 +17,7 @@ import { recordCompletion } from '@/lib/resourceCompletions';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 const FOREST      = '#3A4F2A';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const CREAM_LIGHT = '#F3EEDF';
 const TERRACOTTA  = '#C1694F';
 const GLASS_BG    = 'rgba(255,248,240,0.55)';
@@ -288,7 +288,7 @@ const s = StyleSheet.create({
   subtitle:     { fontFamily: ViveFonts.title, fontSize: 26, color: FOREST, textAlign: 'center' },
   screenTitle:  { fontFamily: ViveFonts.semibold, fontSize: 22, color: FOREST, textAlign: 'center' },
   description:  { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
-  descriptionSmall: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT, textAlign: 'center', opacity: 0.8, marginTop: -8 },
+  descriptionSmall: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT, textAlign: 'center', marginTop: -8 },
 
   soundGrid: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
   soundCard: {

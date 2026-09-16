@@ -421,7 +421,7 @@ export default function ProfesionalScreen() {
                     <MaterialCommunityIcons
                       name={c.kind === 'matricula' ? 'card-account-details-outline' : 'school-outline'}
                       size={18}
-                      color="#6B7A56"
+                      color="#566245"
                       style={{ marginTop: 1 }}
                     />
                     <View style={{ flex: 1 }}>
@@ -868,7 +868,7 @@ const s = StyleSheet.create({
   },
   credMeta: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#87835C', marginTop: 1 },
   credNumber: {
-    fontFamily: ViveFonts.medium, fontSize: 12.5, color: '#6B7A56', marginTop: 3,
+    fontFamily: ViveFonts.medium, fontSize: 12.5, color: '#566245', marginTop: 3,
   },
 
   // ── Recursos del coach ──────────────────────────────────────────────

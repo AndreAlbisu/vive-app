@@ -13,7 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { VITA_TOOL_MAP } from '@/constants/vitaTools';
 
 const FOREST = '#3A4F2A';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const TERRACOTTA = '#C1694F';
 const GLASS = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';

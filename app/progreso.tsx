@@ -60,7 +60,7 @@ function initials(name: string): string {
 
 const CARD_MX = 18;
 const FOREST = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 

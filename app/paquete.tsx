@@ -233,7 +233,7 @@ export default function PaqueteScreen() {
 }
 
 const FOREST = '#3A4F2A';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 
 const s = StyleSheet.create({
   safe: { flex: 1 },

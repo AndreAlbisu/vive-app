@@ -1421,7 +1421,7 @@ const s = StyleSheet.create({
     marginTop: 10, backgroundColor: '#3F512F', borderRadius: 12, paddingVertical: 12,
   },
   linkBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#F3EEDF' },
-  linkNota: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: '#6B7A56' },
+  linkNota: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: '#566245' },
   linkBeneficio: { marginTop: 10 },
 
   // Encabezado de GRUPO — un nivel por encima de `sectionTitle`. Existe porque

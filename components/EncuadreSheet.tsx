@@ -60,7 +60,7 @@ export function EncuadreSheet({ visible, encuadre, onCerrar }: Props) {
 
             <View style={[s.card, encuadre.habilitado && s.cardOn]}>
               <View style={s.cardHead}>
-                <MaterialCommunityIcons name="hand-heart-outline" size={18} color="#6B7A56" />
+                <MaterialCommunityIcons name="hand-heart-outline" size={18} color="#566245" />
                 <Text style={s.cardTitle}>Acompañamiento</Text>
               </View>
               <Text style={s.cardBody}>
@@ -160,7 +160,7 @@ const s = StyleSheet.create({
   },
   note: {
     fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19.5,
-    color: '#6B7A56', marginBottom: 4,
+    color: '#566245', marginBottom: 4,
   },
   foot: {
     fontFamily: ViveFonts.regular, fontSize: 12.5, lineHeight: 18.5,

@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
     fontFamily: ViveFonts.regular,
     fontSize: 12.5,
     lineHeight: 18,
-    color: '#6B7A56',
+    color: '#566245',
   },
 
   shortcuts: {

@@ -38,7 +38,7 @@ import { anotar } from '@/lib/analytics';
 
 // ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
 const FOREST      = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const INK         = '#2E3624';
 const CARD        = '#F7F2E7';
 const TERRACOTTA  = '#C06B4A';

@@ -31,7 +31,7 @@ import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 
 // ─── Paleta local (consistente con Recursos / Explorar) ──────────────────────
 const FOREST      = '#3A4F2A';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const GLASS_BG    = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 

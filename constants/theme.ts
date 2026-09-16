@@ -37,6 +37,33 @@ export const ViveColors = {
    * justamente porque no había nada que buscar.
    */
   onPrimaryInk: '#F7EFE4',
+
+  /**
+   * El verde del TEXTO SECUNDARIO — descripciones, ayudas, metadatos.
+   *
+   * ⚠️ Auditado el 16/09/2026, en la misma línea que `primaryInk`. El valor
+   * anterior era **#6B7A56** y daba **4.05:1** sobre el crema: por debajo del
+   * 4.5 de AA, y es el color de prácticamente todo el texto que no es título.
+   * Peor todavía donde se usaba con transparencia — el pie de Respiración daba
+   * **2.69**, la línea chica de Sonidos **2.91**.
+   *
+   * 🔴 El valor nuevo NO se eligió contra el crema, sino contra **el fondo más
+   * exigente del producto**. Varias de esas líneas no van sobre el fondo de la
+   * app: van adentro de tarjetas pastel (los cuatro sonidos, las herramientas),
+   * donde el mismo color daba 3.49–3.55. Un verde calculado solo contra el
+   * crema pasaba ahí en 4.12 y el bug volvía apenas alguien moviera un texto
+   * adentro de una tarjeta. Este pasa en los cinco fondos con margen:
+   * crema 5.71, blanco 6.50, y 4.91–4.99 en los cuatro pastel.
+   *
+   * 📌 Es el mismo verde, bajado en luminosidad; el tono y la saturación no se
+   * tocaron, así que la paleta es la de antes.
+   *
+   * ⚠️ HOY ESTE TOKEN NO LO IMPORTA NADIE. El valor está copiado a mano como
+   * `FOREST_SOFT` en 30 archivos —por eso el arreglo tuvo que tocar 37—. Existe
+   * para que la próxima vez haya un solo lugar donde cambiarlo; migrar esos 30
+   * a importarlo de acá quedó pendiente, y es puro reemplazo mecánico.
+   */
+  softInk: '#566245',
 };
 
 // 24/08/2026: se sacó Fraunces del proyecto (`frauncesSerif`/`frauncesSemiBold`

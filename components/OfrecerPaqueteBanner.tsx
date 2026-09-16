@@ -110,7 +110,7 @@ const s = StyleSheet.create({
     // de la sala ya pone los 16 de costado y el `gap` entre elementos.
   },
   titulo: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#3A4F2A' },
-  sub: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#6B7A56', marginTop: 2 },
+  sub: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#566245', marginTop: 2 },
   armarBtn: {
     backgroundColor: ViveColors.primaryInk, borderRadius: 12,
     paddingVertical: 8, paddingHorizontal: 14,

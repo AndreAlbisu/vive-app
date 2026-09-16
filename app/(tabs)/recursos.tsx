@@ -56,7 +56,7 @@ type CoachRecoItem = {
 // el contraste que pide la spec. ContinueCard y StreakChip, fuera de los 6
 // ajustes, se dejaron con GLASS_BG/GLASS_BORDER tal cual estaban.
 const FOREST       = '#3F512F';
-const FOREST_SOFT  = '#6B7A56';
+const FOREST_SOFT  = '#566245';
 const CREAM_LIGHT  = '#F3EEDF';
 const CREAM_DEEP   = '#EAE2D0';
 const CARD         = '#F7F2E7';
@@ -834,14 +834,14 @@ const s = StyleSheet.create({
     fontSize: 9.5,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
-    color: 'rgba(107,122,86,0.85)',
+    color: '#566245',
   },
   eyebrowCount: {
     fontFamily: ViveFonts.semibold,
     fontSize: 9.5,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
-    color: 'rgba(107,122,86,0.6)',
+    color: '#566245',
   },
   formatGrid: {
     flexDirection: 'row',

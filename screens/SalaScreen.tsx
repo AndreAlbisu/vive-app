@@ -1984,7 +1984,7 @@ const styles = StyleSheet.create({
   recoCardNote: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
-    color: '#6B7A56',
+    color: '#566245',
     lineHeight: 17,
     fontStyle: 'italic',
   },

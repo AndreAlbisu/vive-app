@@ -60,7 +60,7 @@ function formatAudioTime(seconds: number) {
 
 // Paleta del lector — misma que LecturasScreen (la tool hardcodeada de Vita)
 const FOREST      = '#3A4F2A';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const CREAM_LIGHT = '#F3EEDF';
 const TERRACOTTA  = '#C1694F';
 

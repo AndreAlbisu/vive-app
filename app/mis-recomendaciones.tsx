@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 
 const FOREST = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const TERRACOTTA = '#C06B4A';
 const CREAM_DEEP = '#EAE2D0';
 const CARD = '#F7F2E7';

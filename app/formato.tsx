@@ -25,7 +25,7 @@ const CARD_GAP = 14;
 const SNAP = CARD_W + CARD_GAP;
 
 const FOREST = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const TERRACOTTA = '#C06B4A';
 const CREAM_LIGHT = '#F3EEDF';
 

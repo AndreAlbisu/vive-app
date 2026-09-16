@@ -21,7 +21,7 @@ import { DOORS } from '@/constants/conexionesDoors';
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
 const CARD = '#F7F2E7';
 const FOREST = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const TERRA = '#C06B4A';
 const LINE = 'rgba(63,81,47,0.14)';
 const GREEN_TXT = '#F3EEDF';

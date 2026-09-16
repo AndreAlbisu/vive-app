@@ -16,7 +16,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 const FOREST       = '#3A4F2A';
-const FOREST_SOFT  = '#6B7A56';
+const FOREST_SOFT  = '#566245';
 const CREAM_LIGHT  = '#F3EEDF';
 const TERRACOTTA   = '#C1694F';
 const GLASS_BG     = 'rgba(255,248,240,0.55)';
@@ -310,7 +310,7 @@ const s = StyleSheet.create({
   primaryBtnText: { fontFamily: ViveFonts.semibold, fontSize: 16, color: CREAM_LIGHT },
   ghostBtn:       { borderWidth: 1.5, borderColor: 'rgba(63,81,47,0.30)', borderRadius: 16, paddingVertical: 13, paddingHorizontal: 40, alignItems: 'center', marginTop: 4 },
   ghostBtnText:   { fontFamily: ViveFonts.medium, fontSize: 14, color: FOREST_SOFT },
-  footerHint:     { fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(107,122,86,0.75)', textAlign: 'center', marginTop: 4 },
+  footerHint:     { fontFamily: ViveFonts.regular, fontSize: 12, color: '#566245', textAlign: 'center', marginTop: 4 },
 
   doneIconWrap: { marginBottom: 8 },
   doneTitle:    { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST },

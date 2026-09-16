@@ -15,7 +15,7 @@ import { recordCompletion } from '@/lib/resourceCompletions';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 
 const FOREST      = '#3A4F2A';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const CREAM_LIGHT = '#F3EEDF';
 const TERRACOTTA  = '#C1694F';
 
