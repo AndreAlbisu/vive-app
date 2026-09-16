@@ -35,7 +35,7 @@ function buildCalendar(year: number, month: number): (number | null)[][] {
   return weeks;
 }
 
-type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string };
+type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string; tema?: string };
 
 export default function BookingScreen_Calendar() {
   const router = useRouter();
@@ -143,6 +143,7 @@ export default function BookingScreen_Calendar() {
         ...(params.specialty && { specialty: params.specialty }),
         ...(params.priceFrom && { priceFrom: params.priceFrom }),
         ...(params.coachId && { coachId: params.coachId }),
+        ...(params.tema && { tema: params.tema }),
         date: selectedDate,
       },
     });

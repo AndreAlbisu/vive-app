@@ -124,6 +124,8 @@ export default function ProfesionalScreen() {
     coachId?: string;
     profileId?: string;
     resourceId?: string;
+    /** La puerta por la que la persona llegó hasta acá, si llegó por una. */
+    tema?: string;
   }>();
   const profileId = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
   const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
@@ -639,6 +641,7 @@ export default function ProfesionalScreen() {
                     specialty: prof.specialty,
                     ...(prof.priceFrom != null && { priceFrom: String(prof.priceFrom) }),
                     coachId: params.coachId ?? params.profileId ?? '',
+                    ...(params.tema && { tema: Array.isArray(params.tema) ? params.tema[0] : params.tema }),
                   },
                 });
               }}>

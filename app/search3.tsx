@@ -426,6 +426,12 @@ export default function SearchScreen3() {
                   name: p.name,
                   specialty: p.specialty,
                   priceFrom: String(p.priceFrom),
+                  // Solo cuando se entró POR una puerta (`label` viene de
+                  // Conexiones). Quien llegó por el buscador libre o tocando
+                  // filtros no declaró un tema, y acá inventarlo sería peor que
+                  // no tenerlo: lo lee un profesional como si la persona lo
+                  // hubiera dicho.
+                  ...(label && { tema: Array.isArray(label) ? label[0] : label }),
                 },
               })}>
               {/* Foto */}

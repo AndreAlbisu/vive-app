@@ -337,6 +337,21 @@ De los Extremeños 5069, Córdoba, Provincia de Córdoba, Argentina.
 
 writeFileSync(join(root, 'web/index.html'), homeHtml, 'utf8');
 
+// ── La versión de los legales, para el checkout web ──────────────────────────
+// `web/c/index.html` crea cuentas y tiene que guardar la misma constancia que
+// la app (`profiles.accepted_terms_version`). No puede importar
+// `constants/legal.ts` —es una página suelta, sin bundler— y hardcodearla sería
+// justo el olvido que este script existe para evitar: cambiaría el texto y
+// quedarían aceptaciones registradas contra una versión vieja.
+writeFileSync(
+  join(root, 'web/legal-version.js'),
+  `// GENERADO POR scripts/sync-legal.mjs — NO EDITAR A MANO.\n` +
+    `// Es el mismo valor que LEGAL_VERSION en constants/legal.ts.\n` +
+    `window.LEGAL_VERSION = '${legalVersion}';\n`,
+  'utf8'
+);
+console.log(`web/legal-version.js: ${legalVersion}`);
+
 console.log(
   `web/legal/: ${forWeb.length} páginas generadas ` +
     `(${forWeb.map(({ key }) => WEB_META[key].file).join(', ')}).`

@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-16 — Andre (sesión 240 · qué necesita saber un profesional antes de atender)
+
+**Tocado:** `scripts/add-booking-tema-origen.sql` (nuevo), `lib/time.ts`, `screens/CoachReservasScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/BookingScreen_Calendar.tsx`, `screens/BookingScreen_Time.tsx`, `screens/ProfesionalScreen.tsx`, `app/(tabs)/conexiones.tsx`, `app/search3.tsx`, `SCHEMA.md`.
+
+**Resumen:**
+- **De dónde sale:** Andre le preguntó a una psicóloga qué datos necesita antes de atender. Contestó: *nombre, edad, motivo, derivación psiquiátrica, situación de urgencia/riesgo, derivación por tribunales*. 🔴 **La lista son dos cosas distintas pegadas**: contexto (las tres primeras) y **triage** (las tres últimas). Las pesadas **se descartaron** por decisión de Andre, y es la decisión correcta: preguntar por riesgo o por tribunales convierte a la app en un dispositivo clínico frente a la ley —justo la confusión de roles que `docs/encuadre-salud-y-responsabilidad.md` señala como el riesgo principal— y encima deja a VIVE sabiendo algo con lo que después tiene que hacer algo. Lo que el profesional necesita preguntar, que lo pregunte él; ya tiene `session_notes` para eso.
+- **Edad:** se le muestra al profesional pegada al nombre en Reservas ("Martina, 34"). Nuevo helper `edadDesde` en `lib/time.ts`, con hoy-en-Argentina como referencia igual que el resto del archivo. ⚠️ **Y acá me equivoqué al presentarlo**: dije que la edad "ya la teníamos". No — en el alta solo se tilda *"tengo 18 o más"* (`profiles.age_confirmed`), y `birth_date` se llena **únicamente** desde Editar perfil o en la postulación del coach. O sea que **hoy va a estar vacía para casi todos**. El cableado queda hecho y correcto; falta decidir dónde se pide la fecha, que es una decisión de fricción y no la tomé solo.
+- **Motivo:** ya existía y estaba bien preguntado (*"Contame brevemente qué te trajo acá"*). Lo único que cambió es que **se movió arriba de los avisos de pago**: estaba último, pegado al botón de pagar. Sigue opcional — obligarlo devuelve "nada" o una mentira, que el profesional lee como si fuera cierto. Vara acordada: **2 de cada 3**.
+- **`bookings.tema_origen` (nuevo, ⚠️ PENDIENTE DE CORRER):** la puerta por la que entró la persona, hilada desde Conexiones y desde el buscador *solo si entró por una puerta*, a través de las cinco pantallas de la reserva. Es el piso de contexto que **no depende de que nadie escriba**. Se guarda la etiqueta y no el id (legible aunque se renombren las puertas), y se muestra como *"buscaba por ansiedad y estrés"* — lenguaje de búsqueda, separado del entrecomillado del mensaje, para no hacer pasar una categoría nuestra por una declaración de la persona.
+- 🔴 **El orden de despliegue importa**: `BookingScreen_Confirm` ya manda `tema_origen`, así que **hasta correr el script toda reserva que venga de Conexiones falla** y las del buscador libre no — un error que aparece por un solo camino. Correr el script antes de probar en el celular.
+
+**Pendiente para la próxima sesión:**
+- **Correr `scripts/add-booking-tema-origen.sql`** (ver arriba: bloquea el camino de Conexiones). Trae en el pie la consulta que importa: cuántas reservas le llegan al profesional **a ciegas**, sin motivo ni puerta. Ese es el número a bajar.
+- **Dónde se pide la fecha de nacimiento.** Sin eso, la edad no se muestra nunca. Opciones: dejarla solo en Editar perfil (y que aparezca cuando aparezca), empujar a completar el perfil, o pedirla en la reserva — esta última suma fricción en el paso donde se pierde la plata, así que no la haría.
+- 🔴 **No hay ninguna vía de crisis en la app.** No es un campo y no entra en esta tanda, pero quedó dicho: hoy alguien en urgencia no tiene a dónde ir desde acá, y esa es una exposición abierta, no una mejora pendiente.
+- El tema **solo se muestra en Reservas** (la tarjeta donde el coach decide). No se agregó a la Sala ni al hub — a decidir si hace falta.
+
+---
 ## 2026-09-16 — Andre (sesión 239 · la garantía le estaba subiendo el ranking al coach)
 
 **Tocado:** `scripts/fix-stats-reembolsos.sql` (nuevo), `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `SCHEMA.md`, cabeceras de `scripts/add-coach-rebooking-stats.sql` y `add-coach-trending-stats.sql`.

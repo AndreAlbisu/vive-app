@@ -152,6 +152,27 @@ export function daysFromTodayAr(date: string, now: number = Date.now()): number 
   return Math.round((b - a) / 86_400_000);
 }
 
+/**
+ * Años cumplidos a partir de una fecha de nacimiento guardada (`profiles.birth_date`,
+ * texto ISO "YYYY-MM-DD"). `null` si no hay fecha o si no se entiende.
+ *
+ * La referencia es HOY EN ARGENTINA y no la del dispositivo: es el mismo criterio
+ * que el resto del archivo, y acá además evita el caso feo de que a alguien le
+ * figure un año menos según desde dónde abra la app el día de su cumpleaños.
+ *
+ * ⚠️ Devuelve `null` también para fechas futuras o absurdas (>120): son datos
+ * cargados a mano en el perfil y nadie los valida contra nada.
+ */
+export function edadDesde(birthDate: string | null | undefined, now: number = Date.now()): number | null {
+  if (!birthDate) return null;
+  const [by, bm, bd] = birthDate.split('-').map(Number);
+  if (![by, bm, bd].every(Number.isFinite)) return null;
+  const [ay, am, ad] = todayInAr(now).split('-').map(Number);
+  let edad = ay - by;
+  if (am < bm || (am === bm && ad < bd)) edad -= 1;
+  return edad >= 0 && edad <= 120 ? edad : null;
+}
+
 // ─── Mostrarle la hora al usuario ────────────────────────────────────────────
 
 /** La zona del dispositivo, por nombre. */

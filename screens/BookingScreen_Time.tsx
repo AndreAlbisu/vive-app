@@ -35,6 +35,7 @@ type Params = {
   priceFrom?: string;
   date?: string;
   coachId?: string;
+  tema?: string;
 };
 
 export default function BookingScreen_Time() {
@@ -131,6 +132,7 @@ export default function BookingScreen_Time() {
         ...(params.specialty && { specialty: params.specialty }),
         ...(params.priceFrom && { priceFrom: params.priceFrom }),
         ...(params.coachId && { coachId: params.coachId }),
+        ...(params.tema && { tema: params.tema }),
         date: dateStr,
         time: selectedTime,
       },

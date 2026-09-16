@@ -279,6 +279,9 @@ export default function ConexionesScreen() {
         name: coach.name,
         specialty: coach.specialty,
         priceFrom: String(coach.priceFrom),
+        // La puerta por la que entró viaja con la reserva hasta el profesional.
+        // Acá es inequívoca: el deck se armó con ESTA puerta y ninguna otra.
+        ...(selectedDoor && { tema: selectedDoor.label }),
       },
     });
   }
