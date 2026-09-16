@@ -83,26 +83,31 @@
     border: 1px solid rgba(58,79,42,.28); margin-bottom: 10px;
   }
   .campo:focus { outline: 2px solid #C1694F; outline-offset: 1px; }
+  /* Los campos ya tenían foco; los botones de horario, los CTA y los enlaces
+     del pie no. focus-visible para no pintar el anillo al clickear con mouse. */
+  :focus-visible { outline: 3px solid #A25842; outline-offset: 2px; border-radius: 4px; }
   .codigo { letter-spacing: .35em; text-align: center; font-size: 1.25rem; }
   .legales { display: flex; gap: 9px; align-items: flex-start; font-size: .82rem; line-height: 1.45; margin-bottom: 14px; opacity: .85; }
   .legales input { margin-top: .2rem; flex-shrink: 0; }
-  .legales a { color: #C1694F; }
+  .legales a { color: #A25842; }   /* #C1694F daba 3.41:1 sobre el crema */
   .error { font-size: .85rem; color: #B3392E; margin: 0 0 10px; }
   .ok { font-size: .9rem; margin: 0; }
 
   .cta {
     display: block; width: 100%; padding: .85rem 1rem; border: 0; border-radius: 12px;
-    background: #C1694F; color: #FFF6EC; font-size: 1rem; font-weight: 700;
+    background: #A25842; color: #FFF6EC; font-size: 1rem; font-weight: 700;  /* sobre #C1694F el crema daba 3.64:1 */
     font-family: inherit; text-align: center; text-decoration: none; cursor: pointer;
   }
   .cta[disabled] { opacity: .5; cursor: default; }
-  .cta-nota { margin: 10px 0 0; font-size: .8rem; opacity: .6; text-align: center; }
+  .cta-nota { margin: 10px 0 0; font-size: .8rem; opacity: .85; text-align: center; }   /* .6 no llegaba a AA */
 
   .estado { padding: 48px 0; text-align: center; opacity: .7; }
   .estado h1 { font-size: 1.2rem; margin-bottom: .5rem; }
 
-  .pie { margin-top: 40px; font-size: .8rem; opacity: .55; text-align: center; }
-  .pie a { color: #C1694F; }
+  /* Mismo caso que en /reserva: opacity .55 multiplicada por una terracota
+     clara dejaba los enlaces legales del pie casi ilegibles. */
+  .pie { margin-top: 40px; font-size: .8rem; opacity: .85; text-align: center; }
+  .pie a { color: #A25842; }
 
   [hidden] { display: none !important; }
 
@@ -113,6 +118,8 @@
     .foto { background: rgba(228,224,210,.08); }
     .tema { background: rgba(228,224,210,.06); border-color: rgba(228,224,210,.16); }
     .precio { border-color: rgba(228,224,210,.18); }
+    .pie a, .legales a { color: #C5735A; }
+    :focus-visible { outline-color: #C5735A; }
   }
 </style>
 <!-- El token de Turnstile para el pedido de código. Ruta ABSOLUTA: esta
