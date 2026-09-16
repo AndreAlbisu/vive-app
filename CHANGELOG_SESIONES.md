@@ -6,7 +6,7 @@
 ---
 ## 2026-09-15 — Andre (sesión 238 · los dos SQL "pendientes" hacía semanas que estaban corridos)
 
-**Tocado:** `scripts/add-ai-usage.sql`, `scripts/fix-payout-rails-trigger.sql` (solo cabeceras). Sin cambios de código ni de schema. Commit `425a5702`.
+**Tocado:** `scripts/add-ai-usage.sql`, `scripts/fix-payout-rails-trigger.sql` (solo cabeceras), `SCHEMA.md`. Sin cambios de código ni de schema. Commits `425a5702` y el de cierre.
 
 **Resumen:**
 
@@ -14,10 +14,10 @@
   - `ai_usage` existe con RLS prendido, **0 policies, 0 grants** a `anon`/`authenticated`, `registrar_uso_ia` sin EXECUTE para nadie salvo el service role, y **una fila real de uso** (2026-09-14, `weekly_reflection`, 5 llamadas). O sea que el tope de gasto de `weekly-reflection` **ya está contando de verdad**, no es teoría.
   - `coach_payout_accounts.method` → `is_nullable = YES`, y el cuerpo de `sync_accepts_international()` en producción es el arreglado (ramifica por `TG_TABLE_NAME`, sin el `coalesce(new.coach_id, ...)` que abortaba la sentencia).
 - **SCHEMA.md ya lo decía bien** (líneas 271 y 693: corridos el 26/08 y el 10/09). Los que mentían eran los propios archivos SQL, con un `PENDIENTE DE CORRER` y un `HAY QUE CORRERLO` arriba de todo. **Es exactamente la trampa que `fix-payout-rails-trigger.sql` documentaba sobre sí mismo en agosto** — y que ya costó dos semanas y media de reembolsos sin procesar en julio. Se corrigieron las dos cabeceras con la fecha, lo verificado y el recordatorio de preguntarle a la base.
-- 📌 **Regla que conviene fijar:** el estado de un script lo contesta la base, no su encabezado. Un repaso de backlog que lee comentarios va a volver a dar este falso positivo.
+- 📌 **Regla que conviene fijar:** el estado de un script lo contesta la base, no su encabezado. Un repaso de backlog que lee comentarios va a volver a dar este falso positivo. **Hoy pasó tres veces seguidas** (los dos scripts y la rama del DELETE), y en los tres casos la información correcta ya estaba escrita en otro archivo del mismo repo.
 
 **Pendiente para la próxima sesión:**
-- 🔴 **La rama del DELETE de `sync_accepts_international()` sigue sin probarse** (`old.coach_id`): borrar una fila de `coach_payout_accounts` y, por cascada, borrar un coach. Es lo único que `SCHEMA.md:271` marca como verificación pendiente de ese arreglo. Se intentó correr en esta sesión dentro de `begin/rollback` y **lo frenó el clasificador de permisos** por ser un DELETE contra producción. Para correrlo a mano: `npx supabase db query --linked --file` con la verificación 3 del propio script (ya está escrita ahí, comentada, con su `rollback`).
+- ✅ **CERRADO en la misma sesión: la rama del DELETE del trigger.** Andre corrió el `delete` dentro de `begin/rollback` (el clasificador de permisos me lo había frenado a mí por ser un DELETE contra producción): **sin error, 3 filas antes y 3 después**. Y `trg_sync_intl_on_payout` es `AFTER INSERT OR DELETE OR UPDATE ... FOR EACH ROW`, así que el borrado ejercita la rama de verdad. 📌 **Tercera vez el mismo patrón en la misma sesión:** el changelog del 27/08 (línea ~4031) ya la daba por probada, con una prueba *mejor* que la de hoy — con una fila real (Sofía Herrera), INSERT dejando `accepts_paypal = true` y DELETE volviéndola a `false`. Los desactualizados eran `SCHEMA.md` y la cabecera del script, los dos ya corregidos. **De este script no queda nada sin ejercitar.**
 - El resto del backlog queda como estaba; los bloqueantes de lanzamiento reales siguen siendo la videollamada nunca ejercitada (A5 prueba 2), la comisión real de MP (A5 prueba 3) y el DMARC de `vitaapp.com.ar`.
 
 ---

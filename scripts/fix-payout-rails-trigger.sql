@@ -11,8 +11,10 @@
 -- seguía diciendo "HAY QUE CORRERLO" y por eso el archivo volvió a aparecer
 -- como pendiente en un repaso — la misma trampa que el propio archivo
 -- documenta más abajo: preguntarle a la base, no a los documentos.
--- ⚠️ Lo que SIGUE sin probarse es la rama del DELETE (`old.coach_id`): borrar
--- una fila de cobro y, por cascada, borrar un coach. Ver la verificación 3.
+-- ✅ La rama del DELETE (`old.coach_id`) también está probada: el 27/08/2026
+-- con una fila real (INSERT dejó `accepts_paypal = true`, DELETE la volvió a
+-- `false`, sin error) y re-confirmada el 15/09/2026 con la verificación 3 de
+-- abajo dentro de `begin/rollback`. No queda nada sin ejercitar de este script.
 --
 -- Contexto de por qué se escribió: `add-payout-rails.sql` YA ESTABA CORRIDO en producción
 -- (confirmado contra la base el 25/08/2026 — las columnas de rieles responden
