@@ -63,6 +63,7 @@
 | **L22** | Checkout web con `?probar=1`: sin el tilde de edad no pide código; después queda `age_confirmed = true`. | 241 |
 | **L23** | Sanciones desde el celular: advertencia con captura adjunta, abrirla, levantarla; y un CBU en el chat que rebote y aparezca en Administración → Sanciones. | 242, 247 |
 | **L24** | Versión mínima: `min_version = 9.9.9` en iOS, ver la pantalla de bloqueo, volver a `1.0.0`. | 245 |
+| **L37** | **El recorrido de entrada con cuenta obligatoria** (sesión 255): bienvenida → bifurcación → "Quiero crecer" → registro con Google → tiene que aparecer "¿Cómo te gustaría empezar?". Repetir con mail (pasa por el código) y con una cuenta existente vía "Ya tengo cuenta" (tiene que ir directo a la app). Y sin sesión, abrir Perfil → "Si necesitás ayuda ahora" no se puede — la pantalla de crisis tiene que seguir llegándose sin cuenta por deep link o desde el registro. | 255 |
 | **L25** | ~~Primera corrida del cron de "tu profesional volvió"~~ | ✅ Verificado el 17/09: corre cada hora con 200 y `{"revisados":0}`; el borrado diario de avisos corrió con `DELETE 0`. |
 
 ### L.5 — No bloquea
@@ -79,6 +80,7 @@
 | **L33** | Casilla propia en `vitaapp.com.ar`: si se crea, cambiarla en `lib/contacto.ts`, `admin-actions` y `constants/legal.ts` a la vez. | ⏸️ |
 | **L34** | Voz y producto: B1, B4, C4, E1–E6, y **F** (cero usuarios reales: la prueba de la tarjeta con 5–10 personas). | Ver secciones. |
 | **L35** | 🔴 **Re-verificar las líneas de crisis antes de cada publicación** (`screens/AyudaScreen.tsx` y T&C §5.3). Los horarios cambian; un número muerto ahí es peor que no ponerlo. Fuentes en el CHANGELOG, sesión 253. | ⏸️ En cada publicación. |
+| **L38** | **Cuenta de prueba para la revisión de Apple y Google.** Con registro obligatorio al entrar, los revisores no pueden ver nada sin una cuenta: hay que darles usuario y contraseña en el formulario de envío. | ⏸️ Al publicar. |
 | **L36** | Selia (competidor colombiano, `docs/competencia-selia.md`, versión 3 con FODA): que lo lea Joaquín. Cambia la urgencia de lanzar, no el rumbo. | 🟡 |
 
 📌 **Cerrado desde la lista del 16/09** (no repetir): la escalera de sanciones está corrida en producción y `admin-actions` v30 deployada; la gente ya recibe aviso cuando su profesional cae y cuando vuelve; a un coach suspendido ya no se le puede reservar por ningún camino; Cloudflare y unpkg están declarados; contraste, afirmaciones sin respaldo y foco de teclado en la web, hechos.

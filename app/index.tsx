@@ -6,6 +6,7 @@ import { ViveColors } from '@/constants/theme';
 import OnboardingScreen1 from '@/screens/OnboardingScreen1';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { limpiarTono } from '@/constants/onboardingTonos';
+import { destinoTrasEntrar } from '@/lib/entrada';
 
 export default function Index() {
   const { user, loading, role } = useAuth();
@@ -18,7 +19,10 @@ export default function Index() {
       // deja de aplicar. Si no, queda guardado para siempre y tiñe pantallas de
       // auth a las que se llega por cualquier otro lado.
       void limpiarTono();
-      router.replace(role === 'coach' ? '/(coach)' : '/(tabs)' as any);
+      // Mismo criterio que `AuthRedirect`: la vuelta de Google o Apple puede caer
+      // acá, y una cuenta recién creada tiene que seguir a "¿Cómo te gustaría
+      // empezar?", no saltearla.
+      void destinoTrasEntrar(user, role).then(d => router.replace(d as any));
     }
   }, [user, loading, role, router]);
 

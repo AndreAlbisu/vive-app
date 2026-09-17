@@ -1,3 +1,11 @@
+> 🔴 **Actualización 17/09/2026 — la cuenta se pide al entrar.** Decisión de Andre.
+> El recorrido pasó a ser: bienvenida → bifurcación → **cuenta** → "¿Cómo te gustaría
+> empezar?" → la app. "Quiero crecer" ya no va a `/onboarding2` sino a `/register`, y
+> `/onboarding2` se muestra después de crear la cuenta (`lib/entrada.ts`). Sin cuenta
+> solo quedan abiertas la bienvenida, el registro, el login, la recuperación de
+> contraseña, los Términos y la pantalla de crisis. Lo que este documento dice sobre
+> "anda sin cuenta" describe el recorrido anterior.
+
 # Qué hacer con "¿Cómo te gustaría empezar?"
 
 > 31/08/2026. Revisión de la pantalla hecha con Andre. Lo que se arregló en la

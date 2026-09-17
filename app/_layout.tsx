@@ -30,13 +30,18 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { VersionGate } from '@/components/VersionGate';
 import { pasoDelAlta, type PasoAlta } from '@/lib/altaCoach';
+import { destinoTrasEntrar, PANTALLAS_SIN_CUENTA } from '@/lib/entrada';
 import { registerForPushNotifications } from '@/lib/notifications';
 import { reconcileResourceReminders } from '@/lib/resourceReminders';
 
 // ⚠️ `verificar-mail` y `coach-application` NO van acá: son pantallas a las
 // que se llega CON sesión a propósito, y meterlas en este set las mandaría de
 // vuelta al Inicio apenas se montan.
-const ONBOARDING_SCREENS = new Set(['index', 'onboarding-bifurcacion', 'onboarding2', 'onboarding4', 'login', 'register']);
+// Pantallas de las que un usuario CON cuenta tiene que salir.
+// ⚠️ `onboarding2` y `onboarding4` ya no están (17/09/2026): desde que la cuenta
+// se pide al entrar, "¿Cómo te gustaría empezar?" se muestra DESPUÉS de crearla.
+// Si siguieran acá, este guardia sacaría de ahí a la persona recién registrada.
+const ONBOARDING_SCREENS = new Set(['index', 'onboarding-bifurcacion', 'login', 'register']);
 
 function NotificationSetup() {
   const { user } = useAuth();
@@ -106,7 +111,12 @@ function AuthRedirect() {
     const inOnboardingOrAuth = ONBOARDING_SCREENS.has(segments[0] as string);
 
     if (!user) {
+      // 🔴 Sin cuenta, solo lo de antes de crearla (ver `PANTALLAS_SIN_CUENTA`,
+      // que incluye la pantalla de crisis). Todo lo demás, al principio.
+      // `segments[0]` vacío es la raíz, o sea `index`.
+      const pantalla = (segments[0] as string | undefined) ?? 'index';
       if (inCoachGroup) router.replace('/onboarding-bifurcacion');
+      else if (!PANTALLAS_SIN_CUENTA.has(pantalla)) router.replace('/');
       return;
     }
 
@@ -148,11 +158,15 @@ function AuthRedirect() {
       return;
     }
 
-    const destination = role === 'coach' ? '/(coach)' : '/(tabs)';
-
     if (inOnboardingOrAuth) {
-      router.replace(destination as any);
-    } else if (role === 'coach' && inTabsGroup) {
+      // La persona recién registrada desde el recorrido de entrada sigue a
+      // "¿Cómo te gustaría empezar?"; quien ya tenía cuenta, a la app.
+      // `vivo` evita navegar con una respuesta que llegó tarde, si mientras
+      // tanto la sesión cambió.
+      let vivo = true;
+      void destinoTrasEntrar(user, role).then(d => { if (vivo) router.replace(d as any); });
+      return () => { vivo = false; };
+    } else if (role === 'coach' && (inTabsGroup || segments[0] === 'onboarding2')) {
       router.replace('/(coach)');
     } else if (role === 'user' && inCoachGroup) {
       router.replace('/(tabs)');

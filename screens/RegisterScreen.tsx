@@ -142,7 +142,20 @@ export default function RegisterScreen() {
       setServerError(error);
       return;
     }
-    router.replace('/(tabs)');
+    // No se navega desde acá (17/09/2026). Con la cuenta creada, `AuthRedirect`
+    // decide: primero el muro del mail, y después "¿Cómo te gustaría empezar?"
+    // si la persona viene del recorrido de entrada (`lib/entrada.ts`). Mandar a
+    // `/(tabs)` desde acá se adelantaba a las dos cosas.
+    //
+    // ⚠️ Eso depende de que el alta devuelva una sesión, que es como está
+    // configurado Supabase hoy (el mail lo verifica la app, no Supabase). Si
+    // algún día se prende la confirmación de mail de Supabase, no hay sesión,
+    // `AuthRedirect` no tiene nada que hacer y la persona quedaría en esta
+    // pantalla sin saber qué pasó. Este aviso es para ese caso.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setServerError('Te mandamos un mail para confirmar la cuenta. Confirmala y después entrá con tu mail y contraseña.');
+    }
   }
 
   // Las dos declaraciones habilitan los tres métodos por igual.
