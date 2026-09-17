@@ -4,6 +4,21 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 254 · la tarjeta de una sesión ya pasada seguía apareciendo)
+
+**Tocado:** `screens/SessionsScreen.tsx`, `app/(tabs)/index.tsx`, `lib/time.ts`.
+
+**Resumen:**
+- 🔴 Bug reportado: sesión a las 11, sin unirse, y a las 13 la tarjeta "unirse" seguía en Mensajes. Causa: la consulta traía todo lo de `scheduled_date >= hoy` y el booking sigue `confirmada` si nadie se une, así que nada la sacaba hasta el día siguiente.
+- Nuevo `sessionHasEnded(fecha, hora, duración)` en `lib/time.ts` (inicio + duración, 60 min por defecto). Mensajes filtra con eso en cada render (el tick de 30s ya existente hace que la tarjeta se vaya sola al terminar la sesión).
+- Mismo bug, peor, en la tarjeta "Próxima sesión" de Inicio: con `.limit(1)` la sesión pasada tapaba a la próxima real. Ahora trae 10 y toma la primera que no terminó.
+- De paso: Mensajes calculaba "hoy" en UTC (`toISOString`), y después de las 21:00 dejaba afuera las sesiones de esa noche. Ahora usa `todayInAr()`.
+
+**Pendiente para la próxima sesión:**
+- Probar en el celular: una sesión ya terminada no tiene que aparecer ni en Mensajes ni en Inicio.
+- Sin tocar: qué pasa con el estado de una sesión `confirmada` a la que nadie se unió (sigue así en la base). No es parte de este arreglo.
+
+---
 ## 2026-09-17 — Andre (sesión 254 · tocar la card de Sofía lleva directo a Progreso)
 
 **Tocado:** `app/(tabs)/index.tsx`.

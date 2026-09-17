@@ -35,6 +35,7 @@ import { buildReflection, esPregunta, type Reflection } from '@/lib/weeklyReflec
 import { useDailyReflection } from '@/hooks/useDailyReflection';
 import { localDayKey, localDayKeyMinus, diasEntreDias } from '@/lib/dates';
 import { useWeeklySignals } from '@/hooks/useWeeklySignals';
+import { sessionHasEnded } from '@/lib/time';
 import { shouldShowMoment } from '@/lib/sobreVosMomento';
 import { getMomentPref, getLastShown, markMomentShown, getLastSpoken, markSpoken } from '@/lib/sobreVosMomentoStorage';
 import { shouldStaySilent } from '@/lib/sobreVosSilencio';
@@ -492,9 +493,9 @@ export default function InicioScreen() {
     // Mismo error que documenta `lib/moodStats.ts:18`.
     const today = localDayKey();
 
-    const { data: booking } = await supabase
+    const { data: bookings } = await supabase
       .from('bookings')
-      .select('id, coach_id, sala_id, scheduled_date, scheduled_time')
+      .select('id, coach_id, sala_id, scheduled_date, scheduled_time, duration_minutes')
       .eq('user_id', user.id)
       .eq('status', 'confirmada')
       .gte('scheduled_date', today)
@@ -502,8 +503,14 @@ export default function InicioScreen() {
       // Sin este segundo criterio, con dos sesiones el mismo día la "próxima"
       // salía a suerte del planner. Mismo orden que `SessionsScreen`.
       .order('scheduled_time', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .limit(10);
+
+    // 🔴 La primera que NO terminó. Con `.limit(1)` una sesión de la mañana a
+    // la que nadie se unió (sigue `confirmada`) quedaba como "próxima" el resto
+    // del día, y tapaba a la que venía de verdad.
+    const booking = (bookings ?? []).find(
+      b => !sessionHasEnded(b.scheduled_date, b.scheduled_time, b.duration_minutes),
+    );
 
     if (!booking) { setNextSession(null); return; }
 

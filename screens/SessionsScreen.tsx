@@ -26,7 +26,7 @@ import { ordenarSalas } from '@/lib/salaOrder';
 import { supabase } from '@/lib/supabase';
 import { decryptMessage } from '@/lib/encryption';
 import { hayReembolsoAlCancelar } from '@/lib/bookingHelpers';
-import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
+import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel, todayInAr, sessionHasEnded } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -232,7 +232,9 @@ export default function SessionsScreen() {
   const loadSalas = useCallback(async () => {
     if (!user) return;
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Hoy en Argentina, no en UTC: con `toISOString()`, después de las 21:00 las
+    // sesiones de esa misma noche quedaban afuera de la consulta.
+    const todayStr = todayInAr();
 
     // 📝 Acá había una cuarta consulta —la última sesión completada— que existía
     // solo para saber a quién nombrar en la tarjeta "¿Querés volver a ver a X?".
@@ -496,9 +498,17 @@ export default function SessionsScreen() {
     }
   }
 
+  // 🔴 Solo las que no terminaron. La consulta trae todo lo de hoy en adelante
+  // y el estado sigue en `confirmada` si nadie se unió, así que una sesión de
+  // las 11 seguía con su tarjeta a las 13. Se filtra en cada render (el tick de
+  // 30s lo vuelve a correr), así la tarjeta se va sola al terminar la sesión.
+  const proximasVigentes = proximas.filter(
+    p => !sessionHasEnded(p.scheduled_date, p.scheduled_time, p.duration_minutes),
+  );
+
   /** Con quién ya hay sesión por delante. Sale de `proximas`, que ya trae el
    *  `salaId`: no hace falta ninguna consulta más para saberlo. */
-  const salasConProxima = new Set(proximas.map(p => p.salaId));
+  const salasConProxima = new Set(proximasVigentes.map(p => p.salaId));
 
   return (
     <AppBg>
@@ -563,10 +573,10 @@ export default function SessionsScreen() {
                 siguiente tiene que asomar. Un carrusel donde el segundo ítem
                 cae justo afuera del borde se lee como una sola tarjeta, y nadie
                 descubre que hay más. El contador de abajo refuerza lo mismo. */}
-            {proximas.length > 0 && (
+            {proximasVigentes.length > 0 && (
               <View style={[
                 styles.carruselWrap,
-                proximas.length === 1 && styles.carruselWrapSolo,
+                proximasVigentes.length === 1 && styles.carruselWrapSolo,
               ]}>
                 <RNScrollView
                   horizontal
@@ -575,7 +585,7 @@ export default function SessionsScreen() {
                   // el ancho. El asomo del 14% existe para anunciar que hay otra
                   // tarjeta — si no la hay, es un hueco a la derecha que se lee
                   // como un error de layout.
-                  scrollEnabled={proximas.length > 1}
+                  scrollEnabled={proximasVigentes.length > 1}
                   snapToInterval={CARD_W + CARD_GAP}
                   decelerationRate="fast"
                   contentContainerStyle={styles.carrusel}
@@ -583,7 +593,7 @@ export default function SessionsScreen() {
                     setIndiceVisible(Math.round(e.nativeEvent.contentOffset.x / (CARD_W + CARD_GAP)));
                   }}
                 >
-                  {proximas.map(ses => {
+                  {proximasVigentes.map(ses => {
                     const puedeUnirse = ses.status === 'confirmada'
                       && isJoinable(ses.scheduled_date, ses.scheduled_time)
                       && !!ses.meeting_url;
@@ -592,7 +602,7 @@ export default function SessionsScreen() {
                       <SurfaceCard
                         key={ses.bookingId}
                         variant="elevated" tone="dark" backgroundColor="#3A4A28" borderRadius={22}
-                        style={{ width: proximas.length > 1 ? CARD_W : CARD_FULL }}
+                        style={{ width: proximasVigentes.length > 1 ? CARD_W : CARD_FULL }}
                       >
                         <LinearGradient
                           colors={['#42542F', '#354526']}
@@ -680,16 +690,16 @@ export default function SessionsScreen() {
                   })}
                 </RNScrollView>
 
-                {proximas.length > 1 && (
+                {proximasVigentes.length > 1 && (
                   <View style={styles.puntos}>
-                    {proximas.map((ses, i) => (
+                    {proximasVigentes.map((ses, i) => (
                       <View
                         key={ses.bookingId}
                         style={[styles.punto, i === indiceVisible && styles.puntoActivo]}
                       />
                     ))}
                     <Text style={styles.contador}>
-                      {indiceVisible + 1} de {proximas.length}
+                      {Math.min(indiceVisible + 1, proximasVigentes.length)} de {proximasVigentes.length}
                     </Text>
                   </View>
                 )}

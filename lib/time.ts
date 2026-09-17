@@ -125,6 +125,20 @@ export function scheduledAtMs(date: string, time: string): number {
   return asIfUtc - offsetReal;
 }
 
+/** ¿Ya terminó la sesión? Inicio + duración (60 min si no está guardada).
+ *
+ *  El estado de un booking sigue en `confirmada` aunque nadie se haya unido, así
+ *  que filtrar solo por `scheduled_date >= hoy` deja en pantalla, todo el día,
+ *  las tarjetas de sesiones que ya pasaron. Una fecha ilegible cuenta como no
+ *  terminada: mejor mostrar una fila rara que esconder una sesión real. */
+export function sessionHasEnded(
+  date: string, time: string, durationMinutes: number | null | undefined, now: number = Date.now(),
+): boolean {
+  const start = scheduledAtMs(date, time);
+  if (!Number.isFinite(start)) return false;
+  return now >= start + (durationMinutes ?? 60) * 60_000;
+}
+
 /** La fecha de HOY en Argentina, como "YYYY-MM-DD".
  *
  *  No es lo mismo que la fecha de hoy del dispositivo: a la 01:00 en Madrid en
