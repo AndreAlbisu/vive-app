@@ -22,6 +22,7 @@ import { useAuth } from '@/context/AuthContext';
 import { notifyViaServer } from '@/lib/notifications';
 import { encryptMessage } from '@/lib/encryption';
 import { isCancelLate } from '@/lib/bookingHelpers';
+import { edadDesde } from '@/lib/time';
 import { confirmBooking, rejectBooking } from '@/lib/coachBookingActions';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -29,7 +30,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 // ── Paleta del mockup (docs/coach-app-interactivo.html) ──────────────────────
 const CARD = '#F7F2E7';
 const FOREST = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const TERRA = '#C06B4A';
 const TERRA_LINE = 'rgba(192,107,74,0.30)';
 const LINE = 'rgba(63,81,47,0.14)';
@@ -47,7 +48,14 @@ interface Booking {
   status: ReservationStatus;
   created_at: string;
   user_message: string | null;
+  /** La puerta por la que la persona llegó ("Ansiedad y estrés"). `null` cuando
+   *  no se sabe — reservas viejas, link del coach, o búsqueda libre. */
+  tema_origen: string | null;
   userName: string;
+  /** Años cumplidos, o `null` si la persona nunca cargó su fecha de nacimiento
+   *  — que hoy es el caso de casi todo el mundo: en el alta solo se tilda "tengo
+   *  18 o más" y `profiles.birth_date` se llena únicamente desde Editar perfil. */
+  edad: number | null;
   initials: string;
   avatarUrl: string | null;
 }
@@ -247,9 +255,15 @@ export default function CoachReservasScreen() {
     setCompletedByUser(completedMap);
 
     const userIds = [...new Set(rows.map(r => r.user_id))];
-    const { data: profiles } = await supabase.from('profiles').select('id, name, avatar_url').in('id', userIds);
-    const profileMap: Record<string, { name: string; avatarUrl: string | null }> = {};
-    profiles?.forEach(p => { profileMap[p.id] = { name: p.name ?? 'Usuario', avatarUrl: p.avatar_url ?? null }; });
+    const { data: profiles } = await supabase.from('profiles').select('id, name, avatar_url, birth_date').in('id', userIds);
+    const profileMap: Record<string, { name: string; avatarUrl: string | null; edad: number | null }> = {};
+    profiles?.forEach(p => {
+      profileMap[p.id] = {
+        name: p.name ?? 'Usuario',
+        avatarUrl: p.avatar_url ?? null,
+        edad: edadDesde(p.birth_date as string | null),
+      };
+    });
 
     const merged: Booking[] = rows.map(r => {
       const name = profileMap[r.user_id]?.name ?? 'Usuario';
@@ -257,7 +271,9 @@ export default function CoachReservasScreen() {
         id: r.id, user_id: r.user_id, coach_id: r.coach_id, sala_id: r.sala_id,
         scheduled_date: r.scheduled_date, scheduled_time: r.scheduled_time, status: r.status,
         created_at: r.created_at, user_message: r.user_message ?? null,
+        tema_origen: r.tema_origen ?? null,
         userName: name, initials: getInitials(name), avatarUrl: profileMap[r.user_id]?.avatarUrl ?? null,
+        edad: profileMap[r.user_id]?.edad ?? null,
       };
     });
 
@@ -461,10 +477,19 @@ export default function CoachReservasScreen() {
                       <View style={[s.avSm, s.avFallback]}><Text style={s.avSmTxt}>{b.initials}</Text></View>
                     )}
                     <View style={{ flex: 1 }}>
-                      <Text style={s.reqName}>{b.userName}</Text>
+                      {/* La edad va pegada al nombre y no en la fila de abajo:
+                          es dato de la PERSONA, no de la sesión. Si no la
+                          cargó, no se escribe nada — "edad desconocida" ocupa
+                          el mismo lugar y no dice nada. */}
+                      <Text style={s.reqName}>{b.userName}{b.edad != null ? `, ${b.edad}` : ''}</Text>
                       <Text style={s.reqSub}>{fullDate(b.scheduled_date)} · {b.scheduled_time.slice(0, 5)} hs · {formatTimeAgo(b.created_at)}</Text>
                     </View>
                   </View>
+                  {/* El tema va ANTES del mensaje y con otro peso: es de la app
+                      (por dónde entró), mientras que el entrecomillado es de la
+                      persona. Mezclarlos haría parecer que la categoría también
+                      la dijo ella. */}
+                  {!!b.tema_origen && <Text style={s.ptema}>{`Buscaba por ${b.tema_origen.toLowerCase()}`}</Text>}
                   {!!b.user_message && <Text style={s.pquote}>{`"${b.user_message}"`}</Text>}
                   {esperandoPago(b) && (
                     <Text style={s.esperandoPagoTxt}>
@@ -508,7 +533,7 @@ export default function CoachReservasScreen() {
                         <View style={[s.avXs, s.avFallback]}><Text style={s.avXsTxt}>{b.initials}</Text></View>
                       )}
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={s.bkName} numberOfLines={1}>{b.userName}</Text>
+                        <Text style={s.bkName} numberOfLines={1}>{b.userName}{b.edad != null ? `, ${b.edad}` : ''}</Text>
                         <Text style={s.bkSub}>{ordinals[b.id]} · videollamada</Text>
                       </View>
                       {b.id === nextId && nextWithin24h ? (
@@ -645,6 +670,9 @@ const s = StyleSheet.create({
   pquote: {
     fontFamily: ViveFonts.semibold, fontStyle: 'italic', fontSize: 11.5, color: '#2E3624',
     backgroundColor: CREAM, borderRadius: 11, paddingVertical: 6, paddingHorizontal: 10, marginTop: 9, lineHeight: 16,
+  },
+  ptema: {
+    fontFamily: ViveFonts.medium, fontSize: 11, color: 'rgba(46,54,36,0.62)', marginTop: 8,
   },
   reqActs: { flexDirection: 'row', gap: 8, marginTop: 11 },
 

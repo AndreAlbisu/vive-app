@@ -85,18 +85,42 @@ async function audit(
  *
  *  Es best-effort a propósito: que falle el aviso no puede desarmar una
  *  aprobación ya escrita. Queda en el log. */
-async function notifyCoach(
+// La casilla para reclamos. Misma que `lib/contacto.ts` y que los Términos: si
+// cambia, cambian las tres juntas. La notificación de una sanción ofrece
+// reclamar, y hasta el 17/09/2026 decía "escribinos" sin decir a dónde.
+const EMAIL_CONTACTO = 'vitaappar@gmail.com'
+
+// Los tipos de archivo que acepta la evidencia de una sanción, y la extensión
+// con la que se guardan. Tiene que coincidir con `allowed_mime_types` del bucket
+// `sanction-evidence`: si acá se acepta algo que el bucket no, la subida firmada
+// falla recién en storage, con un error mucho menos claro.
+const EVIDENCE_MIMES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'application/pdf': 'pdf',
+}
+
+async function notifyProfile(
   admin: SupabaseClient,
   profileId: string,
-  type: 'postulacion_aprobada' | 'postulacion_rechazada' | 'credencial_verificada' | 'credencial_rechazada',
+  type: 'postulacion_aprobada' | 'postulacion_rechazada' | 'credencial_verificada' | 'credencial_rechazada'
+    | 'sancion_aplicada' | 'sancion_levantada' | 'profesional_no_disponible',
   title: string,
   body: string,
+  // ⚠️ Último y opcional a propósito: todas las llamadas viejas pasan cinco
+  // argumentos. En el medio corría todo un lugar y el título terminaba guardado
+  // como id de reserva (pasó en el primer borrador, lo marcó el chequeo de tipos).
+  bookingId: string | null = null,
 ): Promise<void> {
   const { error } = await admin.from('notifications').insert({
     recipient_id: profileId,
     type,
     title,
     body,
+    // Con reserva, tocar la notificación abre ese chat (UserNotificationsScreen).
+    ...(bookingId ? { booking_id: bookingId } : {}),
   })
   if (error) {
     console.error(`[admin-actions] no se pudo notificar a ${profileId}: ${error.message}`)
@@ -217,7 +241,7 @@ serve(async (req) => {
         // reescribir `application_status` al revocar.
         await admin.from('profiles').update({ role: 'coach' }).eq('id', coach.profile_id)
 
-        await notifyCoach(
+        await notifyProfile(
           admin,
           coach.profile_id,
           'postulacion_aprobada',
@@ -276,7 +300,7 @@ serve(async (req) => {
         details: { reason },
       })
 
-      await notifyCoach(
+      await notifyProfile(
         admin,
         coach.profile_id,
         'postulacion_rechazada',
@@ -285,6 +309,442 @@ serve(async (req) => {
       )
 
       return json({ result: 'ok', coach, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
+    // ── La escalera de sanciones ─────────────────────────────────────────────
+    //
+    // Advertencia → suspensión → baja. La aplica un HUMANO mirando un caso: no
+    // hay ni va a haber un algoritmo que sancione solo (ver
+    // `scripts/diagnostico-fuga.sql` — con la muestra de hoy, sancionar por
+    // métrica le pegaría a tres inocentes por cada culpable).
+    //
+    // 🔴 El motivo es obligatorio y **se le muestra al coach tal cual se escribe
+    // acá**. No es una nota interna: es lo que va a leer la persona sancionada.
+    // Sin eso la sanción es un castigo secreto, que es lo que hace que una
+    // plataforma se vuelva odiada — el coach ve que dejó de entrar gente, no
+    // sabe por qué, y no puede corregir nada.
+    case 'apply_sanction': {
+      if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
+
+      const nivel = String(body.nivel ?? '')
+      if (!['advertencia', 'suspension', 'baja'].includes(nivel)) {
+        return json({ error: 'nivel tiene que ser advertencia, suspension o baja' }, 400)
+      }
+
+      const motivo = String(body.motivo ?? '').trim()
+      // El mismo piso que el CHECK de la tabla. Se valida acá también para
+      // devolver un error legible en vez de un 500 de Postgres.
+      if (motivo.length < 10) {
+        return json({ error: 'el motivo es obligatorio y tiene que explicar algo (10 caracteres o más)' }, 400)
+      }
+
+      // `dias` solo aplica a la suspensión. La baja no vence y la advertencia no
+      // restringe nada, así que en los dos casos mandar días sería mentir sobre
+      // lo que va a pasar.
+      let hasta: string | null = null
+      if (nivel === 'suspension') {
+        const dias = Number(body.dias)
+        if (!Number.isFinite(dias) || dias < 1 || dias > 365) {
+          return json({ error: 'una suspensión necesita dias entre 1 y 365' }, 400)
+        }
+        hasta = new Date(Date.now() + dias * 86_400_000).toISOString()
+      } else if (nivel === 'baja') {
+        hasta = 'infinity'
+      }
+
+      const { data: coachRow } = await admin
+        .from('coaches').select('id, profile_id').eq('id', body.coach_id).maybeSingle()
+      if (!coachRow) return json({ error: 'no existe ese coach' }, 404)
+
+      const { data, error } = await admin
+        .from('coach_sanctions')
+        .insert({
+          coach_id: body.coach_id,
+          nivel,
+          motivo,
+          evidencia: typeof body.evidencia === 'string' ? body.evidencia.trim() || null : null,
+          hasta,
+          created_by: actor.adminId,
+        })
+        .select('id, nivel, motivo, hasta, created_at')
+        .single()
+
+      if (error) return json({ error: error.message }, 500)
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'apply_sanction',
+        targetType: 'coach',
+        targetId: body.coach_id,
+        details: { nivel, motivo, hasta, sancion_id: data.id },
+      })
+
+      // El aviso. Dice el escalón, el motivo y qué implica — las tres cosas, o
+      // el coach queda adivinando cuál de las tres le pasó.
+      const queImplica =
+        nivel === 'advertencia'
+          ? 'No cambia nada en tu perfil: seguís apareciendo y recibiendo reservas. Queda registrada.'
+          : nivel === 'suspension'
+            ? 'Mientras dure no aparecés en la app y no podés recibir reservas nuevas. Las sesiones que ya tenés agendadas siguen en pie y las atendés normalmente.'
+            : 'Tu perfil deja de estar publicado. Las sesiones que ya tenés agendadas siguen en pie y las atendés normalmente.'
+
+      await notifyProfile(
+        admin,
+        coachRow.profile_id,
+        'sancion_aplicada',
+        nivel === 'advertencia' ? 'Una advertencia sobre tu cuenta' : 'Tu cuenta quedó suspendida',
+        `${motivo} ${queImplica} Si creés que es un error, escribinos a ${EMAIL_CONTACTO}.`,
+      )
+
+      // ── La gente que lo tenía ──────────────────────────────────────────────
+      // Una advertencia no cambia nada para nadie, así que no se avisa. Con una
+      // suspensión o una baja, la persona que atendía con este profesional se
+      // iba a enterar porque deja de encontrarlo.
+      //
+      // 🔴 El aviso NO dice que hubo una sanción. Dice que no está tomando
+      // reservas nuevas y que lo ya agendado sigue en pie. Contarle a un cliente
+      // que su profesional fue sancionado lo expone por algo que el cliente no
+      // necesita saber para decidir, y que además puede levantarse.
+      //
+      // A quién: quien tuvo o tiene una reserva viva con él en los últimos 90
+      // días. Más atrás ya no es "su profesional", y avisarle sería raro.
+      let avisados = 0
+      if (nivel !== 'advertencia') {
+        const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date())
+        const desde = new Date(Date.now() - 90 * 86_400_000)
+        const desdeStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(desde)
+
+        const [{ data: reservas }, { data: perfilCoach }] = await Promise.all([
+          admin.from('bookings')
+            .select('id, user_id, scheduled_date, status')
+            .eq('coach_id', body.coach_id)
+            .in('status', ['pendiente', 'confirmada', 'completada'])
+            .gte('scheduled_date', desdeStr)
+            .order('scheduled_date', { ascending: true }),
+          admin.from('profiles').select('name').eq('id', coachRow.profile_id).maybeSingle(),
+        ])
+
+        const nombre = (perfilCoach?.name as string | undefined)?.split(' ')[0] || 'Tu profesional'
+        const porPersona = new Map<string, { proxima: { id: string; fecha: string } | null }>()
+        for (const r of reservas ?? []) {
+          const uid = r.user_id as string
+          if (!porPersona.has(uid)) porPersona.set(uid, { proxima: null })
+          const esFutura = (r.status === 'pendiente' || r.status === 'confirmada') && (r.scheduled_date as string) >= hoy
+          const p = porPersona.get(uid)!
+          if (esFutura && !p.proxima) p.proxima = { id: r.id as string, fecha: r.scheduled_date as string }
+        }
+
+        const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+        for (const [uid, { proxima }] of porPersona) {
+          const que = nivel === 'baja'
+            ? `${nombre} dejó de atender en Vita.`
+            : `${nombre} no está tomando reservas nuevas por un tiempo.`
+          const siguiente = proxima
+            ? ` Tu sesión del ${ddmm(proxima.fecha)} sigue en pie.`
+            : ' Si querés seguir mientras tanto, en Conexiones hay otros profesionales.'
+          await notifyProfile(admin, uid, 'profesional_no_disponible', `Sobre ${nombre}`, que + siguiente, proxima?.id ?? null)
+          avisados += 1
+        }
+
+        // A quién se avisó y por qué sanción: es lo que usa `sanction-returns`
+        // para decirles, cuando termine, que volvió. Sin esta fila, a esa persona
+        // nunca le llega el "volvió". No frena la sanción si falla: la sanción
+        // y el aviso ya salieron, y perder el "volvió" es el mal menor.
+        if (porPersona.size > 0) {
+          const { error: notErr } = await admin.from('sanction_client_notices').upsert(
+            [...porPersona.keys()].map(uid => ({ sancion_id: data.id, user_id: uid })),
+            { onConflict: 'sancion_id,user_id', ignoreDuplicates: true },
+          )
+          if (notErr) console.error(`[admin-actions] no se anotaron los avisos de la sanción ${data.id}: ${notErr.message}`)
+        }
+      }
+
+      return json({ result: 'ok', sancion: data, avisados, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
+    // Levantar una sanción NO borra la fila: deja constancia de que se levantó y
+    // por qué. El historial tiene que poder contar también los errores nuestros.
+    case 'revoke_sanction': {
+      if (!body.sancion_id) return json({ error: 'falta sancion_id' }, 400)
+      const motivo = String(body.motivo ?? '').trim()
+      if (!motivo) return json({ error: 'hace falta decir por qué se levanta' }, 400)
+
+      const { data, error } = await admin
+        .from('coach_sanctions')
+        .update({
+          revocada_at: new Date().toISOString(),
+          revocada_por: actor.adminId,
+          revocada_motivo: motivo,
+        })
+        .eq('id', body.sancion_id)
+        .is('revocada_at', null)
+        .select('id, coach_id, nivel')
+
+      if (error) return json({ error: error.message }, 500)
+      if (!data || data.length === 0) return json({ error: 'no existe esa sanción, o ya estaba levantada' }, 404)
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'revoke_sanction',
+        targetType: 'coach',
+        targetId: data[0].coach_id,
+        details: { sancion_id: data[0].id, nivel: data[0].nivel, motivo },
+      })
+
+      const { data: coachRow } = await admin
+        .from('coaches').select('profile_id').eq('id', data[0].coach_id).maybeSingle()
+
+      if (coachRow?.profile_id && data[0].nivel !== 'advertencia') {
+        await notifyProfile(
+          admin,
+          coachRow.profile_id,
+          'sancion_levantada',
+          'Tu cuenta vuelve a estar activa',
+          `${motivo} Ya volvés a aparecer en la app y a recibir reservas.`,
+        )
+      }
+
+      return json({ result: 'ok', sancion: data[0], ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
+    // El historial completo, vigentes y levantadas. Va por acá y no con la anon
+    // key porque el RLS de `coach_sanctions` solo le deja a cada coach ver las
+    // suyas — el panel necesita verlas todas.
+    case 'list_sanctions': {
+      const { data, error } = await admin
+        .from('coach_sanctions')
+        .select('id, coach_id, nivel, motivo, evidencia, hasta, created_at, revocada_at, revocada_motivo, coaches!inner(profile_id, profiles!inner(name)), coach_sanction_evidence(id, mime, created_at)')
+        .order('created_at', { ascending: false })
+        .limit(200)
+
+      if (error) return json({ error: error.message }, 500)
+
+      return json({
+        result: 'ok',
+        sanciones: (data ?? []).map((r: any) => {
+          const c = Array.isArray(r.coaches) ? r.coaches[0] : r.coaches
+          const p = c && (Array.isArray(c.profiles) ? c.profiles[0] : c.profiles)
+          return {
+            id: r.id,
+            coachId: r.coach_id,
+            coachName: p?.name ?? 'Sin nombre',
+            nivel: r.nivel,
+            motivo: r.motivo,
+            evidencia: r.evidencia ?? null,
+            hasta: r.hasta ?? null,
+            createdAt: r.created_at,
+            revocadaAt: r.revocada_at ?? null,
+            revocadaMotivo: r.revocada_motivo ?? null,
+            adjuntos: (r.coach_sanction_evidence ?? [])
+              .map((e: any) => ({ id: e.id, mime: e.mime, createdAt: e.created_at }))
+              .sort((x: any, y: any) => String(x.createdAt).localeCompare(String(y.createdAt))),
+          }
+        }),
+      })
+    }
+
+    // ── Avisos de contacto, para revisar ─────────────────────────────────────
+    //
+    // Hasta el 16/09/2026 cada aviso quedaba en `analytics_events` y nadie lo
+    // miraba: la detección y la escalera de sanciones estaban desconectadas.
+    //
+    // 🔴 No se confía en el evento a ciegas. Las propiedades las arma el teléfono;
+    // lo único que garantiza la base es QUIÉN lo escribió (`user_id`, desde que se
+    // borró `analytics_insert_auth` — ver `add-contact-signals-panel.sql`). Así
+    // que un aviso "del coach" solo cuenta si lo escribió ese coach, y uno "de la
+    // persona" solo si lo escribió esa persona. Lo que no cierra se descarta y se
+    // informa cuántos: si ese número crece, alguien está intentando fabricarlos.
+    //
+    // Y ninguno es una prueba. Es una lista de casos para mirar; la prueba es la
+    // conversación, y la decisión es de una persona.
+    case 'list_contact_signals': {
+      const desde = new Date(Date.now() - 90 * 86_400_000).toISOString()
+      const { data: eventos, error } = await admin
+        .from('analytics_events')
+        .select('user_id, properties, created_at')
+        .eq('event_name', 'mensaje_contacto_detectado')
+        .gte('created_at', desde)
+        .order('created_at', { ascending: true })
+        .limit(5000)
+      if (error) return json({ error: error.message }, 500)
+
+      type Par = { userId: string; avisos: number; primero: string }
+      type Grupo = {
+        coachProfileId: string
+        delCoach: number; bloqueados: number; enviadosIgual: number; deLaPersona: number
+        canales: Record<string, number>; senales: Record<string, number>
+        pares: Map<string, Par>; ultimo: string
+      }
+      const grupos = new Map<string, Grupo>()
+      let descartados = 0
+
+      for (const ev of eventos ?? []) {
+        const p = (ev.properties ?? {}) as Record<string, any>
+        const coach = typeof p.coach_id === 'string' ? p.coach_id : null
+        const autorEsperado = p.role === 'coach' ? coach : (typeof p.user_id === 'string' ? p.user_id : null)
+        if (!coach || !ev.user_id || ev.user_id !== autorEsperado) { descartados += 1; continue }
+
+        if (!grupos.has(coach)) {
+          grupos.set(coach, { coachProfileId: coach, delCoach: 0, bloqueados: 0, enviadosIgual: 0, deLaPersona: 0, canales: {}, senales: {}, pares: new Map(), ultimo: ev.created_at })
+        }
+        const g = grupos.get(coach)!
+        if (p.role === 'coach') g.delCoach += 1; else g.deLaPersona += 1
+        if (p.bloqueado === true) g.bloqueados += 1
+        if (p.sent_anyway === true) g.enviadosIgual += 1
+        const canal = String(p.canal ?? 'chat'); g.canales[canal] = (g.canales[canal] ?? 0) + 1
+        const senal = String(p.senal ?? 'sin_dato'); g.senales[senal] = (g.senales[senal] ?? 0) + 1
+        g.ultimo = ev.created_at
+        if (typeof p.user_id === 'string') {
+          const par = g.pares.get(p.user_id) ?? { userId: p.user_id, avisos: 0, primero: ev.created_at }
+          par.avisos += 1
+          g.pares.set(p.user_id, par)
+        }
+      }
+
+      const coachProfileIds = [...grupos.keys()]
+      const userIds = [...new Set([...grupos.values()].flatMap(g => [...g.pares.keys()]))]
+      const [{ data: perfiles }, { data: coachRows }] = await Promise.all([
+        admin.from('profiles').select('id, name').in('id', [...coachProfileIds, ...userIds].length ? [...coachProfileIds, ...userIds] : ['00000000-0000-0000-0000-000000000000']),
+        admin.from('coaches').select('id, profile_id').in('profile_id', coachProfileIds.length ? coachProfileIds : ['00000000-0000-0000-0000-000000000000']),
+      ])
+      const nombre = new Map((perfiles ?? []).map((x: any) => [x.id as string, (x.name as string) ?? 'Sin nombre']))
+      const coachIdDe = new Map((coachRows ?? []).map((x: any) => [x.profile_id as string, x.id as string]))
+
+      // ¿Siguió reservando después del primer aviso? Es la otra mitad de la firma
+      // de la fuga: intercambio de contacto + dejó de reservar.
+      const coachIds = [...coachIdDe.values()]
+      const { data: reservas } = coachIds.length && userIds.length
+        ? await admin.from('bookings').select('coach_id, user_id, created_at, status')
+            .in('coach_id', coachIds).in('user_id', userIds).neq('status', 'cancelada')
+        : { data: [] as any[] }
+
+      const coaches = [...grupos.values()].map(g => {
+        const coachId = coachIdDe.get(g.coachProfileId) ?? null
+        const personas = [...g.pares.values()].map(par => ({
+          userId: par.userId,
+          nombre: nombre.get(par.userId) ?? 'Sin nombre',
+          avisos: par.avisos,
+          siguioReservando: (reservas ?? []).some((r: any) =>
+            r.coach_id === coachId && r.user_id === par.userId && r.created_at > par.primero),
+        }))
+        return {
+          coachProfileId: g.coachProfileId, coachId, nombre: nombre.get(g.coachProfileId) ?? 'Sin nombre',
+          delCoach: g.delCoach, bloqueados: g.bloqueados, enviadosIgual: g.enviadosIgual, deLaPersona: g.deLaPersona,
+          canales: g.canales, senales: g.senales, ultimo: g.ultimo, personas,
+        }
+      })
+      // Primero lo que escribió el coach — es lo que no puede fabricar nadie más.
+      coaches.sort((a, b) => (b.bloqueados - a.bloqueados) || (b.delCoach - a.delCoach) || (b.deLaPersona - a.deLaPersona))
+
+      return json({ result: 'ok', coaches, descartados })
+    }
+
+    // ── Adjuntos de evidencia ────────────────────────────────────────────────
+    //
+    // Tres pasos y no uno, para que el archivo NUNCA pase por esta función (una
+    // captura de 5MB en base64 dentro de un JSON es lenta y frágil):
+    //   1. `sanction_evidence_upload` — valida al admin y la sanción, elige el
+    //      path, y devuelve una URL de subida firmada a ESE path.
+    //   2. el cliente sube el archivo directo a storage con esa URL.
+    //   3. `sanction_evidence_register` — confirma que el objeto existe y lo
+    //      anota. Si el paso 2 falló, no queda una fila apuntando a la nada.
+    //
+    // El bucket no tiene ninguna policy: esta función es la única puerta, igual
+    // que con `coach-credentials`.
+    case 'sanction_evidence_upload': {
+      if (!body.sancion_id) return json({ error: 'falta sancion_id' }, 400)
+      const mime = String(body.mime ?? '')
+      if (!EVIDENCE_MIMES[mime]) {
+        return json({ error: 'solo imágenes (jpg, png, webp, heic) o PDF' }, 400)
+      }
+
+      const { data: sancion } = await admin
+        .from('coach_sanctions').select('id').eq('id', body.sancion_id).maybeSingle()
+      if (!sancion) return json({ error: 'no existe esa sanción' }, 404)
+
+      // El path lo decide el servidor, nunca el cliente: así un admin no puede
+      // pisar la evidencia de otra sanción eligiendo a mano el nombre.
+      const path = `${sancion.id}/${crypto.randomUUID()}.${EVIDENCE_MIMES[mime]}`
+      const { data: signed, error: signErr } = await admin
+        .storage.from('sanction-evidence')
+        .createSignedUploadUrl(path)
+
+      if (signErr || !signed) return json({ error: signErr?.message ?? 'no se pudo firmar la subida' }, 500)
+      return json({ result: 'ok', path: signed.path, token: signed.token })
+    }
+
+    case 'sanction_evidence_register': {
+      if (!body.sancion_id || !body.path) return json({ error: 'falta sancion_id o path' }, 400)
+      const path = String(body.path)
+      const mime = String(body.mime ?? '')
+      if (!EVIDENCE_MIMES[mime]) return json({ error: 'tipo de archivo no permitido' }, 400)
+
+      // El path tiene que ser de ESTA sanción. Sin este chequeo se podría colgar
+      // de una sanción un archivo subido para otra.
+      const [carpeta, archivo] = path.split('/')
+      if (carpeta !== String(body.sancion_id) || !archivo) {
+        return json({ error: 'ese archivo no pertenece a esta sanción' }, 400)
+      }
+
+      // Que el objeto exista de verdad: si la subida falló a mitad de camino, no
+      // se registra nada.
+      const { data: listado } = await admin
+        .storage.from('sanction-evidence')
+        .list(carpeta, { search: archivo, limit: 1 })
+      if (!listado || listado.length === 0) {
+        return json({ error: 'el archivo no llegó a subirse' }, 409)
+      }
+
+      const { data: sancion } = await admin
+        .from('coach_sanctions').select('id, coach_id').eq('id', carpeta).maybeSingle()
+      if (!sancion) return json({ error: 'no existe esa sanción' }, 404)
+
+      const { data, error } = await admin
+        .from('coach_sanction_evidence')
+        .insert({ sancion_id: sancion.id, file_path: path, mime, created_by: actor.adminId })
+        .select('id, mime, created_at')
+        .single()
+      if (error) return json({ error: error.message }, 500)
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'sanction_evidence_register',
+        targetType: 'coach',
+        targetId: sancion.coach_id,
+        details: { sancion_id: sancion.id, evidencia_id: data.id, mime },
+      })
+
+      return json({ result: 'ok', adjunto: data, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
+    // Mirar un adjunto. 5 minutos y auditado, igual que un documento de
+    // identidad: es muy probable que la captura tenga mensajes privados de un
+    // cliente, y tiene que constar quién la abrió.
+    case 'sanction_evidence_url': {
+      if (!body.evidencia_id) return json({ error: 'falta evidencia_id' }, 400)
+
+      const { data: ev } = await admin
+        .from('coach_sanction_evidence')
+        .select('id, file_path, sancion_id, coach_sanctions!inner(coach_id)')
+        .eq('id', body.evidencia_id)
+        .maybeSingle()
+      if (!ev) return json({ error: 'no existe ese adjunto' }, 404)
+
+      const { data: signed, error: signErr } = await admin
+        .storage.from('sanction-evidence')
+        .createSignedUrl(ev.file_path, 300)
+      if (signErr || !signed) return json({ error: signErr?.message ?? 'no se pudo firmar' }, 500)
+
+      const s2: any = Array.isArray((ev as any).coach_sanctions) ? (ev as any).coach_sanctions[0] : (ev as any).coach_sanctions
+      await audit(admin, {
+        ...actor,
+        action: 'sanction_evidence_url',
+        targetType: 'coach',
+        targetId: s2?.coach_id ?? ev.sancion_id,
+        details: { sancion_id: ev.sancion_id, evidencia_id: ev.id },
+      })
+
+      return json({ result: 'ok', url: signed.signedUrl, expires_in: 300 })
     }
 
     // ── Moderar un reporte ───────────────────────────────────────────────────
@@ -581,13 +1041,13 @@ serve(async (req) => {
       const profileId = cred.coaches?.profile_id
       if (profileId) {
         if (body.verified) {
-          await notifyCoach(
+          await notifyProfile(
             admin, profileId, 'credencial_verificada',
             'Credencial verificada ✓',
             `«${cred.title}» ya se muestra en tu perfil con la marca de verificada.`,
           )
         } else {
-          await notifyCoach(
+          await notifyProfile(
             admin, profileId, 'credencial_rechazada',
             'Revisá tu credencial',
             `No pudimos verificar «${cred.title}». ${body.notes}`,

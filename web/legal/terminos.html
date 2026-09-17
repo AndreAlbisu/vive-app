@@ -27,14 +27,29 @@
   table { border-collapse: collapse; width: 100%; font-size: .925rem; }
   th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid rgba(58,79,42,.15); vertical-align: top; }
   th { font-weight: 700; }
-  a { color: #C1694F; }
+  /* ⚠️ #C1694F daba 3.41:1 sobre el crema — por debajo del 4.5 de AA, y acá el
+     link ES el contenido (son páginas de puros enlaces). Esta es la misma
+     terracota oscurecida: 4.59:1. Es el valor que en la app se llama
+     ViveColors.primaryInk. En oscuro hay que ir al revés y aclararla. */
+  a { color: #A25842; }
+
+  /* Foco de teclado. No había ninguno: quien navega con Tab —o con un lector de
+     pantalla, o sin poder usar un mouse— no tenía forma de saber dónde estaba
+     parado. focus-visible y no focus a secas para que el anillo no aparezca al
+     hacer click con el mouse, que es lo que lleva a la gente a matarlo con
+     outline:none. */
+  :focus-visible {
+    outline: 3px solid #A25842;
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
   code { background: rgba(58,79,42,.08); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
   .nav { max-width: 720px; margin: 0 auto 2rem; font-size: .9rem; }
   /* "Lugar destacado" de la Res. 424/2020: el enlace no puede ser un link más
      perdido en el pie. Se lo pinta como botón y se lo separa del resto. */
   .nav a.regret {
     display: inline-block; margin-left: .35rem; padding: .35rem .7rem;
-    background: #C1694F; color: #FFF6EC; border-radius: 8px;
+    background: #A25842; color: #FFF6EC; border-radius: 8px;  /* sobre #C1694F el crema daba 3.64:1 */
     font-weight: 700; letter-spacing: .02em; text-decoration: none;
   }
   .draft {
@@ -45,12 +60,17 @@
   @media (prefers-color-scheme: dark) {
     body { background: #1A1C16; color: #E4E0D2; }
     h1, h2, h3 { color: #F2EDE0; }
+    /* La misma terracota, para el otro lado: sobre el fondo oscuro hay que
+       aclararla (#A25842 ahí da 3.28). Esta da 4.89. */
+    a { color: #C5735A; }
+    :focus-visible { outline-color: #C5735A; }
     hr { border-top-color: rgba(228,224,210,.18); }
     code { background: rgba(228,224,210,.10); }
     th, td { border-bottom-color: rgba(228,224,210,.18); }
     .draft { background: rgba(193,105,79,.16); color: #E8B48F; border-color: rgba(193,105,79,.35); }
     .card { background: rgba(228,224,210,.05); border-color: rgba(228,224,210,.14); }
     .lead { color: rgba(228,224,210,.85); }
+    .card.regret strong { color: #C5735A; }
   }
 </style>
 </head>
@@ -147,7 +167,15 @@
 <h2>10. Uso Exclusivo de la Plataforma (No Elusión)</h2>
 <p>10.1. La Plataforma existe para que la conexión, la agenda, la comunicación y el pago entre Clientes y Profesionales ocurran dentro de ella, lo que permite sostener las protecciones, la trazabilidad y el modelo de Vita.</p>
 <p>10.2. <strong>El Profesional se obliga a no utilizar la Plataforma para desviar, derivar o continuar la relación con un Cliente por fuera de la Plataforma con el fin de eludir las comisiones</strong>, ni a solicitar o proponer pagos por fuera de los canales oficiales durante el vínculo originado en Vita. Asimismo, los Usuarios se obligan a no compartir por la Plataforma datos de contacto o de pago con el propósito de operar por fuera de ella eludiendo las comisiones.</p>
-<p>10.3. El incumplimiento de esta cláusula puede dar lugar a advertencias, suspensión o cancelación de la cuenta, sin perjuicio de las acciones que correspondan. Vita podrá mostrar advertencias automáticas cuando detecte, mediante medios técnicos, un posible intercambio de datos de contacto o de pago; dichas advertencias no implican bloqueo ni monitoreo del contenido de las conversaciones más allá de lo descripto en la Política de Privacidad.</p>
+<p>10.3. <strong>Prevención.</strong> Para prevenir el incumplimiento de esta cláusula, la Plataforma detecta mediante medios técnicos, en el dispositivo de quien escribe y antes de enviar, si un texto incluye datos de contacto o de pago. El alcance es el siguiente:</p>
+<ul>
+<li><strong>En los textos dirigidos a otro Usuario</strong> (mensajes, notas de sesión compartidas y comentarios que acompañan una recomendación o una reserva), la Plataforma muestra una advertencia y permite continuar.</li>
+<li><strong>Excepción:</strong> la Plataforma no permite al Profesional enviar datos para recibir pagos —como CBU, CVU, alias o enlaces de cobro—, dado que todos los pagos de las Sesiones se canalizan a través de Vita.</li>
+<li><strong>En los textos públicos</strong>, la Plataforma no permite publicar datos de contacto o de pago en la presentación del Profesional ni en las reseñas. En los recursos que propone un Profesional, advierte al cargarlos y no permite enlaces a redes sociales o servicios de mensajería; Vita revisa cada recurso antes de publicarlo.</li>
+</ul>
+<p>El tratamiento de datos que esto implica se describe en la Política de Privacidad.</p>
+<p>10.4. <strong>Medidas.</strong> El incumplimiento de esta cláusula puede dar lugar, según su gravedad y reiteración, a una <strong>advertencia</strong>, a la <strong>suspensión temporal</strong> de la cuenta o a su <strong>baja</strong>, sin perjuicio de las acciones que correspondan. Ninguna medida se aplica en forma automática: cada caso es revisado por Vita. La medida se comunica al Profesional junto con su motivo. Mientras dure una suspensión o tras una baja, el Profesional no aparece en las búsquedas ni en las recomendaciones de la Plataforma y no puede recibir reservas nuevas, pero las Sesiones ya agendadas y abonadas se mantienen. Vita informa a los Clientes que tenían un vínculo reciente con el Profesional que este no se encuentra disponible, sin indicar el motivo.</p>
+<p>10.5. <strong>Revisión.</strong> El Profesional puede solicitar la revisión de una medida escribiendo a <a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a>.</p>
 <h2>11. Contenido, Herramientas y Recursos</h2>
 <p>11.1. Vita pone a disposición contenido y herramientas de desarrollo personal para uso personal y no comercial del Usuario. Vita puede modificar, agregar o retirar Contenido en cualquier momento.</p>
 <p>11.2. El Contenido del Usuario (registros de ánimo, diario, gratitud, etc.) pertenece al Usuario. Al ingresarlo, el Usuario otorga a Vita una licencia limitada para almacenarlo y procesarlo con el único fin de prestar el servicio, conforme a la Política de Privacidad.</p>

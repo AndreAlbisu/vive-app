@@ -24,6 +24,7 @@ import { EncuadrePill } from '@/components/EncuadrePill';
 import { EncuadreSheet } from '@/components/EncuadreSheet';
 import { ScaleCard } from '@/components/ScaleCard';
 import { supabase, registrarEvento } from '@/lib/supabase';
+import { detectContactInfo } from '@/lib/contactInfoGuard';
 import { useAuth } from '@/context/AuthContext';
 import { necesitaVerificarMail } from '@/lib/emailVerificado';
 import { notifyViaServer } from '@/lib/notifications';
@@ -53,6 +54,9 @@ type Params = {
   date?: string;
   time?: string;
   coachId?: string;
+  /** La puerta por la que la persona llegó (Conexiones, o una búsqueda que
+   *  entró por una puerta). Viaja de pantalla en pantalla desde ahí. */
+  tema?: string;
 };
 
 export default function BookingScreen_Confirm() {
@@ -114,6 +118,7 @@ export default function BookingScreen_Confirm() {
   const time = params.time ?? '';
   // coachId que llega por params es profiles.id (= coaches.profile_id), NO coaches.id
   const coachProfileIdParam = Array.isArray(params.coachId) ? params.coachId[0] : params.coachId;
+  const temaOrigen = (Array.isArray(params.tema) ? params.tema[0] : params.tema)?.trim() || null;
 
   // Solo para mostrar el copy correcto antes de confirmar — onConfirm vuelve
   // a leer el flag al momento de reservar, por si cambió mientras tanto.
@@ -261,7 +266,29 @@ export default function BookingScreen_Confirm() {
     return false;
   };
 
-  async function onConfirm() {
+  // El mensaje al profesional es el primer texto que cruza entre los dos, antes
+  // de que exista un chat. Mismo aviso que el chat: avisa y deja seguir. Nunca
+  // frena una reserva — es el paso donde más se pierde gente, y un falso
+  // positivo acá costaría una sesión.
+  function onConfirm() {
+    const senal = isLoggedIn && user && userMessage.trim() ? detectContactInfo(userMessage) : null;
+    if (!senal) { void doConfirm(); return; }
+
+    const par = { role: 'user', canal: 'mensaje_reserva', senal, coach_id: coachProfileIdParam ?? null, user_id: user?.id ?? null };
+    Alert.alert(
+      '¿Compartir datos de contacto?',
+      'Tu mensaje parece incluir datos de contacto o de pago. Si arreglás por fuera de Vita, perdés las protecciones de la app: el reembolso, la garantía y el registro de la sesión.',
+      [
+        { text: 'Editar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: false }) },
+        {
+          text: 'Reservar igual',
+          onPress: () => { registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: true }); void doConfirm(); },
+        },
+      ],
+    );
+  }
+
+  async function doConfirm() {
     if (!isLoggedIn || !user) { requestAuth('confirmar_reserva'); return; }
 
     // 🔴 El mail se exige ACÁ y no en el alta. Al registrarse, un muro de mail
@@ -458,6 +485,12 @@ export default function BookingScreen_Confirm() {
             : {}),
           ...(durationMinutes ? { duration_minutes: durationMinutes } : {}),
           ...(userMessage.trim() ? { user_message: userMessage.trim() } : {}),
+          // El tema por el que entró. NO es el motivo —es una categoría, no lo
+          // que le pasa— pero es lo único que le da contexto al profesional
+          // cuando la persona no escribió nada, que va a ser el caso seguido.
+          // `null` cuando no se sabe, nunca un valor inventado: lo lee un
+          // profesional como algo que la persona declaró.
+          ...(temaOrigen ? { tema_origen: temaOrigen } : {}),
         })
         .select('id')
         .single();
@@ -814,6 +847,8 @@ export default function BookingScreen_Confirm() {
             style={s.backBtn}
             onPress={() => router.back()}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Volver"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <MaterialIcons name="arrow-back-ios" size={18} color="#565E32" />
           </TouchableOpacity>
@@ -951,6 +986,36 @@ export default function BookingScreen_Confirm() {
           </View>
         </View>
 
+        {/* El motivo, ARRIBA de los avisos de pago.
+            Estaba último, debajo de los tres avisos y pegado al botón de pagar:
+            el peor lugar de la pantalla para pedirle a alguien que escriba por
+            qué la está pasando mal, porque ya decidió y lo que tiene adelante es
+            plata. Acá todavía se está mirando con quién y cuándo.
+
+            Sigue siendo OPCIONAL a propósito. Obligarlo devuelve "nada", "hola" o
+            una mentira cómoda —peor que el vacío, porque el profesional lo lee
+            como si fuera cierto— y suma fricción justo donde se pierde la
+            reserva. La vara es que lo escriban dos de cada tres; si no se llega,
+            el problema es de diseño y no de la gente. */}
+        <View style={s.messageSection}>
+          <Text style={s.messageTitle}>
+            {instantBooking ? '¿Querés contarle algo al profesional?' : '¿Querés contarle algo antes de que acepte?'}
+          </Text>
+          <Text style={s.messageSubtitle}>Es opcional. Le ayuda al profesional a entender mejor tu situación</Text>
+          <View style={s.messageInputWrap}>
+            <TextInput
+              style={s.messageInput}
+              value={userMessage}
+              onChangeText={t => t.length <= 300 && setUserMessage(t)}
+              placeholder="Contame brevemente qué te trajo acá..."
+              placeholderTextColor="rgba(135,131,92,0.45)"
+              multiline
+              textAlignVertical="top"
+            />
+            <Text style={s.messageCounter}>{userMessage.length}/300</Text>
+          </View>
+        </View>
+
         {/* Aviso de cobro.
             Decía "No se te cobra hasta que el profesional acepte", y era falso:
             `mp-create-payment` se invoca más abajo para TODA reserva, sin mirar la
@@ -1003,26 +1068,6 @@ export default function BookingScreen_Confirm() {
             Si tu profesional no llega en los primeros 10 minutos, no pagás la sesión.
             Si llegás más de 20 minutos tarde, se cobra igual
           </Text>
-        </View>
-
-        {/* Mensaje opcional */}
-        <View style={s.messageSection}>
-          <Text style={s.messageTitle}>
-            {instantBooking ? '¿Querés contarle algo al profesional?' : '¿Querés contarle algo antes de que acepte?'}
-          </Text>
-          <Text style={s.messageSubtitle}>Es opcional. Le ayuda al profesional a entender mejor tu situación</Text>
-          <View style={s.messageInputWrap}>
-            <TextInput
-              style={s.messageInput}
-              value={userMessage}
-              onChangeText={t => t.length <= 300 && setUserMessage(t)}
-              placeholder="Contame brevemente qué te trajo acá..."
-              placeholderTextColor="rgba(135,131,92,0.45)"
-              multiline
-              textAlignVertical="top"
-            />
-            <Text style={s.messageCounter}>{userMessage.length}/300</Text>
-          </View>
         </View>
 
         {/* Error */}

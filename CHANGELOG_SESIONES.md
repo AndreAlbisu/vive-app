@@ -4,6 +4,434 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 250 · los Términos y la Política dicen lo que hace la app)
+
+**Tocado:** `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `constants/legal.ts` + `web/legal/*` (regenerados), `docs/paquete-abogado.md`, `scripts/add-contact-signals-purge.sql` (nuevo).
+
+**Resumen:**
+- **Andre: *"nosotros tenemos que redactar todos los términos y políticas y después un abogado los revisa"*.** En la sesión anterior el texto había quedado como propuesta dentro del paquete del abogado, así que se escribió en los documentos y el paquete ahora solo dice qué cambió, dónde está y qué revisar.
+- **T&C §10:** la 10.3 decía *"no implican bloqueo"* y remitía a una Política que no decía nada. Ahora hay tres cláusulas: **10.3 Prevención** (qué detecta, dónde avisa, dónde bloquea, y la excepción de los datos de cobro del Profesional), **10.4 Medidas** (advertencia, suspensión o baja; revisadas por una persona; se mantienen las sesiones agendadas; aviso a los clientes sin motivo) y **10.5 Revisión** (reclamar a vitaappar@gmail.com).
+- **Política:** la finalidad (f) ahora nombra el uso exclusivo; nueva **§8.3** (el análisis es en el teléfono, el texto no viaja, Vita registra solo el tipo de dato y las cuentas, nada automático, la documentación con acceso restringido y registro, aviso a clientes sin motivo); **§10** suma los plazos (registros de detección 12 meses; medidas mientras exista la cuenta y después disociadas). La vieja 8.3 pasa a ser 8.4; nada la referenciaba.
+- 🔴 **Dos afirmaciones que no eran exactas se corrigieron antes de cerrar:** en la primera pasada escribí que en los recursos no se pueden publicar datos de contacto (solo se bloquea el link; título y descripción avisan y los revisa VITA) y que un suspendido "no figura en la Plataforma" (lo verificado es que no aparece en búsquedas ni recomendaciones y no puede recibir reservas; su página pública por link no se verificó).
+- **Para que el plazo de 12 meses sea cierto se creó el borrado**: cron `purge-contact-signals` (jobid 13, diario 03:23 AR) que borra los avisos de contacto de más de un año. Antes se habrían acumulado para siempre con las dos cuentas adentro.
+- `LEGAL_VERSION` pasa a `db4e8d11c155` (cambió el texto aceptado). Sin usuarios reales, no afecta a nadie.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **`web/legal/*.html` se regeneró**: al pushear, el sitio público muestra los textos nuevos (siguen con el aviso de borrador).
+- 📌 **No verificado**: si la página pública del coach por su link (`/c/<slug>`) muestra a un coach suspendido. No puede reservar (lo bloquea la base), pero quizá se vea el perfil. Si se ve, conviene ocultarlo o mostrar "no disponible".
+- 📌 El comentario de `scripts/sync-legal.mjs` dice que los .md "los edita el/la abogado/a": desactualizado respecto de cómo trabaja el equipo.
+
+---
+## 2026-09-17 — Andre (sesión 249 · "escribinos", ¿a dónde? — y la §10.3 que dejó de ser cierta)
+
+**Tocado:** `lib/contacto.ts` (nuevo), `screens/CoachHomeScreen.tsx`, `lib/coachVisibility.ts`, `screens/ProfileOwnScreen.tsx`, `screens/CoachComoFuncionaScreen.tsx`, `supabase/functions/admin-actions/index.ts`, `docs/paquete-abogado.md`.
+
+**Resumen:**
+- **Se revisó qué le faltaba al sistema anti-fuga y salieron tres cosas.** Andre descartó la primera (sumar "me pidió pagar por fuera" a los motivos de reporte: *"no sé si alguien la usaría"*) y aprobó las otras dos.
+- 🔴 **La app decía "escribinos" sin decir a dónde, en cuatro lugares.** Ninguna pantalla tenía una dirección de contacto. El caso grave era el del coach sancionado: la notificación le ofrecía reclamar y no había canal. Ahora dice `vitaappar@gmail.com` (la misma casilla de los Términos y la Política) en la notificación, en el panel de visibilidad, y en el recuadro del Inicio como botón que abre el mail con el asunto puesto. Se corrigieron también los otros dos "escribinos" sin destino, que no eran de las sanciones: uno era **el pedido de borrar datos del perfil**, un derecho de la Ley 25.326 que se quedaba sin canal dentro de la app. La casilla vive en `lib/contacto.ts` para que un cambio de dirección no deje lugares desparejos. `admin-actions` v34.
+- 🔴 **La §10.3 de los Términos dice algo que ya no es cierto.** Dice que las advertencias *"no implican bloqueo ni monitoreo (…) más allá de lo descripto en la Política"*: desde el 16/09 la app sí bloquea (datos de cobro del coach; teléfonos en bio y reseñas) y la Política no describe nada. Se sumó **A.12** al paquete del abogado, con la descripción verificada de cómo funciona hoy, el texto propuesto (nueva 10.3, nueva 10.4, sección nueva en la Política) y cinco preguntas. Las dos más filosas: si detectar para proteger la comisión choca con la promesa de la §8.2 de no usar las conversaciones con fines comerciales, y si **no mostrarle la evidencia al sancionado** resiste el derecho de acceso (art. 14).
+- Los textos legales vigentes **no se tocaron**: la redacción es del abogado.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Llevarle A.12 al abogado junto con el resto de A.** Hasta que vuelva, la §10.3 en borrador contradice lo que hace la app.
+- Si se crea una casilla en `vitaapp.com.ar`, cambiarla en los tres lugares a la vez: `lib/contacto.ts`, `EMAIL_CONTACTO` en `admin-actions` y `constants/legal.ts`.
+
+---
+## 2026-09-17 — Andre (sesión 248 · avisar cuando el profesional vuelve)
+
+**Tocado:** `scripts/add-sanction-return-notices.sql` (nuevo), `supabase/functions/sanction-returns/index.ts` (nueva), `supabase/functions/admin-actions/index.ts`, `screens/UserNotificationsScreen.tsx`, `SCHEMA.md`.
+
+**Resumen:**
+- **Cerró el hueco de la sesión anterior:** a quien se le avisó que su profesional "no está tomando reservas nuevas" ahora le llega *"volvió a atender en Vita"* cuando la suspensión vence o se levanta. Antes la persona se quedaba con la última noticia, que era que ya no estaba.
+- **Cómo:** `admin-actions` anota a quién avisó y por qué sanción (`sanction_client_notices`); un cron nuevo, `sanction-returns`, corre cada hora y avisa cuando la sanción dejó de pesar, el profesional no tiene otra vigente y sigue publicado. Con push. Sin mencionar ninguna sanción.
+- **Una sola vez, garantizado:** la función reclama la fila en la base antes de mandar, así que dos corridas que se pisen no duplican el aviso. Y si la sanción terminó hace más de 14 días —el cron estuvo caído— lo anota como omitido en vez de mandar un aviso que ya no tiene sentido.
+- ✅ **Probado de punta a punta desde el CLI, con el mismo comando que ejecuta el cron** y verificado por la respuesta, no por "está activo": suspensión terminada → avisó; terminada hace 20 días → omitió; vigente → esperó; segunda corrida → no duplicó; levantar la vigente → avisó. Se usó una cuenta sin celular registrado para no mandarle un push real a nadie, y se borró todo después. Deploys: `admin-actions` v33, `sanction-returns` v1. Cron programado (jobid 12, minuto 41).
+
+**Pendiente para la próxima sesión:**
+- Mirar la primera corrida automática en `net._http_response`: tiene que dar 200 con `{"revisados":0,...}`. El comando es el mismo que se probó a mano tres veces, así que es una confirmación, no una duda.
+
+---
+## 2026-09-16 — Andre (sesión 247 · los avisos de contacto no le llegaban a nadie, y se podían fabricar)
+
+**Tocado:** `scripts/add-contact-signals-panel.sql` (nuevo), `supabase/functions/admin-actions/index.ts`, `lib/admin.ts`, `screens/AdminScreen.tsx`, `screens/UserNotificationsScreen.tsx`, `SCHEMA.md`.
+
+**Resumen:**
+- **Los avisos de contacto ahora se ven en el panel** (pestaña Sanciones, arriba del historial): agrupados por coach, con cuántos datos de cobro le rebotaron, cuántos avisos escribió él y cuántos las personas, de qué tipo y dónde, y **por cada persona si siguió reservando o no** — que junto con varios avisos es la firma de la fuga. Desde cada coach hay un botón que abre el formulario de sanción con él elegido. Hasta hoy cada aviso quedaba en una tabla de métricas que nadie leía: la detección y la escalera estaban desconectadas.
+- 🔴 **Al armarlo apareció un agujero:** una regla de la tabla de eventos dejaba que **cualquier cuenta anotara eventos a nombre de otra**. Verificado con dos cuentas reales. Hoy no importaba; con el panel sí, porque cualquiera podía fabricarle a un coach avisos de "intentó mandar su CBU". Cerrado y re-verificado. Y el panel igual no confía a ciegas: un aviso del coach solo cuenta si lo escribió ese coach, uno de la persona solo si lo escribió esa persona, y muestra cuántos descartó.
+- **Avisarle a la gente cuando su profesional cae:** al aplicar una suspensión o una baja, quien atendió con él en los últimos 90 días recibe *"[Nombre] no está tomando reservas nuevas por un tiempo. Tu sesión del 20/09 sigue en pie"* (o, sin sesión próxima, que en Conexiones hay otros profesionales). **No menciona la sanción.** El panel le dice al admin a cuántas personas se avisó.
+- 🔴 **Bug agarrado antes de subir:** al agregar el parámetro de la reserva a la función de notificaciones lo puse en el medio y no al final, así que **todas las notificaciones existentes** (aprobar una postulación, avisar una sanción) habrían guardado el título como id de reserva. No fue un error de sintaxis — lo marcó la comparación de avisos de tipos contra la versión anterior (subieron de 8 a 14). Corregido, de vuelta en 8, y con un comentario en la firma.
+- ✅ Base corrida y verificada; `admin-actions` v32 deployada y arranca.
+
+**Pendiente para la próxima sesión:**
+- **La prueba de punta a punta, desde el celular:** con la cuenta de un coach de prueba, mandar un CBU en el chat de una reserva (tiene que rebotar); después, en Administración → Sanciones, ver aparecer a ese coach con "1 datos de cobro bloqueados". Es la única forma de probar la lista: necesita una sesión de admin y no se puede desde el CLI. No se sembraron avisos falsos a propósito: serían acusaciones inventadas contra un coach en la base de producción.
+- ⚠️ **Sin aviso cuando el profesional vuelve.** La suspensión vence sola por fecha y eso no dispara nada; la persona a la que se le dijo "no toma reservas" no se entera de que volvió. Resolverlo pide un cron.
+
+---
+## 2026-09-16 — Andre (sesión 246 · la app se llama Vita, y la pantalla de pago decía VIVE)
+
+**Tocado:** `components/VersionGate.tsx`, `components/SessionNotesSheet.tsx`, `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/CoachProfileScreen.tsx`, `screens/CoachPayoutScreen.tsx`, `screens/AdminScreen.tsx`, `supabase/functions/paypal-create-payment/index.ts`.
+
+**Resumen:**
+- **Andre: *"acordate que no VIVE, es VITA"*.** Los textos nuevos de esta tanda (bloqueo de datos de cobro, avisos de contacto, pantalla de versión mínima) decían "VIVE". Se barrió **todo** texto visible del repo, no solo los nuevos: 16 reemplazos a "Vita" (con mayúscula inicial, que es como lo escribe el 90% de la UI). Quedan cero textos visibles con "VIVE"; comentarios, docs y el nombre del repo no se tocan.
+- 🔴 **El que más importaba no era de esta sesión:** `paypal-create-payment` le mostraba al que paga **"VIVE"** como nombre del comercio (`brand_name`) y "Sesión en VIVE" como descripción, en el checkout de PayPal en producción. Alguien que paga en una app llamada Vita y ve otro nombre en el cobro puede desconocerlo — o sea, un contracargo. **Deployado (v23) y verificado**: antes se confirmó que la v22 en producción se subió dos minutos después del último cambio que la afecta, así que el deploy llevó solo esos dos textos. Arranca y responde con el mensaje de nuestro código.
+- Revisados también los mails (ya salían como `Vita <no-responder@vitaapp.com.ar>`) y `constants/legal.ts` (ya decía Vita).
+
+**Pendiente para la próxima sesión:**
+- 📌 **Mercado Pago no se revisó en el panel de MP**: el nombre que ve el comprador en Checkout Pro y en el resumen de la tarjeta sale de la configuración de la cuenta de MP (y de cada coach, en marketplace), no del código. Chequear que diga Vita antes de lanzar.
+
+---
+## 2026-09-16 — Andre (sesión 245 · la versión mínima obligatoria, antes de que sea tarde)
+
+**Tocado:** `scripts/add-app-version-gate.sql` (nuevo), `lib/appVersion.ts` (nuevo), `components/VersionGate.tsx` (nuevo), `__tests__/appVersion.test.ts` (nuevo), `app/_layout.tsx`, `SCHEMA.md`.
+
+**Resumen:**
+- 🔴 **Por qué ahora, con cero usuarios:** es lo único de su tipo que no se puede agregar después. Una app instalada sin este control no se puede obligar a actualizar nunca, así que tiene que venir en la primera versión pública. Salió de la discusión sobre detección del lado del servidor: cuando Andre recordó que nadie tiene la app instalada, el argumento de "versiones viejas" dejó de pesar para la detección y pasó a pesar al revés — para esto.
+- **Cómo funciona:** una tabla `app_version_gate` con la versión mínima por plataforma. La app abre normal y chequea en paralelo (también cada vez que vuelve al frente); si la instalada es menor, tapa todo con una pantalla sin salida que manda a la tienda, con una línea opcional explicando por qué. Arranca en 1.0.0: no bloquea a nadie hasta que se suba.
+- **Tres decisiones tomadas sin preguntar, todas revisables:** (1) la versión mínima vive en la base y se cambia con SQL desde el CLI; (2) el bloqueo es total, sin "más tarde" — si se pudiera saltear no serviría para lo único que sirve; (3) **el link de la tienda también vive en la base**, porque la App Store no tiene link hasta publicar: se carga ese día con un update, sin sacar versión nueva.
+- **Falla abierta en todos los caminos**: sin señal, tabla caída o número mal cargado → deja pasar. Compara por partes y no como texto (`'1.2.10' < '1.2.9'` como texto), con tests.
+- ✅ **Base corrida y verificada desde el CLI**: se lee sin sesión por la API y un PATCH con la anon key rebota con `permission denied`. Sin deploy de funciones.
+
+**Pendiente para la próxima sesión:**
+- **Probarlo en el celular** (Expo Go): subir `min_version` a `9.9.9` para iOS, abrir la app y ver la pantalla; volver a `1.0.0`. Lo corre Claude, avisarle.
+- **El día que se publique en la App Store**, cargar el link: `update app_version_gate set store_url = 'https://apps.apple.com/app/id…' where platform = 'ios';`. Hasta entonces la pantalla de iOS dice "Buscá VIVE en la App Store" en vez de mostrar un botón.
+- 📌 Un modal nativo abierto (una hoja que sube desde abajo) puede quedar por encima de la pantalla de bloqueo hasta que se cierre. Menor: en cuanto se cierra, el bloqueo está ahí.
+
+---
+## 2026-09-16 — Andre (sesión 244 · el coach no puede mandar datos para cobrar)
+
+**Tocado:** `lib/contactInfoGuard.ts`, `__tests__/contactInfoGuard.test.ts`, `screens/SalaScreen.tsx`, `components/SessionNotesSheet.tsx`. Sin cambios de base.
+
+**Resumen:**
+- **Sale de una propuesta de ChatGPT que Andre trajo para contrastar.** Casi todo ya estaba hecho o decidido (quedarse cómodo, aviso suave, escalera, sin chat antes de reservar). Dos cosas re-proponían lo que Andre ya había descartado: comisión completa en las sesiones 1–3 (ya se probó un tramo de 3 en julio y se reemplazó; además cobraría 20% justo en la 2da y 3ra, el momento de máxima fuga) y un tercer tramo por debajo del 15% (descartado el 06/08: no cubre costos). **La idea que sí se tomó**: distinguir un teléfono, que puede ser inocente, de datos para cobrar mandados por el profesional, que no tienen explicación — VIVE cobra y VIVE paga.
+- 🔴 **Es la única excepción a "en lo privado nunca se bloquea".** Si el coach manda un CBU/CVU completo (22 dígitos), un link de cobro (Mercado Pago, PayPal.me, Cafecito) o "alias" seguido de un alias con forma de alias, el mensaje **no sale** y no hay opción de mandarlo igual. Aplica en el chat, la nota compartida y la nota de una recomendación — los tres lugares donde el coach le escribe a la persona. La palabra "alias" suelta no bloquea, un teléfono tampoco, y si la que manda el CBU es la persona, sigue siendo el aviso de siempre.
+- Tests con 8 casos que bloquean y 7 que NO (teléfono, "alias el Loco", "pagué con mercado pago", un precio, una fecha, un link de YouTube, "pagame en efectivo"). El evento lleva `senal: 'datos_de_cobro'` y `bloqueado: true`. Consistente con T&C §10.2, que ya prohíbe proponer pagos por fuera — no hizo falta cambiar ningún texto legal.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Versión mínima obligatoria antes de publicar en las tiendas.** Recomendada y todavía no decidida: una app sin ese mecanismo ya instalada no se puede forzar a actualizar nunca, así que tiene que venir en la primera versión pública. Tiene decisiones propias (dónde se guarda la versión mínima, qué ve quien la tiene vieja, los links a las tiendas).
+- Queda también sin hacer, a propósito: el puntaje de riesgo por relación como lista de casos para revisar. Recién tiene sentido con datos, y hoy no hay usuarios.
+
+---
+## 2026-09-16 — Andre (sesión 243 · el detector de contacto detectaba 3 de 17)
+
+**Tocado:** `lib/contactInfoGuard.ts` (reescrito), `__tests__/contactInfoGuard.test.ts` (nuevo), `screens/SalaScreen.tsx`, `components/SessionNotesSheet.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/ReviewScreen.tsx`, `app/coach-recurso-nuevo.tsx`, `screens/ProposeResourceScreen.tsx`. Sin cambios de base.
+
+**Resumen:**
+- **Andre preguntó si el sistema ya detecta intercambio de contacto, alias y redes.** Se midió en vez de suponerlo: contra 17 formas comunes de pasarse el contacto ("ig", "insta", "guasap", "juan gmail" sin arroba, "por fuera de la app", "en efectivo", un número dictado en palabras, "zoom"…) **detectaba 3**. Y solo miraba dos lugares: la bio (bloquea) y el chat (avisa).
+- **Detector reescrito, 17 de 17**, y probado igual de fuerte contra lo que NO tiene que disparar: 12 frases que van a aparecer en una charla terapéutica o en una bio. 🔴 **Bug que ya estaba en producción**: la palabra "transferencia" sola bloqueaba la presentación, y en psicología es un concepto clínico central — un psicoanalista no podía guardar su bio. Ahora solo dispara la frase de pago ("por transferencia", "te transfiero"). Mismo criterio con "efectivo" (solo "en efectivo") y "por fuera" (solo "por fuera de la app"). 🔴 **Otro falso positivo encontrado antes de salir**: la primera versión contaba palabras-número en todo el mensaje, y "una"/"uno" son artículos — "fue una semana dura, una de esas donde uno siente…" disparaba. Ahora cuenta solo una corrida seguida, que es como se dicta un teléfono.
+- **Regla que queda: público bloquea, privado avisa.** Bloquea: bio (ya estaba), **reseñas**, y **el link de un recurso** si va a redes, WhatsApp, linktree o un acortador. Avisa y deja seguir: chat (ahora también el teléfono partido en dos mensajes), **notas compartidas**, **nota de una recomendación**, **mensaje al reservar**, y título/descripción de recursos y propuestas (que además los revisa VITA). En lo privado nunca se bloquea: los falsos positivos en una charla de salud mental enseñan a evadir, y se pierde el registro. El cuerpo largo de una lectura no se revisa a propósito: cita cifras y fuentes.
+- **El evento ahora dice dónde y qué**: `mensaje_contacto_detectado` suma `canal` (chat, nota_compartida, mensaje_reserva…) y `senal` (teléfono, red_social, pago_externo…) — el TIPO, nunca el texto. Al 16/09 había **0 eventos** en producción en toda la historia, así que no hay línea de base.
+
+**Pendiente para la próxima sesión:**
+- **Detección del lado del servidor, pendiente a propósito**: implica que VIVE revise el contenido de los mensajes, que es una finalidad nueva bajo la Ley 25.326 y tiene que estar en la política de privacidad antes (mismo criterio que `payer_fingerprint`). Hoy todo corre en el teléfono de quien escribe, así que una versión vieja de la app no avisa.
+- 📌 **`scripts/diagnostico-fuga.sql` tiene el encabezado desactualizado**: dice que el evento no guarda entre quiénes pasó, y lo guarda desde el 12/09 — y desde hoy también canal y señal. La consulta todavía no lo cruza con las reservas; es la pieza que conecta "hubo intercambio" con "el cliente dejó de venir".
+- **Lo que ningún detector ve es la videollamada.** La defensa de fondo siguen siendo los incentivos y la escalera de sanciones.
+
+---
+## 2026-09-16 — Andre (sesión 242 · auditoría de 18 puntos de cumplimiento, y lo que apareció en la base)
+
+**Tocado:** `scripts/limpiar-datos-de-prueba.sql` (nuevo, **NO corrido**). Sin código de app. ⚠️ Sesión en paralelo con la 240/241 — mi commit (`16422e01`) toca solo ese archivo.
+
+**Resumen — Andre trajo una lista de 18 puntos para chequear si los tenemos. Se verificaron uno por uno contra el repo y contra la base.**
+
+- ✅ **Lo que está y no necesita trabajo:** política de privacidad, T&C y política de reembolsos (T&C §9 + botón de arrepentimiento), datos fiscales completos en los tres documentos, borrado de cuenta en las dos apps con retención declarada por categoría, declaración de 18+ con constancia en `profiles.age_confirmed`, consentimiento expreso de datos sensibles separado del checkbox de T&C. Sin dark patterns. Sin cargos ocultos: el cliente paga el precio publicado y la comisión sale del lado del coach.
+- ⚠️ **`LEGAL_IS_DRAFT = true`** — los tres documentos siguen sin revisión de abogado.
+- 🔴 **Dos terceros sin declarar en la política**: Cloudflare Turnstile (`web/captcha.js` — recibe IP y es la única cookie real del producto) y `unpkg.com` (la sala web carga `daily-js` desde ahí). La lista §6 nombra Supabase, Mercado Pago, Daily.co, Expo push, Google/Apple, y aparte YouTube y Anthropic. Esos dos faltan. **De paso queda resuelto el punto de cookies**: la app nativa no usa, la única es la de Turnstile, y bajo Ley 25.326 no hay obligación de banner tipo GDPR — es decisión de alcance, no incumplimiento.
+- 🔴 **Contraste: medido, falla de forma sistémica.** `#6B7A56`, el color de TODO el texto secundario (38 archivos), da **4.05:1** sobre el fondo crema `#F7EFE4` — AA pide 4.5. Las variantes con alpha son peores: **2.69** en el pie de Respiración, **2.91** en la línea chica que agregué el 15/09 en Sonidos. `#C1694F` da 3.41: pasa solo en tamaño grande. No es un ajuste puntual, es oscurecer un token del sistema de diseño.
+- 🔴 **Afirmaciones sin respaldo**: `RespiracionScreen.tsx:214` *"Un patrón que calma el sistema nervioso rápidamente"*, más dos en el seed (*"calmar el sistema nervioso"*, *"según la neurociencia del comportamiento"*).
+- ⚠️ **Etiquetas de accesibilidad en 15 de 182 pantallas.** Teclado: solo aplica a la web; `web/c` está bien resuelto (foco visible, `aria-pressed`), la sala y las legales no tienen estilos de foco.
+- ✅ **Auditoría de SDKs, con buen resultado**: 53 dependencias, todas Expo/React salvo `@supabase/supabase-js`, markdown-display, webview, youtube-iframe, svg y reanimated. **Cero SDKs de analítica o publicidad** — la política dice la verdad cuando afirma que no hay analítica de terceros.
+
+**🔴 Lo que apareció al verificar el punto de reseñas falsas — consultando la base con la anon key:**
+
+- **Corrección de lo que dije el 15/09**: el coach al que están atribuidos los recursos `[SEED]` **no es un coach real**, es una cuenta de prueba (slug `coach-prueba`, especialidad "Especialidad de prueba", bio "linda aaaaaa", precio $1). Ningún profesional de verdad tiene su nombre puesto en material ajeno.
+- **Los 8 recursos `[SEED]` son el 100% de la biblioteca publicada.** `coach_resources` tiene 8 filas, las 8 sembradas, las 8 en `published`, las 8 con `is_author_declared = true`. **Dos apuntan a `dQw4w9WgXcQ`** — Rick Astley. Hoy la app rickrollea a quien abra "Técnica de reencuadre para emociones difíciles". Otras dos van a URLs de Spotify que no existen.
+- **24 reseñas falsas, públicas.** `reviews` tiene 25 filas; 24 son cuatro frases repetidas en loop, todas del 07/08/2026, todas con `is_private = false`, todas colgadas de `booking_id` inventados. Alimentan el promedio de estrellas de los perfiles.
+- **El padrón es sintético**: 34 coaches, los 34 con `verified = true`, `aprobada` y `activo`. Entre ellos `coach-test`, `prueba3`, `coach-prueba` y uno con slug `usuario-eliminado`.
+- 📌 **`scripts/seed-recursos.sql` es la causa y no debe correrse nunca más contra la base de verdad**: busca el primer coach con `role='coach'` y le cuelga 8 recursos publicados declarando autoría en su nombre.
+
+**📌 Cuidado metodológico para la próxima medición contra la base:** la anon key **solo ve las tablas públicas**. `bookings`, `messages`, `mood_entries`, `journal_entries` y todas las tablas por usuario tienen RLS por `auth.uid()`, así que devuelven 0 sin error — y ese 0 significa "no puedo ver", no "no hay". Los números reales salen del editor SQL. El script lo dice en mayúsculas.
+
+**Segunda parte — se fueron cerrando puntos de la lista, de a uno:**
+
+- ✅ **Puntos 4, 5 y 8 (cookies y terceros).** Política §6 ahora declara **Cloudflare** (el anti-alta-automatizada: corre en la app Y en la web, al crear cuenta y al pedir código; recibe IP y pone una cookie técnica en el navegador) y **unpkg.com** (el CDN desde donde la sala web baja el componente de videollamada). Los dos ya venían operando: lo que faltaba era decirlo. Con eso declarado se pudo escribir **§13, Cookies y Tecnologías Similares**, que antes no existía. Se editó el `.md`, que es la fuente; el resto salió de `npm run sync:legal`. ⚠️ El hash de los legales se movió (`3a2108db` → `eb147443`) pero **eso no re-pregunta nada**: `consentRules.ts` decidió a propósito no re-pedir consentimiento por cambio de versión. Sí queda anotado en `docs/legal-instrucciones.md` para el abogado, porque ese mismo archivo dice que **cuando cambian los destinatarios hay que re-pedir**, y acá el criterio fue tratarlo como corrección de la declaración (no hay finalidad nueva ni dato nuevo; la IP ya iba a esos dos). **Y si la respuesta es que sí hay que re-pedir, primero hay que construir el mecanismo: hoy no existe.**
+- ✅ **Punto 14 (contraste), arreglado — 38 archivos.** El texto secundario pasó de **#6B7A56** a **#566245**.
+  - 🔴 **La decisión que importa: el color nuevo no se calculó contra el fondo de la app.** Un verde elegido contra el crema daba 4.79 y pasaba… pero **varias de esas líneas no van sobre el crema**: van adentro de tarjetas pastel (los cuatro sonidos, las herramientas), donde el color viejo daba **3.49–3.55** y el candidato calculado contra crema daba **4.12** — o sea que el bug volvía apenas alguien moviera un texto adentro de una tarjeta. El valor final se eligió contra el fondo más exigente y pasa en los cinco: crema **5.71**, blanco **6.50**, los cuatro pastel **4.91–4.99**.
+  - Es el mismo verde bajado en luminosidad; tono y saturación intactos, la paleta no cambia.
+  - **Los colores de texto con transparencia pasaron a sólido**: eran los peores de todos (pie de Respiración **2.69**, línea chica de Sonidos **2.91** — esa la había agregado yo el 15/09). Se pierde a propósito el matiz de "más apagado": la jerarquía ahora la llevan el tamaño y el peso, no un contraste que no se lee.
+  - **No se tocaron los colores de categoría** (`lectura` en `theme.ts`, `FORMAT_COLOR`, el de `CoachResourcesScreen`) porque van de **fondo** con ícono blanco encima, ni `PHASE_COLORS` de Respiración, que son texto de 32px y con 3.39–3.41 ya cumplen el umbral de texto grande.
+  - 📌 **`ViveColors.softInk` nuevo en `theme.ts`, documentado, y hoy no lo importa nadie**: el valor estaba copiado a mano como `FOREST_SOFT` en **30 archivos**, que es por qué el arreglo tocó 38. Existe para que la próxima vez haya un solo lugar. Migrar esos 30 a importarlo es reemplazo mecánico y quedó pendiente.
+
+- ✅ **Punto 12 (afirmaciones sin respaldo).** En pantalla había una sola y estaba en Respiración: *"Un patrón que calma el sistema nervioso rápidamente"*. **No es solo un problema de cumplimiento: contradice el encuadre del propio producto** — T&C §5 declara que Vita no presta servicios de salud ni reemplaza atención profesional (`docs/encuadre-salud-y-responsabilidad.md`). Queda *"Cuatro tiempos iguales, para que la respiración deje de ir apurada"*: describe la práctica, no promete un efecto. Las otras dos estaban en `seed-recursos.sql` (*"calmar el sistema nervioso"*, *"según la neurociencia del comportamiento"*) y también se reescribieron. El barrido sobre el resto de las herramientas no encontró más: Anclaje, Meditación, Escáner y Relajación ya estaban redactadas describiendo qué hacer y no qué cura.
+- 📌 **`scripts/seed-recursos.sql` lleva ahora un cartel de NO CORRER arriba de todo**, explicando que declara autoría en nombre de un coach real y que el contenido es relleno (los dos rickrolls incluidos). Se conserva el archivo para poblar un entorno de desarrollo vacío, con la condición escrita de no usarlo donde haya un coach de verdad.
+
+- ✅ **Punto 15 (navegación por teclado) — y, sin buscarlo, el contraste de la web.** Las cinco páginas (`index`, `c`, `sala`, `reserva`, las cuatro legales) tienen ahora `:focus-visible` con un anillo de 3px. Se usa `focus-visible` y no `focus` a secas para que el anillo no aparezca al clickear con el mouse, que es justamente lo que lleva a la gente a matarlo con `outline:none`. Antes, el único foco propio del producto eran los campos de texto del checkout.
+  - 🔴 **Buscando dónde poner el foco apareció que el contraste de la web estaba peor que el de la app**, y eso corrige lo que dije antes: el arreglo del punto 14 cubrió la app, no la web. **La terracota `#C1694F` da 3.41:1 sobre el crema** y era el color de *todos* los links de las páginas legales —que son páginas de puros enlaces—. Pasaron a `#A25842` (4.59), que es el mismo valor que en la app se llama `ViveColors.primaryInk`, con `#C5735A` en modo oscuro (4.89; `#A25842` ahí cae a 3.28).
+  - **Los botones tenían el mismo problema**: crema sobre `#C1694F` da **3.64**. El CTA del checkout, el de la sala y el botón de arrepentimiento de las legales pasaron a `#A25842` (4.90).
+  - **El pie de `/reserva` y el de `/c` tenían `opacity: .55` Y adentro links en terracota clara: las dos cosas se multiplicaban.** Y ahí viven los enlaces a Términos y al botón de arrepentimiento, que por la Res. 424/2020 tienen que ser de acceso fácil. Quedaron en `.85` con el link corregido.
+  - **El rojo de error de la sala daba 2.90 en modo oscuro** (`#B3392E` sobre `#1A1C16`). Override a `#D4695C`, 4.89.
+  - Textos de ayuda con `opacity` `.55`–`.72` (la marca, `.ayuda`, `.nota`, `.estado`, `.cta-nota`) subidos a `.8`–`.85`: `.72` daba 3.90.
+  - 📌 **Se edita `scripts/sync-legal.mjs`, no los HTML de `web/legal/`**, que son generados. ⚠️ Y ojo con una trampa: **ese CSS vive dentro de un template literal de JS**, así que un backtick en un comentario rompe el script entero. Pasó y se arregló; los comentarios de ahí adentro van sin backticks.
+
+- 🟢 **Punto 13 (etiquetas de accesibilidad) — arrancado por el recorrido crítico, no terminado.** Se etiquetaron **14 controles** en alta, reserva, pago y sala: los dos ojos de contraseña (alta y registro), las tres flechas de volver del flujo de reserva, las flechas de mes del calendario, los días del calendario, y en la Sala el volver, el menú de tres puntos, el "+" de recomendar recurso y el botón de enviar. Se siguió el criterio que ya usaban `MoodCheckIn` e `IslandTabBar`: `accessibilityLabel` + `accessibilityRole` + `accessibilityState` cuando hay estado.
+  - 📌 **`ToolHeader` es el de mayor rendimiento**: una sola etiqueta cubre el "volver" de **todas** las pantallas de herramientas, porque el header es compartido.
+  - 🔴 **El caso que más cambia es el calendario.** Los días eran un `<Text>{day}</Text>` adentro de un touchable: el lector de pantalla leía *"15"* a secas, sin mes y sin decir si se podía reservar. Ahora leen "15 de Octubre" con el estado de seleccionado. Los días sin turno ya iban `disabled`, así que el foco no se para en ellos.
+  - **Medido después: quedan 0 botones de solo ícono sin etiqueta en el recorrido crítico**, y **91 en 50 archivos** en el resto de la app. El grueso está en las pantallas de coach (agenda, disponibilidad, patrón semanal, reservas) y en `app/formato.tsx`, `conexiones` y `ProposeResourceScreen`.
+
+**Cuarta parte — las notas del chat no se comportaban como mensajes (salió de una duda de Andre).**
+
+- 🔴 **Tres agujeros distintos, y el peor no era el que estaba documentado.** SCHEMA.md decía desde el 31/08 que una nota compartida "le aparece al usuario recién al reabrir el chat". **Tampoco al reabrir**: `refreshKey` recarga los mensajes al volver a la pantalla, pero `fetchNotes` no dependía de él, así que las notas se traían **una sola vez, al montar**, y quedaban congeladas hasta salir de la Sala del todo. El único que veía la suya al instante era el coach que la escribía, por `onSaved`.
+- 🔴 **Y no existían fuera de la Sala.** El puntito de no leídos (`hooks/useUnreadSalas`) y el preview de cada chat en Sesiones (`get_last_messages_per_sala`) se calculan **solo contra `messages`**. O sea: el coach compartía una nota y del otro lado no se encendía nada. Sumado a que las notas se ubican en el hilo **por hora de creación** —no al final—, el cliente podía no enterarse nunca.
+- 🟢 **Arreglado en los tres lugares**: canal de realtime propio para `session_notes` (aparte del de mensajes: aquel cuelga de `salaId` y este del PAR usuario+coach, porque la tabla no conoce la sala), `refreshKey` en las dependencias de `fetchNotes`, y `getLatestSharedNotesByCoach` nuevo en `lib/sessionNotes.ts` alimentando el puntito y el preview (`"Nota: …"` cuando es lo último que pasó).
+- 📌 **Escucha `*` y no solo INSERT**: `session_notes` tiene `unique (booking_id, shared)` y el sheet hace upsert, así que **corregir una nota ya compartida llega como UPDATE**. Se contempla también que el coach deje de compartirla.
+- 📌 **El no leído se compara contra el MISMO `user_last_read_at` que los mensajes**, así que abrir el chat apaga las dos cosas de una. Y solo aplica del lado del usuario: las notas las escribe el coach.
+- 📌 **Corrección de algo que dije en la conversación**: la lista de chats **no se reordena por recencia** —ni con mensajes ni con notas—. `lib/salaOrder.ts` fija la posición por antigüedad del vínculo, a propósito y documentado.
+- ✅ **`scripts/publicar-notas-en-realtime.sql` CORRIDO el 16/09/2026** contra producción. `session_notes` es la **quinta** tabla en `supabase_realtime`. SCHEMA.md actualizado.
+  - 📌 **Se corrió con `supabase db push`, y eso estrena un mecanismo nuevo en el proyecto.** El CLI está logueado y el proyecto linkeado, pero **no tiene forma de correr SQL suelto**: `supabase db` solo expone `diff/dump/push/pull/reset/lint`, e `inspect` trae consultas fijas. La única vía era una migración, así que ahora existe `supabase/migrations/` con un archivo, y la base tiene historial de migraciones (antes estaba vacío en los dos lados). **Es una decisión de flujo de trabajo que conviene que Andre confirme**: el proyecto venía guardando su SQL en `scripts/*.sql` y corriéndolo a mano desde el editor. El archivo de migración tiene que quedarse en el repo — borrarlo dejaría el historial remoto apuntando a algo que no existe.
+  - ⚠️ **Lo que se verificó y lo que no**: la salida fue `NOTICE: publicada: session_notes`, que es la rama que solo corre si la tabla NO estaba publicada, y el `replica identity full` pasó en la misma transacción. **No** se leyó de vuelta `pg_publication_tables`, porque el CLI no corre SQL arbitrario. Falta la prueba funcional.
+
+- 🔴 **Y al conectarse con el CLI apareció que los ceros de la anon key eran mentira, con números.** `supabase inspect db table-stats` ve todo, y las tablas que la anon key reportaba vacías tienen: **bookings ~185, messages ~154, salas ~53, profiles ~84, mood_entries ~54**. **Esto cambia el tamaño de la limpieza previa al lanzamiento**: hay reservas y conversaciones colgando de los coaches de prueba, y `scripts/limpiar-datos-de-prueba.sql` hoy **no toca `bookings`, `messages` ni `salas`**. Se corrigió la cabecera de ese script con los números reales y el aviso.
+
+- 🟢 **`limpiar-datos-de-prueba.sql` completado con `bookings`, `salas` y `messages`** (paso 3 bis), después de que Andre confirmara que las ~185 reservas son **reales pero de prueba**. Borrar `bookings` arrastra en cascada `session_notes`, `session_attendance` y `guarantee_claims`.
+  - 🔴 **La trampa que había que no pisar**: `bookings.coach_id` es `coaches.id` y `salas.coach_id` es `coaches.profile_id`. No son la misma columna — está documentado en SCHEMA.md y el script lo dice donde importa.
+  - ⚠️ **CORRECCIÓN, y viene del mismo error de la anon key**: el script tenía un delete de "reseñas colgadas de una reserva que no existe", basado en que las 24 sembradas tendrían `booking_id` inventados. **Falso**: eso salió de ver `bookings` en cero, y `reviews.booking_id` es FK real a `bookings.id`, así que esos ids existen. El delete se sacó. Las 24 se van igual por pertenecer a las cuentas de prueba, que es lo que sí está verificado.
+  - 📌 **No borra cuentas de USUARIO de prueba**: quedan los ~84 perfiles. Quién es persona real y quién prueba no se deduce del esquema — es decisión de Andre.
+
+**Quinta parte — auditoría de la base antes de limpiar, y un hallazgo que frena el borrado.**
+
+- 📌 **Cómo se leyó la base, y por qué es feo.** Desde acá no había forma limpia: la anon key solo ve tablas públicas (ese 0 ya había producido dos conclusiones falsas), `supabase db dump` necesita Docker (no instalado), `inspect db` trae consultas fijas y `supabase db` no tiene `execute`. La única vía era una **migración de solo lectura con `raise notice`**. Quedan dos entradas en el historial (`20260916010000` y `20260916020000`), que **no cambian nada** — están marcadas como tales. ⚠️ Si esto se necesita seguido, conviene resolver el acceso de verdad en vez de repetir el truco.
+- 📊 **Lo que hay**: 185 reservas — **99 canceladas, 80 completadas, 6 confirmadas a futuro (17 al 26/09)**. 84 perfiles, de los cuales los de más actividad son `andre` (89 reservas, 11 de diario, 31 ánimos), `Joaquin Albisu` (32), cuatro "Usuario Seed" (9 cada uno) y varios "Usuario eliminado". 32 coaches.
+- 🔴 **EL HALLAZGO QUE FRENA EL BORRADO: hay plata que se movió de verdad.** 4 reservas de PayPal en `reembolsado` con monto cargado — **30 + 30 + 30 + 1 = USD 91**, entre el 25 y el 29/08 —, que son las pruebas con plata real documentadas en SCHEMA.md. Más 15 en `aprobado` (14 de MP + 1 de USDT) y 17 en `reembolsado`/`reembolso_pendiente`. 🔴 **La Política de Privacidad §10 promete conservar reservas y transacciones 10 años, disociadas, por obligación contable-fiscal.** Borrarlas contradice lo que el producto le dice al usuario y elimina el único registro propio de esos movimientos.
+- 🟢 **El script ahora excluye toda reserva donde la plata se movió** (`payment_status` fuera de `no_iniciado`/`pendiente`, o `charged_amount > 0`). Consecuencia buscada: si un coach de la lista tiene una de esas, **su fila no se va a poder borrar por FK y el script va a fallar** — mejor que falle y se mire, a que se lleve puesto un registro contable en silencio.
+- ⚠️ **Las 6 reservas confirmadas a futuro** (17 al 26/09) hay que mirarlas una por una antes de borrar: si alguna es de una persona real, se queda sin sesión y sin aviso. La consulta está en el script.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Decidir qué pasa con las reservas que movieron plata** (USD 91 en PayPal + 15 aprobadas). Es decisión de Andre y tiene consecuencias fuera del producto: hoy el script las conserva.
+- 🔴 **Mirar las 6 reservas confirmadas a futuro** antes de correr la limpieza.
+- 🔴 **Probar en dos teléfonos que la nota compartida aparece sola** (el realtime ya está corrido): con el chat abierto del lado del cliente, que el coach comparta una nota y aparezca sola.
+- 🟡 **Probar el recorrido crítico con VoiceOver/TalkBack prendido.** Está etiquetado, no escuchado. El calendario es lo que más vale la pena oír.
+- ⏸️ **Etiquetas: quedan 91 controles en 50 archivos.** Se puede seguir por tandas; la próxima más lógica es el lado del coach.
+- 🟡 **Mirar la app en el teléfono después del cambio de contraste.** Son 38 archivos de un color que aparece en casi toda pantalla: está medido, no visto. Si algo quedó demasiado oscuro, es cambiar un valor.
+- 🟡 **`ViveColors.calm` (#87835C) da 3.39 y se usa como `placeholderTextColor` del diario** (`app/diario.tsx:493`). No lo toqué porque subirle el contraste tiene una contra real: un placeholder muy oscuro se lee como texto ya escrito. Decisión de Andre.
+- 🔴 **Correr `scripts/limpiar-datos-de-prueba.sql` antes de lanzar** — Andre confirmó que los coaches falsos se borran antes del lanzamiento. El script está escrito y **no se corrió**: hay que editar la lista de `conservar` (hoy tiene solo `andre`), leer el control previo, y recién ahí borrar. No toca `verified` ni el storage a propósito.
+- 🟡 **Decidir qué significa `verified = true`** antes de abrir: hoy lo tienen los 34.
+- 🟡 Borrar a mano del storage `resource-audio/seed/*.mp3` y los videos de presentación de las cuentas de prueba.
+- ⏸️ **Quedan de la lista de 18, sin empezar**: declarar Turnstile y unpkg en la política, el contraste, las tres afirmaciones sin respaldo, las etiquetas de accesibilidad y el foco de teclado en la web. Andre pidió ir de a uno.
+
+---
+## 2026-09-16 — Andre (sesión 242 · adjuntar evidencia, y la evidencia que se le filtraba al sancionado)
+
+**Tocado:** `scripts/add-sanction-evidence.sql` (nuevo), `supabase/functions/admin-actions/index.ts`, `lib/admin.ts`, `screens/AdminScreen.tsx`, `SCHEMA.md`.
+
+**Resumen:**
+- **Andre: *"no puedo adjuntar nada en las evidencias"*.** Tenía razón en que era un hueco de diseño: la evidencia era un campo de texto, y la evidencia real de una fuga es casi siempre una captura — el chat donde el coach pasó su WhatsApp, un comprobante de transferencia por fuera. Ahora en el panel se adjuntan capturas (desde la galería, varias a la vez) y PDFs, al aplicar la sanción o después desde su tarjeta, y se abren tocándolas.
+- 🔴 **Al diseñarlo apareció una fuga en lo que ya estaba en producción.** La tabla de sanciones heredó el permiso de lectura por defecto de Supabase, así que **el coach sancionado podía leer por la API el texto de evidencia de su propia sanción**, aunque la app no se lo mostrara. Y la evidencia no es suya: casi siempre sale del cliente que contó, de sus mensajes. Dársela al sancionado expone a quien denunció. Criterio que queda: **el coach sabe POR QUÉ (el motivo), no CON QUÉ se probó.** Se cerró por columna, y probado actuando como un coach real con sesión: leer la evidencia da `permission denied`, y el mismo coach sigue leyendo motivo y fecha, así que su aviso en el Inicio sigue andando.
+- **Sin segunda puerta al bucket.** Ni el bucket ni la tabla de adjuntos tienen policies: la única entrada es `admin-actions`, que firma la subida a un path que elige ella, confirma que el archivo llegó antes de anotarlo, y da URLs de 5 minutos para mirarlo. Abrir un adjunto queda auditado — es casi seguro que tenga mensajes privados de un tercero.
+- ✅ **Todo corrido, verificado y deployado desde el CLI** (9 de 9 en la base; `admin-actions` v31, arranca y rechaza al no-admin con nuestro mensaje). Primer deploy hecho por Claude con la regla de permiso que agregó Andre.
+
+**Pendiente para la próxima sesión:**
+- **La prueba de punta a punta desde el celular**: aplicar una advertencia a un coach de prueba adjuntando una captura, abrir la captura desde la tarjeta, y levantarla. Es lo único que no se pudo probar desde el CLI — la subida firmada necesita la sesión de un admin real. ⚠️ Esa advertencia le manda una notificación real al coach de prueba.
+- 📌 **Un adjunto no se puede borrar desde el panel**, a propósito por ahora: la evidencia es registro, igual que una sanción levantada no se borra. Si se sube algo equivocado (por ejemplo, la captura de otro caso), hoy se saca a mano. A decidir si hace falta.
+
+---
+## 2026-09-16 — Andre (sesión 241 · el checkout web creaba cuentas sin declarar la edad ni guardar la aceptación)
+
+**Tocado:** `web/c/index.html`, `scripts/sync-legal.mjs`, `web/legal-version.js` (nuevo, generado), `SCHEMA.md`. **607 tests**, `tsc` limpio. ⚠️ **Sin probar en el navegador.**
+
+⚠️ **Estos cambios quedaron adentro del commit `3c003f1e` de la sesión 240**, no en uno propio: las dos sesiones estaban escribiendo el mismo repo a la vez y el `git add -A` de la otra se llevó lo que yo tenía staged. No se perdió nada, pero el mensaje de ese commit no menciona nada de esto — por eso queda escrito acá.
+
+**Resumen — salió de una pregunta de Andre: "la app es para mayores de edad, ¿no?".**
+
+- **Sí, y está bien dicho en los tres documentos**: T&C §3.1 (*"dirigida exclusivamente a personas mayores de 18 años"*), la Política de privacidad (no se recolectan datos de menores; si aparece uno se da de baja la cuenta) y `docs/etiquetas-privacidad-tiendas.md` (no aplica Play Families). En la app se pide en los tres caminos de alta, y en la postulación de coach **se verifica** contra `birth_date`, que es el único punto con una fecha real.
+- 🔴 **Pero el checkout web era la cuarta puerta y no pedía nada.** `web/c/index.html` crea cuenta con un código al mail —es el camino del cliente #1, el que se abre cuando se prenda `CHECKOUT_HABILITADO`— y **no mencionaba la edad en ninguna parte** (0 apariciones de "18 años" en el archivo). La cláusula §3.1 afirmaba ahí una declaración que nunca existía: exactamente el mismo agujero que se tapó en la app el 13/08.
+- 🐛 **Segundo hueco del mismo archivo, encontrado de paso: el tilde de Términos SE MOSTRABA y no guardaba nada.** Las cuentas nacidas del checkout quedaban sin `accepted_terms`, sin `accepted_terms_at` y sin `accepted_terms_version` — o sea sin ninguna prueba de qué texto leyó la persona, que es para lo único que esas columnas existen (§20).
+- 🟢 **Arreglado con dos tildes separados**, igual que `RegisterScreen`, y un mensaje de error por cada uno: un error que junte los dos manda a mirar el tilde que ya está marcado. `guardarConsentimiento()` escribe las cuatro columnas con **el mismo criterio idempotente de `AuthContext.markAccepted`** — solo lo que está en `false`, nunca pisa una declaración anterior, nunca escribe `false`. Es lo que evita que a quien ya tiene cuenta y entra por el link del coach se le pise *cuándo* aceptó de verdad.
+- 📌 **La versión de los legales llega por `web/legal-version.js`, que ahora genera `sync-legal.mjs`.** La página es HTML suelto sin bundler, no puede importar `constants/legal.ts`, y hardcodear el hash era justo el olvido que ese script existe para evitar: se edita el texto y quedan aceptaciones registradas contra una versión que nadie leyó. Se sirve desde la raíz igual que `/captcha.js`.
+- ✅ **Verificado contra prod que el PATCH va a pasar**: `authenticated` tiene `UPDATE` sobre las cuatro columnas de aceptación (`lock-privileged-columns.sql` corrido).
+
+**Pendiente para la próxima sesión:**
+- **Probarlo en el navegador** con `?probar=1`: que sin el tilde nuevo no deje pedir el código, y que después de confirmarlo la fila del perfil quede con `age_confirmed = true` y las tres de Términos escritas.
+- 📌 **Los 35 perfiles con `accepted_terms = true` y `age_confirmed = false`** son anteriores al 13/08 y **no se backfillean a propósito** (fabricar una constancia que no existió es peor que no tenerla). Dicho para que el número no asuste cuando aparezca.
+- ⚠️ **La limitación de fondo sigue abierta** (ya anotada en `SCHEMA.md:741`): las cuatro columnas las escribe el cliente, así que son falsificables por su propio titular. Cerrarlo exige moverlas a una edge function en el alta.
+- 🔴 **Dos sesiones escribiendo el mismo repo a la vez se pisan.** Pasó hoy con `git add -A`. Si van a trabajar en paralelo, conviene que cada una commitee solo sus archivos por nombre.
+
+---
+## 2026-09-16 — Andre (sesión 241 · la escalera de sanciones, que la app prometía y no existía)
+
+**Tocado:** `scripts/add-coach-sanctions.sql` (nuevo), `supabase/functions/admin-actions/index.ts`, `lib/admin.ts`, `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `lib/coachesCache.ts`, `app/search3.tsx`, `screens/AdminScreen.tsx`, `screens/CoachHomeScreen.tsx`, `__tests__/coachSanciones.test.ts` (nuevo), `SCHEMA.md`.
+
+**Resumen:**
+- **La pregunta de Andre fue si el sistema anti-fuga estaba aplicado y era transparente. La respuesta era: transparente sí, aplicado no.** Lo dicho está bien dicho —T&C §10.2 y `CoachComoFuncionaScreen` le explican al coach qué cuenta como fuga, que puede terminar en *"advertencia, suspensión o baja"*, y también el límite (la gente que ya era suya es suya, y por eso su link no paga comisión la primera vez)—. Pero abajo **no había nada**: el único acto posible era sacarle `verified` a mano, sin motivo guardado, sin registro y sin escalón intermedio. La app prometía tres escalones y tenía uno, el más grande de los tres.
+- **Decisión de Andre: escalera MANUAL con evidencia, no detección automática.** Es la correcta y el motivo ya estaba escrito en `scripts/diagnostico-fuga.sql`: hay UN coach con muestra suficiente, y `rebooking_rate` baja por cuatro causas distintas (el que se lleva gente, el que atiende consultas de una vez, el que atiende gente que se cura, y el que es malo) — sancionar por métrica le pega a tres inocentes por cada culpable. La tabla no reemplaza al criterio humano: le da un lugar donde quedar escrito.
+- **Segunda decisión de Andre: una suspensión respeta las sesiones ya agendadas.** El trigger es solo BEFORE INSERT. Cancelarlas dejaría sin sesión a clientes que no hicieron nada y cada reembolso saldría de la caja de VIVE.
+- 🔴 **La transparencia es la mitad del diseño, no un adorno.** `motivo` es NOT NULL con largo mínimo y **se le muestra al coach tal cual se escribe**: en un banner arriba de su Inicio, en el panel de visibilidad (ítem bloqueante que va primero, por encima de todo lo demás) y en una notificación nueva. Una sanción secreta deja a la persona viendo que dejó de entrar gente sin saber por qué ni qué corregir. Eso obligó a romper a conciencia la "regla no punitiva" de las notificaciones (`add-notifications-propuesta-types.sql`): aquella valía para un descarte que no es accionable; una sanción trae motivo y escalón, y el coach tiene que enterarse por nosotros.
+- 🔴 **`'infinity'` (la baja) no es una fecha parseable en JS.** `new Date('infinity')` es Invalid Date, así que un lector ingenuo leería una baja como "sin sanción" — el error más caro posible de todo esto. Está chequeado aparte en los tres lectores y tiene test.
+- **La defensa real es el trigger, no el filtro del catálogo.** `coachesCache` y `search3` filtran para que el suspendido no se vea, pero eso es UX: un link guardado esquiva cualquier filtro del cliente. Lo que impide de verdad la reserva es `trg_block_bookings_coach_suspendido`, server-side, venga de donde venga el insert.
+- **Panel:** pestaña nueva "Sanciones" en Administración — aplicar (profesional, escalón, días, motivo, evidencia), ver el historial completo y levantar. Levantar no borra la fila: escribe por qué se levantó, para que el historial pueda contar también nuestros errores. 📌 Se usó input en la tarjeta y no `Alert.prompt`, que existe solo en iOS y en Android habría sido un botón que no hace nada.
+
+**Pendiente para la próxima sesión:**
+- ✅ **Script CORRIDO y VERIFICADO el 16/09/2026 — por Claude, desde el CLI.** 🔴 **Hallazgo de proceso:** el CLI de Supabase está linkeado y autenticado en la máquina de Andre, y `supabase db query --linked` corre SQL contra producción. Hasta hoy todo SQL pasaba por copiar al portapapeles y que Andre lo pegue en el editor. Prueba en vivo, 9 de 9 y sin rastro: el espejo se llena solo, una reserva nueva rebota con `coach_suspendido`, la baja queda como `infinity`, levantar sin borrar libera, los CHECK rechazan una suspensión sin fecha y un motivo corto, `notifications` acepta `sancion_aplicada`, y al final 0 sanciones / 0 reservas de prueba / 0 suspendidos / 0 avisos.
+- 📌 **El chequeo 2 no salió vacío y no era un problema:** `anon` tiene UPDATE de tabla sobre `coaches` (default privileges), así que el revoke de columna no le aplica. La única policy de UPDATE es `TO authenticated` y exige ser el dueño, así que no habilita nada. La consulta del script quedó corregida para no dar falsa alarma, con la explicación.
+- ✅ **`admin-actions` DEPLOYADA (v30) y VERIFICADA el 16/09/2026**, subida por Andre. Antes, chequeo de sintaxis (0 errores; los mismos 8 avisos de imports de Deno que la v29). Después: `verify_jwt` conservado, y la función arranca — con la clave pública llega a nuestro código y responde `{"error":"token inválido"}`, el mensaje exacto del chequeo de admin, y no un error de arranque. La prueba de punta a punta con un admin logueado queda para cuando se abra la pestaña Sanciones en el celular.
+- **Nada de esto detecta la fuga todavía**, y no debe hasta que haya muestra. La firma sigue siendo la de `diagnostico-fuga.sql`: cliente que VITA presentó + dejó de reservar + hubo intercambio de contacto. La tercera mitad ya se registra desde el 12/09; falta volumen, no código.
+- 📌 **Sigue sin haber un aviso al USUARIO** cuando su profesional es suspendido o dado de baja. Hoy se entera porque deja de encontrarlo. Sus sesiones agendadas siguen en pie, así que no es urgente, pero es la contracara que falta.
+
+---
+## 2026-09-16 — Andre (sesión 240 · qué necesita saber un profesional antes de atender)
+
+**Tocado:** `scripts/add-booking-tema-origen.sql` (nuevo), `lib/time.ts`, `screens/CoachReservasScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/BookingScreen_Calendar.tsx`, `screens/BookingScreen_Time.tsx`, `screens/ProfesionalScreen.tsx`, `app/(tabs)/conexiones.tsx`, `app/search3.tsx`, `SCHEMA.md`.
+
+**Resumen:**
+- **De dónde sale:** Andre le preguntó a una psicóloga qué datos necesita antes de atender. Contestó: *nombre, edad, motivo, derivación psiquiátrica, situación de urgencia/riesgo, derivación por tribunales*. 🔴 **La lista son dos cosas distintas pegadas**: contexto (las tres primeras) y **triage** (las tres últimas). Las pesadas **se descartaron** por decisión de Andre, y es la decisión correcta: preguntar por riesgo o por tribunales convierte a la app en un dispositivo clínico frente a la ley —justo la confusión de roles que `docs/encuadre-salud-y-responsabilidad.md` señala como el riesgo principal— y encima deja a VIVE sabiendo algo con lo que después tiene que hacer algo. Lo que el profesional necesita preguntar, que lo pregunte él; ya tiene `session_notes` para eso.
+- **Edad:** se le muestra al profesional pegada al nombre en Reservas ("Martina, 34"). Nuevo helper `edadDesde` en `lib/time.ts`, con hoy-en-Argentina como referencia igual que el resto del archivo. ⚠️ **Y acá me equivoqué al presentarlo**: dije que la edad "ya la teníamos". No — en el alta solo se tilda *"tengo 18 o más"* (`profiles.age_confirmed`), y `birth_date` se llena **únicamente** desde Editar perfil o en la postulación del coach. O sea que **hoy va a estar vacía para casi todos**. El cableado queda hecho y correcto; falta decidir dónde se pide la fecha, que es una decisión de fricción y no la tomé solo.
+- **Motivo:** ya existía y estaba bien preguntado (*"Contame brevemente qué te trajo acá"*). Lo único que cambió es que **se movió arriba de los avisos de pago**: estaba último, pegado al botón de pagar. Sigue opcional — obligarlo devuelve "nada" o una mentira, que el profesional lee como si fuera cierto. Vara acordada: **2 de cada 3**.
+- **`bookings.tema_origen` (nuevo, ⚠️ PENDIENTE DE CORRER):** la puerta por la que entró la persona, hilada desde Conexiones y desde el buscador *solo si entró por una puerta*, a través de las cinco pantallas de la reserva. Es el piso de contexto que **no depende de que nadie escriba**. Se guarda la etiqueta y no el id (legible aunque se renombren las puertas), y se muestra como *"buscaba por ansiedad y estrés"* — lenguaje de búsqueda, separado del entrecomillado del mensaje, para no hacer pasar una categoría nuestra por una declaración de la persona.
+- ✅ **Script CORRIDO el 16/09/2026**, el mismo día que el commit, así que la ventana en la que Conexiones habría roto no existió.
+- 📊 **Línea de base, medida al correrlo: 86 reservas, 59 a ciegas.** Con `tema_origen` todavía en null en todas, eso dice una sola cosa: **solo el 31% había escrito el motivo**, contra una vara de 2 de cada 3. Son reservas de prueba de Andre y Joaquín — y que ni ellos lo llenen 7 de cada 10 veces probando su propia app es exactamente el argumento para haberlo movido. De acá en adelante la puerta cubre sola el camino de Conexiones, así que "a ciegas" debería caer aunque nadie escriba una palabra más.
+
+**Pendiente para la próxima sesión:**
+- **Volver a correr la consulta 3 del script** cuando haya reservas reales: es la comparación contra el 31% de hoy. Si el motivo no sube pero "a ciegas" baja igual, la puerta hizo el trabajo y el campo de texto es un extra, no el piso.
+- **Dónde se pide la fecha de nacimiento.** Sin eso, la edad no se muestra nunca. Opciones: dejarla solo en Editar perfil (y que aparezca cuando aparezca), empujar a completar el perfil, o pedirla en la reserva — esta última suma fricción en el paso donde se pierde la plata, así que no la haría.
+- 🔴 **No hay ninguna vía de crisis en la app.** No es un campo y no entra en esta tanda, pero quedó dicho: hoy alguien en urgencia no tiene a dónde ir desde acá, y esa es una exposición abierta, no una mejora pendiente.
+- El tema **solo se muestra en Reservas** (la tarjeta donde el coach decide). No se agregó a la Sala ni al hub — a decidir si hace falta.
+
+---
+## 2026-09-16 — Andre (sesión 239 · la garantía le estaba subiendo el ranking al coach)
+
+**Tocado:** `scripts/fix-stats-reembolsos.sql` (nuevo), `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `SCHEMA.md`, cabeceras de `scripts/add-coach-rebooking-stats.sql` y `add-coach-trending-stats.sql`.
+
+**Resumen:**
+- 🔴 **Las dos vistas que rankean el deck de Conexiones contaban la plata devuelta como señal positiva.** `coach_rebooking_stats` y `coach_trending_stats` colgaban solo de `bookings.status`, y `status` no sabe nada de la plata: `mp-process-refunds` nunca lo toca, así que una sesión reembolsada por la garantía §9.3 o contracargada seguía siendo `'completada'` y seguía sirviendo para cruzar la barra de "Recomendado por Vita". El incentivo perverso: cuanto peor atiende un coach, más sesiones se le reembolsan, y cada una lo empuja igual hacia arriba. Arrancó como una pregunta de Andre sobre si convenía mirar las reservas no reembolsadas.
+- **El criterio es por la negativa y no por la positiva, y ese fue el hallazgo del medio.** La primera versión exigía `payment_status = 'aprobado'`, hasta que apareció que una reserva con coach sin Mercado Pago se confirma **sin cobro** (`BookingScreen_Confirm`, `confirmedNow`) y queda en `'no_iniciado'`: pedir pago aprobado le habría borrado sesiones reales a esos coaches y a todo lo anterior a agosto 2026. Queda entonces excluir `('reembolsado','contracargo','reembolso_pendiente')` en las dos vistas. Las cancelaciones tempranas del usuario —el grueso de los reembolsos, y las que no dicen nada del coach— ya quedaban afuera por `status = 'cancelada'`.
+- **El reagendamiento se dejó intacto** a propósito: volver a reservar es intención, y lo que pase después con esa segunda reserva no la borra. Filtrarlo también haría que una garantía reclamada castigue dos veces.
+- **Decisión de producto (Andre): el número que le baja al coach se le explica.** Por eso la vista suma `reembolsadas_count` —la diferencia exacta entre la definición vieja y la nueva—, que el deck no lee y que existe solo para el texto del panel de visibilidad (`notaReembolsos`). Un número que baja solo, sin que nadie diga por qué, se lee como panel roto.
+- **DB:** `scripts/fix-stats-reembolsos.sql` ✅ **CORRIDO y VERIFICADO el 16/09/2026**. Son dos `create or replace view`, sin backfill ni migración de datos. Verificado que las dos conservan `security_invoker=false` —lo único que si se pierde se pierde en serio, porque leen `bookings` de toda la plataforma— y que los GRANT quedaron como estaban. SCHEMA.md actualizado.
+- 🔴 **Falló al primer intento con 42P16** y vale saber por qué: `create or replace view` solo deja agregar columnas **al final**, y `reembolsadas_count` estaba puesta antes de `rebooking_rate`, así que Postgres lo leyó como un intento de renombrar la tercera columna. Se movió al final; ni el cálculo ni los consumidores cambian (el cliente pide columnas por nombre).
+- 📌 **Hallazgo lateral**: `anon` y `authenticated` tienen INSERT/UPDATE/DELETE sobre estas vistas, no solo SELECT. Es inofensivo —una vista con `group by` no es actualizable y Postgres rechaza cualquier escritura— y viene de los default privileges del esquema público de Supabase, no de este cambio. Lo tiene cualquier vista del proyecto.
+
+**Pendiente para la próxima sesión:**
+- **El cambio fue preventivo, confirmado**: `reembolsadas_count` da **0 en todos los coaches**, así que no le movió el número a nadie. Era el momento barato de hacerlo — con cien sesiones encima, cambiar la regla les mueve el piso a coaches ya acostumbrados a su número.
+- 📌 **Dato del mismo chequeo, que no es de esta sesión pero conviene tener a mano**: **un solo coach llega al piso de 5** (tiene 6 personas atendidas y 0.667 de reagendamiento, cruza la barra holgado). **Todos los demás están en 4** y devuelven `rebooking_rate` NULL, o sea que para ellos "Recomendado por Vita" hoy se decide por reseñas. Están a UNA persona de que el criterio les cambie solo, y el salto puede sacarlos del lugar si su reagendamiento no llega al 30%.
+- **Sin tests nuevos.** `notaReembolsos` es un texto y no un criterio, y llegar a él desde un test pide armar una puerta entera. Los 45 de `deckRanking` + `coachVisibilityHome` siguen en verde.
+- 📌 **Inexactitud vieja que quedó a la vista y no se tocó**: el panel dice "con N sesiones completadas" pero `completadas_count` cuenta **personas distintas**, no sesiones. Un coach que atendió 5 veces a la misma persona ve "5 sesiones completadas" y tiene 1. Es copy, no cálculo — decidir si se corrige el texto o el número.
+- **Tendencia sigue sin cubrir un caso**: una reserva `pendiente` que nadie pagó suma hasta que la expiración la cancela (60 min a 24 h). Distinguir "no pagó todavía" de "no había nada que pagar" es mirar `preference_id`, y es otra decisión.
+
+---
+## 2026-09-15 — Andre (sesión 238 · los dos SQL "pendientes" hacía semanas que estaban corridos)
+
+**Tocado:** `scripts/add-ai-usage.sql`, `scripts/fix-payout-rails-trigger.sql` (solo cabeceras), `SCHEMA.md`. Sin cambios de código ni de schema. Commits `425a5702` y el de cierre.
+
+**Resumen:**
+
+- **Salió de un repaso del backlog** que listó los dos scripts como pendientes de correr. **Eran los comentarios, no la base.** Se verificó contra producción con `npx supabase db query --linked` antes de tocar nada:
+  - `ai_usage` existe con RLS prendido, **0 policies, 0 grants** a `anon`/`authenticated`, `registrar_uso_ia` sin EXECUTE para nadie salvo el service role, y **una fila real de uso** (2026-09-14, `weekly_reflection`, 5 llamadas). O sea que el tope de gasto de `weekly-reflection` **ya está contando de verdad**, no es teoría.
+  - `coach_payout_accounts.method` → `is_nullable = YES`, y el cuerpo de `sync_accepts_international()` en producción es el arreglado (ramifica por `TG_TABLE_NAME`, sin el `coalesce(new.coach_id, ...)` que abortaba la sentencia).
+- **SCHEMA.md ya lo decía bien** (líneas 271 y 693: corridos el 26/08 y el 10/09). Los que mentían eran los propios archivos SQL, con un `PENDIENTE DE CORRER` y un `HAY QUE CORRERLO` arriba de todo. **Es exactamente la trampa que `fix-payout-rails-trigger.sql` documentaba sobre sí mismo en agosto** — y que ya costó dos semanas y media de reembolsos sin procesar en julio. Se corrigieron las dos cabeceras con la fecha, lo verificado y el recordatorio de preguntarle a la base.
+- 📌 **Regla que conviene fijar:** el estado de un script lo contesta la base, no su encabezado. Un repaso de backlog que lee comentarios va a volver a dar este falso positivo. **Hoy pasó tres veces seguidas** (los dos scripts y la rama del DELETE), y en los tres casos la información correcta ya estaba escrita en otro archivo del mismo repo.
+
+**Pendiente para la próxima sesión:**
+- ✅ **CERRADO en la misma sesión: la rama del DELETE del trigger.** Andre corrió el `delete` dentro de `begin/rollback` (el clasificador de permisos me lo había frenado a mí por ser un DELETE contra producción): **sin error, 3 filas antes y 3 después**. Y `trg_sync_intl_on_payout` es `AFTER INSERT OR DELETE OR UPDATE ... FOR EACH ROW`, así que el borrado ejercita la rama de verdad. 📌 **Tercera vez el mismo patrón en la misma sesión:** el changelog del 27/08 (línea ~4031) ya la daba por probada, con una prueba *mejor* que la de hoy — con una fila real (Sofía Herrera), INSERT dejando `accepts_paypal = true` y DELETE volviéndola a `false`. Los desactualizados eran `SCHEMA.md` y la cabecera del script, los dos ya corregidos. **De este script no queda nada sin ejercitar.**
+- El resto del backlog queda como estaba; los bloqueantes de lanzamiento reales siguen siendo la videollamada nunca ejercitada (A5 prueba 2), la comisión real de MP (A5 prueba 3) y el DMARC de `vitaapp.com.ar`.
+
+---
+## 2026-09-15 — Andre (sesión 237 · Respiración: la interfaz se retira a los 30 segundos)
+
+**Tocado:** `screens/RespiracionScreen.tsx`. **607 tests**, `tsc` limpio, lint sin errores nuevos (queda el warning pre-existente de `animScale`). ⚠️ **Sin probar en dispositivo** — es un cambio visual con tiempos, hay que verlo corriendo.
+
+**Resumen:**
+
+- **El problema, que no era la respiración sino la interfaz:** la herramienta pretende bajar revoluciones pero obligaba a mirar el teléfono los 3 u 8 minutos enteros para saber en qué fase estabas. Seguir el orbe con los ojos abiertos mantiene la atención **afuera del cuerpo**, que es lo contrario de lo que la práctica busca. Es además lo que el Outsider del consejo dijo de la app en general: *"para relajarme tengo que quedarme mirando el celular leyendo"*.
+- **El arreglo es sacar, no agregar.** A los 30 segundos (`RETIRO_S`) —ya van casi dos ciclos completos de 16s, el patrón está aprendido— el cronómetro y el label de fase se atenúan a 0,22 en 2,5s, y en el lugar de "4 segundos" (el dato más inútil de la pantalla a esa altura) aparece: *"Ya encontraste el ritmo. Cerrá los ojos si querés."*
+- **El orbe sigue animando y el texto no se apaga del todo, a propósito:** alguien que abre los ojos a los 4 minutos tiene que poder retomar sin tocar nada. La invitación es lo único que NO se atenúa.
+- **Respeta `useReducedMotion`:** con "reducir movimiento" activo la atenuación es directa, sin animar. El pedido ahí es no animar, no dejar de retirarse.
+- Se descartaron dos alternativas: **háptico** (la vibración del teléfono tiene una asociación aprendida con "notificación / prestá atención" — estarías peleando contra el medio) y **audio modulado** que suba con la inhalación y baje con la exhalación. El audio es la buena idea de fondo y es factible (ya está `expo-audio`, y el cambio de fase dispara en el frame exacto donde colgar la rampa de volumen), pero es un proyecto aparte y va después de lanzar.
+
+**Pendiente para la próxima sesión:**
+- **Verlo en el teléfono.** Son tiempos: 30s hasta la retirada, 2,5s de atenuación. En pantalla puede quedar muy rápido o muy lento.
+- 🔴 **Contradicción sin resolver, ahora más visible:** la pantalla activa `expo-keep-awake` y el copy promete *"La pantalla no se apaga mientras dura"*. Si el objetivo es que te olvides del teléfono, tener la pantalla encendida a full 8 minutos para alguien con los ojos cerrados es al revés. No se tocó porque el timer de JS se frena con la pantalla bloqueada y la sesión se cortaría por la mitad (es justo el bug que arregló `81e59533`). Se destraba con audio: si la guía suena, la pantalla puede dormir.
+- **El patrón en sí no se tocó y hay tres versiones dando vueltas:** el código hace **4-4-4-4** (respiración cuadrada, y la pantalla lo dice así), `design/recursos-v2-definiciones.md` dice *"incluye 4-7-8"* —que no existe—, y la literatura de slow-paced breathing trabaja alrededor de 6 respiraciones/min (≈5-5), contra las 3,75/min de hoy. Son objetivos distintos: la cuadrada es regulación aguda, la resonante apunta a coherencia sostenida. Cambiar el patrón es cambiar qué hace la herramienta, y obliga a renombrarla. **Decisión de producto pendiente, no de código.**
+- Respiración sigue terminando en "Bien hecho" y nada más: la métrica `recurso → perfil → reserva` sigue sin instrumentarse (ver `docs/consejo-herramientas.md`).
+
+## 2026-09-15 — Andre (sesión 236 · las herramientas retiradas seguían alcanzables, y en tres lugares distintos)
+
+**Tocado:** `constants/tools.ts`, `app/progreso.tsx`, `app/(tabs)/recursos.tsx`, `hooks/useRecommendedResource.ts`, las 6 rutas retiradas (`app/{sueno,meditacion,escaner,relajacion,lecturas,anclaje}.tsx`). Nuevos: `__tests__/herramientasVisibles.test.ts`, `scripts/limpiar-herramientas-retiradas.sql`. **607 tests** (8 nuevos), `tsc` limpio, lint sin errores. ⚠️ **Sin probar en dispositivo.** ⚠️ **El script SQL no se corrió.**
+
+**Resumen — salió de repasar las herramientas prácticas con el consejo de asesores, y el hallazgo no era de producto sino de ejecución.**
+
+- **El recorte a 4 (Diario, Gratitud, Sonidos ambientales, Respiración) SÍ estaba hecho**, contra lo que yo creía al empezar: `TOOL_GROUPS` ya aplanaba exactamente esas cuatro. Lo que faltaba era el flag: las otras 6 estaban fuera de la grilla pero **el resto de la app seguía leyendo el catálogo crudo y las ofrecía por omisión**. Tres fugas, ninguna ruidosa:
+  1. `app/progreso.tsx` — el picker de "Hábitos de hoy" filtraba sobre `TOOLS` entero. Alguien podía agendarse Meditación como hábito diario y **recibir un push** hacia una pantalla que el equipo decidió no sostener.
+  2. `hooks/useRecommendedResource.ts` — `firstToolInAxis` recorría `TOOL_AXES` (las 10). Para el eje **`alma` la primera es `meditacion`**: cualquiera sin check-in del día y con ese eje recibía hoy una recomendación hacia una retirada. `cuerpo` y `mente` tenían el mismo agujero un paso más adelante, vía `exclude` (bastaba haber hecho Respiración hace poco para caer en `anclaje`).
+  3. Las 6 rutas respondían igual que antes, así que un hábito o recordatorio viejo aterrizaba en la pantalla entera.
+- **La decisión de dónde arreglarlo importa más que el arreglo.** No se parchearon las pantallas: el flag `visible` vive en `constants/tools.ts` y se expone `VISIBLE_TOOLS`/`VISIBLE_TOOL_IDS`. Si se parcheaba en `progreso.tsx`, el próximo consumidor de `TOOLS` volvía a heredar el leak — que es exactamente lo que había pasado ya dos veces.
+- **`TOOL_GROUPS` se mudó de `app/(tabs)/recursos.tsx` a `constants/tools.ts`.** Era la única definición de "qué ve el usuario" y vivía dentro de una pantalla, así que el resto de la app no tenía forma de consultarla. Ahí está la causa raíz de las tres fugas.
+- **Las 6 rutas ahora redirigen a `/(tabs)/recursos`.** Las pantallas NO se borran: `screens/*Screen.tsx` siguen enteras, como pide `design/recursos-v2-definiciones.md` ("se retiran de la vista, sin borrar su código"). Se cierra el acceso, no el código.
+- **Distinción que quedó escrita en el código:** `VISIBLE_TOOLS` es para **ofrecer** (grilla, picker, sugerencias); `TOOLS`/`TOOL_MAP` completos siguen siendo para **resolver** un id ya guardado (hábito viejo, pin, completion), que tiene que renderizar con su label aunque la herramienta ya no se ofrezca.
+- **8 tests nuevos** que afirman que las tres fuentes dicen lo mismo: la grilla ⟺ `visible`, el mapeo de ánimo nunca apunta a una retirada, la rutina sembrada tampoco, y las dos copias del catálogo (`tools.ts` / `vitaTools.ts`) cubren los mismos ids con los mismos labels.
+
+**Pendiente para la próxima sesión:**
+- ✅ **CERRADO en la misma sesión: `scripts/limpiar-herramientas-retiradas.sql` paso 1 corrido contra prod (`npx supabase db query --linked`) → 0 filas.** Ni un hábito ni un recordatorio apuntaba a las 6 retiradas, así que el DELETE del paso 2 no se corrió y no hace falta. El leak existía pero nadie lo ejerció: no hay usuarios todavía. El script queda para el día que se retire otra herramienta. `resource_completions`/`saved_resources`/`pinned_resources` no se tocan a propósito — son historia y curaduría, no promesas a futuro.
+- La unificación del catálogo quedó a medias: `constants/vitaTools.ts` sigue existiendo como copia (íconos MaterialCommunityIcons para el inicio y guardados). El test nuevo evita que se desincronicen, pero la copia sigue ahí.
+- **Del consejo de asesores, sin decidir todavía:** (1) las 4 visibles no llevan a ningún coach — la métrica declarada `recurso → perfil → reserva` no está instrumentada; (2) Sonidos ambientales está en la grilla pero **`moodResources.ts` no lo sugiere nunca**; (3) tres asesores querían sacar Sonidos ambientales del tile y el que razonaba como usuario decía que es el mejor de los cuatro — no se tocó ningún tile, y con 0 usuarios conviene que siga así; (4) la racha de Gratitud contra el principio de "racha suave"; (5) el hueco señalado: ninguna herramienta dura menos de un minuto.
+
+## 2026-09-15 — Andre (sesión 235 · los ambientales: el loop y el copy, los dos problemas de la 234)
+
+**Tocado:** `assets/sounds/*.m4a` (los 4), `screens/RuidoScreen.tsx`, `constants/tools.ts`, `constants/vitaTools.ts`, `app/(tabs)/recursos.tsx`, `scripts/preparar-sonidos-loop.py` (nuevo). **599 tests**, `tsc` limpio, lint sin errores nuevos. ⚠️ **Sin escuchar en dispositivo.**
+
+**Resumen — cierra la verificación que la 234 dejó pendiente, y el resultado cambia el diagnóstico.**
+
+- 🔴 **No había click en la costura: había un bajón.** Decodificando los 4 a WAV, el salto de muestra a muestra en la vuelta del loop queda **por debajo del ruido propio del material** (0,05–0,63× el delta p99) — en olas y lluvia es *menor* que los saltos normales del audio, o sea inaudible. Lo que sí se oía es otra cosa: **tres de los cuatro arrancaban en silencio y terminaban a volumen pleno**. `lluvia` tardaba **3.981 ms** en recuperar el 50% del nivel, `blanco` **3.073 ms**, `olas` **738 ms**. Cada 90 s el ambiente se cortaba en seco y volvía de a poco; en una sesión de 30 min, 20 veces. `bosque` (30 ms) era el único sano, y sirvió de control: confirma que la caída era de los archivos, no del reproductor.
+- 🟢 **Arreglado sobre los mismos archivos, sin conseguir material nuevo:** se recortó el fade de entrada (7,8 s en lluvia, 7,5 en blanco, 2,1 en olas) y la costura se cierra con **crossfade equal-power de 2 s** (sin/cos, no lineal: con ruido de banda ancha el lineal deja un pozo de nivel en el cruce). Medido después: nivel pleno desde el ms 0 y salto de costura 0,05–0,63× el p99. El pozo más hondo que deja el cruce (blanco, 0,36× a los 2 s) **entra dentro de la variación natural del propio archivo** (min 0,29, p10 0,48), así que no sobresale.
+- 📌 **Duran 80–88 s ahora, no 90**, y no se cuadraron a propósito: ninguna pantalla depende de la duración del clip. Re-encodeados a **AAC 64 kbps** (venían a 31) solo para no acumular pérdida en la segunda generación — **no gana calidad que no está**. Pesan ~650–700 KB cada uno en vez de 360 KB: **+1,3 MB en total** en el bundle.
+- 📌 **Sigue en pie lo de la 234 sobre el origen**: mono, 22 kHz, de un corte CC0 ya comprimido a 31 kbps. Eso **no se arregla desde el repo** y es lo que queda del "suena trucho" después de este arreglo. Upsamplear no inventa lo que el corte tiró; si se quiere 48 kHz estéreo hay que volver a freesound y re-exportar.
+- 📌 **`scripts/preparar-sonidos-loop.py`** deja el procedimiento repetible (recorte + crossfade + encode, todo con stdlib y `afconvert`). **No es idempotente** — correrlo dos veces come otros 2 s; está avisado en el docstring. Ojo que `scripts/gen_sounds.py` es otra cosa, el sintetizador viejo de 45 s en WAV, que ya no alimenta a estos archivos.
+
+**Segunda parte — el copy, que era el otro problema de la 234 y se hizo en la misma sesión:**
+
+- 🔬 **Se midió el espectro antes de ponerle nombre al cuarto sonido, en vez de elegir entre "blanco" y "marrón" a ojo.** El archivo cae **-8,7 dB por octava** entre 250 Hz y 4 kHz (FFT de 4096, promediada sobre 24 ventanas). Blanco sería 0, rosa -3, marrón -6: **es todavía más grave que el marrón**, así que las dos etiquetas que convivían estaban mal, y "blanco" era directamente falso. Se llama **"Ruido grave"**, que es lo que se oye y no exige saber la convención de colores. Los otros tres midieron consistentes con su nombre (lluvia y bosque suben hacia los agudos, olas cae -5,1).
+- 🔴 **"Ruido blanco" tampoco era el nombre correcto de la herramienta**, y esa era la raíz del lío: la tarjeta de Recursos decía "Ruido blanco" y abría una pantalla titulada "Sonidos ambientales" con lluvia, bosque, olas y ruido. Ahora la herramienta se llama **"Sonidos ambientales"** en `tools.ts`, `vitaTools.ts` y la campanita de recordatorio — los cuatro nombres para lo mismo pasaron a ser uno. El tile corto de Recursos dice "Sonidos" (era "Ruidos"). **Los ids no se tocaron** (`ruido`, `blanco`): viajan en completions, guardados, hábitos y recordatorios.
+- 🐛 **`duration: 'Libre'` → `'5–30 min'`** en las dos tablas. Se ve en el catálogo de Hábitos (`progreso.tsx:481`) y en la lista de guardados; prometía algo que la pantalla no da desde que obliga a elegir 5/15/30.
+- 🟢 **Cada sonido dice para qué sirve** (`hint` en `SOUNDS`, una línea de 11px bajo el label): dormirte / concentrarte / bajar un cambio / tapar el ruido. Y el texto de arriba pasó de explicar **cómo se usa** ("Elegí un sonido y por cuánto tiempo") a explicar **por qué lo usarías**; la instrucción sigue, en chico, debajo.
+
+**Tercera parte — respiración: la pantalla se apagaba sola en la mitad de la práctica.**
+
+- 🗣️ **Salió de Andre y su hermano**: *"la herramienta de respiración me suena más a decoración que a practicidad real, porque deberías tener los ojos cerrados para hacerlo"*. Tienen razón en el diagnóstico de fondo: **toda la guía de esa pantalla es visual** —el orbe que escala y el label de fase—, no hay ni sonido ni vibración, así que con los ojos cerrados lo único que queda es un cronómetro mudo.
+- 🔴 **Y encima no se podía ni mirar: no había `expo-keep-awake` en el proyecto.** El teléfono se bloquea solo a los 30 s–2 min y con la pantalla apagada el timer de JS se frena, o sea que la sesión de 3 u 8 min se cortaba por la mitad salvo que tocaras la pantalla cada tanto. Ahora se activa **solo mientras corre** (tag `vive-respiracion`), no mientras la pantalla está abierta, para no dejar el teléfono despierto porque alguien entró a mirar y se fue. **Ojo con el lock**: `expo-keep-awake` ya venía adentro de `expo` como dependencia transitiva, en la misma versión (15.0.8) — solo se promovió a dependencia directa, no hay bump de nada ni hace falta dev build nuevo.
+- 🐛 **Bug aparte, del mismo archivo: con "reducir movimiento" activado la herramienta no guiaba nada.** El efecto hacía `return` antes de arrancar el ciclo, así que la fase nunca avanzaba: la pantalla mostraba **"Inhalá" congelado** los 3 u 8 minutos enteros y al final registraba la sesión como completada igual. Reducir movimiento pide no animar, no dejar de guiar: ahora el ciclo corre por `setTimeout` y lo único que se pierde es el escalado del círculo.
+- 📌 **Háptico descartado por Andre** ("tampoco va a servir mucho"), así que la herramienta **sigue sin canal para ojos cerrados**. Si se quiere resolver de verdad, el camino es audio —tonos en cada transición con `expo-audio` y sesión que siga en background—, que es lo único que sobrevive a la pantalla bloqueada. Sin decidir.
+
+**Pendiente para la próxima sesión:**
+- 🟡 **Respiración con ojos cerrados sigue abierto.** Keep-awake arregla que la sesión llegue al final, no que la puedas hacer sin mirar. Decidir si va audio.
+- 🟡 **Ruido tiene el mismo problema de bloqueo y no se tocó**: sesiones de hasta 30 min con el timer de JS contando. Si la pantalla se apaga, el timer se frena y `recordCompletion` no llega a dispararse. Ahí keep-awake no es la respuesta obvia —lo lógico es que suene con la pantalla apagada—, así que es la misma decisión de audio en background.
+- 🔴 **Escuchar una sesión de 15 min en el teléfono** — el arreglo del loop está medido pero no oído. Lo que hay que escuchar es el minuto 1:20–1:30 (la primera vuelta) en lluvia y en olas.
+- 🟡 **Mirar la grilla de sonidos en pantalla**: las tarjetas pasaron de dos líneas a tres y son de 47% de ancho. "para bajar un cambio" es el hint más largo; si parte feo, acortarlo es cambiar una string.
+- 🟡 **"Sonidos ambientales" es más largo que "Ruido blanco"** en el catálogo de Hábitos y en guardados. No se le puso `numberOfLines` a propósito —mejor que envuelva a que se corte— pero conviene verlo.
+- ⏸️ Unificar las dos tablas de guardados (de la 233, sigue abierta).
+- 📝 De la 230, sigue abierto: `send_session_reminders()` hace `to_char` sobre `scheduled_time` text.
+
+---
+## 2026-09-15 — Andre (sesión 234 · sonidos ambientales: diagnóstico a medias, sin tocar código)
+
+**Tocado:** nada de código. Solo este registro. La sesión se cerró antes de decidir el arreglo.
+
+**Planteo de Andre:** *"lo trucho que se escuchan los sonidos ambientales, además de que la gente no sabe para qué sirven"*. Son **dos problemas distintos** y conviene no mezclarlos: uno es de archivo, el otro es de producto.
+
+**Lo que SÍ quedó medido (`afinfo` sobre los 4 archivos de `assets/sounds/`):**
+
+- 🔴 **Los cuatro son mono, 22.050 Hz, AAC a ~31 kbps, 90 segundos, ~360 KB.** Eso es calidad de teléfono de los 90: 22 kHz recorta todo arriba de ~11 kHz, que es justo donde vive el brillo de la lluvia y la espuma de las olas; mono mata la sensación de estar adentro del ambiente; y 31 kbps sobre ruido de banda ancha —lo más difícil de comprimir que existe— mete artefactos de "chapoteo". **Esa es la causa física de que suenen truchos, y ninguna de las tres se arregla desde el código de la app.**
+- ⚠️ **Se reproducen en loop de 90s** (`expo-audio`, `useAudioPlayer`, uno por sonido) con sesiones de 5/15/30 min: o sea que el mismo minuto y medio se repite hasta 20 veces. **Sin verificar**: si el recorte no tiene cruce, hay un click audible en cada vuelta — sería el segundo motivo de "trucho" y ese sí es gratis de arreglar.
+- 📌 Origen declarado en el código: grabaciones CC0 de freesound.org recortadas a 90s. **Habría que volver a la fuente y re-exportar** (48 kHz, estéreo, ~128 kbps, loop con crossfade) antes de tocar una línea de la pantalla. Costo: ~1,5 MB por sonido en vez de 360 KB.
+
+**Lo segundo — "no se sabe para qué sirven" — tiene evidencia concreta y es de copy, no de audio:**
+
+- 🐛 **El nombre no coincide consigo mismo**: el id `blanco` se muestra como **"Ruido marrón"** en la pantalla (`RuidoScreen.tsx:29`), mientras `constants/tools.ts` y `constants/vitaTools.ts` lo llaman **"Ruido blanco"**, y la campanita de recordatorio también. Cuatro nombres para lo mismo, y encima marrón y blanco **no son el mismo ruido**.
+- 🐛 **La duración se contradice**: la tarjeta en Recursos dice **"Libre"** (`tools.ts:38`) pero la pantalla obliga a elegir **5/15/30 min**.
+- 🔴 **En ningún lado dice para qué sirve.** El copy es *"Elegí un sonido y por cuánto tiempo"* — instrucciones de uso, no motivo. Nada dice cuándo conviene (dormir, concentrarse, tapar ruido de afuera, bajar la ansiedad antes de una sesión), que es exactamente lo que Andre reporta que falta.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Decidir el orden**: el copy es barato y se puede hacer ya; el audio exige conseguir y re-exportar los archivos, que es trabajo fuera del repo. Mi recomendación es empezar por el audio —si suena trucho, explicar mejor para qué sirve no lo salva—, pero la decisión es de Andre.
+- ⚠️ **Verificar el click del loop** antes de asumir que el problema es solo el bitrate.
+- ⏸️ Unificar las dos tablas de guardados (de la 233, sigue abierta).
+
+---
 ## 2026-09-14 — Andre (sesión 233 · el contador de guardados contaba lo que la lista no mostraba)
 
 **Tocado:** `screens/RecursosGuardadosScreen.tsx`, `app/(tabs)/recursos.tsx`, `SCHEMA.md`. **599 tests**, `tsc` limpio, lint sin errores. ⚠️ Sin verificar en dispositivo.
@@ -37,6 +465,9 @@
 
 **Pendiente para la próxima sesión:**
 - Mirar en dispositivo la fila nueva en la confirmación: son dos oraciones y la pantalla ya tiene varias filas de aviso; si pesa, evaluar juntarla con la de cancelación.
+- Probar en dispositivo el cartel del paquete al final del chat (commit `6ab673e9`).
+- 🟡 **Replanteo del paquete para la sesión, sin decidir** (detalle en `docs/paquete-para-la-sesion.md` §9): a Andre le parece poco útil mandar check-ins (un ánimo en un momento del día). Medido: 53 check-ins, 1 con nota. Propuesta: "anotar para la sesión" en el momento en que pasa, y que el paquete sean esas anotaciones. No se tocó código.
+- 📝 Ya comentado en la 230, sigue abierto: `send_session_reminders()` hace `to_char` sobre `scheduled_time` text — probablemente el recordatorio del día anterior nunca sale.
 
 ---
 ## 2026-09-14 — Andre (sesión 232 · la costura debajo del carrusel, medida en la captura)

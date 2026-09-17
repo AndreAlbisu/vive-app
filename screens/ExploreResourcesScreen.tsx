@@ -14,7 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 
 // ─── Paleta local (consistente con la pantalla de Recursos) ──────────────────
 const FOREST       = '#3A4F2A';
-const FOREST_SOFT  = '#6B7A56';
+const FOREST_SOFT  = '#566245';
 const TEXT          = '#565E32';
 const CREAM_LIGHT  = '#F7EFE4';
 const GLASS_BG     = 'rgba(255,248,240,0.55)';
@@ -400,7 +400,7 @@ const s = StyleSheet.create({
   emptyWrap: { alignItems: 'center', gap: 12, paddingTop: 44, paddingHorizontal: 40 },
   emptyText: {
     fontFamily: ViveFonts.regular, fontSize: 13.5,
-    color: 'rgba(107,122,86,0.90)', textAlign: 'center', lineHeight: 20,
+    color: '#566245', textAlign: 'center', lineHeight: 20,
   },
   emptyReset: {
     fontFamily: ViveFonts.semibold, fontSize: 13, color: ViveColors.primary, marginTop: 2,

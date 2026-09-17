@@ -348,7 +348,11 @@ export default function RegisterScreen() {
                     onFocus={() => setFocused('pass')}
                     onBlur={() => setFocused(null)}
                   />
-                  <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={8}>
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(v => !v)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}>
                     <MaterialCommunityIcons
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={20}
@@ -373,7 +377,11 @@ export default function RegisterScreen() {
                     onFocus={() => setFocused('confirm')}
                     onBlur={() => setFocused(null)}
                   />
-                  <TouchableOpacity onPress={() => setShowConfirm(v => !v)} hitSlop={8}>
+                  <TouchableOpacity
+                    onPress={() => setShowConfirm(v => !v)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={showConfirm ? 'Ocultar la contraseña repetida' : 'Mostrar la contraseña repetida'}>
                     <MaterialCommunityIcons
                       name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
                       size={20}

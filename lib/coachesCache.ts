@@ -61,6 +61,12 @@ async function _doFetch(): Promise<void> {
     // pantallas después. Debe reflejar la MISMA condición que usa
     // `BookingScreen_Confirm` para decidir qué botón de pago dibujar.
     .or('mp_connected.eq.true,accepts_paypal.eq.true,accepts_usdt.eq.true')
+    // 🔴 Un coach suspendido no aparece. El filtro va con la hora del CLIENTE
+    // porque PostgREST no evalúa `now()` — no es la defensa, es la UX: la
+    // defensa real es `trg_block_bookings_coach_suspendido`, que rebota la
+    // reserva del lado del servidor aunque alguien llegue por un link guardado
+    // o por una consulta hecha a mano.
+    .or(`suspendido_hasta.is.null,suspendido_hasta.lt.${new Date().toISOString()}`)
     // El `.limit()` estaba sin `order`: Postgres devolvía N filas ARBITRARIAS, así
     // que pasado el tope algunos coaches simplemente no existían para Conexiones —
     // y cuáles podía cambiar entre consultas. Con el deck v3 (pools + sorteo) eso

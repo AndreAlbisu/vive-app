@@ -72,7 +72,28 @@ export type VisibilitySelf = CachedCoach & {
   hasSlotThisWeek: boolean;
   hasVideo: boolean;
   instantBooking: boolean;
+  /** `coach_rebooking_stats.reembolsadas_count` — personas que dejaron de contar
+   *  para la barra de calidad porque su sesión terminó con la plata de vuelta
+   *  (garantía §9.3 o contracargo). No es un criterio: existe solo para poder
+   *  explicar por qué `completadasCount` es más chico de lo que el coach cuenta
+   *  en su agenda. Opcional: el deck no la lee. */
+  reembolsadasCount?: number;
+  /** `coaches.suspendido_hasta` — derivada de `coach_sanctions`. Null = sin
+   *  restricción. Una fecha futura = suspendido. 'infinity' = baja. */
+  suspendidoHasta?: string | null;
 };
+
+/** ¿Hay una suspensión o una baja pesando ahora mismo? */
+export function estaSuspendido(self: { suspendidoHasta?: string | null }, now: Date = new Date()): boolean {
+  const hasta = self.suspendidoHasta;
+  if (!hasta) return false;
+  // 'infinity' es lo que guarda una baja. `new Date('infinity')` es Invalid Date,
+  // así que se chequea antes: sin esto una baja se leería como "no suspendido",
+  // que es exactamente el error que no puede pasar acá.
+  if (hasta === 'infinity') return true;
+  const t = new Date(hasta).getTime();
+  return Number.isFinite(t) && t > now.getTime();
+}
 
 function money(n: number | null | undefined): string {
   return n == null || !Number.isFinite(n) ? '—' : `$${Math.round(n).toLocaleString('es-AR')}`;
@@ -97,6 +118,18 @@ function ageDays(c: CachedCoach, now: Date): number | null {
 // reseñas" es accionable; "vas #3 de 7" es una carrera contra gente que él no
 // controla, que es justo lo que v3 dejó de ser.
 
+// Lo que el coach no puede deducir solo: sesiones que dio, que figuran en su
+// agenda como completadas, y que aun así no le cuentan para la barra porque se
+// reembolsaron. Sin esta frase el número baja sin explicación y la conclusión
+// razonable es que el panel está roto.
+function notaReembolsos(self: VisibilitySelf): string {
+  const n = self.reembolsadasCount ?? 0;
+  if (n === 0) return '';
+  return n === 1
+    ? ' Una persona no entra en esa cuenta: su sesión terminó en reembolso.'
+    : ` ${n} personas no entran en esa cuenta: sus sesiones terminaron en reembolso.`;
+}
+
 function gapRecomendado(self: VisibilitySelf): string {
   const rating = self.avgRating ?? 0;
   const reviews = self.reviewCount ?? 0;
@@ -109,10 +142,10 @@ function gapRecomendado(self: VisibilitySelf): string {
     return `Tenés ${rating.toFixed(1)}★ y la barra está en ${MIN_RECOMMEND_RATING}★.`;
   }
   if (completadas >= MIN_REBOOKING_SAMPLE) {
-    return `Con ${completadas} sesiones completadas la barra pasa a ser el reagendamiento: hace falta ${pct(MIN_RECOMMEND_REBOOKING)} y tenés ${pct(self.rebookingRate ?? 0)}.`;
+    return `Con ${completadas} sesiones completadas la barra pasa a ser el reagendamiento: hace falta ${pct(MIN_RECOMMEND_REBOOKING)} y tenés ${pct(self.rebookingRate ?? 0)}.` + notaReembolsos(self);
   }
   const faltan = MIN_RECOMMEND_REVIEWS - reviews;
-  return `Vas bien de puntaje (${rating.toFixed(1)}★). Te ${faltan === 1 ? 'falta' : 'faltan'} ${plural(faltan, 'reseña', 'reseñas')} para cruzar la barra.`;
+  return `Vas bien de puntaje (${rating.toFixed(1)}★). Te ${faltan === 1 ? 'falta' : 'faltan'} ${plural(faltan, 'reseña', 'reseñas')} para cruzar la barra.` + notaReembolsos(self);
 }
 
 function gapTendencia(self: VisibilitySelf): string {
@@ -157,7 +190,7 @@ function inPoolDetail(key: DeckSlotKey, self: VisibilitySelf, rivals: number, ct
 
   switch (key) {
     case 'recomendado':
-      return `Cumplís la barra de calidad. ${share}`;
+      return `Cumplís la barra de calidad. ${share}` + notaReembolsos(self);
     case 'tendencia':
       return `${plural(self.recentBookers ?? 0, 'persona distinta te reservó', 'personas distintas te reservaron')} en 30 días. ${share}`;
     case 'nuevo': {
@@ -215,6 +248,16 @@ export function analyzeDoors(
 /** Lo que el coach controla sin depender de nadie, ordenado por impacto. */
 export function buildChecklist(self: VisibilitySelf): ChecklistItem[] {
   return [
+    // Va PRIMERO y es bloqueante: si hay una sanción pesando, no tiene sentido
+    // que la pantalla le hable de reseñas y de medianas de precio. Es además la
+    // única razón de invisibilidad que no puede resolver solo.
+    ...(estaSuspendido(self) ? [{
+      key: 'sancion',
+      label: 'Cuenta suspendida',
+      done: false,
+      blocking: true,
+      hint: 'Mientras dure, no aparecés en la app y no podés recibir reservas nuevas. Las sesiones ya agendadas las atendés normalmente. El motivo te llegó en una notificación; si creés que es un error, escribinos a vitaappar@gmail.com.',
+    } as ChecklistItem] : []),
     {
       key: 'verified',
       label: 'Postulación aprobada',
@@ -321,6 +364,10 @@ export function visibilityTeaser(args: {
     avatarUrl: 'x',
     hasVideo: true,
     instantBooking: true,
+    // El teaser no consulta la sanción (son dos queries baratas, ver el doc de
+    // la función). Se declara null explícito para que `estaSuspendido` no
+    // dependa de un campo ausente.
+    suspendidoHasta: null,
   } as VisibilitySelf;
 
   return { blocked: blockingReason(buildChecklist(partial)) };

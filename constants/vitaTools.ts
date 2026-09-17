@@ -27,7 +27,8 @@ export const VITA_TOOLS: VitaTool[] = [
   { id: 'meditacion',  label: 'Meditación',       ionicon: 'leaf-outline',          mdicon: 'leaf',              duration: '10–15 min',  route: '/meditacion'  },
   { id: 'escaner',     label: 'Escáner corporal', ionicon: 'body-outline',          mdicon: 'human',             duration: '8 min',      route: '/escaner'     },
   { id: 'relajacion',  label: 'Relajación',       ionicon: 'musical-notes-outline', mdicon: 'music-note',        duration: '10 min',     route: '/relajacion'  },
-  { id: 'ruido',       label: 'Ruido blanco',     ionicon: 'volume-medium-outline', mdicon: 'volume-high',       duration: 'Libre',      route: '/ruido'       },
+  // Ver la nota en constants/tools.ts: ni blanco ni libre. Las dos tablas tienen que decir lo mismo.
+  { id: 'ruido',       label: 'Sonidos ambientales', ionicon: 'volume-medium-outline', mdicon: 'volume-high',       duration: '5–30 min',   route: '/ruido'       },
   { id: 'lecturas',    label: 'Lecturas breves',  ionicon: 'library-outline',       mdicon: 'book-open-variant', duration: '5–10 min',   route: '/lecturas'    },
   { id: 'anclaje',     label: 'Anclaje',          ionicon: 'locate-outline',        mdicon: 'anchor',            duration: '2–3 min',    route: '/anclaje'     },
 ];

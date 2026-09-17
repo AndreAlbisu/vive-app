@@ -36,7 +36,7 @@ export function EncuadrePill({ encuadre, onInfo }: Props) {
       <MaterialCommunityIcons
         name={encuadre.habilitado ? 'shield-check' : 'hand-heart-outline'}
         size={13}
-        color={encuadre.habilitado ? '#42542F' : '#6B7A56'}
+        color={encuadre.habilitado ? '#42542F' : '#566245'}
       />
       <Text style={[s.txt, !encuadre.habilitado && s.txtAcomp]}>{encuadre.etiqueta}</Text>
       <MaterialCommunityIcons
@@ -61,5 +61,5 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.semibold, fontSize: 11.5,
     color: '#42542F', letterSpacing: 0.15,
   },
-  txtAcomp: { color: '#6B7A56' },
+  txtAcomp: { color: '#566245' },
 });

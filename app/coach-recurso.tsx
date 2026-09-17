@@ -38,7 +38,7 @@ import { logResourceEvent } from '@/lib/resourceEvents';
 
 // ─── Constantes de formato ────────────────────────────────────────────────────
 const FOREST = '#3A4F2A';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const CREAM = ViveColors.background; // borde de la perilla del reproductor
 
 function displayTitle(title: string): string {
@@ -1028,7 +1028,7 @@ const s = StyleSheet.create({
   coach: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: '#6B7A56',
+    color: '#566245',
     fontStyle: 'italic',
     marginBottom: 4,
   },
@@ -1064,7 +1064,7 @@ const s = StyleSheet.create({
   audioUnavailableText: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
-    color: '#6B7A56',
+    color: '#566245',
   },
 
   // Bloques de abajo — crema, líneas finas, sin color fuerte
@@ -1098,7 +1098,7 @@ const s = StyleSheet.create({
   errorText: {
     fontFamily: ViveFonts.regular,
     fontSize: 15,
-    color: '#6B7A56',
+    color: '#566245',
     marginBottom: 12,
   },
   backLink: {

@@ -209,14 +209,29 @@ const CSS = `
   table { border-collapse: collapse; width: 100%; font-size: .925rem; }
   th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid rgba(58,79,42,.15); vertical-align: top; }
   th { font-weight: 700; }
-  a { color: #C1694F; }
+  /* ⚠️ #C1694F daba 3.41:1 sobre el crema — por debajo del 4.5 de AA, y acá el
+     link ES el contenido (son páginas de puros enlaces). Esta es la misma
+     terracota oscurecida: 4.59:1. Es el valor que en la app se llama
+     ViveColors.primaryInk. En oscuro hay que ir al revés y aclararla. */
+  a { color: #A25842; }
+
+  /* Foco de teclado. No había ninguno: quien navega con Tab —o con un lector de
+     pantalla, o sin poder usar un mouse— no tenía forma de saber dónde estaba
+     parado. focus-visible y no focus a secas para que el anillo no aparezca al
+     hacer click con el mouse, que es lo que lleva a la gente a matarlo con
+     outline:none. */
+  :focus-visible {
+    outline: 3px solid #A25842;
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
   code { background: rgba(58,79,42,.08); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
   .nav { max-width: 720px; margin: 0 auto 2rem; font-size: .9rem; }
   /* "Lugar destacado" de la Res. 424/2020: el enlace no puede ser un link más
      perdido en el pie. Se lo pinta como botón y se lo separa del resto. */
   .nav a.regret {
     display: inline-block; margin-left: .35rem; padding: .35rem .7rem;
-    background: #C1694F; color: #FFF6EC; border-radius: 8px;
+    background: #A25842; color: #FFF6EC; border-radius: 8px;  /* sobre #C1694F el crema daba 3.64:1 */
     font-weight: 700; letter-spacing: .02em; text-decoration: none;
   }
   .draft {
@@ -227,12 +242,17 @@ const CSS = `
   @media (prefers-color-scheme: dark) {
     body { background: #1A1C16; color: #E4E0D2; }
     h1, h2, h3 { color: #F2EDE0; }
+    /* La misma terracota, para el otro lado: sobre el fondo oscuro hay que
+       aclararla (#A25842 ahí da 3.28). Esta da 4.89. */
+    a { color: #C5735A; }
+    :focus-visible { outline-color: #C5735A; }
     hr { border-top-color: rgba(228,224,210,.18); }
     code { background: rgba(228,224,210,.10); }
     th, td { border-bottom-color: rgba(228,224,210,.18); }
     .draft { background: rgba(193,105,79,.16); color: #E8B48F; border-color: rgba(193,105,79,.35); }
     .card { background: rgba(228,224,210,.05); border-color: rgba(228,224,210,.14); }
     .lead { color: rgba(228,224,210,.85); }
+    .card.regret strong { color: #C5735A; }
   }
 `;
 
@@ -247,11 +267,11 @@ const HOME_CSS = `
   }
   .card:hover { border-color: rgba(58,79,42,.30); }
   .card strong { display: block; margin-bottom: 3px; }
-  .card span { font-size: .9rem; opacity: .8; }
+  .card span { font-size: .9rem; opacity: .85; }
   /* "Lugar destacado" de la Res. 424/2020: el botón de arrepentimiento tiene
      que verse como tal en la portada, no ser un link más de una lista. */
   .card.regret { background: rgba(193,105,79,.10); border-color: rgba(193,105,79,.40); }
-  .card.regret strong { color: #C1694F; letter-spacing: .02em; }
+  .card.regret strong { color: #A25842; letter-spacing: .02em; }   /* #C1694F daba 3.41:1 */
   .contact { margin-top: 3rem; font-size: .925rem; line-height: 1.7; }
 `;
 
@@ -336,6 +356,21 @@ De los Extremeños 5069, Córdoba, Provincia de Córdoba, Argentina.
 `;
 
 writeFileSync(join(root, 'web/index.html'), homeHtml, 'utf8');
+
+// ── La versión de los legales, para el checkout web ──────────────────────────
+// `web/c/index.html` crea cuentas y tiene que guardar la misma constancia que
+// la app (`profiles.accepted_terms_version`). No puede importar
+// `constants/legal.ts` —es una página suelta, sin bundler— y hardcodearla sería
+// justo el olvido que este script existe para evitar: cambiaría el texto y
+// quedarían aceptaciones registradas contra una versión vieja.
+writeFileSync(
+  join(root, 'web/legal-version.js'),
+  `// GENERADO POR scripts/sync-legal.mjs — NO EDITAR A MANO.\n` +
+    `// Es el mismo valor que LEGAL_VERSION en constants/legal.ts.\n` +
+    `window.LEGAL_VERSION = '${legalVersion}';\n`,
+  'utf8'
+);
+console.log(`web/legal-version.js: ${legalVersion}`);
 
 console.log(
   `web/legal/: ${forWeb.length} páginas generadas ` +

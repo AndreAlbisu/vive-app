@@ -38,7 +38,7 @@ import { anotar } from '@/lib/analytics';
 
 // ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
 const FOREST      = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const INK         = '#2E3624';
 const CARD        = '#F7F2E7';
 const TERRACOTTA  = '#C06B4A';
@@ -279,6 +279,9 @@ export default function ConexionesScreen() {
         name: coach.name,
         specialty: coach.specialty,
         priceFrom: String(coach.priceFrom),
+        // La puerta por la que entró viaja con la reserva hasta el profesional.
+        // Acá es inequívoca: el deck se armó con ESTA puerta y ninguna otra.
+        ...(selectedDoor && { tema: selectedDoor.label }),
       },
     });
   }

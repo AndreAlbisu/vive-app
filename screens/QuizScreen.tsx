@@ -21,7 +21,7 @@ import { supabase } from '@/lib/supabase';
 import { guardarPendiente, volcarPendiente } from '@/lib/quizPendiente';
 
 const F  = '#3A4F2A';
-const FS = '#6B7A56';
+const FS = '#566245';
 const CR = '#F3EEDF';
 const TC = '#C1694F';
 const BG = 'rgba(255,248,240,0.65)';

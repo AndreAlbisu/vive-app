@@ -11,6 +11,7 @@
 // el cliente justo para que nadie se auto-apruebe, y `reports` nunca tuvo
 // UPDATE desde el cliente. Escribir directo exigiría reabrir esas columnas.
 
+import { File } from 'expo-file-system';
 import { supabase } from '@/lib/supabase';
 import { REPORT_REASONS, type ReportReason } from '@/lib/reports';
 import { coachNetFor, platformDeliveryCost, type PayoutRail } from '@/lib/payout';
@@ -110,6 +111,157 @@ export function setCoachVerified(coachId: string, verified: boolean, notes?: str
  *  motivo la segunda vuelta sería idéntica a la primera. */
 export function rejectCoachApplication(coachId: string, reason: string) {
   return callAdmin({ action: 'reject_coach_application', coach_id: coachId, reason });
+}
+
+// ─── Sanciones ───────────────────────────────────────────────────────────────
+// La escalera de T&C §10: advertencia → suspensión → baja. La aplica un humano
+// mirando un caso; no hay algoritmo que sancione solo, y con la muestra de hoy
+// tampoco debería haberlo (`scripts/diagnostico-fuga.sql`).
+
+export type SancionNivel = 'advertencia' | 'suspension' | 'baja';
+
+/**
+ * 🔴 `motivo` NO es una nota interna: es el texto que va a leer la persona
+ * sancionada, en su app y en la notificación. Escribirlo como si se lo dijeras
+ * de frente, porque es literalmente eso.
+ *
+ * `dias` solo se usa —y es obligatorio— para `suspension`. La baja no vence.
+ */
+export function applySanction(args: {
+  coachId: string;
+  nivel: SancionNivel;
+  motivo: string;
+  dias?: number;
+  evidencia?: string;
+}) {
+  return callAdmin({
+    action: 'apply_sanction',
+    coach_id: args.coachId,
+    nivel: args.nivel,
+    motivo: args.motivo,
+    ...(args.dias != null ? { dias: args.dias } : {}),
+    ...(args.evidencia ? { evidencia: args.evidencia } : {}),
+  });
+}
+
+/** Levantar no borra: la fila queda con el motivo por el que se levantó. El
+ *  historial tiene que poder contar también los errores nuestros. */
+export function revokeSanction(sancionId: string, motivo: string) {
+  return callAdmin({ action: 'revoke_sanction', sancion_id: sancionId, motivo });
+}
+
+export type AdminSancion = {
+  id: string;
+  coachId: string;
+  coachName: string;
+  nivel: SancionNivel;
+  motivo: string;
+  evidencia: string | null;
+  /** ISO, o 'infinity' para una baja. Null en las advertencias. */
+  hasta: string | null;
+  createdAt: string;
+  revocadaAt: string | null;
+  revocadaMotivo: string | null;
+  /** Capturas y PDFs. Solo los ve el equipo: el coach sancionado NO tiene acceso
+   *  (ni a esta lista ni al texto de `evidencia`) — ver `add-sanction-evidence.sql`. */
+  adjuntos: { id: string; mime: string; createdAt: string }[];
+};
+
+export async function listSanctions(): Promise<AdminSancion[]> {
+  const res = await callAdmin({ action: 'list_sanctions' });
+  if (!res.ok) {
+    console.warn('[admin] no se pudieron leer las sanciones:', res.error);
+    return [];
+  }
+  return (res.data?.sanciones ?? []) as AdminSancion[];
+}
+
+/**
+ * Sube un adjunto de evidencia a una sanción ya creada.
+ *
+ * El archivo NO pasa por la edge function: ella firma una subida a un path que
+ * elige, el archivo va directo a storage, y después ella confirma que llegó y lo
+ * registra. Si la subida se corta a mitad de camino, no queda una fila huérfana.
+ *
+ * ⚠️ `mime` tiene que ser uno de los que acepta el bucket (jpeg, png, webp, heic,
+ * pdf). El selector de fotos devuelve JPEG si se le pide calidad < 1, que es lo
+ * que hace el panel — así una foto HEIC del iPhone no rebota.
+ */
+export async function uploadSanctionEvidence(
+  sancionId: string,
+  uri: string,
+  mime: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const firma = await callAdmin({ action: 'sanction_evidence_upload', sancion_id: sancionId, mime });
+    if (!firma.ok) return { ok: false, error: firma.error ?? 'no se pudo preparar la subida' };
+    const { path, token } = firma.data as { path: string; token: string };
+
+    const bytes = await new File(uri).bytes();
+    const { error: upErr } = await supabase.storage
+      .from('sanction-evidence')
+      .uploadToSignedUrl(path, token, bytes, { contentType: mime });
+    if (upErr) return { ok: false, error: upErr.message };
+
+    const reg = await callAdmin({ action: 'sanction_evidence_register', sancion_id: sancionId, path, mime });
+    if (!reg.ok) return { ok: false, error: reg.error ?? 'se subió pero no se pudo registrar' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+/** URL firmada de 5 minutos. Abrirla queda auditado: es muy probable que la
+ *  captura tenga mensajes privados de un cliente. */
+export async function sanctionEvidenceUrl(evidenciaId: string): Promise<{ url?: string; error?: string }> {
+  const res = await callAdmin({ action: 'sanction_evidence_url', evidencia_id: evidenciaId });
+  if (!res.ok) return { error: res.error ?? 'no se pudo abrir' };
+  return { url: (res.data as { url: string }).url };
+}
+
+// ─── Avisos de contacto ──────────────────────────────────────────────────────
+
+export type SenalesDeCoach = {
+  coachProfileId: string;
+  coachId: string | null;
+  nombre: string;
+  /** Escritos por el coach. Son los que nadie más puede fabricar. */
+  delCoach: number;
+  /** De esos, cuántos fueron datos para cobrar y rebotaron. */
+  bloqueados: number;
+  enviadosIgual: number;
+  /** Escritos por las personas que atiende. */
+  deLaPersona: number;
+  canales: Record<string, number>;
+  senales: Record<string, number>;
+  ultimo: string;
+  personas: { userId: string; nombre: string; avisos: number; siguioReservando: boolean }[];
+};
+
+/**
+ * Los avisos de contacto de los últimos 90 días, agrupados por coach.
+ *
+ * ⚠️ No son pruebas: son casos para mirar. `descartados` cuenta los eventos que
+ * no escribió quien dicen que los escribió — si crece, alguien intenta
+ * fabricarle avisos a un coach.
+ */
+export async function listContactSignals(): Promise<{ coaches: SenalesDeCoach[]; descartados: number }> {
+  const res = await callAdmin({ action: 'list_contact_signals' });
+  if (!res.ok) {
+    console.warn('[admin] no se pudieron leer los avisos de contacto:', res.error);
+    return { coaches: [], descartados: 0 };
+  }
+  return { coaches: (res.data?.coaches ?? []) as SenalesDeCoach[], descartados: Number(res.data?.descartados ?? 0) };
+}
+
+/** ¿Esta sanción está pesando ahora mismo? Misma cuenta que `estaSuspendido`
+ *  del lado del coach: 'infinity' (la baja) no es una fecha parseable. */
+export function sancionVigente(s: AdminSancion, now: Date = new Date()): boolean {
+  if (s.revocadaAt) return false;
+  if (s.nivel === 'advertencia') return false;   // no restringe nada, no "pesa"
+  if (s.hasta === 'infinity') return true;
+  const t = s.hasta ? new Date(s.hasta).getTime() : NaN;
+  return Number.isFinite(t) && t > now.getTime();
 }
 
 // ─── Reportes ────────────────────────────────────────────────────────────────

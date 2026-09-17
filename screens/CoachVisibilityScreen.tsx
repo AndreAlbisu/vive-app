@@ -36,7 +36,7 @@ import {
 // Misma paleta que CoachHomeScreen (docs/coach-app-interactivo.html).
 const CARD = '#F7F2E7';
 const FOREST = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const TERRA = '#C06B4A';
 const TERRA_SOFT = '#EAD3C6';
 const OK_BG = '#DCE5CB';
@@ -382,12 +382,12 @@ const s = StyleSheet.create({
   slotIcon: { marginTop: 2 },
   slotHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   slotLabel: { fontFamily: ViveFonts.semibold, fontSize: 12.5, color: FOREST },
-  slotLabelOff: { color: 'rgba(107,122,86,0.72)' },
+  slotLabelOff: { color: '#566245' },
   pillSm: { borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
   pillSmOff: { borderWidth: 1, borderColor: LINE },
   pillSmTxt: { fontSize: 9.5, fontFamily: ViveFonts.semibold },
   slotDetail: { fontFamily: ViveFonts.regular, fontSize: 11.5, color: FOREST_SOFT, lineHeight: 17, marginTop: 3 },
-  slotDetailOff: { color: 'rgba(107,122,86,0.6)' },
+  slotDetailOff: { color: '#566245' },
 
   // Empty (sin temas)
   emptyCard: { backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20, padding: 18, marginTop: 16 },
@@ -419,7 +419,7 @@ const s = StyleSheet.create({
   altTxt: { fontFamily: ViveFonts.regular, fontSize: 11.5, color: FOREST_SOFT, lineHeight: 17, marginTop: 3 },
 
   footNote: {
-    fontFamily: ViveFonts.regular, fontSize: 11, color: 'rgba(107,122,86,0.85)',
+    fontFamily: ViveFonts.regular, fontSize: 11, color: '#566245',
     lineHeight: 17, marginTop: 16, paddingHorizontal: 4,
   },
 });

@@ -22,11 +22,14 @@ import { supabase } from '@/lib/supabase';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { useResourceProgress } from '@/hooks/useResourceProgress';
 import { useRecommendedResource, type Reco, type MoodLite } from '@/hooks/useRecommendedResource';
-import { TOOL_MAP, type Tool, type IoniconName } from '@/constants/tools';
+import { TOOL_MAP, TOOL_GROUPS, type Tool, type IoniconName } from '@/constants/tools';
+
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 // `Tool`, `IoniconName`, `TOOLS`, `TOOL_MAP` viven en @/constants/tools
-// (fuente única, compartida con Progreso/Hábitos).
+// (fuente única, compartida con Progreso/Hábitos). `TOOL_GROUPS` se mudó ahí el
+// 15/09/2026: la grilla ES la lista de herramientas visibles, así que vivía en
+// el lugar equivocado — la pantalla la definía y el catálogo no se enteraba.
 
 type CoachRecoItem = {
   id: string;
@@ -46,33 +49,6 @@ type CoachRecoItem = {
   };
 };
 
-interface ToolGroup {
-  id: string;
-  title: string;
-  subtitle: string;
-  toolIds: string[];
-}
-
-// ⚠️ El orden de esta lista ES el orden de los tiles en pantalla: `ToolsCarousel`
-// la aplana en el orden en que está escrita. `title` y `subtitle` hoy no se
-// muestran en ningún lado (los grupos quedaron como agrupación conceptual
-// después del rediseño de la fila), así que lo único que cambia al reordenar es
-// la fila de herramientas.
-const TOOL_GROUPS: ToolGroup[] = [
-  {
-    id: 'reflexion',
-    title: 'Para reflexionar',
-    subtitle: 'Poner en palabras lo que pasa',
-    toolIds: ['diario', 'gratitud'],
-  },
-  {
-    id: 'calma',
-    title: 'Para calmarte ahora',
-    subtitle: 'Cuando la mente va rápido',
-    toolIds: ['ruido', 'respiracion'],
-  },
-];
-
 // ─── Colores locales ─────────────────────────────────────────────────────────
 // Herramientas/Recomendado/Biblioteca (Ajustes 1-5) usan los tokens planos del
 // mockup (CARD/LINE/CREAM_DEEP) en vez del "glass" translúcido del resto de la
@@ -80,7 +56,7 @@ const TOOL_GROUPS: ToolGroup[] = [
 // el contraste que pide la spec. ContinueCard y StreakChip, fuera de los 6
 // ajustes, se dejaron con GLASS_BG/GLASS_BORDER tal cual estaban.
 const FOREST       = '#3F512F';
-const FOREST_SOFT  = '#6B7A56';
+const FOREST_SOFT  = '#566245';
 const CREAM_LIGHT  = '#F3EEDF';
 const CREAM_DEEP   = '#EAE2D0';
 const CARD         = '#F7F2E7';
@@ -385,7 +361,7 @@ function FormatGrid({
 // intacto para el resto de los consumidores (ReminderBell, headers de tool, etc.).
 const TILE_LABEL: Record<string, string> = {
   respiracion: 'Respirar',
-  ruido: 'Ruidos',
+  ruido: 'Sonidos',
 };
 
 // ─── ToolCard ─────────────────────────────────────────────────────────────────
@@ -858,14 +834,14 @@ const s = StyleSheet.create({
     fontSize: 9.5,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
-    color: 'rgba(107,122,86,0.85)',
+    color: '#566245',
   },
   eyebrowCount: {
     fontFamily: ViveFonts.semibold,
     fontSize: 9.5,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
-    color: 'rgba(107,122,86,0.6)',
+    color: '#566245',
   },
   formatGrid: {
     flexDirection: 'row',

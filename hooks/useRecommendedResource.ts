@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { leerRespuestas } from '@/lib/onboardingRespuestas';
 import { MOOD_RESOURCES } from '@/constants/moodResources';
+import { TOOL_MAP } from '@/constants/tools';
 
 // Vocabulario de ejes compartido con resource_axes (recursos de coach).
 // Es lo que permite puntuar tools de Vita y recursos de coach en el mismo espacio.
@@ -62,8 +63,17 @@ function dominantAxis(toolIds: string[]): Axis | null {
   return entries[0][0];
 }
 
+// 🔴 El filtro por `visible` no es cosmético: sin él, el eje `alma` devolvía
+// `meditacion` —la primera de su lista— y la pantalla de Recursos recomendaba
+// una herramienta retirada de la grilla a cualquiera que entrara sin check-in
+// del día. `cuerpo` y `mente` tenían el mismo agujero un paso más adelante, vía
+// `exclude`: bastaba haber hecho Respiración hace poco para caer en `anclaje`.
+// `TOOL_AXES` conserva las 10 a propósito — `dominantAxis` lee el historial de
+// lo que la persona YA hizo, que puede incluir retiradas.
 function firstToolInAxis(axis: Axis, exclude: Set<string>): string | null {
-  const inAxis = Object.keys(TOOL_AXES).filter(id => TOOL_AXES[id].includes(axis));
+  const inAxis = Object.keys(TOOL_AXES)
+    .filter(id => TOOL_AXES[id].includes(axis))
+    .filter(id => TOOL_MAP[id]?.visible);
   return inAxis.find(id => !exclude.has(id)) ?? inAxis[0] ?? null;
 }
 

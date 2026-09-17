@@ -135,7 +135,17 @@ Condiciones:
 
 10.2. **El Profesional se obliga a no utilizar la Plataforma para desviar, derivar o continuar la relación con un Cliente por fuera de la Plataforma con el fin de eludir las comisiones**, ni a solicitar o proponer pagos por fuera de los canales oficiales durante el vínculo originado en Vita. Asimismo, los Usuarios se obligan a no compartir por la Plataforma datos de contacto o de pago con el propósito de operar por fuera de ella eludiendo las comisiones.
 
-10.3. El incumplimiento de esta cláusula puede dar lugar a advertencias, suspensión o cancelación de la cuenta, sin perjuicio de las acciones que correspondan. Vita podrá mostrar advertencias automáticas cuando detecte, mediante medios técnicos, un posible intercambio de datos de contacto o de pago; dichas advertencias no implican bloqueo ni monitoreo del contenido de las conversaciones más allá de lo descripto en la Política de Privacidad.
+10.3. **Prevención.** Para prevenir el incumplimiento de esta cláusula, la Plataforma detecta mediante medios técnicos, en el dispositivo de quien escribe y antes de enviar, si un texto incluye datos de contacto o de pago. El alcance es el siguiente:
+
+- **En los textos dirigidos a otro Usuario** (mensajes, notas de sesión compartidas y comentarios que acompañan una recomendación o una reserva), la Plataforma muestra una advertencia y permite continuar.
+- **Excepción:** la Plataforma no permite al Profesional enviar datos para recibir pagos —como CBU, CVU, alias o enlaces de cobro—, dado que todos los pagos de las Sesiones se canalizan a través de Vita.
+- **En los textos públicos**, la Plataforma no permite publicar datos de contacto o de pago en la presentación del Profesional ni en las reseñas. En los recursos que propone un Profesional, advierte al cargarlos y no permite enlaces a redes sociales o servicios de mensajería; Vita revisa cada recurso antes de publicarlo.
+
+El tratamiento de datos que esto implica se describe en la Política de Privacidad.
+
+10.4. **Medidas.** El incumplimiento de esta cláusula puede dar lugar, según su gravedad y reiteración, a una **advertencia**, a la **suspensión temporal** de la cuenta o a su **baja**, sin perjuicio de las acciones que correspondan. Ninguna medida se aplica en forma automática: cada caso es revisado por Vita. La medida se comunica al Profesional junto con su motivo. Mientras dure una suspensión o tras una baja, el Profesional no aparece en las búsquedas ni en las recomendaciones de la Plataforma y no puede recibir reservas nuevas, pero las Sesiones ya agendadas y abonadas se mantienen. Vita informa a los Clientes que tenían un vínculo reciente con el Profesional que este no se encuentra disponible, sin indicar el motivo.
+
+10.5. **Revisión.** El Profesional puede solicitar la revisión de una medida escribiendo a vitaappar@gmail.com.
 
 ## 11. Contenido, Herramientas y Recursos
 
@@ -270,7 +280,7 @@ Ciertos datos vinculados al Usuario —los registros de estado de ánimo, las en
 
 ## 4. Finalidades del Tratamiento
 
-Tratamos los datos para: (a) crear y gestionar la cuenta; (b) conectar Clientes con Profesionales y permitir reservas, sesiones y comunicaciones; (c) procesar pagos, comisiones y reembolsos; (d) brindar el contenido y las herramientas de desarrollo personal y mostrar información de progreso al propio Usuario; (e) enviar notificaciones relacionadas con el servicio; (f) moderar la plataforma, atender reportes y prevenir fraudes o usos indebidos; (g) mejorar el servicio mediante analítica; (h) cumplir obligaciones legales.
+Tratamos los datos para: (a) crear y gestionar la cuenta; (b) conectar Clientes con Profesionales y permitir reservas, sesiones y comunicaciones; (c) procesar pagos, comisiones y reembolsos; (d) brindar el contenido y las herramientas de desarrollo personal y mostrar información de progreso al propio Usuario; (e) enviar notificaciones relacionadas con el servicio; (f) moderar la plataforma, atender reportes y prevenir fraudes o usos indebidos, incluido el incumplimiento de la cláusula de uso exclusivo de los Términos (ver 8.3); (g) mejorar el servicio mediante analítica; (h) cumplir obligaciones legales.
 
 ## 5. Base Legal
 
@@ -285,8 +295,10 @@ Vita **no vende** los datos personales de los Usuarios. Los compartimos únicame
   - **Mercado Pago** — procesamiento de pagos (sujeto a sus propias políticas).
   - **Daily.co** — realización de las videollamadas de las Sesiones.
   - **Expo / proveedor de notificaciones push** — envío de notificaciones.
+  - **Cloudflare** — protección contra la creación automatizada de cuentas. Interviene al crear una cuenta y al solicitar un código de acceso, tanto en la aplicación como en las páginas web de Vita. Recibe la dirección IP y datos técnicos del dispositivo, y en el navegador coloca una cookie técnica necesaria para distinguir a una persona de un programa automatizado. **No recibe el nombre, el correo electrónico ni ningún contenido del Usuario.**
 - **Proveedores de identidad, solo si el Usuario elige registrarse o iniciar sesión con ellos:**
   - **Google** y **Apple**. En ese caso, el proveedor conoce que el Usuario accede a Vita y le comunica a Vita los datos mínimos de la cuenta (nombre y correo electrónico). Si el Usuario se registra con correo y contraseña, ninguno de los dos interviene.
+- **Entrega de componentes desde redes de distribución (CDN):** la sala de Sesión a la que se accede por navegador carga el componente de videollamada desde **unpkg.com**. Al hacerlo, ese servicio recibe la dirección IP y datos técnicos del dispositivo. No recibe datos de la cuenta ni contenido alguno de la Sesión.
 - **Contenido embebido de terceros:** algunas fichas de recursos incluyen un reproductor de **YouTube** insertado dentro de la aplicación. Al cargarse, YouTube recibe la dirección IP y datos técnicos del dispositivo, y puede utilizar cookies o tecnologías similares conforme a sus propias políticas. Ocurre solo al abrir una ficha que contenga ese reproductor.
 - **Redacción asistida de la frase de bienestar:** la pantalla de inicio muestra una frase breve sobre cómo viene el Usuario. **Qué decir lo decide la propia aplicación en el dispositivo**, con reglas fijas; a un proveedor externo (**Anthropic**) se le pide únicamente **redactar** esa frase. Lo que se le envía es el nombre de una categoría (por ejemplo, "racha" o "tendencia en alza"), un tono, y dos o tres números enteros —días de registro consecutivos, sesiones y prácticas de la semana—. **No se le envía identificador alguno del Usuario, ni sus registros de estado de ánimo, ni su historial, ni una sola palabra escrita por él**, y Vita no conserva vinculación entre ese envío y la persona. Si el proveedor no responde, o si el texto que devuelve no supera los controles de contenido de Vita, se muestra el texto redactado por la propia aplicación.
 - **Analítica:** Vita **no utiliza proveedores de analítica de terceros**. Las métricas de uso se registran en la propia base de datos de Vita (alojada en Supabase) y no se comparten con terceros con fines publicitarios ni comerciales.
@@ -310,7 +322,9 @@ Algunos de los proveedores mencionados pueden almacenar o procesar datos en serv
 
 8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales.
 
-8.3. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.
+8.3. **Detección de datos de contacto y de pago.** Para hacer cumplir la cláusula de uso exclusivo de los Términos (sección 10), la aplicación analiza **en el dispositivo de quien escribe**, antes de enviarlo, si un texto incluye datos de contacto o de pago (por ejemplo, un teléfono, una red social o un CBU). **El texto no se envía a Vita para este análisis ni se almacena por este motivo.** Cuando se detecta uno de esos datos, Vita registra únicamente: el **tipo** de dato detectado, el lugar de la aplicación donde ocurrió, la fecha, las cuentas involucradas y si se decidió enviarlo igual. Vita puede revisar esos registros para evaluar un posible incumplimiento y, en su caso, aplicar las medidas previstas en los Términos; **ninguna medida se aplica en forma automática**. Cuando revisa un caso, Vita puede conservar documentación vinculada —por ejemplo, capturas aportadas en un reporte—, con acceso restringido al equipo de Vita y registro de quién la consulta. Esa documentación no se comparte con otros Usuarios. Si un Profesional es suspendido o dado de baja, Vita informa a los Clientes que tenían un vínculo reciente con él que no se encuentra disponible, **sin indicar el motivo**.
+
+8.4. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.
 
 ## 9. Derechos del Titular de los Datos
 
@@ -329,6 +343,8 @@ Conservamos los datos mientras la cuenta esté activa. Al darse de baja, el trat
 - **Reseñas**: se conservan de forma indefinida y **anonimizadas**, por integrar la reputación pública del Profesional evaluado. Suprimirlas permitiría que una baja de cuenta se use para eliminar una evaluación desfavorable.
 - **Mensajes y salas de conversación**: se conservan **anonimizados** mientras subsista la conversación, dado que pertenecen también al otro participante.
 - **Datos técnicos y de uso** (analítica): se conservan **disociados de la identidad** del Usuario.
+- **Registros de detección de datos de contacto y de pago** (ver 8.3): se conservan **doce (12) meses** desde que se generan y luego se suprimen.
+- **Medidas aplicadas a un Profesional y su documentación** (advertencias, suspensiones y bajas): se conservan mientras exista la cuenta del Profesional, para poder considerar la reiteración, y tras la baja quedan **disociadas de su identidad**, como el resto de su ficha.
 
 Al darse de baja, las Sesiones futuras ya agendadas se cancelan automáticamente y se reembolsan. La ficha de perfil no se elimina: queda **vaciada de todo dato personal** y muestra "Usuario eliminado" allí donde antes figuraba el Usuario, de modo que las reservas, reseñas y conversaciones de terceros no queden rotas. La cuenta de acceso se elimina y la dirección de correo queda liberada para un eventual registro futuro.
 
@@ -342,11 +358,24 @@ La Plataforma está dirigida a personas mayores de 18 años. No recolectamos del
 
 Con el consentimiento del Usuario (otorgado a nivel del sistema operativo del dispositivo), Vita envía notificaciones relacionadas con el servicio. El Usuario puede desactivarlas desde la configuración de su dispositivo.
 
-## 13. Cambios a esta Política
+## 13. Cookies y Tecnologías Similares
+
+La **aplicación móvil de Vita no utiliza cookies**. Guarda en el propio dispositivo la información técnica necesaria para funcionar —la sesión iniciada y algunas preferencias de uso—, que no se comparte con terceros ni se utiliza con fines publicitarios.
+
+En las **páginas web de Vita** no se utilizan cookies publicitarias, de seguimiento ni de analítica. Las únicas tecnologías de almacenamiento que intervienen son:
+
+- Una **cookie técnica de Cloudflare**, colocada por el sistema de protección contra la creación automatizada de cuentas descripto en §6. No se utiliza para seguir al Usuario entre sitios.
+- **Almacenamiento local del navegador**, para mantener la sesión iniciada mientras el Usuario utiliza la reserva o la sala de Sesión.
+
+Ambas son estrictamente necesarias para prestar el servicio que el Usuario solicita. Vita **no utiliza cookies de terceros con fines publicitarios ni de perfilado**, y por eso no muestra un panel de preferencias de cookies.
+
+El contenido embebido de terceros mencionado en §6 puede colocar sus propias cookies cuando el Usuario decide reproducirlo; en ese caso rigen las políticas de ese tercero.
+
+## 14. Cambios a esta Política
 
 Vita puede actualizar esta Política. Los cambios sustanciales se notificarán por medios razonables. La versión vigente estará siempre disponible en la Plataforma.
 
-## 14. Contacto
+## 15. Contacto
 
 Consultas o ejercicio de derechos: vitaappar@gmail.com — Andre Albisu Lambertini, De los Extremeños 5069, Córdoba, Provincia de Córdoba.
 `;
@@ -462,7 +491,7 @@ export const LEGAL_PLACEHOLDERS: string[] = ["[Validar con abogado el encuadre d
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '3a2108db8138';
+export const LEGAL_VERSION = 'db4e8d11c155';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

@@ -15,7 +15,7 @@
     font-size: 16px; line-height: 1.6;
   }
   main { max-width: 520px; margin: 0 auto; }
-  .marca { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; opacity: .55; margin-bottom: 28px; }
+  .marca { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; opacity: .8; margin-bottom: 28px; }
   h1 { font-size: 1.45rem; line-height: 1.25; margin: 0 0 12px; }
   .cuando {
     font-size: 1.05rem; padding: 14px 0; margin: 18px 0;
@@ -24,14 +24,22 @@
   .cuando b { display: block; font-size: 1.2rem; }
   .que-sigue { font-size: .92rem; }
   .que-sigue li { margin-bottom: .5rem; }
-  .nota { font-size: .85rem; opacity: .72; margin-top: 22px; }
-  .estado { padding: 40px 0; text-align: center; opacity: .7; }
-  .pie { margin-top: 40px; font-size: .8rem; opacity: .55; text-align: center; }
-  .pie a { color: #C1694F; }
+  .nota { font-size: .85rem; opacity: .85; margin-top: 22px; }   /* .72 daba 3.90:1 */
+  .estado { padding: 40px 0; text-align: center; opacity: .85; }
+  /* El pie tenía opacity .55 Y adentro links en terracota clara: las dos cosas
+     se multiplicaban, y ahí viven los enlaces a Términos y al botón de
+     arrepentimiento, que por la Res. 424/2020 tienen que ser de acceso fácil. */
+  .pie { margin-top: 40px; font-size: .8rem; opacity: .85; text-align: center; }
+  .pie a { color: #A25842; }
+  /* Foco de teclado: la página es toda enlaces y no marcaba ninguno. */
+  :focus-visible { outline: 3px solid #A25842; outline-offset: 2px; border-radius: 3px; }
+
   [hidden] { display: none !important; }
   @media (prefers-color-scheme: dark) {
     body { background: #1A1C16; color: #E4E0D2; }
     .cuando { border-color: rgba(228,224,210,.18); }
+    .pie a { color: #C5735A; }
+    :focus-visible { outline-color: #C5735A; }
   }
 </style>
 </head>
@@ -126,7 +134,7 @@ function pintar(b) {
   // lado. `expire_pending_bookings()` cancela y devuelve a las 24hs.
   const pasos = confirmada
     ? [`La sesión es por videollamada, <b>desde el navegador</b>: no hace falta instalar nada.`,
-       `<a href="/sala?booking=${encodeURIComponent(b.id)}" style="color:#C1694F">Entrar a la sesión</a> — la sala se abre 15 minutos antes.`,
+       `<a href="/sala?booking=${encodeURIComponent(b.id)}" style="color:#A25842">Entrar a la sesión</a> — la sala se abre 15 minutos antes.`,
        `Te mandamos este mismo enlace por mail.`]
     : [`${coach} tiene hasta <b>24 horas</b> para confirmar el horario.`,
        `Apenas lo haga, te avisamos por mail.`,

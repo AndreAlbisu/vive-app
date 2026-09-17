@@ -1,3 +1,25 @@
+-- ══════════════════════════════════════════════════════════════════════════════
+-- 🔴 NO CORRER ESTE SCRIPT CONTRA LA BASE DE VERDAD. NUNCA MÁS.
+--
+-- Qué hace, y por qué está mal hacerlo donde hay gente: busca el PRIMER coach
+-- con role='coach' y le cuelga 8 recursos en estado 'published' con
+-- `is_author_declared = true`. O sea que **declara autoría en nombre de un
+-- profesional** sobre material que ese profesional no hizo. Si ese primer coach
+-- llega a ser una persona real, queda publicando contenido ajeno con su nombre.
+--
+-- Además el contenido es de relleno: dos de los videos apuntan a
+-- youtube.com/watch?v=dQw4w9WgXcQ (Rick Astley) y dos podcasts a URLs de
+-- Spotify que no existen.
+--
+-- Estado al 16/09/2026: las 8 filas ESTÁN en la base y son el 100% de la
+-- biblioteca publicada. Se limpian con `scripts/limpiar-datos-de-prueba.sql`,
+-- que hay que correr antes de lanzar.
+--
+-- Se conserva el archivo por si hace falta poblar un entorno de desarrollo
+-- vacío. Para eso: correrlo solo contra una base de prueba, y nunca contra una
+-- donde haya un coach real.
+-- ══════════════════════════════════════════════════════════════════════════════
+
 DO $$
 DECLARE
   v_coach_id         uuid;
@@ -35,7 +57,7 @@ BEGIN
 
   INSERT INTO public.coach_resources
     (coach_id, title, description, format, source, topic_id, duration_seconds, status, is_author_declared, storage_path)
-  VALUES (v_coach_id, '[SEED] Respiración para dormir mejor', 'Práctica guiada de 8 minutos para calmar el sistema nervioso antes de dormir.', 'audio', 'native', 'descanso', 480, 'published', true, 'seed/respiracion-dormir.mp3')
+  VALUES (v_coach_id, '[SEED] Respiración para dormir mejor', 'Práctica guiada de 8 minutos para preparar el momento de acostarse.', 'audio', 'native', 'descanso', 480, 'published', true, 'seed/respiracion-dormir.mp3')
   RETURNING id INTO r_audio1;
 
   INSERT INTO public.coach_resources
@@ -45,7 +67,7 @@ BEGIN
 
   INSERT INTO public.coach_resources
     (coach_id, title, description, format, source, topic_id, duration_seconds, status, is_author_declared, url)
-  VALUES (v_coach_id, '[SEED] Cómo construir hábitos que duran', 'Los 3 pilares del cambio de hábitos según la neurociencia del comportamiento.', 'podcast', 'external', 'foco', 1920, 'published', true, 'https://open.spotify.com/episode/seed-habitos-placeholder')
+  VALUES (v_coach_id, '[SEED] Cómo construir hábitos que duran', 'Tres ideas para sostener un hábito cuando se corta la racha.', 'podcast', 'external', 'foco', 1920, 'published', true, 'https://open.spotify.com/episode/seed-habitos-placeholder')
   RETURNING id INTO r_podcast1;
 
   INSERT INTO public.coach_resources

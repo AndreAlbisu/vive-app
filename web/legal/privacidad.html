@@ -27,14 +27,29 @@
   table { border-collapse: collapse; width: 100%; font-size: .925rem; }
   th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid rgba(58,79,42,.15); vertical-align: top; }
   th { font-weight: 700; }
-  a { color: #C1694F; }
+  /* ⚠️ #C1694F daba 3.41:1 sobre el crema — por debajo del 4.5 de AA, y acá el
+     link ES el contenido (son páginas de puros enlaces). Esta es la misma
+     terracota oscurecida: 4.59:1. Es el valor que en la app se llama
+     ViveColors.primaryInk. En oscuro hay que ir al revés y aclararla. */
+  a { color: #A25842; }
+
+  /* Foco de teclado. No había ninguno: quien navega con Tab —o con un lector de
+     pantalla, o sin poder usar un mouse— no tenía forma de saber dónde estaba
+     parado. focus-visible y no focus a secas para que el anillo no aparezca al
+     hacer click con el mouse, que es lo que lleva a la gente a matarlo con
+     outline:none. */
+  :focus-visible {
+    outline: 3px solid #A25842;
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
   code { background: rgba(58,79,42,.08); padding: .1em .35em; border-radius: 4px; font-size: .9em; }
   .nav { max-width: 720px; margin: 0 auto 2rem; font-size: .9rem; }
   /* "Lugar destacado" de la Res. 424/2020: el enlace no puede ser un link más
      perdido en el pie. Se lo pinta como botón y se lo separa del resto. */
   .nav a.regret {
     display: inline-block; margin-left: .35rem; padding: .35rem .7rem;
-    background: #C1694F; color: #FFF6EC; border-radius: 8px;
+    background: #A25842; color: #FFF6EC; border-radius: 8px;  /* sobre #C1694F el crema daba 3.64:1 */
     font-weight: 700; letter-spacing: .02em; text-decoration: none;
   }
   .draft {
@@ -45,12 +60,17 @@
   @media (prefers-color-scheme: dark) {
     body { background: #1A1C16; color: #E4E0D2; }
     h1, h2, h3 { color: #F2EDE0; }
+    /* La misma terracota, para el otro lado: sobre el fondo oscuro hay que
+       aclararla (#A25842 ahí da 3.28). Esta da 4.89. */
+    a { color: #C5735A; }
+    :focus-visible { outline-color: #C5735A; }
     hr { border-top-color: rgba(228,224,210,.18); }
     code { background: rgba(228,224,210,.10); }
     th, td { border-bottom-color: rgba(228,224,210,.18); }
     .draft { background: rgba(193,105,79,.16); color: #E8B48F; border-color: rgba(193,105,79,.35); }
     .card { background: rgba(228,224,210,.05); border-color: rgba(228,224,210,.14); }
     .lead { color: rgba(228,224,210,.85); }
+    .card.regret strong { color: #C5735A; }
   }
 </style>
 </head>
@@ -94,7 +114,7 @@
 <p>3.3. El Usuario puede <strong>revocar el consentimiento en cualquier momento</strong> desde su perfil o escribiendo a <a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a>, y solicitar la supresión de los datos ya registrados conforme a la sección 9. La revocación no afecta la licitud del tratamiento realizado con anterioridad.</p>
 <p>3.4. <strong>Estos datos no se comparten con los Profesionales ni con ningún tercero</strong>, salvo que el propio Usuario decida enviarlos, en cada caso y de forma expresa.</p>
 <h2>4. Finalidades del Tratamiento</h2>
-<p>Tratamos los datos para: (a) crear y gestionar la cuenta; (b) conectar Clientes con Profesionales y permitir reservas, sesiones y comunicaciones; (c) procesar pagos, comisiones y reembolsos; (d) brindar el contenido y las herramientas de desarrollo personal y mostrar información de progreso al propio Usuario; (e) enviar notificaciones relacionadas con el servicio; (f) moderar la plataforma, atender reportes y prevenir fraudes o usos indebidos; (g) mejorar el servicio mediante analítica; (h) cumplir obligaciones legales.</p>
+<p>Tratamos los datos para: (a) crear y gestionar la cuenta; (b) conectar Clientes con Profesionales y permitir reservas, sesiones y comunicaciones; (c) procesar pagos, comisiones y reembolsos; (d) brindar el contenido y las herramientas de desarrollo personal y mostrar información de progreso al propio Usuario; (e) enviar notificaciones relacionadas con el servicio; (f) moderar la plataforma, atender reportes y prevenir fraudes o usos indebidos, incluido el incumplimiento de la cláusula de uso exclusivo de los Términos (ver 8.3); (g) mejorar el servicio mediante analítica; (h) cumplir obligaciones legales.</p>
 <h2>5. Base Legal</h2>
 <p>El tratamiento se basa en el consentimiento del Usuario, en la ejecución de la relación contractual (prestación del servicio), y en el cumplimiento de obligaciones legales, según corresponda a cada finalidad.</p>
 <h2>6. Con Quién Compartimos los Datos</h2>
@@ -105,12 +125,14 @@
 <li><strong>Mercado Pago</strong> — procesamiento de pagos (sujeto a sus propias políticas).</li>
 <li><strong>Daily.co</strong> — realización de las videollamadas de las Sesiones.</li>
 <li><strong>Expo / proveedor de notificaciones push</strong> — envío de notificaciones.</li>
+<li><strong>Cloudflare</strong> — protección contra la creación automatizada de cuentas. Interviene al crear una cuenta y al solicitar un código de acceso, tanto en la aplicación como en las páginas web de Vita. Recibe la dirección IP y datos técnicos del dispositivo, y en el navegador coloca una cookie técnica necesaria para distinguir a una persona de un programa automatizado. <strong>No recibe el nombre, el correo electrónico ni ningún contenido del Usuario.</strong></li>
 </ul>
 </li>
 <li><strong>Proveedores de identidad, solo si el Usuario elige registrarse o iniciar sesión con ellos:</strong><ul>
 <li><strong>Google</strong> y <strong>Apple</strong>. En ese caso, el proveedor conoce que el Usuario accede a Vita y le comunica a Vita los datos mínimos de la cuenta (nombre y correo electrónico). Si el Usuario se registra con correo y contraseña, ninguno de los dos interviene.</li>
 </ul>
 </li>
+<li><strong>Entrega de componentes desde redes de distribución (CDN):</strong> la sala de Sesión a la que se accede por navegador carga el componente de videollamada desde <strong>unpkg.com</strong>. Al hacerlo, ese servicio recibe la dirección IP y datos técnicos del dispositivo. No recibe datos de la cuenta ni contenido alguno de la Sesión.</li>
 <li><strong>Contenido embebido de terceros:</strong> algunas fichas de recursos incluyen un reproductor de <strong>YouTube</strong> insertado dentro de la aplicación. Al cargarse, YouTube recibe la dirección IP y datos técnicos del dispositivo, y puede utilizar cookies o tecnologías similares conforme a sus propias políticas. Ocurre solo al abrir una ficha que contenga ese reproductor.</li>
 <li><strong>Redacción asistida de la frase de bienestar:</strong> la pantalla de inicio muestra una frase breve sobre cómo viene el Usuario. <strong>Qué decir lo decide la propia aplicación en el dispositivo</strong>, con reglas fijas; a un proveedor externo (<strong>Anthropic</strong>) se le pide únicamente <strong>redactar</strong> esa frase. Lo que se le envía es el nombre de una categoría (por ejemplo, &quot;racha&quot; o &quot;tendencia en alza&quot;), un tono, y dos o tres números enteros —días de registro consecutivos, sesiones y prácticas de la semana—. <strong>No se le envía identificador alguno del Usuario, ni sus registros de estado de ánimo, ni su historial, ni una sola palabra escrita por él</strong>, y Vita no conserva vinculación entre ese envío y la persona. Si el proveedor no responde, o si el texto que devuelve no supera los controles de contenido de Vita, se muestra el texto redactado por la propia aplicación.</li>
 <li><strong>Analítica:</strong> Vita <strong>no utiliza proveedores de analítica de terceros</strong>. Las métricas de uso se registran en la propia base de datos de Vita (alojada en Supabase) y no se comparten con terceros con fines publicitarios ni comerciales.</li>
@@ -126,7 +148,8 @@
 <h2>8. Seguridad de los Datos</h2>
 <p>8.1. Vita aplica medidas técnicas y organizativas razonables para proteger los datos, incluyendo controles de acceso a nivel de base de datos que restringen el acceso a la información de cada Usuario.</p>
 <p>8.2. <strong>Sobre los mensajes:</strong> los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. <strong>No cuentan con cifrado de extremo a extremo</strong>, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales.</p>
-<p>8.3. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.</p>
+<p>8.3. <strong>Detección de datos de contacto y de pago.</strong> Para hacer cumplir la cláusula de uso exclusivo de los Términos (sección 10), la aplicación analiza <strong>en el dispositivo de quien escribe</strong>, antes de enviarlo, si un texto incluye datos de contacto o de pago (por ejemplo, un teléfono, una red social o un CBU). <strong>El texto no se envía a Vita para este análisis ni se almacena por este motivo.</strong> Cuando se detecta uno de esos datos, Vita registra únicamente: el <strong>tipo</strong> de dato detectado, el lugar de la aplicación donde ocurrió, la fecha, las cuentas involucradas y si se decidió enviarlo igual. Vita puede revisar esos registros para evaluar un posible incumplimiento y, en su caso, aplicar las medidas previstas en los Términos; <strong>ninguna medida se aplica en forma automática</strong>. Cuando revisa un caso, Vita puede conservar documentación vinculada —por ejemplo, capturas aportadas en un reporte—, con acceso restringido al equipo de Vita y registro de quién la consulta. Esa documentación no se comparte con otros Usuarios. Si un Profesional es suspendido o dado de baja, Vita informa a los Clientes que tenían un vínculo reciente con él que no se encuentra disponible, <strong>sin indicar el motivo</strong>.</p>
+<p>8.4. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.</p>
 <h2>9. Derechos del Titular de los Datos</h2>
 <p>Conforme a la Ley 25.326, el Usuario tiene derecho a <strong>acceder</strong> a sus datos, <strong>rectificarlos</strong>, <strong>actualizarlos</strong> y <strong>suprimirlos</strong>, así como a solicitar información sobre su tratamiento. Para ejercerlos, puede escribir a <a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a>. Vita responderá en los plazos legales.</p>
 <p>El ejercicio del derecho de acceso es <strong>gratuito</strong>, y puede ejercerse a intervalos no inferiores a seis meses, salvo que se acredite un interés legítimo, conforme al artículo 14 inciso 3 de la Ley 25.326.</p>
@@ -141,6 +164,8 @@
 <li><strong>Reseñas</strong>: se conservan de forma indefinida y <strong>anonimizadas</strong>, por integrar la reputación pública del Profesional evaluado. Suprimirlas permitiría que una baja de cuenta se use para eliminar una evaluación desfavorable.</li>
 <li><strong>Mensajes y salas de conversación</strong>: se conservan <strong>anonimizados</strong> mientras subsista la conversación, dado que pertenecen también al otro participante.</li>
 <li><strong>Datos técnicos y de uso</strong> (analítica): se conservan <strong>disociados de la identidad</strong> del Usuario.</li>
+<li><strong>Registros de detección de datos de contacto y de pago</strong> (ver 8.3): se conservan <strong>doce (12) meses</strong> desde que se generan y luego se suprimen.</li>
+<li><strong>Medidas aplicadas a un Profesional y su documentación</strong> (advertencias, suspensiones y bajas): se conservan mientras exista la cuenta del Profesional, para poder considerar la reiteración, y tras la baja quedan <strong>disociadas de su identidad</strong>, como el resto de su ficha.</li>
 </ul>
 <p>Al darse de baja, las Sesiones futuras ya agendadas se cancelan automáticamente y se reembolsan. La ficha de perfil no se elimina: queda <strong>vaciada de todo dato personal</strong> y muestra &quot;Usuario eliminado&quot; allí donde antes figuraba el Usuario, de modo que las reservas, reseñas y conversaciones de terceros no queden rotas. La cuenta de acceso se elimina y la dirección de correo queda liberada para un eventual registro futuro.</p>
 <p>Cumplidos los plazos indicados, los datos se suprimen o anonimizan de modo irreversible.</p>
@@ -148,9 +173,18 @@
 <p>La Plataforma está dirigida a personas mayores de 18 años. No recolectamos deliberadamente datos de menores. Si tomamos conocimiento de que se registró un menor, procederemos a dar de baja la cuenta y suprimir sus datos.</p>
 <h2>12. Notificaciones Push</h2>
 <p>Con el consentimiento del Usuario (otorgado a nivel del sistema operativo del dispositivo), Vita envía notificaciones relacionadas con el servicio. El Usuario puede desactivarlas desde la configuración de su dispositivo.</p>
-<h2>13. Cambios a esta Política</h2>
+<h2>13. Cookies y Tecnologías Similares</h2>
+<p>La <strong>aplicación móvil de Vita no utiliza cookies</strong>. Guarda en el propio dispositivo la información técnica necesaria para funcionar —la sesión iniciada y algunas preferencias de uso—, que no se comparte con terceros ni se utiliza con fines publicitarios.</p>
+<p>En las <strong>páginas web de Vita</strong> no se utilizan cookies publicitarias, de seguimiento ni de analítica. Las únicas tecnologías de almacenamiento que intervienen son:</p>
+<ul>
+<li>Una <strong>cookie técnica de Cloudflare</strong>, colocada por el sistema de protección contra la creación automatizada de cuentas descripto en §6. No se utiliza para seguir al Usuario entre sitios.</li>
+<li><strong>Almacenamiento local del navegador</strong>, para mantener la sesión iniciada mientras el Usuario utiliza la reserva o la sala de Sesión.</li>
+</ul>
+<p>Ambas son estrictamente necesarias para prestar el servicio que el Usuario solicita. Vita <strong>no utiliza cookies de terceros con fines publicitarios ni de perfilado</strong>, y por eso no muestra un panel de preferencias de cookies.</p>
+<p>El contenido embebido de terceros mencionado en §6 puede colocar sus propias cookies cuando el Usuario decide reproducirlo; en ese caso rigen las políticas de ese tercero.</p>
+<h2>14. Cambios a esta Política</h2>
 <p>Vita puede actualizar esta Política. Los cambios sustanciales se notificarán por medios razonables. La versión vigente estará siempre disponible en la Plataforma.</p>
-<h2>14. Contacto</h2>
+<h2>15. Contacto</h2>
 <p>Consultas o ejercicio de derechos: <a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a> — Andre Albisu Lambertini, De los Extremeños 5069, Córdoba, Provincia de Córdoba.</p>
 
 </main>

@@ -10,7 +10,7 @@ import { ViveColors } from '@/constants/theme';
 const CREAM       = 'rgba(242,236,223,0.95)';
 const CREAM_LIGHT = '#F3EEDF';
 const FOREST      = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const DOT_COLOR   = ViveColors.primary; // terracota — mismo punto para todas las notificaciones
 
 const AnimatedFeather = Animated.createAnimatedComponent(Feather);

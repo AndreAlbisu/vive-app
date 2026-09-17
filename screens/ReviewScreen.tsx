@@ -17,6 +17,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
+import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { useAuth } from '@/context/AuthContext';
 
 const GLASS = 'rgba(255,248,240,0.55)';
@@ -98,6 +99,15 @@ export default function ReviewScreen() {
       return;
     }
     if (!coachProfileId || !user || !bookingId) return;
+    // Una reseña es pública: se bloquea, igual que la presentación del coach. No
+    // es una conversación entre dos, es un cartel que ve todo el que busca.
+    if (comment.trim() && hasContactInfo(comment)) {
+      Alert.alert(
+        'Sacá los datos de contacto',
+        'La reseña es pública y no puede incluir teléfonos, redes, mails ni datos de pago.',
+      );
+      return;
+    }
 
     setSubmitting(true);
 

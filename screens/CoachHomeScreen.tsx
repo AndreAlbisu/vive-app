@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Image,
   Share,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,6 +18,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase, registrarEvento } from '@/lib/supabase';
+import { EMAIL_CONTACTO, escribirnos } from '@/lib/contacto';
 import { SITIO_WEB, linkCompartible, linkDelCoach, mensajeParaCompartir } from '@/lib/linkCoach';
 import { useAuth } from '@/context/AuthContext';
 import { personasQueSeCaen, haceCuanto, type PersonaEnRiesgo } from '@/lib/coachContinuity';
@@ -70,7 +72,7 @@ const MOSTRAR_ANIMO_AL_COACH = false;
 const CARD = '#F7F2E7';
 const CREAM_DEEP = '#EAE2D0';
 const FOREST = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const TERRA = '#C06B4A';
 const TERRA_SOFT = '#EAD3C6';
 const OK_BG = '#DCE5CB';
@@ -207,6 +209,35 @@ export default function CoachHomeScreen() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  // La sanción vigente, si la hay. Se consulta aparte y no con el resto: es una
+  // fila que el 100% de las veces no existe, y cuando existe manda sobre todo lo
+  // demás de esta pantalla. El RLS de `coach_sanctions` deja al coach leer las
+  // suyas — esa lectura ES la transparencia del sistema, no un extra.
+  const [sancion, setSancion] = useState<{ nivel: string; motivo: string; hasta: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!coachId) { setSancion(null); return; }
+    let vivo = true;
+    supabase
+      .from('coach_sanctions')
+      .select('nivel, motivo, hasta')
+      .eq('coach_id', coachId)
+      .is('revocada_at', null)
+      .neq('nivel', 'advertencia')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!vivo) return;
+        // 'infinity' (la baja) no es una fecha parseable, así que se chequea
+        // aparte: sin esto una baja se leería como vencida y no se mostraría.
+        const vigente = data?.hasta === 'infinity'
+          || (!!data?.hasta && new Date(data.hasta).getTime() > Date.now());
+        setSancion(vigente ? (data as any) : null);
+      });
+    return () => { vivo = false; };
+  }, [coachId]);
 
   const loadData = useCallback(async () => {
     if (!user || !coachId) { setLoading(false); return; }
@@ -723,6 +754,42 @@ export default function CoachHomeScreen() {
             </View>
           </View>
 
+          {/* La sanción, arriba de todo y antes que cualquier número.
+              Un coach suspendido viendo su semana en cero y su panel de
+              visibilidad hablándole de reseñas es la peor versión de esto: ve
+              las consecuencias y no la causa. El motivo va TAL CUAL lo escribió
+              el admin — es lo mismo que le llegó por notificación, acá para que
+              no dependa de haberla visto. */}
+          {sancion && (
+            <View style={s.sancionBox}>
+              <View style={s.sancionHead}>
+                <Feather name="alert-octagon" size={16} color="#9A3412" />
+                <Text style={s.sancionTitle}>
+                  {sancion.nivel === 'baja' ? 'Tu perfil dejó de estar publicado' : 'Tu cuenta está suspendida'}
+                </Text>
+              </View>
+              <Text style={s.sancionMotivo}>{sancion.motivo}</Text>
+              <Text style={s.sancionQue}>
+                No aparecés en la app y no podés recibir reservas nuevas. Las sesiones que ya
+                tenés agendadas siguen en pie y las atendés normalmente.
+                {sancion.nivel !== 'baja' && sancion.hasta && sancion.hasta !== 'infinity'
+                  ? ` Se levanta el ${new Date(sancion.hasta).toLocaleDateString('es-AR')}.`
+                  : ''}
+              </Text>
+              {/* El reclamo tiene que tener un destino. Antes decía "escribinos"
+                  sin decir a dónde. Si el teléfono no tiene mail configurado,
+                  se muestra la dirección para copiarla. */}
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={async () => {
+                  const ok = await escribirnos('Reclamo por la sanción de mi cuenta', `Mi nombre en Vita: ${coachName || ''}\n\n`);
+                  if (!ok) Alert.alert('Escribinos a', EMAIL_CONTACTO);
+                }}>
+                <Text style={[s.sancionQue, s.sancionLink]}>Si creés que es un error, escribinos a {EMAIL_CONTACTO}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Tu semana — se muestra SIEMPRE, también con los siete días en cero.
               📌 Decisión de Andre el 08/09/2026, en contra de la compuerta que
               se había puesto un rato antes ese mismo día. El argumento de la
@@ -1189,6 +1256,18 @@ export default function CoachHomeScreen() {
 const s = StyleSheet.create({
   safe: { flex: 1 },
   container: { paddingHorizontal: 20, paddingTop: 12 },
+
+  // La sanción. Es el único lugar de la app del coach con un rojo de alerta —
+  // el resto de la paleta es cálida a propósito, así que acá se nota sin gritar.
+  sancionBox: {
+    backgroundColor: 'rgba(154,52,18,0.07)', borderRadius: 16, padding: 14, marginBottom: 16,
+    borderWidth: 1, borderColor: 'rgba(154,52,18,0.22)', gap: 7,
+  },
+  sancionHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  sancionTitle: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#9A3412', flex: 1 },
+  sancionMotivo: { fontFamily: ViveFonts.medium, fontSize: 13, color: FOREST, lineHeight: 19 },
+  sancionQue: { fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(46,54,36,0.72)', lineHeight: 17 },
+  sancionLink: { color: '#9A3412', textDecorationLine: 'underline' },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },

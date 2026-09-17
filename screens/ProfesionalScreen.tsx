@@ -124,6 +124,8 @@ export default function ProfesionalScreen() {
     coachId?: string;
     profileId?: string;
     resourceId?: string;
+    /** La puerta por la que la persona llegó hasta acá, si llegó por una. */
+    tema?: string;
   }>();
   const profileId = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
   const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
@@ -419,7 +421,7 @@ export default function ProfesionalScreen() {
                     <MaterialCommunityIcons
                       name={c.kind === 'matricula' ? 'card-account-details-outline' : 'school-outline'}
                       size={18}
-                      color="#6B7A56"
+                      color="#566245"
                       style={{ marginTop: 1 }}
                     />
                     <View style={{ flex: 1 }}>
@@ -639,6 +641,7 @@ export default function ProfesionalScreen() {
                     specialty: prof.specialty,
                     ...(prof.priceFrom != null && { priceFrom: String(prof.priceFrom) }),
                     coachId: params.coachId ?? params.profileId ?? '',
+                    ...(params.tema && { tema: Array.isArray(params.tema) ? params.tema[0] : params.tema }),
                   },
                 });
               }}>
@@ -865,7 +868,7 @@ const s = StyleSheet.create({
   },
   credMeta: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#87835C', marginTop: 1 },
   credNumber: {
-    fontFamily: ViveFonts.medium, fontSize: 12.5, color: '#6B7A56', marginTop: 3,
+    fontFamily: ViveFonts.medium, fontSize: 12.5, color: '#566245', marginTop: 3,
   },
 
   // ── Recursos del coach ──────────────────────────────────────────────

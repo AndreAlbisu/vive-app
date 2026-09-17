@@ -198,6 +198,20 @@ moviendo lo íntimo de lugar.
    > lo ofrece (§8ter), entrada por entrada (§5), nunca "compartir mi diario"
    > (§10)— hay que decidir **si el diario suma sobre la nota o la nota alcanza**.
    > Es feature de Andre y toca la línea de privacidad → se decide entre los dos.
+   >
+   > **PENDIENTE — replanteo abierto por Andre (2026-09-14).** El paquete le parece
+   > poco útil: un check-in es cómo te sentías en UN momento (al abrir la app), no
+   > cómo fue el día. Medido ese día: **53 check-ins, 1 con nota** (3 personas,
+   > probablemente de prueba — no prueba uso real, pero muestra cómo sale el
+   > paquete: una lista de etiquetas). La nota se pide en el momento equivocado:
+   > al hacer el check-in nadie escribe contexto, y al armar el paquete ya no se
+   > acuerda. **Propuesta sin decidir**: invertir el origen del material — un
+   > "anotar para la sesión" siempre a mano, que junta lo que la persona quiere
+   > llevar EN EL MOMENTO en que pasa (ánimo opcional pegado a cada anotación); el
+   > paquete pasa a ser esas anotaciones. Respeta §3 y §8 ter (se escribe para
+   > compartir, no toca el diario). Si avanza: el ofrecimiento se gatilla por
+   > anotaciones y no por check-ins, y `mood_entries.nota` pierde sentido. Antes
+   > de código, bajar acá dónde vive el botón y qué pasa con lo ya mandado.
 
 ## 10. Lo que NO haría
 

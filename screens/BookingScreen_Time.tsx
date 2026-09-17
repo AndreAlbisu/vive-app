@@ -35,6 +35,7 @@ type Params = {
   priceFrom?: string;
   date?: string;
   coachId?: string;
+  tema?: string;
 };
 
 export default function BookingScreen_Time() {
@@ -131,6 +132,7 @@ export default function BookingScreen_Time() {
         ...(params.specialty && { specialty: params.specialty }),
         ...(params.priceFrom && { priceFrom: params.priceFrom }),
         ...(params.coachId && { coachId: params.coachId }),
+        ...(params.tema && { tema: params.tema }),
         date: dateStr,
         time: selectedTime,
       },
@@ -145,6 +147,8 @@ export default function BookingScreen_Time() {
             style={s.backBtn}
             onPress={() => router.back()}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Volver"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <MaterialIcons name="arrow-back-ios" size={18} color="#565E32" />
           </TouchableOpacity>

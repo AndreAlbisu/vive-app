@@ -18,6 +18,7 @@ import { File } from 'expo-file-system';
 import { ViveFonts, ViveColors } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { supabase, registrarEvento } from '@/lib/supabase';
+import { detectContactInfo, isContactLink } from '@/lib/contactInfoGuard';
 import { DOORS } from '@/constants/conexionesDoors';
 import { useAuth } from '@/context/AuthContext';
 import { AudioRecorderModal, type RecordedAsset } from '@/components/AudioRecorderModal';
@@ -126,10 +127,34 @@ export default function CoachRecursoNuevoScreen() {
       if (!isValidUrl(url)) return 'El link no es válido';
     }
     if (formato === 'lectura' && !bodyMd.trim()) return 'Escribí el contenido de la lectura';
+    // El link sí se bloquea: ahí no hay ambigüedad. Un podcast que en realidad
+    // lleva a un Instagram o a un linktree es un canal para sacar gente.
+    if (url.trim() && isContactLink(url)) return 'El link no puede llevar a redes sociales, WhatsApp ni a un linktree';
     return null;
   }
 
-  async function handleSubmit() {
+  // Título y descripción: avisa, no bloquea. Son los campos donde un dato de
+  // contacto funcionaría como publicidad, y el recurso además pasa por la
+  // revisión de VITA antes de publicarse (`status: 'pending'`), que es la que
+  // decide. El cuerpo de una lectura NO se revisa acá a propósito: es texto
+  // largo, cita cifras y fuentes, y ahí los falsos positivos serían constantes.
+  function handleSubmit() {
+    const err = validate();
+    if (err) { Alert.alert('Falta completar', err); return; }
+    const senal = detectContactInfo(`${titulo}\n${descripcion}`);
+    if (!senal) { void doSubmit(); return; }
+    registrarEvento('mensaje_contacto_detectado', { role: 'coach', canal: 'recurso', senal, coach_id: user?.id ?? null });
+    Alert.alert(
+      '¿Datos de contacto en el recurso?',
+      'El título o la descripción parecen incluir datos de contacto o de pago. Los recursos son públicos: si los tiene, no se van a publicar en la revisión.',
+      [
+        { text: 'Editar', style: 'cancel' },
+        { text: 'Enviar igual', onPress: () => { void doSubmit(); } },
+      ],
+    );
+  }
+
+  async function doSubmit() {
     const err = validate();
     if (err) { Alert.alert('Falta completar', err); return; }
 
@@ -421,7 +446,7 @@ export default function CoachRecursoNuevoScreen() {
 const GLASS = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 const FOREST = '#3A4F2A';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 
 const s = StyleSheet.create({
   safe: { flex: 1 },

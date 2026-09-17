@@ -21,7 +21,7 @@ export type VisibilityData = { self: VisibilitySelf; pool: CachedCoach[]; coachI
 export async function loadVisibilitySelf(userId: string): Promise<VisibilityData | null> {
   const { data: coachRow } = await supabase
     .from('coaches')
-    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, availability_status, video_url, instant_booking')
+    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, availability_status, video_url, instant_booking, suspendido_hasta')
     .eq('profile_id', userId)
     .maybeSingle();
 
@@ -35,7 +35,7 @@ export async function loadVisibilitySelf(userId: string): Promise<VisibilityData
       supabase.from('coach_topics').select('topic').eq('coach_id', coachId),
       supabase.from('reviews').select('rating').eq('reviewed_id', userId).eq('is_private', false),
       supabase.from('coach_trending_stats').select('recent_bookers').eq('coach_id', coachId).maybeSingle(),
-      supabase.from('coach_rebooking_stats').select('rebooking_rate, completadas_count').eq('coach_id', coachId).maybeSingle(),
+      supabase.from('coach_rebooking_stats').select('rebooking_rate, completadas_count, reembolsadas_count').eq('coach_id', coachId).maybeSingle(),
       supabase.from('coach_availability_status').select('status').eq('coach_id', coachId).maybeSingle(),
       loadCoaches(),
     ]);
@@ -60,11 +60,14 @@ export async function loadVisibilitySelf(userId: string): Promise<VisibilityData
     reviewCount,
     rebookingRate: (rebookRow?.rebooking_rate ?? null) as number | null,
     completadasCount: (rebookRow?.completadas_count ?? 0) as number,
+    // Solo para el texto del panel — ver `notaReembolsos` en coachVisibility.
+    reembolsadasCount: (rebookRow?.reembolsadas_count ?? 0) as number,
     recentBookers: (trendRows?.recent_bookers ?? 0) as number,
     availabilityStatus: (coachRow.availability_status ?? 'activo') as 'activo' | 'en_pausa',
     hasSlotThisWeek: availRows?.status === 'this_week',
     hasVideo: !!coachRow.video_url,
     instantBooking: !!coachRow.instant_booking,
+    suspendidoHasta: (coachRow.suspendido_hasta ?? null) as string | null,
   };
 
   return { self, pool: pool as CachedCoach[], coachId };

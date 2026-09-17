@@ -83,26 +83,31 @@
     border: 1px solid rgba(58,79,42,.28); margin-bottom: 10px;
   }
   .campo:focus { outline: 2px solid #C1694F; outline-offset: 1px; }
+  /* Los campos ya tenían foco; los botones de horario, los CTA y los enlaces
+     del pie no. focus-visible para no pintar el anillo al clickear con mouse. */
+  :focus-visible { outline: 3px solid #A25842; outline-offset: 2px; border-radius: 4px; }
   .codigo { letter-spacing: .35em; text-align: center; font-size: 1.25rem; }
   .legales { display: flex; gap: 9px; align-items: flex-start; font-size: .82rem; line-height: 1.45; margin-bottom: 14px; opacity: .85; }
   .legales input { margin-top: .2rem; flex-shrink: 0; }
-  .legales a { color: #C1694F; }
+  .legales a { color: #A25842; }   /* #C1694F daba 3.41:1 sobre el crema */
   .error { font-size: .85rem; color: #B3392E; margin: 0 0 10px; }
   .ok { font-size: .9rem; margin: 0; }
 
   .cta {
     display: block; width: 100%; padding: .85rem 1rem; border: 0; border-radius: 12px;
-    background: #C1694F; color: #FFF6EC; font-size: 1rem; font-weight: 700;
+    background: #A25842; color: #FFF6EC; font-size: 1rem; font-weight: 700;  /* sobre #C1694F el crema daba 3.64:1 */
     font-family: inherit; text-align: center; text-decoration: none; cursor: pointer;
   }
   .cta[disabled] { opacity: .5; cursor: default; }
-  .cta-nota { margin: 10px 0 0; font-size: .8rem; opacity: .6; text-align: center; }
+  .cta-nota { margin: 10px 0 0; font-size: .8rem; opacity: .85; text-align: center; }   /* .6 no llegaba a AA */
 
   .estado { padding: 48px 0; text-align: center; opacity: .7; }
   .estado h1 { font-size: 1.2rem; margin-bottom: .5rem; }
 
-  .pie { margin-top: 40px; font-size: .8rem; opacity: .55; text-align: center; }
-  .pie a { color: #C1694F; }
+  /* Mismo caso que en /reserva: opacity .55 multiplicada por una terracota
+     clara dejaba los enlaces legales del pie casi ilegibles. */
+  .pie { margin-top: 40px; font-size: .8rem; opacity: .85; text-align: center; }
+  .pie a { color: #A25842; }
 
   [hidden] { display: none !important; }
 
@@ -113,11 +118,17 @@
     .foto { background: rgba(228,224,210,.08); }
     .tema { background: rgba(228,224,210,.06); border-color: rgba(228,224,210,.16); }
     .precio { border-color: rgba(228,224,210,.18); }
+    .pie a, .legales a { color: #C5735A; }
+    :focus-visible { outline-color: #C5735A; }
   }
 </style>
 <!-- El token de Turnstile para el pedido de código. Ruta ABSOLUTA: esta
      página se sirve en /c/<slug>, y una relativa buscaría /c/captcha.js. -->
 <script src="/captcha.js"></script>
+<!-- La versión exacta de los T&C + Política que se está aceptando. La genera
+     `scripts/sync-legal.mjs` del contenido de los dos documentos, así que no
+     se puede desincronizar con lo que la persona lee en /legal/terminos. -->
+<script src="/legal-version.js"></script>
 </head>
 <body>
 
@@ -189,6 +200,15 @@
           <input type="checkbox" id="acepto">
           <span>Acepto los <a href="/legal/terminos" target="_blank" rel="noopener">Términos</a> y la
           <a href="/legal/privacidad" target="_blank" rel="noopener">Política de privacidad</a>.</span>
+        </label>
+        <!-- Mayoría de edad — tilde propio, no fundido con el de arriba, igual que
+             en el registro de la app (`RegisterScreen`). T&C §3.1 dice que el
+             Usuario "declara" tener 18 o más, y esta página crea una cuenta: sin
+             esto la cláusula afirmaba una declaración que acá nunca existía. Es la
+             única puerta de entrada que no la pedía. Queda en `age_confirmed`. -->
+        <label class="legales">
+          <input type="checkbox" id="mayor">
+          <span>Declaro que tengo 18 años o más.</span>
         </label>
         <p class="error" id="errorMail" hidden></p>
         <button class="cta" id="btnCodigo">Enviarme el código</button>
@@ -495,6 +515,11 @@ async function pedirCodigo() {
   if (!$('acepto').checked) {
     return mostrarError('errorMail', 'Para seguir tenés que aceptar los Términos y la Política de privacidad.');
   }
+  // Mensaje propio y no uno que junte las dos: si el error no dice cuál de los
+  // dos tildes falta, la persona vuelve a mirar el que ya marcó.
+  if (!$('mayor').checked) {
+    return mostrarError('errorMail', 'Para seguir tenés que declarar que tenés 18 años o más.');
+  }
 
   $('btnCodigo').disabled = true;
   $('btnCodigo').textContent = 'Enviando…';
@@ -569,6 +594,7 @@ async function confirmarCodigo() {
     guardarSesion(sesion);
     await marcarMailVerificado(cuerpo.access_token);
     await guardarNombre(cuerpo?.user?.id);
+    await guardarConsentimiento(cuerpo?.user?.id);
     ocultar('pasoCodigo');
     $('identificado').textContent = `Listo, ${mail}.`;
     mostrar('identificado');
@@ -622,6 +648,68 @@ async function guardarNombre(userId) {
     });
   } catch (e) {
     console.error('[nombre] no se pudo guardar:', e);
+  }
+}
+
+/**
+ * Deja la constancia de los dos tildes: Términos + Política, y mayoría de edad.
+ *
+ * 🔴 Hasta hoy esta página MOSTRABA el tilde de Términos y no guardaba nada, y
+ * ni siquiera preguntaba la edad — o sea que la cuenta nacida del checkout era
+ * la única sin ninguna de las dos constancias, que es justo lo que las columnas
+ * existen para probar (T&C §3.1 y §20). Es la misma escritura que hace la app en
+ * `AuthContext.markAccepted`, con el mismo criterio.
+ *
+ * ⚠️ IDEMPOTENTE, y por el mismo motivo que en la app: quien ya tiene cuenta y
+ * entra por el link del coach ya aceptó alguna vez. Sin el chequeo previo se le
+ * pisaría `accepted_terms_at` con la fecha de hoy y `accepted_terms_version` con
+ * la vigente, y se perdería cuándo aceptó de verdad y qué texto leyó. Nunca
+ * escribe `false`: no existe "desdeclarar".
+ *
+ * ⚠️ Best-effort, igual que `guardarNombre`: si falla, la reserva sigue. Una
+ * constancia que no se guardó es un problema; una reserva perdida por eso es
+ * peor, y la persona vuelve a declarar lo mismo la próxima vez que entre.
+ */
+async function guardarConsentimiento(userId) {
+  if (!userId) return;
+  const acepto = $('acepto').checked;
+  const mayor = $('mayor').checked;
+  if (!acepto && !mayor) return;
+
+  const headers = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${sesion.access_token}`,
+    'Content-Type': 'application/json',
+  };
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=accepted_terms,age_confirmed`,
+      { headers }
+    );
+    // Ante la duda no se escribe: pisar una aceptación buena es peor que no
+    // registrar esta.
+    if (!r.ok) return console.warn('[consentimiento] no se pudo leer el estado previo:', r.status);
+    const actual = (await r.json())[0] ?? {};
+
+    const campos = {};
+    if (acepto && !actual.accepted_terms) {
+      campos.accepted_terms = true;
+      campos.accepted_terms_at = new Date().toISOString();
+      // 📌 Si `legal-version.js` no cargó, se guarda la aceptación igual y sin
+      // versión: media constancia es más que ninguna, y el warning deja rastro.
+      if (window.LEGAL_VERSION) campos.accepted_terms_version = window.LEGAL_VERSION;
+      else console.warn('[consentimiento] sin LEGAL_VERSION: se guarda la aceptación sin versión');
+    }
+    if (mayor && !actual.age_confirmed) campos.age_confirmed = true;
+    if (Object.keys(campos).length === 0) return;   // ya estaba todo declarado
+
+    await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+      method: 'PATCH',
+      headers: { ...headers, Prefer: 'return=minimal' },
+      body: JSON.stringify(campos),
+    });
+  } catch (e) {
+    console.error('[consentimiento] no se pudo guardar:', e);
   }
 }
 

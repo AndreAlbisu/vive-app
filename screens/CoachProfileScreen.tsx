@@ -348,7 +348,7 @@ export default function CoachProfileScreen() {
     if (trimmed && hasContactInfo(trimmed)) {
       Alert.alert(
         'Sacá los datos de contacto',
-        'Para tu seguridad y la de los usuarios, la presentación no puede incluir teléfono, redes, mail, links ni datos para pagar por fuera. Mantené la conversación y las reservas dentro de VIVE.',
+        'Para tu seguridad y la de los usuarios, la presentación no puede incluir teléfono, redes, mail, links ni datos para pagar por fuera. Mantené la conversación y las reservas dentro de Vita.',
       );
       return;
     }
@@ -1421,7 +1421,7 @@ const s = StyleSheet.create({
     marginTop: 10, backgroundColor: '#3F512F', borderRadius: 12, paddingVertical: 12,
   },
   linkBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#F3EEDF' },
-  linkNota: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: '#6B7A56' },
+  linkNota: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: '#566245' },
   linkBeneficio: { marginTop: 10 },
 
   // Encabezado de GRUPO — un nivel por encima de `sectionTitle`. Existe porque

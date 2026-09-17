@@ -28,6 +28,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import CaptchaHost from '@/components/CaptchaHost';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { VersionGate } from '@/components/VersionGate';
 import { pasoDelAlta, type PasoAlta } from '@/lib/altaCoach';
 import { registerForPushNotifications } from '@/lib/notifications';
 import { reconcileResourceReminders } from '@/lib/resourceReminders';
@@ -324,6 +325,9 @@ export default function RootLayout() {
             Turnstile decida desafiar. */}
         <CaptchaHost />
         <StatusBar style="auto" />
+        {/* Último, para quedar por encima de todo el Stack. Afuera de nada que
+            dependa de la sesión: tiene que poder tapar también el login. */}
+        <VersionGate />
       </ThemeProvider>
     </AuthProvider>
     </GestureHandlerRootView>

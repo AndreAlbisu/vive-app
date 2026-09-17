@@ -315,6 +315,62 @@ Preguntas:
       de la app a su profesional? Nuestra lectura es que ahí es un mensaje como
       cualquier otro y no una cesión.
 
+**A.12 — La detección de datos de contacto y las sanciones (T&C §10.3 y Política).**
+🔴 *Se sumó el 17/09/2026. Va en A porque **la §10.3 hoy dice algo falso**.*
+
+La §10.3 dice que las advertencias automáticas *"no implican bloqueo ni monitoreo
+del contenido de las conversaciones más allá de lo descripto en la Política de
+Privacidad"*. Desde el 16/09 las dos mitades dejaron de ser ciertas: la app **sí
+bloquea** en algunos casos, y **la Política no describe nada** de esto. Además,
+lo que antes era solo una advertencia hoy alimenta un sistema de sanciones.
+
+Cómo funciona hoy, verificado contra el código:
+
+- **Dónde se analiza:** en el teléfono de quien escribe, antes de enviar. **El
+  texto no viaja a Vita para este análisis.**
+- **Qué se busca:** teléfonos, mails, redes sociales, links, datos de pago (CBU,
+  alias, links de cobro) y frases como "lo hacemos por fuera de la app".
+- **Qué pasa en textos privados** (mensajes, notas y comentarios a otra persona):
+  una advertencia que deja enviar igual. **Una excepción:** si el que escribe es
+  el Profesional y lo que manda son datos para cobrar, no se envía. Vita cobra y
+  Vita le paga, así que no tiene motivo legítimo para mandarlos.
+- **Qué pasa en textos públicos** (presentación del Profesional, reseñas,
+  recursos): no se pueden publicar.
+- **Qué registra Vita:** solo el **tipo** de dato (por ejemplo "teléfono"), en qué
+  lugar de la app, la fecha, las cuentas involucradas y si se envió igual.
+  **Nunca el texto.**
+- **Para qué:** el equipo ve esos avisos agrupados por Profesional, junto con si
+  cada cliente siguió reservando. Si decide actuar, aplica una advertencia, una
+  suspensión o una baja. **Ninguna medida es automática.**
+- **Al Profesional sancionado:** se le notifica el motivo y tiene una casilla para
+  reclamar. **No se le muestra la evidencia** (capturas, notas), porque casi
+  siempre sale de lo que contó el cliente, y mostrarla expondría a quien denunció.
+  Quién abre cada evidencia queda registrado.
+- **A los clientes de un Profesional suspendido o dado de baja:** se les avisa que
+  no está tomando reservas y que sus sesiones ya agendadas siguen en pie, **sin
+  mencionar la sanción**. Cuando vuelve, se les avisa que volvió.
+
+Preguntas:
+
+- [ ] ¿Esto entra en la finalidad (f) de la Política (*"moderar la plataforma (…)
+      y prevenir usos indebidos"*), o necesita una finalidad propia?
+- [ ] 🔴 La **§8.2** promete *"no utilizar el contenido de las conversaciones con
+      fines comerciales"*, y la cláusula que esto protege es la de comisiones.
+      Nuestra lectura: como el análisis corre en el teléfono y Vita solo recibe el
+      tipo de dato, **no es usar el contenido**. ¿Se sostiene, o hay que tocar la
+      §8.2?
+- [ ] 🔴 **No mostrarle la evidencia al sancionado frente al derecho de acceso**
+      (Ley 25.326, art. 14). La evidencia son datos sobre el Profesional. ¿Puede
+      exigir verla? Si puede, ¿cómo se protege al cliente que denunció?
+- [ ] ¿Hace falta darle al Profesional un **descargo previo** antes de suspenderlo,
+      o alcanza con poder pedir la revisión después?
+- [ ] ¿Avisarle a los clientes que el Profesional "no está disponible", sin decir
+      por qué, tiene algún riesgo para Vita?
+- [ ] **Los plazos de conservación que puse en Política §10**: los registros de
+      detección, 12 meses (hay un borrado automático diario que lo cumple); las
+      medidas y su documentación, mientras exista la cuenta del Profesional y
+      después disociadas. ¿Son razonables?
+
 ### B. No bloquean, pero quiero tu lectura
 
 **B.1 — Limitación de responsabilidad e indemnidad (T&C §18–19).**
@@ -467,7 +523,7 @@ Para que no gastes tiempo ahí:
 
 ## 4. Qué necesito de vuelta
 
-1. Los **cinco puntos de A** resueltos, con la redacción que corresponda.
+1. Los **puntos de A** resueltos, con la redacción que corresponda.
 2. Tu lectura de **B**.
 3. La respuesta de **C** si esa sección quedó en el envío.
 4. Cualquier cosa que veas mal y que yo no haya preguntado. Es lo que más me

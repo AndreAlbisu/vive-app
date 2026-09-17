@@ -29,7 +29,7 @@ import { MAX_LARGO_MENSAJE } from '@/constants/chat';
 import { confirmBooking } from '@/lib/coachBookingActions';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { supabase, registrarEvento } from '@/lib/supabase';
-import { hasContactInfo } from '@/lib/contactInfoGuard';
+import { detectContactInfo, detectContactInfoAcross, hasDatosDeCobro } from '@/lib/contactInfoGuard';
 import { useAuth } from '@/context/AuthContext';
 import ReportSheet from '@/components/ReportSheet';
 import UserActionsSheet from '@/components/UserActionsSheet';
@@ -542,9 +542,81 @@ export default function SalaScreen() {
       asCoach: !recipientIsCoach,
     });
     setNotes(rows);
-  }, [user, recipientId, recipientIsCoach]);
+    // `refreshKey` (no se usa adentro): recargar al volver a la pantalla, igual
+    // que los mensajes. Sin él las notas quedaban como estaban al montar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, recipientId, recipientIsCoach, refreshKey]);
 
   useEffect(() => { void fetchNotes(); }, [fetchNotes]);
+
+  // 🔴 LAS NOTAS NO SE COMPORTABAN COMO UN MENSAJE, y en dos lugares distintos.
+  //
+  // Uno: la suscripción de tiempo real de más arriba escucha SOLO `messages`, así
+  // que una nota compartida mientras el chat está abierto no aparecía.
+  // Dos: al volver a la pantalla, `refreshKey` recarga los mensajes pero
+  // `fetchNotes` no dependía de él — o sea que las notas se traían una sola vez,
+  // al montar, y quedaban congeladas hasta salir de la Sala del todo. El único
+  // que veía la suya al instante era el coach que la escribía, por `onSaved`.
+  //
+  // Canal aparte y no un `.on()` más en el de mensajes: aquel depende de
+  // `salaId`, este del PAR (usuario, coach) —`session_notes` no conoce la sala—,
+  // y mezclarlos obligaría a resuscribir el chat entero cada vez que resuelve el
+  // destinatario. El sufijo random del topic es por lo mismo que allá.
+  //
+  // ⚠️ Necesita `session_notes` publicada en `supabase_realtime`:
+  // `scripts/publicar-notas-en-realtime.sql`. Sin eso esto escucha un silencio,
+  // exactamente como pasó el 28/08 con las otras cuatro tablas.
+  useEffect(() => {
+    if (!user || !recipientId) return;
+
+    // El filtro del servidor solo puede mirar UNA columna; la otra punta del par
+    // se chequea acá abajo. El RLS ya garantiza que al cliente solo le lleguen
+    // las compartidas: la policy del usuario es `user_id = auth.uid() AND shared`.
+    const soyCliente = recipientIsCoach;
+    const filtro = soyCliente ? `user_id=eq.${user.id}` : `coach_id=eq.${user.id}`;
+
+    const canal = supabase
+      .channel(`notas:${user.id}-${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'session_notes', filter: filtro },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as Record<string, unknown> | null;
+          if (!row?.id) return;
+          if ((soyCliente ? row.coach_id : row.user_id) !== recipientId) return;
+
+          const id = row.id as string;
+
+          // Se escucha '*' y no solo INSERT porque la nota es editable: la tabla
+          // tiene `unique (booking_id, shared)` y el sheet hace upsert, así que
+          // corregir una nota ya compartida llega como UPDATE.
+          const desapareció = payload.eventType === 'DELETE'
+            || (soyCliente && row.shared === false);   // el coach dejó de compartirla
+          if (desapareció) {
+            setNotes(prev => prev.filter(n => n.id !== id));
+            return;
+          }
+
+          const nota: SessionNote = {
+            id,
+            bookingId: row.booking_id as string,
+            content:   row.content as string,
+            shared:    row.shared as boolean,
+            createdAt: row.created_at as string,
+          };
+          setNotes(prev => {
+            const i = prev.findIndex(n => n.id === id);
+            if (i === -1) return [...prev, nota];
+            const copia = [...prev];
+            copia[i] = nota;
+            return copia;
+          });
+        },
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(canal); };
+  }, [user, recipientId, recipientIsCoach]);
 
   // Mensajes y notas viven en tablas distintas y se muestran en un solo hilo.
   const timeline = useMemo<TimelineItem[]>(() => {
@@ -771,7 +843,37 @@ export default function SalaScreen() {
     setRecoSheetOpen(true);
   }
 
-  async function sendRecommendation() {
+  // La nota de una recomendación es texto del coach que le llega a la persona:
+  // mismo aviso que el chat (avisa, no bloquea). Envuelve al envío real.
+  function sendRecommendation() {
+    if (!selectedReco || !salaId || !user || !coachInternalId || !recipientId) return;
+    if (recoNote.trim() && hasDatosDeCobro(recoNote)) {
+      registrarEvento('mensaje_contacto_detectado', {
+        role: 'coach', canal: 'nota_recomendacion', senal: 'datos_de_cobro', bloqueado: true,
+        sala_id: salaId, coach_id: user.id, user_id: recipientId,
+      });
+      Alert.alert('No se pueden mandar datos para cobrar', 'Los pagos van siempre por Vita: así la persona tiene reembolso y garantía, y vos cobrás sin tener que perseguir a nadie. Sacá el CBU, el alias o el link de pago y volvé a enviar.');
+      return;
+    }
+    const senal = recoNote.trim() ? detectContactInfo(recoNote) : null;
+    if (!senal) { void doSendRecommendation(); return; }
+
+    const par = { role: 'coach', canal: 'nota_recomendacion', senal, sala_id: salaId, coach_id: user.id, user_id: recipientId };
+    Alert.alert(
+      '¿Compartir datos de contacto?',
+      'La nota parece incluir datos de contacto o de pago. Mantené la conversación y los pagos dentro de Vita.',
+      [
+        { text: 'Editar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: false }) },
+        {
+          text: 'Enviar igual',
+          style: 'destructive',
+          onPress: () => { registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: true }); void doSendRecommendation(); },
+        },
+      ],
+    );
+  }
+
+  async function doSendRecommendation() {
     if (!selectedReco || !salaId || !user || !coachInternalId || !recipientId) return;
     setSendingReco(true);
     try {
@@ -849,7 +951,30 @@ export default function SalaScreen() {
     // advertir antes de enviar (no se bloquea duro: en una charla hay más falsos
     // positivos que en la bio, y a veces es legítimo). Se registra el evento con el
     // desenlace para medir cuánto pasa y si la advertencia disuade.
-    if (hasContactInfo(text)) {
+    // 🔴 Datos para cobrar mandados por el PROFESIONAL: se bloquea, sin "enviar
+    // igual". Es la única excepción a no bloquear texto privado — ver
+    // `hasDatosDeCobro`. Va antes del aviso común para que no se ofrezca la
+    // opción de mandarlo igual.
+    if (isCurrentUserCoach && hasDatosDeCobro(text)) {
+      registrarEvento('mensaje_contacto_detectado', {
+        role: 'coach', canal: 'chat', senal: 'datos_de_cobro', bloqueado: true,
+        sala_id: salaId ?? null, coach_id: user?.id ?? null, user_id: recipientId,
+      });
+      Alert.alert('No se pueden mandar datos para cobrar', 'Los pagos van siempre por Vita: así la persona tiene reembolso y garantía, y vos cobrás sin tener que perseguir a nadie. Sacá el CBU, el alias o el link de pago y volvé a enviar.');
+      return;
+    }
+
+    // El mensaje anterior PROPIO, si fue hace poco: es lo que permite ver un
+    // teléfono partido en dos mensajes ("11 5555" y después "4444"). Cinco
+    // minutos alcanzan para eso y no juntan números de charlas distintas.
+    const anteriorPropio = [...messages].reverse().find(m =>
+      m.sender === 'user' && (m.sender_type === 'user' || m.sender_type === 'coach'));
+    const anteriorTexto = anteriorPropio && Date.now() - new Date(anteriorPropio.createdAt).getTime() < 5 * 60_000
+      ? decryptMessage(anteriorPropio.text)
+      : null;
+    const senal = detectContactInfoAcross(anteriorTexto, text);
+
+    if (senal) {
       const role = isCurrentUserCoach ? 'coach' : 'user';
       // 🔴 El PAR, no solo el rol (12/09/2026). Hasta hoy el evento guardaba
       // `role` y `sent_anyway` y nada más, así que se podía saber CUÁNTAS veces
@@ -861,15 +986,22 @@ export default function SalaScreen() {
       // ⚠️ Van los ids del PAR y del chat, no el texto del mensaje: alcanza para
       // cruzar con las reservas y no mete contenido de una conversación privada
       // en una tabla de métricas.
+      //
+      // 📌 `senal` es el TIPO de lo que se encontró (teléfono, red social, pago
+      // por fuera…), nunca el texto. Sirve para ver qué se escapa y qué avisos
+      // molestan sin guardar la conversación. `canal` distingue el chat de los
+      // otros lugares que avisan con el mismo evento (notas, recomendaciones).
       const par = {
         role,
+        canal: 'chat',
+        senal,
         sala_id: salaId ?? null,
         coach_id: isCurrentUserCoach ? user?.id ?? null : recipientId,
         user_id:  isCurrentUserCoach ? recipientId : user?.id ?? null,
       };
       Alert.alert(
         '¿Compartir datos de contacto?',
-        'Por tu seguridad, mantené la conversación y los pagos dentro de VIVE. Si arreglás por fuera, perdés las protecciones de la app.',
+        'Por tu seguridad, mantené la conversación y los pagos dentro de Vita. Si arreglás por fuera, perdés las protecciones de la app.',
         [
           { text: 'Cancelar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: false }) },
           {
@@ -958,7 +1090,12 @@ export default function SalaScreen() {
           },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Volver">
           <MaterialCommunityIcons name="arrow-left" size={22} color="#565E32" />
         </TouchableOpacity>
 
@@ -1017,6 +1154,8 @@ export default function SalaScreen() {
           style={styles.menuBtn}
           onPress={() => setActionsOpen(true)}
           disabled={!recipientId}
+          accessibilityRole="button"
+          accessibilityLabel="Más opciones de la conversación"
           hitSlop={8}>
           <MaterialCommunityIcons name="dots-vertical" size={22} color="#565E32" />
         </TouchableOpacity>
@@ -1434,6 +1573,8 @@ export default function SalaScreen() {
                   style={styles.recoBtn}
                   onPress={openRecoSheet}
                   activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel="Recomendar un recurso"
                   hitSlop={8}>
                   <MaterialCommunityIcons name="plus" size={20} color="#87835C" />
                 </TouchableOpacity>
@@ -1454,6 +1595,9 @@ export default function SalaScreen() {
                 onPress={sendMessage}
                 disabled={!canSend}
                 activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel="Enviar mensaje"
+                accessibilityState={{ disabled: !canSend }}
               >
                 <MaterialCommunityIcons name="send" size={19} color="#565E32" style={{ marginLeft: 2 }} />
               </TouchableOpacity>
@@ -1984,7 +2128,7 @@ const styles = StyleSheet.create({
   recoCardNote: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,
-    color: '#6B7A56',
+    color: '#566245',
     lineHeight: 17,
     fontStyle: 'italic',
   },

@@ -26,7 +26,7 @@ import { VitaHeader } from '@/components/ui/VitaHeader';
 import { ProgressToggle } from '@/components/ui/ProgressToggle';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
-import { TOOLS, TOOL_MAP, PASTEL_SALVIA, PASTEL_DURAZNO, PASTEL_AZUL } from '@/constants/tools';
+import { VISIBLE_TOOLS, TOOL_MAP, PASTEL_SALVIA, PASTEL_DURAZNO, PASTEL_AZUL } from '@/constants/tools';
 import { loadHabits, addHabit, removeHabit } from '@/lib/habits';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ function initials(name: string): string {
 
 const CARD_MX = 18;
 const FOREST = '#3F512F';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 
@@ -241,7 +241,14 @@ export default function ProgresoScreen() {
     await removeHabit(user.id, toolId);
   }
 
-  const availableTools = TOOLS.filter(t => !habits.includes(t.id));
+  // 🔴 VISIBLE_TOOLS, no TOOLS: el picker OFRECE herramientas, así que solo puede
+  // ofrecer las que el usuario puede usar. Con TOOLS crudo ofrecía las 10 —
+  // incluidas las 6 retiradas de la grilla— y el hábito resultante disparaba un
+  // push diario hacia una pantalla que ya no se sostiene. La lista de hábitos ya
+  // elegidos de más abajo sigue resolviendo contra TOOL_MAP completo a propósito:
+  // un hábito viejo hacia una retirada tiene que seguir renderizando con su
+  // nombre, no desaparecer sin explicación.
+  const availableTools = VISIBLE_TOOLS.filter(t => !habits.includes(t.id));
 
   // Historial de sesiones — mismos datos que antes, solo el detalle (nombre/
   // especialidad de coach) para el timeline; el conteo vive en useProgressStats.

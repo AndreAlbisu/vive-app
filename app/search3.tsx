@@ -31,7 +31,7 @@ import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 
 // ─── Paleta local (consistente con Recursos / Explorar) ──────────────────────
 const FOREST      = '#3A4F2A';
-const FOREST_SOFT = '#6B7A56';
+const FOREST_SOFT = '#566245';
 const GLASS_BG    = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 
@@ -208,6 +208,9 @@ export default function SearchScreen3() {
       // esto, con el caché frío esta consulta de respaldo volvía a mostrar
       // coaches sin ningún riel de cobro configurado.
       .or('mp_connected.eq.true,accepts_paypal.eq.true,accepts_usdt.eq.true')
+      // Mismo filtro que `coachesCache.ts`: un coach suspendido no aparece. Va
+      // acá también porque esta consulta es el respaldo con el caché frío.
+      .or(`suspendido_hasta.is.null,suspendido_hasta.lt.${new Date().toISOString()}`)
       .limit(50)
       .then(({ data, error }) => {
         if (cancelled) return;
@@ -426,6 +429,12 @@ export default function SearchScreen3() {
                   name: p.name,
                   specialty: p.specialty,
                   priceFrom: String(p.priceFrom),
+                  // Solo cuando se entró POR una puerta (`label` viene de
+                  // Conexiones). Quien llegó por el buscador libre o tocando
+                  // filtros no declaró un tema, y acá inventarlo sería peor que
+                  // no tenerlo: lo lee un profesional como si la persona lo
+                  // hubiera dicho.
+                  ...(label && { tema: Array.isArray(label) ? label[0] : label }),
                 },
               })}>
               {/* Foto */}
