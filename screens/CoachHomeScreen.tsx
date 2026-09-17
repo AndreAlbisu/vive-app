@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Image,
   Share,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,6 +18,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase, registrarEvento } from '@/lib/supabase';
+import { EMAIL_CONTACTO, escribirnos } from '@/lib/contacto';
 import { SITIO_WEB, linkCompartible, linkDelCoach, mensajeParaCompartir } from '@/lib/linkCoach';
 import { useAuth } from '@/context/AuthContext';
 import { personasQueSeCaen, haceCuanto, type PersonaEnRiesgo } from '@/lib/coachContinuity';
@@ -774,7 +776,17 @@ export default function CoachHomeScreen() {
                   ? ` Se levanta el ${new Date(sancion.hasta).toLocaleDateString('es-AR')}.`
                   : ''}
               </Text>
-              <Text style={s.sancionQue}>Si creés que es un error, escribinos.</Text>
+              {/* El reclamo tiene que tener un destino. Antes decía "escribinos"
+                  sin decir a dónde. Si el teléfono no tiene mail configurado,
+                  se muestra la dirección para copiarla. */}
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={async () => {
+                  const ok = await escribirnos('Reclamo por la sanción de mi cuenta', `Mi nombre en Vita: ${coachName || ''}\n\n`);
+                  if (!ok) Alert.alert('Escribinos a', EMAIL_CONTACTO);
+                }}>
+                <Text style={[s.sancionQue, s.sancionLink]}>Si creés que es un error, escribinos a {EMAIL_CONTACTO}</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -1255,6 +1267,7 @@ const s = StyleSheet.create({
   sancionTitle: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#9A3412', flex: 1 },
   sancionMotivo: { fontFamily: ViveFonts.medium, fontSize: 13, color: FOREST, lineHeight: 19 },
   sancionQue: { fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(46,54,36,0.72)', lineHeight: 17 },
+  sancionLink: { color: '#9A3412', textDecorationLine: 'underline' },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },

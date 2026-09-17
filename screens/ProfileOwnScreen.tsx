@@ -391,7 +391,7 @@ export default function ProfileOwnScreen() {
                 <Text style={styles.preferenceTitle}>Guardar cómo venís</Text>
                 <Text style={styles.preferenceDesc}>
                   {consent.puede
-                    ? 'Tu ánimo, tu diario y qué recursos usás. Si lo apagás dejamos de registrarlo; para borrar lo que ya está, escribinos.'
+                    ? 'Tu ánimo, tu diario y qué recursos usás. Si lo apagás dejamos de registrarlo; para borrar lo que ya está, escribinos a vitaappar@gmail.com.'
                     : 'Está apagado. Sin esto no podemos guardar tu check-in de ánimo ni tu diario.'}
                 </Text>
               </View>

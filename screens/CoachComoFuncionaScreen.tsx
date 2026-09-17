@@ -166,7 +166,7 @@ export default function CoachComoFuncionaScreen() {
           ))}
 
           <Text style={s.pie}>
-            Si algo de esto no coincide con lo que ves en la app, escribinos: el error es
+            Si algo de esto no coincide con lo que ves en la app, escribinos a vitaappar@gmail.com: el error es
             nuestro y queremos saberlo.
           </Text>
 

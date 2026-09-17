@@ -85,6 +85,11 @@ async function audit(
  *
  *  Es best-effort a propósito: que falle el aviso no puede desarmar una
  *  aprobación ya escrita. Queda en el log. */
+// La casilla para reclamos. Misma que `lib/contacto.ts` y que los Términos: si
+// cambia, cambian las tres juntas. La notificación de una sanción ofrece
+// reclamar, y hasta el 17/09/2026 decía "escribinos" sin decir a dónde.
+const EMAIL_CONTACTO = 'vitaappar@gmail.com'
+
 // Los tipos de archivo que acepta la evidencia de una sanción, y la extensión
 // con la que se guardan. Tiene que coincidir con `allowed_mime_types` del bucket
 // `sanction-evidence`: si acá se acepta algo que el bucket no, la subida firmada
@@ -388,7 +393,7 @@ serve(async (req) => {
         coachRow.profile_id,
         'sancion_aplicada',
         nivel === 'advertencia' ? 'Una advertencia sobre tu cuenta' : 'Tu cuenta quedó suspendida',
-        `${motivo} ${queImplica} Si creés que es un error, escribinos.`,
+        `${motivo} ${queImplica} Si creés que es un error, escribinos a ${EMAIL_CONTACTO}.`,
       )
 
       // ── La gente que lo tenía ──────────────────────────────────────────────

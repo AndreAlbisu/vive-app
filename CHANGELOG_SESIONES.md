@@ -4,6 +4,21 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 249 · "escribinos", ¿a dónde? — y la §10.3 que dejó de ser cierta)
+
+**Tocado:** `lib/contacto.ts` (nuevo), `screens/CoachHomeScreen.tsx`, `lib/coachVisibility.ts`, `screens/ProfileOwnScreen.tsx`, `screens/CoachComoFuncionaScreen.tsx`, `supabase/functions/admin-actions/index.ts`, `docs/paquete-abogado.md`.
+
+**Resumen:**
+- **Se revisó qué le faltaba al sistema anti-fuga y salieron tres cosas.** Andre descartó la primera (sumar "me pidió pagar por fuera" a los motivos de reporte: *"no sé si alguien la usaría"*) y aprobó las otras dos.
+- 🔴 **La app decía "escribinos" sin decir a dónde, en cuatro lugares.** Ninguna pantalla tenía una dirección de contacto. El caso grave era el del coach sancionado: la notificación le ofrecía reclamar y no había canal. Ahora dice `vitaappar@gmail.com` (la misma casilla de los Términos y la Política) en la notificación, en el panel de visibilidad, y en el recuadro del Inicio como botón que abre el mail con el asunto puesto. Se corrigieron también los otros dos "escribinos" sin destino, que no eran de las sanciones: uno era **el pedido de borrar datos del perfil**, un derecho de la Ley 25.326 que se quedaba sin canal dentro de la app. La casilla vive en `lib/contacto.ts` para que un cambio de dirección no deje lugares desparejos. `admin-actions` v34.
+- 🔴 **La §10.3 de los Términos dice algo que ya no es cierto.** Dice que las advertencias *"no implican bloqueo ni monitoreo (…) más allá de lo descripto en la Política"*: desde el 16/09 la app sí bloquea (datos de cobro del coach; teléfonos en bio y reseñas) y la Política no describe nada. Se sumó **A.12** al paquete del abogado, con la descripción verificada de cómo funciona hoy, el texto propuesto (nueva 10.3, nueva 10.4, sección nueva en la Política) y cinco preguntas. Las dos más filosas: si detectar para proteger la comisión choca con la promesa de la §8.2 de no usar las conversaciones con fines comerciales, y si **no mostrarle la evidencia al sancionado** resiste el derecho de acceso (art. 14).
+- Los textos legales vigentes **no se tocaron**: la redacción es del abogado.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Llevarle A.12 al abogado junto con el resto de A.** Hasta que vuelva, la §10.3 en borrador contradice lo que hace la app.
+- Si se crea una casilla en `vitaapp.com.ar`, cambiarla en los tres lugares a la vez: `lib/contacto.ts`, `EMAIL_CONTACTO` en `admin-actions` y `constants/legal.ts`.
+
+---
 ## 2026-09-17 — Andre (sesión 248 · avisar cuando el profesional vuelve)
 
 **Tocado:** `scripts/add-sanction-return-notices.sql` (nuevo), `supabase/functions/sanction-returns/index.ts` (nueva), `supabase/functions/admin-actions/index.ts`, `screens/UserNotificationsScreen.tsx`, `SCHEMA.md`.
