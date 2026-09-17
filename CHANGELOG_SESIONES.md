@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 253 · la pantalla de crisis prometía 24 horas y la línea cerraba a medianoche)
+
+**Tocado:** `screens/AyudaScreen.tsx`, `screens/CoachSettingsScreen.tsx`, `docs/terminos-y-condiciones.md` (§5.3), `constants/legal.ts` + `web/legal/*` (regenerados).
+
+**Resumen:**
+- **Contexto:** a partir de lo de Selia (le muestra a un argentino la línea de emergencia de Colombia), se decidió que la vía de crisis tenía que estar bien antes de lanzar. Andre también confirmó el foco: **Argentina de punta a punta**, para quien está acá y para argentinos afuera (el riel en dólares ya construido).
+- 📌 **Corrección de lo dicho en la sesión 252:** dije que Vita "no tiene nada" de vía de crisis, y no era cierto. Existía `AyudaScreen`, bien diseñada (no pregunta nada, no es cálida a propósito, se llega siempre desde el Perfil y no solo desde el piso de seguridad). Mi búsqueda había usado otras palabras.
+- 🔴 **Al re-verificar los números —como pide el propio código antes de publicar— aparecieron dos errores graves:** (1) la pantalla y la **T&C §5.3** decían que las líneas atienden **"las 24 horas, todos los días"**, y el Centro de Asistencia al Suicida (135, 0800-345-1435, (011) 5275-1135) atiende **de 8 a 24** según su propia página de horarios. Alguien que llamaba de madrugada no tenía respuesta, después de que la app le prometiera que sí. (2) **Faltaba la línea que sí es de 24 horas**: la Línea Nacional de Salud Mental del Ministerio de Salud, **0800-999-0091**, gratuita desde todo el país, confirmada por Infobae el 10/09/2026.
+- **Qué cambió:** la línea nacional va segunda, pegada al 911; cada línea dice su horario; y **si el teléfono está fuera de Argentina**, arriba de todo aparece que estos números no funcionan desde el exterior, con un link a findahelpline.com (directorio de ThroughLine, 175+ países, en español). Mismo texto en T&C §5.3, sincronizado (`LEGAL_VERSION` 6fff5d6a0e9a).
+- **El profesional ahora tiene los números**, en su Ajustes → "Líneas de crisis". Hasta hoy solo estaban del lado del usuario, y quien más probablemente esté al lado de alguien en crisis, en plena sesión, es el profesional.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Re-verificar las líneas antes de publicar en las tiendas**, y cada vez que se publique una versión: los horarios cambian y un número muerto en esta pantalla es peor que no ponerlo. Fuentes: `asistenciaalsuicida.org.ar/horarios-de-atencion` y `argentina.gob.ar` (Línea 0800-999-0091).
+- Probar en el celular: abrir Perfil → "Si necesitás ayuda ahora" y ver la nueva lista. El aviso para quien está afuera se puede ver poniendo el teléfono en otra zona horaria.
+
+---
 ## 2026-09-17 — Andre (sesión 252 · la lista de lo que falta para lanzar, en un solo lugar)
 
 **Tocado:** `docs/problemas-abiertos.md`. Sin código ni base.

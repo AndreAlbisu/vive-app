@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ViveFonts } from '@/constants/theme';
+import { deviceIsOffArgentina } from '@/lib/time';
 import { AppBg } from '@/components/ui/AppBg';
 
 // Las líneas de ayuda en crisis. Son las mismas de T&C §5.3 — no un texto
@@ -31,9 +32,23 @@ type Linea = {
   urgente?: boolean;
 };
 
-// Copiadas de T&C §5.3, con la vigencia verificada al escribirlas.
+// Las mismas de T&C §5.3.
 // ⚠️ Re-verificar antes de cada publicación: un número muerto en un aviso de
 // crisis es peor que no ponerlo.
+//
+// 🔴 RE-VERIFICADAS EL 17/09/2026, Y ESTABAN MAL DOS COSAS:
+//   1. La pantalla decía "estas líneas atienden las 24 horas, todos los días",
+//      y el Centro de Asistencia al Suicida (135 y sus dos números) atiende **de
+//      8 a 24** — lo dice su propia página de horarios. Alguien que llamaba a las
+//      3 de la mañana, que es cuando más pasa, no tenía respuesta, y la app le
+//      había prometido que sí.
+//   2. Faltaba la línea que SÍ es de 24 horas: la **Línea Nacional de
+//      Orientación y Apoyo en la Urgencia de Salud Mental**, del Ministerio de
+//      Salud de la Nación, 0800-999-0091, gratuita desde todo el país (confirmada
+//      por Infobae el 10/09/2026). Va segunda, pegada al 911, justamente por ser
+//      la única que atiende a cualquier hora.
+// Por eso cada línea dice su horario: prometer disponibilidad en una pantalla de
+// crisis y no cumplirla es peor que no prometer nada.
 const LINEAS: Linea[] = [
   {
     numero: '911',
@@ -42,24 +57,37 @@ const LINEAS: Linea[] = [
     urgente: true,
   },
   {
-    numero: '135',
-    marcar: '135',
-    detalle: 'Línea de asistencia al suicida. Gratuita desde CABA y Gran Buenos Aires.',
+    numero: '0800-999-0091',
+    marcar: '08009990091',
+    detalle: 'Línea Nacional de Salud Mental, del Ministerio de Salud. Las 24 horas, todos los días, desde todo el país.',
   },
   {
-    numero: '(011) 5275-1135',
-    marcar: '01152751135',
-    detalle: 'La misma línea, desde todo el país.',
+    numero: '135',
+    marcar: '135',
+    detalle: 'Centro de Asistencia al Suicida. De 8 a 24 h. Gratuita desde CABA y Gran Buenos Aires.',
   },
   {
     numero: '0800-345-1435',
     marcar: '08003451435',
-    detalle: 'También desde todo el país.',
+    detalle: 'La misma línea, de 8 a 24 h, desde todo el país.',
+  },
+  {
+    numero: '(011) 5275-1135',
+    marcar: '01152751135',
+    detalle: 'La misma línea, de 8 a 24 h, desde todo el país.',
   },
 ];
 
+// Directorio internacional de líneas gratuitas (ThroughLine, 175+ países, en
+// español). Para quien NO está en Argentina, donde ningún número de arriba anda
+// —salvo el 911 en algunos países, y en otros ni eso: en España es el 112.
+const DIRECTORIO_INTERNACIONAL = 'https://findahelpline.com/es-ES';
+
 export default function AyudaScreen() {
   const router = useRouter();
+  // Vita atiende también a argentinos que viven afuera (riel en dólares). Para
+  // ellos los números de acá no sirven, y es lo primero que tienen que leer.
+  const afuera = deviceIsOffArgentina();
 
   async function llamar(numero: string) {
     const url = `tel:${numero}`;
@@ -85,9 +113,28 @@ export default function AyudaScreen() {
 
         <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
           <Text style={s.title}>Si necesitás hablar con alguien ahora</Text>
+
+          {afuera && (
+            <Pressable
+              style={[s.card, s.cardUrgente]}
+              onPress={() => { Linking.openURL(DIRECTORIO_INTERNACIONAL).catch(() => {}); }}
+              accessibilityRole="link"
+              accessibilityLabel="Si no estás en Argentina, buscá la línea de ayuda de tu país"
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[s.numero, s.numeroUrgente]}>Si no estás en Argentina</Text>
+                <Text style={s.detalle}>
+                  Los números de abajo no funcionan desde otro país. Llamá al número de emergencias
+                  del lugar donde estás, o buscá la línea de ayuda de tu país en findahelpline.com.
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="open-in-new" size={20} color="#B03A2E" />
+            </Pressable>
+          )}
+
           <Text style={s.intro}>
-            Estas líneas atienden las 24 horas, todos los días. Son gratuitas, anónimas
-            y confidenciales. No hace falta estar en lo peor para llamar.
+            Son gratuitas y confidenciales. La línea nacional atiende las 24 horas; la del
+            Centro de Asistencia al Suicida, de 8 a 24. No hace falta estar en lo peor para llamar.
           </Text>
 
           <View style={s.list}>

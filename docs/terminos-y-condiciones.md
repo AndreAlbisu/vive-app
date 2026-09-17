@@ -49,10 +49,12 @@ Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, l
 
 5.2. Los Profesionales que ejercen prestaciones reguladas (por ejemplo, psicólogos/as o nutricionistas) lo hacen bajo su exclusiva responsabilidad profesional, debiendo contar con la matrícula y habilitaciones que la ley exija, y cumplir con las obligaciones propias de su profesión (incluido el secreto profesional). Vita no supervisa ni dirige el ejercicio profesional.
 
-5.3. **La Plataforma no es un servicio de emergencia.** Ante una situación de crisis, riesgo para la vida o emergencia de salud, el Usuario debe comunicarse de inmediato con los servicios de emergencia (**911**) o con la línea de asistencia al suicida y crisis de salud mental, disponible las 24 horas, todos los días, de forma gratuita, anónima y confidencial:
+5.3. **La Plataforma no es un servicio de emergencia.** Ante una situación de crisis, riesgo para la vida o emergencia de salud, el Usuario debe comunicarse de inmediato con los servicios de emergencia (**911**) o con alguna de estas líneas gratuitas y confidenciales:
 
-- **135** — gratuita desde la Ciudad Autónoma de Buenos Aires y el Gran Buenos Aires.
-- **(011) 5275-1135** o **0800-345-1435** — desde todo el país.
+- **0800-999-0091** — Línea Nacional de Orientación y Apoyo en la Urgencia de Salud Mental, del Ministerio de Salud de la Nación. Atiende **las 24 horas, todos los días**, desde todo el país.
+- **Centro de Asistencia al Suicida**, que atiende **de 8 a 24 horas**: **135**, gratuita desde la Ciudad Autónoma de Buenos Aires y el Gran Buenos Aires; **0800-345-1435** o **(011) 5275-1135**, desde todo el país.
+
+Quien se encuentre fuera de la Argentina debe comunicarse con los servicios de emergencia del país donde esté, ya que estas líneas no funcionan desde el exterior.
 
 La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Profesionales no están disponibles para atender urgencias.
 
