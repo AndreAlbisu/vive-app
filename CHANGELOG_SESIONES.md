@@ -4,6 +4,20 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 254 · tocar la card de Sofía lleva directo a Progreso)
+
+**Tocado:** `app/(tabs)/index.tsx`.
+
+**Resumen:**
+- Tocar la card de Sofía en Inicio ya no reabre el momento a pantalla completa (repetía la frase de la card + "Seguir" / "Ver mi progreso completo"): va directo a `/progreso`. Evento `reflexion_vista` con origen `card_a_progreso`.
+- Los destinos propios no cambian: piso de seguridad → `/ayuda`, recurso del coach → `/mis-recomendaciones`, pregunta → Diario.
+- Sin check-in, antes salía un Alert ("Elegí cómo venís hoy"); ahora también va a Progreso.
+
+**Pendiente para la próxima sesión:**
+- El momento todavía aparece solo una vez por día justo después del check-in. Decidir si también se saca.
+- Probar en el celular: tocar la card y ver que abre Progreso.
+
+---
 ## 2026-09-17 — Andre (sesión 253 · la pantalla de crisis prometía 24 horas y la línea cerraba a medianoche)
 
 **Tocado:** `screens/AyudaScreen.tsx`, `screens/CoachSettingsScreen.tsx`, `docs/terminos-y-condiciones.md` (§5.3), `constants/legal.ts` + `web/legal/*` (regenerados).
