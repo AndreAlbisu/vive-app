@@ -4,6 +4,27 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 259 · M6 terminado y M14, lo que faltaba para copiarle el quiz a Selia)
+
+**Tocado:** `lib/proximaSesion.ts` (nuevo), `lib/enfoque.ts` (nuevo), `screens/CoachEnfoqueScreen.tsx` (nuevo), `app/coach-enfoque.tsx` (nuevo), `scripts/add-coach-enfoque.sql` (nuevo, **corrido en producción**), `screens/SalaScreen.tsx`, `screens/BookingScreen_Calendar.tsx`, `screens/QuizScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/ProfesionalScreen.tsx`, `lib/quizMatch.ts`, `lib/coachesCache.ts`, `__tests__/proximaSesion.test.ts` y `__tests__/enfoque.test.ts` (nuevos), `SCHEMA.md`, `docs/problemas-abiertos.md`.
+
+**Resumen:**
+- **M6 terminado** (la base ya estaba de la 258): el profesional elige cada cuánto volver a verse al terminar la sesión, el cliente lo lee en la tarjeta de cierre de la Sala y `/booking-calendar` abre en ese día y lo marca. Queda preseleccionado solo si hay horario libre; si no, lo dice. Es sugerencia, no reserva.
+  - No se usa `upsert`: la tabla da INSERT sobre `(booking_id, cuando)` pero UPDATE solo sobre `cuando`, y el ON CONFLICT de PostgREST también escribe `booking_id`. Insert, y si ya existía, update.
+- **M14, nuevo, de una observación de Andre**: el quiz de Selia pregunta qué tipo de acompañamiento querés, y Vita no podía copiarlo porque no había ningún campo que dijera cómo trabaja cada profesional. 🗄️ **Dos columnas nuevas en `coaches`**: `estilo` (en las palabras de la persona) y `enfoques` (las escuelas, hasta 3, solo para el perfil). Pantalla "Cómo trabajo" del profesional, cuarta pregunta del quiz y sección nueva en el perfil público. SCHEMA.md actualizado.
+  - **El estilo ordena y explica, nunca filtra.** Con pocos profesionales, filtrar vacía la pantalla. Y una diferencia de estilo apaga `hayCoincidenciaExacta`, para no repetir la mentira que cerró M1.
+  - A la persona no se le pregunta por las escuelas: quien busca ayuda por primera vez no sabe qué es "sistémico". Selia también la deja opcional.
+- 🔴 **Hizo falta un `grant update` explícito.** El UPDATE de `coaches` para `authenticated` no es de tabla: está acotado a una lista blanca de columnas. Sin el grant, el profesional guardaba, no había error visible y no se escribía nada. Anotado en SCHEMA.md: **toda columna nueva que edite el profesional tiene que sumarse a esa lista.**
+- ⚠️ **Hallazgo al pasar, sin resolver:** `anon` todavía tiene UPDATE sobre las 25 columnas de `coaches`. Hoy lo frena la policy (`profile_id = auth.uid()`), pero el endurecimiento que se le hizo a `authenticated` nunca llegó a `anon`. Para la auditoría de seguridad previa a la v1.
+- 📌 **Corrección a lo que dije en la sesión:** M5, M6 y M7 están en M.2 ("primer mes después de lanzar"), no en "antes de lanzar". La sección M.1 está completa. Lo que bloquea el lanzamiento sigue siendo **L1 a L5** más la limpieza de la base (L8 a L13).
+
+**Pendiente para la próxima sesión:**
+- 📱 **Ya son cinco cosas construidas y nunca vistas en el teléfono**: el final del quiz (M1/M2), "Avisame cuando tenga horarios" (M3), la pregunta de la videollamada en la reseña (M4), la sugerencia de próxima sesión (M6) y todo M14. Conviene una pasada antes de seguir sumando.
+- ⚠️ `docs/competencia-selia.md` tiene **150 líneas sin commitear** (un §24 con el análisis de las 138 reseñas de las tiendas) que no salieron de esta sesión. Confirmar con Joaquín antes de commitearlas.
+- La respuesta de estilo del quiz **no se persiste**: vale para esa corrida. Si se quiere recomendar con el estilo fuera del quiz, hay que guardarla.
+- Siguen frenadas en decisiones de Andre: M5 (cómo convive con la garantía de reintegro) y M7 (cuánto dan los referidos). Ninguna frena el lanzamiento.
+
+---
 ## 2026-09-17 — Andre (sesión 258 · M6 a medio hacer: la base sí, la pantalla no)
 
 **Tocado:** `scripts/add-next-session-suggestion.sql` (nuevo, **corrido en producción**), `SCHEMA.md`, `docs/problemas-abiertos.md`.
