@@ -19,6 +19,7 @@
 import type { CachedCoach } from '@/lib/coachesCache';
 import { QUIZ_AREAS } from '@/constants/searchData';
 import { tipoProfesional, type TipoProfesional } from '@/lib/tipoProfesional';
+import { evaluarEstilo, ESTILO_OPCIONES_PERSONA, type EstiloPedido } from '@/lib/enfoque';
 
 // ─── Opciones de las preguntas 2 y 3 ────────────────────────────────────────
 
@@ -50,7 +51,16 @@ export const PRESUPUESTO_OPCIONES: OpcionPresupuesto[] = [
 
 // ─── Resultado ──────────────────────────────────────────────────────────────
 
-export type RespuestasQuiz = { tema: string | null; tipo: string | null; presupuesto: string | null };
+export type RespuestasQuiz = {
+  tema: string | null;
+  tipo: string | null;
+  presupuesto: string | null;
+  /** M14: cómo quiere que la acompañen. Opcional de verdad: `null` o `'any'`
+   *  no cambian nada, y nunca saca a nadie de la lista. */
+  estilo?: EstiloPedido | null;
+};
+
+export const ESTILO_OPCIONES = ESTILO_OPCIONES_PERSONA;
 
 export type Recomendacion = {
   coach: CachedCoach;
@@ -123,12 +133,29 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
     else diferencias.push('Su sesión cuesta más de lo que marcaste');
   }
 
+  // M14: el estilo ordena y explica, nunca filtra. Si la persona no lo pidió o
+  // el profesional no lo contestó, no se dice nada de él.
+  const estilo = evaluarEstilo(coach.estilo, r.estilo ?? null);
+  if (estilo.razon) razones.push(estilo.razon);
+  if (estilo.diferencia) diferencias.push(estilo.diferencia);
+
   if (coach.hasSlotThisWeek) razones.push('Tiene horarios libres esta semana');
 
-  // Cuántas de las tres respuestas cumple. El tema pesa más: es lo que la
-  // persona vino a trabajar, y un perfil que no lo trabaja no es una opción.
-  const nivel = (cumpleTema ? 4 : 0) + (cumpleTipo ? 2 : 0) + (cumplePrecio ? 1 : 0);
-  return { razones, diferencias, cumpleTema, nivel, exacto: cumpleTema && cumpleTipo && cumplePrecio };
+  // Cuánto de lo respondido cumple. El tema pesa más: es lo que la persona vino
+  // a trabajar, y un perfil que no lo trabaja no es una opción. El estilo pesa
+  // menos que todo lo demás: desempata, no decide.
+  const nivel = (cumpleTema ? 8 : 0) + (cumpleTipo ? 4 : 0) + (cumplePrecio ? 2 : 0) + (estilo.coincide ? 1 : 0);
+  // `exacto` es lo que habilita el título "coinciden con lo que respondiste".
+  // El estilo entra solo cuando hay una diferencia que mostrar: si no, el
+  // título volvería a prometer una coincidencia total con una resta a la vista,
+  // que es exactamente la mentira que cerró M1.
+  return {
+    razones,
+    diferencias,
+    cumpleTema,
+    nivel,
+    exacto: cumpleTema && cumpleTipo && cumplePrecio && estilo.coincide,
+  };
 }
 
 /**

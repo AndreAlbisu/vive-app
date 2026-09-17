@@ -30,6 +30,7 @@ import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { priceUsdError } from '@/lib/pricing';
 import { faltaParaInternacional, rielesTexto } from '@/lib/payout';
 import { AppBg } from '@/components/ui/AppBg';
+import { etiquetaEstilo, etiquetasEnfoques } from '@/lib/enfoque';
 
 const GLASS = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
@@ -38,6 +39,8 @@ type CoachProfile = {
   name: string;
   specialty: string | null;
   bio: string | null;
+  estilo: string | null;
+  enfoques: string[];
   price_per_session: number | null;
   price_usd: number | null;
   nationality: string | null;
@@ -157,13 +160,15 @@ export default function CoachProfileScreen() {
     (async () => {
       const [{ data: profileRow }, { data: coachRow }] = await Promise.all([
         supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single(),
-        supabase.from('coaches').select('id, specialty, bio, price_per_session, nationality, video_url, instant_booking, availability_status, slug, verified, mp_connected, accepts_international, accepts_paypal, accepts_usdt, price_usd').eq('profile_id', user.id).maybeSingle(),
+        supabase.from('coaches').select('id, specialty, bio, estilo, enfoques, price_per_session, nationality, video_url, instant_booking, availability_status, slug, verified, mp_connected, accepts_international, accepts_paypal, accepts_usdt, price_usd').eq('profile_id', user.id).maybeSingle(),
       ]);
 
       setProfile({
         name: profileRow?.name ?? '',
         specialty: coachRow?.specialty ?? null,
         bio: coachRow?.bio ?? null,
+        estilo: (coachRow as any)?.estilo ?? null,
+        enfoques: ((coachRow as any)?.enfoques ?? []) as string[],
         price_per_session: coachRow?.price_per_session ?? null,
         price_usd: coachRow?.price_usd ?? null,
         nationality: coachRow?.nationality ?? null,
@@ -802,6 +807,31 @@ export default function CoachProfileScreen() {
             activeOpacity={0.7}>
             <MaterialCommunityIcons name="plus" size={14} color={ViveColors.primary} />
             <Text style={s.addChipText}>{topics.length > 0 ? 'Editar' : 'Agregar'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Cómo trabajo (M14) ────────────────────────────── */}
+        <Text style={[s.sectionTitle, s.sectionSpaced]}>Cómo trabajo</Text>
+        <View style={s.chipsWrap}>
+          {etiquetaEstilo(profile?.estilo) && (
+            <View style={s.topicChip}>
+              <Text style={s.topicChipText}>{etiquetaEstilo(profile?.estilo)}</Text>
+            </View>
+          )}
+          {etiquetasEnfoques(profile?.enfoques).map(label => (
+            <View key={label} style={s.topicChip}>
+              <Text style={s.topicChipText}>{label}</Text>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={s.addChip}
+            onPress={() => router.push('/coach-enfoque')}
+            disabled={noCoachProfile}
+            activeOpacity={0.7}>
+            <MaterialCommunityIcons name="plus" size={14} color={ViveColors.primary} />
+            <Text style={s.addChipText}>
+              {profile?.estilo || (profile?.enfoques?.length ?? 0) > 0 ? 'Editar' : 'Agregar'}
+            </Text>
           </TouchableOpacity>
         </View>
 

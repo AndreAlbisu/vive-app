@@ -43,6 +43,12 @@ export type CachedCoach = {
   /** Precio de la sesión internacional, en USD enteros. Lo fija el coach y NO
    *  se deriva de una cotización. */
   priceUsd?: number | null;
+  /** M14: cómo acompaña, en palabras de la persona (`coaches.estilo`). El quiz
+   *  lo usa para ordenar y explicar, nunca para filtrar. Null = no contestó. */
+  estilo?: string | null;
+  /** M14: las escuelas, con su nombre técnico (`coaches.enfoques`). Solo se
+   *  muestran en el perfil: a la persona no se le pregunta por esto. */
+  enfoques?: string[];
 };
 
 let cache: CachedCoach[] | null = null;
@@ -51,7 +57,7 @@ let inflight: Promise<void> | null = null;
 async function _doFetch(): Promise<void> {
   const { data, error } = await supabase
     .from('coaches')
-    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, has_matricula, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
+    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, has_matricula, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, estilo, enfoques, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
     .eq('verified', true)
     .eq('availability_status', 'activo')
     // D6 (docs/decisiones-pagos.md): para aparecer en el catálogo hace falta
@@ -111,6 +117,8 @@ async function _doFetch(): Promise<void> {
       acceptsPaypal: !!(c as any).accepts_paypal && c.price_usd != null,
       acceptsUsdt: !!(c as any).accepts_usdt && c.price_usd != null,
       priceUsd:    (c.price_usd ?? null) as number | null,
+      estilo:      ((c as any).estilo ?? null) as string | null,
+      enfoques:    (((c as any).enfoques ?? []) as string[]),
       avgRating:   null,
       reviewCount: 0,
       rebookingRate:    null,
