@@ -440,6 +440,18 @@ serve(async (req) => {
           await notifyProfile(admin, uid, 'profesional_no_disponible', `Sobre ${nombre}`, que + siguiente, proxima?.id ?? null)
           avisados += 1
         }
+
+        // A quién se avisó y por qué sanción: es lo que usa `sanction-returns`
+        // para decirles, cuando termine, que volvió. Sin esta fila, a esa persona
+        // nunca le llega el "volvió". No frena la sanción si falla: la sanción
+        // y el aviso ya salieron, y perder el "volvió" es el mal menor.
+        if (porPersona.size > 0) {
+          const { error: notErr } = await admin.from('sanction_client_notices').upsert(
+            [...porPersona.keys()].map(uid => ({ sancion_id: data.id, user_id: uid })),
+            { onConflict: 'sancion_id,user_id', ignoreDuplicates: true },
+          )
+          if (notErr) console.error(`[admin-actions] no se anotaron los avisos de la sanción ${data.id}: ${notErr.message}`)
+        }
       }
 
       return json({ result: 'ok', sancion: data, avisados, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })

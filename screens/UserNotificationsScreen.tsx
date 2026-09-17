@@ -99,6 +99,7 @@ export default function UserNotificationsScreen() {
       case 'recordatorio_sesion': return 'clock';
       // Sin rojo a propósito: no es un error ni algo que la persona hizo mal.
       case 'profesional_no_disponible': return 'user';
+      case 'profesional_disponible': return 'user-check';
       default: return 'bell';
     }
   }

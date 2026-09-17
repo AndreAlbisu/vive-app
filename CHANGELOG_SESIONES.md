@@ -4,6 +4,20 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 248 · avisar cuando el profesional vuelve)
+
+**Tocado:** `scripts/add-sanction-return-notices.sql` (nuevo), `supabase/functions/sanction-returns/index.ts` (nueva), `supabase/functions/admin-actions/index.ts`, `screens/UserNotificationsScreen.tsx`, `SCHEMA.md`.
+
+**Resumen:**
+- **Cerró el hueco de la sesión anterior:** a quien se le avisó que su profesional "no está tomando reservas nuevas" ahora le llega *"volvió a atender en Vita"* cuando la suspensión vence o se levanta. Antes la persona se quedaba con la última noticia, que era que ya no estaba.
+- **Cómo:** `admin-actions` anota a quién avisó y por qué sanción (`sanction_client_notices`); un cron nuevo, `sanction-returns`, corre cada hora y avisa cuando la sanción dejó de pesar, el profesional no tiene otra vigente y sigue publicado. Con push. Sin mencionar ninguna sanción.
+- **Una sola vez, garantizado:** la función reclama la fila en la base antes de mandar, así que dos corridas que se pisen no duplican el aviso. Y si la sanción terminó hace más de 14 días —el cron estuvo caído— lo anota como omitido en vez de mandar un aviso que ya no tiene sentido.
+- ✅ **Probado de punta a punta desde el CLI, con el mismo comando que ejecuta el cron** y verificado por la respuesta, no por "está activo": suspensión terminada → avisó; terminada hace 20 días → omitió; vigente → esperó; segunda corrida → no duplicó; levantar la vigente → avisó. Se usó una cuenta sin celular registrado para no mandarle un push real a nadie, y se borró todo después. Deploys: `admin-actions` v33, `sanction-returns` v1. Cron programado (jobid 12, minuto 41).
+
+**Pendiente para la próxima sesión:**
+- Mirar la primera corrida automática en `net._http_response`: tiene que dar 200 con `{"revisados":0,...}`. El comando es el mismo que se probó a mano tres veces, así que es una confirmación, no una duda.
+
+---
 ## 2026-09-16 — Andre (sesión 247 · los avisos de contacto no le llegaban a nadie, y se podían fabricar)
 
 **Tocado:** `scripts/add-contact-signals-panel.sql` (nuevo), `supabase/functions/admin-actions/index.ts`, `lib/admin.ts`, `screens/AdminScreen.tsx`, `screens/UserNotificationsScreen.tsx`, `SCHEMA.md`.
