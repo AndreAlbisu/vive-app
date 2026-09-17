@@ -4,6 +4,20 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-16 — Andre (sesión 244 · el coach no puede mandar datos para cobrar)
+
+**Tocado:** `lib/contactInfoGuard.ts`, `__tests__/contactInfoGuard.test.ts`, `screens/SalaScreen.tsx`, `components/SessionNotesSheet.tsx`. Sin cambios de base.
+
+**Resumen:**
+- **Sale de una propuesta de ChatGPT que Andre trajo para contrastar.** Casi todo ya estaba hecho o decidido (quedarse cómodo, aviso suave, escalera, sin chat antes de reservar). Dos cosas re-proponían lo que Andre ya había descartado: comisión completa en las sesiones 1–3 (ya se probó un tramo de 3 en julio y se reemplazó; además cobraría 20% justo en la 2da y 3ra, el momento de máxima fuga) y un tercer tramo por debajo del 15% (descartado el 06/08: no cubre costos). **La idea que sí se tomó**: distinguir un teléfono, que puede ser inocente, de datos para cobrar mandados por el profesional, que no tienen explicación — VIVE cobra y VIVE paga.
+- 🔴 **Es la única excepción a "en lo privado nunca se bloquea".** Si el coach manda un CBU/CVU completo (22 dígitos), un link de cobro (Mercado Pago, PayPal.me, Cafecito) o "alias" seguido de un alias con forma de alias, el mensaje **no sale** y no hay opción de mandarlo igual. Aplica en el chat, la nota compartida y la nota de una recomendación — los tres lugares donde el coach le escribe a la persona. La palabra "alias" suelta no bloquea, un teléfono tampoco, y si la que manda el CBU es la persona, sigue siendo el aviso de siempre.
+- Tests con 8 casos que bloquean y 7 que NO (teléfono, "alias el Loco", "pagué con mercado pago", un precio, una fecha, un link de YouTube, "pagame en efectivo"). El evento lleva `senal: 'datos_de_cobro'` y `bloqueado: true`. Consistente con T&C §10.2, que ya prohíbe proponer pagos por fuera — no hizo falta cambiar ningún texto legal.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Versión mínima obligatoria antes de publicar en las tiendas.** Recomendada y todavía no decidida: una app sin ese mecanismo ya instalada no se puede forzar a actualizar nunca, así que tiene que venir en la primera versión pública. Tiene decisiones propias (dónde se guarda la versión mínima, qué ve quien la tiene vieja, los links a las tiendas).
+- Queda también sin hacer, a propósito: el puntaje de riesgo por relación como lista de casos para revisar. Recién tiene sentido con datos, y hoy no hay usuarios.
+
+---
 ## 2026-09-16 — Andre (sesión 243 · el detector de contacto detectaba 3 de 17)
 
 **Tocado:** `lib/contactInfoGuard.ts` (reescrito), `__tests__/contactInfoGuard.test.ts` (nuevo), `screens/SalaScreen.tsx`, `components/SessionNotesSheet.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/ReviewScreen.tsx`, `app/coach-recurso-nuevo.tsx`, `screens/ProposeResourceScreen.tsx`. Sin cambios de base.

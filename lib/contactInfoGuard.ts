@@ -139,6 +139,33 @@ export function detectContactInfoAcross(previous: string | null | undefined, tex
   return PHONE.test(`${cola} ${normalize(text)}`) ? 'telefono' : null;
 }
 
+// ── Datos para cobrar, mandados por el PROFESIONAL ───────────────────────────
+//
+// 🔴 La ÚNICA excepción a "en lo privado nunca se bloquea", y por qué lo es: un
+// teléfono en el chat puede ser inocente; un CBU que manda el coach, no. VIVE
+// cobra a la persona y VIVE le paga al coach, así que el coach no tiene ningún
+// motivo legítimo para pasarle datos para cobrar. Casi sin falsos positivos, y es
+// exactamente el acto que convierte la fuga en plata.
+//
+// Acotado a propósito a lo inequívoco (decisión de Andre, 16/09/2026):
+//   · un CBU/CVU completo — 22 dígitos, con o sin separadores;
+//   · un link de cobro (Mercado Pago, PayPal.me, Cafecito);
+//   · "alias" seguido de algo con forma de alias (con punto: juan.coach.mp).
+// La palabra "alias" suelta NO: "alias el Loco" no es un dato de pago. Lo demás
+// (un "pagame en efectivo", un teléfono) sigue siendo aviso, no bloqueo.
+//
+// ⚠️ Se aplica solo cuando escribe el profesional. Si la persona manda su CBU,
+// sigue siendo el aviso de siempre.
+const CBU_CVU = /(?:\d[\s.-]*){22}/;
+const LINK_DE_COBRO = /\b(mpago\.la|mpago\.li|link\.mercadopago\.com|mercadopago\.com(\.ar)?\/|paypal\.me|paypal\.com\/paypalme|cafecito\.app)/;
+const ALIAS_CON_VALOR = /\balias\b[\s:=-]*(es\s+)?[a-z0-9-]+\.[a-z0-9.-]+/;
+
+/** true si el texto trae datos concretos para cobrar por fuera de VIVE. */
+export function hasDatosDeCobro(text: string): boolean {
+  const t = normalize(text);
+  return CBU_CVU.test(t) || LINK_DE_COBRO.test(t) || ALIAS_CON_VALOR.test(t);
+}
+
 // Dominios cuyo único propósito es contactar a alguien o llevarlo a otra parte.
 // Para el campo de link de un recurso, donde un link es lo esperable: ahí no
 // alcanza con "tiene un link", importa ADÓNDE va.

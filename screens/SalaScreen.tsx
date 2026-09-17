@@ -29,7 +29,7 @@ import { MAX_LARGO_MENSAJE } from '@/constants/chat';
 import { confirmBooking } from '@/lib/coachBookingActions';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { supabase, registrarEvento } from '@/lib/supabase';
-import { detectContactInfo, detectContactInfoAcross } from '@/lib/contactInfoGuard';
+import { detectContactInfo, detectContactInfoAcross, hasDatosDeCobro } from '@/lib/contactInfoGuard';
 import { useAuth } from '@/context/AuthContext';
 import ReportSheet from '@/components/ReportSheet';
 import UserActionsSheet from '@/components/UserActionsSheet';
@@ -847,6 +847,14 @@ export default function SalaScreen() {
   // mismo aviso que el chat (avisa, no bloquea). Envuelve al envío real.
   function sendRecommendation() {
     if (!selectedReco || !salaId || !user || !coachInternalId || !recipientId) return;
+    if (recoNote.trim() && hasDatosDeCobro(recoNote)) {
+      registrarEvento('mensaje_contacto_detectado', {
+        role: 'coach', canal: 'nota_recomendacion', senal: 'datos_de_cobro', bloqueado: true,
+        sala_id: salaId, coach_id: user.id, user_id: recipientId,
+      });
+      Alert.alert('No se pueden mandar datos para cobrar', 'Los pagos van siempre por VIVE: así la persona tiene reembolso y garantía, y vos cobrás sin tener que perseguir a nadie. Sacá el CBU, el alias o el link de pago y volvé a enviar.');
+      return;
+    }
     const senal = recoNote.trim() ? detectContactInfo(recoNote) : null;
     if (!senal) { void doSendRecommendation(); return; }
 
@@ -943,6 +951,19 @@ export default function SalaScreen() {
     // advertir antes de enviar (no se bloquea duro: en una charla hay más falsos
     // positivos que en la bio, y a veces es legítimo). Se registra el evento con el
     // desenlace para medir cuánto pasa y si la advertencia disuade.
+    // 🔴 Datos para cobrar mandados por el PROFESIONAL: se bloquea, sin "enviar
+    // igual". Es la única excepción a no bloquear texto privado — ver
+    // `hasDatosDeCobro`. Va antes del aviso común para que no se ofrezca la
+    // opción de mandarlo igual.
+    if (isCurrentUserCoach && hasDatosDeCobro(text)) {
+      registrarEvento('mensaje_contacto_detectado', {
+        role: 'coach', canal: 'chat', senal: 'datos_de_cobro', bloqueado: true,
+        sala_id: salaId ?? null, coach_id: user?.id ?? null, user_id: recipientId,
+      });
+      Alert.alert('No se pueden mandar datos para cobrar', 'Los pagos van siempre por VIVE: así la persona tiene reembolso y garantía, y vos cobrás sin tener que perseguir a nadie. Sacá el CBU, el alias o el link de pago y volvé a enviar.');
+      return;
+    }
+
     // El mensaje anterior PROPIO, si fue hace poco: es lo que permite ver un
     // teléfono partido en dos mensajes ("11 5555" y después "4444"). Cinco
     // minutos alcanzan para eso y no juntan números de charlas distintas.

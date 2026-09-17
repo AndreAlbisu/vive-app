@@ -15,7 +15,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ViveFonts } from '@/constants/theme';
 import { getSessionNotes, saveSessionNote } from '@/lib/sessionNotes';
-import { detectContactInfo } from '@/lib/contactInfoGuard';
+import { detectContactInfo, hasDatosDeCobro } from '@/lib/contactInfoGuard';
 import { registrarEvento } from '@/lib/supabase';
 import { sheetStyles } from '@/components/ui/sheetStyles';
 
@@ -48,6 +48,14 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
   // Avisa y deja guardar igual, como el chat — nunca bloquea texto privado.
   function handleSave() {
     if (!user || saving) return;
+    if (sharedNote.trim() && hasDatosDeCobro(sharedNote)) {
+      registrarEvento('mensaje_contacto_detectado', {
+        role: 'coach', canal: 'nota_compartida', senal: 'datos_de_cobro', bloqueado: true,
+        booking_id: bookingId, coach_id: user.id, user_id: userId,
+      });
+      Alert.alert('No se pueden mandar datos para cobrar', 'Los pagos van siempre por VIVE: así la persona tiene reembolso y garantía, y vos cobrás sin tener que perseguir a nadie. Sacá el CBU, el alias o el link de pago y volvé a enviar.');
+      return;
+    }
     const senal = sharedNote.trim() ? detectContactInfo(sharedNote) : null;
     if (!senal) { void doSave(); return; }
 

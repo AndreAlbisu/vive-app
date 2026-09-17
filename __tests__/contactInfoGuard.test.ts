@@ -1,4 +1,4 @@
-import { detectContactInfo, detectContactInfoAcross, hasContactInfo, isContactLink } from '@/lib/contactInfoGuard';
+import { detectContactInfo, detectContactInfoAcross, hasContactInfo, hasDatosDeCobro, isContactLink } from '@/lib/contactInfoGuard';
 
 // Las 17 formas comunes de pasarse el contacto contra las que se midió el
 // detector el 16/09/2026. La versión anterior detectaba 3.
@@ -84,5 +84,33 @@ describe('links de un recurso', () => {
   it('deja pasar los que son contenido', () => {
     expect(isContactLink('https://www.youtube.com/watch?v=abc')).toBe(false);
     expect(isContactLink('https://open.spotify.com/episode/xyz')).toBe(false);
+  });
+});
+
+// El único bloqueo en texto privado. Por eso importa tanto lo que NO bloquea.
+describe('datos de cobro del profesional', () => {
+  it.each([
+    ['CBU pegado', '0000003100010000000001'],
+    ['CBU con espacios', 'mi cbu: 0000 0031 0001 0000 0000 01'],
+    ['link de Mercado Pago corto', 'te dejo el link mpago.la/2aBcDe'],
+    ['link de Mercado Pago largo', 'https://link.mercadopago.com.ar/juancoach'],
+    ['PayPal.me', 'paypal.me/juancoach'],
+    ['Cafecito', 'cafecito.app/juancoach'],
+    ['alias con valor', 'te paso el alias: juan.coach.mp'],
+    ['alias "es"', 'mi alias es juan.coach.mp'],
+  ])('bloquea: %s', (_n, texto) => {
+    expect(hasDatosDeCobro(texto)).toBe(true);
+  });
+
+  it.each([
+    ['un teléfono', 'mi cel es 11 5555 4444'],
+    ['"alias" como sobrenombre', 'le dicen alias el Loco'],
+    ['hablar de mercado pago', 'pagué la sesión con mercado pago'],
+    ['un precio', 'la sesión sale $15.000'],
+    ['fecha y hora', 'nos vemos el 15/09 a las 18:00'],
+    ['un link de contenido', 'te dejo este video youtube.com/watch?v=abc'],
+    ['pedir efectivo (eso avisa, no bloquea)', 'pagame en efectivo'],
+  ])('NO bloquea: %s', (_n, texto) => {
+    expect(hasDatosDeCobro(texto)).toBe(false);
   });
 });
