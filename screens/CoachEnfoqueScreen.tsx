@@ -35,8 +35,10 @@ import {
   ENFOQUES,
   ESTILO_OPCIONES_COACH,
   MAX_ENFOQUES,
+  enfoquesAGuardar,
   esEnfoque,
   esEstiloCoach,
+  puedeDeclararEnfoque,
   type Enfoque,
   type EstiloCoach,
 } from '@/lib/enfoque';
@@ -52,6 +54,8 @@ export default function CoachEnfoqueScreen() {
   const [tienePerfil, setTienePerfil] = useState(false);
   const [estilo, setEstilo] = useState<EstiloCoach | null>(null);
   const [enfoques, setEnfoques] = useState<Enfoque[]>([]);
+  // La escuela solo la declara quien tiene matrícula verificada por Vita.
+  const [hasMatricula, setHasMatricula] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -60,12 +64,13 @@ export default function CoachEnfoqueScreen() {
     (async () => {
       const { data } = await supabase
         .from('coaches')
-        .select('estilo, enfoques')
+        .select('estilo, enfoques, has_matricula')
         .eq('profile_id', user.id)
         .maybeSingle();
 
       if (!data) { setLoading(false); return; }
       setTienePerfil(true);
+      setHasMatricula(!!(data as { has_matricula?: boolean }).has_matricula);
       const e = (data as { estilo?: string | null }).estilo;
       setEstilo(esEstiloCoach(e) ? e : null);
       setEnfoques((((data as { enfoques?: string[] }).enfoques) ?? []).filter(esEnfoque));
@@ -94,7 +99,7 @@ export default function CoachEnfoqueScreen() {
     setSaving(true);
     const { error } = await supabase
       .from('coaches')
-      .update({ estilo, enfoques })
+      .update({ estilo, enfoques: enfoquesAGuardar(hasMatricula, enfoques) })
       .eq('profile_id', user.id);
     setSaving(false);
 
@@ -161,6 +166,19 @@ export default function CoachEnfoqueScreen() {
                 })}
               </View>
 
+              {/* Sin matrícula verificada no se ofrece: las seis son escuelas
+                  de psicología, y declarar una sin matrícula insinúa en el
+                  perfil una profesión que Vita no chequeó. La regla de verdad
+                  está en la base (`trg_enfoques_requieren_matricula`); esto
+                  evita ofrecer algo que no se iba a guardar. */}
+              {!puedeDeclararEnfoque(hasMatricula) ? (
+                <View style={s.block}>
+                  <Text style={s.blockTitle}>Tu enfoque</Text>
+                  <Text style={s.blockHint}>
+                    Las escuelas (cognitivo conductual, sistémico y las demás) se muestran en el perfil de quien tiene una matrícula verificada por Vita. Si tenés matrícula, cargala en Credenciales y esta pregunta aparece sola.
+                  </Text>
+                </View>
+              ) : (
               <View style={s.block}>
                 <Text style={s.blockTitle}>Tu enfoque</Text>
                 <Text style={s.blockHint}>
@@ -187,6 +205,7 @@ export default function CoachEnfoqueScreen() {
                   })}
                 </View>
               </View>
+              )}
 
               <Text style={s.nota}>
                 Las dos son opcionales. Si no contestás, no se muestra nada y tampoco te deja afuera de las sugerencias.

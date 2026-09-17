@@ -109,6 +109,32 @@ export function evaluarEstilo(
   };
 }
 
+/** La escuela solo la declara quien tiene matrícula verificada por Vita.
+ *
+ *  Las seis opciones son escuelas de PSICOLOGÍA: un coach sin matrícula que
+ *  marque "psicoanalítico" está insinuando en su perfil que es psicólogo, que
+ *  es lo mismo que el buscador (03/09) y el quiz (17/09) dejaron de deducir del
+ *  texto libre. Misma regla que `tipoProfesional`, extendida, no una nueva.
+ *
+ *  ⚠️ `has_matricula` dice que hay UNA matrícula chequeada, no de qué profesión
+ *  (ver `lib/tipoProfesional.ts`). Sigue sin ser perfecto por el mismo motivo.
+ *
+ *  La regla de verdad vive en la base (`trg_enfoques_requieren_matricula`),
+ *  porque una revocación de credencial tiene que poder limpiar un enfoque ya
+ *  declarado. Esto es para que la pantalla no ofrezca lo que no se va a guardar. */
+export function puedeDeclararEnfoque(hasMatricula: boolean | null | undefined): boolean {
+  return !!hasMatricula;
+}
+
+/** Qué mandar a guardar. Sin matrícula, vacío: guardar lo elegido sería pedirle
+ *  a la base que lo descarte y mostrarle al profesional algo que no quedó. */
+export function enfoquesAGuardar(
+  hasMatricula: boolean | null | undefined,
+  elegidos: Enfoque[],
+): Enfoque[] {
+  return puedeDeclararEnfoque(hasMatricula) ? elegidos : [];
+}
+
 /** Cómo se lee el estilo en el perfil público. Null si no contestó. */
 export function etiquetaEstilo(estilo: string | null | undefined): string | null {
   if (!esEstiloCoach(estilo)) return null;

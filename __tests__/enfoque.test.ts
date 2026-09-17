@@ -8,6 +8,8 @@ import {
   etiquetaEstilo,
   etiquetasEnfoques,
   evaluarEstilo,
+  enfoquesAGuardar,
+  puedeDeclararEnfoque,
 } from '../lib/enfoque';
 import { recomendarDesdeQuiz } from '../lib/quizMatch';
 import type { CachedCoach } from '../lib/coachesCache';
@@ -79,6 +81,32 @@ describe('evaluarEstilo', () => {
 
   it('un valor viejo o roto en la base no rompe nada', () => {
     expect(evaluarEstilo('lo_que_sea', 'escucha').coincide).toBe(true);
+  });
+});
+
+describe('la escuela pide matrícula verificada', () => {
+  it('sin matrícula no se ofrece la pregunta', () => {
+    expect(puedeDeclararEnfoque(false)).toBe(false);
+    expect(puedeDeclararEnfoque(null)).toBe(false);
+    expect(puedeDeclararEnfoque(undefined)).toBe(false);
+    expect(puedeDeclararEnfoque(true)).toBe(true);
+  });
+
+  it('sin matrícula no se manda a guardar lo elegido', () => {
+    expect(enfoquesAGuardar(false, ['psicoanalitico'])).toEqual([]);
+  });
+
+  it('con matrícula se guarda tal cual', () => {
+    expect(enfoquesAGuardar(true, ['psicoanalitico', 'sistemico']))
+      .toEqual(['psicoanalitico', 'sistemico']);
+  });
+
+  it('el estilo no depende de la matrícula: lo contesta cualquiera', () => {
+    // Si esto se rompe, un coach sin matrícula dejaría de aparecer con su
+    // estilo en el quiz, que es lo único que el quiz mira.
+    const r = evaluarEstilo('escucha', 'escucha');
+    expect(r.coincide).toBe(true);
+    expect(r.razon).not.toBeNull();
   });
 });
 
