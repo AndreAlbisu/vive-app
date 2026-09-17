@@ -1,303 +1,651 @@
 # Selia — el competidor que hace lo mismo
 
-> Primera versión: 17/09/2026 (sesión 252). **Ampliada el mismo día** (sesión 254) a pedido
-> de Andre: *"una investigación completa y meticulosa de Selia, me parece que es nuestra
-> principal competencia"*. Fuentes al pie.
+> **Versión 3, 17/09/2026 (sesión 255).** Andre pidió primero una investigación
+> (sesión 252), después *"completa y meticulosa"* (254), y ahora *"todas sus features,
+> su onboarding, sus políticas, precios. NECESITO TODO. así podemos ver qué aprovechar
+> de ellos, qué evitar, y qué oportunidades tenemos. Un FODA completo."*
 >
-> ⚠️ Casi todas las cifras las publica la propia Selia o salen de notas de prensa de
-> 2023–2024. Sirven para dimensionar, no son datos auditados. Lo que sigue sin poder
-> verse —la comisión y cuánto le paga al especialista— está detrás de su portal para
-> profesionales.
+> **Cómo se investigó** (para saber cuánto confiar en cada dato):
+> 1. Las ~40 páginas públicas de `selia.co` bajadas y leídas completas, más su mapa del sitio (5.000+ direcciones).
+> 2. **La app web de Selia (`app.selia.co`, versión 2.13.98) por dentro**: sus 125 archivos traen todos los
+>    textos de pantalla. Se extrajeron ~1.100 en español. Así se reconstruyeron el registro, el matching, el
+>    pago, la sesión y el después **sin crear una cuenta**. Lo que dice una pantalla es seguro; en qué orden
+>    aparecen o a quién se le muestran, no siempre.
+> 3. **Los dos PDF de términos**, con las cláusulas de plata, datos, credenciales y conducta leídas enteras:
+>    usuarios (28/11/2023) y **especialistas (versión 2.0 de 2026)**.
+> 4. Prensa 2023–2024, App Store, Y Combinator.
+>
+> ⚠️ Las cifras de tamaño las publica la propia Selia: sirven para dimensionar, no están auditadas.
 
-## 0. Lo más importante, en diez líneas
+---
 
-1. **Es el mismo producto que Vita en su núcleo**: psicólogos + coaches + nutricionistas,
-   test de matching, herramientas entre sesiones, comisión por sesión.
-2. **Es grande para la región**: unos US$2M facturados en 2023, proyectaba US$4M en 2024,
-   más de 10.000 sesiones por mes, 600 especialistas, más de 100 empresas clientes.
-3. **Su motor de plata más fuerte son las empresas** (Coca-Cola FEMSA, Visa, Starbucks,
-   KPMG…). Vita no tiene eso.
-4. **En Argentina está, pero de costado**: precios en dólares, sin Mercado Pago, sin
-   matrícula visible, y al menos una psicóloga argentina en la red. No es una operación local.
-5. **Sus reglas para el usuario son duras**: después de 24 h de reservar ya no devuelve la
-   plata, los paquetes vencen al año, y quien da de baja la cuenta pierde lo que no usó.
-6. **Se lava las manos con las credenciales**: sus términos dicen que no puede garantizar
-   que los títulos de los especialistas sean auténticos y le piden al usuario que los chequee.
-7. **Sus términos le prohíben al usuario hablar mal de Selia en público**, y los pleitos van a
-   tribunales de **Delaware**. En Argentina, las dos cosas chocan con la ley de defensa del
-   consumidor (lectura nuestra, no de un abogado).
-8. **Las ventajas de Vita en Argentina ya existen**: pesos y Mercado Pago, matrícula
-   verificada, garantía y reembolso, voz y crisis locales, el link propio del coach.
-9. **Lo que conviene copiar**: paquetes, tests gratis como puerta de entrada, programas
-   por tema, contenido para Google, venta a empresas (más adelante).
-10. **El riesgo real** es que decida venir en serio. Hoy no hay señales de eso.
+## 0. Lo esencial en una página
+
+**Qué es:** la plataforma de salud mental en español más armada de la región. Colombiana, con Y Combinator,
+~US$2M facturados en 2023 (proyectaba US$4M en 2024), 600 especialistas, 400.000+ sesiones, 100+ empresas.
+Mismo núcleo que Vita: matching, profesionales, sesión por video, herramientas entre sesiones, comisión.
+
+**Lo que no sabíamos hasta esta versión:**
+1. **Tiene IA en serio.** "Lía", una asistente que orienta, hace un primer chequeo de ánimo y **prepara la sesión
+   con el usuario y le pasa un resumen al especialista**. Y **notas automáticas de sesión**: transcribe el audio
+   y genera notas, con consentimiento.
+2. **Una persona te ayuda a elegir**: orientación de 15 minutos por video con un psicólogo orientador. Lo que
+   pagás por ella vuelve como crédito.
+3. **"Garantía de Match":** si no hubo match en la primera cita, la segunda es gratis. Y si querés cambiar de
+   especialista, te dan una sesión sin costo con otro.
+4. **Cobra de mil maneras**: tarjeta, PSE, Nequi, "comprá ahora, pagá después" (Addi y Bancolombia), cuotas
+   sin interés, créditos, cupones, referidos (50% al amigo), tarjetas de regalo, alianzas (Banco Falabella 50%).
+5. **Cuentas familiares**: un adulto administra y paga la terapia de su pareja o de sus hijos.
+6. **Con los profesionales es dura**: **Selia fija el precio**, no el profesional; puede cobrarles una tarifa
+   de registro; les descuenta los reembolsos de sus pagos siguientes; les prohíbe hablar mal de Selia; y durante
+   **12 meses después de irse** no pueden atender por fuera a nadie que conocieron ahí, con multa.
+7. **Su apuesta más fuerte fuera de Colombia son los latinos que viven afuera** (EE.UU., España, Canadá,
+   Australia), desde USD 25. Es exactamente el público del riel internacional de Vita.
+
+**Lo que ya sabíamos y se confirma:** en Argentina está de costado (dólares, sin Mercado Pago, sin matrícula
+visible, pocos profesionales argentinos). Sus reglas con la plata son duras (sin reembolso pasadas 24 h de la
+compra, saldo que vence, perdés todo si das de baja la cuenta). Por escrito dice que no puede garantizar que los
+títulos de sus especialistas sean auténticos.
+
+**El FODA en cuatro líneas** (detalle en §17–18):
+- **Fortaleza de Vita:** hecha para Argentina, con reglas justas y una propuesta mejor para el profesional.
+- **Debilidad de Vita:** cero usuarios, cero reseñas, sin IA, sin orientación humana, sin paquetes, sin empresas.
+- **Oportunidad:** argentinos (acá y afuera) que quieren un profesional argentino, pagando como pagan acá; y
+  profesionales argentinos que no aceptarían las condiciones de Selia.
+- **Amenaza:** que Selia decida venir en serio. Tiene todo armado menos lo local, y lo local se copia rápido.
 
 ---
 
 ## 1. Quién es
 
-- **Selia**, marca de **Heal Room Inc.**, sociedad de **Delaware (EE.UU.)**. Operación en
-  **Bogotá**; Y Combinator la lista en **Miami**. Empezó en **diciembre de 2020** como una
-  clínica virtual para agendar servicios de salud en general, y después se enfocó en salud mental.
-- **Fundadores:** **Santiago de Bedout** (CEO; antes fue de los primeros empleados de Rappi,
-  donde manejó el negocio de bebidas alcohólicas), **Luciano Jaramillo** y **Jaime Castro**.
-  Algunas notas suman a **Gustavo Santamaría** y **Pablo Rojas** como cofundadores.
-- **Equipo:** unas **20 personas** según Y Combinator (sin contar a los especialistas).
-- **Inversión:**
-  - **Y Combinator**, camada invierno 2022.
-  - **Seed de alrededor de US$1,5 millones** (YC y ángeles).
-  - **US$300.000** en octubre de 2023, del premio Forbes 30 Under 30 Latinx (Bad Bunny
-    estaba en el jurado y puso US$100.000).
-  - **No encontré ninguna ronda nueva en 2025 ni 2026.** Tampoco noticias de la empresa
-    después de mediados de 2024; sí sigue activa (la app se actualizó en agosto de 2026 y el
-    blog tiene guías "2026").
+- **Selia**, marca de **Heal Room Inc.**, sociedad de **Delaware** (domicilio en Wilmington). Opera desde
+  **Bogotá**; Y Combinator la lista en **Miami**. Empezó en **diciembre de 2020** como clínica virtual de salud
+  en general y se enfocó en salud mental.
+- **Fundadores:** **Santiago de Bedout** (CEO; antes fue de los primeros empleados de Rappi, donde manejó el
+  negocio de bebidas alcohólicas), **Luciano Jaramillo** y **Jaime Castro**. Algunas notas suman a Gustavo
+  Santamaría y Pablo Rojas.
+- **Equipo:** unas **20 personas** según Y Combinator (sin contar especialistas).
+- **Inversión:** Y Combinator (invierno 2022); seed de ~**US$1,5M**; **US$300.000** en octubre de 2023 del premio
+  Forbes 30 Under 30 Latinx (Bad Bunny, jurado, puso US$100.000). **Ninguna ronda nueva encontrada en 2025–2026.**
+- **Sigue muy activa:** el mapa del sitio se actualizó **hoy**, publica notas de blog de septiembre de 2026, la
+  app va por la versión 2.13.98 y los términos de especialistas son versión 2.0 de 2026.
 
-### Cómo creció (cifras que publica ella)
+### Cómo creció (cifras propias)
 
-| Fecha | Sesiones por mes | Sesiones totales | Especialistas | Empresas | Facturación |
+| Fecha | Sesiones/mes | Sesiones totales | Especialistas | Empresas | Facturación |
 |---|---|---|---|---|---|
 | dic 2023 | ~6.000 | 100.000+ | 350+ | 50+ | objetivo US$2M en 2023 |
 | jul 2024 | 10.000+ | 160.000+ | 350+ | — | proyecta US$4M en 2024 |
 | hoy (web) | — | **400.000+** | **600+** | **100+** | — |
 
-Otros números de su web: **50.000+ personas** atendidas, **4,92/5** en más de 83.000 reseñas
-de pacientes, consultas registradas en **30+ países**.
+- Dice **40.000+** personas atendidas en una página y **50.000+** en otra; **4,92/5** con "83.000" o "100.000"
+  reseñas según la página.
+- En julio de 2024 dijo haberles pagado **US$700.000** a los especialistas. Cruzado con la facturación sugiere que
+  **se queda con una parte grande de cada sesión**, pero no dice el período: es una pista, no un dato.
 
-- En julio de 2024 dijo haberle pagado **US$700.000 (unos COP 2.700 millones)** a los
-  especialistas. Si se cruza con los US$2–4M facturados, **los especialistas se estarían
-  llevando una parte chica de cada peso**, o la cifra es de un período más corto.
-  ⚠️ No se puede sacar la comisión de acá con seguridad: no dicen qué período ni si incluye
-  lo de empresas. Es solo una pista de que **la comisión de Selia es alta**.
+---
 
-## 2. El producto
+## 2. Cómo está hecha
 
-### Qué se puede hacer
+| Pieza | Qué usa | Qué significa |
+|---|---|---|
+| App | **Una web (Vue) empaquetada como app** (Capacitor), la misma para web, iOS y Android | Un solo producto para mantener. Por eso casi todo pasa en la web |
+| Video | **Agora**, dentro de la app, con sala de espera | Igual que Vita (que usa Daily.co) |
+| Pagos | **Stripe** (internacional), **Wompi, PSE y Nequi** (Colombia), **Addi y Bancolombia** (pagar después) | Cero medios argentinos. No hay Mercado Pago en ningún lado del código |
+| Datos y marketing | Amplitude, Segment, HubSpot, Sentry, Typeform | Mide cada paso del matching (hay eventos de "presupuesto", "género", "enfoque") |
+| Web pública | Webflow, con **pruebas A/B de la home** (`home-test/home-a` y `home-b`) | Optimiza la conversión |
+| Idiomas | Español, inglés y **portugués** en toda la app | Preparada para Brasil, aunque no lo anuncia |
 
-- **Servicios:** terapia individual, terapia de pareja, **psiquiatría**, coaching emocional,
-  nutrición, y para empresas también bienestar financiero y talleres.
-- **Cómo se elige:** "Tu Match", un test de 2–3 minutos que recomienda especialistas
-  (dicen que el 90% acierta en el primer intento), o un directorio. Se puede cambiar de
-  especialista cuando se quiera. La app también promociona una **búsqueda con IA**.
-- **Sesión de orientación gratis de 20 minutos** para conocer al especialista antes de pagar.
-- **La sesión:** videollamada, llamada de voz o mensajes; **45–60 minutos** según su página de
-  precios (hay usuarios que se quejan de sesiones de 35 minutos).
-- **Presencial:** la última versión de la app agrega "la dirección del consultorio para
-  citas presenciales", así que también empieza a reservar sesiones en persona.
-- **Entre sesiones:** 100+ meditaciones guiadas, diario emocional con registro de ánimo,
-  respiración, un programa de 21 días para la ansiedad, un curso de mindfulness.
-- **Tests gratis** (10+): depresión, ansiedad, inteligencia emocional, dependencia emocional,
-  insomnio, autoestima, trastornos alimentarios, pareja, burnout, trauma infantil.
-- **Programas por tema:** ansiedad, depresión, burnout, duelo, pareja y "Programa Tusa"
-  (para superar una ruptura; "tusa" es cómo se le dice en Colombia al desamor).
-- **Tarjetas de regalo**, podcast, y un **blog de más de 700 artículos** en 18 temas.
+**Su máquina de Google** (del mapa del sitio): **2.840 páginas solo para México**, **1.482 reseñas de pacientes
+publicadas una por una** como páginas, **815 notas de blog**, **676 perfiles de especialistas**, 20 temas, 10 tests,
+6 programas, páginas por país (Argentina, Colombia, México) y por país de migración (EE.UU., España, Canadá,
+Australia). Cada reseña publicada como página propia es contenido gratis que Google indexa.
 
-### La app
+**Descuidos visibles** (señal de que mueven rápido y revisan poco):
+- La página de **psiquiatría** tiene en "Nuestro enfoque" el texto de **nutrición** ("sin contar calorías").
+- En la home B, la tarjeta de **Burnout** tiene el texto de **ruptura**.
+- La web dice "**4,9** en las tiendas"; la App Store muestra **4,3 con 103 calificaciones**.
+- Orientación de "15 minutos" en la app y "20 minutos" en la web.
+- Los términos de usuarios dicen **solo mayores de 18**; los de especialistas y la app **aceptan menores** con
+  consentimiento de los padres.
+- La landing argentina muestra la **línea de crisis de Colombia**.
 
-- **App Store:** 4,3 estrellas con solo **103 calificaciones** (versión 2.13.44, agosto de 2026).
-  Una reseña: *"Tiene especialistas pésimos y su servicio es horrible. Busquen a psicólogos
-  independientes mejor"*.
-- La web dice "4,9 en las tiendas", que **no coincide** con lo que se ve en la App Store.
-- **Lo que dice esto:** con 50.000 personas atendidas y 103 calificaciones en iOS, **la mayoría
-  de la gente usa Selia desde la web**, no desde la app. Su canal de entrada es Google.
+---
 
-## 3. Precios
+## 3. El registro, paso a paso
 
-| País | Sesión desde | Primera sesión | Paquetes |
+Reconstruido de los textos de la app (y de la web, que dice lo mismo):
+
+1. **Pantallas de bienvenida**: *"Tu espacio para cuidar tu bienestar emocional"*, *"Apoyo de especialistas
+   que conectan contigo"*, *"Recursos personalizados para sentirte mejor"*, *"Hazle seguimiento a tu evolución
+   emocional"*.
+2. **Crear cuenta**: **Apple, Google, o mail con código de 6 dígitos** (también mail y contraseña). Bloquea
+   dominios de mail descartables.
+3. **Preguntas de a una por pantalla**: *¿Cómo te llamas?* → *¿Con qué género te identificás?* (incluye mujer y
+   hombre transgénero) → *¿Cuál es tu fecha de nacimiento?* (si sos menor, pide consentimiento de los padres) →
+   *¿Cómo es tu número de teléfono?* (*"solo para notificarte sobre tu atención"*) → **"¿Qué te trajo a buscar
+   ayuda hoy?"** → **"¿Qué te gustaría hacer en Selia?"**
+4. **Código de empresa** (opcional): si la empresa paga, se verifica con cédula y aparece el beneficio (*"El
+   {x}% de descuento en tus siguientes {n} sesiones"*).
+5. **Lía entra en escena**: *"Hola, soy Lía, tu guía en bienestar emocional"*. Propone *"Una primera mirada a tu
+   bienestar: 5 preguntas sobre cómo te has sentido las últimas dos semanas"*, y si hace falta, sigue con los
+   tests de ansiedad y depresión (*"Solo toma 3 minutos"*, se puede saltar).
+6. **Recomendación**: *"Camino sugerido"* (Lía) o *"Prefiero explorar por ahora"*.
+7. **Tres caminos para elegir especialista** (§4).
+8. Detecta la **zona horaria** y pregunta si actualizarla.
+
+**Comparado con Vita:** mismo principio de una pregunta por pantalla. Diferencia de fondo: Selia **registra primero
+y muestra valor después**; el onboarding de Vita se pensó al revés (valor antes del registro). Selia pide teléfono,
+género y fecha de nacimiento de entrada: mucha fricción, pero la usa para avisar y para el matching.
+
+---
+
+## 4. Cómo se elige especialista
+
+Selia ofrece **tres caminos** en la misma pantalla (*"Selecciona un método"*):
+
+### a) Matching ("Tu Match")
+- 2–3 minutos. Pregunta: **motivos** (qué te trae), **género del especialista** (opcional), **enfoque** (opcional),
+  **presupuesto** y **disponibilidad** (días y horarios).
+- Devuelve **3 especialistas** y **explica por qué** cada uno (enfoque, experiencia con casos parecidos). Si no hay
+  coincidencia exacta: *"creemos que estos especialistas pueden ser de tu interés"*.
+- Hay una versión con IA en prueba (`ai_matching_version` en sus métricas) y una **"Búsqueda inteligente"**:
+  *"Cuéntanos qué necesitas y encontraremos especialistas para ti"*.
+- Se puede rehacer cuando se quiera.
+
+### b) Orientación con una persona
+- **Videollamada de 15 minutos con un "psicólogo orientador"** que recomienda especialistas. *"Estamos
+  seleccionando a la orientadora con la mejor disponibilidad para ti."*
+- **Se paga, pero vuelve como crédito**: *"Después de la orientación, lo recibirás como créditos para usar en tu
+  próxima compra"*. En la práctica, gratis para quien después reserva.
+- Es la salida cuando el matching no convence: *"¿No te gustan estas recomendaciones? Habla gratis con uno de
+  nuestros psicólogos"*.
+
+### c) Directorio y buscador
+- Busca **por nombre, especialidad o síntoma**. Favoritos.
+
+### El perfil del especialista
+Experiencia en años, *"Especialista destacado"*, *"Mi estilo de terapia"*, *"Trabajo con:"*, *"¿Cómo será tu
+primera sesión?"*, dirección de consultorio si atiende presencial, reseñas con calificación, contador de citas
+completadas, *"Excelente continuidad en los procesos"* (una insignia por retención), y avisos de *"no está
+recibiendo nuevos consultantes"*.
+
+- **Si no hay horarios**: botón **"Solicitar disponibilidad"** (elegís días y franjas, *"después de las 6:00 PM"*,
+  y te avisan cuando el especialista responde).
+- **Aviso de habilitación de otro país** (clave para Argentina): *"Este especialista está habilitado y acreditado
+  en {país}, no en tu país de residencia"*, con una casilla que el usuario tiene que tildar: *"He leído y entiendo
+  la información proporcionada"*. O sea: **a un argentino le puede tocar una psicóloga colombiana sin matrícula
+  argentina, y Selia lo resuelve con un tilde**.
+
+---
+
+## 5. Reservar y pagar
+
+- **Elegís servicio** (individual, pareja, psiquiatría, coaching, nutrición), día y hora (reservas hasta 6 meses
+  adelante), y escribís el **motivo de consulta** (obligatorio).
+- **Te guardan el turno 10 minutos** mientras pagás (*"¡Perderás tu cita! Si cancelas el pago de tu cita, tu cupo
+  se liberará"*). Con Nequi, 5 minutos.
+- **"Pagaré en otro momento"**: se puede reservar sin pagar; si no se paga en **24 horas**, se puede cancelar.
+- **Medios:** tarjeta (guardada), PSE, Nequi, Addi, "Paga después" de Bancolombia, **cuotas sin interés**, créditos
+  y cupones.
+- En el checkout: *"¡Garantía de Match! Si no hay match en tu primera cita, te obsequiamos la segunda."* y
+  *"¡Ahorra hasta X en esta sesión con un paquete de sesiones!"*.
+- **Consentimiento informado con firma electrónica** (*"¡Firma completada!"*, llega por mail).
+- **Contacto de emergencia** en el perfil.
+
+---
+
+## 6. La sesión y el después
+
+**Antes:**
+- **Lía prepara la sesión** con el usuario: *"¿Qué te gustaría tener presente para tu sesión? Puedo ayudarte a
+  ordenar tus ideas para llegar con más claridad"*. Arma un **"Resumen para tu sesión"** que *"estará disponible
+  para tu especialista antes de la sesión"*. Se puede *"seguir hablando con Lía durante el día"*.
+- Recordatorio de permisos de cámara, recomendaciones para la primera sesión, sala de espera.
+
+**Durante:**
+- Video (Agora), voz o chat.
+- **Notas automáticas**: pide permiso (*"Autoriza la transcripción de tus sesiones para generar notas
+  automáticas"*), con opción de recordarlo o preguntar cada vez, y *"Rechazar no afecta tu sesión"*. El especialista
+  también puede frenarlas. Las notas (*"generadas automáticamente por IA a partir del audio de la sesión. Solo tú y
+  tu especialista tienen acceso"*) traen resumen, *"Recomendaciones de la sesión"* y *"Reflexión final"*.
+
+**Después:**
+- **Calificación en tres partes**: atención del especialista, **calidad de la videollamada**, y *"¿Cómo te
+  sentiste?"*. Reseña anónima para *"la comunidad"*.
+- **"¿Quieres continuar con este especialista?"** Si decís que no: *"Podrás acceder a una cita sin costo adicional
+  para que conozcas a otro especialista"* (con otro de **igual o menor precio**).
+- **Empuje a la continuidad**, muy trabajado: *"Estás construyendo constancia"*, *"La terapia funciona mejor
+  cuando hay continuidad"*, **"Próxima sesión sugerida"** por el especialista, una barra de progreso, y *"En promedio,
+  los usuarios de Selia empiezan a notar mejoría alrededor de este número de sesiones"*.
+- Botón **"Agendar próxima sesión"** y la oferta de paquete.
+- **Si el especialista no se conectó**: *"Parece que tu especialista tuvo un inconveniente para conectarse"*,
+  con reagendar o buscar otro.
+
+---
+
+## 7. Entre sesiones
+
+- **Chequeos mensuales** de bienestar, ansiedad y depresión, con **gráficos de evolución** (*"Así ha evolucionado
+  tu nivel de ansiedad 🌱"*) e interpretación por rangos.
+- **Diario emocional** con registro de ánimo.
+- **Hábitos**, **"Caminos"** con cuestionario, **programas**, **meditaciones** (100+), respiración, biblioteca de
+  contenido, *"Contenido para ti"*.
+- **Eventos y conferencias** con cupos, y **terapia grupal** de 8 a 14 personas, sin grabar.
+- **Reto de bienestar de 10 días** (web), con ejercicios escritos y newsletter.
+- **Chat con el especialista**, que se habilita después de reservar.
+
+**Tests gratuitos** (con instrumento validado y nombre): depresión (**PHQ-9**), ansiedad (**GAD-7**), inteligencia
+emocional (**WLEIS**), insomnio (**AIS**), conducta alimentaria (**EAT-26**), burnout (**CBI**), trauma infantil
+(**ACE**), autoestima, dependencia emocional, pareja. Cada uno termina en *"agendá con un especialista"*.
+
+**Programas:** ansiedad, depresión, burnout, duelo (incluye migración y mascotas), pareja y **"Programa Tusa"**
+(ruptura). Son sesiones + contenido + seguimiento, y se compran como paquete (*"¡Comprar mi programa!"*).
+
+---
+
+## 8. Precios y todas las formas de cobrar
+
+### Sesiones
+
+| Mercado | Sesión desde | Primera sesión | Notas |
 |---|---|---|---|
-| Colombia | COP 80.000–100.000 (rango COP 80.000–150.000 según experiencia) | 30% off | 4, 8 y 12 sesiones, hasta 12% off |
-| México | MXN 590 | 30% off | ídem |
-| Argentina | **USD 35** (código AR30) | 30% off | ídem |
-| Resto / internacional | desde USD 25 | 30% off | ídem |
+| Colombia | COP 80.000–100.000 (hasta ~150.000) | 30% off (INICIO30) | Promos a COP 51.000 |
+| México | MXN 590 | 30% off | |
+| Argentina | **USD 35** | 30% off (AR30) | |
+| Latinos afuera | **USD 25** | 30% off | *"En muchos países la terapia privada puede costar entre USD 150 y 300"* |
 
-- **Lo cobra el especialista a su precio** (el perfil fija el valor) y Selia cobra y le paga.
-- Se puede **cargar saldo** en la cuenta.
-- **No trabaja con obras sociales ni prepagas**; da recibos para que la persona pida reintegro
-  por su cuenta.
-- **Para ubicar el precio argentino:** según guías de 2026, una sesión en CABA va de
-  **$20.000 a $55.000** y en el interior de $12.000 a $40.000. Con el dólar de hoy, los USD 35 de
-  Selia probablemente quedan **en la punta cara** de ese rango (a confirmar con la cotización del día).
+- **Duración:** 45–60 minutos según la web (hay usuarios que se quejan de sesiones de 35 minutos).
+- **El precio lo fija Selia** por especialista, según formación y experiencia (términos de especialistas §2.3.4).
 
-## 4. Las reglas para el usuario (sus términos, publicados 28/11/2023)
+### Paquetes
+- **4, 8 y 12 sesiones, hasta 12% de descuento**, por tipo de servicio y rango de precio (*"Estos paquetes aplican
+  para especialistas que ofrecen {servicio} por un valor de {precio}"*). El paquete **no está atado a un
+  especialista**, sino a una franja de precio: se puede cambiar de especialista dentro de la franja.
+- **Vencen al año** (*"Estos paquetes expiraron porque ha pasado más de un año desde su compra"*). Cuotas sin interés.
 
-Revisé en el PDF las cláusulas de reintegros, saldos, pagos, credenciales, menores, baja de cuenta y jurisdicción. Lo que importa:
+### Todo lo demás
+| Mecanismo | Cómo funciona |
+|---|---|
+| **Créditos** | *"Saldo acumulado por referidos, gift cards y devoluciones"*. Parte de los reembolsos vuelven como crédito |
+| **Referidos** | Tu código le da **50% en la primera sesión** al amigo; vos recibís créditos. Mensaje listo para compartir |
+| **Tarjetas de regalo** | Recargables, desde COP 42.000 o USD 20 |
+| **Cupones** | AR30, INICIO30, AMARILLO (50%, campaña de prevención del suicidio), FALABELLA50 |
+| **Alianzas** | **Banco Falabella**: 50% en la primera cita pagando con su tarjeta. Podcasts ("Vos Podés", "Los hombres sí lloran") |
+| **Empresas** | Pago por uso con descuentos por colaborador (§11) |
+| **Orientación** | Paga, devuelta como crédito |
+| **Pagar después** | Addi y Bancolombia |
 
-- **Arrepentimiento solo por 24 horas** desde que reserva y paga: reintegro total.
-- **Después de esas 24 h y hasta 24 h antes de la sesión:** solo se puede **reprogramar,
-  no devolver la plata**.
-- **A menos de 24 h:** Selia le pregunta al especialista, y **el especialista decide** si reprograma.
-- **Después de la sesión** se puede pedir reintegro "si considera que lo merece", por falla
-  en el servicio, y Selia lo revisa caso por caso. Los reintegros no incluyen comisiones bancarias.
-- **Saldo y paquetes vencen al año** y no se devuelven en efectivo (§2.3.5).
-- **Si la persona da de baja la cuenta, pierde todo lo que no usó**, sin devolución (§3.11).
-- 🔴 **Credenciales:** *"Heal Room Inc. no tiene ningún control sobre las calidades académicas
-  y habilitaciones legales del Especialista Registrado y no puede garantizar que los documentos
-  y acreditaciones que presentan sean válidos o auténticos"*, y **le recomienda al usuario
-  verificar los títulos por su cuenta**. Contrasta con su web, que dice "especialistas
-  certificados, todos con maestría".
-- 🔴 **Cláusula de no hablar mal:** entre las obligaciones del usuario está *"abstenerse de hacer
-  cualquier comentario público despectivo o negativo con respecto a Heal Room Inc. o SELIA
-  […] incluidos comentarios o publicaciones en las redes sociales"*. Eso explica en parte por qué
-  casi no hay críticas públicas.
-- **Ley y tribunales de Delaware** para cualquier disputa.
-- **Solo mayores de 18**, con excepciones "muy puntuales" con consentimiento de los padres.
-- **No es para emergencias** y lo dice en mayúsculas.
-- Si especialista y paciente acuerdan algo directo, Selia lo acepta **siempre que no afecte su
-  comisión**.
+---
 
-⚠️ **Lectura nuestra, no de un abogado:** para una persona en Argentina, perder la plata al dar
-de baja la cuenta, prohibirle reseñas negativas y mandarla a litigar a Delaware son cláusulas que
-la **Ley 24.240 de Defensa del Consumidor** permite tener por no escritas (cláusulas abusivas,
-art. 37), y el Código Civil y Comercial le da competencia al juez del domicilio del consumidor.
+## 9. Las reglas para el usuario
 
-## 5. El lado de los profesionales
+De los términos (28/11/2023) y de los textos de la app:
 
-- **Cómo entran:** portal de postulaciones (`aplicaciones.selia.co`) con puestos abiertos de
-  psicólogo clínico, nutricionista, psiquiatra y coach. Totalmente remoto, horario propio.
-- **Lo que les ofrece:** perfil, pacientes de cualquier país, recordatorios y calendario,
-  **Selia cobra por ellos**, y una comunidad de colegas.
-- **Exigencia:** su web dice que todos tienen maestría. No se ve cómo verifica.
-- **Cuánto les paga: no es público.** Ni la web, ni la prensa, ni el portal lo dicen. La pista
-  del §1 sugiere una comisión alta.
-- **Lo que no tiene a la vista:** un link propio para traer a sus pacientes, ni nada parecido a
-  cobrar sin comisión a la gente que el profesional ya atiende.
-- **Los especialistas acumulan mucho**: una psicóloga colombiana tiene 2.721 sesiones y 741
-  reseñas. Los mejores perfiles concentran mucha demanda.
+| Tema | Regla de Selia |
+|---|---|
+| Arrepentimiento | Reintegro total **solo dentro de las 24 h de la compra** |
+| Después de eso | **Solo reprogramar**, hasta 24 h antes. *"No se permiten reagendamientos con menos de 24 horas"* |
+| A menos de 24 h | Decide el especialista si reprograma |
+| Insatisfacción | Reintegro "si considera que lo merece", caso por caso; en la práctica, *Garantía de Match* (segunda sesión gratis) |
+| Saldo y paquetes | **Vencen al año**, no se devuelven en efectivo |
+| Dar de baja la cuenta | **Perdés todo lo que no usaste**, sin devolución |
+| Credenciales | *"No tiene ningún control sobre las calidades académicas y habilitaciones legales… no puede garantizar que los documentos y acreditaciones sean válidos o auténticos"*; le pide al usuario verificarlas |
+| Hablar mal | **Prohibido** comentar negativamente en público o en redes sobre Selia |
+| Disputas | Ley y tribunales de **Delaware** |
+| Edad | 18+ (con excepciones y consentimiento de padres) |
+| Datos | *"Selia no comparte datos con inmigración"* (para latinos en EE.UU.) |
+| Borrar cuenta | Desde la app, pidiendo el motivo |
 
-## 6. Empresas (B2B)
+⚠️ **Lectura nuestra, no de un abogado:** para un consumidor argentino, perder el saldo al dar de baja la cuenta,
+prohibir reseñas negativas y mandar los reclamos a Delaware son cláusulas que la **Ley 24.240** (art. 37) permite
+tener por no escritas, y el Código Civil y Comercial le da competencia al juez del domicilio del consumidor.
 
-- **Clientes que muestra:** Coca-Cola FEMSA, Natura & Avon, Visa, Bavaria, Starbucks, KPMG,
-  WeWork, Nutresa, Alquería, Alkosto; en otras fuentes, Experian y Habi.
-- **Modelo:** *"Solo pagás por lo que tu equipo usa"*, por uso, no por empleado. Suma tableros
-  con métricas de bienestar del equipo, tests de burnout y estrés, y talleres.
-- **Dice 82% de adopción** promedio entre empleados.
-- **México:** oferta armada alrededor de la **NOM-035** (norma mexicana obligatoria de riesgo
-  psicosocial). Es el gancho regulatorio que convierte el bienestar en una obligación de la empresa.
-- ⚠️ En Argentina no hay una norma equivalente que obligue, así que ese gancho no se traslada tal cual.
+---
 
-## 7. En Argentina
+## 10. Las reglas para el especialista (términos 2026, versión 2.0)
 
-- **Página:** `selia.co/latam/argentina`. Menciona Buenos Aires, Córdoba y Rosario, y dice que
-  *"Argentina tiene una de las culturas de terapia de pareja más desarrolladas de LATAM"*.
-- **Precio en dólares (USD 35)**, con cupón AR30. **Sin precios en pesos.**
-- **Sin Mercado Pago** ni ningún medio local mencionado.
-- **Sin matrícula** visible en ningún perfil, ni colegios profesionales, ni obras sociales, ni factura.
-- 📌 **Corrección a la primera versión:** dije que no había profesionales argentinos a la vista.
-  **Hay al menos una: Cecilia Carranza**, psicoanalista, 36 reseñas. Comparada con los perfiles
-  colombianos que tienen 700+, sugiere que **la demanda argentina es chica**, pero la red argentina existe.
-- 📌 **Corrección sobre la línea de emergencia:** la landing argentina sigue mostrando la línea
-  de **Colombia** (192 opción 4), y eso sigue siendo un error serio. **Pero su página general de
-  líneas (`selia.co/hotlines`) sí tiene las de Argentina bien**: la nacional 0800-999-0091, la de
-  Provincia de Buenos Aires, Mendoza y Neuquén. El problema es de la página para Google, no de
-  que no lo hayan pensado nunca. (Tampoco lista el Centro de Asistencia al Suicida, 135.)
-- **Ninguna prensa argentina** sobre Selia.
+**Esto es nuevo y es lo que más sirve para reclutar profesionales en Argentina.**
 
-## 8. Otros que compiten en Argentina
+| Tema | Regla de Selia |
+|---|---|
+| **Precio** | **Lo fija Selia**, según formación y experiencia. Si el profesional no está de acuerdo, puede pedir revisión o irse (§2.3.4) |
+| **Comisión** | No está en los términos: va en una **"Propuesta de Servicios" privada por mail**, y Selia puede cambiarla con aviso (§3.1) |
+| **Tarifa de registro** | Selia **puede cobrarle al profesional por registrarse** o una tarifa periódica, y pagarla *"no te garantiza que serás elegido"* (§3.1.1) |
+| **Cobro** | Selia cobra y le paga **semanal, quincenal o mensual**, calendario modificable. Puede exigirle abrir cuenta en un proveedor aliado (§3.4) |
+| **Reembolsos** | Si Selia le devuelve la plata a un paciente por una falla del servicio, **se lo descuenta al profesional de su pago siguiente** (§3.5) |
+| **No elusión** | No puede atender por fuera a **nadie que conoció en Selia**, ni a sus empresas, **mientras esté activo y 12 meses después de irse**. Si lo hace: suspensión, **multa descontada del pago** e indemnización (§3.10) |
+| **Empresas** | Talleres y charlas a clientes de Selia, solo a través de Selia (§3.11) |
+| **Métricas** | Selia lo evalúa por **calidad, retención y satisfacción**; si no llega, **deja de asignarle pacientes nuevos** (§2.3.11) |
+| **Hablar mal** | Prohibido, igual que al usuario |
+| **IA** | Selia puede implementar herramientas de IA; si el profesional sigue usando la plataforma, **las avala bajo su propia responsabilidad** (§3.2.1) |
+| **Historia clínica y datos** | Selia da la herramienta, pero **el responsable legal es el profesional**, y tiene que mantener indemne a Selia ante cualquier multa (§2.3.9) |
+| **Consentimiento informado** | Obligatorio, el de Selia o uno propio |
+| **Factura** | Selia no garantiza factura al paciente; el profesional tiene que avisar antes si no puede emitirla (§2.3.10) |
+| **Horario** | Lo fija el profesional |
+| **Disputas** | Delaware |
 
-Para dimensionar: Selia no está sola, y en Argentina hay jugadores con más foco local.
+**Lo que Selia les ofrece a cambio:** pacientes de cualquier país, agenda y recordatorios, cobro resuelto, historia
+clínica, consentimiento con firma electrónica, notas automáticas, comunidad de colegas, trabajo 100% remoto.
 
-- **Terapify** (México): dice operar en Argentina y España, 30.000+ usuarios, 400+ psicólogos, y
-  recluta psicólogos argentinos.
-- **Psyred:** psicólogos de LATAM desde USD 10–30.
-- **Directorios y sitios locales:** Tu Terapia, BuscoPsi, TerapyX, Psychology Today Argentina.
-- **Software de turnos para psicólogos** con Mercado Pago (Turnito y similares) compite con la parte
-  "agenda y cobro" que Vita le da al coach.
-- **Startups argentinas de salud mental** que nombra La República: Yerbo, Sigmind y Neomente.
-- La alternativa más fuerte sigue siendo **no usar una plataforma**: la obra social o prepaga, el
-  sistema público, o el psicólogo que alguien recomienda.
+---
 
-## 9. Selia contra Vita
+## 11. Empresas (B2B)
+
+- **Clientes que muestra:** Coca-Cola FEMSA, Natura & Avon, Visa, Bavaria, Starbucks, KPMG, WeWork, Nutresa,
+  Alquería, Alkosto, Experian, Habi. **Casos de éxito publicados:** Cenit, Coca-Cola FEMSA, Colfondos, Coninsa,
+  KPMG, Levapan, Mineros, Promigas, Yuno.
+- **Modelo:** *"Solo pagas por lo que tu equipo utiliza"*. El empleado entra con un **código de empresa** y recibe un
+  descuento configurable (en todas, en la primera o en las siguientes N sesiones).
+- **Incluye:** sesiones, talleres, tests de burnout y estrés, bienestar financiero, **tableros de métricas** para RR.HH.
+- Dice **82% de adopción** promedio.
+- **México:** todo armado alrededor de la **NOM-035**, la norma que obliga a las empresas a medir riesgo psicosocial.
+  En Argentina no encontramos una norma equivalente que obligue.
+
+---
+
+## 12. Crisis y seguridad
+
+- **Página de líneas** (`/hotlines`) con 11 países; la de Argentina está bien (0800-999-0091, Provincia de Buenos
+  Aires, Mendoza, Neuquén), pero **no incluye el 135** del Centro de Asistencia al Suicida.
+- **Campaña "Por si acaso"** (septiembre, mes de prevención del suicidio): líneas de Colombia, Argentina y México,
+  guía para quien está preocupado por otro, preguntas para quien está mal, un bloque *"Hablar es de hombres"*, y un
+  cupón de 50%. Bien hecha, aunque la respuesta a *"siento que ya no quiero seguir, ¿qué hago ahora?"* solo da
+  números de **Colombia**.
+- **Landing argentina**: muestra la línea de **Colombia**.
+- Términos: *"no recomendada para emergencias"*, en mayúsculas.
+- Contacto de emergencia en el perfil del usuario.
+
+---
+
+## 13. Marketing y adquisición
+
+1. **Google, a escala**: miles de páginas (tests, temas, reseñas, perfiles, países) y 800+ notas.
+2. **Tests gratis** como puerta: *"Empieza por entenderte. 10 tests científicamente validados"* → agendar.
+3. **Descuento de entrada** en todos lados (30%, 50% con referidos, alianzas y campañas).
+4. **Latinos en el extranjero**: *"sin seguro médico, sin estatus migratorio, desde USD 25, en tu idioma"*, con
+   testimonios de migrantes.
+5. **Alianzas** con bancos y podcasts.
+6. **Empresas**, con casos de éxito y demo.
+7. **Campañas temáticas** (prevención del suicidio, el Mundial y la salud mental).
+8. **Pruebas A/B** de la home.
+
+---
+
+## 14. En Argentina
+
+- **Página propia** en voseo parcial (*"Conectá con psicólogos desde Buenos Aires, Córdoba, Rosario"*, mezclado con
+  *"encuentras"*). Dice *"especialistas argentinos y latinos"* y que *"Argentina tiene una de las culturas de terapia
+  de pareja más desarrolladas de LATAM"*.
+- **USD 35**, cupón AR30. **Sin pesos, sin Mercado Pago**, sin cuotas argentinas.
+- **Sin matrícula visible**; con el aviso de *"habilitado en otro país"*.
+- **Al menos una psicóloga argentina** en la red (psicoanalista, 36 reseñas, contra 700+ de las colombianas más
+  pedidas): la red argentina existe, pero es chica.
+- Sin prensa argentina, sin obras sociales, sin factura garantizada.
+
+---
+
+## 15. Otros que compiten en Argentina
+
+- **Terapify** (México): dice operar en Argentina y España, 30.000+ usuarios, 400+ psicólogos, recluta argentinos.
+- **Psyred**: psicólogos de la región desde USD 10–30.
+- **Directorios locales**: Tu Terapia, BuscoPsi, TerapyX, Psychology Today Argentina.
+- **Software de turnos con Mercado Pago** (Turnito y similares): compite con la parte "agenda y cobro" que Vita le da al profesional.
+- **Startups argentinas de salud mental**: Yerbo, Sigmind, Neomente.
+- **La alternativa más fuerte**: la obra social o prepaga, el hospital público, o el psicólogo que alguien recomienda.
+- **Precio de referencia 2026**: $20.000–55.000 por sesión en CABA, $12.000–40.000 en el interior.
+
+---
+
+## 16. Selia contra Vita, punto por punto
 
 | | Selia | Vita |
 |---|---|---|
-| Quién atiende | psicólogos, psiquiatras, coaches emocionales, nutricionistas | psicólogos, coaches, nutricionistas |
-| Cómo se elige | Tu Match (test de 2–3 min), directorio, búsqueda con IA, orientación gratis de 20 min | quiz, puertas por tema, deck de Conexiones, buscador |
-| La sesión | video, voz o chat; también presencial | video y chat |
-| Entre sesiones | meditaciones, diario, respiración, tests, programas de 21 días | ánimo, diario, gratitud, respiración, recursos de los profesionales |
+| Profesiones | psicología, psiquiatría, coaching emocional, nutrición | psicología, coaching, nutrición |
+| Registro | primero la cuenta, después el valor; pide teléfono, género y nacimiento | valor antes que registro (principio de diseño) |
+| Elegir | matching con 3 recomendaciones explicadas, IA, orientación humana de 15 min, directorio | quiz, puertas por tema, deck de Conexiones, buscador |
+| IA | Lía (orienta, chequea ánimo, prepara la sesión), notas automáticas | no |
+| Sesión | video (Agora), voz, chat; presencial; grupal | video (Daily.co, **sin probar con dos personas**, L1) y chat |
+| Precio lo fija | **Selia** | **el profesional** |
 | Moneda en Argentina | dólares | pesos |
-| Medio de pago en Argentina | tarjeta internacional | Mercado Pago |
-| Quién tiene la plata | Selia cobra y paga después | con MP, va directo al profesional |
-| Paquetes | 4, 8, 12 (hasta 12% off) | no todavía |
-| Si no quedé conforme | reintegro solo si Selia lo aprueba | garantía de reintegro de la primera sesión |
-| Si cancelo | solo 24 h después de reservar; después, reprogramar | reembolso si se cancela a tiempo |
-| Matrícula | "no podemos garantizar que sean auténticos" | verificada; "Psicólogo" solo con matrícula chequeada |
-| Primera sesión | 30% off | garantía |
-| Link propio del profesional | no | sí, sin comisión en la primera sesión |
-| Empresas | sí, fuerte | no |
-| Crisis en Argentina | landing con línea de Colombia; página de líneas correcta | pantalla de ayuda con líneas argentinas y horarios verificados |
+| Medios de pago | tarjeta, PSE, Nequi, pagar después, cuotas; nada argentino | Mercado Pago (con cuotas); PayPal y USDT para afuera |
+| La plata | Selia la retiene y paga semanal a mensual | con MP va directo al profesional |
+| Comisión | privada, cambiable, más posible tarifa de registro | pública: 20% primera sesión del vínculo, 15% después, **0% en la primera si el cliente lo trajo el profesional** |
+| Paquetes | 4/8/12, hasta 12%, vencen al año | no |
+| Créditos, referidos, gift cards | sí | no |
+| Cancelar | reintegro solo 24 h después de comprar; después reprogramar | **reintegro total cancelando con 24 h o más** |
+| Insatisfecho | segunda sesión gratis ("Garantía de Match") o cambio gratis | **reintegro de la primera sesión** (una vez por cliente) |
+| Si el especialista no va | reagendar o cambiar | reembolso automático si cancela o no confirma |
+| Credenciales | "no podemos garantizar que sean auténticos"; tilde de "habilitado en otro país" | **matrícula revisada a mano**; "Psicólogo" en el catálogo solo con matrícula verificada |
+| Reseñas negativas | prohibidas por contrato | permitidas, moderadas |
+| No elusión | hasta 12 meses después de irse + multa | durante el vínculo; detección de contacto y escalera de sanciones revisada a mano |
+| Link propio del profesional | prohibido llevarse pacientes | sí, sin comisión en la primera sesión |
+| Seguimiento | chequeos mensuales con gráficos, empuje a continuidad | registro de ánimo, diario, gratitud |
+| Herramientas | meditaciones, diario, hábitos, caminos, programas, eventos | respiración, meditación, sueño, ruido, relajación, escáner corporal, anclaje, lecturas, recursos de profesionales |
+| Familia | cuentas familiares | no |
+| Empresas | fuerte | no |
+| Crisis en Argentina | landing con línea de Colombia; página de líneas correcta | pantalla con líneas argentinas y horarios verificados, en usuario y profesional |
+| Disputas | Delaware | juez del domicilio del consumidor |
+| Tamaño | 400.000 sesiones, 600 especialistas | **cero usuarios**, pre-lanzamiento |
 
-## 10. Dónde Vita tiene ventaja en Argentina
+---
 
-Todo esto ya existe en Vita, no es un plan:
+## 17. FODA de Selia
 
-1. **Pesos y Mercado Pago.** Pagar USD 35 con tarjeta internacional es caro y con recargos para
-   alguien en Argentina.
-2. **Matrícula verificada** (Ley 23.277). Selia, por escrito, dice que no puede garantizar las
-   credenciales. **Es un argumento de confianza concreto** para la comunicación.
-3. **Reglas justas con la plata:** garantía de la primera sesión y reembolso al cancelar a tiempo,
-   contra un "después de 24 h no hay devolución" y "si te vas, perdés el saldo".
-4. **Hecha para acá:** voz argentina, la pantalla de crisis con líneas locales y sus horarios
-   reales, y los temas de las puertas.
-5. **El link propio del coach** para traer a la gente que ya atiende. Selia no tiene algo así.
+**Fortalezas**
+- Escala y prueba social: 400.000 sesiones, 600 especialistas, miles de reseñas, clientes corporativos conocidos.
+- Producto completo de punta a punta: tres formas de elegir, orientación humana, pagos flexibles, seguimiento,
+  empuje a la continuidad muy trabajado.
+- **IA aplicada donde duele**: preparar la sesión y documentarla.
+- Motor B2B con casos, tableros y un gancho regulatorio en México.
+- Máquina de Google enorme y pruebas A/B: adquisición barata.
+- Monetización diversificada: paquetes, créditos, referidos, alianzas, pagar después.
+- Respaldo de Y Combinator y un equipo que itera rápido.
 
-## 11. Lo que conviene aprender de ellos
+**Debilidades**
+- **Condiciones duras con el profesional** (precio fijado, pagos diferidos, descuentos de reembolsos, tarifa posible,
+  12 meses de no competencia, métricas que cortan pacientes). Terreno fértil para que los buenos se vayan.
+- **Condiciones duras con el usuario** (sin reembolsos, saldo que vence, se pierde al irse, prohibido criticar).
+- **Credenciales sin respaldo**: "certificados" en la web y "no podemos garantizar" en los términos; resuelve la
+  habilitación extranjera con un tilde.
+- **Descuidos** de textos y datos inconsistentes (§2): mucha velocidad, poca revisión.
+- **Nada local fuera de Colombia**: sin pagos locales en Argentina, ni en México más allá de la tarjeta.
+- Pocas descargas reales de la app (103 calificaciones en iOS): depende de la web y de Google.
+- **Sin noticias de inversión desde 2023**: o crece con ingresos propios, o tiene poco margen para expandirse.
 
-- 🔴 **Paquetes.** Un competidor grande los tiene como parte central. La demanda existe. El
-  obstáculo técnico sigue: Selia puede tenerlos porque retiene la plata, y en Vita con Mercado
-  Pago va al profesional; PayPal y USDT, donde Vita sí retiene, serían el lugar para empezar.
-- **Tests gratis como puerta de entrada.** Son su mejor gancho para Google: alguien busca "test de
-  ansiedad", lo hace y termina en el match. Vita tiene el quiz, pero no tests sueltos que alguien
-  busque.
-- **Programas por tema con nombre propio** ("Programa Tusa"). Es lenguaje local que engancha; en
-  Argentina, el equivalente sería con nuestras palabras.
-- **Contenido para Google:** 700+ artículos y una página por país. Es de donde sale su tráfico
-  (pocas reseñas en la App Store).
-- **Sesión de orientación gratis de 20 minutos.** Baja la barrera del primer pago. Choca con la
-  anti-fuga (es un contacto gratis con el profesional), así que hay que pensarla bien antes de copiarla.
-- **Empresas.** Probablemente lo que más creció en Selia. Para Vita es un segundo paso.
+**Oportunidades (para Selia)**
+- Brasil (ya tiene portugués), latinos en EE.UU. y España, IA como diferencial, más empresas.
+- Venir en serio a Argentina con cobro en pesos y psicólogos argentinos.
 
-## 12. Lo que NO conviene copiar
+**Amenazas (para Selia)**
+- Regulación de telepsicología por país (matrícula local, datos de salud, consumidor).
+- Riesgo de privacidad y confianza con la transcripción de sesiones.
+- Competidores locales mejor adaptados en cada país.
+- Profesionales que se van por las condiciones; reseñas negativas que igual aparecen.
 
-- Quedarse con el saldo de quien se va, prohibir críticas, jurisdicción extranjera: además de
-  riesgoso legalmente en Argentina, es lo contrario de la confianza que Vita quiere construir.
-- Decir "especialistas certificados" sin respaldarlo.
-- Una página por país hecha para Google sin revisar lo local: el caso de la línea de Colombia en la
-  página argentina es justo lo que puede salir mal.
+---
 
-## 13. El riesgo
+## 18. FODA de Vita frente a Selia
 
-Tiene plata, respaldo de Y Combinator, 600 especialistas, clientes grandes y ya tiene página y al
-menos una profesional en Argentina. **Si decide venir en serio** —precios en pesos, Mercado Pago,
-matrículas— es un competidor fuerte. **Señales a vigilar:** que aparezcan precios en pesos o Mercado
-Pago en su página argentina, que publique búsquedas de personal en Argentina, prensa argentina, o
-una ronda de inversión nueva. Hoy no hay ninguna.
+**Fortalezas**
+1. **Argentina de punta a punta**: pesos, Mercado Pago con cuotas, voseo real, crisis local verificada.
+2. **Reglas justas y públicas con la plata**: reembolso total cancelando a tiempo, garantía con reintegro,
+   comisión publicada.
+3. **La mejor oferta para el profesional**: fija su precio, cobra en su Mercado Pago, el link propio sin comisión en
+   la primera sesión, sin tarifa de registro, sin no competencia posterior, sanciones revisadas a mano.
+4. **Matrícula revisada a mano** y "Psicólogo" solo con matrícula verificada.
+5. **Riel para argentinos afuera** (PayPal y USDT) ya construido.
+6. Anti-fuga pensado para no castigar al profesional (comisión escalonada, detección que advierte antes de sancionar).
+7. Equipo chico que decide rápido y con costos bajos.
+
+**Debilidades**
+1. **Cero usuarios, cero reseñas reales, marca desconocida.** Es la brecha más grande.
+2. **Lo que bloquea el lanzamiento** (sección L de `problemas-abiertos.md`): videollamada sin probar con dos
+   personas, comisión real de MP sin medir, checkout web apagado, legales sin revisar.
+3. **Sin orientación humana** para quien no sabe elegir, y sin explicar por qué se recomienda a alguien.
+4. **Sin paquetes, créditos, referidos ni gift cards.** Con Mercado Pago la plata va al profesional, y eso los complica.
+5. **Sin IA** para preparar o documentar sesiones.
+6. **Sin empresas**, sin psiquiatría, sin terapia grupal.
+7. **Sin presencia en Google**: no hay blog, tests públicos ni páginas por tema.
+8. Catálogo chico, con datos de prueba todavía adentro (L8), y "profesión" no es un campo estructurado.
+9. Equipo de dos: cada frente nuevo compite con el lanzamiento.
+
+**Oportunidades**
+1. **Argentinos que quieren un profesional argentino**, sobre todo **afuera**: Selia les ofrece "latinos"; Vita les
+   puede ofrecer **argentinos con matrícula, en su propia cultura terapéutica**, pagando en dólares o USDT.
+2. **Reclutar profesionales con las condiciones de Selia como contraste**: *"vos ponés tu precio, cobrás en tu Mercado
+   Pago, tus pacientes son tuyos, sin multas por irte"*.
+3. **Confianza como posicionamiento**: matrícula verificada, reglas de reembolso claras, reseñas libres. Todo lo que
+   Selia no puede decir.
+4. **Google en voseo**: Selia tiene una página flaca para Argentina. Tests y temas escritos para acá, sin competencia seria.
+5. **Reintegro de obras sociales y prepagas**: Selia no garantiza factura. Ayudar al paciente a pedir el reintegro con
+   la factura del profesional matriculado puede ser un diferencial concreto (a validar: qué piden las prepagas).
+6. **Empresas argentinas**, más adelante, sin competir contra el gancho de la NOM-035.
+7. **Llegar primero**: Selia no está enfocada acá y no hay señales de que lo vaya a estar pronto.
+
+**Amenazas**
+1. **Que Selia venga en serio**: tiene todo armado; le falta cobrar en pesos (con Stripe o dLocal no le llevaría
+   mucho) y reclutar argentinos.
+2. **Terapify** y otras plataformas que ya reclutan psicólogos argentinos.
+3. **El listón de producto sube**: IA, orientación, paquetes y seguimiento pasan a ser lo esperable.
+4. **Selia es más barata para quien paga en dólares** (USD 25 desde afuera) y gana en Google.
+5. **La alternativa gratis o cubierta** (obra social, hospital) y el psicólogo por recomendación.
+6. **Regulación y reputación**: un incidente de crisis o de credenciales pega más fuerte a una marca que recién empieza.
+
+---
+
+## 19. Qué aprovechar de ellos
+
+Ordenado por impacto sobre costo para Vita. **Ninguna es para antes del lanzamiento.**
+
+| # | Idea | Por qué | Costo o choque |
+|---|---|---|---|
+| 1 | **Explicar por qué se recomienda a alguien** en el quiz y en Conexiones | Selia lo pone como argumento central; baja la ansiedad de elegir | Bajo: es texto sobre datos que ya existen |
+| 2 | **Salida para "no sé a quién elegir"**: rehacer el quiz, ver otras opciones, o hablar con alguien | La orientación es su red de seguridad | Una persona orientando no escala para dos; empezar por rehacer y ver 3 opciones |
+| 3 | **Cambio de profesional sin culpa**: *"¿Querés seguir con esta persona?"* después de la primera sesión | Retiene a quien no hizo match, en vez de perderlo | Choca con la garantía de reintegro: decidir si se ofrece cambio, reintegro, o elegir |
+| 4 | **Empuje a la continuidad** después de cada sesión: próxima sesión sugerida por el profesional, reservar de nuevo en un toque | Es la medida anti-fuga n.º 1 de Vita, y Selia la tiene muy pulida | Medio; ya está en la lista de anti-fuga |
+| 5 | **Calificar la calidad de la videollamada** aparte del profesional | Separa "el video anduvo mal" de "no me gustó"; detecta fallas técnicas | Bajo |
+| 6 | **"Solicitar disponibilidad"** cuando no hay horarios | No perder a quien llegó al perfil | Bajo a medio |
+| 7 | **Tests validados públicos** (PHQ-9, GAD-7) en voseo, en la web | La puerta de entrada de Google de Selia | Medio; cuidar "Vita guía, no diagnostica" y derivar a crisis si el resultado es severo |
+| 8 | **Referidos** | Adquisición barata | Con MP la plata va al profesional; el descuento sale de la comisión de Vita |
+| 9 | **Paquetes** | La demanda existe | Mismo obstáculo; empezar por PayPal y USDT, donde Vita retiene |
+| 10 | **Preparar la sesión** ("qué quiero trabajar hoy"), aunque sea sin IA | El paciente llega mejor y el profesional valora el resumen | Medio; con IA, alto y con riesgo de privacidad |
+| 11 | **Aviso honesto de habilitación**: si un profesional no tiene matrícula argentina, decirlo claro | Selia lo resuelve con un tilde; Vita puede hacerlo mejor y convertirlo en confianza | Bajo |
+| 12 | **Cuentas familiares** | Padres que pagan la terapia de hijos grandes | Alto; Vita es solo 18+ |
+
+---
+
+## 20. Qué evitar
+
+1. **Fijarle el precio al profesional.** Es lo contrario de la promesa de Vita.
+2. **Quedarse con la plata del usuario**: saldo que vence o se pierde al irse, reembolsos que vuelven solo como crédito.
+3. **Prohibir críticas** o mandar los reclamos a otra jurisdicción.
+4. **No competencia posterior con multas** para el profesional: aleja a los buenos y en Argentina es discutible.
+5. **Decir "certificados" sin poder respaldarlo**, o resolver la habilitación con un tilde.
+6. **Transcribir sesiones** sin un marco de datos de salud muy sólido (Ley 25.326, datos sensibles). Si algún día se
+   hace: consentimiento por sesión y sin guardar el audio.
+7. **Páginas por país sin revisión local**: la línea de crisis equivocada es exactamente el error que no se puede tener.
+8. **Descuentos permanentes de entrada** (30% a 50%) que acostumbran a no pagar precio lleno.
+9. **Pedir teléfono, género y nacimiento antes de mostrar valor.**
+10. **Métricas de retención que le cortan pacientes al profesional** sin explicarle por qué.
+
+---
+
+## 21. Oportunidades concretas, en orden
+
+1. **Lanzar.** Todo lo demás depende de cerrar la sección L. Selia no está enfocada en Argentina, y esa ventana
+   no dura para siempre.
+2. **Salir a buscar profesionales argentinos con la comparación de condiciones** (§10 contra lo de Vita). Es el
+   diferencial más fuerte y el más fácil de comunicar. Una página de una hoja para profesionales.
+3. **Posicionar a Vita en confianza**: matrícula verificada, reembolso claro, reseñas libres.
+4. **Argentinos afuera** como segundo público: el riel ya existe; falta el mensaje (*"un psicólogo argentino, estés
+   donde estés"*) y profesionales que acepten internacionales.
+5. **Google en voseo** después del lanzamiento: tests y temas.
+6. **Reintegro de prepagas**: averiguar qué piden y ayudar con eso.
+7. **Paquetes y referidos** por los rieles donde Vita retiene plata.
+8. **Empresas**, cuando haya usuarios y reseñas para mostrar.
+
+---
+
+## 22. Señales a vigilar
+
+- Precios en **pesos** o **Mercado Pago** en `selia.co/latam/argentina`, o cobro en ARS dentro de su app.
+- Búsquedas de **psicólogos argentinos** en su portal, o una alianza con un banco o prepaga argentina.
+- **Prensa argentina**, una ronda de inversión nueva, o una campaña con influencers argentinos.
+- Cambios en sus **términos de especialistas** (hoy versión 2.0 de 2026).
+- Qué hace **Terapify** en Argentina.
+
+Una forma barata de seguirlo: mirar la página argentina y el mapa del sitio de Selia una vez por mes.
+
+---
 
 ## Lo que no se pudo ver
 
-- La comisión y cuánto cobra el especialista (portal cerrado).
-- Las reseñas de Google Play (la ficha no cargó) y el detalle de Glassdoor (bloqueado).
-- Cualquier dato de 2025–2026 sobre facturación o inversión: no hay publicaciones.
+- **Cuánto se queda Selia de cada sesión**: la comisión va en una propuesta privada por mail.
+- **El orden exacto de las pantallas** y a quién se le muestra cada una: sale de los textos, no de usar la app.
+- **Cómo verifica credenciales** en la práctica.
+- Reseñas de Google Play (la ficha no cargó) y de empleados en Glassdoor (bloqueado).
+- Facturación o inversión de 2025–2026: no hay publicaciones.
+
+---
+
+## Correcciones a versiones anteriores
+
+- **Sesión 252:** decía que no había profesionales argentinos a la vista (hay al menos una) y que la línea de crisis
+  argentina estaba mal en general (solo en la landing; la página de líneas está bien).
+- **Sesión 254:** decía que el precio lo fija el especialista. **Lo fija Selia** (términos de especialistas §2.3.4).
+  Decía que Selia "no tiene nada" para el profesional que trae a sus pacientes: en realidad **se lo prohíbe**. Y que
+  los términos estaban "leídos completos": se leyeron las cláusulas clave, que es lo que sigue siendo cierto.
+
+---
 
 ## Fuentes
 
-- [Selia — sitio](https://www.selia.co/)
-- [Selia — página Argentina](https://www.selia.co/latam/argentina)
-- [Selia — líneas de emergencia](https://www.selia.co/hotlines)
-- [Selia — costos Colombia](https://www.selia.co/terapia-online-costo) y [México](https://www.selia.co/mx/terapia-online-costo)
-- [Selia — preguntas frecuentes](https://www.selia.co/faq)
-- [Selia — opiniones](https://www.selia.co/opiniones)
-- [Selia — programas](https://www.selia.co/programs)
-- [Selia — para especialistas](https://www.selia.co/for-specialists) y [portal de postulaciones](https://aplicaciones.selia.co/)
-- [Selia — empresas en México](https://www.selia.co/mx/empresas)
-- [Perfil de Cecilia Carranza (Argentina)](https://www.selia.co/terapeutas-psicologos-en-linea/cecilia-carranza) y [Valentina Maya (Colombia)](https://www.selia.co/terapeutas-psicologos-en-linea/valentina-maya)
-- [Términos y condiciones de usuarios (PDF, 28/11/2023)](https://s3.amazonaws.com/assets.selia.co/terms_and_conditions_users.pdf)
-- [Selia en la App Store](https://apps.apple.com/co/app/selia-bienestar-mental/id1587213440)
-- [Y Combinator — Selia](https://www.ycombinator.com/companies/selia)
-- [Startups Latam — Bad Bunny invirtió en Selia](https://startupslatam.com/bad-bunny-invirtio-en-ella-conoce-a-la-mental-healthtech-selia/)
-- [Contxto — 100.000 terapias y US$2M (29/12/2023)](https://contxto.com/en/artificial-intelligence/selia-hits-100k-virtual-therapies-eyes-2m-revenue-in-2023/)
-- [El Colombiano — "ya factura US$2 millones" (12/01/2024)](https://www.elcolombiano.com/negocios/empresas/selia-la-app-de-salud-mental-que-ya-factura-us-2-millones-CG23520552)
-- [Yahoo Finanzas / Valora Analitik — US$700.000 a especialistas (27/07/2024)](https://es-us.finanzas.yahoo.com/noticias/plataforma-salud-mental-selia-inyectado-010000188.html)
-- [Portafolio — inyección de US$300.000](https://www.portafolio.co/emprendimiento/plataforma-selia-ampliara-su-radio-de-accion-tras-una-inyeccion-de-us-300-000-592382)
-- [La República — startups de salud mental en América Latina](https://www.larepublica.co/salud-ejecutiva/las-principales-startups-en-america-latina-que-se-enfocan-en-atender-la-salud-mental-3910814)
-- [Tu Terapia — cuánto cuesta un psicólogo online en Argentina en 2026](https://www.tuterapia.com.ar/blog/cuanto-cuesta-un-psicologo-online-en-argentina-en-2026/)
-- [Psyred — precios en Argentina 2026](https://psyred.org/cuanto-cuesta-un-psicologo/argentina/)
-- [Terapify — cómo unirse como psicólogo](https://terapify.reamaze.com/kb/soy-terapeuta/unirme-a-terapify-como-psicologo)
+**Selia, páginas públicas:**
+[Inicio](https://www.selia.co/) ·
+[Argentina](https://www.selia.co/latam/argentina) ·
+[Costos](https://www.selia.co/terapia-online-costo) ·
+[Costos México](https://www.selia.co/mx/terapia-online-costo) ·
+[Preguntas frecuentes](https://www.selia.co/faq) ·
+[Tu Match](https://www.selia.co/tu-match) ·
+[Programas](https://www.selia.co/programs) ·
+[Programa Tusa](https://www.selia.co/programs/programa-tusa) ·
+[Tests](https://www.selia.co/tests) ·
+[Psiquiatría](https://www.selia.co/services/psiquiatria) ·
+[Nutrición](https://www.selia.co/services/nutricion) ·
+[Tarjetas de regalo](https://www.selia.co/tarjetas-regalo) ·
+[Alianzas](https://www.selia.co/alianzas) ·
+[Falabella](https://www.selia.co/alianzas/falabella) ·
+[Latinos en EE.UU.](https://www.selia.co/latinos-en-el-extranjero/estados-unidos) ·
+[Por si acaso](https://www.selia.co/por-si-acaso) ·
+[Líneas de emergencia](https://www.selia.co/hotlines) ·
+[Opiniones](https://www.selia.co/opiniones) ·
+[Empresas México](https://www.selia.co/mx/empresas) ·
+[Casos de éxito](https://www.selia.co/empresas/casos-de-exito) ·
+[Reto de 10 días](https://www.selia.co/herramientas/reto-bienestar-10-dias) ·
+[Home B (prueba A/B)](https://www.selia.co/home-test/home-b) ·
+[Para especialistas](https://www.selia.co/for-specialists) ·
+[Postulaciones](https://aplicaciones.selia.co/) ·
+[Mapa del sitio](https://www.selia.co/sitemap.xml)
+
+**Selia, producto y contratos:**
+[App web](https://app.selia.co/) (versión 2.13.98, textos extraídos el 17/09/2026) ·
+[Términos de usuarios (PDF, 28/11/2023)](https://s3.amazonaws.com/assets.selia.co/terms_and_conditions_users.pdf) ·
+[Términos de especialistas (PDF, v2.0 2026)](https://s3.amazonaws.com/assets.selia.co/terms_and_conditions_specialists.pdf) ·
+[App Store](https://apps.apple.com/co/app/selia-bienestar-mental/id1587213440) ·
+[Perfil Cecilia Carranza (Argentina)](https://www.selia.co/terapeutas-psicologos-en-linea/cecilia-carranza) ·
+[Perfil Valentina Maya (Colombia)](https://www.selia.co/terapeutas-psicologos-en-linea/valentina-maya)
+
+**Prensa y bases:**
+[Y Combinator](https://www.ycombinator.com/companies/selia) ·
+[Startups Latam](https://startupslatam.com/bad-bunny-invirtio-en-ella-conoce-a-la-mental-healthtech-selia/) ·
+[Contxto (29/12/2023)](https://contxto.com/en/artificial-intelligence/selia-hits-100k-virtual-therapies-eyes-2m-revenue-in-2023/) ·
+[El Colombiano (12/01/2024)](https://www.elcolombiano.com/negocios/empresas/selia-la-app-de-salud-mental-que-ya-factura-us-2-millones-CG23520552) ·
+[Yahoo Finanzas / Valora Analitik (27/07/2024)](https://es-us.finanzas.yahoo.com/noticias/plataforma-salud-mental-selia-inyectado-010000188.html) ·
+[Portafolio](https://www.portafolio.co/emprendimiento/plataforma-selia-ampliara-su-radio-de-accion-tras-una-inyeccion-de-us-300-000-592382) ·
+[La República](https://www.larepublica.co/salud-ejecutiva/las-principales-startups-en-america-latina-que-se-enfocan-en-atender-la-salud-mental-3910814)
+
+**Mercado argentino:**
+[Tu Terapia, precios 2026](https://www.tuterapia.com.ar/blog/cuanto-cuesta-un-psicologo-online-en-argentina-en-2026/) ·
+[Psyred, precios 2026](https://psyred.org/cuanto-cuesta-un-psicologo/argentina/) ·
+[Terapify, unirse como psicólogo](https://terapify.reamaze.com/kb/soy-terapeuta/unirme-a-terapify-como-psicologo)

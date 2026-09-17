@@ -79,7 +79,7 @@
 | **L33** | Casilla propia en `vitaapp.com.ar`: si se crea, cambiarla en `lib/contacto.ts`, `admin-actions` y `constants/legal.ts` a la vez. | ⏸️ |
 | **L34** | Voz y producto: B1, B4, C4, E1–E6, y **F** (cero usuarios reales: la prueba de la tarjeta con 5–10 personas). | Ver secciones. |
 | **L35** | 🔴 **Re-verificar las líneas de crisis antes de cada publicación** (`screens/AyudaScreen.tsx` y T&C §5.3). Los horarios cambian; un número muerto ahí es peor que no ponerlo. Fuentes en el CHANGELOG, sesión 253. | ⏸️ En cada publicación. |
-| **L36** | Selia (competidor colombiano, `docs/competencia-selia.md`): que lo lea Joaquín. Cambia la urgencia de lanzar, no el rumbo. | 🟡 |
+| **L36** | Selia (competidor colombiano, `docs/competencia-selia.md`, versión 3 con FODA): que lo lea Joaquín. Cambia la urgencia de lanzar, no el rumbo. | 🟡 |
 
 📌 **Cerrado desde la lista del 16/09** (no repetir): la escalera de sanciones está corrida en producción y `admin-actions` v30 deployada; la gente ya recibe aviso cuando su profesional cae y cuando vuelve; a un coach suspendido ya no se le puede reservar por ningún camino; Cloudflare y unpkg están declarados; contraste, afirmaciones sin respaldo y foco de teclado en la web, hechos.
 

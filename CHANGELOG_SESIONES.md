@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 255 · Selia completa: producto por dentro, contratos y FODA)
+
+**Tocado:** `docs/competencia-selia.md` (versión 3, reescrito). Sin código ni base.
+
+**Resumen:**
+- **Andre pidió "todo"** (features, onboarding, políticas, precios) y un FODA. Además de las ~40 páginas públicas, se leyeron **los textos de la app web de Selia por dentro** (~1.100 en español, sin crear cuenta) y **sus términos para especialistas, versión 2026**.
+- **Lo nuevo que importa:** tiene **IA** (Lía orienta, prepara la sesión y le pasa un resumen al especialista; notas automáticas transcribiendo el audio), **orientación humana de 15 min**, "Garantía de Match" (segunda sesión gratis), paquetes atados a una franja de precio y no a un especialista, créditos, referidos, pagar después, cuentas familiares. Su gran apuesta afuera son los **latinos que viven en otro país**, el mismo público del riel internacional de Vita.
+- 🔴 **Con los profesionales es dura, y eso es la mejor oportunidad para reclutar:** Selia **fija el precio**, puede cobrar tarifa de registro, descuenta los reembolsos del pago, y prohíbe atender por fuera hasta **12 meses después de irse**, con multa.
+- 📌 **Corrección a la sesión 254:** ahí dije que el precio lo fija el especialista. Lo fija Selia.
+- El documento cierra con FODA de Selia, FODA de Vita frente a Selia, 12 ideas para aprovechar (con costo), 10 cosas a evitar, y oportunidades en orden. La primera es lanzar.
+
+**Pendiente para la próxima sesión:**
+- Que Joaquín lea `docs/competencia-selia.md` (§0 es el resumen de una página; §17–21 son el FODA y las acciones).
+- Decidir si se arma la **página de una hoja para profesionales** comparando condiciones (§21.2). Es lo más barato y de más impacto que sale de esto.
+- Nada de §19 es para antes del lanzamiento.
+
+---
 ## 2026-09-17 — Andre (sesión 254 · sacar la raya "—" de los textos visibles)
 
 **Tocado:** ~30 pantallas/componentes (`screens/*`, `components/*`, `app/*`), `lib/weeklyReflection.ts`, `lib/paquete.ts`, `lib/bookingCancel.ts`, `lib/consentRules.ts`, `hooks/useRecommendedResource.ts`, `supabase/functions/weekly-reflection/index.ts` (**deployada, v29**), `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `docs/boton-de-arrepentimiento.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` + `web/legal/*` (regenerados), tests.
