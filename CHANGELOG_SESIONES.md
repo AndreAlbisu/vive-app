@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-16 — Andre (sesión 245 · la versión mínima obligatoria, antes de que sea tarde)
+
+**Tocado:** `scripts/add-app-version-gate.sql` (nuevo), `lib/appVersion.ts` (nuevo), `components/VersionGate.tsx` (nuevo), `__tests__/appVersion.test.ts` (nuevo), `app/_layout.tsx`, `SCHEMA.md`.
+
+**Resumen:**
+- 🔴 **Por qué ahora, con cero usuarios:** es lo único de su tipo que no se puede agregar después. Una app instalada sin este control no se puede obligar a actualizar nunca, así que tiene que venir en la primera versión pública. Salió de la discusión sobre detección del lado del servidor: cuando Andre recordó que nadie tiene la app instalada, el argumento de "versiones viejas" dejó de pesar para la detección y pasó a pesar al revés — para esto.
+- **Cómo funciona:** una tabla `app_version_gate` con la versión mínima por plataforma. La app abre normal y chequea en paralelo (también cada vez que vuelve al frente); si la instalada es menor, tapa todo con una pantalla sin salida que manda a la tienda, con una línea opcional explicando por qué. Arranca en 1.0.0: no bloquea a nadie hasta que se suba.
+- **Tres decisiones tomadas sin preguntar, todas revisables:** (1) la versión mínima vive en la base y se cambia con SQL desde el CLI; (2) el bloqueo es total, sin "más tarde" — si se pudiera saltear no serviría para lo único que sirve; (3) **el link de la tienda también vive en la base**, porque la App Store no tiene link hasta publicar: se carga ese día con un update, sin sacar versión nueva.
+- **Falla abierta en todos los caminos**: sin señal, tabla caída o número mal cargado → deja pasar. Compara por partes y no como texto (`'1.2.10' < '1.2.9'` como texto), con tests.
+- ✅ **Base corrida y verificada desde el CLI**: se lee sin sesión por la API y un PATCH con la anon key rebota con `permission denied`. Sin deploy de funciones.
+
+**Pendiente para la próxima sesión:**
+- **Probarlo en el celular** (Expo Go): subir `min_version` a `9.9.9` para iOS, abrir la app y ver la pantalla; volver a `1.0.0`. Lo corre Claude, avisarle.
+- **El día que se publique en la App Store**, cargar el link: `update app_version_gate set store_url = 'https://apps.apple.com/app/id…' where platform = 'ios';`. Hasta entonces la pantalla de iOS dice "Buscá VIVE en la App Store" en vez de mostrar un botón.
+- 📌 Un modal nativo abierto (una hoja que sube desde abajo) puede quedar por encima de la pantalla de bloqueo hasta que se cierre. Menor: en cuanto se cierra, el bloqueo está ahí.
+
+---
 ## 2026-09-16 — Andre (sesión 244 · el coach no puede mandar datos para cobrar)
 
 **Tocado:** `lib/contactInfoGuard.ts`, `__tests__/contactInfoGuard.test.ts`, `screens/SalaScreen.tsx`, `components/SessionNotesSheet.tsx`. Sin cambios de base.
