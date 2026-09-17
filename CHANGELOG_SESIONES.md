@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 250 · los Términos y la Política dicen lo que hace la app)
+
+**Tocado:** `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `constants/legal.ts` + `web/legal/*` (regenerados), `docs/paquete-abogado.md`, `scripts/add-contact-signals-purge.sql` (nuevo).
+
+**Resumen:**
+- **Andre: *"nosotros tenemos que redactar todos los términos y políticas y después un abogado los revisa"*.** En la sesión anterior el texto había quedado como propuesta dentro del paquete del abogado, así que se escribió en los documentos y el paquete ahora solo dice qué cambió, dónde está y qué revisar.
+- **T&C §10:** la 10.3 decía *"no implican bloqueo"* y remitía a una Política que no decía nada. Ahora hay tres cláusulas: **10.3 Prevención** (qué detecta, dónde avisa, dónde bloquea, y la excepción de los datos de cobro del Profesional), **10.4 Medidas** (advertencia, suspensión o baja; revisadas por una persona; se mantienen las sesiones agendadas; aviso a los clientes sin motivo) y **10.5 Revisión** (reclamar a vitaappar@gmail.com).
+- **Política:** la finalidad (f) ahora nombra el uso exclusivo; nueva **§8.3** (el análisis es en el teléfono, el texto no viaja, Vita registra solo el tipo de dato y las cuentas, nada automático, la documentación con acceso restringido y registro, aviso a clientes sin motivo); **§10** suma los plazos (registros de detección 12 meses; medidas mientras exista la cuenta y después disociadas). La vieja 8.3 pasa a ser 8.4; nada la referenciaba.
+- 🔴 **Dos afirmaciones que no eran exactas se corrigieron antes de cerrar:** en la primera pasada escribí que en los recursos no se pueden publicar datos de contacto (solo se bloquea el link; título y descripción avisan y los revisa VITA) y que un suspendido "no figura en la Plataforma" (lo verificado es que no aparece en búsquedas ni recomendaciones y no puede recibir reservas; su página pública por link no se verificó).
+- **Para que el plazo de 12 meses sea cierto se creó el borrado**: cron `purge-contact-signals` (jobid 13, diario 03:23 AR) que borra los avisos de contacto de más de un año. Antes se habrían acumulado para siempre con las dos cuentas adentro.
+- `LEGAL_VERSION` pasa a `db4e8d11c155` (cambió el texto aceptado). Sin usuarios reales, no afecta a nadie.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **`web/legal/*.html` se regeneró**: al pushear, el sitio público muestra los textos nuevos (siguen con el aviso de borrador).
+- 📌 **No verificado**: si la página pública del coach por su link (`/c/<slug>`) muestra a un coach suspendido. No puede reservar (lo bloquea la base), pero quizá se vea el perfil. Si se ve, conviene ocultarlo o mostrar "no disponible".
+- 📌 El comentario de `scripts/sync-legal.mjs` dice que los .md "los edita el/la abogado/a": desactualizado respecto de cómo trabaja el equipo.
+
+---
 ## 2026-09-17 — Andre (sesión 249 · "escribinos", ¿a dónde? — y la §10.3 que dejó de ser cierta)
 
 **Tocado:** `lib/contacto.ts` (nuevo), `screens/CoachHomeScreen.tsx`, `lib/coachVisibility.ts`, `screens/ProfileOwnScreen.tsx`, `screens/CoachComoFuncionaScreen.tsx`, `supabase/functions/admin-actions/index.ts`, `docs/paquete-abogado.md`.

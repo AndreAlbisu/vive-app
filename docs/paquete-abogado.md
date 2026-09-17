@@ -350,37 +350,6 @@ Cómo funciona hoy, verificado contra el código:
   no está tomando reservas y que sus sesiones ya agendadas siguen en pie, **sin
   mencionar la sanción**. Cuando vuelve, se les avisa que volvió.
 
-Texto propuesto para que lo corrijas:
-
-> **T&C 10.3 (reemplaza la actual).** El incumplimiento de esta cláusula puede dar
-> lugar, según su gravedad y reiteración, a una advertencia, a la suspensión
-> temporal de la cuenta o a su baja, sin perjuicio de las acciones que
-> correspondan. Cada medida se comunica al Profesional junto con su motivo, y las
-> Sesiones ya agendadas y abonadas se mantienen. El Profesional puede solicitar la
-> revisión de la medida escribiendo a vitaappar@gmail.com.
->
-> **T&C 10.4 (nueva).** Para prevenir el incumplimiento, la Plataforma detecta
-> mediante medios técnicos, en el dispositivo de quien escribe, si un texto incluye
-> datos de contacto o de pago. En los textos dirigidos a otro Usuario muestra una
-> advertencia y permite continuar, salvo que se trate de datos para recibir pagos
-> enviados por un Profesional, que no se envían, dado que todos los pagos se
-> canalizan a través de Vita. En los textos públicos, como la presentación del
-> Profesional o las reseñas, no permite publicarlos.
->
-> **Política — nueva sección, "Detección de datos de contacto y de pago".** Para
-> hacer cumplir la cláusula de uso exclusivo de los Términos, la aplicación analiza
-> en el dispositivo de quien escribe si un texto incluye datos de contacto o de
-> pago, antes de enviarlo. El texto no se envía a Vita para este análisis ni se
-> almacena por este motivo. Cuando se detecta uno de esos datos, Vita registra
-> únicamente el tipo de dato, el lugar de la aplicación, la fecha, las cuentas
-> involucradas y si se decidió enviarlo igual. Vita puede revisar ese registro para
-> evaluar un posible incumplimiento y, en su caso, aplicar las medidas previstas en
-> los Términos; ninguna medida se aplica en forma automática. Cuando se revisa un
-> caso, Vita puede conservar documentación vinculada, con acceso restringido y
-> registro de quién la consulta. Si un Profesional es suspendido o dado de baja,
-> Vita informa a quienes atendían con él que no está disponible, sin indicar el
-> motivo.
-
 Preguntas:
 
 - [ ] ¿Esto entra en la finalidad (f) de la Política (*"moderar la plataforma (…)
@@ -397,6 +366,10 @@ Preguntas:
       o alcanza con poder pedir la revisión después?
 - [ ] ¿Avisarle a los clientes que el Profesional "no está disponible", sin decir
       por qué, tiene algún riesgo para Vita?
+- [ ] **Los plazos de conservación que puse en Política §10**: los registros de
+      detección, 12 meses (hay un borrado automático diario que lo cumple); las
+      medidas y su documentación, mientras exista la cuenta del Profesional y
+      después disociadas. ¿Son razonables?
 
 ### B. No bloquean, pero quiero tu lectura
 

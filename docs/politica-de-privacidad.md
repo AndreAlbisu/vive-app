@@ -54,7 +54,7 @@ Ciertos datos vinculados al Usuario —los registros de estado de ánimo, las en
 
 ## 4. Finalidades del Tratamiento
 
-Tratamos los datos para: (a) crear y gestionar la cuenta; (b) conectar Clientes con Profesionales y permitir reservas, sesiones y comunicaciones; (c) procesar pagos, comisiones y reembolsos; (d) brindar el contenido y las herramientas de desarrollo personal y mostrar información de progreso al propio Usuario; (e) enviar notificaciones relacionadas con el servicio; (f) moderar la plataforma, atender reportes y prevenir fraudes o usos indebidos; (g) mejorar el servicio mediante analítica; (h) cumplir obligaciones legales.
+Tratamos los datos para: (a) crear y gestionar la cuenta; (b) conectar Clientes con Profesionales y permitir reservas, sesiones y comunicaciones; (c) procesar pagos, comisiones y reembolsos; (d) brindar el contenido y las herramientas de desarrollo personal y mostrar información de progreso al propio Usuario; (e) enviar notificaciones relacionadas con el servicio; (f) moderar la plataforma, atender reportes y prevenir fraudes o usos indebidos, incluido el incumplimiento de la cláusula de uso exclusivo de los Términos (ver 8.3); (g) mejorar el servicio mediante analítica; (h) cumplir obligaciones legales.
 
 ## 5. Base Legal
 
@@ -96,7 +96,9 @@ Algunos de los proveedores mencionados pueden almacenar o procesar datos en serv
 
 8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales.
 
-8.3. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.
+8.3. **Detección de datos de contacto y de pago.** Para hacer cumplir la cláusula de uso exclusivo de los Términos (sección 10), la aplicación analiza **en el dispositivo de quien escribe**, antes de enviarlo, si un texto incluye datos de contacto o de pago (por ejemplo, un teléfono, una red social o un CBU). **El texto no se envía a Vita para este análisis ni se almacena por este motivo.** Cuando se detecta uno de esos datos, Vita registra únicamente: el **tipo** de dato detectado, el lugar de la aplicación donde ocurrió, la fecha, las cuentas involucradas y si se decidió enviarlo igual. Vita puede revisar esos registros para evaluar un posible incumplimiento y, en su caso, aplicar las medidas previstas en los Términos; **ninguna medida se aplica en forma automática**. Cuando revisa un caso, Vita puede conservar documentación vinculada —por ejemplo, capturas aportadas en un reporte—, con acceso restringido al equipo de Vita y registro de quién la consulta. Esa documentación no se comparte con otros Usuarios. Si un Profesional es suspendido o dado de baja, Vita informa a los Clientes que tenían un vínculo reciente con él que no se encuentra disponible, **sin indicar el motivo**.
+
+8.4. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.
 
 ## 9. Derechos del Titular de los Datos
 
@@ -115,6 +117,8 @@ Conservamos los datos mientras la cuenta esté activa. Al darse de baja, el trat
 - **Reseñas**: se conservan de forma indefinida y **anonimizadas**, por integrar la reputación pública del Profesional evaluado. Suprimirlas permitiría que una baja de cuenta se use para eliminar una evaluación desfavorable.
 - **Mensajes y salas de conversación**: se conservan **anonimizados** mientras subsista la conversación, dado que pertenecen también al otro participante.
 - **Datos técnicos y de uso** (analítica): se conservan **disociados de la identidad** del Usuario.
+- **Registros de detección de datos de contacto y de pago** (ver 8.3): se conservan **doce (12) meses** desde que se generan y luego se suprimen.
+- **Medidas aplicadas a un Profesional y su documentación** (advertencias, suspensiones y bajas): se conservan mientras exista la cuenta del Profesional, para poder considerar la reiteración, y tras la baja quedan **disociadas de su identidad**, como el resto de su ficha.
 
 Al darse de baja, las Sesiones futuras ya agendadas se cancelan automáticamente y se reembolsan. La ficha de perfil no se elimina: queda **vaciada de todo dato personal** y muestra "Usuario eliminado" allí donde antes figuraba el Usuario, de modo que las reservas, reseñas y conversaciones de terceros no queden rotas. La cuenta de acceso se elimina y la dirección de correo queda liberada para un eventual registro futuro.
 

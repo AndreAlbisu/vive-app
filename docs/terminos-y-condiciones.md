@@ -140,7 +140,17 @@ Condiciones:
 
 10.2. **El Profesional se obliga a no utilizar la Plataforma para desviar, derivar o continuar la relación con un Cliente por fuera de la Plataforma con el fin de eludir las comisiones**, ni a solicitar o proponer pagos por fuera de los canales oficiales durante el vínculo originado en Vita. Asimismo, los Usuarios se obligan a no compartir por la Plataforma datos de contacto o de pago con el propósito de operar por fuera de ella eludiendo las comisiones.
 
-10.3. El incumplimiento de esta cláusula puede dar lugar a advertencias, suspensión o cancelación de la cuenta, sin perjuicio de las acciones que correspondan. Vita podrá mostrar advertencias automáticas cuando detecte, mediante medios técnicos, un posible intercambio de datos de contacto o de pago; dichas advertencias no implican bloqueo ni monitoreo del contenido de las conversaciones más allá de lo descripto en la Política de Privacidad.
+10.3. **Prevención.** Para prevenir el incumplimiento de esta cláusula, la Plataforma detecta mediante medios técnicos, en el dispositivo de quien escribe y antes de enviar, si un texto incluye datos de contacto o de pago. El alcance es el siguiente:
+
+- **En los textos dirigidos a otro Usuario** (mensajes, notas de sesión compartidas y comentarios que acompañan una recomendación o una reserva), la Plataforma muestra una advertencia y permite continuar.
+- **Excepción:** la Plataforma no permite al Profesional enviar datos para recibir pagos —como CBU, CVU, alias o enlaces de cobro—, dado que todos los pagos de las Sesiones se canalizan a través de Vita.
+- **En los textos públicos**, la Plataforma no permite publicar datos de contacto o de pago en la presentación del Profesional ni en las reseñas. En los recursos que propone un Profesional, advierte al cargarlos y no permite enlaces a redes sociales o servicios de mensajería; Vita revisa cada recurso antes de publicarlo.
+
+El tratamiento de datos que esto implica se describe en la Política de Privacidad.
+
+10.4. **Medidas.** El incumplimiento de esta cláusula puede dar lugar, según su gravedad y reiteración, a una **advertencia**, a la **suspensión temporal** de la cuenta o a su **baja**, sin perjuicio de las acciones que correspondan. Ninguna medida se aplica en forma automática: cada caso es revisado por Vita. La medida se comunica al Profesional junto con su motivo. Mientras dure una suspensión o tras una baja, el Profesional no aparece en las búsquedas ni en las recomendaciones de la Plataforma y no puede recibir reservas nuevas, pero las Sesiones ya agendadas y abonadas se mantienen. Vita informa a los Clientes que tenían un vínculo reciente con el Profesional que este no se encuentra disponible, sin indicar el motivo.
+
+10.5. **Revisión.** El Profesional puede solicitar la revisión de una medida escribiendo a vitaappar@gmail.com.
 
 ## 11. Contenido, Herramientas y Recursos
 
