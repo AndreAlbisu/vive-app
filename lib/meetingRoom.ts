@@ -1,3 +1,5 @@
+import { Linking, Platform } from 'react-native'
+import * as WebBrowser from 'expo-web-browser'
 import { supabase } from './supabase'
 
 /**
@@ -69,6 +71,56 @@ export async function getJoinUrl(bookingId: string): Promise<Entrada> {
     return { aviso: res.error, estado: res.estado === 'terminada' ? 'terminada' : 'temprano' }
   }
   return null
+}
+
+/**
+ * Abre la videollamada. Las dos pantallas que entran a la sala (la Sala y el
+ * carrusel de próximas sesiones) llaman a esto y no a un navegador directo.
+ *
+ * 🔴 EN iPHONE NO PUEDE SER EL NAVEGADOR IN-APP. `WebBrowser.openBrowserAsync`
+ * en iOS es `SFSafariViewController`, y ahí el permiso de cámara y micrófono
+ * (`getUserMedia`, que es de lo que vive Daily) **no se pide de forma
+ * confiable**: a veces aparece, a veces se deniega solo y la persona entra a la
+ * sesión sin imagen ni voz, sin ningún mensaje que explique por qué. Es una
+ * limitación conocida de Apple (los foros de desarrolladores lo documentan desde
+ * iOS 14) y no hay opción de `openBrowserAsync` que la esquive: la lista entera
+ * de opciones de iOS es color, botón de cerrar, estilo de presentación y modo
+ * lectura. La alternativa dentro de la app sería un WKWebView propio
+ * (`react-native-webview`), que sí soporta getUserMedia desde iOS 14.3, pero eso
+ * es una dependencia nueva y permisos nativos declarados; se puede hacer después
+ * si vale la pena recuperar el "no salir de la app".
+ *
+ * Así que en iOS se abre **Safari de verdad** con `Linking.openURL`. El costo es
+ * real y conocido: la persona sale de Vita y vuelve sola. Se paga igual, porque
+ * una sesión de terapia muda es peor que un cambio de app — es, textual, la
+ * queja técnica más repetida contra el competidor que hace lo mismo
+ * (`docs/competencia-selia.md` §24.3).
+ *
+ * En Android el navegador in-app es una Custom Tab, o sea Chrome de verdad con
+ * su permiso normal, así que se queda como estaba. En web ya estamos en un
+ * navegador; `openBrowserAsync` abre otra pestaña.
+ *
+ * Devuelve `false` solo si no se pudo abrir nada, para que la pantalla lo diga
+ * en vez de quedarse muda.
+ */
+export async function abrirVideollamada(url: string): Promise<boolean> {
+  if (Platform.OS === 'ios') {
+    try {
+      await Linking.openURL(url)
+      return true
+    } catch (e) {
+      // Que `openURL` falle acá es raro (es una URL https), pero si pasa, el
+      // navegador in-app es mejor que nada: puede que la cámara ande.
+      console.warn('[meetingRoom] Linking.openURL fallo, abro in-app:', e)
+    }
+  }
+  try {
+    await WebBrowser.openBrowserAsync(url)
+    return true
+  } catch (e) {
+    console.error('[meetingRoom] no se pudo abrir la videollamada:', e)
+    return false
+  }
 }
 
 /** El título del aviso, compartido por las dos pantallas que entran a la sala. */

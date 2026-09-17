@@ -1,6 +1,9 @@
 # Selia — el competidor que hace lo mismo
 
-> **Versión 3, 17/09/2026 (sesión 255).** Andre pidió primero una investigación
+> **Versión 4, 17/09/2026 (sesión 255).** El §24 agrega el análisis de las reseñas de las tiendas
+> (qué hizo bien y mal Selia según sus propios usuarios).
+>
+> **Versión 3, 17/09/2026.** Andre pidió primero una investigación
 > (sesión 252), después *"completa y meticulosa"* (254), y ahora *"todas sus features,
 > su onboarding, sus políticas, precios. NECESITO TODO. así podemos ver qué aprovechar
 > de ellos, qué evitar, y qué oportunidades tenemos. Un FODA completo."*
@@ -14,6 +17,8 @@
 > 3. **Los dos PDF de términos**, con las cláusulas de plata, datos, credenciales y conducta leídas enteras:
 >    usuarios (28/11/2023) y **especialistas (versión 2.0 de 2026)**.
 > 4. Prensa 2023–2024, App Store, Y Combinator.
+> 5. **(v4)** Las 138 reseñas públicas con texto de Google Play y App Store, bajadas enteras, más el
+>    reparto de estrellas de las dos fichas. Es lo único de todo esto que viene de usuarios reales: ver §24.
 >
 > ⚠️ Las cifras de tamaño las publica la propia Selia: sirven para dimensionar, no están auditadas.
 
@@ -107,7 +112,7 @@ Australia). Cada reseña publicada como página propia es contenido gratis que G
 **Descuidos visibles** (señal de que mueven rápido y revisan poco):
 - La página de **psiquiatría** tiene en "Nuestro enfoque" el texto de **nutrición** ("sin contar calorías").
 - En la home B, la tarjeta de **Burnout** tiene el texto de **ruptura**.
-- La web dice "**4,9** en las tiendas"; la App Store muestra **4,3 con 103 calificaciones**.
+- La web dice "**4,9** en las tiendas". La App Store muestra **4,3 con 103 calificaciones** y Google Play **3,7 con 264 reseñas**, con un 17% de una estrella (§24).
 - Orientación de "15 minutos" en la app y "20 minutos" en la web.
 - Los términos de usuarios dicen **solo mayores de 18**; los de especialistas y la app **aceptan menores** con
   consentimiento de los padres.
@@ -677,12 +682,154 @@ después."* (ya usada con coaches; memoria de pagos).
 
 ---
 
+## 24. Lo que dicen las reseñas (qué hicieron bien y qué mal, según sus usuarios)
+
+> **Cómo se leyó:** las reseñas públicas de las tiendas, bajadas enteras el 17/09/2026.
+> **138 reseñas con texto**: 78 de Google Play (Colombia) y 60 de la App Store (tiendas de
+> Colombia y Estados Unidos, que es donde hay). Los números de estrellas son de las fichas.
+> No es una encuesta: en las tiendas escribe el que está muy contento o muy enojado.
+
+### 24.1 El dato que más dice: las dos tiendas no coinciden
+
+| | App Store (CO) | Google Play (CO) |
+|---|---|---|
+| Nota | **4,3** | **3,7** |
+| Calificaciones | 103 | 264 |
+| 5 estrellas | mayoría | 129 (50%) |
+| 1 estrella | pocas | **43 (17%)** |
+
+En Play el reparto es **bimodal**: 129 personas ponen 5 y 43 ponen 1, y casi nadie queda en el medio
+(30 de cuatro, 28 de tres, 28 de dos). Eso no es un producto mediocre: es un producto que a la mitad
+le cambia la vida y a una sexta parte **no le funciona literalmente**. Los dos grupos no hablan de lo
+mismo. Los de 5 hablan del servicio (el psicólogo, las herramientas). Los de 1 hablan de la app
+(no carga, no puedo registrarme, no me devuelven la plata).
+
+La brecha iOS/Android es la misma historia: **el Android de Selia está peor**. Nueve de las 78 reseñas
+de Play dicen alguna versión de *"la instalé y me encontró una pantalla en blanco"*.
+
+### 24.2 Qué hicieron bien (lo que la gente elogia sola, sin que se lo pregunten)
+
+Ordenado por cuántas veces aparece:
+
+1. **"Fácil de usar", "intuitiva", "sencilla".** Es lejos lo más repetido, unas 25 veces de 138. Es *la*
+   promesa que Selia cumple. Aparece incluso en reseñas de 3 estrellas que se quejan de otra cosa.
+2. **La calidad de los profesionales.** ~20 menciones. Y es notable que aparece **incluso dentro de las
+   reseñas de 1 estrella**: *"Los especialistas son buenos, pero la aplicación es TERRIBLE"*. La gente
+   separa al profesional de la plataforma.
+3. **Encontrar al indicado.** ~12 menciones al catálogo, al test que orienta, al **video de presentación
+   del especialista** y a los filtros. *"No tienen idea cuánto tiempo me costó encontrar a un terapeuta
+   ideal para mí"*. El video de presentación se elogia por nombre.
+4. **Agendar y pagar sin fricción.** ~8 menciones a que reservar y pagar es simple, y a poder ver la
+   agenda del profesional en vez de coordinar por chat.
+5. **Las herramientas entre sesiones.** ~8 menciones: meditaciones, el diario de emociones, los chequeos
+   mensuales de bienestar, el material audiovisual. El **diario** se menciona con cariño (*"Excelente el
+   diario"*, y alguien pide recordatorios para llenarlo).
+6. **Los 15 minutos de orientación gratis.** Poco mencionado pero muy bien cuando aparece:
+   *"Me regalaron 15 minutos de orientación y me conectaron con Mauricio (el mejor!)"*.
+7. **La constancia.** Varias personas dicen que gracias a Selia **sostuvieron** la terapia en el tiempo,
+   que es distinto de empezarla. *"La uso hace más de un año y continúo con la misma terapeuta"*.
+
+**Lo que NADIE menciona: la IA.** Cero reseñas hablan de Lía, del resumen automático para el especialista
+o de las notas de sesión. Selia invirtió ahí y sus usuarios no lo notan, o no les importa. Lo que sí
+nombran es lo aburrido: que se entienda, que el psicólogo sea bueno, que agendar funcione.
+
+### 24.3 Qué hicieron mal (por orden de daño)
+
+**1. La puerta de entrada se rompe.** El problema más grave, porque mata al usuario antes de que pague.
+~9 de 78 reseñas de Play: *"no se puede registrar"*, *"se quedó cargando, lo intenté más de 3 veces, la
+desinstalé"*, *"me encontré con una hoja en blanco"*, *"no pasa del primer aviso"*. En iOS, el login con
+Google que vuelve a la pantalla inicial. Cada una de esas es un 1 estrella público y una persona que
+buscaba ayuda y se fue.
+
+**2. La plata: reembolsos, cobros raros y "dinero canjeable".** Es el tema que genera las reseñas más
+furiosas, las que usan la palabra **estafa**. Los patrones concretos:
+- El especialista no se presenta o cancela y el reembolso no aparece, o tarda *"25 días hábiles"*.
+- El reembolso no vuelve como plata sino como crédito dentro de la app: *"Cobran y luego te lo dan como
+  'dinero canjeable' dentro de la app"*.
+- Paquetes comprados que no se pueden usar ni devolver.
+- *"una vez pagas ese dinero ya jamás regresará sin importar qué"*.
+
+Esto es **exactamente** el reverso de lo que Vita ya decidió (cobro al reservar + reembolso claro). La
+reseña de 1 estrella de Selia es el argumento de venta de Vita, escrito por sus propios clientes.
+
+**3. La política de reagendar a 24 horas.** El tema más repetido en la App Store, con reseñas largas y
+razonadas, no insultos. Dos versiones:
+- *"que no deje reagendar 24 horas antes de la cita es horrible… con salud mental de por medio uno termina
+  peor por esta situación"*. Piden 4 o 5 horas, aunque sea con cargo.
+- La asimétrica, que es peor: **el especialista sí puede reagendar después de las 24 horas**, y lo hace a
+  un horario que el paciente no puede. *"Pierdo mi dinero y tiempo… no el que le dé la gana"*. Dos personas
+  cuentan lo mismo.
+
+**4. La videollamada falla.** ~6 menciones repartidas en las dos tiendas: se cae el audio, no se ve la
+cámara, la app se bloquea en mitad de la sesión, y una perla de soporte: *"confirmaron que no soportan
+audífonos bluetooth"*. Varios terminan pasándose a WhatsApp o Meet, que es fuga del marketplace por
+falla técnica.
+
+**5. La sesión (el login) se cierra sola.** Aparece en las dos tiendas y el comentario que lo explica mejor
+es este: *"la sesión se cierra cada poco tiempo, y en estados de ansiedad o depresión donde se busca
+atención rápida, eso es una gran barrera pues no hay mente para recordar correos o contraseña"*.
+
+**6. El soporte.** *"escalan el caso a un área imaginaria, pues nunca vuelven a responder"*, *"en servicio
+al cliente son súper groseros"*, *"no he podido contactar a servicio al cliente"*. El patrón: cuando algo
+falla, no hay a quién agarrar. Eso convierte un problema chico en una reseña de 1 estrella.
+
+**7. Profesionales que no se presentan o cancelan sobre la hora.** ~5 menciones. *"no asistió el
+especialista a la primera cita… Parece SCAM"*. Con 600 profesionales, la calidad promedio es buena pero
+la cola es larga, y el que cae en la cola escribe.
+
+**8. El precio, y sobre todo cómo se comunica.** ~5 menciones. No es solo que sea caro (*"¿quién no tiene
+los recursos para pagar los 170.000?"*). Es el **desajuste de expectativa**: dos personas dicen que
+llegaron por un podcast que la presentaba como *"ayuda humanizada y al servicio de la comunidad"* y se
+encontraron con precios de consultorio privado. Otra: *"Mienten con el precio"*. Y otra pide convenios
+con prepagas, que no hay.
+
+**9. Rediseños que empeoran.** *"Me gustaba mucho la experiencia anterior, esta nueva actualización me
+parece menos amigable y me cuesta más encontrar las opciones por los colores que se manejan"*, *"Terrible
+recent update, super slow"*.
+
+**10. Detalles que igual duelen.** No se pueden descargar los archivos que manda el terapeuta por el chat
+(hay que abrir la web). Nadie atiende fines de semana. Llamadas y mensajes **de madrugada** recordando
+pagos que ni siquiera vencieron. Y una observación de fondo: *"la mayoría de los especialistas son muy
+jóvenes, todos egresados de la Universidad de los Andes"*.
+
+### 24.4 Qué se lleva Vita de esto
+
+**Lo que hay que copiar sin vergüenza:**
+- **La simplicidad es el producto.** Lo que la gente elogia no es una feature, es no tener que pensar.
+  Si Vita agrega algo que complica agendar, está perdiendo la única batalla que Selia ganó.
+- **El video de presentación del especialista.** Se elogia por nombre y resuelve el problema real de
+  elegir. Es barato de hacer y ya está en el radar de §19.
+- **El diario y los chequeos de bienestar** sostienen la relación entre sesiones. Alguien pidió
+  recordatorio para el diario: ese es un pedido gratis, ya validado.
+- **La orientación gratis de 15 minutos** convierte, y la gente la agradece.
+
+**Lo que hay que evitar, que es donde está la oportunidad:**
+- **El registro tiene que funcionar en Android viejo y con poca señal.** El 17% de 1 estrella de Selia
+  es, en buena parte, gente que nunca entró. Vale más que cualquier feature.
+- **Reembolso en plata, a la tarjeta, con plazo escrito.** Nunca crédito interno. Esto ya es la decisión
+  de Vita: ahora hay que **decirlo** en la página, porque es el dolor número uno del competidor.
+- **Reagendar simétrico y humano.** Si el profesional reagenda, el usuario elige el nuevo horario entre
+  los disponibles, o se le devuelve la plata. Y la ventana del usuario no puede ser de 24 horas rígidas.
+- **Que la sesión no se cierre sola.** Nadie en crisis se acuerda de la contraseña.
+- **Un soporte con cara.** No hace falta un call center: hace falta que alguien responda y que se note
+  que es una persona. Con cero usuarios, Andre puede responder él.
+- **La videollamada tiene que aguantar**, incluida la salida de audio por bluetooth, que es como escucha
+  la mitad de la gente.
+- **Decir el precio antes.** El daño no lo hace el precio: lo hace enterarse tarde.
+
+**La frase que resume todo**, dicha por un usuario de 1 estrella de Selia:
+*"Los especialistas son buenos, pero la aplicación es TERRIBLE… Al final es un negocio donde ellos nunca
+pierden y tú no importas como cliente."*
+Ese es el hueco. No es de features: es de **trato cuando algo sale mal**.
+
+---
+
 ## Lo que no se pudo ver
 
 - **Cuánto se queda Selia de cada sesión**: la comisión va en una propuesta privada por mail.
 - **El orden exacto de las pantallas** y a quién se le muestra cada una: sale de los textos, no de usar la app.
 - **Cómo verifica credenciales** en la práctica.
-- Reseñas de Google Play (la ficha no cargó) y de empleados en Glassdoor (bloqueado).
+- Reseñas de empleados en Glassdoor y Computrabajo (bloqueados). Las de Google Play y App Store sí se leyeron: ver §24.
 - Facturación o inversión de 2025–2026: no hay publicaciones.
 
 ---

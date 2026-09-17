@@ -4,6 +4,29 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 260 · las reseñas de Selia, y el bug de cámara que encontraron por nosotros)
+
+**Tocado:** `docs/competencia-selia.md` (§24 nuevo, +150 líneas), `lib/meetingRoom.ts`, `screens/SalaScreen.tsx`, `screens/SessionsScreen.tsx`.
+
+**Resumen:**
+- **§24 de `docs/competencia-selia.md`: las 138 reseñas públicas con texto de Selia** (78 de Google Play, 60 de App Store CO y US), bajadas enteras, más el reparto de estrellas. Es lo único de toda esa investigación que viene de usuarios reales. Corregido de paso un dato del §2: el doc solo tenía la nota de iOS.
+  - El hallazgo: **App Store 4,3 · Google Play 3,7 con 17% de una estrella**, y en Play el reparto es bimodal (129 cincos, 43 unos, casi nada en el medio). Los de 5 hablan del servicio, los de 1 hablan de la app: no carga, no me puedo registrar, no me devuelven la plata. **Nadie, ni una vez, menciona la IA de Selia.**
+- 🔴 **Bug encontrado por contraste, y arreglado: en iPhone la videollamada podía quedarse sin cámara ni micrófono.** Las dos pantallas que entran a la sala abrían Daily con `WebBrowser.openBrowserAsync`, que en iOS es `SFSafariViewController`, donde el permiso de `getUserMedia` **no se pide de forma confiable y a veces se deniega solo**. Es la queja técnica más repetida contra Selia ("no se ve mi cámara, no escucho a la psicóloga") y nos podía pasar igual, sin ningún mensaje que lo explicara.
+  - Nuevo `abrirVideollamada()` en `lib/meetingRoom.ts`, usado por la Sala y por el carrusel de próximas sesiones. **En iOS abre Safari de verdad** (`Linking.openURL`); en Android sigue la Custom Tab, que es Chrome con su permiso normal; en web no cambia nada.
+  - **El costo es real y se paga a propósito:** en iPhone la persona sale de Vita para la sesión. Una sesión muda es peor. La alternativa de quedarse adentro es un WKWebView propio (`react-native-webview`, soporta getUserMedia desde iOS 14.3): dependencia nueva y permisos nativos, se puede hacer después.
+  - No hay opción de `openBrowserAsync` que lo esquive: la lista entera de opciones de iOS en SDK 54 es color, botón de cerrar, estilo de presentación y modo lectura.
+- **Lo que el contraste confirmó que ya está bien y no se tocó:** el reembolso vuelve como plata al medio de pago y no como crédito interno (que es el dolor #1 de Selia); si el profesional cancela tarde la plata vuelve igual, porque `mark_refund_on_cancel` solo retiene el reembolso cuando cancela el usuario; la política se dice en la pantalla de confirmar antes de pagar; y el video de presentación del profesional, que los usuarios de Selia elogian por nombre, ya existe.
+- ⚠️ **Hay otra sesión trabajando en este repo al mismo tiempo.** Al ir a commitear, el árbol tenía trabajo ajeno ya montado en el index (SCHEMA.md, `lib/enfoque.ts`, `CoachEnfoqueScreen`, `scripts/add-enfoque-requiere-matricula.sql`) y HEAD se movió solo dos veces durante la sesión. Se esperó a que cerrara (`a1419a98`) y **se commitearon solo los 5 archivos de esta sesión, nombrados uno por uno**, para no barrer lo ajeno adentro. Si volvés a ver esto, no uses `git add -A` en este repo.
+
+**Pendiente para la próxima sesión:**
+- 📱 **Probar la videollamada en un iPhone de verdad**, entrando desde la Sala. Es el único modo de saber si el bug estaba activo y si el arreglo alcanza. Se suma a las cinco cosas construidas y nunca vistas en el teléfono que ya venían de la 259.
+- **Decisiones de producto que quedaron planteadas y sin resolver, las dos salidas de las reseñas de Selia:**
+  - **Reagendar no existe en Vita, solo cancelar.** Hoy, a quien se le complica 3 horas antes, la única salida es cancelar y perder la plata. Selia al menos deja mover con más de 24hs y aun así es su queja más razonada. Propuesta a definir: mover a otro horario libre del mismo profesional sin perder el pago; fuera de las 24hs libre, dentro de las 24hs una vez y con el profesional pudiendo aceptar o no.
+  - **Si el profesional mueve la sesión, que el horario nuevo lo elija el usuario** (o le vuelva la plata). Es la queja más furiosa contra Selia y hoy no tenemos regla escrita.
+- **Menores, de pedidos reales de usuarios de Selia:** un recordatorio para el diario, y poder bajarse los archivos que manda el profesional por el chat (falta confirmar si nos aplica).
+- **Endurecer la entrada:** `AuthContext` ya cubre que la red falle con error, pero no que la conexión se cuelgue sin responder — ahí el spinner gira para siempre. Es el "la instalé y me quedé en una hoja en blanco" que se repite 9 veces en el Play de Selia. Se arregla con un límite de unos segundos y entrar como visitante.
+
+---
 ## 2026-09-17 — Andre (sesión 259 · M6 terminado y M14, lo que faltaba para copiarle el quiz a Selia)
 
 **Tocado:** `lib/proximaSesion.ts` (nuevo), `lib/enfoque.ts` (nuevo), `screens/CoachEnfoqueScreen.tsx` (nuevo), `app/coach-enfoque.tsx` (nuevo), `scripts/add-coach-enfoque.sql` (nuevo, **corrido en producción**), `screens/SalaScreen.tsx`, `screens/BookingScreen_Calendar.tsx`, `screens/QuizScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/ProfesionalScreen.tsx`, `lib/quizMatch.ts`, `lib/coachesCache.ts`, `__tests__/proximaSesion.test.ts` y `__tests__/enfoque.test.ts` (nuevos), `SCHEMA.md`, `docs/problemas-abiertos.md`.

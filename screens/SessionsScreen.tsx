@@ -18,8 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Calendar from 'expo-calendar';
-import * as WebBrowser from 'expo-web-browser';
-import { getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
+import { abrirVideollamada, getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
 import { getLatestSharedNotesByCoach } from '@/lib/sessionNotes';
 import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { ordenarSalas } from '@/lib/salaOrder';
@@ -445,7 +444,10 @@ export default function SessionsScreen() {
     if (!ses.meeting_url) return;
     const url = await getJoinUrl(ses.bookingId);
     if (url && 'url' in url) {
-      await WebBrowser.openBrowserAsync(url.url);
+      // Misma razón que en la Sala: en iOS la videollamada sale a Safari porque
+      // el navegador in-app no puede pedir cámara ni micrófono.
+      const abrio = await abrirVideollamada(url.url);
+      if (!abrio) Alert.alert('Error', 'No se pudo abrir la videollamada. Probá de nuevo');
     } else if (url) {
       // Fuera de horario: se dice cuándo abre, no "no se pudo" — eso haría
       // reintentar a alguien que solo llegó temprano.

@@ -21,7 +21,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as WebBrowser from 'expo-web-browser';
 import * as Calendar from 'expo-calendar';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
@@ -43,7 +42,7 @@ import { hayReembolsoAlCancelar } from '@/lib/bookingHelpers';
 import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { logError } from '@/lib/logging';
-import { ensureMeetingRoom, getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
+import { abrirVideollamada, ensureMeetingRoom, getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
 import {
   OPCIONES_PROXIMA_SESION,
   esCuandoVolver,
@@ -686,7 +685,10 @@ export default function SalaScreen() {
     setIsCreatingRoom(false);
 
     if (url && 'url' in url) {
-      await WebBrowser.openBrowserAsync(url.url);
+      // En iOS esto sale a Safari a propósito: el navegador in-app no puede
+      // pedir cámara ni micrófono de forma confiable. Ver `abrirVideollamada`.
+      const abrio = await abrirVideollamada(url.url);
+      if (!abrio) Alert.alert('Error', 'No se pudo abrir la videollamada. Probá de nuevo');
     } else if (url) {
       // Fuera de horario: se dice cuándo abre, no "no se pudo" — eso haría
       // reintentar a alguien que solo llegó temprano.
