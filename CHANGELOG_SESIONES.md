@@ -4,6 +4,20 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 252 · la lista de lo que falta para lanzar, en un solo lugar)
+
+**Tocado:** `docs/problemas-abiertos.md`. Sin código ni base.
+
+**Resumen:**
+- Los "Pendiente" de las sesiones 238–251 estaban repartidos en doce entradas. Se juntaron en la **sección L** nueva de `docs/problemas-abiertos.md` (L1–L34), en cinco grupos: bloquea el lanzamiento, limpieza de la base, seguridad y cuidado, pruebas en dispositivo, no bloquea.
+- Se sacó lo que ya se había cerrado el 16–17/09 (sanciones en producción, avisos de caída y vuelta del profesional, bloqueo de reserva a suspendidos, terceros declarados, contraste, afirmaciones, foco web).
+- Verificado el 17/09: **el DMARC sigue sin estar** (`dig`) y **`CHECKOUT_HABILITADO` sigue en `false`**. La fila A5 remite a L1, L2 y L4.
+
+**Pendiente para la próxima sesión:**
+- Lo que bloquea sigue siendo L1 (videollamada), L2 (comisión de MP), L4 (DMARC) y L5 (abogado). Antes de limpiar la base: decidir L9 y mirar L10.
+- Marcar en la sección L lo que se vaya cerrando, en vez de solo en el CHANGELOG.
+
+---
 ## 2026-09-17 — Andre (sesión 251 · a un coach suspendido se le podía reservar por tres caminos)
 
 **Tocado:** `screens/ProfesionalScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `web/c/index.html`, `supabase/functions/web-book/index.ts`, `SCHEMA.md`.
