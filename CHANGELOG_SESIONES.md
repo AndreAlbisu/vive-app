@@ -18,6 +18,22 @@
 - Probar en el celular: tocar la card y ver que abre Progreso.
 
 ---
+## 2026-09-17 — Andre (sesión 254 · Selia a fondo)
+
+**Tocado:** `docs/competencia-selia.md` (reescrito y ampliado). Sin código ni base.
+
+**Resumen:**
+- **Andre pidió una investigación completa y meticulosa de Selia.** Se amplió el documento de la sesión 252 con: fundadores y equipo (~20 personas, CEO ex Rappi), evolución de números, producto en detalle (orientación gratis de 20 min, tests, programas, presencial), precios por país, **los términos leídos completos**, el lado de los profesionales, la venta a empresas, otros competidores en Argentina y una tabla Selia vs Vita.
+- 🔴 **Lo más fuerte de sus términos:** después de 24 h de reservar no devuelve la plata; quien da de baja la cuenta pierde el saldo; **dice por escrito que no puede garantizar que los títulos de sus especialistas sean auténticos**; **le prohíbe al usuario hablar mal de Selia en redes**; disputas en Delaware. Para Vita, la matrícula verificada es un argumento de confianza concreto.
+- 📌 **Dos correcciones a la sesión 252:** (1) sí hay al menos una psicóloga argentina en Selia (36 reseñas, contra 700+ de las colombianas top: demanda argentina chica); (2) la landing argentina muestra la línea de Colombia, pero su página general de líneas sí tiene bien las argentinas.
+- Sin noticias de inversión ni facturación de 2025–2026. La app en iOS tiene solo 103 calificaciones: su canal es la web y Google.
+
+**Pendiente para la próxima sesión:**
+- Que Joaquín lea `docs/competencia-selia.md` (§0 es el resumen).
+- Sigue sin saberse la comisión de Selia. La única forma sería postularse o preguntarle a un especialista que trabaje ahí.
+- Ideas a decidir, no urgentes: tests sueltos para Google como puerta de entrada; si una orientación gratis choca con la anti-fuga.
+
+---
 ## 2026-09-17 — Andre (sesión 253 · la pantalla de crisis prometía 24 horas y la línea cerraba a medianoche)
 
 **Tocado:** `screens/AyudaScreen.tsx`, `screens/CoachSettingsScreen.tsx`, `docs/terminos-y-condiciones.md` (§5.3), `constants/legal.ts` + `web/legal/*` (regenerados).
