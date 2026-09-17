@@ -100,13 +100,14 @@
 ---
 ## 2026-09-17 — Andre (sesión 255 · la cuenta se pide al entrar)
 
-**Tocado:** `lib/entrada.ts` (nuevo), `__tests__/entrada.test.ts` (nuevo), `app/_layout.tsx`, `app/index.tsx`, `screens/OnboardingBifurcacion.tsx`, `screens/RegisterScreen.tsx`, `screens/VerificarMailScreen.tsx`, `docs/onboarding-bifurcacion-opciones.md`, `docs/problemas-abiertos.md`.
+**Tocado:** `lib/entrada.ts` (nuevo), `__tests__/entrada.test.ts` (nuevo), `components/AyudaAhoraLink.tsx` (nuevo), `screens/LoginScreen.tsx`, `app/_layout.tsx`, `app/index.tsx`, `screens/OnboardingBifurcacion.tsx`, `screens/RegisterScreen.tsx`, `screens/VerificarMailScreen.tsx`, `docs/onboarding-bifurcacion-opciones.md`, `docs/problemas-abiertos.md`.
 
 **Resumen:**
 - **Decisión de Andre: registrarse apenas se entra a la app** (*"toma poco tiempo para el usuario y nos ahorra muchos problemas"*). Tenía razón en lo segundo, y el proyecto lo prueba: la mitad sin cuenta produjo respuestas del test varadas bajo una sesión anónima, conversión inflada, guardias que una sesión anónima cruzaba y analítica sin cuenta rota durante semanas. El costo —registrarse es donde más gente abandona, y acá puede ser alguien que llega mal— se acota con Google y Apple primero, que ya estaban.
 - **Recorrido nuevo:** bienvenida → bifurcación → **cuenta** → "¿Cómo te gustaría empezar?" → la app. "Quiero crecer" va a `/register`; la bifurcación deja una marca y `lib/entrada.ts` decide después de entrar: cuenta nueva que viene del recorrido → `/onboarding2`; quien ya tenía cuenta → directo a la app. La marca sobrevive a verificar el mail y a la vuelta de Google/Apple, que un parámetro de navegación no sobreviviría.
 - **Sin cuenta solo quedan abiertas:** bienvenida, bifurcación, registro, login, alta de coach, recuperar contraseña, verificar mail, **Términos** (se tienen que poder leer antes de aceptarlos) y **la pantalla de crisis** (no puede depender de tener cuenta). Todo lo demás manda al principio.
 - 🔴 **Bug evitado antes de salir:** `AuthRedirect` corre varias veces seguidas mientras carga el perfil y la marca se consumía en la primera lectura, así que la segunda corrida pisaba "¿Cómo te gustaría empezar?" con la app. Se resolvió memoizando la decisión por usuario, con test. Además `onboarding2` salió de la lista de pantallas de las que un usuario con cuenta "tiene que salir": si no, el guardia sacaba de ahí a la persona recién registrada.
+- 🔴 **Regresión propia, agarrada antes de cerrar:** dejé la pantalla de crisis habilitada sin cuenta, pero **nada llevaba a ella antes de registrarse** — se llegaba desde el Perfil, que ahora exige cuenta. Alguien en crisis abriendo la app por primera vez no tenía camino a los números. Nuevo `components/AyudaAhoraLink.tsx` ("¿Necesitás ayuda ahora?", discreto pero siempre visible) al pie de la bifurcación, el registro y el login.
 - `RegisterScreen` ya no navega a `/(tabs)` al crear la cuenta (se adelantaba al muro del mail); si algún día Supabase no devuelve sesión en el alta, muestra un aviso en vez de dejar a la persona trabada. 9 tests nuevos, 678 en verde.
 
 **Pendiente para la próxima sesión:**

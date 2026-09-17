@@ -25,6 +25,7 @@ import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
 import LegalSheet from '@/components/LegalSheet';
 import { supabase } from '@/lib/supabase';
+import { AyudaAhoraLink } from '@/components/AyudaAhoraLink';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -433,6 +434,8 @@ export default function RegisterScreen() {
                 <Text style={s.footerLink}>Iniciá sesión</Text>
               </TouchableOpacity>
             </View>
+            {/* Las líneas de crisis, antes de tener cuenta. Ver `AyudaAhoraLink`. */}
+            <AyudaAhoraLink />
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>

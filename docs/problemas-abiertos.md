@@ -63,7 +63,7 @@
 | **L22** | Checkout web con `?probar=1`: sin el tilde de edad no pide código; después queda `age_confirmed = true`. | 241 |
 | **L23** | Sanciones desde el celular: advertencia con captura adjunta, abrirla, levantarla; y un CBU en el chat que rebote y aparezca en Administración → Sanciones. | 242, 247 |
 | **L24** | Versión mínima: `min_version = 9.9.9` en iOS, ver la pantalla de bloqueo, volver a `1.0.0`. | 245 |
-| **L37** | **El recorrido de entrada con cuenta obligatoria** (sesión 255): bienvenida → bifurcación → "Quiero crecer" → registro con Google → tiene que aparecer "¿Cómo te gustaría empezar?". Repetir con mail (pasa por el código) y con una cuenta existente vía "Ya tengo cuenta" (tiene que ir directo a la app). Y sin sesión, abrir Perfil → "Si necesitás ayuda ahora" no se puede — la pantalla de crisis tiene que seguir llegándose sin cuenta por deep link o desde el registro. | 255 |
+| **L37** | **El recorrido de entrada con cuenta obligatoria** (sesión 255): bienvenida → bifurcación → "Quiero crecer" → registro con Google → tiene que aparecer "¿Cómo te gustaría empezar?". Repetir con mail (pasa por el código) y con una cuenta existente vía "Ya tengo cuenta" (tiene que ir directo a la app). Y **sin cuenta**, tocar "¿Necesitás ayuda ahora?" al pie de la bifurcación, del registro y del login: tiene que abrir las líneas de crisis. | 255 |
 | **L25** | ~~Primera corrida del cron de "tu profesional volvió"~~ | ✅ Verificado el 17/09: corre cada hora con 200 y `{"revisados":0}`; el borrado diario de avisos corrió con `DELETE 0`. |
 
 ### L.5 — No bloquea
