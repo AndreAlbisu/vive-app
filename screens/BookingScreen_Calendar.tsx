@@ -35,7 +35,10 @@ function buildCalendar(year: number, month: number): (number | null)[][] {
   return weeks;
 }
 
-type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string; tema?: string };
+// `sugerida` (M6): el día que el profesional sugirió al terminar la sesión
+// anterior. Abre el calendario en ese mes y lo marca. No reserva nada: si ese
+// día no tiene horario libre, se elige otro.
+type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string; tema?: string; sugerida?: string };
 
 export default function BookingScreen_Calendar() {
   const router = useRouter();
@@ -43,8 +46,15 @@ export default function BookingScreen_Calendar() {
   const params = useLocalSearchParams<Params>();
 
   const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
+  const hoyStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  // Una sugerencia vieja o mal formada no tiene que dejar el calendario en un
+  // mes del pasado, del que después no se puede volver (`prevMonth` se frena en
+  // el mes actual).
+  const sugerida = /^\d{4}-\d{2}-\d{2}$/.test(params.sugerida ?? '') && (params.sugerida as string) >= hoyStr
+    ? (params.sugerida as string)
+    : null;
+  const [year, setYear] = useState(sugerida ? Number(sugerida.slice(0, 4)) : today.getFullYear());
+  const [month, setMonth] = useState(sugerida ? Number(sugerida.slice(5, 7)) - 1 : today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [loadingDates, setLoadingDates] = useState(true);
@@ -128,6 +138,9 @@ export default function BookingScreen_Calendar() {
       });
 
       setAvailableDates(available);
+      // M6: el día sugerido queda elegido solo si el profesional tiene lugar
+      // ese día. Si no, se marca igual en el calendario pero el cliente elige.
+      if (sugerida && available.has(sugerida)) setSelectedDate(sugerida);
       setLoadingDates(false);
     })();
   }, [params.coachId, user?.id]);
@@ -287,6 +300,14 @@ export default function BookingScreen_Calendar() {
           </View>
         )}
 
+        {sugerida && !loadingDates && !sinHorarios && (
+          <Text style={s.sugeridaHint}>
+            {availableDates.has(sugerida)
+              ? `${nombre} sugirió este día. Podés elegir otro.`
+              : `${nombre} sugirió este día, pero no tiene horarios libres. Elegí el que te sirva.`}
+          </Text>
+        )}
+
         <View style={s.weekRow}>
           {DAY_LABELS.map((label, i) => (
             <View key={i} style={s.dayCell}>
@@ -303,6 +324,7 @@ export default function BookingScreen_Calendar() {
               const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const available = !loadingDates && availableDates.has(ds);
               const isSelected = selectedDate === ds;
+              const esSugerida = sugerida === ds && !isSelected;
 
               return (
                 <View key={di} style={s.dayCell}>
@@ -310,6 +332,7 @@ export default function BookingScreen_Calendar() {
                     style={[
                       s.dayCircle,
                       available && !isSelected && s.dayCircleAvailable,
+                      esSugerida && s.dayCircleSugerida,
                       isSelected && s.dayCircleSelected,
                     ]}
                     onPress={() => selectDay(day)}
@@ -318,7 +341,11 @@ export default function BookingScreen_Calendar() {
                     // mes, ni si se puede reservar. Los días sin turno ya van
                     // `disabled`, así que el foco ni se para en ellos.
                     accessibilityRole="button"
-                    accessibilityLabel={`${day} de ${MONTH_NAMES[month]}`}
+                    accessibilityLabel={
+                      sugerida === ds
+                        ? `${day} de ${MONTH_NAMES[month]}, el día que sugirió ${nombre}`
+                        : `${day} de ${MONTH_NAMES[month]}`
+                    }
                     accessibilityState={{ selected: isSelected, disabled: !available }}
                     disabled={!available}>
                     <Text style={[
@@ -406,6 +433,9 @@ const s = StyleSheet.create({
   dayCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   dayCircleAvailable: { backgroundColor: 'rgba(255,248,240,0.68)', ...dayShadow },
   dayCircleSelected: { backgroundColor: ViveColors.primary },
+  // M6: el día que sugirió el profesional, todavía sin elegir. Borde y no
+  // relleno, para que no se confunda con el día ya seleccionado.
+  dayCircleSugerida: { borderWidth: 1.5, borderColor: ViveColors.primary },
   dayText: { fontFamily: ViveFonts.regular, fontSize: 14, color: '#CBCBCB' },
   dayTextAvailable: { fontFamily: ViveFonts.medium, color: '#565E32' },
   dayTextSelected: { fontFamily: ViveFonts.semibold, color: '#F7EFE4' },
@@ -425,6 +455,15 @@ const s = StyleSheet.create({
   waitLink: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
   waitLinkText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#565E32', textDecorationLine: 'underline' },
   waitError: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#B04A3A' },
+  sugeridaHint: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#565E32',
+    lineHeight: 19,
+    textAlign: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 8,
+  },
   footerSafe: {
     backgroundColor: 'rgba(247,239,228,0.97)',
     borderTopWidth: 1, borderTopColor: 'rgba(86,94,50,0.12)',

@@ -110,7 +110,7 @@
 | ID | Qué | Por qué | Estado |
 |---|---|---|---|
 | **M5** | **Cambio de profesional sin culpa** después de la primera sesión | Su "¿Querés continuar con este especialista?" + sesión sin costo con otro | 🟡 **Decisión de Andre**: cómo convive con la garantía de reintegro (T&C §9.3) |
-| **M6** | **Próxima sesión sugerida por el profesional** ("en una semana") | Su "Próxima sesión sugerida"; refuerza la anti-fuga n.º 1 | 🟠 **A medio hacer (17/09).** La base ya está: tabla `next_session_suggestions` **corrida y probada en producción** (ver SCHEMA.md). **Falta solo la app**: (1) tarjeta para el profesional en `SalaScreen` cuando `sessionState === 'finalizada'` y él NO es `recipientIsCoach`, con las cinco opciones del CHECK; (2) del lado del cliente, mostrar la sugerencia en la tarjeta `endedCard` que ya existe (línea ~1500) y pasarle una fecha sugerida a `/booking-calendar`; (3) `lib/proximaSesion.ts` puro (opción → fecha y texto) con tests |
+| **M6** | **Próxima sesión sugerida por el profesional** ("en una semana") | Su "Próxima sesión sugerida"; refuerza la anti-fuga n.º 1 | ✅ 17/09. Tabla `next_session_suggestions` (ver SCHEMA.md) + app: tarjeta con las cinco opciones para el profesional al terminar la sesión, la sugerencia se lee en la tarjeta de cierre del cliente, y `/booking-calendar` abre en ese día y lo marca (queda elegido solo si hay horario libre). `lib/proximaSesion.ts`, 13 tests. 📱 Falta verlo en el teléfono |
 | **M7** | **Referidos** con descuento pagado de la comisión de Vita | Su 50% al amigo + créditos | 🟡 **Decisión de Andre**: cuánto y para quién |
 
 ### M.3 — Cuando haya gente usando la app
