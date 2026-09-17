@@ -32,6 +32,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { PaymentBadges } from '@/components/PaymentBadges';
 import { logResourceEvent } from '@/lib/resourceEvents';
+import { estaSuspendido } from '@/lib/coachVisibility';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 // 🔴 Sin datos inventados. Esto arrancaba con 'Laura Méndez', 'Coach de vida' y
@@ -137,6 +138,11 @@ export default function ProfesionalScreen() {
   const [reportOpen, setReportOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  // 🔴 Sancionado: suspendido o dado de baja. Al perfil se llega también por
+  // favoritos, por un recurso o por un link guardado — caminos que no pasan por
+  // el catálogo, que es el único que filtraba. Sin esto la persona elegía día y
+  // horario y recién le rebotaba al confirmar.
+  const [noDisponible, setNoDisponible] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [coachResources, setCoachResources] = useState<CoachResource[]>([]);
   const [encuadreOpen, setEncuadreOpen] = useState(false);
@@ -169,11 +175,12 @@ export default function ProfesionalScreen() {
     if (!pid) return;
     supabase
       .from('coaches')
-      .select('id, specialty, bio, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, profiles!inner(name, avatar_url)')
+      .select('id, specialty, bio, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
         if (error || !data) return;
+        setNoDisponible(estaSuspendido({ suspendidoHasta: (data as any).suspendido_hasta ?? null }));
         // ⚠️ `coaches.id`, no `profiles.id`: `coach_credentials.coach_id`
         // apunta al PK de coaches, igual que `bookings.coach_id`.
         void listPublicCredentials((data as any).id).then(setCredenciales);
@@ -626,9 +633,9 @@ export default function ProfesionalScreen() {
           </View>
           <View style={s.footerButtons}>
             <TouchableOpacity
-              style={[s.btnPrimary, blocked && s.btnPrimaryDisabled]}
+              style={[s.btnPrimary, (blocked || noDisponible) && s.btnPrimaryDisabled]}
               activeOpacity={0.85}
-              disabled={blocked}
+              disabled={blocked || noDisponible}
               onPress={() => {
                 // El motivo de más valor de todos: es la rama que monetiza.
                 if (!isLoggedIn) { requestAuth('reservar_sesion'); return; }
@@ -646,7 +653,9 @@ export default function ProfesionalScreen() {
                 });
               }}>
               <Text style={s.btnPrimaryText}>
-                {blocked ? 'Bloqueado' : 'Reservar sesión'}
+                {/* "No disponible" y no nada más específico: la persona no
+                    tiene por qué enterarse de una sanción (T&C 10.4). */}
+                {blocked ? 'Bloqueado' : noDisponible ? 'No disponible por ahora' : 'Reservar sesión'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity

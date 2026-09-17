@@ -505,6 +505,12 @@ export default function BookingScreen_Confirm() {
         if (bookingError?.message?.includes('blocked')) {
           throw new Error('No podés reservar con esta persona.');
         }
+        // `trg_block_bookings_coach_suspendido`. Se llega acá solo si el perfil
+        // se abrió antes de la suspensión y la persona siguió de largo. Neutro a
+        // propósito: no se menciona ninguna sanción (T&C 10.4).
+        if (bookingError?.message?.includes('coach_suspendido')) {
+          throw new Error('Este profesional no está tomando reservas por ahora.');
+        }
         await logError('BookingConfirm: insert booking failed', bookingError);
         throw new Error('No se pudo guardar la reserva. Intentalo de nuevo');
       }

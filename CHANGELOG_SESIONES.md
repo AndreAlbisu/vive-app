@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 251 · a un coach suspendido se le podía reservar por tres caminos)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `web/c/index.html`, `supabase/functions/web-book/index.ts`, `SCHEMA.md`.
+
+**Resumen:**
+- **Andre preguntó si el sistema anti-fuga quedó cerrado.** Quedaba un punto sin verificar de la sesión anterior (la página pública del link), y al verificarlo aparecieron **cuatro huecos del mismo tipo**: solo el catálogo filtraba a los suspendidos.
+  1. **La página pública del link** (`/c/<slug>`) mostraba al coach suspendido con su botón de reservar. Ahora cae en "No encontramos este perfil", cuyo texto ya dice "puede que el profesional ya no esté disponible".
+  2. **La ficha del profesional en la app**, a la que se llega por favoritos, recursos o un link guardado: el botón ahora dice "No disponible por ahora".
+  3. **Si igual se llegaba a confirmar**, el rebote de la base mostraba "no se pudo guardar la reserva, intentalo de nuevo". Ahora dice "Este profesional no está tomando reservas por ahora".
+  4. **`web-book`** chequeaba aprobado y activo pero no suspendido: creaba la sala y después la reserva rebotaba, así que la sala **quedaba huérfana**. Ahora frena antes de crearla. Deployada (v7), después de confirmar que la v6 en producción coincidía con el repo.
+- En ningún caso se menciona una sanción (T&C 10.4).
+- ✅ **Probado con un coach real**: con una suspensión de prueba, la consulta que hace la página devuelve la fecha y la lógica de la página lo oculta; sin la sanción, lo vuelve a mostrar. Limpiado.
+- ✅ **Las dos tareas nuevas corrieron solas**: `sanction-returns` cada hora con respuesta 200 (`revisados: 0`), `purge-contact-signals` a las 03:23 AR con `DELETE 0`.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **La fecha de una suspensión es pública por la API.** `coaches` se lee con la clave pública, así que cualquiera que consulte la API puede ver `suspendido_hasta`. La app no lo muestra, pero el dato está expuesto. Cerrarlo pide sacar la columna de la lectura pública y filtrar del lado del servidor (una vista o una función que usen el catálogo, la ficha y la página del link). Es un cambio mediano; no se hizo.
+
+---
 ## 2026-09-17 — Andre (sesión 250 · los Términos y la Política dicen lo que hace la app)
 
 **Tocado:** `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `constants/legal.ts` + `web/legal/*` (regenerados), `docs/paquete-abogado.md`, `scripts/add-contact-signals-purge.sql` (nuevo).
