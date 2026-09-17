@@ -28,6 +28,7 @@ import { topicOptionsFrom } from '@/constants/conexionesDoors';
 import { supabase } from '@/lib/supabase';
 import { getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
+import { normalizarTexto, tipoProfesional } from '@/lib/tipoProfesional';
 
 // ─── Paleta local (consistente con Recursos / Explorar) ──────────────────────
 const FOREST      = '#3A4F2A';
@@ -81,16 +82,8 @@ const DEFAULT_FILTERS: Filters = {
 };
 
 // ─── Normalización para búsqueda sin tildes/mayúsculas ───────────────────────
-function normalize(text: string): string {
-  return (text ?? '')
-    .toLowerCase()
-    .replace(/[áàäâã]/g, 'a')
-    .replace(/[éèëê]/g, 'e')
-    .replace(/[íìïî]/g, 'i')
-    .replace(/[óòöôõ]/g, 'o')
-    .replace(/[úùüû]/g, 'u')
-    .replace(/ñ/g, 'n');
-}
+// Vive en `lib/tipoProfesional.ts`, compartida con el quiz.
+const normalize = normalizarTexto;
 
 // ─── Sombra ──────────────────────────────────────────────────────────────────
 const shadow = Platform.select({
@@ -296,13 +289,8 @@ export default function SearchScreen3() {
   // Así que un nutricionista matriculado que mencione "psicología" en su bio
   // todavía podría caer acá. Cerrarlo del todo pide un campo estructurado de
   // profesión en `coaches`, que es una decisión de producto, no un parche.
-  function inferType(c: { specialty: string; hasMatricula?: boolean }): 'Coach' | 'Psicólogo' | 'Nutricionista' {
-    const s = normalize(c.specialty);
-    if (!c.hasMatricula) return 'Coach';
-    if (s.includes('psicolog')) return 'Psicólogo';
-    if (s.includes('nutricion')) return 'Nutricionista';
-    return 'Coach';
-  }
+  // La regla vive en `lib/tipoProfesional.ts` (compartida con el quiz desde el 17/09).
+  const inferType = tipoProfesional;
 
   const SEX_TO_GENDER: Record<'Mujer' | 'Hombre', string> = {
     Mujer: 'Femenino',

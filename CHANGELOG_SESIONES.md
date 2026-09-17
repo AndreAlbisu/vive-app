@@ -4,6 +4,24 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 257 · lo que Vita toma de Selia, primera tanda: M1 a M4)
+
+**Tocado:** `screens/QuizScreen.tsx`, `lib/quizMatch.ts` (nuevo), `lib/tipoProfesional.ts` (nuevo), `app/search3.tsx`, `__tests__/quizMatch.test.ts` (nuevo), `screens/ReviewScreen.tsx`, `screens/BookingScreen_Calendar.tsx`, `screens/UserNotificationsScreen.tsx`, `app/_layout.tsx`, `supabase/functions/availability-notices/` (nueva), `scripts/add-session-call-feedback.sql`, `scripts/add-availability-waitlist.sql`, `SCHEMA.md`, `docs/problemas-abiertos.md` (sección M nueva).
+
+**Resumen:**
+- Andre: *"anotá todo, y completemos todo"*. El plan quedó en `docs/problemas-abiertos.md` **sección M** (M1–M13, más lo descartado a propósito). Esta tanda cierra lo de antes de lanzar.
+- **M1 y M2, el final del quiz.** Ya existía una frase de "por qué", pero 🔴 **mentía**: si nadie cumplía las tres respuestas, el quiz aflojaba presupuesto y tipo **en silencio** y seguía diciendo "encaja con tus respuestas". Y 🔴 decidía "Psicólogo/a" leyendo el texto libre del profesional, el mismo defecto que se cerró en el buscador el 03/09. Ahora cada tarjeta dice lo que cumple y lo que no, la pantalla avisa cuando no hubo nadie con todo, y hay "Ver otras opciones", "Cambiar mis respuestas" y "Ver todos los profesionales". La regla de tipo quedó en un solo lugar (`lib/tipoProfesional.ts`) para quiz y buscador.
+- **M3, "Avisame cuando tenga horarios".** 🗄️ **Tabla nueva `availability_waitlist`** + edge function **`availability-notices`** (v1) + cron a los 29 de cada hora. Probado de punta a punta en producción con una cuenta de prueba: avisa solo si hay horario libre, no duplica, y quedó todo limpio.
+- **M4, la videollamada aparte.** 🗄️ **Tabla nueva `session_call_feedback`**, privada. Pregunta opcional en la reseña: "Anduvo bien / Con problemas / No anduvo" + qué falló. No la ve el profesional.
+- Las dos tablas se probaron **como usuario real con rollback** (qué puede y qué no). SCHEMA.md ya actualizado.
+
+**Pendiente para la próxima sesión:**
+- 📱 Ver en el teléfono: el final del quiz, la tarjeta de "Avisame" en el calendario de un profesional sin horarios, y la pregunta de la videollamada en la reseña.
+- ⚠️ "No pude entrar" casi nunca va a llegar por la reseña (exige sesión completada). Si importa medirlo, preguntarlo en otro lugar.
+- ⚠️ Los rangos de presupuesto del quiz ($5.000 / $10.000) quedan hasta tener precios reales.
+- Siguen M5–M13 (sección M).
+
+---
 ## 2026-09-17 — Andre (sesión 256 · cómo comunicar Vita, a partir de Selia)
 
 **Tocado:** `docs/competencia-selia.md` (§23 nuevo y guía de lectura en §0). Sin código ni base.

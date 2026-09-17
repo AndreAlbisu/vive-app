@@ -63,6 +63,9 @@ function NotificationSetup() {
       if (data?.type === 'invitacion_review' && data?.booking_id) {
         router.push({ pathname: '/review', params: { booking_id: data.booking_id } });
       }
+      if (data?.type === 'profesional_con_horarios' && data?.coach_profile_id) {
+        router.push({ pathname: '/profesional', params: { profileId: data.coach_profile_id } });
+      }
       if (data?.type === 'resource_reminder' && data?.ref) {
         if (data.kind === 'coach_resource') {
           router.push({ pathname: '/coach-recurso', params: { id: data.ref } });

@@ -87,6 +87,54 @@
 
 ---
 
+## M. Lo que Vita toma de Selia — plan del 17/09/2026
+
+> Sale de `docs/competencia-selia.md` §19–23. Andre (17/09): *"anotá todo, y
+> completemos todo"*. Antes de escribir se verificó qué ya existía en la app, para
+> no rehacer nada: "Reservar próxima sesión" al terminar la sesión **ya existe**
+> (`SalaScreen`), igual que reservar de nuevo desde Mensajes (`SessionsScreen`).
+>
+> **No reemplaza a la sección L**: lo que bloquea el lanzamiento sigue siendo L1–L5.
+
+### M.1 — Antes de lanzar (chico, de alto impacto)
+
+| ID | Qué | Por qué (Selia) | Estado |
+|---|---|---|---|
+| **M1** | **Decir por qué se recomienda a cada profesional** en los resultados del quiz | Selia explica cada match; baja el miedo a elegir | ✅ 17/09. Ya había una frase, pero mentía cuando el quiz aflojaba filtros en silencio, y decidía "psicólogo" por texto libre (mismo defecto que el buscador el 03/09). Ahora cada tarjeta dice lo que cumple y lo que no (`lib/quizMatch.ts`, 9 tests), y la regla de tipo vive en `lib/tipoProfesional.ts`, compartida con el buscador. ⚠️ Los rangos de presupuesto ($5.000 / $10.000) quedan hasta tener precios reales |
+| **M2** | **Salida si ninguno convence** al final del quiz: ver otras opciones y volver a responder | Su red de seguridad (rehacer matching, orientación) | ✅ 17/09. De a 3, "Ver otras opciones", "Cambiar mis respuestas" (vuelve con lo elegido marcado) y "Ver todos los profesionales". Solo muestra perfiles que trabajan el tema |
+| **M3** | **"Avisame cuando tenga horarios"** cuando un profesional no tiene turnos | Su "Solicitar disponibilidad" | ✅ 17/09. Tabla `availability_waitlist`, edge function `availability-notices` con cron horario, probado de punta a punta en producción. Ver SCHEMA.md. 📱 Falta verlo en el teléfono |
+| **M4** | **Calificar la videollamada aparte** del profesional en la reseña | Separa falla técnica de insatisfacción; sirve para L1 | ✅ 17/09. Tabla privada `session_call_feedback`, pregunta opcional en `ReviewScreen`. ⚠️ "No pude entrar" casi nunca llega por acá (la reseña exige sesión completada): ver SCHEMA.md. 📱 Falta verlo en el teléfono |
+
+### M.2 — Primer mes después de lanzar
+
+| ID | Qué | Por qué | Estado |
+|---|---|---|---|
+| **M5** | **Cambio de profesional sin culpa** después de la primera sesión | Su "¿Querés continuar con este especialista?" + sesión sin costo con otro | 🟡 **Decisión de Andre**: cómo convive con la garantía de reintegro (T&C §9.3) |
+| **M6** | **Próxima sesión sugerida por el profesional** ("en una semana") | Su "Próxima sesión sugerida"; refuerza la anti-fuga n.º 1 | 🔴 Por hacer |
+| **M7** | **Referidos** con descuento pagado de la comisión de Vita | Su 50% al amigo + créditos | 🟡 **Decisión de Andre**: cuánto y para quién |
+
+### M.3 — Cuando haya gente usando la app
+
+| ID | Qué | Nota |
+|---|---|---|
+| **M8** | **Paquetes de sesiones** | Empezar por PayPal y USDT, donde Vita retiene la plata (con MP va al profesional) |
+| **M9** | **Tests gratis en la web** (ansiedad, ánimo) que terminen en el quiz | Para Google. "Vita guía, no diagnostica"; derivar a Ayuda si el resultado es alto |
+| **M10** | **Preparar la sesión** ("¿qué querés trabajar hoy?"), primero sin IA | El profesional lo ve antes de la sesión |
+| **M11** | **Empresas** | Cuando haya usuarios y reseñas para mostrar |
+
+### M.4 — Fuera de la app
+
+| ID | Qué | Nota |
+|---|---|---|
+| **M12** | **Página de una hoja para profesionales** comparando condiciones | `competencia-selia.md` §23.2 c. Lo único útil sin usuarios |
+| **M13** | **Escribir en T&C que no hay costo de alta** para profesionales | Antes de prometerlo en M12 |
+
+### M.5 — Descartado a propósito (no re-proponer sin algo nuevo)
+
+Notas automáticas grabando la sesión (datos de salud, equipo de dos) · cuentas familiares (Vita es 18+) · terapia grupal (con grupales Apple exige su sistema de pago, 3.1.3(d)) · psiquiatría y orientación humana de 15 minutos (no escalan para dos).
+
+---
+
 ## A. Exposición — no es producto, es riesgo vivo
 
 **Nada de las secciones B–F vale más que esto.** La revisión de ejecutabilidad

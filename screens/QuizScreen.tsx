@@ -16,6 +16,13 @@ import { AppBg } from '@/components/ui/AppBg';
 import { ViveFonts } from '@/constants/theme';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 import { QUIZ_AREAS as Q1_OPTIONS } from '@/constants/searchData';
+import {
+  recomendarDesdeQuiz,
+  TIPO_OPCIONES as Q2_OPTIONS,
+  PRESUPUESTO_OPCIONES as Q3_OPTIONS,
+  TAMANO_TANDA,
+  type ResultadoQuiz,
+} from '@/lib/quizMatch';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { supabase } from '@/lib/supabase';
 import { guardarPendiente, volcarPendiente } from '@/lib/quizPendiente';
@@ -28,57 +35,7 @@ const BG = 'rgba(255,248,240,0.65)';
 const BD = 'rgba(255,255,255,0.65)';
 const SG = '#C99A3F';
 
-// ─── Quiz data ───────────────────────────────────────────────────────────────
-type Q2Opt = { id: string; label: string; desc: string; kw: string | null };
-const Q2_OPTIONS: Q2Opt[] = [
-  { id: 'coach',         label: 'Coach de vida',   desc: 'Metas, hábitos y propósito',     kw: 'coach' },
-  { id: 'psicologo',     label: 'Psicólogo/a',     desc: 'Salud mental y terapia',          kw: 'psic' },
-  { id: 'nutricionista', label: 'Nutricionista',   desc: 'Alimentación y hábitos físicos',  kw: 'nutri' },
-  { id: 'any',           label: 'Sin preferencia', desc: 'Quiero ver todas las opciones',   kw: null },
-];
-
-type Q3Opt = { id: string; label: string; max: number | null };
-const Q3_OPTIONS: Q3Opt[] = [
-  { id: 'low',  label: 'Hasta $5.000',    max: 5000 },
-  { id: 'mid',  label: '$5.000–$10.000',  max: 10000 },
-  { id: 'high', label: 'Más de $10.000',  max: null },
-  { id: 'flex', label: 'Es flexible',     max: null },
-];
-
-// ─── Matching logic ──────────────────────────────────────────────────────────
-function computeMatches(
-  coaches: CachedCoach[],
-  q1Id: string,
-  q2Id: string,
-  q3Id: string,
-): CachedCoach[] {
-  const q1 = Q1_OPTIONS.find(o => o.id === q1Id);
-  const q2 = Q2_OPTIONS.find(o => o.id === q2Id);
-  const q3 = Q3_OPTIONS.find(o => o.id === q3Id);
-
-  const subtemas = q1?.subtemas ?? [];
-  const kw = q2?.kw ?? null;
-  const maxPrice = q3?.max ?? null;
-
-  const byTopic = (c: CachedCoach) => subtemas.length === 0 || subtemas.some(s => c.topics.includes(s));
-  const byType  = (c: CachedCoach) => !kw || c.specialty.toLowerCase().includes(kw);
-  const byPrice = (c: CachedCoach) => !maxPrice || c.priceFrom <= maxPrice;
-  const sortRating = (a: CachedCoach, b: CachedCoach) => ((b.avgRating ?? 0) - (a.avgRating ?? 0));
-
-  let res = coaches.filter(c => byTopic(c) && byType(c) && byPrice(c));
-  if (res.length === 0) res = coaches.filter(c => byTopic(c) && byType(c)); // relax budget
-  if (res.length === 0) res = coaches.filter(c => byTopic(c));              // relax type
-  if (res.length === 0) res = [...coaches];                                  // fallback: all
-
-  return res.sort(sortRating).slice(0, 2);
-}
-
-function buildReason(coach: CachedCoach, q1Id: string): string {
-  const q1 = Q1_OPTIONS.find(o => o.id === q1Id);
-  const hit = q1?.subtemas.find(s => coach.topics.includes(s));
-  if (hit) return `Trabaja ${hit.toLowerCase()}, alineado con lo que estás buscando`;
-  return 'Su perfil encaja con tus respuestas';
-}
+// Opciones, criterio de coincidencia y razones: `lib/quizMatch.ts`.
 
 function getInitials(name: string) {
   const p = (name ?? '').trim().split(' ');
@@ -94,7 +51,9 @@ export default function QuizScreen() {
   const [q3, setQ3] = useState<string | null>(null);
   const [rawCoaches, setCoaches] = useState<CachedCoach[]>([]);
   const coaches = useBlockedFilter(rawCoaches);
-  const [matches, setMatches] = useState<CachedCoach[]>([]);
+  const [resultado, setResultado] = useState<ResultadoQuiz>({ recomendaciones: [], hayCoincidenciaExacta: false });
+  // Cuántas tandas se ven (M2): "Ver otras opciones" suma una.
+  const [tandas, setTandas] = useState(1);
 
   useEffect(() => {
     prefetchCoaches();
@@ -112,8 +71,8 @@ export default function QuizScreen() {
     if (step < 2) {
       setStep(s => s + 1);
     } else {
-      const ms = computeMatches(coaches, q1 ?? '', q2 ?? '', q3 ?? '');
-      setMatches(ms);
+      setResultado(recomendarDesdeQuiz(coaches, { tema: q1, tipo: q2, presupuesto: q3 }));
+      setTandas(1);
       // 🔴 Antes esto era `if (!uid) return;`: quien hacía el quiz SIN cuenta
       // perdía las tres respuestas en silencio. Lo único que quedaba era
       // `vive_quiz_topic` en AsyncStorage, una clave que no lee nadie — o sea
@@ -133,6 +92,14 @@ export default function QuizScreen() {
       setStep(3);
     }
   }
+
+  // M2: volver a las preguntas con lo ya elegido marcado, para cambiar una sola.
+  function volverAResponder() {
+    setStep(0);
+  }
+
+  const visibles = resultado.recomendaciones.slice(0, tandas * TAMANO_TANDA);
+  const hayMas = resultado.recomendaciones.length > visibles.length;
 
   const canAdvance = (step === 0 && q1) || (step === 1 && q2) || (step === 2 && q3);
 
@@ -237,14 +204,14 @@ export default function QuizScreen() {
             <>
               <Text style={s.resultsTitle}>Para vos</Text>
               <Text style={s.resultsSub}>
-                Basándonos en tus respuestas, estos perfiles se adaptan a lo que buscás.
+                {resultado.recomendaciones.length === 0
+                  ? 'Todavía no hay profesionales que trabajen lo que elegiste.'
+                  : resultado.hayCoincidenciaExacta
+                    ? 'Estos perfiles coinciden con lo que respondiste. Abajo de cada uno te contamos por qué.'
+                    : 'No encontramos a nadie con todo lo que pediste. Estos se acercan, y te marcamos en qué no coinciden.'}
               </Text>
 
-              {matches.length === 0 ? (
-                <Text style={s.noMatches}>
-                  Todavía no hay profesionales cargados que coincidan exactamente. Explorá el directorio completo.
-                </Text>
-              ) : matches.map(coach => (
+              {visibles.map(({ coach, razones, diferencias }) => (
                 <View key={coach.id} style={s.resultCard}>
                   <View style={s.resultTop}>
                     {/* Avatar */}
@@ -273,19 +240,52 @@ export default function QuizScreen() {
                       ${(coach.priceFrom ?? 0).toLocaleString('es-AR')}
                     </Text>
                   </View>
-                  <Text style={s.resultReason}>{buildReason(coach, q1 ?? '')}</Text>
+
+                  {/* M1: por qué aparece. Solo cosas que el perfil cumple de verdad. */}
+                  <View style={s.reasons} accessibilityLabel={`Por qué te lo sugerimos: ${razones.join('. ')}`}>
+                    {razones.map(r => (
+                      <View key={r} style={s.reasonRow}>
+                        <Feather name="check" size={13} color={F} style={s.reasonIcon} />
+                        <Text style={s.reasonText}>{r}</Text>
+                      </View>
+                    ))}
+                    {diferencias.map(d => (
+                      <View key={d} style={s.reasonRow}>
+                        <Feather name="minus" size={13} color={FS} style={s.reasonIcon} />
+                        <Text style={[s.reasonText, s.diffText]}>{d}</Text>
+                      </View>
+                    ))}
+                  </View>
+
                   <TouchableOpacity style={s.resultBtn} onPress={() => goToPerfil(coach)} activeOpacity={0.85}>
                     <Text style={s.resultBtnText}>Ver perfil</Text>
                   </TouchableOpacity>
                 </View>
               ))}
 
-              <TouchableOpacity
-                style={s.backToDir}
-                onPress={() => router.back()}
-                activeOpacity={0.8}>
-                <Text style={s.backToDirText}>Volver a Profesionales</Text>
-              </TouchableOpacity>
+              {/* M2: salidas para cuando ninguno convence. */}
+              <View style={s.exits}>
+                {hayMas ? (
+                  <TouchableOpacity
+                    style={s.exitPrimary}
+                    onPress={() => setTandas(n => n + 1)}
+                    activeOpacity={0.85}
+                    accessibilityRole="button">
+                    <Text style={s.exitPrimaryText}>Ver otras opciones</Text>
+                  </TouchableOpacity>
+                ) : resultado.recomendaciones.length > 0 ? (
+                  <Text style={s.noMore}>No hay más perfiles que trabajen lo que elegiste.</Text>
+                ) : null}
+
+                <TouchableOpacity style={s.exitSecondary} onPress={volverAResponder} activeOpacity={0.8} accessibilityRole="button">
+                  <Feather name="rotate-ccw" size={14} color={F} />
+                  <Text style={s.exitSecondaryText}>Cambiar mis respuestas</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={s.backToDir} onPress={() => router.back()} activeOpacity={0.8} accessibilityRole="button">
+                  <Text style={s.backToDirText}>Ver todos los profesionales</Text>
+                </TouchableOpacity>
+              </View>
             </>
           )}
 
@@ -348,7 +348,6 @@ const s = StyleSheet.create({
   // Results
   resultsTitle: { fontFamily: ViveFonts.title, fontSize: 28, color: F, marginBottom: 4 },
   resultsSub:   { fontFamily: ViveFonts.regular, fontSize: 14, color: FS, lineHeight: 22, marginBottom: 8 },
-  noMatches:    { fontFamily: ViveFonts.regular, fontSize: 14, color: FS, lineHeight: 22, textAlign: 'center', marginTop: 20 },
 
   resultCard: {
     backgroundColor: BG, borderRadius: 22,
@@ -365,7 +364,11 @@ const s = StyleSheet.create({
   ratingRow:   { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
   ratingText:  { fontFamily: ViveFonts.regular, fontSize: 11, color: FS },
   resultPrice: { fontFamily: ViveFonts.semibold, fontSize: 13, color: F },
-  resultReason:{ fontFamily: ViveFonts.regular, fontSize: 13, color: FS, lineHeight: 20, fontStyle: 'italic' },
+  reasons:     { gap: 6 },
+  reasonRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  reasonIcon:  { marginTop: 3 },
+  reasonText:  { flex: 1, fontFamily: ViveFonts.regular, fontSize: 13, color: F, lineHeight: 19 },
+  diffText:    { color: FS },
 
   resultBtn: {
     backgroundColor: F, borderRadius: 14,
@@ -373,6 +376,12 @@ const s = StyleSheet.create({
   },
   resultBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: CR },
 
-  backToDir:     { alignSelf: 'center', marginTop: 8 },
+  exits:         { gap: 10, marginTop: 6 },
+  exitPrimary:   { borderRadius: 16, borderWidth: 1.5, borderColor: F, paddingVertical: 13, alignItems: 'center' },
+  exitPrimaryText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: F },
+  exitSecondary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, minHeight: 44 },
+  exitSecondaryText: { fontFamily: ViveFonts.medium, fontSize: 13.5, color: F },
+  noMore:        { fontFamily: ViveFonts.regular, fontSize: 13, color: FS, textAlign: 'center', lineHeight: 20 },
+  backToDir:     { alignSelf: 'center', marginTop: 2, minHeight: 44, justifyContent: 'center' },
   backToDirText: { fontFamily: ViveFonts.medium, fontSize: 13, color: TC },
 });

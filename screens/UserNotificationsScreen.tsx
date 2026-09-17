@@ -74,6 +74,18 @@ export default function UserNotificationsScreen() {
       router.push({ pathname: '/review', params: { booking_id: n.booking_id } });
       return;
     }
+    // M3: el aviso de "ya tiene horarios" abre la ficha del profesional.
+    // `notifications` no guarda a qué profesional se refiere; lo sabe el pedido.
+    if (n.type === 'profesional_con_horarios') {
+      const { data: pedido } = await supabase
+        .from('availability_waitlist')
+        .select('coaches!inner(profile_id)')
+        .eq('notification_id', n.id)
+        .maybeSingle();
+      const c: any = Array.isArray((pedido as any)?.coaches) ? (pedido as any).coaches[0] : (pedido as any)?.coaches;
+      if (c?.profile_id) router.push({ pathname: '/profesional', params: { profileId: c.profile_id } });
+      return;
+    }
     if (n.booking_id) {
       const { data } = await supabase
         .from('bookings')
@@ -87,7 +99,7 @@ export default function UserNotificationsScreen() {
   }
 
   function isTappable(n: Notif): boolean {
-    return !!(n.booking_id);
+    return !!(n.booking_id) || n.type === 'profesional_con_horarios';
   }
 
   function iconFor(type: string): keyof typeof Feather.glyphMap {
@@ -100,6 +112,7 @@ export default function UserNotificationsScreen() {
       // Sin rojo a propósito: no es un error ni algo que la persona hizo mal.
       case 'profesional_no_disponible': return 'user';
       case 'profesional_disponible': return 'user-check';
+      case 'profesional_con_horarios': return 'calendar';
       default: return 'bell';
     }
   }
