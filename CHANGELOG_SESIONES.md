@@ -18,6 +18,21 @@
 - Marcar en la sección L lo que se vaya cerrando, en vez de solo en el CHANGELOG.
 
 ---
+## 2026-09-17 — Andre (sesión 252 · Selia, el competidor colombiano)
+
+**Tocado:** `docs/competencia-selia.md` (nuevo). Sin cambios de código.
+
+**Resumen:**
+- **Andre pidió investigar Selia** (*"es IGUAL a lo que estamos haciendo"*). Es real y grande: Bogotá, Y Combinator (invierno 2022), unos US$1,5 millones de inversión, US$2 millones facturados en 2023, más de 10.000 sesiones por mes, entre 500 y 600 especialistas y más de 100 empresas clientes. El núcleo del producto es el de Vita: psicólogos + coaches, test de matching, herramientas entre sesiones, comisión por sesión.
+- **Diferencias que importan:** cobra ella y le paga al especialista; vende paquetes de 4, 8 y 12 sesiones con saldo que vence al año y no se devuelve; vende fuerte a empresas; tiene psiquiatría.
+- **En Argentina tiene una página, pero parece solo para aparecer en Google:** precios en dólares, nada de Mercado Pago, matrícula argentina ni obras sociales, y 🔴 **la línea de emergencia que le muestra a un argentino es la de Colombia**. Las ventajas de Vita acá ya existen: pesos y Mercado Pago, matrícula verificada, garantía y reembolso, el link del coach sin comisión en la primera sesión.
+- 🔴 **Matiza la respuesta sobre paquetes de la sesión 251:** la demanda en el mercado existe (Selia los tiene como parte central). Sigue en pie el obstáculo técnico —con Mercado Pago la plata va al coach—, así que el lugar natural para empezar serían PayPal y USDT, donde Vita retiene el dinero.
+
+**Pendiente para la próxima sesión:**
+- Que Joaquín lea `docs/competencia-selia.md`.
+- No se pudo ver la comisión de Selia ni cuánto le paga al especialista: está detrás de su portal para profesionales.
+
+---
 ## 2026-09-17 — Andre (sesión 251 · a un coach suspendido se le podía reservar por tres caminos)
 
 **Tocado:** `screens/ProfesionalScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `web/c/index.html`, `supabase/functions/web-book/index.ts`, `SCHEMA.md`.
