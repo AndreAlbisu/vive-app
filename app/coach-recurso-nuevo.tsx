@@ -303,7 +303,7 @@ export default function CoachRecursoNuevoScreen() {
 
           {/* ── 5. Objetivo de bienestar ────────────────────────── */}
           <Text style={s.label}>¿Para qué sirve? <Text style={s.required}>*</Text></Text>
-          <Text style={s.inputHint}>El objetivo con el que alguien lo buscaría — distinto del tema.</Text>
+          <Text style={s.inputHint}>El objetivo con el que alguien lo buscaría, distinto del tema.</Text>
           <View style={s.goalGrid}>
             {WELLNESS_GOALS.map(g => {
               const active = wellnessGoal === g.id;

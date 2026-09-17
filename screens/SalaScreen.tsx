@@ -697,7 +697,7 @@ export default function SalaScreen() {
       const startDate = new Date(scheduledAtMs(activeBooking.scheduled_date, activeBooking.scheduled_time));
       const dur = activeBooking.duration_minutes ?? 60;
       const endDate = new Date(startDate.getTime() + dur * 60_000);
-      const title = `Sesión con ${recipientProfile?.name ?? 'profesional'} — Vita`;
+      const title = `Sesión con ${recipientProfile?.name ?? 'profesional'} · Vita`;
 
       // Evitar duplicados: si ya existe un evento igual (mismo título y arranque)
       // en ese rango, no lo agregamos de nuevo (bug de tap repetido).

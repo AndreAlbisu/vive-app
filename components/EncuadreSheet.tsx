@@ -98,7 +98,7 @@ export function EncuadreSheet({ visible, encuadre, onCerrar }: Props) {
             {!encuadre.habilitado && (
               <Text style={s.note}>
                 Para muchas formaciones no existe una matrícula estatal que obtener. Que
-                no figure no significa que a esta persona le falte algo — significa que
+                no figure no significa que a esta persona le falte algo. Significa que
                 su trabajo es de acompañamiento y no de atención clínica.
               </Text>
             )}

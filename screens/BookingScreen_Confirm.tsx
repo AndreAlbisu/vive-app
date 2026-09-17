@@ -986,8 +986,8 @@ export default function BookingScreen_Confirm() {
             <MaterialIcons name="info-outline" size={15} color="rgba(135,131,92,0.80)" />
             <Text style={s.modalityText}>
               {instantBooking
-                ? 'Reserva instantánea — tu sesión queda confirmada al instante'
-                : 'Reserva con confirmación — el profesional tiene 24hs para aceptar'}
+                ? 'Reserva instantánea: tu sesión queda confirmada al instante'
+                : 'Reserva con confirmación: el profesional tiene 24hs para aceptar'}
             </Text>
           </View>
         </View>
@@ -1119,7 +1119,7 @@ export default function BookingScreen_Confirm() {
             <View style={s.paymentInfoRow}>
               <MaterialIcons name="wifi" size={15} color="#0B84B0" />
               <Text style={s.paymentInfoText}>
-                Esto está tardando más de lo normal — puede pasar si estás conectando desde lejos. Seguí esperando, no hace falta reintentar.
+                Esto está tardando más de lo normal. Puede pasar si estás conectando desde lejos. Seguí esperando, no hace falta reintentar.
               </Text>
             </View>
           ) : null}

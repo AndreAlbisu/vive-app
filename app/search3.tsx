@@ -637,7 +637,7 @@ export default function SearchScreen3() {
                    PayPal está en producción DEPENDE DEL COACH, y esa frase
                    espantaba a quien no quiere cripto y sorprendía al resto. */
                 <Text style={s.starHint}>
-                  Se paga en dólares. El medio depende de cada profesional — filtralo acá abajo.
+                  Se paga en dólares. El medio depende de cada profesional: filtralo acá abajo.
                 </Text>
               )}
             </View>

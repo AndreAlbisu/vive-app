@@ -17,7 +17,7 @@ describe('componerTextoPaquete', () => {
     const t = componerTextoPaquete(dias);
     expect(t).toContain('Cansado: semana dura');
     // Sin nota, no queda un ": " colgando.
-    expect(t).toContain('— Bien');
+    expect(t).toContain('· Bien');
     expect(t).not.toContain('Bien:');
     // Una línea por día.
     expect(t.split('\n').filter(l => l.startsWith('•'))).toHaveLength(2);

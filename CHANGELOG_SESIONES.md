@@ -4,6 +4,21 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 254 · sacar la raya "—" de los textos visibles)
+
+**Tocado:** ~30 pantallas/componentes (`screens/*`, `components/*`, `app/*`), `lib/weeklyReflection.ts`, `lib/paquete.ts`, `lib/bookingCancel.ts`, `lib/consentRules.ts`, `hooks/useRecommendedResource.ts`, `supabase/functions/weekly-reflection/index.ts` (**deployada, v29**), `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `docs/boton-de-arrepentimiento.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` + `web/legal/*` (regenerados), tests.
+
+**Resumen:**
+- Andre: la raya "—" es un tic de texto generado por IA y en castellano casi no se usa. Se reemplazó en todo texto que ve una persona por punto, coma, dos puntos o paréntesis. Quedan a propósito: "—" como valor vacío, rangos "10–20 min", títulos de pestaña web "X — Vita", logs y comentarios, y el panel de admin.
+- **Sofía:** el prompt de `weekly-reflection` ahora la prohíbe (y se le sacaron las rayas al propio prompt, que las contagiaba). Además `rejectCopy` descarta con motivo `'raya'` la frase que la traiga y cae al texto de las reglas. Deploy verificado (responde `token inválido` con anon key).
+- **Legales:** incisos reescritos en T&C, Política, Arrepentimiento y Eliminar cuenta. `LEGAL_VERSION` nuevo 093888ab9fbd (pre-lanzamiento, no afecta a nadie). Sin cambio de contenido, solo puntuación.
+- Paquete para la sesión: cada línea pasa de "fecha — ánimo: nota" a "fecha · ánimo: nota".
+
+**Pendiente para la próxima sesión:**
+- `docs/sobre-nosotros.md` (texto de Andre, se ve en la app) todavía tiene 4 rayas: no se tocó sin preguntarle.
+- El banner "BORRADOR — REQUIERE REVISIÓN LEGAL" de los .md legales es interno y quedó igual.
+
+---
 ## 2026-09-17 — Andre (sesión 254 · la tarjeta de una sesión ya pasada seguía apareciendo)
 
 **Tocado:** `screens/SessionsScreen.tsx`, `app/(tabs)/index.tsx`, `lib/time.ts`.

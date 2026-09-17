@@ -169,7 +169,7 @@ export default function CoachCredentialsScreen() {
               <Feather name="lock" size={15} color={FOREST_SOFT} />
               <Text style={s.avisoTxt}>
                 El documento lo mira solo el equipo de Vita, para verificarlo.{' '}
-                <Text style={s.avisoFuerte}>Nunca se muestra en tu perfil</Text> — lo que
+                <Text style={s.avisoFuerte}>Nunca se muestra en tu perfil.</Text> Lo que
                 ven las personas es el título, la institución y el número, con la marca de verificado.
               </Text>
             </View>

@@ -352,7 +352,7 @@ export default function CoachApplicationScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Subtemas que trabajás</Text>
               <Text style={styles.fieldHint}>
-                Elegí los temas en los que acompañás — se usan para que los usuarios te encuentren.
+                Elegí los temas en los que acompañás. Se usan para que los usuarios te encuentren.
               </Text>
               {AXES.map(axis => (
                 <View key={axis.id} style={styles.axisBlock}>
@@ -446,7 +446,7 @@ export default function CoachApplicationScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Link de video de presentación</Text>
               <Text style={styles.fieldHint}>
-                Compartinos un video corto contándonos quién sos y cómo trabajás — puede ser un link de YouTube, Drive, o similar.
+                Compartinos un video corto contándonos quién sos y cómo trabajás. Puede ser un link de YouTube, Drive, o similar.
               </Text>
               <TextInput
                 style={styles.input}

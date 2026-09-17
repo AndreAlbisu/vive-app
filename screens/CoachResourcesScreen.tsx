@@ -204,7 +204,7 @@ export default function CoachResourcesScreen() {
                     </View>
                   )}
                   {r.status === 'rejected' && r.rejection_rule ? (
-                    <Text style={s.rejectNote}>Rechazado — regla {r.rejection_rule}. Editá y volvé a enviar.</Text>
+                    <Text style={s.rejectNote}>Rechazado por la regla {r.rejection_rule}. Editá y volvé a enviar.</Text>
                   ) : null}
                 </TouchableOpacity>
               );

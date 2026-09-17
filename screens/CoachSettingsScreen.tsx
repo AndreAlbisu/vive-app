@@ -208,7 +208,7 @@ export default function CoachSettingsScreen() {
                 presentación, tus temas, tus horarios y tus datos de cobro.
               </Text>
               <Text style={s.delBody}>
-                Se conservan de forma anónima las reservas —por obligaciones contables— y
+                Se conservan de forma anónima las reservas (por obligaciones contables) y
                 las reseñas y conversaciones, que figurarán como &quot;Usuario eliminado&quot;.
               </Text>
               <Text style={s.delBody}>

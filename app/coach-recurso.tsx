@@ -766,7 +766,7 @@ export default function CoachRecursoScreen() {
 
   const onShare = useCallback(() => {
     if (!resource) return;
-    Share.share({ message: `${displayTitle(resource.title)} — en Vita` }).catch(() => {});
+    Share.share({ message: `${displayTitle(resource.title)}, en Vita` }).catch(() => {});
   }, [resource]);
 
   if (loading) {

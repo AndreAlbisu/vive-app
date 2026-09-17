@@ -85,7 +85,7 @@ export function AudioRecorderModal({
     }
     const file = new File(uri);
     if (file.size > MAX_BYTES) {
-      setError('La grabación superó los 30 MB — grabá algo más corto');
+      setError('La grabación superó los 30 MB. Grabá algo más corto');
       setPhase('idle');
       return;
     }

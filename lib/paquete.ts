@@ -161,7 +161,7 @@ const ENCABEZADO_PAQUETE = 'Lo que registré desde la última vez que nos vimos:
 export function componerTextoPaquete(dias: DiaDelPaquete[]): string {
   const lineas = dias.map(d => {
     const nota = (d.nota ?? '').trim();
-    return `• ${fechaLegiblePaquete(d.dayKey)} — ${d.moodLabel}${nota ? `: ${nota}` : ''}`;
+    return `• ${fechaLegiblePaquete(d.dayKey)} · ${d.moodLabel}${nota ? `: ${nota}` : ''}`;
   });
   return `${ENCABEZADO_PAQUETE}${lineas.join('\n')}`;
 }

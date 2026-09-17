@@ -155,7 +155,7 @@ export function useRecommendedResource(params: {
           kind: 'tool',
           toolId,
           eyebrow: 'SEGÚN CÓMO TE SENTÍS HOY',
-          why: `Te sentiste ${todayMood.mood_label.toLowerCase()} — ${cfg.tone}`,
+          why: `Te sentiste ${todayMood.mood_label.toLowerCase()}, ${cfg.tone}`,
         };
       }
     }

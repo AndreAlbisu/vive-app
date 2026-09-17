@@ -823,6 +823,7 @@ describe('rejectCopy — el guardarraíl sobre lo que escribe un modelo', () => 
     expect(rejectCopy('**Tu semana viene pareja.** No todo tiene que ser un antes y un después.', 'neutral')).toBe('markdown o comillas');
     expect(rejectCopy('"Tu semana viene pareja." No todo tiene que ser un antes y un después.', 'neutral')).toBe('markdown o comillas');
     expect(rejectCopy('Tu semana viene pareja y eso está muy bien, seguí registrando así!', 'neutral')).toBe('signos de exclamación');
+    expect(rejectCopy('Tu semana viene pareja — no todo tiene que ser un antes y un después.', 'neutral')).toBe('raya');
   });
 
   it('rechaza por largo, en los dos extremos', () => {

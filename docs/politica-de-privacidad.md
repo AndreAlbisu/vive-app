@@ -8,7 +8,7 @@
 > "etiquetas de privacidad" (Apple) y el "formulario de seguridad de los datos"
 > (Google) con lo declarado aquí.
 
-# Política de Privacidad — Vita
+# Política de Privacidad de Vita
 
 **Última actualización:** [fecha]
 **Vigencia a partir de:** [fecha]
@@ -24,7 +24,7 @@ Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contac
 ## 2. Qué Datos Recolectamos
 
 **2.1. Datos que el Usuario proporciona:**
-- **Registro y perfil:** nombre, correo electrónico, y —según el caso— fecha de nacimiento, género, nacionalidad, foto de perfil; para Profesionales: especialidad, presentación, precio, video, temas, credenciales que decida cargar.
+- **Registro y perfil:** nombre, correo electrónico y, según el caso, fecha de nacimiento, género, nacionalidad, foto de perfil; para Profesionales: especialidad, presentación, precio, video, temas, credenciales que decida cargar.
 - **Contenido de bienestar (datos sensibles):** registros de estado de ánimo (check-in), entradas de diario, ejercicios de gratitud y similares.
 - **Comunicaciones:** mensajes intercambiados con Profesionales dentro de una Sesión; reseñas; reportes; notas de sesión (en el caso de Profesionales).
 
@@ -35,14 +35,14 @@ Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contac
 **2.3. Datos técnicos y de uso:**
 - Identificadores de dispositivo y **token de notificaciones push**; datos de uso y eventos de la aplicación (analítica); datos técnicos de conexión.
 
-**2.4. Accesos al dispositivo que la aplicación solicita.** En todos los casos el sistema operativo pide autorización previa, el Usuario puede negarla o revocarla en cualquier momento desde los ajustes del dispositivo, y la aplicación sigue funcionando sin ellos —solo deja de estar disponible la función asociada:
+**2.4. Accesos al dispositivo que la aplicación solicita.** En todos los casos el sistema operativo pide autorización previa, el Usuario puede negarla o revocarla en cualquier momento desde los ajustes del dispositivo, y la aplicación sigue funcionando sin ellos (solo deja de estar disponible la función asociada):
 - **Fotos y cámara:** para subir la foto de perfil y, en el caso de Profesionales, el video de presentación. Vita accede únicamente al archivo que el Usuario elige o captura; no lee el resto de la galería.
 - **Micrófono:** únicamente durante la grabación del video de presentación y durante las videollamadas de las Sesiones.
 - **Calendario:** solo para *escribir* el evento de una Sesión que el Usuario decide agendar. Vita **no lee** los eventos existentes del calendario.
 
 ## 3. Datos Sensibles y Consentimiento Explícito
 
-Ciertos datos vinculados al Usuario —los registros de estado de ánimo, las entradas de diario y de gratitud, el contenido de las conversaciones o notas que pueda revelar información sobre su salud, y **el registro de qué contenidos de bienestar utiliza**— constituyen **datos sensibles** en los términos de la Ley 25.326, sea porque el Usuario los declara o porque permiten deducir información sobre su salud.
+Ciertos datos vinculados al Usuario (los registros de estado de ánimo, las entradas de diario y de gratitud, el contenido de las conversaciones o notas que pueda revelar información sobre su salud, y **el registro de qué contenidos de bienestar utiliza**) constituyen **datos sensibles** en los términos de la Ley 25.326, sea porque el Usuario los declara o porque permiten deducir información sobre su salud.
 
 3.1. Su tratamiento requiere el **consentimiento libre, expreso e informado** del Usuario. Ese consentimiento se solicita **de forma específica y separada de la aceptación de estos documentos**, la primera vez que el Usuario accede a estas funcionalidades, mostrando previamente qué datos se tratan y con qué finalidad. Vita deja constancia de la fecha y de la versión del texto informado.
 
@@ -65,16 +65,16 @@ El tratamiento se basa en el consentimiento del Usuario, en la ejecución de la 
 Vita **no vende** los datos personales de los Usuarios. Los compartimos únicamente con:
 
 - **Proveedores que procesan datos por cuenta de Vita (encargados de tratamiento):**
-  - **Supabase** — infraestructura de base de datos, autenticación y almacenamiento.
-  - **Mercado Pago** — procesamiento de pagos (sujeto a sus propias políticas).
-  - **Daily.co** — realización de las videollamadas de las Sesiones.
-  - **Expo / proveedor de notificaciones push** — envío de notificaciones.
-  - **Cloudflare** — protección contra la creación automatizada de cuentas. Interviene al crear una cuenta y al solicitar un código de acceso, tanto en la aplicación como en las páginas web de Vita. Recibe la dirección IP y datos técnicos del dispositivo, y en el navegador coloca una cookie técnica necesaria para distinguir a una persona de un programa automatizado. **No recibe el nombre, el correo electrónico ni ningún contenido del Usuario.**
+  - **Supabase**: infraestructura de base de datos, autenticación y almacenamiento.
+  - **Mercado Pago**: procesamiento de pagos (sujeto a sus propias políticas).
+  - **Daily.co**: realización de las videollamadas de las Sesiones.
+  - **Expo / proveedor de notificaciones push**: envío de notificaciones.
+  - **Cloudflare**: protección contra la creación automatizada de cuentas. Interviene al crear una cuenta y al solicitar un código de acceso, tanto en la aplicación como en las páginas web de Vita. Recibe la dirección IP y datos técnicos del dispositivo, y en el navegador coloca una cookie técnica necesaria para distinguir a una persona de un programa automatizado. **No recibe el nombre, el correo electrónico ni ningún contenido del Usuario.**
 - **Proveedores de identidad, solo si el Usuario elige registrarse o iniciar sesión con ellos:**
   - **Google** y **Apple**. En ese caso, el proveedor conoce que el Usuario accede a Vita y le comunica a Vita los datos mínimos de la cuenta (nombre y correo electrónico). Si el Usuario se registra con correo y contraseña, ninguno de los dos interviene.
 - **Entrega de componentes desde redes de distribución (CDN):** la sala de Sesión a la que se accede por navegador carga el componente de videollamada desde **unpkg.com**. Al hacerlo, ese servicio recibe la dirección IP y datos técnicos del dispositivo. No recibe datos de la cuenta ni contenido alguno de la Sesión.
 - **Contenido embebido de terceros:** algunas fichas de recursos incluyen un reproductor de **YouTube** insertado dentro de la aplicación. Al cargarse, YouTube recibe la dirección IP y datos técnicos del dispositivo, y puede utilizar cookies o tecnologías similares conforme a sus propias políticas. Ocurre solo al abrir una ficha que contenga ese reproductor.
-- **Redacción asistida de la frase de bienestar:** la pantalla de inicio muestra una frase breve sobre cómo viene el Usuario. **Qué decir lo decide la propia aplicación en el dispositivo**, con reglas fijas; a un proveedor externo (**Anthropic**) se le pide únicamente **redactar** esa frase. Lo que se le envía es el nombre de una categoría (por ejemplo, "racha" o "tendencia en alza"), un tono, y dos o tres números enteros —días de registro consecutivos, sesiones y prácticas de la semana—. **No se le envía identificador alguno del Usuario, ni sus registros de estado de ánimo, ni su historial, ni una sola palabra escrita por él**, y Vita no conserva vinculación entre ese envío y la persona. Si el proveedor no responde, o si el texto que devuelve no supera los controles de contenido de Vita, se muestra el texto redactado por la propia aplicación.
+- **Redacción asistida de la frase de bienestar:** la pantalla de inicio muestra una frase breve sobre cómo viene el Usuario. **Qué decir lo decide la propia aplicación en el dispositivo**, con reglas fijas; a un proveedor externo (**Anthropic**) se le pide únicamente **redactar** esa frase. Lo que se le envía es el nombre de una categoría (por ejemplo, "racha" o "tendencia en alza"), un tono, y dos o tres números enteros (días de registro consecutivos, sesiones y prácticas de la semana). **No se le envía identificador alguno del Usuario, ni sus registros de estado de ánimo, ni su historial, ni una sola palabra escrita por él**, y Vita no conserva vinculación entre ese envío y la persona. Si el proveedor no responde, o si el texto que devuelve no supera los controles de contenido de Vita, se muestra el texto redactado por la propia aplicación.
 - **Analítica:** Vita **no utiliza proveedores de analítica de terceros**. Las métricas de uso se registran en la propia base de datos de Vita (alojada en Supabase) y no se comparten con terceros con fines publicitarios ni comerciales.
 - **Otros Usuarios:** la información necesaria para la interacción (por ejemplo, el perfil del Profesional es visible para los Clientes; el nombre/foto del Cliente puede ser visible para el Profesional con quien tiene una Sesión).
 - **Autoridades competentes:** cuando exista obligación legal o requerimiento válido.
@@ -86,7 +86,7 @@ La lista anterior comprende la totalidad de los proveedores con los que Vita com
 
 ## 7. Transferencia Internacional de Datos
 
-Algunos de los proveedores mencionados pueden almacenar o procesar datos en servidores ubicados fuera de la Argentina. En dichos casos, Vita procurará que existan garantías adecuadas conforme a la Ley 25.326 y a las normas de la AAIP sobre transferencia internacional de datos. [Validar con abogado el encuadre de las transferencias — p. ej., cláusulas contractuales, países con nivel adecuado, etc.]
+Algunos de los proveedores mencionados pueden almacenar o procesar datos en servidores ubicados fuera de la Argentina. En dichos casos, Vita procurará que existan garantías adecuadas conforme a la Ley 25.326 y a las normas de la AAIP sobre transferencia internacional de datos. [Validar con abogado el encuadre de las transferencias; p. ej., cláusulas contractuales, países con nivel adecuado, etc.]
 
 **Redacción asistida de la frase de bienestar.** El envío descripto en la sección 6 **no incluye identificador ni seudónimo del Usuario**, y Vita no conserva vinculación alguna entre ese envío y su persona, por lo que no se trata de información referida a una persona determinada o determinable. Se lo declara igualmente en esta Política para que el Usuario conozca la totalidad de los servicios que intervienen en el funcionamiento de la aplicación.
 
@@ -96,7 +96,7 @@ Algunos de los proveedores mencionados pueden almacenar o procesar datos en serv
 
 8.2. **Sobre los mensajes:** los mensajes se almacenan con controles de acceso que impiden que otros Usuarios accedan a ellos. **No cuentan con cifrado de extremo a extremo**, por lo que Vita podría técnicamente acceder a su contenido. Vita se compromete a acceder únicamente cuando sea necesario para operar el servicio, atender un reporte, cumplir la ley o un requerimiento de autoridad competente, y a no utilizar el contenido de las conversaciones con fines comerciales.
 
-8.3. **Detección de datos de contacto y de pago.** Para hacer cumplir la cláusula de uso exclusivo de los Términos (sección 10), la aplicación analiza **en el dispositivo de quien escribe**, antes de enviarlo, si un texto incluye datos de contacto o de pago (por ejemplo, un teléfono, una red social o un CBU). **El texto no se envía a Vita para este análisis ni se almacena por este motivo.** Cuando se detecta uno de esos datos, Vita registra únicamente: el **tipo** de dato detectado, el lugar de la aplicación donde ocurrió, la fecha, las cuentas involucradas y si se decidió enviarlo igual. Vita puede revisar esos registros para evaluar un posible incumplimiento y, en su caso, aplicar las medidas previstas en los Términos; **ninguna medida se aplica en forma automática**. Cuando revisa un caso, Vita puede conservar documentación vinculada —por ejemplo, capturas aportadas en un reporte—, con acceso restringido al equipo de Vita y registro de quién la consulta. Esa documentación no se comparte con otros Usuarios. Si un Profesional es suspendido o dado de baja, Vita informa a los Clientes que tenían un vínculo reciente con él que no se encuentra disponible, **sin indicar el motivo**.
+8.3. **Detección de datos de contacto y de pago.** Para hacer cumplir la cláusula de uso exclusivo de los Términos (sección 10), la aplicación analiza **en el dispositivo de quien escribe**, antes de enviarlo, si un texto incluye datos de contacto o de pago (por ejemplo, un teléfono, una red social o un CBU). **El texto no se envía a Vita para este análisis ni se almacena por este motivo.** Cuando se detecta uno de esos datos, Vita registra únicamente: el **tipo** de dato detectado, el lugar de la aplicación donde ocurrió, la fecha, las cuentas involucradas y si se decidió enviarlo igual. Vita puede revisar esos registros para evaluar un posible incumplimiento y, en su caso, aplicar las medidas previstas en los Términos; **ninguna medida se aplica en forma automática**. Cuando revisa un caso, Vita puede conservar documentación vinculada (por ejemplo, capturas aportadas en un reporte), con acceso restringido al equipo de Vita y registro de quién la consulta. Esa documentación no se comparte con otros Usuarios. Si un Profesional es suspendido o dado de baja, Vita informa a los Clientes que tenían un vínculo reciente con él que no se encuentra disponible, **sin indicar el motivo**.
 
 8.4. Ningún sistema es completamente seguro; Vita no puede garantizar seguridad absoluta.
 
@@ -112,8 +112,8 @@ El ejercicio del derecho de acceso es **gratuito**, y puede ejercerse a interval
 
 Conservamos los datos mientras la cuenta esté activa. Al darse de baja, el tratamiento depende de la categoría del dato:
 
-- **Contenido personal de bienestar** — entradas de diario, registros de estado de ánimo, ejercicios de gratitud, hábitos, recordatorios, recursos guardados y respuestas del cuestionario: **se suprimen de forma inmediata y definitiva**, junto con la foto de perfil.
-- **Reservas y datos de la transacción** — montos, identificadores de pago, fechas y estados: se conservan **diez (10) años** desde la operación, por obligaciones contables y fiscales, **disociados de la identidad** del Usuario dado de baja.
+- **Contenido personal de bienestar**: entradas de diario, registros de estado de ánimo, ejercicios de gratitud, hábitos, recordatorios, recursos guardados y respuestas del cuestionario: **se suprimen de forma inmediata y definitiva**, junto con la foto de perfil.
+- **Reservas y datos de la transacción**: montos, identificadores de pago, fechas y estados: se conservan **diez (10) años** desde la operación, por obligaciones contables y fiscales, **disociados de la identidad** del Usuario dado de baja.
 - **Reseñas**: se conservan de forma indefinida y **anonimizadas**, por integrar la reputación pública del Profesional evaluado. Suprimirlas permitiría que una baja de cuenta se use para eliminar una evaluación desfavorable.
 - **Mensajes y salas de conversación**: se conservan **anonimizados** mientras subsista la conversación, dado que pertenecen también al otro participante.
 - **Datos técnicos y de uso** (analítica): se conservan **disociados de la identidad** del Usuario.
@@ -134,7 +134,7 @@ Con el consentimiento del Usuario (otorgado a nivel del sistema operativo del di
 
 ## 13. Cookies y Tecnologías Similares
 
-La **aplicación móvil de Vita no utiliza cookies**. Guarda en el propio dispositivo la información técnica necesaria para funcionar —la sesión iniciada y algunas preferencias de uso—, que no se comparte con terceros ni se utiliza con fines publicitarios.
+La **aplicación móvil de Vita no utiliza cookies**. Guarda en el propio dispositivo la información técnica necesaria para funcionar (la sesión iniciada y algunas preferencias de uso), que no se comparte con terceros ni se utiliza con fines publicitarios.
 
 En las **páginas web de Vita** no se utilizan cookies publicitarias, de seguimiento ni de analítica. Las únicas tecnologías de almacenamiento que intervienen son:
 
@@ -151,4 +151,4 @@ Vita puede actualizar esta Política. Los cambios sustanciales se notificarán p
 
 ## 15. Contacto
 
-Consultas o ejercicio de derechos: vitaappar@gmail.com — Andre Albisu Lambertini, De los Extremeños 5069, Córdoba, Provincia de Córdoba.
+Consultas o ejercicio de derechos: vitaappar@gmail.com. Andre Albisu Lambertini, De los Extremeños 5069, Córdoba, Provincia de Córdoba.

@@ -275,7 +275,7 @@ export default function CoachAvailabilityScreen() {
         {selectedDate ? (
           <View style={s.slotsCard}>
             <Text style={s.slotsTitle}>
-              Horarios —{' '}
+              Horarios del{' '}
               <Text style={s.slotsTitleDate}>{formatDate(selectedDate)}</Text>
             </Text>
 

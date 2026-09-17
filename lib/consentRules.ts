@@ -27,7 +27,7 @@ export type ConsentState = {
  *  información sensible SON categoría especial. Si la app va a recomendar en
  *  base al comportamiento, el comportamiento entra en el consentimiento. */
 export const LO_QUE_CUBRE: string[] = [
-  'Cómo venís cada día — tu check-in de ánimo',
+  'Cómo venís cada día: tu check-in de ánimo',
   'Lo que escribís en el diario y en gratitud',
   'Qué recursos usás, para poder acercarte los que encajen',
 ];

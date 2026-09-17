@@ -611,7 +611,7 @@ export default function ConexionesScreen() {
                 <Text style={s.askTitle}>{selectedAxis.label}</Text>
                 <Text style={s.askSub}>
                   {puertaSugerida
-                    ? 'Por lo que contaste, empezaría por el tema destacado — pero elegí el que quieras'
+                    ? 'Por lo que contaste, empezaría por el tema destacado, pero elegí el que quieras'
                     : 'Elegí un tema y te presento a los profesionales indicados'}
                 </Text>
               </View>

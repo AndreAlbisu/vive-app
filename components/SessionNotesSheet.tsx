@@ -106,7 +106,7 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
               <>
                 <View style={s.labelRow}>
                   <MaterialCommunityIcons name="lock-outline" size={15} color="#87835C" />
-                  <Text style={s.label}>Nota privada — solo vos</Text>
+                  <Text style={s.label}>Nota privada, solo para vos</Text>
                 </View>
                 <TextInput
                   style={s.input}
@@ -120,7 +120,7 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
 
                 <View style={s.labelRow}>
                   <MaterialCommunityIcons name="eye-outline" size={15} color="#3A4F2A" />
-                  <Text style={[s.label, { color: '#3A4F2A' }]}>Nota para {clientName} — la ve</Text>
+                  <Text style={[s.label, { color: '#3A4F2A' }]}>Nota para {clientName}, la ve</Text>
                 </View>
                 <TextInput
                   style={s.input}

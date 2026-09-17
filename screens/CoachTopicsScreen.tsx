@@ -121,7 +121,7 @@ export default function CoachTopicsScreen() {
           </View>
         ) : (
           <>
-            <Text style={s.subtitle}>Elegí los subtemas que trabajás — se muestran en tu perfil y los usuarios pueden filtrar por ellos</Text>
+            <Text style={s.subtitle}>Elegí los subtemas que trabajás. Se muestran en tu perfil y los usuarios pueden filtrar por ellos</Text>
 
             <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
               {AXES.map(axis => (
