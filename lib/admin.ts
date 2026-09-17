@@ -219,6 +219,41 @@ export async function sanctionEvidenceUrl(evidenciaId: string): Promise<{ url?: 
   return { url: (res.data as { url: string }).url };
 }
 
+// ─── Avisos de contacto ──────────────────────────────────────────────────────
+
+export type SenalesDeCoach = {
+  coachProfileId: string;
+  coachId: string | null;
+  nombre: string;
+  /** Escritos por el coach. Son los que nadie más puede fabricar. */
+  delCoach: number;
+  /** De esos, cuántos fueron datos para cobrar y rebotaron. */
+  bloqueados: number;
+  enviadosIgual: number;
+  /** Escritos por las personas que atiende. */
+  deLaPersona: number;
+  canales: Record<string, number>;
+  senales: Record<string, number>;
+  ultimo: string;
+  personas: { userId: string; nombre: string; avisos: number; siguioReservando: boolean }[];
+};
+
+/**
+ * Los avisos de contacto de los últimos 90 días, agrupados por coach.
+ *
+ * ⚠️ No son pruebas: son casos para mirar. `descartados` cuenta los eventos que
+ * no escribió quien dicen que los escribió — si crece, alguien intenta
+ * fabricarle avisos a un coach.
+ */
+export async function listContactSignals(): Promise<{ coaches: SenalesDeCoach[]; descartados: number }> {
+  const res = await callAdmin({ action: 'list_contact_signals' });
+  if (!res.ok) {
+    console.warn('[admin] no se pudieron leer los avisos de contacto:', res.error);
+    return { coaches: [], descartados: 0 };
+  }
+  return { coaches: (res.data?.coaches ?? []) as SenalesDeCoach[], descartados: Number(res.data?.descartados ?? 0) };
+}
+
 /** ¿Esta sanción está pesando ahora mismo? Misma cuenta que `estaSuspendido`
  *  del lado del coach: 'infinity' (la baja) no es una fecha parseable. */
 export function sancionVigente(s: AdminSancion, now: Date = new Date()): boolean {

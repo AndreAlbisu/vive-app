@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-16 — Andre (sesión 247 · los avisos de contacto no le llegaban a nadie, y se podían fabricar)
+
+**Tocado:** `scripts/add-contact-signals-panel.sql` (nuevo), `supabase/functions/admin-actions/index.ts`, `lib/admin.ts`, `screens/AdminScreen.tsx`, `screens/UserNotificationsScreen.tsx`, `SCHEMA.md`.
+
+**Resumen:**
+- **Los avisos de contacto ahora se ven en el panel** (pestaña Sanciones, arriba del historial): agrupados por coach, con cuántos datos de cobro le rebotaron, cuántos avisos escribió él y cuántos las personas, de qué tipo y dónde, y **por cada persona si siguió reservando o no** — que junto con varios avisos es la firma de la fuga. Desde cada coach hay un botón que abre el formulario de sanción con él elegido. Hasta hoy cada aviso quedaba en una tabla de métricas que nadie leía: la detección y la escalera estaban desconectadas.
+- 🔴 **Al armarlo apareció un agujero:** una regla de la tabla de eventos dejaba que **cualquier cuenta anotara eventos a nombre de otra**. Verificado con dos cuentas reales. Hoy no importaba; con el panel sí, porque cualquiera podía fabricarle a un coach avisos de "intentó mandar su CBU". Cerrado y re-verificado. Y el panel igual no confía a ciegas: un aviso del coach solo cuenta si lo escribió ese coach, uno de la persona solo si lo escribió esa persona, y muestra cuántos descartó.
+- **Avisarle a la gente cuando su profesional cae:** al aplicar una suspensión o una baja, quien atendió con él en los últimos 90 días recibe *"[Nombre] no está tomando reservas nuevas por un tiempo. Tu sesión del 20/09 sigue en pie"* (o, sin sesión próxima, que en Conexiones hay otros profesionales). **No menciona la sanción.** El panel le dice al admin a cuántas personas se avisó.
+- 🔴 **Bug agarrado antes de subir:** al agregar el parámetro de la reserva a la función de notificaciones lo puse en el medio y no al final, así que **todas las notificaciones existentes** (aprobar una postulación, avisar una sanción) habrían guardado el título como id de reserva. No fue un error de sintaxis — lo marcó la comparación de avisos de tipos contra la versión anterior (subieron de 8 a 14). Corregido, de vuelta en 8, y con un comentario en la firma.
+- ✅ Base corrida y verificada; `admin-actions` v32 deployada y arranca.
+
+**Pendiente para la próxima sesión:**
+- **La prueba de punta a punta, desde el celular:** con la cuenta de un coach de prueba, mandar un CBU en el chat de una reserva (tiene que rebotar); después, en Administración → Sanciones, ver aparecer a ese coach con "1 datos de cobro bloqueados". Es la única forma de probar la lista: necesita una sesión de admin y no se puede desde el CLI. No se sembraron avisos falsos a propósito: serían acusaciones inventadas contra un coach en la base de producción.
+- ⚠️ **Sin aviso cuando el profesional vuelve.** La suspensión vence sola por fecha y eso no dispara nada; la persona a la que se le dijo "no toma reservas" no se entera de que volvió. Resolverlo pide un cron.
+
+---
 ## 2026-09-16 — Andre (sesión 246 · la app se llama Vita, y la pantalla de pago decía VIVE)
 
 **Tocado:** `components/VersionGate.tsx`, `components/SessionNotesSheet.tsx`, `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/CoachProfileScreen.tsx`, `screens/CoachPayoutScreen.tsx`, `screens/AdminScreen.tsx`, `supabase/functions/paypal-create-payment/index.ts`.

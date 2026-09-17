@@ -41,8 +41,8 @@ import {
   type AuditEntry, type GuaranteeCheck,
   listPendingCredentials, credentialFileUrl, reviewCredential, type AdminCredential,
   listSanctions, applySanction, revokeSanction, sancionVigente,
-  uploadSanctionEvidence, sanctionEvidenceUrl,
-  type AdminSancion, type SancionNivel,
+  uploadSanctionEvidence, sanctionEvidenceUrl, listContactSignals,
+  type AdminSancion, type SancionNivel, type SenalesDeCoach,
 } from '@/lib/admin';
 import { supabase } from '@/lib/supabase';
 
@@ -925,6 +925,7 @@ function SanctionsPanel() {
   const [levantando, setLevantando] = useState<string | null>(null);
   const [revokeMotivo, setRevokeMotivo] = useState('');
   const [adjuntos, setAdjuntos] = useState<AdjuntoLocal[]>([]);
+  const [senales, setSenales] = useState<{ coaches: SenalesDeCoach[]; descartados: number }>({ coaches: [], descartados: 0 });
   // Qué tarjeta está subiendo adjuntos ahora (para el spinner de esa sola).
   const [subiendoEn, setSubiendoEn] = useState<string | null>(null);
 
@@ -933,15 +934,17 @@ function SanctionsPanel() {
     // Los coaches salen con la key de siempre: `coaches` se lee público (es el
     // catálogo). Las sanciones NO — su RLS solo le deja a cada coach ver las
     // suyas, así que esas van por la edge function.
-    const [lista, { data: rows }] = await Promise.all([
+    const [lista, { data: rows }, avisos] = await Promise.all([
       listSanctions(),
       supabase
         .from('coaches')
         .select('id, profiles!inner(name)')
         .eq('verified', true)
         .order('created_at', { ascending: true }),
+      listContactSignals(),
     ]);
     setSanciones(lista);
+    setSenales(avisos);
     setCoaches((rows ?? []).map((c: any) => {
       const p = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
       return { id: c.id as string, name: (p?.name as string) ?? 'Sin nombre' };
@@ -1000,7 +1003,7 @@ function SanctionsPanel() {
         : `¿Dar de baja a ${nombre}?`,
       nivel === 'advertencia'
         ? 'No cambia su visibilidad. Le llega una notificación con el motivo y queda registrada.'
-        : 'Sale del catálogo y no puede recibir reservas nuevas. Las sesiones ya agendadas las sigue atendiendo. Le llega una notificación con el motivo.',
+        : 'Sale del catálogo y no puede recibir reservas nuevas. Las sesiones ya agendadas las sigue atendiendo. Le llega una notificación con el motivo, y a la gente que atendía en los últimos 90 días le avisamos que no está tomando reservas — sin mencionar la sanción.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -1025,6 +1028,11 @@ function SanctionsPanel() {
             let fallidos = 0;
             if (nuevaId && pendientes.length > 0) fallidos = await subirAdjuntos(nuevaId, pendientes);
             setBusy(false);
+            const avisados = Number((res as any).data?.avisados ?? 0);
+            if (avisados > 0 && fallidos === 0) {
+              Alert.alert('Sanción aplicada',
+                `Les avisamos a ${avisados === 1 ? '1 persona' : `${avisados} personas`} que atendían con este profesional. El aviso no menciona la sanción: solo que no toma reservas nuevas y que lo ya agendado sigue en pie.`);
+            }
             if (fallidos > 0) {
               Alert.alert('Sanción aplicada, pero faltan adjuntos',
                 `${fallidos} de ${pendientes.length} no se pudieron subir. Agregalos desde la tarjeta de la sanción.`);
@@ -1144,6 +1152,51 @@ function SanctionsPanel() {
         </View>
       )}
 
+      {/* ── Avisos de contacto ─────────────────────────────────────────────
+          Lo que conecta la detección con la escalera. Hasta el 16/09/2026 cada
+          aviso quedaba en una tabla de métricas que nadie miraba. Ninguno es una
+          prueba: son casos para mirar la conversación y decidir. */}
+      <Text style={[s.cardTitle, { marginTop: 8, marginBottom: 4 }]}>Avisos de contacto · últimos 90 días</Text>
+      <Text style={s.note}>
+        Primero lo que escribió el coach, que es lo único que nadie más puede fabricar. "No volvió a
+        reservar" junto a varios avisos es la señal de fuga — pero la prueba está en la conversación.
+      </Text>
+      {senales.descartados > 0 && (
+        <Text style={[s.cardMeta, { color: CLAY }]}>
+          {senales.descartados} {senales.descartados === 1 ? 'aviso descartado' : 'avisos descartados'}: no los escribió quien dicen. Si este número crece, alguien está intentando fabricarlos.
+        </Text>
+      )}
+      {senales.coaches.length === 0
+        ? <Empty icon="message-check-outline" text="Ningún aviso de contacto en los últimos 90 días." />
+        : senales.coaches.map(c => (
+          <View key={c.coachProfileId} style={s.card}>
+            <Text style={s.cardTitle}>{c.nombre}</Text>
+            <Text style={s.cardMeta}>
+              {c.bloqueados > 0 ? `${c.bloqueados} datos de cobro bloqueados · ` : ''}
+              {c.delCoach} del coach{c.enviadosIgual > 0 ? ` (${c.enviadosIgual} enviados igual)` : ''} · {c.deLaPersona} de las personas · último {formatDate(c.ultimo)}
+            </Text>
+            <Text style={s.cardMeta}>
+              {Object.entries(c.senales).map(([k, n]) => `${k.replace(/_/g, ' ')} ${n}`).join(' · ')}
+              {'  —  en '}
+              {Object.entries(c.canales).map(([k, n]) => `${k.replace(/_/g, ' ')} ${n}`).join(' · ')}
+            </Text>
+            {c.personas.map(p => (
+              <Text key={p.userId} style={s.cardBody}>
+                {p.nombre}: {p.avisos} {p.avisos === 1 ? 'aviso' : 'avisos'} · {p.siguioReservando ? 'siguió reservando' : 'no volvió a reservar'}
+              </Text>
+            ))}
+            {!!c.coachId && (
+              <View style={s.actions}>
+                <TouchableOpacity style={[s.btn, s.btnGhost]} activeOpacity={0.8}
+                  onPress={() => { setCoachId(c.coachId); setAbierto(true); }}>
+                  <Text style={s.btnGhostText}>Aplicar una sanción</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        ))}
+
+      <Text style={[s.cardTitle, { marginTop: 18, marginBottom: 4 }]}>Historial de sanciones</Text>
       {sanciones.length === 0
         ? <Empty icon="shield-check-outline" text="Nunca se sancionó a nadie." />
         : sanciones.map(x => {

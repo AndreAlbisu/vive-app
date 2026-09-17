@@ -97,19 +97,25 @@ const EVIDENCE_MIMES: Record<string, string> = {
   'application/pdf': 'pdf',
 }
 
-async function notifyCoach(
+async function notifyProfile(
   admin: SupabaseClient,
   profileId: string,
   type: 'postulacion_aprobada' | 'postulacion_rechazada' | 'credencial_verificada' | 'credencial_rechazada'
-    | 'sancion_aplicada' | 'sancion_levantada',
+    | 'sancion_aplicada' | 'sancion_levantada' | 'profesional_no_disponible',
   title: string,
   body: string,
+  // ⚠️ Último y opcional a propósito: todas las llamadas viejas pasan cinco
+  // argumentos. En el medio corría todo un lugar y el título terminaba guardado
+  // como id de reserva (pasó en el primer borrador, lo marcó el chequeo de tipos).
+  bookingId: string | null = null,
 ): Promise<void> {
   const { error } = await admin.from('notifications').insert({
     recipient_id: profileId,
     type,
     title,
     body,
+    // Con reserva, tocar la notificación abre ese chat (UserNotificationsScreen).
+    ...(bookingId ? { booking_id: bookingId } : {}),
   })
   if (error) {
     console.error(`[admin-actions] no se pudo notificar a ${profileId}: ${error.message}`)
@@ -230,7 +236,7 @@ serve(async (req) => {
         // reescribir `application_status` al revocar.
         await admin.from('profiles').update({ role: 'coach' }).eq('id', coach.profile_id)
 
-        await notifyCoach(
+        await notifyProfile(
           admin,
           coach.profile_id,
           'postulacion_aprobada',
@@ -289,7 +295,7 @@ serve(async (req) => {
         details: { reason },
       })
 
-      await notifyCoach(
+      await notifyProfile(
         admin,
         coach.profile_id,
         'postulacion_rechazada',
@@ -377,7 +383,7 @@ serve(async (req) => {
             ? 'Mientras dure no aparecés en la app y no podés recibir reservas nuevas. Las sesiones que ya tenés agendadas siguen en pie y las atendés normalmente.'
             : 'Tu perfil deja de estar publicado. Las sesiones que ya tenés agendadas siguen en pie y las atendés normalmente.'
 
-      await notifyCoach(
+      await notifyProfile(
         admin,
         coachRow.profile_id,
         'sancion_aplicada',
@@ -385,7 +391,58 @@ serve(async (req) => {
         `${motivo} ${queImplica} Si creés que es un error, escribinos.`,
       )
 
-      return json({ result: 'ok', sancion: data, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+      // ── La gente que lo tenía ──────────────────────────────────────────────
+      // Una advertencia no cambia nada para nadie, así que no se avisa. Con una
+      // suspensión o una baja, la persona que atendía con este profesional se
+      // iba a enterar porque deja de encontrarlo.
+      //
+      // 🔴 El aviso NO dice que hubo una sanción. Dice que no está tomando
+      // reservas nuevas y que lo ya agendado sigue en pie. Contarle a un cliente
+      // que su profesional fue sancionado lo expone por algo que el cliente no
+      // necesita saber para decidir, y que además puede levantarse.
+      //
+      // A quién: quien tuvo o tiene una reserva viva con él en los últimos 90
+      // días. Más atrás ya no es "su profesional", y avisarle sería raro.
+      let avisados = 0
+      if (nivel !== 'advertencia') {
+        const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date())
+        const desde = new Date(Date.now() - 90 * 86_400_000)
+        const desdeStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(desde)
+
+        const [{ data: reservas }, { data: perfilCoach }] = await Promise.all([
+          admin.from('bookings')
+            .select('id, user_id, scheduled_date, status')
+            .eq('coach_id', body.coach_id)
+            .in('status', ['pendiente', 'confirmada', 'completada'])
+            .gte('scheduled_date', desdeStr)
+            .order('scheduled_date', { ascending: true }),
+          admin.from('profiles').select('name').eq('id', coachRow.profile_id).maybeSingle(),
+        ])
+
+        const nombre = (perfilCoach?.name as string | undefined)?.split(' ')[0] || 'Tu profesional'
+        const porPersona = new Map<string, { proxima: { id: string; fecha: string } | null }>()
+        for (const r of reservas ?? []) {
+          const uid = r.user_id as string
+          if (!porPersona.has(uid)) porPersona.set(uid, { proxima: null })
+          const esFutura = (r.status === 'pendiente' || r.status === 'confirmada') && (r.scheduled_date as string) >= hoy
+          const p = porPersona.get(uid)!
+          if (esFutura && !p.proxima) p.proxima = { id: r.id as string, fecha: r.scheduled_date as string }
+        }
+
+        const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+        for (const [uid, { proxima }] of porPersona) {
+          const que = nivel === 'baja'
+            ? `${nombre} dejó de atender en Vita.`
+            : `${nombre} no está tomando reservas nuevas por un tiempo.`
+          const siguiente = proxima
+            ? ` Tu sesión del ${ddmm(proxima.fecha)} sigue en pie.`
+            : ' Si querés seguir mientras tanto, en Conexiones hay otros profesionales.'
+          await notifyProfile(admin, uid, 'profesional_no_disponible', `Sobre ${nombre}`, que + siguiente, proxima?.id ?? null)
+          avisados += 1
+        }
+      }
+
+      return json({ result: 'ok', sancion: data, avisados, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
     }
 
     // Levantar una sanción NO borra la fila: deja constancia de que se levantó y
@@ -421,7 +478,7 @@ serve(async (req) => {
         .from('coaches').select('profile_id').eq('id', data[0].coach_id).maybeSingle()
 
       if (coachRow?.profile_id && data[0].nivel !== 'advertencia') {
-        await notifyCoach(
+        await notifyProfile(
           admin,
           coachRow.profile_id,
           'sancion_levantada',
@@ -467,6 +524,102 @@ serve(async (req) => {
           }
         }),
       })
+    }
+
+    // ── Avisos de contacto, para revisar ─────────────────────────────────────
+    //
+    // Hasta el 16/09/2026 cada aviso quedaba en `analytics_events` y nadie lo
+    // miraba: la detección y la escalera de sanciones estaban desconectadas.
+    //
+    // 🔴 No se confía en el evento a ciegas. Las propiedades las arma el teléfono;
+    // lo único que garantiza la base es QUIÉN lo escribió (`user_id`, desde que se
+    // borró `analytics_insert_auth` — ver `add-contact-signals-panel.sql`). Así
+    // que un aviso "del coach" solo cuenta si lo escribió ese coach, y uno "de la
+    // persona" solo si lo escribió esa persona. Lo que no cierra se descarta y se
+    // informa cuántos: si ese número crece, alguien está intentando fabricarlos.
+    //
+    // Y ninguno es una prueba. Es una lista de casos para mirar; la prueba es la
+    // conversación, y la decisión es de una persona.
+    case 'list_contact_signals': {
+      const desde = new Date(Date.now() - 90 * 86_400_000).toISOString()
+      const { data: eventos, error } = await admin
+        .from('analytics_events')
+        .select('user_id, properties, created_at')
+        .eq('event_name', 'mensaje_contacto_detectado')
+        .gte('created_at', desde)
+        .order('created_at', { ascending: true })
+        .limit(5000)
+      if (error) return json({ error: error.message }, 500)
+
+      type Par = { userId: string; avisos: number; primero: string }
+      type Grupo = {
+        coachProfileId: string
+        delCoach: number; bloqueados: number; enviadosIgual: number; deLaPersona: number
+        canales: Record<string, number>; senales: Record<string, number>
+        pares: Map<string, Par>; ultimo: string
+      }
+      const grupos = new Map<string, Grupo>()
+      let descartados = 0
+
+      for (const ev of eventos ?? []) {
+        const p = (ev.properties ?? {}) as Record<string, any>
+        const coach = typeof p.coach_id === 'string' ? p.coach_id : null
+        const autorEsperado = p.role === 'coach' ? coach : (typeof p.user_id === 'string' ? p.user_id : null)
+        if (!coach || !ev.user_id || ev.user_id !== autorEsperado) { descartados += 1; continue }
+
+        if (!grupos.has(coach)) {
+          grupos.set(coach, { coachProfileId: coach, delCoach: 0, bloqueados: 0, enviadosIgual: 0, deLaPersona: 0, canales: {}, senales: {}, pares: new Map(), ultimo: ev.created_at })
+        }
+        const g = grupos.get(coach)!
+        if (p.role === 'coach') g.delCoach += 1; else g.deLaPersona += 1
+        if (p.bloqueado === true) g.bloqueados += 1
+        if (p.sent_anyway === true) g.enviadosIgual += 1
+        const canal = String(p.canal ?? 'chat'); g.canales[canal] = (g.canales[canal] ?? 0) + 1
+        const senal = String(p.senal ?? 'sin_dato'); g.senales[senal] = (g.senales[senal] ?? 0) + 1
+        g.ultimo = ev.created_at
+        if (typeof p.user_id === 'string') {
+          const par = g.pares.get(p.user_id) ?? { userId: p.user_id, avisos: 0, primero: ev.created_at }
+          par.avisos += 1
+          g.pares.set(p.user_id, par)
+        }
+      }
+
+      const coachProfileIds = [...grupos.keys()]
+      const userIds = [...new Set([...grupos.values()].flatMap(g => [...g.pares.keys()]))]
+      const [{ data: perfiles }, { data: coachRows }] = await Promise.all([
+        admin.from('profiles').select('id, name').in('id', [...coachProfileIds, ...userIds].length ? [...coachProfileIds, ...userIds] : ['00000000-0000-0000-0000-000000000000']),
+        admin.from('coaches').select('id, profile_id').in('profile_id', coachProfileIds.length ? coachProfileIds : ['00000000-0000-0000-0000-000000000000']),
+      ])
+      const nombre = new Map((perfiles ?? []).map((x: any) => [x.id as string, (x.name as string) ?? 'Sin nombre']))
+      const coachIdDe = new Map((coachRows ?? []).map((x: any) => [x.profile_id as string, x.id as string]))
+
+      // ¿Siguió reservando después del primer aviso? Es la otra mitad de la firma
+      // de la fuga: intercambio de contacto + dejó de reservar.
+      const coachIds = [...coachIdDe.values()]
+      const { data: reservas } = coachIds.length && userIds.length
+        ? await admin.from('bookings').select('coach_id, user_id, created_at, status')
+            .in('coach_id', coachIds).in('user_id', userIds).neq('status', 'cancelada')
+        : { data: [] as any[] }
+
+      const coaches = [...grupos.values()].map(g => {
+        const coachId = coachIdDe.get(g.coachProfileId) ?? null
+        const personas = [...g.pares.values()].map(par => ({
+          userId: par.userId,
+          nombre: nombre.get(par.userId) ?? 'Sin nombre',
+          avisos: par.avisos,
+          siguioReservando: (reservas ?? []).some((r: any) =>
+            r.coach_id === coachId && r.user_id === par.userId && r.created_at > par.primero),
+        }))
+        return {
+          coachProfileId: g.coachProfileId, coachId, nombre: nombre.get(g.coachProfileId) ?? 'Sin nombre',
+          delCoach: g.delCoach, bloqueados: g.bloqueados, enviadosIgual: g.enviadosIgual, deLaPersona: g.deLaPersona,
+          canales: g.canales, senales: g.senales, ultimo: g.ultimo, personas,
+        }
+      })
+      // Primero lo que escribió el coach — es lo que no puede fabricar nadie más.
+      coaches.sort((a, b) => (b.bloqueados - a.bloqueados) || (b.delCoach - a.delCoach) || (b.deLaPersona - a.deLaPersona))
+
+      return json({ result: 'ok', coaches, descartados })
     }
 
     // ── Adjuntos de evidencia ────────────────────────────────────────────────
@@ -871,13 +1024,13 @@ serve(async (req) => {
       const profileId = cred.coaches?.profile_id
       if (profileId) {
         if (body.verified) {
-          await notifyCoach(
+          await notifyProfile(
             admin, profileId, 'credencial_verificada',
             'Credencial verificada ✓',
             `«${cred.title}» ya se muestra en tu perfil con la marca de verificada.`,
           )
         } else {
-          await notifyCoach(
+          await notifyProfile(
             admin, profileId, 'credencial_rechazada',
             'Revisá tu credencial',
             `No pudimos verificar «${cred.title}». ${body.notes}`,
