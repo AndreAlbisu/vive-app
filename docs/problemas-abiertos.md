@@ -110,7 +110,7 @@
 | ID | Qué | Por qué | Estado |
 |---|---|---|---|
 | **M5** | **Cambio de profesional sin culpa** después de la primera sesión | Su "¿Querés continuar con este especialista?" + sesión sin costo con otro | 🟡 **Decisión de Andre**: cómo convive con la garantía de reintegro (T&C §9.3) |
-| **M6** | **Próxima sesión sugerida por el profesional** ("en una semana") | Su "Próxima sesión sugerida"; refuerza la anti-fuga n.º 1 | 🔴 Por hacer |
+| **M6** | **Próxima sesión sugerida por el profesional** ("en una semana") | Su "Próxima sesión sugerida"; refuerza la anti-fuga n.º 1 | 🟠 **A medio hacer (17/09).** La base ya está: tabla `next_session_suggestions` **corrida y probada en producción** (ver SCHEMA.md). **Falta solo la app**: (1) tarjeta para el profesional en `SalaScreen` cuando `sessionState === 'finalizada'` y él NO es `recipientIsCoach`, con las cinco opciones del CHECK; (2) del lado del cliente, mostrar la sugerencia en la tarjeta `endedCard` que ya existe (línea ~1500) y pasarle una fecha sugerida a `/booking-calendar`; (3) `lib/proximaSesion.ts` puro (opción → fecha y texto) con tests |
 | **M7** | **Referidos** con descuento pagado de la comisión de Vita | Su 50% al amigo + créditos | 🟡 **Decisión de Andre**: cuánto y para quién |
 
 ### M.3 — Cuando haya gente usando la app
@@ -119,7 +119,7 @@
 |---|---|---|
 | **M8** | **Paquetes de sesiones** | Empezar por PayPal y USDT, donde Vita retiene la plata (con MP va al profesional) |
 | **M9** | **Tests gratis en la web** (ansiedad, ánimo) que terminen en el quiz | Para Google. "Vita guía, no diagnostica"; derivar a Ayuda si el resultado es alto |
-| **M10** | **Preparar la sesión** ("¿qué querés trabajar hoy?"), primero sin IA | El profesional lo ve antes de la sesión |
+| **M10** | ~~**Preparar la sesión**~~ **YA EXISTE**: es el "paquete para la sesión" (`docs/paquete-para-la-sesion.md`, `lib/paquete.ts`, `app/paquete.tsx`, `components/OfrecerPaqueteBanner.tsx`), construido y probado en dispositivo | No hay que construirlo. Lo que sigue abierto es la **decisión de Andre del 14/09**: si se invierte el origen del material ("anotar para la sesión" en el momento, en vez de check-ins), y si el diario entra o la nota alcanza. Ver §9 de ese doc |
 | **M11** | **Empresas** | Cuando haya usuarios y reseñas para mostrar |
 
 ### M.4 — Fuera de la app

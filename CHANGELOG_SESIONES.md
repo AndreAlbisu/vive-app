@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 258 · M6 a medio hacer: la base sí, la pantalla no)
+
+**Tocado:** `scripts/add-next-session-suggestion.sql` (nuevo, **corrido en producción**), `SCHEMA.md`, `docs/problemas-abiertos.md`.
+
+**Resumen:**
+- Seguía la tanda de la sección M. **M6 (próxima sesión sugerida por el profesional): la base quedó hecha y verificada**, la pantalla no. Andre cerró la consola en el medio.
+- 🗄️ **Tabla nueva `next_session_suggestions`**, con la razón de por qué no es una columna de `bookings`: el permiso de UPDATE se da **por rol**, y el cliente tiene policy de update sobre su propia reserva, así que con una columna podría escribirse él mismo la "sugerencia del profesional".
+- Probada como usuario real con rollback: el profesional de la sesión la escribe; el cliente la lee pero su update cambia 0 filas; otro profesional rechazado. Sin filas de prueba dejadas.
+- 📌 **M10 no hay que construirlo: ya existe** como "paquete para la sesión". Lo que sigue abierto ahí es la decisión de Andre del 14/09 (replantear el origen del material). Quedó anotado en la sección M.
+
+**Pendiente para la próxima sesión (retomar exactamente acá):**
+- **Terminar M6 en la app**, en este orden: (1) `lib/proximaSesion.ts` puro (opción → fecha sugerida y texto) con tests; (2) tarjeta del profesional en `SalaScreen` al terminar la sesión; (3) mostrar la sugerencia al cliente en la `endedCard` que ya existe (~línea 1500) y pasarle la fecha a `/booking-calendar`.
+- **Dos decisiones de Andre frenan M5 y M7**: cómo convive el cambio de profesional con la garantía de reintegro (M5), y cuánto dan los referidos y a quién (M7).
+- 📱 Sin ver en el teléfono todavía: el final del quiz (M1/M2), la tarjeta de "Avisame cuando tenga horarios" (M3) y la pregunta de la videollamada en la reseña (M4).
+
+---
 ## 2026-09-17 — Andre (sesión 257 · lo que Vita toma de Selia, primera tanda: M1 a M4)
 
 **Tocado:** `screens/QuizScreen.tsx`, `lib/quizMatch.ts` (nuevo), `lib/tipoProfesional.ts` (nuevo), `app/search3.tsx`, `__tests__/quizMatch.test.ts` (nuevo), `screens/ReviewScreen.tsx`, `screens/BookingScreen_Calendar.tsx`, `screens/UserNotificationsScreen.tsx`, `app/_layout.tsx`, `supabase/functions/availability-notices/` (nueva), `scripts/add-session-call-feedback.sql`, `scripts/add-availability-waitlist.sql`, `SCHEMA.md`, `docs/problemas-abiertos.md` (sección M nueva).
