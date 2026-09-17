@@ -15,7 +15,7 @@
 - Paquete para la sesión: cada línea pasa de "fecha — ánimo: nota" a "fecha · ánimo: nota".
 
 **Pendiente para la próxima sesión:**
-- `docs/sobre-nosotros.md` (texto de Andre, se ve en la app) todavía tiene 4 rayas: no se tocó sin preguntarle.
+- `docs/sobre-nosotros.md`: Andre pidió sacarlas también; hecho (sin cambiar el contenido, solo puntuación).
 - El banner "BORRADOR — REQUIERE REVISIÓN LEGAL" de los .md legales es interno y quedó igual.
 
 ---

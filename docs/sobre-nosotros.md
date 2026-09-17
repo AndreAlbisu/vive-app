@@ -13,13 +13,13 @@ Vita la hacemos dos hermanos, Andre y Joaquín, desde Argentina.
 
 Sofía es nuestra hermana mayor.
 
-Cuando estábamos mal —y estuvimos mal, muchas veces solos y sin demasiadas
-herramientas— ella aparecía a la distancia. Escuchaba. Nos hacía pensar si había
+Cuando estábamos mal (y estuvimos mal, muchas veces solos y sin demasiadas
+herramientas), ella aparecía a la distancia. Escuchaba. Nos hacía pensar si había
 algo para hacer. Nos hacía creer que éramos capaces, y que eso había que
 sostenerlo. Y si tenía algo a mano que sirviera, nos lo pasaba.
 
 No estaba en la habitación. No era nuestra terapeuta. No podía resolvernos nada.
-Aparecía, confiaba, y seguía — y muchas veces eso alcanzó para seguir un día más.
+Aparecía, confiaba, y seguía. Y muchas veces eso alcanzó para seguir un día más.
 
 Vita existe para intentar hacer eso mismo entre una sesión y otra. Por eso la voz
 de la app se llama como ella.
@@ -42,7 +42,7 @@ revisado por nosotros.
 **Nada de lo que vos escribís se le manda a un modelo de inteligencia
 artificial.** Ni tu diario, ni tus ejercicios de gratitud, ni tus notas, ni tus
 mensajes. Lo único que viaja es una etiqueta del tipo de señal y un par de
-números —cuántos días seguidos registraste, por ejemplo—, sin tu nombre ni nada
+números (cuántos días seguidos registraste, por ejemplo), sin tu nombre ni nada
 que permita saber que sos vos.
 
 Qué datos guardamos, dónde y por cuánto tiempo está en la **Política de
