@@ -47,6 +47,9 @@ visible, pocos profesionales argentinos). Sus reglas con la plata son duras (sin
 compra, saldo que vence, perdés todo si das de baja la cuenta). Por escrito dice que no puede garantizar que los
 títulos de sus especialistas sean auténticos.
 
+**Cómo usar este documento:** qué es Selia por dentro (§1–15), comparación (§16), FODA (§17–18), qué copiar,
+qué evitar y oportunidades (§19–21), qué vigilar (§22), y **cómo comunicar Vita** (§23).
+
 **El FODA en cuatro líneas** (detalle en §17–18):
 - **Fortaleza de Vita:** hecha para Argentina, con reglas justas y una propuesta mejor para el profesional.
 - **Debilidad de Vita:** cero usuarios, cero reseñas, sin IA, sin orientación humana, sin paquetes, sin empresas.
@@ -576,6 +579,101 @@ Ordenado por impacto sobre costo para Vita. **Ninguna es para antes del lanzamie
 - Qué hace **Terapify** en Argentina.
 
 Una forma barata de seguirlo: mirar la página argentina y el mapa del sitio de Selia una vez por mes.
+
+---
+
+## 23. Cómo comunicar Vita (lo que sale de todo esto)
+
+> Agregado en la sesión 256, a pedido de Andre: *"aprender de sus fortalezas y errores
+> para marcar nuestro camino, y para saber publicitarnos mejor"*. Las frases son
+> **puntos de partida**, no copy final: pasan por la voz de Vita y por el abogado (L5)
+> antes de publicarse.
+
+### 23.1 El principio
+
+**Selia vende escala y comodidad** ("+600 especialistas", "400.000 sesiones", "desde USD 25", descuentos
+en todos lados). **Vita no puede competir en eso** (cero usuarios) **y no le conviene**: su ventaja es
+**confianza y cercanía**. Todo lo que se diga tiene que poder verificarse en la app el mismo día.
+
+Tres ideas madre, en este orden:
+1. **Sabés con quién hablás.** Matrícula revisada por una persona; en el catálogo, "Psicólogo" solo con matrícula verificada.
+2. **Reglas claras con tu plata.** Pesos, Mercado Pago, reembolso si cancelás a tiempo, garantía de la primera sesión.
+3. **Hecha acá, para acá.** Voseo, profesionales argentinos, las líneas de ayuda de acá.
+
+### 23.2 Por público
+
+**a) La persona en Argentina que busca acompañamiento**
+
+| Qué le preocupa | Qué decir | Respaldo en Vita |
+|---|---|---|
+| "¿Y si no es un profesional de verdad?" | *Cada matrícula la revisa una persona antes de que aparezca.* | Credenciales verificadas a mano; `has_matricula`. ⚠️ No decir "si dice psicólogo, lo es": la marca dice que hay matrícula verificada, no de qué profesión (falta un campo estructurado) |
+| "¿Y si no me gusta?" | *Si tu primera sesión no te sirvió, te devolvemos la plata.* | T&C §9.3 (48 h, una vez por persona) |
+| "¿Y si me surge algo?" | *Cancelá con 24 horas y te devolvemos todo.* | T&C §9.1, reembolso automático |
+| "¿Cuánto me sale y cómo pago?" | *En pesos, con Mercado Pago. El precio lo ves antes de reservar.* | Checkout de MP; precio en el perfil |
+| "No sé por dónde empezar" | *Contanos qué te pasa y te mostramos con quién hablar.* | Quiz y puertas por tema |
+
+Contraste con Selia, **sin nombrarla**: dólares, reglas que se quedan con tu saldo, "no podemos garantizar
+las credenciales". La frase *"en pesos y con Mercado Pago"* ya marca la diferencia sola.
+
+**b) El argentino que vive afuera**
+
+Es donde Selia pone más fuerza ("latinos en el extranjero"). Vita no le gana en precio ni en tamaño. Le gana en
+**algo que Selia no puede ofrecer: un profesional argentino**.
+- *Un psicólogo argentino, estés donde estés.*
+- *Hablá con alguien que entiende de dónde venís, sin traducir nada.*
+- *Pagás desde afuera con PayPal o USDT.*
+
+⚠️ Antes de usarlo: que haya **profesionales que acepten internacionales** en el catálogo, y revisar qué implica
+atender a alguien en otro país con matrícula argentina (Selia lo tapa con un tilde; Vita tiene que decirlo claro).
+
+**c) El profesional (psicólogo, coach, nutricionista)**
+
+El público donde la comparación con Selia es **más fuerte** (§10). Lo que dicen sus términos, al revés:
+
+| Selia | Vita, dicho en una frase |
+|---|---|
+| El precio lo fija la plataforma | *Tu precio lo ponés vos.* |
+| Cobra y te paga semanal a mensual | *Cobrás en tu propia cuenta de Mercado Pago.* |
+| Comisión privada, cambiable, posible tarifa de registro | *Sin costo de alta. Comisión publicada: 20% en la primera sesión con alguien nuevo, 15% después.* ⚠️ Hoy no se cobra alta, pero los T&C no lo dicen: escribirlo antes de prometerlo |
+| Prohibido traer y llevarte pacientes, 12 meses de no competencia | *¿Ya tenés pacientes? Traelos con tu link: la primera sesión no paga comisión.* |
+| Te descuenta reembolsos, te corta pacientes por métricas | *Si hay un problema, lo revisa una persona y te avisamos por qué.* |
+
+Frase madre para profesionales: *"Te cobramos por presentarte a alguien nuevo, no por la relación que construís
+después."* (ya usada con coaches; memoria de pagos).
+
+⚠️ La promo fundador (0%) tiene fecha de fin sin definir: no anunciarla hasta tenerla.
+
+### 23.3 Dónde aparecer (lo que a Selia le funciona, a escala de dos personas)
+
+| Canal | Qué hace Selia | Versión Vita |
+|---|---|---|
+| Google | miles de páginas, tests, temas | **Pocas páginas, bien hechas, en voseo**: "psicólogo online en pesos", "cuánto cuesta un psicólogo online en Argentina", 2 o 3 tests (ansiedad, ánimo) que terminen en el quiz, con derivación a ayuda si el resultado es alto |
+| Profesionales como canal | los usa como oferta, les prohíbe traer gente | **El link de cada profesional** es el canal: cada uno que se suma trae a sus pacientes y los muestra en sus redes |
+| Alianzas | banco (Falabella), podcasts | Más adelante: podcasts y cuentas argentinas de salud mental, colegios profesionales |
+| Referidos | 50% al amigo | Después del lanzamiento, pagado de la comisión de Vita |
+| Campañas por fecha | mes de prevención del suicidio, el Mundial | Fechas argentinas, con cuidado: nunca usar crisis o suicidio para vender |
+| Reseñas | publica cada reseña como página | Cuando haya reseñas reales. **Nunca inventarlas** (las 24 de prueba se borran en L8) |
+
+### 23.4 Qué no decir (errores de Selia que no hay que repetir)
+
+1. **Números que no tenemos.** Nada de "+X profesionales" o "miles de sesiones" hasta que sean reales.
+2. **"Certificados" o "verificados" en general.** Decir exactamente qué se revisó: la matrícula.
+3. **"Terapia" o "psicólogo" para coaches.** La Ley 23.277 reserva el tratamiento a quien tiene matrícula; Vita
+   ya lo separa en la app, la publicidad tiene que hacer lo mismo.
+4. **Promesas de resultados** ("vas a sentirte mejor en 4 semanas", "sanar"). Vita guía, no diagnostica.
+5. **Crisis como gancho comercial.** Selia pone un cupón de 50% en su página de prevención del suicidio; Vita no.
+6. **Descuentos permanentes** como mensaje principal: acostumbran a no pagar precio lleno.
+7. **Páginas o anuncios por país sin revisión local**, empezando por cualquier número de ayuda.
+8. **Nombrar a Selia** en anuncios: es publicidad comparativa y la tiene que mirar el abogado. Decir lo propio
+   alcanza ("en pesos", "matrícula revisada", "tu precio lo ponés vos").
+9. **Mostrar la raya "—"** en textos públicos (regla de la casa).
+
+### 23.5 Orden sugerido
+
+1. **Antes de lanzar:** la página de una hoja para profesionales (§23.2 c). Es lo único que sirve sin usuarios: se
+   usa para sumar profesionales, que a su vez traen gente con su link.
+2. **Al lanzar:** la página de Vita con las tres ideas madre (§23.1) y las frases para la persona en Argentina.
+3. **Después:** Google en voseo, el mensaje para argentinos afuera, referidos, alianzas.
 
 ---
 

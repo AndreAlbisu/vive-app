@@ -4,6 +4,20 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-17 — Andre (sesión 256 · cómo comunicar Vita, a partir de Selia)
+
+**Tocado:** `docs/competencia-selia.md` (§23 nuevo y guía de lectura en §0). Sin código ni base.
+
+**Resumen:**
+- Andre: aprender de fortalezas y errores de Selia *"para saber publicitarnos mejor"*. Se agregó §23: principio (Selia vende escala; Vita, confianza y cercanía), mensajes y frases para tres públicos (persona en Argentina, argentino afuera, profesional), canales a escala de dos personas, qué no decir, y orden.
+- Cada frase está atada a algo que ya existe en la app o en los T&C, con ⚠️ donde todavía no alcanza: "si dice psicólogo, lo es" no se puede afirmar (falta un campo de profesión), y "sin costo de alta" es cierto hoy pero los T&C no lo dicen.
+- Nombrar a Selia en anuncios es publicidad comparativa: pasa por el abogado. Decir lo propio alcanza.
+
+**Pendiente para la próxima sesión:**
+- Decidir si se arma ya la página de una hoja para profesionales (§23.5, lo único útil antes de tener usuarios).
+- Si se promete "sin costo de alta", escribirlo en los T&C primero.
+
+---
 ## 2026-09-17 — Andre (sesión 255 · Selia completa: producto por dentro, contratos y FODA)
 
 **Tocado:** `docs/competencia-selia.md` (versión 3, reescrito). Sin código ni base.
