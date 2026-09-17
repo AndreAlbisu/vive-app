@@ -882,22 +882,24 @@ const styles = StyleSheet.create({
   // ScrollView necesita ser más ancha que la card o le recorta la sombra.
   //
   // Con puntitos: quedan DEBAJO de la sombra (ver `puntos`) y este margen es la
-  // separación real entre ellos y la lista.
-  carruselWrap: { marginHorizontal: -H_PADDING, marginBottom: 8 },
+  // separación real entre ellos y la lista. En 0: el `paddingVertical` de la
+  // primera fila ya alcanza (antes 8 + 14, reducido a la mitad el 17/09/2026).
+  carruselWrap: { marginHorizontal: -H_PADDING, marginBottom: 0 },
 
   /**
    * Con UNA sola sesión no hay puntitos, o sea que debajo de la sombra no queda
    * nada que proteger — y ahí los `SOMBRA_ALCANCE` puntos de
    * `carrusel.paddingBottom` dejan de ser aire útil y se leen como un hueco.
    *
-   * 🔴 Se devuelven enteros con margen negativo y quedan 12pt de separación de
-   * verdad. La sombra se sigue dibujando completa (el `paddingBottom` sigue
+   * 🔴 Se devuelven enteros con margen negativo, y la separación de verdad es
+   * solo el `paddingVertical: 14` de la primera fila (antes 12 + 14 = 26pt, se
+   * leía como hueco; reducido a la mitad el 17/09/2026). La sombra se sigue dibujando completa (el `paddingBottom` sigue
    * ahí, que es lo que evita el recorte de la ScrollView), pero **le CAE ENCIMA
    * a la lista en vez de empujarla**, que es lo que hace una sombra. Sobre la
    * primera fila cae la cola: a 26pt del borde de la card ronda el 10% y la fila
    * arranca justo ahí, por su propio `sessionRow.paddingVertical: 14`.
    */
-  carruselWrapSolo: { marginBottom: 12 - SOMBRA_ALCANCE },
+  carruselWrapSolo: { marginBottom: -SOMBRA_ALCANCE },
   carrusel: { gap: CARD_GAP, paddingHorizontal: H_PADDING, paddingBottom: SOMBRA_ALCANCE },
   // `H_PADDING + 4` y no 4: el wrap sale a sangre, así que los puntitos tienen
   // que recuperar por su cuenta el margen que el scroll padre ya no les da.

@@ -14,7 +14,10 @@
 - Mismo bug, peor, en la tarjeta "Próxima sesión" de Inicio: con `.limit(1)` la sesión pasada tapaba a la próxima real. Ahora trae 10 y toma la primera que no terminó.
 - De paso: Mensajes calculaba "hoy" en UTC (`toISOString`), y después de las 21:00 dejaba afuera las sesiones de esa noche. Ahora usa `todayInAr()`.
 
+- Además, en Mensajes se achicó a la mitad el espacio entre las tarjetas de sesión y la lista de chats: con una sola tarjeta 26pt → 14pt, y con varias 22pt → 14pt debajo de los puntitos (`carruselWrap` / `carruselWrapSolo`).
+
 **Pendiente para la próxima sesión:**
+- Mirar en el celular que la sombra de la tarjeta no ensucie la primera fila de chats ahora que está más cerca.
 - Probar en el celular: una sesión ya terminada no tiene que aparecer ni en Mensajes ni en Inicio.
 - Sin tocar: qué pasa con el estado de una sesión `confirmada` a la que nadie se unió (sigue así en la base). No es parte de este arreglo.
 
