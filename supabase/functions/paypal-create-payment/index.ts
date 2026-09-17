@@ -198,12 +198,12 @@ serve(async (req) => {
         // acá no hace falta tener.
         custom_id: booking.id,
         amount: { currency_code: 'USD', value: precio.toFixed(2) },
-        description: 'Sesión en VIVE',
+        description: 'Sesión en Vita',
       }],
       payment_source: {
         paypal: {
           experience_context: {
-            brand_name: 'VIVE',
+            brand_name: 'Vita',
             user_action: 'PAY_NOW',
             ...(CHECKOUT_RETURN_URL ? {
               return_url: CHECKOUT_RETURN_URL,

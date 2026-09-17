@@ -852,7 +852,7 @@ export default function SalaScreen() {
         role: 'coach', canal: 'nota_recomendacion', senal: 'datos_de_cobro', bloqueado: true,
         sala_id: salaId, coach_id: user.id, user_id: recipientId,
       });
-      Alert.alert('No se pueden mandar datos para cobrar', 'Los pagos van siempre por VIVE: así la persona tiene reembolso y garantía, y vos cobrás sin tener que perseguir a nadie. Sacá el CBU, el alias o el link de pago y volvé a enviar.');
+      Alert.alert('No se pueden mandar datos para cobrar', 'Los pagos van siempre por Vita: así la persona tiene reembolso y garantía, y vos cobrás sin tener que perseguir a nadie. Sacá el CBU, el alias o el link de pago y volvé a enviar.');
       return;
     }
     const senal = recoNote.trim() ? detectContactInfo(recoNote) : null;
@@ -861,7 +861,7 @@ export default function SalaScreen() {
     const par = { role: 'coach', canal: 'nota_recomendacion', senal, sala_id: salaId, coach_id: user.id, user_id: recipientId };
     Alert.alert(
       '¿Compartir datos de contacto?',
-      'La nota parece incluir datos de contacto o de pago. Mantené la conversación y los pagos dentro de VIVE.',
+      'La nota parece incluir datos de contacto o de pago. Mantené la conversación y los pagos dentro de Vita.',
       [
         { text: 'Editar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: false }) },
         {
@@ -960,7 +960,7 @@ export default function SalaScreen() {
         role: 'coach', canal: 'chat', senal: 'datos_de_cobro', bloqueado: true,
         sala_id: salaId ?? null, coach_id: user?.id ?? null, user_id: recipientId,
       });
-      Alert.alert('No se pueden mandar datos para cobrar', 'Los pagos van siempre por VIVE: así la persona tiene reembolso y garantía, y vos cobrás sin tener que perseguir a nadie. Sacá el CBU, el alias o el link de pago y volvé a enviar.');
+      Alert.alert('No se pueden mandar datos para cobrar', 'Los pagos van siempre por Vita: así la persona tiene reembolso y garantía, y vos cobrás sin tener que perseguir a nadie. Sacá el CBU, el alias o el link de pago y volvé a enviar.');
       return;
     }
 
@@ -1001,7 +1001,7 @@ export default function SalaScreen() {
       };
       Alert.alert(
         '¿Compartir datos de contacto?',
-        'Por tu seguridad, mantené la conversación y los pagos dentro de VIVE. Si arreglás por fuera, perdés las protecciones de la app.',
+        'Por tu seguridad, mantené la conversación y los pagos dentro de Vita. Si arreglás por fuera, perdés las protecciones de la app.',
         [
           { text: 'Cancelar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: false }) },
           {

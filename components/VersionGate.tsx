@@ -33,7 +33,7 @@ export function VersionGate() {
   return (
     <View style={s.fondo} accessibilityViewIsModal>
       <View style={s.caja}>
-        <Text style={s.titulo}>Hay una versión nueva de VIVE</Text>
+        <Text style={s.titulo}>Hay una versión nueva de Vita</Text>
         <Text style={s.cuerpo}>
           Para seguir usando la app necesitás actualizarla. Es un minuto, y no perdés nada de lo tuyo.
         </Text>
@@ -52,7 +52,7 @@ export function VersionGate() {
         ) : (
           // Sin link todavía (la App Store no lo tiene hasta publicar): se le
           // dice dónde buscarla en vez de mostrar un botón que no hace nada.
-          <Text style={s.mensaje}>Buscá VIVE en {tienda} y actualizala desde ahí.</Text>
+          <Text style={s.mensaje}>Buscá Vita en {tienda} y actualizala desde ahí.</Text>
         )}
       </View>
     </View>

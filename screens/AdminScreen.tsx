@@ -779,8 +779,8 @@ export default function AdminScreen() {
                             comisión se descontó al pagarle al profesional. */}
                         <Text style={s.cardMeta}>
                           {g.riel === 'mp'
-                            ? 'Mercado Pago — la retuvo el procesador, no pasó por una cuenta de VIVE'
-                            : 'Internacional — entró todo a VIVE y se descontó al pagarle'}
+                            ? 'Mercado Pago — la retuvo el procesador, no pasó por una cuenta de Vita'
+                            : 'Internacional — entró todo a Vita y se descontó al pagarle'}
                         </Text>
                       </View>
                     ))

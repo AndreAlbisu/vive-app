@@ -277,7 +277,7 @@ export default function BookingScreen_Confirm() {
     const par = { role: 'user', canal: 'mensaje_reserva', senal, coach_id: coachProfileIdParam ?? null, user_id: user?.id ?? null };
     Alert.alert(
       '¿Compartir datos de contacto?',
-      'Tu mensaje parece incluir datos de contacto o de pago. Si arreglás por fuera de VIVE, perdés las protecciones de la app: el reembolso, la garantía y el registro de la sesión.',
+      'Tu mensaje parece incluir datos de contacto o de pago. Si arreglás por fuera de Vita, perdés las protecciones de la app: el reembolso, la garantía y el registro de la sesión.',
       [
         { text: 'Editar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, sent_anyway: false }) },
         {

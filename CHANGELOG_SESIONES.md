@@ -4,6 +4,19 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-16 — Andre (sesión 246 · la app se llama Vita, y la pantalla de pago decía VIVE)
+
+**Tocado:** `components/VersionGate.tsx`, `components/SessionNotesSheet.tsx`, `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/CoachProfileScreen.tsx`, `screens/CoachPayoutScreen.tsx`, `screens/AdminScreen.tsx`, `supabase/functions/paypal-create-payment/index.ts`.
+
+**Resumen:**
+- **Andre: *"acordate que no VIVE, es VITA"*.** Los textos nuevos de esta tanda (bloqueo de datos de cobro, avisos de contacto, pantalla de versión mínima) decían "VIVE". Se barrió **todo** texto visible del repo, no solo los nuevos: 16 reemplazos a "Vita" (con mayúscula inicial, que es como lo escribe el 90% de la UI). Quedan cero textos visibles con "VIVE"; comentarios, docs y el nombre del repo no se tocan.
+- 🔴 **El que más importaba no era de esta sesión:** `paypal-create-payment` le mostraba al que paga **"VIVE"** como nombre del comercio (`brand_name`) y "Sesión en VIVE" como descripción, en el checkout de PayPal en producción. Alguien que paga en una app llamada Vita y ve otro nombre en el cobro puede desconocerlo — o sea, un contracargo. **Deployado (v23) y verificado**: antes se confirmó que la v22 en producción se subió dos minutos después del último cambio que la afecta, así que el deploy llevó solo esos dos textos. Arranca y responde con el mensaje de nuestro código.
+- Revisados también los mails (ya salían como `Vita <no-responder@vitaapp.com.ar>`) y `constants/legal.ts` (ya decía Vita).
+
+**Pendiente para la próxima sesión:**
+- 📌 **Mercado Pago no se revisó en el panel de MP**: el nombre que ve el comprador en Checkout Pro y en el resumen de la tarjeta sale de la configuración de la cuenta de MP (y de cada coach, en marketplace), no del código. Chequear que diga Vita antes de lanzar.
+
+---
 ## 2026-09-16 — Andre (sesión 245 · la versión mínima obligatoria, antes de que sea tarde)
 
 **Tocado:** `scripts/add-app-version-gate.sql` (nuevo), `lib/appVersion.ts` (nuevo), `components/VersionGate.tsx` (nuevo), `__tests__/appVersion.test.ts` (nuevo), `app/_layout.tsx`, `SCHEMA.md`.
