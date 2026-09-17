@@ -30,7 +30,7 @@
 | **L4** | **DMARC de `vitaapp.com.ar`** — TXT en `_dmarc`, zona en Vercel. Registro en la receta de A5. | ✅ Verificado con `dig` el 17/09: **sigue sin estar**. | Andre |
 | **L5** | **Revisión del abogado** de Términos, Privacidad y Reembolsos (`LEGAL_IS_DRAFT = true`), con A.12 (§10.3) y la duda de si declarar Cloudflare/unpkg obliga a re-pedir consentimiento — que hoy no tiene mecanismo. | 🔴 Abierto. | Andre |
 | **L6** | **Nombre que ve el comprador en Mercado Pago** (Checkout Pro y resumen de tarjeta): sale de la config de la cuenta de MP, no del código. Tiene que decir Vita. | ⚠️ Sin revisar. | Andre |
-| **L7** | **Link de la App Store en `app_version_gate.store_url`** el día que se publique. Sin eso, la pantalla de versión vieja dice "Buscá VIVE" sin botón. | ⏸️ Espera la publicación. | — |
+| **L7** | **Link de la App Store en `app_version_gate.store_url`** el día que se publique. Sin eso, la pantalla de versión vieja dice "Buscá Vita en la App Store" sin botón. | ⏸️ Espera la publicación. Lo carga Claude con un `update`. | — |
 
 ### L.2 — Limpiar la base antes de abrir
 
@@ -47,9 +47,9 @@
 
 | ID | Qué falta | Estado |
 |---|---|---|
-| **L14** | **Acceso a crisis permanente y a un toque**, no dependiente del detector (D4). Hoy está en el perfil. | 🔴 Abierto. Ver también D2, D5, D6. |
+| **L14** | **Acceso a crisis permanente y a un toque**, no dependiente del detector (D4). Hoy está en el perfil (y en Ajustes del coach desde el 17/09). | 🔴 Abierto el "a un toque". ✅ **Sesión 253: las líneas estaban mal** — la pantalla prometía 24 h y el Centro de Asistencia al Suicida atiende de 8 a 24; faltaba la línea nacional 24 h (0800-999-0091). Corregido en la app y en T&C §5.3, con aviso para quien está fuera de Argentina. Ver también D2, D5, D6. |
 | **L15** | **La fecha de suspensión de un coach es pública por la API** (`coaches.suspendido_hasta`, legible con la anon key). Cerrarlo pide una vista o función para catálogo, ficha y `/c`. | ⚠️ Abierto (sesión 251). |
-| **L16** | **¿`/c/<slug>` muestra el perfil de un coach suspendido?** No se puede reservar (lo bloquea la base), pero quizá se ve. | ⚠️ Sin verificar (sesión 250). |
+| **L16** | ~~**¿`/c/<slug>` muestra el perfil de un coach suspendido?**~~ | ✅ **Sesión 251**: sí lo mostraba, con botón de reservar. Corregido ahí, en la ficha de la app, en el mensaje de error y en `web-book` (que dejaba una sala huérfana). Probado con un coach real. |
 | **L17** | **Edad y aceptación de Términos las escribe el cliente**: falsificables por su titular. Cerrarlo es moverlas a una edge function en el alta. | ⚠️ Abierto (`SCHEMA.md`). |
 | **L18** | **Vista pública del catálogo**: taparía `is_admin`, `birth_date` y `nationality` a `authenticated`. Mejora de A4, no agujero. | 🟡 Para Andre. |
 
@@ -63,7 +63,7 @@
 | **L22** | Checkout web con `?probar=1`: sin el tilde de edad no pide código; después queda `age_confirmed = true`. | 241 |
 | **L23** | Sanciones desde el celular: advertencia con captura adjunta, abrirla, levantarla; y un CBU en el chat que rebote y aparezca en Administración → Sanciones. | 242, 247 |
 | **L24** | Versión mínima: `min_version = 9.9.9` en iOS, ver la pantalla de bloqueo, volver a `1.0.0`. | 245 |
-| **L25** | Primera corrida del cron de "tu profesional volvió" en `net._http_response`: 200 con `{"revisados":0,...}`. | 248 |
+| **L25** | ~~Primera corrida del cron de "tu profesional volvió"~~ | ✅ Verificado el 17/09: corre cada hora con 200 y `{"revisados":0}`; el borrado diario de avisos corrió con `DELETE 0`. |
 
 ### L.5 — No bloquea
 
@@ -78,6 +78,8 @@
 | **L32** | `scripts/diagnostico-fuga.sql` y `scripts/sync-legal.mjs` tienen encabezados desactualizados. | 🟡 Menor. |
 | **L33** | Casilla propia en `vitaapp.com.ar`: si se crea, cambiarla en `lib/contacto.ts`, `admin-actions` y `constants/legal.ts` a la vez. | ⏸️ |
 | **L34** | Voz y producto: B1, B4, C4, E1–E6, y **F** (cero usuarios reales: la prueba de la tarjeta con 5–10 personas). | Ver secciones. |
+| **L35** | 🔴 **Re-verificar las líneas de crisis antes de cada publicación** (`screens/AyudaScreen.tsx` y T&C §5.3). Los horarios cambian; un número muerto ahí es peor que no ponerlo. Fuentes en el CHANGELOG, sesión 253. | ⏸️ En cada publicación. |
+| **L36** | Selia (competidor colombiano, `docs/competencia-selia.md`): que lo lea Joaquín. Cambia la urgencia de lanzar, no el rumbo. | 🟡 |
 
 📌 **Cerrado desde la lista del 16/09** (no repetir): la escalera de sanciones está corrida en producción y `admin-actions` v30 deployada; la gente ya recibe aviso cuando su profesional cae y cuando vuelve; a un coach suspendido ya no se le puede reservar por ningún camino; Cloudflare y unpkg están declarados; contraste, afirmaciones sin respaldo y foco de teclado en la web, hechos.
 
