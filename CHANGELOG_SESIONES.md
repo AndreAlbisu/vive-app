@@ -4,6 +4,23 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-18 — Andre (sesión 261 · la landing de vitaapp.com.ar)
+
+**Tocado:** `web/index.html` (reescrito: ahora es la landing), `scripts/sync-legal.mjs`, `web/legal/index.html` (nuevo, generado).
+
+**Resumen:**
+- **vitaapp.com.ar tiene landing.** Reemplaza la portada que era solo la lista de legales. Referencia de Andre: lacanastaclub.com.ar. Usa la paleta de la app, Plus Jakarta Sans y la aurora granulada de `assets/bg-aurora.jpg` hecha en CSS. La aurora "respira" a 4 s entra y 6 s sale, como el ejercicio de Respiración, y es la única animación que no dispara el usuario (se apaga con reduced-motion). Secciones: hero con un teléfono de la home, valores, un vistazo a tres pantallas, cómo funciona, herramientas y temas, profesionales, cierre con descarga y pie. HTML estático, sin build, igual que el resto de `web/`.
+- 🔴 **`sync-legal.mjs` escribía `web/index.html` y corre en cada deploy de Vercel (`buildCommand`), así que pisaba la landing.** Ahora ese índice se genera en `web/legal/index.html`, con un link de vuelta al inicio. Las dos exigencias que cumplía la portada vieja las sigue cumpliendo la landing: el "BOTÓN DE ARREPENTIMIENTO" (Res. 424/2020, primera pantalla y lugar destacado) va en el nav y repetido en el pie, y el contacto publicado (Guideline 1.2 de Apple) va en el pie. El pie también tiene la línea de emergencias: 0800-999-0091 y 911.
+- **Los botones de descarga dicen "Muy pronto en App Store / Google Play" y no llevan a ningún lado** hasta que se completen las URLs en `TIENDAS`, al final de `web/index.html`. Es el único lugar que hay que tocar el día del lanzamiento.
+- El copy no promete lo que la app no hace: se sacó "si no podés ir, cancelás" del paso 3, porque hoy cancelar tarde hace perder la plata y reagendar no existe (ver sesión 260).
+
+**Pendiente para la próxima sesión:**
+- **Andre tiene que confirmar tres afirmaciones del copy:** "Vita es gratis para descargar, pagás solo las sesiones que reservás"; que los profesionales se postulan desde la app; y el sello "Matrícula verificada" en el perfil de ejemplo del mockup.
+- El pie dice "Hecho en Córdoba". Confirmar que está bien mostrarlo.
+- Falta una imagen para compartir (`og:image`): cuando se pegue el link en WhatsApp o Instagram hoy no aparece ninguna foto. Y el ícono de la app sigue siendo el de Expo (`assets/images/icon.png`), así que la web usa un favicon hecho con dos círculos de la aurora.
+- Mirarla en el celular una vez deployada (push, y Vercel la publica sola).
+
+---
 ## 2026-09-17 — Andre (sesión 260 · las reseñas de Selia, y el bug de cámara que encontraron por nosotros)
 
 **Tocado:** `docs/competencia-selia.md` (§24 nuevo, +150 líneas), `lib/meetingRoom.ts`, `screens/SalaScreen.tsx`, `screens/SessionsScreen.tsx`.
