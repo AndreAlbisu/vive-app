@@ -4,6 +4,19 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-18 — Andre (sesión 262 · ícono de ondas para Bienestar mental)
+
+**Tocado:** `components/EjeIcon.tsx` (nuevo), `constants/conexionesDoors.ts`, `app/(tabs)/conexiones.tsx`.
+
+**Resumen:**
+- **La tarjeta de Bienestar mental en Conexiones cambia el corazón por ondas.** Se eligió entre seis variantes (perfil de cabeza, ondas, espiral, diana, hoja, destello). Ondas ganó porque tiene la misma abstracción que el pulso de Físico y el sol de Espiritual; la espiral suena a "espiralar", la hoja choca con el logo y el destello hoy es el ícono de la IA.
+- Feather no trae ondas, así que `EjeIcon` las dibuja en SVG copiando su trazo (grilla 24, línea 2, puntas redondas) y para cualquier otro nombre sigue usando Feather. Son tres ondas con curva marcada para que no se lea como "≈".
+- El ícono del eje solo se usa en esas tres tarjetas del menú, no en otro lado.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el teléfono (Expo Go) al lado de los otros dos: si se ve más pesado o más liviano, se ajusta la curva o la separación en `EjeIcon.tsx`.
+
+---
 ## 2026-09-18 — Andre (sesión 261 · la landing de vitaapp.com.ar)
 
 **Tocado:** `web/index.html` (reescrito: ahora es la landing), `scripts/sync-legal.mjs`, `web/legal/index.html` (nuevo, generado).

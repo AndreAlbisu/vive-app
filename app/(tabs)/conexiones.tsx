@@ -21,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
+import { EjeIcon } from '@/components/EjeIcon';
 import { MatriculaPill } from '@/components/MatriculaPill';
 import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
@@ -721,7 +722,7 @@ export default function ConexionesScreen() {
                       style={[s.menuCard, { backgroundColor: tint(e.color, 0.18) }]}
                       onPress={() => selectAxis(e.id)}
                       accessibilityLabel={`${e.label}. ${e.tagline}`}>
-                      <Feather name={e.icon as any} size={30} color={e.color} />
+                      <EjeIcon name={e.icon} size={30} color={e.color} />
 
                       {/* "Bienestar" va chico y arriba: lo comparten los tres, así
                           que es la parte muda del nombre. Lo que distingue va
