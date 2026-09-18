@@ -51,6 +51,7 @@
 | **L15** | **La fecha de suspensión de un coach es pública por la API** (`coaches.suspendido_hasta`, legible con la anon key). Cerrarlo pide una vista o función para catálogo, ficha y `/c`. | ⚠️ Abierto (sesión 251). |
 | **L16** | ~~**¿`/c/<slug>` muestra el perfil de un coach suspendido?**~~ | ✅ **Sesión 251**: sí lo mostraba, con botón de reservar. Corregido ahí, en la ficha de la app, en el mensaje de error y en `web-book` (que dejaba una sala huérfana). Probado con un coach real. |
 | **L17** | **Edad y aceptación de Términos las escribe el cliente**: falsificables por su titular. Cerrarlo es moverlas a una edge function en el alta. | ⚠️ Abierto (`SCHEMA.md`). |
+| **L40** | **La pantalla de entrada puede quedarse cargando para siempre.** `AuthContext` ya cubre que `getSession()` RECHACE (red caída → entra como anónimo), pero no que la conexión se CUELGUE sin responder: ahí `loading` nunca pasa a false y `app/index.tsx` gira el spinner sin fin. Es el *"la instalé y me quedé en una hoja en blanco"* que se repite 9 veces en el Google Play de Selia (`competencia-selia.md` §24.3). | 🔴 Abierto (sesión 260). Se cierra con un límite de unos segundos y seguir como visitante. |
 | **L18** | **Vista pública del catálogo**: taparía `is_admin`, `birth_date` y `nationality` a `authenticated`. Mejora de A4, no agujero. | 🟡 Para Andre. |
 
 ### L.4 — Probar en el teléfono / navegador (hecho, no visto)
@@ -64,6 +65,7 @@
 | **L23** | Sanciones desde el celular: advertencia con captura adjunta, abrirla, levantarla; y un CBU en el chat que rebote y aparezca en Administración → Sanciones. | 242, 247 |
 | **L24** | Versión mínima: `min_version = 9.9.9` en iOS, ver la pantalla de bloqueo, volver a `1.0.0`. | 245 |
 | **L37** | **El recorrido de entrada con cuenta obligatoria** (sesión 255): bienvenida → bifurcación → "Quiero crecer" → registro con Google → tiene que aparecer "¿Cómo te gustaría empezar?". Repetir con mail (pasa por el código) y con una cuenta existente vía "Ya tengo cuenta" (tiene que ir directo a la app). Y **sin cuenta**, tocar "¿Necesitás ayuda ahora?" al pie de la bifurcación, del registro y del login: tiene que abrir las líneas de crisis. | 255 |
+| **L39** | 🔴 **La videollamada en un iPhone, entrando desde la Sala.** La sesión 260 cambió cómo se abre en iOS (Safari en vez del navegador in-app, porque ahí el permiso de cámara y micrófono no es confiable): es un arreglo sin verificar sobre un camino sin verificar. Se cierra junto con L1, en la misma sesión de prueba. | 260 |
 | **L25** | ~~Primera corrida del cron de "tu profesional volvió"~~ | ✅ Verificado el 17/09: corre cada hora con 200 y `{"revisados":0}`; el borrado diario de avisos corrió con `DELETE 0`. |
 
 ### L.5 — No bloquea
@@ -81,7 +83,7 @@
 | **L34** | Voz y producto: B1, B4, C4, E1–E6, y **F** (cero usuarios reales: la prueba de la tarjeta con 5–10 personas). | Ver secciones. |
 | **L35** | 🔴 **Re-verificar las líneas de crisis antes de cada publicación** (`screens/AyudaScreen.tsx` y T&C §5.3). Los horarios cambian; un número muerto ahí es peor que no ponerlo. Fuentes en el CHANGELOG, sesión 253. | ⏸️ En cada publicación. |
 | **L38** | **Cuenta de prueba para la revisión de Apple y Google.** Con registro obligatorio al entrar, los revisores no pueden ver nada sin una cuenta: hay que darles usuario y contraseña en el formulario de envío. | ⏸️ Al publicar. |
-| **L36** | Selia (competidor colombiano, `docs/competencia-selia.md`, versión 3 con FODA): que lo lea Joaquín. Cambia la urgencia de lanzar, no el rumbo. | 🟡 |
+| **L36** | Selia (competidor colombiano, `docs/competencia-selia.md`, **versión 4**: FODA + §24 con las 138 reseñas de sus tiendas): que lo lea Joaquín. Cambia la urgencia de lanzar, no el rumbo. | 🟡 |
 
 📌 **Cerrado desde la lista del 16/09** (no repetir): la escalera de sanciones está corrida en producción y `admin-actions` v30 deployada; la gente ya recibe aviso cuando su profesional cae y cuando vuelve; a un coach suspendido ya no se le puede reservar por ningún camino; Cloudflare y unpkg están declarados; contraste, afirmaciones sin respaldo y foco de teclado en la web, hechos.
 
@@ -95,6 +97,10 @@
 > (`SalaScreen`), igual que reservar de nuevo desde Mensajes (`SessionsScreen`).
 >
 > **No reemplaza a la sección L**: lo que bloquea el lanzamiento sigue siendo L1–L5.
+>
+> 📌 **Ampliado en la sesión 260** con lo que salió de leer las 138 reseñas públicas de las tiendas de Selia
+> (`competencia-selia.md` §24): M15, M16, M17, M18. A diferencia de todo lo anterior de esta sección, que salía
+> de mirar su producto, esto sale de sus **usuarios reales diciendo qué les falló**.
 
 ### M.1 — Antes de lanzar (chico, de alto impacto)
 
@@ -105,6 +111,9 @@
 | **M3** | **"Avisame cuando tenga horarios"** cuando un profesional no tiene turnos | Su "Solicitar disponibilidad" | ✅ 17/09. Tabla `availability_waitlist`, edge function `availability-notices` con cron horario, probado de punta a punta en producción. Ver SCHEMA.md. 📱 Falta verlo en el teléfono |
 | **M4** | **Calificar la videollamada aparte** del profesional en la reseña | Separa falla técnica de insatisfacción; sirve para L1 | ✅ 17/09. Tabla privada `session_call_feedback`, pregunta opcional en `ReviewScreen`. ⚠️ "No pude entrar" casi nunca llega por acá (la reseña exige sesión completada): ver SCHEMA.md. 📱 Falta verlo en el teléfono |
 | **M14** | **Cómo trabaja el profesional**: estilo (en palabras de la persona) y enfoque (la escuela) | Observación de Andre sobre el quiz de Selia: además de preguntar si querés un psicólogo, pregunta **qué tipo de acompañamiento** querés (su "enfoque", opcional, `competencia-selia.md` §4.a) | ✅ 17/09. `coaches.estilo` + `coaches.enfoques` (ver SCHEMA.md, corridas y probadas con rollback), pantalla "Cómo trabajo" del profesional, cuarta pregunta del quiz y sección nueva en el perfil público. `lib/enfoque.ts`, 20 tests. ⚠️ El estilo ordena y explica, **nunca filtra**. ⚠️ La respuesta del quiz no se persiste: vale para esa corrida. 📱 Falta verlo en el teléfono. 🔒 La escuela pide matrícula verificada (trigger en la base, probado con revocación incluida) |
+
+| **M15** | 🔴 **Reagendar no existe: hoy solo se puede cancelar.** A quien se le complica 3 horas antes, la única salida es cancelar y perder la plata. | §24.3 de `competencia-selia.md`: es la queja más razonada de su App Store, con reseñas largas y argumentadas. Y **Selia está mejor que nosotros acá**: ellos al menos dejan mover con más de 24hs de anticipación. | 🟡 **Decisión de Andre.** Propuesta a confirmar: mover a otro horario libre del mismo profesional sin perder el pago; fuera de las 24hs libre, dentro de las 24hs una vez y con el profesional pudiendo aceptar o no. Ojo: toca `bookingCancel.ts`, el trigger `mark_refund_on_cancel` y el ranking (el reagendamiento es señal del deck) |
+| **M16** | **Si el profesional mueve la sesión, que el horario nuevo lo elija el usuario** (o que le vuelva la plata). | La queja más furiosa contra Selia: el especialista reagenda a un horario que el paciente no puede y el paciente pierde igual. | 🟡 **Decisión de Andre**, y depende de M15. 📌 Hoy Vita ya está bien en la mitad importante: si el profesional cancela tarde, `mark_refund_on_cancel` devuelve la plata igual. Lo que falta es la regla para cuando **mueve** en vez de cancelar |
 
 ### M.2 — Primer mes después de lanzar
 
@@ -122,6 +131,8 @@
 | **M9** | **Tests gratis en la web** (ansiedad, ánimo) que terminen en el quiz | Para Google. "Vita guía, no diagnostica"; derivar a Ayuda si el resultado es alto |
 | **M10** | ~~**Preparar la sesión**~~ **YA EXISTE**: es el "paquete para la sesión" (`docs/paquete-para-la-sesion.md`, `lib/paquete.ts`, `app/paquete.tsx`, `components/OfrecerPaqueteBanner.tsx`), construido y probado en dispositivo | No hay que construirlo. Lo que sigue abierto es la **decisión de Andre del 14/09**: si se invierte el origen del material ("anotar para la sesión" en el momento, en vez de check-ins), y si el diario entra o la nota alcanza. Ver §9 de ese doc |
 | **M11** | **Empresas** | Cuando haya usuarios y reseñas para mostrar |
+| **M17** | **Recordatorio para llenar el diario** | Pedido textual de un usuario de Selia de 5 estrellas (§24.2): *"me gustaría que tuviera una opción de recordatorio para llenar el diario"*. Es un pedido ya validado y gratis. Existe `lib/resourceReminders.ts` para recursos, no para el diario |
+| **M18** | **Bajarse los archivos que manda el profesional por el chat** | Queja de Selia (§24.3): hay que abrir la web para descargarlos. ⚠️ **Falta confirmar si nos aplica**: no se verificó si la Sala de Vita permite adjuntos |
 
 ### M.4 — Fuera de la app
 
