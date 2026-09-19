@@ -210,7 +210,7 @@ export default function CoachProfileScreen() {
 
       supabase
         .from('coaches')
-        .select('accepts_international, accepts_paypal, accepts_usdt, price_usd')
+        .select('accepts_international, accepts_paypal, accepts_usdt, price_usd, estilo, enfoques')
         .eq('id', coachId)
         .maybeSingle()
         .then(({ data }) => {
@@ -221,6 +221,10 @@ export default function CoachProfileScreen() {
             accepts_paypal: data.accepts_paypal ?? false,
             accepts_usdt: data.accepts_usdt ?? false,
             price_usd: data.price_usd ?? null,
+            // Sin esto, al volver de /coach-enfoque la sección "Cómo trabajo"
+            // seguía en "Agregar" con lo recién guardado, como si no hubiera pasado.
+            estilo: (data as any).estilo ?? null,
+            enfoques: ((data as any).enfoques ?? []) as string[],
           });
         });
     }, [coachId])
