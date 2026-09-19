@@ -210,7 +210,7 @@ export default function RuidoScreen() {
             <Text style={s.subtitle}>Tiempo completado</Text>
             <Text style={s.description}>{formatTime(duration)} de descanso.</Text>
             <Text style={s.doneCoach}>
-              ¿Alguno te ayuda a arrancar o a dormir? Contáselo a tu coach — puede armarte una rutina.
+              ¿Alguno te ayuda a arrancar o a dormir? Contáselo a tu coach: puede armarte una rutina.
             </Text>
             <ScaleCard style={s.primaryBtn} onPress={() => setPhase('idle')} activeOpacity={0.85}>
               <Text style={s.primaryBtnText}>Volver</Text>
