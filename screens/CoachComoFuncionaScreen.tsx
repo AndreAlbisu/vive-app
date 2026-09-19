@@ -64,7 +64,7 @@ const BLOQUES: Bloque[] = [
     icon: 'compass-outline',
     titulo: 'Cómo te encuentran',
     parrafos: [
-      'Hay dos caminos, y conviene no confundirlos. Uno es el catálogo de la app: la gente entra a Conexiones y ve profesionales ordenados por secciones —recomendados, en tendencia, nuevos—. A cada sección se entra cumpliendo algo concreto, no compitiendo contra los demás.',
+      'Hay dos caminos, y conviene no confundirlos. Uno es el catálogo de la app: la gente entra a Conexiones y ve profesionales ordenados por secciones (recomendados, en tendencia, nuevos). A cada sección se entra cumpliendo algo concreto, no compitiendo contra los demás.',
       'El otro camino es tu link. Se lo mandás a quien quieras, por donde quieras, y esa persona llega directo a tu perfil sin pasar por el catálogo. Los clientes que ya tenías entran por ahí.',
     ],
     ir: { label: 'Ver dónde aparecés hoy', ruta: '/coach-visibilidad' },

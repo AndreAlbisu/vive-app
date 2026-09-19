@@ -100,7 +100,7 @@ export type Eje = {
 // un lugar y rompería el resto.
 export const EJES: Eje[] = [
   { id: 'fisico',     label: 'Bienestar físico',     corto: 'Físico',     tagline: 'Cuerpo, descanso y energía',      icon: 'activity', color: ViveColors.accent },
-  { id: 'emocional',  label: 'Bienestar mental',     corto: 'Mental',     tagline: 'Emociones, vínculos y foco',      icon: 'heart',    color: ViveColors.calm },
+  { id: 'emocional',  label: 'Bienestar mental',     corto: 'Mental',     tagline: 'Emociones, vínculos y foco',      icon: 'ondas',    color: ViveColors.calm },
   { id: 'espiritual', label: 'Bienestar espiritual', corto: 'Espiritual', tagline: 'Propósito, identidad y sentido',  icon: 'sun',      color: ViveColors.primary },
 ];
 

@@ -25,6 +25,24 @@ const GLASS_BORDER = 'rgba(255,255,255,0.65)';
 
 const RATING_LABELS = ['', 'Muy mala', 'Mala', 'Regular', 'Buena', 'Excelente'];
 
+// M4 (docs/problemas-abiertos.md): la videollamada se califica APARTE del
+// profesional, para que un corte de video no termine en una reseña pública
+// contra alguien que no tuvo la culpa. Va a `session_call_feedback`, que es
+// privada: no la ve el profesional ni el público.
+type CallQuality = 'bien' | 'con_problemas' | 'no_anduvo';
+type CallProblem = 'audio' | 'imagen' | 'se_corto' | 'no_pude_entrar';
+const CALL_QUALITY: { id: CallQuality; label: string }[] = [
+  { id: 'bien',          label: 'Anduvo bien' },
+  { id: 'con_problemas', label: 'Con problemas' },
+  { id: 'no_anduvo',     label: 'No anduvo' },
+];
+const CALL_PROBLEMS: { id: CallProblem; label: string }[] = [
+  { id: 'audio',          label: 'No se escuchaba bien' },
+  { id: 'imagen',         label: 'No se veía bien' },
+  { id: 'se_corto',       label: 'Se cortó' },
+  { id: 'no_pude_entrar', label: 'No pude entrar' },
+];
+
 export default function ReviewScreen() {
   const router = useRouter();
   const { user, role, loading: authLoading } = useAuth();
@@ -39,6 +57,9 @@ export default function ReviewScreen() {
   const [existingReviewId, setExistingReviewId] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [callQuality, setCallQuality] = useState<CallQuality | null>(null);
+  const [callProblems, setCallProblems] = useState<CallProblem[]>([]);
+  const [existingCallId, setExistingCallId] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -87,6 +108,18 @@ export default function ReviewScreen() {
         setComment(existing.comment ?? '');
       }
 
+      // La opinión sobre la llamada es por SESIÓN, no por profesional.
+      const { data: call } = await supabase
+        .from('session_call_feedback')
+        .select('id, quality, problems')
+        .eq('booking_id', bookingId!)
+        .maybeSingle();
+      if (call) {
+        setExistingCallId(call.id);
+        setCallQuality(call.quality as CallQuality);
+        setCallProblems((call.problems ?? []) as CallProblem[]);
+      }
+
       setPageLoading(false);
     }
 
@@ -130,6 +163,21 @@ export default function ReviewScreen() {
         }));
     }
 
+    // La opinión sobre la llamada es opcional y no frena la reseña: si falla,
+    // queda en consola y la reseña se guarda igual. Sin upsert a propósito:
+    // `authenticated` no tiene UPDATE sobre `booking_id`, y el ON CONFLICT lo
+    // reescribiría.
+    if (!error && callQuality) {
+      const problems = callQuality === 'bien' ? [] : callProblems;
+      const { error: callError } = existingCallId
+        ? await supabase.from('session_call_feedback')
+            .update({ quality: callQuality, problems })
+            .eq('id', existingCallId)
+        : await supabase.from('session_call_feedback')
+            .insert({ booking_id: bookingId, quality: callQuality, problems });
+      if (callError) console.warn('[review] no se pudo guardar la llamada:', callError.message);
+    }
+
     setSubmitting(false);
 
     if (error) {
@@ -144,7 +192,7 @@ export default function ReviewScreen() {
         : 'Tu experiencia ayuda a otros a elegir mejor',
       [{ text: 'Listo', onPress: () => router.back() }],
     );
-  }, [rating, comment, coachProfileId, user, bookingId, existingReviewId, router]);
+  }, [rating, comment, coachProfileId, user, bookingId, existingReviewId, callQuality, callProblems, existingCallId, router]);
 
   if (pageLoading) {
     return (
@@ -209,6 +257,45 @@ export default function ReviewScreen() {
             </View>
             {rating > 0 && (
               <Text style={s.ratingLabel}>{RATING_LABELS[rating]}</Text>
+            )}
+
+            <Text style={[s.label, { marginTop: 28 }]}>¿Y la videollamada? (opcional)</Text>
+            <Text style={s.helper}>
+              Esto no forma parte de la reseña ni lo ve {coachName || 'tu profesional'}. Nos sirve para arreglar fallas.
+            </Text>
+            <View style={s.chipsRow}>
+              {CALL_QUALITY.map(q => {
+                const active = callQuality === q.id;
+                return (
+                  <TouchableOpacity
+                    key={q.id}
+                    style={[s.chip, active && s.chipActive]}
+                    onPress={() => setCallQuality(active ? null : q.id)}
+                    activeOpacity={0.8}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}>
+                    <Text style={[s.chipText, active && s.chipTextActive]}>{q.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {callQuality && callQuality !== 'bien' && (
+              <View style={[s.chipsRow, { marginTop: 10 }]}>
+                {CALL_PROBLEMS.map(pr => {
+                  const active = callProblems.includes(pr.id);
+                  return (
+                    <TouchableOpacity
+                      key={pr.id}
+                      style={[s.chip, s.chipSmall, active && s.chipActive]}
+                      onPress={() => setCallProblems(prev => active ? prev.filter(x => x !== pr.id) : [...prev, pr.id])}
+                      activeOpacity={0.8}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: active }}>
+                      <Text style={[s.chipText, active && s.chipTextActive]}>{pr.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             )}
 
             <Text style={[s.label, { marginTop: 28 }]}>Contanos más (opcional)</Text>
@@ -327,6 +414,30 @@ const s = StyleSheet.create({
     color: '#E8C547',
     marginBottom: 4,
   },
+
+  helper: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12.5,
+    color: '#566245',
+    lineHeight: 18,
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.28)',
+    backgroundColor: GLASS,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  chipSmall: { paddingHorizontal: 12, paddingVertical: 8 },
+  chipActive: { backgroundColor: '#565E32', borderColor: '#565E32' },
+  chipText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#565E32' },
+  chipTextActive: { color: '#F7EFE4' },
 
   textInput: {
     backgroundColor: GLASS,

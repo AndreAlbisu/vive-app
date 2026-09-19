@@ -4,6 +4,290 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-18 — Andre (sesión 262 · ícono de ondas para Bienestar mental)
+
+**Tocado:** `components/EjeIcon.tsx` (nuevo), `constants/conexionesDoors.ts`, `app/(tabs)/conexiones.tsx`.
+
+**Resumen:**
+- **La tarjeta de Bienestar mental en Conexiones cambia el corazón por ondas.** Se eligió entre seis variantes (perfil de cabeza, ondas, espiral, diana, hoja, destello). Ondas ganó porque tiene la misma abstracción que el pulso de Físico y el sol de Espiritual; la espiral suena a "espiralar", la hoja choca con el logo y el destello hoy es el ícono de la IA.
+- Feather no trae ondas, así que `EjeIcon` las dibuja en SVG copiando su trazo (grilla 24, línea 2, puntas redondas) y para cualquier otro nombre sigue usando Feather. Son tres ondas con curva marcada para que no se lea como "≈".
+- El ícono del eje solo se usa en esas tres tarjetas del menú, no en otro lado.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el teléfono (Expo Go) al lado de los otros dos: si se ve más pesado o más liviano, se ajusta la curva o la separación en `EjeIcon.tsx`.
+
+---
+## 2026-09-18 — Andre (sesión 261 · la landing de vitaapp.com.ar)
+
+**Tocado:** `web/index.html` (reescrito: ahora es la landing), `scripts/sync-legal.mjs`, `web/legal/index.html` (nuevo, generado).
+
+**Resumen:**
+- **vitaapp.com.ar tiene landing.** Reemplaza la portada que era solo la lista de legales. Referencia de Andre: lacanastaclub.com.ar. Usa la paleta de la app, Plus Jakarta Sans y la aurora granulada de `assets/bg-aurora.jpg` hecha en CSS. La aurora "respira" a 4 s entra y 6 s sale, como el ejercicio de Respiración, y es la única animación que no dispara el usuario (se apaga con reduced-motion). Secciones: hero con un teléfono de la home, valores, un vistazo a tres pantallas, cómo funciona, herramientas y temas, profesionales, cierre con descarga y pie. HTML estático, sin build, igual que el resto de `web/`.
+- 🔴 **`sync-legal.mjs` escribía `web/index.html` y corre en cada deploy de Vercel (`buildCommand`), así que pisaba la landing.** Ahora ese índice se genera en `web/legal/index.html`, con un link de vuelta al inicio. Las dos exigencias que cumplía la portada vieja las sigue cumpliendo la landing: el "BOTÓN DE ARREPENTIMIENTO" (Res. 424/2020, primera pantalla y lugar destacado) va en el nav y repetido en el pie, y el contacto publicado (Guideline 1.2 de Apple) va en el pie. El pie también tiene la línea de emergencias: 0800-999-0091 y 911.
+- **Los botones de descarga dicen "Muy pronto en App Store / Google Play" y no llevan a ningún lado** hasta que se completen las URLs en `TIENDAS`, al final de `web/index.html`. Es el único lugar que hay que tocar el día del lanzamiento.
+- El copy no promete lo que la app no hace: se sacó "si no podés ir, cancelás" del paso 3, porque hoy cancelar tarde hace perder la plata y reagendar no existe (ver sesión 260).
+
+**Pendiente para la próxima sesión:**
+- **Andre tiene que confirmar tres afirmaciones del copy:** "Vita es gratis para descargar, pagás solo las sesiones que reservás"; que los profesionales se postulan desde la app; y el sello "Matrícula verificada" en el perfil de ejemplo del mockup.
+- El pie dice "Hecho en Córdoba". Confirmar que está bien mostrarlo.
+- Falta una imagen para compartir (`og:image`): cuando se pegue el link en WhatsApp o Instagram hoy no aparece ninguna foto. Y el ícono de la app sigue siendo el de Expo (`assets/images/icon.png`), así que la web usa un favicon hecho con dos círculos de la aurora.
+- Mirarla en el celular una vez deployada (push, y Vercel la publica sola).
+
+---
+## 2026-09-17 — Andre (sesión 260 · las reseñas de Selia, y el bug de cámara que encontraron por nosotros)
+
+**Tocado:** `docs/competencia-selia.md` (§24 nuevo, +150 líneas), `lib/meetingRoom.ts`, `screens/SalaScreen.tsx`, `screens/SessionsScreen.tsx`.
+
+**Resumen:**
+- **§24 de `docs/competencia-selia.md`: las 138 reseñas públicas con texto de Selia** (78 de Google Play, 60 de App Store CO y US), bajadas enteras, más el reparto de estrellas. Es lo único de toda esa investigación que viene de usuarios reales. Corregido de paso un dato del §2: el doc solo tenía la nota de iOS.
+  - El hallazgo: **App Store 4,3 · Google Play 3,7 con 17% de una estrella**, y en Play el reparto es bimodal (129 cincos, 43 unos, casi nada en el medio). Los de 5 hablan del servicio, los de 1 hablan de la app: no carga, no me puedo registrar, no me devuelven la plata. **Nadie, ni una vez, menciona la IA de Selia.**
+- 🔴 **Bug encontrado por contraste, y arreglado: en iPhone la videollamada podía quedarse sin cámara ni micrófono.** Las dos pantallas que entran a la sala abrían Daily con `WebBrowser.openBrowserAsync`, que en iOS es `SFSafariViewController`, donde el permiso de `getUserMedia` **no se pide de forma confiable y a veces se deniega solo**. Es la queja técnica más repetida contra Selia ("no se ve mi cámara, no escucho a la psicóloga") y nos podía pasar igual, sin ningún mensaje que lo explicara.
+  - Nuevo `abrirVideollamada()` en `lib/meetingRoom.ts`, usado por la Sala y por el carrusel de próximas sesiones. **En iOS abre Safari de verdad** (`Linking.openURL`); en Android sigue la Custom Tab, que es Chrome con su permiso normal; en web no cambia nada.
+  - **El costo es real y se paga a propósito:** en iPhone la persona sale de Vita para la sesión. Una sesión muda es peor. La alternativa de quedarse adentro es un WKWebView propio (`react-native-webview`, soporta getUserMedia desde iOS 14.3): dependencia nueva y permisos nativos, se puede hacer después.
+  - No hay opción de `openBrowserAsync` que lo esquive: la lista entera de opciones de iOS en SDK 54 es color, botón de cerrar, estilo de presentación y modo lectura.
+- **Toda la lista de pendientes revisada y completada con lo que salió de esto** (`docs/problemas-abiertos.md`, commit aparte): **L39** probar la videollamada en un iPhone de verdad (el arreglo de arriba está sin verificar, y se cierra junto con L1 en la misma sesión de prueba); **L40** la pantalla de entrada se cuelga para siempre si la conexión no responde en vez de fallar — `AuthContext` cubre el rechazo, no el silencio; y **M15 a M18** en el plan de Selia: reagendar, quién elige el horario cuando el profesional mueve la sesión, recordatorio del diario y los archivos del chat. **M15 y M16 son decisiones de Andre, no código pendiente.**
+  - 📌 A pedido de Andre se listó **todo** lo abierto: son ~70 puntos, de los que **solo 7 bloquean el lanzamiento** (L1–L6 más L39) y cuatro de esos son media hora de Andre (DMARC, comisión de MP, nombre en la cuenta de MP, mandarle los Términos al abogado).
+- **Lo que el contraste confirmó que ya está bien y no se tocó:** el reembolso vuelve como plata al medio de pago y no como crédito interno (que es el dolor #1 de Selia); si el profesional cancela tarde la plata vuelve igual, porque `mark_refund_on_cancel` solo retiene el reembolso cuando cancela el usuario; la política se dice en la pantalla de confirmar antes de pagar; y el video de presentación del profesional, que los usuarios de Selia elogian por nombre, ya existe.
+- ⚠️ **Hay otra sesión trabajando en este repo al mismo tiempo.** Al ir a commitear, el árbol tenía trabajo ajeno ya montado en el index (SCHEMA.md, `lib/enfoque.ts`, `CoachEnfoqueScreen`, `scripts/add-enfoque-requiere-matricula.sql`) y HEAD se movió solo dos veces durante la sesión. Se esperó a que cerrara (`a1419a98`) y **se commitearon solo los 5 archivos de esta sesión, nombrados uno por uno**, para no barrer lo ajeno adentro. Si volvés a ver esto, no uses `git add -A` en este repo.
+
+**Pendiente para la próxima sesión:**
+- 📱 **Probar la videollamada en un iPhone de verdad**, entrando desde la Sala. Es el único modo de saber si el bug estaba activo y si el arreglo alcanza. Se suma a las cinco cosas construidas y nunca vistas en el teléfono que ya venían de la 259.
+- **Las decisiones y los arreglos que salieron de esto ya no viven acá: tienen ID en `docs/problemas-abiertos.md`** (L39, L40, M15, M16, M17, M18). Las dos que frenan trabajo son **M15** (¿se puede reagendar, y con qué regla dentro de las 24hs?) y **M16** (si el profesional mueve la sesión, ¿quién elige el horario nuevo?). Las dos son de Andre.
+- **Lo inmediato, en orden:** la sesión de prueba con Joaquín cierra L1, L39 y L19 de una sola vez. Y hay cuatro cosas de Andre que suman media hora y destraban el resto: DMARC (L4), mirar la comisión real de MP (L2), el nombre que ve el comprador en MP (L6) y mandarle los Términos al abogado (L5), que es el único que es tiempo de calendario y no trabajo.
+
+---
+## 2026-09-17 — Andre (sesión 259 · M6 terminado y M14, lo que faltaba para copiarle el quiz a Selia)
+
+**Tocado:** `lib/proximaSesion.ts` (nuevo), `lib/enfoque.ts` (nuevo), `screens/CoachEnfoqueScreen.tsx` (nuevo), `app/coach-enfoque.tsx` (nuevo), `scripts/add-coach-enfoque.sql` y `scripts/add-enfoque-requiere-matricula.sql` (nuevos, **corridos en producción**), `screens/SalaScreen.tsx`, `screens/BookingScreen_Calendar.tsx`, `screens/QuizScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/ProfesionalScreen.tsx`, `lib/quizMatch.ts`, `lib/coachesCache.ts`, `__tests__/proximaSesion.test.ts` y `__tests__/enfoque.test.ts` (nuevos), `SCHEMA.md`, `docs/problemas-abiertos.md`.
+
+**Resumen:**
+- **M6 terminado** (la base ya estaba de la 258): el profesional elige cada cuánto volver a verse al terminar la sesión, el cliente lo lee en la tarjeta de cierre de la Sala y `/booking-calendar` abre en ese día y lo marca. Queda preseleccionado solo si hay horario libre; si no, lo dice. Es sugerencia, no reserva.
+  - No se usa `upsert`: la tabla da INSERT sobre `(booking_id, cuando)` pero UPDATE solo sobre `cuando`, y el ON CONFLICT de PostgREST también escribe `booking_id`. Insert, y si ya existía, update.
+- **M14, nuevo, de una observación de Andre**: el quiz de Selia pregunta qué tipo de acompañamiento querés, y Vita no podía copiarlo porque no había ningún campo que dijera cómo trabaja cada profesional. 🗄️ **Dos columnas nuevas en `coaches`**: `estilo` (en las palabras de la persona) y `enfoques` (las escuelas, hasta 3, solo para el perfil). Pantalla "Cómo trabajo" del profesional, cuarta pregunta del quiz y sección nueva en el perfil público. SCHEMA.md actualizado.
+  - **El estilo ordena y explica, nunca filtra.** Con pocos profesionales, filtrar vacía la pantalla. Y una diferencia de estilo apaga `hayCoincidenciaExacta`, para no repetir la mentira que cerró M1.
+  - A la persona no se le pregunta por las escuelas: quien busca ayuda por primera vez no sabe qué es "sistémico". Selia también la deja opcional.
+- 🔒 **Agujero detectado y cerrado en la misma sesión:** `enfoques` nació abierta a cualquier perfil, y las seis opciones son escuelas de **psicología**. Un coach sin matrícula marcando "psicoanalítico" insinuaba en su perfil una profesión que Vita no chequeó, el mismo defecto que se cerró en el buscador (03/09) y el quiz (17/09). Ahora la pregunta solo aparece con matrícula verificada, y 🗄️ **`trg_enfoques_requieren_matricula`** vacía el enfoque si la matrícula se revoca.
+  - Es **trigger y no CHECK a propósito**: con un CHECK, revocarle la credencial a alguien que ya declaró su escuela haría fallar ese update, o sea que la app no podría revocar una matrícula. Probado con rollback: la revocación no falla y limpia.
+- 🔴 **Hizo falta un `grant update` explícito.** El UPDATE de `coaches` para `authenticated` no es de tabla: está acotado a una lista blanca de columnas. Sin el grant, el profesional guardaba, no había error visible y no se escribía nada. Anotado en SCHEMA.md: **toda columna nueva que edite el profesional tiene que sumarse a esa lista.**
+- ⚠️ **Hallazgo al pasar, sin resolver:** `anon` todavía tiene UPDATE sobre las 25 columnas de `coaches`. Hoy lo frena la policy (`profile_id = auth.uid()`), pero el endurecimiento que se le hizo a `authenticated` nunca llegó a `anon`. Para la auditoría de seguridad previa a la v1.
+- 📌 **Corrección a lo que dije en la sesión:** M5, M6 y M7 están en M.2 ("primer mes después de lanzar"), no en "antes de lanzar". La sección M.1 está completa. Lo que bloquea el lanzamiento sigue siendo **L1 a L5** más la limpieza de la base (L8 a L13).
+
+**Pendiente para la próxima sesión:**
+- 📱 **Ya son cinco cosas construidas y nunca vistas en el teléfono**: el final del quiz (M1/M2), "Avisame cuando tenga horarios" (M3), la pregunta de la videollamada en la reseña (M4), la sugerencia de próxima sesión (M6) y todo M14. Conviene una pasada antes de seguir sumando.
+- 🔴 **Hay trabajo de otro sin commitear en el working tree**, que no salió de esta sesión: `docs/competencia-selia.md` (un §24 nuevo con el análisis de las 138 reseñas de las tiendas), `lib/meetingRoom.ts`, `screens/SalaScreen.tsx` y `screens/SessionsScreen.tsx`. Se quedó todo sin tocar. **Hablarlo con Joaquín antes de seguir**: `SalaScreen.tsx` es el archivo que esta sesión tocó para M6, así que ahí hay conflicto casi seguro.
+- La respuesta de estilo del quiz **no se persiste**: vale para esa corrida. Si se quiere recomendar con el estilo fuera del quiz, hay que guardarla.
+- Siguen frenadas en decisiones de Andre: M5 (cómo convive con la garantía de reintegro) y M7 (cuánto dan los referidos). Ninguna frena el lanzamiento.
+
+---
+## 2026-09-17 — Andre (sesión 258 · M6 a medio hacer: la base sí, la pantalla no)
+
+**Tocado:** `scripts/add-next-session-suggestion.sql` (nuevo, **corrido en producción**), `SCHEMA.md`, `docs/problemas-abiertos.md`.
+
+**Resumen:**
+- Seguía la tanda de la sección M. **M6 (próxima sesión sugerida por el profesional): la base quedó hecha y verificada**, la pantalla no. Andre cerró la consola en el medio.
+- 🗄️ **Tabla nueva `next_session_suggestions`**, con la razón de por qué no es una columna de `bookings`: el permiso de UPDATE se da **por rol**, y el cliente tiene policy de update sobre su propia reserva, así que con una columna podría escribirse él mismo la "sugerencia del profesional".
+- Probada como usuario real con rollback: el profesional de la sesión la escribe; el cliente la lee pero su update cambia 0 filas; otro profesional rechazado. Sin filas de prueba dejadas.
+- 📌 **M10 no hay que construirlo: ya existe** como "paquete para la sesión". Lo que sigue abierto ahí es la decisión de Andre del 14/09 (replantear el origen del material). Quedó anotado en la sección M.
+
+**Pendiente para la próxima sesión (retomar exactamente acá):**
+- **Terminar M6 en la app**, en este orden: (1) `lib/proximaSesion.ts` puro (opción → fecha sugerida y texto) con tests; (2) tarjeta del profesional en `SalaScreen` al terminar la sesión; (3) mostrar la sugerencia al cliente en la `endedCard` que ya existe (~línea 1500) y pasarle la fecha a `/booking-calendar`.
+- **Dos decisiones de Andre frenan M5 y M7**: cómo convive el cambio de profesional con la garantía de reintegro (M5), y cuánto dan los referidos y a quién (M7).
+- 📱 Sin ver en el teléfono todavía: el final del quiz (M1/M2), la tarjeta de "Avisame cuando tenga horarios" (M3) y la pregunta de la videollamada en la reseña (M4).
+
+---
+## 2026-09-17 — Andre (sesión 257 · lo que Vita toma de Selia, primera tanda: M1 a M4)
+
+**Tocado:** `screens/QuizScreen.tsx`, `lib/quizMatch.ts` (nuevo), `lib/tipoProfesional.ts` (nuevo), `app/search3.tsx`, `__tests__/quizMatch.test.ts` (nuevo), `screens/ReviewScreen.tsx`, `screens/BookingScreen_Calendar.tsx`, `screens/UserNotificationsScreen.tsx`, `app/_layout.tsx`, `supabase/functions/availability-notices/` (nueva), `scripts/add-session-call-feedback.sql`, `scripts/add-availability-waitlist.sql`, `SCHEMA.md`, `docs/problemas-abiertos.md` (sección M nueva).
+
+**Resumen:**
+- Andre: *"anotá todo, y completemos todo"*. El plan quedó en `docs/problemas-abiertos.md` **sección M** (M1–M13, más lo descartado a propósito). Esta tanda cierra lo de antes de lanzar.
+- **M1 y M2, el final del quiz.** Ya existía una frase de "por qué", pero 🔴 **mentía**: si nadie cumplía las tres respuestas, el quiz aflojaba presupuesto y tipo **en silencio** y seguía diciendo "encaja con tus respuestas". Y 🔴 decidía "Psicólogo/a" leyendo el texto libre del profesional, el mismo defecto que se cerró en el buscador el 03/09. Ahora cada tarjeta dice lo que cumple y lo que no, la pantalla avisa cuando no hubo nadie con todo, y hay "Ver otras opciones", "Cambiar mis respuestas" y "Ver todos los profesionales". La regla de tipo quedó en un solo lugar (`lib/tipoProfesional.ts`) para quiz y buscador.
+- **M3, "Avisame cuando tenga horarios".** 🗄️ **Tabla nueva `availability_waitlist`** + edge function **`availability-notices`** (v1) + cron a los 29 de cada hora. Probado de punta a punta en producción con una cuenta de prueba: avisa solo si hay horario libre, no duplica, y quedó todo limpio.
+- **M4, la videollamada aparte.** 🗄️ **Tabla nueva `session_call_feedback`**, privada. Pregunta opcional en la reseña: "Anduvo bien / Con problemas / No anduvo" + qué falló. No la ve el profesional.
+- Las dos tablas se probaron **como usuario real con rollback** (qué puede y qué no). SCHEMA.md ya actualizado.
+
+**Pendiente para la próxima sesión:**
+- 📱 Ver en el teléfono: el final del quiz, la tarjeta de "Avisame" en el calendario de un profesional sin horarios, y la pregunta de la videollamada en la reseña.
+- ⚠️ "No pude entrar" casi nunca va a llegar por la reseña (exige sesión completada). Si importa medirlo, preguntarlo en otro lugar.
+- ⚠️ Los rangos de presupuesto del quiz ($5.000 / $10.000) quedan hasta tener precios reales.
+- Siguen M5–M13 (sección M).
+
+---
+## 2026-09-17 — Andre (sesión 256 · cómo comunicar Vita, a partir de Selia)
+
+**Tocado:** `docs/competencia-selia.md` (§23 nuevo y guía de lectura en §0). Sin código ni base.
+
+**Resumen:**
+- Andre: aprender de fortalezas y errores de Selia *"para saber publicitarnos mejor"*. Se agregó §23: principio (Selia vende escala; Vita, confianza y cercanía), mensajes y frases para tres públicos (persona en Argentina, argentino afuera, profesional), canales a escala de dos personas, qué no decir, y orden.
+- Cada frase está atada a algo que ya existe en la app o en los T&C, con ⚠️ donde todavía no alcanza: "si dice psicólogo, lo es" no se puede afirmar (falta un campo de profesión), y "sin costo de alta" es cierto hoy pero los T&C no lo dicen.
+- Nombrar a Selia en anuncios es publicidad comparativa: pasa por el abogado. Decir lo propio alcanza.
+
+**Pendiente para la próxima sesión:**
+- Decidir si se arma ya la página de una hoja para profesionales (§23.5, lo único útil antes de tener usuarios).
+- Si se promete "sin costo de alta", escribirlo en los T&C primero.
+
+---
+## 2026-09-17 — Andre (sesión 255 · Selia completa: producto por dentro, contratos y FODA)
+
+**Tocado:** `docs/competencia-selia.md` (versión 3, reescrito). Sin código ni base.
+
+**Resumen:**
+- **Andre pidió "todo"** (features, onboarding, políticas, precios) y un FODA. Además de las ~40 páginas públicas, se leyeron **los textos de la app web de Selia por dentro** (~1.100 en español, sin crear cuenta) y **sus términos para especialistas, versión 2026**.
+- **Lo nuevo que importa:** tiene **IA** (Lía orienta, prepara la sesión y le pasa un resumen al especialista; notas automáticas transcribiendo el audio), **orientación humana de 15 min**, "Garantía de Match" (segunda sesión gratis), paquetes atados a una franja de precio y no a un especialista, créditos, referidos, pagar después, cuentas familiares. Su gran apuesta afuera son los **latinos que viven en otro país**, el mismo público del riel internacional de Vita.
+- 🔴 **Con los profesionales es dura, y eso es la mejor oportunidad para reclutar:** Selia **fija el precio**, puede cobrar tarifa de registro, descuenta los reembolsos del pago, y prohíbe atender por fuera hasta **12 meses después de irse**, con multa.
+- 📌 **Corrección a la sesión 254:** ahí dije que el precio lo fija el especialista. Lo fija Selia.
+- El documento cierra con FODA de Selia, FODA de Vita frente a Selia, 12 ideas para aprovechar (con costo), 10 cosas a evitar, y oportunidades en orden. La primera es lanzar.
+
+**Pendiente para la próxima sesión:**
+- Que Joaquín lea `docs/competencia-selia.md` (§0 es el resumen de una página; §17–21 son el FODA y las acciones).
+- Decidir si se arma la **página de una hoja para profesionales** comparando condiciones (§21.2). Es lo más barato y de más impacto que sale de esto.
+- Nada de §19 es para antes del lanzamiento.
+
+---
+## 2026-09-17 — Andre (sesión 254 · sacar la raya "—" de los textos visibles)
+
+**Tocado:** ~30 pantallas/componentes (`screens/*`, `components/*`, `app/*`), `lib/weeklyReflection.ts`, `lib/paquete.ts`, `lib/bookingCancel.ts`, `lib/consentRules.ts`, `hooks/useRecommendedResource.ts`, `supabase/functions/weekly-reflection/index.ts` (**deployada, v29**), `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `docs/boton-de-arrepentimiento.md`, `docs/eliminar-cuenta.md`, `constants/legal.ts` + `web/legal/*` (regenerados), tests.
+
+**Resumen:**
+- Andre: la raya "—" es un tic de texto generado por IA y en castellano casi no se usa. Se reemplazó en todo texto que ve una persona por punto, coma, dos puntos o paréntesis. Quedan a propósito: "—" como valor vacío, rangos "10–20 min", títulos de pestaña web "X — Vita", logs y comentarios, y el panel de admin.
+- **Sofía:** el prompt de `weekly-reflection` ahora la prohíbe (y se le sacaron las rayas al propio prompt, que las contagiaba). Además `rejectCopy` descarta con motivo `'raya'` la frase que la traiga y cae al texto de las reglas. Deploy verificado (responde `token inválido` con anon key).
+- **Legales:** incisos reescritos en T&C, Política, Arrepentimiento y Eliminar cuenta. `LEGAL_VERSION` nuevo 093888ab9fbd (pre-lanzamiento, no afecta a nadie). Sin cambio de contenido, solo puntuación.
+- Paquete para la sesión: cada línea pasa de "fecha — ánimo: nota" a "fecha · ánimo: nota".
+
+**Pendiente para la próxima sesión:**
+- `docs/sobre-nosotros.md`: Andre pidió sacarlas también; hecho (sin cambiar el contenido, solo puntuación).
+- El banner "BORRADOR — REQUIERE REVISIÓN LEGAL" de los .md legales es interno y quedó igual.
+
+---
+## 2026-09-17 — Andre (sesión 254 · la tarjeta de una sesión ya pasada seguía apareciendo)
+
+**Tocado:** `screens/SessionsScreen.tsx`, `app/(tabs)/index.tsx`, `lib/time.ts`.
+
+**Resumen:**
+- 🔴 Bug reportado: sesión a las 11, sin unirse, y a las 13 la tarjeta "unirse" seguía en Mensajes. Causa: la consulta traía todo lo de `scheduled_date >= hoy` y el booking sigue `confirmada` si nadie se une, así que nada la sacaba hasta el día siguiente.
+- Nuevo `sessionHasEnded(fecha, hora, duración)` en `lib/time.ts` (inicio + duración, 60 min por defecto). Mensajes filtra con eso en cada render (el tick de 30s ya existente hace que la tarjeta se vaya sola al terminar la sesión).
+- Mismo bug, peor, en la tarjeta "Próxima sesión" de Inicio: con `.limit(1)` la sesión pasada tapaba a la próxima real. Ahora trae 10 y toma la primera que no terminó.
+- De paso: Mensajes calculaba "hoy" en UTC (`toISOString`), y después de las 21:00 dejaba afuera las sesiones de esa noche. Ahora usa `todayInAr()`.
+
+- Además, en Mensajes se achicó a la mitad el espacio entre las tarjetas de sesión y la lista de chats: con una sola tarjeta 26pt → 14pt, y con varias 22pt → 14pt debajo de los puntitos (`carruselWrap` / `carruselWrapSolo`).
+
+**Pendiente para la próxima sesión:**
+- Mirar en el celular que la sombra de la tarjeta no ensucie la primera fila de chats ahora que está más cerca.
+- Probar en el celular: una sesión ya terminada no tiene que aparecer ni en Mensajes ni en Inicio.
+- Sin tocar: qué pasa con el estado de una sesión `confirmada` a la que nadie se unió (sigue así en la base). No es parte de este arreglo.
+
+---
+## 2026-09-17 — Andre (sesión 254 · tocar la card de Sofía lleva directo a Progreso)
+
+**Tocado:** `app/(tabs)/index.tsx`.
+
+**Resumen:**
+- Tocar la card de Sofía en Inicio ya no reabre el momento a pantalla completa (repetía la frase de la card + "Seguir" / "Ver mi progreso completo"): va directo a `/progreso`. Evento `reflexion_vista` con origen `card_a_progreso`.
+- Los destinos propios no cambian: piso de seguridad → `/ayuda`, recurso del coach → `/mis-recomendaciones`, pregunta → Diario.
+- Sin check-in, antes salía un Alert ("Elegí cómo venís hoy"); ahora también va a Progreso.
+
+**Pendiente para la próxima sesión:**
+- El momento todavía aparece solo una vez por día justo después del check-in. Decidir si también se saca.
+- Probar en el celular: tocar la card y ver que abre Progreso.
+
+---
+## 2026-09-17 — Andre (sesión 254 · Selia a fondo)
+
+**Tocado:** `docs/competencia-selia.md` (reescrito y ampliado). Sin código ni base.
+
+**Resumen:**
+- **Andre pidió una investigación completa y meticulosa de Selia.** Se amplió el documento de la sesión 252 con: fundadores y equipo (~20 personas, CEO ex Rappi), evolución de números, producto en detalle (orientación gratis de 20 min, tests, programas, presencial), precios por país, **los términos leídos completos**, el lado de los profesionales, la venta a empresas, otros competidores en Argentina y una tabla Selia vs Vita.
+- 🔴 **Lo más fuerte de sus términos:** después de 24 h de reservar no devuelve la plata; quien da de baja la cuenta pierde el saldo; **dice por escrito que no puede garantizar que los títulos de sus especialistas sean auténticos**; **le prohíbe al usuario hablar mal de Selia en redes**; disputas en Delaware. Para Vita, la matrícula verificada es un argumento de confianza concreto.
+- 📌 **Dos correcciones a la sesión 252:** (1) sí hay al menos una psicóloga argentina en Selia (36 reseñas, contra 700+ de las colombianas top: demanda argentina chica); (2) la landing argentina muestra la línea de Colombia, pero su página general de líneas sí tiene bien las argentinas.
+- Sin noticias de inversión ni facturación de 2025–2026. La app en iOS tiene solo 103 calificaciones: su canal es la web y Google.
+
+**Pendiente para la próxima sesión:**
+- Que Joaquín lea `docs/competencia-selia.md` (§0 es el resumen).
+- Sigue sin saberse la comisión de Selia. La única forma sería postularse o preguntarle a un especialista que trabaje ahí.
+- Ideas a decidir, no urgentes: tests sueltos para Google como puerta de entrada; si una orientación gratis choca con la anti-fuga.
+
+---
+## 2026-09-17 — Andre (sesión 255 · la cuenta se pide al entrar)
+
+**Tocado:** `lib/entrada.ts` (nuevo), `__tests__/entrada.test.ts` (nuevo), `components/AyudaAhoraLink.tsx` (nuevo), `screens/LoginScreen.tsx`, `app/_layout.tsx`, `app/index.tsx`, `screens/OnboardingBifurcacion.tsx`, `screens/RegisterScreen.tsx`, `screens/VerificarMailScreen.tsx`, `docs/onboarding-bifurcacion-opciones.md`, `docs/problemas-abiertos.md`.
+
+**Resumen:**
+- **Decisión de Andre: registrarse apenas se entra a la app** (*"toma poco tiempo para el usuario y nos ahorra muchos problemas"*). Tenía razón en lo segundo, y el proyecto lo prueba: la mitad sin cuenta produjo respuestas del test varadas bajo una sesión anónima, conversión inflada, guardias que una sesión anónima cruzaba y analítica sin cuenta rota durante semanas. El costo —registrarse es donde más gente abandona, y acá puede ser alguien que llega mal— se acota con Google y Apple primero, que ya estaban.
+- **Recorrido nuevo:** bienvenida → bifurcación → **cuenta** → "¿Cómo te gustaría empezar?" → la app. "Quiero crecer" va a `/register`; la bifurcación deja una marca y `lib/entrada.ts` decide después de entrar: cuenta nueva que viene del recorrido → `/onboarding2`; quien ya tenía cuenta → directo a la app. La marca sobrevive a verificar el mail y a la vuelta de Google/Apple, que un parámetro de navegación no sobreviviría.
+- **Sin cuenta solo quedan abiertas:** bienvenida, bifurcación, registro, login, alta de coach, recuperar contraseña, verificar mail, **Términos** (se tienen que poder leer antes de aceptarlos) y **la pantalla de crisis** (no puede depender de tener cuenta). Todo lo demás manda al principio.
+- 🔴 **Bug evitado antes de salir:** `AuthRedirect` corre varias veces seguidas mientras carga el perfil y la marca se consumía en la primera lectura, así que la segunda corrida pisaba "¿Cómo te gustaría empezar?" con la app. Se resolvió memoizando la decisión por usuario, con test. Además `onboarding2` salió de la lista de pantallas de las que un usuario con cuenta "tiene que salir": si no, el guardia sacaba de ahí a la persona recién registrada.
+- 🔴 **Regresión propia, agarrada antes de cerrar:** dejé la pantalla de crisis habilitada sin cuenta, pero **nada llevaba a ella antes de registrarse** — se llegaba desde el Perfil, que ahora exige cuenta. Alguien en crisis abriendo la app por primera vez no tenía camino a los números. Nuevo `components/AyudaAhoraLink.tsx` ("¿Necesitás ayuda ahora?", discreto pero siempre visible) al pie de la bifurcación, el registro y el login.
+- `RegisterScreen` ya no navega a `/(tabs)` al crear la cuenta (se adelantaba al muro del mail); si algún día Supabase no devuelve sesión en el alta, muestra un aviso en vez de dejar a la persona trabada. 9 tests nuevos, 678 en verde.
+
+**Pendiente para la próxima sesión:**
+- **Probarlo en el celular (L37):** el recorrido con Google, con mail y con una cuenta existente.
+- **L38:** con registro obligatorio, Apple y Google necesitan una cuenta de prueba para revisar la app.
+- 📌 Quedaron partes de la app que suponen "sin cuenta" y ya no se alcanzan (por ejemplo el aviso "Creá tu cuenta para guardar tu progreso" del Perfil, y los `requestAuth` en quince lugares). No molestan y sirven de red; se pueden limpiar más adelante.
+
+---
+## 2026-09-17 — Andre (sesión 253 · la pantalla de crisis prometía 24 horas y la línea cerraba a medianoche)
+
+**Tocado:** `screens/AyudaScreen.tsx`, `screens/CoachSettingsScreen.tsx`, `docs/terminos-y-condiciones.md` (§5.3), `constants/legal.ts` + `web/legal/*` (regenerados).
+
+**Resumen:**
+- **Contexto:** a partir de lo de Selia (le muestra a un argentino la línea de emergencia de Colombia), se decidió que la vía de crisis tenía que estar bien antes de lanzar. Andre también confirmó el foco: **Argentina de punta a punta**, para quien está acá y para argentinos afuera (el riel en dólares ya construido).
+- 📌 **Corrección de lo dicho en la sesión 252:** dije que Vita "no tiene nada" de vía de crisis, y no era cierto. Existía `AyudaScreen`, bien diseñada (no pregunta nada, no es cálida a propósito, se llega siempre desde el Perfil y no solo desde el piso de seguridad). Mi búsqueda había usado otras palabras.
+- 🔴 **Al re-verificar los números —como pide el propio código antes de publicar— aparecieron dos errores graves:** (1) la pantalla y la **T&C §5.3** decían que las líneas atienden **"las 24 horas, todos los días"**, y el Centro de Asistencia al Suicida (135, 0800-345-1435, (011) 5275-1135) atiende **de 8 a 24** según su propia página de horarios. Alguien que llamaba de madrugada no tenía respuesta, después de que la app le prometiera que sí. (2) **Faltaba la línea que sí es de 24 horas**: la Línea Nacional de Salud Mental del Ministerio de Salud, **0800-999-0091**, gratuita desde todo el país, confirmada por Infobae el 10/09/2026.
+- **Qué cambió:** la línea nacional va segunda, pegada al 911; cada línea dice su horario; y **si el teléfono está fuera de Argentina**, arriba de todo aparece que estos números no funcionan desde el exterior, con un link a findahelpline.com (directorio de ThroughLine, 175+ países, en español). Mismo texto en T&C §5.3, sincronizado (`LEGAL_VERSION` 6fff5d6a0e9a).
+- **El profesional ahora tiene los números**, en su Ajustes → "Líneas de crisis". Hasta hoy solo estaban del lado del usuario, y quien más probablemente esté al lado de alguien en crisis, en plena sesión, es el profesional.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Re-verificar las líneas antes de publicar en las tiendas**, y cada vez que se publique una versión: los horarios cambian y un número muerto en esta pantalla es peor que no ponerlo. Fuentes: `asistenciaalsuicida.org.ar/horarios-de-atencion` y `argentina.gob.ar` (Línea 0800-999-0091).
+- Probar en el celular: abrir Perfil → "Si necesitás ayuda ahora" y ver la nueva lista. El aviso para quien está afuera se puede ver poniendo el teléfono en otra zona horaria.
+
+---
+## 2026-09-17 — Andre (sesión 252 · la lista de lo que falta para lanzar, en un solo lugar)
+
+**Tocado:** `docs/problemas-abiertos.md`. Sin código ni base.
+
+**Resumen:**
+- Los "Pendiente" de las sesiones 238–251 estaban repartidos en doce entradas. Se juntaron en la **sección L** nueva de `docs/problemas-abiertos.md` (L1–L34), en cinco grupos: bloquea el lanzamiento, limpieza de la base, seguridad y cuidado, pruebas en dispositivo, no bloquea.
+- Se sacó lo que ya se había cerrado el 16–17/09 (sanciones en producción, avisos de caída y vuelta del profesional, bloqueo de reserva a suspendidos, terceros declarados, contraste, afirmaciones, foco web).
+- Verificado el 17/09: **el DMARC sigue sin estar** (`dig`) y **`CHECKOUT_HABILITADO` sigue en `false`**. La fila A5 remite a L1, L2 y L4.
+
+**Pendiente para la próxima sesión:**
+- Lo que bloquea sigue siendo L1 (videollamada), L2 (comisión de MP), L4 (DMARC) y L5 (abogado). Antes de limpiar la base: decidir L9 y mirar L10.
+- Marcar en la sección L lo que se vaya cerrando, en vez de solo en el CHANGELOG.
+
+---
+## 2026-09-17 — Andre (sesión 252 · Selia, el competidor colombiano)
+
+**Tocado:** `docs/competencia-selia.md` (nuevo). Sin cambios de código.
+
+**Resumen:**
+- **Andre pidió investigar Selia** (*"es IGUAL a lo que estamos haciendo"*). Es real y grande: Bogotá, Y Combinator (invierno 2022), unos US$1,5 millones de inversión, US$2 millones facturados en 2023, más de 10.000 sesiones por mes, entre 500 y 600 especialistas y más de 100 empresas clientes. El núcleo del producto es el de Vita: psicólogos + coaches, test de matching, herramientas entre sesiones, comisión por sesión.
+- **Diferencias que importan:** cobra ella y le paga al especialista; vende paquetes de 4, 8 y 12 sesiones con saldo que vence al año y no se devuelve; vende fuerte a empresas; tiene psiquiatría.
+- **En Argentina tiene una página, pero parece solo para aparecer en Google:** precios en dólares, nada de Mercado Pago, matrícula argentina ni obras sociales, y 🔴 **la línea de emergencia que le muestra a un argentino es la de Colombia**. Las ventajas de Vita acá ya existen: pesos y Mercado Pago, matrícula verificada, garantía y reembolso, el link del coach sin comisión en la primera sesión.
+- 🔴 **Matiza la respuesta sobre paquetes de la sesión 251:** la demanda en el mercado existe (Selia los tiene como parte central). Sigue en pie el obstáculo técnico —con Mercado Pago la plata va al coach—, así que el lugar natural para empezar serían PayPal y USDT, donde Vita retiene el dinero.
+
+**Pendiente para la próxima sesión:**
+- Que Joaquín lea `docs/competencia-selia.md`.
+- No se pudo ver la comisión de Selia ni cuánto le paga al especialista: está detrás de su portal para profesionales.
+
+---
+## 2026-09-17 — Andre (sesión 251 · a un coach suspendido se le podía reservar por tres caminos)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `web/c/index.html`, `supabase/functions/web-book/index.ts`, `SCHEMA.md`.
+
+**Resumen:**
+- **Andre preguntó si el sistema anti-fuga quedó cerrado.** Quedaba un punto sin verificar de la sesión anterior (la página pública del link), y al verificarlo aparecieron **cuatro huecos del mismo tipo**: solo el catálogo filtraba a los suspendidos.
+  1. **La página pública del link** (`/c/<slug>`) mostraba al coach suspendido con su botón de reservar. Ahora cae en "No encontramos este perfil", cuyo texto ya dice "puede que el profesional ya no esté disponible".
+  2. **La ficha del profesional en la app**, a la que se llega por favoritos, recursos o un link guardado: el botón ahora dice "No disponible por ahora".
+  3. **Si igual se llegaba a confirmar**, el rebote de la base mostraba "no se pudo guardar la reserva, intentalo de nuevo". Ahora dice "Este profesional no está tomando reservas por ahora".
+  4. **`web-book`** chequeaba aprobado y activo pero no suspendido: creaba la sala y después la reserva rebotaba, así que la sala **quedaba huérfana**. Ahora frena antes de crearla. Deployada (v7), después de confirmar que la v6 en producción coincidía con el repo.
+- En ningún caso se menciona una sanción (T&C 10.4).
+- ✅ **Probado con un coach real**: con una suspensión de prueba, la consulta que hace la página devuelve la fecha y la lógica de la página lo oculta; sin la sanción, lo vuelve a mostrar. Limpiado.
+- ✅ **Las dos tareas nuevas corrieron solas**: `sanction-returns` cada hora con respuesta 200 (`revisados: 0`), `purge-contact-signals` a las 03:23 AR con `DELETE 0`.
+
+**Pendiente para la próxima sesión:**
+- ⚠️ **La fecha de una suspensión es pública por la API.** `coaches` se lee con la clave pública, así que cualquiera que consulte la API puede ver `suspendido_hasta`. La app no lo muestra, pero el dato está expuesto. Cerrarlo pide sacar la columna de la lectura pública y filtrar del lado del servidor (una vista o una función que usen el catálogo, la ficha y la página del link). Es un cambio mediano; no se hizo.
+
+---
 ## 2026-09-17 — Andre (sesión 250 · los Términos y la Política dicen lo que hace la app)
 
 **Tocado:** `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `constants/legal.ts` + `web/legal/*` (regenerados), `docs/paquete-abogado.md`, `scripts/add-contact-signals-purge.sql` (nuevo).

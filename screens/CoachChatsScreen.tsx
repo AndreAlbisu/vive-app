@@ -199,7 +199,7 @@ export default function CoachChatsScreen() {
       room.userName,
       room.archived
         ? 'Vuelve a tu lista de personas.'
-        : 'Se guarda en Archivados. Si te escribe, te va a llegar igual — solo deja de aparecer arriba.',
+        : 'Se guarda en Archivados. Si te escribe, te va a llegar igual. Solo deja de aparecer arriba.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {

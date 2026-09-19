@@ -35,7 +35,10 @@ function buildCalendar(year: number, month: number): (number | null)[][] {
   return weeks;
 }
 
-type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string; tema?: string };
+// `sugerida` (M6): el día que el profesional sugirió al terminar la sesión
+// anterior. Abre el calendario en ese mes y lo marca. No reserva nada: si ese
+// día no tiene horario libre, se elige otro.
+type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string; tema?: string; sugerida?: string };
 
 export default function BookingScreen_Calendar() {
   const router = useRouter();
@@ -43,11 +46,22 @@ export default function BookingScreen_Calendar() {
   const params = useLocalSearchParams<Params>();
 
   const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
+  const hoyStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  // Una sugerencia vieja o mal formada no tiene que dejar el calendario en un
+  // mes del pasado, del que después no se puede volver (`prevMonth` se frena en
+  // el mes actual).
+  const sugerida = /^\d{4}-\d{2}-\d{2}$/.test(params.sugerida ?? '') && (params.sugerida as string) >= hoyStr
+    ? (params.sugerida as string)
+    : null;
+  const [year, setYear] = useState(sugerida ? Number(sugerida.slice(0, 4)) : today.getFullYear());
+  const [month, setMonth] = useState(sugerida ? Number(sugerida.slice(5, 7)) - 1 : today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [loadingDates, setLoadingDates] = useState(true);
+  // M3 (docs/problemas-abiertos.md): "Avisame cuando tenga horarios".
+  const [coachRowId, setCoachRowId] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<'nada' | 'pendiente' | 'guardando'>('nada');
+  const [avisoError, setAvisoError] = useState(false);
 
   const weeks = buildCalendar(year, month);
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
@@ -63,6 +77,17 @@ export default function BookingScreen_Calendar() {
 
       if (!coachRow?.id) { setLoadingDates(false); return; }
       const coachesId = coachRow.id;
+      setCoachRowId(coachesId);
+
+      if (user?.id) {
+        const { data: pedido } = await supabase
+          .from('availability_waitlist')
+          .select('id')
+          .eq('coach_id', coachesId)
+          .is('resuelta_at', null)
+          .maybeSingle();
+        if (pedido) setAviso('pendiente');
+      }
 
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
@@ -113,9 +138,42 @@ export default function BookingScreen_Calendar() {
       });
 
       setAvailableDates(available);
+      // M6: el día sugerido queda elegido solo si el profesional tiene lugar
+      // ese día. Si no, se marca igual en el calendario pero el cliente elige.
+      if (sugerida && available.has(sugerida)) setSelectedDate(sugerida);
       setLoadingDates(false);
     })();
   }, [params.coachId, user?.id]);
+
+  async function pedirAviso() {
+    if (!coachRowId) return;
+    if (!user) { router.push('/login'); return; }
+    setAvisoError(false);
+    setAviso('guardando');
+    const { error } = await supabase.from('availability_waitlist').insert({ coach_id: coachRowId });
+    // 23505 = ya había un pedido pendiente (índice único parcial): es lo mismo que haberlo pedido.
+    if (error && error.code !== '23505') {
+      console.warn('[calendario] no se pudo guardar el pedido:', error.message);
+      setAviso('nada');
+      setAvisoError(true);
+      return;
+    }
+    setAviso('pendiente');
+  }
+
+  async function cancelarAviso() {
+    if (!coachRowId || !user) return;
+    setAviso('guardando');
+    const { error } = await supabase
+      .from('availability_waitlist')
+      .update({ resultado: 'cancelada', resuelta_at: new Date().toISOString() })
+      .eq('coach_id', coachRowId)
+      .is('resuelta_at', null);
+    setAviso(error ? 'pendiente' : 'nada');
+  }
+
+  const sinHorarios = !loadingDates && !!coachRowId && availableDates.size === 0;
+  const nombre = (params.name ?? '').trim().split(' ')[0] || 'Este profesional';
 
   function prevMonth() {
     if (isCurrentMonth) return;
@@ -207,6 +265,49 @@ export default function BookingScreen_Calendar() {
           />
         )}
 
+        {sinHorarios && (
+          <View style={s.waitCard}>
+            <Text style={s.waitTitle}>{nombre} no tiene horarios libres por ahora</Text>
+            {aviso === 'pendiente' ? (
+              <>
+                <Text style={s.waitText}>
+                  Listo. Te avisamos apenas abra horarios nuevos.
+                </Text>
+                <TouchableOpacity onPress={cancelarAviso} style={s.waitLink} accessibilityRole="button">
+                  <Text style={s.waitLinkText}>Ya no me interesa</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={s.waitText}>
+                  Si querés, te avisamos cuando abra horarios nuevos. No te compromete a nada.
+                </Text>
+                <TouchableOpacity
+                  style={[s.waitBtn, aviso === 'guardando' && s.btnDisabled]}
+                  onPress={pedirAviso}
+                  disabled={aviso === 'guardando'}
+                  activeOpacity={0.85}
+                  accessibilityRole="button">
+                  {aviso === 'guardando'
+                    ? <ActivityIndicator size="small" color="#F7EFE4" />
+                    : <Text style={s.waitBtnText}>Avisame cuando tenga horarios</Text>}
+                </TouchableOpacity>
+                {avisoError && (
+                  <Text style={s.waitError}>No pudimos guardarlo. Probá de nuevo en un rato.</Text>
+                )}
+              </>
+            )}
+          </View>
+        )}
+
+        {sugerida && !loadingDates && !sinHorarios && (
+          <Text style={s.sugeridaHint}>
+            {availableDates.has(sugerida)
+              ? `${nombre} sugirió este día. Podés elegir otro.`
+              : `${nombre} sugirió este día, pero no tiene horarios libres. Elegí el que te sirva.`}
+          </Text>
+        )}
+
         <View style={s.weekRow}>
           {DAY_LABELS.map((label, i) => (
             <View key={i} style={s.dayCell}>
@@ -223,6 +324,7 @@ export default function BookingScreen_Calendar() {
               const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const available = !loadingDates && availableDates.has(ds);
               const isSelected = selectedDate === ds;
+              const esSugerida = sugerida === ds && !isSelected;
 
               return (
                 <View key={di} style={s.dayCell}>
@@ -230,6 +332,7 @@ export default function BookingScreen_Calendar() {
                     style={[
                       s.dayCircle,
                       available && !isSelected && s.dayCircleAvailable,
+                      esSugerida && s.dayCircleSugerida,
                       isSelected && s.dayCircleSelected,
                     ]}
                     onPress={() => selectDay(day)}
@@ -238,7 +341,11 @@ export default function BookingScreen_Calendar() {
                     // mes, ni si se puede reservar. Los días sin turno ya van
                     // `disabled`, así que el foco ni se para en ellos.
                     accessibilityRole="button"
-                    accessibilityLabel={`${day} de ${MONTH_NAMES[month]}`}
+                    accessibilityLabel={
+                      sugerida === ds
+                        ? `${day} de ${MONTH_NAMES[month]}, el día que sugirió ${nombre}`
+                        : `${day} de ${MONTH_NAMES[month]}`
+                    }
                     accessibilityState={{ selected: isSelected, disabled: !available }}
                     disabled={!available}>
                     <Text style={[
@@ -326,10 +433,37 @@ const s = StyleSheet.create({
   dayCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   dayCircleAvailable: { backgroundColor: 'rgba(255,248,240,0.68)', ...dayShadow },
   dayCircleSelected: { backgroundColor: ViveColors.primary },
+  // M6: el día que sugirió el profesional, todavía sin elegir. Borde y no
+  // relleno, para que no se confunda con el día ya seleccionado.
+  dayCircleSugerida: { borderWidth: 1.5, borderColor: ViveColors.primary },
   dayText: { fontFamily: ViveFonts.regular, fontSize: 14, color: '#CBCBCB' },
   dayTextAvailable: { fontFamily: ViveFonts.medium, color: '#565E32' },
   dayTextSelected: { fontFamily: ViveFonts.semibold, color: '#F7EFE4' },
   dayTextUnavailable: { color: '#CBCBCB' },
+  waitCard: {
+    backgroundColor: 'rgba(255,248,240,0.72)', borderRadius: 18,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)',
+    padding: 16, marginBottom: 18, gap: 8,
+  },
+  waitTitle: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#565E32' },
+  waitText: { fontFamily: ViveFonts.regular, fontSize: 13.5, color: '#566245', lineHeight: 20 },
+  waitBtn: {
+    backgroundColor: '#565E32', borderRadius: 14, marginTop: 4,
+    paddingVertical: 13, alignItems: 'center', justifyContent: 'center', minHeight: 46,
+  },
+  waitBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#F7EFE4' },
+  waitLink: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+  waitLinkText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#565E32', textDecorationLine: 'underline' },
+  waitError: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#B04A3A' },
+  sugeridaHint: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#565E32',
+    lineHeight: 19,
+    textAlign: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 8,
+  },
   footerSafe: {
     backgroundColor: 'rgba(247,239,228,0.97)',
     borderTopWidth: 1, borderTopColor: 'rgba(86,94,50,0.12)',

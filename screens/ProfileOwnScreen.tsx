@@ -459,7 +459,7 @@ export default function ProfileOwnScreen() {
               de ánimo, tus recordatorios y tus recursos guardados.
             </Text>
             <Text style={styles.delBody}>
-              Se conservan de forma anónima tus reservas —por obligaciones contables— y las
+              Se conservan de forma anónima tus reservas (por obligaciones contables) y las
               reseñas y conversaciones con profesionales, que figurarán como
               &quot;Usuario eliminado&quot;. Si tenés sesiones futuras, se cancelan y se
               reembolsan.

@@ -308,7 +308,12 @@ ${wrapTables(marked.parse(md))}
   writeFileSync(join(webDir, file), html, 'utf8');
 }
 
-// ── Portada ──────────────────────────────────────────────────────────────────
+// ── Índice de legales (web/legal/index.html) ─────────────────────────────────
+// Hasta el 18/09/2026 esto se escribía en web/index.html y ERA la portada. La
+// portada ahora es la landing, escrita a mano (web/index.html) — este script ya
+// no la toca, porque corre en cada deploy de Vercel y la pisaría. Las dos
+// exigencias de abajo las sigue cumpliendo la landing (el botón va en su nav y
+// el contacto en su pie); este índice queda como hub de los legales.
 // Existe por dos exigencias distintas que se resuelven en el mismo lugar:
 //   - Res. 424/2020: el enlace "BOTÓN DE ARREPENTIMIENTO" tiene que estar en la
 //     PORTADA, en lugar destacado y sin registro previo. Sin index no hay
@@ -332,6 +337,7 @@ const homeHtml = `<!doctype html>
 <style>${CSS}${HOME_CSS}</style>
 </head>
 <body>
+<nav class="nav"><a href="../">Inicio</a></nav>
 ${draftNotice}
 <main>
 <h1>Vita</h1>
@@ -339,7 +345,7 @@ ${draftNotice}
 
 ${HOME_LINKS.map(({ key, hint }) => {
   const m = WEB_META[key];
-  return `<a class="card${key === 'REGRET' ? ' regret' : ''}" href="./legal/${m.file}"><strong>${m.nav}</strong><span>${hint}</span></a>`;
+  return `<a class="card${key === 'REGRET' ? ' regret' : ''}" href="./${m.file}"><strong>${m.nav}</strong><span>${hint}</span></a>`;
 }).join('\n')}
 
 <div class="contact">
@@ -355,7 +361,7 @@ De los Extremeños 5069, Córdoba, Provincia de Córdoba, Argentina.
 </html>
 `;
 
-writeFileSync(join(root, 'web/index.html'), homeHtml, 'utf8');
+writeFileSync(join(webDir, 'index.html'), homeHtml, 'utf8');
 
 // ── La versión de los legales, para el checkout web ──────────────────────────
 // `web/c/index.html` crea cuentas y tiene que guardar la misma constancia que
@@ -376,4 +382,4 @@ console.log(
   `web/legal/: ${forWeb.length} páginas generadas ` +
     `(${forWeb.map(({ key }) => WEB_META[key].file).join(', ')}).`
 );
-console.log('web/index.html: portada generada (botón de arrepentimiento + contacto).');
+console.log('web/legal/index.html: índice de legales generado (botón de arrepentimiento + contacto).');

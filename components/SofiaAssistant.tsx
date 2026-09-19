@@ -517,7 +517,7 @@ export function SofiaAssistant() {
               <Feather name="send" size={16} color="rgba(86,94,50,0.35)" />
             </Animated.View>
             <Animated.Text style={[styles.caption, entrada(0.6)]}>
-              El chat está en desarrollo — probá las opciones de arriba mientras tanto
+              El chat está en desarrollo. Mientras tanto, probá las opciones de arriba
             </Animated.Text>
           </View>
           </View>

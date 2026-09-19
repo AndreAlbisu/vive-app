@@ -860,7 +860,7 @@ export default function CoachHomeScreen() {
                 style={s.actCompu}
                 activeOpacity={0.7}
                 onPress={() => Share.share({
-                  message: `Tu sesión con ${next.userName} — ${next.dateLabel} ${next.timeStr} hs\n${SITIO_WEB}/sala?booking=${next.bookingId}`,
+                  message: `Tu sesión con ${next.userName}, ${next.dateLabel} ${next.timeStr} hs\n${SITIO_WEB}/sala?booking=${next.bookingId}`,
                 }).catch(() => {})}>
                 {/* ⚠️ `GREEN_EYEBROW` y no `FOREST_SOFT`: esta tarjeta tiene
                     fondo verde oscuro (#3E4E2C), y el oliva da 1.9:1 encima —
@@ -904,7 +904,7 @@ export default function CoachHomeScreen() {
                       {prep.resources.map(r => (
                         <View key={r.id} style={s.prepRes}>
                           <Text style={r.opened ? s.prepOk : s.prepWarn} numberOfLines={1}>
-                            {r.opened ? '✓' : '✗'} {r.title}{r.opened ? ' — abierto' : ' — sin abrir'}
+                            {r.opened ? '✓' : '✗'} {r.title}{r.opened ? ': abierto' : ': sin abrir'}
                           </Text>
                         </View>
                       ))}

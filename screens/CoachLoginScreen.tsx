@@ -454,7 +454,7 @@ export default function CoachLoginScreen() {
 
                   {needsName && (
                     <>
-                      <Text style={s.nameHint}>Es la primera vez que entrás con este mail — ¿cómo te llamamos?</Text>
+                      <Text style={s.nameHint}>Es la primera vez que entrás con este mail. ¿Cómo te llamamos?</Text>
                       <TextInput
                         style={s.input}
                         value={name}

@@ -8,7 +8,6 @@ import {
   Animated,
   StatusBar,
   Image,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -36,6 +35,7 @@ import { buildReflection, esPregunta, type Reflection } from '@/lib/weeklyReflec
 import { useDailyReflection } from '@/hooks/useDailyReflection';
 import { localDayKey, localDayKeyMinus, diasEntreDias } from '@/lib/dates';
 import { useWeeklySignals } from '@/hooks/useWeeklySignals';
+import { sessionHasEnded } from '@/lib/time';
 import { shouldShowMoment } from '@/lib/sobreVosMomento';
 import { getMomentPref, getLastShown, markMomentShown, getLastSpoken, markSpoken } from '@/lib/sobreVosMomentoStorage';
 import { shouldStaySilent } from '@/lib/sobreVosSilencio';
@@ -351,12 +351,11 @@ export default function InicioScreen() {
       router.push('/ayuda');
       return;
     }
-    if (!cardMoodColor) {
-      Alert.alert('Elegí cómo venís hoy', 'Así vas a poder ver tu reflexión completa');
-      return;
-    }
-    openMomento(cardReflection, cardMoodColor);
-    registrarEvento('reflexion_vista', { origen: 'reapertura' });
+    // Todo lo demás va directo a Progreso. Hasta el 17/09/2026 reabría el
+    // momento a pantalla completa, que repetía la misma frase que ya se leía en
+    // la card y recién ahí ofrecía "Ver mi progreso completo" — un paso de más.
+    registrarEvento('reflexion_vista', { origen: 'card_a_progreso' });
+    router.push('/progreso');
   }
 
   const a1   = useRef(new Animated.Value(0)).current;
@@ -494,9 +493,9 @@ export default function InicioScreen() {
     // Mismo error que documenta `lib/moodStats.ts:18`.
     const today = localDayKey();
 
-    const { data: booking } = await supabase
+    const { data: bookings } = await supabase
       .from('bookings')
-      .select('id, coach_id, sala_id, scheduled_date, scheduled_time')
+      .select('id, coach_id, sala_id, scheduled_date, scheduled_time, duration_minutes')
       .eq('user_id', user.id)
       .eq('status', 'confirmada')
       .gte('scheduled_date', today)
@@ -504,8 +503,14 @@ export default function InicioScreen() {
       // Sin este segundo criterio, con dos sesiones el mismo día la "próxima"
       // salía a suerte del planner. Mismo orden que `SessionsScreen`.
       .order('scheduled_time', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .limit(10);
+
+    // 🔴 La primera que NO terminó. Con `.limit(1)` una sesión de la mañana a
+    // la que nadie se unió (sigue `confirmada`) quedaba como "próxima" el resto
+    // del día, y tapaba a la que venía de verdad.
+    const booking = (bookings ?? []).find(
+      b => !sessionHasEnded(b.scheduled_date, b.scheduled_time, b.duration_minutes),
+    );
 
     if (!booking) { setNextSession(null); return; }
 
@@ -1053,7 +1058,7 @@ const s = StyleSheet.create({
  *    ver `lib/sobreVosSilencio.ts` y `docs/la-voz-de-sofia.md` §3.3. La card
  *    sigue estando, con su sello y el color del mood, pero sin frase y sin CTA.
  *
- *  Toda la card es tocable → reabre el momento completo (SobreVosMomento).
+ *  Toda la card es tocable → va a Progreso (o a su destino propio: ayuda, recurso, Diario).
  *  Salvo callada: ahí no hay nada que reabrir. */
 function SobreVosCard({
   reflection,

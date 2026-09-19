@@ -12,6 +12,8 @@ import { ViveFonts } from '@/constants/theme';
 import { TONOS, guardarTono, type Tono } from '@/constants/onboardingTonos';
 import { anotar, cronometro } from '@/lib/analytics';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import { marcarPrimerRecorrido } from '@/lib/entrada';
+import { AyudaAhoraLink } from '@/components/AyudaAhoraLink';
 
 // Bifurcación usuario/profesional — rediseño 30/08/2026 (maqueta de Andre).
 //
@@ -37,7 +39,7 @@ import { VitaWordmark } from '@/components/VitaWordmark';
 // #EDE0CF) se oscurece justo donde va el abanico y lo lava contra el durazno de
 // la columna derecha; acá el crema va plano, como en la maqueta.
 //
-// La navegación no cambia: /onboarding2 y /coach-login.
+// La navegación: /register (desde el 17/09/2026; antes /onboarding2) y /coach-login.
 
 const CREMA        = '#F7F2EA';
 const SALVIA       = TONOS.crecer;
@@ -162,7 +164,10 @@ const CAMINOS: Camino[] = [
     desc: 'Quiero explorar herramientas para mi crecimiento.',
     rule: SALVIA_RULE,
     accent: VERDE_ICON,
-    route: '/onboarding2',
+    // 🔴 Al registro, no a `/onboarding2` (17/09/2026): la cuenta se pide al
+    // entrar. "¿Cómo te gustaría empezar?" viene después de crearla — lo decide
+    // `lib/entrada.ts` con la marca que se pone en `elegir`.
+    route: '/register',
     tono: 'crecer',
     lado: 'left',
   },
@@ -248,6 +253,7 @@ export default function OnboardingBifurcacion() {
     // cinco pantallas, y reenviarlo en cada navegación significa que la primera
     // que se olvide corta la cadena sin que nada falle de forma visible.
     void guardarTono(c.tono);
+    if (c.tono === 'crecer') void marcarPrimerRecorrido();
     const ir = () => router.push({ pathname: c.route, params: { tono: c.tono } } as any);
     const nodo = flechas[c.id];
 
@@ -414,6 +420,12 @@ export default function OnboardingBifurcacion() {
         ))}
       </View>
 
+      {/* Las líneas de crisis, antes de tener cuenta: desde el 17/09/2026 esta es
+          la primera pantalla con una decisión, y el Perfil —donde vivía el
+          acceso— ya no se alcanza sin registrarse. Ver `AyudaAhoraLink`. */}
+      <View style={s.ayudaPie} pointerEvents="box-none">
+        <AyudaAhoraLink color={TEXTO_SUAVE} />
+      </View>
     </View>
   );
 }
@@ -468,4 +480,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Al pie y centrado, por encima de las dos columnas (que ocupan toda la
+  // pantalla): con `box-none` solo el link recibe toques, no el contenedor.
+  ayudaPie: { position: 'absolute', left: 0, right: 0, bottom: 18, alignItems: 'center' },
 });

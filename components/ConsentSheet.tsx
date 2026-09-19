@@ -68,7 +68,7 @@ export function ConsentSheet({ visible, onResponder, onCerrar }: Props) {
           </View>
 
           <Text style={s.body}>
-            Es tuyo y no se comparte con nadie — tampoco con los profesionales — salvo
+            Es tuyo y no se comparte con nadie, tampoco con los profesionales, salvo
             que vos decidas mandarlo. Podés cambiar de idea cuando quieras desde tu
             perfil, y pedir que borremos lo guardado.
           </Text>

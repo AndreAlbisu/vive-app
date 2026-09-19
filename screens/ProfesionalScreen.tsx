@@ -30,8 +30,10 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
+import { ENFOQUES, esEnfoque, etiquetaEstilo, etiquetasEnfoques } from '@/lib/enfoque';
 import { PaymentBadges } from '@/components/PaymentBadges';
 import { logResourceEvent } from '@/lib/resourceEvents';
+import { estaSuspendido } from '@/lib/coachVisibility';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 // 🔴 Sin datos inventados. Esto arrancaba con 'Laura Méndez', 'Coach de vida' y
@@ -50,6 +52,8 @@ const DEFAULT_PROFESIONAL = {
   nationality: '',
   gender: '',
   topics: [] as string[],
+  estilo: null as string | null,
+  enfoques: [] as string[],
   priceFrom: null as number | null,
   video_url: null as string | null,
   avatar_url: null as string | null,
@@ -137,6 +141,11 @@ export default function ProfesionalScreen() {
   const [reportOpen, setReportOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  // 🔴 Sancionado: suspendido o dado de baja. Al perfil se llega también por
+  // favoritos, por un recurso o por un link guardado — caminos que no pasan por
+  // el catálogo, que es el único que filtraba. Sin esto la persona elegía día y
+  // horario y recién le rebotaba al confirmar.
+  const [noDisponible, setNoDisponible] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [coachResources, setCoachResources] = useState<CoachResource[]>([]);
   const [encuadreOpen, setEncuadreOpen] = useState(false);
@@ -169,11 +178,12 @@ export default function ProfesionalScreen() {
     if (!pid) return;
     supabase
       .from('coaches')
-      .select('id, specialty, bio, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, profiles!inner(name, avatar_url)')
+      .select('id, specialty, bio, estilo, enfoques, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
         if (error || !data) return;
+        setNoDisponible(estaSuspendido({ suspendidoHasta: (data as any).suspendido_hasta ?? null }));
         // ⚠️ `coaches.id`, no `profiles.id`: `coach_credentials.coach_id`
         // apunta al PK de coaches, igual que `bookings.coach_id`.
         void listPublicCredentials((data as any).id).then(setCredenciales);
@@ -185,6 +195,8 @@ export default function ProfesionalScreen() {
           video_url: (data as any).video_url ?? null,
           avatar_url: (data as any).profiles.avatar_url ?? null,
           bio: (data as any).bio ?? null,
+          estilo: (data as any).estilo ?? null,
+          enfoques: ((data as any).enfoques ?? []) as string[],
           // Los dos juntos, misma condición que el filtro de búsqueda y que el
           // botón de USDT en el checkout: sin precio en dólares el cobro del
           // exterior no se puede armar, así que anunciarlo sería prometer algo
@@ -381,6 +393,30 @@ export default function ProfesionalScreen() {
             </View>
           )}
         </View>
+
+        {/* ── Cómo trabaja (M14) ────────────────────────────────────────────
+            El estilo va primero y en castellano común, porque es lo que se le
+            preguntó a la persona en el quiz. El enfoque va después, con el
+            nombre de la escuela y su explicación de una línea: quien no lo
+            conoce igual entiende qué significa. Si el profesional no contestó
+            ninguna de las dos, la sección no existe. */}
+        {(etiquetaEstilo(prof.estilo) || etiquetasEnfoques(prof.enfoques).length > 0) && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Cómo trabaja</Text>
+            {!!etiquetaEstilo(prof.estilo) && (
+              <Text style={s.comoTrabajaEstilo}>{etiquetaEstilo(prof.estilo)}</Text>
+            )}
+            {prof.enfoques.filter(esEnfoque).map(id => {
+              const e = ENFOQUES.find(x => x.id === id)!;
+              return (
+                <View key={id} style={s.comoTrabajaFila}>
+                  <Text style={s.comoTrabajaLabel}>{e.label}</Text>
+                  <Text style={s.comoTrabajaDesc}>{e.desc}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         {/* ── Formación ─────────────────────────────────────────────────────
             Solo credenciales verificadas por Vita. NO se muestra el documento:
@@ -626,9 +662,9 @@ export default function ProfesionalScreen() {
           </View>
           <View style={s.footerButtons}>
             <TouchableOpacity
-              style={[s.btnPrimary, blocked && s.btnPrimaryDisabled]}
+              style={[s.btnPrimary, (blocked || noDisponible) && s.btnPrimaryDisabled]}
               activeOpacity={0.85}
-              disabled={blocked}
+              disabled={blocked || noDisponible}
               onPress={() => {
                 // El motivo de más valor de todos: es la rama que monetiza.
                 if (!isLoggedIn) { requestAuth('reservar_sesion'); return; }
@@ -646,7 +682,9 @@ export default function ProfesionalScreen() {
                 });
               }}>
               <Text style={s.btnPrimaryText}>
-                {blocked ? 'Bloqueado' : 'Reservar sesión'}
+                {/* "No disponible" y no nada más específico: la persona no
+                    tiene por qué enterarse de una sanción (T&C 10.4). */}
+                {blocked ? 'Bloqueado' : noDisponible ? 'No disponible por ahora' : 'Reservar sesión'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -839,6 +877,23 @@ const s = StyleSheet.create({
     fontSize: 17,
     color: '#565E32',
     marginBottom: 14,
+  },
+
+  // ── Cómo trabaja (M14) ──────────────────────────────────────────────
+  comoTrabajaEstilo: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 15,
+    color: '#565E32',
+    marginBottom: 12,
+  },
+  comoTrabajaFila: { marginBottom: 10 },
+  comoTrabajaLabel: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
+  comoTrabajaDesc: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: 'rgba(135,131,92,0.85)',
+    lineHeight: 19,
+    marginTop: 2,
   },
 
   // ── Formación ───────────────────────────────────────────────────────

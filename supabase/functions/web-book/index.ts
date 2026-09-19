@@ -80,13 +80,22 @@ serve(async (req) => {
   // revisión no tiene link, y por lo tanto tampoco reservas.
   const { data: coach } = await admin
     .from('coaches')
-    .select('id, profile_id, price_per_session, specialty, verified, availability_status')
+    .select('id, profile_id, price_per_session, specialty, verified, availability_status, suspendido_hasta')
     .eq('slug', slug)
     .eq('verified', true)
     .eq('availability_status', 'activo')
     .maybeSingle()
 
   if (!coach) return json({ error: 'profesional no disponible' }, 404)
+
+  // 🔴 Suspendido o dado de baja: se frena ACÁ, antes de crear la sala. El
+  // trigger de la base igual rebotaría la reserva, pero para entonces la sala
+  // ya estaba creada y quedaba huérfana. Mismo mensaje que "no existe": no se
+  // menciona ninguna sanción. 'infinity' es la baja.
+  const hasta = coach.suspendido_hasta as string | null
+  if (hasta && (hasta === 'infinity' || new Date(hasta).getTime() > Date.now())) {
+    return json({ error: 'profesional no disponible' }, 404)
+  }
 
   // ── 🔴 El horario, preguntado de nuevo ─────────────────────────────────────
   // Se usa `slots_libres`, la MISMA función que dibuja los horarios en la

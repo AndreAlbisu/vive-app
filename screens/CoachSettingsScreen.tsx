@@ -99,6 +99,11 @@ export default function CoachSettingsScreen() {
   // quiso sacar.
   const guia: ConfigItem[] = [
     { id: 'como-funciona', icon: 'book-open-outline', label: 'Cómo funciona', onPress: () => router.push('/coach-como-funciona' as any) },
+    // Las líneas de crisis también para el profesional. Hasta el 17/09/2026 solo
+    // estaban del lado del usuario, y quien tiene más chances de estar al lado de
+    // alguien en crisis —en plena sesión— es el profesional. Es la misma pantalla:
+    // los números que tiene que pasarle a esa persona son los mismos.
+    { id: 'ayuda', icon: 'lifebuoy', label: 'Líneas de crisis', onPress: () => router.push('/ayuda') },
   ];
 
   const cuenta: ConfigItem[] = [
@@ -203,7 +208,7 @@ export default function CoachSettingsScreen() {
                 presentación, tus temas, tus horarios y tus datos de cobro.
               </Text>
               <Text style={s.delBody}>
-                Se conservan de forma anónima las reservas —por obligaciones contables— y
+                Se conservan de forma anónima las reservas (por obligaciones contables) y
                 las reseñas y conversaciones, que figurarán como &quot;Usuario eliminado&quot;.
               </Text>
               <Text style={s.delBody}>

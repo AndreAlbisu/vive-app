@@ -23,6 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
 import LegalSheet from '@/components/LegalSheet';
+import { AyudaAhoraLink } from '@/components/AyudaAhoraLink';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -348,6 +349,8 @@ export default function LoginScreen() {
                 <Text style={s.footerLink}>Creamos una</Text>
               </TouchableOpacity>
             </Animated.View>
+            {/* Las líneas de crisis, antes de tener cuenta. Ver `AyudaAhoraLink`. */}
+            <AyudaAhoraLink />
           </ScrollView>
         </KeyboardAvoidingView>
 

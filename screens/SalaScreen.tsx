@@ -21,7 +21,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as WebBrowser from 'expo-web-browser';
 import * as Calendar from 'expo-calendar';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
@@ -43,7 +42,15 @@ import { hayReembolsoAlCancelar } from '@/lib/bookingHelpers';
 import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { logError } from '@/lib/logging';
-import { ensureMeetingRoom, getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
+import { abrirVideollamada, ensureMeetingRoom, getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
+import {
+  OPCIONES_PROXIMA_SESION,
+  esCuandoVolver,
+  fechaSugerida,
+  textoSugerencia,
+  textoSugerenciaCoach,
+  type CuandoVolver,
+} from '@/lib/proximaSesion';
 
 type ResourceMeta = {
   type: 'resource';
@@ -216,6 +223,11 @@ export default function SalaScreen() {
   const notesBookingId = (Array.isArray(notas_booking) ? notas_booking[0] : notas_booking)
     ?? activeBooking?.id
     ?? null;
+
+  // M6: "próxima sesión sugerida". La escribe el profesional al terminar la
+  // sesión; la leen los dos (tabla `next_session_suggestions`, ver SCHEMA.md).
+  const [sugerencia, setSugerencia] = useState<CuandoVolver | null>(null);
+  const [guardandoSugerencia, setGuardandoSugerencia] = useState(false);
 
   const [hasSessionHistory, setHasSessionHistory] = useState(false);
   const [sessionState, setSessionState] = useState<SessionState>('none');
@@ -496,6 +508,26 @@ export default function SalaScreen() {
       .then(({ data }) => { if (data) setCoachInternalId((data as any).id); });
   }, [user, recipientIsCoach]);
 
+  // M6: la sugerencia de la sesión que terminó. Se pide aparte y no junto al
+  // resto porque `activeBooking` puede cambiar solo (una sesión futura la
+  // reemplaza) y la sugerencia es siempre la de ESA reserva.
+  useEffect(() => {
+    const bookingId = activeBooking?.id;
+    if (!bookingId || sessionState !== 'finalizada') { setSugerencia(null); return; }
+    let vivo = true;
+    supabase
+      .from('next_session_suggestions')
+      .select('cuando')
+      .eq('booking_id', bookingId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!vivo) return;
+        const v = (data as { cuando?: string } | null)?.cuando;
+        setSugerencia(esCuandoVolver(v) ? v : null);
+      });
+    return () => { vivo = false; };
+  }, [activeBooking?.id, sessionState]);
+
   // Realtime: mensajes nuevos
   useEffect(() => {
     if (!salaId || !user) return;
@@ -653,7 +685,10 @@ export default function SalaScreen() {
     setIsCreatingRoom(false);
 
     if (url && 'url' in url) {
-      await WebBrowser.openBrowserAsync(url.url);
+      // En iOS esto sale a Safari a propósito: el navegador in-app no puede
+      // pedir cámara ni micrófono de forma confiable. Ver `abrirVideollamada`.
+      const abrio = await abrirVideollamada(url.url);
+      if (!abrio) Alert.alert('Error', 'No se pudo abrir la videollamada. Probá de nuevo');
     } else if (url) {
       // Fuera de horario: se dice cuándo abre, no "no se pudo" — eso haría
       // reintentar a alguien que solo llegó temprano.
@@ -668,6 +703,12 @@ export default function SalaScreen() {
     // guard va acá y no solo en el render: con `recipientIsCoach` en false,
     // `recipientId` es el del usuario y esto armaría una reserva al revés.
     if (!recipientIsCoach || !recipientId || !recipientProfile) return;
+    // M6: si el profesional sugirió cuándo volver, el calendario abre en ese
+    // día en vez del mes de hoy. Es sugerencia, no reserva: si ese día no tiene
+    // horario libre, el cliente elige otro.
+    const sugerida = sugerencia && activeBooking?.scheduled_date
+      ? fechaSugerida(sugerencia, activeBooking.scheduled_date)
+      : null;
     router.push({
       pathname: '/booking-calendar',
       params: {
@@ -675,8 +716,42 @@ export default function SalaScreen() {
         specialty: recipientProfile.specialty ?? '',
         priceFrom: '',
         coachId: recipientId,
+        ...(sugerida && { sugerida }),
       },
     });
+  }
+
+  /** M6: el profesional elige cada cuánto volver a verse.
+   *
+   *  No se usa `upsert`: la tabla otorga INSERT sobre (booking_id, cuando) pero
+   *  UPDATE solo sobre `cuando`, y el ON CONFLICT de PostgREST también escribe
+   *  `booking_id`, así que un upsert se cae por permisos. Insert, y si ya
+   *  existía (23505), update. */
+  async function elegirProximaSesion(cuando: CuandoVolver) {
+    if (!activeBooking || recipientIsCoach || guardandoSugerencia) return;
+    const previa = sugerencia;
+    setSugerencia(cuando);              // optimista: el tap se ve al instante
+    setGuardandoSugerencia(true);
+    try {
+      const ins = await supabase
+        .from('next_session_suggestions')
+        .insert({ booking_id: activeBooking.id, cuando });
+      let error = ins.error;
+      if (error?.code === '23505') {
+        const upd = await supabase
+          .from('next_session_suggestions')
+          .update({ cuando })
+          .eq('booking_id', activeBooking.id);
+        error = upd.error;
+      }
+      if (error) {
+        setSugerencia(previa);
+        await logError('SalaScreen: guardar próxima sesión sugerida failed', error);
+        Alert.alert('No se pudo guardar', 'Probá de nuevo en unos segundos');
+      }
+    } finally {
+      setGuardandoSugerencia(false);
+    }
   }
 
   async function handleAddToCalendar() {
@@ -697,7 +772,7 @@ export default function SalaScreen() {
       const startDate = new Date(scheduledAtMs(activeBooking.scheduled_date, activeBooking.scheduled_time));
       const dur = activeBooking.duration_minutes ?? 60;
       const endDate = new Date(startDate.getTime() + dur * 60_000);
-      const title = `Sesión con ${recipientProfile?.name ?? 'profesional'} — Vita`;
+      const title = `Sesión con ${recipientProfile?.name ?? 'profesional'} · Vita`;
 
       // Evitar duplicados: si ya existe un evento igual (mismo título y arranque)
       // en ese rango, no lo agregamos de nuevo (bug de tap repetido).
@@ -1497,6 +1572,48 @@ export default function SalaScreen() {
               USUARIO, así que iba a pedir la agenda de alguien que no es coach.
               Mismo guard que ya usan la nota compartida (más arriba) y el botón
               de reservar del header; acá se había quedado sin poner. */}
+          {/* M6: el profesional dice cada cuánto volver a verse. Va del lado del
+              COACH (`!recipientIsCoach` = con quien habla NO es coach = el coach
+              soy yo), espejo de la tarjeta de re-reserva que el cliente ve
+              abajo. Lo que elija acá abre el calendario del cliente en esa
+              fecha; nadie reserva nada por él. */}
+          {!loading && !recipientIsCoach && sessionState === 'finalizada' && activeBooking && (
+            <View style={styles.endedCard}>
+              <View style={styles.endedHeader}>
+                <MaterialCommunityIcons name="calendar-heart" size={16} color="#87835C" />
+                <Text style={styles.endedLabel}>Próxima sesión</Text>
+              </View>
+              <Text style={styles.endedText}>
+                ¿Cuándo te parece bien volver a verse?
+              </Text>
+              <Text style={styles.sugerenciaHint}>
+                {sugerencia
+                  ? textoSugerenciaCoach(sugerencia)
+                  : `Se lo mostramos a ${recipientProfile?.name?.trim().split(' ')[0] ?? 'tu paciente'} al reservar. Podés cambiarlo.`}
+              </Text>
+              <View style={styles.sugerenciaOpciones}>
+                {OPCIONES_PROXIMA_SESION.map(op => {
+                  const elegida = sugerencia === op.valor;
+                  return (
+                    <TouchableOpacity
+                      key={op.valor}
+                      style={[styles.sugerenciaChip, elegida && styles.sugerenciaChipOn]}
+                      onPress={() => elegirProximaSesion(op.valor)}
+                      disabled={guardandoSugerencia}
+                      activeOpacity={0.85}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: elegida, disabled: guardandoSugerencia }}
+                      accessibilityLabel={op.label}>
+                      <Text style={[styles.sugerenciaChipText, elegida && styles.sugerenciaChipTextOn]}>
+                        {op.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
           {!loading && recipientIsCoach && sessionState === 'finalizada' && activeBooking && (
             <View style={styles.endedCard}>
               <View style={styles.endedHeader}>
@@ -1508,6 +1625,13 @@ export default function SalaScreen() {
               <Text style={styles.endedText}>
                 ¿Querés reservar tu próxima sesión con {recipientProfile?.name ?? 'tu profesional'}?
               </Text>
+              {/* M6: lo que sugirió el profesional. Solo aparece si lo eligió;
+                  sin sugerencia la tarjeta queda igual que antes. */}
+              {sugerencia && (
+                <Text style={styles.sugerenciaHint}>
+                  {textoSugerencia(sugerencia, recipientProfile?.name)}
+                </Text>
+              )}
               <TouchableOpacity style={styles.endedBtn} onPress={handleReschedule} activeOpacity={0.85}>
                 <MaterialCommunityIcons name="calendar-plus" size={16} color="#FFF6EC" />
                 <Text style={styles.endedBtnText}>Reservar próxima sesión</Text>
@@ -2041,6 +2165,26 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   endedBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#FFF6EC' },
+
+  // M6: sugerencia de próxima sesión (chips del coach + línea que lee el cliente)
+  sugerenciaHint: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: '#87835C',
+    lineHeight: 19,
+  },
+  sugerenciaOpciones: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  sugerenciaChip: {
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  sugerenciaChipOn: { backgroundColor: ViveColors.primary, borderColor: ViveColors.primary },
+  sugerenciaChipText: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#565E32' },
+  sugerenciaChipTextOn: { color: '#FFF6EC' },
 
   systemRow: { alignItems: 'center', paddingVertical: 4 },
   systemText: { fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(135,131,92,0.80)', fontStyle: 'italic', textAlign: 'center' },

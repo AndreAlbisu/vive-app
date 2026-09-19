@@ -27,9 +27,9 @@ const READINGS = [
     duration: '3 min',
     body: `"Siempre solo hay este momento. La vida es ahora. Nunca hubo un momento en que tu vida no fuera ahora, ni lo habrá jamás."
 
-El pasado que recordás y el futuro que anticipás existen solo como pensamientos en tu mente —ahora mismo. La única puerta de entrada a tu vida real es el presente.
+El pasado que recordás y el futuro que anticipás existen solo como pensamientos en tu mente, ahora mismo. La única puerta de entrada a tu vida real es el presente.
 
-Tolle nos invita a notar algo simple: la mayoría del sufrimiento mental no viene de lo que está pasando, sino de nuestra resistencia a lo que está pasando. Cuando la mente lucha contra el presente —queriendo que sea distinto, juzgándolo, escapando de él— genera tensión sin resolver nada.
+Tolle nos invita a notar algo simple: la mayoría del sufrimiento mental no viene de lo que está pasando, sino de nuestra resistencia a lo que está pasando. Cuando la mente lucha contra el presente (queriendo que sea distinto, juzgándolo, escapando de él), genera tensión sin resolver nada.
 
 La práctica no es forzarte a "estar presente". Es solo notar cuándo no lo estás. Ese reconocimiento ya es presencia.`,
   },
@@ -42,7 +42,7 @@ La práctica no es forzarte a "estar presente". Es solo notar cuándo no lo est�
 
 Frankl escribió esto después de sobrevivir los campos de concentración nazis. Perdió a su familia, su trabajo, su manuscrito. Lo que no le pudieron quitar, observó, era la actitud que tomaba frente a lo que le sucedía.
 
-No se trata de positivismo forzado. Frankl no sugería fingir que el sufrimiento no existe. Sugería que incluso en las circunstancias más extremas, existe un margen —pequeño pero real— entre lo que nos ocurre y lo que decidimos hacer con eso.
+No se trata de positivismo forzado. Frankl no sugería fingir que el sufrimiento no existe. Sugería que incluso en las circunstancias más extremas, existe un margen, pequeño pero real, entre lo que nos ocurre y lo que decidimos hacer con eso.
 
 Ese margen es suficiente para construir una vida con sentido.`,
   },
@@ -55,7 +55,7 @@ Ese margen es suficiente para construir una vida con sentido.`,
 
 Kabat-Zinn, pionero del mindfulness clínico, parte de una premisa incómoda: solemos vivir en piloto automático. Comemos sin saborear, caminamos sin sentir el piso, escuchamos sin oír realmente.
 
-La atención plena no es un estado de calma perfecta. Es la capacidad de notar lo que está pasando —incluyendo la agitación, el aburrimiento, la incomodidad— sin que esa experiencia nos arrastre.
+La atención plena no es un estado de calma perfecta. Es la capacidad de notar lo que está pasando, incluyendo la agitación, el aburrimiento y la incomodidad, sin que esa experiencia nos arrastre.
 
 Podés empezar ahora mismo. ¿Qué sentís en las manos? ¿Cómo es tu respiración en este momento? No hay respuesta correcta. Solo hay lo que hay.`,
   },
@@ -68,7 +68,7 @@ Podés empezar ahora mismo. ¿Qué sentís en las manos? ¿Cómo es tu respiraci
 
 Durante años de investigación, Brown descubrió algo paradójico: las personas que describían tener vidas más plenas y conectadas no eran las que evitaban el riesgo emocional. Eran las que se permitían ser vulnerables.
 
-Nuestra cultura equipara vulnerabilidad con debilidad. Sin embargo, toda conexión genuina —amar, pedir ayuda, ser honesto— requiere exponerse sin garantías.
+Nuestra cultura equipara vulnerabilidad con debilidad. Sin embargo, toda conexión genuina (amar, pedir ayuda, ser honesto) requiere exponerse sin garantías.
 
 La pregunta que Brown nos deja no es si vamos a sentir vulnerabilidad. Es si vamos a dejar que eso nos detenga, o si vamos a avanzar de todas formas.`,
   },
@@ -79,11 +79,11 @@ La pregunta que Brown nos deja no es si vamos a sentir vulnerabilidad. Es si vam
     duration: '3 min',
     body: `"Las cosas se desmoronan y nos rendimos. Los regalos de las crisis de vida son preciosos, pero raras veces se perciben como tales."
 
-Chödrön, monja budista tibetana, escribe sobre algo que todos evitamos: la incomodidad no va a desaparecer. El malestar, la incertidumbre, la pérdida —son parte del tejido de la vida, no errores del sistema.
+Chödrön, monja budista tibetana, escribe sobre algo que todos evitamos: la incomodidad no va a desaparecer. El malestar, la incertidumbre, la pérdida: son parte del tejido de la vida, no errores del sistema.
 
 La propuesta no es resignarse, sino relacionarse diferente con lo que no podemos controlar. En vez de luchar contra la experiencia difícil, podemos aprender a quedarnos con ella sin escapar ni colapsar.
 
-Ese pequeño giro —de huir a permanecer— es, paradójicamente, lo que nos da más libertad.`,
+Ese pequeño giro, de huir a permanecer, es, paradójicamente, lo que nos da más libertad.`,
   },
 ];
 

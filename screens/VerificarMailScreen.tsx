@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ViveFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { destinoTrasEntrar } from '@/lib/entrada';
 import { useCerrarSesionAlSalir } from '@/hooks/useCerrarSesionAlSalir';
 import { marcarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
@@ -311,6 +312,9 @@ export default function VerificarMailScreen() {
     // 🔴 Se mira el rol y no se manda derecho a `/(tabs)`: por este muro pasa
     // también un coach ya aprobado que nunca verificó, y `AuthRedirect` lo
     // rebotaría de tabs a `/(coach)` — se corrige solo, pero con un parpadeo.
+    // Y quien se acaba de registrar desde el recorrido de entrada sigue a "¿Cómo
+    // te gustaría empezar?" (`lib/entrada.ts`), no directo a la app.
+    else if (esMuro && user) router.replace((await destinoTrasEntrar(user, role)) as any);
     else if (esMuro) router.replace(role === 'coach' ? '/(coach)' : '/(tabs)');
     else router.back();
   }

@@ -7,7 +7,7 @@
 > la ley vigente y de la figura jurídica/fiscal definitiva de Vita. Los campos entre
 > corchetes `[ ]` requieren completarse con datos reales.
 
-# Términos y Condiciones de Uso — Vita
+# Términos y Condiciones de Uso de Vita
 
 **Última actualización:** [fecha]
 **Vigencia a partir de:** [fecha]
@@ -23,7 +23,7 @@ Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, l
 - **Usuario:** toda persona que accede a la Plataforma, ya sea como Cliente o como Profesional.
 - **Cliente:** Usuario que busca, reserva o contrata sesiones y/o utiliza el contenido de desarrollo personal.
 - **Profesional:** Usuario que ofrece sesiones a través de la Plataforma (por ejemplo, coaches, psicólogos/as, nutricionistas u otros profesionales del bienestar), actuando de manera independiente.
-- **Sesión:** encuentro individual (1 a 1) entre un Cliente y un Profesional, agendado y —cuando corresponda— abonado a través de la Plataforma.
+- **Sesión:** encuentro individual (1 a 1) entre un Cliente y un Profesional, agendado y, cuando corresponda, abonado a través de la Plataforma.
 - **Contenido:** herramientas de autoconocimiento, recursos, ejercicios, textos, audios y demás materiales disponibles en la Plataforma.
 - **Contenido del Usuario:** información que el Usuario ingresa o genera (perfil, mensajes, registros de ánimo, entradas de diario, reseñas, etc.).
 
@@ -39,7 +39,7 @@ Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, l
 
 4.1. **Vita es una plataforma tecnológica de intermediación** que conecta a Clientes con Profesionales independientes y pone a disposición contenido de desarrollo personal. Vita **no presta por sí misma servicios de coaching, psicología, nutrición ni ningún servicio de salud o profesional**, ni emplea a los Profesionales.
 
-4.2. Los Profesionales actúan por cuenta y riesgo propios, como prestadores independientes. La relación contractual por la Sesión se establece entre el Cliente y el Profesional. Vita no es parte de esa relación, más allá de facilitar la conexión, la agenda y —cuando corresponda— el procesamiento del pago.
+4.2. Los Profesionales actúan por cuenta y riesgo propios, como prestadores independientes. La relación contractual por la Sesión se establece entre el Cliente y el Profesional. Vita no es parte de esa relación, más allá de facilitar la conexión, la agenda y, cuando corresponda, el procesamiento del pago.
 
 4.3. Vita no garantiza la contratación, disponibilidad, continuidad, idoneidad ni resultado de ningún Profesional o Sesión, sin perjuicio de los procesos de verificación descriptos en la cláusula 6.
 
@@ -49,10 +49,12 @@ Al crear una cuenta, o al acceder o utilizar la Plataforma de cualquier forma, l
 
 5.2. Los Profesionales que ejercen prestaciones reguladas (por ejemplo, psicólogos/as o nutricionistas) lo hacen bajo su exclusiva responsabilidad profesional, debiendo contar con la matrícula y habilitaciones que la ley exija, y cumplir con las obligaciones propias de su profesión (incluido el secreto profesional). Vita no supervisa ni dirige el ejercicio profesional.
 
-5.3. **La Plataforma no es un servicio de emergencia.** Ante una situación de crisis, riesgo para la vida o emergencia de salud, el Usuario debe comunicarse de inmediato con los servicios de emergencia (**911**) o con la línea de asistencia al suicida y crisis de salud mental, disponible las 24 horas, todos los días, de forma gratuita, anónima y confidencial:
+5.3. **La Plataforma no es un servicio de emergencia.** Ante una situación de crisis, riesgo para la vida o emergencia de salud, el Usuario debe comunicarse de inmediato con los servicios de emergencia (**911**) o con alguna de estas líneas gratuitas y confidenciales:
 
-- **135** — gratuita desde la Ciudad Autónoma de Buenos Aires y el Gran Buenos Aires.
-- **(011) 5275-1135** o **0800-345-1435** — desde todo el país.
+- **0800-999-0091**: Línea Nacional de Orientación y Apoyo en la Urgencia de Salud Mental, del Ministerio de Salud de la Nación. Atiende **las 24 horas, todos los días**, desde todo el país.
+- **Centro de Asistencia al Suicida**, que atiende **de 8 a 24 horas**: **135**, gratuita desde la Ciudad Autónoma de Buenos Aires y el Gran Buenos Aires; **0800-345-1435** o **(011) 5275-1135**, desde todo el país.
+
+Quien se encuentre fuera de la Argentina debe comunicarse con los servicios de emergencia del país donde esté, ya que estas líneas no funcionan desde el exterior.
 
 La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Profesionales no están disponibles para atender urgencias.
 
@@ -82,13 +84,13 @@ La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Prof
 
 8.4. **Impuestos.** Vita opera bajo el **Régimen Simplificado para Pequeños Contribuyentes (Monotributo)**. En consecuencia, los comprobantes que emite son **facturas tipo C, que no discriminan IVA**, y la comisión indicada en 8.3 es el importe total que percibe Vita por su servicio de intermediación, sin adicionales impositivos.
 
-8.5. **Situación fiscal del Profesional.** Cada Profesional es el único responsable de su propia situación fiscal y de emitir al Cliente los comprobantes que correspondan por la Sesión. Vita no emite comprobantes por la Sesión —que es una prestación del Profesional al Cliente— sino únicamente por su comisión, y no actúa como agente de retención o percepción. Las retenciones e impuestos que aplique el procesador de pagos sobre los fondos del Profesional se rigen por las condiciones de dicho procesador y por la normativa aplicable.
+8.5. **Situación fiscal del Profesional.** Cada Profesional es el único responsable de su propia situación fiscal y de emitir al Cliente los comprobantes que correspondan por la Sesión. Vita no emite comprobantes por la Sesión, que es una prestación del Profesional al Cliente, sino únicamente por su comisión, y no actúa como agente de retención o percepción. Las retenciones e impuestos que aplique el procesador de pagos sobre los fondos del Profesional se rigen por las condiciones de dicho procesador y por la normativa aplicable.
 
 8.6. **Cambio de condición fiscal.** Si Vita modifica su condición frente a los impuestos, informará con antelación razonable cualquier cambio que afecte el importe de la comisión.
 
 8.7. **Liberación de fondos.** La liberación de los fondos al Profesional puede estar sujeta a plazos operativos del procesador de pagos.
 
-8.8. **Garantía de primera sesión — efecto sobre el Profesional.** El Profesional conoce y acepta, como condición para operar en la Plataforma, la garantía prevista en la cláusula 9.3: cuando un Cliente la ejerce, el importe reintegrado **se debita de los fondos percibidos por esa Sesión**. La garantía alcanza únicamente a la primera Sesión de cada vínculo Cliente–Profesional y solo puede ejercerse una vez por Cliente en toda la Plataforma. Vita no percibe comisión sobre las Sesiones reintegradas por esta vía, de modo que el costo del reintegro no se traslada a la comisión de Sesiones posteriores.
+8.8. **Garantía de primera sesión: efecto sobre el Profesional.** El Profesional conoce y acepta, como condición para operar en la Plataforma, la garantía prevista en la cláusula 9.3: cuando un Cliente la ejerce, el importe reintegrado **se debita de los fondos percibidos por esa Sesión**. La garantía alcanza únicamente a la primera Sesión de cada vínculo Cliente–Profesional y solo puede ejercerse una vez por Cliente en toda la Plataforma. Vita no percibe comisión sobre las Sesiones reintegradas por esta vía, de modo que el costo del reintegro no se traslada a la comisión de Sesiones posteriores.
 
 ## 9. Cancelaciones, Reembolsos y Garantía
 
@@ -113,7 +115,7 @@ Condiciones:
 - El reintegro se procesa a través del procesador de pagos y **se debita de los fondos correspondientes al Profesional**, conforme a la cláusula 8.8. Vita no percibe comisión sobre las Sesiones reintegradas por esta vía.
 - Vita puede denegar la solicitud ante uso abusivo o fraudulento de la garantía (por ejemplo, cuentas múltiples de una misma persona, o solicitudes reiteradas destinadas a obtener Sesiones sin costo).
 
-9.4. **Derecho de revocación — Botón de arrepentimiento.** Por tratarse de una contratación celebrada a distancia, el Cliente tiene el **derecho irrenunciable de revocar la contratación dentro de los diez (10) días corridos**, contados desde la celebración del contrato —esto es, desde la confirmación de la reserva de la Sesión— conforme al art. 34 de la Ley 24.240 y a los arts. 1110 a 1116 del Código Civil y Comercial.
+9.4. **Derecho de revocación: Botón de arrepentimiento.** Por tratarse de una contratación celebrada a distancia, el Cliente tiene el **derecho irrenunciable de revocar la contratación dentro de los diez (10) días corridos**, contados desde la celebración del contrato (esto es, desde la confirmación de la reserva de la Sesión), conforme al art. 34 de la Ley 24.240 y a los arts. 1110 a 1116 del Código Civil y Comercial.
 
 Condiciones:
 
@@ -129,7 +131,7 @@ Condiciones:
 - **Permanencia del Profesional.** El Profesional debe encontrarse en la videollamada desde el horario agendado y **permanecer hasta que el Cliente ingrese o hasta transcurridos 20 minutos**, lo que ocurra primero. Retirarse antes equivale a no haberse presentado.
 - **Demora del Cliente.** Si el Cliente ingresa con **más de 20 minutos de demora** respecto del horario agendado, o no ingresa, la Sesión **se cobra íntegramente** y el Profesional percibe su importe.
 - **Si no se presenta ninguna de las partes**, el Cliente recibe el reintegro total y ello no se computa como incumplimiento del Profesional.
-- **Cómo se determina.** Vita constata la asistencia a partir de los **registros de conexión a la videollamada** —quién ingresó, cuándo y por cuánto tiempo—, que son **metadatos de conexión y en ningún caso contenido**: Vita no accede al audio, al video ni a transcripción alguna de las Sesiones, conforme a la Política de Privacidad.
+- **Cómo se determina.** Vita constata la asistencia a partir de los **registros de conexión a la videollamada** (quién ingresó, cuándo y por cuánto tiempo), que son **metadatos de conexión y en ningún caso contenido**: Vita no accede al audio, al video ni a transcripción alguna de las Sesiones, conforme a la Política de Privacidad.
 - Lo previsto en esta cláusula **no desplaza** la garantía de la cláusula 9.3, que cubre un supuesto distinto: la insatisfacción del Cliente con una Sesión efectivamente prestada.
 
 9.6. Nada de lo previsto en esta cláusula limita los derechos que la normativa de defensa del consumidor reconozca al Cliente.
@@ -143,7 +145,7 @@ Condiciones:
 10.3. **Prevención.** Para prevenir el incumplimiento de esta cláusula, la Plataforma detecta mediante medios técnicos, en el dispositivo de quien escribe y antes de enviar, si un texto incluye datos de contacto o de pago. El alcance es el siguiente:
 
 - **En los textos dirigidos a otro Usuario** (mensajes, notas de sesión compartidas y comentarios que acompañan una recomendación o una reserva), la Plataforma muestra una advertencia y permite continuar.
-- **Excepción:** la Plataforma no permite al Profesional enviar datos para recibir pagos —como CBU, CVU, alias o enlaces de cobro—, dado que todos los pagos de las Sesiones se canalizan a través de Vita.
+- **Excepción:** la Plataforma no permite al Profesional enviar datos para recibir pagos, como CBU, CVU, alias o enlaces de cobro, dado que todos los pagos de las Sesiones se canalizan a través de Vita.
 - **En los textos públicos**, la Plataforma no permite publicar datos de contacto o de pago en la presentación del Profesional ni en las reseñas. En los recursos que propone un Profesional, advierte al cargarlos y no permite enlaces a redes sociales o servicios de mensajería; Vita revisa cada recurso antes de publicarlo.
 
 El tratamiento de datos que esto implica se describe en la Política de Privacidad.
@@ -176,9 +178,9 @@ El Usuario se obliga a no: (a) usar la Plataforma con fines ilícitos o no autor
 
 14.1. Los Usuarios pueden reportar a otros Usuarios o contenidos a través de las herramientas de la Plataforma. Los reportes son revisados por el equipo de Vita.
 
-14.2. Vita puede, a su razonable criterio y cuando existan motivos, advertir, limitar, suspender o cancelar cuentas, y retirar contenido, ante incumplimientos de estos Términos o de la ley, procurando —cuando sea posible y apropiado— notificar al Usuario afectado.
+14.2. Vita puede, a su razonable criterio y cuando existan motivos, advertir, limitar, suspender o cancelar cuentas, y retirar contenido, ante incumplimientos de estos Términos o de la ley, procurando, cuando sea posible y apropiado, notificar al Usuario afectado.
 
-14.3. **Bloqueo entre Usuarios.** Todo Usuario puede bloquear a otro desde su perfil o desde el menú de la conversación, sin expresar motivo y sin intervención de Vita. El bloqueo impide el intercambio de mensajes y la reserva de nuevas Sesiones entre ambos, en los dos sentidos, y se puede deshacer en cualquier momento desde "Cuentas bloqueadas". El bloqueo **no** cancela las Sesiones ya agendadas —si el Usuario quiere cancelarlas debe hacerlo por separado, y rige la política de cancelación de §9.1— ni elimina el historial de conversaciones o de Sesiones. Bloquear no equivale a reportar: el bloqueo es una medida propia del Usuario y no se le notifica a la persona bloqueada; el reporte, en cambio, se dirige al equipo de Vita conforme §14.1. Ambas acciones pueden ejercerse de forma independiente o conjunta.
+14.3. **Bloqueo entre Usuarios.** Todo Usuario puede bloquear a otro desde su perfil o desde el menú de la conversación, sin expresar motivo y sin intervención de Vita. El bloqueo impide el intercambio de mensajes y la reserva de nuevas Sesiones entre ambos, en los dos sentidos, y se puede deshacer en cualquier momento desde "Cuentas bloqueadas". El bloqueo **no** cancela las Sesiones ya agendadas (si el Usuario quiere cancelarlas debe hacerlo por separado, y rige la política de cancelación de §9.1) ni elimina el historial de conversaciones o de Sesiones. Bloquear no equivale a reportar: el bloqueo es una medida propia del Usuario y no se le notifica a la persona bloqueada; el reporte, en cambio, se dirige al equipo de Vita conforme §14.1. Ambas acciones pueden ejercerse de forma independiente o conjunta.
 
 ## 15. Mensajería y Privacidad de las Comunicaciones
 
@@ -236,4 +238,4 @@ El Usuario puede dar de baja su cuenta en cualquier momento. Vita puede suspende
 
 ## 24. Contacto
 
-Ante consultas sobre estos Términos: vitaappar@gmail.com — Andre Albisu Lambertini, De los Extremeños 5069, Córdoba, Provincia de Córdoba.
+Ante consultas sobre estos Términos: vitaappar@gmail.com. Andre Albisu Lambertini, De los Extremeños 5069, Córdoba, Provincia de Córdoba.

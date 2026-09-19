@@ -228,7 +228,7 @@ export type CopyRejection =
   | 'vacío' | 'muy corto' | 'muy largo' | 'genera a la persona'
   | 'lenguaje clínico' | 'tono gurú' | 'anima en tono suave' | 'pide una acción en tono suave'
   | 'pide una reserva' | 'finge sentir'
-  | 'signos de exclamación' | 'markdown o comillas' | 'etiquetas internas'
+  | 'signos de exclamación' | 'raya' | 'markdown o comillas' | 'etiquetas internas'
   | 'tutea' | 'inventa un día de la semana' | 'inventa que hay alguien acompañando'
   | 'la app se pone de testigo';
 
@@ -268,6 +268,11 @@ export function rejectCopy(
     return 'la app se pone de testigo';
   }
   if (/!/.test(t)) return 'signos de exclamación';
+
+  // La raya (—) es un tic de texto generado en inglés: en castellano casi no se
+  // usa, y en una frase de dos oraciones delata al modelo. El `SYSTEM` la
+  // prohíbe; si igual aparece, va el texto de las reglas.
+  if (/[—–]/.test(t)) return 'raya';
 
   // 🔴 Etiquetas internas del modelo. Hoy no puede pasar —la función corre en
   // Haiku, que no entra en la rama que apaga el thinking— pero `REFLECTION_MODEL`
@@ -631,7 +636,7 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // acción ni se levanta el ánimo a la fuerza: se acusa recibo y se corre.
   if (sharpDrop) {
     return pick(dayKey, [
-      r('Hoy venís ', 'más abajo', '. No hace falta que hagas nada con eso ahora — alcanza con haberlo registrado.', 'gentle', 'sharp-drop'),
+      r('Hoy venís ', 'más abajo', '. No hace falta que hagas nada con eso ahora. Alcanza con haberlo registrado.', 'gentle', 'sharp-drop'),
       r('', 'Un día flojo', ' no borra la semana. Mañana es otro día y no le debés nada a nadie.', 'gentle', 'sharp-drop'),
       // 📌 Antes: *"Registraste un día difícil, y eso ya es mirarse de frente"*.
       // La app dictaminando qué significa lo que hizo. Ahora el hecho se lo

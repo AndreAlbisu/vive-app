@@ -13,6 +13,140 @@
 
 ---
 
+## L. Lo que falta para lanzar — estado al 17/09/2026
+
+> Consolida los "Pendiente" de las sesiones 238–251 del CHANGELOG, que estaban
+> desparramados en doce entradas. **Actualizar esta tabla cuando algo se cierre**
+> (marcar, no borrar). Lo que ya tiene ID en otra sección se referencia, no se
+> duplica.
+
+### L.1 — Bloquea el lanzamiento
+
+| ID | Qué falta | Estado | Quién |
+|---|---|---|---|
+| **L1** | **La videollamada nunca se ejercitó con dos personas adentro** (A5 prueba 2). | 🔴 Abierto. Hace falta agendar una sesión real con `coach-prueba`: la sala abre 15 min antes. | Joaquín / Andre |
+| **L2** | **La comisión real de MP** medida sobre un pago de verdad, no el de $1 (A5 prueba 3). Si no da ~4%, cambia `MP_FEE_PCT_OBSERVED` en `lib/pricing.ts`. | 🔴 Abierto. Es mirar el pago de $4.500 del 19/08 en el panel de MP. | Joaquín / Andre |
+| **L3** | **Prender `CHECKOUT_HABILITADO`** en `web/c/index.html`. | ✅ Verificado 17/09: sigue en `false`. Depende de L1 y L2. | — |
+| **L4** | **DMARC de `vitaapp.com.ar`** — TXT en `_dmarc`, zona en Vercel. Registro en la receta de A5. | ✅ Verificado con `dig` el 17/09: **sigue sin estar**. | Andre |
+| **L5** | **Revisión del abogado** de Términos, Privacidad y Reembolsos (`LEGAL_IS_DRAFT = true`), con A.12 (§10.3) y la duda de si declarar Cloudflare/unpkg obliga a re-pedir consentimiento — que hoy no tiene mecanismo. | 🔴 Abierto. | Andre |
+| **L6** | **Nombre que ve el comprador en Mercado Pago** (Checkout Pro y resumen de tarjeta): sale de la config de la cuenta de MP, no del código. Tiene que decir Vita. | ⚠️ Sin revisar. | Andre |
+| **L7** | **Link de la App Store en `app_version_gate.store_url`** el día que se publique. Sin eso, la pantalla de versión vieja dice "Buscá Vita en la App Store" sin botón. | ⏸️ Espera la publicación. Lo carga Claude con un `update`. | — |
+
+### L.2 — Limpiar la base antes de abrir
+
+| ID | Qué falta | Estado |
+|---|---|---|
+| **L8** | **Correr `scripts/limpiar-datos-de-prueba.sql`** (coaches falsos, 24 reseñas falsas, 8 recursos `[SEED]` con dos rickrolls). | 🔴 No corrido. Antes: completar la lista `conservar` (hoy solo `andre`) y leer el control previo. |
+| **L9** | **Qué hacer con las reservas que movieron plata**: USD 91 en PayPal reembolsados + 15 `aprobado`. Privacidad §10 promete conservarlas 10 años; hoy el script las excluye. | 🔴 Decisión de Andre. |
+| **L10** | **Las 6 reservas confirmadas del 17 al 26/09**: mirar una por una si alguna es de una persona real. | 🔴 Abierto. Algunas ya vencen hoy. |
+| **L11** | **Qué significa `verified = true`** — hoy lo tienen los 34 coaches. | 🟡 Decisión de Andre. |
+| **L12** | Borrar a mano del storage `resource-audio/seed/*.mp3` y los videos de las cuentas de prueba. | 🟡 Después de L8. |
+| **L13** | `coach-prueba` (A2) se queda hasta el lanzamiento y cobra $1 real: sacarlo en L8. | ⏸️ Decidido. |
+
+### L.3 — Seguridad y cuidado
+
+| ID | Qué falta | Estado |
+|---|---|---|
+| **L14** | **Acceso a crisis permanente y a un toque**, no dependiente del detector (D4). Hoy está en el perfil (y en Ajustes del coach desde el 17/09). | 🔴 Abierto el "a un toque". ✅ **Sesión 253: las líneas estaban mal** — la pantalla prometía 24 h y el Centro de Asistencia al Suicida atiende de 8 a 24; faltaba la línea nacional 24 h (0800-999-0091). Corregido en la app y en T&C §5.3, con aviso para quien está fuera de Argentina. Ver también D2, D5, D6. |
+| **L15** | **La fecha de suspensión de un coach es pública por la API** (`coaches.suspendido_hasta`, legible con la anon key). Cerrarlo pide una vista o función para catálogo, ficha y `/c`. | ⚠️ Abierto (sesión 251). |
+| **L16** | ~~**¿`/c/<slug>` muestra el perfil de un coach suspendido?**~~ | ✅ **Sesión 251**: sí lo mostraba, con botón de reservar. Corregido ahí, en la ficha de la app, en el mensaje de error y en `web-book` (que dejaba una sala huérfana). Probado con un coach real. |
+| **L17** | **Edad y aceptación de Términos las escribe el cliente**: falsificables por su titular. Cerrarlo es moverlas a una edge function en el alta. | ⚠️ Abierto (`SCHEMA.md`). |
+| **L40** | **La pantalla de entrada puede quedarse cargando para siempre.** `AuthContext` ya cubre que `getSession()` RECHACE (red caída → entra como anónimo), pero no que la conexión se CUELGUE sin responder: ahí `loading` nunca pasa a false y `app/index.tsx` gira el spinner sin fin. Es el *"la instalé y me quedé en una hoja en blanco"* que se repite 9 veces en el Google Play de Selia (`competencia-selia.md` §24.3). | 🔴 Abierto (sesión 260). Se cierra con un límite de unos segundos y seguir como visitante. |
+| **L18** | **Vista pública del catálogo**: taparía `is_admin`, `birth_date` y `nationality` a `authenticated`. Mejora de A4, no agujero. | 🟡 Para Andre. |
+
+### L.4 — Probar en el teléfono / navegador (hecho, no visto)
+
+| ID | Qué | Origen |
+|---|---|---|
+| **L19** | Una nota compartida por el coach aparece sola del lado del cliente (dos teléfonos, chat abierto). | 242 |
+| **L20** | La app entera con el color nuevo de texto secundario (`#566245`, 38 archivos). | 242 |
+| **L21** | Recorrido crítico con VoiceOver/TalkBack, sobre todo el calendario. | 242 |
+| **L22** | Checkout web con `?probar=1`: sin el tilde de edad no pide código; después queda `age_confirmed = true`. | 241 |
+| **L23** | Sanciones desde el celular: advertencia con captura adjunta, abrirla, levantarla; y un CBU en el chat que rebote y aparezca en Administración → Sanciones. | 242, 247 |
+| **L24** | Versión mínima: `min_version = 9.9.9` en iOS, ver la pantalla de bloqueo, volver a `1.0.0`. | 245 |
+| **L37** | **El recorrido de entrada con cuenta obligatoria** (sesión 255): bienvenida → bifurcación → "Quiero crecer" → registro con Google → tiene que aparecer "¿Cómo te gustaría empezar?". Repetir con mail (pasa por el código) y con una cuenta existente vía "Ya tengo cuenta" (tiene que ir directo a la app). Y **sin cuenta**, tocar "¿Necesitás ayuda ahora?" al pie de la bifurcación, del registro y del login: tiene que abrir las líneas de crisis. | 255 |
+| **L39** | 🔴 **La videollamada en un iPhone, entrando desde la Sala.** La sesión 260 cambió cómo se abre en iOS (Safari en vez del navegador in-app, porque ahí el permiso de cámara y micrófono no es confiable): es un arreglo sin verificar sobre un camino sin verificar. Se cierra junto con L1, en la misma sesión de prueba. | 260 |
+| **L25** | ~~Primera corrida del cron de "tu profesional volvió"~~ | ✅ Verificado el 17/09: corre cada hora con 200 y `{"revisados":0}`; el borrado diario de avisos corrió con `DELETE 0`. |
+
+### L.5 — No bloquea
+
+| ID | Qué | Estado |
+|---|---|---|
+| **L26** | Etiquetas de accesibilidad: **91 botones de solo ícono en 50 archivos**, la mayoría del lado del coach. | ⏸️ Por tandas. |
+| **L27** | Placeholder del diario (`ViveColors.calm`, 3.39:1). Subirlo lo hace parecer texto ya escrito. | 🟡 Decisión de Andre. |
+| **L28** | Migrar los 30 `FOREST_SOFT` copiados a mano a `ViveColors.softInk`. | ⏸️ Mecánico. |
+| **L29** | El panel del coach dice "N sesiones completadas" y cuenta **personas distintas**. Corregir el texto o el número. | 🟡 Decisión. |
+| **L30** | Dónde se pide la fecha de nacimiento (sin ella el coach nunca ve la edad). No en la reserva. | 🟡 Decisión. |
+| **L31** | Detección de contacto del lado del servidor: es finalidad nueva bajo Ley 25.326, primero va a la Política. | ⏸️ A propósito. |
+| **L32** | `scripts/diagnostico-fuga.sql` y `scripts/sync-legal.mjs` tienen encabezados desactualizados. | 🟡 Menor. |
+| **L33** | Casilla propia en `vitaapp.com.ar`: si se crea, cambiarla en `lib/contacto.ts`, `admin-actions` y `constants/legal.ts` a la vez. | ⏸️ |
+| **L34** | Voz y producto: B1, B4, C4, E1–E6, y **F** (cero usuarios reales: la prueba de la tarjeta con 5–10 personas). | Ver secciones. |
+| **L35** | 🔴 **Re-verificar las líneas de crisis antes de cada publicación** (`screens/AyudaScreen.tsx` y T&C §5.3). Los horarios cambian; un número muerto ahí es peor que no ponerlo. Fuentes en el CHANGELOG, sesión 253. | ⏸️ En cada publicación. |
+| **L38** | **Cuenta de prueba para la revisión de Apple y Google.** Con registro obligatorio al entrar, los revisores no pueden ver nada sin una cuenta: hay que darles usuario y contraseña en el formulario de envío. | ⏸️ Al publicar. |
+| **L36** | Selia (competidor colombiano, `docs/competencia-selia.md`, **versión 4**: FODA + §24 con las 138 reseñas de sus tiendas): que lo lea Joaquín. Cambia la urgencia de lanzar, no el rumbo. | 🟡 |
+
+📌 **Cerrado desde la lista del 16/09** (no repetir): la escalera de sanciones está corrida en producción y `admin-actions` v30 deployada; la gente ya recibe aviso cuando su profesional cae y cuando vuelve; a un coach suspendido ya no se le puede reservar por ningún camino; Cloudflare y unpkg están declarados; contraste, afirmaciones sin respaldo y foco de teclado en la web, hechos.
+
+---
+
+## M. Lo que Vita toma de Selia — plan del 17/09/2026
+
+> Sale de `docs/competencia-selia.md` §19–23. Andre (17/09): *"anotá todo, y
+> completemos todo"*. Antes de escribir se verificó qué ya existía en la app, para
+> no rehacer nada: "Reservar próxima sesión" al terminar la sesión **ya existe**
+> (`SalaScreen`), igual que reservar de nuevo desde Mensajes (`SessionsScreen`).
+>
+> **No reemplaza a la sección L**: lo que bloquea el lanzamiento sigue siendo L1–L5.
+>
+> 📌 **Ampliado en la sesión 260** con lo que salió de leer las 138 reseñas públicas de las tiendas de Selia
+> (`competencia-selia.md` §24): M15, M16, M17, M18. A diferencia de todo lo anterior de esta sección, que salía
+> de mirar su producto, esto sale de sus **usuarios reales diciendo qué les falló**.
+
+### M.1 — Antes de lanzar (chico, de alto impacto)
+
+| ID | Qué | Por qué (Selia) | Estado |
+|---|---|---|---|
+| **M1** | **Decir por qué se recomienda a cada profesional** en los resultados del quiz | Selia explica cada match; baja el miedo a elegir | ✅ 17/09. Ya había una frase, pero mentía cuando el quiz aflojaba filtros en silencio, y decidía "psicólogo" por texto libre (mismo defecto que el buscador el 03/09). Ahora cada tarjeta dice lo que cumple y lo que no (`lib/quizMatch.ts`, 9 tests), y la regla de tipo vive en `lib/tipoProfesional.ts`, compartida con el buscador. ⚠️ Los rangos de presupuesto ($5.000 / $10.000) quedan hasta tener precios reales |
+| **M2** | **Salida si ninguno convence** al final del quiz: ver otras opciones y volver a responder | Su red de seguridad (rehacer matching, orientación) | ✅ 17/09. De a 3, "Ver otras opciones", "Cambiar mis respuestas" (vuelve con lo elegido marcado) y "Ver todos los profesionales". Solo muestra perfiles que trabajan el tema |
+| **M3** | **"Avisame cuando tenga horarios"** cuando un profesional no tiene turnos | Su "Solicitar disponibilidad" | ✅ 17/09. Tabla `availability_waitlist`, edge function `availability-notices` con cron horario, probado de punta a punta en producción. Ver SCHEMA.md. 📱 Falta verlo en el teléfono |
+| **M4** | **Calificar la videollamada aparte** del profesional en la reseña | Separa falla técnica de insatisfacción; sirve para L1 | ✅ 17/09. Tabla privada `session_call_feedback`, pregunta opcional en `ReviewScreen`. ⚠️ "No pude entrar" casi nunca llega por acá (la reseña exige sesión completada): ver SCHEMA.md. 📱 Falta verlo en el teléfono |
+| **M14** | **Cómo trabaja el profesional**: estilo (en palabras de la persona) y enfoque (la escuela) | Observación de Andre sobre el quiz de Selia: además de preguntar si querés un psicólogo, pregunta **qué tipo de acompañamiento** querés (su "enfoque", opcional, `competencia-selia.md` §4.a) | ✅ 17/09. `coaches.estilo` + `coaches.enfoques` (ver SCHEMA.md, corridas y probadas con rollback), pantalla "Cómo trabajo" del profesional, cuarta pregunta del quiz y sección nueva en el perfil público. `lib/enfoque.ts`, 20 tests. ⚠️ El estilo ordena y explica, **nunca filtra**. ⚠️ La respuesta del quiz no se persiste: vale para esa corrida. 📱 Falta verlo en el teléfono. 🔒 La escuela pide matrícula verificada (trigger en la base, probado con revocación incluida) |
+
+| **M15** | 🔴 **Reagendar no existe: hoy solo se puede cancelar.** A quien se le complica 3 horas antes, la única salida es cancelar y perder la plata. | §24.3 de `competencia-selia.md`: es la queja más razonada de su App Store, con reseñas largas y argumentadas. Y **Selia está mejor que nosotros acá**: ellos al menos dejan mover con más de 24hs de anticipación. | 🟡 **Decisión de Andre.** Propuesta a confirmar: mover a otro horario libre del mismo profesional sin perder el pago; fuera de las 24hs libre, dentro de las 24hs una vez y con el profesional pudiendo aceptar o no. Ojo: toca `bookingCancel.ts`, el trigger `mark_refund_on_cancel` y el ranking (el reagendamiento es señal del deck) |
+| **M16** | **Si el profesional mueve la sesión, que el horario nuevo lo elija el usuario** (o que le vuelva la plata). | La queja más furiosa contra Selia: el especialista reagenda a un horario que el paciente no puede y el paciente pierde igual. | 🟡 **Decisión de Andre**, y depende de M15. 📌 Hoy Vita ya está bien en la mitad importante: si el profesional cancela tarde, `mark_refund_on_cancel` devuelve la plata igual. Lo que falta es la regla para cuando **mueve** en vez de cancelar |
+
+### M.2 — Primer mes después de lanzar
+
+| ID | Qué | Por qué | Estado |
+|---|---|---|---|
+| **M5** | **Cambio de profesional sin culpa** después de la primera sesión | Su "¿Querés continuar con este especialista?" + sesión sin costo con otro | 🟡 **Decisión de Andre**: cómo convive con la garantía de reintegro (T&C §9.3) |
+| **M6** | **Próxima sesión sugerida por el profesional** ("en una semana") | Su "Próxima sesión sugerida"; refuerza la anti-fuga n.º 1 | ✅ 17/09. Tabla `next_session_suggestions` (ver SCHEMA.md) + app: tarjeta con las cinco opciones para el profesional al terminar la sesión, la sugerencia se lee en la tarjeta de cierre del cliente, y `/booking-calendar` abre en ese día y lo marca (queda elegido solo si hay horario libre). `lib/proximaSesion.ts`, 13 tests. 📱 Falta verlo en el teléfono |
+| **M7** | **Referidos** con descuento pagado de la comisión de Vita | Su 50% al amigo + créditos | 🟡 **Decisión de Andre**: cuánto y para quién |
+
+### M.3 — Cuando haya gente usando la app
+
+| ID | Qué | Nota |
+|---|---|---|
+| **M8** | **Paquetes de sesiones** | Empezar por PayPal y USDT, donde Vita retiene la plata (con MP va al profesional) |
+| **M9** | **Tests gratis en la web** (ansiedad, ánimo) que terminen en el quiz | Para Google. "Vita guía, no diagnostica"; derivar a Ayuda si el resultado es alto |
+| **M10** | ~~**Preparar la sesión**~~ **YA EXISTE**: es el "paquete para la sesión" (`docs/paquete-para-la-sesion.md`, `lib/paquete.ts`, `app/paquete.tsx`, `components/OfrecerPaqueteBanner.tsx`), construido y probado en dispositivo | No hay que construirlo. Lo que sigue abierto es la **decisión de Andre del 14/09**: si se invierte el origen del material ("anotar para la sesión" en el momento, en vez de check-ins), y si el diario entra o la nota alcanza. Ver §9 de ese doc |
+| **M11** | **Empresas** | Cuando haya usuarios y reseñas para mostrar |
+| **M17** | **Recordatorio para llenar el diario** | Pedido textual de un usuario de Selia de 5 estrellas (§24.2): *"me gustaría que tuviera una opción de recordatorio para llenar el diario"*. Es un pedido ya validado y gratis. Existe `lib/resourceReminders.ts` para recursos, no para el diario |
+| **M18** | **Bajarse los archivos que manda el profesional por el chat** | Queja de Selia (§24.3): hay que abrir la web para descargarlos. ⚠️ **Falta confirmar si nos aplica**: no se verificó si la Sala de Vita permite adjuntos |
+
+### M.4 — Fuera de la app
+
+| ID | Qué | Nota |
+|---|---|---|
+| **M12** | **Página de una hoja para profesionales** comparando condiciones | `competencia-selia.md` §23.2 c. Lo único útil sin usuarios |
+| **M13** | **Escribir en T&C que no hay costo de alta** para profesionales | Antes de prometerlo en M12 |
+
+### M.5 — Descartado a propósito (no re-proponer sin algo nuevo)
+
+Notas automáticas grabando la sesión (datos de salud, equipo de dos) · cuentas familiares (Vita es 18+) · terapia grupal (con grupales Apple exige su sistema de pago, 3.1.3(d)) · psiquiatría y orientación humana de 15 minutos (no escalan para dos).
+
+---
+
 ## A. Exposición — no es producto, es riesgo vivo
 
 **Nada de las secciones B–F vale más que esto.** La revisión de ejecutabilidad
@@ -25,7 +159,7 @@ dos hermanos no.
 | **A1** | ⏭️ **ASIGNADO A JOAQUÍN el 08/09** (device review). 🔴 **Dos de las tres ramas del piso de seguridad nunca se probaron.** Es la única feature que le habla a alguien en crisis. ✅ El 07/09 una hora de teléfono encontró un bug que **540 tests no vieron** (le prometía una sesión inexistente), porque el bug no estaba en una función sino en la relación entre dos partes de una pantalla. | Forzar los dos casos que faltan: sin ninguna sesión, y con una agendada. | 15 min |
 | **A2** | ⏸️ **DECIDIDO el 08/09: se queda hasta el lanzamiento.** Es **"Coach Prueba"** (`e58d2ec3`, especialidad *"Especialidad de prueba"*), `verified` y `activo`, con MP conectado y `price_per_session = 1` — `mp-create-payment` deriva el precio de esa columna, así que cobraría $1 real. **Andre lo deja porque hace falta un coach para ejercitar los flujos, y con cero usuarios el riesgo es cero.** 🔴 **El riesgo no es tenerlo: es olvidárselo el día que abran** — y ya llevaba varias sesiones apareciendo en "pendiente" sin que eso lo moviera. | ✅ **Mitigado, no resuelto: `scripts/verificar-pre-lanzamiento.sql`** (solo lectura, 5 chequeos, devuelve filas solo si hay problema). Correrlo con la service key **antes de dejar entrar a la primera persona** deja de depender de que alguien se acuerde. | — |
 | **A4** | ⏭️ **ASIGNADO A JOAQUÍN el 08/09.** 🔴 **`authenticated` puede leer las 17 columnas de `profiles` de TODOS los coaches** — mail y `push_token` incluidos. El agujero que se cerró para `anon` ese mismo día **está a un registro de distancia**. | No es de dos líneas: hay que mover al servidor el envío de push (client-side en 6 lugares) y la lectura de mails del panel, y después una vista pública para el catálogo. **Receta abajo.** | Media sesión larga |
-| **A5** | ⏭️ **ASIGNADO A JOAQUÍN el 09/09.** 🔴 **El camino del cliente #1 está construido entero y hay tres cosas que solo se prueban con un teléfono y plata.** Sin eso no se puede prender `CHECKOUT_HABILITADO`. | Tres pruebas cortas. **Receta abajo.** | Una hora, más la del 18 |
+| **A5** | 📌 **17/09: prueba 1 cerrada (11/09); pruebas 2 y 3 y el DMARC siguen abiertos → L1, L2, L4.** ⏭️ **ASIGNADO A JOAQUÍN el 09/09.** 🔴 **El camino del cliente #1 está construido entero y hay tres cosas que solo se prueban con un teléfono y plata.** Sin eso no se puede prender `CHECKOUT_HABILITADO`. | Tres pruebas cortas. **Receta abajo.** | Una hora, más la del 18 |
 | **A3** | ✅ **RESUELTA el 13/09/2026: la columna ES nullable, así que el guard es NECESARIO.** `information_schema.columns` sobre `public.coaches` devuelve `price_per_session` → `numeric`, **`is_nullable = YES`, sin default** (y `price_usd` igual). Es exactamente la condición que el propio comentario de `app/search3.tsx` nombraba como *"un crash esperando al primer coach sin precio"*: sin el guard, `.toLocaleString()` sobre null revienta la tarjeta. 📌 Hoy **no dispara** —0 de 34 filas en null, medido el 07/09— pero nada lo impide: no hay `NOT NULL` ni default, y el alta de coach no exige precio. 📌 **Cómo se resolvió sin service key**: `npx supabase db query --linked`, que ejecuta SQL contra producción con el login del CLI — la nota de que "el endpoint OpenAPI de PostgREST exige `service_role`" era cierta pero había otro camino. | ✅ Hecha. | — |
 
 ### A1 — receta para Joaquín (device review del piso de seguridad)
