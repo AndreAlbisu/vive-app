@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { AppBg } from '@/components/ui/AppBg';
-import { ViveFonts } from '@/constants/theme';
+import { ViveFonts, ViveColors } from '@/constants/theme';
 import { PASTEL_AZUL, PASTEL_SALVIA, PASTEL_TEAL, PASTEL_DURAZNO } from '@/constants/tools';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
@@ -61,6 +61,13 @@ function formatTime(s: number) {
   const m = Math.floor(s / 60);
   const sec = s % 60;
   return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+// Misma pastilla de fecha que Diario y Gratitud (arriba a la derecha).
+function formatTodayShort() {
+  return new Date()
+    .toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+    .replace('.', '');
 }
 
 export default function RuidoScreen() {
@@ -122,12 +129,16 @@ export default function RuidoScreen() {
     allPlayers.forEach(p => { try { p.volume = 0; p.pause(); } catch {} });
   }
 
-  function startFadeIn(p: typeof playerLluvia) {
+  function startFadeIn(p: typeof playerLluvia, soundId: string) {
     stopFade();
-    const FROM = 0.22;   // audible inmediato — sin silencio previo
+    // 🌊 Olas arranca con un pico y asusta: para ese sonido el fade sale desde
+    // SILENCIO y dura más (~2.4s), para que entre de a poco. El resto mantiene
+    // el fade "audible inmediato" (0.22) para que no haya un vacío al iniciar.
+    const suave = soundId === 'olas';
+    const FROM = suave ? 0 : 0.22;
     const TO   = 0.38;
-    const steps = 20;
-    const intervalMs = 60;   // 20 × 60ms = 1.2s total
+    const steps = suave ? 40 : 20;
+    const intervalMs = 60;   // olas: 40×60 = 2.4s · resto: 20×60 = 1.2s
     let step = 0;
     // Volumen inicial inmediatamente (antes del primer tick del interval)
     try { p.volume = FROM; } catch {}
@@ -145,7 +156,7 @@ export default function RuidoScreen() {
 
     const active = getPlayer();
     allPlayers.forEach(p => { if (p !== active) try { p.volume = 0; } catch {} });
-    startFadeIn(active);  // no hay play(): ya estaba corriendo desde el mount
+    startFadeIn(active, selectedSound);  // no hay play(): ya estaba corriendo desde el mount
 
     let el = 0;
     timerRef.current = setInterval(() => {
@@ -185,8 +196,9 @@ export default function RuidoScreen() {
           onBack={() => { stopTimer(); pauseAll(); router.back(); }}
           right={
             <>
+              <Text style={s.datePillText}>{formatTodayShort()}</Text>
               <ReminderBell kind="tool" resourceRef="ruido" title="Sonidos ambientales" />
-              <PinButton resourceId="ruido" />
+              <PinButton resourceId="ruido" inline />
             </>
           }
         />
@@ -197,6 +209,9 @@ export default function RuidoScreen() {
             <MaterialCommunityIcons name="check-circle-outline" size={72} color={TERRACOTTA} />
             <Text style={s.subtitle}>Tiempo completado</Text>
             <Text style={s.description}>{formatTime(duration)} de descanso.</Text>
+            <Text style={s.doneCoach}>
+              ¿Alguno te ayuda a arrancar o a dormir? Contáselo a tu coach: puede armarte una rutina.
+            </Text>
             <ScaleCard style={s.primaryBtn} onPress={() => setPhase('idle')} activeOpacity={0.85}>
               <Text style={s.primaryBtnText}>Volver</Text>
             </ScaleCard>
@@ -283,12 +298,27 @@ const s = StyleSheet.create({
   safe:    { flex: 1 },
   headerDivider: { height: 1, backgroundColor: 'rgba(58,79,42,0.08)' },
 
+  // Pastilla de fecha del header — idéntica a Diario/Gratitud.
+  datePillText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.text,
+    backgroundColor: 'rgba(255,255,255,0.70)',
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.14)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    overflow: 'hidden',
+  },
+
   content:      { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 18 },
   scrollContent:{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 24, gap: 18 },
   subtitle:     { fontFamily: ViveFonts.title, fontSize: 26, color: FOREST, textAlign: 'center' },
   screenTitle:  { fontFamily: ViveFonts.semibold, fontSize: 22, color: FOREST, textAlign: 'center' },
   description:  { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
   descriptionSmall: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT, textAlign: 'center', marginTop: -8 },
+  doneCoach:    { fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST_SOFT, textAlign: 'center', lineHeight: 21, paddingHorizontal: 8 },
 
   soundGrid: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
   soundCard: {
