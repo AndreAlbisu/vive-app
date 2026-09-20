@@ -270,6 +270,10 @@ export default function BookingScreen_Calendar() {
             <Text style={s.waitTitle}>{nombre} no tiene horarios libres por ahora</Text>
             {aviso === 'pendiente' ? (
               <>
+                <View style={s.waitBadge}>
+                  <MaterialIcons name="notifications-active" size={14} color="#565E32" />
+                  <Text style={s.waitBadgeText}>Aviso pendiente</Text>
+                </View>
                 <Text style={s.waitText}>
                   Listo. Te avisamos apenas abra horarios nuevos.
                 </Text>
@@ -446,6 +450,12 @@ const s = StyleSheet.create({
     padding: 16, marginBottom: 18, gap: 8,
   },
   waitTitle: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#565E32' },
+  waitBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+    backgroundColor: 'rgba(86,94,50,0.12)', borderRadius: 999,
+    paddingVertical: 4, paddingHorizontal: 10,
+  },
+  waitBadgeText: { fontFamily: ViveFonts.semibold, fontSize: 12, color: '#565E32' },
   waitText: { fontFamily: ViveFonts.regular, fontSize: 13.5, color: '#566245', lineHeight: 20 },
   waitBtn: {
     backgroundColor: '#565E32', borderRadius: 14, marginTop: 4,

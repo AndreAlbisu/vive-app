@@ -4,6 +4,20 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-20 — Joaquín (device-testing de las features nuevas de Andre + 2 fixes de UI)
+
+**Tocado:** `screens/BookingScreen_Calendar.tsx`, `screens/AdminScreen.tsx`.
+
+**Resumen:**
+- **Device-testing de lo nuevo de Andre** (quiz "por qué", ícono de ondas en Conexiones, waitlist "avisame cuando haya horarios", videollamada calificada aparte, sanciones desde el panel admin): **todo funciona**. El único "error" de la reseña con solo estrellas era dato de prueba mío (la RLS `reviews_insert_completed_session` exige booking `completada`, no es bug).
+- **Fix 1 (waitlist):** cuando ya pediste el aviso, la tarjeta ahora muestra un badge visible **"🔔 Aviso pendiente"** además del texto de confirmación. El backend del waitlist ya estaba sano (tabla, 3 policies, default `auth.uid()` en `user_id`).
+- **Fix 2 (panel admin):** el input de "motivo" mostraba un cuadro del color del fondo que cortaba la pantalla al abrir el teclado. Era el `KeyboardAvoidingView` con `behavior='padding'` + `keyboardVerticalOffset={90}` fijo. Reemplazado por `automaticallyAdjustKeyboardInsets` en el ScrollView (iOS), sin ese artefacto.
+
+**Pendiente para la próxima sesión:**
+- Revocar la suspensión de "Coach Prueba" (andrealbisu) en el panel si quedó puesta de la prueba, para no dejar la cuenta de coach de Andre fuera del catálogo.
+- Estos fixes van en la rama `device-tests` (junto con los de PR #4). Confirmar con Andre el merge.
+
+---
 ## 2026-09-18 — Andre (sesión 262 · ícono de ondas para Bienestar mental)
 
 **Tocado:** `components/EjeIcon.tsx` (nuevo), `constants/conexionesDoors.ts`, `app/(tabs)/conexiones.tsx`.
