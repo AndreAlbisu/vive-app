@@ -75,6 +75,29 @@ async function ensureRoom(roomName: string, nbf: number, exp: number): Promise<s
   })
   if (get.ok) {
     const room = await get.json()
+    // 🔴 La sala se reusa, pero su ventana (`nbf`/`exp`) se fijó al CREARLA. Hoy
+    // eso alcanza porque una reserva no cambia de horario. Si algún día se
+    // implementa "reagendar" (pendiente de Andre), la sala ya existente seguiría
+    // con la ventana vieja y Daily rechazaría la entrada ("not available yet" /
+    // "expired") aunque el token se acuñe con el horario nuevo — Daily valida las
+    // dos ventanas, la del token Y la de la sala. Se sincroniza acá, de paso: en
+    // el flujo normal las ventanas ya coinciden y este PATCH no se dispara.
+    const cfg = (room?.config ?? {}) as { nbf?: number; exp?: number }
+    if (cfg.nbf !== nbf || cfg.exp !== exp) {
+      const upd = await fetch(`${DAILY_API}/rooms/${encodeURIComponent(roomName)}`, {
+        method: 'POST',
+        headers: dailyHeaders,
+        body: JSON.stringify({ properties: { nbf, exp } }),
+      })
+      if (upd.ok) {
+        const actualizada = await upd.json()
+        return actualizada.url as string
+      }
+      // Si el update falla, la sala existente igual sirve para el caso de hoy
+      // (misma ventana): se devuelve su URL y se deja registro, en vez de cortar
+      // la entrada por una sincronización que solo importa cuando se reagenda.
+      console.error(`[create-meeting-room] no se pudo actualizar nbf/exp de ${roomName}: ${upd.status} ${await upd.text()}`)
+    }
     return room.url as string
   }
   if (get.status !== 404) {

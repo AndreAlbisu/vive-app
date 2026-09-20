@@ -4,6 +4,19 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-20 — Joaquín (fix latente en create-meeting-room: nbf/exp de sala reusada)
+
+**Tocado:** `supabase/functions/create-meeting-room/index.ts`.
+
+**Resumen:**
+- **`ensureRoom` no refrescaba `nbf`/`exp` cuando la sala de Daily ya existía** — solo las fijaba al crearla. Hoy es inofensivo (una reserva no cambia de horario), pero si se implementa "reagendar" (pendiente de Andre), la sala reusada quedaría con la ventana vieja y Daily rechazaría la entrada ("not available yet"/"expired") aunque el token se acuñe con el horario nuevo (Daily valida las dos ventanas). Ahora, si la ventana difiere, hace PATCH `POST /rooms/{name}` de paso. En el flujo normal las ventanas ya coinciden, así que el PATCH no se dispara (sin costo extra).
+- Descubierto en la caza de bugs del flujo de videollamada (20/09). El resto del flujo —create-meeting-room, meetingRoom.ts, SalaScreen, web/sala, session-attendance, crons— quedó revisado y **limpio**.
+
+**Pendiente para la próxima sesión:**
+- 🔴 **Requiere deploy** (`supabase functions deploy create-meeting-room --use-api`) — queda en PR draft para que Andre lo revise y deploye; NO deployado en esta sesión.
+- El fix habilita "reagendar" a futuro, pero reagendar in-place sigue sin implementarse.
+
+---
 ## 2026-09-18 — Andre (sesión 262 · ícono de ondas para Bienestar mental)
 
 **Tocado:** `components/EjeIcon.tsx` (nuevo), `constants/conexionesDoors.ts`, `app/(tabs)/conexiones.tsx`.
