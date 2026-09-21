@@ -24,7 +24,7 @@
 
 | ID | Qué falta | Estado | Quién |
 |---|---|---|---|
-| **L1** | **La videollamada nunca se ejercitó con dos personas adentro** (A5 prueba 2). | 🔴 Abierto. Hace falta agendar una sesión real con `coach-prueba`: la sala abre 15 min antes. | Joaquín / Andre |
+| **L1** | ~~**La videollamada nunca se ejercitó con dos personas adentro** (A5 prueba 2).~~ | ✅ **Cerrado 21/09.** Andre la hizo solo, con las dos puntas: cliente desde su iPhone (app) y coach desde la compu (`/sala?booking=…`, identificándose con el mail de `coach-prueba`). **Se vieron y se escucharon.** No hizo falta Joaquín: alcanza con un segundo dispositivo. | — |
 | **L2** | ~~**La comisión real de MP** medida sobre un pago de verdad, no el de $1 (A5 prueba 3).~~ | ✅ **Cerrado 21/09.** No hizo falta el panel: se leyeron los pagos por la API de MP con el token del coach. Los tres pagos de $4.500 (`174555144528`, `174554303062`, `173787714415`) dan el mismo número, **4,30%**, no 4%. `MP_FEE_PCT_OBSERVED = 4.3`. El 4 viejo no estaba mal medido, estaba mal redondeado: sobre $1 la tarifa es 0,04 y los centavos tapan el 0,3. **La duda del IVA se cerró: ya lo incluye** (193,63 / 1,21 = 3,556% de 4.500). | — |
 | **L3** | **Prender `CHECKOUT_HABILITADO`** en `web/c/index.html`. | ✅ Verificado 17/09: sigue en `false`. Depende de L1 y L2. | — |
 | **L4** | ~~**DMARC de `vitaapp.com.ar`**~~ | ✅ **Cerrado 21/09.** `_dmarc` TXT = `v=DMARC1; p=none; rua=mailto:andrealbisu@gmail.com`, puesto con `vercel dns add` (record `rec_ed677faef43c7312ae8d842c`) y verificado resolviendo desde Google, Cloudflare y el autoritativo. Seguro de publicar porque DKIM ya alineaba: ver la nota de abajo. | — |
@@ -84,7 +84,7 @@ qué darse cuenta si algo quedó afuera.
 | **L23** | Sanciones desde el celular: advertencia con captura adjunta, abrirla, levantarla; y un CBU en el chat que rebote y aparezca en Administración → Sanciones. | 242, 247 |
 | **L24** | Versión mínima: `min_version = 9.9.9` en iOS, ver la pantalla de bloqueo, volver a `1.0.0`. | 245 |
 | **L37** | **El recorrido de entrada con cuenta obligatoria** (sesión 255): bienvenida → bifurcación → "Quiero crecer" → registro con Google → tiene que aparecer "¿Cómo te gustaría empezar?". Repetir con mail (pasa por el código) y con una cuenta existente vía "Ya tengo cuenta" (tiene que ir directo a la app). Y **sin cuenta**, tocar "¿Necesitás ayuda ahora?" al pie del registro y del login: tiene que abrir las líneas de crisis. 📌 **De la bifurcación se sacó el 21/09 a pedido de Andre**, así que ahí ya no va. | 255 |
-| **L39** | 🔴 **La videollamada en un iPhone, entrando desde la Sala.** La sesión 260 cambió cómo se abre en iOS (Safari en vez del navegador in-app, porque ahí el permiso de cámara y micrófono no es confiable): es un arreglo sin verificar sobre un camino sin verificar. Se cierra junto con L1, en la misma sesión de prueba. | 260 |
+| **L39** | ~~**La videollamada en un iPhone, entrando desde la Sala.**~~ | ✅ **Cerrado 21/09: el arreglo de la sesión 260 anda.** Desde el iPhone abrió **Safari de verdad**, pidió permiso de cámara y micrófono, y la llamada entró. O sea que `Linking.openURL` en iOS hace lo que se esperaba y el bug que le pasa a Selia no nos pasa. | 260 |
 | **L25** | ~~Primera corrida del cron de "tu profesional volvió"~~ | ✅ Verificado el 17/09: corre cada hora con 200 y `{"revisados":0}`; el borrado diario de avisos corrió con `DELETE 0`. |
 
 ### L.5 — No bloquea
