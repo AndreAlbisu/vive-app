@@ -184,7 +184,37 @@ serve(async (req) => {
     // vuelve IVA incluido y el ingreso real cae a ~16,5%. Es decisión de precio,
     // no de código: cambiar esto sin cambiar el copy de CoachProfileScreen y el
     // §8.4 de los T&C deja las tres cosas contradiciéndose.
-    const marketplaceFee = marketplaceFeeFor(precio, commissionPct)
+    const marketplaceFeeBase = marketplaceFeeFor(precio, commissionPct)
+
+    // ── M7: el descuento del que llega invitado ──────────────────────────────
+    //
+    // 🔴 **Sale entero de la comisión de Vita.** El coach cobra lo mismo que
+    // cobraría sin descuento; de hecho unos pesos más, porque la tarifa de
+    // Mercado Pago se calcula sobre un monto menor. Por eso se bajan LAS DOS
+    // cosas a la vez: lo que paga la persona y el `marketplace_fee`. Bajar solo
+    // el precio sería pedirle al profesional que pague nuestro marketing.
+    //
+    // ⚠️ El descuento se recorta a la comisión (`Math.min`): con una comisión
+    // del 0% (promo del link del coach, D13) el descuento es 0 y no hay cobro
+    // donde Vita ponga plata. Hoy es imposible que se alcance el tope, porque
+    // el descuento es 10 y la comisión más baja que cobra es 15; existe para el
+    // día que alguien mueva uno de los dos números.
+    //
+    // 📌 El descuento se CALCULA acá pero no se marca como usado: eso lo hace
+    // `mp-webhook` cuando el pago se aprueba. Si se marcara acá, un checkout
+    // abandonado le quemaría el descuento a alguien que nunca pagó.
+    const DESCUENTO_REFERIDO_PCT = 10
+    let descuento = 0
+    const { data: tieneDescuento } = await supabase.rpc('tiene_descuento_referido', {
+      p_user: booking.user_id,
+    })
+    if (tieneDescuento === true) {
+      const pct = Math.min(DESCUENTO_REFERIDO_PCT, commissionPct)
+      descuento = Math.round((precio * pct) / 100 * 100) / 100
+    }
+
+    const precioCobrado = Math.round((precio - descuento) * 100) / 100
+    const marketplaceFee = Math.round((marketplaceFeeBase - descuento) * 100) / 100
 
     // ⚠️ MONEY RELEASE (RE-VERIFICADO en docs MP, 07/2026): con Checkout Pro NO hay
     // parámetro para setear/demorar el release por transacción. `money_release_date`
@@ -200,7 +230,7 @@ serve(async (req) => {
       items: [{
         title: `Sesión con ${booking.coach_name ?? 'tu coach'}`,
         quantity: 1,
-        unit_price: precio,
+        unit_price: precioCobrado,
         currency_id: booking.currency ?? 'ARS',
       }],
       external_reference: booking.id,           // clave para mp-webhook
@@ -265,7 +295,14 @@ serve(async (req) => {
 
     await supabase
       .from('bookings')
-      .update({ preference_id: pref.id, payment_status: 'pendiente', platform_fee_pct: commissionPct })
+      .update({
+        preference_id: pref.id,
+        payment_status: 'pendiente',
+        platform_fee_pct: commissionPct,
+        // Queda guardado para poder explicar por qué el cobro no coincide con
+        // el precio del profesional.
+        referral_discount: descuento,
+      })
       .eq('id', booking.id)
 
     // En modo test hay que abrir el checkout de SANDBOX (sandbox_init_point);

@@ -257,6 +257,29 @@ serve(async (req) => {
     // ninguna sesión que confirmar.
     if (patch.payment_status === 'aprobado' && cambiada?.length) {
       await applyPaidBookingEffects(supabase, bookingId)
+
+      // ── M7: recién acá se quema el descuento del referido ─────────────────
+      //
+      // 🔴 **No se marca al crear la preferencia.** Si se marcara ahí, un
+      // checkout abandonado le quemaría el descuento a alguien que nunca pagó,
+      // y esa persona no tendría forma de recuperarlo: el descuento es uno por
+      // vida. Acá ya hay plata acreditada.
+      //
+      // 📌 Idempotente por el `is('referral_redeemed_at', null)`: MP reintenta
+      // el mismo webhook, y sin eso la segunda pasada movería la fecha.
+      const { data: b } = await supabase
+        .from('bookings')
+        .select('user_id, referral_discount')
+        .eq('id', bookingId)
+        .maybeSingle()
+
+      if (b && Number(b.referral_discount) > 0) {
+        await supabase
+          .from('profiles')
+          .update({ referral_redeemed_at: new Date().toISOString() })
+          .eq('id', b.user_id)
+          .is('referral_redeemed_at', null)
+      }
     }
 
     // Sigue SIN dispararse la confirmación desde acá cuando el coach NO tiene
