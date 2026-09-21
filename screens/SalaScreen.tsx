@@ -202,6 +202,9 @@ export default function SalaScreen() {
   const [recipientId, setRecipientId] = useState<string | null>(null);
   // M16: los horarios que el profesional propuso para esta sesión.
   const [propuestas, setPropuestas] = useState<{ id: string; fecha: string; hora: string }[]>([]);
+  // M5: si esta es la PRIMERA sesión con este profesional y todavía está dentro
+  // de las 48hs de §9.3, se pregunta si quiere seguir.
+  const [garantiaPedida, setGarantiaPedida] = useState(false);
   const [resolviendo, setResolviendo] = useState(false);
   const [recipientIsCoach, setRecipientIsCoach] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -237,6 +240,7 @@ export default function SalaScreen() {
   const [guardandoSugerencia, setGuardandoSugerencia] = useState(false);
 
   const [hasSessionHistory, setHasSessionHistory] = useState(false);
+  const [sesionesCompletadas, setSesionesCompletadas] = useState(0);
   const [sessionState, setSessionState] = useState<SessionState>('none');
   const [isCancelling, setIsCancelling] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -439,6 +443,9 @@ export default function SalaScreen() {
       if (!mounted) return;
 
       setHasSessionHistory((sessionHistoryRes.count ?? 0) > 0);
+      // M5: hace falta el número, no solo si hay alguna: §9.3 alcanza a la
+      // PRIMERA sesión del vínculo y a ninguna otra.
+      setSesionesCompletadas(sessionHistoryRes.count ?? 0);
 
       const recipientName = (profileResult.data as any)?.name ?? '';
       const recipientAvatarUrl = (profileResult.data as any)?.avatar_url ?? null;
@@ -614,6 +621,33 @@ export default function SalaScreen() {
       .then(({ data }) => { if (vivo) setPropuestas(data ?? []); });
     return () => { vivo = false; };
   }, [activeBooking?.id, recipientIsCoach]);
+
+  // M5. 🔴 No aprueba nada: deja el pedido registrado y le llega al mismo buzón
+  // al que antes la persona tenía que escribirle un mail. Lo resuelve un humano,
+  // porque §9.3 permite denegar por uso abusivo y eso no lo decide un `if`.
+  function pedirGarantia(bookingId: string) {
+    Alert.alert(
+      '¿Querés que te devolvamos lo que pagaste?',
+      'Es tu derecho por la primera sesión con alguien, dentro de las 48hs, y no hace falta que expliques por qué. Lo revisamos y te avisamos.',
+      [
+        { text: 'Ahora no', style: 'cancel' },
+        {
+          text: 'Sí, pedirlo',
+          onPress: async () => {
+            const { error } = await supabase.functions.invoke('guarantee-claim', {
+              body: { booking_id: bookingId, solicitar: true },
+            });
+            if (error) {
+              Alert.alert('No se pudo', 'Probá de nuevo, o escribinos a vitaappar@gmail.com.');
+              return;
+            }
+            setGarantiaPedida(true);
+            Alert.alert('Lo recibimos', 'Te avisamos por mail cuando esté resuelto.');
+          },
+        },
+      ],
+    );
+  }
 
   async function tomarHorario(id: string) {
     if (resolviendo) return;
@@ -1195,6 +1229,18 @@ export default function SalaScreen() {
 
   const isCurrentUserCoach = !recipientIsCoach;
   const isChatFrozen = (activeBooking?.status === 'pendiente' && !hasSessionHistory) || pairBlocked;
+
+  // M5 / §9.3: la garantía alcanza a la primera sesión de cada vínculo y se
+  // pide dentro de las 48hs del horario agendado. Las dos condiciones se
+  // calculan acá y no adentro del JSX para que se lean juntas: separadas es
+  // fácil tocar una y olvidarse de la otra.
+  const esPrimeraConEl = sesionesCompletadas === 1;
+  const dentroDeLas48 = !!activeBooking && (() => {
+    const inicio = scheduledAtMs(activeBooking.scheduled_date, activeBooking.scheduled_time);
+    if (!Number.isFinite(inicio)) return false;
+    const horas = (Date.now() - inicio) / 3_600_000;
+    return horas >= 0 && horas <= 48;
+  })();
   const canSend = inputText.trim().length > 0 && !!salaId && !!user && !isChatFrozen;
   const displayInitials = recipientProfile?.initials ?? '···';
 
@@ -1764,6 +1810,34 @@ export default function SalaScreen() {
                 <MaterialCommunityIcons name="calendar-plus" size={16} color="#FFF6EC" />
                 <Text style={styles.endedBtnText}>Reservar próxima sesión</Text>
               </TouchableOpacity>
+
+              {/* M5: la otra respuesta posible. 🔴 Hasta hoy la tarjeta solo
+                  ofrecía seguir: quien NO quedaba cómodo no tenía ningún botón,
+                  y para recuperar su plata tenía que escribir un mail contando
+                  por qué. La mayoría se iba en silencio.
+
+                  📌 Solo en la PRIMERA sesión con esa persona (`sesionesConEl
+                  === 1`), que es el alcance de §9.3, y solo dentro de las 48hs.
+                  Pasado ese plazo desaparece en vez de ofrecer algo que se va a
+                  rechazar. */}
+              {esPrimeraConEl && dentroDeLas48 && !garantiaPedida && (
+                <View style={styles.noComodoBox}>
+                  <Text style={styles.noComodoTxt}>¿No te sentiste cómodo con esta sesión?</Text>
+                  <TouchableOpacity
+                    onPress={() => pedirGarantia(activeBooking.id)}
+                    activeOpacity={0.7}>
+                    <Text style={styles.noComodoLink}>Que me devuelvan lo que pagué</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => router.push('/search3')} activeOpacity={0.7}>
+                    <Text style={styles.noComodoLink}>Ver otros profesionales</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {garantiaPedida && (
+                <Text style={styles.noComodoTxt}>
+                  Recibimos tu pedido. Te avisamos por mail cuando esté resuelto.
+                </Text>
+              )}
             </View>
           )}
 
@@ -2127,6 +2201,13 @@ const styles = StyleSheet.create({
   },
   confirmBtnDisabled: { opacity: 0.6 },
   confirmBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#FFF6EC' },
+
+  // M5. Separado del botón de seguir por una línea: son dos respuestas
+  // opuestas a la misma pregunta, y pegadas se leen como dos botones de lo
+  // mismo.
+  noComodoBox: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(135,131,92,0.25)', gap: 8 },
+  noComodoTxt: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#566245' },
+  noComodoLink: { fontFamily: ViveFonts.semibold, fontSize: 13, color: ViveColors.primary },
 
   // M16. Caja propia y no un renglón más: es una decisión, no un aviso.
   propuestaBox: {

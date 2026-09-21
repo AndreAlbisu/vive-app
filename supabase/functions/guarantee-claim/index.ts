@@ -32,6 +32,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { guaranteeFailures, scheduledAtMs } from '../_shared/guarantee.ts'
 import { esServiceRole } from '../_shared/service-role.ts'
+import { enviarMail } from '../_shared/email.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -76,18 +77,49 @@ async function authorize(authHeader: string): Promise<{ ok: boolean; identity: s
   return { ok: true, identity: user.email ?? user.id }
 }
 
+/** Quién pide, cuando el que pide es el CLIENTE y no un admin (M5). */
+async function quienPide(authHeader: string): Promise<string | null> {
+  if (!authHeader.startsWith('Bearer ')) return null
+  const asCaller = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: authHeader } },
+  })
+  const { data: { user } } = await asCaller.auth.getUser()
+  return user?.id ?? null
+}
+
 serve(async (req) => {
   const authHeader = req.headers.get('Authorization') ?? ''
-  const auth = await authorize(authHeader)
-  if (!auth.ok) {
-    return new Response('Unauthorized', { status: 401 })
-  }
 
-  let body: { booking_id?: string; resolved_by?: string; reject?: string; dry_run?: boolean }
+  let body: { booking_id?: string; resolved_by?: string; reject?: string; dry_run?: boolean; solicitar?: boolean }
   try {
     body = await req.json()
   } catch {
     return json({ error: 'body inválido' }, 400)
+  }
+
+  // ── M5: el pedido lo hace el CLIENTE desde la app ──────────────────────────
+  //
+  // 🔴 Hasta el 21/09/2026 §9.3 se ejercía **escribiendo un mail**. Se le pedía
+  // a alguien que acaba de pasar una hora incómoda que además redactara un
+  // correo contando por qué. La mayoría no lo hace: se va en silencio, y ni
+  // siquiera sabemos que se fue.
+  //
+  // 📌 **No se aprueba solo.** El pedido queda `pendiente` y lo resuelve un
+  // humano por el panel, igual que antes, porque §9.3 permite denegar por uso
+  // abusivo y eso no lo puede decidir un `if`. Lo que cambia es el INTAKE.
+  //
+  // 📌 Y no se duplican las condiciones: se evalúan más abajo, con el mismo
+  // `guaranteeFailures` del runbook. Esta rama solo decide QUIÉN puede pedir.
+  const solicitante = body.solicitar === true ? await quienPide(authHeader) : null
+  if (body.solicitar === true && !solicitante) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
+  let identidadAdmin: string | null = null
+  if (!solicitante) {
+    const auth = await authorize(authHeader)
+    if (!auth.ok) return new Response('Unauthorized', { status: 401 })
+    identidadAdmin = auth.identity
   }
 
   const bookingId = body.booking_id
@@ -96,7 +128,7 @@ serve(async (req) => {
   // Quien resuelve. Si vino por el panel, es la identidad del JWT y el body no
   // puede pisarla; si vino por el runbook con service role, no hay identidad
   // que derivar y vale lo que mande el curl.
-  const resolvedBy = auth.identity ?? body.resolved_by ?? null
+  const resolvedBy = identidadAdmin ?? body.resolved_by ?? null
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -109,12 +141,18 @@ serve(async (req) => {
   if (bookingErr) return json({ error: `no se pudo leer la reserva: ${bookingErr.message}` }, 500)
   if (!booking) return json({ error: 'esa reserva no existe' }, 404)
 
+  // El cliente solo puede pedir sobre SU propia reserva. Va acá y no antes
+  // porque necesita la fila de la reserva para comparar.
+  if (solicitante && booking.user_id !== solicitante) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
   // ── Rechazo explícito ──────────────────────────────────────────────────────
   // Va ANTES de validar: §9.3 permite denegar por uso abusivo, y ese rechazo
   // tiene que poder registrarse aunque la solicitud además no calificara. Si
   // no, un caso abusivo que encima no cumple la ventana no dejaría rastro y
   // sería invisible la próxima vez que la misma persona lo intente.
-  if (body.reject) {
+  if (body.reject && !solicitante) {
     const { error } = await supabase.from('guarantee_claims').upsert({
       booking_id: booking.id,
       user_id: booking.user_id,
@@ -190,6 +228,43 @@ serve(async (req) => {
       amount: booking.amount,
       hours_since_session: Math.floor(hoursSince),
     })
+  }
+
+  // ── M5: el pedido del cliente queda PENDIENTE ─────────────────────────────
+  // Pasó las cinco condiciones de §9.3, pero no se aprueba solo: §9.3 permite
+  // denegar por uso abusivo, y eso lo mira una persona. Lo que se ganó es que
+  // el pedido llegue con todos los datos en vez de un mail escrito a mano por
+  // alguien incómodo.
+  if (solicitante) {
+    const { error: pedidoErr } = await supabase.from('guarantee_claims').insert({
+      booking_id: booking.id,
+      user_id: booking.user_id,
+      coach_id: booking.coach_id,
+      status: 'pendiente',
+      notes: 'Pedida desde la app',
+    })
+    if (pedidoErr) return json({ error: `no se pudo registrar el pedido: ${pedidoErr.message}` }, 500)
+
+    // 📌 El aviso va al MISMO buzón al que antes escribía la persona, así que el
+    // runbook no cambia de lugar: cambia quién escribe el mail y con qué datos.
+    // Si el mail falla, el pedido ya está guardado igual: se vería en el panel.
+    const { data: quien } = await supabase
+      .from('profiles').select('name, email').eq('id', booking.user_id).maybeSingle()
+    await enviarMail({
+      para: 'vitaappar@gmail.com',
+      asunto: `Garantía §9.3 pedida desde la app`,
+      titulo: 'Alguien pidió el reintegro de su primera sesión',
+      lineas: [
+        `<b>Reserva:</b> ${booking.id}`,
+        `<b>Cliente:</b> ${quien?.name ?? 'sin nombre'} (${quien?.email ?? 'sin mail'})`,
+        `<b>Sesión:</b> ${booking.scheduled_date} ${booking.scheduled_time}`,
+        `<b>Monto:</b> ${booking.amount}`,
+        'Pasó las cinco condiciones de §9.3. Falta aprobarla desde Administración → Garantías.',
+      ],
+      pie: 'No hace falta contestarle: el reintegro se procesa al aprobar.',
+    }).catch(() => false)
+
+    return json({ result: 'pendiente', booking_id: booking.id })
   }
 
   // ── Aprobar ────────────────────────────────────────────────────────────────
