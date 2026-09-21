@@ -13,8 +13,23 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { volcarPendiente } from '@/lib/quizPendiente';
 import { enlazarConCuenta, anotar } from '@/lib/analytics';
+import { conTope, TOPE } from '@/lib/conTope';
 
 WebBrowser.maybeCompleteAuthSession();
+
+/** Cuánto se espera a que `getSession()` conteste antes de entrar como visitante (L40).
+ *
+ * 📌 **El número está elegido, no es redondo por casualidad.** En el caso normal
+ * `getSession()` resuelve de AsyncStorage sin tocar la red, o sea en
+ * milisegundos, así que este plazo no se alcanza nunca; solo se gasta cuando hay
+ * que refrescar un token contra el servidor. Ocho segundos son holgados para un
+ * refresh en una red mala y siguen siendo menos de lo que alguien aguanta
+ * mirando un spinner sin saber si la app está rota.
+ *
+ * ⚠️ Pasarse del plazo NO desloguea a nadie: la sesión sigue guardada, y si
+ * `getSession()` contesta después, o si el token se refresca solo más tarde,
+ * `onAuthStateChange` la aplica y la persona entra sin haber hecho nada. */
+const TOPE_SESION_MS = 8000;
 
 export type UserRole = 'user' | 'coach';
 
@@ -199,20 +214,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // refrescar) `loading` se queda en true y app/index.tsx muestra el spinner
     // para siempre. Sin sesión resuelta seguimos como anónimos, que es un
     // estado válido y navegable.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const bruto = session?.user ?? null;
+    //
+    // 🔴 **Y el rechazo no era el único final malo (L40).** Una conexión que se
+    // queda muda sin cortar —wifi de hotel, portal cautivo, datos con señal y
+    // sin tránsito— deja la promesa PENDIENTE: ni resuelve ni rechaza, el
+    // .catch() nunca corre y el spinner gira hasta que la persona mata la app.
+    // Es el "la instalé y me quedé en una hoja en blanco" que se repite nueve
+    // veces en el Google Play de Selia. Por eso la promesa corre contra un
+    // reloj: si gana el reloj, se entra como visitante igual.
+    let yaSeResolvio = false;
+
+    const seguirSinSesion = () => {
+      yaSeResolvio = true;
+      setUser(null);
+      setMailPendiente(false);
+      applyProfile({ role: "user", isAdmin: false, name: null });
+      setLoading(false);
+    };
+
+    conTope(supabase.auth.getSession(), TOPE_SESION_MS).then((r) => {
+      if (r === TOPE) {
+        console.warn(`[auth] getSession no contesto en ${TOPE_SESION_MS}ms, sigo como visitante`);
+        seguirSinSesion();
+        return;
+      }
+
+      const bruto = r.data.session?.user ?? null;
       const u = esSesionAnonima(bruto) ? null : bruto;
+
+      // ⚠️ Puede estar llegando TARDE, después de que el reloj ya dejó entrar
+      // como visitante: `conTope` no cancela nada. Si trae una sesión de
+      // verdad se aplica igual y la pantalla de entrada redirige sola, que es
+      // la app curándose cuando la red vuelve. Si llega tarde y viene vacía,
+      // no hay nada que hacer: ese estado ya es el que se está mostrando, y
+      // volver a escribirlo pisaría una sesión anónima abierta mientras tanto.
+      if (yaSeResolvio && !u) return;
+      yaSeResolvio = true;
+
       setUser(u);
       setLoading(false);
       resolverMailPendiente(u);
       if (u) fetchProfile(u.id).then(applyProfile);
       else applyProfile({ role: "user", isAdmin: false, name: null });
     }).catch((e) => {
+      if (yaSeResolvio) return;
       console.warn('[auth] getSession fallo, sigo como anonimo:', e?.message ?? e);
-      setUser(null);
-      setMailPendiente(false);
-      applyProfile({ role: "user", isAdmin: false, name: null });
-      setLoading(false);
+      seguirSinSesion();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {

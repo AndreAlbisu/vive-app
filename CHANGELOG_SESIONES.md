@@ -20,9 +20,9 @@
 - Sigue abierto desde la sesión 261: la imagen para compartir (`og:image`) y confirmar "Hecho en Córdoba".
 
 ---
-## 2026-09-21 — Andre (sesión 263 · dos bloqueantes menos: L2 y L4)
+## 2026-09-21 — Andre (sesión 263 · L2, L4 y L40)
 
-**Tocado:** `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`. Más DNS de `vitaapp.com.ar`, que no vive en el repo.
+**Tocado:** `lib/conTope.ts` y `__tests__/conTope.test.ts` (nuevos), `context/AuthContext.tsx`, `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`. Más DNS de `vitaapp.com.ar`, que no vive en el repo.
 
 **Resumen:**
 - **L2 cerrado, y sin entrar al panel de Mercado Pago.** Se leyeron los pagos por la API (`GET /v1/payments/<id>`) con el `access_token` del coach que ya vive en `coach_mp_accounts`, que es la misma vía por la que se había medido el de $1. Los tres pagos de $4.500 con tarjeta (`174555144528` y `174554303062` del 19/08, `173787714415` del 20/08) dan **exactamente el mismo desglose**: `mercadopago_fee` 193,63, `application_fee` 675 (el 15% del tramo recurrente, correcto) y `net_received_amount` 3.631,37.
@@ -36,9 +36,15 @@
   - **Antes de publicarlo se chequeó que no pudiera romper la entrega**, que es el riesgo real de un DMARC sobre un dominio que manda mails: los mails salen por **Resend** desde `no-responder@vitaapp.com.ar`, y las dos firmas ya estaban y alineaban (DKIM en `resend._domainkey`, con `d=vitaapp.com.ar`; SPF en `send.vitaapp.com.ar`, que es el Return-Path de Resend). Con DKIM alineado, `p=none` no cambia nada de lo que ya funcionaba.
   - ⚠️ **Los reportes probablemente no lleguen, y no es un error nuestro:** el `rua` va a un Gmail, y el RFC pide una autorización publicada por el dominio de destino (`vitaapp.com.ar._report._dmarc.gmail.com`) que **Gmail no publica**. El valor de L4 está en el `p=none`, no en los informes. Se resuelve solo con **L33** (casilla propia).
   - 📌 Con unas semanas de mails entregados se puede endurecer a `p=quarantine`. No antes.
+- ✅ **L40 cerrado: la pantalla de entrada ya no puede girar para siempre.** El `.catch()` de `getSession()` cubría el **rechazo** (red caída, token irrefrescable), pero no el tercer final: que la promesa quede **pendiente**. Una conexión que acepta el socket y después se queda muda (wifi de hotel, portal cautivo, datos con señal y sin tránsito) no resuelve ni rechaza, así que el `.catch()` nunca corría, `loading` no pasaba nunca a false y `app/index.tsx` giraba hasta que la persona mataba la app. Es el *"la instalé y me quedé en una hoja en blanco"* que aparece nueve veces en el Google Play de Selia.
+  - **`lib/conTope.ts`** (nuevo, 5 tests): corre una promesa contra un reloj y devuelve el símbolo `TOPE` si gana el reloj. **Devuelve un símbolo y no rechaza a propósito**, porque un rechazo se confundiría con "falló la red", que es el caso distinto que ya tenía su rama.
+  - **`TOPE_SESION_MS = 8000`** en `AuthContext`. En el caso normal `getSession()` resuelve de AsyncStorage sin tocar la red, así que el plazo no se alcanza nunca: solo se gasta cuando hay que refrescar el token contra el servidor.
+  - ⚠️ **Pasarse del plazo no desloguea a nadie.** `conTope` no cancela la promesa original (no se puede), así que si contesta tarde **con** sesión se aplica igual y la pantalla de entrada redirige sola. Si contesta tarde y viene vacía se ignora, porque ese estado ya es el que se está mostrando y volver a escribirlo pisaría una sesión anónima abierta mientras tanto. Y si nunca contesta, el refresh siguiente entra por `onAuthStateChange`.
+  - 📱 **Sin ver en el teléfono.** Se reproduce con el wifi conectado a una red **sin internet**. El modo avión no sirve para probarlo: ahí la promesa rechaza y esa rama ya andaba desde antes.
+  - 📌 **Lo que NO se tocó, por si se quiere después:** durante esos 8 segundos la pantalla sigue siendo solo el logo y el spinner, sin una línea que diga que está tardando. Es copy visible, así que lo decide Andre.
 
 **Pendiente para la próxima sesión:**
-- **De los 7 que bloqueaban el lanzamiento quedan 5.** Lo de Andre: el nombre que ve el comprador en MP (**L6**) y mandarle los Términos al abogado (**L5**, el único que es tiempo de calendario). Lo de la sesión de prueba con Joaquín: **L1**, **L39** y **L19** de una sola vez. **L3** (prender `CHECKOUT_HABILITADO`) ahora depende solo de L1.
+- **De los 7 que bloqueaban el lanzamiento quedan 5**, y el bug de arranque (L40) ya no está en la lista. Lo de Andre: el nombre que ve el comprador en MP (**L6**) y mandarle los Términos al abogado (**L5**, el único que es tiempo de calendario). Lo de la sesión de prueba con Joaquín: **L1**, **L39** y **L19** de una sola vez. **L3** (prender `CHECKOUT_HABILITADO`) ahora depende solo de L1.
 - Revisar `docs/fiscal-instrucciones.md` contra la base, por lo de arriba.
 
 ---
