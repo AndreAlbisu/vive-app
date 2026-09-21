@@ -33,6 +33,9 @@
   - Al seguir `position` y no el tab enfocado, la burbuja **acompaña el dedo mientras se swipea** entre pestañas, no solo el toque. Corre por el driver nativo (es `transform`).
   - El ancho de cada tab se **mide** con `onLayout` en vez de escribirse a mano: la isla del coach y la del usuario no tienen la misma cantidad de tabs. El padding de la pastilla salió a una constante `PILL_PAD` porque ahora lo usan tres lugares (pastilla, burbuja y la cuenta del ancho), y si no coinciden la burbuja queda corrida.
   - 📱 **Sin ver en el teléfono.** Es lo primero que hay que mirar de esto.
+- 🔴 **L3: el checkout web quedó PRENDIDO.** `CHECKOUT_HABILITADO` pasó a `true` en `web/c/index.html`. Estaba esperando a que el cobro estuviera probado de punta a punta, y esta misma noche se cerró todo lo que faltaba: L1, L39, L2 y L6.
+  - ⚠️ **Se vuelve real en cuanto Vercel deployee el push**, no antes y no después: `/c/<slug>` es una página pública y viva. Desde ese momento, cualquiera con el link de un profesional puede dar su mail, crear cuenta y pagar de verdad. **Es la primera puerta de Vita que queda abierta al público.**
+  - El `?probar=1` se dejó escrito en la línea aunque ya no haga nada: es el interruptor para cerrarla de nuevo sin reescribir código.
 
 **Pendiente para la próxima sesión:**
 - Hacer la auditoría de seguridad y, con eso, decidir si Agent Skills se queda.
@@ -83,7 +86,7 @@
 ---
 ## 2026-09-21 — Andre (sesión 263 · L2, L4, L40 y el nombre del cobro)
 
-**Tocado:** `components/ui/IslandTabBar.tsx`, `scripts/add-chat-indexes.sql` (nuevo, **corrido en producción**), `lib/conTope.ts` y `__tests__/conTope.test.ts` (nuevos), `context/AuthContext.tsx`, `supabase/functions/mp-create-payment/index.ts` (**deployada, v51**), `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`. Más DNS de `vitaapp.com.ar`, que no vive en el repo.
+**Tocado:** `web/c/index.html`, `components/ui/IslandTabBar.tsx`, `scripts/add-chat-indexes.sql` (nuevo, **corrido en producción**), `lib/conTope.ts` y `__tests__/conTope.test.ts` (nuevos), `context/AuthContext.tsx`, `supabase/functions/mp-create-payment/index.ts` (**deployada, v51**), `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`. Más DNS de `vitaapp.com.ar`, que no vive en el repo.
 
 **Resumen:**
 - **L2 cerrado, y sin entrar al panel de Mercado Pago.** Se leyeron los pagos por la API (`GET /v1/payments/<id>`) con el `access_token` del coach que ya vive en `coach_mp_accounts`, que es la misma vía por la que se había medido el de $1. Los tres pagos de $4.500 con tarjeta (`174555144528` y `174554303062` del 19/08, `173787714415` del 20/08) dan **exactamente el mismo desglose**: `mercadopago_fee` 193,63, `application_fee` 675 (el 15% del tramo recurrente, correcto) y `net_received_amount` 3.631,37.

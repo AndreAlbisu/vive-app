@@ -259,15 +259,18 @@
 // consentimiento para una operación que no puede completarse — y bajo la 25.326
 // el consentimiento se pide para una finalidad concreta, no por las dudas.
 //
-// Se prende en el mismo cambio que habilite el pago, no antes.
+// ✅ **PRENDIDO el 21/09/2026 (L3).** Se esperaba a que el cobro estuviera
+// probado de punta a punta, y esa noche se cerró lo que faltaba: la videollamada
+// con dos personas adentro y en un iPhone (L1 y L39), la tarifa real de Mercado
+// Pago medida contra pagos de verdad (L2, 4,30%) y el nombre que ve el comprador
+// en el resumen de su tarjeta (L6, `MERPAGO*VITA`). O sea que ya no se le pide
+// el mail a nadie para una operación que no pueda completarse.
 //
-// 📌 `?probar=1` lo enciende para una visita, sin encenderlo para nadie más.
-// Existe para poder probar el camino REAL —con plata real, contra las funciones
-// deployadas— sin abrirle a cualquiera que llegue a la página un flujo que
-// todavía promete mails que no existen. No es seguridad: es que la puerta no
-// esté abierta por accidente mientras se prueba.
+// 📌 `?probar=1` queda igual, sin efecto ahora que la constante es `true`. No se
+// saca: es el interruptor para volver atrás sin tener que reescribir esta línea
+// si alguna vez hay que cerrar la puerta de nuevo.
 const CHECKOUT_HABILITADO =
-  false || new URLSearchParams(location.search).get('probar') === '1';
+  true || new URLSearchParams(location.search).get('probar') === '1';
 
 const SUPABASE_URL = 'https://ggygiihhnkjrerpinhha.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdneWdpaWhobmtqcmVycGluaGhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mjc5NjEsImV4cCI6MjA5NzEwMzk2MX0.lHPjyKjJIYD_lUTCF7uMBCKj9tCK_67OyrIFkCLQ-BI';
