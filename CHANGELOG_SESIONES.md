@@ -4,6 +4,20 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-21 — Andre (sesión 264 · skill de diseño UI UX Pro Max)
+
+**Tocado:** `.claude/skills/` (nuevo, instalado con `uipro init --ai claude`, versión 2.15.0 del CLI `ui-ux-pro-max-cli`).
+
+**Resumen:**
+- Se sumó la skill de diseño [UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT) al proyecto. Trae la skill principal (buscador local de estilos, paletas, tipografías y reglas de UX) y seis extra: design, design-system, ui-styling, brand, banner-design y slides.
+- Revisados los scripts: el buscador principal solo lee CSV locales, sin red. `ui-styling` puede correr el CLI de shadcn (es para web, no aplica a la app Expo) y `design-system` solo arma links de Pexels.
+- Uso previsto: revisión de pantallas (accesibilidad, contraste, espaciado, patrones). No reemplaza la guía de diseño de Vita: al usarla, pedirle que respete paleta, tipografía y tono existentes.
+
+**Pendiente para la próxima sesión:**
+- Joaquín: reiniciar Claude Code después del pull para que aparezca la skill.
+- Probarla sobre una pantalla real de Vita y decidir si las seis skills extra se quedan o se borran.
+
+---
 ## 2026-09-21 — Andre (sesión 263 · recorrido de la landing, hecho con Codex y revisado con Claude)
 
 **Tocado:** `web/index.html`.
