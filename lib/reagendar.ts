@@ -128,3 +128,50 @@ export function textoReagendar(r: Reagendable): string {
       }
   }
 }
+
+/**
+ * Traduce el error que devuelve `pedir_reagendado()` a algo que una persona
+ * pueda leer.
+ *
+ * 📌 Vive acá, con las reglas puras, y no al lado de la llamada: así se puede
+ * probar sin levantar Supabase, que es lo que arrastra AsyncStorage y no existe
+ * en los tests.
+ *
+ * 🔴 Es una lista CERRADA a propósito. Mostrar `error.message` tal cual pondría
+ * en pantalla un texto en inglés, con "P0001" adentro y, a veces, nombres de
+ * tablas nuestras. Lo desconocido cae en una frase genérica.
+ */
+export function mensajeDeError(raw: string | null | undefined): string {
+  const m = (raw ?? '').toLowerCase();
+  if (m.includes('ya_la_movio')) {
+    return 'Ya pediste un cambio de último momento para esta sesión.';
+  }
+  if (m.includes('ocupado')) {
+    return 'Ese horario se ocupó recién. Elegí otro.';
+  }
+  if (m.includes('sin_agenda')) {
+    return 'Tu profesional no atiende en ese horario.';
+  }
+  if (m.includes('destino_en_el_pasado')) {
+    return 'Ese horario ya pasó.';
+  }
+  if (m.includes('mismo_horario')) {
+    return 'Es el horario que ya tenías.';
+  }
+  if (m.includes('ya_empezo')) {
+    return 'Esta sesión ya empezó.';
+  }
+  if (m.includes('no_confirmada')) {
+    return 'Esta sesión todavía no está confirmada.';
+  }
+  if (m.includes('no es tu reserva') || m.includes('no es tu sesion')) {
+    return 'Esta sesión no es tuya.';
+  }
+  if (m.includes('sin sesion')) {
+    return 'Entrá a tu cuenta para mover la sesión.';
+  }
+  if (m.includes('solicitud_no_pendiente')) {
+    return 'Ese pedido ya estaba resuelto.';
+  }
+  return 'No se pudo mover la sesión. Probá de nuevo en un rato.';
+}

@@ -38,7 +38,14 @@ function buildCalendar(year: number, month: number): (number | null)[][] {
 // `sugerida` (M6): el día que el profesional sugirió al terminar la sesión
 // anterior. Abre el calendario en ese mes y lo marca. No reserva nada: si ese
 // día no tiene horario libre, se elige otro.
-type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string; tema?: string; sugerida?: string };
+//
+// `reagendar` (M15): el id de una sesión que ya existe y se está MOVIENDO. El
+// calendario y el horario se eligen igual que para una reserva nueva; lo único
+// que cambia es el final del camino, que en vez de ir a pagar llama a
+// `pedir_reagendado`. Va como parámetro y no como pantalla aparte porque elegir
+// día y hora es exactamente el mismo trabajo, y duplicar el calendario sería
+// duplicar los horarios ocupados, la zona horaria y el "no tiene lugar".
+type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string; tema?: string; sugerida?: string; reagendar?: string };
 
 export default function BookingScreen_Calendar() {
   const router = useRouter();
@@ -202,6 +209,7 @@ export default function BookingScreen_Calendar() {
         ...(params.priceFrom && { priceFrom: params.priceFrom }),
         ...(params.coachId && { coachId: params.coachId }),
         ...(params.tema && { tema: params.tema }),
+        ...(params.reagendar && { reagendar: params.reagendar }),
         date: selectedDate,
       },
     });

@@ -41,6 +41,7 @@ import { notifyViaServer } from '@/lib/notifications';
 import { hayReembolsoAlCancelar } from '@/lib/bookingHelpers';
 import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
+import { puedeReagendar, textoReagendar } from '@/lib/reagendar';
 import { logError } from '@/lib/logging';
 import { abrirVideollamada, ensureMeetingRoom, getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
 import {
@@ -94,6 +95,8 @@ type ActiveBooking = {
   user_message: string | null;
   duration_minutes: number | null;
   meeting_url: string | null;
+  /** M15: ya usó su única oportunidad de moverla sobre la hora. */
+  movida_tarde?: boolean | null;
 } | null;
 
 type RecipientProfile = {
@@ -399,7 +402,7 @@ export default function SalaScreen() {
         supabase.from('profiles').select('name, avatar_url').eq('id', resolvedRecipientId).single(),
         supabase
           .from('bookings')
-          .select('id, scheduled_date, scheduled_time, status, user_message, duration_minutes, meeting_url')
+          .select('id, scheduled_date, scheduled_time, status, user_message, duration_minutes, meeting_url, movida_tarde')
           .eq('sala_id', id)
           .in('status', ['pendiente', 'confirmada'])
           .gte('scheduled_date', todayStr)
@@ -408,7 +411,7 @@ export default function SalaScreen() {
           .limit(10),
         supabase
           .from('bookings')
-          .select('id, scheduled_date, scheduled_time, status, user_message, duration_minutes, meeting_url')
+          .select('id, scheduled_date, scheduled_time, status, user_message, duration_minutes, meeting_url, movida_tarde')
           .eq('sala_id', id)
           .eq('status', 'completada')
           .gte('scheduled_date', yesterdayStr)
@@ -1371,6 +1374,38 @@ export default function SalaScreen() {
               `handleCancelBooking` ya distingue —al coach no le aplica la regla
               de las 24hs— y duplicar esa decisión acá sería otro lugar donde
               se puede desincronizar. */}
+          {/* M15: mover en vez de perder. 🔴 **Va ARRIBA de cancelar y no al
+              lado**, porque el problema que resuelve es que hoy la única salida
+              visible es cancelar, y cancelar tarde hace perder la plata: si las
+              dos opciones pesan igual, la de perder la plata sigue ganando por
+              costumbre.
+
+              Solo del lado del CLIENTE (`recipientIsCoach` significa que el otro
+              es el profesional, o sea que yo soy quien reservó). Que el
+              profesional mueva la sesión es M16 y funciona al revés: propone y
+              el cliente elige. */}
+          {recipientIsCoach && activeBooking && recipientId && (() => {
+            const r = puedeReagendar(activeBooking);
+            if (r.puede === 'no') return null;
+            return (
+              <TouchableOpacity
+                style={styles.moverBtn}
+                onPress={() => router.push({
+                  pathname: '/booking-calendar',
+                  params: {
+                    coachId: recipientId,
+                    name: recipientProfile?.name ?? '',
+                    reagendar: activeBooking.id,
+                  },
+                })}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.moverBtnText}>Mover la sesión</Text>
+                <Text style={styles.moverBtnHint}>{textoReagendar(r)}</Text>
+              </TouchableOpacity>
+            );
+          })()}
+
           <TouchableOpacity
             style={styles.cancelBtn}
             onPress={handleCancelBooking}
@@ -1999,6 +2034,13 @@ const styles = StyleSheet.create({
   },
   confirmBtnDisabled: { opacity: 0.6 },
   confirmBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#FFF6EC' },
+
+  // M15. Mover es la salida buena, así que se ve como una acción y no como el
+  // link discreto de cancelar. No usa el rojo de cancelar: no está pasando nada
+  // malo, se está arreglando algo.
+  moverBtn: { alignSelf: 'flex-start', marginTop: 12 },
+  moverBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: ViveColors.primary },
+  moverBtnHint: { fontFamily: ViveFonts.regular, fontSize: 12, color: '#566245', marginTop: 2, maxWidth: 280 },
 
   cancelBtn: { alignSelf: 'flex-start', marginTop: 8 },
   cancelBtnText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#E05252' },

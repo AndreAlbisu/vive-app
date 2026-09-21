@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -17,6 +18,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { scheduledAtMs, deviceIsOffArgentina, localEquivalent } from '@/lib/time';
+import { pedirReagendado } from '@/lib/reagendarApi';
 
 const MONTHS_SHORT = [
   'ene','feb','mar','abr','may','jun',
@@ -36,6 +38,8 @@ type Params = {
   date?: string;
   coachId?: string;
   tema?: string;
+  /** M15: id de la sesión que se está moviendo. Cambia el final del camino. */
+  reagendar?: string;
 };
 
 export default function BookingScreen_Time() {
@@ -43,6 +47,7 @@ export default function BookingScreen_Time() {
   const { user } = useAuth();
   const params = useLocalSearchParams<Params>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [moviendo, setMoviendo] = useState(false);
   // Se resuelve una sola vez: la zona del dispositivo no cambia mientras la
   // pantalla está abierta, y preguntarla en cada render es trabajo al pedo.
   const fueraDeArgentina = useMemo(() => deviceIsOffArgentina(), []);
@@ -123,8 +128,36 @@ export default function BookingScreen_Time() {
     })();
   }, [params.coachId, dateStr, user?.id]);
 
+  // M15. El mismo botón, otro final: con `reagendar` no se va a pagar nada,
+  // porque mover una sesión no toca la plata (es la misma reserva con otra
+  // fecha). Se le pide a la base, que revalida todo, y se vuelve.
+  async function onMover() {
+    if (!selectedTime || !params.reagendar || moviendo) return;
+    setMoviendo(true);
+    const r = await pedirReagendado(params.reagendar, dateStr, selectedTime);
+    setMoviendo(false);
+
+    if (!r.ok) { Alert.alert('No se pudo mover', r.mensaje); return; }
+
+    if (r.resultado === 'movida') {
+      Alert.alert('Listo', 'Tu sesión quedó en el horario nuevo.', [
+        { text: 'Bien', onPress: () => router.back() },
+      ]);
+      return;
+    }
+    // Dentro de las 24hs: quedó pedida. Se dice sin prometer nada, porque el
+    // profesional puede decir que no y el horario NO queda bloqueado mientras
+    // tanto.
+    Alert.alert(
+      'Se lo pedimos a tu profesional',
+      'Falta menos de un día, así que el cambio lo tiene que aceptar. Te avisamos cuando responda. Mientras tanto, tu sesión sigue en el horario original.',
+      [{ text: 'Entendido', onPress: () => router.back() }],
+    );
+  }
+
   function onSeguimos() {
     if (!selectedTime) return;
+    if (params.reagendar) { void onMover(); return; }
     router.push({
       pathname: '/booking-confirm',
       params: {
@@ -250,11 +283,13 @@ export default function BookingScreen_Time() {
       <SafeAreaView style={s.footerSafe} edges={['bottom']}>
         <View style={s.footer}>
           <TouchableOpacity
-            style={[s.btn, !selectedTime && s.btnDisabled]}
+            style={[s.btn, (!selectedTime || moviendo) && s.btnDisabled]}
             onPress={onSeguimos}
-            disabled={!selectedTime}
+            disabled={!selectedTime || moviendo}
             activeOpacity={0.85}>
-            <Text style={s.btnText}>Seguimos</Text>
+            <Text style={s.btnText}>
+              {params.reagendar ? (moviendo ? 'Moviendo…' : 'Mover la sesión') : 'Seguimos'}
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
