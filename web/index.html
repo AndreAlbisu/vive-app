@@ -262,6 +262,23 @@
   .prompt-q { margin-top: 10px; font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.2; text-wrap: balance; }
   .prompt-lines { margin: 24px auto 0; max-width: 360px; height: 72px; background: repeating-linear-gradient(to bottom, transparent 0 35px, var(--line) 35px 36px); }
 
+  /* Nuestra historia: lo único oscuro de la página, y lo único que no es
+     producto. Las fotos van como copias impresas, con su fecha de cámara. */
+  .story { background: var(--forest); color: #EFE6D6; position: relative; }
+  .story-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(48px, 7vw, 112px); align-items: center; }
+  .story h2 { color: var(--cream); }
+  .story-text p { margin-top: 20px; max-width: 58ch; color: rgba(239,230,214,.9); }
+  .story-text p:first-of-type { margin-top: 32px; }
+  .story-text .story-close { color: var(--cream); font-weight: 700; font-size: 1.15rem; }
+  .story-note { margin-top: 32px; padding-top: 20px; border-top: 1px solid rgba(239,230,214,.2); font-size: .95rem; }
+  .album { position: relative; margin: 0; padding-bottom: 30%; }
+  .print { margin: 0; background: #FBF6EE; padding: 12px 12px 14px; border-radius: 4px; box-shadow: 0 18px 40px -18px rgba(0,0,0,.55); }
+  .print img { width: 100%; height: auto; border-radius: 2px; }
+  .print figcaption { margin-top: 10px; color: var(--olive); font-size: .9rem; font-weight: 600; }
+  .print.hoy figcaption { text-align: right; }
+  .print.hoy { width: 74%; margin-left: auto; transform: rotate(2.5deg); }
+  .print.antes { position: absolute; left: 0; bottom: 0; width: 62%; transform: rotate(-4deg); }
+
   /* Preguntas frecuentes */
   .faq { background: var(--cream); }
   .faq-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(32px, 6vw, 96px); align-items: start; }
@@ -377,6 +394,8 @@
     .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px 32px; }
     .pros-box { grid-template-columns: 1fr; }
     .faq-grid { grid-template-columns: 1fr; }
+    .story-grid { grid-template-columns: 1fr; }
+    .album { max-width: 520px; }
     .foot { grid-template-columns: 1fr 1fr; }
     .foot > div:first-child { grid-column: 1 / -1; }
     .peek { grid-template-columns: 1fr; gap: 48px; }
@@ -581,6 +600,30 @@
       <div class="mood-reply" aria-live="polite"></div>
       <div class="moment" hidden></div>
       <p class="checkin-note">Acá no se guarda nada. En la app, queda en tu registro del día.</p>
+    </div>
+  </section>
+
+  <section class="story grain" aria-labelledby="historia">
+    <div class="wrap story-grid">
+      <div class="album">
+        <figure class="print hoy">
+          <img src="img/hermanos-hoy.jpg" width="724" height="800" loading="lazy" alt="Andre, Joaquín y Sofía hoy, abrazados entre plantas">
+          <figcaption>Hoy, con Sofía.</figcaption>
+        </figure>
+        <figure class="print antes">
+          <img src="img/hermanos-2013.jpg" width="900" height="675" loading="lazy" alt="Andre y Joaquín de chicos, riéndose tirados en una cancha">
+          <figcaption>Diciembre de 2013.</figcaption>
+        </figure>
+      </div>
+      <div class="story-text">
+        <h2 id="historia" class="sec-title">encontrarnos fue el comienzo.</h2>
+        <p>Somos Andre y Joaquín, dos hermanos de Córdoba, Argentina. Tenemos maneras distintas de ver el mundo y recorridos que nos llevaron por caminos diferentes. En el desarrollo personal encontramos algo que nos apasionaba a los dos y una oportunidad de volver a acercarnos.</p>
+        <p>Sabemos lo que significa contar con alguien. Nuestra hermana Sofía nos acompañó a la distancia, creyó en nosotros y nos acercó herramientas y personas que nos ayudaron en momentos difíciles. Tuvimos esa suerte. También sabemos que muchas personas atraviesan esos momentos sin saber a quién acudir.</p>
+        <p>Vita empezó como una idea de Andre, después de vivir lo mucho que puede ayudar encontrar acompañamiento y lo difícil que puede ser volver a acceder a él. Una conversación con Joaquín abrió nuevas posibilidades para el proyecto. Empezamos a construir juntos y, en ese proceso, también nos reencontramos como hermanos.</p>
+        <p>Queremos acercar a quienes buscan acompañamiento con quienes tienen mucho para ofrecer. En Argentina hay profesionales capaces que necesitan un lugar donde mostrar cómo trabajan, llegar a otras personas y desarrollar su vocación.</p>
+        <p class="story-close">Vita nace de querer compartir algo de lo que recibimos: la posibilidad de encontrar herramientas, conocer a alguien que pueda acompañarte y dar un primer paso.</p>
+        <p class="story-note">En la app, "Sofía" es la voz que te habla en el inicio. Son mensajes automáticos, escritos con el cariño con que ella nos acompañó. No es una persona del otro lado.</p>
+      </div>
     </div>
   </section>
 
