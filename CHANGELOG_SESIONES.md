@@ -27,6 +27,12 @@
   - 🔴 **Pero buscando eso apareció algo que no se sabía: `messages` no tenía ningún índice salvo su PK.** La consulta del chat es `where sala_id = … order by created_at`, así que recorría **todos los mensajes de la plataforma**. Y se multiplicaba por la RLS, cuya policy pregunta `sala_id in (select id from salas where user_id = auth.uid() or coach_id = auth.uid())` sobre una `salas` que **tampoco tenía índices**: un recorrido completo adentro de otro.
   - Hoy no se nota (≈154 mensajes, ≈53 salas) y por eso nadie lo vio. Se puso ahora porque el costo es cero y el de ponerlo tarde es migrar una tabla con conversaciones de gente real adentro. Verificado con `explain analyze`: el plan ahora usa `Index Cond` sobre `sala_id`.
   - ⚠️ **Queda abierto**: la consulta del chat trae la conversación **entera**, sin `limit`. El chat más largo de hoy tiene 96 mensajes, así que no molesta, pero no tiene techo. Toca la pantalla, así que se dejó para una próxima.
+- 🎨 **La isla pasa a tener un selector que viaja, en vez de uno que se desvanece.** Pedido de Andre, literal: *"en Instagram es como que el selector viaja o se desplaza suavemente hasta el botón que seleccionaste"*.
+  - **Antes había una burbuja verde POR TAB** y lo único que se podía animar era su opacidad: se desvanecía en un lugar y aparecía en otro. Ahora hay **una sola burbuja** dentro de la pastilla, con `translateX` interpolado sobre el `position` del navegador.
+  - **Por qué esto además se siente más rápido aunque dure lo mismo:** un crossfade no da nada que seguir con la vista y se lee como lento por más corto que sea; un objeto que se mueve se lee como inmediato. La duración real no cambió, porque `position` la maneja el pager del navegador y no es una perilla nuestra. ⚠️ Si en el teléfono **sigue** sintiéndose lento, el próximo paso es desacoplar la burbuja del pager y moverla con un spring propio hacia el tab enfocado; el costo es que deja de acompañar el dedo durante el swipe.
+  - Al seguir `position` y no el tab enfocado, la burbuja **acompaña el dedo mientras se swipea** entre pestañas, no solo el toque. Corre por el driver nativo (es `transform`).
+  - El ancho de cada tab se **mide** con `onLayout` en vez de escribirse a mano: la isla del coach y la del usuario no tienen la misma cantidad de tabs. El padding de la pastilla salió a una constante `PILL_PAD` porque ahora lo usan tres lugares (pastilla, burbuja y la cuenta del ancho), y si no coinciden la burbuja queda corrida.
+  - 📱 **Sin ver en el teléfono.** Es lo primero que hay que mirar de esto.
 
 **Pendiente para la próxima sesión:**
 - Hacer la auditoría de seguridad y, con eso, decidir si Agent Skills se queda.
@@ -76,7 +82,7 @@
 ---
 ## 2026-09-21 — Andre (sesión 263 · L2, L4, L40 y el nombre del cobro)
 
-**Tocado:** `lib/conTope.ts` y `__tests__/conTope.test.ts` (nuevos), `context/AuthContext.tsx`, `supabase/functions/mp-create-payment/index.ts` (**deployada, v51**), `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`. Más DNS de `vitaapp.com.ar`, que no vive en el repo.
+**Tocado:** `components/ui/IslandTabBar.tsx`, `scripts/add-chat-indexes.sql` (nuevo, **corrido en producción**), `lib/conTope.ts` y `__tests__/conTope.test.ts` (nuevos), `context/AuthContext.tsx`, `supabase/functions/mp-create-payment/index.ts` (**deployada, v51**), `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`. Más DNS de `vitaapp.com.ar`, que no vive en el repo.
 
 **Resumen:**
 - **L2 cerrado, y sin entrar al panel de Mercado Pago.** Se leyeron los pagos por la API (`GET /v1/payments/<id>`) con el `access_token` del coach que ya vive en `coach_mp_accounts`, que es la misma vía por la que se había medido el de $1. Los tres pagos de $4.500 con tarjeta (`174555144528` y `174554303062` del 19/08, `173787714415` del 20/08) dan **exactamente el mismo desglose**: `mercadopago_fee` 193,63, `application_fee` 675 (el 15% del tramo recurrente, correcto) y `net_received_amount` 3.631,37.
