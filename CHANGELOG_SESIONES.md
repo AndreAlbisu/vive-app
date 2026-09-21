@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-21 — Andre (sesión 263 · recorrido de la landing, hecho con Codex y revisado con Claude)
+
+**Tocado:** `web/index.html`.
+
+**Resumen:**
+- **Nuevo orden de la landing:** presentación, vistazo de la app, cómo funciona, valores, profesionales y descarga. El vistazo se arma en tres experiencias ("Entendé cómo venís", "Encontrá acompañamiento", "Tomate una pausa"). En celular se eligen con botones y nada avanza solo. Sin JavaScript se ven las tres. Herramientas y temas pasan a un desplegable. Aurora, textura y sombras más suaves, y menos espacio entre secciones. Quedaron sin tocar, por pedido de Andre, Descargar, los botones de tiendas, sus destinos y el cierre.
+- **Copy que no promete de más:** la videollamada "se abre desde la app" y no "dentro de Vita", porque en iPhone sale a Safari (`SessionsScreen.handleJoin`). El perfil de ejemplo ya no lleva "Matrícula verificada": un perfil inventado no puede mostrar un sello de verificación. Las pantallas se presentan como ilustraciones, con una nota abajo.
+- **En la revisión se recuperó "Guía, no diagnostica."** como cuarto valor. Era el único lugar de la landing que decía que Vita no es un servicio clínico. También se sacó texto repetido: "Vos elegís" ahora habla de elegir entre hablar con alguien y usar herramientas. En profesionales volvió la ventaja real: "La sala de videollamada de cada sesión se arma sola".
+- El código del selector ya no puede cortar el que arma los botones de descarga. `sync:legal` sigue sin pisar la landing. Revisado en capturas a 1440 y 800 px.
+
+**Pendiente para la próxima sesión:**
+- Reemplazar las ilustraciones por capturas reales de la app (inicio, registro del día, perfil y respiración). No hay ninguna en el repo.
+- Mirarla en el celular una vez deployada, sobre todo el selector de experiencias y si la aurora quedó demasiado apagada.
+- Sigue abierto desde la sesión 261: la imagen para compartir (`og:image`) y confirmar "Hecho en Córdoba".
+
+---
 ## 2026-09-18 — Andre (sesión 262 · ícono de ondas para Bienestar mental)
 
 **Tocado:** `components/EjeIcon.tsx` (nuevo), `constants/conexionesDoors.ts`, `app/(tabs)/conexiones.tsx`.
