@@ -43,11 +43,14 @@
 - **Nuevo orden de la landing:** presentación, vistazo de la app, cómo funciona, valores, profesionales y descarga. El vistazo se arma en tres experiencias ("Entendé cómo venís", "Encontrá acompañamiento", "Tomate una pausa"). En celular se eligen con botones y nada avanza solo. Sin JavaScript se ven las tres. Herramientas y temas pasan a un desplegable. Aurora, textura y sombras más suaves, y menos espacio entre secciones. Quedaron sin tocar, por pedido de Andre, Descargar, los botones de tiendas, sus destinos y el cierre.
 - **Copy que no promete de más:** la videollamada "se abre desde la app" y no "dentro de Vita", porque en iPhone sale a Safari (`SessionsScreen.handleJoin`). El perfil de ejemplo ya no lleva "Matrícula verificada": un perfil inventado no puede mostrar un sello de verificación. Las pantallas se presentan como ilustraciones, con una nota abajo.
 - **En la revisión se recuperó "Guía, no diagnostica."** como cuarto valor. Era el único lugar de la landing que decía que Vita no es un servicio clínico. También se sacó texto repetido: "Vos elegís" ahora habla de elegir entre hablar con alguien y usar herramientas. En profesionales volvió la ventaja real: "La sala de videollamada de cada sesión se arma sola".
+- **Segunda mitad, pasada de diseño (ui-ux-pro-max + frontend-design):** la página tiene un momento propio, "¿cómo venís hoy?", justo después de la presentación. Son los cinco círculos de ánimo de la app (Bajón a Brillando, colores de `ViveMoodColors`), con el mismo gesto de `MoodCheckIn`: el elegido crece, los demás se apagan, el fondo toma el color y aparece una respuesta corta que lleva a la experiencia que corresponde. No guarda nada y lo dice. Sin JavaScript la sección no aparece. Los mockups dejan los emojis por los círculos reales, y el gráfico de la semana usa la misma escala.
+- Correcciones de la revisión: contraste del texto de profesionales (3.9 a 4.6) y del cierre sobre la aurora, las tiendas en "Muy pronto" ya no reaccionan al mouse como botón, el título principal entra en tres renglones sin cortar "a tu ritmo", y el mockup ya no se desborda en celulares de 320 px.
 - El código del selector ya no puede cortar el que arma los botones de descarga. `sync:legal` sigue sin pisar la landing. Revisado en capturas a 1440 y 800 px.
 
 **Pendiente para la próxima sesión:**
 - Reemplazar las ilustraciones por capturas reales de la app (inicio, registro del día, perfil y respiración). No hay ninguna en el repo.
-- Mirarla en el celular una vez deployada, sobre todo el selector de experiencias y si la aurora quedó demasiado apagada.
+- Mirarla en el celular una vez deployada: el "¿cómo venís hoy?" (que se sienta liviano y que las respuestas suenen bien), el selector de experiencias y la aurora.
+- "Cansado" es masculino en la app y ahora también en la web. Decidir si pasa a una palabra sin género (por ejemplo "Sin energía") en los dos lugares.
 - Sigue abierto desde la sesión 261: la imagen para compartir (`og:image`) y confirmar "Hecho en Córdoba".
 
 ---

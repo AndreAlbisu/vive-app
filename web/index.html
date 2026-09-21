@@ -29,6 +29,8 @@
     --sun: #F59B3A;
     --sky: #A9CBE6;
     --lime: #E1EDB9;
+    /* Escala de ánimo de la app (ViveMoodColors), de Bajón a Brillando. */
+    --m1: #C06B4A; --m2: #DDAE93; --m3: #D9D0B8; --m4: #BFCBA6; --m5: #8FA07C;
     --line: rgba(86, 94, 50, .16);
     --gutter: clamp(20px, 5vw, 64px);
     --max: 1240px;
@@ -113,11 +115,11 @@
   .aurora .a4 { animation: breathe 10s ease-in-out infinite; animation-delay: -.3s; }
 
   .hero-inner {
-    display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+    display: grid; grid-template-columns: minmax(0, 1fr) 320px;
     align-items: center; gap: 48px;
     min-height: min(850px, 100svh); padding-top: 120px; padding-bottom: 64px;
   }
-  .hero h1 { font-size: clamp(3rem, 7.4vw, 6.8rem); max-width: 11ch; }
+  .hero h1 { font-size: clamp(3rem, 6.6vw, 6rem); max-width: 12ch; text-wrap: balance; }
   .hero .lead { margin-top: 28px; font-size: clamp(1.1rem, 1.6vw, 1.3rem); max-width: 34ch; color: var(--soft); font-weight: 500; }
   .stores { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
   .store {
@@ -133,6 +135,8 @@
   .store b { display: block; font-size: 18px; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; }
   .store { text-align: left; }
   .store[aria-disabled="true"] { cursor: default; }
+  .store[aria-disabled="true"]:hover { background: var(--olive); }
+  .store[aria-disabled="true"]:active { transform: none; }
   @keyframes dot { 0% { transform: scale(.7); } 40% { transform: scale(1.5); } 100% { transform: scale(.7); } }
 
   /* ── Teléfono ────────────────────────────────────────────────────────── */
@@ -161,14 +165,19 @@
   .p-hi { margin-top: 18px; font-weight: 800; font-size: 24px; letter-spacing: -0.03em; line-height: 1.1; }
   .p-sub { margin-top: 4px; color: var(--soft); font-weight: 500; }
   .moods { display: flex; justify-content: space-between; margin-top: 10px; }
-  .mood { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; background: rgba(255,255,255,.6); }
-  .mood.on { background: var(--terra-ink); box-shadow: 0 0 0 3px rgba(193,105,79,.2); }
+  .moods { align-items: center; padding: 4px 6px; }
+  .mood { width: 26px; height: 26px; border-radius: 50%; opacity: .35; }
+  .mood.on { opacity: 1; transform: scale(1.28); }
+  .mood:nth-child(1) { background: var(--m1); } .mood:nth-child(2) { background: var(--m2); }
+  .mood:nth-child(3) { background: var(--m3); } .mood:nth-child(4) { background: var(--m4); }
+  .mood:nth-child(5) { background: var(--m5); }
   .p-label { font-weight: 700; font-size: 13px; margin: 16px 0 8px; }
   .session { display: flex; gap: 10px; align-items: center; }
   .session .ph { width: 40px; height: 40px; border-radius: 14px; background: linear-gradient(160deg, var(--sky), #7E8CA8); flex: none; }
   .session b { display: block; font-size: 13px; }
   .session span { color: var(--soft); font-size: 11px; }
   .chip { display: inline-block; margin-top: 10px; padding: 6px 12px; border-radius: 999px; background: var(--terra-ink); color: var(--cream); font-weight: 700; font-size: 11px; }
+  .diary { min-height: 120px; }
   .tools-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .tools-mini div { border-radius: 16px; padding: 12px; font-weight: 700; font-size: 12px; }
   .tools-mini small { display: block; font-weight: 500; color: var(--soft); font-size: 10px; margin-top: 2px; }
@@ -183,7 +192,7 @@
 
   /* ── Secciones ───────────────────────────────────────────────────────── */
   section { padding: clamp(64px, 7vw, 96px) 0; }
-  .sec-title { font-size: clamp(2.3rem, 5vw, 4.2rem); max-width: 16ch; }
+  .sec-title { font-size: clamp(2.3rem, 5vw, 4.2rem); max-width: 16ch; text-wrap: balance; }
   .sec-lead { margin-top: 22px; max-width: 46ch; color: var(--soft); font-size: 1.1rem; }
 
   /* Valores: fondo bosque, lo único oscuro de la página. */
@@ -193,6 +202,42 @@
   .vgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px; margin-top: 48px; }
   .value h3 { font-size: clamp(1.6rem, 2.6vw, 2.2rem); }
   .value p { margin-top: 14px; max-width: 38ch; color: rgba(239,230,214,.82); }
+
+  /* ¿Cómo venís hoy? El único momento de la página que responde a quien la
+     visita, y es el mismo gesto con el que arranca la app: los cinco círculos
+     de ánimo, el elegido crece y los demás se apagan (MoodCheckIn.tsx). */
+  .checkin { text-align: center; background: var(--cream); transition: background-color .6s ease; }
+  .checkin[data-mood="1"] { background: color-mix(in srgb, var(--m1) 14%, var(--cream)); }
+  .checkin[data-mood="2"] { background: color-mix(in srgb, var(--m2) 22%, var(--cream)); }
+  .checkin[data-mood="3"] { background: color-mix(in srgb, var(--m3) 30%, var(--cream)); }
+  .checkin[data-mood="4"] { background: color-mix(in srgb, var(--m4) 26%, var(--cream)); }
+  .checkin[data-mood="5"] { background: color-mix(in srgb, var(--m5) 18%, var(--cream)); }
+  .checkin h2 { margin: 0 auto; }
+  .checkin .sec-lead { margin: 18px auto 0; }
+  .mood-pick { list-style: none; padding: 0; margin: 48px auto 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(2px, 2vw, 24px); max-width: 600px; }
+  .mood-pick button {
+    font: inherit; color: var(--olive); background: none; border: 0; padding: 6px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; min-height: 44px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mood-pick i {
+    display: block; width: clamp(40px, 11vw, 72px); aspect-ratio: 1; border-radius: 50%;
+    box-shadow: inset 0 0 0 1px rgba(86,94,50,.14);
+    transition: transform .45s cubic-bezier(.34, 1.56, .64, 1), opacity .25s ease;
+  }
+  .mood-pick span { font-size: clamp(.78rem, 3.4vw, .95rem); font-weight: 600; transition: opacity .25s ease; }
+  .mood-pick li:nth-child(1) i { background: var(--m1); } .mood-pick li:nth-child(2) i { background: var(--m2); }
+  .mood-pick li:nth-child(3) i { background: var(--m3); } .mood-pick li:nth-child(4) i { background: var(--m4); }
+  .mood-pick li:nth-child(5) i { background: var(--m5); }
+  .mood-pick button:hover i { transform: scale(1.08); }
+  .checkin[data-mood] .mood-pick i { opacity: .35; }
+  .checkin[data-mood] .mood-pick span { opacity: .6; }
+  .checkin[data-mood] .mood-pick [aria-pressed="true"] i { opacity: 1; transform: scale(1.28); }
+  .checkin[data-mood] .mood-pick [aria-pressed="true"] span { opacity: 1; }
+  .mood-reply { min-height: 7.5em; max-width: 38ch; margin: 40px auto 0; }
+  .mood-reply p { font-size: clamp(1.15rem, 2vw, 1.4rem); font-weight: 600; line-height: 1.45; }
+  .mood-reply a { display: inline-block; margin-top: 14px; font-weight: 700; color: var(--olive); text-decoration-color: var(--terra); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+  .mood-reply small { display: block; margin-top: 18px; color: var(--soft); font-size: .95rem; }
 
   /* Vista rápida: tres pantallas */
   .peek-switch { display: none; }
@@ -255,11 +300,12 @@
   .pros-box h2 { color: var(--cream); font-size: clamp(2.2rem, 4.4vw, 3.8rem); }
   .pros-box ul { list-style: none; padding: 0; margin: 0; }
   .pros-box li { padding: 12px 0; border-bottom: 1px solid rgba(247,239,228,.25); font-weight: 500; }
-  .pros-box p { margin-top: 20px; color: rgba(247,239,228,.88); max-width: 40ch; }
+  .pros-box p { margin-top: 20px; color: var(--cream); max-width: 40ch; }
 
   /* Cierre */
   .closing { position: relative; overflow: hidden; isolation: isolate; text-align: center; }
   .closing .aurora { inset: 0; }
+  .closing .aurora span { opacity: .28; }
   .closing .aurora .a1 { left: 12%; top: 18%; width: 38vmax; height: 38vmax; }
   .closing .aurora .a2 { left: 44%; top: 30%; width: 36vmax; height: 36vmax; }
   .closing .aurora .a3 { left: 66%; top: -20%; }
@@ -321,6 +367,7 @@
     .hero .phone { width: min(280px, 100%); }
     .hero-inner { padding-bottom: 48px; }
     .explore-content { grid-template-columns: 1fr; gap: 24px; }
+    .diary { min-height: 0; }
     .value + .value { border-top: 1px solid rgba(239,230,214,.2); padding-top: 28px; }
     .steps { grid-template-columns: 1fr; }
     .foot { grid-template-columns: 1fr; }
@@ -348,7 +395,7 @@
 
   <div class="wrap hero-inner">
     <div>
-      <h1>un lugar para estar mejor, a tu ritmo.</h1>
+      <h1>un lugar para estar mejor, a&nbsp;tu&nbsp;ritmo.</h1>
       <p class="lead">Profesionales del bienestar que podés conocer antes de elegir, herramientas para el día a día y un espacio que no te apura.</p>
       <div class="stores" data-stores></div>
     </div>
@@ -362,7 +409,7 @@
           <p class="p-hi">¡Hola!</p>
           <div class="glass" style="margin-top:14px">
             <b style="font-size:13px">¿Cómo venís hoy?</b>
-            <div class="moods"><span class="mood">😔</span><span class="mood">😕</span><span class="mood">😐</span><span class="mood on">🙂</span><span class="mood">😄</span></div>
+            <div class="moods"><span class="mood"></span><span class="mood"></span><span class="mood"></span><span class="mood on"></span><span class="mood"></span></div>
           </div>
           <p class="p-label">Tu próxima sesión</p>
           <div class="glass">
@@ -383,6 +430,23 @@
 
 <main id="contenido">
 
+  <section class="checkin" aria-labelledby="hoy" hidden>
+    <div class="wrap">
+      <h2 id="hoy" class="sec-title">¿cómo venís hoy?</h2>
+      <p class="sec-lead">Es lo primero que te pregunta Vita cuando la abrís. Probá tocar un color.</p>
+      <ul class="mood-pick">
+        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Bajón</span></button></li>
+        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Cansado</span></button></li>
+        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Normal</span></button></li>
+        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Bien</span></button></li>
+        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Brillando</span></button></li>
+      </ul>
+      <div class="mood-reply" aria-live="polite">
+        <small>Acá no se guarda nada. En la app, queda en tu registro del día.</small>
+      </div>
+    </div>
+  </section>
+
   <section class="product" aria-labelledby="vistazo">
     <div class="wrap">
       <h2 id="vistazo" class="sec-title">un vistazo adentro.</h2>
@@ -400,16 +464,15 @@
                 <p class="p-hi" style="margin-top:6px">Contame cómo venís</p>
                 <p class="p-sub">Un toque alcanza. Si querés, escribí algo más.</p>
                 <div class="glass" style="margin-top:16px">
-                  <div class="moods"><span class="mood">😔</span><span class="mood">😕</span><span class="mood on">😐</span><span class="mood">🙂</span><span class="mood">😄</span></div>
+                  <div class="moods"><span class="mood"></span><span class="mood"></span><span class="mood on"></span><span class="mood"></span><span class="mood"></span></div>
                 </div>
-                <div class="glass" style="margin-top:12px;min-height:120px">
+                <div class="glass diary" style="margin-top:12px">
                   <b style="font-size:12px">Diario</b>
                   <p style="margin-top:6px;color:var(--soft)">Hoy me costó arrancar, pero a la tarde salí a caminar y me hizo bien.</p>
                 </div>
                 <p class="p-label">Esta semana</p>
                 <div class="glass" style="display:flex;align-items:flex-end;gap:8px;height:84px">
-                  <i style="flex:1;height:40%;border-radius:6px;background:#F6DCCB"></i><i style="flex:1;height:55%;border-radius:6px;background:#F3E3C4"></i><i style="flex:1;height:35%;border-radius:6px;background:#F6DCCB"></i><i style="flex:1;height:70%;border-radius:6px;background:#DDE8C9"></i><i style="flex:1;height:80%;border-radius:6px;background:#DDE8C9"></i><i style="flex:1;height:60%;border-radius:6px;background:#D6E3EF"></i><i style="flex:1;height:50%;border-radius:6px;background:var(--terra-ink)"></i>
-                </div>
+                  <i style="flex:1;height:45%;border-radius:6px;background:var(--m3)"></i><i style="flex:1;height:30%;border-radius:6px;background:var(--m2)"></i><i style="flex:1;height:60%;border-radius:6px;background:var(--m4)"></i><i style="flex:1;height:20%;border-radius:6px;background:var(--m1)"></i><i style="flex:1;height:55%;border-radius:6px;background:var(--m3)"></i><i style="flex:1;height:80%;border-radius:6px;background:var(--m5)"></i><i style="flex:1;height:65%;border-radius:6px;background:var(--m4)"></i></div>
               </div>
               <div class="tabbar"><i class="on"></i><i></i><i></i><i></i></div>
             </div>
@@ -568,15 +631,46 @@
   // corte el bloque de abajo, que es el que arma los botones de descarga.
   var peek = document.querySelector('.peek');
   var switcher = document.querySelector('.peek-switch');
+  function elegirExperiencia(index) {
+    if (!peek || !switcher) return;
+    peek.dataset.active = String(index);
+    switcher.querySelectorAll('button').forEach(function (item, i) {
+      item.setAttribute('aria-pressed', String(i === index));
+    });
+  }
   if (peek && switcher) {
-    peek.dataset.active = '0';
     switcher.hidden = false;
+    elegirExperiencia(0);
     switcher.querySelectorAll('button').forEach(function (button, index) {
+      button.addEventListener('click', function () { elegirExperiencia(index); });
+    });
+  }
+
+  // ¿Cómo venís hoy? Cada respuesta lleva a la experiencia que le sirve
+  // (0 ánimo, 1 acompañamiento, 2 pausa). No se guarda nada: es una muestra.
+  var RESPUESTAS = [
+    { t: 'Hay días así. No hace falta resolverlo hoy: podés hablar con alguien o empezar por unos minutos para vos.', link: 'Mirá cómo elegir con quién hablar', exp: 1 },
+    { t: 'El cansancio también cuenta. A veces una pausa de tres minutos alcanza para seguir.', link: 'Mirá las pausas de Vita', exp: 2 },
+    { t: 'Un día normal también vale anotarlo. Con el tiempo, esos días te muestran cómo venís.', link: 'Mirá cómo se registra en Vita', exp: 0 },
+    { t: 'Qué bueno. Anotarlo ayuda a reconocer qué te hace bien, para volver ahí cuando haga falta.', link: 'Mirá cómo se registra en Vita', exp: 0 },
+    { t: 'Disfrutalo. Si querés, dejalo escrito en tu diario para releerlo otro día.', link: 'Mirá cómo se registra en Vita', exp: 0 }
+  ];
+  var checkin = document.querySelector('.checkin');
+  if (checkin) {
+    var reply = checkin.querySelector('.mood-reply');
+    var nota = reply.innerHTML;
+    var botones = checkin.querySelectorAll('.mood-pick button');
+    checkin.hidden = false;
+    botones.forEach(function (button, index) {
       button.addEventListener('click', function () {
-        peek.dataset.active = String(index);
-        switcher.querySelectorAll('button').forEach(function (item) {
-          item.setAttribute('aria-pressed', String(item === button));
-        });
+        var r = RESPUESTAS[index];
+        checkin.dataset.mood = String(index + 1);
+        botones.forEach(function (b) { b.setAttribute('aria-pressed', String(b === button)); });
+        reply.innerHTML = '<p></p><a href="#vistazo"></a>' + nota;
+        reply.querySelector('p').textContent = r.t;
+        var a = reply.querySelector('a');
+        a.textContent = r.link;
+        a.addEventListener('click', function () { elegirExperiencia(r.exp); });
       });
     });
   }
