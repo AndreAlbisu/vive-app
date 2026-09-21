@@ -206,13 +206,15 @@
   /* ¿Cómo venís hoy? El único momento de la página que responde a quien la
      visita, y es el mismo gesto con el que arranca la app: los cinco círculos
      de ánimo, el elegido crece y los demás se apagan (MoodCheckIn.tsx). */
-  .checkin { text-align: center; background: var(--cream); transition: background-color .6s ease; }
-  .checkin[data-mood="1"] { background: color-mix(in srgb, var(--m1) 14%, var(--cream)); }
-  .checkin[data-mood="2"] { background: color-mix(in srgb, var(--m2) 22%, var(--cream)); }
-  .checkin[data-mood="3"] { background: color-mix(in srgb, var(--m3) 30%, var(--cream)); }
-  .checkin[data-mood="4"] { background: color-mix(in srgb, var(--m4) 26%, var(--cream)); }
-  .checkin[data-mood="5"] { background: color-mix(in srgb, var(--m5) 18%, var(--cream)); }
+  .checkin { text-align: center; background: var(--paper); transition: background-color .6s ease; }
+  .checkin[data-mood="1"] { background: color-mix(in srgb, var(--m1) 14%, var(--paper)); }
+  .checkin[data-mood="2"] { background: color-mix(in srgb, var(--m2) 22%, var(--paper)); }
+  .checkin[data-mood="3"] { background: color-mix(in srgb, var(--m3) 30%, var(--paper)); }
+  .checkin[data-mood="4"] { background: color-mix(in srgb, var(--m4) 26%, var(--paper)); }
+  .checkin[data-mood="5"] { background: color-mix(in srgb, var(--m5) 18%, var(--paper)); }
   .checkin h2 { margin: 0 auto; }
+  .checkin-q { margin-top: 44px; font-weight: 800; font-size: clamp(1.3rem, 2.4vw, 1.7rem); letter-spacing: -0.02em; }
+  .checkin .mood-pick { margin-top: 28px; }
   .checkin .sec-lead { margin: 18px auto 0; }
   .mood-pick { list-style: none; padding: 0; margin: 48px auto 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(2px, 2vw, 24px); max-width: 600px; }
   .mood-pick button {
@@ -396,7 +398,7 @@
   <div class="wrap hero-inner">
     <div>
       <h1>un lugar para estar mejor, a&nbsp;tu&nbsp;ritmo.</h1>
-      <p class="lead">Profesionales del bienestar que podés conocer antes de elegir, herramientas para el día a día y un espacio que no te apura.</p>
+      <p class="lead">Sesiones por videollamada con profesionales del bienestar que elegís conociendo cómo trabajan. Y herramientas para los días entre una sesión y otra.</p>
       <div class="stores" data-stores></div>
     </div>
 
@@ -430,33 +432,48 @@
 
 <main id="contenido">
 
-  <section class="checkin" aria-labelledby="hoy" hidden>
+  <section class="how" aria-labelledby="como">
     <div class="wrap">
-      <h2 id="hoy" class="sec-title">¿cómo venís hoy?</h2>
-      <p class="sec-lead">Es lo primero que te pregunta Vita cuando la abrís. Probá tocar un color.</p>
-      <ul class="mood-pick">
-        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Bajón</span></button></li>
-        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Cansado</span></button></li>
-        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Normal</span></button></li>
-        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Bien</span></button></li>
-        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Brillando</span></button></li>
-      </ul>
-      <div class="mood-reply" aria-live="polite">
-        <small>Acá no se guarda nada. En la app, queda en tu registro del día.</small>
-      </div>
+      <h2 id="como" class="sec-title">cómo funciona.</h2>
+      <ol class="steps">
+        <li><b>Contás qué buscás</b><span>Unas preguntas cortas sobre qué te trae y cómo querés que te acompañen.</span></li>
+        <li><b>Te sugerimos profesionales</b><span>Personas que trabajan lo que buscás, de la forma que te sirve.</span></li>
+        <li><b>Reservás desde la app</b><span>Elegís el horario y pagás ahí mismo, con Mercado Pago.</span></li>
+        <li><b>Te conectás</b><span>Llegás a tu videollamada desde la app, en el horario que elegiste.</span></li>
+      </ol>
     </div>
   </section>
 
   <section class="product" aria-labelledby="vistazo">
     <div class="wrap">
       <h2 id="vistazo" class="sec-title">un vistazo adentro.</h2>
-      <p class="sec-lead">Para conocerte un poco más, encontrar acompañamiento o hacer una pausa.</p>
+      <p class="sec-lead">Encontrar con quién hablar, conocerte un poco más o hacer una pausa.</p>
       <div class="peek-switch" role="group" aria-label="Elegí qué experiencia conocer" hidden>
-        <button type="button" aria-pressed="true" aria-controls="experiencia-animo">Cómo venís</button>
-        <button type="button" aria-pressed="false" aria-controls="experiencia-profesional">Acompañamiento</button>
+        <button type="button" aria-pressed="true" aria-controls="experiencia-profesional">Acompañamiento</button>
+        <button type="button" aria-pressed="false" aria-controls="experiencia-animo">Cómo venís</button>
         <button type="button" aria-pressed="false" aria-controls="experiencia-pausa">Una pausa</button>
       </div>
       <div class="peek">
+        <figure id="experiencia-profesional">
+          <div class="phone" role="img" aria-label="Perfil ficticio para ilustrar la elección de un profesional">
+            <div class="screen"><div class="island"></div><div class="sb"><span>9:41</span><span>●●●</span></div>
+              <div class="sc">
+                <div class="glass pro-card">
+                  <div class="pro-face"></div>
+                  <p class="pro-name">Profesional de ejemplo</p>
+                  <p class="pro-role">Psicología · Enfoque cognitivo conductual</p>
+                  <div class="tags"><span>Ansiedad y estrés</span><span>Autoestima</span><span>Momentos de cambio</span></div>
+                </div>
+                <p class="p-label">Elegí un horario</p>
+                <div class="slots"><span>10:00</span><span class="on">15:30</span><span>18:00</span><span>19:00</span><span>20:00</span><span>21:00</span></div>
+                <div class="cta-mini">Reservar sesión</div>
+              </div>
+              <div class="tabbar"><i></i><i class="on"></i><i></i><i></i></div>
+            </div>
+          </div>
+          <figcaption><b>Encontrá acompañamiento</b><span>Conocé su enfoque, su formación y sus horarios antes de reservar.</span></figcaption>
+        </figure>
+
         <figure id="experiencia-animo">
           <div class="phone" role="img" aria-label="Vista ilustrativa para registrar cómo venís">
             <div class="screen"><div class="island"></div><div class="sb"><span>9:41</span><span>●●●</span></div>
@@ -478,26 +495,6 @@
             </div>
           </div>
           <figcaption><b>Entendé cómo venís</b><span>Registrá tu ánimo, escribí en tu diario y encontrá un momento para agradecer.</span></figcaption>
-        </figure>
-
-        <figure id="experiencia-profesional">
-          <div class="phone" role="img" aria-label="Perfil ficticio para ilustrar la elección de un profesional">
-            <div class="screen"><div class="island"></div><div class="sb"><span>9:41</span><span>●●●</span></div>
-              <div class="sc">
-                <div class="glass pro-card">
-                  <div class="pro-face"></div>
-                  <p class="pro-name">Profesional de ejemplo</p>
-                  <p class="pro-role">Psicología · Enfoque cognitivo conductual</p>
-                  <div class="tags"><span>Ansiedad y estrés</span><span>Autoestima</span><span>Momentos de cambio</span></div>
-                </div>
-                <p class="p-label">Elegí un horario</p>
-                <div class="slots"><span>10:00</span><span class="on">15:30</span><span>18:00</span><span>19:00</span><span>20:00</span><span>21:00</span></div>
-                <div class="cta-mini">Reservar sesión</div>
-              </div>
-              <div class="tabbar"><i></i><i class="on"></i><i></i><i></i></div>
-            </div>
-          </div>
-          <figcaption><b>Encontrá acompañamiento</b><span>Conocé su enfoque, su formación y sus horarios antes de reservar.</span></figcaption>
         </figure>
 
         <figure id="experiencia-pausa">
@@ -532,15 +529,21 @@
     </div>
   </section>
 
-  <section class="how" aria-labelledby="como">
+  <section class="checkin" aria-labelledby="hoy" hidden>
     <div class="wrap">
-      <h2 id="como" class="sec-title">cómo funciona.</h2>
-      <ol class="steps">
-        <li><b>Contás qué buscás</b><span>Unas preguntas cortas sobre qué te trae y cómo querés que te acompañen.</span></li>
-        <li><b>Te sugerimos profesionales</b><span>Personas que trabajan lo que buscás, de la forma que te sirve.</span></li>
-        <li><b>Reservás desde la app</b><span>Elegís el horario y pagás ahí mismo, con Mercado Pago.</span></li>
-        <li><b>Te conectás</b><span>Llegás a tu videollamada desde la app, en el horario que elegiste.</span></li>
-      </ol>
+      <h2 id="hoy" class="sec-title">para los días entre sesiones.</h2>
+      <p class="sec-lead">Vita también te acompaña cuando no tenés sesión. Cada vez que la abrís, te pregunta cómo venís. Probalo.</p>
+      <p class="checkin-q">¿Cómo venís hoy?</p>
+      <ul class="mood-pick">
+        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Bajón</span></button></li>
+        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Cansado</span></button></li>
+        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Normal</span></button></li>
+        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Bien</span></button></li>
+        <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Brillando</span></button></li>
+      </ul>
+      <div class="mood-reply" aria-live="polite">
+        <small>Acá no se guarda nada. En la app, queda en tu registro del día.</small>
+      </div>
     </div>
   </section>
 
@@ -647,13 +650,13 @@
   }
 
   // ¿Cómo venís hoy? Cada respuesta lleva a la experiencia que le sirve
-  // (0 ánimo, 1 acompañamiento, 2 pausa). No se guarda nada: es una muestra.
+  // (0 acompañamiento, 1 ánimo, 2 pausa). No se guarda nada: es una muestra.
   var RESPUESTAS = [
-    { t: 'Hay días así. No hace falta resolverlo hoy: podés hablar con alguien o empezar por unos minutos para vos.', link: 'Mirá cómo elegir con quién hablar', exp: 1 },
+    { t: 'Hay días así. No hace falta resolverlo hoy: podés hablar con alguien o empezar por unos minutos para vos.', link: 'Mirá cómo elegir con quién hablar', exp: 0 },
     { t: 'El cansancio también cuenta. A veces una pausa de tres minutos alcanza para seguir.', link: 'Mirá las pausas de Vita', exp: 2 },
-    { t: 'Un día normal también vale anotarlo. Con el tiempo, esos días te muestran cómo venís.', link: 'Mirá cómo se registra en Vita', exp: 0 },
-    { t: 'Qué bueno. Anotarlo ayuda a reconocer qué te hace bien, para volver ahí cuando haga falta.', link: 'Mirá cómo se registra en Vita', exp: 0 },
-    { t: 'Disfrutalo. Si querés, dejalo escrito en tu diario para releerlo otro día.', link: 'Mirá cómo se registra en Vita', exp: 0 }
+    { t: 'Un día normal también vale anotarlo. Con el tiempo, esos días te muestran cómo venís.', link: 'Mirá cómo se registra en Vita', exp: 1 },
+    { t: 'Qué bueno. Anotarlo ayuda a reconocer qué te hace bien, para volver ahí cuando haga falta.', link: 'Mirá cómo se registra en Vita', exp: 1 },
+    { t: 'Disfrutalo. Si querés, dejalo escrito en tu diario para releerlo otro día.', link: 'Mirá cómo se registra en Vita', exp: 1 }
   ];
   var checkin = document.querySelector('.checkin');
   if (checkin) {
