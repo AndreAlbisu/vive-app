@@ -25,7 +25,7 @@
 | ID | Qué falta | Estado | Quién |
 |---|---|---|---|
 | **L1** | **La videollamada nunca se ejercitó con dos personas adentro** (A5 prueba 2). | 🔴 Abierto. Hace falta agendar una sesión real con `coach-prueba`: la sala abre 15 min antes. | Joaquín / Andre |
-| **L2** | **La comisión real de MP** medida sobre un pago de verdad, no el de $1 (A5 prueba 3). Si no da ~4%, cambia `MP_FEE_PCT_OBSERVED` en `lib/pricing.ts`. | 🔴 Abierto. Es mirar el pago de $4.500 del 19/08 en el panel de MP. | Joaquín / Andre |
+| **L2** | ~~**La comisión real de MP** medida sobre un pago de verdad, no el de $1 (A5 prueba 3).~~ | ✅ **Cerrado 21/09.** No hizo falta el panel: se leyeron los pagos por la API de MP con el token del coach. Los tres pagos de $4.500 (`174555144528`, `174554303062`, `173787714415`) dan el mismo número, **4,30%**, no 4%. `MP_FEE_PCT_OBSERVED = 4.3`. El 4 viejo no estaba mal medido, estaba mal redondeado: sobre $1 la tarifa es 0,04 y los centavos tapan el 0,3. **La duda del IVA se cerró: ya lo incluye** (193,63 / 1,21 = 3,556% de 4.500). | — |
 | **L3** | **Prender `CHECKOUT_HABILITADO`** en `web/c/index.html`. | ✅ Verificado 17/09: sigue en `false`. Depende de L1 y L2. | — |
 | **L4** | **DMARC de `vitaapp.com.ar`** — TXT en `_dmarc`, zona en Vercel. Registro en la receta de A5. | ✅ Verificado con `dig` el 17/09: **sigue sin estar**. | Andre |
 | **L5** | **Revisión del abogado** de Términos, Privacidad y Reembolsos (`LEGAL_IS_DRAFT = true`), con A.12 (§10.3) y la duda de si declarar Cloudflare/unpkg obliga a re-pedir consentimiento — que hoy no tiene mecanismo. | 🔴 Abierto. | Andre |
@@ -312,15 +312,36 @@ la sesión: la sala se abre 15 minutos antes.
 medido sobre un pago de $1**: `mercadopago_fee` 0,04 sobre 1,00, o sea ≈4%. A ese
 monto, cualquier componente fijo de la tarifa distorsiona el porcentaje.
 
-Buscá en el panel de Mercado Pago el pago **de $4.500 del 19/08/2026** (segunda
-sesión pagada de verdad, par Joaquín + Coach Prueba) y mirá el desglose:
+✅ **HECHA el 21/09/2026, sin panel.** Se leyeron los pagos por la API de MP
+(`GET /v1/payments/<id>`) con el `access_token` del coach que ya está en
+`coach_mp_accounts`, que es la misma vía por la que se había medido el de $1.
 
-- cuánto se llevó **Mercado Pago**,
-- cuánto se llevó **VIVE** (`application_fee`),
-- cuánto quedó **neto para el coach**.
+Los tres pagos de $4.500 con tarjeta (`174555144528` y `174554303062` del 19/08,
+`173787714415` del 20/08) dan **exactamente el mismo desglose**:
 
-Si el porcentaje de MP no da ~4%, hay que actualizar `MP_FEE_PCT_OBSERVED` en
-`lib/pricing.ts` — y con él cambia lo que la app le promete al coach.
+| | |
+|---|---|
+| Mercado Pago (`mercadopago_fee`) | **193,63** = **4,30%** |
+| VIVE (`application_fee`) | 675 (el 15% del tramo recurrente, correcto) |
+| Neto del coach (`net_received_amount`) | 3.631,37 |
+
+**`MP_FEE_PCT_OBSERVED` pasó de 4 a 4,3.** El 4 no estaba mal medido: sobre $1 la
+tarifa es 0,04 y el redondeo a centavos tapaba el 0,3.
+
+📌 **La duda del IVA se cerró**: 193,63 / 1,21 = 160,02, que es el 3,556% de
+4.500. El número que descuenta MP ya viene con IVA adentro.
+
+⚠️ **Lo que sigue sin saberse**: los tres pagos son con **tarjeta de crédito** y
+**acreditación inmediata** (`money_release_date` a los 3 minutos). El de $1 era
+dinero en cuenta. La tarifa cambia con las dos cosas, así que el 4,3% se sigue
+mostrando con "≈" y la pantalla del coach ahora aclara que depende también del
+medio de pago, no solo del plazo de acreditación.
+
+🔴 **Hallazgo al pasar, para Andre**: los **7** pagos de MP a precio real que hay
+en la base figuran `reembolsado`, incluido el del 19/08 que
+`docs/fiscal-instrucciones.md` lista como *"confirmada, sin reembolso"*. O ese
+doc quedó viejo, o el reembolso pasó después de escribirlo. Toca revisarlo antes
+de usarlo para algo fiscal, y se cruza con **L9**.
 
 #### Y una cosa de DNS, si te queda a mano
 

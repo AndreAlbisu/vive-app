@@ -17,9 +17,19 @@ describe('desglose', () => {
   it('en Mercado Pago la tarifa del procesador la paga el coach', () => {
     const d = desglose(100, 'mp', 'primera');
     expect(d.vive).toBe(20);
-    expect(d.procesador).toEqual({ monto: 4, loPaga: 'coach' });
-    expect(d.coach).toBe(76);
+    expect(d.procesador).toEqual({ monto: 4.3, loPaga: 'coach' });
+    expect(d.coach).toBe(75.7);
     expect(d.coachPct).toBe(76);
+  });
+
+  // Los tres pagos de $4.500 del 19 y 20/08 (payments 174555144528, 174554303062
+  // y 173787714415) dan exactamente esto en la API de MP. Es el pago de precio
+  // real que faltaba: el de $1 redondeaba la tarifa a 0,04 y tapaba el 4,3%.
+  it('reproduce los pagos reales del 19/08 sobre $4.500', () => {
+    const d = desglose(4500, 'mp', 'recurrente');
+    expect(d.vive).toBe(675);              // application_fee
+    expect(d.procesador?.monto).toBe(193.5); // mercadopago_fee real: 193,63
+    expect(d.coach).toBe(3631.5);          // net_received_amount real: 3.631,37
   });
 
   it('reproduce el pago real del 09/08 sobre $1', () => {

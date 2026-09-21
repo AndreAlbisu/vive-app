@@ -270,7 +270,7 @@ export default function CoachPayoutScreen() {
 
                     <Text style={s.desgloseNota}>
                       {riel === 'mp'
-                        ? `Lo cobrás vos, directo a tu Mercado Pago. Esa tarifa de ≈${MP_FEE_PCT_OBSERVED}% te la cobra Mercado Pago a vos, no nosotros: en este riel el que vende sos vos y le pagás a tu propio procesador, como cualquiera que cobre con MP. El número exacto depende del plazo de acreditación que tengas configurado.`
+                        ? `Lo cobrás vos, directo a tu Mercado Pago. Esa tarifa de ≈${String(MP_FEE_PCT_OBSERVED).replace('.', ',')}% te la cobra Mercado Pago a vos, no nosotros: en este riel el que vende sos vos y le pagás a tu propio procesador, como cualquiera que cobre con MP. El número exacto depende del medio de pago que use la persona y del plazo de acreditación que tengas configurado.`
                         : 'Estas no te entran por Mercado Pago: las cobra Vita y te las transferimos cada semana, por sesiones ya realizadas. Acá el procesador nos cobra a nosotros, así que sale de nuestra parte y a vos te llega limpio. Por eso retenemos 5 puntos más que en Argentina.'}
                     </Text>
                   </View>

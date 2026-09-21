@@ -20,6 +20,23 @@
 - Sigue abierto desde la sesión 261: la imagen para compartir (`og:image`) y confirmar "Hecho en Córdoba".
 
 ---
+## 2026-09-21 — Andre (sesión 263 · L2 cerrado: la tarifa de MP es 4,30%, no 4%)
+
+**Tocado:** `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`.
+
+**Resumen:**
+- **L2 cerrado, y sin entrar al panel de Mercado Pago.** Se leyeron los pagos por la API (`GET /v1/payments/<id>`) con el `access_token` del coach que ya vive en `coach_mp_accounts`, que es la misma vía por la que se había medido el de $1. Los tres pagos de $4.500 con tarjeta (`174555144528` y `174554303062` del 19/08, `173787714415` del 20/08) dan **exactamente el mismo desglose**: `mercadopago_fee` 193,63, `application_fee` 675 (el 15% del tramo recurrente, correcto) y `net_received_amount` 3.631,37.
+- **`MP_FEE_PCT_OBSERVED` pasa de 4 a 4,3.** El 4 no estaba mal medido, estaba mal redondeado: sobre $1 la tarifa es 0,04 y los centavos tapaban el 0,3. De ahí cuelga todo el desglose que el coach ve en "Cómo te pagamos" (`lib/desglosePago.ts`), así que hasta hoy se le prometía 0,3 puntos de más.
+- ✅ **Se cerró la duda del IVA** que estaba anotada en tres lugares: 193,63 / 1,21 = 160,02, que es el 3,556% de 4.500. El número que descuenta MP ya viene con IVA adentro.
+- ⚠️ **Lo que sigue siendo observación y no tarifa publicada:** los tres pagos son con **tarjeta de crédito** y **acreditación inmediata** (`money_release_date` a los 3 minutos del `date_approved`); el de $1 era dinero en cuenta. La tarifa de Checkout Pro cambia con las dos cosas. Se sigue mostrando con "≈" y la pantalla del coach ahora aclara que depende también del medio de pago, no solo del plazo de acreditación. De paso, el porcentaje se escribe con coma (`4,3%`), que antes salía con punto porque interpolaba el número crudo.
+- Test nuevo en `desglosePago.test.ts` que reproduce el pago de $4.500 real, al lado del de $1 que ya estaba. Las 725 pruebas pasan.
+- 🔴 **Hallazgo al pasar, para Andre:** los **7** pagos de MP a precio real que hay en la base figuran `reembolsado`, incluido el del 19/08 que `docs/fiscal-instrucciones.md` lista como *"confirmada, sin reembolso"*. O el doc quedó viejo, o el reembolso pasó después. No se tocó ese archivo: es fiscal y la decisión es de Andre. Se cruza con **L9**.
+
+**Pendiente para la próxima sesión:**
+- **De los 7 que bloqueaban el lanzamiento quedan 6.** Lo de Andre que es media hora: DMARC (**L4**), el nombre que ve el comprador en MP (**L6**) y mandarle los Términos al abogado (**L5**, el único que es tiempo de calendario). Lo de la sesión de prueba con Joaquín: **L1**, **L39** y **L19** de una sola vez. **L3** (prender `CHECKOUT_HABILITADO`) ahora depende solo de L1.
+- Revisar `docs/fiscal-instrucciones.md` contra la base, por lo de arriba.
+
+---
 ## 2026-09-18 — Andre (sesión 262 · ícono de ondas para Bienestar mental)
 
 **Tocado:** `components/EjeIcon.tsx` (nuevo), `constants/conexionesDoors.ts`, `app/(tabs)/conexiones.tsx`.
