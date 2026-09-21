@@ -102,8 +102,9 @@
   .aurora .a2 { width: 44vmax; height: 44vmax; left: 58%; top: 34%; background: var(--sun);   opacity: .5; }
   .aurora .a3 { width: 40vmax; height: 40vmax; left: 70%; top: -18%; background: var(--sky);  opacity: .6; }
   .aurora .a4 { width: 42vmax; height: 42vmax; left: 8%;  top: 60%; background: var(--lime);  opacity: .6; }
-  /* La única animación que no dispara nadie: la aurora respira al ritmo del
-     ejercicio de Respiración de la app (4 s entra, 6 s sale). */
+  /* La única animación que no dispara nadie: la aurora respira lento, en
+     ciclos de 10 s. La respiración guiada de verdad está en "Probá un momento
+     de Vita" y la dispara quien visita. */
   @keyframes breathe {
     0%   { transform: scale(.9)  translate(0, 0); }
     40%  { transform: scale(1.08) translate(-1.5%, 1%); }
@@ -195,13 +196,6 @@
   .sec-title { font-size: clamp(2.3rem, 5vw, 4.2rem); max-width: 16ch; text-wrap: balance; }
   .sec-lead { margin-top: 22px; max-width: 46ch; color: var(--soft); font-size: 1.1rem; }
 
-  /* Valores: fondo bosque, lo único oscuro de la página. */
-  .values { background: var(--forest); color: #EFE6D6; position: relative; }
-  .values h2, .values h3 { color: #F7EFE4; }
-  .values .sec-lead { color: rgba(239,230,214,.82); }
-  .vgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px; margin-top: 48px; }
-  .value h3 { font-size: clamp(1.6rem, 2.6vw, 2.2rem); }
-  .value p { margin-top: 14px; max-width: 38ch; color: rgba(239,230,214,.82); }
 
   /* ¿Cómo venís hoy? El único momento de la página que responde a quien la
      visita, y es el mismo gesto con el que arranca la app: los cinco círculos
@@ -236,10 +230,55 @@
   .checkin[data-mood] .mood-pick span { opacity: .6; }
   .checkin[data-mood] .mood-pick [aria-pressed="true"] i { opacity: 1; transform: scale(1.28); }
   .checkin[data-mood] .mood-pick [aria-pressed="true"] span { opacity: 1; }
-  .mood-reply { min-height: 7.5em; max-width: 38ch; margin: 40px auto 0; }
+  .mood-reply { max-width: 40ch; margin: 40px auto 0; }
   .mood-reply p { font-size: clamp(1.15rem, 2vw, 1.4rem); font-weight: 600; line-height: 1.45; }
-  .mood-reply a { display: inline-block; margin-top: 14px; font-weight: 700; color: var(--olive); text-decoration-color: var(--terra); text-decoration-thickness: 2px; text-underline-offset: 5px; }
-  .mood-reply small { display: block; margin-top: 18px; color: var(--soft); font-size: .95rem; }
+  .mood-reply a { display: inline-block; font-weight: 700; color: var(--olive); text-decoration-color: var(--terra); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+
+  .checkin-note { margin-top: 36px; color: var(--soft); font-size: .95rem; }
+  .mood-reply:empty { display: none; }
+  .mood-reply .acts { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: center; align-items: center; }
+  .act {
+    font: inherit; font-weight: 700; font-size: 1rem; cursor: pointer;
+    min-height: 48px; padding: 0 22px; border-radius: 999px; border: 0;
+    background: var(--olive); color: var(--cream);
+  }
+  .act:hover { background: var(--forest); }
+  .moment { max-width: 520px; margin: 32px auto 0; padding: clamp(24px, 5vw, 40px); border-radius: 32px; background: rgba(255, 250, 243, .7); box-shadow: inset 0 0 0 1px rgba(255,255,255,.8); }
+  .moment[hidden] { display: none; }
+  /* Pausa: la misma respiración cuadrada de la app (RespiracionScreen),
+     inhalá 4, mantené 4, exhalá 4, mantené 4. Dos vueltas. */
+  .orb {
+    width: 180px; aspect-ratio: 1; margin: 8px auto 0; border-radius: 50%;
+    display: grid; place-items: center;
+    background: radial-gradient(circle at 40% 35%, #FBD9B8, var(--sun));
+    box-shadow: 0 0 0 18px rgba(169,203,230,.28), 0 0 0 40px rgba(169,203,230,.14);
+    transform: scale(.72); transition: transform 4s cubic-bezier(.45, 0, .55, 1);
+  }
+  .orb.grande { transform: scale(1); }
+  .orb b { font-size: 1.15rem; color: #6A3B22; }
+  .moment-foot { margin-top: 28px; color: var(--soft); font-size: .98rem; }
+  .moment .act { margin-top: 18px; }
+  .prompt-lead { color: var(--soft); font-weight: 600; }
+  .prompt-q { margin-top: 10px; font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.2; text-wrap: balance; }
+  .prompt-lines { margin: 24px auto 0; max-width: 360px; height: 72px; background: repeating-linear-gradient(to bottom, transparent 0 35px, var(--line) 35px 36px); }
+
+  /* Preguntas frecuentes */
+  .faq { background: var(--cream); }
+  .faq-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(32px, 6vw, 96px); align-items: start; }
+  .faq-list details { border-bottom: 1px solid var(--line); }
+  .faq-list details:first-child { border-top: 1px solid var(--line); }
+  .faq-list summary {
+    list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    padding: 22px 0; font-weight: 700; font-size: clamp(1.05rem, 1.6vw, 1.2rem); letter-spacing: -0.015em;
+  }
+  .faq-list summary::-webkit-details-marker { display: none; }
+  .faq-list summary::after {
+    content: ""; flex: none; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--m2); transition: transform .3s ease, background-color .3s ease;
+  }
+  .faq-list details[open] summary::after { background: var(--terra); transform: scale(1.3); }
+  .faq-list details p { padding: 0 0 24px; max-width: 58ch; color: var(--soft); }
+  .faq-list a { color: var(--olive); font-weight: 700; }
 
   /* Vista rápida: tres pantallas */
   .peek-switch { display: none; }
@@ -337,6 +376,7 @@
     .hero .phone { transform: rotate(2deg); }
     .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px 32px; }
     .pros-box { grid-template-columns: 1fr; }
+    .faq-grid { grid-template-columns: 1fr; }
     .foot { grid-template-columns: 1fr 1fr; }
     .foot > div:first-child { grid-column: 1 / -1; }
     .peek { grid-template-columns: 1fr; gap: 48px; }
@@ -344,7 +384,6 @@
     .peek .phone { justify-self: center; }
     .peek figcaption { text-align: left; margin: 0; }
     .peek figure:nth-child(2) { margin-top: 0; }
-    .vgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 28px; }
   }
   @media (max-width: 640px) {
     body { font-size: 17px; }
@@ -355,7 +394,6 @@
     .steps li { display: grid; grid-template-columns: 64px 1fr; column-gap: 8px; }
     .steps li::before { grid-row: span 2; font-size: 3rem; }
     .steps b { margin-top: 4px; }
-    .vgrid { grid-template-columns: 1fr; }
     .peek-switch:not([hidden]) { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
     .peek-switch button { font: inherit; font-size: .85rem; font-weight: 700; min-height: 44px; padding: 10px 14px; border-radius: 24px; border: 1px solid var(--line); color: var(--olive); background: transparent; cursor: pointer; }
     .peek-switch button[aria-pressed="true"] { color: var(--cream); background: var(--olive); }
@@ -370,7 +408,6 @@
     .hero-inner { padding-bottom: 48px; }
     .explore-content { grid-template-columns: 1fr; gap: 24px; }
     .diary { min-height: 0; }
-    .value + .value { border-top: 1px solid rgba(239,230,214,.2); padding-top: 28px; }
     .steps { grid-template-columns: 1fr; }
     .foot { grid-template-columns: 1fr; }
     .store { flex: 1 1 200px; }
@@ -504,7 +541,7 @@
                 <p class="breath-t">Respiración</p>
                 <p class="p-sub">Seguí el círculo.</p>
                 <div class="ring"><b>Inhalá</b></div>
-                <p class="p-sub" style="margin-top:26px">4 segundos entra, 6 sale</p>
+                <p class="p-sub" style="margin-top:26px">Inhalá 4, mantené 4, exhalá 4, mantené 4</p>
               </div>
               <div class="tabbar"><i></i><i></i><i class="on"></i><i></i></div>
             </div>
@@ -529,10 +566,10 @@
     </div>
   </section>
 
-  <section class="checkin" aria-labelledby="hoy" hidden>
+  <section class="checkin" aria-labelledby="momento" hidden>
     <div class="wrap">
-      <h2 id="hoy" class="sec-title">para los días entre sesiones.</h2>
-      <p class="sec-lead">Vita también te acompaña cuando no tenés sesión. Cada vez que la abrís, te pregunta cómo venís. Probalo.</p>
+      <h2 id="momento" class="sec-title">probá un momento de Vita.</h2>
+      <p class="sec-lead">Entre una sesión y otra, Vita te acompaña con momentos cortos. Arranca como en la app, con una pregunta.</p>
       <p class="checkin-q">¿Cómo venís hoy?</p>
       <ul class="mood-pick">
         <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Bajón</span></button></li>
@@ -541,33 +578,44 @@
         <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Bien</span></button></li>
         <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Brillando</span></button></li>
       </ul>
-      <div class="mood-reply" aria-live="polite">
-        <small>Acá no se guarda nada. En la app, queda en tu registro del día.</small>
-      </div>
+      <div class="mood-reply" aria-live="polite"></div>
+      <div class="moment" hidden></div>
+      <p class="checkin-note">Acá no se guarda nada. En la app, queda en tu registro del día.</p>
     </div>
   </section>
 
-  <section class="values grain" aria-labelledby="valores">
-    <div class="wrap">
-      <h2 id="valores" class="sec-title">lo que nos importa.</h2>
-      <p class="sec-lead">Hay días para hablar, días para explorar y días para hacer una pausa. Acá hay lugar para todos.</p>
-      <div class="vgrid">
-        <div class="value">
-          <h3>Si abruma, sobra.</h3>
-          <p>Herramientas simples para hacerte un lugar en el día y seguir con lo tuyo.</p>
-        </div>
-        <div class="value">
-          <h3>Vos elegís.</h3>
-          <p>Hablar con alguien, usar las herramientas por tu cuenta o las dos cosas. Lo decidís vos.</p>
-        </div>
-        <div class="value">
-          <h3>Sin apuro.</h3>
-          <p>Podés empezar por unos minutos para vos. No necesitás tener todo resuelto para dar el primer paso.</p>
-        </div>
-        <div class="value">
-          <h3>Guía, no diagnostica.</h3>
-          <p>Vita te acerca herramientas y personas. Lo clínico queda en manos de profesionales.</p>
-        </div>
+  <section class="faq" aria-labelledby="dudas">
+    <div class="wrap faq-grid">
+      <h2 id="dudas" class="sec-title">lo que conviene saber antes.</h2>
+      <div class="faq-list">
+        <details>
+          <summary>¿Cuánto cuesta?</summary>
+          <p>Descargar Vita es gratis. Pagás solo las sesiones que reservás, al precio que fija cada profesional y que ves antes de reservar. Se paga desde la app, con Mercado Pago.</p>
+        </details>
+        <details>
+          <summary>¿Cómo elijo con quién hablar?</summary>
+          <p>Respondés unas preguntas cortas y te sugerimos profesionales que trabajan lo que buscás. En cada perfil ves su enfoque, su formación y sus horarios, y elegís vos.</p>
+        </details>
+        <details>
+          <summary>¿Y si la primera sesión no me sirve?</summary>
+          <p>Si la primera sesión con un profesional no te convence, te devolvemos lo que pagaste. Escribinos a <a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a> dentro de las 48 horas, sin explicar por qué. Vale una vez por persona.</p>
+        </details>
+        <details>
+          <summary>¿Puedo cancelar?</summary>
+          <p>Sí, desde la app. Con 24 horas o más de anticipación te devolvemos todo. Si faltan menos de 24 horas, la sesión se cancela pero no hay reembolso, salvo que el profesional la cancele por vos.</p>
+        </details>
+        <details>
+          <summary>¿Cómo es la sesión?</summary>
+          <p>Por videollamada. A la hora de la sesión tocás "Entrar a la sala" en la app y se abre. No tenés que instalar nada más.</p>
+        </details>
+        <details>
+          <summary>¿Qué pasa con lo que escribo?</summary>
+          <p>Tu registro de ánimo, tu diario y tu gratitud no se comparten con tu profesional ni con nadie, salvo que decidas mandarlos. Los mensajes con tu profesional no los ve ningún otro usuario, pero no tienen cifrado de extremo a extremo. El detalle está en la <a href="./legal/privacidad">Política de Privacidad</a>.</p>
+        </details>
+        <details>
+          <summary>¿Vita reemplaza una terapia?</summary>
+          <p>No. Vita guía, no diagnostica: te acerca herramientas y personas, y lo clínico queda en manos de profesionales. Tampoco es un servicio de emergencias. Si estás en riesgo, llamá a la Línea de Salud Mental al <a href="tel:08009990091">0800-999-0091</a> o al <a href="tel:911">911</a>.</p>
+        </details>
       </div>
     </div>
   </section>
@@ -649,31 +697,103 @@
     });
   }
 
-  // ¿Cómo venís hoy? Cada respuesta lleva a la experiencia que le sirve
-  // (0 acompañamiento, 1 ánimo, 2 pausa). No se guarda nada: es una muestra.
+  // Probá un momento de Vita. Arranca como la app, con el ánimo del día, y
+  // cada respuesta ofrece algo que se puede hacer acá mismo: una pausa de
+  // respiración o la pregunta del diario que la app muestra para ese ánimo
+  // (app/diario.tsx). Experiencias del vistazo: 0 acompañamiento, 1 ánimo,
+  // 2 pausa. No se guarda nada.
   var RESPUESTAS = [
-    { t: 'Hay días así. No hace falta resolverlo hoy: podés hablar con alguien o empezar por unos minutos para vos.', link: 'Mirá cómo elegir con quién hablar', exp: 0 },
-    { t: 'El cansancio también cuenta. A veces una pausa de tres minutos alcanza para seguir.', link: 'Mirá las pausas de Vita', exp: 2 },
-    { t: 'Un día normal también vale anotarlo. Con el tiempo, esos días te muestran cómo venís.', link: 'Mirá cómo se registra en Vita', exp: 1 },
-    { t: 'Qué bueno. Anotarlo ayuda a reconocer qué te hace bien, para volver ahí cuando haga falta.', link: 'Mirá cómo se registra en Vita', exp: 1 },
-    { t: 'Disfrutalo. Si querés, dejalo escrito en tu diario para releerlo otro día.', link: 'Mirá cómo se registra en Vita', exp: 1 }
+    { t: 'Hay días así. No hace falta resolverlo hoy.', act: 'pausa', link: 'O mirá cómo elegir con quién hablar', exp: 0 },
+    { t: 'Hoy venís con poca energía. A veces medio minuto alcanza para seguir.', act: 'pausa' },
+    { t: 'Un día tranquilo también vale mirarlo un poco.', act: 'diario', lead: 'Un día tranquilo.', q: '¿Qué anduvo dando vueltas por tu cabeza hoy?' },
+    { t: 'Qué bueno. Vale la pena saber qué te hizo bien.', act: 'diario', lead: 'Venís bien hoy.', q: '¿Qué fue lo que sumó para sentirte así?' },
+    { t: 'Disfrutalo. Y si querés, dejalo guardado.', act: 'diario', lead: 'Hoy estás brillando.', q: '¿Qué hizo especial este día?' }
   ];
+  var BOTON = { pausa: 'Hacer una pausa de 30 segundos', diario: 'Ver la pregunta del diario' };
+  var FASES = [['Inhalá', true], ['Mantené', true], ['Exhalá', false], ['Mantené', false]];
+
   var checkin = document.querySelector('.checkin');
   if (checkin) {
     var reply = checkin.querySelector('.mood-reply');
-    var nota = reply.innerHTML;
+    var moment = checkin.querySelector('.moment');
     var botones = checkin.querySelectorAll('.mood-pick button');
+    var timers = [];
+    function frenar() { timers.forEach(clearTimeout); timers = []; }
+    function el(tag, cls, text) {
+      var e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text) e.textContent = text;
+      return e;
+    }
+
+    function pausa() {
+      frenar();
+      moment.innerHTML = '';
+      var orb = el('div', 'orb');
+      var word = el('b', '', 'Preparate');
+      orb.appendChild(word);
+      var foot = el('p', 'moment-foot', 'Seguí el círculo. Dos vueltas.');
+      foot.setAttribute('aria-live', 'polite');
+      moment.append(orb, foot);
+      var t = 1200;
+      for (var vuelta = 0; vuelta < 2; vuelta++) {
+        FASES.forEach(function (f) {
+          timers.push(setTimeout(function () {
+            word.textContent = f[0];
+            orb.classList.toggle('grande', f[1]);
+          }, t));
+          t += 4000;
+        });
+      }
+      timers.push(setTimeout(function () {
+        word.textContent = 'Listo';
+        foot.textContent = 'Así de corta puede ser una pausa. En la app hay de 3 a 8 minutos, y también meditación y sonidos.';
+        var otra = el('button', 'act', 'Otra vez');
+        otra.type = 'button';
+        otra.addEventListener('click', pausa);
+        moment.appendChild(otra);
+      }, t));
+    }
+
+    function diario(r) {
+      frenar();
+      moment.innerHTML = '';
+      moment.append(
+        el('p', 'prompt-lead', r.lead),
+        el('p', 'prompt-q', r.q),
+        el('div', 'prompt-lines'),
+        el('p', 'moment-foot', 'Pensalo un momento. En la app la respondés en tu diario, y queda solo para vos.')
+      );
+    }
+
     checkin.hidden = false;
     botones.forEach(function (button, index) {
       button.addEventListener('click', function () {
         var r = RESPUESTAS[index];
+        frenar();
+        moment.hidden = true;
+        moment.innerHTML = '';
         checkin.dataset.mood = String(index + 1);
         botones.forEach(function (b) { b.setAttribute('aria-pressed', String(b === button)); });
-        reply.innerHTML = '<p></p><a href="#vistazo"></a>' + nota;
-        reply.querySelector('p').textContent = r.t;
-        var a = reply.querySelector('a');
-        a.textContent = r.link;
-        a.addEventListener('click', function () { elegirExperiencia(r.exp); });
+
+        reply.innerHTML = '';
+        reply.appendChild(el('p', '', r.t));
+        var acts = el('div', 'acts');
+        var act = el('button', 'act', BOTON[r.act]);
+        act.type = 'button';
+        act.addEventListener('click', function () {
+          moment.hidden = false;
+          if (r.act === 'pausa') pausa(); else diario(r);
+          moment.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
+        acts.appendChild(act);
+        if (r.link) {
+          var a = el('a', '', r.link);
+          a.href = '#vistazo';
+          a.addEventListener('click', function () { elegirExperiencia(r.exp); });
+          acts.appendChild(a);
+        }
+        reply.appendChild(acts);
       });
     });
   }
