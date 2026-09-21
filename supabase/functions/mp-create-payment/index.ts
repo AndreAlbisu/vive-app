@@ -205,6 +205,20 @@ serve(async (req) => {
       }],
       external_reference: booking.id,           // clave para mp-webhook
       notification_url: MP_WEBHOOK_URL,
+      // Lo que la persona va a leer en el resumen de su tarjeta (L6).
+      //
+      // 🔴 **Sin esto, ahí aparece el nombre PERSONAL del profesional.** No es un
+      // olvido de configuración: en el split el `collector` es la cuenta de MP
+      // del coach, así que el descriptor lo saca Mercado Pago de esa cuenta y
+      // hay uno distinto por profesional. Verificado contra el pago real
+      // `174555144528`, que dice `MERPAGO*AUGUSTOUNSAIN`. Un cargo con el
+      // nombre de un desconocido es la definición de un contracargo.
+      //
+      // ⚠️ MP normaliza el campo a su gusto: el prefijo `MERPAGO*` lo agrega él
+      // y el total observado son 25 caracteres. Por eso va **solo "VITA"** y no
+      // "VITA*<coach>": lo que sobra se corta, y un nombre mutilado se lee peor
+      // que ninguno. Quién dio la sesión ya está en el mail y en la app.
+      statement_descriptor: 'VITA',
     }
     // Split: comisión VITA (tier server-side). Se puede apagar para diagnóstico.
     // Con comisión 0 (el link, o la promo fundador) no se manda: omitirlo es lo

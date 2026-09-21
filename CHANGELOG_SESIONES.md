@@ -11,6 +11,9 @@
 **Resumen:**
 - Se leyó el código de 4 plugins que circulaban en redes. **Agent Skills** (Addy Osmani) es solo texto, sin hooks activos. Quedó instalado a prueba. **Ponytail** es inofensivo pero fuerza respuestas escuetas, así que no. **Graphify** es legítimo pero mete hooks en cada lectura y búsqueda y edita CLAUDE.md, y para este repo no hace falta. **OmniRoute** queda descartado: pide la contraseña de la Mac, instala un certificado raíz, intercepta tráfico, reusa los tokens de Claude y manda el código a modelos de terceros.
 - **Auditoría de seguridad antes de la v1: sigue pendiente.** Plan: por áreas, no todo el repo de una. Orden: `supabase/functions/` (webhooks de Mercado Pago, auth), `lib/` (booking y pagos), políticas RLS (que un profesional no pueda ver reservas de otro) y después `app/` y `hooks/`. Herramientas: la skill `find-bugs` y la guía `security-and-hardening` de Agent Skills como checklist extra.
+- ⚠️ **L6: la ficha estaba equivocada y el cobro mostraba el nombre personal del profesional.** Decía que el nombre que ve el comprador "sale de la config de la cuenta de MP, no del código". **Es al revés.** En el split el `collector` es la cuenta de cada coach, así que Mercado Pago saca el descriptor de ahí: hay uno distinto por profesional y **no existe ninguna configuración central que Andre pudiera tocar**. Verificado leyendo el pago real `174555144528`, cuyo `statement_descriptor` es `MERPAGO*AUGUSTOUNSAIN`. Un cargo con el nombre de un desconocido en el resumen de la tarjeta es la definición de un contracargo.
+  - **Arreglado en `mp-create-payment` (v51, deployada):** la preferencia ahora manda `statement_descriptor: 'VITA'`. Decisión de Andre entre "VITA" solo y "VITA*<coach>": ganó **VITA solo**, porque MP antepone `MERPAGO*` y el total observado son 25 caracteres, así que un nombre agregado se corta y se lee peor que no ponerlo. Quién dio la sesión ya está en el mail y en la app.
+  - ✅ **Probado hasta donde se puede sin plata**: se creó una preferencia de marketplace con el token del coach y MP **aceptó el campo y lo devolvió tal cual** (`statement_descriptor: "VITA"`), o sea que no lo rechaza ni lo ignora en este tipo de cobro. **Lo que falta es un pago real**, porque el texto final lo normaliza MP. Se cierra con el pago de la sesión de prueba de L1.
 
 **Pendiente para la próxima sesión:**
 - Hacer la auditoría de seguridad y, con eso, decidir si Agent Skills se queda.
@@ -48,9 +51,9 @@
 - Sigue abierto desde la sesión 261: la imagen para compartir (`og:image`) y confirmar "Hecho en Córdoba".
 
 ---
-## 2026-09-21 — Andre (sesión 263 · L2, L4 y L40)
+## 2026-09-21 — Andre (sesión 263 · L2, L4, L40 y el nombre del cobro)
 
-**Tocado:** `lib/conTope.ts` y `__tests__/conTope.test.ts` (nuevos), `context/AuthContext.tsx`, `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`. Más DNS de `vitaapp.com.ar`, que no vive en el repo.
+**Tocado:** `lib/conTope.ts` y `__tests__/conTope.test.ts` (nuevos), `context/AuthContext.tsx`, `supabase/functions/mp-create-payment/index.ts` (**deployada, v51**), `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`. Más DNS de `vitaapp.com.ar`, que no vive en el repo.
 
 **Resumen:**
 - **L2 cerrado, y sin entrar al panel de Mercado Pago.** Se leyeron los pagos por la API (`GET /v1/payments/<id>`) con el `access_token` del coach que ya vive en `coach_mp_accounts`, que es la misma vía por la que se había medido el de $1. Los tres pagos de $4.500 con tarjeta (`174555144528` y `174554303062` del 19/08, `173787714415` del 20/08) dan **exactamente el mismo desglose**: `mercadopago_fee` 193,63, `application_fee` 675 (el 15% del tramo recurrente, correcto) y `net_received_amount` 3.631,37.
@@ -72,7 +75,7 @@
   - 📌 **Lo que NO se tocó, por si se quiere después:** durante esos 8 segundos la pantalla sigue siendo solo el logo y el spinner, sin una línea que diga que está tardando. Es copy visible, así que lo decide Andre.
 
 **Pendiente para la próxima sesión:**
-- **De los 7 que bloqueaban el lanzamiento quedan 5**, y el bug de arranque (L40) ya no está en la lista. Lo de Andre: el nombre que ve el comprador en MP (**L6**) y mandarle los Términos al abogado (**L5**, el único que es tiempo de calendario). Lo de la sesión de prueba con Joaquín: **L1**, **L39** y **L19** de una sola vez. **L3** (prender `CHECKOUT_HABILITADO`) ahora depende solo de L1.
+- **De los 7 que bloqueaban el lanzamiento quedan 5**, y el bug de arranque (L40) ya no está en la lista. **De esos 5, cuatro se cierran en la misma sesión de prueba con Joaquín**: L1, L39, L6 (mirar el resumen de la tarjeta del pago) y, con eso, L3. El único que queda aparte es **L5**, el abogado, que Andre decidió no arrancar todavía. Lo de Andre: el nombre que ve el comprador en MP (**L6**) y mandarle los Términos al abogado (**L5**, el único que es tiempo de calendario). Lo de la sesión de prueba con Joaquín: **L1**, **L39** y **L19** de una sola vez. **L3** (prender `CHECKOUT_HABILITADO`) ahora depende solo de L1.
 - Revisar `docs/fiscal-instrucciones.md` contra la base, por lo de arriba.
 
 ---
