@@ -74,12 +74,11 @@
   /* Res. 424/2020: el texto tiene que decir literalmente esto, estar en la
      primera pantalla de la portada y verse. Por eso va en el nav y no en el pie. */
   .regret {
-    font-size: 12px; font-weight: 700; letter-spacing: .02em; text-decoration: none;
-    padding: 8px 12px; border-radius: 999px;
-    border: 1.5px solid var(--terra-ink); color: var(--terra-ink);
-    background: rgba(251, 246, 238, .7);
+    font-size: 11px; font-weight: 700; letter-spacing: .03em; color: var(--soft);
+    text-decoration: underline; text-decoration-color: rgba(86, 98, 69, .35); text-underline-offset: 3px;
+    padding: 12px 4px;
   }
-  .regret:hover { background: var(--terra-ink); color: var(--cream); }
+  .regret:hover { color: var(--olive); text-decoration-color: currentColor; }
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 10px;
     min-height: 48px; padding: 0 22px; border-radius: 999px;
@@ -384,7 +383,7 @@
   .foot li { margin-bottom: 8px; }
   .foot a { text-decoration: none; }
   .foot a:hover { text-decoration: underline; }
-  .foot .regret { display: inline-block; margin-top: 4px; }
+  .foot .regret { display: inline-block; margin-top: 4px; padding: 0; }
   .foot p { color: var(--soft); }
   .foot .wordmark { font-size: 36px; display: inline-block; margin-bottom: 14px; }
   .crisis { margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--soft); font-size: .9rem; }
@@ -413,7 +412,7 @@
     .nav { padding-top: 16px; }
     .nav .btn { display: none; }
     .wordmark { font-size: 26px; }
-    .regret { font-size: 10.5px; padding: 7px 10px; }
+    .regret { font-size: 10.5px; padding: 12px 2px; }
     .steps li { display: grid; grid-template-columns: 64px 1fr; column-gap: 8px; }
     .steps li::before { grid-row: span 2; font-size: 3rem; }
     .steps b { margin-top: 4px; }
