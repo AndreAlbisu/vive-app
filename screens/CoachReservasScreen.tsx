@@ -420,7 +420,17 @@ export default function CoachReservasScreen() {
           ? { pathname: '/sala', params: { sala_id: booking.sala_id } }
           : '/sala'),
       },
-      { text: 'Reprogramar', onPress: () => Alert.alert('Reprogramar', 'La reprogramación llega pronto. Por ahora podés cancelar y coordinar un nuevo horario por chat') },
+      {
+        // M16. Reemplaza al "llega pronto" que estuvo acá hasta el 21/09/2026.
+        // 🔴 El profesional PROPONE, no mueve: el horario nuevo lo elige el
+        // cliente, y si no le sirve ninguno se le devuelve la plata aunque falte
+        // menos de un día. Es la queja más furiosa contra Selia.
+        text: 'Proponer otro horario',
+        onPress: () => router.push({
+          pathname: '/booking-calendar',
+          params: { coachId: user!.id, name: booking.userName, proponer: booking.id },
+        }),
+      },
       { text: 'Cancelar sesión', style: 'destructive', onPress: () => cancelConfirmed(booking) },
       { text: 'Cerrar', style: 'cancel' },
     ]);

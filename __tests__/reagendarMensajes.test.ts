@@ -6,6 +6,7 @@ describe('mensajeDeError', () => {
     'ya_la_movio', 'ocupado', 'sin_agenda', 'destino_en_el_pasado',
     'mismo_horario', 'ya_empezo', 'no_confirmada',
     'no es tu reserva', 'no es tu sesion', 'sin sesion', 'solicitud_no_pendiente',
+    'sin_propuestas', 'demasiadas_opciones', 'sin_opciones',
   ];
 
   it('traduce todos los motivos del servidor', () => {

@@ -42,6 +42,7 @@ import { hayReembolsoAlCancelar } from '@/lib/bookingHelpers';
 import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { puedeReagendar, textoReagendar } from '@/lib/reagendar';
+import { elegirHorario, rechazarHorarios } from '@/lib/reagendarApi';
 import { logError } from '@/lib/logging';
 import { abrirVideollamada, ensureMeetingRoom, getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
 import {
@@ -199,6 +200,9 @@ export default function SalaScreen() {
   const [inputText, setInputText] = useState(draftText);
   const [salaId, setSalaId] = useState<string | null>(null);
   const [recipientId, setRecipientId] = useState<string | null>(null);
+  // M16: los horarios que el profesional propuso para esta sesión.
+  const [propuestas, setPropuestas] = useState<{ id: string; fecha: string; hora: string }[]>([]);
+  const [resolviendo, setResolviendo] = useState(false);
   const [recipientIsCoach, setRecipientIsCoach] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -593,6 +597,55 @@ export default function SalaScreen() {
   // al montar, y quedaban congeladas hasta salir de la Sala del todo. El único
   // que veía la suya al instante era el coach que la escribía, por `onSaved`.
   //
+  // M16. Consulta aparte y no pegada a la de la reserva: llega después de que
+  // `activeBooking` se resolvió, y es la única que puede cambiar sin que cambie
+  // la sesión (el profesional propone mientras la pantalla está abierta).
+  useEffect(() => {
+    const id = activeBooking?.id;
+    if (!id || !recipientIsCoach) { setPropuestas([]); return; }
+    let vivo = true;
+    void supabase
+      .from('reschedule_requests')
+      .select('id, fecha, hora')
+      .eq('booking_id', id)
+      .eq('estado', 'pendiente')
+      .eq('pedida_por', 'profesional')
+      .order('fecha')
+      .then(({ data }) => { if (vivo) setPropuestas(data ?? []); });
+    return () => { vivo = false; };
+  }, [activeBooking?.id, recipientIsCoach]);
+
+  async function tomarHorario(id: string) {
+    if (resolviendo) return;
+    setResolviendo(true);
+    const error = await elegirHorario(id);
+    setResolviendo(false);
+    if (error) { Alert.alert('No se pudo', error); return; }
+    setPropuestas([]);
+    Alert.alert('Listo', 'Tu sesión quedó en el horario nuevo.');
+  }
+
+  function rechazarTodo(bookingId: string) {
+    Alert.alert(
+      '¿No podés con ninguno?',
+      'Se cancela la sesión y te devolvemos todo lo que pagaste, aunque falte poco para el horario original.',
+      [
+        { text: 'Volver', style: 'cancel' },
+        {
+          text: 'Cancelar y que me devuelvan',
+          style: 'destructive',
+          onPress: async () => {
+            setResolviendo(true);
+            const error = await rechazarHorarios(bookingId);
+            setResolviendo(false);
+            if (error) { Alert.alert('No se pudo', error); return; }
+            setPropuestas([]);
+          },
+        },
+      ],
+    );
+  }
+
   // Canal aparte y no un `.on()` más en el de mensajes: aquel depende de
   // `salaId`, este del PAR (usuario, coach) —`session_notes` no conoce la sala—,
   // y mezclarlos obligaría a resuscribir el chat entero cada vez que resuelve el
@@ -1374,6 +1427,46 @@ export default function SalaScreen() {
               `handleCancelBooking` ya distingue —al coach no le aplica la regla
               de las 24hs— y duplicar esa decisión acá sería otro lugar donde
               se puede desincronizar. */}
+          {/* M16: el profesional no puede y propuso otros horarios. 🔴 Va
+              ARRIBA de todo lo demás de la tarjeta: es una mala noticia que
+              todavía no leyó, y la sesión que figura abajo ya no va a pasar a
+              esa hora. Mientras esto esté acá, mover o cancelar por su cuenta
+              sería contestar otra pregunta.
+
+              🔴 **La salida siempre incluye la plata.** Si no puede con
+              ninguno, cancela y le vuelve todo aunque falte menos de un día:
+              quien pierde su horario porque el otro no puede no tiene por qué
+              pagar por decir que no. */}
+          {propuestas.length > 0 && activeBooking && (
+            <View style={styles.propuestaBox}>
+              <Text style={styles.propuestaTitulo}>
+                {(recipientProfile?.name ?? 'Tu profesional').split(' ')[0]} no puede a esa hora
+              </Text>
+              <Text style={styles.propuestaSub}>
+                {propuestas.length === 1 ? 'Te propone este horario:' : 'Te propone estos horarios:'}
+              </Text>
+              {propuestas.map(o => (
+                <TouchableOpacity
+                  key={o.id}
+                  style={styles.propuestaOpcion}
+                  disabled={resolviendo}
+                  onPress={() => tomarHorario(o.id)}
+                  activeOpacity={0.85}>
+                  <Text style={styles.propuestaOpcionTxt}>
+                    {`${formatSalaDate(o.fecha)}, ${o.hora} hs`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={styles.propuestaNo}
+                disabled={resolviendo}
+                onPress={() => rechazarTodo(activeBooking.id)}
+                activeOpacity={0.7}>
+                <Text style={styles.propuestaNoTxt}>No puedo con ninguno, devolvemé la plata</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* M15: mover en vez de perder. 🔴 **Va ARRIBA de cancelar y no al
               lado**, porque el problema que resuelve es que hoy la única salida
               visible es cancelar, y cancelar tarde hace perder la plata: si las
@@ -2034,6 +2127,22 @@ const styles = StyleSheet.create({
   },
   confirmBtnDisabled: { opacity: 0.6 },
   confirmBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#FFF6EC' },
+
+  // M16. Caja propia y no un renglón más: es una decisión, no un aviso.
+  propuestaBox: {
+    backgroundColor: 'rgba(224,82,82,0.06)',
+    borderWidth: 1, borderColor: 'rgba(224,82,82,0.25)',
+    borderRadius: 16, padding: 14, marginTop: 12,
+  },
+  propuestaTitulo: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#2E3624' },
+  propuestaSub: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#566245', marginTop: 4 },
+  propuestaOpcion: {
+    backgroundColor: '#3F512F', borderRadius: 999,
+    paddingVertical: 10, paddingHorizontal: 16, marginTop: 10, alignSelf: 'flex-start',
+  },
+  propuestaOpcionTxt: { color: '#F3EEDF', fontFamily: ViveFonts.semibold, fontSize: 13 },
+  propuestaNo: { marginTop: 12 },
+  propuestaNoTxt: { color: '#E05252', fontFamily: ViveFonts.medium, fontSize: 12.5 },
 
   // M15. Mover es la salida buena, así que se ve como una acción y no como el
   // link discreto de cancelar. No usa el rojo de cancelar: no está pasando nada

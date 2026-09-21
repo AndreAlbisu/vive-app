@@ -51,3 +51,39 @@ export async function responderReagendado(
   });
   return error ? mensajeDeError(error.message) : null;
 }
+
+/**
+ * M16: el profesional propone horarios. El cliente elige, o pide la plata.
+ *
+ * 🔴 **Nunca se le impone un horario nuevo al cliente**, que es la queja más
+ * furiosa contra Selia: te reagendan a una hora que no podés y perdés igual.
+ */
+
+/** Hasta 3 opciones. La base rechaza más: una lista larga no es más amable. */
+export async function proponerHorarios(
+  bookingId: string,
+  opciones: { fecha: string; hora: string }[],
+): Promise<string | null> {
+  const { error } = await supabase.rpc('proponer_horarios', {
+    p_booking: bookingId,
+    p_fechas: opciones.map(o => o.fecha),
+    p_horas: opciones.map(o => o.hora.slice(0, 5)),
+  });
+  return error ? mensajeDeError(error.message) : null;
+}
+
+/** El cliente toma una de las opciones. */
+export async function elegirHorario(solicitudId: string): Promise<string | null> {
+  const { error } = await supabase.rpc('elegir_horario', { p_solicitud: solicitudId });
+  return error ? mensajeDeError(error.message) : null;
+}
+
+/**
+ * El cliente no puede con ninguna: se cancela y **le vuelve la plata aunque
+ * falten menos de 24hs**. Eso lo resuelve la base escribiendo
+ * `cancelled_by = 'coach'`, que es la verdad de lo que pasó.
+ */
+export async function rechazarHorarios(bookingId: string): Promise<string | null> {
+  const { error } = await supabase.rpc('rechazar_horarios', { p_booking: bookingId });
+  return error ? mensajeDeError(error.message) : null;
+}

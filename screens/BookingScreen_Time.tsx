@@ -18,7 +18,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { scheduledAtMs, deviceIsOffArgentina, localEquivalent } from '@/lib/time';
-import { pedirReagendado } from '@/lib/reagendarApi';
+import { pedirReagendado, proponerHorarios } from '@/lib/reagendarApi';
 
 const MONTHS_SHORT = [
   'ene','feb','mar','abr','may','jun',
@@ -40,6 +40,8 @@ type Params = {
   tema?: string;
   /** M15: id de la sesión que se está moviendo. Cambia el final del camino. */
   reagendar?: string;
+  /** M16: id de la sesión para la que el profesional propone un horario. */
+  proponer?: string;
 };
 
 export default function BookingScreen_Time() {
@@ -155,8 +157,24 @@ export default function BookingScreen_Time() {
     );
   }
 
+  // M16. El profesional no mueve nada: deja una propuesta. La sesión sigue en
+  // su horario hasta que el cliente elija, porque el que no puede es él.
+  async function onProponer() {
+    if (!selectedTime || !params.proponer || moviendo) return;
+    setMoviendo(true);
+    const error = await proponerHorarios(params.proponer, [{ fecha: dateStr, hora: selectedTime }]);
+    setMoviendo(false);
+    if (error) { Alert.alert('No se pudo', error); return; }
+    Alert.alert(
+      'Se lo propusimos',
+      'La sesión sigue en su horario hasta que la persona elija. Si no puede con este horario, se le devuelve todo lo que pagó.',
+      [{ text: 'Entendido', onPress: () => router.back() }],
+    );
+  }
+
   function onSeguimos() {
     if (!selectedTime) return;
+    if (params.proponer) { void onProponer(); return; }
     if (params.reagendar) { void onMover(); return; }
     router.push({
       pathname: '/booking-confirm',
@@ -288,7 +306,11 @@ export default function BookingScreen_Time() {
             disabled={!selectedTime || moviendo}
             activeOpacity={0.85}>
             <Text style={s.btnText}>
-              {params.reagendar ? (moviendo ? 'Moviendo…' : 'Mover la sesión') : 'Seguimos'}
+              {params.proponer
+                ? (moviendo ? 'Enviando…' : 'Proponer este horario')
+                : params.reagendar
+                  ? (moviendo ? 'Moviendo…' : 'Mover la sesión')
+                  : 'Seguimos'}
             </Text>
           </TouchableOpacity>
         </View>

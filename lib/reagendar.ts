@@ -173,5 +173,14 @@ export function mensajeDeError(raw: string | null | undefined): string {
   if (m.includes('solicitud_no_pendiente')) {
     return 'Ese pedido ya estaba resuelto.';
   }
+  if (m.includes('sin_propuestas')) {
+    return 'No hay horarios propuestos para esta sesión.';
+  }
+  if (m.includes('demasiadas_opciones')) {
+    return 'Son hasta tres horarios.';
+  }
+  if (m.includes('sin_opciones')) {
+    return 'Elegí al menos un horario para proponer.';
+  }
   return 'No se pudo mover la sesión. Probá de nuevo en un rato.';
 }
