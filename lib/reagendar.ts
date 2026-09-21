@@ -38,7 +38,13 @@ export type ReservaAMover = {
   status: string;
   scheduled_date: string;
   scheduled_time: string;
-  /** ¿Ya usó su única movida de último momento? Por reserva. */
+  /** ¿Ya usó su única oportunidad de mover esta sesión sobre la hora?
+   *
+   *  ⚠️ Se marca al **PEDIRLA**, no al aceptarla, y un rechazo no la devuelve.
+   *  Salió de un test con rollback contra la base: gastándola al aceptar, el
+   *  cliente podía mandar una solicitud atrás de otra mientras la primera
+   *  seguía pendiente. Lo que hay que cuidar es la atención del profesional,
+   *  no la escritura de la fila. */
   movida_tarde?: boolean | null;
 };
 
@@ -47,7 +53,7 @@ export type MotivoNo =
   | 'no_confirmada'
   /** La sesión ya empezó o ya pasó. */
   | 'ya_empezo'
-  /** Ya usó su única movida dentro de las 24hs. */
+  /** Ya usó su único pedido de último momento, se haya aceptado o no. */
   | 'ya_la_movio';
 
 export type Reagendable =
@@ -118,7 +124,7 @@ export function textoReagendar(r: Reagendable): string {
         case 'ya_empezo':
           return 'Esta sesión ya empezó.';
         case 'ya_la_movio':
-          return 'Ya moviste esta sesión sobre la hora. Si no podés ir, podés cancelarla.';
+          return 'Ya pediste un cambio de último momento para esta sesión. Si no podés ir, podés cancelarla.';
       }
   }
 }
