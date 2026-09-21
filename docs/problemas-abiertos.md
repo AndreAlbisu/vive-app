@@ -27,10 +27,29 @@
 | **L1** | **La videollamada nunca se ejercitó con dos personas adentro** (A5 prueba 2). | 🔴 Abierto. Hace falta agendar una sesión real con `coach-prueba`: la sala abre 15 min antes. | Joaquín / Andre |
 | **L2** | ~~**La comisión real de MP** medida sobre un pago de verdad, no el de $1 (A5 prueba 3).~~ | ✅ **Cerrado 21/09.** No hizo falta el panel: se leyeron los pagos por la API de MP con el token del coach. Los tres pagos de $4.500 (`174555144528`, `174554303062`, `173787714415`) dan el mismo número, **4,30%**, no 4%. `MP_FEE_PCT_OBSERVED = 4.3`. El 4 viejo no estaba mal medido, estaba mal redondeado: sobre $1 la tarifa es 0,04 y los centavos tapan el 0,3. **La duda del IVA se cerró: ya lo incluye** (193,63 / 1,21 = 3,556% de 4.500). | — |
 | **L3** | **Prender `CHECKOUT_HABILITADO`** en `web/c/index.html`. | ✅ Verificado 17/09: sigue en `false`. Depende de L1 y L2. | — |
-| **L4** | **DMARC de `vitaapp.com.ar`** — TXT en `_dmarc`, zona en Vercel. Registro en la receta de A5. | ✅ Verificado con `dig` el 17/09: **sigue sin estar**. | Andre |
+| **L4** | ~~**DMARC de `vitaapp.com.ar`**~~ | ✅ **Cerrado 21/09.** `_dmarc` TXT = `v=DMARC1; p=none; rua=mailto:andrealbisu@gmail.com`, puesto con `vercel dns add` (record `rec_ed677faef43c7312ae8d842c`) y verificado resolviendo desde Google, Cloudflare y el autoritativo. Seguro de publicar porque DKIM ya alineaba: ver la nota de abajo. | — |
 | **L5** | **Revisión del abogado** de Términos, Privacidad y Reembolsos (`LEGAL_IS_DRAFT = true`), con A.12 (§10.3) y la duda de si declarar Cloudflare/unpkg obliga a re-pedir consentimiento — que hoy no tiene mecanismo. | 🔴 Abierto. | Andre |
 | **L6** | **Nombre que ve el comprador en Mercado Pago** (Checkout Pro y resumen de tarjeta): sale de la config de la cuenta de MP, no del código. Tiene que decir Vita. | ⚠️ Sin revisar. | Andre |
 | **L7** | **Link de la App Store en `app_version_gate.store_url`** el día que se publique. Sin eso, la pantalla de versión vieja dice "Buscá Vita en la App Store" sin botón. | ⏸️ Espera la publicación. Lo carga Claude con un `update`. | — |
+
+📌 **Sobre el DMARC (L4), por si hay que tocarlo de nuevo.** Los mails salen por
+**Resend** desde `no-responder@vitaapp.com.ar` (`supabase/functions/_shared/email.ts`).
+Antes de publicar la política se verificó que las dos firmas ya estaban y alineaban,
+que es lo que hace que `p=none` no pueda romper nada: **DKIM** en
+`resend._domainkey` (firma con `d=vitaapp.com.ar`, alineación directa) y **SPF** en
+`send.vitaapp.com.ar` (`v=spf1 include:amazonses.com ~all`, que es el Return-Path de
+Resend, alineado en modo relajado), más el MX de rebotes a `feedback-smtp.sa-east-1.amazonses.com`.
+
+⚠️ **Los reportes pueden no llegar nunca, y no es un error de configuración.** El
+`rua` apunta a una casilla de Gmail, y el RFC 7489 pide que el dominio de destino
+publique una autorización (`vitaapp.com.ar._report._dmarc.gmail.com`) para aceptar
+reportes de otro dominio. Verificado: **Gmail no la publica**, y no es algo que se
+pueda crear desde acá. El valor de L4 está en el `p=none` publicado, no en los
+informes. Se arregla solo el día que exista la casilla propia del dominio (**L33**).
+
+📌 **Paso siguiente, cuando haya tráfico real:** con unas semanas de mails
+entregados se puede endurecer a `p=quarantine`. No antes: sin volumen no hay con
+qué darse cuenta si algo quedó afuera.
 
 ### L.2 — Limpiar la base antes de abrir
 

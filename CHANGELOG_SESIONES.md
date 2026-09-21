@@ -20,9 +20,9 @@
 - Sigue abierto desde la sesión 261: la imagen para compartir (`og:image`) y confirmar "Hecho en Córdoba".
 
 ---
-## 2026-09-21 — Andre (sesión 263 · L2 cerrado: la tarifa de MP es 4,30%, no 4%)
+## 2026-09-21 — Andre (sesión 263 · dos bloqueantes menos: L2 y L4)
 
-**Tocado:** `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`.
+**Tocado:** `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`. Más DNS de `vitaapp.com.ar`, que no vive en el repo.
 
 **Resumen:**
 - **L2 cerrado, y sin entrar al panel de Mercado Pago.** Se leyeron los pagos por la API (`GET /v1/payments/<id>`) con el `access_token` del coach que ya vive en `coach_mp_accounts`, que es la misma vía por la que se había medido el de $1. Los tres pagos de $4.500 con tarjeta (`174555144528` y `174554303062` del 19/08, `173787714415` del 20/08) dan **exactamente el mismo desglose**: `mercadopago_fee` 193,63, `application_fee` 675 (el 15% del tramo recurrente, correcto) y `net_received_amount` 3.631,37.
@@ -32,8 +32,13 @@
 - Test nuevo en `desglosePago.test.ts` que reproduce el pago de $4.500 real, al lado del de $1 que ya estaba. Las 725 pruebas pasan.
 - 🔴 **Hallazgo al pasar, para Andre:** los **7** pagos de MP a precio real que hay en la base figuran `reembolsado`, incluido el del 19/08 que `docs/fiscal-instrucciones.md` lista como *"confirmada, sin reembolso"*. O el doc quedó viejo, o el reembolso pasó después. No se tocó ese archivo: es fiscal y la decisión es de Andre. Se cruza con **L9**.
 
+- ✅ **L4 cerrado: el DMARC ya está publicado.** `_dmarc` TXT = `v=DMARC1; p=none; rua=mailto:andrealbisu@gmail.com`, agregado con `vercel dns add` (Andre inició sesión en el CLI y el registro lo puso Claude) y verificado resolviendo desde Google, Cloudflare y el autoritativo de Vercel.
+  - **Antes de publicarlo se chequeó que no pudiera romper la entrega**, que es el riesgo real de un DMARC sobre un dominio que manda mails: los mails salen por **Resend** desde `no-responder@vitaapp.com.ar`, y las dos firmas ya estaban y alineaban (DKIM en `resend._domainkey`, con `d=vitaapp.com.ar`; SPF en `send.vitaapp.com.ar`, que es el Return-Path de Resend). Con DKIM alineado, `p=none` no cambia nada de lo que ya funcionaba.
+  - ⚠️ **Los reportes probablemente no lleguen, y no es un error nuestro:** el `rua` va a un Gmail, y el RFC pide una autorización publicada por el dominio de destino (`vitaapp.com.ar._report._dmarc.gmail.com`) que **Gmail no publica**. El valor de L4 está en el `p=none`, no en los informes. Se resuelve solo con **L33** (casilla propia).
+  - 📌 Con unas semanas de mails entregados se puede endurecer a `p=quarantine`. No antes.
+
 **Pendiente para la próxima sesión:**
-- **De los 7 que bloqueaban el lanzamiento quedan 6.** Lo de Andre que es media hora: DMARC (**L4**), el nombre que ve el comprador en MP (**L6**) y mandarle los Términos al abogado (**L5**, el único que es tiempo de calendario). Lo de la sesión de prueba con Joaquín: **L1**, **L39** y **L19** de una sola vez. **L3** (prender `CHECKOUT_HABILITADO`) ahora depende solo de L1.
+- **De los 7 que bloqueaban el lanzamiento quedan 5.** Lo de Andre: el nombre que ve el comprador en MP (**L6**) y mandarle los Términos al abogado (**L5**, el único que es tiempo de calendario). Lo de la sesión de prueba con Joaquín: **L1**, **L39** y **L19** de una sola vez. **L3** (prender `CHECKOUT_HABILITADO`) ahora depende solo de L1.
 - Revisar `docs/fiscal-instrucciones.md` contra la base, por lo de arriba.
 
 ---
