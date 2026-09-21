@@ -182,6 +182,7 @@ export default function InicioScreen() {
     sessionsThisWeek: weekly.sessionsThisWeek,
     writingThisWeek: weekly.writingThisWeek,
     sharpDrop,
+    todayMood: todayMoodEntry?.mood_id ?? null,
     pisoSeguridad,
     recursoSinAbrir: weekly.recursoSinAbrir,
     diasHastaProximaSesion,
@@ -271,6 +272,7 @@ export default function InicioScreen() {
       sessionsThisWeek: weekly.sessionsThisWeek,
       writingThisWeek: weekly.writingThisWeek,
       sharpDrop: detectMoodDrop(augmented) !== null,
+      todayMood: mood.id,
       pisoSeguridad: SAFETY_FLOOR_ENABLED && detectarPisoSeguridad(
         augmented.map(e => ({ moodId: e.mood_id, dayKey: e.entry_date })),
         today,

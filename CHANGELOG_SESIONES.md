@@ -4,13 +4,18 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
-## 2026-09-21 — Andre (sesión 266 · el momento de Sofía sin "Seguir")
+## 2026-09-21 — Andre (sesión 266 · el momento de Sofía sin "Seguir", y Sofía deja de contradecir el día)
 
-**Tocado:** `components/SobreVosMomento.tsx`
+**Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`
 
 **Resumen:**
 - Pedido de Andre: el botón "Seguir" del momento a pantalla completa (el que sube después de registrar el ánimo) *"no sirve de mucho"*. Es cierto: solo cerraba, igual que tocar afuera, y era el botón grande mientras lo único que lleva a algún lado estaba en letra chica abajo.
 - Ahora hay un solo botón, **"Ver mi progreso"**, con el estilo principal. Para cerrar se puede tocar afuera (como antes) o **deslizar hacia abajo** (nuevo, con `PanResponder`: cierra pasados 90 px o con un gesto rápido y, si no, vuelve con un spring). La rayita de arriba ya sugería el gesto sin que funcionara.
+- 🔴 **Sofía contradecía lo que la persona acababa de marcar.** Andre registró "Cansado" y la tarjeta dijo *"Hay un cambio esta semana, para arriba"*. La tendencia compara el promedio de 7 días contra los 30 anteriores y hoy no pesaba más que otro día. Ahora `buildReflection` recibe `todayMood` y **la tendencia se calla si hoy la contradice**: para `trend-up`, hoy quedó 1 punto o más debajo del promedio de la semana o debajo del histórico; al revés para `trend-down`. La tarjeta cae a la señal siguiente (sesiones, racha, nivel).
+  - ⚠️ A propósito NO se cortó por "hoy ≤ Cansado": quien sale de un pozo (histórico en Bajón, semana en Cansado) sí va para arriba, y ya había un test que lo protegía.
+  - `todayMood` no viaja al modelo: la edge function recibe solo `facts` por señal, como antes.
+- La variante *"No sé qué se movió, pero algo se movió"* se reescribió: *"Esta semana viene **más liviana**. Si sabés qué cambió, vale la pena anotarlo."* (en presente y sin inferir qué hizo la persona, que son reglas de la voz de Sofía).
+- 5 tests nuevos; la suite completa pasa (735).
 - 📱 Sin ver en el teléfono. Hay que probar el deslizar: `shouldRasterizeIOS` sigue puesto en la hoja y no debería molestar, pero no se vio.
 - ✅ **Las cuatro decisiones de producto que estaban frenando la sección M quedaron tomadas** (anotadas en `docs/problemas-abiertos.md`, cada una en su fila):
   - **M15, reagendar: libre fuera de las 24hs, una sola vez adentro.** Con más de 24hs el cliente mueve a cualquier horario libre sin perder el pago; dentro de las 24hs lo pide una vez y el profesional acepta o no.
