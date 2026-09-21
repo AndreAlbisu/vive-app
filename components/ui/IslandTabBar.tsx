@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Pressable, StyleSheet, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -14,6 +14,11 @@ const FOREST_SOFT = '#566245';
 const DOT_COLOR   = ViveColors.primary; // terracota — mismo punto para todas las notificaciones
 
 const AnimatedFeather = Animated.createAnimatedComponent(Feather);
+
+// El padding de la pastilla. Vive en una constante porque lo usan el estilo de
+// la pastilla, el de la burbuja y la cuenta del ancho de cada tab: si los tres
+// no coinciden, la burbuja queda corrida.
+const PILL_PAD = 6;
 
 export type IslandTab = {
   name: string;
@@ -61,7 +66,6 @@ function IslandTabItem({
       accessibilityState={isFocused ? { selected: true } : {}}
       style={styles.tabHit}>
       <View style={styles.tab}>
-        <Animated.View pointerEvents="none" style={[styles.bubble, { opacity: focus }]} />
         <View style={styles.iconSlot}>
           <Feather name={tab.icon} size={19} color={FOREST_SOFT} />
           <AnimatedFeather
@@ -90,6 +94,8 @@ function IslandTabItem({
 export function IslandTabBar({ state, navigation, position, tabs }: MaterialTopTabBarProps & { tabs: IslandTab[] }) {
   const insets = useSafeAreaInsets();
   const activeRouteName = state.routes[state.index].name;
+  // Ancho de un tab, medido. Ver la nota de la burbuja más abajo.
+  const [ancho, setAncho] = useState(0);
 
   function onPress(tab: IslandTab, isFocused: boolean) {
     const route = state.routes.find(r => r.name === tab.name);
@@ -113,7 +119,42 @@ export function IslandTabBar({ state, navigation, position, tabs }: MaterialTopT
             Si alguna vez se quiere vidrio esmerilado de verdad, hay que bajarle
             la opacidad a CREAM (0.95 → ~0.55) para que el blur tenga qué mostrar,
             y recién ahí vuelve a tener sentido pagar el costo. */}
-        <View style={styles.pill}>
+        <View
+          style={styles.pill}
+          onLayout={e => setAncho((e.nativeEvent.layout.width - PILL_PAD * 2) / tabs.length)}>
+          {/* 🔴 UNA sola burbuja que se desliza, en vez de una por tab que
+              aparecía y desaparecía en su lugar (hasta el 21/09/2026). El pedido
+              de Andre fue literal: "que el selector viaje hasta el botón que
+              elegiste", como la barra de Instagram.
+
+              Va acá y no adentro de cada tab porque un objeto que se mueve tiene
+              que ser UN objeto: con una burbuja por tab, lo único que se podía
+              animar era su opacidad, y un crossfade se lee como lento por más
+              rápido que sea — no hay nada que siga con la vista.
+
+              `translateX` sobre el `position` del navegador: es transform, o sea
+              que corre por el driver nativo, y al seguir `position` y no al tab
+              enfocado **acompaña el dedo mientras swipeás**, no solo el toque.
+              El ancho se mide en vez de escribirse a mano porque la isla del
+              coach y la del usuario no tienen la misma cantidad de tabs. */}
+          {ancho > 0 && tabs.length > 1 && (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.bubble,
+                {
+                  width: ancho,
+                  transform: [{
+                    translateX: position.interpolate({
+                      inputRange: tabs.map((_, i) => i),
+                      outputRange: tabs.map((_, i) => i * ancho),
+                      extrapolate: 'clamp',
+                    }),
+                  }],
+                },
+              ]}
+            />
+          )}
           {tabs.map((tab, i) => {
             const isFocused = activeRouteName === tab.name;
             return (
@@ -156,7 +197,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: CREAM,
     borderRadius: 26,
-    padding: 6,
+    padding: PILL_PAD,
     overflow: 'hidden',
   },
   tabHit: {
@@ -175,7 +216,10 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   bubble: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    left: PILL_PAD,
+    top: PILL_PAD,
+    bottom: PILL_PAD,
     backgroundColor: FOREST,
     borderRadius: 22,
   },

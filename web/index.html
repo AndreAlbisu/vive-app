@@ -277,8 +277,14 @@
   .print.hoy { width: 74%; margin-left: auto; transform: rotate(2.5deg); }
   .print.antes { position: absolute; left: 0; bottom: 0; width: 62%; transform: rotate(-4deg); }
 
+  /* Para qué existe: una sola frase, grande. La historia completa va abajo. */
+  .purpose { text-align: center; }
+  .purpose-q { margin: 0 auto; max-width: 22ch; font-size: clamp(2rem, 4.4vw, 3.6rem); line-height: 1.08; text-wrap: balance; }
+  .purpose .sec-lead { margin: 24px auto 0; }
+  .purpose-link { display: inline-block; margin-top: 24px; font-weight: 700; text-decoration-color: var(--terra); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+
   /* Preguntas frecuentes */
-  .faq { background: var(--cream); }
+  .faq { background: var(--paper); }
   .faq-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(32px, 6vw, 96px); align-items: start; }
   .faq-list details { border-bottom: 1px solid var(--line); }
   .faq-list details:first-child { border-top: 1px solid var(--line); }
@@ -601,25 +607,11 @@
     </div>
   </section>
 
-  <section class="story grain" aria-labelledby="historia">
-    <div class="wrap story-grid">
-      <div class="album">
-        <figure class="print hoy">
-          <img src="img/hermanos-hoy.jpg" width="724" height="800" loading="lazy" alt="Andre y Joaquín hoy con su mamá, abrazados entre plantas">
-        </figure>
-        <figure class="print antes">
-          <img src="img/hermanos-2013.jpg" width="900" height="675" loading="lazy" alt="Andre y Joaquín de chicos, riéndose tirados en una cancha">
-        </figure>
-      </div>
-      <div class="story-text">
-        <h2 id="historia" class="sec-title">encontrarnos fue el comienzo.</h2>
-        <p>Somos Andre y Joaquín, dos hermanos de Córdoba, Argentina. Tenemos maneras distintas de ver el mundo y recorridos que nos llevaron por caminos diferentes. En el desarrollo personal encontramos algo que nos apasionaba a los dos y una oportunidad de volver a acercarnos.</p>
-        <p>Sabemos lo que significa contar con alguien. Nuestra hermana Sofía nos acompañó a la distancia, creyó en nosotros y nos acercó herramientas y personas que nos ayudaron en momentos difíciles. Tuvimos esa suerte. También sabemos que muchas personas atraviesan esos momentos sin saber a quién acudir.</p>
-        <p>Vita empezó como una idea de Andre, después de vivir lo mucho que puede ayudar encontrar acompañamiento y lo difícil que puede ser volver a acceder a él. Una conversación con Joaquín abrió nuevas posibilidades para el proyecto. Empezamos a construir juntos y, en ese proceso, también nos reencontramos como hermanos.</p>
-        <p>Queremos acercar a quienes buscan acompañamiento con quienes tienen mucho para ofrecer. En Argentina hay profesionales capaces que necesitan un lugar donde mostrar cómo trabajan, llegar a otras personas y desarrollar su vocación.</p>
-        <p class="story-close">Vita nace de querer compartir algo de lo que recibimos: la posibilidad de encontrar herramientas, conocer a alguien que pueda acompañarte y dar un primer paso.</p>
-        <p class="story-note">En la app, "Sofía" es la voz que te habla en el inicio. Son mensajes automáticos, escritos con el cariño con que ella nos acompañó. No es una persona del otro lado.</p>
-      </div>
+  <section class="purpose" aria-labelledby="para-que">
+    <div class="wrap">
+      <h2 id="para-que" class="purpose-q">Vita existe para que, en un momento difícil, sepas a quién acudir.</h2>
+      <p class="sec-lead">Acercamos a quienes buscan acompañamiento con profesionales que tienen mucho para ofrecer.</p>
+      <a class="purpose-link" href="#historia">Conocé por qué la hicimos</a>
     </div>
   </section>
 
@@ -675,6 +667,28 @@
           </ul>
           <p>Bajate la app y postulate desde ahí.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="story grain" aria-labelledby="historia">
+    <div class="wrap story-grid">
+      <div class="album">
+        <figure class="print hoy">
+          <img src="img/hermanos-hoy.jpg" width="724" height="800" loading="lazy" alt="Andre y Joaquín hoy con su mamá, abrazados entre plantas">
+        </figure>
+        <figure class="print antes">
+          <img src="img/hermanos-2013.jpg" width="900" height="675" loading="lazy" alt="Andre y Joaquín de chicos, riéndose tirados en una cancha">
+        </figure>
+      </div>
+      <div class="story-text">
+        <h2 id="historia" class="sec-title">encontrarnos fue el comienzo.</h2>
+        <p>Somos Andre y Joaquín, dos hermanos de Córdoba, Argentina. Tenemos maneras distintas de ver el mundo y recorridos que nos llevaron por caminos diferentes. En el desarrollo personal encontramos algo que nos apasionaba a los dos y una oportunidad de volver a acercarnos.</p>
+        <p>Sabemos lo que significa contar con alguien. Nuestra hermana Sofía nos acompañó a la distancia, creyó en nosotros y nos acercó herramientas y personas que nos ayudaron en momentos difíciles. Tuvimos esa suerte. También sabemos que muchas personas atraviesan esos momentos sin saber a quién acudir.</p>
+        <p>Vita empezó como una idea de Andre, después de vivir lo mucho que puede ayudar encontrar acompañamiento y lo difícil que puede ser volver a acceder a él. Una conversación con Joaquín abrió nuevas posibilidades para el proyecto. Empezamos a construir juntos y, en ese proceso, también nos reencontramos como hermanos.</p>
+        <p>Queremos acercar a quienes buscan acompañamiento con quienes tienen mucho para ofrecer. En Argentina hay profesionales capaces que necesitan un lugar donde mostrar cómo trabajan, llegar a otras personas y desarrollar su vocación.</p>
+        <p class="story-close">Vita nace de querer compartir algo de lo que recibimos: la posibilidad de encontrar herramientas, conocer a alguien que pueda acompañarte y dar un primer paso.</p>
+        <p class="story-note">En la app, "Sofía" es la voz que te habla en el inicio. Son mensajes automáticos, escritos con el cariño con que ella nos acompañó. No es una persona del otro lado.</p>
       </div>
     </div>
   </section>
