@@ -4,6 +4,18 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-21 — Andre (sesión 266 · el momento de Sofía sin "Seguir")
+
+**Tocado:** `components/SobreVosMomento.tsx`
+
+**Resumen:**
+- Pedido de Andre: el botón "Seguir" del momento a pantalla completa (el que sube después de registrar el ánimo) *"no sirve de mucho"*. Es cierto: solo cerraba, igual que tocar afuera, y era el botón grande mientras lo único que lleva a algún lado estaba en letra chica abajo.
+- Ahora hay un solo botón, **"Ver mi progreso"**, con el estilo principal. Para cerrar se puede tocar afuera (como antes) o **deslizar hacia abajo** (nuevo, con `PanResponder`: cierra pasados 90 px o con un gesto rápido y, si no, vuelve con un spring). La rayita de arriba ya sugería el gesto sin que funcionara.
+- 📱 Sin ver en el teléfono. Hay que probar el deslizar: `shouldRasterizeIOS` sigue puesto en la hoja y no debería molestar, pero no se vio.
+
+**Pendiente para la próxima sesión:**
+- Ver en el teléfono que deslizar se sienta natural y que nadie quede sin saber cómo cerrar.
+
 ## 2026-09-21 — Andre (sesión 265 · plugins de Claude Code y auditoría de seguridad pendiente)
 
 **Tocado:** nada del repo salvo este archivo. El plugin `agent-skills` quedó instalado a nivel usuario en la máquina de Andre, no en el proyecto.

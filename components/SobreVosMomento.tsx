@@ -9,6 +9,7 @@ import {
   InteractionManager,
   Platform,
   BackHandler,
+  PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -94,6 +95,30 @@ export function SobreVosMomento() {
     return () => sub.remove();
   }, [visible, close]);
 
+  // Deslizar hacia abajo cierra. Desde el 21/09/2026 no hay botón "Seguir"
+  // (solo cerraba, lo mismo que tocar afuera, y le peleaba el lugar al único
+  // botón que lleva a algún lado), así que la rayita de arriba tiene que
+  // cumplir lo que promete. `closeRef` porque el PanResponder se crea una vez
+  // y capturaría el `close` del primer render.
+  const closeRef = useRef(close);
+  closeRef.current = close;
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+      onPanResponderMove: (_, g) => translateY.setValue(Math.max(0, g.dy)),
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 90 || g.vy > 0.8) {
+          closeRef.current();
+        } else {
+          Animated.spring(translateY, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+      },
+    }),
+  ).current;
+
   function seeProgress() {
     close();
     router.push('/progreso');
@@ -119,6 +144,7 @@ export function SobreVosMomento() {
         // haya Modal, es una optimización distinta y complementaria.
         shouldRasterizeIOS
         renderToHardwareTextureAndroid
+        {...pan.panHandlers}
       >
         {/* El "130%" del stop en el mockup (linear-gradient(160deg, mood, forest
             130%)) suaviza cuánto domina el forest dentro del área visible — acá
@@ -157,11 +183,8 @@ export function SobreVosMomento() {
         </Text>
 
         <View style={s.acts}>
-          <Pressable style={s.go} onPress={close} accessibilityRole="button">
-            <Text style={s.goText}>Seguir</Text>
-          </Pressable>
-          <Pressable style={s.sub} onPress={seeProgress} accessibilityRole="button">
-            <Text style={s.subText}>Ver mi progreso completo</Text>
+          <Pressable style={s.go} onPress={seeProgress} accessibilityRole="button">
+            <Text style={s.goText}>Ver mi progreso</Text>
           </Pressable>
         </View>
       </Animated.View>
@@ -223,7 +246,6 @@ const s = StyleSheet.create({
   },
   acts: {
     marginTop: 26,
-    gap: 10,
   },
   go: {
     alignItems: 'center',
@@ -236,15 +258,5 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.semibold,
     fontSize: 14.5,
     color: '#3F512F',
-  },
-  sub: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 4,
-  },
-  subText: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
   },
 });
