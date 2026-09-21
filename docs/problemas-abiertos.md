@@ -77,7 +77,7 @@ qué darse cuenta si algo quedó afuera.
 
 | ID | Qué | Origen |
 |---|---|---|
-| **L19** | Una nota compartida por el coach aparece sola del lado del cliente (dos teléfonos, chat abierto). | 242 |
+| **L19** | ~~Una nota compartida por el coach aparece sola del lado del cliente.~~ | ✅ **Cerrado 21/09**, y probó más de lo que pedía: **al coach le aparecen las dos notas y al cliente solo la pública**, así que la privada no se filtra. Aparecen al instante (llegan empujadas a una pantalla ya abierta, a diferencia de abrir un chat, que es una carga fría). | 242 |
 | **L20** | La app entera con el color nuevo de texto secundario (`#566245`, 38 archivos). | 242 |
 | **L21** | Recorrido crítico con VoiceOver/TalkBack, sobre todo el calendario. | 242 |
 | **L22** | Checkout web con `?probar=1`: sin el tilde de edad no pide código; después queda `age_confirmed = true`. | 241 |
