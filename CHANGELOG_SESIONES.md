@@ -12,6 +12,14 @@
 - Pedido de Andre: el botón "Seguir" del momento a pantalla completa (el que sube después de registrar el ánimo) *"no sirve de mucho"*. Es cierto: solo cerraba, igual que tocar afuera, y era el botón grande mientras lo único que lleva a algún lado estaba en letra chica abajo.
 - Ahora hay un solo botón, **"Ver mi progreso"**, con el estilo principal. Para cerrar se puede tocar afuera (como antes) o **deslizar hacia abajo** (nuevo, con `PanResponder`: cierra pasados 90 px o con un gesto rápido y, si no, vuelve con un spring). La rayita de arriba ya sugería el gesto sin que funcionara.
 - 📱 Sin ver en el teléfono. Hay que probar el deslizar: `shouldRasterizeIOS` sigue puesto en la hoja y no debería molestar, pero no se vio.
+- ✅ **Las cuatro decisiones de producto que estaban frenando la sección M quedaron tomadas** (anotadas en `docs/problemas-abiertos.md`, cada una en su fila):
+  - **M15, reagendar: libre fuera de las 24hs, una sola vez adentro.** Con más de 24hs el cliente mueve a cualquier horario libre sin perder el pago; dentro de las 24hs lo pide una vez y el profesional acepta o no.
+  - **M16, si mueve el profesional: propone y el cliente elige.** O toma uno de los horarios ofrecidos, o pide la plata de vuelta. Nunca se le impone un horario, que es la queja más furiosa contra Selia.
+  - **M5, cambio de profesional: o reintegro o cambio, no los dos.** Una sesión pagada no puede rendir dos. **Toca los T&C §9.3.**
+  - **M7, referidos: descuento para el que llega, nada para el que invita.** Sale de la comisión de Vita, nunca del bolsillo del profesional.
+- 🔎 **Dos hallazgos al mirar cómo construir M15**, los dos sobre permisos de `bookings`:
+  - ✅ **Reagendar hay que hacerlo sí o sí del lado del servidor.** `authenticated` tiene UPDATE sobre **5 columnas** (`status`, `cancelled_by`, `cancelled_late`, `refund_address`, `refund_network`), y `scheduled_date`/`scheduled_time` **no están**. O sea que el cliente hoy no puede mover su sesión ni por la API, que es lo correcto. La lista blanca es la misma trampa documentada para `coaches` en la sesión 259: **toda columna nueva que el cliente escriba hay que sumarla ahí**, o la app guarda, no da error y no escribe nada.
+  - 🔴 **`anon` tiene UPDATE sobre 43 columnas de `bookings`**, incluidas `payment_status`, `amount`, `status` y `scheduled_date`. Hoy lo frena la RLS (las policies piden `user_id = auth.uid()`, que con la anon key es null), pero es **exactamente el mismo agujero que se anotó para `coaches` el 17/09** y acá es plata. Va a la auditoría de seguridad previa a la v1, y conviene cerrarlo antes de que M15 sume columnas nuevas.
 
 **Pendiente para la próxima sesión:**
 - Ver en el teléfono que deslizar se sienta natural y que nadie quede sin saber cómo cerrar.
