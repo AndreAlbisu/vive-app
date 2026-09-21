@@ -20,6 +20,10 @@
 - 🔎 **Dos hallazgos al mirar cómo construir M15**, los dos sobre permisos de `bookings`:
   - ✅ **Reagendar hay que hacerlo sí o sí del lado del servidor.** `authenticated` tiene UPDATE sobre **5 columnas** (`status`, `cancelled_by`, `cancelled_late`, `refund_address`, `refund_network`), y `scheduled_date`/`scheduled_time` **no están**. O sea que el cliente hoy no puede mover su sesión ni por la API, que es lo correcto. La lista blanca es la misma trampa documentada para `coaches` en la sesión 259: **toda columna nueva que el cliente escriba hay que sumarla ahí**, o la app guarda, no da error y no escribe nada.
   - 🔴 **`anon` tiene UPDATE sobre 43 columnas de `bookings`**, incluidas `payment_status`, `amount`, `status` y `scheduled_date`. Hoy lo frena la RLS (las policies piden `user_id = auth.uid()`, que con la anon key es null), pero es **exactamente el mismo agujero que se anotó para `coaches` el 17/09** y acá es plata. Va a la auditoría de seguridad previa a la v1, y conviene cerrarlo antes de que M15 sume columnas nuevas.
+- 🔒 **Cerrado el agujero de `anon` sobre `bookings`**, que es el primer paso acordado antes de construir M15. Ya no puede INSERT ni UPDATE; queda solo con SELECT.
+  - **Verificado desde afuera con un PATCH real usando la clave pública**: antes devolvía 0 filas en silencio (lo frenaba solo la RLS), ahora devuelve **401 `permission denied for table bookings`**. O sea que ahora hay dos capas y no una.
+  - **Antes de revocar se verificó quién escribe**: `web-book` inserta con el **service role** (la anon key ahí solo valida el token del usuario), y ninguna página de `web/` escribe en `bookings` — la única que la toca es `web/reserva/index.html`, que **lee** mandando el token del usuario, o sea con rol `authenticated`.
+  - ⚠️ **El SELECT de `anon` se dejó a propósito**: revocar una lectura es el tipo de cambio que rompe una página pública viva sin dar error visible. Va a la auditoría, mirando primero quién lee qué. Y **sigue abierto el mismo agujero en `coaches`** (UPDATE sobre 25 columnas, anotado el 17/09).
 
 **Pendiente para la próxima sesión:**
 - Ver en el teléfono que deslizar se sienta natural y que nadie quede sin saber cómo cerrar.
@@ -106,7 +110,7 @@
 ---
 ## 2026-09-21 — Andre (sesión 263 · L2, L4, L40 y el nombre del cobro)
 
-**Tocado:** `web/c/index.html`, `components/ui/IslandTabBar.tsx`, `scripts/add-chat-indexes.sql` (nuevo, **corrido en producción**), `lib/conTope.ts` y `__tests__/conTope.test.ts` (nuevos), `context/AuthContext.tsx`, `supabase/functions/mp-create-payment/index.ts` (**deployada, v51**), `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`. Más DNS de `vitaapp.com.ar`, que no vive en el repo.
+**Tocado:** `web/c/index.html`, `components/ui/IslandTabBar.tsx`, `scripts/add-chat-indexes.sql` y `scripts/revoke-anon-bookings-write.sql` (nuevos, **corridos en producción**), `lib/conTope.ts` y `__tests__/conTope.test.ts` (nuevos), `context/AuthContext.tsx`, `supabase/functions/mp-create-payment/index.ts` (**deployada, v51**), `lib/pricing.ts`, `__tests__/desglosePago.test.ts`, `screens/CoachPayoutScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `docs/decisiones-pagos.md`. Más DNS de `vitaapp.com.ar`, que no vive en el repo.
 
 **Resumen:**
 - **L2 cerrado, y sin entrar al panel de Mercado Pago.** Se leyeron los pagos por la API (`GET /v1/payments/<id>`) con el `access_token` del coach que ya vive en `coach_mp_accounts`, que es la misma vía por la que se había medido el de $1. Los tres pagos de $4.500 con tarjeta (`174555144528` y `174554303062` del 19/08, `173787714415` del 20/08) dan **exactamente el mismo desglose**: `mercadopago_fee` 193,63, `application_fee` 675 (el 15% del tramo recurrente, correcto) y `net_received_amount` 3.631,37.
