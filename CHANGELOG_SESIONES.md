@@ -4,6 +4,20 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-21 — Andre (sesión 265 · plugins de Claude Code y auditoría de seguridad pendiente)
+
+**Tocado:** nada del repo salvo este archivo. El plugin `agent-skills` quedó instalado a nivel usuario en la máquina de Andre, no en el proyecto.
+
+**Resumen:**
+- Se leyó el código de 4 plugins que circulaban en redes. **Agent Skills** (Addy Osmani) es solo texto, sin hooks activos. Quedó instalado a prueba. **Ponytail** es inofensivo pero fuerza respuestas escuetas, así que no. **Graphify** es legítimo pero mete hooks en cada lectura y búsqueda y edita CLAUDE.md, y para este repo no hace falta. **OmniRoute** queda descartado: pide la contraseña de la Mac, instala un certificado raíz, intercepta tráfico, reusa los tokens de Claude y manda el código a modelos de terceros.
+- **Auditoría de seguridad antes de la v1: sigue pendiente.** Plan: por áreas, no todo el repo de una. Orden: `supabase/functions/` (webhooks de Mercado Pago, auth), `lib/` (booking y pagos), políticas RLS (que un profesional no pueda ver reservas de otro) y después `app/` y `hooks/`. Herramientas: la skill `find-bugs` y la guía `security-and-hardening` de Agent Skills como checklist extra.
+
+**Pendiente para la próxima sesión:**
+- Hacer la auditoría de seguridad y, con eso, decidir si Agent Skills se queda.
+- Después, evaluar si hay otros plugins o herramientas que sirvan. Regla: leer el código antes de instalar, porque Claude tiene acceso a producción (Supabase, Mercado Pago).
+- Joaquín: si querés Agent Skills, se instala aparte en tu máquina (`claude plugin marketplace add addyosmani/agent-skills` y `claude plugin install agent-skills@addy-agent-skills`). No viene con el pull.
+
+---
 ## 2026-09-21 — Andre (sesión 264 · skill de diseño UI UX Pro Max)
 
 **Tocado:** `.claude/skills/` (nuevo, instalado con `uipro init --ai claude`, versión 2.15.0 del CLI `ui-ux-pro-max-cli`).
