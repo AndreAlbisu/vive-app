@@ -407,6 +407,7 @@ export default function ConexionesScreen() {
                   key={selectedDoorId}
                   horizontal
                   pagingEnabled
+                  style={s.deckScroll}
                   showsHorizontalScrollIndicator={false}
                   onScrollBeginDrag={() => navigation.setOptions({ swipeEnabled: false })}
                   onScrollEndDrag={() => navigation.setOptions({ swipeEnabled: true })}
@@ -784,6 +785,9 @@ export default function ConexionesScreen() {
 }
 
 // ─── Estilos ─────────────────────────────────────────────────────────────────
+// Lugar para la sombra de la card del deck, ver `cardPage`.
+const DECK_SHADOW_ROOM = 44;
+
 const shadow = Platform.select({
   ios: {
     shadowColor: 'rgba(46,54,36,0.22)',
@@ -1145,9 +1149,16 @@ const s = StyleSheet.create({
   cardPage: {
     width: SCREEN_W,
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingTop: 10,
+    // 🔴 La sombra `elevated` de SurfaceCard baja ~40pt (al presionar) y un
+    // ScrollView horizontal recorta lo que se sale de su caja: con 10 de
+    // padding la sombra se veía cortada en seco abajo (21/09/2026). Se le da
+    // el lugar acá y `deckScroll` lo devuelve con margen negativo, así los
+    // puntitos quedan donde estaban, dibujados encima de la sombra.
+    paddingBottom: DECK_SHADOW_ROOM,
     justifyContent: 'center',   // centra la card verticalmente dentro de la página
   },
+  deckScroll: { marginBottom: -(DECK_SHADOW_ROOM - 10) },
   // Rediseño 24/08/2026 (card-otras-estructuras.html §B2) — el contenedor con
   // sombra/grano/borde-gradiente ahora lo da SurfaceCard (mismo tratamiento
   // que "Sobre vos"), no el `cardWrap`/`shadow` local que tenía antes (`shadow`

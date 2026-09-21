@@ -6,7 +6,7 @@
 ---
 ## 2026-09-21 — Andre (sesión 266 · el momento de Sofía sin "Seguir", y Sofía deja de contradecir el día)
 
-**Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`
+**Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `app/(tabs)/conexiones.tsx`
 
 **Resumen:**
 - Pedido de Andre: el botón "Seguir" del momento a pantalla completa (el que sube después de registrar el ánimo) *"no sirve de mucho"*. Es cierto: solo cerraba, igual que tocar afuera, y era el botón grande mientras lo único que lleva a algún lado estaba en letra chica abajo.
@@ -16,6 +16,7 @@
   - `todayMood` no viaja al modelo: la edge function recibe solo `facts` por señal, como antes.
 - La variante *"No sé qué se movió, pero algo se movió"* se reescribió: *"Esta semana viene **más liviana**. Si sabés qué cambió, vale la pena anotarlo."* (en presente y sin inferir qué hizo la persona, que son reglas de la voz de Sofía).
 - 5 tests nuevos; la suite completa pasa (735).
+- **Sombra cortada en las tarjetas de Profesionales.** El carrusel es un `ScrollView` horizontal, que recorta lo que sale de su caja, y la tarjeta tenía 10pt abajo para una sombra `elevated` que baja ~40pt. Ahora `cardPage` tiene `paddingBottom: 44` y el ScrollView lo devuelve con margen negativo, así los puntitos y "Ver lista completa" no se corren.
 - 📱 Sin ver en el teléfono. Hay que probar el deslizar: `shouldRasterizeIOS` sigue puesto en la hoja y no debería molestar, pero no se vio.
 - ✅ **Las cuatro decisiones de producto que estaban frenando la sección M quedaron tomadas** (anotadas en `docs/problemas-abiertos.md`, cada una en su fila):
   - **M15, reagendar: libre fuera de las 24hs, una sola vez adentro.** Con más de 24hs el cliente mueve a cualquier horario libre sin perder el pago; dentro de las 24hs lo pide una vez y el profesional acepta o no.
