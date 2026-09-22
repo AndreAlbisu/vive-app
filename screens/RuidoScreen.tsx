@@ -34,6 +34,17 @@ const SOUNDS = [
   { id: 'bosque',   icon: 'tree-outline' as const,     label: 'Bosque',        hint: 'para concentrarte',    bg: PASTEL_SALVIA },
   { id: 'olas',     icon: 'waves' as const,            label: 'Olas del mar',  hint: 'para bajar un cambio', bg: PASTEL_TEAL },
   { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido grave',   hint: 'para tapar el ruido',  bg: PASTEL_DURAZNO },
+  // ⏸️ **TEMPORAL (21/09/2026): está para escucharlo al lado del grave y decidir.**
+  // El plan es quedarse con UNO: dos casilleros de ruido en una pantalla de
+  // cuatro convierten una herramienta simple en un menú.
+  //
+  // 🔴 Y hay un motivo concreto para compararlos: el grave promete "tapar el
+  // ruido" y es el peor de los tres para eso. Lo que hay que tapar son voces, y
+  // el habla vive en los medios y agudos, donde un ruido que cae 6 u 8 dB por
+  // octava casi no tiene energía. El rosa cae 3: tapa bastante mejor y sigue sin
+  // tener el siseo áspero del blanco. Si gana, se borra el grave; si pierde, se
+  // borra este y se le corrige el texto al grave.
+  { id: 'rosa',     icon: 'cosine-wave' as const,      label: 'Ruido suave',   hint: 'para tapar voces',     bg: PASTEL_AZUL },
 ];
 
 // ✅ **Re-exportados el 21/09/2026 desde la fuente, que es lo que estas mismas
@@ -51,6 +62,7 @@ const SOUNDS = [
 //                crédito**, y por eso está la línea de abajo en la pantalla.
 //   · bosque  → "20090610 0 ambience", de nille (pdsounds). Dominio público.
 //   · olas    → "On a pebble beach", de earthcalling (pdsounds). Dominio público.
+//   · rosa    → **generado** (temporal, para comparar contra el grave).
 //   · blanco  → **generado**, no grabado. El ruido marrón es una definición
 //                matemática, así que sintetizarlo bien no es imitar nada: es la
 //                cosa. Y sale estéreo de verdad, con los canales independientes.
@@ -77,6 +89,7 @@ const SOUND_FILES: Record<string, any> = {
   bosque: require('../assets/sounds/bosque.m4a'),
   olas:   require('../assets/sounds/olas.m4a'),
   blanco: require('../assets/sounds/blanco.m4a'),
+  rosa:   require('../assets/sounds/rosa.m4a'),
 };
 
 const DURATIONS = [
@@ -103,22 +116,24 @@ export default function RuidoScreen() {
   const fadeRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const userIdRef  = useRef<string | null>(null);
 
-  // Pre-cargar los 4 audios al montar para evitar delay al iniciar
+  // Pre-cargar los audios al montar para evitar delay al iniciar
   const playerLluvia = useAudioPlayer(SOUND_FILES.lluvia);
   const playerBosque = useAudioPlayer(SOUND_FILES.bosque);
   const playerOlas   = useAudioPlayer(SOUND_FILES.olas);
   const playerBlanco = useAudioPlayer(SOUND_FILES.blanco);
+  const playerRosa   = useAudioPlayer(SOUND_FILES.rosa);
 
   const players: Record<string, typeof playerLluvia> = {
     lluvia: playerLluvia,
     bosque: playerBosque,
     olas:   playerOlas,
     blanco: playerBlanco,
+    rosa:   playerRosa,
   };
 
   function getPlayer() { return players[selectedSound] ?? playerLluvia; }
 
-  const allPlayers = [playerLluvia, playerBosque, playerOlas, playerBlanco];
+  const allPlayers = [playerLluvia, playerBosque, playerOlas, playerBlanco, playerRosa];
 
   useEffect(() => {
     usuarioActualId().then(uid => { userIdRef.current = uid; }).catch(() => {});
