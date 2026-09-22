@@ -266,7 +266,7 @@ export default function RuidoScreen() {
             <>
               <Text style={s.datePillText}>{formatTodayShort()}</Text>
               <ReminderBell kind="tool" resourceRef="ruido" title="Sonidos ambientales" />
-              <PinButton resourceId="ruido" />
+              <PinButton resourceId="ruido" inline />
             </>
           }
         />
