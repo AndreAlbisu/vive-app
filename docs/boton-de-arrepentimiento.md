@@ -37,7 +37,7 @@ Con eso alcanza. No hace falta ningún formulario ni ningún dato adicional.
 Tenés otras vías, que son independientes de este derecho:
 
 - **Cancelar una Sesión** que todavía no ocurrió: podés hacerlo desde la app hasta 24 horas antes del horario agendado, con reembolso total (Términos y Condiciones §9.1).
-- **Garantía de primera sesión**: si no quedaste conforme con la primera Sesión con un profesional, podés pedir el reintegro total escribiendo a vitaappar@gmail.com dentro de las 48 horas del horario agendado (Términos y Condiciones §9.3).
+- **Garantía de primera sesión**: si no quedaste conforme con la primera Sesión con un profesional, podés pedir el reintegro total **desde la app, en la pantalla de esa sesión**, o escribiendo a vitaappar@gmail.com, dentro de las 48 horas del horario agendado (Términos y Condiciones §9.3).
 
 ## Ante cualquier problema
 
