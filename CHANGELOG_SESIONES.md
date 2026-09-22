@@ -4,6 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-22 — Andre (sesión 267 · las skills de diseño para Codex, commiteadas)
+
+**Tocado:** `.agents/skills/` (nuevo en git: 172 archivos, 4,5 MB)
+
+**Resumen:**
+- Andre avisó que había instalado herramientas y no se habían commiteado. Eran las **mismas 7 skills de diseño de la sesión 264** (ui-ux-pro-max, design, design-system, ui-styling, brand, banner-design, slides), instaladas una segunda vez en `.agents/skills/` **para usarlas desde Codex**. `.claude/skills/` ya estaba en git desde el 21/09; esta copia estaba sin trackear.
+- 🔴 **Estaban rotas**: las 45 referencias de sus 3 `SKILL.md` apuntaban a `.Codex/skills/...`, una carpeta que no existe en el proyecto (parece un bug del instalador: crea `.agents/` y escribe `.Codex/`). Se reapuntaron a `.agents/skills/` y se probó `search.py` desde la ruta nueva: devuelve resultados.
+- Fuera de eso el árbol estaba limpio, y los 11 commits de la sesión 266 están en la historia con 3 commits posteriores arriba (L42, L43, L45), así que no se perdió nada.
+- 📌 Las dos copias quedan a propósito, una por herramienta: `.claude/skills/` para Claude Code y `.agents/skills/` para Codex. Si una se actualiza, hay que actualizar la otra (o borrar la que no se use).
+- ⚠️ Las tres `SKILL.md` mencionan skills que **no están instaladas** en ninguna de las dos copias (`ai-artist`, `ai-multimodal`, `chrome-devtools`). Viene así del paquete; esas partes no van a funcionar hasta instalarlas.
+
+**Pendiente para la próxima sesión:**
+- Sigue todo lo de la sesión 266 sin ver en el teléfono (la postulación con "Cómo trabajás" es lo primero).
+- Las dos sesiones de Codex (L42, L43, L45) no dejaron entrada acá: si fueron cambios de código, conviene anotarlas.
+
+---
 ## 2026-09-21 — Andre (sesión 266 · Sofía, retoques visuales y el match por forma de trabajar)
 
 **Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `scripts/add-quiz-guia-foco-genero.sql` (nuevo), `lib/enfoque.ts`, `lib/quizMatch.ts`, `lib/quizPendiente.ts`, `lib/coachesCache.ts`, `screens/QuizScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `screens/ProfesionalScreen.tsx`, `__tests__/enfoque.test.ts`, `__tests__/quizMatch.test.ts`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `constants/searchData.ts`, `__tests__/taxonomia.test.ts`, `scripts/add-quiz-areas-subtemas.sql` (nuevo), `components/ui/PriceSlider.tsx` (nuevo), `app/search3.tsx`, `scripts/add-quiz-budget-max.sql` (nuevo), `scripts/add-coach-como-trabaja-en-alta.sql` (nuevo), `screens/CoachApplicationScreen.tsx`, `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `lib/coachDeckRanking.ts`, `__tests__/deckRanking.test.ts`, `scripts/add-quiz-pagos.sql` (nuevo), `scripts/add-quiz-budget-max-usd.sql` (nuevo)
