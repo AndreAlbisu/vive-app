@@ -46,6 +46,14 @@
   - ⚠️ **§8.4 habla de los comprobantes que Vita emite, y el sistema no emite ninguna factura.** Ya estaba anotado del lado fiscal; acá aparece como una promesa contractual.
   - ✅ **Lo que se verificó y coincide**: §9.1 (las 24hs), §9.2 (si cancela el profesional el reembolso es automático de verdad), §9.3 entera, §8.8 (la garantía no le traslada comisión a nadie) y §15.2, que dice explícitamente que **no** hay cifrado de extremo a extremo, que es la verdad.
   - 🔧 **Corregido de paso, y era un cabo suelto mío de ayer**: la página del botón de arrepentimiento seguía diciendo que la garantía se pide **solo por mail**, cuando §9.3 cambió el 21/09 para permitir pedirla desde la app. Sincronizado.
+- ✅ **Los cuatro desajustes de los T&C: tres resueltos, y el tercero se resolvió CONSTRUYENDO en vez de redactando** (**L51**, **L52**).
+  - **§8.3** ahora dice las dos escaleras de comisión, incluida la **25%/20%** del riel internacional que faltaba. Un profesional del exterior ya no firma 20 y paga 25.
+  - **§8.1 y §8.2** describen las dos modalidades reales: en pesos el profesional cobra **directo** por el split de Mercado Pago; desde el exterior **Vita percibe por cuenta y orden y después liquida**. Se dejó un corchete explícito para el abogado pidiéndole que confirme si corresponde encuadrarlo como **mandato de cobranza por cuenta y orden**, porque eso es lo que cambia la naturaleza de la operación y no lo puedo decidir yo.
+  - 🔴 **§9.5 dejó de ser una promesa vacía.** En vez de bajarle el tono al texto, se construyó lo que el texto ya prometía: **el reintegro por plantón ahora se dispara solo.** Fue posible porque los registros de Daily traen el `user_id` de cada participante y **son nuestros propios ids de perfil** (verificado contra la sesión real de anoche).
+    - `_shared/asistencia.ts`, **10 tests**, con las cuatro reglas de §9.5 tal cual están escritas. 📌 El caso que más cuidado pide: si el cliente llega al minuto 25, el profesional que esperó los 20 y se fue **cumplió**, así que "se fue antes" se mide contra `min(cuando entró el cliente, 20 min)` y no contra el final de la sesión. Hay un test parado ahí.
+    - ⚠️ **Sin datos no decide NADA.** Daily puede tardar en publicar la sesión, y una lista vacía significa "todavía no sé", no "no vino nadie". Confundirlas sería reembolsar sesiones que ocurrieron.
+    - Lo aplica `session-attendance`, que es el único lugar que **ya tiene la evidencia en la mano**. Pasa la reserva a `cancelada` con `cancelled_by = 'coach'`, que no es una etiqueta: es lo que hace que `trg_mark_refund_on_cancel` devuelva la plata. Y le avisa al cliente.
+  - ⚠️ **El cuarto sigue abierto y no se arregla redactando**: §8.4 habla de los comprobantes que Vita emite y **el sistema no emite ninguna factura**. Es la conversación con el contador.
 
 **Pendiente para la próxima sesión:**
 - Sigue todo lo de la sesión 266 sin ver en el teléfono (la postulación con "Cómo trabajás" es lo primero).

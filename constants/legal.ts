@@ -71,11 +71,20 @@ La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Prof
 
 ## 8. Precios, Pagos y Comisiones
 
-8.1. **Precios.** Los precios de las Sesiones son fijados por cada Profesional y se expresan en pesos argentinos (ARS). El precio aplicable es el informado al momento de la reserva.
+8.1. **Precios.** Los precios de las Sesiones son fijados por cada Profesional. Según los medios de pago que el Profesional acepte, puede fijar un precio en **pesos argentinos (ARS)**, un precio en **dólares estadounidenses (USD)** para pagos desde el exterior, o ambos. **El precio aplicable es el informado al Cliente al momento de la reserva, en la moneda en que se le cobra.**
 
-8.2. **Procesamiento de pagos.** Los pagos se procesan a través de Mercado Pago mediante un modelo de marketplace (pago dividido). El Cliente autoriza el cobro al momento de reservar. Cada Profesional conecta su propia cuenta de Mercado Pago para recibir el pago correspondiente. Vita no almacena datos completos de tarjetas; el procesamiento se rige también por los términos de Mercado Pago.
+8.2. **Procesamiento de pagos.** El Cliente autoriza el cobro al momento de reservar. Vita no almacena datos completos de tarjetas. Existen dos modalidades, según el medio de pago:
 
-8.3. **Comisión de la Plataforma.** Vita percibe una comisión sobre el precio de cada Sesión, retenida automáticamente en el momento del pago. La comisión vigente es: **20%** sobre la primera Sesión completada de cada vínculo Cliente–Profesional y **15%** a partir de la segunda, de manera permanente. **Excepción:** cuando el Cliente llega a la Plataforma a través del enlace propio del Profesional, la primera Sesión de ese vínculo no tiene comisión; a partir de la segunda rige el 15%. Vita puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. Vita puede modificar sus comisiones a futuro, notificando con antelación razonable.
+- **Pago en pesos (Mercado Pago).** Se procesa mediante un modelo de marketplace (pago dividido): **cada Profesional conecta su propia cuenta de Mercado Pago y recibe directamente el importe de la Sesión**, ya descontada la comisión de Vita. El procesamiento se rige también por los términos de Mercado Pago.
+- **Pago desde el exterior.** Cuando el Cliente paga por los medios internacionales habilitados, **Vita percibe el pago por cuenta y orden del Profesional** y le transfiere el importe que le corresponde, ya descontada la comisión, conforme a sus condiciones de cobro. En esta modalidad Vita retiene transitoriamente fondos de terceros a los solos efectos de liquidarlos al Profesional.
+
+[Para revisión legal: la segunda modalidad implica que Vita percibe fondos de terceros antes de liquidarlos. Confirmar si corresponde encuadrarla expresamente como mandato de cobranza por cuenta y orden, y si ello exige alguna previsión adicional en esta cláusula o en la 4.]
+
+8.3. **Comisión de la Plataforma.** Vita percibe una comisión sobre el precio de cada Sesión, retenida automáticamente en el momento del pago. La comisión vigente depende del medio por el que se cobra la Sesión:
+
+- **Sesiones cobradas en pesos a través de Mercado Pago:** **20%** sobre la primera Sesión completada de cada vínculo Cliente–Profesional y **15%** a partir de la segunda, de manera permanente.
+- **Sesiones cobradas en dólares a través de los medios internacionales** (ver 8.2): **25%** sobre la primera Sesión completada del vínculo y **20%** a partir de la segunda. La diferencia responde al mayor costo de procesamiento y transferencia de esos medios.
+ **Excepción:** cuando el Cliente llega a la Plataforma a través del enlace propio del Profesional, la primera Sesión de ese vínculo no tiene comisión; a partir de la segunda rige el 15%. Vita puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. Vita puede modificar sus comisiones a futuro, notificando con antelación razonable.
 
 8.4. **Impuestos.** Vita opera bajo el **Régimen Simplificado para Pequeños Contribuyentes (Monotributo)**. En consecuencia, los comprobantes que emite son **facturas tipo C, que no discriminan IVA**, y la comisión indicada en 8.3 es el importe total que percibe Vita por su servicio de intermediación, sin adicionales impositivos.
 
@@ -123,7 +132,7 @@ Condiciones:
 
 9.5. **Ausencias.** Si alguna de las partes no se presenta a una Sesión confirmada, rige lo siguiente:
 
-- **Ausencia del Profesional.** Si el Profesional no ingresa a la videollamada dentro de los **primeros 10 minutos** contados desde el horario agendado, el Cliente **no paga la Sesión** y se le reintegra la totalidad de lo abonado. El Cliente puede retirarse a partir de ese momento sin que ello afecte su derecho al reintegro.
+- **Ausencia del Profesional.** Si el Profesional no ingresa a la videollamada dentro de los **primeros 10 minutos** contados desde el horario agendado, el Cliente **no paga la Sesión** y se le reintegra la totalidad de lo abonado. El Cliente puede retirarse a partir de ese momento sin que ello afecte su derecho al reintegro. **El reintegro se dispara de forma automática**, a partir de los registros de conexión descriptos más abajo, **sin que el Cliente deba reclamarlo**.
 - **Permanencia del Profesional.** El Profesional debe encontrarse en la videollamada desde el horario agendado y **permanecer hasta que el Cliente ingrese o hasta transcurridos 20 minutos**, lo que ocurra primero. Retirarse antes equivale a no haberse presentado.
 - **Demora del Cliente.** Si el Cliente ingresa con **más de 20 minutos de demora** respecto del horario agendado, o no ingresa, la Sesión **se cobra íntegramente** y el Profesional percibe su importe.
 - **Si no se presenta ninguna de las partes**, el Cliente recibe el reintegro total y ello no se computa como incumplimiento del Profesional.
@@ -414,7 +423,7 @@ Con eso alcanza. No hace falta ningún formulario ni ningún dato adicional.
 Tenés otras vías, que son independientes de este derecho:
 
 - **Cancelar una Sesión** que todavía no ocurrió: podés hacerlo desde la app hasta 24 horas antes del horario agendado, con reembolso total (Términos y Condiciones §9.1).
-- **Garantía de primera sesión**: si no quedaste conforme con la primera Sesión con un profesional, podés pedir el reintegro total escribiendo a vitaappar@gmail.com dentro de las 48 horas del horario agendado (Términos y Condiciones §9.3).
+- **Garantía de primera sesión**: si no quedaste conforme con la primera Sesión con un profesional, podés pedir el reintegro total **desde la app, en la pantalla de esa sesión**, o escribiendo a vitaappar@gmail.com, dentro de las 48 horas del horario agendado (Términos y Condiciones §9.3).
 
 ## Ante cualquier problema
 
@@ -486,7 +495,7 @@ con o sin cuenta.
 `;
 
 /** Placeholders sin completar detectados al generar este archivo. */
-export const LEGAL_PLACEHOLDERS: string[] = ["[Validar con abogado el encuadre de las transferencias; p. ej., cláusulas contractuales, países con nivel adecuado, etc.]","[Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]","[fecha]"];
+export const LEGAL_PLACEHOLDERS: string[] = ["[Para revisión legal: la segunda modalidad implica que Vita percibe fondos de terceros antes de liquidarlos. Confirmar si corresponde encuadrarla expresamente como mandato de cobranza por cuenta y orden, y si ello exige alguna previsión adicional en esta cláusula o en la 4.]","[Validar con abogado el encuadre de las transferencias; p. ej., cláusulas contractuales, países con nivel adecuado, etc.]","[Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]","[fecha]"];
 
 /** Identifica la versión EXACTA de los T&C + Política que el Usuario acepta.
  *  Es el sha256 (12 hex) del contenido de esos dos documentos, así que cambia
@@ -494,7 +503,7 @@ export const LEGAL_PLACEHOLDERS: string[] = ["[Validar con abogado el encuadre d
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '58408521acb7';
+export const LEGAL_VERSION = '40a86a7d1475';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

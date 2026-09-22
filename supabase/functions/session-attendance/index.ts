@@ -26,6 +26,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { esServiceRole } from '../_shared/service-role.ts'
+import { veredictoAsistencia, type Participante } from '../_shared/asistencia.ts'
+import { scheduledAtMs } from '../_shared/guarantee.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -135,7 +137,7 @@ serve(async (req) => {
   // eso se guarda como la conclusión que es.
   const { data: candidatas, error } = await supabase
     .from('bookings')
-    .select('id, scheduled_date, scheduled_time, duration_minutes, meeting_url')
+    .select('id, scheduled_date, scheduled_time, duration_minutes, meeting_url, user_id, coach_id, status, payment_status')
     .gte('scheduled_date', desde)
     .in('status', ['confirmada', 'completada'])
     .limit(200)
@@ -177,6 +179,18 @@ serve(async (req) => {
   let guardadas = 0
   let vacias = 0
   let sinDatosTodavia = 0
+  let reintegros = 0
+
+  // El `profile_id` de cada profesional, que es el `user_id` con el que Daily
+  // identifica a quien entra a la sala (viaja en el meeting token).
+  const perfilDeCoach = new Map<string, string>()
+  {
+    const ids = [...new Set((candidatas ?? []).map(b => b.coach_id).filter(Boolean))]
+    if (ids.length) {
+      const { data: cs } = await supabase.from('coaches').select('id, profile_id').in('id', ids)
+      for (const c of cs ?? []) perfilDeCoach.set(c.id as string, c.profile_id as string)
+    }
+  }
 
   for (const b of candidatas ?? []) {
     if (traidas.has(b.id)) continue
@@ -225,10 +239,64 @@ serve(async (req) => {
       continue
     }
     guardadas++
+
+    // ── §9.5: el plantón se resuelve solo ────────────────────────────────────
+    //
+    // 🔴 Los Términos prometen que si el Profesional no entra en los primeros 10
+    // minutos, el Cliente "no paga la Sesión y se le reintegra la totalidad".
+    // Hasta el 22/09/2026 **no había nada que lo ejecutara**: esta función
+    // guardaba la evidencia y ahí terminaba. La reserva quedaba `confirmada`
+    // para siempre y la plata se quedaba donde estaba.
+    //
+    // 📌 Se hace acá y no en un cron aparte porque **este es el único lugar que
+    // ya tiene la evidencia en la mano**, recién traída de Daily y en el mismo
+    // instante en que se concluye que la sesión terminó.
+    if (b.status === 'confirmada' && b.payment_status === 'aprobado') {
+      const partes: Participante[] = []
+      // deno-lint-ignore no-explicit-any
+      for (const m of ((raw as any)?.data ?? [])) {
+        for (const q of (m?.participants ?? [])) partes.push(q as Participante)
+      }
+
+      const veredicto = veredictoAsistencia({
+        participantes: partes,
+        clienteId: b.user_id as string,
+        profesionalId: perfilDeCoach.get(b.coach_id as string) ?? '',
+        inicioMs: scheduledAtMs(b.scheduled_date as string, b.scheduled_time as string),
+      })
+
+      if (veredicto.veredicto === 'reembolso') {
+        // `cancelled_by: 'coach'` NO es una etiqueta: es lo que hace que
+        // `trg_mark_refund_on_cancel` devuelva la plata. El trigger solo retiene
+        // el reembolso cuando cancela el usuario y es tardía.
+        const { data: cambiada, error: errCancel } = await supabase
+          .from('bookings')
+          .update({ status: 'cancelada', cancelled_by: 'coach' })
+          .eq('id', b.id)
+          .eq('status', 'confirmada')      // guarda contra una carrera
+          .select('id')
+
+        if (errCancel || !cambiada?.length) {
+          console.error('[attendance] no se pudo cerrar el plantón de', b.id, errCancel?.message ?? 'ya no estaba confirmada')
+        } else {
+          reintegros++
+          console.warn(`[attendance] §9.5 ${veredicto.motivo} — booking ${b.id}, se encola el reintegro`)
+          await supabase.from('notifications').insert({
+            recipient_id: b.user_id,
+            type: 'reserva_cancelada',
+            booking_id: b.id,
+            title: 'No se hizo tu sesión',
+            body: veredicto.motivo === 'no_vino_nadie'
+              ? 'La sesión no se hizo. Te devolvemos todo lo que pagaste.'
+              : 'Tu profesional no llegó a la videollamada. Te devolvemos todo lo que pagaste.',
+          })
+        }
+      }
+    }
   }
 
   return new Response(
-    JSON.stringify({ revisadas, guardadas, vacias, sin_datos_todavia: sinDatosTodavia }),
+    JSON.stringify({ revisadas, guardadas, vacias, sin_datos_todavia: sinDatosTodavia, reintegros }),
     { status: 200, headers: { 'Content-Type': 'application/json' } },
   )
 })
