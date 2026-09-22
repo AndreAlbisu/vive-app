@@ -140,6 +140,15 @@ begin
     update public.bookings
        set scheduled_date = p_fecha, scheduled_time = v_hora
      where id = v_b.id;
+
+    -- El profesional se entera aunque no haya tenido que aprobarlo: es su
+    -- agenda, y enterarse al llegar sería peor que enterarse ahora.
+    perform public.avisar(
+      (select c.profile_id from public.coaches c where c.id = v_b.coach_id),
+      'reserva_confirmada', v_b.id,
+      'Movieron una sesión',
+      'La sesión pasó al ' || to_char(p_fecha, 'DD/MM') || ' a las ' || v_hora || ' hs.');
+
     return jsonb_build_object('resultado', 'movida', 'fecha', p_fecha, 'hora', v_hora);
   end if;
 
@@ -157,6 +166,14 @@ begin
   insert into public.reschedule_requests (booking_id, pedida_por, fecha, hora)
   values (v_b.id, 'cliente', p_fecha, v_hora)
   returning id into v_id;
+
+  -- 🔴 Sin este aviso la solicitud solo se veía si el profesional abría Reservas
+  -- por su cuenta, y es el caso donde el reloj corre: falta menos de un día.
+  perform public.avisar(
+    (select c.profile_id from public.coaches c where c.id = v_b.coach_id),
+    'reserva_nueva', v_b.id,
+    'Te piden cambiar un horario',
+    'Alguien no puede a la hora que habían quedado y te propone otra. Miralo en Reservas.');
 
   return jsonb_build_object('resultado', 'pedida', 'id', v_id);
 end $$;
@@ -189,7 +206,29 @@ begin
   if not p_acepta then
     update public.reschedule_requests
        set estado = 'rechazada', resolved_at = now() where id = v_s.id;
+
+    -- ⚠️ El aviso dice qué puede hacer ahora, no solo que le dijeron que no:
+    -- la sesión sigue en pie en su horario original, y eso no es obvio.
+    perform public.avisar(v_b.user_id, 'reserva_cancelada', v_b.id,
+      'No pudieron con ese horario',
+      'Tu sesión sigue en el horario original. Si no podés ir, podés cancelarla.');
+
     return jsonb_build_object('resultado', 'rechazada');
+  end if;
+
+  -- ⚠️ El horario propuesto pudo quedar EN EL PASADO mientras la solicitud
+  -- esperaba respuesta. Estar libre no alcanza: un horario de ayer está
+  -- libertísimo. Sin esto, aceptar tarde movía la sesión a un momento que ya
+  -- pasó y la dejaba inalcanzable para las dos partes.
+  -- 🔴 Devuelve en vez de `raise` A PROPÓSITO, y costó un test descubrirlo:
+  -- un `raise` revierte TODA la función, incluido el `update` que acaba de
+  -- retirar la solicitud. O sea que marcarla vencida y después lanzar el error
+  -- dejaba la solicitud viva igual, para que alguien volviera a intentar lo
+  -- mismo y volviera a fallar. Entre persistir el estado y usar el canal de
+  -- errores, gana persistir: el estado es lo que la otra persona ve.
+  if public.inicio_de_sesion(v_s.fecha, v_s.hora) <= now() then
+    update public.reschedule_requests set estado = 'vencida', resolved_at = now() where id = v_s.id;
+    return jsonb_build_object('resultado', 'destino_en_el_pasado');
   end if;
 
   -- ⚠️ Se vuelve a mirar si el horario sigue libre. Entre el pedido y la
@@ -204,7 +243,8 @@ begin
   ) then
     update public.reschedule_requests
        set estado = 'vencida', resolved_at = now() where id = v_s.id;
-    raise exception 'ocupado' using errcode = 'P0001';
+    -- Mismo motivo que arriba: se devuelve, no se lanza, o el `update` se pierde.
+    return jsonb_build_object('resultado', 'ocupado');
   end if;
 
   -- `movida_tarde` ya quedó en true cuando se pidió, así que acá no se toca.
@@ -214,6 +254,10 @@ begin
 
   update public.reschedule_requests
      set estado = 'aceptada', resolved_at = now() where id = v_s.id;
+
+  perform public.avisar(v_b.user_id, 'reserva_confirmada', v_b.id,
+    'Te aceptaron el cambio',
+    'Tu sesión quedó para el ' || to_char(v_s.fecha, 'DD/MM') || ' a las ' || v_s.hora || ' hs.');
 
   return jsonb_build_object('resultado', 'aceptada', 'fecha', v_s.fecha, 'hora', v_s.hora);
 end $$;

@@ -177,9 +177,22 @@ serve(async (req) => {
     .select('id, status, requested_at')
     .eq('booking_id', booking.id)
     .maybeSingle()
-  if (existing) {
+  // 🔴 **Corregido el 21/09/2026, el mismo día que se agregó el pedido desde la
+  // app.** Antes bastaba con que existiera una fila para cortar acá, y eso
+  // convertía el intake nuevo en una trampa: el cliente pedía la garantía, la
+  // fila quedaba `pendiente`, y cuando el admin iba a aprobarla desde el panel
+  // esta guarda le devolvía 409. O sea que se podía pedir y NO se podía
+  // conceder. Lo probó nadie porque las dos mitades se escribieron seguidas.
+  //
+  // Ahora una `pendiente` no frena al admin: es justo lo que viene a resolver.
+  // Lo que sigue frenando es una ya resuelta, que es lo que la guarda quería
+  // decir desde el principio.
+  const yaResuelta = existing && existing.status !== 'pendiente'
+  if (existing && (solicitante || yaResuelta)) {
     return json({
-      error: `esta reserva ya tiene una solicitud ${existing.status} del ${existing.requested_at}`,
+      error: solicitante
+        ? `ya pediste la garantía para esta sesión (${existing.status})`
+        : `esta reserva ya tiene una solicitud ${existing.status} del ${existing.requested_at}`,
       claim: existing,
     }, 409)
   }
@@ -273,15 +286,18 @@ serve(async (req) => {
   // garantía se usó — y el "una sola vez por Cliente" se volvería incontable.
   // Al revés el peor caso es un claim aprobado sin reembolso disparado, que se
   // ve en una query y se arregla marcando el booking a mano.
-  const { error: claimErr } = await supabase.from('guarantee_claims').insert({
+  // `upsert` y no `insert`: si el pedido entró desde la app, la fila ya existe
+  // en `pendiente` y aprobarla es actualizarla. Con `insert` esto reventaba
+  // contra el UNIQUE de `booking_id`.
+  const { error: claimErr } = await supabase.from('guarantee_claims').upsert({
     booking_id: booking.id,
     user_id: booking.user_id,
     coach_id: booking.coach_id,
     status: 'aprobada',
     resolved_at: new Date().toISOString(),
     resolved_by: resolvedBy,
-    notes: null,
-  })
+    notes: existing ? 'Pedida desde la app, aprobada desde el panel' : null,
+  }, { onConflict: 'booking_id' })
   if (claimErr) return json({ error: `no se pudo registrar la solicitud: ${claimErr.message}` }, 500)
 
   // `status` NO se toca: la sesión ocurrió y sigue siendo 'completada'.

@@ -78,6 +78,11 @@ begin
     values (v_b.id, 'profesional', p_fechas[i], v_h);
   end loop;
 
+  perform public.avisar(v_b.user_id, 'reserva_nueva', v_b.id,
+    'Tu profesional no puede a esa hora',
+    'Te propuso ' || v_n || case when v_n = 1 then ' horario nuevo.' else ' horarios nuevos.' end
+      || ' Si no podés con ninguno, te devolvemos lo que pagaste.');
+
   return jsonb_build_object('resultado', 'propuestas', 'cuantas', v_n);
 end $$;
 
@@ -102,6 +107,21 @@ begin
     raise exception 'no es tu reserva' using errcode = '42501';
   end if;
 
+  -- ⚠️ El horario propuesto pudo quedar EN EL PASADO mientras la solicitud
+  -- esperaba respuesta. Estar libre no alcanza: un horario de ayer está
+  -- libertísimo. Sin esto, aceptar tarde movía la sesión a un momento que ya
+  -- pasó y la dejaba inalcanzable para las dos partes.
+  -- 🔴 Devuelve en vez de `raise` A PROPÓSITO, y costó un test descubrirlo:
+  -- un `raise` revierte TODA la función, incluido el `update` que acaba de
+  -- retirar la solicitud. O sea que marcarla vencida y después lanzar el error
+  -- dejaba la solicitud viva igual, para que alguien volviera a intentar lo
+  -- mismo y volviera a fallar. Entre persistir el estado y usar el canal de
+  -- errores, gana persistir: el estado es lo que la otra persona ve.
+  if public.inicio_de_sesion(v_s.fecha, v_s.hora) <= now() then
+    update public.reschedule_requests set estado = 'vencida', resolved_at = now() where id = v_s.id;
+    return jsonb_build_object('resultado', 'destino_en_el_pasado');
+  end if;
+
   -- El horario pudo ocuparse entre la propuesta y la elección: las opciones no
   -- bloquean nada, por el mismo motivo que un pedido del cliente tampoco.
   if exists (
@@ -110,7 +130,8 @@ begin
       and left(o.scheduled_time, 5) = v_s.hora and o.status <> 'cancelada' and o.id <> v_b.id
   ) then
     update public.reschedule_requests set estado = 'vencida', resolved_at = now() where id = v_s.id;
-    raise exception 'ocupado' using errcode = 'P0001';
+    -- Mismo motivo que arriba: se devuelve, no se lanza, o el `update` se pierde.
+    return jsonb_build_object('resultado', 'ocupado');
   end if;
 
   -- 📌 No se toca `movida_tarde`: esa ficha es para cuando el que no puede es el
@@ -124,6 +145,12 @@ begin
   update public.reschedule_requests
      set estado = 'vencida', resolved_at = now()
    where booking_id = v_b.id and estado = 'pendiente';
+
+  perform public.avisar(
+    (select c.profile_id from public.coaches c where c.id = v_b.coach_id),
+    'reserva_confirmada', v_b.id,
+    'Eligieron horario',
+    'La sesión quedó para el ' || to_char(v_s.fecha, 'DD/MM') || ' a las ' || v_s.hora || ' hs.');
 
   return jsonb_build_object('resultado', 'elegida', 'fecha', v_s.fecha, 'hora', v_s.hora);
 end $$;
@@ -159,6 +186,12 @@ begin
   update public.bookings
      set status = 'cancelada', cancelled_by = 'coach'
    where id = v_b.id;
+
+  perform public.avisar(
+    (select c.profile_id from public.coaches c where c.id = v_b.coach_id),
+    'reserva_cancelada', v_b.id,
+    'No pudieron con ninguno de tus horarios',
+    'La sesión se canceló y se le devolvió lo que pagó.');
 
   return jsonb_build_object('resultado', 'cancelada');
 end $$;

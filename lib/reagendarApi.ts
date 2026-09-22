@@ -40,16 +40,27 @@ export async function pedirReagendado(
   return { ok: false, mensaje: mensajeDeError(null) };
 }
 
-/** El profesional acepta o rechaza. Devuelve `null` si salió bien. */
+/**
+ * El profesional acepta o rechaza. Devuelve `null` si salió bien.
+ *
+ * ⚠️ **Dos caminos de fracaso, y el segundo no es un error de Postgres.** Si
+ * entre el pedido y la respuesta el horario se ocupó o quedó en el pasado, la
+ * función **devuelve** el motivo en vez de lanzarlo: lanzarlo revertiría el
+ * `update` que retira la solicitud, y quedaría viva para volver a fallar. Así
+ * que hay que mirar el `resultado`, no solo el `error`.
+ */
 export async function responderReagendado(
   solicitudId: string,
   acepta: boolean,
 ): Promise<string | null> {
-  const { error } = await supabase.rpc('responder_reagendado', {
+  const { data, error } = await supabase.rpc('responder_reagendado', {
     p_solicitud: solicitudId,
     p_acepta: acepta,
   });
-  return error ? mensajeDeError(error.message) : null;
+  if (error) return mensajeDeError(error.message);
+  const r = (data as { resultado?: string } | null)?.resultado;
+  if (r === 'ocupado' || r === 'destino_en_el_pasado') return mensajeDeError(r);
+  return null;
 }
 
 /**
@@ -72,10 +83,14 @@ export async function proponerHorarios(
   return error ? mensajeDeError(error.message) : null;
 }
 
-/** El cliente toma una de las opciones. */
+/** El cliente toma una de las opciones. Ver la nota de `responderReagendado`
+ *  sobre por qué acá también hay que mirar el `resultado`. */
 export async function elegirHorario(solicitudId: string): Promise<string | null> {
-  const { error } = await supabase.rpc('elegir_horario', { p_solicitud: solicitudId });
-  return error ? mensajeDeError(error.message) : null;
+  const { data, error } = await supabase.rpc('elegir_horario', { p_solicitud: solicitudId });
+  if (error) return mensajeDeError(error.message);
+  const r = (data as { resultado?: string } | null)?.resultado;
+  if (r === 'ocupado' || r === 'destino_en_el_pasado') return mensajeDeError(r);
+  return null;
 }
 
 /**
