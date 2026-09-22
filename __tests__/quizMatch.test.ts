@@ -148,3 +148,27 @@ describe('recomendarDesdeQuiz — tema en dos niveles (21/09/2026)', () => {
     expect(r.recomendaciones[0].diferencias).toEqual([]);
   });
 });
+
+describe('recomendarDesdeQuiz — presupuesto con barra (21/09/2026)', () => {
+  const BASE: RespuestasQuiz = { tema: 'emocion', tipo: 'any', presupuesto: null };
+
+  it('el tope de la barra deja primero a quien entra', () => {
+    const barato = coach({ priceFrom: 5000 });
+    const caro = coach({ priceFrom: 9000, avgRating: 5 });
+    const r = recomendarDesdeQuiz([caro, barato], { ...BASE, presupuestoMax: 6000 });
+    expect(r.recomendaciones[0].coach.id).toBe(barato.id);
+    expect(r.recomendaciones[1].diferencias).toContain('Su sesión cuesta más de lo que marcaste');
+  });
+
+  it('el extremo de la barra es sin límite', () => {
+    const caro = coach({ priceFrom: 40000 });
+    const r = recomendarDesdeQuiz([caro], { ...BASE, presupuestoMax: 15000 });
+    expect(r.recomendaciones[0].diferencias).toEqual([]);
+  });
+
+  it('una respuesta vieja por rango sigue funcionando', () => {
+    const caro = coach({ priceFrom: 9000 });
+    const r = recomendarDesdeQuiz([caro], { ...BASE, presupuesto: 'low' });
+    expect(r.recomendaciones[0].diferencias).toContain('Su sesión cuesta más de lo que marcaste');
+  });
+});

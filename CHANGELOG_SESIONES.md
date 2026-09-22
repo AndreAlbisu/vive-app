@@ -6,7 +6,7 @@
 ---
 ## 2026-09-21 — Andre (sesión 266 · Sofía, retoques visuales y el match por forma de trabajar)
 
-**Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `scripts/add-quiz-guia-foco-genero.sql` (nuevo), `lib/enfoque.ts`, `lib/quizMatch.ts`, `lib/quizPendiente.ts`, `lib/coachesCache.ts`, `screens/QuizScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `screens/ProfesionalScreen.tsx`, `__tests__/enfoque.test.ts`, `__tests__/quizMatch.test.ts`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `constants/searchData.ts`, `__tests__/taxonomia.test.ts`, `scripts/add-quiz-areas-subtemas.sql` (nuevo)
+**Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `scripts/add-quiz-guia-foco-genero.sql` (nuevo), `lib/enfoque.ts`, `lib/quizMatch.ts`, `lib/quizPendiente.ts`, `lib/coachesCache.ts`, `screens/QuizScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `screens/ProfesionalScreen.tsx`, `__tests__/enfoque.test.ts`, `__tests__/quizMatch.test.ts`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `constants/searchData.ts`, `__tests__/taxonomia.test.ts`, `scripts/add-quiz-areas-subtemas.sql` (nuevo), `components/ui/PriceSlider.tsx` (nuevo), `app/search3.tsx`, `scripts/add-quiz-budget-max.sql` (nuevo)
 
 **Resumen:**
 - Pedido de Andre: el botón "Seguir" del momento a pantalla completa (el que sube después de registrar el ánimo) *"no sirve de mucho"*. Es cierto: solo cerraba, igual que tocar afuera, y era el botón grande mientras lo único que lleva a algún lado estaba en letra chica abajo.
@@ -33,6 +33,9 @@
   - 🗄️ `scripts/add-quiz-areas-subtemas.sql` (`areas`, `subtemas` en `user_quiz_answers`) **corrido y verificado**. SCHEMA.md actualizado.
   - Anotado en `problemas-abiertos.md`: M19 (pareja, familia, menores), M20 (LGBTQ+), M21 (búsqueda describiendo, con el tema legal primero), y la regla de que **"crisis" nunca es un tema del quiz**: lleva a Ayuda.
   - 5 tests nuevos, suite completa en 784.
+- 🎚️ **Presupuesto con barra deslizable** (pedido de Andre). De $2.000 a $15.000 en pasos de $500; el extremo es "Sin límite" y es donde arranca. Debajo dice cuántos de los profesionales que trabajan lo elegido entran en ese precio. Se guarda en `user_quiz_answers.budget_max` (script corrido y verificado); las respuestas viejas por rango se traducen solas.
+  - 🔴 **De paso: la barra de precio del buscador (`search3`) no se movía.** Su PanResponder se creaba una vez y leía el ancho de la barra del primer render (0), así que cortaba cada arrastre. Las dos usan ahora `components/ui/PriceSlider.tsx`, que lee todo de refs, salta al punto tocado y no le cede el gesto al scroll.
+  - 3 tests nuevos, suite en 787.
 - 📱 Sin ver en el teléfono. Hay que probar el deslizar: `shouldRasterizeIOS` sigue puesto en la hoja y no debería molestar, pero no se vio.
 - ✅ **Las cuatro decisiones de producto que estaban frenando la sección M quedaron tomadas** (anotadas en `docs/problemas-abiertos.md`, cada una en su fila):
   - **M15, reagendar: libre fuera de las 24hs, una sola vez adentro.** Con más de 24hs el cliente mueve a cualquier horario libre sin perder el pago; dentro de las 24hs lo pide una vez y el profesional acepta o no.
@@ -102,6 +105,7 @@
 
 **Pendiente para la próxima sesión:**
 - Ver en el teléfono que deslizar se sienta natural y que nadie quede sin saber cómo cerrar.
+- Probar las dos barras de precio (quiz y filtros del buscador): que sigan el dedo y no peleen con el scroll.
 - Probar el quiz nuevo de punta a punta (7 preguntas, resumen, volver con las respuestas) y "Cómo trabajo" con `coach-prueba`.
 - Revisar con un profesional la tabla de tendencias por escuela (`TENDENCIA` en `lib/enfoque.ts`).
 - Joaquín: el match ahora lee `coaches.guia` y `coaches.focos`; ya están en producción, no hay que correr nada.

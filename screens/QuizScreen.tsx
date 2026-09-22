@@ -13,13 +13,17 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import { AppBg } from '@/components/ui/AppBg';
+import { PriceSlider } from '@/components/ui/PriceSlider';
 import { ViveFonts } from '@/constants/theme';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 import { QUIZ_AREAS as Q1_OPTIONS } from '@/constants/searchData';
 import {
   recomendarDesdeQuiz,
   TIPO_OPCIONES as Q2_OPTIONS,
-  PRESUPUESTO_OPCIONES as Q3_OPTIONS,
+  PRESUPUESTO_MIN,
+  PRESUPUESTO_TOPE,
+  PRESUPUESTO_PASO,
+  topeDeRango,
   ESTILO_OPCIONES as Q4_OPTIONS,
   TAMANO_TANDA,
   type ResultadoQuiz,
@@ -63,6 +67,10 @@ function preguntasPara(tipo: string | null): Pregunta[] {
   return ['areas', 'subtemas', 'tipo', 'presupuesto', ...ejes, 'genero'];
 }
 
+function etiquetaPresupuesto(v: number): string {
+  return v >= PRESUPUESTO_TOPE ? 'Sin límite' : `Hasta $${v.toLocaleString('es-AR')}`;
+}
+
 /** "a, b y c" */
 function listarY(xs: string[]): string {
   return xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`;
@@ -89,7 +97,11 @@ export default function QuizScreen() {
   const [areas, setAreas] = useState<string[]>([]);
   const [subtemas, setSubtemas] = useState<string[]>([]);
   const [q2, setQ2] = useState<string | null>(null);
-  const [q3, setQ3] = useState<string | null>(null);
+  // Barra deslizable (21/09/2026). Arranca en el extremo, "sin límite": que la
+  // persona baje el tope si le importa, no que tenga que subirlo para ver a todos.
+  // El extremo se guarda como el número del tope, no como null, porque la cola
+  // descarta los null y dejaría vivo un tope viejo.
+  const [presupuesto, setPresupuesto] = useState<number>(PRESUPUESTO_TOPE);
   // M14: cómo quiere que la acompañen. La última porque es la única opcional:
   // quien no sabe qué contestar ya respondió lo que importa.
   const [q4, setQ4] = useState<EstiloPedido | null>(null);
@@ -132,7 +144,7 @@ export default function QuizScreen() {
           if (data) {
             r = {
               topic: data.topic, areas: data.areas, subtemas: data.subtemas,
-              professionalType: data.professional_type, budget: data.budget,
+              professionalType: data.professional_type, budget: data.budget, budgetMax: data.budget_max,
               estilo: data.estilo, guia: data.guia, foco: data.foco, generoPref: data.genero_pref,
             };
           }
@@ -151,7 +163,13 @@ export default function QuizScreen() {
       setAreas(areasGuardadas);
       setSubtemas(subtemasGuardados ?? []);
       setQ2(tipo);
-      setQ3(valida(r.budget, Q3_OPTIONS));
+      // Respuestas de antes de la barra: el rango se traduce a su tope.
+      const topeGuardado = typeof r.budgetMax === 'number'
+        ? r.budgetMax
+        : r.budget ? topeDeRango(r.budget as string) ?? PRESUPUESTO_TOPE : null;
+      if (topeGuardado != null) {
+        setPresupuesto(Math.max(PRESUPUESTO_MIN, Math.min(PRESUPUESTO_TOPE, topeGuardado)));
+      }
       setQ4(valida(r.estilo, Q4_OPTIONS));
       setQ5(valida(r.guia, Q5_OPTIONS));
       setQ6(valida(r.foco, Q6_OPTIONS));
@@ -163,7 +181,7 @@ export default function QuizScreen() {
         areas: areasGuardadas.length > 0,
         subtemas: subtemasGuardados !== null,
         tipo: !!tipo,
-        presupuesto: !!valida(r.budget, Q3_OPTIONS),
+        presupuesto: topeGuardado != null,
         estilo: !!valida(r.estilo, Q4_OPTIONS),
         guia: !!valida(r.guia, Q5_OPTIONS),
         foco: !!valida(r.foco, Q6_OPTIONS),
@@ -192,7 +210,7 @@ export default function QuizScreen() {
     } else if (step === 'resumen') {
       setResultado(recomendarDesdeQuiz(coaches, {
         tema: areas[0] ?? null, areas, subtemas,
-        tipo: q2, presupuesto: q3, estilo: q4, guia: q5, foco: q6, genero: q7,
+        tipo: q2, presupuesto: null, presupuestoMax: presupuesto, estilo: q4, guia: q5, foco: q6, genero: q7,
       }));
       setTandas(1);
       // 🔴 Antes esto era `if (!uid) return;`: quien hacía el quiz SIN cuenta
@@ -201,7 +219,7 @@ export default function QuizScreen() {
       // `AuthContext` al registrarse.
       guardarPendiente({
         topic: areas[0] ?? null, areas, subtemas,
-        professionalType: q2, budget: q3,
+        professionalType: q2, budgetMax: presupuesto,
         estilo: q4, guia: q5, foco: q6, generoPref: q7,
       })
         .then(() => supabase.auth.getSession())
@@ -241,6 +259,23 @@ export default function QuizScreen() {
       : prev.length >= MAX_SUBTEMAS ? prev : [...prev, t]);
   }
 
+  const deLoQueElegiste = coaches.filter(c => {
+    const temas = Q1_OPTIONS.filter(o => areas.includes(o.id)).flatMap(o => o.subtemas);
+    return temas.length === 0 || temas.some(t => c.topics.includes(t));
+  });
+  const entran = presupuesto >= PRESUPUESTO_TOPE
+    ? deLoQueElegiste.length
+    : deLoQueElegiste.filter(c => (c.priceFrom ?? 0) <= presupuesto).length;
+  const total = deLoQueElegiste.length;
+  const textoCuantosEntran =
+    total === 0 ? ''
+    : total === 1 ? (entran === 1
+        ? 'Entra el único profesional que trabaja lo que elegiste.'
+        : 'El único profesional que trabaja lo que elegiste cobra más. Igual te lo mostramos.')
+    : entran === total ? `Entran los ${total} profesionales que trabajan lo que elegiste.`
+    : entran === 0 ? `Ninguno de los ${total} que trabajan lo que elegiste entra en ese precio. Igual te los mostramos.`
+    : `Entran ${entran} de los ${total} profesionales que trabajan lo que elegiste.`;
+
   // Los temas del segundo nivel: los de las áreas elegidas, sin repetir
   // (Vínculos laborales y Orientación vocacional están en dos).
   const subtemasPosibles = [...new Set(Q1_OPTIONS.filter(o => areas.includes(o.id)).flatMap(o => o.subtemas))];
@@ -252,7 +287,7 @@ export default function QuizScreen() {
     areas:       { pregunta: 'Qué querés trabajar',    respuesta: areas.length ? listarY(Q1_OPTIONS.filter(o => areas.includes(o.id)).map(o => o.label)) : null },
     subtemas:    { pregunta: 'Más en concreto',        respuesta: subtemas.length ? listarY(subtemas) : 'Cualquiera de estos' },
     tipo:        { pregunta: 'Con quién',              respuesta: labelDe(q2 as any, Q2_OPTIONS) },
-    presupuesto: { pregunta: 'Presupuesto por sesión', respuesta: labelDe(q3 as any, Q3_OPTIONS) },
+    presupuesto: { pregunta: 'Presupuesto por sesión', respuesta: etiquetaPresupuesto(presupuesto) },
     estilo:      { pregunta: 'Cómo te acompañen',      respuesta: labelDe(q4, Q4_OPTIONS) },
     guia:        { pregunta: 'Cuánto te guíen',        respuesta: labelDe(q5, Q5_OPTIONS) },
     foco:        { pregunta: 'Hacia dónde mirar',      respuesta: labelDe(q6, Q6_OPTIONS) },
@@ -266,7 +301,7 @@ export default function QuizScreen() {
   const contestada: Record<Pregunta, boolean> = {
     areas: areas.length > 0,
     subtemas: true, // "cualquiera de estos" también es una respuesta
-    tipo: !!q2, presupuesto: !!q3, estilo: !!q4, guia: !!q5, foco: !!q6, genero: !!q7,
+    tipo: !!q2, presupuesto: true, estilo: !!q4, guia: !!q5, foco: !!q6, genero: !!q7,
   };
   const canAdvance = step === 'resumen' || (indicePregunta >= 0 && contestada[step as Pregunta]);
 
@@ -383,20 +418,23 @@ export default function QuizScreen() {
             </>
           )}
 
-          {/* ── Q3 ── */}
+          {/* ── Presupuesto: barra deslizable (21/09/2026) ── */}
           {step === 'presupuesto' && (
             <>
-              <Text style={s.question}>¿Cuál es tu presupuesto por sesión?</Text>
-              {Q3_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt.id}
-                  style={[s.option, q3 === opt.id && s.optionActive]}
-                  onPress={() => setQ3(opt.id)}
-                  activeOpacity={0.8}>
-                  <Text style={[s.optionText, q3 === opt.id && s.optionTextActive]}>{opt.label}</Text>
-                  {q3 === opt.id && <Feather name="check" size={16} color={CR} />}
-                </TouchableOpacity>
-              ))}
+              <Text style={s.question}>¿Cuánto querés gastar por sesión?</Text>
+              <Text style={s.questionHint}>Mové la barra hasta tu tope. Al final no hay límite.</Text>
+              <PriceSlider
+                value={presupuesto}
+                onValueChange={setPresupuesto}
+                min={PRESUPUESTO_MIN}
+                max={PRESUPUESTO_TOPE}
+                step={PRESUPUESTO_PASO}
+                formatLabel={etiquetaPresupuesto}
+              />
+              {/* Cuántos de los que trabajan lo que eligió entran en ese precio:
+                  que vea en el momento qué deja afuera, en vez de enterarse en
+                  los resultados. No filtra: los que no entran siguen, marcados. */}
+              <Text style={s.sliderCount}>{textoCuantosEntran}</Text>
             </>
           )}
 
@@ -647,6 +685,7 @@ const s = StyleSheet.create({
   optionDescActive: { color: 'rgba(243,238,223,0.70)' },
 
   optionBlocked: { opacity: 0.45 },
+  sliderCount: { fontFamily: ViveFonts.regular, fontSize: 13, color: FS, lineHeight: 19 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     backgroundColor: BG, borderRadius: 20,

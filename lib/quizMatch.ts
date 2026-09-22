@@ -59,6 +59,18 @@ export const PRESUPUESTO_OPCIONES: OpcionPresupuesto[] = [
   { id: 'flex', label: 'Es flexible',     max: null },
 ];
 
+// Barra deslizable (21/09/2026): reemplaza a los cuatro rangos de arriba, que
+// quedan solo para leer respuestas guardadas antes. El extremo derecho de la
+// barra es "sin límite".
+export const PRESUPUESTO_MIN = 2000;
+export const PRESUPUESTO_TOPE = 15000;
+export const PRESUPUESTO_PASO = 500;
+
+/** Tope en pesos de una respuesta vieja por rango. null = sin límite. */
+export function topeDeRango(id: string | null | undefined): number | null {
+  return PRESUPUESTO_OPCIONES.find(o => o.id === id)?.max ?? null;
+}
+
 // ─── Resultado ──────────────────────────────────────────────────────────────
 
 export type RespuestasQuiz = {
@@ -71,6 +83,9 @@ export type RespuestasQuiz = {
   subtemas?: string[];
   tipo: string | null;
   presupuesto: string | null;
+  /** Tope de la barra, en pesos. Si viene (aunque sea null = sin límite),
+   *  manda sobre `presupuesto`. */
+  presupuestoMax?: number | null;
   /** M14: cómo quiere que la acompañen. Opcional de verdad: `null` o `'any'`
    *  no cambian nada, y nunca saca a nadie de la lista. */
   estilo?: EstiloPedido | null;
@@ -129,7 +144,9 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
   const tipo = tipoProfesional(coach);
   const cumpleTipo = !tipoPedido || tipo === tipoPedido;
 
-  const max = PRESUPUESTO_OPCIONES.find(o => o.id === r.presupuesto)?.max ?? null;
+  const max = r.presupuestoMax !== undefined
+    ? (r.presupuestoMax != null && r.presupuestoMax < PRESUPUESTO_TOPE ? r.presupuestoMax : null)
+    : topeDeRango(r.presupuesto);
   const cumplePrecio = max == null || (coach.priceFrom ?? 0) <= max;
 
   const razones: string[] = [];
