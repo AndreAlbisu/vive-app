@@ -24,6 +24,17 @@ const GLASS_BG    = 'rgba(255,248,240,0.55)';
 
 // `hint` es para qué sirve cada uno: sin eso la pantalla explicaba cómo se usa
 // (elegí sonido, elegí tiempo) y nunca por qué elegirías uno y no otro.
+//
+// 🔴 **Dos de los cinco textos prometían algo que el sonido no hace, corregidos
+// el 21/09/2026 después de medirlos y escucharlos:**
+//   · Bosque decía *"para concentrarte"*. Tiene pájaros, o sea EVENTOS: sonidos
+//     cortos que aparecen y se van, y cada uno se lleva un pedacito de atención.
+//     Es lo contrario de concentrarse. Lo que sí hace es acompañar. Para
+//     concentrarse la lluvia es mejor, porque es pareja y no pasa nada.
+//   · Ruido grave decía *"para tapar el ruido"* y es **el peor de los cinco para
+//     eso**: lo que hay que tapar son voces, el habla vive en los medios y
+//     agudos, y este cae -8,7 dB por octava. Sí tapa bien el zumbido parejo de
+//     abajo (la calle, un aire acondicionado), y eso es lo que dice ahora.
 // El id `blanco` quedó del primer corte y ya no describe nada: medido, el archivo
 // cae -8,7 dB por octava entre 250 Hz y 4 kHz. Blanco sería 0, rosa -3, marrón -6
 // — o sea que es todavía más grave que el marrón, y "blanco" era directamente
@@ -31,20 +42,9 @@ const GLASS_BG    = 'rgba(255,248,240,0.55)';
 // completions, guardados y recordatorios.
 const SOUNDS = [
   { id: 'lluvia',   icon: 'weather-rainy' as const,    label: 'Lluvia suave',  hint: 'para dormirte',        bg: PASTEL_AZUL },
-  { id: 'bosque',   icon: 'tree-outline' as const,     label: 'Bosque',        hint: 'para concentrarte',    bg: PASTEL_SALVIA },
+  { id: 'bosque',   icon: 'tree-outline' as const,     label: 'Bosque',        hint: 'para acompañarte',     bg: PASTEL_SALVIA },
   { id: 'olas',     icon: 'waves' as const,            label: 'Olas del mar',  hint: 'para bajar un cambio', bg: PASTEL_TEAL },
-  { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido grave',   hint: 'para tapar el ruido',  bg: PASTEL_DURAZNO },
-  // ⏸️ **TEMPORAL (21/09/2026): está para escucharlo al lado del grave y decidir.**
-  // El plan es quedarse con UNO: dos casilleros de ruido en una pantalla de
-  // cuatro convierten una herramienta simple en un menú.
-  //
-  // 🔴 Y hay un motivo concreto para compararlos: el grave promete "tapar el
-  // ruido" y es el peor de los tres para eso. Lo que hay que tapar son voces, y
-  // el habla vive en los medios y agudos, donde un ruido que cae 6 u 8 dB por
-  // octava casi no tiene energía. El rosa cae 3: tapa bastante mejor y sigue sin
-  // tener el siseo áspero del blanco. Si gana, se borra el grave; si pierde, se
-  // borra este y se le corrige el texto al grave.
-  { id: 'rosa',     icon: 'cosine-wave' as const,      label: 'Ruido suave',   hint: 'para tapar voces',     bg: PASTEL_AZUL },
+  { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido grave',   hint: 'para el ruido de fondo', bg: PASTEL_DURAZNO },
 ];
 
 // ✅ **Re-exportados el 21/09/2026 desde la fuente, que es lo que estas mismas
@@ -62,7 +62,6 @@ const SOUNDS = [
 //                crédito**, y por eso está la línea de abajo en la pantalla.
 //   · bosque  → "20090610 0 ambience", de nille (pdsounds). Dominio público.
 //   · olas    → "On a pebble beach", de earthcalling (pdsounds). Dominio público.
-//   · rosa    → **generado** (temporal, para comparar contra el grave).
 //   · blanco  → **generado**, no grabado. El ruido marrón es una definición
 //                matemática, así que sintetizarlo bien no es imitar nada: es la
 //                cosa. Y sale estéreo de verdad, con los canales independientes.
@@ -89,7 +88,6 @@ const SOUND_FILES: Record<string, any> = {
   bosque: require('../assets/sounds/bosque.m4a'),
   olas:   require('../assets/sounds/olas.m4a'),
   blanco: require('../assets/sounds/blanco.m4a'),
-  rosa:   require('../assets/sounds/rosa.m4a'),
 };
 
 const DURATIONS = [
@@ -121,19 +119,17 @@ export default function RuidoScreen() {
   const playerBosque = useAudioPlayer(SOUND_FILES.bosque);
   const playerOlas   = useAudioPlayer(SOUND_FILES.olas);
   const playerBlanco = useAudioPlayer(SOUND_FILES.blanco);
-  const playerRosa   = useAudioPlayer(SOUND_FILES.rosa);
 
   const players: Record<string, typeof playerLluvia> = {
     lluvia: playerLluvia,
     bosque: playerBosque,
     olas:   playerOlas,
     blanco: playerBlanco,
-    rosa:   playerRosa,
   };
 
   function getPlayer() { return players[selectedSound] ?? playerLluvia; }
 
-  const allPlayers = [playerLluvia, playerBosque, playerOlas, playerBlanco, playerRosa];
+  const allPlayers = [playerLluvia, playerBosque, playerOlas, playerBlanco];
 
   useEffect(() => {
     usuarioActualId().then(uid => { userIdRef.current = uid; }).catch(() => {});
