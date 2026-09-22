@@ -23,6 +23,13 @@ export type QuizPendiente = {
   axis?: string | null;
   professionalType?: string | null;
   budget?: string | null;
+  /** M14 ampliado (21/09/2026): cómo quiere que la acompañen. Hasta esa fecha
+   *  el estilo se perdía al salir del quiz. `'any'` también se guarda: "no
+   *  sabría decir" es una respuesta, y al volver tiene que aparecer marcada. */
+  estilo?: string | null;
+  guia?: string | null;
+  foco?: string | null;
+  generoPref?: string | null;
   /** Ya se escribió en la base. Ver `volcarPendiente`. */
   volcado?: boolean;
 };
@@ -79,6 +86,10 @@ export async function volcarPendiente(userId: string): Promise<void> {
   if (p.axis)             fila.axis = p.axis;
   if (p.professionalType) fila.professional_type = p.professionalType;
   if (p.budget)           fila.budget = p.budget;
+  if (p.estilo)           fila.estilo = p.estilo;
+  if (p.guia)             fila.guia = p.guia;
+  if (p.foco)             fila.foco = p.foco;
+  if (p.generoPref)       fila.genero_pref = p.generoPref;
 
   // Solo `user_id` y `updated_at`: no hay ninguna respuesta que escribir.
   if (Object.keys(fila).length <= 2) return;

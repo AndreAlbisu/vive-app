@@ -4,9 +4,9 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
-## 2026-09-21 — Andre (sesión 266 · el momento de Sofía sin "Seguir", y Sofía deja de contradecir el día)
+## 2026-09-21 — Andre (sesión 266 · Sofía, retoques visuales y el match por forma de trabajar)
 
-**Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`
+**Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `scripts/add-quiz-guia-foco-genero.sql` (nuevo), `lib/enfoque.ts`, `lib/quizMatch.ts`, `lib/quizPendiente.ts`, `lib/coachesCache.ts`, `screens/QuizScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `screens/ProfesionalScreen.tsx`, `__tests__/enfoque.test.ts`, `__tests__/quizMatch.test.ts`, `SCHEMA.md`, `docs/problemas-abiertos.md`
 
 **Resumen:**
 - Pedido de Andre: el botón "Seguir" del momento a pantalla completa (el que sube después de registrar el ánimo) *"no sirve de mucho"*. Es cierto: solo cerraba, igual que tocar afuera, y era el botón grande mientras lo único que lleva a algún lado estaba en letra chica abajo.
@@ -18,6 +18,14 @@
 - 5 tests nuevos; la suite completa pasa (735).
 - **Sombra cortada en las tarjetas de Profesionales.** El carrusel es un `ScrollView` horizontal, que recorta lo que sale de su caja, y la tarjeta tenía 10pt abajo para una sombra `elevated` que baja ~40pt. Ahora `cardPage` tiene `paddingBottom: 44` y el ScrollView lo devuelve con margen negativo, así los puntitos y "Ver lista completa" no se corren.
 - Recursos: se sacó el subtítulo "Prácticas, de uso diario" al lado de "Herramientas de Vita", a pedido de Andre (con él se fue el estilo `sectionSubtitle`, que no tenía otro uso).
+- 🧭 **Match por forma de trabajar, ampliado (M14).** Andre preguntó si el match por escuela y tipo de acompañamiento de Selia funcionaba en Vita. **Existía una versión chica** (17/09): una sola pregunta (escucha o herramientas), la escuela no contaba y la respuesta se perdía al salir. En la base, **de 34 perfiles (todos de prueba) solo 1 tiene estilo y 1 tiene escuela**. Andre aprobó ampliarlo y sumar el género:
+  - **El quiz pasa a 7 preguntas**: las 4 de antes más *"¿Cuánto te gustaría que te guíen?"*, *"¿Qué te gustaría trabajar sobre todo?"* (lo que viví / algo de ahora / hacia dónde voy) y *"¿Preferís que sea mujer o varón?"*, todas con "no sé / me da igual". Salen del test del "viaje" de Selia, **sin su rótulo final** ("Tu enfoque: Transpersonal"): la persona nunca recibe un nombre de escuela.
+  - **Resumen editable** antes de los resultados (copiado de Selia). "Cambiar mis respuestas" ahora lleva ahí, y si ya contestó las 7 el quiz abre directo en el resumen.
+  - **Se guardan las respuestas** en `user_quiz_answers` (4 columnas nuevas) y el quiz vuelve con ellas marcadas.
+  - **La escuela cuenta como tendencia** cuando el profesional no contestó (p. ej. cognitivo conductual: guía, ejercicios y presente). La frase lo dice así, "su enfoque (…) suele". ⚠️ La tabla es simplificación de manual: **revisarla con Mónica**.
+  - **Orden**: tema > tipo > presupuesto > género > forma de trabajar, con tres niveles cada uno (coincide > sin dato > no coincide). **Nada filtra**: el que no coincide sigue en la lista con la diferencia marcada. El género usa `profiles.gender`, que ya existía.
+  - Del lado del profesional, "Cómo trabajo" suma *"Cuánto guiás"* y *"Sobre qué trabajás"*. El perfil público los muestra.
+  - 🗄️ `scripts/add-quiz-guia-foco-genero.sql` **corrido y verificado en producción** (6 chequeos). SCHEMA.md actualizado. 17 tests nuevos, suite completa en 779.
 - 📱 Sin ver en el teléfono. Hay que probar el deslizar: `shouldRasterizeIOS` sigue puesto en la hoja y no debería molestar, pero no se vio.
 - ✅ **Las cuatro decisiones de producto que estaban frenando la sección M quedaron tomadas** (anotadas en `docs/problemas-abiertos.md`, cada una en su fila):
   - **M15, reagendar: libre fuera de las 24hs, una sola vez adentro.** Con más de 24hs el cliente mueve a cualquier horario libre sin perder el pago; dentro de las 24hs lo pide una vez y el profesional acepta o no.
@@ -87,6 +95,9 @@
 
 **Pendiente para la próxima sesión:**
 - Ver en el teléfono que deslizar se sienta natural y que nadie quede sin saber cómo cerrar.
+- Probar el quiz nuevo de punta a punta (7 preguntas, resumen, volver con las respuestas) y "Cómo trabajo" con `coach-prueba`.
+- Revisar con un profesional la tabla de tendencias por escuela (`TENDENCIA` en `lib/enfoque.ts`).
+- Joaquín: el match ahora lee `coaches.guia` y `coaches.focos`; ya están en producción, no hay que correr nada.
 
 ## 2026-09-21 — Andre (sesión 265 · plugins de Claude Code y auditoría de seguridad pendiente)
 

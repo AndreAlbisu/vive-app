@@ -196,3 +196,76 @@ describe('el estilo dentro del quiz', () => {
     expect(sin.recomendaciones[0].diferencias).toEqual([]);
   });
 });
+
+// ─── M14 ampliado (21/09/2026) ──────────────────────────────────────────────
+import {
+  evaluarGuia,
+  evaluarFoco,
+  evaluarGenero,
+  evaluarEstiloConEscuela,
+  etiquetasFocos,
+} from '@/lib/enfoque';
+
+describe('evaluarGuia', () => {
+  it('sin pedido no dice nada', () => {
+    expect(evaluarGuia('guia', [], 'any')).toEqual({ razon: null, diferencia: null, coincide: true });
+  });
+  it('lo que contestó el profesional le gana a su escuela', () => {
+    // Psicoanalítico tiende a "acompaña", pero él dijo que guía.
+    const r = evaluarGuia('guia', ['psicoanalitico'], 'guia');
+    expect(r.coincide).toBe(true);
+    expect(r.razon).not.toMatch(/enfoque/);
+  });
+  it('sin respuesta propia usa la escuela y lo dice como tendencia', () => {
+    const r = evaluarGuia(null, ['cognitivo_conductual'], 'guia');
+    expect(r.razon).toMatch(/Su enfoque \(cognitivo conductual\) suele/);
+  });
+  it('escuelas que no coinciden entre sí: no deduce nada', () => {
+    expect(evaluarGuia(null, ['cognitivo_conductual', 'psicoanalitico'], 'guia'))
+      .toEqual({ razon: null, diferencia: null, coincide: true });
+  });
+  it('"ambos" coincide con cualquier pedido', () => {
+    expect(evaluarGuia('ambos', [], 'acompana').coincide).toBe(true);
+  });
+});
+
+describe('evaluarFoco', () => {
+  it('coincide si el foco pedido está entre los que marcó', () => {
+    expect(evaluarFoco(['presente', 'rumbo'], [], 'rumbo').coincide).toBe(true);
+  });
+  it('marca la diferencia si no está', () => {
+    const r = evaluarFoco(['presente'], [], 'historia');
+    expect(r.coincide).toBe(false);
+    expect(r.diferencia).toBeTruthy();
+  });
+  it('ignora valores desconocidos de la base', () => {
+    expect(etiquetasFocos(['presente', 'futuro'])).toEqual(['Lo que pasa ahora']);
+  });
+});
+
+describe('evaluarGenero', () => {
+  it('coincide con el valor que guarda la postulación', () => {
+    expect(evaluarGenero('Femenino', 'mujer').coincide).toBe(true);
+    expect(evaluarGenero('Masculino', 'varon').coincide).toBe(true);
+  });
+  it('🔴 sin género indicado no cuenta como coincidencia: se dice que no lo indicó', () => {
+    const r = evaluarGenero('Prefiero no decir', 'mujer');
+    expect(r.coincide).toBe(false);
+    expect(r.desconocido).toBe(true);
+    expect(r.diferencia).toBe('No indicó su género');
+  });
+  it('me da igual no cambia nada', () => {
+    expect(evaluarGenero('', 'any').coincide).toBe(true);
+  });
+});
+
+describe('evaluarEstiloConEscuela', () => {
+  it('con estilo propio se comporta como evaluarEstilo', () => {
+    expect(evaluarEstiloConEscuela('herramientas', ['psicoanalitico'], 'herramientas').coincide).toBe(true);
+  });
+  it('sin estilo propio, psicoanalítico no coincide con "herramientas"', () => {
+    const r = evaluarEstiloConEscuela(null, ['psicoanalitico'], 'herramientas');
+    expect(r.coincide).toBe(false);
+    expect(r.diferencia).toMatch(/suele/);
+  });
+});

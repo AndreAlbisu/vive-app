@@ -83,3 +83,37 @@ describe('recomendarDesdeQuiz', () => {
     expect(r.recomendaciones.map(x => x.coach.id)).toEqual([b.id, a.id]);
   });
 });
+
+describe('recomendarDesdeQuiz — M14 ampliado (21/09/2026)', () => {
+  const BASE: RespuestasQuiz = { tema: 'emocion', tipo: 'any', presupuesto: 'flex' };
+
+  it('ordena coincide > no contestó > no coincide en cómo trabaja', () => {
+    const coincide = coach({ guia: 'guia' });
+    const nada = coach({});
+    const otro = coach({ guia: 'acompana' });
+    const r = recomendarDesdeQuiz([otro, nada, coincide], { ...BASE, guia: 'guia' });
+    expect(r.recomendaciones.map(x => x.coach.id)).toEqual([coincide.id, nada.id, otro.id]);
+  });
+
+  it('el género pesa más que los tres ejes juntos', () => {
+    const mujerSinEjes = coach({ gender: 'Femenino' });
+    const varonConTodo = coach({ gender: 'Masculino', estilo: 'escucha', guia: 'acompana', focos: ['historia'] });
+    const r = recomendarDesdeQuiz([varonConTodo, mujerSinEjes], {
+      ...BASE, genero: 'mujer', estilo: 'escucha', guia: 'acompana', foco: 'historia',
+    });
+    expect(r.recomendaciones[0].coach.id).toBe(mujerSinEjes.id);
+  });
+
+  it('🔴 nunca filtra: quien no coincide en género sigue en la lista, con la diferencia marcada', () => {
+    const varon = coach({ gender: 'Masculino' });
+    const r = recomendarDesdeQuiz([varon], { ...BASE, genero: 'mujer' });
+    expect(r.recomendaciones).toHaveLength(1);
+    expect(r.recomendaciones[0].diferencias).toContain('No coincide con el género que preferiste');
+    expect(r.hayCoincidenciaExacta).toBe(false);
+  });
+
+  it('una diferencia de foco apaga la coincidencia exacta', () => {
+    const r = recomendarDesdeQuiz([coach({ focos: ['presente'] })], { ...BASE, foco: 'historia' });
+    expect(r.hayCoincidenciaExacta).toBe(false);
+  });
+});

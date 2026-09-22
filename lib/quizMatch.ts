@@ -19,7 +19,17 @@
 import type { CachedCoach } from '@/lib/coachesCache';
 import { QUIZ_AREAS } from '@/constants/searchData';
 import { tipoProfesional, type TipoProfesional } from '@/lib/tipoProfesional';
-import { evaluarEstilo, ESTILO_OPCIONES_PERSONA, type EstiloPedido } from '@/lib/enfoque';
+import {
+  evaluarEstiloConEscuela,
+  evaluarGuia,
+  evaluarFoco,
+  evaluarGenero,
+  ESTILO_OPCIONES_PERSONA,
+  type EstiloPedido,
+  type GuiaPedida,
+  type FocoPedido,
+  type GeneroPedido,
+} from '@/lib/enfoque';
 
 // ─── Opciones de las preguntas 2 y 3 ────────────────────────────────────────
 
@@ -58,6 +68,12 @@ export type RespuestasQuiz = {
   /** M14: cómo quiere que la acompañen. Opcional de verdad: `null` o `'any'`
    *  no cambian nada, y nunca saca a nadie de la lista. */
   estilo?: EstiloPedido | null;
+  /** M14 ampliado (21/09): si quiere que la guíen o elegir ella el camino. */
+  guia?: GuiaPedida | null;
+  /** M14 ampliado: hacia dónde quiere que mire el trabajo. */
+  foco?: FocoPedido | null;
+  /** Preferencia sobre el género del profesional. Ordena, no filtra. */
+  genero?: GeneroPedido | null;
 };
 
 export const ESTILO_OPCIONES = ESTILO_OPCIONES_PERSONA;
@@ -133,20 +149,40 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
     else diferencias.push('Su sesión cuesta más de lo que marcaste');
   }
 
-  // M14: el estilo ordena y explica, nunca filtra. Si la persona no lo pidió o
-  // el profesional no lo contestó, no se dice nada de él.
-  const estilo = evaluarEstilo(coach.estilo, r.estilo ?? null);
-  if (estilo.razon) razones.push(estilo.razon);
-  if (estilo.diferencia) diferencias.push(estilo.diferencia);
+  // El género va antes que la forma de trabajar: quien lo pide suele pedirlo
+  // con fuerza, y la tarjeta tiene que decirlo primero.
+  const genero = evaluarGenero(coach.gender, r.genero ?? null);
+
+  // M14: cómo trabaja. Ordena y explica, nunca filtra. Si la persona no lo
+  // pidió, o ni el profesional ni su escuela dicen nada, no se dice nada.
+  const ejes = [
+    evaluarEstiloConEscuela(coach.estilo, coach.enfoques, r.estilo ?? null),
+    evaluarGuia(coach.guia, coach.enfoques, r.guia ?? null),
+    evaluarFoco(coach.focos, coach.enfoques, r.foco ?? null),
+  ];
+
+  for (const e of [genero, ...ejes]) {
+    if (e.razon) razones.push(e.razon);
+    if (e.diferencia) diferencias.push(e.diferencia);
+  }
 
   if (coach.hasSlotThisWeek) razones.push('Tiene horarios libres esta semana');
 
   // Cuánto de lo respondido cumple. El tema pesa más: es lo que la persona vino
-  // a trabajar, y un perfil que no lo trabaja no es una opción. El estilo pesa
-  // menos que todo lo demás: desempata, no decide.
-  const nivel = (cumpleTema ? 8 : 0) + (cumpleTipo ? 4 : 0) + (cumplePrecio ? 2 : 0) + (estilo.coincide ? 1 : 0);
+  // a trabajar, y un perfil que no lo trabaja no es una opción. Los pesos son
+  // potencias de dos a propósito: cumplir algo de arriba siempre le gana a
+  // cumplir TODO lo de abajo.
+  //
+  // Género y ejes tienen tres puntos y no dos: coincide > no sabemos > no
+  // coincide. Sin el del medio, un perfil que no contestó empataba con uno que
+  // contestó y coincide, o quedaba igual de abajo que uno que dice otra cosa.
+  const puntosGenero = genero.coincide ? 8 : genero.desconocido ? 4 : 0;
+  const puntosEjes = ejes.reduce((n, e) => n + (e.razon ? 2 : e.coincide ? 1 : 0), 0); // máx. 6 < 8
+  const nivel =
+    (cumpleTema ? 64 : 0) + (cumpleTipo ? 32 : 0) + (cumplePrecio ? 16 : 0) +
+    puntosGenero + puntosEjes;
   // `exacto` es lo que habilita el título "coinciden con lo que respondiste".
-  // El estilo entra solo cuando hay una diferencia que mostrar: si no, el
+  // Género y ejes entran solo cuando hay una diferencia que mostrar: si no, el
   // título volvería a prometer una coincidencia total con una resta a la vista,
   // que es exactamente la mentira que cerró M1.
   return {
@@ -154,7 +190,7 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
     diferencias,
     cumpleTema,
     nivel,
-    exacto: cumpleTema && cumpleTipo && cumplePrecio && estilo.coincide,
+    exacto: cumpleTema && cumpleTipo && cumplePrecio && genero.coincide && ejes.every(e => e.coincide),
   };
 }
 

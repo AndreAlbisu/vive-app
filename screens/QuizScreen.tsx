@@ -24,10 +24,18 @@ import {
   TAMANO_TANDA,
   type ResultadoQuiz,
 } from '@/lib/quizMatch';
-import type { EstiloPedido } from '@/lib/enfoque';
+import {
+  GUIA_OPCIONES_PERSONA as Q5_OPTIONS,
+  FOCO_OPCIONES_PERSONA as Q6_OPTIONS,
+  GENERO_OPCIONES_PERSONA as Q7_OPTIONS,
+  type EstiloPedido,
+  type GuiaPedida,
+  type FocoPedido,
+  type GeneroPedido,
+} from '@/lib/enfoque';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { supabase } from '@/lib/supabase';
-import { guardarPendiente, volcarPendiente } from '@/lib/quizPendiente';
+import { guardarPendiente, volcarPendiente, leerPendiente } from '@/lib/quizPendiente';
 
 const F  = '#3A4F2A';
 const FS = '#566245';
@@ -39,6 +47,19 @@ const SG = '#C99A3F';
 
 // Opciones, criterio de coincidencia y razones: `lib/quizMatch.ts`.
 
+// 7 preguntas, después el resumen editable y después los resultados.
+// El resumen sale del de Selia ("Revisa los detalles"), que es de lo mejor de
+// su flujo: ver todo junto y cambiar una sola sin rehacer el resto.
+const N_PREGUNTAS = 7;
+const PASO_RESUMEN = 7;
+const PASO_RESULTADOS = 8;
+
+/** Solo acepta un valor guardado si sigue siendo una opción de la pregunta:
+ *  una respuesta vieja con un id que ya no existe dejaría el quiz trabado. */
+function valida<T extends string>(v: unknown, opciones: { id: T }[]): T | null {
+  return opciones.some(o => o.id === v) ? (v as T) : null;
+}
+
 function getInitials(name: string) {
   const p = (name ?? '').trim().split(' ');
   return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : (p[0]?.[0] ?? '?').toUpperCase();
@@ -47,13 +68,19 @@ function getInitials(name: string) {
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function QuizScreen() {
   const router = useRouter();
-  const [step, setStep]   = useState(0);   // 0–3 = preguntas, 4 = resultados
+  const [step, setStep]   = useState(0);   // 0–6 preguntas, 7 resumen, 8 resultados
   const [q1, setQ1] = useState<string | null>(null);
   const [q2, setQ2] = useState<string | null>(null);
   const [q3, setQ3] = useState<string | null>(null);
   // M14: cómo quiere que la acompañen. La última porque es la única opcional:
   // quien no sabe qué contestar ya respondió lo que importa.
   const [q4, setQ4] = useState<EstiloPedido | null>(null);
+  // M14 ampliado (21/09/2026). Las cuatro últimas tienen "no sé / me da igual".
+  const [q5, setQ5] = useState<GuiaPedida | null>(null);
+  const [q6, setQ6] = useState<FocoPedido | null>(null);
+  const [q7, setQ7] = useState<GeneroPedido | null>(null);
+  // Se entró a una pregunta desde el resumen: al contestarla se vuelve ahí.
+  const [editando, setEditando] = useState(false);
   const [rawCoaches, setCoaches] = useState<CachedCoach[]>([]);
   const coaches = useBlockedFilter(rawCoaches);
   const [resultado, setResultado] = useState<ResultadoQuiz>({ recomendaciones: [], hayCoincidenciaExacta: false });
@@ -72,11 +99,57 @@ export default function QuizScreen() {
     return () => clearInterval(t);
   }, []);
 
+  // Si ya hizo el quiz, vuelve con sus respuestas marcadas. Primero lo local
+  // (vale también sin cuenta); si no hay nada y hay sesión, lo de la base,
+  // que es lo que tiene quien lo hizo en otro teléfono.
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      let r: Record<string, unknown> | null = (await leerPendiente()) as Record<string, unknown> | null;
+      if (!r) {
+        const { data: ses } = await supabase.auth.getSession();
+        const uid = ses.session?.user?.id;
+        if (uid) {
+          const { data } = await supabase.from('user_quiz_answers').select('*').eq('user_id', uid).maybeSingle();
+          if (data) {
+            r = {
+              topic: data.topic, professionalType: data.professional_type, budget: data.budget,
+              estilo: data.estilo, guia: data.guia, foco: data.foco, generoPref: data.genero_pref,
+            };
+          }
+        }
+      }
+      if (cancelado || !r) return;
+      setQ1(valida(r.topic, Q1_OPTIONS));
+      setQ2(valida(r.professionalType, Q2_OPTIONS));
+      setQ3(valida(r.budget, Q3_OPTIONS));
+      setQ4(valida(r.estilo, Q4_OPTIONS));
+      setQ5(valida(r.guia, Q5_OPTIONS));
+      setQ6(valida(r.foco, Q6_OPTIONS));
+      setQ7(valida(r.generoPref, Q7_OPTIONS));
+      // Con las siete ya contestadas, directo al resumen: que vuelva a pasar por
+      // todas para cambiar una es lo que el resumen viene a evitar. Solo si
+      // todavía está en la primera pregunta, por si ya empezó a tocar.
+      const completas = [
+        valida(r.topic, Q1_OPTIONS), valida(r.professionalType, Q2_OPTIONS), valida(r.budget, Q3_OPTIONS),
+        valida(r.estilo, Q4_OPTIONS), valida(r.guia, Q5_OPTIONS), valida(r.foco, Q6_OPTIONS),
+        valida(r.generoPref, Q7_OPTIONS),
+      ].every(Boolean);
+      if (completas) setStep(p => (p === 0 ? PASO_RESUMEN : p));
+    })().catch(e => console.warn('[quiz] no se pudieron leer respuestas previas:', e?.message ?? e));
+    return () => { cancelado = true; };
+  }, []);
+
   function advance() {
-    if (step < 3) {
+    if (editando) {
+      setEditando(false);
+      setStep(PASO_RESUMEN);
+    } else if (step < PASO_RESUMEN) {
       setStep(s => s + 1);
     } else {
-      setResultado(recomendarDesdeQuiz(coaches, { tema: q1, tipo: q2, presupuesto: q3, estilo: q4 }));
+      setResultado(recomendarDesdeQuiz(coaches, {
+        tema: q1, tipo: q2, presupuesto: q3, estilo: q4, guia: q5, foco: q6, genero: q7,
+      }));
       setTandas(1);
       // 🔴 Antes esto era `if (!uid) return;`: quien hacía el quiz SIN cuenta
       // perdía las tres respuestas en silencio. Lo único que quedaba era
@@ -87,30 +160,51 @@ export default function QuizScreen() {
       // Ahora hay un solo camino: se encolan siempre, y si YA hay sesión se
       // vuelcan en el acto para que la recomendación se actualice enseguida.
       // Si no, quedan esperando y las vuelca `AuthContext` al registrarse.
-      // ⚠️ El estilo (q4) NO se guarda: `quiz_pendiente` y la fila del usuario
-      // tienen tema, tipo y presupuesto, y sumarle una columna es otra migración.
-      // Vale para esta corrida del quiz; si después se quiere recomendar con el
-      // estilo fuera de esta pantalla, hay que persistirlo.
-      guardarPendiente({ topic: q1, professionalType: q2, budget: q3 })
+      // Desde el 21/09/2026 se guardan las siete (antes el estilo se perdía).
+      guardarPendiente({
+        topic: q1, professionalType: q2, budget: q3,
+        estilo: q4, guia: q5, foco: q6, generoPref: q7,
+      })
         .then(() => supabase.auth.getSession())
         .then(({ data }) => {
           const uid = data.session?.user?.id;
           if (uid) return volcarPendiente(uid);
         })
         .catch(e => console.warn('[quiz] no se pudo guardar:', e?.message ?? e));
-      setStep(4);
+      setStep(PASO_RESULTADOS);
     }
   }
 
-  // M2: volver a las preguntas con lo ya elegido marcado, para cambiar una sola.
+  // M2: volver a las respuestas para cambiar una sola. Desde el 21/09 va al
+  // resumen y no a la primera pregunta: con siete, recorrerlas todas para
+  // cambiar la última era castigo.
   function volverAResponder() {
-    setStep(0);
+    setStep(PASO_RESUMEN);
   }
+
+  function editar(paso: number) {
+    setEditando(true);
+    setStep(paso);
+  }
+
+  // Lo que se ve en el resumen. `label` de la opción elegida, o null.
+  const labelDe = <T extends string>(v: T | null, ops: { id: T; label: string }[]) =>
+    ops.find(o => o.id === v)?.label ?? null;
+  const resumen = [
+    { paso: 0, pregunta: 'Qué querés trabajar',       respuesta: labelDe(q1, Q1_OPTIONS) },
+    { paso: 1, pregunta: 'Con quién',                 respuesta: labelDe(q2 as any, Q2_OPTIONS) },
+    { paso: 2, pregunta: 'Presupuesto por sesión',    respuesta: labelDe(q3 as any, Q3_OPTIONS) },
+    { paso: 3, pregunta: 'Cómo te acompañen',         respuesta: labelDe(q4, Q4_OPTIONS) },
+    { paso: 4, pregunta: 'Cuánto te guíen',           respuesta: labelDe(q5, Q5_OPTIONS) },
+    { paso: 5, pregunta: 'Hacia dónde mirar',         respuesta: labelDe(q6, Q6_OPTIONS) },
+    { paso: 6, pregunta: 'Género del profesional',    respuesta: labelDe(q7, Q7_OPTIONS) },
+  ];
 
   const visibles = resultado.recomendaciones.slice(0, tandas * TAMANO_TANDA);
   const hayMas = resultado.recomendaciones.length > visibles.length;
 
-  const canAdvance = (step === 0 && q1) || (step === 1 && q2) || (step === 2 && q3) || (step === 3 && q4);
+  const respuestas = [q1, q2, q3, q4, q5, q6, q7];
+  const canAdvance = step === PASO_RESUMEN || (step < N_PREGUNTAS && !!respuestas[step]);
 
   function goToPerfil(coach: CachedCoach) {
     router.push({
@@ -135,16 +229,16 @@ export default function QuizScreen() {
             <Feather name="arrow-left" size={20} color={F} />
             <Text style={s.backText}>Atrás</Text>
           </TouchableOpacity>
-          {step < 4 && (
-            <Text style={s.stepLabel}>{step + 1} / 4</Text>
+          {step < N_PREGUNTAS && (
+            <Text style={s.stepLabel}>{step + 1} / {N_PREGUNTAS}</Text>
           )}
           <View style={{ width: 60 }} />
         </View>
 
         {/* Progress bar */}
-        {step < 4 && (
+        {step < N_PREGUNTAS && (
           <View style={s.progressTrack}>
-            <View style={[s.progressFill, { width: `${((step + 1) / 4) * 100}%` as any }]} />
+            <View style={[s.progressFill, { width: `${((step + 1) / N_PREGUNTAS) * 100}%` as any }]} />
           </View>
         )}
 
@@ -231,8 +325,59 @@ export default function QuizScreen() {
             </>
           )}
 
-          {/* ── Results ── */}
+          {/* ── Q5-Q7 (M14 ampliado, 21/09/2026) ── */}
           {step === 4 && (
+            <Opciones
+              pregunta="¿Cuánto te gustaría que te guíen?"
+              opciones={Q5_OPTIONS}
+              valor={q5}
+              onElegir={setQ5}
+            />
+          )}
+          {step === 5 && (
+            <Opciones
+              pregunta="¿Qué te gustaría trabajar sobre todo?"
+              hint="Pensalo como hacia dónde querés mirar."
+              opciones={Q6_OPTIONS}
+              valor={q6}
+              onElegir={setQ6}
+            />
+          )}
+          {step === 6 && (
+            <Opciones
+              pregunta="¿Preferís que sea mujer o varón?"
+              hint="Hay cosas que se hablan más fácil con alguien en particular. Si te da igual, también está bien."
+              opciones={Q7_OPTIONS}
+              valor={q7}
+              onElegir={setQ7}
+            />
+          )}
+
+          {/* ── Resumen ── */}
+          {step === PASO_RESUMEN && (
+            <>
+              <Text style={s.question}>Revisá tus respuestas</Text>
+              <Text style={s.questionHint}>Tocá una para cambiarla. Con esto te sugerimos profesionales.</Text>
+              {resumen.map(r => (
+                <TouchableOpacity
+                  key={r.paso}
+                  style={s.summaryRow}
+                  onPress={() => editar(r.paso)}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${r.pregunta}: ${r.respuesta ?? 'sin contestar'}. Tocá para cambiar`}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.summaryQ}>{r.pregunta}</Text>
+                    <Text style={s.summaryA}>{r.respuesta ?? 'Sin contestar'}</Text>
+                  </View>
+                  <Feather name="edit-2" size={15} color={FS} />
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
+
+          {/* ── Results ── */}
+          {step === PASO_RESULTADOS && (
             <>
               <Text style={s.resultsTitle}>Para vos</Text>
               <Text style={s.resultsSub}>
@@ -322,13 +467,13 @@ export default function QuizScreen() {
           )}
 
           {/* Siguiente button */}
-          {step < 4 && (
+          {step < PASO_RESULTADOS && (
             <TouchableOpacity
               style={[s.nextBtn, !canAdvance && s.nextBtnDisabled]}
               onPress={() => canAdvance && advance()}
               activeOpacity={canAdvance ? 0.85 : 1}>
               <Text style={[s.nextBtnText, !canAdvance && s.nextBtnTextDisabled]}>
-                {step === 3 ? 'Ver sugerencias' : 'Siguiente'}
+                {editando ? 'Listo' : step === PASO_RESUMEN ? 'Ver sugerencias' : 'Siguiente'}
               </Text>
               <Feather name="arrow-right" size={16} color={canAdvance ? CR : 'rgba(63,81,47,0.35)'} />
             </TouchableOpacity>
@@ -338,6 +483,40 @@ export default function QuizScreen() {
         </ScrollView>
       </SafeAreaView>
     </AppBg>
+  );
+}
+
+/** Una pregunta de opción única, con descripción opcional por opción. */
+function Opciones<T extends string>({ pregunta, hint, opciones, valor, onElegir }: {
+  pregunta: string;
+  hint?: string;
+  opciones: { id: T; label: string; desc?: string }[];
+  valor: T | null;
+  onElegir: (v: T) => void;
+}) {
+  return (
+    <>
+      <Text style={s.question}>{pregunta}</Text>
+      {!!hint && <Text style={s.questionHint}>{hint}</Text>}
+      {opciones.map(opt => {
+        const activo = valor === opt.id;
+        return (
+          <TouchableOpacity
+            key={opt.id}
+            style={[s.option, activo && s.optionActive]}
+            onPress={() => onElegir(opt.id)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activo }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.optionText, activo && s.optionTextActive]}>{opt.label}</Text>
+              {!!opt.desc && <Text style={[s.optionDesc, activo && s.optionDescActive]}>{opt.desc}</Text>}
+            </View>
+            {activo && <Feather name="check" size={16} color={CR} />}
+          </TouchableOpacity>
+        );
+      })}
+    </>
   );
 }
 
@@ -368,6 +547,15 @@ const s = StyleSheet.create({
   optionTextActive: { color: CR },
   optionDesc:   { fontFamily: ViveFonts.regular, fontSize: 11.5, color: FS, marginTop: 2 },
   optionDescActive: { color: 'rgba(243,238,223,0.70)' },
+
+  summaryRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: BG, borderRadius: 18,
+    borderWidth: 1.5, borderColor: BD,
+    paddingHorizontal: 16, paddingVertical: 12,
+  },
+  summaryQ: { fontFamily: ViveFonts.regular, fontSize: 12, color: FS },
+  summaryA: { fontFamily: ViveFonts.semibold, fontSize: 14, color: F, marginTop: 2 },
 
   nextBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
