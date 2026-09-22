@@ -8,6 +8,7 @@ import { SofiaAssistant } from '@/components/SofiaAssistant';
 import { SobreVosMomento } from '@/components/SobreVosMomento';
 import { SobreVosMomentoProvider } from '@/context/SobreVosMomentoContext';
 import { supabase } from '@/lib/supabase';
+import { todayInAr } from '@/lib/time';
 import { useAuth } from '@/context/AuthContext';
 import { useUnreadSalas } from '@/hooks/useUnreadSalas';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -19,8 +20,17 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 const MaterialTopTabs = createMaterialTopTabNavigator();
 const Tabs = withLayoutContext(MaterialTopTabs.Navigator, undefined, true);
 
+/**
+ * ⚠️ Ya no enciende el punto de Mensajes (ver `hasDot`), pero sigue acá porque
+ * el layout lo usa para otras decisiones y porque tenía un bug propio:
+ *
+ * 🔴 `new Date().toISOString()` da la fecha en **UTC**, no en Argentina. O sea
+ * que "hoy" cambiaba a las **21:00 hora argentina**, y entre las 21 y la
+ * medianoche una sesión de mañana ya contaba como de hoy. Es el mismo error de
+ * zona que `scheduledAtMs` y el trigger de reembolsos ya tenían documentado.
+ */
 async function checkBookingToday(userId: string, setHas: (v: boolean) => void) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayInAr();
   const { count } = await supabase
     .from('bookings')
     .select('id', { count: 'exact', head: true })
@@ -34,7 +44,19 @@ export default function TabLayout() {
   const { user } = useAuth();
   const [hasBookingToday, setHasBookingToday] = useState(false);
   const { hasAnyUnread, refresh: refreshUnread } = useUnreadSalas({ userId: user?.id ?? null, role: 'user' });
-  const hasDot = hasAnyUnread || hasBookingToday;
+  // 🔴 **El punto vuelve a significar UNA cosa: hay algo sin leer.**
+  //
+  // Hasta el 21/09/2026 era `hasAnyUnread || hasBookingToday`, y ese segundo
+  // término lo rompía: con una sesión confirmada hoy, el punto quedaba prendido
+  // **todo el día y no había forma de apagarlo**. Abrías el chat, leías todo, y
+  // seguía ahí. Un punto que no se apaga al mirar deja de ser un aviso y pasa a
+  // ser ruido: la persona aprende a ignorarlo, y el día que sí hay un mensaje
+  // tampoco lo mira.
+  //
+  // 📌 "Tenés sesión hoy" no se pierde: vive en la tarjeta de próxima sesión del
+  // Inicio y en el recordatorio de la noche anterior (que, de paso, recién
+  // empezó a funcionar hoy: ver `scripts/fix-session-reminders.sql`).
+  const hasDot = hasAnyUnread;
   const reducedMotion = useReducedMotion();
 
   useEffect(() => {

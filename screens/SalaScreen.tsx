@@ -305,11 +305,32 @@ export default function SalaScreen() {
   // reserva paga que nadie quería tocar, y no se notó hasta horas después.
   const primerFoco = useRef(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Lo último que se sabe de la sala, para poder marcarla leída AL SALIR sin
+  // que el efecto de foco dependa de esos estados (y se vuelva a correr cada
+  // vez que cambian, recargando la pantalla entera).
+  const salaRef = useRef<{ id: string | null; soyCliente: boolean }>({ id: null, soyCliente: true });
+  salaRef.current = { id: salaId, soyCliente: recipientIsCoach };
+
   useFocusEffect(
     useCallback(() => {
       // El primer foco coincide con el montaje: dejarlo pasar duplicaría la carga.
-      if (primerFoco.current) { primerFoco.current = false; return; }
-      setRefreshKey(k => k + 1);
+      if (primerFoco.current) { primerFoco.current = false; }
+      else setRefreshKey(k => k + 1);
+
+      // 🔴 **Marcar leído también AL SALIR, no solo al entrar.**
+      //
+      // Al entrar ya se marcaba (ver el efecto de carga). El agujero era el
+      // mensaje que llega **mientras estás mirando el chat**: se veía en
+      // pantalla, pero la marca de lectura había quedado en el instante de
+      // entrar, así que al volver atrás el punto naranja se encendía por algo
+      // que la persona acababa de leer. Y como la única forma de apagarlo era
+      // volver a entrar, se veía como "el punto no se apaga nunca".
+      return () => {
+        const { id, soyCliente } = salaRef.current;
+        if (!id) return;
+        const campo = soyCliente ? 'user_last_read_at' : 'coach_last_read_at';
+        void supabase.from('salas').update({ [campo]: new Date().toISOString() }).eq('id', id);
+      };
     }, []),
   );
 
