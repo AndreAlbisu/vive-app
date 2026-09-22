@@ -62,7 +62,12 @@ fueron pruebas del pipeline de pagos, no ventas a clientes:
 🔴 **CORREGIDO el 22/09/2026, midiendo contra la base y no contra esta tabla.**
 Los SIETE pagos de precio real figuran `reembolsado`, incluido el del 19/08 que
 esta tabla daba por confirmado. Lo que quedó con comisión retenida y no devuelta
-en toda la historia es **$2,70 (ARS) y USD 1,20**, todo de pruebas propias de $1.
+en toda la historia es **$2,70 (ARS) y USD 1,20**. 🔴 **Y confirmado el 22/09
+mirando las dos puntas de cada operación: NO hubo ninguna venta real.** Las 19
+que movieron plata tienen a `coach-prueba` (cuenta del propio Andre) como
+profesional, y del lado del cliente cuentas propias o de su hermano. Fue su plata
+yendo a sus cuentas. La pregunta deja de ser "cuánto facturo" y pasa a ser **cómo
+se documenta un movimiento entre dos cuentas de la misma persona**.
 El desglose exacto, por riel y estado, está en
 [`mapa-del-dinero.md`](./mapa-del-dinero.md) §5. Los reembolsados normalmente revierten también la
 comisión, y el de USDT no tuvo split.
