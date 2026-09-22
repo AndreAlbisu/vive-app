@@ -76,6 +76,53 @@ export function topeDeRango(id: string | null | undefined): number | null {
   return PRESUPUESTO_OPCIONES.find(o => o.id === id)?.max ?? null;
 }
 
+// ─── Medio de pago (21/09/2026) ─────────────────────────────────────────────
+// Se pregunta el MEDIO y no "desde dónde pagás": alguien en Argentina puede
+// preferir PayPal o cripto. Varias a la vez. 'any' = me da igual.
+export type MedioPago = 'mp' | 'paypal' | 'usdt';
+export type PagoPedido = MedioPago | 'any';
+export const PAGO_OPCIONES: { id: PagoPedido; label: string; desc: string }[] = [
+  { id: 'mp',     label: 'Mercado Pago',   desc: 'Tarjeta, débito o dinero en cuenta, en pesos' },
+  { id: 'paypal', label: 'PayPal',         desc: 'En dólares' },
+  { id: 'usdt',   label: 'Cripto (USDT)',  desc: 'En dólares' },
+  { id: 'any',    label: 'Me da igual',    desc: 'Cualquiera de los tres' },
+];
+const NOMBRE_PAGO: Record<MedioPago, string> = { mp: 'Mercado Pago', paypal: 'PayPal', usdt: 'cripto' };
+
+/** Como `listar`, pero sin pasar a minúsculas: son nombres de marca. */
+function unir(xs: string[], conector: 'y' | 'ni'): string {
+  return xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} ${conector} ${xs[xs.length - 1]}`;
+}
+
+/** Si el profesional acepta alguno de los medios pedidos. Usa los flags del
+ *  cache, que ya exigen precio en dólares para PayPal y USDT (sin eso el cobro
+ *  se rechaza), así que "acepta" quiere decir "se le puede pagar así". */
+function evaluarPago(coach: CachedCoach, pedidos: string[] | null | undefined) {
+  const medios = (pedidos ?? []).filter((p): p is MedioPago => p === 'mp' || p === 'paypal' || p === 'usdt');
+  if (medios.length === 0 || (pedidos ?? []).includes('any')) {
+    return { razon: null as string | null, diferencia: null as string | null, coincide: true };
+  }
+  const acepta: Record<MedioPago, boolean> = {
+    mp: !!coach.acceptsMp, paypal: !!coach.acceptsPaypal, usdt: !!coach.acceptsUsdt,
+  };
+  const aceptados = medios.filter(m => acepta[m]);
+  if (aceptados.length > 0) {
+    // Mercado Pago solo no se dice: lo acepta casi todo el mundo y la razón
+    // sería ruido. PayPal o cripto sí, porque son lo que distingue.
+    const distintivos = aceptados.filter(m => m !== 'mp');
+    return {
+      razon: distintivos.length > 0 ? `Acepta ${unir(distintivos.map(m => NOMBRE_PAGO[m]), 'y')}` : null,
+      diferencia: null,
+      coincide: true,
+    };
+  }
+  return {
+    razon: null,
+    diferencia: `No acepta ${unir(medios.map(m => NOMBRE_PAGO[m]), 'ni')}`,
+    coincide: false,
+  };
+}
+
 // ─── Resultado ──────────────────────────────────────────────────────────────
 
 export type RespuestasQuiz = {
@@ -100,6 +147,8 @@ export type RespuestasQuiz = {
   foco?: FocoPedido | null;
   /** Preferencia sobre el género del profesional. Ordena, no filtra. */
   genero?: GeneroPedido | null;
+  /** Medios de pago que le sirven. Vacío, null o con 'any' = cualquiera. */
+  pagos?: string[] | null;
 };
 
 export const ESTILO_OPCIONES = ESTILO_OPCIONES_PERSONA;
@@ -193,6 +242,10 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
     else diferencias.push('Su sesión cuesta más de lo que marcaste');
   }
 
+  const pago = evaluarPago(coach, r.pagos);
+  if (pago.razon) razones.push(pago.razon);
+  if (pago.diferencia) diferencias.push(pago.diferencia);
+
   // El género va antes que la forma de trabajar: quien lo pide suele pedirlo
   // con fuerza, y la tarjeta tiene que decirlo primero.
   const genero = evaluarGenero(coach.gender, r.genero ?? null);
@@ -235,9 +288,12 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
   //
   // El tema concreto va debajo del tipo: quien pidió psicólogo y duelo prefiere
   // un psicólogo del área antes que un coach que marcó duelo.
+  //
+  // El pago va justo debajo del tipo: un profesional al que no se le puede
+  // pagar como la persona puede es uno que no va a poder reservar.
   const nivel =
-    (cumpleTema ? 256 : 0) + (cumpleTipo ? 128 : 0) + (cumpleSubtema ? 64 : 0) +
-    (cumplePrecio ? 32 : 0) + puntosGenero + puntosEjes;
+    (cumpleTema ? 512 : 0) + (cumpleTipo ? 256 : 0) + (pago.coincide ? 128 : 0) +
+    (cumpleSubtema ? 64 : 0) + (cumplePrecio ? 32 : 0) + puntosGenero + puntosEjes;
   // `exacto` es lo que habilita el título "coinciden con lo que respondiste".
   // Género y ejes entran solo cuando hay una diferencia que mostrar: si no, el
   // título volvería a prometer una coincidencia total con una resta a la vista,
@@ -250,17 +306,17 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
     : null;
   const razonEje = ejes.find(e => e.razon && !e.parcial)?.razon ?? null;
   const razonTipo = tipoPedido && cumpleTipo && tipoPedido !== 'Coach' ? 'Tiene matrícula verificada por Vita' : null;
-  const motivo = razonSubtema ?? genero.razon ?? razonEje ?? razonTipo;
+  const motivo = razonSubtema ?? genero.razon ?? pago.razon ?? razonEje ?? razonTipo;
 
   return {
     razones,
     diferencias,
     cumpleTema,
     // Lo que el mazo usa como piso (ver `evaluarParaMazo`).
-    encajaEnMazo: cumpleTipo && cumplePrecio && genero.coincide && cumpleSubtema,
+    encajaEnMazo: cumpleTipo && pago.coincide && cumplePrecio && genero.coincide && cumpleSubtema,
     motivo,
     nivel,
-    exacto: cumpleTema && cumpleSubtema && cumpleTipo && cumplePrecio && genero.coincide && ejes.every(e => e.coincide),
+    exacto: cumpleTema && cumpleSubtema && cumpleTipo && pago.coincide && cumplePrecio && genero.coincide && ejes.every(e => e.coincide),
   };
 }
 
@@ -274,7 +330,8 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
  * como siempre. Ordenar por puntaje dejaría al mismo profesional primero todos
  * los días, que es lo que la v3 sacó.
  *
- * `encaja` = ninguna diferencia en tipo, presupuesto, género ni tema concreto.
+ * `encaja` = ninguna diferencia en tipo, medio de pago, presupuesto, género ni
+ * tema concreto.
  * Cómo trabaja (estilo, guía, foco) NO entra en el piso: casi ningún perfil lo
  * contestó todavía, y achicaría el grupo a nada. Sí puede ser el `motivo`.
  *

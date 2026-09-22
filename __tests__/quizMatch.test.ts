@@ -201,3 +201,34 @@ describe('escala de la barra (21/09/2026)', () => {
     expect(pide(100000).recomendaciones[0].diferencias).toContain('Su sesión cuesta más de lo que marcaste');
   });
 });
+
+describe('recomendarDesdeQuiz — medio de pago (21/09/2026)', () => {
+  const BASE: RespuestasQuiz = { tema: 'emocion', tipo: 'any', presupuesto: null };
+
+  it('va primero quien acepta lo que eligió, y el resto sigue con la diferencia', () => {
+    const soloMp = coach({ acceptsMp: true, avgRating: 5 });
+    const paypal = coach({ acceptsMp: true, acceptsPaypal: true });
+    const r = recomendarDesdeQuiz([soloMp, paypal], { ...BASE, pagos: ['paypal'] });
+    expect(r.recomendaciones.map(x => x.coach.id)).toEqual([paypal.id, soloMp.id]);
+    expect(r.recomendaciones[0].razones).toContain('Acepta PayPal');
+    expect(r.recomendaciones[1].diferencias).toContain('No acepta PayPal');
+  });
+
+  it('con varios medios alcanza con que acepte uno', () => {
+    const usdt = coach({ acceptsUsdt: true });
+    const r = recomendarDesdeQuiz([usdt], { ...BASE, pagos: ['paypal', 'usdt'] });
+    expect(r.recomendaciones[0].diferencias).toEqual([]);
+  });
+
+  it('"me da igual" no cambia nada, y Mercado Pago solo no se anuncia', () => {
+    const c = coach({ acceptsMp: true });
+    expect(recomendarDesdeQuiz([c], { ...BASE, pagos: ['any'] }).recomendaciones[0].diferencias).toEqual([]);
+    const r = recomendarDesdeQuiz([c], { ...BASE, pagos: ['mp'] });
+    expect(r.recomendaciones[0].razones.join(' ')).not.toMatch(/Mercado Pago/);
+  });
+
+  it('el pago entra en la barra del mazo', () => {
+    const { evaluarParaMazo } = require('../lib/quizMatch');
+    expect(evaluarParaMazo(coach({ acceptsMp: true }), { ...BASE, pagos: ['usdt'] }, []).encaja).toBe(false);
+  });
+});

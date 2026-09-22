@@ -37,6 +37,8 @@ export type QuizPendiente = {
   guia?: string | null;
   foco?: string | null;
   generoPref?: string | null;
+  /** Medios de pago (21/09/2026): 'mp' | 'paypal' | 'usdt', o ['any']. */
+  pagos?: string[] | null;
   /** Ya se escribió en la base. Ver `volcarPendiente`. */
   volcado?: boolean;
 };
@@ -100,6 +102,7 @@ export async function volcarPendiente(userId: string): Promise<void> {
   if (p.guia)             fila.guia = p.guia;
   if (p.foco)             fila.foco = p.foco;
   if (p.generoPref)       fila.genero_pref = p.generoPref;
+  if (p.pagos && p.pagos.length > 0) fila.pagos = p.pagos;
 
   // Solo `user_id` y `updated_at`: no hay ninguna respuesta que escribir.
   if (Object.keys(fila).length <= 2) return;
@@ -140,5 +143,6 @@ export async function leerRespuestasGuardadas(): Promise<QuizPendiente | null> {
     topic: data.topic, areas: data.areas, subtemas: data.subtemas,
     professionalType: data.professional_type, budget: data.budget, budgetMax: data.budget_max,
     estilo: data.estilo, guia: data.guia, foco: data.foco, generoPref: data.genero_pref,
+    pagos: data.pagos,
   };
 }

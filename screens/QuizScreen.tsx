@@ -25,6 +25,7 @@ import {
   PRESUPUESTO_PASO,
   PRESUPUESTO_SIN_LIMITE,
   topeDeRango,
+  PAGO_OPCIONES,
   ESTILO_OPCIONES as Q4_OPTIONS,
   TAMANO_TANDA,
   type ResultadoQuiz,
@@ -57,7 +58,7 @@ const SG = '#C99A3F';
 // no le dice nada a alguien que busca un plan de alimentación. Después de las
 // preguntas va el resumen editable (también de Selia: ver todo junto y cambiar
 // una sola sin rehacer el resto) y después los resultados.
-type Pregunta = 'areas' | 'subtemas' | 'tipo' | 'presupuesto' | 'estilo' | 'guia' | 'foco' | 'genero';
+type Pregunta = 'areas' | 'subtemas' | 'tipo' | 'presupuesto' | 'pago' | 'estilo' | 'guia' | 'foco' | 'genero';
 type Paso = Pregunta | 'resumen' | 'resultados';
 
 const MAX_AREAS = 2;
@@ -65,7 +66,7 @@ const MAX_SUBTEMAS = 3;
 
 function preguntasPara(tipo: string | null): Pregunta[] {
   const ejes: Pregunta[] = tipo === 'nutricionista' ? [] : ['estilo', 'guia', 'foco'];
-  return ['areas', 'subtemas', 'tipo', 'presupuesto', ...ejes, 'genero'];
+  return ['areas', 'subtemas', 'tipo', 'presupuesto', 'pago', ...ejes, 'genero'];
 }
 
 function etiquetaPresupuesto(v: number): string {
@@ -104,6 +105,8 @@ export default function QuizScreen() {
   // "Sin límite" se guarda como PRESUPUESTO_SIN_LIMITE y no como null, porque
   // la cola descarta los null y dejaría vivo un tope viejo.
   const [presupuesto, setPresupuesto] = useState<number>(PRESUPUESTO_TOPE);
+  // Medios de pago (21/09/2026). Varios a la vez; ['any'] = me da igual.
+  const [pagos, setPagos] = useState<string[]>([]);
   // M14: cómo quiere que la acompañen. La última porque es la única opcional:
   // quien no sabe qué contestar ya respondió lo que importa.
   const [q4, setQ4] = useState<EstiloPedido | null>(null);
@@ -161,6 +164,10 @@ export default function QuizScreen() {
       setQ5(valida(r.guia, Q5_OPTIONS));
       setQ6(valida(r.foco, Q6_OPTIONS));
       setQ7(valida(r.generoPref, Q7_OPTIONS));
+      const pagosGuardados = Array.isArray(r.pagos)
+        ? (r.pagos as unknown[]).filter((x): x is string => PAGO_OPCIONES.some(o => o.id === x))
+        : [];
+      setPagos(pagosGuardados);
       // Con todo contestado, directo al resumen: que vuelva a pasar por todas
       // para cambiar una es lo que el resumen viene a evitar. Solo si todavía
       // está en la primera pregunta, por si ya empezó a tocar.
@@ -169,6 +176,7 @@ export default function QuizScreen() {
         subtemas: subtemasGuardados !== null,
         tipo: !!tipo,
         presupuesto: topeGuardado != null,
+        pago: pagosGuardados.length > 0,
         estilo: !!valida(r.estilo, Q4_OPTIONS),
         guia: !!valida(r.guia, Q5_OPTIONS),
         foco: !!valida(r.foco, Q6_OPTIONS),
@@ -197,7 +205,7 @@ export default function QuizScreen() {
     } else if (step === 'resumen') {
       setResultado(recomendarDesdeQuiz(coaches, {
         tema: areas[0] ?? null, areas, subtemas,
-        tipo: q2, presupuesto: null, presupuestoMax: presupuesto, estilo: q4, guia: q5, foco: q6, genero: q7,
+        tipo: q2, presupuesto: null, presupuestoMax: presupuesto, pagos, estilo: q4, guia: q5, foco: q6, genero: q7,
       }));
       setTandas(1);
       // 🔴 Antes esto era `if (!uid) return;`: quien hacía el quiz SIN cuenta
@@ -208,7 +216,7 @@ export default function QuizScreen() {
         topic: areas[0] ?? null, areas, subtemas,
         professionalType: q2,
         budgetMax: presupuesto >= PRESUPUESTO_TOPE ? PRESUPUESTO_SIN_LIMITE : presupuesto,
-        estilo: q4, guia: q5, foco: q6, generoPref: q7,
+        estilo: q4, guia: q5, foco: q6, generoPref: q7, pagos,
       })
         .then(() => supabase.auth.getSession())
         .then(({ data }) => {
@@ -239,6 +247,15 @@ export default function QuizScreen() {
     // Los temas de un área que se sacó ya no corresponden.
     const posibles = Q1_OPTIONS.filter(o => next.includes(o.id)).flatMap(o => o.subtemas);
     setSubtemas(st => st.filter(t => posibles.includes(t)));
+  }
+
+  // "Me da igual" y un medio concreto se excluyen: elegir uno saca al otro.
+  function togglePago(id: string) {
+    if (id === 'any') { setPagos(p => (p.includes('any') ? [] : ['any'])); return; }
+    setPagos(p => {
+      const sinAny = p.filter(x => x !== 'any');
+      return sinAny.includes(id) ? sinAny.filter(x => x !== id) : [...sinAny, id];
+    });
   }
 
   function toggleSubtema(t: string) {
@@ -276,6 +293,7 @@ export default function QuizScreen() {
     subtemas:    { pregunta: 'Más en concreto',        respuesta: subtemas.length ? listarY(subtemas) : 'Cualquiera de estos' },
     tipo:        { pregunta: 'Con quién',              respuesta: labelDe(q2 as any, Q2_OPTIONS) },
     presupuesto: { pregunta: 'Presupuesto por sesión', respuesta: etiquetaPresupuesto(presupuesto) },
+    pago:        { pregunta: 'Cómo pagar',             respuesta: pagos.length ? listarY(PAGO_OPCIONES.filter(o => pagos.includes(o.id)).map(o => o.label)) : null },
     estilo:      { pregunta: 'Cómo te acompañen',      respuesta: labelDe(q4, Q4_OPTIONS) },
     guia:        { pregunta: 'Cuánto te guíen',        respuesta: labelDe(q5, Q5_OPTIONS) },
     foco:        { pregunta: 'Hacia dónde mirar',      respuesta: labelDe(q6, Q6_OPTIONS) },
@@ -289,7 +307,7 @@ export default function QuizScreen() {
   const contestada: Record<Pregunta, boolean> = {
     areas: areas.length > 0,
     subtemas: true, // "cualquiera de estos" también es una respuesta
-    tipo: !!q2, presupuesto: true, estilo: !!q4, guia: !!q5, foco: !!q6, genero: !!q7,
+    tipo: !!q2, presupuesto: true, pago: pagos.length > 0, estilo: !!q4, guia: !!q5, foco: !!q6, genero: !!q7,
   };
   const canAdvance = step === 'resumen' || (indicePregunta >= 0 && contestada[step as Pregunta]);
 
@@ -403,6 +421,32 @@ export default function QuizScreen() {
                   {q2 === opt.id && <Feather name="check" size={16} color={CR} />}
                 </TouchableOpacity>
               ))}
+            </>
+          )}
+
+          {/* ── Medio de pago (21/09/2026) ── */}
+          {step === 'pago' && (
+            <>
+              <Text style={s.question}>¿Cómo te gustaría pagar?</Text>
+              <Text style={s.questionHint}>Podés elegir más de uno. No todos los profesionales aceptan los tres.</Text>
+              {PAGO_OPCIONES.map(opt => {
+                const activo = pagos.includes(opt.id);
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={[s.option, activo && s.optionActive]}
+                    onPress={() => togglePago(opt.id)}
+                    activeOpacity={0.8}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: activo }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.optionText, activo && s.optionTextActive]}>{opt.label}</Text>
+                      <Text style={[s.optionDesc, activo && s.optionDescActive]}>{opt.desc}</Text>
+                    </View>
+                    {activo && <Feather name="check" size={16} color={CR} />}
+                  </TouchableOpacity>
+                );
+              })}
             </>
           )}
 

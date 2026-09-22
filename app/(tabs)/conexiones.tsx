@@ -189,6 +189,7 @@ export default function ConexionesScreen() {
           guia: (r.guia ?? null) as RespuestasQuiz['guia'],
           foco: (r.foco ?? null) as RespuestasQuiz['foco'],
           genero: (r.generoPref ?? null) as RespuestasQuiz['genero'],
+          pagos: r.pagos ?? null,
         });
       })
       .catch(() => { /* sin quiz, el mazo sortea como siempre */ });
