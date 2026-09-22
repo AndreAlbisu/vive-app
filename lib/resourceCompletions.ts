@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logWarn } from '@/lib/logging';
 import { anotar } from '@/lib/analytics';
 
 /**
@@ -34,10 +35,22 @@ export async function recordCompletion(
   // personal — sin cuenta no tiene a quién pertenecer.
   if (!userId) return;
 
-  await supabase.from('resource_completions').insert({
+  // 🔴 El error se MIRA. Hasta el 22/09/2026 esto era un `await` pelado, y la
+  // tabla no tenía ninguna policy: **cada inserción se denegaba en silencio y
+  // la tabla terminó con cero filas después de meses de uso**. La racha, el
+  // progreso y la tarjeta de continuar una práctica nunca funcionaron, y nadie
+  // podía notarlo porque nada se quejaba.
+  //
+  // 📌 Es el tercer bug de esta familia en dos días (los otros: el recordatorio
+  // "tu sesión es mañana" y la cancelación de los competidores del horario).
+  // Los tres se veían igual: un `await` sin mirar el error.
+  const { error } = await supabase.from('resource_completions').insert({
     user_id: userId,
     resource_id: resourceId,
     duration_seconds: durationSeconds ?? null,
     progress_seconds: durationSeconds ?? null,
   });
+  if (error) {
+    await logWarn(`recordCompletion: no se pudo anotar "${resourceId}": ${error.message}`);
+  }
 }
