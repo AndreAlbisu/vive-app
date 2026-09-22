@@ -29,6 +29,7 @@
 // es el que evita el desastre de la primera corrida.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { esServiceRole } from '../_shared/service-role.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarMail } from '../_shared/email.ts'
 
@@ -84,7 +85,16 @@ const PLANTILLAS: Record<string, { titulo: string; pie?: string; conLinkSala?: b
   },
 }
 
-serve(async () => {
+serve(async (req) => {
+  // 🔴 Faltaba el candado. Las otras seis functions que solo llama el cron
+  // chequean `esServiceRole`; esta no, así que **cualquiera con una cuenta
+  // (incluso una sesión anónima) podía dispararla**. El daño es acotado porque
+  // marca `emailed_at` y los reenvíos quedan en no-op, pero era la única de la
+  // familia sin el control, y el helper ya existía.
+  if (!esServiceRole(req.headers.get('Authorization'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
   const admin = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,

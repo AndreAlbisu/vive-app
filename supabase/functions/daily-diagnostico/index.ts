@@ -21,6 +21,7 @@
 // No devuelve ninguna credencial ni el token — solo largos y veredictos.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { esServiceRole } from '../_shared/service-role.ts'
 
 const DAILY_API_KEY = Deno.env.get('DAILY_API_KEY') ?? ''
 const DAILY_API = 'https://api.daily.co/v1'
@@ -32,7 +33,15 @@ const headers = {
 
 type Check = { ok: boolean; detalle: string }
 
-serve(async () => {
+serve(async (req) => {
+  // 🔴 No tenía ningún control de acceso. Hoy no está deployada —se sube, se lee
+  // el veredicto y se borra— así que no hubo exposición, pero un archivo sin
+  // candado es un candado que falta el día que alguien lo vuelva a subir. Y esta
+  // crea salas y acuña tokens en Daily: abierta, es gasto ajeno.
+  if (!esServiceRole(req.headers.get('Authorization'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
   const out: Record<string, unknown> = {}
   const roomName = `vive-diag-${Date.now().toString(36)}`
   let creada = false

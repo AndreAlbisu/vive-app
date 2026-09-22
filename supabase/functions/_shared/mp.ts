@@ -99,6 +99,30 @@ export async function verifyWebhookSignature(opts: {
   }
   if (!ts || !v1) return false
 
+  // ── Frescura del `ts` ──────────────────────────────────────────────────────
+  //
+  // 🔴 El manifest incluye `ts`, pero hasta el 22/09/2026 nadie chequeaba que
+  // fuera reciente: **una notificación capturada se podía reenviar para
+  // siempre**. Reenviar un `approved` es inofensivo (el `.neq` del webhook lo
+  // hace idempotente), pero reenviar un `refunded` viejo sobre una reserva que
+  // después se volvió a pagar la marca como reembolsada.
+  //
+  // ⚠️ **La ventana es de 24 horas y no de 5 minutos, a propósito.** No está
+  // verificado si Mercado Pago **re-firma** cada reintento o si repite la
+  // notificación original: si repitiera la original, una ventana corta
+  // descartaría reintentos legítimos y perderíamos acreditaciones. Entre
+  // rechazar un replay y perder un pago, se elige no perder el pago. El aviso
+  // de abajo existe para aprender cuál de las dos cosas hace MP: si nunca
+  // aparece, la ventana se puede cerrar a minutos.
+  const tsMs = Number(ts) * (String(ts).length > 12 ? 1 : 1000)
+  if (Number.isFinite(tsMs)) {
+    const edadMs = Date.now() - tsMs
+    if (edadMs > 24 * 60 * 60 * 1000) return false
+    if (edadMs > 10 * 60 * 1000) {
+      console.warn(`[mp] notificación con ts de hace ${Math.round(edadMs / 60000)} min: MP reintenta sin re-firmar`)
+    }
+  }
+
   const id = /^[a-z0-9]+$/i.test(dataId) ? dataId.toLowerCase() : dataId
   let manifest = `id:${id};`
   if (xRequestId) manifest += `request-id:${xRequestId};`

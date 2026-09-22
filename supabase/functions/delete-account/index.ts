@@ -35,6 +35,20 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+/**
+ * La fecha de HOY en Argentina, no en UTC.
+ *
+ * 🔴 Acá decía `new Date().toISOString().slice(0, 10)`, que da la fecha en UTC.
+ * Entre las **21:00 argentinas y la medianoche** eso ya es el día siguiente, así
+ * que una sesión de esa misma noche **no contaba como futura**: un profesional
+ * podía darse de baja con un cliente esperándolo en dos horas, y el cliente se
+ * quedaba sin sesión y sin aviso. Argentina no tiene horario de verano, así que
+ * alcanza con restar tres horas.
+ */
+function hoyEnArgentina(): string {
+  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
@@ -91,7 +105,7 @@ serve(async (req) => {
       .from('coaches').select('id').eq('profile_id', userId).maybeSingle()
 
     if (coachRow) {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = hoyEnArgentina()
       const { count } = await admin
         .from('bookings')
         .select('id', { count: 'exact', head: true })
@@ -111,7 +125,7 @@ serve(async (req) => {
     // pagos aprobados, y el cron mp-process-refunds los procesa. `cancelled_late`
     // NO se marca a propósito: una baja de cuenta no es una cancelación tardía,
     // el usuario no debería perder el reembolso por darse de baja.
-    const today = new Date().toISOString().slice(0, 10)
+    const today = hoyEnArgentina()
     const { data: futuras } = await admin
       .from('bookings')
       .select('id')

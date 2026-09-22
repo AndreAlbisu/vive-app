@@ -143,6 +143,40 @@ serve(async (req) => {
     const patch: Record<string, unknown> = { payment_status: newStatus, payment_id: String(paymentId) }
     if (newStatus === 'aprobado') {
       patch.paid_at = new Date().toISOString()
+
+      // ── ¿Entró lo que tenía que entrar? ───────────────────────────────────
+      //
+      // 🔴 Hasta el 22/09/2026 esto no se miraba: el webhook mapeaba el ESTADO
+      // del pago y acreditaba, sin comparar el MONTO contra lo que la reserva
+      // esperaba. El de PayPal sí lo compara desde siempre.
+      //
+      // Hoy no es explotable, porque el precio lo fija el servidor al armar la
+      // preferencia y el pagador no lo puede tocar. Pero si alguna vez el monto
+      // diverge —una preferencia reusada, un cobro parcial, o un error nuestro
+      // en el descuento de referidos— la reserva quedaba acreditada por el
+      // monto equivocado **y nadie se enteraba**. Es el mismo riel donde ya
+      // hubo un incidente de precio manipulable (sesión 107).
+      //
+      // ⚠️ **Se avisa, no se rechaza, y es a propósito.** La plata ya entró: no
+      // acreditar dejaría a la persona pagando sin sesión, que es peor que una
+      // diferencia contable. El grito queda en los logs, como el de la
+      // reversión sobre una sesión ya transferida.
+      const { data: esperada } = await supabase
+        .from('bookings')
+        .select('amount, referral_discount, currency')
+        .eq('id', bookingId)
+        .maybeSingle()
+
+      const cobrado = Number(payment?.transaction_amount)
+      const debia = Number(esperada?.amount ?? NaN) - Number(esperada?.referral_discount ?? 0)
+      if (Number.isFinite(cobrado) && Number.isFinite(debia) && Math.abs(cobrado - debia) > 0.01) {
+        console.error(
+          `[mp-webhook] 🔴 MONTO DISTINTO DEL ESPERADO — booking ${bookingId}, ` +
+          `cobrado ${cobrado} ${payment?.currency_id ?? ''}, esperado ${debia} ` +
+          `(precio ${esperada?.amount}, descuento ${esperada?.referral_discount}). ` +
+          `Se acredita igual porque la plata ya entró, pero hay que mirarlo.`,
+        )
+      }
       // 🔴 La huella del pagador. Se guarda ACÁ y en ningún otro lado porque
       // este es el único momento en que el objeto del pago pasa por nosotros:
       // los pagos que entren sin esto quedan ciegos para siempre.
