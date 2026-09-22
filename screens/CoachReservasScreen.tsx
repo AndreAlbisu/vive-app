@@ -299,13 +299,13 @@ export default function CoachReservasScreen() {
     setCompletedByUser(completedMap);
 
     const userIds = [...new Set(rows.map(r => r.user_id))];
-    const { data: profiles } = await supabase.from('profiles').select('id, name, avatar_url, birth_date').in('id', userIds);
+    const { data: profiles } = await supabase.rpc('get_booking_participant_profiles', { p_ids: userIds });
     const profileMap: Record<string, { name: string; avatarUrl: string | null; edad: number | null }> = {};
-    profiles?.forEach(p => {
+    profiles?.forEach((p: { id: string; name: string | null; avatar_url: string | null; edad: number | null }) => {
       profileMap[p.id] = {
         name: p.name ?? 'Usuario',
         avatarUrl: p.avatar_url ?? null,
-        edad: edadDesde(p.birth_date as string | null),
+        edad: p.edad ?? null,
       };
     });
 

@@ -103,13 +103,14 @@ serve(async (req) => {
 
   const { data: booking } = await admin
     .from('bookings')
-    .select('id, user_id, coach_id, payment_status, payment_provider, preference_id, charged_amount, origen')
+    .select('id, user_id, coach_id, payment_status, payment_provider, preference_id, charged_amount, origen, status, usdt_amount')
     .eq('id', booking_id)
     .maybeSingle()
 
   if (!booking) return json({ error: 'Reserva inexistente' }, 404)
   if (booking.user_id !== user.id) return json({ error: 'Unauthorized' }, 403)
-  if (booking.payment_status === 'aprobado') return json({ error: 'Esta reserva ya está pagada' }, 409)
+  if (booking.status !== 'pendiente' || !['no_iniciado', 'pendiente', 'rechazado'].includes(booking.payment_status)) return json({ error: 'La reserva no admite nuevos pagos' }, 409)
+  if (booking.payment_provider !== 'paypal' && (booking.preference_id || booking.usdt_amount)) return json({ error: 'Ya hay un cobro por otro medio' }, 409)
 
   // 🔴 El coach y el conteo de sesiones del par (comisión, más abajo) tampoco
   // dependen entre sí — los dos solo necesitan `booking`, que ya está. Antes
@@ -156,6 +157,19 @@ serve(async (req) => {
 
   const token = await tokenPromise
   if (!token) return json({ error: 'No se pudo conectar con PayPal' }, 502)
+  if (booking.payment_provider === 'paypal' && booking.preference_id) {
+    const existingResponse = await fetch(`${PAYPAL_API}/v2/checkout/orders/${encodeURIComponent(booking.preference_id)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!existingResponse.ok) return json({ error: 'No se pudo recuperar el pago existente' }, 502)
+    const existing = await existingResponse.json()
+    const approval = existing.links?.find((l: { rel: string }) => l.rel === 'approve' || l.rel === 'payer-action')?.href
+    if (!approval || !['CREATED', 'PAYER_ACTION_REQUIRED', 'APPROVED'].includes(existing.status)) {
+      return json({ error: 'El pago existente requiere verificación' }, 409)
+    }
+    return json({ order_id: booking.preference_id, approve_url: approval, amount: booking.charged_amount, currency: 'USD' })
+  }
+
 
   // ── Comisión: el tramo del par, igual que en Mercado Pago ─────────────────
   // 🔴 Desde el 25/08/2026 estos rieles también tienen escalera (D3). El contador
@@ -178,6 +192,9 @@ serve(async (req) => {
   // por eso `charged_amount` es igual a `amount` en este riel y existe solo para
   // el día que algún rail vuelva a cobrar algo distinto del precio.
   const precio = coach.price_usd
+
+  const { data: attemptId, error: claimError } = await admin.rpc('claim_checkout', { p_booking: booking.id, p_provider: 'paypal' })
+  if (claimError || !attemptId) return json({ error: 'Hay otro intento en curso o la reserva cambió' }, 409)
 
   const orderRes = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
     method: 'POST',
@@ -234,9 +251,10 @@ serve(async (req) => {
   // nueva habría que acordarse de agregarla en los dos lados — y ya pasó con
   // USDT, que por no estar en ese filtro empujaba pares al tramo del 15% sin que
   // se hubiera pagado nada. `payment_provider` dice de qué riel es.
-  const { error: updErr } = await admin
+  const { data: saved, error: updErr } = await admin
     .from('bookings')
     .update({
+      checkout_lock_until: null,
       payment_provider: 'paypal',
       payment_status: 'pendiente',
       currency: 'USD',
@@ -246,12 +264,17 @@ serve(async (req) => {
       platform_fee_pct: commissionPct,
     })
     .eq('id', booking.id)
+    .eq('checkout_attempt_id', attemptId)
+    .eq('status', 'pendiente')
+    .in('payment_status', ['no_iniciado', 'pendiente', 'rechazado'])
+    .is('preference_id', null)
+    .select('id')
 
-  if (updErr) {
+  if (updErr || !saved?.length) {
     // La orden ya existe en PayPal pero la reserva no la registró. Se devuelve
     // error en vez del link: si la persona pagara, el webhook llegaría con un
     // `custom_id` que no tiene la orden asociada y el pago quedaría huérfano.
-    console.error('[paypal-create] no se pudo registrar la orden:', updErr.message)
+    console.error('[paypal-create] no se pudo registrar la orden:', updErr?.message)
     return json({ error: 'No se pudo iniciar el pago' }, 502)
   }
 

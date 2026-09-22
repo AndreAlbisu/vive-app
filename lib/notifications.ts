@@ -53,12 +53,8 @@ export async function registerForPushNotifications(userId: string): Promise<stri
 
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
 
-    await supabase
-      .from('profiles')
-      .update({ push_token: token })
-      .eq('id', userId);
-
-    console.log('[Notifs] Token registrado:', token);
+    const { error } = await supabase.rpc('register_push_token', { p_token: token });
+    if (error) throw error;
     return token;
   } catch (e) {
     console.error('[Notifs] Error obteniendo token:', e);

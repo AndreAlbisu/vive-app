@@ -7,7 +7,13 @@ let mockLlamadasRpc = 0;
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
-    rpc: async () => { mockLlamadasRpc++; return mockMarca; },
+    rpc: (name: string) => {
+      if (name === 'get_my_profile') return {
+        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: mockFila, error: mockError }) }) }),
+      };
+      mockLlamadasRpc++;
+      return Promise.resolve(mockMarca);
+    },
     from: () => ({
       select: () => ({
         eq: () => ({

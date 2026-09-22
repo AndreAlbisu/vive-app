@@ -47,7 +47,7 @@ export default function EditProfileScreen() {
   async function loadProfile() {
     setLoading(true);
     const { data } = await supabase
-      .from('profiles')
+      .rpc('get_my_profile')
       .select('name, birth_date, gender, nationality, avatar_url')
       .eq('id', user!.id)
       .single();

@@ -27,9 +27,8 @@ const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
 // Cuántas veces reintentar si el nonce que elegimos ya lo tiene otra reserva.
-// Con 10.000 combinaciones y decenas de pendientes, chocar dos veces seguidas
-// es improbable; 8 intentos lo vuelven despreciable.
-const MAX_INTENTOS = 8
+// Se recorre cada centavo una sola vez, sin reciclar asignaciones históricas.
+const MAX_INTENTOS = 10 ** NONCE_DIGITS
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -51,22 +50,30 @@ serve(async (req) => {
   const { booking_id } = await req.json().catch(() => ({}))
   if (!booking_id) return json({ error: 'Falta booking_id' }, 400)
 
+  if (Deno.env.get('USDT_LEDGER_WALLET') !== USDT_WALLET) {
+    return json({ error: 'Los pagos USDT están temporalmente en revisión' }, 503)
+  }
+
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
   const { data: booking } = await admin
     .from('bookings')
-    .select('id, user_id, coach_id, payment_status, payment_provider, usdt_amount, origen')
+    .select('id, user_id, coach_id, payment_status, payment_provider, usdt_amount, origen, status, preference_id')
     .eq('id', booking_id)
     .maybeSingle()
 
   if (!booking) return json({ error: 'Reserva inexistente' }, 404)
   if (booking.user_id !== user.id) return json({ error: 'Unauthorized' }, 403)
-  if (booking.payment_status === 'aprobado') return json({ error: 'Esta reserva ya está pagada' }, 409)
+  if (booking.status !== 'pendiente' || !['no_iniciado', 'pendiente', 'rechazado'].includes(booking.payment_status)) return json({ error: 'La reserva no admite nuevos pagos' }, 409)
+  if (booking.payment_provider !== 'usdt' && (booking.preference_id || booking.usdt_amount)) return json({ error: 'Ya hay un cobro por otro medio' }, 409)
 
   // Idempotente: si ya se armó el cobro, se devuelve el mismo monto. Volver a
   // sortear un nonce dejaría al usuario mirando una cifra distinta de la que
   // ya copió, y a la reserva sin poder reconocer la transferencia que mande.
   if (booking.payment_provider === 'usdt' && booking.usdt_amount != null) {
+    const { data: assignment, error } = await admin.from('usdt_amount_assignments')
+      .select('booking_id').eq('booking_id', booking.id).eq('amount', booking.usdt_amount).maybeSingle()
+    if (error || !assignment) return json({ error: 'Este pago anterior necesita revisión. No hagas otra transferencia.' }, 409)
     return json({ address: USDT_WALLET, amount: Number(booking.usdt_amount), network: 'TRC20' })
   }
 
@@ -129,18 +136,23 @@ serve(async (req) => {
   // 🔴 Acá el porcentaje es lo ÚNICO que dice cuánto se le debe al coach: no hay
   // split, entra el total a la billetera de VIVE y se transfiere después.
 
-  // Sorteo del nonce. La unicidad la garantiza el índice parcial de la base
-  // (bookings_usdt_pending_amount_uniq), no esta función: dos invocaciones
+  const { data: attemptId, error: claimError } = await admin.rpc('claim_checkout', { p_booking: booking.id, p_provider: 'usdt' })
+  if (claimError || !attemptId) return json({ error: 'Hay otro intento en curso o la reserva cambió' }, 409)
+
+  // Sorteo del nonce. La unicidad la garantiza el registro permanente de
+  // asignaciones de la base, no esta función: dos invocaciones
   // simultáneas podrían elegir el mismo número, y ahí una de las dos rebota y
   // reintenta. Comprobar antes con un SELECT no serviría — habría una ventana
   // entre el chequeo y la escritura.
+  const startNonce = crypto.getRandomValues(new Uint32Array(1))[0] % MAX_INTENTOS
   for (let intento = 0; intento < MAX_INTENTOS; intento++) {
-    const nonce = Math.floor(Math.random() * 10 ** NONCE_DIGITS)
+    const nonce = (startNonce + intento) % MAX_INTENTOS
     const monto = uniqueAmount(coach.price_usd, nonce)
 
     const { data, error } = await admin
       .from('bookings')
       .update({
+        checkout_lock_until: null,
         payment_provider: 'usdt',
         payment_status: 'pendiente',
         currency: 'USD',
@@ -155,6 +167,10 @@ serve(async (req) => {
         platform_fee_pct: commissionPct,
       })
       .eq('id', booking.id)
+      .eq('checkout_attempt_id', attemptId)
+      .eq('status', 'pendiente')
+      .in('payment_status', ['no_iniciado', 'pendiente', 'rechazado'])
+      .is('usdt_amount', null)
       .select('usdt_amount')
 
     if (!error && data?.length) {

@@ -31,7 +31,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { esServiceRole } from '../_shared/service-role.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { enviarMail } from '../_shared/email.ts'
+import { enviarMail, nombreSeguro } from '../_shared/email.ts'
 
 const VENTANA_MINUTOS = 180
 const TOPE_POR_CORRIDA = 50
@@ -158,7 +158,7 @@ serve(async (req) => {
       continue
     }
 
-    const lineas = [(n.body as string) || '']
+    const lineas = [nombreSeguro((n.body as string) || '')]
     if (plantilla.conLinkSala && n.booking_id) {
       lineas.push(
         `<a href="${SITIO}/sala?booking=${n.booking_id}" style="color:#C1694F;font-weight:bold">Entrar a la sesión</a>`,
@@ -167,7 +167,7 @@ serve(async (req) => {
 
     const ok = await enviarMail({
       para,
-      asunto: (n.title as string) || plantilla.titulo,
+      asunto: plantilla.titulo,
       titulo: plantilla.titulo,
       lineas,
       pie: plantilla.pie,

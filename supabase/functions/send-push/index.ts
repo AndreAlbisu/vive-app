@@ -101,21 +101,7 @@ serve(async (req) => {
         if (participantes.includes(callerId)) {
           if (participantes.includes(recipientId)) {
             autorizado = true
-          } else {
-            // ¿El destinatario es un "competidor"? — un usuario con un booking en
-            // el MISMO coach, día y hora, o sea uno de los que se cancelan al
-            // confirmar otra reserva del mismo slot. Se busca SIN filtrar por
-            // status a propósito: para cuando llega este push el cliente ya lo
-            // pasó a 'cancelada'.
-            const { data: comp } = await admin
-              .from('bookings')
-              .select('id')
-              .eq('coach_id', booking.coach_id)
-              .eq('scheduled_date', booking.scheduled_date)
-              .eq('scheduled_time', booking.scheduled_time)
-              .eq('user_id', recipientId)
-              .limit(1)
-            autorizado = !!comp && comp.length > 0
+
           }
         }
       }
@@ -124,6 +110,10 @@ serve(async (req) => {
     }
 
     if (!autorizado) return json({ error: 'Forbidden' }, 403)
+
+    const { data: allowed, error: quotaError } = await admin.rpc('claim_push', { p_caller: callerId, p_recipient: recipientId })
+    if (quotaError) return json({ error: 'No se pudo validar el envío' }, 503)
+    if (!allowed) return json({ ok: true, skipped: 'blocked-or-limited' })
 
     // ── Envío ────────────────────────────────────────────────────────────────
     const { data: perfil } = await admin
@@ -134,7 +124,7 @@ serve(async (req) => {
     if (!perfil?.push_token) return json({ ok: true, skipped: 'no-token' })
 
     try {
-      await enviarPush(perfil.push_token, title, body)
+      await enviarPush(perfil.push_token, 'Vita', 'Tenés novedades en Vita. Abrí la app para verlas.')
     } catch (e) {
       // Best-effort, igual que cuando era client-side: un push que no sale no es
       // un error del que llamó.

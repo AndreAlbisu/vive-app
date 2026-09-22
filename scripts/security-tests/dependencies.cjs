@@ -1,0 +1,12 @@
+const assert = require('node:assert/strict');
+const qs = require('query-string');
+const decode = require('node:module').createRequire(require.resolve('query-string'))('decode-uri-component');
+const MarkdownIt = require('markdown-it');
+assert.equal(qs.parse('name=Mar%C3%ADa').name, 'María');
+assert.equal(decode('%C3%A1'), 'á');
+assert.equal(typeof decode('%C2'.repeat(1000) + '%'), 'string');
+const markdown = new MarkdownIt({ html: false, linkify: true });
+const tokens = markdown.parse('**Hola** [Vita](https://example.invalid)\n\nTexto', {});
+assert(tokens.some(t => t.type === 'inline' && t.children.some(c => c.type === 'strong_open')));
+assert(!markdown.render('<img src=x onerror=alert(1)>').includes('<img'));
+console.log('PASS patched CommonJS decoder, Router queries and Markdown tokens');

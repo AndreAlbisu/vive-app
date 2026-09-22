@@ -65,12 +65,16 @@ serve(async (req) => {
 
     const { data: booking } = await supabase
       .from('bookings')
-      .select('id, user_id, coach_id, coach_name, amount, currency, payment_status, preference_id, platform_fee_pct, origen')
+      .select('id, user_id, coach_id, coach_name, amount, currency, payment_status, preference_id, platform_fee_pct, origen, status, payment_provider, usdt_amount, checkout_attempt_id')
       .eq('id', booking_id)
       .single()
 
     if (!booking) return json({ error: 'Booking not found' }, 404)
     if (booking.user_id !== user.id) return json({ error: 'Forbidden' }, 403)
+
+    if (booking.status !== 'pendiente' || !['no_iniciado', 'pendiente', 'rechazado'].includes(booking.payment_status) || booking.payment_provider !== 'mp' || booking.usdt_amount != null) {
+      return json({ error: 'Esta reserva no admite un nuevo cobro por Mercado Pago' }, 409)
+    }
 
     // 🔴 EL PRECIO SALE DE `coaches`, NO DE LA RESERVA. `bookings.amount` lo
     // escribe el CLIENTE al insertar (`BookingScreen_Confirm`), tomándolo de un
@@ -113,24 +117,13 @@ serve(async (req) => {
       return json({ error: 'Este profesional todavía no fijó su precio' }, 409)
     }
 
-    // Se corrige la reserva si venía con otro monto. No es cosmético: `amount`
-    // es lo que leen el informe del contador y el cálculo de lo que se le debe
-    // al coach, así que dejarlo mal ahí mueve plata aunque el cobro salga bien.
-    if (Number(booking.amount) !== precio) {
-      console.warn(
-        `[mp-create-payment] monto corregido en booking ${booking.id}: ` +
-        `llegó ${booking.amount}, se cobra ${precio}`,
-      )
-      await supabase.from('bookings').update({ amount: precio }).eq('id', booking.id)
-    }
-
     if (!coachToken) return json({ error: 'Coach sin Mercado Pago conectado' }, 409)
 
     // Idempotente: si ya hay preferencia pendiente, reusarla — pero devolviendo el
     // init_point real (leído de MP), no solo el id. Devolver solo preference_id
     // dejaba al cliente sin URL de checkout → mandaba al usuario a "reserva ok" sin
     // pagar. Se recupera con un GET de la preferencia existente.
-    if (booking.preference_id && booking.payment_status === 'pendiente') {
+    if (booking.preference_id && ['pendiente', 'rechazado'].includes(booking.payment_status)) {
       const prefRes = await fetch(
         `https://api.mercadopago.com/checkout/preferences/${booking.preference_id}`,
         { headers: { Authorization: `Bearer ${coachToken}` } },
@@ -140,9 +133,12 @@ serve(async (req) => {
         const checkoutUrl = MP_TEST_MODE ? (pref.sandbox_init_point ?? pref.init_point) : pref.init_point
         return json({ preference_id: booking.preference_id, init_point: checkoutUrl }, 200)
       }
-      // Si no se pudo leer (preferencia vencida/borrada), caemos a crear una nueva.
-      console.warn('[mp-create-payment] no se pudo leer preferencia existente, se crea otra:', pref)
+      // Sin leer el intento vigente no se crea otro cobro.
+      return json({ error: 'No se pudo recuperar el checkout existente. Volvé a intentarlo.' }, 502)
     }
+
+    const { data: attemptId, error: claimError } = await supabase.rpc('claim_checkout', { p_booking: booking.id, p_provider: 'mp' })
+    if (claimError || !attemptId) return json({ error: 'Hay otro intento en curso o la reserva cambió' }, 409)
 
     // ── Comisión (server-side; el cliente NUNCA la calcula) ──────────────────
     // Esquema definitivo (ver memoria project_vive_payments):
@@ -250,8 +246,9 @@ serve(async (req) => {
         title: `Sesión con ${booking.coach_name ?? 'tu coach'}`,
         quantity: 1,
         unit_price: precioCobrado,
-        currency_id: booking.currency ?? 'ARS',
+        currency_id: 'ARS',
       }],
+      metadata: { vita_attempt_id: attemptId },
       external_reference: booking.id,           // clave para mp-webhook
       notification_url: MP_WEBHOOK_URL,
       // Lo que la persona va a leer en el resumen de su tarjeta (L6).
@@ -312,9 +309,13 @@ serve(async (req) => {
       return json({ error: 'No se pudo crear el pago' }, 502)
     }
 
-    await supabase
+    const { data: saved, error: saveError } = await supabase
       .from('bookings')
       .update({
+        amount: precio,
+        currency: 'ARS',
+        payment_provider: 'mp',
+        checkout_lock_until: null,
         preference_id: pref.id,
         payment_status: 'pendiente',
         platform_fee_pct: commissionPct,
@@ -323,6 +324,12 @@ serve(async (req) => {
         referral_discount: descuento,
       })
       .eq('id', booking.id)
+      .eq('checkout_attempt_id', attemptId)
+      .eq('status', 'pendiente')
+      .in('payment_status', ['no_iniciado', 'pendiente', 'rechazado'])
+      .is('preference_id', null)
+      .select('id')
+    if (saveError || !saved?.length) return json({ error: 'La reserva cambió. No se inició el checkout.' }, 409)
 
     // En modo test hay que abrir el checkout de SANDBOX (sandbox_init_point);
     // el init_point de producción con una preferencia de prueba tira "algo anduvo mal".

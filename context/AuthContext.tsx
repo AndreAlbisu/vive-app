@@ -1,3 +1,4 @@
+import { Alert } from 'react-native';
 import React, { createContext, useCallback, useContext, useRef, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
@@ -184,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    *  que las pantallas saludaran "Hola Usuario" en vez de caer a su fallback. */
   async function fetchProfile(userId: string): Promise<Perfil> {
     const { data } = await supabase
-      .from('profiles')
+      .rpc('get_my_profile')
       .select('role, is_admin, name')
       .eq('id', userId)
       .single();
@@ -401,7 +402,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!session?.user) return;
 
     const { data: actual, error: readError } = await supabase
-      .from('profiles')
+      .rpc('get_my_profile')
       .select('accepted_terms, age_confirmed')
       .eq('id', session.user.id)
       .maybeSingle();
@@ -508,9 +509,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Diagnóstico: sin esto no hay forma de saber en cuál de los tres tramos
       // muere el flujo — si no vuelve del navegador, si vuelve sin `code`, o si
-      // vuelve bien y falla el canje. La URL se recorta a propósito: lleva el
+      // vuelve bien y falla el canje. La URL no se registra: contiene el
       // código de autorización.
-      console.log('[auth] resultado:', res.type, 'url:', 'url' in res ? String(res.url).slice(0, 120) : '(sin url)');
+      console.log('[auth] resultado:', res.type);
 
       if (res.type === 'cancel' || res.type === 'dismiss') return null;
 
@@ -555,7 +556,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // que suena a sesión vencida o a config del servidor y era un `#`.
       const code = res.url.match(/[?&]code=([^&#]+)/)?.[1];
       if (!code) {
-        console.log('[auth] volvió sin código:', res.url.slice(0, 120));
+        console.log('[auth] retorno OAuth recibido');
         return 'Google no devolvió el código de acceso. Probá de nuevo.';
       }
 
@@ -655,6 +656,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
+    // Retirar el destino push mientras todavía hay una sesión válida.
+    if (user) {
+      const { error } = await supabase.from('profiles').update({ push_token: null }).eq('id', user.id);
+      if (error) {
+        Alert.alert('No se pudo cerrar sesión', 'Necesitamos conexión para desactivar las notificaciones. Volvé a intentarlo.');
+        return;
+      }
+    }
     // Apagar las notis locales de recordatorios del usuario que se va (si no,
     // siguen firmando aunque nadie esté logueado en el dispositivo).
     await cancelAllResourceReminders().catch(() => {});

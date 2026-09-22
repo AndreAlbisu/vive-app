@@ -905,7 +905,7 @@ export default function CoachRecursoScreen() {
 
           {format === 'lectura' && resource.body_md && (
             <View style={s.lecturaCard}>
-              <Markdown style={mdStyles as any}>{resource.body_md}</Markdown>
+              <Markdown style={mdStyles as any}>{resource.body_md.slice(0, 20000)}</Markdown>
             </View>
           )}
 

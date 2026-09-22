@@ -1,0 +1,1 @@
+Official decode-uri-component 0.5.0, with only the export changed to CommonJS for query-string 7 / Expo Router 6. Source: npm decode-uri-component@0.5.0. Keep the upstream MIT license. Remove this override when Router supports the fixed ESM dependency.

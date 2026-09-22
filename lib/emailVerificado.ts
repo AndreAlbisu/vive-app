@@ -35,7 +35,7 @@ export async function necesitaVerificarMail(user: User | null | undefined): Prom
   if (mailVieneDeProveedor(user)) return false;
 
   const { data, error } = await supabase
-    .from('profiles')
+    .rpc('get_my_profile')
     .select('email_verified_at')
     .eq('id', user.id)
     .maybeSingle();

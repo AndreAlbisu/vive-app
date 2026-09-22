@@ -4,6 +4,42 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-22 — Andre (Codex · correcciones de auditoría de seguridad)
+
+**Tocado:** autenticación y notificaciones (`context/`, `lib/`), perfiles y recursos
+(`screens/`, `app/coach-recurso.tsx`), web de reserva, funciones de pago/video/push/mail
+y helpers compartidos, dependencias/lockfile, script de pruebas de tablas,
+`scripts/security-audit-2026-09-22.sql`, `scripts/verify-security-audit.sql`,
+`scripts/security-tests/`, `vendor/decode-uri-component/`, test de verificación de
+mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
+
+**Resumen:**
+- Se prepararon cierres de reservas/pagos falsificados, actor de cancelación,
+  XSS, correo falsificado, publicación sin revisión, acceso a datos privados,
+  videollamadas canceladas, push/bloqueos/logout y carreras de horarios. Las
+  reglas críticas se validan en servidor/base y se acompañan de pruebas adversariales.
+- Pagos: lease por intento, guardas de estado/proveedor y webhook MP ligado a
+  la preferencia real, monto y moneda. **USDT queda cerrado por defecto**: la
+  reserva permanente de montos contiene la atribución errónea pero agota 100
+  combinaciones por precio; se necesita un diseño de depósitos únicos para escalar.
+- Dependencias corregidas manteniendo Expo 54; decoder oficial de URL adaptado
+  únicamente en su export CommonJS por compatibilidad. npm audit reporta cero
+  vulnerabilidades conocidas. 50 suites / 811 tests combinados pasan, además de
+  20 pruebas SQL y 21 de handlers, XSS y compatibilidad de parsers.
+- **No se ejecutó SQL ni se desplegó a producción.** SCHEMA actualizado con una
+  sección explícita de cambios pendientes, no como si ya existieran en Supabase.
+
+**Pendiente para la próxima sesión:**
+- Aplicar y verificar el conjunto en staging, coordinar publicación SQL/funciones/app
+  y recién después producción. Revisar duplicados históricos de horario y cola
+  de correos anterior al corte. Detalle operativo en la guía de remediación.
+- Mantener USDT suspendido hasta resolver transición/conciliación y diseño de
+  direcciones por intento. No copiar `USDT_LEDGER_WALLET` sin esa validación.
+- Pruebas en teléfono real de logout, bloqueo, cobro y cancelación. El export web
+  de Expo exige `react-native-web-webview`, dependencia del reproductor ya ausente;
+  la web estática del repo sí tiene prueba para el XSS corregido.
+
+---
 ## 2026-09-22 — Andre (sesión 267 · las skills de diseño para Codex, commiteadas)
 
 **Tocado:** `.agents/skills/` (nuevo en git: 172 archivos, 4,5 MB)

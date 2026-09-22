@@ -34,6 +34,10 @@ serve(async (req) => {
     return new Response('wallet not configured', { status: 500 })
   }
 
+  if (Deno.env.get('USDT_LEDGER_WALLET') !== USDT_WALLET) {
+    return new Response(JSON.stringify({ error: 'Los pagos USDT están temporalmente en revisión' }), { status: 503, headers: { 'Content-Type': 'application/json' } })
+  }
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
   // 🔴 `status <> 'cancelada'` NO es un detalle. `expire_unpaid_checkouts()`
@@ -75,7 +79,7 @@ serve(async (req) => {
   // dirección — que si no, se cruzarían por monto y acreditarían de más.
   const desde = Date.now() - VENTANA_MS
   const url = `https://api.trongrid.io/v1/accounts/${USDT_WALLET}/transactions/trc20`
-    + `?only_to=true&limit=200&min_timestamp=${desde}&contract_address=${USDT_TRC20_CONTRACT}`
+    + `?only_to=true&only_confirmed=true&limit=200&min_timestamp=${desde}&contract_address=${USDT_TRC20_CONTRACT}`
 
   const res = await fetch(url, {
     headers: TRONGRID_API_KEY ? { 'TRON-PRO-API-KEY': TRONGRID_API_KEY } : {},
@@ -100,10 +104,17 @@ serve(async (req) => {
   const menores: unknown[] = []
 
   for (const b of pendientes) {
+    const { data: assignment, error: assignmentError } = await supabase.from('usdt_amount_assignments')
+      .select('assigned_at').eq('booking_id', b.id).eq('amount', b.usdt_amount).maybeSingle()
+    if (assignmentError || !assignment) {
+      console.error('[usdt-check] requiere conciliación manual: asignación ausente o ambigua', b.id)
+      continue
+    }
     const r = findPayment(transfers, {
       direccion: USDT_WALLET,
       monto: Number(b.usdt_amount),
       hashesUsados,
+      assignedAtMs: Date.parse(assignment.assigned_at),
     })
 
     if (r.kind === 'monto_menor') {
@@ -125,6 +136,8 @@ serve(async (req) => {
         paid_at: new Date(r.transfer.block_timestamp).toISOString(),
       })
       .eq('id', b.id)
+      .eq('payment_provider', 'usdt')
+      .eq('usdt_amount', b.usdt_amount)
       .eq('payment_status', 'pendiente')   // no pisar si otra corrida ganó
       // La misma guarda, en la escritura: entre la consulta y este update la
       // reserva pudo expirar. La consulta filtra para no traerla; esto impide

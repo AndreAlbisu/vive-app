@@ -249,13 +249,20 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
 
   // Guarda propia: acá se compite con el coach aceptando a mano en el mismo
   // instante. Solo sigue quien de verdad hizo la transición.
-  const { data: confirmada } = await admin
+  const { data: confirmada, error: confirmError } = await admin
     .from('bookings')
     .update({ status: 'confirmada' })
     .eq('id', booking.id)
     .eq('status', 'pendiente')
     .select('id')
 
+  if (confirmError?.code === '23505') {
+    const { error } = await admin.from('bookings').update({ status: 'cancelada', cancelled_by: 'coach' })
+      .eq('id', booking.id).eq('status', 'pendiente')
+    if (error) throw new Error('No se pudo encolar el reembolso por conflicto de horario')
+    return
+  }
+  if (confirmError) throw new Error('No se pudo confirmar la reserva')
   if (!confirmada || confirmada.length === 0) {
     console.warn('[booking-effects] la reserva ya no estaba pendiente, no se confirma:', bookingId)
     return
@@ -326,7 +333,10 @@ async function cancelarCompetidores(admin: Admin, booking: any, fecha: string, h
       // 'reembolso_pendiente' en esta misma transición. Avisarle a alguien que
       // su reserva se cayó sin haber disparado el reembolso sería lo peor de
       // los dos mundos.
-      await admin.from('bookings').update({ status: 'cancelada' }).eq('id', cb.id)
+      const { data: cancelled, error } = await admin.from('bookings').update({ status: 'cancelada' })
+        .eq('id', cb.id).eq('status', 'pendiente').select('id')
+      if (error) throw error
+      if (!cancelled?.length) return
 
       const ops: Promise<unknown>[] = [
         admin.from('notifications').insert({

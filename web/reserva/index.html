@@ -133,14 +133,27 @@ function pintar(b) {
   // app, así que si no se lo decimos acá y por mail, no se entera por ningún
   // lado. `expire_pending_bookings()` cancela y devuelve a las 24hs.
   const pasos = confirmada
-    ? [`La sesión es por videollamada, <b>desde el navegador</b>: no hace falta instalar nada.`,
-       `<a href="/sala?booking=${encodeURIComponent(b.id)}" style="color:#A25842">Entrar a la sesión</a> — la sala se abre 15 minutos antes.`,
+    ? [`La sesión es por videollamada, desde el navegador: no hace falta instalar nada.`,
+       `La sala se abre 15 minutos antes.`,
        `Te mandamos este mismo enlace por mail.`]
-    : [`${coach} tiene hasta <b>24 horas</b> para confirmar el horario.`,
+    : [`${coach} tiene hasta 24 horas para confirmar el horario.`,
        `Apenas lo haga, te avisamos por mail.`,
-       `Si no llega a confirmarlo, la reserva se cancela sola y <b>te devolvemos todo</b>, sin que tengas que pedirlo.`];
+       `Si no llega a confirmarlo, la reserva se cancela sola y te devolvemos todo, sin que tengas que pedirlo.`];
 
-  $('queSigue').innerHTML = '<ul class="que-sigue">' + pasos.map(p => `<li>${p}</li>`).join('') + '</ul>';
+  const lista = document.createElement('ul');
+  lista.className = 'que-sigue';
+  for (const [indice, paso] of pasos.entries()) {
+    const item = document.createElement('li');
+    item.textContent = paso;
+    if (confirmada && indice === 1) {
+      const enlace = document.createElement('a');
+      enlace.href = `/sala?booking=${encodeURIComponent(b.id)}`;
+      enlace.textContent = 'Entrar a la sesión';
+      item.prepend(enlace, ' — ');
+    }
+    lista.appendChild(item);
+  }
+  $('queSigue').replaceChildren(lista);
 
   // 🔴 ATENCIÓN — ESTA PANTALLA PROMETE MAILS QUE TODAVÍA NO EXISTEN.
   // "te avisamos por mail" aparece tres veces acá y **no hay ningún mail

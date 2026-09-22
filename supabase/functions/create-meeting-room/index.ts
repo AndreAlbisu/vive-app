@@ -197,7 +197,7 @@ serve(async (req) => {
 
     const { data: booking, error: bookingErr } = await supabase
       .from('bookings')
-      .select('id, user_id, scheduled_date, scheduled_time, duration_minutes, sala_id, meeting_url')
+      .select('id, user_id, scheduled_date, scheduled_time, duration_minutes, sala_id, meeting_url, status, payment_status')
       .eq('id', booking_id)
       .single()
 
@@ -214,6 +214,10 @@ serve(async (req) => {
 
     if (!sala || (sala.user_id !== user.id && sala.coach_id !== user.id)) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: cors })
+    }
+
+    if (booking.status !== 'confirmada' || ['reembolsado', 'reembolso_pendiente', 'contracargo'].includes(booking.payment_status)) {
+      return new Response(JSON.stringify({ error: 'La sesión no está habilitada' }), { status: 409, headers: cors })
     }
 
     // Calcular ventana de la sala

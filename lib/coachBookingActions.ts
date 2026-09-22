@@ -91,9 +91,12 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
     const cancelSystemMsg = `Solicitud cancelada automáticamente\n${cancelDateStr} · ${cancelTimeStr} hs`;
 
     await Promise.all(
-      conflicting.map((cb) => {
+      conflicting.map(async (cb) => {
+        const { data: cancelled, error } = await supabase.from('bookings')
+          .update({ status: 'cancelada' }).eq('id', cb.id).eq('status', 'pendiente').select('id');
+        if (error) throw error;
+        if (!cancelled?.length) return;
         const ops: PromiseLike<unknown>[] = [
-          supabase.from('bookings').update({ status: 'cancelada' }).eq('id', cb.id),
           supabase.from('notifications').insert({
             recipient_id: cb.user_id,
             type: 'reserva_cancelada',
@@ -112,10 +115,8 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
             })
           );
         }
-        // El destinatario es un competidor: el push se autoriza porque comparte
-        // con quien confirmó el mismo coach+día+hora. Se pasa el booking ganador
-        // (`bookingId`) como contexto — el cliente ya pasó `cb` a 'cancelada'.
-        ops.push(notifyViaServer({ bookingId, recipientId: cb.user_id, title: cancelTitle, body: cancelBody }));
+        // El contexto es la reserva cancelada, de la que el coach es participante.
+        ops.push(notifyViaServer({ bookingId: cb.id, recipientId: cb.user_id, title: cancelTitle, body: cancelBody }));
         return Promise.all(ops);
       })
     );

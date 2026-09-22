@@ -1,0 +1,17 @@
+const fs=require('fs'),{JSDOM}=require('jsdom');
+const src=fs.readFileSync(require('path').resolve(__dirname,'../../web/reserva/index.html'),'utf8');
+const fn=src.slice(src.indexOf('function pintar(b)'),src.indexOf('(async () =>',src.indexOf('function pintar(b)')));
+const ids=['titulo','fecha','conQuien','queSigue','nota','cargando','listo'];
+const dom=new JSDOM(ids.map(id=>`<div id="${id}"></div>`).join(''),{url:'https://example.invalid/reserva',runScripts:'dangerously'});
+dom.window.sessionStorage.setItem('vita_sesion_web',JSON.stringify({access_token:'FIXTURE_ONLY'}));
+dom.window.eval(`const $=id=>document.getElementById(id);function fechaLarga(){return 'Fixture'};${fn}`);
+dom.window.pintar({id:'fixture',status:'pendiente',payment_status:'pendiente',coach_name:`<img src="invalid" onerror="window.auditMarker=JSON.parse(sessionStorage.getItem('vita_sesion_web')).access_token">`});
+const img=dom.window.document.querySelector('#queSigue img');
+img?.dispatchEvent(new dom.window.Event('error'));
+console.log(JSON.stringify({scope:'Actual pintar() function, isolated jsdom, synthetic booking and fake token; no network.',injectedElement:!!img,handlerExecuted:dom.window.auditMarker==='FIXTURE_ONLY',fakeSessionReadable:dom.window.auditMarker==='FIXTURE_ONLY'},null,2));
+require('node:assert/strict').equal(!!img, false);
+require('node:assert/strict').equal(dom.window.auditMarker, undefined);
+dom.window.pintar({id:'fixture',status:'confirmada',payment_status:'aprobado',coach_name:'Fixture'});
+require('node:assert/strict').equal(dom.window.document.querySelector('#queSigue a').getAttribute('href'), '/sala?booking=fixture');
+console.log('PASS XSS blocked; confirmed session link preserved');
+dom.window.close();

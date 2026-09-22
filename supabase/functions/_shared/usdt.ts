@@ -30,11 +30,11 @@ export const USDT_DECIMALS = 6;
  * decimal 5 sería imposible de tipear para el usuario, y el pago nunca se
  * podría reconocer. 2 decimales es el mínimo común denominador.
  *
- * El costo es el techo: 100 reservas esperando pago **al mismo tiempo** agotan
- * las combinaciones. El índice único de la base rechaza el choque y
- * `usdt-create-payment` reintenta, así que el modo de falla es "probá de
- * nuevo" y no un cobro mal asignado. Si alguna vez se acerca a ese número, la
- * salida es una dirección de depósito por reserva, no más decimales.
+ * Los montos se reservan permanentemente en usdt_amount_assignments,
+ * incluso después de cancelar. El techo es 100 por precio para toda la vida
+ * de la wallet. Al agotarse, se rechazan nuevos cobros; para escalar hace falta
+ * una dirección de depósito por intento.
+
  */
 export const NONCE_DIGITS = 2;
 export const NONCE_SCALE = 100;
@@ -124,7 +124,7 @@ export type MatchResult =
  */
 export function findPayment(
   transfers: TronTransfer[],
-  esperado: { direccion: string; monto: number; hashesUsados?: Set<string> },
+  esperado: { direccion: string; monto: number; hashesUsados?: Set<string>; assignedAtMs?: number },
 ): MatchResult {
   const usados = esperado.hashesUsados ?? new Set<string>();
   const nonceEsperado = nonceOf(esperado.monto);
@@ -132,6 +132,7 @@ export function findPayment(
 
   for (const t of transfers) {
     if (t.type !== 'Transfer') continue;
+    if (esperado.assignedAtMs !== undefined && (!Number.isFinite(esperado.assignedAtMs) || !Number.isFinite(t.block_timestamp) || t.block_timestamp < esperado.assignedAtMs)) continue;
     if (usados.has(t.transaction_id)) continue;
     // Contrato, NO símbolo.
     if ((t.token_info?.address ?? '') !== USDT_TRC20_CONTRACT) continue;

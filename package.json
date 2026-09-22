@@ -12,7 +12,8 @@
     "lint": "expo lint app screens components hooks lib context constants theme",
     "sync:legal": "node ./scripts/sync-legal.mjs",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:security": "node scripts/security-tests/database.mjs && node scripts/security-tests/endpoints.cjs && node scripts/security-tests/web.cjs && node scripts/security-tests/dependencies.cjs"
   },
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
@@ -77,7 +78,8 @@
     "jest": "^29.7.0",
     "jest-expo": "~54.0.0",
     "marked": "^18.0.9",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "@electric-sql/pglite": "0.5.8"
   },
   "private": true,
   "jest": {
@@ -91,5 +93,28 @@
     "setupFiles": [
       "<rootDir>/jest.setup.js"
     ]
+  },
+  "overrides": {
+    "react-native-markdown-display": {
+      "markdown-it": "15.0.2"
+    },
+    "linkify-it": "6.1.0",
+    "metro": "0.83.8",
+    "metro-babel-transformer": "0.83.8",
+    "metro-cache": "0.83.8",
+    "metro-cache-key": "0.83.8",
+    "metro-config": "0.83.8",
+    "metro-core": "0.83.8",
+    "metro-file-map": "0.83.8",
+    "metro-minify-terser": "0.83.8",
+    "metro-resolver": "0.83.8",
+    "metro-runtime": "0.83.8",
+    "metro-source-map": "0.83.8",
+    "metro-symbolicate": "0.83.8",
+    "metro-transform-plugins": "0.83.8",
+    "metro-transform-worker": "0.83.8",
+    "postcss": "8.5.28",
+    "uuid": "11.1.1",
+    "decode-uri-component": "file:vendor/decode-uri-component"
   }
 }

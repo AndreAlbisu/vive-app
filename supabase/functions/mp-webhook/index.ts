@@ -125,6 +125,40 @@ serve(async (req) => {
     const bookingId = payment.external_reference
     if (!bookingId) return new Response('no ref', { status: 200 })
 
+    const { data: expected, error: expectedError } = await supabase.from('bookings')
+      .select('id, payment_provider, preference_id, payment_id, payment_status, status, amount, referral_discount, currency')
+      .eq('id', bookingId).maybeSingle()
+    if (expectedError) return new Response('db error', { status: 502 })
+    if (!expected || expected.payment_provider !== 'mp' || !expected.preference_id) {
+      console.error('[mp-webhook] pago sin reserva MP vinculada', paymentId)
+      return new Response('unbound payment', { status: 409 })
+    }
+    // La referencia externa identifica una reserva, NO el intento. Consultar la
+    // orden al proveedor permite validar también los checkouts anteriores al fix.
+    if (!payment.order?.id) return new Response('missing merchant order', { status: 502 })
+    const orderResponse = await fetch(`https://api.mercadopago.com/merchant_orders/${encodeURIComponent(payment.order.id)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!orderResponse.ok) return new Response('merchant order unavailable', { status: 502 })
+    const merchantOrder = await orderResponse.json()
+    if (String(merchantOrder.preference_id) !== String(expected.preference_id)) {
+      console.error('[mp-webhook] pago de otro intento: conciliar manualmente', paymentId, bookingId)
+      return new Response('stale payment attempt', { status: 409 })
+    }
+    // Reembolsos/rechazos de un pago viejo no pueden revertir uno nuevo.
+    if (expected.payment_id && expected.payment_id !== String(paymentId) &&
+        !['no_iniciado', 'pendiente', 'rechazado'].includes(expected.payment_status)) {
+      console.error('[mp-webhook] segundo pago: requiere conciliación', paymentId, bookingId)
+      return new Response('different settled payment', { status: 409 })
+    }
+    const due = Number(expected.amount) - Number(expected.referral_discount ?? 0)
+    if (payment.status === 'approved' && (payment.currency_id !== 'ARS' || expected.currency !== 'ARS' ||
+        !Number.isFinite(Number(payment.transaction_amount)) || !Number.isFinite(due) ||
+        Math.abs(Number(payment.transaction_amount) - due) > 0.01)) {
+      console.error('[mp-webhook] importe/moneda no coincide: requiere conciliación', paymentId, bookingId)
+      return new Response('amount mismatch', { status: 409 })
+    }
+
     // Mapear estado MP → payment_status interno
     const statusMap: Record<string, string> = {
       approved: 'aprobado',
@@ -139,44 +173,14 @@ serve(async (req) => {
     }
     const newStatus = statusMap[payment.status as string]
     if (!newStatus) return new Response('unhandled status', { status: 200 })
+    if (newStatus === 'rechazado' && !['no_iniciado','pendiente','rechazado'].includes(expected.payment_status)) return new Response('stale rejection', { status: 200 })
+    if (newStatus === 'aprobado' && ['reembolsado','contracargo'].includes(expected.payment_status)) return new Response('stale approval', { status: 200 })
+    if (newStatus === 'reembolsado' && expected.payment_status === 'contracargo') return new Response('already charged back', { status: 200 })
 
     const patch: Record<string, unknown> = { payment_status: newStatus, payment_id: String(paymentId) }
     if (newStatus === 'aprobado') {
       patch.paid_at = new Date().toISOString()
 
-      // ── ¿Entró lo que tenía que entrar? ───────────────────────────────────
-      //
-      // 🔴 Hasta el 22/09/2026 esto no se miraba: el webhook mapeaba el ESTADO
-      // del pago y acreditaba, sin comparar el MONTO contra lo que la reserva
-      // esperaba. El de PayPal sí lo compara desde siempre.
-      //
-      // Hoy no es explotable, porque el precio lo fija el servidor al armar la
-      // preferencia y el pagador no lo puede tocar. Pero si alguna vez el monto
-      // diverge —una preferencia reusada, un cobro parcial, o un error nuestro
-      // en el descuento de referidos— la reserva quedaba acreditada por el
-      // monto equivocado **y nadie se enteraba**. Es el mismo riel donde ya
-      // hubo un incidente de precio manipulable (sesión 107).
-      //
-      // ⚠️ **Se avisa, no se rechaza, y es a propósito.** La plata ya entró: no
-      // acreditar dejaría a la persona pagando sin sesión, que es peor que una
-      // diferencia contable. El grito queda en los logs, como el de la
-      // reversión sobre una sesión ya transferida.
-      const { data: esperada } = await supabase
-        .from('bookings')
-        .select('amount, referral_discount, currency')
-        .eq('id', bookingId)
-        .maybeSingle()
-
-      const cobrado = Number(payment?.transaction_amount)
-      const debia = Number(esperada?.amount ?? NaN) - Number(esperada?.referral_discount ?? 0)
-      if (Number.isFinite(cobrado) && Number.isFinite(debia) && Math.abs(cobrado - debia) > 0.01) {
-        console.error(
-          `[mp-webhook] 🔴 MONTO DISTINTO DEL ESPERADO — booking ${bookingId}, ` +
-          `cobrado ${cobrado} ${payment?.currency_id ?? ''}, esperado ${debia} ` +
-          `(precio ${esperada?.amount}, descuento ${esperada?.referral_discount}). ` +
-          `Se acredita igual porque la plata ya entró, pero hay que mirarlo.`,
-        )
-      }
       // 🔴 La huella del pagador. Se guarda ACÁ y en ningún otro lado porque
       // este es el único momento en que el objeto del pago pasa por nosotros:
       // los pagos que entren sin esto quedan ciegos para siempre.
@@ -252,7 +256,13 @@ serve(async (req) => {
     // rechazados (ver más abajo), así que la aprobación puede llegar sobre un
     // `payment_status = 'rechazado'` y esa transición también tiene que valer.
     const upd = supabase.from('bookings').update(patch).eq('id', bookingId)
-    if (newStatus === 'aprobado') upd.neq('payment_status', 'aprobado')
+      .eq('payment_provider', 'mp').eq('preference_id', expected.preference_id)
+      .eq('payment_status', expected.payment_status)
+      .eq('status', expected.status)
+    if (expected.payment_id) upd.eq('payment_id', expected.payment_id)
+    else upd.is('payment_id', null)
+    if (newStatus === 'rechazado') upd.in('payment_status', ['no_iniciado', 'pendiente', 'rechazado'])
+    if (newStatus === 'aprobado') upd.in('payment_status', ['no_iniciado', 'pendiente', 'rechazado'])
 
     // 🔴 Y el contracargo NO se pisa. Sin esta guarda, una notificación
     // `refunded` posterior a un `charged_back` —MP manda hasta 3 por pago y no
@@ -271,6 +281,10 @@ serve(async (req) => {
     }
 
     const { data: cambiada, error: errUpd } = await upd.select('id')
+
+    if (!errUpd && !cambiada?.length && expected.payment_status !== patch.payment_status) {
+      return new Response('state changed; retry', { status: 503 })
+    }
 
     if (errUpd) {
       // 502 para que MP reintente: la plata está cobrada y la reserva no lo
