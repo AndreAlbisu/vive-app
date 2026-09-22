@@ -133,13 +133,41 @@ export default function RuidoScreen() {
 
   useEffect(() => {
     usuarioActualId().then(uid => { userIdRef.current = uid; }).catch(() => {});
-    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+    // ⚠️ `shouldPlayInBackground` arranca en **false** a propósito, aunque el
+    // sentido de esta pantalla sea sonar con el teléfono bloqueado. El motivo es
+    // el truco de acá abajo: los cuatro audios quedan corriendo en silencio para
+    // que Iniciar no tenga demora. Si el segundo plano estuviera prendido desde
+    // el arranque, **entrar a la pantalla y salir dejaría cuatro loops mudos
+    // vivos indefinidamente**, manteniendo la app despierta y comiendo batería
+    // sin que suene nada. Se prende al empezar y se apaga al terminar.
+    modoAudio(false);
     // Arrancar todos en silencio para que no haya delay al presionar Iniciar.
     // El audio ya está corriendo — solo subimos el volumen cuando el usuario lo pide.
     allPlayers.forEach(p => {
       try { p.volume = 0; p.loop = true; p.play(); } catch {}
     });
   }, []);
+
+  /**
+   * El único lugar que toca el modo de audio.
+   *
+   * 🔴 **`shouldPlayInBackground` es lo que hace que el sonido sobreviva a la
+   * pantalla apagada**, y venía sin prender: quien ponía lluvia para dormirse y
+   * bloqueaba el teléfono se quedaba en silencio, que es justo el caso de uso
+   * principal (nadie se duerme mirando la pantalla). `playsInSilentMode`, que
+   * era lo único que había, resuelve otra cosa: que suene con el interruptor de
+   * silencio puesto.
+   *
+   * ⚠️ En iPhone esto **no alcanza solo**: hace falta además declarar
+   * `UIBackgroundModes: ["audio"]` en `app.json`, que es configuración nativa.
+   * Por eso este arreglo **no se puede probar en Expo Go**: necesita una build.
+   */
+  function modoAudio(enSegundoPlano: boolean) {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: enSegundoPlano,
+    }).catch(() => {});
+  }
 
   function stopTimer() {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -181,6 +209,7 @@ export default function RuidoScreen() {
   function handleStart() {
     setElapsed(0);
     setPhase('running');
+    modoAudio(true);
 
     const active = getPlayer();
     allPlayers.forEach(p => { if (p !== active) try { p.volume = 0; } catch {} });
@@ -193,6 +222,9 @@ export default function RuidoScreen() {
       if (el >= duration) {
         stopTimer();
         silenceAll();
+        // Se libera el segundo plano en cuanto deja de sonar: si no, la app
+        // seguiría despierta después de que la sesión terminó.
+        modoAudio(false);
         setPhase('done');
         // ⚠️ Ahora pasa la duración. Antes se omitía —la función la documenta
         // como opcional "para recursos libres (Diario, Ruido blanco)"— pero
@@ -208,10 +240,11 @@ export default function RuidoScreen() {
   function handleStop() {
     stopTimer();
     silenceAll();
+    modoAudio(false);
     setPhase('idle');
   }
 
-  useEffect(() => () => { stopTimer(); pauseAll(); }, []);
+  useEffect(() => () => { stopTimer(); pauseAll(); modoAudio(false); }, []);
 
   const remaining = Math.max(0, duration - elapsed);
   const isRunning = phase === 'running';
