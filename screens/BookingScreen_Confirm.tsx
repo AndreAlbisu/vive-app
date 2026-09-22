@@ -608,6 +608,27 @@ export default function BookingScreen_Confirm() {
           .eq('status', 'pendiente')
           .neq('id', booking.id);
 
+        // ⚠️ **ESTE BLOQUE YA NO HACE NADA, y conviene saber por qué antes de
+        // tocarlo (22/09/2026).**
+        //
+        // Cancelar la reserva de otro nunca funcionó: la RLS de `bookings` solo
+        // deja al dueño cancelar la suya, así que el `update` de abajo afectaba
+        // **cero filas, en silencio**. Lo único que sí se escribía era la
+        // notificación, o sea que al competidor le llegaba *"tu solicitud fue
+        // cancelada"* mientras su reserva seguía `pendiente`. Un aviso falso.
+        //
+        // Desde el cierre de la policy de `notifications` (22/09) tampoco entra
+        // esa notificación: ahora solo se puede avisar sobre una reserva propia.
+        //
+        // 📌 **No se pierde nada**: `_shared/booking-effects.ts` cancela y avisa
+        // a los competidores con service role cuando se acredita el pago, y
+        // cuando confirma el profesional lo hace `coachBookingActions` (él sí
+        // tiene permiso sobre las reservas de su agenda).
+        //
+        // Se deja en pie y no se borra hoy a propósito: esto está en el camino
+        // de confirmar una reserva, que es el que acaba de abrirse al público.
+        // Borrarlo es una limpieza de una línea de riesgo cero cuando haya una
+        // corrida de prueba del flujo entero, no a las tres de la mañana.
         if (conflicting && conflicting.length > 0) {
           const cancelTitle = 'Horario no disponible';
           const cancelBody = 'Ese horario ya no está disponible. Podés elegir otro horario con tu profesional';
