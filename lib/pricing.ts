@@ -61,19 +61,31 @@ export const MAX_PRICE_USD = 10000;
 /** La tarifa que Mercado Pago le cobra al COACH por cobrar, en porcentaje.
  *
  * 🔴 **Es una observación, no una tarifa publicada, y por eso el nombre lo dice.**
- * Sale del único pago real donde se pudo medir (payment `172923514332`, 09/08/2026,
- * split validado): sobre $1, `application_fee` 0,20 para VIVE, `mercadopago_fee`
- * 0,04, y `net_received_amount` 0,76 para el coach. O sea 4%.
  *
- * ⚠️ Tres motivos para no tratarlo como exacto: fue sobre **$1**, donde cualquier
- * componente fijo de la tarifa distorsionaría el porcentaje; la tarifa de Checkout
- * Pro **depende del plazo de acreditación** que tenga configurado la cuenta; y no
- * se sabe si ese 4% ya incluye IVA. Por eso donde se muestra va con un "≈" y
- * aclarando que la fija Mercado Pago y no VIVE.
+ * ✅ **Remedido el 21/09/2026 contra tres pagos de precio real** (L2), leídos de
+ * la API de MP con el token del coach: payments `174555144528` y `174554303062`
+ * (19/08) y `173787714415` (20/08), los tres de $4.500 con tarjeta Visa. Los tres
+ * dan el MISMO número: `mercadopago_fee` 193,63 sobre 4.500, `application_fee`
+ * 675 para VIVE (el 15% del tramo recurrente) y `net_received_amount` 3.631,37
+ * para el coach. O sea **4,30%**.
+ *
+ * 📌 **Antes decía 4 y salía de un pago de $1** (payment `172923514332`, 09/08):
+ * ahí la `mercadopago_fee` era 0,04, que redondeada a centavos tapaba el 4,3%.
+ * No estaba mal medido, estaba mal redondeado por el monto.
+ *
+ * ⚠️ **Sigue siendo una observación por dos motivos, no por tres.** La duda del
+ * IVA se cerró: 193,63 / 1,21 = 160,02, que es el 3,556% de 4.500, así que el
+ * número **ya incluye IVA** y es lo que efectivamente se le descuenta al coach.
+ * Lo que sigue abierto: la tarifa de Checkout Pro **depende del plazo de
+ * acreditación** de la cuenta (estos tres pagos son con acreditación inmediata,
+ * `money_release_date` a los 3 minutos del `date_approved`), y **depende del
+ * medio de pago** (los tres son tarjeta de crédito; el de $1 fue dinero en
+ * cuenta). Por eso donde se muestra va con un "≈" y aclarando que la fija
+ * Mercado Pago y no VIVE.
  *
  * 📌 Quién la paga NO es una duda: en el split el `collector` es la cuenta del
- * coach, y el `fee_details` del pago real trae `fee_payer: "collector"`. */
-export const MP_FEE_PCT_OBSERVED = 4;
+ * coach, y el `fee_details` de los pagos reales trae `fee_payer: "collector"`. */
+export const MP_FEE_PCT_OBSERVED = 4.3;
 
 export const PAYPAL_PCT = 0.054;
 export const PAYPAL_FIXED_USD = 0.30;

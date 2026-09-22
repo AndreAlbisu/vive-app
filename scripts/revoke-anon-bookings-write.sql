@@ -1,0 +1,41 @@
+-- revoke-anon-bookings-write.sql
+--
+-- Le saca a `anon` el permiso de ESCRIBIR en `bookings`. Ningún dato cambia.
+--
+-- ── Por qué ──────────────────────────────────────────────────────────────────
+--
+-- 🔴 `anon` tenía INSERT y UPDATE sobre las **43 columnas** de `bookings`,
+--    incluidas `payment_status`, `amount`, `status`, `paid_at` y
+--    `scheduled_date`. Es la tabla donde vive la plata.
+--
+-- 📌 **No había nada abierto hoy**: las policies piden `user_id = auth.uid()` o
+--    que el coach sea el dueño, y con la anon key `auth.uid()` es null, así que
+--    ninguna fila matchea y el `with_check` del INSERT tampoco pasa. Esto es
+--    defensa en profundidad: hoy lo frena UNA capa (la RLS), y si alguna policy
+--    futura se escribe de más, la segunda capa no existe.
+--
+-- 📌 Es el mismo hallazgo anotado el 17/09 para `coaches` ("`anon` todavía tiene
+--    UPDATE sobre las 25 columnas"), pero acá es dinero. Se cierra ahora y no en
+--    la auditoría porque M15 (reagendar) va a sumar columnas nuevas, y conviene
+--    que nazcan del lado correcto.
+--
+-- ── Por qué NO se toca el SELECT ─────────────────────────────────────────────
+--
+-- ⚠️ El SELECT de `anon` se deja como está, a propósito. La página pública
+--    `/c/<slug>` lee con la clave anónima, y aunque hoy las reservas no se leen
+--    desde ahí, revocar una lectura es el tipo de cambio que rompe una página
+--    viva sin dar error visible. Queda para la auditoría, mirando primero quién
+--    lee qué.
+--
+-- ── Qué se verificó antes de correrlo ────────────────────────────────────────
+--
+--   · `web-book` (la que crea la reserva desde la web) inserta con el SERVICE
+--     ROLE, que no pasa por estos grants. La anon key ahí solo valida el token.
+--   · Las páginas de `web/` no escriben en `bookings`: la única que la toca es
+--     `web/reserva/index.html`, y **lee** mandando el token del usuario, o sea
+--     que su rol efectivo es `authenticated`, no `anon`.
+--   · `authenticated` NO se toca: sigue con sus 5 columnas
+--     (`status`, `cancelled_by`, `cancelled_late`, `refund_address`,
+--     `refund_network`), que es lo que usa la app para cancelar.
+
+revoke insert, update on public.bookings from anon;

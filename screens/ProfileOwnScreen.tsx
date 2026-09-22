@@ -13,6 +13,7 @@ import {
   Alert,
   Switch,
   TextInput,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,6 +24,7 @@ import { supabase, registrarEvento } from '@/lib/supabase';
 import { FRASE_BORRAR, coincideBorrado } from '@/lib/confirmarBorrado';
 import { AppBg } from '@/components/ui/AppBg';
 import { deleteMyAccount } from '@/lib/accountDeletion';
+import { DESCUENTO_REFERIDO_PCT, normalizarCodigo, tieneFormaDeCodigo } from '@/lib/referidos';
 import { getMomentPref, setMomentPref } from '@/lib/sobreVosMomentoStorage';
 import { useConsent } from '@/hooks/useConsent';
 type Profesional = {
@@ -42,6 +44,11 @@ type ConfigItem = {
 
 export default function ProfileOwnScreen() {
   const router = useRouter();
+  // M7: mi código para invitar, y el de quien me invitó.
+  const [miCodigo, setMiCodigo] = useState<string | null>(null);
+  const [codigoTipeado, setCodigoTipeado] = useState('');
+  const [canjeando, setCanjeando] = useState(false);
+  const [puedeCanjear, setPuedeCanjear] = useState(false);
   const { user, signOut, isAdmin, displayName: nombrePerfil } = useAuth();
 
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
@@ -59,6 +66,47 @@ export default function ProfileOwnScreen() {
   const consent = useConsent(user?.id);
 
   useEffect(() => { getMomentPref().then(setMomentoEnabled); }, []);
+
+  // M7. 📌 Se pregunta lo mismo que pregunta el cobro (`tiene_descuento_referido`)
+  // en vez de mirar columnas: `referred_by` no es legible por el cliente, y así
+  // no hay dos definiciones de "le corresponde descuento".
+  useEffect(() => {
+    if (!user) { setPuedeCanjear(false); return; }
+    let vivo = true;
+    void supabase.rpc('tiene_descuento_referido', { p_user: user.id }).then(({ data }) => {
+      // Puede canjear quien NO tiene ya un descuento pendiente. Si el servidor
+      // no contesta, se asume que no, para no ofrecer algo que va a fallar.
+      if (vivo) setPuedeCanjear(data === false);
+    });
+    return () => { vivo = false; };
+  }, [user]);
+
+  async function pedirMiCodigo() {
+    const { data, error } = await supabase.rpc('mi_codigo_referido');
+    if (error || !data) { Alert.alert('No se pudo', 'Probá de nuevo en un rato.'); return; }
+    setMiCodigo(data as string);
+  }
+
+  async function canjear() {
+    setCanjeando(true);
+    const { error } = await supabase.rpc('canjear_codigo', { p_codigo: codigoTipeado });
+    setCanjeando(false);
+    if (error) {
+      const m = error.message ?? '';
+      Alert.alert(
+        'No se pudo usar ese código',
+        m.includes('codigo_propio') ? 'Ese es tu propio código.'
+          : m.includes('codigo_inexistente') ? 'No encontramos ese código. Fijate que esté bien escrito.'
+          : m.includes('ya_uso_la_app') ? 'El descuento es para la primera sesión, y vos ya tuviste sesiones con nosotros.'
+          : m.includes('ya_tiene_referido') ? 'Ya usaste un código.'
+          : 'Probá de nuevo en un rato.',
+      );
+      return;
+    }
+    setPuedeCanjear(false);
+    setCodigoTipeado('');
+    Alert.alert('Listo', `Tu primera sesión sale ${DESCUENTO_REFERIDO_PCT}% menos.`);
+  }
 
   async function toggleMomento(value: boolean) {
     setMomentoEnabled(value);
@@ -363,6 +411,67 @@ export default function ProfileOwnScreen() {
               </View>
             )}
           </Animated.View>
+
+          {/* M7: invitar. 🔴 Va DESPUÉS de "Mis profesionales" y no arriba de
+              todo: invitar a alguien a terapia no es algo que se haga el primer
+              día, y ponerlo antes de que la persona tenga siquiera un
+              profesional lo convierte en un cartel de marketing en una pantalla
+              que es suya. */}
+          {/* ⚠️ Solo con cuenta: sin sesión no hay código propio que mostrar
+              (`mi_codigo_referido` lo crea contra la persona logueada) ni
+              descuento que canjear. */}
+          {user && (
+          <Animated.View style={fadeUp(configAnim)}>
+            <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>Invitar a alguien</Text>
+            <View style={styles.invitarCard}>
+              {puedeCanjear ? (
+                <>
+                  <Text style={styles.invitarTxt}>
+                    {`¿Te invitó alguien? Poné su código y tu primera sesión sale ${DESCUENTO_REFERIDO_PCT}% menos.`}
+                  </Text>
+                  <View style={styles.invitarFila}>
+                    <TextInput
+                      style={styles.invitarInput}
+                      value={codigoTipeado}
+                      onChangeText={t => setCodigoTipeado(normalizarCodigo(t))}
+                      placeholder="ABC123"
+                      placeholderTextColor="rgba(135,131,92,0.5)"
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      maxLength={6}
+                    />
+                    <TouchableOpacity
+                      style={[styles.invitarBtn, !tieneFormaDeCodigo(codigoTipeado) && styles.invitarBtnOff]}
+                      disabled={!tieneFormaDeCodigo(codigoTipeado) || canjeando}
+                      onPress={canjear}
+                      activeOpacity={0.85}>
+                      <Text style={styles.invitarBtnTxt}>{canjeando ? '…' : 'Usar'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : null}
+
+              <Text style={styles.invitarTxt}>
+                {`Compartí tu código y la primera sesión de quien llegue sale ${DESCUENTO_REFERIDO_PCT}% menos.`}
+              </Text>
+              {miCodigo ? (
+                <TouchableOpacity
+                  style={styles.invitarCodigo}
+                  onPress={() => Share.share({
+                    message: `Te invito a Vita. Con mi código ${miCodigo} tu primera sesión sale ${DESCUENTO_REFERIDO_PCT}% menos. https://vitaapp.com.ar`,
+                  }).catch(() => {})}
+                  activeOpacity={0.8}>
+                  <Text style={styles.invitarCodigoTxt}>{miCodigo}</Text>
+                  <Text style={styles.invitarCodigoHint}>Tocá para compartirlo</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity onPress={pedirMiCodigo} activeOpacity={0.7}>
+                  <Text style={styles.invitarLink}>Ver mi código</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </Animated.View>
+          )}
 
           {/* Preferencias */}
           <Animated.View style={fadeUp(configAnim)}>
@@ -689,6 +798,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   sectionTitleSpaced: { marginTop: 4 },
+
+  // M7
+  invitarCard: {
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderWidth: 1, borderColor: 'rgba(135,131,92,0.18)',
+    borderRadius: 18, padding: 16, gap: 12,
+  },
+  invitarTxt: { fontFamily: ViveFonts.regular, fontSize: 13, color: '#566245', lineHeight: 19 },
+  invitarFila: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  invitarInput: {
+    flex: 1, borderWidth: 1, borderColor: 'rgba(135,131,92,0.28)', borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 10,
+    fontFamily: ViveFonts.semibold, fontSize: 15, letterSpacing: 2, color: '#2E3624',
+  },
+  invitarBtn: { backgroundColor: ViveColors.primary, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11 },
+  invitarBtnOff: { opacity: 0.4 },
+  invitarBtnTxt: { color: '#FFF6EC', fontFamily: ViveFonts.semibold, fontSize: 14 },
+  invitarCodigo: {
+    borderWidth: 1, borderColor: 'rgba(135,131,92,0.28)', borderStyle: 'dashed',
+    borderRadius: 12, paddingVertical: 12, alignItems: 'center',
+  },
+  invitarCodigoTxt: { fontFamily: ViveFonts.semibold, fontSize: 20, letterSpacing: 4, color: '#2E3624' },
+  invitarCodigoHint: { fontFamily: ViveFonts.regular, fontSize: 11.5, color: '#87835C', marginTop: 2 },
+  invitarLink: { fontFamily: ViveFonts.semibold, fontSize: 13, color: ViveColors.primary },
 
   // Profesionales
   profList: {

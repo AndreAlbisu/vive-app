@@ -24,13 +24,32 @@
 
 | ID | Qué falta | Estado | Quién |
 |---|---|---|---|
-| **L1** | **La videollamada nunca se ejercitó con dos personas adentro** (A5 prueba 2). | 🔴 Abierto. Hace falta agendar una sesión real con `coach-prueba`: la sala abre 15 min antes. | Joaquín / Andre |
-| **L2** | **La comisión real de MP** medida sobre un pago de verdad, no el de $1 (A5 prueba 3). Si no da ~4%, cambia `MP_FEE_PCT_OBSERVED` en `lib/pricing.ts`. | 🔴 Abierto. Es mirar el pago de $4.500 del 19/08 en el panel de MP. | Joaquín / Andre |
-| **L3** | **Prender `CHECKOUT_HABILITADO`** en `web/c/index.html`. | ✅ Verificado 17/09: sigue en `false`. Depende de L1 y L2. | — |
-| **L4** | **DMARC de `vitaapp.com.ar`** — TXT en `_dmarc`, zona en Vercel. Registro en la receta de A5. | ✅ Verificado con `dig` el 17/09: **sigue sin estar**. | Andre |
+| **L1** | ~~**La videollamada nunca se ejercitó con dos personas adentro** (A5 prueba 2).~~ | ✅ **Cerrado 21/09.** Andre la hizo solo, con las dos puntas: cliente desde su iPhone (app) y coach desde la compu (`/sala?booking=…`, identificándose con el mail de `coach-prueba`). **Se vieron y se escucharon.** No hizo falta Joaquín: alcanza con un segundo dispositivo. | — |
+| **L2** | ~~**La comisión real de MP** medida sobre un pago de verdad, no el de $1 (A5 prueba 3).~~ | ✅ **Cerrado 21/09.** No hizo falta el panel: se leyeron los pagos por la API de MP con el token del coach. Los tres pagos de $4.500 (`174555144528`, `174554303062`, `173787714415`) dan el mismo número, **4,30%**, no 4%. `MP_FEE_PCT_OBSERVED = 4.3`. El 4 viejo no estaba mal medido, estaba mal redondeado: sobre $1 la tarifa es 0,04 y los centavos tapan el 0,3. **La duda del IVA se cerró: ya lo incluye** (193,63 / 1,21 = 3,556% de 4.500). | — |
+| **L3** | ~~**Prender `CHECKOUT_HABILITADO`** en `web/c/index.html`.~~ | ✅ **Prendido el 21/09**, una vez cerrados L1, L2, L6 y L39, que era de lo que dependía. ⚠️ **Queda vivo en el momento en que Vercel deployee**: `/c/<slug>` es una página pública, así que desde ese push cualquiera que tenga el link de un profesional puede identificarse y pagar. El `?probar=1` se dejó en la línea, sin efecto, como interruptor para volver atrás. | — |
+| **L4** | ~~**DMARC de `vitaapp.com.ar`**~~ | ✅ **Cerrado 21/09.** `_dmarc` TXT = `v=DMARC1; p=none; rua=mailto:andrealbisu@gmail.com`, puesto con `vercel dns add` (record `rec_ed677faef43c7312ae8d842c`) y verificado resolviendo desde Google, Cloudflare y el autoritativo. Seguro de publicar porque DKIM ya alineaba: ver la nota de abajo. | — |
 | **L5** | **Revisión del abogado** de Términos, Privacidad y Reembolsos (`LEGAL_IS_DRAFT = true`), con A.12 (§10.3) y la duda de si declarar Cloudflare/unpkg obliga a re-pedir consentimiento — que hoy no tiene mecanismo. | 🔴 Abierto. | Andre |
-| **L6** | **Nombre que ve el comprador en Mercado Pago** (Checkout Pro y resumen de tarjeta): sale de la config de la cuenta de MP, no del código. Tiene que decir Vita. | ⚠️ Sin revisar. | Andre |
+| **L6** | ~~**Nombre que ve el comprador en Mercado Pago.**~~ | ✅ **Cerrado 21/09, verificado contra un pago real con tarjeta.** El descriptor del pago `180226658676` dice **`MERPAGO*VITA`**. 🔴 La descripción vieja de esta fila estaba equivocada: decía que salía de la config de la cuenta de MP y no del código, y es al revés (el `collector` es la cuenta del coach, hay una por profesional, no existe config central). Se arregló mandando `statement_descriptor: 'VITA'` en la preferencia (`mp-create-payment` v51). Antes decía `MERPAGO*AUGUSTOUNSAIN`, el nombre personal del profesional. ⚠️ **El campo solo existe en pagos con TARJETA**: en los de dinero en cuenta viene vacío, así que un pago con saldo de MP no sirve para probar esto (se descubrió intentándolo). El prefijo `MERPAGO*` lo pone Mercado Pago y no se puede sacar. | — |
 | **L7** | **Link de la App Store en `app_version_gate.store_url`** el día que se publique. Sin eso, la pantalla de versión vieja dice "Buscá Vita en la App Store" sin botón. | ⏸️ Espera la publicación. Lo carga Claude con un `update`. | — |
+
+📌 **Sobre el DMARC (L4), por si hay que tocarlo de nuevo.** Los mails salen por
+**Resend** desde `no-responder@vitaapp.com.ar` (`supabase/functions/_shared/email.ts`).
+Antes de publicar la política se verificó que las dos firmas ya estaban y alineaban,
+que es lo que hace que `p=none` no pueda romper nada: **DKIM** en
+`resend._domainkey` (firma con `d=vitaapp.com.ar`, alineación directa) y **SPF** en
+`send.vitaapp.com.ar` (`v=spf1 include:amazonses.com ~all`, que es el Return-Path de
+Resend, alineado en modo relajado), más el MX de rebotes a `feedback-smtp.sa-east-1.amazonses.com`.
+
+⚠️ **Los reportes pueden no llegar nunca, y no es un error de configuración.** El
+`rua` apunta a una casilla de Gmail, y el RFC 7489 pide que el dominio de destino
+publique una autorización (`vitaapp.com.ar._report._dmarc.gmail.com`) para aceptar
+reportes de otro dominio. Verificado: **Gmail no la publica**, y no es algo que se
+pueda crear desde acá. El valor de L4 está en el `p=none` publicado, no en los
+informes. Se arregla solo el día que exista la casilla propia del dominio (**L33**).
+
+📌 **Paso siguiente, cuando haya tráfico real:** con unas semanas de mails
+entregados se puede endurecer a `p=quarantine`. No antes: sin volumen no hay con
+qué darse cuenta si algo quedó afuera.
 
 ### L.2 — Limpiar la base antes de abrir
 
@@ -51,27 +70,29 @@
 | **L15** | **La fecha de suspensión de un coach es pública por la API** (`coaches.suspendido_hasta`, legible con la anon key). Cerrarlo pide una vista o función para catálogo, ficha y `/c`. | ⚠️ Abierto (sesión 251). |
 | **L16** | ~~**¿`/c/<slug>` muestra el perfil de un coach suspendido?**~~ | ✅ **Sesión 251**: sí lo mostraba, con botón de reservar. Corregido ahí, en la ficha de la app, en el mensaje de error y en `web-book` (que dejaba una sala huérfana). Probado con un coach real. |
 | **L17** | **Edad y aceptación de Términos las escribe el cliente**: falsificables por su titular. Cerrarlo es moverlas a una edge function en el alta. | ⚠️ Abierto (`SCHEMA.md`). |
-| **L40** | **La pantalla de entrada puede quedarse cargando para siempre.** `AuthContext` ya cubre que `getSession()` RECHACE (red caída → entra como anónimo), pero no que la conexión se CUELGUE sin responder: ahí `loading` nunca pasa a false y `app/index.tsx` gira el spinner sin fin. Es el *"la instalé y me quedé en una hoja en blanco"* que se repite 9 veces en el Google Play de Selia (`competencia-selia.md` §24.3). | 🔴 Abierto (sesión 260). Se cierra con un límite de unos segundos y seguir como visitante. |
+| **L40** | ~~**La pantalla de entrada puede quedarse cargando para siempre.**~~ | ✅ **Cerrado 21/09.** `getSession()` ahora corre contra un reloj de 8 s (`TOPE_SESION_MS` en `AuthContext`, helper `lib/conTope.ts` con 5 tests): si no contesta, se entra como visitante. **No desloguea a nadie** — la sesión sigue guardada y, si llega tarde o se refresca después, se aplica igual y la pantalla redirige sola. 📱 **Falta verlo en el teléfono**: se reproduce con el wifi conectado a una red sin internet, que es el caso que la promesa deja colgada (el modo avión no sirve: ahí la promesa rechaza, y esa rama ya andaba). |
 | **L18** | **Vista pública del catálogo**: taparía `is_admin`, `birth_date` y `nationality` a `authenticated`. Mejora de A4, no agujero. | 🟡 Para Andre. |
 
 ### L.4 — Probar en el teléfono / navegador (hecho, no visto)
 
 | ID | Qué | Origen |
 |---|---|---|
-| **L19** | Una nota compartida por el coach aparece sola del lado del cliente (dos teléfonos, chat abierto). | 242 |
+| **L19** | ~~Una nota compartida por el coach aparece sola del lado del cliente.~~ | ✅ **Cerrado 21/09**, y probó más de lo que pedía: **al coach le aparecen las dos notas y al cliente solo la pública**, así que la privada no se filtra. Aparecen al instante (llegan empujadas a una pantalla ya abierta, a diferencia de abrir un chat, que es una carga fría). | 242 |
 | **L20** | La app entera con el color nuevo de texto secundario (`#566245`, 38 archivos). | 242 |
 | **L21** | Recorrido crítico con VoiceOver/TalkBack, sobre todo el calendario. | 242 |
 | **L22** | Checkout web con `?probar=1`: sin el tilde de edad no pide código; después queda `age_confirmed = true`. | 241 |
 | **L23** | Sanciones desde el celular: advertencia con captura adjunta, abrirla, levantarla; y un CBU en el chat que rebote y aparezca en Administración → Sanciones. | 242, 247 |
 | **L24** | Versión mínima: `min_version = 9.9.9` en iOS, ver la pantalla de bloqueo, volver a `1.0.0`. | 245 |
-| **L37** | **El recorrido de entrada con cuenta obligatoria** (sesión 255): bienvenida → bifurcación → "Quiero crecer" → registro con Google → tiene que aparecer "¿Cómo te gustaría empezar?". Repetir con mail (pasa por el código) y con una cuenta existente vía "Ya tengo cuenta" (tiene que ir directo a la app). Y **sin cuenta**, tocar "¿Necesitás ayuda ahora?" al pie de la bifurcación, del registro y del login: tiene que abrir las líneas de crisis. | 255 |
-| **L39** | 🔴 **La videollamada en un iPhone, entrando desde la Sala.** La sesión 260 cambió cómo se abre en iOS (Safari en vez del navegador in-app, porque ahí el permiso de cámara y micrófono no es confiable): es un arreglo sin verificar sobre un camino sin verificar. Se cierra junto con L1, en la misma sesión de prueba. | 260 |
+| **L37** | **El recorrido de entrada con cuenta obligatoria** (sesión 255): bienvenida → bifurcación → "Quiero crecer" → registro con Google → tiene que aparecer "¿Cómo te gustaría empezar?". Repetir con mail (pasa por el código) y con una cuenta existente vía "Ya tengo cuenta" (tiene que ir directo a la app). Y **sin cuenta**, tocar "¿Necesitás ayuda ahora?" al pie del registro y del login: tiene que abrir las líneas de crisis. 📌 **De la bifurcación se sacó el 21/09 a pedido de Andre**, así que ahí ya no va. | 255 |
+| **L39** | ~~**La videollamada en un iPhone, entrando desde la Sala.**~~ | ✅ **Cerrado 21/09: el arreglo de la sesión 260 anda.** Desde el iPhone abrió **Safari de verdad**, pidió permiso de cámara y micrófono, y la llamada entró. O sea que `Linking.openURL` en iOS hace lo que se esperaba y el bug que le pasa a Selia no nos pasa. | 260 |
 | **L25** | ~~Primera corrida del cron de "tu profesional volvió"~~ | ✅ Verificado el 17/09: corre cada hora con 200 y `{"revisados":0}`; el borrado diario de avisos corrió con `DELETE 0`. |
 
 ### L.5 — No bloquea
 
 | ID | Qué | Estado |
 |---|---|---|
+| **L41** | ~~🔊 **Los cuatro sonidos ambiente suenan mal.**~~ | ✅ **Resuelto el 21/09.** Pasaron de **mono 22 kHz 63 kbps** (sobre un corte ya comprimido a 31) a **estéreo 44,1 kHz 128 kbps**, encodeados una sola vez desde el original. Tres son grabaciones de Wikimedia Commons verificadas una por una (lluvia: valvalion, **CC BY 3.0, con crédito en pantalla**; bosque: nille y olas: earthcalling, los dos dominio público) y el ruido marrón se **genera**. El tramo de cada uno se eligió midiendo (`scripts/elegir-tramo.py`), no a oído. El bundle pasó de 2,6 MB a 4,5 MB. 📱 **Falta escucharlos**: se eligieron por licencia, specs y medición de estabilidad, no de oído. ⚠️ **Olas dura 32s** porque el original libre dura 40: se nota más el loop, y si aparece mejor fuente se reemplaza con el mismo script. |
+| **L42** | 🔊 **Los sonidos ambiente ahora siguen sonando con la pantalla apagada.** Antes se cortaban: `shouldPlayInBackground` viene en `false` y nadie lo prendía, y en iPhone faltaba declarar `UIBackgroundModes: ["audio"]`. Era el caso de uso principal roto, porque nadie se duerme mirando la pantalla. | ⚠️ **Hecho el 21/09, SIN PROBAR. No se puede probar en Expo Go**: toca configuración nativa y necesita una build de desarrollo. Tres cosas para mirar ahí: que siga sonando con el teléfono bloqueado, **que el temporizador siga contando y apague solo a los 5/15/30 minutos** (si el sistema congela la app, el riesgo es pasar de "se corta" a "no se corta nunca"), y que en Android no lo mate el sistema, donde la documentación de SDK 54 solo detalla el caso de iOS. | Andre |
 | **L26** | Etiquetas de accesibilidad: **91 botones de solo ícono en 50 archivos**, la mayoría del lado del coach. | ⏸️ Por tandas. |
 | **L27** | Placeholder del diario (`ViveColors.calm`, 3.39:1). Subirlo lo hace parecer texto ya escrito. | 🟡 Decisión de Andre. |
 | **L28** | Migrar los 30 `FOREST_SOFT` copiados a mano a `ViveColors.softInk`. | ⏸️ Mecánico. |
@@ -110,18 +131,18 @@
 | **M2** | **Salida si ninguno convence** al final del quiz: ver otras opciones y volver a responder | Su red de seguridad (rehacer matching, orientación) | ✅ 17/09. De a 3, "Ver otras opciones", "Cambiar mis respuestas" (vuelve con lo elegido marcado) y "Ver todos los profesionales". Solo muestra perfiles que trabajan el tema |
 | **M3** | **"Avisame cuando tenga horarios"** cuando un profesional no tiene turnos | Su "Solicitar disponibilidad" | ✅ 17/09. Tabla `availability_waitlist`, edge function `availability-notices` con cron horario, probado de punta a punta en producción. Ver SCHEMA.md. 📱 Falta verlo en el teléfono |
 | **M4** | **Calificar la videollamada aparte** del profesional en la reseña | Separa falla técnica de insatisfacción; sirve para L1 | ✅ 17/09. Tabla privada `session_call_feedback`, pregunta opcional en `ReviewScreen`. ⚠️ "No pude entrar" casi nunca llega por acá (la reseña exige sesión completada): ver SCHEMA.md. 📱 Falta verlo en el teléfono |
-| **M14** | **Cómo trabaja el profesional**: estilo (en palabras de la persona) y enfoque (la escuela) | Observación de Andre sobre el quiz de Selia: además de preguntar si querés un psicólogo, pregunta **qué tipo de acompañamiento** querés (su "enfoque", opcional, `competencia-selia.md` §4.a) | ✅ 17/09. `coaches.estilo` + `coaches.enfoques` (ver SCHEMA.md, corridas y probadas con rollback), pantalla "Cómo trabajo" del profesional, cuarta pregunta del quiz y sección nueva en el perfil público. `lib/enfoque.ts`, 20 tests. ⚠️ El estilo ordena y explica, **nunca filtra**. ⚠️ La respuesta del quiz no se persiste: vale para esa corrida. 📱 Falta verlo en el teléfono. 🔒 La escuela pide matrícula verificada (trigger en la base, probado con revocación incluida) |
+| **M14** | **Cómo trabaja el profesional**: estilo (en palabras de la persona) y enfoque (la escuela) | Observación de Andre sobre el quiz de Selia: además de preguntar si querés un psicólogo, pregunta **qué tipo de acompañamiento** querés (su "enfoque", opcional, `competencia-selia.md` §4.a) | ✅ 17/09. `coaches.estilo` + `coaches.enfoques` (ver SCHEMA.md, corridas y probadas con rollback), pantalla "Cómo trabajo" del profesional, cuarta pregunta del quiz y sección nueva en el perfil público. `lib/enfoque.ts`, 20 tests. ⚠️ El estilo ordena y explica, **nunca filtra**. ⚠️ La respuesta del quiz no se persiste: vale para esa corrida. 📱 Falta verlo en el teléfono. 🔒 La escuela pide matrícula verificada (trigger en la base, probado con revocación incluida). ➕ **Ampliado el 21/09** (decisión de Andre sobre lo que hace Selia): el quiz pasa a 7 preguntas (suma cuánto te guíen, hacia dónde mirar y género del profesional), resumen editable antes de los resultados, las respuestas se guardan (`user_quiz_answers`), la escuela cuenta como tendencia cuando el profesional no contestó, y "Cómo trabajo" suma las dos preguntas nuevas. Sigue sin filtrar ni poner rótulos. ⚠️ Revisar la tabla de tendencias por escuela con un profesional. ➕ **Segunda vuelta el 21/09**: tema en dos niveles (hasta 2 áreas y hasta 3 temas concretos, que son los mismos de `coach_topics`), y con nutricionista se saltean las preguntas de cómo trabaja. 🔴 Al compararlo apareció que **al quiz le faltaban 8 temas que los profesionales sí usan** (Duelo, Burnout, Sexualidad…): quien trabajaba solo eso no aparecía nunca. Arreglado, y ahora un test lo controla. 🔴 **Regla: "crisis" nunca es un tema del quiz** (Selia lo tiene): esa respuesta lleva a Ayuda, no a una lista con precios. ➕ **Tercera vuelta el 21/09**: presupuesto con barra; "Cómo trabajás" obligatorio en la postulación (y pendiente en la visibilidad de quien ya estaba); la opción del medio cuenta menos que la exacta y "sobre qué trabajás" va hasta 2, para que marcar todo no convenga; y **el mazo de Profesionales usa el quiz como una barra más** (cada tarjeta sortea primero entre los que encajan, sin ordenar por puntaje, y muestra el motivo), además de destacar en el menú el tema del quiz sin abrir el mazo. 📱 Falta verlo en el teléfono |
 
-| **M15** | 🔴 **Reagendar no existe: hoy solo se puede cancelar.** A quien se le complica 3 horas antes, la única salida es cancelar y perder la plata. | §24.3 de `competencia-selia.md`: es la queja más razonada de su App Store, con reseñas largas y argumentadas. Y **Selia está mejor que nosotros acá**: ellos al menos dejan mover con más de 24hs de anticipación. | 🟡 **Decisión de Andre.** Propuesta a confirmar: mover a otro horario libre del mismo profesional sin perder el pago; fuera de las 24hs libre, dentro de las 24hs una vez y con el profesional pudiendo aceptar o no. Ojo: toca `bookingCancel.ts`, el trigger `mark_refund_on_cancel` y el ranking (el reagendamiento es señal del deck) |
-| **M16** | **Si el profesional mueve la sesión, que el horario nuevo lo elija el usuario** (o que le vuelva la plata). | La queja más furiosa contra Selia: el especialista reagenda a un horario que el paciente no puede y el paciente pierde igual. | 🟡 **Decisión de Andre**, y depende de M15. 📌 Hoy Vita ya está bien en la mitad importante: si el profesional cancela tarde, `mark_refund_on_cancel` devuelve la plata igual. Lo que falta es la regla para cuando **mueve** en vez de cancelar |
+| **M15** | **Reagendar.** Hoy solo se puede cancelar, y quien no puede ir pierde la plata. | §24.3 de `competencia-selia.md`: la queja más razonada de su App Store. Y **Selia está mejor que nosotros acá**: deja mover con más de 24hs. | ✅ **DECIDIDO por Andre el 21/09: libre fuera de las 24hs, una sola vez adentro.** Con más de 24hs el cliente mueve la sesión a cualquier horario libre del profesional sin perder el pago. Dentro de las 24hs puede pedirlo **una vez** y el profesional acepta o no. 🏗️ **Construido el 21/09**, falta verlo en el teléfono: regla pura (`lib/reagendar.ts`, 18 tests), base y funciones (`scripts/add-reagendar.sql`, probadas con rollback), botón "Mover la sesión" en la Sala del cliente, el calendario y el horario reusados con el parámetro `reagendar`, y la tarjeta de aceptar o rechazar en las reservas del profesional. |
+| **M16** | **Si el profesional mueve la sesión.** | La queja más furiosa contra Selia: el especialista reagenda a un horario que el paciente no puede y el paciente pierde igual. | ✅ **DECIDIDO por Andre el 21/09: el profesional PROPONE y el cliente ELIGE.** El profesional ofrece horarios; el cliente toma uno o pide que le devuelvan la plata. Nunca se le impone un horario. 🏗️ **Construido el 21/09**, falta verlo en el teléfono. `scripts/add-proponer-horarios.sql` (corrido, probado con rollback): `proponer_horarios` (hasta 3, reemplaza la tanda anterior), `elegir_horario` (el cliente toma una) y `rechazar_horarios` (no puede con ninguna: se cancela y **le vuelve la plata aunque sea tardía**, porque se escribe `cancelled_by = 'coach'`). En la app: el menú "⋯" del profesional pasa a decir **"Proponer otro horario"** en vez del "llega pronto" que estuvo ahí hasta hoy, y el cliente ve las opciones en la Sala. |
 
 ### M.2 — Primer mes después de lanzar
 
 | ID | Qué | Por qué | Estado |
 |---|---|---|---|
-| **M5** | **Cambio de profesional sin culpa** después de la primera sesión | Su "¿Querés continuar con este especialista?" + sesión sin costo con otro | 🟡 **Decisión de Andre**: cómo convive con la garantía de reintegro (T&C §9.3) |
+| **M5** | **Cambio de profesional sin culpa** después de la primera sesión | Su "¿Querés continuar con este especialista?" + sesión sin costo con otro | ✅ **DECIDIDO por Andre el 21/09: o reintegro o cambio, no los dos.** Si la primera sesión no convenció, la persona elige: le vuelve la plata (garantía de T&C §9.3) **o** la usa con otro profesional. Una sesión pagada no puede rendir dos. 🔴 **Al construirlo apareció que la versión de Selia no se puede pagar con nuestros rieles**: con MP el pago va directo a la cuenta del profesional, así que Vita no tiene de dónde sacar una sesión gratis con otro. Andre eligió la versión que sí se puede: **preguntar y dar dos salidas**, el reintegro de §9.3 (que ya devuelve todo) o ver otros profesionales. 🏗️ **Construido el 21/09**: la tarjeta de fin de sesión ahora ofrece las dos, y **la garantía se pide desde la app** (`guarantee-claim` con `solicitar`), no por mail. Falta verlo en el teléfono. |
 | **M6** | **Próxima sesión sugerida por el profesional** ("en una semana") | Su "Próxima sesión sugerida"; refuerza la anti-fuga n.º 1 | ✅ 17/09. Tabla `next_session_suggestions` (ver SCHEMA.md) + app: tarjeta con las cinco opciones para el profesional al terminar la sesión, la sugerencia se lee en la tarjeta de cierre del cliente, y `/booking-calendar` abre en ese día y lo marca (queda elegido solo si hay horario libre). `lib/proximaSesion.ts`, 13 tests. 📱 Falta verlo en el teléfono |
-| **M7** | **Referidos** con descuento pagado de la comisión de Vita | Su 50% al amigo + créditos | 🟡 **Decisión de Andre**: cuánto y para quién |
+| **M7** | **Referidos** con descuento pagado de la comisión de Vita | Su 50% al amigo + créditos | ✅ **DECIDIDO por Andre el 21/09: descuento para el que llega, nada para el que invita.** Baja la barrera justo donde está el miedo a probar, y cuesta la mitad por alta que premiar a los dos. Sale de la comisión de Vita, nunca del bolsillo del profesional. 🏗️ **Construido el 21/09**: **10%**, elegido entre 10/15/20 mirando la cuenta sobre una sesión de $7.000. Base y funciones corridas y probadas, y `mp-create-payment` v52 ya lo aplica bajando el precio y la comisión a la vez. ✅ **Parte visible hecha el 21/09**: sección "Invitar a alguien" en el Perfil (el código propio se comparte con un toque, y quien recién llega puede escribir el de otro), y el checkout **muestra el precio ya con el descuento** más la línea que explica por qué. ⚠️ **Sigue sin estar en PayPal ni USDT**: ahí el precio se cobra entero. |
 
 ### M.3 — Cuando haya gente usando la app
 
@@ -132,6 +153,9 @@
 | **M10** | ~~**Preparar la sesión**~~ **YA EXISTE**: es el "paquete para la sesión" (`docs/paquete-para-la-sesion.md`, `lib/paquete.ts`, `app/paquete.tsx`, `components/OfrecerPaqueteBanner.tsx`), construido y probado en dispositivo | No hay que construirlo. Lo que sigue abierto es la **decisión de Andre del 14/09**: si se invierte el origen del material ("anotar para la sesión" en el momento, en vez de check-ins), y si el diario entra o la nota alcanza. Ver §9 de ese doc |
 | **M11** | **Empresas** | Cuando haya usuarios y reseñas para mostrar |
 | **M17** | **Recordatorio para llenar el diario** | Pedido textual de un usuario de Selia de 5 estrellas (§24.2): *"me gustaría que tuviera una opción de recordatorio para llenar el diario"*. Es un pedido ya validado y gratis. Existe `lib/resourceReminders.ts` para recursos, no para el diario |
+| **M19** | **Terapia de pareja, familiar e infanto-juvenil** | Selia pregunta el tipo de terapia antes que nada (21/09). Pide: que el profesional lo declare, sesiones con dos personas en la sala, y para menores el consentimiento de los adultos responsables (legal). No es solo una pregunta más del quiz |
+| **M20** | **Acompañamiento afirmativo LGBTQ+** | Opción de Selia en "qué te gustaría lograr" (21/09). Marca que declara el profesional sobre sí mismo + pregunta opcional en el quiz. Barato; a quien lo necesita le cambia todo |
+| **M21** | **Búsqueda describiendo lo que te pasa** (la "búsqueda inteligente" de Selia) | Podría ser Sofía. 🔒 Antes: el texto es dato de salud y viajaría a un modelo fuera del país (ver `transferencias-internacionales.md`) |
 | **M18** | **Bajarse los archivos que manda el profesional por el chat** | Queja de Selia (§24.3): hay que abrir la web para descargarlos. ⚠️ **Falta confirmar si nos aplica**: no se verificó si la Sala de Vita permite adjuntos |
 
 ### M.4 — Fuera de la app
@@ -312,15 +336,36 @@ la sesión: la sala se abre 15 minutos antes.
 medido sobre un pago de $1**: `mercadopago_fee` 0,04 sobre 1,00, o sea ≈4%. A ese
 monto, cualquier componente fijo de la tarifa distorsiona el porcentaje.
 
-Buscá en el panel de Mercado Pago el pago **de $4.500 del 19/08/2026** (segunda
-sesión pagada de verdad, par Joaquín + Coach Prueba) y mirá el desglose:
+✅ **HECHA el 21/09/2026, sin panel.** Se leyeron los pagos por la API de MP
+(`GET /v1/payments/<id>`) con el `access_token` del coach que ya está en
+`coach_mp_accounts`, que es la misma vía por la que se había medido el de $1.
 
-- cuánto se llevó **Mercado Pago**,
-- cuánto se llevó **VIVE** (`application_fee`),
-- cuánto quedó **neto para el coach**.
+Los tres pagos de $4.500 con tarjeta (`174555144528` y `174554303062` del 19/08,
+`173787714415` del 20/08) dan **exactamente el mismo desglose**:
 
-Si el porcentaje de MP no da ~4%, hay que actualizar `MP_FEE_PCT_OBSERVED` en
-`lib/pricing.ts` — y con él cambia lo que la app le promete al coach.
+| | |
+|---|---|
+| Mercado Pago (`mercadopago_fee`) | **193,63** = **4,30%** |
+| VIVE (`application_fee`) | 675 (el 15% del tramo recurrente, correcto) |
+| Neto del coach (`net_received_amount`) | 3.631,37 |
+
+**`MP_FEE_PCT_OBSERVED` pasó de 4 a 4,3.** El 4 no estaba mal medido: sobre $1 la
+tarifa es 0,04 y el redondeo a centavos tapaba el 0,3.
+
+📌 **La duda del IVA se cerró**: 193,63 / 1,21 = 160,02, que es el 3,556% de
+4.500. El número que descuenta MP ya viene con IVA adentro.
+
+⚠️ **Lo que sigue sin saberse**: los tres pagos son con **tarjeta de crédito** y
+**acreditación inmediata** (`money_release_date` a los 3 minutos). El de $1 era
+dinero en cuenta. La tarifa cambia con las dos cosas, así que el 4,3% se sigue
+mostrando con "≈" y la pantalla del coach ahora aclara que depende también del
+medio de pago, no solo del plazo de acreditación.
+
+🔴 **Hallazgo al pasar, para Andre**: los **7** pagos de MP a precio real que hay
+en la base figuran `reembolsado`, incluido el del 19/08 que
+`docs/fiscal-instrucciones.md` lista como *"confirmada, sin reembolso"*. O ese
+doc quedó viejo, o el reembolso pasó después de escribirlo. Toca revisarlo antes
+de usarlo para algo fiscal, y se cruza con **L9**.
 
 #### Y una cosa de DNS, si te queda a mano
 

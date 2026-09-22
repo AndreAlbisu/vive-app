@@ -469,6 +469,12 @@ export type ReflectionInput = {
   writingThisWeek: number;
   /** ¿El ánimo cayó fuerte hoy respecto del check-in anterior? Ver decisión 3. */
   sharpDrop: boolean;
+  /** mood_id (1-5) del registro de HOY, o null si todavía no registró.
+   *
+   *  Lo usa solo la rama de tendencia, para no contradecir lo que la persona
+   *  acaba de marcar. Ver el 🔴 de "Cambio de dirección". Opcional para que los
+   *  llamados que no lo conocen sigan andando como antes. */
+  todayMood?: number | null;
   /** ¿Un profesional le dejó un recurso que todavía no abrió?
    *
    *  🔴 **Es la única señal que NO es una lectura de sus propios datos**: es un
@@ -722,7 +728,26 @@ export function buildReflection(input: ReflectionInput): Reflection {
   // ── 4. Cambio de dirección ────────────────────────────────────────────────
   // Solo la dirección: ninguna de estas frases nombra el nivel absoluto.
   if (recentMoods.length >= MIN_SAMPLE && historicMoods.length >= MIN_SAMPLE) {
-    const delta = avgRecent - average(historicMoods);
+    const avgHistoric = average(historicMoods);
+    const delta = avgRecent - avgHistoric;
+
+    // 🔴 El día de hoy manda sobre la tendencia (21/09/2026). Andre marcó
+    // "Cansado" y la tarjeta le contestó *"Hay un cambio esta semana, para
+    // arriba"*. El promedio de 7 días seguía arriba, así que era correcto en
+    // números, pero leído un segundo después de decir "estoy cansado" suena a
+    // que Sofía no escuchó. Si hoy contradice la dirección, la tendencia se
+    // calla y la tarjeta cae a la señal siguiente (sesiones, racha, etc.).
+    //
+    // "Contradice" = hoy quedó un punto entero o más por debajo del promedio de
+    // la semana, o por debajo de lo que era su normal antes de esta semana. Al
+    // revés para `trend-down`.
+    //
+    // ⚠️ NO se usa "hoy ≤ 2" como corte absoluto: alguien que sale de un pozo
+    // (histórico en 1, semana en 2) y hoy marca "Cansado" SÍ va para arriba, y
+    // es a quien más le sirve escucharlo (test "viene CANSADO pero mejor").
+    const today = input.todayMood ?? null;
+    const hoyContradiceSubida = today != null && (today <= avgRecent - 1 || today < avgHistoric);
+    const hoyContradiceBajada = today != null && (today >= avgRecent + 1 || today > avgHistoric);
 
     // ⚠️ Dos cosas que la revisión de voz del 04/09 sacó de acá y conviene no
     // volver a poner:
@@ -743,7 +768,7 @@ export function buildReflection(input: ReflectionInput): Reflection {
     // "las anteriores" (que era el modo devolución/pasado). El delta sigue
     // decidiendo QUÉ rama, pero la frase ya no dice "más/menos que antes".
     // Se mantiene la invariante de que la tendencia NO nombra un nivel absoluto.
-    if (delta >= CHANGE_THRESHOLD) {
+    if (delta >= CHANGE_THRESHOLD && !hoyContradiceSubida) {
       return pick(dayKey, [
         // 🔴 Antes cerraba con *"¿Lo notás vos también?"*, y el usuario del
         // consejo del 08/09 la señaló por nombre: *"me suena a chatbot de call
@@ -754,12 +779,17 @@ export function buildReflection(input: ReflectionInput): Reflection {
         // `rejectCopy` frena desde el 07/09 —solo que dicha al revés, así que
         // ningún patrón la agarraba—. La app no nota nada: le llegó un promedio.
         r('Algo se está ', 'acomodando', ' estos días. Y no fue magia.', 'warm', 'trend-up'),
-        r('Hay un ', 'cambio', ' esta semana, para arriba. No sé qué se movió, pero algo se movió.', 'warm', 'trend-up'),
+        // 📌 Antes: *"Hay un cambio esta semana, para arriba. No sé qué se
+        // movió, pero algo se movió."* Repetía "movió" y el "no sé" hacía
+        // sonar a Sofía perdida, no humilde. Se reescribió el 21/09/2026.
+        // Presente y sin "que antes" (giro a presente, arriba), sin inferir qué
+        // hizo la persona: si ella sabe qué cambió, lo anota ella.
+        r('Esta semana viene ', 'más liviana', '. Si sabés qué cambió, vale la pena anotarlo.', 'warm', 'trend-up'),
         r('Venís ', 'levantando', ', y eso no pasa solo. ¿Sabés qué se movió?', 'warm', 'trend-up'),
       ]);
     }
 
-    if (delta <= -CHANGE_THRESHOLD) {
+    if (delta <= -CHANGE_THRESHOLD && !hoyContradiceBajada) {
       return pick(dayKey, [
         r('Estos días vienen ', 'más cuesta arriba', '. Si necesitás bajar un cambio, bajalo.', 'gentle', 'trend-down'),
         r('Venís ', 'un poco más abajo', ' de lo habitual. Pasa, y no dice nada malo de vos.', 'gentle', 'trend-down'),

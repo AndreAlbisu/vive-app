@@ -1,5 +1,9 @@
 // M14 (docs/problemas-abiertos.md): cómo trabaja el profesional.
 //
+// Desde el 21/09/2026 son cuatro: estilo, cuánto guía, sobre qué trabaja
+// (las tres se le preguntan a la persona) y la escuela. El orden de abajo sigue
+// valiendo para las dos originales.
+//
 // Dos preguntas distintas, y el orden importa. Primero el ESTILO, en las mismas
 // palabras en que se le pregunta a la persona en el quiz: es lo único que el
 // quiz mira para ordenar y explicar. Después el ENFOQUE, con el nombre técnico
@@ -34,6 +38,13 @@ import { useAuth } from '@/context/AuthContext';
 import {
   ENFOQUES,
   ESTILO_OPCIONES_COACH,
+  GUIA_OPCIONES_COACH,
+  FOCO_OPCIONES_COACH,
+  MAX_FOCOS,
+  esGuiaCoach,
+  esFoco,
+  type GuiaCoach,
+  type Foco,
   MAX_ENFOQUES,
   enfoquesAGuardar,
   esEnfoque,
@@ -54,6 +65,10 @@ export default function CoachEnfoqueScreen() {
   const [tienePerfil, setTienePerfil] = useState(false);
   const [estilo, setEstilo] = useState<EstiloCoach | null>(null);
   const [enfoques, setEnfoques] = useState<Enfoque[]>([]);
+  // M14 ampliado (21/09/2026): las otras dos preguntas que se le hacen a la
+  // persona en el quiz, con las mismas ideas y en primera persona.
+  const [guia, setGuia] = useState<GuiaCoach | null>(null);
+  const [focos, setFocos] = useState<Foco[]>([]);
   // La escuela solo la declara quien tiene matrícula verificada por Vita.
   const [hasMatricula, setHasMatricula] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -64,7 +79,7 @@ export default function CoachEnfoqueScreen() {
     (async () => {
       const { data } = await supabase
         .from('coaches')
-        .select('estilo, enfoques, has_matricula')
+        .select('estilo, enfoques, guia, focos, has_matricula')
         .eq('profile_id', user.id)
         .maybeSingle();
 
@@ -74,6 +89,9 @@ export default function CoachEnfoqueScreen() {
       const e = (data as { estilo?: string | null }).estilo;
       setEstilo(esEstiloCoach(e) ? e : null);
       setEnfoques((((data as { enfoques?: string[] }).enfoques) ?? []).filter(esEnfoque));
+      const g = (data as { guia?: string | null }).guia;
+      setGuia(esGuiaCoach(g) ? g : null);
+      setFocos((((data as { focos?: string[] }).focos) ?? []).filter(esFoco));
       setLoading(false);
     })();
   }, [user]);
@@ -94,12 +112,24 @@ export default function CoachEnfoqueScreen() {
     });
   }
 
+  function toggleFoco(id: Foco) {
+    setFocos(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      // El tope también está en el CHECK de la base.
+      if (prev.length >= MAX_FOCOS) {
+        Alert.alert('Hasta dos', 'Elegí las dos que más te representen. Marcar las tres no ayuda a que te encuentren.');
+        return prev;
+      }
+      return [...prev, id];
+    });
+  }
+
   async function handleSave() {
     if (!user) return;
     setSaving(true);
     const { error } = await supabase
       .from('coaches')
-      .update({ estilo, enfoques: enfoquesAGuardar(hasMatricula, enfoques) })
+      .update({ estilo, guia, focos, enfoques: enfoquesAGuardar(hasMatricula, enfoques) })
       .eq('profile_id', user.id);
     setSaving(false);
 
@@ -170,6 +200,56 @@ export default function CoachEnfoqueScreen() {
                 })}
               </View>
 
+              <View style={s.block}>
+                <Text style={s.blockTitle}>Cuánto guiás</Text>
+                <Text style={s.blockHint}>
+                  A la persona le preguntamos si quiere que la guíen o prefiere elegir ella el camino.
+                </Text>
+                {GUIA_OPCIONES_COACH.map(op => {
+                  const activo = guia === op.id;
+                  return (
+                    <TouchableOpacity
+                      key={op.id}
+                      style={[s.option, activo && s.optionActive]}
+                      onPress={() => setGuia(activo ? null : op.id)}
+                      activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: activo }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.optionText, activo && s.optionTextActive]}>{op.label}</Text>
+                        <Text style={[s.optionDesc, activo && s.optionDescActive]}>{op.desc}</Text>
+                      </View>
+                      {activo && <MaterialIcons name="check" size={18} color="#F7EFE4" />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={s.block}>
+                <Text style={s.blockTitle}>Sobre qué trabajás</Text>
+                <Text style={s.blockHint}>
+                  Hasta {MAX_FOCOS}. A la persona le preguntamos si quiere entender lo que vivió, resolver algo de ahora o repensar hacia dónde va.
+                </Text>
+                {FOCO_OPCIONES_COACH.map(op => {
+                  const activo = focos.includes(op.id);
+                  return (
+                    <TouchableOpacity
+                      key={op.id}
+                      style={[s.option, activo && s.optionActive]}
+                      onPress={() => toggleFoco(op.id)}
+                      activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: activo }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.optionText, activo && s.optionTextActive]}>{op.label}</Text>
+                        <Text style={[s.optionDesc, activo && s.optionDescActive]}>{op.desc}</Text>
+                      </View>
+                      {activo && <MaterialIcons name="check" size={18} color="#F7EFE4" />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
               {/* Sin matrícula verificada no se ofrece: las seis son escuelas
                   de psicología, y declarar una sin matrícula insinúa en el
                   perfil una profesión que Vita no chequeó. La regla de verdad
@@ -212,7 +292,7 @@ export default function CoachEnfoqueScreen() {
               )}
 
               <Text style={s.nota}>
-                Las dos son opcionales. Si no contestás, no se muestra nada y tampoco te deja afuera de las sugerencias.
+                Todo es opcional. Si no contestás algo, no se muestra y tampoco te deja afuera de las sugerencias.
               </Text>
               <View style={{ height: 20 }} />
             </ScrollView>

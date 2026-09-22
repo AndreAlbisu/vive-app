@@ -24,6 +24,7 @@ import { encryptMessage } from '@/lib/encryption';
 import { isCancelLate } from '@/lib/bookingHelpers';
 import { edadDesde } from '@/lib/time';
 import { confirmBooking, rejectBooking } from '@/lib/coachBookingActions';
+import { responderReagendado } from '@/lib/reagendarApi';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 
@@ -151,6 +152,15 @@ function groupAvailability(blocks: WeeklyBlock[]): AvailabilityRow[] {
 }
 
 // ── Screen ───────────────────────────────────────────────────────────────────
+/** M15: un pedido de cambio de horario, con la reserva que pide mover. */
+type CambioPedido = {
+  id: string;
+  fecha: string;
+  hora: string;
+  booking_id: string;
+  bookings: { scheduled_date: string; scheduled_time: string } | null;
+};
+
 export default function CoachReservasScreen() {
   const router = useRouter();
   const segments = useSegments();
@@ -164,6 +174,11 @@ export default function CoachReservasScreen() {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  // M15: los pedidos de cambio de horario de último momento. Van aparte de
+  // `bookings` porque no son reservas: son una pregunta sobre una reserva que
+  // ya existe y que sigue en pie mientras tanto.
+  const [cambios, setCambios] = useState<CambioPedido[]>([]);
+  const [respondiendo, setRespondiendo] = useState<string | null>(null);
   const [weeklyBlocks, setWeeklyBlocks] = useState<WeeklyBlock[]>([]);
 
   /** Se inició un cobro y todavía no se acreditó.
@@ -233,8 +248,37 @@ export default function CoachReservasScreen() {
     ? startMs(confirmedUpcoming[0].scheduled_date, confirmedUpcoming[0].scheduled_time) - Date.now() < 24 * 60 * 60 * 1000
     : false;
 
+  const cargarCambios = useCallback(async (cid: string) => {
+    const { data } = await supabase
+      .from('reschedule_requests')
+      .select('id, fecha, hora, booking_id, bookings!inner(coach_id, scheduled_date, scheduled_time, user_id)')
+      .eq('estado', 'pendiente')
+      .eq('pedida_por', 'cliente')
+      .eq('bookings.coach_id', cid)
+      .order('created_at', { ascending: true });
+    setCambios((data ?? []) as unknown as CambioPedido[]);
+  }, []);
+
+  // 📌 El nombre sale de las reservas que ya están cargadas y no de otra
+  // consulta: la sesión que se quiere mover está confirmada, así que su fila ya
+  // vino con el perfil resuelto.
+  const nombreDe = useCallback((bookingId: string) => {
+    const b = bookings.find(x => x.id === bookingId);
+    return (b?.userName ?? '').trim().split(' ')[0] || 'Tu paciente';
+  }, [bookings]);
+
+  async function responderCambio(id: string, acepta: boolean) {
+    if (respondiendo) return;
+    setRespondiendo(id);
+    const error = await responderReagendado(id, acepta);
+    setRespondiendo(null);
+    if (error) { Alert.alert('No se pudo', error); }
+    await loadBookings();
+  }
+
   const loadBookings = useCallback(async () => {
     if (!user || !coachId) return;
+    void cargarCambios(coachId);
 
     const [{ data: rows, error }, { data: completed }, { data: pattern }] = await Promise.all([
       supabase.from('bookings').select('*').eq('coach_id', coachId)
@@ -279,7 +323,7 @@ export default function CoachReservasScreen() {
 
     setBookings(merged);
     setLoading(false);
-  }, [user, coachId]);
+  }, [user, coachId, cargarCambios]);
 
   useEffect(() => {
     if (!user) return;
@@ -376,7 +420,17 @@ export default function CoachReservasScreen() {
           ? { pathname: '/sala', params: { sala_id: booking.sala_id } }
           : '/sala'),
       },
-      { text: 'Reprogramar', onPress: () => Alert.alert('Reprogramar', 'La reprogramación llega pronto. Por ahora podés cancelar y coordinar un nuevo horario por chat') },
+      {
+        // M16. Reemplaza al "llega pronto" que estuvo acá hasta el 21/09/2026.
+        // 🔴 El profesional PROPONE, no mueve: el horario nuevo lo elige el
+        // cliente, y si no le sirve ninguno se le devuelve la plata aunque falte
+        // menos de un día. Es la queja más furiosa contra Selia.
+        text: 'Proponer otro horario',
+        onPress: () => router.push({
+          pathname: '/booking-calendar',
+          params: { coachId: user!.id, name: booking.userName, proponer: booking.id },
+        }),
+      },
       { text: 'Cancelar sesión', style: 'destructive', onPress: () => cancelConfirmed(booking) },
       { text: 'Cerrar', style: 'cancel' },
     ]);
@@ -452,6 +506,59 @@ export default function CoachReservasScreen() {
                   }}>
                   <Text style={s.editAvailBtnTxt}>Editar disponibilidad</Text>
                 </TouchableOpacity>
+              </>
+            )}
+
+            {/* M15: cambios de horario pedidos sobre la hora. 🔴 Van ARRIBA de
+                "Por confirmar" porque son lo único de esta pantalla con reloj:
+                la sesión que se quiere mover es en menos de un día, así que una
+                respuesta tardía equivale a un "no". Una reserva por confirmar
+                puede esperar; esto no.
+
+                📌 La sesión original sigue en pie mientras el profesional
+                decide, y el horario pedido NO queda bloqueado para nadie
+                (decisión de Andre, 21/09): si alguien lo toma antes, aceptar
+                falla con "ocupado" y el pedido queda vencido. */}
+            {cambios.length > 0 && (
+              <>
+                <View style={s.stitle}>
+                  <Text style={s.stitleB}>Cambios de horario</Text>
+                  <Text style={s.stitleSpan}>
+                    {cambios.length === 1 ? '1 pedido' : `${cambios.length} pedidos`}
+                  </Text>
+                </View>
+                {cambios.map(c => (
+                  <View key={c.id} style={s.req}>
+                    <Text style={s.cambioTxt}>
+                      <Text style={s.cambioB}>{nombreDe(c.booking_id)}</Text>
+                      {' no puede a la hora que habían quedado.'}
+                    </Text>
+                    <Text style={s.cambioDe}>
+                      {c.bookings
+                        ? `${fullDate(c.bookings.scheduled_date)}, ${c.bookings.scheduled_time}`
+                        : 'La sesión de siempre'}
+                    </Text>
+                    <Text style={s.cambioA}>{`Pide pasarla al ${fullDate(c.fecha)}, ${c.hora}`}</Text>
+                    <View style={s.cambioBtns}>
+                      <TouchableOpacity
+                        style={s.cambioSi}
+                        disabled={respondiendo === c.id}
+                        onPress={() => responderCambio(c.id, true)}
+                        activeOpacity={0.85}>
+                        <Text style={s.cambioSiTxt}>
+                          {respondiendo === c.id ? 'Un momento…' : 'Aceptar el cambio'}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={s.cambioNo}
+                        disabled={respondiendo === c.id}
+                        onPress={() => responderCambio(c.id, false)}
+                        activeOpacity={0.7}>
+                        <Text style={s.cambioNoTxt}>No puedo</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
               </>
             )}
 
@@ -665,6 +772,20 @@ const s = StyleSheet.create({
   // Por confirmar
   req: { backgroundColor: CARD, borderWidth: 1, borderColor: TERRA_LINE, borderRadius: 20, padding: 14, marginBottom: 9 },
   reqTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+
+  // M15. Sin avatar a propósito: acá no se decide sobre una persona nueva, se
+  // decide sobre una sesión que ya está acordada. Lo que importa es el par de
+  // horarios, y una foto grande arriba empujaría los dos renglones que sí hay
+  // que leer.
+  cambioTxt: { fontSize: 13, fontFamily: ViveFonts.regular, color: FOREST, lineHeight: 18 },
+  cambioB: { fontFamily: ViveFonts.semibold },
+  cambioDe: { fontSize: 12, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 8, textDecorationLine: 'line-through' },
+  cambioA: { fontSize: 13, color: FOREST, fontFamily: ViveFonts.semibold, marginTop: 2 },
+  cambioBtns: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 12 },
+  cambioSi: { backgroundColor: FOREST, borderRadius: 999, paddingVertical: 9, paddingHorizontal: 16 },
+  cambioSiTxt: { color: CREAM, fontFamily: ViveFonts.semibold, fontSize: 13 },
+  cambioNo: { paddingVertical: 9 },
+  cambioNoTxt: { color: FOREST_SOFT, fontFamily: ViveFonts.medium, fontSize: 13 },
   reqName: { fontSize: 13, fontFamily: ViveFonts.semibold, color: FOREST },
   reqSub: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 1 },
   pquote: {

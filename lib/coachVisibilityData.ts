@@ -21,7 +21,7 @@ export type VisibilityData = { self: VisibilitySelf; pool: CachedCoach[]; coachI
 export async function loadVisibilitySelf(userId: string): Promise<VisibilityData | null> {
   const { data: coachRow } = await supabase
     .from('coaches')
-    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, availability_status, video_url, instant_booking, suspendido_hasta')
+    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, availability_status, video_url, instant_booking, suspendido_hasta, estilo, guia, focos')
     .eq('profile_id', userId)
     .maybeSingle();
 
@@ -68,6 +68,9 @@ export async function loadVisibilitySelf(userId: string): Promise<VisibilityData
     hasVideo: !!coachRow.video_url,
     instantBooking: !!coachRow.instant_booking,
     suspendidoHasta: (coachRow.suspendido_hasta ?? null) as string | null,
+    estilo: (coachRow.estilo ?? null) as string | null,
+    guia: (coachRow.guia ?? null) as string | null,
+    focos: ((coachRow.focos ?? []) as string[]),
   };
 
   return { self, pool: pool as CachedCoach[], coachId };

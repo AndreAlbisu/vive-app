@@ -46,9 +46,15 @@ export type CachedCoach = {
   /** M14: cómo acompaña, en palabras de la persona (`coaches.estilo`). El quiz
    *  lo usa para ordenar y explicar, nunca para filtrar. Null = no contestó. */
   estilo?: string | null;
-  /** M14: las escuelas, con su nombre técnico (`coaches.enfoques`). Solo se
-   *  muestran en el perfil: a la persona no se le pregunta por esto. */
+  /** M14: las escuelas, con su nombre técnico (`coaches.enfoques`). A la
+   *  persona no se le pregunta por esto. Desde el 21/09 el quiz usa la
+   *  tendencia de la escuela cuando el profesional no contestó estilo, guía o
+   *  foco (`lib/enfoque.ts`). */
   enfoques?: string[];
+  /** M14: cuánto conduce el proceso (`coaches.guia`). Null = no contestó. */
+  guia?: string | null;
+  /** M14: hacia dónde mira el trabajo (`coaches.focos`). */
+  focos?: string[];
 };
 
 let cache: CachedCoach[] | null = null;
@@ -57,7 +63,7 @@ let inflight: Promise<void> | null = null;
 async function _doFetch(): Promise<void> {
   const { data, error } = await supabase
     .from('coaches')
-    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, has_matricula, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, estilo, enfoques, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
+    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, has_matricula, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, estilo, enfoques, guia, focos, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
     .eq('verified', true)
     .eq('availability_status', 'activo')
     // D6 (docs/decisiones-pagos.md): para aparecer en el catálogo hace falta
@@ -119,6 +125,8 @@ async function _doFetch(): Promise<void> {
       priceUsd:    (c.price_usd ?? null) as number | null,
       estilo:      ((c as any).estilo ?? null) as string | null,
       enfoques:    (((c as any).enfoques ?? []) as string[]),
+      guia:        ((c as any).guia ?? null) as string | null,
+      focos:       (((c as any).focos ?? []) as string[]),
       avgRating:   null,
       reviewCount: 0,
       rebookingRate:    null,

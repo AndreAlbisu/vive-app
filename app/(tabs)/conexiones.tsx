@@ -36,6 +36,9 @@ import { altoDeEje } from '@/lib/ejesLayout';
 import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
 import { rankDeck, SLOT_COLORS, type DeckSlotKey } from '@/lib/coachDeckRanking';
 import { anotar } from '@/lib/analytics';
+import { leerRespuestasGuardadas } from '@/lib/quizPendiente';
+import { evaluarParaMazo, topeDeRango, monedaDePresupuesto, type RespuestasQuiz } from '@/lib/quizMatch';
+import { QUIZ_AREAS } from '@/constants/searchData';
 
 // ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
 const FOREST      = '#3F512F';
@@ -162,6 +165,64 @@ export default function ConexionesScreen() {
   // La puerta que el onboarding sugiere. Solo destaca una fila del menú: no
   // filtra, no reordena y no navega.
   const [puertaSugerida, setPuertaSugerida] = useState<string | null>(null);
+  // De dónde salió la sugerencia, para que la métrica no mezcle onboarding y quiz.
+  const origenSugerencia = useRef<'onboarding' | 'quiz' | null>(null);
+
+  // Lo que la persona respondió en el quiz, si lo hizo (21/09/2026). Se relee
+  // al volver a la pantalla: quien sale del quiz y vuelve tiene que ver el
+  // mazo ya ajustado, sin reabrir la app.
+  const [respuestasQuiz, setRespuestasQuiz] = useState<RespuestasQuiz | null>(null);
+  useFocusEffect(useCallback(() => {
+    let cancelado = false;
+    leerRespuestasGuardadas()
+      .then(r => {
+        if (cancelado) return;
+        if (!r) { setRespuestasQuiz(null); return; }
+        setRespuestasQuiz({
+          tema: null,
+          areas: (r.areas ?? (r.topic ? [r.topic] : [])) as string[],
+          subtemas: (r.subtemas ?? []) as string[],
+          tipo: r.professionalType ?? null,
+          presupuesto: null,
+          // Si paga solo en dólares, el tope que vale es el de dólares.
+          ...(monedaDePresupuesto(r.pagos) === 'USD'
+            ? { presupuestoMax: typeof r.budgetMaxUsd === 'number' ? r.budgetMaxUsd : null, presupuestoMoneda: 'USD' as const }
+            : { presupuestoMax: typeof r.budgetMax === 'number' ? r.budgetMax : topeDeRango(r.budget) }),
+          estilo: (r.estilo ?? null) as RespuestasQuiz['estilo'],
+          guia: (r.guia ?? null) as RespuestasQuiz['guia'],
+          foco: (r.foco ?? null) as RespuestasQuiz['foco'],
+          genero: (r.generoPref ?? null) as RespuestasQuiz['genero'],
+          pagos: r.pagos ?? null,
+        });
+      })
+      .catch(() => { /* sin quiz, el mazo sortea como siempre */ });
+    return () => { cancelado = true; };
+  }, []));
+
+  // Sin puerta ni eje por parámetro, el quiz sugiere el tema: la puerta con más
+  // temas en común con lo que eligió. 🔴 Igual que la sugerencia del
+  // onboarding, SOLO destaca una fila del menú: no abre el mazo. Abrir gente
+  // sola es lo que se frenó a propósito (ver el efecto de `ejeParam`).
+  const sugeridaPorQuiz = useRef(false);
+  useEffect(() => {
+    if (!respuestasQuiz || sugeridaPorQuiz.current || puerta || ejeParam || selectedAxisId) return;
+    sugeridaPorQuiz.current = true;
+    const buscados = respuestasQuiz.subtemas && respuestasQuiz.subtemas.length > 0
+      ? respuestasQuiz.subtemas
+      : QUIZ_AREAS.filter(a => (respuestasQuiz.areas ?? []).includes(a.id)).flatMap(a => a.subtemas);
+    let mejor: { id: string; color: string } | null = null;
+    let max = 0;
+    for (const d of DOORS) {
+      const n = d.subtemas.filter(t => buscados.includes(t)).length;
+      if (n > max) { max = n; mejor = d; }
+    }
+    if (!mejor) return;
+    const eje = EJES.find(e => e.color === mejor!.color);
+    if (!eje) return;
+    setSelectedAxisId(eje.id);
+    origenSugerencia.current = 'quiz';
+    setPuertaSugerida(mejor.id);
+  }, [respuestasQuiz, puerta, ejeParam, selectedAxisId]);
 
   // ── Cache poll ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -197,6 +258,7 @@ export default function ConexionesScreen() {
     const eje = EJES.find(e => e.color === door.color);
     if (!eje) return;
     setSelectedAxisId(eje.id);
+    origenSugerencia.current = 'onboarding';
     setPuertaSugerida(door.id);
   }, [puerta]);
 
@@ -264,8 +326,17 @@ export default function ConexionesScreen() {
   }, [coachQuery, coaches]);
   const selectedDoor = selectedDoorId ? DOORS.find(d => d.id === selectedDoorId) ?? null : null;
   const deck = useMemo(
-    () => (selectedDoor ? rankDeck(coachesForDoor(selectedDoor, coaches), user?.id) : []),
-    [selectedDoor, coaches, user?.id],
+    () => (selectedDoor
+      ? rankDeck(
+          coachesForDoor(selectedDoor, coaches),
+          user?.id,
+          undefined,
+          // Con quiz, cada tarjeta sortea primero entre los que encajan con lo
+          // que respondió (ver `evaluarParaMazo`). Sin quiz, como siempre.
+          respuestasQuiz ? c => evaluarParaMazo(c, respuestasQuiz, selectedDoor.subtemas) : undefined,
+        )
+      : []),
+    [selectedDoor, coaches, user?.id, respuestasQuiz],
   );
   // La disponibilidad "esta semana" ahora viene en el cache (`hasSlotThisWeek`,
   // poblado en coachesCache contra la misma vista), así que se fue el fetch
@@ -319,7 +390,8 @@ export default function ConexionesScreen() {
     anotar('conexiones_puerta_abierta', {
       puerta: id,
       sugerida: puertaSugerida ? id === puertaSugerida : null,
-      desde_onboarding: !!puertaSugerida,
+      desde_onboarding: !!puertaSugerida && origenSugerencia.current === 'onboarding',
+      desde_quiz: !!puertaSugerida && origenSugerencia.current === 'quiz',
     });
 
     // Aseguro que el eje quede fijado (por si se abre desde los chips del deck).
@@ -407,6 +479,7 @@ export default function ConexionesScreen() {
                   key={selectedDoorId}
                   horizontal
                   pagingEnabled
+                  style={s.deckScroll}
                   showsHorizontalScrollIndicator={false}
                   onScrollBeginDrag={() => navigation.setOptions({ swipeEnabled: false })}
                   onScrollEndDrag={() => navigation.setOptions({ swipeEnabled: true })}
@@ -416,7 +489,7 @@ export default function ConexionesScreen() {
                   }}
                   scrollEventThrottle={16}>
                   {deck.map((entry) => {
-                    const { coach, slot } = entry;
+                    const { coach, slot, motivo } = entry;
                     const isFav = favoriteIds.has(coach.id);
                     const reason = REASON_STYLES[slot.key];
                     return (
@@ -486,6 +559,15 @@ export default function ConexionesScreen() {
                               <Feather name={slot.icon as any} size={11} color={reason.text} />
                               <Text style={[s.reasonText, { color: reason.text }]}>{slot.label}</Text>
                             </View>
+
+                            {/* Por qué le sirve a ESTA persona, según su quiz.
+                                Solo si encaja con lo que respondió. */}
+                            {!!motivo && (
+                              <View style={s.motivoRow}>
+                                <Feather name="check" size={12} color={FOREST} />
+                                <Text style={s.motivoText} numberOfLines={2}>{motivo}</Text>
+                              </View>
+                            )}
 
                             {/* Con qué se le puede pagar. `compact` porque la
                                 card del deck es angosta y ya tiene el pill de
@@ -784,6 +866,9 @@ export default function ConexionesScreen() {
 }
 
 // ─── Estilos ─────────────────────────────────────────────────────────────────
+// Lugar para la sombra de la card del deck, ver `cardPage`.
+const DECK_SHADOW_ROOM = 44;
+
 const shadow = Platform.select({
   ios: {
     shadowColor: 'rgba(46,54,36,0.22)',
@@ -1145,9 +1230,16 @@ const s = StyleSheet.create({
   cardPage: {
     width: SCREEN_W,
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingTop: 10,
+    // 🔴 La sombra `elevated` de SurfaceCard baja ~40pt (al presionar) y un
+    // ScrollView horizontal recorta lo que se sale de su caja: con 10 de
+    // padding la sombra se veía cortada en seco abajo (21/09/2026). Se le da
+    // el lugar acá y `deckScroll` lo devuelve con margen negativo, así los
+    // puntitos quedan donde estaban, dibujados encima de la sombra.
+    paddingBottom: DECK_SHADOW_ROOM,
     justifyContent: 'center',   // centra la card verticalmente dentro de la página
   },
+  deckScroll: { marginBottom: -(DECK_SHADOW_ROOM - 10) },
   // Rediseño 24/08/2026 (card-otras-estructuras.html §B2) — el contenedor con
   // sombra/grano/borde-gradiente ahora lo da SurfaceCard (mismo tratamiento
   // que "Sobre vos"), no el `cardWrap`/`shadow` local que tenía antes (`shadow`
@@ -1223,6 +1315,8 @@ const s = StyleSheet.create({
     marginTop: 10,
   },
   reasonText: { fontFamily: ViveFonts.bold, fontSize: 10 },
+  motivoRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, paddingHorizontal: 8 },
+  motivoText: { fontFamily: ViveFonts.medium, fontSize: 12, color: FOREST, textAlign: 'center', flexShrink: 1 },
 
   // Separador de tres puntos en vez de línea recta.
   dots3: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 13, marginBottom: 13 },

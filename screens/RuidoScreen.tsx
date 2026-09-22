@@ -24,6 +24,17 @@ const GLASS_BG    = 'rgba(255,248,240,0.55)';
 
 // `hint` es para qué sirve cada uno: sin eso la pantalla explicaba cómo se usa
 // (elegí sonido, elegí tiempo) y nunca por qué elegirías uno y no otro.
+//
+// 🔴 **Dos de los cinco textos prometían algo que el sonido no hace, corregidos
+// el 21/09/2026 después de medirlos y escucharlos:**
+//   · Bosque decía *"para concentrarte"*. Tiene pájaros, o sea EVENTOS: sonidos
+//     cortos que aparecen y se van, y cada uno se lleva un pedacito de atención.
+//     Es lo contrario de concentrarse. Lo que sí hace es acompañar. Para
+//     concentrarse la lluvia es mejor, porque es pareja y no pasa nada.
+//   · Ruido grave decía *"para tapar el ruido"* y es **el peor de los cinco para
+//     eso**: lo que hay que tapar son voces, el habla vive en los medios y
+//     agudos, y este cae -8,7 dB por octava. Sí tapa bien el zumbido parejo de
+//     abajo (la calle, un aire acondicionado), y eso es lo que dice ahora.
 // El id `blanco` quedó del primer corte y ya no describe nada: medido, el archivo
 // cae -8,7 dB por octava entre 250 Hz y 4 kHz. Blanco sería 0, rosa -3, marrón -6
 // — o sea que es todavía más grave que el marrón, y "blanco" era directamente
@@ -31,19 +42,47 @@ const GLASS_BG    = 'rgba(255,248,240,0.55)';
 // completions, guardados y recordatorios.
 const SOUNDS = [
   { id: 'lluvia',   icon: 'weather-rainy' as const,    label: 'Lluvia suave',  hint: 'para dormirte',        bg: PASTEL_AZUL },
-  { id: 'bosque',   icon: 'tree-outline' as const,     label: 'Bosque',        hint: 'para concentrarte',    bg: PASTEL_SALVIA },
+  { id: 'bosque',   icon: 'tree-outline' as const,     label: 'Bosque',        hint: 'para acompañarte',     bg: PASTEL_SALVIA },
   { id: 'olas',     icon: 'waves' as const,            label: 'Olas del mar',  hint: 'para bajar un cambio', bg: PASTEL_TEAL },
-  { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido grave',   hint: 'para tapar el ruido',  bg: PASTEL_DURAZNO },
+  { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido grave',   hint: 'para el ruido de fondo', bg: PASTEL_DURAZNO },
 ];
 
-// Grabaciones reales con licencia CC0 (freesound.org).
-// Preparados para loopear: se recortó el fade de entrada del corte original (lluvia
-// tardaba 4s en llegar al nivel, blanco 3s) y la costura se cierra con un crossfade
-// de 2s equal-power, así que el bajón que se oía cada 90s ya no está. Duran 80–88s
-// —no 90— y ninguna duración es múltiplo de otra a propósito: no hay por qué
-// cuadrarlas. AAC 64 kbps mono 22 kHz (sube de 31 kbps para no perder más en el
-// re-encode). Si algún día se re-exporta desde la fuente, ahí sí conviene 48 kHz
-// estéreo — eso no se arregla desde acá.
+// ✅ **Re-exportados el 21/09/2026 desde la fuente, que es lo que estas mismas
+// líneas venían pidiendo desde la sesión 234.** Antes: mono, 22 kHz, 63 kbps,
+// sobre un corte que ya venía comprimido a 31 kbps. Ahora: **estéreo, 44,1 kHz,
+// 128 kbps**, encodeados una sola vez desde el original.
+//
+// Por qué importaba: casi todo lo que hace que una lluvia suene a lluvia vive
+// arriba de los 11 kHz, y a 22 kHz de muestreo eso directamente no existe. Y el
+// ambiente es la única categoría donde el estéreo no es adorno: la sensación de
+// estar adentro de un lugar viene de que los dos oídos escuchen cosas distintas.
+//
+// Origen (los tres de campo salen de Wikimedia Commons, verificados uno por uno):
+//   · lluvia  → "Falling Rain SFX 1", de valvalion. **CC BY 3.0: obliga a dar
+//                crédito**, y por eso está la línea de abajo en la pantalla.
+//   · bosque  → "20090610 0 ambience", de nille (pdsounds). Dominio público.
+//   · olas    → "On a pebble beach", de earthcalling (pdsounds). Dominio público.
+//   · blanco  → **generado**, no grabado. El ruido marrón es una definición
+//                matemática, así que sintetizarlo bien no es imitar nada: es la
+//                cosa. Y sale estéreo de verdad, con los canales independientes.
+//
+// El tramo de cada uno se eligió MIDIENDO y no a oído (`scripts/elegir-tramo.py`
+// busca el fragmento más parejo, sin picos ni silencios), y el loop lo cierra
+// `scripts/procesar-sonidos.py` con un crossfade de potencia constante.
+//
+// ⚠️ **Olas dura 32s y no 87**: es la única de las tres grabaciones libres con
+// olas decentes que encontramos, y el original dura 40 segundos. Se nota más el
+// loop que en las otras. Si aparece una fuente mejor, se reemplaza con el mismo
+// script y no hay que tocar nada de esta pantalla.
+//
+// 🔴 **Y el tramo se movió una vez, escuchándolo.** La primera versión arrancaba
+// en el segundo 2 y Andre oyó "algo raro, como pisadas" al principio. Estaba:
+// midiendo el original bloque a bloque aparece un golpe aislado entre 2,50 y
+// 3,00, contra un fondo muy tranquilo. Ahora empieza en el 6,00, que además es
+// donde las olas se vuelven parejas: el corte pasó de 1 pico y 6 silencios a
+// **cero y cero**. 📌 La medición sirve para descartar, no para elegir: encontró
+// el ladrido de perro de otro archivo, pero este golpe no lo marcó como pico
+// porque el tramo de alrededor era muy silencioso. Hace falta el oído humano.
 const SOUND_FILES: Record<string, any> = {
   lluvia: require('../assets/sounds/lluvia.m4a'),
   bosque: require('../assets/sounds/bosque.m4a'),
@@ -75,7 +114,7 @@ export default function RuidoScreen() {
   const fadeRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const userIdRef  = useRef<string | null>(null);
 
-  // Pre-cargar los 4 audios al montar para evitar delay al iniciar
+  // Pre-cargar los audios al montar para evitar delay al iniciar
   const playerLluvia = useAudioPlayer(SOUND_FILES.lluvia);
   const playerBosque = useAudioPlayer(SOUND_FILES.bosque);
   const playerOlas   = useAudioPlayer(SOUND_FILES.olas);
@@ -94,13 +133,41 @@ export default function RuidoScreen() {
 
   useEffect(() => {
     usuarioActualId().then(uid => { userIdRef.current = uid; }).catch(() => {});
-    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+    // ⚠️ `shouldPlayInBackground` arranca en **false** a propósito, aunque el
+    // sentido de esta pantalla sea sonar con el teléfono bloqueado. El motivo es
+    // el truco de acá abajo: los cuatro audios quedan corriendo en silencio para
+    // que Iniciar no tenga demora. Si el segundo plano estuviera prendido desde
+    // el arranque, **entrar a la pantalla y salir dejaría cuatro loops mudos
+    // vivos indefinidamente**, manteniendo la app despierta y comiendo batería
+    // sin que suene nada. Se prende al empezar y se apaga al terminar.
+    modoAudio(false);
     // Arrancar todos en silencio para que no haya delay al presionar Iniciar.
     // El audio ya está corriendo — solo subimos el volumen cuando el usuario lo pide.
     allPlayers.forEach(p => {
       try { p.volume = 0; p.loop = true; p.play(); } catch {}
     });
   }, []);
+
+  /**
+   * El único lugar que toca el modo de audio.
+   *
+   * 🔴 **`shouldPlayInBackground` es lo que hace que el sonido sobreviva a la
+   * pantalla apagada**, y venía sin prender: quien ponía lluvia para dormirse y
+   * bloqueaba el teléfono se quedaba en silencio, que es justo el caso de uso
+   * principal (nadie se duerme mirando la pantalla). `playsInSilentMode`, que
+   * era lo único que había, resuelve otra cosa: que suene con el interruptor de
+   * silencio puesto.
+   *
+   * ⚠️ En iPhone esto **no alcanza solo**: hace falta además declarar
+   * `UIBackgroundModes: ["audio"]` en `app.json`, que es configuración nativa.
+   * Por eso este arreglo **no se puede probar en Expo Go**: necesita una build.
+   */
+  function modoAudio(enSegundoPlano: boolean) {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: enSegundoPlano,
+    }).catch(() => {});
+  }
 
   function stopTimer() {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -142,6 +209,7 @@ export default function RuidoScreen() {
   function handleStart() {
     setElapsed(0);
     setPhase('running');
+    modoAudio(true);
 
     const active = getPlayer();
     allPlayers.forEach(p => { if (p !== active) try { p.volume = 0; } catch {} });
@@ -154,6 +222,9 @@ export default function RuidoScreen() {
       if (el >= duration) {
         stopTimer();
         silenceAll();
+        // Se libera el segundo plano en cuanto deja de sonar: si no, la app
+        // seguiría despierta después de que la sesión terminó.
+        modoAudio(false);
         setPhase('done');
         // ⚠️ Ahora pasa la duración. Antes se omitía —la función la documenta
         // como opcional "para recursos libres (Diario, Ruido blanco)"— pero
@@ -169,10 +240,11 @@ export default function RuidoScreen() {
   function handleStop() {
     stopTimer();
     silenceAll();
+    modoAudio(false);
     setPhase('idle');
   }
 
-  useEffect(() => () => { stopTimer(); pauseAll(); }, []);
+  useEffect(() => () => { stopTimer(); pauseAll(); modoAudio(false); }, []);
 
   const remaining = Math.max(0, duration - elapsed);
   const isRunning = phase === 'running';
@@ -263,6 +335,14 @@ export default function RuidoScreen() {
               <Text style={s.primaryBtnText}>{isRunning ? 'Detener' : 'Iniciar'}</Text>
             </ScaleCard>
 
+            {/* 🔴 No es decorativo: la lluvia es CC BY 3.0 y **el crédito es la
+                condición de la licencia**. Va discreto y al final, pero va. Los
+                otros dos son de dominio público y no obligan; se nombran igual
+                porque cuesta nada y es de donde salieron. */}
+            <Text style={s.creditos}>
+              Lluvia: valvalion (CC BY). Bosque: nille. Olas: earthcalling.
+            </Text>
+
             {isRunning && (
               <View style={s.runningBlock}>
                 <Text style={s.runningTimer}>{formatTime(remaining)}</Text>
@@ -329,4 +409,8 @@ const s = StyleSheet.create({
   runningTimer: { fontFamily: ViveFonts.bold, fontSize: 40, color: FOREST, letterSpacing: -1 },
   runningRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   runningHint: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT },
+  creditos: {
+    fontFamily: ViveFonts.regular, fontSize: 10.5, color: FOREST_SOFT,
+    opacity: 0.75, textAlign: 'center', marginTop: 18,
+  },
 });

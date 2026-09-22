@@ -560,7 +560,6 @@ export default function RecursosScreen() {
           {/* 1. Herramientas de Vita — sugerencia del día (hero/línea) + tiles */}
           <View style={s.libraryHeaderRow}>
             <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Herramientas de Vita</Text>
-            <Text style={s.sectionSubtitle}>Prácticas, de uso diario</Text>
           </View>
           <RecommendedCard
             reco={reco}
@@ -936,12 +935,6 @@ const s = StyleSheet.create({
     color: FOREST,
     textAlign: 'center',
     lineHeight: 13,
-  },
-
-  sectionSubtitle: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 12,
-    color: FOREST_SOFT,
   },
 
   // ── CoachRecoSection — tarjeta-mensaje (Ajuste 3) ────────────────────────────

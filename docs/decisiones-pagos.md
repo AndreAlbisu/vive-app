@@ -77,13 +77,17 @@ prácticamente lo mismo venga de donde venga la persona, y eso hace que la
 elección de riel sea del cliente y no una decisión de plata para él. Cualquier
 cambio en una escalera tiene que mirar la otra.
 
-⚠️ **El ≈4% es una sola observación**, no una tarifa publicada: sale del pago real
-`172923514332` (09/08/2026, sobre $1 — `mercadopago_fee` 0,04 y
-`net_received_amount` 0,76). Fue sobre un monto donde un componente fijo
-distorsionaría el porcentaje, la tarifa de Checkout Pro depende del plazo de
-acreditación de la cuenta, y no se sabe si incluye IVA. **Vale medirlo de nuevo
-contra un pago de precio real** — el del 19/08 por $4.500 sirve. Vive en
-`lib/pricing.ts` como `MP_FEE_PCT_OBSERVED`.
+✅ **Remedido el 21/09/2026 (L2): es 4,30%, no 4%.** Los tres pagos de $4.500 con
+tarjeta (`174555144528`, `174554303062`, `173787714415`) dan todos
+`mercadopago_fee` 193,63, `application_fee` 675 y `net_received_amount` 3.631,37.
+El 4 viejo salía del pago de $1 (`172923514332`), donde la tarifa es 0,04 y el
+redondeo a centavos tapaba el 0,3. **El IVA ya está incluido**: 193,63 / 1,21 es
+el 3,556% de 4.500.
+
+⚠️ **Sigue siendo una observación**, no una tarifa publicada: la de Checkout Pro
+depende del **medio de pago** (estos son tarjeta de crédito; el de $1 era dinero
+en cuenta) y del **plazo de acreditación** (estos son inmediatos). Por eso se
+muestra con "≈". Vive en `lib/pricing.ts` como `MP_FEE_PCT_OBSERVED`.
 
 📌 **En USDT el cliente paga hasta 0,99 MENOS que el precio desde el 08/09/2026**
 (antes pagaba hasta 0,99 de más y se lo quedaba VIVE). El coach cobra siempre

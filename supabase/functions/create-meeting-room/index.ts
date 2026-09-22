@@ -75,6 +75,31 @@ async function ensureRoom(roomName: string, nbf: number, exp: number): Promise<s
   })
   if (get.ok) {
     const room = await get.json()
+
+    // 🔴 **Encontrado el 21/09/2026, revisando M15.** Hasta acá, una sala que ya
+    // existía se devolvía tal cual. Eso estaba bien mientras una sesión no podía
+    // cambiar de horario: la ventana `nbf`/`exp` de la sala se fijaba al
+    // crearla y ya no tenía por qué moverse.
+    //
+    // Con reagendar, sí se mueve. La sala se crea en cuanto la sesión queda
+    // confirmada (no al empezar), así que una sesión movida al jueves conservaba
+    // la ventana del martes: **a la hora nueva la sala ya había expirado y la
+    // videollamada no abría**. Es el peor momento posible para fallar, con las
+    // dos personas esperando.
+    const props = (room.config ?? room.properties ?? {}) as { nbf?: number; exp?: number }
+    if (props.nbf !== nbf || props.exp !== exp) {
+      const fix = await fetch(`${DAILY_API}/rooms/${encodeURIComponent(roomName)}`, {
+        method: 'POST',
+        headers: dailyHeaders,
+        body: JSON.stringify({ properties: { nbf, exp } }),
+      })
+      // Si el ajuste falla se sigue con la sala vieja: es mejor una sala que
+      // quizás no abra que ninguna, y el error queda en los logs.
+      if (!fix.ok) {
+        console.error(`[create-meeting-room] no se pudo mover la ventana de ${roomName}: ${fix.status} ${await fix.text()}`)
+      }
+    }
+
     return room.url as string
   }
   if (get.status !== 404) {

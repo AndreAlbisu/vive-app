@@ -30,7 +30,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { ENFOQUES, esEnfoque, etiquetaEstilo, etiquetasEnfoques } from '@/lib/enfoque';
+import { ENFOQUES, esEnfoque, etiquetaEstilo, etiquetasEnfoques, etiquetaGuia, etiquetasFocos } from '@/lib/enfoque';
 import { PaymentBadges } from '@/components/PaymentBadges';
 import { logResourceEvent } from '@/lib/resourceEvents';
 import { estaSuspendido } from '@/lib/coachVisibility';
@@ -54,6 +54,8 @@ const DEFAULT_PROFESIONAL = {
   topics: [] as string[],
   estilo: null as string | null,
   enfoques: [] as string[],
+  guia: null as string | null,
+  focos: [] as string[],
   priceFrom: null as number | null,
   video_url: null as string | null,
   avatar_url: null as string | null,
@@ -178,7 +180,7 @@ export default function ProfesionalScreen() {
     if (!pid) return;
     supabase
       .from('coaches')
-      .select('id, specialty, bio, estilo, enfoques, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url)')
+      .select('id, specialty, bio, estilo, enfoques, guia, focos, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
@@ -197,6 +199,8 @@ export default function ProfesionalScreen() {
           bio: (data as any).bio ?? null,
           estilo: (data as any).estilo ?? null,
           enfoques: ((data as any).enfoques ?? []) as string[],
+          guia: (data as any).guia ?? null,
+          focos: ((data as any).focos ?? []) as string[],
           // Los dos juntos, misma condición que el filtro de búsqueda y que el
           // botón de USDT en el checkout: sin precio en dólares el cobro del
           // exterior no se puede armar, así que anunciarlo sería prometer algo
@@ -400,11 +404,22 @@ export default function ProfesionalScreen() {
             nombre de la escuela y su explicación de una línea: quien no lo
             conoce igual entiende qué significa. Si el profesional no contestó
             ninguna de las dos, la sección no existe. */}
-        {(etiquetaEstilo(prof.estilo) || etiquetasEnfoques(prof.enfoques).length > 0) && (
+        {(etiquetaEstilo(prof.estilo) || etiquetaGuia(prof.guia) || etiquetasFocos(prof.focos).length > 0
+          || etiquetasEnfoques(prof.enfoques).length > 0) && (
           <View style={s.section}>
             <Text style={s.sectionTitle}>Cómo trabaja</Text>
             {!!etiquetaEstilo(prof.estilo) && (
               <Text style={s.comoTrabajaEstilo}>{etiquetaEstilo(prof.estilo)}</Text>
+            )}
+            {/* M14 ampliado (21/09/2026): cuánto guía y sobre qué trabaja, en
+                primera persona como el estilo, porque son sus respuestas. */}
+            {!!etiquetaGuia(prof.guia) && (
+              <Text style={s.comoTrabajaEstilo}>{etiquetaGuia(prof.guia)}</Text>
+            )}
+            {etiquetasFocos(prof.focos).length > 0 && (
+              <Text style={s.comoTrabajaEstilo}>
+                Trabajo sobre {listarY(etiquetasFocos(prof.focos).map(f => f.toLowerCase()))}
+              </Text>
             )}
             {prof.enfoques.filter(esEnfoque).map(id => {
               const e = ENFOQUES.find(x => x.id === id)!;
@@ -736,6 +751,11 @@ export default function ProfesionalScreen() {
       />
     </AppBg>
   );
+}
+
+/** "a, b y c" */
+function listarY(xs: string[]): string {
+  return xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`;
 }
 
 // ─── Sombra ──────────────────────────────────────────────────────────────────

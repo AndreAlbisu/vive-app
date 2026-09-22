@@ -1146,3 +1146,31 @@ describe('partirDestacado — el modelo no puede romper la tarjeta con esto', ()
     }
   });
 });
+
+describe('buildReflection — el día de hoy manda sobre la tendencia (21/09/2026)', () => {
+  // Andre marcó "Cansado" y la tarjeta le dijo "Hay un cambio esta semana, para
+  // arriba": el promedio de 7 días seguía arriba y hoy no pesaba más que otro día.
+  const subiendo = { recentMoods: [4, 4, 3, 2], historicMoods: [2, 3, 2, 3, 2, 3] };
+
+  it('semana en subida + hoy cansado → no dice "para arriba"', () => {
+    expect(buildReflection(on({ ...subiendo, todayMood: 2 })).signal).not.toBe('trend-up');
+  });
+
+  it('semana en subida + hoy acorde → sigue diciendo trend-up', () => {
+    expect(buildReflection(on({ ...subiendo, todayMood: 4 })).signal).toBe('trend-up');
+  });
+
+  it('saliendo de un pozo + hoy cansado → trend-up igual', () => {
+    const r = buildReflection(on({ recentMoods: [2, 2, 3, 2], historicMoods: [1, 1, 2, 1, 1, 2], todayMood: 2 }));
+    expect(r.signal).toBe('trend-up');
+  });
+
+  it('semana en bajada + hoy brillando → no dice "más abajo"', () => {
+    const r = buildReflection(on({ recentMoods: [3, 3, 2, 5], historicMoods: [4, 4, 5, 4, 4, 5], todayMood: 5 }));
+    expect(r.signal).not.toBe('trend-down');
+  });
+
+  it('sin todayMood se comporta como antes', () => {
+    expect(buildReflection(on(subiendo)).signal).toBe('trend-up');
+  });
+});

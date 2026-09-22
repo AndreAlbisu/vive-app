@@ -131,7 +131,16 @@ export type DeckSlot = {
   icon: string;      // nombre de Feather icon
 };
 
-export type DeckEntry = { coach: CachedCoach; slot: DeckSlot };
+export type DeckEntry = {
+  coach: CachedCoach;
+  slot: DeckSlot;
+  /** Por qué le sirve a ESTA persona, según su quiz. Solo cuando `encaja`. */
+  motivo?: string | null;
+};
+
+/** Lo que el quiz dice de un profesional para esta persona. Ver
+ *  `evaluarParaMazo` en lib/quizMatch.ts. */
+export type AjusteQuiz = (c: CachedCoach) => { encaja: boolean; motivo: string | null };
 
 export const DECK_SLOTS: Record<DeckSlotKey, DeckSlot> = {
   recomendado: { key: 'recomendado', label: 'Recomendado por Vita', sublabel: 'Cumple la barra de calidad', icon: 'award' },
@@ -195,6 +204,10 @@ export function rankDeck(
   eligible: CachedCoach[],
   userId: string | undefined,
   now: Date = new Date(),
+  // 21/09/2026: si la persona hizo el quiz, cada slot sortea PRIMERO entre los
+  // que encajan con sus respuestas, y solo si no hay ninguno entre todos. Es
+  // una barra más, no un orden: la rotación sigue igual adentro del grupo.
+  ajuste?: AjusteQuiz,
 ): DeckEntry[] {
   const seed = `${dayKey(now)}:${userId ?? 'anon'}`;
   const shuffled = seededShuffle(eligible, seed);
@@ -203,11 +216,18 @@ export function rankDeck(
   const picked = new Set<string>();
   const out: DeckEntry[] = [];
 
+  const evaluacion = new Map(ajuste ? eligible.map(c => [c.id, ajuste(c)]) : []);
+  const encaja = (c: CachedCoach) => evaluacion.get(c.id)?.encaja ?? false;
+
   for (const key of SLOT_ORDER) {
-    const coach = shuffled.find(c => !picked.has(c.id) && isEligibleForSlot(key, c, ctx));
+    const apto = (c: CachedCoach) => !picked.has(c.id) && isEligibleForSlot(key, c, ctx);
+    const coach = (ajuste ? shuffled.find(c => apto(c) && encaja(c)) : undefined) ?? shuffled.find(apto);
     if (!coach) continue;
     picked.add(coach.id);
-    out.push({ coach, slot: DECK_SLOTS[key] });
+    // El motivo solo se muestra si encaja: si salió del sorteo general, decir
+    // "trabaja duelo, como pediste" podría ser cierto a medias.
+    const ev = evaluacion.get(coach.id);
+    out.push({ coach, slot: DECK_SLOTS[key], motivo: ev?.encaja ? ev.motivo : null });
   }
 
   return out;

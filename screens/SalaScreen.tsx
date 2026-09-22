@@ -41,6 +41,8 @@ import { notifyViaServer } from '@/lib/notifications';
 import { hayReembolsoAlCancelar } from '@/lib/bookingHelpers';
 import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time';
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
+import { puedeReagendar, textoReagendar } from '@/lib/reagendar';
+import { elegirHorario, rechazarHorarios } from '@/lib/reagendarApi';
 import { logError } from '@/lib/logging';
 import { abrirVideollamada, ensureMeetingRoom, getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
 import {
@@ -94,6 +96,8 @@ type ActiveBooking = {
   user_message: string | null;
   duration_minutes: number | null;
   meeting_url: string | null;
+  /** M15: ya usó su única oportunidad de moverla sobre la hora. */
+  movida_tarde?: boolean | null;
 } | null;
 
 type RecipientProfile = {
@@ -196,6 +200,12 @@ export default function SalaScreen() {
   const [inputText, setInputText] = useState(draftText);
   const [salaId, setSalaId] = useState<string | null>(null);
   const [recipientId, setRecipientId] = useState<string | null>(null);
+  // M16: los horarios que el profesional propuso para esta sesión.
+  const [propuestas, setPropuestas] = useState<{ id: string; fecha: string; hora: string }[]>([]);
+  // M5: si esta es la PRIMERA sesión con este profesional y todavía está dentro
+  // de las 48hs de §9.3, se pregunta si quiere seguir.
+  const [garantiaPedida, setGarantiaPedida] = useState(false);
+  const [resolviendo, setResolviendo] = useState(false);
   const [recipientIsCoach, setRecipientIsCoach] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -230,6 +240,7 @@ export default function SalaScreen() {
   const [guardandoSugerencia, setGuardandoSugerencia] = useState(false);
 
   const [hasSessionHistory, setHasSessionHistory] = useState(false);
+  const [sesionesCompletadas, setSesionesCompletadas] = useState(0);
   const [sessionState, setSessionState] = useState<SessionState>('none');
   const [isCancelling, setIsCancelling] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -399,7 +410,7 @@ export default function SalaScreen() {
         supabase.from('profiles').select('name, avatar_url').eq('id', resolvedRecipientId).single(),
         supabase
           .from('bookings')
-          .select('id, scheduled_date, scheduled_time, status, user_message, duration_minutes, meeting_url')
+          .select('id, scheduled_date, scheduled_time, status, user_message, duration_minutes, meeting_url, movida_tarde')
           .eq('sala_id', id)
           .in('status', ['pendiente', 'confirmada'])
           .gte('scheduled_date', todayStr)
@@ -408,7 +419,7 @@ export default function SalaScreen() {
           .limit(10),
         supabase
           .from('bookings')
-          .select('id, scheduled_date, scheduled_time, status, user_message, duration_minutes, meeting_url')
+          .select('id, scheduled_date, scheduled_time, status, user_message, duration_minutes, meeting_url, movida_tarde')
           .eq('sala_id', id)
           .eq('status', 'completada')
           .gte('scheduled_date', yesterdayStr)
@@ -432,6 +443,9 @@ export default function SalaScreen() {
       if (!mounted) return;
 
       setHasSessionHistory((sessionHistoryRes.count ?? 0) > 0);
+      // M5: hace falta el número, no solo si hay alguna: §9.3 alcanza a la
+      // PRIMERA sesión del vínculo y a ninguna otra.
+      setSesionesCompletadas(sessionHistoryRes.count ?? 0);
 
       const recipientName = (profileResult.data as any)?.name ?? '';
       const recipientAvatarUrl = (profileResult.data as any)?.avatar_url ?? null;
@@ -590,6 +604,86 @@ export default function SalaScreen() {
   // al montar, y quedaban congeladas hasta salir de la Sala del todo. El único
   // que veía la suya al instante era el coach que la escribía, por `onSaved`.
   //
+  // M16. Consulta aparte y no pegada a la de la reserva: llega después de que
+  // `activeBooking` se resolvió, y es la única que puede cambiar sin que cambie
+  // la sesión (el profesional propone mientras la pantalla está abierta).
+  useEffect(() => {
+    const id = activeBooking?.id;
+    if (!id || !recipientIsCoach) { setPropuestas([]); return; }
+    let vivo = true;
+    void supabase
+      .from('reschedule_requests')
+      .select('id, fecha, hora')
+      .eq('booking_id', id)
+      .eq('estado', 'pendiente')
+      .eq('pedida_por', 'profesional')
+      .order('fecha')
+      .then(({ data }) => { if (vivo) setPropuestas(data ?? []); });
+    return () => { vivo = false; };
+    // `refreshKey` cambia al volver a la pantalla. Sin él, un horario propuesto
+    // mientras la Sala estaba en segundo plano no aparecía al volver: el id de
+    // la reserva no cambia cuando la propuesta se crea, así que sin esto el
+    // efecto no se volvía a correr nunca.
+  }, [activeBooking?.id, recipientIsCoach, refreshKey]);
+
+  // M5. 🔴 No aprueba nada: deja el pedido registrado y le llega al mismo buzón
+  // al que antes la persona tenía que escribirle un mail. Lo resuelve un humano,
+  // porque §9.3 permite denegar por uso abusivo y eso no lo decide un `if`.
+  function pedirGarantia(bookingId: string) {
+    Alert.alert(
+      '¿Querés que te devolvamos lo que pagaste?',
+      'Es tu derecho por la primera sesión con alguien, dentro de las 48hs, y no hace falta que expliques por qué. Lo revisamos y te avisamos.',
+      [
+        { text: 'Ahora no', style: 'cancel' },
+        {
+          text: 'Sí, pedirlo',
+          onPress: async () => {
+            const { error } = await supabase.functions.invoke('guarantee-claim', {
+              body: { booking_id: bookingId, solicitar: true },
+            });
+            if (error) {
+              Alert.alert('No se pudo', 'Probá de nuevo, o escribinos a vitaappar@gmail.com.');
+              return;
+            }
+            setGarantiaPedida(true);
+            Alert.alert('Lo recibimos', 'Te avisamos por mail cuando esté resuelto.');
+          },
+        },
+      ],
+    );
+  }
+
+  async function tomarHorario(id: string) {
+    if (resolviendo) return;
+    setResolviendo(true);
+    const error = await elegirHorario(id);
+    setResolviendo(false);
+    if (error) { Alert.alert('No se pudo', error); return; }
+    setPropuestas([]);
+    Alert.alert('Listo', 'Tu sesión quedó en el horario nuevo.');
+  }
+
+  function rechazarTodo(bookingId: string) {
+    Alert.alert(
+      '¿No podés con ninguno?',
+      'Se cancela la sesión y te devolvemos todo lo que pagaste, aunque falte poco para el horario original.',
+      [
+        { text: 'Volver', style: 'cancel' },
+        {
+          text: 'Cancelar y que me devuelvan',
+          style: 'destructive',
+          onPress: async () => {
+            setResolviendo(true);
+            const error = await rechazarHorarios(bookingId);
+            setResolviendo(false);
+            if (error) { Alert.alert('No se pudo', error); return; }
+            setPropuestas([]);
+          },
+        },
+      ],
+    );
+  }
+
   // Canal aparte y no un `.on()` más en el de mensajes: aquel depende de
   // `salaId`, este del PAR (usuario, coach) —`session_notes` no conoce la sala—,
   // y mezclarlos obligaría a resuscribir el chat entero cada vez que resuelve el
@@ -1139,6 +1233,18 @@ export default function SalaScreen() {
 
   const isCurrentUserCoach = !recipientIsCoach;
   const isChatFrozen = (activeBooking?.status === 'pendiente' && !hasSessionHistory) || pairBlocked;
+
+  // M5 / §9.3: la garantía alcanza a la primera sesión de cada vínculo y se
+  // pide dentro de las 48hs del horario agendado. Las dos condiciones se
+  // calculan acá y no adentro del JSX para que se lean juntas: separadas es
+  // fácil tocar una y olvidarse de la otra.
+  const esPrimeraConEl = sesionesCompletadas === 1;
+  const dentroDeLas48 = !!activeBooking && (() => {
+    const inicio = scheduledAtMs(activeBooking.scheduled_date, activeBooking.scheduled_time);
+    if (!Number.isFinite(inicio)) return false;
+    const horas = (Date.now() - inicio) / 3_600_000;
+    return horas >= 0 && horas <= 48;
+  })();
   const canSend = inputText.trim().length > 0 && !!salaId && !!user && !isChatFrozen;
   const displayInitials = recipientProfile?.initials ?? '···';
 
@@ -1371,6 +1477,78 @@ export default function SalaScreen() {
               `handleCancelBooking` ya distingue —al coach no le aplica la regla
               de las 24hs— y duplicar esa decisión acá sería otro lugar donde
               se puede desincronizar. */}
+          {/* M16: el profesional no puede y propuso otros horarios. 🔴 Va
+              ARRIBA de todo lo demás de la tarjeta: es una mala noticia que
+              todavía no leyó, y la sesión que figura abajo ya no va a pasar a
+              esa hora. Mientras esto esté acá, mover o cancelar por su cuenta
+              sería contestar otra pregunta.
+
+              🔴 **La salida siempre incluye la plata.** Si no puede con
+              ninguno, cancela y le vuelve todo aunque falte menos de un día:
+              quien pierde su horario porque el otro no puede no tiene por qué
+              pagar por decir que no. */}
+          {propuestas.length > 0 && activeBooking && (
+            <View style={styles.propuestaBox}>
+              <Text style={styles.propuestaTitulo}>
+                {(recipientProfile?.name ?? 'Tu profesional').split(' ')[0]} no puede a esa hora
+              </Text>
+              <Text style={styles.propuestaSub}>
+                {propuestas.length === 1 ? 'Te propone este horario:' : 'Te propone estos horarios:'}
+              </Text>
+              {propuestas.map(o => (
+                <TouchableOpacity
+                  key={o.id}
+                  style={styles.propuestaOpcion}
+                  disabled={resolviendo}
+                  onPress={() => tomarHorario(o.id)}
+                  activeOpacity={0.85}>
+                  <Text style={styles.propuestaOpcionTxt}>
+                    {`${formatSalaDate(o.fecha)}, ${o.hora} hs`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={styles.propuestaNo}
+                disabled={resolviendo}
+                onPress={() => rechazarTodo(activeBooking.id)}
+                activeOpacity={0.7}>
+                <Text style={styles.propuestaNoTxt}>No puedo con ninguno, devolvemé la plata</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* M15: mover en vez de perder. 🔴 **Va ARRIBA de cancelar y no al
+              lado**, porque el problema que resuelve es que hoy la única salida
+              visible es cancelar, y cancelar tarde hace perder la plata: si las
+              dos opciones pesan igual, la de perder la plata sigue ganando por
+              costumbre.
+
+              Solo del lado del CLIENTE (`recipientIsCoach` significa que el otro
+              es el profesional, o sea que yo soy quien reservó). Que el
+              profesional mueva la sesión es M16 y funciona al revés: propone y
+              el cliente elige. */}
+          {recipientIsCoach && activeBooking && recipientId && (() => {
+            const r = puedeReagendar(activeBooking);
+            if (r.puede === 'no') return null;
+            return (
+              <TouchableOpacity
+                style={styles.moverBtn}
+                onPress={() => router.push({
+                  pathname: '/booking-calendar',
+                  params: {
+                    coachId: recipientId,
+                    name: recipientProfile?.name ?? '',
+                    reagendar: activeBooking.id,
+                  },
+                })}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.moverBtnText}>Mover la sesión</Text>
+                <Text style={styles.moverBtnHint}>{textoReagendar(r)}</Text>
+              </TouchableOpacity>
+            );
+          })()}
+
           <TouchableOpacity
             style={styles.cancelBtn}
             onPress={handleCancelBooking}
@@ -1636,6 +1814,34 @@ export default function SalaScreen() {
                 <MaterialCommunityIcons name="calendar-plus" size={16} color="#FFF6EC" />
                 <Text style={styles.endedBtnText}>Reservar próxima sesión</Text>
               </TouchableOpacity>
+
+              {/* M5: la otra respuesta posible. 🔴 Hasta hoy la tarjeta solo
+                  ofrecía seguir: quien NO quedaba cómodo no tenía ningún botón,
+                  y para recuperar su plata tenía que escribir un mail contando
+                  por qué. La mayoría se iba en silencio.
+
+                  📌 Solo en la PRIMERA sesión con esa persona (`sesionesConEl
+                  === 1`), que es el alcance de §9.3, y solo dentro de las 48hs.
+                  Pasado ese plazo desaparece en vez de ofrecer algo que se va a
+                  rechazar. */}
+              {esPrimeraConEl && dentroDeLas48 && !garantiaPedida && (
+                <View style={styles.noComodoBox}>
+                  <Text style={styles.noComodoTxt}>¿No te sentiste cómodo con esta sesión?</Text>
+                  <TouchableOpacity
+                    onPress={() => pedirGarantia(activeBooking.id)}
+                    activeOpacity={0.7}>
+                    <Text style={styles.noComodoLink}>Que me devuelvan lo que pagué</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => router.push('/search3')} activeOpacity={0.7}>
+                    <Text style={styles.noComodoLink}>Ver otros profesionales</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {garantiaPedida && (
+                <Text style={styles.noComodoTxt}>
+                  Recibimos tu pedido. Te avisamos por mail cuando esté resuelto.
+                </Text>
+              )}
             </View>
           )}
 
@@ -1999,6 +2205,36 @@ const styles = StyleSheet.create({
   },
   confirmBtnDisabled: { opacity: 0.6 },
   confirmBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#FFF6EC' },
+
+  // M5. Separado del botón de seguir por una línea: son dos respuestas
+  // opuestas a la misma pregunta, y pegadas se leen como dos botones de lo
+  // mismo.
+  noComodoBox: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(135,131,92,0.25)', gap: 8 },
+  noComodoTxt: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#566245' },
+  noComodoLink: { fontFamily: ViveFonts.semibold, fontSize: 13, color: ViveColors.primary },
+
+  // M16. Caja propia y no un renglón más: es una decisión, no un aviso.
+  propuestaBox: {
+    backgroundColor: 'rgba(224,82,82,0.06)',
+    borderWidth: 1, borderColor: 'rgba(224,82,82,0.25)',
+    borderRadius: 16, padding: 14, marginTop: 12,
+  },
+  propuestaTitulo: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#2E3624' },
+  propuestaSub: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#566245', marginTop: 4 },
+  propuestaOpcion: {
+    backgroundColor: '#3F512F', borderRadius: 999,
+    paddingVertical: 10, paddingHorizontal: 16, marginTop: 10, alignSelf: 'flex-start',
+  },
+  propuestaOpcionTxt: { color: '#F3EEDF', fontFamily: ViveFonts.semibold, fontSize: 13 },
+  propuestaNo: { marginTop: 12 },
+  propuestaNoTxt: { color: '#E05252', fontFamily: ViveFonts.medium, fontSize: 12.5 },
+
+  // M15. Mover es la salida buena, así que se ve como una acción y no como el
+  // link discreto de cancelar. No usa el rojo de cancelar: no está pasando nada
+  // malo, se está arreglando algo.
+  moverBtn: { alignSelf: 'flex-start', marginTop: 12 },
+  moverBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: ViveColors.primary },
+  moverBtnHint: { fontFamily: ViveFonts.regular, fontSize: 12, color: '#566245', marginTop: 2, maxWidth: 280 },
 
   cancelBtn: { alignSelf: 'flex-start', marginTop: 8 },
   cancelBtnText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#E05252' },

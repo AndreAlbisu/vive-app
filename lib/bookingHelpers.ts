@@ -1,5 +1,15 @@
 import { scheduledAtMs } from '@/lib/time';
 
+/** La ventana de las 24hs, en milisegundos.
+ *
+ *  Vive acá y se exporta porque **la usan dos reglas distintas**: si una
+ *  cancelación es tardía (abajo) y si una sesión se puede mover sin permiso
+ *  (`lib/reagendar.ts`). Son la misma frontera vista desde dos lados, y si se
+ *  escribieran por separado podrían separarse: habría un rato en el que la app
+ *  dice "movela libremente" y a la vez "cancelar ahora no te devuelve la plata".
+ *  `trg_mark_refund_on_cancel` usa la suya del lado del servidor. */
+export const VENTANA_24H_MS = 24 * 60 * 60 * 1000;
+
 /** ¿Cancelar AHORA cuenta como tardía? Menos de 24hs antes del inicio.
  *
  *  🔴 La hora guardada es hora de ARGENTINA, y hasta la sesión 112 esto se
@@ -21,7 +31,7 @@ export function isCancelLate(scheduledDate: string, scheduledTime: string): bool
   // Con datos ilegibles se asume lo conservador: no bloquear la cancelación.
   // Quien decide de verdad es el trigger.
   if (!Number.isFinite(sessionMs)) return false;
-  return Date.now() > sessionMs - 24 * 60 * 60 * 1000;
+  return Date.now() > sessionMs - VENTANA_24H_MS;
 }
 /** ¿Le devuelven la plata si cancela AHORA? Es la contracara de `isCancelLate`.
  *

@@ -8,7 +8,6 @@ import {
   ScrollView,
   Modal,
   Animated,
-  PanResponder,
   Pressable,
   FlatList,
   Image,
@@ -20,7 +19,9 @@ import { MatriculaPill } from '@/components/MatriculaPill';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
-import { NATIONALITIES, MAX_PRICE } from '@/constants/searchData';
+import { NATIONALITIES, MAX_PRICE, PRECIO_PASO } from '@/constants/searchData';
+// Antes era un `CustomSlider` local que no se movía (ver components/ui/PriceSlider.tsx).
+import { PriceSlider } from '@/components/ui/PriceSlider';
 import { PaymentBadges } from '@/components/PaymentBadges';
 import { ScaleCard } from '@/components/ScaleCard';
 import { AppBg } from '@/components/ui/AppBg';
@@ -90,56 +91,6 @@ const shadow = Platform.select({
   ios:     { shadowColor: ViveColors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
   android: { elevation: 3 },
 });
-
-// ─── Custom slider ───────────────────────────────────────────────────────────
-function CustomSlider({
-  value, onValueChange, min, max, formatLabel,
-}: {
-  value: number;
-  onValueChange: (v: number) => void;
-  min: number;
-  max: number;
-  formatLabel: (v: number) => string;
-}) {
-  const [trackWidth, setTrackWidth] = useState(0);
-  const startValue = useRef(value);
-  const currentValue = useRef(value);
-
-  useEffect(() => { currentValue.current = value; }, [value]);
-
-  const pan = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder:  () => true,
-      onPanResponderGrant: () => {
-        startValue.current = currentValue.current;
-      },
-      onPanResponderMove: (_, gs) => {
-        if (trackWidth === 0) return;
-        const newPos  = Math.max(0, Math.min(trackWidth, (startValue.current - min) / (max - min) * trackWidth + gs.dx));
-        const newVal  = Math.round(min + (newPos / trackWidth) * (max - min));
-        onValueChange(newVal);
-      },
-    })
-  ).current;
-
-  const pct   = trackWidth > 0 ? (value - min) / (max - min) : 0;
-  const fillW = trackWidth * pct;
-  const thumbL = fillW - 12;
-
-  return (
-    <View style={sl.wrap}>
-      <View
-        style={sl.track}
-        onLayout={e => setTrackWidth(e.nativeEvent.layout.width)}
-        {...pan.panHandlers}>
-        <View style={[sl.fill, { width: fillW }]} />
-        <View style={[sl.thumb, { left: Math.max(0, thumbL) }]} />
-      </View>
-      <Text style={sl.label}>{formatLabel(value)}</Text>
-    </View>
-  );
-}
 
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 export default function SearchScreen3() {
@@ -586,11 +537,12 @@ export default function SearchScreen3() {
             {/* ── Precio máximo ── */}
             <View style={s.filterSection}>
               <Text style={s.filterLabel}>Precio máximo por sesión</Text>
-              <CustomSlider
+              <PriceSlider
                 value={draftFilters.maxPrice}
                 onValueChange={v => setDraft(d => ({ ...d, maxPrice: v }))}
-                min={1000}
+                min={0}
                 max={MAX_PRICE}
+                step={PRECIO_PASO}
                 formatLabel={v => v >= MAX_PRICE ? 'Sin límite' : `$${v.toLocaleString('es-AR')}`}
               />
             </View>
@@ -709,42 +661,6 @@ export default function SearchScreen3() {
 }
 
 // ─── Estilos: slider ──────────────────────────────────────────────────────────
-const sl = StyleSheet.create({
-  wrap: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  track: {
-    height: 36,
-    justifyContent: 'center',
-  },
-  fill: {
-    height: 4,
-    backgroundColor: ViveColors.primary,
-    borderRadius: 2,
-    position: 'absolute',
-    left: 0,
-    top: 16,
-  },
-  thumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: ViveColors.primary,
-    position: 'absolute',
-    top: 6,
-    ...Platform.select({
-      ios:     { shadowColor: ViveColors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
-      android: { elevation: 4 },
-    }),
-  },
-  label: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 14,
-    color: ViveColors.text,
-  },
-});
-
 // ─── Estilos: pantalla ────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },

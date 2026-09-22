@@ -23,6 +23,24 @@ export type QuizPendiente = {
   axis?: string | null;
   professionalType?: string | null;
   budget?: string | null;
+  /** Tope de la barra de presupuesto, en pesos (21/09/2026). */
+  budgetMax?: number | null;
+  /** Lo mismo en dólares, para quien paga solo con PayPal o cripto. */
+  budgetMaxUsd?: number | null;
+  /** M14 ampliado (21/09/2026): cómo quiere que la acompañen. Hasta esa fecha
+   *  el estilo se perdía al salir del quiz. `'any'` también se guarda: "no
+   *  sabría decir" es una respuesta, y al volver tiene que aparecer marcada. */
+  estilo?: string | null;
+  /** Hasta 2 áreas y hasta 3 temas concretos (21/09/2026). `topic` se sigue
+   *  escribiendo con la primera área. Un array vacío en `subtemas` es una
+   *  respuesta ("cualquiera de estos") y sí viaja, para borrar la anterior. */
+  areas?: string[] | null;
+  subtemas?: string[] | null;
+  guia?: string | null;
+  foco?: string | null;
+  generoPref?: string | null;
+  /** Medios de pago (21/09/2026): 'mp' | 'paypal' | 'usdt', o ['any']. */
+  pagos?: string[] | null;
   /** Ya se escribió en la base. Ver `volcarPendiente`. */
   volcado?: boolean;
 };
@@ -79,6 +97,15 @@ export async function volcarPendiente(userId: string): Promise<void> {
   if (p.axis)             fila.axis = p.axis;
   if (p.professionalType) fila.professional_type = p.professionalType;
   if (p.budget)           fila.budget = p.budget;
+  if (typeof p.budgetMax === 'number') fila.budget_max = p.budgetMax;
+  if (typeof p.budgetMaxUsd === 'number') fila.budget_max_usd = p.budgetMaxUsd;
+  if (p.areas && p.areas.length > 0) fila.areas = p.areas;
+  if (Array.isArray(p.subtemas))     fila.subtemas = p.subtemas;
+  if (p.estilo)           fila.estilo = p.estilo;
+  if (p.guia)             fila.guia = p.guia;
+  if (p.foco)             fila.foco = p.foco;
+  if (p.generoPref)       fila.genero_pref = p.generoPref;
+  if (p.pagos && p.pagos.length > 0) fila.pagos = p.pagos;
 
   // Solo `user_id` y `updated_at`: no hay ninguna respuesta que escribir.
   if (Object.keys(fila).length <= 2) return;
@@ -94,4 +121,32 @@ export async function volcarPendiente(userId: string): Promise<void> {
   }
 
   await AsyncStorage.setItem(KEY, JSON.stringify({ ...p, volcado: true }));
+}
+
+/**
+ * Las últimas respuestas del quiz de esta persona, vengan de donde vengan.
+ *
+ * Primero lo local (vale también sin cuenta y es lo más nuevo en este
+ * teléfono); si no hay nada y hay sesión, la fila de la base, que es lo que
+ * tiene quien hizo el quiz en otro teléfono. null = nunca lo hizo.
+ *
+ * Lo leen el quiz (para volver con todo marcado) y Profesionales (para que el
+ * mazo sortee primero entre los que encajan). No valida contra las opciones:
+ * cada consumidor descarta lo que no reconoce.
+ */
+export async function leerRespuestasGuardadas(): Promise<QuizPendiente | null> {
+  const local = await leerCrudo();
+  if (local) return local;
+  const { data: ses } = await supabase.auth.getSession();
+  const uid = ses.session?.user?.id;
+  if (!uid) return null;
+  const { data } = await supabase.from('user_quiz_answers').select('*').eq('user_id', uid).maybeSingle();
+  if (!data) return null;
+  return {
+    topic: data.topic, areas: data.areas, subtemas: data.subtemas,
+    professionalType: data.professional_type, budget: data.budget, budgetMax: data.budget_max,
+    budgetMaxUsd: data.budget_max_usd,
+    estilo: data.estilo, guia: data.guia, foco: data.foco, generoPref: data.genero_pref,
+    pagos: data.pagos,
+  };
 }
