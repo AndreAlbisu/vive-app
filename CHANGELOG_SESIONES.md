@@ -4,6 +4,21 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-22 — Joaquín (recursos: rescate de la diafragmática + reconciliación de PRs)
+
+**Tocado:** `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`.
+
+**Resumen:**
+- **PR #1 (recursos) se cerró y se reabrió limpio.** El rework de sonidos de Andre (L41/L42: motor de audio estéreo, keep-awake, sin rosa) dejó nuestra mitad de RuidoScreen sobre una base que él reemplazó, y un merge "CLEAN" de GitHub le habría pisado el audio. RespiracionScreen, en cambio, Andre no la tocó (0 commits) → trabajo único y vivo.
+- **Rescatado en rama nueva `recursos-diafragmatica` (basada en andre/main):** (1) RespiracionScreen con la respiración diafragmática (sistema de patrones, inhala 4/exhala 6, Cuadrada por default) tal cual, rebasada limpia; (2) sobre el RuidoScreen NUEVO de Andre, re-apliqué solo lo que sigue siendo único y no está en su main: la **pastilla de fecha** del header y el **empujón al coach** en la pantalla de "tiempo completado".
+- **Descartado a propósito:** nuestro olas-fade-suave, porque Andre resolvió el arranque brusco de las olas en la fuente ("sacar las pisadas del principio de las olas", re-export del audio).
+- 801 tests OK, tsc limpio. La copy de la diafragmática **sigue esperando el ok de voz de Andre** (igual que antes).
+
+**Pendiente para la próxima sesión:**
+- PR nuevo en draft; Andre revisa voz de la diafragmática + mergea.
+- (De la sesión anterior seguía: PR #4 reconciliado y MERGEABLE, espera merge de Andre; PR #2 espera review del SQL.)
+
+---
 ## 2026-09-21 — Andre (sesión 266 · Sofía, retoques visuales y el match por forma de trabajar)
 
 **Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `scripts/add-quiz-guia-foco-genero.sql` (nuevo), `lib/enfoque.ts`, `lib/quizMatch.ts`, `lib/quizPendiente.ts`, `lib/coachesCache.ts`, `screens/QuizScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `screens/ProfesionalScreen.tsx`, `__tests__/enfoque.test.ts`, `__tests__/quizMatch.test.ts`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `constants/searchData.ts`, `__tests__/taxonomia.test.ts`, `scripts/add-quiz-areas-subtemas.sql` (nuevo), `components/ui/PriceSlider.tsx` (nuevo), `app/search3.tsx`, `scripts/add-quiz-budget-max.sql` (nuevo), `scripts/add-coach-como-trabaja-en-alta.sql` (nuevo), `screens/CoachApplicationScreen.tsx`, `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `lib/coachDeckRanking.ts`, `__tests__/deckRanking.test.ts`, `scripts/add-quiz-pagos.sql` (nuevo), `scripts/add-quiz-budget-max-usd.sql` (nuevo)
