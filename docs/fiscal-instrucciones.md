@@ -56,11 +56,15 @@ fueron pruebas del pipeline de pagos, no ventas a clientes:
 |---|---|---|---|
 | 09/08 | 4 pagos de $1 ARS | ~$0,20 c/u | uno reembolsado |
 | 19/08 | Sesión $4.500, tramo 15% | ~$675 | **cancelada y reembolsada** |
-| 19/08 | Sesión $4.500, instantánea | ~$675 | confirmada, sin reembolso |
+| 19/08 | Sesión $4.500, instantánea | ~$675 | **reembolsada** (corregido el 22/09: la base dice `reembolsado`) |
 | 18/08 | 6,28 USDT | **ninguna** | fue a la billetera personal, sin split |
 
-O sea que lo que quedó con comisión retenida y no devuelta es **un solo
-movimiento de ~$675**. Los reembolsados normalmente revierten también la
+🔴 **CORREGIDO el 22/09/2026, midiendo contra la base y no contra esta tabla.**
+Los SIETE pagos de precio real figuran `reembolsado`, incluido el del 19/08 que
+esta tabla daba por confirmado. Lo que quedó con comisión retenida y no devuelta
+en toda la historia es **$2,70 (ARS) y USD 1,20**, todo de pruebas propias de $1.
+El desglose exacto, por riel y estado, está en
+[`mapa-del-dinero.md`](./mapa-del-dinero.md) §5. Los reembolsados normalmente revierten también la
 comisión, y el de USDT no tuvo split.
 
 🔴 **Que hayan sido pruebas no determina por sí solo si son facturables** — eso
