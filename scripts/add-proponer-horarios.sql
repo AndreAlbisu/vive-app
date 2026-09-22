@@ -78,7 +78,7 @@ begin
     values (v_b.id, 'profesional', p_fechas[i], v_h);
   end loop;
 
-  perform public.avisar(v_b.user_id, 'reserva_nueva', v_b.id,
+  perform public.avisar(v_b.user_id, 'cambio_pedido', v_b.id,
     'Tu profesional no puede a esa hora',
     'Te propuso ' || v_n || case when v_n = 1 then ' horario nuevo.' else ' horarios nuevos.' end
       || ' Si no podés con ninguno, te devolvemos lo que pagaste.');
@@ -148,7 +148,7 @@ begin
 
   perform public.avisar(
     (select c.profile_id from public.coaches c where c.id = v_b.coach_id),
-    'reserva_confirmada', v_b.id,
+    'cambio_resuelto', v_b.id,
     'Eligieron horario',
     'La sesión quedó para el ' || to_char(v_s.fecha, 'DD/MM') || ' a las ' || v_s.hora || ' hs.');
 
@@ -189,7 +189,7 @@ begin
 
   perform public.avisar(
     (select c.profile_id from public.coaches c where c.id = v_b.coach_id),
-    'reserva_cancelada', v_b.id,
+    'cambio_resuelto', v_b.id,
     'No pudieron con ninguno de tus horarios',
     'La sesión se canceló y se le devolvió lo que pagó.');
 

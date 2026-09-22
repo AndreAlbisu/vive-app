@@ -209,8 +209,27 @@ serve(async (req) => {
       p_user: booking.user_id,
     })
     if (tieneDescuento === true) {
-      const pct = Math.min(DESCUENTO_REFERIDO_PCT, commissionPct)
-      descuento = Math.round((precio * pct) / 100 * 100) / 100
+      // 🔴 **El descuento se quema al APROBARSE el pago, no al crear el
+      // checkout** (a propósito: si no, un checkout abandonado se lo comería).
+      // Eso deja una ventana: abrir dos checkouts antes de pagar ninguno hacía
+      // que los DOS salieran con descuento, y Vita lo regalaba dos veces por
+      // una sola invitación.
+      //
+      // Se cierra mirando si ya hay otro cobro abierto con descuento. No hace
+      // falta bloquear nada ni cambiar cuándo se quema: quien tiene uno en
+      // curso simplemente no abre un segundo con descuento.
+      const { count: yaHayOtro } = await supabase
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', booking.user_id)
+        .eq('payment_status', 'pendiente')
+        .gt('referral_discount', 0)
+        .neq('id', booking.id)
+
+      if (!yaHayOtro) {
+        const pct = Math.min(DESCUENTO_REFERIDO_PCT, commissionPct)
+        descuento = Math.round((precio * pct) / 100 * 100) / 100
+      }
     }
 
     const precioCobrado = Math.round((precio - descuento) * 100) / 100

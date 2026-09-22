@@ -70,6 +70,18 @@ const PLANTILLAS: Record<string, { titulo: string; pie?: string; conLinkSala?: b
     titulo: 'Tenés una solicitud de sesión',
     pie: 'Entrá a la app para aceptarla. Si no la respondés en 24 horas, se cancela sola.',
   },
+  // 🔴 Tipos propios, y no reutilizar los de arriba, porque **el pie lo pone el
+  // tipo**: con `reserva_nueva` este mail habría dicho "si no la respondés en 24
+  // horas se cancela sola" (falso), y con `reserva_cancelada` habría prometido
+  // una devolución que no existe. Ver `scripts/add-tipos-cambio-horario.sql`.
+  cambio_pedido: {
+    titulo: 'Quieren cambiar el horario de una sesión',
+    pie: 'La sesión sigue en su horario hasta que se resuelva. Entrá a la app para contestar.',
+  },
+  cambio_resuelto: {
+    titulo: 'Novedades con el horario de tu sesión',
+    pie: 'Podés ver el horario actualizado en la app.',
+  },
 }
 
 serve(async () => {

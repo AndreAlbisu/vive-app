@@ -145,7 +145,7 @@ begin
     -- agenda, y enterarse al llegar sería peor que enterarse ahora.
     perform public.avisar(
       (select c.profile_id from public.coaches c where c.id = v_b.coach_id),
-      'reserva_confirmada', v_b.id,
+      'cambio_resuelto', v_b.id,
       'Movieron una sesión',
       'La sesión pasó al ' || to_char(p_fecha, 'DD/MM') || ' a las ' || v_hora || ' hs.');
 
@@ -171,7 +171,7 @@ begin
   -- por su cuenta, y es el caso donde el reloj corre: falta menos de un día.
   perform public.avisar(
     (select c.profile_id from public.coaches c where c.id = v_b.coach_id),
-    'reserva_nueva', v_b.id,
+    'cambio_pedido', v_b.id,
     'Te piden cambiar un horario',
     'Alguien no puede a la hora que habían quedado y te propone otra. Miralo en Reservas.');
 
@@ -209,7 +209,7 @@ begin
 
     -- ⚠️ El aviso dice qué puede hacer ahora, no solo que le dijeron que no:
     -- la sesión sigue en pie en su horario original, y eso no es obvio.
-    perform public.avisar(v_b.user_id, 'reserva_cancelada', v_b.id,
+    perform public.avisar(v_b.user_id, 'cambio_resuelto', v_b.id,
       'No pudieron con ese horario',
       'Tu sesión sigue en el horario original. Si no podés ir, podés cancelarla.');
 
@@ -255,7 +255,7 @@ begin
   update public.reschedule_requests
      set estado = 'aceptada', resolved_at = now() where id = v_s.id;
 
-  perform public.avisar(v_b.user_id, 'reserva_confirmada', v_b.id,
+  perform public.avisar(v_b.user_id, 'cambio_resuelto', v_b.id,
     'Te aceptaron el cambio',
     'Tu sesión quedó para el ' || to_char(v_s.fecha, 'DD/MM') || ' a las ' || v_s.hora || ' hs.');
 

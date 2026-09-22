@@ -620,7 +620,11 @@ export default function SalaScreen() {
       .order('fecha')
       .then(({ data }) => { if (vivo) setPropuestas(data ?? []); });
     return () => { vivo = false; };
-  }, [activeBooking?.id, recipientIsCoach]);
+    // `refreshKey` cambia al volver a la pantalla. Sin él, un horario propuesto
+    // mientras la Sala estaba en segundo plano no aparecía al volver: el id de
+    // la reserva no cambia cuando la propuesta se crea, así que sin esto el
+    // efecto no se volvía a correr nunca.
+  }, [activeBooking?.id, recipientIsCoach, refreshKey]);
 
   // M5. 🔴 No aprueba nada: deja el pedido registrado y le llega al mismo buzón
   // al que antes la persona tenía que escribirle un mail. Lo resuelve un humano,

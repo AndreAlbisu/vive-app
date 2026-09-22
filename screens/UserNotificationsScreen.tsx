@@ -113,6 +113,9 @@ export default function UserNotificationsScreen() {
       case 'profesional_no_disponible': return 'user';
       case 'profesional_disponible': return 'user-check';
       case 'profesional_con_horarios': return 'calendar';
+      // M15/M16: mover una sesión no es confirmarla ni cancelarla.
+      case 'cambio_pedido': return 'clock';
+      case 'cambio_resuelto': return 'calendar';
       default: return 'bell';
     }
   }
@@ -124,6 +127,8 @@ export default function UserNotificationsScreen() {
       case 'reserva_rechazada':
       case 'reserva_cancelada': return '#E05252';
       case 'recordatorio_sesion': return ViveColors.primary;
+      case 'cambio_pedido':
+      case 'cambio_resuelto': return ViveColors.primary;
       default: return 'rgba(135,131,92,0.55)';
     }
   }

@@ -508,7 +508,7 @@ function leerSesion() {
   try { return JSON.parse(sessionStorage.getItem(CLAVE_SESION) || 'null'); } catch { return null; }
 }
 
-let sesion = leerSesion();   // { access_token, email } una vez confirmado
+let sesion = leerSesion();   // { access_token, email, userId } una vez confirmado
 
 function mostrarError(id, msg) {
   const el = $(id);
@@ -605,7 +605,9 @@ async function confirmarCodigo() {
           : 'No pudimos confirmar el código ahora. Probá en un momento.';
       return mostrarError('errorCodigo', msg);
     }
-    sesion = { access_token: cuerpo.access_token, email: mail };
+    // `userId` se guarda desde el 21/09/2026: lo necesita el aviso del
+    // descuento de referido (M7), que pregunta por la persona y no por el token.
+    sesion = { access_token: cuerpo.access_token, email: mail, userId: cuerpo?.user?.id ?? null };
     guardarSesion(sesion);
     await marcarMailVerificado(cuerpo.access_token);
     await guardarNombre(cuerpo?.user?.id);
@@ -790,6 +792,36 @@ function actualizarCta() {
   cta.textContent = 'Ir a pagar';
   cta.disabled = false;
   $('ctaNota').textContent = `${cuando} · vas a pagar en Mercado Pago.`;
+
+  // 🔴 M7 desde acá. El precio de arriba es el que fijó el profesional, y si a
+  // esta persona le corresponde el descuento del referido, Mercado Pago le va a
+  // cobrar MENOS que ese número. Cobrar de menos no perjudica a nadie, pero una
+  // página que dice un precio y un checkout que dice otro es exactamente lo que
+  // hace dudar en el peor momento. Se avisa antes de irse a pagar.
+  //
+  // 📌 Solo se puede saber DESPUÉS de identificarse, así que vive acá y no en el
+  // bloque del precio, que se dibuja mientras la persona todavía es anónima.
+  // Una sesión guardada antes de este cambio no tiene `userId`: ahí no se
+  // pregunta nada y la nota queda como estaba, que es lo correcto.
+  if (!sesion.userId) return;
+
+  fetch(`${SUPABASE_URL}/rest/v1/rpc/tiene_descuento_referido`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${sesion.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ p_user: sesion.userId }),
+  })
+    .then(r => (r.ok ? r.json() : null))
+    .then(tiene => {
+      if (tiene === true) {
+        $('ctaNota').textContent =
+          `${cuando} · te invitaron, así que pagás 10% menos. Vas a pagar en Mercado Pago.`;
+      }
+    })
+    .catch(() => {});
 }
 
 // ── Reservar y cobrar ────────────────────────────────────────────────────────

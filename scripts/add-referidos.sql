@@ -115,12 +115,22 @@ end $$;
 -- Lo usa la app para mostrarlo antes de pagar, y las edge functions (con
 -- service role) para calcular el cobro. Una sola definición para los dos, que es
 -- lo que evita que la pantalla prometa un descuento que el cobro no haga.
+-- ⚠️ **Solo se puede preguntar por uno mismo.** Es `security definer`, así que
+-- sin esta guarda cualquiera con un uuid ajeno podía averiguar si esa persona
+-- llegó invitada y todavía no usó su descuento. Es poca cosa, pero es un dato
+-- de alguien que no lo publicó.
+--
+-- 📌 `auth.uid()` es null cuando la llama una edge function con service role
+-- (`mp-create-payment`, que necesita preguntar por el dueño de la reserva), y
+-- por eso la guarda solo aplica cuando hay una persona detrás de la llamada.
 create or replace function public.tiene_descuento_referido(p_user uuid)
 returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from public.profiles
-    where id = p_user and referred_by is not null and referral_redeemed_at is null
+    where id = p_user
+      and (auth.uid() is null or auth.uid() = p_user)
+      and referred_by is not null and referral_redeemed_at is null
   );
 $$;
 
