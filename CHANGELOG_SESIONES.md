@@ -6,7 +6,7 @@
 ---
 ## 2026-09-21 — Andre (sesión 266 · Sofía, retoques visuales y el match por forma de trabajar)
 
-**Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `scripts/add-quiz-guia-foco-genero.sql` (nuevo), `lib/enfoque.ts`, `lib/quizMatch.ts`, `lib/quizPendiente.ts`, `lib/coachesCache.ts`, `screens/QuizScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `screens/ProfesionalScreen.tsx`, `__tests__/enfoque.test.ts`, `__tests__/quizMatch.test.ts`, `SCHEMA.md`, `docs/problemas-abiertos.md`
+**Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `scripts/add-quiz-guia-foco-genero.sql` (nuevo), `lib/enfoque.ts`, `lib/quizMatch.ts`, `lib/quizPendiente.ts`, `lib/coachesCache.ts`, `screens/QuizScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `screens/ProfesionalScreen.tsx`, `__tests__/enfoque.test.ts`, `__tests__/quizMatch.test.ts`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `constants/searchData.ts`, `__tests__/taxonomia.test.ts`, `scripts/add-quiz-areas-subtemas.sql` (nuevo)
 
 **Resumen:**
 - Pedido de Andre: el botón "Seguir" del momento a pantalla completa (el que sube después de registrar el ánimo) *"no sirve de mucho"*. Es cierto: solo cerraba, igual que tocar afuera, y era el botón grande mientras lo único que lleva a algún lado estaba en letra chica abajo.
@@ -26,6 +26,13 @@
   - **Orden**: tema > tipo > presupuesto > género > forma de trabajar, con tres niveles cada uno (coincide > sin dato > no coincide). **Nada filtra**: el que no coincide sigue en la lista con la diferencia marcada. El género usa `profiles.gender`, que ya existía.
   - Del lado del profesional, "Cómo trabajo" suma *"Cuánto guiás"* y *"Sobre qué trabajás"*. El perfil público los muestra.
   - 🗄️ `scripts/add-quiz-guia-foco-genero.sql` **corrido y verificado en producción** (6 chequeos). SCHEMA.md actualizado. 17 tests nuevos, suite completa en 779.
+- 🧭 **Segunda vuelta del quiz, con más pantallas de Selia.**
+  - 🔴 **Bug encontrado al comparar: al quiz le faltaban 8 temas que los profesionales sí marcan** (Duelo, Soledad, Ansiedad social, Burnout, Hábitos mentales, Hábitos, Sexualidad, Espiritualidad; confirmado en `coach_topics` de producción). Quien trabajaba solo eso **no aparecía nunca en el quiz**. El test de taxonomía decía que el quiz "puede omitir subtemas a propósito"; ahora exige que estén todos.
+  - **Tema en dos niveles**: hasta 2 áreas y después hasta 3 temas concretos ("¿Algo más en concreto?"), que se pueden dejar sin marcar. El tema concreto ordena y explica (*"Trabaja duelo, que es lo que querés trabajar"* / *"No marca duelo entre sus temas"*) pero **no filtra**.
+  - **Pasos según el tipo**: con nutricionista se saltean las tres preguntas de cómo trabaja (y el match las ignora aunque vengan guardadas). El quiz queda entre 6 y 8 preguntas más el resumen.
+  - 🗄️ `scripts/add-quiz-areas-subtemas.sql` (`areas`, `subtemas` en `user_quiz_answers`) **corrido y verificado**. SCHEMA.md actualizado.
+  - Anotado en `problemas-abiertos.md`: M19 (pareja, familia, menores), M20 (LGBTQ+), M21 (búsqueda describiendo, con el tema legal primero), y la regla de que **"crisis" nunca es un tema del quiz**: lleva a Ayuda.
+  - 5 tests nuevos, suite completa en 784.
 - 📱 Sin ver en el teléfono. Hay que probar el deslizar: `shouldRasterizeIOS` sigue puesto en la hoja y no debería molestar, pero no se vio.
 - ✅ **Las cuatro decisiones de producto que estaban frenando la sección M quedaron tomadas** (anotadas en `docs/problemas-abiertos.md`, cada una en su fila):
   - **M15, reagendar: libre fuera de las 24hs, una sola vez adentro.** Con más de 24hs el cliente mueve a cualquier horario libre sin perder el pago; dentro de las 24hs lo pide una vez y el profesional acepta o no.

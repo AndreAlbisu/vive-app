@@ -49,9 +49,16 @@ describe('taxonomía — AXES es la fuente de verdad', () => {
     expect(fantasmas).toEqual([]);
   });
 
+  it('🔴 cada subtema de AXES está en al menos un área del quiz', () => {
+    // Hasta el 21/09/2026 el test de abajo decía que el quiz "puede omitir
+    // subtemas a propósito", y omitía 8 que los profesionales sí usan: quien
+    // trabajaba solo duelo o burnout no aparecía nunca en el quiz.
+    const quizSubtemas = new Set(QUIZ_AREAS.flatMap(q => q.subtemas));
+    expect(axesSubtemas.filter(s => !quizSubtemas.has(s))).toEqual([]);
+  });
+
   it('el quiz no ofrece subtemas inexistentes', () => {
-    // El quiz es un mapa GRUESO y puede omitir subtemas a propósito, pero no
-    // puede nombrar uno que no existe: ese camino no matchearía con nadie.
+    // Un subtema que no existe no matchearía con nadie.
     const quizSubtemas = [...new Set(QUIZ_AREAS.flatMap(q => q.subtemas))];
     const inventados = quizSubtemas.filter(s => !axesSubtemas.includes(s));
     expect(inventados).toEqual([]);

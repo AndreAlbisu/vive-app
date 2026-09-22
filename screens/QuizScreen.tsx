@@ -47,12 +47,26 @@ const SG = '#C99A3F';
 
 // Opciones, criterio de coincidencia y razones: `lib/quizMatch.ts`.
 
-// 7 preguntas, después el resumen editable y después los resultados.
-// El resumen sale del de Selia ("Revisa los detalles"), que es de lo mejor de
-// su flujo: ver todo junto y cambiar una sola sin rehacer el resto.
-const N_PREGUNTAS = 7;
-const PASO_RESUMEN = 7;
-const PASO_RESULTADOS = 8;
+// Los pasos dependen de lo que se va contestando (21/09/2026, tomado de Selia):
+// con nutricionista no se pregunta cómo trabaja, porque "entender lo que viví"
+// no le dice nada a alguien que busca un plan de alimentación. Después de las
+// preguntas va el resumen editable (también de Selia: ver todo junto y cambiar
+// una sola sin rehacer el resto) y después los resultados.
+type Pregunta = 'areas' | 'subtemas' | 'tipo' | 'presupuesto' | 'estilo' | 'guia' | 'foco' | 'genero';
+type Paso = Pregunta | 'resumen' | 'resultados';
+
+const MAX_AREAS = 2;
+const MAX_SUBTEMAS = 3;
+
+function preguntasPara(tipo: string | null): Pregunta[] {
+  const ejes: Pregunta[] = tipo === 'nutricionista' ? [] : ['estilo', 'guia', 'foco'];
+  return ['areas', 'subtemas', 'tipo', 'presupuesto', ...ejes, 'genero'];
+}
+
+/** "a, b y c" */
+function listarY(xs: string[]): string {
+  return xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`;
+}
 
 /** Solo acepta un valor guardado si sigue siendo una opción de la pregunta:
  *  una respuesta vieja con un id que ya no existe dejaría el quiz trabado. */
@@ -68,8 +82,12 @@ function getInitials(name: string) {
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function QuizScreen() {
   const router = useRouter();
-  const [step, setStep]   = useState(0);   // 0–6 preguntas, 7 resumen, 8 resultados
-  const [q1, setQ1] = useState<string | null>(null);
+  const [step, setStep]   = useState<Paso>('areas');
+  // Hasta 2 áreas y, adentro, hasta 3 temas concretos. Los temas son los mismos
+  // nombres que marca el profesional (`coach_topics`), así que el match es
+  // directo. Sin temas marcados = "cualquiera de estos".
+  const [areas, setAreas] = useState<string[]>([]);
+  const [subtemas, setSubtemas] = useState<string[]>([]);
   const [q2, setQ2] = useState<string | null>(null);
   const [q3, setQ3] = useState<string | null>(null);
   // M14: cómo quiere que la acompañen. La última porque es la única opcional:
@@ -113,56 +131,77 @@ export default function QuizScreen() {
           const { data } = await supabase.from('user_quiz_answers').select('*').eq('user_id', uid).maybeSingle();
           if (data) {
             r = {
-              topic: data.topic, professionalType: data.professional_type, budget: data.budget,
+              topic: data.topic, areas: data.areas, subtemas: data.subtemas,
+              professionalType: data.professional_type, budget: data.budget,
               estilo: data.estilo, guia: data.guia, foco: data.foco, generoPref: data.genero_pref,
             };
           }
         }
       }
       if (cancelado || !r) return;
-      setQ1(valida(r.topic, Q1_OPTIONS));
-      setQ2(valida(r.professionalType, Q2_OPTIONS));
+      // Antes del 21/09 se guardaba una sola área (`topic`): sirve igual.
+      const areasGuardadas = (Array.isArray(r.areas) ? r.areas : r.topic ? [r.topic] : [])
+        .filter((a): a is string => typeof a === 'string' && Q1_OPTIONS.some(o => o.id === a))
+        .slice(0, MAX_AREAS);
+      const posibles = Q1_OPTIONS.filter(o => areasGuardadas.includes(o.id)).flatMap(o => o.subtemas);
+      const subtemasGuardados = Array.isArray(r.subtemas)
+        ? (r.subtemas as unknown[]).filter((t): t is string => typeof t === 'string' && posibles.includes(t)).slice(0, MAX_SUBTEMAS)
+        : null;
+      const tipo = valida(r.professionalType, Q2_OPTIONS);
+      setAreas(areasGuardadas);
+      setSubtemas(subtemasGuardados ?? []);
+      setQ2(tipo);
       setQ3(valida(r.budget, Q3_OPTIONS));
       setQ4(valida(r.estilo, Q4_OPTIONS));
       setQ5(valida(r.guia, Q5_OPTIONS));
       setQ6(valida(r.foco, Q6_OPTIONS));
       setQ7(valida(r.generoPref, Q7_OPTIONS));
-      // Con las siete ya contestadas, directo al resumen: que vuelva a pasar por
-      // todas para cambiar una es lo que el resumen viene a evitar. Solo si
-      // todavía está en la primera pregunta, por si ya empezó a tocar.
-      const completas = [
-        valida(r.topic, Q1_OPTIONS), valida(r.professionalType, Q2_OPTIONS), valida(r.budget, Q3_OPTIONS),
-        valida(r.estilo, Q4_OPTIONS), valida(r.guia, Q5_OPTIONS), valida(r.foco, Q6_OPTIONS),
-        valida(r.generoPref, Q7_OPTIONS),
-      ].every(Boolean);
-      if (completas) setStep(p => (p === 0 ? PASO_RESUMEN : p));
+      // Con todo contestado, directo al resumen: que vuelva a pasar por todas
+      // para cambiar una es lo que el resumen viene a evitar. Solo si todavía
+      // está en la primera pregunta, por si ya empezó a tocar.
+      const contestada: Record<Pregunta, boolean> = {
+        areas: areasGuardadas.length > 0,
+        subtemas: subtemasGuardados !== null,
+        tipo: !!tipo,
+        presupuesto: !!valida(r.budget, Q3_OPTIONS),
+        estilo: !!valida(r.estilo, Q4_OPTIONS),
+        guia: !!valida(r.guia, Q5_OPTIONS),
+        foco: !!valida(r.foco, Q6_OPTIONS),
+        genero: !!valida(r.generoPref, Q7_OPTIONS),
+      };
+      if (preguntasPara(tipo).every(p => contestada[p])) {
+        setStep(p => (p === 'areas' ? 'resumen' : p));
+      }
     })().catch(e => console.warn('[quiz] no se pudieron leer respuestas previas:', e?.message ?? e));
     return () => { cancelado = true; };
   }, []);
 
+  const preguntas = preguntasPara(q2);
+  const indicePregunta = preguntas.indexOf(step as Pregunta);
+
   function advance() {
-    if (editando) {
+    // Cambiar las áreas desde el resumen deja temas elegidos de otra área:
+    // se pasa por los temas antes de volver, para que no queden viejos.
+    if (editando && step === 'areas') {
+      setStep('subtemas');
+    } else if (editando) {
       setEditando(false);
-      setStep(PASO_RESUMEN);
-    } else if (step < PASO_RESUMEN) {
-      setStep(s => s + 1);
-    } else {
+      setStep('resumen');
+    } else if (indicePregunta >= 0) {
+      setStep(preguntas[indicePregunta + 1] ?? 'resumen');
+    } else if (step === 'resumen') {
       setResultado(recomendarDesdeQuiz(coaches, {
-        tema: q1, tipo: q2, presupuesto: q3, estilo: q4, guia: q5, foco: q6, genero: q7,
+        tema: areas[0] ?? null, areas, subtemas,
+        tipo: q2, presupuesto: q3, estilo: q4, guia: q5, foco: q6, genero: q7,
       }));
       setTandas(1);
       // 🔴 Antes esto era `if (!uid) return;`: quien hacía el quiz SIN cuenta
-      // perdía las tres respuestas en silencio. Lo único que quedaba era
-      // `vive_quiz_topic` en AsyncStorage, una clave que no lee nadie — o sea
-      // nada. Y el quiz se puede hacer sin cuenta: se llega desde Profesionales,
-      // que es navegable como anónimo.
-      //
-      // Ahora hay un solo camino: se encolan siempre, y si YA hay sesión se
-      // vuelcan en el acto para que la recomendación se actualice enseguida.
-      // Si no, quedan esperando y las vuelca `AuthContext` al registrarse.
-      // Desde el 21/09/2026 se guardan las siete (antes el estilo se perdía).
+      // perdía las respuestas en silencio. Ahora hay un solo camino: se encolan
+      // siempre, y si YA hay sesión se vuelcan en el acto. Si no, las vuelca
+      // `AuthContext` al registrarse.
       guardarPendiente({
-        topic: q1, professionalType: q2, budget: q3,
+        topic: areas[0] ?? null, areas, subtemas,
+        professionalType: q2, budget: q3,
         estilo: q4, guia: q5, foco: q6, generoPref: q7,
       })
         .then(() => supabase.auth.getSession())
@@ -171,40 +210,65 @@ export default function QuizScreen() {
           if (uid) return volcarPendiente(uid);
         })
         .catch(e => console.warn('[quiz] no se pudo guardar:', e?.message ?? e));
-      setStep(PASO_RESULTADOS);
+      setStep('resultados');
     }
   }
 
   // M2: volver a las respuestas para cambiar una sola. Desde el 21/09 va al
-  // resumen y no a la primera pregunta: con siete, recorrerlas todas para
-  // cambiar la última era castigo.
+  // resumen y no a la primera pregunta.
   function volverAResponder() {
-    setStep(PASO_RESUMEN);
+    setStep('resumen');
   }
 
-  function editar(paso: number) {
+  function editar(paso: Pregunta) {
     setEditando(true);
     setStep(paso);
   }
 
+  function toggleArea(id: string) {
+    const next = areas.includes(id)
+      ? areas.filter(x => x !== id)
+      : areas.length >= MAX_AREAS ? areas : [...areas, id];
+    setAreas(next);
+    // Los temas de un área que se sacó ya no corresponden.
+    const posibles = Q1_OPTIONS.filter(o => next.includes(o.id)).flatMap(o => o.subtemas);
+    setSubtemas(st => st.filter(t => posibles.includes(t)));
+  }
+
+  function toggleSubtema(t: string) {
+    setSubtemas(prev => prev.includes(t)
+      ? prev.filter(x => x !== t)
+      : prev.length >= MAX_SUBTEMAS ? prev : [...prev, t]);
+  }
+
+  // Los temas del segundo nivel: los de las áreas elegidas, sin repetir
+  // (Vínculos laborales y Orientación vocacional están en dos).
+  const subtemasPosibles = [...new Set(Q1_OPTIONS.filter(o => areas.includes(o.id)).flatMap(o => o.subtemas))];
+
   // Lo que se ve en el resumen. `label` de la opción elegida, o null.
   const labelDe = <T extends string>(v: T | null, ops: { id: T; label: string }[]) =>
     ops.find(o => o.id === v)?.label ?? null;
-  const resumen = [
-    { paso: 0, pregunta: 'Qué querés trabajar',       respuesta: labelDe(q1, Q1_OPTIONS) },
-    { paso: 1, pregunta: 'Con quién',                 respuesta: labelDe(q2 as any, Q2_OPTIONS) },
-    { paso: 2, pregunta: 'Presupuesto por sesión',    respuesta: labelDe(q3 as any, Q3_OPTIONS) },
-    { paso: 3, pregunta: 'Cómo te acompañen',         respuesta: labelDe(q4, Q4_OPTIONS) },
-    { paso: 4, pregunta: 'Cuánto te guíen',           respuesta: labelDe(q5, Q5_OPTIONS) },
-    { paso: 5, pregunta: 'Hacia dónde mirar',         respuesta: labelDe(q6, Q6_OPTIONS) },
-    { paso: 6, pregunta: 'Género del profesional',    respuesta: labelDe(q7, Q7_OPTIONS) },
-  ];
+  const RESUMEN: Record<Pregunta, { pregunta: string; respuesta: string | null }> = {
+    areas:       { pregunta: 'Qué querés trabajar',    respuesta: areas.length ? listarY(Q1_OPTIONS.filter(o => areas.includes(o.id)).map(o => o.label)) : null },
+    subtemas:    { pregunta: 'Más en concreto',        respuesta: subtemas.length ? listarY(subtemas) : 'Cualquiera de estos' },
+    tipo:        { pregunta: 'Con quién',              respuesta: labelDe(q2 as any, Q2_OPTIONS) },
+    presupuesto: { pregunta: 'Presupuesto por sesión', respuesta: labelDe(q3 as any, Q3_OPTIONS) },
+    estilo:      { pregunta: 'Cómo te acompañen',      respuesta: labelDe(q4, Q4_OPTIONS) },
+    guia:        { pregunta: 'Cuánto te guíen',        respuesta: labelDe(q5, Q5_OPTIONS) },
+    foco:        { pregunta: 'Hacia dónde mirar',      respuesta: labelDe(q6, Q6_OPTIONS) },
+    genero:      { pregunta: 'Género del profesional', respuesta: labelDe(q7, Q7_OPTIONS) },
+  };
+  const resumen = preguntas.map(p => ({ paso: p, ...RESUMEN[p] }));
 
   const visibles = resultado.recomendaciones.slice(0, tandas * TAMANO_TANDA);
   const hayMas = resultado.recomendaciones.length > visibles.length;
 
-  const respuestas = [q1, q2, q3, q4, q5, q6, q7];
-  const canAdvance = step === PASO_RESUMEN || (step < N_PREGUNTAS && !!respuestas[step]);
+  const contestada: Record<Pregunta, boolean> = {
+    areas: areas.length > 0,
+    subtemas: true, // "cualquiera de estos" también es una respuesta
+    tipo: !!q2, presupuesto: !!q3, estilo: !!q4, guia: !!q5, foco: !!q6, genero: !!q7,
+  };
+  const canAdvance = step === 'resumen' || (indicePregunta >= 0 && contestada[step as Pregunta]);
 
   function goToPerfil(coach: CachedCoach) {
     router.push({
@@ -229,16 +293,16 @@ export default function QuizScreen() {
             <Feather name="arrow-left" size={20} color={F} />
             <Text style={s.backText}>Atrás</Text>
           </TouchableOpacity>
-          {step < N_PREGUNTAS && (
-            <Text style={s.stepLabel}>{step + 1} / {N_PREGUNTAS}</Text>
+          {indicePregunta >= 0 && (
+            <Text style={s.stepLabel}>{indicePregunta + 1} / {preguntas.length}</Text>
           )}
           <View style={{ width: 60 }} />
         </View>
 
         {/* Progress bar */}
-        {step < N_PREGUNTAS && (
+        {indicePregunta >= 0 && (
           <View style={s.progressTrack}>
-            <View style={[s.progressFill, { width: `${((step + 1) / N_PREGUNTAS) * 100}%` as any }]} />
+            <View style={[s.progressFill, { width: `${((indicePregunta + 1) / preguntas.length) * 100}%` as any }]} />
           </View>
         )}
 
@@ -247,26 +311,60 @@ export default function QuizScreen() {
           contentContainerStyle={s.content}
           showsVerticalScrollIndicator={false}>
 
-          {/* ── Q1 ── */}
-          {step === 0 && (
+          {/* ── Áreas (hasta 2) ── */}
+          {step === 'areas' && (
             <>
-              <Text style={s.question}>{Q1_OPTIONS.length > 0 ? '¿Qué querés trabajar principalmente?' : ''}</Text>
-              {Q1_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt.id}
-                  style={[s.option, q1 === opt.id && s.optionActive]}
-                  onPress={() => setQ1(opt.id)}
-                  activeOpacity={0.8}>
-                  <Feather name={opt.icon as any} size={18} color={q1 === opt.id ? CR : FS} />
-                  <Text style={[s.optionText, q1 === opt.id && s.optionTextActive]}>{opt.label}</Text>
-                  {q1 === opt.id && <Feather name="check" size={16} color={CR} />}
-                </TouchableOpacity>
-              ))}
+              <Text style={s.question}>¿Qué querés trabajar principalmente?</Text>
+              <Text style={s.questionHint}>Podés elegir hasta {MAX_AREAS}.</Text>
+              {Q1_OPTIONS.map(opt => {
+                const activo = areas.includes(opt.id);
+                const bloqueado = !activo && areas.length >= MAX_AREAS;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={[s.option, activo && s.optionActive, bloqueado && s.optionBlocked]}
+                    onPress={() => toggleArea(opt.id)}
+                    activeOpacity={0.8}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: activo, disabled: bloqueado }}>
+                    <Feather name={opt.icon as any} size={18} color={activo ? CR : FS} />
+                    <Text style={[s.optionText, activo && s.optionTextActive]}>{opt.label}</Text>
+                    {activo && <Feather name="check" size={16} color={CR} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </>
+          )}
+
+          {/* ── Temas concretos (hasta 3, o ninguno) ── */}
+          {step === 'subtemas' && (
+            <>
+              <Text style={s.question}>¿Algo más en concreto?</Text>
+              <Text style={s.questionHint}>
+                Hasta {MAX_SUBTEMAS}. Si no lo tenés claro, seguí sin marcar nada.
+              </Text>
+              <View style={s.chipsRow}>
+                {subtemasPosibles.map(t => {
+                  const activo = subtemas.includes(t);
+                  const bloqueado = !activo && subtemas.length >= MAX_SUBTEMAS;
+                  return (
+                    <TouchableOpacity
+                      key={t}
+                      style={[s.chip, activo && s.optionActive, bloqueado && s.optionBlocked]}
+                      onPress={() => toggleSubtema(t)}
+                      activeOpacity={0.8}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: activo, disabled: bloqueado }}>
+                      <Text style={[s.chipText, activo && s.optionTextActive]}>{t}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </>
           )}
 
           {/* ── Q2 ── */}
-          {step === 1 && (
+          {step === 'tipo' && (
             <>
               <Text style={s.question}>¿Con quién preferís hacerlo?</Text>
               {Q2_OPTIONS.map(opt => (
@@ -286,7 +384,7 @@ export default function QuizScreen() {
           )}
 
           {/* ── Q3 ── */}
-          {step === 2 && (
+          {step === 'presupuesto' && (
             <>
               <Text style={s.question}>¿Cuál es tu presupuesto por sesión?</Text>
               {Q3_OPTIONS.map(opt => (
@@ -303,7 +401,7 @@ export default function QuizScreen() {
           )}
 
           {/* ── Q4 (M14) ── */}
-          {step === 3 && (
+          {step === 'estilo' && (
             <>
               <Text style={s.question}>¿Cómo te gustaría que te acompañen?</Text>
               <Text style={s.questionHint}>
@@ -326,7 +424,7 @@ export default function QuizScreen() {
           )}
 
           {/* ── Q5-Q7 (M14 ampliado, 21/09/2026) ── */}
-          {step === 4 && (
+          {step === 'guia' && (
             <Opciones
               pregunta="¿Cuánto te gustaría que te guíen?"
               opciones={Q5_OPTIONS}
@@ -334,7 +432,7 @@ export default function QuizScreen() {
               onElegir={setQ5}
             />
           )}
-          {step === 5 && (
+          {step === 'foco' && (
             <Opciones
               pregunta="¿Qué te gustaría trabajar sobre todo?"
               hint="Pensalo como hacia dónde querés mirar."
@@ -343,7 +441,7 @@ export default function QuizScreen() {
               onElegir={setQ6}
             />
           )}
-          {step === 6 && (
+          {step === 'genero' && (
             <Opciones
               pregunta="¿Preferís que sea mujer o varón?"
               hint="Hay cosas que se hablan más fácil con alguien en particular. Si te da igual, también está bien."
@@ -354,7 +452,7 @@ export default function QuizScreen() {
           )}
 
           {/* ── Resumen ── */}
-          {step === PASO_RESUMEN && (
+          {step === 'resumen' && (
             <>
               <Text style={s.question}>Revisá tus respuestas</Text>
               <Text style={s.questionHint}>Tocá una para cambiarla. Con esto te sugerimos profesionales.</Text>
@@ -377,7 +475,7 @@ export default function QuizScreen() {
           )}
 
           {/* ── Results ── */}
-          {step === PASO_RESULTADOS && (
+          {step === 'resultados' && (
             <>
               <Text style={s.resultsTitle}>Para vos</Text>
               <Text style={s.resultsSub}>
@@ -467,13 +565,13 @@ export default function QuizScreen() {
           )}
 
           {/* Siguiente button */}
-          {step < PASO_RESULTADOS && (
+          {step !== 'resultados' && (
             <TouchableOpacity
               style={[s.nextBtn, !canAdvance && s.nextBtnDisabled]}
               onPress={() => canAdvance && advance()}
               activeOpacity={canAdvance ? 0.85 : 1}>
               <Text style={[s.nextBtnText, !canAdvance && s.nextBtnTextDisabled]}>
-                {editando ? 'Listo' : step === PASO_RESUMEN ? 'Ver sugerencias' : 'Siguiente'}
+                {editando && step !== 'areas' ? 'Listo' : step === 'resumen' ? 'Ver sugerencias' : 'Siguiente'}
               </Text>
               <Feather name="arrow-right" size={16} color={canAdvance ? CR : 'rgba(63,81,47,0.35)'} />
             </TouchableOpacity>
@@ -547,6 +645,15 @@ const s = StyleSheet.create({
   optionTextActive: { color: CR },
   optionDesc:   { fontFamily: ViveFonts.regular, fontSize: 11.5, color: FS, marginTop: 2 },
   optionDescActive: { color: 'rgba(243,238,223,0.70)' },
+
+  optionBlocked: { opacity: 0.45 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    backgroundColor: BG, borderRadius: 20,
+    borderWidth: 1.5, borderColor: BD,
+    paddingHorizontal: 14, paddingVertical: 10,
+  },
+  chipText: { fontFamily: ViveFonts.medium, fontSize: 13.5, color: F },
 
   summaryRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

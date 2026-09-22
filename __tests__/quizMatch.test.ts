@@ -117,3 +117,34 @@ describe('recomendarDesdeQuiz — M14 ampliado (21/09/2026)', () => {
     expect(r.hayCoincidenciaExacta).toBe(false);
   });
 });
+
+describe('recomendarDesdeQuiz — tema en dos niveles (21/09/2026)', () => {
+  const BASE: RespuestasQuiz = { tema: null, tipo: 'any', presupuesto: 'flex' };
+
+  it('🔴 quien trabaja solo duelo aparece al elegir Emociones (antes quedaba afuera)', () => {
+    const c = coach({ topics: ['Duelo'] });
+    expect(recomendarDesdeQuiz([c], { ...BASE, areas: ['emocion'] }).recomendaciones).toHaveLength(1);
+  });
+
+  it('con dos áreas entra quien trabaja cualquiera de las dos', () => {
+    const a = coach({ topics: ['Ansiedad'] });
+    const b = coach({ topics: ['Burnout (estrés laboral)'] });
+    const r = recomendarDesdeQuiz([a, b], { ...BASE, areas: ['emocion', 'trabajo'] });
+    expect(r.recomendaciones).toHaveLength(2);
+  });
+
+  it('el tema concreto ordena pero no filtra', () => {
+    const conDuelo = coach({ topics: ['Duelo'] });
+    const sinDuelo = coach({ topics: ['Ansiedad'], avgRating: 5 });
+    const r = recomendarDesdeQuiz([sinDuelo, conDuelo], { ...BASE, areas: ['emocion'], subtemas: ['Duelo'] });
+    expect(r.recomendaciones.map(x => x.coach.id)).toEqual([conDuelo.id, sinDuelo.id]);
+    expect(r.recomendaciones[0].razones[0]).toBe('Trabaja duelo, que es lo que querés trabajar');
+    expect(r.recomendaciones[1].diferencias).toContain('No marca duelo entre sus temas');
+  });
+
+  it('con nutricionista ignora las preguntas de cómo trabaja', () => {
+    const c = coach({ specialty: 'Nutricionista', hasMatricula: true, topics: ['Nutrición'], guia: 'acompana' });
+    const r = recomendarDesdeQuiz([c], { ...BASE, areas: ['salud'], tipo: 'nutricionista', guia: 'guia' });
+    expect(r.recomendaciones[0].diferencias).toEqual([]);
+  });
+});

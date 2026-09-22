@@ -89,12 +89,18 @@ export type QuizArea = { id: string; label: string; icon: string; subtemas: stri
 // a agregarlo acá — pero si se omite, ningún camino del quiz lleva a un coach
 // que solo trabaje ese tema. `Autoestima` estaba en esa situación desde antes y
 // se sumó ahora que además tiene puerta propia.
+// 🔴 Hasta el 21/09/2026 al quiz le faltaban 8 subtemas que los profesionales
+// SÍ marcan (Duelo, Soledad, Ansiedad social, Burnout, Hábitos mentales,
+// Hábitos, Sexualidad, Espiritualidad): quien trabajaba solo eso no aparecía
+// nunca en el quiz. Ahora cada subtema de AXES está en al menos un área, y lo
+// controla `__tests__/taxonomia.test.ts`. El área de cada uno sigue a
+// `TOPIC_TO_AREA`, salvo los que ya estaban en dos áreas.
 export const QUIZ_AREAS: QuizArea[] = [
-  { id: 'emocion',    label: 'Emociones y ánimo',      icon: 'smile',      subtemas: ['Tristeza','Ansiedad','Enojo','Culpa','Vergüenza','Alegría','Autoestima'] },
+  { id: 'emocion',    label: 'Emociones y ánimo',      icon: 'smile',      subtemas: ['Tristeza','Ansiedad','Ansiedad social','Enojo','Culpa','Vergüenza','Alegría','Autoestima','Duelo','Soledad'] },
   { id: 'relaciones', label: 'Relaciones',              icon: 'heart',      subtemas: ['Pareja','Familia','Amistades','Vínculos laborales','Ruptura y separación','Comunicación','Asertividad'] },
-  { id: 'trabajo',    label: 'Trabajo y carrera',       icon: 'briefcase',  subtemas: ['Productividad','Concentración','Procrastinación','Vínculos laborales','Equilibrio vida-trabajo','Liderazgo','Orientación vocacional'] },
-  { id: 'salud',      label: 'Salud y bienestar',       icon: 'activity',   subtemas: ['Sueño','Energía','Nutrición','Actividad física','Estrés físico'] },
-  { id: 'proposito',  label: 'Propósito y crecimiento', icon: 'compass',    subtemas: ['Propósito','Identidad','Motivación','Crecimiento','Momentos de cambio','Orientación vocacional'] },
+  { id: 'trabajo',    label: 'Trabajo y carrera',       icon: 'briefcase',  subtemas: ['Productividad','Concentración','Procrastinación','Hábitos mentales','Burnout (estrés laboral)','Vínculos laborales','Equilibrio vida-trabajo','Liderazgo','Orientación vocacional'] },
+  { id: 'salud',      label: 'Salud y bienestar',       icon: 'activity',   subtemas: ['Sueño','Energía','Nutrición','Actividad física','Hábitos','Estrés físico','Sexualidad'] },
+  { id: 'proposito',  label: 'Propósito y crecimiento', icon: 'compass',    subtemas: ['Propósito','Identidad','Motivación','Crecimiento','Momentos de cambio','Orientación vocacional','Espiritualidad'] },
 ];
 
 

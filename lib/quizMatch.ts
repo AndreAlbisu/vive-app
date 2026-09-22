@@ -62,7 +62,13 @@ export const PRESUPUESTO_OPCIONES: OpcionPresupuesto[] = [
 // ─── Resultado ──────────────────────────────────────────────────────────────
 
 export type RespuestasQuiz = {
+  /** Una sola área. Se mantiene por compatibilidad: si viene `areas`, manda. */
   tema: string | null;
+  /** Hasta 2 áreas (21/09/2026). */
+  areas?: string[];
+  /** Hasta 3 temas concretos dentro de esas áreas, con los mismos nombres que
+   *  `coach_topics`. Vacío = "cualquiera de estos". */
+  subtemas?: string[];
   tipo: string | null;
   presupuesto: string | null;
   /** M14: cómo quiere que la acompañen. Opcional de verdad: `null` o `'any'`
@@ -105,11 +111,19 @@ function listar(temas: string[]): string {
 }
 
 function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
-  const area = QUIZ_AREAS.find(a => a.id === r.tema);
-  const subtemas = area?.subtemas ?? [];
+  const idsAreas = r.areas && r.areas.length > 0 ? r.areas : r.tema ? [r.tema] : [];
+  const areas = QUIZ_AREAS.filter(a => idsAreas.includes(a.id));
+  const subtemas = [...new Set(areas.flatMap(a => a.subtemas))];
   const temasEnComun = subtemas.filter(s => coach.topics.includes(s));
   // Sin tema elegido (o un id desconocido) no se filtra por tema.
   const cumpleTema = subtemas.length === 0 || temasEnComun.length > 0;
+
+  // El segundo nivel ordena y explica, pero NO filtra: con pocos perfiles,
+  // exigir "duelo" exacto vaciaría la lista. Quien trabaja el área sin marcar
+  // ese tema sigue, con la diferencia a la vista.
+  const elegidos = (r.subtemas ?? []).filter(s => subtemas.includes(s));
+  const elegidosEnComun = elegidos.filter(s => coach.topics.includes(s));
+  const cumpleSubtema = elegidos.length === 0 || elegidosEnComun.length > 0;
 
   const tipoPedido = r.tipo ? TIPO_POR_OPCION[r.tipo] ?? null : null;
   const tipo = tipoProfesional(coach);
@@ -121,10 +135,17 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
   const razones: string[] = [];
   const diferencias: string[] = [];
 
-  if (temasEnComun.length > 0) {
-    razones.push(`Trabaja ${listar(temasEnComun.slice(0, 2))}, que es lo que querés trabajar`);
+  if (elegidosEnComun.length > 0) {
+    razones.push(`Trabaja ${listar(elegidosEnComun.slice(0, 2))}, que es lo que querés trabajar`);
+  } else if (temasEnComun.length > 0) {
+    // Si eligió temas concretos y este perfil no marca ninguno, "que es lo que
+    // querés trabajar" sería falso: trabaja el área, no lo que pidió.
+    razones.push(elegidos.length > 0
+      ? `Trabaja ${listar(temasEnComun.slice(0, 2))}, dentro de lo que elegiste`
+      : `Trabaja ${listar(temasEnComun.slice(0, 2))}, que es lo que querés trabajar`);
+    if (elegidos.length > 0) diferencias.push(`No marca ${listar(elegidos)} entre sus temas`);
   } else if (subtemas.length > 0) {
-    diferencias.push(`No figura trabajando ${area!.label.toLowerCase()}`);
+    diferencias.push(`No figura trabajando ${listar(areas.map(a => a.label))}`);
   }
 
   if (tipoPedido) {
@@ -155,10 +176,14 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
 
   // M14: cómo trabaja. Ordena y explica, nunca filtra. Si la persona no lo
   // pidió, o ni el profesional ni su escuela dicen nada, no se dice nada.
+  //
+  // Con nutricionista no se preguntan (el quiz las saltea): se ignoran aunque
+  // vengan guardadas de una corrida anterior con otro tipo.
+  const sinEjes = r.tipo === 'nutricionista';
   const ejes = [
-    evaluarEstiloConEscuela(coach.estilo, coach.enfoques, r.estilo ?? null),
-    evaluarGuia(coach.guia, coach.enfoques, r.guia ?? null),
-    evaluarFoco(coach.focos, coach.enfoques, r.foco ?? null),
+    evaluarEstiloConEscuela(coach.estilo, coach.enfoques, sinEjes ? null : r.estilo ?? null),
+    evaluarGuia(coach.guia, coach.enfoques, sinEjes ? null : r.guia ?? null),
+    evaluarFoco(coach.focos, coach.enfoques, sinEjes ? null : r.foco ?? null),
   ];
 
   for (const e of [genero, ...ejes]) {
@@ -178,9 +203,12 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
   // contestó y coincide, o quedaba igual de abajo que uno que dice otra cosa.
   const puntosGenero = genero.coincide ? 8 : genero.desconocido ? 4 : 0;
   const puntosEjes = ejes.reduce((n, e) => n + (e.razon ? 2 : e.coincide ? 1 : 0), 0); // máx. 6 < 8
+  //
+  // El tema concreto va debajo del tipo: quien pidió psicólogo y duelo prefiere
+  // un psicólogo del área antes que un coach que marcó duelo.
   const nivel =
-    (cumpleTema ? 64 : 0) + (cumpleTipo ? 32 : 0) + (cumplePrecio ? 16 : 0) +
-    puntosGenero + puntosEjes;
+    (cumpleTema ? 128 : 0) + (cumpleTipo ? 64 : 0) + (cumpleSubtema ? 32 : 0) +
+    (cumplePrecio ? 16 : 0) + puntosGenero + puntosEjes;
   // `exacto` es lo que habilita el título "coinciden con lo que respondiste".
   // Género y ejes entran solo cuando hay una diferencia que mostrar: si no, el
   // título volvería a prometer una coincidencia total con una resta a la vista,
@@ -190,7 +218,7 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
     diferencias,
     cumpleTema,
     nivel,
-    exacto: cumpleTema && cumpleTipo && cumplePrecio && genero.coincide && ejes.every(e => e.coincide),
+    exacto: cumpleTema && cumpleSubtema && cumpleTipo && cumplePrecio && genero.coincide && ejes.every(e => e.coincide),
   };
 }
 

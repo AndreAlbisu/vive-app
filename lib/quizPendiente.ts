@@ -27,6 +27,11 @@ export type QuizPendiente = {
    *  el estilo se perdía al salir del quiz. `'any'` también se guarda: "no
    *  sabría decir" es una respuesta, y al volver tiene que aparecer marcada. */
   estilo?: string | null;
+  /** Hasta 2 áreas y hasta 3 temas concretos (21/09/2026). `topic` se sigue
+   *  escribiendo con la primera área. Un array vacío en `subtemas` es una
+   *  respuesta ("cualquiera de estos") y sí viaja, para borrar la anterior. */
+  areas?: string[] | null;
+  subtemas?: string[] | null;
   guia?: string | null;
   foco?: string | null;
   generoPref?: string | null;
@@ -86,6 +91,8 @@ export async function volcarPendiente(userId: string): Promise<void> {
   if (p.axis)             fila.axis = p.axis;
   if (p.professionalType) fila.professional_type = p.professionalType;
   if (p.budget)           fila.budget = p.budget;
+  if (p.areas && p.areas.length > 0) fila.areas = p.areas;
+  if (Array.isArray(p.subtemas))     fila.subtemas = p.subtemas;
   if (p.estilo)           fila.estilo = p.estilo;
   if (p.guia)             fila.guia = p.guia;
   if (p.foco)             fila.foco = p.foco;
