@@ -59,10 +59,19 @@ const SOUNDS = [
 // busca el fragmento más parejo, sin picos ni silencios), y el loop lo cierra
 // `scripts/procesar-sonidos.py` con un crossfade de potencia constante.
 //
-// ⚠️ **Olas dura 34s y no 87**: es la única de las tres grabaciones libres con
+// ⚠️ **Olas dura 32s y no 87**: es la única de las tres grabaciones libres con
 // olas decentes que encontramos, y el original dura 40 segundos. Se nota más el
 // loop que en las otras. Si aparece una fuente mejor, se reemplaza con el mismo
 // script y no hay que tocar nada de esta pantalla.
+//
+// 🔴 **Y el tramo se movió una vez, escuchándolo.** La primera versión arrancaba
+// en el segundo 2 y Andre oyó "algo raro, como pisadas" al principio. Estaba:
+// midiendo el original bloque a bloque aparece un golpe aislado entre 2,50 y
+// 3,00, contra un fondo muy tranquilo. Ahora empieza en el 6,00, que además es
+// donde las olas se vuelven parejas: el corte pasó de 1 pico y 6 silencios a
+// **cero y cero**. 📌 La medición sirve para descartar, no para elegir: encontró
+// el ladrido de perro de otro archivo, pero este golpe no lo marcó como pico
+// porque el tramo de alrededor era muy silencioso. Hace falta el oído humano.
 const SOUND_FILES: Record<string, any> = {
   lluvia: require('../assets/sounds/lluvia.m4a'),
   bosque: require('../assets/sounds/bosque.m4a'),
