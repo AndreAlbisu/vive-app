@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, StatusBar,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, StatusBar, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -57,6 +57,41 @@ export default function CoachAgendaScreen() {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [year, setYear] = useState(TODAY.getFullYear());
   const [month, setMonth] = useState(TODAY.getMonth());
+  /**
+   * Tocar una sesión en la agenda.
+   *
+   * 🔴 Hasta el 22/09/2026 esto abría el chat y nada más. La agenda es donde el
+   * profesional mira su semana, así que es el lugar natural para mover una
+   * sesión, y desde acá no se podía: había que acordarse de ir a Reservas y
+   * buscarla en una lista. Ahora ofrece lo mismo que el "⋯" de allá.
+   *
+   * 📌 No incluye "cancelar" a propósito: cancelar dispara reembolso, mensaje de
+   * sistema y aviso, y esa lógica vive entera en `CoachReservasScreen`.
+   * Duplicarla acá sería tener dos cancelaciones que se pueden separar. Mover es
+   * la acción que faltaba; cancelar ya tiene su lugar.
+   */
+  function abrirSesion(b: Booking) {
+    const opciones: { text: string; onPress?: () => void; style?: 'cancel' }[] = [];
+    if (b.sala_id) {
+      opciones.push({
+        text: 'Ver chat',
+        onPress: () => router.push({ pathname: '/sala', params: { sala_id: b.sala_id! } }),
+      });
+    }
+    if (b.status === 'confirmada') {
+      opciones.push({
+        text: 'Proponer otro horario',
+        onPress: () => router.push({
+          pathname: '/booking-calendar',
+          params: { coachId: user!.id, name: b.userName, proponer: b.id },
+        }),
+      });
+    }
+    if (opciones.length === 0) return;
+    opciones.push({ text: 'Cerrar', style: 'cancel' });
+    Alert.alert(b.userName, `${b.time} hs`, opciones);
+  }
+
   const [selected, setSelected] = useState<string | null>(TODAY_STR);
   const [byDate, setByDate] = useState<Record<string, Booking[]>>({});
   const [loading, setLoading] = useState(true);
@@ -204,8 +239,8 @@ export default function CoachAgendaScreen() {
                     <TouchableOpacity
                       key={b.id}
                       style={s.bookingCard}
-                      activeOpacity={b.sala_id ? 0.85 : 1}
-                      onPress={() => { if (b.sala_id) router.push({ pathname: '/sala', params: { sala_id: b.sala_id } }); }}
+                      activeOpacity={0.85}
+                      onPress={() => abrirSesion(b)}
                     >
                       <View style={s.timeTag}><Text style={s.timeTagText}>{b.time}</Text></View>
                       <View style={s.bookingInfo}>

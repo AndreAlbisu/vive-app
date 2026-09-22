@@ -158,6 +158,7 @@ type CambioPedido = {
   fecha: string;
   hora: string;
   booking_id: string;
+  pedida_por: 'cliente' | 'profesional';
   bookings: { scheduled_date: string; scheduled_time: string } | null;
 };
 
@@ -178,6 +179,7 @@ export default function CoachReservasScreen() {
   // `bookings` porque no son reservas: son una pregunta sobre una reserva que
   // ya existe y que sigue en pie mientras tanto.
   const [cambios, setCambios] = useState<CambioPedido[]>([]);
+  const [propias, setPropias] = useState<CambioPedido[]>([]);
   const [respondiendo, setRespondiendo] = useState<string | null>(null);
   const [weeklyBlocks, setWeeklyBlocks] = useState<WeeklyBlock[]>([]);
 
@@ -251,12 +253,18 @@ export default function CoachReservasScreen() {
   const cargarCambios = useCallback(async (cid: string) => {
     const { data } = await supabase
       .from('reschedule_requests')
-      .select('id, fecha, hora, booking_id, bookings!inner(coach_id, scheduled_date, scheduled_time, user_id)')
+      .select('id, fecha, hora, booking_id, pedida_por, bookings!inner(coach_id, scheduled_date, scheduled_time, user_id)')
       .eq('estado', 'pendiente')
-      .eq('pedida_por', 'cliente')
       .eq('bookings.coach_id', cid)
       .order('created_at', { ascending: true });
-    setCambios((data ?? []) as unknown as CambioPedido[]);
+
+    // Los dos lados del mismo mecanismo, separados para la pantalla: lo que pide
+    // el cliente necesita botones, y lo que propuso el profesional es un estado
+    // ("le propusiste esto, está eligiendo"). Sin esa segunda línea, proponer un
+    // horario era gritar a un pozo: no quedaba en ningún lado.
+    const todas = (data ?? []) as unknown as CambioPedido[];
+    setCambios(todas.filter(c => c.pedida_por === 'cliente'));
+    setPropias(todas.filter(c => c.pedida_por === 'profesional'));
   }, []);
 
   // 📌 El nombre sale de las reservas que ya están cargadas y no de otra
@@ -562,6 +570,30 @@ export default function CoachReservasScreen() {
               </>
             )}
 
+            {/* Lo que el profesional propuso y todavía no contestaron. Es un
+                estado, no una decisión: por eso no tiene botones. */}
+            {propias.length > 0 && (
+              <>
+                <View style={s.stitle}>
+                  <Text style={s.stitleB}>Horarios que propusiste</Text>
+                </View>
+                {propias.map(c => (
+                  <View key={c.id} style={s.req}>
+                    <Text style={s.cambioTxt}>
+                      {`Le propusiste a `}
+                      <Text style={s.cambioB}>{nombreDe(c.booking_id)}</Text>
+                      {` pasar al ${fullDate(c.fecha)}, ${c.hora} hs.`}
+                    </Text>
+                    <Text style={s.cambioDe}>
+                      {c.bookings
+                        ? `Sigue agendada el ${fullDate(c.bookings.scheduled_date)}, ${c.bookings.scheduled_time} hasta que conteste.`
+                        : 'La sesión sigue en su horario hasta que conteste.'}
+                    </Text>
+                  </View>
+                ))}
+              </>
+            )}
+
             {/* Por confirmar — se omite entera (ni header ni caja) si no hay
                 nada, en vez de repetir "no hay pendientes" cuando la pantalla
                 ya tiene contenido real más abajo. */}
@@ -643,15 +675,22 @@ export default function CoachReservasScreen() {
                         <Text style={s.bkName} numberOfLines={1}>{b.userName}{b.edad != null ? `, ${b.edad}` : ''}</Text>
                         <Text style={s.bkSub}>{ordinals[b.id]} · videollamada</Text>
                       </View>
-                      {b.id === nextId && nextWithin24h ? (
+                      {/* 🔴 "Preparar" y el menú CONVIVEN desde el 22/09/2026.
+                          Antes se excluían: en la próxima sesión dentro de las
+                          24hs aparecía solo "Preparar", y el "⋯" desaparecía.
+                          O sea que **justo cuando más falta hace mover una
+                          sesión, el único camino para proponer otro horario no
+                          existía**, y al profesional que no podía en tres horas
+                          no le quedaba más que cancelar. Que es exactamente lo
+                          que M16 vino a evitar. */}
+                      {b.id === nextId && nextWithin24h && (
                         <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={() => router.navigate('/(coach)')}>
                           <Text style={s.btnGhostTxt}>Preparar</Text>
                         </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity onPress={() => openMenu(b)} hitSlop={8} activeOpacity={0.6} disabled={cancellingId === b.id}>
-                          <Feather name="more-horizontal" size={20} color={FOREST_SOFT} />
-                        </TouchableOpacity>
                       )}
+                      <TouchableOpacity onPress={() => openMenu(b)} hitSlop={8} activeOpacity={0.6} disabled={cancellingId === b.id}>
+                        <Feather name="more-horizontal" size={20} color={FOREST_SOFT} />
+                      </TouchableOpacity>
                     </View>
                   ))}
                 </View>
