@@ -91,6 +91,7 @@ qué darse cuenta si algo quedó afuera.
 
 | ID | Qué | Estado |
 |---|---|---|
+| **L41** | 🔊 **Los cuatro sonidos ambiente suenan mal, y no se arregla desde el código.** Están en **mono, 22 kHz y 63 kbps**, re-encodeados sobre un corte CC0 que ya venía a 31 kbps. Para lluvia, olas y bosque es lo peor posible: casi todo lo que hace que suenen como un lugar vive **arriba de los 11 kHz**, y a 22 kHz de muestreo eso directamente no existe. Por eso se oyen sordos y planos. Diagnosticado en las sesiones 234 y 235, nunca resuelto. | 🔴 **Falta un paso humano: bajar los cuatro originales de freesound.org en WAV o FLAC.** Todo lo demás está listo: `scripts/procesar-sonidos.py` recorta, cierra el loop con un crossfade de potencia constante, normaliza y encodea a 44,1 kHz estéreo 128 kbps con `afconvert` (sin ffmpeg). Costo: el bundle pasa de 2,6 MB a ~5 MB. | Andre baja, Claude procesa |
 | **L26** | Etiquetas de accesibilidad: **91 botones de solo ícono en 50 archivos**, la mayoría del lado del coach. | ⏸️ Por tandas. |
 | **L27** | Placeholder del diario (`ViveColors.calm`, 3.39:1). Subirlo lo hace parecer texto ya escrito. | 🟡 Decisión de Andre. |
 | **L28** | Migrar los 30 `FOREST_SOFT` copiados a mano a `ViveColors.softInk`. | ⏸️ Mecánico. |
