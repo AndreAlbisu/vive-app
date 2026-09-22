@@ -17,7 +17,7 @@
 // Puro y sin React: lo cubre `__tests__/quizMatch.test.ts`.
 
 import type { CachedCoach } from '@/lib/coachesCache';
-import { QUIZ_AREAS, MAX_PRICE, PRECIO_PASO } from '@/constants/searchData';
+import { QUIZ_AREAS, MAX_PRICE, PRECIO_PASO, MAX_PRICE_USD_BARRA, PRECIO_USD_PASO } from '@/constants/searchData';
 import { tipoProfesional, type TipoProfesional } from '@/lib/tipoProfesional';
 import {
   evaluarEstiloConEscuela,
@@ -70,6 +70,18 @@ export const PRESUPUESTO_PASO = PRECIO_PASO;
  *  si el extremo se mueve (la escala se revisa por inflación), un "sin límite"
  *  guardado como el extremo viejo pasaría a leerse como un tope. */
 export const PRESUPUESTO_SIN_LIMITE = 1_000_000;
+
+export type Moneda = 'ARS' | 'USD';
+export const PRESUPUESTO_USD_TOPE = MAX_PRICE_USD_BARRA;
+export const PRESUPUESTO_USD_PASO = PRECIO_USD_PASO;
+
+/** En qué moneda se pregunta el presupuesto. Dólares solo si eligió pagar
+ *  ÚNICAMENTE con PayPal y/o cripto: con Mercado Pago o "me da igual" puede
+ *  pagar en pesos, y la barra se queda en pesos. */
+export function monedaDePresupuesto(pagos: string[] | null | undefined): Moneda {
+  const p = pagos ?? [];
+  return p.length > 0 && !p.includes('mp') && !p.includes('any') ? 'USD' : 'ARS';
+}
 
 /** Tope en pesos de una respuesta vieja por rango. null = sin límite. */
 export function topeDeRango(id: string | null | undefined): number | null {
@@ -138,6 +150,9 @@ export type RespuestasQuiz = {
   /** Tope de la barra, en pesos. Si viene (aunque sea null = sin límite),
    *  manda sobre `presupuesto`. */
   presupuestoMax?: number | null;
+  /** En qué moneda está `presupuestoMax`. En dólares se compara contra el
+   *  precio en dólares del profesional (`priceUsd`). Default: pesos. */
+  presupuestoMoneda?: Moneda;
   /** M14: cómo quiere que la acompañen. Opcional de verdad: `null` o `'any'`
    *  no cambian nada, y nunca saca a nadie de la lista. */
   estilo?: EstiloPedido | null;
@@ -199,10 +214,16 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
   const tipo = tipoProfesional(coach);
   const cumpleTipo = !tipoPedido || tipo === tipoPedido;
 
+  const enDolares = r.presupuestoMoneda === 'USD';
+  const topeBarra = enDolares ? PRESUPUESTO_USD_TOPE : PRESUPUESTO_TOPE;
   const max = r.presupuestoMax !== undefined
-    ? (r.presupuestoMax != null && r.presupuestoMax < PRESUPUESTO_TOPE ? r.presupuestoMax : null)
+    ? (r.presupuestoMax != null && r.presupuestoMax < topeBarra ? r.presupuestoMax : null)
     : topeDeRango(r.presupuesto);
-  const cumplePrecio = max == null || (coach.priceFrom ?? 0) <= max;
+  // En dólares, sin precio en dólares no hay con qué comparar: no cumple (y de
+  // todos modos no se le puede pagar en dólares, lo marca el medio de pago).
+  const cumplePrecio = max == null || (enDolares
+    ? coach.priceUsd != null && coach.priceUsd <= max
+    : (coach.priceFrom ?? 0) <= max);
 
   const razones: string[] = [];
   const diferencias: string[] = [];

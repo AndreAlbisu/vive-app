@@ -24,6 +24,10 @@ import {
   PRESUPUESTO_TOPE,
   PRESUPUESTO_PASO,
   PRESUPUESTO_SIN_LIMITE,
+  PRESUPUESTO_USD_TOPE,
+  PRESUPUESTO_USD_PASO,
+  monedaDePresupuesto,
+  type Moneda,
   topeDeRango,
   PAGO_OPCIONES,
   ESTILO_OPCIONES as Q4_OPTIONS,
@@ -66,12 +70,15 @@ const MAX_SUBTEMAS = 3;
 
 function preguntasPara(tipo: string | null): Pregunta[] {
   const ejes: Pregunta[] = tipo === 'nutricionista' ? [] : ['estilo', 'guia', 'foco'];
-  return ['areas', 'subtemas', 'tipo', 'presupuesto', 'pago', ...ejes, 'genero'];
+  // El pago va ANTES que el presupuesto: define en qué moneda se pregunta.
+  return ['areas', 'subtemas', 'tipo', 'pago', 'presupuesto', ...ejes, 'genero'];
 }
 
-function etiquetaPresupuesto(v: number): string {
-  if (v >= PRESUPUESTO_TOPE) return 'Sin límite';
-  return v <= 0 ? '$0' : `Hasta $${v.toLocaleString('es-AR')}`;
+function etiquetaPresupuesto(v: number, moneda: Moneda = 'ARS'): string {
+  const usd = moneda === 'USD';
+  if (v >= (usd ? PRESUPUESTO_USD_TOPE : PRESUPUESTO_TOPE)) return 'Sin límite';
+  const monto = usd ? `USD ${v}` : `$${v.toLocaleString('es-AR')}`;
+  return v <= 0 ? monto : `Hasta ${monto}`;
 }
 
 /** "a, b y c" */
@@ -105,6 +112,9 @@ export default function QuizScreen() {
   // "Sin límite" se guarda como PRESUPUESTO_SIN_LIMITE y no como null, porque
   // la cola descarta los null y dejaría vivo un tope viejo.
   const [presupuesto, setPresupuesto] = useState<number>(PRESUPUESTO_TOPE);
+  // Si paga solo con PayPal o cripto, la barra va en dólares (21/09/2026). Se
+  // guardan las dos por separado para no perder una al cambiar el medio.
+  const [presupuestoUsd, setPresupuestoUsd] = useState<number>(PRESUPUESTO_USD_TOPE);
   // Medios de pago (21/09/2026). Varios a la vez; ['any'] = me da igual.
   const [pagos, setPagos] = useState<string[]>([]);
   // M14: cómo quiere que la acompañen. La última porque es la única opcional:
@@ -160,6 +170,9 @@ export default function QuizScreen() {
       if (topeGuardado != null) {
         setPresupuesto(Math.max(PRESUPUESTO_MIN, Math.min(PRESUPUESTO_TOPE, topeGuardado)));
       }
+      if (typeof r.budgetMaxUsd === 'number') {
+        setPresupuestoUsd(Math.max(0, Math.min(PRESUPUESTO_USD_TOPE, r.budgetMaxUsd)));
+      }
       setQ4(valida(r.estilo, Q4_OPTIONS));
       setQ5(valida(r.guia, Q5_OPTIONS));
       setQ6(valida(r.foco, Q6_OPTIONS));
@@ -175,7 +188,7 @@ export default function QuizScreen() {
         areas: areasGuardadas.length > 0,
         subtemas: subtemasGuardados !== null,
         tipo: !!tipo,
-        presupuesto: topeGuardado != null,
+        presupuesto: topeGuardado != null || typeof r.budgetMaxUsd === 'number',
         pago: pagosGuardados.length > 0,
         estilo: !!valida(r.estilo, Q4_OPTIONS),
         guia: !!valida(r.guia, Q5_OPTIONS),
@@ -205,7 +218,8 @@ export default function QuizScreen() {
     } else if (step === 'resumen') {
       setResultado(recomendarDesdeQuiz(coaches, {
         tema: areas[0] ?? null, areas, subtemas,
-        tipo: q2, presupuesto: null, presupuestoMax: presupuesto, pagos, estilo: q4, guia: q5, foco: q6, genero: q7,
+        tipo: q2, presupuesto: null,
+        presupuestoMax: moneda === 'USD' ? presupuestoUsd : presupuesto, presupuestoMoneda: moneda, pagos, estilo: q4, guia: q5, foco: q6, genero: q7,
       }));
       setTandas(1);
       // 🔴 Antes esto era `if (!uid) return;`: quien hacía el quiz SIN cuenta
@@ -216,6 +230,7 @@ export default function QuizScreen() {
         topic: areas[0] ?? null, areas, subtemas,
         professionalType: q2,
         budgetMax: presupuesto >= PRESUPUESTO_TOPE ? PRESUPUESTO_SIN_LIMITE : presupuesto,
+        budgetMaxUsd: presupuestoUsd >= PRESUPUESTO_USD_TOPE ? PRESUPUESTO_SIN_LIMITE : presupuestoUsd,
         estilo: q4, guia: q5, foco: q6, generoPref: q7, pagos,
       })
         .then(() => supabase.auth.getSession())
@@ -268,9 +283,14 @@ export default function QuizScreen() {
     const temas = Q1_OPTIONS.filter(o => areas.includes(o.id)).flatMap(o => o.subtemas);
     return temas.length === 0 || temas.some(t => c.topics.includes(t));
   });
-  const entran = presupuesto >= PRESUPUESTO_TOPE
+  const moneda = monedaDePresupuesto(pagos);
+  const valorBarra = moneda === 'USD' ? presupuestoUsd : presupuesto;
+  const topeBarra = moneda === 'USD' ? PRESUPUESTO_USD_TOPE : PRESUPUESTO_TOPE;
+  const entran = valorBarra >= topeBarra
     ? deLoQueElegiste.length
-    : deLoQueElegiste.filter(c => (c.priceFrom ?? 0) <= presupuesto).length;
+    : deLoQueElegiste.filter(c => moneda === 'USD'
+        ? c.priceUsd != null && c.priceUsd <= valorBarra
+        : (c.priceFrom ?? 0) <= valorBarra).length;
   const total = deLoQueElegiste.length;
   const textoCuantosEntran =
     total === 0 ? ''
@@ -292,7 +312,7 @@ export default function QuizScreen() {
     areas:       { pregunta: 'Qué querés trabajar',    respuesta: areas.length ? listarY(Q1_OPTIONS.filter(o => areas.includes(o.id)).map(o => o.label)) : null },
     subtemas:    { pregunta: 'Más en concreto',        respuesta: subtemas.length ? listarY(subtemas) : 'Cualquiera de estos' },
     tipo:        { pregunta: 'Con quién',              respuesta: labelDe(q2 as any, Q2_OPTIONS) },
-    presupuesto: { pregunta: 'Presupuesto por sesión', respuesta: etiquetaPresupuesto(presupuesto) },
+    presupuesto: { pregunta: 'Presupuesto por sesión', respuesta: etiquetaPresupuesto(valorBarra, moneda) },
     pago:        { pregunta: 'Cómo pagar',             respuesta: pagos.length ? listarY(PAGO_OPCIONES.filter(o => pagos.includes(o.id)).map(o => o.label)) : null },
     estilo:      { pregunta: 'Cómo te acompañen',      respuesta: labelDe(q4, Q4_OPTIONS) },
     guia:        { pregunta: 'Cuánto te guíen',        respuesta: labelDe(q5, Q5_OPTIONS) },
@@ -454,14 +474,21 @@ export default function QuizScreen() {
           {step === 'presupuesto' && (
             <>
               <Text style={s.question}>¿Cuánto querés gastar por sesión?</Text>
-              <Text style={s.questionHint}>Mové la barra hasta tu tope. Al final no hay límite.</Text>
+              <Text style={s.questionHint}>
+                {moneda === 'USD'
+                  ? 'En dólares, porque vas a pagar con PayPal o cripto. Al final no hay límite.'
+                  : 'Mové la barra hasta tu tope. Al final no hay límite.'}
+              </Text>
+              {/* `key` por moneda: al cambiar de escala la barra se rearma en
+                  vez de animar un valor de pesos sobre una escala de dólares. */}
               <PriceSlider
-                value={presupuesto}
-                onValueChange={setPresupuesto}
+                key={moneda}
+                value={valorBarra}
+                onValueChange={moneda === 'USD' ? setPresupuestoUsd : setPresupuesto}
                 min={PRESUPUESTO_MIN}
-                max={PRESUPUESTO_TOPE}
-                step={PRESUPUESTO_PASO}
-                formatLabel={etiquetaPresupuesto}
+                max={topeBarra}
+                step={moneda === 'USD' ? PRESUPUESTO_USD_PASO : PRESUPUESTO_PASO}
+                formatLabel={v => etiquetaPresupuesto(v, moneda)}
               />
               {/* Cuántos de los que trabajan lo que eligió entran en ese precio:
                   que vea en el momento qué deja afuera, en vez de enterarse en

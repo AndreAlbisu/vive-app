@@ -232,3 +232,29 @@ describe('recomendarDesdeQuiz — medio de pago (21/09/2026)', () => {
     expect(evaluarParaMazo(coach({ acceptsMp: true }), { ...BASE, pagos: ['usdt'] }, []).encaja).toBe(false);
   });
 });
+
+describe('presupuesto en dólares (21/09/2026)', () => {
+  const { monedaDePresupuesto, PRESUPUESTO_USD_TOPE } = require('../lib/quizMatch');
+  const BASE: RespuestasQuiz = { tema: 'emocion', tipo: 'any', presupuesto: null };
+
+  it('dólares solo si paga únicamente con PayPal o cripto', () => {
+    expect(monedaDePresupuesto(['paypal'])).toBe('USD');
+    expect(monedaDePresupuesto(['paypal', 'usdt'])).toBe('USD');
+    expect(monedaDePresupuesto(['paypal', 'mp'])).toBe('ARS');
+    expect(monedaDePresupuesto(['any'])).toBe('ARS');
+    expect(monedaDePresupuesto([])).toBe('ARS');
+  });
+
+  it('en dólares compara contra el precio en dólares, no el de pesos', () => {
+    // $5.000 en pesos entraría en cualquier tope; USD 60 no entra en USD 40.
+    const c = coach({ priceFrom: 5000, priceUsd: 60, acceptsPaypal: true });
+    const r = recomendarDesdeQuiz([c], { ...BASE, pagos: ['paypal'], presupuestoMax: 40, presupuestoMoneda: 'USD' });
+    expect(r.recomendaciones[0].diferencias).toContain('Su sesión cuesta más de lo que marcaste');
+  });
+
+  it('el extremo de la barra en dólares es sin límite', () => {
+    const c = coach({ priceUsd: 500, acceptsPaypal: true });
+    const r = recomendarDesdeQuiz([c], { ...BASE, pagos: ['paypal'], presupuestoMax: PRESUPUESTO_USD_TOPE, presupuestoMoneda: 'USD' });
+    expect(r.recomendaciones[0].diferencias).toEqual([]);
+  });
+});

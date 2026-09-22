@@ -37,7 +37,7 @@ import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/c
 import { rankDeck, SLOT_COLORS, type DeckSlotKey } from '@/lib/coachDeckRanking';
 import { anotar } from '@/lib/analytics';
 import { leerRespuestasGuardadas } from '@/lib/quizPendiente';
-import { evaluarParaMazo, topeDeRango, type RespuestasQuiz } from '@/lib/quizMatch';
+import { evaluarParaMazo, topeDeRango, monedaDePresupuesto, type RespuestasQuiz } from '@/lib/quizMatch';
 import { QUIZ_AREAS } from '@/constants/searchData';
 
 // ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
@@ -184,7 +184,10 @@ export default function ConexionesScreen() {
           subtemas: (r.subtemas ?? []) as string[],
           tipo: r.professionalType ?? null,
           presupuesto: null,
-          presupuestoMax: typeof r.budgetMax === 'number' ? r.budgetMax : topeDeRango(r.budget),
+          // Si paga solo en dólares, el tope que vale es el de dólares.
+          ...(monedaDePresupuesto(r.pagos) === 'USD'
+            ? { presupuestoMax: typeof r.budgetMaxUsd === 'number' ? r.budgetMaxUsd : null, presupuestoMoneda: 'USD' as const }
+            : { presupuestoMax: typeof r.budgetMax === 'number' ? r.budgetMax : topeDeRango(r.budget) }),
           estilo: (r.estilo ?? null) as RespuestasQuiz['estilo'],
           guia: (r.guia ?? null) as RespuestasQuiz['guia'],
           foco: (r.foco ?? null) as RespuestasQuiz['foco'],

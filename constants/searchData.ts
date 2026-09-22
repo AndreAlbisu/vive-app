@@ -92,6 +92,12 @@ export const PRECIO_PASO = 2_500;
 /** El extremo de la barra: un paso más allá del máximo real = "Sin límite". */
 export const MAX_PRICE = PRECIO_MAX_REAL + PRECIO_PASO;
 
+// En dólares, para quien paga solo con PayPal o cripto (21/09/2026). Misma
+// búsqueda: la terapia online va de USD 10 a 30 y el coaching llega a USD 150.
+export const PRECIO_USD_MAX_REAL = 150;
+export const PRECIO_USD_PASO = 5;
+export const MAX_PRICE_USD_BARRA = PRECIO_USD_MAX_REAL + PRECIO_USD_PASO;
+
 
 // ─── Quiz de orientación ─────────────────────────────────────────────────────
 // Vive acá y no en `QuizScreen` porque es taxonomía, no interfaz: es el tercer

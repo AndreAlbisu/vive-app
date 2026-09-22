@@ -25,6 +25,8 @@ export type QuizPendiente = {
   budget?: string | null;
   /** Tope de la barra de presupuesto, en pesos (21/09/2026). */
   budgetMax?: number | null;
+  /** Lo mismo en dólares, para quien paga solo con PayPal o cripto. */
+  budgetMaxUsd?: number | null;
   /** M14 ampliado (21/09/2026): cómo quiere que la acompañen. Hasta esa fecha
    *  el estilo se perdía al salir del quiz. `'any'` también se guarda: "no
    *  sabría decir" es una respuesta, y al volver tiene que aparecer marcada. */
@@ -96,6 +98,7 @@ export async function volcarPendiente(userId: string): Promise<void> {
   if (p.professionalType) fila.professional_type = p.professionalType;
   if (p.budget)           fila.budget = p.budget;
   if (typeof p.budgetMax === 'number') fila.budget_max = p.budgetMax;
+  if (typeof p.budgetMaxUsd === 'number') fila.budget_max_usd = p.budgetMaxUsd;
   if (p.areas && p.areas.length > 0) fila.areas = p.areas;
   if (Array.isArray(p.subtemas))     fila.subtemas = p.subtemas;
   if (p.estilo)           fila.estilo = p.estilo;
@@ -142,6 +145,7 @@ export async function leerRespuestasGuardadas(): Promise<QuizPendiente | null> {
   return {
     topic: data.topic, areas: data.areas, subtemas: data.subtemas,
     professionalType: data.professional_type, budget: data.budget, budgetMax: data.budget_max,
+    budgetMaxUsd: data.budget_max_usd,
     estilo: data.estilo, guia: data.guia, foco: data.foco, generoPref: data.genero_pref,
     pagos: data.pagos,
   };
