@@ -33,6 +33,7 @@ import { logError, logWarn } from '@/lib/logging';
 import { encryptMessage } from '@/lib/encryption';
 import { ensureMeetingRoom } from '@/lib/meetingRoom';
 import { observedTz, enArgentina } from '@/lib/time';
+import { DESCUENTO_REFERIDO_PCT } from '@/lib/referidos';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MONTH_NAMES = [
@@ -111,6 +112,8 @@ export default function BookingScreen_Confirm() {
   // que nadie fijó; y como el parámetro lo controla el cliente, una sesión de
   // $50.000 se podía reservar por $1. Los defaults 'Laura Méndez' / 4500 eran
   // restos del mockup (`constants/searchData.ts`).
+  // M7: ¿le corresponde el descuento del referido a esta persona?
+  const [descuentoRef, setDescuentoRef] = useState(false);
   const [precioReal, setPrecioReal] = useState<number | null>(null);
   const precioPlaceholder = params.priceFrom ? parseInt(params.priceFrom, 10) : null;
   const priceFrom = precioReal ?? precioPlaceholder;
@@ -147,6 +150,15 @@ export default function BookingScreen_Confirm() {
       setAceptaUsdt(!!data?.accepts_usdt);
       setPriceUsd(data?.price_usd ?? null);
       setPrecioReal(data?.price_per_session ?? null);
+      // 🔴 Se pregunta lo MISMO que va a preguntar el cobro
+      // (`tiene_descuento_referido`), y no se calcula por acá, para que la
+      // pantalla no pueda prometer un descuento que el cobro no haga. Es el
+      // defecto que ya se pagó caro en esta misma pantalla con el precio de
+      // USDT.
+      if (user) {
+        const { data: tiene } = await supabase.rpc('tiene_descuento_referido', { p_user: user.id });
+        setDescuentoRef(tiene === true);
+      }
     })();
   }, [coachProfileIdParam]);
 
@@ -950,9 +962,21 @@ export default function BookingScreen_Confirm() {
                 {metodoPago !== 'mp' && priceUsd != null
                   ? `USD ${priceUsd} por sesión`
                   : priceFrom != null
-                    ? `$${priceFrom.toLocaleString('es-AR')} por sesión`
+                    ? (descuentoRef && metodoPago === 'mp'
+                        ? `$${Math.round(priceFrom * (1 - DESCUENTO_REFERIDO_PCT / 100)).toLocaleString('es-AR')} por sesión`
+                        : `$${priceFrom.toLocaleString('es-AR')} por sesión`)
                     : '—'}
               </Text>
+              {/* M7. 🔴 Va acá y no en un cartel aparte: el número de arriba ya
+                  es el que se va a cobrar, así que sin esta línea la persona
+                  vería un precio más bajo que el del perfil del profesional y no
+                  sabría por qué. ⚠️ Solo en Mercado Pago: es el único riel donde
+                  el descuento está implementado. */}
+              {descuentoRef && metodoPago === 'mp' && priceFrom != null && (
+                <Text style={s.detailValueRef}>
+                  {`Te invitaron: ${DESCUENTO_REFERIDO_PCT}% menos en tu primera sesión. Antes $${priceFrom.toLocaleString('es-AR')}`}
+                </Text>
+              )}
               {/* 🔴 Exhibición del precio en pesos — Res. 4/2025, ver
                   `docs/consumo.md` A.9. Es obligatorio exhibir en moneda de
                   curso legal a quien está en Argentina, y con un coach sin riel
