@@ -36,14 +36,33 @@ const SOUNDS = [
   { id: 'blanco',   icon: 'sine-wave' as const,        label: 'Ruido grave',   hint: 'para tapar el ruido',  bg: PASTEL_DURAZNO },
 ];
 
-// Grabaciones reales con licencia CC0 (freesound.org).
-// Preparados para loopear: se recortó el fade de entrada del corte original (lluvia
-// tardaba 4s en llegar al nivel, blanco 3s) y la costura se cierra con un crossfade
-// de 2s equal-power, así que el bajón que se oía cada 90s ya no está. Duran 80–88s
-// —no 90— y ninguna duración es múltiplo de otra a propósito: no hay por qué
-// cuadrarlas. AAC 64 kbps mono 22 kHz (sube de 31 kbps para no perder más en el
-// re-encode). Si algún día se re-exporta desde la fuente, ahí sí conviene 48 kHz
-// estéreo — eso no se arregla desde acá.
+// ✅ **Re-exportados el 21/09/2026 desde la fuente, que es lo que estas mismas
+// líneas venían pidiendo desde la sesión 234.** Antes: mono, 22 kHz, 63 kbps,
+// sobre un corte que ya venía comprimido a 31 kbps. Ahora: **estéreo, 44,1 kHz,
+// 128 kbps**, encodeados una sola vez desde el original.
+//
+// Por qué importaba: casi todo lo que hace que una lluvia suene a lluvia vive
+// arriba de los 11 kHz, y a 22 kHz de muestreo eso directamente no existe. Y el
+// ambiente es la única categoría donde el estéreo no es adorno: la sensación de
+// estar adentro de un lugar viene de que los dos oídos escuchen cosas distintas.
+//
+// Origen (los tres de campo salen de Wikimedia Commons, verificados uno por uno):
+//   · lluvia  → "Falling Rain SFX 1", de valvalion. **CC BY 3.0: obliga a dar
+//                crédito**, y por eso está la línea de abajo en la pantalla.
+//   · bosque  → "20090610 0 ambience", de nille (pdsounds). Dominio público.
+//   · olas    → "On a pebble beach", de earthcalling (pdsounds). Dominio público.
+//   · blanco  → **generado**, no grabado. El ruido marrón es una definición
+//                matemática, así que sintetizarlo bien no es imitar nada: es la
+//                cosa. Y sale estéreo de verdad, con los canales independientes.
+//
+// El tramo de cada uno se eligió MIDIENDO y no a oído (`scripts/elegir-tramo.py`
+// busca el fragmento más parejo, sin picos ni silencios), y el loop lo cierra
+// `scripts/procesar-sonidos.py` con un crossfade de potencia constante.
+//
+// ⚠️ **Olas dura 34s y no 87**: es la única de las tres grabaciones libres con
+// olas decentes que encontramos, y el original dura 40 segundos. Se nota más el
+// loop que en las otras. Si aparece una fuente mejor, se reemplaza con el mismo
+// script y no hay que tocar nada de esta pantalla.
 const SOUND_FILES: Record<string, any> = {
   lluvia: require('../assets/sounds/lluvia.m4a'),
   bosque: require('../assets/sounds/bosque.m4a'),
@@ -263,6 +282,14 @@ export default function RuidoScreen() {
               <Text style={s.primaryBtnText}>{isRunning ? 'Detener' : 'Iniciar'}</Text>
             </ScaleCard>
 
+            {/* 🔴 No es decorativo: la lluvia es CC BY 3.0 y **el crédito es la
+                condición de la licencia**. Va discreto y al final, pero va. Los
+                otros dos son de dominio público y no obligan; se nombran igual
+                porque cuesta nada y es de donde salieron. */}
+            <Text style={s.creditos}>
+              Lluvia: valvalion (CC BY). Bosque: nille. Olas: earthcalling.
+            </Text>
+
             {isRunning && (
               <View style={s.runningBlock}>
                 <Text style={s.runningTimer}>{formatTime(remaining)}</Text>
@@ -329,4 +356,8 @@ const s = StyleSheet.create({
   runningTimer: { fontFamily: ViveFonts.bold, fontSize: 40, color: FOREST, letterSpacing: -1 },
   runningRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   runningHint: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT },
+  creditos: {
+    fontFamily: ViveFonts.regular, fontSize: 10.5, color: FOREST_SOFT,
+    opacity: 0.75, textAlign: 'center', marginTop: 18,
+  },
 });

@@ -2,7 +2,7 @@
 Prepara un sonido ambiente para la app: lo recorta, lo hace loopear sin costura,
 lo normaliza y lo encodea.
 
-    python3 scripts/procesar-sonidos.py fuente.wav lluvia [segundos]
+    python3 scripts/procesar-sonidos.py fuente.wav lluvia [segundos] [desde]
 
 El largo por defecto son 85 segundos. Se puede pedir otro si la grabación
 original es más corta, pero cuanto más largo el loop, menos se nota que es
@@ -119,15 +119,21 @@ def normalizar(muestras, pico_dbfs=-1.0):
 
 
 def main():
-    if len(sys.argv) not in (3, 4):
+    if len(sys.argv) not in (3, 4, 5):
         raise SystemExit(__doc__)
     fuente, nombre = sys.argv[1], sys.argv[2]
     global LARGO_SEG
-    if len(sys.argv) == 4:
+    if len(sys.argv) >= 4:
         LARGO_SEG = float(sys.argv[3])
+    # 📌 `desde` importa más de lo que parece: una grabación de campo casi nunca
+    # es pareja de punta a punta (arranca con el micrófono acomodándose, o pasa
+    # un auto). El tramo se elige midiendo, no a ojo: ver `scripts/elegir-tramo.py`.
+    desde = float(sys.argv[4]) if len(sys.argv) == 5 else 0.0
 
     wav = a_wav(fuente)
     muestras, canales, rate = leer(wav)
+    if desde > 0:
+        muestras = muestras[int(desde * rate) * canales:]
     print(f'  fuente: {canales} canal(es), {rate} Hz, {len(muestras)//canales/rate:.1f}s')
     if canales == 1:
         print('  ⚠️  la fuente es MONO. Se puede usar, pero la mitad del problema '
