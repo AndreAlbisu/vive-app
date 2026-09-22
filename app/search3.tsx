@@ -19,7 +19,7 @@ import { MatriculaPill } from '@/components/MatriculaPill';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
-import { NATIONALITIES, MAX_PRICE } from '@/constants/searchData';
+import { NATIONALITIES, MAX_PRICE, PRECIO_PASO } from '@/constants/searchData';
 // Antes era un `CustomSlider` local que no se movía (ver components/ui/PriceSlider.tsx).
 import { PriceSlider } from '@/components/ui/PriceSlider';
 import { PaymentBadges } from '@/components/PaymentBadges';
@@ -540,8 +540,9 @@ export default function SearchScreen3() {
               <PriceSlider
                 value={draftFilters.maxPrice}
                 onValueChange={v => setDraft(d => ({ ...d, maxPrice: v }))}
-                min={1000}
+                min={0}
                 max={MAX_PRICE}
+                step={PRECIO_PASO}
                 formatLabel={v => v >= MAX_PRICE ? 'Sin límite' : `$${v.toLocaleString('es-AR')}`}
               />
             </View>

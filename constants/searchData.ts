@@ -73,7 +73,24 @@ export const PROFESSIONALS: Professional[] = [
 ];
 
 export const NATIONALITIES = ['Argentina', 'Colombia', 'México', 'Uruguay', 'España'];
-export const MAX_PRICE = 8000;
+// ─── Escala de precio por sesión (21/09/2026) ────────────────────────────────
+// La comparten la barra del quiz y la del buscador. Investigado para
+// Argentina, septiembre 2026:
+//   · Psicología: el mínimo ético de los colegios ronda $25.000–$45.000
+//     (Córdoba $30.000 desde abril, Santa Fe $45.000 desde septiembre); en CABA
+//     el mercado va de ~$20.000 a ~$60.000.
+//   · Nutrición: primera consulta en CABA $72.000–$102.000, seguimiento
+//     $48.000–$66.000.
+//   · Coaching: muy disperso; AACOP sugiere $7.500–$22.000 y el ejecutivo llega
+//     a USD 150.
+// Con $100.000 entra casi todo el mercado; lo que queda arriba es el extremo
+// "Sin límite". ⚠️ Con la inflación esto envejece: revisarlo cada tanto.
+// La escala anterior (hasta $8.000 en el buscador, rangos desde "Hasta $5.000"
+// en el quiz) había quedado muy por debajo del piso ético de un psicólogo.
+export const PRECIO_MAX_REAL = 100_000;
+export const PRECIO_PASO = 2_500;
+/** El extremo de la barra: un paso más allá del máximo real = "Sin límite". */
+export const MAX_PRICE = PRECIO_MAX_REAL + PRECIO_PASO;
 
 
 // ─── Quiz de orientación ─────────────────────────────────────────────────────

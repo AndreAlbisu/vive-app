@@ -526,7 +526,7 @@ export default function CoachApplicationScreen() {
                 style={styles.input}
                 value={price}
                 onChangeText={setPrice}
-                placeholder="Ej: 8000"
+                placeholder="Ej: 30000"
                 placeholderTextColor="rgba(135,131,92,0.45)"
                 keyboardType="numeric"
               />

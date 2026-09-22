@@ -45,6 +45,11 @@
   - 🔴 **Se encontró antes de romper nada**: el profesional podía EDITAR esas columnas pero no ESCRIBIRLAS al postularse. Mandarlas en el alta sin el grant habría hecho fallar toda postulación nueva. Arreglado en la base (ver SCHEMA.md).
   - **Para que marcar todo no convenga**: "Las dos cosas" y "Depende de la persona" coinciden pero **por debajo de la respuesta exacta**, y la frase cambia (*"También trabaja con ejercicios"*, no *"como pediste"*). "Sobre qué trabajás" va hasta 2 de 3, en la app y en la base.
   - 6 tests nuevos, suite en 793.
+- 💲 **La escala de precio estaba muy por debajo del mercado.** Andre pidió que la barra fuera de 0 al máximo real de una sesión. Investigado (Argentina, sept. 2026): el **mínimo ético** de los colegios de psicólogos ya es $25.000–$45.000 (Santa Fe $45.000 desde septiembre), CABA va de ~$20.000 a ~$60.000, una primera consulta de nutrición llega a ~$100.000, y el coaching ejecutivo a USD 150. La barra del quiz llegaba a $15.000 y la del buscador a **$8.000**: un psicólogo que cobrara el mínimo ético quedaba afuera de cualquier filtro.
+  - Ahora las dos barras van de **$0 a $100.000 en pasos de $2.500, y después "Sin límite"**. La escala vive en un solo lugar (`constants/searchData.ts`), con las fuentes. ⚠️ Envejece con la inflación.
+  - "Sin límite" se guarda como un valor fijo (1.000.000) y no como el extremo de la barra, para que revisar la escala no convierta los "sin límite" guardados en topes.
+  - El ejemplo del precio en la postulación pasó de "Ej: 8000" a "Ej: 30000".
+  - ⚠️ Los 34 perfiles de prueba cobran entre $3.800 y $11.800, muy lejos del mercado real: con datos reales el orden del quiz va a cambiar bastante.
 - 📱 Sin ver en el teléfono. Hay que probar el deslizar: `shouldRasterizeIOS` sigue puesto en la hoja y no debería molestar, pero no se vio.
 - ✅ **Las cuatro decisiones de producto que estaban frenando la sección M quedaron tomadas** (anotadas en `docs/problemas-abiertos.md`, cada una en su fila):
   - **M15, reagendar: libre fuera de las 24hs, una sola vez adentro.** Con más de 24hs el cliente mueve a cualquier horario libre sin perder el pago; dentro de las 24hs lo pide una vez y el profesional acepta o no.

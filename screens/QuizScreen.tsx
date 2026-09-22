@@ -23,6 +23,7 @@ import {
   PRESUPUESTO_MIN,
   PRESUPUESTO_TOPE,
   PRESUPUESTO_PASO,
+  PRESUPUESTO_SIN_LIMITE,
   topeDeRango,
   ESTILO_OPCIONES as Q4_OPTIONS,
   TAMANO_TANDA,
@@ -68,7 +69,8 @@ function preguntasPara(tipo: string | null): Pregunta[] {
 }
 
 function etiquetaPresupuesto(v: number): string {
-  return v >= PRESUPUESTO_TOPE ? 'Sin límite' : `Hasta $${v.toLocaleString('es-AR')}`;
+  if (v >= PRESUPUESTO_TOPE) return 'Sin límite';
+  return v <= 0 ? '$0' : `Hasta $${v.toLocaleString('es-AR')}`;
 }
 
 /** "a, b y c" */
@@ -99,8 +101,8 @@ export default function QuizScreen() {
   const [q2, setQ2] = useState<string | null>(null);
   // Barra deslizable (21/09/2026). Arranca en el extremo, "sin límite": que la
   // persona baje el tope si le importa, no que tenga que subirlo para ver a todos.
-  // El extremo se guarda como el número del tope, no como null, porque la cola
-  // descarta los null y dejaría vivo un tope viejo.
+  // "Sin límite" se guarda como PRESUPUESTO_SIN_LIMITE y no como null, porque
+  // la cola descarta los null y dejaría vivo un tope viejo.
   const [presupuesto, setPresupuesto] = useState<number>(PRESUPUESTO_TOPE);
   // M14: cómo quiere que la acompañen. La última porque es la única opcional:
   // quien no sabe qué contestar ya respondió lo que importa.
@@ -204,7 +206,8 @@ export default function QuizScreen() {
       // `AuthContext` al registrarse.
       guardarPendiente({
         topic: areas[0] ?? null, areas, subtemas,
-        professionalType: q2, budgetMax: presupuesto,
+        professionalType: q2,
+        budgetMax: presupuesto >= PRESUPUESTO_TOPE ? PRESUPUESTO_SIN_LIMITE : presupuesto,
         estilo: q4, guia: q5, foco: q6, generoPref: q7,
       })
         .then(() => supabase.auth.getSession())

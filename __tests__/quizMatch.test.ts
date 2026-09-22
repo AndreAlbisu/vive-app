@@ -162,7 +162,7 @@ describe('recomendarDesdeQuiz — presupuesto con barra (21/09/2026)', () => {
 
   it('el extremo de la barra es sin límite', () => {
     const caro = coach({ priceFrom: 40000 });
-    const r = recomendarDesdeQuiz([caro], { ...BASE, presupuestoMax: 15000 });
+    const r = recomendarDesdeQuiz([caro], { ...BASE, presupuestoMax: 1_000_000 });
     expect(r.recomendaciones[0].diferencias).toEqual([]);
   });
 
@@ -188,5 +188,16 @@ describe('recomendarDesdeQuiz — la opción del medio no conviene (21/09/2026)'
     const r = recomendarDesdeQuiz([coach({ estilo: 'ambos' })], { ...BASE, estilo: 'herramientas' });
     expect(r.recomendaciones[0].razones.join(' ')).toMatch(/También trabaja con ejercicios/);
     expect(r.recomendaciones[0].razones.join(' ')).not.toMatch(/como pediste/);
+  });
+});
+
+describe('escala de la barra (21/09/2026)', () => {
+  it('el extremo de la barra y el valor guardado de "sin límite" no limitan; $100.000 sí', () => {
+    const { PRESUPUESTO_TOPE, PRESUPUESTO_SIN_LIMITE } = require('../lib/quizMatch');
+    const caro = coach({ priceFrom: 150000 });
+    const pide = (m: number) => recomendarDesdeQuiz([caro], { tema: 'emocion', tipo: 'any', presupuesto: null, presupuestoMax: m });
+    expect(pide(PRESUPUESTO_TOPE).recomendaciones[0].diferencias).toEqual([]);
+    expect(pide(PRESUPUESTO_SIN_LIMITE).recomendaciones[0].diferencias).toEqual([]);
+    expect(pide(100000).recomendaciones[0].diferencias).toContain('Su sesión cuesta más de lo que marcaste');
   });
 });

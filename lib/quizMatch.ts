@@ -17,7 +17,7 @@
 // Puro y sin React: lo cubre `__tests__/quizMatch.test.ts`.
 
 import type { CachedCoach } from '@/lib/coachesCache';
-import { QUIZ_AREAS } from '@/constants/searchData';
+import { QUIZ_AREAS, MAX_PRICE, PRECIO_PASO } from '@/constants/searchData';
 import { tipoProfesional, type TipoProfesional } from '@/lib/tipoProfesional';
 import {
   evaluarEstiloConEscuela,
@@ -62,9 +62,14 @@ export const PRESUPUESTO_OPCIONES: OpcionPresupuesto[] = [
 // Barra deslizable (21/09/2026): reemplaza a los cuatro rangos de arriba, que
 // quedan solo para leer respuestas guardadas antes. El extremo derecho de la
 // barra es "sin límite".
-export const PRESUPUESTO_MIN = 2000;
-export const PRESUPUESTO_TOPE = 15000;
-export const PRESUPUESTO_PASO = 500;
+// La escala (y de dónde salen los números) está en constants/searchData.ts.
+export const PRESUPUESTO_MIN = 0;
+export const PRESUPUESTO_TOPE = MAX_PRICE;
+export const PRESUPUESTO_PASO = PRECIO_PASO;
+/** Cómo se GUARDA "sin límite". Es un valor fijo y no el extremo de la barra:
+ *  si el extremo se mueve (la escala se revisa por inflación), un "sin límite"
+ *  guardado como el extremo viejo pasaría a leerse como un tope. */
+export const PRESUPUESTO_SIN_LIMITE = 1_000_000;
 
 /** Tope en pesos de una respuesta vieja por rango. null = sin límite. */
 export function topeDeRango(id: string | null | undefined): number | null {
