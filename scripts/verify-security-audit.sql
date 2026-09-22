@@ -1,10 +1,11 @@
--- SOLO LECTURA. Primera consulta: preflight antes de la migración.
+-- SOLO LECTURA. Dos conflictos históricos completados antes del corte fueron conservados;
+-- esta consulta comprueba únicamente el conjunto protegido por el índice nuevo.
 -- El resto se ejecuta DESPUÉS, en staging y luego producción.
 begin read only;
 select coach_id, scheduled_date,
  lpad(split_part(scheduled_time,':',1),2,'0')||':'||lpad(split_part(scheduled_time,':',2),2,'0') as hora,
  count(*) as conflictos
-from public.bookings where status in ('confirmada','completada')
+from public.bookings where status='confirmada' or (status='completada' and scheduled_date >= date '2026-09-22')
 group by 1,2,3 having count(*)>1;
 -- Esperado: false, false, true.
 select has_column_privilege('authenticated','public.bookings','payment_status','INSERT') as puede_fabricar_pago,

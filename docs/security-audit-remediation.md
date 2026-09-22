@@ -1,6 +1,6 @@
 # Correcciones de seguridad — 22/09/2026
 
-Estado: cambios locales preparados y probados. **No aplicados a Supabase ni publicados en la app/web.** No dar por cerrado el riesgo en producción hasta completar el despliegue y verificar sus permisos efectivos.
+Estado al 22/09/2026: migración `20260922000000_security_audit.sql` aplicada a VIVE y funciones afectadas redesplegadas. Permisos de pago/perfil y configuración JWT verificados. **La app y la web corregidas aún no están publicadas**; falta probar los flujos completos en dispositivo y navegador. USDT sigue desactivado.
 
 ## Cambios y relación con la auditoría
 
@@ -36,12 +36,12 @@ El export web de Expo encontró una dependencia preexistente del reproductor (`r
 
 ## Despliegue coordinado
 
-1. Revisar el esquema real y su código desplegado. Ejecutar el preflight de `scripts/verify-security-audit.sql` y resolver duplicados de horarios **con sus titulares**, sin borrarlos automáticamente. Respaldar el esquema. Revisar la cola de correos previa al corte: sus filas antiguas no tienen procedencia fiable.
-2. En staging, aplicar **completo** `scripts/security-audit-2026-09-22.sql`. Es transaccional y rerunnable; aborta ante conflictos. Deben existir las columnas/scripts históricos que la app ya usa (`tema_origen`, pagos, bloqueo, etc.). No es un bootstrap de una base vacía.
-3. Publicar conjuntamente las funciones modificadas: `mp-create-payment`, `mp-webhook`, `paypal-create-payment`, `usdt-create-payment`, `usdt-check-payments`, `create-meeting-room`, `send-push`, `mail-notificaciones`. También redesplegar `paypal-webhook` porque importa `_shared/booking-effects.ts`. Conservar su configuración actual de JWT: no activar el gateway JWT sobre webhooks de proveedores.
-4. Publicar la web estática y la app corregida. **La restricción de columnas privadas requiere la app nueva**: una build vieja que lea `birth_date`/`is_admin` directamente dejará de hacerlo. Coordinar actualización requerida o ventana de mantenimiento; no aplicar el SQL solo y asumir que todas las builds antiguas siguen funcionando. Las cancelaciones de builds anteriores siguen enviando campos que el servidor corrige de forma compatible.
-5. Ejecutar la verificación posterior, probar perfiles propios/públicos, reservar/pagar/reintentar/cancelar con cuentas de staging, y confirmar el comportamiento ante duplicados. Probar también entrar a videollamada cancelada, bloquear chat y cambiar de cuenta en un teléfono real.
-6. Una vez verificadas esas operaciones en staging, aplicar el mismo conjunto a producción en una ventana coordinada. No marcar esta guía como aplicada solo porque el código esté commiteado.
+1. Revisar el esquema real y su código desplegado. El preflight encontró dos horarios duplicados, ambos con reservas completadas y anteriores al 22/09/2026; se conservaron intactos. El índice protege confirmaciones y sesiones completadas desde esa fecha. Se guardó una copia local de permisos, policies y triggers previos. Revisar la cola de correos previa al corte: sus filas antiguas no tienen procedencia fiable.
+2. La migración completa ya se aplicó en VIVE, que el usuario confirmó que todavía no está publicada. Se registró en el historial remoto. No es un bootstrap de una base vacía.
+3. Ya se publicaron conjuntamente las funciones modificadas: `mp-create-payment`, `mp-webhook`, `paypal-create-payment`, `usdt-create-payment`, `usdt-check-payments`, `create-meeting-room`, `send-push`, `mail-notificaciones`. También se redesplegó `paypal-webhook` porque importa `_shared/booking-effects.ts`. Conservar su configuración actual de JWT: no activar el gateway JWT sobre webhooks de proveedores.
+4. Pendiente: publicar la web estática y distribuir una build interna de la app corregida. **La restricción de columnas privadas requiere la app nueva**: una build vieja que lea `birth_date`/`is_admin` directamente dejará de hacerlo. Coordinar actualización requerida o ventana de mantenimiento; no aplicar el SQL solo y asumir que todas las builds antiguas siguen funcionando. Las cancelaciones de builds anteriores siguen enviando campos que el servidor corrige de forma compatible.
+5. La verificación de permisos posteriores pasó. Pendiente: probar perfiles propios/públicos, reservar/pagar/reintentar/cancelar con cuentas de prueba en VIVE y confirmar el comportamiento ante duplicados. Probar también entrar a videollamada cancelada, bloquear chat y cambiar de cuenta en un teléfono real.
+6. No publicar para usuarios finales hasta verificar los flujos de punta a punta y distribuir la app compatible. No marcar los riesgos de la app/web como cerrados solo porque el backend esté desplegado.
 
 No revertir únicamente las funciones dejando una mezcla incompatible con los permisos nuevos. Preparar el rollback desde el esquema real respaldado; no reotorgar INSERT de pagos ni SELECT privado para ocultar una incompatibilidad de cliente.
 
