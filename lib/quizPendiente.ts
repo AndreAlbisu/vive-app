@@ -116,3 +116,29 @@ export async function volcarPendiente(userId: string): Promise<void> {
 
   await AsyncStorage.setItem(KEY, JSON.stringify({ ...p, volcado: true }));
 }
+
+/**
+ * Las últimas respuestas del quiz de esta persona, vengan de donde vengan.
+ *
+ * Primero lo local (vale también sin cuenta y es lo más nuevo en este
+ * teléfono); si no hay nada y hay sesión, la fila de la base, que es lo que
+ * tiene quien hizo el quiz en otro teléfono. null = nunca lo hizo.
+ *
+ * Lo leen el quiz (para volver con todo marcado) y Profesionales (para que el
+ * mazo sortee primero entre los que encajan). No valida contra las opciones:
+ * cada consumidor descarta lo que no reconoce.
+ */
+export async function leerRespuestasGuardadas(): Promise<QuizPendiente | null> {
+  const local = await leerCrudo();
+  if (local) return local;
+  const { data: ses } = await supabase.auth.getSession();
+  const uid = ses.session?.user?.id;
+  if (!uid) return null;
+  const { data } = await supabase.from('user_quiz_answers').select('*').eq('user_id', uid).maybeSingle();
+  if (!data) return null;
+  return {
+    topic: data.topic, areas: data.areas, subtemas: data.subtemas,
+    professionalType: data.professional_type, budget: data.budget, budgetMax: data.budget_max,
+    estilo: data.estilo, guia: data.guia, foco: data.foco, generoPref: data.genero_pref,
+  };
+}

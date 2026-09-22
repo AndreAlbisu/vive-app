@@ -136,7 +136,8 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
   // El segundo nivel ordena y explica, pero NO filtra: con pocos perfiles,
   // exigir "duelo" exacto vaciaría la lista. Quien trabaja el área sin marcar
   // ese tema sigue, con la diferencia a la vista.
-  const elegidos = (r.subtemas ?? []).filter(s => subtemas.includes(s));
+  // Sin áreas (el mazo, donde el tema lo pone la puerta) valen tal cual.
+  const elegidos = (r.subtemas ?? []).filter(s => subtemas.length === 0 || subtemas.includes(s));
   const elegidosEnComun = elegidos.filter(s => coach.topics.includes(s));
   const cumpleSubtema = elegidos.length === 0 || elegidosEnComun.length > 0;
 
@@ -218,25 +219,75 @@ function evaluar(coach: CachedCoach, r: RespuestasQuiz) {
   // Género y ejes tienen tres puntos y no dos: coincide > no sabemos > no
   // coincide. Sin el del medio, un perfil que no contestó empataba con uno que
   // contestó y coincide, o quedaba igual de abajo que uno que dice otra cosa.
-  const puntosGenero = genero.coincide ? 8 : genero.desconocido ? 4 : 0;
-  const puntosEjes = ejes.reduce((n, e) => n + (e.razon ? 2 : e.coincide ? 1 : 0), 0); // máx. 6 < 8
+  //
+  // En los ejes hay un nivel más (21/09/2026): exacto > "las dos cosas" > sin
+  // dato > no coincide. Si la opción del medio valiera lo mismo que la exacta,
+  // marcarla siempre sería la forma de aparecer primero para todos.
+  const puntosGenero = genero.coincide ? 16 : genero.desconocido ? 8 : 0;
+  const puntosEjes = ejes.reduce(
+    (n, e) => n + (e.razon && !e.parcial ? 3 : e.parcial ? 2 : e.coincide ? 1 : 0), 0,
+  ); // máx. 9 < 16
   //
   // El tema concreto va debajo del tipo: quien pidió psicólogo y duelo prefiere
   // un psicólogo del área antes que un coach que marcó duelo.
   const nivel =
-    (cumpleTema ? 128 : 0) + (cumpleTipo ? 64 : 0) + (cumpleSubtema ? 32 : 0) +
-    (cumplePrecio ? 16 : 0) + puntosGenero + puntosEjes;
+    (cumpleTema ? 256 : 0) + (cumpleTipo ? 128 : 0) + (cumpleSubtema ? 64 : 0) +
+    (cumplePrecio ? 32 : 0) + puntosGenero + puntosEjes;
   // `exacto` es lo que habilita el título "coinciden con lo que respondiste".
   // Género y ejes entran solo cuando hay una diferencia que mostrar: si no, el
   // título volvería a prometer una coincidencia total con una resta a la vista,
   // que es exactamente la mentira que cerró M1.
+  // El motivo más fuerte, para la línea del mazo. Va de lo más específico de
+  // esta persona a lo más general. No usa el tema del área (en el mazo ya lo
+  // dice la puerta) ni el precio ni los horarios (no son de ella).
+  const razonSubtema = elegidosEnComun.length > 0
+    ? `Trabaja ${listar(elegidosEnComun.slice(0, 2))}, que es lo que querés trabajar`
+    : null;
+  const razonEje = ejes.find(e => e.razon && !e.parcial)?.razon ?? null;
+  const razonTipo = tipoPedido && cumpleTipo && tipoPedido !== 'Coach' ? 'Tiene matrícula verificada por Vita' : null;
+  const motivo = razonSubtema ?? genero.razon ?? razonEje ?? razonTipo;
+
   return {
     razones,
     diferencias,
     cumpleTema,
+    // Lo que el mazo usa como piso (ver `evaluarParaMazo`).
+    encajaEnMazo: cumpleTipo && cumplePrecio && genero.coincide && cumpleSubtema,
+    motivo,
     nivel,
     exacto: cumpleTema && cumpleSubtema && cumpleTipo && cumplePrecio && genero.coincide && ejes.every(e => e.coincide),
   };
+}
+
+/**
+ * Para el mazo de Profesionales (`lib/coachDeckRanking.ts`).
+ *
+ * 🔴 El mazo NO se ordena con esto. Cada tarjeta del mazo es una categoría con
+ * una barra y el profesional sale SORTEADO del grupo que la pasa, para repartir
+ * exposición (criterio v3). El quiz entra como una barra más: `encaja` achica
+ * el grupo antes del sorteo, y si no queda nadie el mazo sortea entre todos
+ * como siempre. Ordenar por puntaje dejaría al mismo profesional primero todos
+ * los días, que es lo que la v3 sacó.
+ *
+ * `encaja` = ninguna diferencia en tipo, presupuesto, género ni tema concreto.
+ * Cómo trabaja (estilo, guía, foco) NO entra en el piso: casi ningún perfil lo
+ * contestó todavía, y achicaría el grupo a nada. Sí puede ser el `motivo`.
+ *
+ * El tema lo pone la puerta: acá se pasan solo los temas concretos del quiz
+ * que caen en esa puerta. Si ninguno cae, el tema no cuenta.
+ */
+export function evaluarParaMazo(
+  coach: CachedCoach,
+  r: RespuestasQuiz,
+  subtemasDeLaPuerta: string[],
+): { encaja: boolean; motivo: string | null } {
+  const e = evaluar(coach, {
+    ...r,
+    tema: null,
+    areas: [],
+    subtemas: (r.subtemas ?? []).filter(t => subtemasDeLaPuerta.includes(t)),
+  });
+  return { encaja: e.encajaEnMazo, motivo: e.motivo };
 }
 
 /**

@@ -14,6 +14,18 @@ import { limpiarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { AXES } from '@/constants/searchData';
+import {
+  ESTILO_OPCIONES_COACH,
+  GUIA_OPCIONES_COACH,
+  FOCO_OPCIONES_COACH,
+  MAX_FOCOS,
+  esEstiloCoach,
+  esGuiaCoach,
+  esFoco,
+  type EstiloCoach,
+  type GuiaCoach,
+  type Foco,
+} from '@/lib/enfoque';
 
 const SPECIALTIES = ['Psicólogo/a', 'Coach', 'Nutricionista'];
 
@@ -77,6 +89,13 @@ export default function CoachApplicationScreen() {
   const [nationality, setNationality] = useState('');
   const [price, setPrice] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  // Cómo trabaja (21/09/2026): obligatorio en el alta. Son las mismas preguntas
+  // que se le hacen a la persona en el quiz, así que sin esto el profesional no
+  // puede aparecer primero para quien busca su forma de trabajar. La escuela NO
+  // va acá: pide matrícula verificada, que llega después del alta.
+  const [estilo, setEstilo] = useState<EstiloCoach | null>(null);
+  const [guia, setGuia] = useState<GuiaCoach | null>(null);
+  const [focos, setFocos] = useState<Foco[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -116,7 +135,7 @@ export default function CoachApplicationScreen() {
     (async () => {
       const { data: coach } = await supabase
         .from('coaches')
-        .select('id, specialty, bio, price_per_session, nationality, application_video_url, application_status, application_notes')
+        .select('id, specialty, bio, price_per_session, nationality, application_video_url, application_status, application_notes, estilo, guia, focos')
         .eq('profile_id', user.id)
         .maybeSingle();
 
@@ -135,6 +154,9 @@ export default function CoachApplicationScreen() {
       setNationality(coach.nationality ?? '');
       setVideoUrl(coach.application_video_url ?? '');
       setTopics(new Set((savedTopics ?? []).map(t => t.topic as string)));
+      setEstilo(esEstiloCoach(coach.estilo) ? coach.estilo : null);
+      setGuia(esGuiaCoach(coach.guia) ? coach.guia : null);
+      setFocos(((coach.focos ?? []) as string[]).filter(esFoco));
     })();
 
     return () => { cancelled = true; };
@@ -146,6 +168,12 @@ export default function CoachApplicationScreen() {
       if (next.has(topic)) next.delete(topic); else next.add(topic);
       return next;
     });
+  }
+
+  function toggleFoco(id: Foco) {
+    setFocos(prev => prev.includes(id)
+      ? prev.filter(x => x !== id)
+      : prev.length >= MAX_FOCOS ? prev : [...prev, id]);
   }
 
   function handleBirthDateChange(text: string) {
@@ -163,6 +191,9 @@ export default function CoachApplicationScreen() {
     if (!specialty) { setSubmitError('Elegí una especialidad'); return; }
     if (bio.trim().length < 10) { setSubmitError('Contanos un poco más sobre vos en la presentación'); return; }
     if (topics.size === 0) { setSubmitError('Elegí al menos un subtema que trabajás'); return; }
+    if (!estilo) { setSubmitError('Contanos cómo acompañás'); return; }
+    if (!guia) { setSubmitError('Contanos cuánto guiás'); return; }
+    if (focos.length === 0) { setSubmitError('Elegí sobre qué trabajás'); return; }
     const birthDateIso = displayToIso(birthDate);
     if (!birthDateIso) { setSubmitError('Ingresá tu fecha de nacimiento (DD/MM/AAAA)'); return; }
     // Chequeo duro contra el dato real: es el único lugar del alta donde hay una
@@ -197,6 +228,12 @@ export default function CoachApplicationScreen() {
       price_per_session: Number(price),
       nationality: nationality.trim(),
       application_video_url: videoUrl.trim(),
+      // ⚠️ Necesitan `grant insert` (scripts/add-coach-como-trabaja-en-alta.sql):
+      // el INSERT de `coaches` está acotado por columnas, y sin el grant el alta
+      // entera falla con 42501.
+      estilo,
+      guia,
+      focos,
     };
 
     // Re-postulación vs. alta. El UPDATE devuelve la fila a 'pendiente' por el
@@ -378,6 +415,59 @@ export default function CoachApplicationScreen() {
                   ))}
                 </View>
               ))}
+            </View>
+
+            {/* Cómo trabajás (21/09/2026, obligatorio) */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Cómo trabajás</Text>
+              <Text style={styles.fieldHint}>
+                Son las preguntas que le hacemos a quien busca un profesional, así que con esto te sugerimos a las personas que buscan tu forma de trabajar.
+              </Text>
+
+              <Text style={styles.axisLabel}>Cómo acompañás</Text>
+              <View style={styles.specialtyGrid}>
+                {ESTILO_OPCIONES_COACH.map(op => (
+                  <TouchableOpacity
+                    key={op.id}
+                    onPress={() => setEstilo(op.id)}
+                    activeOpacity={0.75}
+                    accessibilityHint={op.desc}
+                    style={[styles.chip, estilo === op.id && styles.chipSelected]}>
+                    <Text style={[styles.chipText, estilo === op.id && styles.chipTextSelected]}>{op.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.axisLabel}>Cuánto guiás</Text>
+              <View style={styles.specialtyGrid}>
+                {GUIA_OPCIONES_COACH.map(op => (
+                  <TouchableOpacity
+                    key={op.id}
+                    onPress={() => setGuia(op.id)}
+                    activeOpacity={0.75}
+                    accessibilityHint={op.desc}
+                    style={[styles.chip, guia === op.id && styles.chipSelected]}>
+                    <Text style={[styles.chipText, guia === op.id && styles.chipTextSelected]}>{op.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.axisLabel}>Sobre qué trabajás (hasta {MAX_FOCOS})</Text>
+              <View style={styles.specialtyGrid}>
+                {FOCO_OPCIONES_COACH.map(op => {
+                  const activo = focos.includes(op.id);
+                  return (
+                    <TouchableOpacity
+                      key={op.id}
+                      onPress={() => toggleFoco(op.id)}
+                      activeOpacity={0.75}
+                      accessibilityHint={op.desc}
+                      style={[styles.chip, activo && styles.chipSelected, !activo && focos.length >= MAX_FOCOS && styles.chipBlocked]}>
+                      <Text style={[styles.chipText, activo && styles.chipTextSelected]}>{op.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
             {/* Fecha de nacimiento */}
@@ -577,6 +667,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#87835C',
   },
+  chipBlocked: { opacity: 0.45 },
   chipTextSelected: {
     fontFamily: ViveFonts.medium,
     color: '#565E32',

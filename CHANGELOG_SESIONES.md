@@ -6,7 +6,7 @@
 ---
 ## 2026-09-21 — Andre (sesión 266 · Sofía, retoques visuales y el match por forma de trabajar)
 
-**Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `scripts/add-quiz-guia-foco-genero.sql` (nuevo), `lib/enfoque.ts`, `lib/quizMatch.ts`, `lib/quizPendiente.ts`, `lib/coachesCache.ts`, `screens/QuizScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `screens/ProfesionalScreen.tsx`, `__tests__/enfoque.test.ts`, `__tests__/quizMatch.test.ts`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `constants/searchData.ts`, `__tests__/taxonomia.test.ts`, `scripts/add-quiz-areas-subtemas.sql` (nuevo), `components/ui/PriceSlider.tsx` (nuevo), `app/search3.tsx`, `scripts/add-quiz-budget-max.sql` (nuevo)
+**Tocado:** `components/SobreVosMomento.tsx`, `lib/weeklyReflection.ts`, `app/(tabs)/index.tsx`, `__tests__/weeklyReflection.test.ts`, `app/(tabs)/conexiones.tsx`, `app/(tabs)/recursos.tsx`, `scripts/add-quiz-guia-foco-genero.sql` (nuevo), `lib/enfoque.ts`, `lib/quizMatch.ts`, `lib/quizPendiente.ts`, `lib/coachesCache.ts`, `screens/QuizScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `screens/ProfesionalScreen.tsx`, `__tests__/enfoque.test.ts`, `__tests__/quizMatch.test.ts`, `SCHEMA.md`, `docs/problemas-abiertos.md`, `constants/searchData.ts`, `__tests__/taxonomia.test.ts`, `scripts/add-quiz-areas-subtemas.sql` (nuevo), `components/ui/PriceSlider.tsx` (nuevo), `app/search3.tsx`, `scripts/add-quiz-budget-max.sql` (nuevo), `scripts/add-coach-como-trabaja-en-alta.sql` (nuevo), `screens/CoachApplicationScreen.tsx`, `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `lib/coachDeckRanking.ts`, `__tests__/deckRanking.test.ts`
 
 **Resumen:**
 - Pedido de Andre: el botón "Seguir" del momento a pantalla completa (el que sube después de registrar el ánimo) *"no sirve de mucho"*. Es cierto: solo cerraba, igual que tocar afuera, y era el botón grande mientras lo único que lleva a algún lado estaba en letra chica abajo.
@@ -36,6 +36,15 @@
 - 🎚️ **Presupuesto con barra deslizable** (pedido de Andre). De $2.000 a $15.000 en pasos de $500; el extremo es "Sin límite" y es donde arranca. Debajo dice cuántos de los profesionales que trabajan lo elegido entran en ese precio. Se guarda en `user_quiz_answers.budget_max` (script corrido y verificado); las respuestas viejas por rango se traducen solas.
   - 🔴 **De paso: la barra de precio del buscador (`search3`) no se movía.** Su PanResponder se creaba una vez y leía el ancho de la barra del primer render (0), así que cortaba cada arrastre. Las dos usan ahora `components/ui/PriceSlider.tsx`, que lee todo de refs, salta al punto tocado y no le cede el gesto al scroll.
   - 3 tests nuevos, suite en 787.
+- 🃏 **El mazo de Profesionales y el quiz, juntos** (pregunta de Andre: *"¿podría ser compatible el sistema de recomendaciones (las 4) con estas?"*).
+  - **El quiz entra como una barra más, no como un orden.** Cada tarjeta ("Recomendado por Vita", "En tendencia", "Nuevo", "Económica") sortea primero entre los que no tienen ninguna diferencia con el quiz en **tipo, presupuesto, género y tema concreto**, y si no hay ninguno, entre todos como antes. La rotación del criterio v3 queda intacta (hay un test que lo controla). Cómo trabaja NO entra en el piso todavía: casi nadie lo contestó y vaciaría el grupo.
+  - La tarjeta suma una línea con el motivo más fuerte (*"Trabaja duelo, que es lo que querés trabajar"*, *"Es mujer, como preferiste"*), **solo si encaja**. Si salió del sorteo general, no se dice nada.
+  - ⚠️ **El punto 4 que se había propuesto ("que arranque en el tema del quiz") chocaba con una decisión anterior**: Profesionales a propósito no abre el mazo solo. Se hizo con el mecanismo de la sugerencia del onboarding: abre el menú del eje y **destaca** el tema, sin abrir gente. La métrica `puerta_elegida` suma `desde_quiz` para no mezclarse con `desde_onboarding`.
+  - `leerRespuestasGuardadas()` en `lib/quizPendiente.ts` la comparten el quiz y Profesionales.
+- 📝 **"Cómo trabajás" obligatorio en la postulación** (decisión de Andre: todos los que se registren lo contestan). Estilo, guía y foco; la escuela no (pide matrícula, que llega después). Para quien se postuló antes, aparece como pendiente en su pantalla de visibilidad.
+  - 🔴 **Se encontró antes de romper nada**: el profesional podía EDITAR esas columnas pero no ESCRIBIRLAS al postularse. Mandarlas en el alta sin el grant habría hecho fallar toda postulación nueva. Arreglado en la base (ver SCHEMA.md).
+  - **Para que marcar todo no convenga**: "Las dos cosas" y "Depende de la persona" coinciden pero **por debajo de la respuesta exacta**, y la frase cambia (*"También trabaja con ejercicios"*, no *"como pediste"*). "Sobre qué trabajás" va hasta 2 de 3, en la app y en la base.
+  - 6 tests nuevos, suite en 793.
 - 📱 Sin ver en el teléfono. Hay que probar el deslizar: `shouldRasterizeIOS` sigue puesto en la hoja y no debería molestar, pero no se vio.
 - ✅ **Las cuatro decisiones de producto que estaban frenando la sección M quedaron tomadas** (anotadas en `docs/problemas-abiertos.md`, cada una en su fila):
   - **M15, reagendar: libre fuera de las 24hs, una sola vez adentro.** Con más de 24hs el cliente mueve a cualquier horario libre sin perder el pago; dentro de las 24hs lo pide una vez y el profesional acepta o no.
@@ -111,6 +120,7 @@
 - Ver en el teléfono que deslizar se sienta natural y que nadie quede sin saber cómo cerrar.
 - Probar las dos barras de precio (quiz y filtros del buscador): que sigan el dedo y no peleen con el scroll.
 - Probar el quiz nuevo de punta a punta (7 preguntas, resumen, volver con las respuestas) y "Cómo trabajo" con `coach-prueba`.
+- Probar una postulación de punta a punta con "Cómo trabajás" (es la única forma de confirmar el grant de INSERT desde la app).
 - Revisar con un profesional la tabla de tendencias por escuela (`TENDENCIA` en `lib/enfoque.ts`).
 - Joaquín: el match ahora lee `coaches.guia` y `coaches.focos`; ya están en producción, no hay que correr nada.
 

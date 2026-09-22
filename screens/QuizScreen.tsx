@@ -39,7 +39,7 @@ import {
 } from '@/lib/enfoque';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { supabase } from '@/lib/supabase';
-import { guardarPendiente, volcarPendiente, leerPendiente } from '@/lib/quizPendiente';
+import { guardarPendiente, volcarPendiente, leerRespuestasGuardadas } from '@/lib/quizPendiente';
 
 const F  = '#3A4F2A';
 const FS = '#566245';
@@ -129,27 +129,12 @@ export default function QuizScreen() {
     return () => clearInterval(t);
   }, []);
 
-  // Si ya hizo el quiz, vuelve con sus respuestas marcadas. Primero lo local
-  // (vale también sin cuenta); si no hay nada y hay sesión, lo de la base,
-  // que es lo que tiene quien lo hizo en otro teléfono.
+  // Si ya hizo el quiz, vuelve con sus respuestas marcadas
+  // (`leerRespuestasGuardadas`: primero lo local, después la base).
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      let r: Record<string, unknown> | null = (await leerPendiente()) as Record<string, unknown> | null;
-      if (!r) {
-        const { data: ses } = await supabase.auth.getSession();
-        const uid = ses.session?.user?.id;
-        if (uid) {
-          const { data } = await supabase.from('user_quiz_answers').select('*').eq('user_id', uid).maybeSingle();
-          if (data) {
-            r = {
-              topic: data.topic, areas: data.areas, subtemas: data.subtemas,
-              professionalType: data.professional_type, budget: data.budget, budgetMax: data.budget_max,
-              estilo: data.estilo, guia: data.guia, foco: data.foco, generoPref: data.genero_pref,
-            };
-          }
-        }
-      }
+      const r = (await leerRespuestasGuardadas()) as Record<string, unknown> | null;
       if (cancelado || !r) return;
       // Antes del 21/09 se guardaba una sola área (`topic`): sirve igual.
       const areasGuardadas = (Array.isArray(r.areas) ? r.areas : r.topic ? [r.topic] : [])

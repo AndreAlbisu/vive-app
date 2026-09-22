@@ -289,6 +289,18 @@ export function buildChecklist(self: VisibilitySelf): ChecklistItem[] {
       hint: 'Además de habilitar la reserva, define si entrás al lugar de "Opción económica".',
       route: '/perfil',
     },
+    // 21/09/2026: desde esa fecha se pide en el alta. Esto es para quien se
+    // postuló antes. No bloquea (sigue apareciendo en las puertas), pero sin
+    // esto el quiz no tiene con qué ponerlo primero para quien busca su forma
+    // de trabajar.
+    {
+      key: 'como-trabaja',
+      label: 'Cómo trabajás',
+      done: !!self.estilo && !!self.guia && (self.focos?.length ?? 0) > 0,
+      blocking: false,
+      hint: 'Sin esto no podemos sugerirte a quien busca tu forma de trabajar. Son tres preguntas de un toque.',
+      route: '/coach-enfoque',
+    },
     {
       key: 'availability',
       label: 'Horarios libres esta semana',

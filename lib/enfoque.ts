@@ -75,18 +75,23 @@ export function esEnfoque(v: unknown): v is Enfoque {
 export function evaluarEstilo(
   estiloCoach: string | null | undefined,
   pedido: EstiloPedido | null,
-): { razon: string | null; diferencia: string | null; coincide: boolean } {
+): Evaluacion {
   const vacio = { razon: null, diferencia: null, coincide: true };
   if (!pedido || pedido === 'any') return vacio;
   if (!esEstiloCoach(estiloCoach)) return vacio;
 
+  // 🔴 "Las dos cosas" coincide, pero PARCIAL (21/09/2026). Si valiera lo mismo
+  // que una respuesta exacta, marcar siempre la opción del medio sería la forma
+  // de aparecer primero para todo el mundo. Y la frase no dice "como pediste":
+  // no es lo que pidió, es algo que también hace.
   if (estiloCoach === 'ambos') {
     return {
       razon: pedido === 'escucha'
-        ? 'Acompaña escuchando, que es como lo pediste'
-        : 'Trabaja con herramientas y ejercicios, como pediste',
+        ? 'También acompaña escuchando'
+        : 'También trabaja con ejercicios',
       diferencia: null,
       coincide: true,
+      parcial: true,
     };
   }
 
@@ -193,6 +198,10 @@ export const FOCO_OPCIONES_PERSONA: { id: FocoPedido; label: string; desc: strin
   { id: 'any',      label: 'No sabría decir',           desc: 'Un poco de todo, o no lo tengo claro' },
 ];
 
+/** Tope del CHECK de `coaches.focos`: marcar los tres coincide con cualquier
+ *  pedido y no dice nada. */
+export const MAX_FOCOS = 2;
+
 export const FOCO_OPCIONES_COACH: { id: Foco; label: string; desc: string }[] = [
   { id: 'historia', label: 'La historia de la persona', desc: 'Entender de dónde viene lo que pasa hoy' },
   { id: 'presente', label: 'Lo que pasa ahora',          desc: 'Salir de algo concreto que la afecta' },
@@ -261,6 +270,9 @@ export type Evaluacion = {
   coincide: boolean;
   /** Pidió algo y no sabemos si el perfil lo cumple (solo género). */
   desconocido?: boolean;
+  /** Coincide por la opción del medio ("Las dos cosas", "Depende de la
+   *  persona"), no por una respuesta exacta. Ordena por debajo de la exacta. */
+  parcial?: boolean;
 };
 const VACIO: Evaluacion = { razon: null, diferencia: null, coincide: true };
 
@@ -301,7 +313,10 @@ export function evaluarGuia(
   if (!pedido || pedido === 'any') return VACIO;
 
   if (esGuiaCoach(guiaCoach)) {
-    if (guiaCoach === 'ambos' || guiaCoach === pedido) {
+    if (guiaCoach === 'ambos') {
+      return { razon: 'Adapta cuánto guía a cada persona', diferencia: null, coincide: true, parcial: true };
+    }
+    if (guiaCoach === pedido) {
       return {
         razon: pedido === 'guia'
           ? 'Propone el camino y te guía, como pediste'

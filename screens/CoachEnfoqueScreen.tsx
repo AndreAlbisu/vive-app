@@ -40,6 +40,7 @@ import {
   ESTILO_OPCIONES_COACH,
   GUIA_OPCIONES_COACH,
   FOCO_OPCIONES_COACH,
+  MAX_FOCOS,
   esGuiaCoach,
   esFoco,
   type GuiaCoach,
@@ -112,7 +113,15 @@ export default function CoachEnfoqueScreen() {
   }
 
   function toggleFoco(id: Foco) {
-    setFocos(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+    setFocos(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      // El tope también está en el CHECK de la base.
+      if (prev.length >= MAX_FOCOS) {
+        Alert.alert('Hasta dos', 'Elegí las dos que más te representen. Marcar las tres no ayuda a que te encuentren.');
+        return prev;
+      }
+      return [...prev, id];
+    });
   }
 
   async function handleSave() {
@@ -215,7 +224,7 @@ export default function CoachEnfoqueScreen() {
               <View style={s.block}>
                 <Text style={s.blockTitle}>Sobre qué trabajás</Text>
                 <Text style={s.blockHint}>
-                  Podés marcar más de una. A la persona le preguntamos si quiere entender lo que vivió, resolver algo de ahora o repensar hacia dónde va.
+                  Hasta {MAX_FOCOS}. A la persona le preguntamos si quiere entender lo que vivió, resolver algo de ahora o repensar hacia dónde va.
                 </Text>
                 {FOCO_OPCIONES_COACH.map(op => {
                   const activo = focos.includes(op.id);

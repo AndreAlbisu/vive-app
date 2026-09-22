@@ -172,3 +172,21 @@ describe('recomendarDesdeQuiz — presupuesto con barra (21/09/2026)', () => {
     expect(r.recomendaciones[0].diferencias).toContain('Su sesión cuesta más de lo que marcaste');
   });
 });
+
+describe('recomendarDesdeQuiz — la opción del medio no conviene (21/09/2026)', () => {
+  const BASE: RespuestasQuiz = { tema: 'emocion', tipo: 'any', presupuesto: 'flex' };
+
+  it('exacto > "las dos cosas" > no contestó', () => {
+    const exacto = coach({ estilo: 'herramientas', guia: 'guia' });
+    const medio = coach({ estilo: 'ambos', guia: 'ambos' });
+    const nada = coach({});
+    const r = recomendarDesdeQuiz([nada, medio, exacto], { ...BASE, estilo: 'herramientas', guia: 'guia' });
+    expect(r.recomendaciones.map(x => x.coach.id)).toEqual([exacto.id, medio.id, nada.id]);
+  });
+
+  it('"las dos cosas" no dice "como pediste"', () => {
+    const r = recomendarDesdeQuiz([coach({ estilo: 'ambos' })], { ...BASE, estilo: 'herramientas' });
+    expect(r.recomendaciones[0].razones.join(' ')).toMatch(/También trabaja con ejercicios/);
+    expect(r.recomendaciones[0].razones.join(' ')).not.toMatch(/como pediste/);
+  });
+});

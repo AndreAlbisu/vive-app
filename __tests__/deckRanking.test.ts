@@ -282,3 +282,49 @@ describe('rankDeck', () => {
     });
   });
 });
+
+// ─── Con quiz (21/09/2026) ──────────────────────────────────────────────────
+import { evaluarParaMazo } from '../lib/quizMatch';
+
+describe('rankDeck — con las respuestas del quiz', () => {
+  // Todos califican para "económico" (misma plata = mediana), así el slot tiene
+  // un grupo grande y se ve el efecto del piso.
+  const pool = () => Array.from({ length: 8 }, (_, i) =>
+    coach({ priceFrom: 5000, gender: i === 5 ? 'Femenino' : 'Masculino' }));
+
+  it('el slot sortea primero entre los que encajan', () => {
+    const coaches = pool();
+    const mujer = coaches[5];
+    for (const uid of ['a', 'b', 'c', 'd', 'e']) {
+      const deck = rankDeck(coaches, uid, NOW, c =>
+        evaluarParaMazo(c, { tema: null, tipo: 'any', presupuesto: null, genero: 'mujer' }, []));
+      const eco = deck.find(e => e.slot.key === 'economico')!;
+      expect(eco.coach.id).toBe(mujer.id);
+      expect(eco.motivo).toBe('Es mujer, como preferiste');
+    }
+  });
+
+  it('si nadie encaja, sortea entre todos y no muestra motivo', () => {
+    const coaches = pool().map(c => ({ ...c, gender: 'Masculino' }));
+    const deck = rankDeck(coaches, 'x', NOW, c =>
+      evaluarParaMazo(c, { tema: null, tipo: 'any', presupuesto: null, genero: 'mujer' }, []));
+    const eco = deck.find(e => e.slot.key === 'economico')!;
+    expect(eco).toBeTruthy();
+    expect(eco.motivo).toBeNull();
+  });
+
+  it('🔴 sigue rotando: entre varios que encajan, distintas personas ven distintos', () => {
+    const coaches = Array.from({ length: 8 }, () => coach({ priceFrom: 5000, gender: 'Femenino' }));
+    const vistos = new Set(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(uid =>
+      rankDeck(coaches, uid, NOW, c =>
+        evaluarParaMazo(c, { tema: null, tipo: 'any', presupuesto: null, genero: 'mujer' }, []))
+        .find(e => e.slot.key === 'economico')!.coach.id));
+    expect(vistos.size).toBeGreaterThan(1);
+  });
+
+  it('los temas del quiz que no son de esta puerta no cuentan', () => {
+    const c = coach({ topics: ['Ansiedad'] });
+    const r = evaluarParaMazo(c, { tema: null, tipo: 'any', presupuesto: null, subtemas: ['Duelo'] }, ['Ansiedad']);
+    expect(r.encaja).toBe(true);
+  });
+});
