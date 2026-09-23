@@ -136,9 +136,16 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Se quitó el privilegio (`scripts/quitar-insert-de-perfiles.sql`). El alta sigue funcionando porque el trigger corre como `postgres` — verificado, igual que que los 3 admins siguen siendo 3.
 - 🟢 **Sin hallazgos**: la baja de cuenta toma la identidad del token y nunca del cuerpo del pedido (nadie borra la cuenta de otro); los bloqueos entre cuentas están acotados a quien bloquea; y el ingreso por código de la sala web usa el OTP de Supabase con CAPTCHA, `create_user: false` (un mail mal tipeado no crea cuentas) y el 429 de "ya te mandamos uno" contemplado.
 
+### Tanda 5 — la app y lo que queda en el teléfono (cierra el área de Claude)
+
+- 🟢 **Sin hallazgos nuevos.** Verificado: no hay ninguna clave de servidor en el código de la app (las coincidencias eran nombres de tipografías); los `console.*` solo registran mensajes de error, no contenido de diario, ánimo ni mensajes; y en el teléfono **no se guarda contenido sensible** — las 12 claves de AsyncStorage son preferencias, el estado del onboarding y el quiz pendiente.
+- 🟢 **El "cifrado" de los mensajes y lo que decimos de él coinciden.** `lib/encryption.ts` es XOR + base64 con la clave dentro del binario, y el propio archivo lo dice sin vueltas. Lo importante para una app de salud es que **ningún texto de cara al usuario prometa cifrado**: se revisó la app, la web, los T&C (§15.2) y la Política (§8.2), y los tres dicen expresamente que **no hay cifrado de extremo a extremo** y que Vita podría acceder al contenido. No hay promesa falsa que corregir.
+- 🟡 **Una recomendación, sin tocar nada (L50)**: la sesión se guarda en AsyncStorage y no en el llavero cifrado del sistema. Es lo estándar en Expo, pero moverla a `expo-secure-store` **desloguea a todos** al actualizar; sin usuarios reales, ahora es el momento más barato. Queda como decisión de Andre.
+
 **Pendiente para la próxima sesión:**
 - Limpiar las dos policies que todavía dejan confirmar "sin intento de cobro" (hoy inofensivas: el trigger corta antes).
-- Seguir la auditoría por donde quedó: el resto de `lib/` y después `app/`/`hooks/`.
+- Decidir L50 (dónde se guarda la sesión en el teléfono).
+- El área de Claude (autenticación, permisos, perfiles, mensajería, secretos, infraestructura) quedó cubierta. Lo que falta de seguridad es el área de Codex y lo que él reporte.
 - L15 sigue abierto: `suspendido_hasta` es legible sin cuenta y cerrarlo pide una vista de catálogo.
 - Sigue todo lo de la sesión 266 sin ver en el teléfono.
 
