@@ -146,9 +146,18 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
 
 **Aclaración de Andre del 23/09 que cierra varias decisiones:** **no hay un solo usuario ni profesional real, y la app no está publicada.** Todo lo que hay en la base es de prueba. Con eso: **L10 cerrado** (ninguna de las 6 reservas es de una persona real), **L9 despejado** (la conservación de 10 años de Privacidad §10 no protege a nadie acá; lo único real es la plata que se movió, y ese registro vive en Mercado Pago y PayPal, no en `bookings`), **L11 despejado** (los 34 `verified` son de prueba; la decisión vuelve con el primer profesional real) y **L58 sale gratis** (no hay sesiones que romper). **L8, la limpieza de datos de prueba, queda sin nada que la frene.**
 
+### L58 — la sesión pasa al llavero del sistema
+
+- **Hecho, y hecho ahora por una razón de tiempo**: el cambio desloguea a quien tenga la app abierta, y hoy no hay usuarios reales. Con gente adentro, cuesta.
+- `lib/secureSessionStorage.ts` (nuevo, 8 tests). Tres decisiones que no son obvias, todas escritas en el archivo:
+  - **Se parte en pedazos**: el llavero rechaza valores grandes (iOS cortaba cerca de 2048 bytes) y una sesión de Supabase con sus dos JWT pasa ese tamaño. Al escribir se borran los sobrantes de una sesión anterior más larga, o una lectura futura uniría pedazos de dos sesiones distintas.
+  - **`AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`** y no el default `WHEN_UNLOCKED`: con el default el llavero **no se lee con el teléfono bloqueado** y Supabase renueva el token en segundo plano, así que la sesión se rompería sola de noche. `THIS_DEVICE_ONLY` además evita que viaje al llavero de iCloud.
+  - **Si el llavero falla, se usa AsyncStorage**: dejar a alguien afuera de la app es peor que guardar la sesión como se guardaba ayer. Queda en consola, no en silencio.
+- **Migración**: lo que ya estuviera en AsyncStorage se muda al llavero en la primera lectura y recién ahí se borra del lugar viejo, así actualizar no desloguea.
+- 📱 **Falta probarlo en el teléfono**: entrar, cerrar la app del todo y volver (tiene que seguir la sesión), y cerrar sesión. ⚠️ En iOS el llavero sobrevive a desinstalar la app, así que reinstalar deja la sesión abierta: es Keychain, no un error.
+
 **Pendiente para la próxima sesión:**
 - Limpiar las dos policies que todavía dejan confirmar "sin intento de cobro" (hoy inofensivas: el trigger corta antes).
-- Decidir L58 (dónde se guarda la sesión en el teléfono).
 - El área de Claude (autenticación, permisos, perfiles, mensajería, secretos, infraestructura) quedó cubierta. Lo que falta de seguridad es el área de Codex y lo que él reporte.
 - L15 sigue abierto: `suspendido_hasta` es legible sin cuenta y cerrarlo pide una vista de catálogo.
 - Sigue todo lo de la sesión 266 sin ver en el teléfono.

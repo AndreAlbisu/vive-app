@@ -4,7 +4,7 @@
 import '@/lib/webcrypto';
 import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureSessionStorage } from './secureSessionStorage';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
@@ -20,7 +20,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// Web usa localStorage (con guard SSR); mobile usa AsyncStorage.
+// Web usa localStorage (con guard SSR); mobile, el llavero del sistema.
 const webStorage = {
   getItem: (key: string) =>
     typeof window !== 'undefined' ? window.localStorage.getItem(key) : null,
@@ -31,7 +31,13 @@ const webStorage = {
     if (typeof window !== 'undefined') window.localStorage.removeItem(key);
   },
 };
-const authStorage = Platform.OS === 'web' ? webStorage : AsyncStorage;
+// 🔴 L58 (auditoría 23/09/2026): en el teléfono la sesión ya NO vive en
+// AsyncStorage —texto plano dentro del sandbox de la app— sino en el llavero
+// del sistema (Keychain / Keystore), partida en pedazos y con migración de lo
+// que ya estuviera guardado. El porqué de cada decisión está en
+// `lib/secureSessionStorage.ts`. Se hizo ahora porque todavía no hay usuarios
+// reales: el cambio, con gente adentro, los desloguea.
+const authStorage = Platform.OS === 'web' ? webStorage : secureSessionStorage;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -49,9 +55,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     // implícito no hay ni una cosa ni la otra, así que no hay nada que
     // intercambiar y la sesión nunca se crea.
     //
-    // PKCE guarda el code verifier en `storage` — el mismo AsyncStorage de
-    // arriba— entre que se abre el navegador y vuelve, así que no hace falta
-    // nada más.
+    // PKCE guarda el code verifier en `storage` — el mismo de arriba, desde el
+    // 23/09/2026 el llavero del sistema— entre que se abre el navegador y
+    // vuelve, así que no hace falta nada más.
     //
     // ⚠️ Cambiar esto afectaría también a los links por mail (confirmación,
     // recuperación de contraseña), que bajo PKCE viajan con `code`. Verificado

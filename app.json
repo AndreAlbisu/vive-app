@@ -84,7 +84,8 @@
           "microphonePermission": "Vita necesita acceso al micrófono para grabar tus recursos de audio."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
