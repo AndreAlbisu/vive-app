@@ -155,12 +155,14 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
     throw new Error(`No se pudieron leer los perfiles de ${bookingId}`)
   }
 
-  const userName = (userProfile?.name as string | null) ?? 'Un usuario'
 
   const avisoCoachTitle = isInstant ? 'Nueva reserva confirmada 📅' : 'Nueva solicitud de sesión 📅'
+  // 🔒 Sin nombres (L63, 23/09/2026): el push se lee en la pantalla bloqueada y
+  // viaja a Expo/Apple/Google. Del lado del profesional el expuesto sería su
+  // cliente; del lado del cliente, que está en terapia y con quién.
   const avisoCoachBody = isInstant
-    ? `${userName} reservó una sesión el ${fecha} a las ${hora} hs. Ya está confirmada.`
-    : `${userName} quiere reservar una sesión el ${fecha} a las ${hora} hs`
+    ? `Tenés una reserva confirmada para el ${fecha} a las ${hora} hs`
+    : `Tenés una solicitud de sesión para el ${fecha} a las ${hora} hs`
 
   await sendPush(coachProfile?.push_token, avisoCoachTitle, avisoCoachBody)
 
@@ -268,7 +270,7 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
   }
 
   const notifTitle = '¡Tu sesión fue confirmada! ✅'
-  const notifBody = `Tu sesión con ${coachName} el ${fecha} está confirmada`
+  const notifBody = `Tu sesión del ${fecha} está confirmada`
 
   const { data: userAlreadyNotified, error: userNotifReadError } = await admin
     .from('notifications').select('id')

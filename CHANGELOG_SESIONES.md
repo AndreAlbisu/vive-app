@@ -161,10 +161,11 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
 - 🟢 **Dependencias: 0 vulnerabilidades** (`npm audit`, con y sin dev). La app habla con muy pocos dominios y ninguno inesperado.
 - 🔴 **Hallazgo de privacidad, cerrado: el push del chat llevaba el mensaje.** Se mandaban los primeros 50 caracteres del texto (y el título del recurso recomendado, que también dice algo: *"Dormir mejor con ansiedad"* en una pantalla bloqueada es casi un diagnóstico). Eso es a la vez lo que se lee sin desbloquear el teléfono y lo que viaja a Expo, Apple y Google. Y la Política §12 habla de "notificaciones relacionadas con el servicio", no de contenido.
   - Ahora el aviso avisa y nada más: *"Te escribieron en Vita"* y *"Tu profesional te recomendó algo en Vita"*.
-- ⚠️ **Para decidir (L63)**: los avisos de reserva sí nombran al profesional (*"Tu sesión con X el 24/09 está confirmada"*). En una pantalla bloqueada eso revela que la persona está en terapia y con quién. Se puede dejar la fecha y sacar el nombre, que conserva casi toda la utilidad. **No lo toqué**: es decisión de producto, no un bug.
+- ✅ **Y los avisos de reserva, decisión de Andre el mismo día: sin nombres.** Quedan la fecha y la hora, que es lo que hace útil al aviso. Va en los dos sentidos: el cliente ya no recibe *"Tu sesión con <profesional>"* y el profesional ya no recibe *"<cliente> reservó una sesión"* — del lado del profesional el expuesto en la pantalla bloqueada es su paciente.
+  - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
+  - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
 **Pendiente para la próxima sesión:**
-- Decidir L63 (si los avisos de reserva siguen nombrando al profesional).
 - Limpiar las dos policies que todavía dejan confirmar "sin intento de cobro" (hoy inofensivas: el trigger corta antes).
 - El área de Claude (autenticación, permisos, perfiles, mensajería, secretos, infraestructura) quedó cubierta. Lo que falta de seguridad es el área de Codex y lo que él reporte.
 - L15 sigue abierto: `suspendido_hasta` es legible sin cuenta y cerrarlo pide una vista de catálogo.

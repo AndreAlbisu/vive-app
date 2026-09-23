@@ -421,7 +421,8 @@ export default function CoachReservasScreen() {
               const { data: coachProfile } = await supabase
                 .from('profiles').select('name').eq('id', user!.id).maybeSingle();
               const notifTitle = 'Sesión cancelada';
-              const notifBody = `${coachProfile?.name ?? 'Tu profesional'} canceló la sesión del ${fullDate(booking.scheduled_date)}`;
+              // 🔒 Sin nombres (L63): esto se lee en la pantalla bloqueada.
+              const notifBody = `Se canceló la sesión del ${fullDate(booking.scheduled_date)}`;
               await Promise.all([
                 supabase.from('notifications').insert({
                   recipient_id: booking.user_id, type: 'reserva_cancelada', booking_id: booking.id,

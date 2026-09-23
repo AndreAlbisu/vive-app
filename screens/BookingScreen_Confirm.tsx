@@ -544,15 +544,16 @@ export default function BookingScreen_Confirm() {
         // Notificar al coach. El push lo manda la edge function (busca el token
         // con service role); acá solo se declara el contexto — el booking, del
         // que quien reserva es participante.
-        const userName = user.user_metadata?.name ?? 'Un usuario';
 
         await notifyViaServer({
           bookingId: booking.id,
           recipientId: coachProfileId,
           title: confirmedNow ? 'Nueva reserva confirmada 📅' : 'Nueva solicitud de sesión 📅',
           body: confirmedNow
-            ? `${userName} reservó una sesión el ${formatDate(dateStr)} a las ${time} hs. Ya está confirmada.`
-            : `${userName} quiere reservar una sesión el ${formatDate(dateStr)} a las ${time} hs`,
+            // 🔒 Sin el nombre de quien reserva (L63): del lado del profesional
+            // el que queda expuesto en la pantalla bloqueada es su cliente.
+            ? `Tenés una reserva confirmada para el ${formatDate(dateStr)} a las ${time} hs`
+            : `Tenés una solicitud de sesión para el ${formatDate(dateStr)} a las ${time} hs`,
         });
 
         if (!confirmedNow) return;
@@ -578,7 +579,8 @@ export default function BookingScreen_Confirm() {
         // mensaje de sistema en la sala, y cancelación de otras solicitudes
         // 'pendiente' que hayan quedado compitiendo por el mismo horario.
         const notifTitle = '¡Tu sesión fue confirmada! ✅';
-        const notifBody = `Tu sesión con ${coachName} el ${formatDate(dateStr)} está confirmada`;
+        // 🔒 Sin nombres (L63): esto se lee en la pantalla bloqueada.
+        const notifBody = `Tu sesión del ${formatDate(dateStr)} está confirmada`;
 
         await supabase.from('notifications').insert({
           recipient_id: user.id,

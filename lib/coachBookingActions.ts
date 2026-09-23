@@ -46,7 +46,11 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
   ]);
 
   const notifTitle = '¡Tu sesión fue confirmada! ✅';
-  const notifBody = `Tu sesión con ${coachProfile?.name ?? 'tu profesional'} el ${formatBookingDate(booking.scheduled_date)} está confirmada`;
+  // 🔒 Sin nombres (L63, 23/09/2026). Este texto termina en la pantalla
+  // bloqueada del teléfono y en los servidores de Expo/Apple/Google: "Tu sesión
+  // con <nombre>" ahí cuenta que la persona está en terapia y con quién. La
+  // fecha alcanza para que el aviso sirva; el nombre está adentro de la app.
+  const notifBody = `Tu sesión del ${formatBookingDate(booking.scheduled_date)} está confirmada`;
 
   await Promise.all([
     supabase.from('notifications').insert({
@@ -152,7 +156,7 @@ export async function rejectBooking(bookingId: string, coachAuthUserId: string):
     .from('profiles').select('name').eq('id', coachAuthUserId).maybeSingle();
 
   const notifTitle = 'Ese horario no está disponible';
-  const notifBody = `${coachProfile?.name ?? 'Tu profesional'} no puede en ese horario. Podés elegir otro horario disponible u otro profesional`;
+  const notifBody = 'Ese horario ya no está disponible. Podés elegir otro horario u otro profesional';
 
   await Promise.all([
     supabase.from('notifications').insert({
