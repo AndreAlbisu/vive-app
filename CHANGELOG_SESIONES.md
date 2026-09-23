@@ -140,11 +140,15 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
 
 - 🟢 **Sin hallazgos nuevos.** Verificado: no hay ninguna clave de servidor en el código de la app (las coincidencias eran nombres de tipografías); los `console.*` solo registran mensajes de error, no contenido de diario, ánimo ni mensajes; y en el teléfono **no se guarda contenido sensible** — las 12 claves de AsyncStorage son preferencias, el estado del onboarding y el quiz pendiente.
 - 🟢 **El "cifrado" de los mensajes y lo que decimos de él coinciden.** `lib/encryption.ts` es XOR + base64 con la clave dentro del binario, y el propio archivo lo dice sin vueltas. Lo importante para una app de salud es que **ningún texto de cara al usuario prometa cifrado**: se revisó la app, la web, los T&C (§15.2) y la Política (§8.2), y los tres dicen expresamente que **no hay cifrado de extremo a extremo** y que Vita podría acceder al contenido. No hay promesa falsa que corregir.
-- 🟡 **Una recomendación, sin tocar nada (L50)**: la sesión se guarda en AsyncStorage y no en el llavero cifrado del sistema. Es lo estándar en Expo, pero moverla a `expo-secure-store` **desloguea a todos** al actualizar; sin usuarios reales, ahora es el momento más barato. Queda como decisión de Andre.
+- 🟡 **Una recomendación, sin tocar nada (L58)**: la sesión se guarda en AsyncStorage y no en el llavero cifrado del sistema. Es lo estándar en Expo, pero moverla a `expo-secure-store` **desloguea a todos** al actualizar; sin usuarios reales, ahora es el momento más barato. Queda como decisión de Andre.
+
+**⚠️ Numeración:** Codex y Claude venían numerando en paralelo y chocaron. Las entradas de esta auditoría quedaron en **L59 a L62** (tandas 1 a 4) y **L58** (la recomendación de la sesión en el teléfono). Antes de agregar una nueva, mirar el número más alto del archivo.
+
+**Aclaración de Andre del 23/09 que cierra varias decisiones:** **no hay un solo usuario ni profesional real, y la app no está publicada.** Todo lo que hay en la base es de prueba. Con eso: **L10 cerrado** (ninguna de las 6 reservas es de una persona real), **L9 despejado** (la conservación de 10 años de Privacidad §10 no protege a nadie acá; lo único real es la plata que se movió, y ese registro vive en Mercado Pago y PayPal, no en `bookings`), **L11 despejado** (los 34 `verified` son de prueba; la decisión vuelve con el primer profesional real) y **L58 sale gratis** (no hay sesiones que romper). **L8, la limpieza de datos de prueba, queda sin nada que la frene.**
 
 **Pendiente para la próxima sesión:**
 - Limpiar las dos policies que todavía dejan confirmar "sin intento de cobro" (hoy inofensivas: el trigger corta antes).
-- Decidir L50 (dónde se guarda la sesión en el teléfono).
+- Decidir L58 (dónde se guarda la sesión en el teléfono).
 - El área de Claude (autenticación, permisos, perfiles, mensajería, secretos, infraestructura) quedó cubierta. Lo que falta de seguridad es el área de Codex y lo que él reporte.
 - L15 sigue abierto: `suspendido_hasta` es legible sin cuenta y cerrarlo pide una vista de catálogo.
 - Sigue todo lo de la sesión 266 sin ver en el teléfono.
