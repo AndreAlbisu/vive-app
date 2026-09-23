@@ -36,3 +36,7 @@ no esperar a que el usuario lo pida.
 
 No le pidas confirmación al usuario para hacer esta actualización — es parte
 del flujo normal de cierre, hacela directamente y avisá que la hiciste.
+
+## Coordinación de auditorías
+
+Si existe `.security-audit-handoff.local.md`, leerlo antes de revisar o corregir seguridad, actualizar el estado de los hallazgos y respetar las áreas asignadas. Es local y no se publica; si falta, continuar normalmente.
