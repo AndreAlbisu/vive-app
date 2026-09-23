@@ -156,7 +156,15 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
 - **Migración**: lo que ya estuviera en AsyncStorage se muda al llavero en la primera lectura y recién ahí se borra del lugar viejo, así actualizar no desloguea.
 - 📱 **Falta probarlo en el teléfono**: entrar, cerrar la app del todo y volver (tiene que seguir la sesión), y cerrar sesión. ⚠️ En iOS el llavero sobrevive a desinstalar la app, así que reinstalar deja la sesión abierta: es Keychain, no un error.
 
+### Tanda 6 — dependencias y qué sale de la app
+
+- 🟢 **Dependencias: 0 vulnerabilidades** (`npm audit`, con y sin dev). La app habla con muy pocos dominios y ninguno inesperado.
+- 🔴 **Hallazgo de privacidad, cerrado: el push del chat llevaba el mensaje.** Se mandaban los primeros 50 caracteres del texto (y el título del recurso recomendado, que también dice algo: *"Dormir mejor con ansiedad"* en una pantalla bloqueada es casi un diagnóstico). Eso es a la vez lo que se lee sin desbloquear el teléfono y lo que viaja a Expo, Apple y Google. Y la Política §12 habla de "notificaciones relacionadas con el servicio", no de contenido.
+  - Ahora el aviso avisa y nada más: *"Te escribieron en Vita"* y *"Tu profesional te recomendó algo en Vita"*.
+- ⚠️ **Para decidir (L63)**: los avisos de reserva sí nombran al profesional (*"Tu sesión con X el 24/09 está confirmada"*). En una pantalla bloqueada eso revela que la persona está en terapia y con quién. Se puede dejar la fecha y sacar el nombre, que conserva casi toda la utilidad. **No lo toqué**: es decisión de producto, no un bug.
+
 **Pendiente para la próxima sesión:**
+- Decidir L63 (si los avisos de reserva siguen nombrando al profesional).
 - Limpiar las dos policies que todavía dejan confirmar "sin intento de cobro" (hoy inofensivas: el trigger corta antes).
 - El área de Claude (autenticación, permisos, perfiles, mensajería, secretos, infraestructura) quedó cubierta. Lo que falta de seguridad es el área de Codex y lo que él reporte.
 - L15 sigue abierto: `suspendido_hasta` es legible sin cuenta y cerrarlo pide una vista de catálogo.

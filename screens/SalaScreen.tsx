@@ -1112,7 +1112,9 @@ export default function SalaScreen() {
 
       setRecoSheetOpen(false);
 
-      await notifyViaServer({ salaId, recipientId, title: 'Recurso recomendado', body: selectedReco.title.slice(0, 60) });
+      // Mismo criterio que el mensaje: el título del recurso también dice algo
+      // ("Dormir mejor con ansiedad" en la pantalla bloqueada es un diagnóstico).
+      await notifyViaServer({ salaId, recipientId, title: 'Recurso recomendado', body: 'Tu profesional te recomendó algo en Vita' });
     } catch {
       Alert.alert('Error', 'No se pudo enviar la recomendación');
     } finally {
@@ -1249,7 +1251,14 @@ export default function SalaScreen() {
       return;
     }
 
-    await notifyViaServer({ salaId, recipientId, title: 'Nuevo mensaje', body: text.slice(0, 50) });
+    // 🔴 SIN EL TEXTO DEL MENSAJE (auditoría del 23/09/2026). Hasta hoy iban los
+    // primeros 50 caracteres, y eso son tres cosas a la vez: lo que se ve en la
+    // pantalla bloqueada de un teléfono que puede estar sobre una mesa, lo que
+    // viaja a Expo y a Apple/Google, y algo que la Política §12 no declara
+    // (habla de "notificaciones relacionadas con el servicio", no de contenido).
+    // En una app donde el mensaje puede decir por qué alguien no durmió, el
+    // aviso tiene que avisar y nada más.
+    await notifyViaServer({ salaId, recipientId, title: 'Nuevo mensaje', body: 'Te escribieron en Vita' });
   }
 
   const isCurrentUserCoach = !recipientIsCoach;
