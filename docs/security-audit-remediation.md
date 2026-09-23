@@ -55,7 +55,7 @@ Hay **solo 100 montos por precio para toda la vida del registro**, no 100 simult
 
 ## Dependencias y mantenimiento
 
-Se mantiene Expo SDK 54. Se fijaron parches transitivos de Metro 0.83.x y versiones corregidas de parsers. `decode-uri-component` 0.5.0 se incluye en `vendor/` con licencia MIT y **solo el export adaptado a CommonJS**: Expo Router usa query-string 7, que requiere esa interfaz. Eliminar ese override cuando Router admita la dependencia ESM corregida. No editar el archivo vendorizado sin revisar el upstream.
+Se mantiene Expo SDK 54. Se fijaron parches transitivos de Metro 0.83.x y versiones corregidas de parsers. `decode-uri-component` 0.5.0 se incluye en `vendor/` con licencia MIT como dependencia directa y override, con **solo el export adaptado a CommonJS**: Expo Router usa query-string 7, que requiere esa interfaz. Eliminar ese override cuando Router admita la dependencia ESM corregida. No editar el archivo vendorizado sin revisar el upstream.
 
 La validación de Mercado Pago consulta [la orden comercial y su preference_id](https://www.mercadopago.com.br/developers/en/reference/online-payments/checkout-pro-preferences/merchant-orders/get-merchant-order/get). Un pago no asociado o con diferencias se devuelve como error y queda registrado para conciliación; no se acredita silenciosamente ni se declara inexistente. Los operadores deben vigilar esos errores y conciliar el dinero recibido.
 
