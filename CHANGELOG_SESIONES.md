@@ -4,17 +4,22 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
-## 2026-09-23 — Andre (Claude · historial de notas)
+## 2026-09-23 — Andre (Claude · historial de notas y Metro)
 
-**Tocado:** `components/SessionNotesSheet.tsx`, `screens/SalaScreen.tsx`, `SCHEMA.md`
+**Tocado:** `components/SessionNotesSheet.tsx`, `screens/SalaScreen.tsx`, `SCHEMA.md`, `package.json`, `package-lock.json`
 
 **Resumen:**
 - A pedido de Andre, la hoja "Notas" del profesional muestra debajo de los campos el **historial de notas de sesiones anteriores con esa persona**, agrupado por sesión y con la fecha de la sesión (`bookings.scheduled_date`, no la fecha en que se escribió la nota). Las notas privadas llevan candado y las compartidas un ojo.
 - No hay consulta nueva de notas: la hoja reutiliza las que la Sala ya carga (`getRelationshipNotes`, con realtime). Solo se agrega una lectura de `bookings` para las fechas. La nota de la sesión actual no se repite en el historial porque ya se edita arriba.
 - Git: `git fetch` fallaba con `bad object refs/remotes/origin/HEAD 2`. Eran copias duplicadas de macOS/iCloud dentro de `.git/` (`HEAD 2`, `index 2..5`); se borraron. Puede volver a pasar mientras el repo esté en el Escritorio sincronizado.
+- 🔴 **`npx expo start` se caía al compilar** con `TypeError: events is not iterable`. La causa era el override de Metro a **0.83.8** que agregó la auditoría (M05): desde la 0.83.6 Metro avisa los cambios de archivos con otro formato (`changes` en vez de `eventsQueue`) y el CLI de Expo 54 no lo entiende. Se bajaron los overrides a **0.83.5**, la última compatible. Verificado: el bundle de iOS compila y un cambio de archivo ya no tira abajo el server.
+- ⚠️ **Lo que se resigna:** `npm audit` vuelve a marcar `image-size` (DoS con imágenes ICNS/JXL/HEIF malformadas), que era lo que la 0.83.8 sacaba. Solo lo usa el servidor de desarrollo para leer imágenes del propio proyecto, no viaja en la app. Se cierra al subir de SDK de Expo.
+- El otro error, `Cannot find native module 'ExpoSecureStore'`, no es de código: el development build del teléfono es anterior a L58 (sesión en el llavero) y no trae ese módulo nativo. Hace falta un development build nuevo.
 - Sin cambios en la base.
 
 **Pendiente para la próxima sesión:**
+- Development build nuevo (`eas build --profile development --platform ios`) para que entre `expo-secure-store`.
+- Avisar a Codex del cambio de Metro, porque el override era suyo (M05).
 - Probar en el teléfono con un cliente que tenga varias sesiones con notas. El historial es de solo lectura: si hace falta editar notas viejas, es otro cambio.
 
 ## 2026-09-23 — Codex (integridad de pagos y reintegros; desplegado)
