@@ -102,3 +102,18 @@ export async function rechazarHorarios(bookingId: string): Promise<string | null
   const { error } = await supabase.rpc('rechazar_horarios', { p_booking: bookingId });
   return error ? mensajeDeError(error.message) : null;
 }
+
+/**
+ * El profesional retira los horarios que propuso.
+ *
+ * 📌 Se retira **por reserva**, no por opción: las opciones de una propuesta son
+ * una sola oferta, y retirar media oferta no significa nada. Las filas quedan en
+ * `vencida`, no se borran: la tabla es el registro de qué se ofreció y qué pasó.
+ *
+ * ⚠️ Le avisa al cliente. Si ya vio las opciones en la Sala y desaparecen sin
+ * explicación, lo que queda es una app que cambia sola.
+ */
+export async function retirarPropuestas(bookingId: string): Promise<string | null> {
+  const { error } = await supabase.rpc('retirar_propuestas', { p_booking: bookingId });
+  return error ? mensajeDeError(error.message) : null;
+}

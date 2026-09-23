@@ -24,7 +24,7 @@ import { encryptMessage } from '@/lib/encryption';
 import { isCancelLate } from '@/lib/bookingHelpers';
 import { edadDesde } from '@/lib/time';
 import { confirmBooking, rejectBooking } from '@/lib/coachBookingActions';
-import { responderReagendado } from '@/lib/reagendarApi';
+import { responderReagendado, retirarPropuestas } from '@/lib/reagendarApi';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 
@@ -274,6 +274,27 @@ export default function CoachReservasScreen() {
     const b = bookings.find(x => x.id === bookingId);
     return (b?.userName ?? '').trim().split(' ')[0] || 'Tu paciente';
   }, [bookings]);
+
+  function retirarPropuesta(bookingId: string) {
+    Alert.alert(
+      '¿Retirar los horarios?',
+      'La sesión queda como estaba y le avisamos a la persona que diste marcha atrás.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Sí, retirar',
+          onPress: async () => {
+            if (respondiendo) return;
+            setRespondiendo(bookingId);
+            const error = await retirarPropuestas(bookingId);
+            setRespondiendo(null);
+            if (error) Alert.alert('No se pudo', error);
+            await loadBookings();
+          },
+        },
+      ],
+    );
+  }
 
   async function responderCambio(id: string, acepta: boolean) {
     if (respondiendo) return;
@@ -589,6 +610,19 @@ export default function CoachReservasScreen() {
                         ? `Sigue agendada el ${fullDate(c.bookings.scheduled_date)}, ${c.bookings.scheduled_time} hasta que conteste.`
                         : 'La sesión sigue en su horario hasta que conteste.'}
                     </Text>
+                    {/* Dar marcha atrás. Hasta el 23/09/2026 no se podía: la
+                        única forma de sacar una propuesta era proponer OTRA, o
+                        sea ofrecer algo nuevo aunque ya no hubiera nada que
+                        ofrecer. */}
+                    <TouchableOpacity
+                      style={s.cambioNo}
+                      disabled={respondiendo === c.booking_id}
+                      onPress={() => retirarPropuesta(c.booking_id)}
+                      activeOpacity={0.7}>
+                      <Text style={s.cambioNoTxt}>
+                        {respondiendo === c.booking_id ? 'Retirando…' : 'Retirar los horarios'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 ))}
               </>

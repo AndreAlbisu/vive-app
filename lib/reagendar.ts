@@ -176,6 +176,9 @@ export function mensajeDeError(raw: string | null | undefined): string {
   if (m.includes('sin_propuestas')) {
     return 'No hay horarios propuestos para esta sesión.';
   }
+  if (m.includes('no existe')) {
+    return 'Esa sesión ya no existe.';
+  }
   if (m.includes('demasiadas_opciones')) {
     return 'Son hasta tres horarios.';
   }
