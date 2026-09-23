@@ -92,7 +92,7 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   la web estática del repo sí tiene prueba para el XSS corregido.
 
 ---
-## 2026-09-23 — Andre (sesión 268 · auditoría de seguridad: tres agujeros cerrados, uno grave)
+## 2026-09-23 — Andre (sesión 268 · auditoría de seguridad: cuatro agujeros cerrados, uno grave)
 
 **Tocado:** `scripts/cerrar-columnas-postulacion.sql` y `scripts/cerrar-reserva-sin-pago.sql` (nuevos, **corridos y verificados en producción**), `screens/CoachApplicationScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `supabase/functions/create-meeting-room/index.ts` (v36 deployada), `SCHEMA.md`, `docs/problemas-abiertos.md`
 
@@ -128,6 +128,13 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - **Arreglado**: los avisos solo se aceptan si la reserva de esa sala está **de verdad** en ese estado, y `user`/`coach` solo los manda quien corresponde. Probado contra producción: el chat normal entra, el aviso fabricado y el mensaje suplantado ahora fallan, y el aviso legítimo del profesional (con la reserva confirmada) sigue entrando.
 - 🟢 **Notificaciones: ya estaban cubiertas por el trigger de Codex** (`guard_client_notification`), que además de limitar los tipos **reescribe el título y el cuerpo** con el texto de Vita. Se dejó una segunda cerradura en la policy. Probado: un "credencial verificada" falso ahora no entra, y a un aviso legítimo con título inventado se le reemplaza el texto.
 - 🟢 **Sin hallazgos** en: perfiles (alguien logueado solo ve nombre, foto, género y rol de los demás — la duda que SCHEMA.md dejaba abierta queda cerrada), almacenamiento (cada uno escribe solo en su carpeta; credenciales y pruebas de sanciones sin lectura pública), secretos (las cuatro claves versionadas son la pública `anon`, ninguna de servidor; no hay `.env` en git), funciones con permisos elevados (todas con `search_path` fijo) y tiempo real (las 5 tablas publicadas tienen RLS).
+
+### Tanda 4 — autenticación
+
+- 🔴 **Hallazgo latente, cerrado: alguien podía crearse un perfil marcándose administrador.** `authenticated` tenía INSERT sobre 20 columnas de `profiles`, **incluidas `is_admin` y `role`**, con la policy "podés insertar tu propio perfil". Ser admin da acceso al panel, a `admin-actions` y a todas las lecturas de admin.
+  - **No era explotable el día de la auditoría, y se midió**: el perfil lo crea un trigger del servidor y ninguna pantalla inserta perfiles; no hay cuentas sin perfil (0 de 8); y nadie puede borrar su propio perfil para rehacerlo. La ventana se abría solo si el trigger fallaba una vez en un alta.
+  - Se quitó el privilegio (`scripts/quitar-insert-de-perfiles.sql`). El alta sigue funcionando porque el trigger corre como `postgres` — verificado, igual que que los 3 admins siguen siendo 3.
+- 🟢 **Sin hallazgos**: la baja de cuenta toma la identidad del token y nunca del cuerpo del pedido (nadie borra la cuenta de otro); los bloqueos entre cuentas están acotados a quien bloquea; y el ingreso por código de la sala web usa el OTP de Supabase con CAPTCHA, `create_user: false` (un mail mal tipeado no crea cuentas) y el 429 de "ya te mandamos uno" contemplado.
 
 **Pendiente para la próxima sesión:**
 - Limpiar las dos policies que todavía dejan confirmar "sin intento de cobro" (hoy inofensivas: el trigger corta antes).
