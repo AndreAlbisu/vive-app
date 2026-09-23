@@ -197,7 +197,7 @@ serve(async (req) => {
 
     const { data: booking, error: bookingErr } = await supabase
       .from('bookings')
-      .select('id, user_id, scheduled_date, scheduled_time, duration_minutes, sala_id, meeting_url, status, payment_status, requires_payment')
+      .select('id, user_id, scheduled_date, scheduled_time, duration_minutes, sala_id, meeting_url, status, payment_status')
       .eq('id', booking_id)
       .single()
 
@@ -224,10 +224,9 @@ serve(async (req) => {
     // con que la reserva dijera 'confirmada', y confirmar sin pagar era posible
     // para cualquier profesional sin Mercado Pago (33 de 34 del catálogo): la
     // sala era el último paso de esa sesión gratis. La base ya lo cierra
-    // (`guard_booking_security`), pero esta función no puede depender de que
-    // nadie vuelva a aflojar aquel trigger: si la reserva requiere pago, el
-    // pago tiene que estar acreditado para abrir la sala.
-    if (booking.requires_payment && booking.payment_status !== 'aprobado') {
+    // (`guard_booking_security`), pero esta función exige pago acreditado por
+    // sí misma, incluso para reservas antiguas con requires_payment=false.
+    if (booking.payment_status !== 'aprobado') {
       console.warn('[create-meeting-room] confirmada sin pago acreditado:', booking.id, booking.payment_status)
       return new Response(JSON.stringify({ error: 'La sesión no está habilitada' }), { status: 409, headers: cors })
     }

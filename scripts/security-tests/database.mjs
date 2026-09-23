@@ -28,6 +28,7 @@ insert into salas(id,user_id,coach_id) values('${sid}','${uid}','${cp}');`);
 await db.exec(read('scripts/security-audit-2026-09-22.sql'));
 // Migration is rerunnable.
 await db.exec(read('scripts/security-audit-2026-09-22.sql'));
+await db.exec(read('supabase/migrations/20260923020000_require_paid_bookings.sql'));
 const user=async(id=uid)=>db.exec(`set role authenticated;select set_config('request.jwt.claim.sub','${id}',false);`);
 const server=async()=>db.exec(`reset role;select set_config('request.jwt.claim.sub','',false);`);
 const insert=(time,extra='')=>`insert into bookings(user_id,coach_id,sala_id,coach_name,scheduled_date,scheduled_time${extra}) values('${uid}','${cid}','${sid}','Fixture',current_date+1,'${time}'`;
@@ -63,5 +64,13 @@ await test('checkout lease single owner and privileged only',async()=>{const x=(
 await test('USDT amount not reused after cancellation',async()=>{await q(`update bookings set payment_provider='usdt',usdt_amount=49.99 where id='${b.id}'`);await q(`update bookings set status='cancelada' where id='${b.id}'`);const n=(await q(insert('14:00')+`) returning id`)).rows[0].id;await blocked(`update bookings set usdt_amount=49.99 where id='${n}'`,'23505')});
 await test('push block and quota fail closed',async()=>{for(let i=0;i<5;i++)assert.equal((await q(`select claim_push('${uid}','${cp}') as ok`)).rows[0].ok,true);assert.equal((await q(`select claim_push('${uid}','${cp}') as ok`)).rows[0].ok,false);await q(`insert into blocked_users values('${cp}','${uid}')`);assert.equal((await q(`select claim_push('${cp}','${uid}') as ok`)).rows[0].ok,false)});
 await test('push destination moves between accounts',async()=>{await user();await q(`select register_push_token('ExpoPushToken[fixture]')`);await user(cp);await q(`select register_push_token('ExpoPushToken[fixture]')`);await server();const rows=(await q(`select id from profiles where push_token='ExpoPushToken[fixture]'`)).rows;assert.deepEqual(rows,[{id:cp}])});
+await test('coach without payment rails cannot confirm an unpaid booking',async()=>{
+  await q(`update coaches set mp_connected=false where id='${cid}'`);
+  await user();
+  const booking=(await q(insert('17:00')+`) returning id,requires_payment`)).rows[0];
+  assert.equal(booking.requires_payment,true);
+  await blocked(`update bookings set status='confirmada' where id='${booking.id}'`);
+  await server();
+});
 console.log(`${passed} database security tests passed (isolated minimal schema)`);
 } finally {await db.close()}
