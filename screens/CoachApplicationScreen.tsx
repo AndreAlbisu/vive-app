@@ -133,11 +133,20 @@ export default function CoachApplicationScreen() {
     let cancelled = false;
 
     (async () => {
-      const { data: coach } = await supabase
-        .from('coaches')
-        .select('id, specialty, bio, price_per_session, nationality, application_video_url, application_status, application_notes, estilo, guia, focos')
-        .eq('profile_id', user.id)
-        .maybeSingle();
+      // 🔒 Por la RPC y no por `from('coaches')`: desde la auditoría del
+      // 23/09/2026 las columnas `application_*` ya no son legibles por `anon`
+      // ni por `authenticated` (el motivo de un rechazo es texto que Vita
+      // escribe sobre una persona, y la policy de SELECT de `coaches` es
+      // `using (true)`). `mi_postulacion()` devuelve solo la fila de quien
+      // llama. Ver `scripts/cerrar-columnas-postulacion.sql`.
+      const { data: filas } = await supabase.rpc('mi_postulacion');
+      const coach = (filas ?? [])[0] as {
+        id: string; specialty: string | null; bio: string | null;
+        price_per_session: number | null; nationality: string | null;
+        application_video_url: string | null; application_status: string | null;
+        application_notes: string | null; estilo: string | null;
+        guia: string | null; focos: string[] | null;
+      } | undefined;
 
       if (cancelled || !coach || coach.application_status !== 'rechazada') return;
 

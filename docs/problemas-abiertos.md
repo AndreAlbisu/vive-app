@@ -67,6 +67,7 @@ qué darse cuenta si algo quedó afuera.
 | ID | Qué falta | Estado |
 |---|---|---|
 | **L14** | **Acceso a crisis permanente y a un toque**, no dependiente del detector (D4). Hoy está en el perfil (y en Ajustes del coach desde el 17/09). | 🔴 Abierto el "a un toque". ✅ **Sesión 253: las líneas estaban mal** — la pantalla prometía 24 h y el Centro de Asistencia al Suicida atiende de 8 a 24; faltaba la línea nacional 24 h (0800-999-0091). Corregido en la app y en T&C §5.3, con aviso para quien está fuera de Argentina. Ver también D2, D5, D6. |
+| **L46** | **Auditoría de seguridad, tanda 1 (23/09)**: hallazgo cerrado — `application_notes` (el motivo de rechazo) era legible por cualquiera con la anon key. Ver SCHEMA.md y `scripts/cerrar-columnas-postulacion.sql`. | ✅ Cerrado. Falta auditar `lib/` (booking y pagos) y `app/`/`hooks/`. |
 | **L15** | **La fecha de suspensión de un coach es pública por la API** (`coaches.suspendido_hasta`, legible con la anon key). Cerrarlo pide una vista o función para catálogo, ficha y `/c`. | ⚠️ Abierto (sesión 251). |
 | **L16** | ~~**¿`/c/<slug>` muestra el perfil de un coach suspendido?**~~ | ✅ **Sesión 251**: sí lo mostraba, con botón de reservar. Corregido ahí, en la ficha de la app, en el mensaje de error y en `web-book` (que dejaba una sala huérfana). Probado con un coach real. |
 | **L17** | **Edad y aceptación de Términos las escribe el cliente**: falsificables por su titular. Cerrarlo es moverlas a una edge function en el alta. | ⚠️ Abierto (`SCHEMA.md`). |

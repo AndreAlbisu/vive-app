@@ -67,6 +67,32 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   la web estática del repo sí tiene prueba para el XSS corregido.
 
 ---
+## 2026-09-23 — Andre (sesión 268 · primera tanda de la auditoría de seguridad)
+
+**Tocado:** `scripts/cerrar-columnas-postulacion.sql` (nuevo, **corrido y verificado en producción**), `screens/CoachApplicationScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`
+
+**Resumen:**
+- Arrancó la auditoría previa a la v1, por superficie de ataque. Esta tanda: **edge functions, RLS, grants por columna, lo que ve alguien sin cuenta, buckets y funciones `security definer`**. Todo lo que se probó se probó **contra producción**, con los cambios deshechos.
+- 🔴 **UN HALLAZGO REAL, ya cerrado**: `coaches` tiene la policy de SELECT en `using (true)`, así que las columnas son el único control, y `anon`/`authenticated` podían leer **`application_notes`**: el motivo con el que Vita rechaza una postulación, texto nuestro sobre una persona. También `application_status`, `application_reviewed_at` y `application_video_url`. No filtró nada todavía (los 34 perfiles están aprobados), pero el primer rechazo o suspensión lo habría hecho público.
+  - **El primer arreglo no funcionó y quedó documentado**: el SELECT estaba otorgado a nivel TABLA, y `revoke select (columna)` sobre un grant de tabla no hace nada. Se revocó la tabla y se volvió a otorgar la lista blanca de 23 columnas. ⚠️ Desde ahora, **toda columna nueva de `coaches` que lea el catálogo necesita sumarse a ese grant**.
+  - `CoachApplicationScreen` pasa a leer su propia postulación con `mi_postulacion()` (security definer), no con `from('coaches')`.
+- 🟢 **Lo que se probó y está bien** (queda escrito para no re-auditarlo sin motivo):
+  - Las 5 funciones de cron exigen la service key en el header (`esServiceRole`, comparación en tiempo constante). Las que reciben `booking_id` del cliente comparan contra `auth.uid()` antes de tocar nada.
+  - `guarantee-claim`: el cliente solo puede dejar el pedido **pendiente** sobre SU reserva; aprobar un reembolso exige `is_admin` leído con service role.
+  - Webhooks: MP valida `x-signature`; PayPal es fail-closed sin `PAYPAL_WEBHOOK_ID` y **lee la captura contra su propia API** en vez de creerle a la notificación (defensa que ya venía del hallazgo del 20/08).
+  - RLS: **ninguna tabla sin políticas quedó abierta** — las 6 que no tienen policy son deny-all (solo service role). Ninguna policy de escritura deja pasar a `anon`.
+  - Lo que lee alguien **sin cuenta**: solo catálogo (coaches, topics, disponibilidad, recursos, perfiles con 4 columnas, reseñas **públicas**: 0 privadas expuestas).
+  - Reseñas: se probó **mudar una reseña propia a otro profesional** (el UPDATE lo permitiría por policy) y **un trigger lo bloquea**: `reviewer_id`, `reviewed_id` y `booking_id` son inmutables. La reseña quedó restaurada.
+  - `profiles`: `is_admin` no es escribible por el cliente. Las 21 funciones `security definer` llamables desde la app tienen `search_path` fijo; solo 2 son públicas (`email_es_de_coach`, `slots_libres`), las dos documentadas.
+  - Buckets: `coach-credentials` y `sanction-evidence` **privados**; el resto son públicos a propósito.
+- 📌 CORS es `*` en todas las functions: es correcto acá (autorizan por Bearer, no por cookie), pero queda dicho.
+
+**Pendiente para la próxima sesión:**
+- Seguir la auditoría por donde quedó: `lib/` (booking y pagos) y después `app/`/`hooks/`.
+- L15 sigue abierto: `suspendido_hasta` es legible sin cuenta y cerrarlo pide una vista de catálogo.
+- Sigue todo lo de la sesión 266 sin ver en el teléfono.
+
+---
 ## 2026-09-22 — Andre (sesión 267 · las skills de diseño para Codex, commiteadas)
 
 **Tocado:** `.agents/skills/` (nuevo en git: 172 archivos, 4,5 MB)
