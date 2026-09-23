@@ -1,5 +1,13 @@
 -- cerrar-reserva-sin-pago.sql
 --
+-- ⛔ SUPERADO — NO VOLVER A CORRER (23/09/2026).
+--    `supabase/migrations/20260923020000_require_paid_bookings.sql` (Codex, ya
+--    aplicada en producción) reemplaza este mismo trigger por una versión MÁS
+--    ESTRICTA: `requires_payment` es SIEMPRE true y confirmar exige pago
+--    acreditado incluso en las reservas viejas. Correr este archivo otra vez
+--    reinstalaría la versión débil y volvería a abrir el agujero.
+--    Se conserva solo como registro de cómo se encontró y se probó.
+--
 -- Auditoría de seguridad, tanda 2 (23/09/2026).
 --
 -- 🔴 HALLAZGO: **cualquier usuario registrado podía confirmar una sesión sin

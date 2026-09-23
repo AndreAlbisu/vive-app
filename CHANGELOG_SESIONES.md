@@ -165,8 +165,13 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
+### Revisión cruzada del commit de Codex (23/09, 14:06)
+
+- Codex reemplazó el trigger de reservas por una versión **más estricta** que la de la tanda 2: `requires_payment` es siempre true y confirmar exige pago acreditado **también en las reservas viejas**; además limpió las dos policies que esta sesión había dejado como pendiente menor, y `create-meeting-room` (v37, deployada 14:05) exige pago acreditado sin mirar el flag.
+- **Revisado y verificado contra producción desde acá**: el profesional **sigue pudiendo aceptar una reserva pagada** y **no** una impaga (`pago_no_acreditado`); las cuatro policies de UPDATE quedaron coherentes (cancelar y cargar dirección de reembolso siguen andando); `web-book` solo crea pendientes; y **ninguna reserva viva quedó encerrada**: las 2 confirmadas están pagadas. Sus 28 tests de seguridad pasan.
+- ⛔ **Riesgo evitado**: `scripts/cerrar-reserva-sin-pago.sql` (el de esta sesión) quedó **marcado como NO VOLVER A CORRER**, porque reinstalaría el trigger débil y reabriría el agujero. Anotado también en SCHEMA.md.
+
 **Pendiente para la próxima sesión:**
-- Limpiar las dos policies que todavía dejan confirmar "sin intento de cobro" (hoy inofensivas: el trigger corta antes).
 - El área de Claude (autenticación, permisos, perfiles, mensajería, secretos, infraestructura) quedó cubierta. Lo que falta de seguridad es el área de Codex y lo que él reporte.
 - L15 sigue abierto: `suspendido_hasta` es legible sin cuenta y cerrarlo pide una vista de catálogo.
 - Sigue todo lo de la sesión 266 sin ver en el teléfono.
