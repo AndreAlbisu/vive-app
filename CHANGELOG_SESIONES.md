@@ -4,6 +4,19 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-23 — Andre (Claude · historial de notas)
+
+**Tocado:** `components/SessionNotesSheet.tsx`, `screens/SalaScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- A pedido de Andre, la hoja "Notas" del profesional muestra debajo de los campos el **historial de notas de sesiones anteriores con esa persona**, agrupado por sesión y con la fecha de la sesión (`bookings.scheduled_date`, no la fecha en que se escribió la nota). Las notas privadas llevan candado y las compartidas un ojo.
+- No hay consulta nueva de notas: la hoja reutiliza las que la Sala ya carga (`getRelationshipNotes`, con realtime). Solo se agrega una lectura de `bookings` para las fechas. La nota de la sesión actual no se repite en el historial porque ya se edita arriba.
+- Git: `git fetch` fallaba con `bad object refs/remotes/origin/HEAD 2`. Eran copias duplicadas de macOS/iCloud dentro de `.git/` (`HEAD 2`, `index 2..5`); se borraron. Puede volver a pasar mientras el repo esté en el Escritorio sincronizado.
+- Sin cambios en la base.
+
+**Pendiente para la próxima sesión:**
+- Probar en el teléfono con un cliente que tenga varias sesiones con notas. El historial es de solo lectura: si hace falta editar notas viejas, es otro cambio.
+
 ## 2026-09-23 — Codex (integridad de pagos y reintegros; preparado, no desplegado)
 
 **Tocado:** `supabase/migrations/20260923010000_payment_integrity.sql`, funciones de cobro de MP/PayPal/USDT, `session-attendance`, efectos de reserva, cron de conciliación, pruebas de seguridad y `SCHEMA.md`.

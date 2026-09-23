@@ -2067,6 +2067,7 @@ export default function SalaScreen() {
           bookingId={notesBookingId}
           userId={recipientId}
           clientName={recipientProfile?.name ?? 'tu cliente'}
+          history={notes}
           onSaved={fetchNotes}
         />
       )}
