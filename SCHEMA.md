@@ -912,6 +912,14 @@ Sistema **paralelo e independiente** al de `resource_proposals`→`resources` de
 
 ## Reglas críticas
 
+### Cambio preparado el 23/09/2026: integridad de pagos y asistencia
+
+**Todavía no aplicado a Supabase.** `supabase/migrations/20260923010000_payment_integrity.sql` agrega a `bookings` la marca `paid_effects_completed_at` y un lease para reintentar efectos de pagos aprobados desde `reconcile-paid-effects` (cron cada 5 minutos), más un índice único sobre descuentos de referido activos por usuario. Agrega `session_attendance.refund_resolution` (`pending`, `due`, `resolved`); `complete_confirmed_sessions()` solo podrá completar una sesión con decisión `resolved`. La función `session-attendance` reintenta las decisiones `pending/due` desde la evidencia guardada. Las reservas históricas ya confirmadas o completadas se marcan como resueltas para evitar avisos duplicados; las aprobadas que siguen pendientes quedan para conciliación.
+
+**Orden de publicación:** revisar duplicados de `referral_discount > 0` por usuario; aplicar migración; desplegar `mp-webhook`, `paypal-webhook`, `usdt-check-payments`, `session-attendance` y `reconcile-paid-effects`; instalar `scripts/add-paid-effects-recovery-cron.sql`; verificar una corrida sin errores y las reservas aprobadas aún pendientes. Un descuento histórico duplicado haría fallar la creación del índice y revertiría la migración completa.
+
+Consulta previa: `select user_id, count(*) from bookings where referral_discount > 0 and (status <> 'cancelada' or payment_status in ('aprobado','reembolso_pendiente','reembolsado','contracargo')) group by user_id having count(*) > 1;` Debe devolver cero filas; si no, conciliar esos descuentos antes de aplicar.
+
 1. **`coaches.id` ≠ `profiles.id`** — son valores distintos. El dato que conecta es `coaches.profile_id`.
 2. **`salas.coach_id` → `profiles.id`** (= `coaches.profile_id`). **`bookings.coach_id` → `coaches.id`**. Son FKs distintas — mismo nombre de columna, tablas distintas. No asumir que se puede usar el mismo valor para ambas.
 3. **`messages.content` está encriptado** — nunca guardar texto plano en esa columna.

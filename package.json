@@ -13,7 +13,7 @@
     "sync:legal": "node ./scripts/sync-legal.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:security": "node scripts/security-tests/database.mjs && node scripts/security-tests/endpoints.cjs && node scripts/security-tests/web.cjs && node scripts/security-tests/dependencies.cjs"
+    "test:security": "node scripts/security-tests/database.mjs && node scripts/security-tests/payment-integrity.mjs && node scripts/security-tests/endpoints.cjs && node scripts/security-tests/web.cjs && node scripts/security-tests/dependencies.cjs"
   },
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",

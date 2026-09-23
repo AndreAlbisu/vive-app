@@ -20,13 +20,10 @@
 //   · paypal-webhook       (PayPal)
 //   · usdt-check-payments  (USDT, por cron)
 //
-// ⚠️ IDEMPOTENCIA: esta función NO se defiende sola de correr dos veces. Los
-// tres llamadores ya reclaman la transición con un update condicional que
-// devuelve filas solo la primera vez (`.eq('payment_status','pendiente')` o
-// `.neq('payment_status','aprobado')` + `.select('id')`), y solo llaman acá si
-// ganaron. Llamarla sin ese reclamo duplica el push al coach y el mensaje de
-// sistema en la sala. El paso de 'pendiente' → 'confirmada' sí lleva su propia
-// guarda, porque ahí compite además con el coach aceptando a mano.
+// La confirmación crítica se puede reintentar después de un fallo parcial.
+// paid-effects-recovery reclama un lease; las escrituras persistentes consultan
+// su estado previo. Push y correo son best-effort y pueden repetirse si una
+// corrida falla después de enviarlos, pero no se pierde la reserva pagada.
 
 import { enviarMail, fechaLarga, nombreSeguro } from './email.ts'
 
@@ -124,8 +121,7 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
     .maybeSingle()
 
   if (errBooking || !booking) {
-    console.error('[booking-effects] no se pudo leer la reserva', bookingId, errBooking?.message)
-    return
+    throw new Error(`No se pudo leer la reserva pagada ${bookingId}: ${errBooking?.message ?? 'ausente'}`)
   }
 
   // Pago aprobado sobre una reserva ya cancelada: no hay nada que confirmar ni a
@@ -138,23 +134,26 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
 
   // `bookings.coach_id` es `coaches.id`; el push token vive en `profiles`, que
   // se alcanza por `coaches.profile_id` (reglas 1 y 2 de SCHEMA.md).
-  const { data: coach } = await admin
+  const { data: coach, error: coachError } = await admin
     .from('coaches')
     .select('profile_id, instant_booking')
     .eq('id', booking.coach_id)
     .maybeSingle()
+  if (coachError || !coach) throw new Error(`No se pudo leer el profesional de ${bookingId}`)
+  if (!coach.profile_id) throw new Error(`El profesional de ${bookingId} no tiene un perfil asociado`)
 
   const isInstant = !!coach?.instant_booking
   const fecha = formatDate(booking.scheduled_date as string)
   const hora = booking.scheduled_time as string
   const coachName = (booking.coach_name as string | null) ?? 'tu coach'
 
-  const [{ data: coachProfile }, { data: userProfile }] = await Promise.all([
-    coach?.profile_id
-      ? admin.from('profiles').select('push_token').eq('id', coach.profile_id).maybeSingle()
-      : Promise.resolve({ data: null }),
+  const [{ data: coachProfile, error: coachProfileError }, { data: userProfile, error: userProfileError }] = await Promise.all([
+    admin.from('profiles').select('push_token').eq('id', coach.profile_id).maybeSingle(),
     admin.from('profiles').select('name, email').eq('id', booking.user_id).maybeSingle(),
   ])
+  if (coachProfileError || userProfileError || !coachProfile || !userProfile) {
+    throw new Error(`No se pudieron leer los perfiles de ${bookingId}`)
+  }
 
   const userName = (userProfile?.name as string | null) ?? 'Un usuario'
 
@@ -184,13 +183,15 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
     // La confirmación de abajo se protege sola con el `.eq('status','pendiente')`;
     // un insert no, así que se pregunta antes. El peor caso de perder la carrera
     // son dos filas iguales en la campana: molesto, no roto.
-    const { data: yaAvisado } = await admin
+    const { data: yaAvisado, error: avisoReadError } = await admin
       .from('notifications')
       .select('id')
       .eq('recipient_id', coach.profile_id)
       .eq('booking_id', booking.id)
       .eq('type', 'reserva_nueva')
+      .limit(1)
       .maybeSingle()
+    if (avisoReadError) throw new Error(`No se pudo consultar el aviso al coach: ${avisoReadError.message}`)
 
     if (!yaAvisado) {
       const { error: errNotif } = await admin.from('notifications').insert({
@@ -202,7 +203,7 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
       })
       // Mismo criterio que el push: un aviso que no se pudo guardar no puede
       // tumbar la acreditación del pago.
-      if (errNotif) console.error('[booking-effects] no se pudo guardar el aviso al coach:', errNotif.message)
+      if (errNotif) throw new Error(`No se pudo guardar el aviso al coach: ${errNotif.message}`)
     }
   }
 
@@ -249,12 +250,10 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
 
   // Guarda propia: acá se compite con el coach aceptando a mano en el mismo
   // instante. Solo sigue quien de verdad hizo la transición.
-  const { data: confirmada, error: confirmError } = await admin
-    .from('bookings')
-    .update({ status: 'confirmada' })
-    .eq('id', booking.id)
-    .eq('status', 'pendiente')
-    .select('id')
+  const { data: confirmada, error: confirmError } = booking.status === 'pendiente'
+    ? await admin.from('bookings').update({ status: 'confirmada' })
+        .eq('id', booking.id).eq('status', 'pendiente').select('id')
+    : { data: booking.status === 'confirmada' ? [{ id: booking.id }] : [], error: null }
 
   if (confirmError?.code === '23505') {
     const { error } = await admin.from('bookings').update({ status: 'cancelada', cancelled_by: 'coach' })
@@ -271,25 +270,38 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
   const notifTitle = '¡Tu sesión fue confirmada! ✅'
   const notifBody = `Tu sesión con ${coachName} el ${fecha} está confirmada`
 
-  await admin.from('notifications').insert({
-    recipient_id: booking.user_id,
-    type: 'reserva_confirmada',
-    booking_id: booking.id,
-    title: notifTitle,
-    body: notifBody,
-  })
+  const { data: userAlreadyNotified, error: userNotifReadError } = await admin
+    .from('notifications').select('id')
+    .eq('recipient_id', booking.user_id).eq('booking_id', booking.id)
+    .eq('type', 'reserva_confirmada').limit(1).maybeSingle()
+  if (userNotifReadError) throw new Error('No se pudo consultar el aviso de confirmación')
+  if (!userAlreadyNotified) {
+    const { error: userNotifError } = await admin.from('notifications').insert({
+      recipient_id: booking.user_id,
+      type: 'reserva_confirmada', booking_id: booking.id,
+      title: notifTitle, body: notifBody,
+    })
+    if (userNotifError) throw new Error('No se pudo guardar el aviso de confirmación')
+  }
 
   const mensajeUsuario = (booking.user_message as string | null)?.trim()
   const confirmLine1 = `Sesión reservada · ${fecha} · ${hora} hs`
   const confirmMsg = mensajeUsuario ? `${confirmLine1}\n${mensajeUsuario}` : confirmLine1
 
   if (booking.sala_id) {
-    await admin.from('messages').insert({
-      sala_id: booking.sala_id,
-      sender_id: booking.user_id,
-      sender_type: 'system_confirmed',
-      content: encryptMessage(confirmMsg),
-    })
+    const content = encryptMessage(confirmMsg)
+    const { data: alreadyMessaged, error: messageReadError } = await admin
+      .from('messages').select('id')
+      .eq('sala_id', booking.sala_id).eq('sender_type', 'system_confirmed')
+      .eq('content', content).limit(1).maybeSingle()
+    if (messageReadError) throw new Error('No se pudo consultar el mensaje de confirmación')
+    if (!alreadyMessaged) {
+      const { error: messageError } = await admin.from('messages').insert({
+        sala_id: booking.sala_id, sender_id: booking.user_id,
+        sender_type: 'system_confirmed', content,
+      })
+      if (messageError) throw new Error('No se pudo guardar el mensaje de confirmación')
+    }
   }
 
   await cancelarCompetidores(admin, booking, fecha, hora)
@@ -300,7 +312,7 @@ export async function applyPaidBookingEffects(admin: Admin, bookingId: string): 
 // mensaje de sistema en su propia sala.
 // deno-lint-ignore no-explicit-any
 async function cancelarCompetidores(admin: Admin, booking: any, fecha: string, hora: string) {
-  const { data: conflicting } = await admin
+  const { data: conflicting, error: conflictingError } = await admin
     .from('bookings')
     .select('id, user_id, sala_id')
     .eq('coach_id', booking.coach_id)
@@ -308,6 +320,7 @@ async function cancelarCompetidores(admin: Admin, booking: any, fecha: string, h
     .eq('scheduled_time', booking.scheduled_time)
     .eq('status', 'pendiente')
     .neq('id', booking.id)
+  if (conflictingError) throw new Error('No se pudieron consultar las reservas competidoras')
 
   if (!conflicting?.length) return
 

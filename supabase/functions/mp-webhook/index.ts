@@ -18,7 +18,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { verifyWebhookSignature, getFreshCoachToken } from '../_shared/mp.ts'
-import { applyPaidBookingEffects } from '../_shared/booking-effects.ts'
+import { processPaidBookingEffects } from '../_shared/paid-effects-recovery.ts'
 
 /**
  * `sha256(sal + id del pagador)`, o `null` si no se puede.
@@ -303,9 +303,7 @@ serve(async (req) => {
     // `patch.payment_status` y no `newStatus`: si la reserva ya estaba
     // cancelada, la rama de arriba lo cambió a 'reembolso_pendiente' y no hay
     // ninguna sesión que confirmar.
-    if (patch.payment_status === 'aprobado' && cambiada?.length) {
-      await applyPaidBookingEffects(supabase, bookingId)
-
+    if (patch.payment_status === 'aprobado' && (cambiada?.length || expected.payment_status === 'aprobado')) {
       // ── M7: recién acá se quema el descuento del referido ─────────────────
       //
       // 🔴 **No se marca al crear la preferencia.** Si se marcara ahí, un
@@ -315,19 +313,22 @@ serve(async (req) => {
       //
       // 📌 Idempotente por el `is('referral_redeemed_at', null)`: MP reintenta
       // el mismo webhook, y sin eso la segunda pasada movería la fecha.
-      const { data: b } = await supabase
+      const { data: b, error: bookingDiscountError } = await supabase
         .from('bookings')
         .select('user_id, referral_discount')
         .eq('id', bookingId)
         .maybeSingle()
+      if (bookingDiscountError || !b) throw new Error('No se pudo conciliar el descuento del referido')
 
-      if (b && Number(b.referral_discount) > 0) {
-        await supabase
+      if (Number(b.referral_discount) > 0) {
+        const { error: redeemedError } = await supabase
           .from('profiles')
           .update({ referral_redeemed_at: new Date().toISOString() })
           .eq('id', b.user_id)
           .is('referral_redeemed_at', null)
+        if (redeemedError) throw new Error(`No se pudo registrar el descuento usado: ${redeemedError.message}`)
       }
+      await processPaidBookingEffects(supabase, bookingId)
     }
 
     // Sigue SIN dispararse la confirmación desde acá cuando el coach NO tiene

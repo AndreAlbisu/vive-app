@@ -21,7 +21,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { applyPaidBookingEffects } from '../_shared/booking-effects.ts'
+import { processPaidBookingEffects } from '../_shared/paid-effects-recovery.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -413,7 +413,9 @@ serve(async (req) => {
   // entró menos plata es exactamente el error que nadie encuentra después.
   const capturado = captura.value
   const esperado = Number(booking.charged_amount ?? NaN)
-  if (Number.isFinite(capturado) && Number.isFinite(esperado) && Math.abs(capturado - esperado) > 0.01) {
+  if (!Number.isFinite(capturado) || capturado <= 0 ||
+      !Number.isFinite(esperado) || esperado <= 0 ||
+      Math.abs(capturado - esperado) > 0.01) {
     console.error(
       `[paypal-webhook] monto distinto al esperado en ${bookingId}: capturado ${capturado}, esperado ${esperado}`,
     )
@@ -473,6 +475,9 @@ serve(async (req) => {
 
   if (!actualizada || actualizada.length === 0) {
     // Ya estaba marcada (reintento normal) o cambió de estado mientras tanto.
+    if (booking.payment_status === 'aprobado') {
+      await processPaidBookingEffects(admin, bookingId)
+    }
     return new Response('no change', { status: 200 })
   }
 
@@ -487,7 +492,7 @@ serve(async (req) => {
   // ninguna sesión que confirmar. (`applyPaidBookingEffects` igual se defiende
   // sola de ese caso; esto le ahorra la lectura y deja la intención escrita.)
   if (patch.payment_status === 'aprobado') {
-    await applyPaidBookingEffects(admin, bookingId)
+    await processPaidBookingEffects(admin, bookingId)
   }
 
   return new Response('ok', { status: 200 })

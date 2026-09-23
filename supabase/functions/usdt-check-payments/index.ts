@@ -12,7 +12,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { USDT_TRC20_CONTRACT, findPayment, type TronTransfer } from '../_shared/usdt.ts'
-import { applyPaidBookingEffects } from '../_shared/booking-effects.ts'
+import { processPaidBookingEffects } from '../_shared/paid-effects-recovery.ts'
 import { esServiceRole } from '../_shared/service-role.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -162,7 +162,7 @@ serve(async (req) => {
     // 'pendiente' — sin avisarle al coach, sin liberar el horario de los
     // competidores y sin nadie del otro lado. Ahora lo aplica el mismo helper
     // que usan los webhooks de MP y PayPal.
-    await applyPaidBookingEffects(supabase, b.id)
+    await processPaidBookingEffects(supabase, b.id)
 
     hashesUsados.add(r.transfer.transaction_id)
     acreditadas++

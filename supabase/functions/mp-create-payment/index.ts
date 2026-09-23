@@ -211,9 +211,9 @@ serve(async (req) => {
       // que los DOS salieran con descuento, y Vita lo regalaba dos veces por
       // una sola invitación.
       //
-      // Se cierra mirando si ya hay otro cobro abierto con descuento. No hace
-      // falta bloquear nada ni cambiar cuándo se quema: quien tiene uno en
-      // curso simplemente no abre un segundo con descuento.
+      // Esta lectura mejora el mensaje normal, pero no resuelve dos solicitudes
+      // simultáneas. El índice único bookings_one_referral_discount_per_user
+      // protege la escritura de abajo de forma atómica.
       const { count: yaHayOtro } = await supabase
         .from('bookings')
         .select('id', { count: 'exact', head: true })
@@ -329,6 +329,9 @@ serve(async (req) => {
       .in('payment_status', ['no_iniciado', 'pendiente', 'rechazado'])
       .is('preference_id', null)
       .select('id')
+    if (saveError?.code === '23505' && descuento > 0) {
+      return json({ error: 'Ya hay un descuento de referido en uso. Terminá o cancelá ese pago antes de intentar otro.' }, 409)
+    }
     if (saveError || !saved?.length) return json({ error: 'La reserva cambió. No se inició el checkout.' }, 409)
 
     // En modo test hay que abrir el checkout de SANDBOX (sandbox_init_point);

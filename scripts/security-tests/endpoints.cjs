@@ -9,7 +9,7 @@ function load(file,extras={},env={}) {
   if(spec.includes('supabase-js'))return {createClient:()=>extras.admin};
   if(spec.endsWith('/mp.ts'))return {getFreshCoachToken:async()=> 'fixture-token',verifyWebhookSignature:async()=>true};
   if(spec.endsWith('/commission.ts'))return {commissionPctFor:()=>20,marketplaceFeeFor:(n,p)=>n*p/100,PAIR_SESSION_FILTER:'fixture'};
-  if(spec.endsWith('/guarantee.ts'))return {scheduledAtMs:()=>Date.now()};
+  if(spec.endsWith('/guarantee.ts'))return {scheduledAtMs:extras.scheduledAtMs??(()=>Date.now())};
   if(spec.endsWith('/booking-effects.ts'))return {applyPaidBookingEffects:async()=>{extras.effects?.push('paid')}};
   if(spec.startsWith('.'))return load(path.relative(base,path.resolve(base,path.dirname(file),spec)),extras,env).exports;
   throw Error(spec);
@@ -21,6 +21,7 @@ function load(file,extras={},env={}) {
 function db(rows={},rpcData=true){const writes=[],reads=[],filters=[];return {writes,reads,filters,auth:{getUser:async()=>({data:{user:{id:'user'}}})},rpc:async(name)=>({data:name==='claim_checkout'?'attempt':rpcData}),from(table){reads.push(table);let patch;const q={};
  for(const op of ['select','eq','neq','or','gt','gte','is','in','not','limit','order'])q[op]=(...args)=>{filters.push([table,op,...args]);return q};
  q.update=p=>{patch=p;writes.push({table,patch:p});return q};
+ q.insert=p=>{writes.push({table,patch:p});return Promise.resolve({error:null})};
  q.maybeSingle=q.single=async()=>({data:rows[table],count:0});
  q.then=(resolve,reject)=>Promise.resolve({data:patch?(Array.isArray(rows[table])?rows[table].map(x=>({id:x.id})):[{id:'booking'}]):rows[table],count:0}).then(resolve,reject);return q}}}
 const req=(body={},webhook=false)=>new Request('https://example.invalid'+(webhook?'?data.id=payment&type=payment':''),{method:'POST',headers:{Authorization:'Bearer fixture','Content-Type':'application/json',...(webhook?{'x-signature':'fixture'}:{})},body:JSON.stringify(body)});
@@ -62,6 +63,40 @@ let passed=0;async function test(name,fn){await fn();passed++;console.log('PASS'
   let orders=0;
   const {handler}=load('paypal-create-payment/index.ts',{admin,fetch:async url=>{if(url.includes('/oauth2/token'))return Response.json({access_token:'fixture',expires_in:300});orders++;return Response.json({id:'order',links:[{rel:'approve',href:'https://example.invalid/pay'}]})}});
   assert.equal((await handler(req({booking_id:'booking'}))).status,200);assert.equal(orders,1);assert(admin.filters.some(x=>x[2]==='checkout_attempt_id'));
+ });
+ for(const [captured,expected] of [[null,50],['NaN',50],['0',50],['50',null]])await test(`PayPal rejects invalid amount ${captured}/${expected}`,async()=>{
+  const admin=db({bookings:{id:'booking',status:'pendiente',payment_status:'pendiente',charged_amount:expected}});
+  const {handler}=load('paypal-webhook/index.ts',{admin,fetch:async url=>{
+    if(url.includes('/oauth2/token'))return Response.json({access_token:'fixture'});
+    if(url.includes('/verify-webhook-signature'))return Response.json({verification_status:'SUCCESS'});
+    if(url.includes('/payments/captures/'))return Response.json({id:'capture',status:'COMPLETED',custom_id:'booking',amount:{value:captured}});
+    throw Error('unexpected PayPal request');
+  }});
+  const response=await handler(req({event_type:'PAYMENT.CAPTURE.COMPLETED',resource:{id:'capture'}}));
+  assert.equal(response.status,200);assert.equal(await response.text(),'amount mismatch');assert.equal(admin.writes.length,0);
+ });
+ await test('paid effects retry claims and finishes before reporting success',async()=>{
+  const admin=db();const effects=[];
+  const {exports:recovery}=load('_shared/paid-effects-recovery.ts',{admin,effects});
+  assert.equal(await recovery.processPaidBookingEffects(admin,'booking'),true);
+  assert.deepEqual(effects,['paid']);
+ });
+ await test('attendance retries stored refund and cancels paid session',async()=>{
+  const admin=db({session_attendance:[{booking_id:'booking',raw:{data:[]},participants_count:0,refund_resolution:'due'}],
+    bookings:{id:'booking',user_id:'user',coach_id:'coach',scheduled_date:'2026-01-01',scheduled_time:'09:00',duration_minutes:60,status:'confirmada',payment_status:'aprobado'},
+    coaches:{profile_id:'coach-profile'}});
+  const {exports:m}=load('session-attendance/index.ts',{admin,scheduledAtMs:()=>0});
+  const result=await m.resolverReintegros(admin);
+  assert.equal(result.reintegros,1);
+  assert(admin.writes.some(x=>x.table==='bookings'&&x.patch.status==='cancelada'));
+  assert(admin.writes.some(x=>x.table==='session_attendance'&&x.patch.refund_resolution==='resolved'));
+ });
+ await test('attendance does not refund when coach identity is unavailable',async()=>{
+  const admin=db({session_attendance:[{booking_id:'booking',raw:{data:[]},participants_count:0,refund_resolution:'pending'}],
+    bookings:{id:'booking',user_id:'user',coach_id:'coach',scheduled_date:'2026-01-01',scheduled_time:'09:00',duration_minutes:60,status:'confirmada',payment_status:'aprobado'},coaches:null});
+  const {exports:m}=load('session-attendance/index.ts',{admin,scheduledAtMs:()=>0});
+  const result=await m.resolverReintegros(admin);
+  assert.equal(result.reintegros,0);assert.equal(result.pendientes,1);assert.equal(admin.writes.length,0);
  });
  await test('USDT gated until safe ledger is explicitly configured',async()=>{
   const admin=db();const {handler}=load('usdt-create-payment/index.ts',{admin},{USDT_LEDGER_WALLET:'not-the-wallet'});

@@ -111,6 +111,107 @@ function resumir(data: unknown): Resumen {
   }
 }
 
+// deno-lint-ignore no-explicit-any
+export async function resolverReintegros(admin: any): Promise<{ reintegros: number; pendientes: number }> {
+  const { data: pendientes, error: listError } = await admin.from('session_attendance')
+    .select('booking_id, raw, participants_count, refund_resolution')
+    .in('refund_resolution', ['pending', 'due'])
+    .order('refund_resolution', { ascending: true })
+    .order('checked_at', { ascending: true }).limit(100)
+  if (listError) throw new Error(`No se pudieron leer decisiones pendientes: ${listError.message}`)
+
+  let reintegros = 0
+  let unresolved = 0
+  for (const a of pendientes ?? []) {
+    const { data: b, error: bookingError } = await admin.from('bookings')
+      .select('id, user_id, coach_id, scheduled_date, scheduled_time, duration_minutes, status, payment_status')
+      .eq('id', a.booking_id).maybeSingle()
+    if (bookingError || !b) { unresolved++; continue }
+    const inicioMs = scheduledAtMs(b.scheduled_date, b.scheduled_time)
+    if (!Number.isFinite(inicioMs) || Date.now() < inicioMs + (b.duration_minutes ?? 60) * 60_000) {
+      unresolved++
+      continue
+    }
+
+    // Un reintegro ya encolado puede haber ganado la carrera en la corrida
+    // anterior aunque fallara la escritura final de refund_resolution.
+    if (b.status === 'cancelada' && ['reembolso_pendiente', 'reembolsado'].includes(b.payment_status)) {
+      const { error: resolvedError } = await admin.from('session_attendance').update({ refund_resolution: 'resolved' })
+        .eq('booking_id', b.id)
+      if (resolvedError) unresolved++
+      continue
+    }
+
+    const { data: coach, error: coachError } = await admin.from('coaches')
+      .select('profile_id').eq('id', b.coach_id).maybeSingle()
+    if (coachError || !coach?.profile_id) {
+      // Sin identidad fiable del profesional no se puede concluir que faltó.
+      console.error('[attendance] profesional sin perfil verificable:', b.id, coachError?.message)
+      unresolved++
+      continue
+    }
+
+    const partes: Participante[] = []
+    // deno-lint-ignore no-explicit-any
+    const meetings = (a.raw as any)?.data
+    if (!Array.isArray(meetings)) { unresolved++; continue }
+    let validMeetings = true
+    for (const m of meetings) {
+      if (!Array.isArray(m?.participants)) { validMeetings = false; break }
+      for (const q of m.participants) partes.push(q as Participante)
+    }
+    if (!validMeetings) { unresolved++; continue }
+    const veredicto = partes.length === 0 && a.participants_count === 0
+      ? { veredicto: 'reembolso' as const, motivo: 'no_vino_nadie' as const }
+      : veredictoAsistencia({
+          participantes: partes, clienteId: b.user_id,
+          profesionalId: coach.profile_id,
+          inicioMs: scheduledAtMs(b.scheduled_date, b.scheduled_time),
+        })
+
+    if (veredicto.veredicto === 'sin_datos') { unresolved++; continue }
+    if (veredicto.veredicto !== 'reembolso') {
+      const { error } = await admin.from('session_attendance')
+        .update({ refund_resolution: 'resolved' }).eq('booking_id', b.id)
+      if (error) unresolved++
+      continue
+    }
+
+    const { error: dueError } = await admin.from('session_attendance')
+      .update({ refund_resolution: 'due' }).eq('booking_id', b.id)
+    if (dueError) { unresolved++; continue }
+    if (b.status !== 'confirmada' || b.payment_status !== 'aprobado') {
+      // En particular, no afirmar que una 'completada' se reembolsó: requiere
+      // conciliación manual porque el trigger impide reabrir estados finales.
+      console.error('[attendance] reintegro debido, requiere conciliación:', b.id, b.status, b.payment_status)
+      unresolved++
+      continue
+    }
+
+    const { data: cambiada, error: cancelError } = await admin.from('bookings')
+      .update({ status: 'cancelada', cancelled_by: 'coach' })
+      .eq('id', b.id).eq('status', 'confirmada').eq('payment_status', 'aprobado')
+      .select('id')
+    if (cancelError || !cambiada?.length) {
+      console.error('[attendance] reintegro pendiente de reintento:', b.id, cancelError?.message)
+      unresolved++
+      continue
+    }
+    reintegros++
+    const { error: resolvedError } = await admin.from('session_attendance')
+      .update({ refund_resolution: 'resolved' }).eq('booking_id', b.id)
+    if (resolvedError) unresolved++
+    await admin.from('notifications').insert({
+      recipient_id: b.user_id, type: 'reserva_cancelada', booking_id: b.id,
+      title: 'No se hizo tu sesión',
+      body: veredicto.motivo === 'no_vino_nadie'
+        ? 'La sesión no se hizo. Te devolvemos todo lo que pagaste.'
+        : 'Tu profesional no llegó a la videollamada. Te devolvemos todo lo que pagaste.',
+    })
+  }
+  return { reintegros, pendientes: unresolved }
+}
+
 serve(async (req) => {
   const authHeader = req.headers.get('Authorization') ?? ''
   if (!esServiceRole(authHeader, SUPABASE_SERVICE_ROLE_KEY)) {
@@ -139,7 +240,9 @@ serve(async (req) => {
     .from('bookings')
     .select('id, scheduled_date, scheduled_time, duration_minutes, meeting_url, user_id, coach_id, status, payment_status')
     .gte('scheduled_date', desde)
+    .lte('scheduled_date', new Date().toISOString().split('T')[0])
     .in('status', ['confirmada', 'completada'])
+    .order('scheduled_date', { ascending: true })
     .limit(200)
 
   if (error) {
@@ -179,21 +282,16 @@ serve(async (req) => {
   let guardadas = 0
   let vacias = 0
   let sinDatosTodavia = 0
-  let reintegros = 0
-
-  // El `profile_id` de cada profesional, que es el `user_id` con el que Daily
-  // identifica a quien entra a la sala (viaja en el meeting token).
-  const perfilDeCoach = new Map<string, string>()
-  {
-    const ids = [...new Set((candidatas ?? []).map(b => b.coach_id).filter(Boolean))]
-    if (ids.length) {
-      const { data: cs } = await supabase.from('coaches').select('id, profile_id').in('id', ids)
-      for (const c of cs ?? []) perfilDeCoach.set(c.id as string, c.profile_id as string)
-    }
-  }
 
   for (const b of candidatas ?? []) {
     if (traidas.has(b.id)) continue
+    // Daily todavía puede estar acumulando participantes mientras la llamada
+    // sigue abierta. Guardar una foto parcial impediría volver a consultarla.
+    const inicioMs = scheduledAtMs(b.scheduled_date, b.scheduled_time)
+    if (!Number.isFinite(inicioMs) || Date.now() < inicioMs + (b.duration_minutes ?? 60) * 60_000) {
+      sinDatosTodavia++
+      continue
+    }
     revisadas++
 
     const room = roomNameFor(b.id)
@@ -240,63 +338,14 @@ serve(async (req) => {
     }
     guardadas++
 
-    // ── §9.5: el plantón se resuelve solo ────────────────────────────────────
-    //
-    // 🔴 Los Términos prometen que si el Profesional no entra en los primeros 10
-    // minutos, el Cliente "no paga la Sesión y se le reintegra la totalidad".
-    // Hasta el 22/09/2026 **no había nada que lo ejecutara**: esta función
-    // guardaba la evidencia y ahí terminaba. La reserva quedaba `confirmada`
-    // para siempre y la plata se quedaba donde estaba.
-    //
-    // 📌 Se hace acá y no en un cron aparte porque **este es el único lugar que
-    // ya tiene la evidencia en la mano**, recién traída de Daily y en el mismo
-    // instante en que se concluye que la sesión terminó.
-    if (b.status === 'confirmada' && b.payment_status === 'aprobado') {
-      const partes: Participante[] = []
-      // deno-lint-ignore no-explicit-any
-      for (const m of ((raw as any)?.data ?? [])) {
-        for (const q of (m?.participants ?? [])) partes.push(q as Participante)
-      }
-
-      const veredicto = veredictoAsistencia({
-        participantes: partes,
-        clienteId: b.user_id as string,
-        profesionalId: perfilDeCoach.get(b.coach_id as string) ?? '',
-        inicioMs: scheduledAtMs(b.scheduled_date as string, b.scheduled_time as string),
-      })
-
-      if (veredicto.veredicto === 'reembolso') {
-        // `cancelled_by: 'coach'` NO es una etiqueta: es lo que hace que
-        // `trg_mark_refund_on_cancel` devuelva la plata. El trigger solo retiene
-        // el reembolso cuando cancela el usuario y es tardía.
-        const { data: cambiada, error: errCancel } = await supabase
-          .from('bookings')
-          .update({ status: 'cancelada', cancelled_by: 'coach' })
-          .eq('id', b.id)
-          .eq('status', 'confirmada')      // guarda contra una carrera
-          .select('id')
-
-        if (errCancel || !cambiada?.length) {
-          console.error('[attendance] no se pudo cerrar el plantón de', b.id, errCancel?.message ?? 'ya no estaba confirmada')
-        } else {
-          reintegros++
-          console.warn(`[attendance] §9.5 ${veredicto.motivo} — booking ${b.id}, se encola el reintegro`)
-          await supabase.from('notifications').insert({
-            recipient_id: b.user_id,
-            type: 'reserva_cancelada',
-            booking_id: b.id,
-            title: 'No se hizo tu sesión',
-            body: veredicto.motivo === 'no_vino_nadie'
-              ? 'La sesión no se hizo. Te devolvemos todo lo que pagaste.'
-              : 'Tu profesional no llegó a la videollamada. Te devolvemos todo lo que pagaste.',
-          })
-        }
-      }
-    }
   }
 
+  // La resolución se reintenta desde la evidencia guardada, sin límite de
+  // antigüedad. Un error después del INSERT ya no puede perder el reintegro.
+  const { reintegros, pendientes: resolucionesPendientes } = await resolverReintegros(supabase)
+
   return new Response(
-    JSON.stringify({ revisadas, guardadas, vacias, sin_datos_todavia: sinDatosTodavia, reintegros }),
+    JSON.stringify({ revisadas, guardadas, vacias, sin_datos_todavia: sinDatosTodavia, reintegros, resoluciones_pendientes: resolucionesPendientes }),
     { status: 200, headers: { 'Content-Type': 'application/json' } },
   )
 })

@@ -4,6 +4,18 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-23 — Codex (integridad de pagos y reintegros; preparado, no desplegado)
+
+**Tocado:** `supabase/migrations/20260923010000_payment_integrity.sql`, funciones de cobro de MP/PayPal/USDT, `session-attendance`, efectos de reserva, cron de conciliación, pruebas de seguridad y `SCHEMA.md`.
+
+**Resumen:**
+- Las confirmaciones de pagos aprobados ahora tienen un reclamo exclusivo y una marca de finalización. Webhooks y un cron de conciliación pueden reintentar efectos incompletos sin dejar una reserva pagada en `pendiente` para siempre.
+- La asistencia guarda una decisión de reintegro pendiente antes de pasar una sesión a completada. Si falla la cancelación, la siguiente corrida retoma la evidencia guardada. La identidad del profesional se valida antes de concluir que faltó.
+- Un índice único impide dos descuentos de referido activos para la misma persona, incluso con checkouts simultáneos. PayPal rechaza importes ausentes, no numéricos o cero.
+- Pruebas nuevas ejercitan el reclamo de efectos, el índice, la guarda de finalización y los importes inválidos; `npm run test:security` y `tsc --noEmit` pasan.
+
+**Pendiente operativo:** aplicar primero la migración en una ventana controlada, después desplegar las funciones y por último instalar `scripts/add-paid-effects-recovery-cron.sql`. Antes de aplicar, comprobar que no haya descuentos históricos duplicados que impidan crear el índice. No se ejecutó SQL ni se desplegó a Supabase en esta sesión.
+
 ## 2026-09-22 — Andre (Codex · correcciones de auditoría de seguridad)
 
 **Tocado:** autenticación y notificaciones (`context/`, `lib/`), perfiles y recursos
