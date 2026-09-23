@@ -224,13 +224,16 @@ export default function AdminScreen() {
           })}
         </ScrollView>
 
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={90}>
+        {/* Antes esto usaba KeyboardAvoidingView con behavior='padding' y un
+            keyboardVerticalOffset fijo de 90. En iOS eso insertaba un bloque de
+            padding del color del fondo que quedaba visible sobre el teclado y
+            cortaba la pantalla. `automaticallyAdjustKeyboardInsets` deja que el
+            ScrollView ajuste sus insets nativamente, sin ese artefacto. */}
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={undefined}>
           <ScrollView
             contentContainerStyle={s.list}
             showsVerticalScrollIndicator={false}
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
             keyboardShouldPersistTaps="handled"
             refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={ViveColors.primary} />}>
 

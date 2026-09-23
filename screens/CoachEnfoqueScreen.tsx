@@ -137,7 +137,11 @@ export default function CoachEnfoqueScreen() {
       Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
       return;
     }
-    router.back();
+    // Confirmación explícita: sin esto se volvía de una y la pantalla anterior
+    // seguía mostrando "agregar", que daba la sensación de que no se había guardado.
+    Alert.alert('Guardado', 'Listo, así van a ver cómo trabajás.', [
+      { text: 'Listo', onPress: () => router.back() },
+    ]);
   }
 
   return (

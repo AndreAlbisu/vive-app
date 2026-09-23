@@ -1,4 +1,4 @@
-import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Modal, View, Text, Pressable, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ViveColors, ViveFonts } from '@/constants/theme';
@@ -44,10 +44,14 @@ export function EncuadreSheet({ visible, encuadre, onCerrar }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCerrar}>
-      <Pressable style={s.backdrop} onPress={onCerrar}>
-        {/* El contenido no cierra al tocarse: acá se lee, y un tap perdido
-            mientras se scrollea no puede tirar abajo la explicación. */}
-        <Pressable style={[s.sheet, { paddingBottom: 20 + insets.bottom }]} onPress={() => {}}>
+      {/* 🔴 El backdrop es un TouchableOpacity HERMANO del sheet, no un Pressable
+          que lo envuelve. Anidar el sheet dentro de un Pressable de pantalla
+          completa dejaba el ScrollView del perfil de fondo sin responder al
+          scroll después de cerrar este Modal (iOS). Mismo scaffold que
+          UserActionsSheet/ReportSheet, que no tienen el bug. */}
+      <View style={s.flex}>
+        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onCerrar} />
+        <View style={[s.sheet, { paddingBottom: 20 + insets.bottom }]}>
           <View style={s.grab} />
 
           <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
@@ -114,14 +118,17 @@ export function EncuadreSheet({ visible, encuadre, onCerrar }: Props) {
           <Pressable style={s.close} onPress={onCerrar} accessibilityRole="button">
             <Text style={s.closeTxt}>Entendido</Text>
           </Pressable>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
 
 const s = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(30,26,18,0.45)', justifyContent: 'flex-end' },
+  // El overlay (flex:1) ocupa el espacio de arriba y empuja el sheet abajo; es
+  // el área tocable que cierra. Hermano del sheet, no su contenedor.
+  flex: { flex: 1 },
+  overlay: { flex: 1, backgroundColor: 'rgba(30,26,18,0.45)' },
   sheet: {
     backgroundColor: '#FFF8EF',
     borderTopLeftRadius: 24, borderTopRightRadius: 24,

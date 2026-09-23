@@ -326,6 +326,12 @@ export default function RootLayout() {
           <Stack.Screen name="coach-datos-cobro" options={{ headerShown: false }} />
           <Stack.Screen name="coach-credenciales" options={{ headerShown: false }} />
           <Stack.Screen name="coach-ajustes" options={{ headerShown: false }} />
+          {/* M14 (sesión 259): las dos nuevas del profesional traían el mismo
+              header nativo negro duplicado — les faltaba el headerShown:false,
+              igual que las cinco de arriba. Sus pantallas ya dibujan su propio
+              SafeAreaView + header. */}
+          <Stack.Screen name="coach-enfoque" options={{ headerShown: false }} />
+          <Stack.Screen name="coach-como-funciona" options={{ headerShown: false }} />
           <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
           <Stack.Screen name="explorar-recursos" options={{ headerShown: false }} />
           <Stack.Screen name="mis-recomendaciones" options={{ headerShown: false }} />
