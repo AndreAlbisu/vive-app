@@ -718,8 +718,18 @@ export default function BookingScreen_Confirm() {
       // cobro falló, y seguir dejaría una reserva internacional confirmada sin
       // que entrara un dólar — el mismo bug de las 27 fantasma de agosto, por
       // la tercera puerta.
-      if (metodoPago === 'paypal' && !initPoint) {
-        setError('No pudimos iniciar el pago con PayPal. Probá de nuevo en unos minutos');
+      if (!initPoint) {
+        // 🔴 23/09/2026, auditoría: hasta hoy quedarse sin URL con Mercado Pago
+        // se tomaba como "el profesional no tiene MP, no hay nada que cobrar" y
+        // la reserva se confirmaba GRATIS. Eso venía de cuando un profesional
+        // sin MP no cobraba; hoy el catálogo exige que cobre por algún lado
+        // (MP, PayPal o cripto), así que sin URL lo que pasó es que el cobro
+        // falló. La base ya no deja confirmar sin pago acreditado
+        // (`guard_booking_security`), o sea que seguir de largo solo dejaría a
+        // la persona con un error feo en vez de un mensaje claro.
+        setError(metodoPago === 'paypal'
+          ? 'No pudimos iniciar el pago con PayPal. Probá de nuevo en unos minutos'
+          : 'No pudimos iniciar el pago. Probá de nuevo en unos minutos o con otro medio de pago');
         setLoading(false);
         return;
       }
@@ -841,8 +851,11 @@ export default function BookingScreen_Confirm() {
       // siempre verdadero, y dejarlo escrito sugería un estado que ya no existe.
       const confirmedNow = isInstant;
 
-      // 🔴 Los efectos SOLO se aplican acá cuando no hubo nada que cobrar (coach
-      // sin Mercado Pago conectado). Con cobro de por medio los aplica el
+      // 🔴 Los efectos SOLO se aplican acá cuando no hubo nada que cobrar. Desde
+      // el 23/09/2026 ese caso YA NO EXISTE en la práctica: sin URL de checkout
+      // la función de arriba corta con un error, así que `initPoint` siempre
+      // tiene valor acá. Se deja la condición porque es la que garantiza que
+      // los efectos no corran dos veces (el servidor los aplica al acreditar). Con cobro de por medio los aplica el
       // servidor al acreditar el pago —`_shared/booking-effects.ts` desde
       // `mp-webhook`/`paypal-webhook`/`usdt-check-payments`—, porque desde la
       // sesión 117 esta pantalla puede estar muerta cuando el pago entra.

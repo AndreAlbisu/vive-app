@@ -67,9 +67,9 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   la web estática del repo sí tiene prueba para el XSS corregido.
 
 ---
-## 2026-09-23 — Andre (sesión 268 · primera tanda de la auditoría de seguridad)
+## 2026-09-23 — Andre (sesión 268 · auditoría de seguridad: dos agujeros cerrados, uno grave)
 
-**Tocado:** `scripts/cerrar-columnas-postulacion.sql` (nuevo, **corrido y verificado en producción**), `screens/CoachApplicationScreen.tsx`, `SCHEMA.md`, `docs/problemas-abiertos.md`
+**Tocado:** `scripts/cerrar-columnas-postulacion.sql` y `scripts/cerrar-reserva-sin-pago.sql` (nuevos, **corridos y verificados en producción**), `screens/CoachApplicationScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `supabase/functions/create-meeting-room/index.ts` (v36 deployada), `SCHEMA.md`, `docs/problemas-abiertos.md`
 
 **Resumen:**
 - Arrancó la auditoría previa a la v1, por superficie de ataque. Esta tanda: **edge functions, RLS, grants por columna, lo que ve alguien sin cuenta, buckets y funciones `security definer`**. Todo lo que se probó se probó **contra producción**, con los cambios deshechos.
@@ -87,8 +87,18 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Buckets: `coach-credentials` y `sanction-evidence` **privados**; el resto son públicos a propósito.
 - 📌 CORS es `*` en todas las functions: es correcto acá (autorizan por Bearer, no por cookie), pero queda dicho.
 
+### Tanda 2 — reservas y pagos
+
+- 🔴🔴 **EL HALLAZGO GRANDE: se podía asistir a una sesión sin pagarla.** Cualquier usuario registrado, con cualquiera de los **33 profesionales del catálogo que no tienen Mercado Pago conectado** (todos menos uno). Reproducido contra producción y deshecho.
+  - El camino: la reserva nace en 'pendiente' (eso estaba bien), pero `requires_payment` se calculaba `mp_connected or payment_provider <> 'mp'` y el proveedor arranca en `'mp'` → para un profesional sin MP daba **false** → el guard dejaba pasar `status='confirmada'` con el pago en `no_iniciado` → y `create-meeting-room` solo miraba 'confirmada'. Sala abierta, sesión gratis, el profesional pone la hora.
+  - **La causa es una regla vieja**: "sin Mercado Pago" significaba "no hay nada que cobrar". Dejó de ser cierto cuando entraron PayPal y USDT, y el catálogo hoy exige que el profesional cobre por algún lado. La app tenía escrita la misma idea (`!initPoint` = "coach sin MP" → confirmar gratis), así que **un fallo al crear el link de pago también regalaba la sesión**.
+  - **Arreglado en tres capas**: la base (`requires_payment` mira los tres rieles y nunca baja a false), la app (sin URL de checkout ahora corta con un mensaje claro en vez de confirmar) y la sala (`create-meeting-room` v36 exige pago acreditado). `scripts/cerrar-reserva-sin-pago.sql`, corrido y verificado: el ataque ahora responde `pago_no_acreditado` y el camino legítimo sigue funcionando.
+  - 📌 **No se usó**: las 8 reservas confirmadas de producción están todas pagadas.
+- 🟢 Lo demás de esta tanda, en orden: el cliente puede escribir 15 columnas de `bookings` pero el trigger le pisa `status`, `amount`, `coach_name` y valida que la sala sea suya; `payment_status` **no es escribible** por el cliente; cancelar queda marcado con quién canceló según `auth.uid()`, no según lo que mande el cliente.
+
 **Pendiente para la próxima sesión:**
-- Seguir la auditoría por donde quedó: `lib/` (booking y pagos) y después `app/`/`hooks/`.
+- Limpiar las dos policies que todavía dejan confirmar "sin intento de cobro" (hoy inofensivas: el trigger corta antes).
+- Seguir la auditoría por donde quedó: el resto de `lib/` y después `app/`/`hooks/`.
 - L15 sigue abierto: `suspendido_hasta` es legible sin cuenta y cerrarlo pide una vista de catálogo.
 - Sigue todo lo de la sesión 266 sin ver en el teléfono.
 
