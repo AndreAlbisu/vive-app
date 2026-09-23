@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppBg } from '@/components/ui/AppBg';
-import { ViveFonts } from '@/constants/theme';
+import { ViveFonts, ViveColors } from '@/constants/theme';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
 import { ToolHeader } from '@/components/ui/ToolHeader';
@@ -21,17 +21,58 @@ const CREAM_LIGHT  = '#F3EEDF';
 const TERRACOTTA   = '#C1694F';
 const GLASS_BG     = 'rgba(255,248,240,0.55)';
 
-const PHASES = ['Inhalá', 'Mantené', 'Exhalá', 'Mantené'] as const;
-const PHASE_COLORS = ['#4A7A5A', '#6B7A56', '#C1694F', '#87835C'] as const;
-const PHASE_TARGETS = [1.0, 1.0, 0.4, 0.4] as const; // scale objetivo de cada fase (mantené = repite el valor previo)
-const PHASE_S = 4; // 4s por fase, 16s de ciclo total — coincide con la descripción en pantalla
+// Un patrón de respiración: sus fases, el tamaño objetivo del orbe en cada una,
+// y CUÁNTOS SEGUNDOS dura cada fase. Antes había un solo patrón con 4s parejos;
+// el tiempo es POR FASE porque la diafragmática no es pareja (inhala 4, exhala 6).
+type Patron = {
+  id: string;
+  nombre: string;
+  titulo: string;
+  descripcion: string;
+  fases: readonly string[];
+  targets: readonly number[];   // scale del orbe (mantené = repite el valor previo)
+  segundos: readonly number[];  // duración de cada fase
+  colores: readonly string[];
+};
+
+// 🔴 El copy describe la práctica y cuándo usarla, SIN prometer un efecto
+// fisiológico: T&C §5 declara que Vita no presta servicios de salud (fix de copy
+// del 16/09, ver docs/encuadre-salud-y-responsabilidad.md). No re-introducir
+// "calma el sistema nervioso" ni equivalentes.
+const PATRONES: readonly Patron[] = [
+  {
+    id: 'caja',
+    nombre: 'Cuadrada',
+    titulo: 'Cuatro tiempos iguales',
+    descripcion:
+      'Inhalá 4 segundos, mantené 4, exhalá 4, mantené 4.\n' +
+      'Cuatro tiempos iguales, para que la respiración deje de ir apurada.',
+    fases:    ['Inhalá', 'Mantené', 'Exhalá', 'Mantené'],
+    targets:  [1.0, 1.0, 0.4, 0.4],
+    segundos: [4, 4, 4, 4],
+    colores:  ['#4A7A5A', '#6B7A56', '#C1694F', '#87835C'],
+  },
+  {
+    id: 'diafragmatica',
+    nombre: 'Diafragmática',
+    titulo: 'Respirar hondo, desde la panza',
+    descripcion:
+      'Inhalá 4 segundos llevando el aire abajo, a la panza, y exhalá 6, más lento.\n' +
+      'La exhalación, más larga que la inhalación.',
+    fases:    ['Inhalá', 'Exhalá'],
+    targets:  [1.0, 0.4],
+    segundos: [4, 6],
+    colores:  ['#4A7A5A', '#C1694F'],
+  },
+] as const;
+
 const KEEP_AWAKE_TAG = 'vive-respiracion';
 
 // Segundos de sesión después de los cuales la interfaz se retira.
 //
 // 🔴 El principio: la guía existe para enseñar el ritmo, no para sostenerlo. A
-// los 30s ya diste casi dos ciclos completos de 16s y el patrón está aprendido —
-// a partir de ahí la pantalla deja de aportar y empieza a pedir: seguir el orbe
+// los 30s ya diste casi dos ciclos completos y el patrón está aprendido — a
+// partir de ahí la pantalla deja de aportar y empieza a pedir: seguir el orbe
 // con los ojos abiertos mantiene la atención AFUERA del cuerpo, que es lo
 // contrario de lo que la herramienta busca. Así que el orbe sigue animando (si
 // abrís los ojos, la guía está) pero el texto se atenúa y la pantalla te invita
@@ -53,15 +94,28 @@ function formatTime(s: number) {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
+// Misma pastilla de fecha que Diario y Gratitud (arriba a la derecha).
+function formatTodayShort() {
+  return new Date()
+    .toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+    .replace('.', '');
+}
+
 export default function RespiracionScreen() {
   useRecursoAbierto('respiracion');
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const [phase, setPhase] = useState<'idle' | 'running' | 'done'>('idle');
+  const [patronId, setPatronId] = useState<string>(PATRONES[0].id);
   const [duration, setDuration] = useState(DURATIONS[0].seconds);
   const [remaining, setRemaining] = useState(DURATIONS[0].seconds);
   const [breathPhase, setBreathPhase] = useState(0);
   const [retirada, setRetirada] = useState(false);
+
+  const patron = PATRONES.find(p => p.id === patronId) ?? PATRONES[0];
+  // Guarda: al cambiar de patrón, breathPhase puede quedar un frame apuntando a
+  // una fase del patrón anterior (cuadrada tiene 4, diafragmática 2).
+  const faseIdx = breathPhase % patron.fases.length;
 
   const animScale = useRef(new Animated.Value(0.4)).current;
   const animTexto = useRef(new Animated.Value(1)).current;
@@ -75,22 +129,17 @@ export default function RespiracionScreen() {
   useEffect(() => { setRemaining(duration); }, [duration]);
 
   // El orbe respira solo en loop continuo, desde que se abre la pantalla —
-  // independiente del timer de sesión (que solo cuenta cuánto falta).
-  // El label de fase se dispara desde el callback de cada tramo (no un
-  // setInterval aparte) para que quede pegado al frame exacto en que la
-  // animación nativa termina. Easing.inOut(quad): desacelera al entrar al
-  // hold y acelera al salir, sin la cola larga y casi imperceptible del
-  // ease-in-out default (que hacía ver el círculo "todavía llegando" con
-  // el label ya en "Mantené") ni el frenazo en seco de un easing lineal
-  // (que se probó antes y quedaba muy brusco en el cambio de fase).
+  // independiente del timer de sesión. Se reinicia al cambiar de patrón (dep
+  // `patronId`) porque cambian las fases y los tiempos. El label de fase se
+  // dispara desde el callback de cada tramo para que quede pegado al frame en que
+  // la animación termina. Easing.inOut(quad): desacelera al entrar al hold y
+  // acelera al salir.
   //
-  // 🐛 Con "reducir movimiento" activado esto hacía `return` antes de arrancar:
-  // el círculo quedaba fijo Y la fase no avanzaba nunca, así que la pantalla
-  // mostraba la palabra "Inhalá" congelada durante los 3 u 8 minutos enteros y
-  // al final registraba la sesión como completada igual. Reducir movimiento
-  // pide no animar, no dejar de guiar: ahora el ciclo corre por setTimeout y lo
-  // único que se pierde es el escalado del círculo.
+  // 🐛 Con "reducir movimiento" el ciclo corre por setTimeout (no se anima el
+  // círculo, pero la fase igual avanza): antes hacía `return` y dejaba la palabra
+  // congelada toda la sesión. Reducir movimiento pide no animar, no dejar de guiar.
   useEffect(() => {
+    const p = PATRONES.find(x => x.id === patronId) ?? PATRONES[0];
     animScale.setValue(reducedMotion ? 0.7 : 0.4);
     setBreathPhase(0);
     let cancelled = false;
@@ -101,19 +150,19 @@ export default function RespiracionScreen() {
 
       const avanzar = () => {
         if (cancelled) return;
-        const next = (i + 1) % PHASES.length;
+        const next = (i + 1) % p.fases.length;
         setBreathPhase(next);
         runLeg(next);
       };
 
       if (reducedMotion) {
-        legTimeout = setTimeout(avanzar, PHASE_S * 1000);
+        legTimeout = setTimeout(avanzar, p.segundos[i] * 1000);
         return;
       }
 
       Animated.timing(animScale, {
-        toValue: PHASE_TARGETS[i],
-        duration: PHASE_S * 1000,
+        toValue: p.targets[i],
+        duration: p.segundos[i] * 1000,
         easing: Easing.inOut(Easing.quad),
         useNativeDriver: true,
       }).start(({ finished }) => {
@@ -129,14 +178,13 @@ export default function RespiracionScreen() {
       if (legTimeout) clearTimeout(legTimeout);
       animScale.stopAnimation();
     };
-  }, [reducedMotion]);
+  }, [reducedMotion, patronId]);
 
   // 🔴 Sin esto la herramienta solo funcionaba si tocabas la pantalla cada tanto:
   // el teléfono se bloquea solo a los 30s–2min, y con la pantalla apagada el
   // temporizador de JS se frena, así que la sesión se cortaba por la mitad. Toda
-  // la guía de esta pantalla es visual, o sea que el bloqueo la apaga entera.
-  // Se activa solo mientras corre —no mientras la pantalla está abierta— para no
-  // dejar el teléfono despierto porque alguien entró a mirar y se fue.
+  // la guía es visual, o sea que el bloqueo la apaga entera. Se activa solo
+  // mientras corre.
   useEffect(() => {
     if (phase !== 'running') return;
     activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {});
@@ -148,8 +196,7 @@ export default function RespiracionScreen() {
   }
 
   // La atenuación del texto guía. Se anima salvo que "reducir movimiento" esté
-  // activo, donde el cambio es directo — el pedido ahí es no animar, no dejar de
-  // retirarse.
+  // activo, donde el cambio es directo.
   useEffect(() => {
     if (reducedMotion) { animTexto.setValue(retirada ? RETIRO_OPACIDAD : 1); return; }
     Animated.timing(animTexto, {
@@ -184,7 +231,7 @@ export default function RespiracionScreen() {
     <View style={s.circleWrap}>
       <Animated.View style={[s.circleOuter, { transform: [{ scale: animScale }] }]}>
         <View style={s.circleInner}>
-          {phase !== 'running' && <Text style={s.orbLabel}>{PHASES[breathPhase]}</Text>}
+          {phase !== 'running' && <Text style={s.orbLabel}>{patron.fases[faseIdx]}</Text>}
         </View>
       </Animated.View>
     </View>
@@ -198,8 +245,9 @@ export default function RespiracionScreen() {
           onBack={() => { stopTimer(); router.back(); }}
           right={
             <>
+              <Text style={s.datePillText}>{formatTodayShort()}</Text>
               <ReminderBell kind="tool" resourceRef="respiracion" title="Respiración" />
-              <PinButton resourceId="respiracion" />
+              <PinButton resourceId="respiracion" inline />
             </>
           }
         />
@@ -208,18 +256,23 @@ export default function RespiracionScreen() {
         <View style={s.content}>
           {phase === 'idle' && (
             <>
-              <Text style={s.subtitle}>Respiración cuadrada</Text>
-              {/* 🔴 Decía "Un patrón que calma el sistema nervioso rápidamente".
-                  Es una promesa de efecto fisiológico, sin respaldo y sin
-                  matizar, y contradice el encuadre del propio producto: T&C §5
-                  declara que Vita no presta servicios de salud ni reemplaza
-                  atención profesional (ver docs/encuadre-salud-y-responsabilidad.md).
-                  Lo que sigue describe la práctica y cuándo se usa, que es lo
-                  que la persona necesita para decidir, sin prometer nada. */}
-              <Text style={s.description}>
-                Inhalá 4 segundos, mantené 4, exhalá 4, mantené 4.{'\n'}
-                Cuatro tiempos iguales, para que la respiración deje de ir apurada.
-              </Text>
+              <View style={s.patronRow}>
+                {PATRONES.map(p => (
+                  <TouchableOpacity
+                    key={p.id}
+                    style={[s.patronBtn, patronId === p.id && s.patronBtnActive]}
+                    onPress={() => setPatronId(p.id)}
+                    activeOpacity={0.8}>
+                    <Text style={[s.patronLabel, patronId === p.id && s.patronLabelActive]}>
+                      {p.nombre}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={s.subtitle}>{patron.titulo}</Text>
+              <Text style={s.description}>{patron.descripcion}</Text>
+
               <View style={s.durationRow}>
                 {DURATIONS.map(d => (
                   <TouchableOpacity
@@ -234,7 +287,6 @@ export default function RespiracionScreen() {
                 ))}
               </View>
               {orb}
-              <Text style={[s.phaseSub, { marginTop: -8 }]}>{PHASE_S} segundos</Text>
               <ScaleCard style={s.primaryBtn} onPress={handleStart} activeOpacity={0.85}>
                 <MaterialCommunityIcons name="play" size={16} color={CREAM_LIGHT} />
                 <Text style={s.primaryBtnText}>Iniciar</Text>
@@ -252,18 +304,21 @@ export default function RespiracionScreen() {
               </Animated.Text>
               {orb}
               <Animated.Text
-                style={[s.phaseLabel, { color: PHASE_COLORS[breathPhase], opacity: animTexto }]}>
-                {PHASES[breathPhase]}
+                style={[s.phaseLabel, { color: patron.colores[faseIdx], opacity: animTexto }]}>
+                {patron.fases[faseIdx]}
               </Animated.Text>
-              {/* Lo único que NO se atenúa: la invitación a dejar de mirar. Ocupa
-                  el lugar de "4 segundos", que a esta altura es el dato más
-                  inútil de la pantalla. */}
+              {/* Lo único que NO se atenúa: la invitación a dejar de mirar. */}
               {retirada ? (
                 <Text style={s.retiroHint}>Ya encontraste el ritmo. Cerrá los ojos si querés.</Text>
               ) : (
-                <Text style={s.phaseSub}>{PHASE_S} segundos</Text>
+                <Text style={s.phaseSub}>{patron.segundos[faseIdx]} segundos</Text>
               )}
-              <TouchableOpacity style={s.ghostBtn} onPress={() => { stopTimer(); router.back(); }} activeOpacity={0.8}>
+              {/* Detener vuelve al inicio de la pantalla (no sale), consistente con
+                  Sonidos. Resetea el tiempo y el retiro para la próxima. */}
+              <TouchableOpacity
+                style={s.ghostBtn}
+                onPress={() => { stopTimer(); setRemaining(duration); setRetirada(false); setPhase('idle'); }}
+                activeOpacity={0.8}>
                 <Text style={s.ghostBtnText}>Detener</Text>
               </TouchableOpacity>
             </>
@@ -277,6 +332,9 @@ export default function RespiracionScreen() {
               <Text style={s.doneTitle}>Bien hecho</Text>
               <Text style={s.doneSub}>
                 Completaste {formatTime(duration)} de respiración consciente.
+              </Text>
+              <Text style={s.doneCoach}>
+                Si esto te sirve, contáselo a tu coach: puede adaptarla a lo que estés necesitando.
               </Text>
               <ScaleCard style={s.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
                 <Text style={s.primaryBtnText}>Volver</Text>
@@ -293,9 +351,29 @@ const s = StyleSheet.create({
   safe:    { flex: 1 },
   headerDivider: { height: 1, backgroundColor: 'rgba(58,79,42,0.08)' },
 
+  // Pastilla de fecha del header — idéntica a Diario/Gratitud.
+  datePillText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.text,
+    backgroundColor: 'rgba(255,255,255,0.70)',
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.14)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    overflow: 'hidden',
+  },
+
   content:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 16 },
   subtitle:    { fontFamily: ViveFonts.semibold, fontSize: 22, color: FOREST, textAlign: 'center' },
   description: { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
+
+  patronRow:        { flexDirection: 'row', gap: 10, alignSelf: 'stretch' },
+  patronBtn:        { flex: 1, paddingVertical: 10, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(63,81,47,0.25)', backgroundColor: GLASS_BG, alignItems: 'center' },
+  patronBtnActive:  { backgroundColor: FOREST, borderColor: FOREST },
+  patronLabel:      { fontFamily: ViveFonts.medium, fontSize: 14, color: FOREST_SOFT },
+  patronLabelActive:{ color: CREAM_LIGHT },
 
   durationRow:       { flexDirection: 'row', gap: 12 },
   durationBtn:       { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(63,81,47,0.25)', backgroundColor: GLASS_BG },
@@ -322,4 +400,5 @@ const s = StyleSheet.create({
   doneIconWrap: { marginBottom: 8 },
   doneTitle:    { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST },
   doneSub:      { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 22 },
+  doneCoach:    { fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST_SOFT, textAlign: 'center', lineHeight: 21, marginTop: 2, paddingHorizontal: 8 },
 });

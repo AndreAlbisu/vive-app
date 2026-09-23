@@ -157,6 +157,19 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
 **Pendiente para la próxima sesión:**
 - Sigue todo lo de la sesión 266 sin ver en el teléfono (la postulación con "Cómo trabajás" es lo primero).
 - Las dos sesiones de Codex (L42, L43, L45) no dejaron entrada acá: si fueron cambios de código, conviene anotarlas.
+## 2026-09-22 — Joaquín (recursos: rescate de la diafragmática + reconciliación de PRs)
+
+**Tocado:** `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`.
+
+**Resumen:**
+- **PR #1 (recursos) se cerró y se reabrió limpio.** El rework de sonidos de Andre (L41/L42: motor de audio estéreo, keep-awake, sin rosa) dejó nuestra mitad de RuidoScreen sobre una base que él reemplazó, y un merge "CLEAN" de GitHub le habría pisado el audio. RespiracionScreen, en cambio, Andre no la tocó (0 commits) → trabajo único y vivo.
+- **Rescatado en rama nueva `recursos-diafragmatica` (basada en andre/main):** (1) RespiracionScreen con la respiración diafragmática (sistema de patrones, inhala 4/exhala 6, Cuadrada por default) tal cual, rebasada limpia; (2) sobre el RuidoScreen NUEVO de Andre, re-apliqué solo lo que sigue siendo único y no está en su main: la **pastilla de fecha** del header y el **empujón al coach** en la pantalla de "tiempo completado".
+- **Descartado a propósito:** nuestro olas-fade-suave, porque Andre resolvió el arranque brusco de las olas en la fuente ("sacar las pisadas del principio de las olas", re-export del audio).
+- 801 tests OK, tsc limpio. La copy de la diafragmática **sigue esperando el ok de voz de Andre** (igual que antes).
+
+**Pendiente para la próxima sesión:**
+- PR nuevo en draft; Andre revisa voz de la diafragmática + mergea.
+- (De la sesión anterior seguía: PR #4 reconciliado y MERGEABLE, espera merge de Andre; PR #2 espera review del SQL.)
 
 ---
 ## 2026-09-21 — Andre (sesión 266 · Sofía, retoques visuales y el match por forma de trabajar)

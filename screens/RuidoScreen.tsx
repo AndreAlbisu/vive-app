@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { AppBg } from '@/components/ui/AppBg';
-import { ViveFonts } from '@/constants/theme';
+import { ViveFonts, ViveColors } from '@/constants/theme';
 import { PASTEL_AZUL, PASTEL_SALVIA, PASTEL_TEAL, PASTEL_DURAZNO } from '@/constants/tools';
 import { PinButton } from '@/components/PinButton';
 import { ReminderBell } from '@/components/ReminderBell';
@@ -100,6 +100,13 @@ function formatTime(s: number) {
   const m = Math.floor(s / 60);
   const sec = s % 60;
   return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+// Misma pastilla de fecha que Diario y Gratitud (arriba a la derecha).
+function formatTodayShort() {
+  return new Date()
+    .toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+    .replace('.', '');
 }
 
 export default function RuidoScreen() {
@@ -257,8 +264,9 @@ export default function RuidoScreen() {
           onBack={() => { stopTimer(); pauseAll(); router.back(); }}
           right={
             <>
+              <Text style={s.datePillText}>{formatTodayShort()}</Text>
               <ReminderBell kind="tool" resourceRef="ruido" title="Sonidos ambientales" />
-              <PinButton resourceId="ruido" />
+              <PinButton resourceId="ruido" inline />
             </>
           }
         />
@@ -269,6 +277,9 @@ export default function RuidoScreen() {
             <MaterialCommunityIcons name="check-circle-outline" size={72} color={TERRACOTTA} />
             <Text style={s.subtitle}>Tiempo completado</Text>
             <Text style={s.description}>{formatTime(duration)} de descanso.</Text>
+            <Text style={s.doneCoach}>
+              ¿Alguno te ayuda a arrancar o a dormir? Contáselo a tu coach: puede armarte una rutina.
+            </Text>
             <ScaleCard style={s.primaryBtn} onPress={() => setPhase('idle')} activeOpacity={0.85}>
               <Text style={s.primaryBtnText}>Volver</Text>
             </ScaleCard>
@@ -369,6 +380,20 @@ const s = StyleSheet.create({
   screenTitle:  { fontFamily: ViveFonts.semibold, fontSize: 22, color: FOREST, textAlign: 'center' },
   description:  { fontFamily: ViveFonts.regular, fontSize: 15, color: FOREST_SOFT, textAlign: 'center', lineHeight: 23 },
   descriptionSmall: { fontFamily: ViveFonts.regular, fontSize: 13, color: FOREST_SOFT, textAlign: 'center', marginTop: -8 },
+  doneCoach:    { fontFamily: ViveFonts.regular, fontSize: 14, color: FOREST_SOFT, textAlign: 'center', lineHeight: 21, paddingHorizontal: 8 },
+  // Pastilla de fecha del header — idéntica a Diario/Gratitud.
+  datePillText: {
+    fontFamily: ViveFonts.medium,
+    fontSize: 13,
+    color: ViveColors.text,
+    backgroundColor: 'rgba(255,255,255,0.70)',
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.14)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    overflow: 'hidden',
+  },
 
   soundGrid: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
   soundCard: {
