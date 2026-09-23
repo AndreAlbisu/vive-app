@@ -17,7 +17,8 @@ Estado al 22/09/2026: migración `20260922000000_security_audit.sql` aplicada a 
 | M02 Push y bloqueo | Participantes directos únicamente, bloqueo bidireccional y cuota atómica de 5/minuto/par; contenido genérico del servidor. | Bloqueo/cuota y payload sin texto privado. |
 | M03 Push tras logout | Retirar destino antes del logout; si falla, informar y conservar sesión para reintentar. Registro RPC reasigna dispositivo a una sola cuenta. | Registro por dos cuentas deja un dueño; flujo de logout pendiente de prueba física. |
 | M04 Datos privados del perfil | SELECT público acotado; RPC sin ID para perfil propio; edad de consultantes accesible únicamente al profesional con reserva relacionada. | Lectura ajena denegada, propia permitida, profesional solo ve edad de sus participantes. |
-| M05 Dependencias | Parsers Markdown/linkify, Metro 0.83.8, PostCSS y UUID corregidos; límite de lectura 20.000 caracteres en servidor y render. | Audit sin avisos conocidos; tests y exportación nativa. |
+| M05 Dependencias | ⚠️ **REVERTIDO PARCIALMENTE el 23/09/2026 — ver nota al pie sobre Metro.** |
+| M05 Dependencias (original) | Parsers Markdown/linkify, Metro 0.83.8, PostCSS y UUID corregidos; límite de lectura 20.000 caracteres en servidor y render. | Audit sin avisos conocidos; tests y exportación nativa. |
 | M06 Carrera de horarios | Índice único transaccional para coach/fecha/hora normalizada confirmada o completada; quien pierde la confirmación instantánea pasa a cancelación/reembolso. Cancelación de competidores condicionada a que sigan pendientes. | Duplicado 9:00/09:00 rechazado. No se simuló concurrencia contra proveedores reales. |
 | L01 Credencial/logs | Script usa variables del entorno de prueba, sin JWT versionado; quitados logs de URL OAuth y token push. | Barrido de archivos modificados. El JWT antiguo estaba vencido; no se reescribió historia Git. |
 
@@ -60,3 +61,37 @@ Se mantiene Expo SDK 54. Se fijaron parches transitivos de Metro 0.83.x (⚠️ 
 La validación de Mercado Pago consulta [la orden comercial y su preference_id](https://www.mercadopago.com.br/developers/en/reference/online-payments/checkout-pro-preferences/merchant-orders/get-merchant-order/get). Un pago no asociado o con diferencias se devuelve como error y queda registrado para conciliación; no se acredita silenciosamente ni se declara inexistente. Los operadores deben vigilar esos errores y conciliar el dinero recibido.
 
 Persisten fuera del alcance probado: tokens Daily emitidos antes de una cancelación, configuración remota de Auth/Storage/IAM/CI, retención/borrado integral, dispositivos reales y credenciales/proveedores live. El código local no equivale a una certificación de producción.
+
+
+## Nota del 23/09/2026 — Metro vuelve a 0.83.5
+
+El pin de **Metro 0.83.8** de M05 **rompe el servidor de desarrollo de Expo SDK 54**. Reproducido:
+
+```
+TypeError: events is not iterable
+  at waitForMetroToObserveTypeScriptFile.ts:128
+  at FileMap.emitChange (metro-file-map/src/index.js:570)
+```
+
+La causa es un cambio de contrato entre versiones: el CLI de Expo 54 escucha el evento `change`
+esperando `{ eventsQueue }`, y `metro-file-map` 0.83.8 emite `{ changes, logger, rootDir }`. Sin
+`eventsQueue`, el `for…of` recibe `undefined` y el proceso muere al primer cambio de archivo. Ningún
+test lo agarra porque los tests no levantan Metro.
+
+**Decisión: volver a 0.83.5**, que es la versión que Expo SDK 54 espera. Verificado levantando el
+servidor y tocando, creando y borrando archivos: no se cae.
+
+**Lo que eso reabre, dicho de frente:** vuelven 10 avisos `high` de `npm audit`, y los diez salen de
+una sola dependencia, `image-size ≤ 2.0.2`, que Metro 0.83.5 arrastra (`^1.0.2`) y 0.83.8 ya no usa.
+El aviso es una **denegación de servicio en el parser de archivos `.icns`**: un `.icns` malicioso
+cuelga a quien empaqueta.
+
+**Por qué se acepta hoy:**
+- Es **build-time**: corre en la máquina que compila, no viaja en la app publicada.
+- Las imágenes del proyecto son nuestras; no se empaquetan assets de terceros.
+- El costo de la alternativa es no poder desarrollar.
+
+**Salidas cuando haga falta cerrarlo:** subir de SDK (npm propone Expo 57, que es cambio mayor),
+o parchear `image-size` en `vendor/` como ya se hizo con `decode-uri-component`. Forzar
+`image-size` 2.x por override **no sirve tal cual**: la v2 cambia la forma de importarla y Metro
+0.83.5 la usa como export por defecto.

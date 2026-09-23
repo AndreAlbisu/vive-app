@@ -170,6 +170,14 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
+### 🔴 El pin de Metro rompía el servidor de desarrollo
+
+- Andre no pudo levantar la app: `TypeError: events is not iterable`, y el proceso muere.
+- **Causa**: el pin de **Metro 0.83.8** que Codex puso el 22/09 (su M05, dependencias). El CLI de Expo SDK 54 escucha el evento de cambio de archivos esperando `{ eventsQueue }`, y `metro-file-map` 0.83.8 emite `{ changes, logger, rootDir }`: el `for…of` recibe `undefined` y se cae al primer archivo que cambie. **Ningún test lo agarra porque los tests no levantan Metro.**
+- **Arreglado volviendo a 0.83.5**, la versión que Expo 54 espera. Verificado de verdad: se levantó el servidor, se tocó, creó y borró un archivo, y no se cayó.
+- ⚠️ **Lo que eso reabre, dicho de frente**: vuelven 10 avisos `high` de `npm audit`, y los diez salen de **una sola dependencia de compilación**, `image-size ≤ 2.0.2`, que Metro 0.83.5 arrastra y 0.83.8 ya no usa. El aviso es una denegación de servicio al empaquetar un `.icns` malicioso: corre **en la máquina que compila, no en la app publicada**, y las imágenes del proyecto son nuestras. Se acepta, con las dos salidas escritas en `docs/security-audit-remediation.md` (subir de SDK, o parchear la dependencia en `vendor/` como ya se hizo con otra).
+- 📌 De paso quedó claro por qué apareció: al instalar `expo-secure-store`, el instalador de Expo había bajado esos pines a 0.83.5 por su cuenta. Se restauraron a 0.83.8 creyendo que era una regresión mía, **y ahí se rompió el arranque**. La conclusión vale para los dos: `expo install` toca más cosas que la librería que le pedís, y el pin "más nuevo" no siempre es el compatible.
+
 ### Revisión cruzada del commit de Codex (23/09, 14:06)
 
 - Codex reemplazó el trigger de reservas por una versión **más estricta** que la de la tanda 2: `requires_payment` es siempre true y confirmar exige pago acreditado **también en las reservas viejas**; además limpió las dos policies que esta sesión había dejado como pendiente menor, y `create-meeting-room` (v37, deployada 14:05) exige pago acreditado sin mirar el flag.
