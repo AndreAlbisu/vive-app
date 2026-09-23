@@ -25,6 +25,8 @@ import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
 import LegalSheet from '@/components/LegalSheet';
 import { supabase } from '@/lib/supabase';
+import { normalizarCodigo } from '@/lib/referidos';
+import { guardarCodigoPendiente } from '@/lib/referidoPendiente';
 import { AyudaAhoraLink } from '@/components/AyudaAhoraLink';
 
 if (Platform.OS === 'android') {
@@ -63,6 +65,10 @@ export default function RegisterScreen() {
   const [appleLoading, setAppleLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // M7: el código de invitación, que se guarda y se canjea recién cuando existe
+  // la cuenta (ver `lib/referidoPendiente.ts`).
+  const [codigo, setCodigo] = useState('');
+  const [mostrarCodigo, setMostrarCodigo] = useState(false);
   // Declaración separada de la de T&C a propósito: §3.1 la trata como una
   // manifestación propia del Usuario, y meterla adentro del mismo tilde la
   // volvería una condición sepultada en un texto que casi nadie lee.
@@ -135,6 +141,12 @@ export default function RegisterScreen() {
       setServerError('Esta cuenta ya está registrada como profesional. No podés crear una cuenta de usuario con el mismo mail.');
       return;
     }
+
+    // Se guarda ANTES de crear la cuenta: `AuthContext` lo canjea en cuanto
+    // aparece la sesión, sin importar por cuál de los tres caminos se dio de
+    // alta. Si el código está mal escrito, `guardarCodigoPendiente` lo descarta
+    // en silencio y el alta sigue igual.
+    if (codigo) await guardarCodigoPendiente(codigo);
 
     const error = await signUpWithEmail(email.trim(), password, name.trim(), acceptedTerms, ageConfirmed);
     setLoading(false);
@@ -407,6 +419,42 @@ export default function RegisterScreen() {
                   <Text style={s.errorHint}>Las contraseñas no coinciden.</Text>
                 )}
 
+                {/* M7: el código de invitación.
+                    🔴 **Va acá y no en el Perfil (23/09/2026).** Es el momento en
+                    que el referido de verdad ocurre: el código acaba de llegar
+                    por WhatsApp. Dejándolo canjeable después, cualquiera que
+                    llegara solo podía pedirle un código a un amigo justo antes
+                    de pagar, y el programa dejaba de medir referidos para pasar
+                    a ser un 10% universal en la primera sesión.
+
+                    📌 Opcional y sin validar contra el servidor mientras se
+                    escribe: si el código no existe, se avisa DESPUÉS de crear la
+                    cuenta y la cuenta igual queda. Frenar un alta por un código
+                    mal tipeado sería cambiar un descuento por un usuario. */}
+                <TouchableOpacity
+                  onPress={() => setMostrarCodigo(v => !v)}
+                  activeOpacity={0.7}
+                  style={s.codigoToggle}>
+                  <Text style={s.codigoToggleTxt}>
+                    {mostrarCodigo ? 'No tengo código' : '¿Te invitó alguien? Tengo un código'}
+                  </Text>
+                </TouchableOpacity>
+
+                {mostrarCodigo && (
+                  <View style={s.inputRow}>
+                    <TextInput
+                      style={s.inputInner}
+                      value={codigo}
+                      onChangeText={v => setCodigo(normalizarCodigo(v))}
+                      placeholder="ABC123"
+                      placeholderTextColor="rgba(135,131,92,0.45)"
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      maxLength={6}
+                    />
+                  </View>
+                )}
+
                 {serverError && (
                   <Text style={s.serverError}>{serverError}</Text>
                 )}
@@ -465,6 +513,11 @@ export default function RegisterScreen() {
 }
 
 const s = StyleSheet.create({
+  // M7. Un link discreto: la gran mayoría no tiene código, y un campo siempre
+  // visible le agrega un renglón al formulario a todo el mundo para servirle a
+  // pocos.
+  codigoToggle: { alignSelf: 'flex-start', paddingVertical: 8 },
+  codigoToggleTxt: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#566245' },
   root: { flex: 1, backgroundColor: CREMA },
   safe: { flex: 1 },
   flex: { flex: 1 },

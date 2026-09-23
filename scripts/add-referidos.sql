@@ -94,12 +94,18 @@ begin
     raise exception 'ya_tiene_referido' using errcode = 'P0001';
   end if;
 
-  -- ⚠️ El descuento es para quien EMPIEZA. Quien ya pagó una sesión no está
-  -- llegando: está volviendo, y ahí el descuento no compra nada.
-  if exists (
-    select 1 from public.bookings
-    where user_id = v_uid and payment_status in ('aprobado', 'reembolsado', 'reembolso_pendiente')
-  ) then
+  -- ⚠️ El descuento es para quien EMPIEZA. Quien ya reservó no está llegando:
+  -- está volviendo, y ahí el descuento no compra nada.
+  --
+  -- 🔴 **Endurecido el 23/09/2026: antes miraba si había PAGADO, ahora si
+  -- reservó.** Con la regla vieja, alguien que llegaba solo, miraba la app una
+  -- semana y justo antes de pagar le pedía un código a un amigo se llevaba el
+  -- descuento igual. Eso no es un programa de referidos: es **un 10% de
+  -- descuento universal en la primera sesión**, que es exactamente la práctica
+  -- que se decidió NO copiarle a Selia (acostumbra a no pagar precio lleno).
+  -- El canje ahora vive en el registro, que es el momento en que el referido
+  -- de verdad ocurrió.
+  if exists (select 1 from public.bookings where user_id = v_uid) then
     raise exception 'ya_uso_la_app' using errcode = 'P0001';
   end if;
 

@@ -24,7 +24,7 @@ import { supabase, registrarEvento } from '@/lib/supabase';
 import { FRASE_BORRAR, coincideBorrado } from '@/lib/confirmarBorrado';
 import { AppBg } from '@/components/ui/AppBg';
 import { deleteMyAccount } from '@/lib/accountDeletion';
-import { DESCUENTO_REFERIDO_PCT, normalizarCodigo, tieneFormaDeCodigo } from '@/lib/referidos';
+import { DESCUENTO_REFERIDO_PCT } from '@/lib/referidos';
 import { getMomentPref, setMomentPref } from '@/lib/sobreVosMomentoStorage';
 import { useConsent } from '@/hooks/useConsent';
 type Profesional = {
@@ -46,9 +46,6 @@ export default function ProfileOwnScreen() {
   const router = useRouter();
   // M7: mi código para invitar, y el de quien me invitó.
   const [miCodigo, setMiCodigo] = useState<string | null>(null);
-  const [codigoTipeado, setCodigoTipeado] = useState('');
-  const [canjeando, setCanjeando] = useState(false);
-  const [puedeCanjear, setPuedeCanjear] = useState(false);
   const { user, signOut, isAdmin, displayName: nombrePerfil } = useAuth();
 
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
@@ -67,45 +64,10 @@ export default function ProfileOwnScreen() {
 
   useEffect(() => { getMomentPref().then(setMomentoEnabled); }, []);
 
-  // M7. 📌 Se pregunta lo mismo que pregunta el cobro (`tiene_descuento_referido`)
-  // en vez de mirar columnas: `referred_by` no es legible por el cliente, y así
-  // no hay dos definiciones de "le corresponde descuento".
-  useEffect(() => {
-    if (!user) { setPuedeCanjear(false); return; }
-    let vivo = true;
-    void supabase.rpc('tiene_descuento_referido', { p_user: user.id }).then(({ data }) => {
-      // Puede canjear quien NO tiene ya un descuento pendiente. Si el servidor
-      // no contesta, se asume que no, para no ofrecer algo que va a fallar.
-      if (vivo) setPuedeCanjear(data === false);
-    });
-    return () => { vivo = false; };
-  }, [user]);
-
   async function pedirMiCodigo() {
     const { data, error } = await supabase.rpc('mi_codigo_referido');
     if (error || !data) { Alert.alert('No se pudo', 'Probá de nuevo en un rato.'); return; }
     setMiCodigo(data as string);
-  }
-
-  async function canjear() {
-    setCanjeando(true);
-    const { error } = await supabase.rpc('canjear_codigo', { p_codigo: codigoTipeado });
-    setCanjeando(false);
-    if (error) {
-      const m = error.message ?? '';
-      Alert.alert(
-        'No se pudo usar ese código',
-        m.includes('codigo_propio') ? 'Ese es tu propio código.'
-          : m.includes('codigo_inexistente') ? 'No encontramos ese código. Fijate que esté bien escrito.'
-          : m.includes('ya_uso_la_app') ? 'El descuento es para la primera sesión, y vos ya tuviste sesiones con nosotros.'
-          : m.includes('ya_tiene_referido') ? 'Ya usaste un código.'
-          : 'Probá de nuevo en un rato.',
-      );
-      return;
-    }
-    setPuedeCanjear(false);
-    setCodigoTipeado('');
-    Alert.alert('Listo', `Tu primera sesión sale ${DESCUENTO_REFERIDO_PCT}% menos.`);
   }
 
   async function toggleMomento(value: boolean) {
@@ -424,33 +386,12 @@ export default function ProfileOwnScreen() {
           <Animated.View style={fadeUp(configAnim)}>
             <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>Invitar a alguien</Text>
             <View style={styles.invitarCard}>
-              {puedeCanjear ? (
-                <>
-                  <Text style={styles.invitarTxt}>
-                    {`¿Te invitó alguien? Poné su código y tu primera sesión sale ${DESCUENTO_REFERIDO_PCT}% menos.`}
-                  </Text>
-                  <View style={styles.invitarFila}>
-                    <TextInput
-                      style={styles.invitarInput}
-                      value={codigoTipeado}
-                      onChangeText={t => setCodigoTipeado(normalizarCodigo(t))}
-                      placeholder="ABC123"
-                      placeholderTextColor="rgba(135,131,92,0.5)"
-                      autoCapitalize="characters"
-                      autoCorrect={false}
-                      maxLength={6}
-                    />
-                    <TouchableOpacity
-                      style={[styles.invitarBtn, !tieneFormaDeCodigo(codigoTipeado) && styles.invitarBtnOff]}
-                      disabled={!tieneFormaDeCodigo(codigoTipeado) || canjeando}
-                      onPress={canjear}
-                      activeOpacity={0.85}>
-                      <Text style={styles.invitarBtnTxt}>{canjeando ? '…' : 'Usar'}</Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              ) : null}
-
+              {/* 🔴 Acá ya NO se canjea un código (23/09/2026): el canje se mudó
+                  al registro, que es el momento en que el referido de verdad
+                  ocurre. Mientras vivió acá, cualquiera que hubiera llegado solo
+                  podía pedirle un código a un amigo justo antes de pagar, y eso
+                  convertía el programa en un 10% universal en la primera sesión.
+                  Lo que queda es solo TU código, para compartir. */}
               <Text style={styles.invitarTxt}>
                 {`Compartí tu código y la primera sesión de quien llegue sale ${DESCUENTO_REFERIDO_PCT}% menos.`}
               </Text>
@@ -458,7 +399,11 @@ export default function ProfileOwnScreen() {
                 <TouchableOpacity
                   style={styles.invitarCodigo}
                   onPress={() => Share.share({
-                    message: `Te invito a Vita. Con mi código ${miCodigo} tu primera sesión sale ${DESCUENTO_REFERIDO_PCT}% menos. https://vitaapp.com.ar`,
+                    // El código va DOS veces a propósito: en el texto, para
+                    // poder tipearlo a mano al crear la cuenta, y adentro del
+                    // link, para el día que la app lo lea sola. Hoy la app no
+                    // está publicada, así que el que sirve es el primero.
+                    message: `Te invito a Vita. Con mi código ${miCodigo} tu primera sesión sale ${DESCUENTO_REFERIDO_PCT}% menos.\n\nhttps://vitaapp.com.ar/?ref=${miCodigo}`,
                   }).catch(() => {})}
                   activeOpacity={0.8}>
                   <Text style={styles.invitarCodigoTxt}>{miCodigo}</Text>

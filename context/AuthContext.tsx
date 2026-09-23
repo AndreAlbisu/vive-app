@@ -13,6 +13,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { volcarPendiente } from '@/lib/quizPendiente';
+import { canjearReferidoPendiente } from '@/lib/referidoPendiente';
 import { enlazarConCuenta, anotar } from '@/lib/analytics';
 import { conTope, TOPE } from '@/lib/conTope';
 
@@ -279,6 +280,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // vive adentro) y no bloquea nada — si falla, se reintenta al próximo
         // login.
         void volcarPendiente(u.id);
+
+        // El código de invitación que se tipeó en el registro, cuando todavía no
+        // había cuenta a la cual colgarlo. Mismo patrón que la línea de arriba.
+        // Se hace acá y no en `RegisterScreen` para cubrir los tres caminos de
+        // alta (mail, Google y Apple) en un solo lugar.
+        void canjearReferidoPendiente();
 
         // 🔴 El único punto donde el recorrido ANÓNIMO se puede unir con la
         // persona. Todos los eventos del onboarding se escriben sin sesión, o
