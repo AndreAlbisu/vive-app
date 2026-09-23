@@ -92,7 +92,7 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   la web estática del repo sí tiene prueba para el XSS corregido.
 
 ---
-## 2026-09-23 — Andre (sesión 268 · auditoría de seguridad: dos agujeros cerrados, uno grave)
+## 2026-09-23 — Andre (sesión 268 · auditoría de seguridad: tres agujeros cerrados, uno grave)
 
 **Tocado:** `scripts/cerrar-columnas-postulacion.sql` y `scripts/cerrar-reserva-sin-pago.sql` (nuevos, **corridos y verificados en producción**), `screens/CoachApplicationScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `supabase/functions/create-meeting-room/index.ts` (v36 deployada), `SCHEMA.md`, `docs/problemas-abiertos.md`
 
@@ -120,6 +120,14 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - **Arreglado en tres capas**: la base (`requires_payment` mira los tres rieles y nunca baja a false), la app (sin URL de checkout ahora corta con un mensaje claro en vez de confirmar) y la sala (`create-meeting-room` v36 exige pago acreditado). `scripts/cerrar-reserva-sin-pago.sql`, corrido y verificado: el ataque ahora responde `pago_no_acreditado` y el camino legítimo sigue funcionando.
   - 📌 **No se usó**: las 8 reservas confirmadas de producción están todas pagadas.
 - 🟢 Lo demás de esta tanda, en orden: el cliente puede escribir 15 columnas de `bookings` pero el trigger le pisa `status`, `amount`, `coach_name` y valida que la sala sea suya; `payment_status` **no es escribible** por el cliente; cancelar queda marcado con quién canceló según `auth.uid()`, no según lo que mande el cliente.
+
+### Tanda 3 — mensajería, perfiles, secretos e infraestructura
+
+- 📋 **Apareció `.security-audit-handoff.local.md`** (local, fuera de git) con la división de trabajo: **Claude** toma autenticación, permisos de base, perfiles, mensajería, secretos e infraestructura; **Codex** toma pagos, checkouts, reservas, asistencia, descuentos y reintegros. ⚠️ **El hallazgo de la tanda 2 (confirmar sin pagar) cae en el área de Codex** y ya está cerrado desde acá: queda anotado en el handoff para que no se pise.
+- 🔴 **HALLAZGO PROPIO, cerrado: se podían fabricar avisos de Vita dentro del chat.** En la Sala, un mensaje con `sender_type` de sistema se dibuja como tarjeta oficial (sin globo ni autor), y la policy solo pedía ser participante. Un profesional podía mandarle a su cliente *"Vita confirmó tu pago, entrá a la sala"*, o un cliente fabricar una cancelación. El lado del globo nunca fue falsificable (sale de `sender_id`).
+  - **Arreglado**: los avisos solo se aceptan si la reserva de esa sala está **de verdad** en ese estado, y `user`/`coach` solo los manda quien corresponde. Probado contra producción: el chat normal entra, el aviso fabricado y el mensaje suplantado ahora fallan, y el aviso legítimo del profesional (con la reserva confirmada) sigue entrando.
+- 🟢 **Notificaciones: ya estaban cubiertas por el trigger de Codex** (`guard_client_notification`), que además de limitar los tipos **reescribe el título y el cuerpo** con el texto de Vita. Se dejó una segunda cerradura en la policy. Probado: un "credencial verificada" falso ahora no entra, y a un aviso legítimo con título inventado se le reemplaza el texto.
+- 🟢 **Sin hallazgos** en: perfiles (alguien logueado solo ve nombre, foto, género y rol de los demás — la duda que SCHEMA.md dejaba abierta queda cerrada), almacenamiento (cada uno escribe solo en su carpeta; credenciales y pruebas de sanciones sin lectura pública), secretos (las cuatro claves versionadas son la pública `anon`, ninguna de servidor; no hay `.env` en git), funciones con permisos elevados (todas con `search_path` fijo) y tiempo real (las 5 tablas publicadas tienen RLS).
 
 **Pendiente para la próxima sesión:**
 - Limpiar las dos policies que todavía dejan confirmar "sin intento de cobro" (hoy inofensivas: el trigger corta antes).
