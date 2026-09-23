@@ -27,6 +27,7 @@ import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 import { AppBg } from '@/components/ui/AppBg';
 import { localDayKey } from '@/lib/dates';
 import { semanaDeEscritura } from '@/lib/semanaDiario';
+import { MOOD_PROMPTS, PROMPT_BIENVENIDA, CIERRE_DEFAULT, type Prompt } from '@/lib/vozCompartida';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface JournalEntry {
@@ -37,41 +38,11 @@ interface JournalEntry {
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
-// Pregunta del espacio de escritura, según el ánimo elegido para ESTA entrada
-// (mismos niveles que ViveMoodColors: 1=Bajón..5=Brillando).
-//
-// Partida en tres porque se muestra en tres tamaños: `lead` valida cómo venís,
-// `pregunta` es lo que se responde, `cierre` acompaña. Antes era un solo string
-// corrido, que a tamaño de título no se puede jerarquizar.
-type Prompt = { lead: string; pregunta: string; cierre?: string };
-
-const MOOD_PROMPTS: Record<number, Prompt> = {
-  1: { lead: 'Hoy venís con un bajón.',   pregunta: '¿Qué es lo que más te está pesando?',        cierre: 'Soltalo acá, sin filtro.' },
-  // 🔴 Antes: *"Se nota que estás cansado."* — rompía DOS reglas de la voz, y
-  // ninguna es discutible (`docs/la-voz-de-sofia.md`):
-  //  · **"Se nota que"** es la app poniéndose de testigo. El `SYSTEM` lo prohíbe
-  //    por nombre y `rejectCopy` lo frena desde el 07/09.
-  //  · **"cansado"** le asigna género a quien lee. Es exactamente el bug que
-  //    Andre cazó con *"parejo"* en la tarjeta, y está en `NIVEL_MASCULINO`.
-  //
-  // ⚠️ Los prompts del Diario son la MISMA voz en otra pantalla y nadie los
-  // había revisado: se escribieron antes de que las reglas existieran, y no hay
-  // nada que los verifique. Encontrado el 08/09 pasándolos por `rejectCopy`.
-  2: { lead: 'Hoy venís con poca energía.', pregunta: '¿Qué te está drenando la energía estos días?' },
-  3: { lead: 'Un día tranquilo.',          pregunta: '¿Qué anduvo dando vueltas por tu cabeza hoy?' },
-  4: { lead: 'Venís bien hoy.',            pregunta: '¿Qué fue lo que sumó para sentirte así?' },
-  5: { lead: '¡Hoy estás brillando!',      pregunta: '¿Qué hizo especial este día?',              cierre: 'Dejalo guardado acá.' },
-};
-
-// La primera vez —sin ninguna entrada todavía— gana la bienvenida aunque haya
-// un ánimo elegido: a quien nunca escribió acá hay que decirle qué es esto,
-// no preguntarle por su día.
-const PROMPT_BIENVENIDA: Prompt = {
-  lead: 'Este es tu espacio.',
-  pregunta: 'Escribí lo que necesites descargar, sin juzgarte.',
-};
-
-const CIERRE_DEFAULT = 'No hay respuesta correcta. Escribí lo que te salga.';
+// Los prompts del espacio de escritura (según el ánimo elegido, la bienvenida y
+// el cierre) viven en `@/lib/vozCompartida` junto con los de Gratitud: son la
+// MISMA voz de Sofía en otra pantalla, y ese módulo los barre con un guardarraíl
+// para que no vuelvan a nacer con un adjetivo de género sobre quien lee (el bug
+// de "cansado"/"agradecido", `docs/problemas-abiertos.md` C7).
 
 // Con hora: desde que el ánimo es por entrada se puede escribir dos veces el
 // mismo día con ánimos distintos, y dos filas que dicen "4 de septiembre" no se
