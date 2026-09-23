@@ -87,7 +87,10 @@ El aviso es una **denegación de servicio en el parser de archivos `.icns`**: un
 cuelga a quien empaqueta.
 
 **Por qué se acepta hoy:**
-- Es **build-time**: corre en la máquina que compila, no viaja en la app publicada.
+- Es **build-time**, y se verificó en vez de suponerlo: los únicos archivos de `node_modules` que
+  usan `image-size` son `metro/src/Assets.js` (mide las imágenes al empaquetar, dos copias: la de
+  `@expo/metro` y la de `@react-native/community-cli-plugin`) y bundles del depurador de React
+  Native. Nada que viaje dentro de la app publicada.
 - Las imágenes del proyecto son nuestras; no se empaquetan assets de terceros.
 - El costo de la alternativa es no poder desarrollar.
 
