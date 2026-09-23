@@ -1538,46 +1538,59 @@ export default function SalaScreen() {
             </View>
           )}
 
-          {/* M15: mover en vez de perder. 🔴 **Va ARRIBA de cancelar y no al
-              lado**, porque el problema que resuelve es que hoy la única salida
-              visible es cancelar, y cancelar tarde hace perder la plata: si las
-              dos opciones pesan igual, la de perder la plata sigue ganando por
-              costumbre.
+          {/* Las dos salidas de una sesión reservada, detrás de un solo toque.
+              ⚠️ **Cambiado el 23/09/2026 después de verlo en el teléfono.** Antes
+              "Mover la sesión" estaba suelto y arriba de "Cancelar", con una
+              línea de ayuda debajo. La intención era buena (que mover pese más
+              que cancelar, porque cancelar tarde hace perder la plata) pero la
+              ejecución era mala: *"está súper incómoda ahí, casi que te dan ganas
+              de apretarlo"*.
 
-              Solo del lado del CLIENTE (`recipientIsCoach` significa que el otro
-              es el profesional, o sea que yo soy quien reservó). Que el
-              profesional mueva la sesión es M16 y funciona al revés: propone y
-              el cliente elige. */}
-          {recipientIsCoach && activeBooking && recipientId && (() => {
-            const r = puedeReagendar(activeBooking);
-            if (r.puede === 'no') return null;
-            return (
-              <TouchableOpacity
-                style={styles.moverBtn}
-                onPress={() => router.push({
-                  pathname: '/booking-calendar',
-                  params: {
-                    coachId: recipientId,
-                    name: recipientProfile?.name ?? '',
-                    reagendar: activeBooking.id,
-                  },
-                })}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.moverBtnText}>Mover la sesión</Text>
-                <Text style={styles.moverBtnHint}>{textoReagendar(r)}</Text>
-              </TouchableOpacity>
-            );
-          })()}
+              Es una acción que se usa poco, mostrada con el peso de una acción
+              principal, en la pantalla donde la persona viene a conversar. Un
+              botón grande al lado del chat invita a tocarlo por curiosidad, y del
+              otro lado hay una sesión ya acordada.
 
+              📌 **La prioridad se conserva**: adentro del menú, mover aparece
+              primero y cancelar al final, en rojo. Cambió el volumen, no el
+              orden. Y es el mismo patrón que el profesional ya tiene en su agenda
+              y en Reservas.
+
+              📌 La línea que explicaba qué pasa al mover (las 24hs) pasó a ser el
+              subtítulo del menú: se lee recién cuando la persona decidió mirar
+              las opciones, en vez de ocupar un renglón fijo al lado del chat. */}
           <TouchableOpacity
-            style={styles.cancelBtn}
-            onPress={handleCancelBooking}
+            style={styles.opcionesBtn}
+            onPress={() => {
+              const opciones: { text: string; onPress?: () => void; style?: 'cancel' | 'destructive' }[] = [];
+              const r = activeBooking ? puedeReagendar(activeBooking) : null;
+              const puedeMover = !!(recipientIsCoach && activeBooking && recipientId && r && r.puede !== 'no');
+              if (puedeMover && activeBooking && recipientId) {
+                opciones.push({
+                  text: 'Mover la sesión',
+                  onPress: () => router.push({
+                    pathname: '/booking-calendar',
+                    params: {
+                      coachId: recipientId,
+                      name: recipientProfile?.name ?? '',
+                      reagendar: activeBooking.id,
+                    },
+                  }),
+                });
+              }
+              opciones.push({ text: 'Cancelar sesión', style: 'destructive', onPress: handleCancelBooking });
+              opciones.push({ text: 'Volver', style: 'cancel' });
+              Alert.alert(
+                'Esta sesión',
+                puedeMover && r ? textoReagendar(r) : undefined,
+                opciones,
+              );
+            }}
             disabled={isCancelling}
             activeOpacity={0.7}
           >
-            <Text style={[styles.cancelBtnText, isCancelling && styles.cancelBtnTextDisabled]}>
-              {isCancelling ? 'Cancelando…' : 'Cancelar sesión'}
+            <Text style={styles.opcionesBtnText}>
+              {isCancelling ? 'Cancelando…' : 'Opciones de la sesión'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -2250,12 +2263,10 @@ const styles = StyleSheet.create({
   propuestaNo: { marginTop: 12 },
   propuestaNoTxt: { color: '#E05252', fontFamily: ViveFonts.medium, fontSize: 12.5 },
 
-  // M15. Mover es la salida buena, así que se ve como una acción y no como el
-  // link discreto de cancelar. No usa el rojo de cancelar: no está pasando nada
-  // malo, se está arreglando algo.
-  moverBtn: { alignSelf: 'flex-start', marginTop: 12 },
-  moverBtnText: { fontFamily: ViveFonts.semibold, fontSize: 14, color: ViveColors.primary },
-  moverBtnHint: { fontFamily: ViveFonts.regular, fontSize: 12, color: '#566245', marginTop: 2, maxWidth: 280 },
+  // Una sola entrada discreta para las dos salidas de la sesión, del peso del
+  // link que antes tenía "Cancelar": no compite con la conversación.
+  opcionesBtn: { alignSelf: 'flex-start', marginTop: 10 },
+  opcionesBtnText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#566245' },
 
   cancelBtn: { alignSelf: 'flex-start', marginTop: 8 },
   cancelBtnText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#E05252' },
