@@ -17,7 +17,7 @@
 **Pendiente para la próxima sesión:**
 - Probar en el teléfono con un cliente que tenga varias sesiones con notas. El historial es de solo lectura: si hace falta editar notas viejas, es otro cambio.
 
-## 2026-09-23 — Codex (integridad de pagos y reintegros; preparado, no desplegado)
+## 2026-09-23 — Codex (integridad de pagos y reintegros; desplegado)
 
 **Tocado:** `supabase/migrations/20260923010000_payment_integrity.sql`, funciones de cobro de MP/PayPal/USDT, `session-attendance`, efectos de reserva, cron de conciliación, pruebas de seguridad y `SCHEMA.md`.
 
@@ -27,7 +27,7 @@
 - Un índice único impide dos descuentos de referido activos para la misma persona, incluso con checkouts simultáneos. PayPal rechaza importes ausentes, no numéricos o cero.
 - Pruebas nuevas ejercitan el reclamo de efectos, el índice, la guarda de finalización y los importes inválidos; `npm run test:security` y `tsc --noEmit` pasan.
 
-**Pendiente operativo:** aplicar primero la migración en una ventana controlada, después desplegar las funciones y por último instalar `scripts/add-paid-effects-recovery-cron.sql`. Antes de aplicar, comprobar que no haya descuentos históricos duplicados que impidan crear el índice. No se ejecutó SQL ni se desplegó a Supabase en esta sesión.
+**Despliegue:** se hizo una exportación privada de roles, esquema y datos; la comprobación previa halló 0 usuarios con descuentos duplicados. Se aplicó la migración, se publicaron las seis funciones afectadas y se instaló `scripts/add-paid-effects-recovery-cron.sql`. El reconciliador respondió HTTP 200 en cuatro ejecuciones automáticas; `session-attendance` respondió HTTP 200. Quedaron 0 reservas aprobadas en `pendiente` y 7 reservas históricas de prueba, completadas y pagadas ($1 cada una), con `refund_resolution='due'`: requieren revisión manual porque el sistema no reabre ni reembolsa automáticamente una reserva en estado final.
 
 ## 2026-09-22 — Andre (Codex · correcciones de auditoría de seguridad)
 
