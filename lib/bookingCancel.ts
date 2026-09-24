@@ -134,12 +134,12 @@ export function refundMessage(refund: RefundOutcome): { title: string; body: str
     case 'mp':
       return {
         title: 'Sesión cancelada',
-        body: 'Te devolvemos el total a tu medio de pago. El reembolso sale ahora, pero puede tardar unos días en aparecer en tu resumen. Depende de tu banco, no de nosotros.',
+        body: 'Te devolvemos el total a tu medio de pago. El reembolso sale ahora, pero puede tardar unos días en aparecer en tu resumen. Depende de tu banco, no de nosotros. Podés seguirlo en Perfil › Mis pagos.',
       };
     case 'usdt':
       return {
         title: 'Sesión cancelada',
-        body: 'Te devolvemos el total. Necesitamos que nos digas a qué dirección mandártelo: vas a ver el aviso en Sesiones.',
+        body: 'Te devolvemos el total. Necesitamos que nos digas a qué dirección mandártelo: vas a ver el aviso en Sesiones y en Perfil › Mis pagos.',
       };
     case 'tardia':
       return {

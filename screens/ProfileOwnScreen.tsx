@@ -206,6 +206,8 @@ export default function ProfileOwnScreen() {
     // detecta un patrón, pero un umbral es una heurística y la necesidad no
     // espera a cumplirla. Tiene que haber siempre un camino estable hasta acá.
     { id: 'ayuda', icon: 'lifebuoy', label: 'Si necesitás ayuda ahora', onPress: () => router.push('/ayuda') },
+    // En qué está la plata de cada reserva y cada devolución (docs/investigacion-producto-2026-09-23.md, punto 3).
+    { id: 'pagos', icon: 'receipt-text-outline', label: 'Mis pagos', onPress: () => router.push('/mis-pagos' as any) },
     { id: 'blocked', icon: 'account-cancel-outline', label: 'Cuentas bloqueadas', onPress: () => router.push('/cuentas-bloqueadas') },
     // Crear o cambiar la contraseña. Sobre todo para quien entró con un código
     // (la cuenta nacida en la web no tiene), pero sirve para cualquiera.

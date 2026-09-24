@@ -321,6 +321,7 @@ export default function RootLayout() {
           <Stack.Screen name="coach-reservas" options={{ headerShown: false }} />
           <Stack.Screen name="pago-usdt" options={{ headerShown: false }} />
           <Stack.Screen name="reembolso" options={{ headerShown: false }} />
+          <Stack.Screen name="mis-pagos" options={{ headerShown: false }} />
           <Stack.Screen name="perfil" options={{ headerShown: false }} />
           <Stack.Screen name="agenda" options={{ headerShown: false }} />
           <Stack.Screen name="coach-availability" options={{ headerShown: false }} />

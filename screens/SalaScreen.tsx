@@ -35,6 +35,7 @@ import UserActionsSheet from '@/components/UserActionsSheet';
 import { areBlocked, loadBlockedIds } from '@/lib/blocking';
 import SessionNotesSheet from '@/components/SessionNotesSheet';
 import SessionIssueSheet from '@/components/SessionIssueSheet';
+import OpcionesSheet, { type Opcion } from '@/components/OpcionesSheet';
 import { getProblemaSesion } from '@/lib/sessionIssues';
 import { getRelationshipNotes, type SessionNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
@@ -216,6 +217,7 @@ export default function SalaScreen() {
   const [problemaOpen, setProblemaOpen] = useState(!!verReporteId);
   const [problemaBookingId, setProblemaBookingId] = useState<string | null>(verReporteId ?? null);
   const [tieneReporte, setTieneReporte] = useState(false);
+  const [menuSesion, setMenuSesion] = useState<{ title: string; subtitle?: string; opciones: Opcion[] } | null>(null);
   const [resolviendo, setResolviendo] = useState(false);
   const [recipientIsCoach, setRecipientIsCoach] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -1643,7 +1645,7 @@ export default function SalaScreen() {
           <TouchableOpacity
             style={styles.opcionesBtn}
             onPress={() => {
-              const opciones: { text: string; onPress?: () => void; style?: 'cancel' | 'destructive' }[] = [];
+              const opciones: Opcion[] = [];
               const r = activeBooking ? puedeReagendar(activeBooking) : null;
               const puedeMover = !!(recipientIsCoach && activeBooking && recipientId && r && r.puede !== 'no');
               if (puedeMover && activeBooking && recipientId) {
@@ -1661,18 +1663,26 @@ export default function SalaScreen() {
               }
               if (activeBooking) {
                 const id = activeBooking.id;
+                // Solo quien pagó (el cliente): al profesional no le corresponde.
+                if (recipientIsCoach) {
+                  opciones.push({
+                    text: 'Ver el pago',
+                    onPress: () => router.push({ pathname: '/mis-pagos' as any, params: { booking: id } }),
+                  });
+                }
                 opciones.push({
                   text: tieneReporte ? 'Ver tu reporte' : 'Tengo un problema con esta sesión',
                   onPress: () => abrirProblema(id),
                 });
               }
-              opciones.push({ text: 'Cancelar sesión', style: 'destructive', onPress: handleCancelBooking });
-              opciones.push({ text: 'Volver', style: 'cancel' });
-              Alert.alert(
-                'Esta sesión',
-                puedeMover && r ? textoReagendar(r) : undefined,
+              opciones.push({ text: 'Cancelar sesión', destructive: true, onPress: handleCancelBooking });
+              // Hoja y no `Alert`: en Android el Alert muestra hasta 3 botones y
+              // este menú tiene hasta 5. Ver `components/OpcionesSheet.tsx`.
+              setMenuSesion({
+                title: 'Esta sesión',
+                subtitle: puedeMover && r ? textoReagendar(r) : undefined,
                 opciones,
-              );
+              });
             }}
             disabled={isCancelling}
             activeOpacity={0.7}
@@ -2158,6 +2168,14 @@ export default function SalaScreen() {
         reportedName={recipientProfile?.name ?? 'esta persona'}
         reportedId={recipientId ?? ''}
         salaId={salaId}
+      />
+
+      <OpcionesSheet
+        visible={!!menuSesion}
+        onClose={() => setMenuSesion(null)}
+        title={menuSesion?.title ?? ''}
+        subtitle={menuSesion?.subtitle}
+        opciones={menuSesion?.opciones ?? []}
       />
 
       {problemaBookingId && (

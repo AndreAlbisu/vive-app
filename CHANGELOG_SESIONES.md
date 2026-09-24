@@ -16,6 +16,22 @@
 **Pendiente para la próxima sesión:**
 - Probar en el teléfono: sin check-in de hoy, tocar la tarjeta abre Progreso; con check-in, sigue yendo a donde dice el CTA.
 
+## 2026-09-23 — Andre (Claude · Mis pagos)
+
+**Tocado:** `lib/pagos.ts` (nuevo), `screens/MisPagosScreen.tsx` + `app/mis-pagos.tsx` (nuevos), `components/OpcionesSheet.tsx` (nuevo), `__tests__/pagos.test.ts` (nuevo), `app/_layout.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/SalaScreen.tsx`, `lib/bookingCancel.ts`
+
+**Resumen:**
+- 💸 **Punto 3 del informe de producto.** Nueva pantalla **Perfil › Mis pagos**: cada reserva con intento de cobro, con monto real (descuenta el referido de Mercado Pago, que se guarda aparte), medio, y en qué está: pagado, esperando confirmación, pago no completado, devolución en proceso, **demorada** (el dead-letter de 6 intentos de `mp-process-refunds`, que antes nadie veía), falta tu dirección USDT, devuelto, o pagado sin devolución por cancelación tardía. Todo sale de la base al abrir la pantalla.
+- 📌 Reglas de redacción: "devuelto" es lo que **confirmó el proveedor**, y se aclara que el banco puede tardar; no se promete ningún plazo que no controlamos; y se dice que **no es una factura** (la factura el profesional). Cada tarjeta tiene "¿Algo no está bien? Escribinos", que abre el mismo reporte de la Sala (`session_issues`): una sola bandeja para el equipo.
+- Accesos: Perfil, "Ver el pago" en Opciones de la sesión (solo cliente, resalta esa reserva), y el aviso después de cancelar ahora dice dónde seguir la devolución.
+- 🔴 **"Opciones de la sesión" pasó de `Alert` a una hoja** (`OpcionesSheet`): en Android un `Alert` muestra hasta 3 botones y descarta el resto sin error. Con "Ver el pago" y "Tengo un problema" el menú llega a 5; sin el cambio, en Android se habrían perdido justo las opciones nuevas (y ya pasaba con "Tengo un problema", agregado en la entrada anterior).
+- Sin cambios en la base (lee columnas que el cliente ya podía leer). 10 tests nuevos de estados; 873 en total pasan; el bundle de Android compila.
+
+**Pendiente para la próxima sesión:**
+- Probarlo en el teléfono con las reservas de prueba (hay de casi todos los estados: reembolsadas, pendientes, una en dead-letter).
+- Avisar a Codex: toca solo lectura de `bookings` y el texto de `refundMessage`; no cambia cobros ni reembolsos.
+- Queda del informe: universal links (punto 6, con la publicación), beta cerrada (punto 5), lenguaje de entrada (punto 7) y recordatorio del diario (punto 8).
+
 ## 2026-09-23 — Andre (Claude · profesión como dato)
 
 **Tocado:** `scripts/add-profesion-estructurada.sql` (nuevo, corrido), `supabase/functions/admin-actions` (v36), `lib/tipoProfesional.ts`, `lib/coachesCache.ts`, `app/search3.tsx`, `lib/enfoque.ts`, `screens/CoachEnfoqueScreen.tsx`, `lib/credentialRules.ts`, `lib/coachCredentials.ts`, `screens/ProfesionalScreen.tsx`, `screens/AdminScreen.tsx`, `lib/admin.ts`, tests de quiz y enfoque, `docs/terminos-y-condiciones.md` (+ `sync:legal`), `SCHEMA.md`
