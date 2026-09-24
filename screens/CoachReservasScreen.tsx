@@ -747,7 +747,7 @@ export default function CoachReservasScreen() {
                           no le quedaba más que cancelar. Que es exactamente lo
                           que M16 vino a evitar. */}
                       {b.id === nextId && nextWithin24h && (
-                        <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={() => router.navigate('/(coach)')}>
+                        <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={() => router.navigate({ pathname: '/(coach)', params: { preparar: '1' } })}>
                           <Text style={s.btnGhostTxt}>Preparar</Text>
                         </TouchableOpacity>
                       )}

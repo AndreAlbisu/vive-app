@@ -13,7 +13,8 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { getRelationshipNotes } from '@/lib/sessionNotes';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -130,7 +131,16 @@ type Pendiente = {
 };
 
 type PrepResource = { id: string; title: string; opened: boolean; roomId: string | null };
-type Prep = { lastDaysAgo: number | null; resources: PrepResource[]; animo: AnimoCliente | null };
+type NotaPrep = { content: string; createdAt: string };
+type Prep = {
+  lastDaysAgo: number | null;
+  resources: PrepResource[];
+  animo: AnimoCliente | null;
+  /** La nota privada más reciente del profesional con esta persona. */
+  notaPrivada: NotaPrep | null;
+  /** La última nota compartida: lo que le dejó (tarea, acuerdo). */
+  notaCompartida: NotaPrep | null;
+};
 
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -168,6 +178,10 @@ export default function CoachHomeScreen() {
   const [next, setNext] = useState<NextSession | null>(null);
   const [prep, setPrep] = useState<Prep | null>(null);
   const [prepOpen, setPrepOpen] = useState(false);
+  // "Preparar" desde Reservas llega con `?preparar=1`: abre el panel directo
+  // en vez de dejar al profesional buscando el botón otra vez.
+  const { preparar } = useLocalSearchParams<{ preparar?: string }>();
+  useEffect(() => { if (preparar === '1') setPrepOpen(true); }, [preparar]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -459,7 +473,7 @@ export default function CoachHomeScreen() {
       });
 
       // Preparar sesión: última completada + recursos recomendados (Recursos v2)
-      const [{ data: lastDone }, { data: recs }] = await Promise.all([
+      const [{ data: lastDone }, { data: recs }, notas] = await Promise.all([
         supabase.from('bookings').select('scheduled_date')
           .eq('coach_id', coachId).eq('user_id', b.user_id).eq('status', 'completada')
           .order('scheduled_date', { ascending: false }).limit(1),
@@ -467,7 +481,14 @@ export default function CoachHomeScreen() {
           .select('id, opened_at, room_id, coach_resources!inner(title)')
           .eq('coach_id', coachId).eq('user_id', b.user_id)
           .order('created_at', { ascending: false }).limit(6),
+        // 24/09/2026. Lo que un profesional relee antes de una sesión es SU
+        // nota de la anterior. Vivía detrás de "Notas" en el chat.
+        getRelationshipNotes({ userId: b.user_id as string, coachId: user.id, asCoach: true }),
       ]);
+      const ultimaDe = (compartida: boolean): NotaPrep | null => {
+        const n = [...notas].filter(x => x.shared === compartida).sort((a, z) => z.createdAt.localeCompare(a.createdAt))[0];
+        return n ? { content: n.content, createdAt: n.createdAt } : null;
+      };
       let lastDaysAgo: number | null = null;
       if (lastDone?.[0]?.scheduled_date) {
         lastDaysAgo = Math.max(0, -daysFromTodayAr(lastDone[0].scheduled_date as string));
@@ -498,7 +519,7 @@ export default function CoachHomeScreen() {
         }
       }
 
-      setPrep({ lastDaysAgo, resources, animo });
+      setPrep({ lastDaysAgo, resources, animo, notaPrivada: ultimaDe(false), notaCompartida: ultimaDe(true) });
     } else {
       setNext(null);
       setPrep(null);
@@ -954,12 +975,40 @@ export default function CoachHomeScreen() {
                 <Text style={s.actCompuTxt}>Hacerla desde la computadora</Text>
               </TouchableOpacity>
 
+              {/* 🔴 24/09/2026. El panel mostraba lo que había a mano en la base
+                  (días desde la última sesión y recursos abiertos), no lo que un
+                  profesional relee antes de una sesión. Ahora, en este orden:
+                  en qué quedaron (SU nota privada), qué le dejó (la nota
+                  compartida y los recursos), y el dato de contexto.
+                  📌 Solo lo que el profesional escribió o mandó: nada que la app
+                  registre del cliente sin que él elija compartirlo. */}
               {prepOpen && (
                 <View style={s.prep}>
                   <Text style={s.prepLine}>
-                    <Text style={s.prepB}>Última sesión: </Text>
-                    {prep?.lastDaysAgo == null ? 'primera sesión juntos' : `hace ${prep.lastDaysAgo} ${prep.lastDaysAgo === 1 ? 'día' : 'días'}`}
+                    {prep?.lastDaysAgo == null
+                      ? <Text style={s.prepB}>Primera sesión juntos</Text>
+                      : <><Text style={s.prepB}>{next.ordinal}</Text>{` · la anterior fue hace ${prep.lastDaysAgo} ${prep.lastDaysAgo === 1 ? 'día' : 'días'}`}</>}
                   </Text>
+
+                  {prep?.notaPrivada ? (
+                    <View style={{ marginTop: 10 }}>
+                      <Text style={s.prepB}>La última vez</Text>
+                      <Text style={[s.prepLine, { marginTop: 3 }]} numberOfLines={8}>{prep.notaPrivada.content}</Text>
+                    </View>
+                  ) : (
+                    <Text style={[s.prepLine, { marginTop: 10 }]}>
+                      {prep?.lastDaysAgo == null
+                        ? `Es la primera con ${next.userName.split(' ')[0]}. Al terminar, anotá lo que trabajaron: la próxima vez aparece acá.`
+                        : `No dejaste nota de la última sesión. Al terminar esta, anotá lo que trabajaron: la próxima vez aparece acá.`}
+                    </Text>
+                  )}
+
+                  {(prep?.notaCompartida || (prep && prep.resources.length > 0)) && (
+                    <Text style={[s.prepB, { marginTop: 10 }]}>Lo que le dejaste</Text>
+                  )}
+                  {prep?.notaCompartida && (
+                    <Text style={[s.prepLine, { marginTop: 3 }]} numberOfLines={5}>{prep.notaCompartida.content}</Text>
+                  )}
                   {/* 🔴 Tendencia de ánimo. Va DENTRO de "Preparar sesión" y no
                       suelto en la Home: es información para llegar mejor a esta
                       sesión, no un panel para mirar a la gente.
@@ -984,7 +1033,6 @@ export default function CoachHomeScreen() {
 
                   {prep && prep.resources.length > 0 && (
                     <>
-                      <Text style={[s.prepB, { marginTop: 8 }]}>Recursos que le mandaste:</Text>
                       {prep.resources.map(r => (
                         <View key={r.id} style={s.prepRes}>
                           <Text style={r.opened ? s.prepOk : s.prepWarn} numberOfLines={1}>
@@ -993,6 +1041,20 @@ export default function CoachHomeScreen() {
                         </View>
                       ))}
                     </>
+                  )}
+
+                  {/* Todas las notas, con el historial por sesión, en la hoja de
+                      Notas del chat (abre directo con `abrir_notas`). */}
+                  {next.salaId && (prep?.notaPrivada || prep?.notaCompartida) && (
+                    <TouchableOpacity
+                      onPress={() => router.push({
+                        pathname: '/sala',
+                        params: { sala_id: next.salaId!, abrir_notas: '1', notas_booking: next.bookingId },
+                      })}
+                      activeOpacity={0.7}
+                      hitSlop={6}>
+                      <Text style={[s.prepB, { marginTop: 10, textDecorationLine: 'underline' }]}>Ver todas las notas</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               )}

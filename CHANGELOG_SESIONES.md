@@ -1,3 +1,17 @@
+## 2026-09-24 — Andre (Claude · "Preparar sesión" del profesional, repensado)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `screens/CoachReservasScreen.tsx`
+
+**Resumen:**
+- 🧭 **Pregunta de Andre: ¿para qué sirve "Preparar sesión"?** Mostraba lo que había a mano en la base (hace cuántos días fue la última sesión y si abrió los recursos; el ánimo está apagado con `MOSTRAR_ANIMO_AL_COACH = false`). Se repensó desde lo que un profesional se pregunta antes de una sesión: en qué quedamos, qué le dejé, qué pasó desde entonces, algo que cuidar.
+- **El panel ahora:** número de sesión y hace cuánto fue la anterior (o "Primera sesión juntos") · **"La última vez"**: su nota privada más reciente con esa persona (o, si no hay, una línea que sugiere anotar al terminar) · **"Lo que le dejaste"**: la nota compartida y los recursos con abierto/sin abrir · **"Ver todas las notas"**, que abre la hoja de Notas del chat con el historial por sesión.
+- 📌 **Regla:** solo lo que el profesional escribió o mandó. Nada que la app registre del cliente sin que él elija compartirlo (diario, ánimo, uso de herramientas).
+- 🔧 El "Preparar" de Reservas llevaba al Inicio sin abrir nada; ahora llega con `?preparar=1` y el panel abierto.
+- ⏸️ **Queda para preguntarle a 2 o 3 profesionales de la beta** antes de construir: si muestra lo que el cliente mandó por el chat desde la última sesión (su paquete), si la nota privada va completa, y si "abierto / sin abrir" les sirve o se siente como controlar.
+
+**Pendiente para la próxima sesión:**
+- Probar con una sesión próxima de alguien con notas previas: el panel tiene que mostrar la nota privada y la compartida.
+
 ## 2026-09-24 — Andre (Claude · la agenda del profesional es también su historial)
 
 **Tocado:** `screens/CoachAgendaScreen.tsx`, `screens/CoachReservasScreen.tsx`
