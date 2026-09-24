@@ -232,6 +232,7 @@ export default function QuizScreen() {
         budgetMax: presupuesto >= PRESUPUESTO_TOPE ? PRESUPUESTO_SIN_LIMITE : presupuesto,
         budgetMaxUsd: presupuestoUsd >= PRESUPUESTO_USD_TOPE ? PRESUPUESTO_SIN_LIMITE : presupuestoUsd,
         estilo: q4, guia: q5, foco: q6, generoPref: q7, pagos,
+        respondidoEn: new Date().toISOString(),
       })
         .then(() => supabase.auth.getSession())
         .then(({ data }) => {

@@ -165,18 +165,18 @@ export default function ConexionesScreen() {
   // La puerta que el onboarding sugiere. Solo destaca una fila del menú: no
   // filtra, no reordena y no navega.
   const [puertaSugerida, setPuertaSugerida] = useState<string | null>(null);
-  // De dónde salió la sugerencia, para que la métrica no mezcle onboarding y quiz.
-  const origenSugerencia = useRef<'onboarding' | 'quiz' | null>(null);
 
   // Lo que la persona respondió en el quiz, si lo hizo (21/09/2026). Se relee
   // al volver a la pantalla: quien sale del quiz y vuelve tiene que ver el
   // mazo ya ajustado, sin reabrir la app.
   const [respuestasQuiz, setRespuestasQuiz] = useState<RespuestasQuiz | null>(null);
+  const [quizRespondidoEn, setQuizRespondidoEn] = useState<string | null>(null);
   useFocusEffect(useCallback(() => {
     let cancelado = false;
     leerRespuestasGuardadas()
       .then(r => {
         if (cancelado) return;
+        setQuizRespondidoEn(r?.respondidoEn ?? null);
         if (!r) { setRespuestasQuiz(null); return; }
         setRespuestasQuiz({
           tema: null,
@@ -199,30 +199,57 @@ export default function ConexionesScreen() {
     return () => { cancelado = true; };
   }, []));
 
-  // Sin puerta ni eje por parámetro, el quiz sugiere el tema: la puerta con más
-  // temas en común con lo que eligió. 🔴 Igual que la sugerencia del
-  // onboarding, SOLO destaca una fila del menú: no abre el mazo. Abrir gente
-  // sola es lo que se frenó a propósito (ver el efecto de `ejeParam`).
-  const sugeridaPorQuiz = useRef(false);
-  useEffect(() => {
-    if (!respuestasQuiz || sugeridaPorQuiz.current || puerta || ejeParam || selectedAxisId) return;
-    sugeridaPorQuiz.current = true;
+  // Los temas por los que ya reservó, para dejar de marcar el del quiz.
+  const [reservasPorTema, setReservasPorTema] = useState<{ tema_origen: string; created_at: string }[]>([]);
+  useFocusEffect(useCallback(() => {
+    if (!user?.id) { setReservasPorTema([]); return; }
+    let cancelado = false;
+    supabase
+      .from('bookings')
+      .select('tema_origen, created_at')
+      .eq('user_id', user.id)
+      .eq('payment_status', 'aprobado')
+      .neq('status', 'cancelada')
+      .not('tema_origen', 'is', null)
+      .then(({ data }) => { if (!cancelado) setReservasPorTema(data ?? []); });
+    return () => { cancelado = true; };
+  }, [user?.id]));
+
+  // El quiz sugiere el tema: la puerta con más temas en común con lo que eligió.
+  //
+  // 🔴 SOLO la marca, no la abre. Hasta el 24/09/2026 abría sola el eje cada vez
+  // que se entraba a la pestaña, y a Andre no le gustó: la pantalla arranca
+  // siempre en las tres áreas, con el eje y el tema del quiz marcados.
+  //
+  // 📌 La marca dura hasta que reserva por ese tema (una reserva pagada y no
+  // cancelada, hecha después del quiz). Sin esto quedaba para siempre, aunque ya
+  // hubiera encontrado a alguien y ahora buscara otra cosa. Si la reserva se
+  // cancela, o vuelve a hacer el quiz, la marca vuelve.
+  const puertaQuiz = useMemo(() => {
+    if (!respuestasQuiz) return null;
     const buscados = respuestasQuiz.subtemas && respuestasQuiz.subtemas.length > 0
       ? respuestasQuiz.subtemas
       : QUIZ_AREAS.filter(a => (respuestasQuiz.areas ?? []).includes(a.id)).flatMap(a => a.subtemas);
-    let mejor: { id: string; color: string } | null = null;
+    let mejor: (typeof DOORS)[number] | null = null;
     let max = 0;
     for (const d of DOORS) {
       const n = d.subtemas.filter(t => buscados.includes(t)).length;
       if (n > max) { max = n; mejor = d; }
     }
-    if (!mejor) return;
-    const eje = EJES.find(e => e.color === mejor!.color);
-    if (!eje) return;
-    setSelectedAxisId(eje.id);
-    origenSugerencia.current = 'quiz';
-    setPuertaSugerida(mejor.id);
-  }, [respuestasQuiz, puerta, ejeParam, selectedAxisId]);
+    if (!mejor) return null;
+    const desde = quizRespondidoEn ? Date.parse(quizRespondidoEn) : NaN;
+    const yaReservo = reservasPorTema.some(r =>
+      r.tema_origen === mejor!.label && !(Date.parse(r.created_at) < desde));
+    return yaReservo ? null : mejor.id;
+  }, [respuestasQuiz, quizRespondidoEn, reservasPorTema]);
+
+  // La del onboarding manda sobre la del quiz: es lo que acaba de contar.
+  const puertaDestacada = puertaSugerida ?? puertaQuiz;
+  const origenSugerencia = puertaSugerida ? 'onboarding' : puertaQuiz ? 'quiz' : null;
+  const ejeDestacado = useMemo(() => {
+    const door = DOORS.find(d => d.id === puertaDestacada);
+    return door ? EJES.find(e => e.color === door.color)?.id ?? null : null;
+  }, [puertaDestacada]);
 
   // ── Cache poll ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -258,7 +285,6 @@ export default function ConexionesScreen() {
     const eje = EJES.find(e => e.color === door.color);
     if (!eje) return;
     setSelectedAxisId(eje.id);
-    origenSugerencia.current = 'onboarding';
     setPuertaSugerida(door.id);
   }, [puerta]);
 
@@ -389,9 +415,9 @@ export default function ConexionesScreen() {
     // adivinarlo. `sugerida` es null cuando no vino del onboarding.
     anotar('conexiones_puerta_abierta', {
       puerta: id,
-      sugerida: puertaSugerida ? id === puertaSugerida : null,
-      desde_onboarding: !!puertaSugerida && origenSugerencia.current === 'onboarding',
-      desde_quiz: !!puertaSugerida && origenSugerencia.current === 'quiz',
+      sugerida: puertaDestacada ? id === puertaDestacada : null,
+      desde_onboarding: origenSugerencia === 'onboarding',
+      desde_quiz: origenSugerencia === 'quiz',
     });
 
     // Aseguro que el eje quede fijado (por si se abre desde los chips del deck).
@@ -693,7 +719,7 @@ export default function ConexionesScreen() {
               <View style={s.askWrap}>
                 <Text style={s.askTitle}>{selectedAxis.label}</Text>
                 <Text style={s.askSub}>
-                  {puertaSugerida
+                  {puertaDestacada && ejeDestacado === selectedAxis.id
                     ? 'Por lo que contaste, empezaría por el tema destacado, pero elegí el que quieras'
                     : 'Elegí un tema y te presento a los profesionales indicados'}
                 </Text>
@@ -717,7 +743,7 @@ export default function ConexionesScreen() {
                         badge: sigue siendo una fila más de la lista, que es el
                         punto — la estamos señalando, no eligiendo por ella. */}
                     <ScaleCard
-                      style={[s.doorRow, d.id === puertaSugerida && { backgroundColor: tint(d.color, 0.10) }]}
+                      style={[s.doorRow, d.id === puertaDestacada && { backgroundColor: tint(d.color, 0.10) }]}
                       onPress={() => openDoor(d.id)}
                     >
                       {/* Lo único que lleva el color del eje. El resto —título,
@@ -821,6 +847,16 @@ export default function ConexionesScreen() {
                       </Text>
 
                       <Text style={s.menuTagline}>{e.tagline}</Text>
+
+                      {/* Dónde está el tema del quiz. Solo lo señala: la
+                          pantalla ya no entra sola al eje. */}
+                      {e.id === ejeDestacado && (
+                        <View style={[s.menuSugerido, { backgroundColor: tint(e.color, 0.22) }]}>
+                          <Text style={[s.menuSugeridoText, { color: e.color }]} numberOfLines={1}>
+                            {origenSugerencia === 'quiz' ? 'Según tu quiz' : 'Tu tema'}
+                          </Text>
+                        </View>
+                      )}
 
                       {/* Empujada al fondo con `marginTop: auto`: las bajadas
                           ocupan dos o tres líneas según el eje, y sin esto las
@@ -1172,6 +1208,13 @@ const s = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
+  menuSugerido: {
+    marginTop: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  menuSugeridoText: { fontFamily: ViveFonts.semibold, fontSize: 10.5 },
   menuArrow: {
     width: 38,
     height: 38,

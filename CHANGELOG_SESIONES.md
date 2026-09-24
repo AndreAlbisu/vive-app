@@ -1,3 +1,15 @@
+## 2026-09-24 — Andre (Claude · Profesionales arranca en las tres áreas)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`, `lib/quizPendiente.ts`, `screens/QuizScreen.tsx`
+
+**Resumen:**
+- 🧭 **Pedido de Andre:** con el quiz hecho, la pestaña Profesionales entraba sola al área de su tema cada vez. Ahora **arranca siempre en las tres áreas**; el área del tema lleva un "Según tu quiz" y, adentro, el tema sigue con el fondo teñido de siempre. El quiz sigue ordenando el mazo como antes.
+- 📌 **Cuánto dura la marca:** hasta que reserva por ese tema (reserva pagada y no cancelada, con `tema_origen` igual al tema y hecha después del quiz). Si la cancela o rehace el quiz, vuelve. El quiz guarda ahora `respondidoEn` (local) y de la base se usa `user_quiz_answers.updated_at`. Un quiz viejo sin fecha: cualquier reserva por ese tema la apaga.
+- Sin cambios en la base. El final del onboarding (`?eje=`) sigue abriendo su área una vez, a propósito.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone: con quiz hecho, entrar y salir de la pestaña (tiene que quedar en las tres áreas con la marca); reservar por ese tema y ver que la marca se va.
+
 ## 2026-09-24 — Andre (Claude · el recurso deja de ser un paso del profesional)
 
 **Tocado:** `screens/CoachHomeScreen.tsx`
