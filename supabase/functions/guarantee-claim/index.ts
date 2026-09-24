@@ -32,7 +32,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { guaranteeFailures, scheduledAtMs } from '../_shared/guarantee.ts'
 import { esServiceRole } from '../_shared/service-role.ts'
-import { enviarMail } from '../_shared/email.ts'
+import { enviarMail, nombreSeguro } from '../_shared/email.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -269,7 +269,9 @@ serve(async (req) => {
       titulo: 'Alguien pidió el reintegro de su primera sesión',
       lineas: [
         `<b>Reserva:</b> ${booking.id}`,
-        `<b>Cliente:</b> ${quien?.name ?? 'sin nombre'} (${quien?.email ?? 'sin mail'})`,
+        // El nombre lo escribe la persona y va adentro de HTML: escapado, igual
+        // que en el resto de los mails (`nombreSeguro`).
+        `<b>Cliente:</b> ${nombreSeguro(quien?.name ?? 'sin nombre')} (${nombreSeguro(quien?.email ?? 'sin mail')})`,
         `<b>Sesión:</b> ${booking.scheduled_date} ${booking.scheduled_time}`,
         `<b>Monto:</b> ${booking.amount}`,
         'Pasó las cinco condiciones de §9.3. Falta aprobarla desde Administración → Garantías.',
