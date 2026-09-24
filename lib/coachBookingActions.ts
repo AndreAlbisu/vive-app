@@ -62,7 +62,8 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
     }),
     notifyViaServer({ bookingId, recipientId: booking.user_id, title: notifTitle, body: notifBody }),
     // Analytics: el coach ACEPTÓ una reserva pendiente. Distinto de
-    // 'reserva_confirmada' (ese lo dispara el usuario al reservar). registrarEvento
+    // 'reserva_confirmada' (ese lo anota la base al pasar a 'confirmada',
+    // `scripts/add-booking-funnel-events.sql`). registrarEvento
     // anota user_id = coach (su sesión); client_id guarda al usuario de la reserva.
     registrarEvento('reserva_aceptada', {
       booking_id: bookingId,

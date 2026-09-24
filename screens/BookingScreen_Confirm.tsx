@@ -528,11 +528,18 @@ export default function BookingScreen_Confirm() {
       }
 
       // Mismo motivo que "reserva_iniciada" arriba: no bloquea camino al checkout.
-      registrarEvento('reserva_confirmada', {
+      //
+      // 🔴 Se llamaba `reserva_confirmada` y se emitía acá, ANTES del pago: contaba
+      // como confirmado a quien abandonaba el checkout. La reserva recién se
+      // crea; `pago_aprobado` y `reserva_confirmada` los anota la base al pasar
+      // de estado (`scripts/add-booking-funnel-events.sql`), también cuando el
+      // pago entra con la app cerrada.
+      registrarEvento('reserva_creada', {
         professional_id: coachId,
         booking_id: booking.id,
         sala_id: salaId,
         user_id: user.id,
+        metodo_pago: metodoPago,
       }).catch(() => {});
 
       // Todo lo que sigue —avisarle al coach y, si es instantánea, confirmar—
@@ -681,6 +688,7 @@ export default function BookingScreen_Confirm() {
       // La reserva queda 'pendiente' y la confirma `usdt-check-payments` cuando
       // ve la transferencia.
       if (metodoPago === 'usdt') {
+        registrarEvento('checkout_iniciado', { booking_id: booking.id, metodo_pago: 'usdt' }).catch(() => {});
         router.replace({ pathname: '/pago-usdt', params: { booking_id: booking.id } });
         return;
       }
@@ -735,6 +743,10 @@ export default function BookingScreen_Confirm() {
         setLoading(false);
         return;
       }
+
+      // Hay URL de pago: entre `reserva_creada` y esto se ven los cobros que no
+      // llegaron a iniciarse; entre esto y `pago_aprobado`, los abandonos.
+      registrarEvento('checkout_iniciado', { booking_id: booking.id, metodo_pago: metodoPago }).catch(() => {});
 
       // ── El checkout SALTA A LA APP NATIVA (sesión 117) ────────────────────
       //

@@ -161,9 +161,9 @@ cliente y es reversible.
 - **`UsdtPaymentScreen`** sigue con `router.replace('/(tabs)')`, el patrón que se
   arregló en `BookingScreen_Success` en la sesión 118. Hoy no se nota porque
   `(tabs)` tiene `gestureEnabled: false`.
-- **`registrarEvento('reserva_confirmada')`** se dispara al insertar la reserva,
-  antes del pago: cuenta como confirmadas reservas que se cancelan segundos
-  después.
+- ✅ ~~**`registrarEvento('reserva_confirmada')`** se dispara al insertar la reserva,
+  antes del pago~~. Resuelto el 23/09/2026: el cliente emite `reserva_creada` y
+  la base anota `pago_aprobado`/`reserva_confirmada` (`scripts/add-booking-funnel-events.sql`).
 - **El checkout de PayPal abre Safari**, no la app: PayPal no reclama la ruta
   como universal link. No afecta la acreditación (es server-side) pero obliga a
   loguearse a mano — el paso donde históricamente se caen los pagos. La salida
