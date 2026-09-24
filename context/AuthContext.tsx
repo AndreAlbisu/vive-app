@@ -16,6 +16,7 @@ import { volcarPendiente } from '@/lib/quizPendiente';
 import { canjearReferidoPendiente } from '@/lib/referidoPendiente';
 import { enlazarConCuenta, anotar } from '@/lib/analytics';
 import { conTope, TOPE } from '@/lib/conTope';
+import { logError } from '@/lib/logging';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -529,6 +530,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // que nada se lo dijera. Cualquier resultado que no sea 'success' es un
       // fallo y tiene que decirlo.
       if (res.type !== 'success') {
+        void logError(`Auth: Google terminó en '${res.type}'`);
         return 'No se pudo completar el inicio de sesión con Google. Probá de nuevo.';
       }
 
@@ -575,11 +577,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // que un reintento tiene que arrancar el flujo de cero — no alcanza con
         // volver a canjear el mismo código.
         console.log('[auth] falló el canje:', exchangeError.message);
+        void logError('Auth: Google, falló el canje del código', exchangeError);
         return translateError(exchangeError.message);
       }
       await markAccepted(acceptedTerms, ageConfirmed);
       return null;
     } catch (e: any) {
+      void logError('Auth: Google, excepción', e);
       return translateError(e?.message ?? 'error');
     }
   }
@@ -615,6 +619,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
     } catch (e: any) {
       if (e?.code === 'ERR_REQUEST_CANCELED') return null;
+      void logError('Auth: Apple, excepción', e);
       return translateError(e?.message ?? 'error');
     }
   }

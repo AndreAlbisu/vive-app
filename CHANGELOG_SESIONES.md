@@ -16,17 +16,19 @@
 **Pendiente para la próxima sesión:**
 - Probar en el teléfono: sin check-in de hoy, tocar la tarjeta abre Progreso; con check-in, sigue yendo a donde dice el CTA.
 
-## 2026-09-23 — Andre (Claude · investigación de producto y embudo de reservas)
+## 2026-09-23 — Andre (Claude · investigación de producto, embudo de reservas y errores de la app)
 
-**Tocado:** `docs/investigacion-producto-2026-09-23.md` (nuevo), `scripts/add-booking-funnel-events.sql` (nuevo, corrido), `screens/BookingScreen_Confirm.tsx`, `lib/coachBookingActions.ts`, `docs/plan-pagos.md`, `SCHEMA.md`
+**Tocado:** `docs/investigacion-producto-2026-09-23.md` (nuevo), `scripts/add-booking-funnel-events.sql` (nuevo, corrido), `screens/BookingScreen_Confirm.tsx`, `lib/coachBookingActions.ts`, `lib/logging.ts`, `app/_layout.tsx`, `context/AuthContext.tsx`, `screens/SalaScreen.tsx`, `__tests__/logging.test.ts`, `docs/plan-pagos.md`, `SCHEMA.md`
 
 **Resumen:**
 - 📄 **Se registró la investigación de producto de Codex** (`docs/investigacion-producto-2026-09-23.md`). Se revisaron contra el código los seis hallazgos que da por confirmados y los seis son ciertos: profesión deducida por palabras de la especialidad (`lib/tipoProfesional.ts`), `reserva_confirmada` antes del pago, reseña que exige estrellas para reportar un problema técnico, sin acceso a soporte del lado del usuario, sin universal links en `app.json`, y errores del cliente que no salen del teléfono. **Orden acordado con Andre:** medición primero (es un bug y ensucia la beta), después soporte ligado a la sesión junto con la reseña, profesión y verificación, y estado del dinero.
 - 🔴 **Embudo de reservas arreglado (punto 4 del informe).** `reserva_confirmada` se emitía desde el teléfono al crear la reserva, antes del checkout. Ahora el cliente emite `reserva_creada` y `checkout_iniciado`, y **la base** anota `pago_aprobado` y `reserva_confirmada` con un trigger en la transición real, una vez por reserva y sin poder frenar un pago si falla. Cuenta también el pago que entra con la app cerrada. Los 160 eventos históricos se renombraron a `reserva_creada`.
 - 🗄️ **Base:** trigger `trg_booking_funnel_events` + índice `analytics_events_booking_idx`, **corrido y verificado** sobre una copia temporal de `bookings` con rollback (la primera idea, apagar `a_guard_booking_security` dentro de la prueba, la bloqueó el clasificador, y con razón). SCHEMA actualizado. No se usó `db push`: habría aplicado también la migración de pagos de Codex, que sigue sin desplegar.
 
+- 🛰️ **La otra mitad del punto 4: los errores de la app llegan a la base.** `logError` ahora también anota `error_app` en `analytics_events`, con el texto limpio de mails, tokens y números largos, y un handler global captura lo que nadie atrapó. Se instrumentaron los fallos de login con Google/Apple, de inicio del cobro y de la videollamada. Tope de 30 por apertura y sin repetir el mismo error en un minuto. 4 tests nuevos (`__tests__/logging.test.ts`), 861 en total pasan. No se usó Sentry ni se creó una tabla: con cero usuarios alcanza con una consulta, y es una superficie menos para auditar.
+
 **Pendiente para la próxima sesión:**
-- La otra mitad del punto 4: mandar los errores del cliente (entrada, pago, sala) a algún lado. Hoy `lib/logging.ts` solo escribe en consola.
+- Ver en el teléfono que un error forzado aparezca como `error_app` (necesita el development build nuevo por `expo-secure-store`).
 - La web de reserva no emite `reserva_creada` ni `checkout_iniciado`; si hace falta el embudo completo por la web, agregarlos ahí.
 - Siguiente del informe: "Tengo un problema con esta sesión" + reportar la falla técnica sin calificar al profesional.
 - Avisar a Codex: `BookingScreen_Confirm` es de su área (checkout), el cambio solo toca los eventos de analítica.

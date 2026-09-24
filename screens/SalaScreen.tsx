@@ -803,12 +803,16 @@ export default function SalaScreen() {
       // En iOS esto sale a Safari a propósito: el navegador in-app no puede
       // pedir cámara ni micrófono de forma confiable. Ver `abrirVideollamada`.
       const abrio = await abrirVideollamada(url.url);
-      if (!abrio) Alert.alert('Error', 'No se pudo abrir la videollamada. Probá de nuevo');
+      if (!abrio) {
+        void logError('Sala: no se pudo abrir la videollamada');
+        Alert.alert('Error', 'No se pudo abrir la videollamada. Probá de nuevo');
+      }
     } else if (url) {
       // Fuera de horario: se dice cuándo abre, no "no se pudo" — eso haría
       // reintentar a alguien que solo llegó temprano.
       Alert.alert(tituloDeAviso(url.estado), url.aviso);
     } else {
+      void logError('Sala: no se pudo preparar la videollamada');
       Alert.alert('Error', 'No se pudo preparar la sala. Intentalo de nuevo en unos segundos');
     }
   }

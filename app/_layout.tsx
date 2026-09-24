@@ -33,6 +33,11 @@ import { pasoDelAlta, type PasoAlta } from '@/lib/altaCoach';
 import { destinoTrasEntrar, PANTALLAS_SIN_CUENTA } from '@/lib/entrada';
 import { registerForPushNotifications } from '@/lib/notifications';
 import { reconcileResourceReminders } from '@/lib/resourceReminders';
+import { instalarCapturaGlobal } from '@/lib/logging';
+
+// Una vez, al cargar la app: los errores que nadie atrapa también llegan a la
+// base (`error_app`). Ver `lib/logging.ts`.
+instalarCapturaGlobal();
 
 // ⚠️ `verificar-mail` y `coach-application` NO van acá: son pantallas a las
 // que se llega CON sesión a propósito, y meterlas en este set las mandaría de

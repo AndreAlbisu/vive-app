@@ -729,6 +729,7 @@ export default function BookingScreen_Confirm() {
       // que entrara un dólar — el mismo bug de las 27 fantasma de agosto, por
       // la tercera puerta.
       if (!initPoint) {
+        void logError(`BookingConfirm: no se pudo iniciar el cobro (${metodoPago})`);
         // 🔴 23/09/2026, auditoría: hasta hoy quedarse sin URL con Mercado Pago
         // se tomaba como "el profesional no tiene MP, no hay nada que cobrar" y
         // la reserva se confirmaba GRATIS. Eso venía de cuando un profesional
