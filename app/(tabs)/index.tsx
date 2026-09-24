@@ -348,6 +348,16 @@ export default function InicioScreen() {
     // para una devolución (gradiente del color del ánimo, "ver mi progreso"), y
     // lo que hace falta acá es lo contrario — la pantalla de las líneas, que a
     // propósito no es cálida ni pregunta nada (§5 ter).
+    //
+    // 📌 Sin check-in de hoy la card está neutra ("Contame cómo venís") y no
+    // mostró ninguna frase: el `signal` de `cardReflection` existe igual, pero la
+    // persona no lo leyó, así que mandarla al Diario o a un recurso por algo que
+    // no vio no tiene sentido. Va a Progreso, antes que cualquier otra rama.
+    if (!cardMoodColor) {
+      registrarEvento('reflexion_vista', { origen: 'card_neutra_a_progreso' });
+      router.push('/progreso');
+      return;
+    }
     // El aviso del recurso lleva a donde está el recurso. Misma lógica que el
     // piso con `/ayuda`: si la tarjeta anuncia algo, tocarla tiene que llevar a
     // eso — no a una reflexión sobre la semana.
@@ -1152,7 +1162,7 @@ function SobreVosCard({
           accessible
           accessibilityRole={silent ? 'text' : 'button'}
           accessibilityLabel={a11yLabel}
-          accessibilityHint={silent ? undefined : 'Abre tu reflexión completa'}
+          accessibilityHint={silent ? undefined : isNeutral ? 'Abre tu progreso' : 'Abre tu reflexión completa'}
         >
           {silent ? (
             /* Sin frase y sin copy inventado a propósito: cualquier línea que

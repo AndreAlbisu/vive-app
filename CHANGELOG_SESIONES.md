@@ -4,6 +4,18 @@
 > Al terminar tu sesión, agregá tu propia entrada arriba de todo (orden cronológico inverso).
 
 ---
+## 2026-09-23 — Andre (Claude · tarjeta de Sofía sin check-in va a Progreso)
+
+**Tocado:** `app/(tabs)/index.tsx`
+
+**Resumen:**
+- Tocar la tarjeta de Sofía en Inicio cuando todavía no hay check-in de hoy (estado neutro, "Contame cómo venís") ahora lleva siempre a **Mi progreso**. Antes seguía la señal de la devolución aunque la persona no la hubiera leído, y podía terminar en el Diario con una pregunta o en otro destino por algo que la tarjeta nunca mostró.
+- Evento `reflexion_vista` con origen nuevo `card_neutra_a_progreso`, para distinguirlo del toque con devolución visible (`card_a_progreso`).
+- Sin cambios en la base.
+
+**Pendiente para la próxima sesión:**
+- Probar en el teléfono: sin check-in de hoy, tocar la tarjeta abre Progreso; con check-in, sigue yendo a donde dice el CTA.
+
 ## 2026-09-23 — Andre (Claude · investigación de producto y embudo de reservas)
 
 **Tocado:** `docs/investigacion-producto-2026-09-23.md` (nuevo), `scripts/add-booking-funnel-events.sql` (nuevo, corrido), `screens/BookingScreen_Confirm.tsx`, `lib/coachBookingActions.ts`, `docs/plan-pagos.md`, `SCHEMA.md`
