@@ -31,6 +31,16 @@
   .cta[disabled] { opacity: .5; cursor: default; }
   .error { font-size: .85rem; color: #B3392E; margin: 0 0 10px; }
   .ayuda { font-size: .87rem; opacity: .85; }   /* .72 daba 3.90:1 en claro */
+  .recordar { display: flex; align-items: center; gap: .5rem; font-size: .92rem; margin: .9rem 0 .2rem; cursor: pointer; }
+  .recordar input { width: 1.05rem; height: 1.05rem; }
+  .recordarAyuda { margin: 0 0 .9rem; }
+  /* Salida para quien la marcó donde no debía. Solo aparece con la sesión
+     recordada y mientras la llamada no está abierta: encima del video sería un
+     botón de "salir" al lado de la cara de alguien. */
+  #olvidar {
+    background: none; border: 0; text-decoration: underline; cursor: pointer;
+    font: inherit; font-size: .85rem; opacity: .75; padding: .6rem 0; margin-top: .4rem;
+  }
 
   /* La sala ocupa todo: una videollamada con márgenes de cortesía es una
      videollamada más chica, y acá lo único que importa es verse la cara. */
@@ -87,9 +97,13 @@
     <div id="pasoCodigo" hidden>
       <input class="campo codigo" id="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="······">
       <p class="error" id="errorCodigo" hidden></p>
+      <label class="recordar"><input type="checkbox" id="recordar" checked> Recordar esta computadora</label>
+      <p class="ayuda recordarAyuda">Así no te pedimos el código en cada sesión. No lo marques en una computadora compartida.</p>
       <button class="cta" id="btnConfirmar">Entrar</button>
     </div>
   </div>
+
+  <button id="olvidar" hidden>No es mi computadora: olvidar mi sesión</button>
 
   <div id="temprano" hidden>
     <h1 id="tempranoTitulo">Todavía no es la hora</h1>
@@ -122,8 +136,70 @@ const bookingId = new URLSearchParams(location.search).get('booking');
 // eso la pantalla de código está pensada como parte del camino y no como un
 // error.
 const CLAVE_SESION = 'vita_sesion_web';
-function leerSesion() { try { return JSON.parse(sessionStorage.getItem(CLAVE_SESION) || 'null'); } catch { return null; } }
-function guardarSesion(s) { try { sessionStorage.setItem(CLAVE_SESION, JSON.stringify(s)); } catch (e) {} }
+
+// 🔴 REESCRITO EL 24/09/2026. Antes la sesión vivía SOLO en `sessionStorage` y
+// sin el token de refresco: moría al cerrar la pestaña y el de acceso dura una
+// hora. O sea que el profesional pasaba por mail, captcha y código **casi cada
+// vez que entraba a dar una sesión**, con el cliente esperando del otro lado. La
+// ayuda de la pantalla ya prometía "es por única vez en este dispositivo" y era
+// mentira.
+//
+// Ahora, si marca "Recordar esta computadora", la sesión va a `localStorage`
+// CON el refresco, y el token vencido se renueva solo. Si no la marca, se
+// comporta como antes: muere con la pestaña.
+//
+// ⚠️ Lo que NO cambia: sigue haciendo falta probar la identidad al menos una vez
+// por computadora. Del otro lado hay una sesión de terapia y el link viaja por
+// mail: sin nada, el link reenviado sería la llave.
+function leerSesion() {
+  for (const st of [localStorage, sessionStorage]) {
+    try {
+      const raw = st.getItem(CLAVE_SESION);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+  }
+  return null;
+}
+function guardarSesion(s, recordar) {
+  const dato = JSON.stringify(s);
+  try {
+    if (recordar) { localStorage.setItem(CLAVE_SESION, dato); sessionStorage.removeItem(CLAVE_SESION); }
+    else { sessionStorage.setItem(CLAVE_SESION, dato); localStorage.removeItem(CLAVE_SESION); }
+  } catch (e) {}
+}
+function olvidarSesion() {
+  try { localStorage.removeItem(CLAVE_SESION); } catch (e) {}
+  try { sessionStorage.removeItem(CLAVE_SESION); } catch (e) {}
+}
+function estaRecordada() {
+  try { return !!localStorage.getItem(CLAVE_SESION); } catch (e) { return false; }
+}
+
+/** Renueva el token de acceso con el de refresco. Devuelve la sesión nueva o
+ *  null: si el refresco ya no vale (pasaron semanas, o se cerró sesión desde
+ *  otro lado), se vuelve a pedir el código, que es el camino de siempre. */
+async function renovarSesion() {
+  const s = leerSesion();
+  if (!s?.refresh_token) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: s.refresh_token }),
+    });
+    const cuerpo = await r.json().catch(() => ({}));
+    if (!r.ok || !cuerpo?.access_token) { olvidarSesion(); return null; }
+    const nueva = {
+      access_token: cuerpo.access_token,
+      refresh_token: cuerpo.refresh_token ?? s.refresh_token,
+      email: s.email,
+    };
+    guardarSesion(nueva, estaRecordada());
+    return nueva;
+  } catch (e) {
+    return null;
+  }
+}
 
 function mostrarError(id, msg) { const el = $(id); el.textContent = msg; el.hidden = !msg; }
 
@@ -237,9 +313,13 @@ async function entrar(url) {
   }
 }
 
-async function intentarEntrar() {
-  const sesion = leerSesion();
-  if (!sesion?.access_token) return pedirIdentificacion();
+async function intentarEntrar(yaRenovo) {
+  let sesion = leerSesion();
+  if (!sesion?.access_token) {
+    // Puede haber refresco sin acceso si el guardado quedó a medias.
+    sesion = await renovarSesion();
+    if (!sesion?.access_token) return pedirIdentificacion();
+  }
 
   let r, cuerpo;
   try {
@@ -269,8 +349,13 @@ async function intentarEntrar() {
     return entrar(cuerpo.url);
   }
 
-  // 401 es el caso NORMAL, no un error: el token venció. Se pide el código.
-  if (r.status === 401) return pedirIdentificacion();
+  // 401 = el token venció. Antes esto mandaba derecho a pedir el código; ahora
+  // primero se intenta renovar con el refresco, que es lo que convierte "cada
+  // vez" en "una vez por computadora". Si la renovación falla, sí se pide.
+  if (r.status === 401) {
+    if (!yaRenovo && await renovarSesion()) return intentarEntrar(true);
+    return pedirIdentificacion();
+  }
   if (r.status === 403) {
     return problema('Esta no es tu sesión',
       'Puede que hayas entrado con otro mail. Volvé a intentar con el mail con el que reservaste.');
@@ -294,7 +379,16 @@ async function intentarEntrar() {
 function pedirIdentificacion() {
   ocultar('cargando');
   ver('identificar');
+  // Si llegó acá con una sesión recordada que ya no sirve, no tiene sentido
+  // ofrecerle olvidarla: ya está pidiendo el código igual.
+  ocultar('olvidar');
   $('mail').focus();
+}
+
+/** La salida de "esta no es mi computadora". Solo mientras la llamada no está
+ *  abierta: encima del video sería un botón de salir al lado de una cara. */
+function mostrarOlvidarSiCorresponde() {
+  if (estaRecordada()) ver('olvidar');
 }
 
 async function pedirCodigo() {
@@ -351,7 +445,10 @@ async function confirmarCodigo() {
         ? 'Probaste varias veces seguidas. Esperá un momento.'
         : 'Ese código no coincide, o ya venció.');
     }
-    guardarSesion({ access_token: cuerpo.access_token, email: mail });
+    guardarSesion(
+      { access_token: cuerpo.access_token, refresh_token: cuerpo.refresh_token, email: mail },
+      $('recordar').checked,
+    );
     await marcarMailVerificado(cuerpo.access_token);
     ocultar('identificar'); ver('cargando');
     await intentarEntrar();
@@ -383,10 +480,15 @@ async function marcarMailVerificado(accessToken) {
 
 $('btnCodigo').addEventListener('click', pedirCodigo);
 $('btnConfirmar').addEventListener('click', confirmarCodigo);
+$('olvidar').addEventListener('click', () => {
+  olvidarSesion();
+  location.reload();
+});
 
 if (!bookingId) {
   problema('Falta el enlace de la sesión', 'Abrí el link que te mandamos por mail.');
 } else {
+  mostrarOlvidarSiCorresponde();
   intentarEntrar();
 }
 </script>

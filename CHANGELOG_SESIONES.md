@@ -345,6 +345,15 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
+### La sala web deja de pedir el código en cada sesión
+
+- Pregunta de Andre: *"¿es necesario pedirle un código al coach al entrar por la compu?"*. **Sí, algo hay que pedir**: del otro lado hay una sesión de terapia en vivo y el link viaja por mail, así que sin verificación el link reenviado sería la llave. **Pero el costo era demasiado alto.**
+- 🔴 **Lo que estaba pasando**: la sesión web vivía solo en `sessionStorage` y **sin el token de refresco**. Muere al cerrar la pestaña y el de acceso dura una hora, así que el profesional pasaba por mail, captcha y código **casi cada vez que entraba a dar una sesión**, con el cliente esperando. La ayuda de esa pantalla ya decía *"es por única vez en este dispositivo"*: era mentira.
+- **Ahora**: casilla **"Recordar esta computadora"** (marcada por defecto, con la advertencia de no marcarla en una compartida). Con eso la sesión va a `localStorage` con su refresco y **el token vencido se renueva solo**; sin eso, se comporta como antes y muere con la pestaña. El 401 ya no manda derecho a pedir el código: primero intenta renovar.
+- **Y una salida para el que la marcó donde no debía**: un link discreto, "No es mi computadora: olvidar mi sesión", visible solo mientras la llamada **no** está abierta (encima del video sería un botón de salir al lado de una cara).
+- 📌 Se descartó el link con el acceso adentro (tipo link mágico largo): saca el código pero convierte el mail reenviado en una llave. Y la contraseña en la web no sirve para quienes entraron con Google o Apple.
+- Verificado: sintaxis del script y los 28 tests de seguridad, incluido el de la sala.
+
 ### Una postulación por cuenta (el UNIQUE que el código creía tener)
 
 - Pregunta de Andre: *"¿un mismo mail puede mandar muchas postulaciones?"*. Verificado contra la base, y la respuesta tenía tres partes:
