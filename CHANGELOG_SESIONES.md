@@ -7,8 +7,10 @@
 - **Ahora:** reloj de 30 segundos mientras el Inicio está a la vista (re-dibuja el botón; cuando la sesión pasó, recarga y trae la siguiente) y la tarjeta dura hasta el fin real (inicio + `duration_minutes`) más 15 minutos.
 - 🎨 De paso, a pedido de Andre: la tarjeta de "Invitar a alguien" en Perfil ocupaba todo el ancho (sin margen lateral, con otro fondo y borde). Ahora tiene el mismo material y márgenes que las demás.
 
+- 🔁 **Sesiones al hilo (observación de Andre):** con "fin + 15'", una sesión a las 18 tapaba a la de las 19 hasta las 19:15. Ahora, entre las que no terminaron, la tarjeta muestra la **última cuyo "Unirse" ya se habilitó** (10' antes), y el reloj recarga en ese momento: a las 18:50 pasa sola a la de las 19.
+
 **Pendiente para la próxima sesión:**
-- Probar con el Inicio abierto antes de una sesión: "Unirse" tiene que prenderse solo a los 10 minutos antes.
+- Probar con el Inicio abierto antes de una sesión: "Unirse" tiene que prenderse solo a los 10 minutos antes. Y con dos sesiones seguidas, que a los 10' antes de la segunda la tarjeta cambie sola.
 
 ## 2026-09-24 — Andre (Claude · Profesionales arranca en las tres áreas)
 

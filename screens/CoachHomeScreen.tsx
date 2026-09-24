@@ -93,6 +93,8 @@ type DayEntry = { abbr: string; count: number; isToday: boolean };
 
 /** Cuánto sigue a la vista la tarjeta después del fin previsto de la sesión. */
 const MARGEN_FIN_MS = 15 * 60 * 1000;
+/** "Unirse" se habilita 10 minutos antes del inicio. */
+const ABRE_ANTES_MS = 10 * 60 * 1000;
 
 type NextSession = {
   bookingId: string;
@@ -105,8 +107,9 @@ type NextSession = {
   ordinal: string;
   salaId: string | null;
   startMs: number;
-  /** Hasta cuándo se muestra: fin real de la sesión (inicio + duración) + 15'. */
-  visibleHastaMs: number;
+  /** Cuándo hay que recalcular la tarjeta: el fin real de esta sesión
+   *  (inicio + duración + 15'), o antes si la SIGUIENTE ya se puede abrir. */
+  recalcularEnMs: number;
 };
 
 type AnimoCliente = {
@@ -413,14 +416,25 @@ export default function CoachHomeScreen() {
     // desaparecía en plena sesión. Ahora es el fin real (inicio + duración) más
     // 15' de margen, por si se estira.
     const nowMs = now.getTime();
-    const upcoming = rows
+    //
+    // 🔴 Sesiones al hilo (18hs y 19hs, pedido de Andre): con solo "hasta el fin
+    // + 15'", la de las 18 tapaba a la de las 19 hasta las 19:15, justo cuando
+    // había que entrar. Por eso, entre las que no terminaron, gana la ÚLTIMA cuyo
+    // "Unirse" ya se habilitó (10' antes); si ninguna, la más próxima.
+    const vigentes = rows
       .map(b => {
         const startMs = bookingStartMs(b.scheduled_date as string, b.scheduled_time as string);
         const duracionMs = ((b.duration_minutes as number | null) ?? 60) * 60 * 1000;
-        return { b, startMs, visibleHastaMs: startMs + duracionMs + MARGEN_FIN_MS };
+        return { b, startMs, abreMs: startMs - ABRE_ANTES_MS, visibleHastaMs: startMs + duracionMs + MARGEN_FIN_MS };
       })
       .filter(x => x.visibleHastaMs >= nowMs)
-      .sort((a, b) => a.startMs - b.startMs)[0];
+      .sort((a, b) => a.startMs - b.startMs);
+    const abiertas = vigentes.filter(x => x.abreMs <= nowMs);
+    const upcoming = abiertas.length ? abiertas[abiertas.length - 1] : vigentes[0];
+    const siguiente = upcoming ? vigentes.find(x => x.startMs > upcoming.startMs) : undefined;
+    const recalcularEnMs = upcoming
+      ? Math.min(upcoming.visibleHastaMs, siguiente ? siguiente.abreMs : Infinity)
+      : Infinity;
 
     if (upcoming) {
       const b = upcoming.b;
@@ -441,7 +455,7 @@ export default function CoachHomeScreen() {
         ordinal: ordinalLabel((completedCount ?? 0) + 1),
         salaId: (b.sala_id as string) ?? null,
         startMs: upcoming.startMs,
-        visibleHastaMs: upcoming.visibleHastaMs,
+        recalcularEnMs,
       });
 
       // Preparar sesión: última completada + recursos recomendados (Recursos v2)
@@ -630,7 +644,8 @@ export default function CoachHomeScreen() {
     const id = setInterval(() => setAhoraMs(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []));
-  const nextVencida = !!next && ahoraMs > next.visibleHastaMs;
+  // Recarga cuando la sesión terminó o cuando la siguiente ya se puede abrir.
+  const nextVencida = !!next && ahoraMs >= next.recalcularEnMs;
   useEffect(() => {
     if (nextVencida) void loadData();
   }, [nextVencida, loadData]);
@@ -641,7 +656,7 @@ export default function CoachHomeScreen() {
     setRefreshing(false);
   }, [loadData]);
 
-  const canJoin = next ? ahoraMs >= next.startMs - 10 * 60 * 1000 : false;
+  const canJoin = next ? ahoraMs >= next.startMs - ABRE_ANTES_MS : false;
 
   // 🔴 "Sin sesiones programadas" no distingue entre dos coaches muy
   // distintos: uno con historial que está en un bache entre reservas (para
