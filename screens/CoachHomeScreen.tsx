@@ -172,7 +172,8 @@ export default function CoachHomeScreen() {
   const [aceptando, setAceptando] = useState<string | null>(null);
 
   // ── Card de preparación (estado vacío de Inicio) ────────────────────────
-  // Los 3 pasos del checklist. `puertas` no tiene estado propio — se deriva
+  // Los 2 pasos del checklist, más el recurso como sugerencia opcional (ver
+  // abajo, 24/09/2026). `puertas` no tiene estado propio — se deriva
   // de `doorLabels.length` — acá hace falta la lista completa para los chips.
   const [prepPerfil, setPrepPerfil] = useState(false);
   const [prepRecurso, setPrepRecurso] = useState(false);
@@ -695,14 +696,19 @@ export default function CoachHomeScreen() {
   }, [user, loadData]);
 
   const prepPuertas = doorLabels.length > 0;
-  const prepDoneCount = [prepPerfil, prepPuertas, prepRecurso].filter(Boolean).length;
-  const prepMissing = 3 - prepDoneCount;
+  // 🔴 24/09/2026, decisión de Andre: el recurso NO es un paso. Era 1 de 3 y
+  // el botón principal lo pedía, así que se leía como obligatorio, con la
+  // promesa "los coaches con recursos reciben más reservas", que no es cierta:
+  // los recursos no pesan en el orden del catálogo y no hay datos que la
+  // respalden. Sin recurso se aparece y se reserva igual. Queda como sugerencia
+  // aparte, sin contar en el progreso ni en "estás casi listo".
+  const prepDoneCount = [prepPerfil, prepPuertas].filter(Boolean).length;
+  const prepMissing = 2 - prepDoneCount;
   // La primera acción pendiente, en el mismo orden que se muestra el
   // checklist — es la que ofrece el botón de abajo.
   const prepNextAction: { label: string; route: string } | null =
     !prepPerfil ? { label: 'Completar mi perfil', route: '/perfil' } :
     !prepPuertas ? { label: 'Elegir mis temas', route: '/coach-topics' } :
-    !prepRecurso ? { label: 'Subir un recurso', route: '/coach-recurso-nuevo' } :
     null;
 
   if (loading) {
@@ -942,10 +948,10 @@ export default function CoachHomeScreen() {
 
                 <View style={s.progWrap}>
                   <View style={s.progBar}>
-                    <View style={[s.progFill, { width: `${(prepDoneCount / 3) * 100}%` }]} />
+                    <View style={[s.progFill, { width: `${(prepDoneCount / 2) * 100}%` }]} />
                   </View>
                   <View style={s.progLbl}>
-                    <Text style={s.progLblTxt}><Text style={s.progLblB}>{prepDoneCount} de 3</Text> pasos completos</Text>
+                    <Text style={s.progLblTxt}><Text style={s.progLblB}>{prepDoneCount} de 2</Text> pasos completos</Text>
                     <Text style={s.progLblTxt}>{prepMissing === 0 ? 'Completo' : `Falta ${prepMissing}`}</Text>
                   </View>
                 </View>
@@ -992,15 +998,19 @@ export default function CoachHomeScreen() {
                   </TouchableOpacity>
                 </View>
 
-                <View style={[s.checkRow, { marginTop: 13 }]}>
-                  <View style={[s.checkBox, prepRecurso ? s.checkBoxDone : s.checkBoxTodo]}>
-                    {prepRecurso && <Feather name="check" size={11} color="#F3EEDF" />}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.checkLabel}>Subir tu primer recurso</Text>
-                    <Text style={s.checkSub}>Los coaches con recursos reciben más reservas</Text>
-                  </View>
-                </View>
+                {/* Opcional, fuera del conteo: sin casilla para tildar, porque no
+                    es algo que "falte". Si ya subió uno, no se muestra. */}
+                {!prepRecurso && (
+                  <TouchableOpacity
+                    style={s.opcionalRow}
+                    activeOpacity={0.7}
+                    onPress={() => router.push({ pathname: '/coach-recurso-nuevo' as any, params: { coach_id: coachId } })}>
+                    <Text style={s.opcionalLabel}>Opcional: compartir un recurso</Text>
+                    <Text style={s.checkSub}>
+                      Si ya usás un ejercicio o una lectura con tus pacientes, podés subirlo. No hace falta para recibir reservas.
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 {/* ── El paso que contesta la pregunta que el coach tiene ────
                     🔴 Los tres de arriba son tarea administrativa: perfil,
@@ -1351,7 +1361,7 @@ const s = StyleSheet.create({
 
   // Card de preparación (`esCoachNuevo`) — spec `coach-estados-vacios.html`.
   // Reemplaza a la tarjeta de una línea de la sesión 139 por el checklist
-  // completo: barra de progreso + 3 pasos + chips de puertas + botón de la
+  // completo: barra de progreso + 2 pasos (+ recurso opcional) + chips de puertas + botón de la
   // próxima acción.
   prepCard: { marginTop: 14 },
   prepCardInner: { padding: 20 },
@@ -1376,6 +1386,8 @@ const s = StyleSheet.create({
   checkBoxTodo: { borderWidth: 1.5, borderColor: LINE },
   checkLabel: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: FOREST },
   checkSub: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 1 },
+  opcionalRow: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(86,94,50,0.12)' },
+  opcionalLabel: { fontSize: 12.5, fontFamily: ViveFonts.medium, color: FOREST, textDecorationLine: 'underline' },
 
   doorChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 7, marginLeft: 30 },
   doorChip: { backgroundColor: OK_BG, borderRadius: 11, paddingVertical: 5, paddingHorizontal: 10 },

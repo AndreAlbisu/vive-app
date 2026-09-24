@@ -1,3 +1,14 @@
+## 2026-09-24 — Andre (Claude · el recurso deja de ser un paso del profesional)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`
+
+**Resumen:**
+- 📚 **Decisión de Andre: no obligar al profesional a subir un recurso si no le hace falta.** No era un requisito real (sin recurso se aparece en el catálogo y se reserva igual), pero en el Inicio del profesional nuevo era 1 de los 3 pasos de "Antes de tu primera sesión", el botón principal lo pedía, y la barra quedaba en "Falta 1". Además prometía "Los coaches con recursos reciben más reservas", que **no es cierto**: los recursos no pesan en el orden del catálogo y no hay datos que lo respalden.
+- **Ahora:** el checklist son 2 pasos (perfil y temas), el progreso es "de 2", y el recurso queda como una línea aparte, **"Opcional: compartir un recurso"**, que explica que no hace falta para recibir reservas. Si ya subió uno, no aparece.
+
+**Pendiente para la próxima sesión:**
+- Mirarlo en el teléfono con una cuenta de profesional sin reservas.
+
 ## 2026-09-24 — Andre (Claude · probar el no-show)
 
 **Tocado:** `scripts/security-tests/endpoints.cjs`
