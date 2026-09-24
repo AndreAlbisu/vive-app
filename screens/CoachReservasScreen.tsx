@@ -762,7 +762,7 @@ export default function CoachReservasScreen() {
             )}
 
             <TouchableOpacity style={s.histLink} activeOpacity={0.7} onPress={() => router.push('/coach-agenda')}>
-              <Text style={s.histLinkTxt}>Ver historial de sesiones →</Text>
+              <Text style={s.histLinkTxt}>Ver agenda e historial →</Text>
             </TouchableOpacity>
 
             <View style={{ height: TAB_BAR_CLEARANCE }} />

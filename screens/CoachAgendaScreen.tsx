@@ -28,6 +28,7 @@ type Booking = {
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
   confirmada: { label: 'Confirmada', color: '#3F7D4F', bg: 'rgba(63,125,79,0.14)' },
   pendiente:  { label: 'Pendiente',  color: '#C1694F', bg: 'rgba(193,105,79,0.14)' },
+  completada: { label: 'Hecha',      color: '#87835C', bg: 'rgba(135,131,92,0.14)' },
 };
 
 function buildCalendar(year: number, month: number): (number | null)[][] {
@@ -119,7 +120,11 @@ export default function CoachAgendaScreen() {
       .from('bookings')
       .select('id, user_id, scheduled_date, scheduled_time, sala_id, status')
       .eq('coach_id', coachId)
-      .in('status', ['confirmada', 'pendiente'])
+      // 🔴 24/09/2026. Sin 'completada', la sesión desaparecía de la agenda el
+      // día que se daba, y el botón "Ver historial de sesiones" de Reservas
+      // llevaba acá: a un calendario donde lo ya hecho no estaba. Ahora las
+      // hechas se ven atenuadas y la agenda es también el historial.
+      .in('status', ['confirmada', 'pendiente', 'completada'])
       .gte('scheduled_date', from)
       .lte('scheduled_date', to)
       .order('scheduled_time', { ascending: true });
@@ -199,6 +204,8 @@ export default function CoachAgendaScreen() {
                 if (!day) return <View key={di} style={s.dayCell} />;
                 const ds = dateStr(year, month, day);
                 const count = byDate[ds]?.length ?? 0;
+                // Un día con solo sesiones hechas lleva el punto atenuado.
+                const soloHechas = count > 0 && byDate[ds]!.every(b => b.status === 'completada');
                 const isSelected = selected === ds;
                 const isToday = ds === TODAY_STR;
                 return (
@@ -209,7 +216,7 @@ export default function CoachAgendaScreen() {
                       activeOpacity={0.75}>
                       <Text style={[s.dayText, isSelected && s.dayTextSelected]}>{day}</Text>
                       {count > 0 && (
-                        <View style={[s.dot, isSelected && s.dotSelected]} />
+                        <View style={[s.dot, soloHechas && s.dotHecha, isSelected && s.dotSelected]} />
                       )}
                     </TouchableOpacity>
                   </View>
@@ -231,14 +238,16 @@ export default function CoachAgendaScreen() {
               </Text>
 
               {selectedBookings.length === 0 ? (
-                <Text style={s.emptyDay}>No tenés reservas este día</Text>
+                <Text style={s.emptyDay}>
+                  {selected < TODAY_STR ? 'No hubo sesiones este día' : 'No tenés reservas este día'}
+                </Text>
               ) : (
                 selectedBookings.map(b => {
                   const meta = STATUS_META[b.status] ?? { label: b.status, color: '#87835C', bg: 'rgba(135,131,92,0.14)' };
                   return (
                     <TouchableOpacity
                       key={b.id}
-                      style={s.bookingCard}
+                      style={[s.bookingCard, b.status === 'completada' && s.bookingCardHecha]}
                       activeOpacity={0.85}
                       onPress={() => abrirSesion(b)}
                     >
@@ -302,6 +311,7 @@ const s = StyleSheet.create({
     width: 5, height: 5, borderRadius: 2.5, backgroundColor: ViveColors.primary,
   },
   dotSelected: { backgroundColor: '#F7EFE4' },
+  dotHecha: { backgroundColor: 'rgba(135,131,92,0.45)' },
 
   detail: { marginTop: 20 },
   detailTitle: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#565E32', marginBottom: 12 },
@@ -313,6 +323,7 @@ const s = StyleSheet.create({
     borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.65)',
     padding: 12, marginBottom: 10,
   },
+  bookingCardHecha: { opacity: 0.7 },
   timeTag: {
     backgroundColor: 'rgba(86,94,50,0.10)', borderRadius: 10,
     paddingHorizontal: 10, paddingVertical: 8,

@@ -1,3 +1,14 @@
+## 2026-09-24 — Andre (Claude · la agenda del profesional es también su historial)
+
+**Tocado:** `screens/CoachAgendaScreen.tsx`, `screens/CoachReservasScreen.tsx`
+
+**Resumen:**
+- 🗓️ **Pregunta de Andre: ¿para qué sirve "Ver historial de sesiones" en Reservas?** Llevaba a la Agenda, que solo mostraba sesiones `confirmada` y `pendiente`: el día que una sesión se daba pasaba a `completada` y **desaparecía**. El botón prometía un historial que no existía, y el profesional no tenía en ningún lado la lista de lo que ya dio.
+- **Ahora:** la Agenda también muestra las `completada`, atenuadas y con la etiqueta "Hecha" (punto gris en los días que solo tuvieron sesiones hechas). Retrocediendo meses es el historial. Tocar una hecha ofrece "Ver chat" (donde están las notas). El botón pasa a decir **"Ver agenda e historial"**, y un día pasado vacío dice "No hubo sesiones este día".
+
+**Pendiente para la próxima sesión:**
+- Mirarlo en el teléfono retrocediendo a un mes con sesiones completadas.
+
 ## 2026-09-24 — Andre (Claude · calendario del profesional por suscripción)
 
 **Tocado:** `scripts/add-calendario-profesional.sql` (nuevo, corrido), `supabase/functions/calendario` (nueva, deployada), `supabase/config.toml`, `screens/CoachCalendarioScreen.tsx` + `app/coach-calendario.tsx` (nuevos), `app/_layout.tsx`, `screens/CoachSettingsScreen.tsx`, `SCHEMA.md`
