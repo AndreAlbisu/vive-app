@@ -9,7 +9,8 @@
 //
 // ⚠️ Los números salen de las mismas fuentes que "Cómo funciona": comisión
 // 20/15 (`_shared/commission.ts`), 24 horas para aceptar
-// (`expire_pending_bookings`), sesiones de una hora (`CoachWeeklyPatternScreen`).
+// (`expire_pending_bookings`), sesiones de una hora (`CoachWeeklyPatternScreen`),
+// los cuatro lugares (`DECK_SLOTS`) y la garantía (T&C §9.3).
 // Si cambia alguno, cambia acá en el mismo commit.
 
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
@@ -23,7 +24,7 @@ const PUNTOS: { icon: keyof typeof MaterialCommunityIcons.glyphMap; titulo: stri
   {
     icon: 'account-search-outline',
     titulo: 'Cómo te encuentran',
-    texto: 'En la app, por los temas que elijas. Y por tu link, que le podés mandar a quien ya atendés.',
+    texto: 'En la app, por los temas que elijas: cada tema muestra cuatro profesionales, uno por lugar (recomendado, en tendencia, nuevo y económico), y al principio entrás como nuevo. Y por tu link, que le podés mandar a quien ya atendés.',
   },
   {
     icon: 'calendar-check-outline',
@@ -34,6 +35,11 @@ const PUNTOS: { icon: keyof typeof MaterialCommunityIcons.glyphMap; titulo: stri
     icon: 'cash-multiple',
     titulo: 'Cómo cobrás',
     texto: 'En Argentina, directo a tu Mercado Pago cuando la persona reserva. La comisión es 20% en la primera sesión con cada persona y 15% después.',
+  },
+  {
+    icon: 'shield-check-outline',
+    titulo: 'La garantía',
+    texto: 'Si la persona no queda conforme con su primera sesión con vos, puede pedir la plata de vuelta dentro de las 48 horas. Cada persona la usa una sola vez en toda la app.',
   },
   {
     icon: 'video-outline',

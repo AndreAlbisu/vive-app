@@ -1,3 +1,16 @@
+## 2026-09-24 — Andre (Claude · todas las reglas del profesional en Cómo funciona)
+
+**Tocado:** `screens/CoachComoFuncionaScreen.tsx`, `components/CoachBienvenida.tsx`
+
+**Resumen:**
+- 📋 **Andre: "también habría que explicarle todas las reglas importantes, y lo de las puertas".** Se cruzó la pantalla contra los T&C y el código. Faltaban reglas que afectan al profesional y una estaba mal: "Cómo te encuentran" nombraba 3 lugares (son 4) y no decía cómo se entra a cada uno.
+- **De 5 a 10 bloques, desplegables** (cerrados muestran la regla en una línea): temas y los cuatro lugares con sus barras reales (`DECK_SLOTS`), reservas (24 horas, instantánea, mismo horario, cambios), cobro (suma 25/20 del exterior y que los comprobantes los emite el profesional, §8.3 y §8.5), **garantía de primera sesión** (§9.3: se descuenta de lo que cobró), ausencias (suma que se decide con registros de conexión), cancelaciones (suma el pedido de cancelar por chat), reseñas (§12), urgencias (§5.3 y el compromiso de derivar de la postulación), privacidad y notas, y límites (CBU bloqueado, sanciones revisadas a mano y con revisión).
+- La bienvenida suma los cuatro lugares y la garantía.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone.
+- Afuera a propósito: el botón de arrepentimiento (§9.4, 10 días). Afecta al profesional, pero el efecto sobre una sesión ya dada está marcado para el abogado; se suma cuando esté resuelto.
+
 ## 2026-09-24 — Andre (Claude · lo que el profesional nuevo necesita saber)
 
 **Tocado:** `components/CoachBienvenida.tsx` (nuevo), `screens/CoachHomeScreen.tsx`, `screens/CoachProfileScreen.tsx`, `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `__tests__/coachSanciones.test.ts`, `docs/no-show.md`
