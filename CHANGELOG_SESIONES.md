@@ -27,9 +27,8 @@ Verificación remota: las cuatro funciones coinciden con la migración, historia
 - ⚠️ Los hallazgos 2 a 4 (mensajería, recomendaciones, almacenamiento) y los permisos sobrantes de `anon` tienen OK de Andre pero NO se aplicaron: el control de permisos del entorno bloqueó escribir el script contra producción. Siguen abiertos.
 
 **Pendiente para la próxima sesión:**
-- **Andre, en el panel de Supabase, en este orden:** (1) Authentication → Emails → plantilla **Confirm signup**: que muestre `{{ .Token }}`, igual que Magic Link, y guardar; (2) Authentication → Sign In / Providers → Email → prender **Confirm email**. Sin el paso 1 nadie nuevo puede entrar.
-- Probar en el teléfono: alta con mail nuevo (llega código, se confirma, entra), login con una cuenta sin confirmar (lleva al código), alta de profesional, y reservar desde la web con un mail nuevo.
-- No pushear hasta que el interruptor esté prendido.
+- ✅ Hecho por Andre el mismo día y verificado por Claude leyendo la configuración de Auth de producción: `mailer_autoconfirm = false`, plantilla Confirm signup con `{{ .Token }}` y sin link, asunto "Tu código de Vita: {{ .Token }}", código de 8 dígitos que dura 1 hora.
+- La prueba de punta a punta no se puede hacer desde acá: el CAPTCHA frena las altas por API. Probar en el teléfono: alta con mail nuevo (llega código, se confirma, entra), login con una cuenta sin confirmar (lleva al código), alta de profesional, y reservar desde la web con un mail nuevo.
 - Aplicar los arreglos 2 a 4 cuando Andre destrabe el permiso.
 
 ## 2026-09-23 — Andre (Claude · tarjeta de Sofía sin check-in va a Progreso)
