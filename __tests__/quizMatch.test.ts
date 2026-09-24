@@ -22,18 +22,23 @@ function coach(over: Partial<CachedCoach> = {}): CachedCoach {
 const PIDE: RespuestasQuiz = { tema: 'emocion', tipo: 'psicologo', presupuesto: 'low' };
 
 describe('tipoProfesional', () => {
-  it('sin matrícula verificada es Coach aunque la presentación diga psicología', () => {
-    expect(tipoProfesional({ specialty: 'Psicología positiva', hasMatricula: false })).toBe('Coach');
+  it('sin profesión verificada es Coach', () => {
+    expect(tipoProfesional({ profesion: null })).toBe('Coach');
   });
-  it('con matrícula y "psicóloga" (con tilde) es Psicólogo', () => {
-    expect(tipoProfesional({ specialty: 'Psicóloga clínica', hasMatricula: true })).toBe('Psicólogo');
+  it('matrícula de psicología verificada es Psicólogo', () => {
+    expect(tipoProfesional({ profesion: 'psicologia' })).toBe('Psicólogo');
+  });
+  it('🔴 matrícula de nutrición es Nutricionista aunque el texto diga psicología', () => {
+    // El caso del informe del 23/09: el texto libre ya no decide nada.
+    const c = { specialty: 'Psicología nutricional', hasMatricula: true, profesion: 'nutricion' as const };
+    expect(tipoProfesional(c)).toBe('Nutricionista');
   });
 });
 
 describe('recomendarDesdeQuiz', () => {
   it('pone primero a quien cumple las tres respuestas y lo marca como exacto', () => {
-    const exacto = coach({ specialty: 'Psicóloga', hasMatricula: true });
-    const caro = coach({ specialty: 'Psicóloga', hasMatricula: true, priceFrom: 20000, avgRating: 5 });
+    const exacto = coach({ specialty: 'Psicóloga', hasMatricula: true, profesion: 'psicologia' });
+    const caro = coach({ specialty: 'Psicóloga', hasMatricula: true, profesion: 'psicologia', priceFrom: 20000, avgRating: 5 });
     const r = recomendarDesdeQuiz([caro, exacto], PIDE);
     expect(r.hayCoincidenciaExacta).toBe(true);
     expect(r.recomendaciones[0].coach.id).toBe(exacto.id);
@@ -50,14 +55,14 @@ describe('recomendarDesdeQuiz', () => {
   });
 
   it('🔴 cuando afloja el presupuesto, lo dice en vez de callarlo', () => {
-    const caro = coach({ specialty: 'Psicólogo', hasMatricula: true, priceFrom: 9000 });
+    const caro = coach({ specialty: 'Psicólogo', hasMatricula: true, profesion: 'psicologia', priceFrom: 9000 });
     const r = recomendarDesdeQuiz([caro], PIDE);
     expect(r.hayCoincidenciaExacta).toBe(false);
     expect(r.recomendaciones[0].diferencias).toEqual(['Su sesión cuesta más de lo que marcaste']);
   });
 
   it('no recomienda a quien no trabaja el tema elegido', () => {
-    const otroTema = coach({ topics: ['Productividad'], specialty: 'Psicóloga', hasMatricula: true });
+    const otroTema = coach({ topics: ['Productividad'], specialty: 'Psicóloga', hasMatricula: true, profesion: 'psicologia' });
     expect(recomendarDesdeQuiz([otroTema], PIDE).recomendaciones).toEqual([]);
   });
 
@@ -143,7 +148,7 @@ describe('recomendarDesdeQuiz — tema en dos niveles (21/09/2026)', () => {
   });
 
   it('con nutricionista ignora las preguntas de cómo trabaja', () => {
-    const c = coach({ specialty: 'Nutricionista', hasMatricula: true, topics: ['Nutrición'], guia: 'acompana' });
+    const c = coach({ specialty: 'Nutricionista', hasMatricula: true, profesion: 'nutricion', topics: ['Nutrición'], guia: 'acompana' });
     const r = recomendarDesdeQuiz([c], { ...BASE, areas: ['salud'], tipo: 'nutricionista', guia: 'guia' });
     expect(r.recomendaciones[0].diferencias).toEqual([]);
   });

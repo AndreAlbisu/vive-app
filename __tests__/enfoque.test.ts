@@ -86,18 +86,18 @@ describe('evaluarEstilo', () => {
 
 describe('la escuela pide matrícula verificada', () => {
   it('sin matrícula no se ofrece la pregunta', () => {
-    expect(puedeDeclararEnfoque(false)).toBe(false);
+    expect(puedeDeclararEnfoque('nutricion')).toBe(false);
     expect(puedeDeclararEnfoque(null)).toBe(false);
     expect(puedeDeclararEnfoque(undefined)).toBe(false);
-    expect(puedeDeclararEnfoque(true)).toBe(true);
+    expect(puedeDeclararEnfoque('psicologia')).toBe(true);
   });
 
   it('sin matrícula no se manda a guardar lo elegido', () => {
-    expect(enfoquesAGuardar(false, ['psicoanalitico'])).toEqual([]);
+    expect(enfoquesAGuardar(null, ['psicoanalitico'])).toEqual([]);
   });
 
   it('con matrícula se guarda tal cual', () => {
-    expect(enfoquesAGuardar(true, ['psicoanalitico', 'sistemico']))
+    expect(enfoquesAGuardar('psicologia', ['psicoanalitico', 'sistemico']))
       .toEqual(['psicoanalitico', 'sistemico']);
   });
 

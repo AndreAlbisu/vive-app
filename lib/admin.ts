@@ -731,16 +731,21 @@ export async function credentialFileUrl(credentialId: string): Promise<{ url?: s
   return { url: res.data?.url as string };
 }
 
+/** De qué profesión es una matrícula. Obligatoria al verificar una. */
+export type ProfesionMatricula = 'psicologia' | 'nutricion' | 'otra';
+
 export async function reviewCredential(
   credentialId: string,
   verified: boolean,
   notes?: string,
+  profesion?: ProfesionMatricula,
 ): Promise<{ ok: boolean; error?: string }> {
   const res = await callFunction('admin-actions', {
     action: 'review_credential',
     credential_id: credentialId,
     verified,
     notes: notes ?? null,
+    profesion: profesion ?? null,
   });
   return { ok: res.ok, error: res.error };
 }

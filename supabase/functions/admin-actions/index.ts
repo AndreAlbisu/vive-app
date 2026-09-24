@@ -39,6 +39,8 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const REPORT_STATUSES = ['revisado', 'accionado', 'descartado']
+// De qué profesión es una matrícula (`coach_credentials.profesion`).
+const PROFESIONES = ['psicologia', 'nutricion', 'otra']
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -1064,12 +1066,26 @@ serve(async (req) => {
         return json({ error: 'para rechazar hace falta un motivo' }, 400)
       }
 
+      // 🔴 23/09/2026. Una matrícula verificada dice DE QUÉ profesión es, y lo
+      // decide quien mira el documento, no el texto que escribió el profesional.
+      // De esto sale `coaches.profesion` (trigger), que es lo único que la app
+      // usa para mostrar "Psicólogo" o "Nutricionista".
+      const { data: actual, error: leerErr } = await admin
+        .from('coach_credentials').select('kind').eq('id', body.credential_id).maybeSingle()
+      if (leerErr) return json({ error: leerErr.message }, 500)
+      if (!actual) return json({ error: 'no existe esa credencial' }, 404)
+      const esMatricula = actual.kind === 'matricula'
+      if (body.verified && esMatricula && !PROFESIONES.includes(body.profesion)) {
+        return json({ error: `para verificar una matrícula hace falta la profesión: ${PROFESIONES.join(', ')}` }, 400)
+      }
+
       const { data, error } = await admin
         .from('coach_credentials')
         .update({
           status: body.verified ? 'verificada' : 'rechazada',
           review_notes: body.notes ?? null,
           reviewed_at: new Date().toISOString(),
+          profesion: body.verified && esMatricula ? body.profesion : null,
         })
         .eq('id', body.credential_id)
         .select('id, title, coach_id, coaches(profile_id)')
@@ -1084,7 +1100,7 @@ serve(async (req) => {
         action: 'review_credential',
         targetType: 'coach_credential',
         targetId: cred.id,
-        details: { verified: body.verified, notes: body.notes ?? null },
+        details: { verified: body.verified, notes: body.notes ?? null, profesion: body.verified && esMatricula ? body.profesion : null },
       })
 
       const profileId = cred.coaches?.profile_id

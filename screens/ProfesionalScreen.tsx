@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
-import { listPublicCredentials, lineaCredencial, KIND_LABEL, type PublicCredential } from '@/lib/coachCredentials';
+import { listPublicCredentials, lineaCredencial, profesionDeMatricula, KIND_LABEL, type PublicCredential } from '@/lib/coachCredentials';
 import { encuadreDeSesion } from '@/lib/credentialRules';
 import { EncuadrePill } from '@/components/EncuadrePill';
 import { EncuadreSheet } from '@/components/EncuadreSheet';
@@ -357,10 +357,14 @@ export default function ProfesionalScreen() {
             </View>
           )}
 
-          {/* Badge verificado */}
+          {/* 🔴 23/09/2026: decía "Verificado por Vita", que sobre la foto se
+              leía como que Vita responde por todo lo que hay en el perfil. Lo
+              que se hizo es revisar la postulación (`verified`); lo que se
+              verificó de cada título o matrícula está marcado uno por uno, en
+              Formación. Ver docs/investigacion-producto-2026-09-23.md, punto 1. */}
           <View style={s.verifiedBadge}>
             <MaterialIcons name="verified" size={14} color="#565E32" />
-            <Text style={s.verifiedText}>Verificado por Vita</Text>
+            <Text style={s.verifiedText}>Perfil revisado por Vita</Text>
           </View>
         </View>
 
@@ -467,6 +471,7 @@ export default function ProfesionalScreen() {
             <View style={s.credList}>
               {credenciales.map(c => {
                 const linea = lineaCredencial(c);
+                const deQue = profesionDeMatricula(c);
                 return (
                   <View key={c.id} style={s.credRow}>
                     <MaterialCommunityIcons
@@ -486,6 +491,9 @@ export default function ProfesionalScreen() {
                           <Text style={s.credVerifTxt}>Verificado</Text>
                         </View>
                       </View>
+                      {/* De qué profesión es la matrícula lo decidió quien miró
+                          el documento, no el texto del perfil. */}
+                      {!!deQue && <Text style={s.credMeta}>{deQue}</Text>}
                       {!!linea && <Text style={s.credMeta}>{linea}</Text>}
                       {/* El número de matrícula se muestra entero a propósito:
                           es público por definición y es lo único de esta

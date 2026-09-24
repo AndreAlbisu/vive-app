@@ -16,6 +16,20 @@
 **Pendiente para la próxima sesión:**
 - Probar en el teléfono: sin check-in de hoy, tocar la tarjeta abre Progreso; con check-in, sigue yendo a donde dice el CTA.
 
+## 2026-09-23 — Andre (Claude · profesión como dato)
+
+**Tocado:** `scripts/add-profesion-estructurada.sql` (nuevo, corrido), `supabase/functions/admin-actions` (v36), `lib/tipoProfesional.ts`, `lib/coachesCache.ts`, `app/search3.tsx`, `lib/enfoque.ts`, `screens/CoachEnfoqueScreen.tsx`, `lib/credentialRules.ts`, `lib/coachCredentials.ts`, `screens/ProfesionalScreen.tsx`, `screens/AdminScreen.tsx`, `lib/admin.ts`, tests de quiz y enfoque, `docs/terminos-y-condiciones.md` (+ `sync:legal`), `SCHEMA.md`
+
+**Resumen:**
+- 🩺 **Punto 1 del informe de producto.** "Psicólogo" o "Nutricionista" ya no se deduce buscando palabras en la especialidad que escribe el propio profesional: sale de `coaches.profesion`, que la base deriva de las matrículas **verificadas**, con la profesión que elige **quien mira el documento** (el panel la pide al verificar una matrícula). Una matrícula de nutrición ya no habilita el filtro Psicólogo ni las escuelas de psicología, aunque el texto diga "psicología". Test nuevo con ese caso.
+- 🏷️ **Qué se verificó, dicho con precisión.** La foto del perfil decía "Verificado por Vita", que se leía como aval de todo. Ahora dice **"Perfil revisado por Vita"**, que es lo que pasó (se revisó la postulación). Lo verificado va por credencial, con "Matrícula de psicología" debajo cuando corresponde. **T&C §6.1 actualizado** a los dos nombres (y `sync:legal` corrido: cambia `web/legal-version.js`).
+- 🗄️ **Base:** dos columnas nuevas, trigger de matrícula y de escuelas extendidos, vista pública con la profesión. **Corrido y verificado**. ⚠️ Hallazgo al pasar: `trg_reset_application_on_edit` reabre a cualquier rechazado ante cualquier update de su fila; el backfill se acotó a las filas que cambian y quedó anotado en SCHEMA.
+
+**Pendiente para la próxima sesión:**
+- Probar en el panel verificar una matrícula nueva y elegir la profesión (en Android el selector no tiene "Cancelar": se cancela tocando afuera).
+- ⚠️ Para la auditoría (área de Claude, permisos): `anon` tiene INSERT/UPDATE/DELETE **a nivel tabla** sobre `coaches`. Hoy lo frena la RLS (no hay policy de escritura para `anon`), pero es un permiso sobrante; revisarlo junto con el hallazgo de "permiso sobrante en todas las tablas".
+- Siguiente del informe: estado del dinero (punto 3).
+
 ## 2026-09-23 — Andre (Claude · "Tengo un problema con esta sesión")
 
 **Tocado:** `scripts/add-session-issues.sql` (nuevo, corrido), `lib/sessionIssues.ts` (nuevo), `components/SessionIssueSheet.tsx` (nuevo), `screens/SalaScreen.tsx`, `screens/ReviewScreen.tsx`, `screens/AdminScreen.tsx`, `lib/admin.ts`, `screens/UserNotificationsScreen.tsx`, `screens/CoachNotificationsScreen.tsx`, `supabase/functions/admin-actions` (v35), `supabase/functions/mail-notificaciones` (v9), `SCHEMA.md`

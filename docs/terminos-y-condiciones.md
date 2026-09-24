@@ -60,7 +60,7 @@ La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Prof
 
 ## 6. Los Profesionales y la Verificación
 
-6.1. Vita puede aplicar procesos de verificación de los Profesionales. El distintivo "**Verificado por Vita**" indica que el Profesional atravesó el proceso de verificación vigente al momento de otorgarse, **pero no constituye garantía ni aval** de su idoneidad, matrícula vigente, calidad, ni de los resultados de sus Sesiones.
+6.1. Vita puede aplicar procesos de verificación de los Profesionales. El distintivo "**Perfil revisado por Vita**" indica que Vita revisó la postulación del Profesional según el proceso vigente al momento de otorgarse. Cuando un título, matrícula o certificación figura como "**Verificado**", indica que Vita revisó el documento que lo respalda y, si es una matrícula, a qué profesión corresponde. Ninguno de los dos **constituye garantía ni aval** de su idoneidad, matrícula vigente, calidad, ni de los resultados de sus Sesiones.
 
 6.2. El Profesional es el único responsable por la veracidad de la información de su perfil, sus credenciales, el contenido que publica y las prestaciones que ofrece. Se obliga a no publicar información falsa ni engañosa.
 

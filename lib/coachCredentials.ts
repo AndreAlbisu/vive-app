@@ -16,7 +16,7 @@ import type {
 } from './credentialRules';
 
 // Re-exportadas para que una pantalla no tenga que importar de dos lados.
-export { KIND_LABEL, lineaCredencial, validarCredencial } from './credentialRules';
+export { KIND_LABEL, lineaCredencial, profesionDeMatricula, validarCredencial } from './credentialRules';
 export type { CredentialInput, CredentialKind, CredentialStatus, PublicCredential };
 
 /** Lo que ve el propio coach de su credencial, con el estado de la revisión. */
@@ -72,7 +72,7 @@ export async function listOwnCredentials(coachId: string): Promise<OwnCredential
 export async function listPublicCredentials(coachId: string): Promise<PublicCredential[]> {
   const { data, error } = await supabase
     .from('coach_credentials_public')
-    .select('id, kind, title, institution, year, registration_number')
+    .select('id, kind, title, institution, year, registration_number, profesion')
     .eq('coach_id', coachId);
 
   if (error) {
@@ -86,6 +86,7 @@ export async function listPublicCredentials(coachId: string): Promise<PublicCred
     institution: (r.institution as string | null) ?? null,
     year: (r.year as number | null) ?? null,
     registrationNumber: (r.registration_number as string | null) ?? null,
+    profesion: (r.profesion as PublicCredential['profesion']) ?? null,
   }));
 }
 

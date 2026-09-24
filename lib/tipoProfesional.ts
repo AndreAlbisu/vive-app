@@ -7,14 +7,14 @@
 // 03/09. Un solo lugar evita que vuelvan a divergir.
 //
 // La Ley 23.277 reserva el diagnóstico y el tratamiento a quien tiene
-// matrícula, así que la palabra clave es necesaria pero NO alcanza: hace falta
-// además una matrícula verificada por Vita (`coaches.has_matricula`).
+// matrícula. Ver `docs/encuadre-salud-y-responsabilidad.md` §2.
 //
-// ⚠️ Sigue sin ser perfecto: `has_matricula` dice que hay UNA matrícula
-// chequeada, no de qué profesión (el título es texto libre). Un nutricionista
-// matriculado que mencione "psicología" en su presentación todavía podría caer
-// como Psicólogo. Cerrarlo del todo pide un campo estructurado de profesión en
-// `coaches`, que es una decisión de producto. Ver `docs/encuadre-salud-y-responsabilidad.md` §2.
+// ✅ 23/09/2026: sale de `coaches.profesion`, que deriva la base de las
+// matrículas VERIFICADAS, con la profesión que eligió quien miró el documento
+// (`scripts/add-profesion-estructurada.sql`). Antes se buscaba "psicolog" en
+// `specialty`, texto libre del propio profesional, y un nutricionista
+// matriculado que escribiera "psicología" caía como Psicólogo. El texto ya no
+// decide nada.
 
 export type TipoProfesional = 'Coach' | 'Psicólogo' | 'Nutricionista';
 
@@ -30,10 +30,8 @@ export function normalizarTexto(text: string): string {
     .replace(/ñ/g, 'n');
 }
 
-export function tipoProfesional(c: { specialty: string; hasMatricula?: boolean }): TipoProfesional {
-  const s = normalizarTexto(c.specialty);
-  if (!c.hasMatricula) return 'Coach';
-  if (s.includes('psicolog')) return 'Psicólogo';
-  if (s.includes('nutricion')) return 'Nutricionista';
+export function tipoProfesional(c: { profesion?: string | null }): TipoProfesional {
+  if (c.profesion === 'psicologia') return 'Psicólogo';
+  if (c.profesion === 'nutricion') return 'Nutricionista';
   return 'Coach';
 }

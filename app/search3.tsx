@@ -146,7 +146,7 @@ export default function SearchScreen3() {
     setLoadingCoaches(true);
     supabase
       .from('coaches')
-      .select('id, specialty, bio, price_per_session, nationality, has_matricula, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
+      .select('id, specialty, bio, price_per_session, nationality, has_matricula, profesion, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
       .eq('verified', true)
       // D6 (docs/decisiones-pagos.md): mismo filtro que `coachesCache.ts` — sin
       // esto, con el caché frío esta consulta de respaldo volvía a mostrar
@@ -166,6 +166,7 @@ export default function SearchScreen3() {
             name: profile?.name as string,
             specialty: c.specialty as string,
             hasMatricula: !!c.has_matricula,
+            profesion: c.profesion ?? null,
             priceFrom: c.price_per_session as number,
             nationality: (c.nationality ?? '') as string,
             gender: (profile?.gender ?? '') as string,
@@ -232,15 +233,9 @@ export default function SearchScreen3() {
   // desde una fuente que nadie verifica, en el contexto donde más importa. Ver
   // `docs/encuadre-salud-y-responsabilidad.md` §2.
   //
-  // Ahora la palabra clave sigue siendo necesaria pero **ya no alcanza**: hace
-  // falta además una matrícula verificada por Vita.
-  //
-  // ⚠️ Sigue sin ser perfecto y conviene saber por qué: `has_matricula` dice que
-  // hay UNA matrícula chequeada, no de qué profesión —el título es texto libre—.
-  // Así que un nutricionista matriculado que mencione "psicología" en su bio
-  // todavía podría caer acá. Cerrarlo del todo pide un campo estructurado de
-  // profesión en `coaches`, que es una decisión de producto, no un parche.
-  // La regla vive en `lib/tipoProfesional.ts` (compartida con el quiz desde el 17/09).
+  // ✅ 23/09/2026: ya no se mira el texto. El tipo sale de `coaches.profesion`,
+  // que deriva la base de la matrícula verificada y de la profesión que eligió
+  // quien miró el documento.
   const inferType = tipoProfesional;
 
   const SEX_TO_GENDER: Record<'Mujer' | 'Hombre', string> = {

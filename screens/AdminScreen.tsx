@@ -44,6 +44,7 @@ import {
   uploadSanctionEvidence, sanctionEvidenceUrl, listContactSignals,
   type AdminSancion, type SancionNivel, type SenalesDeCoach,
   listOpenSessionIssues, respondSessionIssue, type AdminSessionIssue,
+  type ProfesionMatricula,
 } from '@/lib/admin';
 import { supabase } from '@/lib/supabase';
 
@@ -460,11 +461,25 @@ export default function AdminScreen() {
                           style={[s.btn, s.btnPrimary, { flex: 1 }]}
                           activeOpacity={0.8}
                           disabled={working === c.id}
-                          onPress={() => act(
-                            c.id,
-                            () => reviewCredential(c.id, true),
-                            'Credencial verificada',
-                          )}>
+                          onPress={() => {
+                            // Una matrícula dice de qué profesión es, y lo decide
+                            // quien mira el documento. De acá sale "Psicólogo" o
+                            // "Nutricionista" en toda la app (`coaches.profesion`).
+                            if (c.kind !== 'matricula') {
+                              void act(c.id, () => reviewCredential(c.id, true), 'Credencial verificada');
+                              return;
+                            }
+                            const elegir = (p: ProfesionMatricula, nombre: string) =>
+                              void act(c.id, () => reviewCredential(c.id, true, undefined, p), `Matrícula de ${nombre} verificada`);
+                            Alert.alert('¿De qué profesión es esta matrícula?', 'Según el documento, no lo que dice el perfil.', [
+                              { text: 'Psicología', onPress: () => elegir('psicologia', 'psicología') },
+                              { text: 'Nutrición', onPress: () => elegir('nutricion', 'nutrición') },
+                              { text: 'Otra', onPress: () => elegir('otra', 'otra profesión') },
+                              // Android muestra hasta 3 botones: ahí se cancela
+                              // tocando afuera (`cancelable`).
+                              ...(Platform.OS === 'ios' ? [{ text: 'Cancelar', style: 'cancel' as const }] : []),
+                            ], { cancelable: true });
+                          }}>
                           <Text style={s.btnPrimaryText}>
                             {working === c.id ? 'Guardando…' : 'Verificar'}
                           </Text>

@@ -18,6 +18,9 @@ export type CachedCoach = {
    *  texto libre y una matrícula puede ser de psicología, nutrición u otra cosa.
    *  Solo dice que hay una y que Vita la chequeó. */
   hasMatricula?: boolean;
+  /** De qué profesión es la matrícula verificada (`coaches.profesion`, derivada
+   *  por la base). Lo único que decide "Psicólogo"/"Nutricionista". */
+  profesion?: 'psicologia' | 'nutricion' | null;
   avgRating?: number | null;
   reviewCount?: number;
   // Ranking del deck de Conexiones (criterio v1)
@@ -63,7 +66,7 @@ let inflight: Promise<void> | null = null;
 async function _doFetch(): Promise<void> {
   const { data, error } = await supabase
     .from('coaches')
-    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, has_matricula, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, estilo, enfoques, guia, focos, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
+    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, has_matricula, profesion, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, estilo, enfoques, guia, focos, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
     .eq('verified', true)
     .eq('availability_status', 'activo')
     // D6 (docs/decisiones-pagos.md): para aparecer en el catálogo hace falta
@@ -106,6 +109,7 @@ async function _doFetch(): Promise<void> {
       topics:      (c.coach_topics ?? []).map((t: any) => t.topic as string),
       verified:    !!(c.verified),
       hasMatricula: !!(c.has_matricula),
+      profesion:   (c.profesion ?? null) as CachedCoach['profesion'],
       // ⚠️ Los dos van juntos y no por separado: `usdt-create-payment` rechaza
       // el cobro si falta el precio en dólares, así que un coach con el flag
       // prendido y sin precio NO puede recibir una reserva del exterior. Es la

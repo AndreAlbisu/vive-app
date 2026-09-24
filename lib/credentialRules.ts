@@ -24,7 +24,17 @@ export type PublicCredential = {
   institution: string | null;
   year: number | null;
   registrationNumber: string | null;
+  /** Solo matrículas: de qué profesión es, según quien verificó el documento. */
+  profesion?: 'psicologia' | 'nutricion' | 'otra' | null;
 };
+
+/** "Matrícula de psicología" / "de nutrición". Null si no hay a qué atarla. */
+export function profesionDeMatricula(c: Pick<PublicCredential, 'kind' | 'profesion'>): string | null {
+  if (c.kind !== 'matricula') return null;
+  if (c.profesion === 'psicologia') return 'Matrícula de psicología';
+  if (c.profesion === 'nutricion') return 'Matrícula de nutrición';
+  return null;
+}
 
 export type CredentialInput = {
   kind: CredentialKind;
