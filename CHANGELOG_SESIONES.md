@@ -9,7 +9,7 @@
 
 **Pendiente para la próxima sesión:**
 - Probar en el teléfono con dos cuentas: el cliente pide un cambio dentro de las 24hs, el profesional toca "Te propongo otro", y del otro lado llega un solo aviso con las opciones.
-- ⚠️ Algo que se vio al pasar y no se tocó: después de proponer, el aviso "Se lo propusimos" vuelve al calendario y no a Reservas (`router.back()` desde la pantalla de horario).
+- ✅ ~~Después de proponer, el aviso vuelve al calendario y no a Reservas~~. Arreglado el mismo día, y no solo para proponer: las **cuatro** salidas de `BookingScreen_Time` (mover, pedir el cambio, proponer, contraproponer) hacían `router.back()` y dejaban a la persona sobre un calendario que ya no servía. Ahora `volverAlOrigen()` saca horario y calendario de una vez (`router.dismiss(2)`) y vuelve a la Sala, Reservas o la agenda.
 
 ## 2026-09-24 — Andre (Claude · CORS y paquetes sin uso)
 

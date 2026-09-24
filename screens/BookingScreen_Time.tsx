@@ -146,7 +146,7 @@ export default function BookingScreen_Time() {
 
     if (r.resultado === 'movida') {
       Alert.alert('Listo', 'Tu sesión quedó en el horario nuevo.', [
-        { text: 'Bien', onPress: () => router.back() },
+        { text: 'Bien', onPress: volverAlOrigen },
       ]);
       return;
     }
@@ -156,8 +156,18 @@ export default function BookingScreen_Time() {
     Alert.alert(
       'Se lo pedimos a tu profesional',
       'Falta menos de un día, así que el cambio lo tiene que aceptar. Te avisamos cuando responda. Mientras tanto, tu sesión sigue en el horario original.',
-      [{ text: 'Entendido', onPress: () => router.back() }],
+      [{ text: 'Entendido', onPress: volverAlOrigen }],
     );
+  }
+
+  // 🔴 24/09/2026. Mover, pedir, proponer y contraproponer terminan acá, y las
+  // cuatro hacían `router.back()`: eso volvía al CALENDARIO, no a la pantalla
+  // desde donde se empezó (la Sala, Reservas o la agenda), y había que tocar
+  // atrás otra vez sobre un calendario que ya no servía para nada. Se sacan las
+  // dos pantallas del camino (horario y calendario) de una vez.
+  function volverAlOrigen() {
+    if (router.canDismiss()) router.dismiss(2);
+    else router.back();
   }
 
   // M16. El profesional no mueve nada: deja una propuesta. La sesión sigue en
@@ -171,7 +181,7 @@ export default function BookingScreen_Time() {
     Alert.alert(
       'Se lo propusimos',
       'La sesión sigue en su horario hasta que la persona elija. Si no puede con este horario, se le devuelve todo lo que pagó.',
-      [{ text: 'Entendido', onPress: () => router.back() }],
+      [{ text: 'Entendido', onPress: volverAlOrigen }],
     );
   }
 
@@ -187,7 +197,7 @@ export default function BookingScreen_Time() {
     Alert.alert(
       'Se lo propusimos',
       'Tu profesional tiene que aceptarlo. Te avisamos cuando responda. Mientras tanto siguen disponibles los horarios que te había ofrecido.',
-      [{ text: 'Entendido', onPress: () => router.back() }],
+      [{ text: 'Entendido', onPress: volverAlOrigen }],
     );
   }
 
