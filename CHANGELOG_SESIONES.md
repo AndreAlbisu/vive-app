@@ -345,6 +345,11 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
+### "Hacerla desde la computadora" comparte solo el link
+
+- Pedido de Andre. Antes el botón compartía *"Tu sesión con &lt;cliente&gt;, &lt;fecha&gt; &lt;hora&gt; hs"* y el link abajo. Dos problemas: pegado en la barra del navegador de la computadora **eso no es una URL** y hay que editarlo a mano, y de paso **el nombre del cliente viajaba** a donde sea que lo pegue. El profesional ya sabe de qué sesión se trata: la está abriendo él.
+- Ahora va el link pelado. ⚠️ `url` en iOS y `message` en Android: iOS trata `url` como un link de verdad (el menú ofrece "Copiar" y da la URL limpia) y Android ignora ese campo, así que ahí sigue por `message`.
+
 ### La sala web deja de pedir el código en cada sesión
 
 - Pregunta de Andre: *"¿es necesario pedirle un código al coach al entrar por la compu?"*. **Sí, algo hay que pedir**: del otro lado hay una sesión de terapia en vivo y el link viaja por mail, así que sin verificación el link reenviado sería la llave. **Pero el costo era demasiado alto.**

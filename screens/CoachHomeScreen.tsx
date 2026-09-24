@@ -10,6 +10,7 @@ import {
   Image,
   Share,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -855,13 +856,26 @@ export default function CoachHomeScreen() {
                   persona necesita no es el texto en el portapapeles del
                   teléfono, es el link EN LA OTRA MÁQUINA — y para eso el camino
                   real es mandárselo por mail o WhatsApp. Además evita sumar
-                  `expo-clipboard` para un botón. */}
+                  `expo-clipboard` para un botón.
+
+                  🔴 **Va SOLO el link (24/09/2026, pedido de Andre).** Antes
+                  llevaba adelante "Tu sesión con <cliente>, <fecha> <hora> hs" y
+                  el link abajo. Dos problemas: al pegarlo en la barra del
+                  navegador de la computadora, eso no es una URL y hay que
+                  editarlo a mano; y de paso el **nombre del cliente** viajaba a
+                  donde sea que lo pegue. El profesional ya sabe de qué sesión
+                  se trata: la está abriendo él.
+
+                  ⚠️ `url` en iOS y `message` en Android: iOS trata `url` como un
+                  link de verdad (el menú ofrece "Copiar" y da la URL limpia),
+                  mientras que Android ignora ese campo y solo mira `message`. */}
               <TouchableOpacity
                 style={s.actCompu}
                 activeOpacity={0.7}
-                onPress={() => Share.share({
-                  message: `Tu sesión con ${next.userName}, ${next.dateLabel} ${next.timeStr} hs\n${SITIO_WEB}/sala?booking=${next.bookingId}`,
-                }).catch(() => {})}>
+                onPress={() => {
+                  const link = `${SITIO_WEB}/sala?booking=${next.bookingId}`;
+                  Share.share(Platform.OS === 'ios' ? { url: link } : { message: link }).catch(() => {});
+                }}>
                 {/* ⚠️ `GREEN_EYEBROW` y no `FOREST_SOFT`: esta tarjeta tiene
                     fondo verde oscuro (#3E4E2C), y el oliva da 1.9:1 encima —
                     invisible. Con este da 5.6:1. Mismo error que la auditoría
