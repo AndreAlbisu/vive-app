@@ -1,3 +1,16 @@
+## 2026-09-24 — Andre (Claude · encabezados de seguridad de la web)
+
+**Tocado:** `vercel.json`
+
+**Resumen:**
+- 🛡️ **Punto 12 de la checklist de seguridad.** La web (`vitaapp.com.ar`, portada, `/c/<slug>` con el checkout, `/sala`, `/reserva`, legales) solo mandaba `nosniff` y `Referrer-Policy`. Ahora suma **CSP** (orígenes permitidos: Supabase, Cloudflare Turnstile, Daily, unpkg para `daily-js`, Google Fonts; `frame-ancestors 'none'`, `object-src 'none'`, `base-uri` y `form-action` propios), **`X-Frame-Options: DENY`** (nadie puede meter el checkout dentro de otro sitio) y **`Permissions-Policy`** sin cámara, micrófono, ubicación ni pagos en todo el sitio **menos `/sala`**, que necesita cámara y micrófono para el iframe de Daily. HSTS ya lo pone Vercel.
+- ✅ **Probado antes de subir:** la web servida en local con los mismos encabezados y cada página cargada en Chrome sin ventana. Una página de control con un script y un iframe de otro origen marcó sus 2 violaciones (el método detecta), y las cinco páginas reales dieron **0**. `/c/coach-prueba` trajo sus datos de Supabase y cargó el captcha.
+- ⚠️ **`script-src` lleva `'unsafe-inline'`**: cada página tiene su script inline. La CSP igual limita a qué se conecta, qué embebe y quién la embebe, pero contra un XSS inyectado protege poco. Pasar a hashes o nonces pide que el build los calcule; queda como mejora.
+
+**Pendiente para la próxima sesión:**
+- Se despliega con el push. Después: `curl -sI https://www.vitaapp.com.ar/ | grep -i content-security` y probar a mano una videollamada web (la carga de `daily-js` solo ocurre al entrar, no se pudo ejercitar sin una sesión real) y un pago desde `/c/<slug>`.
+- ⚠️ Si Daily cambia de dominio o se agrega un servicio externo a la web, hay que sumarlo a la CSP o la página se rompe sin error visible.
+
 ## 2026-09-24 — Andre (Claude · tope de intentos)
 
 **Tocado:** `scripts/add-rate-limits.sql` (nuevo, corrido), `supabase/functions/web-book` (v8), `lib/logging.ts`, `lib/sessionIssues.ts`, `components/SessionIssueSheet.tsx`, `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `SCHEMA.md`
