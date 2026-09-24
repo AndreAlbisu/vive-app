@@ -5,21 +5,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Platform,
   ActivityIndicator,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { generateWeeklySlots } from '@/lib/availabilityGenerator';
 import { AppBg } from '@/components/ui/AppBg';
+import CampoHora, { horaVisible } from '@/components/ui/CampoHora';
 
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DURATIONS = [30, 60, 90] as const;
@@ -35,6 +32,22 @@ type PatternBlock = {
 
 function dateToTimeStr(d: Date): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** Los horarios que va a ofrecer el bloque. Misma cuenta que
+ *  `generateWeeklySlots`: arranca en el inicio y avanza de a un turno mientras
+ *  no llegue al fin. */
+function turnosDelBloque(start: Date, end: Date, duration: number): string[] {
+  const out: string[] = [];
+  for (let t = new Date(start); t.getTime() < end.getTime(); t = new Date(t.getTime() + duration * 60_000)) {
+    out.push(horaVisible(t));
+  }
+  return out;
+}
+
+function listaDeHoras(horas: string[]): string {
+  if (horas.length <= 1) return horas.join('');
+  return `${horas.slice(0, -1).join(', ')} y ${horas[horas.length - 1]}`;
 }
 
 function makeDefaultStart(): Date {
@@ -69,7 +82,6 @@ export default function CoachWeeklyPatternScreen() {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [duration, setDuration] = useState<Duration>(60);
-  const [pickerTarget, setPickerTarget] = useState<'start' | 'end' | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -110,21 +122,17 @@ export default function CoachWeeklyPatternScreen() {
     setStartTime(null);
     setEndTime(null);
     setDuration(60);
-    setPickerTarget(null);
   }
 
   function cancelAdd() {
     setAddingFor(null);
-    setPickerTarget(null);
   }
 
-  function onTimeChange(event: DateTimePickerEvent, selected?: Date) {
-    if (Platform.OS === 'android') {
-      setPickerTarget(null); // dialog closes after any selection
-    }
-    if (event.type === 'dismissed' || !selected) return;
-    if (pickerTarget === 'start') setStartTime(selected);
-    else if (pickerTarget === 'end') setEndTime(selected);
+  // Al elegir el inicio, el fin se propone una hora después si todavía no hay
+  // uno que sirva: el caso común es un bloque corto, y ahorra abrir la rueda.
+  function elegirInicio(d: Date) {
+    setStartTime(d);
+    if (!endTime || endTime.getTime() <= d.getTime()) setEndTime(makeDefaultEnd(d));
   }
 
   // Disabled until both times are set AND end is strictly after start
@@ -153,7 +161,6 @@ export default function CoachWeeklyPatternScreen() {
     await generateWeeklySlots(coachId, supabase);
     setGenerating(false);
     setAddingFor(null);
-    setPickerTarget(null);
     setSaving(false);
   }
 
@@ -258,64 +265,26 @@ export default function CoachWeeklyPatternScreen() {
 
               {isAdding ? (
                 <View style={s.addForm}>
-                  {/* Start time */}
                   <View style={s.timeRow}>
-                    <Text style={s.timeLabel}>Inicio</Text>
-                    <TouchableOpacity
-                      style={[s.timeBtn, startTime !== null && s.timeBtnSet]}
-                      onPress={() => setPickerTarget(p => (p === 'start' ? null : 'start'))}
-                      activeOpacity={0.75}
-                    >
-                      <MaterialCommunityIcons
-                        name="clock-outline"
-                        size={15}
-                        color={startTime !== null ? ViveColors.primary : `${ViveColors.text}55`}
-                      />
-                      <Text style={[s.timeBtnText, startTime !== null && s.timeBtnTextSet]}>
-                        {startTime !== null ? dateToTimeStr(startTime) : 'Seleccionar'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  {pickerTarget === 'start' && Platform.OS === 'ios' && (
-                    <DateTimePicker
-                      mode="time"
-                      display="compact"
-                      value={startTime ?? makeDefaultStart()}
-                      onChange={onTimeChange}
-                      locale="es"
+                    <CampoHora
+                      label="Desde"
+                      titulo="Empieza a las"
+                      value={startTime}
+                      porDefecto={makeDefaultStart()}
+                      onChange={elegirInicio}
                     />
-                  )}
-
-                  {/* End time */}
-                  <View style={s.timeRow}>
-                    <Text style={s.timeLabel}>Fin</Text>
-                    <TouchableOpacity
-                      style={[s.timeBtn, endTime !== null && s.timeBtnSet]}
-                      onPress={() => setPickerTarget(p => (p === 'end' ? null : 'end'))}
-                      activeOpacity={0.75}
-                    >
-                      <MaterialCommunityIcons
-                        name="clock-outline"
-                        size={15}
-                        color={endTime !== null ? ViveColors.primary : `${ViveColors.text}55`}
-                      />
-                      <Text style={[s.timeBtnText, endTime !== null && s.timeBtnTextSet]}>
-                        {endTime !== null ? dateToTimeStr(endTime) : 'Seleccionar'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  {pickerTarget === 'end' && Platform.OS === 'ios' && (
-                    <DateTimePicker
-                      mode="time"
-                      display="compact"
-                      value={endTime ?? makeDefaultEnd(startTime)}
-                      onChange={onTimeChange}
-                      locale="es"
+                    <MaterialCommunityIcons name="arrow-right" size={18} color="rgba(135,131,92,0.6)" />
+                    <CampoHora
+                      label="Hasta"
+                      titulo="Termina a las"
+                      value={endTime}
+                      porDefecto={makeDefaultEnd(startTime)}
+                      onChange={setEndTime}
                     />
-                  )}
+                  </View>
 
                   {startTime !== null && endTime !== null && !canSave && (
-                    <Text style={s.validationHint}>El fin debe ser posterior al inicio</Text>
+                    <Text style={s.validationHint}>El fin tiene que ser después del inicio</Text>
                   )}
 
                   {/* Duration chips */}
@@ -334,6 +303,15 @@ export default function CoachWeeklyPatternScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
+
+                  {canSave && (
+                    <Text style={s.turnosHint}>
+                      {(() => {
+                        const t = turnosDelBloque(startTime!, endTime!, duration);
+                        return t.length === 1 ? `Un turno, a las ${t[0]}` : `${t.length} turnos: ${listaDeHoras(t)}`;
+                      })()}
+                    </Text>
+                  )}
 
                   {/* Actions */}
                   <View style={s.formActions}>
@@ -372,18 +350,6 @@ export default function CoachWeeklyPatternScreen() {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Android: render picker outside ScrollView — it opens as a native dialog */}
-      {Platform.OS === 'android' && pickerTarget !== null && addingFor !== null && (
-        <DateTimePicker
-          mode="time"
-          value={
-            pickerTarget === 'start'
-              ? (startTime ?? makeDefaultStart())
-              : (endTime ?? makeDefaultEnd(startTime))
-          }
-          onChange={onTimeChange}
-        />
-      )}
     </SafeAreaView>
     </AppBg>
   );
@@ -486,26 +452,8 @@ const s = StyleSheet.create({
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
+    gap: 8,
   },
-  timeLabel: { fontFamily: ViveFonts.medium, fontSize: 14, color: '#565E32' },
-  timeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.60)',
-  },
-  timeBtnSet: {
-    borderColor: `${ViveColors.primary}55`,
-    backgroundColor: `${ViveColors.primary}0D`,
-  },
-  timeBtnText: { fontFamily: ViveFonts.medium, fontSize: 14, color: 'rgba(135,131,92,0.72)' },
-  timeBtnTextSet: { color: ViveColors.primary },
 
   validationHint: {
     fontFamily: ViveFonts.regular,
@@ -524,11 +472,18 @@ const s = StyleSheet.create({
   },
   durationRow: { flexDirection: 'row', gap: 8 },
   durationChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.60)',
+  },
+  turnosHint: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 12.5,
+    color: '#87835C',
+    marginTop: 12,
   },
   durationChipActive: { backgroundColor: ViveColors.primaryInk, borderColor: ViveColors.primaryInk },
   durationChipText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#87835C' },
