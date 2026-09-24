@@ -1,3 +1,11 @@
+## 2026-09-23 — Codex: integración y despliegue de pagos/reagendado
+
+Aplicada y verificada `20260924000000_reschedule_refund_integrity.sql` en Supabase, tras autorización de Andre. Integración en main: `acbb50c0`.
+
+Las cancelaciones con una propuesta pendiente del profesional conservan el reintegro; aceptar cambios exige la participación de la parte correspondiente y una reserva vigente y pagada. La prueba `reschedule-refunds.mjs` forma parte de `test:security`. Suite completa aprobada después de integrar.
+
+Verificación remota: las cuatro funciones coinciden con la migración, historial registrado, 0 confirmadas sin pago y 0 aprobadas pendientes. No se alteraron las siete reservas históricas con revisión de reintegro pendiente. No se requieren nuevos despliegues de Edge Functions por este cambio. No ejecutar scripts anteriores que redefinan estas funciones.
+
 # CHANGELOG_SESIONES.md — Registro de sesiones de trabajo
 
 > Antes de tocar código, leé la última entrada de quien no sea vos.
