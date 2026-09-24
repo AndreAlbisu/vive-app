@@ -255,9 +255,28 @@ export default function AdminScreen() {
                         {c.price ? ` · $${c.price.toLocaleString('es-AR')}` : ''}
                         {c.nationality ? ` · ${c.nationality}` : ''}
                       </Text>
+                      {!!c.paisAtencion && (
+                        <Text style={s.cardMeta}>
+                          Atiende desde {c.provinciaAtencion ? `${c.provinciaAtencion}, ` : ''}{c.paisAtencion}
+                        </Text>
+                      )}
                       <Text style={s.cardMeta}>Se postuló el {formatDate(c.createdAt)}</Text>
                       {!!c.email && <Text style={s.cardMeta}>{c.email}</Text>}
                       {!!c.bio && <Text style={s.cardBody} numberOfLines={4}>{c.bio}</Text>}
+
+                      {/* 24/09/2026. Lo que más dice de la persona: cómo maneja un
+                          caso que la excede. Va completo, no recortado. */}
+                      {!!c.respuestaRiesgo && (
+                        <View style={s.priorNote}>
+                          <Text style={s.priorNoteLabel}>Si alguien piensa en hacerse daño:</Text>
+                          <Text style={s.priorNoteText}>{c.respuestaRiesgo}</Text>
+                        </View>
+                      )}
+                      {c.compromisoDerivar != null && (
+                        <Text style={s.cardMeta}>
+                          {c.compromisoDerivar ? '✓ Se comprometió a derivar lo clínico' : 'No confirmó que deriva lo clínico'}
+                        </Text>
+                      )}
 
                       {/* Segunda vuelta: el motivo del rechazo anterior se
                           conserva a propósito — es lo que dice si la persona

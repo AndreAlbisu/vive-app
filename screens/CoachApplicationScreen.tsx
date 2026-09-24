@@ -17,6 +17,7 @@ import { AxisIcon } from '@/components/ui/AxisIcon';
 import { AXES } from '@/constants/searchData';
 import CampoFecha from '@/components/ui/CampoFecha';
 import CampoNacionalidad from '@/components/ui/CampoNacionalidad';
+import CampoProvincia from '@/components/ui/CampoProvincia';
 import {
   ESTILO_OPCIONES_COACH,
   GUIA_OPCIONES_COACH,
@@ -36,6 +37,10 @@ const GENDER_OPTIONS = ['Prefiero no decir', 'Masculino', 'Femenino', 'No binari
 type Gender = (typeof GENDER_OPTIONS)[number];
 
 const BIO_MAX = 500;
+// La respuesta a la pregunta de riesgo: lo mismo que exige el CHECK de
+// `coaches.respuesta_riesgo` (scripts/add-postulacion-derivacion-y-lugar.sql).
+const RIESGO_MIN = 20;
+const RIESGO_MAX = 1000;
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
@@ -135,6 +140,12 @@ export default function CoachApplicationScreen() {
   const [estilo, setEstilo] = useState<EstiloCoach | null>(null);
   const [guia, setGuia] = useState<GuiaCoach | null>(null);
   const [focos, setFocos] = useState<Foco[]>([]);
+  // 24/09/2026 (docs/postulacion-preguntas.md, huecos 2 y 4). Privados: no se
+  // muestran en el perfil, los lee el equipo al revisar la postulación.
+  const [compromisoDerivar, setCompromisoDerivar] = useState(false);
+  const [respuestaRiesgo, setRespuestaRiesgo] = useState('');
+  const [paisAtencion, setPaisAtencion] = useState('');
+  const [provinciaAtencion, setProvinciaAtencion] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -207,6 +218,8 @@ export default function CoachApplicationScreen() {
         application_video_url: string | null; application_status: string | null;
         application_notes: string | null; estilo: string | null;
         guia: string | null; focos: string[] | null;
+        compromiso_derivar: boolean | null; respuesta_riesgo: string | null;
+        pais_atencion: string | null; provincia_atencion: string | null;
       } | undefined;
 
       if (cancelled || !coach || coach.application_status !== 'rechazada') return;
@@ -227,6 +240,10 @@ export default function CoachApplicationScreen() {
       setEstilo(esEstiloCoach(coach.estilo) ? coach.estilo : null);
       setGuia(esGuiaCoach(coach.guia) ? coach.guia : null);
       setFocos(((coach.focos ?? []) as string[]).filter(esFoco));
+      setCompromisoDerivar(!!coach.compromiso_derivar);
+      setRespuestaRiesgo(coach.respuesta_riesgo ?? '');
+      setPaisAtencion(coach.pais_atencion ?? '');
+      setProvinciaAtencion(coach.provincia_atencion ?? '');
     })();
 
     return () => { cancelled = true; };
@@ -250,8 +267,14 @@ export default function CoachApplicationScreen() {
   // sirve para que un formulario largo muestre avance en vez de una lista
   // infinita de campos todos iguales.
   const bloque1Listo = !!specialty && bio.trim().length >= 10 && topics.size > 0;
-  const bloque2Listo = !!estilo && !!guia && focos.length > 0;
-  const bloque3Listo = !!birthDate && !!nationality.trim()
+  // Coaches y nutricionistas no pueden tratar lo clínico (Ley 23.277): se les
+  // pide el compromiso de derivar. A los psicólogos no, porque lo clínico es su
+  // práctica; la pregunta de riesgo sí va para todos.
+  const pideCompromiso = specialty === 'Coach' || specialty === 'Nutricionista';
+  const riesgoOk = respuestaRiesgo.trim().length >= RIESGO_MIN;
+  const lugarOk = !!paisAtencion && (paisAtencion !== 'Argentina' || !!provinciaAtencion);
+  const bloque2Listo = !!estilo && !!guia && focos.length > 0 && riesgoOk && (!pideCompromiso || compromisoDerivar);
+  const bloque3Listo = !!birthDate && lugarOk
     && !!price.trim() && !isNaN(Number(price)) && Number(price) > 0
     && isValidUrl(videoUrl.trim());
   const listos = [bloque1Listo, bloque2Listo, bloque3Listo].filter(Boolean).length;
@@ -265,6 +288,11 @@ export default function CoachApplicationScreen() {
     if (!estilo) { frenar('estilo', 'Contanos cómo acompañás'); return; }
     if (!guia) { frenar('guia', 'Contanos cuánto guiás'); return; }
     if (focos.length === 0) { frenar('focos', 'Elegí sobre qué trabajás'); return; }
+    if (pideCompromiso && !compromisoDerivar) {
+      frenar('compromiso', 'Confirmá que derivás lo que excede tu práctica');
+      return;
+    }
+    if (!riesgoOk) { frenar('riesgo', 'Contanos en unas líneas qué harías'); return; }
     const birthDateIso = birthDate || null;
     if (!birthDateIso) { frenar('birthDate', 'Elegí tu fecha de nacimiento'); return; }
     // Chequeo duro contra el dato real: es el único lugar del alta donde hay una
@@ -274,7 +302,8 @@ export default function CoachApplicationScreen() {
       frenar('birthDate', 'Tenés que ser mayor de 18 años para ofrecer sesiones en Vita');
       return;
     }
-    if (!nationality.trim()) { frenar('nationality', 'Elegí tu nacionalidad'); return; }
+    if (!paisAtencion) { frenar('lugar', 'Elegí desde qué país atendés'); return; }
+    if (paisAtencion === 'Argentina' && !provinciaAtencion) { frenar('lugar', 'Elegí la provincia desde la que atendés'); return; }
     if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) {
       frenar('price', 'Ingresá un precio válido por sesión');
       return;
@@ -297,7 +326,12 @@ export default function CoachApplicationScreen() {
       specialty,
       bio: bio.trim(),
       price_per_session: Number(price),
-      nationality: nationality.trim(),
+      // Opcional desde el 24/09/2026: lo que importa es desde dónde atiende.
+      nationality: nationality.trim() || null,
+      compromiso_derivar: pideCompromiso ? compromisoDerivar : null,
+      respuesta_riesgo: respuestaRiesgo.trim(),
+      pais_atencion: paisAtencion,
+      provincia_atencion: paisAtencion === 'Argentina' ? provinciaAtencion : null,
       application_video_url: videoUrl.trim(),
       // ⚠️ Necesitan `grant insert` (scripts/add-coach-como-trabaja-en-alta.sql):
       // el INSERT de `coaches` está acotado por columnas, y sin el grant el alta
@@ -621,6 +655,49 @@ export default function CoachApplicationScreen() {
                 })}
               </View>
             </Campo>
+
+            {/* 24/09/2026. Los límites de cada uno. No salen en el perfil: los
+                lee el equipo al revisar (docs/postulacion-preguntas.md, hueco 2). */}
+            <View style={styles.limitesSep} />
+            <Text style={styles.limitesNota}>
+              Estas dos no se muestran en tu perfil: las lee el equipo de Vita al revisar tu postulación.
+            </Text>
+
+            {pideCompromiso && (
+              <Campo label="Cuando algo excede tu práctica" error={campoError === 'compromiso'}>
+                <TouchableOpacity
+                  style={styles.checkRow}
+                  onPress={() => setCompromisoDerivar(v => !v)}
+                  activeOpacity={0.75}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: compromisoDerivar }}>
+                  <View style={[styles.checkBox, compromisoDerivar && styles.checkBoxOn]}>
+                    {compromisoDerivar && <MaterialCommunityIcons name="check" size={14} color="#F3EEDF" />}
+                  </View>
+                  <Text style={styles.checkTxt}>
+                    Si aparece algo de salud mental que no me corresponde tratar, lo derivo a un profesional de la salud.
+                  </Text>
+                </TouchableOpacity>
+              </Campo>
+            )}
+
+            <Campo
+              label="¿Qué hacés si alguien te cuenta que piensa en hacerse daño?"
+              hint="No buscamos una respuesta de manual: queremos saber cómo lo manejás."
+              contador={`${respuestaRiesgo.length}/${RIESGO_MAX}`}
+              error={campoError === 'riesgo'}>
+              <TextInput
+                style={[styles.input, styles.bioInput]}
+                value={respuestaRiesgo}
+                onChangeText={(t) => setRespuestaRiesgo(t.slice(0, RIESGO_MAX))}
+                placeholder="Contanos en unas líneas qué harías"
+                placeholderTextColor="rgba(135,131,92,0.45)"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                autoCorrect
+              />
+            </Campo>
             </Bloque>
 
             <Bloque
@@ -653,7 +730,24 @@ export default function CoachApplicationScreen() {
               </View>
             </Campo>
 
-            <Campo label="Nacionalidad" error={campoError === 'nationality'}>
+            <Campo
+              label="Desde dónde atendés"
+              hint="De esto depende qué matrícula corresponde y cómo se te paga."
+              error={campoError === 'lugar'}>
+              <CampoNacionalidad
+                value={paisAtencion}
+                onChange={(p) => { setPaisAtencion(p); if (p !== 'Argentina') setProvinciaAtencion(''); }}
+                placeholder="Elegí el país"
+                titulo="¿Desde qué país atendés?"
+              />
+              {paisAtencion === 'Argentina' && (
+                <View style={{ marginTop: 10 }}>
+                  <CampoProvincia value={provinciaAtencion} onChange={setProvinciaAtencion} />
+                </View>
+              )}
+            </Campo>
+
+            <Campo label="Nacionalidad (opcional)">
               <CampoNacionalidad value={nationality} onChange={setNationality} />
             </Campo>
 
@@ -881,6 +975,15 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.65)',
   },
   bioInput: { minHeight: 120, paddingTop: 14 },
+  limitesSep: { height: 1, backgroundColor: 'rgba(86,94,50,0.14)', marginTop: 4, marginBottom: 12 },
+  limitesNota: { fontFamily: ViveFonts.regular, fontSize: 12.5, lineHeight: 18, color: '#87835C', marginBottom: 14 },
+  checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  checkBox: {
+    width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: 'rgba(86,94,50,0.45)',
+    alignItems: 'center', justifyContent: 'center', marginTop: 1,
+  },
+  checkBoxOn: { backgroundColor: '#565E32', borderColor: '#565E32' },
+  checkTxt: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 20, color: '#565E32' },
   fieldHint: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,

@@ -78,6 +78,12 @@ export type PendingCoach = {
   status: ApplicationStatus;
   notes: string | null;       // motivo del rechazo, si hubo
   reviewedAt: string | null;
+  /** Coaches y nutricionistas: se comprometió a derivar lo clínico. null = no aplica o postulación vieja. */
+  compromisoDerivar: boolean | null;
+  /** "¿Qué hacés si alguien te cuenta que piensa en hacerse daño?" Se lee al revisar. */
+  respuestaRiesgo: string | null;
+  paisAtencion: string | null;
+  provinciaAtencion: string | null;
 };
 
 /** Postulaciones en un estado dado, más viejas primero: es una cola con reloj —

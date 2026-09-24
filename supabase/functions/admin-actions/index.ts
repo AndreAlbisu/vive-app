@@ -1143,7 +1143,7 @@ serve(async (req) => {
 
       const { data, error } = await admin
         .from('coaches')
-        .select('id, profile_id, specialty, bio, price_per_session, nationality, application_video_url, created_at, verified, application_status, application_notes, application_reviewed_at, profiles!inner(name, email)')
+        .select('id, profile_id, specialty, bio, price_per_session, nationality, application_video_url, created_at, verified, application_status, application_notes, application_reviewed_at, compromiso_derivar, respuesta_riesgo, pais_atencion, provincia_atencion, profiles!inner(name, email)')
         .eq('application_status', status)
         .order('created_at', { ascending: true })
 
@@ -1170,6 +1170,11 @@ serve(async (req) => {
             status: c.application_status ?? 'pendiente',
             notes: c.application_notes ?? null,
             reviewedAt: c.application_reviewed_at ?? null,
+            // 24/09/2026: límites y lugar (docs/postulacion-preguntas.md).
+            compromisoDerivar: c.compromiso_derivar ?? null,
+            respuestaRiesgo: c.respuesta_riesgo ?? null,
+            paisAtencion: c.pais_atencion ?? null,
+            provinciaAtencion: c.provincia_atencion ?? null,
           }
         }),
       })

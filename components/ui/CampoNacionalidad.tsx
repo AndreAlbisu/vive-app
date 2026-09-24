@@ -20,9 +20,11 @@ interface Props {
   onChange: (pais: string) => void;
   /** Texto cuando todavía no eligió. */
   placeholder?: string;
+  /** Título de la hoja. Se reusa para "desde dónde atendés" (24/09/2026). */
+  titulo?: string;
 }
 
-export default function CampoNacionalidad({ value, onChange, placeholder = 'Elegí tu nacionalidad' }: Props) {
+export default function CampoNacionalidad({ value, onChange, placeholder = 'Elegí tu nacionalidad', titulo = '¿Cuál es tu nacionalidad?' }: Props) {
   const [abierto, setAbierto] = useState(false);
   const [query, setQuery] = useState('');
   const { frecuentes, resto } = useMemo(() => buscarPaises(query), [query]);
@@ -41,7 +43,7 @@ export default function CampoNacionalidad({ value, onChange, placeholder = 'Eleg
         onPress={() => setAbierto(true)}
         activeOpacity={0.75}
         accessibilityRole="button"
-        accessibilityLabel={value ? `Nacionalidad: ${value}. Tocá para cambiarla` : placeholder}>
+        accessibilityLabel={value ? `${value}. Tocá para cambiarlo` : placeholder}>
         <Text style={[s.valor, !value && s.placeholder]} numberOfLines={1}>
           {value || placeholder}
         </Text>
@@ -53,7 +55,7 @@ export default function CampoNacionalidad({ value, onChange, placeholder = 'Eleg
           <TouchableOpacity style={sheetStyles.overlay} activeOpacity={1} onPress={() => setAbierto(false)} />
           <View style={[sheetStyles.sheet, s.hoja]}>
             <View style={sheetStyles.handle} />
-            <Text style={s.titulo}>¿Cuál es tu nacionalidad?</Text>
+            <Text style={s.titulo}>{titulo}</Text>
 
             <TextInput
               style={s.buscador}

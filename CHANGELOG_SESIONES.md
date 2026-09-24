@@ -1,3 +1,17 @@
+## 2026-09-24 — Andre (Claude · preguntas de la postulación: límites y lugar)
+
+**Tocado:** `docs/postulacion-preguntas.md` (nuevo), `scripts/add-postulacion-derivacion-y-lugar.sql` (nuevo, corrido), `screens/CoachApplicationScreen.tsx`, `components/ui/CampoProvincia.tsx` (nuevo), `components/ui/CampoNacionalidad.tsx`, `supabase/functions/admin-actions` (v37), `lib/admin.ts`, `screens/AdminScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- 🧾 **Pregunta de Andre: ¿estamos haciendo las preguntas correctas en la postulación, sobre todo en metodología?** Análisis registrado en `docs/postulacion-preguntas.md`: en cómo trabaja cada profesional Vita ya está mejor que Selia, pero hay cuatro huecos. 1) Metodología de quien no es psicólogo (solo los psicólogos declaran escuela). 2) Qué hace ante un caso que no le corresponde. 3) Qué es la persona antes de pedirle credenciales (resultó **ya cubierto**: la postulación elige entre tres especialidades). 4) Desde dónde atiende (se preguntaba nacionalidad, no lugar).
+- **Hecho (2 y 4, lo que protege y se revisa para aprobar):** al final de "Cómo trabajás", con la aclaración de que no se muestran en el perfil, coaches y nutricionistas confirman que **derivan lo clínico**, y todos contestan **"¿Qué hacés si alguien te cuenta que piensa en hacerse daño?"**. En "Tus datos", **"Desde dónde atendés"** con país y, si es Argentina, provincia; la nacionalidad pasa a opcional. El panel de Postulaciones muestra todo, la respuesta de riesgo completa.
+- 🗄️ Cuatro columnas privadas en `coaches` y `mi_postulacion()` recreada (ya no la llama `anon`). Verificado (ver SCHEMA). `admin-actions` comparada contra la versión en vivo antes de redeployar (idéntica).
+
+**Pendiente para la próxima sesión:**
+- Hueco 1: **metodologías por profesión** (coaching y nutrición, hasta 3 con una frase, como las escuelas), en "completá tu perfil" después de la aprobación. Después: años de experiencia, "¿cómo es tu primera sesión?" y supervisión.
+- Para la beta: ¿la lista de metodologías es la que usan? ¿La pregunta de riesgo les resulta razonable o invasiva?
+- Probar en el teléfono una postulación nueva como coach (tiene que pedir el compromiso) y como psicólogo (no), y verla en el panel.
+
 ## 2026-09-24 — Andre (Claude · formulario del horario semanal)
 
 **Tocado:** `components/ui/CampoHora.tsx` (nuevo), `screens/CoachWeeklyPatternScreen.tsx`
