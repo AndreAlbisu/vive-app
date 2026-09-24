@@ -579,6 +579,27 @@ export default function CoachReservasScreen() {
                           {respondiendo === c.id ? 'Un momento…' : 'Aceptar el cambio'}
                         </Text>
                       </TouchableOpacity>
+                      {/* 24/09/2026. Contestar con otros horarios. Antes había
+                          que tocar "No puedo" (que le avisa al cliente "podés
+                          cancelarla") y después buscar el "⋯" para proponer.
+                          Proponer cierra este pedido y avisa una sola vez
+                          (`proponer_horarios`, scripts/add-contraoferta-profesional.sql).
+                          El calendario abre en el día que pidió el cliente. */}
+                      <TouchableOpacity
+                        style={s.cambioOtro}
+                        disabled={respondiendo === c.id}
+                        onPress={() => router.push({
+                          pathname: '/booking-calendar',
+                          params: {
+                            coachId: user!.id,
+                            name: nombreDe(c.booking_id),
+                            proponer: c.booking_id,
+                            sugerida: c.fecha,
+                          },
+                        })}
+                        activeOpacity={0.8}>
+                        <Text style={s.cambioOtroTxt}>Te propongo otro</Text>
+                      </TouchableOpacity>
                       <TouchableOpacity
                         style={s.cambioNo}
                         disabled={respondiendo === c.id}
@@ -855,7 +876,9 @@ const s = StyleSheet.create({
   cambioB: { fontFamily: ViveFonts.semibold },
   cambioDe: { fontSize: 12, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 8, textDecorationLine: 'line-through' },
   cambioA: { fontSize: 13, color: FOREST, fontFamily: ViveFonts.semibold, marginTop: 2 },
-  cambioBtns: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 12 },
+  cambioBtns: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginTop: 12 },
+  cambioOtro: { borderWidth: 1, borderColor: 'rgba(58,79,42,0.35)', borderRadius: 999, paddingVertical: 8, paddingHorizontal: 14 },
+  cambioOtroTxt: { color: FOREST, fontFamily: ViveFonts.semibold, fontSize: 13 },
   cambioSi: { backgroundColor: FOREST, borderRadius: 999, paddingVertical: 9, paddingHorizontal: 16 },
   cambioSiTxt: { color: CREAM, fontFamily: ViveFonts.semibold, fontSize: 13 },
   cambioNo: { paddingVertical: 9 },

@@ -1,3 +1,16 @@
+## 2026-09-24 — Andre (Claude · "Te propongo otro")
+
+**Tocado:** `scripts/add-contraoferta-profesional.sql` (nuevo, corrido), `screens/CoachReservasScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- 🔁 **Pregunta de Andre: ¿qué pasa si el cliente pidió un cambio y el profesional quiere ofrecerle otro horario?** Se podía, pero torpe: la tarjeta del pedido solo tenía "Aceptar el cambio" / "No puedo", y el camino intuitivo ("No puedo" y después el "⋯" para proponer) le mandaba al cliente "podés cancelarla" justo antes de ofrecerle horarios. Además quedaban el pedido y la propuesta abiertos a la vez.
+- **Ahora:** botón **"Te propongo otro"** en la tarjeta, que abre el calendario del profesional en el día que pidió el cliente. `proponer_horarios` cierra el pedido pendiente (`rechazada`, porque el profesional lo contestó) y manda **un solo aviso**: "Tu profesional no puede en el horario que pediste". Del lado del cliente no cambia nada: la tarjeta de siempre, con tomar uno, pedir otro, o que le devuelvan todo.
+- 🗄️ Redefinida `proponer_horarios` partiendo de la versión en vivo. Verificado como profesional real con rollback (ver SCHEMA).
+
+**Pendiente para la próxima sesión:**
+- Probar en el teléfono con dos cuentas: el cliente pide un cambio dentro de las 24hs, el profesional toca "Te propongo otro", y del otro lado llega un solo aviso con las opciones.
+- ⚠️ Algo que se vio al pasar y no se tocó: después de proponer, el aviso "Se lo propusimos" vuelve al calendario y no a Reservas (`router.back()` desde la pantalla de horario).
+
 ## 2026-09-24 — Andre (Claude · CORS y paquetes sin uso)
 
 **Tocado:** `supabase/functions/_shared/cors.ts` (nuevo), y el origen CORS de `create-meeting-room`, `delete-account`, `mp-create-payment`, `paypal-create-payment`, `send-push`, `usdt-create-payment`, `user-consent`, `web-book` (las 8 redeployadas)
