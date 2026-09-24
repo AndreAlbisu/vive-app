@@ -294,6 +294,7 @@ export default function RootLayout() {
           <Stack.Screen name="quiz" options={{ headerShown: false }} />
           <Stack.Screen name="coach-topics" options={{ headerShown: false }} />
           <Stack.Screen name="coach-agenda" options={{ headerShown: false }} />
+          <Stack.Screen name="coach-calendario" options={{ headerShown: false }} />
           <Stack.Screen name="resource-proposals" options={{ headerShown: false }} />
           <Stack.Screen name="resource-proposal-new" options={{ headerShown: false }} />
           <Stack.Screen name="recurso" options={{ headerShown: false }} />

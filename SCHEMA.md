@@ -53,6 +53,14 @@ app: las builds antiguas que leen campos privados directamente necesitan actuali
 
 ## Tablas y relaciones
 
+### Calendario del profesional por suscripción: `coach_calendar_feeds` (24/09/2026)
+`scripts/add-calendario-profesional.sql` — ✅ **CORRIDO y VERIFICADO el 24/09/2026**: como profesional real con rollback, el link tiene 64 caracteres, pedirlo dos veces da el mismo, regenerarlo da otro y **el viejo deja de devolver sesiones** (17 → 0); un cliente recibe `no_es_profesional`; `authenticated` no lee la tabla y `anon` no llama `sesiones_para_calendario`. Función `calendario` deployada y probada por HTTP con un link temporal (borrado): 17 eventos, `text/calendar`, sin nombres; token inventado o ausente → 404.
+- **`coach_calendar_feeds`** (`coach_id` PK → `coaches.id` CASCADE, `token` único, `created_at`): RLS activa, sin policies ni grants para el cliente.
+- **`mi_link_calendario(p_regenerar)`** (security definer, `authenticated`): devuelve el token del profesional logueado, lo crea la primera vez, y con `true` lo reemplaza (el anterior deja de funcionar). Token = 32 bytes al azar en hex (`nuevo_token_calendario()`).
+- **`sesiones_para_calendario(token)`** (security definer, solo `service_role`): `confirmada` y `completada` entre 60 días atrás y 120 adelante, con inicio y fin en UTC vía `inicio_de_sesion()` + `duration_minutes`.
+- **Edge function `calendario`** (`verify_jwt = false`, en `config.toml`): `GET ?t=<token>` → iCalendar. Título **"Sesión · Vita" sin el nombre del cliente** (el calendario se sincroniza y se comparte). UID = id de la reserva, así que una sesión movida se actualiza en vez de duplicarse; las canceladas no están y el calendario las borra al releer. Tope de 120 lecturas por hora por link (`consume_rate_limit`, bucket `calendario`). `Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`.
+- App: **Ajustes del profesional › Sincronizar con tu calendario** (`screens/CoachCalendarioScreen.tsx`): agregar al iPhone (`webcal://`), a Google (abre `calendar.google.com` con el link), copiar/compartir, y generar un link nuevo.
+
 ### Tope de intentos: `rate_limits` (24/09/2026)
 `scripts/add-rate-limits.sql` — ✅ **CORRIDO y VERIFICADO el 24/09/2026**: como usuario real con rollback, 5 reportes de sesión entran y el sexto da `rate_limited`; 8 inserts internos seguidos (sin usuario ni IP) no se frenan; 5 triggers instalados; el cliente no puede llamar `consume_rate_limit`; cron `purge-rate-limits` creado. Por HTTP con la anon key, un evento de analítica entra y queda contado **por IP**.
 - **`rate_limits`** (`bucket`, `subject`, `window_start`, `hits`, PK `(bucket, subject)`): una fila por clave con ventana fija, mismo patrón que `claim_push`. RLS activa sin policies, sin permisos para `anon`/`authenticated`. Limpieza diaria (`purge-rate-limits`, 05:37) de ventanas de más de 2 días.

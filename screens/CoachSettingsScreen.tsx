@@ -107,6 +107,9 @@ export default function CoachSettingsScreen() {
   ];
 
   const cuenta: ConfigItem[] = [
+    // Sus sesiones en Google Calendar o el calendario del iPhone, actualizadas
+    // solas (24/09/2026). Ver `screens/CoachCalendarioScreen.tsx`.
+    { id: 'calendario', icon: 'calendar-sync-outline', label: 'Sincronizar con tu calendario', onPress: () => router.push('/coach-calendario' as any) },
     { id: 'blocked', icon: 'account-cancel-outline', label: 'Cuentas bloqueadas', onPress: () => router.push('/cuentas-bloqueadas') },
     // Solo para admins. Esconderlo no es la protección —`admin-actions` revalida
     // contra el JWT en cada escritura— pero no tiene sentido mostrar una puerta

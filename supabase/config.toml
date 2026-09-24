@@ -28,3 +28,8 @@ verify_jwt = false
 # rechaza con 503 en vez de procesar sin verificar.
 [functions.paypal-webhook]
 verify_jwt = false
+
+# Calendario por suscripción del profesional: lo lee Google/Apple sin credencial.
+# El control es el token de la URL (ver supabase/functions/calendario).
+[functions.calendario]
+verify_jwt = false

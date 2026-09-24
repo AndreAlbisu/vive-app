@@ -1,3 +1,16 @@
+## 2026-09-24 — Andre (Claude · calendario del profesional por suscripción)
+
+**Tocado:** `scripts/add-calendario-profesional.sql` (nuevo, corrido), `supabase/functions/calendario` (nueva, deployada), `supabase/config.toml`, `screens/CoachCalendarioScreen.tsx` + `app/coach-calendario.tsx` (nuevos), `app/_layout.tsx`, `screens/CoachSettingsScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- 📅 **Pregunta de Andre: ¿el profesional puede agendar sus sesiones?** Solo de a una, desde el chat de cada cliente, y el evento quedaba desconectado (si la sesión se movía o cancelaba, el calendario seguía con el horario viejo). Andre eligió la opción completa.
+- **Ahora:** en Ajustes, "Sincronizar con tu calendario": un link propio que el profesional agrega una vez a Google Calendar o al iPhone, y sus sesiones aparecen y se actualizan solas (movidas se mueven, canceladas desaparecen). **Sin el nombre del cliente**: cada sesión dice "Sesión · Vita". El link es secreto y regenerable, con tope de lecturas.
+- 🗄️ Tabla nueva `coach_calendar_feeds`, tres funciones y la edge function pública `calendario`. Todo verificado (ver SCHEMA).
+
+**Pendiente para la próxima sesión:**
+- Probar en el teléfono: agregar al iPhone y a Google, y ver que una sesión movida se actualice (Google puede tardar horas; Apple respeta la sugerencia de 1 hora).
+- ⚠️ El link usa el dominio de Supabase (`…supabase.co/functions/v1/calendario?t=…`). Funciona, pero se podría servir desde `vitaapp.com.ar/cal/<token>` con un rewrite de Vercel si se quiere un link con la marca.
+
 ## 2026-09-24 — Andre (Claude · tarjeta "Tu próxima sesión" del profesional)
 
 **Tocado:** `screens/CoachHomeScreen.tsx`, `screens/ProfileOwnScreen.tsx`
