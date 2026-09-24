@@ -18,18 +18,18 @@ Verificación remota: las cuatro funciones coinciden con la migración, historia
 ---
 ## 2026-09-24 — Andre (Claude · pasada completa de seguridad + confirmación de mail obligatoria)
 
-**Tocado:** `context/AuthContext.tsx`, `lib/authErrores.ts` (nuevo), `screens/VerificarMailScreen.tsx`, `screens/RegisterScreen.tsx`, `screens/LoginScreen.tsx`, `screens/CoachLoginScreen.tsx`, `components/AuthModal.tsx`, `SCHEMA.md`, `docs/plantilla-mail-codigo.md`
+**Tocado:** `scripts/cerrar-hallazgos-auditoria-2026-09-24.sql` (nuevo, corrido), `context/AuthContext.tsx`, `lib/authErrores.ts` (nuevo), `screens/VerificarMailScreen.tsx`, `screens/RegisterScreen.tsx`, `screens/LoginScreen.tsx`, `screens/CoachLoginScreen.tsx`, `components/AuthModal.tsx`, `SCHEMA.md`, `docs/plantilla-mail-codigo.md`
 
 **Resumen:**
 - 🔎 **Pasada completa de seguridad** (base, funciones, almacenamiento, web, secretos, dependencias, registro). Sin tablas sin RLS, lecturas sensibles limitadas al dueño, todas las funciones exigen identidad, sin secretos en el repo. Aparecieron cuatro hallazgos nuevos del área de Claude, probados con rollback contra producción; el detalle está en el registro local de auditoría, no acá.
 - 🔴 **Hallazgo 1 (registro): decisión de Andre, se prende "Confirm email" de Supabase.** El alta con contraseña ya no da sesión hasta confirmar la casilla con el código. Nuevo modo `confirmar` en `VerificarMailScreen` (sin sesión, reenvía con `resend` tipo `signup`, al confirmar escribe `email_verified_at` y la aceptación de T&C/edad que viajó en la metadata). Registro, alta de profesional, login y modal de login llevan ahí. Con la confirmación prendida Supabase no avisa "ya registrado" como error: se detecta por `identities` vacío.
 - Sin cambios de base. 877 tests pasan, TypeScript sin errores.
-- ⚠️ Los hallazgos 2 a 4 (mensajería, recomendaciones, almacenamiento) y los permisos sobrantes de `anon` tienen OK de Andre pero NO se aplicaron: el control de permisos del entorno bloqueó escribir el script contra producción. Siguen abiertos.
+- 🔒 **Hallazgos 2 a 4 y permisos de `anon`: aplicados y verificados** (`scripts/cerrar-hallazgos-auditoria-2026-09-24.sql`, detalle en SCHEMA.md). Ya no se puede chatear sin reserva ni recomendar a desconocidos (probado con rollback: rechazado; el par con sesión real sigue pudiendo las dos cosas). Los buckets públicos no se listan sin cuenta, pero las fotos siguen abriendo por URL y el audio publicado se sigue pudiendo escuchar sin cuenta. `anon` solo conserva INSERT en `analytics_events`. Sin basura de las pruebas.
 
 **Pendiente para la próxima sesión:**
 - ✅ Hecho por Andre el mismo día y verificado por Claude leyendo la configuración de Auth de producción: `mailer_autoconfirm = false`, plantilla Confirm signup con `{{ .Token }}` y sin link, asunto "Tu código de Vita: {{ .Token }}", código de 8 dígitos que dura 1 hora.
 - La prueba de punta a punta no se puede hacer desde acá: el CAPTCHA frena las altas por API. Probar en el teléfono: alta con mail nuevo (llega código, se confirma, entra), login con una cuenta sin confirmar (lleva al código), alta de profesional, y reservar desde la web con un mail nuevo.
-- Aplicar los arreglos 2 a 4 cuando Andre destrabe el permiso.
+- Probar en el teléfono el chat de una sesión confirmada, recomendar un recurso y subir/cambiar la foto de perfil (usa el permiso de lectura propio que se reemplazó).
 
 ## 2026-09-23 — Andre (Claude · tarjeta de Sofía sin check-in va a Progreso)
 
