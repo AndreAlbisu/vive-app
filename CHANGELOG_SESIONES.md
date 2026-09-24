@@ -305,6 +305,13 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
+### La puerta del profesional deja de decir "coach"
+
+- Andre preguntó si hacía falta crear pantallas de registro e inicio de sesión para los profesionales. **Ya existen**: `/coach-login` es su propia puerta ("Tu espacio profesional") y hace **las dos cosas en una**: con un mail conocido pide la contraseña, y con uno nuevo pide el nombre y crea la cuenta. También tiene Google y Apple.
+- **Se decidió no partirla en dos.** Partirla obliga a elegir "¿ya tengo cuenta?" antes de saberlo, y quien se equivoca se come un error en el primer minuto. Además acá pasa seguido el caso de alguien que ya entró como usuario y después se postula: con dos puertas, esa persona elige mal.
+- **Lo que sí cambió: el subtítulo decía "Entrá o creá tu cuenta de coach"**, y ahora dice "Entrá o creá tu cuenta". De cara al usuario la sección se llama "Profesionales" desde el 28/08, y por esa puerta entran también psicólogos y nutricionistas: a alguien con matrícula, que le digan "coach" lo hace dudar de si es su lugar. La bifurcación ya usaba el vocabulario correcto ("Soy profesional y quiero ofrecer mi acompañamiento").
+- 📱 **Para probar**: que un profesional ya aprobado entre por las dos puertas (la suya y la de usuario) y termine igual en su panel, y que alguien con cuenta de usuario que se postula no termine con dos cuentas.
+
 ### Después de postularse, la pantalla explica todo
 
 - Pedido de Andre: *"cuando envías la solicitud para ser coach tiene que aparecer una pantalla que diga que va a ser revisada y que nos vamos a contactar con él, o sea explicarle todo"*. La pantalla existía, pero decía una sola línea: *"Te vamos a contactar pronto para contarte los próximos pasos"*.

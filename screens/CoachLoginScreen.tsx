@@ -365,7 +365,12 @@ export default function CoachLoginScreen() {
             {/* Heading */}
             <Animated.View style={[s.headingArea, fadeUp(headingAnim)]}>
               <Text style={s.heading}>Tu espacio profesional</Text>
-              <Text style={s.subheading}>Entrá o creá tu cuenta de coach</Text>
+              {/* 🔴 "cuenta de coach" hasta el 24/09/2026. Se sacó "de coach"
+                  por dos motivos: de cara al usuario la sección se llama
+                  "Profesionales" desde el 28/08, y por acá entran también
+                  psicólogos y nutricionistas. A alguien con matrícula, que la
+                  puerta le diga "coach" lo hace dudar de si es su lugar. */}
+              <Text style={s.subheading}>Entrá o creá tu cuenta</Text>
             </Animated.View>
 
             {/* Botones */}
