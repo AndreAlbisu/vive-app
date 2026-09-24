@@ -13,6 +13,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { uniqueAmount, NONCE_DIGITS } from '../_shared/usdt.ts'
 import { commissionPctFor, PAIR_SESSION_FILTER } from '../_shared/commission.ts'
+import { WEB_ORIGIN } from '../_shared/cors.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -20,7 +21,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const USDT_WALLET = Deno.env.get('USDT_WALLET_TRC20') ?? ''
 
 const cors = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': WEB_ORIGIN,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 const json = (b: unknown, status = 200) =>

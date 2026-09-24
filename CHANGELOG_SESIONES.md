@@ -1,3 +1,17 @@
+## 2026-09-24 — Andre (Claude · CORS y paquetes sin uso)
+
+**Tocado:** `supabase/functions/_shared/cors.ts` (nuevo), y el origen CORS de `create-meeting-room`, `delete-account`, `mp-create-payment`, `paypal-create-payment`, `send-push`, `usdt-create-payment`, `user-consent`, `web-book` (las 8 redeployadas)
+
+**Resumen:**
+- 🌐 **Punto 11 de la checklist de seguridad: CORS.** Ocho funciones aceptaban llamadas de navegador desde cualquier sitio (`*`). No era un agujero (piden el token de la sesión en un encabezado, que otro sitio no tiene), pero ahora solo aceptan `https://www.vitaapp.com.ar` (`WEB_ORIGIN`, un solo lugar). La app no usa CORS, así que no la afecta. ⚠️ Probar las páginas web desde `localhost` o una preview de Vercel va a dar error de CORS contra producción.
+- 🔍 **Antes de redeployar se bajó el código EN VIVO de cada función y se comparó con el repo** (incluida la copia de `_shared` que lleva cada una): las 8 eran idénticas, así que el deploy solo cambió el CORS. `mp-oauth-start` quedó afuera a propósito: lleva una copia vieja de `_shared/mp.ts` y redeployarla habría cambiado más que el CORS en el área de pagos; como solo la usa la app, el `*` ahí no importa.
+- ✅ Verificado después: las 8 arrancan (responden su propio error con la anon key) y el preflight desde `www` devuelve ese origen.
+- 📦 **Punto 15: paquetes sin uso. No hay nada que borrar.** De los 8 que marcó `depcheck`, todos son falsos positivos en Expo: `expo-image` se usa; `react-native-pager-view` lo pide el menú de pestañas; `expo-system-ui` lo necesita `userInterfaceStyle` en Android; `expo-dev-client` es el development build; las dos de `@react-navigation` las instala igual `expo-router`; `decode-uri-component` es el override de la auditoría; `@types/jest` son los tipos de los tests. Al revés: `jsdom`, `react-test-renderer`, `query-string` y `markdown-it` se usan solo en pruebas sin estar declarados (llegan de rebote); funciona, pero conviene declararlos si algún día se rompen.
+
+**Pendiente para la próxima sesión:**
+- Con la checklist del video cerrada, lo que queda es probar en el teléfono y en la web (checklist del 23/09 + videollamada y pago desde la web por la CSP).
+- Avisar a Codex: 4 funciones de pago redeployadas solo con el cambio de CORS; `mp-oauth-start` sigue con una copia vieja de `_shared/mp.ts`.
+
 ## 2026-09-24 — Andre (Claude · encabezados de seguridad de la web)
 
 **Tocado:** `vercel.json`

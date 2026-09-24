@@ -14,6 +14,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { commissionPctFor, PAIR_SESSION_FILTER } from '../_shared/commission.ts'
+import { WEB_ORIGIN } from '../_shared/cors.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -43,7 +44,7 @@ const CHECKOUT_RETURN_URL = Deno.env.get('CHECKOUT_RETURN_URL')
   ?? `${SUPABASE_URL}/functions/v1/booking-return`
 
 const cors = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': WEB_ORIGIN,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 const json = (b: unknown, status = 200) =>

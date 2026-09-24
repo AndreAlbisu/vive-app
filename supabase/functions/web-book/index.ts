@@ -28,9 +28,10 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { WEB_ORIGIN } from '../_shared/cors.ts'
 
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': WEB_ORIGIN,
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
