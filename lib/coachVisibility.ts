@@ -83,6 +83,16 @@ export type VisibilitySelf = CachedCoach & {
   suspendidoHasta?: string | null;
 };
 
+/**
+ * ¿Tiene por dónde cobrar? Sin ningún medio, el catálogo no lo muestra
+ * (`coachesCache` filtra por `mp_connected`, `accepts_paypal` o `accepts_usdt`)
+ * y nadie puede pagarle. PayPal y USDT cuentan solo con precio en dólares,
+ * porque sin él el checkout los rechaza.
+ */
+export function puedeCobrar(c: { acceptsMp?: boolean; acceptsPaypal?: boolean; acceptsUsdt?: boolean }): boolean {
+  return !!(c.acceptsMp || c.acceptsPaypal || c.acceptsUsdt);
+}
+
 /** ¿Hay una suspensión o una baja pesando ahora mismo? */
 export function estaSuspendido(self: { suspendidoHasta?: string | null }, now: Date = new Date()): boolean {
   const hasta = self.suspendidoHasta;
@@ -274,6 +284,14 @@ export function buildChecklist(self: VisibilitySelf): ChecklistItem[] {
       route: '/perfil',
     },
     {
+      key: 'cobro',
+      label: 'Cómo cobrás',
+      done: puedeCobrar(self),
+      blocking: true,
+      hint: 'Conectá Mercado Pago, o cargá PayPal o USDT con tu precio en dólares. Sin un medio de cobro no aparecés en la app y nadie puede reservarte.',
+      route: '/perfil?seccion=cobro',
+    },
+    {
       key: 'topics',
       label: 'Temas que trabajás',
       done: self.topics.length > 0,
@@ -365,6 +383,7 @@ export function visibilityTeaser(args: {
   availabilityStatus: 'activo' | 'en_pausa';
   topics: string[];
   price: number | null;
+  puedeCobrar: boolean;
 }): VisibilityTeaser {
   const partial = {
     verified: args.verified,
@@ -376,6 +395,7 @@ export function visibilityTeaser(args: {
     avatarUrl: 'x',
     hasVideo: true,
     instantBooking: true,
+    acceptsMp: args.puedeCobrar,
     // El teaser no consulta la sanción (son dos queries baratas, ver el doc de
     // la función). Se declara null explícito para que `estaSuspendido` no
     // dependa de un campo ausente.

@@ -30,7 +30,7 @@ import { confirmBooking } from '@/lib/coachBookingActions';
 import { proximosHuecos } from '@/lib/coachProposeData';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { visibilityTeaser, analyzeDoors, homeStanding, tituloVisibilidad, bajadaVisibilidad, type VisibilityTeaser, type HomeStanding } from '@/lib/coachVisibility';
+import { visibilityTeaser, puedeCobrar, analyzeDoors, homeStanding, tituloVisibilidad, bajadaVisibilidad, type VisibilityTeaser, type HomeStanding } from '@/lib/coachVisibility';
 import { loadVisibilitySelf } from '@/lib/coachVisibilityData';
 import { SLOT_ORDER } from '@/lib/coachDeckRanking';
 import { DOORS } from '@/constants/conexionesDoors';
@@ -200,6 +200,7 @@ export default function CoachHomeScreen() {
   const [prepPerfil, setPrepPerfil] = useState(false);
   const [prepRecurso, setPrepRecurso] = useState(false);
   const [prepHorarios, setPrepHorarios] = useState(false);
+  const [prepCobro, setPrepCobro] = useState(false);
   const [doorLabels, setDoorLabels] = useState<string[]>([]);
   // El link público del coach. `null` mientras no esté aprobado: `/c/<slug>`
   // filtra por `verified`, así que ofrecérselo antes sería darle un link roto.
@@ -294,7 +295,7 @@ export default function CoachHomeScreen() {
         .eq('status', 'confirmada')
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true }),
-      supabase.from('coaches').select('verified, availability_status, price_per_session, bio, specialty, slug').eq('id', coachId).maybeSingle(),
+      supabase.from('coaches').select('verified, availability_status, price_per_session, bio, specialty, slug, mp_connected, accepts_paypal, accepts_usdt, price_usd').eq('id', coachId).maybeSingle(),
       supabase.from('coach_topics').select('topic').eq('coach_id', coachId),
       // "Subiste un recurso" cuenta cualquier fila, sin filtrar por `status`:
       // el checklist dice "Subir tu primer recurso" — es la acción, no que ya
@@ -330,11 +331,19 @@ export default function CoachHomeScreen() {
 
     if (profile?.name) setCoachName(profile.name.split(' ')[0]);
 
+    // Misma regla que el catálogo (ver `puedeCobrar`).
+    const cobroNow = puedeCobrar({
+      acceptsMp: !!coachRow?.mp_connected,
+      acceptsPaypal: !!coachRow?.accepts_paypal && coachRow?.price_usd != null,
+      acceptsUsdt: !!coachRow?.accepts_usdt && coachRow?.price_usd != null,
+    });
+
     setVisibility(visibilityTeaser({
       verified: !!coachRow?.verified,
       availabilityStatus: (coachRow?.availability_status ?? 'activo') as 'activo' | 'en_pausa',
       topics: (topicRows ?? []).map(t => t.topic as string),
       price: (coachRow?.price_per_session ?? null) as number | null,
+      puedeCobrar: cobroNow,
     }));
 
     // ── Checklist de preparación ──────────────────────────────────────────
@@ -369,6 +378,11 @@ export default function CoachHomeScreen() {
     setPrepHorarios(prev => {
       if (!prev && horariosNow) registrarEvento('preparacion_paso_completado', { paso: 'horarios' }).catch(() => {});
       return horariosNow;
+    });
+
+    setPrepCobro(prev => {
+      if (!prev && cobroNow) registrarEvento('preparacion_paso_completado', { paso: 'cobro' }).catch(() => {});
+      return cobroNow;
     });
 
     setHasAnyBookingEver((bookingsEverCount ?? 0) > 0);
@@ -786,14 +800,20 @@ export default function CoachHomeScreen() {
   // los recursos no pesan en el orden del catálogo y no hay datos que la
   // respalden. Sin recurso se aparece y se reserva igual. Queda como sugerencia
   // aparte, sin contar en el progreso ni en "estás casi listo".
-  const prepDoneCount = [prepPerfil, prepPuertas, prepHorarios].filter(Boolean).length;
-  const prepMissing = 3 - prepDoneCount;
+  // 🔴 24/09/2026: el cobro es un paso. Sin ningún medio de cobro el catálogo
+  // no muestra al profesional, y la tarjeta le decía "3 de 3 completos"
+  // mientras seguía invisible sin saber por qué.
+  const pasosPrep = [prepPerfil, prepPuertas, prepHorarios, prepCobro];
+  const prepTotal = pasosPrep.length;
+  const prepDoneCount = pasosPrep.filter(Boolean).length;
+  const prepMissing = prepTotal - prepDoneCount;
   // La primera acción pendiente, en el mismo orden que se muestra el
   // checklist — es la que ofrece el botón de abajo.
   const prepNextAction: { label: string; route: string } | null =
     !prepPerfil ? { label: 'Completar mi perfil', route: '/perfil' } :
     !prepPuertas ? { label: 'Elegir mis temas', route: '/coach-topics' } :
     !prepHorarios ? { label: 'Definir mis horarios', route: '/coach-weekly-pattern' } :
+    !prepCobro ? { label: 'Elegir cómo cobro', route: '/perfil?seccion=cobro' } :
     null;
 
   if (loading) {
@@ -1074,10 +1094,10 @@ export default function CoachHomeScreen() {
 
                 <View style={s.progWrap}>
                   <View style={s.progBar}>
-                    <View style={[s.progFill, { width: `${(prepDoneCount / 3) * 100}%` }]} />
+                    <View style={[s.progFill, { width: `${(prepDoneCount / prepTotal) * 100}%` }]} />
                   </View>
                   <View style={s.progLbl}>
-                    <Text style={s.progLblTxt}><Text style={s.progLblB}>{prepDoneCount} de 3</Text> pasos completos</Text>
+                    <Text style={s.progLblTxt}><Text style={s.progLblB}>{prepDoneCount} de {prepTotal}</Text> pasos completos</Text>
                     <Text style={s.progLblTxt}>{prepMissing === 0 ? 'Completo' : `Falta ${prepMissing}`}</Text>
                   </View>
                 </View>
@@ -1134,6 +1154,20 @@ export default function CoachHomeScreen() {
                     </Text>
                     {!prepHorarios && (
                       <Text style={s.checkSub}>Los días y la franja en que atendés. Sin horarios, nadie puede reservarte.</Text>
+                    )}
+                  </View>
+                </View>
+
+                <View style={[s.checkRow, { marginTop: 13 }]}>
+                  <View style={[s.checkBox, prepCobro ? s.checkBoxDone : s.checkBoxTodo]}>
+                    {prepCobro && <Feather name="check" size={11} color="#F3EEDF" />}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.checkLabel}>
+                      {prepCobro ? 'Ya podés cobrar' : 'Elegí cómo cobrás'}
+                    </Text>
+                    {!prepCobro && (
+                      <Text style={s.checkSub}>Conectá Mercado Pago, o PayPal o USDT para el exterior. Sin esto no aparecés en la app.</Text>
                     )}
                   </View>
                 </View>
@@ -1199,7 +1233,7 @@ export default function CoachHomeScreen() {
                   <TouchableOpacity
                     style={s.prepBtn}
                     activeOpacity={0.85}
-                    onPress={() => router.push({ pathname: prepNextAction.route as any, params: prepNextAction.route === '/coach-recurso-nuevo' ? { coach_id: coachId } : undefined })}>
+                    onPress={() => router.push(prepNextAction.route as any)}>
                     <Text style={s.prepBtnTxt}>{prepNextAction.label}</Text>
                   </TouchableOpacity>
                 )}
