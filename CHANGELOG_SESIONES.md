@@ -1,3 +1,17 @@
+## 2026-09-24 — Andre (Claude · lo que el profesional nuevo necesita saber)
+
+**Tocado:** `components/CoachBienvenida.tsx` (nuevo), `screens/CoachHomeScreen.tsx`, `screens/CoachProfileScreen.tsx`, `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `__tests__/coachSanciones.test.ts`, `docs/no-show.md`
+
+**Resumen:**
+- 🧭 **Andre: "el coach apenas abre la app no tiene idea de nada".** Se descartó un manual largo (mismo criterio que la guía del cliente: explicar cuando pasa). Cuatro piezas:
+- 🔴 **Hueco encontrado: el medio de cobro no era un paso.** Sin Mercado Pago, PayPal o USDT (estos dos con precio en dólares) el catálogo no muestra al profesional, y la tarjeta "Antes de tu primera sesión" le decía "3 de 3 completos". Ahora es el cuarto paso ("Elegí cómo cobrás"), también bloqueante en Visibilidad (`puedeCobrar`, con pruebas), y lleva a `/perfil?seccion=cobro`, que baja sola hasta la sección de Mercado Pago.
+- **Bienvenida** de una pantalla, una vez por teléfono (`vita_coach_bienvenida`): cómo lo encuentran, cómo le llegan las sesiones (24 horas para aceptar), cómo cobra (20/15) y la sesión (videollamada de una hora). "Empezar" o "Leer cómo funciona todo".
+- **Ayudas en el momento** en el Inicio, de a una y después de la bienvenida: primera solicitud, primera sesión (Unirse, esperar hasta el minuto 20) y primera sesión sin cerrar (notas). **"Cómo funciona Vita"** como fila al final del Inicio, además de Ajustes.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone con una cuenta de profesional nueva: bienvenida, tarjeta de 4 pasos, el paso de cobro llevando a la sección, y la fila de Cómo funciona. Para volver a ver la bienvenida hay que borrar la app (la marca es local).
+- Las ayudas de solicitud y primera sesión solo se ven con una reserva real: quedan para la prueba del no-show con dos cuentas.
+
 ## 2026-09-24 — Andre (Claude · preguntas de la postulación: límites y lugar)
 
 **Tocado:** `docs/postulacion-preguntas.md` (nuevo), `scripts/add-postulacion-derivacion-y-lugar.sql` (nuevo, corrido), `screens/CoachApplicationScreen.tsx`, `components/ui/CampoProvincia.tsx` (nuevo), `components/ui/CampoNacionalidad.tsx`, `supabase/functions/admin-actions` (v37), `lib/admin.ts`, `screens/AdminScreen.tsx`, `SCHEMA.md`

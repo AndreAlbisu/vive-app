@@ -30,6 +30,9 @@ import { confirmBooking } from '@/lib/coachBookingActions';
 import { proximosHuecos } from '@/lib/coachProposeData';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CoachBienvenida, { BIENVENIDA_COACH_KEY } from '@/components/CoachBienvenida';
+import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
 import { visibilityTeaser, puedeCobrar, analyzeDoors, homeStanding, tituloVisibilidad, bajadaVisibilidad, type VisibilityTeaser, type HomeStanding } from '@/lib/coachVisibility';
 import { loadVisibilitySelf } from '@/lib/coachVisibilityData';
 import { SLOT_ORDER } from '@/lib/coachDeckRanking';
@@ -188,6 +191,19 @@ export default function CoachHomeScreen() {
   const [visibility, setVisibility] = useState<VisibilityTeaser | null>(null);
   const [standing, setStanding] = useState<HomeStanding | null>(null);
   const [seCaen, setSeCaen] = useState<PersonaCayendo[]>([]);
+  // La bienvenida, una sola vez por teléfono. 'cargando' hasta leer la marca:
+  // sin eso las ayudas de abajo podían aparecer encima de ella.
+  const [bienvenida, setBienvenida] = useState<'cargando' | 'mostrar' | 'vista'>('cargando');
+  useEffect(() => {
+    AsyncStorage.getItem(BIENVENIDA_COACH_KEY)
+      .then(v => setBienvenida(v ? 'vista' : 'mostrar'))
+      .catch(() => setBienvenida('vista'));
+  }, []);
+  const cerrarBienvenida = useCallback((verMas: boolean) => {
+    setBienvenida('vista');
+    AsyncStorage.setItem(BIENVENIDA_COACH_KEY, '1').catch(() => {});
+    if (verMas) router.push('/coach-como-funciona');
+  }, [router]);
   const [repu, setRepu] = useState<{ completadas: number; vuelvenPct: number | null } | null>(null);
   const [sinCerrar, setSinCerrar] = useState<{ name: string; salaId: string; bookingId: string; dias: number } | null>(null);
   const [pendientes, setPendientes] = useState<Pendiente[]>([]);
@@ -826,9 +842,46 @@ export default function CoachHomeScreen() {
     );
   }
 
+  // Ayudas en el momento (24/09/2026): cada una la primera vez que pasa lo que
+  // explica, y de a una. Si coinciden, va la más urgente; la otra aparece la
+  // próxima vez que entre. Mismo formato que las del cliente
+  // (`FirstTimeTooltip`), pero sin numerar: no son un recorrido.
+  const ayuda =
+    bienvenida !== 'vista' ? null :
+    pendientes.length > 0 ? {
+      key: 'vita_coach_tip_solicitud',
+      icon: 'calendar-clock' as const,
+      title: 'Te llegó una solicitud',
+      description: 'La persona ya pagó. Aceptala desde acá, o rechazala desde Reservas. Tenés 24 horas: si no contestás, se cancela y se le devuelve todo.',
+    } :
+    next && (repu?.completadas ?? 0) === 0 ? {
+      key: 'vita_coach_tip_primera_sesion',
+      icon: 'video-outline' as const,
+      title: 'Tu primera sesión',
+      description: 'Entrá con "Unirse", que se habilita 10 minutos antes, o desde la computadora. Si la persona no llega, esperala hasta el minuto 20: si no aparece, la sesión se te paga igual.',
+    } :
+    sinCerrar ? {
+      key: 'vita_coach_tip_notas',
+      icon: 'note-edit-outline' as const,
+      title: 'Anotá cómo te fue',
+      description: 'La nota privada es solo tuya y te aparece acá antes de la próxima sesión con esa persona. La compartida también la ve la persona.',
+    } :
+    null;
+
   return (
     <AppBg>
       <SafeAreaView style={s.safe} edges={['top']}>
+        <CoachBienvenida visible={bienvenida === 'mostrar'} onCerrar={cerrarBienvenida} />
+        {ayuda && (
+          <FirstTimeTooltip
+            key={ayuda.key}
+            storageKey={ayuda.key}
+            icon={ayuda.icon}
+            title={ayuda.title}
+            description={ayuda.description}
+            delay={800}
+          />
+        )}
         <ScrollView
           contentContainerStyle={s.container}
           showsVerticalScrollIndicator={false}
@@ -1443,6 +1496,19 @@ export default function CoachHomeScreen() {
               </View>
             </View>
           )}
+
+          {/* "Cómo funciona" también desde acá (24/09/2026): solo vivía en
+              Ajustes, donde un profesional nuevo no lo va a buscar. */}
+          <TouchableOpacity style={s.vis} activeOpacity={0.85} onPress={() => router.push('/coach-como-funciona')}>
+            <View style={s.visIcon}>
+              <Feather name="book-open" size={16} color={FOREST} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.visTitle}>Cómo funciona Vita</Text>
+              <Text style={s.visTxt} numberOfLines={2}>Comisión, cobros, ausencias y cancelaciones</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={FOREST_SOFT} />
+          </TouchableOpacity>
 
           <View style={{ height: TAB_BAR_CLEARANCE + 16 }} />
         </ScrollView>
