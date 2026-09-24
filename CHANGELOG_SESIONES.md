@@ -202,6 +202,15 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
+### M16 bis — el cliente puede contraproponer un horario
+
+- Observación de Andre: *"el coach al proponer un horario al usuario cuando no puede a cierta hora, debería poder permitir al usuario solicitarle otro, uno que tenga disponible"*. Tenía razón: cuando el profesional proponía horarios, al cliente le quedaban **dos salidas y las dos malas** si ninguno le servía pero quería seguir con esa persona: tomar uno que no puede, o cancelar y reservar todo de nuevo.
+- **Ahora hay una tercera**: *"Ninguno me sirve, quiero pedir otro horario"* abre la agenda **real** del profesional (la misma que ya usa reagendar, con sus huecos libres) y el cliente elige uno.
+- 🔴 **Lo decide el profesional** (Andre cambió de opinión a mitad de camino, y para bien): no se mueve sola aunque el horario esté libre. La agenda es suya y ya había dicho que ese día tenía un problema. La contrapropuesta cae donde él ya mira los pedidos de cambio, así que **no hizo falta ninguna pantalla nueva de su lado**.
+- 🔴 **No le gasta al cliente la ficha de las 24hs.** Esa ficha existe para que nadie mueva una sesión a último momento una y otra vez; acá el que no puede es el profesional, y cobrarle al cliente su único cambio sería cobrarle un problema ajeno. Por eso es una función nueva y no un parámetro de `pedir_reagendado`: las reglas de M15 quedan sin tocar.
+- 📌 **Las propuestas del profesional siguen vivas** mientras espera respuesta: si dice que no, el cliente todavía puede tomar una o pedir la plata. Y al aceptar, se cierra todo lo demás pendiente de esa reserva, que antes habría dejado la tarjeta vieja en pantalla sobre una sesión ya movida.
+- **Probado contra producción** con el escenario completo (el profesional propone, el cliente contrapropone, el profesional acepta) y todo borrado después: sin propuesta previa no deja contraproponer, la ficha queda intacta, la sesión se mueve al aceptar y las propuestas viejas quedan vencidas. 📱 Falta verlo en el teléfono.
+
 ### 🔴 El pin de Metro rompía el servidor de desarrollo
 
 - Andre no pudo levantar la app: `TypeError: events is not iterable`, y el proceso muere.

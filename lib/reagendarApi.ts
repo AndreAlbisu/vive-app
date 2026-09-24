@@ -41,6 +41,28 @@ export async function pedirReagendado(
 }
 
 /**
+ * M16 bis: el cliente contrapropone un horario cuando ninguno de los que ofreció
+ * el profesional le sirve.
+ *
+ * ⚠️ Función aparte de `pedirReagendado` porque las reglas son otras: **siempre**
+ * queda como pedido (el profesional acepta, decisión de Andre) y **no gasta la
+ * ficha de las 24 horas**, porque el cambio lo empezó él. Ver
+ * `scripts/add-contrapropuesta-horario.sql`.
+ */
+export async function contraproponerHorario(
+  bookingId: string,
+  fecha: string,
+  hora: string,
+): Promise<string | null> {
+  const { error } = await supabase.rpc('contraproponer_horario', {
+    p_booking: bookingId,
+    p_fecha: fecha,
+    p_hora: hora.slice(0, 5),
+  });
+  return error ? mensajeDeError(error.message) : null;
+}
+
+/**
  * El profesional acepta o rechaza. Devuelve `null` si salió bien.
  *
  * ⚠️ **Dos caminos de fracaso, y el segundo no es un error de Postgres.** Si

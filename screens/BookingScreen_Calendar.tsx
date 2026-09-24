@@ -46,11 +46,15 @@ function buildCalendar(year: number, month: number): (number | null)[][] {
 // día y hora es exactamente el mismo trabajo, y duplicar el calendario sería
 // duplicar los horarios ocupados, la zona horaria y el "no tiene lugar".
 //
+// `contra` (M16 bis): el id de una sesión donde el PROFESIONAL propuso horarios
+// y al cliente no le sirve ninguno. Elige uno libre de la agenda de él, y él lo
+// acepta. No gasta la ficha de las 24hs: el cambio lo empezó el profesional.
+//
 // `proponer` (M16): el id de una sesión que el PROFESIONAL no puede dar, y para
 // la que está eligiendo un horario alternativo. Misma reutilización que
 // `reagendar`, del otro lado del mostrador: acá `coachId` es él mismo, así que
 // el calendario le muestra su propia agenda.
-type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string; tema?: string; sugerida?: string; reagendar?: string; proponer?: string };
+type Params = { name?: string; specialty?: string; priceFrom?: string; coachId?: string; tema?: string; sugerida?: string; reagendar?: string; proponer?: string; contra?: string };
 
 export default function BookingScreen_Calendar() {
   const router = useRouter();
@@ -216,6 +220,7 @@ export default function BookingScreen_Calendar() {
         ...(params.tema && { tema: params.tema }),
         ...(params.reagendar && { reagendar: params.reagendar }),
         ...(params.proponer && { proponer: params.proponer }),
+        ...(params.contra && { contra: params.contra }),
         date: selectedDate,
       },
     });

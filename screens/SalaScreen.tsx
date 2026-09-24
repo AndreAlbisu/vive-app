@@ -674,6 +674,24 @@ export default function SalaScreen() {
     );
   }
 
+  /** M16 bis: ninguno de los horarios propuestos le sirve, pero quiere seguir
+   *  con esta persona. Abre la agenda REAL del profesional para elegir uno
+   *  libre; queda como pedido y él lo acepta. No gasta la ficha de las 24hs
+   *  (`contraproponer_horario`), porque el cambio lo empezó él. */
+  function pedirOtroHorario() {
+    if (!activeBooking || !recipientId || !recipientProfile) return;
+    router.push({
+      pathname: '/booking-calendar',
+      params: {
+        name: recipientProfile.name,
+        specialty: recipientProfile.specialty ?? '',
+        priceFrom: '',
+        coachId: recipientId,
+        contra: activeBooking.id,
+      },
+    });
+  }
+
   async function tomarHorario(id: string) {
     if (resolviendo) return;
     setResolviendo(true);
@@ -1541,6 +1559,19 @@ export default function SalaScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
+              {/* 🔴 M16 bis (23/09/2026). Antes había DOS salidas y las dos
+                  malas para quien quería seguir con esta persona: tomar un
+                  horario que no puede, o cancelar y volver a reservar de cero.
+                  Esta tercera abre la agenda real del profesional. Va ANTES que
+                  la de la plata: pedir otro horario es seguir, cancelar es
+                  terminar, y lo que termina va último. */}
+              <TouchableOpacity
+                style={styles.propuestaOtro}
+                disabled={resolviendo}
+                onPress={pedirOtroHorario}
+                activeOpacity={0.8}>
+                <Text style={styles.propuestaOtroTxt}>Ninguno me sirve, quiero pedir otro horario</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.propuestaNo}
                 disabled={resolviendo}
@@ -2274,6 +2305,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10, paddingHorizontal: 16, marginTop: 10, alignSelf: 'flex-start',
   },
   propuestaOpcionTxt: { color: '#F3EEDF', fontFamily: ViveFonts.semibold, fontSize: 13 },
+  // Borde y no relleno: es una opción real, pero la principal sigue siendo
+  // tomar uno de los horarios que el profesional ofreció.
+  propuestaOtro: {
+    borderWidth: 1.5, borderColor: '#3F512F', borderRadius: 999,
+    paddingVertical: 10, paddingHorizontal: 16, marginTop: 14, alignSelf: 'flex-start',
+  },
+  propuestaOtroTxt: { color: '#3F512F', fontFamily: ViveFonts.semibold, fontSize: 13 },
   propuestaNo: { marginTop: 12 },
   propuestaNoTxt: { color: '#E05252', fontFamily: ViveFonts.medium, fontSize: 12.5 },
 

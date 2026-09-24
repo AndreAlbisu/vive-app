@@ -32,3 +32,12 @@ describe('mensajeDeError', () => {
     }
   });
 });
+
+describe('contrapropuesta (M16 bis, 23/09/2026)', () => {
+  it('explica qué pasó si la propuesta se resolvió mientras elegía', () => {
+    const m = mensajeDeError('P0001: sin_propuesta');
+    expect(m).toMatch(/ya no tiene horarios propuestos/i);
+    // Nada de códigos ni inglés en pantalla.
+    expect(m).not.toMatch(/P0001|sin_propuesta/);
+  });
+});

@@ -18,7 +18,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { scheduledAtMs, deviceIsOffArgentina, localEquivalent } from '@/lib/time';
-import { pedirReagendado, proponerHorarios } from '@/lib/reagendarApi';
+import { pedirReagendado, proponerHorarios, contraproponerHorario } from '@/lib/reagendarApi';
 
 const MONTHS_SHORT = [
   'ene','feb','mar','abr','may','jun',
@@ -42,6 +42,9 @@ type Params = {
   reagendar?: string;
   /** M16: id de la sesión para la que el profesional propone un horario. */
   proponer?: string;
+  /** M16 bis: id de la sesión para la que el cliente CONTRAPROPONE un horario,
+   *  porque ninguno de los que ofreció el profesional le sirve. */
+  contra?: string;
 };
 
 export default function BookingScreen_Time() {
@@ -172,8 +175,25 @@ export default function BookingScreen_Time() {
     );
   }
 
+  // M16 bis. El cliente elige un horario libre de la agenda del profesional
+  // cuando ninguno de los propuestos le sirve. Queda como PEDIDO: él lo acepta,
+  // porque la agenda es suya y ya dijo que ese día tenía un problema.
+  async function onContraproponer() {
+    if (!selectedTime || !params.contra || moviendo) return;
+    setMoviendo(true);
+    const error = await contraproponerHorario(params.contra, dateStr, selectedTime);
+    setMoviendo(false);
+    if (error) { Alert.alert('No se pudo', error); return; }
+    Alert.alert(
+      'Se lo propusimos',
+      'Tu profesional tiene que aceptarlo. Te avisamos cuando responda. Mientras tanto siguen disponibles los horarios que te había ofrecido.',
+      [{ text: 'Entendido', onPress: () => router.back() }],
+    );
+  }
+
   function onSeguimos() {
     if (!selectedTime) return;
+    if (params.contra) { void onContraproponer(); return; }
     if (params.proponer) { void onProponer(); return; }
     if (params.reagendar) { void onMover(); return; }
     router.push({

@@ -158,6 +158,12 @@ export function mensajeDeError(raw: string | null | undefined): string {
   if (m.includes('mismo_horario')) {
     return 'Es el horario que ya tenías.';
   }
+  // M16 bis: contraproponer solo existe mientras haya una propuesta del
+  // profesional sobre la mesa. Si se resolvió mientras la persona elegía, el
+  // camino correcto ya no es este.
+  if (m.includes('sin_propuesta')) {
+    return 'Tu profesional ya no tiene horarios propuestos para esta sesión. Volvé a la sala para ver cómo quedó.';
+  }
   if (m.includes('ya_empezo')) {
     return 'Esta sesión ya empezó.';
   }
