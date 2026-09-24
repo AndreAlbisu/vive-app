@@ -45,6 +45,20 @@ const SITIO = Deno.env.get('WEB_BASE_URL') ?? 'https://vitaapp.com.ar'
  * se ve en pantalla y en el mail hay que decir.
  */
 const PLANTILLAS: Record<string, { titulo: string; pie?: string; conLinkSala?: boolean }> = {
+  // 🔴 Las dos de la postulación entraron el 23/09/2026, y son el caso donde el
+  // mail no es un refuerzo sino el ÚNICO canal: al enviar la solicitud se cierra
+  // la sesión (`CoachApplicationScreen`), así que la persona **no puede entrar a
+  // la app a mirar la campana**. Sin esto, la pantalla que le promete "te
+  // avisamos" mentía: la notificación quedaba esperando adentro de una cuenta a
+  // la que no podía entrar hasta que la aprobaran.
+  postulacion_aprobada: {
+    titulo: 'Tu perfil de Vita ya está publicado',
+    pie: 'Entrá a la app con el mismo mail para cargar tus horarios, tu precio y cómo querés cobrar.',
+  },
+  postulacion_rechazada: {
+    titulo: 'Sobre tu postulación a Vita',
+    pie: 'Podés corregir lo que falte y volver a enviarla desde la app: vuelve a la cola de revisión.',
+  },
   reserva_confirmada: {
     titulo: '¡Listo! Tu sesión está confirmada',
     // 🔴 El link a la sala va ACÁ y no "antes de la sesión" como decía antes:

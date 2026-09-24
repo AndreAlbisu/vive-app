@@ -305,6 +305,14 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
+### Después de postularse, la pantalla explica todo
+
+- Pedido de Andre: *"cuando envías la solicitud para ser coach tiene que aparecer una pantalla que diga que va a ser revisada y que nos vamos a contactar con él, o sea explicarle todo"*. La pantalla existía, pero decía una sola línea: *"Te vamos a contactar pronto para contarte los próximos pasos"*.
+- **Ahora explica los tres pasos**: la miramos a mano (no la aprueba un sistema), te escribimos al mail tanto si queda aprobada como si falta algo, y cuando esté aprobada entrás con el mismo mail a cargar horarios, precio y cobro. Abajo, la aclaración que más confusión evitaba: **le cerramos la sesión**, así que si vuelve a entrar no va a ver el perfil de profesional todavía. Va con scroll, porque en un teléfono chico los tres pasos no entran de una.
+- 🔴 **Y apareció que "te avisamos" era mentira.** `postulacion_aprobada` y `postulacion_rechazada` **no estaban en la lista blanca de mails**: quedaban como notificación adentro de la app… a la que la persona **no puede entrar**, porque al enviar la solicitud se cierra la sesión. O sea que quien se postulaba no se enteraba de nada salvo que Andre le escribiera a mano. Agregadas a `mail-notificaciones` (**v10 deployada y verificada**), con su asunto y su pie: el aprobado dice que entre a cargar horarios y precio, el rechazado que puede corregir y reenviar (el motivo ya viaja en el cuerpo).
+  - ⚠️ El mail sale si la notificación tiene menos de 180 minutos (`VENTANA_MINUTOS`), que es el criterio de siempre: el cron corre seguido, así que no debería perderse ninguna.
+- ⚠️ **Sin plazo prometido, a propósito**: hoy la revisión la hace una persona sin un compromiso escrito, y poner "48 horas" en esa pantalla sería inventar una promesa. **Queda para decidir** si querés comprometer un plazo; si sí, lo agrego en la pantalla y en el mail.
+
 ### M16 bis — el cliente puede contraproponer un horario
 
 - Observación de Andre: *"el coach al proponer un horario al usuario cuando no puede a cierta hora, debería poder permitir al usuario solicitarle otro, uno que tenga disponible"*. Tenía razón: cuando el profesional proponía horarios, al cliente le quedaban **dos salidas y las dos malas** si ninguno le servía pero quería seguir con esa persona: tomar uno que no puede, o cancelar y reservar todo de nuevo.

@@ -288,15 +288,60 @@ export default function CoachApplicationScreen() {
     return (
       <AppBg tono={tonoOnboarding}>
       <SafeAreaView style={styles.container}>
+        {/* Scroll: con los tres pasos, en un teléfono chico el contenido no
+            entra de una y sin esto el botón queda abajo del borde. */}
+        <ScrollView contentContainerStyle={styles.successScroll} showsVerticalScrollIndicator={false}>
         <Animated.View style={[styles.successContainer, fadeUp(successAnim)]}>
           <View style={styles.successIcon}>
             <MaterialCommunityIcons name="check-circle-outline" size={64} color={ViveColors.accent} />
           </View>
           <Text style={styles.successTitle}>
-            {existingCoachId ? 'Reenviada. Queda en revisión otra vez' : '¡Listo! Tu solicitud está en revisión'}
+            {existingCoachId ? 'Reenviada. Vuelve a la cola' : '¡Listo! Recibimos tu solicitud'}
           </Text>
           <Text style={styles.successSubtitle}>
-            Te vamos a contactar pronto para contarte los próximos pasos.
+            {existingCoachId
+              ? 'La miramos de nuevo con los cambios que hiciste.'
+              : 'Ahora la revisamos nosotros, a mano. No la aprueba un sistema.'}
+          </Text>
+
+          {/* 🔴 Qué pasa después, paso por paso (pedido de Andre, 23/09/2026).
+              Antes esta pantalla decía una sola línea, "te vamos a contactar
+              pronto", y dejaba tres cosas sin explicar que son justo las que
+              generan la duda: **que la sesión se cierra** (así que no puede
+              entrar a ver nada), por dónde le avisamos, y qué pasa si falta
+              algo. Alguien que acaba de dejar sus datos y su video no se queda
+              tranquilo con "pronto".
+
+              📌 Sin plazo prometido a propósito: hoy la revisión la hace una
+              persona sin un compromiso escrito, y poner "48 horas" acá sería
+              inventar una promesa que después hay que cumplir. */}
+          <View style={styles.pasos}>
+            <View style={styles.paso}>
+              <Text style={styles.pasoNum}>1</Text>
+              <Text style={styles.pasoTxt}>
+                <Text style={styles.pasoFuerte}>Miramos tu perfil y tu video.</Text> Chequeamos que lo que contás de vos
+                sea claro para quien busca ayuda.
+              </Text>
+            </View>
+            <View style={styles.paso}>
+              <Text style={styles.pasoNum}>2</Text>
+              <Text style={styles.pasoTxt}>
+                <Text style={styles.pasoFuerte}>Te escribimos al mail</Text> con el que te registraste, tanto si queda
+                aprobada como si falta algo. Si falta algo, te decimos qué y la reenviás desde la app.
+              </Text>
+            </View>
+            <View style={styles.paso}>
+              <Text style={styles.pasoNum}>3</Text>
+              <Text style={styles.pasoTxt}>
+                <Text style={styles.pasoFuerte}>Cuando esté aprobada, entrás con el mismo mail</Text> y cargás tus
+                horarios, tu precio y cómo querés cobrar. Recién ahí tu perfil aparece y podés recibir reservas.
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.successNota}>
+            Cerramos tu sesión hasta que esté aprobada, así que si volvés a entrar ahora no vas a ver el perfil de
+            profesional todavía. ¿Dudas? Escribinos a vitaappar@gmail.com.
           </Text>
           <TouchableOpacity
             style={styles.successButton}
@@ -306,6 +351,7 @@ export default function CoachApplicationScreen() {
             <Text style={styles.buttonText}>Volver a Inicio</Text>
           </TouchableOpacity>
         </Animated.View>
+        </ScrollView>
       </SafeAreaView>
       </AppBg>
     );
@@ -729,14 +775,39 @@ const styles = StyleSheet.create({
     color: '#F7EFE4',
     letterSpacing: 0.3,
   },
+  successScroll: { flexGrow: 1, justifyContent: 'center', paddingVertical: 28 },
   successContainer: {
-    flex: 1,
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 20,
+    gap: 18,
   },
   successIcon: { marginBottom: 8 },
+  pasos: { alignSelf: 'stretch', gap: 14 },
+  paso: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  pasoNum: {
+    fontFamily: ViveFonts.semibold,
+    fontSize: 13,
+    color: '#F7EFE4',
+    backgroundColor: '#565E32',
+    width: 24, height: 24, borderRadius: 12,
+    textAlign: 'center', lineHeight: 24, overflow: 'hidden',
+  },
+  pasoTxt: {
+    flex: 1,
+    fontFamily: ViveFonts.regular,
+    fontSize: 14.5,
+    color: '#87835C',
+    lineHeight: 21,
+  },
+  pasoFuerte: { fontFamily: ViveFonts.semibold, color: '#565E32' },
+  successNota: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 13,
+    color: 'rgba(135,131,92,0.85)',
+    lineHeight: 19,
+    textAlign: 'center',
+  },
   successTitle: {
     fontFamily: ViveFonts.semibold,
     fontSize: 26,
