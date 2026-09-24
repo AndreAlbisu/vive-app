@@ -31,3 +31,22 @@ La postulación se acababa de rediseñar en tres bloques, y cada pregunta de má
 - 24/09/2026: **3 ya estaba cubierto** (en la postulación la especialidad es una elección entre Psicólogo/a, Coach y Nutricionista; texto libre es solo después, en el perfil). **Hechos 2 y 4**: compromiso de derivar (coaches y nutricionistas), pregunta de riesgo (todos), país y provincia de atención; nacionalidad pasa a opcional. Ver SCHEMA "Postulación: límites y lugar de atención".
 - Pendiente: 1 (metodologías por profesión), 5, 6, 7.
 - Para la beta: ¿las metodologías de coaching y nutrición de la lista son las que usan? ¿La pregunta de riesgo les resulta razonable o invasiva?
+
+## ⏸️ RETOMAR: metodologías de coaches y nutricionistas
+
+Pausado el 24/09/2026 (Andre reinicia la compu). Para retomar, decir: **"retomemos las metodologías de coaches y nutricionistas"**.
+
+Qué es: el hueco 1 de este documento. Hoy solo los psicólogos declaran escuela (`coaches.enfoques`, `lib/enfoque.ts` → `ENFOQUES`, pantalla `screens/CoachEnfoqueScreen.tsx`, visible solo con `coaches.profesion = 'psicologia'`). Coaches y nutricionistas no tienen dónde decir cómo trabajan.
+
+Plan acordado:
+1. Armar dos listas, cada opción con una frase que la explique (mismo formato que `ENFOQUES`):
+   - Coaching: por ejemplo ontológico, PNL, sistémico, ejecutivo/organizacional, de vida, con base en mindfulness. A revisar: que sean escuelas reales y reconocibles en Argentina.
+   - Nutrición: por ejemplo no dieta / alimentación intuitiva, deportiva, clínica, vegetariana y vegana, conducta alimentaria (ojo: los trastornos de la conducta alimentaria son clínicos, ver si corresponde).
+2. Dónde se pregunta: en "completá tu perfil" después de la aprobación (`CoachEnfoqueScreen`), NO en la postulación. Hasta 3, como las escuelas.
+3. Base: decidir si se reusa `coaches.enfoques` con valores por profesión o una columna nueva; el trigger `trg_enfoques_requieren_matricula` hoy vacía `enfoques` si no es psicología, así que reusarla exige tocarlo. Recordar: toda columna nueva de `coaches` que lea el catálogo necesita sumarse al grant de SELECT (lista blanca) y, si la escribe el profesional, al de UPDATE.
+4. Perfil público (`screens/ProfesionalScreen.tsx`): mostrarlas igual que las escuelas.
+5. Match (`lib/quizMatch.ts`): decidir si pesan en la recomendación o solo se muestran.
+
+Antes de construir, conviene validar las dos listas con los 2 o 3 profesionales de la beta.
+
+Después de esto, en orden: años de experiencia (5), "¿cómo es tu primera sesión con alguien?" (6), supervisión para psicólogos (7).
