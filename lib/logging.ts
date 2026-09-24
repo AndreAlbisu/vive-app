@@ -81,6 +81,15 @@ function enviar(contexto: string, error: unknown, fatal = false) {
   }).catch(() => {});
 }
 
+/** ¿La base frenó esto por el tope de intentos (`scripts/add-rate-limits.sql`)?
+ *  No es una falla: no se reporta como error ni se le dice "probá de nuevo ya". */
+export function esTopeDeIntentos(error: unknown): boolean {
+  const m = (error as { message?: unknown } | null)?.message;
+  return typeof m === 'string' && m.includes('rate_limited');
+}
+
+export const TEXTO_TOPE = 'Hiciste muchos intentos seguidos. Esperá un rato y probá de nuevo.';
+
 export async function logError(message: string, error?: unknown) {
   const entry = formatEntry('ERROR', message, error);
   push(entry);

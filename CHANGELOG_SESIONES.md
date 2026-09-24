@@ -1,3 +1,17 @@
+## 2026-09-24 — Andre (Claude · tope de intentos)
+
+**Tocado:** `scripts/add-rate-limits.sql` (nuevo, corrido), `supabase/functions/web-book` (v8), `lib/logging.ts`, `lib/sessionIssues.ts`, `components/SessionIssueSheet.tsx`, `screens/SalaScreen.tsx`, `screens/BookingScreen_Confirm.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- 🛑 **Punto 9 de la checklist de seguridad (un video que vio Andre con 15 puntos; los demás estaban cubiertos o son config).** Salvo push, IA y checkout, nada tenía tope: con una cuenta se podían abrir reportes sin fin (cada uno manda mail a los admins), inundar un chat o `reports`, crear reservas en masa que retienen horarios, y sin cuenta llenar la analítica.
+- **Arreglo:** tabla `rate_limits` + trigger genérico por usuario o, sin sesión, por la IP que pone Cloudflare. Topes pensados para no rozar un uso normal: reportes de sesión 5/h, reportes 10/h, mensajes 40/min, reservas 12/h, analítica 300 cada 5 min. `web-book` usa el mismo tope de reservas porque inserta con service role. La app muestra "Hiciste muchos intentos seguidos…" en vez de un error genérico.
+- Verificado en producción con rollback y por HTTP (ver SCHEMA). Para probar la IP se creó una función temporal expuesta a `anon` que devolvía los encabezados, y se borró enseguida (0 restos); para probar la llamada de `web-book` se dio permiso temporal a `anon` sobre `consume_rate_limit` y se revocó (verificado `false`).
+- Se complementa con la pasada de seguridad de la otra sesión del mismo día (que ya sacó la escritura de `anon` en tablas): no redefine nada de esa migración, solo agrega triggers.
+
+**Pendiente para la próxima sesión:**
+- Siguen de la checklist: encabezados de seguridad de la web (`vercel.json` no define ninguno), CORS `*` en 9 funciones, y paquetes sin uso.
+- Avisar a Codex: trigger nuevo en `bookings` (tope 12/h) y cambio en `web-book`.
+
 ## 2026-09-23 — Codex: errores de consulta en Mis pagos
 
 Mis pagos distingue una consulta fallida de un historial vacío y ofrece Reintentar. Conserva los datos de la misma cuenta cuando falla una actualización, con aviso de que no están actualizados, y reinicia el contenido al cambiar de cuenta. Pruebas de consulta, reintento y aislamiento entre cuentas aprobadas. Cambio de app: requiere distribuir una nueva build o actualización compatible; no requiere migración de Supabase.

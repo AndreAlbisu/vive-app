@@ -75,6 +75,16 @@ serve(async (req) => {
 
   const admin = createClient(url, serviceKey)
 
+  // 🔴 24/09/2026. Esta función inserta con service role, así que el tope de
+  // `bookings` (`trg_rate_limit`, que limita por usuario) no la ve. Mismo tope y
+  // mismo bucket que la app: 12 reservas por hora por persona, venga de donde
+  // venga. Ver `scripts/add-rate-limits.sql`.
+  const { data: dentroDelTope, error: errTope } = await admin.rpc('consume_rate_limit', {
+    p_bucket: 'booking', p_subject: user.id, p_max: 12, p_window: '1 hour',
+  })
+  if (errTope) return json({ error: 'No se pudo validar la reserva' }, 503)
+  if (!dentroDelTope) return json({ error: 'Demasiadas reservas seguidas. Esperá un rato y probá de nuevo.' }, 429)
+
   // ── El coach ───────────────────────────────────────────────────────────────
   // Los mismos filtros que la página pública: un profesional que no pasó la
   // revisión no tiene link, y por lo tanto tampoco reservas.

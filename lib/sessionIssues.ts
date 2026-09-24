@@ -11,7 +11,7 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { logError } from '@/lib/logging';
+import { logError, esTopeDeIntentos } from '@/lib/logging';
 
 export const PLAZO_RESPUESTA = '24 horas hábiles';
 
@@ -78,7 +78,7 @@ export async function reportarProblema(input: {
   motivo: MotivoProblema;
   detalle: string;
   estadoSesion?: string;
-}): Promise<{ ok: true } | { ok: false; yaAbierto: boolean }> {
+}): Promise<{ ok: true } | { ok: false; yaAbierto: boolean; tope?: boolean }> {
   const detalle = input.detalle.trim().slice(0, 500);
   const { error } = await supabase.from('session_issues').insert({
     booking_id: input.bookingId,
@@ -94,6 +94,8 @@ export async function reportarProblema(input: {
   if (!error) return { ok: true };
   // El índice de "un caso abierto por reserva": ya reportó y no lo vio.
   if (error.code === '23505') return { ok: false, yaAbierto: true };
+  // Tope de 5 reportes por hora (`scripts/add-rate-limits.sql`): no es una falla.
+  if (esTopeDeIntentos(error)) return { ok: false, yaAbierto: false, tope: true };
   void logError('SessionIssue: no se pudo registrar el reporte', error);
   return { ok: false, yaAbierto: false };
 }

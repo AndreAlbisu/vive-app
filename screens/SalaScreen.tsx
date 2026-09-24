@@ -46,7 +46,7 @@ import { scheduledAtMs, daysFromTodayAr, localEquivalentLabel } from '@/lib/time
 import { cancelBookingFlow, refundMessage } from '@/lib/bookingCancel';
 import { puedeReagendar, textoReagendar } from '@/lib/reagendar';
 import { elegirHorario, rechazarHorarios } from '@/lib/reagendarApi';
-import { logError } from '@/lib/logging';
+import { logError, esTopeDeIntentos, TEXTO_TOPE } from '@/lib/logging';
 import { abrirVideollamada, ensureMeetingRoom, getJoinUrl, tituloDeAviso } from '@/lib/meetingRoom';
 import {
   OPCIONES_PROXIMA_SESION,
@@ -1303,7 +1303,7 @@ export default function SalaScreen() {
 
     if (error) {
       setMessages(prev => prev.filter(m => m.id !== optimisticId));
-      Alert.alert('Error', 'No se pudo enviar el mensaje');
+      Alert.alert('Error', esTopeDeIntentos(error) ? TEXTO_TOPE : 'No se pudo enviar el mensaje');
       return;
     }
 

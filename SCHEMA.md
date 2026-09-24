@@ -53,6 +53,15 @@ app: las builds antiguas que leen campos privados directamente necesitan actuali
 
 ## Tablas y relaciones
 
+### Tope de intentos: `rate_limits` (24/09/2026)
+`scripts/add-rate-limits.sql` — ✅ **CORRIDO y VERIFICADO el 24/09/2026**: como usuario real con rollback, 5 reportes de sesión entran y el sexto da `rate_limited`; 8 inserts internos seguidos (sin usuario ni IP) no se frenan; 5 triggers instalados; el cliente no puede llamar `consume_rate_limit`; cron `purge-rate-limits` creado. Por HTTP con la anon key, un evento de analítica entra y queda contado **por IP**.
+- **`rate_limits`** (`bucket`, `subject`, `window_start`, `hits`, PK `(bucket, subject)`): una fila por clave con ventana fija, mismo patrón que `claim_push`. RLS activa sin policies, sin permisos para `anon`/`authenticated`. Limpieza diaria (`purge-rate-limits`, 05:37) de ventanas de más de 2 días.
+- **`consume_rate_limit(bucket, subject, max, window)`** (security definer, solo `service_role`) y **`request_ip()`** (lee `cf-connecting-ip`, que pone Cloudflare y el cliente no puede falsificar; `x-forwarded-for` solo de respaldo).
+- **`tg_rate_limit(bucket, max, segundos)`**, BEFORE INSERT. Sujeto = `auth.uid()`, o la IP si no hay sesión; **sin ninguno de los dos no limita** (service role, crons, triggers). Error `rate_limited` (P0001), que la app traduce con `esTopeDeIntentos` / `TEXTO_TOPE` de `lib/logging.ts`.
+  - `session_issues`: 5 por hora (cada uno manda mail a los admins) · `reports`: 10 por hora · `messages`: 40 por minuto · `bookings`: 12 por hora (cada reserva retiene un horario) · `analytics_events`: 300 cada 5 minutos.
+- ⚠️ **`web-book` inserta con service role**, así que el trigger de `bookings` no la ve: la función (v8) llama a `consume_rate_limit` con el mismo bucket `booking` y 12 por hora, y devuelve 429. Cualquier función nueva que cree filas por el cliente con service role tiene que hacer lo mismo.
+- Ya tenían tope propio: push (`claim_push`), IA (`registrar_uso_ia`), checkout (`claim_checkout`).
+
 ### 🔴 Vistas escribibles con la anon key (23/09/2026, auditoría)
 `scripts/cerrar-escritura-en-vistas.sql` — ✅ **CORRIDO y VERIFICADO el 23/09/2026** (0 vistas con escritura para `anon`/`authenticated`, el ataque repetido da `permission denied` en SQL y por HTTP con la anon key, y la lectura pública sigue: 3 credenciales y 34 filas de disponibilidad).
 - **El hallazgo:** `anon` y `authenticated` tenían INSERT/UPDATE/DELETE sobre las vistas de `public`. Una vista simple es **actualizable**, y sin `security_invoker` corre con los permisos de su dueño (`postgres`), **salteando la RLS** de la tabla. Probado con rollback como `anon`: `coach_credentials_public` dejaba **modificar y borrar las 3 credenciales verificadas**; `coach_availability_status` (vista sobre `coaches`) dejaba **modificar las 34 filas de `coaches`**, y el DELETE solo lo frenó una FK. Por HTTP era un `PATCH`/`DELETE` a `/rest/v1/<vista>`. Los datos estaban intactos al cerrarlo (3 credenciales verificadas, las esperadas); no hay registro que permita descartar un uso anterior, pero no había usuarios.

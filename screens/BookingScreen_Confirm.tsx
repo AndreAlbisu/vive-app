@@ -29,7 +29,7 @@ import { useAuth } from '@/context/AuthContext';
 import { necesitaVerificarMail } from '@/lib/emailVerificado';
 import { notifyViaServer } from '@/lib/notifications';
 import * as WebBrowser from 'expo-web-browser';
-import { logError, logWarn } from '@/lib/logging';
+import { logError, logWarn, esTopeDeIntentos, TEXTO_TOPE } from '@/lib/logging';
 import { encryptMessage } from '@/lib/encryption';
 import { ensureMeetingRoom } from '@/lib/meetingRoom';
 import { observedTz, enArgentina } from '@/lib/time';
@@ -523,6 +523,8 @@ export default function BookingScreen_Confirm() {
         if (bookingError?.message?.includes('coach_suspendido')) {
           throw new Error('Este profesional no está tomando reservas por ahora.');
         }
+        // Tope de reservas por hora (`scripts/add-rate-limits.sql`): no es una falla.
+        if (esTopeDeIntentos(bookingError)) throw new Error(TEXTO_TOPE);
         await logError('BookingConfirm: insert booking failed', bookingError);
         throw new Error('No se pudo guardar la reserva. Intentalo de nuevo');
       }

@@ -78,7 +78,9 @@ export default function SessionIssueSheet({ visible, onClose, bookingId, rol, es
       setFormAbierto(false);
       onCambio?.(!!c);
     } else {
-      setError('No se pudo enviar. Revisá tu conexión y probá de nuevo.');
+      setError('tope' in res && res.tope
+        ? 'Mandaste varios reportes seguidos. Esperá un rato; ya estamos mirando los que llegaron.'
+        : 'No se pudo enviar. Revisá tu conexión y probá de nuevo.');
     }
     setEnviando(false);
   }
