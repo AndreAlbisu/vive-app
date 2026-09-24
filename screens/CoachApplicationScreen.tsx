@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView,
+  View, Text, TextInput, TouchableOpacity, ScrollView, BackHandler,
   StyleSheet, Animated, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +14,8 @@ import { limpiarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { AXES } from '@/constants/searchData';
+import CampoFecha from '@/components/ui/CampoFecha';
+import CampoNacionalidad from '@/components/ui/CampoNacionalidad';
 import {
   ESTILO_OPCIONES_COACH,
   GUIA_OPCIONES_COACH,
@@ -53,17 +55,6 @@ function ageFromIso(iso: string): number {
   return age;
 }
 
-function displayToIso(display: string): string | null {
-  const cleaned = display.replace(/[^0-9]/g, '');
-  if (cleaned.length !== 8) return null;
-  const d = cleaned.slice(0, 2);
-  const m = cleaned.slice(2, 4);
-  const y = cleaned.slice(4, 8);
-  const date = new Date(`${y}-${m}-${d}`);
-  if (isNaN(date.getTime())) return null;
-  return `${y}-${m}-${d}`;
-}
-
 export default function CoachApplicationScreen() {
   const router = useRouter();
   // El color del camino elegido en la bifurcación.
@@ -84,6 +75,8 @@ export default function CoachApplicationScreen() {
   const [specialty, setSpecialty] = useState<string | null>(null);
   const [bio, setBio] = useState('');
   const [topics, setTopics] = useState<Set<string>>(new Set());
+  // 🔴 ISO (`yyyy-mm-dd`) desde el 24/09/2026, no el texto DD/MM/AAAA que se
+  // tipeaba a mano: lo elige el calendario, así que no hay nada que parsear.
   const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState<Gender>('Prefiero no decir');
   const [nationality, setNationality] = useState('');
@@ -124,6 +117,19 @@ export default function CoachApplicationScreen() {
       Animated.timing(successAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
     }
   }, [submitted]);
+
+  // El botón físico de Android en la pantalla de "enviado" tiene que hacer lo
+  // mismo que el botón de la pantalla: cerrar la sesión y salir. Sin esto, la
+  // pila está vacía (se llega con `replace`), así que el back cerraría la app
+  // dejando la sesión viva.
+  useEffect(() => {
+    if (!submitted || Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      void signOut().finally(() => router.replace('/'));
+      return true;
+    });
+    return () => sub.remove();
+  }, [submitted, signOut, router]);
 
   // Carga la postulación anterior si la hubo. Solo se prellena cuando está
   // 'rechazada': una 'pendiente' no se toca (ya está en la cola de revisión) y
@@ -185,17 +191,6 @@ export default function CoachApplicationScreen() {
       : prev.length >= MAX_FOCOS ? prev : [...prev, id]);
   }
 
-  function handleBirthDateChange(text: string) {
-    const cleaned = text.replace(/[^0-9]/g, '').slice(0, 8);
-    let formatted = cleaned;
-    if (cleaned.length > 4) {
-      formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4)}`;
-    } else if (cleaned.length > 2) {
-      formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
-    }
-    setBirthDate(formatted);
-  }
-
   async function handleSubmit() {
     if (!specialty) { setSubmitError('Elegí una especialidad'); return; }
     if (bio.trim().length < 10) { setSubmitError('Contanos un poco más sobre vos en la presentación'); return; }
@@ -203,8 +198,8 @@ export default function CoachApplicationScreen() {
     if (!estilo) { setSubmitError('Contanos cómo acompañás'); return; }
     if (!guia) { setSubmitError('Contanos cuánto guiás'); return; }
     if (focos.length === 0) { setSubmitError('Elegí sobre qué trabajás'); return; }
-    const birthDateIso = displayToIso(birthDate);
-    if (!birthDateIso) { setSubmitError('Ingresá tu fecha de nacimiento (DD/MM/AAAA)'); return; }
+    const birthDateIso = birthDate || null;
+    if (!birthDateIso) { setSubmitError('Elegí tu fecha de nacimiento'); return; }
     // Chequeo duro contra el dato real: es el único lugar del alta donde hay una
     // fecha de nacimiento obligatoria, así que del lado coach la mayoría de edad
     // no queda solo en la declaración de CoachLoginScreen. T&C §3.1.
@@ -212,7 +207,7 @@ export default function CoachApplicationScreen() {
       setSubmitError('Tenés que ser mayor de 18 años para ofrecer sesiones en Vita');
       return;
     }
-    if (!nationality.trim()) { setSubmitError('Ingresá tu nacionalidad'); return; }
+    if (!nationality.trim()) { setSubmitError('Elegí tu nacionalidad'); return; }
     if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) {
       setSubmitError('Ingresá un precio válido por sesión');
       return;
@@ -274,11 +269,22 @@ export default function CoachApplicationScreen() {
       supabase.from('coach_topics').insert([...topics].map(topic => ({ coach_id: coachRow.id, topic }))),
     ]);
 
-    // La solicitud queda pendiente de revisión — no debe quedar una sesión
-    // activa que te deje usar la app como si ya estuvieras aceptado.
-    marcarEnviado();      // envió: el cierre de abajo es el que corresponde
+    // 🔴 EL `signOut()` ESTABA ACÁ Y SE COMÍA LA PANTALLA DE "ENVIADO"
+    // (reportado por Andre el 24/09/2026: *"al enviar la postulación solo
+    // vuelve a la animación de abrir la app"*).
+    //
+    // Cerrar la sesión hace que `AuthRedirect` mande a la bienvenida en el
+    // acto, así que el `setSubmitted(true)` de abajo pintaba una pantalla que
+    // ya no estaba montada: la persona terminaba su postulación y lo único que
+    // veía era la app arrancando de nuevo, sin una sola palabra de qué pasó con
+    // lo que acababa de mandar.
+    //
+    // Ahora la sesión se cierra al tocar el botón de esa pantalla. La decisión
+    // original se mantiene —no queda una sesión activa que deje usar la app
+    // como si ya estuviera aceptado— solo que ocurre un momento después, con
+    // la explicación ya leída.
+    marcarEnviado();      // envió: no es un abandono, no se borra la cuenta
     await limpiarAlta();  // el alta terminó: ya no hay nada que retomar
-    await signOut();
 
     setSubmitting(false);
     setSubmitted(true);
@@ -345,10 +351,16 @@ export default function CoachApplicationScreen() {
           </Text>
           <TouchableOpacity
             style={styles.successButton}
-            onPress={() => router.replace('/')}
+            onPress={async () => {
+              // Acá sí: la persona ya leyó qué sigue. `signOut` dispara solo la
+              // vuelta a la bienvenida; el `replace` queda por si el redirect
+              // tarda un frame.
+              await signOut();
+              router.replace('/');
+            }}
             activeOpacity={0.85}
           >
-            <Text style={styles.buttonText}>Volver a Inicio</Text>
+            <Text style={styles.buttonText}>Entendido</Text>
           </TouchableOpacity>
         </Animated.View>
         </ScrollView>
@@ -528,15 +540,7 @@ export default function CoachApplicationScreen() {
             {/* Fecha de nacimiento */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Fecha de nacimiento</Text>
-              <TextInput
-                style={styles.input}
-                value={birthDate}
-                onChangeText={handleBirthDateChange}
-                placeholder="DD/MM/AAAA"
-                placeholderTextColor="rgba(135,131,92,0.45)"
-                keyboardType="numeric"
-                maxLength={10}
-              />
+              <CampoFecha value={birthDate} onChange={setBirthDate} />
             </View>
 
             {/* Sexo */}
@@ -564,14 +568,7 @@ export default function CoachApplicationScreen() {
             {/* Nacionalidad */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Nacionalidad</Text>
-              <TextInput
-                style={styles.input}
-                value={nationality}
-                onChangeText={setNationality}
-                placeholder="Ej: Argentina"
-                placeholderTextColor="rgba(135,131,92,0.45)"
-                autoCapitalize="words"
-              />
+              <CampoNacionalidad value={nationality} onChange={setNationality} />
             </View>
 
             {/* Precio */}

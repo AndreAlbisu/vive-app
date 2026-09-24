@@ -17,6 +17,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { File } from 'expo-file-system';
 import { ViveColors, ViveFonts } from '@/constants/theme';
+import CampoFecha from '@/components/ui/CampoFecha';
+import CampoNacionalidad from '@/components/ui/CampoNacionalidad';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
@@ -54,7 +56,7 @@ export default function EditProfileScreen() {
 
     if (data) {
       setName(data.name ?? user?.user_metadata?.name ?? '');
-      setBirthDate(data.birth_date ? isoToDisplay(data.birth_date) : '');
+      setBirthDate(data.birth_date ?? '');
       setGender((GENDER_OPTIONS as readonly string[]).includes(data.gender ?? '') ? data.gender : 'Prefiero no decir');
       setNationality(data.nationality ?? '');
       setAvatarUrl(data.avatar_url ?? null);
@@ -143,32 +145,8 @@ export default function EditProfileScreen() {
     ]);
   }
 
-  function isoToDisplay(iso: string) {
-    const [y, m, d] = iso.split('-');
-    return `${d}/${m}/${y}`;
-  }
 
-  function displayToIso(display: string): string | null {
-    const cleaned = display.replace(/[^0-9]/g, '');
-    if (cleaned.length !== 8) return null;
-    const d = cleaned.slice(0, 2);
-    const m = cleaned.slice(2, 4);
-    const y = cleaned.slice(4, 8);
-    const date = new Date(`${y}-${m}-${d}`);
-    if (isNaN(date.getTime())) return null;
-    return `${y}-${m}-${d}`;
-  }
 
-  function handleBirthDateChange(text: string) {
-    const cleaned = text.replace(/[^0-9]/g, '').slice(0, 8);
-    let formatted = cleaned;
-    if (cleaned.length > 4) {
-      formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4)}`;
-    } else if (cleaned.length > 2) {
-      formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
-    }
-    setBirthDate(formatted);
-  }
 
   async function handleSave() {
     if (!user) return;
@@ -182,15 +160,8 @@ export default function EditProfileScreen() {
       nationality: nationality.trim(),
     };
 
-    if (birthDate.replace(/[^0-9]/g, '').length > 0) {
-      const iso = displayToIso(birthDate);
-      if (!iso) {
-        setErrorMsg('Fecha inválida. Usá el formato DD/MM/AAAA');
-        setSaving(false);
-        return;
-      }
-      updateData.birth_date = iso;
-    }
+    // Ya viene en ISO del calendario: no hay formato que validar.
+    if (birthDate) updateData.birth_date = birthDate;
 
     const { error } = await supabase
       .from('profiles')
@@ -296,16 +267,9 @@ export default function EditProfileScreen() {
 
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Fecha de nacimiento</Text>
-              <TextInput
-                style={styles.input}
-                value={birthDate}
-                onChangeText={handleBirthDateChange}
-                placeholder="DD/MM/AAAA"
-                placeholderTextColor="rgba(135,131,92,0.45)"
-                keyboardType="numeric"
-                maxLength={10}
-                returnKeyType="next"
-              />
+              {/* Calendario, no tipeo (24/09/2026). Mismo componente que la
+                  postulación: la fecha viaja en ISO y no hay nada que parsear. */}
+              <CampoFecha value={birthDate} onChange={setBirthDate} />
             </View>
 
             <View style={styles.fieldDivider} />
@@ -337,15 +301,7 @@ export default function EditProfileScreen() {
 
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Nacionalidad</Text>
-              <TextInput
-                style={styles.input}
-                value={nationality}
-                onChangeText={setNationality}
-                placeholder="Tu nacionalidad"
-                placeholderTextColor="rgba(135,131,92,0.45)"
-                autoCapitalize="words"
-                returnKeyType="done"
-              />
+              <CampoNacionalidad value={nationality} onChange={setNationality} />
             </View>
           </View>
 

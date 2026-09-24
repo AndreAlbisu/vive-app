@@ -332,6 +332,22 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
+### 🔴 La pantalla de "postulación enviada" no se veía nunca
+
+- Reporte de Andre: *"al enviar la postulación como coach solo vuelve a la animación de abrir la app antes de la bifurcación"*.
+- **Causa**: `handleSubmit` hacía `await signOut()` **antes** de `setSubmitted(true)`. Cerrar la sesión dispara el redirect a la bienvenida en el acto, así que la pantalla de "enviado" se pintaba sobre algo que ya se estaba yendo. La persona terminaba de postularse y lo único que veía era la app arrancando de nuevo, sin una palabra sobre lo que acababa de mandar. 📌 Y explica algo peor: **la explicación del proceso que se escribió hoy tampoco se habría visto.**
+- **Arreglado**: la sesión se cierra al tocar el botón de esa pantalla ("Entendido"), no antes. La decisión original se mantiene (no queda sesión activa), solo que ocurre después de leer. Se cubrió también el botón físico de Android, que con la pila vacía habría cerrado la app dejando la sesión viva.
+
+### Nacionalidad con selector y fecha con calendario
+
+- Pedido de Andre. Los dos campos se tipeaban a mano en **la postulación y en editar perfil**.
+- **Nacionalidad** (`components/ui/CampoNacionalidad.tsx` + `constants/paises.ts`): hoja con buscador, "más comunes" arriba (los de habla hispana de la región más España) y la lista completa abajo. La búsqueda ignora tildes y mayúsculas, así que "peru" encuentra "Perú".
+  - 🔴 **El problema no era la comodidad, era el dato**: esa columna la lee el filtro de nacionalidad del buscador, que compara texto exacto. Con "argentino", "Argentina " y "arg" conviviendo, el filtro dejaba afuera a gente que sí correspondía. Un test verifica que las cinco nacionalidades que el buscador filtra estén en la lista del selector.
+  - 📌 Lista aparte de `NATIONALITIES` a propósito: aquella son las nacionalidades que **hoy existen** entre los perfiles y sirve de filtro; esta es lo que alguien **puede ser**.
+- **Fecha de nacimiento** (`components/ui/CampoFecha.tsx`): calendario del sistema. Es la fecha que prueba la mayoría de edad (T&C §3.1) y la que el profesional ve como edad del cliente; tipeada a mano se equivoca sola. Abre en 30 años atrás y el tope es hoy. ⚠️ **No se bloquea al menor de 18**: el mínimo se valida al enviar, con su mensaje, porque un selector que directamente no deja elegir se lee como una app rota.
+  - 📌 Usa `@react-native-community/datetimepicker`, que **ya estaba en el cliente** (lo usan la agenda y los recordatorios): no suma una dependencia nativa nueva, que es la trampa que rompió la app ayer.
+- La fecha pasa a viajar en ISO por dentro, así que se fueron tres funciones de parseo y formato duplicadas en las dos pantallas. 7 tests nuevos.
+
 ### La puerta del profesional deja de decir "coach"
 
 - Andre preguntó si hacía falta crear pantallas de registro e inicio de sesión para los profesionales. **Ya existen**: `/coach-login` es su propia puerta ("Tu espacio profesional") y hace **las dos cosas en una**: con un mail conocido pide la contraseña, y con uno nuevo pide el nombre y crea la cuenta. También tiene Google y Apple.
