@@ -5,11 +5,12 @@
 **Resumen:**
 - 🕐 **Andre: "medio feo e incómodo".** En iOS, tocar la hora montaba abajo una segunda cápsula gris (`display="compact"`) que había que volver a tocar. Ahora "Desde → Hasta" van lado a lado y cada uno abre una hoja con la rueda (de a 15 min) y "Listo", mismo patrón que `CampoFecha`; en Android, el diálogo del sistema.
 - Al elegir el inicio, el fin se propone una hora después. Las tres duraciones ocupan el ancho. Abajo se lee qué turnos va a ofrecer el bloque ("2 turnos: 10:00 y 11:00"), con la misma cuenta que `generateWeeklySlots`.
+- ⏱️ **Duración fija en 60 minutos (Andre: "por ahora sí").** Se sacaron los botones 30/60/90: el precio es por sesión, los plazos de ausencia de §9.5 están pensados para una hora y en la base los 9 bloques cargados eran de 60. Otra duración, si hace falta, va junto con el precio.
 - Sin cambios en la base.
 
 **Pendiente para la próxima sesión:**
 - Probar en el iPhone.
-- ⚠️ Visto al pasar, sin tocar: `generateWeeklySlots` ofrece un turno si **empieza** antes del fin, así que 10:00 a 11:00 con 90 min da un turno que termina 11:30. Decidir si el turno tiene que terminar dentro del bloque.
+- Visto al pasar (con 60 fijo solo pasa si el bloque no es de horas enteras, ej. 10:00 a 11:30): `generateWeeklySlots` ofrece un turno si **empieza** antes del fin, así que 10:00 a 11:00 con 90 min da un turno que termina 11:30. Decidir si el turno tiene que terminar dentro del bloque.
 - `CoachAvailabilityScreen` usa el mismo `compact`; si molesta igual, pasa a `CampoHora`.
 - El texto dice "próximos 56 días"; en `docs/no-show.md` se decidió un horizonte de 30 para reservar (el generador sigue en 56 a propósito).
 

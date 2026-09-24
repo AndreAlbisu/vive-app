@@ -19,8 +19,11 @@ import { AppBg } from '@/components/ui/AppBg';
 import CampoHora, { horaVisible } from '@/components/ui/CampoHora';
 
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-const DURATIONS = [30, 60, 90] as const;
-type Duration = (typeof DURATIONS)[number];
+// Fija en una hora (24/09/2026, Andre). Antes se elegía entre 30, 60 y 90, pero
+// el precio es por sesión y los plazos de ausencia (§9.5: 10 y 20 minutos)
+// están pensados para una hora; todos los bloques cargados eran de 60. Si algún
+// día hace falta otra duración, va junto con el precio, no como un botón suelto.
+const DURACION_MIN = 60;
 
 type PatternBlock = {
   id: string;
@@ -81,7 +84,6 @@ export default function CoachWeeklyPatternScreen() {
   const [addingFor, setAddingFor] = useState<number | null>(null);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
-  const [duration, setDuration] = useState<Duration>(60);
 
   useEffect(() => {
     if (!user) return;
@@ -121,7 +123,6 @@ export default function CoachWeeklyPatternScreen() {
     setAddingFor(day);
     setStartTime(null);
     setEndTime(null);
-    setDuration(60);
   }
 
   function cancelAdd() {
@@ -149,7 +150,7 @@ export default function CoachWeeklyPatternScreen() {
       day_of_week: addingFor,
       start_time: dateToTimeStr(startTime!),
       end_time: dateToTimeStr(endTime!),
-      slot_duration_minutes: duration,
+      slot_duration_minutes: DURACION_MIN,
     });
     if (error) {
       Alert.alert('Error', 'No se pudo guardar el bloque');
@@ -287,28 +288,11 @@ export default function CoachWeeklyPatternScreen() {
                     <Text style={s.validationHint}>El fin tiene que ser después del inicio</Text>
                   )}
 
-                  {/* Duration chips */}
-                  <Text style={s.durationLabel}>Duración por turno</Text>
-                  <View style={s.durationRow}>
-                    {DURATIONS.map(d => (
-                      <TouchableOpacity
-                        key={d}
-                        style={[s.durationChip, duration === d && s.durationChipActive]}
-                        onPress={() => setDuration(d)}
-                        activeOpacity={0.75}
-                      >
-                        <Text style={[s.durationChipText, duration === d && s.durationChipTextActive]}>
-                          {d} min
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
                   {canSave && (
                     <Text style={s.turnosHint}>
                       {(() => {
-                        const t = turnosDelBloque(startTime!, endTime!, duration);
-                        return t.length === 1 ? `Un turno, a las ${t[0]}` : `${t.length} turnos: ${listaDeHoras(t)}`;
+                        const t = turnosDelBloque(startTime!, endTime!, DURACION_MIN);
+                        return t.length === 1 ? `Un turno de una hora, a las ${t[0]}` : `${t.length} turnos de una hora: ${listaDeHoras(t)}`;
                       })()}
                     </Text>
                   )}
@@ -463,37 +447,12 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
 
-  durationLabel: {
-    fontFamily: ViveFonts.medium,
-    fontSize: 13,
-    color: '#565E32',
-    marginTop: 14,
-    marginBottom: 8,
-  },
-  durationRow: { flexDirection: 'row', gap: 8 },
-  durationChip: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.60)',
-  },
   turnosHint: {
     fontFamily: ViveFonts.regular,
     fontSize: 12.5,
     color: '#87835C',
     marginTop: 12,
   },
-  durationChipActive: { backgroundColor: ViveColors.primaryInk, borderColor: ViveColors.primaryInk },
-  durationChipText: { fontFamily: ViveFonts.medium, fontSize: 13, color: '#87835C' },
-  // 🔴 Se escapó de la primera barrida: era oliva sobre la terracota clara
-  // (1.78:1), o sea que ELEGIR una duración volvía a ese chip el más difícil de
-  // leer de la fila — el estado seleccionado señalaba al revés. La auditoría no
-  // lo encontró porque solo emparejaba estilos `<nombre>Text`, y este se llama
-  // `durationChipTextActive`.
-  durationChipTextActive: { color: ViveColors.onPrimaryInk },
-
   formActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
   cancelBtn: {
     flex: 1,
