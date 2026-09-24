@@ -1,3 +1,14 @@
+## 2026-09-24 — Andre (Claude · íconos de las áreas en vez de emojis)
+
+**Tocado:** `constants/searchData.ts`, `components/ui/AxisIcon.tsx` (nuevo), `screens/CoachApplicationScreen.tsx`, `screens/CoachTopicsScreen.tsx`, `screens/ExploreResourcesScreen.tsx`, `screens/ProposeResourceScreen.tsx`
+
+**Resumen:**
+- 🎨 **Pedido de Andre: cambiar los emojis de la postulación por algo que quede mejor.** Eran 🌿 💭 ✨, uno por área de bienestar, en `AXES` (`constants/searchData.ts`), y el mismo dato lo usan cuatro pantallas: la postulación, elegir temas, explorar recursos y proponer un recurso. Se cambiaron en las cuatro para que no queden inconsistentes.
+- **Ahora son íconos de línea con el color de cada área:** brote (`sprout-outline`) para Bienestar físico, cabeza con corazón (`head-heart-outline`) para Emocional y mental, brújula (`compass-outline`) para Crecimiento y propósito. `AXES[].emoji` pasó a `AXES[].icon`; un componente `AxisIcon` los dibuja. En Explorar recursos, con la pastilla activa el ícono va en crema sobre el color del área.
+
+**Pendiente para la próxima sesión:**
+- Mirarlo en el teléfono en las cuatro pantallas.
+
 ## 2026-09-24 — Andre (Claude · "Preparar sesión" del profesional, repensado)
 
 **Tocado:** `screens/CoachHomeScreen.tsx`, `screens/CoachReservasScreen.tsx`

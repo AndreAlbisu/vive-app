@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { detectContactInfo, isContactLink } from '@/lib/contactInfoGuard';
 import { AppBg } from '@/components/ui/AppBg';
+import { AxisIcon } from '@/components/ui/AxisIcon';
 import { AXES } from '@/constants/searchData';
 
 type ResourceType = 'audio' | 'podcast' | 'video' | 'guia_pasos' | 'lectura_breve';
@@ -552,7 +553,10 @@ export default function ProposeResourceScreen() {
               <Text style={styles.sectionLabel}>Tema</Text>
               {AXES.map(axis => (
                 <View key={axis.id} style={styles.axisBlock}>
-                  <Text style={styles.axisLabel}>{axis.emoji} {axis.label}</Text>
+                  <View style={styles.axisLabelRow}>
+                    <AxisIcon axis={axis} size={15} />
+                    <Text style={styles.axisLabel}>{axis.label}</Text>
+                  </View>
                   {axis.groups.map((group, gi) => (
                     <View key={gi} style={styles.typeGrid}>
                       {group.items.map(t => {
@@ -915,6 +919,7 @@ const styles = StyleSheet.create({
   },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   axisBlock: { gap: 8, marginBottom: 12 },
+  axisLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   axisLabel: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,

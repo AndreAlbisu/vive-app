@@ -17,7 +17,8 @@ export type TopicGroup = { group: string; items: string[] };
 
 export type Axis = {
   id: string;
-  emoji: string;
+  /** Ícono de MaterialCommunityIcons (ver `components/ui/AxisIcon`). */
+  icon: 'sprout-outline' | 'head-heart-outline' | 'compass-outline';
   label: string;
   color: string;
   bg: string;
@@ -27,7 +28,7 @@ export type Axis = {
 export const AXES: Axis[] = [
   {
     id: 'fisico',
-    emoji: '🌿',
+    icon: 'sprout-outline',
     label: 'Bienestar físico',
     color: ViveColors.accent,
     bg: '#E8F5EE',
@@ -37,7 +38,7 @@ export const AXES: Axis[] = [
   },
   {
     id: 'emocional',
-    emoji: '💭',
+    icon: 'head-heart-outline',
     label: 'Bienestar emocional y mental',
     color: ViveColors.calm,
     bg: '#E8EFF6',
@@ -49,7 +50,7 @@ export const AXES: Axis[] = [
   },
   {
     id: 'crecimiento',
-    emoji: '✨',
+    icon: 'compass-outline',
     label: 'Crecimiento y propósito',
     color: ViveColors.primary,
     bg: '#FDF0E8',

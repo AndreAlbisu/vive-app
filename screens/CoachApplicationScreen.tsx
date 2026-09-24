@@ -13,6 +13,7 @@ import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { limpiarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
+import { AxisIcon } from '@/components/ui/AxisIcon';
 import { AXES } from '@/constants/searchData';
 import CampoFecha from '@/components/ui/CampoFecha';
 import CampoNacionalidad from '@/components/ui/CampoNacionalidad';
@@ -538,7 +539,10 @@ export default function CoachApplicationScreen() {
               error={campoError === 'topics'}>
               {AXES.map(axis => (
                 <View key={axis.id} style={styles.axisBlock}>
-                  <Text style={styles.axisLabel}>{axis.emoji} {axis.label}</Text>
+                  <View style={styles.axisLabelRow}>
+                    <AxisIcon axis={axis} size={15} />
+                    <Text style={styles.axisLabel}>{axis.label}</Text>
+                  </View>
                   {axis.groups.map((group, gi) => (
                     <View key={gi} style={styles.specialtyGrid}>
                       {group.items.map(topic => {
@@ -833,6 +837,7 @@ const styles = StyleSheet.create({
   },
   specialtyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   axisBlock: { gap: 8, marginTop: 4 },
+  axisLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   axisLabel: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
