@@ -1,3 +1,15 @@
+## 2026-09-24 — Andre (Claude · tarjeta "Tu próxima sesión" del profesional)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `screens/ProfileOwnScreen.tsx`
+
+**Resumen:**
+- ⏱️ **Pregunta de Andre: ¿cuándo desaparece "Tu próxima sesión" del Inicio del profesional?** Respuesta: 90 minutos después del inicio, fijo, o antes si se cancela o se completa. Dos defectos: (1) la tarjeta solo se calculaba al abrir el Inicio, así que **con la app abierta "Unirse" no se prendía a los 10 minutos antes**, justo cuando hay que entrar, y la sesión terminada no se iba; (2) los 90 minutos ignoraban la duración (una de 45' seguía 45' de más, una de 2hs desaparecía en plena sesión).
+- **Ahora:** reloj de 30 segundos mientras el Inicio está a la vista (re-dibuja el botón; cuando la sesión pasó, recarga y trae la siguiente) y la tarjeta dura hasta el fin real (inicio + `duration_minutes`) más 15 minutos.
+- 🎨 De paso, a pedido de Andre: la tarjeta de "Invitar a alguien" en Perfil ocupaba todo el ancho (sin margen lateral, con otro fondo y borde). Ahora tiene el mismo material y márgenes que las demás.
+
+**Pendiente para la próxima sesión:**
+- Probar con el Inicio abierto antes de una sesión: "Unirse" tiene que prenderse solo a los 10 minutos antes.
+
 ## 2026-09-24 — Andre (Claude · Profesionales arranca en las tres áreas)
 
 **Tocado:** `app/(tabs)/conexiones.tsx`, `lib/quizPendiente.ts`, `screens/QuizScreen.tsx`

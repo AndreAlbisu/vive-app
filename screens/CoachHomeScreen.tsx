@@ -91,6 +91,9 @@ const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', '
 type Session = { userId: string; time: string; date: string };
 type DayEntry = { abbr: string; count: number; isToday: boolean };
 
+/** Cuánto sigue a la vista la tarjeta después del fin previsto de la sesión. */
+const MARGEN_FIN_MS = 15 * 60 * 1000;
+
 type NextSession = {
   bookingId: string;
   userId: string;
@@ -102,6 +105,8 @@ type NextSession = {
   ordinal: string;
   salaId: string | null;
   startMs: number;
+  /** Hasta cuándo se muestra: fin real de la sesión (inicio + duración) + 15'. */
+  visibleHastaMs: number;
 };
 
 type AnimoCliente = {
@@ -402,11 +407,19 @@ export default function CoachHomeScreen() {
     });
     setWeekData(week);
 
-    // Próxima sesión = primera confirmada con inicio >= ahora
+    // Próxima sesión = la primera confirmada que todavía no terminó.
+    // 🔴 24/09/2026: antes era "empezó hace menos de 90 minutos", fijo. Una
+    // sesión de 45' seguía en la tarjeta 45' después de terminar, y una de 2hs
+    // desaparecía en plena sesión. Ahora es el fin real (inicio + duración) más
+    // 15' de margen, por si se estira.
     const nowMs = now.getTime();
     const upcoming = rows
-      .map(b => ({ b, startMs: bookingStartMs(b.scheduled_date as string, b.scheduled_time as string) }))
-      .filter(x => x.startMs >= nowMs - 90 * 60 * 1000) // incluye una en curso (hasta 90')
+      .map(b => {
+        const startMs = bookingStartMs(b.scheduled_date as string, b.scheduled_time as string);
+        const duracionMs = ((b.duration_minutes as number | null) ?? 60) * 60 * 1000;
+        return { b, startMs, visibleHastaMs: startMs + duracionMs + MARGEN_FIN_MS };
+      })
+      .filter(x => x.visibleHastaMs >= nowMs)
       .sort((a, b) => a.startMs - b.startMs)[0];
 
     if (upcoming) {
@@ -428,6 +441,7 @@ export default function CoachHomeScreen() {
         ordinal: ordinalLabel((completedCount ?? 0) + 1),
         salaId: (b.sala_id as string) ?? null,
         startMs: upcoming.startMs,
+        visibleHastaMs: upcoming.visibleHastaMs,
       });
 
       // Preparar sesión: última completada + recursos recomendados (Recursos v2)
@@ -605,13 +619,29 @@ export default function CoachHomeScreen() {
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
+  // 🔴 24/09/2026. La tarjeta se calculaba solo al abrir el Inicio: con la app
+  // abierta, "Unirse" no se prendía a los 10 minutos antes (justo cuando hay que
+  // entrar) y la sesión terminada no se iba. Un reloj de 30 segundos mientras la
+  // pantalla está a la vista: re-dibuja el botón y, cuando la sesión ya pasó,
+  // recarga para traer la siguiente.
+  const [ahoraMs, setAhoraMs] = useState(() => Date.now());
+  useFocusEffect(useCallback(() => {
+    setAhoraMs(Date.now());
+    const id = setInterval(() => setAhoraMs(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []));
+  const nextVencida = !!next && ahoraMs > next.visibleHastaMs;
+  useEffect(() => {
+    if (nextVencida) void loadData();
+  }, [nextVencida, loadData]);
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
   }, [loadData]);
 
-  const canJoin = next ? Date.now() >= next.startMs - 10 * 60 * 1000 : false;
+  const canJoin = next ? ahoraMs >= next.startMs - 10 * 60 * 1000 : false;
 
   // 🔴 "Sin sesiones programadas" no distingue entre dos coaches muy
   // distintos: uno con historial que está en un bache entre reservas (para
