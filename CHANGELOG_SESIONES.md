@@ -345,6 +345,14 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
+### Las solicitudes de cambio de horario que ya pasaron se vencen solas
+
+- Reporte de Andre: *"no se vencen las solicitudes de cambios de horario que ya pasaron"*. Medido en producción: había **una pendiente cuyo horario ya había pasado**.
+- 🔴 **La causa**: esas filas solo cambiaban de estado **cuando alguien respondía**. `responder_reagendado` ya se defiende (si el horario quedó en el pasado marca vencida en vez de mover la sesión), pero eso solo corre si el otro entra a contestar. Sin respuesta, la fila quedaba pendiente para siempre: el cliente con la tarjeta "te propone estos horarios" ofreciéndole horarios que ya pasaron, y el profesional con un pedido en Reservas sobre algo que ya no existe.
+- **Arreglado con un cron cada 5 minutos** (`vencer_solicitudes_horario`, misma maquinaria que `expire-pending-bookings`). Vence dos casos: el horario propuesto ya pasó, o la reserva dejó de estar confirmada. Corrido a mano en la verificación: venció la que estaba colgada y no quedó ninguna imposible.
+- **Y las dos pantallas descartan lo ya pasado al leer**, por la ventana de hasta 5 minutos: sin eso la app ofrece tomar un horario que el servidor va a rechazar, y la persona ve un error en vez de nada.
+- 📌 No avisa a nadie: un aviso de "venció algo que nadie respondió" es ruido sobre una sesión que, casi siempre, ya pasó.
+
 ### "Hacerla desde la computadora" comparte solo el link
 
 - Pedido de Andre. Antes el botón compartía *"Tu sesión con &lt;cliente&gt;, &lt;fecha&gt; &lt;hora&gt; hs"* y el link abajo. Dos problemas: pegado en la barra del navegador de la computadora **eso no es una URL** y hay que editarlo a mano, y de paso **el nombre del cliente viajaba** a donde sea que lo pegue. El profesional ya sabe de qué sesión se trata: la está abriendo él.

@@ -171,6 +171,14 @@ Es lo único que crea filas en `profiles` — no hay ningún INSERT a `profiles`
 - **Por qué:** antes quedaban las dos cosas abiertas, y el camino intuitivo era "No puedo" (que avisa "Tu sesión sigue en el horario original. Si no podés ir, podés cancelarla") y después buscar el "⋯" para proponer: el cliente recibía la mala noticia antes que las opciones.
 - App: botón **"Te propongo otro"** en la tarjeta del pedido en Reservas, entre "Aceptar el cambio" y "No puedo". Abre el calendario del profesional en el día que pidió el cliente (`sugerida`).
 
+### `vencer_solicitudes_horario()` (24/09/2026)
+`scripts/add-vencer-solicitudes-horario.sql` — ✅ **CORRIDO y VERIFICADO el 24/09/2026** (4 chequeos; venció la solicitud colgada que había y no quedó ninguna imposible).
+- 🔴 **El agujero**: `reschedule_requests` solo cambiaba de estado cuando alguien respondía. `responder_reagendado` ya se defiende del horario que quedó en el pasado, pero **solo corre si el otro entra a responder**. Si nadie contestaba, la fila quedaba `pendiente` para siempre: el cliente seguía viendo "te propone estos horarios" con horarios ya pasados, y el profesional seguía con el pedido en Reservas.
+- Vence dos casos: el horario propuesto ya pasó, o **la reserva dejó de estar confirmada** (se canceló o se completó, así que no hay nada que mover).
+- Cron `vencer-solicitudes-horario`, cada 5 minutos, igual que `expire-pending-bookings`. `execute` solo para `service_role`.
+- 📌 **No avisa a nadie** a propósito: un aviso de "venció algo que nadie respondió" es ruido sobre una sesión que, en el caso más común, ya pasó.
+- 📌 Las dos pantallas (`SalaScreen`, `CoachReservasScreen`) además **descartan lo ya pasado al leer**, por la ventana de hasta 5 minutos entre que el horario pasa y el cron corre: sin eso la pantalla ofrece una acción que el servidor va a rechazar con razón, y lo que ve la persona es un error.
+
 ### `contraproponer_horario()` (23/09/2026 — M16 bis)
 `scripts/add-contrapropuesta-horario.sql` — ✅ **CORRIDO y VERIFICADO el 23/09/2026** contra producción, con el escenario completo y los datos de prueba borrados (6 chequeos).
 - **Qué resuelve**: cuando el profesional no puede y propone hasta 3 horarios, el cliente tenía dos salidas y las dos malas si ninguno le servía pero quería seguir con esa persona: tomar uno que no puede, o cancelar y reservar de cero. Ahora puede **contraproponer** un horario libre de la agenda real del profesional.
