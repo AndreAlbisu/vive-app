@@ -70,6 +70,11 @@ export default function UserNotificationsScreen() {
   }, [user]);
 
   async function handlePress(n: Notif) {
+    // Al equipo: un caso nuevo se contesta desde el panel.
+    if (n.type === 'problema_sesion_nuevo') {
+      router.push('/admin');
+      return;
+    }
     if (n.type === 'invitacion_review' && n.booking_id) {
       router.push({ pathname: '/review', params: { booking_id: n.booking_id } });
       return;
@@ -93,13 +98,19 @@ export default function UserNotificationsScreen() {
         .eq('id', n.booking_id)
         .maybeSingle();
       if (data?.sala_id) {
-        router.push({ pathname: '/sala', params: { sala_id: data.sala_id } });
+        router.push({
+          pathname: '/sala',
+          // La respuesta a un reporte abre la Sala con el caso ya a la vista.
+          params: n.type === 'problema_sesion_respondido'
+            ? { sala_id: data.sala_id, ver_reporte: n.booking_id }
+            : { sala_id: data.sala_id },
+        });
       }
     }
   }
 
   function isTappable(n: Notif): boolean {
-    return !!(n.booking_id) || n.type === 'profesional_con_horarios';
+    return !!(n.booking_id) || n.type === 'profesional_con_horarios' || n.type === 'problema_sesion_nuevo';
   }
 
   function iconFor(type: string): keyof typeof Feather.glyphMap {
@@ -116,6 +127,8 @@ export default function UserNotificationsScreen() {
       // M15/M16: mover una sesión no es confirmarla ni cancelarla.
       case 'cambio_pedido': return 'clock';
       case 'cambio_resuelto': return 'calendar';
+      case 'problema_sesion_nuevo':
+      case 'problema_sesion_respondido': return 'life-buoy';
       default: return 'bell';
     }
   }

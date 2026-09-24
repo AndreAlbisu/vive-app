@@ -96,14 +96,21 @@ export default function CoachNotificationsScreen() {
         <ScrollView contentContainerStyle={s.list} showsVerticalScrollIndicator={false}>
           {notifs.map(n => {
             const isProposal = n.type === 'propuesta_publicada' || n.type === 'propuesta_ajustes';
-            const tappable = !!n.booking_id || isProposal;
+            const tappable = !!n.booking_id || isProposal || n.type === 'problema_sesion_nuevo';
             return (
               <TouchableOpacity
                 key={n.id}
                 style={[s.item, !n.read && s.itemUnread]}
                 activeOpacity={tappable ? 0.7 : 1}
-                onPress={() => {
+                onPress={async () => {
                   if (isProposal) router.navigate('/resource-proposals');
+                  else if (n.type === 'problema_sesion_nuevo') router.navigate('/admin');
+                  else if (n.type === 'problema_sesion_respondido' && n.booking_id) {
+                    // La respuesta se lee en la Sala de esa sesión, no en Reservas.
+                    const { data } = await supabase.from('bookings').select('sala_id').eq('id', n.booking_id).maybeSingle();
+                    if (data?.sala_id) router.push({ pathname: '/sala', params: { sala_id: data.sala_id, ver_reporte: n.booking_id } });
+                    else router.navigate('/reservas');
+                  }
                   else if (n.booking_id) router.navigate('/reservas');
                 }}
               >

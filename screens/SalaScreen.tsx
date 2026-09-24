@@ -34,6 +34,8 @@ import ReportSheet from '@/components/ReportSheet';
 import UserActionsSheet from '@/components/UserActionsSheet';
 import { areBlocked, loadBlockedIds } from '@/lib/blocking';
 import SessionNotesSheet from '@/components/SessionNotesSheet';
+import SessionIssueSheet from '@/components/SessionIssueSheet';
+import { getProblemaSesion } from '@/lib/sessionIssues';
 import { getRelationshipNotes, type SessionNote } from '@/lib/sessionNotes';
 import { AppBg } from '@/components/ui/AppBg';
 import { OfrecerPaqueteBanner } from '@/components/OfrecerPaqueteBanner';
@@ -188,8 +190,9 @@ function buildInitials(name: string): string {
 
 export default function SalaScreen() {
   const router = useRouter();
-  const { sala_id: salaIdParam, coach_id, abrir_notas, notas_booking, draft } = useLocalSearchParams<{
+  const { sala_id: salaIdParam, coach_id, abrir_notas, notas_booking, draft, ver_reporte } = useLocalSearchParams<{
     sala_id?: string; coach_id?: string; abrir_notas?: string; notas_booking?: string; draft?: string;
+    ver_reporte?: string;
   }>();
   const { user } = useAuth();
 
@@ -205,6 +208,14 @@ export default function SalaScreen() {
   // M5: si esta es la PRIMERA sesión con este profesional y todavía está dentro
   // de las 48hs de §9.3, se pregunta si quiere seguir.
   const [garantiaPedida, setGarantiaPedida] = useState(false);
+
+  // "Tengo un problema con esta sesión" (`session_issues`). `ver_reporte` llega
+  // desde la notificación de respuesta y trae la reserva del caso, que puede no
+  // ser la `activeBooking` de hoy.
+  const verReporteId = Array.isArray(ver_reporte) ? ver_reporte[0] : ver_reporte;
+  const [problemaOpen, setProblemaOpen] = useState(!!verReporteId);
+  const [problemaBookingId, setProblemaBookingId] = useState<string | null>(verReporteId ?? null);
+  const [tieneReporte, setTieneReporte] = useState(false);
   const [resolviendo, setResolviendo] = useState(false);
   const [recipientIsCoach, setRecipientIsCoach] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -616,6 +627,21 @@ export default function SalaScreen() {
 
   useEffect(() => { void fetchNotes(); }, [fetchNotes]);
 
+  // ¿Esta persona ya reportó algo sobre la sesión de la tarjeta? Cambia el
+  // acceso de "Tengo un problema…" a "Ver tu reporte".
+  useEffect(() => {
+    const id = activeBooking?.id;
+    if (!id) { setTieneReporte(false); return; }
+    let vivo = true;
+    getProblemaSesion(id).then(c => { if (vivo) setTieneReporte(!!c); });
+    return () => { vivo = false; };
+  }, [activeBooking?.id]);
+
+  function abrirProblema(bookingId: string) {
+    setProblemaBookingId(bookingId);
+    setProblemaOpen(true);
+  }
+
   // 🔴 LAS NOTAS NO SE COMPORTABAN COMO UN MENSAJE, y en dos lugares distintos.
   //
   // Uno: la suscripción de tiempo real de más arriba escucha SOLO `messages`, así
@@ -823,7 +849,10 @@ export default function SalaScreen() {
       const abrio = await abrirVideollamada(url.url);
       if (!abrio) {
         void logError('Sala: no se pudo abrir la videollamada');
-        Alert.alert('Error', 'No se pudo abrir la videollamada. Probá de nuevo');
+        Alert.alert('No se pudo abrir la videollamada', 'Probá de nuevo. Si sigue sin andar, avisanos.', [
+          { text: 'Avisar a Vita', onPress: () => abrirProblema(activeBooking.id) },
+          { text: 'Entendido', style: 'cancel' },
+        ]);
       }
     } else if (url) {
       // Fuera de horario: se dice cuándo abre, no "no se pudo" — eso haría
@@ -831,7 +860,10 @@ export default function SalaScreen() {
       Alert.alert(tituloDeAviso(url.estado), url.aviso);
     } else {
       void logError('Sala: no se pudo preparar la videollamada');
-      Alert.alert('Error', 'No se pudo preparar la sala. Intentalo de nuevo en unos segundos');
+      Alert.alert('No se pudo preparar la sala', 'Intentalo de nuevo en unos segundos. Si sigue sin andar, avisanos.', [
+        { text: 'Avisar a Vita', onPress: () => abrirProblema(activeBooking.id) },
+        { text: 'Entendido', style: 'cancel' },
+      ]);
     }
   }
 
@@ -1424,6 +1456,11 @@ export default function SalaScreen() {
               </Text>
             </TouchableOpacity>
           </Animated.View>
+          <TouchableOpacity onPress={() => abrirProblema(activeBooking!.id)} activeOpacity={0.7} hitSlop={8}>
+            <Text style={styles.problemaLinkLive}>
+              {tieneReporte ? 'Ver tu reporte' : '¿No podés entrar? Avisanos'}
+            </Text>
+          </TouchableOpacity>
         </LinearGradient>
       ) : sessionState === 'pendiente' ? (
         /* 🔴 Esta tarjeta estaba escrita entera desde el punto de vista del
@@ -1620,6 +1657,13 @@ export default function SalaScreen() {
                       reagendar: activeBooking.id,
                     },
                   }),
+                });
+              }
+              if (activeBooking) {
+                const id = activeBooking.id;
+                opciones.push({
+                  text: tieneReporte ? 'Ver tu reporte' : 'Tengo un problema con esta sesión',
+                  onPress: () => abrirProblema(id),
                 });
               }
               opciones.push({ text: 'Cancelar sesión', style: 'destructive', onPress: handleCancelBooking });
@@ -1867,6 +1911,11 @@ export default function SalaScreen() {
                   );
                 })}
               </View>
+              <TouchableOpacity onPress={() => abrirProblema(activeBooking.id)} activeOpacity={0.7}>
+                <Text style={styles.problemaLink}>
+                  {tieneReporte ? 'Ver tu reporte' : 'Tengo un problema con esta sesión'}
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -1920,6 +1969,13 @@ export default function SalaScreen() {
                   Recibimos tu pedido. Te avisamos por mail cuando esté resuelto.
                 </Text>
               )}
+              {/* No es la garantía: esto es para cuando algo FALLÓ (no pude
+                  entrar, no llegó, el cobro), no para "no me gustó". */}
+              <TouchableOpacity onPress={() => abrirProblema(activeBooking.id)} activeOpacity={0.7}>
+                <Text style={styles.problemaLink}>
+                  {tieneReporte ? 'Ver tu reporte' : 'Tengo un problema con esta sesión'}
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -2103,6 +2159,17 @@ export default function SalaScreen() {
         reportedId={recipientId ?? ''}
         salaId={salaId}
       />
+
+      {problemaBookingId && (
+        <SessionIssueSheet
+          visible={problemaOpen}
+          onClose={() => setProblemaOpen(false)}
+          bookingId={problemaBookingId}
+          rol={recipientIsCoach ? 'cliente' : 'profesional'}
+          estadoSesion={sessionState ?? undefined}
+          onCambio={tiene => { if (problemaBookingId === activeBooking?.id) setTieneReporte(tiene); }}
+        />
+      )}
 
       {!recipientIsCoach && notesBookingId && recipientId && (
         <SessionNotesSheet
@@ -2291,6 +2358,14 @@ const styles = StyleSheet.create({
   noComodoBox: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(135,131,92,0.25)', gap: 8 },
   noComodoTxt: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#566245' },
   noComodoLink: { fontFamily: ViveFonts.semibold, fontSize: 13, color: ViveColors.primary },
+  problemaLink: {
+    fontFamily: ViveFonts.medium, fontSize: 13, color: '#87835C',
+    textDecorationLine: 'underline', marginTop: 14, paddingVertical: 4,
+  },
+  problemaLinkLive: {
+    fontFamily: ViveFonts.medium, fontSize: 13, color: 'rgba(243,238,223,0.85)',
+    textDecorationLine: 'underline', marginTop: 14, textAlign: 'center',
+  },
 
   // M16. Caja propia y no un renglón más: es una decisión, no un aviso.
   propuestaBox: {

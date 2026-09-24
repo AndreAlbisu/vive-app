@@ -19,6 +19,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
 import { hasContactInfo } from '@/lib/contactInfoGuard';
 import { useAuth } from '@/context/AuthContext';
+import SessionIssueSheet from '@/components/SessionIssueSheet';
 
 const GLASS = 'rgba(255,248,240,0.55)';
 const GLASS_BORDER = 'rgba(255,255,255,0.65)';
@@ -56,6 +57,7 @@ export default function ReviewScreen() {
   const [coachProfileId, setCoachProfileId] = useState('');
   const [existingReviewId, setExistingReviewId] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
+  const [problemaOpen, setProblemaOpen] = useState(false);
   const [comment, setComment] = useState('');
   const [callQuality, setCallQuality] = useState<CallQuality | null>(null);
   const [callProblems, setCallProblems] = useState<CallProblem[]>([]);
@@ -322,15 +324,36 @@ export default function ReviewScreen() {
               }
             </TouchableOpacity>
 
+            {/* 🔴 La reseña exige estrellas, y está bien: es pública. Pero quien no
+                pudo hacer la sesión no tiene nada que calificar, y hasta el
+                23/09/2026 esta pantalla era el único lugar para contarlo. Sale
+                del camino de la reseña: lo lee el equipo, no el profesional. */}
+            <TouchableOpacity onPress={() => setProblemaOpen(true)} activeOpacity={0.7} style={s.problemaBtn}>
+              <Text style={s.problemaText}>¿La sesión no se pudo hacer? Contanos sin calificar</Text>
+            </TouchableOpacity>
+
             <View style={{ height: 40 }} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      {!!bookingId && (
+        <SessionIssueSheet
+          visible={problemaOpen}
+          onClose={() => setProblemaOpen(false)}
+          bookingId={bookingId}
+          rol="cliente"
+          estadoSesion="resena"
+        />
+      )}
     </AppBg>
   );
 }
 
 const s = StyleSheet.create({
+  problemaBtn: { alignItems: 'center', marginTop: 18, paddingVertical: 8 },
+  problemaText: {
+    fontFamily: ViveFonts.medium, fontSize: 13, color: '#87835C', textDecorationLine: 'underline', textAlign: 'center',
+  },
   safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { fontFamily: ViveFonts.regular, fontSize: 15, color: '#87835C' },

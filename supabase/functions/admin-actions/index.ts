@@ -60,7 +60,7 @@ async function audit(
     adminId: string
     adminEmail: string | null
     action: string
-    targetType: 'coach' | 'report' | 'booking'
+    targetType: 'coach' | 'report' | 'booking' | 'session_issue'
     targetId: string
     details?: Record<string, unknown>
   },
@@ -106,7 +106,8 @@ async function notifyProfile(
   admin: SupabaseClient,
   profileId: string,
   type: 'postulacion_aprobada' | 'postulacion_rechazada' | 'credencial_verificada' | 'credencial_rechazada'
-    | 'sancion_aplicada' | 'sancion_levantada' | 'profesional_no_disponible',
+    | 'sancion_aplicada' | 'sancion_levantada' | 'profesional_no_disponible'
+    | 'problema_sesion_respondido',
   title: string,
   body: string,
   // ⚠️ Último y opcional a propósito: todas las llamadas viejas pasan cinco
@@ -748,6 +749,54 @@ serve(async (req) => {
     }
 
     // ── Moderar un reporte ───────────────────────────────────────────────────
+    // ── Responder un problema con una sesión (`session_issues`) ───────────────
+    // La respuesta se guarda en el caso y la persona la lee en la Sala. El
+    // aviso (campana, push y mail) NO lleva el texto: el push se ve con el
+    // teléfono bloqueado, y la respuesta puede hablar de su sesión o su pago.
+    case 'respond_session_issue': {
+      if (!body.issue_id) return json({ error: 'falta issue_id' }, 400)
+      if (!['en_revision', 'resuelto'].includes(body.estado)) {
+        return json({ error: 'estado tiene que ser en_revision o resuelto' }, 400)
+      }
+      const respuesta = typeof body.respuesta === 'string' ? body.respuesta.trim() : ''
+      if (!respuesta) return json({ error: 'falta la respuesta' }, 400)
+      if (respuesta.length > 2000) return json({ error: 'la respuesta es muy larga (máx. 2000)' }, 400)
+
+      const { data, error } = await admin
+        .from('session_issues')
+        .update({
+          estado: body.estado,
+          respuesta,
+          respondido_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', body.issue_id)
+        .select('id, booking_id, reporter_id, estado')
+
+      if (error) return json({ error: error.message }, 500)
+      if (!data || data.length === 0) return json({ error: 'no existe ese caso' }, 404)
+      const caso = data[0]
+
+      await notifyProfile(
+        admin,
+        caso.reporter_id,
+        'problema_sesion_respondido',
+        'Te respondimos sobre tu sesión',
+        'Entrá al chat de esa sesión y tocá "Ver tu reporte" para leer la respuesta.',
+        caso.booking_id,
+      )
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'respond_session_issue',
+        targetType: 'session_issue',
+        targetId: caso.id,
+        details: { estado: caso.estado },
+      })
+
+      return json({ result: 'ok', issue: caso, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
     case 'resolve_report': {
       if (!body.report_id) return json({ error: 'falta report_id' }, 400)
       if (!REPORT_STATUSES.includes(body.status)) {

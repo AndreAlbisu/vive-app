@@ -16,6 +16,21 @@
 **Pendiente para la próxima sesión:**
 - Probar en el teléfono: sin check-in de hoy, tocar la tarjeta abre Progreso; con check-in, sigue yendo a donde dice el CTA.
 
+## 2026-09-23 — Andre (Claude · "Tengo un problema con esta sesión")
+
+**Tocado:** `scripts/add-session-issues.sql` (nuevo, corrido), `lib/sessionIssues.ts` (nuevo), `components/SessionIssueSheet.tsx` (nuevo), `screens/SalaScreen.tsx`, `screens/ReviewScreen.tsx`, `screens/AdminScreen.tsx`, `lib/admin.ts`, `screens/UserNotificationsScreen.tsx`, `screens/CoachNotificationsScreen.tsx`, `supabase/functions/admin-actions` (v35), `supabase/functions/mail-notificaciones` (v9), `SCHEMA.md`
+
+**Resumen:**
+- 🆘 **Punto 2 del informe de producto.** Cualquiera de las dos partes de una reserva puede decir "tengo un problema con esta sesión" (no puedo entrar, no se ve o no se escucha, el otro no llegó, el cobro, otra cosa), antes, durante o después del horario y **sin calificar a nadie**. Lo lee el equipo, no la otra persona. **Decisiones de Andre:** plazo de **24 horas hábiles**, y reportan cliente y profesional.
+- El equipo recibe un mail por caso (vía `mail-notificaciones`), responde desde la pestaña **Sesiones** del panel, y la persona recibe aviso por campana, push y mail **sin el texto de la respuesta**, que se lee en la Sala ("Ver tu reporte"). La notificación abre la Sala con el caso a la vista.
+- Accesos: debajo de "Unirse ahora", en "Opciones de la sesión", en las tarjetas de sesión finalizada, en los dos avisos de error de la videollamada ("Avisar a Vita") y en la reseña ("¿La sesión no se pudo hacer? Contanos sin calificar").
+- 🗄️ **Base:** tabla `session_issues` + dos triggers + dos tipos de notificación. Rol y autor los decide la base; el cliente no puede escribir la respuesta ni cambiar el estado. **Corrido y verificado** con seis pruebas como usuario real y rollback (ver SCHEMA). `admin-actions` y `mail-notificaciones` deployadas y respondiendo con sus propios errores.
+
+**Pendiente para la próxima sesión:**
+- Probar punta a punta en el teléfono: reportar como cliente, que te llegue el mail, responder desde el panel, leer la respuesta en la Sala. No se pudo probar `respond_session_issue` desde acá porque hace falta el token de un admin.
+- ⚠️ El mail al equipo va a la casilla de cada perfil con `is_admin` (hoy 3). Confirmar que esas casillas se leen.
+- Siguiente del informe: profesión y verificación (punto 1), después estado del dinero (punto 3).
+
 ## 2026-09-23 — Andre (Claude · investigación de producto, embudo de reservas y errores de la app)
 
 **Tocado:** `docs/investigacion-producto-2026-09-23.md` (nuevo), `scripts/add-booking-funnel-events.sql` (nuevo, corrido), `screens/BookingScreen_Confirm.tsx`, `lib/coachBookingActions.ts`, `lib/logging.ts`, `app/_layout.tsx`, `context/AuthContext.tsx`, `screens/SalaScreen.tsx`, `__tests__/logging.test.ts`, `docs/plan-pagos.md`, `SCHEMA.md`

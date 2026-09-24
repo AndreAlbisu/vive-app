@@ -744,3 +744,59 @@ export async function reviewCredential(
   });
   return { ok: res.ok, error: res.error };
 }
+
+// ─── Problemas con sesiones (`session_issues`) ──────────────────────────────
+// Lectura por la policy `session_issues_select_admin`; responder va por
+// `admin-actions` (`respond_session_issue`), que además avisa a la persona.
+
+export type AdminSessionIssue = {
+  id: string;
+  bookingId: string;
+  rol: 'cliente' | 'profesional';
+  motivo: string;
+  detalle: string | null;
+  estado: 'recibido' | 'en_revision' | 'resuelto';
+  respuesta: string | null;
+  contexto: Record<string, unknown> | null;
+  createdAt: string;
+  reporterName: string;
+  sesion: string | null;
+};
+
+export async function listOpenSessionIssues(): Promise<AdminSessionIssue[]> {
+  const { data, error } = await supabase
+    .from('session_issues')
+    .select('id, booking_id, reporter_id, rol, motivo, detalle, estado, respuesta, contexto_tecnico, created_at, bookings(scheduled_date, scheduled_time)')
+    .neq('estado', 'resuelto')
+    .order('created_at', { ascending: true });
+  if (error) {
+    console.warn('[admin] no se pudieron leer los problemas de sesión:', error.message);
+    return [];
+  }
+  if (!data || data.length === 0) return [];
+
+  const ids = [...new Set(data.map(r => r.reporter_id as string))];
+  const { data: people } = await supabase.from('profiles').select('id, name').in('id', ids);
+  const nameById = new Map((people ?? []).map(p => [p.id, p.name as string]));
+
+  return data.map(r => {
+    const b: any = Array.isArray((r as any).bookings) ? (r as any).bookings[0] : (r as any).bookings;
+    return {
+      id: r.id as string,
+      bookingId: r.booking_id as string,
+      rol: r.rol as AdminSessionIssue['rol'],
+      motivo: r.motivo as string,
+      detalle: (r.detalle as string | null) ?? null,
+      estado: r.estado as AdminSessionIssue['estado'],
+      respuesta: (r.respuesta as string | null) ?? null,
+      contexto: (r.contexto_tecnico as Record<string, unknown> | null) ?? null,
+      createdAt: r.created_at as string,
+      reporterName: nameById.get(r.reporter_id as string) ?? 'Alguien',
+      sesion: b ? `${b.scheduled_date} ${String(b.scheduled_time).slice(0, 5)} hs` : null,
+    };
+  });
+}
+
+export function respondSessionIssue(issueId: string, respuesta: string, estado: 'en_revision' | 'resuelto') {
+  return callAdmin({ action: 'respond_session_issue', issue_id: issueId, respuesta, estado });
+}

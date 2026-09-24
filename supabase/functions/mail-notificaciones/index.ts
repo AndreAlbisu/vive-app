@@ -83,6 +83,17 @@ const PLANTILLAS: Record<string, { titulo: string; pie?: string; conLinkSala?: b
     titulo: 'Novedades con el horario de tu sesión',
     pie: 'Podés ver el horario actualizado en la app.',
   },
+  // "Tengo un problema con esta sesión" (`session_issues`). El primero es para
+  // el equipo (sin datos de la persona: se leen en el panel); el segundo avisa
+  // que hay respuesta, sin copiarla, porque puede hablar de su sesión o su pago.
+  problema_sesion_nuevo: {
+    titulo: 'Reportaron un problema con una sesión',
+    pie: 'Prometimos responder en 24 horas hábiles.',
+  },
+  problema_sesion_respondido: {
+    titulo: 'Te respondimos sobre tu sesión',
+    pie: 'La respuesta está en la app, en el chat de esa sesión.',
+  },
 }
 
 serve(async (req) => {

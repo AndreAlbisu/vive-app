@@ -43,6 +43,7 @@ import {
   listSanctions, applySanction, revokeSanction, sancionVigente,
   uploadSanctionEvidence, sanctionEvidenceUrl, listContactSignals,
   type AdminSancion, type SancionNivel, type SenalesDeCoach,
+  listOpenSessionIssues, respondSessionIssue, type AdminSessionIssue,
 } from '@/lib/admin';
 import { supabase } from '@/lib/supabase';
 
@@ -50,11 +51,12 @@ const FOREST = '#3A4F2A';
 const OLIVE = '#87835C';
 const CLAY = '#B5533A';
 
-type Tab = 'coaches' | 'credenciales' | 'reportes' | 'sanciones' | 'garantias' | 'reembolsos' | 'pagos' | 'facturacion' | 'auditoria';
+type Tab = 'coaches' | 'credenciales' | 'sesiones' | 'reportes' | 'sanciones' | 'garantias' | 'reembolsos' | 'pagos' | 'facturacion' | 'auditoria';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'coaches',   label: 'Postulaciones' },
   { key: 'credenciales', label: 'Credenciales' },
+  { key: 'sesiones',  label: 'Sesiones' },
   { key: 'reportes',  label: 'Reportes' },
   { key: 'sanciones', label: 'Sanciones' },
   { key: 'garantias', label: 'Garantías' },
@@ -503,6 +505,9 @@ export default function AdminScreen() {
             {/* ── Sanciones ───────────────────────────────────────────────── */}
             {!loading && tab === 'sanciones' && <SanctionsPanel />}
 
+            {/* ── Problemas con sesiones ──────────────────────────────────── */}
+            {!loading && tab === 'sesiones' && <SessionIssuesPanel />}
+
             {/* ── Garantías ───────────────────────────────────────────────── */}
             {!loading && tab === 'garantias' && (
               <GuaranteePanel claims={claims} onDone={load} />
@@ -912,6 +917,94 @@ async function elegirPdf(): Promise<AdjuntoLocal[]> {
   if (a.size && a.size > MAX_ADJUNTO) { Alert.alert('Archivo muy grande', 'Tiene que pesar menos de 10 MB.'); return []; }
   return [{ uri: a.uri, mime: 'application/pdf', nombre: a.name }];
 }
+
+// Casos de "Tengo un problema con esta sesión". Se prometió responder en 24
+// horas hábiles: la lista va de la más vieja a la más nueva por eso.
+function SessionIssuesPanel() {
+  const [casos, setCasos] = useState<AdminSessionIssue[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [texto, setTexto] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    setCasos(await listOpenSessionIssues());
+    setCargando(false);
+  }, []);
+  useEffect(() => { void cargar(); }, [cargar]);
+
+  async function responder(c: AdminSessionIssue, estado: 'en_revision' | 'resuelto') {
+    const r = (texto[c.id] ?? '').trim();
+    if (!r) { Alert.alert('Falta la respuesta', 'La persona la lee en la Sala de esa sesión.'); return; }
+    setBusy(`${c.id}-${estado}`);
+    const res = await respondSessionIssue(c.id, r, estado);
+    setBusy(null);
+    if (!res.ok) { Alert.alert('No se pudo', res.error ?? 'Probá de nuevo.'); return; }
+    Alert.alert('Listo', estado === 'resuelto' ? 'Respondido y cerrado. Le avisamos.' : 'Respondido. Sigue abierto y le avisamos.');
+    setTexto(prev => ({ ...prev, [c.id]: '' }));
+    void cargar();
+  }
+
+  if (cargando) return <ActivityIndicator color={FOREST} style={{ marginTop: 30 }} />;
+  if (casos.length === 0) return <Empty icon="lifebuoy" text="No hay problemas de sesiones abiertos." />;
+
+  return (
+    <>
+      {casos.map(c => {
+        const horas = Math.floor((Date.now() - new Date(c.createdAt).getTime()) / 3_600_000);
+        const ctx = c.contexto ?? {};
+        return (
+          <View key={c.id} style={s.card}>
+            <Text style={s.cardTitle}>{MOTIVO_PROBLEMA[c.motivo] ?? c.motivo}</Text>
+            <Text style={s.cardMeta}>
+              {c.reporterName} ({c.rol}) · hace {horas} h · {c.estado === 'en_revision' ? 'en revisión' : 'sin responder'}
+            </Text>
+            {!!c.sesion && <Text style={s.cardMeta}>Sesión: {c.sesion}</Text>}
+            <Text style={s.cardMeta}>
+              {[ctx.plataforma, ctx.version_so && `SO ${ctx.version_so}`, ctx.version_app && `app ${ctx.version_app}`, ctx.estado_sesion && `sesión ${ctx.estado_sesion}`].filter(Boolean).join(' · ')}
+            </Text>
+            <Text style={[s.cardMeta, { fontSize: 11 }]} selectable>Reserva {c.bookingId}</Text>
+            {!!c.detalle && <Text style={s.cardBody}>{c.detalle}</Text>}
+            {!!c.respuesta && <Text style={s.cardBody}>Última respuesta: {c.respuesta}</Text>}
+            <TextInput
+              style={s.input}
+              value={texto[c.id] ?? ''}
+              onChangeText={v => setTexto(prev => ({ ...prev, [c.id]: v }))}
+              placeholder="Respuesta (la lee la persona en la app)"
+              placeholderTextColor="rgba(135,131,92,0.45)"
+              multiline
+              maxLength={2000}
+            />
+            <View style={s.actions}>
+              <TouchableOpacity
+                style={[s.btn, s.btnGhost]}
+                disabled={!!busy}
+                onPress={() => responder(c, 'en_revision')}
+                activeOpacity={0.8}>
+                <Text style={s.btnGhostText}>{busy === `${c.id}-en_revision` ? 'Enviando…' : 'Responder, sigue abierto'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.btn, s.btnPrimary, { flex: 1 }]}
+                disabled={!!busy}
+                onPress={() => responder(c, 'resuelto')}
+                activeOpacity={0.8}>
+                <Text style={s.btnPrimaryText}>{busy === `${c.id}-resuelto` ? 'Enviando…' : 'Responder y cerrar'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+      })}
+    </>
+  );
+}
+
+const MOTIVO_PROBLEMA: Record<string, string> = {
+  no_puedo_entrar: 'No puede entrar a la llamada',
+  audio_video: 'No se ve o no se escucha',
+  otro_no_llego: 'La otra parte no llegó',
+  cobro: 'Problema con el cobro',
+  otro: 'Otra cosa',
+};
 
 function SanctionsPanel() {
   const [sanciones, setSanciones] = useState<AdminSancion[]>([]);
