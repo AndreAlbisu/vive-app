@@ -384,6 +384,15 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
+### La pantalla de postulación, rediseñada
+
+- Andre: *"estéticamente es muy fea"*. Tenía razón y el diagnóstico es concreto: **diez secciones del mismo peso visual**, una abajo de la otra, sobre un fondo plano, sin señal de avance y con el botón de enviar al final de tres pantallas de scroll. Leerla era como leer un padrón.
+- **Tres bloques en vez de diez secciones**: "Tu perfil" (especialidad, presentación, temas), "Cómo trabajás" (las tres preguntas) y "Tus datos" (fecha, sexo, nacionalidad, precio, video). Cada uno con número, título y **una línea que dice por qué se pide eso**, que es lo que convierte un formulario en una conversación.
+- **Progreso arriba**: "2 de 3 bloques completos" con barra. Un formulario largo sin señal de avance se siente el doble de largo. Y el número del bloque se convierte en un tilde cuando está completo: el único premio que un formulario puede dar.
+- **El botón de enviar pasa a una barra fija abajo**, y **el error se muestra ahí, pegado al botón**. Antes el error era una caja roja al final: decía "Elegí una especialidad" a alguien que tenía que ir a buscar dónde estaba eso. Ahora, además, **se marca la etiqueta del campo que frenó el envío**.
+- **Dos incoherencias visuales corregidas**: los chips seleccionados usaban un verde menta que no aparece en ninguna otra pantalla del profesional (el resto usa oliva lleno con texto crema), y los campos de texto tenían otro radio y otro fondo que los dos campos nuevos de fecha y nacionalidad.
+- 📌 Tarjetas **sin sombra**, a propósito: tres bloques grandes con sombra en una pantalla que se scrollea se leen como objetos flotando. Alcanza el fondo y el borde para agrupar.
+
 ### Las solicitudes de cambio de horario que ya pasaron se vencen solas
 
 - Reporte de Andre: *"no se vencen las solicitudes de cambios de horario que ya pasaron"*. Medido en producción: había **una pendiente cuyo horario ya había pasado**.
