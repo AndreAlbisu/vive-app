@@ -96,6 +96,10 @@ export default function CoachApplicationScreen() {
 
   // Re-postulación. Si ya existe una fila de coach RECHAZADA, esta pantalla
   // pasa de alta a edición: el UNIQUE de `profile_id` hace que un INSERT falle
+  // con 23505. ⚠️ Ese índice **no existía hasta el 24/09/2026**: este comentario
+  // lo daba por cierto y la base no lo garantizaba (ver
+  // `scripts/add-coaches-profile-unico.sql`). Por la app no se llegaba a
+  // duplicar —el guard de `CoachLoginScreen` corta antes— pero desde la API sí.
   // con 23505 ("ya tenemos una solicitud"), que era un callejón sin salida —
   // la persona sabía qué corregir por la notificación y no tenía dónde hacerlo.
   const [existingCoachId, setExistingCoachId] = useState<string | null>(null);

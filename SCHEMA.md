@@ -207,6 +207,13 @@ Es lo único que crea filas en `profiles` — no hay ningún INSERT a `profiles`
 
 - ✅ **Resuelto el 23/09/2026** (`scripts/cerrar-escritura-en-vistas.sql`). Nota original: `anon` conserva UPDATE sobre las **25** columnas de `coaches`. Hoy no hace daño porque la policy `coaches_update_own` exige `profile_id = auth.uid()` y `anon` no tiene uid, pero el endurecimiento que se le hizo a `authenticated` nunca se le aplicó a `anon`. Candidato de la auditoría de seguridad previa a la v1.
 
+### `coaches` — una postulación por cuenta (24/09/2026)
+`scripts/add-coaches-profile-unico.sql` — ✅ **CORRIDO y VERIFICADO el 24/09/2026** (4 chequeos, incluido el intento real de una segunda postulación, que ahora rebota).
+- 🔴 **El código lo creía desde siempre y la base no lo garantizaba.** `CoachApplicationScreen` decide si el alta es una postulación nueva o la corrección de una rechazada asumiendo *"el UNIQUE de `profile_id` hace que un INSERT falle con 23505"*. `coaches` solo tenía únicos en `id` y en `slug`.
+- Por la app nadie llegaba a duplicar (el guard de `CoachLoginScreen` corta con "Solicitud en revisión" y cierra la sesión), pero la RLS de INSERT solo pide `profile_id = auth.uid()`: desde la API una cuenta podía crear N postulaciones. Rompía dos cosas: la cola de revisión se llena de repetidas, y **su propio panel deja de cargar**, porque `CoachLoginScreen`, `CoachEnfoqueScreen` y `coachVisibilityData` piden esa fila con `maybeSingle()`, que con dos filas devuelve error.
+- Entró sin tocar datos: 38 filas, 38 cuentas distintas. Si alguna vez hubiera duplicados, el script **falla en vez de borrar** — elegir cuál sobrevive no es decisión de una migración.
+- 📌 Lo que esto **no** impide: postularse muchas veces con mails distintos. Eso no tiene arreglo técnico; lo filtra la revisión y, sobre todo, la matrícula.
+
 ### `coaches.guia` y `coaches.focos` (21/09/2026 — M14 ampliado)
 `scripts/add-quiz-guia-foco-genero.sql` — ✅ **CORRIDO y VERIFICADO el 21/09/2026** (6 chequeos en verde: 2 columnas en `coaches`, 4 en `user_quiz_answers`, `grant update (guia, focos)` presente, 6 CHECKs, y los CHECK de `guia` y `focos` rechazan un valor inventado dentro de un subbloque que se deshace).
 - `guia` (text, nullable, CHECK IN `guia` / `acompana` / `ambos`) — cuánto conduce el proceso.

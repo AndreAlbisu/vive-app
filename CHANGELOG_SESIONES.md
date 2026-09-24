@@ -332,6 +332,14 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
 
+### Una postulación por cuenta (el UNIQUE que el código creía tener)
+
+- Pregunta de Andre: *"¿un mismo mail puede mandar muchas postulaciones?"*. Verificado contra la base, y la respuesta tenía tres partes:
+  - **Por la app, no**: si ya tenés una sin aprobar, la puerta del profesional corta con "Solicitud en revisión" y cierra la sesión. Si te la rechazaron, se abre con tus datos para corregir y **actualiza la misma fila**.
+  - 🔴 **Pero la base no lo impedía, y el código creía que sí.** `CoachApplicationScreen` dice *"el UNIQUE de `profile_id` hace que un INSERT falle"* y decide sobre eso si el alta es nueva o una corrección. **Ese índice no existía.** Desde la API, una cuenta podía crear N postulaciones: llena la cola de revisión y **le rompe el panel a esa misma persona**, porque tres pantallas piden su fila con `maybeSingle()`, que con dos filas devuelve error.
+  - **Con otro mail, sí, y no tiene arreglo técnico**: lo filtra la revisión humana y la matrícula, que es un número consultable.
+- **Agregado el índice** (`scripts/add-coaches-profile-unico.sql`, corrido y verificado): entró sin tocar datos (38 filas, 38 cuentas) y se probó de verdad que una segunda postulación rebota. El script **falla en vez de borrar** si algún día encuentra duplicados.
+
 ### 🔴 La pantalla de "postulación enviada" no se veía nunca
 
 - Reporte de Andre: *"al enviar la postulación como coach solo vuelve a la animación de abrir la app antes de la bifurcación"*.
