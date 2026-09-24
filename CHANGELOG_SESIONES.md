@@ -1,3 +1,17 @@
+## 2026-09-24 — Andre (Claude · probar el no-show)
+
+**Tocado:** `scripts/security-tests/endpoints.cjs`
+
+**Resumen:**
+- 🧪 **Simulación del no-show de punta a punta** (sin producción ni plata): 8 casos nuevos que pasan la evidencia de Daily por `resolverReintegros` entero y miran reserva, resolución y aviso. Los dos a horario, profesional que no entra, que entra al minuto 12, que se va al 5 con el cliente entrando al 7, cliente que no entra, cliente que llega al 25 con el profesional que esperó, nadie entra, y sesión sin terminar (no decide). Todos pasan; ya estaban los 10 de la regla (`__tests__/asistencia.test.ts`). Quedan en `test:security`.
+- ✅ En producción: crons `session-attendance` (:17 cada hora) y `complete-sessions` (5 min) activos y corriendo; la sesión del 21/09 (dos personas) quedó completada y `resolved`.
+- 📖 Leída la versión en vivo de `mark_refund_on_cancel`: la cancelación por ausencia (`cancelled_by='coach'`) con pago aprobado pasa a `reembolso_pendiente` sin importar la hora. La prueba con rollback sobre una reserva real no se pudo correr (permiso denegado); la cubre la prueba real.
+- ⚠️ Una reserva confirmada y pagada de hoy 24/09 9:00 no tiene asistencia: si nadie entró, el 25/09 alrededor de las 10:17 se concluye "no vino nadie" y se reintegra sola. Andre tiene que confirmar de quién es.
+
+**Pendiente para la próxima sesión:**
+- Prueba real con dos cuentas y reservas de $1, entrando por `/sala` (web): profesional que no entra (avisos de 2 y 10 min, reintegro y aviso una hora después del fin), cliente que no entra (aviso de 20 min al profesional, completada), profesional que se va al 5 y cliente que entra al 7 (reintegro).
+- Siguen las 7 filas históricas con `refund_resolution='due'` para revisar a mano.
+
 ## 2026-09-24 — Andre (Claude · "Te propongo otro")
 
 **Tocado:** `scripts/add-contraoferta-profesional.sql` (nuevo, corrido), `screens/CoachReservasScreen.tsx`, `SCHEMA.md`

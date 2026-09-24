@@ -98,6 +98,38 @@ let passed=0;async function test(name,fn){await fn();passed++;console.log('PASS'
   const result=await m.resolverReintegros(admin);
   assert.equal(result.reintegros,0);assert.equal(result.pendientes,1);assert.equal(admin.writes.length,0);
  });
+ // No-show de punta a punta: evidencia guardada de Daily → veredicto → reserva,
+ // resolución y aviso. La sesión arranca en 0; join_time y duration en segundos.
+ const cliente=(join,dur)=>({user_id:'user',join_time:join,duration:dur});
+ const pro=(join,dur)=>({user_id:'coach-profile',join_time:join,duration:dur});
+ for(const [name,participants,refund,motivo] of [
+  ['los dos a horario',[pro(0,3600),cliente(60,3000)],false],
+  ['el profesional no entra',[cliente(0,900)],true,'Tu profesional no llegó'],
+  ['el profesional entra al minuto 12',[pro(720,2880),cliente(0,3600)],true,'Tu profesional no llegó'],
+  ['el profesional se va al 5 y el cliente entra al 7',[pro(120,180),cliente(420,600)],true,'Tu profesional no llegó'],
+  ['el cliente no entra',[pro(0,1260)],false],
+  ['el cliente llega al 25 y el profesional esperó 20',[pro(0,1230),cliente(1500,600)],false],
+  ['nadie entra',[],true,'La sesión no se hizo'],
+ ])await test('no-show: '+name,async()=>{
+  const admin=db({session_attendance:[{booking_id:'booking',raw:{data:[{participants}]},participants_count:participants.length,refund_resolution:'pending'}],
+    bookings:{id:'booking',user_id:'user',coach_id:'coach',scheduled_date:'2026-01-01',scheduled_time:'09:00',duration_minutes:60,status:'confirmada',payment_status:'aprobado'},
+    coaches:{profile_id:'coach-profile'}});
+  const {exports:m}=load('session-attendance/index.ts',{admin,scheduledAtMs:()=>0});
+  const result=await m.resolverReintegros(admin);
+  assert.equal(result.reintegros,refund?1:0);assert.equal(result.pendientes,0);
+  const cancel=admin.writes.find(x=>x.table==='bookings');
+  if(refund)assert.deepEqual({...cancel.patch},{status:'cancelada',cancelled_by:'coach'});else assert.equal(cancel,undefined);
+  assert.equal(admin.writes.filter(x=>x.table==='session_attendance').at(-1).patch.refund_resolution,'resolved');
+  const aviso=admin.writes.find(x=>x.table==='notifications');
+  if(refund)assert(aviso.patch.body.startsWith(motivo),aviso.patch.body);else assert.equal(aviso,undefined);
+ });
+ await test('no-show: no decide mientras la sesión no terminó',async()=>{
+  const admin=db({session_attendance:[{booking_id:'booking',raw:{data:[{participants:[cliente(0,900)]}]},participants_count:1,refund_resolution:'pending'}],
+    bookings:{id:'booking',user_id:'user',coach_id:'coach',scheduled_date:'2026-01-01',scheduled_time:'09:00',duration_minutes:60,status:'confirmada',payment_status:'aprobado'},
+    coaches:{profile_id:'coach-profile'}});
+  const {exports:m}=load('session-attendance/index.ts',{admin,scheduledAtMs:()=>Date.now()});
+  assert.deepEqual({...await m.resolverReintegros(admin)},{reintegros:0,pendientes:1});assert.equal(admin.writes.length,0);
+ });
  await test('USDT gated until safe ledger is explicitly configured',async()=>{
   const admin=db();const {handler}=load('usdt-create-payment/index.ts',{admin},{USDT_LEDGER_WALLET:'not-the-wallet'});
   assert.equal((await handler(req({booking_id:'booking'}))).status,503);assert.equal(admin.writes.length,0);
