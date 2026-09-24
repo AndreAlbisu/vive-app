@@ -97,6 +97,11 @@ const fadeUp = (anim: Animated.Value) => ({
  *     La cuenta es legítima y se queda: **abandonar solo cierra la sesión**
  *     (`abandonarAlta` no borra nada sin marca de alta de coach). Confirmar
  *     entra a la app.
+ *   · `modo='confirmar'` — la cuenta recién creada con mail y contraseña, SIN
+ *     sesión: desde el 24/09/2026 "Confirm email" está prendido y Supabase no
+ *     deja entrar hasta que se confirma la casilla. El código lo manda el
+ *     propio alta (`enviado=1`) o se pide acá (login de una cuenta sin
+ *     confirmar). Confirmar abre la sesión. `para=coach` sigue a la postulación.
  *   · `modo='gate'` — alguien que ya usa la app y va a reservar. Su sesión es
  *     legítima: **abandonar NO la cierra**, solo vuelve. Confirmar vuelve
  *     también, a terminar lo que estaba haciendo.
@@ -113,12 +118,14 @@ const fadeUp = (anim: Animated.Value) => ({
  *   · Vita aprueba profesionales sin haber comprobado que la casilla desde la
  *     que se postulan sea suya.
  *
- * ⚠️ POR QUÉ UN OTP Y NO "Confirm email" DE SUPABASE. Ese ajuste es del
- * proyecto entero, así que prenderlo frenaría también el registro de usuarios
- * con un muro de mail en el peor momento — y eso se decidió NO hacer. Además,
- * con el ajuste apagado Supabase auto-confirma a todos: `email_confirmed_at`
- * viene lleno siempre y no sirve para distinguir nada. Por eso el código se
- * pide acá y el resultado se anota en `profiles.email_verified_at`.
+ * 🔴 "Confirm email" DE SUPABASE, PRENDIDO DESDE EL 24/09/2026. Antes estaba
+ * apagado para no frenar el registro, y eso dejaba robar cuentas por
+ * adelantado: alguien registraba el mail de otra persona con una contraseña
+ * suya, Supabase lo daba por confirmado, y cuando la dueña real entraba con
+ * Google caía en ESA cuenta, con la contraseña del otro todavía válida. Ahora
+ * una cuenta con contraseña no existe hasta que se prueba la casilla (modo
+ * `confirmar`). Los otros modos siguen para las cuentas anteriores y para el
+ * gate; la constancia sigue en `profiles.email_verified_at`.
  *
  * 📝 A esta pantalla se llega con sesión abierta (el alta ya la creó), así que
  * el `verifyOtp` no es para entrar: es para probar que la casilla es suya.
@@ -127,8 +134,13 @@ export default function VerificarMailScreen() {
   const router = useRouter();
   // El color del camino elegido en la bifurcación.
   const tonoOnboarding = useTonoOnboarding();
-  const { email, modo } = useLocalSearchParams<{ email?: string; modo?: string }>();
+  const { email, modo, para, enviado } = useLocalSearchParams<{ email?: string; modo?: string; para?: string; enviado?: string }>();
   const cual = (Array.isArray(modo) ? modo[0] : modo) ?? 'alta';
+  /** Alta con mail y contraseña que todavía no confirmó: no hay sesión. */
+  const esConfirmar = cual === 'confirmar';
+  const confirmaCoach = esConfirmar && (Array.isArray(para) ? para[0] : para) === 'coach';
+  /** El alta ya mandó el código: no se pide otro al abrir (pegaría en el límite). */
+  const yaEnviado = (Array.isArray(enviado) ? enviado[0] : enviado) === '1';
   const esGate = cual === 'gate';
   const esAltaCoach = cual === 'alta';
   /** Entrar a la app con un código, SIN sesión. Es la puerta de quien reservó
@@ -140,7 +152,7 @@ export default function VerificarMailScreen() {
    *  que los separa es a dónde va quien confirma. `entrar` y `gate` no son
    *  muros: en uno no hay sesión que cerrar, y en el otro es legítima. */
   const esMuro = esAltaCoach || cual === 'usuario';
-  const { user, role, marcarMailVerificado } = useAuth();
+  const { user, role, marcarMailVerificado, registrarAceptacionDelAlta } = useAuth();
 
   const mail = (Array.isArray(email) ? email[0] : email) ?? user?.email ?? '';
 
@@ -172,7 +184,7 @@ export default function VerificarMailScreen() {
    * es literalmente volver a lo que la persona estaba haciendo.
    */
   function volver() {
-    if (esGate || esEntrar) { router.back(); return; }
+    if (esGate || esEntrar || esConfirmar) { router.back(); return; }
     if (cancelando) return;   // ya está en curso, no reencolar
     setCancelando(true);
     void cancelar().then(() => router.replace('/onboarding-bifurcacion'));
@@ -180,7 +192,8 @@ export default function VerificarMailScreen() {
 
   useEffect(() => {
     Animated.timing(anim, { toValue: 1, duration: 420, useNativeDriver: true }).start();
-    void enviarCodigo(true);
+    if (yaEnviado) setEspera(ESPERA_REENVIO);
+    else void enviarCodigo(true);
     // Solo al montar: el código se manda una vez y después a pedido.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -206,10 +219,14 @@ export default function VerificarMailScreen() {
     // tiene un cooldown en pantalla que solo existe en pantalla. Ver
     // `lib/captcha.ts`.
     const captchaToken = await pedirCaptchaToken();
-    const { error: e } = await supabase.auth.signInWithOtp({
-      email: mail,
-      options: { shouldCreateUser: false, captchaToken },
-    });
+    // Una cuenta sin confirmar recibe el mail de confirmación del alta, no el
+    // de ingreso: `resend` con `signup` es el que corresponde.
+    const { error: e } = esConfirmar
+      ? await supabase.auth.resend({ type: 'signup', email: mail, options: { captchaToken } })
+      : await supabase.auth.signInWithOtp({
+          email: mail,
+          options: { shouldCreateUser: false, captchaToken },
+        });
 
     setReenviando(false);
     if (e) {
@@ -282,6 +299,10 @@ export default function VerificarMailScreen() {
     //
     // ⚠️ Y si falla, NO se da por verificado: dejarla pasar solo en memoria es lo
     // que hacía que el muro volviera a aparecer al reabrir la app.
+    // Recién ahora hay sesión para quien se registró con contraseña: lo que
+    // declaró en el alta (T&C y edad) quedó en la metadata y se pasa a su perfil.
+    if (esConfirmar) await registrarAceptacionDelAlta();
+
     const { data: marcado, error: errMarca } = await supabase.rpc('marcar_mail_verificado');
     if (errMarca || marcado !== true) {
       console.warn('[mail] no se pudo guardar la verificación:', errMarca?.message ?? `devolvió ${marcado}`);
@@ -294,7 +315,7 @@ export default function VerificarMailScreen() {
     // El alta de coach sigue en curso, pero un paso más adelante: si cierra la
     // app ahora, al volver retoma en la postulación y no le pide el código otra
     // vez.
-    if (esAltaCoach) await marcarAlta('postular');
+    if (esAltaCoach || confirmaCoach) await marcarAlta('postular');
     // 🔴 Sin esto el muro rebota: `AuthRedirect` mira `mailPendiente`, que
     // sigue en `true` en memoria, y devuelve a esta misma pantalla. Se marca en
     // vez de releer porque el UPDATE de arriba acaba de pasar y una lectura
@@ -305,7 +326,8 @@ export default function VerificarMailScreen() {
     // Cada camino vuelve a lo suyo: el alta de coach a la postulación, el muro
     // del usuario a la app, y el gate a lo que la persona estaba haciendo
     // (reservar), que es donde quedó el hilo.
-    if (esAltaCoach) router.replace('/coach-application');
+    if (esAltaCoach || confirmaCoach) router.replace('/coach-application');
+    else if (esConfirmar) router.replace('/' as any);
     // Sin sesión previa, el rol todavía no se conoce en este instante: `/`
     // espera a que cargue y manda a cada uno a lo suyo (`app/index.tsx`).
     else if (esEntrar) router.replace('/' as any);
@@ -340,6 +362,8 @@ export default function VerificarMailScreen() {
                     decirlo. El código viene en el mail y en su asunto. */}
                 {esEntrar
                   ? 'Si hay una cuenta con ese mail, te mandamos un código a'
+                  : esConfirmar
+                  ? 'Para cuidar tu cuenta, antes de entrar confirmamos que el mail es tuyo. Te mandamos un código a'
                   : esGate
                   ? 'Antes de reservar necesitamos confirmar tu mail. Te mandamos un código a'
                   : esAltaCoach
@@ -409,7 +433,7 @@ export default function VerificarMailScreen() {
                     <Text style={s.footerLink}>Cancelando…</Text>
                   </View>
                 ) : (
-                  <Text style={s.footerLink}>{esGate ? 'Ahora no' : esEntrar ? 'Volver' : 'Cancelar'}</Text>
+                  <Text style={s.footerLink}>{esGate ? 'Ahora no' : esEntrar || esConfirmar ? 'Volver' : 'Cancelar'}</Text>
                 )}
               </TouchableOpacity>
             </View>

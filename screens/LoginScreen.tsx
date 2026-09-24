@@ -19,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, ERR_MAIL_SIN_CONFIRMAR } from '@/context/AuthContext';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { ReglaConPunto, DivisorConPunto, LineasEsquina } from '@/components/ui/AuthOrnamentos';
 import LegalSheet from '@/components/LegalSheet';
@@ -139,6 +139,12 @@ export default function LoginScreen() {
     const error = await signInWithEmail(email.trim(), password);
     setLoading(false);
 
+    // La cuenta existe pero nunca confirmó el mail: en vez de un error sin
+    // salida, a la pantalla del código (que lo manda al abrir).
+    if (error === ERR_MAIL_SIN_CONFIRMAR) {
+      router.push({ pathname: '/verificar-mail', params: { email: email.trim(), modo: 'confirmar' } } as any);
+      return;
+    }
     if (error) {
       setServerError(error);
     }

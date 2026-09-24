@@ -18,6 +18,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import LegalSheet from '@/components/LegalSheet';
+import { ERR_MAIL_SIN_CONFIRMAR } from '@/lib/authErrores';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -72,6 +73,14 @@ export function AuthModal({ visible, onDismiss, onLogin, signInWithEmail, signIn
     const error = await signInWithEmail(email, password);
     setLoading(false);
 
+    // Cuenta sin confirmar: el modal se cierra y sigue en la pantalla del código.
+    if (error === ERR_MAIL_SIN_CONFIRMAR) {
+      const mail = email.trim();
+      reset();
+      onDismiss();
+      router.push({ pathname: '/verificar-mail', params: { email: mail, modo: 'confirmar' } } as any);
+      return;
+    }
     if (error) {
       setServerError(error);
       return;

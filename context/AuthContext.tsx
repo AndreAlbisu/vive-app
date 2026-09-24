@@ -8,6 +8,7 @@ import { cancelAllResourceReminders } from '@/lib/resourceReminders';
 import { clearBlockedCache } from '@/lib/blocking';
 import { LEGAL_VERSION } from '@/constants/legal';
 import { AuthModal } from '@/components/AuthModal';
+import { ERR_MAIL_SIN_CONFIRMAR } from '@/lib/authErrores';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -60,6 +61,8 @@ interface AuthContextType {
   requestAuth: (motivo?: string) => void;
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
   signUpWithEmail: (email: string, password: string, name: string, acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
+  /** Pasa a `profiles` la aceptación de T&C y edad guardada en la metadata del alta. */
+  registrarAceptacionDelAlta: () => Promise<void>;
   signInWithGoogle: (acceptedTerms?: boolean, ageConfirmed?: boolean) => Promise<string | null>;
   /** Manda el mail de recuperación. Devuelve `null` si salió bien, o el mensaje
    *  de error traducido. Ver `resetPassword` para las dos trampas del flujo. */
@@ -90,6 +93,7 @@ const AuthContext = createContext<AuthContextType>({
   requestAuth: () => {},
   signInWithEmail: async () => null,
   signUpWithEmail: async () => null,
+  registrarAceptacionDelAlta: async () => {},
   signInWithGoogle: async () => null,
   signInWithApple: async () => null,
   resetPassword: async () => null,
@@ -374,6 +378,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return translateError(error.message);
     }
 
+    // 🔴 Con "Confirm email" prendido (24/09/2026), Supabase ya NO avisa con un
+    // error que el mail tiene cuenta: devuelve un usuario falso, sin sesión y
+    // con `identities` vacío, para no revelar qué mails están registrados. Sin
+    // este chequeo la persona iría a esperar un código que nunca se manda.
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      return ERR_YA_REGISTRADO;
+    }
+
     // La fila de `profiles` la crea un trigger sobre auth.users, así que para
     // cuando signUp devuelve ya existe — pero nadie le escribía `accepted_terms`:
     // este parámetro llegaba hasta acá y se descartaba en silencio, con lo cual
@@ -432,6 +444,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .update(fields)
       .eq('id', session.user.id);
     if (error) console.warn('[auth] no se pudo registrar la aceptación:', error.message);
+  }
+
+  /** Constancia de T&C y edad de quien se registró con mail y contraseña.
+   *
+   *  🔴 Con "Confirm email" prendido el alta no devuelve sesión, así que
+   *  `signUpWithEmail` no puede escribirla: lo que la persona declaró queda en
+   *  la metadata del usuario (`options.data`) y se pasa a `profiles` recién
+   *  cuando confirma el mail y hay sesión. `markAccepted` no pisa una
+   *  aceptación previa. */
+  async function registrarAceptacionDelAlta() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const meta = session?.user?.user_metadata as { accepted_terms?: boolean; age_confirmed?: boolean } | undefined;
+    await markAccepted(meta?.accepted_terms === true, meta?.age_confirmed === true);
   }
 
   // `acceptedTerms` / `ageConfirmed` los manda solo el registro (en el login no
@@ -693,7 +718,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, loading, isLoggedIn, role, isAdmin, displayName, refreshProfile,
-      requestAuth, signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, signOut,
+      requestAuth, signInWithEmail, signUpWithEmail, registrarAceptacionDelAlta, signInWithGoogle, signInWithApple, signOut,
       resetPassword, mailPendiente, marcarMailVerificado,
     }}>
       {children}
@@ -730,9 +755,11 @@ export const ERR_YA_REGISTRADO = 'Ya existe una cuenta con ese email';
  */
 export const ERR_CREDENCIALES = 'El email o la contraseña son incorrectos';
 
+export { ERR_MAIL_SIN_CONFIRMAR };
+
 function translateError(msg: string): string {
   if (msg.includes('Invalid login credentials')) return ERR_CREDENCIALES;
-  if (msg.includes('Email not confirmed')) return 'Confirmá tu email antes de iniciar sesión';
+  if (msg.includes('Email not confirmed')) return ERR_MAIL_SIN_CONFIRMAR;
   if (msg.includes('User already registered')) return ERR_YA_REGISTRADO;
   if (msg.includes('Password should be at least')) return 'La contraseña debe tener al menos 6 caracteres';
   if (msg.includes('Unable to validate email') || msg.includes('valid email')) return 'El email no es válido';

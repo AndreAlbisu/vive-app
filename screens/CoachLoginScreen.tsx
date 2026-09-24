@@ -12,7 +12,7 @@ import type { User } from '@supabase/supabase-js';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
 import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
-import { useAuth, ERR_YA_REGISTRADO, ERR_CREDENCIALES } from '@/context/AuthContext';
+import { useAuth, ERR_YA_REGISTRADO, ERR_CREDENCIALES, ERR_MAIL_SIN_CONFIRMAR } from '@/context/AuthContext';
 import { marcarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
 import { VitaWordmark } from '@/components/VitaWordmark';
@@ -254,6 +254,14 @@ export default function CoachLoginScreen() {
       const signUpError = await signUpWithEmail(trimmedEmail, trimmedPassword, trimmedName, true, true);
 
       if (!signUpError) {
+        // 🔴 "Confirm email" prendido (24/09/2026): sin sesión hasta confirmar.
+        // El código ya salió con el alta; al confirmarlo sigue a la postulación.
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setLoading(false);
+          router.push({ pathname: '/verificar-mail', params: { email: trimmedEmail, modo: 'confirmar', para: 'coach', enviado: '1' } } as any);
+          return;
+        }
         await validateAndNavigate(true);
         return;
       }
@@ -310,6 +318,13 @@ export default function CoachLoginScreen() {
     // ⚠️ Credenciales inválidas es el ÚNICO caso ambiguo: Supabase devuelve lo
     // mismo si la cuenta no existe y si la contraseña está mal, para que no se
     // pueda averiguar qué mails están registrados. Ahí sí vale ofrecer crearla.
+    // Se registró y nunca confirmó el mail: a confirmarlo, y de ahí a postularse.
+    if (signInError === ERR_MAIL_SIN_CONFIRMAR) {
+      setLoading(false);
+      router.push({ pathname: '/verificar-mail', params: { email: trimmedEmail, modo: 'confirmar', para: 'coach' } } as any);
+      return;
+    }
+
     if (signInError !== ERR_CREDENCIALES) {
       setLoading(false);
       setError(signInError);

@@ -43,6 +43,15 @@ llega a la casilla con la que se creó la cuenta de Resend. Alcanza para
 desarrollo; para producción hay que verificar `vitaapp.com.ar` y cambiar el
 remitente (ver más abajo).
 
+## 🔴 24/09/2026: "Confirm email" prendido, Confirm signup es obligatoria
+
+Desde que se prendió "Confirm email" (auditoría de seguridad del 24/09/2026),
+**el primer mail de toda cuenta nueva sale de la plantilla Confirm signup**: el
+alta con contraseña de la app, y también la cuenta que nace de un código en la
+web (`/c/<slug>`). Si esa plantilla no tiene `{{ .Token }}`, nadie nuevo puede
+entrar. La app lee el código en `VerificarMailScreen` (modo `confirmar`); el
+link de la plantilla no se usa.
+
 ## Dónde se cambia
 
 Panel de Supabase → **Authentication** → **Emails** (según la versión, *Email
