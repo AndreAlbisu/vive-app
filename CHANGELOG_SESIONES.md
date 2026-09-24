@@ -16,6 +16,19 @@
 **Pendiente para la próxima sesión:**
 - Probar en el teléfono: sin check-in de hoy, tocar la tarjeta abre Progreso; con check-in, sigue yendo a donde dice el CTA.
 
+## 2026-09-23 — Andre (Claude · 🔴 vistas escribibles con la anon key)
+
+**Tocado:** `scripts/cerrar-escritura-en-vistas.sql` (nuevo, corrido), `SCHEMA.md`
+
+**Resumen:**
+- 🔴 **Agujero de seguridad real, encontrado y cerrado en la misma sesión.** Yendo a cerrar el pendiente de "`anon` puede escribir `coaches`", un barrido de permisos mostró que `anon` y `authenticated` podían **escribir vistas**. Una vista simple de Postgres es actualizable y corre como su dueño (`postgres`), salteando la RLS. Probado contra producción con rollback: **con la clave pública de la app, sin cuenta, se podían modificar o borrar las credenciales verificadas y modificar la fila de cualquier profesional** (`coach_credentials_public` y `coach_availability_status`).
+- **Arreglo:** revocada toda escritura de `anon`/`authenticated` sobre todas las vistas de `public` (5 actualizables) y la de `anon` sobre `coaches`. Verificado en SQL y por HTTP con la anon key (42501), y la lectura pública sigue andando. Los datos estaban intactos.
+- ⚠️ Regla nueva en SCHEMA: **toda vista nueva nace escribible**; su script tiene que revocarlo.
+
+**Pendiente para la próxima sesión:**
+- Revocar la escritura de `anon` a nivel tabla en las ~40 tablas que la conservan (hoy la frena la RLS). Dejar solo `analytics_events`.
+- Contárselo a Codex: afecta cualquier vista nueva que cree en sus migraciones.
+
 ## 2026-09-23 — Andre (Claude · Mis pagos)
 
 **Tocado:** `lib/pagos.ts` (nuevo), `screens/MisPagosScreen.tsx` + `app/mis-pagos.tsx` (nuevos), `components/OpcionesSheet.tsx` (nuevo), `__tests__/pagos.test.ts` (nuevo), `app/_layout.tsx`, `screens/ProfileOwnScreen.tsx`, `screens/SalaScreen.tsx`, `lib/bookingCancel.ts`
