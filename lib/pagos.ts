@@ -182,7 +182,7 @@ export async function listMisPagos(userId: string): Promise<PagoRow[]> {
     .limit(100);
   if (error) {
     console.warn('[pagos] no se pudieron leer:', error.message);
-    return [];
+    throw error;
   }
   return (data ?? []) as PagoRow[];
 }

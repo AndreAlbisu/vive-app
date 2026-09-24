@@ -38,28 +38,40 @@ const COLOR_TONO: Record<Tono, string> = {
 };
 
 export default function MisPagosScreen() {
-  const router = useRouter();
   const { user } = useAuth();
+  // A different account must never inherit this account's rows or report sheet.
+  return <MisPagosContent key={user?.id ?? 'sin-sesion'} userId={user?.id ?? null} />;
+}
+
+function MisPagosContent({ userId }: { userId: string | null }) {
+  const router = useRouter();
   const { booking } = useLocalSearchParams<{ booking?: string }>();
   const resaltar = Array.isArray(booking) ? booking[0] : booking;
 
   const [rows, setRows] = useState<PagoRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!userId);
+  const [failed, setFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [ayudaCon, setAyudaCon] = useState<string | null>(null);
 
   // Cada vez que se vuelve a la pantalla: una devolución puede haber cambiado
   // de estado mientras la persona miraba otra cosa.
   useFocusEffect(useCallback(() => {
-    if (!user) return;
+    if (!userId) return;
     let vivo = true;
-    listMisPagos(user.id).then(r => {
+    setLoading(true);
+    setFailed(false);
+    listMisPagos(userId).then(r => {
       if (!vivo) return;
       // La reserva que se pidió ver, primero.
       setRows(resaltar ? [...r.filter(x => x.id === resaltar), ...r.filter(x => x.id !== resaltar)] : r);
-      setLoading(false);
+    }).catch(() => {
+      if (vivo) setFailed(true);
+    }).finally(() => {
+      if (vivo) setLoading(false);
     });
     return () => { vivo = false; };
-  }, [user, resaltar]));
+  }, [userId, resaltar, retry]));
 
   return (
     <AppBg>
@@ -79,16 +91,34 @@ export default function MisPagosScreen() {
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            rows.length > 0 ? (
-              <Text style={s.intro}>
-                El estado de cada pago y cada devolución, tal como figura en Vita. Esto no es una factura: la sesión la factura tu profesional.
-              </Text>
-            ) : null
+            <View>
+              {failed && (
+                <View style={s.error} accessibilityRole="alert">
+                  <Text style={s.emptyTitle}>No pudimos cargar tus pagos</Text>
+                  <Text style={s.emptyText}>
+                    {rows.length > 0
+                      ? 'Estos son los últimos datos que pudimos consultar. Reintentá para actualizar los estados.'
+                      : 'No pudimos consultar el historial. Probá de nuevo.'}
+                  </Text>
+                  <TouchableOpacity accessibilityRole="button" onPress={() => setRetry(n => n + 1)} style={s.btnPrimario}>
+                    <Text style={s.btnPrimarioText}>Reintentar</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {loading && rows.length > 0 && <ActivityIndicator color={ViveColors.primary} />}
+              {rows.length > 0 && (
+                <Text style={s.intro}>
+                  El estado de cada pago y cada devolución, tal como figura en Vita. Esto no es una factura: la sesión la factura tu profesional.
+                </Text>
+              )}
+            </View>
           }
           ListEmptyComponent={
-            loading ? (
+            !userId ? (
+              <Text style={s.emptyText}>Ingresá a tu cuenta para consultar tus pagos.</Text>
+            ) : loading ? (
               <ActivityIndicator size="small" color={ViveColors.primary} style={{ marginTop: 40 }} />
-            ) : (
+            ) : failed ? null : (
               <View style={s.empty}>
                 <MaterialIcons name="receipt-long" size={40} color="rgba(135,131,92,0.45)" />
                 <Text style={s.emptyTitle}>Todavía no hay pagos</Text>
@@ -162,6 +192,7 @@ const s = StyleSheet.create({
   },
   headerSpacer: { width: 36 },
   list: { paddingHorizontal: 20, paddingBottom: 40, gap: 12, flexGrow: 1 },
+  error: { gap: 12, alignItems: 'center', paddingVertical: 20 },
   intro: { fontFamily: ViveFonts.regular, fontSize: 13, color: 'rgba(135,131,92,0.95)', lineHeight: 19, marginBottom: 4 },
   card: {
     backgroundColor: 'rgba(255,248,240,0.80)',

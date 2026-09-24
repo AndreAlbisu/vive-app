@@ -1,6 +1,7 @@
-jest.mock('@/lib/supabase', () => ({ supabase: {} }));
+jest.mock('@/lib/supabase', () => ({ supabase: { from: jest.fn() } }));
 
-import { estadoDelPago, montoLegible, type PagoRow } from '@/lib/pagos';
+import { supabase } from '@/lib/supabase';
+import { listMisPagos, estadoDelPago, montoLegible, type PagoRow } from '@/lib/pagos';
 
 function row(over: Partial<PagoRow> = {}): PagoRow {
   return {
@@ -66,5 +67,32 @@ describe('montoLegible', () => {
   });
   it('Mercado Pago: descuenta el referido guardado aparte', () => {
     expect(montoLegible(row({ amount: 11000, referral_discount: 1100 }))).toBe('$ 9.900');
+  });
+});
+
+
+describe('listMisPagos', () => {
+  function query(result: unknown) {
+    const chain: any = {};
+    for (const method of ['select', 'eq', 'neq', 'order']) chain[method] = jest.fn(() => chain);
+    chain.limit = jest.fn().mockResolvedValue(result);
+    (supabase.from as jest.Mock).mockReturnValue(chain);
+    return chain;
+  }
+  it('returns an empty history only after a successful query', async () => {
+    const chain = query({ data: [], error: null });
+    await expect(listMisPagos('owner')).resolves.toEqual([]);
+    expect(chain.eq).toHaveBeenCalledWith('user_id', 'owner');
+  });
+  it('propagates a failed query and allows a successful retry', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const error = { message: 'network unavailable' };
+      query({ data: null, error });
+      await expect(listMisPagos('owner')).rejects.toEqual(error);
+      const rows = [row()];
+      query({ data: rows, error: null });
+      await expect(listMisPagos('owner')).resolves.toEqual(rows);
+    } finally { warn.mockRestore(); }
   });
 });

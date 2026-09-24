@@ -1,3 +1,7 @@
+## 2026-09-23 — Codex: errores de consulta en Mis pagos
+
+Mis pagos distingue una consulta fallida de un historial vacío y ofrece Reintentar. Conserva los datos de la misma cuenta cuando falla una actualización, con aviso de que no están actualizados, y reinicia el contenido al cambiar de cuenta. Pruebas de consulta, reintento y aislamiento entre cuentas aprobadas. Cambio de app: requiere distribuir una nueva build o actualización compatible; no requiere migración de Supabase.
+
 ## 2026-09-23 — Codex: integración y despliegue de pagos/reagendado
 
 Aplicada y verificada `20260924000000_reschedule_refund_integrity.sql` en Supabase, tras autorización de Andre. Integración en main: `acbb50c0`.
