@@ -93,3 +93,25 @@ describe('secureSessionStorage', () => {
     expect(await secureSessionStorage.getItem(CLAVE)).toBe(sesionLarga);
   });
 });
+
+// 🔴 El caso que rompió la app el 23/09: `expo-secure-store` trae código nativo
+// y este proyecto usa un cliente de desarrollo propio, así que en un build que
+// no lo tenga compilado el módulo NO EXISTE. Antes se importaba arriba de todo
+// y tiraba "Cannot find native module 'ExpoSecureStore'" al cargar, lo que
+// volteaba cada pantalla (lib/supabase.ts lo arrastra). Ahora se carga tarde y
+// si no está, la sesión sigue en AsyncStorage.
+describe('cuando el llavero no existe en este build', () => {
+  it('no explota y usa AsyncStorage', async () => {
+    jest.resetModules();
+    jest.doMock('expo-secure-store', () => { throw new Error("Cannot find native module 'ExpoSecureStore'"); });
+    const { secureSessionStorage: almacen } = require('@/lib/secureSessionStorage');
+
+    await expect(almacen.setItem(CLAVE, 'sesión')).resolves.toBeUndefined();
+    expect(mockAsyncStore.get(CLAVE)).toBe('sesión');
+    expect(await almacen.getItem(CLAVE)).toBe('sesión');
+    await almacen.removeItem(CLAVE);
+    expect(mockAsyncStore.has(CLAVE)).toBe(false);
+    // Y nada quedó en el llavero, porque no hay llavero.
+    expect(mockLlavero.size).toBe(0);
+  });
+});

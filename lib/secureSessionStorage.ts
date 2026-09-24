@@ -32,7 +32,7 @@
 // seguir logueado. Es el comportamiento de Keychain, no un error.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
+import type * as SecureStoreTipos from 'expo-secure-store';
 
 /** Bien por debajo del límite histórico de 2048 bytes de iOS. */
 const TAMANO_PEDAZO = 1500;
@@ -40,9 +40,42 @@ const TAMANO_PEDAZO = 1500;
 /** Hasta acá se buscan pedazos colgados de una sesión anterior más larga. */
 const MAX_PEDAZOS = 40;
 
-const OPCIONES: SecureStore.SecureStoreOptions = {
-  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
-};
+// 🔴 SE CARGA A MANO Y TARDE, no con un `import` arriba (23/09/2026).
+//
+// `expo-secure-store` trae código NATIVO, y este proyecto no usa Expo Go sino un
+// cliente de desarrollo propio (`expo-dev-client`): una app compilada que solo
+// tiene los módulos nativos que existían cuando se compiló. Agregar la librería
+// al `package.json` no la mete adentro de la app que ya está instalada en el
+// teléfono, así que `import * as SecureStore` tiraba
+// **"Cannot find native module 'ExpoSecureStore'" al importar**, y como
+// `lib/supabase.ts` lo arrastra, se caía CADA pantalla de la app.
+//
+// Con esta carga guardada, mientras el módulo no esté la sesión sigue en
+// AsyncStorage —exactamente como antes de este cambio— y el día que se compile
+// un cliente nuevo pasa al llavero sola, migrando lo que hubiera.
+let llaveroModulo: typeof SecureStoreTipos | null = null;
+let yaSeIntento = false;
+
+function llavero(): typeof SecureStoreTipos | null {
+  if (!yaSeIntento) {
+    yaSeIntento = true;
+    try {
+      llaveroModulo = require('expo-secure-store');
+    } catch (e) {
+      console.warn(
+        '[sesión] sin llavero del sistema en este build; la sesión queda en AsyncStorage. ' +
+        'Para activarlo hay que compilar un cliente de desarrollo nuevo.',
+        (e as Error)?.message ?? e,
+      );
+      llaveroModulo = null;
+    }
+  }
+  return llaveroModulo;
+}
+
+function opciones(): SecureStoreTipos.SecureStoreOptions {
+  return { keychainAccessible: llavero()?.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY };
+}
 
 /** `expo-secure-store` solo acepta [A-Za-z0-9._-] en las claves. La de Supabase
  *  (`sb-<ref>-auth-token`) ya cumple, pero esto lo vuelve cierto para cualquiera
@@ -56,7 +89,7 @@ const clavePedazo = (key: string, i: number) => `${normalizar(key)}.${i}`;
 
 async function borrarPedazos(key: string, desde: number, hasta: number): Promise<void> {
   for (let i = desde; i < hasta; i++) {
-    await SecureStore.deleteItemAsync(clavePedazo(key, i), OPCIONES);
+    await llavero()!.deleteItemAsync(clavePedazo(key, i), opciones());
   }
 }
 
@@ -66,22 +99,22 @@ async function guardar(key: string, value: string): Promise<void> {
     pedazos.push(value.slice(i, i + TAMANO_PEDAZO));
   }
   for (let i = 0; i < pedazos.length; i++) {
-    await SecureStore.setItemAsync(clavePedazo(key, i), pedazos[i], OPCIONES);
+    await llavero()!.setItemAsync(clavePedazo(key, i), pedazos[i], opciones());
   }
-  await SecureStore.setItemAsync(claveContador(key), String(pedazos.length), OPCIONES);
+  await llavero()!.setItemAsync(claveContador(key), String(pedazos.length), opciones());
   // Los de una sesión anterior más larga.
   await borrarPedazos(key, pedazos.length, MAX_PEDAZOS);
 }
 
 async function leer(key: string): Promise<string | null> {
-  const n = await SecureStore.getItemAsync(claveContador(key), OPCIONES);
+  const n = await llavero()!.getItemAsync(claveContador(key), opciones());
   if (!n) return null;
   const total = Number(n);
   if (!Number.isFinite(total) || total <= 0) return null;
 
   let out = '';
   for (let i = 0; i < total; i++) {
-    const pedazo = await SecureStore.getItemAsync(clavePedazo(key, i), OPCIONES);
+    const pedazo = await llavero()!.getItemAsync(clavePedazo(key, i), opciones());
     // Un pedazo faltante hace que el JSON no parsee y Supabase lo trate como
     // "sin sesión". Se devuelve null derecho, que es lo mismo pero explícito.
     if (pedazo == null) return null;
@@ -91,7 +124,7 @@ async function leer(key: string): Promise<string | null> {
 }
 
 async function borrar(key: string): Promise<void> {
-  await SecureStore.deleteItemAsync(claveContador(key), OPCIONES);
+  await llavero()!.deleteItemAsync(claveContador(key), opciones());
   await borrarPedazos(key, 0, MAX_PEDAZOS);
 }
 
@@ -118,6 +151,7 @@ async function migrarSiHaceFalta(key: string): Promise<string | null> {
 
 export const secureSessionStorage = {
   async getItem(key: string): Promise<string | null> {
+    if (!llavero()) return AsyncStorage.getItem(key);
     try {
       const enLlavero = await leer(key);
       if (enLlavero != null) return enLlavero;
@@ -129,6 +163,7 @@ export const secureSessionStorage = {
   },
 
   async setItem(key: string, value: string): Promise<void> {
+    if (!llavero()) return AsyncStorage.setItem(key, value);
     try {
       await guardar(key, value);
     } catch (e) {
@@ -138,6 +173,7 @@ export const secureSessionStorage = {
   },
 
   async removeItem(key: string): Promise<void> {
+    if (!llavero()) return AsyncStorage.removeItem(key);
     // Las dos, siempre: cerrar sesión no puede dejar una copia viva en el lugar
     // viejo si la migración quedó a medias.
     try {

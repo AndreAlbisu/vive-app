@@ -159,6 +159,9 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
   - **`AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`** y no el default `WHEN_UNLOCKED`: con el default el llavero **no se lee con el teléfono bloqueado** y Supabase renueva el token en segundo plano, así que la sesión se rompería sola de noche. `THIS_DEVICE_ONLY` además evita que viaje al llavero de iCloud.
   - **Si el llavero falla, se usa AsyncStorage**: dejar a alguien afuera de la app es peor que guardar la sesión como se guardaba ayer. Queda en consola, no en silencio.
 - **Migración**: lo que ya estuviera en AsyncStorage se muda al llavero en la primera lectura y recién ahí se borra del lugar viejo, así actualizar no desloguea.
+- 🔴 **Y rompió la app en el teléfono, arreglado el mismo día.** `expo-secure-store` es un módulo **nativo**, y este proyecto no usa Expo Go sino un cliente de desarrollo propio (`expo-dev-client`): el build instalado solo tiene los módulos nativos que existían cuando se compiló. El `import` de arriba de todo tiraba **"Cannot find native module 'ExpoSecureStore'"** al cargar, y como `lib/supabase.ts` lo arrastra, **se caía cada pantalla**.
+  - **Arreglo**: la librería se carga tarde y dentro de un `try`. Si el módulo no está, la sesión sigue en AsyncStorage exactamente como antes, con un aviso en consola; el día que se compile un cliente nuevo, pasa al llavero sola y migra lo que hubiera. Test nuevo que simula el build sin el módulo.
+  - 📌 **Entonces la mejora de seguridad todavía NO está activa**: queda pendiente compilar un cliente de desarrollo nuevo. Lo bueno es que ya no bloquea nada.
 - 📱 **Falta probarlo en el teléfono**: entrar, cerrar la app del todo y volver (tiene que seguir la sesión), y cerrar sesión. ⚠️ En iOS el llavero sobrevive a desinstalar la app, así que reinstalar deja la sesión abierta: es Keychain, no un error.
 
 ### Tanda 6 — dependencias y qué sale de la app
