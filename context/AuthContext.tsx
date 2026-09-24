@@ -8,7 +8,7 @@ import { cancelAllResourceReminders } from '@/lib/resourceReminders';
 import { clearBlockedCache } from '@/lib/blocking';
 import { LEGAL_VERSION } from '@/constants/legal';
 import { AuthModal } from '@/components/AuthModal';
-import { ERR_MAIL_SIN_CONFIRMAR } from '@/lib/authErrores';
+import { ERR_MAIL_SIN_CONFIRMAR, LARGO_MIN_CONTRASENA } from '@/lib/authErrores';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -761,7 +761,7 @@ function translateError(msg: string): string {
   if (msg.includes('Invalid login credentials')) return ERR_CREDENCIALES;
   if (msg.includes('Email not confirmed')) return ERR_MAIL_SIN_CONFIRMAR;
   if (msg.includes('User already registered')) return ERR_YA_REGISTRADO;
-  if (msg.includes('Password should be at least')) return 'La contraseña debe tener al menos 6 caracteres';
+  if (msg.includes('Password should be at least')) return `La contraseña debe tener al menos ${LARGO_MIN_CONTRASENA} caracteres`;
   if (msg.includes('Unable to validate email') || msg.includes('valid email')) return 'El email no es válido';
   if (msg.includes('rate limit') || msg.includes('too many')) return 'Demasiados intentos. Esperá un momento';
   if (msg.includes('network') || msg.includes('fetch')) return 'Sin conexión. Revisá tu internet';

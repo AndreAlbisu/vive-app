@@ -13,6 +13,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { EntradaDesdeColor } from '@/components/EntradaDesdeColor';
 import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { useAuth, ERR_YA_REGISTRADO, ERR_CREDENCIALES, ERR_MAIL_SIN_CONFIRMAR } from '@/context/AuthContext';
+import { LARGO_MIN_CONTRASENA } from '@/lib/authErrores';
 import { marcarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
 import { VitaWordmark } from '@/components/VitaWordmark';
@@ -231,10 +232,6 @@ export default function CoachLoginScreen() {
       setError('Completá el email y la contraseña');
       return;
     }
-    if (trimmedPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
 
     // 🔴 Segunda vuelta: ya sabemos (por el intento de login de más abajo, en
     // el submit anterior) que hace falta CREAR la cuenta, y ahora ya tenemos
@@ -243,6 +240,12 @@ export default function CoachLoginScreen() {
     if (needsName) {
       const trimmedName = name.trim();
       if (!trimmedName) { setError('Ingresá tu nombre'); return; }
+      // El mínimo va solo al CREAR la cuenta: al entrar, una contraseña vieja
+      // más corta tiene que seguir sirviendo (ver `LARGO_MIN_CONTRASENA`).
+      if (trimmedPassword.length < LARGO_MIN_CONTRASENA) {
+        setError(`La contraseña debe tener al menos ${LARGO_MIN_CONTRASENA} caracteres`);
+        return;
+      }
 
       setLoading(true);
       setError(null);

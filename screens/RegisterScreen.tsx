@@ -28,6 +28,7 @@ import { supabase } from '@/lib/supabase';
 import { normalizarCodigo } from '@/lib/referidos';
 import { guardarCodigoPendiente } from '@/lib/referidoPendiente';
 import { AyudaAhoraLink } from '@/components/AyudaAhoraLink';
+import { LARGO_MIN_CONTRASENA } from '@/lib/authErrores';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -110,7 +111,7 @@ export default function RegisterScreen() {
     const newErrors: Record<string, boolean> = {
       name: !name.trim(),
       email: !email.trim(),
-      password: !password.trim() || password.length < 6,
+      password: !password.trim() || password.length < LARGO_MIN_CONTRASENA,
       confirm: !confirmPassword.trim() || confirmPassword !== password,
     };
     setErrors(newErrors);
@@ -366,7 +367,7 @@ export default function RegisterScreen() {
                     style={s.inputInner}
                     value={password}
                     onChangeText={v => { setPassword(v); clearError('password'); clearError('confirm'); }}
-                    placeholder="Contraseña (mín. 6 caracteres)"
+                    placeholder={`Contraseña (mín. ${LARGO_MIN_CONTRASENA} caracteres)`}
                     placeholderTextColor="rgba(135,131,92,0.45)"
                     secureTextEntry={!showPassword}
                     onFocus={() => setFocused('pass')}

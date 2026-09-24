@@ -20,6 +20,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
 import { VitaWordmark } from '@/components/VitaWordmark';
+import { LARGO_MIN_CONTRASENA } from '@/lib/authErrores';
 
 // Segundo paso de la recuperación de contraseña: acá cae el link del mail que
 // manda `AuthContext.resetPassword`.
@@ -37,7 +38,7 @@ import { VitaWordmark } from '@/components/VitaWordmark';
 
 type Estado = 'canjeando' | 'listo' | 'invalido' | 'guardado';
 
-const MIN_PASS = 6;
+const MIN_PASS = LARGO_MIN_CONTRASENA;
 
 export default function NuevaContrasenaScreen() {
   const router = useRouter();
