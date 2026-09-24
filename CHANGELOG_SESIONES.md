@@ -6,8 +6,10 @@
 - 📚 **Decisión de Andre: no obligar al profesional a subir un recurso si no le hace falta.** No era un requisito real (sin recurso se aparece en el catálogo y se reserva igual), pero en el Inicio del profesional nuevo era 1 de los 3 pasos de "Antes de tu primera sesión", el botón principal lo pedía, y la barra quedaba en "Falta 1". Además prometía "Los coaches con recursos reciben más reservas", que **no es cierto**: los recursos no pesan en el orden del catálogo y no hay datos que lo respalden.
 - **Ahora:** el checklist son 2 pasos (perfil y temas), el progreso es "de 2", y el recurso queda como una línea aparte, **"Opcional: compartir un recurso"**, que explica que no hace falta para recibir reservas. Si ya subió uno, no aparece.
 
+- ⏰ **Y un paso nuevo, pedido de Andre: definir los horarios.** Este sí es requisito real: sin horarios nadie puede reservar. El checklist vuelve a 3 pasos (perfil, temas, horarios). Cuenta como hecho si hay algún horario **futuro y sin bloquear** en `coach_availability`, que es lo que ve el cliente (el patrón semanal lo genera ahí al guardar); tener un patrón que no generó nada no alcanza. El botón lleva a `/coach-weekly-pattern` y al volver se tilda solo. Evento `preparacion_paso_completado` con `paso: 'horarios'`.
+
 **Pendiente para la próxima sesión:**
-- Mirarlo en el teléfono con una cuenta de profesional sin reservas.
+- Mirarlo en el teléfono con una cuenta de profesional sin reservas: sin horarios tiene que decir "Definí tus horarios" y, después de cargar la franja semanal, tildarse al volver.
 
 ## 2026-09-24 — Andre (Claude · probar el no-show)
 

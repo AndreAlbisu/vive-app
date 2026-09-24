@@ -172,11 +172,12 @@ export default function CoachHomeScreen() {
   const [aceptando, setAceptando] = useState<string | null>(null);
 
   // ── Card de preparación (estado vacío de Inicio) ────────────────────────
-  // Los 2 pasos del checklist, más el recurso como sugerencia opcional (ver
-  // abajo, 24/09/2026). `puertas` no tiene estado propio — se deriva
+  // Los 3 pasos del checklist (perfil, temas, horarios), más el recurso como
+  // sugerencia opcional (ver abajo, 24/09/2026). `puertas` no tiene estado propio — se deriva
   // de `doorLabels.length` — acá hace falta la lista completa para los chips.
   const [prepPerfil, setPrepPerfil] = useState(false);
   const [prepRecurso, setPrepRecurso] = useState(false);
+  const [prepHorarios, setPrepHorarios] = useState(false);
   const [doorLabels, setDoorLabels] = useState<string[]>([]);
   // El link público del coach. `null` mientras no esté aprobado: `/c/<slug>`
   // filtra por `verified`, así que ofrecérselo antes sería darle un link roto.
@@ -261,6 +262,7 @@ export default function CoachHomeScreen() {
       { count: recursosCount },
       { count: bookingsEverCount },
       { data: pendingRows },
+      { count: horariosCount },
     ] = await Promise.all([
       supabase.from('profiles').select('name, avatar_url').eq('id', user.id).maybeSingle(),
       supabase
@@ -292,6 +294,16 @@ export default function CoachHomeScreen() {
         .gte('scheduled_date', todayInAr())
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true }),
+      // 24/09/2026, pedido de Andre: "definir la franja horaria" es un paso. Se
+      // mira lo que de verdad se puede reservar: algún horario futuro sin
+      // bloquear en `coach_availability` (el patrón semanal lo genera ahí).
+      // Tener un patrón cargado que no generó nada no alcanza.
+      supabase
+        .from('coach_availability')
+        .select('id', { count: 'exact', head: true })
+        .eq('coach_id', coachId)
+        .eq('blocked', false)
+        .gte('date', todayInAr()),
     ]);
 
     if (profile?.name) setCoachName(profile.name.split(' ')[0]);
@@ -329,6 +341,12 @@ export default function CoachHomeScreen() {
     setPrepRecurso(prev => {
       if (!prev && recursoNow) registrarEvento('preparacion_paso_completado', { paso: 'recurso' }).catch(() => {});
       return recursoNow;
+    });
+
+    const horariosNow = (horariosCount ?? 0) > 0;
+    setPrepHorarios(prev => {
+      if (!prev && horariosNow) registrarEvento('preparacion_paso_completado', { paso: 'horarios' }).catch(() => {});
+      return horariosNow;
     });
 
     setHasAnyBookingEver((bookingsEverCount ?? 0) > 0);
@@ -702,13 +720,14 @@ export default function CoachHomeScreen() {
   // los recursos no pesan en el orden del catálogo y no hay datos que la
   // respalden. Sin recurso se aparece y se reserva igual. Queda como sugerencia
   // aparte, sin contar en el progreso ni en "estás casi listo".
-  const prepDoneCount = [prepPerfil, prepPuertas].filter(Boolean).length;
-  const prepMissing = 2 - prepDoneCount;
+  const prepDoneCount = [prepPerfil, prepPuertas, prepHorarios].filter(Boolean).length;
+  const prepMissing = 3 - prepDoneCount;
   // La primera acción pendiente, en el mismo orden que se muestra el
   // checklist — es la que ofrece el botón de abajo.
   const prepNextAction: { label: string; route: string } | null =
     !prepPerfil ? { label: 'Completar mi perfil', route: '/perfil' } :
     !prepPuertas ? { label: 'Elegir mis temas', route: '/coach-topics' } :
+    !prepHorarios ? { label: 'Definir mis horarios', route: '/coach-weekly-pattern' } :
     null;
 
   if (loading) {
@@ -948,10 +967,10 @@ export default function CoachHomeScreen() {
 
                 <View style={s.progWrap}>
                   <View style={s.progBar}>
-                    <View style={[s.progFill, { width: `${(prepDoneCount / 2) * 100}%` }]} />
+                    <View style={[s.progFill, { width: `${(prepDoneCount / 3) * 100}%` }]} />
                   </View>
                   <View style={s.progLbl}>
-                    <Text style={s.progLblTxt}><Text style={s.progLblB}>{prepDoneCount} de 2</Text> pasos completos</Text>
+                    <Text style={s.progLblTxt}><Text style={s.progLblB}>{prepDoneCount} de 3</Text> pasos completos</Text>
                     <Text style={s.progLblTxt}>{prepMissing === 0 ? 'Completo' : `Falta ${prepMissing}`}</Text>
                   </View>
                 </View>
@@ -996,6 +1015,20 @@ export default function CoachHomeScreen() {
                   <TouchableOpacity style={s.doorChipAdd} activeOpacity={0.7} onPress={() => router.push('/coach-topics')}>
                     <Text style={s.doorChipAddTxt}>+ agregar</Text>
                   </TouchableOpacity>
+                </View>
+
+                <View style={[s.checkRow, { marginTop: 13 }]}>
+                  <View style={[s.checkBox, prepHorarios ? s.checkBoxDone : s.checkBoxTodo]}>
+                    {prepHorarios && <Feather name="check" size={11} color="#F3EEDF" />}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.checkLabel}>
+                      {prepHorarios ? 'Tenés horarios para reservar' : 'Definí tus horarios'}
+                    </Text>
+                    {!prepHorarios && (
+                      <Text style={s.checkSub}>Los días y la franja en que atendés. Sin horarios, nadie puede reservarte.</Text>
+                    )}
+                  </View>
                 </View>
 
                 {/* Opcional, fuera del conteo: sin casilla para tildar, porque no
@@ -1361,7 +1394,7 @@ const s = StyleSheet.create({
 
   // Card de preparación (`esCoachNuevo`) — spec `coach-estados-vacios.html`.
   // Reemplaza a la tarjeta de una línea de la sesión 139 por el checklist
-  // completo: barra de progreso + 2 pasos (+ recurso opcional) + chips de puertas + botón de la
+  // completo: barra de progreso + 3 pasos (+ recurso opcional) + chips de puertas + botón de la
   // próxima acción.
   prepCard: { marginTop: 14 },
   prepCardInner: { padding: 20 },
