@@ -285,6 +285,14 @@
   .moment-foot { margin-top: 44px; color: rgba(255,248,239,.78); font-size: .98rem; }
   .prompt-q { font-size: clamp(1.5rem, 3.4vw, 2rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.2; text-wrap: balance; color: #FFF8EF; }
   .prompt-lines { margin: 28px auto 0; max-width: 340px; height: 72px; background: repeating-linear-gradient(to bottom, transparent 0 35px, rgba(255,248,239,.25) 35px 36px); }
+  .gratitud-sub { margin-top: 10px; color: rgba(255,248,239,.85); }
+  .gratitud { list-style: none; counter-reset: g; padding: 0; margin: 24px auto 0; max-width: 380px; text-align: left; }
+  .gratitud li { counter-increment: g; display: flex; align-items: baseline; gap: 14px; border-bottom: 1px solid rgba(255,248,239,.3); }
+  .gratitud li::before { content: counter(g); font-weight: 800; color: rgba(255,248,239,.7); }
+  .gratitud input { flex: 1; min-width: 0; min-height: 48px; border: 0; background: transparent; font: inherit; font-size: 16px; color: #FFF8EF; }
+  .gratitud input::placeholder { color: rgba(255,248,239,.55); }
+  .gratitud input:focus { outline: none; }
+  .gratitud li:focus-within { border-bottom-color: #FFF8EF; }
 
   /* Nuestra historia: lo único oscuro de la página, y lo único que no es
      producto. Las fotos van como copias impresas, con su fecha de cámara. */
@@ -804,17 +812,18 @@
 
   // ¿Cómo venís hoy? Como en la app: Sofía pregunta, se elige el ánimo, el
   // fondo se tiñe y ella contesta. Cada respuesta ofrece algo para hacer acá
-  // mismo: una pausa de respiración o la pregunta del diario que la app
-  // muestra para ese ánimo (app/diario.tsx). Bajón cierra con la línea que ya
+  // mismo: una pausa de respiración, la pregunta del diario que la app
+  // muestra para ese ánimo (app/diario.tsx) o, en Brillando, la gratitud con
+  // los mismos textos que app/gratitud.tsx (lib/vozCompartida.ts). Bajón cierra con la línea que ya
   // dice la app. Arranca al entrar en pantalla. No se guarda nada.
   var RESPUESTAS = [
     { t: 'Hay días así. No hace falta resolverlo hoy.', act: 'pausa', extra: 'Hay gente preparada para acompañar esto.', link: 'Mirá cómo elegir con quién hablar' },
     { t: 'Hoy venís con poca energía. A veces medio minuto alcanza para seguir.', act: 'pausa' },
     { t: 'Un día tranquilo también vale mirarlo un poco.', act: 'diario', q: '¿Qué anduvo dando vueltas por tu cabeza hoy?' },
     { t: 'Qué bueno. Vale la pena saber qué te hizo bien.', act: 'diario', q: '¿Qué fue lo que sumó para sentirte así?' },
-    { t: 'Disfrutalo. Y si querés, dejalo guardado.', act: 'diario', q: '¿Qué hizo especial este día?' }
+    { t: 'Disfrutalo. Y si querés, dejalo guardado.', act: 'gratitud' }
   ];
-  var BOTON = { pausa: 'Hacer una pausa de 30 segundos', diario: 'Ver la pregunta del diario' };
+  var BOTON = { pausa: 'Hacer una pausa de 30 segundos', diario: 'Ver la pregunta del diario', gratitud: 'Anotar lo que agradecés' };
   var COLORES = ['var(--m1)', 'var(--m2)', 'var(--m3)', 'var(--m4)', 'var(--m5)'];
   var FASES = [['Inhalá', true], ['Mantené', true], ['Exhalá', false], ['Mantené', false]];
 
@@ -900,6 +909,29 @@
       );
     }
 
+    // Tres cosas, como en la app. Se puede escribir, pero no se guarda.
+    function gratitud() {
+      frenar();
+      reply.innerHTML = '';
+      var lista3 = el('ol', 'gratitud');
+      ['Algo que pasó hoy...', 'Alguien que te importa...', 'Algo simple que disfrutaste...'].forEach(function (ph, i) {
+        var li = el('li');
+        var id = 'gratitud-' + (i + 1);
+        var label = el('label', 'skip', 'Cosa ' + (i + 1));
+        label.htmlFor = id;
+        var input = el('input');
+        input.id = id; input.type = 'text'; input.maxLength = 120; input.placeholder = ph; input.autocomplete = 'off';
+        li.append(label, input);
+        lista3.appendChild(li);
+      });
+      reply.append(
+        mostrar(el('p', 'prompt-q', '¿Qué agradecés hoy?')),
+        mostrar(el('p', 'gratitud-sub', 'Tres cosas, grandes o pequeñas. Lo que importa es que sean tuyas.'), 300),
+        mostrar(lista3, 600),
+        mostrar(el('p', 'moment-foot', 'En la app lo anotás en Gratitud, y queda solo para vos.'), 900)
+      );
+    }
+
     checkin.hidden = false;
     // Sin IntersectionObserver (o con movimiento reducido) se ve todo quieto.
     lista.classList.add('off');
@@ -927,7 +959,7 @@
           var act = el('button', 'act', BOTON[r.act]);
           act.type = 'button';
           act.addEventListener('click', function () {
-            if (r.act === 'pausa') pausa(r); else diario(r);
+            if (r.act === 'pausa') pausa(r); else if (r.act === 'gratitud') gratitud(); else diario(r);
           });
           reply.appendChild(mostrar(act));
         });
