@@ -1,0 +1,55 @@
+# Qué le preguntamos a un profesional para postularse
+
+Análisis del 24/09/2026, a pedido de Andre: ¿estamos haciendo las preguntas correctas, sobre todo en metodología? Basado en `docs/competencia-selia.md` y en cómo trabaja un profesional antes de atender. Es una propuesta para validar con los 2 o 3 profesionales de la beta, no una conclusión de datos.
+
+## Qué se preguntaba al 24/09
+
+Especialidad (texto libre) · presentación breve · temas que trabaja · cómo acompaña (escucha / herramientas / las dos) · cuánto guía (propone el camino / sigue el de la persona / depende) · sobre qué trabaja (historia / presente / rumbo) · fecha de nacimiento · sexo · nacionalidad · precio · video. Aparte, después: credenciales y, solo con matrícula de psicología verificada, la escuela (cognitivo conductual, psicoanalítico, sistémico, gestáltico, humanístico, integrativo).
+
+## Donde Vita ya está mejor que Selia
+
+- **Cómo trabaja cada profesional.** Selia muestra "Mi estilo de terapia" en texto libre y un rótulo de escuela. Vita pregunta tres ejes concretos que el cliente también contesta, y el match explica en qué coinciden.
+- **Credenciales.** Selia dice que no puede garantizar que sean auténticas; Vita revisa la matrícula a mano y la profesión sale de la matrícula verificada.
+
+## Los huecos, por importancia
+
+1. **Metodología de quien no es psicólogo.** Solo los psicólogos declaraban escuela. Un coach no tenía dónde decir si hace ontológico, PNL, sistémico o ejecutivo; una nutricionista, si trabaja con enfoque no dieta, intuitiva o deportiva. Para la mayoría del catálogo, el perfil no decía cómo trabajan. Propuesta: lista de metodologías por profesión, hasta 3, cada una con una frase, igual que las escuelas.
+2. **Qué hace ante un caso que no le corresponde.** Selia no lo pregunta. Un coach no puede tratar lo clínico (Ley 23.277) y cualquiera puede encontrarse con alguien en riesgo. Propuesta: a los coaches, compromiso explícito de derivar lo clínico; a todos, una pregunta corta que se revisa a mano: "¿Qué hacés si alguien te cuenta que piensa en hacerse daño?".
+3. **Qué es la persona, antes de pedirle credenciales.** La especialidad es texto libre y recién después se sabe qué matrícula pedir. Propuesta: preguntar de entrada psicología / nutrición / coaching / otra.
+4. **Desde dónde atiende.** Se preguntaba la nacionalidad, pero lo que importa es dónde vive y ejerce: matrícula (nacional o provincial), cobro, zona horaria, impuestos. Todo el sistema supone Argentina y nunca se preguntaba. Propuesta: país y provincia.
+
+Para después (confianza, no críticos): 5. años de experiencia (Selia los muestra) · 6. "¿Cómo es tu primera sesión con alguien?" (Selia lo tiene; baja la ansiedad de quien nunca fue) · 7. supervisión, solo psicología y opcional.
+
+No preguntar: población (menores, parejas, familias: fuera de alcance por decisión), consultorio presencial (solo online), idiomas (no es prioridad).
+
+## Dónde va cada cosa
+
+La postulación se acababa de rediseñar en tres bloques, y cada pregunta de más es un profesional que abandona. En la postulación va solo lo que se revisa para aprobar: 2, 3 y 4, cortos. La metodología (1), los años (5) y la primera sesión (6) van a "completá tu perfil" después de la aprobación, junto a temas.
+
+## Estado
+
+- 24/09/2026: **3 ya estaba cubierto** (en la postulación la especialidad es una elección entre Psicólogo/a, Coach y Nutricionista; texto libre es solo después, en el perfil). **Hechos 2 y 4**: compromiso de derivar (coaches y nutricionistas), pregunta de riesgo (todos), país y provincia de atención; nacionalidad pasa a opcional. Ver SCHEMA "Postulación: límites y lugar de atención".
+- 25/09/2026: **hecho 1** (metodologías por profesión, ver arriba). Pendiente: 5, 6, 7.
+- Para la beta: ¿las metodologías de coaching y nutrición de la lista son las que usan? ¿La pregunta de riesgo les resulta razonable o invasiva?
+
+## ✅ Hueco 1: metodologías de coaches y nutricionistas (25/09/2026)
+
+Investigado a fondo y aprobado por Andre. Van en "Cómo trabajo" (`CoachEnfoqueScreen`), hasta 3, cada profesión ve su lista según la profesión verificada, se muestran en el perfil público con su frase y **no pesan en la recomendación** (a la persona no se le pregunta por escuelas). Misma columna que las escuelas (`coaches.enfoques`); ver SCHEMA.
+
+**Coaching (6):** ontológico, sistémico, cognitivo conductual, de salud y hábitos, con base en mindfulness, integrativo.
+- Ontológico: la escuela dominante en Argentina (AACOP: más de 8000 acreditados, más de 50 escuelas avaladas). Los colegios de psicólogos la critican (Córdoba: "sin validación científica"), pero lo que objetan es que el coach haga terapia, y eso lo cubre el compromiso de derivar.
+- Cognitivo conductual: la de mejor evidencia (metaanálisis de coaching con base psicológica: g = 1,29 en logro de objetivos; estudios por videollamada).
+- De salud y hábitos: se apoya en entrevista motivacional, con evidencia moderada en actividad física, alimentación y estrés. Cubre a los coaches del área física, que no tenían opción.
+
+**Nutrición (5):** dos de cómo trabaja (sin dietas / alimentación intuitiva, con plan alimentario) y tres especialidades (deportiva, basada en plantas, condiciones de salud). En nutrición sí van especialidades porque el único tema es "Nutrición". "Alimentación consciente" va dentro de la intuitiva: según sus autoras (Tribole y Resch) es una herramienta del marco, no un enfoque aparte.
+
+**Afuera a propósito:**
+- PNL: Witkowski (315 estudios, 18% la respalda, más de la mitad la contradice) y Sturt (sin evidencia suficiente para ningún resultado de salud). Una opción de la lista es Vita avalándola; el coach que la usa lo cuenta en su bio. El ontológico sí entra porque es un marco de conversación y no promete curar nada.
+- Trastornos de la conducta alimentaria: se tratan en equipo (psiquiatra, psicólogo, nutricionista, clínico). Selia los ofrece en nutrición; Vita no, porque atraería a quien hay que derivar.
+- Psiconutrición (es un equipo, no una persona), pediátrica (menores fuera de Vita), fitoterapia, flores de Bach, "funcional" y ortomolecular (sin evidencia), coaching ejecutivo o de vida (dicen sobre qué, y eso ya lo dicen los temas).
+
+**Idea para después:** verificar acreditaciones de coaches (AACOP publica credenciales, ICF tiene registro) y mostrar "Acreditado por AACOP", como la matrícula.
+
+**Para la beta:** ¿las listas son las que usan? Un coach con formación en PNL, ¿se siente afuera?
+
+Después de esto, en orden: años de experiencia (5), "¿cómo es tu primera sesión con alguien?" (6), supervisión para psicólogos (7).

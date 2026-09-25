@@ -41,6 +41,9 @@ export type QuizPendiente = {
   generoPref?: string | null;
   /** Medios de pago (21/09/2026): 'mp' | 'paypal' | 'usdt', o ['any']. */
   pagos?: string[] | null;
+  /** Cuándo se terminó el quiz (ISO). Profesionales deja de marcar el tema
+   *  sugerido cuando hay una reserva por ese tema posterior a esto. */
+  respondidoEn?: string | null;
   /** Ya se escribió en la base. Ver `volcarPendiente`. */
   volcado?: boolean;
 };
@@ -147,6 +150,6 @@ export async function leerRespuestasGuardadas(): Promise<QuizPendiente | null> {
     professionalType: data.professional_type, budget: data.budget, budgetMax: data.budget_max,
     budgetMaxUsd: data.budget_max_usd,
     estilo: data.estilo, guia: data.guia, foco: data.foco, generoPref: data.genero_pref,
-    pagos: data.pagos,
+    pagos: data.pagos, respondidoEn: data.updated_at ?? null,
   };
 }

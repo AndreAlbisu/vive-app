@@ -138,7 +138,8 @@ que desde la app no hay aviso en el momento — solo lo que se leyó al reservar
 Mismo criterio que "No se toca `SalaScreen`" más abajo.
 
 ⚠️ Si cambia alguno de los umbrales, cambian en el mismo commit
-`BookingScreen_Confirm`, `CoachComoFuncionaScreen` y `web/sala`.
+`BookingScreen_Confirm`, `CoachComoFuncionaScreen`, `web/sala` y la ayuda de
+la primera sesión en `CoachHomeScreen` (`vita_coach_tip_primera_sesion`).
 
 El **solapamiento mínimo de 10 minutos** no se publica como número: es el criterio
 interno de "¿pasó suficiente sesión?", y decirlo invita a discutir el reloj en vez

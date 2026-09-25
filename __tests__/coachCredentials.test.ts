@@ -1,5 +1,5 @@
 import {
-  lineaCredencial, validarCredencial, KIND_LABEL, encuadreDeSesion, encuadreDesdeFlag,
+  lineaCredencial, validarCredencial, KIND_LABEL, KIND_LABEL_FORM, formularioFormacion, grupoFormacion, encuadreDeSesion, encuadreDesdeFlag,
   type CredentialInput, type CredentialKind,
 } from '@/lib/credentialRules';
 
@@ -129,5 +129,43 @@ describe('encuadreDeSesion', () => {
   it('encuadreDesdeFlag coincide con la lista, salvo la aclaración del título', () => {
     expect(encuadreDesdeFlag(true)).toEqual(encuadreDeSesion([cred('matricula')]));
     expect(encuadreDesdeFlag(false)).toEqual(encuadreDeSesion([]));
+  });
+});
+
+describe('el formulario de Formación según la profesión', () => {
+  it('la profesión verificada manda; sin ella, lo que eligió al postularse', () => {
+    expect(grupoFormacion('psicologia', 'Coach')).toBe('psicologia');
+    expect(grupoFormacion('nutricion', null)).toBe('nutricion');
+    // Se postuló como nutricionista y la matrícula todavía no está verificada:
+    // es justo quien tiene que cargarla, no se lo trata como coach.
+    expect(grupoFormacion(null, 'Nutricionista')).toBe('nutricion');
+    expect(grupoFormacion(null, 'Psicólogo/a')).toBe('psicologia');
+    expect(grupoFormacion(null, 'Coach')).toBe('coaching');
+    expect(grupoFormacion(null, null)).toBe('coaching');
+  });
+
+  it('el coach arranca en certificación; psicólogos y nutricionistas, en matrícula', () => {
+    expect(formularioFormacion('coaching').tipos[0]).toBe('certificacion');
+    expect(formularioFormacion('nutricion').tipos[0]).toBe('matricula');
+    expect(formularioFormacion('psicologia').tipos[0]).toBe('matricula');
+  });
+
+  it('todos pueden cargar los tres tipos', () => {
+    (['coaching', 'nutricion', 'psicologia'] as const).forEach(g => {
+      expect([...formularioFormacion(g).tipos].sort()).toEqual(['certificacion', 'matricula', 'titulo']);
+    });
+  });
+
+  it('en el formulario dice "o curso"; en el perfil público no', () => {
+    expect(KIND_LABEL_FORM.certificacion).toBe('Certificación o curso');
+    expect(KIND_LABEL.certificacion).toBe('Certificación');
+  });
+
+  it('ningún texto usa la raya', () => {
+    (['coaching', 'nutricion', 'psicologia'] as const).forEach(g => {
+      const f = formularioFormacion(g);
+      const textos = [...Object.values(f.ayuda), ...Object.values(f.ejemplos).flatMap(e => [e.titulo, e.institucion])];
+      textos.forEach(t => expect(t).not.toContain('—'));
+    });
   });
 });

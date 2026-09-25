@@ -12,12 +12,12 @@
 import { File } from 'expo-file-system';
 import { supabase } from './supabase';
 import type {
-  CredentialInput, CredentialKind, CredentialStatus, PublicCredential,
+  CredentialInput, CredentialKind, CredentialStatus, GrupoFormacion, PublicCredential,
 } from './credentialRules';
 
 // Re-exportadas para que una pantalla no tenga que importar de dos lados.
-export { KIND_LABEL, lineaCredencial, profesionDeMatricula, validarCredencial } from './credentialRules';
-export type { CredentialInput, CredentialKind, CredentialStatus, PublicCredential };
+export { KIND_LABEL, KIND_LABEL_FORM, formularioFormacion, grupoFormacion, lineaCredencial, profesionDeMatricula, validarCredencial } from './credentialRules';
+export type { CredentialInput, CredentialKind, CredentialStatus, GrupoFormacion, PublicCredential };
 
 /** Lo que ve el propio coach de su credencial, con el estado de la revisión. */
 export type OwnCredential = {

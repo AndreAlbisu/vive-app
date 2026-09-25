@@ -15,6 +15,94 @@ export const KIND_LABEL: Record<CredentialKind, string> = {
   certificacion: 'Certificación',
 };
 
+/** El nombre en el formulario. En el perfil público sigue "Certificación": ahí
+ *  va seguido del nombre ("Certificación Coach Ontológico Profesional") y
+ *  "Certificación o curso ..." se lee mal. */
+export const KIND_LABEL_FORM: Record<CredentialKind, string> = {
+  ...KIND_LABEL,
+  certificacion: 'Certificación o curso',
+};
+
+// ─── El formulario según la profesión (25/09/2026) ──────────────────────────
+//
+// La pantalla estaba escrita para psicólogos: arrancaba en Matrícula y los
+// ejemplos eran "Lic. en Psicología", "UBA". Un coach no tiene matrícula y
+// leía que la pantalla no era para él.
+//
+// Solo cambia el orden, dónde arranca y los ejemplos: los tres tipos siguen
+// disponibles para todos, y quién es qué lo sigue decidiendo quien verifica.
+// Por eso acá SÍ se puede mirar `specialty` (lo que eligió al postularse):
+// alguien que se postuló como nutricionista y todavía no tiene la matrícula
+// verificada es justo quien tiene que cargarla, y con `profesion` sola se lo
+// trataría como coach.
+
+export type GrupoFormacion = 'psicologia' | 'nutricion' | 'coaching';
+
+export function grupoFormacion(
+  profesion: string | null | undefined,
+  specialty: string | null | undefined,
+): GrupoFormacion {
+  if (profesion === 'psicologia' || profesion === 'nutricion') return profesion;
+  const sp = (specialty ?? '').toLowerCase();
+  if (sp.includes('nutri')) return 'nutricion';
+  if (sp.includes('psic')) return 'psicologia';
+  return 'coaching';
+}
+
+type Ejemplos = { titulo: string; institucion: string };
+
+export type FormularioFormacion = {
+  /** En qué orden se ofrecen los tipos; el primero es donde arranca. */
+  tipos: CredentialKind[];
+  ejemplos: Record<CredentialKind, Ejemplos>;
+  /** La línea bajo el tipo elegido. */
+  ayuda: Record<CredentialKind, string>;
+};
+
+const AYUDA_MATRICULADO: Record<CredentialKind, string> = {
+  matricula: 'Es la que habilita la marca de profesional matriculado en tu perfil público.',
+  titulo: 'Suma a tu formación, pero la marca de profesional matriculado la da la matrícula.',
+  certificacion: 'Suma a tu formación, pero la marca de profesional matriculado la da la matrícula.',
+};
+
+export function formularioFormacion(grupo: GrupoFormacion): FormularioFormacion {
+  if (grupo === 'coaching') {
+    return {
+      tipos: ['certificacion', 'titulo', 'matricula'],
+      ejemplos: {
+        certificacion: { titulo: 'Coach Ontológico Profesional', institucion: 'Escuela avalada por AACOP' },
+        titulo: { titulo: 'Lic. en Recursos Humanos', institucion: 'UBA' },
+        matricula: { titulo: 'Matrícula Nacional de Psicología', institucion: 'Ministerio de Salud' },
+      },
+      ayuda: {
+        certificacion: 'Tus formaciones y cursos. Una vez verificados se ven en tu perfil.',
+        titulo: 'Un título universitario o terciario. Una vez verificado se ve en tu perfil.',
+        matricula: 'Solo si además sos psicólogo/a o nutricionista matriculado.',
+      },
+    };
+  }
+  if (grupo === 'nutricion') {
+    return {
+      tipos: ['matricula', 'titulo', 'certificacion'],
+      ejemplos: {
+        matricula: { titulo: 'Matrícula Nacional de Nutrición', institucion: 'Ministerio de Salud' },
+        titulo: { titulo: 'Lic. en Nutrición', institucion: 'UBA' },
+        certificacion: { titulo: 'Nutrición deportiva', institucion: 'Nombre del instituto' },
+      },
+      ayuda: AYUDA_MATRICULADO,
+    };
+  }
+  return {
+    tipos: ['matricula', 'titulo', 'certificacion'],
+    ejemplos: {
+      matricula: { titulo: 'Matrícula Nacional de Psicología', institucion: 'Ministerio de Salud' },
+      titulo: { titulo: 'Lic. en Psicología', institucion: 'UBA' },
+      certificacion: { titulo: 'Posgrado en terapia cognitiva', institucion: 'Nombre del instituto' },
+    },
+    ayuda: AYUDA_MATRICULADO,
+  };
+}
+
 /** Lo que ve cualquiera en el perfil público. Sin archivo y sin notas: sale de
  *  la vista `coach_credentials_public`, que ya filtra por verificada. */
 export type PublicCredential = {

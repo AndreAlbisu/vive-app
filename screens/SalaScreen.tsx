@@ -667,7 +667,16 @@ export default function SalaScreen() {
       .eq('estado', 'pendiente')
       .eq('pedida_por', 'profesional')
       .order('fecha')
-      .then(({ data }) => { if (vivo) setPropuestas(data ?? []); });
+      // 🔴 Se filtran los que ya pasaron (24/09/2026). La base los vence sola
+      // (`vencer_solicitudes_horario`, cron cada 5 minutos), pero en esa ventana
+      // la tarjeta ofrecía tomar un horario que ya no existe: se toca, el
+      // servidor lo rechaza con razón, y lo que ve la persona es un error.
+      // Acá no se decide nada, solo se deja de ofrecer lo imposible.
+      .then(({ data }) => {
+        if (!vivo) return;
+        const ahora = Date.now();
+        setPropuestas((data ?? []).filter(o => scheduledAtMs(o.fecha, o.hora) > ahora));
+      });
     return () => { vivo = false; };
     // `refreshKey` cambia al volver a la pantalla. Sin él, un horario propuesto
     // mientras la Sala estaba en segundo plano no aparecía al volver: el id de

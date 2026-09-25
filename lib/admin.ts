@@ -85,6 +85,12 @@ export type PendingCoach = {
   notes: string | null;       // motivo del rechazo, si hubo
   reviewedAt: string | null;
   interviewedAt: string | null;
+  /** Coaches y nutricionistas: se comprometió a derivar lo clínico. null = no aplica o postulación vieja. */
+  compromisoDerivar: boolean | null;
+  /** "¿Qué hacés si alguien te cuenta que piensa en hacerse daño?" Se lee al revisar. */
+  respuestaRiesgo: string | null;
+  paisAtencion: string | null;
+  provinciaAtencion: string | null;
 };
 
 /** Postulaciones en un estado dado, más viejas primero: es una cola con reloj —
@@ -366,8 +372,14 @@ export async function listClaims(): Promise<AdminClaim[]> {
 /** Resultado de evaluar una reserva contra las 5 condiciones de §9.3.
  *  `eligible` viene de la función, no se decide acá. */
 export type GuaranteeCheck =
-  | { eligible: true; bookingId: string; amount: number | null; hoursSince: number | null }
-  | { eligible: false; reasons: string[] };
+  | { eligible: true; bookingId: string; amount: number | null; hoursSince: number | null; alertas: string[] }
+  | { eligible: false; reasons: string[]; alertas: string[] };
+
+/** Avisos que no descalifican (misma cuenta de pago en otra cuenta que ya usó
+ *  la garantía). Ver `alertasDeAbuso` en `_shared/guarantee.ts`. */
+function leerAlertas(data: any): string[] {
+  return Array.isArray(data?.alertas) ? data.alertas.filter((a: unknown) => typeof a === 'string') : [];
+}
 
 /** Corre las validaciones de §9.3 SIN escribir nada. Es el `dry_run` del
  *  runbook: sirve para contestar el mail sabiendo si califica antes de
@@ -379,7 +391,7 @@ export async function checkGuarantee(bookingId: string): Promise<GuaranteeCheck 
   // son los motivos". Hay que leerla del body y no tratarla como error de red.
   if (!res.ok) {
     const reasons = res.data?.reasons;
-    if (Array.isArray(reasons) && reasons.length > 0) return { eligible: false, reasons };
+    if (Array.isArray(reasons) && reasons.length > 0) return { eligible: false, reasons, alertas: leerAlertas(res.data) };
     return { error: res.error ?? 'No se pudo verificar.' };
   }
 
@@ -388,6 +400,7 @@ export async function checkGuarantee(bookingId: string): Promise<GuaranteeCheck 
     bookingId: res.data?.booking_id ?? bookingId,
     amount: res.data?.amount ?? null,
     hoursSince: res.data?.hours_since_session ?? null,
+    alertas: leerAlertas(res.data),
   };
 }
 

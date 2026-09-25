@@ -30,7 +30,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { guaranteeFailures, scheduledAtMs } from '../_shared/guarantee.ts'
+import { guaranteeFailures, alertasDeAbuso, scheduledAtMs } from '../_shared/guarantee.ts'
 import { esServiceRole } from '../_shared/service-role.ts'
 import { enviarMail, nombreSeguro } from '../_shared/email.ts'
 
@@ -134,7 +134,7 @@ serve(async (req) => {
 
   const { data: booking, error: bookingErr } = await supabase
     .from('bookings')
-    .select('id, user_id, coach_id, status, payment_status, payment_id, preference_id, scheduled_date, scheduled_time, amount')
+    .select('id, user_id, coach_id, status, payment_status, payment_id, preference_id, scheduled_date, scheduled_time, amount, payer_fingerprint')
     .eq('id', bookingId)
     .maybeSingle()
 
@@ -229,8 +229,33 @@ serve(async (req) => {
     now,
   }))
 
+  // ── Avisos para quien revisa (25/09/2026) ─────────────────────────────────
+  // No descalifican: ver `alertasDeAbuso`. Se calculan acá y viajan en todas
+  // las respuestas que ve una persona (la revisión del panel y el mail), porque
+  // el límite de "una vez por Cliente" es por cuenta y abrir otra es gratis.
+  let alertas: string[] = []
+  if (booking.payer_fingerprint) {
+    const { data: mismoPagador } = await supabase
+      .from('bookings')
+      .select('user_id')
+      .eq('payer_fingerprint', booking.payer_fingerprint)
+      .neq('user_id', booking.user_id)
+    const otrasCuentas = [...new Set((mismoPagador ?? []).map(r => r.user_id as string))]
+    let garantiasDeOtrasCuentas = 0
+    if (otrasCuentas.length > 0) {
+      const { count } = await supabase
+        .from('guarantee_claims')
+        .select('id', { count: 'exact', head: true })
+        .in('user_id', otrasCuentas)
+        .eq('status', 'aprobada')
+      garantiasDeOtrasCuentas = count ?? 0
+    }
+    alertas = alertasDeAbuso({ otrasCuentas: otrasCuentas.length, garantiasDeOtrasCuentas })
+  }
+
   if (failures.length > 0) {
-    return json({ eligible: false, booking_id: booking.id, reasons: failures }, 422)
+    // El cliente que pide no ve los avisos: son para quien revisa.
+    return json({ eligible: false, booking_id: booking.id, reasons: failures, ...(solicitante ? {} : { alertas }) }, 422)
   }
 
   if (body.dry_run) {
@@ -240,6 +265,7 @@ serve(async (req) => {
       booking_id: booking.id,
       amount: booking.amount,
       hours_since_session: Math.floor(hoursSince),
+      alertas,
     })
   }
 
@@ -275,6 +301,8 @@ serve(async (req) => {
         `<b>Sesión:</b> ${booking.scheduled_date} ${booking.scheduled_time}`,
         `<b>Monto:</b> ${booking.amount}`,
         'Pasó las cinco condiciones de §9.3. Falta aprobarla desde Administración → Garantías.',
+        // Texto nuestro, sin datos de la persona: no hace falta escapar.
+        ...alertas.map(a => `<b>⚠️ Revisar antes de aprobar:</b> ${a}.`),
       ],
       pie: 'No hace falta contestarle: el reintegro se procesa al aprobar.',
     }).catch(() => false)

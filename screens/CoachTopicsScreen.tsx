@@ -16,6 +16,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AXES } from '@/constants/searchData';
+import { AxisIcon } from '@/components/ui/AxisIcon';
 import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -127,7 +128,7 @@ export default function CoachTopicsScreen() {
               {AXES.map(axis => (
                 <View key={axis.id} style={s.axisBlock}>
                   <View style={s.axisHeader}>
-                    <Text style={s.axisEmoji}>{axis.emoji}</Text>
+                    <AxisIcon axis={axis} size={19} />
                     <Text style={s.axisLabel}>{axis.label}</Text>
                   </View>
 
@@ -223,7 +224,6 @@ const s = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 20, gap: 26 },
   axisBlock: { gap: 14 },
   axisHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  axisEmoji: { fontSize: 18 },
   axisLabel: { fontFamily: ViveFonts.semibold, fontSize: 16, color: '#565E32' },
 
   groupBlock: { gap: 10 },

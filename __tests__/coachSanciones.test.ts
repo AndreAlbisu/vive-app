@@ -1,9 +1,10 @@
-import { estaSuspendido, buildChecklist, blockingReason, type VisibilitySelf } from '@/lib/coachVisibility';
+import { estaSuspendido, buildChecklist, blockingReason, puedeCobrar, type VisibilitySelf } from '@/lib/coachVisibility';
 
 const base = {
   id: 'u1', name: 'Coach', specialty: '', priceFrom: 5000, nationality: '', gender: '',
   avatarUrl: 'x', bio: 'x', topics: ['ansiedad'], verified: true,
   availabilityStatus: 'activo' as const, hasSlotThisWeek: true, hasVideo: true, instantBooking: true,
+  acceptsMp: true,
 };
 const self = (extra: Partial<VisibilitySelf>): VisibilitySelf => ({ ...base, ...extra } as VisibilitySelf);
 
@@ -53,5 +54,26 @@ describe('el checklist de visibilidad', () => {
   it('la sanción gana sobre otros bloqueos que el coach sí podría resolver', () => {
     const items = buildChecklist(self({ suspendidoHasta: 'infinity', topics: [] }));
     expect(blockingReason(items)?.key).toBe('sancion');
+  });
+});
+
+// 24/09/2026. Sin medio de cobro el catálogo no lo muestra: el checklist lo
+// tiene que decir, o el coach ve todo en verde y sigue invisible.
+describe('el cobro en el checklist', () => {
+  it('cualquiera de los tres medios alcanza', () => {
+    expect(puedeCobrar({ acceptsMp: true })).toBe(true);
+    expect(puedeCobrar({ acceptsPaypal: true })).toBe(true);
+    expect(puedeCobrar({ acceptsUsdt: true })).toBe(true);
+    expect(puedeCobrar({})).toBe(false);
+  });
+
+  it('sin medio de cobro es lo que lo bloquea, y lleva a la sección de cobro', () => {
+    const bloqueo = blockingReason(buildChecklist(self({ acceptsMp: false })));
+    expect(bloqueo?.key).toBe('cobro');
+    expect(bloqueo?.route).toBe('/perfil?seccion=cobro');
+  });
+
+  it('con Mercado Pago conectado no bloquea', () => {
+    expect(blockingReason(buildChecklist(self({})))).toBeNull();
   });
 });

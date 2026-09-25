@@ -11,10 +11,13 @@ const psychologist = '33333333-3333-4333-8333-333333333333';
 const pending = '44444444-4444-4444-8444-444444444444';
 const migration = name => fs.readFileSync(path.join(root, 'supabase/migrations', name), 'utf8');
 const q = sql => db.query(sql);
-const application = (bio = 'Acompaño con experiencia y cuidado', topics = "array['Duelo','Autoestima']::text[]") => `
+const application = (bio = 'Acompaño con experiencia y cuidado', topics = "array['Duelo','Autoestima']::text[]", specialty = 'Coach') => `
   select public.submit_coach_application(
-    'Coach','${bio}',${topics},'escucha','acompana',array['presente']::text[],
-    '1990-01-01','Prefiero no decir','Argentina',30000,'https://example.com/video'
+    '${specialty}','${bio}',${topics},'escucha','acompana',array['presente']::text[],
+    '1990-01-01','Prefiero no decir',null,30000,'https://example.com/video',
+    ${specialty === 'Psicólogo/a' ? 'null' : 'true'},
+    'Pregunto si está a salvo y busco ayuda inmediata si hay riesgo.',
+    'Argentina','Córdoba'
   ) as id`;
 
 try {
@@ -51,8 +54,10 @@ try {
   await db.exec(`create trigger trg_reset_application_on_edit before update on coaches
     for each row execute function public.reset_application_on_edit();`);
   await db.exec(migration('20260924030000_coach_interview_review.sql'));
+  await db.exec(migration('20260925010000_submit_application_practice_limits.sql'));
 
   await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${uid}',false);`);
+  await assert.rejects(q(application().replace('true,\n    ', 'false,\n    ')), /postulacion_invalida/);
   const coachId = (await q(application())).rows[0].id;
   assert(coachId);
   await db.exec('reset role');
@@ -84,7 +89,7 @@ try {
   assert.equal((await q(`select role from profiles where id='${uid}'`)).rows[0].role, 'coach');
 
   await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${psychologist}',false);`);
-  const psychId = (await q(application().replace("'Coach'", "'Psicólogo/a'"))).rows[0].id;
+  const psychId = (await q(application(undefined, undefined, 'Psicólogo/a'))).rows[0].id;
   await db.exec('reset role');
   await db.exec(`insert into coach_application_interviews(coach_id,interviewer_id,notes)
     values('${psychId}','${admin}','Entrevista y alcance profesional revisados.');`);

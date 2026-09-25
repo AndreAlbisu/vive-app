@@ -21,7 +21,7 @@ export type VisibilityData = { self: VisibilitySelf; pool: CachedCoach[]; coachI
 export async function loadVisibilitySelf(userId: string): Promise<VisibilityData | null> {
   const { data: coachRow } = await supabase
     .from('coaches')
-    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, availability_status, video_url, instant_booking, suspendido_hasta, estilo, guia, focos')
+    .select('id, created_at, specialty, bio, price_per_session, nationality, verified, availability_status, video_url, instant_booking, suspendido_hasta, estilo, guia, focos, mp_connected, accepts_paypal, accepts_usdt, price_usd')
     .eq('profile_id', userId)
     .maybeSingle();
 
@@ -71,6 +71,12 @@ export async function loadVisibilitySelf(userId: string): Promise<VisibilityData
     estilo: (coachRow.estilo ?? null) as string | null,
     guia: (coachRow.guia ?? null) as string | null,
     focos: ((coachRow.focos ?? []) as string[]),
+    // Misma regla que `coachesCache`: PayPal y USDT sin precio en dólares no
+    // se pueden cobrar.
+    acceptsMp: !!coachRow.mp_connected,
+    acceptsPaypal: !!coachRow.accepts_paypal && coachRow.price_usd != null,
+    acceptsUsdt: !!coachRow.accepts_usdt && coachRow.price_usd != null,
+    priceUsd: (coachRow.price_usd ?? null) as number | null,
   };
 
   return { self, pool: pool as CachedCoach[], coachId };

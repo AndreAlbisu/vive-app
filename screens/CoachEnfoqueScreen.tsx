@@ -36,7 +36,6 @@ import { AppBg } from '@/components/ui/AppBg';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import {
-  ENFOQUES,
   ESTILO_OPCIONES_COACH,
   GUIA_OPCIONES_COACH,
   FOCO_OPCIONES_COACH,
@@ -47,10 +46,8 @@ import {
   type Foco,
   MAX_ENFOQUES,
   enfoquesAGuardar,
-  esEnfoque,
   esEstiloCoach,
-  puedeDeclararEnfoque,
-  type Enfoque,
+  opcionesEnfoque,
   type EstiloCoach,
 } from '@/lib/enfoque';
 
@@ -64,12 +61,12 @@ export default function CoachEnfoqueScreen() {
   const { user } = useAuth();
   const [tienePerfil, setTienePerfil] = useState(false);
   const [estilo, setEstilo] = useState<EstiloCoach | null>(null);
-  const [enfoques, setEnfoques] = useState<Enfoque[]>([]);
+  const [enfoques, setEnfoques] = useState<string[]>([]);
   // M14 ampliado (21/09/2026): las otras dos preguntas que se le hacen a la
   // persona en el quiz, con las mismas ideas y en primera persona.
   const [guia, setGuia] = useState<GuiaCoach | null>(null);
   const [focos, setFocos] = useState<Foco[]>([]);
-  // La escuela solo la declara quien tiene matrícula de psicología verificada.
+  // Qué lista de enfoques ve: la de su profesión verificada (`opcionesEnfoque`).
   const [profesion, setProfesion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,10 +82,12 @@ export default function CoachEnfoqueScreen() {
 
       if (!data) { setLoading(false); return; }
       setTienePerfil(true);
-      setProfesion((data as { profesion?: string | null }).profesion ?? null);
+      const prof = (data as { profesion?: string | null }).profesion ?? null;
+      setProfesion(prof);
       const e = (data as { estilo?: string | null }).estilo;
       setEstilo(esEstiloCoach(e) ? e : null);
-      setEnfoques((((data as { enfoques?: string[] }).enfoques) ?? []).filter(esEnfoque));
+      // Solo lo de su lista: si cambió de profesión, lo viejo ya no se ofrece.
+      setEnfoques(enfoquesAGuardar(prof, ((data as { enfoques?: string[] }).enfoques) ?? []));
       const g = (data as { guia?: string | null }).guia;
       setGuia(esGuiaCoach(g) ? g : null);
       setFocos((((data as { focos?: string[] }).focos) ?? []).filter(esFoco));
@@ -96,7 +95,7 @@ export default function CoachEnfoqueScreen() {
     })();
   }, [user]);
 
-  function toggleEnfoque(id: Enfoque) {
+  function toggleEnfoque(id: string) {
     setEnfoques(prev => {
       if (prev.includes(id)) return prev.filter(x => x !== id);
       // El tope también está en el CHECK de la base. Acá se avisa antes, para
@@ -250,26 +249,17 @@ export default function CoachEnfoqueScreen() {
                 })}
               </View>
 
-              {/* Sin matrícula verificada no se ofrece: las seis son escuelas
-                  de psicología, y declarar una sin matrícula insinúa en el
-                  perfil una profesión que Vita no chequeó. La regla de verdad
-                  está en la base (`trg_enfoques_requieren_matricula`); esto
-                  evita ofrecer algo que no se iba a guardar. */}
-              {!puedeDeclararEnfoque(profesion) ? (
-                <View style={s.block}>
-                  <Text style={s.blockTitle}>Tu enfoque</Text>
-                  <Text style={s.blockHint}>
-                    Las escuelas (cognitivo conductual, sistémico y las demás) se muestran en el perfil de quien tiene una matrícula de psicología verificada por Vita. Si tenés matrícula, cargala en Credenciales y esta pregunta aparece sola.
-                  </Text>
-                </View>
-              ) : (
+              {/* 25/09/2026: cada profesión ve su lista (escuelas de
+                  psicología, metodologías de coaching, enfoques de nutrición),
+                  según la profesión que Vita verificó. La regla de verdad está
+                  en la base (`trg_enfoques_requieren_matricula`). */}
               <View style={s.block}>
-                <Text style={s.blockTitle}>Tu enfoque</Text>
+                <Text style={s.blockTitle}>{profesion === 'psicologia' ? 'Tu escuela' : 'Tu enfoque'}</Text>
                 <Text style={s.blockHint}>
-                  Hasta {MAX_ENFOQUES}. Se muestran en tu perfil. A quien busca no le preguntamos por esto: la mayoría no conoce las escuelas.
+                  Hasta {MAX_ENFOQUES}. Se muestran en tu perfil con una frase que explica cada una. A quien busca no le preguntamos por esto.
                 </Text>
                 <View style={s.chipsRow}>
-                  {ENFOQUES.map(e => {
+                  {opcionesEnfoque(profesion).map(e => {
                     const activo = enfoques.includes(e.id);
                     return (
                       <TouchableOpacity
@@ -288,8 +278,27 @@ export default function CoachEnfoqueScreen() {
                     );
                   })}
                 </View>
+                {/* Declarar una metodología y respaldarla son dos cosas: esto
+                    lleva a cargar el certificado, que es lo que Vita verifica. */}
+                {enfoques.length > 0 && profesion !== 'psicologia' && (
+                  <TouchableOpacity
+                    onPress={() => router.push('/coach-credenciales')}
+                    activeOpacity={0.7}
+                    accessibilityRole="link"
+                    style={{ marginTop: 12 }}>
+                    <Text style={[s.blockHint, { marginBottom: 0, textDecorationLine: 'underline' }]}>
+                      Si tenés el certificado, sumalo en Tu formación
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {/* Sin matrícula verificada se ve la lista de coaching, igual
+                    que en el catálogo aparece como Coach. */}
+                {!profesion && (
+                  <Text style={[s.blockHint, { marginTop: 12, marginBottom: 0 }]}>
+                    Si sos psicólogo/a o nutricionista, cargá tu matrícula en Credenciales. Cuando la verifiquemos vas a ver las opciones de tu profesión.
+                  </Text>
+                )}
               </View>
-              )}
 
               <Text style={s.nota}>
                 Todo es opcional. Si no contestás algo, no se muestra y tampoco te deja afuera de las sugerencias.

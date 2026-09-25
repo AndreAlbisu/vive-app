@@ -9,7 +9,10 @@ import {
   etiquetasEnfoques,
   evaluarEstilo,
   enfoquesAGuardar,
-  puedeDeclararEnfoque,
+  opcionesEnfoque,
+  opcionesGuardadas,
+  METODOS_COACHING,
+  ENFOQUES_NUTRICION,
 } from '../lib/enfoque';
 import { recomendarDesdeQuiz } from '../lib/quizMatch';
 import type { CachedCoach } from '../lib/coachesCache';
@@ -22,6 +25,15 @@ const CHECK_ENFOQUES = [
   'psicoanalitico', 'cognitivo_conductual', 'sistemico',
   'gestaltico', 'humanistico', 'integrativo',
 ];
+// scripts/add-metodologias-coaching-nutricion.sql (25/09/2026).
+const CHECK_COACHING = [
+  'coach_ontologico', 'coach_sistemico', 'coach_cognitivo_conductual',
+  'coach_salud_habitos', 'coach_mindfulness', 'coach_integrativo',
+];
+const CHECK_NUTRICION = [
+  'nutri_sin_dietas', 'nutri_plan', 'nutri_deportiva',
+  'nutri_plantas', 'nutri_condiciones',
+];
 
 describe('opciones', () => {
   it('el estilo del profesional coincide con el CHECK', () => {
@@ -30,6 +42,13 @@ describe('opciones', () => {
 
   it('los enfoques coinciden con el CHECK', () => {
     expect(ENFOQUES.map(e => e.id).sort()).toEqual([...CHECK_ENFOQUES].sort());
+    expect(METODOS_COACHING.map(e => e.id).sort()).toEqual([...CHECK_COACHING].sort());
+    expect(ENFOQUES_NUTRICION.map(e => e.id).sort()).toEqual([...CHECK_NUTRICION].sort());
+  });
+
+  it('ninguna opción se repite entre listas', () => {
+    const ids = [...CHECK_ENFOQUES, ...CHECK_COACHING, ...CHECK_NUTRICION];
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('a la persona no se le ofrece "ambos": se le ofrece no saber', () => {
@@ -84,21 +103,33 @@ describe('evaluarEstilo', () => {
   });
 });
 
-describe('la escuela pide matrícula verificada', () => {
-  it('sin matrícula no se ofrece la pregunta', () => {
-    expect(puedeDeclararEnfoque('nutricion')).toBe(false);
-    expect(puedeDeclararEnfoque(null)).toBe(false);
-    expect(puedeDeclararEnfoque(undefined)).toBe(false);
-    expect(puedeDeclararEnfoque('psicologia')).toBe(true);
+describe('cada profesión ve su lista', () => {
+  it('la lista sale de la profesión verificada; sin ella, coaching', () => {
+    expect(opcionesEnfoque('psicologia')).toBe(ENFOQUES);
+    expect(opcionesEnfoque('nutricion')).toBe(ENFOQUES_NUTRICION);
+    expect(opcionesEnfoque(null)).toBe(METODOS_COACHING);
+    expect(opcionesEnfoque(undefined)).toBe(METODOS_COACHING);
   });
 
-  it('sin matrícula no se manda a guardar lo elegido', () => {
-    expect(enfoquesAGuardar(null, ['psicoanalitico'])).toEqual([]);
+  it('un coach no guarda escuelas de psicología ni enfoques de nutrición', () => {
+    expect(enfoquesAGuardar(null, ['psicoanalitico', 'nutri_condiciones', 'coach_ontologico']))
+      .toEqual(['coach_ontologico']);
   });
 
-  it('con matrícula se guarda tal cual', () => {
+  it('una nutricionista no guarda escuelas de psicología', () => {
+    expect(enfoquesAGuardar('nutricion', ['sistemico', 'nutri_plantas'])).toEqual(['nutri_plantas']);
+  });
+
+  it('un psicólogo guarda sus escuelas tal cual', () => {
     expect(enfoquesAGuardar('psicologia', ['psicoanalitico', 'sistemico']))
       .toEqual(['psicoanalitico', 'sistemico']);
+    expect(enfoquesAGuardar('psicologia', ['coach_sistemico'])).toEqual([]);
+  });
+
+  it('las metodologías de coaching no heredan la tendencia de las escuelas', () => {
+    // "Cognitivo conductual" de coaching no es la escuela de psicología: si lo
+    // fuera, el quiz diría "su enfoque suele guiar" de un coach.
+    expect(esEnfoque('coach_cognitivo_conductual')).toBe(false);
   });
 
   it('el estilo no depende de la matrícula: lo contesta cualquiera', () => {
@@ -114,6 +145,8 @@ describe('etiquetas', () => {
   it('descarta lo que no conoce en vez de imprimir el valor crudo', () => {
     expect(etiquetasEnfoques(['sistemico', 'astrologia'])).toEqual(['Sistémico']);
     expect(etiquetasEnfoques(null)).toEqual([]);
+    expect(etiquetasEnfoques(['nutri_plan', 'coach_ontologico'])).toEqual(['Con plan alimentario', 'Ontológico']);
+    expect(opcionesGuardadas(['astrologia', 'nutri_deportiva']).map(o => o.id)).toEqual(['nutri_deportiva']);
     expect(etiquetaEstilo('lo_que_sea')).toBeNull();
     expect(etiquetaEstilo('ambos')).toBe('Las dos cosas');
   });
@@ -121,6 +154,8 @@ describe('etiquetas', () => {
   it('ningún texto visible usa la raya', () => {
     const todos = [
       ...ENFOQUES.flatMap(e => [e.label, e.desc]),
+      ...METODOS_COACHING.flatMap(e => [e.label, e.desc]),
+      ...ENFOQUES_NUTRICION.flatMap(e => [e.label, e.desc]),
       ...ESTILO_OPCIONES_COACH.flatMap(o => [o.label, o.desc]),
       ...ESTILO_OPCIONES_PERSONA.flatMap(o => [o.label, o.desc]),
       evaluarEstilo('escucha', 'escucha').razon ?? '',

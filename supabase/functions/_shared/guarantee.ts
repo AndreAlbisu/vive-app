@@ -172,7 +172,8 @@ export function guaranteeFailures(input: EligibilityInput): string[] {
     failures.push(`el pago está en '${booking.payment_status}', no 'aprobado' — no hay nada que reintegrar`);
   }
   if (!booking.payment_id) {
-    failures.push('la reserva no tiene payment_id: nunca se cobró por MP');
+    // MP, PayPal y USDT guardan acá su número de pago: sin él, nunca se cobró.
+    failures.push('la reserva no tiene payment_id: nunca se cobró por la Plataforma');
   }
 
   // (2) Ventana de 48hs desde el horario agendado.
@@ -203,4 +204,32 @@ export function guaranteeFailures(input: EligibilityInput): string[] {
   }
 
   return failures;
+}
+
+/**
+ * Avisos para quien revisa, que NO descalifican (25/09/2026).
+ *
+ * 🔴 "Una sola vez por Cliente" se cuenta por CUENTA, y abrir otra cuenta es
+ * gratis. Lo que no cambia de una cuenta a otra es la cuenta de Mercado Pago que
+ * paga: `bookings.payer_fingerprint` (sha256 con sal del payer de MP, lo escribe
+ * `mp-webhook`). Si esa misma huella ya pagó reservas de otras cuentas que
+ * usaron la garantía, se avisa.
+ *
+ * 📌 Aviso y no rechazo: una pareja o una familia comparten tarjeta, y §9.3 pide
+ * que la denegación por abuso la decida una persona. Solo MP deja huella; con
+ * PayPal o USDT no hay nada que comparar y no se avisa nada.
+ */
+export function alertasDeAbuso(input: {
+  /** Otras cuentas (no la que pide) que pagaron con la misma huella. */
+  otrasCuentas: number;
+  /** De esas, cuántas garantías aprobadas tienen. */
+  garantiasDeOtrasCuentas: number;
+}): string[] {
+  const { otrasCuentas, garantiasDeOtrasCuentas } = input;
+  if (garantiasDeOtrasCuentas > 0) {
+    return [
+      `la misma cuenta de Mercado Pago ya pagó reservas de ${otrasCuentas} ${otrasCuentas === 1 ? 'otra cuenta' : 'otras cuentas'} de Vita, que ya ${garantiasDeOtrasCuentas === 1 ? 'usó la garantía una vez' : `usaron la garantía ${garantiasDeOtrasCuentas} veces`}. Puede ser alguien con varias cuentas, o una familia que comparte la tarjeta`,
+    ];
+  }
+  return [];
 }

@@ -747,10 +747,14 @@ const styles = StyleSheet.create({
   sectionTitleSpaced: { marginTop: 4 },
 
   // M7
+  // Mismo material y mismos márgenes que las demás tarjetas de la pantalla
+  // (`preferenceCard`, `profList`). Antes no tenía `marginHorizontal` y ocupaba
+  // todo el ancho, con otro fondo y otro borde (24/09/2026).
   invitarCard: {
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    borderWidth: 1, borderColor: 'rgba(135,131,92,0.18)',
-    borderRadius: 18, padding: 16, gap: 12,
+    backgroundColor: GLASS,
+    borderWidth: 1, borderColor: GLASS_BORDER,
+    borderRadius: 16, padding: 16, gap: 12,
+    marginHorizontal: 20, marginBottom: 20,
   },
   invitarTxt: { fontFamily: ViveFonts.regular, fontSize: 13, color: '#566245', lineHeight: 19 },
   invitarFila: { flexDirection: 'row', alignItems: 'center', gap: 10 },

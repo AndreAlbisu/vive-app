@@ -9,6 +9,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { AXES } from '@/constants/searchData';
+import { AxisIcon } from '@/components/ui/AxisIcon';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
@@ -56,7 +57,7 @@ const AXIS_SHORT: Record<string, string> = {
 // Subtemas de cada eje aplanados (los groups son solo agrupación interna).
 const AXIS_TOPICS = AXES.map(a => ({
   id: a.id,
-  emoji: a.emoji,
+  icon: a.icon,
   short: AXIS_SHORT[a.id] ?? a.label,
   color: a.color,
   topics: a.groups.flatMap(g => g.items),
@@ -196,7 +197,7 @@ export default function ExploreResourcesScreen() {
                   ]}
                   onPress={() => selectAxis(active ? null : axis.id)}
                   activeOpacity={0.8}>
-                  <Text style={s.axisEmoji}>{axis.emoji}</Text>
+                  <AxisIcon axis={axis} size={15} color={active ? CREAM_LIGHT : axis.color} />
                   <Text style={[s.axisPillText, active && s.axisPillTextActive]}>{axis.short}</Text>
                 </TouchableOpacity>
               );
@@ -361,7 +362,6 @@ const s = StyleSheet.create({
     backgroundColor: GLASS_BG,
   },
   axisPillActiveNeutral: { backgroundColor: FOREST, borderColor: FOREST },
-  axisEmoji: { fontSize: 14 },
   axisPillText: { fontFamily: ViveFonts.medium, fontSize: 13, color: TEXT },
   axisPillTextActive: { color: CREAM_LIGHT },
 

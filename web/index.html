@@ -71,12 +71,17 @@
   }
   .wordmark { font-weight: 800; font-size: 30px; letter-spacing: -0.03em; text-decoration: none; color: var(--olive); line-height: 1; }
   .nav-right { display: flex; align-items: center; gap: 10px; }
-  /* Res. 424/2020: el texto tiene que decir literalmente esto, estar en la
-     primera pantalla de la portada y verse. Por eso va en el nav y no en el pie. */
+  /* Res. 424/2020: el enlace tiene que estar en la primera pantalla de la
+     portada, destacado y fácil de encontrar; en el pie solo no alcanza.
+     25/09/2026, pedido de Andre ("da muy malas vibes"): sale del menú y va
+     debajo de la garantía, en la primera pantalla también en el celular, y en
+     minúscula. Si el abogado dice que tiene que ir literal en mayúsculas, se
+     cambia acá y en el pie. */
   .regret {
-    font-size: 11px; font-weight: 700; letter-spacing: .03em; color: var(--soft);
+    display: inline-block; margin-top: 4px;
+    font-size: 13px; font-weight: 600; color: var(--soft);
     text-decoration: underline; text-decoration-color: rgba(86, 98, 69, .35); text-underline-offset: 3px;
-    padding: 12px 4px;
+    padding: 10px 0;
   }
   .regret:hover { color: var(--olive); text-decoration-color: currentColor; }
   .btn {
@@ -138,6 +143,37 @@
   .store[aria-disabled="true"]:hover { background: var(--olive); }
   .store[aria-disabled="true"]:active { transform: none; }
   @keyframes dot { 0% { transform: scale(.7); } 40% { transform: scale(1.5); } 100% { transform: scale(.7); } }
+
+  /* Lista de espera (25/09/2026). Solo en el recuadro de profesionales,
+     mientras la app no está en las tiendas. */
+  .aviso { margin-top: 36px; max-width: 480px; }
+  .aviso-fila { display: flex; gap: 8px; padding: 6px; border-radius: 999px; background: rgba(255, 250, 243, .82); box-shadow: inset 0 0 0 1px rgba(86, 94, 50, .18); }
+  .aviso input {
+    flex: 1; min-width: 0; min-height: 48px; padding: 0 16px; border: 0; background: transparent;
+    font: inherit; font-size: 16px; color: var(--olive);
+  }
+  .aviso input::placeholder { color: rgba(86, 98, 69, .7); }
+  .aviso input:focus { outline: none; }
+  .aviso-fila:focus-within { box-shadow: inset 0 0 0 2px var(--terra-ink); }
+  .aviso button { flex: none; border: 0; cursor: pointer; font: inherit; font-weight: 700; }
+  .aviso button[disabled] { opacity: .6; cursor: default; }
+  .aviso-nota { margin-top: 12px; font-size: .9rem; color: var(--soft); }
+  .aviso-nota.error { color: var(--terra-ink); font-weight: 600; }
+  .aviso-nota a { color: inherit; font-weight: 700; }
+  .aviso-listo { margin-top: 36px; max-width: 480px; font-weight: 600; font-size: 1.1rem; }
+  .closing .aviso, .closing .aviso-listo { margin-left: auto; margin-right: auto; }
+  .pros-box .aviso { margin-top: 24px; }
+  .pros-box .aviso-fila { background: rgba(247, 239, 228, .14); box-shadow: inset 0 0 0 1px rgba(247, 239, 228, .4); }
+  .pros-box .aviso-fila:focus-within { box-shadow: inset 0 0 0 2px var(--cream); }
+  .pros-box .aviso input { color: var(--cream); }
+  .pros-box .aviso input::placeholder { color: rgba(247, 239, 228, .75); }
+  .pros-box .aviso button { background: var(--cream); color: var(--terra-ink); }
+  .pros-box .aviso button:hover { background: #fff; }
+  .pros-box .aviso-nota, .pros-box .aviso-nota.error { color: var(--cream); }
+  .pros-box .aviso-listo { color: var(--cream); margin-top: 24px; }
+  .garantia { margin-top: 18px; font-size: .95rem; color: var(--soft); font-weight: 500; }
+  .garantia a { color: var(--olive); font-weight: 700; text-decoration-color: var(--terra); text-underline-offset: 4px; }
+  .pros-box .precio { margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(247,239,228,.25); }
 
   /* ── Teléfono ────────────────────────────────────────────────────────── */
   .phone {
@@ -276,10 +312,12 @@
   .print.hoy { width: 74%; margin-left: auto; transform: rotate(2.5deg); }
   .print.antes { position: absolute; left: 0; bottom: 0; width: 62%; transform: rotate(-4deg); }
 
-  /* Para qué existe: una sola frase, grande. La historia completa va abajo. */
+  /* Para qué existe: una sola frase, grande. La historia completa va abajo.
+     25/09/2026: el porqué de Vita (Andre): cada vez más conectados y cada vez
+     más solos. El cierre ("no estás solo.") le contesta a esta frase. */
   .purpose { text-align: center; }
   .purpose-q { margin: 0 auto; max-width: 22ch; font-size: clamp(2rem, 4.4vw, 3.6rem); line-height: 1.08; text-wrap: balance; }
-  .purpose .sec-lead { margin: 24px auto 0; }
+  .purpose .sec-lead { margin: 24px auto 0; text-wrap: balance; }
   .purpose-link { display: inline-block; margin-top: 24px; font-weight: 700; text-decoration-color: var(--terra); text-decoration-thickness: 2px; text-underline-offset: 5px; }
 
   /* Preguntas frecuentes */
@@ -412,7 +450,6 @@
     .nav { padding-top: 16px; }
     .nav .btn { display: none; }
     .wordmark { font-size: 26px; }
-    .regret { font-size: 10.5px; padding: 12px 2px; }
     .steps li { display: grid; grid-template-columns: 64px 1fr; column-gap: 8px; }
     .steps li::before { grid-row: span 2; font-size: 3rem; }
     .steps b { margin-top: 4px; }
@@ -433,6 +470,8 @@
     .steps { grid-template-columns: 1fr; }
     .foot { grid-template-columns: 1fr; }
     .store { flex: 1 1 200px; }
+    .aviso-fila { flex-direction: column; border-radius: 24px; padding: 8px; }
+    .aviso button { width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -449,7 +488,6 @@
   <nav class="nav" aria-label="Principal">
     <a class="wordmark" href="./" aria-label="Vita, inicio">vita</a>
     <div class="nav-right">
-      <a class="regret" href="./legal/arrepentimiento">BOTÓN DE ARREPENTIMIENTO</a>
       <a class="btn" href="#descargar">Descargar</a>
     </div>
   </nav>
@@ -457,8 +495,10 @@
   <div class="wrap hero-inner">
     <div>
       <h1>un lugar para estar mejor, a&nbsp;tu&nbsp;ritmo.</h1>
-      <p class="lead">Sesiones por videollamada con profesionales del bienestar que elegís conociendo cómo trabajan. Y herramientas para los días entre una sesión y otra.</p>
-      <div class="stores" data-stores></div>
+      <p class="lead">Sesiones por videollamada con psicólogos, coaches y nutricionistas que elegís conociendo cómo trabajan. Y herramientas para los días entre una sesión y otra.</p>
+      <div class="stores" data-stores data-tipo="persona"></div>
+      <p class="garantia">Si la primera sesión no te convence, te devolvemos lo que pagaste. <a href="#garantia">Cómo funciona</a></p>
+      <a class="regret" href="./legal/arrepentimiento">Botón de arrepentimiento</a>
     </div>
 
     <div class="phone" role="img" aria-label="Vista ilustrativa del inicio de Vita: saludo, pregunta de cómo venís hoy y tu próxima sesión">
@@ -608,8 +648,8 @@
 
   <section class="purpose" aria-labelledby="para-que">
     <div class="wrap">
-      <h2 id="para-que" class="purpose-q">Vita existe para que, en un momento difícil, sepas a quién acudir.</h2>
-      <p class="sec-lead">Acercamos a quienes buscan acompañamiento con profesionales que tienen mucho para ofrecer.</p>
+      <h2 id="para-que" class="purpose-q">Conectados todo el día. Acompañados, casi nunca.</h2>
+      <p class="sec-lead">Vita existe para que, en un momento difícil, sepas a quién acudir. Usamos la pantalla para llevarte a una persona real, no para reemplazarla.</p>
       <a class="purpose-link" href="#historia">Conocé por qué la hicimos</a>
     </div>
   </section>
@@ -623,10 +663,14 @@
           <p>Descargar Vita es gratis. Pagás solo las sesiones que reservás, al precio que fija cada profesional y que ves antes de reservar. Se paga desde la app, con Mercado Pago.</p>
         </details>
         <details>
+          <summary>¿Quiénes son los profesionales?</summary>
+          <p>Psicólogos, coaches y nutricionistas que atienden online. Revisamos a mano cada postulación antes de que aparezca en Vita, y cuando alguien carga su matrícula o su título, revisamos el documento. En cada perfil ves qué quedó verificado. Los coaches y nutricionistas se comprometen a derivar lo que necesite atención clínica.</p>
+        </details>
+        <details>
           <summary>¿Cómo elijo con quién hablar?</summary>
           <p>Respondés unas preguntas cortas y te sugerimos profesionales que trabajan lo que buscás. En cada perfil ves su enfoque, su formación y sus horarios, y elegís vos.</p>
         </details>
-        <details>
+        <details id="garantia">
           <summary>¿Y si la primera sesión no me sirve?</summary>
           <p>Si la primera sesión con un profesional no te convence, te devolvemos lo que pagaste. Escribinos a <a href="mailto:vitaappar@gmail.com">vitaappar@gmail.com</a> dentro de las 48 horas, sin explicar por qué. Vale una vez por persona.</p>
         </details>
@@ -664,7 +708,9 @@
             <li>La sala de videollamada de cada sesión se arma sola.</li>
             <li>Un perfil que cuenta tu enfoque, no solo tu título.</li>
           </ul>
-          <p>Bajate la app y postulate desde ahí.</p>
+          <p class="precio">Sin costo fijo. Vita cobra una comisión solo por las sesiones que das: 20% la primera con cada persona y 15% desde la segunda. Si alguien llega por tu propio link, la primera no tiene comisión.</p>
+          <p id="pros-cta">Estamos sumando a los primeros profesionales.</p>
+          <div data-stores data-tipo="profesional"></div>
         </div>
       </div>
     </div>
@@ -695,9 +741,9 @@
   <section class="closing grain" id="descargar" aria-labelledby="bajala">
     <div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span><span class="a4"></span></div>
     <div class="wrap">
-      <h2 id="bajala">empezá cuando quieras.</h2>
+      <h2 id="bajala">no estás solo.</h2>
       <p class="sec-lead">Vita es gratis para descargar. Pagás solo las sesiones que reservás.</p>
-      <div class="stores" data-stores></div>
+      <div class="stores" data-stores data-tipo="persona"></div>
     </div>
   </section>
 </main>
@@ -715,7 +761,7 @@
           <li><a href="./legal/terminos">Términos y Condiciones</a></li>
           <li><a href="./legal/privacidad">Política de Privacidad</a></li>
           <li><a href="./legal/eliminar-cuenta">Eliminar tu cuenta</a></li>
-          <li><a class="regret" href="./legal/arrepentimiento">BOTÓN DE ARREPENTIMIENTO</a></li>
+          <li><a class="regret" href="./legal/arrepentimiento">Botón de arrepentimiento</a></li>
         </ul>
       </div>
       <div>
@@ -854,8 +900,8 @@
   // y no llevan a ningún lado. Cuando la app salga, pegar acá las URLs de las
   // tiendas y listo: se actualizan los dos lugares donde aparecen.
   var TIENDAS = {
-    ios: '',      // ej. https://apps.apple.com/ar/app/vita/id0000000000
-    android: ''   // ej. https://play.google.com/store/apps/details?id=...
+    ios: '',      // https://apps.apple.com/ar/app/vita/id<número que da App Store Connect>
+    android: ''   // https://play.google.com/store/apps/details?id=com.andrealbisu.viveapp
   };
 
   var ICONOS = {
@@ -863,8 +909,92 @@
     android: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 2.2c-.2.2-.3.6-.3 1v17.6c0 .4.1.8.3 1l.1.1 9.9-9.9v-.2L3.7 2.1l-.1.1zm13.3 13.1-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-3.9 2.2h-.1zm-.1.1L13.4 12 3.6 21.8c.4.4.9.4 1.6.1l11.6-6.5M16.8 8.6 5.2 2c-.7-.4-1.2-.3-1.6.1l9.8 9.9 3.4-3.4z"/></svg>'
   };
   var NOMBRES = { ios: 'App Store', android: 'Google Play' };
+  var HAY_TIENDAS = !!(TIENDAS.ios || TIENDAS.android);
+
+  // Lista de espera (25/09/2026). Mientras no haya links de tiendas, el
+  // recuadro de profesionales muestra un formulario para dejar el mail. Escribe por la
+  // función `anotarse_lista_espera` (scripts/add-lista-de-espera.sql): la tabla
+  // no se puede leer ni escribir con la anon key, y la función tiene tope por IP.
+  // El `?ref=` de un link de invitación se guarda con el mail.
+  var SUPABASE_URL = 'https://ggygiihhnkjrerpinhha.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdneWdpaWhobmtqcmVycGluaGhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mjc5NjEsImV4cCI6MjA5NzEwMzk2MX0.lHPjyKjJIYD_lUTCF7uMBCKj9tCK_67OyrIFkCLQ-BI';
+  var REF = (new URLSearchParams(location.search).get('ref') || '').slice(0, 32) || null;
+  var AVISO = {
+    persona: { boton: 'Avisame', nota: 'Solo para avisarte cuando Vita esté en las tiendas.', listo: 'Listo. Te escribimos a {mail} cuando Vita esté en las tiendas.' },
+    profesional: { boton: 'Quiero sumarme', nota: 'Te escribimos para contarte cómo postularte.', listo: 'Gracias. Te escribimos a {mail} para contarte cómo sumarte.' }
+  };
+  var nAviso = 0;
+
+  function formularioAviso(box, tipo) {
+    var txt = AVISO[tipo];
+    var id = 'aviso-mail-' + (++nAviso);
+    var form = document.createElement('form');
+    form.className = 'aviso';
+    form.noValidate = true;
+    form.innerHTML =
+      '<label class="skip" for="' + id + '">Tu mail</label>' +
+      '<div class="aviso-fila"><input id="' + id + '" type="email" name="email" autocomplete="email" inputmode="email" placeholder="Tu mail" required maxlength="254">' +
+      '<button class="btn" type="submit"></button></div>' +
+      '<p class="aviso-nota" aria-live="polite"></p>';
+    var input = form.querySelector('input');
+    var boton = form.querySelector('button');
+    var nota = form.querySelector('.aviso-nota');
+    boton.textContent = txt.boton;
+    nota.textContent = txt.nota + ' ';
+    var priv = document.createElement('a');
+    priv.href = './legal/privacidad';
+    priv.textContent = 'Privacidad';
+    nota.appendChild(priv);
+
+    function error(msg) { nota.textContent = msg; nota.classList.add('error'); }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var mail = input.value.trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(mail)) { error('Revisá el mail, parece que le falta algo.'); input.focus(); return; }
+      boton.disabled = true;
+      boton.textContent = 'Enviando…';
+      fetch(SUPABASE_URL + '/rest/v1/rpc/anotarse_lista_espera', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+        body: JSON.stringify({ p_email: mail, p_tipo: tipo, p_ref: REF })
+      }).then(function (r) {
+        if (r.ok) {
+          var listo = document.createElement('p');
+          listo.className = 'aviso-listo';
+          listo.setAttribute('role', 'status');
+          listo.textContent = txt.listo.replace('{mail}', mail);
+          form.replaceWith(listo);
+          return;
+        }
+        return r.json().catch(function () { return {}; }).then(function (b) {
+          if (b.message === 'email_invalido') error('Revisá el mail, parece que le falta algo.');
+          else if (b.message === 'rate_limited') error('Hubo muchos intentos seguidos. Probá de nuevo en un rato.');
+          else error('No se pudo guardar. Probá de nuevo o escribinos a vitaappar@gmail.com.');
+          boton.disabled = false;
+          boton.textContent = txt.boton;
+        });
+      }).catch(function () {
+        error('No se pudo conectar. Revisá tu conexión y probá de nuevo.');
+        boton.disabled = false;
+        boton.textContent = txt.boton;
+      });
+    });
+    box.classList.remove('stores');
+    box.appendChild(form);
+  }
 
   document.querySelectorAll('[data-stores]').forEach(function (box) {
+    // 25/09/2026, Andre: las tiendas salen en días, así que para quien busca
+    // acompañamiento van los botones ("Muy pronto" hasta que haya links). El
+    // formulario queda solo para profesionales, mientras no se pueda postular
+    // desde la app publicada.
+    if (box.dataset.tipo === 'profesional') {
+      if (!HAY_TIENDAS) { formularioAviso(box, 'profesional'); return; }
+      var cta = document.getElementById('pros-cta');
+      if (cta) cta.textContent = 'Bajate la app y postulate desde ahí.';
+    }
+    box.classList.add('stores');
     ['ios', 'android'].forEach(function (k) {
       var url = TIENDAS[k];
       var el = document.createElement(url ? 'a' : 'span');
@@ -874,6 +1004,12 @@
       el.innerHTML = ICONOS[k] + '<span><small>' + (url ? 'Descargala en' : 'Muy pronto en') + '</small><b>' + NOMBRES[k] + '</b></span>';
       box.appendChild(el);
     });
+  });
+
+  // "Cómo funciona" de la garantía lleva a una pregunta cerrada: la abre.
+  var garantia = document.getElementById('garantia');
+  document.querySelectorAll('a[href="#garantia"]').forEach(function (a) {
+    a.addEventListener('click', function () { if (garantia) garantia.open = true; });
   });
 </script>
 </body>

@@ -285,6 +285,11 @@ export default function AdminScreen() {
                         {c.price ? ` · $${c.price.toLocaleString('es-AR')}` : ''}
                         {c.nationality ? ` · ${c.nationality}` : ''}
                       </Text>
+                      {!!c.paisAtencion && (
+                        <Text style={s.cardMeta}>
+                          Atiende desde {c.provinciaAtencion ? `${c.provinciaAtencion}, ` : ''}{c.paisAtencion}
+                        </Text>
+                      )}
                       <Text style={s.cardMeta}>Se postuló el {formatDate(c.createdAt)}</Text>
                       {!!c.email && <Text style={s.cardMeta}>{c.email}</Text>}
                       {!!c.bio && <Text style={s.cardBody} numberOfLines={4}>{c.bio}</Text>}
@@ -334,6 +339,20 @@ export default function AdminScreen() {
                           <MaterialCommunityIcons name="account-voice" size={16} color={FOREST} />
                           <Text style={s.linkText}>Registrar entrevista realizada</Text>
                         </TouchableOpacity>
+                      )}
+
+                      {/* 24/09/2026. Lo que más dice de la persona: cómo maneja un
+                          caso que la excede. Va completo, no recortado. */}
+                      {!!c.respuestaRiesgo && (
+                        <View style={s.priorNote}>
+                          <Text style={s.priorNoteLabel}>Si alguien piensa en hacerse daño:</Text>
+                          <Text style={s.priorNoteText}>{c.respuestaRiesgo}</Text>
+                        </View>
+                      )}
+                      {c.compromisoDerivar != null && (
+                        <Text style={s.cardMeta}>
+                          {c.compromisoDerivar ? '✓ Se comprometió a derivar lo clínico' : 'No confirmó que deriva lo clínico'}
+                        </Text>
                       )}
 
                       {/* Segunda vuelta: el motivo del rechazo anterior se
@@ -1541,6 +1560,16 @@ function GuaranteePanel({ claims, onDone }: { claims: AdminClaim[]; onDone: () =
 
         {errored && (
           <Text style={[s.cardBody, { color: CLAY }]}>{(result as { error: string }).error}</Text>
+        )}
+
+        {/* Avisos que no deciden nada: los lee una persona antes de aprobar. */}
+        {result && 'eligible' in result && result.alertas.length > 0 && (
+          <View style={[s.resultBox, { borderColor: CLAY }]}>
+            <Text style={[s.resultTitle, { color: CLAY }]}>Revisar antes de aprobar</Text>
+            {result.alertas.map((a, i) => (
+              <Text key={i} style={s.cardBody}>· {a}</Text>
+            ))}
+          </View>
         )}
 
         {notEligible && (

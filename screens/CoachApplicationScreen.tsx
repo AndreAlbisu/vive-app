@@ -13,9 +13,11 @@ import { useTonoOnboarding } from '@/hooks/useTonoOnboarding';
 import { limpiarAlta } from '@/lib/altaCoach';
 import { supabase } from '@/lib/supabase';
 import { AppBg } from '@/components/ui/AppBg';
+import { AxisIcon } from '@/components/ui/AxisIcon';
 import { AXES } from '@/constants/searchData';
 import CampoFecha from '@/components/ui/CampoFecha';
 import CampoNacionalidad from '@/components/ui/CampoNacionalidad';
+import CampoProvincia from '@/components/ui/CampoProvincia';
 import {
   ESTILO_OPCIONES_COACH,
   GUIA_OPCIONES_COACH,
@@ -35,6 +37,10 @@ const GENDER_OPTIONS = ['Prefiero no decir', 'Masculino', 'Femenino', 'No binari
 type Gender = (typeof GENDER_OPTIONS)[number];
 
 const BIO_MAX = 500;
+// La respuesta a la pregunta de riesgo: lo mismo que exige el CHECK de
+// `coaches.respuesta_riesgo` (scripts/add-postulacion-derivacion-y-lugar.sql).
+const RIESGO_MIN = 20;
+const RIESGO_MAX = 1000;
 
 const fadeUp = (anim: Animated.Value) => ({
   opacity: anim,
@@ -58,6 +64,51 @@ function ageFromIso(iso: string): number {
   const monthDiff = today.getMonth() + 1 - m;
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < d)) age -= 1;
   return age;
+}
+
+/** Un bloque del formulario: número, título y una línea de por qué se pide.
+ *
+ *  🔴 Existe porque el formulario tenía DIEZ secciones del mismo peso visual, una
+ *  abajo de la otra, y leerlo era como leer un padrón. Agrupadas en tres bloques
+ *  con su propio encabezado, la persona sabe dónde está parada y cuánto falta.
+ *  El tilde aparece cuando el bloque está completo: es el único premio que se
+ *  puede dar en un formulario largo. */
+function Bloque({ n, titulo, desc, listo, children }: {
+  n: number; titulo: string; desc: string; listo: boolean; children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.bloque}>
+      <View style={styles.bloqueHead}>
+        <View style={[styles.bloqueNum, listo && styles.bloqueNumListo]}>
+          {listo
+            ? <MaterialCommunityIcons name="check" size={15} color="#F7EFE4" />
+            : <Text style={styles.bloqueNumTxt}>{n}</Text>}
+        </View>
+        <View style={styles.bloqueTitulos}>
+          <Text style={styles.bloqueTitulo}>{titulo}</Text>
+          <Text style={styles.bloqueDesc}>{desc}</Text>
+        </View>
+      </View>
+      <View style={styles.bloqueBody}>{children}</View>
+    </View>
+  );
+}
+
+/** Etiqueta de un campo. Se pinta distinto cuando ese campo es el que frenó el
+ *  envío: el mensaje de abajo dice QUÉ pasa y esto dice DÓNDE. */
+function Campo({ label, hint, error, contador, children }: {
+  label: string; hint?: string; error?: boolean; contador?: string; children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.campo}>
+      <View style={styles.labelRow}>
+        <Text style={[styles.sectionLabel, error && styles.sectionLabelError]}>{label}</Text>
+        {!!contador && <Text style={styles.charCount}>{contador}</Text>}
+      </View>
+      {!!hint && <Text style={styles.fieldHint}>{hint}</Text>}
+      {children}
+    </View>
+  );
 }
 
 export default function CoachApplicationScreen() {
@@ -94,9 +145,20 @@ export default function CoachApplicationScreen() {
   const [estilo, setEstilo] = useState<EstiloCoach | null>(null);
   const [guia, setGuia] = useState<GuiaCoach | null>(null);
   const [focos, setFocos] = useState<Foco[]>([]);
+  // 24/09/2026 (docs/postulacion-preguntas.md, huecos 2 y 4). Privados: no se
+  // muestran en el perfil, los lee el equipo al revisar la postulación.
+  const [compromisoDerivar, setCompromisoDerivar] = useState(false);
+  const [respuestaRiesgo, setRespuestaRiesgo] = useState('');
+  const [paisAtencion, setPaisAtencion] = useState('');
+  const [provinciaAtencion, setProvinciaAtencion] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // 🔴 Qué campo frenó el envío (24/09/2026). Antes el único aviso era una caja
+  // roja al final de un formulario de dos pantallas y media: decía "Elegí una
+  // especialidad" a alguien que tenía que buscar dónde estaba eso. Ahora además
+  // se marca el campo, que es donde la persona tiene que mirar.
+  const [campoError, setCampoError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
   // Re-postulación. Si ya existe una fila de coach RECHAZADA, esta pantalla
@@ -164,6 +226,8 @@ export default function CoachApplicationScreen() {
         application_video_url: string | null; application_status: string | null;
         application_notes: string | null; estilo: string | null;
         guia: string | null; focos: string[] | null;
+        compromiso_derivar: boolean | null; respuesta_riesgo: string | null;
+        pais_atencion: string | null; provincia_atencion: string | null;
       } | undefined;
 
       if (cancelled || !coach || coach.application_status !== 'rechazada') return;
@@ -187,6 +251,10 @@ export default function CoachApplicationScreen() {
       setEstilo(esEstiloCoach(coach.estilo) ? coach.estilo : null);
       setGuia(esGuiaCoach(coach.guia) ? coach.guia : null);
       setFocos(((coach.focos ?? []) as string[]).filter(esFoco));
+      setCompromisoDerivar(!!coach.compromiso_derivar);
+      setRespuestaRiesgo(coach.respuesta_riesgo ?? '');
+      setPaisAtencion(coach.pais_atencion ?? '');
+      setProvinciaAtencion(coach.provincia_atencion ?? '');
     })();
 
     return () => { cancelled = true; };
@@ -206,31 +274,55 @@ export default function CoachApplicationScreen() {
       : prev.length >= MAX_FOCOS ? prev : [...prev, id]);
   }
 
+  // Cuánto del formulario está listo. No valida (eso lo hace `handleSubmit`):
+  // sirve para que un formulario largo muestre avance en vez de una lista
+  // infinita de campos todos iguales.
+  const bloque1Listo = !!specialty && bio.trim().length >= 10 && topics.size > 0;
+  // Coaches y nutricionistas no pueden tratar lo clínico (Ley 23.277): se les
+  // pide el compromiso de derivar. A los psicólogos no, porque lo clínico es su
+  // práctica; la pregunta de riesgo sí va para todos.
+  const pideCompromiso = specialty === 'Coach' || specialty === 'Nutricionista';
+  const riesgoOk = respuestaRiesgo.trim().length >= RIESGO_MIN;
+  const lugarOk = !!paisAtencion && (paisAtencion !== 'Argentina' || !!provinciaAtencion);
+  const bloque2Listo = !!estilo && !!guia && focos.length > 0 && riesgoOk && (!pideCompromiso || compromisoDerivar);
+  const bloque3Listo = !!birthDate && lugarOk
+    && !!price.trim() && !isNaN(Number(price)) && Number(price) > 0
+    && isValidUrl(videoUrl.trim());
+  const listos = [bloque1Listo, bloque2Listo, bloque3Listo].filter(Boolean).length;
+
   async function handleSubmit() {
-    if (!specialty) { setSubmitError('Elegí una especialidad'); return; }
-    if (bio.trim().length < 10) { setSubmitError('Contanos un poco más sobre vos en la presentación'); return; }
-    if (topics.size === 0) { setSubmitError('Elegí al menos un subtema que trabajás'); return; }
-    if (!estilo) { setSubmitError('Contanos cómo acompañás'); return; }
-    if (!guia) { setSubmitError('Contanos cuánto guiás'); return; }
-    if (focos.length === 0) { setSubmitError('Elegí sobre qué trabajás'); return; }
+    const frenar = (campo: string, msg: string) => { setCampoError(campo); setSubmitError(msg); };
+    setCampoError(null);
+    if (!specialty) { frenar('specialty', 'Elegí una especialidad'); return; }
+    if (bio.trim().length < 10) { frenar('bio', 'Contanos un poco más sobre vos en la presentación'); return; }
+    if (topics.size === 0) { frenar('topics', 'Elegí al menos un subtema que trabajás'); return; }
+    if (!estilo) { frenar('estilo', 'Contanos cómo acompañás'); return; }
+    if (!guia) { frenar('guia', 'Contanos cuánto guiás'); return; }
+    if (focos.length === 0) { frenar('focos', 'Elegí sobre qué trabajás'); return; }
+    if (pideCompromiso && !compromisoDerivar) {
+      frenar('compromiso', 'Confirmá que derivás lo que excede tu práctica');
+      return;
+    }
+    if (!riesgoOk) { frenar('riesgo', 'Contanos en unas líneas qué harías'); return; }
     const birthDateIso = birthDate || null;
-    if (!birthDateIso) { setSubmitError('Elegí tu fecha de nacimiento'); return; }
+    if (!birthDateIso) { frenar('birthDate', 'Elegí tu fecha de nacimiento'); return; }
     // Chequeo duro contra el dato real: es el único lugar del alta donde hay una
     // fecha de nacimiento obligatoria, así que del lado coach la mayoría de edad
     // no queda solo en la declaración de CoachLoginScreen. T&C §3.1.
     if (ageFromIso(birthDateIso) < 18) {
-      setSubmitError('Tenés que ser mayor de 18 años para ofrecer sesiones en Vita');
+      frenar('birthDate', 'Tenés que ser mayor de 18 años para ofrecer sesiones en Vita');
       return;
     }
-    if (!nationality.trim()) { setSubmitError('Elegí tu nacionalidad'); return; }
+    if (!paisAtencion) { frenar('lugar', 'Elegí desde qué país atendés'); return; }
+    if (paisAtencion === 'Argentina' && !provinciaAtencion) { frenar('lugar', 'Elegí la provincia desde la que atendés'); return; }
     const priceNumber = Number(price.trim());
     if (!price.trim() || !Number.isFinite(priceNumber) || priceNumber <= 0 || priceNumber >= 1_000_000_000) {
-      setSubmitError('Ingresá un precio válido por sesión');
+      frenar('price', 'Ingresá un precio válido por sesión');
       return;
     }
-    if (!videoUrl.trim()) { setSubmitError('Ingresá el link de tu video de presentación'); return; }
-    if (!isValidUrl(videoUrl.trim())) {
-      setSubmitError('Ingresá un link HTTPS válido para tu video');
+    if (!videoUrl.trim()) { frenar('video', 'Ingresá el link de tu video de presentación'); return; }
+    if (!isValidUrl(videoUrl.trim()) || !videoUrl.trim().startsWith('https://')) {
+      frenar('video', 'Ingresá un link HTTPS válido para tu video');
       return;
     }
     if (!user) { setSubmitError('No encontramos tu sesión. Volvé a ingresar'); return; }
@@ -249,9 +341,13 @@ export default function CoachApplicationScreen() {
       p_focos: focos,
       p_birth_date: birthDateIso,
       p_gender: gender,
-      p_nationality: nationality.trim(),
+      p_nationality: nationality.trim() || null,
       p_price: priceNumber,
       p_video_url: videoUrl.trim(),
+      p_compromiso_derivar: pideCompromiso ? compromisoDerivar : null,
+      p_respuesta_riesgo: respuestaRiesgo.trim(),
+      p_pais_atencion: paisAtencion,
+      p_provincia_atencion: paisAtencion === 'Argentina' ? provinciaAtencion : null,
     });
 
     if (error) {
@@ -393,6 +489,18 @@ export default function CoachApplicationScreen() {
               <Text style={styles.subtitle}>
                 Con esta info armamos tu perfil y lo revisamos antes de activar tu cuenta como profesional.
               </Text>
+
+              <View style={styles.progresoWrap}>
+                <View style={styles.progresoRow}>
+                  <Text style={styles.progresoTxt}>
+                    {listos === 3 ? 'Listo para enviar' : `${listos} de 3 bloques completos`}
+                  </Text>
+                  <Text style={styles.progresoTxt}>{Math.round((listos / 3) * 100)}%</Text>
+                </View>
+                <View style={styles.progresoBarra}>
+                  <View style={[styles.progresoRelleno, { width: `${(listos / 3) * 100}%` }]} />
+                </View>
+              </View>
             </View>
 
             {/* Motivo del rechazo anterior. Va arriba de todo y no en un aviso
@@ -405,9 +513,13 @@ export default function CoachApplicationScreen() {
               </View>
             )}
 
-            {/* Especialidad */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Especialidad</Text>
+            <Bloque
+              n={1}
+              titulo="Tu perfil"
+              desc="Es lo que va a leer alguien que busca ayuda y todavía no te conoce."
+              listo={bloque1Listo}>
+
+            <Campo label="Especialidad" error={campoError === 'specialty'}>
               <View style={styles.specialtyGrid}>
                 {SPECIALTIES.map((s) => {
                   const isSelected = specialty === s;
@@ -428,14 +540,12 @@ export default function CoachApplicationScreen() {
                   );
                 })}
               </View>
-            </View>
+            </Campo>
 
-            {/* Presentación breve */}
-            <View style={styles.section}>
-              <View style={styles.labelRow}>
-                <Text style={styles.sectionLabel}>Presentación breve</Text>
-                <Text style={styles.charCount}>{bio.length}/{BIO_MAX}</Text>
-              </View>
+            <Campo
+              label="Presentación breve"
+              contador={`${bio.length}/${BIO_MAX}`}
+              error={campoError === 'bio'}>
               <TextInput
                 style={[styles.input, styles.bioInput]}
                 value={bio}
@@ -447,17 +557,18 @@ export default function CoachApplicationScreen() {
                 textAlignVertical="top"
                 autoCorrect
               />
-            </View>
+            </Campo>
 
-            {/* Subtemas */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Subtemas que trabajás</Text>
-              <Text style={styles.fieldHint}>
-                Elegí los temas en los que acompañás. Se usan para que los usuarios te encuentren.
-              </Text>
+            <Campo
+              label="Temas que trabajás"
+              hint="Se usan para que las personas te encuentren buscando lo que les pasa."
+              error={campoError === 'topics'}>
               {AXES.map(axis => (
                 <View key={axis.id} style={styles.axisBlock}>
-                  <Text style={styles.axisLabel}>{axis.emoji} {axis.label}</Text>
+                  <View style={styles.axisLabelRow}>
+                    <AxisIcon axis={axis} size={15} />
+                    <Text style={styles.axisLabel}>{axis.label}</Text>
+                  </View>
                   {axis.groups.map((group, gi) => (
                     <View key={gi} style={styles.specialtyGrid}>
                       {group.items.map(topic => {
@@ -479,16 +590,17 @@ export default function CoachApplicationScreen() {
                   ))}
                 </View>
               ))}
-            </View>
+            </Campo>
+            </Bloque>
 
             {/* Cómo trabajás (21/09/2026, obligatorio) */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Cómo trabajás</Text>
-              <Text style={styles.fieldHint}>
-                Son las preguntas que le hacemos a quien busca un profesional, así que con esto te sugerimos a las personas que buscan tu forma de trabajar.
-              </Text>
+            <Bloque
+              n={2}
+              titulo="Cómo trabajás"
+              desc="Son las mismas preguntas que le hacemos a quien busca profesional: con esto te sugerimos a quien busca tu forma de trabajar."
+              listo={bloque2Listo}>
 
-              <Text style={styles.axisLabel}>Cómo acompañás</Text>
+            <Campo label="Cómo acompañás" error={campoError === 'estilo'}>
               <View style={styles.specialtyGrid}>
                 {ESTILO_OPCIONES_COACH.map(op => (
                   <TouchableOpacity
@@ -501,8 +613,9 @@ export default function CoachApplicationScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+            </Campo>
 
-              <Text style={styles.axisLabel}>Cuánto guiás</Text>
+            <Campo label="Cuánto guiás" error={campoError === 'guia'}>
               <View style={styles.specialtyGrid}>
                 {GUIA_OPCIONES_COACH.map(op => (
                   <TouchableOpacity
@@ -515,8 +628,9 @@ export default function CoachApplicationScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+            </Campo>
 
-              <Text style={styles.axisLabel}>Sobre qué trabajás (hasta {MAX_FOCOS})</Text>
+            <Campo label={`Sobre qué trabajás (hasta ${MAX_FOCOS})`} error={campoError === 'focos'}>
               <View style={styles.specialtyGrid}>
                 {FOCO_OPCIONES_COACH.map(op => {
                   const activo = focos.includes(op.id);
@@ -532,17 +646,63 @@ export default function CoachApplicationScreen() {
                   );
                 })}
               </View>
-            </View>
+            </Campo>
 
-            {/* Fecha de nacimiento */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Fecha de nacimiento</Text>
+            {/* 24/09/2026. Los límites de cada uno. No salen en el perfil: los
+                lee el equipo al revisar (docs/postulacion-preguntas.md, hueco 2). */}
+            <View style={styles.limitesSep} />
+            <Text style={styles.limitesNota}>
+              Estas dos no se muestran en tu perfil: las lee el equipo de Vita al revisar tu postulación.
+            </Text>
+
+            {pideCompromiso && (
+              <Campo label="Cuando algo excede tu práctica" error={campoError === 'compromiso'}>
+                <TouchableOpacity
+                  style={styles.checkRow}
+                  onPress={() => setCompromisoDerivar(v => !v)}
+                  activeOpacity={0.75}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: compromisoDerivar }}>
+                  <View style={[styles.checkBox, compromisoDerivar && styles.checkBoxOn]}>
+                    {compromisoDerivar && <MaterialCommunityIcons name="check" size={14} color="#F3EEDF" />}
+                  </View>
+                  <Text style={styles.checkTxt}>
+                    Si aparece algo de salud mental que no me corresponde tratar, lo derivo a un profesional de la salud.
+                  </Text>
+                </TouchableOpacity>
+              </Campo>
+            )}
+
+            <Campo
+              label="¿Qué hacés si alguien te cuenta que piensa en hacerse daño?"
+              hint="No buscamos una respuesta de manual: queremos saber cómo lo manejás."
+              contador={`${respuestaRiesgo.length}/${RIESGO_MAX}`}
+              error={campoError === 'riesgo'}>
+              <TextInput
+                style={[styles.input, styles.bioInput]}
+                value={respuestaRiesgo}
+                onChangeText={(t) => setRespuestaRiesgo(t.slice(0, RIESGO_MAX))}
+                placeholder="Contanos en unas líneas qué harías"
+                placeholderTextColor="rgba(135,131,92,0.45)"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                autoCorrect
+              />
+            </Campo>
+            </Bloque>
+
+            <Bloque
+              n={3}
+              titulo="Tus datos"
+              desc="Lo administrativo: quién sos, cuánto cobrás y un video para conocerte."
+              listo={bloque3Listo}>
+
+            <Campo label="Fecha de nacimiento" error={campoError === 'birthDate'}>
               <CampoFecha value={birthDate} onChange={setBirthDate} />
-            </View>
+            </Campo>
 
-            {/* Sexo */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Sexo</Text>
+            <Campo label="Sexo">
               <View style={styles.specialtyGrid}>
                 {GENDER_OPTIONS.map((option) => {
                   const isSelected = gender === option;
@@ -560,17 +720,33 @@ export default function CoachApplicationScreen() {
                   );
                 })}
               </View>
-            </View>
+            </Campo>
 
-            {/* Nacionalidad */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Nacionalidad</Text>
+            <Campo
+              label="Desde dónde atendés"
+              hint="De esto depende qué matrícula corresponde y cómo se te paga."
+              error={campoError === 'lugar'}>
+              <CampoNacionalidad
+                value={paisAtencion}
+                onChange={(p) => { setPaisAtencion(p); if (p !== 'Argentina') setProvinciaAtencion(''); }}
+                placeholder="Elegí el país"
+                titulo="¿Desde qué país atendés?"
+              />
+              {paisAtencion === 'Argentina' && (
+                <View style={{ marginTop: 10 }}>
+                  <CampoProvincia value={provinciaAtencion} onChange={setProvinciaAtencion} />
+                </View>
+              )}
+            </Campo>
+
+            <Campo label="Nacionalidad (opcional)">
               <CampoNacionalidad value={nationality} onChange={setNationality} />
-            </View>
+            </Campo>
 
-            {/* Precio */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Precio propuesto por sesión (ARS)</Text>
+            <Campo
+              label="Precio por sesión"
+              hint="En pesos. Lo podés cambiar cuando quieras desde tu perfil."
+              error={campoError === 'price'}>
               <TextInput
                 style={styles.input}
                 value={price}
@@ -579,14 +755,12 @@ export default function CoachApplicationScreen() {
                 placeholderTextColor="rgba(135,131,92,0.45)"
                 keyboardType="numeric"
               />
-            </View>
+            </Campo>
 
-            {/* Video */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Link de video de presentación</Text>
-              <Text style={styles.fieldHint}>
-                Compartinos un video corto contándonos quién sos y cómo trabajás. Puede ser un link de YouTube, Drive, o similar.
-              </Text>
+            <Campo
+              label="Video de presentación"
+              hint="Un video corto contándonos quién sos y cómo trabajás. Puede ser de YouTube, Drive o similar."
+              error={campoError === 'video'}>
               <TextInput
                 style={styles.input}
                 value={videoUrl}
@@ -597,27 +771,36 @@ export default function CoachApplicationScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-            </View>
+            </Campo>
+            </Bloque>
+          </Animated.View>
+        </ScrollView>
 
-            {submitError && (
+        {/* Barra de envío, fija. El botón vivía al final del scroll: con tres
+            bloques arriba, enviar obligaba a recorrer el formulario entero otra
+            vez. Y el error aparece ACÁ, pegado al botón que lo disparó. */}
+        <SafeAreaView style={styles.footerSafe} edges={['bottom']}>
+          <View style={styles.footer}>
+            {!!submitError && (
               <View style={styles.errorBox}>
                 <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#C0392B" />
                 <Text style={styles.errorText}>{submitError}</Text>
               </View>
             )}
-
             <TouchableOpacity
               style={[styles.button, submitting && styles.buttonDisabled]}
               onPress={handleSubmit}
               activeOpacity={0.85}
               disabled={submitting}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: submitting }}
             >
               <Text style={styles.buttonText}>
-                {submitting ? 'Enviando...' : existingCoachId ? 'Volver a enviar' : 'Enviar solicitud'}
+                {submitting ? 'Enviando…' : existingCoachId ? 'Volver a enviar' : 'Enviar solicitud'}
               </Text>
             </TouchableOpacity>
-          </Animated.View>
-        </ScrollView>
+          </View>
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </SafeAreaView>
     </AppBg>
@@ -626,9 +809,9 @@ export default function CoachApplicationScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { flexGrow: 1, paddingBottom: 48 },
+  scroll: { flexGrow: 1, paddingBottom: 28 },
   rejectionBox: {
-    marginHorizontal: 24,
+    marginHorizontal: 20,
     marginBottom: 20,
     padding: 14,
     borderRadius: 14,
@@ -661,7 +844,54 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#87835C',
   },
-  content: { paddingHorizontal: 24, paddingTop: 24, gap: 24 },
+  content: { paddingHorizontal: 20, paddingTop: 20, gap: 18 },
+
+  // ── Progreso ──────────────────────────────────────────────────────────────
+  // Un formulario de tres pantallas de alto sin ninguna señal de avance se
+  // siente el doble de largo. La barra no promete rapidez: dice dónde estás.
+  progresoWrap: { gap: 7, marginTop: 4 },
+  progresoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  progresoTxt: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: '#87835C' },
+  progresoBarra: { height: 5, borderRadius: 3, backgroundColor: 'rgba(86,94,50,0.12)', overflow: 'hidden' },
+  progresoRelleno: { height: '100%', borderRadius: 3, backgroundColor: ViveColors.primary },
+
+  // ── Bloques ───────────────────────────────────────────────────────────────
+  // Tarjeta plana, sin sombra: son tres bloques grandes en una pantalla que se
+  // scrollea, y tres sombras apiladas convierten el formulario en un montón de
+  // objetos flotando. Alcanza con el fondo y el borde para agrupar.
+  bloque: {
+    backgroundColor: 'rgba(255,248,240,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.10)',
+    borderRadius: 20,
+    padding: 18,
+    gap: 16,
+  },
+  bloqueHead: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  bloqueNum: {
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: 'rgba(86,94,50,0.10)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  bloqueNumListo: { backgroundColor: ViveColors.primary },
+  bloqueNumTxt: { fontFamily: ViveFonts.semibold, fontSize: 13, color: '#565E32' },
+  bloqueTitulos: { flex: 1, gap: 2 },
+  bloqueTitulo: { fontFamily: ViveFonts.semibold, fontSize: 17, color: '#565E32', letterSpacing: -0.2 },
+  bloqueDesc: { fontFamily: ViveFonts.regular, fontSize: 13, color: 'rgba(135,131,92,0.9)', lineHeight: 19 },
+  bloqueBody: { gap: 18 },
+  campo: { gap: 8 },
+  sectionLabelError: { color: '#C0392B' },
+
+  // ── Barra de envío ────────────────────────────────────────────────────────
+  // Fija abajo: el botón estaba al final de todo, así que para enviar había que
+  // volver a scrollear hasta el fondo. Y el error vive ACÁ, al lado del botón
+  // que lo disparó, en vez de en una caja perdida entre los campos.
+  footerSafe: {
+    backgroundColor: 'rgba(247,239,228,0.97)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(86,94,50,0.12)',
+  },
+  footer: { paddingHorizontal: 20, paddingVertical: 14, gap: 10 },
   titleArea: { gap: 8 },
   title: {
     fontFamily: ViveFonts.semibold,
@@ -676,7 +906,6 @@ const styles = StyleSheet.create({
     color: '#87835C',
     lineHeight: 21,
   },
-  section: { gap: 8 },
   sectionLabel: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
@@ -694,6 +923,7 @@ const styles = StyleSheet.create({
   },
   specialtyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   axisBlock: { gap: 8, marginTop: 4 },
+  axisLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   axisLabel: {
     fontFamily: ViveFonts.medium,
     fontSize: 13,
@@ -707,9 +937,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.65)',
   },
+  // 🔴 Oliva lleno, no el verde menta de antes (24/09/2026). El menta venía de
+  // `ViveColors.accent` y no aparece en ninguna otra pantalla del profesional:
+  // "Cómo trabajo" y los temas ya usan el oliva lleno con texto crema. Con dos
+  // verdes distintos para el mismo gesto, la app parecía de dos manos.
   chipSelected: {
-    backgroundColor: 'rgba(107,191,138,0.22)',
-    borderColor: ViveColors.accent,
+    backgroundColor: ViveColors.primary,
+    borderColor: ViveColors.primary,
   },
   chipText: {
     fontFamily: ViveFonts.regular,
@@ -718,12 +952,12 @@ const styles = StyleSheet.create({
   },
   chipBlocked: { opacity: 0.45 },
   chipTextSelected: {
-    fontFamily: ViveFonts.medium,
-    color: '#565E32',
+    fontFamily: ViveFonts.semibold,
+    color: '#F7EFE4',
   },
   input: {
-    backgroundColor: 'rgba(255,248,240,0.48)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(255,248,240,0.55)',
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontFamily: ViveFonts.regular,
@@ -733,6 +967,15 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.65)',
   },
   bioInput: { minHeight: 120, paddingTop: 14 },
+  limitesSep: { height: 1, backgroundColor: 'rgba(86,94,50,0.14)', marginTop: 4, marginBottom: 12 },
+  limitesNota: { fontFamily: ViveFonts.regular, fontSize: 12.5, lineHeight: 18, color: '#87835C', marginBottom: 14 },
+  checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  checkBox: {
+    width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: 'rgba(86,94,50,0.45)',
+    alignItems: 'center', justifyContent: 'center', marginTop: 1,
+  },
+  checkBoxOn: { backgroundColor: '#565E32', borderColor: '#565E32' },
+  checkTxt: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 20, color: '#565E32' },
   fieldHint: {
     fontFamily: ViveFonts.regular,
     fontSize: 12,

@@ -262,7 +262,14 @@ export default function CoachReservasScreen() {
     // el cliente necesita botones, y lo que propuso el profesional es un estado
     // ("le propusiste esto, está eligiendo"). Sin esa segunda línea, proponer un
     // horario era gritar a un pozo: no quedaba en ningún lado.
-    const todas = (data ?? []) as unknown as CambioPedido[];
+    // 🔴 Se descartan los que ya pasaron (24/09/2026). La base los vence sola
+    // (`vencer_solicitudes_horario`, cron cada 5 minutos), pero en esa ventana
+    // el profesional veía un pedido sobre un horario que ya no existe: aceptarlo
+    // devuelve "ese horario ya pasó", o sea que la pantalla le pedía una
+    // decisión que no podía salir bien.
+    const ahora = Date.now();
+    const todas = ((data ?? []) as unknown as CambioPedido[])
+      .filter(c => startMs(c.fecha, c.hora) > ahora);
     setCambios(todas.filter(c => c.pedida_por === 'cliente'));
     setPropias(todas.filter(c => c.pedida_por === 'profesional'));
   }, []);
@@ -740,7 +747,7 @@ export default function CoachReservasScreen() {
                           no le quedaba más que cancelar. Que es exactamente lo
                           que M16 vino a evitar. */}
                       {b.id === nextId && nextWithin24h && (
-                        <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={() => router.navigate('/(coach)')}>
+                        <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={() => router.navigate({ pathname: '/(coach)', params: { preparar: '1' } })}>
                           <Text style={s.btnGhostTxt}>Preparar</Text>
                         </TouchableOpacity>
                       )}
@@ -755,7 +762,7 @@ export default function CoachReservasScreen() {
             )}
 
             <TouchableOpacity style={s.histLink} activeOpacity={0.7} onPress={() => router.push('/coach-agenda')}>
-              <Text style={s.histLinkTxt}>Ver historial de sesiones →</Text>
+              <Text style={s.histLinkTxt}>Ver agenda e historial →</Text>
             </TouchableOpacity>
 
             <View style={{ height: TAB_BAR_CLEARANCE }} />

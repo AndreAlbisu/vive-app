@@ -13,7 +13,8 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { getRelationshipNotes } from '@/lib/sessionNotes';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,7 +30,10 @@ import { confirmBooking } from '@/lib/coachBookingActions';
 import { proximosHuecos } from '@/lib/coachProposeData';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { visibilityTeaser, analyzeDoors, homeStanding, tituloVisibilidad, bajadaVisibilidad, type VisibilityTeaser, type HomeStanding } from '@/lib/coachVisibility';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CoachBienvenida, { BIENVENIDA_COACH_KEY } from '@/components/CoachBienvenida';
+import { FirstTimeTooltip } from '@/components/FirstTimeTooltip';
+import { visibilityTeaser, puedeCobrar, analyzeDoors, homeStanding, tituloVisibilidad, bajadaVisibilidad, type VisibilityTeaser, type HomeStanding } from '@/lib/coachVisibility';
 import { loadVisibilitySelf } from '@/lib/coachVisibilityData';
 import { SLOT_ORDER } from '@/lib/coachDeckRanking';
 import { DOORS } from '@/constants/conexionesDoors';
@@ -91,6 +95,11 @@ const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', '
 type Session = { userId: string; time: string; date: string };
 type DayEntry = { abbr: string; count: number; isToday: boolean };
 
+/** Cuánto sigue a la vista la tarjeta después del fin previsto de la sesión. */
+const MARGEN_FIN_MS = 15 * 60 * 1000;
+/** "Unirse" se habilita 10 minutos antes del inicio. */
+const ABRE_ANTES_MS = 10 * 60 * 1000;
+
 type NextSession = {
   bookingId: string;
   userId: string;
@@ -102,6 +111,9 @@ type NextSession = {
   ordinal: string;
   salaId: string | null;
   startMs: number;
+  /** Cuándo hay que recalcular la tarjeta: el fin real de esta sesión
+   *  (inicio + duración + 15'), o antes si la SIGUIENTE ya se puede abrir. */
+  recalcularEnMs: number;
 };
 
 type AnimoCliente = {
@@ -122,7 +134,16 @@ type Pendiente = {
 };
 
 type PrepResource = { id: string; title: string; opened: boolean; roomId: string | null };
-type Prep = { lastDaysAgo: number | null; resources: PrepResource[]; animo: AnimoCliente | null };
+type NotaPrep = { content: string; createdAt: string };
+type Prep = {
+  lastDaysAgo: number | null;
+  resources: PrepResource[];
+  animo: AnimoCliente | null;
+  /** La nota privada más reciente del profesional con esta persona. */
+  notaPrivada: NotaPrep | null;
+  /** La última nota compartida: lo que le dejó (tarea, acuerdo). */
+  notaCompartida: NotaPrep | null;
+};
 
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -160,22 +181,42 @@ export default function CoachHomeScreen() {
   const [next, setNext] = useState<NextSession | null>(null);
   const [prep, setPrep] = useState<Prep | null>(null);
   const [prepOpen, setPrepOpen] = useState(false);
+  // "Preparar" desde Reservas llega con `?preparar=1`: abre el panel directo
+  // en vez de dejar al profesional buscando el botón otra vez.
+  const { preparar } = useLocalSearchParams<{ preparar?: string }>();
+  useEffect(() => { if (preparar === '1') setPrepOpen(true); }, [preparar]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [visibility, setVisibility] = useState<VisibilityTeaser | null>(null);
   const [standing, setStanding] = useState<HomeStanding | null>(null);
   const [seCaen, setSeCaen] = useState<PersonaCayendo[]>([]);
+  // La bienvenida, una sola vez por teléfono. 'cargando' hasta leer la marca:
+  // sin eso las ayudas de abajo podían aparecer encima de ella.
+  const [bienvenida, setBienvenida] = useState<'cargando' | 'mostrar' | 'vista'>('cargando');
+  useEffect(() => {
+    AsyncStorage.getItem(BIENVENIDA_COACH_KEY)
+      .then(v => setBienvenida(v ? 'vista' : 'mostrar'))
+      .catch(() => setBienvenida('vista'));
+  }, []);
+  const cerrarBienvenida = useCallback((verMas: boolean) => {
+    setBienvenida('vista');
+    AsyncStorage.setItem(BIENVENIDA_COACH_KEY, '1').catch(() => {});
+    if (verMas) router.push('/coach-como-funciona');
+  }, [router]);
   const [repu, setRepu] = useState<{ completadas: number; vuelvenPct: number | null } | null>(null);
   const [sinCerrar, setSinCerrar] = useState<{ name: string; salaId: string; bookingId: string; dias: number } | null>(null);
   const [pendientes, setPendientes] = useState<Pendiente[]>([]);
   const [aceptando, setAceptando] = useState<string | null>(null);
 
   // ── Card de preparación (estado vacío de Inicio) ────────────────────────
-  // Los 3 pasos del checklist. `puertas` no tiene estado propio — se deriva
+  // Los 3 pasos del checklist (perfil, temas, horarios), más el recurso como
+  // sugerencia opcional (ver abajo, 24/09/2026). `puertas` no tiene estado propio — se deriva
   // de `doorLabels.length` — acá hace falta la lista completa para los chips.
   const [prepPerfil, setPrepPerfil] = useState(false);
   const [prepRecurso, setPrepRecurso] = useState(false);
+  const [prepHorarios, setPrepHorarios] = useState(false);
+  const [prepCobro, setPrepCobro] = useState(false);
   const [doorLabels, setDoorLabels] = useState<string[]>([]);
   // El link público del coach. `null` mientras no esté aprobado: `/c/<slug>`
   // filtra por `verified`, así que ofrecérselo antes sería darle un link roto.
@@ -260,6 +301,7 @@ export default function CoachHomeScreen() {
       { count: recursosCount },
       { count: bookingsEverCount },
       { data: pendingRows },
+      { count: horariosCount },
     ] = await Promise.all([
       supabase.from('profiles').select('name, avatar_url').eq('id', user.id).maybeSingle(),
       supabase
@@ -269,7 +311,7 @@ export default function CoachHomeScreen() {
         .eq('status', 'confirmada')
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true }),
-      supabase.from('coaches').select('verified, availability_status, price_per_session, bio, specialty, slug').eq('id', coachId).maybeSingle(),
+      supabase.from('coaches').select('verified, availability_status, price_per_session, bio, specialty, slug, mp_connected, accepts_paypal, accepts_usdt, price_usd').eq('id', coachId).maybeSingle(),
       supabase.from('coach_topics').select('topic').eq('coach_id', coachId),
       // "Subiste un recurso" cuenta cualquier fila, sin filtrar por `status`:
       // el checklist dice "Subir tu primer recurso" — es la acción, no que ya
@@ -291,15 +333,33 @@ export default function CoachHomeScreen() {
         .gte('scheduled_date', todayInAr())
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true }),
+      // 24/09/2026, pedido de Andre: "definir la franja horaria" es un paso. Se
+      // mira lo que de verdad se puede reservar: algún horario futuro sin
+      // bloquear en `coach_availability` (el patrón semanal lo genera ahí).
+      // Tener un patrón cargado que no generó nada no alcanza.
+      supabase
+        .from('coach_availability')
+        .select('id', { count: 'exact', head: true })
+        .eq('coach_id', coachId)
+        .eq('blocked', false)
+        .gte('date', todayInAr()),
     ]);
 
     if (profile?.name) setCoachName(profile.name.split(' ')[0]);
+
+    // Misma regla que el catálogo (ver `puedeCobrar`).
+    const cobroNow = puedeCobrar({
+      acceptsMp: !!coachRow?.mp_connected,
+      acceptsPaypal: !!coachRow?.accepts_paypal && coachRow?.price_usd != null,
+      acceptsUsdt: !!coachRow?.accepts_usdt && coachRow?.price_usd != null,
+    });
 
     setVisibility(visibilityTeaser({
       verified: !!coachRow?.verified,
       availabilityStatus: (coachRow?.availability_status ?? 'activo') as 'activo' | 'en_pausa',
       topics: (topicRows ?? []).map(t => t.topic as string),
       price: (coachRow?.price_per_session ?? null) as number | null,
+      puedeCobrar: cobroNow,
     }));
 
     // ── Checklist de preparación ──────────────────────────────────────────
@@ -328,6 +388,17 @@ export default function CoachHomeScreen() {
     setPrepRecurso(prev => {
       if (!prev && recursoNow) registrarEvento('preparacion_paso_completado', { paso: 'recurso' }).catch(() => {});
       return recursoNow;
+    });
+
+    const horariosNow = (horariosCount ?? 0) > 0;
+    setPrepHorarios(prev => {
+      if (!prev && horariosNow) registrarEvento('preparacion_paso_completado', { paso: 'horarios' }).catch(() => {});
+      return horariosNow;
+    });
+
+    setPrepCobro(prev => {
+      if (!prev && cobroNow) registrarEvento('preparacion_paso_completado', { paso: 'cobro' }).catch(() => {});
+      return cobroNow;
     });
 
     setHasAnyBookingEver((bookingsEverCount ?? 0) > 0);
@@ -383,12 +454,31 @@ export default function CoachHomeScreen() {
     });
     setWeekData(week);
 
-    // Próxima sesión = primera confirmada con inicio >= ahora
+    // Próxima sesión = la primera confirmada que todavía no terminó.
+    // 🔴 24/09/2026: antes era "empezó hace menos de 90 minutos", fijo. Una
+    // sesión de 45' seguía en la tarjeta 45' después de terminar, y una de 2hs
+    // desaparecía en plena sesión. Ahora es el fin real (inicio + duración) más
+    // 15' de margen, por si se estira.
     const nowMs = now.getTime();
-    const upcoming = rows
-      .map(b => ({ b, startMs: bookingStartMs(b.scheduled_date as string, b.scheduled_time as string) }))
-      .filter(x => x.startMs >= nowMs - 90 * 60 * 1000) // incluye una en curso (hasta 90')
-      .sort((a, b) => a.startMs - b.startMs)[0];
+    //
+    // 🔴 Sesiones al hilo (18hs y 19hs, pedido de Andre): con solo "hasta el fin
+    // + 15'", la de las 18 tapaba a la de las 19 hasta las 19:15, justo cuando
+    // había que entrar. Por eso, entre las que no terminaron, gana la ÚLTIMA cuyo
+    // "Unirse" ya se habilitó (10' antes); si ninguna, la más próxima.
+    const vigentes = rows
+      .map(b => {
+        const startMs = bookingStartMs(b.scheduled_date as string, b.scheduled_time as string);
+        const duracionMs = ((b.duration_minutes as number | null) ?? 60) * 60 * 1000;
+        return { b, startMs, abreMs: startMs - ABRE_ANTES_MS, visibleHastaMs: startMs + duracionMs + MARGEN_FIN_MS };
+      })
+      .filter(x => x.visibleHastaMs >= nowMs)
+      .sort((a, b) => a.startMs - b.startMs);
+    const abiertas = vigentes.filter(x => x.abreMs <= nowMs);
+    const upcoming = abiertas.length ? abiertas[abiertas.length - 1] : vigentes[0];
+    const siguiente = upcoming ? vigentes.find(x => x.startMs > upcoming.startMs) : undefined;
+    const recalcularEnMs = upcoming
+      ? Math.min(upcoming.visibleHastaMs, siguiente ? siguiente.abreMs : Infinity)
+      : Infinity;
 
     if (upcoming) {
       const b = upcoming.b;
@@ -409,10 +499,11 @@ export default function CoachHomeScreen() {
         ordinal: ordinalLabel((completedCount ?? 0) + 1),
         salaId: (b.sala_id as string) ?? null,
         startMs: upcoming.startMs,
+        recalcularEnMs,
       });
 
       // Preparar sesión: última completada + recursos recomendados (Recursos v2)
-      const [{ data: lastDone }, { data: recs }] = await Promise.all([
+      const [{ data: lastDone }, { data: recs }, notas] = await Promise.all([
         supabase.from('bookings').select('scheduled_date')
           .eq('coach_id', coachId).eq('user_id', b.user_id).eq('status', 'completada')
           .order('scheduled_date', { ascending: false }).limit(1),
@@ -420,7 +511,14 @@ export default function CoachHomeScreen() {
           .select('id, opened_at, room_id, coach_resources!inner(title)')
           .eq('coach_id', coachId).eq('user_id', b.user_id)
           .order('created_at', { ascending: false }).limit(6),
+        // 24/09/2026. Lo que un profesional relee antes de una sesión es SU
+        // nota de la anterior. Vivía detrás de "Notas" en el chat.
+        getRelationshipNotes({ userId: b.user_id as string, coachId: user.id, asCoach: true }),
       ]);
+      const ultimaDe = (compartida: boolean): NotaPrep | null => {
+        const n = [...notas].filter(x => x.shared === compartida).sort((a, z) => z.createdAt.localeCompare(a.createdAt))[0];
+        return n ? { content: n.content, createdAt: n.createdAt } : null;
+      };
       let lastDaysAgo: number | null = null;
       if (lastDone?.[0]?.scheduled_date) {
         lastDaysAgo = Math.max(0, -daysFromTodayAr(lastDone[0].scheduled_date as string));
@@ -451,7 +549,7 @@ export default function CoachHomeScreen() {
         }
       }
 
-      setPrep({ lastDaysAgo, resources, animo });
+      setPrep({ lastDaysAgo, resources, animo, notaPrivada: ultimaDe(false), notaCompartida: ultimaDe(true) });
     } else {
       setNext(null);
       setPrep(null);
@@ -586,13 +684,30 @@ export default function CoachHomeScreen() {
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
+  // 🔴 24/09/2026. La tarjeta se calculaba solo al abrir el Inicio: con la app
+  // abierta, "Unirse" no se prendía a los 10 minutos antes (justo cuando hay que
+  // entrar) y la sesión terminada no se iba. Un reloj de 30 segundos mientras la
+  // pantalla está a la vista: re-dibuja el botón y, cuando la sesión ya pasó,
+  // recarga para traer la siguiente.
+  const [ahoraMs, setAhoraMs] = useState(() => Date.now());
+  useFocusEffect(useCallback(() => {
+    setAhoraMs(Date.now());
+    const id = setInterval(() => setAhoraMs(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []));
+  // Recarga cuando la sesión terminó o cuando la siguiente ya se puede abrir.
+  const nextVencida = !!next && ahoraMs >= next.recalcularEnMs;
+  useEffect(() => {
+    if (nextVencida) void loadData();
+  }, [nextVencida, loadData]);
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
   }, [loadData]);
 
-  const canJoin = next ? Date.now() >= next.startMs - 10 * 60 * 1000 : false;
+  const canJoin = next ? ahoraMs >= next.startMs - ABRE_ANTES_MS : false;
 
   // 🔴 "Sin sesiones programadas" no distingue entre dos coaches muy
   // distintos: uno con historial que está en un bache entre reservas (para
@@ -695,14 +810,26 @@ export default function CoachHomeScreen() {
   }, [user, loadData]);
 
   const prepPuertas = doorLabels.length > 0;
-  const prepDoneCount = [prepPerfil, prepPuertas, prepRecurso].filter(Boolean).length;
-  const prepMissing = 3 - prepDoneCount;
+  // 🔴 24/09/2026, decisión de Andre: el recurso NO es un paso. Era 1 de 3 y
+  // el botón principal lo pedía, así que se leía como obligatorio, con la
+  // promesa "los coaches con recursos reciben más reservas", que no es cierta:
+  // los recursos no pesan en el orden del catálogo y no hay datos que la
+  // respalden. Sin recurso se aparece y se reserva igual. Queda como sugerencia
+  // aparte, sin contar en el progreso ni en "estás casi listo".
+  // 🔴 24/09/2026: el cobro es un paso. Sin ningún medio de cobro el catálogo
+  // no muestra al profesional, y la tarjeta le decía "3 de 3 completos"
+  // mientras seguía invisible sin saber por qué.
+  const pasosPrep = [prepPerfil, prepPuertas, prepHorarios, prepCobro];
+  const prepTotal = pasosPrep.length;
+  const prepDoneCount = pasosPrep.filter(Boolean).length;
+  const prepMissing = prepTotal - prepDoneCount;
   // La primera acción pendiente, en el mismo orden que se muestra el
   // checklist — es la que ofrece el botón de abajo.
   const prepNextAction: { label: string; route: string } | null =
     !prepPerfil ? { label: 'Completar mi perfil', route: '/perfil' } :
     !prepPuertas ? { label: 'Elegir mis temas', route: '/coach-topics' } :
-    !prepRecurso ? { label: 'Subir un recurso', route: '/coach-recurso-nuevo' } :
+    !prepHorarios ? { label: 'Definir mis horarios', route: '/coach-weekly-pattern' } :
+    !prepCobro ? { label: 'Elegir cómo cobro', route: '/perfil?seccion=cobro' } :
     null;
 
   if (loading) {
@@ -715,9 +842,46 @@ export default function CoachHomeScreen() {
     );
   }
 
+  // Ayudas en el momento (24/09/2026): cada una la primera vez que pasa lo que
+  // explica, y de a una. Si coinciden, va la más urgente; la otra aparece la
+  // próxima vez que entre. Mismo formato que las del cliente
+  // (`FirstTimeTooltip`), pero sin numerar: no son un recorrido.
+  const ayuda =
+    bienvenida !== 'vista' ? null :
+    pendientes.length > 0 ? {
+      key: 'vita_coach_tip_solicitud',
+      icon: 'calendar-clock' as const,
+      title: 'Te llegó una solicitud',
+      description: 'La persona ya pagó. Aceptala desde acá, o rechazala desde Reservas. Tenés 24 horas: si no contestás, se cancela y se le devuelve todo.',
+    } :
+    next && (repu?.completadas ?? 0) === 0 ? {
+      key: 'vita_coach_tip_primera_sesion',
+      icon: 'video-outline' as const,
+      title: 'Tu primera sesión',
+      description: 'Entrá con "Unirse", que se habilita 10 minutos antes, o desde la computadora. Si la persona no llega, esperala hasta el minuto 20: si no aparece, la sesión se te paga igual.',
+    } :
+    sinCerrar ? {
+      key: 'vita_coach_tip_notas',
+      icon: 'note-edit-outline' as const,
+      title: 'Anotá cómo te fue',
+      description: 'La nota privada es solo tuya y te aparece acá antes de la próxima sesión con esa persona. La compartida también la ve la persona.',
+    } :
+    null;
+
   return (
     <AppBg>
       <SafeAreaView style={s.safe} edges={['top']}>
+        <CoachBienvenida visible={bienvenida === 'mostrar'} onCerrar={cerrarBienvenida} />
+        {ayuda && (
+          <FirstTimeTooltip
+            key={ayuda.key}
+            storageKey={ayuda.key}
+            icon={ayuda.icon}
+            title={ayuda.title}
+            description={ayuda.description}
+            delay={800}
+          />
+        )}
         <ScrollView
           contentContainerStyle={s.container}
           showsVerticalScrollIndicator={false}
@@ -884,12 +1048,40 @@ export default function CoachHomeScreen() {
                 <Text style={s.actCompuTxt}>Hacerla desde la computadora</Text>
               </TouchableOpacity>
 
+              {/* 🔴 24/09/2026. El panel mostraba lo que había a mano en la base
+                  (días desde la última sesión y recursos abiertos), no lo que un
+                  profesional relee antes de una sesión. Ahora, en este orden:
+                  en qué quedaron (SU nota privada), qué le dejó (la nota
+                  compartida y los recursos), y el dato de contexto.
+                  📌 Solo lo que el profesional escribió o mandó: nada que la app
+                  registre del cliente sin que él elija compartirlo. */}
               {prepOpen && (
                 <View style={s.prep}>
                   <Text style={s.prepLine}>
-                    <Text style={s.prepB}>Última sesión: </Text>
-                    {prep?.lastDaysAgo == null ? 'primera sesión juntos' : `hace ${prep.lastDaysAgo} ${prep.lastDaysAgo === 1 ? 'día' : 'días'}`}
+                    {prep?.lastDaysAgo == null
+                      ? <Text style={s.prepB}>Primera sesión juntos</Text>
+                      : <><Text style={s.prepB}>{next.ordinal}</Text>{` · la anterior fue hace ${prep.lastDaysAgo} ${prep.lastDaysAgo === 1 ? 'día' : 'días'}`}</>}
                   </Text>
+
+                  {prep?.notaPrivada ? (
+                    <View style={{ marginTop: 10 }}>
+                      <Text style={s.prepB}>La última vez</Text>
+                      <Text style={[s.prepLine, { marginTop: 3 }]} numberOfLines={8}>{prep.notaPrivada.content}</Text>
+                    </View>
+                  ) : (
+                    <Text style={[s.prepLine, { marginTop: 10 }]}>
+                      {prep?.lastDaysAgo == null
+                        ? `Es la primera con ${next.userName.split(' ')[0]}. Al terminar, anotá lo que trabajaron: la próxima vez aparece acá.`
+                        : `No dejaste nota de la última sesión. Al terminar esta, anotá lo que trabajaron: la próxima vez aparece acá.`}
+                    </Text>
+                  )}
+
+                  {(prep?.notaCompartida || (prep && prep.resources.length > 0)) && (
+                    <Text style={[s.prepB, { marginTop: 10 }]}>Lo que le dejaste</Text>
+                  )}
+                  {prep?.notaCompartida && (
+                    <Text style={[s.prepLine, { marginTop: 3 }]} numberOfLines={5}>{prep.notaCompartida.content}</Text>
+                  )}
                   {/* 🔴 Tendencia de ánimo. Va DENTRO de "Preparar sesión" y no
                       suelto en la Home: es información para llegar mejor a esta
                       sesión, no un panel para mirar a la gente.
@@ -914,7 +1106,6 @@ export default function CoachHomeScreen() {
 
                   {prep && prep.resources.length > 0 && (
                     <>
-                      <Text style={[s.prepB, { marginTop: 8 }]}>Recursos que le mandaste:</Text>
                       {prep.resources.map(r => (
                         <View key={r.id} style={s.prepRes}>
                           <Text style={r.opened ? s.prepOk : s.prepWarn} numberOfLines={1}>
@@ -923,6 +1114,20 @@ export default function CoachHomeScreen() {
                         </View>
                       ))}
                     </>
+                  )}
+
+                  {/* Todas las notas, con el historial por sesión, en la hoja de
+                      Notas del chat (abre directo con `abrir_notas`). */}
+                  {next.salaId && (prep?.notaPrivada || prep?.notaCompartida) && (
+                    <TouchableOpacity
+                      onPress={() => router.push({
+                        pathname: '/sala',
+                        params: { sala_id: next.salaId!, abrir_notas: '1', notas_booking: next.bookingId },
+                      })}
+                      activeOpacity={0.7}
+                      hitSlop={6}>
+                      <Text style={[s.prepB, { marginTop: 10, textDecorationLine: 'underline' }]}>Ver todas las notas</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               )}
@@ -942,10 +1147,10 @@ export default function CoachHomeScreen() {
 
                 <View style={s.progWrap}>
                   <View style={s.progBar}>
-                    <View style={[s.progFill, { width: `${(prepDoneCount / 3) * 100}%` }]} />
+                    <View style={[s.progFill, { width: `${(prepDoneCount / prepTotal) * 100}%` }]} />
                   </View>
                   <View style={s.progLbl}>
-                    <Text style={s.progLblTxt}><Text style={s.progLblB}>{prepDoneCount} de 3</Text> pasos completos</Text>
+                    <Text style={s.progLblTxt}><Text style={s.progLblB}>{prepDoneCount} de {prepTotal}</Text> pasos completos</Text>
                     <Text style={s.progLblTxt}>{prepMissing === 0 ? 'Completo' : `Falta ${prepMissing}`}</Text>
                   </View>
                 </View>
@@ -993,14 +1198,46 @@ export default function CoachHomeScreen() {
                 </View>
 
                 <View style={[s.checkRow, { marginTop: 13 }]}>
-                  <View style={[s.checkBox, prepRecurso ? s.checkBoxDone : s.checkBoxTodo]}>
-                    {prepRecurso && <Feather name="check" size={11} color="#F3EEDF" />}
+                  <View style={[s.checkBox, prepHorarios ? s.checkBoxDone : s.checkBoxTodo]}>
+                    {prepHorarios && <Feather name="check" size={11} color="#F3EEDF" />}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.checkLabel}>Subir tu primer recurso</Text>
-                    <Text style={s.checkSub}>Los coaches con recursos reciben más reservas</Text>
+                    <Text style={s.checkLabel}>
+                      {prepHorarios ? 'Tenés horarios para reservar' : 'Definí tus horarios'}
+                    </Text>
+                    {!prepHorarios && (
+                      <Text style={s.checkSub}>Los días y la franja en que atendés. Sin horarios, nadie puede reservarte.</Text>
+                    )}
                   </View>
                 </View>
+
+                <View style={[s.checkRow, { marginTop: 13 }]}>
+                  <View style={[s.checkBox, prepCobro ? s.checkBoxDone : s.checkBoxTodo]}>
+                    {prepCobro && <Feather name="check" size={11} color="#F3EEDF" />}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.checkLabel}>
+                      {prepCobro ? 'Ya podés cobrar' : 'Elegí cómo cobrás'}
+                    </Text>
+                    {!prepCobro && (
+                      <Text style={s.checkSub}>Conectá Mercado Pago, o PayPal o USDT para el exterior. Sin esto no aparecés en la app.</Text>
+                    )}
+                  </View>
+                </View>
+
+                {/* Opcional, fuera del conteo: sin casilla para tildar, porque no
+                    es algo que "falte". Si ya subió uno, no se muestra. */}
+                {!prepRecurso && (
+                  <TouchableOpacity
+                    style={s.opcionalRow}
+                    activeOpacity={0.7}
+                    onPress={() => router.push({ pathname: '/coach-recurso-nuevo' as any, params: { coach_id: coachId } })}>
+                    <Text style={s.opcionalLabel}>Opcional: compartir un recurso</Text>
+                    <Text style={s.checkSub}>
+                      Si ya usás un ejercicio o una lectura con tus pacientes, podés subirlo. No hace falta para recibir reservas.
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 {/* ── El paso que contesta la pregunta que el coach tiene ────
                     🔴 Los tres de arriba son tarea administrativa: perfil,
@@ -1049,7 +1286,7 @@ export default function CoachHomeScreen() {
                   <TouchableOpacity
                     style={s.prepBtn}
                     activeOpacity={0.85}
-                    onPress={() => router.push({ pathname: prepNextAction.route as any, params: prepNextAction.route === '/coach-recurso-nuevo' ? { coach_id: coachId } : undefined })}>
+                    onPress={() => router.push(prepNextAction.route as any)}>
                     <Text style={s.prepBtnTxt}>{prepNextAction.label}</Text>
                   </TouchableOpacity>
                 )}
@@ -1260,6 +1497,19 @@ export default function CoachHomeScreen() {
             </View>
           )}
 
+          {/* "Cómo funciona" también desde acá (24/09/2026): solo vivía en
+              Ajustes, donde un profesional nuevo no lo va a buscar. */}
+          <TouchableOpacity style={s.vis} activeOpacity={0.85} onPress={() => router.push('/coach-como-funciona')}>
+            <View style={s.visIcon}>
+              <Feather name="book-open" size={16} color={FOREST} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.visTitle}>Cómo funciona Vita</Text>
+              <Text style={s.visTxt} numberOfLines={2}>Comisión, cobros, ausencias y cancelaciones</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={FOREST_SOFT} />
+          </TouchableOpacity>
+
           <View style={{ height: TAB_BAR_CLEARANCE + 16 }} />
         </ScrollView>
       </SafeAreaView>
@@ -1351,7 +1601,7 @@ const s = StyleSheet.create({
 
   // Card de preparación (`esCoachNuevo`) — spec `coach-estados-vacios.html`.
   // Reemplaza a la tarjeta de una línea de la sesión 139 por el checklist
-  // completo: barra de progreso + 3 pasos + chips de puertas + botón de la
+  // completo: barra de progreso + 3 pasos (+ recurso opcional) + chips de puertas + botón de la
   // próxima acción.
   prepCard: { marginTop: 14 },
   prepCardInner: { padding: 20 },
@@ -1376,6 +1626,8 @@ const s = StyleSheet.create({
   checkBoxTodo: { borderWidth: 1.5, borderColor: LINE },
   checkLabel: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: FOREST },
   checkSub: { fontSize: 11, color: FOREST_SOFT, fontFamily: ViveFonts.regular, marginTop: 1 },
+  opcionalRow: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(86,94,50,0.12)' },
+  opcionalLabel: { fontSize: 12.5, fontFamily: ViveFonts.medium, color: FOREST, textDecorationLine: 'underline' },
 
   doorChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 7, marginLeft: 30 },
   doorChip: { backgroundColor: OK_BG, borderRadius: 11, paddingVertical: 5, paddingHorizontal: 10 },

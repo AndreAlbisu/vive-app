@@ -26,6 +26,7 @@ import { logError } from '@/lib/logging';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
 import { GRATITUD_TITULO, GRATITUD_SUBTITULO } from '@/lib/vozCompartida';
+import ParaQueSirve from '@/components/ParaQueSirve';
 
 const CREAM_DEEP = '#EAE2D0';
 
@@ -214,6 +215,7 @@ export default function GratitudScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* ── Intro ────────────────────────────────────────────── */}
+          <ParaQueSirve toolId="gratitud" style={{ marginBottom: 16 }} />
           <View style={s.intro}>
             <View style={s.introIconWrap}>
               <MaterialCommunityIcons name="heart-outline" size={26} color="#C1694F" />

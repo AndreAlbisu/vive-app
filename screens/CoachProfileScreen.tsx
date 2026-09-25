@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
@@ -128,6 +128,20 @@ export default function CoachProfileScreen() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<CoachProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  // `?seccion=cobro` (24/09/2026): desde el paso "Conectá cómo cobrás" del
+  // Inicio y desde Visibilidad. La sección está abajo de todo y sin esto el
+  // profesional aterrizaba en la foto sin saber dónde seguir.
+  const { seccion } = useLocalSearchParams<{ seccion?: string }>();
+  const scrollRef = useRef<ScrollView>(null);
+  const [cobroY, setCobroY] = useState<number | null>(null);
+  const yaBajo = useRef(false);
+  useEffect(() => {
+    if (seccion !== 'cobro' || yaBajo.current || loadingProfile || cobroY === null) return;
+    yaBajo.current = true;
+    // Un respiro para que termine de acomodarse lo que cargó con el perfil.
+    const t = setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, cobroY - 16), animated: true }), 250);
+    return () => clearTimeout(t);
+  }, [seccion, loadingProfile, cobroY]);
   const [noCoachProfile, setNoCoachProfile] = useState(false);
   const [reviews, setReviews] = useState<ReceivedReview[]>([]);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
@@ -677,7 +691,7 @@ export default function CoachProfileScreen() {
           <MaterialCommunityIcons name="arrow-left" size={24} color="#565E32" />
         </TouchableOpacity>
       </View>
-      <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
 
         {/* ── Photo + Info ───────────────────────────────────── */}
         <View style={s.identitySection}>
@@ -981,7 +995,11 @@ export default function CoachProfileScreen() {
         </View>
 
         {/* ── Mercado Pago ──────────────────────────────────── */}
-        <Text style={[s.sectionTitle, s.sectionSpaced]}>Mercado Pago</Text>
+        <Text
+          style={[s.sectionTitle, s.sectionSpaced]}
+          onLayout={e => setCobroY(e.nativeEvent.layout.y)}>
+          Mercado Pago
+        </Text>
         <View style={s.toggleCard}>
           <View style={s.toggleInfo}>
             <Text style={s.toggleTitle}>
@@ -1186,7 +1204,7 @@ export default function CoachProfileScreen() {
           activeOpacity={0.75}
         >
           <MaterialCommunityIcons name="school-outline" size={18} color={ViveColors.primary} />
-          <Text style={s.availBtnText}>Tus títulos y matrícula</Text>
+          <Text style={s.availBtnText}>Tu formación</Text>
           <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.58)" />
         </TouchableOpacity>
 

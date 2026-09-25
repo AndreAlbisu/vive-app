@@ -1,3 +1,282 @@
+## 2026-09-25 — Andre (Claude · para qué sirve cada herramienta)
+
+**Tocado:** `constants/herramientasParaQue.ts` (nuevo), `components/ParaQueSirve.tsx` (nuevo), `app/diario.tsx`, `app/gratitud.tsx`, `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`, `app/(tabs)/recursos.tsx`, `__tests__/herramientasParaQue.test.ts` (nuevo)
+
+**Resumen:**
+- 🧰 **Andre: "deberíamos dar contexto y explicar la importancia y utilidad de las herramientas".** Era el pendiente del consejo del 15/09 (el `paraQue` de Diario, Gratitud y Respiración). Cada pantalla explicaba cómo se usa y no para qué ni cuándo.
+- **Bloque "Para qué sirve"** en las cuatro herramientas visibles: para qué, cuándo, y un dato útil. Abierto la primera vez (marca local `vita_para_que_<id>`), plegado después. En el Diario se esconde con el teclado. En Sonidos reemplaza al párrafo que ya lo decía.
+- **Bajada en Recursos:** "Prácticas cortas para el día a día. No reemplazan una sesión: la acompañan."
+- Textos aprobados por Andre. Sin efectos de salud (T&C §5); una prueba lo controla, junto con que toda herramienta visible tenga su texto. "Tu profesional no lo ve" (Diario) verificado contra el RLS de `journal_entries`.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone, sobre todo Respiración en pantalla chica: el bloque abierto la primera vez empuja los patrones hacia abajo.
+
+## 2026-09-25 — Andre (Claude · Formación para coaches y nutricionistas)
+
+**Tocado:** `lib/credentialRules.ts`, `lib/coachCredentials.ts`, `screens/CoachCredentialsScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `__tests__/coachCredentials.test.ts`
+
+**Resumen:**
+- 🎓 **Andre: "los coaches y nutricionistas deberían poder sumar diplomas y cursos".** Ya podían (pantalla Formación: título, matrícula, certificación, con documento que verifica el equipo), pero estaba escrita para psicólogos: el acceso decía "Tus títulos y matrícula", arrancaba en Matrícula y los ejemplos eran "Lic. en Psicología", "UBA".
+- Ahora el acceso dice **"Tu formación"** y el formulario se arma según la profesión (`formularioFormacion`): el coach arranca en **"Certificación o curso"** con ejemplos de coaching (AACOP); nutrición y psicología arrancan en matrícula con sus ejemplos. Si la matrícula todavía no está verificada, se usa lo que eligió al postularse (`grupoFormacion`): la nutricionista sin verificar es justo quien tiene que cargarla. Solo cambia el orden y los ejemplos; los tres tipos siguen para todos y la verificación no cambia.
+- En el perfil público sigue diciendo "Certificación" ("Certificación o curso Coach…" se leía mal). En Cómo trabajo, al elegir una metodología, un link: "Si tenés el certificado, sumalo en Tu formación".
+- Bug chico corregido: después de guardar una credencial el formulario volvía a "Título" en vez de al tipo inicial.
+- Sin cambios en la base.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone con una cuenta de coach y una de nutricionista sin matrícula verificada.
+- Para después: verificar AACOP/ICF contra sus registros públicos.
+
+## 2026-09-25 — Andre (Claude · "no estás solo" en la app, solo donde es cierto)
+
+**Tocado:** `screens/BookingScreen_Success.tsx`
+
+**Resumen:**
+- Andre preguntó si llevar "no estás solo" a la app. Criterio acordado: decirlo solo cuando detrás hay una persona real, no como slogan ni desde la voz automática de Sofía.
+- **Único cambio:** la reserva confirmada ahora dice "Ya tenés con quién hablar. Tu sesión con {nombre} quedó confirmada." La pendiente queda igual (todavía no es cierto).
+- Descartado, por decisión de Andre: línea nueva bajo "¿Qué te trae por acá?". Descartado por las reglas de `docs/la-voz-de-sofia.md` (3.4 y 5 ter): tocar la respuesta al "Bajón". Ya dice lo correcto ("Llevalo a tu próxima sesión" / "Hay gente preparada para acompañar esto") y no se le suma un botón a profesionales.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone con una reserva de confirmación instantánea.
+
+## 2026-09-25 — Andre (Claude · la landing dice el porqué: conectados y solos)
+
+**Tocado:** `web/index.html`
+
+**Resumen:**
+- 💛 **Andre definió el núcleo de Vita:** la tecnología avanza, estamos cada vez más conectados y cada vez más solos, y Vita acompaña. Frase ancla: "no estás solo". Queda como criterio para decidir features y copy.
+- Sección del medio, antes "Vita existe para que, en un momento difícil, sepas a quién acudir.": ahora **"Conectados todo el día. Acompañados, casi nunca."** y abajo "Vita existe para que, en un momento difícil, sepas a quién acudir. Usamos la pantalla para llevarte a una persona real, no para reemplazarla." (la segunda frase contesta el "¿y ustedes no son otra app?").
+- Cierre: de "empezá cuando quieras." a **"no estás solo."**. En la web el masculino genérico lo eligió Andre; en la app sigue la regla de no usar género (E6 de `docs/problemas-abiertos.md`).
+
+**Pendiente para la próxima sesión:**
+- Si Andre o Joaquín quieren, sumar a la historia de los hermanos una línea propia sobre esto (se decidió no escribirla por ellos).
+
+## 2026-09-25 — Andre (Claude · garantía: aviso de misma cuenta de pago)
+
+**Tocado:** `supabase/functions/_shared/guarantee.ts`, `supabase/functions/guarantee-claim` (v32, deployada), `lib/admin.ts`, `screens/AdminScreen.tsx`, `__tests__/guarantee.test.ts`, `SCHEMA.md`
+
+**Resumen:**
+- ❓ **Andre: "¿una persona puede pedir la devolución de la primera sesión y después seguir reservando?"** Sí, y está bien: la garantía no cierra el vínculo. El riesgo real es otro: "una vez por Cliente" se cuenta por cuenta, y con otra cuenta se consigue otra primera sesión gratis.
+- 🛡️ **Arreglo (área de Codex, con autorización de Andre):** la revisión de la garantía avisa si la misma cuenta de Mercado Pago (`payer_fingerprint`) pagó reservas de otras cuentas que ya usaron la garantía. Aviso y no rechazo (familias que comparten tarjeta). Se ve en el panel ("Revisar antes de aprobar") y en el mail al equipo.
+- Antes de deployar se bajó el código en vivo: era idéntico al repo, así que el deploy solo suma esto. Verificado: v32 activa, 401 de nuestro código con la anon key, y un `dry_run` real desde la base que devolvió `alertas: []` (la huella tenía 3 cuentas más, sin garantías; confirmado por SQL). Nada escrito.
+- 🔁 **Corrección de lo que dije en la sesión:** la comisión de 15% en la sesión siguiente a una garantía NO es un error (§8.8: el reintegro no se traslada a la comisión posterior), y la garantía SÍ acepta PayPal y USDT (guardan su número de pago en `payment_id`). Solo se corrigió el texto del rechazo, que decía "nunca se cobró por MP".
+
+**Pendiente para la próxima sesión:**
+- Avisar a Codex: `guarantee-claim` v32 y `_shared/guarantee.ts` cambiaron (aviso + texto).
+- PayPal y USDT no dejan huella: para esos pagos el aviso no existe.
+
+## 2026-09-25 — Andre (Claude · vuelven los botones de App Store y Google Play)
+
+**Tocado:** `web/index.html`, `SCHEMA.md`
+
+**Resumen:**
+- 📲 **Andre: las tiendas salen "dentro de re poco".** Arriba y en el cierre vuelven los botones de App Store y Google Play ("Muy pronto en…" hasta que haya links), y el menú vuelve a decir "Descargar". El "Avisame" para personas sale.
+- El formulario queda solo en el recuadro de profesionales ("Quiero sumarme"). Cuando se peguen los links, ese recuadro pasa solo a "Bajate la app y postulate desde ahí" con los botones de descarga.
+- Sin cambios en la base: `lista_de_espera` sigue igual.
+
+**Pendiente para la próxima sesión:**
+- Al publicar: pegar los links en `TIENDAS` de `web/index.html`. Android: `https://play.google.com/store/apps/details?id=com.andrealbisu.viveapp`. iOS: el número (`id…`) que da App Store Connect.
+
+## 2026-09-25 — Andre (Claude · botón de arrepentimiento fuera del menú)
+
+**Tocado:** `web/index.html`
+
+**Resumen:**
+- 🙃 **Andre: arriba de todo "da muy malas vibes".** La Res. 424/2020 exige que esté en la primera pantalla y destacado (en el pie solo no cumple), así que no se puede sacar de ahí, pero sí cambiar cómo se ve. Salió del menú y va debajo de la garantía de primera sesión, donde se lee como parte de los derechos del cliente. Sigue en la primera pantalla también en el celular.
+- Pasó de "BOTÓN DE ARREPENTIMIENTO" a "Botón de arrepentimiento", arriba y en el pie, por decisión de Andre.
+
+**Pendiente para la próxima sesión:**
+- Preguntarle al abogado si la resolución exige el texto literal en mayúsculas. Si dice que sí, se cambia en `.regret` de `web/index.html` (dos lugares).
+
+## 2026-09-25 — Andre (Claude · la landing junta mails mientras la app no sale)
+
+**Tocado:** `web/index.html`, `scripts/add-lista-de-espera.sql` (nuevo, corrido), `docs/politica-de-privacidad.md` + generados (`web/legal/privacidad.html`, `web/legal-version.js`, `constants/legal.ts`), `SCHEMA.md`
+
+**Resumen:**
+- 🧭 **Pregunta de Andre: ¿la web transmite lo necesario?** Lo principal que faltaba: en pre-lanzamiento los botones de descarga decían "Muy pronto" y quien entraba no tenía nada para hacer, y los profesionales (lo que más falta hoy) chocaban con "bajate la app y postulate", que no existe todavía. Andre dejó elegir: los mails van a Supabase.
+- **Ahora:** donde iban las tiendas hay un "Avisame" con el mail (presentación y cierre), y el recuadro de profesionales tiene su propio "Quiero sumarme". El botón del menú dice "Avisame". Apenas se peguen los links en `TIENDAS`, vuelven solos los botones de descarga. Se guarda el `?ref=` de los links de invitación.
+- **Texto:** la presentación dice "psicólogos, coaches y nutricionistas"; la garantía de primera sesión sube debajo del formulario (el link abre esa pregunta); pregunta nueva "¿Quiénes son los profesionales?" (revisión a mano, documentos verificados, compromiso de derivar); el recuadro de profesionales dice la comisión (20% / 15%, 0% en la primera por su link, sin costo fijo).
+- 🗄️ Tabla `lista_de_espera` + función `anotarse_lista_espera` (solo anon, tope por IP, responde siempre igual). Política de Privacidad 2.5 y §10 nuevos: cambió `LEGAL_VERSION`. SCHEMA actualizado.
+
+**Pendiente para la próxima sesión:**
+- Ver los anotados: `select * from lista_de_espera order by created_at desc` (con el CLI). Al lanzar, avisar, marcar `avisado_at` y borrar (así lo promete la política).
+- Falta la imagen para compartir (`og:image`): hoy el link en WhatsApp sale sin foto. Necesita una imagen diseñada de 1200×630.
+- Rango de precios en la web cuando haya profesionales cargados.
+- Mirar la web en el celular después del deploy y probar anotarse una vez (y borrar esa fila).
+
+## 2026-09-25 — Andre (Claude · metodologías de coaches y nutricionistas)
+
+**Tocado:** `lib/enfoque.ts`, `screens/CoachEnfoqueScreen.tsx`, `screens/ProfesionalScreen.tsx`, `__tests__/enfoque.test.ts`, `scripts/add-metodologias-coaching-nutricion.sql` (nuevo, corrido), `docs/postulacion-preguntas.md`, `SCHEMA.md`
+
+**Resumen:**
+- 🧭 **Hueco 1 de la postulación, cerrado.** Solo los psicólogos podían decir cómo trabajan. Ahora en "Cómo trabajo" cada profesión ve su lista (hasta 3, con una frase para quien lee el perfil): coaching (ontológico, sistémico, cognitivo conductual, de salud y hábitos, mindfulness, integrativo) y nutrición (sin dietas, con plan alimentario, deportiva, basada en plantas, condiciones de salud). Se muestran en el perfil público; no pesan en la recomendación.
+- 🔬 **Investigado a fondo antes de construir** (fuentes y razones en `docs/postulacion-preguntas.md`). Afuera a propósito: **PNL** (las revisiones no le encuentran evidencia), **trastornos de la conducta alimentaria** (van en equipo; Selia sí los ofrece), psiconutrición, pediátrica, terapias sin evidencia, coaching ejecutivo o de vida (son temas, no métodos).
+- 🗄️ Misma columna `coaches.enfoques`: el CHECK acepta las 17 opciones y `trg_enfoques_requieren_matricula` se queda con lo de la lista de la profesión verificada (sin matrícula = coach). Verificado con 6 pruebas con rollback; SCHEMA actualizado. ⚠️ Una prueba de la primera corrida no tenía rollback y esperaba mal el resultado: el coach no tenía nada cargado, no cambió ningún dato; corregida en el script.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone "Cómo trabajo" con una cuenta de coach (lista de coaching y el aviso de cargar matrícula) y ver el perfil público.
+- Beta: validar las listas con profesionales; ¿un coach formado en PNL se siente afuera?
+- Idea anotada: verificar acreditaciones AACOP/ICF de coaches y mostrarlas como la matrícula.
+- Siguiente de la postulación: años de experiencia, "¿cómo es tu primera sesión?", supervisión.
+
+## 2026-09-24 — Andre (Claude · todas las reglas del profesional en Cómo funciona)
+
+**Tocado:** `screens/CoachComoFuncionaScreen.tsx`, `components/CoachBienvenida.tsx`
+
+**Resumen:**
+- 📋 **Andre: "también habría que explicarle todas las reglas importantes, y lo de las puertas".** Se cruzó la pantalla contra los T&C y el código. Faltaban reglas que afectan al profesional y una estaba mal: "Cómo te encuentran" nombraba 3 lugares (son 4) y no decía cómo se entra a cada uno.
+- **De 5 a 10 bloques, desplegables** (cerrados muestran la regla en una línea): temas y los cuatro lugares con sus barras reales (`DECK_SLOTS`), reservas (24 horas, instantánea, mismo horario, cambios), cobro (suma 25/20 del exterior y que los comprobantes los emite el profesional, §8.3 y §8.5), **garantía de primera sesión** (§9.3: se descuenta de lo que cobró), ausencias (suma que se decide con registros de conexión), cancelaciones (suma el pedido de cancelar por chat), reseñas (§12), urgencias (§5.3 y el compromiso de derivar de la postulación), privacidad y notas, y límites (CBU bloqueado, sanciones revisadas a mano y con revisión).
+- La bienvenida suma los cuatro lugares y la garantía.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone.
+- Afuera a propósito: el botón de arrepentimiento (§9.4, 10 días). Afecta al profesional, pero el efecto sobre una sesión ya dada está marcado para el abogado; se suma cuando esté resuelto.
+
+## 2026-09-24 — Andre (Claude · lo que el profesional nuevo necesita saber)
+
+**Tocado:** `components/CoachBienvenida.tsx` (nuevo), `screens/CoachHomeScreen.tsx`, `screens/CoachProfileScreen.tsx`, `lib/coachVisibility.ts`, `lib/coachVisibilityData.ts`, `__tests__/coachSanciones.test.ts`, `docs/no-show.md`
+
+**Resumen:**
+- 🧭 **Andre: "el coach apenas abre la app no tiene idea de nada".** Se descartó un manual largo (mismo criterio que la guía del cliente: explicar cuando pasa). Cuatro piezas:
+- 🔴 **Hueco encontrado: el medio de cobro no era un paso.** Sin Mercado Pago, PayPal o USDT (estos dos con precio en dólares) el catálogo no muestra al profesional, y la tarjeta "Antes de tu primera sesión" le decía "3 de 3 completos". Ahora es el cuarto paso ("Elegí cómo cobrás"), también bloqueante en Visibilidad (`puedeCobrar`, con pruebas), y lleva a `/perfil?seccion=cobro`, que baja sola hasta la sección de Mercado Pago.
+- **Bienvenida** de una pantalla, una vez por teléfono (`vita_coach_bienvenida`): cómo lo encuentran, cómo le llegan las sesiones (24 horas para aceptar), cómo cobra (20/15) y la sesión (videollamada de una hora). "Empezar" o "Leer cómo funciona todo".
+- **Ayudas en el momento** en el Inicio, de a una y después de la bienvenida: primera solicitud, primera sesión (Unirse, esperar hasta el minuto 20) y primera sesión sin cerrar (notas). **"Cómo funciona Vita"** como fila al final del Inicio, además de Ajustes.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone con una cuenta de profesional nueva: bienvenida, tarjeta de 4 pasos, el paso de cobro llevando a la sección, y la fila de Cómo funciona. Para volver a ver la bienvenida hay que borrar la app (la marca es local).
+- Las ayudas de solicitud y primera sesión solo se ven con una reserva real: quedan para la prueba del no-show con dos cuentas.
+
+## 2026-09-24 — Andre (Claude · preguntas de la postulación: límites y lugar)
+
+**Tocado:** `docs/postulacion-preguntas.md` (nuevo), `scripts/add-postulacion-derivacion-y-lugar.sql` (nuevo, corrido), `screens/CoachApplicationScreen.tsx`, `components/ui/CampoProvincia.tsx` (nuevo), `components/ui/CampoNacionalidad.tsx`, `supabase/functions/admin-actions` (v37), `lib/admin.ts`, `screens/AdminScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- 🧾 **Pregunta de Andre: ¿estamos haciendo las preguntas correctas en la postulación, sobre todo en metodología?** Análisis registrado en `docs/postulacion-preguntas.md`: en cómo trabaja cada profesional Vita ya está mejor que Selia, pero hay cuatro huecos. 1) Metodología de quien no es psicólogo (solo los psicólogos declaran escuela). 2) Qué hace ante un caso que no le corresponde. 3) Qué es la persona antes de pedirle credenciales (resultó **ya cubierto**: la postulación elige entre tres especialidades). 4) Desde dónde atiende (se preguntaba nacionalidad, no lugar).
+- **Hecho (2 y 4, lo que protege y se revisa para aprobar):** al final de "Cómo trabajás", con la aclaración de que no se muestran en el perfil, coaches y nutricionistas confirman que **derivan lo clínico**, y todos contestan **"¿Qué hacés si alguien te cuenta que piensa en hacerse daño?"**. En "Tus datos", **"Desde dónde atendés"** con país y, si es Argentina, provincia; la nacionalidad pasa a opcional. El panel de Postulaciones muestra todo, la respuesta de riesgo completa.
+- 🗄️ Cuatro columnas privadas en `coaches` y `mi_postulacion()` recreada (ya no la llama `anon`). Verificado (ver SCHEMA). `admin-actions` comparada contra la versión en vivo antes de redeployar (idéntica).
+
+**Pendiente para la próxima sesión:**
+- Hueco 1: **metodologías por profesión** (coaching y nutrición, hasta 3 con una frase, como las escuelas), en "completá tu perfil" después de la aprobación. Después: años de experiencia, "¿cómo es tu primera sesión?" y supervisión.
+- Para la beta: ¿la lista de metodologías es la que usan? ¿La pregunta de riesgo les resulta razonable o invasiva?
+- Probar en el teléfono una postulación nueva como coach (tiene que pedir el compromiso) y como psicólogo (no), y verla en el panel.
+
+## 2026-09-24 — Andre (Claude · formulario del horario semanal)
+
+**Tocado:** `components/ui/CampoHora.tsx` (nuevo), `screens/CoachWeeklyPatternScreen.tsx`
+
+**Resumen:**
+- 🕐 **Andre: "medio feo e incómodo".** En iOS, tocar la hora montaba abajo una segunda cápsula gris (`display="compact"`) que había que volver a tocar. Ahora "Desde → Hasta" van lado a lado y cada uno abre una hoja con la rueda (de a 15 min) y "Listo", mismo patrón que `CampoFecha`; en Android, el diálogo del sistema.
+- Al elegir el inicio, el fin se propone una hora después. Las tres duraciones ocupan el ancho. Abajo se lee qué turnos va a ofrecer el bloque ("2 turnos: 10:00 y 11:00"), con la misma cuenta que `generateWeeklySlots`.
+- ⏱️ **Duración fija en 60 minutos (Andre: "por ahora sí").** Se sacaron los botones 30/60/90: el precio es por sesión, los plazos de ausencia de §9.5 están pensados para una hora y en la base los 9 bloques cargados eran de 60. Otra duración, si hace falta, va junto con el precio.
+- Sin cambios en la base.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone.
+- Visto al pasar (con 60 fijo solo pasa si el bloque no es de horas enteras, ej. 10:00 a 11:30): `generateWeeklySlots` ofrece un turno si **empieza** antes del fin, así que 10:00 a 11:00 con 90 min da un turno que termina 11:30. Decidir si el turno tiene que terminar dentro del bloque.
+- `CoachAvailabilityScreen` usa el mismo `compact`; si molesta igual, pasa a `CampoHora`.
+- El texto dice "próximos 56 días"; en `docs/no-show.md` se decidió un horizonte de 30 para reservar (el generador sigue en 56 a propósito).
+
+## 2026-09-24 — Andre (Claude · íconos de las áreas en vez de emojis)
+
+**Tocado:** `constants/searchData.ts`, `components/ui/AxisIcon.tsx` (nuevo), `screens/CoachApplicationScreen.tsx`, `screens/CoachTopicsScreen.tsx`, `screens/ExploreResourcesScreen.tsx`, `screens/ProposeResourceScreen.tsx`
+
+**Resumen:**
+- 🎨 **Pedido de Andre: cambiar los emojis de la postulación por algo que quede mejor.** Eran 🌿 💭 ✨, uno por área de bienestar, en `AXES` (`constants/searchData.ts`), y el mismo dato lo usan cuatro pantallas: la postulación, elegir temas, explorar recursos y proponer un recurso. Se cambiaron en las cuatro para que no queden inconsistentes.
+- **Ahora son íconos de línea con el color de cada área:** brote (`sprout-outline`) para Bienestar físico, cabeza con corazón (`head-heart-outline`) para Emocional y mental, brújula (`compass-outline`) para Crecimiento y propósito. `AXES[].emoji` pasó a `AXES[].icon`; un componente `AxisIcon` los dibuja. En Explorar recursos, con la pastilla activa el ícono va en crema sobre el color del área.
+
+**Pendiente para la próxima sesión:**
+- Mirarlo en el teléfono en las cuatro pantallas.
+
+## 2026-09-24 — Andre (Claude · "Preparar sesión" del profesional, repensado)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `screens/CoachReservasScreen.tsx`
+
+**Resumen:**
+- 🧭 **Pregunta de Andre: ¿para qué sirve "Preparar sesión"?** Mostraba lo que había a mano en la base (hace cuántos días fue la última sesión y si abrió los recursos; el ánimo está apagado con `MOSTRAR_ANIMO_AL_COACH = false`). Se repensó desde lo que un profesional se pregunta antes de una sesión: en qué quedamos, qué le dejé, qué pasó desde entonces, algo que cuidar.
+- **El panel ahora:** número de sesión y hace cuánto fue la anterior (o "Primera sesión juntos") · **"La última vez"**: su nota privada más reciente con esa persona (o, si no hay, una línea que sugiere anotar al terminar) · **"Lo que le dejaste"**: la nota compartida y los recursos con abierto/sin abrir · **"Ver todas las notas"**, que abre la hoja de Notas del chat con el historial por sesión.
+- 📌 **Regla:** solo lo que el profesional escribió o mandó. Nada que la app registre del cliente sin que él elija compartirlo (diario, ánimo, uso de herramientas).
+- 🔧 El "Preparar" de Reservas llevaba al Inicio sin abrir nada; ahora llega con `?preparar=1` y el panel abierto.
+- ⏸️ **Queda para preguntarle a 2 o 3 profesionales de la beta** antes de construir: si muestra lo que el cliente mandó por el chat desde la última sesión (su paquete), si la nota privada va completa, y si "abierto / sin abrir" les sirve o se siente como controlar.
+
+**Pendiente para la próxima sesión:**
+- Probar con una sesión próxima de alguien con notas previas: el panel tiene que mostrar la nota privada y la compartida.
+
+## 2026-09-24 — Andre (Claude · la agenda del profesional es también su historial)
+
+**Tocado:** `screens/CoachAgendaScreen.tsx`, `screens/CoachReservasScreen.tsx`
+
+**Resumen:**
+- 🗓️ **Pregunta de Andre: ¿para qué sirve "Ver historial de sesiones" en Reservas?** Llevaba a la Agenda, que solo mostraba sesiones `confirmada` y `pendiente`: el día que una sesión se daba pasaba a `completada` y **desaparecía**. El botón prometía un historial que no existía, y el profesional no tenía en ningún lado la lista de lo que ya dio.
+- **Ahora:** la Agenda también muestra las `completada`, atenuadas y con la etiqueta "Hecha" (punto gris en los días que solo tuvieron sesiones hechas). Retrocediendo meses es el historial. Tocar una hecha ofrece "Ver chat" (donde están las notas). El botón pasa a decir **"Ver agenda e historial"**, y un día pasado vacío dice "No hubo sesiones este día".
+
+**Pendiente para la próxima sesión:**
+- Mirarlo en el teléfono retrocediendo a un mes con sesiones completadas.
+
+## 2026-09-24 — Andre (Claude · calendario del profesional por suscripción)
+
+**Tocado:** `scripts/add-calendario-profesional.sql` (nuevo, corrido), `supabase/functions/calendario` (nueva, deployada), `supabase/config.toml`, `screens/CoachCalendarioScreen.tsx` + `app/coach-calendario.tsx` (nuevos), `app/_layout.tsx`, `screens/CoachSettingsScreen.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- 📅 **Pregunta de Andre: ¿el profesional puede agendar sus sesiones?** Solo de a una, desde el chat de cada cliente, y el evento quedaba desconectado (si la sesión se movía o cancelaba, el calendario seguía con el horario viejo). Andre eligió la opción completa.
+- **Ahora:** en Ajustes, "Sincronizar con tu calendario": un link propio que el profesional agrega una vez a Google Calendar o al iPhone, y sus sesiones aparecen y se actualizan solas (movidas se mueven, canceladas desaparecen). **Sin el nombre del cliente**: cada sesión dice "Sesión · Vita". El link es secreto y regenerable, con tope de lecturas.
+- 🗄️ Tabla nueva `coach_calendar_feeds`, tres funciones y la edge function pública `calendario`. Todo verificado (ver SCHEMA).
+
+**Pendiente para la próxima sesión:**
+- Probar en el teléfono: agregar al iPhone y a Google, y ver que una sesión movida se actualice (Google puede tardar horas; Apple respeta la sugerencia de 1 hora).
+- ⚠️ El link usa el dominio de Supabase (`…supabase.co/functions/v1/calendario?t=…`). Funciona, pero se podría servir desde `vitaapp.com.ar/cal/<token>` con un rewrite de Vercel si se quiere un link con la marca.
+
+## 2026-09-24 — Andre (Claude · tarjeta "Tu próxima sesión" del profesional)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `screens/ProfileOwnScreen.tsx`
+
+**Resumen:**
+- ⏱️ **Pregunta de Andre: ¿cuándo desaparece "Tu próxima sesión" del Inicio del profesional?** Respuesta: 90 minutos después del inicio, fijo, o antes si se cancela o se completa. Dos defectos: (1) la tarjeta solo se calculaba al abrir el Inicio, así que **con la app abierta "Unirse" no se prendía a los 10 minutos antes**, justo cuando hay que entrar, y la sesión terminada no se iba; (2) los 90 minutos ignoraban la duración (una de 45' seguía 45' de más, una de 2hs desaparecía en plena sesión).
+- **Ahora:** reloj de 30 segundos mientras el Inicio está a la vista (re-dibuja el botón; cuando la sesión pasó, recarga y trae la siguiente) y la tarjeta dura hasta el fin real (inicio + `duration_minutes`) más 15 minutos.
+- 🎨 De paso, a pedido de Andre: la tarjeta de "Invitar a alguien" en Perfil ocupaba todo el ancho (sin margen lateral, con otro fondo y borde). Ahora tiene el mismo material y márgenes que las demás.
+
+- 🔁 **Sesiones al hilo (observación de Andre):** con "fin + 15'", una sesión a las 18 tapaba a la de las 19 hasta las 19:15. Ahora, entre las que no terminaron, la tarjeta muestra la **última cuyo "Unirse" ya se habilitó** (10' antes), y el reloj recarga en ese momento: a las 18:50 pasa sola a la de las 19.
+
+**Pendiente para la próxima sesión:**
+- Probar con el Inicio abierto antes de una sesión: "Unirse" tiene que prenderse solo a los 10 minutos antes. Y con dos sesiones seguidas, que a los 10' antes de la segunda la tarjeta cambie sola.
+
+## 2026-09-24 — Andre (Claude · Profesionales arranca en las tres áreas)
+
+**Tocado:** `app/(tabs)/conexiones.tsx`, `lib/quizPendiente.ts`, `screens/QuizScreen.tsx`
+
+**Resumen:**
+- 🧭 **Pedido de Andre:** con el quiz hecho, la pestaña Profesionales entraba sola al área de su tema cada vez. Ahora **arranca siempre en las tres áreas**; el área del tema lleva un "Según tu quiz" y, adentro, el tema sigue con el fondo teñido de siempre. El quiz sigue ordenando el mazo como antes.
+- 📌 **Cuánto dura la marca:** hasta que reserva por ese tema (reserva pagada y no cancelada, con `tema_origen` igual al tema y hecha después del quiz). Si la cancela o rehace el quiz, vuelve. El quiz guarda ahora `respondidoEn` (local) y de la base se usa `user_quiz_answers.updated_at`. Un quiz viejo sin fecha: cualquier reserva por ese tema la apaga.
+- Sin cambios en la base. El final del onboarding (`?eje=`) sigue abriendo su área una vez, a propósito.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone: con quiz hecho, entrar y salir de la pestaña (tiene que quedar en las tres áreas con la marca); reservar por ese tema y ver que la marca se va.
+
+## 2026-09-24 — Andre (Claude · el recurso deja de ser un paso del profesional)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`
+
+**Resumen:**
+- 📚 **Decisión de Andre: no obligar al profesional a subir un recurso si no le hace falta.** No era un requisito real (sin recurso se aparece en el catálogo y se reserva igual), pero en el Inicio del profesional nuevo era 1 de los 3 pasos de "Antes de tu primera sesión", el botón principal lo pedía, y la barra quedaba en "Falta 1". Además prometía "Los coaches con recursos reciben más reservas", que **no es cierto**: los recursos no pesan en el orden del catálogo y no hay datos que lo respalden.
+- **Ahora:** el checklist son 2 pasos (perfil y temas), el progreso es "de 2", y el recurso queda como una línea aparte, **"Opcional: compartir un recurso"**, que explica que no hace falta para recibir reservas. Si ya subió uno, no aparece.
+
+- ⏰ **Y un paso nuevo, pedido de Andre: definir los horarios.** Este sí es requisito real: sin horarios nadie puede reservar. El checklist vuelve a 3 pasos (perfil, temas, horarios). Cuenta como hecho si hay algún horario **futuro y sin bloquear** en `coach_availability`, que es lo que ve el cliente (el patrón semanal lo genera ahí al guardar); tener un patrón que no generó nada no alcanza. El botón lleva a `/coach-weekly-pattern` y al volver se tilda solo. Evento `preparacion_paso_completado` con `paso: 'horarios'`.
+
+**Pendiente para la próxima sesión:**
+- Mirarlo en el teléfono con una cuenta de profesional sin reservas: sin horarios tiene que decir "Definí tus horarios" y, después de cargar la franja semanal, tildarse al volver.
+
+## 2026-09-24 — Andre (Claude · probar el no-show)
+
+**Tocado:** `scripts/security-tests/endpoints.cjs`
+
+**Resumen:**
+- 🧪 **Simulación del no-show de punta a punta** (sin producción ni plata): 8 casos nuevos que pasan la evidencia de Daily por `resolverReintegros` entero y miran reserva, resolución y aviso. Los dos a horario, profesional que no entra, que entra al minuto 12, que se va al 5 con el cliente entrando al 7, cliente que no entra, cliente que llega al 25 con el profesional que esperó, nadie entra, y sesión sin terminar (no decide). Todos pasan; ya estaban los 10 de la regla (`__tests__/asistencia.test.ts`). Quedan en `test:security`.
+- ✅ En producción: crons `session-attendance` (:17 cada hora) y `complete-sessions` (5 min) activos y corriendo; la sesión del 21/09 (dos personas) quedó completada y `resolved`.
+- 📖 Leída la versión en vivo de `mark_refund_on_cancel`: la cancelación por ausencia (`cancelled_by='coach'`) con pago aprobado pasa a `reembolso_pendiente` sin importar la hora. La prueba con rollback sobre una reserva real no se pudo correr (permiso denegado); la cubre la prueba real.
+- ⚠️ Una reserva confirmada y pagada de hoy 24/09 9:00 no tiene asistencia: si nadie entró, el 25/09 alrededor de las 10:17 se concluye "no vino nadie" y se reintegra sola. Andre tiene que confirmar de quién es.
+
+**Pendiente para la próxima sesión:**
+- Prueba real con dos cuentas y reservas de $1, entrando por `/sala` (web): profesional que no entra (avisos de 2 y 10 min, reintegro y aviso una hora después del fin), cliente que no entra (aviso de 20 min al profesional, completada), profesional que se va al 5 y cliente que entra al 7 (reintegro).
+- Siguen las 7 filas históricas con `refund_resolution='due'` para revisar a mano.
+
 ## 2026-09-24 — Andre (Claude · "Te propongo otro")
 
 **Tocado:** `scripts/add-contraoferta-profesional.sql` (nuevo, corrido), `screens/CoachReservasScreen.tsx`, `SCHEMA.md`
@@ -9,7 +288,7 @@
 
 **Pendiente para la próxima sesión:**
 - Probar en el teléfono con dos cuentas: el cliente pide un cambio dentro de las 24hs, el profesional toca "Te propongo otro", y del otro lado llega un solo aviso con las opciones.
-- ⚠️ Algo que se vio al pasar y no se tocó: después de proponer, el aviso "Se lo propusimos" vuelve al calendario y no a Reservas (`router.back()` desde la pantalla de horario).
+- ✅ ~~Después de proponer, el aviso vuelve al calendario y no a Reservas~~. Arreglado el mismo día, y no solo para proponer: las **cuatro** salidas de `BookingScreen_Time` (mover, pedir el cambio, proponer, contraproponer) hacían `router.back()` y dejaban a la persona sobre un calendario que ya no servía. Ahora `volverAlOrigen()` saca horario y calendario de una vez (`router.dismiss(2)`) y vuelve a la Sala, Reservas o la agenda.
 
 ## 2026-09-24 — Andre (Claude · CORS y paquetes sin uso)
 
@@ -344,6 +623,23 @@ mail, `docs/security-audit-remediation.md`, `SCHEMA.md`.
 - ✅ **Y los avisos de reserva, decisión de Andre el mismo día: sin nombres.** Quedan la fecha y la hora, que es lo que hace útil al aviso. Va en los dos sentidos: el cliente ya no recibe *"Tu sesión con <profesional>"* y el profesional ya no recibe *"<cliente> reservó una sesión"* — del lado del profesional el expuesto en la pantalla bloqueada es su paciente.
   - Tocados los cuatro lugares de la app y el del servidor (`_shared/booking-effects.ts`). **Deployadas**: `mp-webhook` v44, `paypal-webhook` v32, `usdt-check-payments` v32 y `reconcile-paid-effects` v2, las cuatro verificadas respondiendo.
   - 📌 **Los mails sí conservan los nombres** ("Tu sesión con X quedó confirmada"): un mail no se lee sin abrir el teléfono, y ahí el nombre es lo que hace que el mensaje sirva.
+
+### La pantalla de postulación, rediseñada
+
+- Andre: *"estéticamente es muy fea"*. Tenía razón y el diagnóstico es concreto: **diez secciones del mismo peso visual**, una abajo de la otra, sobre un fondo plano, sin señal de avance y con el botón de enviar al final de tres pantallas de scroll. Leerla era como leer un padrón.
+- **Tres bloques en vez de diez secciones**: "Tu perfil" (especialidad, presentación, temas), "Cómo trabajás" (las tres preguntas) y "Tus datos" (fecha, sexo, nacionalidad, precio, video). Cada uno con número, título y **una línea que dice por qué se pide eso**, que es lo que convierte un formulario en una conversación.
+- **Progreso arriba**: "2 de 3 bloques completos" con barra. Un formulario largo sin señal de avance se siente el doble de largo. Y el número del bloque se convierte en un tilde cuando está completo: el único premio que un formulario puede dar.
+- **El botón de enviar pasa a una barra fija abajo**, y **el error se muestra ahí, pegado al botón**. Antes el error era una caja roja al final: decía "Elegí una especialidad" a alguien que tenía que ir a buscar dónde estaba eso. Ahora, además, **se marca la etiqueta del campo que frenó el envío**.
+- **Dos incoherencias visuales corregidas**: los chips seleccionados usaban un verde menta que no aparece en ninguna otra pantalla del profesional (el resto usa oliva lleno con texto crema), y los campos de texto tenían otro radio y otro fondo que los dos campos nuevos de fecha y nacionalidad.
+- 📌 Tarjetas **sin sombra**, a propósito: tres bloques grandes con sombra en una pantalla que se scrollea se leen como objetos flotando. Alcanza el fondo y el borde para agrupar.
+
+### Las solicitudes de cambio de horario que ya pasaron se vencen solas
+
+- Reporte de Andre: *"no se vencen las solicitudes de cambios de horario que ya pasaron"*. Medido en producción: había **una pendiente cuyo horario ya había pasado**.
+- 🔴 **La causa**: esas filas solo cambiaban de estado **cuando alguien respondía**. `responder_reagendado` ya se defiende (si el horario quedó en el pasado marca vencida en vez de mover la sesión), pero eso solo corre si el otro entra a contestar. Sin respuesta, la fila quedaba pendiente para siempre: el cliente con la tarjeta "te propone estos horarios" ofreciéndole horarios que ya pasaron, y el profesional con un pedido en Reservas sobre algo que ya no existe.
+- **Arreglado con un cron cada 5 minutos** (`vencer_solicitudes_horario`, misma maquinaria que `expire-pending-bookings`). Vence dos casos: el horario propuesto ya pasó, o la reserva dejó de estar confirmada. Corrido a mano en la verificación: venció la que estaba colgada y no quedó ninguna imposible.
+- **Y las dos pantallas descartan lo ya pasado al leer**, por la ventana de hasta 5 minutos: sin eso la app ofrece tomar un horario que el servidor va a rechazar, y la persona ve un error en vez de nada.
+- 📌 No avisa a nadie: un aviso de "venció algo que nadie respondió" es ruido sobre una sesión que, casi siempre, ya pasó.
 
 ### "Hacerla desde la computadora" comparte solo el link
 
