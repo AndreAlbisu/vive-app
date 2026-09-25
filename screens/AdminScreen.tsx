@@ -1485,6 +1485,16 @@ function GuaranteePanel({ claims, onDone }: { claims: AdminClaim[]; onDone: () =
           <Text style={[s.cardBody, { color: CLAY }]}>{(result as { error: string }).error}</Text>
         )}
 
+        {/* Avisos que no deciden nada: los lee una persona antes de aprobar. */}
+        {result && 'eligible' in result && result.alertas.length > 0 && (
+          <View style={[s.resultBox, { borderColor: CLAY }]}>
+            <Text style={[s.resultTitle, { color: CLAY }]}>Revisar antes de aprobar</Text>
+            {result.alertas.map((a, i) => (
+              <Text key={i} style={s.cardBody}>· {a}</Text>
+            ))}
+          </View>
+        )}
+
         {notEligible && (
           <View style={s.resultBox}>
             <Text style={[s.resultTitle, { color: CLAY }]}>No califica</Text>

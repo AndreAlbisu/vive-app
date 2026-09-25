@@ -1,3 +1,17 @@
+## 2026-09-25 — Andre (Claude · garantía: aviso de misma cuenta de pago)
+
+**Tocado:** `supabase/functions/_shared/guarantee.ts`, `supabase/functions/guarantee-claim` (v32, deployada), `lib/admin.ts`, `screens/AdminScreen.tsx`, `__tests__/guarantee.test.ts`, `SCHEMA.md`
+
+**Resumen:**
+- ❓ **Andre: "¿una persona puede pedir la devolución de la primera sesión y después seguir reservando?"** Sí, y está bien: la garantía no cierra el vínculo. El riesgo real es otro: "una vez por Cliente" se cuenta por cuenta, y con otra cuenta se consigue otra primera sesión gratis.
+- 🛡️ **Arreglo (área de Codex, con autorización de Andre):** la revisión de la garantía avisa si la misma cuenta de Mercado Pago (`payer_fingerprint`) pagó reservas de otras cuentas que ya usaron la garantía. Aviso y no rechazo (familias que comparten tarjeta). Se ve en el panel ("Revisar antes de aprobar") y en el mail al equipo.
+- Antes de deployar se bajó el código en vivo: era idéntico al repo, así que el deploy solo suma esto. Verificado: v32 activa, 401 de nuestro código con la anon key, y un `dry_run` real desde la base que devolvió `alertas: []` (la huella tenía 3 cuentas más, sin garantías; confirmado por SQL). Nada escrito.
+- 🔁 **Corrección de lo que dije en la sesión:** la comisión de 15% en la sesión siguiente a una garantía NO es un error (§8.8: el reintegro no se traslada a la comisión posterior), y la garantía SÍ acepta PayPal y USDT (guardan su número de pago en `payment_id`). Solo se corrigió el texto del rechazo, que decía "nunca se cobró por MP".
+
+**Pendiente para la próxima sesión:**
+- Avisar a Codex: `guarantee-claim` v32 y `_shared/guarantee.ts` cambiaron (aviso + texto).
+- PayPal y USDT no dejan huella: para esos pagos el aviso no existe.
+
 ## 2026-09-25 — Andre (Claude · vuelven los botones de App Store y Google Play)
 
 **Tocado:** `web/index.html`, `SCHEMA.md`

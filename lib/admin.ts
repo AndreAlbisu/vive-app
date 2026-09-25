@@ -362,8 +362,14 @@ export async function listClaims(): Promise<AdminClaim[]> {
 /** Resultado de evaluar una reserva contra las 5 condiciones de §9.3.
  *  `eligible` viene de la función, no se decide acá. */
 export type GuaranteeCheck =
-  | { eligible: true; bookingId: string; amount: number | null; hoursSince: number | null }
-  | { eligible: false; reasons: string[] };
+  | { eligible: true; bookingId: string; amount: number | null; hoursSince: number | null; alertas: string[] }
+  | { eligible: false; reasons: string[]; alertas: string[] };
+
+/** Avisos que no descalifican (misma cuenta de pago en otra cuenta que ya usó
+ *  la garantía). Ver `alertasDeAbuso` en `_shared/guarantee.ts`. */
+function leerAlertas(data: any): string[] {
+  return Array.isArray(data?.alertas) ? data.alertas.filter((a: unknown) => typeof a === 'string') : [];
+}
 
 /** Corre las validaciones de §9.3 SIN escribir nada. Es el `dry_run` del
  *  runbook: sirve para contestar el mail sabiendo si califica antes de
@@ -375,7 +381,7 @@ export async function checkGuarantee(bookingId: string): Promise<GuaranteeCheck 
   // son los motivos". Hay que leerla del body y no tratarla como error de red.
   if (!res.ok) {
     const reasons = res.data?.reasons;
-    if (Array.isArray(reasons) && reasons.length > 0) return { eligible: false, reasons };
+    if (Array.isArray(reasons) && reasons.length > 0) return { eligible: false, reasons, alertas: leerAlertas(res.data) };
     return { error: res.error ?? 'No se pudo verificar.' };
   }
 
@@ -384,6 +390,7 @@ export async function checkGuarantee(bookingId: string): Promise<GuaranteeCheck 
     bookingId: res.data?.booking_id ?? bookingId,
     amount: res.data?.amount ?? null,
     hoursSince: res.data?.hours_since_session ?? null,
+    alertas: leerAlertas(res.data),
   };
 }
 

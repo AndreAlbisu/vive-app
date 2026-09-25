@@ -1,4 +1,5 @@
 import {
+  alertasDeAbuso,
   guaranteeFailures,
   countPreviousOfPair,
   scheduledAtMs,
@@ -149,5 +150,23 @@ describe('scheduledAtMs', () => {
   it('sigue rechazando horas ilegibles', () => {
     expect(scheduledAtMs('2026-09-21', '7')).toBeNaN();
     expect(scheduledAtMs('2026-09-21', '123:00')).toBeNaN();
+  });
+});
+
+describe('alertasDeAbuso — la misma cuenta de pago en otra cuenta de Vita', () => {
+  it('sin otras cuentas no avisa nada', () => {
+    expect(alertasDeAbuso({ otrasCuentas: 0, garantiasDeOtrasCuentas: 0 })).toEqual([]);
+  });
+
+  // Compartir tarjeta es normal: solo importa si esas otras cuentas ya la usaron.
+  it('otras cuentas que no usaron la garantía no son un aviso', () => {
+    expect(alertasDeAbuso({ otrasCuentas: 2, garantiasDeOtrasCuentas: 0 })).toEqual([]);
+  });
+
+  it('avisa cuando otra cuenta con el mismo pagador ya la usó', () => {
+    const a = alertasDeAbuso({ otrasCuentas: 1, garantiasDeOtrasCuentas: 1 });
+    expect(a).toHaveLength(1);
+    expect(a[0]).toContain('1 otra cuenta');
+    expect(a[0]).toContain('usó la garantía una vez');
   });
 });
