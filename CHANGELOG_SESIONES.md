@@ -1,3 +1,15 @@
+## 2026-09-25 — Andre (Claude · "no estás solo" en la app, solo donde es cierto)
+
+**Tocado:** `screens/BookingScreen_Success.tsx`
+
+**Resumen:**
+- Andre preguntó si llevar "no estás solo" a la app. Criterio acordado: decirlo solo cuando detrás hay una persona real, no como slogan ni desde la voz automática de Sofía.
+- **Único cambio:** la reserva confirmada ahora dice "Ya tenés con quién hablar. Tu sesión con {nombre} quedó confirmada." La pendiente queda igual (todavía no es cierto).
+- Descartado, por decisión de Andre: línea nueva bajo "¿Qué te trae por acá?". Descartado por las reglas de `docs/la-voz-de-sofia.md` (3.4 y 5 ter): tocar la respuesta al "Bajón". Ya dice lo correcto ("Llevalo a tu próxima sesión" / "Hay gente preparada para acompañar esto") y no se le suma un botón a profesionales.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone con una reserva de confirmación instantánea.
+
 ## 2026-09-25 — Andre (Claude · la landing dice el porqué: conectados y solos)
 
 **Tocado:** `web/index.html`

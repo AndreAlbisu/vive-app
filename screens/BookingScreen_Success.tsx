@@ -113,9 +113,12 @@ export default function BookingScreen_Success() {
             <Text style={s.title}>
               {isInstant ? '¡Sesión confirmada!' : '¡Reserva enviada!'}
             </Text>
+            {/* 25/09/2026: "Ya tenés con quién hablar" es el "no estás solo" de Vita
+                dicho donde es literalmente cierto. Solo en la confirmada: en la
+                pendiente todavía no lo es. */}
             <Text style={s.subtitle}>
               {isInstant
-                ? `Tu sesión con ${firstName} ya quedó confirmada`
+                ? `Ya tenés con quién hablar. Tu sesión con ${firstName} quedó confirmada.`
                 : `Le avisamos a ${firstName}. Tiene 24hs para confirmar tu sesión`}
             </Text>
             <View style={[s.statusBadge, isInstant && s.statusBadgeConfirmed]}>
