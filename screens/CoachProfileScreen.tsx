@@ -1204,7 +1204,7 @@ export default function CoachProfileScreen() {
           activeOpacity={0.75}
         >
           <MaterialCommunityIcons name="school-outline" size={18} color={ViveColors.primary} />
-          <Text style={s.availBtnText}>Tus títulos y matrícula</Text>
+          <Text style={s.availBtnText}>Tu formación</Text>
           <MaterialCommunityIcons name="chevron-right" size={18} color="rgba(135,131,92,0.58)" />
         </TouchableOpacity>
 

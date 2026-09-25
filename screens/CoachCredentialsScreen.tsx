@@ -14,8 +14,9 @@ import { useAuth } from '@/context/AuthContext';
 import { AppBg } from '@/components/ui/AppBg';
 import {
   listOwnCredentials, createCredential, deleteCredential, uploadCredentialFile,
-  validarCredencial, lineaCredencial, KIND_LABEL,
-  type OwnCredential, type CredentialKind,
+  validarCredencial, lineaCredencial, KIND_LABEL, KIND_LABEL_FORM,
+  formularioFormacion, grupoFormacion,
+  type OwnCredential, type CredentialKind, type GrupoFormacion,
 } from '@/lib/coachCredentials';
 
 const CARD = '#F7F2E7';
@@ -25,8 +26,6 @@ const TERRA = '#C06B4A';
 const LINE = 'rgba(63,81,47,0.14)';
 const OK_BG = '#DCE5CB';
 const OK_INK = '#42542F';
-
-const KINDS: CredentialKind[] = ['titulo', 'matricula', 'certificacion'];
 
 /** El estado de la revisión, dicho desde el lado del coach. */
 function estadoTxt(c: OwnCredential): { txt: string; bg: string; ink: string } {
@@ -40,15 +39,21 @@ export default function CoachCredentialsScreen() {
   const { user } = useAuth();
 
   const [coachId, setCoachId] = useState<string | null>(null);
+  // De qué profesión es, para el orden de los tipos y los ejemplos
+  // (`formularioFormacion`). No decide permisos: eso lo hace quien verifica.
+  const [grupo, setGrupo] = useState<GrupoFormacion>('coaching');
+  const form = formularioFormacion(grupo);
   const [items, setItems] = useState<OwnCredential[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [abierto, setAbierto] = useState(false);
-  // 🔴 Arranca en `matricula` y no en `titulo`, y no es un capricho: **la
-  // matrícula es la única que habilita la marca de profesional en el perfil
-  // público**. Con el default anterior el camino natural era subir el título
-  // primero, verlo verificado, y no entender por qué el perfil seguía diciendo
-  // "acompañamiento, no tratamiento". Pasó de verdad el 03/09/2026.
+  // 🔴 Psicólogos y nutricionistas arrancan en `matricula` y no en `titulo`,
+  // y no es un capricho: **la matrícula es la única que habilita la marca de
+  // profesional en el perfil público**. Con el default anterior el camino
+  // natural era subir el título primero, verlo verificado, y no entender por
+  // qué el perfil seguía diciendo "acompañamiento, no tratamiento". Pasó de
+  // verdad el 03/09/2026. Los coaches, que no tienen matrícula, arrancan en
+  // certificación (25/09/2026). Se fija al abrir el formulario.
   const [kind, setKind] = useState<CredentialKind>('matricula');
   const [title, setTitle] = useState('');
   const [institution, setInstitution] = useState('');
@@ -63,8 +68,10 @@ export default function CoachCredentialsScreen() {
     if (!user) return;
     // ⚠️ `coaches.id`, no `profiles.id`: son ids distintos y `coach_credentials`
     // apunta al PK de coaches.
-    const { data } = await supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle();
-    const id = (data as { id: string } | null)?.id ?? null;
+    const { data } = await supabase.from('coaches').select('id, profesion, specialty').eq('profile_id', user.id).maybeSingle();
+    const row = data as { id: string; profesion: string | null; specialty: string | null } | null;
+    const id = row?.id ?? null;
+    setGrupo(grupoFormacion(row?.profesion, row?.specialty));
     setCoachId(id);
     if (id) setItems(await listOwnCredentials(id));
     setLoading(false);
@@ -73,7 +80,7 @@ export default function CoachCredentialsScreen() {
   useFocusEffect(useCallback(() => { void cargar(); }, [cargar]));
 
   function limpiar() {
-    setKind('titulo'); setTitle(''); setInstitution(''); setYear('');
+    setTitle(''); setInstitution(''); setYear('');
     setNumero(''); setFilePath(null); setFileName(null); setAbierto(false);
   }
 
@@ -216,7 +223,10 @@ export default function CoachCredentialsScreen() {
                 )}
 
                 {!abierto ? (
-                  <TouchableOpacity style={s.addBtn} onPress={() => setAbierto(true)} activeOpacity={0.8}>
+                  <TouchableOpacity
+                    style={s.addBtn}
+                    onPress={() => { setKind(form.tipos[0]); setAbierto(true); }}
+                    activeOpacity={0.8}>
                     <Feather name="plus" size={16} color={CARD} />
                     <Text style={s.addBtnTxt}>Agregar</Text>
                   </TouchableOpacity>
@@ -224,13 +234,13 @@ export default function CoachCredentialsScreen() {
                   <View style={s.form}>
                     <Text style={s.label}>Tipo</Text>
                     <View style={s.kinds}>
-                      {KINDS.map(k => (
+                      {form.tipos.map(k => (
                         <TouchableOpacity
                           key={k}
                           style={[s.kindPill, kind === k && s.kindPillOn]}
                           onPress={() => setKind(k)}
                           activeOpacity={0.75}>
-                          <Text style={[s.kindTxt, kind === k && s.kindTxtOn]}>{KIND_LABEL[k]}</Text>
+                          <Text style={[s.kindTxt, kind === k && s.kindTxtOn]}>{KIND_LABEL_FORM[k]}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -240,20 +250,16 @@ export default function CoachCredentialsScreen() {
                         perfil cuelga de la matrícula, y por eso hay que decirlo
                         acá — sin esta línea, subir el título y no ver ningún
                         cambio se lee como que el sistema falló. */}
-                    <Text style={s.kindHint}>
-                      {kind === 'matricula'
-                        ? 'Es la que habilita la marca de profesional matriculado en tu perfil público.'
-                        : 'Suma a tu formación, pero la marca de profesional matriculado la da la matrícula.'}
-                    </Text>
+                    <Text style={s.kindHint}>{form.ayuda[kind]}</Text>
 
                     <Text style={s.label}>
-                      {kind === 'matricula' ? 'Qué matrícula es' : 'Nombre del título'}
+                      {kind === 'matricula' ? 'Qué matrícula es' : kind === 'certificacion' ? 'Nombre de la formación' : 'Nombre del título'}
                     </Text>
                     <TextInput
                       style={s.input}
                       value={title}
                       onChangeText={setTitle}
-                      placeholder={kind === 'matricula' ? 'Matrícula Nacional de Psicología' : 'Lic. en Psicología'}
+                      placeholder={form.ejemplos[kind].titulo}
                       placeholderTextColor={FOREST_SOFT}
                       maxLength={120}
                     />
@@ -263,7 +269,7 @@ export default function CoachCredentialsScreen() {
                       style={s.input}
                       value={institution}
                       onChangeText={setInstitution}
-                      placeholder={kind === 'matricula' ? 'Ministerio de Salud' : 'UBA'}
+                      placeholder={form.ejemplos[kind].institucion}
                       placeholderTextColor={FOREST_SOFT}
                       maxLength={120}
                     />
@@ -288,7 +294,7 @@ export default function CoachCredentialsScreen() {
                           style={s.input}
                           value={numero}
                           onChangeText={setNumero}
-                          placeholder="M.N. 12.345"
+                          placeholder={kind === 'matricula' ? 'M.N. 12.345' : 'N° de certificado'}
                           placeholderTextColor={FOREST_SOFT}
                           maxLength={40}
                         />

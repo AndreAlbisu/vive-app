@@ -1,3 +1,18 @@
+## 2026-09-25 — Andre (Claude · Formación para coaches y nutricionistas)
+
+**Tocado:** `lib/credentialRules.ts`, `lib/coachCredentials.ts`, `screens/CoachCredentialsScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `__tests__/coachCredentials.test.ts`
+
+**Resumen:**
+- 🎓 **Andre: "los coaches y nutricionistas deberían poder sumar diplomas y cursos".** Ya podían (pantalla Formación: título, matrícula, certificación, con documento que verifica el equipo), pero estaba escrita para psicólogos: el acceso decía "Tus títulos y matrícula", arrancaba en Matrícula y los ejemplos eran "Lic. en Psicología", "UBA".
+- Ahora el acceso dice **"Tu formación"** y el formulario se arma según la profesión (`formularioFormacion`): el coach arranca en **"Certificación o curso"** con ejemplos de coaching (AACOP); nutrición y psicología arrancan en matrícula con sus ejemplos. Si la matrícula todavía no está verificada, se usa lo que eligió al postularse (`grupoFormacion`): la nutricionista sin verificar es justo quien tiene que cargarla. Solo cambia el orden y los ejemplos; los tres tipos siguen para todos y la verificación no cambia.
+- En el perfil público sigue diciendo "Certificación" ("Certificación o curso Coach…" se leía mal). En Cómo trabajo, al elegir una metodología, un link: "Si tenés el certificado, sumalo en Tu formación".
+- Bug chico corregido: después de guardar una credencial el formulario volvía a "Título" en vez de al tipo inicial.
+- Sin cambios en la base.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone con una cuenta de coach y una de nutricionista sin matrícula verificada.
+- Para después: verificar AACOP/ICF contra sus registros públicos.
+
 ## 2026-09-25 — Andre (Claude · "no estás solo" en la app, solo donde es cierto)
 
 **Tocado:** `screens/BookingScreen_Success.tsx`

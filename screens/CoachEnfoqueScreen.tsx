@@ -278,6 +278,19 @@ export default function CoachEnfoqueScreen() {
                     );
                   })}
                 </View>
+                {/* Declarar una metodología y respaldarla son dos cosas: esto
+                    lleva a cargar el certificado, que es lo que Vita verifica. */}
+                {enfoques.length > 0 && profesion !== 'psicologia' && (
+                  <TouchableOpacity
+                    onPress={() => router.push('/coach-credenciales')}
+                    activeOpacity={0.7}
+                    accessibilityRole="link"
+                    style={{ marginTop: 12 }}>
+                    <Text style={[s.blockHint, { marginBottom: 0, textDecorationLine: 'underline' }]}>
+                      Si tenés el certificado, sumalo en Tu formación
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 {/* Sin matrícula verificada se ve la lista de coaching, igual
                     que en el catálogo aparece como Coach. */}
                 {!profesion && (
