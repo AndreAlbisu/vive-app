@@ -1,3 +1,17 @@
+## 2026-09-25 — Andre (Claude · revisión de la web, primera tanda)
+
+**Tocado:** `web/index.html`, `web/profesionales.html` (nuevo), `web/tiendas.js` (nuevo), `docs/editar-la-web.md`
+
+**Resumen:**
+- 🧭 **Revisión de la landing con ChatGPT, contrastada contra el repo.** Lista acordada de 12 cambios (legales, herramientas reales, mail propio, `/profesionales`, orden de la home, cómo funciona, vistazo, historia, preguntas, botones, check-in, revisión visual). Esta tanda hace tres.
+- **Solo las herramientas que existen:** la web prometía meditación (en tres lugares) y un desplegable con anclaje, escáner corporal, sueño y lecturas. En la app hay 4 activas (Diario, Gratitud, Respiración, Sonidos). Se sacó todo lo demás, desplegable incluido.
+- **Cómo funciona:** paso 3 dice "en pesos con Mercado Pago. Algunos profesionales también aceptan dólares, con PayPal o crypto (USDT)" (Andre: la gente tiene que saber que puede pagar en dólares; la pregunta de "¿Cuánto cuesta?" decía solo Mercado Pago). Nuevo paso 5, "Seguís entre sesiones": el profesional puede dejar una nota o un recurso. El teléfono de la portada decía "50 min"; las sesiones son de una hora.
+- **`/profesionales`:** página propia con perfil, temas, agenda, sala, notas, recursos propios, comisión (20/15, link propio, exterior 25/20 por PayPal/USDT), cómo sumarse y la lista de espera. Todo sacado de "Cómo funciona" del profesional en la app. En la home queda un recuadro corto con el botón "Conocé Vita para profesionales". Los botones de tiendas y el formulario pasaron a `web/tiendas.js`, compartido.
+
+**Pendiente para la próxima sesión:**
+- Ver las dos páginas en el iPhone (las capturas sin ventana no bajan de ~500 px de ancho).
+- Resto de la lista: legales (completar `[fecha]`/notas y paquete para el abogado), mail `hola@vitaapp.com.ar` (lo crea Andre; después cambiar las 29 menciones), subir el manifiesto después de la portada, vistazo contado desde el momento de la persona, historia a la mitad, rediseño del check-in (2 o 3 propuestas), revisión visual.
+
 ## 2026-09-25 — Andre (Claude · la web muestra una sesión)
 
 **Tocado:** `web/index.html`

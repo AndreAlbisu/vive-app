@@ -24,6 +24,8 @@ ni `lib/` llega al sitio: eso es la aplicación del teléfono.
 |---|---|
 | `web/index.html` | **La landing**, la portada de vitaapp.com.ar. Escrita a mano, HTML y CSS, sin build. Es el archivo para mejorar. |
 | `web/img/` | Las fotos de la landing. |
+| `web/profesionales.html` | **La página para profesionales** (`vitaapp.com.ar/profesionales`): qué tienen en Vita, cuánto cuesta, cómo sumarse y la lista de espera. Lo que dice sale de `screens/CoachComoFuncionaScreen.tsx`: si cambia una regla allá, se cambia acá. |
+| `web/tiendas.js` | Los botones de App Store / Google Play y el formulario de lista de espera, compartidos por las dos páginas. **Los links de las tiendas se pegan acá** (`TIENDAS`), una sola vez. |
 
 📌 La landing usa la paleta de la app y la fuente Plus Jakarta Sans. La aurora del
 fondo está hecha en CSS a partir de `assets/bg-aurora.jpg`. Es la única animación
