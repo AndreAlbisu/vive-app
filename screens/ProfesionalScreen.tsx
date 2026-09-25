@@ -30,7 +30,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { ENFOQUES, esEnfoque, etiquetaEstilo, etiquetasEnfoques, etiquetaGuia, etiquetasFocos } from '@/lib/enfoque';
+import { opcionesGuardadas, etiquetaEstilo, etiquetasEnfoques, etiquetaGuia, etiquetasFocos } from '@/lib/enfoque';
 import { PaymentBadges } from '@/components/PaymentBadges';
 import { logResourceEvent } from '@/lib/resourceEvents';
 import { estaSuspendido } from '@/lib/coachVisibility';
@@ -425,10 +425,9 @@ export default function ProfesionalScreen() {
                 Trabajo sobre {listarY(etiquetasFocos(prof.focos).map(f => f.toLowerCase()))}
               </Text>
             )}
-            {prof.enfoques.filter(esEnfoque).map(id => {
-              const e = ENFOQUES.find(x => x.id === id)!;
+            {opcionesGuardadas(prof.enfoques).map(e => {
               return (
-                <View key={id} style={s.comoTrabajaFila}>
+                <View key={e.id} style={s.comoTrabajaFila}>
                   <Text style={s.comoTrabajaLabel}>{e.label}</Text>
                   <Text style={s.comoTrabajaDesc}>{e.desc}</Text>
                 </View>

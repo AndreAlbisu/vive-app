@@ -75,6 +75,21 @@
 - Rango de precios en la web cuando haya profesionales cargados.
 - Mirar la web en el celular después del deploy y probar anotarse una vez (y borrar esa fila).
 
+## 2026-09-25 — Andre (Claude · metodologías de coaches y nutricionistas)
+
+**Tocado:** `lib/enfoque.ts`, `screens/CoachEnfoqueScreen.tsx`, `screens/ProfesionalScreen.tsx`, `__tests__/enfoque.test.ts`, `scripts/add-metodologias-coaching-nutricion.sql` (nuevo, corrido), `docs/postulacion-preguntas.md`, `SCHEMA.md`
+
+**Resumen:**
+- 🧭 **Hueco 1 de la postulación, cerrado.** Solo los psicólogos podían decir cómo trabajan. Ahora en "Cómo trabajo" cada profesión ve su lista (hasta 3, con una frase para quien lee el perfil): coaching (ontológico, sistémico, cognitivo conductual, de salud y hábitos, mindfulness, integrativo) y nutrición (sin dietas, con plan alimentario, deportiva, basada en plantas, condiciones de salud). Se muestran en el perfil público; no pesan en la recomendación.
+- 🔬 **Investigado a fondo antes de construir** (fuentes y razones en `docs/postulacion-preguntas.md`). Afuera a propósito: **PNL** (las revisiones no le encuentran evidencia), **trastornos de la conducta alimentaria** (van en equipo; Selia sí los ofrece), psiconutrición, pediátrica, terapias sin evidencia, coaching ejecutivo o de vida (son temas, no métodos).
+- 🗄️ Misma columna `coaches.enfoques`: el CHECK acepta las 17 opciones y `trg_enfoques_requieren_matricula` se queda con lo de la lista de la profesión verificada (sin matrícula = coach). Verificado con 6 pruebas con rollback; SCHEMA actualizado. ⚠️ Una prueba de la primera corrida no tenía rollback y esperaba mal el resultado: el coach no tenía nada cargado, no cambió ningún dato; corregida en el script.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone "Cómo trabajo" con una cuenta de coach (lista de coaching y el aviso de cargar matrícula) y ver el perfil público.
+- Beta: validar las listas con profesionales; ¿un coach formado en PNL se siente afuera?
+- Idea anotada: verificar acreditaciones AACOP/ICF de coaches y mostrarlas como la matrícula.
+- Siguiente de la postulación: años de experiencia, "¿cómo es tu primera sesión?", supervisión.
+
 ## 2026-09-24 — Andre (Claude · todas las reglas del profesional en Cómo funciona)
 
 **Tocado:** `screens/CoachComoFuncionaScreen.tsx`, `components/CoachBienvenida.tsx`

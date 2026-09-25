@@ -29,24 +29,27 @@ La postulación se acababa de rediseñar en tres bloques, y cada pregunta de má
 ## Estado
 
 - 24/09/2026: **3 ya estaba cubierto** (en la postulación la especialidad es una elección entre Psicólogo/a, Coach y Nutricionista; texto libre es solo después, en el perfil). **Hechos 2 y 4**: compromiso de derivar (coaches y nutricionistas), pregunta de riesgo (todos), país y provincia de atención; nacionalidad pasa a opcional. Ver SCHEMA "Postulación: límites y lugar de atención".
-- Pendiente: 1 (metodologías por profesión), 5, 6, 7.
+- 25/09/2026: **hecho 1** (metodologías por profesión, ver arriba). Pendiente: 5, 6, 7.
 - Para la beta: ¿las metodologías de coaching y nutrición de la lista son las que usan? ¿La pregunta de riesgo les resulta razonable o invasiva?
 
-## ⏸️ RETOMAR: metodologías de coaches y nutricionistas
+## ✅ Hueco 1: metodologías de coaches y nutricionistas (25/09/2026)
 
-Pausado el 24/09/2026 (Andre reinicia la compu). Para retomar, decir: **"retomemos las metodologías de coaches y nutricionistas"**.
+Investigado a fondo y aprobado por Andre. Van en "Cómo trabajo" (`CoachEnfoqueScreen`), hasta 3, cada profesión ve su lista según la profesión verificada, se muestran en el perfil público con su frase y **no pesan en la recomendación** (a la persona no se le pregunta por escuelas). Misma columna que las escuelas (`coaches.enfoques`); ver SCHEMA.
 
-Qué es: el hueco 1 de este documento. Hoy solo los psicólogos declaran escuela (`coaches.enfoques`, `lib/enfoque.ts` → `ENFOQUES`, pantalla `screens/CoachEnfoqueScreen.tsx`, visible solo con `coaches.profesion = 'psicologia'`). Coaches y nutricionistas no tienen dónde decir cómo trabajan.
+**Coaching (6):** ontológico, sistémico, cognitivo conductual, de salud y hábitos, con base en mindfulness, integrativo.
+- Ontológico: la escuela dominante en Argentina (AACOP: más de 8000 acreditados, más de 50 escuelas avaladas). Los colegios de psicólogos la critican (Córdoba: "sin validación científica"), pero lo que objetan es que el coach haga terapia, y eso lo cubre el compromiso de derivar.
+- Cognitivo conductual: la de mejor evidencia (metaanálisis de coaching con base psicológica: g = 1,29 en logro de objetivos; estudios por videollamada).
+- De salud y hábitos: se apoya en entrevista motivacional, con evidencia moderada en actividad física, alimentación y estrés. Cubre a los coaches del área física, que no tenían opción.
 
-Plan acordado:
-1. Armar dos listas, cada opción con una frase que la explique (mismo formato que `ENFOQUES`):
-   - Coaching: por ejemplo ontológico, PNL, sistémico, ejecutivo/organizacional, de vida, con base en mindfulness. A revisar: que sean escuelas reales y reconocibles en Argentina.
-   - Nutrición: por ejemplo no dieta / alimentación intuitiva, deportiva, clínica, vegetariana y vegana, conducta alimentaria (ojo: los trastornos de la conducta alimentaria son clínicos, ver si corresponde).
-2. Dónde se pregunta: en "completá tu perfil" después de la aprobación (`CoachEnfoqueScreen`), NO en la postulación. Hasta 3, como las escuelas.
-3. Base: decidir si se reusa `coaches.enfoques` con valores por profesión o una columna nueva; el trigger `trg_enfoques_requieren_matricula` hoy vacía `enfoques` si no es psicología, así que reusarla exige tocarlo. Recordar: toda columna nueva de `coaches` que lea el catálogo necesita sumarse al grant de SELECT (lista blanca) y, si la escribe el profesional, al de UPDATE.
-4. Perfil público (`screens/ProfesionalScreen.tsx`): mostrarlas igual que las escuelas.
-5. Match (`lib/quizMatch.ts`): decidir si pesan en la recomendación o solo se muestran.
+**Nutrición (5):** dos de cómo trabaja (sin dietas / alimentación intuitiva, con plan alimentario) y tres especialidades (deportiva, basada en plantas, condiciones de salud). En nutrición sí van especialidades porque el único tema es "Nutrición". "Alimentación consciente" va dentro de la intuitiva: según sus autoras (Tribole y Resch) es una herramienta del marco, no un enfoque aparte.
 
-Antes de construir, conviene validar las dos listas con los 2 o 3 profesionales de la beta.
+**Afuera a propósito:**
+- PNL: Witkowski (315 estudios, 18% la respalda, más de la mitad la contradice) y Sturt (sin evidencia suficiente para ningún resultado de salud). Una opción de la lista es Vita avalándola; el coach que la usa lo cuenta en su bio. El ontológico sí entra porque es un marco de conversación y no promete curar nada.
+- Trastornos de la conducta alimentaria: se tratan en equipo (psiquiatra, psicólogo, nutricionista, clínico). Selia los ofrece en nutrición; Vita no, porque atraería a quien hay que derivar.
+- Psiconutrición (es un equipo, no una persona), pediátrica (menores fuera de Vita), fitoterapia, flores de Bach, "funcional" y ortomolecular (sin evidencia), coaching ejecutivo o de vida (dicen sobre qué, y eso ya lo dicen los temas).
+
+**Idea para después:** verificar acreditaciones de coaches (AACOP publica credenciales, ICF tiene registro) y mostrar "Acreditado por AACOP", como la matrícula.
+
+**Para la beta:** ¿las listas son las que usan? Un coach con formación en PNL, ¿se siente afuera?
 
 Después de esto, en orden: años de experiencia (5), "¿cómo es tu primera sesión con alguien?" (6), supervisión para psicólogos (7).

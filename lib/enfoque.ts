@@ -54,6 +54,79 @@ export const ENFOQUES: { id: Enfoque; label: string; desc: string }[] = [
   { id: 'integrativo',          label: 'Integrativo',          desc: 'Combina herramientas de varias escuelas según el caso' },
 ];
 
+// ─── Metodologías de coaching y nutrición (25/09/2026) ──────────────────────
+//
+// Hueco 1 de `docs/postulacion-preguntas.md`: solo los psicólogos tenían dónde
+// decir cómo trabajan. Van en la misma columna (`coaches.enfoques`) y cada
+// profesión ve solo su lista; la base descarta lo que no es de la suya
+// (`trg_enfoques_requieren_matricula`).
+//
+// Los ids llevan prefijo aunque el nombre se repita con una escuela de
+// psicología ("sistémico"): son cosas distintas, y así la tendencia de las
+// escuelas (TENDENCIA, abajo) no se aplica a un coach.
+//
+// 🔴 Afuera a propósito (investigación del 25/09, en el doc):
+//   - PNL: las dos revisiones grandes no le encuentran evidencia. Una opción de
+//     esta lista es Vita avalándola; el coach que la usa lo cuenta en su bio.
+//   - Trastornos de la conducta alimentaria: se tratan en equipo (psiquiatra,
+//     psicólogo, nutricionista, clínico). Ofrecerlo atrae a quien hay que derivar.
+//   - Psiconutrición: es un equipo, no una persona; insinúa que hace terapia.
+//   - Pediátrica: los menores están fuera de Vita.
+//   - Fitoterapia, flores de Bach, "funcional", ortomolecular: sin evidencia.
+//   - Coaching ejecutivo o de vida: dicen sobre QUÉ trabaja, y eso ya lo dicen
+//     los temas. En nutrición sí van especialidades (deportiva, basada en
+//     plantas), porque el único tema es "Nutrición" y no alcanza.
+
+export type MetodoCoaching =
+  | 'coach_ontologico' | 'coach_sistemico' | 'coach_cognitivo_conductual'
+  | 'coach_salud_habitos' | 'coach_mindfulness' | 'coach_integrativo';
+
+export type EnfoqueNutricion =
+  | 'nutri_sin_dietas' | 'nutri_plan' | 'nutri_deportiva'
+  | 'nutri_plantas' | 'nutri_condiciones';
+
+type Opcion<T extends string> = { id: T; label: string; desc: string };
+
+export const METODOS_COACHING: Opcion<MetodoCoaching>[] = [
+  { id: 'coach_ontologico',           label: 'Ontológico',             desc: 'Trabaja sobre cómo hablás, sentís y actuás, para cambiar cómo ves lo que te pasa' },
+  { id: 'coach_sistemico',            label: 'Sistémico',              desc: 'Te mira como parte de tus vínculos y tu entorno, no aislado' },
+  { id: 'coach_cognitivo_conductual', label: 'Cognitivo conductual',   desc: 'Objetivos concretos y ejercicios entre sesiones' },
+  { id: 'coach_salud_habitos',        label: 'De salud y hábitos',     desc: 'Cambios de hábitos paso a paso, a partir de tus propios motivos' },
+  { id: 'coach_mindfulness',          label: 'Con base en mindfulness', desc: 'Atención al presente y manejo del estrés' },
+  { id: 'coach_integrativo',          label: 'Integrativo',            desc: 'Combina herramientas según la persona' },
+];
+
+export const ENFOQUES_NUTRICION: Opcion<EnfoqueNutricion>[] = [
+  { id: 'nutri_sin_dietas',  label: 'Sin dietas (alimentación intuitiva)', desc: 'Sin restricciones ni culpa: trabaja tu relación con la comida y las señales de hambre y saciedad' },
+  { id: 'nutri_plan',        label: 'Con plan alimentario',  desc: 'Arma un plan con comidas y cantidades, y lo ajusta en cada control' },
+  { id: 'nutri_deportiva',   label: 'Deportiva',             desc: 'Alimentación para entrenar, rendir y recuperarte' },
+  { id: 'nutri_plantas',     label: 'Basada en plantas',     desc: 'Vegetariana o vegana, con todos los nutrientes cubiertos' },
+  { id: 'nutri_condiciones', label: 'Condiciones de salud',  desc: 'Diabetes, colesterol, hipertensión: acompaña el tratamiento de tu médico, no lo reemplaza' },
+];
+
+/** Todas las opciones de las tres listas, para mostrar lo que ya está guardado. */
+const TODAS: Opcion<string>[] = [...ENFOQUES, ...METODOS_COACHING, ...ENFOQUES_NUTRICION];
+
+/** La lista que ve cada profesión. Sin matrícula verificada es coach, igual que
+ *  en `tipoProfesional`: la profesión sale de lo que Vita verificó, no del texto. */
+export function opcionesEnfoque(profesion: string | null | undefined): Opcion<string>[] {
+  if (profesion === 'psicologia') return ENFOQUES;
+  if (profesion === 'nutricion') return ENFOQUES_NUTRICION;
+  return METODOS_COACHING;
+}
+
+/** Cualquier valor válido de las tres listas (lo que acepta el CHECK). */
+export function esOpcionEnfoque(v: unknown): boolean {
+  return TODAS.some(o => o.id === v);
+}
+
+/** Las opciones guardadas, con su texto, en el orden en que se eligieron. */
+export function opcionesGuardadas(enfoques: string[] | null | undefined): Opcion<string>[] {
+  return (enfoques ?? [])
+    .map(id => TODAS.find(o => o.id === id))
+    .filter((o): o is Opcion<string> => !!o);
+}
+
 /** Tope del CHECK de la base. Más que esto es marcar todas para aparecer siempre. */
 export const MAX_ENFOQUES = 3;
 
@@ -114,31 +187,23 @@ export function evaluarEstilo(
   };
 }
 
-/** La escuela solo la declara quien tiene matrícula DE PSICOLOGÍA verificada.
+/** Qué mandar a guardar: solo lo que es de la lista de su profesión.
  *
- *  Las seis opciones son escuelas de PSICOLOGÍA: un coach sin matrícula que
- *  marque "psicoanalítico" está insinuando en su perfil que es psicólogo, que
- *  es lo mismo que el buscador (03/09) y el quiz (17/09) dejaron de deducir del
- *  texto libre. Misma regla que `tipoProfesional`, extendida, no una nueva.
- *
- *  ✅ Desde el 23/09/2026 mira `coaches.profesion` y no `has_matricula`, que
- *  decía que había UNA matrícula sin decir de qué: una de nutrición habilitaba
- *  escuelas de psicología.
+ *  Las escuelas son de PSICOLOGÍA: un coach sin matrícula que marque
+ *  "psicoanalítico" insinúa en su perfil que es psicólogo, lo mismo que el
+ *  buscador (03/09) y el quiz (17/09) dejaron de deducir del texto libre. Y al
+ *  revés, un coach no puede declarar "condiciones de salud".
  *
  *  La regla de verdad vive en la base (`trg_enfoques_requieren_matricula`),
- *  porque una revocación de credencial tiene que poder limpiar un enfoque ya
- *  declarado. Esto es para que la pantalla no ofrezca lo que no se va a guardar. */
-export function puedeDeclararEnfoque(profesion: string | null | undefined): boolean {
-  return profesion === 'psicologia';
-}
-
-/** Qué mandar a guardar. Sin matrícula, vacío: guardar lo elegido sería pedirle
- *  a la base que lo descarte y mostrarle al profesional algo que no quedó. */
+ *  porque una revocación de credencial tiene que poder limpiar lo ya declarado.
+ *  Esto es para no mandar lo que la base va a descartar y mostrarle al
+ *  profesional algo que no quedó. */
 export function enfoquesAGuardar(
   profesion: string | null | undefined,
-  elegidos: Enfoque[],
-): Enfoque[] {
-  return puedeDeclararEnfoque(profesion) ? elegidos : [];
+  elegidos: string[],
+): string[] {
+  const permitidos = opcionesEnfoque(profesion).map(o => o.id);
+  return elegidos.filter(id => permitidos.includes(id));
 }
 
 /** Cómo se lee el estilo en el perfil público. Null si no contestó. */
@@ -147,12 +212,10 @@ export function etiquetaEstilo(estilo: string | null | undefined): string | null
   return ESTILO_OPCIONES_COACH.find(o => o.id === estilo)?.label ?? null;
 }
 
-/** Los nombres de las escuelas, listos para mostrar. Descarta lo que no conoce
- *  en vez de imprimir el valor crudo de la base. */
+/** Los nombres de las escuelas o metodologías, listos para mostrar. Descarta lo
+ *  que no conoce en vez de imprimir el valor crudo de la base. */
 export function etiquetasEnfoques(enfoques: string[] | null | undefined): string[] {
-  return (enfoques ?? [])
-    .filter(esEnfoque)
-    .map(id => ENFOQUES.find(e => e.id === id)!.label);
+  return opcionesGuardadas(enfoques).map(o => o.label);
 }
 
 // ─── M14 ampliado (21/09/2026): dos ejes más y el género ────────────────────
