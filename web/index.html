@@ -391,6 +391,9 @@
   }
   .steps b { display: block; margin-top: 18px; font-size: 1.2rem; letter-spacing: -0.02em; color: var(--olive); }
   .steps span { display: block; margin-top: 8px; color: var(--soft); font-size: 1rem; }
+  .how-cta { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--line); }
+  .how-cta p { font-weight: 600; }
+  .how-cta .stores { margin-top: 16px; }
 
   .preview-note { margin-top: 32px; color: var(--soft); font-size: .85rem; text-align: center; }
 
@@ -548,6 +551,33 @@
 
 <main id="contenido">
 
+  <section class="purpose" aria-labelledby="para-que">
+    <div class="wrap">
+      <h2 id="para-que" class="purpose-q">Conectados todo el día. Acompañados, casi nunca.</h2>
+      <p class="sec-lead">Vita existe para que, en un momento difícil, sepas a quién acudir. Usamos la pantalla para llevarte a una persona real, no para reemplazarla.</p>
+      <figure class="llamada">
+        <div class="laptop" role="img" aria-label="Ilustración de una sesión de Vita: una videollamada entre una persona y su profesional">
+          <div class="laptop-screen">
+            <div class="call">
+              <span class="planta" aria-hidden="true"><svg viewBox="0 0 60 100"><path d="M30 62C28 44 16 36 6 36c2 14 12 22 24 26zM30 62c2-20 12-32 24-34-1 16-10 28-24 34zM30 64c-4-22 0-40 2-50 8 12 8 34-2 50z" fill="#8FA07C"/><path d="M30 64c-6-14-16-18-22-18 4 10 12 16 22 18z" fill="#6F8660"/><path d="M16 64h28l-4 36H20z" fill="#C1694F"/></svg></span>
+              <div class="persona"><span class="cabeza"></span><span class="cuerpo"></span></div>
+              <div class="call-self"><div class="persona"><span class="cabeza"></span><span class="cuerpo"></span></div></div>
+              <span class="call-tag">Tu profesional</span>
+              <div class="call-bar" aria-hidden="true">
+                <span><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
+                <span><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg></span>
+                <span class="salir"><svg viewBox="0 0 24 24"><path d="M4 14c4.5-4 11.5-4 16 0l-2 3-3-1v-2.5a9 9 0 0 0-6 0V16l-3 1z"/></svg></span>
+              </div>
+            </div>
+          </div>
+          <div class="laptop-base"></div>
+        </div>
+        <figcaption>Una sesión en Vita: vos y una persona que te escucha, por videollamada desde la app.</figcaption>
+      </figure>
+      <a class="purpose-link" href="#historia">Conocé por qué la hicimos</a>
+    </div>
+  </section>
+
   <section class="how" aria-labelledby="como">
     <div class="wrap">
       <h2 id="como" class="sec-title">cómo funciona.</h2>
@@ -558,6 +588,10 @@
         <li><b>Tenés tu videollamada</b><span>Cuando llega el momento, entrá a la sala desde tu reserva en la app.</span></li>
         <li><b>Seguís entre sesiones</b><span>Tu profesional puede dejarte una nota o un recurso para la semana, y tenés tus herramientas a mano.</span></li>
       </ol>
+      <div class="how-cta">
+        <p>Vita es gratis para descargar. Pagás solo las sesiones que reservás.</p>
+        <div class="stores" data-stores data-tipo="persona"></div>
+      </div>
     </div>
   </section>
 
@@ -588,7 +622,7 @@
               <div class="tabbar"><i></i><i class="on"></i><i></i><i></i></div>
             </div>
           </div>
-          <figcaption><b>Encontrá acompañamiento</b><span>Conocé su enfoque, su formación y sus horarios antes de reservar.</span></figcaption>
+          <figcaption><b>Cuando necesitás hablar con alguien</b><span>Encontrá a alguien que trabaje con lo que estás atravesando. Conocé su enfoque, su formación y sus horarios antes de reservar.</span></figcaption>
         </figure>
 
         <figure id="experiencia-animo">
@@ -611,7 +645,7 @@
               <div class="tabbar"><i class="on"></i><i></i><i></i><i></i></div>
             </div>
           </div>
-          <figcaption><b>Entendé cómo venís</b><span>Registrá tu ánimo, escribí en tu diario y encontrá un momento para agradecer.</span></figcaption>
+          <figcaption><b>Cuando necesitás entenderte</b><span>Registrá tu ánimo, escribí en tu diario y anotá lo que agradecés. Con los días, ves cómo vienen tus semanas.</span></figcaption>
         </figure>
 
         <figure id="experiencia-pausa">
@@ -626,7 +660,7 @@
               <div class="tabbar"><i></i><i></i><i class="on"></i><i></i></div>
             </div>
           </div>
-          <figcaption><b>Tomate una pausa</b><span>Respiración y sonidos para acompañarte, tengas o no una sesión reservada.</span></figcaption>
+          <figcaption><b>Cuando necesitás bajar un cambio</b><span>Respiración y sonidos para hacer una pausa, tengas o no una sesión reservada.</span></figcaption>
         </figure>
       </div>
       <p class="preview-note">Vistas ilustrativas de las experiencias de Vita. El perfil y los datos son de ejemplo.</p>
@@ -648,33 +682,6 @@
       <div class="mood-reply" aria-live="polite"></div>
       <div class="moment" hidden></div>
       <p class="checkin-note">Acá no se guarda nada. En la app, queda en tu registro del día.</p>
-    </div>
-  </section>
-
-  <section class="purpose" aria-labelledby="para-que">
-    <div class="wrap">
-      <h2 id="para-que" class="purpose-q">Conectados todo el día. Acompañados, casi nunca.</h2>
-      <p class="sec-lead">Vita existe para que, en un momento difícil, sepas a quién acudir. Usamos la pantalla para llevarte a una persona real, no para reemplazarla.</p>
-      <figure class="llamada">
-        <div class="laptop" role="img" aria-label="Ilustración de una sesión de Vita: una videollamada entre una persona y su profesional">
-          <div class="laptop-screen">
-            <div class="call">
-              <span class="planta" aria-hidden="true"><svg viewBox="0 0 60 100"><path d="M30 62C28 44 16 36 6 36c2 14 12 22 24 26zM30 62c2-20 12-32 24-34-1 16-10 28-24 34zM30 64c-4-22 0-40 2-50 8 12 8 34-2 50z" fill="#8FA07C"/><path d="M30 64c-6-14-16-18-22-18 4 10 12 16 22 18z" fill="#6F8660"/><path d="M16 64h28l-4 36H20z" fill="#C1694F"/></svg></span>
-              <div class="persona"><span class="cabeza"></span><span class="cuerpo"></span></div>
-              <div class="call-self"><div class="persona"><span class="cabeza"></span><span class="cuerpo"></span></div></div>
-              <span class="call-tag">Tu profesional</span>
-              <div class="call-bar" aria-hidden="true">
-                <span><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
-                <span><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg></span>
-                <span class="salir"><svg viewBox="0 0 24 24"><path d="M4 14c4.5-4 11.5-4 16 0l-2 3-3-1v-2.5a9 9 0 0 0-6 0V16l-3 1z"/></svg></span>
-              </div>
-            </div>
-          </div>
-          <div class="laptop-base"></div>
-        </div>
-        <figcaption>Una sesión en Vita: vos y una persona que te escucha, por videollamada desde la app.</figcaption>
-      </figure>
-      <a class="purpose-link" href="#historia">Conocé por qué la hicimos</a>
     </div>
   </section>
 
