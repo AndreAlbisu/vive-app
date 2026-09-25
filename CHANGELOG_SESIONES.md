@@ -1,3 +1,18 @@
+## 2026-09-25 — Andre (Claude · revisión de la web, segunda tanda: legales completos)
+
+**Tocado:** `web/index.html`, `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `docs/boton-de-arrepentimiento.md`, `docs/eliminar-cuenta.md`, `docs/paquete-abogado.md`, `constants/legal.ts`, `web/legal/*`, `web/legal-version.js`
+
+**Resumen:**
+- ⚖️ **Andre: "los TyC los dejemos completos, después hablo con un abogado".** Se completaron los 7 pendientes y el aviso de "Borrador" desapareció solo (lo saca `sync-legal` cuando no queda ningún `[…]`), en la web y en la app (`LEGAL_IS_DRAFT` = false). Versión de los legales: `46f38a992801`. Sin usuarios, no hay aceptaciones viejas que migrar.
+- Fechas: 25 de septiembre de 2026 (actualización y vigencia). **T&C §9.4:** la revocación da reintegro total aunque la sesión ya se haya prestado (lo más favorable al consumidor; una cláusula que lo recorte se anularía igual). **Política §7:** dónde está cada dato (Supabase en Brasil; Daily, Expo, Resend, PayPal y Anthropic en EE.UU.), que con Supabase rige su DPA, y que los acuerdos se informan por mail. No afirma acuerdos con Daily ni Expo, que siguen sin confirmar. La nota de T&C §8.2 (cobro por cuenta y orden) pasó al paquete como **B.7**.
+- 🔴 **La Política decía que su lista de proveedores estaba completa y le faltaban tres:** PayPal, Resend (mails) y la cadena de bloques pública de los pagos en USDT (dirección y monto visibles para siempre, no se pueden borrar). Sumados en §6.
+- **Historia de los hermanos:** texto de Andre con correcciones (suma "En un mundo cada vez más conectado por la tecnología, muchos nos sentimos cada vez más solos."; sale el párrafo de "Vita empezó como una idea de Andre"). Andre decide si se acorta más.
+
+**Pendiente para la próxima sesión:**
+- Andre: revisar los legales con un abogado (paquete en `docs/paquete-abogado.md`, A.5 anotada con lo que se decidió). Pasos de `docs/transferencias-internacionales.md` §4: copia fechada del DPA de Supabase, confirmar DPA de Daily y Expo.
+- Sin definir: si la revocación de una sesión ya dada la absorbe el profesional (como la garantía, §8.8) o Vita. Hoy §8.8 solo cubre la garantía.
+- Historia: ¿se saca el párrafo de profesionales? Check-in: 2 o 3 propuestas. Mail propio.
+
 ## 2026-09-25 — Andre (Claude · revisión de la web, primera tanda)
 
 **Tocado:** `web/index.html`, `web/profesionales.html` (nuevo), `web/tiendas.js` (nuevo), `docs/editar-la-web.md`

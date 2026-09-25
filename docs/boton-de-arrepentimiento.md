@@ -1,4 +1,4 @@
-> ⚠️ **BORRADOR — REQUIERE REVISIÓN LEGAL PROFESIONAL. NO PUBLICAR SIN ELLA.**
+> ⚠️ **Completado y publicado por nosotros el 25/09/2026, sin revisión legal profesional todavía.** Andre lo va a revisar con un abogado; si hace falta, se amplía o modifica.
 > Esta página existe para cumplir la Resolución 424/2020 de la Secretaría de
 > Comercio Interior, que obliga a quien vende por web o app a ofrecer un enlace
 > "BOTÓN DE ARREPENTIMIENTO" de acceso fácil y directo desde la portada, en
@@ -8,7 +8,7 @@
 
 # Botón de arrepentimiento
 
-**Última actualización:** [fecha]
+**Última actualización:** 25 de septiembre de 2026
 
 ## Qué es
 

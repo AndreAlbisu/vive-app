@@ -211,6 +211,8 @@ sesión **ya se prestó** dentro de esos 10 días, con conformidad expresa del
 cliente, ¿el reintegro es total o proporcional al servicio efectivamente
 prestado? Los arts. 1110 a 1116 del CCyC no parecen contemplar expresamente esa
 hipótesis para servicios. Necesito la cláusula redactada en consecuencia.
+*25/09/2026: mientras tanto, §9.4 dice reintegro total aunque la sesión ya se
+haya prestado (lo más favorable al consumidor). Si se puede limitar, se cambia.*
 
 **A.6 — Cancelación dentro de las 24hs sin reembolso (T&C §9.1).**
 Hoy quien cancela con menos de 24 horas de anticipación **pierde el reembolso**, y
@@ -443,6 +445,12 @@ corrijas:
 Preguntas: ¿son correctas las dos lecturas? Y sobre la segunda, ¿qué se
 considera suficiente para "informar" — una línea en la pantalla, una mención en
 la Política, una etiqueta visible en la propia tarjeta?
+
+**B.7 — Cobro por cuenta y orden en los pagos del exterior (T&C §8.2).**
+En los pagos por PayPal o USDT, Vita recibe la plata y después le transfiere su
+parte al profesional. La cláusula ya dice que Vita "percibe el pago por cuenta y
+orden del Profesional". ¿Corresponde encuadrarlo expresamente como mandato de
+cobranza, y hace falta alguna previsión adicional en §8.2 o en §4?
 
 ### C. Solo si decidimos que Sofía conversa — *decidir antes de enviar*
 

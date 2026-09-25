@@ -1,4 +1,4 @@
-> ⚠️ **BORRADOR — REQUIERE REVISIÓN LEGAL PROFESIONAL. NO PUBLICAR SIN ELLA.**
+> ⚠️ **Completado y publicado por nosotros el 25/09/2026, sin revisión legal profesional todavía.** Andre lo va a revisar con un abogado; si hace falta, se amplía o modifica.
 > Este documento fue redactado como primer borrador estructurado para Vita y debe
 > ser revisado, corregido y validado por un/a abogado/a matriculado/a en Argentina
 > antes de su publicación o entrada en vigencia. Contiene decisiones legales
@@ -9,8 +9,8 @@
 
 # Términos y Condiciones de Uso de Vita
 
-**Última actualización:** [fecha]
-**Vigencia a partir de:** [fecha]
+**Última actualización:** 25 de septiembre de 2026
+**Vigencia a partir de:** 25 de septiembre de 2026
 
 ## 1. Aceptación de los Términos
 
@@ -83,8 +83,6 @@ La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Prof
 - **Pago en pesos (Mercado Pago).** Se procesa mediante un modelo de marketplace (pago dividido): **cada Profesional conecta su propia cuenta de Mercado Pago y recibe directamente el importe de la Sesión**, ya descontada la comisión de Vita. El procesamiento se rige también por los términos de Mercado Pago.
 - **Pago desde el exterior.** Cuando el Cliente paga por los medios internacionales habilitados, **Vita percibe el pago por cuenta y orden del Profesional** y le transfiere el importe que le corresponde, ya descontada la comisión, conforme a sus condiciones de cobro. En esta modalidad Vita retiene transitoriamente fondos de terceros a los solos efectos de liquidarlos al Profesional.
 
-[Para revisión legal: la segunda modalidad implica que Vita percibe fondos de terceros antes de liquidarlos. Confirmar si corresponde encuadrarla expresamente como mandato de cobranza por cuenta y orden, y si ello exige alguna previsión adicional en esta cláusula o en la 4.]
-
 8.3. **Comisión de la Plataforma.** Vita percibe una comisión sobre el precio de cada Sesión, retenida automáticamente en el momento del pago. La comisión vigente depende del medio por el que se cobra la Sesión:
 
 - **Sesiones cobradas en pesos a través de Mercado Pago:** **20%** sobre la primera Sesión completada de cada vínculo Cliente–Profesional y **15%** a partir de la segunda, de manera permanente.
@@ -133,7 +131,7 @@ Condiciones:
 - Puede ejercerse desde el enlace **"BOTÓN DE ARREPENTIMIENTO"**, disponible en https://vitaapp.com.ar y en https://vitaapp.com.ar/legal/arrepentimiento, **sin necesidad de registrarse ni de realizar trámite previo alguno**, o escribiendo a vitaappar@gmail.com.
 - Recibida la solicitud, Vita remitirá al Cliente, **dentro de las 24 horas y por medio electrónico**, un **código de identificación de la revocación**, conforme a la Resolución 424/2020 de la Secretaría de Comercio Interior.
 - Ejercida la revocación, Vita reintegrará la totalidad de lo abonado, sin cargo. El reintegro se procesa a través del procesador de pagos; los tiempos de acreditación dependen de dicho procesador y del medio de pago.
-- [Validar con abogado/a el efecto de la revocación sobre una Sesión ya prestada dentro del plazo de 10 días: si la Sesión se realizó con conformidad expresa del Cliente, corresponde definir si el reintegro es total o proporcional al servicio efectivamente prestado, y redactar la cláusula en consecuencia. Los arts. 1110 a 1116 CCyC no contemplan expresamente esta hipótesis para servicios.]
+- La revocación procede **aunque la Sesión ya se haya prestado** dentro del plazo de diez (10) días, y también en ese caso Vita reintegra la totalidad de lo abonado.
 
 9.5. **Ausencias.** Si alguna de las partes no se presenta a una Sesión confirmada, rige lo siguiente:
 

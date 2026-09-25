@@ -1,4 +1,4 @@
-> ⚠️ **BORRADOR — REQUIERE REVISIÓN LEGAL PROFESIONAL. NO PUBLICAR SIN ELLA.**
+> ⚠️ **Completado y publicado por nosotros el 25/09/2026, sin revisión legal profesional todavía.** Andre lo va a revisar con un abogado; si hace falta, se amplía o modifica.
 > Esta página existe porque Google Play exige una **URL pública de solicitud de
 > eliminación de cuenta**, accesible sin instalar la app y sin iniciar sesión,
 > que declare qué datos se borran y cuáles se conservan con su plazo. Tiene que
@@ -8,7 +8,7 @@
 
 # Eliminar tu cuenta de Vita
 
-**Última actualización:** [fecha]
+**Última actualización:** 25 de septiembre de 2026
 
 ## Desde la app (la vía más rápida)
 

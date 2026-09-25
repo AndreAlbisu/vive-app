@@ -1,4 +1,4 @@
-> ⚠️ **BORRADOR — REQUIERE REVISIÓN LEGAL PROFESIONAL. NO PUBLICAR SIN ELLA.**
+> ⚠️ **Completado y publicado por nosotros el 25/09/2026, sin revisión legal profesional todavía.** Andre lo va a revisar con un abogado; si hace falta, se amplía o modifica.
 > Primer borrador estructurado para Vita. Debe ser revisado y validado por un/a
 > abogado/a matriculado/a en Argentina con experiencia en protección de datos antes
 > de su publicación. El tratamiento de **datos sensibles** (estado de ánimo, diario,
@@ -10,8 +10,8 @@
 
 # Política de Privacidad de Vita
 
-**Última actualización:** [fecha]
-**Vigencia a partir de:** [fecha]
+**Última actualización:** 25 de septiembre de 2026
+**Vigencia a partir de:** 25 de septiembre de 2026
 
 Esta Política describe cómo Vita, operada por Andre Albisu Lambertini, CUIT 20-46034087-0, con domicilio en De los Extremeños 5069, Córdoba, Provincia de Córdoba ("**Vita**", "**nosotros**"), recolecta, usa, comparte y protege los datos personales de sus Usuarios, en el marco de la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su reglamentación, bajo la autoridad de la Agencia de Acceso a la Información Pública (AAIP).
 
@@ -69,9 +69,12 @@ Vita **no vende** los datos personales de los Usuarios. Los compartimos únicame
 - **Proveedores que procesan datos por cuenta de Vita (encargados de tratamiento):**
   - **Supabase**: infraestructura de base de datos, autenticación y almacenamiento.
   - **Mercado Pago**: procesamiento de pagos (sujeto a sus propias políticas).
+  - **PayPal**: procesamiento de los pagos en dólares (sujeto a sus propias políticas).
   - **Daily.co**: realización de las videollamadas de las Sesiones.
+  - **Resend**: envío de los correos electrónicos de la Plataforma (por ejemplo, avisos sobre reservas y Sesiones). Recibe la dirección de correo del destinatario y el contenido del mensaje.
   - **Expo / proveedor de notificaciones push**: envío de notificaciones.
   - **Cloudflare**: protección contra la creación automatizada de cuentas. Interviene al crear una cuenta y al solicitar un código de acceso, tanto en la aplicación como en las páginas web de Vita. Recibe la dirección IP y datos técnicos del dispositivo, y en el navegador coloca una cookie técnica necesaria para distinguir a una persona de un programa automatizado. **No recibe el nombre, el correo electrónico ni ningún contenido del Usuario.**
+- **Pagos en USDT, solo si el Usuario elige ese medio:** el pago se registra en una **cadena de bloques pública**. La dirección desde la que se paga, la dirección que recibe y el monto quedan visibles para cualquier persona, en forma permanente, y **no pueden borrarse**, ni siquiera a pedido del Usuario. Vita consulta esos registros públicos para confirmar el pago y guarda la dirección que el Usuario indique para un eventual reintegro.
 - **Proveedores de identidad, solo si el Usuario elige registrarse o iniciar sesión con ellos:**
   - **Google** y **Apple**. En ese caso, el proveedor conoce que el Usuario accede a Vita y le comunica a Vita los datos mínimos de la cuenta (nombre y correo electrónico). Si el Usuario se registra con correo y contraseña, ninguno de los dos interviene.
 - **Entrega de componentes desde redes de distribución (CDN):** la sala de Sesión a la que se accede por navegador carga el componente de videollamada desde **unpkg.com**. Al hacerlo, ese servicio recibe la dirección IP y datos técnicos del dispositivo. No recibe datos de la cuenta ni contenido alguno de la Sesión.
@@ -88,7 +91,16 @@ La lista anterior comprende la totalidad de los proveedores con los que Vita com
 
 ## 7. Transferencia Internacional de Datos
 
-Algunos de los proveedores mencionados pueden almacenar o procesar datos en servidores ubicados fuera de la Argentina. En dichos casos, Vita procurará que existan garantías adecuadas conforme a la Ley 25.326 y a las normas de la AAIP sobre transferencia internacional de datos. [Validar con abogado el encuadre de las transferencias; p. ej., cláusulas contractuales, países con nivel adecuado, etc.]
+Parte de los datos se almacenan o procesan fuera de la Argentina:
+
+- **Supabase** (base de datos, autenticación y almacenamiento): los datos se alojan en la región de **San Pablo, Brasil**.
+- **Daily.co** (videollamadas), en los Estados Unidos: el audio y el video **no se graban ni se almacenan**; se transmiten en el momento de la Sesión. Se conservan metadatos técnicos de conexión.
+- **Expo** (notificaciones), en los Estados Unidos: se conserva el identificador del dispositivo.
+- **Resend** (correos electrónicos) y **PayPal** (pagos en dólares), en los Estados Unidos.
+- **Anthropic** (redacción de la frase de bienestar), en los Estados Unidos, sin datos que identifiquen al Usuario, conforme a la sección 6.
+- Los demás servicios mencionados en la sección 6 (Cloudflare, Google, Apple, unpkg.com y YouTube) pueden procesar datos técnicos fuera del país.
+
+Brasil y los Estados Unidos no integran la nómina de países con nivel adecuado de protección de la Disposición DNPDP 60-E/2016. Con Supabase rige su acuerdo de tratamiento de datos, que se incorpora al aceptar sus términos de servicio e incluye obligaciones de confidencialidad, medidas de seguridad, control de subencargados y supresión de los datos al finalizar el servicio. Vita trabaja para que el resto de las transferencias cuente con garantías equivalentes. El Usuario puede solicitar información sobre los acuerdos vigentes escribiendo a vitaappar@gmail.com.
 
 **Redacción asistida de la frase de bienestar.** El envío descripto en la sección 6 **no incluye identificador ni seudónimo del Usuario**, y Vita no conserva vinculación alguna entre ese envío y su persona, por lo que no se trata de información referida a una persona determinada o determinable. Se lo declara igualmente en esta Política para que el Usuario conozca la totalidad de los servicios que intervienen en el funcionamiento de la aplicación.
 
