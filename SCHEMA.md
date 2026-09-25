@@ -53,6 +53,12 @@ app: las builds antiguas que leen campos privados directamente necesitan actuali
 
 ## Tablas y relaciones
 
+### Lista de espera de la landing: `lista_de_espera` (25/09/2026)
+`scripts/add-lista-de-espera.sql` — ✅ **CORRIDO y VERIFICADO el 25/09/2026**: `anon` y `authenticated` no leen ni escriben la tabla (también por HTTP: `select` e `insert` directos dan 42501); 3 llamadas de prueba dejan 2 filas (mail normalizado a minúsculas, mismo mail y tipo no se duplica, `ref` inválido se descarta); mail y tipo inválidos dan `email_invalido` / `tipo_invalido`; 0 filas de prueba quedaron. Por HTTP con la anon key la función devuelve `"ok"` y el intento queda contado **por IP** en `rate_limits`.
+- **`lista_de_espera`** (`id`, `email` ≤254, `tipo` `'persona'|'profesional'`, `ref` código de invitación opcional `^[A-Za-z0-9_-]{1,32}$`, `created_at`, `avisado_at` para marcar a quién ya se le avisó; UNIQUE `(email, tipo)`). RLS activa sin policies y sin grants para el cliente: se lee desde el SQL del proyecto.
+- **`anotarse_lista_espera(p_email, p_tipo, p_ref)`** (security definer, execute **solo `anon`**): valida, normaliza, tope de 5 por hora por IP (`consume_rate_limit`, bucket `lista_espera`) e inserta con `on conflict do nothing`. **Siempre devuelve `'ok'`**, esté o no el mail: no sirve para averiguar si alguien se anotó.
+- La llama `web/index.html` en lugar de los botones de tiendas mientras `TIENDAS` esté vacío. Política de Privacidad 2.5 y §10: el mail se usa solo para avisar del lanzamiento (y contar cómo postularse, a profesionales) y **se suprime una vez enviado el aviso**.
+
 ### Calendario del profesional por suscripción: `coach_calendar_feeds` (24/09/2026)
 `scripts/add-calendario-profesional.sql` — ✅ **CORRIDO y VERIFICADO el 24/09/2026**: como profesional real con rollback, el link tiene 64 caracteres, pedirlo dos veces da el mismo, regenerarlo da otro y **el viejo deja de devolver sesiones** (17 → 0); un cliente recibe `no_es_profesional`; `authenticated` no lee la tabla y `anon` no llama `sesiones_para_calendario`. Función `calendario` deployada y probada por HTTP con un link temporal (borrado): 17 eventos, `text/calendar`, sin nombres; token inventado o ausente → 404.
 - **`coach_calendar_feeds`** (`coach_id` PK → `coaches.id` CASCADE, `token` único, `created_at`): RLS activa, sin policies ni grants para el cliente.

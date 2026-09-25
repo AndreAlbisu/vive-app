@@ -278,6 +278,8 @@ Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contac
 - **Micrófono:** únicamente durante la grabación del video de presentación y durante las videollamadas de las Sesiones.
 - **Calendario:** solo para *escribir* el evento de una Sesión que el Usuario decide agendar. Vita **no lee** los eventos existentes del calendario.
 
+**2.5. Lista de espera del sitio web.** Quien deja su correo en vitaapp.com.ar para que le avisemos cuando Vita esté disponible nos proporciona ese correo, si se anota como persona o como Profesional y, si llegó por un enlace de invitación, su código; registramos además la fecha. Lo usamos solo para avisarle del lanzamiento y, si se anotó como Profesional, para contarle cómo postularse. No lo compartimos con terceros ni lo usamos con fines publicitarios.
+
 ## 3. Datos Sensibles y Consentimiento Explícito
 
 Ciertos datos vinculados al Usuario (los registros de estado de ánimo, las entradas de diario y de gratitud, el contenido de las conversaciones o notas que pueda revelar información sobre su salud, y **el registro de qué contenidos de bienestar utiliza**) constituyen **datos sensibles** en los términos de la Ley 25.326, sea porque el Usuario los declara o porque permiten deducir información sobre su salud.
@@ -356,6 +358,7 @@ Conservamos los datos mientras la cuenta esté activa. Al darse de baja, el trat
 - **Mensajes y salas de conversación**: se conservan **anonimizados** mientras subsista la conversación, dado que pertenecen también al otro participante.
 - **Datos técnicos y de uso** (analítica): se conservan **disociados de la identidad** del Usuario.
 - **Registros de detección de datos de contacto y de pago** (ver 8.3): se conservan **doce (12) meses** desde que se generan y luego se suprimen.
+- **Correos de la lista de espera** (ver 2.5): se suprimen una vez enviado el aviso, o antes si el titular lo pide por los medios de contacto.
 - **Medidas aplicadas a un Profesional y su documentación** (advertencias, suspensiones y bajas): se conservan mientras exista la cuenta del Profesional, para poder considerar la reiteración, y tras la baja quedan **disociadas de su identidad**, como el resto de su ficha.
 
 Al darse de baja, las Sesiones futuras ya agendadas se cancelan automáticamente y se reembolsan. La ficha de perfil no se elimina: queda **vaciada de todo dato personal** y muestra "Usuario eliminado" allí donde antes figuraba el Usuario, de modo que las reservas, reseñas y conversaciones de terceros no queden rotas. La cuenta de acceso se elimina y la dirección de correo queda liberada para un eventual registro futuro.
@@ -503,7 +506,7 @@ export const LEGAL_PLACEHOLDERS: string[] = ["[Para revisión legal: la segunda 
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = 'baefd3350f06';
+export const LEGAL_VERSION = '79ed5cb72432';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la

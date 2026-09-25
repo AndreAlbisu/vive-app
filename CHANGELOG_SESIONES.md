@@ -1,3 +1,19 @@
+## 2026-09-25 — Andre (Claude · la landing junta mails mientras la app no sale)
+
+**Tocado:** `web/index.html`, `scripts/add-lista-de-espera.sql` (nuevo, corrido), `docs/politica-de-privacidad.md` + generados (`web/legal/privacidad.html`, `web/legal-version.js`, `constants/legal.ts`), `SCHEMA.md`
+
+**Resumen:**
+- 🧭 **Pregunta de Andre: ¿la web transmite lo necesario?** Lo principal que faltaba: en pre-lanzamiento los botones de descarga decían "Muy pronto" y quien entraba no tenía nada para hacer, y los profesionales (lo que más falta hoy) chocaban con "bajate la app y postulate", que no existe todavía. Andre dejó elegir: los mails van a Supabase.
+- **Ahora:** donde iban las tiendas hay un "Avisame" con el mail (presentación y cierre), y el recuadro de profesionales tiene su propio "Quiero sumarme". El botón del menú dice "Avisame". Apenas se peguen los links en `TIENDAS`, vuelven solos los botones de descarga. Se guarda el `?ref=` de los links de invitación.
+- **Texto:** la presentación dice "psicólogos, coaches y nutricionistas"; la garantía de primera sesión sube debajo del formulario (el link abre esa pregunta); pregunta nueva "¿Quiénes son los profesionales?" (revisión a mano, documentos verificados, compromiso de derivar); el recuadro de profesionales dice la comisión (20% / 15%, 0% en la primera por su link, sin costo fijo).
+- 🗄️ Tabla `lista_de_espera` + función `anotarse_lista_espera` (solo anon, tope por IP, responde siempre igual). Política de Privacidad 2.5 y §10 nuevos: cambió `LEGAL_VERSION`. SCHEMA actualizado.
+
+**Pendiente para la próxima sesión:**
+- Ver los anotados: `select * from lista_de_espera order by created_at desc` (con el CLI). Al lanzar, avisar, marcar `avisado_at` y borrar (así lo promete la política).
+- Falta la imagen para compartir (`og:image`): hoy el link en WhatsApp sale sin foto. Necesita una imagen diseñada de 1200×630.
+- Rango de precios en la web cuando haya profesionales cargados.
+- Mirar la web en el celular después del deploy y probar anotarse una vez (y borrar esa fila).
+
 ## 2026-09-24 — Andre (Claude · todas las reglas del profesional en Cómo funciona)
 
 **Tocado:** `screens/CoachComoFuncionaScreen.tsx`, `components/CoachBienvenida.tsx`
