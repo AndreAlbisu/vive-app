@@ -1,3 +1,15 @@
+## 2026-09-25 — Andre (Claude · la landing dice el porqué: conectados y solos)
+
+**Tocado:** `web/index.html`
+
+**Resumen:**
+- 💛 **Andre definió el núcleo de Vita:** la tecnología avanza, estamos cada vez más conectados y cada vez más solos, y Vita acompaña. Frase ancla: "no estás solo". Queda como criterio para decidir features y copy.
+- Sección del medio, antes "Vita existe para que, en un momento difícil, sepas a quién acudir.": ahora **"Conectados todo el día. Acompañados, casi nunca."** y abajo "Vita existe para que, en un momento difícil, sepas a quién acudir. Usamos la pantalla para llevarte a una persona real, no para reemplazarla." (la segunda frase contesta el "¿y ustedes no son otra app?").
+- Cierre: de "empezá cuando quieras." a **"no estás solo."**. En la web el masculino genérico lo eligió Andre; en la app sigue la regla de no usar género (E6 de `docs/problemas-abiertos.md`).
+
+**Pendiente para la próxima sesión:**
+- Si Andre o Joaquín quieren, sumar a la historia de los hermanos una línea propia sobre esto (se decidió no escribirla por ellos).
+
 ## 2026-09-25 — Andre (Claude · garantía: aviso de misma cuenta de pago)
 
 **Tocado:** `supabase/functions/_shared/guarantee.ts`, `supabase/functions/guarantee-claim` (v32, deployada), `lib/admin.ts`, `screens/AdminScreen.tsx`, `__tests__/guarantee.test.ts`, `SCHEMA.md`

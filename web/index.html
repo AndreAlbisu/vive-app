@@ -312,10 +312,12 @@
   .print.hoy { width: 74%; margin-left: auto; transform: rotate(2.5deg); }
   .print.antes { position: absolute; left: 0; bottom: 0; width: 62%; transform: rotate(-4deg); }
 
-  /* Para qué existe: una sola frase, grande. La historia completa va abajo. */
+  /* Para qué existe: una sola frase, grande. La historia completa va abajo.
+     25/09/2026: el porqué de Vita (Andre): cada vez más conectados y cada vez
+     más solos. El cierre ("no estás solo.") le contesta a esta frase. */
   .purpose { text-align: center; }
   .purpose-q { margin: 0 auto; max-width: 22ch; font-size: clamp(2rem, 4.4vw, 3.6rem); line-height: 1.08; text-wrap: balance; }
-  .purpose .sec-lead { margin: 24px auto 0; }
+  .purpose .sec-lead { margin: 24px auto 0; text-wrap: balance; }
   .purpose-link { display: inline-block; margin-top: 24px; font-weight: 700; text-decoration-color: var(--terra); text-decoration-thickness: 2px; text-underline-offset: 5px; }
 
   /* Preguntas frecuentes */
@@ -646,8 +648,8 @@
 
   <section class="purpose" aria-labelledby="para-que">
     <div class="wrap">
-      <h2 id="para-que" class="purpose-q">Vita existe para que, en un momento difícil, sepas a quién acudir.</h2>
-      <p class="sec-lead">Acercamos a quienes buscan acompañamiento con profesionales que tienen mucho para ofrecer.</p>
+      <h2 id="para-que" class="purpose-q">Conectados todo el día. Acompañados, casi nunca.</h2>
+      <p class="sec-lead">Vita existe para que, en un momento difícil, sepas a quién acudir. Usamos la pantalla para llevarte a una persona real, no para reemplazarla.</p>
       <a class="purpose-link" href="#historia">Conocé por qué la hicimos</a>
     </div>
   </section>
@@ -739,7 +741,7 @@
   <section class="closing grain" id="descargar" aria-labelledby="bajala">
     <div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span><span class="a4"></span></div>
     <div class="wrap">
-      <h2 id="bajala">empezá cuando quieras.</h2>
+      <h2 id="bajala">no estás solo.</h2>
       <p class="sec-lead">Vita es gratis para descargar. Pagás solo las sesiones que reservás.</p>
       <div class="stores" data-stores data-tipo="persona"></div>
     </div>
