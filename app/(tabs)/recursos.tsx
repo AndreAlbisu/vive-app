@@ -23,6 +23,7 @@ import { useMoodHistory } from '@/hooks/useMoodHistory';
 import { useResourceProgress } from '@/hooks/useResourceProgress';
 import { useRecommendedResource, type Reco, type MoodLite } from '@/hooks/useRecommendedResource';
 import { TOOL_MAP, TOOL_GROUPS, type Tool, type IoniconName } from '@/constants/tools';
+import { HERRAMIENTAS_BAJADA } from '@/constants/herramientasParaQue';
 
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -561,6 +562,7 @@ export default function RecursosScreen() {
           <View style={s.libraryHeaderRow}>
             <Text style={[s.sectionTitle, s.sectionTitleFlush]}>Herramientas de Vita</Text>
           </View>
+          <Text style={s.herramientasBajada}>{HERRAMIENTAS_BAJADA}</Text>
           <RecommendedCard
             reco={reco}
             todayMoodEntry={todayMoodEntry}
@@ -820,6 +822,7 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   sectionTitleFlush: { marginTop: 0, marginBottom: 0, flexShrink: 1 },
+  herramientasBajada: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: FOREST_SOFT, marginTop: -8, marginBottom: 14 },
 
   // ── Eyebrow (encabezado chico) + grilla de formatos ────────────────────────
   eyebrowRow: {

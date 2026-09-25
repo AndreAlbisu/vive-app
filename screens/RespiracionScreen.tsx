@@ -14,6 +14,7 @@ import { recordCompletion } from '@/lib/resourceCompletions';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
+import ParaQueSirve from '@/components/ParaQueSirve';
 
 const FOREST       = '#3A4F2A';
 const FOREST_SOFT  = '#566245';
@@ -256,6 +257,7 @@ export default function RespiracionScreen() {
         <View style={s.content}>
           {phase === 'idle' && (
             <>
+              <ParaQueSirve toolId="respiracion" style={{ alignSelf: 'stretch', marginBottom: 14 }} />
               <View style={s.patronRow}>
                 {PATRONES.map(p => (
                   <TouchableOpacity

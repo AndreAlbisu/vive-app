@@ -15,6 +15,7 @@ import { SoundEqualizer } from '@/components/ui/SoundEqualizer';
 import { usuarioActualId } from '@/lib/supabase';
 import { recordCompletion } from '@/lib/resourceCompletions';
 import { useRecursoAbierto } from '@/hooks/useRecursoAbierto';
+import ParaQueSirve from '@/components/ParaQueSirve';
 
 const FOREST      = '#3A4F2A';
 const FOREST_SOFT = '#566245';
@@ -287,11 +288,9 @@ export default function RuidoScreen() {
         ) : (
           <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
             <Text style={s.screenTitle}>Sonidos ambientales</Text>
-            <Text style={s.description}>
-              Un fondo parejo tapa el ruido de afuera y le da a la cabeza algo
-              que no cambia. Sirve para dormirte, para concentrarte, o para
-              bajar un cambio antes de una sesión.
-            </Text>
+            {/* Reemplaza al párrafo que ya decía para qué sirve: mismo bloque
+                que las otras tres herramientas (constants/herramientasParaQue). */}
+            <ParaQueSirve toolId="ruido" style={{ alignSelf: 'stretch', marginBottom: 12 }} />
             <Text style={s.descriptionSmall}>
               Elegí uno y por cuánto tiempo. Se detiene solo.
             </Text>

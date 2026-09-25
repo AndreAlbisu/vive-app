@@ -28,6 +28,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { localDayKey } from '@/lib/dates';
 import { semanaDeEscritura } from '@/lib/semanaDiario';
 import { MOOD_PROMPTS, PROMPT_BIENVENIDA, CIERRE_DEFAULT, type Prompt } from '@/lib/vozCompartida';
+import ParaQueSirve from '@/components/ParaQueSirve';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface JournalEntry {
@@ -398,6 +399,9 @@ export default function DiarioScreen() {
               </>
             ) : (
               <>
+                {/* Para qué sirve: abierto la primera vez, plegado después. Se
+                    esconde con el teclado, por el mismo motivo que el ánimo. */}
+                {!textFocused && <ParaQueSirve toolId="diario" style={{ marginBottom: 16 }} />}
                 {/* ── Ánimo y pregunta ──────────────────────────────── */}
                 {/* Con el teclado abierto se colapsan a dos chips. No es un
                     adorno: entre header, ánimo, pregunta, hint y botón, al

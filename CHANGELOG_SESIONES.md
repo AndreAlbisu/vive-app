@@ -1,3 +1,16 @@
+## 2026-09-25 — Andre (Claude · para qué sirve cada herramienta)
+
+**Tocado:** `constants/herramientasParaQue.ts` (nuevo), `components/ParaQueSirve.tsx` (nuevo), `app/diario.tsx`, `app/gratitud.tsx`, `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`, `app/(tabs)/recursos.tsx`, `__tests__/herramientasParaQue.test.ts` (nuevo)
+
+**Resumen:**
+- 🧰 **Andre: "deberíamos dar contexto y explicar la importancia y utilidad de las herramientas".** Era el pendiente del consejo del 15/09 (el `paraQue` de Diario, Gratitud y Respiración). Cada pantalla explicaba cómo se usa y no para qué ni cuándo.
+- **Bloque "Para qué sirve"** en las cuatro herramientas visibles: para qué, cuándo, y un dato útil. Abierto la primera vez (marca local `vita_para_que_<id>`), plegado después. En el Diario se esconde con el teclado. En Sonidos reemplaza al párrafo que ya lo decía.
+- **Bajada en Recursos:** "Prácticas cortas para el día a día. No reemplazan una sesión: la acompañan."
+- Textos aprobados por Andre. Sin efectos de salud (T&C §5); una prueba lo controla, junto con que toda herramienta visible tenga su texto. "Tu profesional no lo ve" (Diario) verificado contra el RLS de `journal_entries`.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone, sobre todo Respiración en pantalla chica: el bloque abierto la primera vez empuja los patrones hacia abajo.
+
 ## 2026-09-25 — Andre (Claude · Formación para coaches y nutricionistas)
 
 **Tocado:** `lib/credentialRules.ts`, `lib/coachCredentials.ts`, `screens/CoachCredentialsScreen.tsx`, `screens/CoachProfileScreen.tsx`, `screens/CoachEnfoqueScreen.tsx`, `__tests__/coachCredentials.test.ts`
