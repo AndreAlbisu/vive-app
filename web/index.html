@@ -144,8 +144,8 @@
   .store[aria-disabled="true"]:active { transform: none; }
   @keyframes dot { 0% { transform: scale(.7); } 40% { transform: scale(1.5); } 100% { transform: scale(.7); } }
 
-  /* Lista de espera (25/09/2026). Mientras la app no está en las tiendas, el
-     lugar de los botones de descarga lo ocupa este formulario. */
+  /* Lista de espera (25/09/2026). Solo en el recuadro de profesionales,
+     mientras la app no está en las tiendas. */
   .aviso { margin-top: 36px; max-width: 480px; }
   .aviso-fila { display: flex; gap: 8px; padding: 6px; border-radius: 999px; background: rgba(255, 250, 243, .82); box-shadow: inset 0 0 0 1px rgba(86, 94, 50, .18); }
   .aviso input {
@@ -707,7 +707,7 @@
             <li>Un perfil que cuenta tu enfoque, no solo tu título.</li>
           </ul>
           <p class="precio">Sin costo fijo. Vita cobra una comisión solo por las sesiones que das: 20% la primera con cada persona y 15% desde la segunda. Si alguien llega por tu propio link, la primera no tiene comisión.</p>
-          <p>Estamos sumando a los primeros profesionales.</p>
+          <p id="pros-cta">Estamos sumando a los primeros profesionales.</p>
           <div data-stores data-tipo="profesional"></div>
         </div>
       </div>
@@ -898,8 +898,8 @@
   // y no llevan a ningún lado. Cuando la app salga, pegar acá las URLs de las
   // tiendas y listo: se actualizan los dos lugares donde aparecen.
   var TIENDAS = {
-    ios: '',      // ej. https://apps.apple.com/ar/app/vita/id0000000000
-    android: ''   // ej. https://play.google.com/store/apps/details?id=...
+    ios: '',      // https://apps.apple.com/ar/app/vita/id<número que da App Store Connect>
+    android: ''   // https://play.google.com/store/apps/details?id=com.andrealbisu.viveapp
   };
 
   var ICONOS = {
@@ -909,8 +909,8 @@
   var NOMBRES = { ios: 'App Store', android: 'Google Play' };
   var HAY_TIENDAS = !!(TIENDAS.ios || TIENDAS.android);
 
-  // Lista de espera (25/09/2026). Mientras no haya links de tiendas, cada
-  // lugar de descarga muestra un formulario para dejar el mail. Escribe por la
+  // Lista de espera (25/09/2026). Mientras no haya links de tiendas, el
+  // recuadro de profesionales muestra un formulario para dejar el mail. Escribe por la
   // función `anotarse_lista_espera` (scripts/add-lista-de-espera.sql): la tabla
   // no se puede leer ni escribir con la anon key, y la función tiene tope por IP.
   // El `?ref=` de un link de invitación se guarda con el mail.
@@ -983,7 +983,15 @@
   }
 
   document.querySelectorAll('[data-stores]').forEach(function (box) {
-    if (!HAY_TIENDAS) { formularioAviso(box, box.dataset.tipo || 'persona'); return; }
+    // 25/09/2026, Andre: las tiendas salen en días, así que para quien busca
+    // acompañamiento van los botones ("Muy pronto" hasta que haya links). El
+    // formulario queda solo para profesionales, mientras no se pueda postular
+    // desde la app publicada.
+    if (box.dataset.tipo === 'profesional') {
+      if (!HAY_TIENDAS) { formularioAviso(box, 'profesional'); return; }
+      var cta = document.getElementById('pros-cta');
+      if (cta) cta.textContent = 'Bajate la app y postulate desde ahí.';
+    }
     box.classList.add('stores');
     ['ios', 'android'].forEach(function (k) {
       var url = TIENDAS[k];
@@ -995,10 +1003,6 @@
       box.appendChild(el);
     });
   });
-
-  // El botón del menú dice "Avisame" mientras no haya app para descargar.
-  var navBtn = document.querySelector('.nav .btn');
-  if (navBtn && !HAY_TIENDAS) navBtn.textContent = 'Avisame';
 
   // "Cómo funciona" de la garantía lleva a una pregunta cerrada: la abre.
   var garantia = document.getElementById('garantia');

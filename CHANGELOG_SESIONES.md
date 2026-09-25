@@ -1,3 +1,15 @@
+## 2026-09-25 — Andre (Claude · vuelven los botones de App Store y Google Play)
+
+**Tocado:** `web/index.html`, `SCHEMA.md`
+
+**Resumen:**
+- 📲 **Andre: las tiendas salen "dentro de re poco".** Arriba y en el cierre vuelven los botones de App Store y Google Play ("Muy pronto en…" hasta que haya links), y el menú vuelve a decir "Descargar". El "Avisame" para personas sale.
+- El formulario queda solo en el recuadro de profesionales ("Quiero sumarme"). Cuando se peguen los links, ese recuadro pasa solo a "Bajate la app y postulate desde ahí" con los botones de descarga.
+- Sin cambios en la base: `lista_de_espera` sigue igual.
+
+**Pendiente para la próxima sesión:**
+- Al publicar: pegar los links en `TIENDAS` de `web/index.html`. Android: `https://play.google.com/store/apps/details?id=com.andrealbisu.viveapp`. iOS: el número (`id…`) que da App Store Connect.
+
 ## 2026-09-25 — Andre (Claude · botón de arrepentimiento fuera del menú)
 
 **Tocado:** `web/index.html`
