@@ -1,3 +1,14 @@
+## 2026-09-25 — Andre (Claude · botón de arrepentimiento fuera del menú)
+
+**Tocado:** `web/index.html`
+
+**Resumen:**
+- 🙃 **Andre: arriba de todo "da muy malas vibes".** La Res. 424/2020 exige que esté en la primera pantalla y destacado (en el pie solo no cumple), así que no se puede sacar de ahí, pero sí cambiar cómo se ve. Salió del menú y va debajo de la garantía de primera sesión, donde se lee como parte de los derechos del cliente. Sigue en la primera pantalla también en el celular.
+- Pasó de "BOTÓN DE ARREPENTIMIENTO" a "Botón de arrepentimiento", arriba y en el pie, por decisión de Andre.
+
+**Pendiente para la próxima sesión:**
+- Preguntarle al abogado si la resolución exige el texto literal en mayúsculas. Si dice que sí, se cambia en `.regret` de `web/index.html` (dos lugares).
+
 ## 2026-09-25 — Andre (Claude · la landing junta mails mientras la app no sale)
 
 **Tocado:** `web/index.html`, `scripts/add-lista-de-espera.sql` (nuevo, corrido), `docs/politica-de-privacidad.md` + generados (`web/legal/privacidad.html`, `web/legal-version.js`, `constants/legal.ts`), `SCHEMA.md`

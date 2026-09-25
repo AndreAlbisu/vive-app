@@ -71,12 +71,17 @@
   }
   .wordmark { font-weight: 800; font-size: 30px; letter-spacing: -0.03em; text-decoration: none; color: var(--olive); line-height: 1; }
   .nav-right { display: flex; align-items: center; gap: 10px; }
-  /* Res. 424/2020: el texto tiene que decir literalmente esto, estar en la
-     primera pantalla de la portada y verse. Por eso va en el nav y no en el pie. */
+  /* Res. 424/2020: el enlace tiene que estar en la primera pantalla de la
+     portada, destacado y fácil de encontrar; en el pie solo no alcanza.
+     25/09/2026, pedido de Andre ("da muy malas vibes"): sale del menú y va
+     debajo de la garantía, en la primera pantalla también en el celular, y en
+     minúscula. Si el abogado dice que tiene que ir literal en mayúsculas, se
+     cambia acá y en el pie. */
   .regret {
-    font-size: 11px; font-weight: 700; letter-spacing: .03em; color: var(--soft);
+    display: inline-block; margin-top: 4px;
+    font-size: 13px; font-weight: 600; color: var(--soft);
     text-decoration: underline; text-decoration-color: rgba(86, 98, 69, .35); text-underline-offset: 3px;
-    padding: 12px 4px;
+    padding: 10px 0;
   }
   .regret:hover { color: var(--olive); text-decoration-color: currentColor; }
   .btn {
@@ -443,7 +448,6 @@
     .nav { padding-top: 16px; }
     .nav .btn { display: none; }
     .wordmark { font-size: 26px; }
-    .regret { font-size: 10.5px; padding: 12px 2px; }
     .steps li { display: grid; grid-template-columns: 64px 1fr; column-gap: 8px; }
     .steps li::before { grid-row: span 2; font-size: 3rem; }
     .steps b { margin-top: 4px; }
@@ -482,7 +486,6 @@
   <nav class="nav" aria-label="Principal">
     <a class="wordmark" href="./" aria-label="Vita, inicio">vita</a>
     <div class="nav-right">
-      <a class="regret" href="./legal/arrepentimiento">BOTÓN DE ARREPENTIMIENTO</a>
       <a class="btn" href="#descargar">Descargar</a>
     </div>
   </nav>
@@ -493,6 +496,7 @@
       <p class="lead">Sesiones por videollamada con psicólogos, coaches y nutricionistas que elegís conociendo cómo trabajan. Y herramientas para los días entre una sesión y otra.</p>
       <div class="stores" data-stores data-tipo="persona"></div>
       <p class="garantia">Si la primera sesión no te convence, te devolvemos lo que pagaste. <a href="#garantia">Cómo funciona</a></p>
+      <a class="regret" href="./legal/arrepentimiento">Botón de arrepentimiento</a>
     </div>
 
     <div class="phone" role="img" aria-label="Vista ilustrativa del inicio de Vita: saludo, pregunta de cómo venís hoy y tu próxima sesión">
@@ -755,7 +759,7 @@
           <li><a href="./legal/terminos">Términos y Condiciones</a></li>
           <li><a href="./legal/privacidad">Política de Privacidad</a></li>
           <li><a href="./legal/eliminar-cuenta">Eliminar tu cuenta</a></li>
-          <li><a class="regret" href="./legal/arrepentimiento">BOTÓN DE ARREPENTIMIENTO</a></li>
+          <li><a class="regret" href="./legal/arrepentimiento">Botón de arrepentimiento</a></li>
         </ul>
       </div>
       <div>
