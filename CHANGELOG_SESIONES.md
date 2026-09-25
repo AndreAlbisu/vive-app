@@ -8,7 +8,10 @@
 - **Check-in, Brillando → gratitud** (Andre): en vez de la pregunta del diario, "¿Qué agradecés hoy?" con los tres renglones de la app (mismos textos que `lib/vozCompartida.ts` y los placeholders de `app/gratitud.tsx`). Se puede escribir; no se guarda.
 - 🎨 **Andre: "la ilustración está media fea".** La videollamada dibujada en CSS se reemplazó por dos círculos del isotipo, "vos" (cálido) y "tu profesional" (celeste), que se acercan hasta superponerse al entrar en pantalla. Con gradiente como la aurora: en coral y naranja planos se leía como el logo de Mastercard. Sin JS o con movimiento reducido, quedan juntos.
 
+- **Logo en la web** (Andre: "no está en ningún lado"): el isotipo de tres círculos en trébol de `components/VitaMark.tsx`, con la misma geometría, junto a "vita" en el menú y el pie de las dos páginas, en el favicon y en la firma de Sofía del check-in. Reemplaza los dos círculos que yo había puesto en el favicon y en la firma, que no eran la marca. El logo sigue sin cerrar (encargo al estudio).
+
 **Pendiente para la próxima sesión:**
+- 🔴 **La app tiene el ícono de ejemplo de Expo** (la "A" azul en `assets/images/icon.png`, y seguramente también `splash-icon.png` y los de Android). Bloquea la publicación en tiendas: hace falta el ícono real antes de subir.
 - La foto real con alguien de la beta sigue siendo el plan para `og:image` (vista previa en WhatsApp), que sigue faltando; puede sumarse debajo de los círculos.
 
 ## 2026-09-25 — Andre (Claude · revisión de la web, tercera tanda: el check-in como en la app)

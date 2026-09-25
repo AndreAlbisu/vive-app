@@ -8,7 +8,7 @@
 <meta property="og:title" content="Vita">
 <meta property="og:description" content="Un espacio para estar mejor, a tu ritmo.">
 <meta name="theme-color" content="#F7EFE4">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='26' cy='28' r='18' fill='%23F0664A'/%3E%3Ccircle cx='38' cy='38' r='18' fill='%23F59B3A' fill-opacity='.85'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23565E32' stroke-width='8'%3E%3Ccircle cx='50' cy='34' r='26'/%3E%3Ccircle cx='29.5' cy='66' r='26'/%3E%3Ccircle cx='70.5' cy='66' r='26'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -70,6 +70,11 @@
     max-width: var(--max); margin: 0 auto; padding: 22px var(--gutter);
   }
   .wordmark { font-weight: 800; font-size: 30px; letter-spacing: -0.03em; text-decoration: none; color: var(--olive); line-height: 1; }
+  /* Isotipo: los tres círculos en trébol de la app (components/VitaMark.tsx),
+     misma geometría. ⚠️ El logo no está cerrado (encargo al estudio): si
+     cambia, se reemplaza este dibujo, el favicon y la firma de Sofía. */
+  .wordmark { display: inline-flex; align-items: center; gap: .28em; }
+  .vmark { width: .95em; height: .95em; flex: none; fill: none; stroke: currentColor; stroke-width: 7; }
   .nav-right { display: flex; align-items: center; gap: 10px; }
   /* Res. 424/2020: el enlace tiene que estar en la primera pantalla de la
      portada, destacado y fácil de encontrar; en el pie solo no alcanza.
@@ -223,7 +228,7 @@
   .checkin.picked::before { opacity: 1; }
   .checkin .wrap { max-width: 680px; }
   .sofia-mark { display: inline-flex; align-items: center; gap: 8px; font-style: italic; font-weight: 600; font-size: .95rem; color: var(--soft); transition: color .9s ease; }
-  .sofia-mark svg { width: 20px; height: 20px; }
+  .sofia-mark .vmark { width: 20px; height: 20px; }
   .checkin h2 { margin: 18px auto 0; max-width: 14ch; font-size: clamp(2.2rem, 6vw, 3.6rem); text-wrap: balance; transition: font-size .6s ease, opacity .6s ease, color .9s ease; }
   .checkin.picked h2 { font-size: clamp(1.1rem, 2.4vw, 1.35rem); opacity: .8; max-width: none; }
   .checkin.picked .sofia-mark { color: rgba(255,248,239,.85); }
@@ -316,9 +321,9 @@
   .purpose-q { margin: 0 auto; max-width: 22ch; font-size: clamp(2rem, 4.4vw, 3.6rem); line-height: 1.08; text-wrap: balance; }
   .purpose .sec-lead { margin: 24px auto 0; text-wrap: balance; }
   /* Un encuentro (25/09/2026). Reemplaza la videollamada dibujada, que
-     quedaba infantil al lado de los teléfonos. Son los dos círculos del
-     isotipo de Vita, uno por persona (cálido y celeste, con gradiente
-     como la aurora: en coral y naranja planos se leía como otro logo): al entrar en pantalla se acercan hasta
+     quedaba infantil al lado de los teléfonos. Son dos círculos, uno por
+     persona (cálido y celeste, con gradiente como la aurora: en coral y
+     naranja planos se leía como otro logo): al entrar en pantalla se acercan hasta
      superponerse. Sin JavaScript, o con movimiento reducido, se ven juntos.
      🔁 Si llega la FOTO real (escena armada con alguien de la beta, con
      permiso firmado), puede ir acá o sumarse debajo. */
@@ -437,7 +442,7 @@
   .foot a:hover { text-decoration: underline; }
   .foot .regret { display: inline-block; margin-top: 4px; padding: 0; }
   .foot p { color: var(--soft); }
-  .foot .wordmark { font-size: 36px; display: inline-block; margin-bottom: 14px; }
+  .foot .wordmark { font-size: 36px; margin-bottom: 14px; }
   .crisis { margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--soft); font-size: .9rem; }
   .crisis a { font-weight: 700; color: var(--olive); }
   .legal-line { margin-top: 12px; color: var(--soft); font-size: .85rem; }
@@ -504,7 +509,7 @@
   <div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span><span class="a4"></span></div>
 
   <nav class="nav" aria-label="Principal">
-    <a class="wordmark" href="./" aria-label="Vita, inicio">vita</a>
+    <a class="wordmark" href="./" aria-label="Vita, inicio"><svg class="vmark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="34" r="26"/><circle cx="29.5" cy="66" r="26"/><circle cx="70.5" cy="66" r="26"/></svg>vita</a>
     <div class="nav-right">
       <a class="btn" href="#descargar">Descargar</a>
     </div>
@@ -651,7 +656,7 @@
 
   <section class="checkin" aria-labelledby="momento" hidden>
     <div class="wrap">
-      <span class="sofia-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="26" cy="28" r="17" fill="none" stroke="currentColor" stroke-width="6"/><circle cx="38" cy="38" r="17" fill="none" stroke="currentColor" stroke-width="6"/></svg>Sofía</span>
+      <span class="sofia-mark"><svg class="vmark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="34" r="26"/><circle cx="29.5" cy="66" r="26"/><circle cx="70.5" cy="66" r="26"/></svg>Sofía</span>
       <h2 id="momento">¡Hola! ¿Cómo venís hoy?</h2>
       <ul class="mood-pick">
         <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Bajón</span></button></li>
@@ -755,7 +760,7 @@
   <div class="wrap">
     <div class="foot">
       <div>
-        <a class="wordmark" href="./">vita</a>
+        <a class="wordmark" href="./"><svg class="vmark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="34" r="26"/><circle cx="29.5" cy="66" r="26"/><circle cx="70.5" cy="66" r="26"/></svg>vita</a>
         <p>Un lugar para estar mejor, a tu ritmo. Hecho en Córdoba, Argentina.</p>
       </div>
       <div>

@@ -8,7 +8,7 @@
 <meta property="og:title" content="Vita para profesionales">
 <meta property="og:description" content="Un lugar para que te encuentren por cómo trabajás.">
 <meta name="theme-color" content="#F7EFE4">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='26' cy='28' r='18' fill='%23F0664A'/%3E%3Ccircle cx='38' cy='38' r='18' fill='%23F59B3A' fill-opacity='.85'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23565E32' stroke-width='8'%3E%3Ccircle cx='50' cy='34' r='26'/%3E%3Ccircle cx='29.5' cy='66' r='26'/%3E%3Ccircle cx='70.5' cy='66' r='26'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -60,6 +60,11 @@
     max-width: var(--max); margin: 0 auto; padding: 22px var(--gutter);
   }
   .wordmark { font-weight: 800; font-size: 30px; letter-spacing: -0.03em; text-decoration: none; color: var(--olive); line-height: 1; }
+  /* Isotipo: los tres círculos en trébol de la app (components/VitaMark.tsx),
+     misma geometría. ⚠️ El logo no está cerrado (encargo al estudio): si
+     cambia, se reemplaza este dibujo, el favicon y la firma de Sofía. */
+  .wordmark { display: inline-flex; align-items: center; gap: .28em; }
+  .vmark { width: .95em; height: .95em; flex: none; fill: none; stroke: currentColor; stroke-width: 7; }
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 10px;
     min-height: 48px; padding: 0 22px; border-radius: 999px;
@@ -204,7 +209,7 @@
 <header class="hero grain">
   <div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span><span class="a4"></span></div>
   <nav class="nav" aria-label="Principal">
-    <a class="wordmark" href="./" aria-label="Vita, inicio">vita</a>
+    <a class="wordmark" href="./" aria-label="Vita, inicio"><svg class="vmark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="34" r="26"/><circle cx="29.5" cy="66" r="26"/><circle cx="70.5" cy="66" r="26"/></svg>vita</a>
     <a class="btn" href="#sumarte">Quiero sumarme</a>
   </nav>
   <div class="wrap hero-inner">
@@ -287,7 +292,7 @@
 <footer>
   <div class="wrap">
     <div class="foot">
-      <a class="wordmark" href="./">vita</a>
+      <a class="wordmark" href="./"><svg class="vmark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="34" r="26"/><circle cx="29.5" cy="66" r="26"/><circle cx="70.5" cy="66" r="26"/></svg>vita</a>
       <ul>
         <li><a href="./">Vita para quien busca acompañamiento</a></li>
         <li><a href="./legal/terminos">Términos y Condiciones</a></li>
