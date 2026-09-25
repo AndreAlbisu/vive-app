@@ -472,8 +472,8 @@
     .steps li { display: grid; grid-template-columns: 64px 1fr; column-gap: 8px; }
     .steps li::before { grid-row: span 2; font-size: 3rem; }
     .steps b { margin-top: 4px; }
-    .peek-switch:not([hidden]) { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
-    .peek-switch button { font: inherit; font-size: .85rem; font-weight: 700; min-height: 44px; padding: 10px 14px; border-radius: 24px; border: 1px solid var(--line); color: var(--olive); background: transparent; cursor: pointer; }
+    .peek-switch:not([hidden]) { display: flex; gap: 6px; margin-top: 24px; }
+    .peek-switch button { flex: 1 1 auto; font: inherit; font-size: .8rem; font-weight: 700; min-height: 44px; padding: 10px 8px; white-space: nowrap; border-radius: 24px; border: 1px solid var(--line); color: var(--olive); background: transparent; cursor: pointer; }
     .peek-switch button[aria-pressed="true"] { color: var(--cream); background: var(--olive); }
     .peek[data-active] { margin-top: 28px; }
     .peek[data-active="0"] figure:not(:nth-child(1)),
@@ -482,7 +482,6 @@
     .peek figure { display: flex; flex-direction: column; gap: 0; }
     .peek figcaption { order: -1; align-self: stretch; max-width: 34ch; margin-bottom: 24px; }
     .hero h1 { font-size: clamp(2.8rem, 10.5vw, 4rem); }
-    .hero .phone { width: min(280px, 100%); }
     .hero-inner { padding-top: 88px; padding-bottom: 48px; gap: 32px; }
     .hero .lead { margin-top: 20px; }
     .hero .stores { flex-wrap: nowrap; }
@@ -494,7 +493,12 @@
     .diary { min-height: 0; }
     .steps { grid-template-columns: 1fr; }
     .foot { grid-template-columns: 1fr; }
-    .store { flex: 1 1 200px; }
+    .store { flex: 1 1 0; min-width: 0; min-height: 52px; padding: 8px 12px; gap: 8px; border-radius: 16px; }
+    .store svg { width: 20px; height: 20px; }
+    .store b { font-size: 15px; }
+    .stores { flex-wrap: nowrap; gap: 10px; }
+    .pros-box { gap: 4px; }
+    .hero .phone { width: min(250px, 100%); }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -965,6 +969,8 @@
           act.type = 'button';
           act.addEventListener('click', function () {
             if (r.act === 'pausa') pausa(r); else if (r.act === 'gratitud') gratitud(); else diario(r);
+            // En el celular lo que se abre queda abajo de la pantalla.
+            reply.scrollIntoView({ block: 'center', behavior: quieto ? 'auto' : 'smooth' });
           });
           reply.appendChild(mostrar(act));
         });

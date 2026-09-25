@@ -1,3 +1,14 @@
+## 2026-09-25 — Andre (Claude · la web en el celular)
+
+**Tocado:** `web/index.html`, `web/profesionales.html`
+
+**Resumen:**
+- 📱 **Andre: "en la compu está hermosa, en el celular es donde falla más".** Revisada a 390 px con un marco del tamaño de un iPhone (Chrome sin ventana no baja de 500 px, y con el marco alto las `vmax` de la aurora salían gigantes: por eso las capturas anteriores la mostraban plana; a 390×844 se ve bien).
+- Arreglado: las tres pestañas del vistazo entran en una fila (antes "Una pausa" quedaba sola abajo); el recuadro de profesionales no tiene el hueco de 48 px entre sus dos mitades; los botones de tiendas van lado a lado también en el cierre (antes, dos barras a todo el ancho); el teléfono de la portada es más chico (250 px); en el check-in, lo que se abre (respiración, diario, gratitud) se centra en pantalla, porque en el celular quedaba abajo; en /profesionales, 20% y 15% lado a lado.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone lo que la captura no muestra: tocar, desplazarse, las animaciones del check-in y los círculos, y las fuentes en Safari.
+
 ## 2026-09-25 — Andre (Claude · revisión de la web, cuarta tanda: portada más limpia y un encuentro)
 
 **Tocado:** `web/index.html`
