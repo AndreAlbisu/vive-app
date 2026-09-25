@@ -29,7 +29,7 @@ import { topicOptionsFrom } from '@/constants/conexionesDoors';
 import { supabase } from '@/lib/supabase';
 import { getCoachesCache, CachedCoach } from '@/lib/coachesCache';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
-import { normalizarTexto, tipoProfesional } from '@/lib/tipoProfesional';
+import { normalizarTexto, tipoProfesional, etiquetaProfesionalPublica } from '@/lib/tipoProfesional';
 
 // ─── Paleta local (consistente con Recursos / Explorar) ──────────────────────
 const FOREST      = '#3A4F2A';
@@ -148,6 +148,7 @@ export default function SearchScreen3() {
       .from('coaches')
       .select('id, specialty, bio, price_per_session, nationality, has_matricula, profesion, accepts_international, accepts_paypal, accepts_usdt, mp_connected, price_usd, profiles!inner(id, name, avatar_url, gender), coach_topics(topic)')
       .eq('verified', true)
+      .eq('availability_status', 'activo')
       // D6 (docs/decisiones-pagos.md): mismo filtro que `coachesCache.ts` — sin
       // esto, con el caché frío esta consulta de respaldo volvía a mostrar
       // coaches sin ningún riel de cobro configurado.
@@ -155,7 +156,8 @@ export default function SearchScreen3() {
       // Mismo filtro que `coachesCache.ts`: un coach suspendido no aparece. Va
       // acá también porque esta consulta es el respaldo con el caché frío.
       .or(`suspendido_hasta.is.null,suspendido_hasta.lt.${new Date().toISOString()}`)
-      .limit(50)
+      .order('created_at', { ascending: true })
+      .limit(200)
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) console.error('[Search3] coaches fetch:', error.message);
@@ -164,7 +166,7 @@ export default function SearchScreen3() {
           return {
             id: profile?.id as string,
             name: profile?.name as string,
-            specialty: c.specialty as string,
+            specialty: etiquetaProfesionalPublica(c),
             hasMatricula: !!c.has_matricula,
             profesion: c.profesion ?? null,
             priceFrom: c.price_per_session as number,

@@ -26,6 +26,7 @@
 //   { action: 'credential_file_url', credential_id }
 //   { action: 'review_credential', credential_id, verified: boolean, notes? }
 //   { action: 'list_coach_applications', status? }   // lee el mail del coach (A4)
+//   { action: 'record_coach_interview', coach_id, notes }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -186,6 +187,41 @@ serve(async (req) => {
   }
 
   switch (body.action) {
+    case 'record_coach_interview': {
+      if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
+      const notes = typeof body.notes === 'string' ? body.notes.trim() : ''
+      if (notes.length < 10 || notes.length > 2000) {
+        return json({ error: 'resumí la entrevista en 10 a 2000 caracteres' }, 400)
+      }
+
+      const { data: candidate, error: candidateError } = await admin
+        .from('coaches')
+        .select('id, application_status, verified')
+        .eq('id', body.coach_id)
+        .maybeSingle()
+      if (candidateError) return json({ error: candidateError.message }, 500)
+      if (!candidate || candidate.application_status !== 'pendiente' || candidate.verified) {
+        return json({ error: 'la solicitud no está pendiente' }, 409)
+      }
+
+      const { error } = await admin.from('coach_application_interviews').upsert({
+        coach_id: candidate.id,
+        interviewer_id: user.id,
+        interviewed_at: new Date().toISOString(),
+        notes,
+        recorded_at: new Date().toISOString(),
+      }, { onConflict: 'coach_id' })
+      if (error) return json({ error: error.message }, 500)
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'record_coach_interview',
+        targetType: 'coach',
+        targetId: candidate.id,
+        details: { interviewed: true },
+      })
+      return json({ result: 'ok', ...(auditErr ? { warning: `entrevista guardada, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
     // ── Aprobar / revocar una postulación ────────────────────────────────────
     // `verified` es el flag por el que `coachesCache` filtra el catálogo, así
     // que esto es literalmente lo que publica o despublica a un profesional.
@@ -201,18 +237,26 @@ serve(async (req) => {
       if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
       if (typeof body.verified !== 'boolean') return json({ error: 'verified tiene que ser booleano' }, 400)
 
-      const patch: Record<string, unknown> = { verified: body.verified }
       if (body.verified) {
-        patch.application_status = 'aprobada'
-        patch.application_reviewed_at = new Date().toISOString()
-        patch.application_notes = body.notes ?? null
+        const { data: interview, error: interviewError } = await admin
+          .from('coach_application_interviews')
+          .select('coach_id')
+          .eq('coach_id', body.coach_id)
+          .maybeSingle()
+        if (interviewError) return json({ error: interviewError.message }, 500)
+        if (!interview) return json({ error: 'registrá la entrevista antes de aprobar' }, 409)
       }
 
-      const { data, error } = await admin
-        .from('coaches')
-        .update(patch)
-        .eq('id', body.coach_id)
-        .select('id, verified, profile_id, application_status')
+      const { data, error } = body.verified
+        ? await admin.rpc('approve_coach_application', {
+            p_coach_id: body.coach_id,
+            p_admin_id: user.id,
+            p_notes: body.notes ?? null,
+          })
+        : await admin.from('coaches')
+            .update({ verified: false })
+            .eq('id', body.coach_id)
+            .select('id, verified, profile_id, application_status')
 
       if (error) return json({ error: error.message }, 500)
       if (!data || data.length === 0) return json({ error: 'no existe ese coach' }, 404)
@@ -228,28 +272,12 @@ serve(async (req) => {
       })
 
       if (body.verified) {
-        // 🔴 Hasta acá esto solo escribía `coaches.verified` — y `role` es lo
-        // que `AuthRedirect`/`app/index.tsx` usa para mandar a `(coach)` vs
-        // `(tabs)`. Sin esta línea, un coach aprobado por este mismo camino
-        // se logueaba y volvía a caer en la app de USUARIO para siempre, sin
-        // ningún error visible (encontrado 27/08/2026 con un alta real de
-        // punta a punta — nadie lo había pisado porque los coaches de prueba
-        // existentes se sembraron por SQL con el rol ya puesto a mano).
-        // Ningún coach real había pasado por acá todavía, así que no hay
-        // cuentas viejas para migrar — el fix alcanza desde ahora.
-        //
-        // ⚠️ No se toca al REVOCAR (`verified=false`, más abajo no hay rama
-        // simétrica): revocar es "sacar del catálogo", no "convertir de nuevo
-        // en usuario final" — mismo criterio que ya usa este archivo para no
-        // reescribir `application_status` al revocar.
-        await admin.from('profiles').update({ role: 'coach' }).eq('id', coach.profile_id)
-
         await notifyProfile(
           admin,
           coach.profile_id,
           'postulacion_aprobada',
-          'Tu perfil ya está publicado',
-          'Aprobamos tu postulación. Ya aparecés en Vita y podés recibir reservas.',
+          'Aprobamos tu postulación',
+          'Ya podés entrar a tu panel profesional. Configurá tus horarios y cómo querés cobrar para empezar a recibir reservas.',
         )
       }
 
@@ -1143,11 +1171,38 @@ serve(async (req) => {
 
       const { data, error } = await admin
         .from('coaches')
-        .select('id, profile_id, specialty, bio, price_per_session, nationality, application_video_url, created_at, verified, application_status, application_notes, application_reviewed_at, profiles!inner(name, email)')
+        .select('id, profile_id, specialty, bio, price_per_session, nationality, application_video_url, estilo, guia, focos, created_at, verified, application_status, application_notes, application_reviewed_at, profiles!inner(name, email)')
         .eq('application_status', status)
         .order('created_at', { ascending: true })
 
       if (error) return json({ error: error.message }, 500)
+
+      const coachIds = (data ?? []).map((c: any) => c.id as string)
+      const { data: interviews, error: interviewError } = coachIds.length
+        ? await admin.from('coach_application_interviews')
+            .select('coach_id, interviewed_at')
+            .in('coach_id', coachIds)
+        : { data: [], error: null }
+      if (interviewError) return json({ error: interviewError.message }, 500)
+      const interviewByCoach = new Map((interviews ?? []).map((i: any) => [i.coach_id, i.interviewed_at]))
+
+      const { data: topics, error: topicsError } = coachIds.length
+        ? await admin.from('coach_topics').select('coach_id, topic').in('coach_id', coachIds)
+        : { data: [], error: null }
+      if (topicsError) return json({ error: topicsError.message }, 500)
+      const topicsByCoach = new Map<string, string[]>()
+      for (const topic of topics ?? []) {
+        const current = topicsByCoach.get(topic.coach_id) ?? []
+        current.push(topic.topic)
+        topicsByCoach.set(topic.coach_id, current)
+      }
+
+      const { data: credentials, error: credentialsError } = coachIds.length
+        ? await admin.from('coach_credentials')
+            .select('coach_id, status, profesion')
+            .in('coach_id', coachIds).eq('kind', 'matricula')
+        : { data: [], error: null }
+      if (credentialsError) return json({ error: credentialsError.message }, 500)
 
       return json({
         result: 'ok',
@@ -1165,11 +1220,21 @@ serve(async (req) => {
             price: c.price_per_session ?? null,
             nationality: c.nationality ?? null,
             applicationVideoUrl: c.application_video_url ?? null,
+            topics: topicsByCoach.get(c.id) ?? [],
+            estilo: c.estilo ?? null,
+            guia: c.guia ?? null,
+            focos: c.focos ?? [],
+            matriculaVerificada: (credentials ?? []).some((cc: any) => cc.coach_id === c.id
+              && cc.status === 'verificada'
+              && cc.profesion === (c.specialty === 'Psicólogo/a' ? 'psicologia' : 'nutricion')),
+            matriculaPendiente: (credentials ?? []).some((cc: any) => cc.coach_id === c.id
+              && cc.status === 'pendiente'),
             createdAt: c.created_at ?? null,
             verified: !!c.verified,
             status: c.application_status ?? 'pendiente',
             notes: c.application_notes ?? null,
             reviewedAt: c.application_reviewed_at ?? null,
+            interviewedAt: interviewByCoach.get(c.id) ?? null,
           }
         }),
       })

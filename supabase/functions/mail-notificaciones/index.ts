@@ -17,9 +17,9 @@
 // Tres cinturones, porque un mail de más no se puede deshacer:
 //
 //  1. `emailed_at` se marca al mandar. Una notificación se manda una sola vez.
-//  2. **Solo notificaciones RECIENTES** (`VENTANA_MINUTOS`). Si el cron estuvo
-//     caído dos días, al volver NO vomita dos días de mails: lo viejo se da por
-//     perdido, que es mucho mejor que llegar tarde y en manada.
+//  2. Las reservas solo se mandan dentro de `VENTANA_MINUTOS`; las decisiones
+//     de postulación no vencen, porque son el canal principal de respuesta.
+//     Su backfill previo a este cambio evita un envío masivo histórico.
 //  3. Una lista blanca de tipos. `notifications` tiene tipos que no son para
 //     mandar por mail (feedback de recursos, propuestas), y la tabla va a ganar
 //     más con el tiempo. Se manda lo que está en la lista, no lo que no está en
@@ -35,6 +35,7 @@ import { enviarMail, nombreSeguro } from '../_shared/email.ts'
 
 const VENTANA_MINUTOS = 180
 const TOPE_POR_CORRIDA = 50
+const DECISIONES = ['postulacion_aprobada', 'postulacion_rechazada']
 
 const SITIO = Deno.env.get('WEB_BASE_URL') ?? 'https://vitaapp.com.ar'
 
@@ -52,7 +53,7 @@ const PLANTILLAS: Record<string, { titulo: string; pie?: string; conLinkSala?: b
   // avisamos" mentía: la notificación quedaba esperando adentro de una cuenta a
   // la que no podía entrar hasta que la aprobaran.
   postulacion_aprobada: {
-    titulo: 'Tu perfil de Vita ya está publicado',
+    titulo: 'Aprobamos tu postulación a Vita',
     pie: 'Entrá a la app con el mismo mail para cargar tus horarios, tu precio y cómo querés cobrar.',
   },
   postulacion_rechazada: {
@@ -126,12 +127,29 @@ serve(async (req) => {
   )
 
   const desde = new Date(Date.now() - VENTANA_MINUTOS * 60_000).toISOString()
+  const ahora = new Date().toISOString()
+
+  // Si la ejecución anterior murió después de reservar una decisión, se
+  // libera tras 15 minutos. El reenvío lleva una clave de idempotencia estable
+  // al proveedor para evitar duplicados cuando el primer intento sí salió.
+  const claimVencido = new Date(Date.now() - 15 * 60_000).toISOString()
+  const { error: recoveryError } = await admin.from('notifications')
+    .update({ emailed_at: null })
+    .in('type', DECISIONES)
+    .is('mail_completed_at', null)
+    .not('emailed_at', 'is', null)
+    .lt('emailed_at', claimVencido)
+  if (recoveryError) {
+    console.error('[mail-notificaciones] no se pudieron recuperar reservas vencidas:', recoveryError.message)
+    return new Response('error', { status: 500 })
+  }
 
   const { data: pendientes, error } = await admin
     .from('notifications')
-    .select('id, recipient_id, type, title, body, booking_id, created_at')
+    .select('id, recipient_id, type, title, body, booking_id, created_at, mail_attempts')
     .is('emailed_at', null)
-    .gte('created_at', desde)
+    .or(`created_at.gte.${desde},type.in.(${DECISIONES.join(',')})`)
+    .or(`mail_retry_after.is.null,mail_retry_after.lte.${ahora}`)
     .in('type', Object.keys(PLANTILLAS))
     .order('created_at', { ascending: true })
     .limit(TOPE_POR_CORRIDA)
@@ -159,7 +177,6 @@ serve(async (req) => {
   // El `.is('emailed_at', null)` hace la reserva ATÓMICA: solo la corrida que
   // gana la carrera recibe la fila de vuelta. Las que llegan tarde reciben cero
   // filas y no mandan nada.
-  const ahora = new Date().toISOString()
   const { data: tomadas } = await admin
     .from('notifications')
     .update({ emailed_at: ahora })
@@ -180,6 +197,12 @@ serve(async (req) => {
     // vacía deja de ser una cola.
     if (!para || !plantilla) {
       if (!para) sinMail++
+      if (DECISIONES.includes(n.type as string)) {
+        const { error: noAddressError } = await admin.from('notifications')
+          .update({ mail_completed_at: new Date().toISOString() })
+          .eq('id', n.id).eq('emailed_at', ahora)
+        if (noAddressError) console.error('[mail-notificaciones] no se pudo cerrar aviso sin destinatario:', n.id, noAddressError.message)
+      }
       continue
     }
 
@@ -196,12 +219,12 @@ serve(async (req) => {
       titulo: plantilla.titulo,
       lineas,
       pie: plantilla.pie,
+      ...(DECISIONES.includes(n.type as string) ? { idempotencyKey: `postulacion/${n.id}` } : {}),
     })
 
-    // 📌 Si NO salió se libera, para que la próxima corrida lo reintente
-    // mientras siga dentro de la ventana. Pasada la ventana deja de intentarse,
-    // que es lo correcto: un aviso de algo que pasó hace tres horas ya no le
-    // sirve a nadie.
+    // Una decisión vuelve a la cola sin fecha de caducidad; su próxima prueba
+    // espera 5, 10, 20... minutos (máximo un día). Los avisos de reservas
+    // conservan la ventana de tres horas.
     //
     // ⚠️ El caso que queda sin cubrir: que el mail salga y esta liberación no
     // haga falta pero el proceso muera justo acá. Ahí el mail salió y la fila
@@ -211,8 +234,25 @@ serve(async (req) => {
     // avisos de plata.
     if (ok) {
       mandados++
+      if (DECISIONES.includes(n.type as string)) {
+        const { error: completeError } = await admin.from('notifications')
+          .update({ mail_completed_at: new Date().toISOString() })
+          .eq('id', n.id).eq('emailed_at', ahora)
+        if (completeError) console.error('[mail-notificaciones] falta confirmar envío aceptado:', n.id, completeError.message)
+      }
     } else {
-      await admin.from('notifications').update({ emailed_at: null }).eq('id', n.id)
+      const intentos = Number(n.mail_attempts ?? 0) + 1
+      const demoraMinutos = DECISIONES.includes(n.type as string)
+        ? Math.min(5 * 2 ** Math.min(intentos - 1, 9), 24 * 60)
+        : 0
+      const { error: releaseError } = await admin.from('notifications').update({
+        emailed_at: null,
+        mail_attempts: intentos,
+        mail_retry_after: demoraMinutos
+          ? new Date(Date.now() + demoraMinutos * 60_000).toISOString()
+          : null,
+      }).eq('id', n.id).eq('emailed_at', ahora)
+      if (releaseError) console.error('[mail-notificaciones] no se pudo liberar la notificación:', n.id, releaseError.message)
     }
   }
 

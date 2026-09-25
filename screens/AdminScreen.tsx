@@ -30,7 +30,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
 import {
-  listCoachApplications, setCoachVerified, rejectCoachApplication,
+  listCoachApplications, setCoachVerified, rejectCoachApplication, recordCoachInterview,
   listPendingReports, resolveReport,
   listClaims, checkGuarantee, approveGuarantee, rejectGuarantee,
   listUsdtRefunds, markUsdtRefunded, type UsdtRefund,
@@ -81,6 +81,7 @@ function formatDateTime(iso: string | null): string {
 
 const ACTION_LABELS: Record<string, string> = {
   set_coach_verified:       'cambió la publicación de un coach',
+  record_coach_interview:   'registró una entrevista profesional',
   reject_coach_application: 'rechazó una postulación',
   resolve_report:           'resolvió un reporte',
   mark_usdt_refunded:       'registró un reembolso en USDT',
@@ -93,6 +94,7 @@ export default function AdminScreen() {
 
   const [tab, setTab] = useState<Tab>('coaches');
   const [coaches, setCoaches] = useState<PendingCoach[]>([]);
+  const [coachesError, setCoachesError] = useState<string | null>(null);
   const [rejected, setRejected] = useState<PendingCoach[]>([]);
   const [showRejected, setShowRejected] = useState(false);
   const [reports, setReports] = useState<AdminReport[]>([]);
@@ -114,9 +116,13 @@ export default function AdminScreen() {
   // Rechazo de postulación: qué tarjeta tiene el campo abierto y qué se escribió.
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [interviewing, setInterviewing] = useState<string | null>(null);
+  const [interviewNote, setInterviewNote] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
+    setCoachesError(null);
+    try {
     const [c, rej, r, g, rf, pg, fc, a, cr] = await Promise.all([
       listCoachApplications('pendiente'),
       listCoachApplications('rechazada'),
@@ -130,7 +136,11 @@ export default function AdminScreen() {
     ]);
     setCoaches(c); setRejected(rej); setReports(r); setClaims(g); setRefunds(rf);
     setPayouts(pg.rows); setPayoutsError(pg.error); setFactu(fc); setAudit(a); setCreds(cr);
-    setLoading(false);
+    } catch (error) {
+      setCoachesError(error instanceof Error ? error.message : 'No se pudo cargar el panel');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { if (isAdmin) void load(); }, [isAdmin, load]);
@@ -164,17 +174,36 @@ export default function AdminScreen() {
   }
 
   function confirmCoach(c: PendingCoach) {
+    if (!c.interviewedAt) {
+      Alert.alert('Falta la entrevista', 'Registrá la entrevista antes de aprobar esta solicitud.');
+      return;
+    }
+    if ((c.specialty === 'Psicólogo/a' || c.specialty === 'Nutricionista') && !c.matriculaVerificada) {
+      Alert.alert('Falta la matrícula', 'Verificá la matrícula correspondiente en Credenciales antes de aprobar.');
+      return;
+    }
     Alert.alert(
       `¿Aprobar a ${c.name}?`,
-      'Va a aparecer en Profesionales y en las búsquedas, y va a poder recibir reservas.',
+      'Se habilitará su panel profesional. Aparecerá en las búsquedas cuando complete la configuración necesaria.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Aprobar',
-          onPress: () => act(c.coachId, () => setCoachVerified(c.coachId, true), `${c.name} ya está publicado.`),
+          onPress: () => act(c.coachId, () => setCoachVerified(c.coachId, true), `La solicitud de ${c.name} fue aprobada.`),
         },
       ],
     );
+  }
+
+  function submitInterview(c: PendingCoach) {
+    const note = interviewNote.trim();
+    if (note.length < 10) {
+      Alert.alert('Falta un resumen', 'Anotá brevemente qué evaluaron en la entrevista.');
+      return;
+    }
+    setInterviewing(null);
+    setInterviewNote('');
+    void act(c.coachId, () => recordCoachInterview(c.coachId, note), `Entrevista de ${c.name} registrada.`);
   }
 
   function submitRejection(c: PendingCoach) {
@@ -245,9 +274,10 @@ export default function AdminScreen() {
             {/* ── Postulaciones ───────────────────────────────────────────── */}
             {!loading && tab === 'coaches' && (
               <>
-                {coaches.length === 0
+                {!!coachesError && <Text style={s.cardMeta}>No se pudieron cargar las postulaciones: {coachesError}. Deslizá para reintentar.</Text>}
+                {!coachesError && coaches.length === 0
                   ? <Empty icon="account-check-outline" text="No hay postulaciones esperando." />
-                  : coaches.map(c => (
+                  : !coachesError && coaches.map(c => (
                     <View key={c.coachId} style={s.card}>
                       <Text style={s.cardTitle}>{c.name}</Text>
                       <Text style={s.cardMeta}>
@@ -258,6 +288,53 @@ export default function AdminScreen() {
                       <Text style={s.cardMeta}>Se postuló el {formatDate(c.createdAt)}</Text>
                       {!!c.email && <Text style={s.cardMeta}>{c.email}</Text>}
                       {!!c.bio && <Text style={s.cardBody} numberOfLines={4}>{c.bio}</Text>}
+                      <Text style={s.cardMeta}>Temas: {c.topics?.join(', ') || 'Sin temas'}</Text>
+                      <Text style={s.cardMeta}>
+                        Cómo acompaña: {c.estilo ?? 'sin respuesta'} · Guía: {c.guia ?? 'sin respuesta'}
+                        {'\n'}Focos: {c.focos?.join(', ') || 'sin respuesta'}
+                      </Text>
+                      {(c.specialty === 'Psicólogo/a' || c.specialty === 'Nutricionista') && (
+                        <Text style={s.cardMeta}>
+                          Matrícula: {c.matriculaVerificada ? 'verificada para esta profesión'
+                            : c.matriculaPendiente ? 'cargada, pendiente de verificación' : 'pendiente de carga o corrección'}
+                        </Text>
+                      )}
+                      <Text style={s.cardMeta}>
+                        {c.interviewedAt
+                          ? `Entrevista registrada el ${formatDate(c.interviewedAt)}`
+                          : 'Entrevista pendiente antes de aprobar'}
+                      </Text>
+                      {interviewing === c.coachId && (
+                        <View style={s.rejectBox}>
+                          <Text style={s.rejectLabel}>Resumen privado de la entrevista</Text>
+                          <TextInput
+                            style={s.input}
+                            value={interviewNote}
+                            onChangeText={setInterviewNote}
+                            placeholder="Criterio, experiencia y límites observados"
+                            placeholderTextColor="rgba(135,131,92,0.55)"
+                            multiline
+                            maxLength={2000}
+                          />
+                          <View style={s.actions}>
+                            <TouchableOpacity style={[s.btn, s.btnGhost]}
+                              onPress={() => { setInterviewing(null); setInterviewNote(''); }}>
+                              <Text style={s.btnGhostText}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[s.btn, s.btnPrimary]}
+                              onPress={() => submitInterview(c)} disabled={working === c.coachId}>
+                              <Text style={s.btnPrimaryText}>Guardar entrevista</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+                      {!c.interviewedAt && interviewing !== c.coachId && (
+                        <TouchableOpacity style={s.linkRow}
+                          onPress={() => { setInterviewing(c.coachId); setInterviewNote(''); }}>
+                          <MaterialCommunityIcons name="account-voice" size={16} color={FOREST} />
+                          <Text style={s.linkText}>Registrar entrevista realizada</Text>
+                        </TouchableOpacity>
+                      )}
 
                       {/* Segunda vuelta: el motivo del rechazo anterior se
                           conserva a propósito — es lo que dice si la persona
@@ -1269,8 +1346,8 @@ function SanctionsPanel() {
           prueba: son casos para mirar la conversación y decidir. */}
       <Text style={[s.cardTitle, { marginTop: 8, marginBottom: 4 }]}>Avisos de contacto · últimos 90 días</Text>
       <Text style={s.note}>
-        Primero lo que escribió el coach, que es lo único que nadie más puede fabricar. "No volvió a
-        reservar" junto a varios avisos es la señal de fuga — pero la prueba está en la conversación.
+        Primero lo que escribió el coach, que es lo único que nadie más puede fabricar. &quot;No volvió a
+        reservar&quot; junto a varios avisos es la señal de fuga — pero la prueba está en la conversación.
       </Text>
       {senales.descartados > 0 && (
         <Text style={[s.cardMeta, { color: CLAY }]}>

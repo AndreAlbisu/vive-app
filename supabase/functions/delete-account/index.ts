@@ -102,23 +102,34 @@ serve(async (req) => {
     // hay clientes esperando y plata cobrada: que desaparezca sin avisar deja
     // al cliente sin sesión y sin explicación. Se bloquea y se le pide que
     // cancele primero (así cada cancelación dispara su reembolso y su aviso).
-    const { data: coachRow } = await admin
+    const { data: coachRow, error: coachLookupErr } = await admin
       .from('coaches').select('id').eq('profile_id', userId).maybeSingle()
+    if (coachLookupErr) return json({ error: 'No se pudo consultar el perfil profesional', detail: coachLookupErr.message }, 500)
 
     if (coachRow) {
       const today = hoyEnArgentina()
-      const { count } = await admin
+      const { count, error: bookingsErr } = await admin
         .from('bookings')
         .select('id', { count: 'exact', head: true })
         .eq('coach_id', coachRow.id)
         .in('status', ['pendiente', 'confirmada'])
         .gte('scheduled_date', today)
+      if (bookingsErr) return json({ error: 'No se pudieron comprobar las sesiones futuras', detail: bookingsErr.message }, 500)
       if ((count ?? 0) > 0) {
         return json({
           error: 'coach_con_sesiones',
           message: `Tenés ${count} sesión(es) agendada(s). Cancelalas antes de eliminar tu cuenta para que tus clientes reciban el reembolso y el aviso.`,
         }, 409)
       }
+
+      // La fila se conserva por reservas y pagos históricos, pero sale del
+      // catálogo ANTES de borrar datos o la cuenta de auth. Si luego falla un
+      // paso, la baja se puede reintentar sin volver a exponer el perfil.
+      const { error: unpublishErr } = await admin.from('coaches')
+        .update({ verified: false, availability_status: 'en_pausa' })
+        .eq('id', coachRow.id)
+      if (unpublishErr) return json({ error: 'No se pudo despublicar el perfil profesional', detail: unpublishErr.message }, 500)
+      steps.push('perfil profesional despublicado')
     }
 
     // ── 2. Cancelar sesiones futuras del usuario (dispara reembolso) ─────────
@@ -127,12 +138,13 @@ serve(async (req) => {
     // NO se marca a propósito: una baja de cuenta no es una cancelación tardía,
     // el usuario no debería perder el reembolso por darse de baja.
     const today = hoyEnArgentina()
-    const { data: futuras } = await admin
+    const { data: futuras, error: futurasErr } = await admin
       .from('bookings')
       .select('id')
       .eq('user_id', userId)
       .in('status', ['pendiente', 'confirmada'])
       .gte('scheduled_date', today)
+    if (futurasErr) return json({ error: 'No se pudieron consultar las sesiones futuras', detail: futurasErr.message }, 500)
 
     if (futuras?.length) {
       const { error } = await admin
@@ -143,20 +155,74 @@ serve(async (req) => {
       steps.push(`${futuras.length} sesión(es) futura(s) cancelada(s)`)
     }
 
-    // ── 3. Borrar contenido personal ────────────────────────────────────────
+    // ── 3. Expediente profesional y archivos ────────────────────────────────
+    // El documento es privado, pero su vista textual verificada es pública;
+    // borrar solamente el archivo dejaría título y matrícula expuestos. Se
+    // recorre la carpeta completa para incluir archivos subidos que nunca
+    // llegaron a guardarse como credencial.
+    if (coachRow) {
+      for (let batch = 0; batch <= 100; batch++) {
+        const { data: files, error: listErr } = await admin.storage.from('coach-credentials')
+          .list(userId, { limit: 100 })
+        if (listErr) return json({ error: 'No se pudieron listar los documentos profesionales', detail: listErr.message }, 500)
+        if (!files?.length) break
+        if (batch === 100) return json({ error: 'Demasiados documentos para completar la baja automáticamente' }, 500)
+        const paths = files.map(file => `${userId}/${file.name}`)
+        const { error: removeErr } = await admin.storage.from('coach-credentials').remove(paths)
+        if (removeErr) return json({ error: 'No se pudieron borrar los documentos profesionales', detail: removeErr.message }, 500)
+      }
+
+      const { error: videoErr } = await admin.storage.from('coach-videos')
+        .remove([`${userId}/video.mp4`])
+      if (videoErr) return json({ error: 'No se pudo borrar el video público', detail: videoErr.message }, 500)
+
+      const { error: credentialsErr } = await admin.from('coach_credentials')
+        .delete().eq('coach_id', coachRow.id)
+      if (credentialsErr) return json({ error: 'No se pudieron borrar las credenciales', detail: credentialsErr.message }, 500)
+
+      const { error: topicsErr } = await admin.from('coach_topics')
+        .delete().eq('coach_id', coachRow.id)
+      if (topicsErr) return json({ error: 'No se pudieron borrar los temas profesionales', detail: topicsErr.message }, 500)
+
+      const { error: interviewErr } = await admin.from('coach_application_interviews')
+        .delete().eq('coach_id', coachRow.id)
+      if (interviewErr) return json({ error: 'No se pudo borrar la nota de entrevista', detail: interviewErr.message }, 500)
+
+      const { error: scrubErr } = await admin.from('coaches').update({
+        specialty: null,
+        bio: null,
+        nationality: null,
+        application_video_url: null,
+        application_notes: null,
+        video_url: null,
+        estilo: null,
+        guia: null,
+        focos: [],
+        enfoques: [],
+        profesion: null,
+        has_matricula: false,
+        price_per_session: null,
+        price_usd: null,
+        slug: `deleted-${coachRow.id}`,
+      }).eq('id', coachRow.id)
+      if (scrubErr) return json({ error: 'No se pudo anonimizar el perfil profesional', detail: scrubErr.message }, 500)
+      steps.push('expediente profesional y archivos borrados')
+    }
+
+    // ── 4. Borrar contenido personal ────────────────────────────────────────
     for (const { table, column } of PERSONAL_TABLES) {
       const { error } = await admin.from(table).delete().eq(column, userId)
-      // Se loguea y se sigue: una tabla que no exista en este entorno no debe
-      // dejar la cuenta a medio borrar.
-      if (error) console.warn(`[delete-account] ${table}: ${error.message}`)
+      // No eliminar auth ni informar éxito con datos personales todavía en
+      // una tabla: la cuenta queda accesible para reintentar la baja.
+      if (error) return json({ error: `No se pudo borrar ${table}`, detail: error.message }, 500)
     }
     steps.push('contenido personal borrado')
 
-    // ── 4. Avatar del storage ───────────────────────────────────────────────
+    // ── 5. Avatar del storage ───────────────────────────────────────────────
     const { error: storageErr } = await admin.storage.from('avatars').remove([`${userId}/avatar.jpg`])
-    if (storageErr) console.warn('[delete-account] avatar:', storageErr.message)
+    if (storageErr) return json({ error: 'No se pudo borrar el avatar', detail: storageErr.message }, 500)
 
-    // ── 5. Lápida en profiles ───────────────────────────────────────────────
+    // ── 6. Lápida en profiles ───────────────────────────────────────────────
     // Reservas, reseñas, mensajes y salas siguen apuntando acá; por eso la fila
     // sobrevive, pero sin un solo dato que identifique a la persona.
     // El email va a un placeholder opaco y no a NULL: `profiles.email` puede ser
@@ -192,7 +258,7 @@ serve(async (req) => {
     if (tombErr) return json({ error: 'No se pudo anonimizar el perfil', detail: tombErr.message }, 500)
     steps.push('perfil anonimizado')
 
-    // ── 6. Borrar la cuenta de auth ─────────────────────────────────────────
+    // ── 7. Borrar la cuenta de auth ─────────────────────────────────────────
     // Último paso a propósito: si algo falla antes, la cuenta sigue existiendo
     // y la baja se puede reintentar. Al revés quedaría contenido huérfano sin
     // dueño que pueda pedir nada.

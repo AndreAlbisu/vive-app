@@ -73,11 +73,18 @@ export type PendingCoach = {
   price: number | null;
   nationality: string | null;
   applicationVideoUrl: string | null;
+  topics: string[];
+  estilo: string | null;
+  guia: string | null;
+  focos: string[];
+  matriculaVerificada: boolean;
+  matriculaPendiente: boolean;
   createdAt: string | null;
   verified: boolean;
   status: ApplicationStatus;
   notes: string | null;       // motivo del rechazo, si hubo
   reviewedAt: string | null;
+  interviewedAt: string | null;
 };
 
 /** Postulaciones en un estado dado, más viejas primero: es una cola con reloj —
@@ -95,14 +102,17 @@ export async function listCoachApplications(status: ApplicationStatus = 'pendien
   // lee con service role; devuelve la lista ya mapeada a `PendingCoach`.
   const res = await callAdmin({ action: 'list_coach_applications', status });
   if (!res.ok) {
-    console.warn('[admin] no se pudieron leer las postulaciones:', res.error);
-    return [];
+    throw new Error(res.error ?? 'No se pudieron leer las postulaciones');
   }
   return (res.data?.applications ?? []) as PendingCoach[];
 }
 
 export function setCoachVerified(coachId: string, verified: boolean, notes?: string) {
   return callAdmin({ action: 'set_coach_verified', coach_id: coachId, verified, notes });
+}
+
+export function recordCoachInterview(coachId: string, notes: string) {
+  return callAdmin({ action: 'record_coach_interview', coach_id: coachId, notes });
 }
 
 /** Rechaza una postulación. El motivo es obligatorio y le llega al coach por

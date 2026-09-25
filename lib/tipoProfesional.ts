@@ -35,3 +35,10 @@ export function tipoProfesional(c: { profesion?: string | null }): TipoProfesion
   if (c.profesion === 'nutricion') return 'Nutricionista';
   return 'Coach';
 }
+
+/** Rótulo público: una especialidad declarada no acredita una profesión. */
+export function etiquetaProfesionalPublica(c: { profesion?: string | null }): string {
+  if (c.profesion === 'psicologia') return 'Psicólogo/a';
+  if (c.profesion === 'nutricion') return 'Nutricionista';
+  return 'Coach';
+}

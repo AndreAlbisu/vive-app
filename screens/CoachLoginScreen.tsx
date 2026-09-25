@@ -109,6 +109,27 @@ export default function CoachLoginScreen() {
     }
 
     if (coachRow && !coachRow.verified) {
+      // El estado es privado: se obtiene por la RPC del propio postulante.
+      // Una solicitud rechazada tiene que poder corregirse con esta cuenta.
+      const { data: applications, error: applicationError } = await supabase.rpc('mi_postulacion');
+      if (applicationError) {
+        setError('No pudimos consultar tu solicitud. Probá de nuevo.');
+        await signOut();
+        return;
+      }
+      const status = (applications ?? [])[0]?.application_status;
+      if (status === 'rechazada') {
+        router.replace('/coach-application');
+        return;
+      }
+      if (status === 'aprobada') {
+        router.replace('/(coach)' as any);
+        return;
+      }
+      if (status === 'pendiente') {
+        router.replace('/coach-postulacion-estado');
+        return;
+      }
       await signOut();
       Alert.alert(
         'Solicitud en revisión',

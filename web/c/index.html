@@ -317,7 +317,7 @@ async function cargar() {
   // acá y no en la URL porque el filtro con fecha en PostgREST pide comillas y
   // es frágil; y cae en "no encontrado", cuyo texto ya dice "puede que ya no
   // esté disponible" — sin mencionar ninguna sanción.
-  const campos = 'slug,specialty,bio,price_per_session,nationality,verified,availability_status,suspendido_hasta,' +
+  const campos = 'slug,specialty,profesion,bio,price_per_session,nationality,verified,availability_status,suspendido_hasta,' +
                  'profiles!inner(name,avatar_url,gender),coach_topics(topic)';
   const url = `${SUPABASE_URL}/rest/v1/coaches?slug=eq.${encodeURIComponent(slug)}` +
               `&verified=eq.true&availability_status=eq.activo&select=${campos}&limit=1`;
@@ -359,7 +359,8 @@ async function cargar() {
   }
 
   $('nombre').textContent = nombre;
-  $('especialidad').textContent = coach.specialty || '';
+  $('especialidad').textContent = coach.profesion === 'psicologia' ? 'Psicólogo/a'
+    : coach.profesion === 'nutricion' ? 'Nutricionista' : 'Coach';
   $('meta').textContent = coach.nationality || '';
   $('bio').textContent = coach.bio || '';
 

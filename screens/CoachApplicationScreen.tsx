@@ -42,7 +42,12 @@ const fadeUp = (anim: Animated.Value) => ({
 });
 
 function isValidUrl(url: string) {
-  return url.startsWith('http://') || url.startsWith('https://');
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && !!parsed.hostname && !/\s/.test(url);
+  } catch {
+    return false;
+  }
 }
 
 /** Años cumplidos a hoy. Cuenta el cumpleaños del año en curso solo si ya pasó. */
@@ -149,7 +154,10 @@ export default function CoachApplicationScreen() {
       // escribe sobre una persona, y la policy de SELECT de `coaches` es
       // `using (true)`). `mi_postulacion()` devuelve solo la fila de quien
       // llama. Ver `scripts/cerrar-columnas-postulacion.sql`.
-      const { data: filas } = await supabase.rpc('mi_postulacion');
+      const [{ data: filas }, { data: ownProfile }] = await Promise.all([
+        supabase.rpc('mi_postulacion'),
+        supabase.rpc('get_my_profile').maybeSingle(),
+      ]);
       const coach = (filas ?? [])[0] as {
         id: string; specialty: string | null; bio: string | null;
         price_per_session: number | null; nationality: string | null;
@@ -172,6 +180,9 @@ export default function CoachApplicationScreen() {
       setPrice(coach.price_per_session != null ? String(coach.price_per_session) : '');
       setNationality(coach.nationality ?? '');
       setVideoUrl(coach.application_video_url ?? '');
+      setBirthDate((ownProfile as { birth_date?: string | null } | null)?.birth_date ?? '');
+      const savedGender = (ownProfile as { gender?: string | null } | null)?.gender;
+      if (GENDER_OPTIONS.some(option => option === savedGender)) setGender(savedGender as Gender);
       setTopics(new Set((savedTopics ?? []).map(t => t.topic as string)));
       setEstilo(esEstiloCoach(coach.estilo) ? coach.estilo : null);
       setGuia(esGuiaCoach(coach.guia) ? coach.guia : null);
@@ -212,13 +223,14 @@ export default function CoachApplicationScreen() {
       return;
     }
     if (!nationality.trim()) { setSubmitError('Elegí tu nacionalidad'); return; }
-    if (!price.trim() || isNaN(Number(price)) || Number(price) <= 0) {
+    const priceNumber = Number(price.trim());
+    if (!price.trim() || !Number.isFinite(priceNumber) || priceNumber <= 0 || priceNumber >= 1_000_000_000) {
       setSubmitError('Ingresá un precio válido por sesión');
       return;
     }
     if (!videoUrl.trim()) { setSubmitError('Ingresá el link de tu video de presentación'); return; }
     if (!isValidUrl(videoUrl.trim())) {
-      setSubmitError('El link del video debe comenzar con http:// o https://');
+      setSubmitError('Ingresá un link HTTPS válido para tu video');
       return;
     }
     if (!user) { setSubmitError('No encontramos tu sesión. Volvé a ingresar'); return; }
@@ -226,52 +238,33 @@ export default function CoachApplicationScreen() {
     setSubmitting(true);
     setSubmitError(null);
 
-    // Los campos que se revisan. `verified` NO va acá: la escribe solo
-    // `admin-actions` con service role, y desde `add-application-status-and-audit.sql`
-    // el cliente ya no tiene el privilegio de INSERT sobre esa columna —
-    // mandarla haría fallar el alta entera con un 42501.
-    const application = {
-      specialty,
-      bio: bio.trim(),
-      price_per_session: Number(price),
-      nationality: nationality.trim(),
-      application_video_url: videoUrl.trim(),
-      // ⚠️ Necesitan `grant insert` (scripts/add-coach-como-trabaja-en-alta.sql):
-      // el INSERT de `coaches` está acotado por columnas, y sin el grant el alta
-      // entera falla con 42501.
-      estilo,
-      guia,
-      focos,
-    };
-
-    // Re-postulación vs. alta. El UPDATE devuelve la fila a 'pendiente' por el
-    // trigger `trg_reset_application_on_edit` — el coach no puede escribir
-    // `application_status` ni debería poder.
-    const { data: coachRow, error } = existingCoachId
-      ? await supabase.from('coaches').update(application).eq('id', existingCoachId).select('id').single()
-      : await supabase.from('coaches').insert({ profile_id: user.id, ...application }).select('id').single();
+    // La RPC confirma perfil, coach y temas en una transacción. Nunca se
+    // muestra éxito si una de las tres partes quedó sin guardar.
+    const { error } = await supabase.rpc('submit_coach_application', {
+      p_specialty: specialty,
+      p_bio: bio.trim(),
+      p_topics: [...topics],
+      p_estilo: estilo,
+      p_guia: guia,
+      p_focos: focos,
+      p_birth_date: birthDateIso,
+      p_gender: gender,
+      p_nationality: nationality.trim(),
+      p_price: priceNumber,
+      p_video_url: videoUrl.trim(),
+    });
 
     if (error) {
       setSubmitting(false);
-      if (error.code === '23505') {
-        setSubmitError('Ya tenemos una solicitud de este perfil. Nos ponemos en contacto pronto');
+      if (error.message.includes('solicitud_no_editable')) {
+        setSubmitError('Tu solicitud ya está en revisión. Te avisaremos por mail.');
+      } else if (error.message.includes('postulacion_invalida')) {
+        setSubmitError('Revisá los datos de la solicitud e intentá de nuevo.');
       } else {
         setSubmitError(`No pudimos enviar tu solicitud. (${error.message})`);
       }
       return;
     }
-
-    // En la re-postulación los temas se reemplazan, no se suman: si el motivo
-    // del rechazo fue justamente qué temas eligió, dejar los viejos haría que
-    // la corrección no corrigiera nada.
-    if (existingCoachId) {
-      await supabase.from('coach_topics').delete().eq('coach_id', coachRow.id);
-    }
-
-    await Promise.all([
-      supabase.from('profiles').update({ birth_date: birthDateIso, gender }).eq('id', user.id),
-      supabase.from('coach_topics').insert([...topics].map(topic => ({ coach_id: coachRow.id, topic }))),
-    ]);
 
     // 🔴 EL `signOut()` ESTABA ACÁ Y SE COMÍA LA PANTALLA DE "ENVIADO"
     // (reportado por Andre el 24/09/2026: *"al enviar la postulación solo
@@ -336,22 +329,22 @@ export default function CoachApplicationScreen() {
             <View style={styles.paso}>
               <Text style={styles.pasoNum}>2</Text>
               <Text style={styles.pasoTxt}>
-                <Text style={styles.pasoFuerte}>Te escribimos al mail</Text> con el que te registraste, tanto si queda
-                aprobada como si falta algo. Si falta algo, te decimos qué y la reenviás desde la app.
+                <Text style={styles.pasoFuerte}>Si avanzamos, coordinamos una entrevista</Text> por el mail con el que
+                te registraste. Es una conversación para conocerte y entender cómo trabajás.
               </Text>
             </View>
             <View style={styles.paso}>
               <Text style={styles.pasoNum}>3</Text>
               <Text style={styles.pasoTxt}>
-                <Text style={styles.pasoFuerte}>Cuando esté aprobada, entrás con el mismo mail</Text> y cargás tus
-                horarios, tu precio y cómo querés cobrar. Recién ahí tu perfil aparece y podés recibir reservas.
+                <Text style={styles.pasoFuerte}>Te avisamos la decisión por mail.</Text> Si falta algo, te decimos qué
+                corregir. Si aprobamos tu solicitud, entrás con el mismo mail para configurar horarios y cobros.
               </Text>
             </View>
           </View>
 
           <Text style={styles.successNota}>
-            Cerramos tu sesión hasta que esté aprobada, así que si volvés a entrar ahora no vas a ver el perfil de
-            profesional todavía. ¿Dudas? Escribinos a vitaappar@gmail.com.
+            Cerramos tu sesión mientras revisamos la solicitud. Tu perfil aparecerá cuando esté aprobado y tengas
+            configurados los medios de cobro. ¿Dudas? Escribinos a vitaappar@gmail.com.
           </Text>
           <TouchableOpacity
             style={styles.successButton}

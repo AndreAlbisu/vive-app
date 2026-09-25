@@ -34,6 +34,7 @@ import { destinoTrasEntrar, PANTALLAS_SIN_CUENTA } from '@/lib/entrada';
 import { registerForPushNotifications } from '@/lib/notifications';
 import { reconcileResourceReminders } from '@/lib/resourceReminders';
 import { instalarCapturaGlobal } from '@/lib/logging';
+import { supabase } from '@/lib/supabase';
 
 // Una vez, al cargar la app: los errores que nadie atrapa también llegan a la
 // base (`error_app`). Ver `lib/logging.ts`.
@@ -106,11 +107,29 @@ function AuthRedirect() {
   // `undefined` = todavía no se sabe. Hasta saberlo NO se redirige nada:
   // redirigir con la respuesta a medias es exactamente el bug.
   const [pasoAlta, setPasoAlta] = useState<PasoAlta | null | undefined>(undefined);
+  const [postulacion, setPostulacion] = useState<'pendiente' | 'rechazada' | null | undefined>(undefined);
   useEffect(() => {
     if (!user) { setPasoAlta(null); return; }
     setPasoAlta(undefined);
     pasoDelAlta().then(setPasoAlta);
   }, [user]);
+
+  useEffect(() => {
+    if (!user || role !== 'user') { setPostulacion(null); return; }
+    let vivo = true;
+    setPostulacion(undefined);
+    void supabase.rpc('mi_postulacion').maybeSingle().then(({ data, error }) => {
+      if (!vivo) return;
+      if (error) {
+        console.warn('[AuthRedirect] No se pudo consultar la postulación:', error.message);
+        setPostulacion(null);
+        return;
+      }
+      const status = (data as { application_status?: string } | null)?.application_status;
+      setPostulacion(status === 'pendiente' || status === 'rechazada' ? status : null);
+    });
+    return () => { vivo = false; };
+  }, [user, role]);
 
   useEffect(() => {
     if (loading || pasoAlta === undefined) return;
@@ -166,6 +185,26 @@ function AuthRedirect() {
       return;
     }
 
+    // El rol sigue siendo "user" hasta la aprobación. Una postulación ya enviada
+    // conserva su estado al reabrir la app, incluso si se inició sesión por el
+    // acceso general en vez del acceso de profesionales.
+    if (role === 'user') {
+      if (postulacion === undefined) return;
+      const pantalla = segments[0] as string;
+      if (postulacion === 'pendiente') {
+        if (pantalla !== 'coach-postulacion-estado' && pantalla !== 'coach-credenciales' && pantalla !== 'coach-application') {
+          router.replace('/coach-postulacion-estado');
+        }
+        return;
+      }
+      if (postulacion === 'rechazada') {
+        if (pantalla !== 'coach-application' && pantalla !== 'coach-credenciales') {
+          router.replace('/coach-application');
+        }
+        return;
+      }
+    }
+
     if (inOnboardingOrAuth) {
       // La persona recién registrada desde el recorrido de entrada sigue a
       // "¿Cómo te gustaría empezar?"; quien ya tenía cuenta, a la app.
@@ -179,7 +218,7 @@ function AuthRedirect() {
     } else if (role === 'user' && inCoachGroup) {
       router.replace('/(tabs)');
     }
-  }, [user, loading, role, segments, router, pasoAlta, mailPendiente]);
+  }, [user, loading, role, segments, router, pasoAlta, mailPendiente, postulacion]);
 
   return null;
 }
@@ -271,6 +310,7 @@ export default function RootLayout() {
               de Android sí va por JS y lo sigue manejando `beforeRemove`. */}
           <Stack.Screen name="verificar-mail" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="coach-application" options={{ headerShown: false, gestureEnabled: false }} />
+          <Stack.Screen name="coach-postulacion-estado" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="(coach)" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="profesional" options={{ headerShown: false }} />

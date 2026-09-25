@@ -88,7 +88,7 @@ function armarTexto(titulo: string, lineas: string[], pie?: string): string {
   return [titulo, '', ...lineas.map(limpio), pie ? `\n${limpio(pie)}` : ''].join('\n')
 }
 
-export type Mail = { para: string; asunto: string; titulo: string; lineas: string[]; pie?: string }
+export type Mail = { para: string; asunto: string; titulo: string; lineas: string[]; pie?: string; idempotencyKey?: string }
 
 /**
  * Manda uno. Devuelve `true` si Resend lo aceptó.
@@ -108,7 +108,11 @@ export async function enviarMail(m: Mail): Promise<boolean> {
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+        ...(m.idempotencyKey ? { 'Idempotency-Key': m.idempotencyKey } : {}),
+      },
       body: JSON.stringify({
         from: REMITENTE,
         to: [m.para],

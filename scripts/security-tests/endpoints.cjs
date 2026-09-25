@@ -19,7 +19,7 @@ function load(file,extras={},env={}) {
  vm.runInNewContext(compiled.outputText,globals,{filename:file});return {exports,handler};
 }
 function db(rows={},rpcData=true){const writes=[],reads=[],filters=[];return {writes,reads,filters,auth:{getUser:async()=>({data:{user:{id:'user'}}})},rpc:async(name)=>({data:name==='claim_checkout'?'attempt':rpcData}),from(table){reads.push(table);let patch;const q={};
- for(const op of ['select','eq','neq','or','gt','gte','is','in','not','limit','order'])q[op]=(...args)=>{filters.push([table,op,...args]);return q};
+ for(const op of ['select','eq','neq','or','gt','gte','lt','is','in','not','limit','order'])q[op]=(...args)=>{filters.push([table,op,...args]);return q};
  q.update=p=>{patch=p;writes.push({table,patch:p});return q};
  q.insert=p=>{writes.push({table,patch:p});return Promise.resolve({error:null})};
  q.maybeSingle=q.single=async()=>({data:rows[table],count:0});
@@ -118,6 +118,22 @@ let passed=0;async function test(name,fn){await fn();passed++;console.log('PASS'
   const admin=db({notifications:[{id:'n',recipient_id:'user',type:'reserva_confirmada',title:'FORGED',body:'<a href="https://example.invalid">Phish</a>',booking_id:'booking'}],profiles:[{id:'user',email:'user@example.invalid'}]});let sent;
   const {handler}=load('mail-notificaciones/index.ts',{admin,fetch:async(url,opts)=>{sent=JSON.parse(opts.body);return Response.json({})}});
   assert.equal((await handler(req())).status,200);assert(sent);assert(!sent.html.includes('<a href="https://example.invalid">'));assert(!sent.subject.includes('FORGED'));assert(sent.html.includes('&lt;a'));
+ });
+ await test('failed decision email gets a durable retry delay',async()=>{
+  const admin=db({notifications:[{id:'decision',recipient_id:'user',type:'postulacion_rechazada',body:'Falta documentación',mail_attempts:0}],profiles:[{id:'user',email:'user@example.invalid'}]});
+  const {handler}=load('mail-notificaciones/index.ts',{admin,fetch:async()=>new Response('provider unavailable',{status:503})});
+  assert.equal((await handler(req())).status,200);
+  assert(admin.filters.some(f=>f[0]==='notifications'&&f[1]==='or'&&String(f[2]).includes('postulacion_rechazada')));
+  const retry=admin.writes.find(w=>w.table==='notifications'&&w.patch.mail_retry_after);
+  assert(retry);assert.equal(retry.patch.emailed_at,null);assert.equal(retry.patch.mail_attempts,1);
+ });
+ await test('decision email uses a stable provider key and completes the claim',async()=>{
+  const admin=db({notifications:[{id:'decision-2',recipient_id:'user',type:'postulacion_aprobada',body:'Tu solicitud fue aprobada',mail_attempts:0}],profiles:[{id:'user',email:'user@example.invalid'}]});
+  let key;
+  const {handler}=load('mail-notificaciones/index.ts',{admin,fetch:async(_url,opts)=>{key=opts.headers['Idempotency-Key'];return Response.json({id:'provider-mail'})}});
+  assert.equal((await handler(req())).status,200);
+  assert.equal(key,'postulacion/decision-2');
+  assert(admin.writes.some(w=>w.table==='notifications'&&w.patch.mail_completed_at));
  });
  console.log(`${passed} endpoint security tests passed (mocked services)`);
 })().catch(e=>{console.error(e);process.exitCode=1});

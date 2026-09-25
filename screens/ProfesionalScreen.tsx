@@ -4,6 +4,7 @@ import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import { listPublicCredentials, lineaCredencial, profesionDeMatricula, KIND_LABEL, type PublicCredential } from '@/lib/coachCredentials';
 import { encuadreDeSesion } from '@/lib/credentialRules';
+import { etiquetaProfesionalPublica } from '@/lib/tipoProfesional';
 import { EncuadrePill } from '@/components/EncuadrePill';
 import { EncuadreSheet } from '@/components/EncuadreSheet';
 import { FotoAmpliada } from '@/components/FotoAmpliada';
@@ -21,6 +22,7 @@ import {
   StatusBar,
   Image,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -137,6 +139,7 @@ export default function ProfesionalScreen() {
   const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
   const saved = !!profileId && favoriteIds.has(profileId);
   const [fetchedData, setFetchedData] = useState<Partial<typeof DEFAULT_PROFESIONAL> | null>(null);
+  const [profileState, setProfileState] = useState<{ id: string; status: 'available' | 'unavailable' } | null>(null);
   const [liveReviews, setLiveReviews] = useState<LiveReview[]>([]);
   const [liveAvgRating, setLiveAvgRating] = useState<number | null>(null);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
@@ -180,18 +183,22 @@ export default function ProfesionalScreen() {
     if (!pid) return;
     supabase
       .from('coaches')
-      .select('id, specialty, bio, estilo, enfoques, guia, focos, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url)')
+      .select('id, verified, availability_status, specialty, profesion, bio, estilo, enfoques, guia, focos, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
-        if (error || !data) return;
+        if (error || !data || !(data as any).verified || (data as any).availability_status !== 'activo') {
+          setProfileState({ id: pid, status: 'unavailable' });
+          return;
+        }
+        setProfileState({ id: pid, status: 'available' });
         setNoDisponible(estaSuspendido({ suspendidoHasta: (data as any).suspendido_hasta ?? null }));
         // ⚠️ `coaches.id`, no `profiles.id`: `coach_credentials.coach_id`
         // apunta al PK de coaches, igual que `bookings.coach_id`.
         void listPublicCredentials((data as any).id).then(setCredenciales);
         setFetchedData({
           name: (data as any).profiles.name,
-          specialty: (data as any).specialty,
+          specialty: etiquetaProfesionalPublica(data as any),
           nationality: (data as any).nationality ?? DEFAULT_PROFESIONAL.nationality,
           priceFrom: (data as any).price_per_session,
           video_url: (data as any).video_url ?? null,
@@ -290,7 +297,6 @@ export default function ProfesionalScreen() {
   const prof = {
     ...DEFAULT_PROFESIONAL,
     ...(params.name && { name: params.name }),
-    ...(params.specialty && { specialty: params.specialty }),
     ...(params.priceFrom && { priceFrom: parseInt(params.priceFrom, 10) }),
     ...fetchedData,
   };
@@ -310,6 +316,29 @@ export default function ProfesionalScreen() {
   // ⚠️ No alcanza con un `paddingTop`: eso empujaría la imagen y dejaría una
   // banda vacía arriba, que es perder la portada para arreglar el recorte.
   const insets = useSafeAreaInsets();
+
+  // Un enlace viejo o un favorito puede abrir esta ruta sin pasar por el
+  // catálogo. No se debe mostrar un perfil despublicado, ni siquiera usando
+  // nombre/precio que hayan quedado en los parámetros de navegación.
+  if (!profileId || profileState?.id !== profileId || profileState?.status === 'unavailable') {
+    const loadingProfile = !!profileId && profileState?.id !== profileId;
+    return (
+      <AppBg>
+        <SafeAreaView style={[s.safe, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+          {loadingProfile ? <ActivityIndicator color={ViveColors.primary} /> : (
+            <>
+              <Text style={{ color: ViveColors.text, fontFamily: ViveFonts.semibold, fontSize: 22, textAlign: 'center' }}>
+                Este perfil ya no está disponible
+              </Text>
+              <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 20, padding: 12 }}>
+                <Text style={{ color: ViveColors.primaryInk, fontFamily: ViveFonts.medium }}>Volver</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </SafeAreaView>
+      </AppBg>
+    );
+  }
 
   return (
     <AppBg>

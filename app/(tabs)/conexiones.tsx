@@ -39,6 +39,7 @@ import { anotar } from '@/lib/analytics';
 import { leerRespuestasGuardadas } from '@/lib/quizPendiente';
 import { evaluarParaMazo, topeDeRango, monedaDePresupuesto, type RespuestasQuiz } from '@/lib/quizMatch';
 import { QUIZ_AREAS } from '@/constants/searchData';
+import { etiquetaProfesionalPublica } from '@/lib/tipoProfesional';
 
 // ─── Paleta (refleja el HTML de referencia) ──────────────────────────────────
 const FOREST      = '#3F512F';
@@ -290,7 +291,7 @@ export default function ConexionesScreen() {
 
     const { data: coachRow } = await supabase
       .from('coaches')
-      .select('specialty, price_per_session, profile_id')
+      .select('specialty, profesion, price_per_session, profile_id')
       .eq('id', last.coach_id)
       .eq('availability_status', 'activo')
       .single();
@@ -306,7 +307,7 @@ export default function ConexionesScreen() {
     setRebookData({
       coachProfileId: coachRow.profile_id as string,
       name:           (profileRow?.name || (last.coach_name as string) || '') as string,
-      specialty:      (coachRow.specialty || (last.coach_specialty as string) || '') as string,
+      specialty:      etiquetaProfesionalPublica(coachRow),
       pricePerSession: coachRow.price_per_session as number,
       avatarUrl:      (profileRow?.avatar_url ?? null) as string | null,
       lastDate:       (last.scheduled_date as string) ?? null,

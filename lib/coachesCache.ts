@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { etiquetaProfesionalPublica } from './tipoProfesional';
 
 export type CachedCoach = {
   id: string;           // profiles.id (= coaches.profile_id)
@@ -100,7 +101,7 @@ async function _doFetch(): Promise<void> {
       coachId:     c.id as string,               // coaches.id (clave del rate de reagendamiento)
       createdAt:   (c.created_at ?? null) as string | null,
       name:        profile?.name as string,
-      specialty:   c.specialty as string,
+      specialty:   etiquetaProfesionalPublica(c),
       priceFrom:   c.price_per_session as number,
       nationality: (c.nationality ?? '') as string,
       gender:      (profile?.gender ?? '') as string,
