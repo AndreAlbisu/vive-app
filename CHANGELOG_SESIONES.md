@@ -1,3 +1,15 @@
+## 2026-09-25 — Andre (Claude · revisión de la web, cuarta tanda: portada más limpia y un encuentro)
+
+**Tocado:** `web/index.html`
+
+**Resumen:**
+- **Historia:** los dos párrafos finales se fusionaron en el cierre en negrita: "…para que encontrar a alguien que te acompañe y dar un primer paso no dependa de la suerte." (contesta al "Tuvimos esa suerte." de Sofía).
+- **Portada sin "Conocé cómo funciona"** (Andre): salteaba el porqué que ahora va justo debajo y competía con los botones de tiendas. **"Cómo funciona" sin botones de descarga** (Andre).
+- 🎨 **Andre: "la ilustración está media fea".** La videollamada dibujada en CSS se reemplazó por dos círculos del isotipo, "vos" (cálido) y "tu profesional" (celeste), que se acercan hasta superponerse al entrar en pantalla. Con gradiente como la aurora: en coral y naranja planos se leía como el logo de Mastercard. Sin JS o con movimiento reducido, quedan juntos.
+
+**Pendiente para la próxima sesión:**
+- La foto real con alguien de la beta sigue siendo el plan para `og:image` (vista previa en WhatsApp), que sigue faltando; puede sumarse debajo de los círculos.
+
 ## 2026-09-25 — Andre (Claude · revisión de la web, tercera tanda: el check-in como en la app)
 
 **Tocado:** `web/index.html`

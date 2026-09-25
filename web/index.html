@@ -307,40 +307,25 @@
   .purpose { text-align: center; }
   .purpose-q { margin: 0 auto; max-width: 22ch; font-size: clamp(2rem, 4.4vw, 3.6rem); line-height: 1.08; text-wrap: balance; }
   .purpose .sec-lead { margin: 24px auto 0; text-wrap: balance; }
-  /* Una sesión, dibujada (25/09/2026). La página mostraba perfil, ánimo y
-     respiración, pero nunca el momento central: dos personas hablando.
-     🔁 Es un lugar reservado para una FOTO real armada con alguien de la beta
-     (escena preparada, nunca una sesión real, con permiso firmado). Cuando
-     esté, se reemplaza el <div class="laptop"> por un <img> y se borra este
-     bloque. Sin fotos de banco: se leerían como profesionales de Vita. */
-  .llamada { margin: 56px auto 0; max-width: 760px; }
-  .laptop-screen {
-    padding: 12px; border-radius: 22px 22px 8px 8px; background: #2B2E22;
-    box-shadow: 0 1px 0 1px rgba(255,255,255,.08) inset, 0 28px 52px -24px rgba(80, 40, 20, .28);
-  }
-  .call { position: relative; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; background: radial-gradient(circle at 50% 28%, #F6E6CC, #EACFAE 58%, #DDB793); }
-  .persona { position: absolute; left: 50%; bottom: 0; width: 44%; aspect-ratio: 1; transform: translateX(-50%); }
-  .persona .cabeza { position: absolute; left: 50%; top: 17%; width: 38%; aspect-ratio: 1; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(circle at 35% 35%, #F7C9A8, var(--terra)); }
-  .persona .cabeza { overflow: hidden; }
-  .persona .cabeza::before { content: ""; position: absolute; left: -15%; top: -45%; width: 130%; height: 85%; border-radius: 50%; background: #5A3A28; }
-  .persona .cuerpo { position: absolute; left: 0; right: 0; bottom: 0; height: 46%; border-radius: 50% 50% 0 0 / 70% 70% 0 0; background: var(--forest); }
-  .call-self { position: absolute; right: 3%; top: 5%; width: 23%; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 10px; background: radial-gradient(circle at 50% 30%, #DCE9F3, var(--sky)); box-shadow: 0 0 0 2px rgba(255,255,255,.7); }
-  .call-self .persona { width: 70%; }
-  .call-self .cabeza { background: radial-gradient(circle at 35% 35%, #FBD9B8, var(--sun)); }
-  .call-self .cuerpo { background: #7E8CA8; }
-  .call-self .cabeza::before { background: #2E2A26; top: -52%; }
-  /* El cuarto de quien atiende: una ventana y una planta. */
-  .call::before { content: ""; position: absolute; left: 7%; top: 10%; width: 22%; height: 42%; border-radius: 10px; background: linear-gradient(180deg, #F4F1E6, #D8E6EE); box-shadow: 0 0 0 6px rgba(255,250,240,.55); }
-  .call .planta { position: absolute; left: 70%; bottom: 0; width: 13%; }
-  .call .planta svg { width: 100%; height: auto; display: block; }
-  .call-tag { position: absolute; left: 3%; bottom: 5%; padding: 5px 12px; border-radius: 999px; background: rgba(26,28,22,.55); color: var(--cream); font-size: clamp(10px, 1.6vw, 13px); font-weight: 700; }
-  .call-bar { position: absolute; right: 3%; bottom: 5%; display: flex; gap: 8px; }
-  .call-bar span { display: grid; place-items: center; width: clamp(26px, 4.4vw, 38px); aspect-ratio: 1; border-radius: 50%; background: rgba(26,28,22,.55); }
-  .call-bar span.salir { background: var(--terra-ink); }
-  .call-bar svg { width: 50%; height: 50%; fill: none; stroke: var(--cream); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .laptop-base { height: 14px; margin: 0 -5%; border-radius: 0 0 16px 16px; background: linear-gradient(#DDD4BD, #BFB59A); position: relative; }
-  .laptop-base::before { content: ""; position: absolute; left: 50%; top: 0; width: 16%; height: 5px; transform: translateX(-50%); border-radius: 0 0 6px 6px; background: rgba(86,94,50,.2); }
-  .llamada figcaption { margin-top: 22px; color: var(--soft); font-size: .95rem; }
+  /* Un encuentro (25/09/2026). Reemplaza la videollamada dibujada, que
+     quedaba infantil al lado de los teléfonos. Son los dos círculos del
+     isotipo de Vita, uno por persona (cálido y celeste, con gradiente
+     como la aurora: en coral y naranja planos se leía como otro logo): al entrar en pantalla se acercan hasta
+     superponerse. Sin JavaScript, o con movimiento reducido, se ven juntos.
+     🔁 Si llega la FOTO real (escena armada con alguien de la beta, con
+     permiso firmado), puede ir acá o sumarse debajo. */
+  .encuentro { margin: 56px auto 0; max-width: 560px; }
+  .pareja { display: flex; justify-content: center; align-items: flex-start; }
+  .quien { display: flex; flex-direction: column; align-items: center; gap: 18px; transition: transform 2.4s cubic-bezier(.22, 1, .36, 1); }
+  .quien i { display: block; width: min(220px, 38vw); aspect-ratio: 1; border-radius: 50%; mix-blend-mode: multiply; }
+  .quien:first-child i { background: radial-gradient(circle at 38% 34%, #FBD9B8, var(--sun) 58%, var(--coral)); opacity: .82; }
+  .quien:last-child i { background: radial-gradient(circle at 38% 34%, #EAF2F8, var(--sky) 60%, #7E8CA8); opacity: .8; }
+  .quien i { box-shadow: 0 30px 60px -30px rgba(80, 40, 20, .35); }
+  .quien:first-child { margin-right: calc(min(220px, 38vw) * -.32); }
+  .quien span { font-weight: 700; font-size: .95rem; }
+  .pareja.lejos .quien:first-child { transform: translateX(-38%); }
+  .pareja.lejos .quien:last-child { transform: translateX(38%); }
+  .encuentro figcaption { margin-top: 28px; color: var(--soft); font-size: .95rem; }
   .purpose-link { display: inline-block; margin-top: 24px; font-weight: 700; text-decoration-color: var(--terra); text-decoration-thickness: 2px; text-underline-offset: 5px; }
 
   /* Preguntas frecuentes */
@@ -401,9 +386,6 @@
   }
   .steps b { display: block; margin-top: 18px; font-size: 1.2rem; letter-spacing: -0.02em; color: var(--olive); }
   .steps span { display: block; margin-top: 8px; color: var(--soft); font-size: 1rem; }
-  .how-cta { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--line); }
-  .how-cta p { font-weight: 600; }
-  .how-cta .stores { margin-top: 16px; }
 
   .preview-note { margin-top: 32px; color: var(--soft); font-size: .85rem; text-align: center; }
 
@@ -563,22 +545,10 @@
     <div class="wrap">
       <h2 id="para-que" class="purpose-q">Conectados todo el día. Acompañados, casi nunca.</h2>
       <p class="sec-lead">Vita existe para que, en un momento difícil, sepas a quién acudir. Usamos la pantalla para llevarte a una persona real, no para reemplazarla.</p>
-      <figure class="llamada">
-        <div class="laptop" role="img" aria-label="Ilustración de una sesión de Vita: una videollamada entre una persona y su profesional">
-          <div class="laptop-screen">
-            <div class="call">
-              <span class="planta" aria-hidden="true"><svg viewBox="0 0 60 100"><path d="M30 62C28 44 16 36 6 36c2 14 12 22 24 26zM30 62c2-20 12-32 24-34-1 16-10 28-24 34zM30 64c-4-22 0-40 2-50 8 12 8 34-2 50z" fill="#8FA07C"/><path d="M30 64c-6-14-16-18-22-18 4 10 12 16 22 18z" fill="#6F8660"/><path d="M16 64h28l-4 36H20z" fill="#C1694F"/></svg></span>
-              <div class="persona"><span class="cabeza"></span><span class="cuerpo"></span></div>
-              <div class="call-self"><div class="persona"><span class="cabeza"></span><span class="cuerpo"></span></div></div>
-              <span class="call-tag">Tu profesional</span>
-              <div class="call-bar" aria-hidden="true">
-                <span><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
-                <span><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg></span>
-                <span class="salir"><svg viewBox="0 0 24 24"><path d="M4 14c4.5-4 11.5-4 16 0l-2 3-3-1v-2.5a9 9 0 0 0-6 0V16l-3 1z"/></svg></span>
-              </div>
-            </div>
-          </div>
-          <div class="laptop-base"></div>
+      <figure class="encuentro">
+        <div class="pareja" role="img" aria-label="Dos círculos, uno por persona, que se encuentran: vos y tu profesional">
+          <div class="quien"><i></i><span>vos</span></div>
+          <div class="quien"><i></i><span>tu profesional</span></div>
         </div>
         <figcaption>Una sesión en Vita: vos y una persona que te escucha, por videollamada desde la app.</figcaption>
       </figure>
@@ -596,10 +566,6 @@
         <li><b>Tenés tu videollamada</b><span>Cuando llega el momento, entrá a la sala desde tu reserva en la app.</span></li>
         <li><b>Seguís entre sesiones</b><span>Tu profesional puede dejarte una nota o un recurso para la semana, y tenés tus herramientas a mano.</span></li>
       </ol>
-      <div class="how-cta">
-        <p>Vita es gratis para descargar. Pagás solo las sesiones que reservás.</p>
-        <div class="stores" data-stores data-tipo="persona"></div>
-      </div>
     </div>
   </section>
 
@@ -804,6 +770,18 @@
 </footer>
 
 <script>
+  // Un encuentro: los dos círculos arrancan separados y se acercan cuando la
+  // sección entra en pantalla. Sin soporte o con movimiento reducido, quedan
+  // juntos desde el principio.
+  var pareja = document.querySelector('.pareja');
+  if (pareja && 'IntersectionObserver' in window && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+    pareja.classList.add('lejos');
+    var obsPareja = new IntersectionObserver(function (es) {
+      if (es[0].isIntersecting) { obsPareja.disconnect(); setTimeout(function () { pareja.classList.remove('lejos'); }, 300); }
+    }, { threshold: 0.5 });
+    obsPareja.observe(pareja);
+  }
+
   // En el celular se ve una experiencia por vez, siempre elegida por quien
   // visita. Sin JavaScript se ven las tres. El chequeo evita que un error acá
   // corte el bloque de abajo, que es el que arma los botones de descarga.
