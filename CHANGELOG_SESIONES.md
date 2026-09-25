@@ -1,3 +1,15 @@
+## 2026-09-25 — Andre (Claude · revisión de la web, tercera tanda: el check-in como en la app)
+
+**Tocado:** `web/index.html`
+
+**Resumen:**
+- 🎨 **Andre: el check-in se sentía soso, "tendría que ser lo más cercano a la app".** Cuatro propuestas en un prototipo (toda la pantalla, Sofía pregunta, un respiro y la mezcla). Eligió la mezcla con un ajuste: arranca neutra.
+- **Ahora:** sin el título "probá un momento de Vita". Firma "Sofía" y "¡Hola! ¿Cómo venís hoy?" que aparece de a una palabra al entrar en pantalla. Al elegir, el fondo se tiñe con el degradé del ánimo al verde `#3F512F` (el mismo del momento de `SobreVosMomento.tsx`), aparecen tres puntitos y Sofía contesta. La respiración es un círculo grande en el color del ánimo; la pregunta del diario va a todo el ancho. Bajón cierra con "Hay gente preparada para acompañar esto." (la línea de la app) y un link a elegir con quién hablar.
+- La nota aclara que Sofía son mensajes automáticos. Respeta "reducir movimiento" (todo quieto, sin animar palabras).
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone, sobre todo "Normal" (beige claro con texto crema arriba) y el salto de alto de la sección al abrir la respiración.
+
 ## 2026-09-25 — Andre (Claude · revisión de la web, segunda tanda: legales completos)
 
 **Tocado:** `web/index.html`, `docs/terminos-y-condiciones.md`, `docs/politica-de-privacidad.md`, `docs/boton-de-arrepentimiento.md`, `docs/eliminar-cuenta.md`, `docs/paquete-abogado.md`, `constants/legal.ts`, `web/legal/*`, `web/legal-version.js`

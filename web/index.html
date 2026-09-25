@@ -211,70 +211,81 @@
   .sec-lead { margin-top: 22px; max-width: 46ch; color: var(--soft); font-size: 1.1rem; }
 
 
-  /* ¿Cómo venís hoy? El único momento de la página que responde a quien la
-     visita, y es el mismo gesto con el que arranca la app: los cinco círculos
-     de ánimo, el elegido crece y los demás se apagan (MoodCheckIn.tsx). */
-  .checkin { text-align: center; background: var(--paper); transition: background-color .6s ease; }
-  .checkin[data-mood="1"] { background: color-mix(in srgb, var(--m1) 14%, var(--paper)); }
-  .checkin[data-mood="2"] { background: color-mix(in srgb, var(--m2) 22%, var(--paper)); }
-  .checkin[data-mood="3"] { background: color-mix(in srgb, var(--m3) 30%, var(--paper)); }
-  .checkin[data-mood="4"] { background: color-mix(in srgb, var(--m4) 26%, var(--paper)); }
-  .checkin[data-mood="5"] { background: color-mix(in srgb, var(--m5) 18%, var(--paper)); }
-  .checkin h2 { margin: 0 auto; }
-  .checkin-q { margin-top: 44px; font-weight: 800; font-size: clamp(1.3rem, 2.4vw, 1.7rem); letter-spacing: -0.02em; }
-  .checkin .mood-pick { margin-top: 28px; }
-  .checkin .sec-lead { margin: 18px auto 0; }
-  .mood-pick { list-style: none; padding: 0; margin: 48px auto 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(2px, 2vw, 24px); max-width: 600px; }
+  /* ¿Cómo venís hoy? (25/09/2026, propuesta D elegida por Andre). El único
+     momento de la página que responde a quien la visita, y copia a la app:
+     Sofía saluda y pregunta (inicio), los cinco círculos (MoodCheckIn.tsx), y
+     al elegir, el fondo se tiñe con el degradé del ánimo al verde y Sofía
+     contesta, como el momento de SobreVosMomento.tsx. Arranca neutro. */
+  .checkin { position: relative; isolation: isolate; text-align: center; background: var(--paper); padding: clamp(72px, 9vw, 120px) 0; }
+  .checkin::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity 1.1s ease;
+    background: linear-gradient(160deg, var(--mood, #3F512F) 0%, color-mix(in srgb, var(--mood, #3F512F) 55%, #3F512F) 38%, #3F512F 92%);
+  }
+  .checkin.picked::before { opacity: 1; }
+  .checkin .wrap { max-width: 680px; }
+  .sofia-mark { display: inline-flex; align-items: center; gap: 8px; font-style: italic; font-weight: 600; font-size: .95rem; color: var(--soft); transition: color .9s ease; }
+  .sofia-mark svg { width: 20px; height: 20px; }
+  .checkin h2 { margin: 18px auto 0; max-width: 14ch; font-size: clamp(2.2rem, 6vw, 3.6rem); text-wrap: balance; transition: font-size .6s ease, opacity .6s ease, color .9s ease; }
+  .checkin.picked h2 { font-size: clamp(1.1rem, 2.4vw, 1.35rem); opacity: .8; max-width: none; }
+  .checkin.picked .sofia-mark { color: rgba(255,248,239,.85); }
+  .checkin.picked h2, .checkin.picked .mood-pick span { color: #FFF8EF; }
+  .w { transition: opacity .5s ease; }
+  .w.off { opacity: 0; }
+  .mood-pick { list-style: none; padding: 0; margin: 44px auto 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(2px, 2vw, 24px); max-width: 560px; transition: opacity .6s ease; }
+  .mood-pick.off { opacity: 0; }
   .mood-pick button {
     font: inherit; color: var(--olive); background: none; border: 0; padding: 6px; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; min-height: 44px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; min-height: 44px;
     -webkit-tap-highlight-color: transparent;
   }
   .mood-pick i {
-    display: block; width: clamp(40px, 11vw, 72px); aspect-ratio: 1; border-radius: 50%;
+    display: block; width: clamp(44px, 12vw, 68px); aspect-ratio: 1; border-radius: 50%;
     box-shadow: inset 0 0 0 1px rgba(86,94,50,.14);
     transition: transform .45s cubic-bezier(.34, 1.56, .64, 1), opacity .25s ease;
   }
-  .mood-pick span { font-size: clamp(.78rem, 3.4vw, .95rem); font-weight: 600; transition: opacity .25s ease; }
+  .mood-pick span { font-size: clamp(.78rem, 3.4vw, .95rem); font-weight: 600; transition: opacity .25s ease, color .9s ease; }
   .mood-pick li:nth-child(1) i { background: var(--m1); } .mood-pick li:nth-child(2) i { background: var(--m2); }
   .mood-pick li:nth-child(3) i { background: var(--m3); } .mood-pick li:nth-child(4) i { background: var(--m4); }
   .mood-pick li:nth-child(5) i { background: var(--m5); }
   .mood-pick button:hover i { transform: scale(1.08); }
-  .checkin[data-mood] .mood-pick i { opacity: .35; }
-  .checkin[data-mood] .mood-pick span { opacity: .6; }
-  .checkin[data-mood] .mood-pick [aria-pressed="true"] i { opacity: 1; transform: scale(1.28); }
-  .checkin[data-mood] .mood-pick [aria-pressed="true"] span { opacity: 1; }
-  .mood-reply { max-width: 40ch; margin: 40px auto 0; }
-  .mood-reply p { font-size: clamp(1.15rem, 2vw, 1.4rem); font-weight: 600; line-height: 1.45; }
-  .mood-reply a { display: inline-block; font-weight: 700; color: var(--olive); text-decoration-color: var(--terra); text-decoration-thickness: 2px; text-underline-offset: 5px; }
-
-  .checkin-note { margin-top: 36px; color: var(--soft); font-size: .95rem; }
+  .checkin.picked .mood-pick i { opacity: .35; box-shadow: 0 0 0 2px rgba(255,248,239,.35); }
+  .checkin.picked .mood-pick span { opacity: .6; }
+  .checkin.picked .mood-pick [aria-pressed="true"] i { opacity: 1; transform: scale(1.25); }
+  .checkin.picked .mood-pick [aria-pressed="true"] span { opacity: 1; }
+  .mood-reply { margin: 40px auto 0; max-width: 40ch; color: #FFF8EF; }
   .mood-reply:empty { display: none; }
-  .mood-reply .acts { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: center; align-items: center; }
+  .mood-reply .say { font-size: clamp(1.2rem, 2.4vw, 1.5rem); font-weight: 600; line-height: 1.45; text-wrap: balance; text-shadow: 0 1px 12px rgba(30,26,18,.25); }
+  .mood-reply .say + .say { margin-top: 16px; }
+  .dots { display: inline-flex; gap: 6px; padding: 12px 0; }
+  .dots span { width: 8px; height: 8px; border-radius: 50%; background: #FFF8EF; opacity: .35; animation: blink 1.1s infinite; }
+  .dots span:nth-child(2) { animation-delay: .18s; } .dots span:nth-child(3) { animation-delay: .36s; }
+  @keyframes blink { 40% { opacity: .9; } }
+  .fade { opacity: 0; transform: translateY(6px); transition: opacity .6s ease, transform .6s ease; }
+  .fade.on { opacity: 1; transform: none; }
   .act {
-    font: inherit; font-weight: 700; font-size: 1rem; cursor: pointer;
-    min-height: 48px; padding: 0 22px; border-radius: 999px; border: 0;
-    background: var(--olive); color: var(--cream);
+    margin-top: 24px; font: inherit; font-weight: 700; font-size: 1rem; cursor: pointer;
+    min-height: 48px; padding: 0 24px; border-radius: 16px; border: 0;
+    background: #FFF8EF; color: #3F512F;
   }
-  .act:hover { background: var(--forest); }
-  .moment { max-width: 520px; margin: 32px auto 0; padding: clamp(24px, 5vw, 40px); border-radius: 32px; background: rgba(255, 250, 243, .7); box-shadow: inset 0 0 0 1px rgba(255,255,255,.8); }
-  .moment[hidden] { display: none; }
+  .act:hover { background: #fff; }
+  .mood-reply a { display: inline-block; margin-top: 18px; font-weight: 700; color: #FFF8EF; text-decoration-color: rgba(255,248,239,.6); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+  .checkin-note { margin-top: 44px; color: var(--soft); font-size: .9rem; transition: color .9s ease; }
+  .checkin.picked .checkin-note { color: rgba(255,248,239,.78); }
   /* Pausa: la misma respiración cuadrada de la app (RespiracionScreen),
-     inhalá 4, mantené 4, exhalá 4, mantené 4. Dos vueltas. */
+     inhalá 4, mantené 4, exhalá 4, mantené 4. Dos vueltas. El círculo toma
+     el color del ánimo. */
   .orb {
-    width: 180px; aspect-ratio: 1; margin: 8px auto 0; border-radius: 50%;
+    width: min(240px, 62vw); aspect-ratio: 1; margin: 16px auto 0; border-radius: 50%;
     display: grid; place-items: center;
-    background: radial-gradient(circle at 40% 35%, #FBD9B8, var(--sun));
-    box-shadow: 0 0 0 18px rgba(169,203,230,.28), 0 0 0 40px rgba(169,203,230,.14);
-    transform: scale(.72); transition: transform 4s cubic-bezier(.45, 0, .55, 1);
+    background: radial-gradient(circle at 40% 35%, rgba(255,255,255,.9), var(--mood, var(--sun)));
+    box-shadow: 0 0 0 22px rgba(255,248,239,.1), 0 0 0 52px rgba(255,248,239,.05);
+    transform: scale(.66); transition: transform 4s cubic-bezier(.45, 0, .55, 1);
   }
   .orb.grande { transform: scale(1); }
-  .orb b { font-size: 1.15rem; color: #6A3B22; }
-  .moment-foot { margin-top: 28px; color: var(--soft); font-size: .98rem; }
-  .moment .act { margin-top: 18px; }
-  .prompt-lead { color: var(--soft); font-weight: 600; }
-  .prompt-q { margin-top: 10px; font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.2; text-wrap: balance; }
-  .prompt-lines { margin: 24px auto 0; max-width: 360px; height: 72px; background: repeating-linear-gradient(to bottom, transparent 0 35px, var(--line) 35px 36px); }
+  .orb b { font-size: 1.25rem; color: #3F512F; }
+  .moment-foot { margin-top: 44px; color: rgba(255,248,239,.78); font-size: .98rem; }
+  .prompt-q { font-size: clamp(1.5rem, 3.4vw, 2rem); font-weight: 800; letter-spacing: -0.025em; line-height: 1.2; text-wrap: balance; color: #FFF8EF; }
+  .prompt-lines { margin: 28px auto 0; max-width: 340px; height: 72px; background: repeating-linear-gradient(to bottom, transparent 0 35px, rgba(255,248,239,.25) 35px 36px); }
 
   /* Nuestra historia: lo único oscuro de la página, y lo único que no es
      producto. Las fotos van como copias impresas, con su fecha de cámara. */
@@ -669,9 +680,8 @@
 
   <section class="checkin" aria-labelledby="momento" hidden>
     <div class="wrap">
-      <h2 id="momento" class="sec-title">probá un momento de Vita.</h2>
-      <p class="sec-lead">Entre una sesión y otra, Vita te acompaña con momentos cortos. Arranca como en la app, con una pregunta.</p>
-      <p class="checkin-q">¿Cómo venís hoy?</p>
+      <span class="sofia-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="26" cy="28" r="17" fill="none" stroke="currentColor" stroke-width="6"/><circle cx="38" cy="38" r="17" fill="none" stroke="currentColor" stroke-width="6"/></svg>Sofía</span>
+      <h2 id="momento">¡Hola! ¿Cómo venís hoy?</h2>
       <ul class="mood-pick">
         <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Bajón</span></button></li>
         <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Cansado</span></button></li>
@@ -680,8 +690,7 @@
         <li><button type="button" aria-pressed="false"><i aria-hidden="true"></i><span>Brillando</span></button></li>
       </ul>
       <div class="mood-reply" aria-live="polite"></div>
-      <div class="moment" hidden></div>
-      <p class="checkin-note">Acá no se guarda nada. En la app, queda en tu registro del día.</p>
+      <p class="checkin-note">Sofía son mensajes automáticos, escritos por nosotros. Acá no se guarda nada; en la app, queda en tu registro del día.</p>
     </div>
   </section>
 
@@ -819,103 +828,135 @@
     });
   }
 
-  // Probá un momento de Vita. Arranca como la app, con el ánimo del día, y
-  // cada respuesta ofrece algo que se puede hacer acá mismo: una pausa de
-  // respiración o la pregunta del diario que la app muestra para ese ánimo
-  // (app/diario.tsx). Experiencias del vistazo: 0 acompañamiento, 1 ánimo,
-  // 2 pausa. No se guarda nada.
+  // ¿Cómo venís hoy? Como en la app: Sofía pregunta, se elige el ánimo, el
+  // fondo se tiñe y ella contesta. Cada respuesta ofrece algo para hacer acá
+  // mismo: una pausa de respiración o la pregunta del diario que la app
+  // muestra para ese ánimo (app/diario.tsx). Bajón cierra con la línea que ya
+  // dice la app. Arranca al entrar en pantalla. No se guarda nada.
   var RESPUESTAS = [
-    { t: 'Hay días así. No hace falta resolverlo hoy.', act: 'pausa', link: 'O mirá cómo elegir con quién hablar', exp: 0 },
+    { t: 'Hay días así. No hace falta resolverlo hoy.', act: 'pausa', extra: 'Hay gente preparada para acompañar esto.', link: 'Mirá cómo elegir con quién hablar' },
     { t: 'Hoy venís con poca energía. A veces medio minuto alcanza para seguir.', act: 'pausa' },
-    { t: 'Un día tranquilo también vale mirarlo un poco.', act: 'diario', lead: 'Un día tranquilo.', q: '¿Qué anduvo dando vueltas por tu cabeza hoy?' },
-    { t: 'Qué bueno. Vale la pena saber qué te hizo bien.', act: 'diario', lead: 'Venís bien hoy.', q: '¿Qué fue lo que sumó para sentirte así?' },
-    { t: 'Disfrutalo. Y si querés, dejalo guardado.', act: 'diario', lead: 'Hoy estás brillando.', q: '¿Qué hizo especial este día?' }
+    { t: 'Un día tranquilo también vale mirarlo un poco.', act: 'diario', q: '¿Qué anduvo dando vueltas por tu cabeza hoy?' },
+    { t: 'Qué bueno. Vale la pena saber qué te hizo bien.', act: 'diario', q: '¿Qué fue lo que sumó para sentirte así?' },
+    { t: 'Disfrutalo. Y si querés, dejalo guardado.', act: 'diario', q: '¿Qué hizo especial este día?' }
   ];
   var BOTON = { pausa: 'Hacer una pausa de 30 segundos', diario: 'Ver la pregunta del diario' };
+  var COLORES = ['var(--m1)', 'var(--m2)', 'var(--m3)', 'var(--m4)', 'var(--m5)'];
   var FASES = [['Inhalá', true], ['Mantené', true], ['Exhalá', false], ['Mantené', false]];
 
   var checkin = document.querySelector('.checkin');
   if (checkin) {
+    var quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var titulo = checkin.querySelector('h2');
+    var lista = checkin.querySelector('.mood-pick');
     var reply = checkin.querySelector('.mood-reply');
-    var moment = checkin.querySelector('.moment');
     var botones = checkin.querySelectorAll('.mood-pick button');
     var timers = [];
     function frenar() { timers.forEach(clearTimeout); timers = []; }
+    function luego(fn, ms) { timers.push(setTimeout(fn, quieto ? 0 : ms)); }
     function el(tag, cls, text) {
       var e = document.createElement(tag);
       if (cls) e.className = cls;
       if (text) e.textContent = text;
       return e;
     }
+    // Las palabras aparecen de a una: la voz habla, no se imprime. Devuelve
+    // cuánto tarda.
+    function palabras(p) {
+      var ws = p.textContent.split(' ');
+      p.textContent = '';
+      ws.forEach(function (w, i) {
+        var s = el('span', 'w off', w);
+        p.append(s, ' ');
+        luego(function () { s.classList.remove('off'); }, 160 * i);
+      });
+      return 160 * ws.length + 300;
+    }
+    function mostrar(node, ms) { node.classList.add('fade'); luego(function () { node.classList.add('on'); }, ms || 30); return node; }
+    // Tres puntitos y después la frase de Sofía.
+    function sofia(texto, espera, despues) {
+      var dots = el('div', 'dots');
+      dots.innerHTML = '<span></span><span></span><span></span>';
+      luego(function () { reply.appendChild(dots); }, espera);
+      luego(function () {
+        dots.remove();
+        var p = el('p', 'say', texto);
+        reply.appendChild(p);
+        var t = palabras(p);
+        if (despues) luego(despues, t);
+      }, espera + 1000);
+    }
 
-    function pausa() {
+    function pausa(r) {
       frenar();
-      moment.innerHTML = '';
+      reply.innerHTML = '';
       var orb = el('div', 'orb');
       var word = el('b', '', 'Preparate');
       orb.appendChild(word);
       var foot = el('p', 'moment-foot', 'Seguí el círculo. Dos vueltas.');
-      foot.setAttribute('aria-live', 'polite');
-      moment.append(orb, foot);
+      reply.append(mostrar(orb), foot);
       var t = 1200;
       for (var vuelta = 0; vuelta < 2; vuelta++) {
         FASES.forEach(function (f) {
-          timers.push(setTimeout(function () {
-            word.textContent = f[0];
-            orb.classList.toggle('grande', f[1]);
-          }, t));
+          luego(function () { word.textContent = f[0]; orb.classList.toggle('grande', f[1]); }, t);
           t += 4000;
         });
       }
-      timers.push(setTimeout(function () {
+      luego(function () {
         word.textContent = 'Listo';
-        foot.textContent = 'Así de corta puede ser una pausa. En la app hay de 3 a 8 minutos, y también sonidos para acompañarte.';
-        var otra = el('button', 'act', 'Otra vez');
-        otra.type = 'button';
-        otra.addEventListener('click', pausa);
-        moment.appendChild(otra);
-      }, t));
+        foot.textContent = 'Así de corta puede ser una pausa. En la app hay de 3 a 8 minutos.';
+      }, t);
+      if (r.extra) {
+        sofia(r.extra, t + 400, function () {
+          var a = el('a', '', r.link);
+          a.href = '#vistazo';
+          a.addEventListener('click', function () { elegirExperiencia(0); });
+          reply.appendChild(mostrar(a));
+        });
+      }
     }
 
     function diario(r) {
       frenar();
-      moment.innerHTML = '';
-      moment.append(
-        el('p', 'prompt-lead', r.lead),
-        el('p', 'prompt-q', r.q),
-        el('div', 'prompt-lines'),
-        el('p', 'moment-foot', 'Pensalo un momento. En la app la respondés en tu diario, y queda solo para vos.')
+      reply.innerHTML = '';
+      reply.append(
+        mostrar(el('p', 'prompt-q', r.q)),
+        mostrar(el('div', 'prompt-lines'), 500),
+        mostrar(el('p', 'moment-foot', 'Pensalo un momento. En la app la respondés en tu diario, y queda solo para vos.'), 900)
       );
     }
 
     checkin.hidden = false;
+    // Sin IntersectionObserver (o con movimiento reducido) se ve todo quieto.
+    lista.classList.add('off');
+    var saludo = function () { luego(function () { lista.classList.remove('off'); }, palabras(titulo)); };
+    if ('IntersectionObserver' in window && !quieto) {
+      var obs = new IntersectionObserver(function (es) {
+        if (es[0].isIntersecting) { obs.disconnect(); saludo(); }
+      }, { threshold: 0.4 });
+      obs.observe(checkin);
+    } else {
+      lista.classList.remove('off');
+    }
+
     botones.forEach(function (button, index) {
       button.addEventListener('click', function () {
         var r = RESPUESTAS[index];
         frenar();
-        moment.hidden = true;
-        moment.innerHTML = '';
-        checkin.dataset.mood = String(index + 1);
+        titulo.querySelectorAll('.w').forEach(function (w) { w.classList.remove('off'); });
+        lista.classList.remove('off');
+        checkin.style.setProperty('--mood', COLORES[index]);
+        checkin.classList.add('picked');
         botones.forEach(function (b) { b.setAttribute('aria-pressed', String(b === button)); });
-
         reply.innerHTML = '';
-        reply.appendChild(el('p', '', r.t));
-        var acts = el('div', 'acts');
-        var act = el('button', 'act', BOTON[r.act]);
-        act.type = 'button';
-        act.addEventListener('click', function () {
-          moment.hidden = false;
-          if (r.act === 'pausa') pausa(); else diario(r);
-          moment.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        sofia(r.t, 500, function () {
+          var act = el('button', 'act', BOTON[r.act]);
+          act.type = 'button';
+          act.addEventListener('click', function () {
+            if (r.act === 'pausa') pausa(r); else diario(r);
+          });
+          reply.appendChild(mostrar(act));
         });
-        acts.appendChild(act);
-        if (r.link) {
-          var a = el('a', '', r.link);
-          a.href = '#vistazo';
-          a.addEventListener('click', function () { elegirExperiencia(r.exp); });
-          acts.appendChild(a);
-        }
-        reply.appendChild(acts);
       });
     });
   }
