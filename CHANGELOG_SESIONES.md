@@ -1,3 +1,14 @@
+## 2026-09-25 — Andre (Claude · la web muestra una sesión)
+
+**Tocado:** `web/index.html`
+
+**Resumen:**
+- 🖼️ **Andre: a la web le falta una imagen de dos personas en llamada.** Es cierto: mostraba perfil, ánimo y respiración, pero nunca el momento central. Sin foto todavía, va una ilustración en CSS con el estilo de los teléfonos: una compu con la videollamada (la profesional en su cuarto con ventana y planta, la propia imagen arriba a la derecha, "Tu profesional" y los botones de la sala). Va debajo de "Conectados todo el día. Acompañados, casi nunca." como respuesta visual, con el texto "Una sesión en Vita: vos y una persona que te escucha, por videollamada desde la app."
+- Descartadas las fotos de banco: son lo que usan todas las apps y se leerían como profesionales de Vita.
+
+**Pendiente para la próxima sesión:**
+- 📸 Foto real armada con alguien de la beta (escena preparada, nunca una sesión real, permiso firmado de los dos). Cuando esté: reemplazar `<div class="laptop">` por un `<img>` y borrar el bloque CSS "Una sesión, dibujada". Esa misma foto sirve de `og:image` (vista previa en WhatsApp), que sigue faltando.
+
 ## 2026-09-25 — Andre (Claude · para qué sirve cada herramienta)
 
 **Tocado:** `constants/herramientasParaQue.ts` (nuevo), `components/ParaQueSirve.tsx` (nuevo), `app/diario.tsx`, `app/gratitud.tsx`, `screens/RespiracionScreen.tsx`, `screens/RuidoScreen.tsx`, `app/(tabs)/recursos.tsx`, `__tests__/herramientasParaQue.test.ts` (nuevo)
