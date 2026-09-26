@@ -12,16 +12,25 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
+// La cuenta conectada y si dio el consentimiento de datos sensibles.
+let mockUid: string | null = 'u1';
+let mockConsiente = true;
+
 jest.mock('@/lib/supabase', () => ({
-  supabase: { from: () => ({ insert: async (fila: Record<string, unknown>) => { filas.push(fila); return { error: null }; } }) },
+  supabase: {
+    auth: { getSession: async () => ({ data: { session: mockUid ? { user: { id: mockUid } } : null } }) },
+    from: () => ({ insert: async (fila: Record<string, unknown>) => { filas.push(fila); return { error: null }; } }),
+  },
   registrarEvento: async (nombre: string, props: Record<string, unknown>) => { eventos.push({ nombre, props }); },
 }));
+
+jest.mock('@/lib/consent', () => ({ puedeTratarBienestar: async (uid?: string | null) => !!uid && mockConsiente }));
 
 import { recordCompletion } from '@/lib/resourceCompletions';
 
 const dejarCorrer = () => new Promise(r => setTimeout(r, 0));
 
-beforeEach(() => { filas.length = 0; eventos.length = 0; });
+beforeEach(() => { filas.length = 0; eventos.length = 0; mockUid = 'u1'; mockConsiente = true; });
 
 describe('recordCompletion', () => {
   it('🔴 emite `recurso_completado`: es el cuello por el que pasan las once pantallas', async () => {
@@ -57,6 +66,7 @@ describe('recordCompletion', () => {
     // hay fila posible. Pero el evento tiene que salir: es a donde el onboarding
     // manda a quien dice "solo estoy mirando", y sin esto sus aperturas se
     // leerían todas como abandono.
+    mockUid = null;
     await recordCompletion(null, 'respiracion', 300);
     await dejarCorrer();
 
@@ -76,5 +86,17 @@ describe('recordCompletion', () => {
     await recordCompletion('u1', 'diario');
     await dejarCorrer();
     expect(eventos[0].props.sesion).toBeTruthy();
+  });
+
+  it('🔴 sin consentimiento no guarda la fila ni dice qué recurso fue (auditoría 26/09, C2)', async () => {
+    mockConsiente = false;
+    await recordCompletion('u1', 'meditacion', 300);
+    await dejarCorrer();
+
+    expect(filas).toHaveLength(0);
+    const ev = eventos.find(e => e.nombre === 'recurso_completado');
+    expect(ev).toBeTruthy();
+    expect(ev!.props).not.toHaveProperty('resource_id');
+    expect(ev!.props.sin_consentimiento).toBe(true);
   });
 });

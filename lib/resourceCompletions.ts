@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { logWarn } from '@/lib/logging';
-import { anotar } from '@/lib/analytics';
+import { anotarUsoDeRecurso } from '@/lib/resourceEvents';
+import { puedeTratarBienestar } from '@/lib/consent';
 
 /**
  * Registra que el usuario completó (o usó) un recurso.
@@ -24,16 +25,18 @@ export async function recordCompletion(
   // — y es exactamente a donde el onboarding nuevo manda a quien dice "solo
   // estoy mirando". Sin esto tendríamos `recurso_iniciado` sin su par y las
   // aperturas anónimas se leerían todas como abandono.
-  anotar('recurso_completado', {
-    resource_id: resourceId,
+  anotarUsoDeRecurso('recurso_completado', resourceId, {
     duration_seconds: durationSeconds ?? null,
-    user_id: userId,
     con_cuenta: !!userId,
   });
 
   // La FILA sí necesita cuenta: `user_id` es FK a `auth.users`. Es progreso
   // personal — sin cuenta no tiene a quién pertenecer.
   if (!userId) return;
+  // 🔴 El progreso dice qué recursos usa y cuánto: sin consentimiento no se
+  // guarda (auditoría 26/09, C2). Racha y progreso quedan sin contar, que es
+  // lo que la Política §3.2 dice que se pierde al no darlo.
+  if (!(await puedeTratarBienestar(userId))) return;
 
   // 🔴 El error se MIRA. Hasta el 22/09/2026 esto era un `await` pelado, y la
   // tabla no tenía ninguna policy: **cada inserción se denegaba en silencio y

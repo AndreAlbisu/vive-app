@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getConsent, setConsent } from '@/lib/consent';
+import { volcarPendiente } from '@/lib/quizPendiente';
 import { necesitaPedir, puedeTratar, type ConsentState, type ConsentType } from '@/lib/consentRules';
 
 // El consentimiento de datos sensibles, listo para usar en una pantalla.
@@ -41,8 +42,11 @@ export function useConsent(userId: string | undefined, type: ConsentType = 'dato
     const ok = await setConsent(granted, type);
     if (token !== opToken.current) return true; // hubo un toque más nuevo: descartar
     if (!ok) { await refrescar(); return false; }
+    // Lo que contestó en el quiz mientras no había permiso estaba esperando en
+    // el teléfono: con el sí, sube.
+    if (granted && userId) void volcarPendiente(userId);
     return true;
-  }, [type, refrescar]);
+  }, [type, refrescar, userId]);
 
   return {
     loading,

@@ -75,9 +75,46 @@ export async function setConsent(
       console.error('[consent] setConsent:', res.status, await res.text());
       return false;
     }
+    cacheBienestar = null;
     return true;
   } catch (e) {
     console.error('[consent] setConsent:', e);
     return false;
   }
+}
+
+// ── Para los que escriben de fondo ───────────────────────────────────────────
+// El quiz y el uso de recursos se guardan sin pantalla de por medio (eventos,
+// volcados), así que no pueden usar `useConsent`. Antes directamente no
+// preguntaban: se guardaban aunque la persona hubiera dicho que no o revocado
+// (auditoría del 26/09/2026, C2). Esto les da la misma regla fail-closed.
+//
+// 📝 Cache corto por persona: abrir un recurso dispara varios eventos seguidos
+// y no hace falta una consulta por cada uno. `setConsent` lo invalida, así que
+// revocar corta en el acto en este teléfono.
+
+const CACHE_MS = 60_000;
+let cacheBienestar: { userId: string; puede: boolean; en: number } | null = null;
+
+/** ¿Se puede guardar dato de bienestar de esta persona? Sin cuenta, o si la
+ *  consulta falla, no. */
+export async function puedeTratarBienestar(userId?: string | null): Promise<boolean> {
+  let uid = userId ?? null;
+  if (!uid) {
+    const { data } = await supabase.auth.getSession();
+    uid = data.session?.user?.id ?? null;
+  }
+  if (!uid) return false;
+  if (cacheBienestar && cacheBienestar.userId === uid && Date.now() - cacheBienestar.en < CACHE_MS) {
+    return cacheBienestar.puede;
+  }
+  const estado = await getConsent(uid);
+  const puede = estado?.granted === true;
+  cacheBienestar = { userId: uid, puede, en: Date.now() };
+  return puede;
+}
+
+/** Para tests y para el cierre de sesión. */
+export function olvidarConsentimientoCacheado(): void {
+  cacheBienestar = null;
 }

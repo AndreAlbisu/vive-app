@@ -30,6 +30,7 @@ export const LO_QUE_CUBRE: string[] = [
   'Cómo venís cada día: tu check-in de ánimo',
   'Lo que escribís en el diario y en gratitud',
   'Qué recursos usás, para poder acercarte los que encajen',
+  'Los temas que elegís en el cuestionario, para sugerirte profesionales',
 ];
 
 /** ¿Hay que pedirlo?

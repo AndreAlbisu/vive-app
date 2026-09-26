@@ -12,6 +12,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
+import { puedeTratarBienestar } from '@/lib/consent';
 
 export type QuizPendiente = {
   topic?: string | null;
@@ -126,6 +127,11 @@ export async function volcarPendiente(userId: string): Promise<void> {
     await AsyncStorage.removeItem(KEY);
     return;
   }
+  // 🔴 Los temas que alguien elige ("ansiedad", "sexualidad") son dato de
+  // salud: sin su consentimiento no suben a la cuenta (auditoría 26/09, C2).
+  // Quedan pendientes en el teléfono, sin marcar, y se vuelcan si lo da
+  // después (`useConsent` llama acá al registrar un sí).
+  if (!(await puedeTratarBienestar(userId))) return;
 
   const fila: Record<string, unknown> = { user_id: userId, updated_at: new Date().toISOString() };
   if (p.topic)            fila.topic = p.topic;
@@ -176,6 +182,9 @@ export async function leerRespuestasGuardadas(): Promise<QuizPendiente | null> {
   // (sin `dueño` y ya volcado) se ignora: la base tiene lo mismo, bajo su dueño.
   if (local && esDe(local, uid)) return local;
   if (!uid) return null;
+  // Lo guardado en la cuenta se usa para personalizar solo con consentimiento:
+  // revocar tiene que cortar también esto, no solo las escrituras nuevas.
+  if (!(await puedeTratarBienestar(uid))) return null;
   const { data } = await supabase.from('user_quiz_answers').select('*').eq('user_id', uid).maybeSingle();
   if (!data) return null;
   return {

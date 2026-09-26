@@ -13,6 +13,9 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import { AppBg } from '@/components/ui/AppBg';
+import { ConsentSheet } from '@/components/ConsentSheet';
+import { useConsentGate } from '@/hooks/useConsentGate';
+import { useAuth } from '@/context/AuthContext';
 import { PriceSlider } from '@/components/ui/PriceSlider';
 import { ViveFonts } from '@/constants/theme';
 import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
@@ -44,7 +47,6 @@ import {
   type GeneroPedido,
 } from '@/lib/enfoque';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
-import { supabase } from '@/lib/supabase';
 import { guardarPendiente, volcarPendiente, leerRespuestasGuardadas } from '@/lib/quizPendiente';
 
 const F  = '#3A4F2A';
@@ -100,6 +102,11 @@ function getInitials(name: string) {
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function QuizScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  // Los temas que alguien elige son dato de salud: guardarlos en la cuenta pide
+  // el mismo consentimiento que el diario (auditoría 26/09, C2). Los resultados
+  // se muestran igual, digan que sí o que no.
+  const consentGate = useConsentGate(user?.id);
   const [step, setStep]   = useState<Paso>('areas');
   // Hasta 2 áreas y, adentro, hasta 3 temas concretos. Los temas son los mismos
   // nombres que marca el profesional (`coach_topics`), así que el match es
@@ -226,8 +233,10 @@ export default function QuizScreen() {
       setTandas(1);
       // 🔴 Antes esto era `if (!uid) return;`: quien hacía el quiz SIN cuenta
       // perdía las respuestas en silencio. Ahora hay un solo camino: se encolan
-      // siempre, y si YA hay sesión se vuelcan en el acto. Si no, las vuelca
-      // `AuthContext` al registrarse.
+      // siempre en el teléfono, y suben a la cuenta solo con consentimiento:
+      // si todavía no lo dio, se le pide acá, sobre los resultados. Si dice que
+      // no, quedan en el teléfono y nada más (`volcarPendiente` lo chequea).
+      // Sin cuenta las vuelca `AuthContext` al registrarse, con la misma regla.
       guardarPendiente({
         topic: areas[0] ?? null, areas, subtemas,
         professionalType: q2,
@@ -236,10 +245,9 @@ export default function QuizScreen() {
         estilo: q4, guia: q5, foco: q6, generoPref: q7, pagos,
         respondidoEn: new Date().toISOString(),
       })
-        .then(() => supabase.auth.getSession())
-        .then(({ data }) => {
-          const uid = data.session?.user?.id;
-          if (uid) return volcarPendiente(uid);
+        .then(async () => {
+          if (!user?.id) return;
+          if (await consentGate.pedir()) await volcarPendiente(user.id);
         })
         .catch(e => console.warn('[quiz] no se pudo guardar:', e?.message ?? e));
       setStep('resultados');
@@ -680,6 +688,7 @@ export default function QuizScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </SafeAreaView>
+      <ConsentSheet {...consentGate.sheetProps} />
     </AppBg>
   );
 }

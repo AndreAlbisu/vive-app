@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { leerRespuestas } from '@/lib/onboardingRespuestas';
 import { MOOD_RESOURCES } from '@/constants/moodResources';
 import { TOOL_MAP } from '@/constants/tools';
+import { puedeTratarBienestar } from '@/lib/consent';
 
 // Vocabulario de ejes compartido con resource_axes (recursos de coach).
 // Es lo que permite puntuar tools de Vita y recursos de coach en el mismo espacio.
@@ -121,26 +122,32 @@ export function useRecommendedResource(params: {
     });
 
     if (!userId) { setQuizTopic(null); return () => { vivo = false; }; }
-    supabase
-      .from('user_quiz_answers')
-      // ⚠️ `*` y no `'topic, axis'` a propósito: `axis` la agrega
-      // `scripts/add-quiz-declared-axis.sql`, y pedir por nombre una columna que
-      // todavía no existe devuelve error y `data` en null — o sea que un OTA que
-      // llegue antes de correr el script dejaría de leer el topic también, y la
-      // recomendación se apagaría entera. Con `*` la app anda igual antes y
-      // después de la migración.
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!vivo) return;
-        setQuizTopic((data?.topic as string) ?? null);
-        const a = data?.axis as Axis | undefined;
-        // ⚠️ Solo pisa si la base trae un eje válido. Antes seteaba `null` en el
-        // caso contrario, y ahora eso borraría el eje local que acaba de leerse
-        // —que para las cuentas nuevas es el ÚNICO que hay—.
-        if (a === 'cuerpo' || a === 'mente' || a === 'alma') setQuizAxis(a);
-      });
+    // Personalizar con lo guardado en la cuenta pide consentimiento: revocar
+    // corta también esto, no solo las escrituras (auditoría 26/09, C2).
+    void puedeTratarBienestar(userId).then(puede => {
+      if (!vivo) return;
+      if (!puede) { setQuizTopic(null); return; }
+      supabase
+        .from('user_quiz_answers')
+        // ⚠️ `*` y no `'topic, axis'` a propósito: `axis` la agrega
+        // `scripts/add-quiz-declared-axis.sql`, y pedir por nombre una columna que
+        // todavía no existe devuelve error y `data` en null — o sea que un OTA que
+        // llegue antes de correr el script dejaría de leer el topic también, y la
+        // recomendación se apagaría entera. Con `*` la app anda igual antes y
+        // después de la migración.
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!vivo) return;
+          setQuizTopic((data?.topic as string) ?? null);
+          const a = data?.axis as Axis | undefined;
+          // ⚠️ Solo pisa si la base trae un eje válido. Antes seteaba `null` en el
+          // caso contrario, y ahora eso borraría el eje local que acaba de leerse
+          // —que para las cuentas nuevas es el ÚNICO que hay—.
+          if (a === 'cuerpo' || a === 'mente' || a === 'alma') setQuizAxis(a);
+        });
+    });
 
     return () => { vivo = false; };
   }, [userId]);

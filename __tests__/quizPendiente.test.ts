@@ -3,6 +3,9 @@ const mockUpsert = jest.fn(async (..._a: unknown[]) => ({ error: null as { messa
 // La cuenta conectada en el teléfono. null = todavía sin cuenta (onboarding).
 let mockUid: string | null = null;
 let mockFilaBase: Record<string, unknown> | null = null;
+let mockConsiente = true;
+
+jest.mock('@/lib/consent', () => ({ puedeTratarBienestar: async (uid?: string | null) => !!uid && mockConsiente }));
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -29,6 +32,7 @@ beforeEach(() => {
   for (const k of Object.keys(mockStore)) delete mockStore[k];
   mockUid = null;
   mockFilaBase = null;
+  mockConsiente = true;
   mockUpsert.mockClear();
   mockUpsert.mockResolvedValue({ error: null });
 });
@@ -172,5 +176,40 @@ describe('🔴 dos cuentas en el mismo teléfono (auditoría 26/09, C1)', () => 
     await guardarPendiente({ topic: 'emocion' });
     await borrarPendienteLocal();
     await expect(leerPendiente()).resolves.toBeNull();
+  });
+});
+
+describe('🔴 consentimiento (auditoría 26/09, C2)', () => {
+  it('sin consentimiento los temas no suben a la cuenta y quedan pendientes', async () => {
+    mockUid = 'A';
+    mockConsiente = false;
+    await guardarPendiente({ topic: 'emocion', subtemas: ['ansiedad'] });
+    await volcarPendiente('A');
+    expect(mockUpsert).not.toHaveBeenCalled();
+    await expect(leerPendiente()).resolves.toMatchObject({ volcado: false });
+  });
+
+  it('cuando lo da después, lo pendiente sube', async () => {
+    mockUid = 'A';
+    mockConsiente = false;
+    await guardarPendiente({ topic: 'emocion' });
+    await volcarPendiente('A');
+    mockConsiente = true;
+    await volcarPendiente('A');
+    expect(filaEscrita()).toMatchObject({ user_id: 'A', topic: 'emocion' });
+  });
+
+  it('revocado, lo guardado en la cuenta no se usa para personalizar', async () => {
+    mockUid = 'A';
+    mockConsiente = false;
+    mockFilaBase = { topic: 'trabajo' };
+    await expect(leerRespuestasGuardadas()).resolves.toBeNull();
+  });
+
+  it('lo del propio teléfono se sigue usando: no sale del dispositivo', async () => {
+    mockUid = 'A';
+    mockConsiente = false;
+    await guardarPendiente({ topic: 'emocion' });
+    await expect(leerRespuestasGuardadas()).resolves.toMatchObject({ topic: 'emocion' });
   });
 });

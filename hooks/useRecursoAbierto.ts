@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { anotar } from '@/lib/analytics';
+import { anotarUsoDeRecurso } from '@/lib/resourceEvents';
 
 /**
  * Anota que se abrió un recurso.
@@ -26,6 +26,6 @@ export function useRecursoAbierto(resourceId: string): void {
   useEffect(() => {
     if (anotado.current) return;
     anotado.current = true;
-    anotar('recurso_iniciado', { resource_id: resourceId });
+    anotarUsoDeRecurso('recurso_iniciado', resourceId);
   }, [resourceId]);
 }

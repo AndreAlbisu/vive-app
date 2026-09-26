@@ -48,8 +48,14 @@ describe('LO_QUE_CUBRE', () => {
     expect(LO_QUE_CUBRE.some(l => /recursos/i.test(l))).toBe(true);
   });
 
-  it('nombra las tres categorías sin tecnicismos de tabla', () => {
-    expect(LO_QUE_CUBRE).toHaveLength(3);
+  // El cuestionario entró el 26/09/2026 (auditoría C2): los temas que alguien
+  // elige se guardaban sin este consentimiento.
+  it('incluye los temas del cuestionario', () => {
+    expect(LO_QUE_CUBRE.some(l => /cuestionario/i.test(l))).toBe(true);
+  });
+
+  it('nombra las cuatro categorías sin tecnicismos de tabla', () => {
+    expect(LO_QUE_CUBRE).toHaveLength(4);
     for (const linea of LO_QUE_CUBRE) {
       expect(linea).not.toMatch(/mood_entries|resource_events|journal/);
     }

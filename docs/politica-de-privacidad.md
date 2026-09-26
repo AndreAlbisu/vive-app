@@ -44,11 +44,11 @@ Responsable del tratamiento: Andre Albisu Lambertini, CUIT 20-46034087-0. Contac
 
 ## 3. Datos Sensibles y Consentimiento Explícito
 
-Ciertos datos vinculados al Usuario (los registros de estado de ánimo, las entradas de diario y de gratitud, el contenido de las conversaciones o notas que pueda revelar información sobre su salud, y **el registro de qué contenidos de bienestar utiliza**) constituyen **datos sensibles** en los términos de la Ley 25.326, sea porque el Usuario los declara o porque permiten deducir información sobre su salud.
+Ciertos datos vinculados al Usuario (los registros de estado de ánimo, las entradas de diario y de gratitud, los temas que elige en el cuestionario para encontrar Profesionales, el contenido de las conversaciones o notas que pueda revelar información sobre su salud, y **el registro de qué contenidos de bienestar utiliza**) constituyen **datos sensibles** en los términos de la Ley 25.326, sea porque el Usuario los declara o porque permiten deducir información sobre su salud.
 
 3.1. Su tratamiento requiere el **consentimiento libre, expreso e informado** del Usuario. Ese consentimiento se solicita **de forma específica y separada de la aceptación de estos documentos**, la primera vez que el Usuario accede a estas funcionalidades, mostrando previamente qué datos se tratan y con qué finalidad. Vita deja constancia de la fecha y de la versión del texto informado.
 
-3.2. **Prestarlo es voluntario y no es condición para utilizar la Plataforma.** El Usuario que no lo preste puede reservar Sesiones, comunicarse con Profesionales y acceder a los contenidos, sin las funcionalidades de registro de bienestar ni las recomendaciones basadas en su uso.
+3.2. **Prestarlo es voluntario y no es condición para utilizar la Plataforma.** El Usuario que no lo preste puede reservar Sesiones, comunicarse con Profesionales y acceder a los contenidos, sin las funcionalidades de registro de bienestar ni las recomendaciones basadas en su uso. Si completa el cuestionario sin haberlo prestado, ve igual sus resultados, pero sus respuestas no se guardan en su cuenta.
 
 3.3. El Usuario puede **revocar el consentimiento en cualquier momento** desde su perfil o escribiendo a vitaappar@gmail.com, y solicitar la supresión de los datos ya registrados conforme a la sección 9. La revocación no afecta la licitud del tratamiento realizado con anterioridad.
 
