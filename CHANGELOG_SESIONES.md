@@ -7,7 +7,8 @@
 - Lo que sí: el **reintegro de la prepaga** con la factura del psicólogo matriculado (ya estaba como oportunidad en `docs/competencia-selia.md`). Nueva pregunta en la web, "¿Puedo usar mi obra social o prepaga?", que cuenta el motivo y explica el reintegro.
 
 **Pendiente para la próxima sesión:**
-- Preguntarle a Mónica qué piden las prepagas para reintegrar (factura, matrícula, ¿diagnóstico?). Si piden algo que el profesional no suele dar, ver si Vita puede ayudar.
+- ✏️ **Corregido el mismo día:** el primer texto decía "muchas prepagas reintegran" y ponía en boca de los psicólogos motivos (cobran tarde, limitan sesiones) que Mónica no dio. Ahora: "algunos planes de prepaga" (solo los de libre elección; factura B/C a nombre del afiliado con matrícula, a veces orden médica; verificado en Swiss Medical, OSDE y OSTEP) y solo "muy insatisfactorio".
+- Si Mónica dio motivos concretos, sumarlos con sus palabras. Preguntarle qué piden las prepagas que ella conoce.
 
 ## 2026-09-25 — Andre (Claude · la web en el celular)
 
