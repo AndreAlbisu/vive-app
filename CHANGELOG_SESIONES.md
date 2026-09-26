@@ -5,6 +5,7 @@
 **Resumen:**
 - ✍️ **Andre: "un lugar para estar mejor, a tu ritmo" funciona pero le falta punch.** No era propio de Vita (lo podría decir cualquier app de bienestar). Opción elegida: el porqué sube a la portada. Título: **"Conectados todo el día. Acompañados, casi nunca."**, cada oración en su bloque para que el corte caiga entre las dos. La bajada sigue explicando el producto.
 - La sección de abajo ahora se titula "Vita existe para que, en un momento difícil, sepas a quién acudir." con "Usamos la pantalla para llevarte a una persona real, no para reemplazarla." y los dos círculos. La página abre con el problema y cierra con "no estás solo."
+- **Menú:** link de texto "Para profesionales" al lado de "Descargar" (Andre). Texto y no botón, para no competir con la descarga; en el celular queda solo, porque "Descargar" se esconde.
 - "Un lugar para estar mejor, a tu ritmo." queda en el pie y en la vista previa al compartir (`og:description`).
 
 **Pendiente para la próxima sesión:**

@@ -75,7 +75,9 @@
      cambia, se reemplaza este dibujo, el favicon y la firma de Sofía. */
   .wordmark { display: inline-flex; align-items: center; gap: .28em; }
   .vmark { width: .95em; height: .95em; flex: none; fill: none; stroke: currentColor; stroke-width: 7; }
-  .nav-right { display: flex; align-items: center; gap: 10px; }
+  .nav-right { display: flex; align-items: center; gap: 22px; }
+  .nav-link { font-weight: 700; font-size: 14px; text-decoration: none; padding: 10px 0; }
+  .nav-link:hover { text-decoration: underline; text-decoration-color: var(--terra); text-underline-offset: 5px; }
   /* Res. 424/2020: el enlace tiene que estar en la primera pantalla de la
      portada, destacado y fácil de encontrar; en el pie solo no alcanza.
      25/09/2026, pedido de Andre ("da muy malas vibes"): sale del menú y va
@@ -517,6 +519,7 @@
   <nav class="nav" aria-label="Principal">
     <a class="wordmark" href="./" aria-label="Vita, inicio"><svg class="vmark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="34" r="26"/><circle cx="29.5" cy="66" r="26"/><circle cx="70.5" cy="66" r="26"/></svg>vita</a>
     <div class="nav-right">
+      <a class="nav-link" href="./profesionales.html">Para profesionales</a>
       <a class="btn" href="#descargar">Descargar</a>
     </div>
   </nav>
