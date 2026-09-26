@@ -80,6 +80,7 @@ qué darse cuenta si algo quedó afuera.
 | **L18** | **Vista pública del catálogo**: taparía `is_admin`, `birth_date` y `nationality` a `authenticated`. Mejora de A4, no agujero. | 🟡 Para Andre. |
 
 | **L64** | **Auditoría de producto del 26/09 (Codex), tanda de datos que se perdían o se mezclaban.** Cerrado por Claude el mismo día: (C1) las respuestas del quiz y del onboarding quedaban en el teléfono y las heredaba la próxima cuenta; (C3) una falla al cargar las notas de sesión las mostraba vacías y guardar las borraba; (C4) un mensaje que no se enviaba se perdía; (C6) un error de red dejaba el catálogo vacío hasta reiniciar y en Mensajes/Inicio se veía como "no reservaste". Los demás hallazgos de esa auditoría están en el registro local de coordinación, no acá. | ✅ Cerrado con tests. 📱 Falta verlo en el teléfono (ver L65). |
+| **L66** | **Misma auditoría, segunda tanda (26/09, decisiones de Andre).** (C2) el quiz y el uso de recursos se guardaban sin el consentimiento de datos sensibles que la Política promete: ahora lo piden, igual que el diario, y revocar corta también la personalización. (C5) la excepción del enlace propio en T&C §8.3 decía 15% para todos los medios: corregida a 15% en Mercado Pago y 20% en los internacionales, que es lo que se cobra. | ✅ Cerrado. Política y T&C resincronizados (versión `858b0f80ee26`). |
 
 ### L.4 — Probar en el teléfono / navegador (hecho, no visto)
 
@@ -95,7 +96,7 @@ qué darse cuenta si algo quedó afuera.
 | **L39** | ~~**La videollamada en un iPhone, entrando desde la Sala.**~~ | ✅ **Cerrado 21/09: el arreglo de la sesión 260 anda.** Desde el iPhone abrió **Safari de verdad**, pidió permiso de cámara y micrófono, y la llamada entró. O sea que `Linking.openURL` en iOS hace lo que se esperaba y el bug que le pasa a Selia no nos pasa. | 260 |
 | **L25** | ~~Primera corrida del cron de "tu profesional volvió"~~ | ✅ Verificado el 17/09: corre cada hora con 200 y `{"revisados":0}`; el borrado diario de avisos corrió con `DELETE 0`. |
 
-| **L65** | Lo de L64 en el teléfono: modo avión al abrir las notas de una sesión (tiene que decir "No pudimos cargar" con Reintentar, no mostrarlas vacías); mandar un mensaje en modo avión (el texto vuelve al campo); abrir Profesionales en modo avión, elegir un tema y volver a conectar (tiene que cargar solo en unos segundos); cerrar sesión y entrar con otra cuenta (el quiz arranca vacío). | 26/09 |
+| **L65** | Lo de L64 y L66 en el teléfono: hacer el quiz con una cuenta que no dio el consentimiento (sobre los resultados tiene que aparecer la hoja; con "Ahora no" los resultados se ven igual). Y además: modo avión al abrir las notas de una sesión (tiene que decir "No pudimos cargar" con Reintentar, no mostrarlas vacías); mandar un mensaje en modo avión (el texto vuelve al campo); abrir Profesionales en modo avión, elegir un tema y volver a conectar (tiene que cargar solo en unos segundos); cerrar sesión y entrar con otra cuenta (el quiz arranca vacío). | 26/09 |
 
 ### L.5 — No bloquea
 

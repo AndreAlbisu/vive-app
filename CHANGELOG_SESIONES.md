@@ -1,3 +1,17 @@
+## 2026-09-26 — Andre (Claude · auditoría de Codex, segunda tanda: consentimiento y comisión)
+
+**Tocado:** `lib/consent.ts`, `lib/consentRules.ts`, `lib/quizPendiente.ts`, `lib/resourceEvents.ts`, `lib/resourceCompletions.ts`, `hooks/useConsent.ts`, `hooks/useRecursoAbierto.ts`, `hooks/useRecommendedResource.ts`, `screens/QuizScreen.tsx`, `docs/politica-de-privacidad.md`, `docs/terminos-y-condiciones.md`, legales generados, tests, `docs/problemas-abiertos.md`
+
+**Resumen:**
+- 🔒 **Consentimiento (C2), Andre: "sí".** Los temas del quiz ("ansiedad", "sexualidad") y qué recursos usa cada persona se guardaban sin el permiso de datos sensibles. Ahora: el quiz muestra los resultados siempre y pide el permiso sobre ellos (la misma hoja del diario, que suma "Los temas que elegís en el cuestionario"); sin permiso, las respuestas quedan en el teléfono y suben si lo da después. Recursos: sin permiso no se guarda el progreso ni los eventos, y la analítica cuenta el uso sin decir cuál. Revocar corta también la recomendación basada en el quiz. Política §3 actualizada.
+- ⚖️ **Comisión (C5), Andre: "corregí el texto".** T&C §8.3: la excepción del enlace propio ahora dice 15% en Mercado Pago y 20% en los medios internacionales. Las pantallas del profesional ya lo decían bien. Versión de legales `858b0f80ee26` (sin usuarios, no hay aceptaciones que migrar).
+- El control es en la app, igual que el del diario y el check-in. Sin cambios en la base; SCHEMA.md no cambia. 924 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone (L65).
+- 📌 Queda un caso del mismo tipo, sin tocar: la analítica del onboarding (`onboarding_respuesta`) guarda la categoría elegida ("sentirme", "sexualidad") atada a la cuenta, sin pedir el permiso. Decidir si se anonimiza o se deja de mandar la categoría.
+- 📌 El permiso se controla solo en la app (como el del diario): un control en la base, con policies que miren `user_consents`, sería la versión robusta para todas estas tablas. Es un cambio en producción, para decidir.
+
 ## 2026-09-26 — Andre (Claude · auditoría de Codex: datos que se perdían o se mezclaban)
 
 **Tocado:** `lib/sessionNotes.ts`, `components/SessionNotesSheet.tsx`, `screens/SalaScreen.tsx`, `lib/coachesCache.ts`, `app/(tabs)/conexiones.tsx`, `screens/QuizScreen.tsx`, `screens/SessionsScreen.tsx`, `app/(tabs)/index.tsx`, `lib/quizPendiente.ts`, `lib/onboardingRespuestas.ts`, `context/AuthContext.tsx`, tests (`sessionNotes`, `coachesCache` nuevos; `quizPendiente`, `onboardingRespuestas`), `docs/problemas-abiertos.md`
