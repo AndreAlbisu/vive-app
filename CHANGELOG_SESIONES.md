@@ -1,3 +1,14 @@
+## 2026-09-26 — Andre (Claude · web: sin la leyenda de los círculos)
+
+**Tocado:** `web/index.html`
+
+**Resumen:**
+- Andre: sacar "Una sesión en Vita: vos y una persona que te escucha, por videollamada desde la app.", la leyenda debajo de los dos círculos. También se borró su estilo (`.encuentro figcaption`), que quedaba sin uso. "Conocé por qué la hicimos" queda 24 px debajo de los círculos.
+- Diagnóstico del crash del development build en el iPhone de Joaquín (sin cambios de código): el único reporte es del build 13 y pasa al recargar, no al abrir; apagar la New Architecture no es opción porque Reanimated 4 la exige; SDK 54 soporta iOS 26. Se le pidió instalar el build 28, revisar el Modo de desarrollador y conseguir el registro del cierre.
+
+**Pendiente para la próxima sesión:**
+- El registro del cierre en el iPhone de Joaquín (Datos de análisis o la app Consola de la Mac) para ver la causa real.
+
 ## 2026-09-26 — Andre (Claude · el porqué pasa a ser el título)
 
 **Tocado:** `web/index.html`
