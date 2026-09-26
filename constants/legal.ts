@@ -82,7 +82,7 @@ La Plataforma no reemplaza a estos servicios ni permite contactarlos, y los Prof
 
 - **Sesiones cobradas en pesos a través de Mercado Pago:** **20%** sobre la primera Sesión completada de cada vínculo Cliente–Profesional y **15%** a partir de la segunda, de manera permanente.
 - **Sesiones cobradas en dólares a través de los medios internacionales** (ver 8.2): **25%** sobre la primera Sesión completada del vínculo y **20%** a partir de la segunda. La diferencia responde al mayor costo de procesamiento y transferencia de esos medios.
- **Excepción:** cuando el Cliente llega a la Plataforma a través del enlace propio del Profesional, la primera Sesión de ese vínculo no tiene comisión; a partir de la segunda rige el 15%. Vita puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. Vita puede modificar sus comisiones a futuro, notificando con antelación razonable.
+ **Excepción:** cuando el Cliente llega a la Plataforma a través del enlace propio del Profesional, la primera Sesión de ese vínculo no tiene comisión; a partir de la segunda rige la comisión de la segunda Sesión en adelante que corresponda al medio de cobro (15% en Mercado Pago, 20% en los medios internacionales). Vita puede ofrecer promociones (por ejemplo, comisión reducida por tiempo limitado), que se informarán oportunamente. Vita puede modificar sus comisiones a futuro, notificando con antelación razonable.
 
 8.4. **Impuestos.** Vita opera bajo el **Régimen Simplificado para Pequeños Contribuyentes (Monotributo)**. En consecuencia, los comprobantes que emite son **facturas tipo C, que no discriminan IVA**, y la comisión indicada en 8.3 es el importe total que percibe Vita por su servicio de intermediación, sin adicionales impositivos.
 
@@ -516,7 +516,7 @@ export const LEGAL_PLACEHOLDERS: string[] = [];
  *  Se guarda en `profiles.accepted_terms_version` al registrarse: sin esto no
  *  hay forma de probar qué texto leyó cada persona, que es lo que se discute al
  *  invocar §20 (modificaciones) o §10 (no elusión). */
-export const LEGAL_VERSION = '46f38a992801';
+export const LEGAL_VERSION = 'a0122b14ecdb';
 
 /** true mientras los documentos sigan siendo un borrador sin completar.
  *  La pantalla legal muestra un aviso mientras esto sea true; cuando el/la
