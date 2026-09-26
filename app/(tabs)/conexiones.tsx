@@ -30,7 +30,7 @@ import { PaymentBadges } from '@/components/PaymentBadges';
 import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
-import { prefetchCoaches, getCoachesCache, CachedCoach } from '@/lib/coachesCache';
+import { prefetchCoaches, getCoachesCache, getCoachesStatus, CachedCoach } from '@/lib/coachesCache';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { altoDeEje } from '@/lib/ejesLayout';
 import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
@@ -142,6 +142,9 @@ export default function ConexionesScreen() {
   const coaches                         = useBlockedFilter(rawCoaches);
   const [coachQuery, setCoachQuery]     = useState('');
   const [loadingCoaches, setLoadingCoaches] = useState(true);
+  // La carga del catálogo falló (sin conexión). No es "no hay profesionales".
+  const [coachesError, setCoachesError] = useState(false);
+  const [intentoCatalogo, setIntentoCatalogo] = useState(0);
   const [rebookData, setRebookData]     = useState<RebookData | null>(null);
 
   // ── Llegar desde el onboarding ────────────────────────────────────────────
@@ -254,16 +257,26 @@ export default function ConexionesScreen() {
 
   // ── Cache poll ────────────────────────────────────────────────────────────
   useEffect(() => {
-    prefetchCoaches();
+    prefetchCoaches(intentoCatalogo > 0);
     let t: ReturnType<typeof setInterval>;
     const check = () => {
       const c = getCoachesCache();
-      if (c) { setCoaches(c); setLoadingCoaches(false); clearInterval(t); }
+      if (c) { setCoaches(c); setLoadingCoaches(false); setCoachesError(false); clearInterval(t); return; }
+      // Sin conexión: se avisa, y el poll sigue reintentando cada 5 s
+      // (`prefetchCoaches` se encarga de espaciarlo) hasta que vuelva la red.
+      if (getCoachesStatus() === 'error') { setCoachesError(true); setLoadingCoaches(false); }
+      prefetchCoaches();
     };
     check();
     t = setInterval(check, 80);
     return () => clearInterval(t);
-  }, []);
+  }, [intentoCatalogo]);
+
+  const reintentarCatalogo = () => {
+    setCoachesError(false);
+    setLoadingCoaches(true);
+    setIntentoCatalogo(n => n + 1);
+  };
 
   // Llega del onboarding con el eje que la persona acaba de contar: se abre su
   // menú, sin destacar ninguna puerta. No filtra ni elige por ella — eso lo
@@ -494,6 +507,15 @@ export default function ConexionesScreen() {
             {/* Deck — carrusel paginado (swipe izq/der) */}
             {loadingCoaches ? (
               <ActivityIndicator size="small" color={FOREST} style={{ marginTop: 40 }} />
+            ) : coachesError ? (
+              <View style={s.deckClose}>
+                <Feather name="wifi-off" size={22} color={FOREST_SOFT} />
+                <Text style={s.deckCloseTitle}>No pudimos cargar a los profesionales</Text>
+                <Text style={s.deckCloseSub}>Revisá la conexión. Lo volvemos a intentar solos, o tocá para probar ahora.</Text>
+                <TouchableOpacity onPress={reintentarCatalogo} hitSlop={10} activeOpacity={0.7} accessibilityRole="button">
+                  <Text style={s.reintentar}>Reintentar</Text>
+                </TouchableOpacity>
+              </View>
             ) : deck.length === 0 ? (
               <View style={s.deckClose}>
                 <Feather name="search" size={22} color={FOREST_SOFT} />
@@ -1429,6 +1451,7 @@ const s = StyleSheet.create({
   },
   deckCloseTitle: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: FOREST, textAlign: 'center' },
   deckCloseSub: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, textAlign: 'center', lineHeight: 18 },
+  reintentar: { fontFamily: ViveFonts.semibold, fontSize: 13, color: FOREST, marginTop: 6, textDecorationLine: 'underline' },
 
   // Re-book
   rebook: {

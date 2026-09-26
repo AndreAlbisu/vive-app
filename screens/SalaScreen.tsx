@@ -201,7 +201,7 @@ export default function SalaScreen() {
   // La tarjeta "Pedile una recomendación" (formato.tsx) abre la sala con un
   // borrador ya escrito (sin enviar); se siembra el input una vez al montar.
   const draftText = Array.isArray(draft) ? draft[0] : (draft ?? '');
-  const [inputText, setInputText] = useState(draftText);
+  const [inputText, setInputText] = useState<string>(draftText);
   const [salaId, setSalaId] = useState<string | null>(null);
   const [recipientId, setRecipientId] = useState<string | null>(null);
   // M16: los horarios que el profesional propuso para esta sesión.
@@ -1312,7 +1312,14 @@ export default function SalaScreen() {
 
     if (error) {
       setMessages(prev => prev.filter(m => m.id !== optimisticId));
-      Alert.alert('Error', esTopeDeIntentos(error) ? TEXTO_TOPE : 'No se pudo enviar el mensaje');
+      // 🔴 El texto vuelve al campo (auditoría del 26/09/2026, C4): antes se
+      // perdía, y puede ser un mensaje largo y personal. Si la persona ya
+      // empezó otro mientras tanto, el que falló va adelante y no lo pisa.
+      setInputText(prev => (prev.trim() ? `${text}\n${prev}` : text));
+      Alert.alert(
+        'No se pudo enviar',
+        `${esTopeDeIntentos(error) ? TEXTO_TOPE : 'Revisá la conexión y probá de nuevo.'} Tu mensaje quedó en el campo de texto.`,
+      );
       return;
     }
 

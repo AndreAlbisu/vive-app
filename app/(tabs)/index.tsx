@@ -530,7 +530,7 @@ export default function InicioScreen() {
     // Mismo error que documenta `lib/moodStats.ts:18`.
     const today = localDayKey();
 
-    const { data: bookings } = await supabase
+    const { data: bookings, error: bookingsError } = await supabase
       .from('bookings')
       .select('id, coach_id, sala_id, scheduled_date, scheduled_time, duration_minutes')
       .eq('user_id', user.id)
@@ -541,6 +541,10 @@ export default function InicioScreen() {
       // salía a suerte del planner. Mismo orden que `SessionsScreen`.
       .order('scheduled_time', { ascending: true })
       .limit(10);
+
+    // 🔴 Un error de red no es "no tenés sesión" (auditoría 26/09, C6): se
+    // deja la tarjeta que había y se reintenta al volver a la pestaña.
+    if (bookingsError) { console.error('[Inicio] próxima sesión:', bookingsError.message); return; }
 
     // 🔴 La primera que NO terminó. Con `.limit(1)` una sesión de la mañana a
     // la que nadie se unió (sigue `confirmada`) quedaba como "próxima" el resto

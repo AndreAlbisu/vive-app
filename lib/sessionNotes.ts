@@ -4,17 +4,39 @@
 
 import { supabase } from '@/lib/supabase';
 
-/** Coach: lee ambas notas (privada y compartida) de una sesión. */
-export async function getSessionNotes(bookingId: string): Promise<{ privateNote: string; sharedNote: string }> {
-  const { data } = await supabase
+export type NotasDeSesion = { privateNote: string; sharedNote: string };
+
+/** Coach: lee ambas notas (privada y compartida) de una sesión.
+ *
+ *  🔴 null = NO SE PUDO LEER, que no es lo mismo que "no hay notas". Antes un
+ *  error devolvía dos vacíos, el formulario los mostraba como si no hubiera
+ *  nada, y "Guardar" mandaba esos vacíos, que `saveSessionNote` interpreta
+ *  como borrar: un corte de red al abrir terminaba borrando notas reales
+ *  (auditoría del 26/09/2026, C3). */
+export async function getSessionNotes(bookingId: string): Promise<NotasDeSesion | null> {
+  const { data, error } = await supabase
     .from('session_notes')
     .select('content, shared')
     .eq('booking_id', bookingId);
+  if (error) {
+    console.error('[sessionNotes] get:', error.message);
+    return null;
+  }
   const rows = data ?? [];
   return {
     privateNote: rows.find(r => !r.shared)?.content ?? '',
     sharedNote: rows.find(r => r.shared)?.content ?? '',
   };
+}
+
+/** Qué notas hay que escribir: solo las que el coach cambió respecto de lo que
+ *  se cargó. Así guardar una no reescribe (ni borra) la otra, y vaciar una
+ *  nota sigue siendo la forma deliberada de borrarla. */
+export function notasCambiadas(original: NotasDeSesion, actual: NotasDeSesion): { shared: boolean; content: string }[] {
+  const cambios: { shared: boolean; content: string }[] = [];
+  if (actual.privateNote.trim() !== original.privateNote.trim()) cambios.push({ shared: false, content: actual.privateNote });
+  if (actual.sharedNote.trim() !== original.sharedNote.trim()) cambios.push({ shared: true, content: actual.sharedNote });
+  return cambios;
 }
 
 export type SessionNote = {

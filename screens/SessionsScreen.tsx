@@ -201,6 +201,9 @@ export default function SessionsScreen() {
   const [refundPendiente, setRefundPendiente] = useState<{ id: string; monto: number | null } | null>(null);
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  /** La última carga falló. Lo que ya estaba en pantalla se conserva: un corte
+   *  de red no puede verse igual que "nunca reservaste" (auditoría 26/09, C6). */
+  const [loadError, setLoadError] = useState(false);
   /** Se re-renderiza cada 30s para que `isJoinable` se recalcule en cada
    *  tarjeta. Antes era un booleano único, atado a la sesión del hero. */
   const [, setTick] = useState(0);
@@ -271,18 +274,25 @@ export default function SessionsScreen() {
         .maybeSingle(),
     ]);
 
-    setRefundPendiente(
+    // 🔴 Si falla cualquiera de las dos consultas principales, NO se pisa lo
+    // que había: antes una falla dejaba salas y próximas en [], lo mismo que
+    // ve alguien que nunca reservó. Se avisa y se reintenta al volver a la
+    // pestaña o con el botón.
+    if (salasRes.error || nextBookingRes.error) {
+      console.error('[Sessions] Error cargando:', (salasRes.error ?? nextBookingRes.error)?.message);
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
+    setLoadError(false);
 
-      refundRes?.data
-
-        ? { id: refundRes.data.id, monto: refundRes.data.usdt_amount != null ? Number(refundRes.data.usdt_amount) : null }
-
-        : null,
-
-    );
-
-
-    if (salasRes.error) console.error('[Sessions] Error cargando salas:', salasRes.error.message);
+    if (!refundRes.error) {
+      setRefundPendiente(
+        refundRes.data
+          ? { id: refundRes.data.id, monto: refundRes.data.usdt_amount != null ? Number(refundRes.data.usdt_amount) : null }
+          : null,
+      );
+    }
 
     const salasData = salasRes.data;
     if (!salasData || salasData.length === 0) {
@@ -546,6 +556,23 @@ export default function SessionsScreen() {
                 es plata de la persona que no le podemos devolver hasta que nos
                 diga adónde, y las reservas canceladas no aparecen en ninguna
                 otra parte de la app. Si no lo ve acá, no se entera nunca. */}
+            {loadError && (
+              <TouchableOpacity
+                style={styles.errorBanner}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                onPress={() => { void loadSalas(); }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.errorTitle}>No pudimos actualizar tus mensajes</Text>
+                  <Text style={styles.errorDesc}>
+                    {salas.length > 0 ? 'Puede que falte algo nuevo. ' : ''}Revisá la conexión y tocá para reintentar.
+                  </Text>
+                </View>
+                <MaterialCommunityIcons name="refresh" size={20} color="#3A4F2A" />
+              </TouchableOpacity>
+            )}
+
             {refundPendiente && (
               <TouchableOpacity
                 style={styles.refundBanner}
@@ -749,7 +776,7 @@ export default function SessionsScreen() {
                   </View>
                 </TouchableOpacity>
               </View>
-            ) : (
+            ) : loadError ? null : (
               <Animated.View style={styles.emptyState}>
                 <MaterialCommunityIcons name="message-outline" size={52} color="rgba(135,131,92,0.45)" />
                 <Text style={styles.emptyTitle}>Todavía no armaste tu sala</Text>
@@ -936,6 +963,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(214,150,120,0.18)', borderRadius: 16,
     paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16,
   },
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: 'rgba(86,94,50,0.10)', borderRadius: 16,
+    paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16,
+  },
+  errorTitle: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#3A4F2A' },
+  errorDesc: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#3A4F2A', opacity: 0.85, marginTop: 2 },
   refundTitle: { fontFamily: ViveFonts.semibold, fontSize: 14.5, color: '#8C4A31' },
   refundDesc: { fontFamily: ViveFonts.regular, fontSize: 12.5, color: '#8C4A31', opacity: 0.85, marginTop: 2 },
 

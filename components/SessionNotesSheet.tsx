@@ -15,7 +15,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ViveFonts } from '@/constants/theme';
-import { getSessionNotes, saveSessionNote, type SessionNote } from '@/lib/sessionNotes';
+import { getSessionNotes, saveSessionNote, notasCambiadas, type NotasDeSesion, type SessionNote } from '@/lib/sessionNotes';
 import { fechaLegiblePaquete } from '@/lib/paquete';
 import { supabase } from '@/lib/supabase';
 import { detectContactInfo, hasDatosDeCobro } from '@/lib/contactInfoGuard';
@@ -63,6 +63,12 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
   const [privateNote, setPrivateNote] = useState('');
   const [sharedNote, setSharedNote] = useState('');
   const [loading, setLoading] = useState(false);
+  // Lo que se cargó de la base. null mientras carga o si la lectura falló: en
+  // ese caso no se muestra el formulario, para que no se pueda guardar encima
+  // de notas que existen pero no se ven.
+  const [original, setOriginal] = useState<NotasDeSesion | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [intento, setIntento] = useState(0);
   const [saving, setSaving] = useState(false);
   const [fechas, setFechas] = useState<Record<string, string>>({});
 
@@ -89,11 +95,23 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
 
   useEffect(() => {
     if (!visible || !bookingId) return;
+    // `vivo`: si se cambia de reserva mientras carga, la respuesta vieja no
+    // puede pisar las notas de la nueva.
+    let vivo = true;
     setLoading(true);
+    setLoadError(false);
+    setOriginal(null);
     getSessionNotes(bookingId)
-      .then(({ privateNote, sharedNote }) => { setPrivateNote(privateNote); setSharedNote(sharedNote); })
-      .finally(() => setLoading(false));
-  }, [visible, bookingId]);
+      .then(notas => {
+        if (!vivo) return;
+        if (!notas) { setLoadError(true); return; }
+        setOriginal(notas);
+        setPrivateNote(notas.privateNote);
+        setSharedNote(notas.sharedNote);
+      })
+      .finally(() => { if (vivo) setLoading(false); });
+    return () => { vivo = false; };
+  }, [visible, bookingId, intento]);
 
   // Solo se revisa la COMPARTIDA: es la que le llega a la persona. La privada la
   // ve únicamente el coach, así que ahí un teléfono no es un canal de nada.
@@ -127,18 +145,25 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
   }
 
   async function doSave() {
-    if (!user || saving) return;
+    if (!user || saving || !original) return;
+    const actual = { privateNote, sharedNote };
+    const cambios = notasCambiadas(original, actual);
+    if (cambios.length === 0) { onClose(); return; }
     setSaving(true);
     const base = { bookingId, coachId: user.id, userId };
-    const [okPriv, okShared] = await Promise.all([
-      saveSessionNote({ ...base, shared: false, content: privateNote }),
-      saveSessionNote({ ...base, shared: true, content: sharedNote }),
-    ]);
+    const resultados = await Promise.all(cambios.map(c => saveSessionNote({ ...base, ...c })));
     setSaving(false);
-    if (!okPriv || !okShared) {
-      Alert.alert('No se pudo guardar', 'Probá de nuevo en unos minutos');
+    if (resultados.some(ok => !ok)) {
+      // Lo escrito queda en el formulario para reintentar. Lo que sí se guardó
+      // pasa a ser el nuevo original, para no reescribirlo en el reintento.
+      setOriginal({
+        privateNote: cambios.some((c, i) => !c.shared && resultados[i]) ? privateNote : original.privateNote,
+        sharedNote: cambios.some((c, i) => c.shared && resultados[i]) ? sharedNote : original.sharedNote,
+      });
+      Alert.alert('No se pudo guardar', 'Lo que escribiste sigue acá. Probá de nuevo en unos minutos.');
       return;
     }
+    setOriginal(actual);
     onClose();
     onSaved?.();
   }
@@ -154,6 +179,13 @@ export default function SessionNotesSheet({ visible, onClose, bookingId, userId,
 
             {loading ? (
               <ActivityIndicator size="small" color="#3A4F2A" style={{ marginVertical: 28 }} />
+            ) : loadError ? (
+              <View style={s.errorBox}>
+                <Text style={s.errorText}>No pudimos cargar las notas de esta sesión. Revisá la conexión y probá de nuevo.</Text>
+                <TouchableOpacity style={s.saveBtn} onPress={() => setIntento(n => n + 1)} activeOpacity={0.85}>
+                  <Text style={s.saveBtnText}>Reintentar</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               <ScrollView style={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 <View style={s.labelRow}>
@@ -287,6 +319,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   saveBtnDisabled: { backgroundColor: 'rgba(58,79,42,0.35)' },
+  errorBox: { paddingVertical: 12, gap: 16 },
+  errorText: {
+    fontFamily: ViveFonts.regular,
+    fontSize: 14, lineHeight: 20, color: '#3A4F2A',
+  },
   saveBtnText: {
     fontFamily: ViveFonts.semibold,
     fontSize: 15, color: '#F3EEDF',

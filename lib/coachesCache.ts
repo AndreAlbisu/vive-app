@@ -63,6 +63,14 @@ export type CachedCoach = {
 
 let cache: CachedCoach[] | null = null;
 let inflight: Promise<void> | null = null;
+/** Cuándo falló la última carga (ms), o null si no falló. 🔴 Antes un error
+ *  guardaba `cache = []` y eso quedaba para siempre en el proceso: la persona
+ *  veía "no hay profesionales" hasta reiniciar la app, cuando el problema era
+ *  la conexión (auditoría del 26/09/2026, C6). Ahora un error deja el cache en
+ *  null, se puede distinguir de un catálogo vacío y se reintenta. */
+let lastFailAt: number | null = null;
+/** Entre reintentos automáticos. Un reintento pedido por la persona no espera. */
+const REINTENTO_MS = 5_000;
 
 async function _doFetch(): Promise<void> {
   const { data, error } = await supabase
@@ -92,7 +100,8 @@ async function _doFetch(): Promise<void> {
     .order('created_at', { ascending: true })
     .limit(200);
 
-  if (error) { console.error('[coachesCache] fetch:', error.message); cache = []; return; }
+  if (error) { console.error('[coachesCache] fetch:', error.message); lastFailAt = Date.now(); return; }
+  lastFailAt = null;
 
   const initial: CachedCoach[] = (data ?? []).map((c: any) => {
     const profile = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
@@ -202,9 +211,27 @@ async function _doFetch(): Promise<void> {
   });
 }
 
-export function prefetchCoaches(): void {
+function arrancar(): Promise<void> {
+  return inflight ?? (inflight = _doFetch()
+    .catch(e => { console.error('[coachesCache] fetch:', e); lastFailAt = Date.now(); })
+    .finally(() => { inflight = null; }));
+}
+
+/** Dispara la carga si hace falta. Después de un error espera `REINTENTO_MS`
+ *  antes de reintentar solo, así los que llaman en un poll no martillan la red
+ *  sin conexión; `force` (el botón "Reintentar") no espera. */
+export function prefetchCoaches(force = false): void {
   if (cache || inflight) return;
-  inflight = _doFetch().finally(() => { inflight = null; });
+  if (!force && lastFailAt !== null && Date.now() - lastFailAt < REINTENTO_MS) return;
+  void arrancar();
+}
+
+/** 'error' = la última carga falló y no hay nada cargado. No es lo mismo que
+ *  un catálogo vacío, que es 'ok' con cero profesionales. */
+export function getCoachesStatus(): 'ok' | 'cargando' | 'error' {
+  if (cache) return 'ok';
+  if (!inflight && lastFailAt !== null) return 'error';
+  return 'cargando';
 }
 
 export function getCoachesCache(): CachedCoach[] | null {
@@ -214,12 +241,13 @@ export function getCoachesCache(): CachedCoach[] | null {
 /** Igual que prefetch pero esperable — evita el poll con setInterval del lado del consumidor. */
 export async function loadCoaches(): Promise<CachedCoach[]> {
   if (cache) return cache;
-  const p = inflight ?? (inflight = _doFetch().finally(() => { inflight = null; }));
-  await p;
+  await arrancar();
+  // Si falló, [] para este llamado, pero no queda cacheado: el próximo reintenta.
   return cache ?? [];
 }
 
 export function invalidateCoachesCache(): void {
   cache = null;
   inflight = null;
+  lastFailAt = null;
 }

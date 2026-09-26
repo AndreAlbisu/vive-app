@@ -137,7 +137,9 @@ export default function QuizScreen() {
     let t: ReturnType<typeof setInterval>;
     const check = () => {
       const c = getCoachesCache();
-      if (c) { setCoaches(c); clearInterval(t); }
+      if (c) { setCoaches(c); clearInterval(t); return; }
+      // Si la carga falló, reintenta (espaciado por `prefetchCoaches`).
+      prefetchCoaches();
     };
     check();
     t = setInterval(check, 80);
