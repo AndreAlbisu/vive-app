@@ -1,3 +1,15 @@
+## 2026-09-26 — Andre (Claude · el porqué pasa a ser el título)
+
+**Tocado:** `web/index.html`
+
+**Resumen:**
+- ✍️ **Andre: "un lugar para estar mejor, a tu ritmo" funciona pero le falta punch.** No era propio de Vita (lo podría decir cualquier app de bienestar). Opción elegida: el porqué sube a la portada. Título: **"Conectados todo el día. Acompañados, casi nunca."**, cada oración en su bloque para que el corte caiga entre las dos. La bajada sigue explicando el producto.
+- La sección de abajo ahora se titula "Vita existe para que, en un momento difícil, sepas a quién acudir." con "Usamos la pantalla para llevarte a una persona real, no para reemplazarla." y los dos círculos. La página abre con el problema y cierra con "no estás solo."
+- "Un lugar para estar mejor, a tu ritmo." queda en el pie y en la vista previa al compartir (`og:description`).
+
+**Pendiente para la próxima sesión:**
+- Andre lo ve en compu y celular y decide si queda.
+
 ## 2026-09-26 — Andre (Claude · obras sociales: no, y por qué)
 
 **Tocado:** `web/index.html`

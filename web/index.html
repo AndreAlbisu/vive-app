@@ -129,7 +129,9 @@
     align-items: center; gap: 48px;
     min-height: min(850px, 100svh); padding-top: 120px; padding-bottom: 64px;
   }
-  .hero h1 { font-size: clamp(3rem, 6.2vw, 5.5rem); max-width: 12ch; text-wrap: balance; }
+  .hero h1 { font-size: clamp(2.8rem, 5.4vw, 4.8rem); max-width: 13ch; }
+  /* Cada oración en su bloque: el corte cae entre las dos, nunca a mitad. */
+  .hero h1 span { display: block; text-wrap: balance; }
   .hero .lead { margin-top: 24px; font-size: clamp(1.1rem, 1.6vw, 1.3rem); max-width: 42ch; color: var(--soft); font-weight: 500; }
   .hero .stores { margin-top: 28px; gap: 10px; }
   .hero .store { min-height: 48px; padding: 8px 16px; gap: 8px; border-radius: 14px; }
@@ -318,7 +320,7 @@
      25/09/2026: el porqué de Vita (Andre): cada vez más conectados y cada vez
      más solos. El cierre ("no estás solo.") le contesta a esta frase. */
   .purpose { text-align: center; }
-  .purpose-q { margin: 0 auto; max-width: 22ch; font-size: clamp(2rem, 4.4vw, 3.6rem); line-height: 1.08; text-wrap: balance; }
+  .purpose-q { margin: 0 auto; max-width: 22ch; font-size: clamp(1.8rem, 3.6vw, 2.9rem); line-height: 1.08; text-wrap: balance; }
   .purpose .sec-lead { margin: 24px auto 0; text-wrap: balance; }
   /* Un encuentro (25/09/2026). Reemplaza la videollamada dibujada, que
      quedaba infantil al lado de los teléfonos. Son dos círculos, uno por
@@ -481,7 +483,7 @@
     .peek[data-active="2"] figure:not(:nth-child(3)) { display: none; }
     .peek figure { display: flex; flex-direction: column; gap: 0; }
     .peek figcaption { order: -1; align-self: stretch; max-width: 34ch; margin-bottom: 24px; }
-    .hero h1 { font-size: clamp(2.8rem, 10.5vw, 4rem); }
+    .hero h1 { font-size: clamp(2.4rem, 9.6vw, 3.4rem); }
     .hero-inner { padding-top: 88px; padding-bottom: 48px; gap: 32px; }
     .hero .lead { margin-top: 20px; }
     .hero .stores { flex-wrap: nowrap; }
@@ -521,7 +523,7 @@
 
   <div class="wrap hero-inner">
     <div>
-      <h1>un lugar para estar mejor, a&nbsp;tu&nbsp;ritmo.</h1>
+      <h1><span>Conectados todo el&nbsp;día.</span> <span>Acompañados, casi&nbsp;nunca.</span></h1>
       <p class="lead">Encontrá con quién hablar: psicólogos, coaches y nutricionistas para sesiones por videollamada. Elegí por cómo trabajan, con herramientas para acompañarte entre sesiones.</p>
       <div class="stores" data-stores data-tipo="persona"></div>
       <p class="garantia">Si la primera sesión no te convence, te devolvemos lo que pagaste. <a href="#garantia">Ver garantía</a></p>
@@ -560,8 +562,8 @@
 
   <section class="purpose" aria-labelledby="para-que">
     <div class="wrap">
-      <h2 id="para-que" class="purpose-q">Conectados todo el día. Acompañados, casi nunca.</h2>
-      <p class="sec-lead">Vita existe para que, en un momento difícil, sepas a quién acudir. Usamos la pantalla para llevarte a una persona real, no para reemplazarla.</p>
+      <h2 id="para-que" class="purpose-q">Vita existe para que, en un momento difícil, sepas a quién acudir.</h2>
+      <p class="sec-lead">Usamos la pantalla para llevarte a una persona real, no para reemplazarla.</p>
       <figure class="encuentro">
         <div class="pareja" role="img" aria-label="Dos círculos, uno por persona, que se encuentran: vos y tu profesional">
           <div class="quien"><i></i><span>vos</span></div>
