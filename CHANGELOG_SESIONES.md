@@ -1,3 +1,14 @@
+## 2026-09-26 — Andre (Claude · obras sociales: no, y por qué)
+
+**Tocado:** `web/index.html`
+
+**Resumen:**
+- 🏥 **Andre, con el testimonio de Mónica (psicóloga): trabajar con obras sociales es muy insatisfactorio, y no está claro cuánto costaría integrarlas.** Decisión: Vita no trabaja con obras sociales ni prepagas. Motivos: a los profesionales no les sirve (cobran tarde, les limitan sesiones, trámites); cada una es un convenio y una facturación aparte; no cubren coaching; y rompe el cobro en el momento por Mercado Pago.
+- Lo que sí: el **reintegro de la prepaga** con la factura del psicólogo matriculado (ya estaba como oportunidad en `docs/competencia-selia.md`). Nueva pregunta en la web, "¿Puedo usar mi obra social o prepaga?", que cuenta el motivo y explica el reintegro.
+
+**Pendiente para la próxima sesión:**
+- Preguntarle a Mónica qué piden las prepagas para reintegrar (factura, matrícula, ¿diagnóstico?). Si piden algo que el profesional no suele dar, ver si Vita puede ayudar.
+
 ## 2026-09-25 — Andre (Claude · la web en el celular)
 
 **Tocado:** `web/index.html`, `web/profesionales.html`
