@@ -158,6 +158,13 @@ export async function guardarRespuestas(r: RespuestasOnboarding): Promise<void> 
   await guardarPendiente({ topic, axis: esEje(r.universo) ? r.universo : null });
 }
 
+/** Al cerrar sesión, junto con `borrarPendienteLocal`: universo y categoría
+ *  son de la persona, no del teléfono (auditoría del 26/09/2026, C1). El
+ *  `topic` que salió de acá ya viajó por `quizPendiente` a la base. */
+export async function borrarRespuestasLocales(): Promise<void> {
+  await AsyncStorage.removeItem(KEY);
+}
+
 export async function leerRespuestas(): Promise<RespuestasOnboarding | null> {
   const raw = await AsyncStorage.getItem(KEY);
   if (!raw) return null;

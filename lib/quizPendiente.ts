@@ -46,6 +46,11 @@ export type QuizPendiente = {
   respondidoEn?: string | null;
   /** Ya se escribió en la base. Ver `volcarPendiente`. */
   volcado?: boolean;
+  /** De quién son: el id de la cuenta con la que se contestó, o null si fue
+   *  antes de registrarse. 🔴 Sin esto la clave era del TELÉFONO, no de la
+   *  persona: A contestaba, cerraba sesión, entraba B y veía (y se le
+   *  guardaban) los temas de A (auditoría del 26/09/2026, C1). */
+  dueño?: string | null;
 };
 
 const KEY = 'vita_quiz_pendiente';
@@ -63,6 +68,24 @@ async function leerCrudo(): Promise<QuizPendiente | null> {
 
 export const leerPendiente = leerCrudo;
 
+async function uidActual(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
+}
+
+/** Al cerrar sesión: lo contestado en este teléfono no puede quedar para la
+ *  próxima cuenta que entre. Lo que ya se volcó sigue en la base. */
+export async function borrarPendienteLocal(): Promise<void> {
+  await AsyncStorage.removeItem(KEY);
+}
+
+/** Si lo guardado localmente se puede usar para `uid`: es suyo, o se contestó
+ *  sin cuenta y todavía no lo adoptó nadie (el onboarding antes del registro). */
+function esDe(p: QuizPendiente, uid: string | null): boolean {
+  if (p.dueño) return p.dueño === uid;
+  return !p.volcado;
+}
+
 /**
  * Guarda respuestas nuevas sobre las que hubiera.
  *
@@ -74,11 +97,14 @@ export const leerPendiente = leerCrudo;
  * ya escritas, no llegarían nunca a la base.
  */
 export async function guardarPendiente(parcial: QuizPendiente): Promise<void> {
-  const previo = (await leerCrudo()) ?? {};
+  const uid = await uidActual();
+  const crudo = await leerCrudo();
+  // Lo de otra cuenta no se mergea: se empieza de cero.
+  const previo = crudo && esDe(crudo, uid) ? crudo : {};
   const limpio = Object.fromEntries(
-    Object.entries(parcial).filter(([, v]) => v !== null && v !== undefined),
+    Object.entries(parcial).filter(([k, v]) => k !== 'dueño' && v !== null && v !== undefined),
   );
-  await AsyncStorage.setItem(KEY, JSON.stringify({ ...previo, ...limpio, volcado: false }));
+  await AsyncStorage.setItem(KEY, JSON.stringify({ ...previo, ...limpio, volcado: false, dueño: uid }));
 }
 
 /**
@@ -94,6 +120,12 @@ export async function guardarPendiente(parcial: QuizPendiente): Promise<void> {
 export async function volcarPendiente(userId: string): Promise<void> {
   const p = await leerCrudo();
   if (!p || p.volcado) return;
+  // 🔴 Respuestas de OTRA cuenta: no se escriben bajo esta. Se descartan del
+  // teléfono (las de la otra cuenta, si se volcaron, siguen en la base).
+  if (p.dueño && p.dueño !== userId) {
+    await AsyncStorage.removeItem(KEY);
+    return;
+  }
 
   const fila: Record<string, unknown> = { user_id: userId, updated_at: new Date().toISOString() };
   if (p.topic)            fila.topic = p.topic;
@@ -123,7 +155,7 @@ export async function volcarPendiente(userId: string): Promise<void> {
     return;
   }
 
-  await AsyncStorage.setItem(KEY, JSON.stringify({ ...p, volcado: true }));
+  await AsyncStorage.setItem(KEY, JSON.stringify({ ...p, volcado: true, dueño: userId }));
 }
 
 /**
@@ -138,10 +170,11 @@ export async function volcarPendiente(userId: string): Promise<void> {
  * cada consumidor descarta lo que no reconoce.
  */
 export async function leerRespuestasGuardadas(): Promise<QuizPendiente | null> {
+  const uid = await uidActual();
   const local = await leerCrudo();
-  if (local) return local;
-  const { data: ses } = await supabase.auth.getSession();
-  const uid = ses.session?.user?.id;
+  // Lo local solo si es de esta persona. Lo guardado antes de este control
+  // (sin `dueño` y ya volcado) se ignora: la base tiene lo mismo, bajo su dueño.
+  if (local && esDe(local, uid)) return local;
   if (!uid) return null;
   const { data } = await supabase.from('user_quiz_answers').select('*').eq('user_id', uid).maybeSingle();
   if (!data) return null;

@@ -1,22 +1,34 @@
 const mockStore: Record<string, string> = {};
 const mockUpsert = jest.fn(async (..._a: unknown[]) => ({ error: null as { message: string } | null }));
+// La cuenta conectada en el teléfono. null = todavía sin cuenta (onboarding).
+let mockUid: string | null = null;
+let mockFilaBase: Record<string, unknown> | null = null;
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {
     getItem: async (k: string) => mockStore[k] ?? null,
     setItem: async (k: string, v: string) => { mockStore[k] = v; },
+    removeItem: async (k: string) => { delete mockStore[k]; },
   },
 }));
 
 jest.mock('@/lib/supabase', () => ({
-  supabase: { from: () => ({ upsert: (...a: unknown[]) => mockUpsert(...a) }) },
+  supabase: {
+    auth: { getSession: async () => ({ data: { session: mockUid ? { user: { id: mockUid } } : null } }) },
+    from: () => ({
+      upsert: (...a: unknown[]) => mockUpsert(...a),
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: mockFilaBase, error: null }) }) }),
+    }),
+  },
 }));
 
-import { guardarPendiente, leerPendiente, volcarPendiente } from '@/lib/quizPendiente';
+import { borrarPendienteLocal, guardarPendiente, leerPendiente, leerRespuestasGuardadas, volcarPendiente } from '@/lib/quizPendiente';
 
 beforeEach(() => {
   for (const k of Object.keys(mockStore)) delete mockStore[k];
+  mockUid = null;
+  mockFilaBase = null;
   mockUpsert.mockClear();
   mockUpsert.mockResolvedValue({ error: null });
 });
@@ -103,5 +115,62 @@ describe('volcarPendiente', () => {
     mockStore['vita_quiz_pendiente'] = 'no soy json';
     await expect(volcarPendiente('u1')).resolves.toBeUndefined();
     expect(mockUpsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('🔴 dos cuentas en el mismo teléfono (auditoría 26/09, C1)', () => {
+  it('B no lee las respuestas que dejó A', async () => {
+    mockUid = 'A';
+    await guardarPendiente({ topic: 'emocion', subtemas: ['ansiedad'] });
+    mockUid = 'B';
+    await expect(leerRespuestasGuardadas()).resolves.toBeNull();
+  });
+
+  it('A sí vuelve a encontrar las suyas', async () => {
+    mockUid = 'A';
+    await guardarPendiente({ topic: 'emocion' });
+    await expect(leerRespuestasGuardadas()).resolves.toMatchObject({ topic: 'emocion' });
+  });
+
+  it('un guardado parcial de B no arrastra los temas de A', async () => {
+    mockUid = 'A';
+    await guardarPendiente({ topic: 'emocion', subtemas: ['ansiedad'] });
+    mockUid = 'B';
+    await guardarPendiente({ budget: 'low' });
+    const p = await leerPendiente();
+    expect(p).toMatchObject({ budget: 'low', dueño: 'B' });
+    expect(p).not.toHaveProperty('subtemas');
+    expect(p).not.toHaveProperty('topic');
+  });
+
+  it('lo pendiente de A no se escribe bajo la cuenta de B', async () => {
+    mockUid = 'A';
+    await guardarPendiente({ topic: 'emocion' });
+    await volcarPendiente('B');
+    expect(mockUpsert).not.toHaveBeenCalled();
+    await expect(leerPendiente()).resolves.toBeNull();
+  });
+
+  it('lo contestado sin cuenta lo adopta quien se registra', async () => {
+    await guardarPendiente({ topic: 'emocion' });
+    mockUid = 'A';
+    await expect(leerRespuestasGuardadas()).resolves.toMatchObject({ topic: 'emocion' });
+    await volcarPendiente('A');
+    expect(filaEscrita()).toMatchObject({ user_id: 'A', topic: 'emocion' });
+    await expect(leerPendiente()).resolves.toMatchObject({ dueño: 'A', volcado: true });
+  });
+
+  it('lo viejo sin dueño y ya volcado se ignora y se lee de la base', async () => {
+    mockStore['vita_quiz_pendiente'] = JSON.stringify({ topic: 'emocion', volcado: true });
+    mockUid = 'B';
+    mockFilaBase = { topic: 'trabajo' };
+    await expect(leerRespuestasGuardadas()).resolves.toMatchObject({ topic: 'trabajo' });
+  });
+
+  it('borrarPendienteLocal deja el teléfono limpio', async () => {
+    mockUid = 'A';
+    await guardarPendiente({ topic: 'emocion' });
+    await borrarPendienteLocal();
+    await expect(leerPendiente()).resolves.toBeNull();
   });
 });

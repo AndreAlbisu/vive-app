@@ -10,7 +10,13 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 // `quizPendiente` importa el cliente real, que tira si no hay env vars.
 // Este test no escribe en la base: solo mira el vocabulario y la cola local.
-jest.mock('@/lib/supabase', () => ({ supabase: { from: () => ({ upsert: async () => ({ error: null }) }) } }));
+// Sin sesión: el onboarding se contesta antes de registrarse.
+jest.mock('@/lib/supabase', () => ({
+  supabase: {
+    auth: { getSession: async () => ({ data: { session: null } }) },
+    from: () => ({ upsert: async () => ({ error: null }) }),
+  },
+}));
 
 import {
   CATEGORIA_A_TOPIC, CATEGORIA_A_PUERTA, topicDeCategoria, puertaDeCategoria,

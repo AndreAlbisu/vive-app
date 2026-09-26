@@ -13,7 +13,8 @@ import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
-import { volcarPendiente } from '@/lib/quizPendiente';
+import { volcarPendiente, borrarPendienteLocal } from '@/lib/quizPendiente';
+import { borrarRespuestasLocales } from '@/lib/onboardingRespuestas';
 import { canjearReferidoPendiente } from '@/lib/referidoPendiente';
 import { enlazarConCuenta, anotar } from '@/lib/analytics';
 import { conTope, TOPE } from '@/lib/conTope';
@@ -708,6 +709,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // loguee en este dispositivo hereda los bloqueos del anterior y no ve
     // coaches que nunca bloqueó.
     clearBlockedCache();
+    // Lo que contestó en el quiz y el onboarding vive en el teléfono: sin esto
+    // la próxima cuenta que entre lo hereda (auditoría del 26/09/2026, C1).
+    await Promise.all([borrarPendienteLocal(), borrarRespuestasLocales()]).catch(() => {});
     await supabase.auth.signOut();
     setUser(null);
     applyProfile({ role: "user", isAdmin: false, name: null });
