@@ -1,3 +1,17 @@
+## 2026-09-26 — Andre (Claude · auditoría de Codex: datos que se perdían o se mezclaban)
+
+**Tocado:** `lib/sessionNotes.ts`, `components/SessionNotesSheet.tsx`, `screens/SalaScreen.tsx`, `lib/coachesCache.ts`, `app/(tabs)/conexiones.tsx`, `screens/QuizScreen.tsx`, `screens/SessionsScreen.tsx`, `app/(tabs)/index.tsx`, `lib/quizPendiente.ts`, `lib/onboardingRespuestas.ts`, `context/AuthContext.tsx`, tests (`sessionNotes`, `coachesCache` nuevos; `quizPendiente`, `onboardingRespuestas`), `docs/problemas-abiertos.md`
+
+**Resumen:**
+- Andre trajo una auditoría de producto hecha por Codex. Verifiqué contra el código los cinco hallazgos más graves: los cinco son reales. Cerré los cuatro que no necesitaban decisión (L64):
+- **Notas de sesión:** si fallaba la carga se veían vacías, y "Guardar" borraba las reales. Ahora dice "No pudimos cargar" con Reintentar, y guardar solo escribe la nota que se cambió. **Chat:** un mensaje que no se envía vuelve al campo de texto en vez de perderse.
+- **Catálogo:** un error de red quedaba guardado como "no hay profesionales" hasta reiniciar la app. Ahora avisa, reintenta solo cada 5 s y tiene botón. **Mensajes e Inicio:** un error ya no borra tus sesiones de la pantalla; se conserva lo que había y aparece un aviso para reintentar.
+- **Quiz y onboarding:** las respuestas guardadas en el teléfono las heredaba la próxima cuenta que entrara. Ahora tienen dueño y se borran al cerrar sesión. Sin cambios en la base; SCHEMA.md no cambia. 918 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone (L65): modo avión con notas, chat y Profesionales; cerrar sesión y entrar con otra cuenta.
+- Dos decisiones de Andre sobre hallazgos abiertos de la misma auditoría (detalle en el registro local de coordinación, no en el repo): el alcance del consentimiento del quiz, y el texto de la comisión en la excepción del enlace (T&C §8.3), que es área de pagos.
+
 ## 2026-09-26 — Andre (Claude · web: sin la leyenda de los círculos)
 
 **Tocado:** `web/index.html`
