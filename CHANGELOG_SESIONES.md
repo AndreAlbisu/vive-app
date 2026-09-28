@@ -1,3 +1,19 @@
+## 2026-09-28 — Joaquín (device-testing de la pasada de seguridad + hallazgos para Andre)
+
+**Tocado:** nada de código (device-testing sobre el dev build; hallazgos abajo). Datos de prueba creados y ya limpiados.
+
+**Resumen:**
+- **Falsa alarma del "crash":** el dev build no crasheaba — no encontraba a Metro ("No development servers found"). Se resolvió corriendo `npx expo start --dev-client` (mismo WiFi/túnel). El build 28 está sano. (Antes hubo que instalar CocoaPods vía brew y usar `xcrun devicectl ... process launch` para verificar que abría.)
+- ✅ **Test 1 (alta + confirmación de mail obligatoria):** funciona (alta → código 8 díg → entra). **Test 3 (alta de profesional):** también pide código y avanza. ✅
+- 🐛 **Test 2 (login con cuenta sin confirmar) — MEDIO:** dice "email y contraseña incorrecta" (con contraseña correcta) en vez de llevar al código. Causa: Supabase con "Confirm email" ON devuelve `Invalid login credentials`, NO `Email not confirmed`, así que el routing de `LoginScreen`/`translateError` (que espera ese texto) no dispara. La cuenta SÍ existe (verificado en base). Mitigado por el link "Entrá con un código" (probado: entra y confirma). Fix: mejorar el mensaje o detectar el caso de otra forma.
+- 🔴 **Test 4 (chat) — REGRESIÓN de la pasada de seguridad, con fix:** el chat anda pero tira error rojo `[SalaScreen] Error actualizando user_last_read`. `salas` quedó **sin GRANT de UPDATE** para `authenticated` (la policy "Users can update their own salas" existe, pero el grant se revocó el 24/09). Postgres necesita grant+policy → falla marcar leído (read-receipts/no-leídos rotos). **FIX (column-scoped, seguro):** `grant update (user_last_read_at, coach_last_read_at) on public.salas to authenticated;`
+- 🟡 **Test 6 (foto de perfil):** backend OK — se guarda (`profiles.avatar_url` seteada, la URL del bucket `avatars` devuelve JPEG 200, grants column-level de profiles OK). El "se ve al subir pero no al volver" es client-side: `ProfileOwnScreen.loadAvatar()` corre solo en `useEffect` de montaje (no `useFocusEffect`) y/o `<Image>` cachea. Minor.
+- 🎨 **Diseño (a decidir con Joaquín):** `OfrecerPaqueteBanner` ("¿Querés armar algo para llevar?") queda flotando desconectado en el chat cuando hay pocos/cero mensajes. Está al final del hilo a propósito (tu comentario del 14/09), pero Joaquín lo quiere fijo abajo. No se tocó. Propuesta intermedia: final del hilo pero pegado abajo cuando hay pocos mensajes.
+- **Test 5 (recomendar recurso):** es acción solo-coach, no testeable desde cuenta cliente; ya lo verificaste server-side.
+
+**Pendiente para la próxima sesión:**
+- Andre: aplicar el grant de `salas` (arriba), decidir el mensaje del login sin confirmar y lo del banner. Faltan los tests de reservar/checkout (necesitan flujo de pago).
+
 ## 2026-09-26 — Andre (Claude · auditoría de Codex, segunda tanda: consentimiento y comisión)
 
 **Tocado:** `lib/consent.ts`, `lib/consentRules.ts`, `lib/quizPendiente.ts`, `lib/resourceEvents.ts`, `lib/resourceCompletions.ts`, `hooks/useConsent.ts`, `hooks/useRecursoAbierto.ts`, `hooks/useRecommendedResource.ts`, `screens/QuizScreen.tsx`, `docs/politica-de-privacidad.md`, `docs/terminos-y-condiciones.md`, legales generados, tests, `docs/problemas-abiertos.md`
