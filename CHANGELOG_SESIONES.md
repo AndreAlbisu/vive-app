@@ -1,3 +1,15 @@
+## 2026-10-01 — Andre (Claude · analítica sin dato de salud sin consentimiento)
+
+**Tocado:** `lib/analytics.ts`, `lib/resourceEvents.ts`, `screens/OnboardingScreen2.tsx`, `screens/OnboardingScreen4.tsx`, tests (`analytics`, `resourceCompletions`)
+
+**Resumen:**
+- Andre: "hagamos los cambios" (los dos pendientes de la sesión anterior). **Analítica:** nueva `anotarSensible`. Sin el consentimiento de datos sensibles, los eventos del onboarding salen sin el eje, la categoría ni la puerta, y los de recursos sin cuál recurso; llevan `detalle_omitido: true` y el embudo sigue contando los pasos. Antes del registro tampoco viajan, porque `enlazarConCuenta` ata ese recorrido a la cuenta después. 927 tests y TypeScript OK.
+- **Control en la base: NO aplicado.** La migración que hace que las policies de `mood_entries`, `journal_entries`, `gratitude_entries`, `user_quiz_answers`, `resource_events` y `resource_completions` exijan el consentimiento para INSERT/UPDATE fue bloqueada por el control de permisos del entorno (la clasifica como despliegue a producción). Queda esperando que Andre la autorice. SCHEMA.md no cambia.
+
+**Pendiente para la próxima sesión:**
+- La migración de consentimiento en la base, con la autorización de Andre.
+- `conexiones_puerta_abierta` (qué tema abre alguien en Profesionales) es el mismo caso y no se tocó: `app/(tabs)/conexiones.tsx` tiene un rediseño de tarjetas sin commitear de otra sesión. Pasarlo a `anotarSensible` cuando ese cambio entre.
+
 ## 2026-09-26 — Andre (Claude · auditoría de Codex, segunda tanda: consentimiento y comisión)
 
 **Tocado:** `lib/consent.ts`, `lib/consentRules.ts`, `lib/quizPendiente.ts`, `lib/resourceEvents.ts`, `lib/resourceCompletions.ts`, `hooks/useConsent.ts`, `hooks/useRecursoAbierto.ts`, `hooks/useRecommendedResource.ts`, `screens/QuizScreen.tsx`, `docs/politica-de-privacidad.md`, `docs/terminos-y-condiciones.md`, legales generados, tests, `docs/problemas-abiertos.md`
