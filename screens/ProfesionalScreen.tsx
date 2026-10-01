@@ -149,6 +149,10 @@ export default function ProfesionalScreen() {
   const [duracionMin, setDuracionMin] = useState<number | null>(null);
   const [proximosLugares, setProximosLugares] = useState<{ fecha: string; hora: string }[] | undefined>(undefined);
   const [todasLasResenas, setTodasLasResenas] = useState(false);
+  // `coaches.id` (no `profile_id`): es la clave de `bookings.coach_id`.
+  const [coachRowId, setCoachRowId] = useState<string | null>(null);
+  // undefined = todavía no se sabe; mientras tanto no se muestra.
+  const [garantiaDisponible, setGarantiaDisponible] = useState<boolean | undefined>(undefined);
   const [liveReviews, setLiveReviews] = useState<LiveReview[]>([]);
   const [liveAvgRating, setLiveAvgRating] = useState<number | null>(null);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
@@ -205,6 +209,7 @@ export default function ProfesionalScreen() {
           return;
         }
         setProfileState({ id: pid, status: 'available' });
+        setCoachRowId((data as any).id);
         setNoDisponible(estaSuspendido({ suspendidoHasta: (data as any).suspendido_hasta ?? null }));
         // ⚠️ `coaches.id`, no `profiles.id`: `coach_credentials.coach_id`
         // apunta al PK de coaches, igual que `bookings.coach_id`.
@@ -272,6 +277,32 @@ export default function ProfesionalScreen() {
           });
       });
   }, [params.profileId, intento]);
+
+  // ── Garantía de primera sesión (T&C §9.3) ──────────────────────────────
+  // Se muestra solo a quien todavía la tiene: vale una vez por persona en toda
+  // la app y para la primera sesión con cada profesional. Mostrársela a quien
+  // ya la usó sería una promesa en el punto de venta que no se cumple (art. 8
+  // Ley 24.240: lo que se anuncia integra el contrato). Por eso se la había
+  // sacado del checkout en agosto, cuando todavía no existía el mecanismo.
+  // Sin sesión iniciada no hay historia: la tiene. Si la consulta falla, no se
+  // muestra: ante la duda, no prometer.
+  useEffect(() => {
+    if (!user) { setGarantiaDisponible(true); return; }
+    if (!coachRowId) return;
+    let vivo = true;
+    void Promise.all([
+      supabase.from('guarantee_claims').select('id')
+        .eq('user_id', user.id).in('status', ['pedida', 'aprobada']).limit(1),
+      supabase.from('bookings').select('id')
+        .eq('user_id', user.id).eq('coach_id', coachRowId)
+        .in('status', ['confirmada', 'completada']).limit(1),
+    ]).then(([claims, sesiones]) => {
+      if (!vivo) return;
+      if (claims.error || sesiones.error) { setGarantiaDisponible(false); return; }
+      setGarantiaDisponible((claims.data ?? []).length === 0 && (sesiones.data ?? []).length === 0);
+    });
+    return () => { vivo = false; };
+  }, [user, coachRowId]);
 
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
@@ -342,7 +373,7 @@ export default function ProfesionalScreen() {
     prof.acceptsMp && 'Mercado Pago',
     prof.acceptsPaypal && 'PayPal',
     prof.acceptsUsdt && 'USDT',
-  ].filter(Boolean).join(' · ');
+  ].filter(Boolean) as string[];
 
   const displayRating = liveAvgRating ?? (params.rating ? parseFloat(params.rating) : null);
   const displayReviewCount = reviewsLoaded ? liveReviews.length : (params.reviewCount ? parseInt(params.reviewCount, 10) : 0);
@@ -462,6 +493,9 @@ export default function ProfesionalScreen() {
         <View style={s.infoSection}>
           <Text style={s.name}>{prof.name}</Text>
           <Text style={s.specialty}>{prof.specialty}</Text>
+          {/* La nacionalidad va con quién es, no con la sesión: pegada a
+              "60 minutos" no se sabía si era de dónde es o dónde atiende. */}
+          {!!prof.nationality && <Text style={s.nacionalidad}>Nacionalidad: {prof.nationality}</Text>}
 
           {/* Sin reseñas todavía se dice "Nuevo en Vita" y no "no hay reseñas":
               al lanzar es el caso de todos, y dicho en negativo se lee como un
@@ -498,15 +532,6 @@ export default function ProfesionalScreen() {
                 Por videollamada{duracionMin ? `, ${duracionMin} minutos` : ''}
               </Text>
             </View>
-            {/* La nacionalidad en su renglón y con nombre: pegada a la sesión
-                ("60 minutos · Argentina") no se sabía si era de dónde es o
-                dónde atiende. */}
-            {!!prof.nationality && (
-              <View style={s.factRow}>
-                <MaterialIcons name="public" size={17} color={ViveColors.softInk} />
-                <Text style={s.factText}>Nacionalidad: {prof.nationality}</Text>
-              </View>
-            )}
             {puedeReservar && proximoLugar !== undefined && (
               <View style={s.factRow}>
                 <MaterialIcons name="event-available" size={17} color={proximoLugar ? ViveColors.accent : ViveColors.softInk} />
@@ -516,6 +541,30 @@ export default function ProfesionalScreen() {
                     : 'Sin horarios por ahora. Podés pedir que te avise.'}
                 </Text>
               </View>
+            )}
+            {/* Con qué se paga, arriba (Andre, 01/10/2026): es parte de
+                decidir, no un detalle del final. Solo los medios que este
+                profesional acepta. */}
+            {paymentMethods.length > 0 && (
+              <View style={s.factRow}>
+                <MaterialIcons name="payments" size={17} color={ViveColors.softInk} />
+                <Text style={s.factText}>Pagás con {listarO(paymentMethods)}</Text>
+              </View>
+            )}
+            {garantiaDisponible && puedeReservar && (
+              <TouchableOpacity
+                style={s.factRow}
+                activeOpacity={0.7}
+                onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
+                accessibilityRole="link"
+                accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
+                <MaterialIcons name="verified-user" size={17} color={ViveColors.accent} />
+                <Text style={s.factText}>
+                  <Text style={s.factStrong}>Garantía de primera sesión.</Text>
+                  {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
+                  <Text style={s.factLink}>Ver condiciones</Text>
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
 
@@ -790,10 +839,6 @@ export default function ProfesionalScreen() {
           </View>
         )}
 
-        {/* Con qué se paga va al final y en chico: es información del momento
-            de pagar, y en la portada competía con lo que ayuda a elegir. */}
-        {!!paymentMethods && <Text style={s.paymentLine}>Acepta {paymentMethods}</Text>}
-
         {/* Reportar / bloquear (oculto en el propio perfil) */}
         {user?.id !== profileId && (
           <TouchableOpacity
@@ -881,6 +926,11 @@ export default function ProfesionalScreen() {
       />
     </AppBg>
   );
+}
+
+/** "a, b o c" */
+function listarO(xs: string[]): string {
+  return xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} o ${xs[xs.length - 1]}`;
 }
 
 /** "Mañana a las 9" → "mañana a las 9", para ir después de "Próximo lugar:". */
@@ -984,6 +1034,8 @@ const s = StyleSheet.create({
   factRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   factText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 20, color: ViveColors.softInk },
   factStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
+  factLink: { fontFamily: ViveFonts.semibold, color: ViveColors.primaryInk },
+  nacionalidad: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 2 },
 
   // El video: fondo oliva, la cara en un círculo con el play encima, y el
   // texto abajo. Crema sobre oliva da 6.1:1.
@@ -1127,20 +1179,12 @@ const s = StyleSheet.create({
   resourceMeta: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 2 },
 
   // ── Pie ─────────────────────────────────────────────────────────────
-  paymentLine: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: ViveColors.softInk,
-    textAlign: 'center',
-    marginTop: 24,
-    marginHorizontal: 20,
-  },
   reportLink: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 14,
+    marginTop: 24,
     paddingVertical: 8,
   },
   reportLinkText: { fontFamily: ViveFonts.medium, fontSize: 13, color: ViveColors.softInk },

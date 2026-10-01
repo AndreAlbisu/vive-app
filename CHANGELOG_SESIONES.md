@@ -1,3 +1,15 @@
+## 2026-10-01 — Andre (Claude · perfil del profesional: orden, medios de pago y garantía)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:**
+- Andre pidió subir los medios de pago y definir la lista y el orden de todo el perfil. Orden acordado: quién es (foto, nombre, profesión, nacionalidad, matrícula, reseñas) → cómo sería la sesión (videollamada y duración, próximo lugar, medios de pago, garantía) → Sobre mí y video → Cómo trabaja → Formación → Reseñas → Recursos → reportar. Precio y "Reservar" fijos abajo.
+- **"Pagás con Mercado Pago o PayPal"** sube al bloque de la sesión, solo con los medios que ese profesional acepta (Andre: "los que el coach ofrezca").
+- 🛡️ **Garantía de primera sesión en el perfil** (T&C §9.3), que no estaba en ningún lado. Andre eligió solo la garantía, sin la línea de cancelación. Se muestra **solo a quien todavía la tiene**: sin `guarantee_claims` pedida o aprobada y sin sesión confirmada o completada con ese profesional; si la consulta falla, no se muestra. Toca y abre los términos. Se había sacado del checkout el 10/08 porque no existían ni el texto legal ni el mecanismo; hoy existen los dos. Sin cambios en la base. 937 tests y TypeScript OK; render del perfil probado con jest.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone. El checkout (`BookingScreen_Confirm`) sigue sin mencionar la garantía; reponerla ahí con el mismo criterio de elegibilidad sería lo coherente.
+
 ## 2026-10-01 — Andre (Claude · perfil del profesional, segunda pasada con capturas)
 
 **Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts`, `lib/tipoProfesional.ts`, `__tests__/perfilProfesional.test.ts`
