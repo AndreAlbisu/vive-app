@@ -1,3 +1,14 @@
+## 2026-10-01 — Andre (Claude · perfil del profesional: portada más corta)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts`, `__tests__/perfilProfesional.test.ts`
+
+**Resumen:**
+- Andre sacó de la portada "Por videollamada", los "60 minutos" (hoy toda sesión es así) y "Próximo lugar" (la fecha libre aparece con un toque en Reservar). Se borraron también sus consultas (`coach_weekly_pattern`, `slots_libres`) y sus funciones y tests (`duracionUnica`, `etiquetaProximoLugar`, `primerLugarVigente`): si vuelven, están en el historial de git (commit 3cb24ffa).
+- **Medios de pago a la barra de abajo**, debajo del precio ("Mercado Pago · PayPal · USDT"), elegido entre tres diseños. En la portada queda solo la garantía de primera sesión. 933 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone, sobre todo que el renglón de medios de pago entre al lado del botón (puede ocupar dos líneas).
+
 ## 2026-10-01 — Andre (Claude · perfil del profesional: orden, medios de pago y garantía)
 
 **Tocado:** `screens/ProfesionalScreen.tsx`

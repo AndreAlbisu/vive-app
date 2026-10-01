@@ -36,7 +36,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { opcionesGuardadas } from '@/lib/enfoque';
 import { logResourceEvent } from '@/lib/resourceEvents';
 import { estaSuspendido } from '@/lib/coachVisibility';
-import { firmaDeResena, motivoSinPerfil, duracionUnica, etiquetaProximoLugar, primerLugarVigente, frasesDeTrabajo, precioParaMostrar } from '@/lib/perfilProfesional';
+import { firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar } from '@/lib/perfilProfesional';
 import { enArgentina } from '@/lib/time';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
@@ -143,11 +143,6 @@ export default function ProfesionalScreen() {
   // 'unavailable', que es "el perfil no está". Ver `motivoSinPerfil`.
   const [profileState, setProfileState] = useState<{ id: string; status: 'available' | 'unavailable' | 'error' } | null>(null);
   const [intento, setIntento] = useState(0);
-  // Lo que la persona necesita para decidir y antes no estaba: cuánto dura y
-  // cuándo hay lugar. `proximosLugares` undefined = cargando; se guardan
-  // varios para poder saltear los que pasen con el perfil abierto.
-  const [duracionMin, setDuracionMin] = useState<number | null>(null);
-  const [proximosLugares, setProximosLugares] = useState<{ fecha: string; hora: string }[] | undefined>(undefined);
   const [todasLasResenas, setTodasLasResenas] = useState(false);
   // `coaches.id` (no `profile_id`): es la clave de `bookings.coach_id`.
   const [coachRowId, setCoachRowId] = useState<string | null>(null);
@@ -256,25 +251,6 @@ export default function ProfesionalScreen() {
             setFetchedData(prev => ({ ...prev, topics: (topicRows ?? []).map(t => t.topic as string) }));
           });
 
-        supabase
-          .from('coach_weekly_pattern')
-          .select('slot_duration_minutes')
-          .eq('coach_id', (data as any).id)
-          .then(({ data: franjas }) => {
-            setDuracionMin(duracionUnica((franjas ?? []).map(f => f.slot_duration_minutes as number | null)));
-          });
-
-        // El primer horario libre sale de `slots_libres`, la misma función de
-        // la página pública: un horario está libre si nadie lo reservó, y eso
-        // exige mirar `bookings`, que desde acá no se ve (ni se debe ver).
-        // Si falla queda en null y la línea no aparece: no es información que
-        // valga un cartel de error.
-        supabase
-          .rpc('slots_libres' as any, { p_slug: (data as any).slug, p_dias: 30 } as any)
-          .then(({ data: slots, error: slotsError }) => {
-            const lista = !slotsError && Array.isArray(slots) ? (slots as any[]).slice(0, 24) : [];
-            setProximosLugares(lista.map(x => ({ fecha: x.fecha as string, hora: x.hora as string })));
-          });
       });
   }, [params.profileId, intento]);
 
@@ -387,7 +363,6 @@ export default function ProfesionalScreen() {
   const frases = frasesDeTrabajo(prof.estilo, prof.guia, prof.focos);
   const escuelas = opcionesGuardadas(prof.enfoques);
   const hayComoTrabaja = prof.topics.length > 0 || frases.length > 0 || escuelas.length > 0;
-  const proximoLugar = proximosLugares ? primerLugarVigente(proximosLugares) : undefined;
   const precio = precioParaMostrar(
     { ars: prof.priceFrom, usd: prof.priceUsd, cobraExterior: prof.acceptsInternational },
     enArgentina(),
@@ -522,51 +497,29 @@ export default function ProfesionalScreen() {
             <EncuadrePill encuadre={encuadre} onInfo={() => setEncuadreOpen(true)} />
           </View>
 
-          {/* ── La sesión ─────────────────────────────────────────────────
-              Qué es y cuándo hay lugar: antes había que tocar "Reservar" para
-              enterarse de si tenía horarios esta semana. */}
+          {/* ── Garantía ──────────────────────────────────────────────────
+              01/10/2026: este bloque tuvo también videollamada, duración,
+              próximo lugar y medios de pago. Andre sacó los tres primeros
+              (hoy toda sesión es por videollamada y de 60 minutos, y la fecha
+              libre aparece con un toque en "Reservar") y los medios de pago
+              pasaron a la barra de abajo, junto al precio. */}
+          {garantiaDisponible && puedeReservar && (
           <View style={s.facts}>
-            <View style={s.factRow}>
-              <MaterialIcons name="videocam" size={17} color={ViveColors.softInk} />
+            <TouchableOpacity
+              style={s.factRow}
+              activeOpacity={0.7}
+              onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
+              accessibilityRole="link"
+              accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
+              <MaterialIcons name="verified-user" size={17} color={ViveColors.accent} />
               <Text style={s.factText}>
-                Por videollamada{duracionMin ? `, ${duracionMin} minutos` : ''}
+                <Text style={s.factStrong}>Garantía de primera sesión.</Text>
+                {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
+                <Text style={s.factLink}>Ver condiciones</Text>
               </Text>
-            </View>
-            {puedeReservar && proximoLugar !== undefined && (
-              <View style={s.factRow}>
-                <MaterialIcons name="event-available" size={17} color={proximoLugar ? ViveColors.accent : ViveColors.softInk} />
-                <Text style={[s.factText, !!proximoLugar && s.factStrong]}>
-                  {proximoLugar
-                    ? `Próximo lugar: ${enMinuscula(etiquetaProximoLugar(proximoLugar.fecha, proximoLugar.hora))}`
-                    : 'Sin horarios por ahora. Podés pedir que te avise.'}
-                </Text>
-              </View>
-            )}
-            {/* Con qué se paga, arriba (Andre, 01/10/2026): es parte de
-                decidir, no un detalle del final. Solo los medios que este
-                profesional acepta. */}
-            {paymentMethods.length > 0 && (
-              <View style={s.factRow}>
-                <MaterialIcons name="payments" size={17} color={ViveColors.softInk} />
-                <Text style={s.factText}>Pagás con {listarO(paymentMethods)}</Text>
-              </View>
-            )}
-            {garantiaDisponible && puedeReservar && (
-              <TouchableOpacity
-                style={s.factRow}
-                activeOpacity={0.7}
-                onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
-                accessibilityRole="link"
-                accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
-                <MaterialIcons name="verified-user" size={17} color={ViveColors.accent} />
-                <Text style={s.factText}>
-                  <Text style={s.factStrong}>Garantía de primera sesión.</Text>
-                  {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
-                  <Text style={s.factLink}>Ver condiciones</Text>
-                </Text>
-              </TouchableOpacity>
-            )}
+            </TouchableOpacity>
           </View>
+          )}
 
         </View>
         </View>
@@ -868,6 +821,12 @@ export default function ProfesionalScreen() {
               {precio ?? 'Precio por confirmar'}
               {!!precio && <Text style={s.priceUnit}> la sesión</Text>}
             </Text>
+            {/* Con qué se paga, al lado del precio (Andre, 01/10/2026): es donde
+                se mira cuando se piensa en pagar. Solo lo que este profesional
+                acepta. */}
+            {paymentMethods.length > 0 && (
+              <Text style={s.mediosPago} numberOfLines={2}>{paymentMethods.join(' · ')}</Text>
+            )}
           </View>
             <TouchableOpacity
               style={[s.btnPrimary, !puedeReservar && s.btnPrimaryDisabled]}
@@ -928,15 +887,6 @@ export default function ProfesionalScreen() {
   );
 }
 
-/** "a, b o c" */
-function listarO(xs: string[]): string {
-  return xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} o ${xs[xs.length - 1]}`;
-}
-
-/** "Mañana a las 9" → "mañana a las 9", para ir después de "Próximo lugar:". */
-function enMinuscula(t: string): string {
-  return t.charAt(0).toLowerCase() + t.slice(1);
-}
 
 
 // ─── Estilos ─────────────────────────────────────────────────────────────────
@@ -1035,6 +985,7 @@ const s = StyleSheet.create({
   factText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 20, color: ViveColors.softInk },
   factStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
   factLink: { fontFamily: ViveFonts.semibold, color: ViveColors.primaryInk },
+  mediosPago: { fontFamily: ViveFonts.regular, fontSize: 12, lineHeight: 16, color: ViveColors.softInk, marginTop: 2 },
   nacionalidad: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 2 },
 
   // El video: fondo oliva, la cara en un círculo con el play encima, y el
