@@ -503,42 +503,45 @@ export default function ProfesionalScreen() {
             )}
           </View>
 
-          {/* ── Video ─────────────────────────────────────────────────────
-              Sube a la portada: es lo más humano del perfil, la persona real
-              detrás de la foto, y estaba quinto, debajo de Formación. */}
-          {prof.video_url && (
-            <TouchableOpacity
-              style={s.videoCard}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel={`Ver el video de presentación de ${primerNombre}`}
-              onPress={() => { setIsPlayingVideo(true); videoPlayer.play(); }}>
-              <View style={s.videoThumb}>
+        </View>
+        </View>
+
+        {/* ── Sobre mí + video ───────────────────────────────────────────────
+            El video va grande, debajo de la bio (Andre, 01/10/2026): primero
+            se lee quién es y enseguida se lo ve contarlo. En la portada iba
+            como una tarjeta chica y quedaba como un dato más. */}
+        {(!!prof.bio || !!prof.video_url) && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Sobre mí</Text>
+            {!!prof.bio && <Text style={s.bio}>{prof.bio}</Text>}
+            {!!prof.video_url && (
+              <TouchableOpacity
+                style={[s.videoCard, !!prof.bio && { marginTop: 18 }, !prof.avatar_url && s.videoCardSinFoto]}
+                activeOpacity={0.88}
+                accessibilityRole="button"
+                accessibilityLabel={`Ver el video de presentación de ${primerNombre}`}
+                onPress={() => { setIsPlayingVideo(true); videoPlayer.play(); }}>
                 {/* La foto del profesional hace de miniatura. 01/10/2026: la
                     primera versión generaba un cuadro del video con
                     `generateThumbnailsAsync` y lo pintaba con expo-image, y la
                     app se cerraba al abrir el perfil en el iPhone. Las dos
                     piezas son nativas y era el primer uso de expo-image en la
                     app; la foto da el mismo efecto sin nada nativo nuevo. */}
-                {!!prof.avatar_url && <Image source={{ uri: prof.avatar_url }} style={StyleSheet.absoluteFill} />}
+                {!!prof.avatar_url && (
+                  <>
+                    <Image source={{ uri: prof.avatar_url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                    <View style={s.videoVelo} />
+                  </>
+                )}
                 <View style={s.playBtn}>
-                  <MaterialIcons name="play-arrow" size={22} color={ViveColors.onPrimaryInk} />
+                  <MaterialIcons name="play-arrow" size={36} color={ViveColors.onPrimaryInk} />
                 </View>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.videoTitle}>Mirá cómo se presenta</Text>
-                <Text style={s.videoCaption}>Un video corto de {primerNombre}</Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={22} color={ViveColors.softInk} />
-            </TouchableOpacity>
-          )}
-        </View>
-        </View>
-
-        {!!prof.bio && (
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Sobre mí</Text>
-            <Text style={s.bio}>{prof.bio}</Text>
+                <View style={s.videoPie}>
+                  <Text style={s.videoTitle}>Mirá cómo se presenta</Text>
+                  <Text style={s.videoCaption}>Un video corto de {primerNombre}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -982,35 +985,36 @@ const s = StyleSheet.create({
   factStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
 
   videoCard: {
-    marginTop: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BORDE,
-    backgroundColor: 'rgba(86,94,50,0.04)',
-  },
-  videoThumb: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
+    width: '100%',
+    aspectRatio: 4 / 3,
+    borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: 'rgba(86,94,50,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Sin foto, el fondo pasa al oliva oscuro para que el texto crema se lea.
+  videoCardSinFoto: { backgroundColor: ViveColors.text },
+  // Un velo suave sobre la foto, para que se lea como "video" y no como otra
+  // foto; el texto lleva su propia franja oscura y se lee sobre cualquier foto.
+  videoVelo: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(30,34,18,0.22)' },
   playBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: ViveColors.primaryInk,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(247,239,228,0.85)',
   },
-  videoTitle: { fontFamily: ViveFonts.semibold, fontSize: 15, color: ViveColors.text },
-  videoCaption: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 1 },
+  videoPie: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    paddingHorizontal: 16, paddingVertical: 12,
+    backgroundColor: 'rgba(30,34,18,0.62)',
+  },
+  videoTitle: { fontFamily: ViveFonts.semibold, fontSize: 17, color: ViveColors.onPrimaryInk },
+  videoCaption: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.onPrimaryInk, opacity: 0.9, marginTop: 1 },
   videoModalBg: { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
   videoModalPlayer: { width: '100%', height: '100%' },
   videoModalCloseBtn: {
