@@ -23,8 +23,9 @@ import {
   Image,
   Modal,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -33,7 +34,6 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { opcionesGuardadas, etiquetaEstilo, etiquetasEnfoques, etiquetaGuia, etiquetasFocos } from '@/lib/enfoque';
-import { PaymentBadges } from '@/components/PaymentBadges';
 import { logResourceEvent } from '@/lib/resourceEvents';
 import { estaSuspendido } from '@/lib/coachVisibility';
 
@@ -50,9 +50,7 @@ import { estaSuspendido } from '@/lib/coachVisibility';
 const DEFAULT_PROFESIONAL = {
   name: '',
   specialty: '',
-  age: '',
   nationality: '',
-  gender: '',
   topics: [] as string[],
   estilo: null as string | null,
   enfoques: [] as string[],
@@ -300,22 +298,18 @@ export default function ProfesionalScreen() {
     ...(params.priceFrom && { priceFrom: parseInt(params.priceFrom, 10) }),
     ...fetchedData,
   };
+  const { width } = useWindowDimensions();
+  const photoHeight = Math.min(250, Math.max(205, width * 0.58));
+  const paymentMethods = [
+    prof.acceptsMp && 'Mercado Pago',
+    prof.acceptsPaypal && 'PayPal',
+    prof.acceptsUsdt && 'USDT',
+  ].filter(Boolean).join(' · ');
 
   const displayRating = liveAvgRating ?? (params.rating ? parseFloat(params.rating) : null);
   const displayReviewCount = reviewsLoaded ? liveReviews.length : (params.reviewCount ? parseInt(params.reviewCount, 10) : 0);
 
   const videoPlayer = useVideoPlayer(prof.video_url, p => { p.loop = false; });
-
-  // 🔴 La foto arranca en y = 0 a propósito —es una portada a sangre, el patrón
-  // de siempre para esto— pero el scroll no está adentro de ningún SafeArea, así
-  // que en un teléfono con notch o isla los primeros ~60pt de la imagen quedan
-  // TAPADOS: en un retrato eso es media cara. Se compensa haciendo el contenedor
-  // más alto por exactamente lo que mide el recorte, así queda visible la misma
-  // foto de 300 que en un teléfono sin notch en vez de 240 mal cortados.
-  //
-  // ⚠️ No alcanza con un `paddingTop`: eso empujaría la imagen y dejaría una
-  // banda vacía arriba, que es perder la portada para arreglar el recorte.
-  const insets = useSafeAreaInsets();
 
   // Un enlace viejo o un favorito puede abrir esta ruta sin pasar por el
   // catálogo. No se debe mostrar un perfil despublicado, ni siquiera usando
@@ -324,7 +318,7 @@ export default function ProfesionalScreen() {
     const loadingProfile = !!profileId && profileState?.id !== profileId;
     return (
       <AppBg>
-        <SafeAreaView style={[s.safe, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <SafeAreaView style={[s.page, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
           {loadingProfile ? <ActivityIndicator color={ViveColors.primary} /> : (
             <>
               <Text style={{ color: ViveColors.text, fontFamily: ViveFonts.semibold, fontSize: 22, textAlign: 'center' }}>
@@ -343,18 +337,30 @@ export default function ProfesionalScreen() {
   return (
     <AppBg>
       <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={s.safe} edges={['top']}>
-
-        {/* ── Botón atrás flotante ─────────────────────────────────────── */}
+      <SafeAreaView style={s.page} edges={['top']}>
+      <View style={s.header}>
         <TouchableOpacity
           style={s.backBtn}
           onPress={() => router.back()}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Volver"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <MaterialIcons name="arrow-back-ios" size={18} color="#565E32" />
+          <MaterialIcons name="arrow-back-ios" size={19} color={ViveColors.text} />
         </TouchableOpacity>
-
-      </SafeAreaView>
+        <Text style={s.headerTitle}>Profesional</Text>
+        <TouchableOpacity
+          style={s.favoriteBtn}
+          onPress={() => {
+            if (!isLoggedIn) { requestAuth('guardar_profesional'); return; }
+            if (profileId) toggleFavorite(profileId);
+          }}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Quitar de favoritos' : 'Guardar en favoritos'}>
+          <MaterialIcons name={saved ? 'favorite' : 'favorite-border'} size={24} color={saved ? ViveColors.primaryInk : ViveColors.text} />
+        </TouchableOpacity>
+      </View>
 
       {/* ── Scroll ───────────────────────────────────────────────────────── */}
       <ScrollView
@@ -362,16 +368,9 @@ export default function ProfesionalScreen() {
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}>
 
-        {/* ── Foto grande ──────────────────────────────────────────────── */}
-        <View style={[s.photoContainer, { height: 300 + insets.top }]}>
+        <View style={s.heroCard}>
+        <View style={[s.photoContainer, { height: photoHeight }]}>
           {prof.avatar_url ? (
-            // La portada recorta a sangre, así que de un retrato se ve una
-            // franja. Tocarla la abre entera — es lo que espera cualquiera que
-            // ve una foto de alguien a quien está por elegir, y hasta ahora la
-            // única forma de verle bien la cara era no haberla recortado.
-            //
-            // 🔴 Sin `Pressable` cuando no hay foto: el placeholder es un ícono
-            // genérico, y abrirlo en grande sería prometer algo que no hay.
             <Pressable
               onPress={() => setFotoAmpliada(true)}
               accessibilityRole="imagebutton"
@@ -397,10 +396,18 @@ export default function ProfesionalScreen() {
           </View>
         </View>
 
-        {/* ── Info básica ──────────────────────────────────────────────── */}
         <View style={s.infoSection}>
           <Text style={s.name}>{prof.name}</Text>
           <Text style={s.specialty}>{prof.specialty}</Text>
+
+          {displayRating !== null && displayReviewCount > 0 && (
+            <View style={s.ratingInline}>
+              <MaterialIcons name="star" size={17} color="#C99A3F" />
+              <Text style={s.ratingInlineText}>
+                {displayRating.toFixed(1)} · {displayReviewCount} {displayReviewCount === 1 ? 'reseña' : 'reseñas'}
+              </Text>
+            </View>
+          )}
 
           {/* El encuadre va acá, pegado a la especialidad, y no en un bloque
               propio más abajo: dice de qué TIPO es lo que esta persona ofrece,
@@ -409,18 +416,21 @@ export default function ProfesionalScreen() {
           <View style={s.encuadreRow}>
             <EncuadrePill encuadre={encuadre} onInfo={() => setEncuadreOpen(true)} />
           </View>
+          {!!prof.nationality && <Text style={s.metaLine}>{prof.nationality}</Text>}
+          {!!paymentMethods && <Text style={s.paymentLine}>Acepta {paymentMethods}</Text>}
+        </View>
+        </View>
 
-          <Text style={s.metaLine}>
-            {prof.age} · {prof.nationality} · {prof.gender}
-          </Text>
-
-          {/* Presentación */}
-          {!!prof.bio && (
+        {!!prof.bio && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Sobre mí</Text>
             <Text style={s.bio}>{prof.bio}</Text>
-          )}
+          </View>
+        )}
 
-          {/* Chips de temas */}
-          {prof.topics.length > 0 && (
+        {prof.topics.length > 0 && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Temas que acompaña</Text>
             <View style={s.chipsRow}>
               {prof.topics.map(topic => (
                 <View key={topic} style={s.chip}>
@@ -428,8 +438,8 @@ export default function ProfesionalScreen() {
                 </View>
               ))}
             </View>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* ── Cómo trabaja (M14) ────────────────────────────────────────────
             El estilo va primero y en castellano común, porque es lo que se le
@@ -442,23 +452,32 @@ export default function ProfesionalScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>Cómo trabaja</Text>
             {!!etiquetaEstilo(prof.estilo) && (
-              <Text style={s.comoTrabajaEstilo}>{etiquetaEstilo(prof.estilo)}</Text>
+              <View style={s.workRow}>
+                <Text style={s.workLabel}>Su estilo</Text>
+                <Text style={s.workText}>{etiquetaEstilo(prof.estilo)}</Text>
+              </View>
             )}
             {/* M14 ampliado (21/09/2026): cuánto guía y sobre qué trabaja, en
                 primera persona como el estilo, porque son sus respuestas. */}
             {!!etiquetaGuia(prof.guia) && (
-              <Text style={s.comoTrabajaEstilo}>{etiquetaGuia(prof.guia)}</Text>
+              <View style={s.workRow}>
+                <Text style={s.workLabel}>Cómo acompaña</Text>
+                <Text style={s.workText}>{etiquetaGuia(prof.guia)}</Text>
+              </View>
             )}
             {etiquetasFocos(prof.focos).length > 0 && (
-              <Text style={s.comoTrabajaEstilo}>
-                Trabajo sobre {listarY(etiquetasFocos(prof.focos).map(f => f.toLowerCase()))}
-              </Text>
+              <View style={s.workRow}>
+                <Text style={s.workLabel}>Foco</Text>
+                <Text style={s.workText}>
+                  Trabajo sobre {listarY(etiquetasFocos(prof.focos).map(f => f.toLowerCase()))}
+                </Text>
+              </View>
             )}
             {opcionesGuardadas(prof.enfoques).map(e => {
               return (
-                <View key={e.id} style={s.comoTrabajaFila}>
-                  <Text style={s.comoTrabajaLabel}>{e.label}</Text>
-                  <Text style={s.comoTrabajaDesc}>{e.desc}</Text>
+                <View key={e.id} style={s.workRow}>
+                  <Text style={s.workLabel}>{e.label}</Text>
+                  <Text style={s.workText}>{e.desc}</Text>
                 </View>
               );
             })}
@@ -656,7 +675,11 @@ export default function ProfesionalScreen() {
             <View style={s.noReviews}>
               <Text style={s.noReviewsText}>Todavía no hay reseñas para este profesional</Text>
             </View>
-          ) : null}
+          ) : (
+            <View style={s.noReviews}>
+              <Text style={s.noReviewsText}>Cargando reseñas…</Text>
+            </View>
+          )}
         </View>
 
         {/* Reportar / bloquear (oculto en el propio perfil) */}
@@ -674,44 +697,24 @@ export default function ProfesionalScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Espaciador para el footer sticky */}
-        <View style={{ height: 108 }} />
       </ScrollView>
 
       {/* ── Footer sticky ────────────────────────────────────────────────── */}
       <SafeAreaView style={s.footerSafe} edges={['bottom']}>
         <View style={s.footer}>
           <View style={s.footerTop}>
-            <Text style={s.price}>
+            <Text style={s.price} numberOfLines={1}>
               {prof.priceFrom != null
-                ? `Desde $${prof.priceFrom.toLocaleString('es-AR')} por sesión`
-                : 'Cargando precio…'}
+                ? `Desde $${prof.priceFrom.toLocaleString('es-AR')}`
+                : 'Precio por confirmar'}
             </Text>
-            {/* La única superficie del perfil que habla del exterior. Había
-                además un cartel "Atiende desde el exterior" pegado al de
-                verificado, y se sacó: decía la lectura equivocada de las dos
-                que SCHEMA.md separa —que el PROFESIONAL está afuera— cuando el
-                hecho es que el cliente puede estarlo, y con el estilo del badge
-                de verificado se leía como un atributo de la persona. El precio
-                en dólares dice lo mismo sin ambigüedad: quien está afuera
-                necesita el número, no la etiqueta. */}
+            {prof.priceFrom != null && <Text style={s.priceUnit}>por sesión</Text>}
             {prof.acceptsInternational && prof.priceUsd != null && (
-              <Text style={s.priceIntl}>
-                Desde el exterior: USD {prof.priceUsd}
+              <Text style={s.priceIntl} numberOfLines={1}>
+                Exterior: USD {prof.priceUsd}
               </Text>
             )}
-            {/* Sin `compact`: acá hay ancho de sobra (el footer apila precio y
-                botones), así que se muestran los tres si acepta los tres. En la
-                card del deck van recortados porque la fila se parte. */}
-            <View style={s.payRow}>
-              <PaymentBadges
-                mp={prof.acceptsMp}
-                paypal={prof.acceptsPaypal}
-                usdt={prof.acceptsUsdt}
-              />
-            </View>
           </View>
-          <View style={s.footerButtons}>
             <TouchableOpacity
               style={[s.btnPrimary, (blocked || noDisponible) && s.btnPrimaryDisabled]}
               activeOpacity={0.85}
@@ -733,29 +736,11 @@ export default function ProfesionalScreen() {
                 });
               }}>
               <Text style={s.btnPrimaryText}>
-                {/* "No disponible" y no nada más específico: la persona no
-                    tiene por qué enterarse de una sanción (T&C 10.4). */}
-                {blocked ? 'Bloqueado' : noDisponible ? 'No disponible por ahora' : 'Reservar sesión'}
+                {(blocked || noDisponible) ? 'No disponible por ahora' : 'Reservar sesión'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.btnSecondary, saved && s.btnSecondaryActive]}
-              onPress={() => {
-                if (!isLoggedIn) { requestAuth('guardar_profesional'); return; }
-                if (profileId) toggleFavorite(profileId);
-              }}
-              activeOpacity={0.8}>
-              <MaterialIcons
-                name={saved ? 'favorite' : 'favorite-border'}
-                size={18}
-                color={ViveColors.primary}
-              />
-              <Text style={s.btnSecondaryText}>
-                {saved ? 'Guardado' : 'Guardar en favoritos'}
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
+      </SafeAreaView>
       </SafeAreaView>
 
       <UserActionsSheet
@@ -794,40 +779,28 @@ function listarY(xs: string[]): string {
   return xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`;
 }
 
-// ─── Sombra ──────────────────────────────────────────────────────────────────
-const shadow = Platform.select({
-  ios: {
-    shadowColor: 'rgba(0,0,0,0.5)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-  },
-  android: { elevation: 3 },
-});
-
 // ─── Estilos ─────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: 'transparent',
   },
-  safe: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
+  page: { flex: 1 },
+  header: {
+    height: 56,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   backBtn: {
-    margin: 16,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,248,240,0.65)',
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow,
   },
+  headerTitle: { fontFamily: ViveFonts.semibold, fontSize: 16, color: ViveColors.text },
+  favoriteBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   scroll: {
     flex: 1,
   },
@@ -835,13 +808,18 @@ const s = StyleSheet.create({
     paddingBottom: 24,
   },
 
-  // ── Foto ──────────────────────────────────────────────────────────────
+  // ── Portada ───────────────────────────────────────────────────────────
+  heroCard: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    overflow: 'hidden',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.14)',
+    backgroundColor: '#FBF8F1',
+  },
   photoContainer: {
     width: '100%',
-    // La altura real la pone el render sumándole el alto del notch. 300 es el
-    // piso —lo que se ve en un teléfono sin recorte— y el valor que usan las
-    // medidas de abajo (el badge de verificado va anclado al pie, no al alto).
-    height: 300,
   },
   photoPlaceholder: {
     flex: 1,
@@ -855,11 +833,11 @@ const s = StyleSheet.create({
   },
   verifiedBadge: {
     position: 'absolute',
-    bottom: 16,
-    left: 20,
+    bottom: 12,
+    left: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: ViveColors.accent,
+    backgroundColor: 'rgba(251,248,241,0.96)',
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -875,14 +853,14 @@ const s = StyleSheet.create({
   // ── Info básica ────────────────────────────────────────────────────────
   infoSection: {
     paddingHorizontal: 20,
-    paddingTop: 22,
-    paddingBottom: 8,
+    paddingTop: 18,
+    paddingBottom: 20,
   },
   name: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 28,
+    fontSize: 26,
     color: '#565E32',
-    lineHeight: 36,
+    lineHeight: 32,
     letterSpacing: -0.3,
     marginBottom: 4,
   },
@@ -890,20 +868,22 @@ const s = StyleSheet.create({
     fontFamily: ViveFonts.medium,
     fontSize: 16,
     color: ViveColors.primary,
-    marginBottom: 8,
+    marginBottom: 4,
   },
+  ratingInline: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+  ratingInlineText: { fontFamily: ViveFonts.medium, fontSize: 13, color: ViveColors.text },
   metaLine: {
     fontFamily: ViveFonts.regular,
     fontSize: 13,
     color: '#87835C',
-    marginBottom: 14,
+    marginTop: 12,
   },
+  paymentLine: { fontFamily: ViveFonts.regular, fontSize: 12, color: '#726F57', marginTop: 8 },
   bio: {
     fontFamily: ViveFonts.regular,
     fontSize: 14,
     color: '#565E32',
     lineHeight: 21,
-    marginBottom: 14,
   },
   chipsRow: {
     flexDirection: 'row',
@@ -911,8 +891,9 @@ const s = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    borderWidth: 1.5,
-    borderColor: ViveColors.primary,
+    borderWidth: 1,
+    borderColor: 'rgba(86,94,50,0.22)',
+    backgroundColor: 'rgba(86,94,50,0.05)',
     borderRadius: 20,
     paddingVertical: 4,
     paddingHorizontal: 12,
@@ -920,37 +901,27 @@ const s = StyleSheet.create({
   chipText: {
     fontFamily: ViveFonts.medium,
     fontSize: 12,
-    color: ViveColors.primary,
+    color: ViveColors.text,
   },
 
   // ── Sección genérica ──────────────────────────────────────────────────
   section: {
-    paddingHorizontal: 20,
-    paddingTop: 28,
+    marginHorizontal: 20,
+    paddingVertical: 22,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(86,94,50,0.14)',
   },
   sectionTitle: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 17,
+    fontSize: 18,
     color: '#565E32',
     marginBottom: 14,
   },
 
   // ── Cómo trabaja (M14) ──────────────────────────────────────────────
-  comoTrabajaEstilo: {
-    fontFamily: ViveFonts.semibold,
-    fontSize: 15,
-    color: '#565E32',
-    marginBottom: 12,
-  },
-  comoTrabajaFila: { marginBottom: 10 },
-  comoTrabajaLabel: { fontFamily: ViveFonts.semibold, fontSize: 14, color: '#565E32' },
-  comoTrabajaDesc: {
-    fontFamily: ViveFonts.regular,
-    fontSize: 13,
-    color: 'rgba(135,131,92,0.85)',
-    lineHeight: 19,
-    marginTop: 2,
-  },
+  workRow: { marginBottom: 14 },
+  workLabel: { fontFamily: ViveFonts.semibold, fontSize: 12, color: ViveColors.primaryInk, marginBottom: 3 },
+  workText: { fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 21, color: ViveColors.text },
 
   // ── Formación ───────────────────────────────────────────────────────
   // El estado sin matrícula NO va en rojo ni con ícono de alerta: no es una
@@ -985,10 +956,10 @@ const s = StyleSheet.create({
   // ── Recursos del coach ──────────────────────────────────────────────
   resourcesList: { gap: 10 },
   resourceCard: {
-    backgroundColor: 'rgba(255,248,240,0.55)',
+    backgroundColor: '#FBF8F1',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
+    borderColor: 'rgba(86,94,50,0.14)',
     padding: 14,
   },
   resourceHeader: {
@@ -1019,15 +990,14 @@ const s = StyleSheet.create({
 
   // ── Video ─────────────────────────────────────────────────────────────
   videoPlaceholder: {
-    backgroundColor: 'rgba(255,248,240,0.55)',
+    backgroundColor: '#FBF8F1',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
+    borderColor: 'rgba(86,94,50,0.14)',
     height: 160,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    ...shadow,
   },
   playBtn: {
     width: 60,
@@ -1070,14 +1040,13 @@ const s = StyleSheet.create({
   ratingOverall: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,248,240,0.55)',
+    backgroundColor: '#FBF8F1',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
+    borderColor: 'rgba(86,94,50,0.14)',
     padding: 16,
     marginBottom: 14,
     gap: 14,
-    ...shadow,
   },
   ratingNumber: {
     fontFamily: ViveFonts.bold,
@@ -1124,12 +1093,11 @@ const s = StyleSheet.create({
     gap: 12,
   },
   reviewCard: {
-    backgroundColor: 'rgba(255,248,240,0.55)',
+    backgroundColor: '#FBF8F1',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.60)',
+    borderColor: 'rgba(86,94,50,0.14)',
     padding: 14,
-    ...shadow,
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -1184,56 +1152,40 @@ const s = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 8,
-    gap: 10,
+    paddingTop: 12,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  footerTop: {},
+  footerTop: { flex: 1, minWidth: 0 },
   price: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 15,
+    fontSize: 16,
     color: '#565E32',
   },
-  payRow: { marginTop: 6 },
+  priceUnit: { fontFamily: ViveFonts.regular, fontSize: 11, color: '#726F57' },
   priceIntl: {
     fontFamily: ViveFonts.regular,
-    fontSize: 12.5,
+    fontSize: 11,
     color: 'rgba(135,131,92,0.95)',
     marginTop: 2,
   },
-  footerButtons: {
-    gap: 10,
-  },
   btnPrimary: {
     backgroundColor: '#565E32',
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: 24,
+    width: 156,
+    minHeight: 48,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   btnPrimaryDisabled: { backgroundColor: 'rgba(86,94,50,0.35)' },
   btnPrimaryText: {
     fontFamily: ViveFonts.semibold,
-    fontSize: 16,
-    color: '#F7EFE4',
-    letterSpacing: 0.2,
-  },
-  btnSecondary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: ViveColors.primary,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  btnSecondaryActive: {
-    backgroundColor: 'rgba(232,197,71,0.15)',
-  },
-  btnSecondaryText: {
-    fontFamily: ViveFonts.semibold,
     fontSize: 14,
-    color: ViveColors.primary,
+    color: '#F7EFE4',
+    textAlign: 'center',
   },
 });
