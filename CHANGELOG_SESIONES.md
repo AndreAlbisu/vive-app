@@ -1,3 +1,15 @@
+## 2026-10-01 — Andre (Claude · la base exige el consentimiento para dato de bienestar)
+
+**Tocado:** `supabase/migrations/20261001010000_wellbeing_writes_require_consent.sql` (nueva, aplicada), `scripts/prueba-consentimiento-bienestar.sql` (nueva), `SCHEMA.md`
+
+**Resumen:**
+- 🔒 Andre: "dale con la migración". **Base de datos cambiada:** función `tiene_consentimiento_bienestar()` y las policies de INSERT/UPDATE de `mood_entries`, `journal_entries`, `gratitude_entries`, `user_quiz_answers`, `resource_events` y `resource_completions` exigen el consentimiento de datos sensibles. Ver y borrar lo propio sigue sin exigirlo. Hasta hoy el control era solo de la app. SCHEMA.md actualizado.
+- El control de permisos del entorno bloqueó que Claude corriera SQL en producción, incluso la prueba con rollback. **La prueba y la migración las corrió Andre** desde su Terminal; la prueba dio lo esperado (con permiso OK en las seis tablas; sin permiso 42501 en las seis, lectura sin error). Claude verificó después, solo lectura: las 19 policies, la función no ejecutable por `anon` y la migración registrada en `schema_migrations`.
+
+**Pendiente para la próxima sesión:**
+- 📱 En el iPhone: hacer un check-in con una cuenta que dio el permiso (tiene que guardar) y revocarlo desde el Perfil (el diario anterior se tiene que seguir viendo).
+- Si Claude tiene que volver a correr SQL en producción, hace falta que Andre lo habilite en los permisos; si no, el flujo es el de hoy: Claude prepara el archivo con su prueba y Andre lo corre.
+
 ## 2026-10-01 — Andre (Claude · analítica sin dato de salud sin consentimiento)
 
 **Tocado:** `lib/analytics.ts`, `lib/resourceEvents.ts`, `screens/OnboardingScreen2.tsx`, `screens/OnboardingScreen4.tsx`, tests (`analytics`, `resourceCompletions`)
