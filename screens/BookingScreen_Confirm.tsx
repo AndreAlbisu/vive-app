@@ -32,7 +32,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { logError, logWarn, esTopeDeIntentos, TEXTO_TOPE } from '@/lib/logging';
 import { encryptMessage } from '@/lib/encryption';
 import { ensureMeetingRoom } from '@/lib/meetingRoom';
-import { observedTz, enArgentina } from '@/lib/time';
+import { observedTz, enArgentina, localEquivalentLabel } from '@/lib/time';
+import { CoachAvatar } from '@/components/CoachAvatar';
 import { DESCUENTO_REFERIDO_PCT } from '@/lib/referidos';
 
 const DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -83,6 +84,7 @@ export default function BookingScreen_Confirm() {
   const [internacionalDisponible, setInternacionalDisponible] = useState(false);
   const [aceptaPaypal, setAceptaPaypal] = useState(false);
   const [aceptaUsdt, setAceptaUsdt] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [priceUsd, setPriceUsd] = useState<number | null>(null);
   const [metodoPago, setMetodoPago] = useState<'mp' | 'usdt' | 'paypal'>('mp');
   // Pago abierto FUERA de la app (app nativa de Mercado Pago, o el browser con
@@ -130,9 +132,10 @@ export default function BookingScreen_Confirm() {
     (async () => {
       const { data } = await supabase
         .from('coaches')
-        .select('instant_booking, has_matricula, accepts_international, accepts_paypal, accepts_usdt, price_usd, price_per_session')
+        .select('instant_booking, has_matricula, accepts_international, accepts_paypal, accepts_usdt, price_usd, price_per_session, profiles(avatar_url)')
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
+      setAvatarUrl((data as any)?.profiles?.avatar_url ?? null);
       setInstantBooking(!!data?.instant_booking);
       setHasMatricula(!!data?.has_matricula);
       // Los medios internacionales (USDT y PayPal) solo existen si el coach
@@ -890,6 +893,7 @@ export default function BookingScreen_Confirm() {
           specialty,
           date: dateStr,
           time,
+          ...(avatarUrl && { avatar: avatarUrl }),
           bookingId: booking.id,
           roomUrl,
           salaId,
@@ -940,9 +944,7 @@ export default function BookingScreen_Confirm() {
 
           {/* Coach */}
           <View style={s.coachRow}>
-            <View style={s.coachAvatar}>
-              <MaterialIcons name="person" size={34} color="rgba(135,131,92,0.80)" />
-            </View>
+            <CoachAvatar uri={avatarUrl} size={54} style={s.coachAvatar} />
             <View style={s.coachInfo}>
               <View style={s.coachNameRow}>
                 <Text style={s.coachName}>{coachName}</Text>
@@ -986,6 +988,12 @@ export default function BookingScreen_Confirm() {
             <View style={s.detailText}>
               <Text style={s.detailLabel}>HORA</Text>
               <Text style={s.detailValue}>{time} hs (horario Argentina)</Text>
+              {/* Desde afuera, la cuenta la hacemos nosotros: el día es lo que
+                  más se corre ("07:00 del martes para vos"). */}
+              {(() => {
+                const local = localEquivalentLabel(dateStr, time);
+                return local ? <Text style={s.detailValueRef}>{`Son las ${local}`}</Text> : null;
+              })()}
             </View>
           </View>
 
@@ -1414,15 +1422,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 18,
   },
-  coachAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: 'rgba(255,248,240,0.62)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
+  coachAvatar: { marginRight: 14 },
   coachInfo: { flex: 1 },
   coachNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   encuadreRow: { marginTop: 6 },

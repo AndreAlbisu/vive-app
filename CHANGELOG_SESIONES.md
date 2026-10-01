@@ -1,3 +1,17 @@
+## 2026-10-01 — Andre (Claude · flujo de reserva: errores de la revisión de UX)
+
+**Tocado:** `screens/BookingScreen_Calendar.tsx`, `screens/BookingScreen_Time.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/BookingScreen_Success.tsx`, `components/CoachAvatar.tsx` (nuevo)
+
+**Resumen:**
+- Revisión del flujo de reserva con ui-ux-pro-max (leyendo código, sin capturas): 14 puntos. Andre dio "dale" a los errores (1 a 5) más dos que salieron del perfil nuevo (13 y 14).
+- **Arreglado:** la flecha de "mes anterior" era blanca sobre crema; en una contrapropuesta el botón decía "Seguimos" y ya mandaba la propuesta (ahora "Proponer este horario"); sin red, calendario y horarios ya no se ven como "sin lugar": dicen "No pudimos cargar los horarios" con Reintentar; si este mes no hay lugar, el calendario abre en el primer mes que tiene y lo avisa; confirmar y la pantalla final dicen "hora de Argentina" y, desde afuera, la equivalencia ("07:00 del martes para vos").
+- **Foto del profesional** en horario, confirmar y pantalla final (antes un ícono genérico). Se lee de la base en horario y confirmar (así aparece también al mover una sesión desde la Sala) y viaja a la pantalla final por la ruta, solo si es https. `CoachAvatar` usa `Image` de React Native, no expo-image. Se sacó el "Coach de vida" por defecto (resto del mockup). Sin cambios en la base. 939 tests y TypeScript OK; no se probó en pantalla.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone: calendario sin red (modo avión) y con un profesional sin lugar este mes; reservar desde fuera de Argentina (cambiar la zona horaria del teléfono).
+- Puntos de la revisión todavía sin hacer: (6) juntar los cuatro avisos de Confirmar en una tarjeta y sumar la garantía de primera sesión; (7) el error se muestra dos veces; (8) el selector de medio de pago va al contenido, no a la barra fija; (9) el botón dice "Confirmar reserva" pero paga; (11) "Agregar a mi calendario" y vibración en la pantalla final (skill animate-expo); (12) el tilde de verificado sale siempre, sin mirar `coaches.verified`.
+- Simulador de iPhone: Andre tiene que instalar Xcode desde el App Store; después Claude compila el cliente de desarrollo (perfil `development-simulator` de eas.json) y revisa con capturas.
+
 ## 2026-10-01 — Andre (Claude · perfil de ejemplo para mostrar la app)
 
 **Tocado:** `lib/perfilEjemplo.ts` (nuevo), `screens/ProfesionalScreen.tsx`, `screens/ProfileOwnScreen.tsx`
