@@ -5,6 +5,7 @@
 **Resumen:**
 - Andre sacó de la portada "Por videollamada", los "60 minutos" (hoy toda sesión es así) y "Próximo lugar" (la fecha libre aparece con un toque en Reservar). Se borraron también sus consultas (`coach_weekly_pattern`, `slots_libres`) y sus funciones y tests (`duracionUnica`, `etiquetaProximoLugar`, `primerLugarVigente`): si vuelven, están en el historial de git (commit 3cb24ffa).
 - **Medios de pago**: primero fueron a la barra de abajo, debajo del precio; a Andre se le veía feo y pasaron a la portada como chips, y Andre los prefirió abajo del precio pero mejor resueltos: quedaron en la barra fija como pastillas chicas (una por medio, fondo oliva suave). En el iPhone "USDT" caía solo a una segunda línea: el botón pasó a decir "Reservar" (el precio ya dice "la sesión") con ancho según el texto, y las pastillas se achicaron un poco. 933 tests y TypeScript OK.
+- **Nacionalidad como gentilicio** (Andre pidió "Argentino/a"; se usó el género, como en "Psicóloga"): "Argentina" o "Argentino" según `profiles.gender`, y "De Argentina" sin género o con un país sin gentilicio cargado (`lineaNacionalidad`, 26 países). En la base hay valores sucios de texto libre ("Argentinaa", "Argentino"): el segundo se respeta, el primero se ve como "De Argentinaa".
 
 **Pendiente para la próxima sesión:**
 - Verlo en el iPhone.
