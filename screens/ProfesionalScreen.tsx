@@ -29,8 +29,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useVideoPlayer, VideoView, type VideoThumbnail } from 'expo-video';
-import { Image as ExpoImage } from 'expo-image';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
@@ -147,7 +146,6 @@ export default function ProfesionalScreen() {
   // cuándo hay lugar. `proximoLugar` undefined = cargando, null = no hay.
   const [duracionMin, setDuracionMin] = useState<number | null>(null);
   const [proximoLugar, setProximoLugar] = useState<{ fecha: string; hora: string } | null | undefined>(undefined);
-  const [videoThumb, setVideoThumb] = useState<VideoThumbnail | null>(null);
   const [todasLasResenas, setTodasLasResenas] = useState(false);
   const [liveReviews, setLiveReviews] = useState<LiveReview[]>([]);
   const [liveAvgRating, setLiveAvgRating] = useState<number | null>(null);
@@ -349,18 +347,6 @@ export default function ProfesionalScreen() {
 
   const videoPlayer = useVideoPlayer(prof.video_url, p => { p.loop = false; });
 
-  // La miniatura del video: sin ella la tarjeta era una caja vacía con un
-  // play, que no invita a tocar. Si no se puede generar, queda el fondo liso.
-  useEffect(() => {
-    setVideoThumb(null);
-    if (!prof.video_url) return;
-    let vivo = true;
-    videoPlayer.generateThumbnailsAsync(1)
-      .then(t => { if (vivo && t[0]) setVideoThumb(t[0]); })
-      .catch(() => {});
-    return () => { vivo = false; };
-  }, [prof.video_url, videoPlayer]);
-
   const primerNombre = prof.name.split(' ')[0];
   const puedeReservar = !blocked && !noDisponible;
   const hayResenas = reviewsLoaded && displayRating !== null && displayReviewCount > 0;
@@ -528,7 +514,13 @@ export default function ProfesionalScreen() {
               accessibilityLabel={`Ver el video de presentación de ${primerNombre}`}
               onPress={() => { setIsPlayingVideo(true); videoPlayer.play(); }}>
               <View style={s.videoThumb}>
-                {videoThumb && <ExpoImage source={videoThumb} style={StyleSheet.absoluteFill} contentFit="cover" />}
+                {/* La foto del profesional hace de miniatura. 01/10/2026: la
+                    primera versión generaba un cuadro del video con
+                    `generateThumbnailsAsync` y lo pintaba con expo-image, y la
+                    app se cerraba al abrir el perfil en el iPhone. Las dos
+                    piezas son nativas y era el primer uso de expo-image en la
+                    app; la foto da el mismo efecto sin nada nativo nuevo. */}
+                {!!prof.avatar_url && <Image source={{ uri: prof.avatar_url }} style={StyleSheet.absoluteFill} />}
                 <View style={s.playBtn}>
                   <MaterialIcons name="play-arrow" size={22} color={ViveColors.onPrimaryInk} />
                 </View>
