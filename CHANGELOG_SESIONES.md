@@ -1,3 +1,17 @@
+## 2026-10-01 — Andre (Claude · web: auditoría y rediseño de la página del profesional)
+
+**Tocado:** `web/c/index.html`, `web/perfil-datos.js` (nuevo, generado), `scripts/sync-web-perfil.cjs` (nuevo), `__tests__/webPerfilDatos.test.ts` (nuevo), `lib/perfilProfesional.ts` (exporta `GENTILICIOS`), `package.json` (`sync:web-perfil`)
+
+**Resumen:**
+- Auditoría de la web con Impeccable y playwright-cli (capturas en celular y compu). Landing y /profesionales bien; la comisión del link coincide con T&C 8.3. El problema era `/c/<slug>`, adonde llegan los clientes que manda cada profesional.
+- 🔴 **El cartel "Modo prueba: la reserva y el cobro son REALES" le salía a todo cliente** desde el 21/09 (colgaba de `CHECKOUT_HABILITADO`). Ahora solo con `?probar=1` (commit b1d9dee0). Área de Codex (checkout): anotado en el registro de coordinación.
+- **Rediseño de `/c`** con la identidad de la landing (Plus Jakarta Sans, isotipo, colores). Portada con lo mismo que la app: profesión y nacionalidad según género, reseñas ("Nuevo en Vita" si no hay), "Perfil revisado por Vita", matrícula verificada o sesiones de acompañamiento con su explicación, garantía de primera sesión. Secciones Sobre mí, Cómo trabaja, Formación (solo verificadas) y Reseñas (sin nombres). Horarios: fila de días y horas del día elegido (antes ~200 botones en 3.000 px). Barra fija con precio, "Pagás con Mercado Pago" (único medio del checkout web) y el botón. Identificación y pago sin cambios.
+- **Los textos los genera la app**: `npm run sync:web-perfil` escribe `web/perfil-datos.js` desde `lib/`, y un test compara web y app en todos los países, géneros y combinaciones. 939 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- `! git push` para publicar, y probar una reserva real por `/c/coach-prueba` (identificación con código y pago).
+- ⚠️ Codex está rediseñando `ProfesionalScreen.tsx` en paralelo (sin commitear) y volvió a usar `expo-image`, una de las dos piezas que sacamos cuando la app se cerraba al abrir el perfil. Probar en el iPhone antes de commitearlo.
+
 ## 2026-10-01 — Andre (Claude · perfil del profesional: portada más corta)
 
 **Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts`, `__tests__/perfilProfesional.test.ts`

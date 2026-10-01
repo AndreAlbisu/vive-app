@@ -93,7 +93,7 @@ export function precioParaMostrar(
 
 // [masculino, femenino]. Los de la región y los más probables; el resto cae en
 // "De <país>", que se lee natural sin tener que mantener los 195.
-const GENTILICIOS: Record<string, [string, string]> = {
+export const GENTILICIOS: Record<string, [string, string]> = {
   'Argentina': ['Argentino', 'Argentina'],
   'Uruguay': ['Uruguayo', 'Uruguaya'],
   'Chile': ['Chileno', 'Chilena'],
