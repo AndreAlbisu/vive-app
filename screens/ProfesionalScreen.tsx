@@ -22,6 +22,7 @@ import {
   StatusBar,
   Modal,
   ActivityIndicator,
+  Alert,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,6 +37,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { opcionesGuardadas } from '@/lib/enfoque';
 import { logResourceEvent } from '@/lib/resourceEvents';
 import { estaSuspendido } from '@/lib/coachVisibility';
+import { esPerfilEjemplo, PERFIL_EJEMPLO, CREDENCIALES_EJEMPLO, RESENAS_EJEMPLO, AVISO_EJEMPLO } from '@/lib/perfilEjemplo';
 import { firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar, lineaNacionalidad } from '@/lib/perfilProfesional';
 import { enArgentina } from '@/lib/time';
 
@@ -128,6 +130,10 @@ export default function ProfesionalScreen() {
     tema?: string;
   }>();
   const profileId = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
+  // Perfil de ejemplo (`lib/perfilEjemplo.ts`): datos fijos, sin consultas y
+  // sin acciones que escriban en la base.
+  const esEjemplo = esPerfilEjemplo(profileId);
+  const avisarEjemplo = () => Alert.alert(AVISO_EJEMPLO.titulo, AVISO_EJEMPLO.texto);
   const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
   const saved = !!profileId && favoriteIds.has(profileId);
   const [fetchedData, setFetchedData] = useState<Partial<typeof DEFAULT_PROFESIONAL> | null>(null);
@@ -162,7 +168,7 @@ export default function ProfesionalScreen() {
   // catálogo ya filtra a los que bloqueé. Lo que resta es que el perfil sepa
   // mostrar "Desbloquear" si se llegó por un link viejo o un favorito.
   useEffect(() => {
-    if (!user || !profileId) return;
+    if (!user || !profileId || esPerfilEjemplo(profileId)) return;
     let mounted = true;
     const sync = () => { if (mounted) setBlocked(isBlocked(profileId)); };
     void loadBlockedIds(user.id).then(sync);
@@ -182,6 +188,13 @@ export default function ProfesionalScreen() {
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
     if (!pid) return;
+    if (esPerfilEjemplo(pid)) {
+      const { profesion, ...datos } = PERFIL_EJEMPLO;
+      setProfileState({ id: pid, status: 'available' });
+      setCredenciales(CREDENCIALES_EJEMPLO);
+      setFetchedData({ ...datos, specialty: etiquetaProfesionalPublica({ profesion }, datos.genero) });
+      return;
+    }
     supabase
       .from('coaches')
       .select('id, slug, verified, availability_status, specialty, profesion, bio, estilo, enfoques, guia, focos, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url, gender)')
@@ -257,7 +270,7 @@ export default function ProfesionalScreen() {
   // Sin sesión iniciada no hay historia: la tiene. Si la consulta falla, no se
   // muestra: ante la duda, no prometer.
   useEffect(() => {
-    if (!user) { setGarantiaDisponible(true); return; }
+    if (!user || esPerfilEjemplo(profileId)) { setGarantiaDisponible(true); return; }
     if (!coachRowId) return;
     let vivo = true;
     void Promise.all([
@@ -272,11 +285,18 @@ export default function ProfesionalScreen() {
       setGarantiaDisponible((claims.data ?? []).length === 0 && (sesiones.data ?? []).length === 0);
     });
     return () => { vivo = false; };
-  }, [user, coachRowId]);
+  }, [user, coachRowId, profileId]);
 
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
     if (!pid) return;
+    if (esPerfilEjemplo(pid)) {
+      const avg = RESENAS_EJEMPLO.reduce((a, r) => a + r.rating, 0) / RESENAS_EJEMPLO.length;
+      setLiveAvgRating(Math.round(avg * 10) / 10);
+      setLiveReviews(RESENAS_EJEMPLO);
+      setReviewsLoaded(true);
+      return;
+    }
 
     async function loadReviews() {
       const { data: reviewRows, error: reviewsError } = await supabase
@@ -318,7 +338,7 @@ export default function ProfesionalScreen() {
 
   useEffect(() => {
     const pid = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId;
-    if (!pid) return;
+    if (!pid || esPerfilEjemplo(pid)) return;
 
     supabase
       .from('resources')
@@ -415,6 +435,7 @@ export default function ProfesionalScreen() {
         <TouchableOpacity
           style={s.favoriteBtn}
           onPress={() => {
+            if (esEjemplo) { avisarEjemplo(); return; }
             if (!isLoggedIn) { requestAuth('guardar_profesional'); return; }
             if (profileId) toggleFavorite(profileId);
           }}
@@ -424,6 +445,13 @@ export default function ProfesionalScreen() {
           <MaterialIcons name={saved ? 'favorite' : 'favorite-border'} size={24} color={saved ? ViveColors.primaryInk : ViveColors.text} />
         </TouchableOpacity>
       </View>
+
+      {esEjemplo && (
+        <TouchableOpacity style={s.ejemploBanner} onPress={avisarEjemplo} activeOpacity={0.8} accessibilityRole="button">
+          <MaterialIcons name="info-outline" size={15} color={ViveColors.text} />
+          <Text style={s.ejemploBannerTxt}>Perfil de ejemplo · los datos son ilustrativos</Text>
+        </TouchableOpacity>
+      )}
 
       {/* ── Scroll ───────────────────────────────────────────────────────── */}
       <ScrollView
@@ -791,6 +819,7 @@ export default function ProfesionalScreen() {
           <TouchableOpacity
             style={s.reportLink}
             onPress={() => {
+              if (esEjemplo) { avisarEjemplo(); return; }
               if (!isLoggedIn) { requestAuth('reportar_profesional'); return; }
               setActionsOpen(true);
             }}
@@ -820,6 +849,7 @@ export default function ProfesionalScreen() {
               activeOpacity={0.85}
               disabled={!puedeReservar}
               onPress={() => {
+                if (esEjemplo) { avisarEjemplo(); return; }
                 // El motivo de más valor de todos: es la rama que monetiza.
                 if (!isLoggedIn) { requestAuth('reservar_sesion'); return; }
                 const resourceId = Array.isArray(params.resourceId) ? params.resourceId[0] : params.resourceId;
@@ -892,6 +922,13 @@ export default function ProfesionalScreen() {
 const BORDE = 'rgba(86,94,50,0.14)';
 
 const s = StyleSheet.create({
+  ejemploBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    alignSelf: 'center', marginBottom: 6,
+    paddingVertical: 5, paddingHorizontal: 12, borderRadius: 999,
+    backgroundColor: 'rgba(86,94,50,0.09)',
+  },
+  ejemploBannerTxt: { fontFamily: ViveFonts.medium, fontSize: 12.5, color: ViveColors.text },
   page: { flex: 1 },
   header: {
     height: 56,

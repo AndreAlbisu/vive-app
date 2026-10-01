@@ -1,3 +1,15 @@
+## 2026-10-01 — Andre (Claude · perfil de ejemplo para mostrar la app)
+
+**Tocado:** `lib/perfilEjemplo.ts` (nuevo), `screens/ProfesionalScreen.tsx`, `screens/ProfileOwnScreen.tsx`
+
+**Resumen:**
+- Andre pidió un perfil de prueba completo (descripción, foto, reseñas) para mostrar la app en pitch, a amigos, profesionales e inversores. Se armó **dentro de la app y no en la base**: un perfil ficticio en producción aparecería en el catálogo, en /c/ y en recomendaciones, y una reseña exige inventar una reserva pagada con asistencia en las tablas de pagos.
+- "Lucía Benítez", psicóloga con matrícula (MN 00000 a propósito), bio, temas, cómo trabaja, formación, 3 reseñas firmadas con nombre e inicial, garantía, $18.000 / USD 25. Se abre con `/profesional?profileId=ejemplo`: la pantalla carga datos fijos, no consulta la base (verificado con un render: 0 consultas) y muestra "Perfil de ejemplo · los datos son ilustrativos". Reservar, guardar y reportar avisan que es un ejemplo.
+- Acceso: fila "Perfil de ejemplo" en el menú de tu perfil, solo para admins. Sobre el rediseño de Codex (515d5a46), sin tocar su diseño. 939 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- La foto: Unsplash bloquea el acceso automatizado. Andre pasa un link de foto con licencia libre (o de alguien que dé permiso) y va en `PERFIL_EJEMPLO.avatar_url`. Sin video por ahora (`video_url`).
+
 ## 2026-10-01 — Codex · portada circular elegida por Andre
 
 **Tocado:** `screens/ProfesionalScreen.tsx`
