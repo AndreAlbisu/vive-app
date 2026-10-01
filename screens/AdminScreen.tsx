@@ -30,7 +30,7 @@ import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
 import {
-  listCoachApplications, setCoachVerified, rejectCoachApplication, recordCoachInterview,
+  listCoachApplications, setCoachVerified, rejectCoachApplication, recordCoachInterview, setCoachName,
   listPendingReports, resolveReport,
   listClaims, checkGuarantee, approveGuarantee, rejectGuarantee,
   listUsdtRefunds, markUsdtRefunded, type UsdtRefund,
@@ -83,6 +83,7 @@ const ACTION_LABELS: Record<string, string> = {
   set_coach_verified:       'cambió la publicación de un coach',
   record_coach_interview:   'registró una entrevista profesional',
   reject_coach_application: 'rechazó una postulación',
+  set_coach_name:           'corrigió el nombre de un profesional',
   resolve_report:           'resolvió un reporte',
   mark_usdt_refunded:       'registró un reembolso en USDT',
   mark_coach_paid:          'registró un pago a un coach',
@@ -456,6 +457,8 @@ export default function AdminScreen() {
                 )}
               </>
             )}
+
+            {!loading && tab === 'coaches' && <NombreProfesionalPanel />}
 
             {/* ── Reportes ────────────────────────────────────────────────── */}
             {!loading && tab === 'credenciales' && (
@@ -1116,6 +1119,108 @@ const MOTIVO_PROBLEMA: Record<string, string> = {
   cobro: 'Problema con el cobro',
   otro: 'Otra cosa',
 };
+
+// Un profesional aprobado no cambia su nombre desde la app (01/10/2026): es el
+// nombre que se revisó. Las correcciones las hace un admin desde acá.
+function NombreProfesionalPanel() {
+  const [abierto, setAbierto] = useState(false);
+  const [coaches, setCoaches] = useState<{ id: string; name: string }[]>([]);
+  const [coachId, setCoachId] = useState<string | null>(null);
+  const [nombre, setNombre] = useState('');
+  const [motivo, setMotivo] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function abrir() {
+    setAbierto(true);
+    const { data } = await supabase
+      .from('coaches')
+      .select('id, profiles!inner(name)')
+      .eq('application_status', 'aprobada')
+      .order('created_at', { ascending: true });
+    setCoaches((data ?? []).map((c: any) => {
+      const p = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
+      return { id: c.id as string, name: (p?.name as string) ?? 'Sin nombre' };
+    }));
+  }
+
+  function reset() {
+    setAbierto(false); setCoachId(null); setNombre(''); setMotivo('');
+  }
+
+  function guardar() {
+    const actual = coaches.find(c => c.id === coachId);
+    if (!actual) { Alert.alert('Falta el profesional', 'Elegí a quién le corregís el nombre.'); return; }
+    if (nombre.trim().length < 2) { Alert.alert('Falta el nombre', 'Escribí el nombre nuevo.'); return; }
+    if (!motivo.trim()) { Alert.alert('Falta el motivo', 'Queda en la auditoría.'); return; }
+    Alert.alert(
+      `¿Cambiar "${actual.name}" por "${nombre.trim()}"?`,
+      'Se ve en su perfil, en sus reservas y en sus reseñas. El link de su página no cambia.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Cambiar',
+          onPress: async () => {
+            setBusy(true);
+            const res = await setCoachName(actual.id, nombre.trim(), motivo.trim());
+            setBusy(false);
+            if (!res.ok) { Alert.alert('No se pudo', res.error ?? 'Probá de nuevo.'); return; }
+            Alert.alert('Listo', 'Nombre corregido.');
+            reset();
+          },
+        },
+      ],
+    );
+  }
+
+  if (!abierto) {
+    return (
+      <TouchableOpacity style={[s.btn, s.btnGhost, { alignSelf: 'flex-start', marginTop: 18 }]}
+        onPress={() => void abrir()} activeOpacity={0.85}>
+        <Text style={s.btnGhostText}>Corregir el nombre de un profesional</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View style={[s.card, { marginTop: 18 }]}>
+      <Text style={s.cardTitle}>Corregir nombre</Text>
+      <Text style={s.hint}>
+        Los profesionales aprobados no pueden cambiar su nombre desde la app. Usalo para
+        errores de tipeo o cambios de apellido, comparando con su documento.
+      </Text>
+
+      <Text style={[s.cardMeta, { marginTop: 12 }]}>Profesional</Text>
+      <View style={s.actions}>
+        {coaches.map(c => (
+          <TouchableOpacity key={c.id}
+            style={[s.btn, coachId === c.id ? s.btnPrimary : s.btnGhost]}
+            onPress={() => { setCoachId(c.id); setNombre(c.name); }} activeOpacity={0.8}>
+            <Text style={coachId === c.id ? s.btnPrimaryText : s.btnGhostText}>{c.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Text style={[s.cardMeta, { marginTop: 12 }]}>Nombre nuevo</Text>
+      <TextInput style={s.input} value={nombre} onChangeText={setNombre}
+        autoCapitalize="words" placeholder="Nombre y apellido"
+        placeholderTextColor="rgba(135,131,92,0.5)" />
+
+      <Text style={[s.cardMeta, { marginTop: 12 }]}>Motivo (queda en la auditoría)</Text>
+      <TextInput style={s.input} value={motivo} onChangeText={setMotivo}
+        placeholder="Ej.: pidió corregir el apellido por mail"
+        placeholderTextColor="rgba(135,131,92,0.5)" />
+
+      <View style={[s.actions, { marginTop: 14 }]}>
+        <TouchableOpacity style={[s.btn, s.btnPrimary]} onPress={guardar} disabled={busy} activeOpacity={0.85}>
+          {busy ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.btnPrimaryText}>Guardar</Text>}
+        </TouchableOpacity>
+        <TouchableOpacity style={[s.btn, s.btnGhost]} onPress={reset} disabled={busy} activeOpacity={0.85}>
+          <Text style={s.btnGhostText}>Cancelar</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
 function SanctionsPanel() {
   const [sanciones, setSanciones] = useState<AdminSancion[]>([]);

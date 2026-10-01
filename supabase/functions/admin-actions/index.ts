@@ -27,6 +27,7 @@
 //   { action: 'review_credential', credential_id, verified: boolean, notes? }
 //   { action: 'list_coach_applications', status? }   // lee el mail del coach (A4)
 //   { action: 'record_coach_interview', coach_id, notes }
+//   { action: 'set_coach_name', coach_id, name, reason }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -187,6 +188,45 @@ serve(async (req) => {
   }
 
   switch (body.action) {
+    // ── Corregir el nombre de un profesional ─────────────────────────────────
+    // Desde el 01/10/2026 un profesional aprobado no cambia su nombre desde la
+    // app (`trg_limitar_cambio_de_nombre`): es el nombre que se revisó. Las
+    // correcciones legítimas (un tipeo, un apellido) pasan por acá, con motivo
+    // y auditoría. El service role no pasa por el trigger. El slug del link NO
+    // se toca: los links ya compartidos tienen que seguir andando.
+    case 'set_coach_name': {
+      if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
+      const name = typeof body.name === 'string' ? body.name.trim().replace(/\s+/g, ' ') : ''
+      if (name.length < 2 || name.length > 80) return json({ error: 'el nombre tiene que tener entre 2 y 80 caracteres' }, 400)
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+      if (!reason) return json({ error: 'hace falta un motivo para cambiar el nombre' }, 400)
+
+      const { data: coach, error: coachErr } = await admin
+        .from('coaches')
+        .select('id, profile_id, profiles!inner(name)')
+        .eq('id', body.coach_id)
+        .maybeSingle()
+      if (coachErr) return json({ error: coachErr.message }, 500)
+      if (!coach) return json({ error: 'no existe ese coach' }, 404)
+      const anterior = (Array.isArray(coach.profiles) ? coach.profiles[0] : coach.profiles as any)?.name ?? null
+
+      const { error } = await admin
+        .from('profiles')
+        .update({ name })
+        .eq('id', coach.profile_id)
+      if (error) return json({ error: error.message }, 500)
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'set_coach_name',
+        targetType: 'coach',
+        targetId: coach.id,
+        details: { anterior, nuevo: name, reason },
+      })
+
+      return json({ result: 'ok', name, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
     case 'record_coach_interview': {
       if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
       const notes = typeof body.notes === 'string' ? body.notes.trim() : ''

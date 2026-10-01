@@ -1,3 +1,17 @@
+## 2026-10-01 — Andre (Claude · límites al cambio de nombre)
+
+**Tocado:** `supabase/migrations/20261001020000_profile_name_change_limits.sql` (nuevo), `lib/cambioDeNombre.ts` (nuevo), `__tests__/cambioDeNombre.test.ts` (nuevo), `screens/EditProfileScreen.tsx`, `screens/AdminScreen.tsx`, `lib/admin.ts`, `supabase/functions/admin-actions/index.ts`, `SCHEMA.md`
+
+**Resumen:**
+- Andre: "uno no debería estar cambiándose el nombre todo el tiempo". Hasta hoy usuarios y profesionales cambiaban el nombre sin límite. Decidido: **profesional aprobado no lo cambia** (es el nombre revisado, firma reseñas y acompaña al link `/c/<slug>`, que no sigue al nombre); **usuario, una vez cada 30 días**. Completar el placeholder "Usuario" no cuenta.
+- La regla vive en la base (`trg_limitar_cambio_de_nombre`), no solo en la pantalla. **Aplicada en producción y verificada** con 6 pruebas como usuario real y rollback, 0 filas tocadas. La primera versión fallaba para todos (*permission denied for table coaches*): lo encontró la verificación, se corrigió con `es_profesional_aprobado()`. Detalle en SCHEMA.md (`profiles.name_changed_at`).
+- "Editar perfil": el campo queda fijo con una nota (profesional: "escribinos a vitaappar@gmail.com"; usuario: desde qué fecha puede de nuevo) y pide confirmación antes de cambiarlo. Admin: botón "Corregir el nombre de un profesional" en la pestaña de coaches, con motivo obligatorio; `admin-actions` **v40 deployada** (el código en vivo era idéntico al repo antes del deploy) y responde bien.
+- 953 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- Probar en el iPhone: editar el nombre como usuario (aviso y confirmación), intentarlo de nuevo (campo fijo con fecha), y como profesional (campo fijo).
+- Decisión abierta: verificación de identidad de profesionales (DNI + selfie) antes de publicarlos. Se habló, sin implementar.
+
 ## 2026-10-01 — Andre (Claude · perfil del profesional: revisión de diseño y UX, los 3 P1)
 
 **Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts`, `__tests__/perfilProfesional.test.ts`

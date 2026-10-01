@@ -117,6 +117,13 @@ export function setCoachVerified(coachId: string, verified: boolean, notes?: str
   return callAdmin({ action: 'set_coach_verified', coach_id: coachId, verified, notes });
 }
 
+/** Corrige el nombre de un profesional aprobado, que desde la app no puede
+ *  cambiarlo (`trg_limitar_cambio_de_nombre`). Motivo obligatorio: queda en la
+ *  auditoría. El link `/c/<slug>` no cambia. */
+export function setCoachName(coachId: string, name: string, reason: string) {
+  return callAdmin({ action: 'set_coach_name', coach_id: coachId, name, reason });
+}
+
 export function recordCoachInterview(coachId: string, notes: string) {
   return callAdmin({ action: 'record_coach_interview', coach_id: coachId, notes });
 }
