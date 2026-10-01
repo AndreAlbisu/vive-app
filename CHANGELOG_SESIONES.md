@@ -1,3 +1,18 @@
+## 2026-10-01 — Andre (Claude · web: auditoría de diseño y UX completa, 20 de 21 puntos)
+
+**Tocado:** `web/index.html`, `web/profesionales.html`, `web/c/index.html`, `web/reserva/index.html`, `web/sala/index.html`, `web/tiendas.js`, `scripts/sync-legal.mjs` + `web/legal/*` (regenerados), `api/c.js` (nuevo), `vercel.json`, `web/favicon.svg`, `web/img/og-vita.jpg` y `web/img/og-profesionales.jpg` (nuevos)
+
+**Resumen:**
+- Auditoría de las 10 páginas en producción (playwright con capturas en celular y compu, chequeos de contraste, botones al tocar, desbordes; checklists de Impeccable y mobile-native). 21 puntos; Andre dio "hagamos los 21".
+- **Vista previa en WhatsApp:** `/c/<slug>` ahora pasa por una función de Vercel (`api/c.js`) que devuelve el mismo HTML con nombre, profesión y foto del profesional en las etiquetas `og:`. Si la base no contesta, devuelve la página con la vista previa genérica. Portada y /profesionales tienen imagen propia (1200x630, JPG < 100 KB). Probado en local contra la base real, **no en Vercel**.
+- **/c:** el botón de abajo ya no está gris y muerto: lleva a los horarios o al formulario, y paga solo cuando se puede. Etiquetas visibles en los campos, casillas de 22 px, un solo color para "elegido", sin "hs", y desde afuera de Argentina la equivalencia ("23:00 para vos", probado con zona de Madrid). En la compu, dos columnas (perfil y reserva al costado).
+- **Portada:** el teléfono del principio ya no se rompe en el celular; tarjeta "¿sos profesional?" alineada; "Los mensajes de Sofía son automáticos…". /reserva, /sala y las legales con la identidad de Vita (letra, isotipo, colores; solo modo claro, como /c) y un mail de contacto cuando algo falla. Legales: la URL larga ya no corre la página, "Última actualización" y "Vigencia" en dos líneas (arreglado al dibujar, sin tocar el .md: LEGAL_VERSION sigue en 858b0f80ee26). Favicon en todas, sin destello gris al tocar, hover solo con mouse, movimiento reducido sin apagar los fundidos. Sin cambios en la base; 939 tests y tsc OK.
+
+**Pendiente para la próxima sesión:**
+- Punto 21 sin hacer: `hola@vitaapp.com.ar` no existe (el dominio no tiene registros MX). Cuando Andre cree la casilla, cambiar las menciones de `vitaappar@gmail.com`.
+- Después del push: abrir `/c/coach-prueba` en producción (que cargue, no 404) y pegar el link en WhatsApp o en https://www.opengraph.xyz para ver la vista previa con la foto. Si la función falla en Vercel, volver el rewrite de `vercel.json` a `"destination": "/c"`.
+- Ver en el iPhone: /c con el formulario abierto (casillas, teclado, barra de abajo) y el teléfono de la portada.
+
 ## 2026-10-01 — Andre (Claude · flujo de reserva: errores de la revisión de UX)
 
 **Tocado:** `screens/BookingScreen_Calendar.tsx`, `screens/BookingScreen_Time.tsx`, `screens/BookingScreen_Confirm.tsx`, `screens/BookingScreen_Success.tsx`, `components/CoachAvatar.tsx` (nuevo)

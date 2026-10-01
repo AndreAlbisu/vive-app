@@ -2,7 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F7EFE4">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <title>Reservá tu sesión — Vita</title>
 
 <!-- 🔴 La vista previa de WhatsApp es parte del producto, no un detalle de SEO.
@@ -11,15 +13,19 @@
      ⚠️ Estas etiquetas son ESTÁTICAS y por lo tanto iguales para todos los
      profesionales: WhatsApp lee el HTML del servidor y no ejecuta JavaScript,
      así que no puede ver el nombre ni la foto que pinta esta página. Para
-     personalizarlas hace falta renderizar del lado del servidor (una función en
-     `/api` que devuelva el HTML con las meta ya resueltas). Queda pendiente;
-     mientras tanto, marca genérica es mucho mejor que nada. -->
+     personalizarlas, `api/c.js` (01/10/2026) devuelve este mismo HTML con
+     título, descripción e imagen del profesional ya resueltos. Estas de acá
+     son las de reserva: las usa si la base no contesta o el slug no existe. -->
 <meta name="description" content="Reservá una sesión online con un profesional del bienestar en Vita.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Vita">
 <meta property="og:title" content="Reservá tu sesión en Vita">
 <meta property="og:description" content="Sesiones online con profesionales del bienestar. Elegís horario y reservás.">
-<meta name="twitter:card" content="summary">
+<meta property="og:url" content="https://www.vitaapp.com.ar/c">
+<meta property="og:image" content="https://www.vitaapp.com.ar/img/og-vita.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -51,6 +57,9 @@
     padding-bottom: 140px;  /* lugar para la barra fija de abajo */
   }
   main { max-width: 600px; margin: 0 auto; padding: 0 20px; }
+  html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+  a, button, summary, label { touch-action: manipulation; }
+  button { -webkit-user-select: none; user-select: none; }
   :focus-visible { outline: 3px solid var(--terra-ink); outline-offset: 2px; border-radius: 6px; }
   [hidden] { display: none !important; }
 
@@ -70,14 +79,15 @@
   .profesion { margin: 0; font-weight: 600; color: var(--terra-ink); }
   .meta { margin: 2px 0 0; font-size: .9rem; color: var(--soft); }
   .resenas-linea { margin: 6px 0 0; font-size: .9rem; font-weight: 600; display: flex; align-items: center; gap: 5px; }
-  .estrella { color: #C99A3F; }
+  /* Dorado oscuro: el anterior (#C99A3F) daba 2.4:1 sobre crema. */
+  .estrella { color: #A87A1E; }
 
   .sellos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
   .sello { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; font-weight: 700; padding: .35rem .7rem; border-radius: 10px; background: rgba(86,94,50,.08); color: var(--olive); }
   .sello.pro { background: var(--verde-bg); color: var(--verde); }
   .sello svg { width: 14px; height: 14px; flex-shrink: 0; }
   details.encuadre { margin-top: 10px; font-size: .88rem; color: var(--soft); }
-  details.encuadre summary { cursor: pointer; font-weight: 600; color: var(--terra-ink); list-style: none; }
+  details.encuadre summary { display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 600; color: var(--terra-ink); list-style: none; }
   details.encuadre summary::-webkit-details-marker { display: none; }
   details.encuadre p { margin: 6px 0 0; }
 
@@ -104,7 +114,7 @@
   .cred span { display: block; font-size: .88rem; color: var(--soft); }
   .verif { font-size: .78rem; font-weight: 700; color: var(--verde); white-space: nowrap; }
   .resena { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
-  .resena .estrellas { color: #C99A3F; font-size: .9rem; letter-spacing: 1px; }
+  .resena .estrellas { color: #A87A1E; font-size: .9rem; letter-spacing: 1px; }
   .resena p { margin: 4px 0 0; }
 
   /* ── Horarios: días arriba, horas del día abajo ──
@@ -119,7 +129,9 @@
   .dia[aria-selected="true"] small { color: rgba(247,239,228,.85); }
   .horas { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; margin-top: 6px; }
   .hora { padding: .6rem 0; border-radius: 12px; border: 1px solid rgba(86,94,50,.25); background: var(--paper); color: inherit; font: inherit; font-weight: 600; cursor: pointer; min-height: 44px; }
-  .hora[aria-pressed="true"] { background: var(--terra-ink); border-color: var(--terra-ink); color: #FFF6EC; }
+  /* Elegido = oliva, igual que el día. Antes la hora era terracota y el día
+     verde: dos colores para decir lo mismo. */
+  .hora[aria-pressed="true"] { background: var(--olive); border-color: var(--olive); color: var(--cream); }
   .zona { font-size: .82rem; color: var(--soft); margin: 10px 0 0; }
   .agenda-vacia { margin: 0; color: var(--soft); }
 
@@ -127,16 +139,21 @@
   .paso { padding: 26px 0; border-bottom: 1px solid var(--line); }
   .paso h2 { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 4px; }
   .paso p.ayuda { font-size: .9rem; color: var(--soft); margin: 0 0 12px; }
+  .etiqueta { display: block; font-size: .85rem; font-weight: 700; margin: 0 0 4px; }
   .campo { width: 100%; padding: .75rem .85rem; border-radius: 12px; font-size: 1rem; font-family: inherit; color: inherit; background: var(--paper); border: 1px solid rgba(86,94,50,.28); margin-bottom: 10px; }
   .campo:focus { outline: 2px solid var(--terra-ink); outline-offset: 1px; }
   .codigo { letter-spacing: .35em; text-align: center; font-size: 1.25rem; }
-  .legales { display: flex; gap: 9px; align-items: flex-start; font-size: .85rem; line-height: 1.45; margin-bottom: 12px; }
-  .legales input { margin-top: .2rem; flex-shrink: 0; }
+  /* Toda la fila se puede tocar (44 px) y la casilla es de 22 px: la del
+     navegador era de 13 px, difícil de acertar con el dedo. */
+  .legales { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: .88rem; line-height: 1.45; margin-bottom: 4px; cursor: pointer; }
+  .legales input { width: 22px; height: 22px; margin: 0; flex-shrink: 0; accent-color: var(--olive); cursor: pointer; }
   .legales a, .cta-nota a { color: var(--terra-ink); }
   .error { font-size: .88rem; color: var(--error); margin: 0 0 10px; }
   .ok { font-size: .95rem; margin: 0; }
   .cta { display: block; width: 100%; padding: .9rem 1rem; border: 0; border-radius: 999px; background: var(--olive); color: var(--cream); font-size: 1rem; font-weight: 700; font-family: inherit; text-align: center; cursor: pointer; }
-  .cta:hover:not([disabled]) { background: var(--forest); }
+  @media (hover: hover) and (pointer: fine) { .cta:hover:not([disabled]) { background: var(--forest); } }
+  .cta:active:not([disabled]) { transform: scale(.98); }
+  .cta { transition: transform .12s ease, background .2s ease; }
   .cta[disabled] { opacity: .45; cursor: default; }
   .cta-nota { margin: 8px 0 0; font-size: .82rem; text-align: center; color: var(--soft); }
 
@@ -154,6 +171,30 @@
   .estado h1 { font-size: 1.3rem; margin-bottom: .5rem; color: var(--olive); }
   .pie { margin: 34px 0 0; font-size: .85rem; text-align: center; color: var(--soft); }
   .pie a { color: var(--terra-ink); }
+
+  /* ── Compu: el perfil a la izquierda, la reserva a la derecha ──
+     En una sola columna de 600 px, en la compu el horario quedaba abajo de
+     todo y los costados vacíos. La columna de la reserva acompaña el scroll
+     cuando entra en la pantalla. */
+  @media (min-width: 980px) {
+    .top, main { max-width: 1080px; }
+    .barra-in, .barra .cta-nota { max-width: 1040px; }
+    #perfil:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 48px; align-items: start; }
+    .lado { background: var(--paper); border: 1px solid var(--line); border-radius: 24px; padding: 4px 24px; }
+    .lado .seccion, .lado .paso { border-bottom: 0; }
+    .lado .paso { border-top: 1px solid var(--line); }
+    .principal > .seccion:last-child { border-bottom: 0; }
+  }
+  @media (min-width: 980px) and (min-height: 820px) {
+    /* Con tope de alto: sin él, con el formulario abierto, el final de la
+       columna quedaba debajo de la barra fija sin forma de llegar. */
+    .lado { position: sticky; top: 24px; max-height: calc(100vh - 150px); overflow-y: auto; overscroll-behavior: contain; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cta { transition: background .2s ease; }
+    .cta:active:not([disabled]) { transform: none; }
+  }
 </style>
 <!-- El token de Turnstile para el pedido de código. Ruta ABSOLUTA: esta
      página se sirve en /c/<slug>, y una relativa buscaría /c/captcha.js. -->
@@ -180,6 +221,7 @@
   </div>
 
   <article id="perfil" hidden>
+   <div class="principal">
     <!-- ── Portada: quién es y por qué confiar ──────────────────────────────
          Mismo orden que el perfil de la app (ProfesionalScreen): identidad,
          reseñas, lo que Vita revisó y la garantía. Antes eran nombre, $1 y
@@ -244,6 +286,11 @@
       <div id="resenasLista"></div>
     </section>
 
+   </div>
+
+   <!-- La reserva: en el celular sigue debajo del perfil; en la compu es la
+        columna derecha. -->
+   <div class="lado">
     <section class="seccion" id="agenda" hidden>
       <h2>Elegí un horario</h2>
       <div class="dias" id="dias" role="tablist" aria-label="Días con horarios"></div>
@@ -273,10 +320,14 @@
              getElementById devuelva el <h1>. Con id="nombre" acá, pedirCodigo
              leía `$('nombre').value` sobre el <h1> (value = undefined) y tiraba
              una excepción no atrapada: el botón "no hacía nada". -->
+        <!-- Etiquetas visibles: el texto gris de ejemplo se borra al escribir y
+             un lector de pantalla no lo lee como nombre del campo. -->
+        <label class="etiqueta" for="tuNombre">Tu nombre</label>
         <input class="campo" id="tuNombre" type="text" autocomplete="name"
-               placeholder="Tu nombre" spellcheck="false">
+               placeholder="Como querés que te llamen" spellcheck="false" enterkeyhint="next">
+        <label class="etiqueta" for="mail">Tu mail</label>
         <input class="campo" id="mail" type="email" inputmode="email" autocomplete="email"
-               placeholder="tu@mail.com" spellcheck="false">
+               placeholder="tu@mail.com" spellcheck="false" autocapitalize="none" enterkeyhint="done">
         <!-- Es venta a distancia: los Términos y la privacidad tienen que estar
              accesibles ANTES de pagar, no después. Las dos páginas ya viven en
              este dominio. -->
@@ -300,8 +351,9 @@
 
       <div id="pasoCodigo" hidden>
         <p class="ayuda" id="mandadoA"></p>
+        <label class="etiqueta" for="codigo">Código</label>
         <input class="campo codigo" id="codigo" inputmode="numeric" autocomplete="one-time-code"
-               maxlength="8" placeholder="······">
+               maxlength="8" placeholder="······" enterkeyhint="done">
         <p class="error" id="errorCodigo" hidden></p>
         <button class="cta" id="btnConfirmar">Confirmar</button>
         <p class="cta-nota"><a href="#" id="otroMail">Usar otro mail</a></p>
@@ -311,6 +363,7 @@
     </section>
 
     <p class="error" id="errorPago" hidden></p>
+   </div>
   </article>
 
   <p class="pie">
@@ -330,7 +383,7 @@
            (`mp-create-payment`). PayPal y USDT se ofrecen desde la app. -->
       <small>Pagás con Mercado Pago</small>
     </div>
-    <button class="cta" id="cta" disabled>Elegí un horario</button>
+    <button class="cta" id="cta">Elegí un horario</button>
   </div>
   <p class="cta-nota" id="ctaNota"></p>
 </div>
@@ -618,7 +671,7 @@ function elegir(btn, fecha, hora) {
     // La primera vez, se lleva a la persona al paso siguiente: con la barra
     // fija el formulario queda fuera de la vista y el botón dice "Confirmá tu
     // mail" sin que se vea dónde.
-    if (nueva && !sesion) $('identificacion').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (nueva && !sesion) llevarA('identificacion');
   }
   actualizarCta();
 }
@@ -1001,33 +1054,74 @@ function volverAlMail() {
   $('mail').focus();
 }
 
-// El botón de abajo dice en qué paso está la persona, en vez de estar siempre
-// apagado sin explicar por qué.
+// Lleva a una parte de la página sin taparla con la barra fija, y respeta el
+// movimiento reducido.
+function llevarA(id) {
+  const quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $(id).scrollIntoView({ behavior: quieto ? 'auto' : 'smooth', block: 'start' });
+}
+
+// Fuera de Argentina, la equivalencia en la hora de quien mira, con la misma
+// forma que la app (`lib/time.ts`): "07:00 del martes para vos". Los horarios
+// están guardados en hora de Argentina, que es UTC−3 todo el año.
+function enArgentina() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    return /^America\/(Argentina\/|Buenos_Aires|Cordoba|Catamarca|Jujuy|Mendoza|Rosario)/.test(tz);
+  } catch (e) { return true; }
+}
+function horaParaVos(fecha, hora) {
+  if (enArgentina()) return null;
+  try {
+    const [y, m, d] = fecha.split('-').map(Number);
+    const [h, mi] = hora.split(':').map(Number);
+    const instante = new Date(Date.UTC(y, m - 1, d, h + 3, mi || 0));
+    const hhmm = instante.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const mismoDia = instante.getFullYear() === y && instante.getMonth() === m - 1 && instante.getDate() === d;
+    if (mismoDia) return `${hhmm} para vos`;
+    return `${hhmm} del ${instante.toLocaleDateString('es-AR', { weekday: 'long' })} para vos`;
+  } catch (e) { return null; }
+}
+
+// 🔴 El botón de abajo SIEMPRE hace algo (01/10/2026). Antes estaba gris y
+// apagado diciendo "Elegí un horario" y después "Confirmá tu mail": parecía
+// roto, y abajo de todo había otro botón, el que de verdad servía. Ahora cada
+// texto lleva al paso que nombra; solo paga cuando ya se puede pagar.
+let accionCta = 'agenda';
 function actualizarCta() {
   const cta = $('cta');
-  cta.disabled = true;
+  cta.disabled = false;
 
   if (!elegido) {
+    accionCta = 'agenda';
     cta.textContent = 'Elegí un horario';
     $('ctaNota').textContent = '';
     return;
   }
 
-  const cuando = `${etiquetaDia(elegido.fecha)} a las ${elegido.hora} hs`;
+  const paraVos = horaParaVos(elegido.fecha, elegido.hora);
+  const cuando = `${etiquetaDia(elegido.fecha)} a las ${elegido.hora}` +
+    (paraVos ? ` (hora de Argentina) · ${paraVos}` : '');
 
   // ⚠️ Sin el checkout, la página NO promete una fecha. Decía "se habilita en
   // los próximos días" y eso es un plazo que no controlamos, dicho en una
   // página pública a alguien que vino a reservar. Se dice lo que sí es cierto:
   // que todavía no se reserva desde acá, y que el horario existe.
   if (!CHECKOUT_HABILITADO) {
+    cta.disabled = true;
     cta.textContent = 'Todavía no se reserva desde acá';
     $('ctaNota').textContent = `${cuando} · coordinalo directamente con ${nombreCoach}.`;
     return;
   }
 
-  if (!sesion) { cta.textContent = 'Confirmá tu mail'; $('ctaNota').textContent = cuando; return; }
+  if (!sesion) {
+    accionCta = 'identificacion';
+    cta.textContent = 'Confirmá tu mail';
+    $('ctaNota').textContent = cuando;
+    return;
+  }
+  accionCta = 'pagar';
   cta.textContent = 'Ir a pagar';
-  cta.disabled = false;
   $('ctaNota').textContent = `${cuando} · vas a pagar en Mercado Pago.`;
 
   // 🔴 M7 desde acá. El precio de arriba es el que fijó el profesional, y si a
@@ -1137,7 +1231,15 @@ async function irAPagar() {
   }
 }
 
-$('cta').addEventListener('click', irAPagar);
+$('cta').addEventListener('click', () => {
+  if (accionCta === 'pagar') return irAPagar();
+  llevarA(accionCta);
+  // En el paso del mail, el foco va al primer campo que falta, sin otro salto.
+  if (accionCta === 'identificacion') {
+    const campo = !$('pasoCodigo').hidden ? $('codigo') : ($('tuNombre').value.trim() ? $('mail') : $('tuNombre'));
+    setTimeout(() => campo.focus({ preventScroll: true }), 350);
+  }
+});
 $('btnCodigo').addEventListener('click', pedirCodigo);
 $('btnConfirmar').addEventListener('click', confirmarCodigo);
 $('otroMail').addEventListener('click', (e) => { e.preventDefault(); volverAlMail(); });

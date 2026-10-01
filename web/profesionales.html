@@ -5,10 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vita para profesionales</title>
 <meta name="description" content="Para psicólogos, coaches y nutricionistas que atienden online: un perfil que cuenta cómo trabajás, agenda, cobros, sala de videollamada y tus propios recursos. Sin costo fijo.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Vita">
+<meta property="og:url" content="https://www.vitaapp.com.ar/profesionales">
 <meta property="og:title" content="Vita para profesionales">
-<meta property="og:description" content="Un lugar para que te encuentren por cómo trabajás.">
+<meta property="og:description" content="Un lugar para que te encuentren por cómo trabajás. Agenda, cobros y sala de videollamada, sin costo fijo.">
+<meta property="og:image" content="https://www.vitaapp.com.ar/img/og-profesionales.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Vita para profesionales. Un lugar para que te encuentren por cómo trabajás.">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F7EFE4">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23565E32' stroke-width='8'%3E%3Ccircle cx='50' cy='34' r='26'/%3E%3Ccircle cx='29.5' cy='66' r='26'/%3E%3Ccircle cx='70.5' cy='66' r='26'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -35,7 +43,8 @@
     --max: 1240px;
   }
   *, *::before, *::after { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+  a, button, summary { touch-action: manipulation; }
   body {
     margin: 0; background: var(--cream); color: var(--olive);
     font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -71,7 +80,7 @@
     font-weight: 700; font-size: 16px; text-decoration: none;
     background: var(--olive); color: var(--cream); transition: transform .2s ease, background .2s ease;
   }
-  .btn:hover { background: var(--forest); }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { background: var(--forest); } }
   .btn:active { transform: scale(.97); }
   .nav .btn { min-height: 40px; font-size: 14px; padding: 0 18px; }
 
@@ -159,7 +168,7 @@
   .aviso input::placeholder { color: rgba(247, 239, 228, .75); }
   .aviso input:focus { outline: none; }
   .aviso button { flex: none; border: 0; cursor: pointer; font: inherit; font-weight: 700; background: var(--cream); color: var(--terra-ink); }
-  .aviso button:hover { background: #fff; }
+  @media (hover: hover) and (pointer: fine) { .aviso button:hover { background: #fff; } }
   .aviso button[disabled] { opacity: .6; cursor: default; }
   .aviso-nota { margin-top: 12px; font-size: .9rem; color: var(--cream); }
   .aviso-nota.error { font-weight: 600; }
@@ -170,7 +179,7 @@
   .foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 24px; align-items: baseline; }
   .foot ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px 24px; }
   .foot a { text-decoration: none; }
-  .foot a:hover { text-decoration: underline; }
+  @media (hover: hover) and (pointer: fine) { .foot a:hover { text-decoration: underline; } }
   .foot .wordmark { font-size: 32px; }
   .foot-contact { margin-top: 24px; color: var(--soft); }
   .foot-contact a { font-weight: 700; color: var(--olive); }
@@ -199,8 +208,9 @@
     .aviso button { width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation: none !important; transition: none !important; }
     html { scroll-behavior: auto; }
+    .aurora span { animation: none !important; }
+    *, *::before, *::after { transition-property: opacity, color, background-color, border-color !important; }
   }
 </style>
 </head>
