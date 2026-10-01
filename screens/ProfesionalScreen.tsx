@@ -497,27 +497,42 @@ export default function ProfesionalScreen() {
             <EncuadrePill encuadre={encuadre} onInfo={() => setEncuadreOpen(true)} />
           </View>
 
-          {/* ── Garantía ──────────────────────────────────────────────────
-              01/10/2026: este bloque tuvo también videollamada, duración,
-              próximo lugar y medios de pago. Andre sacó los tres primeros
-              (hoy toda sesión es por videollamada y de 60 minutos, y la fecha
-              libre aparece con un toque en "Reservar") y los medios de pago
-              pasaron a la barra de abajo, junto al precio. */}
-          {garantiaDisponible && puedeReservar && (
+          {/* ── Pagos y garantía ──────────────────────────────────────────
+              01/10/2026: este bloque tuvo también videollamada, duración y
+              próximo lugar; Andre los sacó (hoy toda sesión es por videollamada
+              y de 60 minutos, y la fecha libre aparece con un toque en
+              "Reservar"). Los medios de pago pasaron por una línea junto al
+              precio, que se veía mal, y quedaron acá como chips: solo los que
+              este profesional acepta. */}
+          {(paymentMethods.length > 0 || (garantiaDisponible && puedeReservar)) && (
           <View style={s.facts}>
-            <TouchableOpacity
-              style={s.factRow}
-              activeOpacity={0.7}
-              onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
-              accessibilityRole="link"
-              accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
-              <MaterialIcons name="verified-user" size={17} color={ViveColors.accent} />
-              <Text style={s.factText}>
-                <Text style={s.factStrong}>Garantía de primera sesión.</Text>
-                {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
-                <Text style={s.factLink}>Ver condiciones</Text>
-              </Text>
-            </TouchableOpacity>
+            {paymentMethods.length > 0 && (
+              <View style={s.pagosBlock}>
+                <Text style={s.pagosLabel}>Acepta</Text>
+                <View style={s.chipsRow}>
+                  {paymentMethods.map(m => (
+                    <View key={m} style={s.chip}>
+                      <Text style={s.chipText}>{m}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+            {garantiaDisponible && puedeReservar && (
+              <TouchableOpacity
+                style={s.factRow}
+                activeOpacity={0.7}
+                onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
+                accessibilityRole="link"
+                accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
+                <MaterialIcons name="verified-user" size={17} color={ViveColors.accent} />
+                <Text style={s.factText}>
+                  <Text style={s.factStrong}>Garantía de primera sesión.</Text>
+                  {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
+                  <Text style={s.factLink}>Ver condiciones</Text>
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
           )}
 
@@ -821,12 +836,6 @@ export default function ProfesionalScreen() {
               {precio ?? 'Precio por confirmar'}
               {!!precio && <Text style={s.priceUnit}> la sesión</Text>}
             </Text>
-            {/* Con qué se paga, al lado del precio (Andre, 01/10/2026): es donde
-                se mira cuando se piensa en pagar. Solo lo que este profesional
-                acepta. */}
-            {paymentMethods.length > 0 && (
-              <Text style={s.mediosPago} numberOfLines={2}>{paymentMethods.join(' · ')}</Text>
-            )}
           </View>
             <TouchableOpacity
               style={[s.btnPrimary, !puedeReservar && s.btnPrimaryDisabled]}
@@ -979,13 +988,14 @@ const s = StyleSheet.create({
     paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: BORDE,
-    gap: 8,
+    gap: 14,
   },
   factRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   factText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 20, color: ViveColors.softInk },
   factStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
   factLink: { fontFamily: ViveFonts.semibold, color: ViveColors.primaryInk },
-  mediosPago: { fontFamily: ViveFonts.regular, fontSize: 12, lineHeight: 16, color: ViveColors.softInk, marginTop: 2 },
+  pagosBlock: { gap: 6 },
+  pagosLabel: { fontFamily: ViveFonts.semibold, fontSize: 13, color: ViveColors.softInk },
   nacionalidad: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 2 },
 
   // El video: fondo oliva, la cara en un círculo con el play encima, y el
