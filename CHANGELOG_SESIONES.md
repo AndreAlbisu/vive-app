@@ -1,3 +1,18 @@
+## 2026-10-01 — Andre (Claude · perfil del profesional: revisión de diseño y UX, los 3 P1)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts`, `__tests__/perfilProfesional.test.ts`
+
+**Resumen:**
+- Crítica del perfil público con Impeccable (critique), la guía nativa de Expo/iOS y la de Emil, leyendo código y sin capturas (el simulador todavía no estaba): 27/40. Andre eligió arrancar por "decidir y reservar" y hacer los 3 P1.
+- **Bloque nuevo debajo de la portada** con lo práctico: "Sesión de N min por videollamada" (los minutos solo si `coach_weekly_pattern` tiene una única duración), "Próximo horario libre: mañana a las 18:00" (de `slots_libres`, la misma función que /c; desde afuera, "(hora de Argentina)" más la equivalencia) y la **garantía, que estaba al final** después de los recursos. Ahora usa un ícono de devolución y no un escudo, para no confundirla con lo verificado.
+- **"No disponible" ahora dice por qué**, en el lugar del precio: "Bloqueaste a Lucía" (y el botón pasa a "Desbloquear", abre la hoja de bloquear) o "Por ahora no está tomando reservas". Sin cambios en la base. 943 tests, tsc y eslint OK. Verificado contra la base: coach-prueba da 60 min y un horario de hoy.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el simulador o el iPhone: el bloque nuevo, un profesional sin horarios ("Sin horarios libres en las próximas tres semanas"), uno bloqueado y la zona horaria de afuera.
+- Copy de "Tu primera sesión" (bloque escrito por Vita para quien llega con miedo): propuesto a Andre, falta aprobación.
+- Resto de la crítica sin hacer: (4) sellos que se confunden entre sí, (5) la pantalla que se arma de a pedazos, reseñas más fuertes que la bio, títulos repetidos en Cómo trabaja, nombre y compartir en la cabecera, sensación al tocar (Reservar, corazón, enfoques).
+- `slots_libres` también descuenta las reservas *pendientes* de otros y el calendario no: en un caso borde el perfil podría decir "sin horarios" y el calendario mostrar alguno.
+
 ## 2026-10-01 — Andre (Claude · web: auditoría de diseño y UX completa, 20 de 21 puntos)
 
 **Tocado:** `web/index.html`, `web/profesionales.html`, `web/c/index.html`, `web/reserva/index.html`, `web/sala/index.html`, `web/tiendas.js`, `scripts/sync-legal.mjs` + `web/legal/*` (regenerados), `api/c.js` (nuevo), `vercel.json`, `web/favicon.svg`, `web/img/og-vita.jpg` y `web/img/og-profesionales.jpg` (nuevos)

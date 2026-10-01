@@ -38,8 +38,11 @@ import { opcionesGuardadas } from '@/lib/enfoque';
 import { logResourceEvent } from '@/lib/resourceEvents';
 import { estaSuspendido } from '@/lib/coachVisibility';
 import { esPerfilEjemplo, PERFIL_EJEMPLO, CREDENCIALES_EJEMPLO, RESENAS_EJEMPLO, AVISO_EJEMPLO } from '@/lib/perfilEjemplo';
-import { firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar, lineaNacionalidad } from '@/lib/perfilProfesional';
-import { enArgentina } from '@/lib/time';
+import {
+  firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar, lineaNacionalidad,
+  duracionUnica, lineaSesion, lineaProximoLugar, motivoSinReserva,
+} from '@/lib/perfilProfesional';
+import { enArgentina, todayInAr } from '@/lib/time';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 // 🔴 Sin datos inventados. Esto arrancaba con 'Laura Méndez', 'Coach de vida' y
@@ -162,6 +165,11 @@ export default function ProfesionalScreen() {
   const [encuadreOpen, setEncuadreOpen] = useState(false);
   const [fotoAmpliada, setFotoAmpliada] = useState(false);
   const [enfoquesAbiertos, setEnfoquesAbiertos] = useState<string[]>([]);
+  // Lo práctico para decidir, debajo de la portada. `undefined` = todavía no
+  // se sabe; el renglón ya está y solo cambia el texto, así no salta nada.
+  const [coachSlug, setCoachSlug] = useState<string | null>(null);
+  const [duracion, setDuracion] = useState<number | null | undefined>(undefined);
+  const [proximo, setProximo] = useState<{ fecha: string; hora: string } | 'ninguno' | 'error' | undefined>(undefined);
 
   // Acá alcanza con el cache propio (a diferencia de la Sala, donde hacen falta
   // las dos direcciones): a este perfil se llega desde el catálogo, y el
@@ -211,6 +219,7 @@ export default function ProfesionalScreen() {
         }
         setProfileState({ id: pid, status: 'available' });
         setCoachRowId((data as any).id);
+        setCoachSlug((data as any).slug ?? null);
         setNoDisponible(estaSuspendido({ suspendidoHasta: (data as any).suspendido_hasta ?? null }));
         // ⚠️ `coaches.id`, no `profiles.id`: `coach_credentials.coach_id`
         // apunta al PK de coaches, igual que `bookings.coach_id`.
@@ -260,6 +269,36 @@ export default function ProfesionalScreen() {
 
       });
   }, [params.profileId, intento]);
+
+  // ── Duración y próximo horario libre ────────────────────────────────────
+  // Antes había que tocar Reservar para saber si el profesional tenía lugar, y
+  // la duración no aparecía en ningún lado antes de pagar. El horario sale de
+  // `slots_libres`, la misma función que usa la página pública `/c`: ya
+  // descuenta los turnos reservados sin que la app tenga que leer reservas
+  // ajenas, y cuenta "hoy" en hora argentina.
+  useEffect(() => {
+    if (esPerfilEjemplo(profileId)) {
+      setDuracion(50);
+      setProximo({ fecha: todayInAr(Date.now() + 86_400_000), hora: '18:00' });
+      return;
+    }
+    if (!coachRowId) return;
+    let vivo = true;
+    void supabase.from('coach_weekly_pattern').select('slot_duration_minutes').eq('coach_id', coachRowId)
+      .then(({ data, error }) => {
+        if (!vivo) return;
+        setDuracion(error ? null : duracionUnica((data ?? []).map(r => (r as any).slot_duration_minutes)));
+      });
+    if (!coachSlug) { setProximo('error'); return () => { vivo = false; }; }
+    void supabase.rpc('slots_libres', { p_slug: coachSlug, p_dias: 21 })
+      .then(({ data, error }) => {
+        if (!vivo) return;
+        if (error) { setProximo('error'); return; }
+        const primero = (data as { fecha: string; hora: string }[] | null)?.[0];
+        setProximo(primero ? { fecha: primero.fecha, hora: primero.hora } : 'ninguno');
+      });
+    return () => { vivo = false; };
+  }, [coachRowId, coachSlug, profileId, intento]);
 
   // ── Garantía de primera sesión (T&C §9.3) ──────────────────────────────
   // Se muestra solo a quien todavía la tiene: vale una vez por persona en toda
@@ -372,6 +411,11 @@ export default function ProfesionalScreen() {
 
   const primerNombre = prof.name.split(' ')[0];
   const puedeReservar = !blocked && !noDisponible;
+  const motivo = motivoSinReserva({ bloqueado: blocked, suspendido: noDisponible }, primerNombre);
+  const proximoTexto = proximo === undefined ? { texto: 'Buscando el próximo horario libre…', paraVos: null }
+    : proximo === 'ninguno' ? { texto: 'Sin horarios libres en las próximas tres semanas', paraVos: null }
+    : proximo === 'error' ? { texto: 'Vas a ver los horarios al reservar', paraVos: null }
+    : lineaProximoLugar(proximo.fecha, proximo.hora);
   const hayResenas = reviewsLoaded && displayRating !== null && displayReviewCount > 0;
   const resenasVisibles = todasLasResenas ? liveReviews : liveReviews.slice(0, 3);
   const frases = frasesDeTrabajo(prof.estilo, prof.guia, prof.focos);
@@ -528,6 +572,45 @@ export default function ProfesionalScreen() {
           </View>
 
         </View>
+        </View>
+
+        {/* ── Lo práctico, antes de leer el resto ───────────────────────────
+            01/10/2026 (revisión de UX): duración, modalidad y cuándo hay lugar
+            no aparecían en ninguna parte del perfil, y la garantía estaba al
+            final, después de los recursos, donde casi nadie llega. Es lo que
+            más tranquiliza a quien está por pagar su primera sesión, así que va
+            acá, junto a lo demás que se necesita para decidir. */}
+        <View style={s.practico}>
+          <View style={s.practicoRow}>
+            <MaterialCommunityIcons name="video-outline" size={19} color={ViveColors.text} style={s.practicoIcon} />
+            <Text style={s.practicoText}>{lineaSesion(duracion ?? null)}</Text>
+          </View>
+          {puedeReservar && (
+            <View style={s.practicoRow}>
+              <MaterialCommunityIcons name="calendar-clock-outline" size={19} color={ViveColors.text} style={s.practicoIcon} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.practicoText}>{proximoTexto.texto}</Text>
+                {!!proximoTexto.paraVos && <Text style={s.practicoSub}>{proximoTexto.paraVos}</Text>}
+              </View>
+            </View>
+          )}
+          {garantiaDisponible && puedeReservar && (
+            <TouchableOpacity
+              style={s.practicoRow}
+              activeOpacity={0.7}
+              onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
+              accessibilityRole="link"
+              accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
+              {/* Ícono de devolución y no un escudo: los escudos del perfil
+                  dicen "esto lo verificó Vita", y la garantía es otra cosa. */}
+              <MaterialCommunityIcons name="cash-refund" size={19} color={ViveColors.accent} style={s.practicoIcon} />
+              <Text style={s.practicoText}>
+                <Text style={s.factStrong}>Garantía de primera sesión.</Text>
+                {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
+                <Text style={s.factLink}>Ver condiciones</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Biografía seguida del video compacto de presentación. */}
@@ -795,25 +878,6 @@ export default function ProfesionalScreen() {
           </View>
         )}
 
-        {/* La garantía conserva sus condiciones y acompaña la decisión de reservar. */}
-        {garantiaDisponible && puedeReservar && (
-          <View style={s.facts}>
-            <TouchableOpacity
-              style={s.factRow}
-              activeOpacity={0.7}
-              onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
-              accessibilityRole="link"
-              accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
-              <MaterialIcons name="verified-user" size={17} color={ViveColors.accent} />
-              <Text style={s.factText}>
-                <Text style={s.factStrong}>Garantía de primera sesión.</Text>
-                {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
-                <Text style={s.factLink}>Ver condiciones</Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Reportar / bloquear (oculto en el propio perfil) */}
         {user?.id !== profileId && (
           <TouchableOpacity
@@ -840,16 +904,27 @@ export default function ProfesionalScreen() {
                 Argentina, dólares desde afuera si los cobra. Antes eran tres
                 renglones ("$1 / por sesión / Exterior: USD 50") y la barra se
                 comía un sexto de la pantalla. Sin "Desde": el precio es uno. */}
-            <Text style={s.price}>{precio ?? 'Precio por confirmar'}</Text>
-            {!!precio && <Text style={s.priceUnit}>por sesión</Text>}
+            {/* Sin reserva posible se dice por qué en el lugar del precio:
+                un precio de algo que no se puede comprar no le sirve a nadie. */}
+            {motivo ? (
+              <Text style={s.motivo}>{motivo}</Text>
+            ) : (
+              <>
+                <Text style={s.price}>{precio ?? 'Precio por confirmar'}</Text>
+                {!!precio && <Text style={s.priceUnit}>por sesión</Text>}
+              </>
+            )}
 
           </View>
             <TouchableOpacity
-              style={[s.btnPrimary, !puedeReservar && s.btnPrimaryDisabled]}
+              style={[s.btnPrimary, noDisponible && s.btnPrimaryDisabled]}
               activeOpacity={0.85}
-              disabled={!puedeReservar}
+              disabled={noDisponible}
               onPress={() => {
                 if (esEjemplo) { avisarEjemplo(); return; }
+                // Bloqueado por vos: el botón deshace el bloqueo, con la
+                // misma hoja de "Reportar o bloquear", donde se elige hacerlo.
+                if (blocked) { setActionsOpen(true); return; }
                 // El motivo de más valor de todos: es la rama que monetiza.
                 if (!isLoggedIn) { requestAuth('reservar_sesion'); return; }
                 const resourceId = Array.isArray(params.resourceId) ? params.resourceId[0] : params.resourceId;
@@ -866,11 +941,11 @@ export default function ProfesionalScreen() {
                 });
               }}>
               <Text style={s.btnPrimaryText}>
-                {puedeReservar ? 'Reservar' : 'No disponible'}
+                {noDisponible ? 'No disponible' : blocked ? 'Desbloquear' : 'Reservar'}
               </Text>
             </TouchableOpacity>
         </View>
-        {paymentMethods.length > 0 && (
+        {puedeReservar && paymentMethods.length > 0 && (
           <View style={s.pagosRow} accessible accessibilityLabel={`Acepta ${paymentMethods.join(', ')}`}>
             {paymentMethods.map((m, i) => (
               <Text key={m} style={s.pagoTagTxt}>{i > 0 ? '·  ' : ''}{m}</Text>
@@ -1001,15 +1076,21 @@ const s = StyleSheet.create({
   encuadreRow: { marginTop: 12, alignItems: 'center' },
   encuadreCentered: { alignSelf: 'center', maxWidth: '100%' },
 
-  facts: {
+  practico: {
     marginHorizontal: 20,
-    marginTop: 24,
-    padding: 18,
+    marginBottom: 4,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     borderRadius: 16,
+    borderCurve: 'continuous',
     backgroundColor: '#E6E9DA',
+    gap: 14,
   },
-  factRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  factText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 20, color: ViveColors.softInk },
+  practicoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  practicoIcon: { marginTop: 1 },
+  practicoText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14.5, lineHeight: 21, color: ViveColors.text },
+  practicoSub: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: ViveColors.softInk, marginTop: 2 },
+  motivo: { fontFamily: ViveFonts.medium, fontSize: 15, lineHeight: 21, color: ViveColors.text },
   factStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
   factLink: { fontFamily: ViveFonts.semibold, color: ViveColors.primaryInk },
   pagosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 20, paddingBottom: 12 },

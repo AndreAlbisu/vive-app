@@ -6,6 +6,7 @@
 // era la red, una frase que no se entiende, un precio que no corresponde).
 
 import { esEstiloCoach, esGuiaCoach, esFoco, FOCO_OPCIONES_COACH } from './enfoque';
+import { daysFromTodayAr, deviceIsOffArgentina, deviceTz, localEquivalentLabel } from './time';
 
 /**
  * Cómo se firma una reseña en el perfil: "Martina G.".
@@ -140,4 +141,72 @@ export function lineaNacionalidad(pais: string | null | undefined, genero?: stri
   const yaEsGentilicio = !g && Object.values(GENTILICIOS).some(([m, f]) => m === p || f === p);
   if (yaEsGentilicio) return p;
   return `De ${p}`;
+}
+
+/**
+ * La duración de la sesión, si es una sola.
+ *
+ * Sale de `coach_weekly_pattern.slot_duration_minutes`, que es la que después
+ * se copia al booking. Si el profesional tiene franjas con duraciones distintas
+ * no hay un número que decir sin mentirle a alguien, y no se dice ninguno. Sin
+ * patrón cargado tampoco: el 60 por defecto de la base es un supuesto, no algo
+ * que el profesional haya elegido.
+ */
+export function duracionUnica(minutos: (number | null | undefined)[]): number | null {
+  const distintas = new Set(minutos.filter((m): m is number => typeof m === 'number' && m > 0));
+  return distintas.size === 1 ? [...distintas][0] : null;
+}
+
+/** "Sesión de 60 min por videollamada", o sin los minutos si no hay uno solo. */
+export function lineaSesion(minutos: number | null): string {
+  return minutos ? `Sesión de ${minutos} min por videollamada` : 'Sesión por videollamada';
+}
+
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
+  'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+/**
+ * El primer horario libre, dicho como se dice: "mañana a las 18:00", "el
+ * jueves a las 9:00", "el jueves 9 de octubre a las 9:00".
+ *
+ * Fecha y hora están guardadas en hora argentina (igual que todo el flujo de
+ * reserva), así que "hoy" y "mañana" se cuentan en días argentinos. Desde
+ * afuera se aclara la zona y se agrega la equivalencia, con el día si cambia:
+ * es el mismo criterio que Confirmar y la pantalla final.
+ */
+export function lineaProximoLugar(
+  fecha: string,
+  hora: string,
+  now: number = Date.now(),
+  tz: string = deviceTz(),
+): { texto: string; paraVos: string | null } {
+  const dias = daysFromTodayAr(fecha, now);
+  const [y, m, d] = fecha.split('-').map(Number);
+  const dia = DIAS[new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay()];
+  const cuando = dias === 0 ? 'hoy'
+    : dias === 1 ? 'mañana'
+    : dias > 1 && dias < 7 ? `el ${dia}`
+    : `el ${dia} ${d} de ${MESES[m - 1]}`;
+  const afuera = deviceIsOffArgentina(now, tz);
+  return {
+    texto: `Próximo horario libre: ${cuando} a las ${hora}${afuera ? ' (hora de Argentina)' : ''}`,
+    paraVos: afuera ? localEquivalentLabel(fecha, hora, tz) : null,
+  };
+}
+
+/**
+ * Por qué no se puede reservar, dicho en el lugar del precio.
+ *
+ * Antes el botón decía "No disponible" y nada más, igual para quien bloqueó al
+ * profesional que para un profesional suspendido: el primero no sabía que
+ * podía deshacerlo y el segundo pensaba que la app andaba mal.
+ */
+export function motivoSinReserva(
+  p: { bloqueado: boolean; suspendido: boolean },
+  primerNombre: string,
+): string | null {
+  if (p.bloqueado) return `Bloqueaste a ${primerNombre}`;
+  if (p.suspendido) return 'Por ahora no está tomando reservas';
+  return null;
 }

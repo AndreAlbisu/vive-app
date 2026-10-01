@@ -1,4 +1,7 @@
-import { firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar, lineaNacionalidad } from '@/lib/perfilProfesional';
+import {
+  firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar, lineaNacionalidad,
+  duracionUnica, lineaSesion, lineaProximoLugar, motivoSinReserva,
+} from '@/lib/perfilProfesional';
 import { etiquetaProfesionalPublica } from '@/lib/tipoProfesional';
 
 describe('firmaDeResena', () => {
@@ -71,5 +74,44 @@ describe('lineaNacionalidad', () => {
 
   it('respeta un gentilicio viejo cargado como texto libre', () => {
     expect(lineaNacionalidad('Argentino')).toBe('Argentino');
+  });
+});
+
+describe('duracionUnica / lineaSesion', () => {
+  it('solo se dice un número si hay uno solo', () => {
+    expect(duracionUnica([50, 50, 50])).toBe(50);
+    expect(duracionUnica([50, 60])).toBeNull();
+    expect(duracionUnica([])).toBeNull();
+    expect(duracionUnica([null, undefined, 0])).toBeNull();
+    expect(lineaSesion(50)).toBe('Sesión de 50 min por videollamada');
+    expect(lineaSesion(null)).toBe('Sesión por videollamada');
+  });
+});
+
+describe('lineaProximoLugar', () => {
+  // Miércoles 1/10/2026, 12:00 en Argentina (15:00 UTC).
+  const ahora = Date.UTC(2026, 9, 1, 15, 0);
+  const BA = 'America/Argentina/Buenos_Aires';
+
+  it('hoy, mañana, día de la semana y fecha completa, contados en Argentina', () => {
+    expect(lineaProximoLugar('2026-10-01', '18:00', ahora, BA).texto).toBe('Próximo horario libre: hoy a las 18:00');
+    expect(lineaProximoLugar('2026-10-02', '09:00', ahora, BA).texto).toBe('Próximo horario libre: mañana a las 09:00');
+    expect(lineaProximoLugar('2026-10-05', '10:00', ahora, BA).texto).toBe('Próximo horario libre: el lunes a las 10:00');
+    expect(lineaProximoLugar('2026-10-09', '10:00', ahora, BA).texto).toBe('Próximo horario libre: el viernes 9 de octubre a las 10:00');
+    expect(lineaProximoLugar('2026-10-02', '09:00', ahora, BA).paraVos).toBeNull();
+  });
+
+  it('desde afuera aclara la zona y da la equivalencia', () => {
+    const r = lineaProximoLugar('2026-10-02', '18:00', ahora, 'Europe/Madrid');
+    expect(r.texto).toBe('Próximo horario libre: mañana a las 18:00 (hora de Argentina)');
+    expect(r.paraVos).toBe('23:00 para vos');
+  });
+});
+
+describe('motivoSinReserva', () => {
+  it('dice por qué no se puede reservar', () => {
+    expect(motivoSinReserva({ bloqueado: true, suspendido: false }, 'Lucía')).toBe('Bloqueaste a Lucía');
+    expect(motivoSinReserva({ bloqueado: false, suspendido: true }, 'Lucía')).toBe('Por ahora no está tomando reservas');
+    expect(motivoSinReserva({ bloqueado: false, suspendido: false }, 'Lucía')).toBeNull();
   });
 });
