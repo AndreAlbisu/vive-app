@@ -10,7 +10,7 @@ import { ScaleCard } from '@/components/ScaleCard';
 import { VitaWordmark } from '@/components/VitaWordmark';
 import { guardarCamino } from '@/lib/guiaContextual';
 import { EJE_DE_UNIVERSO, guardarEjeLocal } from '@/lib/onboardingRespuestas';
-import { anotar, cronometro } from '@/lib/analytics';
+import { anotar, anotarSensible, cronometro } from '@/lib/analytics';
 import { AppBg } from '@/components/ui/AppBg';
 
 // "¿Qué te trae por acá?" — opción A del brief, elegida por Andre el 01/09/2026.
@@ -189,13 +189,16 @@ export default function OnboardingScreen2() {
     if (yendo.current) return;
     yendo.current = true;
 
-    anotar('onboarding_respuesta', {
+    // El eje (cuerpo, mente, alma) es dato de salud declarado: va solo con
+    // consentimiento. "Solo estoy mirando" no dice nada y va siempre.
+    anotarSensible('onboarding_respuesta', {
       pantalla: 'que_te_trae',
       respuesta: id,
+      eligio_eje: id !== 'mirando',
       // Sin paso de confirmación no hay `toques` que medir (ver (d) arriba); la
       // demora sigue siendo la señal de cuánto costó decidirse.
       segundos: medir.current(),
-    });
+    }, id === 'mirando' ? [] : ['respuesta']);
 
     // 🔴 La elección se guardaba en ningún lado: era estado local que solo
     // servía para elegir la ruta y se perdía al salir de la pantalla. Le
@@ -232,7 +235,7 @@ export default function OnboardingScreen2() {
     // ⚠️ El eje se guarda ACÁ, que antes lo hacía la pantalla que se fue.
     // Por ahora solo en el teléfono: ver `guardarEjeLocal`.
     void guardarEjeLocal(id);
-    anotar('onboarding_fin', { destino: 'conexiones', desde: 'que_te_trae', eje: id });
+    anotarSensible('onboarding_fin', { destino: 'conexiones', desde: 'que_te_trae', eje: id }, ['eje']);
     router.replace({ pathname: '/(tabs)/conexiones', params: { eje: EJE_DE_UNIVERSO[id] } } as any);
   }
 

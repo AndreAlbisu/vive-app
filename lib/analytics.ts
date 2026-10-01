@@ -23,7 +23,8 @@
 // justo antes de lo que más importa medir.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { registrarEvento } from '@/lib/supabase';
+import { registrarEvento, supabase } from '@/lib/supabase';
+import { puedeTratarBienestar } from '@/lib/consent';
 
 const SESION_KEY = 'vita_onboarding_sesion';
 // Marca de que este recorrido ya se unió con una cuenta (ver `enlazarConCuenta`).
@@ -84,6 +85,31 @@ export function anotar(evento: string, props: Record<string, unknown> = {}): voi
       // Ver arriba: silencio a propósito.
     }
   })();
+}
+
+/**
+ * Como `anotar`, para eventos con un dato que revela algo de la salud de la
+ * persona (el eje o la categoría del onboarding, qué recurso usó).
+ *
+ * 🔴 `registrarEvento` le pega el `user_id` de la sesión, y los eventos de
+ * antes del registro quedan atados a la cuenta por `sesion` (ver
+ * `enlazarConCuenta`). O sea que nada de lo que va por acá es anónimo: sin el
+ * consentimiento de datos sensibles, los campos de `sensibles` no viajan y el
+ * evento sale con `detalle_omitido: true`. El embudo sigue contando cuántos
+ * pasaron por cada paso; lo que se pierde es qué eligieron (auditoría 26/09).
+ */
+export function anotarSensible(
+  evento: string,
+  props: Record<string, unknown>,
+  sensibles: string[],
+): void {
+  void (async () => {
+    const { data } = await supabase.auth.getSession();
+    const uid = data.session?.user?.id ?? null;
+    if (uid && (await puedeTratarBienestar(uid))) { anotar(evento, props); return; }
+    const limpio = Object.fromEntries(Object.entries(props).filter(([k]) => !sensibles.includes(k)));
+    anotar(evento, { ...limpio, detalle_omitido: true });
+  })().catch(() => {});
 }
 
 /**

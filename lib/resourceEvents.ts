@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { puedeTratarBienestar } from '@/lib/consent';
-import { anotar } from '@/lib/analytics';
+import { anotarSensible } from '@/lib/analytics';
 
 export type ResourceEventType = 'view' | 'play' | 'complete' | 'coach_profile_visit' | 'booking_started';
 
@@ -17,16 +17,8 @@ export function logResourceEvent(userId: string, resourceId: string, event: Reso
   });
 }
 
-/** Evento de analítica sobre un recurso. `registrarEvento` le pega el
- *  `user_id` de la sesión, así que con `resource_id` dice qué usó quién. Sin
- *  consentimiento se anota igual que se usó un recurso, pero sin cuál: el
- *  embudo sigue contando y no queda el dato sensible. Sin cuenta no hay
- *  persona a quien atarlo y va completo. */
+/** Evento de analítica sobre un recurso: con `resource_id` dice qué usó
+ *  quién, así que sin consentimiento sale sin cuál (`anotarSensible`). */
 export function anotarUsoDeRecurso(evento: string, resourceId: string, props: Record<string, unknown> = {}): void {
-  void (async () => {
-    const { data } = await supabase.auth.getSession();
-    const uid = data.session?.user?.id ?? null;
-    const conDetalle = !uid || (await puedeTratarBienestar(uid));
-    anotar(evento, conDetalle ? { ...props, resource_id: resourceId } : { ...props, sin_consentimiento: true });
-  })().catch(() => {});
+  anotarSensible(evento, { ...props, resource_id: resourceId }, ['resource_id']);
 }

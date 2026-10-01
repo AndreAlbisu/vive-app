@@ -97,6 +97,6 @@ describe('recordCompletion', () => {
     const ev = eventos.find(e => e.nombre === 'recurso_completado');
     expect(ev).toBeTruthy();
     expect(ev!.props).not.toHaveProperty('resource_id');
-    expect(ev!.props.sin_consentimiento).toBe(true);
+    expect(ev!.props.detalle_omitido).toBe(true);
   });
 });
