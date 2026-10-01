@@ -3,6 +3,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { AppBg } from '@/components/ui/AppBg';
+import { ViveFonts } from '@/constants/theme';
 import { anotar, cronometro } from '@/lib/analytics';
 import Animated, {
   useSharedValue,
@@ -330,7 +331,7 @@ export default function OnboardingScreen1() {
               x={CX}
               y={CY + 28}
               textAnchor="middle"
-              fontFamily="SpaceGrotesk_400Regular"
+              fontFamily={ViveFonts.regular}
               fontSize={12}
               letterSpacing={0.8}
               fill={PAL.subColor}
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   hint: {
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: ViveFonts.regular,
     fontSize: 11,
     letterSpacing: 1,
     color: '#87835C',
