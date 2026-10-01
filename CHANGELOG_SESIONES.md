@@ -1,3 +1,17 @@
+## 2026-10-01 — Andre (Claude · perfil del profesional: privacidad, cuándo hay lugar y lectura)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts` (nuevo), `__tests__/perfilProfesional.test.ts` (nuevo)
+
+**Resumen:**
+- Andre pidió un análisis del perfil del profesional y después "hagamos todo". 🔒 **Las reseñas ya no publican el nombre completo** de quien las escribió: firman "Martina G." (o "Alguien de Vita" si no hay nombre). En salud mental, el nombre completo contaba en público que esa persona va a terapia. **Un error de red ya no dice "Este perfil ya no está disponible"**: dice "No pudimos cargar el perfil", con Reintentar (el mismo bug que tuvo el catálogo hasta el 26/09).
+- **La portada dice qué es la sesión y cuándo hay lugar**: "Por videollamada, 60 minutos" (la duración sale de `coach_weekly_pattern`, solo si es una sola) y "Próximo lugar: mañana a las 18:00" (de `slots_libres`, la función de la página web; con la hora de quien lee si está fuera de Argentina). Sin horarios: "Podés pedir que te avise". El precio pierde el "Desde", porque cada profesional tiene un solo precio.
+- **El video sube a la portada** con su miniatura (expo-video + expo-image, sin librería nueva: no hace falta recompilar). Sin reseñas, la portada dice "Nuevo en Vita" y la sección de reseñas no aparece; con más de 3, "Ver las N reseñas". Nuevo orden: portada, Sobre mí, Cómo trabaja (con los temas adentro), Formación, Reseñas, Recursos. Los medios de pago pasan al final.
+- **Lectura:** la biografía va en 16 px y las reseñas en 15. Los cinco olivas escritos a mano pasan a `ViveColors.text` y `softInk` (#87835C daba 3.6:1, debajo de AA). Sin cambios en la base; SCHEMA.md no cambia. 933 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- Probarlo en el iPhone: perfil con video, con y sin horarios (`coach-prueba` tiene, casi todos los demás no), y en modo avión.
+- Los nombres completos de quienes reseñan igual viajan al teléfono (se acortan en la pantalla). Para cerrarlo del todo haría falta una vista o función que devuelva la reseña ya firmada. Es un cambio en la base, para decidir.
+
 ## 2026-10-01 — Andre (Claude · la base exige el consentimiento para dato de bienestar)
 
 **Tocado:** `supabase/migrations/20261001010000_wellbeing_writes_require_consent.sql` (nueva, aplicada), `scripts/prueba-consentimiento-bienestar.sql` (nueva), `SCHEMA.md`
