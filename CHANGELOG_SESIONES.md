@@ -1,4 +1,14 @@
-## 2026-09-26 — Andre (Claude · auditoría de Codex, segunda tanda: consentimiento y comisión)
+## 2026-10-01 — Joaquín (tipografía de la animación de inicio)
+
+**Tocado:** `screens/OnboardingScreen1.tsx`.
+
+**Resumen:**
+- La animación de arranque (los círculos que se juntan) usaba **`SpaceGrotesk_400Regular`** en el tagline ("convive con vos") y el hint de abajo — una fuente que ya no es la del resto de la app (quedó desactualizada). El resto usa Poppins para texto (`ViveFonts.regular`) y Plus Jakarta Sans para títulos/wordmark.
+- Reemplazado por **`ViveFonts.regular`** (Poppins_400Regular), así la animación respeta la misma tipografía que toda la app. El brand "vita" ya estaba en Plus Jakarta Sans ExtraBold (consistente con el wordmark), no se tocó.
+- Space Grotesk queda sin uso en pantallas (sigue definido en `theme.ts`/cargado en `_layout` por si acaso; no se removió para no ampliar el cambio).
+- tsc OK para el archivo tocado. ⚠️ Nota: hay 2 errores de tsc **pre-existentes** en `app/_layout.tsx` y `CoachLoginScreen.tsx` (ruta `/coach-postulacion-estado` sin tipar) — ajenos a este cambio.
+
+
 
 **Tocado:** `lib/consent.ts`, `lib/consentRules.ts`, `lib/quizPendiente.ts`, `lib/resourceEvents.ts`, `lib/resourceCompletions.ts`, `hooks/useConsent.ts`, `hooks/useRecursoAbierto.ts`, `hooks/useRecommendedResource.ts`, `screens/QuizScreen.tsx`, `docs/politica-de-privacidad.md`, `docs/terminos-y-condiciones.md`, legales generados, tests, `docs/problemas-abiertos.md`
 
