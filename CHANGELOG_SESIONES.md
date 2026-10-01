@@ -8,7 +8,7 @@
 - Acceso: fila "Perfil de ejemplo" en el menú de tu perfil, solo para admins. Sobre el rediseño de Codex (515d5a46), sin tocar su diseño. 939 tests y TypeScript OK.
 
 **Pendiente para la próxima sesión:**
-- La foto: Unsplash bloquea el acceso automatizado. Andre pasa un link de foto con licencia libre (o de alguien que dé permiso) y va en `PERFIL_EJEMPLO.avatar_url`. Sin video por ahora (`video_url`).
+- Foto: la de la hermana de Andre, con su permiso, subida a Supabase Storage (`avatars/ejemplo/lucia.jpg`) y no al repo, que es público. Para sacarla, borrar ese archivo. Sin video por ahora (`video_url`).
 
 ## 2026-10-01 — Codex · portada circular elegida por Andre
 

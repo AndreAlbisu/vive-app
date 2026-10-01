@@ -29,9 +29,11 @@ export const PERFIL_EJEMPLO = {
   genero: 'Femenino',
   profesion: 'psicologia',
   nationality: 'Argentina',
-  // Una foto de alguien que dio permiso, o de banco con licencia libre. Vacía
-  // hasta tenerla: el perfil muestra el ícono de persona.
-  avatar_url: null as string | null,
+  // La hermana de Andre, con su permiso (01/10/2026). Vive en Supabase Storage
+  // (`avatars/ejemplo/lucia.jpg`) y NO en el repo, que es público: así no queda
+  // en el historial de git y se puede borrar cuando haga falta. Para cambiarla,
+  // reemplazar ese archivo o esta URL.
+  avatar_url: 'https://ggygiihhnkjrerpinhha.supabase.co/storage/v1/object/public/avatars/ejemplo/lucia.jpg' as string | null,
   video_url: null as string | null,
   bio:
     'Soy psicóloga y acompaño a personas que atraviesan ansiedad, momentos de cambio o cansancio emocional. ' +
