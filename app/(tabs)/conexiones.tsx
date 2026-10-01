@@ -33,7 +33,7 @@ import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { altoDeEje } from '@/lib/ejesLayout';
 import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
 import { rankDeck, type DeckSlotKey } from '@/lib/coachDeckRanking';
-import { anotar } from '@/lib/analytics';
+import { anotarSensible } from '@/lib/analytics';
 import { leerRespuestasGuardadas } from '@/lib/quizPendiente';
 import { evaluarParaMazo, topeDeRango, monedaDePresupuesto, type RespuestasQuiz } from '@/lib/quizMatch';
 import { QUIZ_AREAS } from '@/constants/searchData';
@@ -419,12 +419,15 @@ export default function ConexionesScreen() {
     // que le SUGERIMOS con la que abre de verdad. Si la mayoría abre otra, el
     // mapa `CATEGORIA_A_PUERTA` está mal y esto lo dice sin que haya que
     // adivinarlo. `sugerida` es null cuando no vino del onboarding.
-    anotar('conexiones_puerta_abierta', {
+    // ⚠️ El tema que alguien abre ("Ansiedad") es dato de salud: sin
+    // consentimiento va sin `puerta`. `sugerida` sí viaja, no dice cuál
+    // (auditoría 26/09).
+    anotarSensible('conexiones_puerta_abierta', {
       puerta: id,
       sugerida: puertaDestacada ? id === puertaDestacada : null,
       desde_onboarding: origenSugerencia === 'onboarding',
       desde_quiz: origenSugerencia === 'quiz',
-    });
+    }, ['puerta']);
 
     // Aseguro que el eje quede fijado (por si se abre desde los chips del deck).
     const door = DOORS.find(d => d.id === id);
