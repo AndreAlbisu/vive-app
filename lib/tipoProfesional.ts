@@ -36,9 +36,17 @@ export function tipoProfesional(c: { profesion?: string | null }): TipoProfesion
   return 'Coach';
 }
 
-/** Rótulo público: una especialidad declarada no acredita una profesión. */
-export function etiquetaProfesionalPublica(c: { profesion?: string | null }): string {
-  if (c.profesion === 'psicologia') return 'Psicólogo/a';
+/** Rótulo público: una especialidad declarada no acredita una profesión.
+ *
+ *  Con `genero` (de `profiles.gender`) dice "Psicóloga" o "Psicólogo": el "/a"
+ *  suena a formulario en el perfil de una persona. Sin género, o con "No
+ *  binario" / "Prefiero no decir", queda la forma doble. */
+export function etiquetaProfesionalPublica(c: { profesion?: string | null }, genero?: string | null): string {
+  if (c.profesion === 'psicologia') {
+    if (genero === 'Femenino') return 'Psicóloga';
+    if (genero === 'Masculino') return 'Psicólogo';
+    return 'Psicólogo/a';
+  }
   if (c.profesion === 'nutricion') return 'Nutricionista';
   return 'Coach';
 }

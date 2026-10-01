@@ -33,10 +33,11 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
-import { opcionesGuardadas, etiquetaEstilo, etiquetasEnfoques, etiquetaGuia, etiquetasFocos } from '@/lib/enfoque';
+import { opcionesGuardadas } from '@/lib/enfoque';
 import { logResourceEvent } from '@/lib/resourceEvents';
 import { estaSuspendido } from '@/lib/coachVisibility';
-import { firmaDeResena, motivoSinPerfil, duracionUnica, etiquetaProximoLugar } from '@/lib/perfilProfesional';
+import { firmaDeResena, motivoSinPerfil, duracionUnica, etiquetaProximoLugar, primerLugarVigente, frasesDeTrabajo, precioParaMostrar } from '@/lib/perfilProfesional';
+import { enArgentina } from '@/lib/time';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 // 🔴 Sin datos inventados. Esto arrancaba con 'Laura Méndez', 'Coach de vida' y
@@ -143,9 +144,10 @@ export default function ProfesionalScreen() {
   const [profileState, setProfileState] = useState<{ id: string; status: 'available' | 'unavailable' | 'error' } | null>(null);
   const [intento, setIntento] = useState(0);
   // Lo que la persona necesita para decidir y antes no estaba: cuánto dura y
-  // cuándo hay lugar. `proximoLugar` undefined = cargando, null = no hay.
+  // cuándo hay lugar. `proximosLugares` undefined = cargando; se guardan
+  // varios para poder saltear los que pasen con el perfil abierto.
   const [duracionMin, setDuracionMin] = useState<number | null>(null);
-  const [proximoLugar, setProximoLugar] = useState<{ fecha: string; hora: string } | null | undefined>(undefined);
+  const [proximosLugares, setProximosLugares] = useState<{ fecha: string; hora: string }[] | undefined>(undefined);
   const [todasLasResenas, setTodasLasResenas] = useState(false);
   const [liveReviews, setLiveReviews] = useState<LiveReview[]>([]);
   const [liveAvgRating, setLiveAvgRating] = useState<number | null>(null);
@@ -190,7 +192,7 @@ export default function ProfesionalScreen() {
     if (!pid) return;
     supabase
       .from('coaches')
-      .select('id, slug, verified, availability_status, specialty, profesion, bio, estilo, enfoques, guia, focos, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url)')
+      .select('id, slug, verified, availability_status, specialty, profesion, bio, estilo, enfoques, guia, focos, price_per_session, nationality, video_url, accepts_international, price_usd, mp_connected, accepts_paypal, accepts_usdt, suspendido_hasta, profiles!inner(name, avatar_url, gender)')
       .eq('profile_id', pid)
       .single()
       .then(({ data, error }) => {
@@ -209,7 +211,7 @@ export default function ProfesionalScreen() {
         void listPublicCredentials((data as any).id).then(setCredenciales);
         setFetchedData({
           name: (data as any).profiles.name,
-          specialty: etiquetaProfesionalPublica(data as any),
+          specialty: etiquetaProfesionalPublica(data as any, (data as any).profiles.gender),
           nationality: (data as any).nationality ?? DEFAULT_PROFESIONAL.nationality,
           priceFrom: (data as any).price_per_session,
           video_url: (data as any).video_url ?? null,
@@ -265,8 +267,8 @@ export default function ProfesionalScreen() {
         supabase
           .rpc('slots_libres' as any, { p_slug: (data as any).slug, p_dias: 30 } as any)
           .then(({ data: slots, error: slotsError }) => {
-            const primero = !slotsError && Array.isArray(slots) ? (slots as any[])[0] : null;
-            setProximoLugar(primero ? { fecha: primero.fecha, hora: primero.hora } : null);
+            const lista = !slotsError && Array.isArray(slots) ? (slots as any[]).slice(0, 24) : [];
+            setProximosLugares(lista.map(x => ({ fecha: x.fecha as string, hora: x.hora as string })));
           });
       });
   }, [params.profileId, intento]);
@@ -351,8 +353,14 @@ export default function ProfesionalScreen() {
   const puedeReservar = !blocked && !noDisponible;
   const hayResenas = reviewsLoaded && displayRating !== null && displayReviewCount > 0;
   const resenasVisibles = todasLasResenas ? liveReviews : liveReviews.slice(0, 3);
-  const temasYEstilo = prof.topics.length > 0 || !!etiquetaEstilo(prof.estilo) || !!etiquetaGuia(prof.guia)
-    || etiquetasFocos(prof.focos).length > 0 || etiquetasEnfoques(prof.enfoques).length > 0;
+  const frases = frasesDeTrabajo(prof.estilo, prof.guia, prof.focos);
+  const escuelas = opcionesGuardadas(prof.enfoques);
+  const hayComoTrabaja = prof.topics.length > 0 || frases.length > 0 || escuelas.length > 0;
+  const proximoLugar = proximosLugares ? primerLugarVigente(proximosLugares) : undefined;
+  const precio = precioParaMostrar(
+    { ars: prof.priceFrom, usd: prof.priceUsd, cobraExterior: prof.acceptsInternational },
+    enArgentina(),
+  );
 
   // Un enlace viejo o un favorito puede abrir esta ruta sin pasar por el
   // catálogo. No se debe mostrar un perfil despublicado, ni siquiera usando
@@ -488,9 +496,17 @@ export default function ProfesionalScreen() {
               <MaterialIcons name="videocam" size={17} color={ViveColors.softInk} />
               <Text style={s.factText}>
                 Por videollamada{duracionMin ? `, ${duracionMin} minutos` : ''}
-                {prof.nationality ? ` · ${prof.nationality}` : ''}
               </Text>
             </View>
+            {/* La nacionalidad en su renglón y con nombre: pegada a la sesión
+                ("60 minutos · Argentina") no se sabía si era de dónde es o
+                dónde atiende. */}
+            {!!prof.nationality && (
+              <View style={s.factRow}>
+                <MaterialIcons name="public" size={17} color={ViveColors.softInk} />
+                <Text style={s.factText}>Nacionalidad: {prof.nationality}</Text>
+              </View>
+            )}
             {puedeReservar && proximoLugar !== undefined && (
               <View style={s.factRow}>
                 <MaterialIcons name="event-available" size={17} color={proximoLugar ? ViveColors.accent : ViveColors.softInk} />
@@ -516,47 +532,45 @@ export default function ProfesionalScreen() {
             {!!prof.bio && <Text style={s.bio}>{prof.bio}</Text>}
             {!!prof.video_url && (
               <TouchableOpacity
-                style={[s.videoCard, !!prof.bio && { marginTop: 18 }, !prof.avatar_url && s.videoCardSinFoto]}
+                style={[s.videoCard, !!prof.bio && { marginTop: 18 }]}
                 activeOpacity={0.88}
                 accessibilityRole="button"
                 accessibilityLabel={`Ver el video de presentación de ${primerNombre}`}
                 onPress={() => { setIsPlayingVideo(true); videoPlayer.play(); }}>
-                {/* La foto del profesional hace de miniatura. 01/10/2026: la
-                    primera versión generaba un cuadro del video con
-                    `generateThumbnailsAsync` y lo pintaba con expo-image, y la
-                    app se cerraba al abrir el perfil en el iPhone. Las dos
-                    piezas son nativas y era el primer uso de expo-image en la
-                    app; la foto da el mismo efecto sin nada nativo nuevo. */}
-                {!!prof.avatar_url && (
-                  <>
-                    <Image source={{ uri: prof.avatar_url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                    <View style={s.videoVelo} />
-                  </>
-                )}
-                <View style={s.playBtn}>
-                  <MaterialIcons name="play-arrow" size={36} color={ViveColors.onPrimaryInk} />
+                {/* Fondo liso con la foto en un círculo, y no la foto de
+                    fondo: esa es la misma de la portada, a un scroll de
+                    distancia, y se veía repetida (capturas del 01/10/2026).
+                    Un cuadro del video sería lo ideal, pero generarlo
+                    (`generateThumbnailsAsync` + expo-image) cerraba la app en
+                    el iPhone. */}
+                <View style={s.videoCara}>
+                  {prof.avatar_url ? (
+                    <Image source={{ uri: prof.avatar_url }} style={s.videoCaraImg} />
+                  ) : (
+                    <MaterialIcons name="person" size={44} color="rgba(247,239,228,0.7)" />
+                  )}
+                  <View style={s.playBtn}>
+                    <MaterialIcons name="play-arrow" size={26} color={ViveColors.onPrimaryInk} />
+                  </View>
                 </View>
-                <View style={s.videoPie}>
-                  <Text style={s.videoTitle}>Mirá cómo se presenta</Text>
-                  <Text style={s.videoCaption}>Un video corto de {primerNombre}</Text>
-                </View>
+                <Text style={s.videoTitle}>Mirá cómo se presenta</Text>
+                <Text style={s.videoCaption}>Un video corto de {primerNombre}</Text>
               </TouchableOpacity>
             )}
           </View>
         )}
 
         {/* ── Cómo trabaja (M14) ────────────────────────────────────────────
-            Los temas entran acá como primera fila: antes iban solos en una
-            sección de chips que cortaba el recorrido entre "Sobre mí" y esto.
-            El estilo va en castellano común, porque es lo que se le preguntó a
-            la persona en el quiz. El enfoque va después, con el nombre de la
-            escuela y su explicación de una línea. Si no hay nada, la sección
-            no existe. */}
-        {temasYEstilo && (
+            01/10/2026, después de verlo en el iPhone: eran siete títulos en
+            terracota uno abajo del otro, y "Su estilo: Las dos cosas" no se
+            entendía sin la pregunta. Ahora son tres bloques: los temas, cómo
+            trabaja en frases que se entienden solas (`frasesDeTrabajo`) y las
+            escuelas con su explicación. Si no hay nada, la sección no existe. */}
+        {hayComoTrabaja && (
           <View style={s.section}>
             <Text style={s.sectionTitle}>Cómo trabaja</Text>
             {prof.topics.length > 0 && (
-              <View style={s.workRow}>
+              <View style={s.workBlock}>
                 <Text style={s.workLabel}>Temas que acompaña</Text>
                 <View style={s.chipsRow}>
                   {prof.topics.map(topic => (
@@ -567,36 +581,28 @@ export default function ProfesionalScreen() {
                 </View>
               </View>
             )}
-            {!!etiquetaEstilo(prof.estilo) && (
-              <View style={s.workRow}>
-                <Text style={s.workLabel}>Su estilo</Text>
-                <Text style={s.workText}>{etiquetaEstilo(prof.estilo)}</Text>
+            {frases.length > 0 && (
+              <View style={s.workBlock}>
+                <Text style={s.workLabel}>Su forma de trabajar</Text>
+                {frases.map(f => (
+                  <View key={f} style={s.fraseRow}>
+                    <View style={s.fraseDot} />
+                    <Text style={[s.workText, { flex: 1 }]}>{f}</Text>
+                  </View>
+                ))}
               </View>
             )}
-            {/* M14 ampliado (21/09/2026): cuánto guía y sobre qué trabaja, en
-                primera persona como el estilo, porque son sus respuestas. */}
-            {!!etiquetaGuia(prof.guia) && (
-              <View style={s.workRow}>
-                <Text style={s.workLabel}>Cómo acompaña</Text>
-                <Text style={s.workText}>{etiquetaGuia(prof.guia)}</Text>
+            {escuelas.length > 0 && (
+              <View style={s.workBlock}>
+                <Text style={s.workLabel}>{escuelas.length === 1 ? 'Enfoque' : 'Enfoques'}</Text>
+                {escuelas.map(e => (
+                  <View key={e.id} style={s.escuelaRow}>
+                    <Text style={s.escuelaNombre}>{e.label}</Text>
+                    <Text style={s.workText}>{e.desc}</Text>
+                  </View>
+                ))}
               </View>
             )}
-            {etiquetasFocos(prof.focos).length > 0 && (
-              <View style={s.workRow}>
-                <Text style={s.workLabel}>Foco</Text>
-                <Text style={s.workText}>
-                  Trabajo sobre {listarY(etiquetasFocos(prof.focos).map(f => f.toLowerCase()))}
-                </Text>
-              </View>
-            )}
-            {opcionesGuardadas(prof.enfoques).map(e => {
-              return (
-                <View key={e.id} style={s.workRow}>
-                  <Text style={s.workLabel}>{e.label}</Text>
-                  <Text style={s.workText}>{e.desc}</Text>
-                </View>
-              );
-            })}
           </View>
         )}
 
@@ -663,7 +669,7 @@ export default function ProfesionalScreen() {
                           sección que un usuario puede ir a verificar por su
                           cuenta. Ocultarlo le sacaría todo el valor. */}
                       {!!c.registrationNumber && (
-                        <Text style={s.credNumber}>
+                        <Text style={s.credNumber} selectable>
                           {KIND_LABEL[c.kind] === 'Matrícula' ? '' : `${KIND_LABEL[c.kind]} `}
                           {c.registrationNumber}
                         </Text>
@@ -703,6 +709,9 @@ export default function ProfesionalScreen() {
         {hayResenas && (
           <View style={s.section}>
             <Text style={s.sectionTitle}>Reseñas</Text>
+            {/* El número grande con una o dos reseñas promete más de lo que
+                hay: hasta tres, hablan las reseñas solas. */}
+            {displayReviewCount >= 3 && (
             <View style={s.ratingOverall}>
               <Text style={s.ratingNumber}>{displayRating!.toFixed(1)}</Text>
               <View style={s.ratingRight}>
@@ -710,6 +719,7 @@ export default function ProfesionalScreen() {
                 <Text style={s.ratingCount}>{displayReviewCount} {displayReviewCount === 1 ? 'reseña' : 'reseñas'}</Text>
               </View>
             </View>
+            )}
 
             <View style={s.reviewsList}>
               {resenasVisibles.map((review, i) => (
@@ -805,19 +815,14 @@ export default function ProfesionalScreen() {
       <SafeAreaView style={s.footerSafe} edges={['bottom']}>
         <View style={s.footer}>
           <View style={s.footerTop}>
-            {/* Sin "Desde": cada profesional tiene un solo precio por sesión, y
-                el "desde" hacía pensar que la sesión podía salir más cara. */}
+            {/* Un solo precio, el que le sirve a quien mira: pesos en
+                Argentina, dólares desde afuera si los cobra. Antes eran tres
+                renglones ("$1 / por sesión / Exterior: USD 50") y la barra se
+                comía un sexto de la pantalla. Sin "Desde": el precio es uno. */}
             <Text style={s.price} numberOfLines={1}>
-              {prof.priceFrom != null
-                ? `$${prof.priceFrom.toLocaleString('es-AR')}`
-                : 'Precio por confirmar'}
+              {precio ?? 'Precio por confirmar'}
+              {!!precio && <Text style={s.priceUnit}> la sesión</Text>}
             </Text>
-            {prof.priceFrom != null && <Text style={s.priceUnit}>por sesión</Text>}
-            {prof.acceptsInternational && prof.priceUsd != null && (
-              <Text style={s.priceIntl} numberOfLines={1}>
-                Exterior: USD {prof.priceUsd}
-              </Text>
-            )}
           </View>
             <TouchableOpacity
               style={[s.btnPrimary, !puedeReservar && s.btnPrimaryDisabled]}
@@ -883,10 +888,6 @@ function enMinuscula(t: string): string {
   return t.charAt(0).toLowerCase() + t.slice(1);
 }
 
-/** "a, b y c" */
-function listarY(xs: string[]): string {
-  return xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`;
-}
 
 // ─── Estilos ─────────────────────────────────────────────────────────────────
 // 01/10/2026: los cinco olivas escritos a mano (#565E32, #87835C, #726F57,
@@ -984,37 +985,41 @@ const s = StyleSheet.create({
   factText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 20, color: ViveColors.softInk },
   factStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
 
+  // El video: fondo oliva, la cara en un círculo con el play encima, y el
+  // texto abajo. Crema sobre oliva da 6.1:1.
   videoCard: {
     width: '100%',
-    aspectRatio: 4 / 3,
     borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(86,94,50,0.14)',
+    borderCurve: 'continuous',
+    backgroundColor: ViveColors.text,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    gap: 4,
   },
-  // Sin foto, el fondo pasa al oliva oscuro para que el texto crema se lea.
-  videoCardSinFoto: { backgroundColor: ViveColors.text },
-  // Un velo suave sobre la foto, para que se lea como "video" y no como otra
-  // foto; el texto lleva su propia franja oscura y se lee sobre cualquier foto.
-  videoVelo: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(30,34,18,0.22)' },
+  videoCara: { width: 104, height: 104, marginBottom: 12 },
+  videoCaraImg: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    borderWidth: 3,
+    borderColor: 'rgba(247,239,228,0.9)',
+  },
   playBtn: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    position: 'absolute',
+    right: -4,
+    bottom: -4,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: ViveColors.primaryInk,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(247,239,228,0.85)',
+    borderWidth: 3,
+    borderColor: ViveColors.text,
   },
-  videoPie: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: 'rgba(30,34,18,0.62)',
-  },
-  videoTitle: { fontFamily: ViveFonts.semibold, fontSize: 17, color: ViveColors.onPrimaryInk },
-  videoCaption: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.onPrimaryInk, opacity: 0.9, marginTop: 1 },
+  videoTitle: { fontFamily: ViveFonts.semibold, fontSize: 18, color: ViveColors.onPrimaryInk, textAlign: 'center' },
+  videoCaption: { fontFamily: ViveFonts.regular, fontSize: 14, color: ViveColors.onPrimaryInk, opacity: 0.85, textAlign: 'center' },
   videoModalBg: { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
   videoModalPlayer: { width: '100%', height: '100%' },
   videoModalCloseBtn: {
@@ -1050,7 +1055,11 @@ const s = StyleSheet.create({
   chipText: { fontFamily: ViveFonts.medium, fontSize: 13, color: ViveColors.text },
 
   // ── Cómo trabaja (M14) ──────────────────────────────────────────────
-  workRow: { marginBottom: 16 },
+  workBlock: { marginBottom: 20, gap: 8 },
+  fraseRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  fraseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: ViveColors.softInk, marginTop: 9 },
+  escuelaRow: { gap: 1 },
+  escuelaNombre: { fontFamily: ViveFonts.semibold, fontSize: 15, color: ViveColors.text },
   workLabel: { fontFamily: ViveFonts.semibold, fontSize: 13, color: ViveColors.primaryInk, marginBottom: 3 },
   workText: { fontFamily: ViveFonts.regular, fontSize: 15, lineHeight: 22, color: ViveColors.text },
 
@@ -1161,8 +1170,7 @@ const s = StyleSheet.create({
   },
   footerTop: { flex: 1, minWidth: 0 },
   price: { fontFamily: ViveFonts.semibold, fontSize: 18, color: ViveColors.text },
-  priceUnit: { fontFamily: ViveFonts.regular, fontSize: 12, color: ViveColors.softInk },
-  priceIntl: { fontFamily: ViveFonts.regular, fontSize: 12, color: ViveColors.softInk, marginTop: 2 },
+  priceUnit: { fontFamily: ViveFonts.regular, fontSize: 14, color: ViveColors.softInk },
   btnPrimary: {
     backgroundColor: ViveColors.text,
     borderRadius: 24,

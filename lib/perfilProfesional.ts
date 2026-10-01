@@ -5,7 +5,8 @@
 // rompen en silencio (un nombre completo publicado, un "no disponible" que en
 // realidad era la red, una hora del día equivocado).
 
-import { localEquivalent, deviceIsOffArgentina, daysFromTodayAr } from './time';
+import { localEquivalent, deviceIsOffArgentina, daysFromTodayAr, scheduledAtMs } from './time';
+import { esEstiloCoach, esGuiaCoach, esFoco, FOCO_OPCIONES_COACH } from './enfoque';
 
 /**
  * Cómo se firma una reseña en el perfil: "Martina G.".
@@ -91,4 +92,70 @@ function diasDesdeHoyEn(dia: Date, now: number, tz?: string): number {
   const [hy, hm, hd] = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' })
     .format(now).split('-').map(Number);
   return Math.round((dia.getTime() - Date.UTC(hy, hm - 1, hd, 12)) / 86_400_000);
+}
+
+/**
+ * El primer horario que todavía no pasó.
+ *
+ * `slots_libres` ya descarta los pasados, pero eso vale para el momento de la
+ * consulta: con el perfil abierto un rato, el primero puede quedar atrás. Se
+ * vio en el iPhone el 01/10/2026: "hoy a las 13:00" a las 13:44.
+ */
+export function primerLugarVigente<T extends { fecha: string; hora: string }>(
+  slots: T[],
+  now: number = Date.now(),
+): T | null {
+  return slots.find(s => scheduledAtMs(s.fecha, s.hora) > now) ?? null;
+}
+
+const FRASE_ESTILO = {
+  escucha: 'Escucha y acompaña, al ritmo de la persona',
+  herramientas: 'Da herramientas: ejercicios y tareas concretas entre sesiones',
+  ambos: 'Escucha y da herramientas, según lo que necesite cada persona',
+} as const;
+
+const FRASE_GUIA = {
+  guia: 'Propone el camino: marca por dónde empezar y cómo avanzar',
+  acompana: 'Sigue el camino de la persona: orienta, y la ruta la decide ella',
+  ambos: 'Guía más o menos, según lo que necesite cada persona',
+} as const;
+
+/**
+ * "Cómo trabaja" en frases que se entienden solas.
+ *
+ * 🔴 Antes se mostraba la respuesta del profesional sin la pregunta ("Su
+ * estilo: Las dos cosas"), que fuera del formulario no dice nada. Cada frase
+ * lleva su explicación y va en tercera persona, porque la lee otra persona.
+ */
+export function frasesDeTrabajo(
+  estilo: string | null | undefined,
+  guia: string | null | undefined,
+  focos: string[] | null | undefined,
+): string[] {
+  const frases: string[] = [];
+  if (esEstiloCoach(estilo)) frases.push(FRASE_ESTILO[estilo]);
+  if (esGuiaCoach(guia)) frases.push(FRASE_GUIA[guia]);
+  const sobre = (focos ?? []).filter(esFoco)
+    .map(id => FOCO_OPCIONES_COACH.find(o => o.id === id)!.label.toLowerCase());
+  if (sobre.length) {
+    const lista = sobre.length === 1 ? sobre[0] : `${sobre.slice(0, -1).join(', ')} y ${sobre[sobre.length - 1]}`;
+    frases.push(`Trabaja sobre ${lista}`);
+  }
+  return frases;
+}
+
+/**
+ * El precio que le sirve a quien mira: uno solo.
+ *
+ * En Argentina, pesos (además es obligatorio exhibirlos: ver `enArgentina` en
+ * `lib/time.ts`). Desde afuera, dólares si el profesional los cobra; si no,
+ * pesos, que es lo único que va a poder pagar.
+ */
+export function precioParaMostrar(
+  p: { ars: number | null; usd: number | null; cobraExterior: boolean },
+  estaEnArgentina: boolean,
+): string | null {
+  if (!estaEnArgentina && p.cobraExterior && p.usd != null) return `USD ${p.usd}`;
+  if (p.ars != null) return `$${p.ars.toLocaleString('es-AR')}`;
+  return null;
 }

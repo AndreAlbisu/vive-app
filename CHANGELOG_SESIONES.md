@@ -1,3 +1,17 @@
+## 2026-10-01 — Andre (Claude · perfil del profesional, segunda pasada con capturas)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts`, `lib/tipoProfesional.ts`, `__tests__/perfilProfesional.test.ts`
+
+**Resumen:**
+- Andre mandó 5 capturas del perfil y pidió analizarlo con las skills instaladas (ui-ux-pro-max y expo-native-ui); después "dale" a los puntos 1 al 9.
+- 🔴 **"Próximo lugar: hoy a las 13:00" a las 13:44**: la consulta estaba bien (a las 13:46 la base daba 14:00), pero el perfil abierto un rato mostraba un horario pasado. Ahora se guardan los próximos 24 y se muestra el primero que no pasó (`primerLugarVigente`).
+- **Cómo trabaja**: "Su estilo: Las dos cosas" no se entendía sin la pregunta. Pasan a frases en tercera persona que se entienden solas (`frasesDeTrabajo`), bajo "Su forma de trabajar"; las escuelas van con el nombre en negrita y su explicación. De siete títulos terracota a tres.
+- **Video**: ya no repite la foto de la portada de fondo; tarjeta oliva con la cara en un círculo y el play. **Barra de abajo**: un solo precio, "$X la sesión" en Argentina y "USD X" desde afuera si cobra en dólares (`precioParaMostrar`). **"Psicóloga"/"Psicólogo"** según `profiles.gender` (sin género o "No binario", sigue "Psicólogo/a"). Nacionalidad en su renglón. El "5.0" grande solo con 3 reseñas o más. El número de matrícula se puede copiar. Sin cambios en la base. 937 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- Verlo en el iPhone. Quedan para una pasada de pulido: probar con letra grande del sistema (el botón de reservar tiene ancho fijo), la X del video con el margen seguro, y una vibración suave al reservar y al guardar en favoritos.
+- Pedir un largo mínimo de bio cuando el profesional la carga. Y en la revisión de credenciales: la cuenta de prueba tiene matrícula de 2001 con título de 2022, eso debería frenarse.
+
 ## 2026-10-01 — Andre (Claude · perfil del profesional: privacidad, cuándo hay lugar y lectura)
 
 **Tocado:** `screens/ProfesionalScreen.tsx`, `lib/perfilProfesional.ts` (nuevo), `__tests__/perfilProfesional.test.ts` (nuevo)
