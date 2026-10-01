@@ -1,3 +1,11 @@
+## 2026-10-01 — Codex · portada circular elegida por Andre
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:** Retrato circular de 180 puntos (adaptable a pantallas angostas), centrado, con nombre en 27 y datos agrupados. Conserva el resto del rediseño Combinada y la ampliación de la foto al tocarla.
+
+**Validación:** TypeScript, ESLint y diff sin errores. La composición anterior con expo-image fue recorrida en el iPhone sin cierre de la app; se comprobó abrir y cerrar enfoques, formación, reseñas y recursos. El cambio circular final queda pendiente de comprobación visual porque la duplicación indica teléfono en uso. Garantía pendiente de visualizar en un perfil elegible.
+
 ## 2026-10-01 — Andre (Claude · web: auditoría y rediseño de la página del profesional)
 
 **Tocado:** `web/c/index.html`, `web/perfil-datos.js` (nuevo, generado), `scripts/sync-web-perfil.cjs` (nuevo), `__tests__/webPerfilDatos.test.ts` (nuevo), `lib/perfilProfesional.ts` (exporta `GENTILICIOS`), `package.json` (`sync:web-perfil`)
@@ -11,6 +19,22 @@
 **Pendiente para la próxima sesión:**
 - `! git push` para publicar, y probar una reserva real por `/c/coach-prueba` (identificación con código y pago).
 - ⚠️ Codex está rediseñando `ProfesionalScreen.tsx` en paralelo (sin commitear) y volvió a usar `expo-image`, una de las dos piezas que sacamos cuando la app se cerraba al abrir el perfil. Probar en el iPhone antes de commitearlo.
+
+## 2026-10-01 — Codex · ajuste de Combinada contra capturas
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:** Segunda pasada para acercar la implementación al boceto elegido: retrato alineado arriba (expo-image), identidad más compacta, matrícula centrada mediante un contenedor propio, valoración y revisión en una fila que se adapta al ancho. Cómo trabaja con íconos y títulos derivados de los datos reales; enfoques desplegables con estado accesible. Reseñas con estrellas, texto y firma; resumen compacto, sin avatar ni separadores duplicados. Reserva con precio/unidad separados y pagos en todo el ancho. Cabecera Vita del boceto. Sin textos biográficos, títulos ni reseñas inventados.
+
+**Validación:** TypeScript y ESLint. Recorrido visual completado posteriormente en el iPhone: portada, video compacto, enfoques desplegables, formación, reseñas y recursos. Garantía pendiente de visualizar.
+
+## 2026-10-01 — Codex · perfil Combinada
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:** Aplicada la propuesta Combinada elegida por Andre: foto grande con nombre y datos centrados, sin tarjeta alrededor de toda la portada. Video compacto sin repetir retrato, títulos Plus Jakarta Sans, reseñas y recursos abiertos, garantía al final del recorrido y medios de pago legibles. Se conservan datos reales, condiciones de disponibilidad y garantía, favoritos, credenciales, reproducción, recursos y reserva.
+
+**Validación:** TypeScript y revisión del diff. Revisión visual pendiente: la duplicación del iPhone se detuvo al usarse el teléfono.
 
 ## 2026-10-01 — Andre (Claude · perfil del profesional: portada más corta)
 
