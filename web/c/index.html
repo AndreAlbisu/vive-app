@@ -300,7 +300,11 @@ function precioArs(n) {
 }
 
 // Que nadie confunda una prueba con producción, ni de un lado ni del otro.
-if (CHECKOUT_HABILITADO) {
+// 🔴 01/10/2026: colgaba de `CHECKOUT_HABILITADO`, y desde que esa constante
+// quedó en `true` (21/09) el cartel rojo le salía a TODO cliente real, justo
+// antes de pagar. Ahora sale solo con `?probar=1`, que es quien prueba a
+// propósito. El cobro no cambia: sigue dependiendo de `CHECKOUT_HABILITADO`.
+if (new URLSearchParams(location.search).get('probar') === '1') {
   $('avisoPrueba').textContent = '⚠️ Modo prueba: la reserva y el cobro son REALES.';
   $('avisoPrueba').hidden = false;
 }
