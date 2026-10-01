@@ -856,7 +856,7 @@ export default function ProfesionalScreen() {
                 });
               }}>
               <Text style={s.btnPrimaryText}>
-                {puedeReservar ? 'Reservar sesión' : 'No disponible por ahora'}
+                {puedeReservar ? 'Reservar' : 'No disponible'}
               </Text>
             </TouchableOpacity>
         </View>
@@ -992,15 +992,15 @@ const s = StyleSheet.create({
   factText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 20, color: ViveColors.softInk },
   factStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
   factLink: { fontFamily: ViveFonts.semibold, color: ViveColors.primaryInk },
-  pagosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
+  pagosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 5 },
   pagoTag: {
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderCurve: 'continuous',
     backgroundColor: 'rgba(86,94,50,0.09)',
   },
-  pagoTagTxt: { fontFamily: ViveFonts.medium, fontSize: 11, lineHeight: 15, color: ViveColors.text },
+  pagoTagTxt: { fontFamily: ViveFonts.medium, fontSize: 10.5, lineHeight: 14, color: ViveColors.text },
   nacionalidad: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 2 },
 
   // El video: fondo oliva, la cara en un círculo con el play encima, y el
@@ -1184,9 +1184,12 @@ const s = StyleSheet.create({
   btnPrimary: {
     backgroundColor: ViveColors.text,
     borderRadius: 24,
-    width: 148,
+    // Ancho según el texto y no fijo: con "Reservar sesión" en 148 las
+    // pastillas de pago no entraban en una línea y "USDT" caía solo abajo
+    // (captura del 01/10/2026). "Reservar" alcanza: el precio dice "la sesión".
+    minWidth: 120,
     minHeight: 50,
-    paddingHorizontal: 10,
+    paddingHorizontal: 24,
     paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
