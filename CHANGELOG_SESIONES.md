@@ -4,11 +4,11 @@
 
 **Resumen:**
 - Andre: "hagamos los cambios" (los dos pendientes de la sesión anterior). **Analítica:** nueva `anotarSensible`. Sin el consentimiento de datos sensibles, los eventos del onboarding salen sin el eje, la categoría ni la puerta, y los de recursos sin cuál recurso; llevan `detalle_omitido: true` y el embudo sigue contando los pasos. Antes del registro tampoco viajan, porque `enlazarConCuenta` ata ese recorrido a la cuenta después. 927 tests y TypeScript OK.
+- Después de que Andre commiteó el rediseño de Profesionales (`9b4f794e`), pasaron también a `anotarSensible` `conexiones_puerta_abierta` (qué tema abre en Profesionales) y `relacionado_abierto` (`app/coach-recurso.tsx`). Revisados los demás eventos: ninguno más lleva tema ni recurso del cliente.
 - **Control en la base: NO aplicado.** La migración que hace que las policies de `mood_entries`, `journal_entries`, `gratitude_entries`, `user_quiz_answers`, `resource_events` y `resource_completions` exijan el consentimiento para INSERT/UPDATE fue bloqueada por el control de permisos del entorno (la clasifica como despliegue a producción). Queda esperando que Andre la autorice. SCHEMA.md no cambia.
 
 **Pendiente para la próxima sesión:**
 - La migración de consentimiento en la base, con la autorización de Andre.
-- `conexiones_puerta_abierta` (qué tema abre alguien en Profesionales) es el mismo caso y no se tocó: `app/(tabs)/conexiones.tsx` tiene un rediseño de tarjetas sin commitear de otra sesión. Pasarlo a `anotarSensible` cuando ese cambio entre.
 
 ## 2026-09-26 — Andre (Claude · auditoría de Codex, segunda tanda: consentimiento y comisión)
 
