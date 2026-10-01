@@ -1,4 +1,4 @@
-import { firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar } from '@/lib/perfilProfesional';
+import { firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar, lineaNacionalidad } from '@/lib/perfilProfesional';
 import { etiquetaProfesionalPublica } from '@/lib/tipoProfesional';
 
 describe('firmaDeResena', () => {
@@ -54,5 +54,22 @@ describe('etiquetaProfesionalPublica con género', () => {
     expect(etiquetaProfesionalPublica({ profesion: 'psicologia' }, 'Masculino')).toBe('Psicólogo');
     expect(etiquetaProfesionalPublica({ profesion: 'psicologia' }, 'No binario')).toBe('Psicólogo/a');
     expect(etiquetaProfesionalPublica({ profesion: 'psicologia' })).toBe('Psicólogo/a');
+  });
+});
+
+describe('lineaNacionalidad', () => {
+  it('gentilicio según el género, o "De <país>" sin género', () => {
+    expect(lineaNacionalidad('Argentina', 'Femenino')).toBe('Argentina');
+    expect(lineaNacionalidad('Argentina', 'Masculino')).toBe('Argentino');
+    expect(lineaNacionalidad('España', 'Femenino')).toBe('Española');
+    expect(lineaNacionalidad('Argentina', 'No binario')).toBe('De Argentina');
+    expect(lineaNacionalidad('Argentina')).toBe('De Argentina');
+    expect(lineaNacionalidad('Alemania', 'Femenino')).toBe('Alemana');
+    expect(lineaNacionalidad('Mongolia', 'Femenino')).toBe('De Mongolia');
+    expect(lineaNacionalidad(null)).toBeNull();
+  });
+
+  it('respeta un gentilicio viejo cargado como texto libre', () => {
+    expect(lineaNacionalidad('Argentino')).toBe('Argentino');
   });
 });

@@ -36,7 +36,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { opcionesGuardadas } from '@/lib/enfoque';
 import { logResourceEvent } from '@/lib/resourceEvents';
 import { estaSuspendido } from '@/lib/coachVisibility';
-import { firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar } from '@/lib/perfilProfesional';
+import { firmaDeResena, motivoSinPerfil, frasesDeTrabajo, precioParaMostrar, lineaNacionalidad } from '@/lib/perfilProfesional';
 import { enArgentina } from '@/lib/time';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
@@ -53,6 +53,7 @@ const DEFAULT_PROFESIONAL = {
   name: '',
   specialty: '',
   nationality: '',
+  genero: null as string | null,
   topics: [] as string[],
   estilo: null as string | null,
   enfoques: [] as string[],
@@ -213,6 +214,7 @@ export default function ProfesionalScreen() {
           name: (data as any).profiles.name,
           specialty: etiquetaProfesionalPublica(data as any, (data as any).profiles.gender),
           nationality: (data as any).nationality ?? DEFAULT_PROFESIONAL.nationality,
+          genero: (data as any).profiles.gender ?? null,
           priceFrom: (data as any).price_per_session,
           video_url: (data as any).video_url ?? null,
           avatar_url: (data as any).profiles.avatar_url ?? null,
@@ -468,9 +470,12 @@ export default function ProfesionalScreen() {
         <View style={s.infoSection}>
           <Text style={s.name}>{prof.name}</Text>
           <Text style={s.specialty}>{prof.specialty}</Text>
-          {/* La nacionalidad va con quién es, no con la sesión: pegada a
-              "60 minutos" no se sabía si era de dónde es o dónde atiende. */}
-          {!!prof.nationality && <Text style={s.nacionalidad}>Nacionalidad: {prof.nationality}</Text>}
+          {/* La nacionalidad va con quién es, dicha como se dice de una
+              persona ("Argentina", "Uruguayo"), y no como dato de formulario.
+              Ver `lineaNacionalidad`. */}
+          {!!lineaNacionalidad(prof.nationality, prof.genero) && (
+            <Text style={s.nacionalidad}>{lineaNacionalidad(prof.nationality, prof.genero)}</Text>
+          )}
 
           {/* Sin reseñas todavía se dice "Nuevo en Vita" y no "no hay reseñas":
               al lanzar es el caso de todos, y dicho en negativo se lee como un

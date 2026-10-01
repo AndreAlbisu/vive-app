@@ -90,3 +90,54 @@ export function precioParaMostrar(
   if (p.ars != null) return `$${p.ars.toLocaleString('es-AR')}`;
   return null;
 }
+
+// [masculino, femenino]. Los de la región y los más probables; el resto cae en
+// "De <país>", que se lee natural sin tener que mantener los 195.
+const GENTILICIOS: Record<string, [string, string]> = {
+  'Argentina': ['Argentino', 'Argentina'],
+  'Uruguay': ['Uruguayo', 'Uruguaya'],
+  'Chile': ['Chileno', 'Chilena'],
+  'Paraguay': ['Paraguayo', 'Paraguaya'],
+  'Bolivia': ['Boliviano', 'Boliviana'],
+  'Perú': ['Peruano', 'Peruana'],
+  'Colombia': ['Colombiano', 'Colombiana'],
+  'México': ['Mexicano', 'Mexicana'],
+  'España': ['Español', 'Española'],
+  'Brasil': ['Brasileño', 'Brasileña'],
+  'Venezuela': ['Venezolano', 'Venezolana'],
+  'Ecuador': ['Ecuatoriano', 'Ecuatoriana'],
+  'Cuba': ['Cubano', 'Cubana'],
+  'Guatemala': ['Guatemalteco', 'Guatemalteca'],
+  'Honduras': ['Hondureño', 'Hondureña'],
+  'El Salvador': ['Salvadoreño', 'Salvadoreña'],
+  'Panamá': ['Panameño', 'Panameña'],
+  'República Dominicana': ['Dominicano', 'Dominicana'],
+  'Italia': ['Italiano', 'Italiana'],
+  'Francia': ['Francés', 'Francesa'],
+  'Alemania': ['Alemán', 'Alemana'],
+  'Portugal': ['Portugués', 'Portuguesa'],
+  'Costa Rica': ['Costarricense', 'Costarricense'],
+  'Nicaragua': ['Nicaragüense', 'Nicaragüense'],
+  'Estados Unidos': ['Estadounidense', 'Estadounidense'],
+  'Canadá': ['Canadiense', 'Canadiense'],
+};
+
+/**
+ * La nacionalidad como se dice de una persona: "Argentina", "Uruguayo".
+ *
+ * Con `genero` (de `profiles.gender`) va el gentilicio que corresponde, como
+ * en "Psicóloga". Sin género, con "No binario" o "Prefiero no decir", o con un
+ * país sin gentilicio cargado, va "De Argentina": dice lo mismo sin el "/a".
+ * Hay valores viejos de texto libre ("Argentino"): si ya es un gentilicio, se
+ * respeta.
+ */
+export function lineaNacionalidad(pais: string | null | undefined, genero?: string | null): string | null {
+  const p = (pais ?? '').trim();
+  if (!p) return null;
+  const g = GENTILICIOS[p];
+  if (g && genero === 'Masculino') return g[0];
+  if (g && genero === 'Femenino') return g[1];
+  const yaEsGentilicio = !g && Object.values(GENTILICIOS).some(([m, f]) => m === p || f === p);
+  if (yaEsGentilicio) return p;
+  return `De ${p}`;
+}
