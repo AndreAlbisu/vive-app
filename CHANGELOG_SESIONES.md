@@ -10,8 +10,7 @@
 
 **Pendiente para la próxima sesión:**
 - Punto 21 sin hacer: `hola@vitaapp.com.ar` no existe (el dominio no tiene registros MX). Cuando Andre cree la casilla, cambiar las menciones de `vitaappar@gmail.com`.
-- Después del push: abrir `/c/coach-prueba` en producción (que cargue, no 404) y pegar el link en WhatsApp o en https://www.opengraph.xyz para ver la vista previa con la foto. Si la función falla en Vercel, volver el rewrite de `vercel.json` a `"destination": "/c"`.
-- Ver en el iPhone: /c con el formulario abierto (casillas, teclado, barra de abajo) y el teléfono de la portada.
+- ✅ Verificado por Andre después del push: "funciona todo" (/c en producción, vista previa y iPhone). Si algún día la función falla en Vercel, se vuelve atrás con el rewrite de `vercel.json` a `"destination": "/c"`.
 
 ## 2026-10-01 — Andre (Claude · flujo de reserva: errores de la revisión de UX)
 
