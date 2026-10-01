@@ -4,7 +4,7 @@
 
 **Resumen:**
 - Andre sacó de la portada "Por videollamada", los "60 minutos" (hoy toda sesión es así) y "Próximo lugar" (la fecha libre aparece con un toque en Reservar). Se borraron también sus consultas (`coach_weekly_pattern`, `slots_libres`) y sus funciones y tests (`duracionUnica`, `etiquetaProximoLugar`, `primerLugarVigente`): si vuelven, están en el historial de git (commit 3cb24ffa).
-- **Medios de pago**: primero fueron a la barra de abajo, debajo del precio; a Andre se le veía feo y quedaron en la portada como chips ("Acepta" + una pastilla por medio, mismo estilo que los temas), arriba de la garantía. La barra de abajo queda con precio y botón. 933 tests y TypeScript OK.
+- **Medios de pago**: primero fueron a la barra de abajo, debajo del precio; a Andre se le veía feo y pasaron a la portada como chips, y Andre los prefirió abajo del precio pero mejor resueltos: quedaron en la barra fija como pastillas chicas (una por medio, fondo oliva suave). El botón de reservar se angostó a 148 para que entren en una línea; en teléfonos angostos pueden pasar a dos. 933 tests y TypeScript OK.
 
 **Pendiente para la próxima sesión:**
 - Verlo en el iPhone.

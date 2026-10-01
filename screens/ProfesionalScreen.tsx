@@ -497,42 +497,27 @@ export default function ProfesionalScreen() {
             <EncuadrePill encuadre={encuadre} onInfo={() => setEncuadreOpen(true)} />
           </View>
 
-          {/* ── Pagos y garantía ──────────────────────────────────────────
+          {/* ── Garantía ──────────────────────────────────────────────────
               01/10/2026: este bloque tuvo también videollamada, duración y
               próximo lugar; Andre los sacó (hoy toda sesión es por videollamada
               y de 60 minutos, y la fecha libre aparece con un toque en
-              "Reservar"). Los medios de pago pasaron por una línea junto al
-              precio, que se veía mal, y quedaron acá como chips: solo los que
-              este profesional acepta. */}
-          {(paymentMethods.length > 0 || (garantiaDisponible && puedeReservar)) && (
+              "Reservar"). Los medios de pago estuvieron acá como chips y
+              volvieron a la barra de abajo, junto al precio. */}
+          {garantiaDisponible && puedeReservar && (
           <View style={s.facts}>
-            {paymentMethods.length > 0 && (
-              <View style={s.pagosBlock}>
-                <Text style={s.pagosLabel}>Acepta</Text>
-                <View style={s.chipsRow}>
-                  {paymentMethods.map(m => (
-                    <View key={m} style={s.chip}>
-                      <Text style={s.chipText}>{m}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-            {garantiaDisponible && puedeReservar && (
-              <TouchableOpacity
-                style={s.factRow}
-                activeOpacity={0.7}
-                onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
-                accessibilityRole="link"
-                accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
-                <MaterialIcons name="verified-user" size={17} color={ViveColors.accent} />
-                <Text style={s.factText}>
-                  <Text style={s.factStrong}>Garantía de primera sesión.</Text>
-                  {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
-                  <Text style={s.factLink}>Ver condiciones</Text>
-                </Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={s.factRow}
+              activeOpacity={0.7}
+              onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
+              accessibilityRole="link"
+              accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
+              <MaterialIcons name="verified-user" size={17} color={ViveColors.accent} />
+              <Text style={s.factText}>
+                <Text style={s.factStrong}>Garantía de primera sesión.</Text>
+                {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
+                <Text style={s.factLink}>Ver condiciones</Text>
+              </Text>
+            </TouchableOpacity>
           </View>
           )}
 
@@ -836,6 +821,19 @@ export default function ProfesionalScreen() {
               {precio ?? 'Precio por confirmar'}
               {!!precio && <Text style={s.priceUnit}> la sesión</Text>}
             </Text>
+            {/* Con qué se paga, debajo del precio (Andre, 01/10/2026): es donde
+                se mira cuando se piensa en pagar. Como renglón de texto gris se
+                veía mal; van como pastillas chicas, solo las que este
+                profesional acepta. */}
+            {paymentMethods.length > 0 && (
+              <View style={s.pagosRow} accessibilityLabel={`Acepta ${paymentMethods.join(', ')}`}>
+                {paymentMethods.map(m => (
+                  <View key={m} style={s.pagoTag}>
+                    <Text style={s.pagoTagTxt}>{m}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
             <TouchableOpacity
               style={[s.btnPrimary, !puedeReservar && s.btnPrimaryDisabled]}
@@ -994,8 +992,15 @@ const s = StyleSheet.create({
   factText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 20, color: ViveColors.softInk },
   factStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
   factLink: { fontFamily: ViveFonts.semibold, color: ViveColors.primaryInk },
-  pagosBlock: { gap: 6 },
-  pagosLabel: { fontFamily: ViveFonts.semibold, fontSize: 13, color: ViveColors.softInk },
+  pagosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
+  pagoTag: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderCurve: 'continuous',
+    backgroundColor: 'rgba(86,94,50,0.09)',
+  },
+  pagoTagTxt: { fontFamily: ViveFonts.medium, fontSize: 11, lineHeight: 15, color: ViveColors.text },
   nacionalidad: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 2 },
 
   // El video: fondo oliva, la cara en un círculo con el play encima, y el
@@ -1179,7 +1184,7 @@ const s = StyleSheet.create({
   btnPrimary: {
     backgroundColor: ViveColors.text,
     borderRadius: 24,
-    width: 168,
+    width: 148,
     minHeight: 50,
     paddingHorizontal: 10,
     paddingVertical: 8,
