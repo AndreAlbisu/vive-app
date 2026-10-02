@@ -31,6 +31,7 @@ import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
 import {
   listCoachApplications, setCoachVerified, rejectCoachApplication, recordCoachInterview, setCoachName,
+  identityFileUrl, verifyIdentity,
   listPendingReports, resolveReport,
   listClaims, checkGuarantee, approveGuarantee, rejectGuarantee,
   listUsdtRefunds, markUsdtRefunded, type UsdtRefund,
@@ -84,6 +85,8 @@ const ACTION_LABELS: Record<string, string> = {
   record_coach_interview:   'registró una entrevista profesional',
   reject_coach_application: 'rechazó una postulación',
   set_coach_name:           'corrigió el nombre de un profesional',
+  identity_file_url:        'abrió una foto de identidad',
+  verify_identity:          'verificó la identidad de un profesional',
   resolve_report:           'resolvió un reporte',
   mark_usdt_refunded:       'registró un reembolso en USDT',
   mark_coach_paid:          'registró un pago a un coach',
@@ -179,6 +182,10 @@ export default function AdminScreen() {
       Alert.alert('Falta la entrevista', 'Registrá la entrevista antes de aprobar esta solicitud.');
       return;
     }
+    if (c.identidad !== 'verificada') {
+      Alert.alert('Falta la identidad', 'Mirá las fotos del DNI y la selfie, y marcá la identidad como verificada antes de aprobar.');
+      return;
+    }
     if ((c.specialty === 'Psicólogo/a' || c.specialty === 'Nutricionista') && !c.matriculaVerificada) {
       Alert.alert('Falta la matrícula', 'Verificá la matrícula correspondiente en Credenciales antes de aprobar.');
       return;
@@ -191,6 +198,26 @@ export default function AdminScreen() {
         {
           text: 'Aprobar',
           onPress: () => act(c.coachId, () => setCoachVerified(c.coachId, true), `La solicitud de ${c.name} fue aprobada.`),
+        },
+      ],
+    );
+  }
+
+  async function verFotoIdentidad(c: PendingCoach, which: 'dni-frente' | 'dni-dorso' | 'selfie') {
+    const r = await identityFileUrl(c.coachId, which);
+    if (r.error || !r.url) { Alert.alert('No se pudo abrir', r.error ?? ''); return; }
+    await Linking.openURL(r.url);
+  }
+
+  function confirmIdentity(c: PendingCoach) {
+    Alert.alert(
+      '¿Identidad verificada?',
+      `Confirmá que el nombre del DNI es "${c.name}" y que la cara de la selfie es la del DNI. Las tres fotos se borran al confirmar. Si algo no coincide, rechazá la postulación diciendo qué foto volver a subir.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Coincide',
+          onPress: () => act(c.coachId, () => verifyIdentity(c.coachId), `Identidad de ${c.name} verificada. Las fotos se borraron.`),
         },
       ],
     );
@@ -304,6 +331,26 @@ export default function AdminScreen() {
                           Matrícula: {c.matriculaVerificada ? 'verificada para esta profesión'
                             : c.matriculaPendiente ? 'cargada, pendiente de verificación' : 'pendiente de carga o corrección'}
                         </Text>
+                      )}
+                      <Text style={s.cardMeta}>
+                        Identidad: {c.identidad === 'verificada' ? 'verificada'
+                          : c.identidad === 'pendiente' ? 'fotos cargadas, falta revisarlas' : 'sin fotos'}
+                      </Text>
+                      {c.identidad === 'pendiente' && (
+                        <>
+                          {([['dni-frente', 'Ver DNI, frente'], ['dni-dorso', 'Ver DNI, dorso'], ['selfie', 'Ver selfie con DNI']] as const).map(([which, label]) => (
+                            <TouchableOpacity key={which} style={s.linkRow} activeOpacity={0.75}
+                              onPress={() => void verFotoIdentidad(c, which)}>
+                              <MaterialCommunityIcons name="card-account-details-outline" size={16} color={FOREST} />
+                              <Text style={s.linkText}>{label}</Text>
+                            </TouchableOpacity>
+                          ))}
+                          <TouchableOpacity style={s.linkRow} activeOpacity={0.75}
+                            onPress={() => confirmIdentity(c)} disabled={working === c.coachId}>
+                            <MaterialCommunityIcons name="shield-check-outline" size={16} color={FOREST} />
+                            <Text style={s.linkText}>Marcar identidad verificada</Text>
+                          </TouchableOpacity>
+                        </>
                       )}
                       <Text style={s.cardMeta}>
                         {c.interviewedAt

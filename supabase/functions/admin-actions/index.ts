@@ -28,6 +28,8 @@
 //   { action: 'list_coach_applications', status? }   // lee el mail del coach (A4)
 //   { action: 'record_coach_interview', coach_id, notes }
 //   { action: 'set_coach_name', coach_id, name, reason }
+//   { action: 'identity_file_url', coach_id, which: 'dni-frente'|'dni-dorso'|'selfie' }
+//   { action: 'verify_identity', coach_id }
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -43,6 +45,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const REPORT_STATUSES = ['revisado', 'accionado', 'descartado']
 // De qué profesión es una matrícula (`coach_credentials.profesion`).
 const PROFESIONES = ['psicologia', 'nutricion', 'otra']
+// Las tres fotos de la verificación de identidad, con el nombre fijo con el que
+// las sube la app (`lib/identidad.ts`) y las busca `enviar_identidad()`.
+const FOTOS_IDENTIDAD = ['dni-frente', 'dni-dorso', 'selfie']
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -225,6 +230,85 @@ serve(async (req) => {
       })
 
       return json({ result: 'ok', name, ...(auditErr ? { warning: `acción hecha, auditoría fallida: ${auditErr}` } : {}) })
+    }
+
+    // ── Verificación de identidad (01/10/2026) ──────────────────────────────
+    // El profesional sube DNI frente, dorso y una selfie con el DNI en la
+    // postulación. Mirar cada foto queda auditado, como los documentos de
+    // matrícula: es un documento de identidad y tiene que constar quién lo vio.
+    case 'identity_file_url': {
+      if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
+      if (!FOTOS_IDENTIDAD.includes(body.which)) return json({ error: 'foto inválida' }, 400)
+
+      const { data: coach, error } = await admin
+        .from('coaches').select('id, profile_id').eq('id', body.coach_id).maybeSingle()
+      if (error) return json({ error: error.message }, 500)
+      if (!coach) return json({ error: 'no existe ese coach' }, 404)
+
+      const { data: signed, error: signErr } = await admin
+        .storage.from('identity-docs')
+        .createSignedUrl(`${coach.profile_id}/${body.which}.jpg`, 300)
+      if (signErr || !signed) return json({ error: 'no está esa foto (puede que ya se haya borrado al verificar)' }, 404)
+
+      await audit(admin, {
+        ...actor,
+        action: 'identity_file_url',
+        targetType: 'coach',
+        targetId: coach.id,
+        details: { which: body.which },
+      })
+
+      return json({ result: 'ok', url: signed.signedUrl, expires_in: 300 })
+    }
+
+    // Marca la identidad como verificada y BORRA las tres fotos: queda la
+    // constancia (quién, cuándo, con qué nombre), no el documento. Si algo no
+    // coincide, no se usa esto: se rechaza la postulación con el motivo y la
+    // persona vuelve a subir las fotos.
+    case 'verify_identity': {
+      if (!body.coach_id) return json({ error: 'falta coach_id' }, 400)
+
+      const { data: coach, error } = await admin
+        .from('coaches').select('id, profile_id, profiles!inner(name)').eq('id', body.coach_id).maybeSingle()
+      if (error) return json({ error: error.message }, 500)
+      if (!coach) return json({ error: 'no existe ese coach' }, 404)
+      const nombre = (Array.isArray(coach.profiles) ? coach.profiles[0] : coach.profiles as any)?.name ?? null
+
+      const { data: iv, error: ivErr } = await admin
+        .from('identity_verifications').select('status').eq('profile_id', coach.profile_id).maybeSingle()
+      if (ivErr) return json({ error: ivErr.message }, 500)
+      if (!iv) return json({ error: 'todavía no envió las fotos de identidad' }, 409)
+      if (iv.status === 'verificada') return json({ result: 'ok', ya_estaba: true })
+
+      const { error: upErr } = await admin
+        .from('identity_verifications')
+        .update({ status: 'verificada', reviewed_at: new Date().toISOString(), reviewed_by: user.id, verified_name: nombre })
+        .eq('profile_id', coach.profile_id)
+      if (upErr) return json({ error: upErr.message }, 500)
+
+      // Borrar después de marcar: si el borrado falla, la identidad ya quedó
+      // verificada y se avisa; al revés quedaría sin fotos y sin verificar.
+      const { error: rmErr } = await admin.storage.from('identity-docs')
+        .remove(FOTOS_IDENTIDAD.map(f => `${coach.profile_id}/${f}.jpg`))
+      if (!rmErr) {
+        await admin.from('identity_verifications')
+          .update({ files_deleted_at: new Date().toISOString() })
+          .eq('profile_id', coach.profile_id)
+      }
+
+      const auditErr = await audit(admin, {
+        ...actor,
+        action: 'verify_identity',
+        targetType: 'coach',
+        targetId: coach.id,
+        details: { verified_name: nombre, fotos_borradas: !rmErr },
+      })
+
+      const avisos = [
+        rmErr ? `identidad verificada, pero no se pudieron borrar las fotos: ${rmErr.message}` : null,
+        auditErr ? `acción hecha, auditoría fallida: ${auditErr}` : null,
+      ].filter(Boolean)
+      return json({ result: 'ok', ...(avisos.length ? { warning: avisos.join(' · ') } : {}) })
     }
 
     case 'record_coach_interview': {
@@ -1244,6 +1328,13 @@ serve(async (req) => {
         : { data: [], error: null }
       if (credentialsError) return json({ error: credentialsError.message }, 500)
 
+      const profileIds = (data ?? []).map((c: any) => c.profile_id as string)
+      const { data: identities, error: identitiesError } = profileIds.length
+        ? await admin.from('identity_verifications').select('profile_id, status').in('profile_id', profileIds)
+        : { data: [], error: null }
+      if (identitiesError) return json({ error: identitiesError.message }, 500)
+      const identityByProfile = new Map((identities ?? []).map((i: any) => [i.profile_id, i.status]))
+
       return json({
         result: 'ok',
         // Se devuelve ya mapeado a la forma que consume el panel (`PendingCoach`),
@@ -1275,6 +1366,8 @@ serve(async (req) => {
             notes: c.application_notes ?? null,
             reviewedAt: c.application_reviewed_at ?? null,
             interviewedAt: interviewByCoach.get(c.id) ?? null,
+            // 'verificada' | 'pendiente' | 'sin_cargar' (01/10/2026).
+            identidad: identityByProfile.get(c.profile_id) ?? 'sin_cargar',
             // 24/09/2026: límites y lugar (docs/postulacion-preguntas.md).
             compromisoDerivar: c.compromiso_derivar ?? null,
             respuestaRiesgo: c.respuesta_riesgo ?? null,

@@ -85,6 +85,8 @@ export type PendingCoach = {
   notes: string | null;       // motivo del rechazo, si hubo
   reviewedAt: string | null;
   interviewedAt: string | null;
+  /** DNI y selfie (01/10/2026). Aprobar exige 'verificada'. */
+  identidad: 'verificada' | 'pendiente' | 'sin_cargar';
   /** Coaches y nutricionistas: se comprometió a derivar lo clínico. null = no aplica o postulación vieja. */
   compromisoDerivar: boolean | null;
   /** "¿Qué hacés si alguien te cuenta que piensa en hacerse daño?" Se lee al revisar. */
@@ -122,6 +124,21 @@ export function setCoachVerified(coachId: string, verified: boolean, notes?: str
  *  auditoría. El link `/c/<slug>` no cambia. */
 export function setCoachName(coachId: string, name: string, reason: string) {
   return callAdmin({ action: 'set_coach_name', coach_id: coachId, name, reason });
+}
+
+/** URL firmada de 5 minutos a una foto de identidad. Abrirla queda auditado. */
+export async function identityFileUrl(
+  coachId: string,
+  which: 'dni-frente' | 'dni-dorso' | 'selfie',
+): Promise<{ url?: string; error?: string }> {
+  const res = await callAdmin({ action: 'identity_file_url', coach_id: coachId, which });
+  if (!res.ok) return { error: res.error ?? 'no se pudo abrir la foto' };
+  return { url: res.data?.url as string };
+}
+
+/** Marca la identidad como verificada y borra las tres fotos. */
+export function verifyIdentity(coachId: string) {
+  return callAdmin({ action: 'verify_identity', coach_id: coachId });
 }
 
 export function recordCoachInterview(coachId: string, notes: string) {

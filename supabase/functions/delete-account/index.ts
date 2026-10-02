@@ -70,6 +70,8 @@ const PERSONAL_TABLES: { table: string; column: string }[] = [
   { table: 'resource_feedback',  column: 'user_id' },
   { table: 'favorite_coaches',   column: 'user_id' },
   { table: 'notifications',      column: 'recipient_id' },
+  // La constancia de identidad lleva el nombre verificado (01/10/2026).
+  { table: 'identity_verifications', column: 'profile_id' },
 ]
 // NO están acá a propósito, y conviene saber por qué:
 //   · bookings / reviews / messages / salas → se conservan anonimizadas.
@@ -221,6 +223,13 @@ serve(async (req) => {
     // ── 5. Avatar del storage ───────────────────────────────────────────────
     const { error: storageErr } = await admin.storage.from('avatars').remove([`${userId}/avatar.jpg`])
     if (storageErr) return json({ error: 'No se pudo borrar el avatar', detail: storageErr.message }, 500)
+
+    // Fotos de la verificación de identidad (DNI y selfie). Para cualquier
+    // cuenta y no solo coaches: una postulación abandonada antes de enviarse
+    // también se borra por acá (`useCerrarSesionAlSalir`) y pudo haberlas subido.
+    const { error: identityErr } = await admin.storage.from('identity-docs')
+      .remove(['dni-frente', 'dni-dorso', 'selfie'].map(f => `${userId}/${f}.jpg`))
+    if (identityErr) return json({ error: 'No se pudieron borrar las fotos de identidad', detail: identityErr.message }, 500)
 
     // ── 6. Lápida en profiles ───────────────────────────────────────────────
     // Reservas, reseñas, mensajes y salas siguen apuntando acá; por eso la fila

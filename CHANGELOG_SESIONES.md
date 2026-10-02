@@ -1,3 +1,19 @@
+## 2026-10-01 — Andre (Claude · verificación de identidad de profesionales)
+
+**Tocado:** `supabase/migrations/20261001030000_coach_identity_verification.sql` (nuevo), `lib/identidad.ts` (nuevo), `__tests__/identidad.test.ts` (nuevo), `screens/CoachApplicationScreen.tsx`, `screens/AdminScreen.tsx`, `lib/admin.ts`, `supabase/functions/admin-actions/index.ts`, `supabase/functions/delete-account/index.ts`, `docs/politica-de-privacidad.md` + legales regenerados, `app.json`, `SCHEMA.md`
+
+**Resumen:**
+- Andre: "deberíamos pedir documentos a los profesionales para verificar quiénes son". Decidido: **DNI frente, dorso y selfie con el DNI, obligatorios para aprobar**, revisión manual por ahora. A los aprobados de hoy no se les pide (son de prueba).
+- Las fotos se suben **en el formulario de postulación** (bloque 4, "Tu identidad"), porque al enviarla se cierra la sesión hasta la aprobación. Van a un espacio privado; el admin las abre desde la tarjeta de la postulación (cada apertura queda registrada) y al marcar "identidad verificada" **se borran**: queda solo la constancia.
+- **En la base**: tabla `identity_verifications`, bucket privado `identity-docs`, `enviar_identidad()` y `approve_coach_application` que exige la identidad. **Aplicado y verificado en producción** (10 chequeos con rollback, 0 restos). `admin-actions` **v41** y `delete-account` **v27** deployadas (el código en vivo era idéntico al repo) y responden bien.
+- Política de privacidad §2.6 (qué se pide, que compara una persona y no un sistema de reconocimiento facial, que se borra al verificar) y §10. Textos de permiso de cámara y fotos en `app.json` mencionan el DNI. 957 tests y TypeScript OK.
+
+**Pendiente para la próxima sesión:**
+- **Recompilar el cliente de desarrollo**: `app.json` cambió los textos de permiso de cámara/fotos (es nativo). La app actual sigue funcionando, con el texto viejo.
+- Probar en el iPhone una postulación completa: sacar las tres fotos (la selfie abre la cámara frontal), enviar, y desde el admin abrir las fotos, verificar, y confirmar que "Aprobar" exige la identidad.
+- Etiquetas de privacidad de las tiendas (`docs/etiquetas-privacidad-tiendas.md`): sumar fotos de documento de identidad para profesionales antes de publicar.
+- Si un día hay volumen, pasar a un servicio automático (Didit, MetaMap, Veriff) que valide contra RENAPER.
+
 ## 2026-10-01 — Andre (Claude · límites al cambio de nombre)
 
 **Tocado:** `supabase/migrations/20261001020000_profile_name_change_limits.sql` (nuevo), `lib/cambioDeNombre.ts` (nuevo), `__tests__/cambioDeNombre.test.ts` (nuevo), `screens/EditProfileScreen.tsx`, `screens/AdminScreen.tsx`, `lib/admin.ts`, `supabase/functions/admin-actions/index.ts`, `SCHEMA.md`
