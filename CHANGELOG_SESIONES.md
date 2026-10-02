@@ -1,3 +1,11 @@
+## 2026-10-02 — Andre (Claude · barra de pestañas con nombres y letra en Inicio del profesional)
+
+**Tocado:** `components/ui/IslandTabBar.tsx`, `app/(coach)/_layout.tsx`, `screens/CoachHomeScreen.tsx`
+
+**Resumen:**
+- **La barra de pestañas vuelve a tener nombres** debajo de cada ícono (cliente y profesional, es el mismo componente). Se habían sacado el 20/08 porque el ancho cambiaba al enfocar y la animación se trababa; ahora todas las pestañas miden lo mismo (80 pt, entra "Profesionales") y el nombre hace el mismo fundido de color que el ícono, sin nada de tamaño que animar. Inicio del profesional pasa de ícono de calendario a casa, como el del cliente. Verificado en el simulador: la burbuja viaja alineada.
+- **Inicio del profesional:** "Unirse", "Proponer horario" y los círculos de la semana pasan a la terracota oscura (`primaryInk`, 4,59:1 con el crema; la clara daba 3,6). Letra: fecha y hora de la próxima sesión 11 a 13, botones 12 a 14 (y 46 de alto), "Preparar sesión" 11,5 a 13, días de la semana 10 a 11,5. La tarjeta de la próxima sesión no se pudo ver (coach-prueba no tiene sesiones agendadas). 957 tests y tsc OK.
+
 ## 2026-10-02 — Andre (Claude · simulador andando y bug de zona horaria)
 
 **Tocado:** `lib/time.ts`, `__tests__/time.test.ts`, `screens/CoachHomeScreen.tsx`, `screens/CoachReservasScreen.tsx`, `lib/coachVisibility.ts`, `__tests__/coachVisibilityHome.test.ts`

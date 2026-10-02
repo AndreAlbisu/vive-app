@@ -93,7 +93,7 @@ export default function CoachTabLayout() {
   // llevan juntos y cuándo fue la última. El coach no busca "una conversación",
   // busca a alguien — y esa lista no existía en ningún lado de la app.
   const tabs: IslandTab[] = [
-    { name: 'index',    icon: 'calendar',        label: 'Inicio' },
+    { name: 'index',    icon: 'home',            label: 'Inicio' },
     { name: 'reservas', icon: 'clipboard',       label: 'Reservas', dot: pendingCount > 0 },
     { name: 'chats',    icon: 'users',           label: 'Personas', dot: hasUnreadChats },
     { name: 'recursos', icon: 'book-open',       label: 'Recursos' },

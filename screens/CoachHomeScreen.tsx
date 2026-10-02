@@ -19,7 +19,7 @@ import { getRelationshipNotes } from '@/lib/sessionNotes';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { supabase, registrarEvento } from '@/lib/supabase';
 import { EMAIL_CONTACTO, escribirnos } from '@/lib/contacto';
 import { SITIO_WEB, linkCompartible, linkDelCoach, mensajeParaCompartir } from '@/lib/linkCoach';
@@ -80,6 +80,10 @@ const CREAM_DEEP = '#EAE2D0';
 const FOREST = '#3F512F';
 const FOREST_SOFT = '#566245';
 const TERRA = '#C06B4A';
+// Terracota para botones CON TEXTO encima: la clara (`TERRA`) da 3,6:1 con el
+// crema, por debajo del mínimo; esta da 4,59. Ver `primaryInk` en el tema.
+// 02/10/2026: "Unirse" y "Proponer horario" pasan a esta.
+const TERRA_INK = ViveColors.primaryInk;
 const TERRA_SOFT = '#EAD3C6';
 const OK_BG = '#DCE5CB';
 const OK_INK = '#42542F';
@@ -1613,15 +1617,15 @@ const s = StyleSheet.create({
   },
   wd: { alignItems: 'center' },
   wdToday: {},
-  wdAbbr: { fontSize: 10, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
+  wdAbbr: { fontSize: 11.5, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
   wdAbbrToday: { color: FOREST, fontFamily: ViveFonts.semibold },
   wdCircle: {
     width: 26, height: 26, borderRadius: 13, marginTop: 5,
     alignItems: 'center', justifyContent: 'center', backgroundColor: CREAM_DEEP,
   },
-  wdCircleHas: { backgroundColor: TERRA },
+  wdCircleHas: { backgroundColor: TERRA_INK },
   wdCircleToday: { borderWidth: 1.5, borderColor: FOREST },
-  wdCount: { fontSize: 10.5, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },
+  wdCount: { fontSize: 12, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },
 
   // Próxima sesión (verde)
   next: { marginTop: 14, backgroundColor: '#3E4E2C', borderRadius: 24, padding: 17, overflow: 'hidden' },
@@ -1629,27 +1633,29 @@ const s = StyleSheet.create({
     position: 'absolute', right: -40, top: -46, width: 140, height: 140, borderRadius: 70,
     backgroundColor: 'rgba(234,211,198,0.10)',
   },
-  eyebrow: { fontSize: 10.5, letterSpacing: 0.8, textTransform: 'uppercase', color: GREEN_EYEBROW, fontFamily: ViveFonts.medium },
+  eyebrow: { fontSize: 11.5, letterSpacing: 0.8, textTransform: 'uppercase', color: GREEN_EYEBROW, fontFamily: ViveFonts.medium },
   who: { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 10 },
   whoAv: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#55663F' },
   whoAvFallback: { alignItems: 'center', justifyContent: 'center' },
   whoAvTxt: { fontFamily: ViveFonts.bold, fontSize: 14, color: '#FFF3E8' },
   whoName: { fontFamily: ViveFonts.titleSemiBold, fontSize: 17, color: GREEN_TXT },
-  whoSub: { fontSize: 11, color: GREEN_EYEBROW, fontFamily: ViveFonts.regular, marginTop: 2 },
+  // Cuándo es la sesión: 13 (era 11). Es el dato que se viene a mirar.
+  whoSub: { fontSize: 13, lineHeight: 18, color: GREEN_EYEBROW, fontFamily: ViveFonts.regular, marginTop: 2 },
   acts: { flexDirection: 'row', gap: 8, marginTop: 13 },
-  actBtn: { flex: 1, borderRadius: 15, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
-  actJoin: { backgroundColor: TERRA },
-  actJoinTxt: { fontSize: 12, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },
-  actDisabled: { backgroundColor: 'rgba(192,107,74,0.45)' },
+  actBtn: { flex: 1, borderRadius: 15, paddingVertical: 11, minHeight: 46, alignItems: 'center', justifyContent: 'center' },
+  actJoin: { backgroundColor: TERRA_INK },
+  // Letra de 14 (era 12): es el botón que se toca con la persona esperando.
+  actJoinTxt: { fontSize: 14, fontFamily: ViveFonts.semibold, color: ViveColors.onPrimaryInk },
+  actDisabled: { backgroundColor: 'rgba(162,88,66,0.45)' },
   actPrep: { backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
-  actPrepTxt: { fontSize: 12, fontFamily: ViveFonts.semibold, color: GREEN_TXT },
+  actPrepTxt: { fontSize: 14, fontFamily: ViveFonts.semibold, color: GREEN_TXT },
   prep: { marginTop: 11, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 16, padding: 13 },
-  prepLine: { fontSize: 11.5, color: '#E9E4D2', lineHeight: 18, fontFamily: ViveFonts.regular },
-  prepB: { color: GREEN_TXT, fontFamily: ViveFonts.semibold, fontSize: 11.5 },
+  prepLine: { fontSize: 13, color: '#E9E4D2', lineHeight: 19, fontFamily: ViveFonts.regular },
+  prepB: { color: GREEN_TXT, fontFamily: ViveFonts.semibold, fontSize: 13 },
   prepRes: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
-  prepOk: { color: '#C9DFA9', fontSize: 11.5, fontFamily: ViveFonts.regular, flexShrink: 1 },
+  prepOk: { color: '#C9DFA9', fontSize: 13, fontFamily: ViveFonts.regular, flexShrink: 1 },
   prepSoft: { fontFamily: ViveFonts.regular, fontSize: 11, color: FOREST_SOFT, opacity: 0.85 },
-  prepWarn: { color: TERRA_SOFT, fontSize: 11.5, fontFamily: ViveFonts.regular, flexShrink: 1 },
+  prepWarn: { color: TERRA_SOFT, fontSize: 13, fontFamily: ViveFonts.regular, flexShrink: 1 },
 
   nextEmpty: {
     marginTop: 14, backgroundColor: CARD, borderWidth: 1, borderColor: LINE, borderRadius: 20,
@@ -1816,12 +1822,12 @@ const s = StyleSheet.create({
   caenName: { fontFamily: ViveFonts.semibold, fontSize: 14, color: FOREST },
   caenMeta: { fontFamily: ViveFonts.regular, fontSize: 12, color: FOREST_SOFT, marginTop: 1 },
   caenBtn: {
-    backgroundColor: TERRA,
+    backgroundColor: TERRA_INK,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  caenBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 12, color: '#F7EFE4' },
+  caenBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 13, color: ViveColors.onPrimaryInk },
 
   vis: {
     flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12, padding: 15,
