@@ -11,6 +11,18 @@
 **Pendiente para la próxima sesión:**
 - Ver en un perfil con video y recursos cómo quedan; confirmar en el iPhone que 4 líneas de bio es la medida justa.
 
+## 2026-10-02 — Andre (Claude · Personas y Recursos del profesional)
+
+**Tocado:** `screens/CoachChatsScreen.tsx`, `screens/CoachResourcesScreen.tsx`
+
+**Resumen:**
+- Revisión de Personas y Recursos (código + capturas como coach-prueba). Las dos están bien resueltas; el problema era el mismo de Inicio y Reservas: **sin señal decían "Todavía no atendiste a nadie" y "Todavía no subiste recursos"**. Ahora "No pudimos cargar…" con Reintentar.
+- Recursos: "Ir a Chats" → "Ir a Personas" (la pestaña se llama así); reproducciones y guardados con íconos (`play`, `bookmark`) en vez de ▶ y ◈ de texto ("◈" no se entendía); "Subir" en terracota oscura (contraste). Verificado en el simulador. 957 tests y tsc OK.
+
+**Pendiente para la próxima sesión:**
+- "Recomendar" en un recurso abre un aviso que dice "abrí el chat y tocá +": podría abrir directamente la elección de persona.
+- En Personas aparecen "Usuario" y "Usuario Eliminado" como nombres (datos de prueba; una cuenta borrada sigue como persona con su conversación).
+
 ## 2026-10-02 — Andre (Claude · buscador con letras separadas)
 
 **Tocado:** `screens/VerificarMailScreen.tsx`, `app/(tabs)/conexiones.tsx`

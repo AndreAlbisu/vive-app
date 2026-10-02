@@ -134,6 +134,10 @@ export default function CoachChatsScreen() {
   const { user } = useAuth();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
+  // 02/10/2026: si la consulta fallaba (sin señal) se mostraba "Todavía no
+  // atendiste a nadie" a un profesional con pacientes. Mismo arreglo que
+  // Inicio y Reservas.
+  const [cargaFallo, setCargaFallo] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const { unreadSalaIds } = useUnreadSalas({ userId: user?.id ?? null, role: 'coach' });
 
@@ -218,7 +222,9 @@ export default function CoachChatsScreen() {
       .select('id, user_id, coach_last_read_at, coach_archived')
       .eq('coach_id', user.id);
 
-    if (error || !salas || salas.length === 0) { setRooms([]); setLoading(false); return; }
+    if (error) { setCargaFallo(true); setLoading(false); return; }
+    setCargaFallo(false);
+    if (!salas || salas.length === 0) { setRooms([]); setLoading(false); return; }
 
     const userIds = [...new Set(salas.map(s => s.user_id as string))];
 
@@ -489,6 +495,19 @@ export default function CoachChatsScreen() {
 
         {loading ? (
           <View style={s.loadingState}><ActivityIndicator size="large" color={FOREST} /></View>
+        ) : cargaFallo ? (
+          <View style={s.falloBox}>
+            <Feather name="wifi-off" size={22} color={FOREST} />
+            <Text style={s.falloTitulo}>No pudimos cargar tus personas</Text>
+            <Text style={s.falloTxt}>Revisá tu conexión y probá de nuevo. Tus conversaciones siguen como estaban.</Text>
+            <TouchableOpacity
+              style={s.falloBtn}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              onPress={() => { setLoading(true); setCargaFallo(false); void loadRooms(); }}>
+              <Text style={s.falloBtnTxt}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
         ) : rooms.length === 0 ? (
           // Estado vacío — spec `coach-estados-vacios.html`. A propósito NO
           // lleva checklist ni progreso: esta pantalla es un directorio de
@@ -644,6 +663,14 @@ const s = StyleSheet.create({
   // "estás adentro de esto", y el ✕ de adentro dice cómo salir.
   lupaActiva: { backgroundColor: FOREST, borderColor: FOREST },
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  falloBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 10 },
+  falloTitulo: { fontFamily: ViveFonts.semibold, fontSize: 18, color: FOREST, textAlign: 'center' },
+  falloTxt: { fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 21, color: FOREST_SOFT, textAlign: 'center' },
+  falloBtn: {
+    marginTop: 8, minHeight: 48, paddingHorizontal: 28, borderRadius: 24,
+    backgroundColor: FOREST, alignItems: 'center', justifyContent: 'center',
+  },
+  falloBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 15, color: '#F3EEDF' },
   container: { paddingHorizontal: 20, paddingTop: 4 },
 
   // Estado vacío (spec `coach-estados-vacios.html`) — mismo lenguaje que el

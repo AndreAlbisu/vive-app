@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
+import { ViveColors, ViveFonts, TAB_BAR_CLEARANCE } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -61,17 +61,20 @@ export default function CoachResourcesScreen() {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [resources, setResources] = useState<CoachResource[]>([]);
   const [loading, setLoading] = useState(true);
+  // 02/10/2026: un error se mostraba como "Todavía no subiste recursos".
+  const [cargaFallo, setCargaFallo] = useState(false);
   const [monthStats, setMonthStats] = useState({ plays: 0, saves: 0, profile_visits: 0 });
   const [counts, setCounts] = useState<Record<string, { plays: number; saves: number }>>({});
 
   const load = useCallback(async () => {
     if (!user) { setLoading(false); return; }
-    const { data: coach } = await supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle();
+    const { data: coach, error: errCoach } = await supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle();
+    if (errCoach) { setCargaFallo(true); setLoading(false); return; }
     const cid = (coach?.id as string) ?? null;
     setCoachId(cid);
     if (!cid) { setResources([]); setLoading(false); return; }
 
-    const [{ data }, { data: monthData }, { data: countsData }] = await Promise.all([
+    const [{ data, error: errRecursos }, { data: monthData }, { data: countsData }] = await Promise.all([
       supabase
         .from('coach_resources')
         .select('id, title, format, status, rejection_rule, duration_seconds, topic_id')
@@ -81,6 +84,8 @@ export default function CoachResourcesScreen() {
       supabase.rpc('get_my_resource_stats_month').maybeSingle(),
       supabase.rpc('get_my_resource_counts'),
     ]);
+    if (errRecursos) { setCargaFallo(true); setLoading(false); return; }
+    setCargaFallo(false);
     setResources((data as CoachResource[]) ?? []);
     if (monthData) {
       setMonthStats({
@@ -111,7 +116,7 @@ export default function CoachResourcesScreen() {
       'Recomendar',
       `Abrí el chat con la persona y tocá + para enviarle "${r.title}"`,
       [
-        { text: 'Ir a Chats', onPress: () => router.navigate('/chats') },
+        { text: 'Ir a Personas', onPress: () => router.navigate('/chats') },
         { text: 'Cerrar', style: 'cancel' },
       ],
     );
@@ -149,7 +154,7 @@ export default function CoachResourcesScreen() {
           {/* CTAs */}
           <View style={s.ctaRow}>
             <TouchableOpacity style={[s.cta, s.ctaUp]} activeOpacity={0.88} onPress={() => openUpload()}>
-              <Feather name="plus" size={15} color="#FFF6EC" />
+              <Feather name="plus" size={15} color={ViveColors.onPrimaryInk} />
               <Text style={s.ctaUpTxt}>Subir</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.cta, s.ctaRec]} activeOpacity={0.88} onPress={() => openUpload('audio')}>
@@ -166,6 +171,17 @@ export default function CoachResourcesScreen() {
 
           {loading ? (
             <View style={s.loadingBox}><ActivityIndicator size="small" color={FOREST} /></View>
+          ) : cargaFallo ? (
+            <View style={s.empty}>
+              <Text style={s.emptyTxt}>No pudimos cargar tus recursos. Revisá tu conexión.</Text>
+              <TouchableOpacity
+                onPress={() => { setLoading(true); setCargaFallo(false); void load(); }}
+                style={s.reintentar}
+                accessibilityRole="button"
+                hitSlop={8}>
+                <Text style={s.reintentarTxt}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
           ) : resources.length === 0 ? (
             <View style={s.empty}>
               <Text style={s.emptyTxt}>Todavía no subiste recursos.{'\n'}Tus audios, videos, podcasts y lecturas aparecerán acá.</Text>
@@ -196,8 +212,16 @@ export default function CoachResourcesScreen() {
                   </View>
                   {r.status === 'published' && (
                     <View style={s.line2}>
-                      <Text style={s.line2Stat}>▶ <Text style={s.line2StatN}>{counts[r.id]?.plays ?? 0}</Text></Text>
-                      <Text style={s.line2Stat}>◈ <Text style={s.line2StatN}>{counts[r.id]?.saves ?? 0}</Text></Text>
+                      {/* Íconos de verdad y no ▶ / ◈ de texto: "◈" para guardados
+                          no se entendía. */}
+                      <View style={s.line2Item} accessible accessibilityLabel={`${counts[r.id]?.plays ?? 0} reproducciones`}>
+                        <Feather name="play" size={12} color={FOREST_SOFT} />
+                        <Text style={s.line2StatN}>{counts[r.id]?.plays ?? 0}</Text>
+                      </View>
+                      <View style={s.line2Item} accessible accessibilityLabel={`${counts[r.id]?.saves ?? 0} guardados`}>
+                        <Feather name="bookmark" size={12} color={FOREST_SOFT} />
+                        <Text style={s.line2StatN}>{counts[r.id]?.saves ?? 0}</Text>
+                      </View>
                       <TouchableOpacity style={s.recBtn} activeOpacity={0.8} onPress={() => recommend(r)}>
                         <Text style={s.recBtnTxt}>Recomendar</Text>
                       </TouchableOpacity>
@@ -248,8 +272,9 @@ const s = StyleSheet.create({
   // CTAs
   ctaRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   cta: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 18, paddingVertical: 13 },
-  ctaUp: { backgroundColor: TERRA },
-  ctaUpTxt: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: '#FFF6EC' },
+  // Terracota oscura para texto encima (4,59:1); la clara daba 3,6.
+  ctaUp: { backgroundColor: ViveColors.primaryInk },
+  ctaUpTxt: { fontSize: 13.5, fontFamily: ViveFonts.semibold, color: ViveColors.onPrimaryInk },
   ctaRec: { backgroundColor: CARD, borderWidth: 1.5, borderColor: TERRA },
   ctaRecTxt: { fontSize: 12.5, fontFamily: ViveFonts.semibold, color: '#8F4A2E' },
 
@@ -269,7 +294,10 @@ const s = StyleSheet.create({
   badgeTxt: { fontSize: 9, fontFamily: ViveFonts.bold, letterSpacing: 0.4 },
   line2: { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 9, paddingTop: 9, borderTopWidth: 1, borderTopColor: LINE },
   line2Stat: { fontSize: 10, color: FOREST_SOFT, fontFamily: ViveFonts.regular },
-  line2StatN: { color: FOREST, fontFamily: ViveFonts.semibold },
+  line2StatN: { fontSize: 12, color: FOREST, fontFamily: ViveFonts.semibold },
+  line2Item: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  reintentar: { marginTop: 10, paddingVertical: 6, paddingHorizontal: 12 },
+  reintentarTxt: { fontSize: 13, fontFamily: ViveFonts.semibold, color: FOREST },
   recBtn: { marginLeft: 'auto', borderWidth: 1.5, borderColor: FOREST, borderRadius: 12, paddingVertical: 5, paddingHorizontal: 10 },
   recBtnTxt: { fontSize: 10.5, fontFamily: ViveFonts.semibold, color: FOREST },
   rejectNote: { fontSize: 10.5, color: '#B53B3B', marginTop: 8, fontFamily: ViveFonts.regular },
