@@ -30,7 +30,11 @@ export type CachedCoach = {
   rebookingRate?: number | null; // coach_rebooking_stats.rebooking_rate (null si <5 completadas)
   completadasCount?: number;     // coach_rebooking_stats.completadas_count
   recentBookers?: number;        // coach_trending_stats.recent_bookers (usuarios distintos, 30d)
-  hasSlotThisWeek?: boolean;     // coach_availability_status.status = 'this_week' — criterio del slot de relleno
+  hasSlotThisWeek?: boolean;     // tiene `proximoTurno` (un turno libre en los próximos 7 días)
+  /** El primer turno libre de los próximos 7 días (`proximos_turnos`, mismas
+   *  reglas que el "Próximo turno" del perfil). Null = ninguno esta semana.
+   *  Ordena el mazo y la lista y se muestra en la tarjeta; nunca filtra. */
+  proximoTurno?: { fecha: string; hora: string } | null;
   /** Atiende a gente de fuera de Argentina, cobrando en dólares. **No cambia
    *  sus horarios** (atiende en las mismas franjas; el que se acomoda es el
    *  usuario), cambia el cobro. Ya NO implica USDT: desde D4 el riel puede ser
@@ -164,8 +168,12 @@ async function _doFetch(): Promise<void> {
     coachIds.length
       ? supabase.from('coach_trending_stats').select('coach_id, recent_bookers').in('coach_id', coachIds)
       : Promise.resolve({ data: [] as any[] }),
+    // 02/10/2026: antes era la vista `coach_availability_status` (sí o no).
+    // Ahora el turno mismo, para mostrarlo en la tarjeta. Es una sola llamada
+    // para todo el catálogo; si falla, nadie tiene turno y el orden queda como
+    // antes.
     coachIds.length
-      ? supabase.from('coach_availability_status').select('coach_id, status').in('coach_id', coachIds).eq('status', 'this_week')
+      ? supabase.rpc('proximos_turnos', { p_dias: 7 })
       : Promise.resolve({ data: [] as any[] }),
   ]);
 
@@ -189,8 +197,10 @@ async function _doFetch(): Promise<void> {
     trendByCoach[r.coach_id as string] = (r.recent_bookers ?? 0) as number;
   });
 
-  // La query ya viene filtrada por status='this_week', así que estar en el set alcanza.
-  const availableThisWeek = new Set<string>((availRes.data ?? []).map((r: any) => r.coach_id as string));
+  const turnoByCoach: Record<string, { fecha: string; hora: string }> = {};
+  ((availRes.data ?? []) as any[]).forEach(r => {
+    turnoByCoach[r.coach_id as string] = { fecha: r.fecha as string, hora: r.hora as string };
+  });
 
   cache = initial.map(c => {
     const ratings = ratingsByCoach[c.id] ?? [];
@@ -206,7 +216,8 @@ async function _doFetch(): Promise<void> {
       rebookingRate:    rb?.rate ?? null,
       completadasCount: rb?.completed ?? 0,
       recentBookers:    (c.coachId ? trendByCoach[c.coachId] : 0) ?? 0,
-      hasSlotThisWeek:  !!c.coachId && availableThisWeek.has(c.coachId),
+      proximoTurno:     (c.coachId ? turnoByCoach[c.coachId] : undefined) ?? null,
+      hasSlotThisWeek:  !!c.coachId && !!turnoByCoach[c.coachId],
     };
   });
 }

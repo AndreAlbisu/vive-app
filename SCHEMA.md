@@ -504,6 +504,12 @@ Datos de cobro del coach para las **sesiones internacionales** — las únicas d
 - `continuidad_resumen(dias default 30)`: parejas con sesión, cuántas volvieron (2+ sesiones o reserva abierta después de la primera), porcentaje, cortadas y cortadas que siguen en Vita sin otro profesional.
 - Primera corrida (datos de prueba, no significan nada): 44 parejas, 3 volvieron (6,8%), 41 cortadas, 1 que sigue en Vita sin otro profesional.
 
+### `proximos_turnos(p_dias default 7)` (02/10/2026)
+`scripts/add-proximos-turnos.sql` — ✅ **CORRIDO y VERIFICADO el 02/10/2026**: 2 profesionales con turno en 7 días y los dos coinciden con el primero de `slots_libres`; `anon` puede ejecutarla.
+- Devuelve `(coach_id, fecha, hora)`: el primer turno libre de cada profesional verificado y activo. **Mismas reglas que `slots_libres`** (no bloqueado, "hoy" en hora argentina sin turnos pasados, sin reservas `pendiente`/`confirmada` en ese horario), para que la tarjeta y el perfil digan lo mismo. Pública como `slots_libres`.
+- La usan `coachesCache` (`proximoTurno`, y de ahí `hasSlotThisWeek`) y el respaldo de `app/search3.tsx`. **Ordena, nunca filtra**: el mazo prefiere adentro de cada grupo a quien tiene turno (el quiz pesa más) y la lista los pone arriba, el más cercano primero. La tarjeta muestra "Próximo turno: mañana, 09:00".
+- `coach_availability_status` sigue para el panel del profesional. Diferencia conocida: la vista da por libre un turno con un checkout abandonado hace más de 15 min (30 en USDT); esta función, como `slots_libres`, no.
+
 ### `coach_trending_stats` (VISTA)
 - Vista de agregación (no tabla) para el slot **"En tendencia"** del deck de Conexiones (criterio v2 de slots etiquetados). Una fila por coach: `coach_id` (= `coaches.id`), `recent_bookers`.
 - **`recent_bookers`** = usuarios DISTINTOS que reservaron a ese coach en los últimos 30 días (por `bookings.created_at`, el acto de reservar), excluyendo `status = 'cancelada'` **y la plata que volvió** (`payment_status in ('reembolsado','contracargo','reembolso_pendiente')`, `scripts/fix-stats-reembolsos.sql`, ✅ **CORRIDO y VERIFICADO el 16/09/2026** — mismo motivo y mismo criterio que en `coach_rebooking_stats`). Distintos usuarios y no filas para que un mismo usuario reservando varias veces no infle la tendencia.

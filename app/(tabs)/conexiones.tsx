@@ -29,6 +29,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavoriteCoaches } from '@/hooks/useFavoriteCoaches';
 import { supabase } from '@/lib/supabase';
 import { prefetchCoaches, getCoachesCache, getCoachesStatus, CachedCoach } from '@/lib/coachesCache';
+import { lineaProximoLugar } from '@/lib/perfilProfesional';
 import { useBlockedFilter } from '@/hooks/useBlockedFilter';
 import { altoDeEje } from '@/lib/ejesLayout';
 import { DOORS, coachesForDoor, EJES, EJE_MAP, doorsForEje } from '@/constants/conexionesDoors';
@@ -597,6 +598,18 @@ export default function ConexionesScreen() {
                               <View style={s.motivoRow}>
                                 <Feather name="check" size={12} color={FOREST} />
                                 <Text style={s.motivoText} numberOfLines={2}>{motivo}</Text>
+                              </View>
+                            )}
+
+                            {/* Mismo texto que el perfil ("Próximo turno: mañana, 18:00").
+                                Solo si tiene uno en los próximos 7 días: sin turno
+                                pronto no se dice nada, no es una falta. */}
+                            {!!coach.proximoTurno && (
+                              <View style={s.motivoRow}>
+                                <Feather name="clock" size={12} color={FOREST} />
+                                <Text style={s.motivoText} numberOfLines={1}>
+                                  {lineaProximoLugar(coach.proximoTurno.fecha, coach.proximoTurno.hora).texto}
+                                </Text>
                               </View>
                             )}
 

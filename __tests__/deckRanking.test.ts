@@ -328,3 +328,29 @@ describe('rankDeck — con las respuestas del quiz', () => {
     expect(r.encaja).toBe(true);
   });
 });
+
+describe('rankDeck — turno libre esta semana', () => {
+  const turno = { fecha: '2026-08-17', hora: '18:00' };
+
+  it('adentro del grupo, sale primero quien tiene turno pronto', () => {
+    for (const uid of ['a', 'b', 'c', 'd', 'e']) {
+      const sinTurno = Array.from({ length: 6 }, () => coach({ priceFrom: 5000 }));
+      const conTurno = coach({ priceFrom: 5000, proximoTurno: turno });
+      const deck = rankDeck([...sinTurno, conTurno], uid, NOW);
+      expect(deck.find(e => e.slot.key === 'economico')!.coach.id).toBe(conTurno.id);
+    }
+  });
+
+  it('si nadie tiene turno pronto, igual sale alguien (nunca filtra)', () => {
+    const deck = rankDeck([coach({ priceFrom: 5000 }), coach({ priceFrom: 5000 })], 'x', NOW);
+    expect(deck.find(e => e.slot.key === 'economico')).toBeTruthy();
+  });
+
+  it('lo que pidió en el quiz pesa más que el turno', () => {
+    const mujerSinTurno = coach({ priceFrom: 5000, gender: 'Femenino' });
+    const varonConTurno = coach({ priceFrom: 5000, gender: 'Masculino', proximoTurno: turno });
+    const deck = rankDeck([mujerSinTurno, varonConTurno], 'x', NOW, c =>
+      evaluarParaMazo(c, { tema: null, tipo: 'any', presupuesto: null, genero: 'mujer' }, []));
+    expect(deck.find(e => e.slot.key === 'economico')!.coach.id).toBe(mujerSinTurno.id);
+  });
+});

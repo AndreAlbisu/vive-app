@@ -1,3 +1,18 @@
+## 2026-10-02 — Andre (Claude · turno libre pronto: orden y tarjeta)
+
+**Tocado:** `scripts/add-proximos-turnos.sql`, `lib/coachesCache.ts`, `lib/coachDeckRanking.ts`, `__tests__/deckRanking.test.ts`, `app/(tabs)/conexiones.tsx`, `app/search3.tsx`, `SCHEMA.md`
+
+**Resumen:**
+- Andre propuso un filtro "con disponibilidad la próxima semana". Decidido: **ordenar y mostrar, no filtrar** (con pocos profesionales reales al lanzar, un filtro vacía puertas enteras). El filtro queda para cuando haya catálogo.
+- 🗄️ **Base (producción):** `proximos_turnos()`, el primer turno libre de cada profesional en 7 días, con las mismas reglas que `slots_libres`. Verificado. SCHEMA.md actualizado.
+- **Mazo:** adentro de cada grupo sale primero quien tiene turno pronto (lo del quiz pesa más). 3 tests nuevos. **Lista completa:** arriba los que tienen turno, el más cercano primero. Las dos tarjetas muestran "Próximo turno: mañana, 09:00", el mismo texto del perfil.
+- Bug encontrado al verlo: ordenar con `localeCompare` subía a los que no tienen turno (el símbolo de relleno va antes que los números). Arreglado con una comparación explícita. La lista se vio en el simulador; **el mazo no** (en el simulador quedó abierta una cuenta de profesional).
+- Corrección a lo que se le dijo a Andre: `hasSlotThisWeek` no era un criterio del mazo (solo el motivo del quiz y el panel del profesional). Ahora sí ordena.
+- Los "37 profesionales activos" son perfiles de prueba; en el catálogo se ven 3 (los demás no tienen medio de cobro).
+
+**Pendiente para la próxima sesión:**
+- Ver la tarjeta del mazo con "Próximo turno" en el iPhone (Mental → Comunicación tiene a Augusto con turno).
+
 ## 2026-10-02 — Andre (Claude · medición de continuidad y fuga)
 
 **Tocado:** `scripts/add-medicion-continuidad.sql`, `SCHEMA.md`
