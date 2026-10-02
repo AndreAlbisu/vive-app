@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Pressable, StyleSheet, Animated, Platform, Text } from 'react-native';
+import { View, Pressable, StyleSheet, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 
-import { ViveColors, ViveFonts } from '@/constants/theme';
+import { ViveColors } from '@/constants/theme';
 
 const CREAM       = 'rgba(242,236,223,0.95)';
 const CREAM_LIGHT = '#F3EEDF';
@@ -19,9 +19,6 @@ const AnimatedFeather = Animated.createAnimatedComponent(Feather);
 // la pastilla, el de la burbuja y la cuenta del ancho de cada tab: si los tres
 // no coinciden, la burbuja queda corrida.
 const PILL_PAD = 6;
-// Ancho de cada pestaña: entra "Profesionales" (la más larga) y es igual para
-// todas, que es lo que necesita la burbuja.
-const TAB_W = 80;
 
 export type IslandTab = {
   name: string;
@@ -30,13 +27,6 @@ export type IslandTab = {
   dot?: boolean;
 };
 
-// 🔴 02/10/2026: VUELVE EL NOMBRE debajo de cada ícono (revisión de UX: una
-// barra de solo íconos obliga a adivinar; "calendario" y "portapapeles" no
-// dicen Inicio y Reservas). El problema del 20/08 de abajo era el ANCHO que
-// cambiaba al enfocar; acá el nombre está siempre y todas las pestañas tienen
-// el mismo ancho fijo (`TAB_W`), así que no hay ningún layout que animar. El
-// color del nombre hace el mismo crossfade que el ícono.
-//
 // 20/08/2026: se sacó el label visible (quedó solo como accessibilityLabel).
 // Antes cada tab cambiaba de ancho al enfocarse para hacerle lugar al texto —
 // `paddingHorizontal`/`maxWidth` no se pueden animar por el driver nativo
@@ -90,15 +80,6 @@ function IslandTabItem({
               style={[styles.dot, { opacity: focus.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]}
             />
           )}
-        </View>
-        <View>
-          <Text style={styles.label} numberOfLines={1} maxFontSizeMultiplier={1.2}>{tab.label}</Text>
-          <Animated.Text
-            style={[styles.label, styles.labelOn, StyleSheet.absoluteFill, { opacity: focus }]}
-            numberOfLines={1}
-            maxFontSizeMultiplier={1.2}>
-            {tab.label}
-          </Animated.Text>
         </View>
       </View>
     </Pressable>
@@ -222,7 +203,7 @@ const styles = StyleSheet.create({
   tabHit: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: TAB_W,
+    minWidth: 44,
     minHeight: 44,
   },
   tab: {
@@ -230,12 +211,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     // Mismo padding siempre, foco o no — es justo lo que evita tener que
     // animar ningún ancho al cambiar de tab (ver nota arriba del componente).
-    paddingVertical: 8,
-    gap: 3,
+    paddingVertical: 12,
+    paddingHorizontal: 15,
     borderRadius: 22,
   },
-  label: { fontFamily: ViveFonts.medium, fontSize: 10.5, color: FOREST_SOFT, textAlign: 'center' },
-  labelOn: { color: CREAM_LIGHT },
   bubble: {
     position: 'absolute',
     left: PILL_PAD,
