@@ -745,7 +745,7 @@ export default function ProfesionalScreen() {
           <View style={s.section}>
             <Text accessibilityRole="header" style={s.sectionTitle}>Cómo trabaja</Text>
             {prof.topics.length > 0 && (
-              <View style={s.workBlock}>
+              <View style={[s.workBlock, s.topicsBlock]}>
                 <View style={s.chipsRow}>
                   {prof.topics.map(topic => (
                     <View key={topic} style={s.chip}>
@@ -1027,12 +1027,20 @@ export default function ProfesionalScreen() {
               </>
             )}
 
+            {puedeReservar && paymentMethods.length > 0 && (
+              <View style={s.pagosRow} accessible accessibilityLabel={`Acepta ${paymentMethods.join(', ')}`}>
+                {paymentMethods.map((m, i) => (
+                  <Text key={m} style={s.pagoTagTxt}>{i > 0 ? '·  ' : ''}{m}</Text>
+                ))}
+              </View>
+            )}
           </View>
             <ScaleCard
               style={[s.btnPrimary, noDisponible && s.btnPrimaryDisabled]}
               activeOpacity={0.9}
               disabled={noDisponible}
               accessibilityRole="button"
+              accessibilityState={{ disabled: noDisponible }}
               onPressIn={() => vibrar(true)}
               onPress={() => {
                 if (esEjemplo) { avisarEjemplo(); return; }
@@ -1054,18 +1062,19 @@ export default function ProfesionalScreen() {
                   },
                 });
               }}>
-              <Text style={s.btnPrimaryText}>
+              {!noDisponible && (
+                <MaterialCommunityIcons
+                  name={blocked ? 'lock-open-outline' : 'calendar-blank-outline'}
+                  size={20}
+                  color={ViveColors.onPrimaryInk}
+                  accessible={false}
+                />
+              )}
+              <Text style={[s.btnPrimaryText, noDisponible && s.btnPrimaryTextDisabled]}>
                 {noDisponible ? 'No disponible' : blocked ? 'Desbloquear' : 'Reservar'}
               </Text>
             </ScaleCard>
         </View>
-        {puedeReservar && paymentMethods.length > 0 && (
-          <View style={s.pagosRow} accessible accessibilityLabel={`Acepta ${paymentMethods.join(', ')}`}>
-            {paymentMethods.map((m, i) => (
-              <Text key={m} style={s.pagoTagTxt}>{i > 0 ? '·  ' : ''}{m}</Text>
-            ))}
-          </View>
-        )}
       </SafeAreaView>
       </SafeAreaView>
 
@@ -1193,27 +1202,27 @@ const s = StyleSheet.create({
   practico: {
     marginHorizontal: 20,
     marginBottom: 4,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 16,
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    borderRadius: 15,
     borderCurve: 'continuous',
-    backgroundColor: '#E6E9DA',
-    gap: 14,
+    backgroundColor: '#EDEADD',
+    gap: 9,
   },
   practicoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   primera: { gap: 3, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(86,94,50,0.12)' },
   primeraTitulo: { fontFamily: ViveFonts.semibold, fontSize: 15, color: ViveColors.text },
   primeraTexto: { fontFamily: ViveFonts.regular, fontSize: 14.5, lineHeight: 21, color: ViveColors.text },
   practicoIcon: { marginTop: 1 },
-  practicoText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14.5, lineHeight: 21, color: ViveColors.text },
+  practicoText: { flexShrink: 1, fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 20, color: ViveColors.text },
   practicoSub: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: ViveColors.softInk, marginTop: 2 },
   motivo: { fontFamily: ViveFonts.medium, fontSize: 15, lineHeight: 21, color: ViveColors.text },
   factStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
   factLink: { fontFamily: ViveFonts.semibold, color: ViveColors.primaryInk },
   // Abajo ya está el área segura del teléfono (la raya de inicio): no hace
   // falta sumarle aire propio.
-  pagosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 20, paddingBottom: 2 },
-  pagoTagTxt: { fontFamily: ViveFonts.medium, fontSize: 12, lineHeight: 17, color: ViveColors.text },
+  pagosRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 6, rowGap: 2, paddingTop: 6 },
+  pagoTagTxt: { fontFamily: ViveFonts.regular, fontSize: 11, lineHeight: 16, color: ViveColors.softInk },
   nacionalidad: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 4, textAlign: 'center' },
 
   // Presentación compacta: el retrato aparece una sola vez en la portada.
@@ -1265,6 +1274,7 @@ const s = StyleSheet.create({
 
   // ── Cómo trabaja (M14) ──────────────────────────────────────────────
   workBlock: { marginBottom: 18, gap: 14 },
+  topicsBlock: { marginBottom: 30 },
   fraseRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   workCopy: { flex: 1 },
   enfoquesList: { gap: 4 },
@@ -1354,8 +1364,8 @@ const s = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingTop: 14,
+    paddingBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -1364,16 +1374,18 @@ const s = StyleSheet.create({
   price: { fontFamily: ViveFonts.title, fontSize: 22, color: ViveColors.text },
   priceUnit: { fontFamily: ViveFonts.regular, fontSize: 14, color: ViveColors.softInk },
   btnPrimary: {
-    backgroundColor: ViveColors.text,
-    borderRadius: 24,
-    // Los medios de pago tienen su propio renglón, fuera del ancho del botón.
-    minWidth: 120,
-    minHeight: 50,
-    paddingHorizontal: 24,
-    paddingVertical: 8,
+    backgroundColor: ViveColors.primaryInk,
+    borderRadius: 16,
+    minWidth: 148,
+    minHeight: 52,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    gap: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  btnPrimaryDisabled: { backgroundColor: 'rgba(86,94,50,0.35)' },
-  btnPrimaryText: { fontFamily: ViveFonts.semibold, fontSize: 15, color: ViveColors.onPrimaryInk, textAlign: 'center' },
+  btnPrimaryDisabled: { backgroundColor: 'rgba(86,94,50,0.10)' },
+  btnPrimaryText: { fontFamily: ViveFonts.titleSemiBold, fontSize: 15, color: ViveColors.onPrimaryInk, textAlign: 'center', flexShrink: 1 },
+  btnPrimaryTextDisabled: { color: ViveColors.softInk },
 });

@@ -157,9 +157,9 @@ export function duracionUnica(minutos: (number | null | undefined)[]): number | 
   return distintas.size === 1 ? [...distintas][0] : null;
 }
 
-/** "Sesión de 60 min por videollamada", o sin los minutos si no hay uno solo. */
+/** Modalidad y duración, sin minutos si hay distintas duraciones. */
 export function lineaSesion(minutos: number | null): string {
-  return minutos ? `Sesión de ${minutos} min por videollamada` : 'Sesión por videollamada';
+  return minutos ? `Videollamada · ${minutos} min` : 'Videollamada';
 }
 
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -190,7 +190,7 @@ export function lineaProximoLugar(
     : `el ${dia} ${d} de ${MESES[m - 1]}`;
   const afuera = deviceIsOffArgentina(now, tz);
   return {
-    texto: `Próximo horario libre: ${cuando} a las ${hora}${afuera ? ' (hora de Argentina)' : ''}`,
+    texto: `Próximo turno: ${cuando}, ${hora}${afuera ? ' (hora de Argentina)' : ''}`,
     paraVos: afuera ? localEquivalentLabel(fecha, hora, tz) : null,
   };
 }

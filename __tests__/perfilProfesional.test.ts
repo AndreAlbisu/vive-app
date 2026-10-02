@@ -83,8 +83,8 @@ describe('duracionUnica / lineaSesion', () => {
     expect(duracionUnica([50, 60])).toBeNull();
     expect(duracionUnica([])).toBeNull();
     expect(duracionUnica([null, undefined, 0])).toBeNull();
-    expect(lineaSesion(50)).toBe('Sesión de 50 min por videollamada');
-    expect(lineaSesion(null)).toBe('Sesión por videollamada');
+    expect(lineaSesion(50)).toBe('Videollamada · 50 min');
+    expect(lineaSesion(null)).toBe('Videollamada');
   });
 });
 
@@ -94,16 +94,16 @@ describe('lineaProximoLugar', () => {
   const BA = 'America/Argentina/Buenos_Aires';
 
   it('hoy, mañana, día de la semana y fecha completa, contados en Argentina', () => {
-    expect(lineaProximoLugar('2026-10-01', '18:00', ahora, BA).texto).toBe('Próximo horario libre: hoy a las 18:00');
-    expect(lineaProximoLugar('2026-10-02', '09:00', ahora, BA).texto).toBe('Próximo horario libre: mañana a las 09:00');
-    expect(lineaProximoLugar('2026-10-05', '10:00', ahora, BA).texto).toBe('Próximo horario libre: el lunes a las 10:00');
-    expect(lineaProximoLugar('2026-10-09', '10:00', ahora, BA).texto).toBe('Próximo horario libre: el viernes 9 de octubre a las 10:00');
+    expect(lineaProximoLugar('2026-10-01', '18:00', ahora, BA).texto).toBe('Próximo turno: hoy, 18:00');
+    expect(lineaProximoLugar('2026-10-02', '09:00', ahora, BA).texto).toBe('Próximo turno: mañana, 09:00');
+    expect(lineaProximoLugar('2026-10-05', '10:00', ahora, BA).texto).toBe('Próximo turno: el lunes, 10:00');
+    expect(lineaProximoLugar('2026-10-09', '10:00', ahora, BA).texto).toBe('Próximo turno: el viernes 9 de octubre, 10:00');
     expect(lineaProximoLugar('2026-10-02', '09:00', ahora, BA).paraVos).toBeNull();
   });
 
   it('desde afuera aclara la zona y da la equivalencia', () => {
     const r = lineaProximoLugar('2026-10-02', '18:00', ahora, 'Europe/Madrid');
-    expect(r.texto).toBe('Próximo horario libre: mañana a las 18:00 (hora de Argentina)');
+    expect(r.texto).toBe('Próximo turno: mañana, 18:00 (hora de Argentina)');
     expect(r.paraVos).toBe('23:00 para vos');
   });
 });
