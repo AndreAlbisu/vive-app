@@ -1,3 +1,18 @@
+## 2026-10-02 — Andre (Claude · perfil del profesional: sellos y carga)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:**
+- Puntos 4 y 5 de la crítica del perfil. **Sellos:** el escudo queda solo para documentos que Vita verificó (etiqueta de matrícula y "Verificado" en Formación). "Perfil revisado por Vita" deja el tilde de "cuenta verificada" y pasa a un ícono de persona revisada; la garantía ya tenía el de devolución. Un solo dorado para las estrellas (#C99A3F; había dos).
+- **Carga:** el perfil se muestra cuando ya están credenciales, temas, reseñas y garantía (antes aparecían de a una y corrían lo que se estaba leyendo). Nada traba: cada consulta que falla termina en vacío. Sin cambios en la base; tsc, eslint y 957 tests OK. Sin ver en pantalla todavía.
+- **Simulador:** Xcode 27 no trae la app Simulator (solo el motor) y **compilada con Xcode 27 la app se cierra al abrir**: "UIScene life cycle is required" (iOS 27 lo exige a lo compilado con su SDK; Expo SDK 54 no lo cumple). Los builds de EAS (Xcode 26) no están afectados. Se está bajando el simulador de iOS 26 para revisar con capturas. Además, `ios/Podfile` local (no va al repo) sube a 15.1 el mínimo de iOS de los pods: Xcode 27 rechaza SDWebImage, RNSVG y AsyncStorage con mínimos viejos.
+
+**Pendiente para la próxima sesión:**
+- 🔴 Antes de que Apple exija compilar con Xcode 27 (suele ser en abril): actualizar Expo a una versión que adopte UIScene, o la app compilada no abre en iOS 27.
+- Capturas en el simulador de iOS 26 de todo lo del perfil (P1 y P2).
+- Si `listPublicCredentials` falla, devuelve vacío y la etiqueta dice "Sesiones de acompañamiento" a un matriculado. Ya pasaba antes; habría que distinguir error de "no tiene".
+- Con la verificación de identidad nueva (DNI y selfie), definir si "Perfil revisado por Vita" pasa a decir algo de la identidad.
+
 ## 2026-10-01 — Andre (Claude · verificación de identidad de profesionales)
 
 **Tocado:** `supabase/migrations/20261001030000_coach_identity_verification.sql` (nuevo), `lib/identidad.ts` (nuevo), `__tests__/identidad.test.ts` (nuevo), `screens/CoachApplicationScreen.tsx`, `screens/AdminScreen.tsx`, `lib/admin.ts`, `supabase/functions/admin-actions/index.ts`, `supabase/functions/delete-account/index.ts`, `docs/politica-de-privacidad.md` + legales regenerados, `app.json`, `SCHEMA.md`

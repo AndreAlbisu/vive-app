@@ -100,6 +100,10 @@ const RESOURCE_TYPE_ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> =
   gratitud: 'favorite-border',
 };
 
+// Un solo dorado para las estrellas (eran dos: #E8C547 en las reseñas y
+// #C99A3F en la portada). Queda el más oscuro, que se ve sobre el crema.
+const DORADO = '#C99A3F';
+
 // ─── Subcomponentes ───────────────────────────────────────────────────────────
 function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
@@ -109,7 +113,7 @@ function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
           key={i}
           name={i <= Math.round(rating) ? 'star' : 'star-border'}
           size={size}
-          color="#E8C547"
+          color={DORADO}
         />
       ))}
     </View>
@@ -152,6 +156,10 @@ export default function ProfesionalScreen() {
   const [liveReviews, setLiveReviews] = useState<LiveReview[]>([]);
   const [liveAvgRating, setLiveAvgRating] = useState<number | null>(null);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
+  // Terminó la consulta de reseñas, haya salido bien o mal. `reviewsLoaded`
+  // queda en false si falló (ver abajo); esto solo sirve para no mostrar el
+  // perfil hasta saberlo, y que el renglón de la portada no aparezca después.
+  const [resenasConsultadas, setResenasConsultadas] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -217,13 +225,9 @@ export default function ProfesionalScreen() {
           setProfileState({ id: pid, status: 'unavailable' });
           return;
         }
-        setProfileState({ id: pid, status: 'available' });
         setCoachRowId((data as any).id);
         setCoachSlug((data as any).slug ?? null);
         setNoDisponible(estaSuspendido({ suspendidoHasta: (data as any).suspendido_hasta ?? null }));
-        // ⚠️ `coaches.id`, no `profiles.id`: `coach_credentials.coach_id`
-        // apunta al PK de coaches, igual que `bookings.coach_id`.
-        void listPublicCredentials((data as any).id).then(setCredenciales);
         setFetchedData({
           name: (data as any).profiles.name,
           specialty: etiquetaProfesionalPublica(data as any, (data as any).profiles.gender),
@@ -259,14 +263,22 @@ export default function ProfesionalScreen() {
           acceptsUsdt: !!(data as any).accepts_usdt && (data as any).price_usd != null,
         });
 
-        supabase
-          .from('coach_topics')
-          .select('topic')
-          .eq('coach_id', (data as any).id)
-          .then(({ data: topicRows }) => {
-            setFetchedData(prev => ({ ...prev, topics: (topicRows ?? []).map(t => t.topic as string) }));
-          });
-
+        // 01/10/2026 (revisión de UX): credenciales y temas llegaban cada uno
+        // por su lado DESPUÉS de mostrar el perfil, y la etiqueta de matrícula,
+        // los temas y Formación aparecían de a uno empujando lo que se estaba
+        // leyendo. Ahora el perfil se muestra cuando están las dos. Ninguna
+        // traba: las dos terminan en una lista vacía si fallan.
+        // ⚠️ `coaches.id`, no `profiles.id`: `coach_credentials.coach_id`
+        // apunta al PK de coaches, igual que `bookings.coach_id`.
+        void Promise.all([
+          listPublicCredentials((data as any).id),
+          supabase.from('coach_topics').select('topic').eq('coach_id', (data as any).id)
+            .then(({ data: topicRows }) => (topicRows ?? []).map(t => t.topic as string)),
+        ]).then(([creds, topics]) => {
+          setCredenciales(creds);
+          setFetchedData(prev => ({ ...prev, topics }));
+          setProfileState({ id: pid, status: 'available' });
+        });
       });
   }, [params.profileId, intento]);
 
@@ -334,6 +346,7 @@ export default function ProfesionalScreen() {
       setLiveAvgRating(Math.round(avg * 10) / 10);
       setLiveReviews(RESENAS_EJEMPLO);
       setReviewsLoaded(true);
+      setResenasConsultadas(true);
       return;
     }
 
@@ -372,7 +385,7 @@ export default function ProfesionalScreen() {
       setReviewsLoaded(true);
     }
 
-    loadReviews();
+    void loadReviews().finally(() => setResenasConsultadas(true));
   }, [params.profileId, intento]);
 
   useEffect(() => {
@@ -429,8 +442,11 @@ export default function ProfesionalScreen() {
   // Un enlace viejo o un favorito puede abrir esta ruta sin pasar por el
   // catálogo. No se debe mostrar un perfil despublicado, ni siquiera usando
   // nombre/precio que hayan quedado en los parámetros de navegación.
-  if (!profileId || profileState?.id !== profileId || profileState?.status !== 'available') {
-    const loadingProfile = !!profileId && profileState?.id !== profileId;
+  // Lo que va en la portada y en el bloque práctico tiene que estar antes de
+  // mostrar: si no, aparece tarde y corre todo hacia abajo.
+  const portadaLista = resenasConsultadas && garantiaDisponible !== undefined;
+  if (!profileId || profileState?.id !== profileId || profileState?.status !== 'available' || !portadaLista) {
+    const loadingProfile = !!profileId && (profileState?.id !== profileId || (profileState?.status === 'available' && !portadaLista));
     const errorRed = profileState?.id === profileId && profileState?.status === 'error';
     return (
       <AppBg>
@@ -537,7 +553,7 @@ export default function ProfesionalScreen() {
           <View style={s.identityMeta}>
           {hayResenas ? (
             <View style={s.ratingInline}>
-              <MaterialIcons name="star" size={17} color="#C99A3F" />
+              <MaterialIcons name="star" size={17} color={DORADO} />
               <Text style={s.ratingInlineText}>
                 {displayRating!.toFixed(1)} · {displayReviewCount} {displayReviewCount === 1 ? 'reseña' : 'reseñas'}
               </Text>
@@ -555,7 +571,10 @@ export default function ProfesionalScreen() {
               verificó de cada título o matrícula está marcado uno por uno, en
               Formación. Ver docs/investigacion-producto-2026-09-23.md, punto 1. */}
           <View style={s.verifiedBadge}>
-            <MaterialIcons name="verified" size={14} color={ViveColors.text} />
+            {/* Ícono de persona revisada y no el tilde de "cuenta verificada"
+                ni un escudo: los escudos del perfil son de documentos que Vita
+                verificó (matrícula, títulos), y esto es otra cosa. */}
+            <MaterialCommunityIcons name="account-check-outline" size={15} color={ViveColors.text} />
             <Text style={s.verifiedText}>Perfil revisado por Vita</Text>
           </View>
 
