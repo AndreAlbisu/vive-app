@@ -23,7 +23,8 @@ import { notifyViaServer } from '@/lib/notifications';
 import { encryptMessage } from '@/lib/encryption';
 import { isCancelLate } from '@/lib/bookingHelpers';
 import { edadDesde } from '@/lib/time';
-import { confirmBooking, rejectBooking } from '@/lib/coachBookingActions';
+import { confirmBooking, rejectBooking, MOTIVO_RECHAZO_MAX } from '@/lib/coachBookingActions';
+import { detectContactInfo, hasDatosDeCobro } from '@/lib/contactInfoGuard';
 import { responderReagendado, retirarPropuestas } from '@/lib/reagendarApi';
 import { AppBg } from '@/components/ui/AppBg';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -398,11 +399,40 @@ export default function CoachReservasScreen() {
     setRejectReason('');
   }
 
-  async function confirmReject() {
+  // El motivo le llega a la persona: mismo criterio que la nota de una
+  // recomendación (SalaScreen). Datos para cobrar se bloquean; datos de
+  // contacto avisan y dejan enviar, y queda registrado.
+  function confirmReject() {
     if (!rejectModal.id || !user) { setRejectModal({ visible: false, id: null }); return; }
+    const motivo = rejectReason.trim();
+    const destinatario = bookings.find(b => b.id === rejectModal.id)?.user_id ?? null;
+    const par = { role: 'coach', canal: 'motivo_rechazo', coach_id: user.id, user_id: destinatario };
+    if (motivo && hasDatosDeCobro(motivo)) {
+      registrarEvento('mensaje_contacto_detectado', { ...par, senal: 'datos_de_cobro', bloqueado: true });
+      Alert.alert('No se pueden mandar datos para cobrar', 'Los pagos van siempre por Vita: así la persona tiene reembolso y garantía. Sacá el CBU, el alias o el link de pago y volvé a enviar.');
+      return;
+    }
+    const senal = motivo ? detectContactInfo(motivo) : null;
+    if (!senal) { void enviarRechazo(motivo); return; }
+    Alert.alert(
+      '¿Compartir datos de contacto?',
+      'El mensaje parece incluir datos de contacto. Mantené la conversación y los pagos dentro de Vita.',
+      [
+        { text: 'Editar', style: 'cancel', onPress: () => registrarEvento('mensaje_contacto_detectado', { ...par, senal, sent_anyway: false }) },
+        {
+          text: 'Enviar igual',
+          style: 'destructive',
+          onPress: () => { registrarEvento('mensaje_contacto_detectado', { ...par, senal, sent_anyway: true }); void enviarRechazo(motivo); },
+        },
+      ],
+    );
+  }
+
+  async function enviarRechazo(motivo: string) {
+    if (!rejectModal.id || !user) return;
     const id = rejectModal.id;
     setRejectModal({ visible: false, id: null });
-    const ok = await rejectBooking(id, user.id);
+    const ok = await rejectBooking(id, user.id, motivo);
     // Sin esto el profesional creía que había avisado y la persona seguía
     // esperando respuesta.
     if (!ok) Alert.alert('No pudimos avisarle', 'La solicitud sigue pendiente. Revisá tu conexión y probá de nuevo.');
@@ -814,13 +844,14 @@ export default function CoachReservasScreen() {
               </TouchableOpacity>
             </View>
             <View style={rm.body}>
-              <Text style={rm.helper}>El usuario recibe un aviso para elegir otro horario disponible u otro profesional</Text>
-              <Text style={rm.label}>Motivo (opcional)</Text>
+              <Text style={rm.helper}>Le avisamos que puede elegir otro horario u otro profesional. Si pagó, se le devuelve todo.</Text>
+              <Text style={rm.label}>Mensaje para la persona (opcional)</Text>
               <TextInput
                 style={rm.input}
                 value={rejectReason}
                 onChangeText={setRejectReason}
-                placeholder="Ej: No tengo disponibilidad ese horario"
+                placeholder="Ej: Esa semana estoy de vacaciones, la siguiente tengo lugar"
+                maxLength={MOTIVO_RECHAZO_MAX}
                 placeholderTextColor="rgba(107,122,86,0.5)"
                 multiline
                 numberOfLines={4}
