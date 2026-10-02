@@ -7,6 +7,10 @@
       "label": "Cognitivo conductual",
       "desc": "Trabaja sobre pensamientos y conductas del presente, con ejercicios"
     },
+    "tercera_ola": {
+      "label": "Tercera ola (ACT, DBT, mindfulness)",
+      "desc": "Aceptar lo que sentís y actuar según lo que te importa, con práctica de atención al presente"
+    },
     "psicoanalitico": {
       "label": "Psicoanalítico",
       "desc": "Busca el origen de lo que pasa hoy en la historia de cada uno"
@@ -15,6 +19,10 @@
       "label": "Sistémico",
       "desc": "Mira los vínculos y el entorno, no solo a la persona sola"
     },
+    "interpersonal": {
+      "label": "Interpersonal",
+      "desc": "Trabaja cómo tus vínculos de hoy influyen en cómo te sentís, en un tiempo acotado"
+    },
     "gestaltico": {
       "label": "Gestáltico",
       "desc": "Se centra en lo que pasa acá y ahora, y en darse cuenta"
@@ -22,6 +30,10 @@
     "humanistico": {
       "label": "Humanístico",
       "desc": "Parte de los recursos propios de cada persona para crecer"
+    },
+    "emdr": {
+      "label": "EMDR",
+      "desc": "Procesa recuerdos difíciles o traumáticos para que dejen de pesar como antes"
     },
     "integrativo": {
       "label": "Integrativo",

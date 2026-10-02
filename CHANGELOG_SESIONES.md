@@ -1,3 +1,16 @@
+## 2026-10-02 — Andre (Claude · tres escuelas más de psicología)
+
+**Tocado:** `lib/enfoque.ts`, `__tests__/enfoque.test.ts`, `web/perfil-datos.js` (generado), `scripts/add-enfoques-tercera-ola-emdr-interpersonal.sql`, `SCHEMA.md`
+
+**Resumen:**
+- Andre preguntó si cubrimos las ramas importantes de la psicología: las seis (cognitivo conductual, psicoanalítico, sistémico, gestáltico, humanístico, integrativo) cubren lo principal en Argentina. Se suman, a pedido de Andre: **tercera ola (ACT, DBT, mindfulness)**, **EMDR** e **interpersonal**. Selia: su blog nombra TCC, psicoanálisis, humanista/Gestalt y sistémico; tercera ola y EMDR aparecen en perfiles de sus psicólogos (texto libre).
+- 🗄️ **Base (producción):** CHECK de `coaches.enfoques` y `trg_enfoques_requieren_matricula` con los tres valores nuevos, solo para psicología. Corrido y verificado con pruebas con rollback. SCHEMA.md actualizado.
+- Tendencias del quiz para las nuevas (cuando el profesional no contestó cómo trabaja): tercera ola = herramientas y presente; EMDR = guía e historia; interpersonal = guía y presente. Son de manual, igual que las demás.
+- Queda abierto (Andre: "lo dejemos así"): la marca "Según tu quiz" en Profesionales no vence por tiempo; solo se apaga si reserva por ese tema.
+
+**Pendiente para la próxima sesión:**
+- Revisar con un profesional (Mónica) la tabla de tendencias, ahora con las tres nuevas. EMDR lo declara cada profesional y no lo verificamos (es una certificación aparte).
+
 ## 2026-10-02 — Andre (Claude · reseñas del perfil en tarjetas)
 
 **Tocado:** `screens/ProfesionalScreen.tsx` (solo la sección Reseñas)

@@ -40,17 +40,26 @@ export const ESTILO_OPCIONES_COACH: { id: EstiloCoach; label: string; desc: stri
 
 export type Enfoque =
   | 'psicoanalitico' | 'cognitivo_conductual' | 'sistemico'
-  | 'gestaltico' | 'humanistico' | 'integrativo';
+  | 'gestaltico' | 'humanistico' | 'integrativo'
+  | 'tercera_ola' | 'emdr' | 'interpersonal';
 
 /** Las escuelas, con una línea en castellano común. La descripción no es para
  *  el profesional (él ya sabe cuál es la suya): es lo que lee la persona en su
  *  perfil, que es donde esto se muestra. */
+//
+// Tercera ola, EMDR e interpersonal se sumaron el 02/10/2026
+// (`scripts/add-enfoques-tercera-ola-emdr-interpersonal.sql`): quien trabajaba
+// así tenía que elegir una parecida. Selia muestra las dos primeras en los
+// perfiles de sus psicólogos.
 export const ENFOQUES: { id: Enfoque; label: string; desc: string }[] = [
   { id: 'cognitivo_conductual', label: 'Cognitivo conductual', desc: 'Trabaja sobre pensamientos y conductas del presente, con ejercicios' },
+  { id: 'tercera_ola',          label: 'Tercera ola (ACT, DBT, mindfulness)', desc: 'Aceptar lo que sentís y actuar según lo que te importa, con práctica de atención al presente' },
   { id: 'psicoanalitico',       label: 'Psicoanalítico',       desc: 'Busca el origen de lo que pasa hoy en la historia de cada uno' },
   { id: 'sistemico',            label: 'Sistémico',            desc: 'Mira los vínculos y el entorno, no solo a la persona sola' },
+  { id: 'interpersonal',        label: 'Interpersonal',        desc: 'Trabaja cómo tus vínculos de hoy influyen en cómo te sentís, en un tiempo acotado' },
   { id: 'gestaltico',           label: 'Gestáltico',           desc: 'Se centra en lo que pasa acá y ahora, y en darse cuenta' },
   { id: 'humanistico',          label: 'Humanístico',          desc: 'Parte de los recursos propios de cada persona para crecer' },
+  { id: 'emdr',                 label: 'EMDR',                 desc: 'Procesa recuerdos difíciles o traumáticos para que dejen de pesar como antes' },
   { id: 'integrativo',          label: 'Integrativo',          desc: 'Combina herramientas de varias escuelas según el caso' },
 ];
 
@@ -304,6 +313,13 @@ const TENDENCIA: Record<Enfoque, { estilo: EstiloCoach | null; guia: GuiaCoach |
   gestaltico:           { estilo: null,           guia: 'acompana', foco: 'presente' },
   humanistico:          { estilo: 'escucha',      guia: 'acompana', foco: 'rumbo' },
   integrativo:          { estilo: null,           guia: null,       foco: null },
+  // 02/10/2026. Tercera ola: ejercicios y práctica, sobre el presente; cuánto
+  // conduce depende de la corriente (DBT más, ACT menos). EMDR: sigue un
+  // protocolo que conduce el profesional, sobre recuerdos. Interpersonal:
+  // estructurada y breve, sobre los vínculos de hoy.
+  tercera_ola:          { estilo: 'herramientas', guia: null,       foco: 'presente' },
+  emdr:                 { estilo: null,           guia: 'guia',     foco: 'historia' },
+  interpersonal:        { estilo: null,           guia: 'guia',     foco: 'presente' },
 };
 
 /** La tendencia de un eje según las escuelas declaradas. Solo si TODAS las que
