@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
 import { encuadreDesdeFlag } from '@/lib/credentialRules';
@@ -86,6 +87,12 @@ export default function BookingScreen_Confirm() {
   const [aceptaUsdt, setAceptaUsdt] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [priceUsd, setPriceUsd] = useState<number | null>(null);
+  // Garantía de primera sesión (T&C §9.3). Misma condición que el perfil
+  // (`ProfesionalScreen`): no la usó nunca y no tuvo sesiones con este
+  // profesional. `false` mientras no se sabe o si la consulta falla: ante la
+  // duda, no se promete (art. 8 Ley 24.240).
+  const [garantiaDisponible, setGarantiaDisponible] = useState(false);
+  const [coachRowIdGarantia, setCoachRowIdGarantia] = useState<string | null>(null);
   const [metodoPago, setMetodoPago] = useState<'mp' | 'usdt' | 'paypal'>('mp');
   // Pago abierto FUERA de la app (app nativa de Mercado Pago, o el browser con
   // PayPal). Guarda la URL del checkout, no solo un booleano, para poder
@@ -132,7 +139,7 @@ export default function BookingScreen_Confirm() {
     (async () => {
       const { data } = await supabase
         .from('coaches')
-        .select('instant_booking, has_matricula, accepts_international, accepts_paypal, accepts_usdt, price_usd, price_per_session, profiles(avatar_url)')
+        .select('id, instant_booking, has_matricula, accepts_international, accepts_paypal, accepts_usdt, price_usd, price_per_session, profiles(avatar_url)')
         .eq('profile_id', coachProfileIdParam)
         .maybeSingle();
       setAvatarUrl((data as any)?.profiles?.avatar_url ?? null);
@@ -162,8 +169,28 @@ export default function BookingScreen_Confirm() {
         const { data: tiene } = await supabase.rpc('tiene_descuento_referido', { p_user: user.id });
         setDescuentoRef(tiene === true);
       }
+      setCoachRowIdGarantia((data as any)?.id ?? null);
     })();
   }, [coachProfileIdParam]);
+
+  // Aparte del efecto de arriba porque depende de la sesión: si `user` todavía
+  // no estaba cuando corrió aquel, la garantía quedaba apagada para siempre.
+  useEffect(() => {
+    if (!user || !coachRowIdGarantia) return;
+    let vivo = true;
+    void Promise.all([
+      supabase.from('guarantee_claims').select('id')
+        .eq('user_id', user.id).in('status', ['pedida', 'aprobada']).limit(1),
+      supabase.from('bookings').select('id')
+        .eq('user_id', user.id).eq('coach_id', coachRowIdGarantia)
+        .in('status', ['confirmada', 'completada']).limit(1),
+    ]).then(([claims, sesiones]) => {
+      if (!vivo) return;
+      setGarantiaDisponible(!claims.error && !sesiones.error
+        && (claims.data ?? []).length === 0 && (sesiones.data ?? []).length === 0);
+    });
+    return () => { vivo = false; };
+  }, [user?.id, coachRowIdGarantia]);
 
   // Ver la declaración de `loadingLong` más arriba. El timer se limpia si
   // `loading` se apaga antes de los 3.5s (caso normal) y también al
@@ -1118,6 +1145,21 @@ export default function BookingScreen_Confirm() {
             Antes eran tres párrafos sueltos, oscuros, con el ícono centrado y
             el texto pegado al borde derecho. El contenido no cambió. */}
         <View style={s.avisos}>
+        {garantiaDisponible && (
+          <TouchableOpacity
+            style={s.noticeRow}
+            activeOpacity={0.7}
+            onPress={() => router.push({ pathname: '/legal', params: { doc: 'terminos' } })}
+            accessibilityRole="link"
+            accessibilityLabel="Garantía de primera sesión. Si no te convence, te devolvemos lo que pagaste. Ver condiciones.">
+            <MaterialCommunityIcons name="cash-refund" size={17} color={ViveColors.accent} style={{ marginTop: 1 }} />
+            <Text style={s.noticeText}>
+              <Text style={s.noticeStrong}>Garantía de primera sesión.</Text>
+              {' '}Si no te convence, te devolvemos lo que pagaste.{' '}
+              <Text style={s.noticeLink}>Ver condiciones</Text>
+            </Text>
+          </TouchableOpacity>
+        )}
         <View style={s.noticeRow}>
           <MaterialIcons name="shield" size={16} color={ViveColors.accent} style={{ marginTop: 2 }} />
           <Text style={s.noticeText}>
@@ -1258,11 +1300,17 @@ export default function BookingScreen_Confirm() {
                 <Text style={s.btnText}>Reservando…</Text>
               </View>
             ) : (
-              <Text style={s.btnText}>Confirmar reserva</Text>
+              // Siempre hay cobro en este paso (sin checkout no se reserva):
+              // "Confirmar reserva" escondía que el botón paga.
+              <Text style={s.btnText}>Pagar y reservar</Text>
             )}
           </ScaleCard>
 
-          {/* Acá iba "Garantía de primera sesión — si no quedás conforme, te
+          {/* ↩️ 02/10/2026: la garantía VOLVIÓ, arriba en la tarjeta de avisos,
+              con la condición del perfil (`garantiaDisponible`). Lo de abajo es
+              por qué se había sacado; hoy existen T&C §9.3 y el pedido de
+              garantía (`guarantee_claims`).
+              Acá iba "Garantía de primera sesión — si no quedás conforme, te
               devolvemos el dinero". Se sacó el 10/08/2026: es una promesa
               incondicional en el punto de venta (art. 8 Ley 24.240: las
               precisiones publicitarias obligan e integran el contrato) contra la
@@ -1517,6 +1565,8 @@ const s = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 10,
   },
+  noticeStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
+  noticeLink: { fontFamily: ViveFonts.semibold, color: ViveColors.primaryInk },
   noticeText: {
     flex: 1,
     fontFamily: ViveFonts.regular,

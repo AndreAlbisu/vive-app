@@ -1,3 +1,11 @@
+## 2026-10-02 — Andre (Claude · checkout: "Pagar y reservar" y garantía)
+
+**Tocado:** `screens/BookingScreen_Confirm.tsx`
+
+**Resumen:**
+- El botón decía "Confirmar reserva" y paga: ahora **"Pagar y reservar"**. En esta pantalla siempre hay cobro (sin checkout no se reserva; si el cobro no arranca, error).
+- **Vuelve la garantía de primera sesión** al checkout, primera en la tarjeta de avisos, con "Ver condiciones" (T&C). Se había sacado el 10/08 porque no había ni política ni mecanismo; hoy están T&C §9.3 y `guarantee_claims`. Misma condición que el perfil: no la usó nunca (`guarantee_claims` pedida/aprobada) y no tuvo sesiones confirmadas o completadas con este profesional; si la consulta falla, no se muestra. La consulta va en su propio efecto que espera la sesión (en la primera versión, dentro del efecto del coach, quedaba apagada si `user` llegaba tarde; se vio en el simulador). Verificado en el simulador.
+
 ## 2026-10-02 — Andre (Claude · checkout: avisos debajo del mensaje)
 
 **Tocado:** `screens/BookingScreen_Confirm.tsx`
