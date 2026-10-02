@@ -1,3 +1,15 @@
+## 2026-10-02 — Andre (Claude · medición de continuidad y fuga)
+
+**Tocado:** `scripts/add-medicion-continuidad.sql`, `SCHEMA.md`
+
+**Resumen:**
+- Charla sobre cómo evita Selia la fuga (no elusión de 12 meses con multa descontada de pagos, paquetes prepagos, continuidad muy trabajada, deja de mandar pacientes a quien no retiene). Conclusión con Andre: no copiar el contrato; Vita ya tiene lo principal del lado del producto. Antes de construir más (paquetes, re-reservar sin volver a pagar desde cero), **medir**.
+- 🗄️ **Base (producción):** dos funciones solo para admins y de solo lectura, `continuidad_resumen()` y `pares_que_dejaron_de_reservar()`. La señal de fuga: pareja con sesiones, más de 30 días sin reservar, y la persona sigue usando Vita sin haber reservado con otro. Verificado (admin ve, no admin rebota, anon sin permiso). SCHEMA.md actualizado. Para verificarlo se simuló la sesión de un admin dentro de la transacción (autorizado por Andre).
+- Sin cambios en la app. Hoy los números son de datos de prueba.
+
+**Pendiente para la próxima sesión:**
+- Cuando haya usuarios reales: correr `select * from continuidad_resumen()` y `pares_que_dejaron_de_reservar()` cada tanto. Si se quiere verlo sin terminal, sumarlo al panel de admin.
+
 ## 2026-10-02 — Andre (Claude · tres escuelas más de psicología)
 
 **Tocado:** `lib/enfoque.ts`, `__tests__/enfoque.test.ts`, `web/perfil-datos.js` (generado), `scripts/add-enfoques-tercera-ola-emdr-interpersonal.sql`, `SCHEMA.md`

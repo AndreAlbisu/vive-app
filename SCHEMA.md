@@ -496,6 +496,14 @@ Datos de cobro del coach para las **sesiones internacionales** — las únicas d
 - Se lee en `lib/coachesCache.ts` (join en paralelo con reviews, por `coach_id`) y alimenta `lib/coachDeckRanking.ts`. Usa `bookings.created_at` para "posterior". Vista en vivo; si el volumen la hace lenta, convertir a MATERIALIZED VIEW + cron (patrón `complete_confirmed_sessions()`).
 - Creada 10/07/2026 (`scripts/add-coach-rebooking-stats.sql`, corrida en Supabase el 10/07).
 
+### Medición de continuidad: `continuidad_resumen()` y `pares_que_dejaron_de_reservar()` (02/10/2026)
+`scripts/add-medicion-continuidad.sql` — ✅ **CORRIDO y VERIFICADO el 02/10/2026**: como admin devuelven datos, un no admin rebota con 42501 "solo admins", `anon` sin EXECUTE.
+- Para saber si hay fuga antes de construir más en contra (paquetes, re-reserva sin pagar desde cero). **Solo lectura, solo admins** (`security definer` + `is_admin()`), por función y no por vista porque leen reservas y eventos de toda la plataforma.
+- "Sesión hecha" = `completada` sin reembolso ni contracargo (mismo criterio que `coach_rebooking_stats`).
+- `pares_que_dejaron_de_reservar(dias default 30)`: una fila por persona + profesional con sesión hecha, sin reserva abierta con él y con la última hace `dias` o más. Excluye garantía aprobada y bloqueo entre los dos. Columnas para leerla: `sugerencia_del_profesional`, `sigue_usando_vita` (algún evento suyo en `analytics_events` en los últimos 30 días), `reservo_con_otro`, `avisos_de_contacto` (cruza `properties.user_id` / `properties.coach_id` = `coaches.profile_id`). **La señal de fuga es `sigue_usando_vita` y no `reservo_con_otro`.** No prueba nada: se mira a mano.
+- `continuidad_resumen(dias default 30)`: parejas con sesión, cuántas volvieron (2+ sesiones o reserva abierta después de la primera), porcentaje, cortadas y cortadas que siguen en Vita sin otro profesional.
+- Primera corrida (datos de prueba, no significan nada): 44 parejas, 3 volvieron (6,8%), 41 cortadas, 1 que sigue en Vita sin otro profesional.
+
 ### `coach_trending_stats` (VISTA)
 - Vista de agregación (no tabla) para el slot **"En tendencia"** del deck de Conexiones (criterio v2 de slots etiquetados). Una fila por coach: `coach_id` (= `coaches.id`), `recent_bookers`.
 - **`recent_bookers`** = usuarios DISTINTOS que reservaron a ese coach en los últimos 30 días (por `bookings.created_at`, el acto de reservar), excluyendo `status = 'cancelada'` **y la plata que volvió** (`payment_status in ('reembolsado','contracargo','reembolso_pendiente')`, `scripts/fix-stats-reembolsos.sql`, ✅ **CORRIDO y VERIFICADO el 16/09/2026** — mismo motivo y mismo criterio que en `coach_rebooking_stats`). Distintos usuarios y no filas para que un mismo usuario reservando varias veces no infle la tendencia.
