@@ -220,6 +220,9 @@ export default function ProfesionalScreen() {
   // `file_path` —el path del documento— porque RLS filtra filas, no columnas.
   // El documento en sí no llega nunca hasta acá; lo que se muestra es el dato.
   const [credenciales, setCredenciales] = useState<PublicCredential[]>([]);
+  // false si no se pudieron leer: ahí no se dice ni "matrícula verificada" ni
+  // "acompañamiento", porque cualquiera de las dos podría ser falsa.
+  const [credencialesSabidas, setCredencialesSabidas] = useState(true);
   // `coach_credentials_public` ya filtra por `verificada`, así que basta con que
   // exista una de tipo matrícula: la vista no devuelve pendientes ni rechazadas.
   const encuadre = encuadreDeSesion(credenciales);
@@ -298,7 +301,8 @@ export default function ProfesionalScreen() {
           supabase.from('coach_topics').select('topic').eq('coach_id', (data as any).id)
             .then(({ data: topicRows }) => (topicRows ?? []).map(t => t.topic as string)),
         ]).then(([creds, topics]) => {
-          setCredenciales(creds);
+          setCredenciales(creds ?? []);
+          setCredencialesSabidas(creds !== null);
           setFetchedData(prev => ({ ...prev, topics }));
           setProfileState({ id: pid, status: 'available' });
         });
@@ -620,7 +624,7 @@ export default function ProfesionalScreen() {
               `EncuadrePill` para por qué las dos variantes pesan igual. */}
           <View style={s.encuadreRow}>
             <View style={s.encuadreCentered}>
-              <EncuadrePill encuadre={encuadre} onInfo={() => setEncuadreOpen(true)} />
+              {credencialesSabidas && <EncuadrePill encuadre={encuadre} onInfo={() => setEncuadreOpen(true)} />}
             </View>
           </View>
 
@@ -713,21 +717,17 @@ export default function ProfesionalScreen() {
             {frases.length > 0 && (
               <View style={s.workBlock}>
                 {frases.map(f => {
+                  // Sin título arriba de cada frase: repetía la frase misma
+                  // ("Escucha y herramientas" sobre "Escucha y da herramientas…").
                   const esFoco = f.startsWith('Trabaja sobre');
                   const esEscucha = f.startsWith('Escucha');
                   const esHerramientas = f.startsWith('Da herramientas');
-                  const title = esFoco ? 'Su foco' : esEscucha
-                    ? (f.includes('herramientas') ? 'Escucha y herramientas' : 'Escucha y acompañamiento')
-                    : esHerramientas ? 'Herramientas concretas' : 'Cómo guía el proceso';
                   return (
                     <View key={f} style={s.fraseRow}>
                       <MaterialCommunityIcons
                         name={esFoco ? 'sprout-outline' : esEscucha ? 'ear-hearing' : esHerramientas ? 'tools' : 'routes'}
-                        size={20} color={ViveColors.primaryInk} style={{ marginTop: 3 }} />
-                      <View style={s.workCopy}>
-                        <Text style={s.workHeading}>{title}</Text>
-                        <Text style={s.workText}>{f}</Text>
-                      </View>
+                        size={20} color={ViveColors.primaryInk} style={{ marginTop: 1 }} />
+                      <Text style={[s.workText, s.workCopy]}>{f}</Text>
                     </View>
                   );
                 })}
@@ -1202,10 +1202,9 @@ const s = StyleSheet.create({
   chipText: { fontFamily: ViveFonts.medium, fontSize: 13, color: ViveColors.text },
 
   // ── Cómo trabaja (M14) ──────────────────────────────────────────────
-  workBlock: { marginBottom: 18, gap: 18 },
+  workBlock: { marginBottom: 18, gap: 14 },
   fraseRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  workCopy: { flex: 1, gap: 4 },
-  workHeading: { fontFamily: ViveFonts.medium, fontSize: 15, color: ViveColors.text },
+  workCopy: { flex: 1 },
   enfoquesList: { gap: 4 },
   enfoqueToggle: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   enfoqueLabel: { flex: 1, fontFamily: ViveFonts.medium, fontSize: 14, color: ViveColors.primaryInk },
@@ -1231,7 +1230,9 @@ const s = StyleSheet.create({
   reviewsList: { gap: 18, marginTop: 14 },
   reviewCard: { paddingVertical: 10, gap: 10 },
   reviewName: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk },
-  reviewText: { fontFamily: ViveFonts.titleSemiBold, fontSize: 18, color: ViveColors.text, lineHeight: 28 },
+  // Más bajo que la bio (16): las palabras del profesional van primero. Antes
+  // eran 18 en seminegrita y las reseñas pesaban más que su propia voz.
+  reviewText: { fontFamily: ViveFonts.regular, fontSize: 15, color: ViveColors.text, lineHeight: 23 },
   verMas: { alignSelf: 'center', marginTop: 14, paddingVertical: 10, paddingHorizontal: 16 },
   verMasTxt: { fontFamily: ViveFonts.semibold, fontSize: 14, color: ViveColors.primaryInk },
 

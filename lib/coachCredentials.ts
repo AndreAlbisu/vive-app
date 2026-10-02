@@ -69,7 +69,9 @@ export async function listOwnCredentials(coachId: string): Promise<OwnCredential
  * ⚠️ Lee la vista y no la tabla. La tabla no tiene policy de lectura pública, y
  * si la tuviera expondría `file_path` — RLS filtra filas, no columnas.
  */
-export async function listPublicCredentials(coachId: string): Promise<PublicCredential[]> {
+// `null` si la consulta falló: no es lo mismo que no tener credenciales. Con
+// una lista vacía, a un matriculado le salía "Sesiones de acompañamiento".
+export async function listPublicCredentials(coachId: string): Promise<PublicCredential[] | null> {
   const { data, error } = await supabase
     .from('coach_credentials_public')
     .select('id, kind, title, institution, year, registration_number, profesion')
@@ -77,7 +79,7 @@ export async function listPublicCredentials(coachId: string): Promise<PublicCred
 
   if (error) {
     console.error('[coachCredentials] listPublic:', error.message);
-    return [];
+    return null;
   }
   return (data ?? []).map(r => ({
     id: r.id as string,

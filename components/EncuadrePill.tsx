@@ -31,7 +31,8 @@ export function EncuadrePill({ encuadre, onInfo }: Props) {
       onPress={onInfo}
       accessibilityRole="button"
       accessibilityLabel={`${encuadre.etiqueta}. Tocá para saber qué significa.`}
-      hitSlop={8}
+      // La pastilla mide ~24 pt de alto: el área extra lleva el toque a 44+.
+      hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
     >
       <MaterialCommunityIcons
         name={encuadre.habilitado ? 'shield-check' : 'hand-heart-outline'}
@@ -58,7 +59,7 @@ const s = StyleSheet.create({
   // Arena, no naranja de advertencia: es una categoría, no una alerta.
   pillAcomp: { backgroundColor: 'rgba(135,131,92,0.13)' },
   txt: {
-    fontFamily: ViveFonts.semibold, fontSize: 11.5,
+    fontFamily: ViveFonts.semibold, fontSize: 12.5,
     color: '#42542F', letterSpacing: 0.15,
   },
   txtAcomp: { color: '#566245' },

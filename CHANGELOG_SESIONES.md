@@ -9,10 +9,11 @@
 
 - **Sensación al tocar** (skill animate-expo): Reservar usa `ScaleCard` (se achica a 0,97, como Pagar en Confirmar) y vibra suave al apoyar el dedo; el corazón hace un "pop" y vibra al guardar (al sacar, solo un tic, sin pop); la explicación de cada enfoque y las reseñas que suma "Ver las N" aparecen con un fundido de 180 ms. Con "reducir movimiento" no hay pop; los fundidos los maneja el sistema. Vibraciones solo en iPhone.
 
+- **Lectura:** reseñas en 15 regular (eran 18 en seminegrita y pesaban más que la bio, 16); en Cómo trabaja se sacaron los títulos que repetían la frase; la etiqueta de matrícula pasa a 12,5 y su área de toque a 44+ pt (también se ve así en Confirmar). **Credenciales:** `listPublicCredentials` devuelve `null` si la consulta falla y el perfil no muestra la etiqueta (ni matrícula ni acompañamiento) en vez de decirle "acompañamiento" a un matriculado.
+
 **Pendiente para la próxima sesión:**
 - 🔴 Antes de que Apple exija compilar con Xcode 27 (suele ser en abril): actualizar Expo a una versión que adopte UIScene, o la app compilada no abre en iOS 27.
 - Capturas en el simulador de iOS 26 de todo lo del perfil (P1 y P2).
-- Si `listPublicCredentials` falla, devuelve vacío y la etiqueta dice "Sesiones de acompañamiento" a un matriculado. Ya pasaba antes; habría que distinguir error de "no tiene".
 - Con la verificación de identidad nueva (DNI y selfie), definir si "Perfil revisado por Vita" pasa a decir algo de la identidad.
 
 ## 2026-10-01 — Andre (Claude · verificación de identidad de profesionales)
