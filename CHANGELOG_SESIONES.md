@@ -1,3 +1,12 @@
+## 2026-10-02 — Andre (Claude · "Tu primera sesión" en el perfil)
+
+**Tocado:** `screens/ProfesionalScreen.tsx` (solo el bloque nuevo)
+
+**Resumen:**
+- Andre eligió la versión corta: arriba del bloque práctico, "**Tu primera sesión** · Es para conocerse, a tu ritmo. No hace falta llegar con nada preparado." Sale con la misma condición que la garantía (`garantiaDisponible`): si ya tuvo sesiones con ese profesional, no aparece. Verificado en el simulador.
+- ⚠️ Mientras tanto, otra sesión estaba rediseñando el botón Reservar y los medios de pago en el MISMO archivo, sin commitear. Este commit lleva solo el bloque nuevo; sus cambios quedan en el árbol de trabajo para que los commitee esa sesión.
+- La segunda reseña cortada del perfil de ejemplo: Andre dice que ya no importa. Su check-in de hoy lo corrigió él.
+
 ## 2026-10-02 — Andre (Claude · perfil del profesional: pasada de espaciado)
 
 **Tocado:** `screens/ProfesionalScreen.tsx`

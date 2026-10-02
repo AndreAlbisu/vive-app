@@ -647,6 +647,16 @@ export default function ProfesionalScreen() {
             más tranquiliza a quien está por pagar su primera sesión, así que va
             acá, junto a lo demás que se necesita para decidir. */}
         <View style={s.practico}>
+          {/* "Tu primera sesión" (texto elegido por Andre, 02/10/2026): para
+              quien llega con miedo a empezar. Misma condición que la garantía
+              (`garantiaDisponible`): si ya tuvo sesiones con este profesional,
+              no es su primera y no se dice. */}
+          {garantiaDisponible && puedeReservar && (
+            <View style={s.primera}>
+              <Text style={s.primeraTitulo}>Tu primera sesión</Text>
+              <Text style={s.primeraTexto}>Es para conocerse, a tu ritmo. No hace falta llegar con nada preparado.</Text>
+            </View>
+          )}
           <View style={s.practicoRow}>
             <MaterialCommunityIcons name="video-outline" size={19} color={ViveColors.text} style={s.practicoIcon} />
             <Text style={s.practicoText}>{lineaSesion(duracion ?? null)}</Text>
@@ -1176,6 +1186,9 @@ const s = StyleSheet.create({
     gap: 14,
   },
   practicoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  primera: { gap: 3, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(86,94,50,0.12)' },
+  primeraTitulo: { fontFamily: ViveFonts.semibold, fontSize: 15, color: ViveColors.text },
+  primeraTexto: { fontFamily: ViveFonts.regular, fontSize: 14.5, lineHeight: 21, color: ViveColors.text },
   practicoIcon: { marginTop: 1 },
   practicoText: { flex: 1, fontFamily: ViveFonts.regular, fontSize: 14.5, lineHeight: 21, color: ViveColors.text },
   practicoSub: { fontFamily: ViveFonts.regular, fontSize: 13, lineHeight: 19, color: ViveColors.softInk, marginTop: 2 },
