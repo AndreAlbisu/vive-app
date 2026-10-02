@@ -107,6 +107,9 @@ const RESOURCE_TYPE_ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> =
 
 // Un solo dorado para las estrellas (eran dos: #E8C547 en las reseñas y
 // #C99A3F en la portada). Queda el más oscuro, que se ve sobre el crema.
+// Líneas de la bio antes de "Leer más": un párrafo corto, no media pantalla.
+const BIO_LINEAS = 4;
+
 const DORADO = '#C99A3F';
 
 // ─── Subcomponentes ───────────────────────────────────────────────────────────
@@ -172,6 +175,12 @@ export default function ProfesionalScreen() {
   const [profileState, setProfileState] = useState<{ id: string; status: 'available' | 'unavailable' | 'error' } | null>(null);
   const [intento, setIntento] = useState(0);
   const [todasLasResenas, setTodasLasResenas] = useState(false);
+  // La bio entera ocupaba casi una pantalla y corría el video y los temas
+  // hacia abajo: se muestran las primeras líneas y "Leer más" abre el resto.
+  // `bioLineas` sale de medir la bio completa en una copia invisible, así el
+  // "Leer más" aparece solo si de verdad hay algo cortado.
+  const [bioAbierta, setBioAbierta] = useState(false);
+  const [bioLineas, setBioLineas] = useState(0);
   // `coaches.id` (no `profile_id`): es la clave de `bookings.coach_id`.
   const [coachRowId, setCoachRowId] = useState<string | null>(null);
   // undefined = todavía no se sabe; mientras tanto no se muestra.
@@ -674,7 +683,29 @@ export default function ProfesionalScreen() {
         {(!!prof.bio || !!prof.video_url) && (
           <View style={s.section}>
             <Text accessibilityRole="header" style={s.sectionTitle}>Sobre mí</Text>
-            {!!prof.bio && <Text style={s.bio}>{prof.bio}</Text>}
+            {!!prof.bio && (
+              <View>
+                <Text
+                  style={[s.bio, s.bioMedida]}
+                  aria-hidden
+                  importantForAccessibility="no-hide-descendants"
+                  onTextLayout={e => setBioLineas(e.nativeEvent.lines.length)}>
+                  {prof.bio}
+                </Text>
+                <Text style={s.bio} numberOfLines={bioAbierta ? undefined : BIO_LINEAS}>
+                  {prof.bio}
+                </Text>
+                {bioLineas > BIO_LINEAS && (
+                  <TouchableOpacity
+                    onPress={() => setBioAbierta(v => !v)}
+                    style={s.leerMas}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button">
+                    <Text style={s.verMasTxt}>{bioAbierta ? 'Leer menos' : 'Leer más'}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
             {!!prof.video_url && (
               <TouchableOpacity
                 style={[s.videoCard, !!prof.bio && { marginTop: 18 }]}
@@ -805,16 +836,7 @@ export default function ProfesionalScreen() {
                       style={{ marginTop: 1 }}
                     />
                     <View style={{ flex: 1 }}>
-                      {/* El "Verificado" va en la línea del título y no debajo:
-                          es lo que califica a ESA credencial, y separado de
-                          ella volvería a flotar sobre toda la fila. */}
-                      <View style={s.credTitleRow}>
-                        <Text style={s.credTitle}>{c.title}</Text>
-                        <View style={s.credVerif}>
-                          <MaterialCommunityIcons name="shield-check" size={11} color="#42542F" />
-                          <Text style={s.credVerifTxt}>Verificado</Text>
-                        </View>
-                      </View>
+                      <Text style={s.credTitle}>{c.title}</Text>
                       {/* De qué profesión es la matrícula lo decidió quien miró
                           el documento, no el texto del perfil. */}
                       {!!deQue && <Text style={s.credMeta}>{deQue}</Text>}
@@ -829,6 +851,14 @@ export default function ProfesionalScreen() {
                           {c.registrationNumber}
                         </Text>
                       )}
+                      {/* "Verificado" cierra cada credencial, dentro de su
+                          columna: sigue calificando a ESA y no a toda la
+                          sección. En la línea del título pesaba de más junto a
+                          títulos largos (02/10/2026). */}
+                      <View style={s.credVerif}>
+                        <MaterialCommunityIcons name="shield-check" size={11} color="#42542F" />
+                        <Text style={s.credVerifTxt}>Verificado</Text>
+                      </View>
                     </View>
                   </View>
                 );
@@ -1152,7 +1182,9 @@ const s = StyleSheet.create({
   motivo: { fontFamily: ViveFonts.medium, fontSize: 15, lineHeight: 21, color: ViveColors.text },
   factStrong: { fontFamily: ViveFonts.semibold, color: ViveColors.accent },
   factLink: { fontFamily: ViveFonts.semibold, color: ViveColors.primaryInk },
-  pagosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 20, paddingBottom: 12 },
+  // Abajo ya está el área segura del teléfono (la raya de inicio): no hace
+  // falta sumarle aire propio.
+  pagosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 20, paddingBottom: 2 },
   pagoTagTxt: { fontFamily: ViveFonts.medium, fontSize: 12, lineHeight: 17, color: ViveColors.text },
   nacionalidad: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 4, textAlign: 'center' },
 
@@ -1192,6 +1224,8 @@ const s = StyleSheet.create({
   },
   sectionTitle: { fontFamily: ViveFonts.title, fontSize: 20, color: ViveColors.text, marginBottom: 14 },
   bio: { fontFamily: ViveFonts.regular, fontSize: 16, color: ViveColors.text, lineHeight: 25 },
+  bioMedida: { position: 'absolute', left: 0, right: 0, opacity: 0 },
+  leerMas: { alignSelf: 'flex-start', marginTop: 6, paddingVertical: 6 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: {
     backgroundColor: '#E5E7D9',
@@ -1212,23 +1246,24 @@ const s = StyleSheet.create({
   workText: { fontFamily: ViveFonts.regular, fontSize: 15, lineHeight: 22, color: ViveColors.text },
 
   // ── Formación ───────────────────────────────────────────────────────
-  credList: { gap: 14, marginTop: 4 },
+  credList: { gap: 18, marginTop: 2 },
   credRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  credTitleRow: { gap: 6 },
   // Verde de la marca y no ámbar, y sin caja: es la constatación de un hecho,
   // no una alerta. `flexShrink: 0` para que un título largo lo corte a él y no
   // al revés — el que se acorta con "…" tiene que ser el nombre, que sigue
   // legible, y no la palabra que califica la credencial.
-  credVerif: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
+  credVerif: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
   credVerifTxt: { fontFamily: ViveFonts.medium, fontSize: 12, color: '#42542F', letterSpacing: 0.2 },
-  credTitle: { fontFamily: ViveFonts.semibold, fontSize: 15, color: ViveColors.text, lineHeight: 21, flexShrink: 1 },
+  credTitle: { fontFamily: ViveFonts.medium, fontSize: 15, color: ViveColors.text, lineHeight: 21, flexShrink: 1 },
   credMeta: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: 1 },
   credNumber: { fontFamily: ViveFonts.medium, fontSize: 13, color: ViveColors.softInk, marginTop: 3 },
 
   // ── Reseñas ─────────────────────────────────────────────────────────
-  ratingCount: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk },
-  reviewsList: { gap: 18, marginTop: 14 },
-  reviewCard: { paddingVertical: 10, gap: 10 },
+  // Estrellas, comentario y firma van pegados (eran 10 de aire entre cada uno
+  // y 38 entre reseñas): cada reseña se lee como un solo bloque.
+  ratingCount: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: -8 },
+  reviewsList: { gap: 22, marginTop: 16 },
+  reviewCard: { gap: 6 },
   reviewName: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk },
   // Más bajo que la bio (16): las palabras del profesional van primero. Antes
   // eran 18 en seminegrita y las reseñas pesaban más que su propia voz.
@@ -1239,12 +1274,12 @@ const s = StyleSheet.create({
   // ── Recursos del coach ──────────────────────────────────────────────
   resourcesList: { gap: 0 },
   resourceLast: { borderBottomWidth: 0 },
-  resourceCard: { paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: BORDE },
+  resourceCard: { paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: BORDE },
   resourceHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   resourceIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(232,116,59,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1281,8 +1316,8 @@ const s = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,

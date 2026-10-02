@@ -1,3 +1,16 @@
+## 2026-10-02 — Andre (Claude · perfil del profesional: pasada de espaciado)
+
+**Tocado:** `screens/ProfesionalScreen.tsx`
+
+**Resumen:**
+- Correcciones de otra revisión del perfil ("agradable pero estirado"). **Bio:** 4 líneas y "Leer más"/"Leer menos" (se mide la bio entera en una copia invisible: el botón aparece solo si hay algo cortado). **Reseñas:** estrellas, comentario y firma pegados (6 de separación, eran 10 + 10 de relleno) y el "4.7 de 5" junto al título. **Recursos:** filas de 11 de relleno (eran 16) e ícono de 32.
+- **Formación:** título en medium (era semibold) y "Verificado" pasa a ser el último dato de cada credencial, dentro de su columna (antes iba al lado del título).
+- **Barra de abajo:** menos aire propio (pagos 12 → 2 abajo, barra 12/8 → 10/6); el área segura del teléfono se respeta igual.
+- Visto en el simulador con el perfil de ejemplo (sin video ni recursos, así que esas dos partes no se vieron). tsc, eslint y 957 tests OK.
+
+**Pendiente para la próxima sesión:**
+- Ver en un perfil con video y recursos cómo quedan; confirmar en el iPhone que 4 líneas de bio es la medida justa.
+
 ## 2026-10-02 — Andre (Claude · check-in sin renglón de confirmación, barra un poco más grande)
 
 **Tocado:** `components/MoodCheckIn.tsx`, `components/ui/IslandTabBar.tsx`
