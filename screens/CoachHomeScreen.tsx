@@ -186,6 +186,13 @@ export default function CoachHomeScreen() {
   const { preparar } = useLocalSearchParams<{ preparar?: string }>();
   useEffect(() => { if (preparar === '1') setPrepOpen(true); }, [preparar]);
   const [loading, setLoading] = useState(true);
+  // 🔴 02/10/2026 (revisión de UX). Si las consultas fallaban (sin señal), la
+  // pantalla tomaba el error como "no hay datos": a un profesional con meses de
+  // trabajo le mostraba "Antes de tu primera sesión", todo sin tildar y "Sin
+  // esto no aparecés en la app", y abajo "Sin sesiones programadas". Ahora un
+  // error se dice como error, con Reintentar.
+  const [cargaFallo, setCargaFallo] = useState(false);
+  const [intento, setIntento] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [visibility, setVisibility] = useState<VisibilityTeaser | null>(null);
@@ -232,8 +239,12 @@ export default function CoachHomeScreen() {
   useEffect(() => {
     if (!user) return;
     supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle()
-      .then(({ data }) => { if (data) setCoachId(data.id); });
-  }, [user]);
+      .then(({ data, error }) => {
+        if (error) { setCargaFallo(true); setLoading(false); return; }
+        if (data) setCoachId(data.id);
+        else setLoading(false);
+      });
+  }, [user, intento]);
 
   // Badge de notificaciones (campana del header).
   useEffect(() => {
@@ -282,7 +293,10 @@ export default function CoachHomeScreen() {
   }, [coachId]);
 
   const loadData = useCallback(async () => {
-    if (!user || !coachId) { setLoading(false); return; }
+    // Sin `coachId` todavía no se sabe nada: se sigue cargando (lo resuelve el
+    // efecto de arriba). Antes se mostraba la pantalla con todo en cero.
+    if (!user) { setLoading(false); return; }
+    if (!coachId) return;
 
     const now = new Date();
     const todayStr = toDateStr(now);
@@ -294,14 +308,14 @@ export default function CoachHomeScreen() {
     const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
 
     const [
-      { data: profile },
-      { data: confirmed },
-      { data: coachRow },
-      { data: topicRows },
-      { count: recursosCount },
-      { count: bookingsEverCount },
-      { data: pendingRows },
-      { count: horariosCount },
+      { data: profile, error: errProfile },
+      { data: confirmed, error: errConfirmed },
+      { data: coachRow, error: errCoach },
+      { data: topicRows, error: errTopics },
+      { count: recursosCount, error: errRecursos },
+      { count: bookingsEverCount, error: errEver },
+      { data: pendingRows, error: errPending },
+      { count: horariosCount, error: errHorarios },
     ] = await Promise.all([
       supabase.from('profiles').select('name, avatar_url').eq('id', user.id).maybeSingle(),
       supabase
@@ -344,6 +358,15 @@ export default function CoachHomeScreen() {
         .eq('blocked', false)
         .gte('date', todayInAr()),
     ]);
+
+    // Todas alimentan algo que, vacío, se lee como un hecho (sin sesiones,
+    // paso sin hacer, profesional nuevo). Si una falla, no se muestra nada.
+    if (errProfile || errConfirmed || errCoach || errTopics || errRecursos || errEver || errPending || errHorarios) {
+      setCargaFallo(true);
+      setLoading(false);
+      return;
+    }
+    setCargaFallo(false);
 
     if (profile?.name) setCoachName(profile.name.split(' ')[0]);
 
@@ -837,6 +860,31 @@ export default function CoachHomeScreen() {
       <AppBg>
         <SafeAreaView style={s.safe} edges={['top']}>
           <View style={s.loadingBox}><ActivityIndicator size="small" color={FOREST} /></View>
+        </SafeAreaView>
+      </AppBg>
+    );
+  }
+
+  if (cargaFallo) {
+    return (
+      <AppBg>
+        <SafeAreaView style={s.safe} edges={['top']}>
+          <View style={s.falloBox}>
+            <Feather name="wifi-off" size={22} color={FOREST} />
+            <Text style={s.falloTitulo}>No pudimos cargar tu inicio</Text>
+            <Text style={s.falloTxt}>Revisá tu conexión y probá de nuevo. Tus sesiones y tu perfil siguen como estaban.</Text>
+            <TouchableOpacity
+              style={s.falloBtn}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              onPress={() => {
+                setLoading(true);
+                setCargaFallo(false);
+                if (coachId) void loadData(); else setIntento(n => n + 1);
+              }}>
+              <Text style={s.falloBtnTxt}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
         </SafeAreaView>
       </AppBg>
     );
@@ -1533,6 +1581,14 @@ const s = StyleSheet.create({
   sancionQue: { fontFamily: ViveFonts.regular, fontSize: 12, color: 'rgba(46,54,36,0.72)', lineHeight: 17 },
   sancionLink: { color: '#9A3412', textDecorationLine: 'underline' },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  falloBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 10 },
+  falloTitulo: { fontFamily: ViveFonts.semibold, fontSize: 18, color: FOREST, textAlign: 'center' },
+  falloTxt: { fontFamily: ViveFonts.regular, fontSize: 14, lineHeight: 21, color: FOREST_SOFT, textAlign: 'center' },
+  falloBtn: {
+    marginTop: 8, minHeight: 48, paddingHorizontal: 28, borderRadius: 24,
+    backgroundColor: FOREST, alignItems: 'center', justifyContent: 'center',
+  },
+  falloBtnTxt: { fontFamily: ViveFonts.semibold, fontSize: 15, color: GREEN_TXT },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
   hello: { fontFamily: ViveFonts.title, fontSize: 28, color: FOREST, flex: 1 },

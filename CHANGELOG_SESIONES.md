@@ -1,3 +1,17 @@
+## 2026-10-02 — Andre (Claude · lado del profesional: revisión de UX de Inicio y Reservas)
+
+**Tocado:** `screens/CoachHomeScreen.tsx`, `screens/CoachReservasScreen.tsx`, `lib/coachBookingActions.ts`
+
+**Resumen:**
+- Crítica de Inicio y Reservas del profesional (Impeccable + guías nativas, leyendo código): 23/40. Andre eligió los 3 P1.
+- **Sin señal ya no se muestran estados falsos.** Inicio tomaba los errores como "no hay datos": a un profesional con historia le mostraba "Antes de tu primera sesión", todo sin tildar, "Sin esto no aparecés en la app" y "Sin sesiones programadas"; Reservas decía "Tu agenda está libre". Ahora las dos dicen "No pudimos cargar…" con Reintentar. Inicio además ya no se dibuja con todo en cero antes de saber el `coachId`.
+- **Fallas que eran silenciosas ahora avisan:** confirmar, rechazar y cancelar una confirmada. `rejectBooking` exige que se haya actualizado una fila (antes, sin filas, avisaba al cliente igual), como ya hacía `confirmBooking`. Sin cambios en la base; tsc y 957 tests OK. Sin ver en pantalla.
+
+**Pendiente para la próxima sesión:**
+- **"Otro horario" en "Por confirmar" sigue RECHAZANDO la solicitud.** Andre quiere que proponga horarios, pero `proponer_horarios` exige `status = 'confirmada'` (verificado en producción). Habilitarlo para pendientes toca cobros y reembolsos: decidir con Andre (y ver el área de Codex en pagos).
+- **El "Motivo (opcional)" del rechazo no se envía a ningún lado**: el profesional lo escribe y se pierde. Decidir si se manda (pasando por el filtro de datos de contacto) o se saca el campo.
+- P2 sin hacer: letra de 10 a 12 pt en Inicio y "Unirse" con contraste 3,6:1; cancelar sin decir consecuencias; tarjeta del profesional nuevo larga y con "Estás casi listo" en masculino. Chats y Recursos sin revisar.
+
 ## 2026-10-02 — Andre (Claude · perfil del profesional: sellos y carga)
 
 **Tocado:** `screens/ProfesionalScreen.tsx`

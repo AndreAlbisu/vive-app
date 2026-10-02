@@ -139,12 +139,14 @@ export async function confirmBooking(bookingId: string, coachAuthUserId: string)
 
 // Rechaza una solicitud pendiente. Espeja CoachReservasScreen.confirmReject().
 export async function rejectBooking(bookingId: string, coachAuthUserId: string): Promise<boolean> {
-  const { error } = await supabase
+  const { data: actualizadas, error } = await supabase
     .from('bookings')
     .update({ status: 'cancelada' })
     .eq('id', bookingId)
-    .select();
-  if (error) return false;
+    .select('id');
+  // Sin filas es que no se guardó (RLS, o ya no estaba): igual que
+  // `confirmBooking`. Antes eso contaba como éxito y se avisaba igual.
+  if (error || !actualizadas?.length) return false;
 
   const { data: booking } = await supabase
     .from('bookings')
