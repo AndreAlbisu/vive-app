@@ -1,3 +1,14 @@
+## 2026-10-02 — Andre (Claude · reseñas del perfil en tarjetas)
+
+**Tocado:** `screens/ProfesionalScreen.tsx` (solo la sección Reseñas)
+
+**Resumen:**
+- Andre: "esta parte de reseñas está super fea" (con una sola reseña corta, "mid", quedaban cuatro renglones sueltos). Ahora el promedio va a la derecha del título ("★ 4.7 · 3 reseñas") y cada reseña es una tarjeta con el fondo del bloque práctico: nombre en seminegrita y estrellas arriba en la misma línea, comentario debajo. Visto en el simulador con el perfil de ejemplo.
+- En el mismo archivo había cambios sin commitear de otra sesión (botón Reservar, pagos, "Tu primera sesión"): se commiteó solo la sección Reseñas y lo demás quedó como estaba.
+
+**Pendiente para la próxima sesión:**
+- Andre pidió centrar mejor el botón Reservar: la otra sesión ya lo está cambiando (pagos debajo del precio, botón terracota con ícono). Confirmar con Andre si así le cierra.
+
 ## 2026-10-02 — Andre (Claude · checkout: "Pagar y reservar" y garantía)
 
 **Tocado:** `screens/BookingScreen_Confirm.tsx`

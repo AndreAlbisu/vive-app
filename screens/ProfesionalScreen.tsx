@@ -905,21 +905,36 @@ export default function ProfesionalScreen() {
             sección vacía al final repetía lo mismo en negativo. */}
         {hayResenas && (
           <View style={s.section}>
-            <Text accessibilityRole="header" style={s.sectionTitle}>Reseñas</Text>
-            <Text style={s.ratingCount}>
-              {displayRating!.toFixed(1)} de 5 · {displayReviewCount} {displayReviewCount === 1 ? 'reseña' : 'reseñas'}
-            </Text>
+            {/* El promedio va en la línea del título y cada reseña es una
+                tarjeta con quién y cuántas estrellas arriba: antes eran cuatro
+                renglones sueltos (promedio, estrellas, texto, nombre) y una
+                reseña corta quedaba perdida en el medio (02/10/2026). */}
+            <View style={s.reviewsHeader}>
+              <Text accessibilityRole="header" style={[s.sectionTitle, { marginBottom: 0 }]}>Reseñas</Text>
+              <View
+                style={s.ratingSummary}
+                accessible
+                accessibilityLabel={`${displayRating!.toFixed(1)} de 5, ${displayReviewCount} ${displayReviewCount === 1 ? 'reseña' : 'reseñas'}`}>
+                <MaterialIcons name="star" size={16} color={DORADO} />
+                <Text style={s.ratingValue}>{displayRating!.toFixed(1)}</Text>
+                <Text style={s.ratingCount}>
+                  · {displayReviewCount} {displayReviewCount === 1 ? 'reseña' : 'reseñas'}
+                </Text>
+              </View>
+            </View>
 
             <View style={s.reviewsList}>
               {resenasVisibles.map((review, i) => (
                 // Las tres primeras ya están; las que suma "Ver las N" aparecen
                 // con el fundido, no de golpe.
                 <Animated.View key={i} entering={i >= 3 ? APARECE : undefined} style={s.reviewCard}>
-                  <Stars rating={review.rating} size={14} />
+                  <View style={s.reviewTop}>
+                    <Text style={s.reviewName} numberOfLines={1}>{review.reviewerName}</Text>
+                    <Stars rating={review.rating} size={13} />
+                  </View>
                   {!!review.comment && (
                     <Text style={s.reviewText}>{review.comment}</Text>
                   )}
-                  <Text style={s.reviewName}>{review.reviewerName}</Text>
                 </Animated.View>
               ))}
             </View>
@@ -1272,12 +1287,22 @@ const s = StyleSheet.create({
   credNumber: { fontFamily: ViveFonts.medium, fontSize: 13, color: ViveColors.softInk, marginTop: 3 },
 
   // ── Reseñas ─────────────────────────────────────────────────────────
-  // Estrellas, comentario y firma van pegados (eran 10 de aire entre cada uno
-  // y 38 entre reseñas): cada reseña se lee como un solo bloque.
-  ratingCount: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk, marginTop: -8 },
-  reviewsList: { gap: 22, marginTop: 16 },
-  reviewCard: { gap: 6 },
-  reviewName: { fontFamily: ViveFonts.regular, fontSize: 13, color: ViveColors.softInk },
+  reviewsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  ratingSummary: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ratingValue: { fontFamily: ViveFonts.semibold, fontSize: 15, color: ViveColors.text },
+  ratingCount: { fontFamily: ViveFonts.regular, fontSize: 14, color: ViveColors.softInk },
+  reviewsList: { gap: 10, marginTop: 16 },
+  // Mismo fondo que el bloque práctico de arriba: una tarjeta por reseña.
+  reviewCard: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 15,
+    borderCurve: 'continuous',
+    backgroundColor: '#EDEADD',
+    gap: 6,
+  },
+  reviewTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  reviewName: { flexShrink: 1, fontFamily: ViveFonts.semibold, fontSize: 14, color: ViveColors.text },
   // Más bajo que la bio (16): las palabras del profesional van primero. Antes
   // eran 18 en seminegrita y las reseñas pesaban más que su propia voz.
   reviewText: { fontFamily: ViveFonts.regular, fontSize: 15, color: ViveColors.text, lineHeight: 23 },
