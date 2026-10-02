@@ -7,6 +7,8 @@
 - **Carga:** el perfil se muestra cuando ya están credenciales, temas, reseñas y garantía (antes aparecían de a una y corrían lo que se estaba leyendo). Nada traba: cada consulta que falla termina en vacío. Sin cambios en la base; tsc, eslint y 957 tests OK. Sin ver en pantalla todavía.
 - **Simulador:** Xcode 27 no trae la app Simulator (solo el motor) y **compilada con Xcode 27 la app se cierra al abrir**: "UIScene life cycle is required" (iOS 27 lo exige a lo compilado con su SDK; Expo SDK 54 no lo cumple). Los builds de EAS (Xcode 26) no están afectados. Se está bajando el simulador de iOS 26 para revisar con capturas. Además, `ios/Podfile` local (no va al repo) sube a 15.1 el mínimo de iOS de los pods: Xcode 27 rechaza SDWebImage, RNSVG y AsyncStorage con mínimos viejos.
 
+- **Sensación al tocar** (skill animate-expo): Reservar usa `ScaleCard` (se achica a 0,97, como Pagar en Confirmar) y vibra suave al apoyar el dedo; el corazón hace un "pop" y vibra al guardar (al sacar, solo un tic, sin pop); la explicación de cada enfoque y las reseñas que suma "Ver las N" aparecen con un fundido de 180 ms. Con "reducir movimiento" no hay pop; los fundidos los maneja el sistema. Vibraciones solo en iPhone.
+
 **Pendiente para la próxima sesión:**
 - 🔴 Antes de que Apple exija compilar con Xcode 27 (suele ser en abril): actualizar Expo a una versión que adopte UIScene, o la app compilada no abre en iOS 27.
 - Capturas en el simulador de iOS 26 de todo lo del perfil (P1 y P2).

@@ -31,6 +31,11 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
+import Animated, {
+  FadeIn, FadeOut, Easing, useReducedMotion, useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring,
+} from 'react-native-reanimated';
+import { ScaleCard } from '@/components/ScaleCard';
 
 import { ViveColors, ViveFonts } from '@/constants/theme';
 import { AppBg } from '@/components/ui/AppBg';
@@ -120,6 +125,21 @@ function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   );
 }
 
+// Movimiento (skill animate-expo, 02/10/2026). Lo que se abre aparece con un
+// fundido corto en vez de saltar; el corazón hace un "pop" solo al guardar.
+// Las vibraciones van una por acción y siempre junto a un cambio visible.
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const APARECE = FadeIn.duration(180).easing(EASE_OUT);
+const DESAPARECE = FadeOut.duration(120);
+
+function vibrar(fuerte: boolean) {
+  if (Platform.OS !== 'ios') return;
+  (fuerte
+    ? Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    : Haptics.selectionAsync()
+  ).catch(() => {});
+}
+
 // ─── Pantalla ─────────────────────────────────────────────────────────────────
 export default function ProfesionalScreen() {
   const router = useRouter();
@@ -143,6 +163,9 @@ export default function ProfesionalScreen() {
   const avisarEjemplo = () => Alert.alert(AVISO_EJEMPLO.titulo, AVISO_EJEMPLO.texto);
   const { favoriteIds, toggleFavorite } = useFavoriteCoaches(user?.id);
   const saved = !!profileId && favoriteIds.has(profileId);
+  const reducirMovimiento = useReducedMotion();
+  const corazon = useSharedValue(1);
+  const corazonStyle = useAnimatedStyle(() => ({ transform: [{ scale: corazon.get() }] }));
   const [fetchedData, setFetchedData] = useState<Partial<typeof DEFAULT_PROFESIONAL> | null>(null);
   // 'error' es "no se pudo preguntar" (sin señal, timeout), distinto de
   // 'unavailable', que es "el perfil no está". Ver `motivoSinPerfil`.
@@ -497,12 +520,23 @@ export default function ProfesionalScreen() {
           onPress={() => {
             if (esEjemplo) { avisarEjemplo(); return; }
             if (!isLoggedIn) { requestAuth('guardar_profesional'); return; }
-            if (profileId) toggleFavorite(profileId);
+            if (!profileId) return;
+            // Guardar es el momento que vale un gesto; sacarlo, solo el tic.
+            vibrar(!saved);
+            if (!saved && !reducirMovimiento) {
+              corazon.set(withSequence(
+                withTiming(1.22, { duration: 110, easing: EASE_OUT }),
+                withSpring(1, { duration: 300, dampingRatio: 0.6 }),
+              ));
+            }
+            toggleFavorite(profileId);
           }}
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel={saved ? 'Quitar de favoritos' : 'Guardar en favoritos'}>
-          <MaterialIcons name={saved ? 'favorite' : 'favorite-border'} size={24} color={saved ? ViveColors.primaryInk : ViveColors.text} />
+          <Animated.View style={corazonStyle}>
+            <MaterialIcons name={saved ? 'favorite' : 'favorite-border'} size={24} color={saved ? ViveColors.primaryInk : ViveColors.text} />
+          </Animated.View>
         </TouchableOpacity>
       </View>
 
@@ -716,7 +750,9 @@ export default function ProfesionalScreen() {
                         <Text style={s.enfoqueLabel}>{e.label}</Text>
                         <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={20} color={ViveColors.primaryInk} />
                       </TouchableOpacity>
-                      {expanded && <Text style={s.enfoqueDesc}>{e.desc}</Text>}
+                      {expanded && (
+                        <Animated.Text entering={APARECE} exiting={DESAPARECE} style={s.enfoqueDesc}>{e.desc}</Animated.Text>
+                      )}
                     </View>
                   );
                 })}
@@ -836,13 +872,15 @@ export default function ProfesionalScreen() {
 
             <View style={s.reviewsList}>
               {resenasVisibles.map((review, i) => (
-                <View key={i} style={s.reviewCard}>
+                // Las tres primeras ya están; las que suma "Ver las N" aparecen
+                // con el fundido, no de golpe.
+                <Animated.View key={i} entering={i >= 3 ? APARECE : undefined} style={s.reviewCard}>
                   <Stars rating={review.rating} size={14} />
                   {!!review.comment && (
                     <Text style={s.reviewText}>{review.comment}</Text>
                   )}
                   <Text style={s.reviewName}>{review.reviewerName}</Text>
-                </View>
+                </Animated.View>
               ))}
             </View>
             {liveReviews.length > 3 && (
@@ -935,10 +973,12 @@ export default function ProfesionalScreen() {
             )}
 
           </View>
-            <TouchableOpacity
+            <ScaleCard
               style={[s.btnPrimary, noDisponible && s.btnPrimaryDisabled]}
-              activeOpacity={0.85}
+              activeOpacity={0.9}
               disabled={noDisponible}
+              accessibilityRole="button"
+              onPressIn={() => vibrar(true)}
               onPress={() => {
                 if (esEjemplo) { avisarEjemplo(); return; }
                 // Bloqueado por vos: el botón deshace el bloqueo, con la
@@ -962,7 +1002,7 @@ export default function ProfesionalScreen() {
               <Text style={s.btnPrimaryText}>
                 {noDisponible ? 'No disponible' : blocked ? 'Desbloquear' : 'Reservar'}
               </Text>
-            </TouchableOpacity>
+            </ScaleCard>
         </View>
         {puedeReservar && paymentMethods.length > 0 && (
           <View style={s.pagosRow} accessible accessibilityLabel={`Acepta ${paymentMethods.join(', ')}`}>
