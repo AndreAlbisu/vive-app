@@ -768,8 +768,12 @@ export default function CoachReservasScreen() {
                       <Text style={s.btnSolidTxt}>Confirmar</Text>
                     </TouchableOpacity>
                     {/* Rechazar queda SIEMPRE habilitado: libera el turno, no lo compromete. */}
+                    {/* 02/10/2026: decía "Otro horario" y rechaza la solicitud;
+                        el profesional creía que iba a proponer otro día. Proponer
+                        sobre una solicitud sin confirmar todavía no existe
+                        (`proponer_horarios` exige 'confirmada'). */}
                     <TouchableOpacity style={[s.btnS, s.btnGhost]} activeOpacity={0.85} onPress={() => openReject(b.id)}>
-                      <Text style={s.btnGhostTxt}>Otro horario</Text>
+                      <Text style={s.btnGhostTxt}>No puedo</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

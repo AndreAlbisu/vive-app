@@ -9,7 +9,7 @@
 - **El mensaje del rechazo ahora llega** (Andre: "mandarlo"). Antes el "Motivo (opcional)" se escribía y no se mandaba. Va en la notificación de la app y en el mail ("Te dejó este mensaje: …"), no en el push (pantalla bloqueada). Hasta 300 caracteres. Datos para cobrar se bloquean y datos de contacto avisan y dejan enviar (`mensaje_contacto_detectado`, canal `motivo_rechazo`), igual que la nota de una recomendación.
 
 **Pendiente para la próxima sesión:**
-- **"Otro horario" en "Por confirmar" sigue RECHAZANDO la solicitud.** Andre quiere que proponga horarios, pero `proponer_horarios` exige `status = 'confirmada'` (verificado en producción). Habilitarlo para pendientes toca cobros y reembolsos: decidir con Andre (y ver el área de Codex en pagos).
+- **"Otro horario" en "Por confirmar" pasó a decir "No puedo"** (es lo que hace: rechaza). Andre quiere que algún día proponga horarios, pero `proponer_horarios` exige `status = 'confirmada'` (verificado en producción). Habilitarlo para pendientes toca cobros y reembolsos: decidir con Andre (y ver el área de Codex en pagos).
 - P2 sin hacer: letra de 10 a 12 pt en Inicio y "Unirse" con contraste 3,6:1; cancelar sin decir consecuencias; tarjeta del profesional nuevo larga y con "Estás casi listo" en masculino. Chats y Recursos sin revisar.
 
 ## 2026-10-02 — Andre (Claude · perfil del profesional: sellos y carga)
