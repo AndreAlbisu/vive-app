@@ -11,6 +11,13 @@
 **Pendiente para la próxima sesión:**
 - Ver en un perfil con video y recursos cómo quedan; confirmar en el iPhone que 4 líneas de bio es la medida justa.
 
+## 2026-10-02 — Andre (Claude · buscador con letras separadas)
+
+**Tocado:** `screens/VerificarMailScreen.tsx`, `app/(tabs)/conexiones.tsx`
+
+**Resumen:**
+- Visto en el simulador: después de pasar por la pantalla del código ("Entrá con un código", también en el alta), el buscador de Profesionales mostraba "B u s c á  u n  p r o f e s i o", cortado. Causa: el campo del código tenía `letterSpacing: 10` y React Native en iOS reutiliza el campo de texto nativo sin limpiar esa propiedad. Confirmado: sin pasar por el código, el buscador se ve bien. El campo del código pasa a separación 0 con dígitos de ancho fijo (`tabular-nums`), y el buscador fija `letterSpacing: 0`. No se volvió a abrir la pantalla del código para verlo (manda un mail real).
+
 ## 2026-10-02 — Andre (Claude · check-in sin renglón de confirmación, barra un poco más grande)
 
 **Tocado:** `components/MoodCheckIn.tsx`, `components/ui/IslandTabBar.tsx`

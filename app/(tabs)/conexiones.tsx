@@ -964,6 +964,9 @@ const s = StyleSheet.create({
     fontSize: 15,
     color: FOREST,
     padding: 0,
+    // Explícito: iOS reutiliza el campo nativo y puede arrastrar la separación
+    // de otro (ver `VerificarMailScreen`, estilo `input`).
+    letterSpacing: 0,
   },
   resultsWrap: {
     paddingHorizontal: 20,
