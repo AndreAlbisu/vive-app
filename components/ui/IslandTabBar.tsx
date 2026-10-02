@@ -19,6 +19,10 @@ const AnimatedFeather = Animated.createAnimatedComponent(Feather);
 // la pastilla, el de la burbuja y la cuenta del ancho de cada tab: si los tres
 // no coinciden, la burbuja queda corrida.
 const PILL_PAD = 6;
+// 02/10/2026: un poco más grande (ícono 19 → 22, pestaña 49 → 60 de ancho, 56 de alto).
+// Andre la vio con nombres (más alta y ancha) y le gustó ese tamaño, no los
+// nombres: ver la memoria "barra sin nombres".
+const ICON = 22;
 
 export type IslandTab = {
   name: string;
@@ -67,10 +71,10 @@ function IslandTabItem({
       style={styles.tabHit}>
       <View style={styles.tab}>
         <View style={styles.iconSlot}>
-          <Feather name={tab.icon} size={19} color={FOREST_SOFT} />
+          <Feather name={tab.icon} size={ICON} color={FOREST_SOFT} />
           <AnimatedFeather
             name={tab.icon}
-            size={19}
+            size={ICON}
             color={CREAM_LIGHT}
             style={[StyleSheet.absoluteFill, { opacity: focus }]}
           />
@@ -185,7 +189,7 @@ const styles = StyleSheet.create({
   // redondeadas) no pueden vivir en la misma view en iOS — se cortarían
   // mutuamente. Shadow afuera, overflow adentro.
   shadowWrap: {
-    borderRadius: 26,
+    borderRadius: 30,
     shadowColor: '#2E3624',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.14,
@@ -196,7 +200,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: CREAM,
-    borderRadius: 26,
+    borderRadius: 30,
     padding: PILL_PAD,
     overflow: 'hidden',
   },
@@ -211,9 +215,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     // Mismo padding siempre, foco o no — es justo lo que evita tener que
     // animar ningún ancho al cambiar de tab (ver nota arriba del componente).
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    borderRadius: 22,
+    // 56 de alto en total (6 + 11 + 22 + 11 + 6): Andre la pidió un poco más
+    // baja que la de 62; el ancho queda, que es lo que la hace verse más grande.
+    paddingVertical: 11,
+    paddingHorizontal: 19,
+    borderRadius: 25,
   },
   bubble: {
     position: 'absolute',
@@ -221,11 +227,11 @@ const styles = StyleSheet.create({
     top: PILL_PAD,
     bottom: PILL_PAD,
     backgroundColor: FOREST,
-    borderRadius: 22,
+    borderRadius: 25,
   },
   iconSlot: {
-    width: 19,
-    height: 19,
+    width: ICON,
+    height: ICON,
   },
   dot: {
     position: 'absolute',

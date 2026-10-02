@@ -1,3 +1,12 @@
+## 2026-10-02 — Andre (Claude · check-in sin renglón de confirmación, barra un poco más grande)
+
+**Tocado:** `components/MoodCheckIn.tsx`, `components/ui/IslandTabBar.tsx`
+
+**Resumen:**
+- **Check-in diario:** se sacó el renglón "Registrado: normal · gracias por contarnos" (pedido de Andre). Ocupaba lugar también antes de elegir (alto reservado) y repetía lo que ya muestra la carita elegida.
+- **Barra de pestañas** (sin nombres, ver memoria): íconos 19 → 22, pestañas de 60 × 44 y 56 de alto en total (era 55; una versión intermedia de 62 le pareció alta a Andre). Verificada en el simulador.
+- ⚠️ **Incidente:** probando en el simulador con la cuenta de Andre, un toque mío cambió su check-in real de hoy de "Bajón" a "Normal" (la pantalla no lo mostró hasta reabrir la app) y el intento de volverlo atrás no se registró. Andre lo corrige desde su iPhone. Regla desde ahora: en cuentas reales, en el simulador no se toca nada que guarde datos.
+
 ## 2026-10-02 — Andre (Claude · barra de pestañas con nombres y letra en Inicio del profesional)
 
 **Tocado:** `app/(coach)/_layout.tsx`, `screens/CoachHomeScreen.tsx` (y `components/ui/IslandTabBar.tsx`, cambiado y revertido)
